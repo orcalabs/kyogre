@@ -1,0 +1,6 @@
+[workspace]
+members = [
+    "postgres",
+    "consumer",
+    "ais-core",
+]
