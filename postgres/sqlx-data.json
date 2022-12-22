@@ -1,0 +1,102 @@
+{
+  "db": "PostgreSQL",
+  "222b78ea47f718eec3c1f0974da8588b98959fee6d1ed5569fee1020a813c98d": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Int4Array"
+        ]
+      }
+    },
+    "query": "\nINSERT INTO ais_vessels(mmsi)\nVALUES (UNNEST ($1::int[]))\n            "
+  },
+  "59a35a04476e8351798960a890253d4f7d1c725b7dd14e41f196a27c9b384e9b": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Int4Array",
+          "NumericArray",
+          "NumericArray",
+          "NumericArray",
+          "NumericArray",
+          "NumericArray",
+          "NumericArray",
+          "TimestamptzArray",
+          "Int4Array",
+          "Int4Array"
+        ]
+      }
+    },
+    "query": "\nINSERT INTO ais_positions(mmsi, latitude, longitude, course_over_ground,\n    rate_of_turn, true_heading, speed_over_ground,\n    timestamp, altitude, navigation_status_id)\nSELECT * FROM\n    UNNEST(\n        $1::int[],\n        $2::decimal[],\n        $3::decimal[],\n        $4::decimal[],\n        $5::decimal[],\n        $6::decimal[],\n        $7::decimal[],\n        $8::timestamptz[],\n        $9::int[],\n        $10::int[]\n)\n            "
+  },
+  "6138a4e04a0ad3b269213be46cd2814197c1a6473698a2473ae2326a307d9dce": {
+    "describe": {
+      "columns": [
+        {
+          "name": "mmsi",
+          "ordinal": 0,
+          "type_info": "Int4"
+        },
+        {
+          "name": "latitude",
+          "ordinal": 1,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "longitude",
+          "ordinal": 2,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "course_over_ground",
+          "ordinal": 3,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "rate_of_turn",
+          "ordinal": 4,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "true_heading",
+          "ordinal": 5,
+          "type_info": "Int4"
+        },
+        {
+          "name": "speed_over_ground",
+          "ordinal": 6,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "msgtime",
+          "ordinal": 7,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "navigational_status",
+          "ordinal": 8,
+          "type_info": "Int4"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        true,
+        true,
+        true,
+        true,
+        false,
+        false
+      ],
+      "parameters": {
+        "Left": []
+      }
+    },
+    "query": "\nSELECT\n    mmsi, latitude, longitude, course_over_ground, rate_of_turn, true_heading,\n    speed_over_ground, timestamp as msgtime,  navigation_status_id as navigational_status\nFROM ais_positions\n            "
+  }
+}

@@ -7,6 +7,9 @@ pub struct Settings {
     pub log_level: LogLevel,
     pub postgres: PsqlSettings,
     pub environment: Environment,
+    #[serde(with = "humantime_serde")]
+    pub commit_interval: std::time::Duration,
+    pub broadcast_buffer_size: usize,
 }
 
 impl Settings {
@@ -16,7 +19,7 @@ impl Settings {
             .try_into()
             .expect("Failed to parse APP_ENVIRONMENT.");
 
-        let mut builder = Config::builder()
+        let builder = Config::builder()
             .add_source(
                 File::with_name(&format!("config/{}", environment.as_str().to_lowercase()))
                     .required(true),

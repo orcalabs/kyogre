@@ -1,0 +1,8 @@
+version: "3.9"
+services:
+  postgres:
+    image: postgis/postgis:14-3.3-alpine
+    environment:
+      - POSTGRES_PASSWORD=test123
+    ports:
+      - 5432:5432

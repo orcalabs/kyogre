@@ -1,63 +1,48 @@
-use std::time::Duration;
-
-use crate::error::{AisMessageError, AisMessageProcessingError, ConsumerError};
-use ais_core::{AisPosition, AisStatic, DataMessage};
+use crate::{
+    error::{AisMessageProcessingError, ConsumerError},
+    models::{
+        AisMessage, AisPosition, AisStatic, MessageType, NewAisPositionWrapper,
+        SupportedMessageTypes,
+    },
+};
+use ais_core::{DataMessage, NewAisStatic};
 use error_stack::{bail, IntoReport, Result, ResultExt};
 use futures::StreamExt;
-use serde::Deserialize;
 use tokio::io::AsyncRead;
 use tokio::sync::broadcast::Sender;
 use tokio_util::codec::{FramedRead, LinesCodec, LinesCodecError};
 use tracing::{event, instrument, Level};
 
-pub struct Consumer {}
-
-/// The AIS message types we support.
-enum SupportedMessageTypes {
-    /// A message containing position data.
-    Position,
-    /// A message containing vessel related data.
-    Static,
-}
-
-/// Convenience struct to deserialize the message type prior to attempting to deserialize the full
-/// message.
-#[derive(Deserialize)]
-struct MessageType {
-    /// What type of message this is.
-    #[serde(rename = "messageType")]
-    message_type: u32,
-}
-
-enum AisMessage {
-    Static(AisStatic),
-    Position(AisPosition),
-}
-
-impl TryFrom<u32> for SupportedMessageTypes {
-    type Error = AisMessageError;
-
-    fn try_from(value: u32) -> std::result::Result<Self, Self::Error> {
-        match value {
-            1 | 2 | 3 | 27 => Ok(SupportedMessageTypes::Position),
-            5 | 18 | 19 | 24 => Ok(SupportedMessageTypes::Static),
-            _ => Err(AisMessageError::InvalidMessageType(value)),
-        }
-    }
+pub struct Consumer {
+    commit_interval: std::time::Duration,
 }
 
 impl Consumer {
+    pub fn new(commit_interval: std::time::Duration) -> Consumer {
+        Consumer { commit_interval }
+    }
     pub async fn run(
         self,
         source: impl AsyncRead + Unpin,
         sender: Sender<DataMessage>,
+        cancellation: Option<tokio::sync::mpsc::Receiver<()>>,
     ) -> Result<(), ConsumerError> {
         let codec = LinesCodec::new_with_max_length(1000);
         let mut framed_read = FramedRead::new(source, codec);
 
+        let enable_cancellation = cancellation.is_some();
+        let mut cancellation = if let Some(c) = cancellation {
+            c
+        } else {
+            let (_, recv) = tokio::sync::mpsc::channel(1);
+            recv
+        };
+
+        // This vector is never deallocated and will match the size of
+        // highest amount of messages received during a commit interval.
         let mut buffer = Vec::new();
 
-        let mut interval = tokio::time::interval(Duration::from_secs(10));
+        let mut interval = tokio::time::interval(self.commit_interval);
 
         loop {
             tokio::select! {
@@ -71,6 +56,9 @@ impl Consumer {
                     if !buffer.is_empty() {
                         process_messages(buffer.drain(..), &sender).await?;
                     }
+                }
+                _ = cancellation.recv(), if enable_cancellation => {
+                    break Ok(());
                 }
             }
         }
@@ -91,8 +79,14 @@ where
             Ok(message) => match parse_message(message) {
                 Err(e) => event!(Level::ERROR, "{:?}", e),
                 Ok(message) => match message {
-                    AisMessage::Static(m) => data_message.static_messages.push(m),
-                    AisMessage::Position(m) => data_message.positions.push(m),
+                    AisMessage::Static(m) => {
+                        data_message.static_messages.push(NewAisStatic::from(m))
+                    }
+                    AisMessage::Position(m) => {
+                        if let Some(m) = NewAisPositionWrapper::from(m).0 {
+                            data_message.positions.push(m)
+                        }
+                    }
                 },
             },
         }

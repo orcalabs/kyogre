@@ -6,6 +6,8 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+ais-core = { path = "../ais-core" }
+postgres = { path = "../postgres" }
 orca-core = { registry = "orcalabs-orcastrator", version = "0.19.0", features = ["telemetry"] }
 
 async-trait = "0.1.59"
@@ -18,3 +20,13 @@ tracing = "0.1.37"
 chrono = { version = "0.4.23", features = ["serde"] }
 error-stack = "0.2.4"
 serde_json = "1.0.89"
+humantime-serde = "1.1.1"
+rand = "0.8.5"
+
+[dev-dependencies]
+lazy_static = "1.4.0"
+tracing-subscriber = "0.3.16"
+orca-core = { registry = "orcalabs-orcastrator", version = "0.19.0", features = ["dockertest"] }
+dockertest = { version = "0.3.1", registry = "orcalabs-orcastrator" }
+rand = "0.8.5"
+tokio-stream = "0.1.11"
