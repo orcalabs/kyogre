@@ -9,6 +9,7 @@ async fn main() {
     let tracing = match settings.environment {
         Environment::Development
         | Environment::Test
+        | Environment::Local
         | Environment::Production
         | Environment::Staging => TracingOutput::Local,
     };
@@ -20,12 +21,12 @@ async fn main() {
         tracing,
     );
 
-    let app = App::build();
+    let _app = App::build(settings, None).await;
 
     let span = span!(Level::TRACE, "ais_consumer");
     let _enter = span.enter();
 
     event!(Level::INFO, "starting ais_consumer...");
 
-    app.run().await;
+    // app.run().await;
 }
