@@ -1,0 +1,50 @@
+name: Rust Check
+
+concurrency:
+  group: ${{ github.head_ref }}
+  cancel-in-progress: true
+
+on:
+  pull_request:
+    branches:
+      - master
+
+env:
+  CARGO_TERM_COLOR: always
+  DATABASE_URL: postgres://127.0.0.1:5432?user=postgres&password=postgres
+
+jobs:
+  rust-check:
+    uses: orcalabs/github-actions/.github/workflows/rust_verify.yml@master
+    secrets: inherit
+    with:
+      dependencies: protobuf-compiler
+      src-dir: .
+  sqlx-check:
+    runs-on: ubuntu-latest
+    services:
+          postgres:
+            image: postgres:15.1-alpine
+            env:
+              POSTGRES_DB: postgres
+              POSTGRES_PASSWORD: postgres
+              POSTGRES_USER: postgres
+            ports:
+              - 5432:5432
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install rustup toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+      - uses: Swatinem/rust-cache@v2
+      - name: sqlx migration
+        run: |
+          sudo apt-get install -y protobuf-compiler
+          git config --global credential.helper store
+          echo '${{ secrets.CLOUDSMITH_CARGO_REGISTRY }}' > ~/.cargo/config
+          echo '${{ secrets.CLOUDSMITH_GIT_API_KEY }}' > ~/.git-credentials
+          cargo install sqlx-cli --no-default-features --features postgres,rustls
+          sqlx migrate run --source postgres/migrations
+          cargo sqlx prepare --merged --check
+
