@@ -12,7 +12,7 @@
     },
     "query": "\nINSERT INTO ais_vessels(mmsi)\nVALUES (UNNEST ($1::int[]))\n            "
   },
-  "2d28e5349f62c7d335cc68ad1f5652c575806936ee046357388d1e669004e5ff": {
+  "285120135ed18d195176fde5b20c966dbc490a0b9a6ed608e1db7d733e4c2c63": {
     "describe": {
       "columns": [
         {
@@ -44,10 +44,22 @@
           "name": "ship_length",
           "ordinal": 5,
           "type_info": "Int4"
+        },
+        {
+          "name": "eta",
+          "ordinal": 6,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "destination",
+          "ordinal": 7,
+          "type_info": "Varchar"
         }
       ],
       "nullable": [
         false,
+        true,
+        true,
         true,
         true,
         true,
@@ -58,7 +70,7 @@
         "Left": []
       }
     },
-    "query": "\nSELECT\n    mmsi, imo_number, call_sign, name, ship_width, ship_length\nFROM ais_vessels\n            "
+    "query": "\nSELECT\n    mmsi, imo_number, call_sign, name, ship_width, ship_length,\n    eta, destination\nFROM ais_vessels\n            "
   },
   "59a35a04476e8351798960a890253d4f7d1c725b7dd14e41f196a27c9b384e9b": {
     "describe": {
@@ -147,7 +159,7 @@
     },
     "query": "\nSELECT\n    mmsi, latitude, longitude, course_over_ground, rate_of_turn, true_heading,\n    speed_over_ground, timestamp as msgtime,  navigation_status_id as navigational_status\nFROM ais_positions\n            "
   },
-  "71b2ae874ee7d43334cab7940b3011bf323bc5492dd7b5a7b8b1bcde3aed079d": {
+  "7a91b6c825621f627a347a76a85350452105c831d811d1dd1c592664fff45992": {
     "describe": {
       "columns": [],
       "nullable": [],
@@ -158,10 +170,14 @@
           "VarcharArray",
           "VarcharArray",
           "Int4Array",
-          "Int4Array"
+          "Int4Array",
+          "Int4Array",
+          "TimestamptzArray",
+          "Int4Array",
+          "VarcharArray"
         ]
       }
     },
-    "query": "\nINSERT INTO ais_vessels(mmsi, imo_number, call_sign, name, ship_width, ship_length)\nSELECT * FROM UNNEST($1::int[], $2::int[], $3::varchar[], $4::varchar[], $5::int[], $6::int[])\n            "
+    "query": "\nINSERT INTO ais_vessels(mmsi, imo_number, call_sign, name, ship_width, ship_length, ship_type, eta, draught, destination)\nSELECT * FROM UNNEST($1::int[], $2::int[], $3::varchar[], $4::varchar[], $5::int[], $6::int[],\n    $7::int[], $8::timestamptz[], $9::int[], $10::varchar[])\nON CONFLICT (mmsi)\nDO UPDATE\nSET\n    imo_number = excluded.imo_number,\n    call_sign = excluded.call_sign,\n    name = excluded.name,\n    ship_width = excluded.ship_width,\n    ship_length = excluded.ship_length,\n    ship_type = excluded.ship_type,\n    eta = excluded.eta,\n    draught = excluded.draught,\n    destination = excluded.destination\n            "
   }
 }

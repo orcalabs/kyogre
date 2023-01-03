@@ -1,4 +1,5 @@
 use ais_core::CallSign;
+use chrono::{DateTime, Utc};
 use error_stack::{IntoReport, Report, ResultExt};
 
 use crate::error::PostgresError;
@@ -11,6 +12,8 @@ pub struct AisVessel {
     pub name: Option<String>,
     pub ship_length: Option<i32>,
     pub ship_width: Option<i32>,
+    pub eta: Option<DateTime<Utc>>,
+    pub destination: Option<String>,
 }
 
 impl TryFrom<AisVessel> for ais_core::AisVessel {
@@ -31,6 +34,8 @@ impl TryFrom<AisVessel> for ais_core::AisVessel {
             name: value.name,
             ship_length: value.ship_length,
             ship_width: value.ship_width,
+            eta: value.eta,
+            destination: value.destination,
         })
     }
 }

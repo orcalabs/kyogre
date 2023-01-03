@@ -5,6 +5,10 @@ CREATE TABLE ais_vessels (
     name varchar,
     ship_width int,
     ship_length int,
+    ship_type int,
+    eta timestamptz,
+    draught int,
+    destination varchar,
     PRIMARY KEY (mmsi)
 );
 
@@ -45,3 +49,4 @@ INSERT INTO navigation_status(navigation_status_id, name) VALUES
     (14, 'AisSartIsActive'),
     (15, 'NotDefined');
 
+CREATE UNIQUE INDEX ON ais_positions (timestamp);

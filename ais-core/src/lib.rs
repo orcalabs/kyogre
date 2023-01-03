@@ -38,7 +38,7 @@ pub struct NewAisStatic {
     pub imo_number: Option<i32>,
     pub call_sign: Option<String>,
     pub destination: Option<String>,
-    pub eta: Option<String>,
+    pub eta: Option<DateTime<Utc>>,
     pub name: Option<String>,
     pub draught: Option<i32>,
     pub ship_length: Option<i32>,
@@ -67,6 +67,8 @@ pub struct AisVessel {
     pub name: Option<String>,
     pub ship_length: Option<i32>,
     pub ship_width: Option<i32>,
+    pub eta: Option<DateTime<Utc>>,
+    pub destination: Option<String>,
 }
 
 #[derive(
