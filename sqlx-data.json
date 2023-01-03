@@ -12,6 +12,54 @@
     },
     "query": "\nINSERT INTO ais_vessels(mmsi)\nVALUES (UNNEST ($1::int[]))\n            "
   },
+  "2d28e5349f62c7d335cc68ad1f5652c575806936ee046357388d1e669004e5ff": {
+    "describe": {
+      "columns": [
+        {
+          "name": "mmsi",
+          "ordinal": 0,
+          "type_info": "Int4"
+        },
+        {
+          "name": "imo_number",
+          "ordinal": 1,
+          "type_info": "Int4"
+        },
+        {
+          "name": "call_sign",
+          "ordinal": 2,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "name",
+          "ordinal": 3,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "ship_width",
+          "ordinal": 4,
+          "type_info": "Int4"
+        },
+        {
+          "name": "ship_length",
+          "ordinal": 5,
+          "type_info": "Int4"
+        }
+      ],
+      "nullable": [
+        false,
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "parameters": {
+        "Left": []
+      }
+    },
+    "query": "\nSELECT\n    mmsi, imo_number, call_sign, name, ship_width, ship_length\nFROM ais_vessels\n            "
+  },
   "59a35a04476e8351798960a890253d4f7d1c725b7dd14e41f196a27c9b384e9b": {
     "describe": {
       "columns": [],
@@ -98,5 +146,22 @@
       }
     },
     "query": "\nSELECT\n    mmsi, latitude, longitude, course_over_ground, rate_of_turn, true_heading,\n    speed_over_ground, timestamp as msgtime,  navigation_status_id as navigational_status\nFROM ais_positions\n            "
+  },
+  "71b2ae874ee7d43334cab7940b3011bf323bc5492dd7b5a7b8b1bcde3aed079d": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Int4Array",
+          "Int4Array",
+          "VarcharArray",
+          "VarcharArray",
+          "Int4Array",
+          "Int4Array"
+        ]
+      }
+    },
+    "query": "\nINSERT INTO ais_vessels(mmsi, imo_number, call_sign, name, ship_width, ship_length)\nSELECT * FROM UNNEST($1::int[], $2::int[], $3::varchar[], $4::varchar[], $5::int[], $6::int[])\n            "
   }
 }

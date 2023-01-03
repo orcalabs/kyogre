@@ -1,6 +1,6 @@
 use ais_core::{NewAisPosition, NewAisStatic};
 use chrono::{DateTime, Utc};
-use rand::random;
+use rand::{random, Rng};
 use serde::{Deserialize, Serialize};
 
 use crate::error::AisMessageError;
@@ -167,6 +167,33 @@ impl AisPosition {
     }
 }
 
+impl AisStatic {
+    pub fn test_default() -> AisStatic {
+        let mmsi: i32 = rand::thread_rng().gen();
+        AisStatic {
+            message_type: 5,
+            type_name: Some("ais_message".to_string()),
+            mmsi: mmsi.abs(),
+            msgtime: chrono::offset::Utc::now(),
+            imo_number: Some(123),
+            call_sign: Some("LK45".to_string()),
+            destination: Some("BERGEN".to_string()),
+            eta: Some("1981".to_string()),
+            name: Some("sjarken".to_string()),
+            draught: Some(213),
+            ship_length: Some(23),
+            ship_width: Some(8),
+            ship_type: Some(2),
+            dimension_a: Some(1),
+            dimension_b: Some(2),
+            dimension_c: Some(3),
+            dimension_d: Some(4),
+            position_fixing_device_type: Some(2),
+            report_class: Some("test_report_class".to_string()),
+        }
+    }
+}
+
 impl PartialEq<ais_core::AisPosition> for AisPosition {
     fn eq(&self, other: &ais_core::AisPosition) -> bool {
         self.latitude.unwrap() as i32 == other.latitude as i32
@@ -184,6 +211,23 @@ impl PartialEq<ais_core::AisPosition> for AisPosition {
 
 impl PartialEq<AisPosition> for ais_core::AisPosition {
     fn eq(&self, other: &AisPosition) -> bool {
+        other.eq(self)
+    }
+}
+
+impl PartialEq<ais_core::AisVessel> for AisStatic {
+    fn eq(&self, other: &ais_core::AisVessel) -> bool {
+        other.mmsi == self.mmsi
+            && other.imo_number == self.imo_number
+            && other.call_sign.as_ref().map(|c| c.as_ref()) == self.call_sign.as_deref()
+            && other.name == self.name
+            && other.ship_width == self.ship_width
+            && other.ship_length == self.ship_length
+    }
+}
+
+impl PartialEq<AisStatic> for ais_core::AisVessel {
+    fn eq(&self, other: &AisStatic) -> bool {
         other.eq(self)
     }
 }

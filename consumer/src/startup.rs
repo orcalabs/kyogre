@@ -1,6 +1,10 @@
-use crate::{consumer::Consumer, settings::Settings};
+use crate::{
+    barentswatch::BarentswatchAisClient, consumer::Consumer, settings::Settings, token::BearerToken,
+};
 use ais_core::DataMessage;
+use hyper::Uri;
 use postgres::PostgresAdapter;
+use std::str::FromStr;
 use tokio::{
     io::AsyncRead,
     sync::broadcast::{self, Receiver, Sender},
@@ -8,22 +12,29 @@ use tokio::{
 
 pub struct App {
     consumer: Consumer,
+    postgres: PostgresAdapter,
     sender: Sender<DataMessage>,
+    ais_source: Option<BarentswatchAisClient>,
 }
 
 impl App {
-    pub async fn build(
-        settings: Settings,
-        postgres_cancellation: Option<tokio::sync::mpsc::Receiver<()>>,
-    ) -> App {
-        let (sender, receiver) = broadcast::channel::<DataMessage>(settings.broadcast_buffer_size);
-        let adapter = PostgresAdapter::new(&settings.postgres).await.unwrap();
+    pub async fn build(settings: Settings) -> App {
+        let (sender, _) = broadcast::channel::<DataMessage>(settings.broadcast_buffer_size);
+        let postgres = PostgresAdapter::new(&settings.postgres).await.unwrap();
 
-        tokio::spawn(adapter.consume_loop(receiver, postgres_cancellation));
+        let ais_source = if let orca_core::Environment::Test = settings.environment {
+            None
+        } else {
+            let bearer_token = BearerToken::acquire(settings.oauth.unwrap()).await.unwrap();
+            let uri = Uri::from_str(&settings.api_address.unwrap()).unwrap();
+            Some(BarentswatchAisClient::new(bearer_token, uri))
+        };
 
         App {
+            postgres,
             sender,
             consumer: Consumer::new(settings.commit_interval),
+            ais_source,
         }
     }
 
@@ -31,13 +42,32 @@ impl App {
         self.sender.subscribe()
     }
 
-    pub async fn run(
+    pub async fn run(self) {
+        let receiver = self.subscribe();
+        tokio::spawn(self.postgres.consume_loop(receiver, None));
+        self.consumer
+            .run(
+                self.ais_source.unwrap().streamer().await.unwrap(),
+                self.sender,
+                None,
+            )
+            .await
+            .unwrap()
+    }
+
+    pub async fn run_test(
         self,
         source: impl AsyncRead + Unpin,
-        cancellation: Option<tokio::sync::mpsc::Receiver<()>>,
+        postgres_cancellation: tokio::sync::mpsc::Receiver<()>,
+        consumer_cancellation: tokio::sync::mpsc::Receiver<()>,
     ) {
+        let receiver = self.subscribe();
+        tokio::spawn(
+            self.postgres
+                .consume_loop(receiver, Some(postgres_cancellation)),
+        );
         self.consumer
-            .run(source, self.sender, cancellation)
+            .run(source, self.sender, Some(consumer_cancellation))
             .await
             .unwrap()
     }

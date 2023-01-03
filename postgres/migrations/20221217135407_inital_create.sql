@@ -3,8 +3,8 @@ CREATE TABLE ais_vessels (
     imo_number int,
     call_sign varchar,
     name varchar,
-    ship_width decimal,
-    ship_length decimal,
+    ship_width int,
+    ship_length int,
     PRIMARY KEY (mmsi)
 );
 

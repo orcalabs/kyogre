@@ -98,13 +98,15 @@ where
                 postgres: settings,
                 commit_interval,
                 broadcast_buffer_size: 10,
+                oauth: None,
+                api_address: None,
             };
 
             let test_db = TestDb { db };
             test_db.do_migrations().await;
 
-            let (postgres_cancellation, recv) = tokio::sync::mpsc::channel(1);
-            let app = App::build(app_settings, Some(recv)).await;
+            let (postgres_cancellation, postgres_recv_cancel) = tokio::sync::mpsc::channel(1);
+            let app = App::build(app_settings).await;
 
             let (sender, recv) = tokio::sync::mpsc::channel(100);
 
@@ -113,9 +115,9 @@ where
                 receiver_stream.into_async_read(),
             );
 
-            let (consumer_cancellation, recv) = tokio::sync::mpsc::channel(1);
+            let (consumer_cancellation, consumer_recv_cancel) = tokio::sync::mpsc::channel(1);
 
-            tokio::spawn(app.run(compat, Some(recv)));
+            tokio::spawn(app.run_test(compat, postgres_recv_cancel, consumer_recv_cancel));
 
             let helper = TestHelper {
                 ais_source: AisSource { out: sender },

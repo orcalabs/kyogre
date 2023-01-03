@@ -1,4 +1,4 @@
-use consumer::models::AisPosition;
+use consumer::models::{AisPosition, AisStatic};
 
 use crate::helper::test;
 
@@ -14,6 +14,22 @@ async fn test_ais_position_messages_are_persisted_to_postgres() {
         helper.postgres_cancellation.send(()).await.unwrap();
 
         assert_eq!(vec![pos], helper.db.all_ais_positions().await);
+    })
+    .await;
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn test_ais_static_messages_are_persisted_to_storage() {
+    test(|helper| async move {
+        let vessel = AisStatic::test_default();
+        helper.ais_source.send_static(&vessel).await;
+
+        tokio::time::sleep(helper.consumer_commit_interval * 2).await;
+
+        helper.consumer_cancellation.send(()).await.unwrap();
+        helper.postgres_cancellation.send(()).await.unwrap();
+
+        assert_eq!(vec![vessel], helper.db.all_ais_vessels().await);
     })
     .await;
 }

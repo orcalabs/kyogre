@@ -1,5 +1,5 @@
 use crate::error::{BigDecimalError, PostgresError};
-use ais_core::{AisPosition, DataMessage, NewAisPosition};
+use ais_core::{AisPosition, AisVessel, DataMessage, NewAisPosition, NewAisStatic};
 use bigdecimal::{BigDecimal, FromPrimitive};
 use error_stack::{IntoReport, Result, ResultExt};
 use orca_core::{PsqlLogStatements, PsqlSettings};
@@ -57,6 +57,31 @@ FROM ais_positions
 
         for p in positions {
             let core_model = AisPosition::try_from(p).unwrap();
+            converted.push(core_model);
+        }
+
+        converted
+    }
+
+    pub async fn all_ais_vessels(&self) -> Vec<AisVessel> {
+        let mut conn = self.db.pool.acquire().await.unwrap();
+
+        let positions = sqlx::query_as!(
+            crate::models::AisVessel,
+            r#"
+SELECT
+    mmsi, imo_number, call_sign, name, ship_width, ship_length
+FROM ais_vessels
+            "#
+        )
+        .fetch_all(&mut conn)
+        .await
+        .unwrap();
+
+        let mut converted = Vec::with_capacity(positions.len());
+
+        for p in positions {
+            let core_model = AisVessel::try_from(p).unwrap();
             converted.push(core_model);
         }
 
@@ -163,6 +188,10 @@ impl PostgresAdapter {
                     event!(Level::ERROR, "failed to add ais positions: {:?}", e);
                 }
 
+                if let Err(e) = self.add_ais_vessels(message.static_messages).await {
+                    event!(Level::ERROR, "failed to add ais positions: {:?}", e);
+                }
+
                 AisProcessingAction::Continue
             }
             Err(e) => match e {
@@ -183,6 +212,55 @@ impl PostgresAdapter {
                 }
             },
         }
+    }
+
+    async fn add_ais_vessels(&self, vessels: Vec<NewAisStatic>) -> Result<(), PostgresError> {
+        let mut mmsis = Vec::with_capacity(vessels.len());
+        let mut imo_number = Vec::with_capacity(vessels.len());
+        let mut call_sign = Vec::with_capacity(vessels.len());
+        let mut name = Vec::with_capacity(vessels.len());
+        let mut ship_width = Vec::with_capacity(vessels.len());
+        let mut ship_length = Vec::with_capacity(vessels.len());
+
+        for v in vessels {
+            mmsis.push(v.mmsi);
+            imo_number.push(v.imo_number);
+            call_sign.push(v.call_sign);
+            name.push(v.name);
+            ship_width.push(v.ship_width);
+            ship_length.push(v.ship_length);
+        }
+
+        let mut tx = self
+            .pool
+            .begin()
+            .await
+            .into_report()
+            .change_context(PostgresError::Transaction)?;
+
+        sqlx::query!(
+            r#"
+INSERT INTO ais_vessels(mmsi, imo_number, call_sign, name, ship_width, ship_length)
+SELECT * FROM UNNEST($1::int[], $2::int[], $3::varchar[], $4::varchar[], $5::int[], $6::int[])
+            "#,
+            &mmsis,
+            &imo_number as _,
+            &call_sign as _,
+            &name as _,
+            &ship_width as _,
+            &ship_length as _,
+        )
+        .execute(&mut tx)
+        .await
+        .into_report()
+        .change_context(PostgresError::Query)?;
+
+        tx.commit()
+            .await
+            .into_report()
+            .change_context(PostgresError::Transaction)?;
+
+        Ok(())
     }
 
     async fn add_ais_positions(&self, positions: Vec<NewAisPosition>) -> Result<(), PostgresError> {
