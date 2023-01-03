@@ -1,3 +1,7 @@
+mod call_sign;
+
+pub use call_sign::CallSign;
+
 use chrono::{DateTime, Utc};
 
 #[derive(Debug, Clone, Default)]
@@ -51,4 +55,14 @@ pub struct AisPosition {
     pub rate_of_turn: Option<f64>,
     pub speed_over_ground: Option<f64>,
     pub true_heading: Option<i32>,
+}
+
+#[derive(Debug, Clone)]
+pub struct AisVessel {
+    pub mmsi: i32,
+    pub imo_number: Option<i32>,
+    pub call_sign: Option<CallSign>,
+    pub name: Option<String>,
+    pub ship_length: Option<i32>,
+    pub ship_width: Option<i32>,
 }

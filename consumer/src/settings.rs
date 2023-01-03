@@ -2,6 +2,8 @@ use config::{Config, File};
 use orca_core::{Environment, LogLevel, PsqlSettings};
 use serde::Deserialize;
 
+use crate::token::OauthConfig;
+
 #[derive(Deserialize, Debug)]
 pub struct Settings {
     pub log_level: LogLevel,
@@ -10,6 +12,8 @@ pub struct Settings {
     #[serde(with = "humantime_serde")]
     pub commit_interval: std::time::Duration,
     pub broadcast_buffer_size: usize,
+    pub oauth: Option<OauthConfig>,
+    pub api_address: Option<String>,
 }
 
 impl Settings {

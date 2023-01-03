@@ -47,3 +47,49 @@ impl std::fmt::Display for AisMessageError {
         }
     }
 }
+
+#[derive(Debug)]
+pub enum BarentswatchClientError {
+    RequestCreation,
+    SendingRequest,
+    Body,
+    Server { response_code: u16, body: String },
+}
+
+impl Context for BarentswatchClientError {}
+
+impl std::fmt::Display for BarentswatchClientError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            BarentswatchClientError::RequestCreation => f.write_str("failed to construct request"),
+            BarentswatchClientError::Body => f.write_str("failed to read the request body"),
+            BarentswatchClientError::SendingRequest => {
+                f.write_str("failed to send request to server")
+            }
+            BarentswatchClientError::Server {
+                response_code,
+                body,
+            } => f.write_fmt(format_args!(
+                "non-ok response received from server, status_code: {}, body: {}",
+                response_code, body
+            )),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub enum BearerTokenError {
+    Configuration,
+    Acquisition,
+}
+
+impl Context for BearerTokenError {}
+
+impl std::fmt::Display for BearerTokenError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            BearerTokenError::Configuration => f.write_str("invalid oauth configuration"),
+            BearerTokenError::Acquisition => f.write_str("failed to acquire token"),
+        }
+    }
+}
