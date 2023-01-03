@@ -34,9 +34,10 @@ jobs:
         with:
           toolchain: stable
       - uses: Swatinem/rust-cache@v2
+        id: cache
         with:
           shared-key: sqlx
-      - if: steps.cache.cache-hit != 'true'
+      - if: steps.cache.outputs.cache-hit != 'true'
         name: build cache
         run: |
           sudo apt-get install -y protobuf-compiler
