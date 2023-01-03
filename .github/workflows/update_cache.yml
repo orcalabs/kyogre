@@ -10,6 +10,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  DATABASE_URL: postgres://127.0.0.1:5432?user=postgres&password=postgres
 
 jobs:
   update-rust-cache:
