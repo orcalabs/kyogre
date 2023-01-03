@@ -1,4 +1,4 @@
-use ais_core::{NewAisPosition, NewAisStatic};
+use ais_core::{NavigationStatus, NewAisPosition, NewAisStatic};
 use chrono::{DateTime, Utc};
 use rand::{random, Rng};
 use serde::{Deserialize, Serialize};
@@ -57,7 +57,7 @@ pub struct AisPosition {
     pub latitude: Option<f64>,
     pub longitude: Option<f64>,
     #[serde(rename = "navigationalStatus")]
-    pub navigational_status: i32,
+    pub navigational_status: NavigationStatus,
     #[serde(rename = "aisClass")]
     pub ais_class: Option<String>,
     #[serde(rename = "rateOfTurn")]
@@ -158,7 +158,7 @@ impl AisPosition {
             course_over_ground: Some(123.32),
             latitude: Some(12.23),
             longitude: Some(74.4),
-            navigational_status: 0,
+            navigational_status: NavigationStatus::UnderWayUsingEngine,
             ais_class: Some("AIS_CLASS".to_string()),
             rate_of_turn: Some(43.23),
             speed_over_ground: Some(8.4),

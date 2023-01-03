@@ -1,8 +1,10 @@
+use ais_core::NavigationStatus;
+use bigdecimal::FromPrimitive;
 use bigdecimal::{BigDecimal, ToPrimitive};
 use chrono::{DateTime, Utc};
 use error_stack::{IntoReport, Report, ResultExt};
 
-use crate::error::{FromBigDecimalError, PostgresError};
+use crate::error::{FromBigDecimalError, NavigationStatusError, PostgresError};
 
 #[derive(Debug, Clone)]
 pub struct AisPosition {
@@ -45,7 +47,10 @@ impl TryFrom<AisPosition> for ais_core::AisPosition {
                         .change_context(PostgresError::DataConversion)
                 })
                 .transpose()?,
-            navigational_status: value.navigational_status,
+            navigational_status: NavigationStatus::from_i32(value.navigational_status)
+                .ok_or(NavigationStatusError(value.navigational_status))
+                .into_report()
+                .change_context(PostgresError::DataConversion)?,
             rate_of_turn: value
                 .rate_of_turn
                 .map(|v| {

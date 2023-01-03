@@ -322,7 +322,7 @@ SELECT * FROM UNNEST($1::int[], $2::int[], $3::varchar[], $4::varchar[], $5::int
                     .transpose()?,
             );
             altitude.push(p.altitude);
-            navigation_status_id.push(p.navigational_status);
+            navigation_status_id.push(p.navigational_status as i32);
             timestamp.push(p.msgtime);
         }
 
