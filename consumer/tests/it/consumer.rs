@@ -1,4 +1,4 @@
-use chrono::{TimeZone, Utc};
+use chrono::{Duration, TimeZone, Utc};
 use consumer::models::{AisPosition, AisStatic};
 
 use crate::helper::test;
@@ -73,6 +73,28 @@ async fn test_postgres_handles_multiple_static_messages_from_same_vessel() {
         helper.postgres_cancellation.send(()).await.unwrap();
 
         assert_eq!(vec![vessel], helper.db.all_ais_vessels().await);
+    })
+    .await;
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn test_ais_position_messages_updates_current_position() {
+    test(|helper| async move {
+        let pos = AisPosition::test_default(None);
+        let mut pos2 = pos.clone();
+        pos2.msgtime += Duration::seconds(10);
+        helper.ais_source.send_position(&pos).await;
+
+        tokio::time::sleep(helper.consumer_commit_interval * 2).await;
+
+        helper.ais_source.send_position(&pos2).await;
+
+        tokio::time::sleep(helper.consumer_commit_interval * 2).await;
+
+        helper.consumer_cancellation.send(()).await.unwrap();
+        helper.postgres_cancellation.send(()).await.unwrap();
+
+        assert_eq!(vec![pos2], helper.db.all_current_ais_positions().await);
     })
     .await;
 }

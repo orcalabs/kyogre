@@ -65,6 +65,32 @@ FROM ais_positions
         converted
     }
 
+    pub async fn all_current_ais_positions(&self) -> Vec<AisPosition> {
+        let mut conn = self.db.pool.acquire().await.unwrap();
+
+        let positions = sqlx::query_as!(
+            crate::models::AisPosition,
+            r#"
+SELECT
+    mmsi, latitude, longitude, course_over_ground, rate_of_turn, true_heading,
+    speed_over_ground, timestamp as msgtime,  navigation_status_id as navigational_status
+FROM current_ais_positions
+            "#
+        )
+        .fetch_all(&mut conn)
+        .await
+        .unwrap();
+
+        let mut converted = Vec::with_capacity(positions.len());
+
+        for p in positions {
+            let core_model = AisPosition::try_from(p).unwrap();
+            converted.push(core_model);
+        }
+
+        converted
+    }
+
     pub async fn all_ais_vessels(&self) -> Vec<AisVessel> {
         let mut conn = self.db.pool.acquire().await.unwrap();
 
@@ -311,7 +337,17 @@ SET
         let mut altitude = Vec::with_capacity(positions.len());
         let mut navigation_status_id = Vec::with_capacity(positions.len());
 
+        let mut latest_position_per_vessel: HashMap<i32, NewAisPosition> = HashMap::new();
+
         for p in positions {
+            if let Some(v) = latest_position_per_vessel.get(&p.mmsi) {
+                if p.msgtime > v.msgtime {
+                    latest_position_per_vessel.insert(p.mmsi, p.clone());
+                }
+            } else {
+                latest_position_per_vessel.insert(p.mmsi, p.clone());
+            }
+
             mmsis.push(p.mmsi);
             latitude.push(
                 BigDecimal::from_f64(p.latitude)
@@ -373,6 +409,8 @@ SET
             r#"
 INSERT INTO ais_vessels(mmsi)
 VALUES (UNNEST ($1::int[]))
+ON CONFLICT (mmsi)
+DO NOTHING
             "#,
             &mmsis
         )
@@ -393,7 +431,7 @@ SELECT * FROM
         $3::decimal[],
         $4::decimal[],
         $5::decimal[],
-        $6::decimal[],
+        $6::int[],
         $7::decimal[],
         $8::timestamptz[],
         $9::int[],
@@ -415,6 +453,94 @@ SELECT * FROM
         .await
         .into_report()
         .change_context(PostgresError::Query)?;
+
+        for (_, p) in latest_position_per_vessel {
+            let latitude = BigDecimal::from_f64(p.latitude)
+                .ok_or(BigDecimalError(p.latitude))
+                .into_report()
+                .change_context(PostgresError::DataConversion)?;
+
+            let longitude = BigDecimal::from_f64(p.longitude)
+                .ok_or(BigDecimalError(p.longitude))
+                .into_report()
+                .change_context(PostgresError::DataConversion)?;
+
+            let course_over_ground = p
+                .course_over_ground
+                .map(|v| {
+                    BigDecimal::from_f64(v)
+                        .ok_or(BigDecimalError(v))
+                        .into_report()
+                        .change_context(PostgresError::DataConversion)
+                })
+                .transpose()?;
+
+            let rate_of_turn = p
+                .rate_of_turn
+                .map(|v| {
+                    BigDecimal::from_f64(v)
+                        .ok_or(BigDecimalError(v))
+                        .into_report()
+                        .change_context(PostgresError::DataConversion)
+                })
+                .transpose()?;
+
+            let speed_over_ground = p
+                .speed_over_ground
+                .map(|v| {
+                    BigDecimal::from_f64(v)
+                        .ok_or(BigDecimalError(v))
+                        .into_report()
+                        .change_context(PostgresError::DataConversion)
+                })
+                .transpose()?;
+
+            sqlx::query!(
+                r#"
+INSERT INTO current_ais_positions(mmsi, latitude, longitude, course_over_ground,
+    rate_of_turn, true_heading, speed_over_ground,
+    timestamp, altitude, navigation_status_id)
+VALUES(
+        $1::int,
+        $2::decimal,
+        $3::decimal,
+        $4::decimal,
+        $5::decimal,
+        $6::int,
+        $7::decimal,
+        $8::timestamptz,
+        $9::int,
+        $10::int
+)
+ON CONFLICT (mmsi)
+DO UPDATE
+    SET
+        latitude = excluded.latitude,
+        longitude = excluded.longitude,
+        course_over_ground = excluded.course_over_ground,
+        rate_of_turn = excluded.rate_of_turn,
+        true_heading = excluded.true_heading,
+        speed_over_ground = excluded.speed_over_ground,
+        timestamp = excluded.timestamp,
+        altitude = excluded.altitude,
+        navigation_status_id = excluded.navigation_status_id
+            "#,
+                p.mmsi,
+                latitude,
+                longitude,
+                course_over_ground,
+                rate_of_turn,
+                p.true_heading,
+                speed_over_ground,
+                p.msgtime,
+                p.altitude,
+                p.navigational_status as i32,
+            )
+            .execute(&mut tx)
+            .await
+            .into_report()
+            .change_context(PostgresError::Query)?;
+        }
 
         tx.commit()
             .await
