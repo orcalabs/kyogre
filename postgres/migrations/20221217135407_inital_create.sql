@@ -31,6 +31,20 @@ CREATE TABLE ais_positions (
     navigation_status_id int NOT NULL references navigation_status(navigation_status_id)
 );
 
+CREATE TABLE current_ais_positions (
+    mmsi int NOT NULL references ais_vessels(mmsi),
+    latitude decimal NOT NULL,
+    longitude decimal NOT NULL,
+    course_over_ground decimal,
+    rate_of_turn decimal,
+    true_heading int,
+    speed_over_ground decimal,
+    timestamp timestamptz NOT NULL,
+    altitude int,
+    navigation_status_id int NOT NULL references navigation_status(navigation_status_id),
+    PRIMARY KEY (mmsi)
+);
+
 INSERT INTO navigation_status(navigation_status_id, name) VALUES
     (0, 'UnderWayUsingEngine'),
     (1, 'AtAnchor'),
