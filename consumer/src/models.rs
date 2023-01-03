@@ -1,5 +1,5 @@
 use ais_core::{NavigationStatus, NewAisPosition, NewAisStatic};
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, TimeZone, Utc};
 use rand::{random, Rng};
 use serde::{Deserialize, Serialize};
 
@@ -19,7 +19,7 @@ pub struct AisStatic {
     #[serde(rename = "callSign")]
     pub call_sign: Option<String>,
     pub destination: Option<String>,
-    pub eta: Option<String>,
+    pub eta: Option<DateTime<Utc>>,
     pub name: Option<String>,
     pub draught: Option<i32>,
     #[serde(rename = "shipLength")]
@@ -178,7 +178,7 @@ impl AisStatic {
             imo_number: Some(123),
             call_sign: Some("LK45".to_string()),
             destination: Some("BERGEN".to_string()),
-            eta: Some("1981".to_string()),
+            eta: Some(Utc.timestamp_opt(1000, 0).unwrap()),
             name: Some("sjarken".to_string()),
             draught: Some(213),
             ship_length: Some(23),
@@ -223,6 +223,8 @@ impl PartialEq<ais_core::AisVessel> for AisStatic {
             && other.name == self.name
             && other.ship_width == self.ship_width
             && other.ship_length == self.ship_length
+            && other.eta.map(|t| t.timestamp()) == self.eta.map(|t| t.timestamp())
+            && other.destination == self.destination
     }
 }
 
