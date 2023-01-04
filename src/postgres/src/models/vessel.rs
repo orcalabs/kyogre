@@ -1,6 +1,6 @@
-use ais_core::CallSign;
 use chrono::{DateTime, Utc};
 use error_stack::{IntoReport, Report, ResultExt};
+use kyogre_core::CallSign;
 
 use crate::error::PostgresError;
 
@@ -16,11 +16,11 @@ pub struct AisVessel {
     pub destination: Option<String>,
 }
 
-impl TryFrom<AisVessel> for ais_core::AisVessel {
+impl TryFrom<AisVessel> for kyogre_core::AisVessel {
     type Error = Report<PostgresError>;
 
     fn try_from(value: AisVessel) -> Result<Self, Self::Error> {
-        Ok(ais_core::AisVessel {
+        Ok(kyogre_core::AisVessel {
             mmsi: value.mmsi,
             imo_number: value.imo_number,
             call_sign: value

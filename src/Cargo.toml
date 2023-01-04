@@ -1,6 +1,6 @@
 [workspace]
 members = [
     "postgres",
-    "consumer",
-    "ais-core",
+    "ais-consumer",
+    "kyogre-core",
 ]

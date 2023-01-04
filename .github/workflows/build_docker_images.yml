@@ -10,7 +10,7 @@ on:
       - master
     paths:
       - src/**/*
-      - Dockerfile
+      - dockerfiles/**/*
 
 jobs:
   build:
@@ -34,8 +34,10 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v3
         with:
+          context: .
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          file: dockerfiles/ais-consumer/Dockerfile
           push: true
           tags: ghcr.io/orcalabs/kyogre/ais-consumer:${{ github.sha }}
           secrets: |

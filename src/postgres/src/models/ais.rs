@@ -1,8 +1,8 @@
-use ais_core::NavigationStatus;
 use bigdecimal::FromPrimitive;
 use bigdecimal::{BigDecimal, ToPrimitive};
 use chrono::{DateTime, Utc};
 use error_stack::{IntoReport, Report, ResultExt};
+use kyogre_core::NavigationStatus;
 
 use crate::error::{FromBigDecimalError, NavigationStatusError, PostgresError};
 
@@ -19,11 +19,11 @@ pub struct AisPosition {
     pub true_heading: Option<i32>,
 }
 
-impl TryFrom<AisPosition> for ais_core::AisPosition {
+impl TryFrom<AisPosition> for kyogre_core::AisPosition {
     type Error = Report<PostgresError>;
 
     fn try_from(value: AisPosition) -> Result<Self, Self::Error> {
-        Ok(ais_core::AisPosition {
+        Ok(kyogre_core::AisPosition {
             latitude: value
                 .latitude
                 .to_f64()
