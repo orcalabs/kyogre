@@ -7,7 +7,7 @@ services:
     ports:
       - 5432:5432
   consumer:
-    image: gchr.io/orcalabs/ais-consumer/consumer
+    image: gchr.io/orcalabs/kyogre/ais-consumer
     environment:
       - RUST_BACKTRACE=1
       - APP_ENVIRONMENT=local
