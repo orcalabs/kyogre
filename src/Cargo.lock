@@ -20,6 +20,37 @@ dependencies = [
 ]
 
 [[package]]
+name = "ais-consumer"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "config",
+ "dockertest",
+ "error-stack",
+ "flate2",
+ "futures",
+ "geo",
+ "humantime-serde",
+ "hyper",
+ "hyper-alpn",
+ "kyogre-core",
+ "lazy_static",
+ "oauth2",
+ "orca-core",
+ "postgres",
+ "rand",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tokio-stream",
+ "tokio-util",
+ "tracing",
+ "tracing-subscriber",
+ "vpsearch",
+]
+
+[[package]]
 name = "android_system_properties"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -302,37 +333,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "consumer"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "chrono",
- "config",
- "dockertest",
- "error-stack",
- "flate2",
- "futures",
- "geo",
- "humantime-serde",
- "hyper",
- "hyper-alpn",
- "kyogre-core",
- "lazy_static",
- "oauth2",
- "orca-core",
- "postgres",
- "rand",
- "serde",
- "serde_json",
- "tokio",
- "tokio-stream",
- "tokio-util",
- "tracing",
- "tracing-subscriber",
- "vpsearch",
-]
-
-[[package]]
 name = "core-foundation"
 version = "0.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -516,6 +516,17 @@ dependencies = [
  "lock_api",
  "once_cell",
  "parking_lot_core 0.9.5",
+]
+
+[[package]]
+name = "database-migrator"
+version = "0.1.0"
+dependencies = [
+ "config",
+ "orca-core",
+ "postgres",
+ "serde",
+ "tokio",
 ]
 
 [[package]]

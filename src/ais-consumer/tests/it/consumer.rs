@@ -1,5 +1,5 @@
+use ais_consumer::models::{AisPosition, AisStatic};
 use chrono::{Duration, TimeZone, Utc};
-use consumer::models::{AisPosition, AisStatic};
 
 use crate::helper::test;
 

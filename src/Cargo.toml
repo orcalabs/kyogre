@@ -3,4 +3,5 @@ members = [
     "postgres",
     "ais-consumer",
     "kyogre-core",
+    "database-migrator",
 ]
