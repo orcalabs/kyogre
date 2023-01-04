@@ -30,7 +30,8 @@ CREATE TABLE ais_positions (
     altitude int,
     distance_to_shore decimal NOT NULL,
     navigation_status_id int NOT NULL references navigation_status(navigation_status_id)
-);
+)
+PARTITION BY LIST (mmsi);
 
 CREATE TABLE current_ais_positions (
     mmsi int NOT NULL references ais_vessels(mmsi),
@@ -65,4 +66,27 @@ INSERT INTO navigation_status(navigation_status_id, name) VALUES
     (14, 'AisSartIsActive'),
     (15, 'NotDefined');
 
-CREATE UNIQUE INDEX ON ais_positions (timestamp);
+CREATE UNIQUE INDEX ON ais_positions (mmsi, timestamp);
+
+CREATE OR REPLACE FUNCTION add_ais_position_partition()
+ RETURNS TRIGGER
+ LANGUAGE PLPGSQL
+AS $$
+    DECLARE _mmsi int;
+    BEGIN
+        IF (TG_OP = 'INSERT') THEN
+            execute format(
+                $f$
+                    CREATE TABLE IF NOT EXISTS %I PARTITION OF ais_positions FOR VALUES IN (%L);
+                $f$,
+                concat('ais_positions', NEW.mmsi), NEW.mmsi);
+        END IF;
+
+        RETURN NEW;
+   END;
+$$;
+
+CREATE TRIGGER ais_vessels_after_insert
+    AFTER INSERT ON ais_vessels
+    FOR EACH ROW
+    EXECUTE PROCEDURE add_ais_position_partition();
