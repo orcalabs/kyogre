@@ -6,3 +6,15 @@ services:
       - POSTGRES_PASSWORD=test123
     ports:
       - 5432:5432
+  consumer:
+    image: gchr.io/orcalabs/ais-consumer/consumer
+    environment:
+      - RUST_BACKTRACE=1
+      - APP_ENVIRONMENT=local
+    build:
+      secrets:
+        - source: git-credentials
+
+secrets:
+  git-credentials:
+    file: ~/.git-credentials
