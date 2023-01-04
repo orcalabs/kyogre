@@ -1,3 +1,6 @@
+#![deny(warnings)]
+#![deny(rust_2018_idioms)]
+
 use chrono::{DateTime, Utc};
 use num_derive::FromPrimitive;
 use serde_repr::{Deserialize_repr, Serialize_repr};
@@ -27,6 +30,7 @@ pub struct NewAisPosition {
     pub rate_of_turn: Option<f64>,
     pub speed_over_ground: Option<f64>,
     pub true_heading: Option<i32>,
+    pub distance_to_shore: f64,
 }
 
 #[derive(Debug, Clone)]

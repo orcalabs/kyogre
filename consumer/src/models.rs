@@ -3,7 +3,7 @@ use chrono::{DateTime, TimeZone, Utc};
 use rand::{random, Rng};
 use serde::{Deserialize, Serialize};
 
-use crate::error::AisMessageError;
+use crate::{distance_to_shore::distance_to_shore, error::AisMessageError};
 
 /// Vessel related data that is emitted every 6th minute from vessels.
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -141,6 +141,7 @@ impl From<AisPosition> for NewAisPositionWrapper {
                 rate_of_turn: a.rate_of_turn,
                 speed_over_ground: a.speed_over_ground,
                 true_heading: a.true_heading,
+                distance_to_shore: distance_to_shore(latitude, longitude),
             })),
             _ => NewAisPositionWrapper(None),
         }

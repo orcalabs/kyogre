@@ -28,6 +28,7 @@ CREATE TABLE ais_positions (
     speed_over_ground decimal,
     timestamp timestamptz NOT NULL,
     altitude int,
+    distance_to_shore decimal NOT NULL,
     navigation_status_id int NOT NULL references navigation_status(navigation_status_id)
 );
 
@@ -41,6 +42,7 @@ CREATE TABLE current_ais_positions (
     speed_over_ground decimal,
     timestamp timestamptz NOT NULL,
     altitude int,
+    distance_to_shore decimal NOT NULL,
     navigation_status_id int NOT NULL references navigation_status(navigation_status_id),
     PRIMARY KEY (mmsi)
 );
