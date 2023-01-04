@@ -1,0 +1,11 @@
+log_level: "Info"
+api_address: "https://live.ais.barentswatch.no/live/v1/ais/"
+oauth:
+  auth_url: "https://id.barentswatch.no/connect/authorize"
+  token_url: "https://id.barentswatch.no/connect/token"
+  scope: "ais"
+postgres:
+  max_connections: 1
+  log_statements: "Disable"
+commit_interval: 10s
+broadcast_buffer_size: 100

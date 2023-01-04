@@ -1,0 +1,2 @@
+[registries]
+orcalabs-orcastrator = { index = "https://dl.cloudsmith.io/basic/orcalabs/orcastrator/cargo/index.git" }

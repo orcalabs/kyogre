@@ -15,7 +15,7 @@ jobs:
     secrets: inherit
     with:
       dependencies: protobuf-compiler
-      src-dir: .
+      src-dir: src
   update-sqlx-cache:
     runs-on: ubuntu-latest
     services:
@@ -40,6 +40,7 @@ jobs:
       - if: steps.cache.outputs.cache-hit != 'true'
         name: build cache
         run: |
+          cd src
           sudo apt-get install -y protobuf-compiler
           git config --global credential.helper store
           echo '${{ secrets.CLOUDSMITH_CARGO_REGISTRY }}' > ~/.cargo/config
