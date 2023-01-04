@@ -177,32 +177,19 @@ impl PostgresAdapter {
     pub async fn consume_loop(
         self,
         mut receiver: tokio::sync::broadcast::Receiver<DataMessage>,
-        cancellation: Option<tokio::sync::mpsc::Receiver<()>>,
+        process_confirmation: Option<tokio::sync::mpsc::Sender<()>>,
     ) {
-        let enable_cancellation = cancellation.is_some();
-        let mut cancellation = if let Some(c) = cancellation {
-            c
-        } else {
-            let (_, recv) = tokio::sync::mpsc::channel(1);
-            recv
-        };
-
         loop {
-            tokio::select! {
-            message = receiver.recv() => {
-                match self.process_message(message).await {
-                    AisProcessingAction::Exit => break,
-                    AisProcessingAction::Continue => (),
-                }
+            let message = receiver.recv().await;
+            let result = self.process_message(message).await;
+            // Only enabled in tests
+            if let Some(ref s) = process_confirmation {
+                s.send(()).await.unwrap();
             }
-            _ = cancellation.recv(), if enable_cancellation => {
-                event!(
-                    Level::WARN,
-                        "cancellation message received, exiting"
-                    );
-                        break;
-                    }
-                }
+            match result {
+                AisProcessingAction::Exit => break,
+                AisProcessingAction::Continue => (),
+            }
         }
     }
 

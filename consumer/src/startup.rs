@@ -1,7 +1,9 @@
 use crate::{
-    barentswatch::BarentswatchAisClient, consumer::Consumer, settings::Settings, token::BearerToken,
+    barentswatch::BarentswatchAisClient, consumer::Consumer, error::ConsumerError,
+    settings::Settings, token::BearerToken,
 };
 use ais_core::DataMessage;
+use error_stack::Result;
 use hyper::Uri;
 use postgres::PostgresAdapter;
 use std::str::FromStr;
@@ -49,7 +51,6 @@ impl App {
             .run(
                 self.ais_source.unwrap().streamer().await.unwrap(),
                 self.sender,
-                None,
             )
             .await
             .unwrap()
@@ -58,17 +59,13 @@ impl App {
     pub async fn run_test(
         self,
         source: impl AsyncRead + Unpin,
-        postgres_cancellation: tokio::sync::mpsc::Receiver<()>,
-        consumer_cancellation: tokio::sync::mpsc::Receiver<()>,
-    ) {
+        postgres_process_confirmation: tokio::sync::mpsc::Sender<()>,
+    ) -> Result<(), ConsumerError> {
         let receiver = self.subscribe();
         tokio::spawn(
             self.postgres
-                .consume_loop(receiver, Some(postgres_cancellation)),
+                .consume_loop(receiver, Some(postgres_process_confirmation)),
         );
-        self.consumer
-            .run(source, self.sender, Some(consumer_cancellation))
-            .await
-            .unwrap()
+        self.consumer.run(source, self.sender).await
     }
 }

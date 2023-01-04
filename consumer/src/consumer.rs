@@ -25,18 +25,9 @@ impl Consumer {
         self,
         source: impl AsyncRead + Unpin,
         sender: Sender<DataMessage>,
-        cancellation: Option<tokio::sync::mpsc::Receiver<()>>,
     ) -> Result<(), ConsumerError> {
         let codec = LinesCodec::new_with_max_length(1000);
         let mut framed_read = FramedRead::new(source, codec);
-
-        let enable_cancellation = cancellation.is_some();
-        let mut cancellation = if let Some(c) = cancellation {
-            c
-        } else {
-            let (_, recv) = tokio::sync::mpsc::channel(1);
-            recv
-        };
 
         // This vector is never deallocated and will match the size of
         // highest amount of messages received during a commit interval.
@@ -56,9 +47,6 @@ impl Consumer {
                     if !buffer.is_empty() {
                         process_messages(buffer.drain(..), &sender).await?;
                     }
-                }
-                _ = cancellation.recv(), if enable_cancellation => {
-                    break Ok(());
                 }
             }
         }

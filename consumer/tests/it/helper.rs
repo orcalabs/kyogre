@@ -29,8 +29,7 @@ pub struct TestHelper {
     pub ais_source: AisSource,
     pub db: TestDb,
     pub consumer_commit_interval: std::time::Duration,
-    pub consumer_cancellation: tokio::sync::mpsc::Sender<()>,
-    pub postgres_cancellation: tokio::sync::mpsc::Sender<()>,
+    pub postgres_process_confirmation: tokio::sync::mpsc::Receiver<()>,
 }
 
 pub struct AisSource {
@@ -107,7 +106,7 @@ where
             let test_db = TestDb { db };
             test_db.do_migrations().await;
 
-            let (postgres_cancellation, postgres_recv_cancel) = tokio::sync::mpsc::channel(1);
+            let (postgres_sender, postgres_recveiver) = tokio::sync::mpsc::channel(100);
             let app = App::build(app_settings).await;
 
             let (sender, recv) = tokio::sync::mpsc::channel(100);
@@ -117,16 +116,13 @@ where
                 receiver_stream.into_async_read(),
             );
 
-            let (consumer_cancellation, consumer_recv_cancel) = tokio::sync::mpsc::channel(1);
-
-            tokio::spawn(app.run_test(compat, postgres_recv_cancel, consumer_recv_cancel));
+            tokio::spawn(app.run_test(compat, postgres_sender));
 
             let helper = TestHelper {
                 ais_source: AisSource { out: sender },
                 db: test_db.clone(),
                 consumer_commit_interval: commit_interval,
-                consumer_cancellation,
-                postgres_cancellation,
+                postgres_process_confirmation: postgres_recveiver,
             };
 
             test_closure(helper).await;
