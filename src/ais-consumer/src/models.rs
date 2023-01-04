@@ -1,5 +1,5 @@
-use ais_core::{NavigationStatus, NewAisPosition, NewAisStatic};
 use chrono::{DateTime, TimeZone, Utc};
+use kyogre_core::{NavigationStatus, NewAisPosition, NewAisStatic};
 use rand::{random, Rng};
 use serde::{Deserialize, Serialize};
 
@@ -195,8 +195,8 @@ impl AisStatic {
     }
 }
 
-impl PartialEq<ais_core::AisPosition> for AisPosition {
-    fn eq(&self, other: &ais_core::AisPosition) -> bool {
+impl PartialEq<kyogre_core::AisPosition> for AisPosition {
+    fn eq(&self, other: &kyogre_core::AisPosition) -> bool {
         self.latitude.unwrap() as i32 == other.latitude as i32
             && self.longitude.unwrap() as i32 == other.longitude as i32
             && self.mmsi == other.mmsi
@@ -210,14 +210,14 @@ impl PartialEq<ais_core::AisPosition> for AisPosition {
     }
 }
 
-impl PartialEq<AisPosition> for ais_core::AisPosition {
+impl PartialEq<AisPosition> for kyogre_core::AisPosition {
     fn eq(&self, other: &AisPosition) -> bool {
         other.eq(self)
     }
 }
 
-impl PartialEq<ais_core::AisVessel> for AisStatic {
-    fn eq(&self, other: &ais_core::AisVessel) -> bool {
+impl PartialEq<kyogre_core::AisVessel> for AisStatic {
+    fn eq(&self, other: &kyogre_core::AisVessel) -> bool {
         other.mmsi == self.mmsi
             && other.imo_number == self.imo_number
             && other.call_sign.as_ref().map(|c| c.as_ref()) == self.call_sign.as_deref()
@@ -229,7 +229,7 @@ impl PartialEq<ais_core::AisVessel> for AisStatic {
     }
 }
 
-impl PartialEq<AisStatic> for ais_core::AisVessel {
+impl PartialEq<AisStatic> for kyogre_core::AisVessel {
     fn eq(&self, other: &AisStatic) -> bool {
         other.eq(self)
     }

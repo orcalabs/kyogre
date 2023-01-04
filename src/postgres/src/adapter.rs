@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 
 use crate::error::{BigDecimalError, PostgresError};
-use ais_core::{AisPosition, AisVessel, DataMessage, NewAisPosition, NewAisStatic};
 use bigdecimal::{BigDecimal, FromPrimitive};
 use error_stack::{IntoReport, Result, ResultExt};
+use kyogre_core::{AisPosition, AisVessel, DataMessage, NewAisPosition, NewAisStatic};
 use orca_core::{PsqlLogStatements, PsqlSettings};
 use sqlx::{
     postgres::{PgConnectOptions, PgPoolOptions, PgSslMode},

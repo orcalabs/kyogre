@@ -5,9 +5,9 @@ use crate::{
         SupportedMessageTypes,
     },
 };
-use ais_core::{DataMessage, NewAisStatic};
 use error_stack::{bail, IntoReport, Result, ResultExt};
 use futures::StreamExt;
+use kyogre_core::{DataMessage, NewAisStatic};
 use tokio::io::AsyncRead;
 use tokio::sync::broadcast::Sender;
 use tokio_util::codec::{FramedRead, LinesCodec, LinesCodecError};

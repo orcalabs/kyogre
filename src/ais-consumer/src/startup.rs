@@ -2,9 +2,9 @@ use crate::{
     barentswatch::BarentswatchAisClient, consumer::Consumer, error::ConsumerError,
     settings::Settings, token::BearerToken,
 };
-use ais_core::DataMessage;
 use error_stack::Result;
 use hyper::Uri;
+use kyogre_core::DataMessage;
 use postgres::PostgresAdapter;
 use std::str::FromStr;
 use tokio::{

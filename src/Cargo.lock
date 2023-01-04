@@ -20,19 +20,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ais-core"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "chrono",
- "num-derive",
- "num-traits",
- "serde",
- "serde_repr",
- "strum",
-]
-
-[[package]]
 name = "android_system_properties"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -318,7 +305,6 @@ dependencies = [
 name = "consumer"
 version = "0.1.0"
 dependencies = [
- "ais-core",
  "async-trait",
  "chrono",
  "config",
@@ -330,6 +316,7 @@ dependencies = [
  "humantime-serde",
  "hyper",
  "hyper-alpn",
+ "kyogre-core",
  "lazy_static",
  "oauth2",
  "orca-core",
@@ -1201,6 +1188,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "kyogre-core"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "num-derive",
+ "num-traits",
+ "serde",
+ "serde_repr",
+ "strum",
+]
+
+[[package]]
 name = "lazy_static"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1791,10 +1791,10 @@ checksum = "6ac9a59f73473f1b8d852421e59e64809f025994837ef743615c6d0c5b305160"
 name = "postgres"
 version = "0.1.0"
 dependencies = [
- "ais-core",
  "bigdecimal",
  "chrono",
  "error-stack",
+ "kyogre-core",
  "orca-core",
  "sqlx",
  "tokio",
