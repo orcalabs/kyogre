@@ -1,4 +1,4 @@
-use consumer::{settings::Settings, startup::App};
+use ais_consumer::{settings::Settings, startup::App};
 use orca_core::{Environment, TracingOutput};
 use tracing::{event, span, Level};
 
@@ -16,7 +16,7 @@ async fn main() {
 
     orca_core::init_tracer(
         Level::from(&settings.log_level),
-        "ais-ais-consumer",
+        "kyogre-ais-consumer",
         "ais-consumer",
         tracing,
     );

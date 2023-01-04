@@ -43,3 +43,15 @@ jobs:
           secrets: |
             git-credentials=${{ secrets.CLOUDSMITH_GIT_API_KEY }}
 
+      - name: Build and push
+        uses: docker/build-push-action@v3
+        with:
+          context: .
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          file: dockerfiles/database-migrator/Dockerfile
+          push: true
+          tags: ghcr.io/orcalabs/kyogre/database-migrator:${{ github.sha }}
+          secrets: |
+            git-credentials=${{ secrets.CLOUDSMITH_GIT_API_KEY }}
+

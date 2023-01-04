@@ -1,5 +1,5 @@
 [package]
-name = "consumer"
+name = "ais-consumer"
 version = "0.1.0"
 edition = "2021"
 

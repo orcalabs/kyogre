@@ -124,14 +124,6 @@ FROM ais_vessels
             .await
             .unwrap();
     }
-
-    pub async fn do_migrations(&self) {
-        sqlx::migrate!()
-            .set_ignore_missing(true)
-            .run(&self.db.pool)
-            .await
-            .unwrap();
-    }
 }
 
 impl PostgresAdapter {
@@ -172,6 +164,14 @@ impl PostgresAdapter {
             .change_context(PostgresError::Connection)?;
 
         Ok(PostgresAdapter { pool })
+    }
+
+    pub async fn do_migrations(&self) {
+        sqlx::migrate!()
+            .set_ignore_missing(true)
+            .run(&self.pool)
+            .await
+            .unwrap();
     }
 
     pub async fn consume_loop(

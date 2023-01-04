@@ -26,12 +26,12 @@ RUN --mount=type=secret,id=git-credentials,target=/root/.git-credentials,require
 
 COPY src .
 RUN --mount=type=secret,id=git-credentials,target=~/.git-credentials,required=true \
-    cargo build --release --bin ais-consumer
+    cargo build --release --bin database-migrator
 
 FROM gcr.io/distroless/cc
 
-COPY --from=builder /app/target/release/ais-consumer .
+COPY --from=builder /app/target/release/database-migrator .
 
-COPY src/ais-consumer/config config
+COPY src/database-migrator/config config
 
-CMD ["./ais-consumer"]
+CMD ["./database-migrator"]

@@ -1,6 +1,6 @@
 use std::panic;
 
-use consumer::{
+use ais_consumer::{
     models::{AisPosition, AisStatic},
     settings::Settings,
     startup::App,
@@ -103,8 +103,8 @@ where
                 api_address: None,
             };
 
+            db.do_migrations().await;
             let test_db = TestDb { db };
-            test_db.do_migrations().await;
 
             let (postgres_sender, postgres_recveiver) = tokio::sync::mpsc::channel(100);
             let app = App::build(app_settings).await;

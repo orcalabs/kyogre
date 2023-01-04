@@ -1,0 +1,7 @@
+postgres:
+  ip: "db"
+  port: 5432
+  username: "postgres"
+  password: "super_secret_password12"
+  max_connections: 1
+  log_statements: "Disable"
