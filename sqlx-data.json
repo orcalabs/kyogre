@@ -60,6 +60,28 @@
     },
     "query": "\nSELECT\n    mmsi, imo_number, call_sign, name, ship_width, ship_length,\n    eta, destination\nFROM ais_vessels\n            "
   },
+  "35e8a3ccaca470af986e5472d3c9030a066a40da7a4a70d2e2aae89253dd68c3": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Int4Array",
+          "NumericArray",
+          "NumericArray",
+          "NumericArray",
+          "NumericArray",
+          "Int4Array",
+          "NumericArray",
+          "TimestamptzArray",
+          "Int4Array",
+          "NumericArray",
+          "Int4Array"
+        ]
+      }
+    },
+    "query": "\nINSERT INTO ais_positions(mmsi, latitude, longitude, course_over_ground,\n    rate_of_turn, true_heading, speed_over_ground,\n    timestamp, altitude, distance_to_shore, navigation_status_id)\nSELECT * FROM\n    UNNEST(\n        $1::int[],\n        $2::decimal[],\n        $3::decimal[],\n        $4::decimal[],\n        $5::decimal[],\n        $6::int[],\n        $7::decimal[],\n        $8::timestamptz[],\n        $9::int[],\n        $10::decimal[],\n        $11::int[]\n)\n            "
+  },
   "3ea60cb18afb359926c17d72b4a87651c314054f7fecd32e0ceef17edc653d47": {
     "describe": {
       "columns": [
@@ -192,6 +214,28 @@
     },
     "query": "\nSELECT\n    mmsi, latitude, longitude, course_over_ground, rate_of_turn, true_heading,\n    speed_over_ground, timestamp as msgtime,  navigation_status_id as navigational_status\nFROM ais_positions\n            "
   },
+  "73129fb002b5b8f1ed25664a2b842de200e5d5ddb2affdaf4931fda228ae4f60": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Int4",
+          "Numeric",
+          "Numeric",
+          "Numeric",
+          "Numeric",
+          "Int4",
+          "Numeric",
+          "Timestamptz",
+          "Int4",
+          "Numeric",
+          "Int4"
+        ]
+      }
+    },
+    "query": "\nINSERT INTO current_ais_positions(mmsi, latitude, longitude, course_over_ground,\n    rate_of_turn, true_heading, speed_over_ground,\n    timestamp, altitude, distance_to_shore, navigation_status_id)\nVALUES(\n        $1::int,\n        $2::decimal,\n        $3::decimal,\n        $4::decimal,\n        $5::decimal,\n        $6::int,\n        $7::decimal,\n        $8::timestamptz,\n        $9::int,\n        $10::decimal,\n        $11::int\n)\nON CONFLICT (mmsi)\nDO UPDATE\n    SET\n        latitude = excluded.latitude,\n        longitude = excluded.longitude,\n        course_over_ground = excluded.course_over_ground,\n        rate_of_turn = excluded.rate_of_turn,\n        true_heading = excluded.true_heading,\n        speed_over_ground = excluded.speed_over_ground,\n        timestamp = excluded.timestamp,\n        altitude = excluded.altitude,\n        distance_to_shore = excluded.distance_to_shore,\n        navigation_status_id = excluded.navigation_status_id\n            "
+  },
   "7681e33720e06537ba01f056a6cb373a916b9266d842ed2151ac9fae7f066ffb": {
     "describe": {
       "columns": [],
@@ -224,47 +268,5 @@
       }
     },
     "query": "\nINSERT INTO ais_vessels(mmsi, imo_number, call_sign, name, ship_width, ship_length, ship_type, eta, draught, destination)\nSELECT * FROM UNNEST($1::int[], $2::int[], $3::varchar[], $4::varchar[], $5::int[], $6::int[],\n    $7::int[], $8::timestamptz[], $9::int[], $10::varchar[])\nON CONFLICT (mmsi)\nDO UPDATE\nSET\n    imo_number = excluded.imo_number,\n    call_sign = excluded.call_sign,\n    name = excluded.name,\n    ship_width = excluded.ship_width,\n    ship_length = excluded.ship_length,\n    ship_type = excluded.ship_type,\n    eta = excluded.eta,\n    draught = excluded.draught,\n    destination = excluded.destination\n            "
-  },
-  "c22cc6a87a125055fc07cccf09eb09da366f2d3b7c886923f430ca65ef68e705": {
-    "describe": {
-      "columns": [],
-      "nullable": [],
-      "parameters": {
-        "Left": [
-          "Int4Array",
-          "NumericArray",
-          "NumericArray",
-          "NumericArray",
-          "NumericArray",
-          "Int4Array",
-          "NumericArray",
-          "TimestamptzArray",
-          "Int4Array",
-          "Int4Array"
-        ]
-      }
-    },
-    "query": "\nINSERT INTO ais_positions(mmsi, latitude, longitude, course_over_ground,\n    rate_of_turn, true_heading, speed_over_ground,\n    timestamp, altitude, navigation_status_id)\nSELECT * FROM\n    UNNEST(\n        $1::int[],\n        $2::decimal[],\n        $3::decimal[],\n        $4::decimal[],\n        $5::decimal[],\n        $6::int[],\n        $7::decimal[],\n        $8::timestamptz[],\n        $9::int[],\n        $10::int[]\n)\n            "
-  },
-  "c69d91e98326c9139e3632a7e43b595f8324fb06d7330f3991db978fc06e64d2": {
-    "describe": {
-      "columns": [],
-      "nullable": [],
-      "parameters": {
-        "Left": [
-          "Int4",
-          "Numeric",
-          "Numeric",
-          "Numeric",
-          "Numeric",
-          "Int4",
-          "Numeric",
-          "Timestamptz",
-          "Int4",
-          "Int4"
-        ]
-      }
-    },
-    "query": "\nINSERT INTO current_ais_positions(mmsi, latitude, longitude, course_over_ground,\n    rate_of_turn, true_heading, speed_over_ground,\n    timestamp, altitude, navigation_status_id)\nVALUES(\n        $1::int,\n        $2::decimal,\n        $3::decimal,\n        $4::decimal,\n        $5::decimal,\n        $6::int,\n        $7::decimal,\n        $8::timestamptz,\n        $9::int,\n        $10::int\n)\nON CONFLICT (mmsi)\nDO UPDATE\n    SET\n        latitude = excluded.latitude,\n        longitude = excluded.longitude,\n        course_over_ground = excluded.course_over_ground,\n        rate_of_turn = excluded.rate_of_turn,\n        true_heading = excluded.true_heading,\n        speed_over_ground = excluded.speed_over_ground,\n        timestamp = excluded.timestamp,\n        altitude = excluded.altitude,\n        navigation_status_id = excluded.navigation_status_id\n            "
   }
 }

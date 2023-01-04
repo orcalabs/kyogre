@@ -335,6 +335,7 @@ SET
         let mut speed_over_ground = Vec::with_capacity(positions.len());
         let mut timestamp = Vec::with_capacity(positions.len());
         let mut altitude = Vec::with_capacity(positions.len());
+        let mut distance_to_shore = Vec::with_capacity(positions.len());
         let mut navigation_status_id = Vec::with_capacity(positions.len());
 
         let mut latest_position_per_vessel: HashMap<i32, NewAisPosition> = HashMap::new();
@@ -394,6 +395,12 @@ SET
                     .transpose()?,
             );
             altitude.push(p.altitude);
+            distance_to_shore.push(
+                BigDecimal::from_f64(p.distance_to_shore)
+                    .ok_or(BigDecimalError(p.distance_to_shore))
+                    .into_report()
+                    .change_context(PostgresError::DataConversion)?,
+            );
             navigation_status_id.push(p.navigational_status as i32);
             timestamp.push(p.msgtime);
         }
@@ -423,7 +430,7 @@ DO NOTHING
             r#"
 INSERT INTO ais_positions(mmsi, latitude, longitude, course_over_ground,
     rate_of_turn, true_heading, speed_over_ground,
-    timestamp, altitude, navigation_status_id)
+    timestamp, altitude, distance_to_shore, navigation_status_id)
 SELECT * FROM
     UNNEST(
         $1::int[],
@@ -435,7 +442,8 @@ SELECT * FROM
         $7::decimal[],
         $8::timestamptz[],
         $9::int[],
-        $10::int[]
+        $10::decimal[],
+        $11::int[]
 )
             "#,
             &mmsis,
@@ -447,6 +455,7 @@ SELECT * FROM
             &speed_over_ground as _,
             &timestamp,
             &altitude as _,
+            &distance_to_shore,
             &navigation_status_id,
         )
         .execute(&mut tx)
@@ -495,11 +504,16 @@ SELECT * FROM
                 })
                 .transpose()?;
 
+            let distance_to_shore = BigDecimal::from_f64(p.distance_to_shore)
+                .ok_or(BigDecimalError(p.distance_to_shore))
+                .into_report()
+                .change_context(PostgresError::DataConversion)?;
+
             sqlx::query!(
                 r#"
 INSERT INTO current_ais_positions(mmsi, latitude, longitude, course_over_ground,
     rate_of_turn, true_heading, speed_over_ground,
-    timestamp, altitude, navigation_status_id)
+    timestamp, altitude, distance_to_shore, navigation_status_id)
 VALUES(
         $1::int,
         $2::decimal,
@@ -510,7 +524,8 @@ VALUES(
         $7::decimal,
         $8::timestamptz,
         $9::int,
-        $10::int
+        $10::decimal,
+        $11::int
 )
 ON CONFLICT (mmsi)
 DO UPDATE
@@ -523,6 +538,7 @@ DO UPDATE
         speed_over_ground = excluded.speed_over_ground,
         timestamp = excluded.timestamp,
         altitude = excluded.altitude,
+        distance_to_shore = excluded.distance_to_shore,
         navigation_status_id = excluded.navigation_status_id
             "#,
                 p.mmsi,
@@ -534,6 +550,7 @@ DO UPDATE
                 speed_over_ground,
                 p.msgtime,
                 p.altitude,
+                distance_to_shore,
                 p.navigational_status as i32,
             )
             .execute(&mut tx)

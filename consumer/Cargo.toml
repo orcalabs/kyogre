@@ -27,6 +27,11 @@ oauth2 = "4.2.3"
 hyper = { version = "0.14.22", features = ["http2"] }
 hyper-alpn = "0.3.0"
 
+geo = "0.23.0"
+vpsearch = "2.0.1"
+flate2 = "1.0.24"
+lazy_static = "1.4.0"
+
 [dev-dependencies]
 lazy_static = "1.4.0"
 tracing-subscriber = "0.3.16"
