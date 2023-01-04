@@ -1,4 +1,4 @@
-log_level: "Info"
+log_level: "Debug"
 api_address: "https://live.ais.barentswatch.no/live/v1/ais/"
 oauth:
   auth_url: "https://id.barentswatch.no/connect/authorize"
