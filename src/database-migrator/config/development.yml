@@ -1,0 +1,4 @@
+postgres:
+  port: 5432
+  max_connections: 1
+  log_statements: "Disable"
