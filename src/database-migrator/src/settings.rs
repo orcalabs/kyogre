@@ -1,4 +1,4 @@
-use config::{Config, File};
+use config::{Config, File, Source};
 use orca_core::{Environment, PsqlSettings};
 use serde::Deserialize;
 
@@ -14,10 +14,20 @@ impl Settings {
             .try_into()
             .expect("Failed to parse APP_ENVIRONMENT.");
 
-        let builder = Config::builder().add_source(
+        let mut builder = Config::builder().add_source(
             File::with_name(&format!("config/{}", environment.as_str().to_lowercase()))
                 .required(true),
         );
+
+        if environment == Environment::Development {
+            let database = config::File::with_name("/run/secrets/postgres-credentials.yaml")
+                .required(true)
+                .format(config::FileFormat::Yaml);
+            let map = database.collect()?;
+            builder = builder.set_override("postgres.ip", map["ip"].clone())?;
+            builder = builder.set_override("postgres.username", map["username"].clone())?;
+            builder = builder.set_override("postgres.password", map["password"].clone())?;
+        }
 
         let config = builder.build()?;
 
