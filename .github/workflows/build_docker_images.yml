@@ -55,3 +55,34 @@ jobs:
           secrets: |
             git-credentials=${{ secrets.CLOUDSMITH_GIT_API_KEY }}
 
+      - name: Checkout aks repository
+        uses: actions/checkout@v3
+        with:
+            repository: orcalabs/aks
+            token: ${{ secrets.CI_PAT_TOKEN }}
+            path: aks-repo
+
+      - name: Setup Kustomize
+        uses: imranismail/setup-kustomize@v2
+        with:
+          kustomize-version: "4.5.7"
+
+      - name: Update database-migrator image tag
+        run: |
+          cd aks-repo/pre-deploy/kyogre
+          kustomize edit set image ghcr.io/orcalabs/kyogre/database-migrator:${{ github.sha }}
+
+
+      - name: Commit and push
+        env:
+          GITHUB_TOKEN: ${{ secrets.CI_PAT_TOKEN }}
+          GH_TOKEN: ${{ secrets.CI_PAT_TOKEN }}
+        run: |
+          cd aks-repo
+          git checkout -b kyogre-${{ github.sha }}
+          git config --local user.email github-actions@github.com
+          git config --local user.name github-actions
+          git commit -am "Update kyogre image tags"
+          git push -u origin HEAD
+          gh pr create -B master -H kyogre-${{ github.sha }} --title 'Merge kyogre-tag-update' --body 'Created by Github action'
+
