@@ -72,6 +72,10 @@ jobs:
           cd aks-repo/pre-deploy/kyogre
           kustomize edit set image ghcr.io/orcalabs/kyogre/database-migrator:${{ github.sha }}
 
+      - name: Update ais-consumer image tag
+        run: |
+          cd aks-repo/apps/base/kyogre
+          kustomize edit set image ghcr.io/orcalabs/kyogre/ais-consumer:${{ github.sha }}
 
       - name: Commit and push
         env:
