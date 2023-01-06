@@ -5,6 +5,7 @@ use crate::{
 use error_stack::Result;
 use hyper::Uri;
 use kyogre_core::DataMessage;
+use orca_core::Environment;
 use postgres::PostgresAdapter;
 use std::str::FromStr;
 use tokio::{
@@ -24,13 +25,17 @@ impl App {
         let (sender, _) = broadcast::channel::<DataMessage>(settings.broadcast_buffer_size);
         let postgres = PostgresAdapter::new(&settings.postgres).await.unwrap();
 
-        let ais_source = if let orca_core::Environment::Test = settings.environment {
+        let ais_source = if let Environment::Test = settings.environment {
             None
         } else {
             let bearer_token = BearerToken::acquire(settings.oauth.unwrap()).await.unwrap();
             let uri = Uri::from_str(&settings.api_address.unwrap()).unwrap();
             Some(BarentswatchAisClient::new(bearer_token, uri))
         };
+
+        if settings.environment == Environment::Local {
+            postgres.do_migrations().await;
+        }
 
         App {
             postgres,

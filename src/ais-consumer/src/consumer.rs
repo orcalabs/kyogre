@@ -1,8 +1,7 @@
 use crate::{
     error::{AisMessageProcessingError, ConsumerError},
     models::{
-        AisMessage, AisPosition, AisStatic, MessageType, NewAisPositionWrapper,
-        SupportedMessageTypes,
+        AisMessage, AisMessageType, AisPosition, AisStatic, MessageType, NewAisPositionWrapper,
     },
 };
 use error_stack::{bail, IntoReport, Result, ResultExt};
@@ -67,9 +66,10 @@ where
             Ok(message) => match parse_message(message) {
                 Err(e) => event!(Level::ERROR, "{:?}", e),
                 Ok(message) => match message {
-                    AisMessage::Static(m) => {
-                        data_message.static_messages.push(NewAisStatic::from(m))
-                    }
+                    AisMessage::Static(m) => match NewAisStatic::try_from(m) {
+                        Err(e) => event!(Level::ERROR, "{:?}", e),
+                        Ok(d) => data_message.static_messages.push(d),
+                    },
                     AisMessage::Position(m) => {
                         if let Some(m) = NewAisPositionWrapper::from(m).0 {
                             data_message.positions.push(m)
@@ -92,40 +92,23 @@ where
 }
 
 fn parse_message(message: String) -> Result<AisMessage, AisMessageProcessingError> {
-    let message_type: Result<MessageType, AisMessageProcessingError> =
-        serde_json::from_str(&message)
-            .into_report()
-            .change_context(AisMessageProcessingError);
+    let message_type: MessageType = serde_json::from_str(&message)
+        .into_report()
+        .change_context(AisMessageProcessingError)?;
 
-    // The AIS streaming api has a weird behaviour where the `message_type` is sometimes not
-    // provided. All observed cases of this indicates that if the message does not contain a
-    // `message_type` the message is a [SupportedMessageTypes::Position], but its also possible
-    // for a position message to contain a `message_type`.
-    if let Ok(message_type) = message_type {
-        let supported = SupportedMessageTypes::try_from(message_type.message_type)
-            .into_report()
-            .change_context(AisMessageProcessingError)?;
+    match message_type.message_type {
+        AisMessageType::Position => {
+            let val: AisPosition = serde_json::from_str(&message)
+                .into_report()
+                .change_context(AisMessageProcessingError)?;
 
-        match supported {
-            SupportedMessageTypes::Position => {
-                let val: AisPosition = serde_json::from_str(&message)
-                    .into_report()
-                    .change_context(AisMessageProcessingError)?;
-
-                Ok(AisMessage::Position(val))
-            }
-            SupportedMessageTypes::Static => {
-                let val: AisStatic = serde_json::from_str(&message)
-                    .into_report()
-                    .change_context(AisMessageProcessingError)?;
-                Ok(AisMessage::Static(val))
-            }
+            Ok(AisMessage::Position(val))
         }
-    } else {
-        let val: AisPosition = serde_json::from_str(&message)
-            .into_report()
-            .change_context(AisMessageProcessingError)?;
-
-        Ok(AisMessage::Position(val))
+        AisMessageType::Static => {
+            let val: AisStatic = serde_json::from_str(&message)
+                .into_report()
+                .change_context(AisMessageProcessingError)?;
+            Ok(AisMessage::Static(val))
+        }
     }
 }
