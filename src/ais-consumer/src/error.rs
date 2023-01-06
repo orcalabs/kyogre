@@ -33,6 +33,7 @@ impl std::fmt::Display for AisMessageProcessingError {
 #[derive(Debug)]
 pub enum AisMessageError {
     InvalidMessageType(u32),
+    InvalidEta(String),
 }
 
 impl std::error::Error for AisMessageError {}
@@ -43,6 +44,10 @@ impl std::fmt::Display for AisMessageError {
             AisMessageError::InvalidMessageType(message_type) => f.write_fmt(format_args!(
                 "encountered an unsupported message type: {}",
                 message_type
+            )),
+            AisMessageError::InvalidEta(val) => f.write_fmt(format_args!(
+                "encountered an invalid estimated-time-of-arrival value: {}",
+                val
             )),
         }
     }

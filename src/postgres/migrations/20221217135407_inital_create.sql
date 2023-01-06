@@ -18,6 +18,16 @@ CREATE TABLE navigation_status (
     PRIMARY KEY (navigation_status_id)
 );
 
+CREATE TABLE ais_message_types (
+    ais_message_type_id int NOT NULL,
+    PRIMARY KEY (ais_message_type_id)
+);
+
+CREATE TABLE ais_classes (
+    ais_class_id varchar NOT NULL,
+    PRIMARY KEY (ais_class_id)
+);
+
 CREATE TABLE ais_positions (
     mmsi int NOT NULL references ais_vessels(mmsi),
     latitude decimal NOT NULL,
@@ -29,6 +39,8 @@ CREATE TABLE ais_positions (
     timestamp timestamptz NOT NULL,
     altitude int,
     distance_to_shore decimal NOT NULL,
+    ais_class varchar references ais_classes(ais_class_id),
+    ais_message_type_id int references ais_message_types(ais_message_type_id),
     navigation_status_id int NOT NULL references navigation_status(navigation_status_id)
 )
 PARTITION BY LIST (mmsi);
@@ -44,6 +56,8 @@ CREATE TABLE current_ais_positions (
     timestamp timestamptz NOT NULL,
     altitude int,
     distance_to_shore decimal NOT NULL,
+    ais_class varchar references ais_classes(ais_class_id),
+    ais_message_type_id int references ais_message_types(ais_message_type_id),
     navigation_status_id int NOT NULL references navigation_status(navigation_status_id),
     PRIMARY KEY (mmsi)
 );
@@ -65,6 +79,41 @@ INSERT INTO navigation_status(navigation_status_id, name) VALUES
     (13, 'Reserved13'),
     (14, 'AisSartIsActive'),
     (15, 'NotDefined');
+
+INSERT INTO ais_classes(ais_class_id) VALUES
+    ('A'),
+    ('B');
+
+
+INSERT INTO ais_message_types(ais_message_type_id) VALUES
+    (0),
+    (1),
+    (2),
+    (3),
+    (4),
+    (5),
+    (6),
+    (7),
+    (8),
+    (9),
+    (10),
+    (11),
+    (12),
+    (13),
+    (14),
+    (16),
+    (17),
+    (18),
+    (19),
+    (20),
+    (21),
+    (22),
+    (23),
+    (24),
+    (25),
+    (26),
+    (27);
+
 
 CREATE UNIQUE INDEX ON ais_positions (mmsi, timestamp);
 

@@ -1,3 +1,5 @@
+use std::fmt;
+
 use bigdecimal::FromPrimitive;
 use bigdecimal::{BigDecimal, ToPrimitive};
 use chrono::{DateTime, Utc};
@@ -17,6 +19,29 @@ pub struct AisPosition {
     pub rate_of_turn: Option<BigDecimal>,
     pub speed_over_ground: Option<BigDecimal>,
     pub true_heading: Option<i32>,
+}
+
+pub enum AisClass {
+    A,
+    B,
+}
+
+impl fmt::Display for AisClass {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            AisClass::A => f.write_str("A"),
+            AisClass::B => f.write_str("B"),
+        }
+    }
+}
+
+impl From<kyogre_core::AisClass> for AisClass {
+    fn from(value: kyogre_core::AisClass) -> Self {
+        match value {
+            kyogre_core::AisClass::A => AisClass::A,
+            kyogre_core::AisClass::B => AisClass::B,
+        }
+    }
 }
 
 impl TryFrom<AisPosition> for kyogre_core::AisPosition {

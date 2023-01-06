@@ -3,6 +3,7 @@
 
 use chrono::{DateTime, Utc};
 use num_derive::FromPrimitive;
+use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 
 mod call_sign;
@@ -19,14 +20,14 @@ pub struct DataMessage {
 pub struct NewAisPosition {
     pub latitude: f64,
     pub longitude: f64,
-    pub message_type: Option<i32>,
-    pub type_name: Option<String>,
+    pub message_type_id: Option<i32>,
+    pub message_type: Option<AisMessageType>,
     pub mmsi: i32,
     pub msgtime: DateTime<Utc>,
     pub altitude: Option<i32>,
     pub course_over_ground: Option<f64>,
     pub navigational_status: NavigationStatus,
-    pub ais_class: Option<String>,
+    pub ais_class: Option<AisClass>,
     pub rate_of_turn: Option<f64>,
     pub speed_over_ground: Option<f64>,
     pub true_heading: Option<i32>,
@@ -35,8 +36,8 @@ pub struct NewAisPosition {
 
 #[derive(Debug, Clone)]
 pub struct NewAisStatic {
-    pub type_name: Option<String>,
-    pub message_type: u32,
+    pub message_type: Option<AisMessageType>,
+    pub message_type_id: u32,
     pub mmsi: i32,
     pub msgtime: DateTime<Utc>,
     pub imo_number: Option<i32>,
@@ -73,6 +74,20 @@ pub struct AisVessel {
     pub ship_width: Option<i32>,
     pub eta: Option<DateTime<Utc>>,
     pub destination: Option<String>,
+}
+
+#[derive(Clone, Debug)]
+pub enum AisMessageType {
+    /// A message containing position data.
+    Position,
+    /// A message containing vessel related data.
+    Static,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub enum AisClass {
+    A,
+    B,
 }
 
 #[derive(

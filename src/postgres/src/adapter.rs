@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use crate::error::{BigDecimalError, PostgresError};
+use crate::models::AisClass;
 use bigdecimal::{BigDecimal, FromPrimitive};
 use error_stack::{IntoReport, Result, ResultExt};
 use kyogre_core::{AisPosition, AisVessel, DataMessage, NewAisPosition, NewAisStatic};
@@ -324,6 +325,8 @@ SET
         let mut altitude = Vec::with_capacity(positions.len());
         let mut distance_to_shore = Vec::with_capacity(positions.len());
         let mut navigation_status_id = Vec::with_capacity(positions.len());
+        let mut ais_class = Vec::with_capacity(positions.len());
+        let mut ais_message_type = Vec::with_capacity(positions.len());
 
         let mut latest_position_per_vessel: HashMap<i32, NewAisPosition> = HashMap::new();
 
@@ -390,6 +393,8 @@ SET
             );
             navigation_status_id.push(p.navigational_status as i32);
             timestamp.push(p.msgtime);
+            ais_class.push(p.ais_class.map(|a| AisClass::from(a).to_string()));
+            ais_message_type.push(p.message_type_id);
         }
 
         let mut tx = self
@@ -417,7 +422,7 @@ DO NOTHING
             r#"
 INSERT INTO ais_positions(mmsi, latitude, longitude, course_over_ground,
     rate_of_turn, true_heading, speed_over_ground,
-    timestamp, altitude, distance_to_shore, navigation_status_id)
+    timestamp, altitude, distance_to_shore, ais_class, ais_message_type_id, navigation_status_id)
 SELECT * FROM
     UNNEST(
         $1::int[],
@@ -430,7 +435,9 @@ SELECT * FROM
         $8::timestamptz[],
         $9::int[],
         $10::decimal[],
-        $11::int[]
+        $11::varchar[],
+        $12::int[],
+        $13::int[]
 )
             "#,
             &mmsis,
@@ -443,6 +450,8 @@ SELECT * FROM
             &timestamp,
             &altitude as _,
             &distance_to_shore,
+            &ais_class as _,
+            &ais_message_type as _,
             &navigation_status_id,
         )
         .execute(&mut tx)
@@ -496,11 +505,13 @@ SELECT * FROM
                 .into_report()
                 .change_context(PostgresError::DataConversion)?;
 
+            let ais_class = p.ais_class.map(|a| AisClass::from(a).to_string());
+
             sqlx::query!(
                 r#"
 INSERT INTO current_ais_positions(mmsi, latitude, longitude, course_over_ground,
     rate_of_turn, true_heading, speed_over_ground,
-    timestamp, altitude, distance_to_shore, navigation_status_id)
+    timestamp, altitude, distance_to_shore, ais_class, ais_message_type_id, navigation_status_id)
 VALUES(
         $1::int,
         $2::decimal,
@@ -512,7 +523,9 @@ VALUES(
         $8::timestamptz,
         $9::int,
         $10::decimal,
-        $11::int
+        $11::varchar,
+        $12::int,
+        $13::int
 )
 ON CONFLICT (mmsi)
 DO UPDATE
@@ -526,6 +539,8 @@ DO UPDATE
         timestamp = excluded.timestamp,
         altitude = excluded.altitude,
         distance_to_shore = excluded.distance_to_shore,
+        ais_class = excluded.ais_class,
+        ais_message_type_id = excluded.ais_message_type_id,
         navigation_status_id = excluded.navigation_status_id
             "#,
                 p.mmsi,
@@ -538,6 +553,8 @@ DO UPDATE
                 p.msgtime,
                 p.altitude,
                 distance_to_shore,
+                ais_class,
+                p.message_type_id,
                 p.navigational_status as i32,
             )
             .execute(&mut tx)

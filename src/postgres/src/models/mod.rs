@@ -1,5 +1,5 @@
 mod ais;
 mod vessel;
 
-pub use ais::AisPosition;
+pub use ais::{AisClass, AisPosition};
 pub use vessel::AisVessel;
