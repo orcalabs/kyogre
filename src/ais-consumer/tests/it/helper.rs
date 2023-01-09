@@ -101,6 +101,7 @@ where
                 broadcast_buffer_size: 10,
                 oauth: None,
                 api_address: None,
+                honeycomb: None,
             };
 
             db.do_migrations().await;
