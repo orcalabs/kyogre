@@ -439,6 +439,8 @@ SELECT * FROM
         $12::int[],
         $13::int[]
 )
+ON CONFLICT (mmsi, timestamp)
+DO NOTHING
             "#,
             &mmsis,
             &latitude,
