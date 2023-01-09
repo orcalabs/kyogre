@@ -96,3 +96,17 @@ async fn test_handles_missing_eta() {
     })
     .await;
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn test_adding_same_position_twice_does_not_fail() {
+    test(|mut helper| async move {
+        let pos = AisPosition::test_default(None);
+        helper.ais_source.send_position(&pos).await;
+        helper.ais_source.send_position(&pos).await;
+
+        helper.postgres_process_confirmation.recv().await.unwrap();
+
+        assert_eq!(vec![pos], helper.db.all_ais_positions().await);
+    })
+    .await;
+}
