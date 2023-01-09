@@ -1,5 +1,5 @@
 postgres:
   port: 5432
-  database: kyogre
+  db_name: kyogre
   max_connections: 1
   log_statements: "Disable"
