@@ -7,11 +7,12 @@ async fn main() {
     let settings = Settings::new().unwrap();
 
     let tracing = match settings.environment {
-        Environment::Development
-        | Environment::Test
-        | Environment::Local
-        | Environment::Production
-        | Environment::Staging => TracingOutput::Local,
+        Environment::Test | Environment::Local | Environment::Production | Environment::Staging => {
+            TracingOutput::Local
+        }
+        Environment::Development => TracingOutput::Honeycomb {
+            api_key: settings.honeycomb.clone().unwrap().api_key,
+        },
     };
 
     orca_core::init_tracer(
