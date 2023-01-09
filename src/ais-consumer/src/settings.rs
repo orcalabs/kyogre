@@ -58,8 +58,8 @@ impl Settings {
                     .required(true)
                     .format(config::FileFormat::Yaml);
             let map = oauth_settings.collect()?;
-            builder = builder.set_override("client_secret", map["client_secret"].clone())?;
-            builder = builder.set_override("client_id", map["client_id"].clone())?;
+            builder = builder.set_override("oauth.client_secret", map["client_secret"].clone())?;
+            builder = builder.set_override("oauth.client_id", map["client_id"].clone())?;
         }
 
         let config = builder.build()?;
