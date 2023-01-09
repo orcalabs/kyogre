@@ -5,6 +5,11 @@ oauth:
   token_url: "https://id.barentswatch.no/connect/token"
   scope: "ais"
 postgres:
+  ip: postgres
+  port: 5432
+  username: postgres
+  password: test123
+  db_name: postgres
   max_connections: 1
   log_statements: "Disable"
 commit_interval: 10s
