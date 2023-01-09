@@ -37,6 +37,7 @@ jobs:
         id: cache
         with:
           shared-key: sqlx
+          workspaces: ${{ inputs.src-dir }}
       - if: steps.cache.outputs.cache-hit != 'true'
         name: build cache
         run: |

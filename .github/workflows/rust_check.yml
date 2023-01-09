@@ -41,6 +41,7 @@ jobs:
         with:
           save-if: false
           shared-key: sqlx
+          workspaces: ${{ inputs.src-dir }}
       - name: sqlx migration
         run: |
           cd src
