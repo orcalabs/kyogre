@@ -6,4 +6,5 @@ members = [
     "database-migrator",
     "ais-data-migrator",
     "leviathan-postgres",
+    "web-api",
 ]

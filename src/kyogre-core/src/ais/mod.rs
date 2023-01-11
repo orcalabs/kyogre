@@ -1,10 +1,10 @@
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, TimeZone, Utc};
 use num_derive::FromPrimitive;
+use rand::random;
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 
 use crate::CallSign;
-
 #[derive(Debug, Clone, Default)]
 pub struct DataMessage {
     pub positions: Vec<NewAisPosition>,
@@ -121,4 +121,45 @@ pub enum NavigationStatus {
 pub struct AisVesselMigrate {
     pub mmsi: i32,
     pub progress: Option<DateTime<Utc>>,
+}
+
+impl NewAisStatic {
+    pub fn test_default(mmsi: i32, call_sign: &str) -> NewAisStatic {
+        NewAisStatic {
+            mmsi,
+            imo_number: Some(random()),
+            call_sign: Some(call_sign.to_owned()),
+            name: Some("test_vessel".to_string()),
+            ship_length: Some(random()),
+            ship_width: Some(random()),
+            eta: Some(Utc.timestamp_opt(1000, 0).unwrap()),
+            destination: Some("ramfjord camping".to_string()),
+            message_type: Some(AisMessageType::Static),
+            message_type_id: 18,
+            msgtime: Utc.timestamp_opt(900, 0).unwrap(),
+            draught: Some(random()),
+            ship_type: Some(random()),
+        }
+    }
+}
+
+impl NewAisPosition {
+    pub fn test_default(mmsi: i32, time: DateTime<Utc>) -> NewAisPosition {
+        NewAisPosition {
+            latitude: random(),
+            longitude: random(),
+            message_type_id: Some(19),
+            message_type: Some(AisMessageType::Position),
+            mmsi,
+            msgtime: time,
+            altitude: Some(random()),
+            course_over_ground: Some(random()),
+            navigational_status: NavigationStatus::UnderWayUsingEngine,
+            ais_class: Some(AisClass::A),
+            rate_of_turn: Some(random()),
+            speed_over_ground: Some(random()),
+            true_heading: Some(random()),
+            distance_to_shore: random(),
+        }
+    }
 }

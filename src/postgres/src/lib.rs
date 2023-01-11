@@ -4,5 +4,8 @@
 mod adapter;
 mod error;
 mod models;
+mod queries;
+mod test_db;
 
-pub use adapter::{PostgresAdapter, TestDb};
+pub use adapter::PostgresAdapter;
+pub use test_db::TestDb;

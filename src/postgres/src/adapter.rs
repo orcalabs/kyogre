@@ -5,10 +5,10 @@ use crate::models::AisClass;
 use async_trait::async_trait;
 use bigdecimal::{BigDecimal, FromPrimitive};
 use chrono::{DateTime, Utc};
-use error_stack::{IntoReport, Result, ResultExt};
+use error_stack::{IntoReport, Report, Result, ResultExt};
 use kyogre_core::{
-    AisMigratorDestination, AisPosition, AisVessel, AisVesselMigrate, DataMessage, InsertError,
-    NewAisPosition, NewAisStatic, QueryError,
+    AisMigratorDestination, AisPosition, AisVesselMigrate, DataMessage, DateRange, InsertError,
+    NewAisPosition, NewAisStatic, QueryError, WebApiPort,
 };
 use orca_core::{PsqlLogStatements, PsqlSettings};
 use sqlx::{
@@ -22,116 +22,9 @@ pub struct PostgresAdapter {
     pub(crate) pool: PgPool,
 }
 
-/// Wrapper with additional methods inteded for testing purposes.
-#[derive(Debug, Clone)]
-pub struct TestDb {
-    pub db: PostgresAdapter,
-}
-
 enum AisProcessingAction {
     Exit,
     Continue,
-}
-
-impl TestDb {
-    pub async fn drop_db(&self, db_name: &str) {
-        {
-            let mut conn = self.db.pool.acquire().await.unwrap();
-            sqlx::query(&format!("DROP DATABASE \"{}\" WITH (FORCE);", db_name))
-                .execute(&mut conn)
-                .await
-                .unwrap();
-        }
-        self.db.pool.close().await;
-    }
-
-    pub async fn all_ais_positions(&self) -> Vec<AisPosition> {
-        let mut conn = self.db.pool.acquire().await.unwrap();
-
-        let positions = sqlx::query_as!(
-            crate::models::AisPosition,
-            r#"
-SELECT
-    mmsi, latitude, longitude, course_over_ground, rate_of_turn, true_heading,
-    speed_over_ground, timestamp as msgtime,  navigation_status_id as navigational_status,
-    distance_to_shore
-FROM ais_positions
-            "#
-        )
-        .fetch_all(&mut conn)
-        .await
-        .unwrap();
-
-        let mut converted = Vec::with_capacity(positions.len());
-
-        for p in positions {
-            let core_model = AisPosition::try_from(p).unwrap();
-            converted.push(core_model);
-        }
-
-        converted
-    }
-
-    pub async fn all_current_ais_positions(&self) -> Vec<AisPosition> {
-        let mut conn = self.db.pool.acquire().await.unwrap();
-
-        let positions = sqlx::query_as!(
-            crate::models::AisPosition,
-            r#"
-SELECT
-    mmsi, latitude, longitude, course_over_ground, rate_of_turn, true_heading,
-    speed_over_ground, timestamp as msgtime,  navigation_status_id as navigational_status,
-    distance_to_shore
-FROM current_ais_positions
-            "#
-        )
-        .fetch_all(&mut conn)
-        .await
-        .unwrap();
-
-        let mut converted = Vec::with_capacity(positions.len());
-
-        for p in positions {
-            let core_model = AisPosition::try_from(p).unwrap();
-            converted.push(core_model);
-        }
-
-        converted
-    }
-
-    pub async fn all_ais_vessels(&self) -> Vec<AisVessel> {
-        let mut conn = self.db.pool.acquire().await.unwrap();
-
-        let positions = sqlx::query_as!(
-            crate::models::AisVessel,
-            r#"
-SELECT
-    mmsi, imo_number, call_sign, name, ship_width, ship_length,
-    eta, destination
-FROM ais_vessels
-            "#
-        )
-        .fetch_all(&mut conn)
-        .await
-        .unwrap();
-
-        let mut converted = Vec::with_capacity(positions.len());
-
-        for p in positions {
-            let core_model = AisVessel::try_from(p).unwrap();
-            converted.push(core_model);
-        }
-
-        converted
-    }
-
-    pub async fn create_test_database(&self, db_name: &str) {
-        let mut conn = self.db.pool.acquire().await.unwrap();
-        sqlx::query(&format!("CREATE DATABASE \"{}\";", db_name))
-            .execute(&mut conn)
-            .await
-            .unwrap();
-    }
 }
 
 impl PostgresAdapter {
@@ -244,7 +137,7 @@ impl PostgresAdapter {
         }
     }
 
-    async fn add_ais_vessels(
+    pub(crate) async fn add_ais_vessels(
         &self,
         vessels: HashMap<i32, NewAisStatic>,
     ) -> Result<(), PostgresError> {
@@ -475,7 +368,10 @@ DO NOTHING
         Ok(())
     }
 
-    async fn add_ais_positions(&self, positions: Vec<NewAisPosition>) -> Result<(), PostgresError> {
+    pub(crate) async fn add_ais_positions(
+        &self,
+        positions: Vec<NewAisPosition>,
+    ) -> Result<(), PostgresError> {
         let mut mmsis = Vec::with_capacity(positions.len());
         let mut latitude = Vec::with_capacity(positions.len());
         let mut longitude = Vec::with_capacity(positions.len());
@@ -788,4 +684,33 @@ impl AisMigratorDestination for PostgresAdapter {
             .await
             .change_context(QueryError)
     }
+}
+
+#[async_trait]
+impl WebApiPort for PostgresAdapter {
+    async fn ais_positions(
+        &self,
+        mmsi: i32,
+        range: &DateRange,
+    ) -> Result<Vec<AisPosition>, QueryError> {
+        let positions = self
+            .ais_positions_impl(mmsi, range)
+            .await
+            .change_context(QueryError)?;
+
+        convert_models(positions).change_context(QueryError)
+    }
+}
+
+pub(crate) fn convert_models<D, I, C>(input: D) -> Result<Vec<C>, PostgresError>
+where
+    D: IntoIterator<Item = I>,
+    C: TryFrom<I>,
+    C: std::convert::TryFrom<I, Error = Report<PostgresError>>,
+{
+    input
+        .into_iter()
+        .map(C::try_from)
+        .collect::<std::result::Result<Vec<_>, <C as std::convert::TryFrom<I>>::Error>>()
+        .change_context(PostgresError::DataConversion)
 }

@@ -345,6 +345,82 @@
     },
     "query": "\nSELECT\n    mmsi, latitude, longitude, course_over_ground, rate_of_turn, true_heading,\n    speed_over_ground, timestamp as msgtime,  navigation_status_id as navigational_status,\n    distance_to_shore\nFROM ais_positions\n            "
   },
+  "c6a16db63da1ad7b4e76a0bde8805ee6edd705a61a93865d58f6c761bb52280f": {
+    "describe": {
+      "columns": [
+        {
+          "name": "latitude",
+          "ordinal": 0,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "longitude",
+          "ordinal": 1,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "mmsi",
+          "ordinal": 2,
+          "type_info": "Int4"
+        },
+        {
+          "name": "msgtime",
+          "ordinal": 3,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "course_over_ground",
+          "ordinal": 4,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "navigational_status",
+          "ordinal": 5,
+          "type_info": "Int4"
+        },
+        {
+          "name": "rate_of_turn",
+          "ordinal": 6,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "speed_over_ground",
+          "ordinal": 7,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "true_heading",
+          "ordinal": 8,
+          "type_info": "Int4"
+        },
+        {
+          "name": "distance_to_shore",
+          "ordinal": 9,
+          "type_info": "Numeric"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        true,
+        true,
+        true,
+        true,
+        true,
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Int4",
+          "Timestamptz",
+          "Timestamptz"
+        ]
+      }
+    },
+    "query": "\nSELECT\n    latitude, longitude, mmsi, timestamp as msgtime, course_over_ground,\n    navigation_status_id as navigational_status, rate_of_turn, speed_over_ground,\n    true_heading, distance_to_shore\nFROM ais_positions\nWHERE mmsi = $1\nAND timestamp BETWEEN $2 AND $3\n            "
+  },
   "cc29ecfbf690cf67c6f9af3ade10e4b54ddaf99ced730f19b39a63581a5fcbd0": {
     "describe": {
       "columns": [],

@@ -6,6 +6,15 @@ services:
       - POSTGRES_PASSWORD=test123
     ports:
       - 5432:5432
+  test-db:
+    image: ghcr.io/orcalabs/kyogre/test-postgres
+    environment:
+      - POSTGRES_PASSWORD=test123
+    ports:
+      - 5432:5432
+    build:
+      context: .
+      dockerfile: dockerfiles/test-db/Dockerfile
   ais-consumer:
     image: gchr.io/orcalabs/kyogre/ais-consumer
     environment:
@@ -34,6 +43,16 @@ services:
     build:
       context: .
       dockerfile: dockerfiles/ais-data-migrator/Dockerfile
+      secrets:
+        - source: git-credentials
+  web-api:
+    image: gchr.io/orcalabs/kyogre/web-api
+    environment:
+      - RUST_BACKTRACE=1
+      - APP_ENVIRONMENT=local
+    build:
+      context: .
+      dockerfile: dockerfiles/web-api/Dockerfile
       secrets:
         - source: git-credentials
 
