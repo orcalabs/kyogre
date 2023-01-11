@@ -1,4 +1,4 @@
-use config::{Config, ConfigError, File};
+use config::{Config, ConfigError, File, Source};
 use orca_core::{Environment, LogLevel, PsqlSettings, TelemetrySettings};
 use serde::Deserialize;
 
@@ -39,11 +39,20 @@ impl Settings {
             .set_override("environment", environment.as_str())?;
 
         if environment == Environment::Development {
+            let database = config::File::with_name("/run/secrets/postgres-credentials.yaml")
+                .required(true)
+                .format(config::FileFormat::Yaml);
+            let map = database.collect()?;
+            builder = builder.set_override("postgres.ip", map["ip"].clone())?;
+            builder = builder.set_override("postgres.username", map["username"].clone())?;
+            builder = builder.set_override("postgres.password", map["password"].clone())?;
+
             let honeycomb = config::File::with_name("/run/secrets/honeycomb_api_key")
                 .required(true)
                 .format(config::FileFormat::Yaml);
 
-            builder = builder.add_source(honeycomb);
+            let map = honeycomb.collect()?;
+            builder = builder.set_override("honeycomb.api_key", map["api-key"].clone())?;
         }
 
         let config = builder.build()?;
