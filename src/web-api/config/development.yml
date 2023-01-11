@@ -1,0 +1,11 @@
+log_level: "Info"
+api:
+  address: "0.0.0.0"
+  port: 8080
+database:
+  db_name: kyogre
+  max_connections: 10
+  log_statements: "Disable"
+telemetry:
+  ip: "api.honeycomb.io"
+  port: 443
