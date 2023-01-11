@@ -25,6 +25,8 @@ lazy_static! {
     .unwrap();
 }
 
+static DATABASE_PASSWORD: &str = "test123";
+
 pub struct TestHelper {
     pub ais_source: AisSource,
     pub db: TestDb,
@@ -46,11 +48,14 @@ where
     initialize(&TRACING);
     let mut docker_test = DockerTest::new().with_default_source(Source::DockerHub);
 
-    let database_password = "test123".to_string();
+    let mut db_composition = postgres_composition(
+        DATABASE_PASSWORD,
+        "postgres",
+        "ghcr.io/orcalabs/kyogre/test-postgres",
+        "latest",
+    )
+    .with_log_options(None);
 
-    let mut db_composition =
-        postgres_composition(&database_password, "test-db", "postgres", "15.1-alpine")
-            .with_log_options(None);
     db_composition.static_container(StaticManagementPolicy::Dynamic);
 
     docker_test.add_composition(db_composition);
@@ -61,14 +66,14 @@ where
         .run_async(|ops| async move {
             // Necessary evil to avoid unzipping shore map for each test
             std::env::set_var("APP_ENVIRONMENT", "TEST");
-            let db_handle = ops.handle("test-db");
+            let db_handle = ops.handle("postgres");
 
             let master_db_settings = PsqlSettings {
                 ip: db_handle.ip().to_string(),
                 port: 5432,
-                db_name: None,
+                db_name: Some("template1".to_string()),
                 username: "postgres".to_string(),
-                password: database_password.clone(),
+                password: DATABASE_PASSWORD.to_string(),
                 max_connections: 1,
                 root_cert: None,
                 log_statements: PsqlLogStatements::Disable,
@@ -76,14 +81,16 @@ where
 
             let master_db = PostgresAdapter::new(&master_db_settings).await.unwrap();
             let test_master_db = TestDb { db: master_db };
-            test_master_db.create_test_database(&db_name).await;
+            test_master_db
+                .create_test_database_from_template(&db_name)
+                .await;
 
             let settings = PsqlSettings {
                 ip: db_handle.ip().to_string(),
                 port: 5432,
                 db_name: Some(db_name.to_string()),
                 username: "postgres".to_string(),
-                password: database_password,
+                password: DATABASE_PASSWORD.to_string(),
                 max_connections: 1,
                 root_cert: None,
                 log_statements: PsqlLogStatements::Disable,
@@ -104,7 +111,6 @@ where
                 honeycomb: None,
             };
 
-            db.do_migrations().await;
             let test_db = TestDb { db };
 
             let (postgres_sender, postgres_recveiver) = tokio::sync::mpsc::channel(100);

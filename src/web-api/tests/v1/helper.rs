@@ -61,7 +61,7 @@ where
             let mut db_settings = PsqlSettings {
                 ip: db_handle.ip().to_string(),
                 port: 5432,
-                db_name: None,
+                db_name: Some("template1".to_string()),
                 password: DATABASE_PASSWORD.to_string(),
                 username: "postgres".to_string(),
                 max_connections: 1,

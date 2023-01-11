@@ -103,14 +103,6 @@ FROM ais_vessels
         converted
     }
 
-    pub async fn create_test_database(&self, db_name: &str) {
-        let mut conn = self.db.pool.acquire().await.unwrap();
-        sqlx::query(&format!("CREATE DATABASE \"{}\";", db_name))
-            .execute(&mut conn)
-            .await
-            .unwrap();
-    }
-
     pub async fn create_test_database_from_template(&self, db_name: &str) {
         let mut conn = self.db.pool.acquire().await.unwrap();
         sqlx::query(&format!(
