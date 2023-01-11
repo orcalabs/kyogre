@@ -1,0 +1,16 @@
+log_level: Info
+chunk_size: "7d"
+source_start_threshold: "2021-02-01 00:00:00Z"
+destination_end_threshold: "2021-07-01 00:00:00Z"
+source:
+  max_connections: 1
+  log_statements: "Disable"
+destination:
+  ip: postgres
+  db_name: postgres
+  password: test123
+  username: postgres
+  port: 5432
+  max_connections: 1
+  log_statements: "Disable"
+

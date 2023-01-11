@@ -1,5 +1,5 @@
 [package]
-name = "postgres"
+name = "ais-data-migrator"
 version = "0.1.0"
 edition = "2021"
 
@@ -8,11 +8,13 @@ edition = "2021"
 [dependencies]
 kyogre-core = { path = "../kyogre-core" }
 orca-core = { registry = "orcalabs-orcastrator", version = "0.19.1", features = ["telemetry"] }
+postgres = { path = "../postgres" }
+leviathan-postgres = { path = "../leviathan-postgres" }
 
 chrono = { version = "0.4.23", features = ["serde"] }
-sqlx = { version = "0.6.2", features = ["runtime-tokio-native-tls", "postgres", "bigdecimal", "chrono", "offline"] }
-error-stack = "0.2.4"
-bigdecimal = "0.3.0"
-tokio = { version = "1.24.1", features = ["macros", "sync", "time"] }
 tracing = "0.1.37"
-async-trait = "0.1.59"
+error-stack = "0.2.4"
+config = "0.13.3"
+serde = "1.0.149"
+humantime-serde = "1.1.1"
+tokio = { version = "1.24.1", features = ["macros"] }

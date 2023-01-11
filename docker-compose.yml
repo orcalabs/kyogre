@@ -26,6 +26,16 @@ services:
       dockerfile: dockerfiles/database-migrator/Dockerfile
       secrets:
         - source: git-credentials
+  ais-data-migrator:
+    image: gchr.io/orcalabs/kyogre/ais-data-migrator
+    environment:
+      - RUST_BACKTRACE=1
+      - APP_ENVIRONMENT=local
+    build:
+      context: .
+      dockerfile: dockerfiles/ais-data-migrator/Dockerfile
+      secrets:
+        - source: git-credentials
 
 secrets:
   git-credentials:

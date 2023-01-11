@@ -1,5 +1,31 @@
 {
   "db": "PostgreSQL",
+  "21be1933e1216cfa762413a58233d00bd8f67aaccd15f26e16ce7d1985fe2376": {
+    "describe": {
+      "columns": [
+        {
+          "name": "mmsi",
+          "ordinal": 0,
+          "type_info": "Int4"
+        },
+        {
+          "name": "progress",
+          "ordinal": 1,
+          "type_info": "Timestamptz"
+        }
+      ],
+      "nullable": [
+        false,
+        true
+      ],
+      "parameters": {
+        "Left": [
+          "Timestamptz"
+        ]
+      }
+    },
+    "query": "\nSELECT mmsi, progress\nFROM ais_data_migration_progress\nWHERE progress < $1\n            "
+  },
   "274ab2cd04dcff738b2687fd66d594554f5f0ff2b067bf0e2f89248c0476b8d2": {
     "describe": {
       "columns": [],
@@ -108,7 +134,7 @@
     },
     "query": "\nINSERT INTO ais_positions(mmsi, latitude, longitude, course_over_ground,\n    rate_of_turn, true_heading, speed_over_ground,\n    timestamp, altitude, distance_to_shore, ais_class, ais_message_type_id, navigation_status_id)\nSELECT * FROM\n    UNNEST(\n        $1::int[],\n        $2::decimal[],\n        $3::decimal[],\n        $4::decimal[],\n        $5::decimal[],\n        $6::int[],\n        $7::decimal[],\n        $8::timestamptz[],\n        $9::int[],\n        $10::decimal[],\n        $11::varchar[],\n        $12::int[],\n        $13::int[]\n)\nON CONFLICT (mmsi, timestamp)\nDO NOTHING\n            "
   },
-  "3ea60cb18afb359926c17d72b4a87651c314054f7fecd32e0ceef17edc653d47": {
+  "31e8523f0debc7597e580e9a2cb7c54138691043f3513fd7606df918f12d6181": {
     "describe": {
       "columns": [
         {
@@ -155,6 +181,11 @@
           "name": "navigational_status",
           "ordinal": 8,
           "type_info": "Int4"
+        },
+        {
+          "name": "distance_to_shore",
+          "ordinal": 9,
+          "type_info": "Numeric"
         }
       ],
       "nullable": [
@@ -166,79 +197,48 @@
         true,
         true,
         false,
+        true,
         false
       ],
       "parameters": {
         "Left": []
       }
     },
-    "query": "\nSELECT\n    mmsi, latitude, longitude, course_over_ground, rate_of_turn, true_heading,\n    speed_over_ground, timestamp as msgtime,  navigation_status_id as navigational_status\nFROM current_ais_positions\n            "
+    "query": "\nSELECT\n    mmsi, latitude, longitude, course_over_ground, rate_of_turn, true_heading,\n    speed_over_ground, timestamp as msgtime,  navigation_status_id as navigational_status,\n    distance_to_shore\nFROM current_ais_positions\n            "
   },
-  "6138a4e04a0ad3b269213be46cd2814197c1a6473698a2473ae2326a307d9dce": {
+  "320a53a67e7a4836037d070329527a98fc0118fae4fc93c25a749f49d767aa42": {
     "describe": {
-      "columns": [
-        {
-          "name": "mmsi",
-          "ordinal": 0,
-          "type_info": "Int4"
-        },
-        {
-          "name": "latitude",
-          "ordinal": 1,
-          "type_info": "Numeric"
-        },
-        {
-          "name": "longitude",
-          "ordinal": 2,
-          "type_info": "Numeric"
-        },
-        {
-          "name": "course_over_ground",
-          "ordinal": 3,
-          "type_info": "Numeric"
-        },
-        {
-          "name": "rate_of_turn",
-          "ordinal": 4,
-          "type_info": "Numeric"
-        },
-        {
-          "name": "true_heading",
-          "ordinal": 5,
-          "type_info": "Int4"
-        },
-        {
-          "name": "speed_over_ground",
-          "ordinal": 6,
-          "type_info": "Numeric"
-        },
-        {
-          "name": "msgtime",
-          "ordinal": 7,
-          "type_info": "Timestamptz"
-        },
-        {
-          "name": "navigational_status",
-          "ordinal": 8,
-          "type_info": "Int4"
-        }
-      ],
-      "nullable": [
-        false,
-        false,
-        false,
-        true,
-        true,
-        true,
-        true,
-        false,
-        false
-      ],
+      "columns": [],
+      "nullable": [],
       "parameters": {
-        "Left": []
+        "Left": [
+          "Int4",
+          "Timestamptz"
+        ]
       }
     },
-    "query": "\nSELECT\n    mmsi, latitude, longitude, course_over_ground, rate_of_turn, true_heading,\n    speed_over_ground, timestamp as msgtime,  navigation_status_id as navigational_status\nFROM ais_positions\n            "
+    "query": "\nINSERT INTO ais_data_migration_progress(mmsi, progress)\nVALUES ($1, $2)\nON CONFLICT (mmsi)\nDO UPDATE\nSET progress = excluded.progress\n        "
+  },
+  "535c52acf35c9d89c7066a1ec3cd4a930ff9189cb1daa25623bea2bf129ef9c1": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Int4Array",
+          "NumericArray",
+          "NumericArray",
+          "NumericArray",
+          "NumericArray",
+          "Int4Array",
+          "NumericArray",
+          "TimestamptzArray",
+          "NumericArray",
+          "Int4Array"
+        ]
+      }
+    },
+    "query": "\nINSERT INTO ais_positions(mmsi, latitude, longitude, course_over_ground,\n    rate_of_turn, true_heading, speed_over_ground, timestamp,  distance_to_shore,  navigation_status_id)\nSELECT * FROM\n    UNNEST(\n        $1::int[],\n        $2::decimal[],\n        $3::decimal[],\n        $4::decimal[],\n        $5::decimal[],\n        $6::int[],\n        $7::decimal[],\n        $8::timestamptz[],\n        $9::decimal[],\n        $10::int[]\n)\nON CONFLICT (mmsi, timestamp)\nDO NOTHING\n            "
   },
   "7681e33720e06537ba01f056a6cb373a916b9266d842ed2151ac9fae7f066ffb": {
     "describe": {
@@ -272,5 +272,89 @@
       }
     },
     "query": "\nINSERT INTO ais_vessels(mmsi, imo_number, call_sign, name, ship_width, ship_length, ship_type, eta, draught, destination)\nSELECT * FROM UNNEST($1::int[], $2::int[], $3::varchar[], $4::varchar[], $5::int[], $6::int[],\n    $7::int[], $8::timestamptz[], $9::int[], $10::varchar[])\nON CONFLICT (mmsi)\nDO UPDATE\nSET\n    imo_number = excluded.imo_number,\n    call_sign = excluded.call_sign,\n    name = excluded.name,\n    ship_width = excluded.ship_width,\n    ship_length = excluded.ship_length,\n    ship_type = excluded.ship_type,\n    eta = excluded.eta,\n    draught = excluded.draught,\n    destination = excluded.destination\n            "
+  },
+  "b6600035f1208cda204e611ccb2eec456e03066e4c84c12d0fa2b1973c63f8d8": {
+    "describe": {
+      "columns": [
+        {
+          "name": "mmsi",
+          "ordinal": 0,
+          "type_info": "Int4"
+        },
+        {
+          "name": "latitude",
+          "ordinal": 1,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "longitude",
+          "ordinal": 2,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "course_over_ground",
+          "ordinal": 3,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "rate_of_turn",
+          "ordinal": 4,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "true_heading",
+          "ordinal": 5,
+          "type_info": "Int4"
+        },
+        {
+          "name": "speed_over_ground",
+          "ordinal": 6,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "msgtime",
+          "ordinal": 7,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "navigational_status",
+          "ordinal": 8,
+          "type_info": "Int4"
+        },
+        {
+          "name": "distance_to_shore",
+          "ordinal": 9,
+          "type_info": "Numeric"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        true,
+        true,
+        true,
+        true,
+        false,
+        true,
+        false
+      ],
+      "parameters": {
+        "Left": []
+      }
+    },
+    "query": "\nSELECT\n    mmsi, latitude, longitude, course_over_ground, rate_of_turn, true_heading,\n    speed_over_ground, timestamp as msgtime,  navigation_status_id as navigational_status,\n    distance_to_shore\nFROM ais_positions\n            "
+  },
+  "cc29ecfbf690cf67c6f9af3ade10e4b54ddaf99ced730f19b39a63581a5fcbd0": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Int4"
+        ]
+      }
+    },
+    "query": "\nINSERT INTO ais_vessels(mmsi)\nVALUES ($1)\nON CONFLICT (mmsi)\nDO NOTHING\n        "
   }
 }

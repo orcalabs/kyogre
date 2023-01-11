@@ -14,3 +14,4 @@ serde_repr = "0.1.10"
 strum = { version = "0.24.1", features = ["derive"] }
 num-traits = "0.2.15"
 num-derive = "0.3.3"
+error-stack = "0.2.4"
