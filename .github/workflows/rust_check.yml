@@ -20,6 +20,7 @@ jobs:
     with:
       dependencies: protobuf-compiler
       src-dir: src
+      image-build-command: docker build -f dockerfiles/test-db/Dockerfile -t ghcr.io/orcalabs/kyogre/test-postgres .
   sqlx-check:
     runs-on: ubuntu-latest
     services:

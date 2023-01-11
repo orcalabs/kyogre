@@ -67,6 +67,17 @@ jobs:
           secrets: |
             git-credentials=${{ secrets.CLOUDSMITH_GIT_API_KEY }}
 
+      - name: Build and push
+        uses: docker/build-push-action@v3
+        with:
+          context: .
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          file: dockerfiles/web-api/Dockerfile
+          push: true
+          tags: ghcr.io/orcalabs/kyogre/web-api:${{ github.sha }}
+          secrets: |
+            git-credentials=${{ secrets.CLOUDSMITH_GIT_API_KEY }}
 
       - name: Checkout aks repository
         uses: actions/checkout@v3

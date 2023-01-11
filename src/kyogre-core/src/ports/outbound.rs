@@ -1,4 +1,4 @@
-use crate::{AisPosition, QueryError};
+use crate::{AisPosition, DateRange, QueryError};
 
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
@@ -13,4 +13,13 @@ pub trait AisMigratorSource {
         end: DateTime<Utc>,
     ) -> Result<Vec<AisPosition>, QueryError>;
     async fn existing_mmsis(&self) -> Result<Vec<i32>, QueryError>;
+}
+
+#[async_trait]
+pub trait WebApiPort {
+    async fn ais_positions(
+        &self,
+        mmsi: i32,
+        range: &DateRange,
+    ) -> Result<Vec<AisPosition>, QueryError>;
 }
