@@ -199,7 +199,7 @@ impl PartialEq<kyogre_core::AisPosition> for AisPosition {
             && self.msgtime.timestamp() == other.msgtime.timestamp()
             && self.course_over_ground.map(|v| v as i32)
                 == other.course_over_ground.map(|v| v as i32)
-            && self.navigational_status == other.navigational_status
+            && self.navigational_status == other.navigational_status.unwrap()
             && self.rate_of_turn.map(|v| v as i32) == other.rate_of_turn.map(|v| v as i32)
             && self.speed_over_ground.map(|v| v as i32) == other.speed_over_ground.map(|v| v as i32)
             && self.true_heading == other.true_heading

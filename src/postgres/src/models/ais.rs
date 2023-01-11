@@ -9,16 +9,23 @@ use kyogre_core::NavigationStatus;
 use crate::error::{FromBigDecimalError, NavigationStatusError, PostgresError};
 
 #[derive(Debug, Clone)]
+pub struct AisVesselMigrationProgress {
+    pub mmsi: i32,
+    pub progress: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone)]
 pub struct AisPosition {
     pub latitude: BigDecimal,
     pub longitude: BigDecimal,
     pub mmsi: i32,
     pub msgtime: DateTime<Utc>,
     pub course_over_ground: Option<BigDecimal>,
-    pub navigational_status: i32,
+    pub navigational_status: Option<i32>,
     pub rate_of_turn: Option<BigDecimal>,
     pub speed_over_ground: Option<BigDecimal>,
     pub true_heading: Option<i32>,
+    pub distance_to_shore: BigDecimal,
 }
 
 pub enum AisClass {
@@ -72,10 +79,15 @@ impl TryFrom<AisPosition> for kyogre_core::AisPosition {
                         .change_context(PostgresError::DataConversion)
                 })
                 .transpose()?,
-            navigational_status: NavigationStatus::from_i32(value.navigational_status)
-                .ok_or(NavigationStatusError(value.navigational_status))
-                .into_report()
-                .change_context(PostgresError::DataConversion)?,
+            navigational_status: value
+                .navigational_status
+                .map(|v| {
+                    NavigationStatus::from_i32(v)
+                        .ok_or(NavigationStatusError(v))
+                        .into_report()
+                        .change_context(PostgresError::DataConversion)
+                })
+                .transpose()?,
             rate_of_turn: value
                 .rate_of_turn
                 .map(|v| {
@@ -95,6 +107,12 @@ impl TryFrom<AisPosition> for kyogre_core::AisPosition {
                 })
                 .transpose()?,
             true_heading: value.true_heading,
+            distance_to_shore: value
+                .distance_to_shore
+                .to_f64()
+                .ok_or(FromBigDecimalError(value.distance_to_shore))
+                .into_report()
+                .change_context(PostgresError::DataConversion)?,
         })
     }
 }

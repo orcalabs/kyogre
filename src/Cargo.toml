@@ -4,4 +4,6 @@ members = [
     "ais-consumer",
     "kyogre-core",
     "database-migrator",
+    "ais-data-migrator",
+    "leviathan-postgres",
 ]

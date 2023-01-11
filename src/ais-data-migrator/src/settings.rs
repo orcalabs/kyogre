@@ -1,10 +1,18 @@
+use chrono::{DateTime, Utc};
 use config::{Config, File, Source};
-use orca_core::{Environment, PsqlSettings};
+use orca_core::{Environment, LogLevel, PsqlSettings};
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
 pub struct Settings {
-    pub postgres: PsqlSettings,
+    pub log_level: LogLevel,
+    pub source: PsqlSettings,
+    pub destination: PsqlSettings,
+    #[serde(with = "humantime_serde")]
+    pub chunk_size: std::time::Duration,
+    pub source_start_threshold: DateTime<Utc>,
+    pub destination_end_threshold: DateTime<Utc>,
+    pub environment: Environment,
     pub honeycomb: Option<HoneycombApiKey>,
 }
 
@@ -20,10 +28,12 @@ impl Settings {
             .try_into()
             .expect("Failed to parse APP_ENVIRONMENT.");
 
-        let mut builder = Config::builder().add_source(
-            File::with_name(&format!("config/{}", environment.as_str().to_lowercase()))
-                .required(true),
-        );
+        let mut builder = Config::builder()
+            .add_source(
+                File::with_name(&format!("config/{}", environment.as_str().to_lowercase()))
+                    .required(true),
+            )
+            .set_override("environment", environment.as_str())?;
 
         if environment == Environment::Development {
             let database = config::File::with_name("/run/secrets/postgres-credentials.yaml")
