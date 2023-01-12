@@ -1,11 +1,11 @@
-log_level: "Debug"
+log_level: Debug
 api:
-  ip: "0.0.0.0"
+  ip: 0.0.0.0
   port: 8080
 postgres:
-  ip: "postgres"
+  ip: postgres
   port: 5432
-  username: "postgres"
-  password: "test123"
+  username: postgres
+  password: test123
   max_connections: 10
-  log_statements: "Enable"
+  log_statements: Enable
