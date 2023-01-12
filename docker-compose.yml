@@ -50,6 +50,8 @@ services:
     environment:
       - RUST_BACKTRACE=1
       - APP_ENVIRONMENT=local
+    ports:
+      - 8080:8080
     build:
       context: .
       dockerfile: dockerfiles/web-api/Dockerfile
