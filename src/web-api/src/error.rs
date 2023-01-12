@@ -2,7 +2,7 @@ use actix_web::{body::BoxBody, http::StatusCode, HttpResponse, ResponseError};
 use serde::Serialize;
 use utoipa::ToSchema;
 
-#[derive(Clone, Copy, Debug, Serialize)]
+#[derive(Clone, Copy, Debug, Serialize, ToSchema)]
 pub enum ApiError {
     InvalidDateRange,
     InternalServerError,
