@@ -1,8 +1,8 @@
 log_level: "Debug"
 api:
-  address: "0.0.0.0"
+  ip: "0.0.0.0"
   port: 8080
-database:
+postgres:
   ip: "postgres"
   port: 5432
   username: "postgres"
