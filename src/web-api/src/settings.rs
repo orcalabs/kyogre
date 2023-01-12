@@ -47,7 +47,7 @@ impl Settings {
             builder = builder.set_override("postgres.username", map["username"].clone())?;
             builder = builder.set_override("postgres.password", map["password"].clone())?;
 
-            let honeycomb = config::File::with_name("/run/secrets/honeycomb_api_key")
+            let honeycomb = config::File::with_name("/run/secrets/honeycomb-api-key")
                 .required(true)
                 .format(config::FileFormat::Yaml);
 
