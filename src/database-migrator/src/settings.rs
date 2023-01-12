@@ -5,12 +5,6 @@ use serde::Deserialize;
 #[derive(Debug, Deserialize)]
 pub struct Settings {
     pub postgres: PsqlSettings,
-    pub honeycomb: Option<HoneycombApiKey>,
-}
-
-#[derive(Clone, Debug, Deserialize)]
-pub struct HoneycombApiKey {
-    pub api_key: String,
 }
 
 impl Settings {
@@ -33,12 +27,6 @@ impl Settings {
             builder = builder.set_override("postgres.ip", map["ip"].clone())?;
             builder = builder.set_override("postgres.username", map["username"].clone())?;
             builder = builder.set_override("postgres.password", map["password"].clone())?;
-
-            let honeycomb = config::File::with_name("/run/secrets/honeycomb-api-key")
-                .required(true)
-                .format(config::FileFormat::Yaml);
-            let map = honeycomb.collect()?;
-            builder = builder.set_override("honeycomb.api_key", map["api-key"].clone())?;
         }
 
         let config = builder.build()?;
