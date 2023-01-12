@@ -30,6 +30,8 @@ RUN --mount=type=secret,id=git-credentials,target=~/.git-credentials,required=tr
 
 FROM gcr.io/distroless/cc
 
+COPY src/web-api/config config
+
 COPY --from=builder /app/target/release/web-api .
 
 CMD ["./web-api"]
