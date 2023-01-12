@@ -19,7 +19,7 @@ pub struct AisTrackParameters {
     params(AisTrackParameters),
     responses(
         (status = 200, description = "ais positions for the given mmsi", body = [AisPosition]),
-        (status = 500, description = "an error occured", body = ErrorResponse),
+        (status = 500, description = "an internal error occured", body = ErrorResponse),
         (status = 400, description = "invalid parameters were provided", body = ErrorResponse),
     )
 )]
