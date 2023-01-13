@@ -28,6 +28,7 @@ pub struct AisPosition {
     pub distance_to_shore: BigDecimal,
 }
 
+#[derive(Clone, Copy)]
 pub enum AisClass {
     A,
     B,
