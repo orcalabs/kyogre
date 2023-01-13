@@ -42,6 +42,7 @@ jobs:
         name: build cache
         run: |
           cd src
+          sudo apt-get update -y
           sudo apt-get install -y protobuf-compiler
           git config --global credential.helper store
           echo '${{ secrets.CLOUDSMITH_CARGO_REGISTRY }}' > ~/.cargo/config
