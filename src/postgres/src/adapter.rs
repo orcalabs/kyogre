@@ -128,6 +128,7 @@ impl PostgresAdapter {
         }
     }
 
+    #[instrument(skip_all, name = "postgres_insert_ais_data")]
     async fn process_message(
         &self,
         incoming: std::result::Result<DataMessage, tokio::sync::broadcast::error::RecvError>,
