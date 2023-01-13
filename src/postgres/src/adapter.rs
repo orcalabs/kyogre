@@ -64,6 +64,7 @@ impl PostgresAdapter {
 
         let pool = PgPoolOptions::new()
             .max_connections(connections_per_pool)
+            .acquire_timeout(std::time::Duration::from_secs(20))
             .connect_with(opts)
             .await
             .into_report()
