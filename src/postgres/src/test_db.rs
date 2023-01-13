@@ -119,7 +119,7 @@ FROM ais_vessels
         let mut map = HashMap::new();
         map.insert(val.mmsi, val);
 
-        self.db.add_ais_vessels(map).await.unwrap();
+        self.db.add_ais_vessels(&map).await.unwrap();
 
         let mut vessels = self
             .all_ais_vessels()
@@ -138,7 +138,7 @@ FROM ais_vessels
         timestamp: DateTime<chrono::Utc>,
     ) -> AisPosition {
         let pos = NewAisPosition::test_default(mmsi, timestamp);
-        self.db.add_ais_positions(vec![pos]).await.unwrap();
+        self.db.add_ais_positions(&[pos]).await.unwrap();
 
         let mut positions = self
             .db

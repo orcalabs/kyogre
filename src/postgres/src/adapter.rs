@@ -25,6 +25,10 @@ pub struct PostgresAdapter {
 enum AisProcessingAction {
     Exit,
     Continue,
+    Retry {
+        positions: Option<Vec<NewAisPosition>>,
+        unique_static: Option<HashMap<i32, NewAisStatic>>,
+    },
 }
 
 impl PostgresAdapter {
@@ -91,31 +95,77 @@ impl PostgresAdapter {
             match result {
                 AisProcessingAction::Exit => break,
                 AisProcessingAction::Continue => (),
+                AisProcessingAction::Retry {
+                    positions,
+                    unique_static,
+                } => {
+                    for _ in 0..2 {
+                        self.insertion_retry(positions.as_deref(), unique_static.as_ref())
+                            .await;
+                    }
+                }
             }
         }
     }
 
-    #[instrument(skip_all, name = "postgres_process_ais_messages")]
+    #[instrument(skip_all, name = "postgres_insertion_retry")]
+    async fn insertion_retry(
+        &self,
+        positions: Option<&[NewAisPosition]>,
+        unique_static: Option<&HashMap<i32, NewAisStatic>>,
+    ) {
+        if let Some(positions) = positions {
+            if let Err(e) = self.add_ais_positions(positions).await {
+                event!(Level::ERROR, "failed to add ais positions: {:?}", e);
+            }
+        }
+
+        if let Some(unique_static) = unique_static {
+            if let Err(e) = self.add_ais_vessels(unique_static).await {
+                event!(Level::ERROR, "failed to add ais static: {:?}", e);
+            }
+        }
+    }
+
     async fn process_message(
         &self,
         incoming: std::result::Result<DataMessage, tokio::sync::broadcast::error::RecvError>,
     ) -> AisProcessingAction {
         match incoming {
             Ok(message) => {
-                if let Err(e) = self.add_ais_positions(message.positions).await {
-                    event!(Level::ERROR, "failed to add ais positions: {:?}", e);
-                }
-
                 let mut unique_static = HashMap::new();
                 for v in message.static_messages {
                     unique_static.entry(v.mmsi).or_insert(v);
                 }
 
-                if let Err(e) = self.add_ais_vessels(unique_static).await {
-                    event!(Level::ERROR, "failed to add ais static: {:?}", e);
+                match (
+                    self.add_ais_positions(&message.positions).await,
+                    self.add_ais_vessels(&unique_static).await,
+                ) {
+                    (Ok(_), Ok(_)) => AisProcessingAction::Continue,
+                    (Ok(_), Err(e)) => {
+                        event!(Level::ERROR, "failed to add ais static: {:?}", e);
+                        AisProcessingAction::Retry {
+                            positions: None,
+                            unique_static: Some(unique_static),
+                        }
+                    }
+                    (Err(e), Ok(_)) => {
+                        event!(Level::ERROR, "failed to add ais positions: {:?}", e);
+                        AisProcessingAction::Retry {
+                            positions: Some(message.positions),
+                            unique_static: None,
+                        }
+                    }
+                    (Err(e), Err(e2)) => {
+                        event!(Level::ERROR, "failed to add ais positions: {:?}", e);
+                        event!(Level::ERROR, "failed to add ais static: {:?}", e2);
+                        AisProcessingAction::Retry {
+                            positions: Some(message.positions),
+                            unique_static: Some(unique_static),
+                        }
+                    }
                 }
-
-                AisProcessingAction::Continue
             }
             Err(e) => match e {
                 tokio::sync::broadcast::error::RecvError::Closed => {
@@ -139,7 +189,7 @@ impl PostgresAdapter {
 
     pub(crate) async fn add_ais_vessels(
         &self,
-        vessels: HashMap<i32, NewAisStatic>,
+        vessels: &HashMap<i32, NewAisStatic>,
     ) -> Result<(), PostgresError> {
         let mut mmsis = Vec::with_capacity(vessels.len());
         let mut imo_number = Vec::with_capacity(vessels.len());
@@ -152,18 +202,18 @@ impl PostgresAdapter {
         let mut draught = Vec::with_capacity(vessels.len());
         let mut destination = Vec::with_capacity(vessels.len());
 
-        for (_, v) in vessels {
+        vessels.values().for_each(|v| {
             mmsis.push(v.mmsi);
             imo_number.push(v.imo_number);
-            call_sign.push(v.call_sign);
-            name.push(v.name);
+            call_sign.push(v.call_sign.clone());
+            name.push(v.name.clone());
             ship_width.push(v.ship_width);
             ship_length.push(v.ship_length);
             ship_type.push(v.ship_type);
             eta.push(v.eta);
             draught.push(v.draught);
-            destination.push(v.destination);
-        }
+            destination.push(v.destination.clone());
+        });
 
         let mut tx = self
             .pool
@@ -370,7 +420,7 @@ DO NOTHING
 
     pub(crate) async fn add_ais_positions(
         &self,
-        positions: Vec<NewAisPosition>,
+        positions: &[NewAisPosition],
     ) -> Result<(), PostgresError> {
         let mut mmsis = Vec::with_capacity(positions.len());
         let mut latitude = Vec::with_capacity(positions.len());

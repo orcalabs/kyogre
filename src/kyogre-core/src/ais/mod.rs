@@ -80,7 +80,7 @@ pub enum AisMessageType {
     Static,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Copy, Debug)]
 pub enum AisClass {
     A,
     B,
