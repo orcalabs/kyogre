@@ -25,6 +25,16 @@ services:
       dockerfile: dockerfiles/ais-consumer/Dockerfile
       secrets:
         - source: git-credentials
+  engine:
+    image: gchr.io/orcalabs/kyogre/engine
+    environment:
+      - RUST_BACKTRACE=1
+      - APP_ENVIRONMENT=local
+    build:
+      context: .
+      dockerfile: dockerfiles/engine/Dockerfile
+      secrets:
+        - source: git-credentials
   database-migrator:
     image: gchr.io/orcalabs/kyogre/database-migrator
     environment:

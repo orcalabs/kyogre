@@ -1,0 +1,11 @@
+log_level: Debug
+postgres:
+  ip: test-db
+  port: 5432
+  username: postgres
+  password: test123
+  max_connections: 10
+  log_statements: Enable
+engine:
+  scrape_schedule:
+    Periodic: 10m
