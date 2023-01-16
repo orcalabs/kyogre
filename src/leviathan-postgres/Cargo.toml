@@ -9,7 +9,7 @@ edition = "2021"
 kyogre-core = { path = "../kyogre-core" }
 orca-core = { registry = "orcalabs-orcastrator", version = "0.19.1", features = ["telemetry"] }
 
-sqlx = { version = "0.6.2", features = ["runtime-tokio-native-tls", "postgres", "bigdecimal", "chrono", "offline"] }
+sqlx = { version = "0.6.2", features = ["runtime-tokio-rustls", "postgres", "bigdecimal", "chrono", "offline"] }
 error-stack = "0.2.4"
 bigdecimal = "0.3.0"
 async-trait = "0.1.59"

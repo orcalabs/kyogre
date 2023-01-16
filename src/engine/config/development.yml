@@ -1,0 +1,12 @@
+log_level: Info
+postgres:
+  port: 5432
+  db_name: kyogre
+  max_connections: 1
+  log_statements: Disable
+telemetry:
+  ip: api.honeycomb.io
+  port: 443
+engine:
+  scrape_schedule:
+    Periodic: 1h
