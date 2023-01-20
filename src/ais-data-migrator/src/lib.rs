@@ -79,9 +79,15 @@ impl Migrator {
         for v in vessels {
             let start = v.progress.unwrap_or(self.source_start_threshold);
 
-            if let Err(e) = self.migrate_vessel(v.mmsi, start).await {
-                event!(Level::ERROR, "{:?}", e);
-                panic!("{:?}", e);
+            let mut tries = 0;
+            loop {
+                match self.migrate_vessel(v.mmsi, start).await {
+                    Ok(_) => break,
+                    Err(e) => {
+                        tries += 1;
+                        event!(Level::ERROR, "{:?}, try_number: {}", e, tries);
+                    }
+                }
             }
         }
 
