@@ -3,7 +3,7 @@ FROM lukemathwalker/cargo-chef:latest-rust-1.66.0-buster AS chef
 WORKDIR /app
 
 FROM chef AS planner
-ADD cargo-config /app/.cargo/config
+ADD dockerfiles/cargo-config /app/.cargo/config
 
 COPY src .
 
