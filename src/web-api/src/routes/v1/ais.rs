@@ -2,15 +2,13 @@ use crate::{error::ApiError, response::Response, Database};
 use actix_web::web;
 use chrono::{DateTime, Duration, Utc};
 use kyogre_core::DateRange;
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use tracing::{event, Level};
 use utoipa::{IntoParams, ToSchema};
 
-lazy_static! {
-    pub static ref AIS_DETAILS_INTERVAL: Duration = Duration::minutes(30);
-    pub static ref MISSING_DATA_DURATION: Duration = Duration::minutes(60);
-}
+pub static AIS_DETAILS_INTERVAL: Lazy<Duration> = Lazy::new(|| Duration::minutes(30));
+pub static MISSING_DATA_DURATION: Lazy<Duration> = Lazy::new(|| Duration::minutes(60));
 
 #[derive(Debug, Deserialize, IntoParams)]
 pub struct AisTrackParameters {
