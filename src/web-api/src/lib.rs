@@ -19,13 +19,13 @@ impl Database for PostgresAdapter {}
 #[derive(OpenApi)]
 #[openapi(
     paths(
-        v1::ais::ais_track,
+        v1::ais::ais_track_minimal,
     ),
     components(
         schemas(
             error::ErrorResponse,
             error::ApiError,
-            v1::ais::AisPosition,
+            v1::ais::MinimalAisPosition,
             v1::ais::NavigationStatus,
         )
     ),

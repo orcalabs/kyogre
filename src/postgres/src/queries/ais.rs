@@ -26,6 +26,7 @@ SELECT
 FROM ais_positions
 WHERE mmsi = $1
 AND timestamp BETWEEN $2 AND $3
+ORDER BY timestamp ASC
             "#,
             mmsi,
             range.start(),
