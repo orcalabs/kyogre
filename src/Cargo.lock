@@ -3623,7 +3623,7 @@ dependencies = [
  "dockertest",
  "futures",
  "kyogre-core",
- "lazy_static",
+ "once_cell",
  "orca-core",
  "postgres",
  "rand",
