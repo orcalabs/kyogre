@@ -1,10 +1,16 @@
 use crate::{error::ApiError, response::Response, Database};
 use actix_web::web;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Duration, Utc};
 use kyogre_core::DateRange;
+use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use tracing::{event, Level};
 use utoipa::{IntoParams, ToSchema};
+
+lazy_static! {
+    pub static ref AIS_DETAILS_INTERVAL: Duration = Duration::minutes(30);
+    pub static ref MISSING_DATA_DURATION: Duration = Duration::minutes(60);
+}
 
 #[derive(Debug, Deserialize, IntoParams)]
 pub struct AisTrackParameters {
@@ -15,7 +21,7 @@ pub struct AisTrackParameters {
 
 #[utoipa::path(
     get,
-    path = "/ais_track",
+    path = "/ais_track_minimal",
     params(AisTrackParameters),
     responses(
         (status = 200, description = "ais positions for the given mmsi", body = [AisPosition]),
@@ -24,10 +30,10 @@ pub struct AisTrackParameters {
     )
 )]
 #[tracing::instrument(skip(db))]
-pub async fn ais_track<T: Database>(
+pub async fn ais_track_minimal<T: Database>(
     db: web::Data<T>,
     params: web::Query<AisTrackParameters>,
-) -> Result<Response<Vec<AisPosition>>, ApiError> {
+) -> Result<Response<Vec<MinimalAisPosition>>, ApiError> {
     let range = DateRange::new(params.start, params.end).map_err(|e| {
         event!(Level::WARN, "{:?}", e);
         ApiError::InvalidDateRange
@@ -41,57 +47,105 @@ pub async fn ais_track<T: Database>(
             ApiError::InternalServerError
         })?
         .into_iter()
-        .map(AisPosition::from)
+        .map(MinimalAisPosition::from)
         .collect();
 
-    Ok(Response::new(positions))
+    Ok(Response::new(create_ais_track(positions)))
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema)]
-pub struct AisPosition {
-    pub latitude: f64,
-    pub longitude: f64,
-    pub mmsi: i32,
-    pub msgtime: DateTime<Utc>,
-    pub course_over_ground: Option<f64>,
-    // TODO: duplicate or not?
+pub struct MinimalAisPosition {
+    pub lat: f64,
+    pub lon: f64,
+    pub timestamp: DateTime<Utc>,
+    pub cog: Option<f64>,
+    pub det: Option<ExtendedAisPosition>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, ToSchema)]
+pub struct ExtendedAisPosition {
     pub navigational_status: Option<NavigationStatus>,
     pub rate_of_turn: Option<f64>,
     pub speed_over_ground: Option<f64>,
     pub true_heading: Option<i32>,
     pub distance_to_shore: f64,
+    pub missing_data: bool,
 }
 
-impl From<kyogre_core::AisPosition> for AisPosition {
+impl From<kyogre_core::AisPosition> for MinimalAisPosition {
     fn from(value: kyogre_core::AisPosition) -> Self {
-        AisPosition {
-            latitude: value.latitude,
-            longitude: value.longitude,
-            mmsi: value.mmsi,
-            msgtime: value.msgtime,
-            course_over_ground: value.course_over_ground,
-            navigational_status: value.navigational_status.map(NavigationStatus::from),
-            rate_of_turn: value.rate_of_turn,
-            speed_over_ground: value.speed_over_ground,
-            true_heading: value.true_heading,
-            distance_to_shore: value.distance_to_shore,
+        MinimalAisPosition {
+            lat: value.latitude,
+            lon: value.longitude,
+            timestamp: value.msgtime,
+            cog: value.course_over_ground,
+            det: Some(ExtendedAisPosition {
+                navigational_status: value.navigational_status.map(NavigationStatus::from),
+                rate_of_turn: value.rate_of_turn,
+                speed_over_ground: value.speed_over_ground,
+                true_heading: value.true_heading,
+                distance_to_shore: value.distance_to_shore,
+                missing_data: false,
+            }),
         }
     }
 }
 
-impl PartialEq<kyogre_core::AisPosition> for AisPosition {
+// Positions are assumed to be sorted in ascending order based on their timestamp
+fn create_ais_track(positions: Vec<MinimalAisPosition>) -> Vec<MinimalAisPosition> {
+    if positions.is_empty() {
+        return vec![];
+    }
+
+    // Safe due to check above
+    let mut current_detail_timstamp = positions.first().unwrap().timestamp;
+    let len = positions.len();
+
+    let mut prev: Option<usize> = None;
+    let mut res = Vec::<MinimalAisPosition>::with_capacity(len);
+    for (i, p) in positions.into_iter().enumerate() {
+        if i == len - 1
+            || i == 0
+            || (p.timestamp - current_detail_timstamp >= *AIS_DETAILS_INTERVAL)
+        {
+            if let Some(j) = prev {
+                let prev = &mut res[j];
+                if p.timestamp - prev.timestamp >= *MISSING_DATA_DURATION {
+                    if let Some(ref mut det) = prev.det {
+                        det.missing_data = true;
+                    }
+                }
+            }
+            current_detail_timstamp = p.timestamp;
+
+            prev = Some(i);
+            res.push(p);
+        } else {
+            res.push(MinimalAisPosition {
+                lat: p.lat,
+                lon: p.lon,
+                cog: p.cog,
+                timestamp: p.timestamp,
+                det: None,
+            });
+        }
+    }
+
+    res
+}
+
+impl PartialEq<kyogre_core::AisPosition> for MinimalAisPosition {
     fn eq(&self, other: &kyogre_core::AisPosition) -> bool {
-        self.latitude as i32 == other.latitude as i32
-            && self.longitude as i32 == other.longitude as i32
-            && self.mmsi == other.mmsi
-            && self.msgtime.timestamp() == other.msgtime.timestamp()
-            && self.course_over_ground.map(|c| c as i32)
-                == other.course_over_ground.map(|c| c as i32)
-            && self.navigational_status == other.navigational_status.map(NavigationStatus::from)
-            && self.rate_of_turn.map(|c| c as i32) == other.rate_of_turn.map(|c| c as i32)
-            && self.speed_over_ground.map(|c| c as i32) == other.speed_over_ground.map(|c| c as i32)
-            && self.true_heading == other.true_heading
-            && self.distance_to_shore as i32 == other.distance_to_shore as i32
+        let mut equal_details = true;
+        if let Some(ref details) = self.det {
+            equal_details = details == other;
+        }
+
+        equal_details
+            && self.lat as i32 == other.latitude as i32
+            && self.lon as i32 == other.longitude as i32
+            && self.timestamp.timestamp() == other.msgtime.timestamp()
+            && self.cog.map(|c| c as i32) == other.course_over_ground.map(|c| c as i32)
     }
 }
 
@@ -113,6 +167,22 @@ pub enum NavigationStatus {
     Reserved13 = 13,
     AisSartIsActive = 14,
     NotDefined = 15,
+}
+
+impl PartialEq<kyogre_core::AisPosition> for ExtendedAisPosition {
+    fn eq(&self, other: &kyogre_core::AisPosition) -> bool {
+        self.navigational_status == other.navigational_status.map(NavigationStatus::from)
+            && self.rate_of_turn.map(|c| c as i32) == other.rate_of_turn.map(|c| c as i32)
+            && self.speed_over_ground.map(|c| c as i32) == other.speed_over_ground.map(|c| c as i32)
+            && self.true_heading == other.true_heading
+            && self.distance_to_shore as i32 == other.distance_to_shore as i32
+    }
+}
+
+impl PartialEq<ExtendedAisPosition> for kyogre_core::AisPosition {
+    fn eq(&self, other: &ExtendedAisPosition) -> bool {
+        other.eq(self)
+    }
 }
 
 impl PartialEq<kyogre_core::NavigationStatus> for NavigationStatus {

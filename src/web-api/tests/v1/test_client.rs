@@ -20,13 +20,13 @@ impl ApiClient {
         client.execute(request).await.unwrap()
     }
 
-    pub async fn get_ais_track(&self, params: AisTrackParameters) -> Response {
+    pub async fn get_ais_track_minimal(&self, params: AisTrackParameters) -> Response {
         let url_params = vec![
             ("start".to_owned(), params.start.to_string()),
             ("end".to_owned(), params.end.to_string()),
             ("mmsi".to_owned(), params.mmsi.to_string()),
         ];
 
-        self.get("ais_track", url_params.as_slice()).await
+        self.get("ais_track_minimal", url_params.as_slice()).await
     }
 }

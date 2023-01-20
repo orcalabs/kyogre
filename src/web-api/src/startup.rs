@@ -59,10 +59,10 @@ where
             .wrap(Compress::default())
             .wrap(Condition::new(not_prod, actix_cors::Cors::permissive()))
             .wrap(TracingLogger::default())
-            .service(
-                web::scope("/v1.0")
-                    .route("/ais_track", web::get().to(routes::v1::ais::ais_track::<T>)),
-            );
+            .service(web::scope("/v1.0").route(
+                "/ais_track_minimal",
+                web::get().to(routes::v1::ais::ais_track_minimal::<T>),
+            ));
 
         match environment {
             Environment::Production | Environment::Test => app,
