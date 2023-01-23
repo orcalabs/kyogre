@@ -21,6 +21,7 @@ jobs:
           echo '${{ secrets.CLOUDSMITH_GIT_API_KEY }}' > ~/.git-credentials
           cargo install cargo-edit
           cargo upgrade
+          git checkout -b kyogre-${{ github.sha }}
           git add .
           git config --local user.email github-actions@github.com
           git config --local user.name github-actions
