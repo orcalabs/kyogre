@@ -55,8 +55,8 @@ services:
       dockerfile: dockerfiles/ais-data-migrator/Dockerfile
       secrets:
         - source: git-credentials
-  web-api:
-    image: gchr.io/orcalabs/kyogre/web-api
+  fishery-api:
+    image: gchr.io/orcalabs/kyogre/fishery-api
     environment:
       - RUST_BACKTRACE=1
       - APP_ENVIRONMENT=local
@@ -64,7 +64,7 @@ services:
       - 8080:8080
     build:
       context: .
-      dockerfile: dockerfiles/web-api/Dockerfile
+      dockerfile: dockerfiles/fishery-api/Dockerfile
       secrets:
         - source: git-credentials
 

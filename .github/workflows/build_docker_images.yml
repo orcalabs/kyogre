@@ -73,9 +73,9 @@ jobs:
           context: .
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          file: dockerfiles/web-api/Dockerfile
+          file: dockerfiles/fishery-api/Dockerfile
           push: true
-          tags: ghcr.io/orcalabs/kyogre/web-api:${{ github.sha }}
+          tags: ghcr.io/orcalabs/kyogre/fishery-api:${{ github.sha }}
           secrets: |
             git-credentials=${{ secrets.CLOUDSMITH_GIT_API_KEY }}
 
@@ -113,10 +113,10 @@ jobs:
           cd aks-repo/apps/base/kyogre
           kustomize edit set image ghcr.io/orcalabs/kyogre/ais-consumer:${{ github.sha }}
 
-      - name: Update web-api image tag
+      - name: Update fishery-api image tag
         run: |
           cd aks-repo/apps/base/kyogre
-          kustomize edit set image ghcr.io/orcalabs/kyogre/web-api:${{ github.sha }}
+          kustomize edit set image ghcr.io/orcalabs/kyogre/fishery-api:${{ github.sha }}
 
       - name: Update engine image tag
         run: |
