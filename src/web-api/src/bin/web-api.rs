@@ -20,8 +20,8 @@ async fn main() {
 
     orca_core::init_tracer(
         Level::from(&settings.log_level),
-        "kyogre-web-api",
-        "web-api",
+        "kyogre-fishery-api",
+        "fishery-api",
         tracing,
     );
 
