@@ -33,6 +33,7 @@ jobs:
           echo '${{ secrets.CLOUDSMITH_GIT_API_KEY }}' > ~/.git-credentials
           git config --global credential.helper store
           cd src
+          export SQLX_OFFLINE=true
           cargo run --bin web-api-openapi | cat > web-api/openapispec.json
 
       - name: Checkout azure-terraform repository
