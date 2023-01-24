@@ -33,4 +33,4 @@ impl Database for PostgresAdapter {}
         (name = "kyogre-api", description = "kyogre api")
     ),
 )]
-struct ApiDoc;
+pub struct ApiDoc;
