@@ -19,7 +19,7 @@ pub struct AisTrackParameters {
 
 #[utoipa::path(
     get,
-    path = "/ais_track_minimal",
+    path = "/ais_track",
     params(AisTrackParameters),
     responses(
         (status = 200, description = "ais positions for the given mmsi", body = [AisPosition]),
@@ -28,7 +28,7 @@ pub struct AisTrackParameters {
     )
 )]
 #[tracing::instrument(skip(db))]
-pub async fn ais_track_minimal<T: Database>(
+pub async fn ais_track<T: Database>(
     db: web::Data<T>,
     params: web::Query<AisTrackParameters>,
 ) -> Result<Response<Vec<MinimalAisPosition>>, ApiError> {

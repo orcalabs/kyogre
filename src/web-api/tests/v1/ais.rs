@@ -24,7 +24,7 @@ async fn test_ais_track_filters_by_start_and_end() {
 
         let response = helper
             .app
-            .get_ais_track_minimal(AisTrackParameters {
+            .get_ais_track(AisTrackParameters {
                 mmsi: vessel.mmsi,
                 start: pos.msgtime + Duration::seconds(1),
                 end: pos3.msgtime - Duration::seconds(1),
@@ -40,7 +40,7 @@ async fn test_ais_track_filters_by_start_and_end() {
 }
 
 #[tokio::test]
-async fn test_ais_track_minimal_returns_a_details_on_first_and_last_point() {
+async fn test_ais_track_returns_a_details_on_first_and_last_point() {
     test(|helper| async move {
         let vessel = helper.db.generate_vessel(40, "LK-28").await;
         let pos = helper
@@ -55,7 +55,7 @@ async fn test_ais_track_minimal_returns_a_details_on_first_and_last_point() {
 
         let response = helper
             .app
-            .get_ais_track_minimal(AisTrackParameters {
+            .get_ais_track(AisTrackParameters {
                 mmsi: vessel.mmsi,
                 start: pos.msgtime,
                 end: pos2.msgtime,
@@ -73,7 +73,7 @@ async fn test_ais_track_minimal_returns_a_details_on_first_and_last_point() {
 }
 
 #[tokio::test]
-async fn test_ais_track_minimal_returns_a_details_every_interval() {
+async fn test_ais_track_returns_a_details_every_interval() {
     test(|helper| async move {
         let vessel = helper.db.generate_vessel(40, "LK-28").await;
         let pos = helper
@@ -94,7 +94,7 @@ async fn test_ais_track_minimal_returns_a_details_every_interval() {
 
         let response = helper
             .app
-            .get_ais_track_minimal(AisTrackParameters {
+            .get_ais_track(AisTrackParameters {
                 mmsi: vessel.mmsi,
                 start: pos.msgtime,
                 end: pos3.msgtime,
@@ -112,7 +112,7 @@ async fn test_ais_track_minimal_returns_a_details_every_interval() {
 }
 
 #[tokio::test]
-async fn test_ais_track_minimal_returns_missing_data_if_time_between_points_exceeds_limit() {
+async fn test_ais_track_returns_missing_data_if_time_between_points_exceeds_limit() {
     test(|helper| async move {
         let vessel = helper.db.generate_vessel(40, "LK-28").await;
         let pos = helper
@@ -136,7 +136,7 @@ async fn test_ais_track_minimal_returns_missing_data_if_time_between_points_exce
 
         let response = helper
             .app
-            .get_ais_track_minimal(AisTrackParameters {
+            .get_ais_track(AisTrackParameters {
                 mmsi: vessel.mmsi,
                 start: pos.msgtime,
                 end: pos3.msgtime,

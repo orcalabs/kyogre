@@ -19,7 +19,7 @@ impl Database for PostgresAdapter {}
 #[derive(OpenApi)]
 #[openapi(
     paths(
-        v1::ais::ais_track_minimal,
+        v1::ais::ais_track,
     ),
     components(
         schemas(
