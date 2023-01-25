@@ -20,6 +20,9 @@ jobs:
       dependencies: protobuf-compiler
       src-dir: src
       image-build-command: docker build -f dockerfiles/test-db/Dockerfile -t ghcr.io/orcalabs/kyogre/test-postgres .
+      openapi-bins: |
+        web-api-openapi
+
   sqlx-check:
     runs-on: ubuntu-latest
     services:
@@ -50,28 +53,3 @@ jobs:
           cargo install sqlx-cli --no-default-features --features postgres,rustls
           sqlx migrate run --source postgres/migrations
           cargo sqlx prepare --merged --check
-  openapi-check:
-    runs-on: ubuntu-latest
-    services:
-      swagger-editor:
-        image: swaggerapi/swagger-editor
-        ports:
-          - 80:8080
-    steps:
-      - uses: actions/checkout@v3
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-        with:
-          save-if: false
-          shared-key: shared
-          workspaces: src
-      - name: Produce OpenApi spec
-        run: |
-          cd src
-          cargo run --bin web-api-openapi | cat > web-api/openapispec.json
-      - name: Validate OpenAPI spec
-        uses: char0n/swagger-editor-validate@v1
-        with:
-          swagger-editor-url: http://localhost/
-          definition-file: src/web-api/openapispec.json
-          ignore-error: ignore-openapi-error.js
