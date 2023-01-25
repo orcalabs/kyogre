@@ -7,24 +7,5 @@ on:
 
 jobs:
   update_dependencies:
-    name: Update rust dependencies
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-      - uses: dtolnay/rust-toolchain@stable
-      - name: Update deps
-        run: |
-          cd src
-          git config --global credential.helper store
-          echo '${{ secrets.CLOUDSMITH_CARGO_REGISTRY }}' > ~/.cargo/config
-          echo '${{ secrets.CLOUDSMITH_GIT_API_KEY }}' > ~/.git-credentials
-          cargo install cargo-edit
-          cargo upgrade
-          git checkout -b kyogre-${{ github.sha }}
-          git add .
-          git config --local user.email github-actions@github.com
-          git config --local user.name github-actions
-          git commit -am "Update rust dependencies"
-          git push -u origin HEAD
-          gh pr create -B master -H kyogre-${{ github.sha }} --title 'Merge rust-dependencies-update' --body 'Created by Github action'
+    uses: orcalabs/github-actions/.github/workflows/rust_update.yml@master
+    secrets: inherit
