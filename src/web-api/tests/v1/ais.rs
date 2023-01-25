@@ -24,11 +24,13 @@ async fn test_ais_track_filters_by_start_and_end() {
 
         let response = helper
             .app
-            .get_ais_track(AisTrackParameters {
-                mmsi: vessel.mmsi,
-                start: pos.msgtime + Duration::seconds(1),
-                end: pos3.msgtime - Duration::seconds(1),
-            })
+            .get_ais_track(
+                vessel.mmsi,
+                AisTrackParameters {
+                    start: Some(pos.msgtime + Duration::seconds(1)),
+                    end: Some(pos3.msgtime - Duration::seconds(1)),
+                },
+            )
             .await;
 
         assert_eq!(response.status(), StatusCode::OK);
@@ -55,11 +57,13 @@ async fn test_ais_track_returns_a_details_on_first_and_last_point() {
 
         let response = helper
             .app
-            .get_ais_track(AisTrackParameters {
-                mmsi: vessel.mmsi,
-                start: pos.msgtime,
-                end: pos2.msgtime,
-            })
+            .get_ais_track(
+                vessel.mmsi,
+                AisTrackParameters {
+                    start: Some(pos.msgtime),
+                    end: Some(pos2.msgtime),
+                },
+            )
             .await;
 
         assert_eq!(response.status(), StatusCode::OK);
@@ -94,11 +98,13 @@ async fn test_ais_track_returns_a_details_every_interval() {
 
         let response = helper
             .app
-            .get_ais_track(AisTrackParameters {
-                mmsi: vessel.mmsi,
-                start: pos.msgtime,
-                end: pos3.msgtime,
-            })
+            .get_ais_track(
+                vessel.mmsi,
+                AisTrackParameters {
+                    start: Some(pos.msgtime),
+                    end: Some(pos3.msgtime),
+                },
+            )
             .await;
 
         assert_eq!(response.status(), StatusCode::OK);
@@ -136,11 +142,13 @@ async fn test_ais_track_returns_missing_data_if_time_between_points_exceeds_limi
 
         let response = helper
             .app
-            .get_ais_track(AisTrackParameters {
-                mmsi: vessel.mmsi,
-                start: pos.msgtime,
-                end: pos3.msgtime,
-            })
+            .get_ais_track(
+                vessel.mmsi,
+                AisTrackParameters {
+                    start: Some(pos.msgtime),
+                    end: Some(pos3.msgtime),
+                },
+            )
             .await;
 
         assert_eq!(response.status(), StatusCode::OK);
@@ -148,6 +156,66 @@ async fn test_ais_track_returns_missing_data_if_time_between_points_exceeds_limi
 
         assert_eq!(body.len(), 3);
         assert!(body[1].clone().det.unwrap().missing_data);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_ais_track_returns_bad_request_with_only_start_and_no_end_specified() {
+    test(|helper| async move {
+        let vessel = helper.db.generate_vessel(40, "LK-28").await;
+
+        let response = helper
+            .app
+            .get_ais_track(
+                vessel.mmsi,
+                AisTrackParameters {
+                    start: Some(chrono::Utc::now()),
+                    end: None,
+                },
+            )
+            .await;
+
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_ais_track_returns_24h_of_data_when_no_start_and_end_are_specified() {
+    test(|helper| async move {
+        let vessel = helper.db.generate_vessel(40, "LK-28").await;
+
+        let now_pos = helper
+            .db
+            .generate_ais_position(vessel.mmsi, Utc::now() - Duration::seconds(10))
+            .await;
+
+        let at_24h = helper
+            .db
+            .generate_ais_position(vessel.mmsi, now_pos.msgtime - Duration::hours(23))
+            .await;
+
+        let _beyond_24h = helper
+            .db
+            .generate_ais_position(vessel.mmsi, now_pos.msgtime - Duration::hours(26))
+            .await;
+
+        let response = helper
+            .app
+            .get_ais_track(
+                vessel.mmsi,
+                AisTrackParameters {
+                    start: None,
+                    end: None,
+                },
+            )
+            .await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let body: Vec<AisPosition> = response.json().await.unwrap();
+
+        assert_eq!(vec![at_24h, now_pos], body);
     })
     .await;
 }
