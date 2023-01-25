@@ -25,7 +25,8 @@ impl Database for PostgresAdapter {}
         schemas(
             error::ErrorResponse,
             error::ApiError,
-            v1::ais::MinimalAisPosition,
+            v1::ais::AisPosition,
+            v1::ais::AisPositionDetails,
             v1::ais::NavigationStatus,
         )
     ),
