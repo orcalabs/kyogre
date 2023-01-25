@@ -8,7 +8,6 @@ on:
   pull_request:
     branches:
       - master
-
 env:
   CARGO_TERM_COLOR: always
   DATABASE_URL: postgres://127.0.0.1:5432?user=postgres&password=postgres
@@ -24,26 +23,23 @@ jobs:
   sqlx-check:
     runs-on: ubuntu-latest
     services:
-          postgres:
-            image: postgres:15.1-alpine
-            env:
-              POSTGRES_DB: postgres
-              POSTGRES_PASSWORD: postgres
-              POSTGRES_USER: postgres
-            ports:
-              - 5432:5432
+      postgres:
+        image: postgres:15.1-alpine
+        env:
+          POSTGRES_DB: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+        ports:
+          - 5432:5432
     steps:
       - uses: actions/checkout@v3
-      - name: Install rustup toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
+      - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
         with:
           save-if: false
           shared-key: sqlx
           workspaces: src
-      - name: sqlx migration
+      - name: check sqlx query cache
         run: |
           cd src
           sudo apt-get update -y
@@ -54,3 +50,28 @@ jobs:
           cargo install sqlx-cli --no-default-features --features postgres,rustls
           sqlx migrate run --source postgres/migrations
           cargo sqlx prepare --merged --check
+  openapi-check:
+    runs-on: ubuntu-latest
+    services:
+      swagger-editor:
+        image: swaggerapi/swagger-editor
+        ports:
+          - 80:8080
+    steps:
+      - uses: actions/checkout@v3
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          save-if: false
+          shared-key: shared
+          workspaces: src
+      - name: Produce OpenApi spec
+        run: |
+          cd src
+          cargo run --bin web-api-openapi | cat > web-api/openapispec.json
+      - name: Validate OpenAPI spec
+        uses: char0n/swagger-editor-validate@v1
+        with:
+          swagger-editor-url: http://localhost/
+          definition-file: src/web-api/openapispec.json
+          ignore-error: ignore-openapi-error.js
