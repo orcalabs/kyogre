@@ -31,7 +31,7 @@ pub struct AisTrackParameters {
 pub async fn ais_track<T: Database>(
     db: web::Data<T>,
     params: web::Query<AisTrackParameters>,
-) -> Result<Response<Vec<MinimalAisPosition>>, ApiError> {
+) -> Result<Response<Vec<AisPosition>>, ApiError> {
     let range = DateRange::new(params.start, params.end).map_err(|e| {
         event!(Level::WARN, "{:?}", e);
         ApiError::InvalidDateRange
@@ -45,23 +45,23 @@ pub async fn ais_track<T: Database>(
             ApiError::InternalServerError
         })?
         .into_iter()
-        .map(MinimalAisPosition::from)
+        .map(AisPosition::from)
         .collect();
 
     Ok(Response::new(create_ais_track(positions)))
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema)]
-pub struct MinimalAisPosition {
+pub struct AisPosition {
     pub lat: f64,
     pub lon: f64,
     pub timestamp: DateTime<Utc>,
     pub cog: Option<f64>,
-    pub det: Option<ExtendedAisPosition>,
+    pub det: Option<AisPositionDetails>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema)]
-pub struct ExtendedAisPosition {
+pub struct AisPositionDetails {
     pub navigational_status: Option<NavigationStatus>,
     pub rate_of_turn: Option<f64>,
     pub speed_over_ground: Option<f64>,
@@ -70,14 +70,14 @@ pub struct ExtendedAisPosition {
     pub missing_data: bool,
 }
 
-impl From<kyogre_core::AisPosition> for MinimalAisPosition {
+impl From<kyogre_core::AisPosition> for AisPosition {
     fn from(value: kyogre_core::AisPosition) -> Self {
-        MinimalAisPosition {
+        AisPosition {
             lat: value.latitude,
             lon: value.longitude,
             timestamp: value.msgtime,
             cog: value.course_over_ground,
-            det: Some(ExtendedAisPosition {
+            det: Some(AisPositionDetails {
                 navigational_status: value.navigational_status.map(NavigationStatus::from),
                 rate_of_turn: value.rate_of_turn,
                 speed_over_ground: value.speed_over_ground,
@@ -90,7 +90,7 @@ impl From<kyogre_core::AisPosition> for MinimalAisPosition {
 }
 
 // Positions are assumed to be sorted in ascending order based on their timestamp
-fn create_ais_track(positions: Vec<MinimalAisPosition>) -> Vec<MinimalAisPosition> {
+fn create_ais_track(positions: Vec<AisPosition>) -> Vec<AisPosition> {
     if positions.is_empty() {
         return vec![];
     }
@@ -100,7 +100,7 @@ fn create_ais_track(positions: Vec<MinimalAisPosition>) -> Vec<MinimalAisPositio
     let len = positions.len();
 
     let mut prev: Option<usize> = None;
-    let mut res = Vec::<MinimalAisPosition>::with_capacity(len);
+    let mut res = Vec::<AisPosition>::with_capacity(len);
     for (i, p) in positions.into_iter().enumerate() {
         if i == len - 1
             || i == 0
@@ -119,7 +119,7 @@ fn create_ais_track(positions: Vec<MinimalAisPosition>) -> Vec<MinimalAisPositio
             prev = Some(i);
             res.push(p);
         } else {
-            res.push(MinimalAisPosition {
+            res.push(AisPosition {
                 lat: p.lat,
                 lon: p.lon,
                 cog: p.cog,
@@ -132,7 +132,7 @@ fn create_ais_track(positions: Vec<MinimalAisPosition>) -> Vec<MinimalAisPositio
     res
 }
 
-impl PartialEq<kyogre_core::AisPosition> for MinimalAisPosition {
+impl PartialEq<kyogre_core::AisPosition> for AisPosition {
     fn eq(&self, other: &kyogre_core::AisPosition) -> bool {
         let mut equal_details = true;
         if let Some(ref details) = self.det {
@@ -167,7 +167,7 @@ pub enum NavigationStatus {
     NotDefined = 15,
 }
 
-impl PartialEq<kyogre_core::AisPosition> for ExtendedAisPosition {
+impl PartialEq<kyogre_core::AisPosition> for AisPositionDetails {
     fn eq(&self, other: &kyogre_core::AisPosition) -> bool {
         self.navigational_status == other.navigational_status.map(NavigationStatus::from)
             && self.rate_of_turn.map(|c| c as i32) == other.rate_of_turn.map(|c| c as i32)
@@ -177,8 +177,8 @@ impl PartialEq<kyogre_core::AisPosition> for ExtendedAisPosition {
     }
 }
 
-impl PartialEq<ExtendedAisPosition> for kyogre_core::AisPosition {
-    fn eq(&self, other: &ExtendedAisPosition) -> bool {
+impl PartialEq<AisPositionDetails> for kyogre_core::AisPosition {
+    fn eq(&self, other: &AisPositionDetails) -> bool {
         other.eq(self)
     }
 }

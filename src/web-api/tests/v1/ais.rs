@@ -2,7 +2,7 @@ use super::helper::test;
 use actix_web::http::StatusCode;
 use chrono::{Duration, TimeZone, Utc};
 use web_api::routes::v1::ais::{
-    AisTrackParameters, MinimalAisPosition, AIS_DETAILS_INTERVAL, MISSING_DATA_DURATION,
+    AisPosition, AisTrackParameters, AIS_DETAILS_INTERVAL, MISSING_DATA_DURATION,
 };
 
 #[tokio::test]
@@ -32,7 +32,7 @@ async fn test_ais_track_filters_by_start_and_end() {
             .await;
 
         assert_eq!(response.status(), StatusCode::OK);
-        let body: Vec<MinimalAisPosition> = response.json().await.unwrap();
+        let body: Vec<AisPosition> = response.json().await.unwrap();
 
         assert_eq!(body, vec![pos2]);
     })
@@ -63,7 +63,7 @@ async fn test_ais_track_returns_a_details_on_first_and_last_point() {
             .await;
 
         assert_eq!(response.status(), StatusCode::OK);
-        let body: Vec<MinimalAisPosition> = response.json().await.unwrap();
+        let body: Vec<AisPosition> = response.json().await.unwrap();
 
         assert_eq!(body.len(), 2);
         assert_eq!(body[0].clone().det.unwrap(), pos);
@@ -102,7 +102,7 @@ async fn test_ais_track_returns_a_details_every_interval() {
             .await;
 
         assert_eq!(response.status(), StatusCode::OK);
-        let body: Vec<MinimalAisPosition> = response.json().await.unwrap();
+        let body: Vec<AisPosition> = response.json().await.unwrap();
 
         assert_eq!(body.len(), 3);
         assert_eq!(body[1].clone().det.unwrap(), pos2);
@@ -144,7 +144,7 @@ async fn test_ais_track_returns_missing_data_if_time_between_points_exceeds_limi
             .await;
 
         assert_eq!(response.status(), StatusCode::OK);
-        let body: Vec<MinimalAisPosition> = response.json().await.unwrap();
+        let body: Vec<AisPosition> = response.json().await.unwrap();
 
         assert_eq!(body.len(), 3);
         assert!(body[1].clone().det.unwrap().missing_data);
