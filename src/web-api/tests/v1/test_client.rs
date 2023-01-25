@@ -11,8 +11,8 @@ impl ApiClient {
         ApiClient { address }
     }
 
-    async fn get(&self, path: &str, parameters: &[(String, String)]) -> Response {
-        let url = format!("{}/{}", self.address, path);
+    async fn get<T: AsRef<str>>(&self, path: T, parameters: &[(String, String)]) -> Response {
+        let url = format!("{}/{}", self.address, path.as_ref());
 
         let client = Client::new();
         let request = client.get(url).query(parameters).build().unwrap();
@@ -20,13 +20,18 @@ impl ApiClient {
         client.execute(request).await.unwrap()
     }
 
-    pub async fn get_ais_track(&self, params: AisTrackParameters) -> Response {
-        let url_params = vec![
-            ("start".to_owned(), params.start.to_string()),
-            ("end".to_owned(), params.end.to_string()),
-            ("mmsi".to_owned(), params.mmsi.to_string()),
-        ];
+    pub async fn get_ais_track(&self, mmsi: i32, params: AisTrackParameters) -> Response {
+        let mut url_params = Vec::new();
 
-        self.get("ais_track", url_params.as_slice()).await
+        if let Some(s) = params.start {
+            url_params.push((("start".to_owned()), s.to_string()));
+        }
+
+        if let Some(s) = params.end {
+            url_params.push((("end".to_owned()), s.to_string()));
+        }
+
+        self.get(format!("ais_track/{}", mmsi), url_params.as_slice())
+            .await
     }
 }

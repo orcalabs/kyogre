@@ -1,5 +1,5 @@
 use crate::{error::ApiError, response::Response, Database};
-use actix_web::web;
+use actix_web::web::{self, Path};
 use chrono::{DateTime, Duration, Utc};
 use kyogre_core::DateRange;
 use once_cell::sync::Lazy;
@@ -12,14 +12,13 @@ pub static MISSING_DATA_DURATION: Lazy<Duration> = Lazy::new(|| Duration::minute
 
 #[derive(Debug, Deserialize, IntoParams)]
 pub struct AisTrackParameters {
-    pub start: DateTime<Utc>,
-    pub end: DateTime<Utc>,
-    pub mmsi: i32,
+    pub start: Option<DateTime<Utc>>,
+    pub end: Option<DateTime<Utc>>,
 }
 
 #[utoipa::path(
     get,
-    path = "/ais_track",
+    path = "/ais_track/{mmsi}",
     params(AisTrackParameters),
     responses(
         (status = 200, description = "ais positions for the given mmsi", body = [AisPosition]),
@@ -31,14 +30,25 @@ pub struct AisTrackParameters {
 pub async fn ais_track<T: Database>(
     db: web::Data<T>,
     params: web::Query<AisTrackParameters>,
+    mmsi: Path<i32>,
 ) -> Result<Response<Vec<AisPosition>>, ApiError> {
-    let range = DateRange::new(params.start, params.end).map_err(|e| {
+    let (start, end) = match (params.start, params.end) {
+        (None, None) => {
+            let end = chrono::Utc::now();
+            let start = end - Duration::hours(24);
+            Ok((start, end))
+        }
+        (Some(start), Some(end)) => Ok((start, end)),
+        _ => Err(ApiError::InvalidDateRange),
+    }?;
+
+    let range = DateRange::new(start, end).map_err(|e| {
         event!(Level::WARN, "{:?}", e);
         ApiError::InvalidDateRange
     })?;
 
     let positions = db
-        .ais_positions(params.mmsi, &range)
+        .ais_positions(mmsi.into_inner(), &range)
         .await
         .map_err(|e| {
             event!(Level::ERROR, "failed to retrieve ais positions: {:?}", e);
@@ -144,6 +154,12 @@ impl PartialEq<kyogre_core::AisPosition> for AisPosition {
             && self.lon as i32 == other.longitude as i32
             && self.timestamp.timestamp() == other.msgtime.timestamp()
             && self.cog.map(|c| c as i32) == other.course_over_ground.map(|c| c as i32)
+    }
+}
+
+impl PartialEq<AisPosition> for kyogre_core::AisPosition {
+    fn eq(&self, other: &AisPosition) -> bool {
+        other.eq(self)
     }
 }
 

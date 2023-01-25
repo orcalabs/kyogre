@@ -146,7 +146,7 @@ FROM ais_vessels
             .await
             .unwrap()
             .into_iter()
-            .filter(|v| v.mmsi == mmsi && v.msgtime == timestamp)
+            .filter(|v| v.mmsi == mmsi && v.msgtime.timestamp() == timestamp.timestamp())
             .collect::<Vec<AisPosition>>();
 
         assert_eq!(positions.len(), 1);
