@@ -1,0 +1,15 @@
+[package]
+name = "trip-assembler"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+kyogre-core = { path = "../kyogre-core" }
+
+async-trait = "0.1.59"
+tracing = "0.1.37"
+chrono = { version = "0.4.23", features = ["serde"] }
+error-stack = "0.2.4"
+strum = { version = "0.24.1", features = ["derive"] }
