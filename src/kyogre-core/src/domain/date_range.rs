@@ -2,6 +2,7 @@ use chrono::{DateTime, Utc};
 
 use crate::DateRangeError;
 
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DateRange {
     start: DateTime<Utc>,
     end: DateTime<Utc>,
