@@ -17,6 +17,7 @@ pub struct NewTrip {
 #[derive(Debug, Clone)]
 pub enum TripsConflictStrategy {
     Error,
+    Replace,
 }
 
 #[derive(Debug, Clone)]

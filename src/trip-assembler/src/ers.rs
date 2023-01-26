@@ -1,10 +1,10 @@
-use crate::{TripAssembler, TripAssemblerError};
+use crate::{State, TripAssembler, TripAssemblerError};
 use async_trait::async_trait;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, TimeZone, Utc};
 use error_stack::{IntoReport, Result, ResultExt};
 use kyogre_core::{
     Arrival, ArrivalFilter, DateRange, Departure, NewTrip, Trip, TripAssemblerId,
-    TripAssemblerOutboundPort, Vessel,
+    TripAssemblerOutboundPort, TripsConflictStrategy, Vessel,
 };
 use strum::EnumDiscriminants;
 
@@ -55,14 +55,26 @@ impl TripAssembler for ErsTripAssembler {
         TripAssemblerId::Ers
     }
 
+    fn start_search_time(&self, state: &State) -> DateTime<Utc> {
+        match state {
+            State::Conflict(c) | State::CurrentCalculationTime(c) => *c,
+            State::NoPriorState => Utc.timestamp_opt(1000, 0).unwrap(),
+        }
+    }
+
+    fn trip_calculation_time(&self, most_recent_trip: &NewTrip) -> DateTime<Utc> {
+        *most_recent_trip.range.end()
+    }
+
     async fn new_trips(
         &self,
         adapter: &dyn TripAssemblerOutboundPort,
         vessel: &Vessel,
-        range: &DateRange,
+        start: &DateTime<Utc>,
         prior_trip: Option<Trip>,
-    ) -> Result<Vec<NewTrip>, TripAssemblerError> {
+    ) -> Result<(Vec<NewTrip>, Option<TripsConflictStrategy>), TripAssemblerError> {
         let mut stop_points: Vec<StopPoint> = Vec::new();
+        let mut conflict_strategy = None;
 
         // If a new arrival is added and no further departures, we want to extend the current trip to
         // that next arrival.
@@ -76,13 +88,13 @@ impl TripAssembler for ErsTripAssembler {
         }
 
         let arrivals = adapter
-            .ers_arrivals(vessel.id, range, ArrivalFilter::WithLandingFacility)
+            .ers_arrivals(vessel.id, start, ArrivalFilter::WithLandingFacility)
             .await
             .change_context(TripAssemblerError)
             .into_iter()
             .map(StopPoint::Arrival);
         let departures = adapter
-            .ers_departures(vessel.id, range)
+            .ers_departures(vessel.id, start)
             .await
             .change_context(TripAssemblerError)
             .into_iter()
@@ -140,11 +152,13 @@ impl TripAssembler for ErsTripAssembler {
                     && new_trips[0].range.end().timestamp() == prior_trip.range.end().timestamp()
                 {
                     new_trips.remove(0);
+                } else {
+                    conflict_strategy = Some(TripsConflictStrategy::Replace);
                 }
             }
         }
 
-        Ok(new_trips)
+        Ok((new_trips, conflict_strategy))
     }
 }
 

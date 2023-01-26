@@ -1,11 +1,13 @@
-use error_stack::IntoReport;
-use std::collections::HashMap;
-
-use crate::{TripAssembler, TripAssemblerError};
+use crate::{State, TripAssembler, TripAssemblerError};
 use async_trait::async_trait;
-use chrono::{DateTime, NaiveDate, Utc};
+use chrono::{DateTime, Duration, NaiveDate, TimeZone, Utc};
+use error_stack::IntoReport;
 use error_stack::{Result, ResultExt};
-use kyogre_core::{DateRange, NewTrip, Trip, TripAssemblerId, TripAssemblerOutboundPort, Vessel};
+use kyogre_core::{
+    DateRange, NewTrip, Trip, TripAssemblerId, TripAssemblerOutboundPort, TripsConflictStrategy,
+    Vessel,
+};
+use std::collections::HashMap;
 
 pub struct LandingTripAssembler {}
 
@@ -15,61 +17,93 @@ impl TripAssembler for LandingTripAssembler {
         TripAssemblerId::Landings
     }
 
+    fn start_search_time(&self, state: &State) -> DateTime<Utc> {
+        match state {
+            State::Conflict(c) => {
+                DateTime::<Utc>::from_utc(c.date_naive().and_hms_opt(0, 0, 0).unwrap(), Utc)
+            }
+            State::CurrentCalculationTime(c) => DateTime::<Utc>::from_utc(
+                c.date_naive()
+                    .succ_opt()
+                    .unwrap()
+                    .and_hms_opt(0, 0, 0)
+                    .unwrap(),
+                Utc,
+            ),
+            State::NoPriorState => Utc.timestamp_opt(1000, 0).unwrap(),
+        }
+    }
+
+    fn trip_calculation_time(&self, most_recent_trip: &NewTrip) -> DateTime<Utc> {
+        DateTime::<Utc>::from_utc(
+            most_recent_trip
+                .range
+                .end()
+                .date_naive()
+                .and_hms_opt(23, 59, 59)
+                .unwrap(),
+            Utc,
+        )
+    }
+
     async fn new_trips(
         &self,
         adapter: &dyn TripAssemblerOutboundPort,
         vessel: &Vessel,
-        range: &DateRange,
+        start: &DateTime<Utc>,
         prior_trip: Option<Trip>,
-    ) -> Result<Vec<NewTrip>, TripAssemblerError> {
-        let landing_dates = adapter
-            .landing_dates(vessel.id, range)
+    ) -> Result<(Vec<NewTrip>, Option<TripsConflictStrategy>), TripAssemblerError> {
+        let mut landing_dates = adapter
+            .landing_dates(vessel.id, start)
             .await
             .change_context(TripAssemblerError)?;
-
-        let mut grouped_by_day = group_dates_by_day(landing_dates);
-
-        let mut new_trips = Vec::new();
-        let len = grouped_by_day.len();
-
-        // If a new landing occurs earlier on the same day as the prior trip's end/start we need to include
-        // them in the same day grouping.
-        if let (Some(prior_trip), false) = (prior_trip, grouped_by_day.is_empty()) {
-            let first_landing_date = grouped_by_day[0].date_naive();
-            let prior_trip_start = prior_trip.range.start();
-            let prior_trip_end = prior_trip.range.end();
-
-            match (
-                prior_trip_start.date_naive() == first_landing_date,
-                prior_trip_end.date_naive() == first_landing_date,
-            ) {
-                // We are only interested in the earlierst landing on each day, as start is always
-                // before end we prioritize it.
-                (true, _) => grouped_by_day[0] = *prior_trip_start,
-                (false, true) => grouped_by_day[0] = *prior_trip_end,
-                _ => (),
-            }
+        if landing_dates.is_empty() {
+            return Ok((vec![], None));
         }
 
-        let mut i = 0;
+        let oldest_landing = *landing_dates.iter().min().unwrap();
 
-        while i < len - 1 {
-            let range = DateRange::new(grouped_by_day[i], grouped_by_day[i + 1])
-                .into_report()
-                .change_context(TripAssemblerError)?;
+        let mut new_trips = Vec::new();
 
-            let new_trip = NewTrip {
-                range,
+        // When conflicts occur on the same day as the prior trip ended we have to add both
+        // the start and end of the prior trip to our assembly line as we would lose the link
+        // between prior trip if we didnt.
+        // If they did not occur on the same day its sufficient to add the end part to our assembly
+        // line as this will create the link to the prior trip for our new trips.
+        if let Some(prior_trip) = prior_trip {
+            if prior_trip.range.end().date_naive() == oldest_landing.date_naive() {
+                landing_dates.push(*prior_trip.range.start());
+            }
+            landing_dates.push(*prior_trip.range.end());
+        } else {
+            let end = oldest_landing - Duration::days(1);
+            let start = end - Duration::days(1);
+            new_trips.push(NewTrip {
+                range: DateRange::new(start, end)
+                    .into_report()
+                    .change_context(TripAssemblerError)?,
                 start_port_code: None,
                 end_port_code: None,
-            };
+            });
+        };
 
-            new_trips.push(new_trip);
+        let grouped_by_day = group_dates_by_day(landing_dates);
+
+        let mut i = 0;
+        let len = grouped_by_day.len();
+        while i < len - 1 {
+            new_trips.push(NewTrip {
+                range: DateRange::new(grouped_by_day[i], grouped_by_day[i + 1])
+                    .into_report()
+                    .change_context(TripAssemblerError)?,
+                start_port_code: None,
+                end_port_code: None,
+            });
 
             i += 1;
         }
 
-        Ok(new_trips)
+        Ok((new_trips, None))
     }
 }
 
