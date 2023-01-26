@@ -36,7 +36,7 @@ pub trait TripAssemblerOutboundPort: Send + Sync {
     async fn landing_dates(
         &self,
         vessel_id: i64,
-        range: &DateRange,
+        start: &DateTime<Utc>,
     ) -> Result<Vec<DateTime<Utc>>, QueryError>;
     async fn most_recent_trip(
         &self,
@@ -47,12 +47,18 @@ pub trait TripAssemblerOutboundPort: Send + Sync {
     async fn ers_arrivals(
         &self,
         vessel_id: i64,
-        range: &DateRange,
+        start: &DateTime<Utc>,
         filter: ArrivalFilter,
     ) -> Result<Arrival, QueryError>;
     async fn ers_departures(
         &self,
         vessel_id: i64,
-        range: &DateRange,
+        start: &DateTime<Utc>,
     ) -> Result<Departure, QueryError>;
+    async fn trip_prior_to(
+        &self,
+        vessel_id: i64,
+        assembler_id: TripAssemblerId,
+        time: &DateTime<Utc>,
+    ) -> Result<Option<Trip>, QueryError>;
 }
