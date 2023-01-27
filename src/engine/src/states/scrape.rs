@@ -1,3 +1,5 @@
+use tracing::instrument;
+
 use crate::{Engine, Pending, SharedState, StepWrapper};
 
 // Pending -> Scrape
@@ -18,6 +20,7 @@ impl<L, T> From<StepWrapper<L, T, Scrape>> for StepWrapper<L, T, Pending> {
 pub struct Scrape;
 
 impl<A, B> StepWrapper<A, SharedState<B>, Scrape> {
+    #[instrument(name = "scrape_state", skip_all)]
     pub async fn run(self) -> Engine<A, SharedState<B>> {
         self.scraper().run().await;
         Engine::Pending(StepWrapper::<A, SharedState<B>, Pending>::from(self))
