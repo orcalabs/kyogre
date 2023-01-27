@@ -84,4 +84,10 @@ pub trait TripPrecisionOutboundPort: Send + Sync {
         &self,
         trip_id: i64,
     ) -> Result<Vec<DeliveryPoint>, QueryError>;
+
+    async fn trips_without_precision(
+        &self,
+        vessel_id: i64,
+        assembler_id: TripAssemblerId,
+    ) -> Result<Vec<Trip>, QueryError>;
 }

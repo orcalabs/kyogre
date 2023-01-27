@@ -2,7 +2,10 @@
 #![deny(rust_2018_idioms)]
 
 use async_trait::async_trait;
-use kyogre_core::{TripAssemblerInboundPort, TripAssemblerOutboundPort};
+use kyogre_core::{
+    TripAssemblerInboundPort, TripAssemblerOutboundPort, TripPrecisionInboundPort,
+    TripPrecisionOutboundPort,
+};
 use orca_statemachine::{Machine, Schedule, Step, TransitionLog};
 use scraper::Scraper;
 use serde::Deserialize;
@@ -16,12 +19,25 @@ pub mod startup;
 pub mod states;
 
 pub trait Database:
-    TripAssemblerOutboundPort + TripAssemblerInboundPort + Send + Sync + 'static
+    TripAssemblerOutboundPort
+    + TripAssemblerInboundPort
+    + TripPrecisionInboundPort
+    + TripPrecisionOutboundPort
+    + Send
+    + Sync
+    + 'static
 {
 }
 pub trait TripProcessor: TripAssembler + Send + Sync + 'static {}
 
-impl<T> Database for T where T: TripAssemblerOutboundPort + TripAssemblerInboundPort + 'static {}
+impl<T> Database for T where
+    T: TripAssemblerOutboundPort
+        + TripAssemblerInboundPort
+        + TripPrecisionInboundPort
+        + TripPrecisionOutboundPort
+        + 'static
+{
+}
 impl<T> TripProcessor for T where T: TripAssembler + 'static {}
 
 #[derive(EnumDiscriminants)]
@@ -91,7 +107,7 @@ where
             Engine::Sleep(s) => s.run().await,
             Engine::Scrape(s) => s.run().await,
             Engine::Trips(s) => s.run().await,
-            Engine::TripsPrecision(s) => s.run(),
+            Engine::TripsPrecision(s) => s.run().await,
         }
     }
     fn is_exit_state(&self) -> bool {

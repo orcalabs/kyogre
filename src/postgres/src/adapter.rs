@@ -8,10 +8,12 @@ use chrono::{DateTime, Utc};
 use error_stack::{IntoReport, Report, Result, ResultExt};
 use kyogre_core::{
     AisMigratorDestination, AisPosition, AisVesselMigrate, Arrival, ArrivalFilter, DataMessage,
-    DateRange, Departure, FileHashId, HashDiff, InsertError, NewAisPosition, NewAisStatic, NewTrip,
-    QueryError, ScraperFileHashInboundPort, ScraperInboundPort, Trip, TripAssemblerConflict,
-    TripAssemblerId, TripAssemblerInboundPort, TripAssemblerOutboundPort, TripCalculationTimer,
-    TripsConflictStrategy, Vessel, WebApiPort,
+    DateRange, DeliveryPoint, Departure, FileHashId, HashDiff, InsertError, NewAisPosition,
+    NewAisStatic, NewTrip, QueryError, ScraperFileHashInboundPort, ScraperInboundPort, Trip,
+    TripAssemblerConflict, TripAssemblerId, TripAssemblerInboundPort, TripAssemblerOutboundPort,
+    TripCalculationTimer, TripDockPoints, TripPorts, TripPrecisionInboundPort,
+    TripPrecisionOutboundPort, TripPrecisionUpdate, TripsConflictStrategy, UpdateError, Vessel,
+    WebApiPort,
 };
 use orca_core::{PsqlLogStatements, PsqlSettings};
 use sqlx::{
@@ -834,6 +836,55 @@ impl TripAssemblerInboundPort for PostgresAdapter {
         _conflict_strategy: TripsConflictStrategy,
         _trips: Vec<NewTrip>,
     ) -> Result<Vec<DateTime<Utc>>, InsertError> {
+        unimplemented!();
+    }
+}
+
+#[async_trait]
+impl TripPrecisionOutboundPort for PostgresAdapter {
+    async fn ports_of_trip(&self, _trip_id: i64) -> Result<TripPorts, QueryError> {
+        unimplemented!();
+    }
+    async fn dock_points_of_trip(&self, _trip_id: i64) -> Result<TripDockPoints, QueryError> {
+        unimplemented!();
+    }
+    async fn ais_positions(
+        &self,
+        _vessel_id: i64,
+        _range: &DateRange,
+    ) -> Result<Vec<AisPosition>, QueryError> {
+        unimplemented!();
+    }
+    async fn trip_prior_to(
+        &self,
+        _vessel_id: i64,
+        _assembler_id: TripAssemblerId,
+        _time: &DateTime<Utc>,
+    ) -> Result<Option<Trip>, QueryError> {
+        unimplemented!();
+    }
+    async fn delivery_points_associated_with_trip(
+        &self,
+        _trip_id: i64,
+    ) -> Result<Vec<DeliveryPoint>, QueryError> {
+        unimplemented!();
+    }
+
+    async fn trips_without_precision(
+        &self,
+        _vessel_id: i64,
+        _assembler_id: TripAssemblerId,
+    ) -> Result<Vec<Trip>, QueryError> {
+        unimplemented!();
+    }
+}
+
+#[async_trait]
+impl TripPrecisionInboundPort for PostgresAdapter {
+    async fn update_trip_precisions(
+        &self,
+        _updates: Vec<TripPrecisionUpdate>,
+    ) -> Result<(), UpdateError> {
         unimplemented!();
     }
 }

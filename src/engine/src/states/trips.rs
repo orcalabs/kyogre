@@ -34,7 +34,7 @@ where
         Engine::TripsPrecision(StepWrapper::<A, SharedState<B>, TripsPrecision>::from(self))
     }
 
-    #[instrument(name = "trips_state", skip_all, fields(app.trip_assembler))]
+    #[instrument(name = "run_assembler", skip_all, fields(app.trip_assembler))]
     async fn run_assembler(
         &self,
         trip_assembler: &dyn TripProcessor,

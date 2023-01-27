@@ -24,6 +24,17 @@ impl std::fmt::Display for QueryError {
 }
 
 #[derive(Debug)]
+pub struct UpdateError;
+
+impl Context for UpdateError {}
+
+impl std::fmt::Display for UpdateError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("an error occurred while updating data")
+    }
+}
+
+#[derive(Debug)]
 pub struct DateRangeError {
     pub start: DateTime<Utc>,
     pub end: DateTime<Utc>,
