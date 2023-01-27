@@ -21,7 +21,7 @@ pub use landing_assembler::*;
 pub use precision::*;
 
 #[async_trait]
-pub trait TripAssembler {
+pub trait TripAssembler: Send + Sync {
     fn assembler_id(&self) -> TripAssemblerId;
     fn trip_calculation_time(&self, most_recent_trip: &NewTrip) -> DateTime<Utc>;
     fn start_search_time(&self, state: &State) -> DateTime<Utc>;

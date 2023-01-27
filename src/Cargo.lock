@@ -924,6 +924,7 @@ dependencies = [
  "strum_macros",
  "tokio",
  "tracing",
+ "trip-assembler",
 ]
 
 [[package]]

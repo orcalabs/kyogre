@@ -29,7 +29,7 @@ pub enum TripAssemblerId {
 
 #[derive(Debug, Clone)]
 pub struct TripAssemblerConflict {
-    pub vessel_id: String,
+    pub vessel_id: i64,
     pub timestamp: DateTime<Utc>,
 }
 
@@ -131,11 +131,26 @@ pub struct TripPorts {
     pub end: Option<Port>,
 }
 
+#[derive(Debug, Clone)]
+pub struct TripCalculationTimer {
+    pub timestamp: DateTime<Utc>,
+    pub vessel_id: i64,
+}
+
 impl Trip {
     pub fn start(&self) -> DateTime<Utc> {
         self.range.start()
     }
     pub fn end(&self) -> DateTime<Utc> {
         self.range.end()
+    }
+}
+
+impl std::fmt::Display for TripAssemblerId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            TripAssemblerId::Landings => write!(f, "landings_assembler"),
+            TripAssemblerId::Ers => write!(f, "ers_assembler"),
+        }
     }
 }

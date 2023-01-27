@@ -1,19 +1,55 @@
 use crate::{
-    precision::TripPrecisionCalculator, State, TripAssembler, TripAssemblerError,
-    TripPrecisionError,
+    precision::TripPrecisionCalculator, DeliveryPointPrecision, PortPrecision, PrecisionConfig,
+    StartSearchPoint, State, TripAssembler, TripAssemblerError, TripPrecisionError,
 };
 use async_trait::async_trait;
 use chrono::{DateTime, TimeZone, Utc};
 use error_stack::{IntoReport, Result, ResultExt};
 use kyogre_core::{
-    Arrival, ArrivalFilter, DateRange, Departure, NewTrip, Trip, TripAssemblerId,
-    TripAssemblerOutboundPort, TripPrecisionOutboundPort, TripPrecisionUpdate,
+    Arrival, ArrivalFilter, DateRange, Departure, NewTrip, PrecisionDirection, Trip,
+    TripAssemblerId, TripAssemblerOutboundPort, TripPrecisionOutboundPort, TripPrecisionUpdate,
     TripsConflictStrategy, Vessel,
 };
 use strum::EnumDiscriminants;
 
 pub struct ErsTripAssembler {
     precision_calculator: TripPrecisionCalculator,
+}
+
+impl Default for ErsTripAssembler {
+    fn default() -> Self {
+        let config = PrecisionConfig::default();
+        let dp_end = Box::new(DeliveryPointPrecision::new(
+            config.clone(),
+            PrecisionDirection::Extending,
+        ));
+        let port_start = Box::new(PortPrecision::new(
+            config.clone(),
+            PrecisionDirection::Extending,
+            StartSearchPoint::Start,
+        ));
+        let port_end = Box::new(PortPrecision::new(
+            config.clone(),
+            PrecisionDirection::Extending,
+            StartSearchPoint::End,
+        ));
+        let dock_point_start = Box::new(PortPrecision::new(
+            config.clone(),
+            PrecisionDirection::Extending,
+            StartSearchPoint::Start,
+        ));
+        let dock_point_end = Box::new(PortPrecision::new(
+            config,
+            PrecisionDirection::Extending,
+            StartSearchPoint::End,
+        ));
+        ErsTripAssembler {
+            precision_calculator: TripPrecisionCalculator::new(
+                vec![port_start, dock_point_start],
+                vec![dp_end, port_end, dock_point_end],
+            ),
+        }
+    }
 }
 
 impl ErsTripAssembler {
