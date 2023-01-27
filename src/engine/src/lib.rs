@@ -5,7 +5,7 @@ use async_trait::async_trait;
 use orca_statemachine::{Machine, Schedule, Step, TransitionLog};
 use scraper::Scraper;
 use serde::Deserialize;
-use states::{Pending, Scrape, Sleep};
+use states::{Pending, Scrape, Sleep, Trips, TripsPrecision};
 use strum_macros::{AsRefStr, EnumDiscriminants, EnumIter, EnumString};
 
 pub mod error;
@@ -19,6 +19,8 @@ pub enum Engine<A, B> {
     Pending(StepWrapper<A, B, Pending>),
     Sleep(StepWrapper<A, B, Sleep>),
     Scrape(StepWrapper<A, B, Scrape>),
+    Trips(StepWrapper<A, B, Trips>),
+    TripsPrecision(StepWrapper<A, B, TripsPrecision>),
 }
 
 pub struct StepWrapper<A, B, C> {
@@ -70,6 +72,8 @@ where
             Engine::Pending(s) => s.run().await,
             Engine::Sleep(s) => s.run().await,
             Engine::Scrape(s) => s.run().await,
+            Engine::Trips(s) => s.run(),
+            Engine::TripsPrecision(s) => s.run(),
         }
     }
     fn is_exit_state(&self) -> bool {
@@ -81,6 +85,8 @@ where
             Engine::Pending(s) => &s.inner.transition_log,
             Engine::Sleep(s) => &s.inner.transition_log,
             Engine::Scrape(s) => &s.inner.transition_log,
+            Engine::Trips(s) => &s.inner.transition_log,
+            Engine::TripsPrecision(s) => &s.inner.transition_log,
         }
     }
 
@@ -106,7 +112,10 @@ impl<A> SharedState<A> {
 impl Config {
     pub fn schedule(&self, state: &EngineDiscriminants) -> Option<&Schedule> {
         match state {
-            EngineDiscriminants::Pending | EngineDiscriminants::Sleep => None,
+            EngineDiscriminants::Pending
+            | EngineDiscriminants::Sleep
+            | EngineDiscriminants::Trips
+            | EngineDiscriminants::TripsPrecision => None,
             EngineDiscriminants::Scrape => Some(&self.scrape_schedule),
         }
     }

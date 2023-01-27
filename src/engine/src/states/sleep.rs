@@ -1,5 +1,5 @@
 use crate::{Engine, Pending, SharedState, StepWrapper};
-use tracing::{event, Level};
+use tracing::{event, instrument, Level};
 
 // Pending -> Sleep
 impl<L, T> From<StepWrapper<L, T, Pending>> for StepWrapper<L, T, Sleep> {
@@ -27,6 +27,7 @@ pub struct Sleep {
 }
 
 impl<A, B> StepWrapper<A, SharedState<B>, Sleep> {
+    #[instrument(name = "sleep_state", skip_all)]
     pub async fn run(self) -> Engine<A, SharedState<B>> {
         event!(
             Level::INFO,

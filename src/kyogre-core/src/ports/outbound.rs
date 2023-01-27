@@ -1,6 +1,6 @@
 use crate::{
-    AisPosition, Arrival, ArrivalFilter, DateRange, Departure, QueryError, Trip,
-    TripAssemblerConflict, TripAssemblerId,
+    AisPosition, Arrival, ArrivalFilter, DateRange, DeliveryPoint, Departure, QueryError, Trip,
+    TripAssemblerConflict, TripAssemblerId, TripDockPoints, TripPorts,
 };
 
 use async_trait::async_trait;
@@ -61,4 +61,25 @@ pub trait TripAssemblerOutboundPort: Send + Sync {
         assembler_id: TripAssemblerId,
         time: &DateTime<Utc>,
     ) -> Result<Option<Trip>, QueryError>;
+}
+
+#[async_trait]
+pub trait TripPrecisionOutboundPort: Send + Sync {
+    async fn ports_of_trip(&self, trip_id: i64) -> Result<TripPorts, QueryError>;
+    async fn dock_points_of_trip(&self, trip_id: i64) -> Result<TripDockPoints, QueryError>;
+    async fn ais_positions(
+        &self,
+        vessel_id: i64,
+        range: &DateRange,
+    ) -> Result<Vec<AisPosition>, QueryError>;
+    async fn trip_prior_to(
+        &self,
+        vessel_id: i64,
+        assembler_id: TripAssemblerId,
+        time: &DateTime<Utc>,
+    ) -> Result<Option<Trip>, QueryError>;
+    async fn delivery_points_associated_with_trip(
+        &self,
+        trip_id: i64,
+    ) -> Result<Vec<DeliveryPoint>, QueryError>;
 }
