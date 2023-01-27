@@ -1,6 +1,6 @@
 use crate::{
     AisPosition, AisVesselMigrate, FileHashId, HashDiff, InsertError, NewTrip, QueryError,
-    TripsConflictStrategy,
+    TripPrecisionUpdate, TripsConflictStrategy, UpdateError,
 };
 
 use async_trait::async_trait;
@@ -30,6 +30,14 @@ pub trait TripAssemblerInboundPort {
         conflict_strategy: TripsConflictStrategy,
         trips: Vec<NewTrip>,
     ) -> Result<Vec<DateTime<Utc>>, InsertError>;
+}
+
+#[async_trait]
+pub trait TripPrecisionInboundPort {
+    async fn update_trip_precisions(
+        &self,
+        updates: Vec<TripPrecisionUpdate>,
+    ) -> Result<(), UpdateError>;
 }
 
 pub trait ScraperInboundPort {}
