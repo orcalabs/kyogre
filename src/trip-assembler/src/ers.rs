@@ -1,14 +1,28 @@
-use crate::{State, TripAssembler, TripAssemblerError};
+use crate::{
+    precision::TripPrecisionCalculator, State, TripAssembler, TripAssemblerError,
+    TripPrecisionError,
+};
 use async_trait::async_trait;
 use chrono::{DateTime, TimeZone, Utc};
 use error_stack::{IntoReport, Result, ResultExt};
 use kyogre_core::{
     Arrival, ArrivalFilter, DateRange, Departure, NewTrip, Trip, TripAssemblerId,
-    TripAssemblerOutboundPort, TripsConflictStrategy, Vessel,
+    TripAssemblerOutboundPort, TripPrecisionOutboundPort, TripPrecisionUpdate,
+    TripsConflictStrategy, Vessel,
 };
 use strum::EnumDiscriminants;
 
-pub struct ErsTripAssembler {}
+pub struct ErsTripAssembler {
+    precision_calculator: TripPrecisionCalculator,
+}
+
+impl ErsTripAssembler {
+    pub fn new(precision_calculator: TripPrecisionCalculator) -> ErsTripAssembler {
+        ErsTripAssembler {
+            precision_calculator,
+        }
+    }
+}
 
 #[derive(EnumDiscriminants, Debug, Eq)]
 enum StopPoint {
@@ -63,7 +77,18 @@ impl TripAssembler for ErsTripAssembler {
     }
 
     fn trip_calculation_time(&self, most_recent_trip: &NewTrip) -> DateTime<Utc> {
-        *most_recent_trip.range.end()
+        most_recent_trip.range.end()
+    }
+
+    async fn calculate_precision(
+        &self,
+        vessel: &Vessel,
+        adapter: &dyn TripPrecisionOutboundPort,
+        trips: Vec<Trip>,
+    ) -> Result<Vec<TripPrecisionUpdate>, TripPrecisionError> {
+        self.precision_calculator
+            .calculate_precision(vessel, adapter, trips)
+            .await
     }
 
     async fn new_trips(
