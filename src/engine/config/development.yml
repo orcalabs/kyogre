@@ -10,16 +10,16 @@ telemetry:
 engine:
   scrape_schedule:
     Periodic: 1h
-  scraper:
-    ers_dca:
-      min_year: 2020
-      max_year: 2023
-    ers_dep:
-      min_year: 2020
-      max_year: 2023
-    ers_por:
-      min_year: 2020
-      max_year: 2023
-    landings:
-      min_year: 2021
-      max_year: 2023
+scraper:
+  ers_dca:
+    min_year: 2020
+    max_year: 2023
+  ers_dep:
+    min_year: 2020
+    max_year: 2023
+  ers_por:
+    min_year: 2020
+    max_year: 2023
+  landings:
+    min_year: 2021
+    max_year: 2023
