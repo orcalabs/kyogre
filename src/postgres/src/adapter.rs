@@ -7,8 +7,9 @@ use bigdecimal::{BigDecimal, FromPrimitive};
 use chrono::{DateTime, Utc};
 use error_stack::{IntoReport, Report, Result, ResultExt};
 use kyogre_core::{
-    AisMigratorDestination, AisPosition, AisVesselMigrate, DataMessage, DateRange, InsertError,
-    NewAisPosition, NewAisStatic, QueryError, WebApiPort,
+    AisMigratorDestination, AisPosition, AisVesselMigrate, DataMessage, DateRange, FileHashId,
+    HashDiff, InsertError, NewAisPosition, NewAisStatic, QueryError, ScraperFileHashInboundPort,
+    ScraperInboundPort, WebApiPort,
 };
 use orca_core::{PsqlLogStatements, PsqlSettings};
 use sqlx::{
@@ -751,6 +752,18 @@ impl WebApiPort for PostgresAdapter {
             .change_context(QueryError)?;
 
         convert_models(positions).change_context(QueryError)
+    }
+}
+
+impl ScraperInboundPort for PostgresAdapter {}
+
+#[async_trait]
+impl ScraperFileHashInboundPort for PostgresAdapter {
+    async fn add(&self, _id: &FileHashId, _hash: String) -> Result<(), InsertError> {
+        unimplemented!();
+    }
+    async fn diff(&self, _id: &FileHashId, _hash: &str) -> Result<HashDiff, QueryError> {
+        unimplemented!();
     }
 }
 

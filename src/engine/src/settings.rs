@@ -9,6 +9,7 @@ pub struct Settings {
     pub postgres: PsqlSettings,
     pub engine: crate::Config,
     pub environment: Environment,
+    pub scraper: scraper::Config,
     pub honeycomb: Option<HoneycombApiKey>,
 }
 

@@ -19,7 +19,7 @@ pub struct Scrape;
 
 impl<A, B> StepWrapper<A, SharedState<B>, Scrape> {
     pub async fn run(self) -> Engine<A, SharedState<B>> {
-        tokio::time::sleep(std::time::Duration::from_secs(60 * 60)).await;
+        self.scraper().run().await;
         Engine::Pending(StepWrapper::<A, SharedState<B>, Pending>::from(self))
     }
 }
