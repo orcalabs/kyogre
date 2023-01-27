@@ -144,6 +144,9 @@ where
 
     fn transition(self, new_state: EngineDiscriminants) -> Engine<A, SharedState<B>> {
         match new_state {
+            EngineDiscriminants::Trips | EngineDiscriminants::TripsPrecision => {
+                panic!("tried to enter the Trips/TripsPrecision state from the Pending state")
+            }
             EngineDiscriminants::Pending => {
                 panic!("tried to enter the Pending state from the Pending state")
             }
