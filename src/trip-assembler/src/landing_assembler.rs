@@ -1,20 +1,42 @@
-use crate::{State, TripAssembler, TripAssemblerError};
+use crate::precision::TripPrecisionCalculator;
+use crate::{State, TripAssembler, TripAssemblerError, TripPrecisionError};
 use async_trait::async_trait;
 use chrono::{DateTime, Duration, NaiveDate, TimeZone, Utc};
 use error_stack::IntoReport;
 use error_stack::{Result, ResultExt};
 use kyogre_core::{
-    DateRange, NewTrip, Trip, TripAssemblerId, TripAssemblerOutboundPort, TripsConflictStrategy,
-    Vessel,
+    DateRange, NewTrip, Trip, TripAssemblerId, TripAssemblerOutboundPort,
+    TripPrecisionOutboundPort, TripPrecisionUpdate, TripsConflictStrategy, Vessel,
 };
 use std::collections::HashMap;
 
-pub struct LandingTripAssembler {}
+pub struct LandingTripAssembler {
+    precision_calculator: TripPrecisionCalculator,
+}
+
+impl LandingTripAssembler {
+    pub fn new(precision_calculator: TripPrecisionCalculator) -> LandingTripAssembler {
+        LandingTripAssembler {
+            precision_calculator,
+        }
+    }
+}
 
 #[async_trait]
 impl TripAssembler for LandingTripAssembler {
     fn assembler_id(&self) -> TripAssemblerId {
         TripAssemblerId::Landings
+    }
+
+    async fn calculate_precision(
+        &self,
+        vessel: &Vessel,
+        adapter: &dyn TripPrecisionOutboundPort,
+        trips: Vec<Trip>,
+    ) -> Result<Vec<TripPrecisionUpdate>, TripPrecisionError> {
+        self.precision_calculator
+            .calculate_precision(vessel, adapter, trips)
+            .await
     }
 
     fn start_search_time(&self, state: &State) -> DateTime<Utc> {
@@ -72,9 +94,9 @@ impl TripAssembler for LandingTripAssembler {
         // line as this will create the link to the prior trip for our new trips.
         if let Some(prior_trip) = prior_trip {
             if prior_trip.range.end().date_naive() == oldest_landing.date_naive() {
-                landing_dates.push(*prior_trip.range.start());
+                landing_dates.push(prior_trip.range.start());
             }
-            landing_dates.push(*prior_trip.range.end());
+            landing_dates.push(prior_trip.range.end());
         } else {
             let end = oldest_landing - Duration::days(1);
             let start = end - Duration::days(1);

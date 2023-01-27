@@ -1,17 +1,24 @@
+#![deny(warnings)]
+#![deny(rust_2018_idioms)]
+#![allow(dead_code)]
+
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use error_stack::{Result, ResultExt};
 use kyogre_core::{
-    NewTrip, Trip, TripAssemblerId, TripAssemblerOutboundPort, TripsConflictStrategy, Vessel,
+    NewTrip, Trip, TripAssemblerId, TripAssemblerOutboundPort, TripPrecisionOutboundPort,
+    TripPrecisionUpdate, TripsConflictStrategy, Vessel,
 };
 
 mod error;
 mod ers;
 mod landing_assembler;
+mod precision;
 
 pub use error::*;
 pub use ers::*;
 pub use landing_assembler::*;
+pub use precision::*;
 
 #[async_trait]
 pub trait TripAssembler {
@@ -25,6 +32,14 @@ pub trait TripAssembler {
         start: &DateTime<Utc>,
         prior_trip: Option<Trip>,
     ) -> Result<(Vec<NewTrip>, Option<TripsConflictStrategy>), TripAssemblerError>;
+
+    async fn calculate_precision(
+        &self,
+        vessel: &Vessel,
+        adapter: &dyn TripPrecisionOutboundPort,
+        trips: Vec<Trip>,
+    ) -> Result<Vec<TripPrecisionUpdate>, TripPrecisionError>;
+
     async fn assemble(
         &self,
         adapter: &dyn TripAssemblerOutboundPort,
@@ -50,7 +65,7 @@ pub trait TripAssembler {
 
         let (mut new_trips, conflict_strategy) =
             self.new_trips(adapter, vessel, &start, prior_trip).await?;
-        new_trips.sort_by_key(|n| *n.range.end());
+        new_trips.sort_by_key(|n| n.range.end());
 
         if new_trips.is_empty() {
             Ok(None)

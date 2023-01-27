@@ -17,11 +17,11 @@ impl DateRange {
         }
     }
 
-    pub fn start(&self) -> &DateTime<Utc> {
-        &self.start
+    pub fn start(&self) -> DateTime<Utc> {
+        self.start
     }
 
-    pub fn end(&self) -> &DateTime<Utc> {
-        &self.end
+    pub fn end(&self) -> DateTime<Utc> {
+        self.end
     }
 }
