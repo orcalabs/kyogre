@@ -9,4 +9,5 @@ members = [
     "web-api",
     "engine",
     "trip-assembler",
+    "scraper",
 ]

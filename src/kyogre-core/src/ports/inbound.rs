@@ -1,5 +1,6 @@
 use crate::{
-    AisPosition, AisVesselMigrate, InsertError, NewTrip, QueryError, TripsConflictStrategy,
+    AisPosition, AisVesselMigrate, FileHashId, HashDiff, InsertError, NewTrip, QueryError,
+    TripsConflictStrategy,
 };
 
 use async_trait::async_trait;
@@ -29,4 +30,12 @@ pub trait TripAssemblerInboundPort {
         conflict_strategy: TripsConflictStrategy,
         trips: Vec<NewTrip>,
     ) -> Result<Vec<DateTime<Utc>>, InsertError>;
+}
+
+pub trait ScraperInboundPort {}
+
+#[async_trait]
+pub trait ScraperFileHashInboundPort {
+    async fn add(&self, id: &FileHashId, hash: String) -> Result<(), InsertError>;
+    async fn diff(&self, id: &FileHashId, hash: &str) -> Result<HashDiff, QueryError>;
 }

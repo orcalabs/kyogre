@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 kyogre-core = { path = "../kyogre-core" }
 postgres = { path = "../postgres" }
+scraper = { path = "../scraper" }
 
 orca-statemachine = { version = "0.34.0", registry = "orcalabs-orcastrator", features = ["psql-adapter"] }
 orca-core = {  version = "0.19.1", registry = "orcalabs-orcastrator", features = ["telemetry"] }

@@ -3,8 +3,10 @@
 
 mod domain;
 mod error;
+mod file_hash;
 mod ports;
 
 pub use domain::*;
 pub use error::*;
+pub use file_hash::*;
 pub use ports::*;

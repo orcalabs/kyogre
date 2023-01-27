@@ -3,6 +3,7 @@
 
 use async_trait::async_trait;
 use orca_statemachine::{Machine, Schedule, Step, TransitionLog};
+use scraper::Scraper;
 use serde::Deserialize;
 use states::{Pending, Scrape, Sleep};
 use strum_macros::{AsRefStr, EnumDiscriminants, EnumIter, EnumString};
@@ -33,6 +34,7 @@ pub struct Config {
 pub struct SharedState<A> {
     config: Config,
     database: A,
+    scraper: Scraper,
 }
 
 impl<A, B, C> StepWrapper<A, B, C> {
@@ -46,6 +48,12 @@ impl<A, B, C> StepWrapper<A, B, C> {
         StepWrapper {
             inner: self.inner.inherit(state),
         }
+    }
+}
+
+impl<A, B, C> StepWrapper<A, SharedState<B>, C> {
+    pub fn scraper(&self) -> &Scraper {
+        &self.inner.shared_state.scraper
     }
 }
 
@@ -86,8 +94,12 @@ where
 }
 
 impl<A> SharedState<A> {
-    pub fn new(config: Config, database: A) -> SharedState<A> {
-        SharedState { config, database }
+    pub fn new(config: Config, database: A, scraper: Scraper) -> SharedState<A> {
+        SharedState {
+            config,
+            database,
+            scraper,
+        }
     }
 }
 
