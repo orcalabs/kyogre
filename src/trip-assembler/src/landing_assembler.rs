@@ -1,11 +1,14 @@
 use crate::precision::TripPrecisionCalculator;
-use crate::{State, TripAssembler, TripAssemblerError, TripPrecisionError};
+use crate::{
+    DeliveryPointPrecision, FirstMovedPoint, PrecisionConfig, StartSearchPoint, State,
+    TripAssembler, TripAssemblerError, TripPrecisionError,
+};
 use async_trait::async_trait;
 use chrono::{DateTime, Duration, NaiveDate, TimeZone, Utc};
 use error_stack::IntoReport;
 use error_stack::{Result, ResultExt};
 use kyogre_core::{
-    DateRange, NewTrip, Trip, TripAssemblerId, TripAssemblerOutboundPort,
+    DateRange, NewTrip, PrecisionDirection, Trip, TripAssemblerId, TripAssemblerOutboundPort,
     TripPrecisionOutboundPort, TripPrecisionUpdate, TripsConflictStrategy, Vessel,
 };
 use std::collections::HashMap;
@@ -18,6 +21,24 @@ impl LandingTripAssembler {
     pub fn new(precision_calculator: TripPrecisionCalculator) -> LandingTripAssembler {
         LandingTripAssembler {
             precision_calculator,
+        }
+    }
+}
+
+impl Default for LandingTripAssembler {
+    fn default() -> Self {
+        let config = PrecisionConfig::default();
+        let start = Box::new(FirstMovedPoint::new(
+            config.clone(),
+            StartSearchPoint::Start,
+        ));
+        let end = Box::new(FirstMovedPoint::new(config.clone(), StartSearchPoint::End));
+        let dp_end = Box::new(DeliveryPointPrecision::new(
+            config,
+            PrecisionDirection::Shrinking,
+        ));
+        LandingTripAssembler {
+            precision_calculator: TripPrecisionCalculator::new(vec![start], vec![dp_end, end]),
         }
     }
 }

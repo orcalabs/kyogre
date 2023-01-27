@@ -2,16 +2,27 @@
 #![deny(rust_2018_idioms)]
 
 use async_trait::async_trait;
+use kyogre_core::{TripAssemblerInboundPort, TripAssemblerOutboundPort};
 use orca_statemachine::{Machine, Schedule, Step, TransitionLog};
 use scraper::Scraper;
 use serde::Deserialize;
 use states::{Pending, Scrape, Sleep, Trips, TripsPrecision};
 use strum_macros::{AsRefStr, EnumDiscriminants, EnumIter, EnumString};
+use trip_assembler::TripAssembler;
 
 pub mod error;
 pub mod settings;
 pub mod startup;
 pub mod states;
+
+pub trait Database:
+    TripAssemblerOutboundPort + TripAssemblerInboundPort + Send + Sync + 'static
+{
+}
+pub trait TripProcessor: TripAssembler + Send + Sync + 'static {}
+
+impl<T> Database for T where T: TripAssemblerOutboundPort + TripAssemblerInboundPort + 'static {}
+impl<T> TripProcessor for T where T: TripAssembler + 'static {}
 
 #[derive(EnumDiscriminants)]
 #[strum_discriminants(derive(AsRefStr, EnumString, EnumIter))]
@@ -32,11 +43,11 @@ pub struct Config {
     scrape_schedule: Schedule,
 }
 
-#[allow(dead_code)]
 pub struct SharedState<A> {
     config: Config,
     database: A,
     scraper: Scraper,
+    trip_processors: Vec<Box<dyn TripProcessor>>,
 }
 
 impl<A, B, C> StepWrapper<A, B, C> {
@@ -57,13 +68,20 @@ impl<A, B, C> StepWrapper<A, SharedState<B>, C> {
     pub fn scraper(&self) -> &Scraper {
         &self.inner.shared_state.scraper
     }
+    pub fn trip_processors(&self) -> &[Box<dyn TripProcessor>] {
+        self.inner.shared_state.trip_processors.as_slice()
+    }
+
+    pub fn database(&self) -> &B {
+        &self.inner.shared_state.database
+    }
 }
 
 #[async_trait]
 impl<A, B> Machine<A> for Engine<A, SharedState<B>>
 where
     A: TransitionLog + Send + Sync + 'static,
-    B: Send + Sync + 'static,
+    B: Database,
 {
     type SharedState = SharedState<B>;
 
@@ -72,7 +90,7 @@ where
             Engine::Pending(s) => s.run().await,
             Engine::Sleep(s) => s.run().await,
             Engine::Scrape(s) => s.run().await,
-            Engine::Trips(s) => s.run(),
+            Engine::Trips(s) => s.run().await,
             Engine::TripsPrecision(s) => s.run(),
         }
     }
@@ -99,12 +117,21 @@ where
     }
 }
 
-impl<A> SharedState<A> {
-    pub fn new(config: Config, database: A, scraper: Scraper) -> SharedState<A> {
+impl<A> SharedState<A>
+where
+    A: Database,
+{
+    pub fn new(
+        config: Config,
+        database: A,
+        scraper: Scraper,
+        trip_processors: Vec<Box<dyn TripProcessor>>,
+    ) -> SharedState<A> {
         SharedState {
             config,
             database,
             scraper,
+            trip_processors,
         }
     }
 }

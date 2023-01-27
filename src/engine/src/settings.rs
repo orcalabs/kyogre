@@ -1,3 +1,4 @@
+use crate::TripProcessor;
 use config::{Config, ConfigError, File, Source};
 use orca_core::{Environment, LogLevel, PsqlSettings, TelemetrySettings};
 use serde::Deserialize;
@@ -17,7 +18,6 @@ pub struct Settings {
 pub struct HoneycombApiKey {
     pub api_key: String,
 }
-
 impl Settings {
     pub fn new() -> Result<Self, ConfigError> {
         let environment: Environment = std::env::var("APP_ENVIRONMENT")
@@ -61,5 +61,17 @@ impl Settings {
 
     pub fn honeycomb_api_key(&self) -> String {
         self.honeycomb.clone().unwrap().api_key
+    }
+
+    pub fn trip_assemblers(&self) -> Vec<Box<dyn TripProcessor>> {
+        let landings_assembler = Box::<trip_assembler::LandingTripAssembler>::default();
+        let ers_assembler = Box::<trip_assembler::ErsTripAssembler>::default();
+
+        let vec = vec![
+            ers_assembler as Box<dyn TripProcessor>,
+            landings_assembler as Box<dyn TripProcessor>,
+        ];
+
+        vec
     }
 }

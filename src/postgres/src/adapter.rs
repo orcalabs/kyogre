@@ -7,9 +7,11 @@ use bigdecimal::{BigDecimal, FromPrimitive};
 use chrono::{DateTime, Utc};
 use error_stack::{IntoReport, Report, Result, ResultExt};
 use kyogre_core::{
-    AisMigratorDestination, AisPosition, AisVesselMigrate, DataMessage, DateRange, FileHashId,
-    HashDiff, InsertError, NewAisPosition, NewAisStatic, QueryError, ScraperFileHashInboundPort,
-    ScraperInboundPort, WebApiPort,
+    AisMigratorDestination, AisPosition, AisVesselMigrate, Arrival, ArrivalFilter, DataMessage,
+    DateRange, Departure, FileHashId, HashDiff, InsertError, NewAisPosition, NewAisStatic, NewTrip,
+    QueryError, ScraperFileHashInboundPort, ScraperInboundPort, Trip, TripAssemblerConflict,
+    TripAssemblerId, TripAssemblerInboundPort, TripAssemblerOutboundPort, TripCalculationTimer,
+    TripsConflictStrategy, Vessel, WebApiPort,
 };
 use orca_core::{PsqlLogStatements, PsqlSettings};
 use sqlx::{
@@ -763,6 +765,75 @@ impl ScraperFileHashInboundPort for PostgresAdapter {
         unimplemented!();
     }
     async fn diff(&self, _id: &FileHashId, _hash: &str) -> Result<HashDiff, QueryError> {
+        unimplemented!();
+    }
+}
+
+#[async_trait]
+impl TripAssemblerOutboundPort for PostgresAdapter {
+    async fn vessels(&self) -> Result<Vec<Vessel>, QueryError> {
+        unimplemented!();
+    }
+    async fn trip_calculation_timers(&self) -> Result<Vec<TripCalculationTimer>, QueryError> {
+        unimplemented!();
+    }
+    async fn conflicts(
+        &self,
+        _id: TripAssemblerId,
+    ) -> Result<Vec<TripAssemblerConflict>, QueryError> {
+        unimplemented!();
+    }
+    async fn landing_dates(
+        &self,
+        _vessel_id: i64,
+        _start: &DateTime<Utc>,
+    ) -> Result<Vec<DateTime<Utc>>, QueryError> {
+        unimplemented!();
+    }
+    async fn most_recent_trip(
+        &self,
+        _vessel_id: i64,
+        _assembler_id: TripAssemblerId,
+    ) -> Result<Option<Trip>, QueryError> {
+        unimplemented!();
+    }
+    async fn departure_of_trip(&self, _trip_id: i64) -> Result<Departure, QueryError> {
+        unimplemented!();
+    }
+    async fn ers_arrivals(
+        &self,
+        _vessel_id: i64,
+        _start: &DateTime<Utc>,
+        _filter: ArrivalFilter,
+    ) -> Result<Arrival, QueryError> {
+        unimplemented!();
+    }
+    async fn ers_departures(
+        &self,
+        _vessel_id: i64,
+        _start: &DateTime<Utc>,
+    ) -> Result<Departure, QueryError> {
+        unimplemented!();
+    }
+    async fn trip_prior_to(
+        &self,
+        _vessel_id: i64,
+        _assembler_id: TripAssemblerId,
+        _time: &DateTime<Utc>,
+    ) -> Result<Option<Trip>, QueryError> {
+        unimplemented!();
+    }
+}
+
+#[async_trait]
+impl TripAssemblerInboundPort for PostgresAdapter {
+    async fn add_trips(
+        &self,
+        _vessel_id: i64,
+        _new_trip_calculation_time: DateTime<Utc>,
+        _conflict_strategy: TripsConflictStrategy,
+        _trips: Vec<NewTrip>,
+    ) -> Result<Vec<DateTime<Utc>>, InsertError> {
         unimplemented!();
     }
 }

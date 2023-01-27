@@ -1,6 +1,7 @@
 use crate::{
     AisPosition, Arrival, ArrivalFilter, DateRange, DeliveryPoint, Departure, QueryError, Trip,
-    TripAssemblerConflict, TripAssemblerId, TripDockPoints, TripPorts,
+    TripAssemblerConflict, TripAssemblerId, TripCalculationTimer, TripDockPoints, TripPorts,
+    Vessel,
 };
 
 use async_trait::async_trait;
@@ -17,7 +18,6 @@ pub trait AisMigratorSource {
     ) -> Result<Vec<AisPosition>, QueryError>;
     async fn existing_mmsis(&self) -> Result<Vec<i32>, QueryError>;
 }
-
 #[async_trait]
 pub trait WebApiPort {
     async fn ais_positions(
@@ -29,6 +29,8 @@ pub trait WebApiPort {
 
 #[async_trait]
 pub trait TripAssemblerOutboundPort: Send + Sync {
+    async fn vessels(&self) -> Result<Vec<Vessel>, QueryError>;
+    async fn trip_calculation_timers(&self) -> Result<Vec<TripCalculationTimer>, QueryError>;
     async fn conflicts(
         &self,
         id: TripAssemblerId,
