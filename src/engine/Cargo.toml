@@ -16,10 +16,10 @@ orca-core = {  version = "0.19.1", registry = "orcalabs-orcastrator", features =
 
 config = { version = "0.13.3", features = ["yaml"] }
 chrono = { version = "0.4.23", features = ["serde"] }
-tokio = "1.23.0"
+tokio = "1.25.0"
 tracing = "0.1.37"
-serde = { version = "1.0.150", features = ["derive"] }
-async-trait = "0.1.59"
+serde = { version = "1.0.152", features = ["derive"] }
+async-trait = "0.1.63"
 error-stack = "0.2.4"
 
 strum = "0.24.1"

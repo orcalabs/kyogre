@@ -10,10 +10,10 @@ kyogre-core = { path = "../kyogre-core" }
 postgres = { path = "../postgres" }
 orca-core = { registry = "orcalabs-orcastrator", version = "0.19.1", features = ["telemetry"] }
 
-async-trait = "0.1.61"
+async-trait = "0.1.63"
 serde = "1.0.152"
 config = "0.13.3"
-tokio = { version = "1.24.2", features = ["macros", "sync", "time"] }
+tokio = { version = "1.25.0", features = ["macros", "sync", "time"] }
 tokio-util = { version = "0.7.4", features = ["codec", "compat"] }
 futures = "0.3.25"
 tracing = "0.1.37"
@@ -25,7 +25,7 @@ rand = "0.8.5"
 oauth2 = "4.3.0"
 
 hyper = { version = "0.14.23", features = ["http2"] }
-hyper-alpn = "0.3.0"
+hyper-alpn = "0.4.0"
 
 geo = "0.23.1"
 vpsearch = "2.0.1"
