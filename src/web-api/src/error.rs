@@ -36,7 +36,7 @@ impl ResponseError for ApiError {
     fn error_response(&self) -> HttpResponse<BoxBody> {
         let error = ErrorResponse {
             error: *self,
-            description: format!("{}", self),
+            description: format!("{self}"),
         };
         HttpResponse::build(self.status_code()).json(&error)
     }

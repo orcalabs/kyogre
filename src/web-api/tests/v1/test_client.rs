@@ -31,7 +31,7 @@ impl ApiClient {
             url_params.push((("end".to_owned()), s.to_string()));
         }
 
-        self.get(format!("ais_track/{}", mmsi), url_params.as_slice())
+        self.get(format!("ais_track/{mmsi}"), url_params.as_slice())
             .await
     }
 }
