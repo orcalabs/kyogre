@@ -5,17 +5,20 @@
 use async_trait::async_trait;
 use error_stack::Result;
 use fiskedir::LandingScraper;
-use kyogre_core::{ScraperFileHashInboundPort, ScraperInboundPort};
+use kyogre_core::ScraperInboundPort;
 use serde::Deserialize;
+use std::sync::Arc;
 use tracing::{event, instrument, Level};
 
+mod chunks;
 mod error;
 mod fiskedir;
 
 pub use error::*;
+pub use fiskedir::FiskedirSource;
 
-pub trait Processor: ScraperInboundPort + ScraperFileHashInboundPort + Send + Sync {}
-impl<T> Processor for T where T: ScraperInboundPort + ScraperFileHashInboundPort + Send + Sync {}
+pub trait Processor: ScraperInboundPort + Send + Sync {}
+impl<T> Processor for T where T: ScraperInboundPort + Send + Sync {}
 
 pub struct Scraper {
     scrapers: Vec<Box<dyn DataSource + Send + Sync>>,
@@ -43,12 +46,13 @@ pub trait DataSource: Send + Sync {
 }
 
 impl Scraper {
-    pub fn new(config: Config, processor: Box<dyn Processor>) -> Scraper {
+    pub fn new(config: Config, processor: Box<dyn Processor>, source: FiskedirSource) -> Scraper {
+        let arc = Arc::new(source);
         let landings_scraper =
-            LandingScraper::new(config.landings.min_year, config.landings.min_year);
+            LandingScraper::new(arc, config.landings.min_year, config.landings.min_year);
         Scraper {
-            processor,
             scrapers: vec![Box::new(landings_scraper)],
+            processor,
         }
     }
 

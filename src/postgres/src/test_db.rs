@@ -15,7 +15,7 @@ impl TestDb {
     pub async fn drop_db(&self, db_name: &str) {
         {
             let mut conn = self.db.pool.acquire().await.unwrap();
-            sqlx::query(&format!("DROP DATABASE \"{}\" WITH (FORCE);", db_name))
+            sqlx::query(&format!("DROP DATABASE \"{db_name}\" WITH (FORCE);"))
                 .execute(&mut conn)
                 .await
                 .unwrap();
@@ -105,13 +105,10 @@ FROM ais_vessels
 
     pub async fn create_test_database_from_template(&self, db_name: &str) {
         let mut conn = self.db.pool.acquire().await.unwrap();
-        sqlx::query(&format!(
-            "CREATE DATABASE \"{}\" TEMPLATE postgres;",
-            db_name
-        ))
-        .execute(&mut conn)
-        .await
-        .unwrap();
+        sqlx::query(&format!("CREATE DATABASE \"{db_name}\" TEMPLATE postgres;",))
+            .execute(&mut conn)
+            .await
+            .unwrap();
     }
 
     pub async fn generate_vessel(&self, mmsi: i32, call_sign: &str) -> AisVessel {

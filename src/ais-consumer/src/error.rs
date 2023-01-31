@@ -42,12 +42,10 @@ impl std::fmt::Display for AisMessageError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             AisMessageError::InvalidMessageType(message_type) => f.write_fmt(format_args!(
-                "encountered an unsupported message type: {}",
-                message_type
+                "encountered an unsupported message type: {message_type}"
             )),
             AisMessageError::InvalidEta(val) => f.write_fmt(format_args!(
-                "encountered an invalid estimated-time-of-arrival value: {}",
-                val
+                "encountered an invalid estimated-time-of-arrival value: {val}"
             )),
         }
     }
@@ -75,8 +73,7 @@ impl std::fmt::Display for BarentswatchClientError {
                 response_code,
                 body,
             } => f.write_fmt(format_args!(
-                "non-ok response received from server, status_code: {}, body: {}",
-                response_code, body
+                "non-ok response received from server, status_code: {response_code}, body: {body}"
             )),
         }
     }

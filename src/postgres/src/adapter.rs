@@ -9,11 +9,11 @@ use error_stack::{IntoReport, Report, Result, ResultExt};
 use kyogre_core::{
     AisMigratorDestination, AisPosition, AisVesselMigrate, Arrival, ArrivalFilter, DataMessage,
     DateRange, DeliveryPoint, Departure, FileHashId, HashDiff, InsertError, NewAisPosition,
-    NewAisStatic, NewTrip, QueryError, ScraperFileHashInboundPort, ScraperInboundPort, Trip,
-    TripAssemblerConflict, TripAssemblerId, TripAssemblerInboundPort, TripAssemblerOutboundPort,
-    TripCalculationTimer, TripDockPoints, TripPorts, TripPrecisionInboundPort,
-    TripPrecisionOutboundPort, TripPrecisionUpdate, TripsConflictStrategy, UpdateError, Vessel,
-    WebApiPort,
+    NewAisStatic, NewArrival, NewDca, NewDeparture, NewLanding, NewTrip, QueryError,
+    ScraperFileHashInboundPort, ScraperInboundPort, Trip, TripAssemblerConflict, TripAssemblerId,
+    TripAssemblerInboundPort, TripAssemblerOutboundPort, TripCalculationTimer, TripDockPoints,
+    TripPorts, TripPrecisionInboundPort, TripPrecisionOutboundPort, TripPrecisionUpdate,
+    TripsConflictStrategy, UpdateError, Vessel, WebApiPort,
 };
 use orca_core::{PsqlLogStatements, PsqlSettings};
 use sqlx::{
@@ -759,7 +759,21 @@ impl WebApiPort for PostgresAdapter {
     }
 }
 
-impl ScraperInboundPort for PostgresAdapter {}
+#[async_trait]
+impl ScraperInboundPort for PostgresAdapter {
+    async fn add_landings(&self, _landings: Vec<NewLanding>) -> Result<(), InsertError> {
+        unimplemented!();
+    }
+    async fn add_dca(&self, _dca: Vec<NewDca>) -> Result<(), InsertError> {
+        unimplemented!();
+    }
+    async fn add_departure(&self, _departures: Vec<NewDeparture>) -> Result<(), InsertError> {
+        unimplemented!();
+    }
+    async fn add_arrival(&self, _arrivals: Vec<NewArrival>) -> Result<(), InsertError> {
+        unimplemented!();
+    }
+}
 
 #[async_trait]
 impl ScraperFileHashInboundPort for PostgresAdapter {

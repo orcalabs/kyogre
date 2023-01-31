@@ -6,3 +6,5 @@ pub struct Departure {
     pub timestamp: DateTime<Utc>,
     pub port_code: Option<String>,
 }
+
+pub struct NewDeparture {}
