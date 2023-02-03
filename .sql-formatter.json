@@ -1,0 +1,12 @@
+{
+  "tabWidth": 4,
+  "useTabs": false,
+  "expressionWidth": 50,
+  "keywordCase": "upper",
+  "tabulateAlias": false,
+  "denseOperators": false,
+  "language": "postgresql",
+  "commaPosition": "after",
+  "indentStyle": "standard",
+  "logicalOperatorNewline": "before"
+}
