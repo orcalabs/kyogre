@@ -51,5 +51,6 @@ jobs:
           echo '${{ secrets.CLOUDSMITH_CARGO_REGISTRY }}' > ~/.cargo/config
           echo '${{ secrets.CLOUDSMITH_GIT_API_KEY }}' > ~/.git-credentials
           cargo install sqlx-cli --no-default-features --features postgres,rustls
-          sqlx migrate run --source postgres/migrations
-          cargo sqlx prepare --merged --check
+          cd postgres
+          sqlx migrate run
+          cargo sqlx prepare -- --lib
