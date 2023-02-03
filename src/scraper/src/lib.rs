@@ -48,10 +48,10 @@ pub trait DataSource: Send + Sync {
 impl Scraper {
     pub fn new(config: Config, processor: Box<dyn Processor>, source: FiskedirSource) -> Scraper {
         let arc = Arc::new(source);
-        let landings_scraper =
+        let _landings_scraper =
             LandingScraper::new(arc, config.landings.min_year, config.landings.min_year);
         Scraper {
-            scrapers: vec![Box::new(landings_scraper)],
+            scrapers: vec![],
             processor,
         }
     }
