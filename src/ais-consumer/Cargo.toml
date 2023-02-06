@@ -10,21 +10,21 @@ kyogre-core = { path = "../kyogre-core" }
 postgres = { path = "../postgres" }
 orca-core = { registry = "orcalabs-orcastrator", version = "0.19.1", features = ["telemetry"] }
 
-async-trait = "0.1.63"
+async-trait = "0.1.64"
 serde = "1.0.152"
 config = "0.13.3"
 tokio = { version = "1.25.0", features = ["macros", "sync", "time"] }
 tokio-util = { version = "0.7.4", features = ["codec", "compat"] }
-futures = "0.3.25"
+futures = "0.3.26"
 tracing = "0.1.37"
 chrono = { version = "0.4.23", features = ["serde"] }
 error-stack = "0.2.4"
-serde_json = "1.0.91"
+serde_json = "1.0.92"
 humantime-serde = "1.1.1"
 rand = "0.8.5"
 oauth2 = "4.3.0"
 
-hyper = { version = "0.14.23", features = ["http2"] }
+hyper = { version = "0.14.24", features = ["http2"] }
 hyper-alpn = "=0.3.0"
 
 geo = "0.23.1"
