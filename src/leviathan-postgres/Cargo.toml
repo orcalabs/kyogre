@@ -12,5 +12,5 @@ orca-core = { registry = "orcalabs-orcastrator", version = "0.19.1", features = 
 sqlx = { version = "0.6.2", features = ["runtime-tokio-rustls", "postgres", "bigdecimal", "chrono", "offline"] }
 error-stack = "0.2.4"
 bigdecimal = "0.3.0"
-async-trait = "0.1.63"
+async-trait = "0.1.64"
 chrono = { version = "0.4.23", features = ["serde"] }
