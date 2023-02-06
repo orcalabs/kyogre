@@ -7,7 +7,6 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  DATABASE_URL: postgres://127.0.0.1:5432?user=postgres&password=postgres
 
 jobs:
   update-rust-cache:
@@ -16,38 +15,4 @@ jobs:
     with:
       dependencies: protobuf-compiler
       src-dir: src
-  update-sqlx-cache:
-    runs-on: ubuntu-latest
-    services:
-          postgres:
-            image: postgres:15.1-alpine
-            env:
-              POSTGRES_DB: postgres
-              POSTGRES_PASSWORD: postgres
-              POSTGRES_USER: postgres
-            ports:
-              - 5432:5432
-    steps:
-      - uses: actions/checkout@v3
-      - name: Install rustup toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-      - uses: Swatinem/rust-cache@v2
-        id: cache
-        with:
-          shared-key: sqlx
-          workspaces: src
-      - if: steps.cache.outputs.cache-hit != 'true'
-        name: build cache
-        run: |
-          cd src
-          sudo apt-get update -y
-          sudo apt-get install -y protobuf-compiler
-          git config --global credential.helper store
-          echo '${{ secrets.CLOUDSMITH_CARGO_REGISTRY }}' > ~/.cargo/config
-          echo '${{ secrets.CLOUDSMITH_GIT_API_KEY }}' > ~/.git-credentials
-          cargo install sqlx-cli --no-default-features --features postgres,rustls
-          cd postgres
-          sqlx migrate run
-          cargo sqlx prepare --merged --check
+      build-sqlx-cache: true
