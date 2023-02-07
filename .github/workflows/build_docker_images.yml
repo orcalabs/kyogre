@@ -13,126 +13,35 @@ on:
       - dockerfiles/**/*
 
 jobs:
-  build:
-    name: Build container images
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v2
-        with:
-          registry: ghcr.io/orcalabs
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build and push
-        uses: docker/build-push-action@v3
-        with:
-          context: .
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          file: dockerfiles/ais-consumer/Dockerfile
-          push: true
-          tags: ghcr.io/orcalabs/kyogre/ais-consumer:${{ github.sha }}
-          secrets: |
-            git-credentials=${{ secrets.CLOUDSMITH_GIT_API_KEY }}
-
-      - name: Build and push
-        uses: docker/build-push-action@v3
-        with:
-          context: .
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          file: dockerfiles/database-migrator/Dockerfile
-          push: true
-          tags: ghcr.io/orcalabs/kyogre/database-migrator:${{ github.sha }}
-          secrets: |
-            git-credentials=${{ secrets.CLOUDSMITH_GIT_API_KEY }}
-
-      - name: Build and push
-        uses: docker/build-push-action@v3
-        with:
-          context: .
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          file: dockerfiles/ais-data-migrator/Dockerfile
-          push: true
-          tags: ghcr.io/orcalabs/kyogre/ais-data-migrator:${{ github.sha }}
-          secrets: |
-            git-credentials=${{ secrets.CLOUDSMITH_GIT_API_KEY }}
-
-      - name: Build and push
-        uses: docker/build-push-action@v3
-        with:
-          context: .
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          file: dockerfiles/fishery-api/Dockerfile
-          push: true
-          tags: ghcr.io/orcalabs/kyogre/fishery-api:${{ github.sha }}
-          secrets: |
-            git-credentials=${{ secrets.CLOUDSMITH_GIT_API_KEY }}
-
-      - name: Build and push
-        uses: docker/build-push-action@v3
-        with:
-          context: .
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          file: dockerfiles/engine/Dockerfile
-          push: true
-          tags: ghcr.io/orcalabs/kyogre/engine:${{ github.sha }}
-          secrets: |
-            git-credentials=${{ secrets.CLOUDSMITH_GIT_API_KEY }}
-
-      - name: Checkout aks repository
-        uses: actions/checkout@v3
-        with:
-            repository: orcalabs/aks
-            token: ${{ secrets.CI_PAT_TOKEN }}
-            path: aks-repo
-
-      - name: Setup Kustomize
-        uses: imranismail/setup-kustomize@v2
-        with:
-          kustomize-version: "4.5.7"
-
-      - name: Update database-migrator image tag
-        run: |
-          cd aks-repo/pre-deploy/kyogre
-          kustomize edit set image ghcr.io/orcalabs/kyogre/database-migrator:${{ github.sha }}
-
-      - name: Update ais-consumer image tag
-        run: |
-          cd aks-repo/apps/base/kyogre
-          kustomize edit set image ghcr.io/orcalabs/kyogre/ais-consumer:${{ github.sha }}
-
-      - name: Update fishery-api image tag
-        run: |
-          cd aks-repo/apps/base/kyogre
-          kustomize edit set image ghcr.io/orcalabs/kyogre/fishery-api:${{ github.sha }}
-
-      - name: Update engine image tag
-        run: |
-          cd aks-repo/apps/base/kyogre
-          kustomize edit set image ghcr.io/orcalabs/kyogre/engine:${{ github.sha }}
-
-      - name: Commit and push
-        env:
-          GITHUB_TOKEN: ${{ secrets.CI_PAT_TOKEN }}
-          GH_TOKEN: ${{ secrets.CI_PAT_TOKEN }}
-        run: |
-          cd aks-repo
-          git checkout -b kyogre-${{ github.sha }}
-          git config --local user.email github-actions@github.com
-          git config --local user.name github-actions
-          git commit -am "Update kyogre image tags"
-          git push -u origin HEAD
-          gh pr create -B master -H kyogre-${{ github.sha }} --title 'Merge kyogre-tag-update' --body 'Created by Github action'
-
+  images:
+    uses: orcalabs/github-actions/.github/workflows/images.yml@master
+    secrets: inherit
+    with:
+      keys: |
+        database-migrator
+        ais-consumer
+        fishery-api
+        engine
+      object: '{
+           "database-migrator" : {
+              "aks-path" : "pre-deploy/kyogre",
+              "dockerfile" : "dockerfiles/database-migrator/Dockerfile",
+              "registry" : "ghcr.io/orcalabs/kyogre/database-migrator"
+           },
+           "ais-consumer" : {
+              "aks-path" : "apps/base/kyogre",
+              "dockerfile" : "dockerfiles/ais-consumer/Dockerfile",
+              "registry" : "ghcr.io/orcalabs/kyogre/ais-consumer"
+           },
+           "engine" : {
+              "aks-path" : "apps/base/kyogre",
+              "dockerfile" : "dockerfiles/engine/Dockerfile",
+              "registry" : "ghcr.io/orcalabs/kyogre/engine"
+           },
+           "fishery-api" : {
+              "aks-path" : "apps/base/kyogre",
+              "dockerfile" : "dockerfiles/fishery-api/Dockerfile",
+              "registry" : "ghcr.io/orcalabs/kyogre/fishery-api"
+           }
+        }'
+      aks-repo: orcalabs/aks
