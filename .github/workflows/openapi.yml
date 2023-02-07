@@ -12,61 +12,15 @@ on:
       - src/**/*
 
 jobs:
-  update_specs:
-    name: Update OpenApi specs
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - uses: Swatinem/rust-cache@v2
-        with:
-          save-if: false
-          workspaces: src
-          shared-key: shared
-
-      - name: Produce openapi-spec
-        run: |
-          sudo apt-get update -y
-          sudo apt-get install protobuf-compiler
-          echo '${{ secrets.CLOUDSMITH_CARGO_REGISTRY }}' > ~/.cargo/config
-          echo '${{ secrets.CLOUDSMITH_GIT_API_KEY }}' > ~/.git-credentials
-          git config --global credential.helper store
-          cd src
-          export SQLX_OFFLINE=true
-          cargo run --bin web-api-openapi | cat > web-api/openapispec.json
-
-      - name: Checkout azure-terraform repository
-        uses: actions/checkout@v3
-        with:
-            repository: orcalabs/azure-terraform
-            token: ${{ secrets.CI_PAT_TOKEN }}
-            path: tf-repo
-
-      - name: Diff openapi specs
-        id: spec_diff
-        # Dont exit on command failure (return non-zero exit code)
-        shell: bash {0}
-        run: |
-          diff -q src/web-api/openapispec.json tf-repo/dev/api-swaggers/fishery-api.json
-          if [[ $? == "1" ]]; then
-            echo "changed=true" >> $GITHUB_OUTPUT
-          else
-            echo "changed=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Commit and push
-        env:
-          GITHUB_TOKEN: ${{ secrets.CI_PAT_TOKEN }}
-          GH_TOKEN: ${{ secrets.CI_PAT_TOKEN }}
-        if: steps.spec_diff.outputs.changed == 'true'
-        run: |
-          mv src/web-api/openapispec.json tf-repo/dev/api-swaggers/fishery-api.json
-          cd tf-repo
-          git add dev/api-swaggers/fishery-api.json
-          git checkout -b kyogre-${{ github.sha }}
-          git config --local user.email github-actions@github.com
-          git config --local user.name github-actions
-          git commit -am "Update kyogre OpenApi spec"
-          git push -u origin HEAD
-          gh pr create -B master -H kyogre-${{ github.sha }} --title 'Merge kyogre OpenApi spec update' --body 'Created by Github action'
+  openapi:
+    uses: orcalabs/github-actions/.github/workflows/openapi.yml@openapi
+    secrets: inherit
+    with:
+      dependencies: protobuf-compiler
+      object: '[
+          {
+            "bin": "web-api-openapi",
+            "terraform-path": "dev/api-swaggers/fishery-api.json"
+          }
+        ]'
+      terraform-repo: orcalabs/azure-terraform
