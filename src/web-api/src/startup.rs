@@ -6,7 +6,7 @@ use actix_web::{
     web::{self, Data},
     HttpServer,
 };
-use orca_core::{Environment, TracingLogger};
+use orca_core::{Environment, OrcaRootSpanBuilder, TracingLogger};
 use postgres::PostgresAdapter;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
@@ -58,7 +58,7 @@ where
             .app_data(Data::new(database.clone()))
             .wrap(Compress::default())
             .wrap(Condition::new(not_prod, actix_cors::Cors::permissive()))
-            .wrap(TracingLogger::default())
+            .wrap(TracingLogger::<OrcaRootSpanBuilder>::new())
             .service(web::scope("/v1.0").route(
                 "/ais_track/{mmsi}",
                 web::get().to(routes::v1::ais::ais_track::<T>),
