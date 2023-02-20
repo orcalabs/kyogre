@@ -1,16 +1,8 @@
-use crate::error::PostgresError;
+use crate::{error::PostgresError, landing_set::LandingSet};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use error_stack::{IntoReport, Report, Result, ResultExt};
-use kyogre_core::{
-    AisMigratorDestination, AisPosition, AisVesselMigrate, Arrival, ArrivalFilter, DataMessage,
-    DateRange, DeliveryPoint, Departure, FileHashId, HashDiff, InsertError, NewAisPosition,
-    NewAisStatic, NewArrival, NewDca, NewDeparture, NewLanding, NewTrip, QueryError,
-    ScraperFileHashInboundPort, ScraperInboundPort, Trip, TripAssemblerConflict, TripAssemblerId,
-    TripAssemblerInboundPort, TripAssemblerOutboundPort, TripCalculationTimer, TripDockPoints,
-    TripPorts, TripPrecisionInboundPort, TripPrecisionOutboundPort, TripPrecisionUpdate,
-    TripsConflictStrategy, UpdateError, Vessel, WebApiPort,
-};
+use kyogre_core::*;
 use orca_core::{PsqlLogStatements, PsqlSettings};
 use sqlx::{
     postgres::{PgConnectOptions, PgPoolOptions, PgSslMode},
@@ -22,6 +14,7 @@ use tracing::{event, instrument, Level};
 #[derive(Debug, Clone)]
 pub struct PostgresAdapter {
     pub(crate) pool: PgPool,
+    pub(crate) ais_pool: PgPool,
 }
 
 enum AisProcessingAction {
@@ -44,8 +37,7 @@ impl PostgresAdapter {
             .username(&settings.username)
             .password(&settings.password)
             .host(&settings.ip)
-            .port(settings.port as u16)
-            .options([("plan_cache_mode", "force_custom_plan")]);
+            .port(settings.port as u16);
 
         if let Some(db_name) = &settings.db_name {
             opts = opts.database(db_name);
@@ -64,6 +56,10 @@ impl PostgresAdapter {
             }
         }
 
+        let ais_opts = opts
+            .clone()
+            .options([("plan_cache_mode", "force_custom_plan")]);
+
         let pool = PgPoolOptions::new()
             .max_connections(connections_per_pool)
             .acquire_timeout(std::time::Duration::from_secs(20))
@@ -72,7 +68,15 @@ impl PostgresAdapter {
             .into_report()
             .change_context(PostgresError::Connection)?;
 
-        Ok(PostgresAdapter { pool })
+        let ais_pool = PgPoolOptions::new()
+            .max_connections(connections_per_pool)
+            .acquire_timeout(std::time::Duration::from_secs(20))
+            .connect_with(ais_opts)
+            .await
+            .into_report()
+            .change_context(PostgresError::Connection)?;
+
+        Ok(PostgresAdapter { pool, ais_pool })
     }
 
     pub async fn do_migrations(&self) {
@@ -232,8 +236,10 @@ impl WebApiPort for PostgresAdapter {
 
 #[async_trait]
 impl ScraperInboundPort for PostgresAdapter {
-    async fn add_landings(&self, _landings: Vec<NewLanding>) -> Result<(), InsertError> {
-        unimplemented!();
+    async fn add_landings(&self, landings: Vec<fiskeridir_rs::Landing>) -> Result<(), InsertError> {
+        let set = LandingSet::new(landings).change_context(InsertError)?;
+
+        self.add_landing_set(set).await.change_context(InsertError)
     }
     async fn add_dca(&self, _dca: Vec<NewDca>) -> Result<(), InsertError> {
         unimplemented!();
@@ -248,11 +254,11 @@ impl ScraperInboundPort for PostgresAdapter {
 
 #[async_trait]
 impl ScraperFileHashInboundPort for PostgresAdapter {
-    async fn add(&self, _id: &FileHashId, _hash: String) -> Result<(), InsertError> {
-        unimplemented!();
+    async fn add(&self, id: &FileHashId, hash: String) -> Result<(), InsertError> {
+        self.add_hash(id, hash).await.change_context(InsertError)
     }
-    async fn diff(&self, _id: &FileHashId, _hash: &str) -> Result<HashDiff, QueryError> {
-        unimplemented!();
+    async fn diff(&self, id: &FileHashId, hash: &str) -> Result<HashDiff, QueryError> {
+        self.diff_hash(id, hash).await.change_context(QueryError)
     }
 }
 

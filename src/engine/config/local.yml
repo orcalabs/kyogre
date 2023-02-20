@@ -1,24 +1,15 @@
 log_level: Debug
 postgres:
-  ip: test-db
+  ip: 127.0.0.1
   port: 5432
   username: postgres
   password: test123
   max_connections: 10
-  log_statements: Enable
+  log_statements: Disable
 engine:
   scrape_schedule:
-    Periodic: 10m
+    Periodic: 30s
 scraper:
-  ers_dca:
-    min_year: 2020
-    max_year: 2023
-  ers_dep:
-    min_year: 2020
-    max_year: 2023
-  ers_por:
-    min_year: 2020
-    max_year: 2023
   landings:
-    min_year: 2021
+    min_year: 2002
     max_year: 2023

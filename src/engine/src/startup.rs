@@ -1,7 +1,9 @@
 use crate::{settings::Settings, Engine, SharedState};
+use orca_core::Environment;
 use orca_statemachine::Machine;
 use postgres::PostgresAdapter;
 use scraper::{FiskedirSource, Scraper};
+use std::path::PathBuf;
 
 pub struct App {
     shared_state: SharedState<PostgresAdapter>,
@@ -12,10 +14,17 @@ impl App {
     pub async fn build(settings: &Settings) -> App {
         let postgres = PostgresAdapter::new(&settings.postgres).await.unwrap();
 
+        if settings.environment == Environment::Local {
+            postgres.do_migrations().await;
+        }
+
+        let file_downloader = fiskeridir_rs::FileDownloader::new(PathBuf::from("/tmp")).unwrap();
+        let fiskeridir_source = FiskedirSource::new(Box::new(postgres.clone()), file_downloader);
+
         let scraper = Scraper::new(
             settings.scraper.clone(),
             Box::new(postgres.clone()),
-            FiskedirSource::new(Box::new(postgres.clone())),
+            fiskeridir_source,
         );
         let trip_assemblers = settings.trip_assemblers();
         let transition_log = orca_statemachine::Client::new(&settings.postgres)

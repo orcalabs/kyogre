@@ -11,3 +11,7 @@ members = [
     "trip-assembler",
     "scraper",
 ]
+
+[workspace.dependencies]
+fiskeridir-rs = { version = "0.3.0", registry = "orcalabs-orcastrator" }
+

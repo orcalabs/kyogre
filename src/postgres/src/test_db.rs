@@ -30,10 +30,18 @@ impl TestDb {
             crate::models::AisPosition,
             r#"
 SELECT
-    mmsi, latitude, longitude, course_over_ground, rate_of_turn, true_heading,
-    speed_over_ground, timestamp as msgtime,  navigation_status_id as navigational_status,
+    mmsi,
+    latitude,
+    longitude,
+    course_over_ground,
+    rate_of_turn,
+    true_heading,
+    speed_over_ground,
+    TIMESTAMP AS msgtime,
+    navigation_status_id AS navigational_status,
     distance_to_shore
-FROM ais_positions
+FROM
+    ais_positions
             "#
         )
         .fetch_all(&mut conn)
@@ -57,10 +65,18 @@ FROM ais_positions
             crate::models::AisPosition,
             r#"
 SELECT
-    mmsi, latitude, longitude, course_over_ground, rate_of_turn, true_heading,
-    speed_over_ground, timestamp as msgtime,  navigation_status_id as navigational_status,
+    mmsi,
+    latitude,
+    longitude,
+    course_over_ground,
+    rate_of_turn,
+    true_heading,
+    speed_over_ground,
+    TIMESTAMP AS msgtime,
+    navigation_status_id AS navigational_status,
     distance_to_shore
-FROM current_ais_positions
+FROM
+    current_ais_positions
             "#
         )
         .fetch_all(&mut conn)
@@ -84,9 +100,16 @@ FROM current_ais_positions
             crate::models::AisVessel,
             r#"
 SELECT
-    mmsi, imo_number, call_sign, name, ship_width, ship_length,
-    eta, destination
-FROM ais_vessels
+    mmsi,
+    imo_number,
+    call_sign,
+    NAME,
+    ship_width,
+    ship_length,
+    eta,
+    destination
+FROM
+    ais_vessels
             "#
         )
         .fetch_all(&mut conn)
@@ -111,7 +134,7 @@ FROM ais_vessels
             .unwrap();
     }
 
-    pub async fn generate_vessel(&self, mmsi: i32, call_sign: &str) -> AisVessel {
+    pub async fn generate_ais_vessel(&self, mmsi: i32, call_sign: &str) -> AisVessel {
         let val = NewAisStatic::test_default(mmsi, call_sign);
         let mut map = HashMap::new();
         map.insert(val.mmsi, val);

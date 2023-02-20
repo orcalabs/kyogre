@@ -3,29 +3,21 @@ use std::sync::Arc;
 use crate::{DataSource, Processor, ScraperError, ScraperId};
 use async_trait::async_trait;
 use error_stack::Result;
-use kyogre_core::{FileHash, NewLanding};
+use fiskeridir_rs::Source;
+use kyogre_core::FileHash;
 use tracing::{event, Level};
 
 use super::FiskedirSource;
 
-// Placeholder until the fiskedir-rs crate is done.
-pub struct FiskedirLanding;
-
 pub struct LandingScraper {
-    min_year: u32,
-    max_year: u32,
+    sources: Vec<Source>,
     fiskedir_source: Arc<FiskedirSource>,
 }
 
 impl LandingScraper {
-    pub fn new(
-        fiskedir_source: Arc<FiskedirSource>,
-        min_year: u32,
-        max_year: u32,
-    ) -> LandingScraper {
+    pub fn new(fiskedir_source: Arc<FiskedirSource>, sources: Vec<Source>) -> LandingScraper {
         LandingScraper {
-            min_year,
-            max_year,
+            sources,
             fiskedir_source,
         }
     }
@@ -39,32 +31,31 @@ impl DataSource for LandingScraper {
 
     async fn scrape(&self, processor: &(dyn Processor)) -> Result<(), ScraperError> {
         let closure = |landings| processor.add_landings(landings);
-        for year in self.min_year..=self.max_year {
+        for source in &self.sources {
             if let Err(e) = self
                 .fiskedir_source
-                .scrape_year::<FiskedirLanding, _, NewLanding, _>(
+                .scrape_year::<fiskeridir_rs::LandingRaw, fiskeridir_rs::Landing, _, _>(
                     FileHash::Landings,
-                    year,
+                    source,
                     closure,
-                    1000,
+                    100000,
                 )
                 .await
             {
                 event!(
                     Level::ERROR,
-                    "failed to scrape landings for year: {year}, err: {:?}",
-                    e
+                    "failed to scrape landings for year: {}, err: {:?}",
+                    source.year(),
+                    e,
+                );
+            } else {
+                event!(
+                    Level::INFO,
+                    "succesfully scraped landings year: {}",
+                    source.year()
                 );
             }
         }
         Ok(())
-    }
-}
-
-impl TryFrom<FiskedirLanding> for NewLanding {
-    type Error = ScraperError;
-
-    fn try_from(_value: FiskedirLanding) -> std::result::Result<Self, Self::Error> {
-        Ok(NewLanding {})
     }
 }

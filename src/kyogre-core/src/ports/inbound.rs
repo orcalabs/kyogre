@@ -1,7 +1,6 @@
 use crate::{
     AisPosition, AisVesselMigrate, FileHashId, HashDiff, InsertError, NewArrival, NewDca,
-    NewDeparture, NewLanding, NewTrip, QueryError, TripPrecisionUpdate, TripsConflictStrategy,
-    UpdateError,
+    NewDeparture, NewTrip, QueryError, TripPrecisionUpdate, TripsConflictStrategy, UpdateError,
 };
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
@@ -42,7 +41,7 @@ pub trait TripPrecisionInboundPort {
 
 #[async_trait]
 pub trait ScraperInboundPort {
-    async fn add_landings(&self, landings: Vec<NewLanding>) -> Result<(), InsertError>;
+    async fn add_landings(&self, landings: Vec<fiskeridir_rs::Landing>) -> Result<(), InsertError>;
     async fn add_dca(&self, dca: Vec<NewDca>) -> Result<(), InsertError>;
     async fn add_departure(&self, departures: Vec<NewDeparture>) -> Result<(), InsertError>;
     async fn add_arrival(&self, arrivals: Vec<NewArrival>) -> Result<(), InsertError>;

@@ -25,3 +25,9 @@ pub enum HashDiff {
     Equal,
     Changed,
 }
+
+impl AsRef<str> for FileHashId {
+    fn as_ref(&self) -> &str {
+        &self.0
+    }
+}

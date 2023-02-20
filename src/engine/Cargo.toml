@@ -13,6 +13,7 @@ trip-assembler = { path = "../trip-assembler" }
 
 orca-statemachine = { version = "0.35.0", registry = "orcalabs-orcastrator", features = ["psql-adapter"] }
 orca-core = { version = "0.20.0", registry = "orcalabs-orcastrator", features = ["telemetry"] }
+fiskeridir-rs = { workspace =  true }
 
 config = { version = "0.13.3", features = ["yaml"] }
 chrono = { version = "0.4.23", features = ["serde"] }

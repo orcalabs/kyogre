@@ -1,10 +1,10 @@
 use chrono::{DateTime, TimeZone, Utc};
+use fiskeridir_rs::CallSign;
 use num_derive::FromPrimitive;
 use rand::random;
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 
-use crate::CallSign;
 #[derive(Debug, Clone, Default)]
 pub struct DataMessage {
     pub positions: Vec<NewAisPosition>,

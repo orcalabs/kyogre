@@ -1,9 +1,7 @@
+use error_stack::{Report, Result};
 use kyogre_core::InsertError;
-use tracing::{event, Level};
-
-use crate::ScraperError;
-use error_stack::Result;
 use std::future::Future;
+use tracing::{event, Level};
 
 trait Chunk<T> {
     fn push(&mut self, entry: T);
@@ -11,19 +9,20 @@ trait Chunk<T> {
     fn is_empty(&self) -> bool;
 }
 
-pub(crate) async fn add_in_chunks<A, B, C, D>(
-    insert_closure: B,
-    data: Box<dyn Iterator<Item = Result<A, ScraperError>> + Send>,
+pub(crate) async fn add_in_chunks<A, B, C, D, E>(
+    insert_closure: A,
+    data: C,
     chunk_size: usize,
 ) -> Result<(), InsertError>
 where
-    A: TryInto<C, Error = ScraperError>,
-    B: Fn(Vec<C>) -> D,
-    D: Future<Output = Result<(), InsertError>>,
+    A: Fn(Vec<D>) -> B,
+    B: Future<Output = Result<(), InsertError>>,
+    C: IntoIterator<Item = Result<E, fiskeridir_rs::Error>>,
+    E: TryInto<D, Error = Report<fiskeridir_rs::Error>>,
 {
-    let mut chunk: Vec<C> = Vec::with_capacity(chunk_size);
+    let mut chunk: Vec<D> = Vec::with_capacity(chunk_size);
 
-    for (i, item) in data.enumerate() {
+    for (i, item) in data.into_iter().enumerate() {
         match item {
             Err(e) => {
                 event!(Level::ERROR, "failed to read data: {:?}", e);
@@ -31,6 +30,7 @@ where
             Ok(item) => match item.try_into() {
                 Err(e) => {
                     event!(Level::ERROR, "failed to convert data: {:?}", e);
+                    panic!("{e}");
                 }
                 Ok(item) => {
                     chunk.push(item);
@@ -41,6 +41,10 @@ where
                 }
             },
         }
+    }
+
+    if !chunk.is_empty() {
+        insert_closure(chunk).await?;
     }
 
     Ok(())
