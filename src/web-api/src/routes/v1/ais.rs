@@ -11,6 +11,7 @@ pub static AIS_DETAILS_INTERVAL: Lazy<Duration> = Lazy::new(|| Duration::minutes
 pub static MISSING_DATA_DURATION: Lazy<Duration> = Lazy::new(|| Duration::minutes(60));
 
 #[derive(Debug, Deserialize, IntoParams)]
+#[serde(rename_all = "camelCase")]
 pub struct AisTrackParameters {
     pub start: Option<DateTime<Utc>>,
     pub end: Option<DateTime<Utc>>,
@@ -62,6 +63,7 @@ pub async fn ais_track<T: Database>(
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct AisPosition {
     pub lat: f64,
     pub lon: f64,
@@ -71,6 +73,7 @@ pub struct AisPosition {
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct AisPositionDetails {
     pub navigational_status: Option<NavigationStatus>,
     pub rate_of_turn: Option<f64>,

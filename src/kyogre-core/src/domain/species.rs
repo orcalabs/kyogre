@@ -19,11 +19,11 @@ pub struct SpeciesMainGroup {
 #[derive(Clone, PartialEq, Eq)]
 pub struct SpeciesFao {
     pub id: String,
-    pub name: String,
+    pub name: Option<String>,
 }
 
 #[derive(Clone, PartialEq, Eq)]
 pub struct SpeciesFiskeridir {
     pub id: u32,
-    pub name: String,
+    pub name: Option<String>,
 }

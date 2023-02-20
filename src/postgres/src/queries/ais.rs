@@ -143,12 +143,7 @@ ORDER BY
             ais_message_type.push(p.message_type_id);
         }
 
-        let mut tx = self
-            .pool
-            .begin()
-            .await
-            .into_report()
-            .change_context(PostgresError::Transaction)?;
+        let mut tx = self.begin().await?;
 
         sqlx::query!(
             r#"
@@ -352,12 +347,7 @@ SET
         &self,
         migration_end_threshold: &DateTime<Utc>,
     ) -> Result<Vec<AisVesselMigrate>, PostgresError> {
-        let mut conn = self
-            .pool
-            .acquire()
-            .await
-            .into_report()
-            .change_context(PostgresError::Connection)?;
+        let mut conn = self.acquire().await?;
 
         Ok(sqlx::query_as!(
             crate::models::AisVesselMigrationProgress,
@@ -412,12 +402,7 @@ WHERE
             destination.push(v.destination.clone());
         });
 
-        let mut tx = self
-            .pool
-            .begin()
-            .await
-            .into_report()
-            .change_context(PostgresError::Transaction)?;
+        let mut tx = self.begin().await?;
 
         sqlx::query!(
             r#"
@@ -559,12 +544,7 @@ SET
             timestamp.push(p.msgtime);
         }
 
-        let mut tx = self
-            .pool
-            .begin()
-            .await
-            .into_report()
-            .change_context(PostgresError::Transaction)?;
+        let mut tx = self.begin().await?;
 
         sqlx::query!(
             r#"

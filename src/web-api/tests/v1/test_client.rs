@@ -53,4 +53,7 @@ impl ApiClient {
     pub async fn get_vessels(&self) -> Response {
         self.get("vessels", &[]).await
     }
+    pub async fn get_hauls(&self) -> Response {
+        self.get("hauls", &[]).await
+    }
 }

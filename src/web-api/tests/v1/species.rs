@@ -126,11 +126,11 @@ async fn test_species_fao_returns_all_species_fao() {
         let mut expected = vec![
             SpeciesFao {
                 id: landing.product.species.fao_code.clone().unwrap(),
-                name: landing.product.species.fao_name.clone().unwrap(),
+                name: Some(landing.product.species.fao_name.clone().unwrap()),
             },
             SpeciesFao {
                 id: landing2.product.species.fao_code.clone().unwrap(),
-                name: landing2.product.species.fao_name.clone().unwrap(),
+                name: Some(landing2.product.species.fao_name.clone().unwrap()),
             },
         ];
 
@@ -163,11 +163,11 @@ async fn test_species_fiskeridir_returns_all_species_fiskeridir() {
         let mut expected = vec![
             SpeciesFiskeridir {
                 id: landing.product.species.fdir_code,
-                name: landing.product.species.fdir_name.clone(),
+                name: Some(landing.product.species.fdir_name.clone()),
             },
             SpeciesFiskeridir {
                 id: landing2.product.species.fdir_code,
-                name: landing2.product.species.fdir_name.clone(),
+                name: Some(landing2.product.species.fdir_name.clone()),
             },
         ];
 

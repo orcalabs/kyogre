@@ -8,12 +8,7 @@ impl PostgresAdapter {
         id: &FileHashId,
         hash: String,
     ) -> Result<(), PostgresError> {
-        let mut tx = self
-            .pool
-            .begin()
-            .await
-            .into_report()
-            .change_context(PostgresError::Transaction)?;
+        let mut tx = self.begin().await?;
 
         sqlx::query!(
             r#"
@@ -37,12 +32,7 @@ VALUES
         id: &FileHashId,
         hash: &str,
     ) -> Result<HashDiff, PostgresError> {
-        let mut conn = self
-            .pool
-            .acquire()
-            .await
-            .into_report()
-            .change_context(PostgresError::Transaction)?;
+        let mut conn = self.acquire().await?;
 
         struct ExistingHash {
             hash: String,

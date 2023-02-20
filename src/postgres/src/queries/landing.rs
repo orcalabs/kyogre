@@ -4,12 +4,7 @@ use error_stack::{IntoReport, Result, ResultExt};
 impl PostgresAdapter {
     pub(crate) async fn add_landing_set(&self, set: LandingSet) -> Result<(), PostgresError> {
         let prepared_set = set.prepare();
-        let mut tx = self
-            .pool
-            .begin()
-            .await
-            .into_report()
-            .change_context(PostgresError::Transaction)?;
+        let mut tx = self.begin().await?;
 
         self.add_delivery_points(prepared_set.delivery_points, &mut tx)
             .await?;
@@ -17,7 +12,7 @@ impl PostgresAdapter {
         self.add_municipalities(prepared_set.municipalities, &mut tx)
             .await?;
         self.add_counties(prepared_set.counties, &mut tx).await?;
-        self.add_vessels_from_landings(prepared_set.vessels, &mut tx)
+        self.add_fiskeridir_vessels(prepared_set.vessels, &mut tx)
             .await?;
 
         self.add_species_main_groups(prepared_set.species_main_groups, &mut tx)
@@ -340,7 +335,7 @@ FROM
         $67::VARCHAR[]
     )
 ON CONFLICT (landing_id, "version") DO NOTHING
-                "#,
+            "#,
             landing_id.as_slice(),
             document_id.as_slice(),
             fiskeridir_vessel_id.as_slice() as _,

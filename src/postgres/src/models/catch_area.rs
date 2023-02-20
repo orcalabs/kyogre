@@ -8,7 +8,7 @@ pub struct NewCatchArea {
 #[derive(Debug, Clone, PartialEq)]
 pub struct NewCatchMainArea {
     pub id: i32,
-    pub name: String,
+    pub name: Option<String>,
     pub longitude: Option<f64>,
     pub latitude: Option<f64>,
 }
@@ -29,7 +29,7 @@ impl From<fiskeridir_rs::CatchLocation> for NewCatchMainArea {
     fn from(value: fiskeridir_rs::CatchLocation) -> Self {
         NewCatchMainArea {
             id: value.main_area_code as i32,
-            name: value.main_area,
+            name: Some(value.main_area),
             longitude: value.main_area_longitude,
             latitude: value.main_area_latitude,
         }
@@ -37,6 +37,10 @@ impl From<fiskeridir_rs::CatchLocation> for NewCatchMainArea {
 }
 
 impl NewAreaGrouping {
+    pub fn new(id: String, name: Option<String>) -> Self {
+        Self { id, name }
+    }
+
     pub fn from_landing(landing: &fiskeridir_rs::Landing) -> Option<NewAreaGrouping> {
         landing
             .catch_location

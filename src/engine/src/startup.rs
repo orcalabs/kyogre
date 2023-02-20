@@ -2,7 +2,7 @@ use crate::{settings::Settings, Engine, SharedState};
 use orca_core::Environment;
 use orca_statemachine::Machine;
 use postgres::PostgresAdapter;
-use scraper::{FiskedirSource, Scraper};
+use scraper::{FiskeridirSource, Scraper};
 use std::path::PathBuf;
 
 pub struct App {
@@ -19,7 +19,7 @@ impl App {
         }
 
         let file_downloader = fiskeridir_rs::FileDownloader::new(PathBuf::from("/tmp")).unwrap();
-        let fiskeridir_source = FiskedirSource::new(Box::new(postgres.clone()), file_downloader);
+        let fiskeridir_source = FiskeridirSource::new(Box::new(postgres.clone()), file_downloader);
 
         let scraper = Scraper::new(
             settings.scraper.clone(),

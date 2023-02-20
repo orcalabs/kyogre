@@ -1,7 +1,10 @@
 use std::collections::HashMap;
 
 use chrono::DateTime;
-use kyogre_core::{AisPosition, AisVessel, DateRange, NewAisPosition, NewAisStatic, WebApiPort};
+use fiskeridir_rs::ErsDca;
+use kyogre_core::{
+    AisPosition, AisVessel, DateRange, NewAisPosition, NewAisStatic, ScraperInboundPort, WebApiPort,
+};
 
 use crate::PostgresAdapter;
 
@@ -171,5 +174,14 @@ FROM
 
         assert_eq!(positions.len(), 1);
         positions.pop().unwrap()
+    }
+
+    pub async fn generate_ers_dca(&self, message_id: u64, vessel_id: Option<u64>) -> ErsDca {
+        let ers_dca = ErsDca::test_default(message_id, vessel_id);
+
+        self.db.add_ers_dca(vec![ers_dca.clone()]).await.unwrap();
+        self.db.update_database_views().await.unwrap();
+
+        ers_dca
     }
 }

@@ -3,13 +3,13 @@
 
 use async_trait::async_trait;
 use kyogre_core::{
-    TripAssemblerInboundPort, TripAssemblerOutboundPort, TripPrecisionInboundPort,
-    TripPrecisionOutboundPort,
+    ScraperInboundPort, TripAssemblerInboundPort, TripAssemblerOutboundPort,
+    TripPrecisionInboundPort, TripPrecisionOutboundPort,
 };
 use orca_statemachine::{Machine, Schedule, Step, TransitionLog};
 use scraper::Scraper;
 use serde::Deserialize;
-use states::{Pending, Scrape, Sleep, Trips, TripsPrecision};
+use states::{Pending, Scrape, Sleep, Trips, TripsPrecision, UpdateDatabaseViews};
 use strum_macros::{AsRefStr, EnumDiscriminants, EnumIter, EnumString};
 use trip_assembler::TripAssembler;
 
@@ -23,6 +23,7 @@ pub trait Database:
     + TripAssemblerInboundPort
     + TripPrecisionInboundPort
     + TripPrecisionOutboundPort
+    + ScraperInboundPort
     + Send
     + Sync
     + 'static
@@ -35,6 +36,7 @@ impl<T> Database for T where
         + TripAssemblerInboundPort
         + TripPrecisionInboundPort
         + TripPrecisionOutboundPort
+        + ScraperInboundPort
         + 'static
 {
 }
@@ -48,6 +50,7 @@ pub enum Engine<A, B> {
     Scrape(StepWrapper<A, B, Scrape>),
     Trips(StepWrapper<A, B, Trips>),
     TripsPrecision(StepWrapper<A, B, TripsPrecision>),
+    UpdateDatabaseViews(StepWrapper<A, B, UpdateDatabaseViews>),
 }
 
 pub struct StepWrapper<A, B, C> {
@@ -108,6 +111,7 @@ where
             Engine::Scrape(s) => s.run().await,
             Engine::Trips(s) => s.run().await,
             Engine::TripsPrecision(s) => s.run().await,
+            Engine::UpdateDatabaseViews(s) => s.run().await,
         }
     }
     fn is_exit_state(&self) -> bool {
@@ -121,6 +125,7 @@ where
             Engine::Scrape(s) => &s.inner.transition_log,
             Engine::Trips(s) => &s.inner.transition_log,
             Engine::TripsPrecision(s) => &s.inner.transition_log,
+            Engine::UpdateDatabaseViews(s) => &s.inner.transition_log,
         }
     }
 
@@ -158,7 +163,8 @@ impl Config {
             EngineDiscriminants::Pending
             | EngineDiscriminants::Sleep
             | EngineDiscriminants::Trips
-            | EngineDiscriminants::TripsPrecision => None,
+            | EngineDiscriminants::TripsPrecision
+            | EngineDiscriminants::UpdateDatabaseViews => None,
             EngineDiscriminants::Scrape => Some(&self.scrape_schedule),
         }
     }

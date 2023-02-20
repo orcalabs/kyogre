@@ -65,3 +65,17 @@ impl std::fmt::Display for NavigationStatusError {
         ))
     }
 }
+
+#[derive(Debug)]
+pub struct WhaleGenderError(pub i32);
+
+impl std::error::Error for WhaleGenderError {}
+
+impl std::fmt::Display for WhaleGenderError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!(
+            "failed to convert int value to whale gender, value: {}",
+            self.0
+        ))
+    }
+}

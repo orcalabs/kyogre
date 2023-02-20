@@ -50,18 +50,21 @@ pub async fn gear_main_groups() -> Result<Response<Vec<GearMainGroup>>, ApiError
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema, Ord, PartialOrd, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
 pub struct Gear {
     pub id: u32,
     pub name: &'static str,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema, Ord, PartialOrd, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
 pub struct GearGroup {
     pub id: u32,
     pub name: &'static str,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema, Ord, PartialOrd, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
 pub struct GearMainGroup {
     pub id: u32,
     pub name: &'static str,

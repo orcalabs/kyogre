@@ -12,5 +12,3 @@ pub enum ArrivalFilter {
     WithLandingFacility,
     All,
 }
-
-pub struct NewArrival {}
