@@ -1,10 +1,11 @@
-use std::future::Future;
-
 use crate::chunks::add_in_chunks;
 use crate::ScraperError;
-use error_stack::{Result, ResultExt};
+use error_stack::{Report, Result, ResultExt};
+use fiskeridir_rs::{DataFile, FileDownloader, Source};
 use kyogre_core::{FileHash, InsertError, ScraperFileHashInboundPort};
 use kyogre_core::{FileHashId, HashDiff};
+use serde::de::DeserializeOwned;
+use std::future::Future;
 
 mod ers_dca;
 mod ers_dep;
@@ -16,36 +17,47 @@ pub use ers_dep::*;
 pub use ers_por::*;
 pub use landings::*;
 
-// Placeholders untill the fiskedir-rs crate is done
 pub struct FiskedirSource {
     hash_store: Box<dyn ScraperFileHashInboundPort + Send + Sync>,
+    fiskedir: FileDownloader,
 }
-pub struct Handle(String);
 
 impl FiskedirSource {
-    pub fn new(hash_store: Box<dyn ScraperFileHashInboundPort + Send + Sync>) -> FiskedirSource {
-        FiskedirSource { hash_store }
+    pub fn new(
+        hash_store: Box<dyn ScraperFileHashInboundPort + Send + Sync>,
+        fiskedir: FileDownloader,
+    ) -> FiskedirSource {
+        FiskedirSource {
+            hash_store,
+            fiskedir,
+        }
     }
 
-    pub async fn download(&self) -> Result<Handle, ScraperError> {
-        Ok(Handle("test".to_string()))
+    pub async fn download(&self, source: &Source) -> Result<DataFile, ScraperError> {
+        self.fiskedir
+            .download(source)
+            .await
+            .change_context(ScraperError)
     }
 
     pub async fn scrape_year<A, B, C, D>(
         &self,
         file_hash: FileHash,
-        year: u32,
-        insert_closure: B,
+        source: &Source,
+        insert_closure: D,
         chunk_size: usize,
     ) -> Result<(), ScraperError>
     where
-        A: TryInto<C, Error = ScraperError>,
-        B: Fn(Vec<C>) -> D,
-        D: Future<Output = Result<(), InsertError>>,
+        A: DeserializeOwned
+            + TryInto<B, Error = Report<fiskeridir_rs::Error>>
+            + 'static
+            + std::fmt::Debug,
+        C: Future<Output = Result<(), InsertError>>,
+        D: Fn(Vec<B>) -> C,
     {
-        let handle = self.download().await?;
-        let hash = handle.hash();
-        let hash_id = FileHashId::new(file_hash, year);
+        let file = self.download(source).await?;
+        let hash = file.hash().change_context(ScraperError)?;
+        let hash_id = FileHashId::new(file_hash, source.year());
 
         let diff = self
             .hash_store
@@ -56,7 +68,7 @@ impl FiskedirSource {
         match diff {
             HashDiff::Equal => Ok(()),
             HashDiff::Changed => {
-                let data = handle.read::<A>()?;
+                let data = file.into_deserialize::<A>().change_context(ScraperError)?;
                 add_in_chunks(insert_closure, data, chunk_size)
                     .await
                     .change_context(ScraperError)?;
@@ -66,17 +78,5 @@ impl FiskedirSource {
                     .change_context(ScraperError)
             }
         }
-    }
-}
-
-impl Handle {
-    pub fn hash(&self) -> String {
-        self.0.clone()
-    }
-
-    pub fn read<T>(
-        &self,
-    ) -> Result<Box<dyn Iterator<Item = Result<T, ScraperError>> + Send + Sync>, ScraperError> {
-        unimplemented!();
     }
 }

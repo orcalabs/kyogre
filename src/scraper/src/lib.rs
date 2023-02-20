@@ -27,14 +27,20 @@ pub struct Scraper {
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct Config {
-    pub landings: FileYear,
-    pub ers_dca: FileYear,
-    pub ers_por: FileYear,
-    pub ers_dep: FileYear,
+    pub landings: LandingFileYears,
+    pub ers_dca: Option<Vec<ErsFileYear>>,
+    pub ers_por: Option<Vec<ErsFileYear>>,
+    pub ers_dep: Option<Vec<ErsFileYear>>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
-pub struct FileYear {
+pub struct ErsFileYear {
+    pub year: u32,
+    pub url: String,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct LandingFileYears {
     pub min_year: u32,
     pub max_year: u32,
 }
@@ -47,11 +53,15 @@ pub trait DataSource: Send + Sync {
 
 impl Scraper {
     pub fn new(config: Config, processor: Box<dyn Processor>, source: FiskedirSource) -> Scraper {
+        let mut landing_sources = Vec::new();
+        for year in config.landings.min_year..=config.landings.max_year {
+            landing_sources.push(fiskeridir_rs::Source::Landings { year, url: None });
+        }
+
         let arc = Arc::new(source);
-        let _landings_scraper =
-            LandingScraper::new(arc, config.landings.min_year, config.landings.min_year);
+        let landings_scraper = LandingScraper::new(arc, landing_sources);
         Scraper {
-            scrapers: vec![],
+            scrapers: vec![Box::new(landings_scraper)],
             processor,
         }
     }

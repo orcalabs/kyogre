@@ -25,6 +25,26 @@
     },
     "query": "\nINSERT INTO\n  ais_data_migration_progress (mmsi, progress)\nVALUES\n  ($1, $2)\nON CONFLICT (mmsi) DO\nUPDATE\nSET\n  progress = excluded.progress\n            "
   },
+  "13041c559dae3b4a2972bf672ab879da750bad4bd0816aab29693d19f28a422e": {
+    "describe": {
+      "columns": [
+        {
+          "name": "hash",
+          "ordinal": 0,
+          "type_info": "Varchar"
+        }
+      ],
+      "nullable": [
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Text"
+        ]
+      }
+    },
+    "query": "\nSELECT\n    hash\nFROM\n    data_hashes\nWHERE\n    data_hash_id = $1\n            "
+  },
   "13f4e21a07fd20087dc4bc7b8122180ba6815d95b7d20ec55db0bc509ae28946": {
     "describe": {
       "columns": [
@@ -122,7 +142,105 @@
     },
     "query": "\nINSERT INTO\n  ais_positions (\n    mmsi,\n    latitude,\n    longitude,\n    course_over_ground,\n    rate_of_turn,\n    true_heading,\n    speed_over_ground,\n    timestamp,\n    distance_to_shore,\n    navigation_status_id\n  )\nSELECT\n  *\nFROM\n  UNNEST(\n    $1::int[],\n    $2::decimal[],\n    $3::decimal[],\n    $4::decimal[],\n    $5::decimal[],\n    $6::int[],\n    $7::decimal[],\n    $8::timestamptz[],\n    $9::decimal[],\n    $10::int[]\n  )\nON CONFLICT (mmsi, timestamp) DO NOTHING\n            "
   },
-  "285120135ed18d195176fde5b20c966dbc490a0b9a6ed608e1db7d733e4c2c63": {
+  "564ecbda445799ebe77b936a3199254676762e91b0006b9782f124f15f4b3778": {
+    "describe": {
+      "columns": [
+        {
+          "name": "mmsi",
+          "ordinal": 0,
+          "type_info": "Int4"
+        },
+        {
+          "name": "latitude",
+          "ordinal": 1,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "longitude",
+          "ordinal": 2,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "course_over_ground",
+          "ordinal": 3,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "rate_of_turn",
+          "ordinal": 4,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "true_heading",
+          "ordinal": 5,
+          "type_info": "Int4"
+        },
+        {
+          "name": "speed_over_ground",
+          "ordinal": 6,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "msgtime",
+          "ordinal": 7,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "navigational_status",
+          "ordinal": 8,
+          "type_info": "Int4"
+        },
+        {
+          "name": "distance_to_shore",
+          "ordinal": 9,
+          "type_info": "Numeric"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        true,
+        true,
+        true,
+        true,
+        false,
+        true,
+        false
+      ],
+      "parameters": {
+        "Left": []
+      }
+    },
+    "query": "\nSELECT\n    mmsi,\n    latitude,\n    longitude,\n    course_over_ground,\n    rate_of_turn,\n    true_heading,\n    speed_over_ground,\n    TIMESTAMP AS msgtime,\n    navigation_status_id AS navigational_status,\n    distance_to_shore\nFROM\n    current_ais_positions\n            "
+  },
+  "578b6c7aa86e2c45f34223e588de692b11ac48752428b03ab74790ee9a9d81bd": {
+    "describe": {
+      "columns": [
+        {
+          "name": "mmsi",
+          "ordinal": 0,
+          "type_info": "Int4"
+        },
+        {
+          "name": "progress",
+          "ordinal": 1,
+          "type_info": "Timestamptz"
+        }
+      ],
+      "nullable": [
+        false,
+        true
+      ],
+      "parameters": {
+        "Left": [
+          "Timestamptz"
+        ]
+      }
+    },
+    "query": "\nSELECT\n  mmsi,\n  progress\nFROM\n  ais_data_migration_progress\nWHERE\n  progress < $1\n            "
+  },
+  "6b63083645ee5131c65b06de6940f6f49491cf5fc32b7d57e113b29b8244e6f6": {
     "describe": {
       "columns": [
         {
@@ -180,105 +298,75 @@
         "Left": []
       }
     },
-    "query": "\nSELECT\n    mmsi, imo_number, call_sign, name, ship_width, ship_length,\n    eta, destination\nFROM ais_vessels\n            "
+    "query": "\nSELECT\n    mmsi,\n    imo_number,\n    call_sign,\n    NAME,\n    ship_width,\n    ship_length,\n    eta,\n    destination\nFROM\n    ais_vessels\n            "
   },
-  "31e8523f0debc7597e580e9a2cb7c54138691043f3513fd7606df918f12d6181": {
+  "75415dace8613b993a4de5a2eb00109da8197486811a22bf1aea50a1f4284b90": {
     "describe": {
-      "columns": [
-        {
-          "name": "mmsi",
-          "ordinal": 0,
-          "type_info": "Int4"
-        },
-        {
-          "name": "latitude",
-          "ordinal": 1,
-          "type_info": "Numeric"
-        },
-        {
-          "name": "longitude",
-          "ordinal": 2,
-          "type_info": "Numeric"
-        },
-        {
-          "name": "course_over_ground",
-          "ordinal": 3,
-          "type_info": "Numeric"
-        },
-        {
-          "name": "rate_of_turn",
-          "ordinal": 4,
-          "type_info": "Numeric"
-        },
-        {
-          "name": "true_heading",
-          "ordinal": 5,
-          "type_info": "Int4"
-        },
-        {
-          "name": "speed_over_ground",
-          "ordinal": 6,
-          "type_info": "Numeric"
-        },
-        {
-          "name": "msgtime",
-          "ordinal": 7,
-          "type_info": "Timestamptz"
-        },
-        {
-          "name": "navigational_status",
-          "ordinal": 8,
-          "type_info": "Int4"
-        },
-        {
-          "name": "distance_to_shore",
-          "ordinal": 9,
-          "type_info": "Numeric"
-        }
-      ],
-      "nullable": [
-        false,
-        false,
-        false,
-        true,
-        true,
-        true,
-        true,
-        false,
-        true,
-        false
-      ],
-      "parameters": {
-        "Left": []
-      }
-    },
-    "query": "\nSELECT\n    mmsi, latitude, longitude, course_over_ground, rate_of_turn, true_heading,\n    speed_over_ground, timestamp as msgtime,  navigation_status_id as navigational_status,\n    distance_to_shore\nFROM current_ais_positions\n            "
-  },
-  "578b6c7aa86e2c45f34223e588de692b11ac48752428b03ab74790ee9a9d81bd": {
-    "describe": {
-      "columns": [
-        {
-          "name": "mmsi",
-          "ordinal": 0,
-          "type_info": "Int4"
-        },
-        {
-          "name": "progress",
-          "ordinal": 1,
-          "type_info": "Timestamptz"
-        }
-      ],
-      "nullable": [
-        false,
-        true
-      ],
+      "columns": [],
+      "nullable": [],
       "parameters": {
         "Left": [
-          "Timestamptz"
+          "Int4Array",
+          "VarcharArray"
         ]
       }
     },
-    "query": "\nSELECT\n  mmsi,\n  progress\nFROM\n  ais_data_migration_progress\nWHERE\n  progress < $1\n            "
+    "query": "\nINSERT INTO\n    species_groups (species_group_id, \"name\")\nSELECT\n    *\nFROM\n    UNNEST($1::INT[], $2::VARCHAR[]) ON CONFLICT\nDO\n    NOTHING\n            "
+  },
+  "81cf4e9f3d861aa0930118463c396127fdcc7baa818e2775535203167cd31203": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Int8Array",
+          "VarcharArray",
+          "Int8Array",
+          "Int4Array",
+          "Int4Array",
+          "Int4Array",
+          "VarcharArray",
+          "DateArray",
+          "DateArray",
+          "TimestamptzArray",
+          "Int4Array",
+          "DateArray",
+          "Int4Array",
+          "Int4Array",
+          "Int4Array",
+          "BoolArray",
+          "Int4Array",
+          "Int4Array",
+          "VarcharArray",
+          "Int4Array",
+          "Int4Array",
+          "VarcharArray",
+          "VarcharArray",
+          "Int4Array",
+          "Int4Array",
+          "VarcharArray",
+          "Int4Array",
+          "VarcharArray",
+          "VarcharArray",
+          "TimestamptzArray"
+        ]
+      }
+    },
+    "query": "\nINSERT INTO\n    landings (\n        fiskedir_vessel_id,\n        landing_id,\n        document_id,\n        gear_id,\n        document_type_id,\n        sale_team_id,\n        delivery_point_id,\n        document_sale_date,\n        document_version_date,\n        landing_timestamp,\n        version,\n        last_catch_date,\n        num_crew_members,\n        fisher_org_id,\n        catch_field,\n        within_12_mile_border,\n        physical_trip_diary_number,\n        physical_trip_diary_trip_number,\n        economic_zone_id,\n        catch_area_id,\n        major_fishing_area_id,\n        fishing_region_id,\n        north_south_62_degrees_id,\n        norwegian_county_id,\n        delivery_point_municipality_id,\n        nation_id,\n        part_delivery,\n        part_delivery_next_delivery_point_id,\n        part_delivery_previous_delivery_point_id,\n        data_update_timestamp\n    )\nSELECT\n    *\nFROM\n    UNNEST(\n        $1::BIGINT[],\n        $2::VARCHAR[],\n        $3::BIGINT[],\n        $4::int[],\n        $5::INT[],\n        $6::INT[],\n        $7::varchar[],\n        $8::date[],\n        $9::date[],\n        $10::timestamptz[],\n        $11::int[],\n        $12::date[],\n        $13::int[],\n        $14::int[],\n        $15::int[],\n        $16::boolean[],\n        $17::int[],\n        $18::int[],\n        $19::varchar[],\n        $20::int[],\n        $21::int[],\n        $22::varchar[],\n        $23::varchar[],\n        $24::int[],\n        $25::int[],\n        $26::varchar[],\n        $27::int[],\n        $28::varchar[],\n        $29::varchar[],\n        $30::timestamptz[]\n    ) ON CONFLICT (landing_id, version)\nDO NOTHING\n                "
+  },
+  "874538671571d9c089a6b73bc6d4c970141840abd2c7ce817ab4ff4a7eae1759": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "VarcharArray",
+          "Int4Array",
+          "Int4Array"
+        ]
+      }
+    },
+    "query": "\nINSERT INTO\n    delivery_points (delivery_point_id, delivery_point_type_id, delivery_point_source_id)\nSELECT\n    *\nFROM\n    UNNEST($1::VARCHAR[], $2::INT[], $3::INT[]) ON CONFLICT (delivery_point_id)\nDO NOTHING\n            "
   },
   "a3f3fe68f7aab0136f4983528ef65a3fbbc16023ff5e63537e5d81448d5ee1d9": {
     "describe": {
@@ -304,7 +392,7 @@
     },
     "query": "\nINSERT INTO\n  ais_positions (\n    mmsi,\n    latitude,\n    longitude,\n    course_over_ground,\n    rate_of_turn,\n    true_heading,\n    speed_over_ground,\n    timestamp,\n    altitude,\n    distance_to_shore,\n    ais_class,\n    ais_message_type_id,\n    navigation_status_id\n  )\nSELECT\n  *\nFROM\n  UNNEST(\n    $1::int[],\n    $2::decimal[],\n    $3::decimal[],\n    $4::decimal[],\n    $5::decimal[],\n    $6::int[],\n    $7::decimal[],\n    $8::timestamptz[],\n    $9::int[],\n    $10::decimal[],\n    $11::varchar[],\n    $12::int[],\n    $13::int[]\n  )\nON CONFLICT (mmsi, timestamp) DO NOTHING\n            "
   },
-  "b6600035f1208cda204e611ccb2eec456e03066e4c84c12d0fa2b1973c63f8d8": {
+  "ab15e4e6c5ff90388b02abad8a9e97df7b945ece5c32f9aca9963bc68de95187": {
     "describe": {
       "columns": [
         {
@@ -374,7 +462,7 @@
         "Left": []
       }
     },
-    "query": "\nSELECT\n    mmsi, latitude, longitude, course_over_ground, rate_of_turn, true_heading,\n    speed_over_ground, timestamp as msgtime,  navigation_status_id as navigational_status,\n    distance_to_shore\nFROM ais_positions\n            "
+    "query": "\nSELECT\n    mmsi,\n    latitude,\n    longitude,\n    course_over_ground,\n    rate_of_turn,\n    true_heading,\n    speed_over_ground,\n    TIMESTAMP AS msgtime,\n    navigation_status_id AS navigational_status,\n    distance_to_shore\nFROM\n    ais_positions\n            "
   },
   "bb6a2c123e1e3b732b965473fb2cebd45bbc88182fdbbcd56ff658543e78fb9a": {
     "describe": {
@@ -387,6 +475,76 @@
       }
     },
     "query": "\nINSERT INTO\n  ais_vessels (mmsi)\nVALUES\n  ($1)\nON CONFLICT (mmsi) DO NOTHING\n            "
+  },
+  "c93224d0d5f2bcc637755ea34716670ecb6c1335166d143d8199f1fbe79e95f0": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "VarcharArray",
+          "Int4Array",
+          "Int4Array",
+          "Int4Array",
+          "Int4Array",
+          "Int4Array",
+          "Int4Array",
+          "Int4Array",
+          "NumericArray",
+          "NumericArray",
+          "NumericArray",
+          "NumericArray",
+          "NumericArray",
+          "Int4Array",
+          "NumericArray",
+          "Int4Array",
+          "NumericArray",
+          "NumericArray",
+          "NumericArray",
+          "NumericArray",
+          "NumericArray",
+          "VarcharArray",
+          "Int4Array",
+          "Int4Array",
+          "Int4Array",
+          "VarcharArray",
+          "Int4Array",
+          "VarcharArray",
+          "VarcharArray",
+          "VarcharArray",
+          "Int4Array",
+          "VarcharArray",
+          "VarcharArray",
+          "NumericArray",
+          "Int4Array"
+        ]
+      }
+    },
+    "query": "\nINSERT INTO\n    notes (\n        landing_id,\n        product_condition_id,\n        conservation_method_id,\n        product_purpose_id,\n        product_purpose_group_id,\n        landing_method_id,\n        species_id,\n        line_number,\n        product_weight,\n        product_weight_over_quota,\n        gross_weight,\n        living_weight,\n        living_weight_over_quota,\n        catch_year,\n        catch_value,\n        num_fish,\n        post_payment,\n        price_for_buyer,\n        price_for_fisher,\n        unit_price_for_buyer,\n        unit_price_for_fisher,\n        production_facility,\n        production_facility_municipality_id,\n        product_quality_id,\n        quota_type_id,\n        quota_vessel_registration_id,\n        buyer_org_id,\n        buyer_nation_id,\n        receiving_vessel_registration_id,\n        receiving_vessel_mmsi_or_call_sign,\n        receiving_vessel_type,\n        receiving_vessel_nation_id,\n        size_grouping_code,\n        withdrawn_catch_value,\n        fiskedir_species_id\n    )\nSELECT\n    *\nFROM\n    UNNEST(\n        $1::VARCHAR[],\n        $2::INT[],\n        $3::INT[],\n        $4::INT[],\n        $5::INT[],\n        $6::INT[],\n        $7::INT[],\n        $8::INT[],\n        $9::DECIMAL[],\n        $10::DECIMAL[],\n        $11::DECIMAL[],\n        $12::DECIMAL[],\n        $13::DECIMAL[],\n        $14::INT[],\n        $15::DECIMAL[],\n        $16::INT[],\n        $17::DECIMAL[],\n        $18::DECIMAL[],\n        $19::DECIMAL[],\n        $20::DECIMAL[],\n        $21::DECIMAL[],\n        $22::VARCHAR[],\n        $23::INT[],\n        $24::INT[],\n        $25::INT[],\n        $26::VARCHAR[],\n        $27::INT[],\n        $28::VARCHAR[],\n        $29::VARCHAR[],\n        $30::VARCHAR[],\n        $31::INT[],\n        $32::VARCHAR[],\n        $33::VARCHAR[],\n        $34::DECIMAL[],\n        $35::INT[]\n    )\nON CONFLICT (landing_id, line_number) DO NOTHING\n                "
+  },
+  "cb261f3dd82f4b7fb3205742a15944e98bc83c30497c33bb1daebfe50745584f": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Int8Array",
+          "VarcharArray",
+          "VarcharArray",
+          "VarcharArray",
+          "NumericArray",
+          "Int4Array",
+          "Int4Array",
+          "Int4Array",
+          "Int4Array",
+          "Int4Array",
+          "Int4Array",
+          "VarcharArray",
+          "VarcharArray"
+        ]
+      }
+    },
+    "query": "\nINSERT INTO\n    fiskedir_vessels (\n        fiskedir_vessel_id,\n        call_sign,\n        registration_id,\n        \"name\",\n        \"length\",\n        building_year,\n        engine_power,\n        engine_building_year,\n        fiskedir_vessel_type_id,\n        norwegian_municipality_id,\n        norwegian_county_id,\n        fiskedir_nation_group_id,\n        nation_id\n    )\nSELECT\n    *\nFROM\n    UNNEST(\n        $1::BIGINT[],\n        $2::VARCHAR[],\n        $3::VARCHAR[],\n        $4::VARCHAR[],\n        $5::DECIMAL[],\n        $6::INT[],\n        $7::INT[],\n        $8::INT[],\n        $9::INT[],\n        $10::INT[],\n        $11::INT[],\n        $12::VARCHAR[],\n        $13::VARCHAR[]\n    ) ON CONFLICT (fiskedir_vessel_id)\nDO NOTHING\n            "
   },
   "d135460e747a39824aaa786c7fb9c050d850337903e8ba96e3ceb5b4ffc6081c": {
     "describe": {
@@ -411,6 +569,33 @@
       }
     },
     "query": "\nINSERT INTO\n  current_ais_positions (\n    mmsi,\n    latitude,\n    longitude,\n    course_over_ground,\n    rate_of_turn,\n    true_heading,\n    speed_over_ground,\n    timestamp,\n    altitude,\n    distance_to_shore,\n    ais_class,\n    ais_message_type_id,\n    navigation_status_id\n  )\nVALUES\n  (\n    $1::int,\n    $2::decimal,\n    $3::decimal,\n    $4::decimal,\n    $5::decimal,\n    $6::int,\n    $7::decimal,\n    $8::timestamptz,\n    $9::int,\n    $10::decimal,\n    $11::varchar,\n    $12::int,\n    $13::int\n  )\nON CONFLICT (mmsi) DO\nUPDATE\nSET\n  latitude = excluded.latitude,\n  longitude = excluded.longitude,\n  course_over_ground = excluded.course_over_ground,\n  rate_of_turn = excluded.rate_of_turn,\n  true_heading = excluded.true_heading,\n  speed_over_ground = excluded.speed_over_ground,\n  timestamp = excluded.timestamp,\n  altitude = excluded.altitude,\n  distance_to_shore = excluded.distance_to_shore,\n  ais_class = excluded.ais_class,\n  ais_message_type_id = excluded.ais_message_type_id,\n  navigation_status_id = excluded.navigation_status_id\n            "
+  },
+  "daddd7e4576c760468feedfa424b892333db783217eebdfbb3fb9c31f0464a6c": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Int4Array",
+          "VarcharArray",
+          "Int4Array"
+        ]
+      }
+    },
+    "query": "\nINSERT INTO\n    species (species_id, \"name\", species_group_id)\nSELECT\n    *\nFROM\n\n\nUNNEST($1::INT[], $2::VARCHAR[], $3::INT[]) ON CONFLICT (species_id)\nDO\n    UPDATE\nSET\nname = excluded.name,\nspecies_group_id = excluded.species_group_id\nWHERE excluded.species_group_id = 0\n            "
+  },
+  "e5aab4876ee777a611bc9fa3b49249b9e47d65f0b1cd788bb52d2f70cbb7915f": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Varchar",
+          "Varchar"
+        ]
+      }
+    },
+    "query": "\nINSERT INTO\n    data_hashes (hash, data_hash_id)\nVALUES\n    ($1, $2)\n            "
   },
   "f05f205a90fb8630a3e142de02b90ba5b3b697cdfd09ba4aa429d4737e814995": {
     "describe": {

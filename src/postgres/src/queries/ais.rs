@@ -18,7 +18,7 @@ impl PostgresAdapter {
         range: &DateRange,
     ) -> Result<Vec<AisPosition>, PostgresError> {
         let mut conn = self
-            .pool
+            .ais_pool
             .acquire()
             .await
             .into_report()
@@ -28,23 +28,23 @@ impl PostgresAdapter {
             AisPosition,
             r#"
 SELECT
-  latitude,
-  longitude,
-  mmsi,
-  timestamp as msgtime,
-  course_over_ground,
-  navigation_status_id as navigational_status,
-  rate_of_turn,
-  speed_over_ground,
-  true_heading,
-  distance_to_shore
+    latitude,
+    longitude,
+    mmsi,
+    TIMESTAMP AS msgtime,
+    course_over_ground,
+    navigation_status_id AS navigational_status,
+    rate_of_turn,
+    speed_over_ground,
+    true_heading,
+    distance_to_shore
 FROM
-  ais_positions
+    ais_positions
 WHERE
-  mmsi = $1
-  AND timestamp BETWEEN $2 AND $3
+    mmsi = $1
+    AND TIMESTAMP BETWEEN $2 AND $3
 ORDER BY
-  timestamp ASC
+    TIMESTAMP ASC
             "#,
             mmsi,
             range.start(),
@@ -153,9 +153,9 @@ ORDER BY
         sqlx::query!(
             r#"
 INSERT INTO
-  ais_vessels (mmsi)
+    ais_vessels (mmsi)
 VALUES
-  (UNNEST($1::int[]))
+    (UNNEST($1::INT[]))
 ON CONFLICT (mmsi) DO NOTHING
             "#,
             &mmsis
@@ -168,40 +168,40 @@ ON CONFLICT (mmsi) DO NOTHING
         sqlx::query!(
             r#"
 INSERT INTO
-  ais_positions (
-    mmsi,
-    latitude,
-    longitude,
-    course_over_ground,
-    rate_of_turn,
-    true_heading,
-    speed_over_ground,
-    timestamp,
-    altitude,
-    distance_to_shore,
-    ais_class,
-    ais_message_type_id,
-    navigation_status_id
-  )
+    ais_positions (
+        mmsi,
+        latitude,
+        longitude,
+        course_over_ground,
+        rate_of_turn,
+        true_heading,
+        speed_over_ground,
+        TIMESTAMP,
+        altitude,
+        distance_to_shore,
+        ais_class,
+        ais_message_type_id,
+        navigation_status_id
+    )
 SELECT
-  *
+    *
 FROM
-  UNNEST(
-    $1::int[],
-    $2::decimal[],
-    $3::decimal[],
-    $4::decimal[],
-    $5::decimal[],
-    $6::int[],
-    $7::decimal[],
-    $8::timestamptz[],
-    $9::int[],
-    $10::decimal[],
-    $11::varchar[],
-    $12::int[],
-    $13::int[]
-  )
-ON CONFLICT (mmsi, timestamp) DO NOTHING
+    UNNEST(
+        $1::INT[],
+        $2::DECIMAL[],
+        $3::DECIMAL[],
+        $4::DECIMAL[],
+        $5::DECIMAL[],
+        $6::INT[],
+        $7::DECIMAL[],
+        $8::timestamptz[],
+        $9::INT[],
+        $10::DECIMAL[],
+        $11::VARCHAR[],
+        $12::INT[],
+        $13::INT[]
+    )
+ON CONFLICT (mmsi, TIMESTAMP) DO NOTHING
             "#,
             &mmsis,
             &latitude,
@@ -273,52 +273,52 @@ ON CONFLICT (mmsi, timestamp) DO NOTHING
             sqlx::query!(
                 r#"
 INSERT INTO
-  current_ais_positions (
-    mmsi,
-    latitude,
-    longitude,
-    course_over_ground,
-    rate_of_turn,
-    true_heading,
-    speed_over_ground,
-    timestamp,
-    altitude,
-    distance_to_shore,
-    ais_class,
-    ais_message_type_id,
-    navigation_status_id
-  )
+    current_ais_positions (
+        mmsi,
+        latitude,
+        longitude,
+        course_over_ground,
+        rate_of_turn,
+        true_heading,
+        speed_over_ground,
+        TIMESTAMP,
+        altitude,
+        distance_to_shore,
+        ais_class,
+        ais_message_type_id,
+        navigation_status_id
+    )
 VALUES
-  (
-    $1::int,
-    $2::decimal,
-    $3::decimal,
-    $4::decimal,
-    $5::decimal,
-    $6::int,
-    $7::decimal,
-    $8::timestamptz,
-    $9::int,
-    $10::decimal,
-    $11::varchar,
-    $12::int,
-    $13::int
-  )
+    (
+        $1::INT,
+        $2::DECIMAL,
+        $3::DECIMAL,
+        $4::DECIMAL,
+        $5::DECIMAL,
+        $6::INT,
+        $7::DECIMAL,
+        $8::timestamptz,
+        $9::INT,
+        $10::DECIMAL,
+        $11::VARCHAR,
+        $12::INT,
+        $13::INT
+    )
 ON CONFLICT (mmsi) DO
 UPDATE
 SET
-  latitude = excluded.latitude,
-  longitude = excluded.longitude,
-  course_over_ground = excluded.course_over_ground,
-  rate_of_turn = excluded.rate_of_turn,
-  true_heading = excluded.true_heading,
-  speed_over_ground = excluded.speed_over_ground,
-  timestamp = excluded.timestamp,
-  altitude = excluded.altitude,
-  distance_to_shore = excluded.distance_to_shore,
-  ais_class = excluded.ais_class,
-  ais_message_type_id = excluded.ais_message_type_id,
-  navigation_status_id = excluded.navigation_status_id
+    latitude = excluded.latitude,
+    longitude = excluded.longitude,
+    course_over_ground = excluded.course_over_ground,
+    rate_of_turn = excluded.rate_of_turn,
+    true_heading = excluded.true_heading,
+    speed_over_ground = excluded.speed_over_ground,
+    TIMESTAMP = excluded.timestamp,
+    altitude = excluded.altitude,
+    distance_to_shore = excluded.distance_to_shore,
+    ais_class = excluded.ais_class,
+    ais_message_type_id = excluded.ais_message_type_id,
+    navigation_status_id = excluded.navigation_status_id
             "#,
                 p.mmsi,
                 latitude,
@@ -363,12 +363,12 @@ SET
             crate::models::AisVesselMigrationProgress,
             r#"
 SELECT
-  mmsi,
-  progress
+    mmsi,
+    progress
 FROM
-  ais_data_migration_progress
+    ais_data_migration_progress
 WHERE
-  progress < $1
+    progress < $1
             "#,
             migration_end_threshold
         )
@@ -422,45 +422,45 @@ WHERE
         sqlx::query!(
             r#"
 INSERT INTO
-  ais_vessels (
-    mmsi,
-    imo_number,
-    call_sign,
-    name,
-    ship_width,
-    ship_length,
-    ship_type,
-    eta,
-    draught,
-    destination
-  )
+    ais_vessels (
+        mmsi,
+        imo_number,
+        call_sign,
+        NAME,
+        ship_width,
+        ship_length,
+        ship_type,
+        eta,
+        draught,
+        destination
+    )
 SELECT
-  *
+    *
 FROM
-  UNNEST(
-    $1::int[],
-    $2::int[],
-    $3::varchar[],
-    $4::varchar[],
-    $5::int[],
-    $6::int[],
-    $7::int[],
-    $8::timestamptz[],
-    $9::int[],
-    $10::varchar[]
-  )
+    UNNEST(
+        $1::INT[],
+        $2::INT[],
+        $3::VARCHAR[],
+        $4::VARCHAR[],
+        $5::INT[],
+        $6::INT[],
+        $7::INT[],
+        $8::timestamptz[],
+        $9::INT[],
+        $10::VARCHAR[]
+    )
 ON CONFLICT (mmsi) DO
 UPDATE
 SET
-  imo_number = excluded.imo_number,
-  call_sign = excluded.call_sign,
-  name = excluded.name,
-  ship_width = excluded.ship_width,
-  ship_length = excluded.ship_length,
-  ship_type = excluded.ship_type,
-  eta = excluded.eta,
-  draught = excluded.draught,
-  destination = excluded.destination
+    imo_number = excluded.imo_number,
+    call_sign = excluded.call_sign,
+    NAME = excluded.name,
+    ship_width = excluded.ship_width,
+    ship_length = excluded.ship_length,
+    ship_type = excluded.ship_type,
+    eta = excluded.eta,
+    draught = excluded.draught,
+    destination = excluded.destination
             "#,
             &mmsis,
             &imo_number as _,
@@ -569,9 +569,9 @@ SET
         sqlx::query!(
             r#"
 INSERT INTO
-  ais_vessels (mmsi)
+    ais_vessels (mmsi)
 VALUES
-  ($1)
+    ($1)
 ON CONFLICT (mmsi) DO NOTHING
             "#,
             &mmsi,
@@ -584,13 +584,13 @@ ON CONFLICT (mmsi) DO NOTHING
         sqlx::query!(
             r#"
 INSERT INTO
-  ais_data_migration_progress (mmsi, progress)
+    ais_data_migration_progress (mmsi, progress)
 VALUES
-  ($1, $2)
+    ($1, $2)
 ON CONFLICT (mmsi) DO
 UPDATE
 SET
-  progress = excluded.progress
+    progress = excluded.progress
             "#,
             &mmsi,
             &progress
@@ -603,34 +603,34 @@ SET
         sqlx::query!(
             r#"
 INSERT INTO
-  ais_positions (
-    mmsi,
-    latitude,
-    longitude,
-    course_over_ground,
-    rate_of_turn,
-    true_heading,
-    speed_over_ground,
-    timestamp,
-    distance_to_shore,
-    navigation_status_id
-  )
+    ais_positions (
+        mmsi,
+        latitude,
+        longitude,
+        course_over_ground,
+        rate_of_turn,
+        true_heading,
+        speed_over_ground,
+        TIMESTAMP,
+        distance_to_shore,
+        navigation_status_id
+    )
 SELECT
-  *
+    *
 FROM
-  UNNEST(
-    $1::int[],
-    $2::decimal[],
-    $3::decimal[],
-    $4::decimal[],
-    $5::decimal[],
-    $6::int[],
-    $7::decimal[],
-    $8::timestamptz[],
-    $9::decimal[],
-    $10::int[]
-  )
-ON CONFLICT (mmsi, timestamp) DO NOTHING
+    UNNEST(
+        $1::INT[],
+        $2::DECIMAL[],
+        $3::DECIMAL[],
+        $4::DECIMAL[],
+        $5::DECIMAL[],
+        $6::INT[],
+        $7::DECIMAL[],
+        $8::timestamptz[],
+        $9::DECIMAL[],
+        $10::INT[]
+    )
+ON CONFLICT (mmsi, TIMESTAMP) DO NOTHING
             "#,
             &mmsis,
             &latitude,

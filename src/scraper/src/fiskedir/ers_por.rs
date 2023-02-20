@@ -3,8 +3,7 @@ use std::sync::Arc;
 use crate::{DataSource, Processor, ScraperError, ScraperId};
 use async_trait::async_trait;
 use error_stack::Result;
-use kyogre_core::{FileHash, NewArrival};
-use tracing::{event, Level};
+use kyogre_core::NewArrival;
 
 use super::FiskedirSource;
 
@@ -37,27 +36,28 @@ impl DataSource for ErsPorScraper {
         ScraperId::ErsDca
     }
 
-    async fn scrape(&self, processor: &(dyn Processor)) -> Result<(), ScraperError> {
-        let closure = |landings| processor.add_arrival(landings);
-        for year in self.min_year..=self.max_year {
-            if let Err(e) = self
-                .fiskedir_source
-                .scrape_year::<FiskedirPor, _, NewArrival, _>(
-                    FileHash::Landings,
-                    year,
-                    closure,
-                    1000,
-                )
-                .await
-            {
-                event!(
-                    Level::ERROR,
-                    "failed to scrape por for year: {year}, err: {:?}",
-                    e
-                );
-            }
-        }
-        Ok(())
+    async fn scrape(&self, _processor: &(dyn Processor)) -> Result<(), ScraperError> {
+        unimplemented!();
+        // let closure = |landings| processor.add_arrival(landings);
+        // for year in self.min_year..=self.max_year {
+        //     if let Err(e) = self
+        //         .fiskedir_source
+        //         .scrape_year::<FiskedirPor, _, NewArrival, _>(
+        //             FileHash::Landings,
+        //             year,
+        //             closure,
+        //             1000,
+        //         )
+        //         .await
+        //     {
+        //         event!(
+        //             Level::ERROR,
+        //             "failed to scrape por for year: {year}, err: {:?}",
+        //             e
+        //         );
+        //     }
+        // }
+        // Ok(())
     }
 }
 

@@ -3,6 +3,7 @@
 
 mod adapter;
 mod error;
+mod landing_set;
 mod models;
 mod queries;
 mod test_db;
