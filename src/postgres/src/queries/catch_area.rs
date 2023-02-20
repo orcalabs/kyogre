@@ -95,6 +95,9 @@ FROM
 ON CONFLICT (catch_main_area_id) DO
 UPDATE
 SET
+    "name" = CASE
+        WHEN catch_main_areas.name IS NULL THEN excluded.name
+    END,
     latitude = excluded.latitude,
     longitude = excluded.longitude
 WHERE
@@ -102,7 +105,7 @@ WHERE
     AND catch_main_areas.longitude IS NULL
                 "#,
             catch_main_area_id.as_slice(),
-            name.as_slice(),
+            name.as_slice() as _,
             latitude.as_slice() as _,
             longitude.as_slice() as _,
         )

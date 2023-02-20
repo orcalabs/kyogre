@@ -1,14 +1,20 @@
+#[derive(Default, Debug, Clone)]
 pub struct NewMunicipality {
     pub id: i32,
     pub name: Option<String>,
 }
 
+#[derive(Default, Debug, Clone)]
 pub struct NewCounty {
     pub id: i32,
     pub name: String,
 }
 
 impl NewMunicipality {
+    pub fn new(id: i32, name: Option<String>) -> Self {
+        Self { id, name }
+    }
+
     pub fn municipalities_from_landing(landing: &fiskeridir_rs::Landing) -> Vec<NewMunicipality> {
         let mut municipalities = Vec::with_capacity(5);
         if let Some(id) = landing.landing_municipality_code {
@@ -50,6 +56,10 @@ impl NewMunicipality {
 }
 
 impl NewCounty {
+    pub fn new(id: i32, name: String) -> Self {
+        Self { id, name }
+    }
+
     pub fn counties_from_landing(landing: &fiskeridir_rs::Landing) -> Vec<NewCounty> {
         let mut counties = Vec::with_capacity(2);
         if let (Some(id), Some(name)) = (landing.landing_county_code, &landing.landing_county) {

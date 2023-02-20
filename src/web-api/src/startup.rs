@@ -88,15 +88,26 @@ where
                         "/gear_main_groups",
                         web::get().to(routes::v1::gear::gear_main_groups),
                     )
-                    .route("/vessels", web::get().to(routes::v1::vessel::vessels::<T>)),
+                    .route("/vessels", web::get().to(routes::v1::vessel::vessels::<T>))
+                    .route("/hauls", web::get().to(routes::v1::haul::hauls::<T>)),
             );
 
         match environment {
             Environment::Production | Environment::Test => app,
-            _ => app.service(
-                SwaggerUi::new("/swagger-ui/{_:.*}")
-                    .url("/api-doc/openapi.json", ApiDoc::openapi()),
-            ),
+            _ => {
+                let mut doc = ApiDoc::openapi();
+
+                if matches!(environment, Environment::Local) {
+                    doc.paths.paths = doc
+                        .paths
+                        .paths
+                        .into_iter()
+                        .map(|(path, item)| (format!("/v1.0{path}"), item))
+                        .collect();
+                }
+
+                app.service(SwaggerUi::new("/swagger-ui/{_:.*}").url("/api-doc/openapi.json", doc))
+            }
         }
     })
     .listen(listener)

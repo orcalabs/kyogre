@@ -4,7 +4,7 @@
 
 use async_trait::async_trait;
 use error_stack::Result;
-use fiskedir::LandingScraper;
+use fiskeridir::{ErsDcaScraper, ErsDepScraper, ErsPorScraper, LandingScraper};
 use kyogre_core::ScraperInboundPort;
 use serde::Deserialize;
 use std::sync::Arc;
@@ -12,10 +12,10 @@ use tracing::{event, instrument, Level};
 
 mod chunks;
 mod error;
-mod fiskedir;
+mod fiskeridir;
 
 pub use error::*;
-pub use fiskedir::FiskedirSource;
+pub use fiskeridir::FiskeridirSource;
 
 pub trait Processor: ScraperInboundPort + Send + Sync {}
 impl<T> Processor for T where T: ScraperInboundPort + Send + Sync {}
@@ -52,16 +52,53 @@ pub trait DataSource: Send + Sync {
 }
 
 impl Scraper {
-    pub fn new(config: Config, processor: Box<dyn Processor>, source: FiskedirSource) -> Scraper {
-        let mut landing_sources = Vec::new();
-        for year in config.landings.min_year..=config.landings.max_year {
-            landing_sources.push(fiskeridir_rs::Source::Landings { year, url: None });
-        }
+    pub fn new(config: Config, processor: Box<dyn Processor>, source: FiskeridirSource) -> Scraper {
+        let landing_sources = (config.landings.min_year..=config.landings.max_year)
+            .map(|year| fiskeridir_rs::Source::Landings { year, url: None })
+            .collect();
+
+        let ers_dca_sources = config
+            .ers_dca
+            .unwrap_or_default()
+            .into_iter()
+            .map(|file_year| fiskeridir_rs::Source::ErsDca {
+                year: file_year.year,
+                url: file_year.url,
+            })
+            .collect();
+
+        let ers_dep_sources = config
+            .ers_dep
+            .unwrap_or_default()
+            .into_iter()
+            .map(|file_year| fiskeridir_rs::Source::ErsDep {
+                year: file_year.year,
+                url: file_year.url,
+            })
+            .collect();
+
+        let ers_por_sources = config
+            .ers_por
+            .unwrap_or_default()
+            .into_iter()
+            .map(|file_year| fiskeridir_rs::Source::ErsPor {
+                year: file_year.year,
+                url: file_year.url,
+            })
+            .collect();
 
         let arc = Arc::new(source);
-        let landings_scraper = LandingScraper::new(arc, landing_sources);
+        let _landings_scraper = LandingScraper::new(arc.clone(), landing_sources);
+        let ers_dca_scraper = ErsDcaScraper::new(arc.clone(), ers_dca_sources);
+        let ers_dep_scraper = ErsDepScraper::new(arc.clone(), ers_dep_sources);
+        let ers_por_scraper = ErsPorScraper::new(arc, ers_por_sources);
         Scraper {
-            scrapers: vec![Box::new(landings_scraper)],
+            scrapers: vec![
+                // Box::new(landings_scraper),
+                Box::new(ers_dca_scraper),
+                Box::new(ers_dep_scraper),
+                Box::new(ers_por_scraper),
+            ],
             processor,
         }
     }
@@ -83,7 +120,7 @@ impl Scraper {
 
 pub enum ScraperId {
     Landings,
-    /// All existing landing ids (Fiskedirektoratet can remove landings upon request)
+    /// All existing landing ids (Fiskeridirektoratet can remove landings upon request)
     LandingIds,
     ErsPor,
     ErsDep,

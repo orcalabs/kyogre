@@ -85,7 +85,7 @@ impl LandingSet {
             set.add_species(&l);
             set.add_species_group(&l);
             set.add_species_fao(&l);
-            set.add_species_fiskedir(&l);
+            set.add_species_fiskeridir(&l);
             set.add_species_main_group(&l);
             set.add_species_group(&l);
             set.add_delivery_point(&l);
@@ -205,10 +205,10 @@ impl LandingSet {
             .or_insert(species_main_group);
     }
 
-    fn add_species_fiskedir(&mut self, landing: &fiskeridir_rs::Landing) {
-        let species_fiskedir = SpeciesFiskeridir::from(&landing.product.species);
+    fn add_species_fiskeridir(&mut self, landing: &fiskeridir_rs::Landing) {
+        let species_fiskeridir = SpeciesFiskeridir::from(&landing.product.species);
         self.species_fiskeridir
-            .entry(species_fiskedir.id)
-            .or_insert(species_fiskedir);
+            .entry(species_fiskeridir.id)
+            .or_insert(species_fiskeridir);
     }
 }

@@ -1,4 +1,5 @@
 version: "3.9"
+
 services:
   postgres:
     image: postgis/postgis:14-3.3-alpine
@@ -6,67 +7,73 @@ services:
       - POSTGRES_PASSWORD=test123
     ports:
       - 5432:5432
+
   test-db:
     image: ghcr.io/orcalabs/kyogre/test-postgres
-    environment:
-      - POSTGRES_PASSWORD=test123
-    ports:
-      - 5432:5432
     build:
       context: .
       dockerfile: dockerfiles/test-db/Dockerfile
+    environment:
+      - POSTGRES_PASSWORD=test123
+    ports:
+      - 5433:5432
+
   ais-consumer:
     image: gchr.io/orcalabs/kyogre/ais-consumer
-    environment:
-      - RUST_BACKTRACE=1
-      - APP_ENVIRONMENT=local
     build:
       context: .
       dockerfile: dockerfiles/ais-consumer/Dockerfile
       secrets:
         - source: git-credentials
-  engine:
-    image: gchr.io/orcalabs/kyogre/engine
     environment:
       - RUST_BACKTRACE=1
       - APP_ENVIRONMENT=local
+
+  engine:
+    image: gchr.io/orcalabs/kyogre/engine
     build:
       context: .
       dockerfile: dockerfiles/engine/Dockerfile
       secrets:
         - source: git-credentials
-  database-migrator:
-    image: gchr.io/orcalabs/kyogre/database-migrator
     environment:
       - RUST_BACKTRACE=1
       - APP_ENVIRONMENT=local
+
+  database-migrator:
+    image: gchr.io/orcalabs/kyogre/database-migrator
     build:
       context: .
       dockerfile: dockerfiles/database-migrator/Dockerfile
       secrets:
         - source: git-credentials
-  ais-data-migrator:
-    image: gchr.io/orcalabs/kyogre/ais-data-migrator
     environment:
       - RUST_BACKTRACE=1
       - APP_ENVIRONMENT=local
+
+  ais-data-migrator:
+    image: gchr.io/orcalabs/kyogre/ais-data-migrator
     build:
       context: .
       dockerfile: dockerfiles/ais-data-migrator/Dockerfile
       secrets:
         - source: git-credentials
-  fishery-api:
-    image: gchr.io/orcalabs/kyogre/fishery-api
     environment:
       - RUST_BACKTRACE=1
       - APP_ENVIRONMENT=local
-    ports:
-      - 8080:8080
+
+  fishery-api:
+    image: gchr.io/orcalabs/kyogre/fishery-api
     build:
       context: .
       dockerfile: dockerfiles/fishery-api/Dockerfile
       secrets:
         - source: git-credentials
+    environment:
+      - RUST_BACKTRACE=1
+      - APP_ENVIRONMENT=local
+    ports:
+      - 8080:8080
 
 secrets:
   git-credentials:

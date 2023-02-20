@@ -1,5 +1,6 @@
 use crate::{
     error::EngineError, Engine, EngineDiscriminants, Scrape, SharedState, Sleep, StepWrapper,
+    UpdateDatabaseViews,
 };
 
 use chrono::{DateTime, Utc};
@@ -155,6 +156,11 @@ where
             }
             EngineDiscriminants::Scrape => {
                 Engine::Scrape(StepWrapper::<A, SharedState<B>, Scrape>::from(self))
+            }
+            EngineDiscriminants::UpdateDatabaseViews => {
+                Engine::UpdateDatabaseViews(
+                    StepWrapper::<A, SharedState<B>, UpdateDatabaseViews>::from(self),
+                )
             }
         }
     }

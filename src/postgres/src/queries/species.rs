@@ -28,7 +28,7 @@ FROM
 ON CONFLICT (species_fiskeridir_id) DO NOTHING
             "#,
             species_fiskeridir_id.as_slice(),
-            name.as_slice(),
+            name.as_slice() as _,
         )
         .execute(&mut *tx)
         .await
@@ -164,10 +164,15 @@ SELECT
     *
 FROM
     UNNEST($1::VARCHAR[], $2::VARCHAR[])
-ON CONFLICT (species_fao_id) DO NOTHING
+ON CONFLICT (species_fao_id) DO
+UPDATE
+SET
+    "name" = CASE
+        WHEN species_fao.name IS NULL THEN excluded.name
+    END
             "#,
             species_fao_id.as_slice(),
-            name.as_slice(),
+            name.as_slice() as _,
         )
         .execute(&mut *tx)
         .await
@@ -177,12 +182,7 @@ ON CONFLICT (species_fao_id) DO NOTHING
     }
 
     pub(crate) async fn species_groups_impl(&self) -> Result<Vec<SpeciesGroup>, PostgresError> {
-        let mut conn = self
-            .pool
-            .acquire()
-            .await
-            .into_report()
-            .change_context(PostgresError::Connection)?;
+        let mut conn = self.acquire().await?;
 
         sqlx::query_as!(
             SpeciesGroup,
@@ -203,19 +203,14 @@ FROM
     pub(crate) async fn species_fiskeridir_impl(
         &self,
     ) -> Result<Vec<SpeciesFiskeridir>, PostgresError> {
-        let mut conn = self
-            .pool
-            .acquire()
-            .await
-            .into_report()
-            .change_context(PostgresError::Connection)?;
+        let mut conn = self.acquire().await?;
 
         sqlx::query_as!(
             SpeciesFiskeridir,
             r#"
 SELECT
     species_fiskeridir_id AS id,
-    "name"
+    "name" AS "name?"
 FROM
     species_fiskeridir
             "#,
@@ -229,12 +224,7 @@ FROM
     pub(crate) async fn species_main_groups_impl(
         &self,
     ) -> Result<Vec<SpeciesMainGroup>, PostgresError> {
-        let mut conn = self
-            .pool
-            .acquire()
-            .await
-            .into_report()
-            .change_context(PostgresError::Connection)?;
+        let mut conn = self.acquire().await?;
 
         sqlx::query_as!(
             SpeciesMainGroup,
@@ -253,12 +243,7 @@ FROM
     }
 
     pub(crate) async fn species_impl(&self) -> Result<Vec<Species>, PostgresError> {
-        let mut conn = self
-            .pool
-            .acquire()
-            .await
-            .into_report()
-            .change_context(PostgresError::Connection)?;
+        let mut conn = self.acquire().await?;
 
         sqlx::query_as!(
             Species,
@@ -277,19 +262,14 @@ FROM
     }
 
     pub(crate) async fn species_fao_impl(&self) -> Result<Vec<SpeciesFao>, PostgresError> {
-        let mut conn = self
-            .pool
-            .acquire()
-            .await
-            .into_report()
-            .change_context(PostgresError::Connection)?;
+        let mut conn = self.acquire().await?;
 
         sqlx::query_as!(
             SpeciesFao,
             r#"
 SELECT
     species_fao_id AS id,
-    "name"
+    "name" AS "name?"
 FROM
     species_fao
             "#,
@@ -298,5 +278,40 @@ FROM
         .await
         .into_report()
         .change_context(PostgresError::Query)
+    }
+
+    pub(crate) async fn add_main_species_fao<'a>(
+        &'a self,
+        main_species: Vec<MainSpeciesFao>,
+        tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
+    ) -> Result<(), PostgresError> {
+        let len = main_species.len();
+
+        let mut main_species_fao_id = Vec::with_capacity(len);
+        let mut name = Vec::with_capacity(len);
+
+        for s in main_species {
+            main_species_fao_id.push(s.id);
+            name.push(s.name);
+        }
+
+        sqlx::query!(
+            r#"
+INSERT INTO
+    main_species_fao (main_species_fao_id, "name")
+SELECT
+    *
+FROM
+    UNNEST($1::VARCHAR[], $2::VARCHAR[])
+ON CONFLICT (main_species_fao_id) DO NOTHING
+            "#,
+            main_species_fao_id.as_slice(),
+            name.as_slice() as _,
+        )
+        .execute(&mut *tx)
+        .await
+        .into_report()
+        .change_context(PostgresError::Query)
+        .map(|_| ())
     }
 }

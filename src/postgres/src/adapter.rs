@@ -1,10 +1,14 @@
-use crate::{error::PostgresError, landing_set::LandingSet};
+use crate::{
+    error::PostgresError, ers_dca_set::ErsDcaSet, ers_dep_set::ErsDepSet, ers_por_set::ErsPorSet,
+    landing_set::LandingSet,
+};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use error_stack::{IntoReport, Report, Result, ResultExt};
 use kyogre_core::*;
 use orca_core::{PsqlLogStatements, PsqlSettings};
 use sqlx::{
+    pool::PoolConnection,
     postgres::{PgConnectOptions, PgPoolOptions, PgSslMode},
     ConnectOptions, PgPool,
 };
@@ -194,6 +198,24 @@ impl PostgresAdapter {
             },
         }
     }
+
+    pub(crate) async fn acquire(&self) -> Result<PoolConnection<sqlx::Postgres>, PostgresError> {
+        self.pool
+            .acquire()
+            .await
+            .into_report()
+            .change_context(PostgresError::Connection)
+    }
+
+    pub(crate) async fn begin(
+        &self,
+    ) -> Result<sqlx::Transaction<'_, sqlx::Postgres>, PostgresError> {
+        self.pool
+            .begin()
+            .await
+            .into_report()
+            .change_context(PostgresError::Connection)
+    }
 }
 
 #[async_trait]
@@ -277,6 +299,11 @@ impl WebApiPort for PostgresAdapter {
 
         convert_models(vessel_combinations).change_context(QueryError)
     }
+
+    async fn hauls(&self, query: HaulsQuery) -> Result<Vec<Haul>, QueryError> {
+        let hauls = self.hauls(query).await.change_context(QueryError)?;
+        convert_models(hauls).change_context(QueryError)
+    }
 }
 
 #[async_trait]
@@ -286,14 +313,25 @@ impl ScraperInboundPort for PostgresAdapter {
 
         self.add_landing_set(set).await.change_context(InsertError)
     }
-    async fn add_dca(&self, _dca: Vec<NewDca>) -> Result<(), InsertError> {
-        unimplemented!();
+    async fn delete_ers_dca(&self) -> Result<(), InsertError> {
+        self.delete_ers_dca_impl().await.change_context(InsertError)
     }
-    async fn add_departure(&self, _departures: Vec<NewDeparture>) -> Result<(), InsertError> {
-        unimplemented!();
+    async fn add_ers_dca(&self, dca: Vec<fiskeridir_rs::ErsDca>) -> Result<(), InsertError> {
+        let set = ErsDcaSet::new(dca).change_context(InsertError)?;
+        self.add_ers_dca_set(set).await.change_context(InsertError)
     }
-    async fn add_arrival(&self, _arrivals: Vec<NewArrival>) -> Result<(), InsertError> {
-        unimplemented!();
+    async fn add_ers_dep(&self, departures: Vec<fiskeridir_rs::ErsDep>) -> Result<(), InsertError> {
+        let set = ErsDepSet::new(departures).change_context(InsertError)?;
+        self.add_ers_dep_set(set).await.change_context(InsertError)
+    }
+    async fn add_ers_por(&self, arrivals: Vec<fiskeridir_rs::ErsPor>) -> Result<(), InsertError> {
+        let set = ErsPorSet::new(arrivals).change_context(InsertError)?;
+        self.add_ers_por_set(set).await.change_context(InsertError)
+    }
+    async fn update_database_views(&self) -> Result<(), UpdateError> {
+        self.update_database_views_impl()
+            .await
+            .change_context(UpdateError)
     }
 }
 

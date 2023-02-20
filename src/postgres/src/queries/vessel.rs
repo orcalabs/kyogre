@@ -3,7 +3,7 @@ use crate::{error::PostgresError, models::FiskeridirAisVesselCombination, Postgr
 use error_stack::{IntoReport, Result, ResultExt};
 
 impl PostgresAdapter {
-    pub(crate) async fn add_vessels_from_landings<'a>(
+    pub(crate) async fn add_fiskeridir_vessels<'a>(
         &'a self,
         vessels: Vec<fiskeridir_rs::Vessel>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
@@ -17,10 +17,10 @@ impl PostgresAdapter {
         let mut building_years = Vec::with_capacity(len);
         let mut engine_powers = Vec::with_capacity(len);
         let mut engine_building_years = Vec::with_capacity(len);
-        let mut fiskedir_vessel_types = Vec::with_capacity(len);
+        let mut fiskeridir_vessel_types = Vec::with_capacity(len);
         let mut norwegian_municipality_ids = Vec::with_capacity(len);
         let mut norwegian_county_ids = Vec::with_capacity(len);
-        let mut fiskedir_nation_group_ids = Vec::with_capacity(len);
+        let mut fiskeridir_nation_group_ids = Vec::with_capacity(len);
         let mut nation_ids = Vec::with_capacity(len);
         let mut gross_tonnage_1969 = Vec::with_capacity(len);
         let mut gross_tonnage_other = Vec::with_capacity(len);
@@ -39,10 +39,10 @@ impl PostgresAdapter {
                 building_years.push(v.building_year.map(|b| b as i32));
                 engine_powers.push(v.engine_power.map(|e| e as i32));
                 engine_building_years.push(v.engine_building_year.map(|e| e as i32));
-                fiskedir_vessel_types.push(v.type_code.map(|v| v as i32));
+                fiskeridir_vessel_types.push(v.type_code.map(|v| v as i32));
                 norwegian_municipality_ids.push(v.municipality_code.map(|v| v as i32));
                 norwegian_county_ids.push(v.county_code.map(|v| v as i32));
-                fiskedir_nation_group_ids.push(v.nation_group);
+                fiskeridir_nation_group_ids.push(v.nation_group);
                 nation_ids.push(v.nationality_code.alpha3().to_string());
                 gross_tonnage_1969.push(v.gross_tonnage_1969.map(|v| v as i32));
                 gross_tonnage_other.push(v.gross_tonnage_other.map(|v| v as i32));
@@ -105,10 +105,10 @@ ON CONFLICT (fiskeridir_vessel_id) DO NOTHING
             building_years.as_slice() as _,
             engine_powers.as_slice() as _,
             engine_building_years.as_slice() as _,
-            fiskedir_vessel_types.as_slice() as _,
+            fiskeridir_vessel_types.as_slice() as _,
             norwegian_municipality_ids.as_slice() as _,
             norwegian_county_ids.as_slice() as _,
-            fiskedir_nation_group_ids.as_slice() as _,
+            fiskeridir_nation_group_ids.as_slice() as _,
             nation_ids.as_slice(),
             gross_tonnage_1969.as_slice() as _,
             gross_tonnage_other.as_slice() as _,
@@ -125,12 +125,7 @@ ON CONFLICT (fiskeridir_vessel_id) DO NOTHING
     pub(crate) async fn fiskeridir_ais_vessel_combinations(
         &self,
     ) -> Result<Vec<FiskeridirAisVesselCombination>, PostgresError> {
-        let mut conn = self
-            .pool
-            .acquire()
-            .await
-            .into_report()
-            .change_context(PostgresError::Connection)?;
+        let mut conn = self.acquire().await?;
 
         sqlx::query_as!(
             FiskeridirAisVesselCombination,
@@ -139,7 +134,7 @@ SELECT
     f.fiskeridir_vessel_id AS "fiskeridir_vessel_id!",
     f.fiskeridir_vessel_type_id,
     f.fiskeridir_length_group_id,
-    f.fiskeridir_nation_group_id AS "fiskeridir_nation_group_id!",
+    f.fiskeridir_nation_group_id,
     f.norwegian_municipality_id AS fiskeridir_norwegian_municipality_id,
     f.norwegian_county_id AS fiskeridir_norwegian_county_id,
     f.nation_id AS "fiskeridir_nation_id!",

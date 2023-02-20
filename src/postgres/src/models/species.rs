@@ -17,7 +17,13 @@ pub struct SpeciesGroup {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SpeciesFao {
     pub id: String,
-    pub name: String,
+    pub name: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct MainSpeciesFao {
+    pub id: String,
+    pub name: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -29,7 +35,7 @@ pub struct SpeciesMainGroup {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SpeciesFiskeridir {
     pub id: i32,
-    pub name: String,
+    pub name: Option<String>,
 }
 
 impl From<&fiskeridir_rs::Species> for Species {
@@ -63,15 +69,19 @@ impl From<&fiskeridir_rs::Species> for SpeciesFiskeridir {
     fn from(val: &fiskeridir_rs::Species) -> SpeciesFiskeridir {
         SpeciesFiskeridir {
             id: val.fdir_code as i32,
-            name: val.fdir_name.clone(),
+            name: Some(val.fdir_name.clone()),
         }
     }
 }
 
 impl SpeciesFao {
+    pub fn new(id: String, name: Option<String>) -> Self {
+        Self { id, name }
+    }
+
     pub fn from_landing_species(species: &fiskeridir_rs::Species) -> Option<SpeciesFao> {
         match (&species.fao_name, &species.fao_code) {
-            (Some(name), Some(id)) => Some(SpeciesFao {
+            (name, Some(id)) => Some(SpeciesFao {
                 id: id.clone(),
                 name: name.clone(),
             }),
@@ -132,5 +142,29 @@ impl TryFrom<SpeciesMainGroup> for kyogre_core::SpeciesMainGroup {
             id: value.id as u32,
             name: value.name,
         })
+    }
+}
+
+impl SpeciesFiskeridir {
+    pub fn new(id: i32, name: Option<String>) -> Self {
+        Self { id, name }
+    }
+}
+
+impl MainSpeciesFao {
+    pub fn new(id: String, name: Option<String>) -> Self {
+        Self { id, name }
+    }
+}
+
+impl SpeciesGroup {
+    pub fn new(id: i32, name: String) -> Self {
+        Self { id, name }
+    }
+}
+
+impl SpeciesMainGroup {
+    pub fn new(id: i32, name: String) -> Self {
+        Self { id, name }
     }
 }

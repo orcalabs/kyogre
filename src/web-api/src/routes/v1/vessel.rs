@@ -30,17 +30,19 @@ pub async fn vessels<T: Database>(db: web::Data<T>) -> Result<Response<Vec<Vesse
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
+#[serde(rename_all = "camelCase")]
 pub struct Vessel {
     pub fiskeridir: FiskeridirVessel,
     pub ais: Option<AisVessel>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
+#[serde(rename_all = "camelCase")]
 pub struct FiskeridirVessel {
     pub id: i64,
     pub vessel_type_id: Option<u32>,
     pub length_group_id: Option<u32>,
-    pub nation_group_id: String,
+    pub nation_group_id: Option<String>,
     pub nation_id: String,
     pub norwegian_municipality_id: Option<u32>,
     pub norwegian_county_id: Option<u32>,
@@ -59,6 +61,7 @@ pub struct FiskeridirVessel {
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
+#[serde(rename_all = "camelCase")]
 pub struct AisVessel {
     pub mmsi: i32,
     pub imo_number: Option<i32>,
@@ -66,6 +69,7 @@ pub struct AisVessel {
     pub name: Option<String>,
     pub ship_length: Option<i32>,
     pub ship_width: Option<i32>,
+    #[schema(value_type = Option<String>, example = "2023-02-24T11:08:20.409416682Z")]
     pub eta: Option<DateTime<Utc>>,
     pub destination: Option<String>,
 }
@@ -125,7 +129,7 @@ impl PartialEq<fiskeridir_rs::Vessel> for FiskeridirVessel {
         self.id == other.id.unwrap()
             && self.vessel_type_id == other.type_code.map(|v| v as u32)
             && self.length_group_id == other.length_group_code.map(|v| v as u32)
-            && self.nation_group_id == other.nation_group.clone().unwrap()
+            && self.nation_group_id == other.nation_group.clone()
             && self.norwegian_municipality_id == other.municipality_code
             && self.norwegian_county_id == other.county_code
             && self.gross_tonnage_1969 == other.gross_tonnage_1969

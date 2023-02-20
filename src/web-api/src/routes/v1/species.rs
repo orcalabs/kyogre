@@ -141,33 +141,38 @@ pub async fn species_fao<T: Database>(
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema, Ord, PartialOrd, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
 pub struct Species {
     pub id: u32,
     pub name: String,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema, Ord, PartialOrd, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
 pub struct SpeciesGroup {
     pub id: u32,
     pub name: String,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema, Ord, PartialOrd, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
 pub struct SpeciesMainGroup {
     pub id: u32,
     pub name: String,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema, Ord, PartialOrd, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
 pub struct SpeciesFiskeridir {
     pub id: u32,
-    pub name: String,
+    pub name: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema, Ord, PartialOrd, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
 pub struct SpeciesFao {
     pub id: String,
-    pub name: String,
+    pub name: Option<String>,
 }
 
 impl From<kyogre_core::Species> for Species {
