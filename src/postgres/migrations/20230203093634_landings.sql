@@ -140,7 +140,7 @@ CREATE TABLE
 
 CREATE TABLE
     species_groups (
-        species_group_id INT NOT NULL PRIMARY KEY,
+        species_group_id INT PRIMARY KEY,
         "name" VARCHAR NOT NULL CHECK ("name" <> '')
     );
 
