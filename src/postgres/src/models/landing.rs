@@ -1,8 +1,7 @@
+use crate::{error::PostgresError, queries::opt_float_to_decimal};
 use bigdecimal::BigDecimal;
 use chrono::{DateTime, NaiveDate, NaiveTime, Utc};
 use error_stack::{Report, ResultExt};
-
-use crate::{error::PostgresError, queries::opt_float_to_decimal};
 
 pub struct NewLanding {
     // Dokumentnummer-SalgslagId-Dokumenttype
@@ -10,9 +9,9 @@ pub struct NewLanding {
     // Dokumentnummer
     pub document_id: i64,
     // Fartøy ID
-    pub fiskedir_vessel_id: Option<i64>,
+    pub fiskeridir_vessel_id: Option<i64>,
     // Fartøy ID
-    pub fiskedir_vessel_type_id: Option<i32>,
+    pub fiskeridir_vessel_type_id: Option<i32>,
     // Radiokallesignal (seddel)
     pub vessel_call_sign: Option<String>,
     pub vessel_registration_id: String,
@@ -26,8 +25,8 @@ pub struct NewLanding {
     pub vessel_norwegian_municipality_id: Option<i32>,
     // Landingsfylke (kode)
     pub vessel_norwegian_county_id: Option<i32>,
-    pub vessel_gross_1969: Option<i32>,
-    pub vessel_gross_other: Option<i32>,
+    pub vessel_gross_tonnage_1969: Option<i32>,
+    pub vessel_gross_tonnage_other: Option<i32>,
     pub vessel_name: Option<String>,
     pub vessel_length: Option<BigDecimal>,
     pub vessel_engine_building_year: Option<i32>,
@@ -81,6 +80,7 @@ pub struct NewLanding {
     pub receiving_vessel_mmsi_or_call_sign: Option<String>,
     pub receiving_vessel_type: Option<i32>,
     pub receiving_vessel_nation_id: Option<String>,
+    pub receiving_vessel_nation: Option<String>,
 }
 
 impl TryFrom<fiskeridir_rs::Landing> for NewLanding {
@@ -90,8 +90,8 @@ impl TryFrom<fiskeridir_rs::Landing> for NewLanding {
         Ok(NewLanding {
             landing_id: landing.id.into_inner(),
             document_id: landing.document_info.id,
-            fiskedir_vessel_id: landing.vessel.id,
-            fiskedir_vessel_type_id: landing.vessel.type_code.map(|v| v as i32),
+            fiskeridir_vessel_id: landing.vessel.id,
+            fiskeridir_vessel_type_id: landing.vessel.type_code.map(|v| v as i32),
             vessel_call_sign: landing.vessel.call_sign.map(|v| v.into_inner()),
             vessel_registration_id: landing.vessel.registration_id,
             vessel_length_group_id: landing.vessel.length_group_code.map(|v| v as i32),
@@ -99,8 +99,8 @@ impl TryFrom<fiskeridir_rs::Landing> for NewLanding {
             vessel_nation_id: landing.vessel.nationality_code.alpha3().to_string(),
             vessel_norwegian_municipality_id: landing.vessel.municipality_code.map(|v| v as i32),
             vessel_norwegian_county_id: landing.vessel.county_code.map(|v| v as i32),
-            vessel_gross_1969: landing.vessel.gross_tonnage_1969.map(|v| v as i32),
-            vessel_gross_other: landing.vessel.gross_tonnage_other.map(|v| v as i32),
+            vessel_gross_tonnage_1969: landing.vessel.gross_tonnage_1969.map(|v| v as i32),
+            vessel_gross_tonnage_other: landing.vessel.gross_tonnage_other.map(|v| v as i32),
             vessel_name: landing.vessel.name,
             vessel_length: opt_float_to_decimal(landing.vessel.length)
                 .change_context(PostgresError::DataConversion)?,
@@ -172,9 +172,8 @@ impl TryFrom<fiskeridir_rs::Landing> for NewLanding {
             receiving_vessel_registration_id: landing.recipient_vessel_registration_id,
             receiving_vessel_mmsi_or_call_sign: landing.recipient_vessel_callsign_or_mmsi,
             receiving_vessel_type: landing.recipient_vessel_type_code.map(|v| v as i32),
-            receiving_vessel_nation_id: landing
-                .recipient_vessel_nation_code
-                .map(|v| v.alpha3().to_string()),
+            receiving_vessel_nation_id: landing.recipient_vessel_nation_code,
+            receiving_vessel_nation: landing.recipient_vessel_nation,
         })
     }
 }

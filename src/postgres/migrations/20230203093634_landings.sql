@@ -1,299 +1,257 @@
 CREATE TABLE
-    data_hash_ids (
-        data_hash_id VARCHAR NOT NULL,
-        PRIMARY KEY (data_hash_id)
-    );
-
-CREATE TABLE
     data_hashes (
         hash VARCHAR NOT NULL CHECK (hash <> ''),
-        data_hash_id VARCHAR NOT NULL REFERENCES data_hash_ids (data_hash_id) ON DELETE CASCADE,
-        PRIMARY KEY (data_hash_id)
+        data_hash_id VARCHAR PRIMARY KEY
     );
 
 CREATE TABLE
-    fiskedir_vessel_types (
+    fiskeridir_vessel_types (
         "name" VARCHAR NOT NULL CHECK ("name" <> ''),
-        fiskedir_vessel_type_id INT NOT NULL,
-        PRIMARY KEY (fiskedir_vessel_type_id)
+        fiskeridir_vessel_type_id INT PRIMARY KEY
     );
 
 CREATE TABLE
-    fiskedir_length_groups (
+    fiskeridir_length_groups (
         "name" VARCHAR NOT NULL CHECK ("name" <> ''),
-        fiskedir_length_group_id INT NOT NULL,
-        PRIMARY KEY (fiskedir_length_group_id)
+        fiskeridir_length_group_id INT PRIMARY KEY
     );
 
 CREATE TABLE
-    fiskedir_nation_groups (
-        fiskedir_nation_group_id VARCHAR NOT NULL,
-        PRIMARY KEY (fiskedir_nation_group_id)
+    fiskeridir_nation_groups (
+        fiskeridir_nation_group_id VARCHAR PRIMARY KEY CHECK (fiskeridir_nation_group_id <> '')
     );
 
 CREATE TABLE
     nation_ids (
-        nation_id VARCHAR NOT NULL,
-        "name" VARCHAR NOT NULL CHECK ("name" <> ''),
-        PRIMARY KEY (nation_id)
+        nation_id VARCHAR PRIMARY KEY CHECK (nation_id <> ''),
+        "name" VARCHAR NOT NULL CHECK ("name" <> '')
     );
 
 CREATE TABLE
     norwegian_municipalities (
         "name" VARCHAR CHECK ("name" <> ''),
-        norwegian_municipality_id INT NOT NULL,
-        PRIMARY KEY (norwegian_municipality_id)
+        norwegian_municipality_id INT PRIMARY KEY
     );
 
 CREATE TABLE
     norwegian_counties (
         "name" VARCHAR NOT NULL CHECK ("name" <> ''),
-        norwegian_county_id INT NOT NULL,
-        PRIMARY KEY (norwegian_county_id)
+        norwegian_county_id INT PRIMARY KEY
     );
 
 CREATE TABLE
     north_south_62_degrees (
-        north_south_62_degrees_id VARCHAR NOT NULL,
-        north_of_62_degrees_north BOOLEAN,
-        PRIMARY KEY (north_south_62_degrees_id)
+        north_south_62_degrees_id VARCHAR PRIMARY KEY CHECK (north_south_62_degrees_id <> ''),
+        north_of_62_degrees_north BOOLEAN
     );
 
 CREATE TABLE
     landing_months (
         "name" VARCHAR NOT NULL CHECK ("name" <> ''),
-        landing_month_id INT NOT NULL,
-        PRIMARY KEY (landing_month_id)
+        landing_month_id INT PRIMARY KEY
     );
 
 CREATE TABLE
-    fiskedir_vessels (
-        fiskedir_vessel_id BIGINT NOT NULL,
-        fiskedir_vessel_type_id INT REFERENCES fiskedir_vessel_types (fiskedir_vessel_type_id),
-        fiskedir_length_group_id INT REFERENCES fiskedir_length_groups (fiskedir_length_group_id),
-        fiskedir_nation_group_id VARCHAR NOT NULL REFERENCES fiskedir_nation_groups (fiskedir_nation_group_id),
+    fiskeridir_vessels (
+        fiskeridir_vessel_id BIGINT PRIMARY KEY,
+        fiskeridir_vessel_type_id INT REFERENCES fiskeridir_vessel_types (fiskeridir_vessel_type_id),
+        fiskeridir_length_group_id INT REFERENCES fiskeridir_length_groups (fiskeridir_length_group_id),
+        fiskeridir_nation_group_id VARCHAR NOT NULL REFERENCES fiskeridir_nation_groups (fiskeridir_nation_group_id),
         nation_id VARCHAR REFERENCES nation_ids (nation_id) NOT NULL,
         norwegian_municipality_id INT REFERENCES norwegian_municipalities (norwegian_municipality_id),
         norwegian_county_id INT REFERENCES norwegian_counties (norwegian_county_id),
         gross_tonnage_1969 INT,
         gross_tonnage_other INT,
-        call_sign VARCHAR,
+        call_sign VARCHAR CHECK (call_sign <> ''),
         "name" VARCHAR CHECK ("name" <> ''),
-        registration_id VARCHAR,
+        registration_id VARCHAR CHECK (registration_id <> ''),
         "length" DECIMAL,
         "width" DECIMAL,
-        "owner" VARCHAR,
+        "owner" VARCHAR CHECK ("owner" <> ''),
         engine_building_year INT,
         engine_power INT,
         building_year INT,
-        rebuilding_year INT,
-        PRIMARY KEY (fiskedir_vessel_id)
+        rebuilding_year INT
     );
 
 CREATE TABLE
     sales_teams (
-        sales_team_id INT NOT NULL,
+        sales_team_id INT PRIMARY KEY,
         org_id INT,
-        "name" VARCHAR NOT NULL CHECK ("name" <> ''),
-        PRIMARY KEY (sales_team_id)
+        "name" VARCHAR NOT NULL CHECK ("name" <> '')
     );
 
 CREATE TABLE
     document_types (
-        document_type_id INT NOT NULL,
-        "name" VARCHAR NOT NULL CHECK ("name" <> ''),
-        PRIMARY KEY (document_type_id)
+        document_type_id INT PRIMARY KEY,
+        "name" VARCHAR NOT NULL CHECK ("name" <> '')
     );
 
 CREATE TABLE
     gear_main_groups (
-        gear_main_group_id INT NOT NULL,
-        "name" VARCHAR NOT NULL CHECK ("name" <> ''),
-        PRIMARY KEY (gear_main_group_id)
+        gear_main_group_id INT PRIMARY KEY,
+        "name" VARCHAR NOT NULL CHECK ("name" <> '')
     );
 
 CREATE TABLE
     gear_groups (
-        gear_group_id INT NOT NULL,
+        gear_group_id INT PRIMARY KEY,
         gear_main_group_id INT NOT NULL REFERENCES gear_main_groups (gear_main_group_id),
-        "name" VARCHAR NOT NULL CHECK ("name" <> ''),
-        PRIMARY KEY (gear_group_id)
+        "name" VARCHAR NOT NULL CHECK ("name" <> '')
     );
 
 CREATE TABLE
     gear_fao (
-        gear_fao_id VARCHAR NOT NULL,
-        "name" VARCHAR NOT NULL CHECK ("name" <> ''),
-        PRIMARY KEY (gear_fao_id)
+        gear_fao_id VARCHAR PRIMARY KEY,
+        "name" VARCHAR NOT NULL CHECK ("name" <> '')
     );
 
 CREATE TABLE
     gear (
-        gear_id INT NOT NULL,
+        gear_id INT PRIMARY KEY,
         gear_group_id INT NOT NULL REFERENCES gear_groups (gear_group_id),
-        "name" VARCHAR NOT NULL CHECK ("name" <> ''),
-        PRIMARY KEY (gear_id)
+        "name" VARCHAR NOT NULL CHECK ("name" <> '')
     );
 
 CREATE TABLE
     delivery_point_sources (
-        delivery_point_source_id INT NOT NULL,
-        "name" VARCHAR NOT NULL CHECK ("name" <> ''),
-        PRIMARY KEY (delivery_point_source_id)
+        delivery_point_source_id INT PRIMARY KEY,
+        "name" VARCHAR NOT NULL CHECK ("name" <> '')
     );
 
 CREATE TABLE
     delivery_point_types (
-        delivery_point_type_id INT NOT NULL,
-        "name" VARCHAR NOT NULL CHECK ("name" <> ''),
-        PRIMARY KEY (delivery_point_type_id)
+        delivery_point_type_id INT PRIMARY KEY,
+        "name" VARCHAR NOT NULL CHECK ("name" <> '')
     );
 
 CREATE TABLE
     delivery_points (
-        delivery_point_id VARCHAR NOT NULL CHECK (delivery_point_id <> ''),
+        delivery_point_id VARCHAR PRIMARY KEY CHECK (delivery_point_id <> ''),
         delivery_point_type_id INT NOT NULL REFERENCES delivery_point_types (delivery_point_type_id),
-        delivery_point_source_id INT NOT NULL REFERENCES delivery_point_sources (delivery_point_source_id),
-        PRIMARY KEY (delivery_point_id)
+        delivery_point_source_id INT NOT NULL REFERENCES delivery_point_sources (delivery_point_source_id)
     );
 
 CREATE TABLE
     species_main_groups (
-        species_main_group_id INT NOT NULL,
-        "name" VARCHAR NOT NULL CHECK ("name" <> ''),
-        PRIMARY KEY (species_main_group_id)
+        species_main_group_id INT PRIMARY KEY,
+        "name" VARCHAR NOT NULL CHECK ("name" <> '')
     );
 
 CREATE TABLE
     species_groups (
-        species_group_id INT NOT NULL,
-        "name" VARCHAR NOT NULL CHECK ("name" <> ''),
-        PRIMARY KEY (species_group_id)
+        species_group_id INT NOT NULL PRIMARY KEY,
+        "name" VARCHAR NOT NULL CHECK ("name" <> '')
     );
 
 CREATE TABLE
     species (
-        species_id INT NOT NULL,
-        "name" VARCHAR NOT NULL CHECK ("name" <> ''),
-        PRIMARY KEY (species_id)
+        species_id INT PRIMARY KEY,
+        "name" VARCHAR NOT NULL CHECK ("name" <> '')
     );
 
 CREATE TABLE
-    species_fiskedir (
+    species_fiskeridir (
         "name" VARCHAR NOT NULL CHECK ("name" <> ''),
-        species_fiskedir_id INT NOT NULL,
-        PRIMARY KEY (species_fiskedir_id)
+        species_fiskeridir_id INT PRIMARY KEY
     );
 
 CREATE TABLE
     species_fao (
         "name" VARCHAR NOT NULL CHECK ("name" <> ''),
-        species_fao_id VARCHAR NOT NULL CHECK (species_fao_id <> ''),
-        PRIMARY KEY (species_fao_id)
+        species_fao_id VARCHAR PRIMARY KEY CHECK (species_fao_id <> '')
     );
 
 CREATE TABLE
     product_purpose_groups (
-        product_purpose_group_id INT NOT NULL,
-        "name" VARCHAR NOT NULL CHECK ("name" <> ''),
-        PRIMARY KEY (product_purpose_group_id)
+        product_purpose_group_id INT PRIMARY KEY,
+        "name" VARCHAR NOT NULL CHECK ("name" <> '')
     );
 
 CREATE TABLE
     product_purposes (
-        product_purpose_id INT NOT NULL,
-        "name" VARCHAR NOT NULL CHECK ("name" <> ''),
-        PRIMARY KEY (product_purpose_id)
+        product_purpose_id INT PRIMARY KEY,
+        "name" VARCHAR NOT NULL CHECK ("name" <> '')
     );
 
 CREATE TABLE
     product_conditions (
-        product_condition_id INT NOT NULL,
-        "name" VARCHAR NOT NULL CHECK ("name" <> ''),
-        PRIMARY KEY (product_condition_id)
+        product_condition_id INT PRIMARY KEY,
+        "name" VARCHAR NOT NULL CHECK ("name" <> '')
     );
 
 CREATE TABLE
     conservation_methods (
-        conservation_method_id INT NOT NULL,
-        "name" VARCHAR NOT NULL CHECK ("name" <> ''),
-        PRIMARY KEY (conservation_method_id)
+        conservation_method_id INT PRIMARY KEY,
+        "name" VARCHAR NOT NULL CHECK ("name" <> '')
     );
 
 CREATE TABLE
     landing_methods (
-        landing_method_id INT NOT NULL,
-        "name" VARCHAR NOT NULL CHECK ("name" <> ''),
-        PRIMARY KEY (landing_method_id)
+        landing_method_id INT PRIMARY KEY,
+        "name" VARCHAR NOT NULL CHECK ("name" <> '')
     );
 
 CREATE TABLE
     economic_zones (
-        economic_zone_id VARCHAR NOT NULL CHECK (economic_zone_id <> ''),
-        "name" VARCHAR CHECK ("name" <> ''),
-        PRIMARY KEY (economic_zone_id)
+        economic_zone_id VARCHAR PRIMARY KEY CHECK (economic_zone_id <> ''),
+        "name" VARCHAR CHECK ("name" <> '')
     );
 
 CREATE TABLE
     catch_main_areas (
-        catch_main_area_id INT NOT NULL,
+        catch_main_area_id INT PRIMARY KEY,
         "name" VARCHAR NOT NULL CHECK ("name" <> ''),
         latitude DECIMAL,
-        longitude DECIMAL,
-        PRIMARY KEY (catch_main_area_id)
+        longitude DECIMAL
     );
 
 CREATE TABLE
     catch_areas (
-        catch_area_id INT NOT NULL,
+        catch_area_id INT PRIMARY KEY,
         latitude DECIMAL,
-        longitude DECIMAL,
-        PRIMARY KEY (catch_area_id)
+        longitude DECIMAL
     );
 
 CREATE TABLE
     catch_main_area_fao (
-        catch_main_area_fao_id INT NOT NULL,
-        "name" VARCHAR NOT NULL CHECK ("name" <> ''),
-        PRIMARY KEY (catch_main_area_fao_id)
+        catch_main_area_fao_id INT PRIMARY KEY,
+        "name" VARCHAR NOT NULL CHECK ("name" <> '')
     );
 
 CREATE TABLE
     area_groupings (
-        area_grouping_id VARCHAR NOT NULL CHECK (area_grouping_id <> ''),
-        "name" VARCHAR NOT NULL CHECK ("name" <> ''),
-        PRIMARY KEY (area_grouping_id)
+        area_grouping_id VARCHAR PRIMARY KEY CHECK (area_grouping_id <> ''),
+        "name" VARCHAR NOT NULL CHECK ("name" <> '')
     );
 
 CREATE TABLE
     product_qualities (
-        product_quality_id INT NOT NULL,
-        "name" VARCHAR NOT NULL CHECK ("name" <> ''),
-        PRIMARY KEY (product_quality_id)
+        product_quality_id INT PRIMARY KEY,
+        "name" VARCHAR NOT NULL CHECK ("name" <> '')
     );
 
 CREATE TABLE
     quota_types (
-        quota_type_id INT NOT NULL,
-        "name" VARCHAR CHECK ("name" <> ''),
-        PRIMARY KEY (quota_type_id)
+        quota_type_id INT PRIMARY KEY,
+        "name" VARCHAR CHECK ("name" <> '')
     );
 
 CREATE TABLE
     landings (
-        landing_id VARCHAR NOT NULL,
+        landing_id VARCHAR PRIMARY KEY,
         document_id BIGINT NOT NULL,
-        fiskedir_vessel_id BIGINT REFERENCES fiskedir_vessels (fiskedir_vessel_id),
-        fiskedir_vessel_type_id INT REFERENCES fiskedir_vessel_types (fiskedir_vessel_type_id),
-        vessel_call_sign VARCHAR,
-        vessel_registration_id VARCHAR,
-        vessel_length_group_id INT REFERENCES fiskedir_length_groups (fiskedir_length_group_id),
-        vessel_nation_group_id VARCHAR NOT NULL REFERENCES fiskedir_nation_groups (fiskedir_nation_group_id),
+        fiskeridir_vessel_id BIGINT REFERENCES fiskeridir_vessels (fiskeridir_vessel_id),
+        fiskeridir_vessel_type_id INT REFERENCES fiskeridir_vessel_types (fiskeridir_vessel_type_id),
+        vessel_call_sign VARCHAR CHECK (vessel_call_sign <> ''),
+        vessel_registration_id VARCHAR CHECK (vessel_registration_id <> ''),
+        vessel_length_group_id INT REFERENCES fiskeridir_length_groups (fiskeridir_length_group_id),
+        vessel_nation_group_id VARCHAR NOT NULL REFERENCES fiskeridir_nation_groups (fiskeridir_nation_group_id),
         vessel_nation_id VARCHAR NOT NULL REFERENCES nation_ids (nation_id) NOT NULL,
         vessel_norwegian_municipality_id INT REFERENCES norwegian_municipalities (norwegian_municipality_id),
         vessel_norwegian_county_id INT REFERENCES norwegian_counties (norwegian_county_id),
-        vessel_gross_1969 INT,
-        vessel_gross_other INT,
+        vessel_gross_tonnage_1969 INT,
+        vessel_gross_tonnage_other INT,
         vessel_name VARCHAR CHECK (vessel_name <> ''),
         vessel_length DECIMAL,
         vessel_engine_building_year INT,
@@ -336,25 +294,25 @@ CREATE TABLE
         partial_landing_previous_delivery_point_id VARCHAR REFERENCES delivery_points (delivery_point_id),
         data_update_timestamp timestamptz NOT NULL,
         catch_year INT NOT NULL,
-        production_facility VARCHAR,
+        production_facility VARCHAR CHECK (production_facility <> ''),
         production_facility_municipality_id INT REFERENCES norwegian_municipalities (norwegian_municipality_id),
         product_quality_id INT NOT NULL REFERENCES product_qualities (product_quality_id),
         quota_type_id INT REFERENCES quota_types (quota_type_id),
-        quota_vessel_registration_id VARCHAR,
+        quota_vessel_registration_id VARCHAR CHECK (quota_vessel_registration_id <> ''),
         buyer_org_id INT,
         buyer_nation_id VARCHAR REFERENCES nation_ids (nation_id),
-        receiving_vessel_registration_id VARCHAR,
-        receiving_vessel_mmsi_or_call_sign VARCHAR,
-        receiving_vessel_type INT REFERENCES fiskedir_vessel_types (fiskedir_vessel_type_id),
-        receiving_vessel_nation_id VARCHAR REFERENCES nation_ids (nation_id),
-        UNIQUE (landing_id, "version"),
-        PRIMARY KEY (landing_id)
+        receiving_vessel_registration_id VARCHAR CHECK (receiving_vessel_registration_id <> ''),
+        receiving_vessel_mmsi_or_call_sign VARCHAR CHECK (receiving_vessel_mmsi_or_call_sign <> ''),
+        receiving_vessel_type INT REFERENCES fiskeridir_vessel_types (fiskeridir_vessel_type_id),
+        receiving_vessel_nation_id VARCHAR CHECK (receiving_vessel_nation_id <> ''),
+        receiving_vessel_nation VARCHAR CHECK (receiving_vessel_nation <> ''),
+        UNIQUE (landing_id, "version")
     );
 
 CREATE TABLE
     landing_entries (
         landing_id VARCHAR NOT NULL REFERENCES landings (landing_id) ON DELETE CASCADE,
-        size_grouping_code VARCHAR NOT NULL,
+        size_grouping_code VARCHAR NOT NULL CHECK (size_grouping_code <> ''),
         withdrawn_catch_value DECIMAL,
         catch_value DECIMAL,
         sales_team_fee DECIMAL,
@@ -379,7 +337,7 @@ CREATE TABLE
         species_id INT NOT NULL REFERENCES species (species_id),
         species_fao_id VARCHAR REFERENCES species_fao (species_fao_id),
         species_group_id INT NOT NULL REFERENCES species_groups (species_group_id),
-        species_fiskedir_id INT NOT NULL REFERENCES species_fiskedir (species_fiskedir_id),
+        species_fiskeridir_id INT NOT NULL REFERENCES species_fiskeridir (species_fiskeridir_id),
         species_main_group_id INT NOT NULL REFERENCES species_main_groups (species_main_group_id),
         PRIMARY KEY (landing_id, line_number)
     );
@@ -524,34 +482,6 @@ VALUES
     (14, 'FryseSkip');
 
 INSERT INTO
-    data_hash_ids (data_hash_id)
-VALUES
-    ('landings_2000'),
-    ('landings_2001'),
-    ('landings_2002'),
-    ('landings_2003'),
-    ('landings_2004'),
-    ('landings_2005'),
-    ('landings_2006'),
-    ('landings_2007'),
-    ('landings_2008'),
-    ('landings_2009'),
-    ('landings_2010'),
-    ('landings_2011'),
-    ('landings_2012'),
-    ('landings_2013'),
-    ('landings_2014'),
-    ('landings_2015'),
-    ('landings_2016'),
-    ('landings_2017'),
-    ('landings_2018'),
-    ('landings_2019'),
-    ('landings_2020'),
-    ('landings_2021'),
-    ('landings_2022'),
-    ('landings_2023');
-
-INSERT INTO
     delivery_point_sources (delivery_point_source_id, "name")
 VALUES
     (1, 'Fiskeridirektoratet'),
@@ -561,7 +491,7 @@ VALUES
     (5, 'Manual');
 
 INSERT INTO
-    fiskedir_vessel_types (fiskedir_vessel_type_id, "name")
+    fiskeridir_vessel_types (fiskeridir_vessel_type_id, "name")
 VALUES
     (0, 'Ukjent'),
     (1, 'Fiskefartøy'),
@@ -1220,13 +1150,13 @@ VALUES
     (999, 'Uspesifisert');
 
 INSERT INTO
-    fiskedir_nation_groups (fiskedir_nation_group_id)
+    fiskeridir_nation_groups (fiskeridir_nation_group_id)
 VALUES
     ('Norske fartøy'),
     ('Utenlandske fartøy');
 
 INSERT INTO
-    fiskedir_length_groups (fiskedir_length_group_id, "name")
+    fiskeridir_length_groups (fiskeridir_length_group_id, "name")
 VALUES
     (1, 'under 11 meter'),
     (2, '11-14,99 meter'),

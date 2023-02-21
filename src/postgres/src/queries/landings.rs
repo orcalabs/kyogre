@@ -56,8 +56,8 @@ impl PostgresAdapter {
 
         let mut landing_id = Vec::with_capacity(len);
         let mut document_id = Vec::with_capacity(len);
-        let mut fiskedir_vessel_id = Vec::with_capacity(len);
-        let mut fiskedir_vessel_type_id = Vec::with_capacity(len);
+        let mut fiskeridir_vessel_id = Vec::with_capacity(len);
+        let mut fiskeridir_vessel_type_id = Vec::with_capacity(len);
         let mut vessel_call_sign = Vec::with_capacity(len);
         let mut vessel_registration_id = Vec::with_capacity(len);
         let mut vessel_length_group_id = Vec::with_capacity(len);
@@ -65,8 +65,8 @@ impl PostgresAdapter {
         let mut vessel_nation_id = Vec::with_capacity(len);
         let mut vessel_norwegian_municipality_id = Vec::with_capacity(len);
         let mut vessel_norwegian_county_id = Vec::with_capacity(len);
-        let mut vessel_gross_1969 = Vec::with_capacity(len);
-        let mut vessel_gross_other = Vec::with_capacity(len);
+        let mut vessel_gross_tonnage_1969 = Vec::with_capacity(len);
+        let mut vessel_gross_tonnage_other = Vec::with_capacity(len);
         let mut vessel_name = Vec::with_capacity(len);
         let mut vessel_length = Vec::with_capacity(len);
         let mut vessel_engine_building_year = Vec::with_capacity(len);
@@ -120,12 +120,13 @@ impl PostgresAdapter {
         let mut receiving_vessel_mmsi_or_call_sign = Vec::with_capacity(len);
         let mut receiving_vessel_type = Vec::with_capacity(len);
         let mut receiving_vessel_nation_id = Vec::with_capacity(len);
+        let mut receiving_vessel_nation = Vec::with_capacity(len);
 
         for l in landings {
             landing_id.push(l.landing_id);
             document_id.push(l.document_id);
-            fiskedir_vessel_id.push(l.fiskedir_vessel_id);
-            fiskedir_vessel_type_id.push(l.fiskedir_vessel_type_id);
+            fiskeridir_vessel_id.push(l.fiskeridir_vessel_id);
+            fiskeridir_vessel_type_id.push(l.fiskeridir_vessel_type_id);
             vessel_call_sign.push(l.vessel_call_sign);
             vessel_registration_id.push(l.vessel_registration_id);
             vessel_length_group_id.push(l.vessel_length_group_id);
@@ -133,8 +134,8 @@ impl PostgresAdapter {
             vessel_nation_id.push(l.vessel_nation_id);
             vessel_norwegian_municipality_id.push(l.vessel_norwegian_municipality_id);
             vessel_norwegian_county_id.push(l.vessel_norwegian_county_id);
-            vessel_gross_1969.push(l.vessel_gross_1969);
-            vessel_gross_other.push(l.vessel_gross_other);
+            vessel_gross_tonnage_1969.push(l.vessel_gross_tonnage_1969);
+            vessel_gross_tonnage_other.push(l.vessel_gross_tonnage_other);
             vessel_name.push(l.vessel_name);
             vessel_length.push(l.vessel_length);
             vessel_engine_building_year.push(l.vessel_engine_building_year);
@@ -189,6 +190,7 @@ impl PostgresAdapter {
             receiving_vessel_mmsi_or_call_sign.push(l.receiving_vessel_mmsi_or_call_sign);
             receiving_vessel_type.push(l.receiving_vessel_type);
             receiving_vessel_nation_id.push(l.receiving_vessel_nation_id);
+            receiving_vessel_nation.push(l.receiving_vessel_nation);
         }
 
         sqlx::query!(
@@ -197,8 +199,8 @@ INSERT INTO
     landings (
         landing_id,
         document_id,
-        fiskedir_vessel_id,
-        fiskedir_vessel_type_id,
+        fiskeridir_vessel_id,
+        fiskeridir_vessel_type_id,
         vessel_call_sign,
         vessel_registration_id,
         vessel_length_group_id,
@@ -206,8 +208,8 @@ INSERT INTO
         vessel_nation_id,
         vessel_norwegian_municipality_id,
         vessel_norwegian_county_id,
-        vessel_gross_1969,
-        vessel_gross_other,
+        vessel_gross_tonnage_1969,
+        vessel_gross_tonnage_other,
         vessel_name,
         vessel_length,
         vessel_engine_building_year,
@@ -260,7 +262,8 @@ INSERT INTO
         receiving_vessel_registration_id,
         receiving_vessel_mmsi_or_call_sign,
         receiving_vessel_type,
-        receiving_vessel_nation_id
+        receiving_vessel_nation_id,
+        receiving_vessel_nation
     )
 SELECT
     *
@@ -331,14 +334,15 @@ FROM
         $63::VARCHAR[],
         $64::VARCHAR[],
         $65::INT[],
-        $66::VARCHAR[]
+        $66::VARCHAR[],
+        $67::VARCHAR[]
     )
 ON CONFLICT (landing_id, "version") DO NOTHING
                 "#,
             landing_id.as_slice(),
             document_id.as_slice(),
-            fiskedir_vessel_id.as_slice() as _,
-            fiskedir_vessel_type_id.as_slice() as _,
+            fiskeridir_vessel_id.as_slice() as _,
+            fiskeridir_vessel_type_id.as_slice() as _,
             vessel_call_sign.as_slice() as _,
             vessel_registration_id.as_slice(),
             vessel_length_group_id.as_slice() as _,
@@ -346,8 +350,8 @@ ON CONFLICT (landing_id, "version") DO NOTHING
             vessel_nation_id.as_slice(),
             vessel_norwegian_municipality_id.as_slice() as _,
             vessel_norwegian_county_id.as_slice() as _,
-            vessel_gross_1969.as_slice() as _,
-            vessel_gross_other.as_slice() as _,
+            vessel_gross_tonnage_1969.as_slice() as _,
+            vessel_gross_tonnage_other.as_slice() as _,
             vessel_name.as_slice() as _,
             vessel_length.as_slice() as _,
             vessel_engine_building_year.as_slice() as _,
@@ -400,7 +404,8 @@ ON CONFLICT (landing_id, "version") DO NOTHING
             receiving_vessel_registration_id.as_slice() as _,
             receiving_vessel_mmsi_or_call_sign.as_slice() as _,
             receiving_vessel_type.as_slice() as _,
-            receiving_vessel_nation_id.as_slice() as _
+            receiving_vessel_nation_id.as_slice() as _,
+            receiving_vessel_nation.as_slice() as _,
         )
         .execute(&mut *tx)
         .await
