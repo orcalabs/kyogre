@@ -3,14 +3,14 @@ use bigdecimal::{BigDecimal, FromPrimitive};
 use error_stack::{report, Result};
 
 pub mod ais;
-pub mod catch_areas;
-pub mod delivery_points;
-pub mod hashes;
-pub mod landing_entries;
-pub mod landings;
+pub mod catch_area;
+pub mod delivery_point;
+pub mod hash;
+pub mod landing;
+pub mod landing_entry;
 pub mod norwegian_land;
-pub mod specie;
-pub mod vessels;
+pub mod species;
+pub mod vessel;
 
 pub(crate) fn float_to_decimal(value: f64) -> Result<BigDecimal, BigDecimalError> {
     BigDecimal::from_f64(value)

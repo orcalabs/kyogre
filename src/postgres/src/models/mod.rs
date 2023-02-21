@@ -1,15 +1,15 @@
 mod ais;
-mod catch_areas;
+mod catch_area;
 mod landing;
-mod landing_entries;
+mod landing_entry;
 mod norwegian_land;
-mod specie;
+mod species;
 mod vessel;
 
 pub use ais::*;
-pub use catch_areas::*;
+pub use catch_area::*;
 pub use landing::*;
-pub use landing_entries::*;
+pub use landing_entry::*;
 pub use norwegian_land::*;
-pub use specie::*;
+pub use species::*;
 pub use vessel::*;
