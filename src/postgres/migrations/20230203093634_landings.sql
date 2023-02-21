@@ -276,7 +276,7 @@ CREATE TABLE
         fisher_org_id INT,
         fisher_nation_id VARCHAR REFERENCES nation_ids (nation_id),
         fisher_municipality_id INT REFERENCES norwegian_municipalities (norwegian_municipality_id),
-        catch_field VARCHAR NOT NULL CHECK (CHAR_LENGTH(catch_field) = 5),
+        catch_field VARCHAR NOT NULL CHECK (catch_field <> ''),
         catch_area_id INT NOT NULL REFERENCES catch_areas (catch_area_id),
         catch_main_area_id INT NOT NULL REFERENCES catch_main_areas (catch_main_area_id),
         catch_main_area_fao_id INT REFERENCES catch_main_area_fao (catch_main_area_fao_id),
