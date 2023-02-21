@@ -1,7 +1,7 @@
 CREATE TABLE
     data_hashes (
         hash VARCHAR NOT NULL CHECK (hash <> ''),
-        data_hash_id VARCHAR PRIMARY KEY CHECK (data_hash_id <> ''),
+        data_hash_id VARCHAR PRIMARY KEY CHECK (data_hash_id <> '')
     );
 
 CREATE TABLE
