@@ -129,7 +129,7 @@ impl TryFrom<fiskeridir_rs::Landing> for NewLanding {
                 .fisher_nationality_code
                 .map(|v| v.alpha3().to_string()),
             fisher_municipality_id: landing.fisher_tax_municipality_code.map(|v| v as i32),
-            catch_field: landing.catch_location.catch_field.into_inner(),
+            catch_field: landing.catch_location.catch_field,
             catch_area_id: landing.catch_location.location_code as i32,
             catch_main_area_id: landing.catch_location.main_area_code as i32,
             catch_main_area_fao_id: landing.catch_location.main_area_fao_code.map(|v| v as i32),
