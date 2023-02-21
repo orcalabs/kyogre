@@ -6,32 +6,32 @@ use crate::{
 use error_stack::{IntoReport, Result, ResultExt};
 
 impl PostgresAdapter {
-    pub(crate) async fn add_species_fiskedir<'a>(
+    pub(crate) async fn add_species_fiskeridir<'a>(
         &'a self,
         species: Vec<SpeciesFiskedir>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
     ) -> Result<(), PostgresError> {
         let len = species.len();
 
-        let mut species_fiskedir_id = Vec::with_capacity(len);
+        let mut species_fiskeridir_id = Vec::with_capacity(len);
         let mut name = Vec::with_capacity(len);
 
         for s in species {
-            species_fiskedir_id.push(s.id);
+            species_fiskeridir_id.push(s.id);
             name.push(s.name);
         }
 
         sqlx::query!(
             r#"
 INSERT INTO
-    species_fiskedir (species_fiskedir_id, "name")
+    species_fiskeridir (species_fiskeridir_id, "name")
 SELECT
     *
 FROM
     UNNEST($1::INT[], $2::VARCHAR[])
-ON CONFLICT (species_fiskedir_id) DO NOTHING
+ON CONFLICT (species_fiskeridir_id) DO NOTHING
             "#,
-            species_fiskedir_id.as_slice(),
+            species_fiskeridir_id.as_slice(),
             name.as_slice(),
         )
         .execute(&mut *tx)

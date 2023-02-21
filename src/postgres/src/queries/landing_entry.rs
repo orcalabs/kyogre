@@ -35,7 +35,7 @@ impl PostgresAdapter {
         let mut species_id = Vec::with_capacity(len);
         let mut species_fao_id = Vec::with_capacity(len);
         let mut species_group_id = Vec::with_capacity(len);
-        let mut species_fiskedir_id = Vec::with_capacity(len);
+        let mut species_fiskeridir_id = Vec::with_capacity(len);
         let mut species_main_group_id = Vec::with_capacity(len);
 
         for l in entries {
@@ -65,7 +65,7 @@ impl PostgresAdapter {
             species_id.push(l.species_id);
             species_fao_id.push(l.species_fao_id);
             species_group_id.push(l.species_group_id);
-            species_fiskedir_id.push(l.species_fiskedir_id);
+            species_fiskeridir_id.push(l.species_fiskeridir_id);
             species_main_group_id.push(l.species_main_group_id);
         }
 
@@ -99,7 +99,7 @@ INSERT INTO
         species_id,
         species_fao_id,
         species_group_id,
-        species_fiskedir_id,
+        species_fiskeridir_id,
         species_main_group_id
     )
 SELECT
@@ -163,7 +163,7 @@ ON CONFLICT (landing_id, line_number) DO NOTHING
             species_id.as_slice(),
             species_fao_id.as_slice() as _,
             species_group_id.as_slice(),
-            species_fiskedir_id.as_slice(),
+            species_fiskeridir_id.as_slice(),
             species_main_group_id.as_slice()
         )
         .execute(&mut *tx)
