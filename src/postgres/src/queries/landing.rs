@@ -22,7 +22,7 @@ impl PostgresAdapter {
 
         self.add_species_main_groups(prepared_set.species_main_groups, &mut tx)
             .await?;
-        self.add_species_fiskedir(prepared_set.species_fiskedir, &mut tx)
+        self.add_species_fiskeridir(prepared_set.species_fiskeridir, &mut tx)
             .await?;
         self.add_species(prepared_set.species, &mut tx).await?;
         self.add_species_groups(prepared_set.species_groups, &mut tx)

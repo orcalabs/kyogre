@@ -9,7 +9,7 @@ impl PostgresAdapter {
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
     ) -> Result<(), PostgresError> {
         let len = vessels.len();
-        let mut fiskedir_vessel_ids = Vec::with_capacity(len);
+        let mut fiskeridir_vessel_id = Vec::with_capacity(len);
         let mut call_signs = Vec::with_capacity(len);
         let mut registration_ids = Vec::with_capacity(len);
         let mut names = Vec::with_capacity(len);
@@ -27,7 +27,7 @@ impl PostgresAdapter {
 
         for v in vessels {
             if let Some(vessel_id) = v.id {
-                fiskedir_vessel_ids.push(vessel_id);
+                fiskeridir_vessel_id.push(vessel_id);
                 call_signs.push(v.call_sign.map(|c| c.into_inner()));
                 registration_ids.push(v.registration_id);
                 names.push(v.name);
@@ -50,8 +50,8 @@ impl PostgresAdapter {
         sqlx::query!(
             r#"
 INSERT INTO
-    fiskedir_vessels (
-        fiskedir_vessel_id,
+    fiskeridir_vessels (
+        fiskeridir_vessel_id,
         call_sign,
         registration_id,
         "name",
@@ -59,10 +59,10 @@ INSERT INTO
         building_year,
         engine_power,
         engine_building_year,
-        fiskedir_vessel_type_id,
+        fiskeridir_vessel_type_id,
         norwegian_municipality_id,
         norwegian_county_id,
-        fiskedir_nation_group_id,
+        fiskeridir_nation_group_id,
         nation_id,
         gross_tonnage_1969,
         gross_tonnage_other
@@ -87,9 +87,9 @@ FROM
         $14::INT[],
         $15::INT[]
     )
-ON CONFLICT (fiskedir_vessel_id) DO NOTHING
+ON CONFLICT (fiskeridir_vessel_id) DO NOTHING
             "#,
-            fiskedir_vessel_ids.as_slice(),
+            fiskeridir_vessel_id.as_slice(),
             call_signs.as_slice() as _,
             registration_ids.as_slice(),
             names.as_slice() as _,

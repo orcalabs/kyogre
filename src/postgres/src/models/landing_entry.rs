@@ -59,7 +59,7 @@ pub struct NewLandingEntry {
     // Art - gruppe (kode)
     pub species_group_id: i32,
     // Art - FDIR (kode)
-    pub species_fiskedir_id: i32,
+    pub species_fiskeridir_id: i32,
     // Art - hovedgruppe (kode)
     pub species_main_group_id: i32,
 }
@@ -115,7 +115,7 @@ impl TryFrom<fiskeridir_rs::Landing> for NewLandingEntry {
             species_id: landing.product.species.code as i32,
             species_fao_id: landing.product.species.fao_code,
             species_group_id: landing.product.species.group_code as i32,
-            species_fiskedir_id: landing.product.species.fdir_code as i32,
+            species_fiskeridir_id: landing.product.species.fdir_code as i32,
             species_main_group_id: landing.product.species.main_group_code as i32,
         })
     }

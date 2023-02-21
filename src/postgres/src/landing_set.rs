@@ -8,7 +8,7 @@ pub struct LandingSet {
     species: HashMap<i32, Species>,
     species_group: HashMap<i32, SpeciesGroup>,
     species_fao: HashMap<String, SpeciesFao>,
-    species_fiskedir: HashMap<i32, SpeciesFiskedir>,
+    species_fiskeridir: HashMap<i32, SpeciesFiskedir>,
     species_main_group: HashMap<i32, SpeciesMainGroup>,
     landings: HashMap<LandingId, NewLanding>,
     landing_entries: Vec<NewLandingEntry>,
@@ -25,7 +25,7 @@ pub struct PreparedLandingSet {
     pub species: Vec<Species>,
     pub species_groups: Vec<SpeciesGroup>,
     pub species_fao: Vec<SpeciesFao>,
-    pub species_fiskedir: Vec<SpeciesFiskedir>,
+    pub species_fiskeridir: Vec<SpeciesFiskedir>,
     pub species_main_groups: Vec<SpeciesMainGroup>,
     pub vessels: Vec<fiskeridir_rs::Vessel>,
     pub delivery_points: Vec<DeliveryPointId>,
@@ -49,7 +49,7 @@ impl LandingSet {
         let catch_main_areas = self.catch_main_areas.into_values().collect();
         let area_groupings = self.area_groupings.into_values().collect();
         let species_main_groups = self.species_main_group.into_values().collect();
-        let species_fiskedir = self.species_fiskedir.into_values().collect();
+        let species_fiskeridir = self.species_fiskeridir.into_values().collect();
         let landings = self.landings.into_values().collect();
         let counties = self.counties.into_values().collect();
         let municipalities = self.municipalities.into_values().collect();
@@ -65,7 +65,7 @@ impl LandingSet {
             catch_areas,
             catch_main_areas,
             area_groupings,
-            species_fiskedir,
+            species_fiskeridir,
             species_main_groups,
             counties,
             municipalities,
@@ -194,7 +194,7 @@ impl LandingSet {
 
     fn add_species_fiskedir(&mut self, landing: &fiskeridir_rs::Landing) {
         let species_fiskedir = SpeciesFiskedir::from(&landing.product.species);
-        self.species_fiskedir
+        self.species_fiskeridir
             .entry(species_fiskedir.id)
             .or_insert(species_fiskedir);
     }
