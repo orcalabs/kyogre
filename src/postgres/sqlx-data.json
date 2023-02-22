@@ -259,6 +259,30 @@
     },
     "query": "\nINSERT INTO\n    norwegian_municipalities (norwegian_municipality_id, \"name\")\nSELECT\n    *\nFROM\n    UNNEST($1::INT[], $2::VARCHAR[])\nON CONFLICT (norwegian_municipality_id) DO\nUPDATE\nSET\n    NAME = excluded.name\nWHERE\n    norwegian_municipalities.name IS NULL\n    AND excluded.name IS NOT NULL\n            "
   },
+  "4bd78a038424d71bbe305cade54f47ad6e97f1a7b65ea8f4963675204cbb1aa6": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "name",
+          "ordinal": 1,
+          "type_info": "Varchar"
+        }
+      ],
+      "nullable": [
+        false,
+        false
+      ],
+      "parameters": {
+        "Left": []
+      }
+    },
+    "query": "\nSELECT\n    species_fao_id AS id,\n    \"name\"\nFROM\n    species_fao\n            "
+  },
   "564ecbda445799ebe77b936a3199254676762e91b0006b9782f124f15f4b3778": {
     "describe": {
       "columns": [
@@ -431,6 +455,30 @@
     },
     "query": "\nINSERT INTO\n    catch_areas (catch_area_id, latitude, longitude)\nSELECT\n    *\nFROM\n    UNNEST($1::INT[], $2::DECIMAL[], $3::DECIMAL[])\nON CONFLICT (catch_area_id) DO\nUPDATE\nSET\n    latitude = excluded.latitude,\n    longitude = excluded.longitude\nWHERE\n    catch_areas.latitude IS NULL\n    AND catch_areas.longitude IS NULL\n                "
   },
+  "781618072ae7d25ac07156de946b8cca767def1b91991e2f872328a8decf17d7": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Int4"
+        },
+        {
+          "name": "name",
+          "ordinal": 1,
+          "type_info": "Varchar"
+        }
+      ],
+      "nullable": [
+        false,
+        false
+      ],
+      "parameters": {
+        "Left": []
+      }
+    },
+    "query": "\nSELECT\n    species_main_group_id AS id,\n    \"name\"\nFROM\n    species_main_groups\n            "
+  },
   "7995adf5b81e38ca6af97cfc294b62272f4797a739ba668765b2598d1b848ba7": {
     "describe": {
       "columns": [],
@@ -507,6 +555,54 @@
       }
     },
     "query": "\nINSERT INTO\n    ais_positions (\n        mmsi,\n        latitude,\n        longitude,\n        course_over_ground,\n        rate_of_turn,\n        true_heading,\n        speed_over_ground,\n        TIMESTAMP,\n        altitude,\n        distance_to_shore,\n        ais_class,\n        ais_message_type_id,\n        navigation_status_id\n    )\nSELECT\n    *\nFROM\n    UNNEST(\n        $1::INT[],\n        $2::DECIMAL[],\n        $3::DECIMAL[],\n        $4::DECIMAL[],\n        $5::DECIMAL[],\n        $6::INT[],\n        $7::DECIMAL[],\n        $8::timestamptz[],\n        $9::INT[],\n        $10::DECIMAL[],\n        $11::VARCHAR[],\n        $12::INT[],\n        $13::INT[]\n    )\nON CONFLICT (mmsi, TIMESTAMP) DO NOTHING\n            "
+  },
+  "a07f417e298ab03b2adb041a6a2786bee3d1c948243ea0f910b685fbbe7572f3": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Int4"
+        },
+        {
+          "name": "name",
+          "ordinal": 1,
+          "type_info": "Varchar"
+        }
+      ],
+      "nullable": [
+        false,
+        false
+      ],
+      "parameters": {
+        "Left": []
+      }
+    },
+    "query": "\nSELECT\n    species_fiskeridir_id AS id,\n    \"name\"\nFROM\n    species_fiskeridir\n            "
+  },
+  "a9edf164edbae7c8d059cfbfda567a4504bc42bd25f3fba04a4e92f11c651fd2": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Int4"
+        },
+        {
+          "name": "name",
+          "ordinal": 1,
+          "type_info": "Varchar"
+        }
+      ],
+      "nullable": [
+        false,
+        false
+      ],
+      "parameters": {
+        "Left": []
+      }
+    },
+    "query": "\nSELECT\n    species_group_id AS id,\n    \"name\"\nFROM\n    species_groups\n            "
   },
   "ab15e4e6c5ff90388b02abad8a9e97df7b945ece5c32f9aca9963bc68de95187": {
     "describe": {
@@ -692,6 +788,30 @@
       }
     },
     "query": "\nINSERT INTO\n    data_hashes (hash, data_hash_id)\nVALUES\n    ($1, $2)\n            "
+  },
+  "fb3aaf3ee1627012e7f1fe0386ae6c75e1320fb35f11df3de3bba049a269b1e6": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Int4"
+        },
+        {
+          "name": "name",
+          "ordinal": 1,
+          "type_info": "Varchar"
+        }
+      ],
+      "nullable": [
+        false,
+        false
+      ],
+      "parameters": {
+        "Left": []
+      }
+    },
+    "query": "\nSELECT\n    species_id AS id,\n    \"name\"\nFROM\n    species\n            "
   },
   "fe62186142403a611afecc100fedddfe5931a1ae3a9e8b79a034006156e45955": {
     "describe": {

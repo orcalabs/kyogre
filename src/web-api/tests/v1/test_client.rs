@@ -34,4 +34,20 @@ impl ApiClient {
         self.get(format!("ais_track/{mmsi}"), url_params.as_slice())
             .await
     }
+
+    pub async fn get_species(&self) -> Response {
+        self.get("species", &[]).await
+    }
+    pub async fn get_species_groups(&self) -> Response {
+        self.get("species_groups", &[]).await
+    }
+    pub async fn get_species_main_groups(&self) -> Response {
+        self.get("species_main_groups", &[]).await
+    }
+    pub async fn get_species_fao(&self) -> Response {
+        self.get("species_fao", &[]).await
+    }
+    pub async fn get_species_fiskeridir(&self) -> Response {
+        self.get("species_fiskeridir", &[]).await
+    }
 }

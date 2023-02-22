@@ -8,7 +8,7 @@ pub struct LandingSet {
     species: HashMap<i32, Species>,
     species_group: HashMap<i32, SpeciesGroup>,
     species_fao: HashMap<String, SpeciesFao>,
-    species_fiskeridir: HashMap<i32, SpeciesFiskedir>,
+    species_fiskeridir: HashMap<i32, SpeciesFiskeridir>,
     species_main_group: HashMap<i32, SpeciesMainGroup>,
     landings: HashMap<LandingId, NewLanding>,
     landing_entries: Vec<NewLandingEntry>,
@@ -26,7 +26,7 @@ pub struct PreparedLandingSet {
     pub species: Vec<Species>,
     pub species_groups: Vec<SpeciesGroup>,
     pub species_fao: Vec<SpeciesFao>,
-    pub species_fiskeridir: Vec<SpeciesFiskedir>,
+    pub species_fiskeridir: Vec<SpeciesFiskeridir>,
     pub species_main_groups: Vec<SpeciesMainGroup>,
     pub vessels: Vec<fiskeridir_rs::Vessel>,
     pub delivery_points: Vec<DeliveryPointId>,
@@ -206,7 +206,7 @@ impl LandingSet {
     }
 
     fn add_species_fiskedir(&mut self, landing: &fiskeridir_rs::Landing) {
-        let species_fiskedir = SpeciesFiskedir::from(&landing.product.species);
+        let species_fiskedir = SpeciesFiskeridir::from(&landing.product.species);
         self.species_fiskeridir
             .entry(species_fiskedir.id)
             .or_insert(species_fiskedir);

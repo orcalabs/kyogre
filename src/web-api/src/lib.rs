@@ -28,6 +28,11 @@ impl Database for PostgresAdapter {}
             v1::ais::AisPosition,
             v1::ais::AisPositionDetails,
             v1::ais::NavigationStatus,
+            v1::species::SpeciesGroup,
+            v1::species::SpeciesFiskeridir,
+            v1::species::Species,
+            v1::species::SpeciesMainGroup,
+            v1::species::SpeciesFao
         )
     ),
     tags(

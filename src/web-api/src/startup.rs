@@ -59,10 +59,30 @@ where
             .wrap(Compress::default())
             .wrap(Condition::new(not_prod, actix_cors::Cors::permissive()))
             .wrap(TracingLogger::<OrcaRootSpanBuilder>::new())
-            .service(web::scope("/v1.0").route(
-                "/ais_track/{mmsi}",
-                web::get().to(routes::v1::ais::ais_track::<T>),
-            ));
+            .service(
+                web::scope("/v1.0")
+                    .route(
+                        "/ais_track/{mmsi}",
+                        web::get().to(routes::v1::ais::ais_track::<T>),
+                    )
+                    .route("/species", web::get().to(routes::v1::species::species::<T>))
+                    .route(
+                        "/species_groups",
+                        web::get().to(routes::v1::species::species_groups::<T>),
+                    )
+                    .route(
+                        "/species_main_groups",
+                        web::get().to(routes::v1::species::species_main_groups::<T>),
+                    )
+                    .route(
+                        "/species_fao",
+                        web::get().to(routes::v1::species::species_fao::<T>),
+                    )
+                    .route(
+                        "/species_fiskeridir",
+                        web::get().to(routes::v1::species::species_fiskeridir::<T>),
+                    ),
+            );
 
         match environment {
             Environment::Production | Environment::Test => app,
