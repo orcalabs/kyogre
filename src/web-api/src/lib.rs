@@ -20,6 +20,14 @@ impl Database for PostgresAdapter {}
 #[openapi(
     paths(
         v1::ais::ais_track,
+        v1::species::species,
+        v1::species::species_groups,
+        v1::species::species_main_groups,
+        v1::species::species_fao,
+        v1::species::species_fiskeridir,
+        v1::gear::gear,
+        v1::gear::gear_groups,
+        v1::gear::gear_main_groups
     ),
     components(
         schemas(
@@ -32,7 +40,10 @@ impl Database for PostgresAdapter {}
             v1::species::SpeciesFiskeridir,
             v1::species::Species,
             v1::species::SpeciesMainGroup,
-            v1::species::SpeciesFao
+            v1::species::SpeciesFao,
+            v1::gear::Gear,
+            v1::gear::GearGroup,
+            v1::gear::GearMainGroup
         )
     ),
     tags(
