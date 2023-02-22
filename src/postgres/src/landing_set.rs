@@ -138,9 +138,11 @@ impl LandingSet {
     }
 
     fn add_catch_area(&mut self, landing: &fiskeridir_rs::Landing) {
-        self.catch_areas
-            .entry(landing.catch_location.location_code)
-            .or_insert_with(|| NewCatchArea::from(landing.catch_location.clone()));
+        if let Some(catch_area) = NewCatchArea::from_landing(landing) {
+            self.catch_areas
+                .entry(catch_area.id as u32)
+                .or_insert(catch_area);
+        }
     }
 
     fn add_main_catch_area(&mut self, landing: &fiskeridir_rs::Landing) {

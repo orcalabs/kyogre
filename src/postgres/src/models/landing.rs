@@ -14,11 +14,11 @@ pub struct NewLanding {
     pub fiskeridir_vessel_type_id: Option<i32>,
     // Radiokallesignal (seddel)
     pub vessel_call_sign: Option<String>,
-    pub vessel_registration_id: String,
+    pub vessel_registration_id: Option<String>,
     // Lengdegruppe (kode)
     pub vessel_length_group_id: Option<i32>,
     // Fartøynasjonalitet gruppe
-    pub vessel_nation_group_id: String,
+    pub vessel_nation_group_id: Option<String>,
     // Fartøynasjonalitet (kode)
     pub vessel_nation_id: String,
     // Fartøykommune (kode)
@@ -52,7 +52,7 @@ pub struct NewLanding {
     pub fisher_nation_id: Option<String>,
     pub fisher_municipality_id: Option<i32>,
     pub catch_field: String,
-    pub catch_area_id: i32,
+    pub catch_area_id: Option<i32>,
     pub catch_main_area_id: i32,
     pub catch_main_area_fao_id: Option<i32>,
     pub area_grouping_id: Option<String>,
@@ -130,7 +130,7 @@ impl TryFrom<fiskeridir_rs::Landing> for NewLanding {
                 .map(|v| v.alpha3().to_string()),
             fisher_municipality_id: landing.fisher_tax_municipality_code.map(|v| v as i32),
             catch_field: landing.catch_location.catch_field,
-            catch_area_id: landing.catch_location.location_code as i32,
+            catch_area_id: landing.catch_location.location_code.map(|v| v as i32),
             catch_main_area_id: landing.catch_location.main_area_code as i32,
             catch_main_area_fao_id: landing.catch_location.main_area_fao_code.map(|v| v as i32),
             area_grouping_id: landing.catch_location.area_grouping_code,

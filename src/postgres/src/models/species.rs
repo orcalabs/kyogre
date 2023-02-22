@@ -41,7 +41,7 @@ impl From<&fiskeridir_rs::Species> for SpeciesGroup {
     fn from(val: &fiskeridir_rs::Species) -> SpeciesGroup {
         SpeciesGroup {
             id: val.group_code as i32,
-            name: val.name.clone(),
+            name: val.group_name.clone(),
         }
     }
 }
