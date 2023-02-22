@@ -645,38 +645,6 @@ VALUES
     (99, 'Uspesifisert');
 
 INSERT INTO
-    catch_main_area_fao (catch_main_area_fao_id, "name")
-VALUES
-    (1, 'Africa - inland waters'),
-    (2, 'North America - inland waters'),
-    (3, 'South America - inland waters'),
-    (4, 'Asia - inland waters'),
-    (5, 'Europe - inland waters'),
-    (6, 'Oceania - inland waters'),
-    (7, 'Former USSR'),
-    (8, 'Antartica inland waters'),
-    (18, 'Arctic Sea'),
-    (21, 'Northwest Atlantic'),
-    (27, 'Northeast Atlantic'),
-    (31, 'Western Central Atlantic'),
-    (34, 'Eatern Central Atlantic'),
-    (37, 'Mediterranean and Black Sea'),
-    (41, 'Sothwest Atlantic'),
-    (47, 'Southeast Atlantic'),
-    (48, 'Atlantic (Antarctic)'),
-    (51, 'Western Indian Ocean'),
-    (57, 'Eastern Indian Ocean'),
-    (58, 'Indian Ocean (Antarctic)'),
-    (61, 'Northwest Pacific'),
-    (67, 'Northeast Pacific'),
-    (71, 'Western Central Pacific'),
-    (77, 'Eastern Central Pacific'),
-    (81, 'Southwest Pacific'),
-    (87, 'Southeast Pacific'),
-    (88, 'Pacific (Antarctic)'),
-    (99, NULL);
-
-INSERT INTO
     nation_ids (nation_id, "name")
 VALUES
     ('ABW', 'Aruba'),

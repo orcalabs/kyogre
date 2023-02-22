@@ -16,6 +16,7 @@ pub struct LandingSet {
     delivery_points: HashSet<DeliveryPointId>,
     catch_areas: HashMap<u32, NewCatchArea>,
     catch_main_areas: HashMap<u32, NewCatchMainArea>,
+    catch_main_area_fao: HashMap<i32, NewCatchMainAreaFao>,
     area_groupings: HashMap<String, NewAreaGrouping>,
     counties: HashMap<i32, NewCounty>,
     municipalities: HashMap<i32, NewMunicipality>,
@@ -31,6 +32,7 @@ pub struct PreparedLandingSet {
     pub delivery_points: Vec<DeliveryPointId>,
     pub catch_areas: Vec<NewCatchArea>,
     pub catch_main_areas: Vec<NewCatchMainArea>,
+    pub catch_main_area_fao: Vec<NewCatchMainAreaFao>,
     pub area_groupings: Vec<NewAreaGrouping>,
     pub landings: Vec<NewLanding>,
     pub landing_entries: Vec<NewLandingEntry>,
@@ -53,6 +55,7 @@ impl LandingSet {
         let landings = self.landings.into_values().collect();
         let counties = self.counties.into_values().collect();
         let municipalities = self.municipalities.into_values().collect();
+        let catch_main_area_fao = self.catch_main_area_fao.into_values().collect();
 
         PreparedLandingSet {
             species,
@@ -69,6 +72,7 @@ impl LandingSet {
             species_main_groups,
             counties,
             municipalities,
+            catch_main_area_fao,
         }
     }
 
@@ -87,6 +91,7 @@ impl LandingSet {
             set.add_delivery_point(&l);
             set.add_catch_area(&l);
             set.add_main_catch_area(&l);
+            set.add_main_catch_area_fao(&l);
             set.add_catch_area(&l);
             set.add_fishing_region(&l);
             set.add_municipality(&l);
@@ -142,6 +147,12 @@ impl LandingSet {
             self.catch_areas
                 .entry(catch_area.id as u32)
                 .or_insert(catch_area);
+        }
+    }
+
+    fn add_main_catch_area_fao(&mut self, landing: &fiskeridir_rs::Landing) {
+        if let Some(area) = NewCatchMainAreaFao::from_landing(landing) {
+            self.catch_main_area_fao.entry(area.id).or_insert(area);
         }
     }
 

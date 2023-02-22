@@ -1,7 +1,7 @@
 log_level: Debug
 postgres:
   ip: 127.0.0.1
-  port: 5432
+  port: 5433
   username: postgres
   password: test123
   max_connections: 10
@@ -11,5 +11,5 @@ engine:
     Periodic: 30s
 scraper:
   landings:
-    min_year: 2002
+    min_year: 2008
     max_year: 2023
