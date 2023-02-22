@@ -216,7 +216,7 @@ CREATE TABLE
 CREATE TABLE
     catch_main_area_fao (
         catch_main_area_fao_id INT PRIMARY KEY,
-        "name" VARCHAR NOT NULL CHECK ("name" <> '')
+        "name" VARCHAR CHECK ("name" <> '')
     );
 
 CREATE TABLE
@@ -673,7 +673,8 @@ VALUES
     (77, 'Eastern Central Pacific'),
     (81, 'Southwest Pacific'),
     (87, 'Southeast Pacific'),
-    (88, 'Pacific (Antarctic)');
+    (88, 'Pacific (Antarctic)'),
+    (99, NULL);
 
 INSERT INTO
     nation_ids (nation_id, "name")
