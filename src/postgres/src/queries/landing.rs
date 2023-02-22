@@ -33,6 +33,8 @@ impl PostgresAdapter {
             .await?;
         self.add_catch_main_areas(prepared_set.catch_main_areas, &mut tx)
             .await?;
+        self.add_catch_main_area_fao(prepared_set.catch_main_area_fao, &mut tx)
+            .await?;
         self.add_area_groupings(prepared_set.area_groupings, &mut tx)
             .await?;
         self.add_landings(prepared_set.landings, &mut tx).await?;

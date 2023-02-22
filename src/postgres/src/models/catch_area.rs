@@ -19,6 +19,12 @@ pub struct NewAreaGrouping {
     pub name: Option<String>,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct NewCatchMainAreaFao {
+    pub id: i32,
+    pub name: Option<String>,
+}
+
 impl From<fiskeridir_rs::CatchLocation> for NewCatchMainArea {
     fn from(value: fiskeridir_rs::CatchLocation) -> Self {
         NewCatchMainArea {
@@ -50,5 +56,17 @@ impl NewCatchArea {
             latitude: landing.catch_location.location_latitude,
             longitude: landing.catch_location.location_longitude,
         })
+    }
+}
+
+impl NewCatchMainAreaFao {
+    pub fn from_landing(landing: &fiskeridir_rs::Landing) -> Option<NewCatchMainAreaFao> {
+        landing
+            .catch_location
+            .main_area_fao_code
+            .map(|id| NewCatchMainAreaFao {
+                id: id as i32,
+                name: landing.catch_location.main_area_fao.clone(),
+            })
     }
 }
