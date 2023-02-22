@@ -30,16 +30,6 @@ impl From<fiskeridir_rs::CatchLocation> for NewCatchMainArea {
     }
 }
 
-impl From<fiskeridir_rs::CatchLocation> for NewCatchArea {
-    fn from(value: fiskeridir_rs::CatchLocation) -> Self {
-        NewCatchArea {
-            id: value.location_code as i32,
-            longitude: value.location_longitude,
-            latitude: value.location_latitude,
-        }
-    }
-}
-
 impl NewAreaGrouping {
     pub fn from_landing(landing: &fiskeridir_rs::Landing) -> Option<NewAreaGrouping> {
         landing
@@ -50,5 +40,15 @@ impl NewAreaGrouping {
                 id: id.clone(),
                 name: landing.catch_location.area_grouping_code.clone(),
             })
+    }
+}
+
+impl NewCatchArea {
+    pub fn from_landing(landing: &fiskeridir_rs::Landing) -> Option<NewCatchArea> {
+        landing.catch_location.location_code.map(|id| NewCatchArea {
+            id: id as i32,
+            latitude: landing.catch_location.location_latitude,
+            longitude: landing.catch_location.location_longitude,
+        })
     }
 }
