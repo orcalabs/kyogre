@@ -81,6 +81,12 @@ where
                     .route(
                         "/species_fiskeridir",
                         web::get().to(routes::v1::species::species_fiskeridir::<T>),
+                    )
+                    .route("/gear", web::get().to(routes::v1::gear::gear))
+                    .route("/gear_groups", web::get().to(routes::v1::gear::gear_groups))
+                    .route(
+                        "/gear_main_groups",
+                        web::get().to(routes::v1::gear::gear_main_groups),
                     ),
             );
 

@@ -1118,9 +1118,9 @@ dependencies = [
 
 [[package]]
 name = "fiskeridir-rs"
-version = "0.4.5"
+version = "0.4.6"
 source = "registry+https://dl.cloudsmith.io/basic/orcalabs/orcastrator/cargo/index.git"
-checksum = "cdc79a07a621db9879e74b300009beacb37a309c32e27eb8d0c60704a6693d31"
+checksum = "3c065c07ad9c6d5b17dba2cc1840f631982ca39c2fc846b82e698512f7867709"
 dependencies = [
  "bigdecimal",
  "chrono",
@@ -1137,6 +1137,8 @@ dependencies = [
  "serde_repr",
  "serde_with 2.2.0",
  "sha3",
+ "strum",
+ "strum_macros",
  "thiserror",
  "tracing",
  "zip",
@@ -4192,6 +4194,7 @@ dependencies = [
  "reqwest",
  "serde",
  "serde_json",
+ "strum",
  "tokio",
  "tracing",
  "tracing-subscriber",
