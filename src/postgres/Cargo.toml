@@ -8,14 +8,22 @@ edition = "2021"
 [dependencies]
 kyogre-core = { path = "../kyogre-core" }
 
-orca-core = { registry = "orcalabs-orcastrator", version = "0.20.0", features = ["telemetry"] }
-fiskeridir-rs = { workspace =  true }
+orca-core = { registry = "orcalabs-orcastrator", version = "0.20.0", features = [
+    "telemetry",
+] }
+fiskeridir-rs = { workspace = true }
 jurisdiction = "0.1.1"
 
 num-traits = "0.2.15"
 chrono = { version = "0.4.23", features = ["serde"] }
-sqlx = { version = "0.6.2", features = ["runtime-tokio-rustls", "postgres", "bigdecimal", "chrono", "offline"] }
-error-stack = "0.2.4"
+sqlx = { version = "0.6.2", features = [
+    "runtime-tokio-rustls",
+    "postgres",
+    "bigdecimal",
+    "chrono",
+    "offline",
+] }
+error-stack = { workspace = true }
 bigdecimal = "0.3.0"
 tokio = { version = "1.25.0", features = ["macros", "sync", "time"] }
 tracing = "0.1.37"
@@ -24,6 +32,8 @@ async-trait = "0.1.64"
 [dev-dependencies]
 rand = "0.8.5"
 dockertest = { version = "0.3.1", registry = "orcalabs-orcastrator" }
-orca-core = { version = "0.20.0", registry = "orcalabs-orcastrator", features = ["dockertest"] }
+orca-core = { version = "0.20.0", registry = "orcalabs-orcastrator", features = [
+    "dockertest",
+] }
 futures = "0.3.26"
 tokio = { version = "1.25.0", features = ["rt-multi-thread", "macros"] }

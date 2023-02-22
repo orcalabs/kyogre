@@ -7,9 +7,9 @@ edition = "2021"
 
 [dependencies]
 kyogre-core = { path = "../kyogre-core" }
-fiskeridir-rs = { workspace =  true }
+fiskeridir-rs = { workspace = true }
 
 serde = { version = "1.0.152", features = ["derive"] }
 tracing = "0.1.37"
 async-trait = "0.1.64"
-error-stack = "0.2.4"
+error-stack = { workspace = true }

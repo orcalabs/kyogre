@@ -7,13 +7,15 @@ edition = "2021"
 
 [dependencies]
 kyogre-core = { path = "../kyogre-core" }
-orca-core = { registry = "orcalabs-orcastrator", version = "0.20.0", features = ["telemetry"] }
+orca-core = { registry = "orcalabs-orcastrator", version = "0.20.0", features = [
+    "telemetry",
+] }
 postgres = { path = "../postgres" }
 leviathan-postgres = { path = "../leviathan-postgres" }
 
 chrono = { version = "0.4.23", features = ["serde"] }
 tracing = "0.1.37"
-error-stack = "0.2.4"
+error-stack = { workspace = true }
 config = "0.13.3"
 serde = "1.0.152"
 humantime-serde = "1.1.1"
