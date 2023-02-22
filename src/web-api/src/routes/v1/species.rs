@@ -4,6 +4,14 @@ use serde::{Deserialize, Serialize};
 use tracing::{event, Level};
 use utoipa::ToSchema;
 
+#[utoipa::path(
+    get,
+    path = "/species",
+    responses(
+        (status = 200, description = "all species", body = [Species]),
+        (status = 500, description = "an internal error occured", body = ErrorResponse),
+    )
+)]
 #[tracing::instrument(skip(db))]
 pub async fn species<T: Database>(db: web::Data<T>) -> Result<Response<Vec<Species>>, ApiError> {
     let species = db
@@ -20,6 +28,14 @@ pub async fn species<T: Database>(db: web::Data<T>) -> Result<Response<Vec<Speci
     Ok(Response::new(species))
 }
 
+#[utoipa::path(
+    get,
+    path = "/species_groups",
+    responses(
+        (status = 200, description = "all species groups", body = [SpeciesGroup]),
+        (status = 500, description = "an internal error occured", body = ErrorResponse),
+    )
+)]
 #[tracing::instrument(skip(db))]
 pub async fn species_groups<T: Database>(
     db: web::Data<T>,
@@ -38,6 +54,14 @@ pub async fn species_groups<T: Database>(
     Ok(Response::new(species))
 }
 
+#[utoipa::path(
+    get,
+    path = "/species_main_groups",
+    responses(
+        (status = 200, description = "all species main groups", body = [SpeciesMainGroup]),
+        (status = 500, description = "an internal error occured", body = ErrorResponse),
+    )
+)]
 #[tracing::instrument(skip(db))]
 pub async fn species_main_groups<T: Database>(
     db: web::Data<T>,
@@ -60,6 +84,14 @@ pub async fn species_main_groups<T: Database>(
     Ok(Response::new(species))
 }
 
+#[utoipa::path(
+    get,
+    path = "/species_fiskeridir",
+    responses(
+        (status = 200, description = "all Fiskeriderktoratet species", body = [SpeciesFiskeridir]),
+        (status = 500, description = "an internal error occured", body = ErrorResponse),
+    )
+)]
 #[tracing::instrument(skip(db))]
 pub async fn species_fiskeridir<T: Database>(
     db: web::Data<T>,
@@ -82,6 +114,14 @@ pub async fn species_fiskeridir<T: Database>(
     Ok(Response::new(species))
 }
 
+#[utoipa::path(
+    get,
+    path = "/species_fao",
+    responses(
+        (status = 200, description = "all fao species", body = [SpeciesFao]),
+        (status = 500, description = "an internal error occured", body = ErrorResponse),
+    )
+)]
 #[tracing::instrument(skip(db))]
 pub async fn species_fao<T: Database>(
     db: web::Data<T>,
