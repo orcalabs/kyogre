@@ -232,6 +232,42 @@ impl WebApiPort for PostgresAdapter {
 
         convert_models(positions).change_context(QueryError)
     }
+
+    async fn species_groups(&self) -> Result<Vec<SpeciesGroup>, QueryError> {
+        let species = self
+            .species_groups_impl()
+            .await
+            .change_context(QueryError)?;
+
+        convert_models(species).change_context(QueryError)
+    }
+
+    async fn species_fiskeridir(&self) -> Result<Vec<SpeciesFiskeridir>, QueryError> {
+        let species = self
+            .species_fiskeridir_impl()
+            .await
+            .change_context(QueryError)?;
+
+        convert_models(species).change_context(QueryError)
+    }
+    async fn species(&self) -> Result<Vec<Species>, QueryError> {
+        let species = self.species_impl().await.change_context(QueryError)?;
+
+        convert_models(species).change_context(QueryError)
+    }
+    async fn species_main_groups(&self) -> Result<Vec<SpeciesMainGroup>, QueryError> {
+        let species = self
+            .species_main_groups_impl()
+            .await
+            .change_context(QueryError)?;
+
+        convert_models(species).change_context(QueryError)
+    }
+    async fn species_fao(&self) -> Result<Vec<SpeciesFao>, QueryError> {
+        let species = self.species_fao_impl().await.change_context(QueryError)?;
+
+        convert_models(species).change_context(QueryError)
+    }
 }
 
 #[async_trait]

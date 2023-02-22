@@ -1,5 +1,3 @@
-use std::panic;
-
 use super::test_client::ApiClient;
 use dockertest::{DockerTest, Source, StaticManagementPolicy};
 use futures::Future;
@@ -8,11 +6,15 @@ use orca_core::{
 };
 use postgres::{PostgresAdapter, TestDb};
 use rand::random;
+use std::panic;
+use std::sync::Once;
+use tracing_subscriber::FmtSubscriber;
 use web_api::{
     settings::{ApiSettings, Settings},
     startup::App,
 };
 
+static TRACING: Once = Once::new();
 static DATABASE_PASSWORD: &str = "test123";
 
 pub struct TestHelper {
@@ -21,6 +23,9 @@ pub struct TestHelper {
 }
 
 impl TestHelper {
+    pub fn handle(&self) -> &PostgresAdapter {
+        &self.db.db
+    }
     async fn spawn_app(db: PostgresAdapter, app: App) -> TestHelper {
         let address = format!("http://127.0.0.1:{}/v1.0", app.port());
 
@@ -39,6 +44,14 @@ where
     Fut: Future<Output = ()> + Send + 'static,
 {
     let mut docker_test = DockerTest::new().with_default_source(Source::DockerHub);
+    TRACING.call_once(|| {
+        tracing::subscriber::set_global_default(
+            FmtSubscriber::builder()
+                .with_max_level(tracing::Level::INFO)
+                .finish(),
+        )
+        .unwrap();
+    });
 
     let mut composition = postgres_composition(
         DATABASE_PASSWORD,

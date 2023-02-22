@@ -1,9 +1,4 @@
-use crate::{
-    AisPosition, Arrival, ArrivalFilter, DateRange, DeliveryPoint, Departure, QueryError, Trip,
-    TripAssemblerConflict, TripAssemblerId, TripCalculationTimer, TripDockPoints, TripPorts,
-    Vessel,
-};
-
+use crate::*;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use error_stack::Result;
@@ -25,6 +20,11 @@ pub trait WebApiPort {
         mmsi: i32,
         range: &DateRange,
     ) -> Result<Vec<AisPosition>, QueryError>;
+    async fn species(&self) -> Result<Vec<Species>, QueryError>;
+    async fn species_fiskeridir(&self) -> Result<Vec<SpeciesFiskeridir>, QueryError>;
+    async fn species_groups(&self) -> Result<Vec<SpeciesGroup>, QueryError>;
+    async fn species_main_groups(&self) -> Result<Vec<SpeciesMainGroup>, QueryError>;
+    async fn species_fao(&self) -> Result<Vec<SpeciesFao>, QueryError>;
 }
 
 #[async_trait]
