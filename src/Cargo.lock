@@ -244,7 +244,7 @@ dependencies = [
  "chrono",
  "config",
  "dockertest",
- "error-stack",
+ "error-stack 0.3.1",
  "flate2",
  "futures",
  "geo",
@@ -273,7 +273,7 @@ version = "0.1.0"
 dependencies = [
  "chrono",
  "config",
- "error-stack",
+ "error-stack 0.3.1",
  "humantime-serde",
  "kyogre-core",
  "leviathan-postgres",
@@ -1065,7 +1065,7 @@ dependencies = [
  "async-trait",
  "chrono",
  "config",
- "error-stack",
+ "error-stack 0.3.1",
  "fiskeridir-rs",
  "kyogre-core",
  "orca-core",
@@ -1092,6 +1092,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "error-stack"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5f00447f331c7f726db5b8532ebc9163519eed03c6d7c8b73c90b3ff5646ac85"
+dependencies = [
+ "anyhow",
+ "rustc_version",
+]
+
+[[package]]
 name = "event-listener"
 version = "2.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1108,15 +1118,15 @@ dependencies = [
 
 [[package]]
 name = "fiskeridir-rs"
-version = "0.3.2"
+version = "0.4.3"
 source = "registry+https://dl.cloudsmith.io/basic/orcalabs/orcastrator/cargo/index.git"
-checksum = "ff67a41abab79293fabd6779ec00e25d5c736e5a4bdb09b3611d8610e5033ff0"
+checksum = "c5dc88a1bf78be4b5e8121216eec28a96690a56455a301a35a8ab74889e7d802"
 dependencies = [
  "bigdecimal",
  "chrono",
  "chrono-tz",
  "csv",
- "error-stack",
+ "error-stack 0.3.1",
  "futures-util",
  "jurisdiction",
  "num-derive",
@@ -1128,6 +1138,7 @@ dependencies = [
  "serde_with 2.2.0",
  "sha3",
  "thiserror",
+ "tracing",
  "zip",
 ]
 
@@ -1755,7 +1766,7 @@ dependencies = [
  "async-trait",
  "chrono",
  "chrono-tz",
- "error-stack",
+ "error-stack 0.3.1",
  "fiskeridir-rs",
  "num-derive",
  "num-traits",
@@ -1784,7 +1795,7 @@ dependencies = [
  "async-trait",
  "bigdecimal",
  "chrono",
- "error-stack",
+ "error-stack 0.3.1",
  "kyogre-core",
  "orca-core",
  "sqlx",
@@ -2244,7 +2255,7 @@ checksum = "a7b80cd557301ad03ed21c036cd4b09c2189c5a600ef5c3fb8c3dd06c8d31303"
 dependencies = [
  "async-trait",
  "chrono",
- "error-stack",
+ "error-stack 0.2.4",
  "humantime-serde",
  "orca-core",
  "serde",
@@ -2513,7 +2524,7 @@ dependencies = [
  "bigdecimal",
  "chrono",
  "dockertest",
- "error-stack",
+ "error-stack 0.3.1",
  "fiskeridir-rs",
  "futures",
  "jurisdiction",
@@ -2972,7 +2983,7 @@ name = "scraper"
 version = "0.1.0"
 dependencies = [
  "async-trait",
- "error-stack",
+ "error-stack 0.3.1",
  "fiskeridir-rs",
  "kyogre-core",
  "serde",
@@ -3878,7 +3889,7 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "chrono",
- "error-stack",
+ "error-stack 0.3.1",
  "geoutils",
  "kyogre-core",
  "num-traits",
