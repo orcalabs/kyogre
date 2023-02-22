@@ -222,7 +222,7 @@ CREATE TABLE
 CREATE TABLE
     area_groupings (
         area_grouping_id VARCHAR PRIMARY KEY CHECK (area_grouping_id <> ''),
-        "name" VARCHAR NOT NULL CHECK ("name" <> '')
+        "name" VARCHAR CHECK ("name" <> '')
     );
 
 CREATE TABLE
