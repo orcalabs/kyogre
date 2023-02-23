@@ -69,9 +69,9 @@ where
         let mut vessel_states = Vec::new();
 
         for vessel in vessels {
-            if let Some(conflict) = conflicts.get(&vessel.id) {
+            if let Some(conflict) = conflicts.get(&vessel.fiskeridir.id) {
                 vessel_states.push((vessel, State::Conflict(*conflict)));
-            } else if let Some(timer) = timers.get(&vessel.id) {
+            } else if let Some(timer) = timers.get(&vessel.fiskeridir.id) {
                 vessel_states.push((vessel, State::CurrentCalculationTime(*timer)));
             } else {
                 vessel_states.push((vessel, State::NoPriorState));
@@ -79,7 +79,7 @@ where
         }
 
         for s in vessel_states {
-            let id = s.0.id;
+            let id = s.0.fiskeridir.id;
             if let Err(e) = self.run_assembler_on_vessel(trip_assembler, s.0, s.1).await {
                 event!(
                     Level::ERROR,
@@ -105,7 +105,7 @@ where
         if let Some(trips) = trips {
             database
                 .add_trips(
-                    vessel.id,
+                    vessel.fiskeridir.id,
                     trips.new_trip_calucation_time,
                     trips.conflict_strategy,
                     trips.trips,

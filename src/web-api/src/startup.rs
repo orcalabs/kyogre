@@ -87,7 +87,8 @@ where
                     .route(
                         "/gear_main_groups",
                         web::get().to(routes::v1::gear::gear_main_groups),
-                    ),
+                    )
+                    .route("/vessels", web::get().to(routes::v1::vessel::vessels::<T>)),
             );
 
         match environment {

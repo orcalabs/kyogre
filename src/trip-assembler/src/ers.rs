@@ -149,13 +149,17 @@ impl TripAssembler for ErsTripAssembler {
         }
 
         let arrivals = adapter
-            .ers_arrivals(vessel.id, start, ArrivalFilter::WithLandingFacility)
+            .ers_arrivals(
+                vessel.fiskeridir.id,
+                start,
+                ArrivalFilter::WithLandingFacility,
+            )
             .await
             .change_context(TripAssemblerError)
             .into_iter()
             .map(StopPoint::Arrival);
         let departures = adapter
-            .ers_departures(vessel.id, start)
+            .ers_departures(vessel.fiskeridir.id, start)
             .await
             .change_context(TripAssemblerError)
             .into_iter()

@@ -97,7 +97,7 @@ impl TripAssembler for LandingTripAssembler {
         prior_trip: Option<Trip>,
     ) -> Result<(Vec<NewTrip>, Option<TripsConflictStrategy>), TripAssemblerError> {
         let mut landing_dates = adapter
-            .landing_dates(vessel.id, start)
+            .landing_dates(vessel.fiskeridir.id, start)
             .await
             .change_context(TripAssemblerError)?;
         if landing_dates.is_empty() {

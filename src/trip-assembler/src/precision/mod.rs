@@ -114,7 +114,7 @@ impl TripPrecisionCalculator {
         adapter: &dyn TripPrecisionOutboundPort,
         trips: Vec<Trip>,
     ) -> Result<Vec<TripPrecisionUpdate>, TripPrecisionError> {
-        if vessel.mmsi.is_none() {
+        if vessel.mmsi().is_none() {
             return Ok(vec![]);
         }
 
@@ -122,7 +122,7 @@ impl TripPrecisionCalculator {
 
         for t in trips {
             let positions = adapter
-                .ais_positions(vessel.id, &t.range)
+                .ais_positions(vessel.fiskeridir.id, &t.range)
                 .await
                 .change_context(TripPrecisionError)?;
             if positions.is_empty() {
@@ -138,7 +138,7 @@ impl TripPrecisionCalculator {
 
             for f in &self.start_precisions {
                 if let Some(s) = f
-                    .precision(adapter, &positions, &t, vessel.id)
+                    .precision(adapter, &positions, &t, vessel.fiskeridir.id)
                     .await
                     .change_context(TripPrecisionError)?
                 {
@@ -149,7 +149,7 @@ impl TripPrecisionCalculator {
 
             for f in &self.end_precisions {
                 if let Some(s) = f
-                    .precision(adapter, &positions, &t, vessel.id)
+                    .precision(adapter, &positions, &t, vessel.fiskeridir.id)
                     .await
                     .change_context(TripPrecisionError)?
                 {

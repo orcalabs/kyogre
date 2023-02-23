@@ -27,7 +27,8 @@ impl Database for PostgresAdapter {}
         v1::species::species_fiskeridir,
         v1::gear::gear,
         v1::gear::gear_groups,
-        v1::gear::gear_main_groups
+        v1::gear::gear_main_groups,
+        v1::vessel::vessels
     ),
     components(
         schemas(
@@ -43,7 +44,8 @@ impl Database for PostgresAdapter {}
             v1::species::SpeciesFao,
             v1::gear::Gear,
             v1::gear::GearGroup,
-            v1::gear::GearMainGroup
+            v1::gear::GearMainGroup,
+            v1::vessel::Vessel
         )
     ),
     tags(
