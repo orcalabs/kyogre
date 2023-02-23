@@ -144,10 +144,7 @@ impl TryFrom<fiskeridir_rs::Landing> for NewLanding {
             within_12_mile_border: landing.catch_location.coast_ocean_code as i32,
             fishing_diary_number: landing.fishing_diary_number.map(|v| v as i32),
             fishing_diary_trip_number: landing.fishing_diary_trip_number.map(|v| v as i32),
-            economic_zone_id: landing
-                .catch_location
-                .economic_zone_code
-                .map(|v| v.code().to_owned()),
+            economic_zone_id: landing.catch_location.economic_zone_code,
             partial_landing: landing.partial_landing,
             partial_landing_next_delivery_point_id: landing
                 .partial_landing_next_delivery_point_id
