@@ -268,6 +268,15 @@ impl WebApiPort for PostgresAdapter {
 
         convert_models(species).change_context(QueryError)
     }
+
+    async fn vessels(&self) -> Result<Vec<Vessel>, QueryError> {
+        let vessel_combinations = self
+            .fiskeridir_ais_vessel_combinations()
+            .await
+            .change_context(QueryError)?;
+
+        convert_models(vessel_combinations).change_context(QueryError)
+    }
 }
 
 #[async_trait]

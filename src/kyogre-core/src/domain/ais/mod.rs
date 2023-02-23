@@ -127,18 +127,18 @@ impl NewAisStatic {
     pub fn test_default(mmsi: i32, call_sign: &str) -> NewAisStatic {
         NewAisStatic {
             mmsi,
-            imo_number: Some(random()),
+            imo_number: Some(10),
             call_sign: Some(call_sign.to_owned()),
             name: Some("test_vessel".to_string()),
-            ship_length: Some(random()),
-            ship_width: Some(random()),
+            ship_length: Some(10),
+            ship_width: Some(5),
             eta: Some(Utc.timestamp_opt(1000, 0).unwrap()),
             destination: Some("ramfjord camping".to_string()),
             message_type: Some(AisMessageType::Static),
             message_type_id: 18,
             msgtime: Utc.timestamp_opt(900, 0).unwrap(),
-            draught: Some(random()),
-            ship_type: Some(random()),
+            draught: Some(50),
+            ship_type: Some(1),
         }
     }
 }

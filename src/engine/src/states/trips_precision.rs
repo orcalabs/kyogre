@@ -58,12 +58,12 @@ where
         let database = self.database();
 
         for vessel in vessels {
-            if vessel.mmsi.is_none() {
+            if vessel.mmsi().is_none() {
                 continue;
             }
 
             let trips = database
-                .trips_without_precision(vessel.id, processor.assembler_id())
+                .trips_without_precision(vessel.fiskeridir.id, processor.assembler_id())
                 .await
                 .change_context(TripPrecisionError)?;
 

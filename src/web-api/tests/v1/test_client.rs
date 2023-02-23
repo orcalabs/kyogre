@@ -50,4 +50,7 @@ impl ApiClient {
     pub async fn get_species_fiskeridir(&self) -> Response {
         self.get("species_fiskeridir", &[]).await
     }
+    pub async fn get_vessels(&self) -> Response {
+        self.get("vessels", &[]).await
+    }
 }

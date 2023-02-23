@@ -25,6 +25,7 @@ pub trait WebApiPort {
     async fn species_groups(&self) -> Result<Vec<SpeciesGroup>, QueryError>;
     async fn species_main_groups(&self) -> Result<Vec<SpeciesMainGroup>, QueryError>;
     async fn species_fao(&self) -> Result<Vec<SpeciesFao>, QueryError>;
+    async fn vessels(&self) -> Result<Vec<Vessel>, QueryError>;
 }
 
 #[async_trait]

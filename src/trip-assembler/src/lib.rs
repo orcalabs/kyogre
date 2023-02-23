@@ -51,12 +51,12 @@ pub trait TripAssembler: Send + Sync {
         let prior_trip = match state {
             State::Conflict(_) => {
                 adapter
-                    .trip_prior_to(vessel.id, self.assembler_id(), &start)
+                    .trip_prior_to(vessel.fiskeridir.id, self.assembler_id(), &start)
                     .await
             }
             State::CurrentCalculationTime(_) => {
                 adapter
-                    .most_recent_trip(vessel.id, self.assembler_id())
+                    .most_recent_trip(vessel.fiskeridir.id, self.assembler_id())
                     .await
             }
             State::NoPriorState => Ok(None),
