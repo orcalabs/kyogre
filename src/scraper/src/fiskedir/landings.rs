@@ -38,7 +38,7 @@ impl DataSource for LandingScraper {
                     FileHash::Landings,
                     source,
                     closure,
-                    1000,
+                    10000,
                 )
                 .await
             {
