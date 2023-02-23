@@ -8,8 +8,7 @@ telemetry:
   ip: api.honeycomb.io
   port: 443
 engine:
-  scrape_schedule:
-    Daily: 07:00:00
+  scrape_schedule: Disabled
 scraper:
   landings:
     min_year: 2000
