@@ -1,7 +1,6 @@
 use crate::{error::ApiError, response::Response, Database};
 use actix_web::web;
 use chrono::{DateTime, Utc};
-use fiskeridir_rs::CallSign;
 use serde::{Deserialize, Serialize};
 use tracing::{event, Level};
 use utoipa::ToSchema;
@@ -63,7 +62,7 @@ pub struct FiskeridirVessel {
 pub struct AisVessel {
     pub mmsi: i32,
     pub imo_number: Option<i32>,
-    pub call_sign: Option<CallSign>,
+    pub call_sign: Option<String>,
     pub name: Option<String>,
     pub ship_length: Option<i32>,
     pub ship_width: Option<i32>,
@@ -85,7 +84,7 @@ impl From<kyogre_core::AisVessel> for AisVessel {
         AisVessel {
             mmsi: value.mmsi,
             imo_number: value.imo_number,
-            call_sign: value.call_sign,
+            call_sign: value.call_sign.map(|v| v.into_inner()),
             name: value.name,
             ship_length: value.ship_length,
             ship_width: value.ship_width,
@@ -147,7 +146,8 @@ impl PartialEq<fiskeridir_rs::Vessel> for FiskeridirVessel {
 impl PartialEq<kyogre_core::AisVessel> for AisVessel {
     fn eq(&self, other: &kyogre_core::AisVessel) -> bool {
         self.mmsi == other.mmsi
-            && self.call_sign == other.call_sign
+            && self.call_sign.as_ref().map(|v| v.as_ref())
+                == other.call_sign.as_ref().map(|v| v.as_ref())
             && self.imo_number == other.imo_number
             && self.name == other.name
             && self.ship_length == other.ship_length
