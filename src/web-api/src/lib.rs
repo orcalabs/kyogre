@@ -45,7 +45,9 @@ impl Database for PostgresAdapter {}
             v1::gear::Gear,
             v1::gear::GearGroup,
             v1::gear::GearMainGroup,
-            v1::vessel::Vessel
+            v1::vessel::Vessel,
+            v1::vessel::AisVessel,
+            v1::vessel::FiskeridirVessel
         )
     ),
     tags(
