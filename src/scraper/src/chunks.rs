@@ -34,7 +34,7 @@ where
                 }
                 Ok(item) => {
                     chunk.push(item);
-                    if i % chunk_size == 0 {
+                    if i % chunk_size == 0 && i > 0 {
                         insert_closure(chunk).await?;
                         chunk = Vec::with_capacity(chunk_size);
                     }
