@@ -24,6 +24,8 @@ impl PostgresAdapter {
         let mut nation_ids = Vec::with_capacity(len);
         let mut gross_tonnage_1969 = Vec::with_capacity(len);
         let mut gross_tonnage_other = Vec::with_capacity(len);
+        let mut rebuilding_year = Vec::with_capacity(len);
+        let mut fiskeridir_length_group_id = Vec::with_capacity(len);
 
         for v in vessels {
             if let Some(vessel_id) = v.id {
@@ -44,6 +46,8 @@ impl PostgresAdapter {
                 nation_ids.push(v.nationality_code.alpha3().to_string());
                 gross_tonnage_1969.push(v.gross_tonnage_1969.map(|v| v as i32));
                 gross_tonnage_other.push(v.gross_tonnage_other.map(|v| v as i32));
+                rebuilding_year.push(v.rebuilding_year.map(|v| v as i32));
+                fiskeridir_length_group_id.push(v.length_group_code.map(|v| v as i32));
             }
         }
 
@@ -65,7 +69,9 @@ INSERT INTO
         fiskeridir_nation_group_id,
         nation_id,
         gross_tonnage_1969,
-        gross_tonnage_other
+        gross_tonnage_other,
+        rebuilding_year,
+        fiskeridir_length_group_id
     )
 SELECT
     *
@@ -85,7 +91,9 @@ FROM
         $12::VARCHAR[],
         $13::VARCHAR[],
         $14::INT[],
-        $15::INT[]
+        $15::INT[],
+        $16::INT[],
+        $17::INT[]
     )
 ON CONFLICT (fiskeridir_vessel_id) DO NOTHING
             "#,
@@ -104,6 +112,8 @@ ON CONFLICT (fiskeridir_vessel_id) DO NOTHING
             nation_ids.as_slice(),
             gross_tonnage_1969.as_slice() as _,
             gross_tonnage_other.as_slice() as _,
+            rebuilding_year.as_slice() as _,
+            fiskeridir_length_group_id.as_slice() as _,
         )
         .execute(&mut *tx)
         .await
