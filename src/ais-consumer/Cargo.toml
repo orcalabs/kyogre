@@ -42,4 +42,4 @@ orca-core = { registry = "orcalabs-orcastrator", version = "0.20.0", features = 
 ] }
 dockertest = { version = "0.3.1", registry = "orcalabs-orcastrator" }
 rand = "0.8.5"
-tokio-stream = "0.1.11"
+tokio-stream = "0.1.12"

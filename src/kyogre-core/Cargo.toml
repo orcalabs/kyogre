@@ -9,7 +9,7 @@ edition = "2021"
 async-trait = "0.1.64"
 serde = "1.0.152"
 chrono = { version = "0.4.23", features = ["serde"] }
-chrono-tz = "0.8.0"
+chrono-tz = "0.8.1"
 fiskeridir-rs = { workspace = true }
 
 serde_repr = "0.1.10"
