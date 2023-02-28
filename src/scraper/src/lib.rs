@@ -88,13 +88,13 @@ impl Scraper {
             .collect();
 
         let arc = Arc::new(source);
-        let _landings_scraper = LandingScraper::new(arc.clone(), landing_sources);
+        let landings_scraper = LandingScraper::new(arc.clone(), landing_sources);
         let ers_dca_scraper = ErsDcaScraper::new(arc.clone(), ers_dca_sources);
         let ers_dep_scraper = ErsDepScraper::new(arc.clone(), ers_dep_sources);
         let ers_por_scraper = ErsPorScraper::new(arc, ers_por_sources);
         Scraper {
             scrapers: vec![
-                // Box::new(landings_scraper),
+                Box::new(landings_scraper),
                 Box::new(ers_dca_scraper),
                 Box::new(ers_dep_scraper),
                 Box::new(ers_por_scraper),
