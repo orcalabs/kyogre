@@ -120,7 +120,7 @@ impl Gear {
             Gear::KrokGarn => "KrokGarn",
             Gear::UdefinertTraal => "Udefinert trål",
             Gear::BunnTraal => "Bunntrål",
-            Gear::BunnTraalPar => "Bunntrål",
+            Gear::BunnTraalPar => "Bunntrål par",
             Gear::FlyteTraal => "Flytetrål",
             Gear::FlyteTraalPar => "Flytetrål par",
             Gear::RekeTraal => "Reketrål",

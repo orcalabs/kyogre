@@ -1804,6 +1804,7 @@ dependencies = [
  "num-derive",
  "num-traits",
  "rand",
+ "remain",
  "serde",
  "serde_repr",
  "strum",
