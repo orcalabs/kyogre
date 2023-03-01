@@ -4,7 +4,7 @@
 
 use async_trait::async_trait;
 use error_stack::Result;
-use fiskeridir::{ErsDcaScraper, ErsDepScraper, ErsPorScraper, LandingScraper};
+use fiskeridir::{ErsDcaScraper, ErsDepScraper, ErsPorScraper, ErsTraScraper, LandingScraper};
 use kyogre_core::ScraperInboundPort;
 use serde::Deserialize;
 use std::sync::Arc;
@@ -31,6 +31,7 @@ pub struct Config {
     pub ers_dca: Option<Vec<ErsFileYear>>,
     pub ers_por: Option<Vec<ErsFileYear>>,
     pub ers_dep: Option<Vec<ErsFileYear>>,
+    pub ers_tra: Option<Vec<ErsFileYear>>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -87,17 +88,29 @@ impl Scraper {
             })
             .collect();
 
+        let ers_tra_sources = config
+            .ers_tra
+            .unwrap_or_default()
+            .into_iter()
+            .map(|file_year| fiskeridir_rs::Source::ErsTra {
+                year: file_year.year,
+                url: file_year.url,
+            })
+            .collect();
+
         let arc = Arc::new(source);
         let _landings_scraper = LandingScraper::new(arc.clone(), landing_sources);
         let ers_dca_scraper = ErsDcaScraper::new(arc.clone(), ers_dca_sources);
         let ers_dep_scraper = ErsDepScraper::new(arc.clone(), ers_dep_sources);
-        let ers_por_scraper = ErsPorScraper::new(arc, ers_por_sources);
+        let ers_por_scraper = ErsPorScraper::new(arc.clone(), ers_por_sources);
+        let ers_tra_scraper = ErsTraScraper::new(arc, ers_tra_sources);
         Scraper {
             scrapers: vec![
                 // Box::new(landings_scraper),
                 Box::new(ers_dca_scraper),
                 Box::new(ers_dep_scraper),
                 Box::new(ers_por_scraper),
+                Box::new(ers_tra_scraper),
             ],
             processor,
         }
@@ -125,6 +138,7 @@ pub enum ScraperId {
     ErsPor,
     ErsDep,
     ErsDca,
+    ErsTra,
 }
 
 impl std::fmt::Display for ScraperId {
@@ -135,6 +149,7 @@ impl std::fmt::Display for ScraperId {
             ScraperId::ErsPor => write!(f, "ers_por_scraper"),
             ScraperId::ErsDep => write!(f, "ers_dep_scraper"),
             ScraperId::ErsDca => write!(f, "ers_dca_scraper"),
+            ScraperId::ErsTra => write!(f, "ers_tra_scraper"),
         }
     }
 }

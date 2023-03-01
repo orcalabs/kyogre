@@ -2,21 +2,21 @@ use std::sync::Arc;
 
 use crate::{DataSource, Processor, ScraperError, ScraperId};
 use async_trait::async_trait;
-use error_stack::{Result, ResultExt};
+use error_stack::Result;
 use fiskeridir_rs::Source;
 use kyogre_core::FileHash;
 use tracing::{event, Level};
 
 use super::FiskeridirSource;
 
-pub struct ErsDcaScraper {
+pub struct ErsTraScraper {
     sources: Vec<Source>,
     fiskeridir_source: Arc<FiskeridirSource>,
 }
 
-impl ErsDcaScraper {
-    pub fn new(fiskeridir_source: Arc<FiskeridirSource>, sources: Vec<Source>) -> ErsDcaScraper {
-        ErsDcaScraper {
+impl ErsTraScraper {
+    pub fn new(fiskeridir_source: Arc<FiskeridirSource>, sources: Vec<Source>) -> ErsTraScraper {
+        ErsTraScraper {
             sources,
             fiskeridir_source,
         }
@@ -24,34 +24,29 @@ impl ErsDcaScraper {
 }
 
 #[async_trait]
-impl DataSource for ErsDcaScraper {
+impl DataSource for ErsTraScraper {
     fn id(&self) -> ScraperId {
-        ScraperId::ErsDca
+        ScraperId::ErsTra
     }
 
     async fn scrape(&self, processor: &(dyn Processor)) -> Result<(), ScraperError> {
-        processor
-            .delete_ers_dca()
-            .await
-            .change_context(ScraperError)?;
-
-        let closure = |ers_dca| processor.add_ers_dca(ers_dca);
+        let closure = |ers_tra| processor.add_ers_tra(ers_tra);
         for source in &self.sources {
             if let Err(e) = self
                 .fiskeridir_source
-                .scrape_year(FileHash::ErsDca, source, closure, 10000)
+                .scrape_year(FileHash::ErsTra, source, closure, 10000)
                 .await
             {
                 event!(
                     Level::ERROR,
-                    "failed to scrape ers_dca for year: {}, err: {:?}",
+                    "failed to scrape ers_tra for year: {}, err: {:?}",
                     source.year(),
                     e,
                 );
             } else {
                 event!(
                     Level::INFO,
-                    "succesfully scraped ers_dca year: {}",
+                    "succesfully scraped ers_tra year: {}",
                     source.year()
                 );
             }

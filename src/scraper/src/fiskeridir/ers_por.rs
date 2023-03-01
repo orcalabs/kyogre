@@ -34,7 +34,7 @@ impl DataSource for ErsPorScraper {
         for source in &self.sources {
             if let Err(e) = self
                 .fiskeridir_source
-                .scrape_year(FileHash::ErsPor, source, closure, 100000)
+                .scrape_year(FileHash::ErsPor, source, closure, 10000)
                 .await
             {
                 event!(

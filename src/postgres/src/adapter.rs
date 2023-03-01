@@ -1,6 +1,6 @@
 use crate::{
     error::PostgresError, ers_dca_set::ErsDcaSet, ers_dep_set::ErsDepSet, ers_por_set::ErsPorSet,
-    landing_set::LandingSet,
+    ers_tra_set::ErsTraSet, landing_set::LandingSet,
 };
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
@@ -316,17 +316,21 @@ impl ScraperInboundPort for PostgresAdapter {
     async fn delete_ers_dca(&self) -> Result<(), InsertError> {
         self.delete_ers_dca_impl().await.change_context(InsertError)
     }
-    async fn add_ers_dca(&self, dca: Vec<fiskeridir_rs::ErsDca>) -> Result<(), InsertError> {
-        let set = ErsDcaSet::new(dca).change_context(InsertError)?;
+    async fn add_ers_dca(&self, ers_dca: Vec<fiskeridir_rs::ErsDca>) -> Result<(), InsertError> {
+        let set = ErsDcaSet::new(ers_dca).change_context(InsertError)?;
         self.add_ers_dca_set(set).await.change_context(InsertError)
     }
-    async fn add_ers_dep(&self, departures: Vec<fiskeridir_rs::ErsDep>) -> Result<(), InsertError> {
-        let set = ErsDepSet::new(departures).change_context(InsertError)?;
+    async fn add_ers_dep(&self, ers_dep: Vec<fiskeridir_rs::ErsDep>) -> Result<(), InsertError> {
+        let set = ErsDepSet::new(ers_dep).change_context(InsertError)?;
         self.add_ers_dep_set(set).await.change_context(InsertError)
     }
-    async fn add_ers_por(&self, arrivals: Vec<fiskeridir_rs::ErsPor>) -> Result<(), InsertError> {
-        let set = ErsPorSet::new(arrivals).change_context(InsertError)?;
+    async fn add_ers_por(&self, ers_por: Vec<fiskeridir_rs::ErsPor>) -> Result<(), InsertError> {
+        let set = ErsPorSet::new(ers_por).change_context(InsertError)?;
         self.add_ers_por_set(set).await.change_context(InsertError)
+    }
+    async fn add_ers_tra(&self, ers_tra: Vec<fiskeridir_rs::ErsTra>) -> Result<(), InsertError> {
+        let set = ErsTraSet::new(ers_tra).change_context(InsertError)?;
+        self.add_ers_tra_set(set).await.change_context(InsertError)
     }
     async fn update_database_views(&self) -> Result<(), UpdateError> {
         self.update_database_views_impl()
