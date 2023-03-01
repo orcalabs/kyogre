@@ -94,3 +94,30 @@ scraper:
       url: https://www.fiskeridir.no/Tall-og-analyse/AApne-data/elektronisk-rapportering-ers/_/attachment/download/fab9f6b7-65d8-401c-805f-28d4f21b31ed:6df3611602349b1b9930b03924ef0ddd41bba8c9/elektronisk-rapportering-ers-2012.zip
     - year: 2011
       url: https://www.fiskeridir.no/Tall-og-analyse/AApne-data/elektronisk-rapportering-ers/_/attachment/download/04f14bc2-daf3-4e42-8c16-970afbe88290:3e9891ffb23a1092630e76a5dfcbff7dee891008/elektronisk-rapportering-ers-2011.zip
+  ers_tra:
+    - year: 2023
+      url: https://register.fiskeridir.no/vms-ers/2023-ERS-TRA.csv.zip
+    - year: 2022
+      url: https://www.fiskeridir.no/Tall-og-analyse/AApne-data/elektronisk-rapportering-ers/_/attachment/download/2a9042cf-cb61-45d0-81e2-7786dd54381f:ce5fbcf4bf8da3ec55e0705b30fde5425d2764f0/elektronisk-rapportering-ers-2022.zip
+    - year: 2021
+      url: https://www.fiskeridir.no/Tall-og-analyse/AApne-data/elektronisk-rapportering-ers/_/attachment/download/337a59a1-6558-4c2a-9eae-2dead4aa09b5:09eb7a6c6427acba63ec23d1e195ea652051e870/elektronisk-rapportering-ers-2021.zip
+    - year: 2020
+      url: https://www.fiskeridir.no/Tall-og-analyse/AApne-data/elektronisk-rapportering-ers/_/attachment/download/9c646247-da57-4cfa-9be7-9f1686435c44:cba6190f435eeb88c2e0c225a98197840551445d/elektronisk-rapportering-ers-2020.zip
+    - year: 2019
+      url: https://www.fiskeridir.no/Tall-og-analyse/AApne-data/elektronisk-rapportering-ers/_/attachment/download/e1e59b82-ecf8-4122-aa16-878ecfbfc2e9:1cea6f381d9981436ed1bc3ad5d819a0974ee7a2/elektronisk-rapportering-ers-2019.zip
+    - year: 2018
+      url: https://www.fiskeridir.no/Tall-og-analyse/AApne-data/elektronisk-rapportering-ers/_/attachment/download/784c05bd-9ef6-425c-abfe-b9c3ee3b90b7:17df0f8ca7c82c11d3d673b306a94f79a200a57f/elektronisk-rapportering-ers-2018.zip
+    - year: 2017
+      url: https://www.fiskeridir.no/Tall-og-analyse/AApne-data/elektronisk-rapportering-ers/_/attachment/download/1e7a6b7f-78ae-4ccf-80cc-3d3ce649140b:dfb442acf363a1b8a9bf3e525c41b15bcd85c961/elektronisk-rapportering-ers-2017.zip
+    - year: 2016
+      url: https://www.fiskeridir.no/Tall-og-analyse/AApne-data/elektronisk-rapportering-ers/_/attachment/download/41e575d9-617e-494d-a4bb-0f8612eaa061:d9a93b57a3cfdcc725f53fcc4e5d151c0d2e34c9/elektronisk-rapportering-ers-2016.zip
+    - year: 2015
+      url: https://www.fiskeridir.no/Tall-og-analyse/AApne-data/elektronisk-rapportering-ers/_/attachment/download/a59cf002-f558-4095-86cf-730f38077616:ffd8d835160ee11080662ded9992b4094fa0abb3/elektronisk-rapportering-ers-2015.zip
+    - year: 2014
+      url: https://www.fiskeridir.no/Tall-og-analyse/AApne-data/elektronisk-rapportering-ers/_/attachment/download/c64857e6-4384-44db-a90e-6190ca7066b3:ceea78138640e4adffd0f0ff5be498ff29a24e42/elektronisk-rapportering-ers-2014.zip
+    - year: 2013
+      url: https://www.fiskeridir.no/Tall-og-analyse/AApne-data/elektronisk-rapportering-ers/_/attachment/download/dabe7e59-603c-4553-83ca-f81332ab36c2:ad3229a7f9887cc343990e0ca4834c33d529e386/elektronisk-rapportering-ers-2013.zip
+    - year: 2012
+      url: https://www.fiskeridir.no/Tall-og-analyse/AApne-data/elektronisk-rapportering-ers/_/attachment/download/fab9f6b7-65d8-401c-805f-28d4f21b31ed:6df3611602349b1b9930b03924ef0ddd41bba8c9/elektronisk-rapportering-ers-2012.zip
+    - year: 2011
+      url: https://www.fiskeridir.no/Tall-og-analyse/AApne-data/elektronisk-rapportering-ers/_/attachment/download/04f14bc2-daf3-4e42-8c16-970afbe88290:3e9891ffb23a1092630e76a5dfcbff7dee891008/elektronisk-rapportering-ers-2011.zip

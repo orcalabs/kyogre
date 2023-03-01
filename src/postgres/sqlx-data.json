@@ -267,6 +267,24 @@
     },
     "query": "\nINSERT INTO\n    ais_data_migration_progress (mmsi, progress)\nVALUES\n    ($1, $2)\nON CONFLICT (mmsi) DO\nUPDATE\nSET\n    progress = excluded.progress\n            "
   },
+  "2533e0d68d58e5b97458ffded9ec1c433336e1dc0887df59b0fa80b7f6184c87": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Int8Array",
+          "VarcharArray",
+          "Int4Array",
+          "VarcharArray",
+          "Int4Array",
+          "Int4Array",
+          "Int4Array"
+        ]
+      }
+    },
+    "query": "\nINSERT INTO\n    ers_tra_catches (\n        message_id,\n        ers_quantum_type_id,\n        living_weight,\n        species_fao_id,\n        species_fiskeridir_id,\n        species_group_id,\n        species_main_group_id\n    )\nSELECT\n    *\nFROM\n    UNNEST(\n        $1::BIGINT[],\n        $2::VARCHAR[],\n        $3::INT[],\n        $4::VARCHAR[],\n        $5::INT[],\n        $6::INT[],\n        $7::INT[]\n    )\nON CONFLICT (message_id, species_fao_id) DO NOTHING\n            "
+  },
   "26413798bcb01e60f28bb8810246d0ccbaccbb71b0a22467d90cb6cce37326c2": {
     "describe": {
       "columns": [],
@@ -1824,6 +1842,57 @@
       }
     },
     "query": "\nSELECT\n    species_id AS id,\n    \"name\"\nFROM\n    species\n            "
+  },
+  "fcd827c9a390a80cb6d412c55d9a8d35d25fc6b26602bf5d10e78e1684aa9922": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Int8Array",
+          "DateArray",
+          "Int4Array",
+          "TimeArray",
+          "TimestamptzArray",
+          "VarcharArray",
+          "Int4Array",
+          "Int4Array",
+          "Int4Array",
+          "DateArray",
+          "TimeArray",
+          "TimestamptzArray",
+          "Int4Array",
+          "Int4Array",
+          "VarcharArray",
+          "VarcharArray",
+          "Int4Array",
+          "Int4Array",
+          "Int4Array",
+          "Int4Array",
+          "VarcharArray",
+          "Int4Array",
+          "NumericArray",
+          "VarcharArray",
+          "NumericArray",
+          "VarcharArray",
+          "Int4Array",
+          "VarcharArray",
+          "VarcharArray",
+          "Int4Array",
+          "VarcharArray",
+          "VarcharArray",
+          "VarcharArray",
+          "Int4Array",
+          "Int4Array",
+          "VarcharArray",
+          "VarcharArray",
+          "DateArray",
+          "DateArray",
+          "NumericArray"
+        ]
+      }
+    },
+    "query": "\nINSERT INTO\n    ers_tra (\n        message_id,\n        message_date,\n        message_number,\n        message_time,\n        message_timestamp,\n        ers_message_type_id,\n        message_year,\n        relevant_year,\n        sequence_number,\n        reloading_date,\n        reloading_time,\n        reloading_timestamp,\n        fiskeridir_vessel_id,\n        vessel_building_year,\n        vessel_call_sign,\n        vessel_call_sign_ers,\n        vessel_engine_building_year,\n        vessel_engine_power,\n        vessel_gross_tonnage_1969,\n        vessel_gross_tonnage_other,\n        vessel_county,\n        vessel_county_code,\n        vessel_greatest_length,\n        vessel_identification,\n        vessel_length,\n        vessel_length_group,\n        vessel_length_group_code,\n        vessel_material_code,\n        vessel_municipality,\n        vessel_municipality_code,\n        vessel_name,\n        vessel_name_ers,\n        vessel_nationality_code,\n        fiskeridir_vessel_nationality_group_id,\n        vessel_rebuilding_year,\n        vessel_registration_id,\n        vessel_registration_id_ers,\n        vessel_valid_until,\n        vessel_valid_from,\n        vessel_width\n    )\nSELECT\n    *\nFROM\n    UNNEST(\n        $1::BIGINT[],\n        $2::date[],\n        $3::INT[],\n        $4::TIME[],\n        $5::timestamptz[],\n        $6::VARCHAR[],\n        $7::INT[],\n        $8::INT[],\n        $9::INT[],\n        $10::date[],\n        $11::TIME[],\n        $12::timestamptz[],\n        $13::INT[],\n        $14::INT[],\n        $15::VARCHAR[],\n        $16::VARCHAR[],\n        $17::INT[],\n        $18::INT[],\n        $19::INT[],\n        $20::INT[],\n        $21::VARCHAR[],\n        $22::INT[],\n        $23::DECIMAL[],\n        $24::VARCHAR[],\n        $25::DECIMAL[],\n        $26::VARCHAR[],\n        $27::INT[],\n        $28::VARCHAR[],\n        $29::VARCHAR[],\n        $30::INT[],\n        $31::VARCHAR[],\n        $32::VARCHAR[],\n        $33::VARCHAR[],\n        $34::INT[],\n        $35::INT[],\n        $36::VARCHAR[],\n        $37::VARCHAR[],\n        $38::date[],\n        $39::date[],\n        $40::DECIMAL[]\n    )\nON CONFLICT (message_id) DO NOTHING\n            "
   },
   "fe62186142403a611afecc100fedddfe5931a1ae3a9e8b79a034006156e45955": {
     "describe": {

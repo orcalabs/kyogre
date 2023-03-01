@@ -10,11 +10,13 @@ use std::future::Future;
 mod ers_dca;
 mod ers_dep;
 mod ers_por;
+mod ers_tra;
 mod landings;
 
 pub use ers_dca::*;
 pub use ers_dep::*;
 pub use ers_por::*;
+pub use ers_tra::*;
 pub use landings::*;
 
 pub struct FiskeridirSource {

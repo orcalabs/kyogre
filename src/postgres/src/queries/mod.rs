@@ -10,6 +10,7 @@ pub mod ers_common;
 pub mod ers_dca;
 pub mod ers_dep;
 pub mod ers_por;
+pub mod ers_tra;
 pub mod gear;
 pub mod hash;
 pub mod haul;

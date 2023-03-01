@@ -4,6 +4,7 @@ pub enum FileHash {
     ErsDca,
     ErsDep,
     ErsPor,
+    ErsTra,
 }
 
 #[derive(Debug)]
@@ -16,6 +17,7 @@ impl FileHashId {
             FileHash::ErsDca => FileHashId(format!("ers_{year}")),
             FileHash::ErsDep => FileHashId(format!("ers_dep_{year}")),
             FileHash::ErsPor => FileHashId(format!("ers_por_{year}")),
+            FileHash::ErsTra => FileHashId(format!("ers_tra_{year}")),
         }
     }
 }
