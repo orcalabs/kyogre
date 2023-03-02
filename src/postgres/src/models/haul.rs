@@ -89,10 +89,10 @@ pub struct Haul {
 
 #[derive(Deserialize)]
 pub struct HaulCatch {
-    pub main_species_fao_id: Option<String>,
+    pub main_species_fao_id: String,
     pub main_species_fiskeridir_id: Option<i32>,
-    pub living_weight: Option<i32>,
-    pub species_fao_id: Option<String>,
+    pub living_weight: i32,
+    pub species_fao_id: String,
     pub species_fiskeridir_id: Option<i32>,
     pub species_group_id: Option<i32>,
     pub species_main_group_id: Option<i32>,
@@ -106,7 +106,7 @@ pub struct WhaleCatch {
     pub circumference: Option<i32>,
     pub fetus_length: Option<i32>,
     pub gender_id: Option<i32>,
-    pub grenade_number: Option<String>,
+    pub grenade_number: String,
     pub individual_number: Option<i32>,
     pub length: Option<i32>,
 }

@@ -6,8 +6,7 @@ use crate::{
 };
 use actix_web::web;
 use chrono::{DateTime, Datelike, Duration, NaiveDate, Utc};
-use error_stack::{IntoReport, Report, ResultExt};
-use kyogre_core::{ConversionError, DateRange, HaulsQuery, WhaleGender};
+use kyogre_core::{DateRange, HaulsQuery, WhaleGender};
 use serde::{Deserialize, Serialize};
 use tracing::{event, Level};
 use utoipa::{IntoParams, ToSchema};
@@ -45,12 +44,8 @@ pub async fn hauls<T: Database>(
             ApiError::InternalServerError
         })?
         .into_iter()
-        .map(Haul::try_from)
-        .collect::<Result<Vec<_>, _>>()
-        .map_err(|e| {
-            event!(Level::ERROR, "failed to convert hauls: {:?}", e);
-            ApiError::InternalServerError
-        })?;
+        .map(Haul::from)
+        .collect();
 
     Ok(Response::new(hauls))
 }
@@ -61,8 +56,8 @@ pub struct Haul {
     pub ers_activity_id: String,
     pub duration: i32,
     pub haul_distance: Option<i32>,
-    pub catch_field_start: Option<i32>,
-    pub catch_field_end: Option<i32>,
+    pub catch_field_start: Option<String>,
+    pub catch_field_end: Option<String>,
     pub ocean_depth_end: i32,
     pub ocean_depth_start: i32,
     pub quota_type_id: i32,
@@ -87,8 +82,8 @@ pub struct Haul {
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct HaulCatch {
+    pub living_weight: i32,
     pub main_species_fiskeridir_id: Option<i32>,
-    pub living_weight: Option<i32>,
     pub species_fiskeridir_id: Option<i32>,
     pub species_group_id: Option<i32>,
 }
@@ -102,40 +97,26 @@ pub struct WhaleCatch {
     pub circumference: Option<i32>,
     pub fetus_length: Option<i32>,
     pub gender_id: Option<WhaleGender>,
-    pub grenade_number: Option<String>,
+    pub grenade_number: String,
     pub individual_number: Option<i32>,
     pub length: Option<i32>,
 }
 
-fn concatinate_optional_numbers(
-    a: Option<i32>,
-    b: Option<i32>,
-) -> Result<Option<i32>, Report<ConversionError>> {
-    Ok(match (a, b) {
-        (Some(a), Some(b)) => Some(
-            format!("{a:02}{b:02}")
-                .parse()
-                .into_report()
-                .change_context(ConversionError)
-                .attach_printable_lazy(|| format!("could not concatinate values: {a}, {b}"))?,
-        ),
+fn format_catch_field(a: Option<i32>, b: Option<i32>) -> Option<String> {
+    match (a, b) {
+        (Some(a), Some(b)) => Some(format!("{a:02}-{b:02}")),
         _ => None,
-    })
+    }
 }
 
-impl TryFrom<kyogre_core::Haul> for Haul {
-    type Error = Report<ConversionError>;
-
-    fn try_from(v: kyogre_core::Haul) -> Result<Self, Self::Error> {
-        Ok(Haul {
+impl From<kyogre_core::Haul> for Haul {
+    fn from(v: kyogre_core::Haul) -> Self {
+        Haul {
             ers_activity_id: v.ers_activity_id,
             duration: v.duration,
             haul_distance: v.haul_distance,
-            catch_field_start: concatinate_optional_numbers(
-                v.main_area_start_id,
-                v.location_start_code,
-            )?,
-            catch_field_end: concatinate_optional_numbers(v.main_area_end_id, v.location_end_code)?,
+            catch_field_start: format_catch_field(v.main_area_start_id, v.location_start_code),
+            catch_field_end: format_catch_field(v.main_area_end_id, v.location_end_code),
             ocean_depth_end: v.ocean_depth_end,
             ocean_depth_start: v.ocean_depth_start,
             quota_type_id: v.quota_type_id,
@@ -153,7 +134,7 @@ impl TryFrom<kyogre_core::Haul> for Haul {
             vessel_name_ers: v.vessel_name_ers,
             catches: v.catches.into_iter().map(HaulCatch::from).collect(),
             whale_catches: v.whale_catches.into_iter().map(WhaleCatch::from).collect(),
-        })
+        }
     }
 }
 

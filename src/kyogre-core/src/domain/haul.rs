@@ -85,10 +85,10 @@ pub struct Haul {
 #[derive(Debug, Clone)]
 #[remain::sorted]
 pub struct HaulCatch {
-    pub living_weight: Option<i32>,
-    pub main_species_fao_id: Option<String>,
+    pub living_weight: i32,
+    pub main_species_fao_id: String,
     pub main_species_fiskeridir_id: Option<i32>,
-    pub species_fao_id: Option<String>,
+    pub species_fao_id: String,
     pub species_fiskeridir_id: Option<i32>,
     pub species_group_id: Option<i32>,
     pub species_main_group_id: Option<i32>,
@@ -103,7 +103,7 @@ pub struct WhaleCatch {
     pub circumference: Option<i32>,
     pub fetus_length: Option<i32>,
     pub gender_id: Option<WhaleGender>,
-    pub grenade_number: Option<String>,
+    pub grenade_number: String,
     pub individual_number: Option<i32>,
     pub length: Option<i32>,
 }
