@@ -4228,6 +4228,7 @@ dependencies = [
  "chrono",
  "config",
  "dockertest",
+ "error-stack 0.3.1",
  "fiskeridir-rs",
  "futures",
  "kyogre-core",
