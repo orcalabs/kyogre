@@ -27,10 +27,10 @@ async fn main() {
 
     let app = App::build(&settings).await;
 
-    let span = span!(Level::TRACE, "ais_consumer");
+    let span = span!(Level::TRACE, "fishery_api");
     let _enter = span.enter();
 
-    event!(Level::INFO, "starting ais_consumer...");
+    event!(Level::INFO, "starting fishery_api...");
 
     app.run().await.unwrap();
 }

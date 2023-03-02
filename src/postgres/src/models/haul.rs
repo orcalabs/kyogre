@@ -1,35 +1,18 @@
 use bigdecimal::{BigDecimal, FromPrimitive};
 use chrono::{DateTime, NaiveDate, NaiveTime, Utc};
-use error_stack::{report, IntoReport, Report, ResultExt};
-use kyogre_core::{FiskdirVesselNationalityGroup, WhaleGender};
+use error_stack::{IntoReport, Report, ResultExt};
+use kyogre_core::WhaleGender;
 use serde::Deserialize;
 
 use crate::{
     error::{PostgresError, WhaleGenderError},
-    queries::{decimal_to_float, opt_decimal_to_float},
+    queries::decimal_to_float,
 };
 
 pub struct Haul {
-    pub message_id: i64,
-    pub message_date: NaiveDate,
-    pub message_number: i32,
-    pub message_time: NaiveTime,
-    pub message_timestamp: DateTime<Utc>,
-    pub ers_message_type_id: String,
-    pub message_year: i32,
-    pub relevant_year: i32,
-    pub sequence_number: Option<i32>,
-    pub message_version: i32,
     pub ers_activity_id: String,
-    pub area_grouping_end_id: Option<String>,
-    pub area_grouping_start_id: Option<String>,
-    pub call_sign_of_loading_vessel: Option<String>,
-    pub catch_year: Option<i32>,
     pub duration: i32,
-    pub economic_zone_id: Option<String>,
     pub haul_distance: Option<i32>,
-    pub herring_population_id: Option<String>,
-    pub herring_population_fiskeridir_id: Option<i32>,
     pub location_end_code: Option<i32>,
     pub location_start_code: Option<i32>,
     pub main_area_end_id: Option<i32>,
@@ -47,44 +30,14 @@ pub struct Haul {
     pub stop_longitude: BigDecimal,
     pub stop_time: NaiveTime,
     pub stop_timestamp: DateTime<Utc>,
-    pub gear_amount: Option<i32>,
-    pub gear_fao_id: Option<String>,
     pub gear_fiskeridir_id: Option<i32>,
-    pub gear_group_id: Option<i32>,
-    pub gear_main_group_id: Option<i32>,
-    pub gear_mesh_width: Option<i32>,
-    pub gear_problem_id: Option<i32>,
-    pub gear_specification_id: Option<i32>,
-    pub port_id: Option<String>,
     pub fiskeridir_vessel_id: Option<i64>,
-    pub vessel_building_year: Option<i32>,
     pub vessel_call_sign: Option<String>,
     pub vessel_call_sign_ers: String,
-    pub vessel_engine_building_year: Option<i32>,
-    pub vessel_engine_power: Option<i32>,
-    pub vessel_gross_tonnage_1969: Option<i32>,
-    pub vessel_gross_tonnage_other: Option<i32>,
-    pub vessel_county: Option<String>,
-    pub vessel_county_code: Option<i32>,
-    pub vessel_greatest_length: Option<BigDecimal>,
-    pub vessel_identification: String,
-    pub vessel_length: BigDecimal,
-    pub vessel_length_group: Option<String>,
-    pub vessel_length_group_code: Option<i32>,
-    pub vessel_material_code: Option<String>,
-    pub vessel_municipality: Option<String>,
-    pub vessel_municipality_code: Option<i32>,
     pub vessel_name: Option<String>,
     pub vessel_name_ers: Option<String>,
-    pub vessel_nationality_code: String,
-    pub vessel_nationality_group_id: i32,
-    pub vessel_rebuilding_year: Option<i32>,
-    pub vessel_registration_id: Option<String>,
-    pub vessel_registration_id_ers: Option<String>,
-    pub vessel_valid_until: Option<NaiveDate>,
-    pub vessel_width: Option<BigDecimal>,
-    pub catches: serde_json::Value,
-    pub whale_catches: serde_json::Value,
+    pub catches: String,
+    pub whale_catches: String,
 }
 
 #[derive(Deserialize)]
@@ -116,26 +69,9 @@ impl TryFrom<Haul> for kyogre_core::Haul {
 
     fn try_from(v: Haul) -> Result<Self, Self::Error> {
         Ok(Self {
-            message_id: v.message_id,
-            message_date: v.message_date,
-            message_number: v.message_number,
-            message_time: v.message_time,
-            message_timestamp: v.message_timestamp,
-            ers_message_type_id: v.ers_message_type_id,
-            message_year: v.message_year,
-            relevant_year: v.relevant_year,
-            sequence_number: v.sequence_number,
-            message_version: v.message_version,
             ers_activity_id: v.ers_activity_id,
-            area_grouping_end_id: v.area_grouping_end_id,
-            area_grouping_start_id: v.area_grouping_start_id,
-            call_sign_of_loading_vessel: v.call_sign_of_loading_vessel,
-            catch_year: v.catch_year,
             duration: v.duration,
-            economic_zone_id: v.economic_zone_id,
             haul_distance: v.haul_distance,
-            herring_population_id: v.herring_population_id,
-            herring_population_fiskeridir_id: v.herring_population_fiskeridir_id,
             location_end_code: v.location_end_code,
             location_start_code: v.location_start_code,
             main_area_end_id: v.main_area_end_id,
@@ -157,60 +93,24 @@ impl TryFrom<Haul> for kyogre_core::Haul {
                 .change_context(PostgresError::DataConversion)?,
             stop_time: v.stop_time,
             stop_timestamp: v.stop_timestamp,
-            gear_amount: v.gear_amount,
-            gear_fao_id: v.gear_fao_id,
             gear_fiskeridir_id: v.gear_fiskeridir_id,
-            gear_group_id: v.gear_group_id,
-            gear_main_group_id: v.gear_main_group_id,
-            gear_mesh_width: v.gear_mesh_width,
-            gear_problem_id: v.gear_problem_id,
-            gear_specification_id: v.gear_specification_id,
-            port_id: v.port_id,
             fiskeridir_vessel_id: v.fiskeridir_vessel_id,
-            vessel_building_year: v.vessel_building_year,
             vessel_call_sign: v.vessel_call_sign,
             vessel_call_sign_ers: v.vessel_call_sign_ers,
-            vessel_engine_building_year: v.vessel_engine_building_year,
-            vessel_engine_power: v.vessel_engine_power,
-            vessel_gross_tonnage_1969: v.vessel_gross_tonnage_1969,
-            vessel_gross_tonnage_other: v.vessel_gross_tonnage_other,
-            vessel_county: v.vessel_county,
-            vessel_county_code: v.vessel_county_code,
-            vessel_greatest_length: opt_decimal_to_float(v.vessel_greatest_length)
-                .change_context(PostgresError::DataConversion)?,
-            vessel_identification: v.vessel_identification,
-            vessel_length: decimal_to_float(v.vessel_length)
-                .change_context(PostgresError::DataConversion)?,
-            vessel_length_group: v.vessel_length_group,
-            vessel_length_group_code: v.vessel_length_group_code,
-            vessel_material_code: v.vessel_material_code,
-            vessel_municipality: v.vessel_municipality,
-            vessel_municipality_code: v.vessel_municipality_code,
             vessel_name: v.vessel_name,
             vessel_name_ers: v.vessel_name_ers,
-            vessel_nationality_code: v.vessel_nationality_code,
-            vessel_nationality_group_id: FiskdirVesselNationalityGroup::from_i32(
-                v.vessel_nationality_group_id,
-            )
-            .ok_or_else(|| report!(PostgresError::DataConversion))?,
-            vessel_rebuilding_year: v.vessel_rebuilding_year,
-            vessel_registration_id: v.vessel_registration_id,
-            vessel_registration_id_ers: v.vessel_registration_id_ers,
-            vessel_valid_until: v.vessel_valid_until,
-            vessel_width: opt_decimal_to_float(v.vessel_width)
-                .change_context(PostgresError::DataConversion)?,
-            catches: serde_json::from_value::<Vec<HaulCatch>>(v.catches)
+            catches: serde_json::from_str::<Vec<HaulCatch>>(&v.catches)
                 .into_report()
                 .change_context(PostgresError::DataConversion)?
                 .into_iter()
                 .map(kyogre_core::HaulCatch::try_from)
-                .collect::<Result<Vec<_>, Report<PostgresError>>>()?,
-            whale_catches: serde_json::from_value::<Vec<WhaleCatch>>(v.whale_catches)
+                .collect::<Result<_, _>>()?,
+            whale_catches: serde_json::from_str::<Vec<WhaleCatch>>(&v.whale_catches)
                 .into_report()
                 .change_context(PostgresError::DataConversion)?
                 .into_iter()
                 .map(kyogre_core::WhaleCatch::try_from)
-                .collect::<Result<Vec<_>, Report<PostgresError>>>()?,
+                .collect::<Result<_, _>>()?,
         })
     }
 }
