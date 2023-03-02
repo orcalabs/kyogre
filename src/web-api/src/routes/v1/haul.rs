@@ -6,7 +6,8 @@ use crate::{
 };
 use actix_web::web;
 use chrono::{DateTime, Datelike, Duration, NaiveDate, Utc};
-use kyogre_core::{DateRange, HaulsQuery, WhaleGender};
+use error_stack::{IntoReport, Report, ResultExt};
+use kyogre_core::{ConversionError, DateRange, HaulsQuery, WhaleGender};
 use serde::{Deserialize, Serialize};
 use tracing::{event, Level};
 use utoipa::{IntoParams, ToSchema};
@@ -44,8 +45,12 @@ pub async fn hauls<T: Database>(
             ApiError::InternalServerError
         })?
         .into_iter()
-        .map(Haul::from)
-        .collect();
+        .map(Haul::try_from)
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| {
+            event!(Level::ERROR, "failed to convert hauls: {:?}", e);
+            ApiError::InternalServerError
+        })?;
 
     Ok(Response::new(hauls))
 }
@@ -54,23 +59,21 @@ pub async fn hauls<T: Database>(
 #[serde(rename_all = "camelCase")]
 pub struct Haul {
     pub ers_activity_id: String,
-    pub duration: Option<i32>,
+    pub duration: i32,
     pub haul_distance: Option<i32>,
-    pub location_end_code: Option<i32>,
-    pub location_start_code: Option<i32>,
-    pub main_area_end_id: Option<i32>,
-    pub main_area_start_id: Option<i32>,
-    pub ocean_depth_end: Option<i32>,
-    pub ocean_depth_start: Option<i32>,
+    pub catch_field_start: Option<i32>,
+    pub catch_field_end: Option<i32>,
+    pub ocean_depth_end: i32,
+    pub ocean_depth_start: i32,
     pub quota_type_id: i32,
-    pub start_latitude: Option<f64>,
-    pub start_longitude: Option<f64>,
-    #[schema(value_type = Option<String>, example = "2023-02-24T11:08:20.409416682Z")]
-    pub start_timestamp: Option<DateTime<Utc>>,
-    pub stop_latitude: Option<f64>,
-    pub stop_longitude: Option<f64>,
-    #[schema(value_type = Option<String>, example = "2023-02-24T11:08:20.409416682Z")]
-    pub stop_timestamp: Option<DateTime<Utc>>,
+    pub start_latitude: f64,
+    pub start_longitude: f64,
+    #[schema(value_type = String, example = "2023-02-24T11:08:20.409416682Z")]
+    pub start_timestamp: DateTime<Utc>,
+    pub stop_latitude: f64,
+    pub stop_longitude: f64,
+    #[schema(value_type = String, example = "2023-02-24T11:08:20.409416682Z")]
+    pub stop_timestamp: DateTime<Utc>,
     pub gear_fiskeridir_id: Option<i32>,
     pub fiskeridir_vessel_id: Option<i64>,
     pub vessel_call_sign: Option<String>,
@@ -104,16 +107,35 @@ pub struct WhaleCatch {
     pub length: Option<i32>,
 }
 
-impl From<kyogre_core::Haul> for Haul {
-    fn from(v: kyogre_core::Haul) -> Self {
-        Haul {
+fn concatinate_optional_numbers(
+    a: Option<i32>,
+    b: Option<i32>,
+) -> Result<Option<i32>, Report<ConversionError>> {
+    Ok(match (a, b) {
+        (Some(a), Some(b)) => Some(
+            format!("{a:02}{b:02}")
+                .parse()
+                .into_report()
+                .change_context(ConversionError)
+                .attach_printable_lazy(|| format!("could not concatinate values: {a}, {b}"))?,
+        ),
+        _ => None,
+    })
+}
+
+impl TryFrom<kyogre_core::Haul> for Haul {
+    type Error = Report<ConversionError>;
+
+    fn try_from(v: kyogre_core::Haul) -> Result<Self, Self::Error> {
+        Ok(Haul {
             ers_activity_id: v.ers_activity_id,
             duration: v.duration,
             haul_distance: v.haul_distance,
-            location_end_code: v.location_end_code,
-            location_start_code: v.location_start_code,
-            main_area_end_id: v.main_area_end_id,
-            main_area_start_id: v.main_area_start_id,
+            catch_field_start: concatinate_optional_numbers(
+                v.main_area_start_id,
+                v.location_start_code,
+            )?,
+            catch_field_end: concatinate_optional_numbers(v.main_area_end_id, v.location_end_code)?,
             ocean_depth_end: v.ocean_depth_end,
             ocean_depth_start: v.ocean_depth_start,
             quota_type_id: v.quota_type_id,
@@ -131,7 +153,7 @@ impl From<kyogre_core::Haul> for Haul {
             vessel_name_ers: v.vessel_name_ers,
             catches: v.catches.into_iter().map(HaulCatch::from).collect(),
             whale_catches: v.whale_catches.into_iter().map(WhaleCatch::from).collect(),
-        }
+        })
     }
 }
 
