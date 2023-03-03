@@ -31,6 +31,7 @@ tracing = "0.1.37"
 async-trait = "0.1.66"
 serde_json = "1.0.94"
 serde = { version = "1.0.152", features = ["derive"] }
+futures = "0.3.26"
 
 [dev-dependencies]
 rand = "0.8.5"
@@ -38,5 +39,4 @@ dockertest = { version = "0.3.1", registry = "orcalabs-orcastrator" }
 orca-core = { version = "0.20.0", registry = "orcalabs-orcastrator", features = [
     "dockertest",
 ] }
-futures = "0.3.26"
 tokio = { version = "1.26.0", features = ["rt-multi-thread", "macros"] }

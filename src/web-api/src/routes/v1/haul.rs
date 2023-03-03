@@ -1,11 +1,13 @@
 use crate::{
     error::ApiError,
-    response::Response,
     routes::utils::{deserialize_string_list, DateTimeUtc},
     Database,
 };
-use actix_web::web;
+use actix_web::{web, HttpResponse};
+use async_stream::{__private::AsyncStream, try_stream};
 use chrono::{DateTime, Datelike, Duration, NaiveDate, Utc};
+use error_stack::IntoReport;
+use futures::StreamExt;
 use kyogre_core::{DateRange, HaulsQuery, WhaleGender};
 use serde::{Deserialize, Serialize};
 use tracing::{event, Level};
@@ -30,24 +32,70 @@ pub struct HaulsParams {
     )
 )]
 #[tracing::instrument(skip(db))]
-pub async fn hauls<T: Database>(
+pub async fn hauls<T: Database + 'static>(
     db: web::Data<T>,
     params: web::Query<HaulsParams>,
-) -> Result<Response<Vec<Haul>>, ApiError> {
+) -> HttpResponse {
     let query = params.into_inner().into();
 
-    let hauls = db
-        .hauls(query)
-        .await
-        .map_err(|e| {
-            event!(Level::ERROR, "failed to retrieve hauls: {:?}", e);
-            ApiError::InternalServerError
-        })?
-        .into_iter()
-        .map(Haul::from)
-        .collect();
+    let stream: AsyncStream<Result<web::Bytes, ApiError>, _> = try_stream! {
 
-    Ok(Response::new(hauls))
+        let mut stream = db.hauls(query).map(|haul| match haul {
+            Ok(h) => Ok(Haul::from(h)),
+            Err(e) => {
+                event!(Level::ERROR, "failed to retrieve hauls: {:?}", e);
+                Err(ApiError::InternalServerError)
+            }
+        });
+
+        yield web::Bytes::from_static(b"[");
+
+        let mut count = 0;
+        let mut first = true;
+        while let Some(item) = stream.next().await {
+            let item =  item?;
+            let test = serde_json::to_vec(&item).into_report();
+            match test {
+                Ok(bytes) => {
+                    if count > 1000 {
+                    // Err(ApiError::InternalServerError)?;
+                    }
+                    count += 1;
+                    if !first {
+                        yield web::Bytes::from_static(b",");
+                    }
+                    first = false;
+                    yield web::Bytes::from(bytes);
+                }
+                Err(e) => {
+                    event!(Level::ERROR, "failed to serialize item: {:?}", e);
+                    Err(ApiError::InternalServerError)?;
+                }
+            }
+        }
+
+        yield web::Bytes::from_static(b"]");
+    };
+
+    HttpResponse::Ok().streaming(Box::pin(stream))
+
+    // Alternate solution where the result is collected into a `Vec`, and then returned
+
+    // let mut stream = db._hauls(query);
+
+    // let mut vec = Vec::new();
+
+    // while let Some(h) = stream.next().await {
+    //     match h {
+    //         Ok(h) => vec.push(h.into()),
+    //         Err(e) => {
+    //             event!(Level::ERROR, "failed to retrieve hauls: {:?}", e);
+    //             return Err(ApiError::InternalServerError);
+    //         }
+    //     }
+    // }
+
+    // Ok(Response::new(vec))
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
