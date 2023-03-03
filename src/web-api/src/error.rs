@@ -8,6 +8,8 @@ pub enum ApiError {
     InternalServerError,
 }
 
+impl std::error::Error for ApiError {}
+
 #[derive(Serialize, ToSchema)]
 pub struct ErrorResponse {
     error: ApiError,

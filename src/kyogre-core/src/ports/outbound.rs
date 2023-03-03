@@ -1,7 +1,10 @@
+use std::pin::Pin;
+
 use crate::*;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use error_stack::Result;
+use futures::Stream;
 
 #[async_trait]
 pub trait AisMigratorSource {
@@ -26,7 +29,10 @@ pub trait WebApiPort {
     async fn species_main_groups(&self) -> Result<Vec<SpeciesMainGroup>, QueryError>;
     async fn species_fao(&self) -> Result<Vec<SpeciesFao>, QueryError>;
     async fn vessels(&self) -> Result<Vec<Vessel>, QueryError>;
-    async fn hauls(&self, query: HaulsQuery) -> Result<Vec<Haul>, QueryError>;
+    fn hauls(
+        &self,
+        query: HaulsQuery,
+    ) -> Pin<Box<dyn Stream<Item = Result<Haul, QueryError>> + '_>>;
 }
 
 #[async_trait]

@@ -5,14 +5,14 @@ use crate::{
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use error_stack::{IntoReport, Report, Result, ResultExt};
+use futures::{Stream, StreamExt};
 use kyogre_core::*;
 use orca_core::{PsqlLogStatements, PsqlSettings};
 use sqlx::{
-    pool::PoolConnection,
     postgres::{PgConnectOptions, PgPoolOptions, PgSslMode},
     ConnectOptions, PgPool,
 };
-use std::collections::HashMap;
+use std::{collections::HashMap, pin::Pin};
 use tracing::{event, instrument, Level};
 
 #[derive(Debug, Clone)]
@@ -292,9 +292,16 @@ impl WebApiPort for PostgresAdapter {
         convert_models(vessel_combinations).change_context(QueryError)
     }
 
-    async fn hauls(&self, query: HaulsQuery) -> Result<Vec<Haul>, QueryError> {
-        let hauls = self.hauls(query).await.change_context(QueryError)?;
-        convert_models(hauls).change_context(QueryError)
+    fn hauls(
+        &self,
+        query: HaulsQuery,
+    ) -> Pin<Box<dyn Stream<Item = Result<Haul, QueryError>> + '_>> {
+        self.hauls(query)
+            .map(|h| match h {
+                Ok(h) => Haul::try_from(h).change_context(QueryError),
+                Err(e) => Err(e.change_context(QueryError)),
+            })
+            .boxed()
     }
 }
 

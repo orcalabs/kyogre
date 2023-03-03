@@ -1831,6 +1831,7 @@ dependencies = [
  "chrono-tz",
  "error-stack 0.3.1",
  "fiskeridir-rs",
+ "futures",
  "num-derive",
  "num-traits",
  "rand",
@@ -4254,6 +4255,7 @@ version = "0.1.0"
 dependencies = [
  "actix-cors",
  "actix-web",
+ "async-stream",
  "async-trait",
  "chrono",
  "config",

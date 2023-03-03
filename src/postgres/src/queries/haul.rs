@@ -1,14 +1,16 @@
 use std::ops::Bound;
 
 use crate::{error::PostgresError, models::Haul, PostgresAdapter};
-use error_stack::{IntoReport, Result, ResultExt};
+use error_stack::{report, Result};
+use futures::{Stream, TryStreamExt};
 use kyogre_core::HaulsQuery;
 use sqlx::postgres::types::PgRange;
 
 impl PostgresAdapter {
-    pub(crate) async fn hauls(&self, query: HaulsQuery) -> Result<Vec<Haul>, PostgresError> {
-        let mut conn = self.acquire().await?;
-
+    pub(crate) fn hauls(
+        &self,
+        query: HaulsQuery,
+    ) -> impl Stream<Item = Result<Haul, PostgresError>> + '_ {
         let ranges = query.ranges.map(|ranges| {
             ranges
                 .into_iter()
@@ -61,9 +63,7 @@ WHERE
             "#,
             ranges
         )
-        .fetch_all(&mut conn)
-        .await
-        .into_report()
-        .change_context(PostgresError::Query)
+        .fetch(&self.pool)
+        .map_err(|e| report!(e).change_context(PostgresError::Query))
     }
 }
