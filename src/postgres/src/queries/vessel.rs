@@ -125,8 +125,6 @@ ON CONFLICT (fiskeridir_vessel_id) DO NOTHING
     pub(crate) async fn fiskeridir_ais_vessel_combinations(
         &self,
     ) -> Result<Vec<FiskeridirAisVesselCombination>, PostgresError> {
-        let mut conn = self.acquire().await?;
-
         sqlx::query_as!(
             FiskeridirAisVesselCombination,
             r#"
@@ -163,7 +161,7 @@ FROM
     LEFT JOIN ais_vessels AS a ON f.call_sign = a.call_sign
             "#
         )
-        .fetch_all(&mut conn)
+        .fetch_all(&self.pool)
         .await
         .into_report()
         .change_context(PostgresError::Query)

@@ -65,14 +65,6 @@ impl AisMigratorSource for LeviathanPostgresAdapter {
         start: DateTime<Utc>,
         end: DateTime<Utc>,
     ) -> Result<Vec<AisPosition>, QueryError> {
-        let mut conn = self
-            .pool
-            .acquire()
-            .await
-            .into_report()
-            .change_context(PostgresError::Transaction)
-            .change_context(kyogre_core::QueryError)?;
-
         let positions: Vec<crate::models::AisPosition> = sqlx::query_as(
             "SELECT
                 mmsi, latitude, longitude, time, speed, course_over_ground,
@@ -87,7 +79,7 @@ impl AisMigratorSource for LeviathanPostgresAdapter {
         .bind(mmsi)
         .bind(start)
         .bind(end)
-        .fetch_all(&mut conn)
+        .fetch_all(&self.pool)
         .await
         .into_report()
         .change_context(PostgresError::Transaction)
@@ -104,16 +96,8 @@ impl AisMigratorSource for LeviathanPostgresAdapter {
     }
 
     async fn existing_mmsis(&self) -> Result<Vec<i32>, QueryError> {
-        let mut conn = self
-            .pool
-            .acquire()
-            .await
-            .into_report()
-            .change_context(PostgresError::Transaction)
-            .change_context(kyogre_core::QueryError)?;
-
         let mmsis: Vec<i32> = sqlx::query("SELECT mmsi FROM mmsis")
-            .fetch_all(&mut conn)
+            .fetch_all(&self.pool)
             .await
             .into_report()
             .change_context(PostgresError::Transaction)
