@@ -564,10 +564,8 @@ ON CONFLICT (herring_population_id) DO NOTHING
     }
 
     pub(crate) async fn delete_ers_dca_impl(&self) -> Result<(), PostgresError> {
-        let mut conn = self.acquire().await?;
-
         sqlx::query("DELETE FROM ers_dca")
-            .execute(&mut conn)
+            .execute(&self.pool)
             .await
             .into_report()
             .change_context(PostgresError::Query)?;

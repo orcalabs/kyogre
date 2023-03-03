@@ -17,9 +17,8 @@ pub struct TestDb {
 impl TestDb {
     pub async fn drop_db(&self, db_name: &str) {
         {
-            let mut conn = self.db.pool.acquire().await.unwrap();
             sqlx::query(&format!("DROP DATABASE \"{db_name}\" WITH (FORCE);"))
-                .execute(&mut conn)
+                .execute(&self.db.pool)
                 .await
                 .unwrap();
         }
@@ -27,8 +26,6 @@ impl TestDb {
     }
 
     pub async fn all_ais_positions(&self) -> Vec<AisPosition> {
-        let mut conn = self.db.pool.acquire().await.unwrap();
-
         let positions = sqlx::query_as!(
             crate::models::AisPosition,
             r#"
@@ -47,7 +44,7 @@ FROM
     ais_positions
             "#
         )
-        .fetch_all(&mut conn)
+        .fetch_all(&self.db.pool)
         .await
         .unwrap();
 
@@ -62,8 +59,6 @@ FROM
     }
 
     pub async fn all_current_ais_positions(&self) -> Vec<AisPosition> {
-        let mut conn = self.db.pool.acquire().await.unwrap();
-
         let positions = sqlx::query_as!(
             crate::models::AisPosition,
             r#"
@@ -82,7 +77,7 @@ FROM
     current_ais_positions
             "#
         )
-        .fetch_all(&mut conn)
+        .fetch_all(&self.db.pool)
         .await
         .unwrap();
 
@@ -97,8 +92,6 @@ FROM
     }
 
     pub async fn all_ais_vessels(&self) -> Vec<AisVessel> {
-        let mut conn = self.db.pool.acquire().await.unwrap();
-
         let positions = sqlx::query_as!(
             crate::models::AisVessel,
             r#"
@@ -115,7 +108,7 @@ FROM
     ais_vessels
             "#
         )
-        .fetch_all(&mut conn)
+        .fetch_all(&self.db.pool)
         .await
         .unwrap();
 
@@ -130,9 +123,8 @@ FROM
     }
 
     pub async fn create_test_database_from_template(&self, db_name: &str) {
-        let mut conn = self.db.pool.acquire().await.unwrap();
         sqlx::query(&format!("CREATE DATABASE \"{db_name}\" TEMPLATE postgres;",))
-            .execute(&mut conn)
+            .execute(&self.db.pool)
             .await
             .unwrap();
     }

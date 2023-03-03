@@ -199,14 +199,6 @@ impl PostgresAdapter {
         }
     }
 
-    pub(crate) async fn acquire(&self) -> Result<PoolConnection<sqlx::Postgres>, PostgresError> {
-        self.pool
-            .acquire()
-            .await
-            .into_report()
-            .change_context(PostgresError::Connection)
-    }
-
     pub(crate) async fn begin(
         &self,
     ) -> Result<sqlx::Transaction<'_, sqlx::Postgres>, PostgresError> {
@@ -214,7 +206,7 @@ impl PostgresAdapter {
             .begin()
             .await
             .into_report()
-            .change_context(PostgresError::Connection)
+            .change_context(PostgresError::Transaction)
     }
 }
 

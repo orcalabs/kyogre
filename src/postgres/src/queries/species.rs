@@ -182,8 +182,6 @@ SET
     }
 
     pub(crate) async fn species_groups_impl(&self) -> Result<Vec<SpeciesGroup>, PostgresError> {
-        let mut conn = self.acquire().await?;
-
         sqlx::query_as!(
             SpeciesGroup,
             r#"
@@ -194,7 +192,7 @@ FROM
     species_groups
             "#,
         )
-        .fetch_all(&mut conn)
+        .fetch_all(&self.pool)
         .await
         .into_report()
         .change_context(PostgresError::Query)
@@ -203,8 +201,6 @@ FROM
     pub(crate) async fn species_fiskeridir_impl(
         &self,
     ) -> Result<Vec<SpeciesFiskeridir>, PostgresError> {
-        let mut conn = self.acquire().await?;
-
         sqlx::query_as!(
             SpeciesFiskeridir,
             r#"
@@ -215,7 +211,7 @@ FROM
     species_fiskeridir
             "#,
         )
-        .fetch_all(&mut conn)
+        .fetch_all(&self.pool)
         .await
         .into_report()
         .change_context(PostgresError::Query)
@@ -224,8 +220,6 @@ FROM
     pub(crate) async fn species_main_groups_impl(
         &self,
     ) -> Result<Vec<SpeciesMainGroup>, PostgresError> {
-        let mut conn = self.acquire().await?;
-
         sqlx::query_as!(
             SpeciesMainGroup,
             r#"
@@ -236,15 +230,13 @@ FROM
     species_main_groups
             "#,
         )
-        .fetch_all(&mut conn)
+        .fetch_all(&self.pool)
         .await
         .into_report()
         .change_context(PostgresError::Query)
     }
 
     pub(crate) async fn species_impl(&self) -> Result<Vec<Species>, PostgresError> {
-        let mut conn = self.acquire().await?;
-
         sqlx::query_as!(
             Species,
             r#"
@@ -255,15 +247,13 @@ FROM
     species
             "#,
         )
-        .fetch_all(&mut conn)
+        .fetch_all(&self.pool)
         .await
         .into_report()
         .change_context(PostgresError::Query)
     }
 
     pub(crate) async fn species_fao_impl(&self) -> Result<Vec<SpeciesFao>, PostgresError> {
-        let mut conn = self.acquire().await?;
-
         sqlx::query_as!(
             SpeciesFao,
             r#"
@@ -274,7 +264,7 @@ FROM
     species_fao
             "#,
         )
-        .fetch_all(&mut conn)
+        .fetch_all(&self.pool)
         .await
         .into_report()
         .change_context(PostgresError::Query)

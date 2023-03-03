@@ -32,8 +32,6 @@ VALUES
         id: &FileHashId,
         hash: &str,
     ) -> Result<HashDiff, PostgresError> {
-        let mut conn = self.acquire().await?;
-
         struct ExistingHash {
             hash: String,
         }
@@ -50,7 +48,7 @@ WHERE
             "#,
             id.as_ref(),
         )
-        .fetch_optional(&mut conn)
+        .fetch_optional(&self.pool)
         .await
         .into_report()
         .change_context(PostgresError::Query)?;

@@ -17,13 +17,6 @@ impl PostgresAdapter {
         mmsi: i32,
         range: &DateRange,
     ) -> Result<Vec<AisPosition>, PostgresError> {
-        let mut conn = self
-            .ais_pool
-            .acquire()
-            .await
-            .into_report()
-            .change_context(PostgresError::Connection)?;
-
         sqlx::query_as!(
             AisPosition,
             r#"
@@ -50,7 +43,7 @@ ORDER BY
             range.start(),
             range.end(),
         )
-        .fetch_all(&mut conn)
+        .fetch_all(&self.ais_pool)
         .await
         .into_report()
         .change_context(PostgresError::Query)
@@ -347,8 +340,6 @@ SET
         &self,
         migration_end_threshold: &DateTime<Utc>,
     ) -> Result<Vec<AisVesselMigrate>, PostgresError> {
-        let mut conn = self.acquire().await?;
-
         Ok(sqlx::query_as!(
             crate::models::AisVesselMigrationProgress,
             r#"
@@ -362,7 +353,7 @@ WHERE
             "#,
             migration_end_threshold
         )
-        .fetch_all(&mut conn)
+        .fetch_all(&self.pool)
         .await
         .into_report()
         .change_context(PostgresError::Query)?
