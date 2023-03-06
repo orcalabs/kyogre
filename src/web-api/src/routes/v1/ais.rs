@@ -1,6 +1,13 @@
-use crate::{error::ApiError, response::Response, Database};
-use actix_web::web::{self, Path};
+use std::pin::Pin;
+
+use crate::{error::ApiError, response::to_bytes, Database};
+use actix_web::{
+    web::{self, Path},
+    HttpResponse,
+};
+use async_stream::{__private::AsyncStream, try_stream};
 use chrono::{DateTime, Duration, Utc};
+use futures::{StreamExt, TryStreamExt};
 use kyogre_core::DateRange;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
@@ -28,11 +35,11 @@ pub struct AisTrackParameters {
     )
 )]
 #[tracing::instrument(skip(db))]
-pub async fn ais_track<T: Database>(
+pub async fn ais_track<T: Database + 'static>(
     db: web::Data<T>,
     params: web::Query<AisTrackParameters>,
     mmsi: Path<i32>,
-) -> Result<Response<Vec<AisPosition>>, ApiError> {
+) -> Result<HttpResponse, ApiError> {
     let (start, end) = match (params.start, params.end) {
         (None, None) => {
             let end = chrono::Utc::now();
@@ -48,18 +55,69 @@ pub async fn ais_track<T: Database>(
         ApiError::InvalidDateRange
     })?;
 
-    let positions = db
-        .ais_positions(mmsi.into_inner(), &range)
-        .await
-        .map_err(|e| {
-            event!(Level::ERROR, "failed to retrieve ais positions: {:?}", e);
-            ApiError::InternalServerError
-        })?
-        .into_iter()
-        .map(AisPosition::from)
-        .collect();
+    let stream: AsyncStream<Result<web::Bytes, ApiError>, _> = try_stream! {
+        let mut stream = db
+            .ais_positions(mmsi.into_inner(), &range)
+            .map_err(|e| {
+                event!(Level::ERROR, "failed to retrieve ais positions: {:?}", e);
+                ApiError::InternalServerError
+            })
+            .peekable();
 
-    Ok(Response::new(create_ais_track(positions)))
+        yield web::Bytes::from_static(b"[");
+
+        if let Some(first) = stream.next().await {
+            let pos = AisPosition::from(first?);
+            yield to_bytes(&pos)?;
+
+            let mut current_detail_timstamp = pos.timestamp;
+
+            while let Some(item) = stream.next().await {
+                yield web::Bytes::from_static(b",");
+
+                let item = item?;
+                let next = Pin::new(&mut stream).peek().await;
+
+                let position = if next.is_none()
+                    || (item.msgtime - current_detail_timstamp >= *AIS_DETAILS_INTERVAL)
+                {
+                    let mut pos = AisPosition::from(item);
+
+                    if let Some(next) = next {
+                        if next.is_err() {
+                            // Error has already been logged in `map_err` above
+                            Err(ApiError::InternalServerError)?
+                        }
+
+                        // `unwrap` is safe because of `is_err` check above
+                        if next.as_ref().unwrap().msgtime - pos.timestamp >= *MISSING_DATA_DURATION
+                        {
+                            if let Some(ref mut det) = pos.det {
+                                det.missing_data = true;
+                            }
+                        }
+                    }
+
+                    current_detail_timstamp = pos.timestamp;
+                    pos
+                } else {
+                    AisPosition {
+                        lat: item.latitude,
+                        lon: item.longitude,
+                        cog: item.course_over_ground,
+                        timestamp: item.msgtime,
+                        det: None,
+                    }
+                };
+
+                yield to_bytes(&position)?;
+            }
+        };
+
+        yield web::Bytes::from_static(b"]");
+    };
+
+    Ok(HttpResponse::Ok().streaming(Box::pin(stream)))
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema)]
@@ -100,49 +158,6 @@ impl From<kyogre_core::AisPosition> for AisPosition {
             }),
         }
     }
-}
-
-// Positions are assumed to be sorted in ascending order based on their timestamp
-fn create_ais_track(positions: Vec<AisPosition>) -> Vec<AisPosition> {
-    if positions.is_empty() {
-        return vec![];
-    }
-
-    // Safe due to check above
-    let mut current_detail_timstamp = positions.first().unwrap().timestamp;
-    let len = positions.len();
-
-    let mut prev: Option<usize> = None;
-    let mut res = Vec::<AisPosition>::with_capacity(len);
-    for (i, p) in positions.into_iter().enumerate() {
-        if i == len - 1
-            || i == 0
-            || (p.timestamp - current_detail_timstamp >= *AIS_DETAILS_INTERVAL)
-        {
-            if let Some(j) = prev {
-                let prev = &mut res[j];
-                if p.timestamp - prev.timestamp >= *MISSING_DATA_DURATION {
-                    if let Some(ref mut det) = prev.det {
-                        det.missing_data = true;
-                    }
-                }
-            }
-            current_detail_timstamp = p.timestamp;
-
-            prev = Some(i);
-            res.push(p);
-        } else {
-            res.push(AisPosition {
-                lat: p.lat,
-                lon: p.lon,
-                cog: p.cog,
-                timestamp: p.timestamp,
-                det: None,
-            });
-        }
-    }
-
-    res
 }
 
 impl PartialEq<kyogre_core::AisPosition> for AisPosition {

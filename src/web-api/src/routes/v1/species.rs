@@ -1,5 +1,6 @@
-use crate::{error::ApiError, response::Response, Database};
-use actix_web::web;
+use crate::{to_streaming_response, Database};
+use actix_web::{web, HttpResponse};
+use futures::TryStreamExt;
 use serde::{Deserialize, Serialize};
 use tracing::{event, Level};
 use utoipa::ToSchema;
@@ -13,19 +14,13 @@ use utoipa::ToSchema;
     )
 )]
 #[tracing::instrument(skip(db))]
-pub async fn species<T: Database>(db: web::Data<T>) -> Result<Response<Vec<Species>>, ApiError> {
-    let species = db
-        .species()
-        .await
-        .map_err(|e| {
+pub async fn species<T: Database + 'static>(db: web::Data<T>) -> HttpResponse {
+    to_streaming_response! {
+        db.species().map_ok(Species::from).map_err(|e| {
             event!(Level::ERROR, "failed to retrieve species: {:?}", e);
             ApiError::InternalServerError
-        })?
-        .into_iter()
-        .map(Species::from)
-        .collect();
-
-    Ok(Response::new(species))
+        })
+    }
 }
 
 #[utoipa::path(
@@ -37,21 +32,13 @@ pub async fn species<T: Database>(db: web::Data<T>) -> Result<Response<Vec<Speci
     )
 )]
 #[tracing::instrument(skip(db))]
-pub async fn species_groups<T: Database>(
-    db: web::Data<T>,
-) -> Result<Response<Vec<SpeciesGroup>>, ApiError> {
-    let species = db
-        .species_groups()
-        .await
-        .map_err(|e| {
+pub async fn species_groups<T: Database + 'static + 'static>(db: web::Data<T>) -> HttpResponse {
+    to_streaming_response! {
+        db.species_groups().map_ok(SpeciesGroup::from).map_err(|e| {
             event!(Level::ERROR, "failed to retrieve species_groups: {:?}", e);
             ApiError::InternalServerError
-        })?
-        .into_iter()
-        .map(SpeciesGroup::from)
-        .collect();
-
-    Ok(Response::new(species))
+        })
+    }
 }
 
 #[utoipa::path(
@@ -63,25 +50,19 @@ pub async fn species_groups<T: Database>(
     )
 )]
 #[tracing::instrument(skip(db))]
-pub async fn species_main_groups<T: Database>(
-    db: web::Data<T>,
-) -> Result<Response<Vec<SpeciesMainGroup>>, ApiError> {
-    let species = db
-        .species_main_groups()
-        .await
-        .map_err(|e| {
-            event!(
-                Level::ERROR,
-                "failed to retrieve species_main_groups: {:?}",
-                e
-            );
-            ApiError::InternalServerError
-        })?
-        .into_iter()
-        .map(SpeciesMainGroup::from)
-        .collect();
-
-    Ok(Response::new(species))
+pub async fn species_main_groups<T: Database + 'static>(db: web::Data<T>) -> HttpResponse {
+    to_streaming_response! {
+        db.species_main_groups()
+            .map_ok(SpeciesMainGroup::from)
+            .map_err(|e| {
+                event!(
+                    Level::ERROR,
+                    "failed to retrieve species_main_groups: {:?}",
+                    e
+                );
+                ApiError::InternalServerError
+            })
+    }
 }
 
 #[utoipa::path(
@@ -93,25 +74,19 @@ pub async fn species_main_groups<T: Database>(
     )
 )]
 #[tracing::instrument(skip(db))]
-pub async fn species_fiskeridir<T: Database>(
-    db: web::Data<T>,
-) -> Result<Response<Vec<SpeciesFiskeridir>>, ApiError> {
-    let species = db
-        .species_fiskeridir()
-        .await
-        .map_err(|e| {
-            event!(
-                Level::ERROR,
-                "failed to retrieve species_fiskeridir: {:?}",
-                e
-            );
-            ApiError::InternalServerError
-        })?
-        .into_iter()
-        .map(SpeciesFiskeridir::from)
-        .collect();
-
-    Ok(Response::new(species))
+pub async fn species_fiskeridir<T: Database + 'static>(db: web::Data<T>) -> HttpResponse {
+    to_streaming_response! {
+        db.species_fiskeridir()
+            .map_ok(SpeciesFiskeridir::from)
+            .map_err(|e| {
+                event!(
+                    Level::ERROR,
+                    "failed to retrieve species_fiskeridir: {:?}",
+                    e
+                );
+                ApiError::InternalServerError
+            })
+    }
 }
 
 #[utoipa::path(
@@ -123,21 +98,13 @@ pub async fn species_fiskeridir<T: Database>(
     )
 )]
 #[tracing::instrument(skip(db))]
-pub async fn species_fao<T: Database>(
-    db: web::Data<T>,
-) -> Result<Response<Vec<SpeciesFao>>, ApiError> {
-    let species = db
-        .species_fao()
-        .await
-        .map_err(|e| {
+pub async fn species_fao<T: Database + 'static>(db: web::Data<T>) -> HttpResponse {
+    to_streaming_response! {
+        db.species_fao().map_ok(SpeciesFao::from).map_err(|e| {
             event!(Level::ERROR, "failed to retrieve species_fao: {:?}", e);
             ApiError::InternalServerError
-        })?
-        .into_iter()
-        .map(SpeciesFao::from)
-        .collect();
-
-    Ok(Response::new(species))
+        })
+    }
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema, Ord, PartialOrd, PartialEq, Eq)]

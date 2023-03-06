@@ -41,6 +41,7 @@ macro_rules! to_streaming_response {
     ($stream:expr) => {
         use actix_web::{web::Bytes, HttpResponse};
         use async_stream::{__private::AsyncStream, try_stream};
+        use futures::StreamExt;
 
         use $crate::error::ApiError;
         use $crate::response::to_bytes;

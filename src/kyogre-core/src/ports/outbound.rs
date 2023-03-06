@@ -16,19 +16,23 @@ pub trait AisMigratorSource {
     ) -> Result<Vec<AisPosition>, QueryError>;
     async fn existing_mmsis(&self) -> Result<Vec<i32>, QueryError>;
 }
-#[async_trait]
+
 pub trait WebApiPort {
-    async fn ais_positions(
+    fn ais_positions(
         &self,
         mmsi: i32,
         range: &DateRange,
-    ) -> Result<Vec<AisPosition>, QueryError>;
-    async fn species(&self) -> Result<Vec<Species>, QueryError>;
-    async fn species_fiskeridir(&self) -> Result<Vec<SpeciesFiskeridir>, QueryError>;
-    async fn species_groups(&self) -> Result<Vec<SpeciesGroup>, QueryError>;
-    async fn species_main_groups(&self) -> Result<Vec<SpeciesMainGroup>, QueryError>;
-    async fn species_fao(&self) -> Result<Vec<SpeciesFao>, QueryError>;
-    async fn vessels(&self) -> Result<Vec<Vessel>, QueryError>;
+    ) -> Pin<Box<dyn Stream<Item = Result<AisPosition, QueryError>> + '_>>;
+    fn species(&self) -> Pin<Box<dyn Stream<Item = Result<Species, QueryError>> + '_>>;
+    fn species_fiskeridir(
+        &self,
+    ) -> Pin<Box<dyn Stream<Item = Result<SpeciesFiskeridir, QueryError>> + '_>>;
+    fn species_groups(&self) -> Pin<Box<dyn Stream<Item = Result<SpeciesGroup, QueryError>> + '_>>;
+    fn species_main_groups(
+        &self,
+    ) -> Pin<Box<dyn Stream<Item = Result<SpeciesMainGroup, QueryError>> + '_>>;
+    fn species_fao(&self) -> Pin<Box<dyn Stream<Item = Result<SpeciesFao, QueryError>> + '_>>;
+    fn vessels(&self) -> Pin<Box<dyn Stream<Item = Result<Vessel, QueryError>> + '_>>;
     fn hauls(
         &self,
         query: HaulsQuery,

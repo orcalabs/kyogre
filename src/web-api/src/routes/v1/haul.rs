@@ -4,7 +4,7 @@ use crate::{
 };
 use actix_web::{web, HttpResponse};
 use chrono::{DateTime, Datelike, Duration, NaiveDate, Utc};
-use futures::StreamExt;
+use futures::TryStreamExt;
 use kyogre_core::{DateRange, HaulsQuery, WhaleGender};
 use serde::{Deserialize, Serialize};
 use tracing::{event, Level};
@@ -36,12 +36,9 @@ pub async fn hauls<T: Database + 'static>(
     let query = params.into_inner().into();
 
     to_streaming_response! {
-        db.hauls(query).map(|haul| match haul {
-            Ok(h) => Ok(Haul::from(h)),
-            Err(e) => {
-                event!(Level::ERROR, "failed to retrieve hauls: {:?}", e);
-                Err(ApiError::InternalServerError)
-            }
+        db.hauls(query).map_ok(Haul::from).map_err(|e| {
+            event!(Level::ERROR, "failed to retrieve hauls: {:?}", e);
+            ApiError::InternalServerError
         })
     }
 }

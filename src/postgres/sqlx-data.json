@@ -645,6 +645,82 @@
     },
     "query": "\nINSERT INTO\n    catch_main_area_fao (catch_main_area_fao_id, \"name\")\nSELECT\n    *\nFROM\n    UNNEST($1::INT[], $2::VARCHAR[])\nON CONFLICT (catch_main_area_fao_id) DO NOTHING\n                "
   },
+  "8918bd19bb31b88fba67fde04509b22a4e74c743d14211d25020d61cd985f377": {
+    "describe": {
+      "columns": [
+        {
+          "name": "latitude",
+          "ordinal": 0,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "longitude",
+          "ordinal": 1,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "mmsi",
+          "ordinal": 2,
+          "type_info": "Int4"
+        },
+        {
+          "name": "msgtime",
+          "ordinal": 3,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "course_over_ground",
+          "ordinal": 4,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "navigational_status",
+          "ordinal": 5,
+          "type_info": "Int4"
+        },
+        {
+          "name": "rate_of_turn",
+          "ordinal": 6,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "speed_over_ground",
+          "ordinal": 7,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "true_heading",
+          "ordinal": 8,
+          "type_info": "Int4"
+        },
+        {
+          "name": "distance_to_shore",
+          "ordinal": 9,
+          "type_info": "Numeric"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        true,
+        true,
+        true,
+        true,
+        true,
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Int4",
+          "Timestamptz",
+          "Timestamptz"
+        ]
+      }
+    },
+    "query": "\nSELECT\n    latitude,\n    longitude,\n    mmsi,\n    \"timestamp\" AS msgtime,\n    course_over_ground,\n    navigation_status_id AS navigational_status,\n    rate_of_turn,\n    speed_over_ground,\n    true_heading,\n    distance_to_shore\nFROM\n    ais_positions\nWHERE\n    (\n        $1::INT IS NULL\n        OR mmsi = $1\n    )\n    AND (\n        (\n            $2::timestamptz IS NULL\n            AND $3::timestamptz IS NULL\n        )\n        OR \"timestamp\" BETWEEN $2 AND $3\n    )\nORDER BY\n    \"timestamp\" ASC\n            "
+  },
   "8aee9591a7eb25ac77394bbe9dfa535c58c520d72d529cb27ec22f3d39256785": {
     "describe": {
       "columns": [],
@@ -985,78 +1061,6 @@
       }
     },
     "query": "\nSELECT\n    species_group_id AS id,\n    \"name\"\nFROM\n    species_groups\n            "
-  },
-  "ab15e4e6c5ff90388b02abad8a9e97df7b945ece5c32f9aca9963bc68de95187": {
-    "describe": {
-      "columns": [
-        {
-          "name": "mmsi",
-          "ordinal": 0,
-          "type_info": "Int4"
-        },
-        {
-          "name": "latitude",
-          "ordinal": 1,
-          "type_info": "Numeric"
-        },
-        {
-          "name": "longitude",
-          "ordinal": 2,
-          "type_info": "Numeric"
-        },
-        {
-          "name": "course_over_ground",
-          "ordinal": 3,
-          "type_info": "Numeric"
-        },
-        {
-          "name": "rate_of_turn",
-          "ordinal": 4,
-          "type_info": "Numeric"
-        },
-        {
-          "name": "true_heading",
-          "ordinal": 5,
-          "type_info": "Int4"
-        },
-        {
-          "name": "speed_over_ground",
-          "ordinal": 6,
-          "type_info": "Numeric"
-        },
-        {
-          "name": "msgtime",
-          "ordinal": 7,
-          "type_info": "Timestamptz"
-        },
-        {
-          "name": "navigational_status",
-          "ordinal": 8,
-          "type_info": "Int4"
-        },
-        {
-          "name": "distance_to_shore",
-          "ordinal": 9,
-          "type_info": "Numeric"
-        }
-      ],
-      "nullable": [
-        false,
-        false,
-        false,
-        true,
-        true,
-        true,
-        true,
-        false,
-        true,
-        false
-      ],
-      "parameters": {
-        "Left": []
-      }
-    },
-    "query": "\nSELECT\n    mmsi,\n    latitude,\n    longitude,\n    course_over_ground,\n    rate_of_turn,\n    true_heading,\n    speed_over_ground,\n    TIMESTAMP AS msgtime,\n    navigation_status_id AS navigational_status,\n    distance_to_shore\nFROM\n    ais_positions\n            "
   },
   "afab8a5cb3418938aa30de7bd22a9852b1b204e39858a3194974a12c5e61100c": {
     "describe": {
