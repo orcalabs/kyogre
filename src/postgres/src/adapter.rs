@@ -232,76 +232,45 @@ impl AisMigratorDestination for PostgresAdapter {
     }
 }
 
-#[async_trait]
 impl WebApiPort for PostgresAdapter {
-    async fn ais_positions(
+    fn ais_positions(
         &self,
         mmsi: i32,
         range: &DateRange,
-    ) -> Result<Vec<AisPosition>, QueryError> {
-        let positions = self
-            .ais_positions_impl(mmsi, range)
-            .await
-            .change_context(QueryError)?;
-
-        convert_models(positions).change_context(QueryError)
+    ) -> Pin<Box<dyn Stream<Item = Result<AisPosition, QueryError>> + '_>> {
+        convert_stream(self.ais_positions_impl(mmsi, range)).boxed()
     }
 
-    async fn species_groups(&self) -> Result<Vec<SpeciesGroup>, QueryError> {
-        let species = self
-            .species_groups_impl()
-            .await
-            .change_context(QueryError)?;
-
-        convert_models(species).change_context(QueryError)
+    fn species_groups(&self) -> Pin<Box<dyn Stream<Item = Result<SpeciesGroup, QueryError>> + '_>> {
+        convert_stream(self.species_groups_impl()).boxed()
     }
 
-    async fn species_fiskeridir(&self) -> Result<Vec<SpeciesFiskeridir>, QueryError> {
-        let species = self
-            .species_fiskeridir_impl()
-            .await
-            .change_context(QueryError)?;
-
-        convert_models(species).change_context(QueryError)
+    fn species_fiskeridir(
+        &self,
+    ) -> Pin<Box<dyn Stream<Item = Result<SpeciesFiskeridir, QueryError>> + '_>> {
+        convert_stream(self.species_fiskeridir_impl()).boxed()
     }
-    async fn species(&self) -> Result<Vec<Species>, QueryError> {
-        let species = self.species_impl().await.change_context(QueryError)?;
-
-        convert_models(species).change_context(QueryError)
+    fn species(&self) -> Pin<Box<dyn Stream<Item = Result<Species, QueryError>> + '_>> {
+        convert_stream(self.species_impl()).boxed()
     }
-    async fn species_main_groups(&self) -> Result<Vec<SpeciesMainGroup>, QueryError> {
-        let species = self
-            .species_main_groups_impl()
-            .await
-            .change_context(QueryError)?;
-
-        convert_models(species).change_context(QueryError)
+    fn species_main_groups(
+        &self,
+    ) -> Pin<Box<dyn Stream<Item = Result<SpeciesMainGroup, QueryError>> + '_>> {
+        convert_stream(self.species_main_groups_impl()).boxed()
     }
-    async fn species_fao(&self) -> Result<Vec<SpeciesFao>, QueryError> {
-        let species = self.species_fao_impl().await.change_context(QueryError)?;
-
-        convert_models(species).change_context(QueryError)
+    fn species_fao(&self) -> Pin<Box<dyn Stream<Item = Result<SpeciesFao, QueryError>> + '_>> {
+        convert_stream(self.species_fao_impl()).boxed()
     }
 
-    async fn vessels(&self) -> Result<Vec<Vessel>, QueryError> {
-        let vessel_combinations = self
-            .fiskeridir_ais_vessel_combinations()
-            .await
-            .change_context(QueryError)?;
-
-        convert_models(vessel_combinations).change_context(QueryError)
+    fn vessels(&self) -> Pin<Box<dyn Stream<Item = Result<Vessel, QueryError>> + '_>> {
+        convert_stream(self.fiskeridir_ais_vessel_combinations()).boxed()
     }
 
     fn hauls(
         &self,
         query: HaulsQuery,
     ) -> Pin<Box<dyn Stream<Item = Result<Haul, QueryError>> + '_>> {
-        self.hauls(query)
-            .map(|h| match h {
-                Ok(h) => Haul::try_from(h).change_context(QueryError),
-                Err(e) => Err(e.change_context(QueryError)),
-            })
-            .boxed()
+        convert_stream(self.hauls(query)).boxed()
     }
 }
 
@@ -466,15 +435,17 @@ impl TripPrecisionInboundPort for PostgresAdapter {
     }
 }
 
-pub(crate) fn convert_models<D, I, C>(input: D) -> Result<Vec<C>, PostgresError>
+pub(crate) fn convert_stream<I, A, B>(input: I) -> impl Stream<Item = Result<B, QueryError>>
 where
-    D: IntoIterator<Item = I>,
-    C: TryFrom<I>,
-    C: std::convert::TryFrom<I, Error = Report<PostgresError>>,
+    I: Stream<Item = Result<A, PostgresError>>,
+    B: TryFrom<A>,
+    B: std::convert::TryFrom<A, Error = Report<PostgresError>>,
 {
-    input
-        .into_iter()
-        .map(C::try_from)
-        .collect::<std::result::Result<Vec<_>, <C as std::convert::TryFrom<I>>::Error>>()
-        .change_context(PostgresError::DataConversion)
+    input.map(|i| {
+        match i {
+            Ok(i) => B::try_from(i),
+            Err(e) => Err(e),
+        }
+        .change_context(QueryError)
+    })
 }

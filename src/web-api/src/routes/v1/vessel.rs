@@ -1,6 +1,7 @@
-use crate::{error::ApiError, response::Response, Database};
-use actix_web::web;
+use crate::{to_streaming_response, Database};
+use actix_web::{web, HttpResponse};
 use chrono::{DateTime, Utc};
+use futures::TryStreamExt;
 use serde::{Deserialize, Serialize};
 use tracing::{event, Level};
 use utoipa::ToSchema;
@@ -14,19 +15,13 @@ use utoipa::ToSchema;
     )
 )]
 #[tracing::instrument(skip(db))]
-pub async fn vessels<T: Database>(db: web::Data<T>) -> Result<Response<Vec<Vessel>>, ApiError> {
-    let vessels = db
-        .vessels()
-        .await
-        .map_err(|e| {
+pub async fn vessels<T: Database + 'static>(db: web::Data<T>) -> HttpResponse {
+    to_streaming_response! {
+        db.vessels().map_ok(Vessel::from).map_err(|e| {
             event!(Level::ERROR, "failed to retrieve vessels: {:?}", e);
             ApiError::InternalServerError
-        })?
-        .into_iter()
-        .map(Vessel::from)
-        .collect();
-
-    Ok(Response::new(vessels))
+        })
+    }
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq)]

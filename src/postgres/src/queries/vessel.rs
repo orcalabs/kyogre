@@ -1,6 +1,7 @@
 use super::opt_float_to_decimal;
 use crate::{error::PostgresError, models::FiskeridirAisVesselCombination, PostgresAdapter};
-use error_stack::{IntoReport, Result, ResultExt};
+use error_stack::{report, IntoReport, Result, ResultExt};
+use futures::{Stream, TryStreamExt};
 
 impl PostgresAdapter {
     pub(crate) async fn add_fiskeridir_vessels<'a>(
@@ -122,9 +123,9 @@ ON CONFLICT (fiskeridir_vessel_id) DO NOTHING
         .map(|_| ())
     }
 
-    pub(crate) async fn fiskeridir_ais_vessel_combinations(
+    pub(crate) fn fiskeridir_ais_vessel_combinations(
         &self,
-    ) -> Result<Vec<FiskeridirAisVesselCombination>, PostgresError> {
+    ) -> impl Stream<Item = Result<FiskeridirAisVesselCombination, PostgresError>> + '_ {
         sqlx::query_as!(
             FiskeridirAisVesselCombination,
             r#"
@@ -161,9 +162,7 @@ FROM
     LEFT JOIN ais_vessels AS a ON f.call_sign = a.call_sign
             "#
         )
-        .fetch_all(&self.pool)
-        .await
-        .into_report()
-        .change_context(PostgresError::Query)
+        .fetch(&self.pool)
+        .map_err(|e| report!(e).change_context(PostgresError::Query))
     }
 }

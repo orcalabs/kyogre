@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use bigdecimal::{BigDecimal, FromPrimitive};
 use chrono::{DateTime, Utc};
+use futures::{Stream, TryStreamExt};
 use kyogre_core::{AisVesselMigrate, DateRange, NewAisPosition, NewAisStatic};
 
 use crate::{
@@ -9,14 +10,14 @@ use crate::{
     models::{AisClass, AisPosition},
     PostgresAdapter,
 };
-use error_stack::{IntoReport, Result, ResultExt};
+use error_stack::{report, IntoReport, Result, ResultExt};
 
 impl PostgresAdapter {
-    pub(crate) async fn ais_positions_impl(
+    pub(crate) fn ais_positions_impl(
         &self,
         mmsi: i32,
         range: &DateRange,
-    ) -> Result<Vec<AisPosition>, PostgresError> {
+    ) -> impl Stream<Item = Result<AisPosition, PostgresError>> + '_ {
         sqlx::query_as!(
             AisPosition,
             r#"
@@ -43,10 +44,8 @@ ORDER BY
             range.start(),
             range.end(),
         )
-        .fetch_all(&self.ais_pool)
-        .await
-        .into_report()
-        .change_context(PostgresError::Query)
+        .fetch(&self.ais_pool)
+        .map_err(|e| report!(e).change_context(PostgresError::Query))
     }
 
     pub(crate) async fn add_ais_positions(

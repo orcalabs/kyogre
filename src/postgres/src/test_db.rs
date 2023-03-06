@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use chrono::DateTime;
 use fiskeridir_rs::ErsDca;
 use kyogre_core::{
-    AisPosition, AisVessel, DateRange, NewAisPosition, NewAisStatic, ScraperInboundPort, WebApiPort,
+    AisPosition, AisVessel, DateRange, NewAisPosition, NewAisStatic, ScraperInboundPort,
 };
 
 use crate::PostgresAdapter;
@@ -26,36 +26,56 @@ impl TestDb {
     }
 
     pub async fn all_ais_positions(&self) -> Vec<AisPosition> {
-        let positions = sqlx::query_as!(
+        self.ais_positions(None, None).await
+    }
+
+    pub async fn ais_positions(
+        &self,
+        mmsi: Option<i32>,
+        range: Option<&DateRange>,
+    ) -> Vec<AisPosition> {
+        sqlx::query_as!(
             crate::models::AisPosition,
             r#"
 SELECT
-    mmsi,
     latitude,
     longitude,
+    mmsi,
+    "timestamp" AS msgtime,
     course_over_ground,
-    rate_of_turn,
-    true_heading,
-    speed_over_ground,
-    TIMESTAMP AS msgtime,
     navigation_status_id AS navigational_status,
+    rate_of_turn,
+    speed_over_ground,
+    true_heading,
     distance_to_shore
 FROM
     ais_positions
-            "#
+WHERE
+    (
+        $1::INT IS NULL
+        OR mmsi = $1
+    )
+    AND (
+        (
+            $2::timestamptz IS NULL
+            AND $3::timestamptz IS NULL
         )
-        .fetch_all(&self.db.pool)
+        OR "timestamp" BETWEEN $2 AND $3
+    )
+ORDER BY
+    "timestamp" ASC
+            "#,
+            mmsi,
+            range.map(|r| r.start()),
+            range.map(|r| r.end()),
+        )
+        .fetch_all(&self.db.ais_pool)
         .await
-        .unwrap();
-
-        let mut converted = Vec::with_capacity(positions.len());
-
-        for p in positions {
-            let core_model = AisPosition::try_from(p).unwrap();
-            converted.push(core_model);
-        }
-
-        converted
+        .unwrap()
+        .into_iter()
+        .map(AisPosition::try_from)
+        .collect::<Result<_, _>>()
+        .unwrap()
     }
 
     pub async fn all_current_ais_positions(&self) -> Vec<AisPosition> {
@@ -156,13 +176,11 @@ FROM
         self.db.add_ais_positions(&[pos]).await.unwrap();
 
         let mut positions = self
-            .db
-            .ais_positions(mmsi, &DateRange::new(timestamp, timestamp).unwrap())
-            .await
-            .unwrap()
-            .into_iter()
-            .filter(|v| v.mmsi == mmsi && v.msgtime.timestamp() == timestamp.timestamp())
-            .collect::<Vec<AisPosition>>();
+            .ais_positions(
+                Some(mmsi),
+                Some(&DateRange::new(timestamp, timestamp).unwrap()),
+            )
+            .await;
 
         assert_eq!(positions.len(), 1);
         positions.pop().unwrap()
