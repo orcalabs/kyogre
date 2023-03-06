@@ -28,7 +28,7 @@ COPY src .
 RUN --mount=type=secret,id=git-credentials,target=~/.git-credentials,required=true \
     cargo build --release --bin engine
 
-FROM gcr.io/distroless/cc
+FROM ubuntu:latest
 
 COPY --from=builder /app/target/release/engine .
 
