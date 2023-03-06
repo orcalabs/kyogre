@@ -45,7 +45,7 @@ SELECT
     h.stop_longitude AS "stop_longitude!",
     h.stop_time AS "stop_time!",
     h.stop_timestamp AS "stop_timestamp!",
-    h.gear_fiskeridir_id AS gear_fiskeridir_id,
+    h.gear_group_id AS gear_group_id,
     h.fiskeridir_vessel_id AS fiskeridir_vessel_id,
     h.vessel_call_sign AS vessel_call_sign,
     h.vessel_call_sign_ers AS "vessel_call_sign_ers!",
