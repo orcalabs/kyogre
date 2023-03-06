@@ -65,7 +65,7 @@ pub struct Haul {
     pub stop_longitude: f64,
     #[schema(value_type = String, example = "2023-02-24T11:08:20.409416682Z")]
     pub stop_timestamp: DateTime<Utc>,
-    pub gear_fiskeridir_id: Option<i32>,
+    pub gear_group_id: Option<i32>,
     pub fiskeridir_vessel_id: Option<i64>,
     pub vessel_call_sign: Option<String>,
     pub vessel_call_sign_ers: String,
@@ -122,7 +122,7 @@ impl From<kyogre_core::Haul> for Haul {
             stop_latitude: v.stop_latitude,
             stop_longitude: v.stop_longitude,
             stop_timestamp: v.stop_timestamp,
-            gear_fiskeridir_id: v.gear_fiskeridir_id,
+            gear_group_id: v.gear_fiskeridir_id,
             fiskeridir_vessel_id: v.fiskeridir_vessel_id,
             vessel_call_sign: v.vessel_call_sign,
             vessel_call_sign_ers: v.vessel_call_sign_ers,
