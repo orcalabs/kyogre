@@ -42,20 +42,19 @@ where
     Ok(())
 }
 
-pub(crate) async fn add_in_chunks_with_conversion<A, B, C, D, E>(
+pub(crate) async fn add_in_chunks_with_conversion<A, B, D, E>(
     insert_closure: A,
-    data: C,
+    data: Box<dyn Iterator<Item = Result<E, fiskeridir_rs::Error>> + Send>,
     chunk_size: usize,
 ) -> Result<(), InsertError>
 where
     A: Fn(Vec<D>) -> B,
     B: Future<Output = Result<(), InsertError>>,
-    C: IntoIterator<Item = Result<E, fiskeridir_rs::Error>>,
     E: TryInto<D, Error = Report<fiskeridir_rs::Error>>,
 {
     let mut chunk: Vec<D> = Vec::with_capacity(chunk_size);
 
-    for (i, item) in data.into_iter().enumerate() {
+    for (i, item) in data.enumerate() {
         match item {
             Err(e) => {
                 event!(Level::ERROR, "failed to read data: {:?}", e);
