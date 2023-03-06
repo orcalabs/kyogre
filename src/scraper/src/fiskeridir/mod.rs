@@ -50,7 +50,7 @@ impl FiskeridirSource {
         chunk_size: usize,
     ) -> Result<(), ScraperError>
     where
-        A: DeserializeOwned + 'static + std::fmt::Debug,
+        A: DeserializeOwned + 'static + std::fmt::Debug + Send,
         B: Future<Output = Result<(), InsertError>>,
         C: Fn(Vec<A>) -> B,
     {
@@ -68,7 +68,7 @@ impl FiskeridirSource {
             HashDiff::Equal => Ok(()),
             HashDiff::Changed => {
                 let data = file.into_deserialize::<A>().change_context(ScraperError)?;
-                add_in_chunks(insert_closure, data, chunk_size)
+                add_in_chunks(insert_closure, Box::new(data), chunk_size)
                     .await
                     .change_context(ScraperError)?;
                 self.hash_store

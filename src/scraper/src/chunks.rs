@@ -9,19 +9,18 @@ trait Chunk<T> {
     fn is_empty(&self) -> bool;
 }
 
-pub(crate) async fn add_in_chunks<A, B, C, D>(
+pub(crate) async fn add_in_chunks<A, B, D>(
     insert_closure: A,
-    data: C,
+    data: Box<dyn Iterator<Item = Result<D, fiskeridir_rs::Error>> + Send>,
     chunk_size: usize,
 ) -> Result<(), InsertError>
 where
     A: Fn(Vec<D>) -> B,
     B: Future<Output = Result<(), InsertError>>,
-    C: IntoIterator<Item = Result<D, fiskeridir_rs::Error>>,
 {
     let mut chunk: Vec<D> = Vec::with_capacity(chunk_size);
 
-    for (i, item) in data.into_iter().enumerate() {
+    for (i, item) in data.enumerate() {
         match item {
             Err(e) => {
                 event!(Level::ERROR, "failed to read data: {:?}", e);
