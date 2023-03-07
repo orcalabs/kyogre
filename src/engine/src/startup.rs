@@ -18,7 +18,7 @@ impl App {
             postgres.do_migrations().await;
         }
 
-        let file_downloader = fiskeridir_rs::FileDownloader::new(PathBuf::from("/tmp")).unwrap();
+        let file_downloader = fiskeridir_rs::FileDownloader::new(PathBuf::from("/home")).unwrap();
         let fiskeridir_source = FiskeridirSource::new(Box::new(postgres.clone()), file_downloader);
 
         let scraper = Scraper::new(
