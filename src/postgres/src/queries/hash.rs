@@ -23,8 +23,14 @@ VALUES
         .execute(&mut tx)
         .await
         .into_report()
-        .change_context(PostgresError::Query)
-        .map(|_| ())
+        .change_context(PostgresError::Query)?;
+
+        tx.commit()
+            .await
+            .into_report()
+            .change_context(PostgresError::Transaction)?;
+
+        Ok(())
     }
 
     pub(crate) async fn diff_hash(
