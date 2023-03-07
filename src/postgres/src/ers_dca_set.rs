@@ -8,6 +8,7 @@ pub struct ErsDcaSet {
     area_groupings: HashMap<String, NewAreaGrouping>,
     herring_populations: HashMap<String, NewHerringPopulation>,
     main_areas: HashMap<i32, NewCatchMainArea>,
+    catch_areas: HashMap<i32, NewCatchArea>,
     gear_fao: HashMap<String, NewGearFao>,
     gear_fiskeridir: HashMap<i32, NewGearFiskeridir>,
     gear_problems: HashMap<i32, NewGearProblem>,
@@ -29,6 +30,7 @@ pub struct PreparedErsDcaSet {
     pub area_groupings: Vec<NewAreaGrouping>,
     pub herring_populations: Vec<NewHerringPopulation>,
     pub main_areas: Vec<NewCatchMainArea>,
+    pub catch_areas: Vec<NewCatchArea>,
     pub gear_fao: Vec<NewGearFao>,
     pub gear_fiskeridir: Vec<NewGearFiskeridir>,
     pub gear_problems: Vec<NewGearProblem>,
@@ -51,6 +53,7 @@ impl ErsDcaSet {
         let area_groupings = self.area_groupings.into_values().collect();
         let herring_populations = self.herring_populations.into_values().collect();
         let main_areas = self.main_areas.into_values().collect();
+        let catch_areas = self.catch_areas.into_values().collect();
         let gear_fao = self.gear_fao.into_values().collect();
         let gear_fiskeridir = self.gear_fiskeridir.into_values().collect();
         let gear_problems = self.gear_problems.into_values().collect();
@@ -70,6 +73,7 @@ impl ErsDcaSet {
             area_groupings,
             herring_populations,
             main_areas,
+            catch_areas,
             gear_fao,
             gear_fiskeridir,
             gear_problems,
@@ -97,6 +101,7 @@ impl ErsDcaSet {
             set.add_area_grouping(&e);
             set.add_herring_population(&e)?;
             set.add_main_area(&e);
+            set.add_catch_area(&e);
             set.add_gear_fao(&e);
             set.add_gear_fiskeridir(&e)?;
             set.add_gear_problem(&e);
@@ -337,12 +342,29 @@ impl ErsDcaSet {
         }
     }
 
+    fn add_catch_area_impl(&mut self, code: Option<u32>) {
+        if let Some(code) = code {
+            self.catch_areas
+                .entry(code as i32)
+                .or_insert_with(|| NewCatchArea {
+                    id: code as i32,
+                    longitude: None,
+                    latitude: None,
+                });
+        }
+    }
+
     fn add_main_area(&mut self, ers_dca: &fiskeridir_rs::ErsDca) {
         self.add_main_area_impl(ers_dca.main_area_end_code, ers_dca.main_area_end.clone());
         self.add_main_area_impl(
             ers_dca.main_area_start_code,
             ers_dca.main_area_start.clone(),
         );
+    }
+
+    fn add_catch_area(&mut self, ers_dca: &fiskeridir_rs::ErsDca) {
+        self.add_catch_area_impl(ers_dca.location_start_code);
+        self.add_catch_area_impl(ers_dca.location_end_code);
     }
 
     fn add_ers_dca(&mut self, ers_dca: &fiskeridir_rs::ErsDca) -> Result<(), PostgresError> {

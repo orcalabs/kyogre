@@ -1,5 +1,7 @@
+use std::{fmt::Write, string::ToString};
+
 use reqwest::{Client, Response};
-use web_api::routes::v1::ais::AisTrackParameters;
+use web_api::routes::v1::{ais::AisTrackParameters, haul::HaulsParams};
 
 #[derive(Debug, Clone)]
 pub struct ApiClient {
@@ -53,7 +55,37 @@ impl ApiClient {
     pub async fn get_vessels(&self) -> Response {
         self.get("vessels", &[]).await
     }
-    pub async fn get_hauls(&self) -> Response {
-        self.get("hauls", &[]).await
+    pub async fn get_hauls(&self, params: HaulsParams) -> Response {
+        let mut parameters = Vec::new();
+
+        if let Some(months) = params.months {
+            parameters.push(("months".to_string(), create_comma_separated_list(months)))
+        }
+
+        if let Some(locations) = params.catch_locations {
+            parameters.push((
+                "catchLocations".to_string(),
+                create_comma_separated_list(locations),
+            ))
+        }
+
+        self.get("hauls", &parameters).await
     }
+}
+
+fn create_comma_separated_list<T>(vals: Vec<T>) -> String
+where
+    T: ToString,
+{
+    let len = vals.len();
+    let mut string_list = String::new();
+    for (i, v) in vals.iter().enumerate() {
+        if i == len - 1 {
+            write!(string_list, "{}", v.to_string()).unwrap();
+        } else {
+            write!(string_list, "{},", v.to_string()).unwrap();
+        }
+    }
+
+    string_list
 }
