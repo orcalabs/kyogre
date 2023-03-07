@@ -92,3 +92,9 @@ impl<'de> Deserialize<'de> for DateTimeUtc {
         deserializer.deserialize_newtype_struct("DateTimeUtc", DateTimeUtcVisitor)
     }
 }
+
+impl ToString for DateTimeUtc {
+    fn to_string(&self) -> String {
+        self.0.to_rfc3339()
+    }
+}

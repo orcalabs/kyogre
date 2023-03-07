@@ -5,7 +5,7 @@ use crate::{
 use actix_web::{web, HttpResponse};
 use chrono::{DateTime, Datelike, Duration, Months, NaiveDate, Utc};
 use futures::TryStreamExt;
-use kyogre_core::{DateRange, HaulsQuery, WhaleGender};
+use kyogre_core::{CatchLocationId, DateRange, HaulsQuery, WhaleGender};
 use serde::{Deserialize, Serialize};
 use tracing::{event, Level};
 use utoipa::{IntoParams, ToSchema};
@@ -16,6 +16,9 @@ pub struct HaulsParams {
     #[param(value_type = Option<String>, example = "2023-01-1T00:00:00Z,2023-02-1T00:00:00Z")]
     #[serde(deserialize_with = "deserialize_string_list", default)]
     pub months: Option<Vec<DateTimeUtc>>,
+    #[param(value_type = Option<String>, example = "09-05,09-04")]
+    #[serde(deserialize_with = "deserialize_string_list", default)]
+    pub catch_locations: Option<Vec<CatchLocationId>>,
 }
 
 #[utoipa::path(
@@ -49,8 +52,10 @@ pub struct Haul {
     pub ers_activity_id: String,
     pub duration: i32,
     pub haul_distance: Option<i32>,
-    pub catch_field_start: Option<String>,
-    pub catch_field_end: Option<String>,
+    #[schema(value_type = Option<String>, example = "09-05")]
+    pub catch_location_start: Option<CatchLocationId>,
+    #[schema(value_type = Option<String>, example = "09-05")]
+    pub catch_location_end: Option<CatchLocationId>,
     pub ocean_depth_end: i32,
     pub ocean_depth_start: i32,
     pub quota_type_id: i32,
@@ -95,21 +100,17 @@ pub struct WhaleCatch {
     pub length: Option<i32>,
 }
 
-fn format_catch_field(a: Option<i32>, b: Option<i32>) -> Option<String> {
-    match (a, b) {
-        (Some(a), Some(b)) => Some(format!("{a:02}-{b:02}")),
-        _ => None,
-    }
-}
-
 impl From<kyogre_core::Haul> for Haul {
     fn from(v: kyogre_core::Haul) -> Self {
         Haul {
             ers_activity_id: v.ers_activity_id,
             duration: v.duration,
             haul_distance: v.haul_distance,
-            catch_field_start: format_catch_field(v.main_area_start_id, v.location_start_code),
-            catch_field_end: format_catch_field(v.main_area_end_id, v.location_end_code),
+            catch_location_start: CatchLocationId::new_opt(
+                v.main_area_start_id,
+                v.location_start_code,
+            ),
+            catch_location_end: CatchLocationId::new_opt(v.main_area_end_id, v.location_end_code),
             ocean_depth_end: v.ocean_depth_end,
             ocean_depth_start: v.ocean_depth_start,
             quota_type_id: v.quota_type_id,
@@ -180,6 +181,9 @@ impl From<HaulsParams> for HaulsQuery {
                 .collect()
         });
 
-        Self { ranges }
+        Self {
+            ranges,
+            catch_locations: v.catch_locations,
+        }
     }
 }

@@ -1,4 +1,5 @@
 mod ais;
+mod catch_location;
 mod date_range;
 mod delivery_points;
 mod ers;
@@ -15,6 +16,7 @@ pub struct Coordinates {
 }
 
 pub use ais::*;
+pub use catch_location::*;
 pub use date_range::*;
 pub use delivery_points::*;
 pub use ers::*;

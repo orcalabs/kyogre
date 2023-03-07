@@ -21,6 +21,12 @@ impl PostgresAdapter {
                 .collect::<Vec<_>>()
         });
 
+        let catch_locations = query.catch_locations.map(|cls| {
+            cls.into_iter()
+                .map(|c| c.into_inner())
+                .collect::<Vec<String>>()
+        });
+
         sqlx::query_as!(
             Haul,
             r#"
@@ -60,8 +66,24 @@ WHERE
         $1::tstzrange[] IS NULL
         OR tstzrange (h.start_timestamp, h.stop_timestamp, '[]') && ANY ($1)
     )
+    AND (
+        $2::VARCHAR[] IS NULL
+        OR EXISTS (
+            SELECT
+                *
+            FROM
+                catch_locations c
+            WHERE
+                c.catch_location_id = ANY ($2)
+                AND ST_CONTAINS (
+                    c.polygon,
+                    ST_POINT (h.start_longitude, h.start_latitude)
+                )
+        )
+    )
             "#,
-            ranges
+            ranges,
+            catch_locations as _,
         )
         .fetch(&self.pool)
         .map_err(|e| report!(e).change_context(PostgresError::Query))

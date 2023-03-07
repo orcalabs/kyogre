@@ -20,6 +20,8 @@ impl PostgresAdapter {
             .await?;
         self.add_catch_main_areas(prepared_set.main_areas, &mut tx)
             .await?;
+        self.add_catch_areas(prepared_set.catch_areas, &mut tx)
+            .await?;
         self.add_gear_fao(prepared_set.gear_fao, &mut tx).await?;
         self.add_gear_fiskeridir(prepared_set.gear_fiskeridir, &mut tx)
             .await?;
