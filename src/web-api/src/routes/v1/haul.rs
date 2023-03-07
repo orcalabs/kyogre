@@ -3,7 +3,7 @@ use crate::{
     to_streaming_response, Database,
 };
 use actix_web::{web, HttpResponse};
-use chrono::{DateTime, Datelike, Duration, NaiveDate, Utc};
+use chrono::{DateTime, Datelike, Duration, Months, NaiveDate, Utc};
 use futures::TryStreamExt;
 use kyogre_core::{DateRange, HaulsQuery, WhaleGender};
 use serde::{Deserialize, Serialize};
@@ -158,14 +158,8 @@ impl From<kyogre_core::WhaleCatch> for WhaleCatch {
     }
 }
 
-fn utc_from_ymd(year: i32, month: u32, day: u32) -> DateTime<Utc> {
-    DateTime::<Utc>::from_utc(
-        NaiveDate::from_ymd_opt(year, month, day)
-            .unwrap()
-            .and_hms_opt(0, 0, 0)
-            .unwrap(),
-        Utc,
-    )
+fn utc_from_naive(naive_date: NaiveDate) -> DateTime<Utc> {
+    DateTime::<Utc>::from_utc(naive_date.and_hms_opt(0, 0, 0).unwrap(), Utc)
 }
 
 impl From<HaulsParams> for HaulsQuery {
@@ -174,9 +168,12 @@ impl From<HaulsParams> for HaulsQuery {
             months
                 .into_iter()
                 .map(|m| {
+                    let start = NaiveDate::from_ymd_opt(m.0.year(), m.0.month(), 1).unwrap();
+                    let end = start.checked_add_months(Months::new(1)).unwrap();
+
                     DateRange::new(
-                        utc_from_ymd(m.0.year(), m.0.month(), 1),
-                        utc_from_ymd(m.0.year(), m.0.month() + 1, 1) - Duration::nanoseconds(1),
+                        utc_from_naive(start),
+                        utc_from_naive(end) - Duration::nanoseconds(1),
                     )
                     .unwrap()
                 })
