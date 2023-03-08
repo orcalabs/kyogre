@@ -108,8 +108,8 @@ impl Scraper {
             scrapers: vec![
                 Box::new(landings_scraper),
                 Box::new(ers_dca_scraper),
-                Box::new(ers_dep_scraper),
                 Box::new(ers_por_scraper),
+                Box::new(ers_dep_scraper),
                 Box::new(ers_tra_scraper),
             ],
             processor,
