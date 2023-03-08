@@ -1,3 +1,5 @@
+CREATE EXTENSION IF NOT EXISTS postgis;
+
 CREATE TABLE
     catch_locations (
         catch_location_id VARCHAR PRIMARY KEY CHECK (catch_location_id <> ''),
