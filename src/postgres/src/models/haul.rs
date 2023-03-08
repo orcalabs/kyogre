@@ -34,6 +34,7 @@ pub struct Haul {
     pub fiskeridir_vessel_id: Option<i64>,
     pub vessel_call_sign: Option<String>,
     pub vessel_call_sign_ers: String,
+    pub vessel_length: BigDecimal,
     pub vessel_name: Option<String>,
     pub vessel_name_ers: Option<String>,
     pub catches: String,
@@ -97,6 +98,8 @@ impl TryFrom<Haul> for kyogre_core::Haul {
             fiskeridir_vessel_id: v.fiskeridir_vessel_id,
             vessel_call_sign: v.vessel_call_sign,
             vessel_call_sign_ers: v.vessel_call_sign_ers,
+            vessel_length: decimal_to_float(v.vessel_length)
+                .change_context(PostgresError::DataConversion)?,
             vessel_name: v.vessel_name,
             vessel_name_ers: v.vessel_name_ers,
             catches: serde_json::from_str::<Vec<HaulCatch>>(&v.catches)

@@ -55,6 +55,7 @@ SELECT
     h.fiskeridir_vessel_id AS fiskeridir_vessel_id,
     h.vessel_call_sign AS vessel_call_sign,
     h.vessel_call_sign_ers AS "vessel_call_sign_ers!",
+    h.vessel_length AS "vessel_length!",
     h.vessel_name AS vessel_name,
     h.vessel_name_ers AS vessel_name_ers,
     h.catches::TEXT AS "catches!",
