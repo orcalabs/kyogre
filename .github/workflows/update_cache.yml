@@ -16,3 +16,4 @@ jobs:
       dependencies: protobuf-compiler
       src-dir: src
       build-sqlx-cache: true
+      postgres-version: postgis/postgis:14-3.3-alpine
