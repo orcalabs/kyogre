@@ -25,17 +25,6 @@ pub struct NewCatchMainAreaFao {
     pub name: Option<String>,
 }
 
-impl From<fiskeridir_rs::CatchLocation> for NewCatchMainArea {
-    fn from(value: fiskeridir_rs::CatchLocation) -> Self {
-        NewCatchMainArea {
-            id: value.main_area_code as i32,
-            name: Some(value.main_area),
-            longitude: value.main_area_longitude,
-            latitude: value.main_area_latitude,
-        }
-    }
-}
-
 impl NewAreaGrouping {
     pub fn new(id: String, name: Option<String>) -> Self {
         Self { id, name }

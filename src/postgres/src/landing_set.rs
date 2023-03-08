@@ -157,9 +157,16 @@ impl LandingSet {
     }
 
     fn add_main_catch_area(&mut self, landing: &fiskeridir_rs::Landing) {
-        self.catch_main_areas
-            .entry(landing.catch_location.main_area_code)
-            .or_insert_with(|| NewCatchMainArea::from(landing.catch_location.clone()));
+        if let Some(id) = landing.catch_location.main_area_code {
+            self.catch_main_areas
+                .entry(id)
+                .or_insert_with(|| NewCatchMainArea {
+                    id: id as i32,
+                    name: landing.catch_location.main_area.clone(),
+                    latitude: landing.catch_location.main_area_latitude,
+                    longitude: landing.catch_location.main_area_longitude,
+                });
+        }
     }
 
     fn add_landing(&mut self, landing: &fiskeridir_rs::Landing) -> Result<(), PostgresError> {

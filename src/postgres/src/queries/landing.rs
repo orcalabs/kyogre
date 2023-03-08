@@ -375,7 +375,7 @@ ON CONFLICT (landing_id, "version") DO NOTHING
             fisher_municipality_id.as_slice() as _,
             catch_field.as_slice(),
             catch_area_id.as_slice() as _,
-            catch_main_area_id.as_slice(),
+            catch_main_area_id.as_slice() as _,
             catch_main_area_fao_id.as_slice() as _,
             fishing_region_id.as_slice() as _,
             delivery_point_municipality_id.as_slice() as _,
