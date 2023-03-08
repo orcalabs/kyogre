@@ -1,5 +1,18 @@
 {
   "db": "PostgreSQL",
+  "08a03f64df22a7c92a164d1800c3092cb6705eff86ced66c185be07dddd6332c": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Varchar",
+          "Varchar"
+        ]
+      }
+    },
+    "query": "\nINSERT INTO\n    data_hashes (hash, data_hash_id)\nVALUES\n    ($1, $2)\nON CONFLICT (data_hash_id) DO\nUPDATE\nSET\n    hash = excluded.hash\n            "
+  },
   "094967e78df9f65d178d39fcd60785516678c268bdef18e309cea941948bc1e8": {
     "describe": {
       "columns": [],
@@ -1391,19 +1404,6 @@
       }
     },
     "query": "\nINSERT INTO\n    ers_departures (\n        message_id,\n        message_date,\n        message_number,\n        message_time,\n        message_timestamp,\n        ers_message_type_id,\n        message_year,\n        relevant_year,\n        sequence_number,\n        ers_activity_id,\n        departure_date,\n        departure_time,\n        departure_timestamp,\n        fishing_date,\n        fishing_time,\n        fishing_timestamp,\n        start_latitude,\n        start_latitude_sggdd,\n        start_longitude,\n        start_longitude_sggdd,\n        target_species_fao_id,\n        target_species_fiskeridir_id,\n        port_id,\n        fiskeridir_vessel_id,\n        vessel_building_year,\n        vessel_call_sign,\n        vessel_call_sign_ers,\n        vessel_engine_building_year,\n        vessel_engine_power,\n        vessel_gross_tonnage_1969,\n        vessel_gross_tonnage_other,\n        vessel_county,\n        vessel_county_code,\n        vessel_greatest_length,\n        vessel_identification,\n        vessel_length,\n        vessel_length_group,\n        vessel_length_group_code,\n        vessel_material_code,\n        vessel_municipality,\n        vessel_municipality_code,\n        vessel_name,\n        vessel_name_ers,\n        vessel_nationality_code,\n        fiskeridir_vessel_nationality_group_id,\n        vessel_rebuilding_year,\n        vessel_registration_id,\n        vessel_registration_id_ers,\n        vessel_valid_until,\n        vessel_width\n    )\nSELECT\n    *\nFROM\n    UNNEST(\n        $1::BIGINT[],\n        $2::date[],\n        $3::INT[],\n        $4::TIME[],\n        $5::timestamptz[],\n        $6::VARCHAR[],\n        $7::INT[],\n        $8::INT[],\n        $9::INT[],\n        $10::VARCHAR[],\n        $11::date[],\n        $12::TIME[],\n        $13::timestamptz[],\n        $14::date[],\n        $15::TIME[],\n        $16::timestamptz[],\n        $17::DECIMAL[],\n        $18::VARCHAR[],\n        $19::DECIMAL[],\n        $20::VARCHAR[],\n        $21::VARCHAR[],\n        $22::INT[],\n        $23::VARCHAR[],\n        $24::INT[],\n        $25::INT[],\n        $26::VARCHAR[],\n        $27::VARCHAR[],\n        $28::INT[],\n        $29::INT[],\n        $30::INT[],\n        $31::INT[],\n        $32::VARCHAR[],\n        $33::INT[],\n        $34::DECIMAL[],\n        $35::VARCHAR[],\n        $36::DECIMAL[],\n        $37::VARCHAR[],\n        $38::INT[],\n        $39::VARCHAR[],\n        $40::VARCHAR[],\n        $41::INT[],\n        $42::VARCHAR[],\n        $43::VARCHAR[],\n        $44::VARCHAR[],\n        $45::INT[],\n        $46::INT[],\n        $47::VARCHAR[],\n        $48::VARCHAR[],\n        $49::date[],\n        $50::DECIMAL[]\n    )\nON CONFLICT (message_id) DO NOTHING\n            "
-  },
-  "e5aab4876ee777a611bc9fa3b49249b9e47d65f0b1cd788bb52d2f70cbb7915f": {
-    "describe": {
-      "columns": [],
-      "nullable": [],
-      "parameters": {
-        "Left": [
-          "Varchar",
-          "Varchar"
-        ]
-      }
-    },
-    "query": "\nINSERT INTO\n    data_hashes (hash, data_hash_id)\nVALUES\n    ($1, $2)\n            "
   },
   "e779e9953f3857967807104310164c3b65a65642a287d6849ceb23e858d10f8b": {
     "describe": {
