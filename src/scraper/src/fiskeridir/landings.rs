@@ -4,7 +4,7 @@ use crate::{DataSource, Processor, ScraperError, ScraperId};
 use async_trait::async_trait;
 use error_stack::Result;
 use fiskeridir_rs::Source;
-use kyogre_core::FileHash;
+use kyogre_core::{FileHash, HashDiff};
 use tracing::{event, Level};
 
 use super::FiskeridirSource;
@@ -32,7 +32,7 @@ impl DataSource for LandingScraper {
     async fn scrape(&self, processor: &(dyn Processor)) -> Result<(), ScraperError> {
         let closure = |landings| processor.add_landings(landings);
         for source in &self.sources {
-            if let Err(e) = self
+            match self
                 .fiskeridir_source
                 .scrape_year_with_conversion::<fiskeridir_rs::LandingRaw, fiskeridir_rs::Landing, _, _>(
                     FileHash::Landings,
@@ -42,18 +42,22 @@ impl DataSource for LandingScraper {
                 )
                 .await
             {
-                event!(
+                Err(e) => event!(
                     Level::ERROR,
                     "failed to scrape landings for year: {}, err: {:?}",
                     source.year(),
                     e,
-                );
-            } else {
-                event!(
+                ),
+                Ok(HashDiff::Changed) => event!(
                     Level::INFO,
-                    "succesfully scraped landings year: {}",
+                    "successfully scraped landings year: {}",
                     source.year()
-                );
+                ),
+                Ok(HashDiff::Equal) => event!(
+                    Level::INFO,
+                    "no changes for landings year: {}",
+                    source.year()
+                ),
             }
         }
         Ok(())

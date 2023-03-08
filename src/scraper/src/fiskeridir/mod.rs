@@ -44,11 +44,29 @@ impl FiskeridirSource {
 
     pub async fn scrape_year<A, B, C>(
         &self,
-        file_hash: FileHash,
         source: &Source,
         insert_closure: C,
         chunk_size: usize,
     ) -> Result<(), ScraperError>
+    where
+        A: DeserializeOwned + 'static + std::fmt::Debug + Send,
+        B: Future<Output = Result<(), InsertError>>,
+        C: Fn(Vec<A>) -> B,
+    {
+        let file = self.download(source).await?;
+        let data = file.into_deserialize::<A>().change_context(ScraperError)?;
+        add_in_chunks(insert_closure, Box::new(data), chunk_size)
+            .await
+            .change_context(ScraperError)
+    }
+
+    pub async fn scrape_year_if_changed<A, B, C>(
+        &self,
+        file_hash: FileHash,
+        source: &Source,
+        insert_closure: C,
+        chunk_size: usize,
+    ) -> Result<HashDiff, ScraperError>
     where
         A: DeserializeOwned + 'static + std::fmt::Debug + Send,
         B: Future<Output = Result<(), InsertError>>,
@@ -65,7 +83,7 @@ impl FiskeridirSource {
             .change_context(ScraperError)?;
 
         match diff {
-            HashDiff::Equal => Ok(()),
+            HashDiff::Equal => Ok(HashDiff::Equal),
             HashDiff::Changed => {
                 let data = file.into_deserialize::<A>().change_context(ScraperError)?;
                 add_in_chunks(insert_closure, Box::new(data), chunk_size)
@@ -74,7 +92,8 @@ impl FiskeridirSource {
                 self.hash_store
                     .add(&hash_id, hash)
                     .await
-                    .change_context(ScraperError)
+                    .change_context(ScraperError)?;
+                Ok(HashDiff::Changed)
             }
         }
     }
@@ -85,7 +104,7 @@ impl FiskeridirSource {
         source: &Source,
         insert_closure: D,
         chunk_size: usize,
-    ) -> Result<(), ScraperError>
+    ) -> Result<HashDiff, ScraperError>
     where
         A: DeserializeOwned
             + TryInto<B, Error = Report<fiskeridir_rs::Error>>
@@ -106,7 +125,7 @@ impl FiskeridirSource {
             .change_context(ScraperError)?;
 
         match diff {
-            HashDiff::Equal => Ok(()),
+            HashDiff::Equal => Ok(HashDiff::Equal),
             HashDiff::Changed => {
                 let data = file.into_deserialize::<A>().change_context(ScraperError)?;
                 add_in_chunks_with_conversion(insert_closure, Box::new(data), chunk_size)
@@ -115,7 +134,8 @@ impl FiskeridirSource {
                 self.hash_store
                     .add(&hash_id, hash)
                     .await
-                    .change_context(ScraperError)
+                    .change_context(ScraperError)?;
+                Ok(HashDiff::Changed)
             }
         }
     }

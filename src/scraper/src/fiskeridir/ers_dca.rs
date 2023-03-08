@@ -4,7 +4,6 @@ use crate::{DataSource, Processor, ScraperError, ScraperId};
 use async_trait::async_trait;
 use error_stack::{Result, ResultExt};
 use fiskeridir_rs::Source;
-use kyogre_core::FileHash;
 use tracing::{event, Level};
 
 use super::FiskeridirSource;
@@ -39,7 +38,7 @@ impl DataSource for ErsDcaScraper {
         for source in &self.sources {
             if let Err(e) = self
                 .fiskeridir_source
-                .scrape_year(FileHash::ErsDca, source, closure, 10000)
+                .scrape_year(source, closure, 10000)
                 .await
             {
                 event!(
@@ -51,7 +50,7 @@ impl DataSource for ErsDcaScraper {
             } else {
                 event!(
                     Level::INFO,
-                    "succesfully scraped ers_dca year: {}",
+                    "successfully scraped ers_dca year: {}",
                     source.year()
                 );
             }
