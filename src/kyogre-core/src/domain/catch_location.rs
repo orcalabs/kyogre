@@ -1,4 +1,4 @@
-use error_stack::{report, Context, IntoReport, Report, ResultExt};
+use error_stack::{report, IntoReport, Report, ResultExt};
 use serde::{
     de::{self, Visitor},
     Deserialize, Serialize,
@@ -31,7 +31,7 @@ pub enum CatchLocationIdError {
     InvalidCatchArea,
 }
 
-impl Context for CatchLocationIdError {}
+impl std::error::Error for CatchLocationIdError {}
 
 impl std::fmt::Display for CatchLocationIdError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
