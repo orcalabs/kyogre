@@ -16,6 +16,10 @@ INSERT INTO
     data_hashes (hash, data_hash_id)
 VALUES
     ($1, $2)
+ON CONFLICT (data_hash_id) DO
+UPDATE
+SET
+    hash = excluded.hash
             "#,
             hash,
             id.as_ref(),
