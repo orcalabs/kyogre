@@ -4,7 +4,7 @@ use serde::{
     Deserialize, Serialize,
 };
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize)]
 pub struct CatchLocationId(String);
 
 impl CatchLocationId {

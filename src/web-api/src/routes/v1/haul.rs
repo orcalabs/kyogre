@@ -1,4 +1,8 @@
+use std::collections::HashMap;
+
 use crate::{
+    error::ApiError,
+    response::Response,
     routes::utils::{deserialize_string_list, DateTimeUtc},
     to_streaming_response, Database,
 };
@@ -13,10 +17,10 @@ use utoipa::{IntoParams, ToSchema};
 #[derive(Default, Debug, Clone, Deserialize, IntoParams)]
 #[serde(rename_all = "camelCase")]
 pub struct HaulsParams {
-    #[param(value_type = Option<String>, example = "2023-01-1T00:00:00Z,2023-02-1T00:00:00Z")]
+    #[param(value_type = Option<String>, example = "2023-01-01T00:00:00Z,2023-02-01T00:00:00Z")]
     #[serde(deserialize_with = "deserialize_string_list", default)]
     pub months: Option<Vec<DateTimeUtc>>,
-    #[param(value_type = Option<String>, example = "09-05,09-04")]
+    #[param(value_type = Option<String>, example = "05-24,15-10")]
     #[serde(deserialize_with = "deserialize_string_list", default)]
     pub catch_locations: Option<Vec<CatchLocationId>>,
 }
@@ -46,16 +50,39 @@ pub async fn hauls<T: Database + 'static>(
     }
 }
 
+#[utoipa::path(
+    get,
+    path = "/hauls_grid",
+    params(HaulsParams),
+    responses(
+        (status = 200, description = "an aggregated grid view of haul living weights", body = HaulsGrid),
+        (status = 400, description = "the provided parameters were invalid"),
+        (status = 500, description = "an internal error occured", body = ErrorResponse),
+    )
+)]
+#[tracing::instrument(skip(db))]
+pub async fn hauls_grid<T: Database + 'static>(
+    db: web::Data<T>,
+    params: web::Query<HaulsParams>,
+) -> Result<Response<HaulsGrid>, ApiError> {
+    let query = params.into_inner().into();
+
+    let grid = db.hauls_grid(query).await.map_err(|e| {
+        event!(Level::ERROR, "failed to retrieve hauls grid: {:?}", e);
+        ApiError::InternalServerError
+    })?;
+
+    Ok(Response::new(HaulsGrid::from(grid)))
+}
+
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct Haul {
     pub ers_activity_id: String,
     pub duration: i32,
     pub haul_distance: Option<i32>,
-    #[schema(value_type = Option<String>, example = "09-05")]
+    #[schema(value_type = Option<String>, example = "05-24")]
     pub catch_location_start: Option<CatchLocationId>,
-    #[schema(value_type = Option<String>, example = "09-05")]
-    pub catch_location_end: Option<CatchLocationId>,
     pub ocean_depth_end: i32,
     pub ocean_depth_start: i32,
     pub quota_type_id: i32,
@@ -101,17 +128,21 @@ pub struct WhaleCatch {
     pub length: Option<i32>,
 }
 
+#[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct HaulsGrid {
+    pub grid: HashMap<CatchLocationId, i64>,
+    pub max_weight: i64,
+    pub min_weight: i64,
+}
+
 impl From<kyogre_core::Haul> for Haul {
     fn from(v: kyogre_core::Haul) -> Self {
         Haul {
             ers_activity_id: v.ers_activity_id,
             duration: v.duration,
             haul_distance: v.haul_distance,
-            catch_location_start: CatchLocationId::new_opt(
-                v.main_area_start_id,
-                v.location_start_code,
-            ),
-            catch_location_end: CatchLocationId::new_opt(v.main_area_end_id, v.location_end_code),
+            catch_location_start: v.catch_location_start,
             ocean_depth_end: v.ocean_depth_end,
             ocean_depth_start: v.ocean_depth_start,
             quota_type_id: v.quota_type_id,
@@ -161,6 +192,15 @@ impl From<kyogre_core::WhaleCatch> for WhaleCatch {
     }
 }
 
+impl From<kyogre_core::HaulsGrid> for HaulsGrid {
+    fn from(v: kyogre_core::HaulsGrid) -> Self {
+        HaulsGrid {
+            grid: v.grid,
+            max_weight: v.max_weight,
+            min_weight: v.min_weight,
+        }
+    }
+}
 fn utc_from_naive(naive_date: NaiveDate) -> DateTime<Utc> {
     DateTime::<Utc>::from_utc(naive_date.and_hms_opt(0, 0, 0).unwrap(), Utc)
 }

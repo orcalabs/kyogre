@@ -1,7 +1,7 @@
 use bigdecimal::{BigDecimal, FromPrimitive};
 use chrono::{DateTime, NaiveDate, NaiveTime, Utc};
 use error_stack::{IntoReport, Report, ResultExt};
-use kyogre_core::WhaleGender;
+use kyogre_core::{CatchLocationId, WhaleGender};
 use serde::Deserialize;
 
 use crate::{
@@ -13,10 +13,7 @@ pub struct Haul {
     pub ers_activity_id: String,
     pub duration: i32,
     pub haul_distance: Option<i32>,
-    pub location_end_code: Option<i32>,
-    pub location_start_code: Option<i32>,
-    pub main_area_end_id: Option<i32>,
-    pub main_area_start_id: Option<i32>,
+    pub catch_location_start: Option<String>,
     pub ocean_depth_end: i32,
     pub ocean_depth_start: i32,
     pub quota_type_id: i32,
@@ -65,6 +62,13 @@ pub struct WhaleCatch {
     pub length: Option<i32>,
 }
 
+#[derive(Debug)]
+pub struct HaulsGrid {
+    pub grid: String,
+    pub max_weight: i64,
+    pub min_weight: i64,
+}
+
 impl TryFrom<Haul> for kyogre_core::Haul {
     type Error = Report<PostgresError>;
 
@@ -73,10 +77,11 @@ impl TryFrom<Haul> for kyogre_core::Haul {
             ers_activity_id: v.ers_activity_id,
             duration: v.duration,
             haul_distance: v.haul_distance,
-            location_end_code: v.location_end_code,
-            location_start_code: v.location_start_code,
-            main_area_end_id: v.main_area_end_id,
-            main_area_start_id: v.main_area_start_id,
+            catch_location_start: v
+                .catch_location_start
+                .map(CatchLocationId::try_from)
+                .transpose()
+                .change_context(PostgresError::DataConversion)?,
             ocean_depth_end: v.ocean_depth_end,
             ocean_depth_start: v.ocean_depth_start,
             quota_type_id: v.quota_type_id,
@@ -156,6 +161,21 @@ impl TryFrom<WhaleCatch> for kyogre_core::WhaleCatch {
             grenade_number: v.grenade_number,
             individual_number: v.individual_number,
             length: v.length,
+        })
+    }
+}
+
+impl TryFrom<HaulsGrid> for kyogre_core::HaulsGrid {
+    type Error = Report<PostgresError>;
+
+    fn try_from(v: HaulsGrid) -> Result<Self, Self::Error> {
+        Ok(Self {
+            grid: serde_json::from_str(&v.grid)
+                .into_report()
+                .change_context(PostgresError::DataConversion)
+                .attach_printable_lazy(|| format!("could not serialize grid: {}", v.grid))?,
+            max_weight: v.max_weight,
+            min_weight: v.min_weight,
         })
     }
 }

@@ -29,7 +29,8 @@ impl Database for PostgresAdapter {}
         v1::gear::gear_groups,
         v1::gear::gear_main_groups,
         v1::vessel::vessels,
-        v1::haul::hauls
+        v1::haul::hauls,
+        v1::haul::hauls_grid,
     ),
     components(
         schemas(
@@ -54,6 +55,7 @@ impl Database for PostgresAdapter {}
             v1::haul::Haul,
             v1::haul::HaulCatch,
             v1::haul::WhaleCatch,
+            v1::haul::HaulsGrid,
         )
     ),
     tags(

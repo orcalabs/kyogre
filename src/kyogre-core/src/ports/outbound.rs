@@ -17,6 +17,7 @@ pub trait AisMigratorSource {
     async fn existing_mmsis(&self) -> Result<Vec<i32>, QueryError>;
 }
 
+#[async_trait]
 pub trait WebApiPort {
     fn ais_positions(
         &self,
@@ -37,6 +38,7 @@ pub trait WebApiPort {
         &self,
         query: HaulsQuery,
     ) -> Pin<Box<dyn Stream<Item = Result<Haul, QueryError>> + '_>>;
+    async fn hauls_grid(&self, query: HaulsQuery) -> Result<HaulsGrid, QueryError>;
 }
 
 #[async_trait]
