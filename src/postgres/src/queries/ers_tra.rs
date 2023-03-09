@@ -321,7 +321,6 @@ FROM
         $6::INT[],
         $7::INT[]
     )
-ON CONFLICT (message_id, species_fao_id) DO NOTHING
             "#,
             message_id.as_slice(),
             ers_quantum_type_id.as_slice() as _,
@@ -332,6 +331,23 @@ ON CONFLICT (message_id, species_fao_id) DO NOTHING
             species_main_group_id.as_slice() as _,
         )
         .execute(&mut *tx)
+        .await
+        .into_report()
+        .change_context(PostgresError::Query)
+        .map(|_| ())
+    }
+
+    pub(crate) async fn delete_ers_tra_catches_impl(&self, year: u32) -> Result<(), PostgresError> {
+        sqlx::query!(
+            r#"
+DELETE FROM ers_tra_catches c USING ers_tra e
+WHERE
+    e.message_id = c.message_id
+    AND e.relevant_year = $1
+            "#,
+            year as i32
+        )
+        .execute(&self.pool)
         .await
         .into_report()
         .change_context(PostgresError::Query)

@@ -304,13 +304,28 @@ impl ScraperInboundPort for PostgresAdapter {
         let set = ErsDepSet::new(ers_dep).change_context(InsertError)?;
         self.add_ers_dep_set(set).await.change_context(InsertError)
     }
+    async fn delete_ers_dep_catches(&self, year: u32) -> Result<(), DeleteError> {
+        self.delete_ers_dep_catches_impl(year)
+            .await
+            .change_context(DeleteError)
+    }
     async fn add_ers_por(&self, ers_por: Vec<fiskeridir_rs::ErsPor>) -> Result<(), InsertError> {
         let set = ErsPorSet::new(ers_por).change_context(InsertError)?;
         self.add_ers_por_set(set).await.change_context(InsertError)
     }
+    async fn delete_ers_por_catches(&self, year: u32) -> Result<(), DeleteError> {
+        self.delete_ers_por_catches_impl(year)
+            .await
+            .change_context(DeleteError)
+    }
     async fn add_ers_tra(&self, ers_tra: Vec<fiskeridir_rs::ErsTra>) -> Result<(), InsertError> {
         let set = ErsTraSet::new(ers_tra).change_context(InsertError)?;
         self.add_ers_tra_set(set).await.change_context(InsertError)
+    }
+    async fn delete_ers_tra_catches(&self, year: u32) -> Result<(), DeleteError> {
+        self.delete_ers_tra_catches_impl(year)
+            .await
+            .change_context(DeleteError)
     }
     async fn update_database_views(&self) -> Result<(), UpdateError> {
         self.update_database_views_impl()
