@@ -2,7 +2,7 @@ use crate::chunks::{add_in_chunks, add_in_chunks_with_conversion};
 use crate::ScraperError;
 use error_stack::{Report, Result, ResultExt};
 use fiskeridir_rs::{DataFile, FileDownloader, Source};
-use kyogre_core::{FileHash, InsertError, ScraperFileHashInboundPort};
+use kyogre_core::{DeleteError, FileHash, InsertError, ScraperFileHashInboundPort};
 use kyogre_core::{FileHashId, HashDiff};
 use serde::de::DeserializeOwned;
 use std::future::Future;
@@ -42,35 +42,20 @@ impl FiskeridirSource {
             .change_context(ScraperError)
     }
 
-    pub async fn scrape_year<A, B, C>(
-        &self,
-        source: &Source,
-        insert_closure: C,
-        chunk_size: usize,
-    ) -> Result<(), ScraperError>
-    where
-        A: DeserializeOwned + 'static + std::fmt::Debug + Send,
-        B: Future<Output = Result<(), InsertError>>,
-        C: Fn(Vec<A>) -> B,
-    {
-        let file = self.download(source).await?;
-        let data = file.into_deserialize::<A>().change_context(ScraperError)?;
-        add_in_chunks(insert_closure, Box::new(data), chunk_size)
-            .await
-            .change_context(ScraperError)
-    }
-
-    pub async fn scrape_year_if_changed<A, B, C>(
+    pub async fn scrape_year_if_changed<A, B, C, D, E>(
         &self,
         file_hash: FileHash,
         source: &Source,
         insert_closure: C,
         chunk_size: usize,
+        delete_closure: D,
     ) -> Result<HashDiff, ScraperError>
     where
         A: DeserializeOwned + 'static + std::fmt::Debug + Send,
         B: Future<Output = Result<(), InsertError>>,
         C: Fn(Vec<A>) -> B,
+        D: Fn(u32) -> E,
+        E: Future<Output = Result<(), DeleteError>>,
     {
         let file = self.download(source).await?;
         let hash = file.hash().change_context(ScraperError)?;
@@ -85,6 +70,10 @@ impl FiskeridirSource {
         match diff {
             HashDiff::Equal => Ok(HashDiff::Equal),
             HashDiff::Changed => {
+                delete_closure(source.year())
+                    .await
+                    .change_context(ScraperError)?;
+
                 let data = file.into_deserialize::<A>().change_context(ScraperError)?;
                 add_in_chunks(insert_closure, Box::new(data), chunk_size)
                     .await

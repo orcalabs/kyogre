@@ -291,8 +291,10 @@ impl ScraperInboundPort for PostgresAdapter {
 
         self.add_landing_set(set).await.change_context(InsertError)
     }
-    async fn delete_ers_dca(&self) -> Result<(), InsertError> {
-        self.delete_ers_dca_impl().await.change_context(InsertError)
+    async fn delete_ers_dca(&self, year: u32) -> Result<(), DeleteError> {
+        self.delete_ers_dca_impl(year)
+            .await
+            .change_context(DeleteError)
     }
     async fn add_ers_dca(&self, ers_dca: Vec<fiskeridir_rs::ErsDca>) -> Result<(), InsertError> {
         let set = ErsDcaSet::new(ers_dca).change_context(InsertError)?;
