@@ -2,8 +2,9 @@ use std::sync::Arc;
 
 use crate::{DataSource, Processor, ScraperError, ScraperId};
 use async_trait::async_trait;
-use error_stack::{Result, ResultExt};
+use error_stack::Result;
 use fiskeridir_rs::Source;
+use kyogre_core::{FileHash, HashDiff};
 use tracing::{event, Level};
 
 use super::FiskeridirSource;
@@ -29,30 +30,31 @@ impl DataSource for ErsDcaScraper {
     }
 
     async fn scrape(&self, processor: &(dyn Processor)) -> Result<(), ScraperError> {
-        processor
-            .delete_ers_dca()
-            .await
-            .change_context(ScraperError)?;
-
         let closure = |ers_dca| processor.add_ers_dca(ers_dca);
+        let delete_closure = |year| processor.delete_ers_dca(year);
+
         for source in &self.sources {
-            if let Err(e) = self
+            match self
                 .fiskeridir_source
-                .scrape_year(source, closure, 10000)
+                .scrape_year_if_changed(FileHash::ErsDca, source, closure, 10000, delete_closure)
                 .await
             {
-                event!(
+                Err(e) => event!(
                     Level::ERROR,
                     "failed to scrape ers_dca for year: {}, err: {:?}",
                     source.year(),
                     e,
-                );
-            } else {
-                event!(
+                ),
+                Ok(HashDiff::Changed) => event!(
                     Level::INFO,
                     "successfully scraped ers_dca year: {}",
                     source.year()
-                );
+                ),
+                Ok(HashDiff::Equal) => event!(
+                    Level::INFO,
+                    "no changes for ers_dca year: {}",
+                    source.year()
+                ),
             }
         }
         Ok(())

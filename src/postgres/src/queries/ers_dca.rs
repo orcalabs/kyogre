@@ -565,12 +565,19 @@ ON CONFLICT (herring_population_id) DO NOTHING
         .map(|_| ())
     }
 
-    pub(crate) async fn delete_ers_dca_impl(&self) -> Result<(), PostgresError> {
-        sqlx::query("DELETE FROM ers_dca")
-            .execute(&self.pool)
-            .await
-            .into_report()
-            .change_context(PostgresError::Query)?;
+    pub(crate) async fn delete_ers_dca_impl(&self, year: u32) -> Result<(), PostgresError> {
+        sqlx::query!(
+            r#"
+DELETE FROM ers_dca
+WHERE
+    relevant_year = $1
+            "#,
+            year as i32
+        )
+        .execute(&self.pool)
+        .await
+        .into_report()
+        .change_context(PostgresError::Query)?;
 
         Ok(())
     }

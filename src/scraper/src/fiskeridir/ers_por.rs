@@ -31,10 +31,12 @@ impl DataSource for ErsPorScraper {
 
     async fn scrape(&self, processor: &(dyn Processor)) -> Result<(), ScraperError> {
         let closure = |ers_por| processor.add_ers_por(ers_por);
+        let delete_closure = |_| async { Ok(()) };
+
         for source in &self.sources {
             match self
                 .fiskeridir_source
-                .scrape_year_if_changed(FileHash::ErsPor, source, closure, 10000)
+                .scrape_year_if_changed(FileHash::ErsPor, source, closure, 10000, delete_closure)
                 .await
             {
                 Err(e) => event!(

@@ -966,6 +966,18 @@
     },
     "query": "\nINSERT INTO\n    fiskeridir_vessels (\n        fiskeridir_vessel_id,\n        call_sign,\n        registration_id,\n        \"name\",\n        \"length\",\n        building_year,\n        engine_power,\n        engine_building_year,\n        fiskeridir_vessel_type_id,\n        norwegian_municipality_id,\n        norwegian_county_id,\n        fiskeridir_nation_group_id,\n        nation_id,\n        gross_tonnage_1969,\n        gross_tonnage_other,\n        rebuilding_year,\n        fiskeridir_length_group_id\n    )\nSELECT\n    *\nFROM\n    UNNEST(\n        $1::BIGINT[],\n        $2::VARCHAR[],\n        $3::VARCHAR[],\n        $4::VARCHAR[],\n        $5::DECIMAL[],\n        $6::INT[],\n        $7::INT[],\n        $8::INT[],\n        $9::INT[],\n        $10::INT[],\n        $11::INT[],\n        $12::VARCHAR[],\n        $13::VARCHAR[],\n        $14::INT[],\n        $15::INT[],\n        $16::INT[],\n        $17::INT[]\n    )\nON CONFLICT (fiskeridir_vessel_id) DO NOTHING\n            "
   },
+  "90692aec2f77f36b2d8e4d3e122b8fd69a7d0f6b2dd960f90ce537bfad6836b5": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Int4"
+        ]
+      }
+    },
+    "query": "\nDELETE FROM ers_dca\nWHERE\n    relevant_year = $1\n            "
+  },
   "927b056d9953e6791031f77c451b9b7d821feae9d62b0305cc595c6f1ae9fb6b": {
     "describe": {
       "columns": [],

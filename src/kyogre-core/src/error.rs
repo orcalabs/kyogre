@@ -35,6 +35,17 @@ impl std::fmt::Display for UpdateError {
 }
 
 #[derive(Debug)]
+pub struct DeleteError;
+
+impl Context for DeleteError {}
+
+impl std::fmt::Display for DeleteError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("an error occurred while deleting data")
+    }
+}
+
+#[derive(Debug)]
 pub struct DateRangeError {
     pub start: DateTime<Utc>,
     pub end: DateTime<Utc>,
