@@ -1,20 +1,19 @@
+use std::collections::HashMap;
+
 use chrono::{DateTime, NaiveDate, NaiveTime, Utc};
 
-use crate::WhaleGender;
+use crate::{CatchLocationId, WhaleGender};
 
 #[derive(Debug, Clone)]
 #[remain::sorted]
 pub struct Haul {
+    pub catch_location_start: Option<CatchLocationId>,
     pub catches: Vec<HaulCatch>,
     pub duration: i32,
     pub ers_activity_id: String,
     pub fiskeridir_vessel_id: Option<i64>,
     pub gear_fiskeridir_id: Option<i32>,
     pub haul_distance: Option<i32>,
-    pub location_end_code: Option<i32>,
-    pub location_start_code: Option<i32>,
-    pub main_area_end_id: Option<i32>,
-    pub main_area_start_id: Option<i32>,
     pub ocean_depth_end: i32,
     pub ocean_depth_start: i32,
     pub quota_type_id: i32,
@@ -60,4 +59,12 @@ pub struct WhaleCatch {
     pub grenade_number: String,
     pub individual_number: Option<i32>,
     pub length: Option<i32>,
+}
+
+#[derive(Debug, Clone)]
+#[remain::sorted]
+pub struct HaulsGrid {
+    pub grid: HashMap<CatchLocationId, i64>,
+    pub max_weight: i64,
+    pub min_weight: i64,
 }

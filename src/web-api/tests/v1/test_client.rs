@@ -71,6 +71,22 @@ impl ApiClient {
 
         self.get("hauls", &parameters).await
     }
+    pub async fn get_hauls_grid(&self, params: HaulsParams) -> Response {
+        let mut parameters = Vec::new();
+
+        if let Some(months) = params.months {
+            parameters.push(("months".to_string(), create_comma_separated_list(months)))
+        }
+
+        if let Some(locations) = params.catch_locations {
+            parameters.push((
+                "catchLocations".to_string(),
+                create_comma_separated_list(locations),
+            ))
+        }
+
+        self.get("hauls_grid", &parameters).await
+    }
 }
 
 fn create_comma_separated_list<T>(vals: Vec<T>) -> String

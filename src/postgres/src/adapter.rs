@@ -232,6 +232,7 @@ impl AisMigratorDestination for PostgresAdapter {
     }
 }
 
+#[async_trait]
 impl WebApiPort for PostgresAdapter {
     fn ais_positions(
         &self,
@@ -270,7 +271,16 @@ impl WebApiPort for PostgresAdapter {
         &self,
         query: HaulsQuery,
     ) -> Pin<Box<dyn Stream<Item = Result<Haul, QueryError>> + '_>> {
-        convert_stream(self.hauls(query)).boxed()
+        convert_stream(self.hauls_impl(query)).boxed()
+    }
+
+    async fn hauls_grid(&self, query: HaulsQuery) -> Result<HaulsGrid, QueryError> {
+        let grid = self
+            .hauls_grid_impl(query)
+            .await
+            .change_context(QueryError)?;
+
+        HaulsGrid::try_from(grid).change_context(QueryError)
     }
 }
 

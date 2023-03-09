@@ -89,7 +89,11 @@ where
                         web::get().to(routes::v1::gear::gear_main_groups),
                     )
                     .route("/vessels", web::get().to(routes::v1::vessel::vessels::<T>))
-                    .route("/hauls", web::get().to(routes::v1::haul::hauls::<T>)),
+                    .route("/hauls", web::get().to(routes::v1::haul::hauls::<T>))
+                    .route(
+                        "/hauls_grid",
+                        web::get().to(routes::v1::haul::hauls_grid::<T>),
+                    ),
             );
 
         match environment {
