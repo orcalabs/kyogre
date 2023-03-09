@@ -31,7 +31,7 @@ impl DataSource for ErsDepScraper {
 
     async fn scrape(&self, processor: &(dyn Processor)) -> Result<(), ScraperError> {
         let closure = |ers_dep| processor.add_ers_dep(ers_dep);
-        let delete_closure = |_| async { Ok(()) };
+        let delete_closure = |year| processor.delete_ers_dep_catches(year);
 
         for source in &self.sources {
             match self

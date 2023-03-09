@@ -1,5 +1,23 @@
 {
   "db": "PostgreSQL",
+  "063ffe3ea8b5130ce0826bfca3da92147d6472f539da0b9e2ce34f83532da96c": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Int8Array",
+          "VarcharArray",
+          "Int4Array",
+          "VarcharArray",
+          "Int4Array",
+          "Int4Array",
+          "Int4Array"
+        ]
+      }
+    },
+    "query": "\nINSERT INTO\n    ers_departure_catches (\n        message_id,\n        ers_quantum_type_id,\n        living_weight,\n        species_fao_id,\n        species_fiskeridir_id,\n        species_group_id,\n        species_main_group_id\n    )\nSELECT\n    *\nFROM\n    UNNEST(\n        $1::BIGINT[],\n        $2::VARCHAR[],\n        $3::INT[],\n        $4::VARCHAR[],\n        $5::INT[],\n        $6::INT[],\n        $7::INT[]\n    )\n            "
+  },
   "08a03f64df22a7c92a164d1800c3092cb6705eff86ced66c185be07dddd6332c": {
     "describe": {
       "columns": [],
@@ -226,6 +244,18 @@
     },
     "query": "\nSELECT\n    f.fiskeridir_vessel_id AS \"fiskeridir_vessel_id!\",\n    f.fiskeridir_vessel_type_id,\n    f.fiskeridir_length_group_id,\n    f.fiskeridir_nation_group_id,\n    f.norwegian_municipality_id AS fiskeridir_norwegian_municipality_id,\n    f.norwegian_county_id AS fiskeridir_norwegian_county_id,\n    f.nation_id AS \"fiskeridir_nation_id!\",\n    f.gross_tonnage_1969 AS fiskeridir_gross_tonnage_1969,\n    f.gross_tonnage_other AS fiskeridir_gross_tonnage_other,\n    f.call_sign AS fiskeridir_call_sign,\n    f.\"name\" AS fiskeridir_name,\n    f.registration_id AS fiskeridir_registration_id,\n    f.\"length\" AS fiskeridir_length,\n    f.\"width\" AS fiskeridir_width,\n    f.\"owner\" AS fiskeridir_owner,\n    f.engine_building_year AS fiskeridir_engine_building_year,\n    f.engine_power AS fiskeridir_engine_power,\n    f.building_year AS fiskeridir_building_year,\n    f.rebuilding_year AS fiskeridir_rebuilding_year,\n    a.mmsi AS \"ais_mmsi?\",\n    a.imo_number AS ais_imo_number,\n    a.call_sign AS ais_call_sign,\n    a.name AS ais_name,\n    a.ship_length AS ais_ship_length,\n    a.ship_width AS ais_ship_width,\n    a.eta AS ais_eta,\n    a.destination AS ais_destination\nFROM\n    fiskeridir_vessels AS f\n    LEFT JOIN ais_vessels AS a ON f.call_sign = a.call_sign\n            "
   },
+  "0ef8600ed3dec02cfd9a260f004587fc2715180f308d47e5de8bb5ed52b87e91": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Int4"
+        ]
+      }
+    },
+    "query": "\nDELETE FROM ers_tra_catches c USING ers_tra e\nWHERE\n    e.message_id = c.message_id\n    AND e.relevant_year = $1\n            "
+  },
   "0faa0da5ec942cced96e1a399a31b2334e533f59c14312fb2b772c47dff6a61f": {
     "describe": {
       "columns": [
@@ -279,6 +309,18 @@
     },
     "query": "\nSELECT\n    hash\nFROM\n    data_hashes\nWHERE\n    data_hash_id = $1\n            "
   },
+  "1eb59eb4935a78bc9ed387bac65c7c3b006ca15bdeac5274693210f3a237cb8c": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Int4"
+        ]
+      }
+    },
+    "query": "\nDELETE FROM ers_departure_catches c USING ers_departures e\nWHERE\n    e.message_id = c.message_id\n    AND e.relevant_year = $1\n            "
+  },
   "1ec530d8f145aad047ef664764c7b7aec1058aab0896a286e76121fadd72d33d": {
     "describe": {
       "columns": [],
@@ -313,23 +355,17 @@
     },
     "query": "\nINSERT INTO\n    ais_data_migration_progress (mmsi, progress)\nVALUES\n    ($1, $2)\nON CONFLICT (mmsi) DO\nUPDATE\nSET\n    progress = excluded.progress\n            "
   },
-  "2533e0d68d58e5b97458ffded9ec1c433336e1dc0887df59b0fa80b7f6184c87": {
+  "22e529e16a86898f34ded502a045b6c293e79c8889dd1c9320ae8522befba9ed": {
     "describe": {
       "columns": [],
       "nullable": [],
       "parameters": {
         "Left": [
-          "Int8Array",
-          "VarcharArray",
-          "Int4Array",
-          "VarcharArray",
-          "Int4Array",
-          "Int4Array",
-          "Int4Array"
+          "Int4"
         ]
       }
     },
-    "query": "\nINSERT INTO\n    ers_tra_catches (\n        message_id,\n        ers_quantum_type_id,\n        living_weight,\n        species_fao_id,\n        species_fiskeridir_id,\n        species_group_id,\n        species_main_group_id\n    )\nSELECT\n    *\nFROM\n    UNNEST(\n        $1::BIGINT[],\n        $2::VARCHAR[],\n        $3::INT[],\n        $4::VARCHAR[],\n        $5::INT[],\n        $6::INT[],\n        $7::INT[]\n    )\nON CONFLICT (message_id, species_fao_id) DO NOTHING\n            "
+    "query": "\nDELETE FROM ers_arrival_catches c USING ers_arrivals e\nWHERE\n    e.message_id = c.message_id\n    AND e.relevant_year = $1\n            "
   },
   "26413798bcb01e60f28bb8810246d0ccbaccbb71b0a22467d90cb6cce37326c2": {
     "describe": {
@@ -367,6 +403,24 @@
       }
     },
     "query": "\nINSERT INTO\n    current_ais_positions (\n        mmsi,\n        latitude,\n        longitude,\n        course_over_ground,\n        rate_of_turn,\n        true_heading,\n        speed_over_ground,\n        TIMESTAMP,\n        altitude,\n        distance_to_shore,\n        ais_class,\n        ais_message_type_id,\n        navigation_status_id\n    )\nVALUES\n    (\n        $1::INT,\n        $2::DECIMAL,\n        $3::DECIMAL,\n        $4::DECIMAL,\n        $5::DECIMAL,\n        $6::INT,\n        $7::DECIMAL,\n        $8::timestamptz,\n        $9::INT,\n        $10::DECIMAL,\n        $11::VARCHAR,\n        $12::INT,\n        $13::INT\n    )\nON CONFLICT (mmsi) DO\nUPDATE\nSET\n    latitude = excluded.latitude,\n    longitude = excluded.longitude,\n    course_over_ground = excluded.course_over_ground,\n    rate_of_turn = excluded.rate_of_turn,\n    true_heading = excluded.true_heading,\n    speed_over_ground = excluded.speed_over_ground,\n    TIMESTAMP = excluded.timestamp,\n    altitude = excluded.altitude,\n    distance_to_shore = excluded.distance_to_shore,\n    ais_class = excluded.ais_class,\n    ais_message_type_id = excluded.ais_message_type_id,\n    navigation_status_id = excluded.navigation_status_id\n            "
+  },
+  "2937299bd506f10ab4ce79809225a575d4c55f465dfc90b71e618467dda14394": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Int8Array",
+          "VarcharArray",
+          "Int4Array",
+          "VarcharArray",
+          "Int4Array",
+          "Int4Array",
+          "Int4Array"
+        ]
+      }
+    },
+    "query": "\nINSERT INTO\n    ers_tra_catches (\n        message_id,\n        ers_quantum_type_id,\n        living_weight,\n        species_fao_id,\n        species_fiskeridir_id,\n        species_group_id,\n        species_main_group_id\n    )\nSELECT\n    *\nFROM\n    UNNEST(\n        $1::BIGINT[],\n        $2::VARCHAR[],\n        $3::INT[],\n        $4::VARCHAR[],\n        $5::INT[],\n        $6::INT[],\n        $7::INT[]\n    )\n            "
   },
   "29c411b419f2f4a111fe02906a6bf3be8cf5182894eb6ee1e24eccc81de8f35e": {
     "describe": {
@@ -431,24 +485,6 @@
       }
     },
     "query": "\nINSERT INTO\n    norwegian_municipalities (norwegian_municipality_id, \"name\")\nSELECT\n    *\nFROM\n    UNNEST($1::INT[], $2::VARCHAR[])\nON CONFLICT (norwegian_municipality_id) DO\nUPDATE\nSET\n    NAME = excluded.name\nWHERE\n    norwegian_municipalities.name IS NULL\n    AND excluded.name IS NOT NULL\n            "
-  },
-  "42f3533d342307bfdda1387bf505bd40d7dc84215916e2640010bc47a89326cf": {
-    "describe": {
-      "columns": [],
-      "nullable": [],
-      "parameters": {
-        "Left": [
-          "Int8Array",
-          "VarcharArray",
-          "Int4Array",
-          "VarcharArray",
-          "Int4Array",
-          "Int4Array",
-          "Int4Array"
-        ]
-      }
-    },
-    "query": "\nINSERT INTO\n    ers_arrival_catches (\n        message_id,\n        ers_quantum_type_id,\n        living_weight,\n        species_fao_id,\n        species_fiskeridir_id,\n        species_group_id,\n        species_main_group_id\n    )\nSELECT\n    *\nFROM\n    UNNEST(\n        $1::BIGINT[],\n        $2::VARCHAR[],\n        $3::INT[],\n        $4::VARCHAR[],\n        $5::INT[],\n        $6::INT[],\n        $7::INT[]\n    )\nON CONFLICT (message_id, species_fao_id) DO NOTHING\n            "
   },
   "5101d466d5c5425c8f98f48cf5b82ff3497c642b369dcbf2ba25e69ead8ca917": {
     "describe": {
@@ -1030,24 +1066,6 @@
     },
     "query": "\nINSERT INTO\n    ers_arrivals (\n        message_id,\n        message_date,\n        message_number,\n        message_time,\n        message_timestamp,\n        ers_message_type_id,\n        message_year,\n        relevant_year,\n        sequence_number,\n        arrival_date,\n        arrival_time,\n        arrival_timestamp,\n        landing_facility,\n        port_id,\n        fiskeridir_vessel_id,\n        vessel_building_year,\n        vessel_call_sign,\n        vessel_call_sign_ers,\n        vessel_engine_building_year,\n        vessel_engine_power,\n        vessel_gross_tonnage_1969,\n        vessel_gross_tonnage_other,\n        vessel_county,\n        vessel_county_code,\n        vessel_greatest_length,\n        vessel_identification,\n        vessel_length,\n        vessel_length_group,\n        vessel_length_group_code,\n        vessel_material_code,\n        vessel_municipality,\n        vessel_municipality_code,\n        vessel_name,\n        vessel_name_ers,\n        vessel_nationality_code,\n        fiskeridir_vessel_nationality_group_id,\n        vessel_rebuilding_year,\n        vessel_registration_id,\n        vessel_registration_id_ers,\n        vessel_valid_until,\n        vessel_width\n    )\nSELECT\n    *\nFROM\n    UNNEST(\n        $1::BIGINT[],\n        $2::date[],\n        $3::INT[],\n        $4::TIME[],\n        $5::timestamptz[],\n        $6::VARCHAR[],\n        $7::INT[],\n        $8::INT[],\n        $9::INT[],\n        $10::date[],\n        $11::TIME[],\n        $12::timestamptz[],\n        $13::VARCHAR[],\n        $14::VARCHAR[],\n        $15::INT[],\n        $16::INT[],\n        $17::VARCHAR[],\n        $18::VARCHAR[],\n        $19::INT[],\n        $20::INT[],\n        $21::INT[],\n        $22::INT[],\n        $23::VARCHAR[],\n        $24::INT[],\n        $25::DECIMAL[],\n        $26::VARCHAR[],\n        $27::DECIMAL[],\n        $28::VARCHAR[],\n        $29::INT[],\n        $30::VARCHAR[],\n        $31::VARCHAR[],\n        $32::INT[],\n        $33::VARCHAR[],\n        $34::VARCHAR[],\n        $35::VARCHAR[],\n        $36::INT[],\n        $37::INT[],\n        $38::VARCHAR[],\n        $39::VARCHAR[],\n        $40::date[],\n        $41::DECIMAL[]\n    )\nON CONFLICT (message_id) DO NOTHING\n            "
   },
-  "9e98bbac144beaae2f6009e5be9b9ab046d99f67cb89ee02fefad91d7d2116ee": {
-    "describe": {
-      "columns": [],
-      "nullable": [],
-      "parameters": {
-        "Left": [
-          "Int8Array",
-          "VarcharArray",
-          "Int4Array",
-          "VarcharArray",
-          "Int4Array",
-          "Int4Array",
-          "Int4Array"
-        ]
-      }
-    },
-    "query": "\nINSERT INTO\n    ers_departure_catches (\n        message_id,\n        ers_quantum_type_id,\n        living_weight,\n        species_fao_id,\n        species_fiskeridir_id,\n        species_group_id,\n        species_main_group_id\n    )\nSELECT\n    *\nFROM\n    UNNEST(\n        $1::BIGINT[],\n        $2::VARCHAR[],\n        $3::INT[],\n        $4::VARCHAR[],\n        $5::INT[],\n        $6::INT[],\n        $7::INT[]\n    )\nON CONFLICT (message_id, species_fao_id) DO NOTHING\n            "
-  },
   "9f9b965dc448ce53a78ad20637e40bc3b24dbcd6abc5a8bbede22343d08da84e": {
     "describe": {
       "columns": [],
@@ -1304,6 +1322,24 @@
       }
     },
     "query": "\nINSERT INTO\n    herring_populations (herring_population_id, \"name\")\nSELECT\n    *\nFROM\n    UNNEST($1::VARCHAR[], $2::VARCHAR[])\nON CONFLICT (herring_population_id) DO NOTHING\n            "
+  },
+  "d1aa1ba13ded870125bd254ccb84850995fd48db341ca8a6680f1af0a64ec030": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Int8Array",
+          "VarcharArray",
+          "Int4Array",
+          "VarcharArray",
+          "Int4Array",
+          "Int4Array",
+          "Int4Array"
+        ]
+      }
+    },
+    "query": "\nINSERT INTO\n    ers_arrival_catches (\n        message_id,\n        ers_quantum_type_id,\n        living_weight,\n        species_fao_id,\n        species_fiskeridir_id,\n        species_group_id,\n        species_main_group_id\n    )\nSELECT\n    *\nFROM\n    UNNEST(\n        $1::BIGINT[],\n        $2::VARCHAR[],\n        $3::INT[],\n        $4::VARCHAR[],\n        $5::INT[],\n        $6::INT[],\n        $7::INT[]\n    )\n            "
   },
   "d52da252e39a219e038bf4ede6dc7b3e0df80c71b4a316be3487c37c5795c554": {
     "describe": {
