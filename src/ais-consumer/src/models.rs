@@ -4,6 +4,7 @@ use chrono::{DateTime, Datelike, NaiveDate, NaiveDateTime, NaiveTime, TimeZone, 
 use kyogre_core::{AisClass, NavigationStatus, NewAisPosition, NewAisStatic};
 use rand::{random, Rng};
 use serde::{Deserialize, Serialize};
+use tracing::{event, Level};
 
 use crate::{distance_to_shore::distance_to_shore, error::AisMessageError};
 
@@ -99,7 +100,15 @@ impl TryFrom<AisStatic> for NewAisStatic {
     type Error = Report<AisMessageError>;
 
     fn try_from(a: AisStatic) -> std::result::Result<Self, Self::Error> {
-        let eta = a.eta.map(|eta| parse_eta_value(&eta)).transpose()?;
+        let eta = a.eta.map(|eta| parse_eta_value(&eta)).transpose();
+        let eta: Result<Option<Option<DateTime<Utc>>>, AisMessageError> = match eta {
+            Ok(v) => Ok(v),
+            Err(e) => {
+                event!(Level::WARN, "{:?}", e);
+                Ok(None)
+            }
+        };
+
         Ok(NewAisStatic {
             message_type: a.message_type.map(kyogre_core::AisMessageType::from),
             message_type_id: a.message_type_id,
@@ -108,7 +117,7 @@ impl TryFrom<AisStatic> for NewAisStatic {
             imo_number: a.imo_number,
             call_sign: a.call_sign,
             destination: a.destination,
-            eta: eta.flatten(),
+            eta: eta?.flatten(),
             name: a.name,
             draught: a.draught,
             ship_length: a.ship_length,
