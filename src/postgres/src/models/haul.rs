@@ -10,6 +10,7 @@ use crate::{
 };
 
 pub struct Haul {
+    pub haul_id: String,
     pub ers_activity_id: String,
     pub duration: i32,
     pub haul_distance: Option<i32>,
@@ -27,6 +28,7 @@ pub struct Haul {
     pub stop_longitude: BigDecimal,
     pub stop_time: NaiveTime,
     pub stop_timestamp: DateTime<Utc>,
+    pub gear_fiskeridir_id: Option<i32>,
     pub gear_group_id: Option<i32>,
     pub fiskeridir_vessel_id: Option<i64>,
     pub vessel_call_sign: Option<String>,
@@ -74,6 +76,7 @@ impl TryFrom<Haul> for kyogre_core::Haul {
 
     fn try_from(v: Haul) -> Result<Self, Self::Error> {
         Ok(Self {
+            haul_id: v.haul_id,
             ers_activity_id: v.ers_activity_id,
             duration: v.duration,
             haul_distance: v.haul_distance,
@@ -99,7 +102,8 @@ impl TryFrom<Haul> for kyogre_core::Haul {
                 .change_context(PostgresError::DataConversion)?,
             stop_time: v.stop_time,
             stop_timestamp: v.stop_timestamp,
-            gear_fiskeridir_id: v.gear_group_id,
+            gear_fiskeridir_id: v.gear_fiskeridir_id,
+            gear_group_id: v.gear_group_id,
             fiskeridir_vessel_id: v.fiskeridir_vessel_id,
             vessel_call_sign: v.vessel_call_sign,
             vessel_call_sign_ers: v.vessel_call_sign_ers,
