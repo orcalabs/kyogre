@@ -1,0 +1,3 @@
+ALTER TABLE landings
+ALTER COLUMN catch_area_id
+DROP NOT NULL;
