@@ -4,7 +4,7 @@
 
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use error_stack::{Result, ResultExt};
+use error_stack::Result;
 use kyogre_core::{
     NewTrip, Trip, TripAssemblerId, TripAssemblerOutboundPort, TripPrecisionOutboundPort,
     TripPrecisionUpdate, TripsConflictStrategy, Vessel,
@@ -30,8 +30,8 @@ pub trait TripAssembler: Send + Sync {
         adapter: &dyn TripAssemblerOutboundPort,
         vessel: &Vessel,
         start: &DateTime<Utc>,
-        prior_trip: Option<Trip>,
-    ) -> Result<(Vec<NewTrip>, Option<TripsConflictStrategy>), TripAssemblerError>;
+        no_prior_state: bool,
+    ) -> Result<Vec<NewTrip>, TripAssemblerError>;
 
     async fn calculate_precision(
         &self,
@@ -48,24 +48,15 @@ pub trait TripAssembler: Send + Sync {
     ) -> Result<Option<AssembledTrips>, TripAssemblerError> {
         let start = self.start_search_time(&state);
 
-        let prior_trip = match state {
-            State::Conflict(_) => {
-                adapter
-                    .trip_prior_to(vessel.fiskeridir.id, self.assembler_id(), &start)
-                    .await
-            }
-            State::CurrentCalculationTime(_) => {
-                adapter
-                    .most_recent_trip(vessel.fiskeridir.id, self.assembler_id())
-                    .await
-            }
-            State::NoPriorState => Ok(None),
-        }
-        .change_context(TripAssemblerError)?;
-
-        let (mut new_trips, conflict_strategy) =
-            self.new_trips(adapter, vessel, &start, prior_trip).await?;
-        new_trips.sort_by_key(|n| n.range.end());
+        let mut new_trips = self
+            .new_trips(
+                adapter,
+                vessel,
+                &start,
+                matches!(state, State::NoPriorState),
+            )
+            .await?;
+        new_trips.sort_by_key(|n| n.period.end());
 
         if new_trips.is_empty() {
             Ok(None)
@@ -73,7 +64,7 @@ pub trait TripAssembler: Send + Sync {
             Ok(Some(AssembledTrips {
                 new_trip_calucation_time: self.trip_calculation_time(new_trips.last().unwrap()),
                 trips: new_trips,
-                conflict_strategy: conflict_strategy.unwrap_or_else(|| state.conflict_strategy()),
+                conflict_strategy: state.conflict_strategy(),
             }))
         }
     }
@@ -88,7 +79,10 @@ pub struct AssembledTrips {
 
 #[derive(Debug, Clone)]
 pub enum State {
-    Conflict(DateTime<Utc>),
+    Conflict {
+        conflict_timestamp: DateTime<Utc>,
+        trip_prior_to_or_at_conflict: Option<Trip>,
+    },
     CurrentCalculationTime(DateTime<Utc>),
     NoPriorState,
 }
@@ -96,7 +90,11 @@ pub enum State {
 impl State {
     fn conflict_strategy(&self) -> TripsConflictStrategy {
         match self {
-            State::Conflict(_) | State::NoPriorState => TripsConflictStrategy::Replace,
+            State::Conflict {
+                conflict_timestamp: _,
+                trip_prior_to_or_at_conflict: _,
+            }
+            | State::NoPriorState => TripsConflictStrategy::Replace,
             State::CurrentCalculationTime(_) => TripsConflictStrategy::Error,
         }
     }

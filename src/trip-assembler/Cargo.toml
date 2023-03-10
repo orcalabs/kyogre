@@ -15,3 +15,16 @@ error-stack = { workspace = true }
 strum = { version = "0.24.1", features = ["derive"] }
 geoutils = "0.5.1"
 num-traits = "0.2.15"
+
+
+[dev-dependencies]
+postgres = { path = "../postgres" }
+rand = "0.8.5"
+dockertest = { version = "0.3.1", registry = "orcalabs-orcastrator" }
+orca-core = { version = "0.20.0", registry = "orcalabs-orcastrator", features = [
+    "dockertest",
+] }
+tokio = { version = "1.26.0", features = ["rt-multi-thread", "macros"] }
+futures = "0.3.26"
+fiskeridir-rs = { workspace = true }
+tracing-subscriber = "0.3.16"

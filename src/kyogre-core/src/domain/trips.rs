@@ -1,35 +1,37 @@
 use crate::{DateRange, Port};
 use chrono::{DateTime, TimeZone, Utc};
+use num_derive::FromPrimitive;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Trip {
     pub trip_id: i64,
-    pub range: DateRange,
+    pub period: DateRange,
     pub landing_coverage: DateRange,
     pub assembler_id: TripAssemblerId,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NewTrip {
-    pub range: DateRange,
+    pub period: DateRange,
     pub start_port_code: Option<String>,
     pub end_port_code: Option<String>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TripsConflictStrategy {
     Error,
     Replace,
 }
-#[derive(Debug, Clone, Copy)]
+
+#[derive(Debug, Clone, Copy, FromPrimitive, PartialEq, Eq)]
 pub enum TripAssemblerId {
-    Landings,
-    Ers,
+    Landings = 1,
+    Ers = 2,
 }
 
 #[derive(Debug, Clone)]
 pub struct TripAssemblerConflict {
-    pub vessel_id: i64,
+    pub fiskeridir_vessel_id: i64,
     pub timestamp: DateTime<Utc>,
 }
 
@@ -134,15 +136,15 @@ pub struct TripPorts {
 #[derive(Debug, Clone)]
 pub struct TripCalculationTimer {
     pub timestamp: DateTime<Utc>,
-    pub vessel_id: i64,
+    pub fiskeridir_vessel_id: i64,
 }
 
 impl Trip {
     pub fn start(&self) -> DateTime<Utc> {
-        self.range.start()
+        self.period.start()
     }
     pub fn end(&self) -> DateTime<Utc> {
-        self.range.end()
+        self.period.end()
     }
 }
 

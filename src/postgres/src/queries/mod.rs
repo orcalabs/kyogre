@@ -19,6 +19,7 @@ pub mod landing_entry;
 pub mod norwegian_land;
 pub mod port;
 pub mod species;
+pub mod trip;
 pub mod vessel;
 pub mod views;
 

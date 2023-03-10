@@ -165,4 +165,52 @@ FROM
         .fetch(&self.pool)
         .map_err(|e| report!(e).change_context(PostgresError::Query))
     }
+
+    pub(crate) async fn single_fiskeridir_ais_vessel_combination(
+        &self,
+        fiskeridir_vessel_id: i64,
+    ) -> Result<Option<FiskeridirAisVesselCombination>, PostgresError> {
+        sqlx::query_as!(
+            FiskeridirAisVesselCombination,
+            r#"
+SELECT
+    f.fiskeridir_vessel_id AS "fiskeridir_vessel_id!",
+    f.fiskeridir_vessel_type_id,
+    f.fiskeridir_length_group_id,
+    f.fiskeridir_nation_group_id,
+    f.norwegian_municipality_id AS fiskeridir_norwegian_municipality_id,
+    f.norwegian_county_id AS fiskeridir_norwegian_county_id,
+    f.nation_id AS "fiskeridir_nation_id!",
+    f.gross_tonnage_1969 AS fiskeridir_gross_tonnage_1969,
+    f.gross_tonnage_other AS fiskeridir_gross_tonnage_other,
+    f.call_sign AS fiskeridir_call_sign,
+    f."name" AS fiskeridir_name,
+    f.registration_id AS fiskeridir_registration_id,
+    f."length" AS fiskeridir_length,
+    f."width" AS fiskeridir_width,
+    f."owner" AS fiskeridir_owner,
+    f.engine_building_year AS fiskeridir_engine_building_year,
+    f.engine_power AS fiskeridir_engine_power,
+    f.building_year AS fiskeridir_building_year,
+    f.rebuilding_year AS fiskeridir_rebuilding_year,
+    a.mmsi AS "ais_mmsi?",
+    a.imo_number AS ais_imo_number,
+    a.call_sign AS ais_call_sign,
+    a.name AS ais_name,
+    a.ship_length AS ais_ship_length,
+    a.ship_width AS ais_ship_width,
+    a.eta AS ais_eta,
+    a.destination AS ais_destination
+FROM
+    fiskeridir_vessels AS f
+    LEFT JOIN ais_vessels AS a ON f.call_sign = a.call_sign
+WHERE
+    f.fiskeridir_vessel_id = $1
+            "#,
+            fiskeridir_vessel_id
+        )
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|e| report!(e).change_context(PostgresError::Query))
+    }
 }

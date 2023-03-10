@@ -1,3 +1,4 @@
+use crate::*;
 use std::collections::HashMap;
 
 use chrono::{DateTime, Utc};
@@ -6,14 +7,10 @@ use kyogre_core::Vessel;
 use tracing::{event, instrument, Level};
 use trip_assembler::{State, TripAssemblerError};
 
-use crate::{Database, Engine, SharedState, StepWrapper, TripProcessor};
-
-use super::TripsPrecision;
-
-// Trips -> TripsPrecision
-impl<L, T> From<StepWrapper<L, T, Trips>> for StepWrapper<L, T, TripsPrecision> {
-    fn from(val: StepWrapper<L, T, Trips>) -> StepWrapper<L, T, TripsPrecision> {
-        val.inherit(TripsPrecision::default())
+// Trips -> UpdateDatabaseViews
+impl<L, T> From<StepWrapper<L, T, Trips>> for StepWrapper<L, T, UpdateDatabaseViews> {
+    fn from(val: StepWrapper<L, T, Trips>) -> StepWrapper<L, T, UpdateDatabaseViews> {
+        val.inherit(UpdateDatabaseViews::default())
     }
 }
 
@@ -31,26 +28,26 @@ where
                 event!(Level::ERROR, "failed to run trip assembler: {:?}", e);
             }
         }
-        Engine::TripsPrecision(StepWrapper::<A, SharedState<B>, TripsPrecision>::from(self))
+        Engine::UpdateDatabaseViews(StepWrapper::<A, SharedState<B>, UpdateDatabaseViews>::from(
+            self,
+        ))
     }
 
-    #[instrument(name = "run_assembler", skip_all, fields(app.trip_assembler))]
+    #[instrument(name = "run_assembler", skip_all, fields(app.trip_assembler, app.vessels, app.conflicts,app.no_prior_state))]
     async fn run_assembler(
         &self,
         trip_assembler: &dyn TripProcessor,
     ) -> Result<(), TripAssemblerError> {
-        tracing::Span::current().record(
-            "app.trip_assembler",
-            trip_assembler.assembler_id().to_string(),
-        );
+        let trip_assembler_id = trip_assembler.assembler_id();
+        tracing::Span::current().record("app.trip_assembler", trip_assembler_id.to_string());
         let database = self.database();
 
         let timers = database
-            .trip_calculation_timers()
+            .trip_calculation_timers(trip_assembler.assembler_id())
             .await
             .change_context(TripAssemblerError)?
             .into_iter()
-            .map(|t| (t.vessel_id, t.timestamp))
+            .map(|t| (t.fiskeridir_vessel_id, t.timestamp))
             .collect::<HashMap<i64, DateTime<Utc>>>();
 
         let conflicts = database
@@ -58,7 +55,7 @@ where
             .await
             .change_context(TripAssemblerError)?
             .into_iter()
-            .map(|t| (t.vessel_id, t.timestamp))
+            .map(|t| (t.fiskeridir_vessel_id, t.timestamp))
             .collect::<HashMap<i64, DateTime<Utc>>>();
 
         let vessels = database
@@ -68,15 +65,37 @@ where
 
         let mut vessel_states = Vec::new();
 
+        let num_vessels = vessels.len();
+        let mut num_conflicts = 0;
+        let mut num_no_prior_state = 0;
+
         for vessel in vessels {
             if let Some(conflict) = conflicts.get(&vessel.fiskeridir.id) {
-                vessel_states.push((vessel, State::Conflict(*conflict)));
+                num_conflicts += 1;
+                let prior_trip = database
+                    .trip_at_or_prior_to(vessel.fiskeridir.id, trip_assembler_id, conflict)
+                    .await
+                    .change_context(TripAssemblerError)?;
+                vessel_states.push((
+                    vessel,
+                    State::Conflict {
+                        conflict_timestamp: *conflict,
+                        trip_prior_to_or_at_conflict: prior_trip,
+                    },
+                ));
             } else if let Some(timer) = timers.get(&vessel.fiskeridir.id) {
                 vessel_states.push((vessel, State::CurrentCalculationTime(*timer)));
             } else {
+                num_no_prior_state += 1;
                 vessel_states.push((vessel, State::NoPriorState));
             }
         }
+
+        tracing::Span::current().record("app.vessels", num_vessels);
+        tracing::Span::current().record("app.conflicts", num_conflicts);
+        tracing::Span::current().record("app.no_prior_state", num_no_prior_state);
+
+        event!(Level::INFO, "starting..",);
 
         for s in vessel_states {
             let id = s.0.fiskeridir.id;
@@ -109,6 +128,7 @@ where
                     trips.new_trip_calucation_time,
                     trips.conflict_strategy,
                     trips.trips,
+                    trip_assembler.assembler_id(),
                 )
                 .await
                 .change_context(TripAssemblerError)?;

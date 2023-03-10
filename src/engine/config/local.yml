@@ -11,7 +11,7 @@ engine:
     Periodic: 30s
 scraper:
   landings:
-    min_year: 2008
+    min_year: 2000
     max_year: 2023
   ers_dca:
     - year: 2023

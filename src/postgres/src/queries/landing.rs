@@ -1,4 +1,5 @@
 use crate::{error::PostgresError, landing_set::LandingSet, models::NewLanding, PostgresAdapter};
+use chrono::{DateTime, Utc};
 use error_stack::{IntoReport, Result, ResultExt};
 
 impl PostgresAdapter {
@@ -409,5 +410,36 @@ ON CONFLICT (landing_id, "version") DO NOTHING
         .into_report()
         .change_context(PostgresError::Query)
         .map(|_| ())
+    }
+
+    pub(crate) async fn landing_dates_impl(
+        &self,
+        vessel_id: i64,
+        start: &DateTime<Utc>,
+    ) -> Result<Vec<DateTime<Utc>>, PostgresError> {
+        struct Intermediate {
+            landing_timestamp: DateTime<Utc>,
+        }
+        Ok(sqlx::query_as!(
+            Intermediate,
+            r#"
+SELECT
+    landing_timestamp
+FROM
+    landings
+WHERE
+    fiskeridir_vessel_id = $1
+    AND landing_timestamp >= $2
+            "#,
+            vessel_id,
+            start,
+        )
+        .fetch_all(&self.pool)
+        .await
+        .into_report()
+        .change_context(PostgresError::Query)?
+        .into_iter()
+        .map(|v| v.landing_timestamp)
+        .collect())
     }
 }

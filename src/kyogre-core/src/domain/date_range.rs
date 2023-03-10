@@ -2,7 +2,7 @@ use chrono::{DateTime, Utc};
 
 use crate::DateRangeError;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone)]
 pub struct DateRange {
     start: DateTime<Utc>,
     end: DateTime<Utc>,
@@ -25,3 +25,12 @@ impl DateRange {
         self.end
     }
 }
+
+impl PartialEq for DateRange {
+    fn eq(&self, other: &Self) -> bool {
+        self.start.timestamp() == other.start.timestamp()
+            && self.end.timestamp() == other.end.timestamp()
+    }
+}
+
+impl Eq for DateRange {}
