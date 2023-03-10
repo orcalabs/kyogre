@@ -1,5 +1,41 @@
 {
   "db": "PostgreSQL",
+  "0546138a230b9d98012e5fb94fe9b71f25dabee4fa659af98a0cd0d447670bc3": {
+    "describe": {
+      "columns": [
+        {
+          "name": "grid!",
+          "ordinal": 0,
+          "type_info": "Text"
+        },
+        {
+          "name": "min_weight!",
+          "ordinal": 1,
+          "type_info": "Int8"
+        },
+        {
+          "name": "max_weight!",
+          "ordinal": 2,
+          "type_info": "Int8"
+        }
+      ],
+      "nullable": [
+        null,
+        null,
+        null
+      ],
+      "parameters": {
+        "Left": [
+          "TstzRangeArray",
+          "VarcharArray",
+          "Int4Array",
+          "Int4Array",
+          "NumRangeArray"
+        ]
+      }
+    },
+    "query": "\nSELECT\n    COALESCE(\n        JSON_OBJECT_AGG(q.catch_location_start, q.total_living_weight)::TEXT,\n        '{}'\n    ) AS \"grid!\",\n    COALESCE(MIN(q.total_living_weight), 0)::BIGINT AS \"min_weight!\",\n    COALESCE(MAX(q.total_living_weight), 0)::BIGINT AS \"max_weight!\"\nFROM\n    (\n        SELECT\n            h.catch_location_start,\n            SUM(h.total_living_weight) AS total_living_weight\n        FROM\n            hauls_view h\n        WHERE\n            h.catch_location_start IS NOT NULL\n            AND (\n                $1::tstzrange[] IS NULL\n                OR tstzrange (h.start_timestamp, h.stop_timestamp, '[]') && ANY ($1)\n            )\n            AND (\n                $2::VARCHAR[] IS NULL\n                OR h.catch_location_start = ANY ($2)\n            )\n            AND (\n                $3::INT[] IS NULL\n                OR h.gear_group_id = ANY ($3)\n            )\n            AND (\n                $4::INT[] IS NULL\n                OR h.species_group_ids && $4\n            )\n            AND (\n                $5::numrange[] IS NULL\n                OR h.vessel_length <@ ANY ($5)\n            )\n        GROUP BY\n            h.catch_location_start\n    ) q\n            "
+  },
   "063ffe3ea8b5130ce0826bfca3da92147d6472f539da0b9e2ce34f83532da96c": {
     "describe": {
       "columns": [],
@@ -255,39 +291,6 @@
       }
     },
     "query": "\nDELETE FROM ers_tra_catches c USING ers_tra e\nWHERE\n    e.message_id = c.message_id\n    AND e.relevant_year = $1\n            "
-  },
-  "0faa0da5ec942cced96e1a399a31b2334e533f59c14312fb2b772c47dff6a61f": {
-    "describe": {
-      "columns": [
-        {
-          "name": "grid!",
-          "ordinal": 0,
-          "type_info": "Text"
-        },
-        {
-          "name": "min_weight!",
-          "ordinal": 1,
-          "type_info": "Int8"
-        },
-        {
-          "name": "max_weight!",
-          "ordinal": 2,
-          "type_info": "Int8"
-        }
-      ],
-      "nullable": [
-        null,
-        null,
-        null
-      ],
-      "parameters": {
-        "Left": [
-          "TstzRangeArray",
-          "VarcharArray"
-        ]
-      }
-    },
-    "query": "\nSELECT\n    COALESCE(\n        JSON_OBJECT_AGG(q.catch_location_start, q.total_living_weight)::TEXT,\n        '{}'\n    ) AS \"grid!\",\n    COALESCE(MIN(q.total_living_weight), 0)::BIGINT AS \"min_weight!\",\n    COALESCE(MAX(q.total_living_weight), 0)::BIGINT AS \"max_weight!\"\nFROM\n    (\n        SELECT\n            h.catch_location_start,\n            SUM(h.total_living_weight) AS total_living_weight\n        FROM\n            hauls_view h\n        WHERE\n            h.catch_location_start IS NOT NULL\n            AND (\n                $1::tstzrange[] IS NULL\n                OR tstzrange (h.start_timestamp, h.stop_timestamp, '[]') && ANY ($1)\n            )\n            AND (\n                $2::VARCHAR[] IS NULL\n                OR h.catch_location_start = ANY ($2)\n            )\n        GROUP BY\n            h.catch_location_start\n    ) q\n            "
   },
   "13041c559dae3b4a2972bf672ab879da750bad4bd0816aab29693d19f28a422e": {
     "describe": {
@@ -1265,7 +1268,33 @@
     },
     "query": "\nSELECT\n    trip_id,\n    period,\n    landing_coverage,\n    trip_assembler_id\nFROM\n    trips\nWHERE\n    fiskeridir_vessel_id = $1\n    AND trip_assembler_id = $2\nORDER BY\n    period DESC\nLIMIT\n    1\n            "
   },
-  "c9896e43bcaf3088e3d2ae49f5736640ec783bd3db1cd1203bc55debe225cbf1": {
+  "ca28c3d988c1b915c8f1596bb7189b3467cd016e3536342d2e2c8b0e83473da9": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "VarcharArray",
+          "VarcharArray"
+        ]
+      }
+    },
+    "query": "\nINSERT INTO\n    economic_zones (economic_zone_id, \"name\")\nSELECT\n    *\nFROM\n    UNNEST($1::VARCHAR[], $2::VARCHAR[])\nON CONFLICT (economic_zone_id) DO NOTHING\n            "
+  },
+  "cc7529bb4ecd6aa70d015d86abc5efdbb2cca25ed8019b40dbb30e76ad745e65": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "VarcharArray",
+          "VarcharArray"
+        ]
+      }
+    },
+    "query": "\nINSERT INTO\n    herring_populations (herring_population_id, \"name\")\nSELECT\n    *\nFROM\n    UNNEST($1::VARCHAR[], $2::VARCHAR[])\nON CONFLICT (herring_population_id) DO NOTHING\n            "
+  },
+  "cede28f22419bfb9dc51aba029b1e3a5897918af55abd3bafc8ab90832865ff5": {
     "describe": {
       "columns": [
         {
@@ -1442,37 +1471,14 @@
       "parameters": {
         "Left": [
           "TstzRangeArray",
-          "VarcharArray"
-        ]
-      }
-    },
-    "query": "\nSELECT\n    h.haul_id AS \"haul_id!\",\n    h.ers_activity_id AS \"ers_activity_id!\",\n    h.duration AS \"duration!\",\n    h.haul_distance AS haul_distance,\n    h.catch_location_start AS catch_location_start,\n    h.ocean_depth_end AS \"ocean_depth_end!\",\n    h.ocean_depth_start AS \"ocean_depth_start!\",\n    h.quota_type_id AS \"quota_type_id!\",\n    h.start_date AS \"start_date!\",\n    h.start_latitude AS \"start_latitude!\",\n    h.start_longitude AS \"start_longitude!\",\n    h.start_time AS \"start_time!\",\n    h.start_timestamp AS \"start_timestamp!\",\n    h.stop_date AS \"stop_date!\",\n    h.stop_latitude AS \"stop_latitude!\",\n    h.stop_longitude AS \"stop_longitude!\",\n    h.stop_time AS \"stop_time!\",\n    h.stop_timestamp AS \"stop_timestamp!\",\n    h.gear_fiskeridir_id AS gear_fiskeridir_id,\n    h.gear_group_id AS gear_group_id,\n    h.fiskeridir_vessel_id AS fiskeridir_vessel_id,\n    h.vessel_call_sign AS vessel_call_sign,\n    h.vessel_call_sign_ers AS \"vessel_call_sign_ers!\",\n    h.vessel_length AS \"vessel_length!\",\n    h.vessel_name AS vessel_name,\n    h.vessel_name_ers AS vessel_name_ers,\n    h.catches::TEXT AS \"catches!\",\n    h.whale_catches::TEXT AS \"whale_catches!\"\nFROM\n    hauls_view h\nWHERE\n    (\n        $1::tstzrange[] IS NULL\n        OR tstzrange (h.start_timestamp, h.stop_timestamp, '[]') && ANY ($1)\n    )\n    AND (\n        $2::VARCHAR[] IS NULL\n        OR h.catch_location_start = ANY ($2)\n    )\n            "
-  },
-  "ca28c3d988c1b915c8f1596bb7189b3467cd016e3536342d2e2c8b0e83473da9": {
-    "describe": {
-      "columns": [],
-      "nullable": [],
-      "parameters": {
-        "Left": [
           "VarcharArray",
-          "VarcharArray"
+          "Int4Array",
+          "Int4Array",
+          "NumRangeArray"
         ]
       }
     },
-    "query": "\nINSERT INTO\n    economic_zones (economic_zone_id, \"name\")\nSELECT\n    *\nFROM\n    UNNEST($1::VARCHAR[], $2::VARCHAR[])\nON CONFLICT (economic_zone_id) DO NOTHING\n            "
-  },
-  "cc7529bb4ecd6aa70d015d86abc5efdbb2cca25ed8019b40dbb30e76ad745e65": {
-    "describe": {
-      "columns": [],
-      "nullable": [],
-      "parameters": {
-        "Left": [
-          "VarcharArray",
-          "VarcharArray"
-        ]
-      }
-    },
-    "query": "\nINSERT INTO\n    herring_populations (herring_population_id, \"name\")\nSELECT\n    *\nFROM\n    UNNEST($1::VARCHAR[], $2::VARCHAR[])\nON CONFLICT (herring_population_id) DO NOTHING\n            "
+    "query": "\nSELECT\n    h.haul_id AS \"haul_id!\",\n    h.ers_activity_id AS \"ers_activity_id!\",\n    h.duration AS \"duration!\",\n    h.haul_distance AS haul_distance,\n    h.catch_location_start AS catch_location_start,\n    h.ocean_depth_end AS \"ocean_depth_end!\",\n    h.ocean_depth_start AS \"ocean_depth_start!\",\n    h.quota_type_id AS \"quota_type_id!\",\n    h.start_date AS \"start_date!\",\n    h.start_latitude AS \"start_latitude!\",\n    h.start_longitude AS \"start_longitude!\",\n    h.start_time AS \"start_time!\",\n    h.start_timestamp AS \"start_timestamp!\",\n    h.stop_date AS \"stop_date!\",\n    h.stop_latitude AS \"stop_latitude!\",\n    h.stop_longitude AS \"stop_longitude!\",\n    h.stop_time AS \"stop_time!\",\n    h.stop_timestamp AS \"stop_timestamp!\",\n    h.gear_fiskeridir_id AS gear_fiskeridir_id,\n    h.gear_group_id AS gear_group_id,\n    h.fiskeridir_vessel_id AS fiskeridir_vessel_id,\n    h.vessel_call_sign AS vessel_call_sign,\n    h.vessel_call_sign_ers AS \"vessel_call_sign_ers!\",\n    h.vessel_length AS \"vessel_length!\",\n    h.vessel_name AS vessel_name,\n    h.vessel_name_ers AS vessel_name_ers,\n    h.catches::TEXT AS \"catches!\",\n    h.whale_catches::TEXT AS \"whale_catches!\"\nFROM\n    hauls_view h\nWHERE\n    (\n        $1::tstzrange[] IS NULL\n        OR tstzrange (h.start_timestamp, h.stop_timestamp, '[]') && ANY ($1)\n    )\n    AND (\n        $2::VARCHAR[] IS NULL\n        OR h.catch_location_start = ANY ($2)\n    )\n    AND (\n        $3::INT[] IS NULL\n        OR h.gear_group_id = ANY ($3)\n    )\n    AND (\n        $4::INT[] IS NULL\n        OR h.species_group_ids && $4\n    )\n    AND (\n        $5::numrange[] IS NULL\n        OR h.vessel_length <@ ANY ($5)\n    )\n            "
   },
   "d1aa1ba13ded870125bd254ccb84850995fd48db341ca8a6680f1af0a64ec030": {
     "describe": {

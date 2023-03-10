@@ -17,27 +17,22 @@ pub trait AisMigratorSource {
     async fn existing_mmsis(&self) -> Result<Vec<i32>, QueryError>;
 }
 
+pub type PinBoxStream<'a, T, E> = Pin<Box<dyn Stream<Item = Result<T, E>> + 'a>>;
+
 #[async_trait]
 pub trait WebApiPort {
     fn ais_positions(
         &self,
         mmsi: i32,
         range: &DateRange,
-    ) -> Pin<Box<dyn Stream<Item = Result<AisPosition, QueryError>> + '_>>;
-    fn species(&self) -> Pin<Box<dyn Stream<Item = Result<Species, QueryError>> + '_>>;
-    fn species_fiskeridir(
-        &self,
-    ) -> Pin<Box<dyn Stream<Item = Result<SpeciesFiskeridir, QueryError>> + '_>>;
-    fn species_groups(&self) -> Pin<Box<dyn Stream<Item = Result<SpeciesGroup, QueryError>> + '_>>;
-    fn species_main_groups(
-        &self,
-    ) -> Pin<Box<dyn Stream<Item = Result<SpeciesMainGroup, QueryError>> + '_>>;
-    fn species_fao(&self) -> Pin<Box<dyn Stream<Item = Result<SpeciesFao, QueryError>> + '_>>;
+    ) -> PinBoxStream<'_, AisPosition, QueryError>;
+    fn species(&self) -> PinBoxStream<'_, Species, QueryError>;
+    fn species_fiskeridir(&self) -> PinBoxStream<'_, SpeciesFiskeridir, QueryError>;
+    fn species_groups(&self) -> PinBoxStream<'_, SpeciesGroup, QueryError>;
+    fn species_main_groups(&self) -> PinBoxStream<'_, SpeciesMainGroup, QueryError>;
+    fn species_fao(&self) -> PinBoxStream<'_, SpeciesFao, QueryError>;
     fn vessels(&self) -> Pin<Box<dyn Stream<Item = Result<Vessel, QueryError>> + Send + '_>>;
-    fn hauls(
-        &self,
-        query: HaulsQuery,
-    ) -> Pin<Box<dyn Stream<Item = Result<Haul, QueryError>> + '_>>;
+    fn hauls(&self, query: HaulsQuery) -> Result<PinBoxStream<'_, Haul, QueryError>, QueryError>;
     async fn hauls_grid(&self, query: HaulsQuery) -> Result<HaulsGrid, QueryError>;
 }
 

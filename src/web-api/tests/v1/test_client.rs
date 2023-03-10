@@ -56,22 +56,12 @@ impl ApiClient {
         self.get("vessels", &[]).await
     }
     pub async fn get_hauls(&self, params: HaulsParams) -> Response {
-        let mut parameters = Vec::new();
-
-        if let Some(months) = params.months {
-            parameters.push(("months".to_string(), create_comma_separated_list(months)))
-        }
-
-        if let Some(locations) = params.catch_locations {
-            parameters.push((
-                "catchLocations".to_string(),
-                create_comma_separated_list(locations),
-            ))
-        }
-
-        self.get("hauls", &parameters).await
+        self.get_hauls_impl("hauls", params).await
     }
     pub async fn get_hauls_grid(&self, params: HaulsParams) -> Response {
+        self.get_hauls_impl("hauls_grid", params).await
+    }
+    pub async fn get_hauls_impl(&self, url: &str, params: HaulsParams) -> Response {
         let mut parameters = Vec::new();
 
         if let Some(months) = params.months {
@@ -85,21 +75,47 @@ impl ApiClient {
             ))
         }
 
-        self.get("hauls_grid", &parameters).await
+        if let Some(gear) = params.gear_group_ids {
+            parameters.push((
+                "gearGroupIds".to_string(),
+                create_comma_separated_list(gear.into_iter().map(|g| g.0 as u8).collect()),
+            ))
+        }
+
+        if let Some(species) = params.species_group_ids {
+            parameters.push((
+                "speciesGroupIds".to_string(),
+                create_comma_separated_list(species.into_iter().map(|s| s.0).collect()),
+            ))
+        }
+
+        if let Some(ranges) = params.vessel_length_ranges {
+            parameters.push((
+                "vesselLengthRanges".to_string(),
+                create_semicolon_separated_list(ranges),
+            ))
+        }
+
+        self.get(url, &parameters).await
     }
 }
 
-fn create_comma_separated_list<T>(vals: Vec<T>) -> String
-where
-    T: ToString,
-{
+fn create_comma_separated_list<T: ToString>(vals: Vec<T>) -> String {
+    create_separated_list(vals, ',')
+}
+
+fn create_semicolon_separated_list<T: ToString>(vals: Vec<T>) -> String {
+    create_separated_list(vals, ';')
+}
+
+fn create_separated_list<T: ToString>(vals: Vec<T>, separator: char) -> String {
     let len = vals.len();
     let mut string_list = String::new();
     for (i, v) in vals.iter().enumerate() {
         if i == len - 1 {
             write!(string_list, "{}", v.to_string()).unwrap();
         } else {
-            write!(string_list, "{},", v.to_string()).unwrap();
+            write!(string_list, "{}{separator}", v.to_string()).unwrap();
         }
     }
 

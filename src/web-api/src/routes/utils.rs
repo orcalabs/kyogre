@@ -1,6 +1,11 @@
-use std::fmt::{self, Debug};
+use std::{
+    fmt::{self, Debug},
+    str::FromStr,
+};
 
 use chrono::{DateTime, Utc};
+use kyogre_core::GearGroup;
+use num_traits::FromPrimitive;
 use serde::{
     de::{DeserializeOwned, IntoDeserializer, Visitor},
     Deserialize, Deserializer,
@@ -57,6 +62,53 @@ where
     deserializer.deserialize_any(StringVecVisitor(std::marker::PhantomData::<T>))
 }
 
+pub fn deserialize_range_list<'de, D, T>(deserializer: D) -> Result<Option<Vec<T>>, D::Error>
+where
+    D: Deserializer<'de>,
+    T: FromStr + Debug,
+    <T as FromStr>::Err: std::fmt::Display,
+{
+    struct RangeVecVisitor<T>(std::marker::PhantomData<T>);
+
+    impl<'de, T> Visitor<'de> for RangeVecVisitor<T>
+    where
+        T: FromStr + Debug,
+        <T as FromStr>::Err: std::fmt::Display,
+    {
+        type Value = Option<Vec<T>>;
+
+        fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+            formatter.write_str("a string containing a semicolon separated list of ranges")
+        }
+
+        fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+            <T as FromStr>::Err: std::fmt::Display,
+        {
+            v.split(';')
+                .map(|v| {
+                    T::from_str(v).map_err(|e| {
+                        serde::de::Error::custom(format!(
+                            "failed to parse str to Range<T>: value: {v}, error: {e}"
+                        ))
+                    })
+                })
+                .collect::<Result<_, _>>()
+                .map(Some)
+        }
+
+        fn visit_none<E>(self) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(None)
+        }
+    }
+
+    deserializer.deserialize_any(RangeVecVisitor(std::marker::PhantomData::<T>))
+}
+
 /// NewType wrapper for a core `DateTime<Utc>` to customize the deserialize implementation
 /// such that it can be used in [crate::routes::utils::deserialize_string_list].
 #[derive(Debug, Clone)]
@@ -96,5 +148,81 @@ impl<'de> Deserialize<'de> for DateTimeUtc {
 impl ToString for DateTimeUtc {
     fn to_string(&self) -> String {
         self.0.to_rfc3339()
+    }
+}
+
+/// NewType wrapper for a core `GearGroup` to customize the deserialize implementation
+/// such that it can be used in [crate::routes::utils::deserialize_string_list].
+#[derive(Debug, Clone)]
+pub struct GearGroupId(pub GearGroup);
+
+impl<'de> Deserialize<'de> for GearGroupId {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        struct GearGroupVisitor;
+
+        impl<'de> Visitor<'de> for GearGroupVisitor {
+            type Value = GearGroupId;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+                formatter.write_str("an u32 integer representing a gear group id")
+            }
+
+            fn visit_none<E>(self) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                Ok(GearGroupId(GearGroup::Not))
+            }
+
+            fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                let id = v
+                    .parse::<u8>()
+                    .map_err(|_| serde::de::Error::custom("failed to deserialize str to u32"))?;
+
+                let gear_id = GearGroup::from_u8(id)
+                    .ok_or_else(|| serde::de::Error::custom("invalid gear_group_id"))?;
+
+                Ok(GearGroupId(gear_id))
+            }
+        }
+        deserializer.deserialize_newtype_struct("GearGroupId", GearGroupVisitor)
+    }
+}
+
+/// NewType wrapper for a specie group id to customize the deserialize implementation
+/// such that it can be used in [crate::routes::utils::deserialize_string_list].
+#[derive(Debug, Clone)]
+pub struct SpeciesGroupId(pub u32);
+
+impl<'de> Deserialize<'de> for SpeciesGroupId {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        struct SpecieVisitor;
+
+        impl<'de> Visitor<'de> for SpecieVisitor {
+            type Value = SpeciesGroupId;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+                formatter.write_str("an u32 integer")
+            }
+
+            fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                Ok(SpeciesGroupId(v.parse().map_err(|_| {
+                    serde::de::Error::custom("failed to deserialize str to u32")
+                })?))
+            }
+        }
+        deserializer.deserialize_newtype_struct("SpecieGroupId", SpecieVisitor)
     }
 }

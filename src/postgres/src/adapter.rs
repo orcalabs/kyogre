@@ -238,28 +238,24 @@ impl WebApiPort for PostgresAdapter {
         &self,
         mmsi: i32,
         range: &DateRange,
-    ) -> Pin<Box<dyn Stream<Item = Result<AisPosition, QueryError>> + '_>> {
+    ) -> PinBoxStream<'_, AisPosition, QueryError> {
         convert_stream(self.ais_positions_impl(mmsi, range)).boxed()
     }
 
-    fn species_groups(&self) -> Pin<Box<dyn Stream<Item = Result<SpeciesGroup, QueryError>> + '_>> {
+    fn species_groups(&self) -> PinBoxStream<'_, SpeciesGroup, QueryError> {
         convert_stream(self.species_groups_impl()).boxed()
     }
 
-    fn species_fiskeridir(
-        &self,
-    ) -> Pin<Box<dyn Stream<Item = Result<SpeciesFiskeridir, QueryError>> + '_>> {
+    fn species_fiskeridir(&self) -> PinBoxStream<'_, SpeciesFiskeridir, QueryError> {
         convert_stream(self.species_fiskeridir_impl()).boxed()
     }
-    fn species(&self) -> Pin<Box<dyn Stream<Item = Result<Species, QueryError>> + '_>> {
+    fn species(&self) -> PinBoxStream<'_, Species, QueryError> {
         convert_stream(self.species_impl()).boxed()
     }
-    fn species_main_groups(
-        &self,
-    ) -> Pin<Box<dyn Stream<Item = Result<SpeciesMainGroup, QueryError>> + '_>> {
+    fn species_main_groups(&self) -> PinBoxStream<'_, SpeciesMainGroup, QueryError> {
         convert_stream(self.species_main_groups_impl()).boxed()
     }
-    fn species_fao(&self) -> Pin<Box<dyn Stream<Item = Result<SpeciesFao, QueryError>> + '_>> {
+    fn species_fao(&self) -> PinBoxStream<'_, SpeciesFao, QueryError> {
         convert_stream(self.species_fao_impl()).boxed()
     }
 
@@ -267,11 +263,9 @@ impl WebApiPort for PostgresAdapter {
         convert_stream(self.fiskeridir_ais_vessel_combinations()).boxed()
     }
 
-    fn hauls(
-        &self,
-        query: HaulsQuery,
-    ) -> Pin<Box<dyn Stream<Item = Result<Haul, QueryError>> + '_>> {
-        convert_stream(self.hauls_impl(query)).boxed()
+    fn hauls(&self, query: HaulsQuery) -> Result<PinBoxStream<'_, Haul, QueryError>, QueryError> {
+        let stream = self.hauls_impl(query).change_context(QueryError)?;
+        Ok(convert_stream(stream).boxed())
     }
 
     async fn hauls_grid(&self, query: HaulsQuery) -> Result<HaulsGrid, QueryError> {
