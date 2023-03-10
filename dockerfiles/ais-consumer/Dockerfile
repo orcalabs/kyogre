@@ -1,4 +1,4 @@
-FROM lukemathwalker/cargo-chef:latest-rust-1.68.0-buster AS chef
+FROM lukemathwalker/cargo-chef:latest-rust-1.67.0-buster AS chef
 
 WORKDIR /app
 
