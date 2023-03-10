@@ -4,9 +4,9 @@ use super::helper::test;
 use actix_web::http::StatusCode;
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::ErsDca;
-use kyogre_core::ScraperInboundPort;
+use kyogre_core::{GearGroup, ScraperInboundPort};
 use web_api::routes::{
-    utils::DateTimeUtc,
+    utils::{DateTimeUtc, GearGroupId, SpeciesGroupId},
     v1::haul::{Haul, HaulsGrid, HaulsParams},
 };
 
@@ -92,6 +92,111 @@ async fn test_hauls_returns_hauls_in_catch_location() {
                 "09-05".try_into().unwrap(),
                 "09-04".try_into().unwrap(),
             ]),
+            ..Default::default()
+        };
+
+        let response = helper.app.get_hauls(params).await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let hauls: Vec<Haul> = response.json().await.unwrap();
+
+        assert_eq!(hauls.len(), 2);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_hauls_returns_hauls_with_gear_group_ids() {
+    test(|helper| async move {
+        let mut ers1 = ErsDca::test_default(1, None);
+        let mut ers2 = ErsDca::test_default(2, None);
+        let ers3 = ErsDca::test_default(3, None);
+        let ers4 = ErsDca::test_default(4, None);
+
+        ers1.gear.gear_group_code = Some(1);
+        ers2.gear.gear_group_code = Some(5);
+
+        helper
+            .db
+            .db
+            .add_ers_dca(vec![ers1, ers2, ers3, ers4])
+            .await
+            .unwrap();
+        helper.db.db.update_database_views().await.unwrap();
+
+        let params = HaulsParams {
+            gear_group_ids: Some(vec![
+                GearGroupId(GearGroup::Not),
+                GearGroupId(GearGroup::Traal),
+            ]),
+            ..Default::default()
+        };
+
+        let response = helper.app.get_hauls(params).await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let hauls: Vec<Haul> = response.json().await.unwrap();
+
+        assert_eq!(hauls.len(), 2);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_hauls_returns_hauls_with_species_group_ids() {
+    test(|helper| async move {
+        let mut ers1 = ErsDca::test_default(1, None);
+        let mut ers2 = ErsDca::test_default(2, None);
+        let ers3 = ErsDca::test_default(3, None);
+        let ers4 = ErsDca::test_default(4, None);
+
+        ers1.catch.species.species_group_code = Some(301);
+        ers2.catch.species.species_group_code = Some(302);
+
+        helper
+            .db
+            .db
+            .add_ers_dca(vec![ers1, ers2, ers3, ers4])
+            .await
+            .unwrap();
+        helper.db.db.update_database_views().await.unwrap();
+
+        let params = HaulsParams {
+            species_group_ids: Some(vec![SpeciesGroupId(301), SpeciesGroupId(302)]),
+            ..Default::default()
+        };
+
+        let response = helper.app.get_hauls(params).await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let hauls: Vec<Haul> = response.json().await.unwrap();
+
+        assert_eq!(hauls.len(), 2);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_hauls_returns_hauls_with_vessel_length_ranges() {
+    test(|helper| async move {
+        let mut ers1 = ErsDca::test_default(1, None);
+        let mut ers2 = ErsDca::test_default(2, None);
+        let ers3 = ErsDca::test_default(3, None);
+        let ers4 = ErsDca::test_default(4, None);
+
+        ers1.vessel_info.vessel_length = 9.;
+        ers2.vessel_info.vessel_length = 12.;
+
+        helper
+            .db
+            .db
+            .add_ers_dca(vec![ers1, ers2, ers3, ers4])
+            .await
+            .unwrap();
+        helper.db.db.update_database_views().await.unwrap();
+
+        let params = HaulsParams {
+            vessel_length_ranges: Some(vec!["(,10)".parse().unwrap(), "[10,15)".parse().unwrap()]),
             ..Default::default()
         };
 
@@ -234,6 +339,153 @@ async fn test_hauls_grid_returns_grid_for_hauls_in_catch_location() {
 
         let params = HaulsParams {
             catch_locations: Some(vec!["09-05".try_into().unwrap()]),
+            ..Default::default()
+        };
+
+        let response = helper.app.get_hauls_grid(params).await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let grid: HaulsGrid = response.json().await.unwrap();
+
+        assert_eq!(
+            grid,
+            HaulsGrid {
+                grid: HashMap::from([("09-05".try_into().unwrap(), 30)]),
+                max_weight: 30,
+                min_weight: 30,
+            }
+        );
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_hauls_grid_returns_grid_for_hauls_with_gear_group_ids() {
+    test(|helper| async move {
+        let mut ers1 = ErsDca::test_default(1, None);
+        let mut ers2 = ErsDca::test_default(2, None);
+        let ers3 = ErsDca::test_default(3, None);
+        let ers4 = ErsDca::test_default(4, None);
+
+        ers1.gear.gear_group_code = Some(1);
+        ers1.start_latitude = Some(56.727258);
+        ers1.start_longitude = Some(12.565410);
+        ers1.catch.species.living_weight = Some(10);
+
+        ers2.gear.gear_group_code = Some(5);
+        ers2.start_latitude = Some(56.727258);
+        ers2.start_longitude = Some(12.565410);
+        ers2.catch.species.living_weight = Some(20);
+
+        helper
+            .db
+            .db
+            .add_ers_dca(vec![ers1, ers2, ers3, ers4])
+            .await
+            .unwrap();
+        helper.db.db.update_database_views().await.unwrap();
+
+        let params = HaulsParams {
+            gear_group_ids: Some(vec![
+                GearGroupId(GearGroup::Not),
+                GearGroupId(GearGroup::Traal),
+            ]),
+            ..Default::default()
+        };
+
+        let response = helper.app.get_hauls_grid(params).await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let grid: HaulsGrid = response.json().await.unwrap();
+
+        assert_eq!(
+            grid,
+            HaulsGrid {
+                grid: HashMap::from([("09-05".try_into().unwrap(), 30)]),
+                max_weight: 30,
+                min_weight: 30,
+            }
+        );
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_hauls_grid_returns_grid_for_hauls_with_species_group_ids() {
+    test(|helper| async move {
+        let mut ers1 = ErsDca::test_default(1, None);
+        let mut ers2 = ErsDca::test_default(2, None);
+        let ers3 = ErsDca::test_default(3, None);
+        let ers4 = ErsDca::test_default(4, None);
+
+        ers1.catch.species.species_group_code = Some(301);
+        ers1.start_latitude = Some(56.727258);
+        ers1.start_longitude = Some(12.565410);
+        ers1.catch.species.living_weight = Some(10);
+
+        ers2.catch.species.species_group_code = Some(302);
+        ers2.start_latitude = Some(56.727258);
+        ers2.start_longitude = Some(12.565410);
+        ers2.catch.species.living_weight = Some(20);
+
+        helper
+            .db
+            .db
+            .add_ers_dca(vec![ers1, ers2, ers3, ers4])
+            .await
+            .unwrap();
+        helper.db.db.update_database_views().await.unwrap();
+
+        let params = HaulsParams {
+            species_group_ids: Some(vec![SpeciesGroupId(301), SpeciesGroupId(302)]),
+            ..Default::default()
+        };
+
+        let response = helper.app.get_hauls_grid(params).await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let grid: HaulsGrid = response.json().await.unwrap();
+
+        assert_eq!(
+            grid,
+            HaulsGrid {
+                grid: HashMap::from([("09-05".try_into().unwrap(), 30)]),
+                max_weight: 30,
+                min_weight: 30,
+            }
+        );
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_hauls_grid_returns_grid_for_hauls_with_vessel_length_ranges() {
+    test(|helper| async move {
+        let mut ers1 = ErsDca::test_default(1, None);
+        let mut ers2 = ErsDca::test_default(2, None);
+        let ers3 = ErsDca::test_default(3, None);
+        let ers4 = ErsDca::test_default(4, None);
+
+        ers1.vessel_info.vessel_length = 9.;
+        ers1.start_latitude = Some(56.727258);
+        ers1.start_longitude = Some(12.565410);
+        ers1.catch.species.living_weight = Some(10);
+
+        ers2.vessel_info.vessel_length = 12.;
+        ers2.start_latitude = Some(56.727258);
+        ers2.start_longitude = Some(12.565410);
+        ers2.catch.species.living_weight = Some(20);
+
+        helper
+            .db
+            .db
+            .add_ers_dca(vec![ers1, ers2, ers3, ers4])
+            .await
+            .unwrap();
+        helper.db.db.update_database_views().await.unwrap();
+
+        let params = HaulsParams {
+            vessel_length_ranges: Some(vec!["(,10)".parse().unwrap(), "[10,15)".parse().unwrap()]),
             ..Default::default()
         };
 

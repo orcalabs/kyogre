@@ -3,13 +3,15 @@ use std::collections::HashMap;
 use crate::{
     error::ApiError,
     response::Response,
-    routes::utils::{deserialize_string_list, DateTimeUtc},
+    routes::utils::{
+        deserialize_range_list, deserialize_string_list, DateTimeUtc, GearGroupId, SpeciesGroupId,
+    },
     to_streaming_response, Database,
 };
 use actix_web::{web, HttpResponse};
 use chrono::{DateTime, Datelike, Duration, Months, NaiveDate, Utc};
 use futures::TryStreamExt;
-use kyogre_core::{CatchLocationId, DateRange, HaulsQuery, WhaleGender};
+use kyogre_core::{CatchLocationId, DateRange, HaulsQuery, Range, WhaleGender};
 use serde::{Deserialize, Serialize};
 use tracing::{event, Level};
 use utoipa::{IntoParams, ToSchema};
@@ -23,6 +25,15 @@ pub struct HaulsParams {
     #[param(value_type = Option<String>, example = "05-24,15-10")]
     #[serde(deserialize_with = "deserialize_string_list", default)]
     pub catch_locations: Option<Vec<CatchLocationId>>,
+    #[param(value_type = Option<String>, example = "2,5")]
+    #[serde(deserialize_with = "deserialize_string_list", default)]
+    pub gear_group_ids: Option<Vec<GearGroupId>>,
+    #[param(value_type = Option<String>, example = "201,302")]
+    #[serde(deserialize_with = "deserialize_string_list", default)]
+    pub species_group_ids: Option<Vec<SpeciesGroupId>>,
+    #[param(value_type = Option<String>, example = "[0,11);[15,)")]
+    #[serde(deserialize_with = "deserialize_range_list", default)]
+    pub vessel_length_ranges: Option<Vec<Range<f64>>>,
 }
 
 #[utoipa::path(
@@ -43,10 +54,16 @@ pub async fn hauls<T: Database + 'static>(
     let query = params.into_inner().into();
 
     to_streaming_response! {
-        db.hauls(query).map_ok(Haul::from).map_err(|e| {
-            event!(Level::ERROR, "failed to retrieve hauls: {:?}", e);
-            ApiError::InternalServerError
-        })
+        db.hauls(query)
+            .map_err(|e| {
+                event!(Level::ERROR, "failed to retrieve hauls: {:?}", e);
+                ApiError::InternalServerError
+            })?
+            .map_ok(Haul::from)
+            .map_err(|e| {
+                event!(Level::ERROR, "failed to retrieve hauls: {:?}", e);
+                ApiError::InternalServerError
+            })
     }
 }
 
@@ -230,6 +247,13 @@ impl From<HaulsParams> for HaulsQuery {
         Self {
             ranges,
             catch_locations: v.catch_locations,
+            gear_group_ids: v
+                .gear_group_ids
+                .map(|gs| gs.into_iter().map(|g| g.0).collect()),
+            species_group_ids: v
+                .species_group_ids
+                .map(|gs| gs.into_iter().map(|g| g.0).collect()),
+            vessel_length_ranges: v.vessel_length_ranges,
         }
     }
 }

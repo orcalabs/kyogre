@@ -4272,6 +4272,7 @@ dependencies = [
  "fiskeridir-rs",
  "futures",
  "kyogre-core",
+ "num-traits",
  "once_cell",
  "orca-core",
  "postgres",

@@ -1,3 +1,5 @@
+use std::ops::Bound;
+
 use crate::error::{BigDecimalError, FromBigDecimalError};
 use bigdecimal::{BigDecimal, FromPrimitive};
 use error_stack::{report, Result};
@@ -45,4 +47,14 @@ pub(crate) fn opt_decimal_to_float(
     value
         .map(|v| bigdecimal::ToPrimitive::to_f64(&v).ok_or_else(|| report!(FromBigDecimalError(v))))
         .transpose()
+}
+
+pub(crate) fn bound_float_to_decimal(
+    value: Bound<f64>,
+) -> Result<Bound<BigDecimal>, BigDecimalError> {
+    Ok(match value {
+        Bound::Unbounded => Bound::Unbounded,
+        Bound::Excluded(v) => Bound::Excluded(float_to_decimal(v)?),
+        Bound::Included(v) => Bound::Included(float_to_decimal(v)?),
+    })
 }
