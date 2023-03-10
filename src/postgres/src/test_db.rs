@@ -3,7 +3,8 @@ use std::collections::HashMap;
 use chrono::DateTime;
 use fiskeridir_rs::ErsDca;
 use kyogre_core::{
-    AisPosition, AisVessel, DateRange, NewAisPosition, NewAisStatic, ScraperInboundPort,
+    AisPosition, AisVessel, DateRange, NewAisPosition, NewAisStatic, ScraperInboundPort, Trip,
+    Vessel,
 };
 
 use crate::PostgresAdapter;
@@ -147,6 +148,27 @@ FROM
             .execute(&self.db.pool)
             .await
             .unwrap();
+    }
+
+    pub async fn vessel(&self, fiskeridir_vessel_id: i64) -> Vessel {
+        Vessel::try_from(
+            self.db
+                .single_fiskeridir_ais_vessel_combination(fiskeridir_vessel_id)
+                .await
+                .unwrap()
+                .unwrap(),
+        )
+        .unwrap()
+    }
+
+    pub async fn trips_of_vessel(&self, fiskeridir_vessel_id: i64) -> Vec<Trip> {
+        self.db
+            .trips_of_vessel_impl(fiskeridir_vessel_id)
+            .await
+            .unwrap()
+            .into_iter()
+            .map(|v| Trip::try_from(v).unwrap())
+            .collect()
     }
 
     pub async fn generate_ais_vessel(&self, mmsi: i32, call_sign: &str) -> AisVessel {

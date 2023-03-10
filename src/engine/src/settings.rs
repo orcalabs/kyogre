@@ -65,12 +65,8 @@ impl Settings {
 
     pub fn trip_assemblers(&self) -> Vec<Box<dyn TripProcessor>> {
         let landings_assembler = Box::<trip_assembler::LandingTripAssembler>::default();
-        let ers_assembler = Box::<trip_assembler::ErsTripAssembler>::default();
 
-        let vec = vec![
-            ers_assembler as Box<dyn TripProcessor>,
-            landings_assembler as Box<dyn TripProcessor>,
-        ];
+        let vec = vec![landings_assembler as Box<dyn TripProcessor>];
 
         vec
     }

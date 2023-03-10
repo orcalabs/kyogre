@@ -122,7 +122,7 @@ impl TripPrecisionCalculator {
 
         for t in trips {
             let positions = adapter
-                .ais_positions(vessel.fiskeridir.id, &t.range)
+                .ais_positions(vessel.fiskeridir.id, &t.period)
                 .await
                 .change_context(TripPrecisionError)?;
             if positions.is_empty() {

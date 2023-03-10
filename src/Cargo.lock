@@ -1162,9 +1162,9 @@ dependencies = [
 
 [[package]]
 name = "fiskeridir-rs"
-version = "0.6.0"
+version = "0.6.1"
 source = "registry+https://dl.cloudsmith.io/basic/orcalabs/orcastrator/cargo/index.git"
-checksum = "27be97a347bc3260ab50ca077b5bbe1941265f258b786ab5f4201df40963650f"
+checksum = "d59707df3d59223f12a7ba4a51a65f4a70be5e1dfdb60067b4b0130d226f4eff"
 dependencies = [
  "bigdecimal",
  "chrono",
@@ -3966,12 +3966,20 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "chrono",
+ "dockertest",
  "error-stack 0.3.1",
+ "fiskeridir-rs",
+ "futures",
  "geoutils",
  "kyogre-core",
  "num-traits",
+ "orca-core",
+ "postgres",
+ "rand",
  "strum",
+ "tokio",
  "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]

@@ -8,7 +8,7 @@ use error_stack::{IntoReport, Result, ResultExt};
 use kyogre_core::{
     Arrival, ArrivalFilter, DateRange, Departure, NewTrip, PrecisionDirection, Trip,
     TripAssemblerId, TripAssemblerOutboundPort, TripPrecisionOutboundPort, TripPrecisionUpdate,
-    TripsConflictStrategy, Vessel,
+    Vessel,
 };
 use strum::EnumDiscriminants;
 
@@ -107,13 +107,20 @@ impl TripAssembler for ErsTripAssembler {
 
     fn start_search_time(&self, state: &State) -> DateTime<Utc> {
         match state {
-            State::Conflict(c) | State::CurrentCalculationTime(c) => *c,
+            State::Conflict {
+                conflict_timestamp,
+                trip_prior_to_or_at_conflict,
+            } => trip_prior_to_or_at_conflict
+                .as_ref()
+                .map(|t| t.start())
+                .unwrap_or(*conflict_timestamp),
+            State::CurrentCalculationTime(c) => *c,
             State::NoPriorState => Utc.timestamp_opt(1000, 0).unwrap(),
         }
     }
 
     fn trip_calculation_time(&self, most_recent_trip: &NewTrip) -> DateTime<Utc> {
-        most_recent_trip.range.end()
+        most_recent_trip.period.end()
     }
 
     async fn calculate_precision(
@@ -132,21 +139,9 @@ impl TripAssembler for ErsTripAssembler {
         adapter: &dyn TripAssemblerOutboundPort,
         vessel: &Vessel,
         start: &DateTime<Utc>,
-        prior_trip: Option<Trip>,
-    ) -> Result<(Vec<NewTrip>, Option<TripsConflictStrategy>), TripAssemblerError> {
+        _no_prior_state: bool,
+    ) -> Result<Vec<NewTrip>, TripAssemblerError> {
         let mut stop_points: Vec<StopPoint> = Vec::new();
-        let mut conflict_strategy = None;
-
-        // If a new arrival is added and no further departures, we want to extend the current trip to
-        // that next arrival.
-        if let Some(p) = &prior_trip {
-            let prior_departure = adapter
-                .departure_of_trip(p.trip_id)
-                .await
-                .change_context(TripAssemblerError)?;
-
-            stop_points.push(StopPoint::Departure(prior_departure));
-        }
 
         let arrivals = adapter
             .ers_arrivals(
@@ -190,12 +185,12 @@ impl TripAssembler for ErsTripAssembler {
                         current_departure_threshold = arrival.0;
                         let arrival = arrival.1;
 
-                        let range = DateRange::new(current_stop.timestamp(), arrival.timestamp)
+                        let period = DateRange::new(current_stop.timestamp(), arrival.timestamp)
                             .into_report()
                             .change_context(TripAssemblerError)?;
 
                         new_trips.push(NewTrip {
-                            range,
+                            period,
                             start_port_code: current_stop.port_code().map(|p| p.to_string()),
                             end_port_code: arrival.port_code.clone(),
                         });
@@ -207,23 +202,7 @@ impl TripAssembler for ErsTripAssembler {
             }
         }
 
-        if !new_trips.is_empty() {
-            // Since we include the prior departure we will re-create the most recent trip each
-            // assembly round.
-            // If the most recent trip has not changed (a new arrival extending it has not
-            // occurred) we do not need to re-add it.
-            if let Some(prior_trip) = prior_trip {
-                if new_trips[0].range.start().timestamp() == prior_trip.range.start().timestamp()
-                    && new_trips[0].range.end().timestamp() == prior_trip.range.end().timestamp()
-                {
-                    new_trips.remove(0);
-                } else {
-                    conflict_strategy = Some(TripsConflictStrategy::Replace);
-                }
-            }
-        }
-
-        Ok((new_trips, conflict_strategy))
+        Ok(new_trips)
     }
 }
 

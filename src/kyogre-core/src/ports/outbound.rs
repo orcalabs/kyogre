@@ -33,7 +33,7 @@ pub trait WebApiPort {
         &self,
     ) -> Pin<Box<dyn Stream<Item = Result<SpeciesMainGroup, QueryError>> + '_>>;
     fn species_fao(&self) -> Pin<Box<dyn Stream<Item = Result<SpeciesFao, QueryError>> + '_>>;
-    fn vessels(&self) -> Pin<Box<dyn Stream<Item = Result<Vessel, QueryError>> + '_>>;
+    fn vessels(&self) -> Pin<Box<dyn Stream<Item = Result<Vessel, QueryError>> + Send + '_>>;
     fn hauls(
         &self,
         query: HaulsQuery,
@@ -44,7 +44,10 @@ pub trait WebApiPort {
 #[async_trait]
 pub trait TripAssemblerOutboundPort: Send + Sync {
     async fn vessels(&self) -> Result<Vec<Vessel>, QueryError>;
-    async fn trip_calculation_timers(&self) -> Result<Vec<TripCalculationTimer>, QueryError>;
+    async fn trip_calculation_timers(
+        &self,
+        trip_assembler_id: TripAssemblerId,
+    ) -> Result<Vec<TripCalculationTimer>, QueryError>;
     async fn conflicts(
         &self,
         id: TripAssemblerId,
@@ -71,10 +74,10 @@ pub trait TripAssemblerOutboundPort: Send + Sync {
         vessel_id: i64,
         start: &DateTime<Utc>,
     ) -> Result<Departure, QueryError>;
-    async fn trip_prior_to(
+    async fn trip_at_or_prior_to(
         &self,
-        vessel_id: i64,
-        assembler_id: TripAssemblerId,
+        fiskeridir_vessel_id: i64,
+        trip_assembler_id: TripAssemblerId,
         time: &DateTime<Utc>,
     ) -> Result<Option<Trip>, QueryError>;
 }

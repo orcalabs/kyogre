@@ -25,6 +25,17 @@ impl std::fmt::Display for PostgresError {
 }
 
 #[derive(Debug)]
+pub struct UnboundedRangeError;
+
+impl std::error::Error for UnboundedRangeError {}
+
+impl std::fmt::Display for UnboundedRangeError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("encountered and unexpected unbounded range")
+    }
+}
+
+#[derive(Debug)]
 pub struct BigDecimalError(pub f64);
 
 impl std::error::Error for BigDecimalError {}
@@ -47,6 +58,20 @@ impl std::fmt::Display for FromBigDecimalError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_fmt(format_args!(
             "failed to convert bigdecimal value to float, value: {}",
+            self.0
+        ))
+    }
+}
+
+#[derive(Debug)]
+pub struct TripAssemblerError(pub i32);
+
+impl std::error::Error for TripAssemblerError {}
+
+impl std::fmt::Display for TripAssemblerError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!(
+            "failed to convert int value to trip assembler id value: {}",
             self.0
         ))
     }

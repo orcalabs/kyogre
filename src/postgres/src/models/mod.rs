@@ -14,6 +14,7 @@ mod landing_entry;
 mod norwegian_land;
 mod port;
 mod species;
+mod trip;
 mod vessel;
 
 pub use ais::*;
@@ -32,4 +33,5 @@ pub use landing_entry::*;
 pub use norwegian_land::*;
 pub use port::*;
 pub use species::*;
+pub use trip::*;
 pub use vessel::*;

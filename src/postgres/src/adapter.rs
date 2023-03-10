@@ -263,7 +263,7 @@ impl WebApiPort for PostgresAdapter {
         convert_stream(self.species_fao_impl()).boxed()
     }
 
-    fn vessels(&self) -> Pin<Box<dyn Stream<Item = Result<Vessel, QueryError>> + '_>> {
+    fn vessels(&self) -> Pin<Box<dyn Stream<Item = Result<Vessel, QueryError>> + Send + '_>> {
         convert_stream(self.fiskeridir_ais_vessel_combinations()).boxed()
     }
 
@@ -347,30 +347,51 @@ impl ScraperFileHashInboundPort for PostgresAdapter {
 #[async_trait]
 impl TripAssemblerOutboundPort for PostgresAdapter {
     async fn vessels(&self) -> Result<Vec<Vessel>, QueryError> {
-        unimplemented!();
+        let mut stream = convert_stream(self.fiskeridir_ais_vessel_combinations());
+
+        let mut vessels = vec![];
+
+        while let Some(v) = stream.next().await {
+            vessels.push(v.change_context_lazy(|| QueryError)?);
+        }
+
+        Ok(vessels)
     }
-    async fn trip_calculation_timers(&self) -> Result<Vec<TripCalculationTimer>, QueryError> {
-        unimplemented!();
+    async fn trip_calculation_timers(
+        &self,
+        trip_assembler_id: TripAssemblerId,
+    ) -> Result<Vec<TripCalculationTimer>, QueryError> {
+        self.trip_calculation_timers_impl(trip_assembler_id)
+            .await
+            .change_context(QueryError)
     }
     async fn conflicts(
         &self,
-        _id: TripAssemblerId,
+        id: TripAssemblerId,
     ) -> Result<Vec<TripAssemblerConflict>, QueryError> {
-        unimplemented!();
+        self.trip_assembler_conflicts(id)
+            .await
+            .change_context(QueryError)
     }
     async fn landing_dates(
         &self,
-        _vessel_id: i64,
-        _start: &DateTime<Utc>,
+        vessel_id: i64,
+        start: &DateTime<Utc>,
     ) -> Result<Vec<DateTime<Utc>>, QueryError> {
-        unimplemented!();
+        self.landing_dates_impl(vessel_id, start)
+            .await
+            .change_context(QueryError)
     }
     async fn most_recent_trip(
         &self,
-        _vessel_id: i64,
-        _assembler_id: TripAssemblerId,
+        fiskeridir_vessel_id: i64,
+        trip_assembler_id: TripAssemblerId,
     ) -> Result<Option<Trip>, QueryError> {
-        unimplemented!();
+        convert_optional(
+            self.most_recent_trip_impl(fiskeridir_vessel_id, trip_assembler_id)
+                .await
+                .change_context(QueryError)?,
+        )
     }
     async fn departure_of_trip(&self, _trip_id: i64) -> Result<Departure, QueryError> {
         unimplemented!();
@@ -390,13 +411,17 @@ impl TripAssemblerOutboundPort for PostgresAdapter {
     ) -> Result<Departure, QueryError> {
         unimplemented!();
     }
-    async fn trip_prior_to(
+    async fn trip_at_or_prior_to(
         &self,
-        _vessel_id: i64,
-        _assembler_id: TripAssemblerId,
-        _time: &DateTime<Utc>,
+        fiskeridir_vessel_id: i64,
+        trip_assembler_id: TripAssemblerId,
+        time: &DateTime<Utc>,
     ) -> Result<Option<Trip>, QueryError> {
-        unimplemented!();
+        convert_optional(
+            self.trip_at_or_prior_to_impl(fiskeridir_vessel_id, trip_assembler_id, time)
+                .await
+                .change_context(QueryError)?,
+        )
     }
 }
 
@@ -404,12 +429,21 @@ impl TripAssemblerOutboundPort for PostgresAdapter {
 impl TripAssemblerInboundPort for PostgresAdapter {
     async fn add_trips(
         &self,
-        _vessel_id: i64,
-        _new_trip_calculation_time: DateTime<Utc>,
-        _conflict_strategy: TripsConflictStrategy,
-        _trips: Vec<NewTrip>,
-    ) -> Result<Vec<DateTime<Utc>>, InsertError> {
-        unimplemented!();
+        fiskeridir_vessel_id: i64,
+        new_trip_calculation_time: DateTime<Utc>,
+        conflict_strategy: TripsConflictStrategy,
+        trips: Vec<NewTrip>,
+        trip_assembler_id: TripAssemblerId,
+    ) -> Result<(), InsertError> {
+        self.add_trips_impl(
+            fiskeridir_vessel_id,
+            new_trip_calculation_time,
+            conflict_strategy,
+            trips,
+            trip_assembler_id,
+        )
+        .await
+        .change_context(InsertError)
     }
 }
 
@@ -475,4 +509,13 @@ where
         }
         .change_context(QueryError)
     })
+}
+
+pub(crate) fn convert_optional<A, B>(val: Option<A>) -> Result<Option<B>, QueryError>
+where
+    B: std::convert::TryFrom<A, Error = Report<PostgresError>>,
+{
+    val.map(|a| B::try_from(a))
+        .transpose()
+        .change_context(QueryError)
 }

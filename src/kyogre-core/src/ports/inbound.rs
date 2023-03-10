@@ -1,7 +1,4 @@
-use crate::{
-    AisPosition, AisVesselMigrate, DeleteError, FileHashId, HashDiff, InsertError, NewTrip,
-    QueryError, TripPrecisionUpdate, TripsConflictStrategy, UpdateError,
-};
+use crate::*;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use error_stack::Result;
@@ -24,11 +21,12 @@ pub trait AisMigratorDestination {
 pub trait TripAssemblerInboundPort {
     async fn add_trips(
         &self,
-        vessel_id: i64,
+        fiskeridir_vessel_id: i64,
         new_trip_calculation_time: DateTime<Utc>,
         conflict_strategy: TripsConflictStrategy,
         trips: Vec<NewTrip>,
-    ) -> Result<Vec<DateTime<Utc>>, InsertError>;
+        trip_assembler_id: TripAssemblerId,
+    ) -> Result<(), InsertError>;
 }
 
 #[async_trait]
