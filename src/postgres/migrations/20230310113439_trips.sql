@@ -1,3 +1,5 @@
+DELETE FROM engine_transitions;
+
 DELETE FROM valid_engine_transitions
 WHERE
     (
