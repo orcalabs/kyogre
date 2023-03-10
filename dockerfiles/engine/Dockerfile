@@ -28,13 +28,7 @@ COPY src .
 RUN --mount=type=secret,id=git-credentials,target=~/.git-credentials,required=true \
     cargo build --release --bin engine
 
-FROM lukemathwalker/cargo-chef:latest-rust-1.66.0-buster
-
-RUN apt update -y && \
-    apt install -y \
-    libssl1.1 \
-    libssl-dev \
-    pkg-config
+FROM gcr.io/distroless/cc
 
 COPY --from=builder /app/target/release/engine .
 
