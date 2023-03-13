@@ -37,12 +37,11 @@ SELECT
     h.start_latitude AS "start_latitude!",
     h.start_longitude AS "start_longitude!",
     h.start_time AS "start_time!",
-    h.start_timestamp AS "start_timestamp!",
+    h.period AS "period!",
     h.stop_date AS "stop_date!",
     h.stop_latitude AS "stop_latitude!",
     h.stop_longitude AS "stop_longitude!",
     h.stop_time AS "stop_time!",
-    h.stop_timestamp AS "stop_timestamp!",
     h.gear_fiskeridir_id AS gear_fiskeridir_id,
     h.gear_group_id AS gear_group_id,
     h.fiskeridir_vessel_id AS fiskeridir_vessel_id,
@@ -58,7 +57,7 @@ FROM
 WHERE
     (
         $1::tstzrange[] IS NULL
-        OR tstzrange (h.start_timestamp, h.stop_timestamp, '[]') && ANY ($1)
+        OR h.period && ANY ($1)
     )
     AND (
         $2::VARCHAR[] IS NULL
@@ -116,7 +115,7 @@ FROM
             h.catch_location_start IS NOT NULL
             AND (
                 $1::tstzrange[] IS NULL
-                OR tstzrange (h.start_timestamp, h.stop_timestamp, '[]') && ANY ($1)
+                OR h.period && ANY ($1)
             )
             AND (
                 $2::VARCHAR[] IS NULL
