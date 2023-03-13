@@ -3,7 +3,7 @@
 #![allow(dead_code)]
 
 use async_trait::async_trait;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, NaiveDate, NaiveDateTime, NaiveTime, Utc};
 use error_stack::Result;
 use kyogre_core::{
     NewTrip, Trip, TripAssemblerId, TripAssemblerOutboundPort, TripPrecisionOutboundPort,
@@ -19,6 +19,17 @@ pub use error::*;
 pub use ers::*;
 pub use landing_assembler::*;
 pub use precision::*;
+
+// TODO: make this a const when rust supports it
+pub fn ers_last_trip_landing_coverage_end() -> DateTime<Utc> {
+    DateTime::<Utc>::from_utc(
+        NaiveDateTime::new(
+            NaiveDate::from_ymd_opt(2200, 1, 1).unwrap(),
+            NaiveTime::from_hms_opt(0, 0, 0).unwrap(),
+        ),
+        Utc,
+    )
+}
 
 #[async_trait]
 pub trait TripAssembler: Send + Sync {

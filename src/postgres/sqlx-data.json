@@ -1313,6 +1313,40 @@
     },
     "query": "\nSELECT\n    species_group_id AS id,\n    \"name\"\nFROM\n    species_groups\n            "
   },
+  "ae4a01d2a251e7d9be99a7e33be14885ab8070c67586cca322b84b85c9eec050": {
+    "describe": {
+      "columns": [
+        {
+          "name": "fiskeridir_vessel_id!",
+          "ordinal": 0,
+          "type_info": "Int8"
+        },
+        {
+          "name": "timestamp",
+          "ordinal": 1,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "port_id",
+          "ordinal": 2,
+          "type_info": "Varchar"
+        }
+      ],
+      "nullable": [
+        true,
+        false,
+        true
+      ],
+      "parameters": {
+        "Left": [
+          "Int8",
+          "Timestamptz",
+          "Bool"
+        ]
+      }
+    },
+    "query": "\nSELECT\n    fiskeridir_vessel_id AS \"fiskeridir_vessel_id!\",\n    arrival_timestamp AS \"timestamp\",\n    port_id\nFROM\n    ers_arrivals\nWHERE\n    fiskeridir_vessel_id = $1\n    AND arrival_timestamp >= $2\n    AND (\n        $3::bool IS NULL\n        OR landing_facility IS NOT NULL\n    )\n            "
+  },
   "afab8a5cb3418938aa30de7bd22a9852b1b204e39858a3194974a12c5e61100c": {
     "describe": {
       "columns": [],
@@ -1628,6 +1662,39 @@
       }
     },
     "query": "\nINSERT INTO\n    economic_zones (economic_zone_id, \"name\")\nSELECT\n    *\nFROM\n    UNNEST($1::VARCHAR[], $2::VARCHAR[])\nON CONFLICT (economic_zone_id) DO NOTHING\n            "
+  },
+  "cc3ffc88f78f6c469c67a3f8e28456c14cf5da9f51cf791dac92dc2d1386df78": {
+    "describe": {
+      "columns": [
+        {
+          "name": "fiskeridir_vessel_id!",
+          "ordinal": 0,
+          "type_info": "Int8"
+        },
+        {
+          "name": "timestamp",
+          "ordinal": 1,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "port_id",
+          "ordinal": 2,
+          "type_info": "Varchar"
+        }
+      ],
+      "nullable": [
+        true,
+        false,
+        true
+      ],
+      "parameters": {
+        "Left": [
+          "Int8",
+          "Timestamptz"
+        ]
+      }
+    },
+    "query": "\nSELECT\n    fiskeridir_vessel_id AS \"fiskeridir_vessel_id!\",\n    departure_timestamp AS \"timestamp\",\n    port_id\nFROM\n    ers_departures\nWHERE\n    fiskeridir_vessel_id = $1\n    AND departure_timestamp >= $2\n            "
   },
   "cc7529bb4ecd6aa70d015d86abc5efdbb2cca25ed8019b40dbb30e76ad745e65": {
     "describe": {

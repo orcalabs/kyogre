@@ -33,7 +33,6 @@ async fn test_produces_new_trips_without_replacing_existing_ones() {
             .await
             .unwrap();
 
-        dbg!("SECOND RUN");
         let mut landing2 = fiskeridir_rs::Landing::test_default(2, Some(fiskeridir_vessel_id));
         landing2.landing_timestamp = landing.landing_timestamp + Duration::days(1);
         helper.add_landings(vec![landing2.clone()]).await.unwrap();

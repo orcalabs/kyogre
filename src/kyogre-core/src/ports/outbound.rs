@@ -57,18 +57,17 @@ pub trait TripAssemblerOutboundPort: Send + Sync {
         vessel_id: i64,
         assembler_id: TripAssemblerId,
     ) -> Result<Option<Trip>, QueryError>;
-    async fn departure_of_trip(&self, trip_id: i64) -> Result<Departure, QueryError>;
     async fn ers_arrivals(
         &self,
         vessel_id: i64,
         start: &DateTime<Utc>,
         filter: ArrivalFilter,
-    ) -> Result<Arrival, QueryError>;
+    ) -> Result<Vec<Arrival>, QueryError>;
     async fn ers_departures(
         &self,
         vessel_id: i64,
         start: &DateTime<Utc>,
-    ) -> Result<Departure, QueryError>;
+    ) -> Result<Vec<Departure>, QueryError>;
     async fn trip_at_or_prior_to(
         &self,
         fiskeridir_vessel_id: i64,

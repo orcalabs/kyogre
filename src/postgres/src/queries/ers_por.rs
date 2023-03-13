@@ -4,7 +4,9 @@ use crate::{
     models::{NewErsPor, NewErsPorCatch},
     PostgresAdapter,
 };
+use chrono::{DateTime, Utc};
 use error_stack::{IntoReport, Result, ResultExt};
+use kyogre_core::ArrivalFilter;
 
 impl PostgresAdapter {
     pub(crate) async fn add_ers_por_set(&self, set: ErsPorSet) -> Result<(), PostgresError> {
@@ -338,5 +340,42 @@ WHERE
         .into_report()
         .change_context(PostgresError::Query)
         .map(|_| ())
+    }
+
+    pub async fn ers_arrivals_impl(
+        &self,
+        fiskeridir_vessel_id: i64,
+        start: &DateTime<Utc>,
+        filter: ArrivalFilter,
+    ) -> Result<Vec<kyogre_core::Arrival>, PostgresError> {
+        let landing_facility = match filter {
+            ArrivalFilter::WithLandingFacility => Some(true),
+            ArrivalFilter::All => None,
+        };
+        sqlx::query_as!(
+            kyogre_core::Arrival,
+            r#"
+SELECT
+    fiskeridir_vessel_id AS "fiskeridir_vessel_id!",
+    arrival_timestamp AS "timestamp",
+    port_id
+FROM
+    ers_arrivals
+WHERE
+    fiskeridir_vessel_id = $1
+    AND arrival_timestamp >= $2
+    AND (
+        $3::bool IS NULL
+        OR landing_facility IS NOT NULL
+    )
+            "#,
+            fiskeridir_vessel_id,
+            start,
+            landing_facility,
+        )
+        .fetch_all(&self.pool)
+        .await
+        .into_report()
+        .change_context(PostgresError::Query)
     }
 }

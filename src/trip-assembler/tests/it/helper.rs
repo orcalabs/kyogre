@@ -1,5 +1,7 @@
+use chrono::{DateTime, NaiveDate, NaiveDateTime, NaiveTime, Utc};
 use dockertest::{DockerTest, Source, StaticManagementPolicy};
 use futures::Future;
+use kyogre_core::*;
 use orca_core::{compositions::postgres_composition, PsqlLogStatements, PsqlSettings};
 use postgres::{PostgresAdapter, TestDb};
 use rand::random;
@@ -20,6 +22,53 @@ impl std::ops::Deref for TestHelper {
     fn deref(&self) -> &Self::Target {
         &self.db.db
     }
+}
+
+pub trait TimeAndDate {
+    fn time(&self) -> NaiveTime;
+    fn date(&self) -> NaiveDate;
+}
+
+impl TimeAndDate for fiskeridir_rs::ErsDep {
+    fn time(&self) -> NaiveTime {
+        self.departure_time
+    }
+
+    fn date(&self) -> NaiveDate {
+        self.departure_date
+    }
+}
+
+impl TimeAndDate for fiskeridir_rs::ErsPor {
+    fn time(&self) -> NaiveTime {
+        self.arrival_time
+    }
+
+    fn date(&self) -> NaiveDate {
+        self.arrival_date
+    }
+}
+
+impl TimeAndDate for DateTime<Utc> {
+    fn time(&self) -> NaiveTime {
+        self.time()
+    }
+
+    fn date(&self) -> NaiveDate {
+        self.date_naive()
+    }
+}
+
+pub fn create_date_range<T, S>(start: &T, end: &S) -> DateRange
+where
+    T: TimeAndDate,
+    S: TimeAndDate,
+{
+    DateRange::new(
+        DateTime::<Utc>::from_utc(NaiveDateTime::new(start.date(), start.time()), Utc),
+        DateTime::<Utc>::from_utc(NaiveDateTime::new(end.date(), end.time()), Utc),
+    )
+    .unwrap()
 }
 
 pub async fn test<T, Fut>(test: T)
