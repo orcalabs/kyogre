@@ -21,4 +21,4 @@ sqlx = { version = "0.6.2", features = [
 error-stack = { workspace = true }
 bigdecimal = "0.3.0"
 async-trait = "0.1.66"
-chrono = { version = "0.4.23", features = ["serde"] }
+chrono = { version = "0.4.24", features = ["serde"] }
