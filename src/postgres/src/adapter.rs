@@ -387,23 +387,24 @@ impl TripAssemblerOutboundPort for PostgresAdapter {
                 .change_context(QueryError)?,
         )
     }
-    async fn departure_of_trip(&self, _trip_id: i64) -> Result<Departure, QueryError> {
-        unimplemented!();
-    }
     async fn ers_arrivals(
         &self,
-        _vessel_id: i64,
-        _start: &DateTime<Utc>,
-        _filter: ArrivalFilter,
-    ) -> Result<Arrival, QueryError> {
-        unimplemented!();
+        fiskeridir_vessel_id: i64,
+        start: &DateTime<Utc>,
+        filter: ArrivalFilter,
+    ) -> Result<Vec<Arrival>, QueryError> {
+        self.ers_arrivals_impl(fiskeridir_vessel_id, start, filter)
+            .await
+            .change_context(QueryError)
     }
     async fn ers_departures(
         &self,
-        _vessel_id: i64,
-        _start: &DateTime<Utc>,
-    ) -> Result<Departure, QueryError> {
-        unimplemented!();
+        fiskeridir_vessel_id: i64,
+        start: &DateTime<Utc>,
+    ) -> Result<Vec<Departure>, QueryError> {
+        self.ers_departures_impl(fiskeridir_vessel_id, start)
+            .await
+            .change_context(QueryError)
     }
     async fn trip_at_or_prior_to(
         &self,

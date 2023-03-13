@@ -4,6 +4,7 @@ use crate::{
     models::{NewErsDep, NewErsDepCatch},
     PostgresAdapter,
 };
+use chrono::{DateTime, Utc};
 use error_stack::{IntoReport, Result, ResultExt};
 
 impl PostgresAdapter {
@@ -373,5 +374,32 @@ WHERE
         .into_report()
         .change_context(PostgresError::Query)
         .map(|_| ())
+    }
+
+    pub async fn ers_departures_impl(
+        &self,
+        fiskeridir_vessel_id: i64,
+        start: &DateTime<Utc>,
+    ) -> Result<Vec<kyogre_core::Departure>, PostgresError> {
+        sqlx::query_as!(
+            kyogre_core::Departure,
+            r#"
+SELECT
+    fiskeridir_vessel_id AS "fiskeridir_vessel_id!",
+    departure_timestamp AS "timestamp",
+    port_id
+FROM
+    ers_departures
+WHERE
+    fiskeridir_vessel_id = $1
+    AND departure_timestamp >= $2
+            "#,
+            fiskeridir_vessel_id,
+            start,
+        )
+        .fetch_all(&self.pool)
+        .await
+        .into_report()
+        .change_context(PostgresError::Query)
     }
 }

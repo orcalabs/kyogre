@@ -75,8 +75,8 @@ impl StopPoint {
     }
     pub fn port_code(&self) -> Option<&str> {
         match self {
-            StopPoint::Arrival(a) => a.port_code.as_deref(),
-            StopPoint::Departure(d) => d.port_code.as_deref(),
+            StopPoint::Arrival(a) => a.port_id.as_deref(),
+            StopPoint::Departure(d) => d.port_id.as_deref(),
         }
     }
 }
@@ -150,15 +150,17 @@ impl TripAssembler for ErsTripAssembler {
                 ArrivalFilter::WithLandingFacility,
             )
             .await
-            .change_context(TripAssemblerError)
+            .change_context(TripAssemblerError)?
             .into_iter()
-            .map(StopPoint::Arrival);
+            .map(StopPoint::Arrival)
+            .collect::<Vec<StopPoint>>();
         let departures = adapter
             .ers_departures(vessel.fiskeridir.id, start)
             .await
-            .change_context(TripAssemblerError)
+            .change_context(TripAssemblerError)?
             .into_iter()
-            .map(StopPoint::Departure);
+            .map(StopPoint::Departure)
+            .collect::<Vec<StopPoint>>();
 
         stop_points.extend(arrivals);
         stop_points.extend(departures);
@@ -192,7 +194,7 @@ impl TripAssembler for ErsTripAssembler {
                         new_trips.push(NewTrip {
                             period,
                             start_port_code: current_stop.port_code().map(|p| p.to_string()),
-                            end_port_code: arrival.port_code.clone(),
+                            end_port_code: arrival.port_id.clone(),
                         });
                     } else {
                         break;
