@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use chrono::{DateTime, NaiveDate, NaiveTime, Utc};
+use chrono::{DateTime, Utc};
 
 use crate::{CatchLocationId, WhaleGender};
 
@@ -19,15 +19,11 @@ pub struct Haul {
     pub ocean_depth_end: i32,
     pub ocean_depth_start: i32,
     pub quota_type_id: i32,
-    pub start_date: NaiveDate,
     pub start_latitude: f64,
     pub start_longitude: f64,
-    pub start_time: NaiveTime,
     pub start_timestamp: DateTime<Utc>,
-    pub stop_date: NaiveDate,
     pub stop_latitude: f64,
     pub stop_longitude: f64,
-    pub stop_time: NaiveTime,
     pub stop_timestamp: DateTime<Utc>,
     pub vessel_call_sign: Option<String>,
     pub vessel_call_sign_ers: String,

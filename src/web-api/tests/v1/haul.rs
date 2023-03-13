@@ -38,10 +38,14 @@ async fn test_hauls_returns_hauls_in_specified_months() {
         let month1: DateTime<Utc> = "2001-01-1T00:00:00Z".parse().unwrap();
         let month2: DateTime<Utc> = "2000-06-1T00:00:00Z".parse().unwrap();
 
-        ers1.start_timestamp = Some(month1);
-        ers1.stop_timestamp = Some(month1);
-        ers2.start_timestamp = Some(month2);
-        ers2.stop_timestamp = Some(month2);
+        ers1.start_date = Some(month1.date_naive());
+        ers1.start_time = Some(month1.time());
+        ers1.stop_date = Some(month1.date_naive());
+        ers1.stop_time = Some(month1.time());
+        ers2.start_date = Some(month2.date_naive());
+        ers2.start_time = Some(month2.time());
+        ers2.stop_date = Some(month2.date_naive());
+        ers2.stop_time = Some(month2.time());
 
         helper
             .db
@@ -269,16 +273,20 @@ async fn test_hauls_grid_returns_grid_for_hauls_in_specified_month() {
         let month1: DateTime<Utc> = "2001-01-1T00:00:00Z".parse().unwrap();
         let month2: DateTime<Utc> = "2000-06-1T00:00:00Z".parse().unwrap();
 
-        ers1.start_timestamp = Some(month1);
-        ers1.stop_timestamp = Some(month1);
+        ers1.start_date = Some(month1.date_naive());
+        ers1.start_time = Some(month1.time());
+        ers1.stop_date = Some(month1.date_naive());
+        ers1.stop_time = Some(month1.time());
         ers1.start_latitude = Some(56.727258);
         ers1.start_longitude = Some(12.565410);
         ers1.catch.species.living_weight = Some(10);
 
         ers2.start_latitude = Some(56.756293);
         ers2.start_longitude = Some(11.514740);
-        ers2.start_timestamp = Some(month2);
-        ers2.stop_timestamp = Some(month2);
+        ers2.start_date = Some(month2.date_naive());
+        ers2.start_time = Some(month2.time());
+        ers2.stop_date = Some(month2.date_naive());
+        ers2.stop_time = Some(month2.time());
         ers2.catch.species.living_weight = Some(20);
 
         helper

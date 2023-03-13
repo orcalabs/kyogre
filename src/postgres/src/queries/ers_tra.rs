@@ -49,16 +49,12 @@ impl PostgresAdapter {
         let len = ers_tra.len();
 
         let mut message_id = Vec::with_capacity(len);
-        let mut message_date = Vec::with_capacity(len);
         let mut message_number = Vec::with_capacity(len);
-        let mut message_time = Vec::with_capacity(len);
         let mut message_timestamp = Vec::with_capacity(len);
         let mut ers_message_type_id = Vec::with_capacity(len);
         let mut message_year = Vec::with_capacity(len);
         let mut relevant_year = Vec::with_capacity(len);
         let mut sequence_number = Vec::with_capacity(len);
-        let mut reloading_date = Vec::with_capacity(len);
-        let mut reloading_time = Vec::with_capacity(len);
         let mut reloading_timestamp = Vec::with_capacity(len);
         let mut fiskeridir_vessel_id = Vec::with_capacity(len);
         let mut vessel_building_year = Vec::with_capacity(len);
@@ -91,16 +87,12 @@ impl PostgresAdapter {
 
         for e in ers_tra {
             message_id.push(e.message_id);
-            message_date.push(e.message_date);
             message_number.push(e.message_number);
-            message_time.push(e.message_time);
             message_timestamp.push(e.message_timestamp);
             ers_message_type_id.push(e.ers_message_type_id);
             message_year.push(e.message_year);
             relevant_year.push(e.relevant_year);
             sequence_number.push(e.sequence_number);
-            reloading_date.push(e.reloading_date);
-            reloading_time.push(e.reloading_time);
             reloading_timestamp.push(e.reloading_timestamp);
             fiskeridir_vessel_id.push(e.fiskeridir_vessel_id);
             vessel_building_year.push(e.vessel_building_year);
@@ -137,16 +129,12 @@ impl PostgresAdapter {
 INSERT INTO
     ers_tra (
         message_id,
-        message_date,
         message_number,
-        message_time,
         message_timestamp,
         ers_message_type_id,
         message_year,
         relevant_year,
         sequence_number,
-        reloading_date,
-        reloading_time,
         reloading_timestamp,
         fiskeridir_vessel_id,
         vessel_building_year,
@@ -182,59 +170,51 @@ SELECT
 FROM
     UNNEST(
         $1::BIGINT[],
-        $2::date[],
-        $3::INT[],
-        $4::TIME[],
-        $5::timestamptz[],
-        $6::VARCHAR[],
+        $2::INT[],
+        $3::timestamptz[],
+        $4::VARCHAR[],
+        $5::INT[],
+        $6::INT[],
         $7::INT[],
-        $8::INT[],
+        $8::timestamptz[],
         $9::INT[],
-        $10::date[],
-        $11::TIME[],
-        $12::timestamptz[],
+        $10::INT[],
+        $11::VARCHAR[],
+        $12::VARCHAR[],
         $13::INT[],
         $14::INT[],
-        $15::VARCHAR[],
-        $16::VARCHAR[],
-        $17::INT[],
+        $15::INT[],
+        $16::INT[],
+        $17::VARCHAR[],
         $18::INT[],
-        $19::INT[],
-        $20::INT[],
-        $21::VARCHAR[],
-        $22::INT[],
-        $23::DECIMAL[],
+        $19::DECIMAL[],
+        $20::VARCHAR[],
+        $21::DECIMAL[],
+        $22::VARCHAR[],
+        $23::INT[],
         $24::VARCHAR[],
-        $25::DECIMAL[],
-        $26::VARCHAR[],
-        $27::INT[],
+        $25::VARCHAR[],
+        $26::INT[],
+        $27::VARCHAR[],
         $28::VARCHAR[],
         $29::VARCHAR[],
         $30::INT[],
-        $31::VARCHAR[],
+        $31::INT[],
         $32::VARCHAR[],
         $33::VARCHAR[],
-        $34::INT[],
-        $35::INT[],
-        $36::VARCHAR[],
-        $37::VARCHAR[],
-        $38::date[],
-        $39::date[],
-        $40::DECIMAL[]
+        $34::date[],
+        $35::date[],
+        $36::DECIMAL[]
     )
 ON CONFLICT (message_id) DO NOTHING
             "#,
             message_id.as_slice(),
-            message_date.as_slice(),
             message_number.as_slice(),
-            message_time.as_slice(),
             message_timestamp.as_slice(),
             ers_message_type_id.as_slice(),
             message_year.as_slice(),
             relevant_year.as_slice(),
             sequence_number.as_slice() as _,
-            reloading_date.as_slice() as _,
-            reloading_time.as_slice() as _,
             reloading_timestamp.as_slice() as _,
             fiskeridir_vessel_id.as_slice() as _,
             vessel_building_year.as_slice() as _,

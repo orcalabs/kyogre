@@ -50,20 +50,14 @@ impl PostgresAdapter {
         let len = ers_dep.len();
 
         let mut message_id = Vec::with_capacity(len);
-        let mut message_date = Vec::with_capacity(len);
         let mut message_number = Vec::with_capacity(len);
-        let mut message_time = Vec::with_capacity(len);
         let mut message_timestamp = Vec::with_capacity(len);
         let mut ers_message_type_id = Vec::with_capacity(len);
         let mut message_year = Vec::with_capacity(len);
         let mut relevant_year = Vec::with_capacity(len);
         let mut sequence_number = Vec::with_capacity(len);
         let mut ers_activity_id = Vec::with_capacity(len);
-        let mut departure_date = Vec::with_capacity(len);
-        let mut departure_time = Vec::with_capacity(len);
         let mut departure_timestamp = Vec::with_capacity(len);
-        let mut fishing_date = Vec::with_capacity(len);
-        let mut fishing_time = Vec::with_capacity(len);
         let mut fishing_timestamp = Vec::with_capacity(len);
         let mut start_latitude = Vec::with_capacity(len);
         let mut start_latitude_sggdd = Vec::with_capacity(len);
@@ -102,20 +96,14 @@ impl PostgresAdapter {
 
         for e in ers_dep {
             message_id.push(e.message_id);
-            message_date.push(e.message_date);
             message_number.push(e.message_number);
-            message_time.push(e.message_time);
             message_timestamp.push(e.message_timestamp);
             ers_message_type_id.push(e.ers_message_type_id);
             message_year.push(e.message_year);
             relevant_year.push(e.relevant_year);
             sequence_number.push(e.sequence_number);
             ers_activity_id.push(e.ers_activity_id);
-            departure_date.push(e.departure_date);
-            departure_time.push(e.departure_time);
             departure_timestamp.push(e.departure_timestamp);
-            fishing_date.push(e.fishing_date);
-            fishing_time.push(e.fishing_time);
             fishing_timestamp.push(e.fishing_timestamp);
             start_latitude.push(e.start_latitude);
             start_latitude_sggdd.push(e.start_latitude_sggdd);
@@ -158,20 +146,14 @@ impl PostgresAdapter {
 INSERT INTO
     ers_departures (
         message_id,
-        message_date,
         message_number,
-        message_time,
         message_timestamp,
         ers_message_type_id,
         message_year,
         relevant_year,
         sequence_number,
         ers_activity_id,
-        departure_date,
-        departure_time,
         departure_timestamp,
-        fishing_date,
-        fishing_time,
         fishing_timestamp,
         start_latitude,
         start_latitude_sggdd,
@@ -213,73 +195,61 @@ SELECT
 FROM
     UNNEST(
         $1::BIGINT[],
-        $2::date[],
-        $3::INT[],
-        $4::TIME[],
-        $5::timestamptz[],
-        $6::VARCHAR[],
+        $2::INT[],
+        $3::timestamptz[],
+        $4::VARCHAR[],
+        $5::INT[],
+        $6::INT[],
         $7::INT[],
-        $8::INT[],
-        $9::INT[],
-        $10::VARCHAR[],
-        $11::date[],
-        $12::TIME[],
-        $13::timestamptz[],
-        $14::date[],
-        $15::TIME[],
-        $16::timestamptz[],
-        $17::DECIMAL[],
-        $18::VARCHAR[],
-        $19::DECIMAL[],
+        $8::VARCHAR[],
+        $9::timestamptz[],
+        $10::timestamptz[],
+        $11::DECIMAL[],
+        $12::VARCHAR[],
+        $13::DECIMAL[],
+        $14::VARCHAR[],
+        $15::VARCHAR[],
+        $16::INT[],
+        $17::VARCHAR[],
+        $18::INT[],
+        $19::INT[],
         $20::VARCHAR[],
         $21::VARCHAR[],
         $22::INT[],
-        $23::VARCHAR[],
+        $23::INT[],
         $24::INT[],
         $25::INT[],
         $26::VARCHAR[],
-        $27::VARCHAR[],
-        $28::INT[],
-        $29::INT[],
-        $30::INT[],
-        $31::INT[],
-        $32::VARCHAR[],
-        $33::INT[],
-        $34::DECIMAL[],
-        $35::VARCHAR[],
-        $36::DECIMAL[],
+        $27::INT[],
+        $28::DECIMAL[],
+        $29::VARCHAR[],
+        $30::DECIMAL[],
+        $31::VARCHAR[],
+        $32::INT[],
+        $33::VARCHAR[],
+        $34::VARCHAR[],
+        $35::INT[],
+        $36::VARCHAR[],
         $37::VARCHAR[],
-        $38::INT[],
-        $39::VARCHAR[],
-        $40::VARCHAR[],
-        $41::INT[],
+        $38::VARCHAR[],
+        $39::INT[],
+        $40::INT[],
+        $41::VARCHAR[],
         $42::VARCHAR[],
-        $43::VARCHAR[],
-        $44::VARCHAR[],
-        $45::INT[],
-        $46::INT[],
-        $47::VARCHAR[],
-        $48::VARCHAR[],
-        $49::date[],
-        $50::DECIMAL[]
+        $43::date[],
+        $44::DECIMAL[]
     )
 ON CONFLICT (message_id) DO NOTHING
             "#,
             message_id.as_slice(),
-            message_date.as_slice(),
             message_number.as_slice(),
-            message_time.as_slice(),
             message_timestamp.as_slice(),
             ers_message_type_id.as_slice(),
             message_year.as_slice(),
             relevant_year.as_slice(),
             sequence_number.as_slice() as _,
             ers_activity_id.as_slice() as _,
-            departure_date.as_slice(),
-            departure_time.as_slice(),
             departure_timestamp.as_slice(),
-            fishing_date.as_slice(),
-            fishing_time.as_slice(),
             fishing_timestamp.as_slice(),
             start_latitude.as_slice(),
             start_latitude_sggdd.as_slice(),

@@ -50,16 +50,12 @@ impl PostgresAdapter {
         let len = ers_por.len();
 
         let mut message_id = Vec::with_capacity(len);
-        let mut message_date = Vec::with_capacity(len);
         let mut message_number = Vec::with_capacity(len);
-        let mut message_time = Vec::with_capacity(len);
         let mut message_timestamp = Vec::with_capacity(len);
         let mut ers_message_type_id = Vec::with_capacity(len);
         let mut message_year = Vec::with_capacity(len);
         let mut relevant_year = Vec::with_capacity(len);
         let mut sequence_number = Vec::with_capacity(len);
-        let mut arrival_date = Vec::with_capacity(len);
-        let mut arrival_time = Vec::with_capacity(len);
         let mut arrival_timestamp = Vec::with_capacity(len);
         let mut landing_facility = Vec::with_capacity(len);
         let mut port_id = Vec::with_capacity(len);
@@ -93,16 +89,12 @@ impl PostgresAdapter {
 
         for e in ers_por {
             message_id.push(e.message_id);
-            message_date.push(e.message_date);
             message_number.push(e.message_number);
-            message_time.push(e.message_time);
             message_timestamp.push(e.message_timestamp);
             ers_message_type_id.push(e.ers_message_type_id);
             message_year.push(e.message_year);
             relevant_year.push(e.relevant_year);
             sequence_number.push(e.sequence_number);
-            arrival_date.push(e.arrival_date);
-            arrival_time.push(e.arrival_time);
             arrival_timestamp.push(e.arrival_timestamp);
             landing_facility.push(e.landing_facility);
             port_id.push(e.port_id);
@@ -140,16 +132,12 @@ impl PostgresAdapter {
 INSERT INTO
     ers_arrivals (
         message_id,
-        message_date,
         message_number,
-        message_time,
         message_timestamp,
         ers_message_type_id,
         message_year,
         relevant_year,
         sequence_number,
-        arrival_date,
-        arrival_time,
         arrival_timestamp,
         landing_facility,
         port_id,
@@ -186,60 +174,52 @@ SELECT
 FROM
     UNNEST(
         $1::BIGINT[],
-        $2::date[],
-        $3::INT[],
-        $4::TIME[],
-        $5::timestamptz[],
-        $6::VARCHAR[],
+        $2::INT[],
+        $3::timestamptz[],
+        $4::VARCHAR[],
+        $5::INT[],
+        $6::INT[],
         $7::INT[],
-        $8::INT[],
-        $9::INT[],
-        $10::date[],
-        $11::TIME[],
-        $12::timestamptz[],
+        $8::timestamptz[],
+        $9::VARCHAR[],
+        $10::VARCHAR[],
+        $11::INT[],
+        $12::INT[],
         $13::VARCHAR[],
         $14::VARCHAR[],
         $15::INT[],
         $16::INT[],
-        $17::VARCHAR[],
-        $18::VARCHAR[],
-        $19::INT[],
+        $17::INT[],
+        $18::INT[],
+        $19::VARCHAR[],
         $20::INT[],
-        $21::INT[],
-        $22::INT[],
-        $23::VARCHAR[],
-        $24::INT[],
-        $25::DECIMAL[],
+        $21::DECIMAL[],
+        $22::VARCHAR[],
+        $23::DECIMAL[],
+        $24::VARCHAR[],
+        $25::INT[],
         $26::VARCHAR[],
-        $27::DECIMAL[],
-        $28::VARCHAR[],
-        $29::INT[],
+        $27::VARCHAR[],
+        $28::INT[],
+        $29::VARCHAR[],
         $30::VARCHAR[],
         $31::VARCHAR[],
         $32::INT[],
-        $33::VARCHAR[],
+        $33::INT[],
         $34::VARCHAR[],
         $35::VARCHAR[],
-        $36::INT[],
-        $37::INT[],
-        $38::VARCHAR[],
-        $39::VARCHAR[],
-        $40::date[],
-        $41::DECIMAL[]
+        $36::date[],
+        $37::DECIMAL[]
     )
 ON CONFLICT (message_id) DO NOTHING
             "#,
             message_id.as_slice(),
-            message_date.as_slice(),
             message_number.as_slice(),
-            message_time.as_slice(),
             message_timestamp.as_slice(),
             ers_message_type_id.as_slice(),
             message_year.as_slice(),
             relevant_year.as_slice(),
             sequence_number.as_slice() as _,
-            arrival_date.as_slice(),
-            arrival_time.as_slice(),
             arrival_timestamp.as_slice(),
             landing_facility.as_slice() as _,
             port_id.as_slice() as _,

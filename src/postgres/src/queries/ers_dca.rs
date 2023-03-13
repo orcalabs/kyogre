@@ -63,9 +63,7 @@ impl PostgresAdapter {
         let len = ers_dca.len();
 
         let mut message_id = Vec::with_capacity(len);
-        let mut message_date = Vec::with_capacity(len);
         let mut message_number = Vec::with_capacity(len);
-        let mut message_time = Vec::with_capacity(len);
         let mut message_timestamp = Vec::with_capacity(len);
         let mut ers_message_type_id = Vec::with_capacity(len);
         let mut message_year = Vec::with_capacity(len);
@@ -89,15 +87,11 @@ impl PostgresAdapter {
         let mut ocean_depth_end = Vec::with_capacity(len);
         let mut ocean_depth_start = Vec::with_capacity(len);
         let mut quota_type_id = Vec::with_capacity(len);
-        let mut start_date = Vec::with_capacity(len);
         let mut start_latitude = Vec::with_capacity(len);
         let mut start_longitude = Vec::with_capacity(len);
-        let mut start_time = Vec::with_capacity(len);
         let mut start_timestamp = Vec::with_capacity(len);
-        let mut stop_date = Vec::with_capacity(len);
         let mut stop_latitude = Vec::with_capacity(len);
         let mut stop_longitude = Vec::with_capacity(len);
-        let mut stop_time = Vec::with_capacity(len);
         let mut stop_timestamp = Vec::with_capacity(len);
         let mut gear_amount = Vec::with_capacity(len);
         let mut gear_fao_id = Vec::with_capacity(len);
@@ -154,9 +148,7 @@ impl PostgresAdapter {
 
         for e in ers_dca {
             message_id.push(e.message_id);
-            message_date.push(e.message_date);
             message_number.push(e.message_number);
-            message_time.push(e.message_time);
             message_timestamp.push(e.message_timestamp);
             ers_message_type_id.push(e.ers_message_type_id);
             message_year.push(e.message_year);
@@ -180,15 +172,11 @@ impl PostgresAdapter {
             ocean_depth_end.push(e.ocean_depth_end);
             ocean_depth_start.push(e.ocean_depth_start);
             quota_type_id.push(e.quota_type_id);
-            start_date.push(e.start_date);
             start_latitude.push(e.start_latitude);
             start_longitude.push(e.start_longitude);
-            start_time.push(e.start_time);
             start_timestamp.push(e.start_timestamp);
-            stop_date.push(e.stop_date);
             stop_latitude.push(e.stop_latitude);
             stop_longitude.push(e.stop_longitude);
-            stop_time.push(e.stop_time);
             stop_timestamp.push(e.stop_timestamp);
             gear_amount.push(e.gear_amount);
             gear_fao_id.push(e.gear_fao_id);
@@ -249,9 +237,7 @@ impl PostgresAdapter {
 INSERT INTO
     ers_dca (
         message_id,
-        message_date,
         message_number,
-        message_time,
         message_timestamp,
         ers_message_type_id,
         message_year,
@@ -275,15 +261,11 @@ INSERT INTO
         ocean_depth_end,
         ocean_depth_start,
         quota_type_id,
-        start_date,
         start_latitude,
         start_longitude,
-        start_time,
         start_timestamp,
-        stop_date,
         stop_latitude,
         stop_longitude,
-        stop_time,
         stop_timestamp,
         gear_amount,
         gear_fao_id,
@@ -343,100 +325,92 @@ SELECT
 FROM
     UNNEST(
         $1::BIGINT[],
-        $2::date[],
-        $3::INT[],
-        $4::TIME[],
-        $5::timestamptz[],
-        $6::VARCHAR[],
+        $2::INT[],
+        $3::timestamptz[],
+        $4::VARCHAR[],
+        $5::INT[],
+        $6::INT[],
         $7::INT[],
         $8::INT[],
-        $9::INT[],
-        $10::INT[],
+        $9::VARCHAR[],
+        $10::VARCHAR[],
         $11::VARCHAR[],
         $12::VARCHAR[],
-        $13::VARCHAR[],
-        $14::VARCHAR[],
-        $15::INT[],
+        $13::INT[],
+        $14::INT[],
+        $15::VARCHAR[],
         $16::INT[],
         $17::VARCHAR[],
         $18::INT[],
-        $19::VARCHAR[],
+        $19::INT[],
         $20::INT[],
         $21::INT[],
         $22::INT[],
         $23::INT[],
         $24::INT[],
         $25::INT[],
-        $26::INT[],
-        $27::INT[],
-        $28::date[],
+        $26::DECIMAL[],
+        $27::DECIMAL[],
+        $28::timestamptz[],
         $29::DECIMAL[],
         $30::DECIMAL[],
-        $31::TIME[],
-        $32::timestamptz[],
-        $33::date[],
-        $34::DECIMAL[],
-        $35::DECIMAL[],
-        $36::TIME[],
-        $37::timestamptz[],
+        $31::timestamptz[],
+        $32::INT[],
+        $33::VARCHAR[],
+        $34::INT[],
+        $35::INT[],
+        $36::INT[],
+        $37::INT[],
         $38::INT[],
-        $39::VARCHAR[],
-        $40::INT[],
+        $39::INT[],
+        $40::VARCHAR[],
         $41::INT[],
         $42::INT[],
-        $43::INT[],
-        $44::INT[],
+        $43::VARCHAR[],
+        $44::VARCHAR[],
         $45::INT[],
-        $46::VARCHAR[],
+        $46::INT[],
         $47::INT[],
         $48::INT[],
         $49::VARCHAR[],
-        $50::VARCHAR[],
-        $51::INT[],
-        $52::INT[],
-        $53::INT[],
-        $54::INT[],
-        $55::VARCHAR[],
-        $56::INT[],
-        $57::DECIMAL[],
-        $58::VARCHAR[],
-        $59::DECIMAL[],
+        $50::INT[],
+        $51::DECIMAL[],
+        $52::VARCHAR[],
+        $53::DECIMAL[],
+        $54::VARCHAR[],
+        $55::INT[],
+        $56::VARCHAR[],
+        $57::VARCHAR[],
+        $58::INT[],
+        $59::VARCHAR[],
         $60::VARCHAR[],
-        $61::INT[],
-        $62::VARCHAR[],
-        $63::VARCHAR[],
-        $64::INT[],
+        $61::VARCHAR[],
+        $62::INT[],
+        $63::INT[],
+        $64::VARCHAR[],
         $65::VARCHAR[],
-        $66::VARCHAR[],
-        $67::VARCHAR[],
-        $68::INT[],
+        $66::date[],
+        $67::DECIMAL[],
+        $68::VARCHAR[],
         $69::INT[],
-        $70::VARCHAR[],
+        $70::INT[],
         $71::VARCHAR[],
-        $72::date[],
-        $73::DECIMAL[],
-        $74::VARCHAR[],
+        $72::INT[],
+        $73::INT[],
+        $74::INT[],
         $75::INT[],
         $76::INT[],
-        $77::VARCHAR[],
+        $77::INT[],
         $78::INT[],
         $79::INT[],
         $80::INT[],
-        $81::INT[],
+        $81::VARCHAR[],
         $82::INT[],
-        $83::INT[],
-        $84::INT[],
-        $85::INT[],
-        $86::INT[],
-        $87::VARCHAR[],
-        $88::INT[],
-        $89::INT[]
+        $83::INT[]
     )
             "#,
             message_id.as_slice(),
-            message_date.as_slice(),
             message_number.as_slice(),
-            message_time.as_slice(),
             message_timestamp.as_slice(),
             ers_message_type_id.as_slice(),
             message_year.as_slice(),
@@ -460,15 +434,11 @@ FROM
             ocean_depth_end.as_slice() as _,
             ocean_depth_start.as_slice() as _,
             quota_type_id.as_slice(),
-            start_date.as_slice() as _,
             start_latitude.as_slice() as _,
             start_longitude.as_slice() as _,
-            start_time.as_slice() as _,
             start_timestamp.as_slice() as _,
-            stop_date.as_slice() as _,
             stop_latitude.as_slice() as _,
             stop_longitude.as_slice() as _,
-            stop_time.as_slice() as _,
             stop_timestamp.as_slice() as _,
             gear_amount.as_slice() as _,
             gear_fao_id.as_slice() as _,

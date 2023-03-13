@@ -1,5 +1,5 @@
 use bigdecimal::BigDecimal;
-use chrono::{DateTime, NaiveDate, NaiveTime, Utc};
+use chrono::{DateTime, NaiveDate, Utc};
 use error_stack::{Report, ResultExt};
 use kyogre_core::FiskdirVesselNationalityGroup;
 
@@ -10,16 +10,12 @@ use crate::{
 
 pub struct NewErsPor {
     pub message_id: i64,
-    pub message_date: NaiveDate,
     pub message_number: i32,
-    pub message_time: NaiveTime,
     pub message_timestamp: DateTime<Utc>,
     pub ers_message_type_id: String,
     pub message_year: i32,
     pub relevant_year: i32,
     pub sequence_number: Option<i32>,
-    pub arrival_date: NaiveDate,
-    pub arrival_time: NaiveTime,
     pub arrival_timestamp: DateTime<Utc>,
     pub landing_facility: Option<String>,
     pub port_id: Option<String>,
@@ -68,17 +64,21 @@ impl TryFrom<fiskeridir_rs::ErsPor> for NewErsPor {
     fn try_from(v: fiskeridir_rs::ErsPor) -> Result<Self, Self::Error> {
         Ok(Self {
             message_id: v.message_info.message_id as i64,
-            message_date: v.message_info.message_date,
             message_number: v.message_info.message_number as i32,
-            message_time: v.message_info.message_time,
-            message_timestamp: v.message_info.message_timestamp,
+            message_timestamp: DateTime::<Utc>::from_utc(
+                v.message_info
+                    .message_date
+                    .and_time(v.message_info.message_time),
+                Utc,
+            ),
             ers_message_type_id: v.message_info.message_type_code.into_inner(),
             message_year: v.message_info.message_year as i32,
             relevant_year: v.message_info.relevant_year as i32,
             sequence_number: v.message_info.sequence_number.map(|v| v as i32),
-            arrival_date: v.arrival_date,
-            arrival_time: v.arrival_time,
-            arrival_timestamp: v.arrival_timestamp,
+            arrival_timestamp: DateTime::<Utc>::from_utc(
+                v.arrival_date.and_time(v.arrival_time),
+                Utc,
+            ),
             landing_facility: v.landing_facility,
             port_id: v.port.code,
             fiskeridir_vessel_id: v.vessel_info.vessel_id.map(|v| v as i64),

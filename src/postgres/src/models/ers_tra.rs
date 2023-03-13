@@ -1,6 +1,6 @@
 use bigdecimal::BigDecimal;
-use chrono::{DateTime, NaiveDate, NaiveTime, Utc};
-use error_stack::{Report, ResultExt};
+use chrono::{DateTime, NaiveDate, Utc};
+use error_stack::{report, Report, ResultExt};
 use kyogre_core::FiskdirVesselNationalityGroup;
 
 use crate::{
@@ -10,16 +10,12 @@ use crate::{
 
 pub struct NewErsTra {
     pub message_id: i64,
-    pub message_date: NaiveDate,
     pub message_number: i32,
-    pub message_time: NaiveTime,
     pub message_timestamp: DateTime<Utc>,
     pub ers_message_type_id: String,
     pub message_year: i32,
     pub relevant_year: i32,
     pub sequence_number: Option<i32>,
-    pub reloading_date: Option<NaiveDate>,
-    pub reloading_time: Option<NaiveTime>,
     pub reloading_timestamp: Option<DateTime<Utc>>,
     pub fiskeridir_vessel_id: Option<i64>,
     pub vessel_building_year: Option<i32>,
@@ -67,17 +63,30 @@ impl TryFrom<fiskeridir_rs::ErsTra> for NewErsTra {
     fn try_from(v: fiskeridir_rs::ErsTra) -> Result<Self, Self::Error> {
         Ok(Self {
             message_id: v.message_info.message_id as i64,
-            message_date: v.message_info.message_date,
             message_number: v.message_info.message_number as i32,
-            message_time: v.message_info.message_time,
-            message_timestamp: v.message_info.message_timestamp,
+            message_timestamp: DateTime::<Utc>::from_utc(
+                v.message_info
+                    .message_date
+                    .and_time(v.message_info.message_time),
+                Utc,
+            ),
             ers_message_type_id: v.message_info.message_type_code.into_inner(),
             message_year: v.message_info.message_year as i32,
             relevant_year: v.message_info.relevant_year as i32,
             sequence_number: v.message_info.sequence_number.map(|v| v as i32),
-            reloading_date: v.reloading_date,
-            reloading_time: v.reloading_time,
-            reloading_timestamp: v.reloading_timestamp,
+            reloading_timestamp: v
+                .reloading_date
+                .map::<Result<_, Report<PostgresError>>, _>(|reloading_date| {
+                    Ok(DateTime::<Utc>::from_utc(
+                        reloading_date.and_time(v.reloading_time.ok_or_else(|| {
+                            report!(PostgresError::DataConversion).attach_printable(
+                                "expected reloading_time to be `Some` due to reloading_date",
+                            )
+                        })?),
+                        Utc,
+                    ))
+                })
+                .transpose()?,
             fiskeridir_vessel_id: v.vessel_info.vessel_id.map(|v| v as i64),
             vessel_building_year: v.vessel_info.building_year.map(|v| v as i32),
             vessel_call_sign: v.vessel_info.call_sign,

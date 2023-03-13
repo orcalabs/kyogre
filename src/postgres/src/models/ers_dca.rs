@@ -1,6 +1,6 @@
 use bigdecimal::BigDecimal;
-use chrono::{DateTime, NaiveDate, NaiveTime, Utc};
-use error_stack::{Report, ResultExt};
+use chrono::{DateTime, NaiveDate, Utc};
+use error_stack::{report, Report, ResultExt};
 use kyogre_core::FiskdirVesselNationalityGroup;
 
 use crate::{
@@ -11,9 +11,7 @@ use crate::{
 #[derive(Debug, Clone)]
 pub struct NewErsDca {
     pub message_id: i64,
-    pub message_date: NaiveDate,
     pub message_number: i32,
-    pub message_time: NaiveTime,
     pub message_timestamp: DateTime<Utc>,
     pub ers_message_type_id: String,
     pub message_year: i32,
@@ -37,15 +35,11 @@ pub struct NewErsDca {
     pub ocean_depth_end: Option<i32>,
     pub ocean_depth_start: Option<i32>,
     pub quota_type_id: i32,
-    pub start_date: Option<NaiveDate>,
     pub start_latitude: Option<BigDecimal>,
     pub start_longitude: Option<BigDecimal>,
-    pub start_time: Option<NaiveTime>,
     pub start_timestamp: Option<DateTime<Utc>>,
-    pub stop_date: Option<NaiveDate>,
     pub stop_latitude: Option<BigDecimal>,
     pub stop_longitude: Option<BigDecimal>,
-    pub stop_time: Option<NaiveTime>,
     pub stop_timestamp: Option<DateTime<Utc>>,
     pub gear_amount: Option<i32>,
     pub gear_fao_id: Option<String>,
@@ -107,10 +101,13 @@ impl TryFrom<fiskeridir_rs::ErsDca> for NewErsDca {
     fn try_from(v: fiskeridir_rs::ErsDca) -> Result<Self, Self::Error> {
         Ok(Self {
             message_id: v.message_info.message_id as i64,
-            message_date: v.message_info.message_date,
             message_number: v.message_info.message_number as i32,
-            message_time: v.message_info.message_time,
-            message_timestamp: v.message_info.message_timestamp,
+            message_timestamp: DateTime::<Utc>::from_utc(
+                v.message_info
+                    .message_date
+                    .and_time(v.message_info.message_time),
+                Utc,
+            ),
             ers_message_type_id: v.message_info.message_type_code.into_inner(),
             message_year: v.message_info.message_year as i32,
             relevant_year: v.message_info.relevant_year as i32,
@@ -133,20 +130,40 @@ impl TryFrom<fiskeridir_rs::ErsDca> for NewErsDca {
             ocean_depth_end: v.ocean_depth_end,
             ocean_depth_start: v.ocean_depth_start,
             quota_type_id: v.quota_type_code as i32,
-            start_date: v.start_date,
             start_latitude: opt_float_to_decimal(v.start_latitude)
                 .change_context(PostgresError::DataConversion)?,
             start_longitude: opt_float_to_decimal(v.start_longitude)
                 .change_context(PostgresError::DataConversion)?,
-            start_time: v.start_time,
-            start_timestamp: v.start_timestamp,
-            stop_date: v.stop_date,
+            start_timestamp: v
+                .start_date
+                .map::<Result<_, Report<PostgresError>>, _>(|start_date| {
+                    Ok(DateTime::<Utc>::from_utc(
+                        start_date.and_time(v.start_time.ok_or_else(|| {
+                            report!(PostgresError::DataConversion).attach_printable(
+                                "expected start_time to be `Some` due to start_date",
+                            )
+                        })?),
+                        Utc,
+                    ))
+                })
+                .transpose()?,
             stop_latitude: opt_float_to_decimal(v.stop_latitude)
                 .change_context(PostgresError::DataConversion)?,
             stop_longitude: opt_float_to_decimal(v.stop_longitude)
                 .change_context(PostgresError::DataConversion)?,
-            stop_time: v.stop_time,
-            stop_timestamp: v.stop_timestamp,
+            stop_timestamp: v
+                .stop_date
+                .map::<Result<_, Report<PostgresError>>, _>(|stop_date| {
+                    Ok(DateTime::<Utc>::from_utc(
+                        stop_date.and_time(v.stop_time.ok_or_else(|| {
+                            report!(PostgresError::DataConversion).attach_printable(
+                                "expected stop_time to be `Some` due to stop_date",
+                            )
+                        })?),
+                        Utc,
+                    ))
+                })
+                .transpose()?,
             gear_amount: v.gear.gear_amount.map(|v| v as i32),
             gear_fao_id: v.gear.gear_fao_code,
             gear_fiskeridir_id: v.gear.gear_fdir_code.map(|v| v as i32),

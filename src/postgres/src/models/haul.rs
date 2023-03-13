@@ -1,5 +1,5 @@
 use bigdecimal::{BigDecimal, FromPrimitive};
-use chrono::{DateTime, NaiveDate, NaiveTime, Utc};
+use chrono::{DateTime, Utc};
 use error_stack::{report, IntoReport, Report, ResultExt};
 use kyogre_core::{CatchLocationId, WhaleGender};
 use serde::Deserialize;
@@ -19,15 +19,11 @@ pub struct Haul {
     pub ocean_depth_end: i32,
     pub ocean_depth_start: i32,
     pub quota_type_id: i32,
-    pub start_date: NaiveDate,
     pub start_latitude: BigDecimal,
     pub start_longitude: BigDecimal,
-    pub start_time: NaiveTime,
     pub period: PgRange<DateTime<Utc>>,
-    pub stop_date: NaiveDate,
     pub stop_latitude: BigDecimal,
     pub stop_longitude: BigDecimal,
-    pub stop_time: NaiveTime,
     pub gear_fiskeridir_id: Option<i32>,
     pub gear_group_id: Option<i32>,
     pub fiskeridir_vessel_id: Option<i64>,
@@ -102,19 +98,15 @@ impl TryFrom<Haul> for kyogre_core::Haul {
             ocean_depth_end: v.ocean_depth_end,
             ocean_depth_start: v.ocean_depth_start,
             quota_type_id: v.quota_type_id,
-            start_date: v.start_date,
             start_latitude: decimal_to_float(v.start_latitude)
                 .change_context(PostgresError::DataConversion)?,
             start_longitude: decimal_to_float(v.start_longitude)
                 .change_context(PostgresError::DataConversion)?,
-            start_time: v.start_time,
             start_timestamp: period_start,
-            stop_date: v.stop_date,
             stop_latitude: decimal_to_float(v.stop_latitude)
                 .change_context(PostgresError::DataConversion)?,
             stop_longitude: decimal_to_float(v.stop_longitude)
                 .change_context(PostgresError::DataConversion)?,
-            stop_time: v.stop_time,
             stop_timestamp: period_end,
             gear_fiskeridir_id: v.gear_fiskeridir_id,
             gear_group_id: v.gear_group_id,

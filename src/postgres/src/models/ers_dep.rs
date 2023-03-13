@@ -1,5 +1,5 @@
 use bigdecimal::BigDecimal;
-use chrono::{DateTime, NaiveDate, NaiveTime, Utc};
+use chrono::{DateTime, NaiveDate, Utc};
 use error_stack::{Report, ResultExt};
 use kyogre_core::FiskdirVesselNationalityGroup;
 
@@ -10,20 +10,14 @@ use crate::{
 
 pub struct NewErsDep {
     pub message_id: i64,
-    pub message_date: NaiveDate,
     pub message_number: i32,
-    pub message_time: NaiveTime,
     pub message_timestamp: DateTime<Utc>,
     pub ers_message_type_id: String,
     pub message_year: i32,
     pub relevant_year: i32,
     pub sequence_number: Option<i32>,
     pub ers_activity_id: Option<String>,
-    pub departure_date: NaiveDate,
-    pub departure_time: NaiveTime,
     pub departure_timestamp: DateTime<Utc>,
-    pub fishing_date: NaiveDate,
-    pub fishing_time: NaiveTime,
     pub fishing_timestamp: DateTime<Utc>,
     pub start_latitude: BigDecimal,
     pub start_latitude_sggdd: String,
@@ -77,21 +71,26 @@ impl TryFrom<fiskeridir_rs::ErsDep> for NewErsDep {
     fn try_from(v: fiskeridir_rs::ErsDep) -> Result<Self, Self::Error> {
         Ok(Self {
             message_id: v.message_info.message_id as i64,
-            message_date: v.message_info.message_date,
             message_number: v.message_info.message_number as i32,
-            message_time: v.message_info.message_time,
-            message_timestamp: v.message_info.message_timestamp,
+            message_timestamp: DateTime::<Utc>::from_utc(
+                v.message_info
+                    .message_date
+                    .and_time(v.message_info.message_time),
+                Utc,
+            ),
             ers_message_type_id: v.message_info.message_type_code.into_inner(),
             message_year: v.message_info.message_year as i32,
             relevant_year: v.message_info.relevant_year as i32,
             sequence_number: v.message_info.sequence_number.map(|v| v as i32),
             ers_activity_id: v.activity_code,
-            departure_date: v.departure_date,
-            departure_time: v.departure_time,
-            departure_timestamp: v.departure_timestamp,
-            fishing_date: v.fishing_date,
-            fishing_time: v.fishing_time,
-            fishing_timestamp: v.fishing_timestamp,
+            departure_timestamp: DateTime::<Utc>::from_utc(
+                v.departure_date.and_time(v.departure_time),
+                Utc,
+            ),
+            fishing_timestamp: DateTime::<Utc>::from_utc(
+                v.fishing_date.and_time(v.fishing_time),
+                Utc,
+            ),
             start_latitude: float_to_decimal(v.start_latitude)
                 .change_context(PostgresError::DataConversion)?,
             start_latitude_sggdd: v.start_latitude_sggdd.into_inner(),
