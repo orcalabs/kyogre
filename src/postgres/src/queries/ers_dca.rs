@@ -32,7 +32,11 @@ impl PostgresAdapter {
         self.add_economic_zones(prepared_set.economic_zones, &mut tx)
             .await?;
         self.add_counties(prepared_set.counties, &mut tx).await?;
-        self.add_fiskeridir_vessels(prepared_set.vessels, &mut tx)
+        self.add_fiskeridir_vessels(prepared_set.fiskeridir_vessels, &mut tx)
+            .await?;
+        self.add_ers_vessels(prepared_set.ers_vessels, &mut tx)
+            .await?;
+        self.add_vessel_identifications(prepared_set.vessel_identifications, &mut tx)
             .await?;
         self.add_ports(prepared_set.ports, &mut tx).await?;
         self.add_main_species_fao(prepared_set.main_species_fao, &mut tx)

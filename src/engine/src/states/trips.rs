@@ -3,7 +3,7 @@ use std::collections::HashMap;
 
 use chrono::{DateTime, Utc};
 use error_stack::{Result, ResultExt};
-use kyogre_core::Vessel;
+use kyogre_core::{Vessel, VesselIdentificationId};
 use tracing::{event, instrument, Level};
 use trip_assembler::{State, TripAssemblerError};
 
@@ -47,16 +47,16 @@ where
             .await
             .change_context(TripAssemblerError)?
             .into_iter()
-            .map(|t| (t.fiskeridir_vessel_id, t.timestamp))
-            .collect::<HashMap<i64, DateTime<Utc>>>();
+            .map(|t| (t.vessel_identification_id, t.timestamp))
+            .collect::<HashMap<VesselIdentificationId, DateTime<Utc>>>();
 
         let conflicts = database
             .conflicts(trip_assembler.assembler_id())
             .await
             .change_context(TripAssemblerError)?
             .into_iter()
-            .map(|t| (t.fiskeridir_vessel_id, t.timestamp))
-            .collect::<HashMap<i64, DateTime<Utc>>>();
+            .map(|t| (t.vessel_identification_id, t.timestamp))
+            .collect::<HashMap<VesselIdentificationId, DateTime<Utc>>>();
 
         let vessels = database
             .vessels()
@@ -70,10 +70,10 @@ where
         let mut num_no_prior_state = 0;
 
         for vessel in vessels {
-            if let Some(conflict) = conflicts.get(&vessel.fiskeridir.id) {
+            if let Some(conflict) = conflicts.get(&vessel.id) {
                 num_conflicts += 1;
                 let prior_trip = database
-                    .trip_at_or_prior_to(vessel.fiskeridir.id, trip_assembler_id, conflict)
+                    .trip_at_or_prior_to(vessel.id, trip_assembler_id, conflict)
                     .await
                     .change_context(TripAssemblerError)?;
                 vessel_states.push((
@@ -83,7 +83,7 @@ where
                         trip_prior_to_or_at_conflict: prior_trip,
                     },
                 ));
-            } else if let Some(timer) = timers.get(&vessel.fiskeridir.id) {
+            } else if let Some(timer) = timers.get(&vessel.id) {
                 vessel_states.push((vessel, State::CurrentCalculationTime(*timer)));
             } else {
                 num_no_prior_state += 1;
@@ -98,7 +98,7 @@ where
         event!(Level::INFO, "starting..",);
 
         for s in vessel_states {
-            let id = s.0.fiskeridir.id;
+            let id = s.0.id;
             if let Err(e) = self.run_assembler_on_vessel(trip_assembler, s.0, s.1).await {
                 event!(
                     Level::ERROR,
@@ -124,7 +124,7 @@ where
         if let Some(trips) = trips {
             database
                 .add_trips(
-                    vessel.fiskeridir.id,
+                    vessel.id,
                     trips.new_trip_calculation_time,
                     trips.conflict_strategy,
                     trips.trips,

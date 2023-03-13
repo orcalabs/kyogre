@@ -1,6 +1,7 @@
 use crate::{error::PostgresError, landing_set::LandingSet, models::NewLanding, PostgresAdapter};
 use chrono::{DateTime, Utc};
 use error_stack::{IntoReport, Result, ResultExt};
+use kyogre_core::VesselIdentificationId;
 
 impl PostgresAdapter {
     pub(crate) async fn add_landing_set(&self, set: LandingSet) -> Result<(), PostgresError> {
@@ -14,6 +15,8 @@ impl PostgresAdapter {
             .await?;
         self.add_counties(prepared_set.counties, &mut tx).await?;
         self.add_fiskeridir_vessels(prepared_set.vessels, &mut tx)
+            .await?;
+        self.add_vessel_identifications(prepared_set.vessel_identifications, &mut tx)
             .await?;
 
         self.add_species_main_groups(prepared_set.species_main_groups, &mut tx)
@@ -414,7 +417,7 @@ ON CONFLICT (landing_id, "version") DO NOTHING
 
     pub(crate) async fn landing_dates_impl(
         &self,
-        vessel_id: i64,
+        vessel_id: VesselIdentificationId,
         start: &DateTime<Utc>,
     ) -> Result<Vec<DateTime<Utc>>, PostgresError> {
         struct Intermediate {
@@ -424,14 +427,15 @@ ON CONFLICT (landing_id, "version") DO NOTHING
             Intermediate,
             r#"
 SELECT
-    landing_timestamp
+    l.landing_timestamp
 FROM
-    landings
+    landings l
+    INNER JOIN vessel_identifications v ON v.vessel_id = l.fiskeridir_vessel_id
 WHERE
-    fiskeridir_vessel_id = $1
+    v.vessel_identification_id = $1
     AND landing_timestamp >= $2
             "#,
-            vessel_id,
+            vessel_id.0,
             start,
         )
         .fetch_all(&self.pool)

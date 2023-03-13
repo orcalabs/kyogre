@@ -1,13 +1,15 @@
 use crate::{error::PostgresError, models::*};
 use error_stack::{report, Result, ResultExt};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 #[derive(Default)]
 pub struct ErsPorSet {
     ers_message_types: HashMap<String, NewErsMessageType>,
     species_fao: HashMap<String, SpeciesFao>,
     species_fiskeridir: HashMap<i32, SpeciesFiskeridir>,
-    vessels: HashMap<i64, fiskeridir_rs::Vessel>,
+    fiskeridir_vessels: HashMap<i64, fiskeridir_rs::Vessel>,
+    ers_vessels: HashMap<String, ErsVessel>,
+    vessel_identifications: HashSet<NewVesselIdentification>,
     ports: HashMap<String, NewPort>,
     municipalities: HashMap<i32, NewMunicipality>,
     counties: HashMap<i32, NewCounty>,
@@ -21,7 +23,9 @@ pub struct PreparedErsPorSet {
     pub ers_message_types: Vec<NewErsMessageType>,
     pub species_fao: Vec<SpeciesFao>,
     pub species_fiskeridir: Vec<SpeciesFiskeridir>,
-    pub vessels: Vec<fiskeridir_rs::Vessel>,
+    pub fiskeridir_vessels: Vec<fiskeridir_rs::Vessel>,
+    pub ers_vessels: Vec<ErsVessel>,
+    pub vessel_identifications: Vec<NewVesselIdentification>,
     pub ports: Vec<NewPort>,
     pub municipalities: Vec<NewMunicipality>,
     pub counties: Vec<NewCounty>,
@@ -36,7 +40,9 @@ impl ErsPorSet {
         let ers_message_types = self.ers_message_types.into_values().collect();
         let species_fao = self.species_fao.into_values().collect();
         let species_fiskeridir = self.species_fiskeridir.into_values().collect();
-        let vessels = self.vessels.into_values().collect();
+        let fiskeridir_vessels = self.fiskeridir_vessels.into_values().collect();
+        let ers_vessels = self.ers_vessels.into_values().collect();
+        let vessel_identifications = self.vessel_identifications.into_iter().collect();
         let ports = self.ports.into_values().collect();
         let municipalities = self.municipalities.into_values().collect();
         let counties = self.counties.into_values().collect();
@@ -48,7 +54,9 @@ impl ErsPorSet {
             ers_message_types,
             species_fao,
             species_fiskeridir,
-            vessels,
+            fiskeridir_vessels,
+            ers_vessels,
+            vessel_identifications,
             ports,
             municipalities,
             counties,
@@ -66,7 +74,9 @@ impl ErsPorSet {
 
         for e in ers_por.into_iter() {
             set.add_ers_message_type(&e);
-            set.add_vessel(&e)?;
+            set.add_fiskeridir_vessel(&e)?;
+            set.add_ers_vessel(&e);
+            set.add_vessel_identification(&e);
             set.add_port(&e)?;
             set.add_catch(&e)?;
             set.add_municipality(&e);
@@ -113,18 +123,38 @@ impl ErsPorSet {
         }
     }
 
-    fn add_vessel(&mut self, ers_por: &fiskeridir_rs::ErsPor) -> Result<(), PostgresError> {
+    fn add_fiskeridir_vessel(
+        &mut self,
+        ers_por: &fiskeridir_rs::ErsPor,
+    ) -> Result<(), PostgresError> {
         if let Some(vessel_id) = ers_por.vessel_info.vessel_id {
-            if !self.vessels.contains_key(&(vessel_id as i64)) {
+            if !self.fiskeridir_vessels.contains_key(&(vessel_id as i64)) {
                 let vessel = ers_por
                     .vessel_info
                     .clone()
                     .try_into()
                     .change_context(PostgresError::DataConversion)?;
-                self.vessels.entry(vessel_id as i64).or_insert(vessel);
+                self.fiskeridir_vessels
+                    .entry(vessel_id as i64)
+                    .or_insert(vessel);
             }
         }
         Ok(())
+    }
+
+    fn add_ers_vessel(&mut self, ers_por: &fiskeridir_rs::ErsPor) {
+        if !self
+            .ers_vessels
+            .contains_key(ers_por.vessel_info.call_sign_ers.as_ref())
+        {
+            let vessel: ErsVessel = (&ers_por.vessel_info).into();
+            self.ers_vessels.insert(vessel.call_sign.clone(), vessel);
+        }
+    }
+
+    fn add_vessel_identification(&mut self, ers_por: &fiskeridir_rs::ErsPor) {
+        self.vessel_identifications
+            .insert((&ers_por.vessel_info).into());
     }
 
     fn add_port(&mut self, ers_por: &fiskeridir_rs::ErsPor) -> Result<(), PostgresError> {

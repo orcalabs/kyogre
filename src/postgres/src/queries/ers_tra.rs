@@ -21,7 +21,11 @@ impl PostgresAdapter {
         self.add_municipalities(prepared_set.municipalities, &mut tx)
             .await?;
         self.add_counties(prepared_set.counties, &mut tx).await?;
-        self.add_fiskeridir_vessels(prepared_set.vessels, &mut tx)
+        self.add_fiskeridir_vessels(prepared_set.fiskeridir_vessels, &mut tx)
+            .await?;
+        self.add_ers_vessels(prepared_set.ers_vessels, &mut tx)
+            .await?;
+        self.add_vessel_identifications(prepared_set.vessel_identifications, &mut tx)
             .await?;
         self.add_species_groups(prepared_set.species_groups, &mut tx)
             .await?;

@@ -1,7 +1,7 @@
 use crate::error::{PostgresError, TripAssemblerError, UnboundedRangeError};
 use chrono::{DateTime, Utc};
 use error_stack::{report, IntoReport, Report, ResultExt};
-use kyogre_core::{DateRange, TripAssemblerId};
+use kyogre_core::{DateRange, TripAssemblerId, VesselIdentificationId};
 use num_traits::FromPrimitive;
 use sqlx::postgres::types::PgRange;
 
@@ -11,6 +11,18 @@ pub struct Trip {
     pub period: PgRange<DateTime<Utc>>,
     pub landing_coverage: PgRange<DateTime<Utc>>,
     pub trip_assembler_id: i32,
+}
+
+#[derive(Debug, Clone)]
+pub struct TripCalculationTimer {
+    pub timestamp: DateTime<Utc>,
+    pub vessel_identification_id: i64,
+}
+
+#[derive(Debug, Clone)]
+pub struct TripAssemblerConflict {
+    pub vessel_identification_id: i64,
+    pub timestamp: DateTime<Utc>,
 }
 
 impl TryFrom<Trip> for kyogre_core::Trip {
@@ -63,5 +75,23 @@ impl TryFrom<Trip> for kyogre_core::Trip {
             landing_coverage,
             assembler_id,
         })
+    }
+}
+
+impl From<TripCalculationTimer> for kyogre_core::TripCalculationTimer {
+    fn from(v: TripCalculationTimer) -> Self {
+        Self {
+            vessel_identification_id: VesselIdentificationId(v.vessel_identification_id),
+            timestamp: v.timestamp,
+        }
+    }
+}
+
+impl From<TripAssemblerConflict> for kyogre_core::TripAssemblerConflict {
+    fn from(v: TripAssemblerConflict) -> Self {
+        Self {
+            vessel_identification_id: VesselIdentificationId(v.vessel_identification_id),
+            timestamp: v.timestamp,
+        }
     }
 }

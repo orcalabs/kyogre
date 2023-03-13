@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use bigdecimal::{BigDecimal, FromPrimitive};
 use chrono::{DateTime, Utc};
@@ -379,7 +379,11 @@ WHERE
         let mut draught = Vec::with_capacity(vessels.len());
         let mut destination = Vec::with_capacity(vessels.len());
 
+        let mut vessel_identifications = HashSet::with_capacity(vessels.len());
+
         vessels.values().for_each(|v| {
+            vessel_identifications.insert(v.into());
+
             mmsis.push(v.mmsi);
             imo_number.push(v.imo_number);
             call_sign.push(v.call_sign.clone());
@@ -452,6 +456,9 @@ SET
         .await
         .into_report()
         .change_context(PostgresError::Query)?;
+
+        self.add_vessel_identifications(vessel_identifications.into_iter().collect(), &mut tx)
+            .await?;
 
         tx.commit()
             .await

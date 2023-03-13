@@ -5,10 +5,10 @@ use super::{
 use crate::error::TripPrecisionError;
 use async_trait::async_trait;
 use chrono::{TimeZone, Utc};
-use error_stack::{Result, ResultExt};
+use error_stack::{report, Result, ResultExt};
 use geoutils::Location;
-use kyogre_core::TripPrecisionOutboundPort;
 use kyogre_core::{AisPosition, DateRange, Trip};
+use kyogre_core::{TripPrecisionOutboundPort, Vessel};
 
 /// Precision strategy where we try to find a collection of positions close to the dock points
 /// associated with the trip.
@@ -26,7 +26,7 @@ impl TripPrecision for DockPointPrecision {
         adapter: &dyn TripPrecisionOutboundPort,
         positions: &[AisPosition],
         trip: &Trip,
-        vessel_id: i64,
+        vessel: &Vessel,
     ) -> Result<Option<PrecisionStop>, TripPrecisionError> {
         let trip_dock_points = adapter
             .dock_points_of_trip(trip.trip_id)
@@ -41,7 +41,7 @@ impl TripPrecision for DockPointPrecision {
         for d in dock_points {
             let target = Location::new(d.latitude, d.longitude);
             if let Some(ps) = self
-                .do_precision(adapter, &target, vessel_id, positions, trip)
+                .do_precision(adapter, &target, vessel, positions, trip)
                 .await?
             {
                 return Ok(Some(ps));
@@ -69,10 +69,14 @@ impl DockPointPrecision {
         &self,
         adapter: &dyn TripPrecisionOutboundPort,
         target: &Location,
-        vessel_id: i64,
+        vessel: &Vessel,
         positions: &[AisPosition],
         trip: &Trip,
     ) -> Result<Option<PrecisionStop>, TripPrecisionError> {
+        let mmsi = vessel.mmsi().ok_or_else(|| {
+            report!(TripPrecisionError).attach_printable("expected mmsi to be Some")
+        })?;
+
         Ok(match self.start_search_point {
             StartSearchPoint::End => match self.direction {
                 PrecisionDirection::Shrinking => self.do_precision_impl(
@@ -90,7 +94,7 @@ impl DockPointPrecision {
                     )
                     .unwrap();
                     let positions = adapter
-                        .ais_positions(vessel_id, &range)
+                        .ais_positions(mmsi, &range)
                         .await
                         .change_context(TripPrecisionError)?;
                     self.do_precision_impl(
@@ -108,7 +112,7 @@ impl DockPointPrecision {
                 ),
                 PrecisionDirection::Extending => {
                     let prior_trip_end = adapter
-                        .trip_prior_to(vessel_id, trip.assembler_id, &trip.start())
+                        .trip_prior_to(vessel.id, trip.assembler_id, &trip.start())
                         .await
                         .change_context(TripPrecisionError)?
                         .map(|t| t.landing_coverage.end())
@@ -120,7 +124,7 @@ impl DockPointPrecision {
                     )
                     .unwrap();
                     let positions = adapter
-                        .ais_positions(vessel_id, &range)
+                        .ais_positions(mmsi, &range)
                         .await
                         .change_context(TripPrecisionError)?;
                     self.do_precision_impl(

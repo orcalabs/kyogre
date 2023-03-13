@@ -4,7 +4,8 @@ use dockertest::{DockerTest, Source, StaticManagementPolicy};
 use fiskeridir_rs::{ErsDep, ErsPor};
 use futures::Future;
 use kyogre_core::{
-    ScraperInboundPort, TripAssemblerId, TripAssemblerInboundPort, TripAssemblerOutboundPort,
+    FiskeridirVesselId, ScraperInboundPort, TripAssemblerId, TripAssemblerInboundPort,
+    TripAssemblerOutboundPort,
 };
 use orca_core::{
     compositions::postgres_composition, Environment, LogLevel, PsqlLogStatements, PsqlSettings,
@@ -49,35 +50,33 @@ impl TestHelper {
 
     pub async fn generate_ers_trip(
         &self,
-        fiskeridir_vessel_id: i64,
+        vessel_id: FiskeridirVesselId,
         start: &DateTime<Utc>,
         end: &DateTime<Utc>,
     ) -> kyogre_core::Trip {
-        let mut departure = ErsDep::test_default(random(), Some(fiskeridir_vessel_id as u64));
+        let mut departure = ErsDep::test_default(random(), Some(vessel_id.0 as u64));
         departure.departure_date = start.date_naive();
         departure.departure_time = start.time();
-        let mut arrival = ErsPor::test_default(random(), Some(fiskeridir_vessel_id as u64), true);
+        let mut arrival = ErsPor::test_default(random(), Some(vessel_id.0 as u64), true);
         arrival.arrival_date = end.date_naive();
         arrival.arrival_time = end.time();
         self.db.db.add_ers_por(vec![arrival]).await.unwrap();
         self.db.db.add_ers_dep(vec![departure]).await.unwrap();
 
-        self.add_trip(fiskeridir_vessel_id, start, end, TripAssemblerId::Ers)
+        self.add_trip(vessel_id, start, end, TripAssemblerId::Ers)
             .await
     }
 
     pub async fn generate_landings_trip(
         &self,
-        fiskeridir_vessel_id: i64,
+        vessel_id: FiskeridirVesselId,
         start: &DateTime<Utc>,
         end: &DateTime<Utc>,
     ) -> kyogre_core::Trip {
-        let mut landing =
-            fiskeridir_rs::Landing::test_default(random(), Some(fiskeridir_vessel_id));
+        let mut landing = fiskeridir_rs::Landing::test_default(random(), Some(vessel_id.0));
         landing.landing_timestamp = *start;
 
-        let mut landing2 =
-            fiskeridir_rs::Landing::test_default(random(), Some(fiskeridir_vessel_id));
+        let mut landing2 = fiskeridir_rs::Landing::test_default(random(), Some(vessel_id.0));
         landing2.landing_timestamp = *end;
 
         self.db
@@ -86,13 +85,13 @@ impl TestHelper {
             .await
             .unwrap();
 
-        self.add_trip(fiskeridir_vessel_id, start, end, TripAssemblerId::Landings)
+        self.add_trip(vessel_id, start, end, TripAssemblerId::Landings)
             .await
     }
 
     async fn add_trip(
         &self,
-        fiskeridir_vessel_id: i64,
+        vessel_id: FiskeridirVesselId,
         start: &DateTime<Utc>,
         end: &DateTime<Utc>,
         assembler: TripAssemblerId,
@@ -104,7 +103,7 @@ impl TestHelper {
             .await
             .unwrap()
             .into_iter()
-            .find(|v| v.fiskeridir.id == fiskeridir_vessel_id)
+            .find(|v| v.fiskeridir.as_ref().map(|f| f.id) == Some(vessel_id))
             .unwrap();
 
         let assembled = match assembler {
@@ -125,7 +124,7 @@ impl TestHelper {
         self.db
             .db
             .add_trips(
-                vessel.fiskeridir.id,
+                vessel.id,
                 assembled.new_trip_calculation_time,
                 assembled.conflict_strategy,
                 assembled.trips,
@@ -134,7 +133,7 @@ impl TestHelper {
             .await
             .unwrap();
 
-        let trips = self.db.trips_of_vessel(vessel.fiskeridir.id).await;
+        let trips = self.db.trips_of_vessel(vessel.id).await;
         trips
             .into_iter()
             .find(|t| t.start() == *start && t.end() == *end)

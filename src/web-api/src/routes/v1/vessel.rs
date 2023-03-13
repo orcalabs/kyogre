@@ -2,6 +2,7 @@ use crate::{to_streaming_response, Database};
 use actix_web::{web, HttpResponse};
 use chrono::{DateTime, Utc};
 use futures::TryStreamExt;
+use kyogre_core::{FiskeridirVesselId, VesselIdentificationId};
 use serde::{Deserialize, Serialize};
 use tracing::{event, Level};
 use utoipa::ToSchema;
@@ -27,14 +28,18 @@ pub async fn vessels<T: Database + 'static>(db: web::Data<T>) -> HttpResponse {
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct Vessel {
-    pub fiskeridir: FiskeridirVessel,
+    #[schema(value_type = i64)]
+    pub id: VesselIdentificationId,
+    pub fiskeridir: Option<FiskeridirVessel>,
     pub ais: Option<AisVessel>,
+    pub ers: Option<ErsVessel>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct FiskeridirVessel {
-    pub id: i64,
+    #[schema(value_type = i64)]
+    pub id: FiskeridirVesselId,
     pub vessel_type_id: Option<u32>,
     pub length_group_id: Option<u32>,
     pub nation_group_id: Option<String>,
@@ -69,11 +74,21 @@ pub struct AisVessel {
     pub destination: Option<String>,
 }
 
+#[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct ErsVessel {
+    pub call_sign: String,
+    pub name: Option<String>,
+    pub registration_id: Option<String>,
+}
+
 impl From<kyogre_core::Vessel> for Vessel {
     fn from(value: kyogre_core::Vessel) -> Self {
         Vessel {
-            fiskeridir: FiskeridirVessel::from(value.fiskeridir),
+            id: value.id,
+            fiskeridir: value.fiskeridir.map(FiskeridirVessel::from),
             ais: value.ais.map(AisVessel::from),
+            ers: value.ers.map(ErsVessel::from),
         }
     }
 }
@@ -105,7 +120,7 @@ impl From<kyogre_core::FiskeridirVessel> for FiskeridirVessel {
             norwegian_county_id: value.norwegian_county_id,
             gross_tonnage_1969: value.gross_tonnage_1969,
             gross_tonnage_other: value.gross_tonnage_other,
-            call_sign: value.call_sign,
+            call_sign: value.call_sign.map(|c| c.into_inner()),
             name: value.name,
             registration_id: value.registration_id,
             length: value.length,
@@ -119,9 +134,19 @@ impl From<kyogre_core::FiskeridirVessel> for FiskeridirVessel {
     }
 }
 
+impl From<kyogre_core::ErsVessel> for ErsVessel {
+    fn from(value: kyogre_core::ErsVessel) -> Self {
+        ErsVessel {
+            call_sign: value.call_sign.into_inner(),
+            name: value.name,
+            registration_id: value.registration_id,
+        }
+    }
+}
+
 impl PartialEq<fiskeridir_rs::Vessel> for FiskeridirVessel {
     fn eq(&self, other: &fiskeridir_rs::Vessel) -> bool {
-        self.id == other.id.unwrap()
+        self.id.0 == other.id.unwrap()
             && self.vessel_type_id == other.type_code.map(|v| v as u32)
             && self.length_group_id == other.length_group_code.map(|v| v as u32)
             && self.nation_group_id == other.nation_group.clone()
@@ -156,6 +181,14 @@ impl PartialEq<kyogre_core::AisVessel> for AisVessel {
     }
 }
 
+impl PartialEq<fiskeridir_rs::ErsVesselInfo> for ErsVessel {
+    fn eq(&self, other: &fiskeridir_rs::ErsVesselInfo) -> bool {
+        self.call_sign == other.call_sign_ers.clone().into_inner()
+            && self.name == other.vessel_name
+            && self.registration_id == other.vessel_registration_id_ers
+    }
+}
+
 impl PartialEq<AisVessel> for kyogre_core::AisVessel {
     fn eq(&self, other: &AisVessel) -> bool {
         other.eq(self)
@@ -164,6 +197,12 @@ impl PartialEq<AisVessel> for kyogre_core::AisVessel {
 
 impl PartialEq<FiskeridirVessel> for fiskeridir_rs::Vessel {
     fn eq(&self, other: &FiskeridirVessel) -> bool {
+        other.eq(self)
+    }
+}
+
+impl PartialEq<ErsVessel> for fiskeridir_rs::ErsVesselInfo {
+    fn eq(&self, other: &ErsVessel) -> bool {
         other.eq(self)
     }
 }

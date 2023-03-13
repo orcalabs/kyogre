@@ -1,11 +1,12 @@
 use crate::{
     error::PostgresError,
     ers_dep_set::ErsDepSet,
-    models::{NewErsDep, NewErsDepCatch},
+    models::{Departure, NewErsDep, NewErsDepCatch},
     PostgresAdapter,
 };
 use chrono::{DateTime, Utc};
 use error_stack::{IntoReport, Result, ResultExt};
+use kyogre_core::VesselIdentificationId;
 
 impl PostgresAdapter {
     pub(crate) async fn add_ers_dep_set(&self, set: ErsDepSet) -> Result<(), PostgresError> {
@@ -22,7 +23,11 @@ impl PostgresAdapter {
         self.add_municipalities(prepared_set.municipalities, &mut tx)
             .await?;
         self.add_counties(prepared_set.counties, &mut tx).await?;
-        self.add_fiskeridir_vessels(prepared_set.vessels, &mut tx)
+        self.add_fiskeridir_vessels(prepared_set.fiskeridir_vessels, &mut tx)
+            .await?;
+        self.add_ers_vessels(prepared_set.ers_vessels, &mut tx)
+            .await?;
+        self.add_vessel_identifications(prepared_set.vessel_identifications, &mut tx)
             .await?;
         self.add_ports(prepared_set.ports, &mut tx).await?;
         self.add_species_groups(prepared_set.species_groups, &mut tx)
@@ -378,23 +383,24 @@ WHERE
 
     pub async fn ers_departures_impl(
         &self,
-        fiskeridir_vessel_id: i64,
+        vessel_id: VesselIdentificationId,
         start: &DateTime<Utc>,
-    ) -> Result<Vec<kyogre_core::Departure>, PostgresError> {
+    ) -> Result<Vec<Departure>, PostgresError> {
         sqlx::query_as!(
-            kyogre_core::Departure,
+            Departure,
             r#"
 SELECT
     fiskeridir_vessel_id AS "fiskeridir_vessel_id!",
     departure_timestamp AS "timestamp",
     port_id
 FROM
-    ers_departures
+    ers_departures e
+    INNER JOIN vessel_identifications v ON v.vessel_id = e.fiskeridir_vessel_id
 WHERE
-    fiskeridir_vessel_id = $1
+    v.vessel_identification_id = $1
     AND departure_timestamp >= $2
             "#,
-            fiskeridir_vessel_id,
+            vessel_id.0,
             start,
         )
         .fetch_all(&self.pool)

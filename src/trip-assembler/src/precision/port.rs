@@ -4,9 +4,11 @@ use super::{
 };
 use crate::error::TripPrecisionError;
 use chrono::{TimeZone, Utc};
+use error_stack::report;
 use error_stack::Result;
 use error_stack::ResultExt;
 use geoutils::Location;
+use kyogre_core::Vessel;
 use kyogre_core::{AisPosition, DateRange, Trip, TripPrecisionOutboundPort};
 
 use async_trait::async_trait;
@@ -30,7 +32,7 @@ impl TripPrecision for PortPrecision {
         adapter: &dyn TripPrecisionOutboundPort,
         positions: &[AisPosition],
         trip: &Trip,
-        vessel_id: i64,
+        vessel: &Vessel,
     ) -> Result<Option<PrecisionStop>, TripPrecisionError> {
         let trip_ports = adapter
             .ports_of_trip(trip.trip_id)
@@ -47,7 +49,7 @@ impl TripPrecision for PortPrecision {
                 // Unwrap is safe because of `is_some` checks above
                 let cords = p.coordinates.unwrap();
                 let target = Location::new(cords.latitude, cords.longitude);
-                self.do_precision(adapter, &target, vessel_id, positions, trip)
+                self.do_precision(adapter, &target, vessel, positions, trip)
                     .await
             }
             _ => Ok(None),
@@ -72,10 +74,14 @@ impl PortPrecision {
         &self,
         adapter: &dyn TripPrecisionOutboundPort,
         target: &Location,
-        vessel_id: i64,
+        vessel: &Vessel,
         positions: &[AisPosition],
         trip: &Trip,
     ) -> Result<Option<PrecisionStop>, TripPrecisionError> {
+        let mmsi = vessel.mmsi().ok_or_else(|| {
+            report!(TripPrecisionError).attach_printable("expected mmsi to be Some")
+        })?;
+
         Ok(match self.start_search_point {
             StartSearchPoint::End => match self.direction {
                 PrecisionDirection::Shrinking => self.do_precision_impl(
@@ -93,7 +99,7 @@ impl PortPrecision {
                     )
                     .unwrap();
                     let positions = adapter
-                        .ais_positions(vessel_id, &range)
+                        .ais_positions(mmsi, &range)
                         .await
                         .change_context(TripPrecisionError)?;
                     self.do_precision_impl(
@@ -111,7 +117,7 @@ impl PortPrecision {
                 ),
                 PrecisionDirection::Extending => {
                     let prior_trip_end = adapter
-                        .trip_prior_to(vessel_id, trip.assembler_id, &trip.start())
+                        .trip_prior_to(vessel.id, trip.assembler_id, &trip.start())
                         .await
                         .change_context(TripPrecisionError)?
                         .map(|t| t.landing_coverage.end())
@@ -123,7 +129,7 @@ impl PortPrecision {
                     )
                     .unwrap();
                     let positions = adapter
-                        .ais_positions(vessel_id, &range)
+                        .ais_positions(mmsi, &range)
                         .await
                         .change_context(TripPrecisionError)?;
                     self.do_precision_impl(

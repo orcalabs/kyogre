@@ -1,16 +1,26 @@
 use crate::AisVessel;
+use fiskeridir_rs::CallSign;
 use num_derive::FromPrimitive;
+use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize, Serialize)]
+pub struct VesselIdentificationId(pub i64);
 
 #[derive(Debug, Clone)]
 pub struct Vessel {
-    pub fiskeridir: FiskeridirVessel,
+    pub id: VesselIdentificationId,
+    pub fiskeridir: Option<FiskeridirVessel>,
     pub ais: Option<AisVessel>,
+    pub ers: Option<ErsVessel>,
 }
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize, Serialize)]
+pub struct FiskeridirVesselId(pub i64);
 
 #[derive(Debug, Clone)]
 pub struct FiskeridirVessel {
-    pub id: i64,
+    pub id: FiskeridirVesselId,
     pub vessel_type_id: Option<u32>,
     pub length_group_id: Option<u32>,
     pub nation_group_id: Option<String>,
@@ -19,7 +29,7 @@ pub struct FiskeridirVessel {
     pub norwegian_county_id: Option<u32>,
     pub gross_tonnage_1969: Option<u32>,
     pub gross_tonnage_other: Option<u32>,
-    pub call_sign: Option<String>,
+    pub call_sign: Option<CallSign>,
     pub name: Option<String>,
     pub registration_id: Option<String>,
     pub length: Option<f64>,
@@ -29,6 +39,13 @@ pub struct FiskeridirVessel {
     pub engine_power: Option<u32>,
     pub building_year: Option<u32>,
     pub rebuilding_year: Option<u32>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ErsVessel {
+    pub call_sign: CallSign,
+    pub name: Option<String>,
+    pub registration_id: Option<String>,
 }
 
 impl Vessel {

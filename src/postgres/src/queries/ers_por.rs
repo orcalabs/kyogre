@@ -1,12 +1,12 @@
 use crate::{
     error::PostgresError,
     ers_por_set::ErsPorSet,
-    models::{NewErsPor, NewErsPorCatch},
+    models::{Arrival, NewErsPor, NewErsPorCatch},
     PostgresAdapter,
 };
 use chrono::{DateTime, Utc};
 use error_stack::{IntoReport, Result, ResultExt};
-use kyogre_core::ArrivalFilter;
+use kyogre_core::{ArrivalFilter, VesselIdentificationId};
 
 impl PostgresAdapter {
     pub(crate) async fn add_ers_por_set(&self, set: ErsPorSet) -> Result<(), PostgresError> {
@@ -23,7 +23,11 @@ impl PostgresAdapter {
         self.add_municipalities(prepared_set.municipalities, &mut tx)
             .await?;
         self.add_counties(prepared_set.counties, &mut tx).await?;
-        self.add_fiskeridir_vessels(prepared_set.vessels, &mut tx)
+        self.add_fiskeridir_vessels(prepared_set.fiskeridir_vessels, &mut tx)
+            .await?;
+        self.add_ers_vessels(prepared_set.ers_vessels, &mut tx)
+            .await?;
+        self.add_vessel_identifications(prepared_set.vessel_identifications, &mut tx)
             .await?;
         self.add_ports(prepared_set.ports, &mut tx).await?;
         self.add_species_groups(prepared_set.species_groups, &mut tx)
@@ -344,32 +348,33 @@ WHERE
 
     pub async fn ers_arrivals_impl(
         &self,
-        fiskeridir_vessel_id: i64,
+        vessel_id: VesselIdentificationId,
         start: &DateTime<Utc>,
         filter: ArrivalFilter,
-    ) -> Result<Vec<kyogre_core::Arrival>, PostgresError> {
+    ) -> Result<Vec<Arrival>, PostgresError> {
         let landing_facility = match filter {
             ArrivalFilter::WithLandingFacility => Some(true),
             ArrivalFilter::All => None,
         };
         sqlx::query_as!(
-            kyogre_core::Arrival,
+            Arrival,
             r#"
 SELECT
-    fiskeridir_vessel_id AS "fiskeridir_vessel_id!",
-    arrival_timestamp AS "timestamp",
-    port_id
+    e.fiskeridir_vessel_id AS "fiskeridir_vessel_id!",
+    e.arrival_timestamp AS "timestamp",
+    e.port_id
 FROM
-    ers_arrivals
+    ers_arrivals e
+    INNER JOIN vessel_identifications v ON v.vessel_id = e.fiskeridir_vessel_id
 WHERE
-    fiskeridir_vessel_id = $1
-    AND arrival_timestamp >= $2
+    v.vessel_identification_id = $1
+    AND e.arrival_timestamp >= $2
     AND (
         $3::bool IS NULL
-        OR landing_facility IS NOT NULL
+        OR e.landing_facility IS NOT NULL
     )
             "#,
-            fiskeridir_vessel_id,
+            vessel_id.0,
             start,
             landing_facility,
         )

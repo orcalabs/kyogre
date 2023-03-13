@@ -104,7 +104,7 @@ impl TripAssembler for LandingTripAssembler {
         no_prior_state: bool,
     ) -> Result<Vec<NewTrip>, TripAssemblerError> {
         let landing_dates = adapter
-            .landing_dates(vessel.fiskeridir.id, start)
+            .landing_dates(vessel.id, start)
             .await
             .change_context(TripAssemblerError)?;
 

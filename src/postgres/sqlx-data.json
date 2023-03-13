@@ -1,5 +1,205 @@
 {
   "db": "PostgreSQL",
+  "061f50ff6a4548c4446d4e4da67a456532820882cc367e64ed2e11e81193765f": {
+    "describe": {
+      "columns": [
+        {
+          "name": "vessel_identification_id",
+          "ordinal": 0,
+          "type_info": "Int8"
+        },
+        {
+          "name": "fiskeridir_vessel_id?",
+          "ordinal": 1,
+          "type_info": "Int8"
+        },
+        {
+          "name": "fiskeridir_vessel_type_id",
+          "ordinal": 2,
+          "type_info": "Int4"
+        },
+        {
+          "name": "fiskeridir_length_group_id",
+          "ordinal": 3,
+          "type_info": "Int4"
+        },
+        {
+          "name": "fiskeridir_nation_group_id",
+          "ordinal": 4,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "fiskeridir_norwegian_municipality_id",
+          "ordinal": 5,
+          "type_info": "Int4"
+        },
+        {
+          "name": "fiskeridir_norwegian_county_id",
+          "ordinal": 6,
+          "type_info": "Int4"
+        },
+        {
+          "name": "fiskeridir_nation_id?",
+          "ordinal": 7,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "fiskeridir_gross_tonnage_1969",
+          "ordinal": 8,
+          "type_info": "Int4"
+        },
+        {
+          "name": "fiskeridir_gross_tonnage_other",
+          "ordinal": 9,
+          "type_info": "Int4"
+        },
+        {
+          "name": "fiskeridir_call_sign",
+          "ordinal": 10,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "fiskeridir_name",
+          "ordinal": 11,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "fiskeridir_registration_id",
+          "ordinal": 12,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "fiskeridir_length",
+          "ordinal": 13,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "fiskeridir_width",
+          "ordinal": 14,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "fiskeridir_owner",
+          "ordinal": 15,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "fiskeridir_engine_building_year",
+          "ordinal": 16,
+          "type_info": "Int4"
+        },
+        {
+          "name": "fiskeridir_engine_power",
+          "ordinal": 17,
+          "type_info": "Int4"
+        },
+        {
+          "name": "fiskeridir_building_year",
+          "ordinal": 18,
+          "type_info": "Int4"
+        },
+        {
+          "name": "fiskeridir_rebuilding_year",
+          "ordinal": 19,
+          "type_info": "Int4"
+        },
+        {
+          "name": "ers_call_sign?",
+          "ordinal": 20,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "ers_name",
+          "ordinal": 21,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "ers_registration_id",
+          "ordinal": 22,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "ais_mmsi?",
+          "ordinal": 23,
+          "type_info": "Int4"
+        },
+        {
+          "name": "ais_imo_number",
+          "ordinal": 24,
+          "type_info": "Int4"
+        },
+        {
+          "name": "ais_call_sign",
+          "ordinal": 25,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "ais_name",
+          "ordinal": 26,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "ais_ship_length",
+          "ordinal": 27,
+          "type_info": "Int4"
+        },
+        {
+          "name": "ais_ship_width",
+          "ordinal": 28,
+          "type_info": "Int4"
+        },
+        {
+          "name": "ais_eta",
+          "ordinal": 29,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "ais_destination",
+          "ordinal": 30,
+          "type_info": "Varchar"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        true,
+        true,
+        true,
+        true,
+        true,
+        false,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        false,
+        true,
+        true,
+        false,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "parameters": {
+        "Left": [
+          "Int8"
+        ]
+      }
+    },
+    "query": "\nSELECT\n    v.vessel_identification_id,\n    f.fiskeridir_vessel_id AS \"fiskeridir_vessel_id?\",\n    f.fiskeridir_vessel_type_id,\n    f.fiskeridir_length_group_id,\n    f.fiskeridir_nation_group_id,\n    f.norwegian_municipality_id AS fiskeridir_norwegian_municipality_id,\n    f.norwegian_county_id AS fiskeridir_norwegian_county_id,\n    f.nation_id AS \"fiskeridir_nation_id?\",\n    f.gross_tonnage_1969 AS fiskeridir_gross_tonnage_1969,\n    f.gross_tonnage_other AS fiskeridir_gross_tonnage_other,\n    f.call_sign AS fiskeridir_call_sign,\n    f.\"name\" AS fiskeridir_name,\n    f.registration_id AS fiskeridir_registration_id,\n    f.\"length\" AS fiskeridir_length,\n    f.\"width\" AS fiskeridir_width,\n    f.\"owner\" AS fiskeridir_owner,\n    f.engine_building_year AS fiskeridir_engine_building_year,\n    f.engine_power AS fiskeridir_engine_power,\n    f.building_year AS fiskeridir_building_year,\n    f.rebuilding_year AS fiskeridir_rebuilding_year,\n    e.call_sign AS \"ers_call_sign?\",\n    e.\"name\" AS ers_name,\n    e.registration_id AS ers_registration_id,\n    a.mmsi AS \"ais_mmsi?\",\n    a.imo_number AS ais_imo_number,\n    a.call_sign AS ais_call_sign,\n    a.name AS ais_name,\n    a.ship_length AS ais_ship_length,\n    a.ship_width AS ais_ship_width,\n    a.eta AS ais_eta,\n    a.destination AS ais_destination\nFROM\n    vessel_identifications v\n    LEFT JOIN fiskeridir_vessels AS f ON v.vessel_id = f.fiskeridir_vessel_id\n    LEFT JOIN ers_vessels AS e ON v.call_sign = e.call_sign\n    LEFT JOIN ais_vessels AS a ON v.mmsi = a.mmsi\nWHERE\n    f.fiskeridir_vessel_id = $1\n            "
+  },
   "063ffe3ea8b5130ce0826bfca3da92147d6472f539da0b9e2ce34f83532da96c": {
     "describe": {
       "columns": [],
@@ -70,7 +270,7 @@
     },
     "query": "\nINSERT INTO\n    landing_entries (\n        landing_id,\n        size_grouping_code,\n        withdrawn_catch_value,\n        catch_value,\n        sales_team_fee,\n        post_payment,\n        support_fee_for_fisher,\n        price_for_buyer,\n        price_for_fisher,\n        unit_price_for_buyer,\n        unit_price_for_fisher,\n        landing_method_id,\n        conservation_method_id,\n        product_condition_id,\n        product_purpose_id,\n        product_purpose_group_id,\n        line_number,\n        num_fish,\n        product_weight,\n        product_weight_over_quota,\n        gross_weight,\n        living_weight,\n        living_weight_over_quota,\n        species_id,\n        species_fao_id,\n        species_group_id,\n        species_fiskeridir_id,\n        species_main_group_id\n    )\nSELECT\n    *\nFROM\n    UNNEST(\n        $1::VARCHAR[],\n        $2::VARCHAR[],\n        $3::DECIMAL[],\n        $4::DECIMAL[],\n        $5::DECIMAL[],\n        $6::DECIMAL[],\n        $7::DECIMAL[],\n        $8::DECIMAL[],\n        $9::DECIMAL[],\n        $10::DECIMAL[],\n        $11::DECIMAL[],\n        $12::INT[],\n        $13::INT[],\n        $14::INT[],\n        $15::INT[],\n        $16::INT[],\n        $17::INT[],\n        $18::INT[],\n        $19::DECIMAL[],\n        $20::DECIMAL[],\n        $21::DECIMAL[],\n        $22::DECIMAL[],\n        $23::DECIMAL[],\n        $24::INT[],\n        $25::VARCHAR[],\n        $26::INT[],\n        $27::INT[],\n        $28::INT[]\n    )\nON CONFLICT (landing_id, line_number) DO NOTHING\n                "
   },
-  "0c3073dec14dea7ad11a979f215febb31944cd980fc7ac24c33b0d64443014c4": {
+  "09be7bcb04e9c46fc977aeb0a1c388a53c131fdacf1042c26e8c48fdddc553b9": {
     "describe": {
       "columns": [
         {
@@ -79,170 +279,30 @@
           "type_info": "Int8"
         },
         {
-          "name": "fiskeridir_vessel_type_id",
+          "name": "timestamp",
           "ordinal": 1,
-          "type_info": "Int4"
-        },
-        {
-          "name": "fiskeridir_length_group_id",
-          "ordinal": 2,
-          "type_info": "Int4"
-        },
-        {
-          "name": "fiskeridir_nation_group_id",
-          "ordinal": 3,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "fiskeridir_norwegian_municipality_id",
-          "ordinal": 4,
-          "type_info": "Int4"
-        },
-        {
-          "name": "fiskeridir_norwegian_county_id",
-          "ordinal": 5,
-          "type_info": "Int4"
-        },
-        {
-          "name": "fiskeridir_nation_id!",
-          "ordinal": 6,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "fiskeridir_gross_tonnage_1969",
-          "ordinal": 7,
-          "type_info": "Int4"
-        },
-        {
-          "name": "fiskeridir_gross_tonnage_other",
-          "ordinal": 8,
-          "type_info": "Int4"
-        },
-        {
-          "name": "fiskeridir_call_sign",
-          "ordinal": 9,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "fiskeridir_name",
-          "ordinal": 10,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "fiskeridir_registration_id",
-          "ordinal": 11,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "fiskeridir_length",
-          "ordinal": 12,
-          "type_info": "Numeric"
-        },
-        {
-          "name": "fiskeridir_width",
-          "ordinal": 13,
-          "type_info": "Numeric"
-        },
-        {
-          "name": "fiskeridir_owner",
-          "ordinal": 14,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "fiskeridir_engine_building_year",
-          "ordinal": 15,
-          "type_info": "Int4"
-        },
-        {
-          "name": "fiskeridir_engine_power",
-          "ordinal": 16,
-          "type_info": "Int4"
-        },
-        {
-          "name": "fiskeridir_building_year",
-          "ordinal": 17,
-          "type_info": "Int4"
-        },
-        {
-          "name": "fiskeridir_rebuilding_year",
-          "ordinal": 18,
-          "type_info": "Int4"
-        },
-        {
-          "name": "ais_mmsi?",
-          "ordinal": 19,
-          "type_info": "Int4"
-        },
-        {
-          "name": "ais_imo_number",
-          "ordinal": 20,
-          "type_info": "Int4"
-        },
-        {
-          "name": "ais_call_sign",
-          "ordinal": 21,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "ais_name",
-          "ordinal": 22,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "ais_ship_length",
-          "ordinal": 23,
-          "type_info": "Int4"
-        },
-        {
-          "name": "ais_ship_width",
-          "ordinal": 24,
-          "type_info": "Int4"
-        },
-        {
-          "name": "ais_eta",
-          "ordinal": 25,
           "type_info": "Timestamptz"
         },
         {
-          "name": "ais_destination",
-          "ordinal": 26,
+          "name": "port_id",
+          "ordinal": 2,
           "type_info": "Varchar"
         }
       ],
       "nullable": [
         true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
         false,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
         true
       ],
       "parameters": {
-        "Left": []
+        "Left": [
+          "Int8",
+          "Timestamptz",
+          "Bool"
+        ]
       }
     },
-    "query": "\nSELECT\n    f.fiskeridir_vessel_id AS \"fiskeridir_vessel_id!\",\n    f.fiskeridir_vessel_type_id,\n    f.fiskeridir_length_group_id,\n    f.fiskeridir_nation_group_id,\n    f.norwegian_municipality_id AS fiskeridir_norwegian_municipality_id,\n    f.norwegian_county_id AS fiskeridir_norwegian_county_id,\n    f.nation_id AS \"fiskeridir_nation_id!\",\n    f.gross_tonnage_1969 AS fiskeridir_gross_tonnage_1969,\n    f.gross_tonnage_other AS fiskeridir_gross_tonnage_other,\n    f.call_sign AS fiskeridir_call_sign,\n    f.\"name\" AS fiskeridir_name,\n    f.registration_id AS fiskeridir_registration_id,\n    f.\"length\" AS fiskeridir_length,\n    f.\"width\" AS fiskeridir_width,\n    f.\"owner\" AS fiskeridir_owner,\n    f.engine_building_year AS fiskeridir_engine_building_year,\n    f.engine_power AS fiskeridir_engine_power,\n    f.building_year AS fiskeridir_building_year,\n    f.rebuilding_year AS fiskeridir_rebuilding_year,\n    a.mmsi AS \"ais_mmsi?\",\n    a.imo_number AS ais_imo_number,\n    a.call_sign AS ais_call_sign,\n    a.name AS ais_name,\n    a.ship_length AS ais_ship_length,\n    a.ship_width AS ais_ship_width,\n    a.eta AS ais_eta,\n    a.destination AS ais_destination\nFROM\n    fiskeridir_vessels AS f\n    LEFT JOIN ais_vessels AS a ON f.call_sign = a.call_sign\n            "
+    "query": "\nSELECT\n    e.fiskeridir_vessel_id AS \"fiskeridir_vessel_id!\",\n    e.arrival_timestamp AS \"timestamp\",\n    e.port_id\nFROM\n    ers_arrivals e\n    INNER JOIN vessel_identifications v ON v.vessel_id = e.fiskeridir_vessel_id\nWHERE\n    v.vessel_identification_id = $1\n    AND e.arrival_timestamp >= $2\n    AND (\n        $3::bool IS NULL\n        OR e.landing_facility IS NOT NULL\n    )\n            "
   },
   "0ef8600ed3dec02cfd9a260f004587fc2715180f308d47e5de8bb5ed52b87e91": {
     "describe": {
@@ -331,6 +391,20 @@
     },
     "query": "\nSELECT\n    hash\nFROM\n    data_hashes\nWHERE\n    data_hash_id = $1\n            "
   },
+  "1df829de26fcc6c0567d4e82183f48a3a17efae999b36a5fa0cc0cd5ea2c6f8f": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "TstzRangeArray",
+          "Int8",
+          "Int4"
+        ]
+      }
+    },
+    "query": "\nDELETE FROM trips\nWHERE\n    period && ANY ($1)\n    AND vessel_identification_id = $2\n    AND trip_assembler_id = $3\n            "
+  },
   "1eb59eb4935a78bc9ed387bac65c7c3b006ca15bdeac5274693210f3a237cb8c": {
     "describe": {
       "columns": [],
@@ -364,6 +438,79 @@
     },
     "query": "\nINSERT INTO\n    ais_positions (\n        mmsi,\n        latitude,\n        longitude,\n        course_over_ground,\n        rate_of_turn,\n        true_heading,\n        speed_over_ground,\n        TIMESTAMP,\n        distance_to_shore,\n        navigation_status_id\n    )\nSELECT\n    *\nFROM\n    UNNEST(\n        $1::INT[],\n        $2::DECIMAL[],\n        $3::DECIMAL[],\n        $4::DECIMAL[],\n        $5::DECIMAL[],\n        $6::INT[],\n        $7::DECIMAL[],\n        $8::timestamptz[],\n        $9::DECIMAL[],\n        $10::INT[]\n    )\nON CONFLICT (mmsi, TIMESTAMP) DO NOTHING\n            "
   },
+  "207649285dd2a7fbc5efc90903868fead6e046767701be0856864da6b3ac6754": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Int8",
+          "Int4",
+          "Timestamptz"
+        ]
+      }
+    },
+    "query": "\nINSERT INTO\n    trip_calculation_timers (\n        vessel_identification_id,\n        trip_assembler_id,\n        timer\n    )\nVALUES\n    ($1, $2, $3)\nON CONFLICT (vessel_identification_id, trip_assembler_id) DO\nUPDATE\nSET\n    timer = excluded.timer\n            "
+  },
+  "2168257243432e735da7b65efabf18acf2ed8495b58c251a1e4d915eb9f3a444": {
+    "describe": {
+      "columns": [
+        {
+          "name": "trip_id",
+          "ordinal": 0,
+          "type_info": "Int8"
+        },
+        {
+          "name": "period",
+          "ordinal": 1,
+          "type_info": "TstzRange"
+        },
+        {
+          "name": "landing_coverage",
+          "ordinal": 2,
+          "type_info": "TstzRange"
+        },
+        {
+          "name": "trip_assembler_id",
+          "ordinal": 3,
+          "type_info": "Int4"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Text"
+        ]
+      }
+    },
+    "query": "\nSELECT\n    t.trip_id,\n    t.period,\n    t.landing_coverage,\n    t.trip_assembler_id\nFROM\n    trips AS t\n    INNER JOIN hauls_view AS h ON h.period <@ t.period\n    AND h.vessel_identification_id = t.vessel_identification_id\nWHERE\n    h.haul_id = $1\n            "
+  },
+  "2168a3370de9eeab68bd0bbef71d6cfdc3fc002240f028569e945adec6d1befa": {
+    "describe": {
+      "columns": [
+        {
+          "name": "landing_timestamp",
+          "ordinal": 0,
+          "type_info": "Timestamptz"
+        }
+      ],
+      "nullable": [
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Int8",
+          "Timestamptz"
+        ]
+      }
+    },
+    "query": "\nSELECT\n    l.landing_timestamp\nFROM\n    landings l\n    INNER JOIN vessel_identifications v ON v.vessel_id = l.fiskeridir_vessel_id\nWHERE\n    v.vessel_identification_id = $1\n    AND landing_timestamp >= $2\n            "
+  },
   "224fd2efcc5d10ac251cac4bad6200666b127269250e93689ff8589c3c741e0e": {
     "describe": {
       "columns": [],
@@ -388,6 +535,20 @@
       }
     },
     "query": "\nDELETE FROM ers_arrival_catches c USING ers_arrivals e\nWHERE\n    e.message_id = c.message_id\n    AND e.relevant_year = $1\n            "
+  },
+  "24e10e1bdb45f9036e60c3d91406d89a2b6b23a8bbf0742ffdb2104f6e012b9f": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "VarcharArray",
+          "VarcharArray",
+          "VarcharArray"
+        ]
+      }
+    },
+    "query": "\nINSERT INTO\n    ers_vessels (call_sign, \"name\", registration_id)\nSELECT\n    *\nFROM\n    UNNEST($1::VARCHAR[], $2::VARCHAR[], $3::VARCHAR[])\nON CONFLICT (call_sign) DO\nUPDATE\nSET\n    \"name\" = COALESCE(ers_vessels.name, EXCLUDED.name),\n    registration_id = COALESCE(\n        ers_vessels.registration_id,\n        EXCLUDED.registration_id\n    )\n            "
   },
   "26413798bcb01e60f28bb8810246d0ccbaccbb71b0a22467d90cb6cce37326c2": {
     "describe": {
@@ -425,32 +586,6 @@
       }
     },
     "query": "\nINSERT INTO\n    current_ais_positions (\n        mmsi,\n        latitude,\n        longitude,\n        course_over_ground,\n        rate_of_turn,\n        true_heading,\n        speed_over_ground,\n        TIMESTAMP,\n        altitude,\n        distance_to_shore,\n        ais_class,\n        ais_message_type_id,\n        navigation_status_id\n    )\nVALUES\n    (\n        $1::INT,\n        $2::DECIMAL,\n        $3::DECIMAL,\n        $4::DECIMAL,\n        $5::DECIMAL,\n        $6::INT,\n        $7::DECIMAL,\n        $8::timestamptz,\n        $9::INT,\n        $10::DECIMAL,\n        $11::VARCHAR,\n        $12::INT,\n        $13::INT\n    )\nON CONFLICT (mmsi) DO\nUPDATE\nSET\n    latitude = excluded.latitude,\n    longitude = excluded.longitude,\n    course_over_ground = excluded.course_over_ground,\n    rate_of_turn = excluded.rate_of_turn,\n    true_heading = excluded.true_heading,\n    speed_over_ground = excluded.speed_over_ground,\n    TIMESTAMP = excluded.timestamp,\n    altitude = excluded.altitude,\n    distance_to_shore = excluded.distance_to_shore,\n    ais_class = excluded.ais_class,\n    ais_message_type_id = excluded.ais_message_type_id,\n    navigation_status_id = excluded.navigation_status_id\n            "
-  },
-  "28d3494f2ca837c2a2651b3359769f31fb834256f8f85990c669f078f7bc7149": {
-    "describe": {
-      "columns": [
-        {
-          "name": "fiskeridir_vessel_id",
-          "ordinal": 0,
-          "type_info": "Int8"
-        },
-        {
-          "name": "timestamp",
-          "ordinal": 1,
-          "type_info": "Timestamptz"
-        }
-      ],
-      "nullable": [
-        false,
-        false
-      ],
-      "parameters": {
-        "Left": [
-          "Int4"
-        ]
-      }
-    },
-    "query": "\nSELECT\n    fiskeridir_vessel_id,\n    \"conflict\" AS \"timestamp\"\nFROM\n    trip_assembler_conflicts\nWHERE\n    trip_assembler_id = $1\n            "
   },
   "2937299bd506f10ab4ce79809225a575d4c55f465dfc90b71e618467dda14394": {
     "describe": {
@@ -521,46 +656,6 @@
     },
     "query": "\nINSERT INTO\n    species (species_id, \"name\")\nSELECT\n    *\nFROM\n    UNNEST($1::INT[], $2::VARCHAR[])\nON CONFLICT (species_id) DO NOTHING\n            "
   },
-  "39db23d1490eed0efae4f20d61d4b0a0d2103391fbbda571a10a211467830ae8": {
-    "describe": {
-      "columns": [],
-      "nullable": [],
-      "parameters": {
-        "Left": [
-          "Int8",
-          "Int4",
-          "Timestamptz"
-        ]
-      }
-    },
-    "query": "\nINSERT INTO\n    trip_calculation_timers (fiskeridir_vessel_id, trip_assembler_id, timer)\nVALUES\n    ($1, $2, $3)\nON CONFLICT (fiskeridir_vessel_id, trip_assembler_id) DO\nUPDATE\nSET\n    timer = excluded.timer\n            "
-  },
-  "3a39569d2de907617d14506da3c5c15ee672765615f8d531c20bafea2af1288d": {
-    "describe": {
-      "columns": [
-        {
-          "name": "fiskeridir_vessel_id",
-          "ordinal": 0,
-          "type_info": "Int8"
-        },
-        {
-          "name": "timestamp",
-          "ordinal": 1,
-          "type_info": "Timestamptz"
-        }
-      ],
-      "nullable": [
-        false,
-        false
-      ],
-      "parameters": {
-        "Left": [
-          "Int4"
-        ]
-      }
-    },
-    "query": "\nSELECT\n    fiskeridir_vessel_id,\n    timer AS \"timestamp\"\nFROM\n    trip_calculation_timers\nWHERE\n    trip_assembler_id = $1\n            "
-  },
   "42d280b49c134606e1875c16d0a03ff9d90a4f7a9e461203ff3c283f2ce22a58": {
     "describe": {
       "columns": [],
@@ -574,7 +669,7 @@
     },
     "query": "\nINSERT INTO\n    norwegian_municipalities (norwegian_municipality_id, \"name\")\nSELECT\n    *\nFROM\n    UNNEST($1::INT[], $2::VARCHAR[])\nON CONFLICT (norwegian_municipality_id) DO\nUPDATE\nSET\n    NAME = excluded.name\nWHERE\n    norwegian_municipalities.name IS NULL\n    AND excluded.name IS NOT NULL\n            "
   },
-  "4b8c4869fdc36ee1ab1c9e146f501eec3a2f85500b99967f94260b9c5351c989": {
+  "452dfd9a5ca83dfd9ede053d4b7e3f5f7e7a63534e00caa4bafc97b1fae77bab": {
     "describe": {
       "columns": [
         {
@@ -606,11 +701,52 @@
       ],
       "parameters": {
         "Left": [
-          "Text"
+          "Int8",
+          "Int4"
         ]
       }
     },
-    "query": "\nSELECT\n    t.trip_id,\n    t.period,\n    t.landing_coverage,\n    t.trip_assembler_id\nFROM\n    trips AS t\n    INNER JOIN hauls_view AS h ON h.period <@ t.period\n    AND h.fiskeridir_vessel_id = t.fiskeridir_vessel_id\nWHERE\n    h.haul_id = $1\n            "
+    "query": "\nSELECT\n    trip_id,\n    period,\n    landing_coverage,\n    trip_assembler_id\nFROM\n    trips\nWHERE\n    vessel_identification_id = $1\n    AND trip_assembler_id = $2\nORDER BY\n    period DESC\nLIMIT\n    1\n            "
+  },
+  "4973e583f2254687bc5f8ce2da64c7ae1c18e2f6e2b0f0c086f7505be1924a43": {
+    "describe": {
+      "columns": [
+        {
+          "name": "trip_id",
+          "ordinal": 0,
+          "type_info": "Int8"
+        },
+        {
+          "name": "period",
+          "ordinal": 1,
+          "type_info": "TstzRange"
+        },
+        {
+          "name": "landing_coverage",
+          "ordinal": 2,
+          "type_info": "TstzRange"
+        },
+        {
+          "name": "trip_assembler_id",
+          "ordinal": 3,
+          "type_info": "Int4"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Int8",
+          "Int4",
+          "Timestamptz"
+        ]
+      }
+    },
+    "query": "\nSELECT\n    trip_id,\n    period,\n    landing_coverage,\n    trip_assembler_id\nFROM\n    trips\nWHERE\n    vessel_identification_id = $1\n    AND trip_assembler_id = $2\n    AND (\n        UPPER(period) <= $3\n        OR period @> $3\n    )\nORDER BY\n    period DESC\nLIMIT\n    1\n            "
   },
   "5101d466d5c5425c8f98f48cf5b82ff3497c642b369dcbf2ba25e69ead8ca917": {
     "describe": {
@@ -880,6 +1016,22 @@
     },
     "query": "\nSELECT\n    h.haul_id AS \"haul_id!\",\n    h.ers_activity_id AS \"ers_activity_id!\",\n    h.duration AS \"duration!\",\n    h.haul_distance AS haul_distance,\n    h.catch_location_start AS catch_location_start,\n    h.ocean_depth_end AS \"ocean_depth_end!\",\n    h.ocean_depth_start AS \"ocean_depth_start!\",\n    h.quota_type_id AS \"quota_type_id!\",\n    h.start_latitude AS \"start_latitude!\",\n    h.start_longitude AS \"start_longitude!\",\n    h.period AS \"period!\",\n    h.stop_latitude AS \"stop_latitude!\",\n    h.stop_longitude AS \"stop_longitude!\",\n    h.gear_fiskeridir_id AS gear_fiskeridir_id,\n    h.gear_group_id AS gear_group_id,\n    h.fiskeridir_vessel_id AS fiskeridir_vessel_id,\n    h.vessel_call_sign AS vessel_call_sign,\n    h.vessel_call_sign_ers AS \"vessel_call_sign_ers!\",\n    h.vessel_length AS \"vessel_length!\",\n    h.vessel_name AS vessel_name,\n    h.vessel_name_ers AS vessel_name_ers,\n    h.catches::TEXT AS \"catches!\",\n    h.whale_catches::TEXT AS \"whale_catches!\"\nFROM\n    hauls_view h\nWHERE\n    h.fiskeridir_vessel_id = $1\n            "
   },
+  "68054bbc5c168debad317d906b85aa9ce0a47cc730c296b2db671222170bb4c2": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "TstzRangeArray",
+          "VarcharArray",
+          "VarcharArray",
+          "Int4Array",
+          "Int8Array"
+        ]
+      }
+    },
+    "query": "\nINSERT INTO\n    trips (\n        period,\n        start_port_id,\n        end_port_id,\n        trip_assembler_id,\n        vessel_identification_id\n    )\nSELECT\n    *\nFROM\n    UNNEST(\n        $1::tstzrange[],\n        $2::VARCHAR[],\n        $3::VARCHAR[],\n        $4::INT[],\n        $5::BIGINT[]\n    )\n            "
+  },
   "6b63083645ee5131c65b06de6940f6f49491cf5fc32b7d57e113b29b8244e6f6": {
     "describe": {
       "columns": [
@@ -1038,6 +1190,53 @@
       }
     },
     "query": "\nINSERT INTO\n    delivery_points (\n        delivery_point_id,\n        delivery_point_type_id,\n        delivery_point_source_id\n    )\nSELECT\n    *\nFROM\n    UNNEST($1::VARCHAR[], $2::INT[], $3::INT[])\nON CONFLICT (delivery_point_id) DO NOTHING\n            "
+  },
+  "7be0124da5ca64620470d05bfe081f48898f8f3f43b673b798da67d209f6d4bf": {
+    "describe": {
+      "columns": [
+        {
+          "name": "fiskeridir_vessel_id!",
+          "ordinal": 0,
+          "type_info": "Int8"
+        },
+        {
+          "name": "timestamp",
+          "ordinal": 1,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "port_id",
+          "ordinal": 2,
+          "type_info": "Varchar"
+        }
+      ],
+      "nullable": [
+        true,
+        false,
+        true
+      ],
+      "parameters": {
+        "Left": [
+          "Int8",
+          "Timestamptz"
+        ]
+      }
+    },
+    "query": "\nSELECT\n    fiskeridir_vessel_id AS \"fiskeridir_vessel_id!\",\n    departure_timestamp AS \"timestamp\",\n    port_id\nFROM\n    ers_departures e\n    INNER JOIN vessel_identifications v ON v.vessel_id = e.fiskeridir_vessel_id\nWHERE\n    v.vessel_identification_id = $1\n    AND departure_timestamp >= $2\n            "
+  },
+  "81b08f817a673ab945b259f813a6cc10377c5e5dee8243f1106a77f731597e1a": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Int8Array",
+          "VarcharArray",
+          "Int4Array"
+        ]
+      }
+    },
+    "query": "\nINSERT INTO\n    vessel_identifications (vessel_id, call_sign, mmsi)\nSELECT\n    *\nFROM\n    UNNEST($1::BIGINT[], $2::VARCHAR[], $3::INT[])\n            "
   },
   "85720e65ca627b504427389b69b979a8728fcf2acd2498b3106556ed40572780": {
     "describe": {
@@ -1445,27 +1644,6 @@
     },
     "query": "\nSELECT\n    h.haul_id AS \"haul_id!\",\n    h.ers_activity_id AS \"ers_activity_id!\",\n    h.duration AS \"duration!\",\n    h.haul_distance AS haul_distance,\n    h.catch_location_start AS catch_location_start,\n    h.ocean_depth_end AS \"ocean_depth_end!\",\n    h.ocean_depth_start AS \"ocean_depth_start!\",\n    h.quota_type_id AS \"quota_type_id!\",\n    h.start_latitude AS \"start_latitude!\",\n    h.start_longitude AS \"start_longitude!\",\n    h.period AS \"period!\",\n    h.stop_latitude AS \"stop_latitude!\",\n    h.stop_longitude AS \"stop_longitude!\",\n    h.gear_fiskeridir_id AS gear_fiskeridir_id,\n    h.gear_group_id AS gear_group_id,\n    h.fiskeridir_vessel_id AS fiskeridir_vessel_id,\n    h.vessel_call_sign AS vessel_call_sign,\n    h.vessel_call_sign_ers AS \"vessel_call_sign_ers!\",\n    h.vessel_length AS \"vessel_length!\",\n    h.vessel_name AS vessel_name,\n    h.vessel_name_ers AS vessel_name_ers,\n    h.catches::TEXT AS \"catches!\",\n    h.whale_catches::TEXT AS \"whale_catches!\"\nFROM\n    hauls_view h\nWHERE\n    (\n        $1::tstzrange[] IS NULL\n        OR h.period && ANY ($1)\n    )\n    AND (\n        $2::VARCHAR[] IS NULL\n        OR h.catch_location_start = ANY ($2)\n    )\n    AND (\n        $3::INT[] IS NULL\n        OR h.gear_group_id = ANY ($3)\n    )\n    AND (\n        $4::INT[] IS NULL\n        OR h.species_group_ids && $4\n    )\n    AND (\n        $5::numrange[] IS NULL\n        OR h.vessel_length <@ ANY ($5)\n    )\n            "
   },
-  "a8e39928448822cfd172f3fc6b893758eb2b7c3298fea955ef33d89700730798": {
-    "describe": {
-      "columns": [
-        {
-          "name": "landing_timestamp",
-          "ordinal": 0,
-          "type_info": "Timestamptz"
-        }
-      ],
-      "nullable": [
-        false
-      ],
-      "parameters": {
-        "Left": [
-          "Int8",
-          "Timestamptz"
-        ]
-      }
-    },
-    "query": "\nSELECT\n    landing_timestamp\nFROM\n    landings\nWHERE\n    fiskeridir_vessel_id = $1\n    AND landing_timestamp >= $2\n            "
-  },
   "a9edf164edbae7c8d059cfbfda567a4504bc42bd25f3fba04a4e92f11c651fd2": {
     "describe": {
       "columns": [
@@ -1489,40 +1667,6 @@
       }
     },
     "query": "\nSELECT\n    species_group_id AS id,\n    \"name\"\nFROM\n    species_groups\n            "
-  },
-  "ae4a01d2a251e7d9be99a7e33be14885ab8070c67586cca322b84b85c9eec050": {
-    "describe": {
-      "columns": [
-        {
-          "name": "fiskeridir_vessel_id!",
-          "ordinal": 0,
-          "type_info": "Int8"
-        },
-        {
-          "name": "timestamp",
-          "ordinal": 1,
-          "type_info": "Timestamptz"
-        },
-        {
-          "name": "port_id",
-          "ordinal": 2,
-          "type_info": "Varchar"
-        }
-      ],
-      "nullable": [
-        true,
-        false,
-        true
-      ],
-      "parameters": {
-        "Left": [
-          "Int8",
-          "Timestamptz",
-          "Bool"
-        ]
-      }
-    },
-    "query": "\nSELECT\n    fiskeridir_vessel_id AS \"fiskeridir_vessel_id!\",\n    arrival_timestamp AS \"timestamp\",\n    port_id\nFROM\n    ers_arrivals\nWHERE\n    fiskeridir_vessel_id = $1\n    AND arrival_timestamp >= $2\n    AND (\n        $3::bool IS NULL\n        OR landing_facility IS NOT NULL\n    )\n            "
   },
   "afab8a5cb3418938aa30de7bd22a9852b1b204e39858a3194974a12c5e61100c": {
     "describe": {
@@ -1788,45 +1932,6 @@
     },
     "query": "\nINSERT INTO\n    landings (\n        landing_id,\n        document_id,\n        fiskeridir_vessel_id,\n        fiskeridir_vessel_type_id,\n        vessel_call_sign,\n        vessel_registration_id,\n        vessel_length_group_id,\n        vessel_nation_group_id,\n        vessel_nation_id,\n        vessel_norwegian_municipality_id,\n        vessel_norwegian_county_id,\n        vessel_gross_tonnage_1969,\n        vessel_gross_tonnage_other,\n        vessel_name,\n        vessel_length,\n        vessel_engine_building_year,\n        vessel_engine_power,\n        vessel_building_year,\n        vessel_rebuilding_year,\n        gear_id,\n        gear_group_id,\n        gear_main_group_id,\n        document_type_id,\n        sales_team_id,\n        sales_team_tax,\n        delivery_point_id,\n        document_sale_date,\n        document_version_date,\n        landing_timestamp,\n        landing_time,\n        landing_month_id,\n        \"version\",\n        last_catch_date,\n        num_crew_members,\n        fisher_org_id,\n        fisher_nation_id,\n        fisher_municipality_id,\n        catch_field,\n        catch_area_id,\n        catch_main_area_id,\n        catch_main_area_fao_id,\n        area_grouping_id,\n        delivery_point_municipality_id,\n        landing_norwegian_county_id,\n        landing_nation_id,\n        north_south_62_degrees_id,\n        within_12_mile_border,\n        fishing_diary_number,\n        fishing_diary_trip_number,\n        economic_zone_id,\n        partial_landing,\n        partial_landing_next_delivery_point_id,\n        partial_landing_previous_delivery_point_id,\n        data_update_timestamp,\n        catch_year,\n        production_facility,\n        production_facility_municipality_id,\n        product_quality_id,\n        quota_type_id,\n        quota_vessel_registration_id,\n        buyer_org_id,\n        buyer_nation_id,\n        receiving_vessel_registration_id,\n        receiving_vessel_mmsi_or_call_sign,\n        receiving_vessel_type,\n        receiving_vessel_nation_id,\n        receiving_vessel_nation\n    )\nSELECT\n    *\nFROM\n    UNNEST(\n        $1::VARCHAR[],\n        $2::BIGINT[],\n        $3::BIGINT[],\n        $4::INT[],\n        $5::VARCHAR[],\n        $6::VARCHAR[],\n        $7::INT[],\n        $8::VARCHAR[],\n        $9::VARCHAR[],\n        $10::INT[],\n        $11::INT[],\n        $12::INT[],\n        $13::INT[],\n        $14::VARCHAR[],\n        $15::DECIMAL[],\n        $16::INT[],\n        $17::INT[],\n        $18::INT[],\n        $19::INT[],\n        $20::INT[],\n        $21::INT[],\n        $22::INT[],\n        $23::INT[],\n        $24::INT[],\n        $25::DECIMAL[],\n        $26::VARCHAR[],\n        $27::date[],\n        $28::timestamptz[],\n        $29::timestamptz[],\n        $30::TIME[],\n        $31::INT[],\n        $32::INT[],\n        $33::date[],\n        $34::INT[],\n        $35::INT[],\n        $36::VARCHAR[],\n        $37::INT[],\n        $38::VARCHAR[],\n        $39::INT[],\n        $40::INT[],\n        $41::INT[],\n        $42::VARCHAR[],\n        $43::INT[],\n        $44::INT[],\n        $45::VARCHAR[],\n        $46::VARCHAR[],\n        $47::INT[],\n        $48::INT[],\n        $49::INT[],\n        $50::VARCHAR[],\n        $51::BOOLEAN[],\n        $52::VARCHAR[],\n        $53::VARCHAR[],\n        $54::timestamptz[],\n        $55::INT[],\n        $56::VARCHAR[],\n        $57::INT[],\n        $58::INT[],\n        $59::INT[],\n        $60::VARCHAR[],\n        $61::INT[],\n        $62::VARCHAR[],\n        $63::VARCHAR[],\n        $64::VARCHAR[],\n        $65::INT[],\n        $66::VARCHAR[],\n        $67::VARCHAR[]\n    )\nON CONFLICT (landing_id, \"version\") DO NOTHING\n            "
   },
-  "c8425d444f61bc14f417690d0eb5a999db6e3b75657f896b80dc2285c7b545fc": {
-    "describe": {
-      "columns": [
-        {
-          "name": "trip_id",
-          "ordinal": 0,
-          "type_info": "Int8"
-        },
-        {
-          "name": "period",
-          "ordinal": 1,
-          "type_info": "TstzRange"
-        },
-        {
-          "name": "landing_coverage",
-          "ordinal": 2,
-          "type_info": "TstzRange"
-        },
-        {
-          "name": "trip_assembler_id",
-          "ordinal": 3,
-          "type_info": "Int4"
-        }
-      ],
-      "nullable": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "parameters": {
-        "Left": [
-          "Int8",
-          "Int4"
-        ]
-      }
-    },
-    "query": "\nSELECT\n    trip_id,\n    period,\n    landing_coverage,\n    trip_assembler_id\nFROM\n    trips\nWHERE\n    fiskeridir_vessel_id = $1\n    AND trip_assembler_id = $2\nORDER BY\n    period DESC\nLIMIT\n    1\n            "
-  },
   "ca28c3d988c1b915c8f1596bb7189b3467cd016e3536342d2e2c8b0e83473da9": {
     "describe": {
       "columns": [],
@@ -1840,39 +1945,6 @@
     },
     "query": "\nINSERT INTO\n    economic_zones (economic_zone_id, \"name\")\nSELECT\n    *\nFROM\n    UNNEST($1::VARCHAR[], $2::VARCHAR[])\nON CONFLICT (economic_zone_id) DO NOTHING\n            "
   },
-  "cc3ffc88f78f6c469c67a3f8e28456c14cf5da9f51cf791dac92dc2d1386df78": {
-    "describe": {
-      "columns": [
-        {
-          "name": "fiskeridir_vessel_id!",
-          "ordinal": 0,
-          "type_info": "Int8"
-        },
-        {
-          "name": "timestamp",
-          "ordinal": 1,
-          "type_info": "Timestamptz"
-        },
-        {
-          "name": "port_id",
-          "ordinal": 2,
-          "type_info": "Varchar"
-        }
-      ],
-      "nullable": [
-        true,
-        false,
-        true
-      ],
-      "parameters": {
-        "Left": [
-          "Int8",
-          "Timestamptz"
-        ]
-      }
-    },
-    "query": "\nSELECT\n    fiskeridir_vessel_id AS \"fiskeridir_vessel_id!\",\n    departure_timestamp AS \"timestamp\",\n    port_id\nFROM\n    ers_departures\nWHERE\n    fiskeridir_vessel_id = $1\n    AND departure_timestamp >= $2\n            "
-  },
   "cc7529bb4ecd6aa70d015d86abc5efdbb2cca25ed8019b40dbb30e76ad745e65": {
     "describe": {
       "columns": [],
@@ -1885,20 +1957,6 @@
       }
     },
     "query": "\nINSERT INTO\n    herring_populations (herring_population_id, \"name\")\nSELECT\n    *\nFROM\n    UNNEST($1::VARCHAR[], $2::VARCHAR[])\nON CONFLICT (herring_population_id) DO NOTHING\n            "
-  },
-  "d0f5a1120264b570bd35e961a8e8650bac90a07b3ef7f3e9acbf6a59e99f169c": {
-    "describe": {
-      "columns": [],
-      "nullable": [],
-      "parameters": {
-        "Left": [
-          "TstzRangeArray",
-          "Int8",
-          "Int4"
-        ]
-      }
-    },
-    "query": "\nDELETE FROM trips\nWHERE\n    period && ANY ($1)\n    AND fiskeridir_vessel_id = $2\n    AND trip_assembler_id = $3\n            "
   },
   "d1aa1ba13ded870125bd254ccb84850995fd48db341ca8a6680f1af0a64ec030": {
     "describe": {
@@ -1931,46 +1989,6 @@
     },
     "query": "\nINSERT INTO\n    gear_problems (gear_problem_id, \"name\")\nSELECT\n    *\nFROM\n    UNNEST($1::INT[], $2::VARCHAR[])\nON CONFLICT (gear_problem_id) DO\nUPDATE\nSET\n    \"name\" = CASE\n        WHEN gear_problems.name IS NULL THEN excluded.name\n    END\n            "
   },
-  "d770fe65767e2c8b0f64963920138c475923dcc77b63eb34f5c03350694502c0": {
-    "describe": {
-      "columns": [
-        {
-          "name": "trip_id",
-          "ordinal": 0,
-          "type_info": "Int8"
-        },
-        {
-          "name": "period",
-          "ordinal": 1,
-          "type_info": "TstzRange"
-        },
-        {
-          "name": "landing_coverage",
-          "ordinal": 2,
-          "type_info": "TstzRange"
-        },
-        {
-          "name": "trip_assembler_id",
-          "ordinal": 3,
-          "type_info": "Int4"
-        }
-      ],
-      "nullable": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "parameters": {
-        "Left": [
-          "Int8",
-          "Int4",
-          "Timestamptz"
-        ]
-      }
-    },
-    "query": "\nSELECT\n    trip_id,\n    period,\n    landing_coverage,\n    trip_assembler_id\nFROM\n    trips\nWHERE\n    fiskeridir_vessel_id = $1\n    AND trip_assembler_id = $2\n    AND (\n        UPPER(period) <= $3\n        OR period @> $3\n    )\nORDER BY\n    period DESC\nLIMIT\n    1\n            "
-  },
   "d77eb2b073f3d5ea63fdc015a532fc10c2c846ef86a5f9c4dcb36db4c69e2e67": {
     "describe": {
       "columns": [],
@@ -1983,6 +2001,32 @@
       }
     },
     "query": "\nINSERT INTO\n    species_main_groups (species_main_group_id, \"name\")\nSELECT\n    *\nFROM\n    UNNEST($1::INT[], $2::VARCHAR[])\nON CONFLICT (species_main_group_id) DO NOTHING\n            "
+  },
+  "d9698d771fce7bc7b990693d027ccf7a15eae88a641e4ef57df181ecd4b07f1e": {
+    "describe": {
+      "columns": [
+        {
+          "name": "vessel_identification_id",
+          "ordinal": 0,
+          "type_info": "Int8"
+        },
+        {
+          "name": "timestamp",
+          "ordinal": 1,
+          "type_info": "Timestamptz"
+        }
+      ],
+      "nullable": [
+        false,
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Int4"
+        ]
+      }
+    },
+    "query": "\nSELECT\n    vessel_identification_id,\n    timer AS \"timestamp\"\nFROM\n    trip_calculation_timers\nWHERE\n    trip_assembler_id = $1\n            "
   },
   "dcd255dc94a1f21697504bc18af844a01e9c4fe801be89543e9e7cbc97df1884": {
     "describe": {
@@ -2017,7 +2061,80 @@
     },
     "query": "\nINSERT INTO\n    ais_vessels (mmsi)\nVALUES\n    ($1)\nON CONFLICT (mmsi) DO NOTHING\n            "
   },
-  "dfead96faf34eba214488569b578e07f3a008a2821d792e081c77dfcd6846fd1": {
+  "e0bf5755168f5b7a1ef3502e770f7f3d381ee98c0d8c7ffed858a4c0b5b0c173": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Int4Array",
+          "VarcharArray"
+        ]
+      }
+    },
+    "query": "\nINSERT INTO\n    species_groups (species_group_id, \"name\")\nSELECT\n    *\nFROM\n    UNNEST($1::INT[], $2::VARCHAR[])\nON CONFLICT (species_group_id) DO NOTHING\n            "
+  },
+  "e39e5d2059af0ec414056c6f4d74579b0ecf413b1c793145bb0dcedb2ef1648e": {
+    "describe": {
+      "columns": [
+        {
+          "name": "old_value",
+          "ordinal": 0,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "new_value",
+          "ordinal": 1,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "column",
+          "ordinal": 2,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "created",
+          "ordinal": 3,
+          "type_info": "Timestamptz"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false
+      ],
+      "parameters": {
+        "Left": []
+      }
+    },
+    "query": "\nSELECT\n    old_value,\n    new_value,\n    \"column\",\n    created\nFROM\n    vessel_identification_conflicts\n            "
+  },
+  "e779e9953f3857967807104310164c3b65a65642a287d6849ceb23e858d10f8b": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Int4"
+        },
+        {
+          "name": "name?",
+          "ordinal": 1,
+          "type_info": "Varchar"
+        }
+      ],
+      "nullable": [
+        false,
+        true
+      ],
+      "parameters": {
+        "Left": []
+      }
+    },
+    "query": "\nSELECT\n    species_fiskeridir_id AS id,\n    \"name\" AS \"name?\"\nFROM\n    species_fiskeridir\n            "
+  },
+  "ee3e168267d4aba638b2471b687661653d796c8ad1007b41a5350194b84003c9": {
     "describe": {
       "columns": [
         {
@@ -2053,236 +2170,205 @@
         ]
       }
     },
-    "query": "\nSELECT\n    trip_id,\n    period,\n    landing_coverage,\n    trip_assembler_id\nFROM\n    trips\nWHERE\n    fiskeridir_vessel_id = $1\n            "
+    "query": "\nSELECT\n    trip_id,\n    period,\n    landing_coverage,\n    trip_assembler_id\nFROM\n    trips\nWHERE\n    vessel_identification_id = $1\n            "
   },
-  "e0bf5755168f5b7a1ef3502e770f7f3d381ee98c0d8c7ffed858a4c0b5b0c173": {
-    "describe": {
-      "columns": [],
-      "nullable": [],
-      "parameters": {
-        "Left": [
-          "Int4Array",
-          "VarcharArray"
-        ]
-      }
-    },
-    "query": "\nINSERT INTO\n    species_groups (species_group_id, \"name\")\nSELECT\n    *\nFROM\n    UNNEST($1::INT[], $2::VARCHAR[])\nON CONFLICT (species_group_id) DO NOTHING\n            "
-  },
-  "e779e9953f3857967807104310164c3b65a65642a287d6849ceb23e858d10f8b": {
+  "f547491cde5ce474cd8a28060e6404ba3e5e8c2aa0cf97d17fa213871b8c67f3": {
     "describe": {
       "columns": [
         {
-          "name": "id",
+          "name": "vessel_identification_id",
           "ordinal": 0,
+          "type_info": "Int8"
+        },
+        {
+          "name": "fiskeridir_vessel_id",
+          "ordinal": 1,
+          "type_info": "Int8"
+        },
+        {
+          "name": "fiskeridir_vessel_type_id",
+          "ordinal": 2,
           "type_info": "Int4"
         },
         {
-          "name": "name?",
-          "ordinal": 1,
+          "name": "fiskeridir_length_group_id",
+          "ordinal": 3,
+          "type_info": "Int4"
+        },
+        {
+          "name": "fiskeridir_nation_group_id",
+          "ordinal": 4,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "fiskeridir_norwegian_municipality_id",
+          "ordinal": 5,
+          "type_info": "Int4"
+        },
+        {
+          "name": "fiskeridir_norwegian_county_id",
+          "ordinal": 6,
+          "type_info": "Int4"
+        },
+        {
+          "name": "fiskeridir_nation_id",
+          "ordinal": 7,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "fiskeridir_gross_tonnage_1969",
+          "ordinal": 8,
+          "type_info": "Int4"
+        },
+        {
+          "name": "fiskeridir_gross_tonnage_other",
+          "ordinal": 9,
+          "type_info": "Int4"
+        },
+        {
+          "name": "fiskeridir_call_sign",
+          "ordinal": 10,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "fiskeridir_name",
+          "ordinal": 11,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "fiskeridir_registration_id",
+          "ordinal": 12,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "fiskeridir_length",
+          "ordinal": 13,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "fiskeridir_width",
+          "ordinal": 14,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "fiskeridir_owner",
+          "ordinal": 15,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "fiskeridir_engine_building_year",
+          "ordinal": 16,
+          "type_info": "Int4"
+        },
+        {
+          "name": "fiskeridir_engine_power",
+          "ordinal": 17,
+          "type_info": "Int4"
+        },
+        {
+          "name": "fiskeridir_building_year",
+          "ordinal": 18,
+          "type_info": "Int4"
+        },
+        {
+          "name": "fiskeridir_rebuilding_year",
+          "ordinal": 19,
+          "type_info": "Int4"
+        },
+        {
+          "name": "ers_call_sign",
+          "ordinal": 20,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "ers_name",
+          "ordinal": 21,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "ers_registration_id",
+          "ordinal": 22,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "ais_mmsi",
+          "ordinal": 23,
+          "type_info": "Int4"
+        },
+        {
+          "name": "ais_imo_number",
+          "ordinal": 24,
+          "type_info": "Int4"
+        },
+        {
+          "name": "ais_call_sign",
+          "ordinal": 25,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "ais_name",
+          "ordinal": 26,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "ais_ship_length",
+          "ordinal": 27,
+          "type_info": "Int4"
+        },
+        {
+          "name": "ais_ship_width",
+          "ordinal": 28,
+          "type_info": "Int4"
+        },
+        {
+          "name": "ais_eta",
+          "ordinal": 29,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "ais_destination",
+          "ordinal": 30,
           "type_info": "Varchar"
         }
       ],
       "nullable": [
         false,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
         true
       ],
       "parameters": {
         "Left": []
       }
     },
-    "query": "\nSELECT\n    species_fiskeridir_id AS id,\n    \"name\" AS \"name?\"\nFROM\n    species_fiskeridir\n            "
-  },
-  "f2383be27f1915e5db07fc183569651ad0e7a1361785e705632133827adccc42": {
-    "describe": {
-      "columns": [
-        {
-          "name": "fiskeridir_vessel_id!",
-          "ordinal": 0,
-          "type_info": "Int8"
-        },
-        {
-          "name": "fiskeridir_vessel_type_id",
-          "ordinal": 1,
-          "type_info": "Int4"
-        },
-        {
-          "name": "fiskeridir_length_group_id",
-          "ordinal": 2,
-          "type_info": "Int4"
-        },
-        {
-          "name": "fiskeridir_nation_group_id",
-          "ordinal": 3,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "fiskeridir_norwegian_municipality_id",
-          "ordinal": 4,
-          "type_info": "Int4"
-        },
-        {
-          "name": "fiskeridir_norwegian_county_id",
-          "ordinal": 5,
-          "type_info": "Int4"
-        },
-        {
-          "name": "fiskeridir_nation_id!",
-          "ordinal": 6,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "fiskeridir_gross_tonnage_1969",
-          "ordinal": 7,
-          "type_info": "Int4"
-        },
-        {
-          "name": "fiskeridir_gross_tonnage_other",
-          "ordinal": 8,
-          "type_info": "Int4"
-        },
-        {
-          "name": "fiskeridir_call_sign",
-          "ordinal": 9,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "fiskeridir_name",
-          "ordinal": 10,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "fiskeridir_registration_id",
-          "ordinal": 11,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "fiskeridir_length",
-          "ordinal": 12,
-          "type_info": "Numeric"
-        },
-        {
-          "name": "fiskeridir_width",
-          "ordinal": 13,
-          "type_info": "Numeric"
-        },
-        {
-          "name": "fiskeridir_owner",
-          "ordinal": 14,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "fiskeridir_engine_building_year",
-          "ordinal": 15,
-          "type_info": "Int4"
-        },
-        {
-          "name": "fiskeridir_engine_power",
-          "ordinal": 16,
-          "type_info": "Int4"
-        },
-        {
-          "name": "fiskeridir_building_year",
-          "ordinal": 17,
-          "type_info": "Int4"
-        },
-        {
-          "name": "fiskeridir_rebuilding_year",
-          "ordinal": 18,
-          "type_info": "Int4"
-        },
-        {
-          "name": "ais_mmsi?",
-          "ordinal": 19,
-          "type_info": "Int4"
-        },
-        {
-          "name": "ais_imo_number",
-          "ordinal": 20,
-          "type_info": "Int4"
-        },
-        {
-          "name": "ais_call_sign",
-          "ordinal": 21,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "ais_name",
-          "ordinal": 22,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "ais_ship_length",
-          "ordinal": 23,
-          "type_info": "Int4"
-        },
-        {
-          "name": "ais_ship_width",
-          "ordinal": 24,
-          "type_info": "Int4"
-        },
-        {
-          "name": "ais_eta",
-          "ordinal": 25,
-          "type_info": "Timestamptz"
-        },
-        {
-          "name": "ais_destination",
-          "ordinal": 26,
-          "type_info": "Varchar"
-        }
-      ],
-      "nullable": [
-        false,
-        true,
-        true,
-        true,
-        true,
-        true,
-        false,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        false,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true
-      ],
-      "parameters": {
-        "Left": [
-          "Int8"
-        ]
-      }
-    },
-    "query": "\nSELECT\n    f.fiskeridir_vessel_id AS \"fiskeridir_vessel_id!\",\n    f.fiskeridir_vessel_type_id,\n    f.fiskeridir_length_group_id,\n    f.fiskeridir_nation_group_id,\n    f.norwegian_municipality_id AS fiskeridir_norwegian_municipality_id,\n    f.norwegian_county_id AS fiskeridir_norwegian_county_id,\n    f.nation_id AS \"fiskeridir_nation_id!\",\n    f.gross_tonnage_1969 AS fiskeridir_gross_tonnage_1969,\n    f.gross_tonnage_other AS fiskeridir_gross_tonnage_other,\n    f.call_sign AS fiskeridir_call_sign,\n    f.\"name\" AS fiskeridir_name,\n    f.registration_id AS fiskeridir_registration_id,\n    f.\"length\" AS fiskeridir_length,\n    f.\"width\" AS fiskeridir_width,\n    f.\"owner\" AS fiskeridir_owner,\n    f.engine_building_year AS fiskeridir_engine_building_year,\n    f.engine_power AS fiskeridir_engine_power,\n    f.building_year AS fiskeridir_building_year,\n    f.rebuilding_year AS fiskeridir_rebuilding_year,\n    a.mmsi AS \"ais_mmsi?\",\n    a.imo_number AS ais_imo_number,\n    a.call_sign AS ais_call_sign,\n    a.name AS ais_name,\n    a.ship_length AS ais_ship_length,\n    a.ship_width AS ais_ship_width,\n    a.eta AS ais_eta,\n    a.destination AS ais_destination\nFROM\n    fiskeridir_vessels AS f\n    LEFT JOIN ais_vessels AS a ON f.call_sign = a.call_sign\nWHERE\n    f.fiskeridir_vessel_id = $1\n            "
-  },
-  "f83c24e69093ba8fcc3f97951fbefaad78315e94ea14d79c973672053d4095e3": {
-    "describe": {
-      "columns": [],
-      "nullable": [],
-      "parameters": {
-        "Left": [
-          "TstzRangeArray",
-          "VarcharArray",
-          "VarcharArray",
-          "Int4Array",
-          "Int8Array"
-        ]
-      }
-    },
-    "query": "\nINSERT INTO\n    trips (\n        period,\n        start_port_id,\n        end_port_id,\n        trip_assembler_id,\n        fiskeridir_vessel_id\n    )\nSELECT\n    *\nFROM\n    UNNEST(\n        $1::tstzrange[],\n        $2::VARCHAR[],\n        $3::VARCHAR[],\n        $4::INT[],\n        $5::BIGINT[]\n    )\n            "
+    "query": "\nSELECT\n    v.vessel_identification_id,\n    f.fiskeridir_vessel_id AS fiskeridir_vessel_id,\n    f.fiskeridir_vessel_type_id,\n    f.fiskeridir_length_group_id,\n    f.fiskeridir_nation_group_id,\n    f.norwegian_municipality_id AS fiskeridir_norwegian_municipality_id,\n    f.norwegian_county_id AS fiskeridir_norwegian_county_id,\n    f.nation_id AS fiskeridir_nation_id,\n    f.gross_tonnage_1969 AS fiskeridir_gross_tonnage_1969,\n    f.gross_tonnage_other AS fiskeridir_gross_tonnage_other,\n    f.call_sign AS fiskeridir_call_sign,\n    f.\"name\" AS fiskeridir_name,\n    f.registration_id AS fiskeridir_registration_id,\n    f.\"length\" AS fiskeridir_length,\n    f.\"width\" AS fiskeridir_width,\n    f.\"owner\" AS fiskeridir_owner,\n    f.engine_building_year AS fiskeridir_engine_building_year,\n    f.engine_power AS fiskeridir_engine_power,\n    f.building_year AS fiskeridir_building_year,\n    f.rebuilding_year AS fiskeridir_rebuilding_year,\n    e.call_sign AS ers_call_sign,\n    e.\"name\" AS ers_name,\n    e.registration_id AS ers_registration_id,\n    a.mmsi AS ais_mmsi,\n    a.imo_number AS ais_imo_number,\n    a.call_sign AS ais_call_sign,\n    a.name AS ais_name,\n    a.ship_length AS ais_ship_length,\n    a.ship_width AS ais_ship_width,\n    a.eta AS ais_eta,\n    a.destination AS ais_destination\nFROM\n    vessel_identifications v\n    LEFT JOIN fiskeridir_vessels AS f ON v.vessel_id = f.fiskeridir_vessel_id\n    LEFT JOIN ers_vessels AS e ON v.call_sign = e.call_sign\n    LEFT JOIN ais_vessels AS a ON v.mmsi = a.mmsi\n            "
   },
   "f8f21e04458ff3eee0244010414a1d6324de7d76f0488675064305e267c28fb4": {
     "describe": {
@@ -2296,6 +2382,32 @@
       }
     },
     "query": "\nINSERT INTO\n    species_fao (species_fao_id, \"name\")\nSELECT\n    *\nFROM\n    UNNEST($1::VARCHAR[], $2::VARCHAR[])\nON CONFLICT (species_fao_id) DO\nUPDATE\nSET\n    \"name\" = CASE\n        WHEN species_fao.name IS NULL THEN excluded.name\n    END\n            "
+  },
+  "f9fc3739ba8ad2d4a46fdd7124916437af28b0e92ec0052c4750602cf279368d": {
+    "describe": {
+      "columns": [
+        {
+          "name": "vessel_identification_id",
+          "ordinal": 0,
+          "type_info": "Int8"
+        },
+        {
+          "name": "timestamp",
+          "ordinal": 1,
+          "type_info": "Timestamptz"
+        }
+      ],
+      "nullable": [
+        false,
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Int4"
+        ]
+      }
+    },
+    "query": "\nSELECT\n    vessel_identification_id,\n    \"conflict\" AS \"timestamp\"\nFROM\n    trip_assembler_conflicts\nWHERE\n    trip_assembler_id = $1\n            "
   },
   "fb3aaf3ee1627012e7f1fe0386ae6c75e1320fb35f11df3de3bba049a269b1e6": {
     "describe": {

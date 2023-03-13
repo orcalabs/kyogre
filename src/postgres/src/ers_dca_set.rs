@@ -1,6 +1,6 @@
 use crate::{error::PostgresError, models::*};
 use error_stack::{report, Result, ResultExt};
-use std::collections::{hash_map::Entry, HashMap};
+use std::collections::{hash_map::Entry, HashMap, HashSet};
 
 #[derive(Default, Debug, Clone)]
 pub struct ErsDcaSet {
@@ -12,7 +12,9 @@ pub struct ErsDcaSet {
     gear_fao: HashMap<String, NewGearFao>,
     gear_fiskeridir: HashMap<i32, NewGearFiskeridir>,
     gear_problems: HashMap<i32, NewGearProblem>,
-    vessels: HashMap<i64, fiskeridir_rs::Vessel>,
+    fiskeridir_vessels: HashMap<i64, fiskeridir_rs::Vessel>,
+    ers_vessels: HashMap<String, ErsVessel>,
+    vessel_identifications: HashSet<NewVesselIdentification>,
     ports: HashMap<String, NewPort>,
     main_species_fao: HashMap<String, MainSpeciesFao>,
     species_fao: HashMap<String, SpeciesFao>,
@@ -34,7 +36,9 @@ pub struct PreparedErsDcaSet {
     pub gear_fao: Vec<NewGearFao>,
     pub gear_fiskeridir: Vec<NewGearFiskeridir>,
     pub gear_problems: Vec<NewGearProblem>,
-    pub vessels: Vec<fiskeridir_rs::Vessel>,
+    pub fiskeridir_vessels: Vec<fiskeridir_rs::Vessel>,
+    pub ers_vessels: Vec<ErsVessel>,
+    pub vessel_identifications: Vec<NewVesselIdentification>,
     pub ports: Vec<NewPort>,
     pub main_species_fao: Vec<MainSpeciesFao>,
     pub species_fao: Vec<SpeciesFao>,
@@ -60,7 +64,9 @@ impl ErsDcaSet {
         let municipalities = self.municipalities.into_values().collect();
         let economic_zones = self.economic_zones.into_values().collect();
         let counties = self.counties.into_values().collect();
-        let vessels = self.vessels.into_values().collect();
+        let fiskeridir_vessels = self.fiskeridir_vessels.into_values().collect();
+        let ers_vessels = self.ers_vessels.into_values().collect();
+        let vessel_identifications = self.vessel_identifications.into_iter().collect();
         let ports = self.ports.into_values().collect();
         let main_species_fao = self.main_species_fao.into_values().collect();
         let species_fao = self.species_fao.into_values().collect();
@@ -77,7 +83,9 @@ impl ErsDcaSet {
             gear_fao,
             gear_fiskeridir,
             gear_problems,
-            vessels,
+            fiskeridir_vessels,
+            ers_vessels,
+            vessel_identifications,
             ports,
             main_species_fao,
             species_fao,
@@ -105,7 +113,9 @@ impl ErsDcaSet {
             set.add_gear_fao(&e);
             set.add_gear_fiskeridir(&e)?;
             set.add_gear_problem(&e);
-            set.add_vessel(&e)?;
+            set.add_fiskeridir_vessel(&e)?;
+            set.add_ers_vessel(&e);
+            set.add_vessel_identification(&e);
             set.add_port(&e)?;
             set.add_municipality(&e);
             set.add_economic_zone(&e);
@@ -220,9 +230,12 @@ impl ErsDcaSet {
         }
     }
 
-    fn add_vessel(&mut self, ers_dca: &fiskeridir_rs::ErsDca) -> Result<(), PostgresError> {
+    fn add_fiskeridir_vessel(
+        &mut self,
+        ers_dca: &fiskeridir_rs::ErsDca,
+    ) -> Result<(), PostgresError> {
         if let Some(vessel_id) = ers_dca.vessel_info.vessel_id {
-            if let Entry::Vacant(e) = self.vessels.entry(vessel_id as i64) {
+            if let Entry::Vacant(e) = self.fiskeridir_vessels.entry(vessel_id as i64) {
                 let vessel = ers_dca
                     .vessel_info
                     .clone()
@@ -232,6 +245,21 @@ impl ErsDcaSet {
             }
         }
         Ok(())
+    }
+
+    fn add_ers_vessel(&mut self, ers_dca: &fiskeridir_rs::ErsDca) {
+        if !self
+            .ers_vessels
+            .contains_key(ers_dca.vessel_info.call_sign_ers.as_ref())
+        {
+            let vessel: ErsVessel = (&ers_dca.vessel_info).into();
+            self.ers_vessels.insert(vessel.call_sign.clone(), vessel);
+        }
+    }
+
+    fn add_vessel_identification(&mut self, ers_dca: &fiskeridir_rs::ErsDca) {
+        self.vessel_identifications
+            .insert((&ers_dca.vessel_info).into());
     }
 
     fn add_port(&mut self, ers_dca: &fiskeridir_rs::ErsDca) -> Result<(), PostgresError> {

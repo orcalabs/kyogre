@@ -1,7 +1,12 @@
 use super::opt_float_to_decimal;
-use crate::{error::PostgresError, models::FiskeridirAisVesselCombination, PostgresAdapter};
+use crate::{
+    error::PostgresError,
+    models::{ErsVessel, FiskeridirAisErsVesselCombination, NewVesselIdentification},
+    PostgresAdapter,
+};
 use error_stack::{report, IntoReport, Result, ResultExt};
 use futures::{Stream, TryStreamExt};
+use kyogre_core::FiskeridirVesselId;
 
 impl PostgresAdapter {
     pub(crate) async fn add_fiskeridir_vessels<'a>(
@@ -123,20 +128,103 @@ ON CONFLICT (fiskeridir_vessel_id) DO NOTHING
         .map(|_| ())
     }
 
-    pub(crate) fn fiskeridir_ais_vessel_combinations(
+    pub(crate) async fn add_ers_vessels<'a>(
+        &'a self,
+        vessels: Vec<ErsVessel>,
+        tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
+    ) -> Result<(), PostgresError> {
+        let len = vessels.len();
+        let mut call_signs = Vec::with_capacity(len);
+        let mut names = Vec::with_capacity(len);
+        let mut registration_ids = Vec::with_capacity(len);
+
+        for v in vessels {
+            call_signs.push(v.call_sign);
+            registration_ids.push(v.registration_id);
+            names.push(v.name);
+        }
+
+        sqlx::query!(
+            r#"
+INSERT INTO
+    ers_vessels (call_sign, "name", registration_id)
+SELECT
+    *
+FROM
+    UNNEST($1::VARCHAR[], $2::VARCHAR[], $3::VARCHAR[])
+ON CONFLICT (call_sign) DO
+UPDATE
+SET
+    "name" = COALESCE(ers_vessels.name, EXCLUDED.name),
+    registration_id = COALESCE(
+        ers_vessels.registration_id,
+        EXCLUDED.registration_id
+    )
+            "#,
+            call_signs.as_slice(),
+            names.as_slice() as _,
+            registration_ids.as_slice() as _,
+        )
+        .execute(&mut *tx)
+        .await
+        .into_report()
+        .change_context(PostgresError::Query)
+        .map(|_| ())
+    }
+
+    pub(crate) async fn add_vessel_identifications<'a>(
+        &'a self,
+        vessel_identifications: Vec<NewVesselIdentification>,
+        tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
+    ) -> Result<(), PostgresError> {
+        let len = vessel_identifications.len();
+        let mut vessel_ids = Vec::with_capacity(len);
+        let mut call_signs = Vec::with_capacity(len);
+        let mut mmsis = Vec::with_capacity(len);
+
+        for v in vessel_identifications {
+            if v.vessel_id.is_some() || v.call_sign.is_some() || v.mmsi.is_some() {
+                vessel_ids.push(v.vessel_id);
+                call_signs.push(v.call_sign);
+                mmsis.push(v.mmsi);
+            }
+        }
+
+        sqlx::query!(
+            r#"
+INSERT INTO
+    vessel_identifications (vessel_id, call_sign, mmsi)
+SELECT
+    *
+FROM
+    UNNEST($1::BIGINT[], $2::VARCHAR[], $3::INT[])
+            "#,
+            vessel_ids as _,
+            call_signs as _,
+            mmsis as _,
+        )
+        .execute(&mut *tx)
+        .await
+        .into_report()
+        .change_context(PostgresError::Query)
+        .map(|_| ())
+    }
+
+    pub(crate) fn fiskeridir_ais_ers_vessel_combinations(
         &self,
-    ) -> impl Stream<Item = Result<FiskeridirAisVesselCombination, PostgresError>> + '_ {
+    ) -> impl Stream<Item = Result<FiskeridirAisErsVesselCombination, PostgresError>> + '_ {
         sqlx::query_as!(
-            FiskeridirAisVesselCombination,
+            FiskeridirAisErsVesselCombination,
             r#"
 SELECT
-    f.fiskeridir_vessel_id AS "fiskeridir_vessel_id!",
+    v.vessel_identification_id,
+    f.fiskeridir_vessel_id AS fiskeridir_vessel_id,
     f.fiskeridir_vessel_type_id,
     f.fiskeridir_length_group_id,
     f.fiskeridir_nation_group_id,
     f.norwegian_municipality_id AS fiskeridir_norwegian_municipality_id,
     f.norwegian_county_id AS fiskeridir_norwegian_county_id,
-    f.nation_id AS "fiskeridir_nation_id!",
+    f.nation_id AS fiskeridir_nation_id,
     f.gross_tonnage_1969 AS fiskeridir_gross_tonnage_1969,
     f.gross_tonnage_other AS fiskeridir_gross_tonnage_other,
     f.call_sign AS fiskeridir_call_sign,
@@ -149,7 +237,10 @@ SELECT
     f.engine_power AS fiskeridir_engine_power,
     f.building_year AS fiskeridir_building_year,
     f.rebuilding_year AS fiskeridir_rebuilding_year,
-    a.mmsi AS "ais_mmsi?",
+    e.call_sign AS ers_call_sign,
+    e."name" AS ers_name,
+    e.registration_id AS ers_registration_id,
+    a.mmsi AS ais_mmsi,
     a.imo_number AS ais_imo_number,
     a.call_sign AS ais_call_sign,
     a.name AS ais_name,
@@ -158,29 +249,32 @@ SELECT
     a.eta AS ais_eta,
     a.destination AS ais_destination
 FROM
-    fiskeridir_vessels AS f
-    LEFT JOIN ais_vessels AS a ON f.call_sign = a.call_sign
+    vessel_identifications v
+    LEFT JOIN fiskeridir_vessels AS f ON v.vessel_id = f.fiskeridir_vessel_id
+    LEFT JOIN ers_vessels AS e ON v.call_sign = e.call_sign
+    LEFT JOIN ais_vessels AS a ON v.mmsi = a.mmsi
             "#
         )
         .fetch(&self.pool)
         .map_err(|e| report!(e).change_context(PostgresError::Query))
     }
 
-    pub(crate) async fn single_fiskeridir_ais_vessel_combination(
+    pub(crate) async fn single_fiskeridir_ais_ers_vessel_combination(
         &self,
-        fiskeridir_vessel_id: i64,
-    ) -> Result<Option<FiskeridirAisVesselCombination>, PostgresError> {
+        vessel_id: FiskeridirVesselId,
+    ) -> Result<Option<FiskeridirAisErsVesselCombination>, PostgresError> {
         sqlx::query_as!(
-            FiskeridirAisVesselCombination,
+            FiskeridirAisErsVesselCombination,
             r#"
 SELECT
-    f.fiskeridir_vessel_id AS "fiskeridir_vessel_id!",
+    v.vessel_identification_id,
+    f.fiskeridir_vessel_id AS "fiskeridir_vessel_id?",
     f.fiskeridir_vessel_type_id,
     f.fiskeridir_length_group_id,
     f.fiskeridir_nation_group_id,
     f.norwegian_municipality_id AS fiskeridir_norwegian_municipality_id,
     f.norwegian_county_id AS fiskeridir_norwegian_county_id,
-    f.nation_id AS "fiskeridir_nation_id!",
+    f.nation_id AS "fiskeridir_nation_id?",
     f.gross_tonnage_1969 AS fiskeridir_gross_tonnage_1969,
     f.gross_tonnage_other AS fiskeridir_gross_tonnage_other,
     f.call_sign AS fiskeridir_call_sign,
@@ -193,6 +287,9 @@ SELECT
     f.engine_power AS fiskeridir_engine_power,
     f.building_year AS fiskeridir_building_year,
     f.rebuilding_year AS fiskeridir_rebuilding_year,
+    e.call_sign AS "ers_call_sign?",
+    e."name" AS ers_name,
+    e.registration_id AS ers_registration_id,
     a.mmsi AS "ais_mmsi?",
     a.imo_number AS ais_imo_number,
     a.call_sign AS ais_call_sign,
@@ -202,12 +299,14 @@ SELECT
     a.eta AS ais_eta,
     a.destination AS ais_destination
 FROM
-    fiskeridir_vessels AS f
-    LEFT JOIN ais_vessels AS a ON f.call_sign = a.call_sign
+    vessel_identifications v
+    LEFT JOIN fiskeridir_vessels AS f ON v.vessel_id = f.fiskeridir_vessel_id
+    LEFT JOIN ers_vessels AS e ON v.call_sign = e.call_sign
+    LEFT JOIN ais_vessels AS a ON v.mmsi = a.mmsi
 WHERE
     f.fiskeridir_vessel_id = $1
             "#,
-            fiskeridir_vessel_id
+            vessel_id.0
         )
         .fetch_optional(&self.pool)
         .await

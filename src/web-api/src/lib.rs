@@ -52,6 +52,7 @@ impl Database for PostgresAdapter {}
             v1::gear::GearMainGroup,
             v1::vessel::Vessel,
             v1::vessel::AisVessel,
+            v1::vessel::ErsVessel,
             v1::vessel::FiskeridirVessel,
             v1::haul::Haul,
             v1::haul::HaulCatch,

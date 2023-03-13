@@ -260,7 +260,7 @@ impl WebApiPort for PostgresAdapter {
     }
 
     fn vessels(&self) -> Pin<Box<dyn Stream<Item = Result<Vessel, QueryError>> + Send + '_>> {
-        convert_stream(self.fiskeridir_ais_vessel_combinations()).boxed()
+        convert_stream(self.fiskeridir_ais_ers_vessel_combinations()).boxed()
     }
 
     fn hauls(&self, query: HaulsQuery) -> Result<PinBoxStream<'_, Haul, QueryError>, QueryError> {
@@ -349,7 +349,7 @@ impl ScraperFileHashInboundPort for PostgresAdapter {
 #[async_trait]
 impl TripAssemblerOutboundPort for PostgresAdapter {
     async fn vessels(&self) -> Result<Vec<Vessel>, QueryError> {
-        let mut stream = convert_stream(self.fiskeridir_ais_vessel_combinations());
+        let mut stream = convert_stream(self.fiskeridir_ais_ers_vessel_combinations());
 
         let mut vessels = vec![];
 
@@ -377,7 +377,7 @@ impl TripAssemblerOutboundPort for PostgresAdapter {
     }
     async fn landing_dates(
         &self,
-        vessel_id: i64,
+        vessel_id: VesselIdentificationId,
         start: &DateTime<Utc>,
     ) -> Result<Vec<DateTime<Utc>>, QueryError> {
         self.landing_dates_impl(vessel_id, start)
@@ -386,42 +386,50 @@ impl TripAssemblerOutboundPort for PostgresAdapter {
     }
     async fn most_recent_trip(
         &self,
-        fiskeridir_vessel_id: i64,
+        vessel_id: VesselIdentificationId,
         trip_assembler_id: TripAssemblerId,
     ) -> Result<Option<Trip>, QueryError> {
         convert_optional(
-            self.most_recent_trip_impl(fiskeridir_vessel_id, trip_assembler_id)
+            self.most_recent_trip_impl(vessel_id, trip_assembler_id)
                 .await
                 .change_context(QueryError)?,
         )
     }
     async fn ers_arrivals(
         &self,
-        fiskeridir_vessel_id: i64,
+        vessel_id: VesselIdentificationId,
         start: &DateTime<Utc>,
         filter: ArrivalFilter,
     ) -> Result<Vec<Arrival>, QueryError> {
-        self.ers_arrivals_impl(fiskeridir_vessel_id, start, filter)
+        Ok(self
+            .ers_arrivals_impl(vessel_id, start, filter)
             .await
-            .change_context(QueryError)
+            .change_context(QueryError)?
+            .into_iter()
+            .map(Arrival::from)
+            .collect())
     }
     async fn ers_departures(
         &self,
-        fiskeridir_vessel_id: i64,
+        vessel_id: VesselIdentificationId,
         start: &DateTime<Utc>,
     ) -> Result<Vec<Departure>, QueryError> {
-        self.ers_departures_impl(fiskeridir_vessel_id, start)
+        Ok(self
+            .ers_departures_impl(vessel_id, start)
             .await
-            .change_context(QueryError)
+            .change_context(QueryError)?
+            .into_iter()
+            .map(Departure::from)
+            .collect())
     }
     async fn trip_at_or_prior_to(
         &self,
-        fiskeridir_vessel_id: i64,
+        vessel_id: VesselIdentificationId,
         trip_assembler_id: TripAssemblerId,
         time: &DateTime<Utc>,
     ) -> Result<Option<Trip>, QueryError> {
         convert_optional(
-            self.trip_at_or_prior_to_impl(fiskeridir_vessel_id, trip_assembler_id, time)
+            self.trip_at_or_prior_to_impl(vessel_id, trip_assembler_id, time)
                 .await
                 .change_context(QueryError)?,
         )
@@ -432,14 +440,14 @@ impl TripAssemblerOutboundPort for PostgresAdapter {
 impl TripAssemblerInboundPort for PostgresAdapter {
     async fn add_trips(
         &self,
-        fiskeridir_vessel_id: i64,
+        vessel_id: VesselIdentificationId,
         new_trip_calculation_time: DateTime<Utc>,
         conflict_strategy: TripsConflictStrategy,
         trips: Vec<NewTrip>,
         trip_assembler_id: TripAssemblerId,
     ) -> Result<(), InsertError> {
         self.add_trips_impl(
-            fiskeridir_vessel_id,
+            vessel_id,
             new_trip_calculation_time,
             conflict_strategy,
             trips,
@@ -460,14 +468,14 @@ impl TripPrecisionOutboundPort for PostgresAdapter {
     }
     async fn ais_positions(
         &self,
-        _vessel_id: i64,
+        _mmsi: i32,
         _range: &DateRange,
     ) -> Result<Vec<AisPosition>, QueryError> {
         unimplemented!();
     }
     async fn trip_prior_to(
         &self,
-        _vessel_id: i64,
+        _vessel_id: VesselIdentificationId,
         _assembler_id: TripAssemblerId,
         _time: &DateTime<Utc>,
     ) -> Result<Option<Trip>, QueryError> {
@@ -482,7 +490,7 @@ impl TripPrecisionOutboundPort for PostgresAdapter {
 
     async fn trips_without_precision(
         &self,
-        _vessel_id: i64,
+        _vessel_id: VesselIdentificationId,
         _assembler_id: TripAssemblerId,
     ) -> Result<Vec<Trip>, QueryError> {
         unimplemented!();

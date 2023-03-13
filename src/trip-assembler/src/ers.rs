@@ -144,18 +144,14 @@ impl TripAssembler for ErsTripAssembler {
         let mut stop_points: Vec<StopPoint> = Vec::new();
 
         let arrivals = adapter
-            .ers_arrivals(
-                vessel.fiskeridir.id,
-                start,
-                ArrivalFilter::WithLandingFacility,
-            )
+            .ers_arrivals(vessel.id, start, ArrivalFilter::WithLandingFacility)
             .await
             .change_context(TripAssemblerError)?
             .into_iter()
             .map(StopPoint::Arrival)
             .collect::<Vec<StopPoint>>();
         let departures = adapter
-            .ers_departures(vessel.fiskeridir.id, start)
+            .ers_departures(vessel.id, start)
             .await
             .change_context(TripAssemblerError)?
             .into_iter()

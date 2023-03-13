@@ -1,18 +1,18 @@
 use crate::helper::test;
 use chrono::{DateTime, Duration, Utc};
 use kyogre_core::{
-    DateRange, NewTrip, ScraperInboundPort, Trip, TripAssemblerId, TripAssemblerInboundPort,
-    TripAssemblerOutboundPort, TripsConflictStrategy,
+    DateRange, FiskeridirVesselId, NewTrip, ScraperInboundPort, Trip, TripAssemblerId,
+    TripAssemblerInboundPort, TripAssemblerOutboundPort, TripsConflictStrategy,
 };
 use trip_assembler::{LandingTripAssembler, State, TripAssembler};
 
 #[tokio::test]
 async fn test_produces_new_trips_without_replacing_existing_ones() {
     test(|helper| async move {
-        let fiskeridir_vessel_id = 1;
+        let fiskeridir_vessel_id = FiskeridirVesselId(11);
         let landings_assembler = LandingTripAssembler::default();
 
-        let landing = fiskeridir_rs::Landing::test_default(1, Some(fiskeridir_vessel_id));
+        let landing = fiskeridir_rs::Landing::test_default(1, Some(fiskeridir_vessel_id.0));
         helper.add_landings(vec![landing.clone()]).await.unwrap();
 
         let vessel = helper.db.vessel(fiskeridir_vessel_id).await;
@@ -24,7 +24,7 @@ async fn test_produces_new_trips_without_replacing_existing_ones() {
 
         helper
             .add_trips(
-                vessel.fiskeridir.id,
+                vessel.id,
                 assembled.new_trip_calculation_time,
                 assembled.conflict_strategy,
                 assembled.trips,
@@ -33,7 +33,7 @@ async fn test_produces_new_trips_without_replacing_existing_ones() {
             .await
             .unwrap();
 
-        let mut landing2 = fiskeridir_rs::Landing::test_default(2, Some(fiskeridir_vessel_id));
+        let mut landing2 = fiskeridir_rs::Landing::test_default(2, Some(fiskeridir_vessel_id.0));
         landing2.landing_timestamp = landing.landing_timestamp + Duration::days(1);
         helper.add_landings(vec![landing2.clone()]).await.unwrap();
         let assembled = landings_assembler
@@ -48,7 +48,7 @@ async fn test_produces_new_trips_without_replacing_existing_ones() {
 
         helper
             .add_trips(
-                vessel.fiskeridir.id,
+                vessel.id,
                 assembled.new_trip_calculation_time,
                 assembled.conflict_strategy,
                 assembled.trips,
@@ -63,7 +63,7 @@ async fn test_produces_new_trips_without_replacing_existing_ones() {
         )
         .unwrap();
 
-        let mut trips = helper.db.trips_of_vessel(vessel.fiskeridir.id).await;
+        let mut trips = helper.db.trips_of_vessel(vessel.id).await;
         trips.sort_by_key(|v| v.trip_id);
 
         let expected_range_2 =
@@ -91,9 +91,9 @@ async fn test_produces_new_trips_without_replacing_existing_ones() {
 #[tokio::test]
 async fn test_produces_no_trips_with_no_new_landings() {
     test(|helper| async move {
-        let fiskeridir_vessel_id = 1;
+        let fiskeridir_vessel_id = FiskeridirVesselId(11);
         let landings_assembler = LandingTripAssembler::default();
-        let landing = fiskeridir_rs::Landing::test_default(1, Some(fiskeridir_vessel_id));
+        let landing = fiskeridir_rs::Landing::test_default(1, Some(fiskeridir_vessel_id.0));
         helper.add_landings(vec![landing.clone()]).await.unwrap();
 
         let vessel = helper.db.vessel(fiskeridir_vessel_id).await;
@@ -105,7 +105,7 @@ async fn test_produces_no_trips_with_no_new_landings() {
 
         helper
             .add_trips(
-                vessel.fiskeridir.id,
+                vessel.id,
                 assembled.new_trip_calculation_time,
                 assembled.conflict_strategy,
                 assembled.trips,
@@ -130,9 +130,9 @@ async fn test_produces_no_trips_with_no_new_landings() {
 #[tokio::test]
 async fn test_sets_start_of_first_trip_one_day_earlier_than_landing_timestamp() {
     test(|helper| async move {
-        let fiskeridir_vessel_id = 1;
+        let fiskeridir_vessel_id = FiskeridirVesselId(11);
         let landings_assembler = LandingTripAssembler::default();
-        let landing = fiskeridir_rs::Landing::test_default(1, Some(fiskeridir_vessel_id));
+        let landing = fiskeridir_rs::Landing::test_default(1, Some(fiskeridir_vessel_id.0));
         helper.add_landings(vec![landing.clone()]).await.unwrap();
 
         let vessel = helper.db.vessel(fiskeridir_vessel_id).await;
@@ -171,7 +171,7 @@ async fn test_sets_start_of_first_trip_one_day_earlier_than_landing_timestamp() 
 
         helper
             .add_trips(
-                vessel.fiskeridir.id,
+                vessel.id,
                 assembled.new_trip_calculation_time,
                 assembled.conflict_strategy,
                 assembled.trips,
@@ -180,7 +180,7 @@ async fn test_sets_start_of_first_trip_one_day_earlier_than_landing_timestamp() 
             .await
             .unwrap();
 
-        let trips = helper.db.trips_of_vessel(vessel.fiskeridir.id).await;
+        let trips = helper.db.trips_of_vessel(vessel.id).await;
         assert_eq!(1, trips.len());
 
         let expected = Trip {
@@ -197,10 +197,10 @@ async fn test_sets_start_of_first_trip_one_day_earlier_than_landing_timestamp() 
 #[tokio::test]
 async fn test_resolves_conflict_on_day_prior_to_most_recent_trip_end() {
     test(|helper| async move {
-        let fiskeridir_vessel_id = 1;
+        let fiskeridir_vessel_id = FiskeridirVesselId(11);
         let landings_assembler = LandingTripAssembler::default();
-        let landing = fiskeridir_rs::Landing::test_default(1, Some(fiskeridir_vessel_id));
-        let mut landing2 = fiskeridir_rs::Landing::test_default(2, Some(fiskeridir_vessel_id));
+        let landing = fiskeridir_rs::Landing::test_default(1, Some(fiskeridir_vessel_id.0));
+        let mut landing2 = fiskeridir_rs::Landing::test_default(2, Some(fiskeridir_vessel_id.0));
         landing2.landing_timestamp += Duration::days(3);
 
         helper
@@ -218,7 +218,7 @@ async fn test_resolves_conflict_on_day_prior_to_most_recent_trip_end() {
 
         helper
             .add_trips(
-                vessel.fiskeridir.id,
+                vessel.id,
                 assembled.new_trip_calculation_time,
                 assembled.conflict_strategy,
                 assembled.trips,
@@ -227,7 +227,7 @@ async fn test_resolves_conflict_on_day_prior_to_most_recent_trip_end() {
             .await
             .unwrap();
 
-        let mut landing3 = fiskeridir_rs::Landing::test_default(3, Some(fiskeridir_vessel_id));
+        let mut landing3 = fiskeridir_rs::Landing::test_default(3, Some(fiskeridir_vessel_id.0));
         landing3.landing_timestamp = landing2.landing_timestamp - Duration::days(1);
 
         helper.add_landings(vec![landing3.clone()]).await.unwrap();
@@ -247,7 +247,7 @@ async fn test_resolves_conflict_on_day_prior_to_most_recent_trip_end() {
                     conflict_timestamp: conflict.timestamp,
                     trip_prior_to_or_at_conflict: helper
                         .trip_at_or_prior_to(
-                            vessel.fiskeridir.id,
+                            vessel.id,
                             TripAssemblerId::Landings,
                             &conflict.timestamp,
                         )
@@ -260,7 +260,7 @@ async fn test_resolves_conflict_on_day_prior_to_most_recent_trip_end() {
             .unwrap();
         helper
             .add_trips(
-                vessel.fiskeridir.id,
+                vessel.id,
                 assembled.new_trip_calculation_time,
                 assembled.conflict_strategy,
                 assembled.trips,
@@ -269,7 +269,7 @@ async fn test_resolves_conflict_on_day_prior_to_most_recent_trip_end() {
             .await
             .unwrap();
 
-        let mut trips = helper.db.trips_of_vessel(vessel.fiskeridir.id).await;
+        let mut trips = helper.db.trips_of_vessel(vessel.id).await;
         assert_eq!(3, trips.len());
         trips.sort_by_key(|v| v.trip_id);
 

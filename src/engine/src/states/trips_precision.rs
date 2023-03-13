@@ -63,7 +63,7 @@ where
             }
 
             let trips = database
-                .trips_without_precision(vessel.fiskeridir.id, processor.assembler_id())
+                .trips_without_precision(vessel.id, processor.assembler_id())
                 .await
                 .change_context(TripPrecisionError)?;
 

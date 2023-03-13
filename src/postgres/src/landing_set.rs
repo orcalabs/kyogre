@@ -13,6 +13,7 @@ pub struct LandingSet {
     landings: HashMap<LandingId, NewLanding>,
     landing_entries: Vec<NewLandingEntry>,
     vessels: HashMap<i64, fiskeridir_rs::Vessel>,
+    vessel_identifications: HashSet<NewVesselIdentification>,
     delivery_points: HashSet<DeliveryPointId>,
     catch_areas: HashMap<u32, NewCatchArea>,
     catch_main_areas: HashMap<u32, NewCatchMainArea>,
@@ -29,6 +30,7 @@ pub struct PreparedLandingSet {
     pub species_fiskeridir: Vec<SpeciesFiskeridir>,
     pub species_main_groups: Vec<SpeciesMainGroup>,
     pub vessels: Vec<fiskeridir_rs::Vessel>,
+    pub vessel_identifications: Vec<NewVesselIdentification>,
     pub delivery_points: Vec<DeliveryPointId>,
     pub catch_areas: Vec<NewCatchArea>,
     pub catch_main_areas: Vec<NewCatchMainArea>,
@@ -46,6 +48,7 @@ impl LandingSet {
         let species_groups = self.species_group.into_values().collect();
         let species_fao = self.species_fao.into_values().collect();
         let vessels = self.vessels.into_values().collect();
+        let vessel_identifications = self.vessel_identifications.into_iter().collect();
         let delivery_points = self.delivery_points.into_iter().collect();
         let catch_areas = self.catch_areas.into_values().collect();
         let catch_main_areas = self.catch_main_areas.into_values().collect();
@@ -63,6 +66,7 @@ impl LandingSet {
             landings,
             landing_entries: self.landing_entries,
             vessels,
+            vessel_identifications,
             delivery_points,
             species_fao,
             catch_areas,
@@ -82,6 +86,7 @@ impl LandingSet {
         let mut set = LandingSet::default();
         for l in landings.into_iter() {
             set.add_vessel(&l);
+            set.add_vessel_identification(&l);
             set.add_species(&l);
             set.add_species_group(&l);
             set.add_species_fao(&l);
@@ -132,6 +137,10 @@ impl LandingSet {
                 .entry(vessel_id)
                 .or_insert_with(|| landing.vessel.clone());
         }
+    }
+
+    fn add_vessel_identification(&mut self, landing: &fiskeridir_rs::Landing) {
+        self.vessel_identifications.insert((&landing.vessel).into());
     }
 
     fn add_fishing_region(&mut self, landing: &fiskeridir_rs::Landing) {

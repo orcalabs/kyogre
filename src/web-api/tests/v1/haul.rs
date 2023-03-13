@@ -4,7 +4,7 @@ use super::helper::test;
 use actix_web::http::StatusCode;
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::ErsDca;
-use kyogre_core::{GearGroup, ScraperInboundPort};
+use kyogre_core::GearGroup;
 use web_api::routes::{
     utils::{DateTimeUtc, GearGroupId, SpeciesGroupId},
     v1::haul::{Haul, HaulsGrid, HaulsParams},
@@ -47,13 +47,7 @@ async fn test_hauls_returns_hauls_in_specified_months() {
         ers2.stop_date = Some(month2.date_naive());
         ers2.stop_time = Some(month2.time());
 
-        helper
-            .db
-            .db
-            .add_ers_dca(vec![ers1, ers2, ers3, ers4])
-            .await
-            .unwrap();
-        helper.db.db.update_database_views().await.unwrap();
+        helper.db.add_ers_dca(vec![ers1, ers2, ers3, ers4]).await;
 
         let params = HaulsParams {
             months: Some(vec![DateTimeUtc(month1), DateTimeUtc(month2)]),
@@ -83,13 +77,7 @@ async fn test_hauls_returns_hauls_in_catch_location() {
         ers2.start_latitude = Some(56.756293);
         ers2.start_longitude = Some(11.514740);
 
-        helper
-            .db
-            .db
-            .add_ers_dca(vec![ers1, ers2, ers3, ers4])
-            .await
-            .unwrap();
-        helper.db.db.update_database_views().await.unwrap();
+        helper.db.add_ers_dca(vec![ers1, ers2, ers3, ers4]).await;
 
         let params = HaulsParams {
             catch_locations: Some(vec![
@@ -120,13 +108,7 @@ async fn test_hauls_returns_hauls_with_gear_group_ids() {
         ers1.gear.gear_group_code = Some(1);
         ers2.gear.gear_group_code = Some(5);
 
-        helper
-            .db
-            .db
-            .add_ers_dca(vec![ers1, ers2, ers3, ers4])
-            .await
-            .unwrap();
-        helper.db.db.update_database_views().await.unwrap();
+        helper.db.add_ers_dca(vec![ers1, ers2, ers3, ers4]).await;
 
         let params = HaulsParams {
             gear_group_ids: Some(vec![
@@ -157,13 +139,7 @@ async fn test_hauls_returns_hauls_with_species_group_ids() {
         ers1.catch.species.species_group_code = Some(301);
         ers2.catch.species.species_group_code = Some(302);
 
-        helper
-            .db
-            .db
-            .add_ers_dca(vec![ers1, ers2, ers3, ers4])
-            .await
-            .unwrap();
-        helper.db.db.update_database_views().await.unwrap();
+        helper.db.add_ers_dca(vec![ers1, ers2, ers3, ers4]).await;
 
         let params = HaulsParams {
             species_group_ids: Some(vec![SpeciesGroupId(301), SpeciesGroupId(302)]),
@@ -191,13 +167,7 @@ async fn test_hauls_returns_hauls_with_vessel_length_ranges() {
         ers1.vessel_info.vessel_length = 9.;
         ers2.vessel_info.vessel_length = 12.;
 
-        helper
-            .db
-            .db
-            .add_ers_dca(vec![ers1, ers2, ers3, ers4])
-            .await
-            .unwrap();
-        helper.db.db.update_database_views().await.unwrap();
+        helper.db.add_ers_dca(vec![ers1, ers2, ers3, ers4]).await;
 
         let params = HaulsParams {
             vessel_length_ranges: Some(vec!["(,10)".parse().unwrap(), "[10,15)".parse().unwrap()]),
@@ -234,13 +204,7 @@ async fn test_hauls_grid_returns_grid_for_all_hauls() {
         let mut ers4 = ers2.clone();
         ers4.message_info.message_id = 4;
 
-        helper
-            .db
-            .db
-            .add_ers_dca(vec![ers1, ers2, ers3, ers4])
-            .await
-            .unwrap();
-        helper.db.db.update_database_views().await.unwrap();
+        helper.db.add_ers_dca(vec![ers1, ers2, ers3, ers4]).await;
 
         let response = helper.app.get_hauls_grid(Default::default()).await;
 
@@ -289,13 +253,7 @@ async fn test_hauls_grid_returns_grid_for_hauls_in_specified_month() {
         ers2.stop_time = Some(month2.time());
         ers2.catch.species.living_weight = Some(20);
 
-        helper
-            .db
-            .db
-            .add_ers_dca(vec![ers1, ers2, ers3, ers4])
-            .await
-            .unwrap();
-        helper.db.db.update_database_views().await.unwrap();
+        helper.db.add_ers_dca(vec![ers1, ers2, ers3, ers4]).await;
 
         let params = HaulsParams {
             months: Some(vec![DateTimeUtc(month1), DateTimeUtc(month2)]),
@@ -337,13 +295,7 @@ async fn test_hauls_grid_returns_grid_for_hauls_in_catch_location() {
         ers2.start_longitude = Some(12.565410);
         ers2.catch.species.living_weight = Some(20);
 
-        helper
-            .db
-            .db
-            .add_ers_dca(vec![ers1, ers2, ers3, ers4])
-            .await
-            .unwrap();
-        helper.db.db.update_database_views().await.unwrap();
+        helper.db.add_ers_dca(vec![ers1, ers2, ers3, ers4]).await;
 
         let params = HaulsParams {
             catch_locations: Some(vec!["09-05".try_into().unwrap()]),
@@ -385,13 +337,7 @@ async fn test_hauls_grid_returns_grid_for_hauls_with_gear_group_ids() {
         ers2.start_longitude = Some(12.565410);
         ers2.catch.species.living_weight = Some(20);
 
-        helper
-            .db
-            .db
-            .add_ers_dca(vec![ers1, ers2, ers3, ers4])
-            .await
-            .unwrap();
-        helper.db.db.update_database_views().await.unwrap();
+        helper.db.add_ers_dca(vec![ers1, ers2, ers3, ers4]).await;
 
         let params = HaulsParams {
             gear_group_ids: Some(vec![
@@ -436,13 +382,7 @@ async fn test_hauls_grid_returns_grid_for_hauls_with_species_group_ids() {
         ers2.start_longitude = Some(12.565410);
         ers2.catch.species.living_weight = Some(20);
 
-        helper
-            .db
-            .db
-            .add_ers_dca(vec![ers1, ers2, ers3, ers4])
-            .await
-            .unwrap();
-        helper.db.db.update_database_views().await.unwrap();
+        helper.db.add_ers_dca(vec![ers1, ers2, ers3, ers4]).await;
 
         let params = HaulsParams {
             species_group_ids: Some(vec![SpeciesGroupId(301), SpeciesGroupId(302)]),
@@ -484,13 +424,7 @@ async fn test_hauls_grid_returns_grid_for_hauls_with_vessel_length_ranges() {
         ers2.start_longitude = Some(12.565410);
         ers2.catch.species.living_weight = Some(20);
 
-        helper
-            .db
-            .db
-            .add_ers_dca(vec![ers1, ers2, ers3, ers4])
-            .await
-            .unwrap();
-        helper.db.db.update_database_views().await.unwrap();
+        helper.db.add_ers_dca(vec![ers1, ers2, ers3, ers4]).await;
 
         let params = HaulsParams {
             vessel_length_ranges: Some(vec!["(,10)".parse().unwrap(), "[10,15)".parse().unwrap()]),
