@@ -5,6 +5,40 @@ use kyogre_core::{NewTrip, TripAssemblerId, TripsConflictStrategy};
 use sqlx::postgres::types::PgRange;
 
 impl PostgresAdapter {
+    pub(crate) async fn trip_of_haul_impl(
+        &self,
+        haul_id: &str,
+    ) -> Result<Option<Trip>, PostgresError> {
+        let mut trips = sqlx::query_as!(
+            Trip,
+            r#"
+SELECT
+    t.trip_id,
+    t.period,
+    t.landing_coverage,
+    t.trip_assembler_id
+FROM
+    trips AS t
+    INNER JOIN hauls_view AS h ON h.period <@ t.period
+    AND h.fiskeridir_vessel_id = t.fiskeridir_vessel_id
+WHERE
+    h.haul_id = $1
+            "#,
+            haul_id,
+        )
+        .fetch_all(&self.pool)
+        .await
+        .into_report()
+        .change_context(PostgresError::Query)?;
+
+        match trips.len() {
+            0 => Ok(None),
+            1 => Ok(trips.pop()),
+            _ => Ok(trips
+                .into_iter()
+                .find(|t| t.trip_assembler_id == TripAssemblerId::Ers as i32)),
+        }
+    }
     pub(crate) async fn trip_at_or_prior_to_impl(
         &self,
         fiskeridir_vessel_id: i64,
@@ -197,9 +231,11 @@ DELETE FROM trips
 WHERE
     period && ANY ($1)
     AND fiskeridir_vessel_id = $2
+    AND trip_assembler_id = $3
             "#,
                 range,
                 fiskeridir_vessel_id,
+                trip_assembler_id as i32,
             )
             .execute(&mut tx)
             .await

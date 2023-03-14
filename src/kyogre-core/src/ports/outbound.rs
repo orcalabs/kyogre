@@ -33,6 +33,7 @@ pub trait WebApiPort {
     fn species_fao(&self) -> PinBoxStream<'_, SpeciesFao, QueryError>;
     fn vessels(&self) -> Pin<Box<dyn Stream<Item = Result<Vessel, QueryError>> + Send + '_>>;
     fn hauls(&self, query: HaulsQuery) -> Result<PinBoxStream<'_, Haul, QueryError>, QueryError>;
+    async fn trip_of_haul(&self, haul_id: &str) -> Result<Option<Trip>, QueryError>;
     async fn hauls_grid(&self, query: HaulsQuery) -> Result<HaulsGrid, QueryError>;
 }
 

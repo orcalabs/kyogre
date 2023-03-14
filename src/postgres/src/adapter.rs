@@ -276,6 +276,14 @@ impl WebApiPort for PostgresAdapter {
 
         HaulsGrid::try_from(grid).change_context(QueryError)
     }
+
+    async fn trip_of_haul(&self, haul_id: &str) -> Result<Option<Trip>, QueryError> {
+        convert_optional(
+            self.trip_of_haul_impl(haul_id)
+                .await
+                .change_context(QueryError)?,
+        )
+    }
 }
 
 #[async_trait]

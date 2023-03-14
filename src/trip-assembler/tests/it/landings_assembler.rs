@@ -25,7 +25,7 @@ async fn test_produces_new_trips_without_replacing_existing_ones() {
         helper
             .add_trips(
                 vessel.fiskeridir.id,
-                assembled.new_trip_calucation_time,
+                assembled.new_trip_calculation_time,
                 assembled.conflict_strategy,
                 assembled.trips,
                 TripAssemblerId::Landings,
@@ -40,7 +40,7 @@ async fn test_produces_new_trips_without_replacing_existing_ones() {
             .assemble(
                 &helper.db.db,
                 &vessel,
-                State::CurrentCalculationTime(assembled.new_trip_calucation_time),
+                State::CurrentCalculationTime(assembled.new_trip_calculation_time),
             )
             .await
             .unwrap()
@@ -49,7 +49,7 @@ async fn test_produces_new_trips_without_replacing_existing_ones() {
         helper
             .add_trips(
                 vessel.fiskeridir.id,
-                assembled.new_trip_calucation_time,
+                assembled.new_trip_calculation_time,
                 assembled.conflict_strategy,
                 assembled.trips,
                 TripAssemblerId::Landings,
@@ -106,7 +106,7 @@ async fn test_produces_no_trips_with_no_new_landings() {
         helper
             .add_trips(
                 vessel.fiskeridir.id,
-                assembled.new_trip_calucation_time,
+                assembled.new_trip_calculation_time,
                 assembled.conflict_strategy,
                 assembled.trips,
                 TripAssemblerId::Landings,
@@ -118,7 +118,7 @@ async fn test_produces_no_trips_with_no_new_landings() {
             .assemble(
                 &helper.db.db,
                 &vessel,
-                State::CurrentCalculationTime(assembled.new_trip_calucation_time)
+                State::CurrentCalculationTime(assembled.new_trip_calculation_time)
             )
             .await
             .unwrap()
@@ -164,7 +164,7 @@ async fn test_sets_start_of_first_trip_one_day_earlier_than_landing_timestamp() 
                     .unwrap(),
                 Utc,
             ),
-            assembled.new_trip_calucation_time
+            assembled.new_trip_calculation_time
         );
         assert_eq!(TripsConflictStrategy::Replace, assembled.conflict_strategy);
         assert_eq!(expected, assembled.trips[0]);
@@ -172,7 +172,7 @@ async fn test_sets_start_of_first_trip_one_day_earlier_than_landing_timestamp() 
         helper
             .add_trips(
                 vessel.fiskeridir.id,
-                assembled.new_trip_calucation_time,
+                assembled.new_trip_calculation_time,
                 assembled.conflict_strategy,
                 assembled.trips,
                 TripAssemblerId::Landings,
@@ -219,7 +219,7 @@ async fn test_resolves_conflict_on_day_prior_to_most_recent_trip_end() {
         helper
             .add_trips(
                 vessel.fiskeridir.id,
-                assembled.new_trip_calucation_time,
+                assembled.new_trip_calculation_time,
                 assembled.conflict_strategy,
                 assembled.trips,
                 TripAssemblerId::Landings,
@@ -261,7 +261,7 @@ async fn test_resolves_conflict_on_day_prior_to_most_recent_trip_end() {
         helper
             .add_trips(
                 vessel.fiskeridir.id,
-                assembled.new_trip_calucation_time,
+                assembled.new_trip_calculation_time,
                 assembled.conflict_strategy,
                 assembled.trips,
                 TripAssemblerId::Landings,

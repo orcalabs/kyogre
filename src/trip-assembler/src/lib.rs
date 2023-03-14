@@ -73,7 +73,7 @@ pub trait TripAssembler: Send + Sync {
             Ok(None)
         } else {
             Ok(Some(AssembledTrips {
-                new_trip_calucation_time: self.trip_calculation_time(new_trips.last().unwrap()),
+                new_trip_calculation_time: self.trip_calculation_time(new_trips.last().unwrap()),
                 trips: new_trips,
                 conflict_strategy: state.conflict_strategy(),
             }))
@@ -84,7 +84,7 @@ pub trait TripAssembler: Send + Sync {
 #[derive(Debug, Clone)]
 pub struct AssembledTrips {
     pub trips: Vec<NewTrip>,
-    pub new_trip_calucation_time: DateTime<Utc>,
+    pub new_trip_calculation_time: DateTime<Utc>,
     pub conflict_strategy: TripsConflictStrategy,
 }
 

@@ -125,7 +125,7 @@ where
             database
                 .add_trips(
                     vessel.fiskeridir.id,
-                    trips.new_trip_calucation_time,
+                    trips.new_trip_calculation_time,
                     trips.conflict_strategy,
                     trips.trips,
                     trip_assembler.assembler_id(),
