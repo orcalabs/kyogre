@@ -1,5 +1,3 @@
-use std::{io::Error, net::TcpListener};
-
 use actix_web::{
     dev::Server,
     middleware::{Compress, Condition},
@@ -8,6 +6,7 @@ use actix_web::{
 };
 use orca_core::{Environment, OrcaRootSpanBuilder, TracingLogger};
 use postgres::PostgresAdapter;
+use std::{io::Error, net::TcpListener};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
@@ -89,6 +88,10 @@ where
                         web::get().to(routes::v1::gear::gear_main_groups),
                     )
                     .route("/vessels", web::get().to(routes::v1::vessel::vessels::<T>))
+                    .route(
+                        "/trip_of_haul/{haul_id}",
+                        web::get().to(routes::v1::trip::trip_of_haul::<T>),
+                    )
                     .route("/hauls", web::get().to(routes::v1::haul::hauls::<T>))
                     .route(
                         "/hauls_grid",

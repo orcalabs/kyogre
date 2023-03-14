@@ -35,6 +35,7 @@ async-stream = "0.3.4"
 num-traits = "0.2.15"
 
 [dev-dependencies]
+trip-assembler = { path = "../trip-assembler" }
 dockertest = { version = "0.3.1", registry = "orcalabs-orcastrator" }
 orca-core = { version = "0.20.0", registry = "orcalabs-orcastrator", features = [
     "dockertest",

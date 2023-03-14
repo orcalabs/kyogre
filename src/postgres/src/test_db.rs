@@ -1,13 +1,13 @@
 use std::collections::HashMap;
 
-use chrono::DateTime;
+use chrono::{DateTime, Utc};
 use fiskeridir_rs::ErsDca;
 use kyogre_core::{
     AisPosition, AisVessel, DateRange, NewAisPosition, NewAisStatic, ScraperInboundPort, Trip,
     Vessel,
 };
 
-use crate::PostgresAdapter;
+use crate::{models::Haul, PostgresAdapter};
 
 /// Wrapper with additional methods inteded for testing purposes.
 #[derive(Debug, Clone)]
@@ -28,6 +28,49 @@ impl TestDb {
 
     pub async fn all_ais_positions(&self) -> Vec<AisPosition> {
         self.ais_positions(None, None).await
+    }
+
+    pub async fn hauls_of_vessel(&self, fiskeridir_vessel_id: i64) -> Vec<kyogre_core::Haul> {
+        sqlx::query_as!(
+            Haul,
+            r#"
+SELECT
+    h.haul_id AS "haul_id!",
+    h.ers_activity_id AS "ers_activity_id!",
+    h.duration AS "duration!",
+    h.haul_distance AS haul_distance,
+    h.catch_location_start AS catch_location_start,
+    h.ocean_depth_end AS "ocean_depth_end!",
+    h.ocean_depth_start AS "ocean_depth_start!",
+    h.quota_type_id AS "quota_type_id!",
+    h.start_latitude AS "start_latitude!",
+    h.start_longitude AS "start_longitude!",
+    h.period AS "period!",
+    h.stop_latitude AS "stop_latitude!",
+    h.stop_longitude AS "stop_longitude!",
+    h.gear_fiskeridir_id AS gear_fiskeridir_id,
+    h.gear_group_id AS gear_group_id,
+    h.fiskeridir_vessel_id AS fiskeridir_vessel_id,
+    h.vessel_call_sign AS vessel_call_sign,
+    h.vessel_call_sign_ers AS "vessel_call_sign_ers!",
+    h.vessel_length AS "vessel_length!",
+    h.vessel_name AS vessel_name,
+    h.vessel_name_ers AS vessel_name_ers,
+    h.catches::TEXT AS "catches!",
+    h.whale_catches::TEXT AS "whale_catches!"
+FROM
+    hauls_view h
+WHERE
+    h.fiskeridir_vessel_id = $1
+            "#,
+            fiskeridir_vessel_id
+        )
+        .fetch_all(&self.db.pool)
+        .await
+        .unwrap()
+        .into_iter()
+        .map(|h| kyogre_core::Haul::try_from(h).unwrap())
+        .collect()
     }
 
     pub async fn ais_positions(
@@ -171,6 +214,23 @@ FROM
             .collect()
     }
 
+    pub async fn generate_haul(
+        &self,
+        fiskeridir_vessel_id: i64,
+        start: &DateTime<Utc>,
+        end: &DateTime<Utc>,
+    ) -> kyogre_core::Haul {
+        let mut dca = ErsDca::test_default(1, Some(fiskeridir_vessel_id as u64));
+        dca.start_date = Some(start.date_naive());
+        dca.start_time = Some(start.time());
+        dca.stop_date = Some(end.date_naive());
+        dca.stop_time = Some(end.time());
+        self.add_ers_dca_value(dca).await;
+        let mut hauls = self.hauls_of_vessel(fiskeridir_vessel_id).await;
+        assert_eq!(hauls.len(), 1);
+        hauls.pop().unwrap()
+    }
+
     pub async fn generate_ais_vessel(&self, mmsi: i32, call_sign: &str) -> AisVessel {
         let val = NewAisStatic::test_default(mmsi, call_sign);
         let mut map = HashMap::new();
@@ -215,5 +275,10 @@ FROM
         self.db.update_database_views().await.unwrap();
 
         ers_dca
+    }
+
+    pub async fn add_ers_dca_value(&self, val: ErsDca) {
+        self.db.add_ers_dca(vec![val]).await.unwrap();
+        self.db.update_database_views().await.unwrap();
     }
 }

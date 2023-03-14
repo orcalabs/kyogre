@@ -12,6 +12,7 @@ async fn test_produces_new_trips_without_replacing_existing_ones() {
         let departure = fiskeridir_rs::ErsDep::test_default(1, Some(fiskeridir_vessel_id));
         let mut arrival = fiskeridir_rs::ErsPor::test_default(1, Some(fiskeridir_vessel_id), true);
         arrival.arrival_date = departure.departure_date + Duration::days(1);
+
         helper.add_ers_dep(vec![departure.clone()]).await.unwrap();
         helper.add_ers_por(vec![arrival.clone()]).await.unwrap();
 
@@ -25,7 +26,7 @@ async fn test_produces_new_trips_without_replacing_existing_ones() {
         helper
             .add_trips(
                 vessel.fiskeridir.id,
-                assembled.new_trip_calucation_time,
+                assembled.new_trip_calculation_time,
                 assembled.conflict_strategy,
                 assembled.trips,
                 TripAssemblerId::Ers,
@@ -45,7 +46,7 @@ async fn test_produces_new_trips_without_replacing_existing_ones() {
             .assemble(
                 &helper.db.db,
                 &vessel,
-                State::CurrentCalculationTime(assembled.new_trip_calucation_time),
+                State::CurrentCalculationTime(assembled.new_trip_calculation_time),
             )
             .await
             .unwrap()
@@ -54,7 +55,7 @@ async fn test_produces_new_trips_without_replacing_existing_ones() {
         helper
             .add_trips(
                 vessel.fiskeridir.id,
-                assembled.new_trip_calucation_time,
+                assembled.new_trip_calculation_time,
                 assembled.conflict_strategy,
                 assembled.trips,
                 TripAssemblerId::Ers,
@@ -109,7 +110,7 @@ async fn test_produces_no_trips_with_no_new_departures_or_arrivals() {
         helper
             .add_trips(
                 vessel.fiskeridir.id,
-                assembled.new_trip_calucation_time,
+                assembled.new_trip_calculation_time,
                 assembled.conflict_strategy,
                 assembled.trips,
                 TripAssemblerId::Ers,
@@ -121,7 +122,7 @@ async fn test_produces_no_trips_with_no_new_departures_or_arrivals() {
             .assemble(
                 &helper.db.db,
                 &vessel,
-                State::CurrentCalculationTime(assembled.new_trip_calucation_time)
+                State::CurrentCalculationTime(assembled.new_trip_calculation_time)
             )
             .await
             .unwrap()
@@ -152,7 +153,7 @@ async fn test_extends_most_recent_trip_with_new_arrival() {
         helper
             .add_trips(
                 vessel.fiskeridir.id,
-                assembled.new_trip_calucation_time,
+                assembled.new_trip_calculation_time,
                 assembled.conflict_strategy,
                 assembled.trips,
                 TripAssemblerId::Ers,
@@ -195,7 +196,7 @@ async fn test_extends_most_recent_trip_with_new_arrival() {
         helper
             .add_trips(
                 vessel.fiskeridir.id,
-                assembled.new_trip_calucation_time,
+                assembled.new_trip_calculation_time,
                 assembled.conflict_strategy,
                 assembled.trips,
                 TripAssemblerId::Ers,
@@ -252,7 +253,7 @@ async fn test_handles_conflict_correctly() {
         helper
             .add_trips(
                 vessel.fiskeridir.id,
-                assembled.new_trip_calucation_time,
+                assembled.new_trip_calculation_time,
                 assembled.conflict_strategy,
                 assembled.trips,
                 TripAssemblerId::Ers,
@@ -298,7 +299,7 @@ async fn test_handles_conflict_correctly() {
         helper
             .add_trips(
                 vessel.fiskeridir.id,
-                assembled.new_trip_calucation_time,
+                assembled.new_trip_calculation_time,
                 assembled.conflict_strategy,
                 assembled.trips,
                 TripAssemblerId::Ers,
