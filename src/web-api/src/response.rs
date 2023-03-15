@@ -63,6 +63,8 @@ macro_rules! to_streaming_response {
             yield Bytes::from_static(b"]");
         };
 
-        HttpResponse::Ok().streaming(Box::pin(stream))
+        HttpResponse::Ok()
+            .content_type("application/json")
+            .streaming(Box::pin(stream))
     };
 }

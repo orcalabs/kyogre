@@ -117,7 +117,9 @@ pub async fn ais_track<T: Database + 'static>(
         yield web::Bytes::from_static(b"]");
     };
 
-    Ok(HttpResponse::Ok().streaming(Box::pin(stream)))
+    Ok(HttpResponse::Ok()
+        .content_type("application/json")
+        .streaming(Box::pin(stream)))
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema)]
