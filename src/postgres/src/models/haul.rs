@@ -1,7 +1,7 @@
 use bigdecimal::{BigDecimal, FromPrimitive};
 use chrono::{DateTime, Utc};
 use error_stack::{report, IntoReport, Report, ResultExt};
-use kyogre_core::{CatchLocationId, WhaleGender};
+use kyogre_core::{CatchLocationId, VesselIdentificationId, WhaleGender};
 use serde::Deserialize;
 use sqlx::postgres::types::PgRange;
 
@@ -26,6 +26,7 @@ pub struct Haul {
     pub stop_longitude: BigDecimal,
     pub gear_fiskeridir_id: Option<i32>,
     pub gear_group_id: Option<i32>,
+    pub vessel_identification_id: i64,
     pub fiskeridir_vessel_id: Option<i64>,
     pub vessel_call_sign: Option<String>,
     pub vessel_call_sign_ers: String,
@@ -110,6 +111,7 @@ impl TryFrom<Haul> for kyogre_core::Haul {
             stop_timestamp: period_end,
             gear_fiskeridir_id: v.gear_fiskeridir_id,
             gear_group_id: v.gear_group_id,
+            vessel_identification_id: VesselIdentificationId(v.vessel_identification_id),
             fiskeridir_vessel_id: v.fiskeridir_vessel_id,
             vessel_call_sign: v.vessel_call_sign,
             vessel_call_sign_ers: v.vessel_call_sign_ers,

@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use chrono::{DateTime, Utc};
 
-use crate::{CatchLocationId, WhaleGender};
+use crate::{CatchLocationId, VesselIdentificationId, WhaleGender};
 
 #[derive(Debug, Clone)]
 #[remain::sorted]
@@ -27,6 +27,7 @@ pub struct Haul {
     pub stop_timestamp: DateTime<Utc>,
     pub vessel_call_sign: Option<String>,
     pub vessel_call_sign_ers: String,
+    pub vessel_identification_id: VesselIdentificationId,
     pub vessel_length: f64,
     pub vessel_name: Option<String>,
     pub vessel_name_ers: Option<String>,

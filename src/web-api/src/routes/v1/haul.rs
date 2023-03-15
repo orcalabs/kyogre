@@ -11,7 +11,9 @@ use crate::{
 use actix_web::{web, HttpResponse};
 use chrono::{DateTime, Datelike, Duration, Months, NaiveDate, Utc};
 use futures::TryStreamExt;
-use kyogre_core::{CatchLocationId, DateRange, HaulsQuery, Range, WhaleGender};
+use kyogre_core::{
+    CatchLocationId, DateRange, HaulsQuery, Range, VesselIdentificationId, WhaleGender,
+};
 use serde::{Deserialize, Serialize};
 use tracing::{event, Level};
 use utoipa::{IntoParams, ToSchema};
@@ -114,6 +116,8 @@ pub struct Haul {
     pub stop_timestamp: DateTime<Utc>,
     pub gear_fiskeridir_id: Option<i32>,
     pub gear_group_id: Option<i32>,
+    #[schema(value_type = i64)]
+    pub vessel_identification_id: VesselIdentificationId,
     pub fiskeridir_vessel_id: Option<i64>,
     pub vessel_call_sign: Option<String>,
     pub vessel_call_sign_ers: String,
@@ -174,6 +178,7 @@ impl From<kyogre_core::Haul> for Haul {
             stop_timestamp: v.stop_timestamp,
             gear_fiskeridir_id: v.gear_fiskeridir_id,
             gear_group_id: v.gear_group_id,
+            vessel_identification_id: v.vessel_identification_id,
             fiskeridir_vessel_id: v.fiskeridir_vessel_id,
             vessel_call_sign: v.vessel_call_sign,
             vessel_call_sign_ers: v.vessel_call_sign_ers,
