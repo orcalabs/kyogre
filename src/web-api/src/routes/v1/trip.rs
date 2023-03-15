@@ -9,7 +9,7 @@ use utoipa::ToSchema;
     get,
     path = "/trip_of_haul/{haul_id}",
     responses(
-        (status = 200, description = "trip associated with the given haul_id", body = [Trip]),
+        (status = 200, description = "trip associated with the given haul_id", body = Trip),
         (status = 500, description = "an internal error occured", body = ErrorResponse),
     )
 )]
