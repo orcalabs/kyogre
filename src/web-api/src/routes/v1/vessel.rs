@@ -30,6 +30,7 @@ pub async fn vessels<T: Database + 'static>(db: web::Data<T>) -> HttpResponse {
 pub struct Vessel {
     #[schema(value_type = i64)]
     pub id: VesselIdentificationId,
+    pub call_sign: Option<String>,
     pub fiskeridir: Option<FiskeridirVessel>,
     pub ais: Option<AisVessel>,
     pub ers: Option<ErsVessel>,
@@ -86,6 +87,7 @@ impl From<kyogre_core::Vessel> for Vessel {
     fn from(value: kyogre_core::Vessel) -> Self {
         Vessel {
             id: value.id,
+            call_sign: value.call_sign.map(|c| c.into_inner()),
             fiskeridir: value.fiskeridir.map(FiskeridirVessel::from),
             ais: value.ais.map(AisVessel::from),
             ers: value.ers.map(ErsVessel::from),

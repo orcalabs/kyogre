@@ -218,6 +218,7 @@ FROM
             r#"
 SELECT
     v.vessel_identification_id,
+    v.call_sign,
     f.fiskeridir_vessel_id AS fiskeridir_vessel_id,
     f.fiskeridir_vessel_type_id,
     f.fiskeridir_length_group_id,
@@ -268,6 +269,7 @@ FROM
             r#"
 SELECT
     v.vessel_identification_id,
+    v.call_sign,
     f.fiskeridir_vessel_id AS "fiskeridir_vessel_id?",
     f.fiskeridir_vessel_type_id,
     f.fiskeridir_length_group_id,

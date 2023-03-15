@@ -115,6 +115,7 @@ impl From<&NewAisStatic> for NewVesselIdentification {
 #[derive(Debug, Clone)]
 pub struct FiskeridirAisErsVesselCombination {
     pub vessel_identification_id: i64,
+    pub call_sign: Option<String>,
     pub ais_mmsi: Option<i32>,
     pub ais_imo_number: Option<i32>,
     pub ais_call_sign: Option<String>,
@@ -225,6 +226,10 @@ impl TryFrom<FiskeridirAisErsVesselCombination> for kyogre_core::Vessel {
 
         Ok(kyogre_core::Vessel {
             id: VesselIdentificationId(value.vessel_identification_id),
+            call_sign: value
+                .call_sign
+                .map(|c| CallSign::try_from(c).change_context(PostgresError::DataConversion))
+                .transpose()?,
             fiskeridir,
             ais,
             ers,

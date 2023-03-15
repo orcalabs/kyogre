@@ -10,6 +10,7 @@ pub struct VesselIdentificationId(pub i64);
 #[derive(Debug, Clone)]
 pub struct Vessel {
     pub id: VesselIdentificationId,
+    pub call_sign: Option<CallSign>,
     pub fiskeridir: Option<FiskeridirVessel>,
     pub ais: Option<AisVessel>,
     pub ers: Option<ErsVessel>,
