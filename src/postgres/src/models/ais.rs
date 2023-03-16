@@ -4,7 +4,7 @@ use bigdecimal::FromPrimitive;
 use bigdecimal::{BigDecimal, ToPrimitive};
 use chrono::{DateTime, Utc};
 use error_stack::{IntoReport, Report, ResultExt};
-use kyogre_core::NavigationStatus;
+use kyogre_core::{Mmsi, NavigationStatus};
 
 use crate::error::{FromBigDecimalError, NavigationStatusError, PostgresError};
 
@@ -69,7 +69,7 @@ impl TryFrom<AisPosition> for kyogre_core::AisPosition {
                 .ok_or(FromBigDecimalError(value.longitude))
                 .into_report()
                 .change_context(PostgresError::DataConversion)?,
-            mmsi: value.mmsi,
+            mmsi: Mmsi(value.mmsi),
             msgtime: value.msgtime,
             course_over_ground: value
                 .course_over_ground

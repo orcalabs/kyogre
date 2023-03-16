@@ -26,7 +26,7 @@ enum AisProcessingAction {
     Continue,
     Retry {
         positions: Option<Vec<NewAisPosition>>,
-        unique_static: Option<HashMap<i32, NewAisStatic>>,
+        unique_static: Option<HashMap<Mmsi, NewAisStatic>>,
     },
 }
 
@@ -123,7 +123,7 @@ impl PostgresAdapter {
     async fn insertion_retry(
         &self,
         positions: Option<&[NewAisPosition]>,
-        unique_static: Option<&HashMap<i32, NewAisStatic>>,
+        unique_static: Option<&HashMap<Mmsi, NewAisStatic>>,
     ) {
         if let Some(positions) = positions {
             if let Err(e) = self.add_ais_positions(positions).await {
@@ -214,7 +214,7 @@ impl PostgresAdapter {
 impl AisMigratorDestination for PostgresAdapter {
     async fn migrate_ais_data(
         &self,
-        mmsi: i32,
+        mmsi: Mmsi,
         positions: Vec<AisPosition>,
         progress: DateTime<Utc>,
     ) -> Result<(), InsertError> {
@@ -236,7 +236,7 @@ impl AisMigratorDestination for PostgresAdapter {
 impl WebApiPort for PostgresAdapter {
     fn ais_positions(
         &self,
-        mmsi: i32,
+        mmsi: Mmsi,
         range: &DateRange,
     ) -> PinBoxStream<'_, AisPosition, QueryError> {
         convert_stream(self.ais_positions_impl(mmsi, range)).boxed()
@@ -468,7 +468,7 @@ impl TripPrecisionOutboundPort for PostgresAdapter {
     }
     async fn ais_positions(
         &self,
-        _mmsi: i32,
+        _mmsi: Mmsi,
         _range: &DateRange,
     ) -> Result<Vec<AisPosition>, QueryError> {
         unimplemented!();

@@ -7,7 +7,7 @@ use error_stack::Result;
 pub trait AisMigratorDestination {
     async fn migrate_ais_data(
         &self,
-        mmsi: i32,
+        mmsi: Mmsi,
         positions: Vec<AisPosition>,
         progress: DateTime<Utc>,
     ) -> Result<(), InsertError>;

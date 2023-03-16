@@ -1,14 +1,17 @@
 use super::helper::test;
 use actix_web::http::StatusCode;
 use fiskeridir_rs::{CallSign, ErsDca, Landing};
-use kyogre_core::{FiskeridirVesselId, ScraperInboundPort};
+use kyogre_core::{FiskeridirVesselId, Mmsi, ScraperInboundPort};
 use web_api::routes::v1::vessel::Vessel;
 
 #[tokio::test]
 async fn test_vessels_returns_merged_data_from_fiskeridir_and_ais_and_ers() {
     test(|helper| async move {
         let call_sign = CallSign::try_from("LK-28").unwrap();
-        let ais_vessel = helper.db.generate_ais_vessel(40, call_sign.as_ref()).await;
+        let ais_vessel = helper
+            .db
+            .generate_ais_vessel(Mmsi(40), call_sign.as_ref())
+            .await;
 
         let vessel_id = 1;
         let mut landing = Landing::test_default(1, Some(vessel_id));
@@ -94,7 +97,7 @@ async fn test_vessel_identification_handles_merging_two_vessels() {
             .unwrap();
 
         let call_sign = "LK28".to_string();
-        let ais_vessel = helper.db.generate_ais_vessel(40, &call_sign).await;
+        let ais_vessel = helper.db.generate_ais_vessel(Mmsi(40), &call_sign).await;
 
         let response = helper.app.get_vessels().await;
         assert_eq!(response.status(), StatusCode::OK);

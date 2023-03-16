@@ -1,4 +1,4 @@
-use crate::AisVessel;
+use crate::{AisVessel, Mmsi};
 use fiskeridir_rs::CallSign;
 use num_derive::FromPrimitive;
 use serde::{Deserialize, Serialize};
@@ -50,7 +50,7 @@ pub struct ErsVessel {
 }
 
 impl Vessel {
-    pub fn mmsi(&self) -> Option<i32> {
+    pub fn mmsi(&self) -> Option<Mmsi> {
         self.ais.as_ref().map(|v| v.mmsi)
     }
 }

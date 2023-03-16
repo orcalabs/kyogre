@@ -4,7 +4,7 @@
 use chrono::{DateTime, Duration, Utc};
 use error::MigratorError;
 use error_stack::{Result, ResultExt};
-use kyogre_core::{AisMigratorDestination, AisMigratorSource, AisVesselMigrate};
+use kyogre_core::{AisMigratorDestination, AisMigratorSource, AisVesselMigrate, Mmsi};
 use std::collections::HashMap;
 use tracing::{event, instrument, Level};
 
@@ -45,7 +45,7 @@ impl Migrator {
             .await
             .unwrap();
 
-        let mut map: HashMap<i32, Option<DateTime<Utc>>> = current_progress
+        let mut map: HashMap<Mmsi, Option<DateTime<Utc>>> = current_progress
             .into_iter()
             .map(|v| (v.mmsi, v.progress))
             .collect();
@@ -95,10 +95,10 @@ impl Migrator {
     }
 
     #[instrument(skip(self, mmsi, start), fields(app.migrated_vessels))]
-    async fn migrate_vessel(&self, mmsi: i32, start: DateTime<Utc>) -> Result<(), MigratorError> {
+    async fn migrate_vessel(&self, mmsi: Mmsi, start: DateTime<Utc>) -> Result<(), MigratorError> {
         let mut current = start;
 
-        tracing::Span::current().record("app.mmsi", mmsi);
+        tracing::Span::current().record("app.mmsi", mmsi.0);
 
         while current < self.destination_end_threshold {
             let end = current + self.chunk_size;

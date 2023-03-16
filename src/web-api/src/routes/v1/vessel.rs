@@ -2,7 +2,7 @@ use crate::{to_streaming_response, Database};
 use actix_web::{web, HttpResponse};
 use chrono::{DateTime, Utc};
 use futures::TryStreamExt;
-use kyogre_core::{FiskeridirVesselId, VesselIdentificationId};
+use kyogre_core::{FiskeridirVesselId, Mmsi, VesselIdentificationId};
 use serde::{Deserialize, Serialize};
 use tracing::{event, Level};
 use utoipa::ToSchema;
@@ -64,7 +64,8 @@ pub struct FiskeridirVessel {
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct AisVessel {
-    pub mmsi: i32,
+    #[schema(value_type = i32)]
+    pub mmsi: Mmsi,
     pub imo_number: Option<i32>,
     pub call_sign: Option<String>,
     pub name: Option<String>,

@@ -10,11 +10,11 @@ use futures::Stream;
 pub trait AisMigratorSource {
     async fn ais_positions(
         &self,
-        mmsi: i32,
+        mmsi: Mmsi,
         start: DateTime<Utc>,
         end: DateTime<Utc>,
     ) -> Result<Vec<AisPosition>, QueryError>;
-    async fn existing_mmsis(&self) -> Result<Vec<i32>, QueryError>;
+    async fn existing_mmsis(&self) -> Result<Vec<Mmsi>, QueryError>;
 }
 
 pub type PinBoxStream<'a, T, E> = Pin<Box<dyn Stream<Item = Result<T, E>> + 'a>>;
@@ -23,7 +23,7 @@ pub type PinBoxStream<'a, T, E> = Pin<Box<dyn Stream<Item = Result<T, E>> + 'a>>
 pub trait WebApiPort {
     fn ais_positions(
         &self,
-        mmsi: i32,
+        mmsi: Mmsi,
         range: &DateRange,
     ) -> PinBoxStream<'_, AisPosition, QueryError>;
     fn species(&self) -> PinBoxStream<'_, Species, QueryError>;
@@ -83,7 +83,7 @@ pub trait TripPrecisionOutboundPort: Send + Sync {
     async fn dock_points_of_trip(&self, trip_id: i64) -> Result<TripDockPoints, QueryError>;
     async fn ais_positions(
         &self,
-        mmsi: i32,
+        mmsi: Mmsi,
         range: &DateRange,
     ) -> Result<Vec<AisPosition>, QueryError>;
     async fn trip_prior_to(

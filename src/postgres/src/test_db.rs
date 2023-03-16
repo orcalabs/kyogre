@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::ErsDca;
 use kyogre_core::{
-    AisPosition, AisVessel, DateRange, FiskeridirVesselId, NewAisPosition, NewAisStatic,
+    AisPosition, AisVessel, DateRange, FiskeridirVesselId, Mmsi, NewAisPosition, NewAisStatic,
     ScraperInboundPort, Trip, Vessel, VesselIdentificationId,
 };
 
@@ -76,7 +76,7 @@ WHERE
 
     pub async fn ais_positions(
         &self,
-        mmsi: Option<i32>,
+        mmsi: Option<Mmsi>,
         range: Option<&DateRange>,
     ) -> Vec<AisPosition> {
         sqlx::query_as!(
@@ -110,7 +110,7 @@ WHERE
 ORDER BY
     "timestamp" ASC
             "#,
-            mmsi,
+            mmsi.map(|m| m.0),
             range.map(|r| r.start()),
             range.map(|r| r.end()),
         )
@@ -257,7 +257,7 @@ FROM
         hauls.pop().unwrap()
     }
 
-    pub async fn generate_ais_vessel(&self, mmsi: i32, call_sign: &str) -> AisVessel {
+    pub async fn generate_ais_vessel(&self, mmsi: Mmsi, call_sign: &str) -> AisVessel {
         let val = NewAisStatic::test_default(mmsi, call_sign);
         let mut map = HashMap::new();
         map.insert(val.mmsi, val);
@@ -277,7 +277,7 @@ FROM
 
     pub async fn generate_ais_position(
         &self,
-        mmsi: i32,
+        mmsi: Mmsi,
         timestamp: DateTime<chrono::Utc>,
     ) -> AisPosition {
         let pos = NewAisPosition::test_default(mmsi, timestamp);

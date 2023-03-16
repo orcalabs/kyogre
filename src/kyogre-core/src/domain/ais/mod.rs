@@ -11,13 +11,16 @@ pub struct DataMessage {
     pub static_messages: Vec<NewAisStatic>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize, Serialize)]
+pub struct Mmsi(pub i32);
+
 #[derive(Debug, Clone)]
 pub struct NewAisPosition {
     pub latitude: f64,
     pub longitude: f64,
     pub message_type_id: Option<i32>,
     pub message_type: Option<AisMessageType>,
-    pub mmsi: i32,
+    pub mmsi: Mmsi,
     pub msgtime: DateTime<Utc>,
     pub altitude: Option<i32>,
     pub course_over_ground: Option<f64>,
@@ -33,7 +36,7 @@ pub struct NewAisPosition {
 pub struct NewAisStatic {
     pub message_type: Option<AisMessageType>,
     pub message_type_id: u32,
-    pub mmsi: i32,
+    pub mmsi: Mmsi,
     pub msgtime: DateTime<Utc>,
     pub imo_number: Option<i32>,
     pub call_sign: Option<String>,
@@ -50,7 +53,7 @@ pub struct NewAisStatic {
 pub struct AisPosition {
     pub latitude: f64,
     pub longitude: f64,
-    pub mmsi: i32,
+    pub mmsi: Mmsi,
     pub msgtime: DateTime<Utc>,
     pub course_over_ground: Option<f64>,
     pub navigational_status: Option<NavigationStatus>,
@@ -62,7 +65,7 @@ pub struct AisPosition {
 
 #[derive(Debug, Clone)]
 pub struct AisVessel {
-    pub mmsi: i32,
+    pub mmsi: Mmsi,
     pub imo_number: Option<i32>,
     pub call_sign: Option<CallSign>,
     pub name: Option<String>,
@@ -119,12 +122,12 @@ pub enum NavigationStatus {
 
 #[derive(Debug)]
 pub struct AisVesselMigrate {
-    pub mmsi: i32,
+    pub mmsi: Mmsi,
     pub progress: Option<DateTime<Utc>>,
 }
 
 impl NewAisStatic {
-    pub fn test_default(mmsi: i32, call_sign: &str) -> NewAisStatic {
+    pub fn test_default(mmsi: Mmsi, call_sign: &str) -> NewAisStatic {
         NewAisStatic {
             mmsi,
             imo_number: Some(10),
@@ -144,7 +147,7 @@ impl NewAisStatic {
 }
 
 impl NewAisPosition {
-    pub fn test_default(mmsi: i32, time: DateTime<Utc>) -> NewAisPosition {
+    pub fn test_default(mmsi: Mmsi, time: DateTime<Utc>) -> NewAisPosition {
         NewAisPosition {
             latitude: random(),
             longitude: random(),

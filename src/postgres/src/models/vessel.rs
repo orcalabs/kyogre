@@ -3,7 +3,7 @@ use bigdecimal::BigDecimal;
 use chrono::{DateTime, Utc};
 use error_stack::{report, Report, ResultExt};
 use fiskeridir_rs::CallSign;
-use kyogre_core::{FiskeridirVesselId, NewAisStatic, VesselIdentificationId};
+use kyogre_core::{FiskeridirVesselId, Mmsi, NewAisStatic, VesselIdentificationId};
 
 #[derive(Debug, Clone)]
 pub struct AisVessel {
@@ -44,7 +44,7 @@ impl TryFrom<AisVessel> for kyogre_core::AisVessel {
 
     fn try_from(value: AisVessel) -> Result<Self, Self::Error> {
         Ok(kyogre_core::AisVessel {
-            mmsi: value.mmsi,
+            mmsi: Mmsi(value.mmsi),
             imo_number: value.imo_number,
             call_sign: value
                 .call_sign
@@ -107,7 +107,7 @@ impl From<&NewAisStatic> for NewVesselIdentification {
         Self {
             vessel_id: None,
             call_sign: v.call_sign.clone(),
-            mmsi: Some(v.mmsi),
+            mmsi: Some(v.mmsi.0),
         }
     }
 }
@@ -156,7 +156,7 @@ impl TryFrom<FiskeridirAisErsVesselCombination> for kyogre_core::Vessel {
             .ais_mmsi
             .map::<Result<_, Report<PostgresError>>, _>(|mmsi| {
                 Ok(kyogre_core::AisVessel {
-                    mmsi,
+                    mmsi: Mmsi(mmsi),
                     imo_number: value.ais_imo_number,
                     call_sign: value
                         .ais_call_sign

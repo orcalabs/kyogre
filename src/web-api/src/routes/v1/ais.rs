@@ -8,7 +8,7 @@ use actix_web::{
 use async_stream::{__private::AsyncStream, try_stream};
 use chrono::{DateTime, Duration, Utc};
 use futures::{StreamExt, TryStreamExt};
-use kyogre_core::DateRange;
+use kyogre_core::{DateRange, Mmsi};
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use tracing::{event, Level};
@@ -38,7 +38,7 @@ pub struct AisTrackParameters {
 pub async fn ais_track<T: Database + 'static>(
     db: web::Data<T>,
     params: web::Query<AisTrackParameters>,
-    mmsi: Path<i32>,
+    mmsi: Path<Mmsi>,
 ) -> Result<HttpResponse, ApiError> {
     let (start, end) = match (params.start, params.end) {
         (None, None) => {

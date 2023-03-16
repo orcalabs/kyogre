@@ -1,7 +1,7 @@
 use error_stack::{bail, IntoReport, Report, Result, ResultExt};
 
 use chrono::{DateTime, Datelike, NaiveDate, NaiveDateTime, NaiveTime, TimeZone, Timelike, Utc};
-use kyogre_core::{AisClass, NavigationStatus, NewAisPosition, NewAisStatic};
+use kyogre_core::{AisClass, Mmsi, NavigationStatus, NewAisPosition, NewAisStatic};
 use rand::{random, Rng};
 use serde::{Deserialize, Serialize};
 use tracing::{event, Level};
@@ -112,7 +112,7 @@ impl TryFrom<AisStatic> for NewAisStatic {
         Ok(NewAisStatic {
             message_type: a.message_type.map(kyogre_core::AisMessageType::from),
             message_type_id: a.message_type_id,
-            mmsi: a.mmsi,
+            mmsi: Mmsi(a.mmsi),
             msgtime: a.msgtime,
             imo_number: a.imo_number,
             call_sign: a.call_sign,
@@ -135,7 +135,7 @@ impl From<AisPosition> for NewAisPositionWrapper {
                 longitude,
                 message_type_id: a.message_type_id,
                 message_type: a.message_type.map(kyogre_core::AisMessageType::from),
-                mmsi: a.mmsi,
+                mmsi: Mmsi(a.mmsi),
                 msgtime: a.msgtime,
                 altitude: a.altitude,
                 course_over_ground: a.course_over_ground,
@@ -204,7 +204,7 @@ impl PartialEq<kyogre_core::AisPosition> for AisPosition {
     fn eq(&self, other: &kyogre_core::AisPosition) -> bool {
         self.latitude.unwrap() as i32 == other.latitude as i32
             && self.longitude.unwrap() as i32 == other.longitude as i32
-            && self.mmsi == other.mmsi
+            && self.mmsi == other.mmsi.0
             && self.msgtime.timestamp() == other.msgtime.timestamp()
             && self.course_over_ground.map(|v| v as i32)
                 == other.course_over_ground.map(|v| v as i32)
@@ -233,7 +233,7 @@ pub fn create_eta_string_value(timestamp: &DateTime<Utc>) -> String {
 
 impl PartialEq<kyogre_core::AisVessel> for AisStatic {
     fn eq(&self, other: &kyogre_core::AisVessel) -> bool {
-        other.mmsi == self.mmsi
+        other.mmsi.0 == self.mmsi
             && other.imo_number == self.imo_number
             && other.call_sign.as_ref().map(|c| c.as_ref()) == self.call_sign.as_deref()
             && other.name == self.name

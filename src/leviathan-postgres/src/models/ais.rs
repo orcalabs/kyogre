@@ -2,6 +2,7 @@ use crate::error::{FromBigDecimalError, PostgresError};
 use bigdecimal::{BigDecimal, FromPrimitive, ToPrimitive};
 use chrono::{DateTime, Utc};
 use error_stack::{report, Report};
+use kyogre_core::Mmsi;
 
 #[derive(Debug, Clone, PartialEq, Eq, sqlx::FromRow)]
 pub struct AisPosition {
@@ -38,7 +39,7 @@ impl TryFrom<AisPosition> for kyogre_core::AisPosition {
                 report!(FromBigDecimalError(value.longitude))
                     .change_context(PostgresError::DataConversion)
             })?,
-            mmsi: value.mmsi,
+            mmsi: Mmsi(value.mmsi),
             msgtime: value.time,
             course_over_ground: value
                 .course_over_ground

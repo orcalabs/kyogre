@@ -3,7 +3,7 @@ use std::collections::{HashMap, HashSet};
 use bigdecimal::{BigDecimal, FromPrimitive};
 use chrono::{DateTime, Utc};
 use futures::{Stream, TryStreamExt};
-use kyogre_core::{AisVesselMigrate, DateRange, NewAisPosition, NewAisStatic};
+use kyogre_core::{AisVesselMigrate, DateRange, Mmsi, NewAisPosition, NewAisStatic};
 
 use crate::{
     error::{BigDecimalError, PostgresError},
@@ -15,7 +15,7 @@ use error_stack::{report, IntoReport, Result, ResultExt};
 impl PostgresAdapter {
     pub(crate) fn ais_positions_impl(
         &self,
-        mmsi: i32,
+        mmsi: Mmsi,
         range: &DateRange,
     ) -> impl Stream<Item = Result<AisPosition, PostgresError>> + '_ {
         sqlx::query_as!(
@@ -40,7 +40,7 @@ WHERE
 ORDER BY
     TIMESTAMP ASC
             "#,
-            mmsi,
+            mmsi.0,
             range.start(),
             range.end(),
         )
@@ -66,7 +66,7 @@ ORDER BY
         let mut ais_class = Vec::with_capacity(positions.len());
         let mut ais_message_type = Vec::with_capacity(positions.len());
 
-        let mut latest_position_per_vessel: HashMap<i32, NewAisPosition> = HashMap::new();
+        let mut latest_position_per_vessel: HashMap<Mmsi, NewAisPosition> = HashMap::new();
 
         for p in positions {
             if let Some(v) = latest_position_per_vessel.get(&p.mmsi) {
@@ -77,7 +77,7 @@ ORDER BY
                 latest_position_per_vessel.insert(p.mmsi, p.clone());
             }
 
-            mmsis.push(p.mmsi);
+            mmsis.push(p.mmsi.0);
             latitude.push(
                 BigDecimal::from_f64(p.latitude)
                     .ok_or(BigDecimalError(p.latitude))
@@ -307,7 +307,7 @@ SET
     ais_message_type_id = excluded.ais_message_type_id,
     navigation_status_id = excluded.navigation_status_id
             "#,
-                p.mmsi,
+                p.mmsi.0,
                 latitude,
                 longitude,
                 course_over_ground,
@@ -358,7 +358,7 @@ WHERE
         .change_context(PostgresError::Query)?
         .into_iter()
         .map(|v| AisVesselMigrate {
-            mmsi: v.mmsi,
+            mmsi: Mmsi(v.mmsi),
             progress: v.progress,
         })
         .collect())
@@ -366,7 +366,7 @@ WHERE
 
     pub(crate) async fn add_ais_vessels(
         &self,
-        vessels: &HashMap<i32, NewAisStatic>,
+        vessels: &HashMap<Mmsi, NewAisStatic>,
     ) -> Result<(), PostgresError> {
         let mut mmsis = Vec::with_capacity(vessels.len());
         let mut imo_number = Vec::with_capacity(vessels.len());
@@ -384,7 +384,7 @@ WHERE
         vessels.values().for_each(|v| {
             vessel_identifications.insert(v.into());
 
-            mmsis.push(v.mmsi);
+            mmsis.push(v.mmsi.0);
             imo_number.push(v.imo_number);
             call_sign.push(v.call_sign.clone());
             name.push(v.name.clone());
@@ -470,7 +470,7 @@ SET
 
     pub(crate) async fn add_ais_migration_data(
         &self,
-        mmsi: i32,
+        mmsi: Mmsi,
         positions: Vec<kyogre_core::AisPosition>,
         progress: DateTime<Utc>,
     ) -> Result<(), PostgresError> {
@@ -486,7 +486,7 @@ SET
         let mut navigation_status_id = Vec::with_capacity(positions.len());
 
         for p in positions {
-            mmsis.push(p.mmsi);
+            mmsis.push(p.mmsi.0);
             latitude.push(
                 BigDecimal::from_f64(p.latitude)
                     .ok_or(BigDecimalError(p.latitude))
@@ -551,7 +551,7 @@ VALUES
     ($1)
 ON CONFLICT (mmsi) DO NOTHING
             "#,
-            &mmsi,
+            &mmsi.0,
         )
         .execute(&mut tx)
         .await
@@ -569,7 +569,7 @@ UPDATE
 SET
     progress = excluded.progress
             "#,
-            &mmsi,
+            &mmsi.0,
             &progress
         )
         .execute(&mut tx)
