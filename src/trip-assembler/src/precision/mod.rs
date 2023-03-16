@@ -42,7 +42,7 @@ pub trait TripPrecision: Send + Sync {
         adapter: &dyn TripPrecisionOutboundPort,
         positions: &[AisPosition],
         trip: &Trip,
-        vessel_id: i64,
+        vessel: &Vessel,
     ) -> Result<Option<PrecisionStop>, TripPrecisionError>;
 }
 
@@ -118,11 +118,14 @@ impl TripPrecisionCalculator {
             return Ok(vec![]);
         }
 
+        // `unwrap` is safe because of `is_none` check above
+        let mmsi = vessel.mmsi().unwrap();
+
         let mut updates = Vec::with_capacity(trips.len());
 
         for t in trips {
             let positions = adapter
-                .ais_positions(vessel.fiskeridir.id, &t.period)
+                .ais_positions(mmsi, &t.period)
                 .await
                 .change_context(TripPrecisionError)?;
             if positions.is_empty() {
@@ -138,7 +141,7 @@ impl TripPrecisionCalculator {
 
             for f in &self.start_precisions {
                 if let Some(s) = f
-                    .precision(adapter, &positions, &t, vessel.fiskeridir.id)
+                    .precision(adapter, &positions, &t, vessel)
                     .await
                     .change_context(TripPrecisionError)?
                 {
@@ -149,7 +152,7 @@ impl TripPrecisionCalculator {
 
             for f in &self.end_precisions {
                 if let Some(s) = f
-                    .precision(adapter, &positions, &t, vessel.fiskeridir.id)
+                    .precision(adapter, &positions, &t, vessel)
                     .await
                     .change_context(TripPrecisionError)?
                 {

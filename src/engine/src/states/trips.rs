@@ -3,7 +3,7 @@ use std::collections::HashMap;
 
 use chrono::{DateTime, Utc};
 use error_stack::{Result, ResultExt};
-use kyogre_core::Vessel;
+use kyogre_core::{FiskeridirVesselId, Vessel};
 use tracing::{event, instrument, Level};
 use trip_assembler::{State, TripAssemblerError};
 
@@ -48,7 +48,7 @@ where
             .change_context(TripAssemblerError)?
             .into_iter()
             .map(|t| (t.fiskeridir_vessel_id, t.timestamp))
-            .collect::<HashMap<i64, DateTime<Utc>>>();
+            .collect::<HashMap<FiskeridirVesselId, DateTime<Utc>>>();
 
         let conflicts = database
             .conflicts(trip_assembler.assembler_id())
@@ -56,7 +56,7 @@ where
             .change_context(TripAssemblerError)?
             .into_iter()
             .map(|t| (t.fiskeridir_vessel_id, t.timestamp))
-            .collect::<HashMap<i64, DateTime<Utc>>>();
+            .collect::<HashMap<FiskeridirVesselId, DateTime<Utc>>>();
 
         let vessels = database
             .vessels()

@@ -6,8 +6,8 @@ use crate::{error::TripPrecisionError, precision::PrecisionConfig, Result};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use geoutils::Location;
-use kyogre_core::TripPrecisionOutboundPort;
 use kyogre_core::{AisPosition, Trip};
+use kyogre_core::{TripPrecisionOutboundPort, Vessel};
 use num_traits::ToPrimitive;
 
 #[derive(Debug)]
@@ -23,7 +23,7 @@ impl TripPrecision for FirstMovedPoint {
         _adapter: &dyn TripPrecisionOutboundPort,
         positions: &[AisPosition],
         _trip: &Trip,
-        _vessel_id: i64,
+        _vessel: &Vessel,
     ) -> Result<Option<PrecisionStop>, TripPrecisionError> {
         match self.start_search_point {
             StartSearchPoint::Start => {

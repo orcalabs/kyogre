@@ -1,5 +1,6 @@
 use std::{fmt::Write, string::ToString};
 
+use kyogre_core::Mmsi;
 use reqwest::{Client, Response};
 use web_api::routes::v1::{ais::AisTrackParameters, haul::HaulsParams};
 
@@ -22,7 +23,7 @@ impl ApiClient {
         client.execute(request).await.unwrap()
     }
 
-    pub async fn get_ais_track(&self, mmsi: i32, params: AisTrackParameters) -> Response {
+    pub async fn get_ais_track(&self, mmsi: Mmsi, params: AisTrackParameters) -> Response {
         let mut url_params = Vec::new();
 
         if let Some(s) = params.start {
@@ -33,7 +34,7 @@ impl ApiClient {
             url_params.push((("end".to_owned()), s.to_string()));
         }
 
-        self.get(format!("ais_track/{mmsi}"), url_params.as_slice())
+        self.get(format!("ais_track/{}", mmsi.0), url_params.as_slice())
             .await
     }
 

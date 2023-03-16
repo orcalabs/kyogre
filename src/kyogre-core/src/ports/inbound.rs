@@ -7,7 +7,7 @@ use error_stack::Result;
 pub trait AisMigratorDestination {
     async fn migrate_ais_data(
         &self,
-        mmsi: i32,
+        mmsi: Mmsi,
         positions: Vec<AisPosition>,
         progress: DateTime<Utc>,
     ) -> Result<(), InsertError>;
@@ -21,7 +21,7 @@ pub trait AisMigratorDestination {
 pub trait TripAssemblerInboundPort {
     async fn add_trips(
         &self,
-        fiskeridir_vessel_id: i64,
+        vessel_id: FiskeridirVesselId,
         new_trip_calculation_time: DateTime<Utc>,
         conflict_strategy: TripsConflictStrategy,
         trips: Vec<NewTrip>,

@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use error_stack::{IntoReport, Result, ResultExt};
-use kyogre_core::{AisMigratorSource, AisPosition, QueryError};
+use kyogre_core::{AisMigratorSource, AisPosition, Mmsi, QueryError};
 use orca_core::{PsqlLogStatements, PsqlSettings};
 use sqlx::{
     postgres::{PgConnectOptions, PgPoolOptions, PgSslMode},
@@ -61,7 +61,7 @@ impl LeviathanPostgresAdapter {
 impl AisMigratorSource for LeviathanPostgresAdapter {
     async fn ais_positions(
         &self,
-        mmsi: i32,
+        mmsi: Mmsi,
         start: DateTime<Utc>,
         end: DateTime<Utc>,
     ) -> Result<Vec<AisPosition>, QueryError> {
@@ -76,7 +76,7 @@ impl AisMigratorSource for LeviathanPostgresAdapter {
             AND
                 time BETWEEN $2 AND $3",
         )
-        .bind(mmsi)
+        .bind(mmsi.0)
         .bind(start)
         .bind(end)
         .fetch_all(&self.pool)
@@ -95,15 +95,15 @@ impl AisMigratorSource for LeviathanPostgresAdapter {
         Ok(core_models)
     }
 
-    async fn existing_mmsis(&self) -> Result<Vec<i32>, QueryError> {
-        let mmsis: Vec<i32> = sqlx::query("SELECT mmsi FROM mmsis")
+    async fn existing_mmsis(&self) -> Result<Vec<Mmsi>, QueryError> {
+        let mmsis = sqlx::query("SELECT mmsi FROM mmsis")
             .fetch_all(&self.pool)
             .await
             .into_report()
             .change_context(PostgresError::Transaction)
             .change_context(kyogre_core::QueryError)?
             .into_iter()
-            .map(|r| r.get(0))
+            .map(|r| Mmsi(r.get(0)))
             .collect();
 
         Ok(mmsis)

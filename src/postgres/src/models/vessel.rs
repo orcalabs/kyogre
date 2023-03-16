@@ -3,6 +3,7 @@ use bigdecimal::BigDecimal;
 use chrono::{DateTime, Utc};
 use error_stack::{Report, ResultExt};
 use fiskeridir_rs::CallSign;
+use kyogre_core::{FiskeridirVesselId, Mmsi};
 
 #[derive(Debug, Clone)]
 pub struct AisVessel {
@@ -21,7 +22,7 @@ impl TryFrom<AisVessel> for kyogre_core::AisVessel {
 
     fn try_from(value: AisVessel) -> Result<Self, Self::Error> {
         Ok(kyogre_core::AisVessel {
-            mmsi: value.mmsi,
+            mmsi: Mmsi(value.mmsi),
             imo_number: value.imo_number,
             call_sign: value
                 .call_sign
@@ -74,7 +75,7 @@ impl TryFrom<FiskeridirAisVesselCombination> for kyogre_core::Vessel {
         let ais_vessel: Result<Option<kyogre_core::AisVessel>, Report<PostgresError>> =
             if let Some(mmsi) = value.ais_mmsi {
                 Ok(Some(kyogre_core::AisVessel {
-                    mmsi,
+                    mmsi: Mmsi(mmsi),
                     imo_number: value.ais_imo_number,
                     call_sign: value
                         .ais_call_sign
@@ -93,7 +94,7 @@ impl TryFrom<FiskeridirAisVesselCombination> for kyogre_core::Vessel {
             };
 
         let fiskeridir_vessel = kyogre_core::FiskeridirVessel {
-            id: value.fiskeridir_vessel_id,
+            id: FiskeridirVesselId(value.fiskeridir_vessel_id),
             vessel_type_id: value.fiskeridir_vessel_type_id.map(|v| v as u32),
             length_group_id: value.fiskeridir_length_group_id.map(|v| v as u32),
             nation_group_id: value.fiskeridir_nation_group_id,

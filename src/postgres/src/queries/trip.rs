@@ -1,7 +1,11 @@
-use crate::{error::PostgresError, models::Trip, PostgresAdapter};
+use crate::{
+    error::PostgresError,
+    models::{Trip, TripAssemblerConflict, TripCalculationTimer},
+    PostgresAdapter,
+};
 use chrono::{DateTime, Utc};
 use error_stack::{IntoReport, Result, ResultExt};
-use kyogre_core::{NewTrip, TripAssemblerId, TripsConflictStrategy};
+use kyogre_core::{FiskeridirVesselId, NewTrip, TripAssemblerId, TripsConflictStrategy};
 use sqlx::postgres::types::PgRange;
 
 impl PostgresAdapter {
@@ -41,7 +45,7 @@ WHERE
     }
     pub(crate) async fn trip_at_or_prior_to_impl(
         &self,
-        fiskeridir_vessel_id: i64,
+        vessel_id: FiskeridirVesselId,
         trip_assembler_id: TripAssemblerId,
         time: &DateTime<Utc>,
     ) -> Result<Option<Trip>, PostgresError> {
@@ -67,7 +71,7 @@ ORDER BY
 LIMIT
     1
             "#,
-            fiskeridir_vessel_id,
+            vessel_id.0,
             trip_assembler_id as i32,
             time
         )
@@ -78,7 +82,7 @@ LIMIT
     }
     pub(crate) async fn most_recent_trip_impl(
         &self,
-        fiskeridir_vessel_id: i64,
+        vessel_id: FiskeridirVesselId,
         trip_assembler_id: TripAssemblerId,
     ) -> Result<Option<Trip>, PostgresError> {
         sqlx::query_as!(
@@ -99,7 +103,7 @@ ORDER BY
 LIMIT
     1
             "#,
-            fiskeridir_vessel_id,
+            vessel_id.0,
             trip_assembler_id as i32
         )
         .fetch_optional(&self.pool)
@@ -110,9 +114,9 @@ LIMIT
     pub(crate) async fn trip_calculation_timers_impl(
         &self,
         trip_assembler_id: TripAssemblerId,
-    ) -> Result<Vec<kyogre_core::TripCalculationTimer>, PostgresError> {
+    ) -> Result<Vec<TripCalculationTimer>, PostgresError> {
         sqlx::query_as!(
-            kyogre_core::TripCalculationTimer,
+            TripCalculationTimer,
             r#"
 SELECT
     fiskeridir_vessel_id,
@@ -132,9 +136,9 @@ WHERE
     pub(crate) async fn trip_assembler_conflicts(
         &self,
         trip_assembler_id: TripAssemblerId,
-    ) -> Result<Vec<kyogre_core::TripAssemblerConflict>, PostgresError> {
+    ) -> Result<Vec<TripAssemblerConflict>, PostgresError> {
         sqlx::query_as!(
-            kyogre_core::TripAssemblerConflict,
+            TripAssemblerConflict,
             r#"
 SELECT
     fiskeridir_vessel_id,
@@ -153,7 +157,7 @@ WHERE
     }
     pub(crate) async fn trips_of_vessel_impl(
         &self,
-        fiskeridir_vessel_id: i64,
+        vessel_id: FiskeridirVesselId,
     ) -> Result<Vec<Trip>, PostgresError> {
         sqlx::query_as!(
             Trip,
@@ -168,7 +172,7 @@ FROM
 WHERE
     fiskeridir_vessel_id = $1
             "#,
-            fiskeridir_vessel_id
+            vessel_id.0,
         )
         .fetch_all(&self.pool)
         .await
@@ -178,7 +182,7 @@ WHERE
 
     pub(crate) async fn add_trips_impl(
         &self,
-        fiskeridir_vessel_id: i64,
+        vessel_id: FiskeridirVesselId,
         new_trip_calculation_time: DateTime<Utc>,
         conflict_strategy: TripsConflictStrategy,
         trips: Vec<NewTrip>,
@@ -199,7 +203,7 @@ WHERE
             start_port_id.push(t.start_port_code);
             end_port_id.push(t.end_port_code);
             trip_assembler_ids.push(trip_assembler_id as i32);
-            fiskeridir_vessel_ids.push(fiskeridir_vessel_id);
+            fiskeridir_vessel_ids.push(vessel_id.0);
         }
 
         let mut tx = self.begin().await?;
@@ -215,7 +219,7 @@ UPDATE
 SET
     timer = excluded.timer
             "#,
-            fiskeridir_vessel_id,
+            vessel_id.0,
             trip_assembler_id as i32,
             new_trip_calculation_time,
         )
@@ -234,7 +238,7 @@ WHERE
     AND trip_assembler_id = $3
             "#,
                 range,
-                fiskeridir_vessel_id,
+                vessel_id.0,
                 trip_assembler_id as i32,
             )
             .execute(&mut tx)

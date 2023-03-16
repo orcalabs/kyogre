@@ -8,7 +8,7 @@ use actix_web::{
 use async_stream::{__private::AsyncStream, try_stream};
 use chrono::{DateTime, Duration, Utc};
 use futures::{StreamExt, TryStreamExt};
-use kyogre_core::DateRange;
+use kyogre_core::{DateRange, Mmsi};
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use tracing::{event, Level};
@@ -57,7 +57,7 @@ pub async fn ais_track<T: Database + 'static>(
 
     let stream: AsyncStream<Result<web::Bytes, ApiError>, _> = try_stream! {
         let mut stream = db
-            .ais_positions(mmsi.into_inner(), &range)
+            .ais_positions(Mmsi(mmsi.into_inner()), &range)
             .map_err(|e| {
                 event!(Level::ERROR, "failed to retrieve ais positions: {:?}", e);
                 ApiError::InternalServerError
