@@ -28,27 +28,66 @@ CREATE TABLE
 
 CREATE
 OR REPLACE FUNCTION update_vessel_identification_if_already_exists () RETURNS TRIGGER LANGUAGE PLPGSQL AS $$
+    DECLARE _vessel_id BIGINT;
+    DECLARE _call_sign VARCHAR;
+    DECLARE _mmsi INT;
     DECLARE _updated BIGINT;
     BEGIN
         IF (TG_OP = 'INSERT') THEN
-            DELETE FROM vessel_identifications vi USING (
-                SELECT
-                    ARRAY_AGG(v.vessel_identification_id) AS vessel_identification_ids
-                FROM
-                    vessel_identifications v
-                WHERE
-                    v.vessel_id = NEW.vessel_id
-                    OR v.call_sign = NEW.call_sign
-                    OR v.mmsi = NEW.mmsi
-                GROUP BY
-                    NEW.vessel_id,
-                    NEW.call_sign,
-                    NEW.mmsi
-                HAVING
-                    COUNT(*) > 1
-            ) q
-            WHERE
-                vi.vessel_identification_id = ANY (q.vessel_identification_ids);
+            WITH
+                del AS (
+                    DELETE FROM vessel_identifications vi USING (
+                        SELECT
+                            ARRAY_AGG(v.vessel_identification_id) AS vessel_identification_ids
+                        FROM
+                            vessel_identifications v
+                        WHERE
+                            v.vessel_id = NEW.vessel_id
+                            OR v.call_sign = NEW.call_sign
+                            OR v.mmsi = NEW.mmsi
+                        GROUP BY
+                            NEW.vessel_id,
+                            NEW.call_sign,
+                            NEW.mmsi
+                        HAVING
+                            COUNT(*) > 1
+                    ) q
+                    WHERE
+                        vi.vessel_identification_id = ANY (q.vessel_identification_ids)
+                    RETURNING
+                        vi.vessel_id,
+                        vi.call_sign,
+                        vi.mmsi
+                )
+            SELECT
+                (
+                    ARRAY_AGG(del.vessel_id) FILTER (
+                        WHERE
+                            del.vessel_id IS NOT NULL
+                    )
+                ) [1],
+                (
+                    ARRAY_AGG(del.call_sign) FILTER (
+                        WHERE
+                            del.call_sign IS NOT NULL
+                    )
+                ) [1],
+                (
+                    ARRAY_AGG(del.mmsi) FILTER (
+                        WHERE
+                            del.mmsi IS NOT NULL
+                    )
+                ) [1]
+            FROM
+                del
+            INTO
+                _vessel_id,
+                _call_sign,
+                _mmsi;
+
+            NEW.vessel_id = COALESCE(NEW.vessel_id, _vessel_id);
+            NEW.call_sign = COALESCE(NEW.call_sign, _call_sign);
+            NEW.mmsi = COALESCE(NEW.mmsi, _mmsi);
 
             UPDATE vessel_identifications v
             SET

@@ -93,29 +93,30 @@ async fn test_vessel_identification_handles_merging_two_vessels() {
             .await
             .unwrap();
 
-        let ers = helper.db.generate_ers_dca(1, None).await;
+        let call_sign = "LK28".to_string();
+        let ais_vessel = helper.db.generate_ais_vessel(40, &call_sign).await;
 
         let response = helper.app.get_vessels().await;
         assert_eq!(response.status(), StatusCode::OK);
         let vessels: Vec<Vessel> = response.json().await.unwrap();
         assert_eq!(vessels.len(), 2);
 
-        let ers2 = ErsDca::test_default(2, Some(fiskeridir_vessel_id.0 as u64));
-        helper.db.add_ers_dca(vec![ers2]).await;
+        let mut ers = ErsDca::test_default(2, Some(fiskeridir_vessel_id.0 as u64));
+        ers.vessel_info.call_sign_ers = call_sign.clone().try_into().unwrap();
+        helper.db.add_ers_dca(vec![ers]).await;
 
         let response = helper.app.get_vessels().await;
         assert_eq!(response.status(), StatusCode::OK);
         let vessels: Vec<Vessel> = response.json().await.unwrap();
 
         assert_eq!(vessels.len(), 1);
+        assert_eq!(vessels[0].call_sign, Some(call_sign.clone()));
         assert_eq!(
             vessels[0].fiskeridir.as_ref().unwrap().id,
             fiskeridir_vessel_id
         );
-        assert_eq!(
-            vessels[0].ers.as_ref().unwrap().call_sign,
-            ers.vessel_info.call_sign_ers
-        );
+        assert_eq!(vessels[0].ais.as_ref().unwrap().mmsi, ais_vessel.mmsi);
+        assert_eq!(vessels[0].ers.as_ref().unwrap().call_sign, call_sign);
     })
     .await;
 }
