@@ -3,9 +3,9 @@ use super::{
     PrecisionStop, TripPrecision,
 };
 use crate::error::TripPrecisionError;
-use error_stack::{Result, ResultExt};
+use error_stack::{report, Result, ResultExt};
 use geoutils::Location;
-use kyogre_core::{AisPosition, DateRange, Trip, TripPrecisionOutboundPort};
+use kyogre_core::{AisPosition, DateRange, Trip, TripPrecisionOutboundPort, Vessel};
 use num_traits::ToPrimitive;
 
 use async_trait::async_trait;
@@ -27,7 +27,7 @@ impl TripPrecision for DeliveryPointPrecision {
         adapter: &dyn TripPrecisionOutboundPort,
         positions: &[AisPosition],
         trip: &Trip,
-        vessel_id: i64,
+        vessel: &Vessel,
     ) -> Result<Option<PrecisionStop>, TripPrecisionError> {
         let delivery_points = adapter
             .delivery_points_associated_with_trip(trip.trip_id)
@@ -41,7 +41,7 @@ impl TripPrecision for DeliveryPointPrecision {
                         cords.latitude.to_f64().unwrap(),
                         cords.longitude.to_f64().unwrap(),
                     );
-                    self.do_precision(adapter, &target, vessel_id, positions, trip)
+                    self.do_precision(adapter, &target, vessel, positions, trip)
                         .await
                 }
                 _ => Ok(None),
@@ -61,7 +61,7 @@ impl DeliveryPointPrecision {
         &self,
         adapter: &dyn TripPrecisionOutboundPort,
         target: &Location,
-        vessel_id: i64,
+        vessel: &Vessel,
         positions: &[AisPosition],
         trip: &Trip,
     ) -> Result<Option<PrecisionStop>, TripPrecisionError> {
@@ -82,7 +82,12 @@ impl DeliveryPointPrecision {
                 )
                 .unwrap();
                 let positions = adapter
-                    .ais_positions(vessel_id, &range)
+                    .ais_positions(
+                        vessel.mmsi().ok_or_else(|| {
+                            report!(TripPrecisionError).attach_printable("expected mmsi to be Some")
+                        })?,
+                        &range,
+                    )
                     .await
                     .change_context(TripPrecisionError)?;
                 self.do_precision_impl(

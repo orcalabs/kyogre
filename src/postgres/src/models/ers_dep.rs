@@ -1,7 +1,7 @@
 use bigdecimal::BigDecimal;
 use chrono::{DateTime, NaiveDate, Utc};
 use error_stack::{Report, ResultExt};
-use kyogre_core::FiskdirVesselNationalityGroup;
+use kyogre_core::{FiskdirVesselNationalityGroup, FiskeridirVesselId};
 
 use crate::{
     error::PostgresError,
@@ -63,6 +63,12 @@ pub struct NewErsDepCatch {
     pub species_fiskeridir_id: Option<i32>,
     pub species_group_id: Option<i32>,
     pub species_main_group_id: Option<i32>,
+}
+
+pub struct Departure {
+    pub fiskeridir_vessel_id: i64,
+    pub timestamp: DateTime<Utc>,
+    pub port_id: Option<String>,
 }
 
 impl TryFrom<fiskeridir_rs::ErsDep> for NewErsDep {
@@ -157,6 +163,16 @@ impl NewErsDepCatch {
             })
         } else {
             None
+        }
+    }
+}
+
+impl From<Departure> for kyogre_core::Departure {
+    fn from(v: Departure) -> Self {
+        Self {
+            fiskeridir_vessel_id: FiskeridirVesselId(v.fiskeridir_vessel_id),
+            timestamp: v.timestamp,
+            port_id: v.port_id,
         }
     }
 }

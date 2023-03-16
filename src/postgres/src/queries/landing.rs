@@ -1,6 +1,7 @@
 use crate::{error::PostgresError, landing_set::LandingSet, models::NewLanding, PostgresAdapter};
 use chrono::{DateTime, Utc};
 use error_stack::{IntoReport, Result, ResultExt};
+use kyogre_core::FiskeridirVesselId;
 
 impl PostgresAdapter {
     pub(crate) async fn add_landing_set(&self, set: LandingSet) -> Result<(), PostgresError> {
@@ -414,7 +415,7 @@ ON CONFLICT (landing_id, "version") DO NOTHING
 
     pub(crate) async fn landing_dates_impl(
         &self,
-        vessel_id: i64,
+        vessel_id: FiskeridirVesselId,
         start: &DateTime<Utc>,
     ) -> Result<Vec<DateTime<Utc>>, PostgresError> {
         struct Intermediate {
@@ -431,7 +432,7 @@ WHERE
     fiskeridir_vessel_id = $1
     AND landing_timestamp >= $2
             "#,
-            vessel_id,
+            vessel_id.0,
             start,
         )
         .fetch_all(&self.pool)

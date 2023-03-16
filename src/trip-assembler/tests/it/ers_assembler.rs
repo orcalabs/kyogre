@@ -6,17 +6,18 @@ use trip_assembler::*;
 #[tokio::test]
 async fn test_produces_new_trips_without_replacing_existing_ones() {
     test(|helper| async move {
-        let fiskeridir_vessel_id = 1;
+        let fiskeridir_vessel_id = FiskeridirVesselId(11);
         let ers_assembler = ErsTripAssembler::default();
 
-        let departure = fiskeridir_rs::ErsDep::test_default(1, Some(fiskeridir_vessel_id));
-        let mut arrival = fiskeridir_rs::ErsPor::test_default(1, Some(fiskeridir_vessel_id), true);
+        let departure = fiskeridir_rs::ErsDep::test_default(1, Some(fiskeridir_vessel_id.0 as u64));
+        let mut arrival =
+            fiskeridir_rs::ErsPor::test_default(1, Some(fiskeridir_vessel_id.0 as u64), true);
         arrival.arrival_date = departure.departure_date + Duration::days(1);
 
         helper.add_ers_dep(vec![departure.clone()]).await.unwrap();
         helper.add_ers_por(vec![arrival.clone()]).await.unwrap();
 
-        let vessel = helper.db.vessel(fiskeridir_vessel_id as i64).await;
+        let vessel = helper.db.vessel(fiskeridir_vessel_id).await;
         let assembled = ers_assembler
             .assemble(&helper.db.db, &vessel, State::NoPriorState)
             .await
@@ -34,8 +35,10 @@ async fn test_produces_new_trips_without_replacing_existing_ones() {
             .await
             .unwrap();
 
-        let mut departure2 = fiskeridir_rs::ErsDep::test_default(2, Some(fiskeridir_vessel_id));
-        let mut arrival2 = fiskeridir_rs::ErsPor::test_default(2, Some(fiskeridir_vessel_id), true);
+        let mut departure2 =
+            fiskeridir_rs::ErsDep::test_default(2, Some(fiskeridir_vessel_id.0 as u64));
+        let mut arrival2 =
+            fiskeridir_rs::ErsPor::test_default(2, Some(fiskeridir_vessel_id.0 as u64), true);
         departure2.departure_date = departure.departure_date + Duration::days(2);
         arrival2.arrival_date = departure2.departure_date + Duration::days(3);
 
@@ -91,16 +94,17 @@ async fn test_produces_new_trips_without_replacing_existing_ones() {
 #[tokio::test]
 async fn test_produces_no_trips_with_no_new_departures_or_arrivals() {
     test(|helper| async move {
-        let fiskeridir_vessel_id = 1;
+        let fiskeridir_vessel_id = FiskeridirVesselId(11);
         let ers_assembler = ErsTripAssembler::default();
 
-        let departure = fiskeridir_rs::ErsDep::test_default(1, Some(fiskeridir_vessel_id));
-        let mut arrival = fiskeridir_rs::ErsPor::test_default(1, Some(fiskeridir_vessel_id), true);
+        let departure = fiskeridir_rs::ErsDep::test_default(1, Some(fiskeridir_vessel_id.0 as u64));
+        let mut arrival =
+            fiskeridir_rs::ErsPor::test_default(1, Some(fiskeridir_vessel_id.0 as u64), true);
         arrival.arrival_date = departure.departure_date + Duration::days(1);
         helper.add_ers_dep(vec![departure.clone()]).await.unwrap();
         helper.add_ers_por(vec![arrival.clone()]).await.unwrap();
 
-        let vessel = helper.db.vessel(fiskeridir_vessel_id as i64).await;
+        let vessel = helper.db.vessel(fiskeridir_vessel_id).await;
         let assembled = ers_assembler
             .assemble(&helper.db.db, &vessel, State::NoPriorState)
             .await
@@ -134,16 +138,17 @@ async fn test_produces_no_trips_with_no_new_departures_or_arrivals() {
 #[tokio::test]
 async fn test_extends_most_recent_trip_with_new_arrival() {
     test(|helper| async move {
-        let fiskeridir_vessel_id = 1;
+        let fiskeridir_vessel_id = FiskeridirVesselId(11);
         let ers_assembler = ErsTripAssembler::default();
 
-        let departure = fiskeridir_rs::ErsDep::test_default(1, Some(fiskeridir_vessel_id));
-        let mut arrival = fiskeridir_rs::ErsPor::test_default(1, Some(fiskeridir_vessel_id), true);
+        let departure = fiskeridir_rs::ErsDep::test_default(1, Some(fiskeridir_vessel_id.0 as u64));
+        let mut arrival =
+            fiskeridir_rs::ErsPor::test_default(1, Some(fiskeridir_vessel_id.0 as u64), true);
         arrival.arrival_date = departure.departure_date + Duration::days(1);
         helper.add_ers_dep(vec![departure.clone()]).await.unwrap();
         helper.add_ers_por(vec![arrival.clone()]).await.unwrap();
 
-        let vessel = helper.db.vessel(fiskeridir_vessel_id as i64).await;
+        let vessel = helper.db.vessel(fiskeridir_vessel_id).await;
         let assembled = ers_assembler
             .assemble(&helper.db.db, &vessel, State::NoPriorState)
             .await
@@ -161,7 +166,8 @@ async fn test_extends_most_recent_trip_with_new_arrival() {
             .await
             .unwrap();
 
-        let mut arrival2 = fiskeridir_rs::ErsPor::test_default(2, Some(fiskeridir_vessel_id), true);
+        let mut arrival2 =
+            fiskeridir_rs::ErsPor::test_default(2, Some(fiskeridir_vessel_id.0 as u64), true);
         arrival2.arrival_date = departure.departure_date + Duration::days(2);
 
         helper.add_ers_por(vec![arrival2.clone()]).await.unwrap();
@@ -221,16 +227,19 @@ async fn test_extends_most_recent_trip_with_new_arrival() {
 #[tokio::test]
 async fn test_handles_conflict_correctly() {
     test(|helper| async move {
-        let fiskeridir_vessel_id = 1;
+        let fiskeridir_vessel_id = FiskeridirVesselId(11);
         let ers_assembler = ErsTripAssembler::default();
 
-        let departure = fiskeridir_rs::ErsDep::test_default(1, Some(fiskeridir_vessel_id));
+        let departure = fiskeridir_rs::ErsDep::test_default(1, Some(fiskeridir_vessel_id.0 as u64));
         let base_time = departure.departure_date;
-        let mut arrival = fiskeridir_rs::ErsPor::test_default(1, Some(fiskeridir_vessel_id), true);
+        let mut arrival =
+            fiskeridir_rs::ErsPor::test_default(1, Some(fiskeridir_vessel_id.0 as u64), true);
         arrival.arrival_date = base_time + Duration::days(1);
 
-        let mut departure2 = fiskeridir_rs::ErsDep::test_default(2, Some(fiskeridir_vessel_id));
-        let mut arrival2 = fiskeridir_rs::ErsPor::test_default(2, Some(fiskeridir_vessel_id), true);
+        let mut departure2 =
+            fiskeridir_rs::ErsDep::test_default(2, Some(fiskeridir_vessel_id.0 as u64));
+        let mut arrival2 =
+            fiskeridir_rs::ErsPor::test_default(2, Some(fiskeridir_vessel_id.0 as u64), true);
         departure2.departure_date = base_time + Duration::days(5);
         arrival2.arrival_date = base_time + Duration::days(6);
 
@@ -243,7 +252,7 @@ async fn test_handles_conflict_correctly() {
             .await
             .unwrap();
 
-        let vessel = helper.db.vessel(fiskeridir_vessel_id as i64).await;
+        let vessel = helper.db.vessel(fiskeridir_vessel_id).await;
         let assembled = ers_assembler
             .assemble(&helper.db.db, &vessel, State::NoPriorState)
             .await
@@ -261,8 +270,10 @@ async fn test_handles_conflict_correctly() {
             .await
             .unwrap();
 
-        let mut departure3 = fiskeridir_rs::ErsDep::test_default(3, Some(fiskeridir_vessel_id));
-        let mut arrival3 = fiskeridir_rs::ErsPor::test_default(3, Some(fiskeridir_vessel_id), true);
+        let mut departure3 =
+            fiskeridir_rs::ErsDep::test_default(3, Some(fiskeridir_vessel_id.0 as u64));
+        let mut arrival3 =
+            fiskeridir_rs::ErsPor::test_default(3, Some(fiskeridir_vessel_id.0 as u64), true);
         departure3.departure_date = base_time + Duration::days(3);
         arrival3.arrival_date = base_time + Duration::days(4);
 

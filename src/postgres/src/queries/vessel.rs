@@ -2,6 +2,7 @@ use super::opt_float_to_decimal;
 use crate::{error::PostgresError, models::FiskeridirAisVesselCombination, PostgresAdapter};
 use error_stack::{report, IntoReport, Result, ResultExt};
 use futures::{Stream, TryStreamExt};
+use kyogre_core::FiskeridirVesselId;
 
 impl PostgresAdapter {
     pub(crate) async fn add_fiskeridir_vessels<'a>(
@@ -168,7 +169,7 @@ FROM
 
     pub(crate) async fn single_fiskeridir_ais_vessel_combination(
         &self,
-        fiskeridir_vessel_id: i64,
+        vessel_id: FiskeridirVesselId,
     ) -> Result<Option<FiskeridirAisVesselCombination>, PostgresError> {
         sqlx::query_as!(
             FiskeridirAisVesselCombination,
@@ -207,7 +208,7 @@ FROM
 WHERE
     f.fiskeridir_vessel_id = $1
             "#,
-            fiskeridir_vessel_id
+            vessel_id.0
         )
         .fetch_optional(&self.pool)
         .await

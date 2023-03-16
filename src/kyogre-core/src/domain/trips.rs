@@ -1,4 +1,4 @@
-use crate::{DateRange, Port};
+use crate::{DateRange, FiskeridirVesselId, Port};
 use chrono::{DateTime, TimeZone, Utc};
 use num_derive::FromPrimitive;
 
@@ -31,7 +31,7 @@ pub enum TripAssemblerId {
 
 #[derive(Debug, Clone)]
 pub struct TripAssemblerConflict {
-    pub fiskeridir_vessel_id: i64,
+    pub fiskeridir_vessel_id: FiskeridirVesselId,
     pub timestamp: DateTime<Utc>,
 }
 
@@ -136,7 +136,7 @@ pub struct TripPorts {
 #[derive(Debug, Clone)]
 pub struct TripCalculationTimer {
     pub timestamp: DateTime<Utc>,
-    pub fiskeridir_vessel_id: i64,
+    pub fiskeridir_vessel_id: FiskeridirVesselId,
 }
 
 impl Trip {

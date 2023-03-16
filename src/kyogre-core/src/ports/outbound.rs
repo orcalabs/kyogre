@@ -10,11 +10,11 @@ use futures::Stream;
 pub trait AisMigratorSource {
     async fn ais_positions(
         &self,
-        mmsi: i32,
+        mmsi: Mmsi,
         start: DateTime<Utc>,
         end: DateTime<Utc>,
     ) -> Result<Vec<AisPosition>, QueryError>;
-    async fn existing_mmsis(&self) -> Result<Vec<i32>, QueryError>;
+    async fn existing_mmsis(&self) -> Result<Vec<Mmsi>, QueryError>;
 }
 
 pub type PinBoxStream<'a, T, E> = Pin<Box<dyn Stream<Item = Result<T, E>> + 'a>>;
@@ -23,7 +23,7 @@ pub type PinBoxStream<'a, T, E> = Pin<Box<dyn Stream<Item = Result<T, E>> + 'a>>
 pub trait WebApiPort {
     fn ais_positions(
         &self,
-        mmsi: i32,
+        mmsi: Mmsi,
         range: &DateRange,
     ) -> PinBoxStream<'_, AisPosition, QueryError>;
     fn species(&self) -> PinBoxStream<'_, Species, QueryError>;
@@ -50,28 +50,28 @@ pub trait TripAssemblerOutboundPort: Send + Sync {
     ) -> Result<Vec<TripAssemblerConflict>, QueryError>;
     async fn landing_dates(
         &self,
-        vessel_id: i64,
+        vessel_id: FiskeridirVesselId,
         start: &DateTime<Utc>,
     ) -> Result<Vec<DateTime<Utc>>, QueryError>;
     async fn most_recent_trip(
         &self,
-        vessel_id: i64,
+        vessel_id: FiskeridirVesselId,
         assembler_id: TripAssemblerId,
     ) -> Result<Option<Trip>, QueryError>;
     async fn ers_arrivals(
         &self,
-        vessel_id: i64,
+        vessel_id: FiskeridirVesselId,
         start: &DateTime<Utc>,
         filter: ArrivalFilter,
     ) -> Result<Vec<Arrival>, QueryError>;
     async fn ers_departures(
         &self,
-        vessel_id: i64,
+        vessel_id: FiskeridirVesselId,
         start: &DateTime<Utc>,
     ) -> Result<Vec<Departure>, QueryError>;
     async fn trip_at_or_prior_to(
         &self,
-        fiskeridir_vessel_id: i64,
+        vessel_id: FiskeridirVesselId,
         trip_assembler_id: TripAssemblerId,
         time: &DateTime<Utc>,
     ) -> Result<Option<Trip>, QueryError>;
@@ -83,12 +83,12 @@ pub trait TripPrecisionOutboundPort: Send + Sync {
     async fn dock_points_of_trip(&self, trip_id: i64) -> Result<TripDockPoints, QueryError>;
     async fn ais_positions(
         &self,
-        vessel_id: i64,
+        mmsi: Mmsi,
         range: &DateRange,
     ) -> Result<Vec<AisPosition>, QueryError>;
     async fn trip_prior_to(
         &self,
-        vessel_id: i64,
+        vessel_id: FiskeridirVesselId,
         assembler_id: TripAssemblerId,
         time: &DateTime<Utc>,
     ) -> Result<Option<Trip>, QueryError>;
@@ -99,7 +99,7 @@ pub trait TripPrecisionOutboundPort: Send + Sync {
 
     async fn trips_without_precision(
         &self,
-        vessel_id: i64,
+        vessel_id: FiskeridirVesselId,
         assembler_id: TripAssemblerId,
     ) -> Result<Vec<Trip>, QueryError>;
 }

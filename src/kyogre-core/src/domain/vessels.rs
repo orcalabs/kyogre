@@ -1,5 +1,6 @@
-use crate::AisVessel;
+use crate::{AisVessel, Mmsi};
 use num_derive::FromPrimitive;
+use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 
 #[derive(Debug, Clone)]
@@ -8,9 +9,12 @@ pub struct Vessel {
     pub ais: Option<AisVessel>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize, Serialize)]
+pub struct FiskeridirVesselId(pub i64);
+
 #[derive(Debug, Clone)]
 pub struct FiskeridirVessel {
-    pub id: i64,
+    pub id: FiskeridirVesselId,
     pub vessel_type_id: Option<u32>,
     pub length_group_id: Option<u32>,
     pub nation_group_id: Option<String>,
@@ -32,7 +36,7 @@ pub struct FiskeridirVessel {
 }
 
 impl Vessel {
-    pub fn mmsi(&self) -> Option<i32> {
+    pub fn mmsi(&self) -> Option<Mmsi> {
         self.ais.as_ref().map(|v| v.mmsi)
     }
 }

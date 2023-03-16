@@ -2,6 +2,7 @@ use crate::{to_streaming_response, Database};
 use actix_web::{web, HttpResponse};
 use chrono::{DateTime, Utc};
 use futures::TryStreamExt;
+use kyogre_core::{FiskeridirVesselId, Mmsi};
 use serde::{Deserialize, Serialize};
 use tracing::{event, Level};
 use utoipa::ToSchema;
@@ -34,7 +35,8 @@ pub struct Vessel {
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct FiskeridirVessel {
-    pub id: i64,
+    #[schema(value_type = i64)]
+    pub id: FiskeridirVesselId,
     pub vessel_type_id: Option<u32>,
     pub length_group_id: Option<u32>,
     pub nation_group_id: Option<String>,
@@ -58,7 +60,8 @@ pub struct FiskeridirVessel {
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct AisVessel {
-    pub mmsi: i32,
+    #[schema(value_type = i32)]
+    pub mmsi: Mmsi,
     pub imo_number: Option<i32>,
     pub call_sign: Option<String>,
     pub name: Option<String>,
@@ -121,7 +124,7 @@ impl From<kyogre_core::FiskeridirVessel> for FiskeridirVessel {
 
 impl PartialEq<fiskeridir_rs::Vessel> for FiskeridirVessel {
     fn eq(&self, other: &fiskeridir_rs::Vessel) -> bool {
-        self.id == other.id.unwrap()
+        self.id.0 == other.id.unwrap()
             && self.vessel_type_id == other.type_code.map(|v| v as u32)
             && self.length_group_id == other.length_group_code.map(|v| v as u32)
             && self.nation_group_id == other.nation_group.clone()

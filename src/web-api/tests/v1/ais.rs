@@ -1,6 +1,7 @@
 use super::helper::test;
 use actix_web::http::StatusCode;
 use chrono::{Duration, TimeZone, Utc};
+use kyogre_core::Mmsi;
 use web_api::routes::v1::ais::{
     AisPosition, AisTrackParameters, AIS_DETAILS_INTERVAL, MISSING_DATA_DURATION,
 };
@@ -8,7 +9,7 @@ use web_api::routes::v1::ais::{
 #[tokio::test]
 async fn test_ais_track_filters_by_start_and_end() {
     test(|helper| async move {
-        let vessel = helper.db.generate_ais_vessel(40, "LK-28").await;
+        let vessel = helper.db.generate_ais_vessel(Mmsi(40), "LK-28").await;
         let pos = helper
             .db
             .generate_ais_position(vessel.mmsi, Utc.timestamp_opt(1000, 0).unwrap())
@@ -44,7 +45,7 @@ async fn test_ais_track_filters_by_start_and_end() {
 #[tokio::test]
 async fn test_ais_track_returns_a_details_on_first_and_last_point() {
     test(|helper| async move {
-        let vessel = helper.db.generate_ais_vessel(40, "LK-28").await;
+        let vessel = helper.db.generate_ais_vessel(Mmsi(40), "LK-28").await;
         let pos = helper
             .db
             .generate_ais_position(vessel.mmsi, Utc.timestamp_opt(1000, 0).unwrap())
@@ -79,7 +80,7 @@ async fn test_ais_track_returns_a_details_on_first_and_last_point() {
 #[tokio::test]
 async fn test_ais_track_returns_a_details_every_interval() {
     test(|helper| async move {
-        let vessel = helper.db.generate_ais_vessel(40, "LK-28").await;
+        let vessel = helper.db.generate_ais_vessel(Mmsi(40), "LK-28").await;
         let pos = helper
             .db
             .generate_ais_position(vessel.mmsi, Utc.timestamp_opt(1000, 0).unwrap())
@@ -120,7 +121,7 @@ async fn test_ais_track_returns_a_details_every_interval() {
 #[tokio::test]
 async fn test_ais_track_returns_missing_data_if_time_between_points_exceeds_limit() {
     test(|helper| async move {
-        let vessel = helper.db.generate_ais_vessel(40, "LK-28").await;
+        let vessel = helper.db.generate_ais_vessel(Mmsi(40), "LK-28").await;
         let pos = helper
             .db
             .generate_ais_position(vessel.mmsi, Utc.timestamp_opt(1000, 0).unwrap())
@@ -163,7 +164,7 @@ async fn test_ais_track_returns_missing_data_if_time_between_points_exceeds_limi
 #[tokio::test]
 async fn test_ais_track_returns_bad_request_with_only_start_and_no_end_specified() {
     test(|helper| async move {
-        let vessel = helper.db.generate_ais_vessel(40, "LK-28").await;
+        let vessel = helper.db.generate_ais_vessel(Mmsi(40), "LK-28").await;
 
         let response = helper
             .app
@@ -184,7 +185,7 @@ async fn test_ais_track_returns_bad_request_with_only_start_and_no_end_specified
 #[tokio::test]
 async fn test_ais_track_returns_24h_of_data_when_no_start_and_end_are_specified() {
     test(|helper| async move {
-        let vessel = helper.db.generate_ais_vessel(40, "LK-28").await;
+        let vessel = helper.db.generate_ais_vessel(Mmsi(40), "LK-28").await;
 
         let now_pos = helper
             .db

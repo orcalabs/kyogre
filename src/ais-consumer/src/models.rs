@@ -1,7 +1,7 @@
 use error_stack::{bail, IntoReport, Report, Result, ResultExt};
 
 use chrono::{DateTime, Datelike, NaiveDate, NaiveDateTime, NaiveTime, TimeZone, Timelike, Utc};
-use kyogre_core::{AisClass, NavigationStatus, NewAisPosition, NewAisStatic};
+use kyogre_core::{AisClass, Mmsi, NavigationStatus, NewAisPosition, NewAisStatic};
 use rand::{random, Rng};
 use serde::{Deserialize, Serialize};
 use tracing::{event, Level};
@@ -15,7 +15,7 @@ pub struct AisStatic {
     pub message_type: Option<AisMessageType>,
     #[serde(rename = "messageType")]
     pub message_type_id: u32,
-    pub mmsi: i32,
+    pub mmsi: Mmsi,
     pub msgtime: DateTime<Utc>,
     #[serde(rename = "imoNumber")]
     pub imo_number: Option<i32>,
@@ -52,7 +52,7 @@ pub struct AisPosition {
     pub message_type_id: Option<i32>,
     #[serde(rename = "type")]
     pub message_type: Option<AisMessageType>,
-    pub mmsi: i32,
+    pub mmsi: Mmsi,
     pub msgtime: DateTime<Utc>,
     pub altitude: Option<i32>,
     #[serde(rename = "courseOverGround")]
@@ -152,11 +152,11 @@ impl From<AisPosition> for NewAisPositionWrapper {
 }
 
 impl AisPosition {
-    pub fn test_default(mmsi: Option<i32>) -> AisPosition {
+    pub fn test_default(mmsi: Option<Mmsi>) -> AisPosition {
         AisPosition {
             message_type_id: Some(1),
             message_type: Some(AisMessageType::Position),
-            mmsi: mmsi.unwrap_or_else(random::<i32>),
+            mmsi: mmsi.unwrap_or_else(|| Mmsi(random::<i32>())),
             msgtime: chrono::offset::Utc::now(),
             altitude: Some(5),
             course_over_ground: Some(123.32),
@@ -177,7 +177,7 @@ impl AisStatic {
         AisStatic {
             message_type_id: 5,
             message_type: Some(AisMessageType::Static),
-            mmsi: mmsi.abs(),
+            mmsi: Mmsi(mmsi.abs()),
             msgtime: chrono::offset::Utc::now(),
             imo_number: Some(123),
             call_sign: Some("LK45".to_string()),

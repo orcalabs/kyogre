@@ -3,8 +3,8 @@ use std::collections::HashMap;
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::ErsDca;
 use kyogre_core::{
-    AisPosition, AisVessel, DateRange, NewAisPosition, NewAisStatic, ScraperInboundPort, Trip,
-    Vessel,
+    AisPosition, AisVessel, DateRange, FiskeridirVesselId, Mmsi, NewAisPosition, NewAisStatic,
+    ScraperInboundPort, Trip, Vessel,
 };
 
 use crate::{models::Haul, PostgresAdapter};
@@ -30,7 +30,7 @@ impl TestDb {
         self.ais_positions(None, None).await
     }
 
-    pub async fn hauls_of_vessel(&self, fiskeridir_vessel_id: i64) -> Vec<kyogre_core::Haul> {
+    pub async fn hauls_of_vessel(&self, vessel_id: FiskeridirVesselId) -> Vec<kyogre_core::Haul> {
         sqlx::query_as!(
             Haul,
             r#"
@@ -63,7 +63,7 @@ FROM
 WHERE
     h.fiskeridir_vessel_id = $1
             "#,
-            fiskeridir_vessel_id
+            vessel_id.0
         )
         .fetch_all(&self.db.pool)
         .await
@@ -75,7 +75,7 @@ WHERE
 
     pub async fn ais_positions(
         &self,
-        mmsi: Option<i32>,
+        mmsi: Option<Mmsi>,
         range: Option<&DateRange>,
     ) -> Vec<AisPosition> {
         sqlx::query_as!(
@@ -109,7 +109,7 @@ WHERE
 ORDER BY
     "timestamp" ASC
             "#,
-            mmsi,
+            mmsi.map(|m| m.0),
             range.map(|r| r.start()),
             range.map(|r| r.end()),
         )
@@ -193,10 +193,10 @@ FROM
             .unwrap();
     }
 
-    pub async fn vessel(&self, fiskeridir_vessel_id: i64) -> Vessel {
+    pub async fn vessel(&self, vessel_id: FiskeridirVesselId) -> Vessel {
         Vessel::try_from(
             self.db
-                .single_fiskeridir_ais_vessel_combination(fiskeridir_vessel_id)
+                .single_fiskeridir_ais_vessel_combination(vessel_id)
                 .await
                 .unwrap()
                 .unwrap(),
@@ -204,9 +204,9 @@ FROM
         .unwrap()
     }
 
-    pub async fn trips_of_vessel(&self, fiskeridir_vessel_id: i64) -> Vec<Trip> {
+    pub async fn trips_of_vessel(&self, vessel_id: FiskeridirVesselId) -> Vec<Trip> {
         self.db
-            .trips_of_vessel_impl(fiskeridir_vessel_id)
+            .trips_of_vessel_impl(vessel_id)
             .await
             .unwrap()
             .into_iter()
@@ -216,22 +216,22 @@ FROM
 
     pub async fn generate_haul(
         &self,
-        fiskeridir_vessel_id: i64,
+        vessel_id: FiskeridirVesselId,
         start: &DateTime<Utc>,
         end: &DateTime<Utc>,
     ) -> kyogre_core::Haul {
-        let mut dca = ErsDca::test_default(1, Some(fiskeridir_vessel_id as u64));
+        let mut dca = ErsDca::test_default(1, Some(vessel_id.0 as u64));
         dca.start_date = Some(start.date_naive());
         dca.start_time = Some(start.time());
         dca.stop_date = Some(end.date_naive());
         dca.stop_time = Some(end.time());
         self.add_ers_dca_value(dca).await;
-        let mut hauls = self.hauls_of_vessel(fiskeridir_vessel_id).await;
+        let mut hauls = self.hauls_of_vessel(vessel_id).await;
         assert_eq!(hauls.len(), 1);
         hauls.pop().unwrap()
     }
 
-    pub async fn generate_ais_vessel(&self, mmsi: i32, call_sign: &str) -> AisVessel {
+    pub async fn generate_ais_vessel(&self, mmsi: Mmsi, call_sign: &str) -> AisVessel {
         let val = NewAisStatic::test_default(mmsi, call_sign);
         let mut map = HashMap::new();
         map.insert(val.mmsi, val);
@@ -251,7 +251,7 @@ FROM
 
     pub async fn generate_ais_position(
         &self,
-        mmsi: i32,
+        mmsi: Mmsi,
         timestamp: DateTime<chrono::Utc>,
     ) -> AisPosition {
         let pos = NewAisPosition::test_default(mmsi, timestamp);

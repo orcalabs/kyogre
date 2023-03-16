@@ -26,7 +26,7 @@ enum AisProcessingAction {
     Continue,
     Retry {
         positions: Option<Vec<NewAisPosition>>,
-        unique_static: Option<HashMap<i32, NewAisStatic>>,
+        unique_static: Option<HashMap<Mmsi, NewAisStatic>>,
     },
 }
 
@@ -123,7 +123,7 @@ impl PostgresAdapter {
     async fn insertion_retry(
         &self,
         positions: Option<&[NewAisPosition]>,
-        unique_static: Option<&HashMap<i32, NewAisStatic>>,
+        unique_static: Option<&HashMap<Mmsi, NewAisStatic>>,
     ) {
         if let Some(positions) = positions {
             if let Err(e) = self.add_ais_positions(positions).await {
@@ -214,7 +214,7 @@ impl PostgresAdapter {
 impl AisMigratorDestination for PostgresAdapter {
     async fn migrate_ais_data(
         &self,
-        mmsi: i32,
+        mmsi: Mmsi,
         positions: Vec<AisPosition>,
         progress: DateTime<Utc>,
     ) -> Result<(), InsertError> {
@@ -236,7 +236,7 @@ impl AisMigratorDestination for PostgresAdapter {
 impl WebApiPort for PostgresAdapter {
     fn ais_positions(
         &self,
-        mmsi: i32,
+        mmsi: Mmsi,
         range: &DateRange,
     ) -> PinBoxStream<'_, AisPosition, QueryError> {
         convert_stream(self.ais_positions_impl(mmsi, range)).boxed()
@@ -363,21 +363,29 @@ impl TripAssemblerOutboundPort for PostgresAdapter {
         &self,
         trip_assembler_id: TripAssemblerId,
     ) -> Result<Vec<TripCalculationTimer>, QueryError> {
-        self.trip_calculation_timers_impl(trip_assembler_id)
+        Ok(self
+            .trip_calculation_timers_impl(trip_assembler_id)
             .await
-            .change_context(QueryError)
+            .change_context(QueryError)?
+            .into_iter()
+            .map(TripCalculationTimer::from)
+            .collect())
     }
     async fn conflicts(
         &self,
         id: TripAssemblerId,
     ) -> Result<Vec<TripAssemblerConflict>, QueryError> {
-        self.trip_assembler_conflicts(id)
+        Ok(self
+            .trip_assembler_conflicts(id)
             .await
-            .change_context(QueryError)
+            .change_context(QueryError)?
+            .into_iter()
+            .map(TripAssemblerConflict::from)
+            .collect())
     }
     async fn landing_dates(
         &self,
-        vessel_id: i64,
+        vessel_id: FiskeridirVesselId,
         start: &DateTime<Utc>,
     ) -> Result<Vec<DateTime<Utc>>, QueryError> {
         self.landing_dates_impl(vessel_id, start)
@@ -386,42 +394,50 @@ impl TripAssemblerOutboundPort for PostgresAdapter {
     }
     async fn most_recent_trip(
         &self,
-        fiskeridir_vessel_id: i64,
+        vessel_id: FiskeridirVesselId,
         trip_assembler_id: TripAssemblerId,
     ) -> Result<Option<Trip>, QueryError> {
         convert_optional(
-            self.most_recent_trip_impl(fiskeridir_vessel_id, trip_assembler_id)
+            self.most_recent_trip_impl(vessel_id, trip_assembler_id)
                 .await
                 .change_context(QueryError)?,
         )
     }
     async fn ers_arrivals(
         &self,
-        fiskeridir_vessel_id: i64,
+        vessel_id: FiskeridirVesselId,
         start: &DateTime<Utc>,
         filter: ArrivalFilter,
     ) -> Result<Vec<Arrival>, QueryError> {
-        self.ers_arrivals_impl(fiskeridir_vessel_id, start, filter)
+        Ok(self
+            .ers_arrivals_impl(vessel_id, start, filter)
             .await
-            .change_context(QueryError)
+            .change_context(QueryError)?
+            .into_iter()
+            .map(Arrival::from)
+            .collect())
     }
     async fn ers_departures(
         &self,
-        fiskeridir_vessel_id: i64,
+        vessel_id: FiskeridirVesselId,
         start: &DateTime<Utc>,
     ) -> Result<Vec<Departure>, QueryError> {
-        self.ers_departures_impl(fiskeridir_vessel_id, start)
+        Ok(self
+            .ers_departures_impl(vessel_id, start)
             .await
-            .change_context(QueryError)
+            .change_context(QueryError)?
+            .into_iter()
+            .map(Departure::from)
+            .collect())
     }
     async fn trip_at_or_prior_to(
         &self,
-        fiskeridir_vessel_id: i64,
+        vessel_id: FiskeridirVesselId,
         trip_assembler_id: TripAssemblerId,
         time: &DateTime<Utc>,
     ) -> Result<Option<Trip>, QueryError> {
         convert_optional(
-            self.trip_at_or_prior_to_impl(fiskeridir_vessel_id, trip_assembler_id, time)
+            self.trip_at_or_prior_to_impl(vessel_id, trip_assembler_id, time)
                 .await
                 .change_context(QueryError)?,
         )
@@ -432,14 +448,14 @@ impl TripAssemblerOutboundPort for PostgresAdapter {
 impl TripAssemblerInboundPort for PostgresAdapter {
     async fn add_trips(
         &self,
-        fiskeridir_vessel_id: i64,
+        vessel_id: FiskeridirVesselId,
         new_trip_calculation_time: DateTime<Utc>,
         conflict_strategy: TripsConflictStrategy,
         trips: Vec<NewTrip>,
         trip_assembler_id: TripAssemblerId,
     ) -> Result<(), InsertError> {
         self.add_trips_impl(
-            fiskeridir_vessel_id,
+            vessel_id,
             new_trip_calculation_time,
             conflict_strategy,
             trips,
@@ -460,14 +476,14 @@ impl TripPrecisionOutboundPort for PostgresAdapter {
     }
     async fn ais_positions(
         &self,
-        _vessel_id: i64,
+        _mmsi: Mmsi,
         _range: &DateRange,
     ) -> Result<Vec<AisPosition>, QueryError> {
         unimplemented!();
     }
     async fn trip_prior_to(
         &self,
-        _vessel_id: i64,
+        _vessel_id: FiskeridirVesselId,
         _assembler_id: TripAssemblerId,
         _time: &DateTime<Utc>,
     ) -> Result<Option<Trip>, QueryError> {
@@ -482,7 +498,7 @@ impl TripPrecisionOutboundPort for PostgresAdapter {
 
     async fn trips_without_precision(
         &self,
-        _vessel_id: i64,
+        _vessel_id: FiskeridirVesselId,
         _assembler_id: TripAssemblerId,
     ) -> Result<Vec<Trip>, QueryError> {
         unimplemented!();
