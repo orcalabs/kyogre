@@ -468,10 +468,10 @@ impl TripAssemblerInboundPort for PostgresAdapter {
 
 #[async_trait]
 impl TripPrecisionOutboundPort for PostgresAdapter {
-    async fn ports_of_trip(&self, _trip_id: i64) -> Result<TripPorts, QueryError> {
+    async fn ports_of_trip(&self, _trip_id: TripId) -> Result<TripPorts, QueryError> {
         unimplemented!();
     }
-    async fn dock_points_of_trip(&self, _trip_id: i64) -> Result<TripDockPoints, QueryError> {
+    async fn dock_points_of_trip(&self, _trip_id: TripId) -> Result<TripDockPoints, QueryError> {
         unimplemented!();
     }
     async fn ais_positions(
@@ -491,7 +491,7 @@ impl TripPrecisionOutboundPort for PostgresAdapter {
     }
     async fn delivery_points_associated_with_trip(
         &self,
-        _trip_id: i64,
+        _trip_id: TripId,
     ) -> Result<Vec<DeliveryPoint>, QueryError> {
         unimplemented!();
     }

@@ -9,7 +9,7 @@ pub struct Vessel {
     pub ais: Option<AisVessel>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize)]
 pub struct FiskeridirVesselId(pub i64);
 
 #[derive(Debug, Clone)]
