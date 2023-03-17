@@ -11,7 +11,7 @@ pub struct DataMessage {
     pub static_messages: Vec<NewAisStatic>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize)]
 pub struct Mmsi(pub i32);
 
 #[derive(Debug, Clone)]

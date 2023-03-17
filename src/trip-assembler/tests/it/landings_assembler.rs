@@ -2,7 +2,7 @@ use crate::helper::test;
 use chrono::{DateTime, Duration, Utc};
 use kyogre_core::{
     DateRange, FiskeridirVesselId, NewTrip, ScraperInboundPort, Trip, TripAssemblerId,
-    TripAssemblerInboundPort, TripAssemblerOutboundPort, TripsConflictStrategy,
+    TripAssemblerInboundPort, TripAssemblerOutboundPort, TripId, TripsConflictStrategy,
 };
 use trip_assembler::{LandingTripAssembler, State, TripAssembler};
 
@@ -71,13 +71,13 @@ async fn test_produces_new_trips_without_replacing_existing_ones() {
 
         let expected = vec![
             Trip {
-                trip_id: 1,
+                trip_id: TripId(1),
                 period: expected_range_1.clone(),
                 landing_coverage: expected_range_1,
                 assembler_id: TripAssemblerId::Landings,
             },
             Trip {
-                trip_id: 2,
+                trip_id: TripId(2),
                 period: expected_range_2.clone(),
                 landing_coverage: expected_range_2,
                 assembler_id: TripAssemblerId::Landings,
@@ -184,7 +184,7 @@ async fn test_sets_start_of_first_trip_one_day_earlier_than_landing_timestamp() 
         assert_eq!(1, trips.len());
 
         let expected = Trip {
-            trip_id: 1,
+            trip_id: TripId(1),
             period: expected_range.clone(),
             landing_coverage: expected_range,
             assembler_id: TripAssemblerId::Landings,
@@ -287,20 +287,20 @@ async fn test_resolves_conflict_on_day_prior_to_most_recent_trip_end() {
 
         let expected = vec![
             Trip {
-                trip_id: 1,
+                trip_id: TripId(1),
                 period: expected_range_1.clone(),
                 landing_coverage: expected_range_1,
                 assembler_id: TripAssemblerId::Landings,
             },
             Trip {
-                trip_id: 3,
+                trip_id: TripId(3),
                 period: expected_range_2.clone(),
                 landing_coverage: expected_range_2,
                 assembler_id: TripAssemblerId::Landings,
             },
             Trip {
                 // One trip is deleted so serial key is incremented
-                trip_id: 4,
+                trip_id: TripId(4),
                 period: expected_range_3.clone(),
                 landing_coverage: expected_range_3,
                 assembler_id: TripAssemblerId::Landings,

@@ -1,10 +1,14 @@
 use crate::{DateRange, FiskeridirVesselId, Port};
 use chrono::{DateTime, TimeZone, Utc};
 use num_derive::FromPrimitive;
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize)]
+pub struct TripId(pub i64);
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Trip {
-    pub trip_id: i64,
+    pub trip_id: TripId,
     pub period: DateRange,
     pub landing_coverage: DateRange,
     pub assembler_id: TripAssemblerId,
@@ -41,7 +45,7 @@ pub struct TripLandingCoverage(DateRange);
 /// An outcome of exectuing one or more trip precision implementations on a trip.
 #[derive(Debug, Clone)]
 pub struct TripPrecisionUpdate {
-    pub trip_id: i64,
+    pub trip_id: TripId,
     pub outcome: PrecisionOutcome,
 }
 

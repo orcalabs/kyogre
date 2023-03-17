@@ -1,7 +1,7 @@
 use crate::error::{PostgresError, TripAssemblerError, UnboundedRangeError};
 use chrono::{DateTime, Utc};
 use error_stack::{report, IntoReport, Report, ResultExt};
-use kyogre_core::{DateRange, FiskeridirVesselId, TripAssemblerId};
+use kyogre_core::{DateRange, FiskeridirVesselId, TripAssemblerId, TripId};
 use num_traits::FromPrimitive;
 use sqlx::postgres::types::PgRange;
 
@@ -70,7 +70,7 @@ impl TryFrom<Trip> for kyogre_core::Trip {
             .change_context(PostgresError::DataConversion)?;
 
         Ok(kyogre_core::Trip {
-            trip_id: value.trip_id,
+            trip_id: TripId(value.trip_id),
             period,
             landing_coverage,
             assembler_id,

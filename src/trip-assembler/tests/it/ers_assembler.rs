@@ -71,13 +71,13 @@ async fn test_produces_new_trips_without_replacing_existing_ones() {
 
         let expected = vec![
             Trip {
-                trip_id: 1,
+                trip_id: TripId(1),
                 period: create_date_range(&departure, &arrival),
                 landing_coverage: create_date_range(&departure, &departure2),
                 assembler_id: TripAssemblerId::Ers,
             },
             Trip {
-                trip_id: 2,
+                trip_id: TripId(2),
                 period: create_date_range(&departure2, &arrival2),
                 landing_coverage: create_date_range(
                     &departure2,
@@ -214,7 +214,7 @@ async fn test_extends_most_recent_trip_with_new_arrival() {
         trips.sort_by_key(|v| v.trip_id);
 
         let expected = vec![Trip {
-            trip_id: 2,
+            trip_id: TripId(2),
             period: create_date_range(&departure, &arrival2),
             landing_coverage: create_date_range(&departure, &ers_last_trip_landing_coverage_end()),
             assembler_id: TripAssemblerId::Ers,
@@ -323,19 +323,19 @@ async fn test_handles_conflict_correctly() {
 
         let expected = vec![
             Trip {
-                trip_id: 3,
+                trip_id: TripId(3),
                 period: create_date_range(&departure, &arrival),
                 landing_coverage: create_date_range(&departure, &departure3),
                 assembler_id: TripAssemblerId::Ers,
             },
             Trip {
-                trip_id: 4,
+                trip_id: TripId(4),
                 period: create_date_range(&departure3, &arrival3),
                 landing_coverage: create_date_range(&departure3, &departure2),
                 assembler_id: TripAssemblerId::Ers,
             },
             Trip {
-                trip_id: 5,
+                trip_id: TripId(5),
                 period: create_date_range(&departure2, &arrival2),
                 landing_coverage: create_date_range(
                     &departure2,
