@@ -1,7 +1,7 @@
 use crate::chunks::{add_in_chunks, add_in_chunks_with_conversion};
 use crate::ScraperError;
 use error_stack::{Report, Result, ResultExt};
-use fiskeridir_rs::{DataFile, FileDownloader, Source};
+use fiskeridir_rs::{ApiDownloader, DataFile, FileDownloader, FileSource};
 use kyogre_core::{DeleteError, FileHash, InsertError, ScraperFileHashInboundPort};
 use kyogre_core::{FileHashId, HashDiff};
 use serde::de::DeserializeOwned;
@@ -12,31 +12,36 @@ mod ers_dep;
 mod ers_por;
 mod ers_tra;
 mod landings;
+mod register_vessel;
 
 pub use ers_dca::*;
 pub use ers_dep::*;
 pub use ers_por::*;
 pub use ers_tra::*;
 pub use landings::*;
+pub use register_vessel::*;
 
 pub struct FiskeridirSource {
     hash_store: Box<dyn ScraperFileHashInboundPort + Send + Sync>,
-    fiskeridir: FileDownloader,
+    fiskeridir_file: FileDownloader,
+    pub fiskeridir_api: ApiDownloader,
 }
 
 impl FiskeridirSource {
     pub fn new(
         hash_store: Box<dyn ScraperFileHashInboundPort + Send + Sync>,
-        fiskeridir: FileDownloader,
+        fiskeridir_file: FileDownloader,
+        fiskeridir_api: ApiDownloader,
     ) -> FiskeridirSource {
         FiskeridirSource {
             hash_store,
-            fiskeridir,
+            fiskeridir_file,
+            fiskeridir_api,
         }
     }
 
-    pub async fn download(&self, source: &Source) -> Result<DataFile, ScraperError> {
-        self.fiskeridir
+    pub async fn download(&self, source: &FileSource) -> Result<DataFile, ScraperError> {
+        self.fiskeridir_file
             .download(source)
             .await
             .change_context(ScraperError)
@@ -45,7 +50,7 @@ impl FiskeridirSource {
     pub async fn scrape_year_if_changed<A, B, C, D, E>(
         &self,
         file_hash: FileHash,
-        source: &Source,
+        source: &FileSource,
         insert_closure: C,
         chunk_size: usize,
         delete_closure: D,
@@ -90,7 +95,7 @@ impl FiskeridirSource {
     pub async fn scrape_year_with_conversion<A, B, C, D>(
         &self,
         file_hash: FileHash,
-        source: &Source,
+        source: &FileSource,
         insert_closure: D,
         chunk_size: usize,
     ) -> Result<HashDiff, ScraperError>

@@ -19,7 +19,10 @@ impl App {
         }
 
         let file_downloader = fiskeridir_rs::FileDownloader::new(PathBuf::from("/home")).unwrap();
-        let fiskeridir_source = FiskeridirSource::new(Box::new(postgres.clone()), file_downloader);
+        let api_downloader = fiskeridir_rs::ApiDownloader::new().unwrap();
+
+        let fiskeridir_source =
+            FiskeridirSource::new(Box::new(postgres.clone()), file_downloader, api_downloader);
 
         let scraper = Scraper::new(
             settings.scraper.clone(),

@@ -4,7 +4,10 @@
 
 use async_trait::async_trait;
 use error_stack::Result;
-use fiskeridir::{ErsDcaScraper, ErsDepScraper, ErsPorScraper, ErsTraScraper, LandingScraper};
+use fiskeridir::{
+    ErsDcaScraper, ErsDepScraper, ErsPorScraper, ErsTraScraper, LandingScraper,
+    RegisterVesselsScraper,
+};
 use kyogre_core::ScraperInboundPort;
 use serde::Deserialize;
 use std::sync::Arc;
@@ -32,6 +35,7 @@ pub struct Config {
     pub ers_por: Option<Vec<ErsFileYear>>,
     pub ers_dep: Option<Vec<ErsFileYear>>,
     pub ers_tra: Option<Vec<ErsFileYear>>,
+    pub register_vessels_url: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -55,14 +59,14 @@ pub trait DataSource: Send + Sync {
 impl Scraper {
     pub fn new(config: Config, processor: Box<dyn Processor>, source: FiskeridirSource) -> Scraper {
         let landing_sources = (config.landings.min_year..=config.landings.max_year)
-            .map(|year| fiskeridir_rs::Source::Landings { year, url: None })
+            .map(|year| fiskeridir_rs::FileSource::Landings { year, url: None })
             .collect();
 
         let ers_dca_sources = config
             .ers_dca
             .unwrap_or_default()
             .into_iter()
-            .map(|file_year| fiskeridir_rs::Source::ErsDca {
+            .map(|file_year| fiskeridir_rs::FileSource::ErsDca {
                 year: file_year.year,
                 url: file_year.url,
             })
@@ -72,7 +76,7 @@ impl Scraper {
             .ers_dep
             .unwrap_or_default()
             .into_iter()
-            .map(|file_year| fiskeridir_rs::Source::ErsDep {
+            .map(|file_year| fiskeridir_rs::FileSource::ErsDep {
                 year: file_year.year,
                 url: file_year.url,
             })
@@ -82,7 +86,7 @@ impl Scraper {
             .ers_por
             .unwrap_or_default()
             .into_iter()
-            .map(|file_year| fiskeridir_rs::Source::ErsPor {
+            .map(|file_year| fiskeridir_rs::FileSource::ErsPor {
                 year: file_year.year,
                 url: file_year.url,
             })
@@ -92,20 +96,26 @@ impl Scraper {
             .ers_tra
             .unwrap_or_default()
             .into_iter()
-            .map(|file_year| fiskeridir_rs::Source::ErsTra {
+            .map(|file_year| fiskeridir_rs::FileSource::ErsTra {
                 year: file_year.year,
                 url: file_year.url,
             })
             .collect();
+
+        let register_vessels_source = config
+            .register_vessels_url
+            .map(|url| fiskeridir_rs::ApiSource::RegisterVessels { url });
 
         let arc = Arc::new(source);
         let landings_scraper = LandingScraper::new(arc.clone(), landing_sources);
         let ers_dca_scraper = ErsDcaScraper::new(arc.clone(), ers_dca_sources);
         let ers_dep_scraper = ErsDepScraper::new(arc.clone(), ers_dep_sources);
         let ers_por_scraper = ErsPorScraper::new(arc.clone(), ers_por_sources);
-        let ers_tra_scraper = ErsTraScraper::new(arc, ers_tra_sources);
+        let ers_tra_scraper = ErsTraScraper::new(arc.clone(), ers_tra_sources);
+        let register_vessels_scraper = RegisterVesselsScraper::new(arc, register_vessels_source);
         Scraper {
             scrapers: vec![
+                Box::new(register_vessels_scraper),
                 Box::new(landings_scraper),
                 Box::new(ers_dca_scraper),
                 Box::new(ers_por_scraper),
@@ -139,6 +149,7 @@ pub enum ScraperId {
     ErsDep,
     ErsDca,
     ErsTra,
+    RegisterVessels,
 }
 
 impl std::fmt::Display for ScraperId {
@@ -150,6 +161,7 @@ impl std::fmt::Display for ScraperId {
             ScraperId::ErsDep => write!(f, "ers_dep_scraper"),
             ScraperId::ErsDca => write!(f, "ers_dca_scraper"),
             ScraperId::ErsTra => write!(f, "ers_tra_scraper"),
+            ScraperId::RegisterVessels => write!(f, "register_vessels_scraper"),
         }
     }
 }

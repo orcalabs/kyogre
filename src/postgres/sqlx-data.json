@@ -1192,6 +1192,28 @@
     },
     "query": "\nINSERT INTO\n    fiskeridir_vessels (\n        fiskeridir_vessel_id,\n        call_sign,\n        registration_id,\n        \"name\",\n        \"length\",\n        building_year,\n        engine_power,\n        engine_building_year,\n        fiskeridir_vessel_type_id,\n        norwegian_municipality_id,\n        norwegian_county_id,\n        fiskeridir_nation_group_id,\n        nation_id,\n        gross_tonnage_1969,\n        gross_tonnage_other,\n        rebuilding_year,\n        fiskeridir_length_group_id\n    )\nSELECT\n    *\nFROM\n    UNNEST(\n        $1::BIGINT[],\n        $2::VARCHAR[],\n        $3::VARCHAR[],\n        $4::VARCHAR[],\n        $5::DECIMAL[],\n        $6::INT[],\n        $7::INT[],\n        $8::INT[],\n        $9::INT[],\n        $10::INT[],\n        $11::INT[],\n        $12::VARCHAR[],\n        $13::VARCHAR[],\n        $14::INT[],\n        $15::INT[],\n        $16::INT[],\n        $17::INT[]\n    )\nON CONFLICT (fiskeridir_vessel_id) DO NOTHING\n            "
   },
+  "8eb814fcde0f1787d9c86b11131db9cce2b4e1d9b39b7be89a2ee2297b25fb74": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Int8Array",
+          "Int4Array",
+          "VarcharArray",
+          "VarcharArray",
+          "VarcharArray",
+          "NumericArray",
+          "NumericArray",
+          "Int4Array",
+          "Int8Array",
+          "JsonArray",
+          "Int4Array"
+        ]
+      }
+    },
+    "query": "\nINSERT INTO\n    fiskeridir_vessels (\n        fiskeridir_vessel_id,\n        norwegian_municipality_id,\n        call_sign,\n        \"name\",\n        registration_id,\n        \"length\",\n        \"width\",\n        engine_power,\n        imo_number,\n        owners,\n        fiskeridir_vessel_source_id\n    )\nSELECT\n    *\nFROM\n    UNNEST(\n        $1::BIGINT[],\n        $2::INT[],\n        $3::VARCHAR[],\n        $4::VARCHAR[],\n        $5::VARCHAR[],\n        $6::DECIMAL[],\n        $7::DECIMAL[],\n        $8::INT[],\n        $9::BIGINT[],\n        $10::JSON[],\n        $11::INT[]\n    )\nON CONFLICT (fiskeridir_vessel_id) DO\nUPDATE\nSET\n    norwegian_municipality_id = EXCLUDED.norwegian_municipality_id,\n    call_sign = EXCLUDED.call_sign,\n    \"name\" = EXCLUDED.name,\n    registration_id = EXCLUDED.registration_id,\n    \"length\" = EXCLUDED.length,\n    \"width\" = EXCLUDED.width,\n    engine_power = EXCLUDED.engine_power,\n    imo_number = EXCLUDED.imo_number,\n    owners = EXCLUDED.owners,\n    fiskeridir_vessel_source_id = EXCLUDED.fiskeridir_vessel_source_id\n            "
+  },
   "90692aec2f77f36b2d8e4d3e122b8fd69a7d0f6b2dd960f90ce537bfad6836b5": {
     "describe": {
       "columns": [],
@@ -2238,7 +2260,7 @@
         true,
         true,
         true,
-        false,
+        true,
         true,
         true,
         true,

@@ -3,19 +3,22 @@ use std::sync::Arc;
 use crate::{DataSource, Processor, ScraperError, ScraperId};
 use async_trait::async_trait;
 use error_stack::Result;
-use fiskeridir_rs::Source;
+use fiskeridir_rs::FileSource;
 use kyogre_core::{FileHash, HashDiff};
 use tracing::{event, Level};
 
 use super::FiskeridirSource;
 
 pub struct ErsDcaScraper {
-    sources: Vec<Source>,
+    sources: Vec<FileSource>,
     fiskeridir_source: Arc<FiskeridirSource>,
 }
 
 impl ErsDcaScraper {
-    pub fn new(fiskeridir_source: Arc<FiskeridirSource>, sources: Vec<Source>) -> ErsDcaScraper {
+    pub fn new(
+        fiskeridir_source: Arc<FiskeridirSource>,
+        sources: Vec<FileSource>,
+    ) -> ErsDcaScraper {
         ErsDcaScraper {
             sources,
             fiskeridir_source,
