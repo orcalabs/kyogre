@@ -1,7 +1,7 @@
 use bigdecimal::{BigDecimal, FromPrimitive};
 use chrono::{DateTime, Utc};
 use error_stack::{report, IntoReport, Report, ResultExt};
-use kyogre_core::{CatchLocationId, WhaleGender};
+use kyogre_core::{CatchLocationId, HaulId, WhaleGender};
 use serde::Deserialize;
 use sqlx::postgres::types::PgRange;
 
@@ -86,7 +86,7 @@ impl TryFrom<Haul> for kyogre_core::Haul {
         .change_context(PostgresError::DataConversion)?;
 
         Ok(Self {
-            haul_id: v.haul_id,
+            haul_id: HaulId(v.haul_id),
             ers_activity_id: v.ers_activity_id,
             duration: v.duration,
             haul_distance: v.haul_distance,

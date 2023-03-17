@@ -11,7 +11,7 @@ use crate::{
 use actix_web::{web, HttpResponse};
 use chrono::{DateTime, Datelike, Duration, Months, NaiveDate, Utc};
 use futures::TryStreamExt;
-use kyogre_core::{CatchLocationId, DateRange, HaulsQuery, Range, WhaleGender};
+use kyogre_core::{CatchLocationId, DateRange, HaulId, HaulsQuery, Range, WhaleGender};
 use serde::{Deserialize, Serialize};
 use tracing::{event, Level};
 use utoipa::{IntoParams, ToSchema};
@@ -95,7 +95,8 @@ pub async fn hauls_grid<T: Database + 'static>(
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct Haul {
-    pub haul_id: String,
+    #[schema(value_type = String)]
+    pub haul_id: HaulId,
     pub ers_activity_id: String,
     pub duration: i32,
     pub haul_distance: Option<i32>,

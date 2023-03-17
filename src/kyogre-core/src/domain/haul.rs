@@ -1,8 +1,12 @@
 use std::collections::HashMap;
 
 use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 
 use crate::{CatchLocationId, WhaleGender};
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize)]
+pub struct HaulId(pub String);
 
 #[derive(Debug, Clone)]
 #[remain::sorted]
@@ -15,7 +19,7 @@ pub struct Haul {
     pub gear_fiskeridir_id: Option<i32>,
     pub gear_group_id: Option<i32>,
     pub haul_distance: Option<i32>,
-    pub haul_id: String,
+    pub haul_id: HaulId,
     pub ocean_depth_end: i32,
     pub ocean_depth_start: i32,
     pub quota_type_id: i32,

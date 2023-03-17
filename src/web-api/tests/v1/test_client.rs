@@ -1,6 +1,6 @@
 use std::{fmt::Write, string::ToString};
 
-use kyogre_core::Mmsi;
+use kyogre_core::{HaulId, Mmsi};
 use reqwest::{Client, Response};
 use web_api::routes::v1::{ais::AisTrackParameters, haul::HaulsParams};
 
@@ -62,8 +62,8 @@ impl ApiClient {
     pub async fn get_hauls_grid(&self, params: HaulsParams) -> Response {
         self.get_hauls_impl("hauls_grid", params).await
     }
-    pub async fn get_trip_of_haul(&self, haul_id: &str) -> Response {
-        self.get(format!("trip_of_haul/{haul_id}"), &[]).await
+    pub async fn get_trip_of_haul(&self, haul_id: &HaulId) -> Response {
+        self.get(format!("trip_of_haul/{}", haul_id.0), &[]).await
     }
     pub async fn get_hauls_impl(&self, url: &str, params: HaulsParams) -> Response {
         let mut parameters = Vec::new();
