@@ -288,6 +288,14 @@ impl WebApiPort for PostgresAdapter {
 
 #[async_trait]
 impl ScraperInboundPort for PostgresAdapter {
+    async fn add_register_vessels(
+        &self,
+        vessels: Vec<fiskeridir_rs::RegisterVessel>,
+    ) -> Result<(), InsertError> {
+        self.add_register_vessels_impl(vessels)
+            .await
+            .change_context(InsertError)
+    }
     async fn add_landings(&self, landings: Vec<fiskeridir_rs::Landing>) -> Result<(), InsertError> {
         let set = LandingSet::new(landings).change_context(InsertError)?;
 

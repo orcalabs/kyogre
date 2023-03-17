@@ -3,19 +3,22 @@ use std::sync::Arc;
 use crate::{DataSource, Processor, ScraperError, ScraperId};
 use async_trait::async_trait;
 use error_stack::Result;
-use fiskeridir_rs::Source;
+use fiskeridir_rs::FileSource;
 use kyogre_core::{FileHash, HashDiff};
 use tracing::{event, Level};
 
 use super::FiskeridirSource;
 
 pub struct LandingScraper {
-    sources: Vec<Source>,
+    sources: Vec<FileSource>,
     fiskeridir_source: Arc<FiskeridirSource>,
 }
 
 impl LandingScraper {
-    pub fn new(fiskeridir_source: Arc<FiskeridirSource>, sources: Vec<Source>) -> LandingScraper {
+    pub fn new(
+        fiskeridir_source: Arc<FiskeridirSource>,
+        sources: Vec<FileSource>,
+    ) -> LandingScraper {
         LandingScraper {
             sources,
             fiskeridir_source,

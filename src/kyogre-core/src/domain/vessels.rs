@@ -61,6 +61,26 @@ pub enum FiskdirVesselNationalityGroup {
     Test = 3,
 }
 
+#[derive(
+    Debug,
+    Copy,
+    Clone,
+    PartialEq,
+    FromPrimitive,
+    Eq,
+    Serialize_repr,
+    Deserialize_repr,
+    Hash,
+    Ord,
+    PartialOrd,
+)]
+#[repr(u8)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
+pub enum FiskeridirVesselSource {
+    Landings = 1,
+    FiskeridirVesselRegister = 2,
+}
+
 impl From<fiskeridir_rs::FiskdirVesselNationalityGroup> for FiskdirVesselNationalityGroup {
     fn from(v: fiskeridir_rs::FiskdirVesselNationalityGroup) -> Self {
         match v {
