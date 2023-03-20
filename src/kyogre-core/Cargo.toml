@@ -9,13 +9,13 @@ edition = "2021"
 utoipa = ["dep:utoipa"]
 
 [dependencies]
-async-trait = "0.1.66"
-serde = "1.0.155"
+async-trait = "0.1.67"
+serde = "1.0.157"
 chrono = { version = "0.4.24", features = ["serde"] }
 chrono-tz = "0.8.1"
 fiskeridir-rs = { workspace = true }
 
-serde_repr = "0.1.11"
+serde_repr = "0.1.12"
 strum = { version = "0.24.1", features = ["derive"] }
 num-traits = "0.2.15"
 num-derive = "0.3.3"
@@ -24,4 +24,4 @@ rand = "0.8.5"
 futures = "0.3.27"
 
 utoipa = { version = "3.1", optional = true }
-remain = "0.2.7"
+remain = "0.2.8"
