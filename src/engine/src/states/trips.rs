@@ -59,7 +59,7 @@ where
             .collect::<HashMap<FiskeridirVesselId, DateTime<Utc>>>();
 
         let vessels = database
-            .vessels()
+            .all_vessels()
             .await
             .change_context(TripAssemblerError)?;
 

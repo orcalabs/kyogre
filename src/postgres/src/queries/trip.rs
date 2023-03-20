@@ -1,34 +1,81 @@
 use crate::{
     error::PostgresError,
-    models::{Trip, TripAssemblerConflict, TripCalculationTimer},
+    models::{Trip, TripAssemblerConflict, TripCalculationTimer, TripDetailed},
     PostgresAdapter,
 };
 use chrono::{DateTime, Utc};
 use error_stack::{IntoReport, Result, ResultExt};
-use kyogre_core::{FiskeridirVesselId, NewTrip, TripAssemblerId, TripsConflictStrategy};
+use kyogre_core::{FiskeridirVesselId, HaulId, NewTrip, TripAssemblerId, TripsConflictStrategy};
 use sqlx::postgres::types::PgRange;
 
 impl PostgresAdapter {
-    pub(crate) async fn trip_of_haul_impl(
+    pub(crate) async fn detailed_trips_of_vessel_impl(
         &self,
-        haul_id: &str,
-    ) -> Result<Option<Trip>, PostgresError> {
-        let mut trips = sqlx::query_as!(
-            Trip,
+        vessel_id: FiskeridirVesselId,
+    ) -> Result<Vec<TripDetailed>, PostgresError> {
+        sqlx::query_as!(
+            TripDetailed,
             r#"
 SELECT
-    t.trip_id,
-    t.period,
-    t.landing_coverage,
-    t.trip_assembler_id
+    t.trip_id AS "trip_id!",
+    t.trip_assembler_id AS "trip_assembler_id!",
+    t.fiskeridir_vessel_id AS "fiskeridir_vessel_id!",
+    t.period AS "period!",
+    t.start_port_id,
+    t.end_port_id,
+    t.num_deliveries as "num_deliveries!",
+    t.total_living_weight as "total_living_weight!",
+    t.total_gross_weight as "total_gross_weight!",
+    t.total_product_weight as "total_product_weight!",
+    t.delivery_points as "delivery_points!",
+    t.latest_landing_timestamp,
+    t.catches::TEXT AS "catches!",
+    t.hauls::TEXT AS "hauls!",
+    t.delivery_point_catches::TEXT AS "delivery_point_catches!",
+    t.gear_ids as "gear_ids!"
 FROM
-    trips AS t
-    INNER JOIN hauls_view AS h ON h.period <@ t.period
-    AND h.fiskeridir_vessel_id = t.fiskeridir_vessel_id
+    trips_view AS t
 WHERE
-    h.haul_id = $1
+    t.fiskeridir_vessel_id = $1
             "#,
-            haul_id,
+            vessel_id.0
+        )
+        .fetch_all(&self.pool)
+        .await
+        .into_report()
+        .change_context(PostgresError::Query)
+    }
+
+    pub(crate) async fn detailed_trip_of_haul_impl(
+        &self,
+        haul_id: &HaulId,
+    ) -> Result<Option<TripDetailed>, PostgresError> {
+        let mut trips = sqlx::query_as!(
+            TripDetailed,
+            r#"
+SELECT
+    t.trip_id AS "trip_id!",
+    t.trip_assembler_id AS "trip_assembler_id!",
+    t.fiskeridir_vessel_id AS "fiskeridir_vessel_id!",
+    t.period AS "period!",
+    t.start_port_id,
+    t.end_port_id,
+    t.num_deliveries as "num_deliveries!",
+    t.total_living_weight as "total_living_weight!",
+    t.total_gross_weight as "total_gross_weight!",
+    t.total_product_weight as "total_product_weight!",
+    t.delivery_points as "delivery_points!",
+    t.latest_landing_timestamp,
+    t.catches::TEXT AS "catches!",
+    t.hauls::TEXT AS "hauls!",
+    t.delivery_point_catches::TEXT AS "delivery_point_catches!",
+    t.gear_ids as "gear_ids!"
+FROM
+    trips_view AS t
+WHERE
+    $1 = ANY (t.haul_ids)
+            "#,
+            haul_id.0,
         )
         .fetch_all(&self.pool)
         .await

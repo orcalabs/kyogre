@@ -1,7 +1,7 @@
 #![deny(warnings)]
 #![deny(rust_2018_idioms)]
 
-use kyogre_core::{FiskdirVesselNationalityGroup, WebApiPort, WhaleGender};
+use kyogre_core::{Catch, Delivery, FiskdirVesselNationalityGroup, WebApiPort, WhaleGender};
 use postgres::PostgresAdapter;
 use routes::v1;
 use utoipa::OpenApi;
@@ -35,6 +35,8 @@ impl Database for PostgresAdapter {}
     ),
     components(
         schemas(
+            Delivery,
+            Catch,
             FiskdirVesselNationalityGroup,
             WhaleGender,
             error::ErrorResponse,

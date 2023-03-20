@@ -277,9 +277,12 @@ impl WebApiPort for PostgresAdapter {
         HaulsGrid::try_from(grid).change_context(QueryError)
     }
 
-    async fn trip_of_haul(&self, haul_id: &str) -> Result<Option<Trip>, QueryError> {
+    async fn detailed_trip_of_haul(
+        &self,
+        haul_id: &HaulId,
+    ) -> Result<Option<TripDetailed>, QueryError> {
         convert_optional(
-            self.trip_of_haul_impl(haul_id)
+            self.detailed_trip_of_haul_impl(haul_id)
                 .await
                 .change_context(QueryError)?,
         )
@@ -356,7 +359,7 @@ impl ScraperFileHashInboundPort for PostgresAdapter {
 
 #[async_trait]
 impl TripAssemblerOutboundPort for PostgresAdapter {
-    async fn vessels(&self) -> Result<Vec<Vessel>, QueryError> {
+    async fn all_vessels(&self) -> Result<Vec<Vessel>, QueryError> {
         let mut stream = convert_stream(self.fiskeridir_ais_vessel_combinations());
 
         let mut vessels = vec![];
