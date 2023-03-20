@@ -21,7 +21,7 @@ where
 {
     #[instrument(name = "trips_precision_state", skip_all)]
     pub async fn run(self) -> Engine<A, SharedState<B>> {
-        match self.database().vessels().await {
+        match self.database().all_vessels().await {
             Err(e) => {
                 event!(Level::ERROR, "failed to retrieve vessels: {:?}", e);
             }

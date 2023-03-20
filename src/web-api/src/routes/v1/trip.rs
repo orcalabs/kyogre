@@ -1,10 +1,14 @@
-use crate::{error::ApiError, response::Response, Database};
+use std::collections::HashMap;
+
+use crate::{error::ApiError, response::Response, *};
 use actix_web::web::{self, Path};
 use chrono::{DateTime, Utc};
-use kyogre_core::TripId;
+use kyogre_core::{Delivery, HaulId, TripId};
 use serde::{Deserialize, Serialize};
 use tracing::{event, Level};
 use utoipa::ToSchema;
+
+use super::haul::Haul;
 
 #[utoipa::path(
     get,
@@ -19,7 +23,7 @@ pub async fn trip_of_haul<T: Database + 'static>(
     db: web::Data<T>,
     haul_id: Path<String>,
 ) -> Result<Response<Option<Trip>>, ApiError> {
-    db.trip_of_haul(&haul_id)
+    db.detailed_trip_of_haul(&HaulId(haul_id.into_inner()))
         .await
         .map(|t| Response::new(t.map(Trip::from)))
         .map_err(|e| {
@@ -35,14 +39,35 @@ pub struct Trip {
     pub trip_id: TripId,
     pub start: DateTime<Utc>,
     pub end: DateTime<Utc>,
+    pub num_deliveries: u32,
+    pub most_recent_delivery_date: Option<DateTime<Utc>>,
+    #[schema(value_type = Vec<u32>)]
+    pub gear_ids: Vec<fiskeridir_rs::Gear>,
+    #[schema(value_type = Vec<String>)]
+    pub delivery_point_ids: Vec<fiskeridir_rs::DeliveryPointId>,
+    pub hauls: Vec<Haul>,
+    pub delivery: Delivery,
+    #[schema(value_type = HashMap<String, Delivery>)]
+    pub delivered_per_delivery_point: HashMap<fiskeridir_rs::DeliveryPointId, Delivery>,
+    pub start_port_id: Option<String>,
+    pub end_port_id: Option<String>,
 }
 
-impl From<kyogre_core::Trip> for Trip {
-    fn from(value: kyogre_core::Trip) -> Self {
+impl From<kyogre_core::TripDetailed> for Trip {
+    fn from(value: kyogre_core::TripDetailed) -> Self {
         Trip {
             trip_id: value.trip_id,
-            start: value.start(),
-            end: value.end(),
+            start: value.period.start(),
+            end: value.period.end(),
+            num_deliveries: value.num_deliveries,
+            most_recent_delivery_date: value.most_recent_delivery_date,
+            gear_ids: value.gear_ids,
+            delivery_point_ids: value.delivery_point_ids,
+            hauls: value.hauls.into_iter().map(Haul::from).collect(),
+            delivery: value.delivery,
+            delivered_per_delivery_point: value.delivered_per_delivery_point,
+            start_port_id: value.start_port_id,
+            end_port_id: value.end_port_id,
         }
     }
 }
@@ -52,5 +77,12 @@ impl PartialEq<Trip> for kyogre_core::Trip {
         self.trip_id == other.trip_id
             && self.start().timestamp() == other.start.timestamp()
             && self.end().timestamp() == other.end.timestamp()
+    }
+}
+
+impl PartialEq<Trip> for kyogre_core::TripDetailed {
+    fn eq(&self, other: &Trip) -> bool {
+        let converted: Trip = From::from(self.clone());
+        converted.eq(other)
     }
 }

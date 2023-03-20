@@ -3,10 +3,7 @@ use chrono::{DateTime, Utc};
 use dockertest::{DockerTest, Source, StaticManagementPolicy};
 use fiskeridir_rs::{ErsDep, ErsPor};
 use futures::Future;
-use kyogre_core::{
-    FiskeridirVesselId, ScraperInboundPort, TripAssemblerId, TripAssemblerInboundPort,
-    TripAssemblerOutboundPort,
-};
+use kyogre_core::*;
 use orca_core::{
     compositions::postgres_composition, Environment, LogLevel, PsqlLogStatements, PsqlSettings,
 };
@@ -53,15 +50,15 @@ impl TestHelper {
         vessel_id: FiskeridirVesselId,
         start: &DateTime<Utc>,
         end: &DateTime<Utc>,
-    ) -> kyogre_core::Trip {
+    ) -> TripDetailed {
         let mut departure = ErsDep::test_default(random(), Some(vessel_id.0 as u64));
         departure.departure_date = start.date_naive();
         departure.departure_time = start.time();
         let mut arrival = ErsPor::test_default(random(), Some(vessel_id.0 as u64), true);
         arrival.arrival_date = end.date_naive();
         arrival.arrival_time = end.time();
-        self.db.db.add_ers_por(vec![arrival]).await.unwrap();
         self.db.db.add_ers_dep(vec![departure]).await.unwrap();
+        self.db.db.add_ers_por(vec![arrival]).await.unwrap();
 
         self.add_trip(vessel_id, start, end, TripAssemblerId::Ers)
             .await
@@ -72,7 +69,7 @@ impl TestHelper {
         vessel_id: FiskeridirVesselId,
         start: &DateTime<Utc>,
         end: &DateTime<Utc>,
-    ) -> kyogre_core::Trip {
+    ) -> TripDetailed {
         let mut landing = fiskeridir_rs::Landing::test_default(random(), Some(vessel_id.0));
         landing.landing_timestamp = *start;
 
@@ -95,11 +92,11 @@ impl TestHelper {
         start: &DateTime<Utc>,
         end: &DateTime<Utc>,
         assembler: TripAssemblerId,
-    ) -> kyogre_core::Trip {
+    ) -> TripDetailed {
         let vessel = self
             .db
             .db
-            .vessels()
+            .all_vessels()
             .await
             .unwrap()
             .into_iter()
@@ -133,10 +130,18 @@ impl TestHelper {
             .await
             .unwrap();
 
-        let trips = self.db.trips_of_vessel(vessel.fiskeridir.id).await;
+        self.db.db.update_database_views().await.unwrap();
+
+        let trips = self
+            .db
+            .detailed_trips_of_vessels(vessel.fiskeridir.id)
+            .await;
+
         trips
             .into_iter()
-            .find(|t| t.start() == *start && t.end() == *end)
+            .find(|t| {
+                t.period.start() == *start && t.period.end() == *end && t.assembler_id == assembler
+            })
             .unwrap()
     }
 }

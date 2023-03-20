@@ -1,7 +1,9 @@
-use crate::{DateRange, FiskeridirVesselId, Port};
+use crate::*;
 use chrono::{DateTime, TimeZone, Utc};
+use fiskeridir_rs::DeliveryPointId;
 use num_derive::FromPrimitive;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize)]
 pub struct TripId(pub i64);
@@ -19,6 +21,43 @@ pub struct NewTrip {
     pub period: DateRange,
     pub start_port_code: Option<String>,
     pub end_port_code: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct TripDetailed {
+    pub fiskeridir_vessel_id: FiskeridirVesselId,
+    pub trip_id: TripId,
+    pub period: DateRange,
+    pub num_deliveries: u32,
+    pub most_recent_delivery_date: Option<DateTime<Utc>>,
+    pub gear_ids: Vec<fiskeridir_rs::Gear>,
+    pub delivery_point_ids: Vec<DeliveryPointId>,
+    pub hauls: Vec<Haul>,
+    pub delivery: Delivery,
+    pub delivered_per_delivery_point: HashMap<DeliveryPointId, Delivery>,
+    pub start_port_id: Option<String>,
+    pub end_port_id: Option<String>,
+    pub assembler_id: TripAssemblerId,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
+pub struct Delivery {
+    pub delivered: Vec<Catch>,
+    pub total_living_weight: f64,
+    pub total_product_weight: f64,
+    pub total_gross_weight: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
+pub struct Catch {
+    pub living_weight: f64,
+    pub gross_weight: f64,
+    pub product_weight: f64,
+    pub species_id: i32,
+    pub product_quality_id: i32,
+    pub product_quality_name: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

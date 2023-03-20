@@ -5,7 +5,7 @@ use utoipa::ToSchema;
 
 use crate::error::ApiError;
 
-#[derive(Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct Response<T> {
     pub body: T,
 }

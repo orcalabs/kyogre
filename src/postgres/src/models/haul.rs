@@ -1,15 +1,15 @@
 use bigdecimal::{BigDecimal, FromPrimitive};
 use chrono::{DateTime, Utc};
-use error_stack::{report, IntoReport, Report, ResultExt};
+use error_stack::{IntoReport, Report, ResultExt};
 use kyogre_core::{CatchLocationId, HaulId, WhaleGender};
 use serde::Deserialize;
-use sqlx::postgres::types::PgRange;
 
 use crate::{
-    error::{PostgresError, UnboundedRangeError, WhaleGenderError},
+    error::{PostgresError, WhaleGenderError},
     queries::decimal_to_float,
 };
 
+#[derive(Deserialize)]
 pub struct Haul {
     pub haul_id: String,
     pub ers_activity_id: String,
@@ -19,9 +19,10 @@ pub struct Haul {
     pub ocean_depth_end: i32,
     pub ocean_depth_start: i32,
     pub quota_type_id: i32,
+    pub start_timestamp: DateTime<Utc>,
+    pub stop_timestamp: DateTime<Utc>,
     pub start_latitude: BigDecimal,
     pub start_longitude: BigDecimal,
-    pub period: PgRange<DateTime<Utc>>,
     pub stop_latitude: BigDecimal,
     pub stop_longitude: BigDecimal,
     pub gear_fiskeridir_id: Option<i32>,
@@ -71,20 +72,6 @@ impl TryFrom<Haul> for kyogre_core::Haul {
     type Error = Report<PostgresError>;
 
     fn try_from(v: Haul) -> Result<Self, Self::Error> {
-        let period_start = match v.period.start {
-            std::ops::Bound::Included(b) => Ok(b),
-            std::ops::Bound::Excluded(b) => Ok(b),
-            std::ops::Bound::Unbounded => Err(report!(UnboundedRangeError)),
-        }
-        .change_context(PostgresError::DataConversion)?;
-
-        let period_end = match v.period.end {
-            std::ops::Bound::Included(b) => Ok(b),
-            std::ops::Bound::Excluded(b) => Ok(b),
-            std::ops::Bound::Unbounded => Err(report!(UnboundedRangeError)),
-        }
-        .change_context(PostgresError::DataConversion)?;
-
         Ok(Self {
             haul_id: HaulId(v.haul_id),
             ers_activity_id: v.ers_activity_id,
@@ -102,12 +89,12 @@ impl TryFrom<Haul> for kyogre_core::Haul {
                 .change_context(PostgresError::DataConversion)?,
             start_longitude: decimal_to_float(v.start_longitude)
                 .change_context(PostgresError::DataConversion)?,
-            start_timestamp: period_start,
+            start_timestamp: v.start_timestamp,
             stop_latitude: decimal_to_float(v.stop_latitude)
                 .change_context(PostgresError::DataConversion)?,
             stop_longitude: decimal_to_float(v.stop_longitude)
                 .change_context(PostgresError::DataConversion)?,
-            stop_timestamp: period_end,
+            stop_timestamp: v.stop_timestamp,
             gear_fiskeridir_id: v.gear_fiskeridir_id,
             gear_group_id: v.gear_group_id,
             fiskeridir_vessel_id: v.fiskeridir_vessel_id,

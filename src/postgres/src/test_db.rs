@@ -1,13 +1,9 @@
 use std::collections::HashMap;
 
+use crate::{models::Haul, PostgresAdapter};
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::ErsDca;
-use kyogre_core::{
-    AisPosition, AisVessel, DateRange, FiskeridirVesselId, Mmsi, NewAisPosition, NewAisStatic,
-    ScraperInboundPort, Trip, Vessel,
-};
-
-use crate::{models::Haul, PostgresAdapter};
+use kyogre_core::*;
 
 /// Wrapper with additional methods inteded for testing purposes.
 #[derive(Debug, Clone)]
@@ -45,7 +41,8 @@ SELECT
     h.quota_type_id AS "quota_type_id!",
     h.start_latitude AS "start_latitude!",
     h.start_longitude AS "start_longitude!",
-    h.period AS "period!",
+    LOWER(h.period) AS "start_timestamp!",
+    UPPER(h.period) AS "stop_timestamp!",
     h.stop_latitude AS "stop_latitude!",
     h.stop_longitude AS "stop_longitude!",
     h.gear_fiskeridir_id AS gear_fiskeridir_id,
@@ -211,6 +208,19 @@ FROM
             .unwrap()
             .into_iter()
             .map(|v| Trip::try_from(v).unwrap())
+            .collect()
+    }
+
+    pub async fn detailed_trips_of_vessels(
+        &self,
+        vessel_id: FiskeridirVesselId,
+    ) -> Vec<TripDetailed> {
+        self.db
+            .detailed_trips_of_vessel_impl(vessel_id)
+            .await
+            .unwrap()
+            .into_iter()
+            .map(|v| TripDetailed::try_from(v).unwrap())
             .collect()
     }
 

@@ -33,13 +33,16 @@ pub trait WebApiPort {
     fn species_fao(&self) -> PinBoxStream<'_, SpeciesFao, QueryError>;
     fn vessels(&self) -> Pin<Box<dyn Stream<Item = Result<Vessel, QueryError>> + Send + '_>>;
     fn hauls(&self, query: HaulsQuery) -> Result<PinBoxStream<'_, Haul, QueryError>, QueryError>;
-    async fn trip_of_haul(&self, haul_id: &str) -> Result<Option<Trip>, QueryError>;
+    async fn detailed_trip_of_haul(
+        &self,
+        haul_id: &HaulId,
+    ) -> Result<Option<TripDetailed>, QueryError>;
     async fn hauls_grid(&self, query: HaulsQuery) -> Result<HaulsGrid, QueryError>;
 }
 
 #[async_trait]
 pub trait TripAssemblerOutboundPort: Send + Sync {
-    async fn vessels(&self) -> Result<Vec<Vessel>, QueryError>;
+    async fn all_vessels(&self) -> Result<Vec<Vessel>, QueryError>;
     async fn trip_calculation_timers(
         &self,
         trip_assembler_id: TripAssemblerId,
