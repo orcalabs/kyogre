@@ -39,7 +39,7 @@ pub fn to_bytes<T: Serialize>(value: &T) -> Result<Bytes, ApiError> {
 #[macro_export]
 macro_rules! to_streaming_response {
     ($stream:expr) => {
-        use actix_web::{web::Bytes, HttpResponse};
+        use actix_web::{http::header::ContentType, web::Bytes, HttpResponse};
         use async_stream::{__private::AsyncStream, try_stream};
         use futures::StreamExt;
 
@@ -63,6 +63,8 @@ macro_rules! to_streaming_response {
             yield Bytes::from_static(b"]");
         };
 
-        HttpResponse::Ok().streaming(Box::pin(stream))
+        HttpResponse::Ok()
+            .content_type(ContentType::json())
+            .streaming(Box::pin(stream))
     };
 }

@@ -176,6 +176,8 @@ FROM
                         h.vessel_call_sign_ers,
                         'vessel_length',
                         h.vessel_length,
+                        'vessel_length_group',
+                        h.vessel_length_group,
                         'vessel_name',
                         h.vessel_name,
                         'vessel_name_ers',
@@ -210,6 +212,7 @@ FROM
                     h.vessel_call_sign,
                     h.vessel_call_sign_ers,
                     h.vessel_length,
+                    h.vessel_length_group,
                     h.vessel_name,
                     h.vessel_name_ers
                 ORDER BY

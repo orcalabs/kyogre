@@ -36,20 +36,6 @@ impl std::fmt::Display for UnboundedRangeError {
 }
 
 #[derive(Debug)]
-pub struct GearError(pub i32);
-
-impl std::error::Error for GearError {}
-
-impl std::fmt::Display for GearError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!(
-            "failed to convert integer value to gear, value: {}",
-            self.0
-        ))
-    }
-}
-
-#[derive(Debug)]
 pub struct BigDecimalError(pub f64);
 
 impl std::error::Error for BigDecimalError {}
@@ -100,20 +86,6 @@ impl std::fmt::Display for NavigationStatusError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_fmt(format_args!(
             "failed to convert int value to navigation status, value: {}",
-            self.0
-        ))
-    }
-}
-
-#[derive(Debug)]
-pub struct WhaleGenderError(pub i32);
-
-impl std::error::Error for WhaleGenderError {}
-
-impl std::fmt::Display for WhaleGenderError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!(
-            "failed to convert int value to whale gender, value: {}",
             self.0
         ))
     }

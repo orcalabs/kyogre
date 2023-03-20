@@ -8,6 +8,7 @@ use crate::{
 use bigdecimal::BigDecimal;
 use chrono::{DateTime, Utc};
 use error_stack::{report, IntoReport, Report, Result, ResultExt};
+use fiskeridir_rs::{GearGroup, VesselLengthGroup};
 use futures::{Stream, TryStreamExt};
 use kyogre_core::HaulsQuery;
 use sqlx::postgres::types::PgRange;
@@ -40,11 +41,12 @@ SELECT
     h.stop_latitude AS "stop_latitude!",
     h.stop_longitude AS "stop_longitude!",
     h.gear_fiskeridir_id AS gear_fiskeridir_id,
-    h.gear_group_id AS gear_group_id,
+    h.gear_group_id AS "gear_group_id: GearGroup",
     h.fiskeridir_vessel_id AS fiskeridir_vessel_id,
     h.vessel_call_sign AS vessel_call_sign,
     h.vessel_call_sign_ers AS "vessel_call_sign_ers!",
     h.vessel_length AS "vessel_length!",
+    h.vessel_length_group AS "vessel_length_group!: VesselLengthGroup",
     h.vessel_name AS vessel_name,
     h.vessel_name_ers AS vessel_name_ers,
     h.catches::TEXT AS "catches!",
@@ -94,45 +96,110 @@ WHERE
         sqlx::query_as!(
             HaulsGrid,
             r#"
-SELECT
-    COALESCE(
-        JSON_OBJECT_AGG(q.catch_location_start, q.total_living_weight)::TEXT,
-        '{}'
-    ) AS "grid!",
-    COALESCE(MIN(q.total_living_weight), 0)::BIGINT AS "min_weight!",
-    COALESCE(MAX(q.total_living_weight), 0)::BIGINT AS "max_weight!"
-FROM
-    (
+WITH
+    hauls AS (
         SELECT
-            h.catch_location_start,
-            SUM(h.total_living_weight) AS total_living_weight
+            catch_location_start,
+            total_living_weight,
+            gear_group_id,
+            vessel_length_group,
+            catches
         FROM
-            hauls_view h
+            hauls_view
         WHERE
-            h.catch_location_start IS NOT NULL
+            catch_location_start IS NOT NULL
             AND (
                 $1::tstzrange[] IS NULL
-                OR h.period && ANY ($1)
+                OR period && ANY ($1)
             )
             AND (
                 $2::VARCHAR[] IS NULL
-                OR h.catch_location_start = ANY ($2)
+                OR catch_location_start = ANY ($2)
             )
             AND (
                 $3::INT[] IS NULL
-                OR h.gear_group_id = ANY ($3)
+                OR gear_group_id = ANY ($3)
             )
             AND (
                 $4::INT[] IS NULL
-                OR h.species_group_ids && $4
+                OR species_group_ids && $4
             )
             AND (
                 $5::numrange[] IS NULL
-                OR h.vessel_length <@ ANY ($5)
+                OR vessel_length <@ ANY ($5::numrange[])
             )
-        GROUP BY
-            h.catch_location_start
-    ) q
+    )
+SELECT
+    COALESCE(q1.grid::TEXT, '{}') AS "grid!",
+    COALESCE(q1.max_weight, 0)::BIGINT AS "max_weight!",
+    COALESCE(q1.min_weight, 0)::BIGINT AS "min_weight!",
+    COALESCE(q2.weight_by_gear_group::TEXT, '{}') AS "weight_by_gear_group!",
+    COALESCE(q3.weight_by_species_group::TEXT, '{}') AS "weight_by_species_group!",
+    COALESCE(q4.weight_by_vessel_length_group::TEXT, '{}') AS "weight_by_vessel_length_group!"
+FROM
+    (
+        SELECT
+            JSONB_OBJECT_AGG(h.catch_location_start, h.total_living_weight) AS grid,
+            MIN(h.total_living_weight) AS min_weight,
+            MAX(h.total_living_weight) AS max_weight
+        FROM
+            (
+                SELECT
+                    catch_location_start,
+                    SUM(total_living_weight) AS total_living_weight
+                FROM
+                    hauls
+                GROUP BY
+                    catch_location_start
+            ) h
+    ) q1,
+    (
+        SELECT
+            JSONB_OBJECT_AGG(h.gear_group_id, h.total_living_weight) AS weight_by_gear_group
+        FROM
+            (
+                SELECT
+                    gear_group_id,
+                    SUM(total_living_weight) AS total_living_weight
+                FROM
+                    hauls
+                GROUP BY
+                    gear_group_id
+            ) h
+    ) q2,
+    (
+        SELECT
+            JSONB_OBJECT_AGG(h2.species_group_id, h2.total_living_weight) AS weight_by_species_group
+        FROM
+            (
+                SELECT
+                    h1.catch['species_group_id']::INT AS species_group_id,
+                    SUM(h1.catch['living_weight']::INT) AS total_living_weight
+                FROM
+                    (
+                        SELECT
+                            JSONB_ARRAY_ELEMENTS(catches) catch
+                        FROM
+                            hauls
+                    ) h1
+                GROUP BY
+                    h1.catch['species_group_id']
+            ) h2
+    ) q3,
+    (
+        SELECT
+            JSONB_OBJECT_AGG(h.vessel_length_group, h.total_living_weight) AS weight_by_vessel_length_group
+        FROM
+            (
+                SELECT
+                    vessel_length_group,
+                    SUM(total_living_weight) AS total_living_weight
+                FROM
+                    hauls
+                GROUP BY
+                    vessel_length_group
+            ) h
+    ) q4
             "#,
             args.ranges,
             args.catch_locations as _,

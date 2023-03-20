@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::{models::Haul, PostgresAdapter};
 use chrono::{DateTime, Utc};
-use fiskeridir_rs::ErsDca;
+use fiskeridir_rs::{ErsDca, GearGroup, VesselLengthGroup};
 use kyogre_core::*;
 
 /// Wrapper with additional methods inteded for testing purposes.
@@ -46,11 +46,12 @@ SELECT
     h.stop_latitude AS "stop_latitude!",
     h.stop_longitude AS "stop_longitude!",
     h.gear_fiskeridir_id AS gear_fiskeridir_id,
-    h.gear_group_id AS gear_group_id,
+    h.gear_group_id AS "gear_group_id: GearGroup",
     h.fiskeridir_vessel_id AS fiskeridir_vessel_id,
     h.vessel_call_sign AS vessel_call_sign,
     h.vessel_call_sign_ers AS "vessel_call_sign_ers!",
     h.vessel_length AS "vessel_length!",
+    h.vessel_length_group AS "vessel_length_group!: VesselLengthGroup",
     h.vessel_name AS vessel_name,
     h.vessel_name_ers AS vessel_name_ers,
     h.catches::TEXT AS "catches!",

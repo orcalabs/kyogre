@@ -10,8 +10,9 @@ use crate::{
 };
 use actix_web::{web, HttpResponse};
 use chrono::{DateTime, Datelike, Duration, Months, NaiveDate, Utc};
+use fiskeridir_rs::{GearGroup, VesselLengthGroup, WhaleGender};
 use futures::TryStreamExt;
-use kyogre_core::{CatchLocationId, DateRange, HaulId, HaulsQuery, Range, WhaleGender};
+use kyogre_core::{CatchLocationId, DateRange, HaulId, HaulsQuery, Range};
 use serde::{Deserialize, Serialize};
 use tracing::{event, Level};
 use utoipa::{IntoParams, ToSchema};
@@ -114,11 +115,14 @@ pub struct Haul {
     #[schema(value_type = String, example = "2023-02-24T11:08:20.409416682Z")]
     pub stop_timestamp: DateTime<Utc>,
     pub gear_fiskeridir_id: Option<i32>,
-    pub gear_group_id: Option<i32>,
+    #[schema(value_type = Option<i32>)]
+    pub gear_group_id: Option<GearGroup>,
     pub fiskeridir_vessel_id: Option<i64>,
     pub vessel_call_sign: Option<String>,
     pub vessel_call_sign_ers: String,
     pub vessel_length: f64,
+    #[schema(value_type = i32)]
+    pub vessel_length_group: VesselLengthGroup,
     pub vessel_name: Option<String>,
     pub vessel_name_ers: Option<String>,
     pub catches: Vec<HaulCatch>,
@@ -142,6 +146,7 @@ pub struct WhaleCatch {
     pub blubber_measure_c: Option<i32>,
     pub circumference: Option<i32>,
     pub fetus_length: Option<i32>,
+    #[schema(value_type = Option<i32>)]
     pub gender_id: Option<WhaleGender>,
     pub grenade_number: String,
     pub individual_number: Option<i32>,
@@ -154,6 +159,9 @@ pub struct HaulsGrid {
     pub grid: HashMap<CatchLocationId, i64>,
     pub max_weight: i64,
     pub min_weight: i64,
+    pub weight_by_gear_group: HashMap<GearGroup, i64>,
+    pub weight_by_species_group: HashMap<i32, i64>,
+    pub weight_by_vessel_length_group: HashMap<VesselLengthGroup, i64>,
 }
 
 impl From<kyogre_core::Haul> for Haul {
@@ -179,6 +187,7 @@ impl From<kyogre_core::Haul> for Haul {
             vessel_call_sign: v.vessel_call_sign,
             vessel_call_sign_ers: v.vessel_call_sign_ers,
             vessel_length: v.vessel_length,
+            vessel_length_group: v.vessel_length_group,
             vessel_name: v.vessel_name,
             vessel_name_ers: v.vessel_name_ers,
             catches: v.catches.into_iter().map(HaulCatch::from).collect(),
@@ -220,6 +229,9 @@ impl From<kyogre_core::HaulsGrid> for HaulsGrid {
             grid: v.grid,
             max_weight: v.max_weight,
             min_weight: v.min_weight,
+            weight_by_gear_group: v.weight_by_gear_group,
+            weight_by_species_group: v.weight_by_species_group,
+            weight_by_vessel_length_group: v.weight_by_vessel_length_group,
         }
     }
 }

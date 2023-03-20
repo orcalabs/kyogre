@@ -1,12 +1,12 @@
 use super::{HaulCatch, WhaleCatch};
 use crate::{
-    error::{GearError, PostgresError, TripAssemblerError, UnboundedRangeError},
+    error::{PostgresError, TripAssemblerError, UnboundedRangeError},
     queries::decimal_to_float,
 };
 use bigdecimal::BigDecimal;
 use chrono::{DateTime, Utc};
 use error_stack::{report, IntoReport, Report, ResultExt};
-use fiskeridir_rs::{DeliveryPointId, Quality};
+use fiskeridir_rs::{DeliveryPointId, Gear, GearGroup, Quality, VesselLengthGroup};
 use kyogre_core::{
     CatchLocationId, DateRange, FiskeridirVesselId, HaulId, TripAssemblerId, TripId,
 };
@@ -44,7 +44,7 @@ pub struct TripDetailed {
     pub total_gross_weight: BigDecimal,
     pub total_product_weight: BigDecimal,
     pub delivery_points: Vec<String>,
-    pub gear_ids: Vec<i32>,
+    pub gear_ids: Vec<Gear>,
     pub latest_landing_timestamp: Option<DateTime<Utc>>,
     pub catches: String,
     pub hauls: String,
@@ -71,11 +71,12 @@ struct TripHaul {
     stop_latitude: BigDecimal,
     stop_longitude: BigDecimal,
     gear_fiskeridir_id: Option<i32>,
-    gear_group_id: Option<i32>,
+    gear_group_id: Option<GearGroup>,
     fiskeridir_vessel_id: Option<i64>,
     vessel_call_sign: Option<String>,
     vessel_call_sign_ers: String,
     vessel_length: BigDecimal,
+    vessel_length_group: VesselLengthGroup,
     vessel_name: Option<String>,
     vessel_name_ers: Option<String>,
     catches: Vec<HaulCatch>,
@@ -216,15 +217,7 @@ impl TryFrom<TripDetailed> for kyogre_core::TripDetailed {
             period,
             num_deliveries: value.num_deliveries as u32,
             most_recent_delivery_date: value.latest_landing_timestamp,
-            gear_ids: value
-                .gear_ids
-                .into_iter()
-                .map(|v| {
-                    fiskeridir_rs::Gear::from_i32(v).ok_or_else(|| {
-                        report!(GearError(v)).change_context(PostgresError::DataConversion)
-                    })
-                })
-                .collect::<Result<_, _>>()?,
+            gear_ids: value.gear_ids,
             delivery_point_ids: value
                 .delivery_points
                 .into_iter()
@@ -333,6 +326,7 @@ impl TryFrom<TripHaul> for kyogre_core::Haul {
             vessel_call_sign_ers: v.vessel_call_sign_ers,
             vessel_length: decimal_to_float(v.vessel_length)
                 .change_context(PostgresError::DataConversion)?,
+            vessel_length_group: v.vessel_length_group,
             vessel_name: v.vessel_name,
             vessel_name_ers: v.vessel_name_ers,
             catches: v

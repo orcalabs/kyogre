@@ -51,6 +51,10 @@ async fn test_species_groups_returns_all_species_groups() {
 
         let mut expected = vec![
             SpeciesGroup {
+                id: 0,
+                name: "Ukjent".into(),
+            },
+            SpeciesGroup {
                 id: landing.product.species.group_code,
                 name: landing.product.species.group_name.clone(),
             },
