@@ -115,12 +115,12 @@ impl Scraper {
         let register_vessels_scraper = RegisterVesselsScraper::new(arc, register_vessels_source);
         Scraper {
             scrapers: vec![
-                Box::new(register_vessels_scraper),
                 Box::new(landings_scraper),
                 Box::new(ers_dca_scraper),
                 Box::new(ers_por_scraper),
                 Box::new(ers_dep_scraper),
                 Box::new(ers_tra_scraper),
+                Box::new(register_vessels_scraper),
             ],
             processor,
         }

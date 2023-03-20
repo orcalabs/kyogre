@@ -1,9 +1,10 @@
 use std::collections::HashMap;
 
 use chrono::{DateTime, Utc};
+use fiskeridir_rs::{GearGroup, VesselLengthGroup, WhaleGender};
 use serde::{Deserialize, Serialize};
 
-use crate::{CatchLocationId, WhaleGender};
+use crate::CatchLocationId;
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize)]
 pub struct HaulId(pub String);
@@ -17,7 +18,7 @@ pub struct Haul {
     pub ers_activity_id: String,
     pub fiskeridir_vessel_id: Option<i64>,
     pub gear_fiskeridir_id: Option<i32>,
-    pub gear_group_id: Option<i32>,
+    pub gear_group_id: Option<GearGroup>,
     pub haul_distance: Option<i32>,
     pub haul_id: HaulId,
     pub ocean_depth_end: i32,
@@ -32,6 +33,7 @@ pub struct Haul {
     pub vessel_call_sign: Option<String>,
     pub vessel_call_sign_ers: String,
     pub vessel_length: f64,
+    pub vessel_length_group: VesselLengthGroup,
     pub vessel_name: Option<String>,
     pub vessel_name_ers: Option<String>,
     pub whale_catches: Vec<WhaleCatch>,
@@ -69,4 +71,7 @@ pub struct HaulsGrid {
     pub grid: HashMap<CatchLocationId, i64>,
     pub max_weight: i64,
     pub min_weight: i64,
+    pub weight_by_gear_group: HashMap<GearGroup, i64>,
+    pub weight_by_species_group: HashMap<i32, i64>,
+    pub weight_by_vessel_length_group: HashMap<VesselLengthGroup, i64>,
 }

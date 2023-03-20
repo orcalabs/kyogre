@@ -5,6 +5,7 @@ use crate::{
 };
 use chrono::{DateTime, Utc};
 use error_stack::{IntoReport, Result, ResultExt};
+use fiskeridir_rs::Gear;
 use kyogre_core::{FiskeridirVesselId, HaulId, NewTrip, TripAssemblerId, TripsConflictStrategy};
 use sqlx::postgres::types::PgRange;
 
@@ -23,16 +24,16 @@ SELECT
     t.period AS "period!",
     t.start_port_id,
     t.end_port_id,
-    t.num_deliveries as "num_deliveries!",
-    t.total_living_weight as "total_living_weight!",
-    t.total_gross_weight as "total_gross_weight!",
-    t.total_product_weight as "total_product_weight!",
-    t.delivery_points as "delivery_points!",
+    t.num_deliveries AS "num_deliveries!",
+    t.total_living_weight AS "total_living_weight!",
+    t.total_gross_weight AS "total_gross_weight!",
+    t.total_product_weight AS "total_product_weight!",
+    t.delivery_points AS "delivery_points!",
     t.latest_landing_timestamp,
     t.catches::TEXT AS "catches!",
     t.hauls::TEXT AS "hauls!",
     t.delivery_point_catches::TEXT AS "delivery_point_catches!",
-    t.gear_ids as "gear_ids!"
+    t.gear_ids AS "gear_ids!: Vec<Gear>"
 FROM
     trips_view AS t
 WHERE
@@ -60,16 +61,16 @@ SELECT
     t.period AS "period!",
     t.start_port_id,
     t.end_port_id,
-    t.num_deliveries as "num_deliveries!",
-    t.total_living_weight as "total_living_weight!",
-    t.total_gross_weight as "total_gross_weight!",
-    t.total_product_weight as "total_product_weight!",
-    t.delivery_points as "delivery_points!",
+    t.num_deliveries AS "num_deliveries!",
+    t.total_living_weight AS "total_living_weight!",
+    t.total_gross_weight AS "total_gross_weight!",
+    t.total_product_weight AS "total_product_weight!",
+    t.delivery_points AS "delivery_points!",
     t.latest_landing_timestamp,
     t.catches::TEXT AS "catches!",
     t.hauls::TEXT AS "hauls!",
     t.delivery_point_catches::TEXT AS "delivery_point_catches!",
-    t.gear_ids as "gear_ids!"
+    t.gear_ids AS "gear_ids!: Vec<Gear>"
 FROM
     trips_view AS t
 WHERE

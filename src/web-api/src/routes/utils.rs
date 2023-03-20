@@ -4,7 +4,7 @@ use std::{
 };
 
 use chrono::{DateTime, Utc};
-use kyogre_core::GearGroup;
+use fiskeridir_rs::GearGroup;
 use num_traits::FromPrimitive;
 use serde::{
     de::{DeserializeOwned, IntoDeserializer, Visitor},

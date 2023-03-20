@@ -2,6 +2,7 @@ use std::pin::Pin;
 
 use crate::{error::ApiError, response::to_bytes, Database};
 use actix_web::{
+    http::header::ContentType,
     web::{self, Path},
     HttpResponse,
 };
@@ -117,7 +118,9 @@ pub async fn ais_track<T: Database + 'static>(
         yield web::Bytes::from_static(b"]");
     };
 
-    Ok(HttpResponse::Ok().streaming(Box::pin(stream)))
+    Ok(HttpResponse::Ok()
+        .content_type(ContentType::json())
+        .streaming(Box::pin(stream)))
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema)]

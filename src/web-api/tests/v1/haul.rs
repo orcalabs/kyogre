@@ -3,8 +3,8 @@ use std::collections::HashMap;
 use super::helper::test;
 use actix_web::http::StatusCode;
 use chrono::{DateTime, Utc};
-use fiskeridir_rs::ErsDca;
-use kyogre_core::{GearGroup, ScraperInboundPort};
+use fiskeridir_rs::{ErsDca, GearGroup, VesselLengthGroup};
+use kyogre_core::ScraperInboundPort;
 use web_api::routes::{
     utils::{DateTimeUtc, GearGroupId, SpeciesGroupId},
     v1::haul::{Haul, HaulsGrid, HaulsParams},
@@ -256,6 +256,12 @@ async fn test_hauls_grid_returns_grid_for_all_hauls() {
                 ]),
                 max_weight: 40,
                 min_weight: 20,
+                weight_by_gear_group: HashMap::from([(GearGroup::Garn, 60)]),
+                weight_by_species_group: HashMap::from([(201, 60)]),
+                weight_by_vessel_length_group: HashMap::from([(
+                    VesselLengthGroup::TwentyEightAndAbove,
+                    60
+                )])
             }
         );
     })
@@ -316,6 +322,12 @@ async fn test_hauls_grid_returns_grid_for_hauls_in_specified_month() {
                 ]),
                 max_weight: 20,
                 min_weight: 10,
+                weight_by_gear_group: HashMap::from([(GearGroup::Garn, 30)]),
+                weight_by_species_group: HashMap::from([(201, 30)]),
+                weight_by_vessel_length_group: HashMap::from([(
+                    VesselLengthGroup::TwentyEightAndAbove,
+                    30
+                )])
             }
         );
     })
@@ -361,6 +373,12 @@ async fn test_hauls_grid_returns_grid_for_hauls_in_catch_location() {
                 grid: HashMap::from([("09-05".try_into().unwrap(), 30)]),
                 max_weight: 30,
                 min_weight: 30,
+                weight_by_gear_group: HashMap::from([(GearGroup::Garn, 30)]),
+                weight_by_species_group: HashMap::from([(201, 30)]),
+                weight_by_vessel_length_group: HashMap::from([(
+                    VesselLengthGroup::TwentyEightAndAbove,
+                    30
+                )])
             }
         );
     })
@@ -412,6 +430,12 @@ async fn test_hauls_grid_returns_grid_for_hauls_with_gear_group_ids() {
                 grid: HashMap::from([("09-05".try_into().unwrap(), 30)]),
                 max_weight: 30,
                 min_weight: 30,
+                weight_by_gear_group: HashMap::from([(GearGroup::Not, 10), (GearGroup::Traal, 20)]),
+                weight_by_species_group: HashMap::from([(201, 30)]),
+                weight_by_vessel_length_group: HashMap::from([(
+                    VesselLengthGroup::TwentyEightAndAbove,
+                    30
+                )])
             }
         );
     })
@@ -460,6 +484,12 @@ async fn test_hauls_grid_returns_grid_for_hauls_with_species_group_ids() {
                 grid: HashMap::from([("09-05".try_into().unwrap(), 30)]),
                 max_weight: 30,
                 min_weight: 30,
+                weight_by_gear_group: HashMap::from([(GearGroup::Garn, 30)]),
+                weight_by_species_group: HashMap::from([(301, 10), (302, 20)]),
+                weight_by_vessel_length_group: HashMap::from([(
+                    VesselLengthGroup::TwentyEightAndAbove,
+                    30
+                )])
             }
         );
     })
@@ -508,6 +538,12 @@ async fn test_hauls_grid_returns_grid_for_hauls_with_vessel_length_ranges() {
                 grid: HashMap::from([("09-05".try_into().unwrap(), 30)]),
                 max_weight: 30,
                 min_weight: 30,
+                weight_by_gear_group: HashMap::from([(GearGroup::Garn, 30)]),
+                weight_by_species_group: HashMap::from([(201, 30)]),
+                weight_by_vessel_length_group: HashMap::from([
+                    (VesselLengthGroup::UnderEleven, 10),
+                    (VesselLengthGroup::ElevenToFifteen, 20)
+                ])
             }
         );
     })

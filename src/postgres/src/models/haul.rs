@@ -1,13 +1,11 @@
-use bigdecimal::{BigDecimal, FromPrimitive};
+use bigdecimal::BigDecimal;
 use chrono::{DateTime, Utc};
 use error_stack::{IntoReport, Report, ResultExt};
-use kyogre_core::{CatchLocationId, HaulId, WhaleGender};
+use fiskeridir_rs::{GearGroup, VesselLengthGroup, WhaleGender};
+use kyogre_core::{CatchLocationId, HaulId};
 use serde::Deserialize;
 
-use crate::{
-    error::{PostgresError, WhaleGenderError},
-    queries::decimal_to_float,
-};
+use crate::{error::PostgresError, queries::decimal_to_float};
 
 #[derive(Deserialize)]
 pub struct Haul {
@@ -26,11 +24,12 @@ pub struct Haul {
     pub stop_latitude: BigDecimal,
     pub stop_longitude: BigDecimal,
     pub gear_fiskeridir_id: Option<i32>,
-    pub gear_group_id: Option<i32>,
+    pub gear_group_id: Option<GearGroup>,
     pub fiskeridir_vessel_id: Option<i64>,
     pub vessel_call_sign: Option<String>,
     pub vessel_call_sign_ers: String,
     pub vessel_length: BigDecimal,
+    pub vessel_length_group: VesselLengthGroup,
     pub vessel_name: Option<String>,
     pub vessel_name_ers: Option<String>,
     pub catches: String,
@@ -55,7 +54,7 @@ pub struct WhaleCatch {
     pub blubber_measure_c: Option<i32>,
     pub circumference: Option<i32>,
     pub fetus_length: Option<i32>,
-    pub gender_id: Option<i32>,
+    pub gender_id: Option<WhaleGender>,
     pub grenade_number: String,
     pub individual_number: Option<i32>,
     pub length: Option<i32>,
@@ -66,6 +65,9 @@ pub struct HaulsGrid {
     pub grid: String,
     pub max_weight: i64,
     pub min_weight: i64,
+    pub weight_by_gear_group: String,
+    pub weight_by_species_group: String,
+    pub weight_by_vessel_length_group: String,
 }
 
 impl TryFrom<Haul> for kyogre_core::Haul {
@@ -102,6 +104,7 @@ impl TryFrom<Haul> for kyogre_core::Haul {
             vessel_call_sign_ers: v.vessel_call_sign_ers,
             vessel_length: decimal_to_float(v.vessel_length)
                 .change_context(PostgresError::DataConversion)?,
+            vessel_length_group: v.vessel_length_group,
             vessel_name: v.vessel_name,
             vessel_name_ers: v.vessel_name_ers,
             catches: serde_json::from_str::<Vec<HaulCatch>>(&v.catches)
@@ -146,15 +149,7 @@ impl TryFrom<WhaleCatch> for kyogre_core::WhaleCatch {
             blubber_measure_c: v.blubber_measure_c,
             circumference: v.circumference,
             fetus_length: v.fetus_length,
-            gender_id: v
-                .gender_id
-                .map(|g| {
-                    WhaleGender::from_i32(g)
-                        .ok_or(WhaleGenderError(g))
-                        .into_report()
-                        .change_context(PostgresError::DataConversion)
-                })
-                .transpose()?,
+            gender_id: v.gender_id,
             grenade_number: v.grenade_number,
             individual_number: v.individual_number,
             length: v.length,
@@ -173,6 +168,33 @@ impl TryFrom<HaulsGrid> for kyogre_core::HaulsGrid {
                 .attach_printable_lazy(|| format!("could not serialize grid: {}", v.grid))?,
             max_weight: v.max_weight,
             min_weight: v.min_weight,
+            weight_by_gear_group: serde_json::from_str(&v.weight_by_gear_group)
+                .into_report()
+                .change_context(PostgresError::DataConversion)
+                .attach_printable_lazy(|| {
+                    format!(
+                        "could not serialize weight by gear group: {}",
+                        v.weight_by_gear_group
+                    )
+                })?,
+            weight_by_species_group: serde_json::from_str(&v.weight_by_species_group)
+                .into_report()
+                .change_context(PostgresError::DataConversion)
+                .attach_printable_lazy(|| {
+                    format!(
+                        "could not serialize weight by species group: {}",
+                        v.weight_by_species_group
+                    )
+                })?,
+            weight_by_vessel_length_group: serde_json::from_str(&v.weight_by_vessel_length_group)
+                .into_report()
+                .change_context(PostgresError::DataConversion)
+                .attach_printable_lazy(|| {
+                    format!(
+                        "could not serialize weight by vessel length group: {}",
+                        v.weight_by_vessel_length_group
+                    )
+                })?,
         })
     }
 }
