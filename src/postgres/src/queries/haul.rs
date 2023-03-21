@@ -131,8 +131,8 @@ WITH
     )
 SELECT
     COALESCE(q1.grid::TEXT, '{}') AS "grid!",
-    COALESCE(q1.max_weight, 0)::BIGINT AS "max_weight!",
-    COALESCE(q1.min_weight, 0)::BIGINT AS "min_weight!",
+    q1.max_weight::BIGINT AS "max_weight!",
+    q1.min_weight::BIGINT AS "min_weight!",
     COALESCE(q2.weight_by_gear_group::TEXT, '{}') AS "weight_by_gear_group!",
     COALESCE(q3.weight_by_species_group::TEXT, '{}') AS "weight_by_species_group!",
     COALESCE(q4.weight_by_vessel_length_group::TEXT, '{}') AS "weight_by_vessel_length_group!"
@@ -146,7 +146,7 @@ FROM
             (
                 SELECT
                     catch_location_start,
-                    SUM(total_living_weight) AS total_living_weight
+                    COALESCE(SUM(total_living_weight), 0) AS total_living_weight
                 FROM
                     hauls
                 GROUP BY
@@ -160,7 +160,7 @@ FROM
             (
                 SELECT
                     gear_group_id,
-                    SUM(total_living_weight) AS total_living_weight
+                    COALESCE(SUM(total_living_weight), 0) AS total_living_weight
                 FROM
                     hauls
                 GROUP BY
@@ -174,7 +174,7 @@ FROM
             (
                 SELECT
                     h1.catch['species_group_id']::INT AS species_group_id,
-                    SUM(h1.catch['living_weight']::INT) AS total_living_weight
+                    COALESCE(SUM(h1.catch['living_weight']::INT), 0) AS total_living_weight
                 FROM
                     (
                         SELECT
@@ -193,7 +193,7 @@ FROM
             (
                 SELECT
                     vessel_length_group,
-                    SUM(total_living_weight) AS total_living_weight
+                    COALESCE(SUM(total_living_weight), 0) AS total_living_weight
                 FROM
                     hauls
                 GROUP BY
