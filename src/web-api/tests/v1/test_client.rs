@@ -100,6 +100,13 @@ impl ApiClient {
             ))
         }
 
+        if let Some(id) = params.fiskeridir_vessel_ids {
+            parameters.push((
+                "fiskeridirVesselIds".to_string(),
+                create_comma_separated_list(id.into_iter().map(|i| i.0).collect()),
+            ))
+        }
+
         self.get(url, &parameters).await
     }
 }
