@@ -1,59 +1,5 @@
 {
   "db": "PostgreSQL",
-  "0048263e6474562e4ba370cf897671bafb14a1e3f61f71738c2fcec9f9dcd8ae": {
-    "describe": {
-      "columns": [
-        {
-          "name": "grid!",
-          "ordinal": 0,
-          "type_info": "Text"
-        },
-        {
-          "name": "max_weight!",
-          "ordinal": 1,
-          "type_info": "Int8"
-        },
-        {
-          "name": "min_weight!",
-          "ordinal": 2,
-          "type_info": "Int8"
-        },
-        {
-          "name": "weight_by_gear_group!",
-          "ordinal": 3,
-          "type_info": "Text"
-        },
-        {
-          "name": "weight_by_species_group!",
-          "ordinal": 4,
-          "type_info": "Text"
-        },
-        {
-          "name": "weight_by_vessel_length_group!",
-          "ordinal": 5,
-          "type_info": "Text"
-        }
-      ],
-      "nullable": [
-        null,
-        null,
-        null,
-        null,
-        null,
-        null
-      ],
-      "parameters": {
-        "Left": [
-          "TstzRangeArray",
-          "VarcharArray",
-          "Int4Array",
-          "Int4Array",
-          "NumRangeArray"
-        ]
-      }
-    },
-    "query": "\nWITH\n    hauls AS (\n        SELECT\n            catch_location_start,\n            total_living_weight,\n            gear_group_id,\n            vessel_length_group,\n            catches\n        FROM\n            hauls_view\n        WHERE\n            catch_location_start IS NOT NULL\n            AND (\n                $1::tstzrange[] IS NULL\n                OR period && ANY ($1)\n            )\n            AND (\n                $2::VARCHAR[] IS NULL\n                OR catch_location_start = ANY ($2)\n            )\n            AND (\n                $3::INT[] IS NULL\n                OR gear_group_id = ANY ($3)\n            )\n            AND (\n                $4::INT[] IS NULL\n                OR species_group_ids && $4\n            )\n            AND (\n                $5::numrange[] IS NULL\n                OR vessel_length <@ ANY ($5::numrange[])\n            )\n    )\nSELECT\n    COALESCE(q1.grid::TEXT, '{}') AS \"grid!\",\n    COALESCE(q1.max_weight, 0)::BIGINT AS \"max_weight!\",\n    COALESCE(q1.min_weight, 0)::BIGINT AS \"min_weight!\",\n    COALESCE(q2.weight_by_gear_group::TEXT, '{}') AS \"weight_by_gear_group!\",\n    COALESCE(q3.weight_by_species_group::TEXT, '{}') AS \"weight_by_species_group!\",\n    COALESCE(q4.weight_by_vessel_length_group::TEXT, '{}') AS \"weight_by_vessel_length_group!\"\nFROM\n    (\n        SELECT\n            JSONB_OBJECT_AGG(h.catch_location_start, h.total_living_weight) AS grid,\n            MIN(h.total_living_weight) AS min_weight,\n            MAX(h.total_living_weight) AS max_weight\n        FROM\n            (\n                SELECT\n                    catch_location_start,\n                    COALESCE(SUM(total_living_weight), 0) AS total_living_weight\n                FROM\n                    hauls\n                GROUP BY\n                    catch_location_start\n            ) h\n    ) q1,\n    (\n        SELECT\n            JSONB_OBJECT_AGG(h.gear_group_id, h.total_living_weight) AS weight_by_gear_group\n        FROM\n            (\n                SELECT\n                    gear_group_id,\n                    COALESCE(SUM(total_living_weight), 0) AS total_living_weight\n                FROM\n                    hauls\n                GROUP BY\n                    gear_group_id\n            ) h\n    ) q2,\n    (\n        SELECT\n            JSONB_OBJECT_AGG(h2.species_group_id, h2.total_living_weight) AS weight_by_species_group\n        FROM\n            (\n                SELECT\n                    h1.catch['species_group_id']::INT AS species_group_id,\n                    COALESCE(SUM(h1.catch['living_weight']::INT), 0) AS total_living_weight\n                FROM\n                    (\n                        SELECT\n                            JSONB_ARRAY_ELEMENTS(catches) catch\n                        FROM\n                            hauls\n                    ) h1\n                GROUP BY\n                    h1.catch['species_group_id']\n            ) h2\n    ) q3,\n    (\n        SELECT\n            JSONB_OBJECT_AGG(h.vessel_length_group, h.total_living_weight) AS weight_by_vessel_length_group\n        FROM\n            (\n                SELECT\n                    vessel_length_group,\n                    COALESCE(SUM(total_living_weight), 0) AS total_living_weight\n                FROM\n                    hauls\n                GROUP BY\n                    vessel_length_group\n            ) h\n    ) q4\n            "
-  },
   "063ffe3ea8b5130ce0826bfca3da92147d6472f539da0b9e2ce34f83532da96c": {
     "describe": {
       "columns": [],
@@ -630,123 +576,7 @@
     },
     "query": "\nINSERT INTO\n    norwegian_municipalities (norwegian_municipality_id, \"name\")\nSELECT\n    *\nFROM\n    UNNEST($1::INT[], $2::VARCHAR[])\nON CONFLICT (norwegian_municipality_id) DO\nUPDATE\nSET\n    NAME = excluded.name\nWHERE\n    norwegian_municipalities.name IS NULL\n    AND excluded.name IS NOT NULL\n            "
   },
-  "5101d466d5c5425c8f98f48cf5b82ff3497c642b369dcbf2ba25e69ead8ca917": {
-    "describe": {
-      "columns": [
-        {
-          "name": "update_database_views",
-          "ordinal": 0,
-          "type_info": "Void"
-        }
-      ],
-      "nullable": [
-        null
-      ],
-      "parameters": {
-        "Left": []
-      }
-    },
-    "query": "\nSELECT\n    update_database_views ();\n            "
-  },
-  "564ecbda445799ebe77b936a3199254676762e91b0006b9782f124f15f4b3778": {
-    "describe": {
-      "columns": [
-        {
-          "name": "mmsi",
-          "ordinal": 0,
-          "type_info": "Int4"
-        },
-        {
-          "name": "latitude",
-          "ordinal": 1,
-          "type_info": "Numeric"
-        },
-        {
-          "name": "longitude",
-          "ordinal": 2,
-          "type_info": "Numeric"
-        },
-        {
-          "name": "course_over_ground",
-          "ordinal": 3,
-          "type_info": "Numeric"
-        },
-        {
-          "name": "rate_of_turn",
-          "ordinal": 4,
-          "type_info": "Numeric"
-        },
-        {
-          "name": "true_heading",
-          "ordinal": 5,
-          "type_info": "Int4"
-        },
-        {
-          "name": "speed_over_ground",
-          "ordinal": 6,
-          "type_info": "Numeric"
-        },
-        {
-          "name": "msgtime",
-          "ordinal": 7,
-          "type_info": "Timestamptz"
-        },
-        {
-          "name": "navigational_status",
-          "ordinal": 8,
-          "type_info": "Int4"
-        },
-        {
-          "name": "distance_to_shore",
-          "ordinal": 9,
-          "type_info": "Numeric"
-        }
-      ],
-      "nullable": [
-        false,
-        false,
-        false,
-        true,
-        true,
-        true,
-        true,
-        false,
-        true,
-        false
-      ],
-      "parameters": {
-        "Left": []
-      }
-    },
-    "query": "\nSELECT\n    mmsi,\n    latitude,\n    longitude,\n    course_over_ground,\n    rate_of_turn,\n    true_heading,\n    speed_over_ground,\n    TIMESTAMP AS msgtime,\n    navigation_status_id AS navigational_status,\n    distance_to_shore\nFROM\n    current_ais_positions\n            "
-  },
-  "576c963cbdfdb331aa5c7d49ade0498051293588de7d8aaed4c98f4dd43dcc95": {
-    "describe": {
-      "columns": [],
-      "nullable": [],
-      "parameters": {
-        "Left": [
-          "Int4Array",
-          "VarcharArray"
-        ]
-      }
-    },
-    "query": "\nINSERT INTO\n    species_fiskeridir (species_fiskeridir_id, \"name\")\nSELECT\n    *\nFROM\n    UNNEST($1::INT[], $2::VARCHAR[])\nON CONFLICT (species_fiskeridir_id) DO NOTHING\n            "
-  },
-  "5869234c9b9d67363dbc4a2188df4507bddf24b864a27cd5580aa8bb7ab62ba5": {
-    "describe": {
-      "columns": [],
-      "nullable": [],
-      "parameters": {
-        "Left": [
-          "VarcharArray",
-          "VarcharArray"
-        ]
-      }
-    },
-    "query": "\nINSERT INTO\n    area_groupings (area_grouping_id, \"name\")\nSELECT\n    *\nFROM\n    UNNEST($1::VARCHAR[], $2::VARCHAR[])\nON CONFLICT (area_grouping_id) DO NOTHING\n                "
-  },
-  "6579216e9c511add45c5bd1bfdca55f57058b812bf3c4cffc955d9fcbf73aa73": {
+  "4995351d2e6db998267fcd7503bd6d4f6bd1d21e230781e888d4a096a372d61f": {
     "describe": {
       "columns": [
         {
@@ -908,11 +738,183 @@
           "VarcharArray",
           "Int4Array",
           "Int4Array",
-          "NumRangeArray"
+          "NumRangeArray",
+          "Int8Array"
         ]
       }
     },
-    "query": "\nSELECT\n    h.haul_id AS \"haul_id!\",\n    h.ers_activity_id AS \"ers_activity_id!\",\n    h.duration AS \"duration!\",\n    h.haul_distance AS haul_distance,\n    h.catch_location_start AS catch_location_start,\n    h.ocean_depth_end AS \"ocean_depth_end!\",\n    h.ocean_depth_start AS \"ocean_depth_start!\",\n    h.quota_type_id AS \"quota_type_id!\",\n    h.start_latitude AS \"start_latitude!\",\n    h.start_longitude AS \"start_longitude!\",\n    LOWER(h.period) AS \"start_timestamp!\",\n    UPPER(h.period) AS \"stop_timestamp!\",\n    h.stop_latitude AS \"stop_latitude!\",\n    h.stop_longitude AS \"stop_longitude!\",\n    h.gear_fiskeridir_id AS gear_fiskeridir_id,\n    h.gear_group_id AS \"gear_group_id: GearGroup\",\n    h.fiskeridir_vessel_id AS fiskeridir_vessel_id,\n    h.vessel_call_sign AS vessel_call_sign,\n    h.vessel_call_sign_ers AS \"vessel_call_sign_ers!\",\n    h.vessel_length AS \"vessel_length!\",\n    h.vessel_length_group AS \"vessel_length_group!: VesselLengthGroup\",\n    h.vessel_name AS vessel_name,\n    h.vessel_name_ers AS vessel_name_ers,\n    h.catches::TEXT AS \"catches!\",\n    h.whale_catches::TEXT AS \"whale_catches!\"\nFROM\n    hauls_view h\nWHERE\n    (\n        $1::tstzrange[] IS NULL\n        OR h.period && ANY ($1)\n    )\n    AND (\n        $2::VARCHAR[] IS NULL\n        OR h.catch_location_start = ANY ($2)\n    )\n    AND (\n        $3::INT[] IS NULL\n        OR h.gear_group_id = ANY ($3)\n    )\n    AND (\n        $4::INT[] IS NULL\n        OR h.species_group_ids && $4\n    )\n    AND (\n        $5::numrange[] IS NULL\n        OR h.vessel_length <@ ANY ($5)\n    )\n            "
+    "query": "\nSELECT\n    h.haul_id AS \"haul_id!\",\n    h.ers_activity_id AS \"ers_activity_id!\",\n    h.duration AS \"duration!\",\n    h.haul_distance AS haul_distance,\n    h.catch_location_start AS catch_location_start,\n    h.ocean_depth_end AS \"ocean_depth_end!\",\n    h.ocean_depth_start AS \"ocean_depth_start!\",\n    h.quota_type_id AS \"quota_type_id!\",\n    h.start_latitude AS \"start_latitude!\",\n    h.start_longitude AS \"start_longitude!\",\n    LOWER(h.period) AS \"start_timestamp!\",\n    UPPER(h.period) AS \"stop_timestamp!\",\n    h.stop_latitude AS \"stop_latitude!\",\n    h.stop_longitude AS \"stop_longitude!\",\n    h.gear_fiskeridir_id AS gear_fiskeridir_id,\n    h.gear_group_id AS \"gear_group_id: GearGroup\",\n    h.fiskeridir_vessel_id AS fiskeridir_vessel_id,\n    h.vessel_call_sign AS vessel_call_sign,\n    h.vessel_call_sign_ers AS \"vessel_call_sign_ers!\",\n    h.vessel_length AS \"vessel_length!\",\n    h.vessel_length_group AS \"vessel_length_group!: VesselLengthGroup\",\n    h.vessel_name AS vessel_name,\n    h.vessel_name_ers AS vessel_name_ers,\n    h.catches::TEXT AS \"catches!\",\n    h.whale_catches::TEXT AS \"whale_catches!\"\nFROM\n    hauls_view h\nWHERE\n    (\n        $1::tstzrange[] IS NULL\n        OR h.period && ANY ($1)\n    )\n    AND (\n        $2::VARCHAR[] IS NULL\n        OR h.catch_location_start = ANY ($2)\n    )\n    AND (\n        $3::INT[] IS NULL\n        OR h.gear_group_id = ANY ($3)\n    )\n    AND (\n        $4::INT[] IS NULL\n        OR h.species_group_ids && $4\n    )\n    AND (\n        $5::numrange[] IS NULL\n        OR h.vessel_length <@ ANY ($5)\n    )\n    AND (\n        $6::BIGINT[] IS NULL\n        OR fiskeridir_vessel_id = ANY ($6)\n    )\n            "
+  },
+  "5101d466d5c5425c8f98f48cf5b82ff3497c642b369dcbf2ba25e69ead8ca917": {
+    "describe": {
+      "columns": [
+        {
+          "name": "update_database_views",
+          "ordinal": 0,
+          "type_info": "Void"
+        }
+      ],
+      "nullable": [
+        null
+      ],
+      "parameters": {
+        "Left": []
+      }
+    },
+    "query": "\nSELECT\n    update_database_views ();\n            "
+  },
+  "564ecbda445799ebe77b936a3199254676762e91b0006b9782f124f15f4b3778": {
+    "describe": {
+      "columns": [
+        {
+          "name": "mmsi",
+          "ordinal": 0,
+          "type_info": "Int4"
+        },
+        {
+          "name": "latitude",
+          "ordinal": 1,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "longitude",
+          "ordinal": 2,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "course_over_ground",
+          "ordinal": 3,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "rate_of_turn",
+          "ordinal": 4,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "true_heading",
+          "ordinal": 5,
+          "type_info": "Int4"
+        },
+        {
+          "name": "speed_over_ground",
+          "ordinal": 6,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "msgtime",
+          "ordinal": 7,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "navigational_status",
+          "ordinal": 8,
+          "type_info": "Int4"
+        },
+        {
+          "name": "distance_to_shore",
+          "ordinal": 9,
+          "type_info": "Numeric"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        true,
+        true,
+        true,
+        true,
+        false,
+        true,
+        false
+      ],
+      "parameters": {
+        "Left": []
+      }
+    },
+    "query": "\nSELECT\n    mmsi,\n    latitude,\n    longitude,\n    course_over_ground,\n    rate_of_turn,\n    true_heading,\n    speed_over_ground,\n    TIMESTAMP AS msgtime,\n    navigation_status_id AS navigational_status,\n    distance_to_shore\nFROM\n    current_ais_positions\n            "
+  },
+  "576c963cbdfdb331aa5c7d49ade0498051293588de7d8aaed4c98f4dd43dcc95": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Int4Array",
+          "VarcharArray"
+        ]
+      }
+    },
+    "query": "\nINSERT INTO\n    species_fiskeridir (species_fiskeridir_id, \"name\")\nSELECT\n    *\nFROM\n    UNNEST($1::INT[], $2::VARCHAR[])\nON CONFLICT (species_fiskeridir_id) DO NOTHING\n            "
+  },
+  "5869234c9b9d67363dbc4a2188df4507bddf24b864a27cd5580aa8bb7ab62ba5": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "VarcharArray",
+          "VarcharArray"
+        ]
+      }
+    },
+    "query": "\nINSERT INTO\n    area_groupings (area_grouping_id, \"name\")\nSELECT\n    *\nFROM\n    UNNEST($1::VARCHAR[], $2::VARCHAR[])\nON CONFLICT (area_grouping_id) DO NOTHING\n                "
+  },
+  "5d6dba33a18d13098ba17061d252734a9ae475be470f61a5dc056e52ff4c81bf": {
+    "describe": {
+      "columns": [
+        {
+          "name": "grid!",
+          "ordinal": 0,
+          "type_info": "Text"
+        },
+        {
+          "name": "max_weight!",
+          "ordinal": 1,
+          "type_info": "Int8"
+        },
+        {
+          "name": "min_weight!",
+          "ordinal": 2,
+          "type_info": "Int8"
+        },
+        {
+          "name": "weight_by_gear_group!",
+          "ordinal": 3,
+          "type_info": "Text"
+        },
+        {
+          "name": "weight_by_species_group!",
+          "ordinal": 4,
+          "type_info": "Text"
+        },
+        {
+          "name": "weight_by_vessel_length_group!",
+          "ordinal": 5,
+          "type_info": "Text"
+        }
+      ],
+      "nullable": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "parameters": {
+        "Left": [
+          "TstzRangeArray",
+          "VarcharArray",
+          "Int4Array",
+          "Int4Array",
+          "NumRangeArray",
+          "Int8Array"
+        ]
+      }
+    },
+    "query": "\nWITH\n    hauls AS (\n        SELECT\n            catch_location_start,\n            total_living_weight,\n            gear_group_id,\n            vessel_length_group,\n            catches\n        FROM\n            hauls_view\n        WHERE\n            catch_location_start IS NOT NULL\n            AND (\n                $1::tstzrange[] IS NULL\n                OR period && ANY ($1)\n            )\n            AND (\n                $2::VARCHAR[] IS NULL\n                OR catch_location_start = ANY ($2)\n            )\n            AND (\n                $3::INT[] IS NULL\n                OR gear_group_id = ANY ($3)\n            )\n            AND (\n                $4::INT[] IS NULL\n                OR species_group_ids && $4\n            )\n            AND (\n                $5::numrange[] IS NULL\n                OR vessel_length <@ ANY ($5::numrange[])\n            )\n            AND (\n                $6::BIGINT[] IS NULL\n                OR fiskeridir_vessel_id = ANY ($6)\n            )\n    )\nSELECT\n    COALESCE(q1.grid::TEXT, '{}') AS \"grid!\",\n    COALESCE(q1.max_weight, 0)::BIGINT AS \"max_weight!\",\n    COALESCE(q1.min_weight, 0)::BIGINT AS \"min_weight!\",\n    COALESCE(q2.weight_by_gear_group::TEXT, '{}') AS \"weight_by_gear_group!\",\n    COALESCE(q3.weight_by_species_group::TEXT, '{}') AS \"weight_by_species_group!\",\n    COALESCE(q4.weight_by_vessel_length_group::TEXT, '{}') AS \"weight_by_vessel_length_group!\"\nFROM\n    (\n        SELECT\n            JSONB_OBJECT_AGG(h.catch_location_start, h.total_living_weight) AS grid,\n            MIN(h.total_living_weight) AS min_weight,\n            MAX(h.total_living_weight) AS max_weight\n        FROM\n            (\n                SELECT\n                    catch_location_start,\n                    COALESCE(SUM(total_living_weight), 0) AS total_living_weight\n                FROM\n                    hauls\n                GROUP BY\n                    catch_location_start\n            ) h\n    ) q1,\n    (\n        SELECT\n            JSONB_OBJECT_AGG(h.gear_group_id, h.total_living_weight) AS weight_by_gear_group\n        FROM\n            (\n                SELECT\n                    gear_group_id,\n                    COALESCE(SUM(total_living_weight), 0) AS total_living_weight\n                FROM\n                    hauls\n                GROUP BY\n                    gear_group_id\n            ) h\n    ) q2,\n    (\n        SELECT\n            JSONB_OBJECT_AGG(h2.species_group_id, h2.total_living_weight) AS weight_by_species_group\n        FROM\n            (\n                SELECT\n                    h1.catch['species_group_id']::INT AS species_group_id,\n                    COALESCE(SUM(h1.catch['living_weight']::INT), 0) AS total_living_weight\n                FROM\n                    (\n                        SELECT\n                            JSONB_ARRAY_ELEMENTS(catches) catch\n                        FROM\n                            hauls\n                    ) h1\n                GROUP BY\n                    h1.catch['species_group_id']\n            ) h2\n    ) q3,\n    (\n        SELECT\n            JSONB_OBJECT_AGG(h.vessel_length_group, h.total_living_weight) AS weight_by_vessel_length_group\n        FROM\n            (\n                SELECT\n                    vessel_length_group,\n                    COALESCE(SUM(total_living_weight), 0) AS total_living_weight\n                FROM\n                    hauls\n                GROUP BY\n                    vessel_length_group\n            ) h\n    ) q4\n            "
   },
   "6b63083645ee5131c65b06de6940f6f49491cf5fc32b7d57e113b29b8244e6f6": {
     "describe": {

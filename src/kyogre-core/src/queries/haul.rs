@@ -1,6 +1,6 @@
 use fiskeridir_rs::GearGroup;
 
-use crate::{CatchLocationId, DateRange, Range};
+use crate::{CatchLocationId, DateRange, FiskeridirVesselId, Range};
 
 pub struct HaulsQuery {
     pub ranges: Option<Vec<DateRange>>,
@@ -8,4 +8,5 @@ pub struct HaulsQuery {
     pub gear_group_ids: Option<Vec<GearGroup>>,
     pub species_group_ids: Option<Vec<u32>>,
     pub vessel_length_ranges: Option<Vec<Range<f64>>>,
+    pub vessel_ids: Option<Vec<FiskeridirVesselId>>,
 }

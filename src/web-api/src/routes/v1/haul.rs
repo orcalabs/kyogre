@@ -12,7 +12,7 @@ use actix_web::{web, HttpResponse};
 use chrono::{DateTime, Datelike, Duration, Months, NaiveDate, Utc};
 use fiskeridir_rs::{GearGroup, VesselLengthGroup, WhaleGender};
 use futures::TryStreamExt;
-use kyogre_core::{CatchLocationId, DateRange, HaulId, HaulsQuery, Range};
+use kyogre_core::{CatchLocationId, DateRange, FiskeridirVesselId, HaulId, HaulsQuery, Range};
 use serde::{Deserialize, Serialize};
 use tracing::{event, Level};
 use utoipa::{IntoParams, ToSchema};
@@ -35,6 +35,9 @@ pub struct HaulsParams {
     #[param(value_type = Option<String>, example = "[0,11);[15,)")]
     #[serde(deserialize_with = "deserialize_range_list", default)]
     pub vessel_length_ranges: Option<Vec<Range<f64>>>,
+    #[param(value_type = Option<String>, example = "2000013801,2001015304")]
+    #[serde(deserialize_with = "deserialize_string_list", default)]
+    pub fiskeridir_vessel_ids: Option<Vec<FiskeridirVesselId>>,
 }
 
 #[utoipa::path(
@@ -267,6 +270,7 @@ impl From<HaulsParams> for HaulsQuery {
                 .species_group_ids
                 .map(|gs| gs.into_iter().map(|g| g.0).collect()),
             vessel_length_ranges: v.vessel_length_ranges,
+            vessel_ids: v.fiskeridir_vessel_ids,
         }
     }
 }

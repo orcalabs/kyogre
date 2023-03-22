@@ -4,7 +4,7 @@ use super::helper::test;
 use actix_web::http::StatusCode;
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::{ErsDca, GearGroup, VesselLengthGroup};
-use kyogre_core::ScraperInboundPort;
+use kyogre_core::{FiskeridirVesselId, ScraperInboundPort};
 use web_api::routes::{
     utils::{DateTimeUtc, GearGroupId, SpeciesGroupId},
     v1::haul::{Haul, HaulsGrid, HaulsParams},
@@ -201,6 +201,37 @@ async fn test_hauls_returns_hauls_with_vessel_length_ranges() {
 
         let params = HaulsParams {
             vessel_length_ranges: Some(vec!["(,10)".parse().unwrap(), "[10,15)".parse().unwrap()]),
+            ..Default::default()
+        };
+
+        let response = helper.app.get_hauls(params).await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let hauls: Vec<Haul> = response.json().await.unwrap();
+
+        assert_eq!(hauls.len(), 2);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_hauls_returns_hauls_with_fiskeridir_vessel_ids() {
+    test(|helper| async move {
+        let ers1 = ErsDca::test_default(1, Some(1));
+        let ers2 = ErsDca::test_default(2, Some(2));
+        let ers3 = ErsDca::test_default(3, None);
+        let ers4 = ErsDca::test_default(4, None);
+
+        helper
+            .db
+            .db
+            .add_ers_dca(vec![ers1, ers2, ers3, ers4])
+            .await
+            .unwrap();
+        helper.db.db.update_database_views().await.unwrap();
+
+        let params = HaulsParams {
+            fiskeridir_vessel_ids: Some(vec![FiskeridirVesselId(1), FiskeridirVesselId(2)]),
             ..Default::default()
         };
 
@@ -544,6 +575,58 @@ async fn test_hauls_grid_returns_grid_for_hauls_with_vessel_length_ranges() {
                     (VesselLengthGroup::UnderEleven, 10),
                     (VesselLengthGroup::ElevenToFifteen, 20)
                 ])
+            }
+        );
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_hauls_grid_returns_grid_for_hauls_with_fiskeridir_vessel_ids() {
+    test(|helper| async move {
+        let mut ers1 = ErsDca::test_default(1, Some(1));
+        let mut ers2 = ErsDca::test_default(2, Some(2));
+        let ers3 = ErsDca::test_default(3, None);
+        let ers4 = ErsDca::test_default(4, None);
+
+        ers1.start_latitude = Some(56.727258);
+        ers1.start_longitude = Some(12.565410);
+        ers1.catch.species.living_weight = Some(10);
+
+        ers2.start_latitude = Some(56.727258);
+        ers2.start_longitude = Some(12.565410);
+        ers2.catch.species.living_weight = Some(20);
+
+        helper
+            .db
+            .db
+            .add_ers_dca(vec![ers1, ers2, ers3, ers4])
+            .await
+            .unwrap();
+        helper.db.db.update_database_views().await.unwrap();
+
+        let params = HaulsParams {
+            fiskeridir_vessel_ids: Some(vec![FiskeridirVesselId(1), FiskeridirVesselId(2)]),
+            ..Default::default()
+        };
+
+        let response = helper.app.get_hauls_grid(params).await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let grid: HaulsGrid = response.json().await.unwrap();
+
+        assert_eq!(
+            grid,
+            HaulsGrid {
+                grid: HashMap::from([("09-05".try_into().unwrap(), 30)]),
+                max_weight: 30,
+                min_weight: 30,
+                weight_by_gear_group: HashMap::from([(GearGroup::Garn, 30)]),
+                weight_by_species_group: HashMap::from([(201, 30)]),
+                weight_by_vessel_length_group: HashMap::from([(
+                    VesselLengthGroup::TwentyEightAndAbove,
+                    30,
+                )])
             }
         );
     })
