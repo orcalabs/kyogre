@@ -40,7 +40,7 @@ pub struct FiskeridirVessel {
     pub vessel_type_id: Option<u32>,
     pub length_group_id: Option<u32>,
     pub nation_group_id: Option<String>,
-    pub nation_id: String,
+    pub nation_id: Option<String>,
     pub norwegian_municipality_id: Option<u32>,
     pub norwegian_county_id: Option<u32>,
     pub gross_tonnage_1969: Option<u32>,
@@ -141,7 +141,7 @@ impl PartialEq<fiskeridir_rs::Vessel> for FiskeridirVessel {
             && self.engine_power == other.engine_power
             && self.building_year == other.building_year
             && self.rebuilding_year == other.rebuilding_year
-            && self.nation_id == other.nationality_code.alpha3().to_string()
+            && self.nation_id == Some(other.nationality_code.alpha3().to_string())
     }
 }
 
