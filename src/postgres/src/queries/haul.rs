@@ -131,8 +131,8 @@ WITH
     )
 SELECT
     COALESCE(q1.grid::TEXT, '{}') AS "grid!",
-    q1.max_weight::BIGINT AS "max_weight!",
-    q1.min_weight::BIGINT AS "min_weight!",
+    COALESCE(q1.max_weight, 0)::BIGINT AS "max_weight!",
+    COALESCE(q1.min_weight, 0)::BIGINT AS "min_weight!",
     COALESCE(q2.weight_by_gear_group::TEXT, '{}') AS "weight_by_gear_group!",
     COALESCE(q3.weight_by_species_group::TEXT, '{}') AS "weight_by_species_group!",
     COALESCE(q4.weight_by_vessel_length_group::TEXT, '{}') AS "weight_by_vessel_length_group!"
