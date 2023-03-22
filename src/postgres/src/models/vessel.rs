@@ -51,7 +51,7 @@ pub struct FiskeridirAisVesselCombination {
     pub fiskeridir_vessel_type_id: Option<i32>,
     pub fiskeridir_length_group_id: Option<i32>,
     pub fiskeridir_nation_group_id: Option<String>,
-    pub fiskeridir_nation_id: String,
+    pub fiskeridir_nation_id: Option<String>,
     pub fiskeridir_norwegian_municipality_id: Option<i32>,
     pub fiskeridir_norwegian_county_id: Option<i32>,
     pub fiskeridir_gross_tonnage_1969: Option<i32>,

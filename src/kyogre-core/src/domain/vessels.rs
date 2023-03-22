@@ -18,7 +18,7 @@ pub struct FiskeridirVessel {
     pub vessel_type_id: Option<u32>,
     pub length_group_id: Option<u32>,
     pub nation_group_id: Option<String>,
-    pub nation_id: String,
+    pub nation_id: Option<String>,
     pub norwegian_municipality_id: Option<u32>,
     pub norwegian_county_id: Option<u32>,
     pub gross_tonnage_1969: Option<u32>,
