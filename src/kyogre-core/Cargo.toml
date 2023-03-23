@@ -7,6 +7,7 @@ edition = "2021"
 
 [features]
 utoipa = ["dep:utoipa"]
+sqlx = ["dep:sqlx"]
 
 [dependencies]
 async-trait = "0.1.67"
@@ -25,3 +26,11 @@ futures = "0.3.27"
 
 utoipa = { version = "3.1", optional = true }
 remain = "0.2.8"
+sqlx = { version = "0.6.2", features = [
+    "runtime-tokio-rustls",
+    "postgres",
+    "bigdecimal",
+    "chrono",
+    "offline",
+    "json",
+], optional = true }

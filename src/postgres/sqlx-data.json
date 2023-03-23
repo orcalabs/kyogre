@@ -1,5 +1,45 @@
 {
   "db": "PostgreSQL",
+  "03f6bba89621ded33f9bbf8802fa4d177e61ba361dfa425a3998b23882a958d9": {
+    "describe": {
+      "columns": [
+        {
+          "name": "trip_id",
+          "ordinal": 0,
+          "type_info": "Int8"
+        },
+        {
+          "name": "period",
+          "ordinal": 1,
+          "type_info": "TstzRange"
+        },
+        {
+          "name": "landing_coverage",
+          "ordinal": 2,
+          "type_info": "TstzRange"
+        },
+        {
+          "name": "trip_assembler_id!: TripAssemblerId",
+          "ordinal": 3,
+          "type_info": "Int4"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Int8",
+          "Int4",
+          "Timestamptz"
+        ]
+      }
+    },
+    "query": "\nSELECT\n    trip_id,\n    period,\n    landing_coverage,\n    trip_assembler_id AS \"trip_assembler_id!: TripAssemblerId\"\nFROM\n    trips\nWHERE\n    fiskeridir_vessel_id = $1\n    AND trip_assembler_id = $2\n    AND (\n        UPPER(period) <= $3\n        OR period @> $3\n    )\nORDER BY\n    period DESC\nLIMIT\n    1\n            "
+  },
   "063ffe3ea8b5130ce0826bfca3da92147d6472f539da0b9e2ce34f83532da96c": {
     "describe": {
       "columns": [],
@@ -1690,6 +1730,44 @@
     },
     "query": "\nSELECT\n    h.haul_id AS \"haul_id!\",\n    h.ers_activity_id AS \"ers_activity_id!\",\n    h.duration AS \"duration!\",\n    h.haul_distance AS haul_distance,\n    h.catch_location_start AS catch_location_start,\n    h.ocean_depth_end AS \"ocean_depth_end!\",\n    h.ocean_depth_start AS \"ocean_depth_start!\",\n    h.quota_type_id AS \"quota_type_id!\",\n    h.start_latitude AS \"start_latitude!\",\n    h.start_longitude AS \"start_longitude!\",\n    LOWER(h.period) AS \"start_timestamp!\",\n    UPPER(h.period) AS \"stop_timestamp!\",\n    h.stop_latitude AS \"stop_latitude!\",\n    h.stop_longitude AS \"stop_longitude!\",\n    h.gear_fiskeridir_id AS gear_fiskeridir_id,\n    h.gear_group_id AS \"gear_group_id: GearGroup\",\n    h.fiskeridir_vessel_id AS fiskeridir_vessel_id,\n    h.vessel_call_sign AS vessel_call_sign,\n    h.vessel_call_sign_ers AS \"vessel_call_sign_ers!\",\n    h.vessel_length AS \"vessel_length!\",\n    h.vessel_length_group AS \"vessel_length_group!: VesselLengthGroup\",\n    h.vessel_name AS vessel_name,\n    h.vessel_name_ers AS vessel_name_ers,\n    h.catches::TEXT AS \"catches!\",\n    h.whale_catches::TEXT AS \"whale_catches!\"\nFROM\n    hauls_view h\nWHERE\n    h.fiskeridir_vessel_id = $1\n            "
   },
+  "bd9ffa8819fa0b6623f100877e7712413cd82809222176f59a320e8467c73d6a": {
+    "describe": {
+      "columns": [
+        {
+          "name": "trip_id",
+          "ordinal": 0,
+          "type_info": "Int8"
+        },
+        {
+          "name": "period",
+          "ordinal": 1,
+          "type_info": "TstzRange"
+        },
+        {
+          "name": "landing_coverage",
+          "ordinal": 2,
+          "type_info": "TstzRange"
+        },
+        {
+          "name": "trip_assembler_id!: TripAssemblerId",
+          "ordinal": 3,
+          "type_info": "Int4"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Int8"
+        ]
+      }
+    },
+    "query": "\nSELECT\n    trip_id,\n    period,\n    landing_coverage,\n    trip_assembler_id AS \"trip_assembler_id!: TripAssemblerId\"\nFROM\n    trips\nWHERE\n    fiskeridir_vessel_id = $1\n            "
+  },
   "bff6cd57b7c80963830eb6bc6774187058373b603ee16bc61a15cd053c505f25": {
     "describe": {
       "columns": [],
@@ -1818,45 +1896,6 @@
     },
     "query": "\nINSERT INTO\n    landings (\n        landing_id,\n        document_id,\n        fiskeridir_vessel_id,\n        fiskeridir_vessel_type_id,\n        vessel_call_sign,\n        vessel_registration_id,\n        vessel_length_group_id,\n        vessel_nation_group_id,\n        vessel_nation_id,\n        vessel_norwegian_municipality_id,\n        vessel_norwegian_county_id,\n        vessel_gross_tonnage_1969,\n        vessel_gross_tonnage_other,\n        vessel_name,\n        vessel_length,\n        vessel_engine_building_year,\n        vessel_engine_power,\n        vessel_building_year,\n        vessel_rebuilding_year,\n        gear_id,\n        gear_group_id,\n        gear_main_group_id,\n        document_type_id,\n        sales_team_id,\n        sales_team_tax,\n        delivery_point_id,\n        document_sale_date,\n        document_version_date,\n        landing_timestamp,\n        landing_time,\n        landing_month_id,\n        \"version\",\n        last_catch_date,\n        num_crew_members,\n        fisher_org_id,\n        fisher_nation_id,\n        fisher_municipality_id,\n        catch_field,\n        catch_area_id,\n        catch_main_area_id,\n        catch_main_area_fao_id,\n        area_grouping_id,\n        delivery_point_municipality_id,\n        landing_norwegian_county_id,\n        landing_nation_id,\n        north_south_62_degrees_id,\n        within_12_mile_border,\n        fishing_diary_number,\n        fishing_diary_trip_number,\n        economic_zone_id,\n        partial_landing,\n        partial_landing_next_delivery_point_id,\n        partial_landing_previous_delivery_point_id,\n        data_update_timestamp,\n        catch_year,\n        production_facility,\n        production_facility_municipality_id,\n        product_quality_id,\n        quota_type_id,\n        quota_vessel_registration_id,\n        buyer_org_id,\n        buyer_nation_id,\n        receiving_vessel_registration_id,\n        receiving_vessel_mmsi_or_call_sign,\n        receiving_vessel_type,\n        receiving_vessel_nation_id,\n        receiving_vessel_nation\n    )\nSELECT\n    *\nFROM\n    UNNEST(\n        $1::VARCHAR[],\n        $2::BIGINT[],\n        $3::BIGINT[],\n        $4::INT[],\n        $5::VARCHAR[],\n        $6::VARCHAR[],\n        $7::INT[],\n        $8::VARCHAR[],\n        $9::VARCHAR[],\n        $10::INT[],\n        $11::INT[],\n        $12::INT[],\n        $13::INT[],\n        $14::VARCHAR[],\n        $15::DECIMAL[],\n        $16::INT[],\n        $17::INT[],\n        $18::INT[],\n        $19::INT[],\n        $20::INT[],\n        $21::INT[],\n        $22::INT[],\n        $23::INT[],\n        $24::INT[],\n        $25::DECIMAL[],\n        $26::VARCHAR[],\n        $27::date[],\n        $28::timestamptz[],\n        $29::timestamptz[],\n        $30::TIME[],\n        $31::INT[],\n        $32::INT[],\n        $33::date[],\n        $34::INT[],\n        $35::INT[],\n        $36::VARCHAR[],\n        $37::INT[],\n        $38::VARCHAR[],\n        $39::INT[],\n        $40::INT[],\n        $41::INT[],\n        $42::VARCHAR[],\n        $43::INT[],\n        $44::INT[],\n        $45::VARCHAR[],\n        $46::VARCHAR[],\n        $47::INT[],\n        $48::INT[],\n        $49::INT[],\n        $50::VARCHAR[],\n        $51::BOOLEAN[],\n        $52::VARCHAR[],\n        $53::VARCHAR[],\n        $54::timestamptz[],\n        $55::INT[],\n        $56::VARCHAR[],\n        $57::INT[],\n        $58::INT[],\n        $59::INT[],\n        $60::VARCHAR[],\n        $61::INT[],\n        $62::VARCHAR[],\n        $63::VARCHAR[],\n        $64::VARCHAR[],\n        $65::INT[],\n        $66::VARCHAR[],\n        $67::VARCHAR[]\n    )\nON CONFLICT (landing_id, \"version\") DO NOTHING\n            "
   },
-  "c8425d444f61bc14f417690d0eb5a999db6e3b75657f896b80dc2285c7b545fc": {
-    "describe": {
-      "columns": [
-        {
-          "name": "trip_id",
-          "ordinal": 0,
-          "type_info": "Int8"
-        },
-        {
-          "name": "period",
-          "ordinal": 1,
-          "type_info": "TstzRange"
-        },
-        {
-          "name": "landing_coverage",
-          "ordinal": 2,
-          "type_info": "TstzRange"
-        },
-        {
-          "name": "trip_assembler_id",
-          "ordinal": 3,
-          "type_info": "Int4"
-        }
-      ],
-      "nullable": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "parameters": {
-        "Left": [
-          "Int8",
-          "Int4"
-        ]
-      }
-    },
-    "query": "\nSELECT\n    trip_id,\n    period,\n    landing_coverage,\n    trip_assembler_id\nFROM\n    trips\nWHERE\n    fiskeridir_vessel_id = $1\n    AND trip_assembler_id = $2\nORDER BY\n    period DESC\nLIMIT\n    1\n            "
-  },
   "ca28c3d988c1b915c8f1596bb7189b3467cd016e3536342d2e2c8b0e83473da9": {
     "describe": {
       "columns": [],
@@ -1961,7 +2000,7 @@
     },
     "query": "\nINSERT INTO\n    gear_problems (gear_problem_id, \"name\")\nSELECT\n    *\nFROM\n    UNNEST($1::INT[], $2::VARCHAR[])\nON CONFLICT (gear_problem_id) DO\nUPDATE\nSET\n    \"name\" = CASE\n        WHEN gear_problems.name IS NULL THEN excluded.name\n    END\n            "
   },
-  "d770fe65767e2c8b0f64963920138c475923dcc77b63eb34f5c03350694502c0": {
+  "d611698d070b341efb887d8fa818635141fb6ca9c144d34f8a89e9850c10fdc0": {
     "describe": {
       "columns": [
         {
@@ -1980,7 +2019,7 @@
           "type_info": "TstzRange"
         },
         {
-          "name": "trip_assembler_id",
+          "name": "trip_assembler_id!: TripAssemblerId",
           "ordinal": 3,
           "type_info": "Int4"
         }
@@ -1994,12 +2033,11 @@
       "parameters": {
         "Left": [
           "Int8",
-          "Int4",
-          "Timestamptz"
+          "Int4"
         ]
       }
     },
-    "query": "\nSELECT\n    trip_id,\n    period,\n    landing_coverage,\n    trip_assembler_id\nFROM\n    trips\nWHERE\n    fiskeridir_vessel_id = $1\n    AND trip_assembler_id = $2\n    AND (\n        UPPER(period) <= $3\n        OR period @> $3\n    )\nORDER BY\n    period DESC\nLIMIT\n    1\n            "
+    "query": "\nSELECT\n    trip_id,\n    period,\n    landing_coverage,\n    trip_assembler_id AS \"trip_assembler_id!: TripAssemblerId\"\nFROM\n    trips\nWHERE\n    fiskeridir_vessel_id = $1\n    AND trip_assembler_id = $2\nORDER BY\n    period DESC\nLIMIT\n    1\n            "
   },
   "d77eb2b073f3d5ea63fdc015a532fc10c2c846ef86a5f9c4dcb36db4c69e2e67": {
     "describe": {
@@ -2046,44 +2084,6 @@
       }
     },
     "query": "\nINSERT INTO\n    ais_vessels (mmsi)\nVALUES\n    ($1)\nON CONFLICT (mmsi) DO NOTHING\n            "
-  },
-  "dfead96faf34eba214488569b578e07f3a008a2821d792e081c77dfcd6846fd1": {
-    "describe": {
-      "columns": [
-        {
-          "name": "trip_id",
-          "ordinal": 0,
-          "type_info": "Int8"
-        },
-        {
-          "name": "period",
-          "ordinal": 1,
-          "type_info": "TstzRange"
-        },
-        {
-          "name": "landing_coverage",
-          "ordinal": 2,
-          "type_info": "TstzRange"
-        },
-        {
-          "name": "trip_assembler_id",
-          "ordinal": 3,
-          "type_info": "Int4"
-        }
-      ],
-      "nullable": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "parameters": {
-        "Left": [
-          "Int8"
-        ]
-      }
-    },
-    "query": "\nSELECT\n    trip_id,\n    period,\n    landing_coverage,\n    trip_assembler_id\nFROM\n    trips\nWHERE\n    fiskeridir_vessel_id = $1\n            "
   },
   "e0bf5755168f5b7a1ef3502e770f7f3d381ee98c0d8c7ffed858a4c0b5b0c173": {
     "describe": {

@@ -105,7 +105,7 @@ SELECT
     trip_id,
     period,
     landing_coverage,
-    trip_assembler_id
+    trip_assembler_id AS "trip_assembler_id!: TripAssemblerId"
 FROM
     trips
 WHERE
@@ -141,7 +141,7 @@ SELECT
     trip_id,
     period,
     landing_coverage,
-    trip_assembler_id
+    trip_assembler_id AS "trip_assembler_id!: TripAssemblerId"
 FROM
     trips
 WHERE
@@ -215,7 +215,7 @@ SELECT
     trip_id,
     period,
     landing_coverage,
-    trip_assembler_id
+    trip_assembler_id AS "trip_assembler_id!: TripAssemblerId"
 FROM
     trips
 WHERE
