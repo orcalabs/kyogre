@@ -1011,61 +1011,6 @@
     },
     "query": "\nINSERT INTO\n    area_groupings (area_grouping_id, \"name\")\nSELECT\n    *\nFROM\n    UNNEST($1::VARCHAR[], $2::VARCHAR[])\nON CONFLICT (area_grouping_id) DO NOTHING\n                "
   },
-  "5d6dba33a18d13098ba17061d252734a9ae475be470f61a5dc056e52ff4c81bf": {
-    "describe": {
-      "columns": [
-        {
-          "name": "grid!",
-          "ordinal": 0,
-          "type_info": "Text"
-        },
-        {
-          "name": "max_weight!",
-          "ordinal": 1,
-          "type_info": "Int8"
-        },
-        {
-          "name": "min_weight!",
-          "ordinal": 2,
-          "type_info": "Int8"
-        },
-        {
-          "name": "weight_by_gear_group!",
-          "ordinal": 3,
-          "type_info": "Text"
-        },
-        {
-          "name": "weight_by_species_group!",
-          "ordinal": 4,
-          "type_info": "Text"
-        },
-        {
-          "name": "weight_by_vessel_length_group!",
-          "ordinal": 5,
-          "type_info": "Text"
-        }
-      ],
-      "nullable": [
-        null,
-        null,
-        null,
-        null,
-        null,
-        null
-      ],
-      "parameters": {
-        "Left": [
-          "TstzRangeArray",
-          "VarcharArray",
-          "Int4Array",
-          "Int4Array",
-          "NumRangeArray",
-          "Int8Array"
-        ]
-      }
-    },
-    "query": "\nWITH\n    hauls AS (\n        SELECT\n            catch_location_start,\n            total_living_weight,\n            gear_group_id,\n            vessel_length_group,\n            catches\n        FROM\n            hauls_view\n        WHERE\n            catch_location_start IS NOT NULL\n            AND (\n                $1::tstzrange[] IS NULL\n                OR period && ANY ($1)\n            )\n            AND (\n                $2::VARCHAR[] IS NULL\n                OR catch_location_start = ANY ($2)\n            )\n            AND (\n                $3::INT[] IS NULL\n                OR gear_group_id = ANY ($3)\n            )\n            AND (\n                $4::INT[] IS NULL\n                OR species_group_ids && $4\n            )\n            AND (\n                $5::numrange[] IS NULL\n                OR vessel_length <@ ANY ($5::numrange[])\n            )\n            AND (\n                $6::BIGINT[] IS NULL\n                OR fiskeridir_vessel_id = ANY ($6)\n            )\n    )\nSELECT\n    COALESCE(q1.grid::TEXT, '{}') AS \"grid!\",\n    COALESCE(q1.max_weight, 0)::BIGINT AS \"max_weight!\",\n    COALESCE(q1.min_weight, 0)::BIGINT AS \"min_weight!\",\n    COALESCE(q2.weight_by_gear_group::TEXT, '{}') AS \"weight_by_gear_group!\",\n    COALESCE(q3.weight_by_species_group::TEXT, '{}') AS \"weight_by_species_group!\",\n    COALESCE(q4.weight_by_vessel_length_group::TEXT, '{}') AS \"weight_by_vessel_length_group!\"\nFROM\n    (\n        SELECT\n            JSONB_OBJECT_AGG(h.catch_location_start, h.total_living_weight) AS grid,\n            MIN(h.total_living_weight) AS min_weight,\n            MAX(h.total_living_weight) AS max_weight\n        FROM\n            (\n                SELECT\n                    catch_location_start,\n                    COALESCE(SUM(total_living_weight), 0) AS total_living_weight\n                FROM\n                    hauls\n                GROUP BY\n                    catch_location_start\n            ) h\n    ) q1,\n    (\n        SELECT\n            JSONB_OBJECT_AGG(h.gear_group_id, h.total_living_weight) AS weight_by_gear_group\n        FROM\n            (\n                SELECT\n                    gear_group_id,\n                    COALESCE(SUM(total_living_weight), 0) AS total_living_weight\n                FROM\n                    hauls\n                GROUP BY\n                    gear_group_id\n            ) h\n    ) q2,\n    (\n        SELECT\n            JSONB_OBJECT_AGG(h2.species_group_id, h2.total_living_weight) AS weight_by_species_group\n        FROM\n            (\n                SELECT\n                    h1.catch['species_group_id']::INT AS species_group_id,\n                    COALESCE(SUM(h1.catch['living_weight']::INT), 0) AS total_living_weight\n                FROM\n                    (\n                        SELECT\n                            JSONB_ARRAY_ELEMENTS(catches) catch\n                        FROM\n                            hauls\n                    ) h1\n                GROUP BY\n                    h1.catch['species_group_id']\n            ) h2\n    ) q3,\n    (\n        SELECT\n            JSONB_OBJECT_AGG(h.vessel_length_group, h.total_living_weight) AS weight_by_vessel_length_group\n        FROM\n            (\n                SELECT\n                    vessel_length_group,\n                    COALESCE(SUM(total_living_weight), 0) AS total_living_weight\n                FROM\n                    hauls\n                GROUP BY\n                    vessel_length_group\n            ) h\n    ) q4\n            "
-  },
   "6b63083645ee5131c65b06de6940f6f49491cf5fc32b7d57e113b29b8244e6f6": {
     "describe": {
       "columns": [
@@ -1334,6 +1279,61 @@
       }
     },
     "query": "\nINSERT INTO\n    delivery_points (\n        delivery_point_id,\n        delivery_point_type_id,\n        delivery_point_source_id\n    )\nSELECT\n    *\nFROM\n    UNNEST($1::VARCHAR[], $2::INT[], $3::INT[])\nON CONFLICT (delivery_point_id) DO NOTHING\n            "
+  },
+  "7b4753b94a5e57fbd50274ab16c6a15e56b89c7fc2b414ed8f73b0d10e676623": {
+    "describe": {
+      "columns": [
+        {
+          "name": "grid!",
+          "ordinal": 0,
+          "type_info": "Text"
+        },
+        {
+          "name": "max_weight!",
+          "ordinal": 1,
+          "type_info": "Int8"
+        },
+        {
+          "name": "min_weight!",
+          "ordinal": 2,
+          "type_info": "Int8"
+        },
+        {
+          "name": "weight_by_gear_group!",
+          "ordinal": 3,
+          "type_info": "Text"
+        },
+        {
+          "name": "weight_by_species_group!",
+          "ordinal": 4,
+          "type_info": "Text"
+        },
+        {
+          "name": "weight_by_vessel_length_group!",
+          "ordinal": 5,
+          "type_info": "Text"
+        }
+      ],
+      "nullable": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "parameters": {
+        "Left": [
+          "TstzRangeArray",
+          "VarcharArray",
+          "Int4Array",
+          "Int4Array",
+          "NumRangeArray",
+          "Int8Array"
+        ]
+      }
+    },
+    "query": "\nWITH\n    hauls AS (\n        SELECT\n            catch_location_start,\n            total_living_weight,\n            species_group_ids,\n            gear_group_id,\n            vessel_length,\n            vessel_length_group,\n            fiskeridir_vessel_id,\n            catches\n        FROM\n            hauls_view\n        WHERE\n            catch_location_start IS NOT NULL\n            AND (\n                $1::tstzrange[] IS NULL\n                OR period && ANY ($1)\n            )\n    )\nSELECT\n    COALESCE(q1.grid::TEXT, '{}') AS \"grid!\",\n    COALESCE(q1.max_weight, 0)::BIGINT AS \"max_weight!\",\n    COALESCE(q1.min_weight, 0)::BIGINT AS \"min_weight!\",\n    COALESCE(q2.weight_by_gear_group::TEXT, '{}') AS \"weight_by_gear_group!\",\n    COALESCE(q3.weight_by_species_group::TEXT, '{}') AS \"weight_by_species_group!\",\n    COALESCE(q4.weight_by_vessel_length_group::TEXT, '{}') AS \"weight_by_vessel_length_group!\"\nFROM\n    (\n        SELECT\n            JSONB_OBJECT_AGG(h.catch_location_start, h.total_living_weight) AS grid,\n            MIN(h.total_living_weight) AS min_weight,\n            MAX(h.total_living_weight) AS max_weight\n        FROM\n            (\n                SELECT\n                    catch_location_start,\n                    COALESCE(SUM(total_living_weight), 0) AS total_living_weight\n                FROM\n                    hauls\n                WHERE\n                    (\n                        $2::VARCHAR[] IS NULL\n                        OR catch_location_start = ANY ($2)\n                    )\n                    AND (\n                        $3::INT[] IS NULL\n                        OR gear_group_id = ANY ($3)\n                    )\n                    AND (\n                        $4::INT[] IS NULL\n                        OR species_group_ids && $4\n                    )\n                    AND (\n                        $5::numrange[] IS NULL\n                        OR vessel_length <@ ANY ($5::numrange[])\n                    )\n                    AND (\n                        $6::BIGINT[] IS NULL\n                        OR fiskeridir_vessel_id = ANY ($6)\n                    )\n                GROUP BY\n                    catch_location_start\n            ) h\n    ) q1,\n    (\n        SELECT\n            JSONB_OBJECT_AGG(h.gear_group_id, h.total_living_weight) AS weight_by_gear_group\n        FROM\n            (\n                SELECT\n                    gear_group_id,\n                    COALESCE(SUM(total_living_weight), 0) AS total_living_weight\n                FROM\n                    hauls\n                GROUP BY\n                    gear_group_id\n            ) h\n    ) q2,\n    (\n        SELECT\n            JSONB_OBJECT_AGG(h2.species_group_id, h2.total_living_weight) AS weight_by_species_group\n        FROM\n            (\n                SELECT\n                    h1.catch['species_group_id']::INT AS species_group_id,\n                    COALESCE(SUM(h1.catch['living_weight']::INT), 0) AS total_living_weight\n                FROM\n                    (\n                        SELECT\n                            JSONB_ARRAY_ELEMENTS(catches) catch\n                        FROM\n                            hauls\n                    ) h1\n                GROUP BY\n                    h1.catch['species_group_id']\n            ) h2\n    ) q3,\n    (\n        SELECT\n            JSONB_OBJECT_AGG(h.vessel_length_group, h.total_living_weight) AS weight_by_vessel_length_group\n        FROM\n            (\n                SELECT\n                    vessel_length_group,\n                    COALESCE(SUM(total_living_weight), 0) AS total_living_weight\n                FROM\n                    hauls\n                GROUP BY\n                    vessel_length_group\n            ) h\n    ) q4\n            "
   },
   "85720e65ca627b504427389b69b979a8728fcf2acd2498b3106556ed40572780": {
     "describe": {

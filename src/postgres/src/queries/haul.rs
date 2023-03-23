@@ -106,8 +106,11 @@ WITH
         SELECT
             catch_location_start,
             total_living_weight,
+            species_group_ids,
             gear_group_id,
+            vessel_length,
             vessel_length_group,
+            fiskeridir_vessel_id,
             catches
         FROM
             hauls_view
@@ -116,26 +119,6 @@ WITH
             AND (
                 $1::tstzrange[] IS NULL
                 OR period && ANY ($1)
-            )
-            AND (
-                $2::VARCHAR[] IS NULL
-                OR catch_location_start = ANY ($2)
-            )
-            AND (
-                $3::INT[] IS NULL
-                OR gear_group_id = ANY ($3)
-            )
-            AND (
-                $4::INT[] IS NULL
-                OR species_group_ids && $4
-            )
-            AND (
-                $5::numrange[] IS NULL
-                OR vessel_length <@ ANY ($5::numrange[])
-            )
-            AND (
-                $6::BIGINT[] IS NULL
-                OR fiskeridir_vessel_id = ANY ($6)
             )
     )
 SELECT
@@ -158,6 +141,27 @@ FROM
                     COALESCE(SUM(total_living_weight), 0) AS total_living_weight
                 FROM
                     hauls
+                WHERE
+                    (
+                        $2::VARCHAR[] IS NULL
+                        OR catch_location_start = ANY ($2)
+                    )
+                    AND (
+                        $3::INT[] IS NULL
+                        OR gear_group_id = ANY ($3)
+                    )
+                    AND (
+                        $4::INT[] IS NULL
+                        OR species_group_ids && $4
+                    )
+                    AND (
+                        $5::numrange[] IS NULL
+                        OR vessel_length <@ ANY ($5::numrange[])
+                    )
+                    AND (
+                        $6::BIGINT[] IS NULL
+                        OR fiskeridir_vessel_id = ANY ($6)
+                    )
                 GROUP BY
                     catch_location_start
             ) h
