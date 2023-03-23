@@ -5,92 +5,91 @@ use crate::{
 };
 use chrono::{DateTime, Utc};
 use error_stack::{IntoReport, Result, ResultExt};
+use fiskeridir_rs::Gear;
 use kyogre_core::{FiskeridirVesselId, HaulId, NewTrip, TripAssemblerId, TripsConflictStrategy};
 use sqlx::postgres::types::PgRange;
 
 impl PostgresAdapter {
     pub(crate) async fn detailed_trips_of_vessel_impl(
         &self,
-        _vessel_id: FiskeridirVesselId,
+        vessel_id: FiskeridirVesselId,
     ) -> Result<Vec<TripDetailed>, PostgresError> {
-        Ok(vec![])
-        // sqlx::query_as!(
-        //     TripDetailed,
-        //     r#"
-        // SELECT
-        // t.trip_id AS "trip_id!",
-        // t.trip_assembler_id AS "trip_assembler_id!",
-        // t.fiskeridir_vessel_id AS "fiskeridir_vessel_id!",
-        // t.period AS "period!",
-        // t.start_port_id,
-        // t.end_port_id,
-        // t.num_deliveries AS "num_deliveries!",
-        // t.total_living_weight AS "total_living_weight!",
-        // t.total_gross_weight AS "total_gross_weight!",
-        // t.total_product_weight AS "total_product_weight!",
-        // t.delivery_points AS "delivery_points!",
-        // t.latest_landing_timestamp,
-        // t.catches::TEXT AS "catches!",
-        // t.hauls::TEXT AS "hauls!",
-        // t.delivery_point_catches::TEXT AS "delivery_point_catches!",
-        // t.gear_ids AS "gear_ids!: Vec<Gear>"
-        // FROM
-        // trips_view AS t
-        // WHERE
-        // t.fiskeridir_vessel_id = $1
-        //     "#,
-        //     vessel_id.0
-        // )
-        // .fetch_all(&self.pool)
-        // .await
-        // .into_report()
-        // .change_context(PostgresError::Query)
+        sqlx::query_as!(
+            TripDetailed,
+            r#"
+SELECT
+    t.trip_id AS "trip_id!",
+    t.trip_assembler_id AS "trip_assembler_id!: TripAssemblerId",
+    t.fiskeridir_vessel_id AS "fiskeridir_vessel_id!",
+    t.period AS "period!",
+    t.start_port_id,
+    t.end_port_id,
+    t.num_deliveries AS "num_deliveries!",
+    t.total_living_weight AS "total_living_weight!",
+    t.total_gross_weight AS "total_gross_weight!",
+    t.total_product_weight AS "total_product_weight!",
+    t.delivery_points AS "delivery_points!",
+    t.latest_landing_timestamp,
+    t.catches::TEXT AS "catches!",
+    t.hauls::TEXT AS "hauls!",
+    t.delivery_point_catches::TEXT AS "delivery_point_catches!",
+    t.gear_ids AS "gear_ids!: Vec<Gear>"
+FROM
+    trips_view AS t
+WHERE
+    t.fiskeridir_vessel_id = $1
+            "#,
+            vessel_id.0
+        )
+        .fetch_all(&self.pool)
+        .await
+        .into_report()
+        .change_context(PostgresError::Query)
     }
 
     pub(crate) async fn detailed_trip_of_haul_impl(
         &self,
-        _haul_id: &HaulId,
+        haul_id: &HaulId,
     ) -> Result<Option<TripDetailed>, PostgresError> {
-        Ok(None)
-        // let mut trips = sqlx::query_as!(
-        //     TripDetailed,
-        //     r#"
-        // SELECT
-        // t.trip_id AS "trip_id!",
-        // t.trip_assembler_id AS "trip_assembler_id!",
-        // t.fiskeridir_vessel_id AS "fiskeridir_vessel_id!",
-        // t.period AS "period!",
-        // t.start_port_id,
-        // t.end_port_id,
-        // t.num_deliveries AS "num_deliveries!",
-        // t.total_living_weight AS "total_living_weight!",
-        // t.total_gross_weight AS "total_gross_weight!",
-        // t.total_product_weight AS "total_product_weight!",
-        // t.delivery_points AS "delivery_points!",
-        // t.latest_landing_timestamp,
-        // t.catches::TEXT AS "catches!",
-        // t.hauls::TEXT AS "hauls!",
-        // t.delivery_point_catches::TEXT AS "delivery_point_catches!",
-        // t.gear_ids AS "gear_ids!: Vec<Gear>"
-        // FROM
-        // trips_view AS t
-        // WHERE
-        // $1 = ANY (t.haul_ids)
-        //     "#,
-        //     haul_id.0,
-        // )
-        // .fetch_all(&self.pool)
-        // .await
-        // .into_report()
-        // .change_context(PostgresError::Query)?;
+        let mut trips = sqlx::query_as!(
+            TripDetailed,
+            r#"
+SELECT
+    t.trip_id AS "trip_id!",
+    t.trip_assembler_id AS "trip_assembler_id!: TripAssemblerId",
+    t.fiskeridir_vessel_id AS "fiskeridir_vessel_id!",
+    t.period AS "period!",
+    t.start_port_id,
+    t.end_port_id,
+    t.num_deliveries AS "num_deliveries!",
+    t.total_living_weight AS "total_living_weight!",
+    t.total_gross_weight AS "total_gross_weight!",
+    t.total_product_weight AS "total_product_weight!",
+    t.delivery_points AS "delivery_points!",
+    t.latest_landing_timestamp,
+    t.catches::TEXT AS "catches!",
+    t.hauls::TEXT AS "hauls!",
+    t.delivery_point_catches::TEXT AS "delivery_point_catches!",
+    t.gear_ids AS "gear_ids!: Vec<Gear>"
+FROM
+    trips_view AS t
+WHERE
+    $1 = ANY (t.haul_ids)
+            "#,
+            haul_id.0,
+        )
+        .fetch_all(&self.pool)
+        .await
+        .into_report()
+        .change_context(PostgresError::Query)?;
 
-        // match trips.len() {
-        //     0 => Ok(None),
-        //     1 => Ok(trips.pop()),
-        //     _ => Ok(trips
-        //         .into_iter()
-        //         .find(|t| t.trip_assembler_id == TripAssemblerId::Ers as i32)),
-        // }
+        match trips.len() {
+            0 => Ok(None),
+            1 => Ok(trips.pop()),
+            _ => Ok(trips
+                .into_iter()
+                .find(|t| t.trip_assembler_id == TripAssemblerId::Ers)),
+        }
     }
     pub(crate) async fn trip_at_or_prior_to_impl(
         &self,
