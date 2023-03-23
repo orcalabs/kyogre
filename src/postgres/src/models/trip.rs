@@ -1,6 +1,6 @@
 use super::{HaulCatch, WhaleCatch};
 use crate::{
-    error::{PostgresError, TripAssemblerError, UnboundedRangeError},
+    error::{PostgresError, UnboundedRangeError},
     queries::decimal_to_float,
 };
 use bigdecimal::BigDecimal;
@@ -20,7 +20,7 @@ pub struct Trip {
     pub trip_id: i64,
     pub period: PgRange<DateTime<Utc>>,
     pub landing_coverage: PgRange<DateTime<Utc>>,
-    pub trip_assembler_id: i32,
+    pub trip_assembler_id: TripAssemblerId,
 }
 
 #[derive(Debug, Clone)]
@@ -51,7 +51,7 @@ pub struct TripDetailed {
     pub delivery_point_catches: String,
     pub start_port_id: Option<String>,
     pub end_port_id: Option<String>,
-    pub trip_assembler_id: i32,
+    pub trip_assembler_id: TripAssemblerId,
 }
 
 #[derive(Deserialize)]
@@ -162,11 +162,6 @@ impl TryFrom<Trip> for kyogre_core::Trip {
         }
         .change_context(PostgresError::DataConversion)?;
 
-        let assembler_id = TripAssemblerId::from_i32(value.trip_assembler_id).ok_or(
-            report!(TripAssemblerError(value.trip_assembler_id))
-                .change_context(PostgresError::DataConversion),
-        )?;
-
         let period = DateRange::new(period_start, period_end)
             .into_report()
             .change_context(PostgresError::DataConversion)?;
@@ -178,7 +173,7 @@ impl TryFrom<Trip> for kyogre_core::Trip {
             trip_id: TripId(value.trip_id),
             period,
             landing_coverage,
-            assembler_id,
+            assembler_id: value.trip_assembler_id,
         })
     }
 }
@@ -246,10 +241,7 @@ impl TryFrom<TripDetailed> for kyogre_core::TripDetailed {
             start_port_id: value.start_port_id,
             end_port_id: value.end_port_id,
             delivered_per_delivery_point: delivery_point_catches,
-            assembler_id: TripAssemblerId::from_i32(value.trip_assembler_id).ok_or(
-                report!(TripAssemblerError(value.trip_assembler_id))
-                    .change_context(PostgresError::DataConversion),
-            )?,
+            assembler_id: value.trip_assembler_id,
         })
     }
 }

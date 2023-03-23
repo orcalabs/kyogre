@@ -3,6 +3,7 @@ use chrono::{DateTime, TimeZone, Utc};
 use fiskeridir_rs::DeliveryPointId;
 use num_derive::FromPrimitive;
 use serde::{Deserialize, Serialize};
+use serde_repr::{Deserialize_repr, Serialize_repr};
 use std::collections::HashMap;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize)]
@@ -66,7 +67,21 @@ pub enum TripsConflictStrategy {
     Replace,
 }
 
-#[derive(Debug, Clone, Copy, FromPrimitive, PartialEq, Eq)]
+#[repr(i32)]
+#[derive(
+    Debug,
+    Copy,
+    Clone,
+    PartialEq,
+    FromPrimitive,
+    Eq,
+    Hash,
+    Ord,
+    PartialOrd,
+    Serialize_repr,
+    Deserialize_repr,
+)]
+#[cfg_attr(feature = "sqlx", derive(sqlx::Type))]
 pub enum TripAssemblerId {
     Landings = 1,
     Ers = 2,

@@ -1843,6 +1843,7 @@ dependencies = [
  "remain",
  "serde",
  "serde_repr",
+ "sqlx",
  "strum",
  "utoipa",
 ]
