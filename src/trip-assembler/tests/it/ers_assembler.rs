@@ -348,3 +348,98 @@ async fn test_handles_conflict_correctly() {
     })
     .await;
 }
+
+#[tokio::test]
+async fn test_is_not_affected_of_other_vessels_trips() {
+    test(|helper| async move {
+        let fiskeridir_vessel_id = FiskeridirVesselId(11);
+        let ers_assembler = ErsTripAssembler::default();
+
+        let departure = fiskeridir_rs::ErsDep::test_default(1, Some(fiskeridir_vessel_id.0 as u64));
+        let mut arrival =
+            fiskeridir_rs::ErsPor::test_default(1, Some(fiskeridir_vessel_id.0 as u64), true);
+        arrival.arrival_date = departure.departure_date + Duration::days(1);
+
+        helper.add_ers_dep(vec![departure.clone()]).await.unwrap();
+        helper.add_ers_por(vec![arrival.clone()]).await.unwrap();
+
+        let vessel = helper.db.vessel(fiskeridir_vessel_id).await;
+        let assembled = ers_assembler
+            .assemble(&helper.db.db, &vessel, State::NoPriorState)
+            .await
+            .unwrap()
+            .unwrap();
+
+        helper
+            .add_trips(
+                vessel.fiskeridir.id,
+                assembled.new_trip_calculation_time,
+                assembled.conflict_strategy,
+                assembled.trips,
+                TripAssemblerId::Ers,
+            )
+            .await
+            .unwrap();
+
+        let fiskeridir_vessel_id2 = FiskeridirVesselId(12);
+        let mut departure2 =
+            fiskeridir_rs::ErsDep::test_default(2, Some(fiskeridir_vessel_id2.0 as u64));
+        let mut arrival2 =
+            fiskeridir_rs::ErsPor::test_default(2, Some(fiskeridir_vessel_id2.0 as u64), true);
+        departure2.departure_date = departure.departure_date + Duration::days(2);
+        arrival2.arrival_date = departure2.departure_date + Duration::days(3);
+
+        helper.add_ers_dep(vec![departure2.clone()]).await.unwrap();
+        helper.add_ers_por(vec![arrival2.clone()]).await.unwrap();
+
+        let vessel2 = helper.db.vessel(fiskeridir_vessel_id2).await;
+        let assembled = ers_assembler
+            .assemble(
+                &helper.db.db,
+                &vessel2,
+                State::CurrentCalculationTime(assembled.new_trip_calculation_time),
+            )
+            .await
+            .unwrap()
+            .unwrap();
+
+        helper
+            .add_trips(
+                vessel2.fiskeridir.id,
+                assembled.new_trip_calculation_time,
+                assembled.conflict_strategy,
+                assembled.trips,
+                TripAssemblerId::Ers,
+            )
+            .await
+            .unwrap();
+
+        let mut trips = helper.db.trips_of_vessel(vessel.fiskeridir.id).await;
+        let trips2 = helper.db.trips_of_vessel(vessel2.fiskeridir.id).await;
+        trips.extend(trips2);
+        trips.sort_by_key(|v| v.trip_id);
+
+        let expected = vec![
+            Trip {
+                trip_id: TripId(1),
+                period: create_date_range(&departure, &arrival),
+                landing_coverage: create_date_range(
+                    &departure,
+                    &ers_last_trip_landing_coverage_end(),
+                ),
+                assembler_id: TripAssemblerId::Ers,
+            },
+            Trip {
+                trip_id: TripId(2),
+                period: create_date_range(&departure2, &arrival2),
+                landing_coverage: create_date_range(
+                    &departure2,
+                    &ers_last_trip_landing_coverage_end(),
+                ),
+                assembler_id: TripAssemblerId::Ers,
+            },
+        ];
+        assert_eq!(expected, trips);
+    })
+    .await;
+}
