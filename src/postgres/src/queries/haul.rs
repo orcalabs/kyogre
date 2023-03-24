@@ -120,6 +120,14 @@ WITH
                 $1::tstzrange[] IS NULL
                 OR period && ANY ($1)
             )
+            AND (
+                $2::VARCHAR[] IS NULL
+                OR catch_location_start = ANY ($2)
+            )
+            AND (
+                $3::BIGINT[] IS NULL
+                OR fiskeridir_vessel_id = ANY ($3)
+            )
     )
 SELECT
     COALESCE(q1.grid::TEXT, '{}') AS "grid!",
@@ -143,24 +151,16 @@ FROM
                     hauls
                 WHERE
                     (
-                        $2::VARCHAR[] IS NULL
-                        OR catch_location_start = ANY ($2)
-                    )
-                    AND (
-                        $3::INT[] IS NULL
-                        OR gear_group_id = ANY ($3)
-                    )
-                    AND (
                         $4::INT[] IS NULL
-                        OR species_group_ids && $4
+                        OR gear_group_id = ANY ($4)
                     )
                     AND (
-                        $5::numrange[] IS NULL
-                        OR vessel_length <@ ANY ($5::numrange[])
+                        $5::INT[] IS NULL
+                        OR species_group_ids && $5
                     )
                     AND (
-                        $6::BIGINT[] IS NULL
-                        OR fiskeridir_vessel_id = ANY ($6)
+                        $6::numrange[] IS NULL
+                        OR vessel_length <@ ANY ($6::numrange[])
                     )
                 GROUP BY
                     catch_location_start
@@ -176,6 +176,15 @@ FROM
                     COALESCE(SUM(total_living_weight), 0) AS total_living_weight
                 FROM
                     hauls
+                WHERE
+                    (
+                        $5::INT[] IS NULL
+                        OR species_group_ids && $5
+                    )
+                    AND (
+                        $6::numrange[] IS NULL
+                        OR vessel_length <@ ANY ($6::numrange[])
+                    )
                 GROUP BY
                     gear_group_id
             ) h
@@ -194,6 +203,15 @@ FROM
                             JSONB_ARRAY_ELEMENTS(catches) catch
                         FROM
                             hauls
+                        WHERE
+                            (
+                                $4::INT[] IS NULL
+                                OR gear_group_id = ANY ($4)
+                            )
+                            AND (
+                                $6::numrange[] IS NULL
+                                OR vessel_length <@ ANY ($6::numrange[])
+                            )
                     ) h1
                 GROUP BY
                     h1.catch['species_group_id']
@@ -209,6 +227,15 @@ FROM
                     COALESCE(SUM(total_living_weight), 0) AS total_living_weight
                 FROM
                     hauls
+                WHERE
+                    (
+                        $4::INT[] IS NULL
+                        OR gear_group_id = ANY ($4)
+                    )
+                    AND (
+                        $5::INT[] IS NULL
+                        OR species_group_ids && $5
+                    )
                 GROUP BY
                     vessel_length_group
             ) h
@@ -216,10 +243,10 @@ FROM
             "#,
             args.ranges,
             args.catch_locations as _,
+            args.fiskeridir_vessel_ids as _,
             args.gear_group_ids as _,
             args.species_group_ids as _,
             args.vessel_length_ranges as _,
-            args.fiskeridir_vessel_ids as _,
         )
         .fetch_one(&self.pool)
         .await
