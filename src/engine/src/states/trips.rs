@@ -68,6 +68,7 @@ where
         let num_vessels = vessels.len();
         let mut num_conflicts = 0;
         let mut num_no_prior_state = 0;
+        let mut num_trips = 0;
 
         for vessel in vessels {
             if let Some(conflict) = conflicts.get(&vessel.fiskeridir.id) {
@@ -99,15 +100,22 @@ where
 
         for s in vessel_states {
             let id = s.0.fiskeridir.id;
-            if let Err(e) = self.run_assembler_on_vessel(trip_assembler, s.0, s.1).await {
-                event!(
-                    Level::ERROR,
-                    "failed to run trip assembler for vessel: {:?}, err: {:?}",
-                    id,
-                    e
-                );
+            match self.run_assembler_on_vessel(trip_assembler, s.0, s.1).await {
+                Err(e) => {
+                    event!(
+                        Level::ERROR,
+                        "failed to run trip assembler for vessel: {:?}, err: {:?}",
+                        id,
+                        e
+                    )
+                }
+                Ok(produced) => {
+                    num_trips += produced;
+                }
             }
         }
+
+        tracing::Span::current().record("app.produced_trips", num_trips);
 
         Ok(())
     }
@@ -117,11 +125,13 @@ where
         trip_assembler: &dyn TripProcessor,
         vessel: Vessel,
         state: State,
-    ) -> Result<(), TripAssemblerError> {
+    ) -> Result<u32, TripAssemblerError> {
         let database = self.database();
         let trips = trip_assembler.assemble(database, &vessel, state).await?;
+        let mut num_trips = 0;
 
         if let Some(trips) = trips {
+            num_trips = trips.trips.len() as u32;
             database
                 .add_trips(
                     vessel.fiskeridir.id,
@@ -134,6 +144,6 @@ where
                 .change_context(TripAssemblerError)?;
         }
 
-        Ok(())
+        Ok(num_trips)
     }
 }
