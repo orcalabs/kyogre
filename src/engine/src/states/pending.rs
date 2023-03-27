@@ -1,10 +1,12 @@
+use std::str::FromStr;
+
 use crate::{
     error::EngineError, Engine, EngineDiscriminants, Scrape, SharedState, Sleep, StepWrapper,
     UpdateDatabaseViews,
 };
 
 use chrono::{DateTime, Utc};
-use error_stack::{report, Result};
+use error_stack::{report, IntoReport, Result, ResultExt};
 use orca_statemachine::TransitionLog;
 use strum::IntoEnumIterator;
 use tracing::{event, instrument, Level};
@@ -51,9 +53,14 @@ where
     }
 
     async fn next_transition(&mut self) -> Result<EngineDiscriminants, EngineError> {
-        let last_transitions = self.last_transitions().await?;
-        let current_time = chrono::Utc::now();
-        let next_state = self.resolve_next_state(last_transitions, current_time);
+        let next_state = match self.check_for_interrupted_chain().await? {
+            Some(state) => state,
+            None => {
+                let last_transitions = self.last_transitions().await?;
+                let current_time = chrono::Utc::now();
+                self.resolve_next_state(last_transitions, current_time)
+            }
+        };
 
         match next_state {
             NextState::State(s) => Ok(s),
@@ -62,6 +69,26 @@ where
                 Ok(EngineDiscriminants::Sleep)
             }
         }
+    }
+
+    async fn check_for_interrupted_chain(&self) -> Result<Option<NextState>, EngineError> {
+        self.inner
+            .transition_log
+            .last_in_chain(
+                EngineDiscriminants::Scrape.as_ref(),
+                EngineDiscriminants::UpdateDatabaseViews.as_ref(),
+                EngineDiscriminants::Pending.as_ref(),
+                10,
+            )
+            .await
+            .map_err(|_| report!(EngineError::Transition))?
+            .map(|state_name| {
+                let state = EngineDiscriminants::from_str(&state_name)
+                    .into_report()
+                    .change_context(EngineError::Transition)?;
+                Ok(NextState::State(state))
+            })
+            .transpose()
     }
 
     async fn last_transitions(&self) -> Result<Vec<LastTranstion>, EngineError> {
