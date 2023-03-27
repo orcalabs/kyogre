@@ -1,5 +1,5 @@
 use super::test_client::ApiClient;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Duration, Utc};
 use dockertest::{DockerTest, Source, StaticManagementPolicy};
 use fiskeridir_rs::{ErsDep, ErsPor};
 use futures::Future;
@@ -42,6 +42,66 @@ impl TestHelper {
             db: TestDb { db },
             ers_assembler: ErsTripAssembler::default(),
             landings_assembler: LandingTripAssembler::default(),
+        }
+    }
+
+    pub async fn add_precision_to_trip(&self, vessel: &Vessel, trip: &TripDetailed) -> DateRange {
+        let ports = self.db.db.ports_of_trip(trip.trip_id).await.unwrap();
+
+        let precision_start = trip.period.start() - Duration::seconds(1);
+        let precision_end = trip.period.end() + Duration::seconds(1);
+        // We need atleast a single point within trip to enable precision, the
+        // ports precision for the ers assempler only operates on position outside the
+        // trip period.
+        let trip_point = trip.period.end() - Duration::seconds(1);
+
+        assert!(trip_point < trip.period.end() && trip_point > trip.period.start());
+        assert!(precision_start < trip.period.end());
+        assert!(precision_end > trip.period.start());
+
+        let start_port_cords = ports.start.unwrap().coordinates.unwrap();
+        let end_port_cords = ports.end.unwrap().coordinates.unwrap();
+        self.db
+            .generate_ais_position_with_coordinates(
+                vessel.mmsi().unwrap(),
+                precision_start,
+                start_port_cords.latitude,
+                start_port_cords.longitude,
+            )
+            .await;
+        self.db
+            .generate_ais_position(vessel.mmsi().unwrap(), trip_point)
+            .await;
+        self.db
+            .generate_ais_position_with_coordinates(
+                vessel.mmsi().unwrap(),
+                precision_end,
+                end_port_cords.latitude,
+                end_port_cords.longitude,
+            )
+            .await;
+
+        let mut updates = self
+            .ers_assembler
+            .calculate_precision(vessel, &self.db.db, vec![Trip::from(trip.clone())])
+            .await
+            .unwrap();
+        assert_eq!(1, updates.len());
+
+        self.db
+            .db
+            .update_trip_precisions(updates.clone())
+            .await
+            .unwrap();
+        self.db.db.update_database_views().await.unwrap();
+
+        match updates.pop().unwrap().outcome {
+            PrecisionOutcome::Success {
+                new_period: new_range,
+                start_precision: _,
+                end_precision: _,
+            } => new_range,
+            PrecisionOutcome::Failed => panic!("failed to compute trip precision"),
         }
     }
 

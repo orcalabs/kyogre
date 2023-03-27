@@ -1,8 +1,8 @@
 use super::helper::test;
 use actix_web::http::StatusCode;
 use chrono::{Duration, TimeZone, Utc};
-use fiskeridir_rs::Quality;
-use kyogre_core::{FiskeridirVesselId, HaulId, ScraperInboundPort};
+use fiskeridir_rs::{CallSign, Quality};
+use kyogre_core::{FiskeridirVesselId, HaulId, Mmsi, ScraperInboundPort};
 use web_api::routes::v1::trip::Trip;
 
 #[tokio::test]
@@ -243,6 +243,47 @@ async fn test_aggregates_landing_data_per_product_quality_and_species_id() {
                 .len(),
             2
         );
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_trip_of_haul_returns_precision_range_of_trip_if_it_exists() {
+    test(|helper| async move {
+        let call_sign = CallSign::try_from("LK-28").unwrap();
+        let fiskeridir_vessel_id = FiskeridirVesselId(11);
+        helper
+            .db
+            .generate_ais_vessel(Mmsi(40), call_sign.as_ref())
+            .await;
+        let vessel = helper
+            .db
+            .generate_fiskeridir_vessel(fiskeridir_vessel_id, None, Some(call_sign))
+            .await;
+        let start = Utc.timestamp_opt(10000, 0).unwrap();
+        let end = Utc.timestamp_opt(100000, 0).unwrap();
+
+        let haul = helper
+            .db
+            .generate_haul(
+                fiskeridir_vessel_id,
+                &(start + Duration::hours(1)),
+                &(end - Duration::hours(1)),
+            )
+            .await;
+
+        let ers_trip = helper
+            .generate_ers_trip(fiskeridir_vessel_id, &start, &end)
+            .await;
+
+        let precision_update = helper.add_precision_to_trip(&vessel, &ers_trip).await;
+
+        let response = helper.app.get_trip_of_haul(&haul.haul_id).await;
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body: Trip = response.json().await.unwrap();
+        assert_eq!(precision_update.start(), body.start);
+        assert_eq!(precision_update.end(), body.end);
     })
     .await;
 }

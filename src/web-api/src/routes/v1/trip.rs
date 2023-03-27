@@ -55,10 +55,15 @@ pub struct Trip {
 
 impl From<kyogre_core::TripDetailed> for Trip {
     fn from(value: kyogre_core::TripDetailed) -> Self {
+        let (start, end) = if let Some(v) = value.period_precision {
+            (v.start(), v.end())
+        } else {
+            (value.period.start(), value.period.end())
+        };
         Trip {
             trip_id: value.trip_id,
-            start: value.period.start(),
-            end: value.period.end(),
+            start,
+            end,
             num_deliveries: value.num_deliveries,
             most_recent_delivery_date: value.most_recent_delivery_date,
             gear_ids: value.gear_ids,

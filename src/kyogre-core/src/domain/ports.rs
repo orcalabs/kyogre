@@ -19,9 +19,9 @@ pub struct TripDockPoints {
 #[derive(Deserialize, Debug, Clone, PartialEq)]
 pub struct PortDockPoint {
     /// Code of the port this dock point belongs to.
-    pub code: String,
+    pub port_id: String,
     /// Unique id within the port.
-    pub point_id: i32,
+    pub port_dock_point_id: i32,
     /// Name of the dock point
     pub name: String,
     /// Port latitude, these coordinates seem to be more accurate than the coordinates

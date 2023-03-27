@@ -6,7 +6,10 @@ use crate::{
 use chrono::{DateTime, Utc};
 use error_stack::{IntoReport, Result, ResultExt};
 use fiskeridir_rs::Gear;
-use kyogre_core::{FiskeridirVesselId, HaulId, NewTrip, TripAssemblerId, TripsConflictStrategy};
+use kyogre_core::{
+    FiskeridirVesselId, HaulId, NewTrip, PrecisionOutcome, PrecisionStatus, TripAssemblerId,
+    TripPrecisionUpdate, TripsConflictStrategy,
+};
 use sqlx::postgres::types::PgRange;
 
 impl PostgresAdapter {
@@ -22,9 +25,11 @@ SELECT
     t.trip_assembler_id AS "trip_assembler_id!: TripAssemblerId",
     t.fiskeridir_vessel_id AS "fiskeridir_vessel_id!",
     t.period AS "period!",
+    t.period_precision,
     t.start_port_id,
     t.end_port_id,
     t.num_deliveries AS "num_deliveries!",
+    t.landing_coverage AS "landing_coverage!",
     t.total_living_weight AS "total_living_weight!",
     t.total_gross_weight AS "total_gross_weight!",
     t.total_product_weight AS "total_product_weight!",
@@ -59,6 +64,8 @@ SELECT
     t.trip_assembler_id AS "trip_assembler_id!: TripAssemblerId",
     t.fiskeridir_vessel_id AS "fiskeridir_vessel_id!",
     t.period AS "period!",
+    t.period_precision,
+    t.landing_coverage AS "landing_coverage!",
     t.start_port_id,
     t.end_port_id,
     t.num_deliveries AS "num_deliveries!",
@@ -103,6 +110,7 @@ WHERE
 SELECT
     trip_id,
     period,
+    period_precision,
     landing_coverage,
     trip_assembler_id AS "trip_assembler_id!: TripAssemblerId"
 FROM
@@ -139,6 +147,7 @@ LIMIT
 SELECT
     trip_id,
     period,
+    period_precision,
     landing_coverage,
     trip_assembler_id AS "trip_assembler_id!: TripAssemblerId"
 FROM
@@ -213,6 +222,7 @@ WHERE
 SELECT
     trip_id,
     period,
+    period_precision,
     landing_coverage,
     trip_assembler_id AS "trip_assembler_id!: TripAssemblerId"
 FROM
@@ -335,5 +345,158 @@ FROM
             .change_context(PostgresError::Transaction)?;
 
         Ok(())
+    }
+
+    pub(crate) async fn trip_prior_to_impl(
+        &self,
+        vessel_id: FiskeridirVesselId,
+        assembler_id: TripAssemblerId,
+        time: &DateTime<Utc>,
+    ) -> Result<Option<Trip>, PostgresError> {
+        sqlx::query_as!(
+            Trip,
+            r#"
+SELECT
+    trip_id,
+    period,
+    period_precision,
+    landing_coverage,
+    trip_assembler_id AS "trip_assembler_id!: TripAssemblerId"
+FROM
+    trips
+WHERE
+    fiskeridir_vessel_id = $1
+    AND trip_assembler_id = $2
+    AND UPPER(period) <= $3
+ORDER BY
+    period DESC
+LIMIT
+    1
+            "#,
+            vessel_id.0,
+            assembler_id as i32,
+            time
+        )
+        .fetch_optional(&self.pool)
+        .await
+        .into_report()
+        .change_context(PostgresError::Query)
+    }
+    pub(crate) async fn update_trip_precisions_impl(
+        &self,
+        updates: Vec<TripPrecisionUpdate>,
+    ) -> Result<(), PostgresError> {
+        let len = updates.len();
+        let mut trip_id = Vec::with_capacity(len);
+        let mut period_precision = Vec::with_capacity(len);
+        let mut trip_precision_status_id = Vec::with_capacity(len);
+        let mut start_precision_id = Vec::with_capacity(len);
+        let mut start_precision_direction = Vec::with_capacity(len);
+        let mut end_precision_id = Vec::with_capacity(len);
+        let mut end_precision_direction = Vec::with_capacity(len);
+
+        for u in updates {
+            trip_id.push(u.trip_id.0);
+            match u.outcome {
+                PrecisionOutcome::Success {
+                    new_period,
+                    start_precision,
+                    end_precision,
+                } => {
+                    let pg_range: PgRange<DateTime<Utc>> = PgRange {
+                        start: std::ops::Bound::Excluded(new_period.start()),
+                        end: std::ops::Bound::Included(new_period.end()),
+                    };
+                    trip_precision_status_id.push(PrecisionStatus::Successful.name().to_string());
+                    period_precision.push(Some(pg_range));
+                    start_precision_id.push(start_precision.as_ref().map(|v| v.id as i32));
+                    start_precision_direction.push(
+                        start_precision
+                            .as_ref()
+                            .map(|v| v.direction.name().to_string()),
+                    );
+                    end_precision_id.push(end_precision.as_ref().map(|v| v.id as i32));
+                    end_precision_direction
+                        .push(end_precision.map(|v| v.direction.name().to_string()));
+                }
+                PrecisionOutcome::Failed => {
+                    trip_precision_status_id.push(PrecisionStatus::Attempted.name().to_string());
+                    period_precision.push(None);
+                    start_precision_id.push(None);
+                    start_precision_direction.push(None);
+                    end_precision_id.push(None);
+                    end_precision_direction.push(None);
+                }
+            };
+        }
+
+        sqlx::query!(
+            r#"
+UPDATE trips
+SET
+    period_precision = u.period_precision,
+    trip_precision_status_id = u.precision_status,
+    start_precision_id = u.start_precision_id,
+    end_precision_id = u.end_precision_id,
+    start_precision_direction = u.start_precision_direction,
+    end_precision_direction = u.end_precision_direction
+FROM
+    (
+        SELECT
+            UNNEST($1::BIGINT[]) AS trip_id,
+            UNNEST($2::tstzrange[]) AS period_precision,
+            UNNEST($3::VARCHAR[]) AS precision_status,
+            UNNEST($4::INT[]) AS start_precision_id,
+            UNNEST($5::INT[]) AS end_precision_id,
+            UNNEST($6::VARCHAR[]) AS start_precision_direction,
+            UNNEST($7::VARCHAR[]) AS end_precision_direction
+    ) u
+WHERE
+    trips.trip_id = u.trip_id
+            "#,
+            trip_id.as_slice(),
+            period_precision.as_slice() as _,
+            trip_precision_status_id.as_slice(),
+            start_precision_id.as_slice() as _,
+            end_precision_id.as_slice() as _,
+            start_precision_direction.as_slice() as _,
+            end_precision_direction.as_slice() as _,
+        )
+        .execute(&self.pool)
+        .await
+        .into_report()
+        .change_context(PostgresError::Query)
+        .map(|_| ())
+    }
+
+    pub(crate) async fn trips_without_precision_impl(
+        &self,
+        vessel_id: FiskeridirVesselId,
+        assembler_id: TripAssemblerId,
+    ) -> Result<Vec<Trip>, PostgresError> {
+        sqlx::query_as!(
+            Trip,
+            r#"
+SELECT
+    trip_id,
+    period,
+    period_precision,
+    landing_coverage,
+    trip_assembler_id AS "trip_assembler_id!: TripAssemblerId"
+FROM
+    trips
+WHERE
+    fiskeridir_vessel_id = $1
+    AND trip_assembler_id = $2
+    AND trip_precision_status_id = $3
+            "#,
+            vessel_id.0,
+            assembler_id as i32,
+            PrecisionStatus::Unprocessed as i32
+        )
+        .fetch_all(&self.pool)
+        .await
+        .into_report()
+        .change_context(PostgresError::Query)
     }
 }

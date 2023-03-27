@@ -128,6 +128,7 @@ impl TripPrecisionCalculator {
                 .ais_positions(mmsi, &t.period)
                 .await
                 .change_context(TripPrecisionError)?;
+
             if positions.is_empty() {
                 updates.push(TripPrecisionUpdate {
                     trip_id: t.trip_id,
@@ -174,7 +175,7 @@ impl TripPrecisionCalculator {
                 TripPrecisionUpdate {
                     trip_id: t.trip_id,
                     outcome: PrecisionOutcome::Success {
-                        new_range: DateRange::new(start, end)
+                        new_period: DateRange::new(start, end)
                             .into_report()
                             .change_context(TripPrecisionError)?,
                         start_precision: start_precision.map(PrecisionUpdate::from),
