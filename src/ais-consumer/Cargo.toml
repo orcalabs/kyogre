@@ -12,8 +12,8 @@ orca-core = { registry = "orcalabs-orcastrator", version = "0.20.0", features = 
     "telemetry",
 ] }
 
-async-trait = "0.1.67"
-serde = "1.0.157"
+async-trait = "0.1.68"
+serde = "1.0.158"
 config = "0.13.3"
 tokio = { version = "1.26.0", features = ["macros", "sync", "time"] }
 tokio-util = { version = "0.7.7", features = ["codec", "compat"] }

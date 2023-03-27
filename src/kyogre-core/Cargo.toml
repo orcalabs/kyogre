@@ -10,8 +10,8 @@ utoipa = ["dep:utoipa"]
 sqlx = ["dep:sqlx"]
 
 [dependencies]
-async-trait = "0.1.67"
-serde = "1.0.157"
+async-trait = "0.1.68"
+serde = "1.0.158"
 chrono = { version = "0.4.24", features = ["serde"] }
 chrono-tz = "0.8.1"
 fiskeridir-rs = { workspace = true }
@@ -26,7 +26,7 @@ futures = "0.3.27"
 
 utoipa = { version = "3.1", optional = true }
 remain = "0.2.8"
-sqlx = { version = "0.6.2", features = [
+sqlx = { version = "0.6.3", features = [
     "runtime-tokio-rustls",
     "postgres",
     "bigdecimal",
