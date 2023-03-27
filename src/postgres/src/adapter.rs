@@ -295,7 +295,7 @@ impl ScraperInboundPort for PostgresAdapter {
         &self,
         vessels: Vec<fiskeridir_rs::RegisterVessel>,
     ) -> Result<(), InsertError> {
-        self.add_register_vessels_impl(vessels)
+        self.add_register_vessels_full(vessels)
             .await
             .change_context(InsertError)
     }
@@ -479,40 +479,66 @@ impl TripAssemblerInboundPort for PostgresAdapter {
 
 #[async_trait]
 impl TripPrecisionOutboundPort for PostgresAdapter {
-    async fn ports_of_trip(&self, _trip_id: TripId) -> Result<TripPorts, QueryError> {
-        unimplemented!();
+    async fn ports_of_trip(&self, trip_id: TripId) -> Result<TripPorts, QueryError> {
+        convert_single(
+            self.ports_of_trip_impl(trip_id)
+                .await
+                .change_context(QueryError)?,
+        )
     }
-    async fn dock_points_of_trip(&self, _trip_id: TripId) -> Result<TripDockPoints, QueryError> {
-        unimplemented!();
+    async fn dock_points_of_trip(&self, trip_id: TripId) -> Result<TripDockPoints, QueryError> {
+        convert_single(
+            self.dock_points_of_trip_impl(trip_id)
+                .await
+                .change_context(QueryError)?,
+        )
     }
     async fn ais_positions(
         &self,
-        _mmsi: Mmsi,
-        _range: &DateRange,
+        mmsi: Mmsi,
+        range: &DateRange,
     ) -> Result<Vec<AisPosition>, QueryError> {
-        unimplemented!();
+        let mut stream = convert_stream(self.ais_positions_impl(mmsi, range));
+
+        let mut positions = vec![];
+
+        while let Some(a) = stream.next().await {
+            positions.push(a.change_context_lazy(|| QueryError)?);
+        }
+
+        Ok(positions)
     }
     async fn trip_prior_to(
         &self,
-        _vessel_id: FiskeridirVesselId,
-        _assembler_id: TripAssemblerId,
-        _time: &DateTime<Utc>,
+        vessel_id: FiskeridirVesselId,
+        assembler_id: TripAssemblerId,
+        time: &DateTime<Utc>,
     ) -> Result<Option<Trip>, QueryError> {
-        unimplemented!();
+        convert_optional(
+            self.trip_prior_to_impl(vessel_id, assembler_id, time)
+                .await
+                .change_context(QueryError)?,
+        )
     }
     async fn delivery_points_associated_with_trip(
         &self,
-        _trip_id: TripId,
+        trip_id: TripId,
     ) -> Result<Vec<DeliveryPoint>, QueryError> {
-        unimplemented!();
+        self.delivery_points_associated_with_trip_impl(trip_id)
+            .await
+            .change_context(QueryError)
     }
 
     async fn trips_without_precision(
         &self,
-        _vessel_id: FiskeridirVesselId,
-        _assembler_id: TripAssemblerId,
+        vessel_id: FiskeridirVesselId,
+        assembler_id: TripAssemblerId,
     ) -> Result<Vec<Trip>, QueryError> {
-        unimplemented!();
+        convert_vec(
+            self.trips_without_precision_impl(vessel_id, assembler_id)
+                .await
+                .change_context(QueryError)?,
+        )
     }
 }
 
@@ -520,9 +546,11 @@ impl TripPrecisionOutboundPort for PostgresAdapter {
 impl TripPrecisionInboundPort for PostgresAdapter {
     async fn update_trip_precisions(
         &self,
-        _updates: Vec<TripPrecisionUpdate>,
+        updates: Vec<TripPrecisionUpdate>,
     ) -> Result<(), UpdateError> {
-        unimplemented!();
+        self.update_trip_precisions_impl(updates)
+            .await
+            .change_context(UpdateError)
     }
 }
 
@@ -547,5 +575,22 @@ where
 {
     val.map(|a| B::try_from(a))
         .transpose()
+        .change_context(QueryError)
+}
+
+pub(crate) fn convert_single<A, B>(val: A) -> Result<B, QueryError>
+where
+    B: std::convert::TryFrom<A, Error = Report<PostgresError>>,
+{
+    B::try_from(val).change_context(QueryError)
+}
+
+pub(crate) fn convert_vec<A, B>(val: Vec<A>) -> Result<Vec<B>, QueryError>
+where
+    B: std::convert::TryFrom<A, Error = Report<PostgresError>>,
+{
+    val.into_iter()
+        .map(B::try_from)
+        .collect::<std::result::Result<Vec<_>, <B as std::convert::TryFrom<A>>::Error>>()
         .change_context(QueryError)
 }

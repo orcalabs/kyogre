@@ -102,6 +102,7 @@ impl PortPrecision {
                         .ais_positions(mmsi, &range)
                         .await
                         .change_context(TripPrecisionError)?;
+
                     self.do_precision_impl(
                         target,
                         positions.chunks(self.config.position_chunk_size),

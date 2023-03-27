@@ -1,5 +1,11 @@
+use std::collections::HashMap;
+
 use super::{float_to_decimal, opt_float_to_decimal};
-use crate::{error::PostgresError, models::FiskeridirAisVesselCombination, PostgresAdapter};
+use crate::{
+    error::PostgresError,
+    models::{FiskeridirAisVesselCombination, NewMunicipality},
+    PostgresAdapter,
+};
 use error_stack::{report, IntoReport, Result, ResultExt};
 use futures::{Stream, TryStreamExt};
 use kyogre_core::{FiskeridirVesselId, FiskeridirVesselSource};
@@ -124,9 +130,42 @@ ON CONFLICT (fiskeridir_vessel_id) DO NOTHING
         .map(|_| ())
     }
 
-    pub(crate) async fn add_register_vessels_impl(
+    pub(crate) async fn add_register_vessels_full(
         &self,
         vessels: Vec<fiskeridir_rs::RegisterVessel>,
+    ) -> Result<(), PostgresError> {
+        let municipalitis: HashMap<i32, NewMunicipality> = vessels
+            .iter()
+            .map(|v| {
+                (
+                    v.municipality_code,
+                    NewMunicipality {
+                        id: v.municipality_code,
+                        name: None,
+                    },
+                )
+            })
+            .collect();
+
+        let mut tx = self.begin().await?;
+
+        self.add_municipalities(municipalitis.into_values().collect(), &mut tx)
+            .await?;
+
+        self.add_register_vessels_impl(vessels, &mut tx).await?;
+
+        tx.commit()
+            .await
+            .into_report()
+            .change_context(PostgresError::Transaction)?;
+
+        Ok(())
+    }
+
+    pub(crate) async fn add_register_vessels_impl<'a>(
+        &'a self,
+        vessels: Vec<fiskeridir_rs::RegisterVessel>,
+        tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
     ) -> Result<(), PostgresError> {
         let len = vessels.len();
 
@@ -222,7 +261,7 @@ SET
             owners.as_slice(),
             source_ids.as_slice(),
         )
-        .execute(&self.pool)
+        .execute(tx)
         .await
         .into_report()
         .change_context(PostgresError::Query)?;

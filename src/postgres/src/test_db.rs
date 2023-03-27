@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::{models::Haul, PostgresAdapter};
 use chrono::{DateTime, Utc};
-use fiskeridir_rs::{ErsDca, GearGroup, VesselLengthGroup};
+use fiskeridir_rs::{CallSign, ErsDca, GearGroup, VesselLengthGroup};
 use kyogre_core::*;
 
 /// Wrapper with additional methods inteded for testing purposes.
@@ -266,17 +266,35 @@ FROM
         timestamp: DateTime<chrono::Utc>,
     ) -> AisPosition {
         let pos = NewAisPosition::test_default(mmsi, timestamp);
-        self.db.add_ais_positions(&[pos]).await.unwrap();
+        self.add_ais_position(pos).await
+    }
 
-        let mut positions = self
-            .ais_positions(
-                Some(mmsi),
-                Some(&DateRange::new(timestamp, timestamp).unwrap()),
-            )
-            .await;
+    pub async fn generate_fiskeridir_vessel(
+        &self,
+        id: FiskeridirVesselId,
+        imo: Option<i64>,
+        call_sign: Option<CallSign>,
+    ) -> kyogre_core::Vessel {
+        let mut vessel = fiskeridir_rs::RegisterVessel::test_default(id.0);
+        vessel.imo_number = imo;
+        vessel.radio_call_sign = call_sign;
 
-        assert_eq!(positions.len(), 1);
-        positions.pop().unwrap()
+        self.db.add_register_vessels(vec![vessel]).await.unwrap();
+
+        self.vessel(id).await
+    }
+
+    pub async fn generate_ais_position_with_coordinates(
+        &self,
+        mmsi: Mmsi,
+        timestamp: DateTime<chrono::Utc>,
+        lat: f64,
+        lon: f64,
+    ) -> AisPosition {
+        let mut pos = NewAisPosition::test_default(mmsi, timestamp);
+        pos.latitude = lat;
+        pos.longitude = lon;
+        self.add_ais_position(pos).await
     }
 
     pub async fn generate_ers_dca(&self, message_id: u64, vessel_id: Option<u64>) -> ErsDca {
@@ -291,5 +309,21 @@ FROM
     pub async fn add_ers_dca_value(&self, val: ErsDca) {
         self.db.add_ers_dca(vec![val]).await.unwrap();
         self.db.update_database_views().await.unwrap();
+    }
+
+    async fn add_ais_position(&self, pos: NewAisPosition) -> AisPosition {
+        let timestamp = pos.msgtime;
+        let mmsi = pos.mmsi;
+        self.db.add_ais_positions(&[pos]).await.unwrap();
+
+        let mut positions = self
+            .ais_positions(
+                Some(mmsi),
+                Some(&DateRange::new(timestamp, timestamp).unwrap()),
+            )
+            .await;
+
+        assert_eq!(positions.len(), 1);
+        positions.pop().unwrap()
     }
 }

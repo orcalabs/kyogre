@@ -19,6 +19,7 @@ use std::collections::HashMap;
 pub struct Trip {
     pub trip_id: i64,
     pub period: PgRange<DateTime<Utc>>,
+    pub period_precision: Option<PgRange<DateTime<Utc>>>,
     pub landing_coverage: PgRange<DateTime<Utc>>,
     pub trip_assembler_id: TripAssemblerId,
 }
@@ -39,6 +40,8 @@ pub struct TripDetailed {
     pub trip_id: i64,
     pub fiskeridir_vessel_id: i64,
     pub period: PgRange<DateTime<Utc>>,
+    pub period_precision: Option<PgRange<DateTime<Utc>>>,
+    pub landing_coverage: PgRange<DateTime<Utc>>,
     pub num_deliveries: i64,
     pub total_living_weight: BigDecimal,
     pub total_gross_weight: BigDecimal,
@@ -191,6 +194,11 @@ impl TryFrom<TripDetailed> for kyogre_core::TripDetailed {
 
     fn try_from(value: TripDetailed) -> Result<Self, Self::Error> {
         let period = DateRange::try_from(PgRangeWrapper(value.period))?;
+        let period_precision = value
+            .period_precision
+            .map(|v| DateRange::try_from(PgRangeWrapper(v)))
+            .transpose()?;
+        let landing_coverage = DateRange::try_from(PgRangeWrapper(value.landing_coverage))?;
 
         let db_delivery_point_catches: Vec<DeliveryPointCatch> =
             serde_json::from_str(&value.delivery_point_catches)
@@ -207,7 +215,9 @@ impl TryFrom<TripDetailed> for kyogre_core::TripDetailed {
         }
 
         Ok(kyogre_core::TripDetailed {
+            period_precision,
             fiskeridir_vessel_id: FiskeridirVesselId(value.fiskeridir_vessel_id),
+            landing_coverage,
             trip_id: TripId(value.trip_id),
             period,
             num_deliveries: value.num_deliveries as u32,

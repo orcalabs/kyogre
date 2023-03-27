@@ -29,6 +29,8 @@ pub struct TripDetailed {
     pub fiskeridir_vessel_id: FiskeridirVesselId,
     pub trip_id: TripId,
     pub period: DateRange,
+    pub period_precision: Option<DateRange>,
+    pub landing_coverage: DateRange,
     pub num_deliveries: u32,
     pub most_recent_delivery_date: Option<DateTime<Utc>>,
     pub gear_ids: Vec<fiskeridir_rs::Gear>,
@@ -106,7 +108,7 @@ pub struct TripPrecisionUpdate {
 #[derive(Debug, Clone)]
 pub enum PrecisionOutcome {
     Success {
-        new_range: DateRange,
+        new_period: DateRange,
         start_precision: Option<PrecisionUpdate>,
         end_precision: Option<PrecisionUpdate>,
     },
@@ -117,10 +119,10 @@ impl PrecisionOutcome {
     pub fn status(&self) -> PrecisionStatus {
         match self {
             PrecisionOutcome::Success {
-                new_range: _,
+                new_period: _,
                 start_precision: _,
                 end_precision: _,
-            } => PrecisionStatus::Completed,
+            } => PrecisionStatus::Successful,
             PrecisionOutcome::Failed => PrecisionStatus::Attempted,
         }
     }
@@ -136,11 +138,21 @@ pub struct PrecisionUpdate {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum PrecisionStatus {
     /// No precision implementation has been attempted.
-    Original = 1,
+    Unprocessed = 1,
     /// All enabled precision implementations have been attempted, but failed.
     Attempted = 2,
     /// Enabled precision implementations have been attempted and atleast 1 succeeded.
-    Completed = 3,
+    Successful = 3,
+}
+
+impl PrecisionStatus {
+    pub fn name(&self) -> &'static str {
+        match self {
+            PrecisionStatus::Attempted => "attempted",
+            PrecisionStatus::Successful => "successful",
+            PrecisionStatus::Unprocessed => "unprocessed",
+        }
+    }
 }
 
 /// What direction a precision implementation have modified a trip.
@@ -150,6 +162,15 @@ pub enum PrecisionDirection {
     Shrinking = 1,
     /// The trip has been extended.
     Extending = 2,
+}
+
+impl PrecisionDirection {
+    pub fn name(&self) -> &'static str {
+        match self {
+            PrecisionDirection::Shrinking => "shrinking",
+            PrecisionDirection::Extending => "extending",
+        }
+    }
 }
 
 /// All trip precision implementations.
@@ -211,6 +232,17 @@ impl std::fmt::Display for TripAssemblerId {
         match self {
             TripAssemblerId::Landings => write!(f, "landings_assembler"),
             TripAssemblerId::Ers => write!(f, "ers_assembler"),
+        }
+    }
+}
+
+impl From<TripDetailed> for Trip {
+    fn from(value: TripDetailed) -> Self {
+        Trip {
+            trip_id: value.trip_id,
+            period: value.period,
+            landing_coverage: value.landing_coverage,
+            assembler_id: value.assembler_id,
         }
     }
 }
