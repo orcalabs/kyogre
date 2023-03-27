@@ -441,16 +441,23 @@ SET
     start_precision_direction = u.start_precision_direction,
     end_precision_direction = u.end_precision_direction
 FROM
-    (
-        SELECT
-            UNNEST($1::BIGINT[]) AS trip_id,
-            UNNEST($2::tstzrange[]) AS period_precision,
-            UNNEST($3::VARCHAR[]) AS precision_status,
-            UNNEST($4::INT[]) AS start_precision_id,
-            UNNEST($5::INT[]) AS end_precision_id,
-            UNNEST($6::VARCHAR[]) AS start_precision_direction,
-            UNNEST($7::VARCHAR[]) AS end_precision_direction
-    ) u
+    UNNEST(
+        $1::BIGINT[],
+        $2::tstzrange[],
+        $3::VARCHAR[],
+        $4::INT[],
+        $5::INT[],
+        $6::VARCHAR[],
+        $7::VARCHAR[]
+    ) u (
+        trip_id,
+        period_precision,
+        precision_status,
+        start_precision_id,
+        end_precision_id,
+        start_precision_direction,
+        end_precision_direction
+    )
 WHERE
     trips.trip_id = u.trip_id
             "#,
