@@ -111,7 +111,7 @@ where
 
 /// NewType wrapper for a core `DateTime<Utc>` to customize the deserialize implementation
 /// such that it can be used in [crate::routes::utils::deserialize_string_list].
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct DateTimeUtc(pub DateTime<Utc>);
 
 impl<'de> Deserialize<'de> for DateTimeUtc {

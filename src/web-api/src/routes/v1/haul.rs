@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, ops::Bound};
 
 use crate::{
     error::ApiError,
@@ -9,10 +9,10 @@ use crate::{
     to_streaming_response, Database,
 };
 use actix_web::{web, HttpResponse};
-use chrono::{DateTime, Datelike, Duration, Months, NaiveDate, Utc};
+use chrono::{DateTime, Datelike, Months, NaiveDate, Utc};
 use fiskeridir_rs::{GearGroup, VesselLengthGroup, WhaleGender};
 use futures::TryStreamExt;
-use kyogre_core::{CatchLocationId, DateRange, FiskeridirVesselId, HaulId, HaulsQuery, Range};
+use kyogre_core::{CatchLocationId, FiskeridirVesselId, HaulId, HaulsQuery, Range};
 use serde::{Deserialize, Serialize};
 use tracing::{event, Level};
 use utoipa::{IntoParams, ToSchema};
@@ -238,26 +238,46 @@ impl From<kyogre_core::HaulsGrid> for HaulsGrid {
         }
     }
 }
+
 fn utc_from_naive(naive_date: NaiveDate) -> DateTime<Utc> {
     DateTime::<Utc>::from_utc(naive_date.and_hms_opt(0, 0, 0).unwrap(), Utc)
 }
 
 impl From<HaulsParams> for HaulsQuery {
     fn from(v: HaulsParams) -> Self {
-        let ranges = v.months.map(|months| {
-            months
-                .into_iter()
-                .map(|m| {
-                    let start = NaiveDate::from_ymd_opt(m.0.year(), m.0.month(), 1).unwrap();
-                    let end = start.checked_add_months(Months::new(1)).unwrap();
+        let ranges = v.months.map(|mut months| {
+            let mut vec = Vec::with_capacity(months.len());
 
-                    DateRange::new(
-                        utc_from_naive(start),
-                        utc_from_naive(end) - Duration::nanoseconds(1),
-                    )
-                    .unwrap()
-                })
-                .collect()
+            months.sort();
+
+            let mut start_naive = None;
+            let mut end_naive = None;
+            for m in months {
+                if let (Some(start), Some(end)) = (start_naive, end_naive) {
+                    let naive = NaiveDate::from_ymd_opt(m.0.year(), m.0.month(), 1).unwrap();
+                    if end != naive {
+                        vec.push(Range {
+                            start: Bound::Included(utc_from_naive(start)),
+                            end: Bound::Excluded(utc_from_naive(end)),
+                        });
+                        start_naive = Some(naive);
+                    }
+                    end_naive = Some(naive.checked_add_months(Months::new(1)).unwrap());
+                } else {
+                    let start = NaiveDate::from_ymd_opt(m.0.year(), m.0.month(), 1).unwrap();
+                    end_naive = Some(start.checked_add_months(Months::new(1)).unwrap());
+                    start_naive = Some(start);
+                }
+            }
+
+            if let (Some(start), Some(end)) = (start_naive, end_naive) {
+                vec.push(Range {
+                    start: Bound::Included(utc_from_naive(start)),
+                    end: Bound::Excluded(utc_from_naive(end)),
+                });
+            }
+
+            vec
         });
 
         Self {
@@ -272,5 +292,51 @@ impl From<HaulsParams> for HaulsQuery {
             vessel_length_ranges: v.vessel_length_ranges,
             vessel_ids: v.fiskeridir_vessel_ids,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::ops::Bound;
+
+    use chrono::{DateTime, Utc};
+    use kyogre_core::HaulsQuery;
+
+    use crate::routes::utils::DateTimeUtc;
+
+    use super::HaulsParams;
+
+    #[test]
+    fn hauls_params_merges_consecutive_date_ranges() {
+        let month1: DateTime<Utc> = "2001-11-1T00:00:00Z".parse().unwrap();
+        let month2: DateTime<Utc> = "2001-12-1T00:00:00Z".parse().unwrap();
+        let month3: DateTime<Utc> = "2002-01-1T00:00:00Z".parse().unwrap();
+        let res1: DateTime<Utc> = "2002-02-1T00:00:00Z".parse().unwrap();
+
+        let month4: DateTime<Utc> = "2002-06-1T00:00:00Z".parse().unwrap();
+        let month5: DateTime<Utc> = "2002-07-1T00:00:00Z".parse().unwrap();
+        let month6: DateTime<Utc> = "2002-08-1T00:00:00Z".parse().unwrap();
+        let res2: DateTime<Utc> = "2002-09-1T00:00:00Z".parse().unwrap();
+
+        let params = HaulsParams {
+            months: Some(vec![
+                DateTimeUtc(month1),
+                DateTimeUtc(month2),
+                DateTimeUtc(month3),
+                DateTimeUtc(month4),
+                DateTimeUtc(month5),
+                DateTimeUtc(month6),
+            ]),
+            ..Default::default()
+        };
+
+        let query = HaulsQuery::from(params);
+        let ranges = query.ranges.unwrap();
+
+        assert_eq!(ranges.len(), 2);
+        assert_eq!(ranges[0].start, Bound::Included(month1));
+        assert_eq!(ranges[0].end, Bound::Excluded(res1));
+        assert_eq!(ranges[1].start, Bound::Included(month4));
+        assert_eq!(ranges[1].end, Bound::Excluded(res2));
     }
 }

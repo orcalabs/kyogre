@@ -1,5 +1,3 @@
-use std::ops::Bound;
-
 use crate::{
     error::PostgresError,
     models::{Haul, HaulsGrid},
@@ -273,8 +271,8 @@ impl TryFrom<HaulsQuery> for HaulsArgs {
                 ranges
                     .into_iter()
                     .map(|m| PgRange {
-                        start: Bound::Included(m.start()),
-                        end: Bound::Included(m.end()),
+                        start: m.start,
+                        end: m.end,
                     })
                     .collect()
             }),
