@@ -6,8 +6,8 @@ use scraper::{FiskeridirSource, Scraper};
 use std::path::PathBuf;
 
 pub struct App {
-    shared_state: SharedState<PostgresAdapter>,
-    transition_log: orca_statemachine::Client,
+    pub shared_state: SharedState<PostgresAdapter>,
+    pub transition_log: orca_statemachine::Client,
 }
 
 impl App {

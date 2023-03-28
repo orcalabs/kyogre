@@ -11,7 +11,7 @@ postgres = { path = "../postgres" }
 scraper = { path = "../scraper" }
 trip-assembler = { path = "../trip-assembler" }
 
-orca-statemachine = { version = "0.36.0", registry = "orcalabs-orcastrator", features = [
+orca-statemachine = { version = "0.37.0", registry = "orcalabs-orcastrator", features = [
     "psql-adapter",
 ] }
 orca-core = { version = "0.20.0", registry = "orcalabs-orcastrator", features = [
@@ -29,3 +29,12 @@ error-stack = { workspace = true }
 
 strum = "0.24.1"
 strum_macros = "0.24.3"
+
+[dev-dependencies]
+tracing-subscriber = "0.3.16"
+rand = "0.8.5"
+futures = "0.3.27"
+dockertest = { version = "0.3.1", registry = "orcalabs-orcastrator" }
+orca-core = { version = "0.20.0", registry = "orcalabs-orcastrator", features = [
+    "dockertest",
+] }

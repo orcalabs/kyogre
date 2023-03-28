@@ -15,6 +15,14 @@ impl<L, T> From<StepWrapper<L, T, Pending>> for StepWrapper<L, T, Sleep> {
     }
 }
 
+impl Default for Sleep {
+    fn default() -> Self {
+        Sleep {
+            sleep_duration: tokio::time::Duration::from_millis(10),
+        }
+    }
+}
+
 // Sleep -> Pending
 impl<L, T> From<StepWrapper<L, T, Sleep>> for StepWrapper<L, T, Pending> {
     fn from(val: StepWrapper<L, T, Sleep>) -> StepWrapper<L, T, Pending> {

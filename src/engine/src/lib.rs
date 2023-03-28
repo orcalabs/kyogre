@@ -18,6 +18,11 @@ pub mod settings;
 pub mod startup;
 pub mod states;
 
+pub use error::*;
+pub use settings::*;
+pub use startup::*;
+pub use states::*;
+
 pub trait Database:
     TripAssemblerOutboundPort
     + TripAssemblerInboundPort
@@ -59,7 +64,7 @@ pub struct StepWrapper<A, B, C> {
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct Config {
-    scrape_schedule: Schedule,
+    pub scrape_schedule: Schedule,
 }
 
 pub struct SharedState<A> {

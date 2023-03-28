@@ -1087,18 +1087,22 @@ dependencies = [
  "async-trait",
  "chrono",
  "config",
+ "dockertest",
  "error-stack 0.3.1",
  "fiskeridir-rs",
+ "futures",
  "kyogre-core",
  "orca-core",
  "orca-statemachine",
  "postgres",
+ "rand",
  "scraper",
  "serde",
  "strum",
  "strum_macros",
  "tokio",
  "tracing",
+ "tracing-subscriber",
  "trip-assembler",
 ]
 
@@ -2327,9 +2331,9 @@ dependencies = [
 
 [[package]]
 name = "orca-statemachine"
-version = "0.36.0"
+version = "0.37.0"
 source = "registry+https://dl.cloudsmith.io/basic/orcalabs/orcastrator/cargo/index.git"
-checksum = "9b1f234ace17e05e557049e95fbdacec2ebe5aba5331448c89dff0e07cee61cf"
+checksum = "a97f0759b4aeb6486c67fbdd2f64e55d7f693f6163f883e4cacdcbe641d9ef7a"
 dependencies = [
  "async-trait",
  "chrono",
