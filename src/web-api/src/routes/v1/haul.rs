@@ -138,7 +138,7 @@ pub struct HaulCatch {
     pub living_weight: i32,
     pub main_species_fiskeridir_id: Option<i32>,
     pub species_fiskeridir_id: Option<i32>,
-    pub species_group_id: Option<i32>,
+    pub species_group_id: i32,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
