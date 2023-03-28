@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::{error::ApiError, response::Response, *};
 use actix_web::web::{self, Path};
 use chrono::{DateTime, Utc};
-use kyogre_core::{Delivery, HaulId, TripId};
+use kyogre_core::{Delivery, FiskeridirVesselId, HaulId, TripId};
 use serde::{Deserialize, Serialize};
 use tracing::{event, Level};
 use utoipa::ToSchema;
@@ -35,6 +35,8 @@ pub async fn trip_of_haul<T: Database + 'static>(
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct Trip {
+    #[schema(value_type = i64)]
+    pub fiskeridir_vessel_id: FiskeridirVesselId,
     #[schema(value_type = i64)]
     pub trip_id: TripId,
     pub start: DateTime<Utc>,
@@ -73,6 +75,7 @@ impl From<kyogre_core::TripDetailed> for Trip {
             delivered_per_delivery_point: value.delivered_per_delivery_point,
             start_port_id: value.start_port_id,
             end_port_id: value.end_port_id,
+            fiskeridir_vessel_id: value.fiskeridir_vessel_id,
         }
     }
 }
