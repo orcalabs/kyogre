@@ -43,7 +43,7 @@ pub struct HaulCatch {
     pub living_weight: i32,
     pub species_fao_id: String,
     pub species_fiskeridir_id: Option<i32>,
-    pub species_group_id: Option<i32>,
+    pub species_group_id: i32,
     pub species_main_group_id: Option<i32>,
 }
 
