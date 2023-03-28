@@ -11,16 +11,20 @@ use orca_statemachine::TransitionLog;
 use strum::IntoEnumIterator;
 use tracing::{event, instrument, Level};
 
+use super::{Trips, TripsPrecision};
+
 #[derive(Default)]
 pub struct Pending {
     pub(crate) sleep_duration: Option<tokio::time::Duration>,
 }
 
+#[derive(Debug, Clone)]
 struct LastTranstion {
     state: EngineDiscriminants,
     time: Option<DateTime<Utc>>,
 }
 
+#[derive(Debug, Clone)]
 enum NextState {
     State(EngineDiscriminants),
     Sleep(std::time::Duration),
@@ -78,7 +82,7 @@ where
                 EngineDiscriminants::Scrape.as_ref(),
                 EngineDiscriminants::UpdateDatabaseViews.as_ref(),
                 EngineDiscriminants::Pending.as_ref(),
-                10,
+                20,
             )
             .await
             .map_err(|_| report!(EngineError::Transition))?
@@ -172,11 +176,14 @@ where
 
     fn transition(self, new_state: EngineDiscriminants) -> Engine<A, SharedState<B>> {
         match new_state {
-            EngineDiscriminants::Trips | EngineDiscriminants::TripsPrecision => {
-                panic!("tried to enter the Trips/TripsPrecision state from the Pending state")
-            }
             EngineDiscriminants::Pending => {
                 panic!("tried to enter the Pending state from the Pending state")
+            }
+            EngineDiscriminants::Trips => {
+                Engine::Trips(StepWrapper::<A, SharedState<B>, Trips>::from(self))
+            }
+            EngineDiscriminants::TripsPrecision => {
+                Engine::TripsPrecision(StepWrapper::<A, SharedState<B>, TripsPrecision>::from(self))
             }
             EngineDiscriminants::Sleep => {
                 Engine::Sleep(StepWrapper::<A, SharedState<B>, Sleep>::from(self))

@@ -14,6 +14,13 @@ impl<L, T> From<StepWrapper<L, T, Trips>> for StepWrapper<L, T, UpdateDatabaseVi
     }
 }
 
+// Pending -> Trips
+impl<L, T> From<StepWrapper<L, T, Pending>> for StepWrapper<L, T, Trips> {
+    fn from(val: StepWrapper<L, T, Pending>) -> StepWrapper<L, T, Trips> {
+        val.inherit(Trips::default())
+    }
+}
+
 #[derive(Default)]
 pub struct Trips;
 

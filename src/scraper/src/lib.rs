@@ -10,6 +10,7 @@ use fiskeridir::{
 };
 use kyogre_core::ScraperInboundPort;
 use serde::Deserialize;
+use std::fmt::Debug;
 use std::sync::Arc;
 use tracing::{event, instrument, Level};
 
@@ -28,9 +29,9 @@ pub struct Scraper {
     processor: Box<dyn Processor>,
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Clone, Default)]
 pub struct Config {
-    pub landings: LandingFileYears,
+    pub landings: Option<LandingFileYears>,
     pub ers_dca: Option<Vec<ErsFileYear>>,
     pub ers_por: Option<Vec<ErsFileYear>>,
     pub ers_dep: Option<Vec<ErsFileYear>>,
@@ -58,9 +59,11 @@ pub trait DataSource: Send + Sync {
 
 impl Scraper {
     pub fn new(config: Config, processor: Box<dyn Processor>, source: FiskeridirSource) -> Scraper {
-        let landing_sources = (config.landings.min_year..=config.landings.max_year)
-            .map(|year| fiskeridir_rs::FileSource::Landings { year, url: None })
-            .collect();
+        let landing_sources = config.landings.map(|landings| {
+            (landings.min_year..=landings.max_year)
+                .map(|year| fiskeridir_rs::FileSource::Landings { year, url: None })
+                .collect()
+        });
 
         let ers_dca_sources = config
             .ers_dca
@@ -107,7 +110,8 @@ impl Scraper {
             .map(|url| fiskeridir_rs::ApiSource::RegisterVessels { url });
 
         let arc = Arc::new(source);
-        let landings_scraper = LandingScraper::new(arc.clone(), landing_sources);
+        let landings_scraper =
+            LandingScraper::new(arc.clone(), landing_sources.unwrap_or_default());
         let ers_dca_scraper = ErsDcaScraper::new(arc.clone(), ers_dca_sources);
         let ers_dep_scraper = ErsDepScraper::new(arc.clone(), ers_dep_sources);
         let ers_por_scraper = ErsPorScraper::new(arc.clone(), ers_por_sources);
