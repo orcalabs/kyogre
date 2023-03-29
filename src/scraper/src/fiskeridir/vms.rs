@@ -38,7 +38,7 @@ impl DataSource for VmsScraper {
         for source in &self.sources {
             match self
                 .fiskeridir_source
-                .scrape_year_if_changed(FileHash::Vms, source, closure, 1, |_| nop())
+                .scrape_year_if_changed(FileHash::Vms, source, closure, 10000, |_| nop())
                 .await
             {
                 Err(e) => event!(
