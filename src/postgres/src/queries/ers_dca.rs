@@ -35,8 +35,6 @@ impl PostgresAdapter {
         self.add_fiskeridir_vessels(prepared_set.vessels, &mut tx)
             .await?;
         self.add_ports(prepared_set.ports, &mut tx).await?;
-        self.add_main_species_fao(prepared_set.main_species_fao, &mut tx)
-            .await?;
         self.add_species_fao(prepared_set.species_fao, &mut tx)
             .await?;
         self.add_species_fiskeridir(prepared_set.species_fiskeridir, &mut tx)
@@ -129,8 +127,8 @@ impl PostgresAdapter {
         let mut vessel_registration_id_ers = Vec::with_capacity(len);
         let mut vessel_valid_until = Vec::with_capacity(len);
         let mut vessel_width = Vec::with_capacity(len);
-        let mut main_species_fao_id = Vec::with_capacity(len);
-        let mut main_species_fiskeridir_id = Vec::with_capacity(len);
+        let mut majority_species_fao_id = Vec::with_capacity(len);
+        let mut majority_species_fiskeridir_id = Vec::with_capacity(len);
         let mut living_weight = Vec::with_capacity(len);
         let mut species_fao_id = Vec::with_capacity(len);
         let mut species_fiskeridir_id = Vec::with_capacity(len);
@@ -214,8 +212,8 @@ impl PostgresAdapter {
             vessel_registration_id_ers.push(e.vessel_registration_id_ers);
             vessel_valid_until.push(e.vessel_valid_until);
             vessel_width.push(e.vessel_width);
-            main_species_fao_id.push(e.main_species_fao_id);
-            main_species_fiskeridir_id.push(e.main_species_fiskeridir_id);
+            majority_species_fao_id.push(e.majority_species_fao_id);
+            majority_species_fiskeridir_id.push(e.majority_species_fiskeridir_id);
             living_weight.push(e.living_weight);
             species_fao_id.push(e.species_fao_id);
             species_fiskeridir_id.push(e.species_fiskeridir_id);
@@ -303,8 +301,8 @@ INSERT INTO
         vessel_registration_id_ers,
         vessel_valid_until,
         vessel_width,
-        main_species_fao_id,
-        main_species_fiskeridir_id,
+        majority_species_fao_id,
+        majority_species_fiskeridir_id,
         living_weight,
         species_fao_id,
         species_fiskeridir_id,
@@ -476,8 +474,8 @@ FROM
             vessel_registration_id_ers.as_slice() as _,
             vessel_valid_until.as_slice() as _,
             vessel_width.as_slice() as _,
-            main_species_fao_id.as_slice() as _,
-            main_species_fiskeridir_id.as_slice() as _,
+            majority_species_fao_id.as_slice() as _,
+            majority_species_fiskeridir_id.as_slice() as _,
             living_weight.as_slice() as _,
             species_fao_id.as_slice() as _,
             species_fiskeridir_id.as_slice() as _,

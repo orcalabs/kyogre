@@ -21,12 +21,6 @@ pub struct SpeciesFao {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct MainSpeciesFao {
-    pub id: String,
-    pub name: Option<String>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SpeciesMainGroup {
     pub id: i32,
     pub name: String,
@@ -147,12 +141,6 @@ impl TryFrom<SpeciesMainGroup> for kyogre_core::SpeciesMainGroup {
 
 impl SpeciesFiskeridir {
     pub fn new(id: i32, name: Option<String>) -> Self {
-        Self { id, name }
-    }
-}
-
-impl MainSpeciesFao {
-    pub fn new(id: String, name: Option<String>) -> Self {
         Self { id, name }
     }
 }

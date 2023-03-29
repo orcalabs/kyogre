@@ -38,11 +38,11 @@ pub struct Haul {
 
 #[derive(Deserialize)]
 pub struct HaulCatch {
-    pub main_species_fao_id: String,
-    pub main_species_fiskeridir_id: Option<i32>,
+    pub majority_species_fao_id: String,
+    pub majority_species_fiskeridir_id: Option<i32>,
     pub living_weight: i32,
     pub species_fao_id: String,
-    pub species_fiskeridir_id: Option<i32>,
+    pub species_fiskeridir_id: i32,
     pub species_group_id: i32,
     pub species_main_group_id: Option<i32>,
 }
@@ -128,8 +128,8 @@ impl TryFrom<HaulCatch> for kyogre_core::HaulCatch {
 
     fn try_from(v: HaulCatch) -> Result<Self, Self::Error> {
         Ok(Self {
-            main_species_fao_id: v.main_species_fao_id,
-            main_species_fiskeridir_id: v.main_species_fiskeridir_id,
+            majority_species_fao_id: v.majority_species_fao_id,
+            majority_species_fiskeridir_id: v.majority_species_fiskeridir_id,
             living_weight: v.living_weight,
             species_fao_id: v.species_fao_id,
             species_fiskeridir_id: v.species_fiskeridir_id,

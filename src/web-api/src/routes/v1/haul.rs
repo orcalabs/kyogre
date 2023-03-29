@@ -136,9 +136,7 @@ pub struct Haul {
 #[serde(rename_all = "camelCase")]
 pub struct HaulCatch {
     pub living_weight: i32,
-    pub main_species_fiskeridir_id: Option<i32>,
-    pub species_fiskeridir_id: Option<i32>,
-    pub species_group_id: i32,
+    pub species_fiskeridir_id: i32,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
@@ -202,10 +200,8 @@ impl From<kyogre_core::Haul> for Haul {
 impl From<kyogre_core::HaulCatch> for HaulCatch {
     fn from(v: kyogre_core::HaulCatch) -> Self {
         Self {
-            main_species_fiskeridir_id: v.main_species_fiskeridir_id,
             living_weight: v.living_weight,
             species_fiskeridir_id: v.species_fiskeridir_id,
-            species_group_id: v.species_group_id,
         }
     }
 }
