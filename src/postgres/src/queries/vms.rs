@@ -61,25 +61,28 @@ ORDER BY
         let mut vessel_name = Vec::with_capacity(len);
         let mut vessel_type = Vec::with_capacity(len);
 
-        for v in vms.clone() {
-            call_sign.push(v.call_sign.into_inner());
-            course.push(v.course as i32);
-            gross_tonnage.push(v.gross_tonnage as i32);
-            latitude
-                .push(float_to_decimal(v.latitude).change_context(PostgresError::DataConversion)?);
-            longitude
-                .push(float_to_decimal(v.longitude).change_context(PostgresError::DataConversion)?);
-            message_id.push(v.message_id as i32);
-            message_type.push(v.message_type);
-            message_type_code.push(v.message_type_code);
-            registration_id.push(v.registration_id);
-            speed.push(float_to_decimal(v.speed).change_context(PostgresError::DataConversion)?);
-            timestamp.push(v.timestamp);
-            vessel_length.push(
-                float_to_decimal(v.vessel_length).change_context(PostgresError::DataConversion)?,
-            );
-            vessel_name.push(v.vessel_name);
-            vessel_type.push(v.vessel_type);
+        for v in vms {
+            if let (Some(lat), Some(lon)) = (v.latitude, v.longitude) {
+                call_sign.push(v.call_sign.into_inner());
+                course.push(v.course as i32);
+                gross_tonnage.push(v.gross_tonnage as i32);
+                latitude.push(float_to_decimal(lat).change_context(PostgresError::DataConversion)?);
+                longitude
+                    .push(float_to_decimal(lon).change_context(PostgresError::DataConversion)?);
+                message_id.push(v.message_id as i32);
+                message_type.push(v.message_type);
+                message_type_code.push(v.message_type_code);
+                registration_id.push(v.registration_id);
+                speed
+                    .push(float_to_decimal(v.speed).change_context(PostgresError::DataConversion)?);
+                timestamp.push(v.timestamp);
+                vessel_length.push(
+                    float_to_decimal(v.vessel_length)
+                        .change_context(PostgresError::DataConversion)?,
+                );
+                vessel_name.push(v.vessel_name);
+                vessel_type.push(v.vessel_type);
+            }
         }
 
         sqlx::query!(
