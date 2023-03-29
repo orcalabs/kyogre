@@ -1590,7 +1590,7 @@
     },
     "query": "\nDELETE FROM ers_dca\nWHERE\n    relevant_year = $1\n            "
   },
-  "914e1374b87d7920585bfdca34662523ea555231f8869cb531a9303882dc3b14": {
+  "9b4f2b3b02b0055124ddde8a9dc9e763b156d67a3babc87e21dcb7f5e1b7135b": {
     "describe": {
       "columns": [],
       "nullable": [],
@@ -1613,7 +1613,7 @@
         ]
       }
     },
-    "query": "\nINSERT INTO\n    vms_positions (\n        call_sign,\n        course,\n        gross_tonnage,\n        latitude,\n        longitude,\n        message_id,\n        message_type,\n        message_type_code,\n        registration_id,\n        speed,\n        \"timestamp\",\n        vessel_length,\n        vessel_name,\n        vessel_type\n    )\nSELECT\n    *\nFROM\n    UNNEST(\n        $1::VARCHAR[],\n        $2::INT[],\n        $3::INT[],\n        $4::DECIMAL[],\n        $5::DECIMAL[],\n        $6::INT[],\n        $7::VARCHAR[],\n        $8::VARCHAR[],\n        $9::VARCHAR[],\n        $10::DECIMAL[],\n        $11::timestamptz[],\n        $12::DECIMAL[],\n        $13::VARCHAR[],\n        $14::VARCHAR[]\n    )\n            "
+    "query": "\nINSERT INTO\n    vms_positions (\n        call_sign,\n        course,\n        gross_tonnage,\n        latitude,\n        longitude,\n        message_id,\n        message_type,\n        message_type_code,\n        registration_id,\n        speed,\n        \"timestamp\",\n        vessel_length,\n        vessel_name,\n        vessel_type\n    )\nSELECT\n    *\nFROM\n    UNNEST(\n        $1::VARCHAR[],\n        $2::INT[],\n        $3::INT[],\n        $4::DECIMAL[],\n        $5::DECIMAL[],\n        $6::INT[],\n        $7::VARCHAR[],\n        $8::VARCHAR[],\n        $9::VARCHAR[],\n        $10::DECIMAL[],\n        $11::timestamptz[],\n        $12::DECIMAL[],\n        $13::VARCHAR[],\n        $14::VARCHAR[]\n    )\nON CONFLICT (message_id) DO NOTHING\n            "
   },
   "9cd1c5dcb3702c1f36ba3a3a869ad3a36010357f2ddf7576635224b2c2bae6c6": {
     "describe": {

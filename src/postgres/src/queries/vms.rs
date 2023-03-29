@@ -120,6 +120,7 @@ FROM
         $13::VARCHAR[],
         $14::VARCHAR[]
     )
+ON CONFLICT (message_id) DO NOTHING
             "#,
             call_sign.as_slice(),
             course.as_slice(),
