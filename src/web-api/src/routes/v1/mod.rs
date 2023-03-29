@@ -4,3 +4,4 @@ pub mod haul;
 pub mod species;
 pub mod trip;
 pub mod vessel;
+pub mod vms;

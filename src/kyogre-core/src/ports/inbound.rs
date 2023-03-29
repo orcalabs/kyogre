@@ -53,6 +53,7 @@ pub trait ScraperInboundPort {
     async fn add_ers_tra(&self, ers_tra: Vec<fiskeridir_rs::ErsTra>) -> Result<(), InsertError>;
     async fn delete_ers_tra_catches(&self, year: u32) -> Result<(), DeleteError>;
     async fn update_database_views(&self) -> Result<(), UpdateError>;
+    async fn add_vms(&self, vms: Vec<fiskeridir_rs::Vms>) -> Result<(), InsertError>;
 }
 
 #[async_trait]

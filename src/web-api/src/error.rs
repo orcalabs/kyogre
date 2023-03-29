@@ -4,6 +4,7 @@ use utoipa::ToSchema;
 
 #[derive(Clone, Copy, Debug, Serialize, ToSchema)]
 pub enum ApiError {
+    InvalidCallSign,
     InvalidDateRange,
     InternalServerError,
 }
@@ -23,6 +24,7 @@ impl std::fmt::Display for ApiError {
                 f.write_str("an invalid start/end date pair was received")
             }
             ApiError::InternalServerError => f.write_str("an internal server error occured"),
+            ApiError::InvalidCallSign => f.write_str("an invalid call sign was received"),
         }
     }
 }
@@ -30,7 +32,7 @@ impl std::fmt::Display for ApiError {
 impl ResponseError for ApiError {
     fn status_code(&self) -> StatusCode {
         match self {
-            ApiError::InvalidDateRange => StatusCode::BAD_REQUEST,
+            ApiError::InvalidDateRange | ApiError::InvalidCallSign => StatusCode::BAD_REQUEST,
             ApiError::InternalServerError => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }

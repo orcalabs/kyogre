@@ -1036,6 +1036,82 @@
     },
     "query": "\nINSERT INTO\n    area_groupings (area_grouping_id, \"name\")\nSELECT\n    *\nFROM\n    UNNEST($1::VARCHAR[], $2::VARCHAR[])\nON CONFLICT (area_grouping_id) DO NOTHING\n                "
   },
+  "5de184c12731c0e021da2ad72c77cbe0a5791bdc0f92c673008593a1354e2e40": {
+    "describe": {
+      "columns": [
+        {
+          "name": "call_sign",
+          "ordinal": 0,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "course",
+          "ordinal": 1,
+          "type_info": "Int4"
+        },
+        {
+          "name": "latitude",
+          "ordinal": 2,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "longitude",
+          "ordinal": 3,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "registration_id",
+          "ordinal": 4,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "speed",
+          "ordinal": 5,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "timestamp",
+          "ordinal": 6,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "vessel_length",
+          "ordinal": 7,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "vessel_name",
+          "ordinal": 8,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "vessel_type",
+          "ordinal": 9,
+          "type_info": "Varchar"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        true,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Text",
+          "Timestamptz",
+          "Timestamptz"
+        ]
+      }
+    },
+    "query": "\nSELECT\n    call_sign,\n    course,\n    latitude,\n    longitude,\n    registration_id,\n    speed,\n    \"timestamp\",\n    vessel_length,\n    vessel_name,\n    vessel_type\nFROM\n    vms_positions\nWHERE\n    call_sign = $1\n    AND \"timestamp\" BETWEEN $2 AND $3\nORDER BY\n    \"timestamp\" ASC\n            "
+  },
   "6b63083645ee5131c65b06de6940f6f49491cf5fc32b7d57e113b29b8244e6f6": {
     "describe": {
       "columns": [
@@ -1513,6 +1589,31 @@
       }
     },
     "query": "\nDELETE FROM ers_dca\nWHERE\n    relevant_year = $1\n            "
+  },
+  "914e1374b87d7920585bfdca34662523ea555231f8869cb531a9303882dc3b14": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "VarcharArray",
+          "Int4Array",
+          "Int4Array",
+          "NumericArray",
+          "NumericArray",
+          "Int4Array",
+          "VarcharArray",
+          "VarcharArray",
+          "VarcharArray",
+          "NumericArray",
+          "TimestamptzArray",
+          "NumericArray",
+          "VarcharArray",
+          "VarcharArray"
+        ]
+      }
+    },
+    "query": "\nINSERT INTO\n    vms_positions (\n        call_sign,\n        course,\n        gross_tonnage,\n        latitude,\n        longitude,\n        message_id,\n        message_type,\n        message_type_code,\n        registration_id,\n        speed,\n        \"timestamp\",\n        vessel_length,\n        vessel_name,\n        vessel_type\n    )\nSELECT\n    *\nFROM\n    UNNEST(\n        $1::VARCHAR[],\n        $2::INT[],\n        $3::INT[],\n        $4::DECIMAL[],\n        $5::DECIMAL[],\n        $6::INT[],\n        $7::VARCHAR[],\n        $8::VARCHAR[],\n        $9::VARCHAR[],\n        $10::DECIMAL[],\n        $11::timestamptz[],\n        $12::DECIMAL[],\n        $13::VARCHAR[],\n        $14::VARCHAR[]\n    )\n            "
   },
   "9cd1c5dcb3702c1f36ba3a3a869ad3a36010357f2ddf7576635224b2c2bae6c6": {
     "describe": {
@@ -2080,6 +2181,80 @@
       }
     },
     "query": "\nINSERT INTO\n    ers_message_types (ers_message_type_id, \"name\")\nSELECT\n    *\nFROM\n    UNNEST($1::VARCHAR[], $2::VARCHAR[])\nON CONFLICT (ers_message_type_id) DO NOTHING\n            "
+  },
+  "c0c6c9be48bbffa926b4f15fbee86e5eda7c08745fb01f5e926df92835910c93": {
+    "describe": {
+      "columns": [
+        {
+          "name": "call_sign",
+          "ordinal": 0,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "course",
+          "ordinal": 1,
+          "type_info": "Int4"
+        },
+        {
+          "name": "latitude",
+          "ordinal": 2,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "longitude",
+          "ordinal": 3,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "registration_id",
+          "ordinal": 4,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "speed",
+          "ordinal": 5,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "timestamp",
+          "ordinal": 6,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "vessel_length",
+          "ordinal": 7,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "vessel_name",
+          "ordinal": 8,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "vessel_type",
+          "ordinal": 9,
+          "type_info": "Varchar"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        true,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Int4"
+        ]
+      }
+    },
+    "query": "\nSELECT\n    call_sign,\n    course,\n    latitude,\n    longitude,\n    registration_id,\n    speed,\n    \"timestamp\",\n    vessel_length,\n    vessel_name,\n    vessel_type\nFROM\n    vms_positions\nWHERE\n    message_id = $1\n            "
   },
   "c1133ee8fd33134dfe41ca538a51db2595ad5ea910ad913dc106db5735d21fc9": {
     "describe": {

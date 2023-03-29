@@ -9,6 +9,7 @@ mod range;
 mod species;
 mod trips;
 mod vessels;
+mod vms;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Coordinates {
@@ -27,3 +28,4 @@ pub use range::*;
 pub use species::*;
 pub use trips::*;
 pub use vessels::*;
+pub use vms::*;

@@ -1,4 +1,4 @@
-use crate::{to_streaming_response, Database};
+use crate::{error::ApiError, to_streaming_response, Database};
 use actix_web::{web, HttpResponse};
 use futures::TryStreamExt;
 use serde::{Deserialize, Serialize};
@@ -14,7 +14,7 @@ use utoipa::ToSchema;
     )
 )]
 #[tracing::instrument(skip(db))]
-pub async fn species<T: Database + 'static>(db: web::Data<T>) -> HttpResponse {
+pub async fn species<T: Database + 'static>(db: web::Data<T>) -> Result<HttpResponse, ApiError> {
     to_streaming_response! {
         db.species().map_ok(Species::from).map_err(|e| {
             event!(Level::ERROR, "failed to retrieve species: {:?}", e);
@@ -32,7 +32,9 @@ pub async fn species<T: Database + 'static>(db: web::Data<T>) -> HttpResponse {
     )
 )]
 #[tracing::instrument(skip(db))]
-pub async fn species_groups<T: Database + 'static + 'static>(db: web::Data<T>) -> HttpResponse {
+pub async fn species_groups<T: Database + 'static + 'static>(
+    db: web::Data<T>,
+) -> Result<HttpResponse, ApiError> {
     to_streaming_response! {
         db.species_groups().map_ok(SpeciesGroup::from).map_err(|e| {
             event!(Level::ERROR, "failed to retrieve species_groups: {:?}", e);
@@ -50,7 +52,9 @@ pub async fn species_groups<T: Database + 'static + 'static>(db: web::Data<T>) -
     )
 )]
 #[tracing::instrument(skip(db))]
-pub async fn species_main_groups<T: Database + 'static>(db: web::Data<T>) -> HttpResponse {
+pub async fn species_main_groups<T: Database + 'static>(
+    db: web::Data<T>,
+) -> Result<HttpResponse, ApiError> {
     to_streaming_response! {
         db.species_main_groups()
             .map_ok(SpeciesMainGroup::from)
@@ -74,7 +78,9 @@ pub async fn species_main_groups<T: Database + 'static>(db: web::Data<T>) -> Htt
     )
 )]
 #[tracing::instrument(skip(db))]
-pub async fn species_fiskeridir<T: Database + 'static>(db: web::Data<T>) -> HttpResponse {
+pub async fn species_fiskeridir<T: Database + 'static>(
+    db: web::Data<T>,
+) -> Result<HttpResponse, ApiError> {
     to_streaming_response! {
         db.species_fiskeridir()
             .map_ok(SpeciesFiskeridir::from)
@@ -98,7 +104,9 @@ pub async fn species_fiskeridir<T: Database + 'static>(db: web::Data<T>) -> Http
     )
 )]
 #[tracing::instrument(skip(db))]
-pub async fn species_fao<T: Database + 'static>(db: web::Data<T>) -> HttpResponse {
+pub async fn species_fao<T: Database + 'static>(
+    db: web::Data<T>,
+) -> Result<HttpResponse, ApiError> {
     to_streaming_response! {
         db.species_fao().map_ok(SpeciesFao::from).map_err(|e| {
             event!(Level::ERROR, "failed to retrieve species_fao: {:?}", e);

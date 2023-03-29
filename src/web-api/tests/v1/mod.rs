@@ -5,3 +5,4 @@ pub mod species;
 pub mod test_client;
 pub mod trip;
 pub mod vessel;
+pub mod vms;

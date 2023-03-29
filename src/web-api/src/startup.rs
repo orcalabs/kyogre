@@ -89,6 +89,10 @@ where
                     )
                     .route("/vessels", web::get().to(routes::v1::vessel::vessels::<T>))
                     .route(
+                        "/vms/{call_sign}",
+                        web::get().to(routes::v1::vms::vms_positions::<T>),
+                    )
+                    .route(
                         "/trip_of_haul/{haul_id}",
                         web::get().to(routes::v1::trip::trip_of_haul::<T>),
                     )
