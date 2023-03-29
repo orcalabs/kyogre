@@ -23,6 +23,10 @@ impl VmsScraper {
     }
 }
 
+pub async fn nop() -> Result<(), kyogre_core::DeleteError> {
+    Ok(())
+}
+
 #[async_trait]
 impl DataSource for VmsScraper {
     fn id(&self) -> ScraperId {
@@ -34,7 +38,7 @@ impl DataSource for VmsScraper {
         for source in &self.sources {
             match self
                 .fiskeridir_source
-                .scrape_year(FileHash::Vms, source, closure, 1)
+                .scrape_year_if_changed(FileHash::Vms, source, closure, 1, |_| nop())
                 .await
             {
                 Err(e) => event!(
