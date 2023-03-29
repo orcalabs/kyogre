@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::{models::Haul, PostgresAdapter};
 use chrono::{DateTime, Utc};
-use fiskeridir_rs::{CallSign, ErsDca, GearGroup, VesselLengthGroup};
+use fiskeridir_rs::{CallSign, ErsDca, GearGroup, VesselLengthGroup, Vms};
 use kyogre_core::*;
 
 /// Wrapper with additional methods inteded for testing purposes.
@@ -269,6 +269,17 @@ FROM
         self.add_ais_position(pos).await
     }
 
+    pub async fn generate_vms_position(
+        &self,
+        message_id: u32,
+        call_sign: &CallSign,
+        timestamp: DateTime<chrono::Utc>,
+    ) -> VmsPosition {
+        let pos = Vms::test_default(message_id, call_sign.clone(), timestamp);
+        self.db.add_vms(vec![pos]).await.unwrap();
+        self.single_vms_position(message_id).await
+    }
+
     pub async fn generate_fiskeridir_vessel(
         &self,
         id: FiskeridirVesselId,
@@ -325,5 +336,34 @@ FROM
 
         assert_eq!(positions.len(), 1);
         positions.pop().unwrap()
+    }
+
+    async fn single_vms_position(&self, message_id: u32) -> VmsPosition {
+        let pos = sqlx::query_as!(
+            crate::models::VmsPosition,
+            r#"
+SELECT
+    call_sign,
+    course,
+    latitude,
+    longitude,
+    registration_id,
+    speed,
+    "timestamp",
+    vessel_length,
+    vessel_name,
+    vessel_type
+FROM
+    vms_positions
+WHERE
+    message_id = $1
+            "#,
+            message_id as i32
+        )
+        .fetch_one(&self.db.pool)
+        .await
+        .unwrap();
+
+        VmsPosition::try_from(pos).unwrap()
     }
 }

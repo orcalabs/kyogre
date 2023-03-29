@@ -32,6 +32,7 @@ impl Database for PostgresAdapter {}
         v1::haul::hauls,
         v1::haul::hauls_grid,
         v1::trip::trip_of_haul,
+        v1::vms::vms_positions,
     ),
     components(
         schemas(
@@ -58,6 +59,7 @@ impl Database for PostgresAdapter {}
             v1::haul::WhaleCatch,
             v1::haul::HaulsGrid,
             v1::trip::Trip,
+            v1::vms::VmsPosition,
         )
     ),
     tags(

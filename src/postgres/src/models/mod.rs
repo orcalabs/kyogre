@@ -16,6 +16,7 @@ mod port;
 mod species;
 mod trip;
 mod vessel;
+mod vms;
 
 pub use ais::*;
 pub use catch_area::*;
@@ -35,3 +36,4 @@ pub use port::*;
 pub use species::*;
 pub use trip::*;
 pub use vessel::*;
+pub use vms::*;

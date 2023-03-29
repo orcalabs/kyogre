@@ -1,8 +1,9 @@
 use std::{fmt::Write, string::ToString};
 
+use fiskeridir_rs::CallSign;
 use kyogre_core::{HaulId, Mmsi};
 use reqwest::{Client, Response};
-use web_api::routes::v1::{ais::AisTrackParameters, haul::HaulsParams};
+use web_api::routes::v1::{ais::AisTrackParameters, haul::HaulsParams, vms::VmsParameters};
 
 #[derive(Debug, Clone)]
 pub struct ApiClient {
@@ -64,6 +65,19 @@ impl ApiClient {
     }
     pub async fn get_trip_of_haul(&self, haul_id: &HaulId) -> Response {
         self.get(format!("trip_of_haul/{}", haul_id.0), &[]).await
+    }
+    pub async fn get_vms_positions(&self, call_sign: &CallSign, params: VmsParameters) -> Response {
+        let mut parameters = Vec::new();
+        if let Some(start) = params.start {
+            parameters.push(("start".to_string(), start.to_string()))
+        }
+
+        if let Some(end) = params.end {
+            parameters.push(("end".to_string(), end.to_string()))
+        }
+
+        self.get(format!("vms/{}", call_sign.as_ref()), &parameters)
+            .await
     }
     pub async fn get_hauls_impl(&self, url: &str, params: HaulsParams) -> Response {
         let mut parameters = Vec::new();

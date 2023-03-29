@@ -54,7 +54,7 @@ pub struct HaulsParams {
 pub async fn hauls<T: Database + 'static>(
     db: web::Data<T>,
     params: web::Query<HaulsParams>,
-) -> HttpResponse {
+) -> Result<HttpResponse, ApiError> {
     let query = params.into_inner().into();
 
     to_streaming_response! {

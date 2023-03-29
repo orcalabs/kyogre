@@ -5,6 +5,7 @@ use crate::{
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use error_stack::{IntoReport, Report, Result, ResultExt};
+use fiskeridir_rs::CallSign;
 use futures::{Stream, StreamExt};
 use kyogre_core::*;
 use orca_core::{PsqlLogStatements, PsqlSettings};
@@ -242,6 +243,14 @@ impl WebApiPort for PostgresAdapter {
         convert_stream(self.ais_positions_impl(mmsi, range)).boxed()
     }
 
+    fn vms_positions(
+        &self,
+        call_sign: &CallSign,
+        range: &DateRange,
+    ) -> PinBoxStream<'_, VmsPosition, QueryError> {
+        convert_stream(self.vms_positions_impl(call_sign, range)).boxed()
+    }
+
     fn species_groups(&self) -> PinBoxStream<'_, SpeciesGroup, QueryError> {
         convert_stream(self.species_groups_impl()).boxed()
     }
@@ -308,6 +317,9 @@ impl ScraperInboundPort for PostgresAdapter {
         self.delete_ers_dca_impl(year)
             .await
             .change_context(DeleteError)
+    }
+    async fn add_vms(&self, vms: Vec<fiskeridir_rs::Vms>) -> Result<(), InsertError> {
+        self.add_vms_impl(vms).await.change_context(InsertError)
     }
     async fn add_ers_dca(&self, ers_dca: Vec<fiskeridir_rs::ErsDca>) -> Result<(), InsertError> {
         let set = ErsDcaSet::new(ers_dca).change_context(InsertError)?;

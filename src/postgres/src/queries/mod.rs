@@ -24,6 +24,7 @@ pub mod species;
 pub mod trip;
 pub mod vessel;
 pub mod views;
+pub mod vms;
 
 pub(crate) fn float_to_decimal(value: f64) -> Result<BigDecimal, BigDecimalError> {
     BigDecimal::from_f64(value).ok_or_else(|| report!(BigDecimalError(value)))

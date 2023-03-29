@@ -6,7 +6,7 @@ use async_trait::async_trait;
 use error_stack::Result;
 use fiskeridir::{
     ErsDcaScraper, ErsDepScraper, ErsPorScraper, ErsTraScraper, LandingScraper,
-    RegisterVesselsScraper,
+    RegisterVesselsScraper, VmsScraper,
 };
 use kyogre_core::ScraperInboundPort;
 use serde::Deserialize;
@@ -32,15 +32,16 @@ pub struct Scraper {
 #[derive(Debug, Deserialize, Clone, Default)]
 pub struct Config {
     pub landings: Option<LandingFileYears>,
-    pub ers_dca: Option<Vec<ErsFileYear>>,
-    pub ers_por: Option<Vec<ErsFileYear>>,
-    pub ers_dep: Option<Vec<ErsFileYear>>,
-    pub ers_tra: Option<Vec<ErsFileYear>>,
+    pub ers_dca: Option<Vec<FileYear>>,
+    pub ers_por: Option<Vec<FileYear>>,
+    pub ers_dep: Option<Vec<FileYear>>,
+    pub ers_tra: Option<Vec<FileYear>>,
+    pub vms: Option<Vec<FileYear>>,
     pub register_vessels_url: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
-pub struct ErsFileYear {
+pub struct FileYear {
     pub year: u32,
     pub url: String,
 }
@@ -105,6 +106,16 @@ impl Scraper {
             })
             .collect();
 
+        let vms_sources = config
+            .vms
+            .unwrap_or_default()
+            .into_iter()
+            .map(|file_year| fiskeridir_rs::FileSource::Vms {
+                year: file_year.year,
+                url: file_year.url,
+            })
+            .collect();
+
         let register_vessels_source = config
             .register_vessels_url
             .map(|url| fiskeridir_rs::ApiSource::RegisterVessels { url });
@@ -116,9 +127,11 @@ impl Scraper {
         let ers_dep_scraper = ErsDepScraper::new(arc.clone(), ers_dep_sources);
         let ers_por_scraper = ErsPorScraper::new(arc.clone(), ers_por_sources);
         let ers_tra_scraper = ErsTraScraper::new(arc.clone(), ers_tra_sources);
+        let vms_scraper = VmsScraper::new(arc.clone(), vms_sources);
         let register_vessels_scraper = RegisterVesselsScraper::new(arc, register_vessels_source);
         Scraper {
             scrapers: vec![
+                Box::new(vms_scraper),
                 Box::new(landings_scraper),
                 Box::new(ers_dca_scraper),
                 Box::new(ers_por_scraper),
@@ -154,6 +167,7 @@ pub enum ScraperId {
     ErsDca,
     ErsTra,
     RegisterVessels,
+    Vms,
 }
 
 impl std::fmt::Display for ScraperId {
@@ -166,6 +180,7 @@ impl std::fmt::Display for ScraperId {
             ScraperId::ErsDca => write!(f, "ers_dca_scraper"),
             ScraperId::ErsTra => write!(f, "ers_tra_scraper"),
             ScraperId::RegisterVessels => write!(f, "register_vessels_scraper"),
+            ScraperId::Vms => write!(f, "vms_scraper"),
         }
     }
 }

@@ -4,6 +4,7 @@ use crate::*;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use error_stack::Result;
+use fiskeridir_rs::CallSign;
 use futures::Stream;
 
 #[async_trait]
@@ -26,6 +27,11 @@ pub trait WebApiPort {
         mmsi: Mmsi,
         range: &DateRange,
     ) -> PinBoxStream<'_, AisPosition, QueryError>;
+    fn vms_positions(
+        &self,
+        call_sign: &CallSign,
+        range: &DateRange,
+    ) -> PinBoxStream<'_, VmsPosition, QueryError>;
     fn species(&self) -> PinBoxStream<'_, Species, QueryError>;
     fn species_fiskeridir(&self) -> PinBoxStream<'_, SpeciesFiskeridir, QueryError>;
     fn species_groups(&self) -> PinBoxStream<'_, SpeciesGroup, QueryError>;
