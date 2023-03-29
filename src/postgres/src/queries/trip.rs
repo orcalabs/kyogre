@@ -56,6 +56,7 @@ WHERE
         &self,
         haul_id: &HaulId,
     ) -> Result<Option<TripDetailed>, PostgresError> {
+        let haul_id_vec = vec![haul_id.0.clone()];
         let mut trips = sqlx::query_as!(
             TripDetailed,
             r#"
@@ -81,9 +82,9 @@ SELECT
 FROM
     trips_view AS t
 WHERE
-    $1 = ANY (t.haul_ids)
+    $1::TEXT[] <@ (t.haul_ids)
             "#,
-            haul_id.0,
+            haul_id_vec.as_slice()
         )
         .fetch_all(&self.pool)
         .await
