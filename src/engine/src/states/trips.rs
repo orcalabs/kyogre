@@ -40,7 +40,7 @@ where
         ))
     }
 
-    #[instrument(name = "run_assembler", skip_all, fields(app.trip_assembler, app.vessels, app.conflicts,app.no_prior_state))]
+    #[instrument(name = "run_assembler", skip_all, fields(app.trip_assembler, app.vessels, app.conflicts, app.no_prior_state, app.produced_trips))]
     async fn run_assembler(
         &self,
         trip_assembler: &dyn TripProcessor,
