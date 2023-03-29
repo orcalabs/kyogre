@@ -26,7 +26,10 @@ SELECT
     *
 FROM
     UNNEST($1::INT[], $2::VARCHAR[])
-ON CONFLICT (species_fiskeridir_id) DO NOTHING
+ON CONFLICT (species_fiskeridir_id) DO
+UPDATE
+SET
+    "name" = COALESCE(species_fiskeridir.name, EXCLUDED.name)
             "#,
             species_fiskeridir_id.as_slice(),
             name.as_slice() as _,
@@ -60,7 +63,10 @@ SELECT
     *
 FROM
     UNNEST($1::INT[], $2::VARCHAR[])
-ON CONFLICT (species_main_group_id) DO NOTHING
+ON CONFLICT (species_main_group_id) DO
+UPDATE
+SET
+    "name" = COALESCE(species_main_groups.name, EXCLUDED.name)
             "#,
             species_main_group_id.as_slice(),
             name.as_slice(),
@@ -95,7 +101,10 @@ SELECT
     *
 FROM
     UNNEST($1::INT[], $2::VARCHAR[])
-ON CONFLICT (species_group_id) DO NOTHING
+ON CONFLICT (species_group_id) DO
+UPDATE
+SET
+    "name" = COALESCE(species_groups.name, EXCLUDED.name)
             "#,
             species_group_id.as_slice(),
             name.as_slice(),
@@ -130,7 +139,10 @@ SELECT
     *
 FROM
     UNNEST($1::INT[], $2::VARCHAR[])
-ON CONFLICT (species_id) DO NOTHING
+ON CONFLICT (species_id) DO
+UPDATE
+SET
+    "name" = COALESCE(species.name, EXCLUDED.name)
             "#,
             species_id.as_slice(),
             name.as_slice(),
@@ -168,9 +180,7 @@ FROM
 ON CONFLICT (species_fao_id) DO
 UPDATE
 SET
-    "name" = CASE
-        WHEN species_fao.name IS NULL THEN excluded.name
-    END
+    "name" = COALESCE(species_fao.name, EXCLUDED.name)
             "#,
             species_fao_id.as_slice(),
             name.as_slice() as _,
@@ -263,40 +273,5 @@ FROM
         )
         .fetch(&self.pool)
         .map_err(|e| report!(e).change_context(PostgresError::Query))
-    }
-
-    pub(crate) async fn add_main_species_fao<'a>(
-        &'a self,
-        main_species: Vec<MainSpeciesFao>,
-        tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<(), PostgresError> {
-        let len = main_species.len();
-
-        let mut main_species_fao_id = Vec::with_capacity(len);
-        let mut name = Vec::with_capacity(len);
-
-        for s in main_species {
-            main_species_fao_id.push(s.id);
-            name.push(s.name);
-        }
-
-        sqlx::query!(
-            r#"
-INSERT INTO
-    main_species_fao (main_species_fao_id, "name")
-SELECT
-    *
-FROM
-    UNNEST($1::VARCHAR[], $2::VARCHAR[])
-ON CONFLICT (main_species_fao_id) DO NOTHING
-            "#,
-            main_species_fao_id.as_slice(),
-            name.as_slice() as _,
-        )
-        .execute(&mut *tx)
-        .await
-        .into_report()
-        .change_context(PostgresError::Query)
-        .map(|_| ())
     }
 }

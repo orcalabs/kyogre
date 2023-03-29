@@ -166,6 +166,10 @@ async fn test_species_fiskeridir_returns_all_species_fiskeridir() {
 
         let mut expected = vec![
             SpeciesFiskeridir {
+                id: 0,
+                name: Some("Ukjent".into()),
+            },
+            SpeciesFiskeridir {
                 id: landing.product.species.fdir_code,
                 name: Some(landing.product.species.fdir_name.clone()),
             },

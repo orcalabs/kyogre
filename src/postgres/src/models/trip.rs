@@ -122,7 +122,7 @@ struct Catch {
     living_weight: f64,
     gross_weight: f64,
     product_weight: f64,
-    species_id: i32,
+    species_fiskeridir_id: i32,
     product_quality_id: i32,
 }
 
@@ -287,7 +287,7 @@ impl From<Catch> for kyogre_core::Catch {
             living_weight: c.living_weight,
             gross_weight: c.gross_weight,
             product_weight: c.product_weight,
-            species_id: c.species_id,
+            species_fiskeridir_id: c.species_fiskeridir_id,
             product_quality_id: c.product_quality_id,
             product_quality_name: product_quality.name().to_owned(),
         }

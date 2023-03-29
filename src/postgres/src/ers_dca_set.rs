@@ -14,7 +14,6 @@ pub struct ErsDcaSet {
     gear_problems: HashMap<i32, NewGearProblem>,
     vessels: HashMap<i64, fiskeridir_rs::Vessel>,
     ports: HashMap<String, NewPort>,
-    main_species_fao: HashMap<String, MainSpeciesFao>,
     species_fao: HashMap<String, SpeciesFao>,
     species_fiskeridir: HashMap<i32, SpeciesFiskeridir>,
     species_groups: HashMap<i32, SpeciesGroup>,
@@ -36,7 +35,6 @@ pub struct PreparedErsDcaSet {
     pub gear_problems: Vec<NewGearProblem>,
     pub vessels: Vec<fiskeridir_rs::Vessel>,
     pub ports: Vec<NewPort>,
-    pub main_species_fao: Vec<MainSpeciesFao>,
     pub species_fao: Vec<SpeciesFao>,
     pub species_fiskeridir: Vec<SpeciesFiskeridir>,
     pub species_groups: Vec<SpeciesGroup>,
@@ -62,7 +60,6 @@ impl ErsDcaSet {
         let counties = self.counties.into_values().collect();
         let vessels = self.vessels.into_values().collect();
         let ports = self.ports.into_values().collect();
-        let main_species_fao = self.main_species_fao.into_values().collect();
         let species_fao = self.species_fao.into_values().collect();
         let species_fiskeridir = self.species_fiskeridir.into_values().collect();
         let species_groups = self.species_groups.into_values().collect();
@@ -79,7 +76,6 @@ impl ErsDcaSet {
             gear_problems,
             vessels,
             ports,
-            main_species_fao,
             species_fao,
             species_fiskeridir,
             species_groups,
@@ -114,7 +110,6 @@ impl ErsDcaSet {
             set.add_species_fiskeridir(&e);
             set.add_species_group(&e)?;
             set.add_species_main_group(&e)?;
-            set.add_main_species_fao(&e);
             set.add_ers_dca(&e)?;
         }
 
@@ -244,25 +239,40 @@ impl ErsDcaSet {
         Ok(())
     }
 
-    fn add_species_fao(&mut self, ers_dca: &fiskeridir_rs::ErsDca) {
-        if let Some(ref code) = ers_dca.catch.species.species_fao_code {
+    fn add_species_fao_impl(&mut self, code: &Option<String>, name: &Option<String>) {
+        if let Some(code) = code {
             if !self.species_fao.contains_key(code) {
-                self.species_fao.insert(
-                    code.clone(),
-                    SpeciesFao::new(code.clone(), ers_dca.catch.species.species_fao.clone()),
-                );
+                self.species_fao
+                    .insert(code.clone(), SpeciesFao::new(code.clone(), name.clone()));
             }
         }
     }
 
-    fn add_species_fiskeridir(&mut self, ers_dca: &fiskeridir_rs::ErsDca) {
-        if let Some(code) = ers_dca.catch.species.species_fdir_code {
+    fn add_species_fao(&mut self, ers_dca: &fiskeridir_rs::ErsDca) {
+        self.add_species_fao_impl(
+            &ers_dca.catch.species.species_fao_code,
+            &ers_dca.catch.species.species_fao,
+        );
+        self.add_species_fao_impl(
+            &ers_dca.catch.majority_species_fao_code,
+            &ers_dca.catch.majority_species_fao,
+        );
+    }
+
+    fn add_species_fiskeridir_impl(&mut self, code: Option<u32>, name: &Option<String>) {
+        if let Some(code) = code {
             self.species_fiskeridir
                 .entry(code as i32)
-                .or_insert_with(|| {
-                    SpeciesFiskeridir::new(code as i32, ers_dca.catch.species.species_fdir.clone())
-                });
+                .or_insert_with(|| SpeciesFiskeridir::new(code as i32, name.clone()));
         }
+    }
+
+    fn add_species_fiskeridir(&mut self, ers_dca: &fiskeridir_rs::ErsDca) {
+        self.add_species_fiskeridir_impl(
+            ers_dca.catch.species.species_fdir_code,
+            &ers_dca.catch.species.species_fdir,
+        );
+        self.add_species_fiskeridir_impl(ers_dca.catch.majority_species_fdir_code, &None);
     }
 
     fn add_species_group(&mut self, ers_dca: &fiskeridir_rs::ErsDca) -> Result<(), PostgresError> {
@@ -297,17 +307,6 @@ impl ErsDcaSet {
                 .or_insert_with(|| SpeciesMainGroup::new(code as i32, species_main_group));
         }
         Ok(())
-    }
-
-    fn add_main_species_fao(&mut self, ers_dca: &fiskeridir_rs::ErsDca) {
-        if let Some(ref code) = ers_dca.catch.main_species_fao_code {
-            if !self.main_species_fao.contains_key(code) {
-                self.main_species_fao.insert(
-                    code.clone(),
-                    MainSpeciesFao::new(code.clone(), ers_dca.catch.main_species_fao.clone()),
-                );
-            }
-        }
     }
 
     fn add_area_grouping_impl(&mut self, code: &String, name: &Option<String>) {
