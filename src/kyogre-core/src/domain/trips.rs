@@ -44,6 +44,7 @@ pub struct TripDetailed {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct Delivery {
     pub delivered: Vec<Catch>,
@@ -53,6 +54,7 @@ pub struct Delivery {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct Catch {
     pub living_weight: f64,
