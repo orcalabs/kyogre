@@ -1,4 +1,7 @@
-use crate::{error::PostgresError, queries::decimal_to_float};
+use crate::{
+    error::PostgresError,
+    queries::{decimal_to_float, opt_decimal_to_float},
+};
 use bigdecimal::BigDecimal;
 use chrono::{DateTime, Utc};
 use error_stack::{Report, ResultExt};
@@ -8,11 +11,11 @@ use serde::Deserialize;
 #[derive(Deserialize, Debug, Clone)]
 pub struct VmsPosition {
     pub call_sign: String,
-    pub course: i32,
+    pub course: Option<i32>,
     pub latitude: BigDecimal,
     pub longitude: BigDecimal,
     pub registration_id: Option<String>,
-    pub speed: BigDecimal,
+    pub speed: Option<BigDecimal>,
     pub timestamp: DateTime<Utc>,
     pub vessel_length: BigDecimal,
     pub vessel_name: String,
@@ -28,8 +31,9 @@ impl TryFrom<VmsPosition> for kyogre_core::VmsPosition {
                 .change_context(PostgresError::DataConversion)?,
             longitude: decimal_to_float(value.longitude)
                 .change_context(PostgresError::DataConversion)?,
-            course: value.course as u32,
-            speed: decimal_to_float(value.speed).change_context(PostgresError::DataConversion)?,
+            course: value.course.map(|c| c as u32),
+            speed: opt_decimal_to_float(value.speed)
+                .change_context(PostgresError::DataConversion)?,
             call_sign: CallSign::try_from(value.call_sign)
                 .change_context(PostgresError::DataConversion)?,
             registration_id: value.registration_id,

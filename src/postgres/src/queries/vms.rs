@@ -1,4 +1,4 @@
-use super::float_to_decimal;
+use super::{float_to_decimal, opt_float_to_decimal};
 use crate::{error::PostgresError, models::VmsPosition, PostgresAdapter};
 use error_stack::{report, IntoReport, Result, ResultExt};
 use fiskeridir_rs::CallSign;
@@ -64,8 +64,8 @@ ORDER BY
         for v in vms {
             if let (Some(lat), Some(lon)) = (v.latitude, v.longitude) {
                 call_sign.push(v.call_sign.into_inner());
-                course.push(v.course as i32);
-                gross_tonnage.push(v.gross_tonnage as i32);
+                course.push(v.course.map(|c| c as i32));
+                gross_tonnage.push(v.gross_tonnage.map(|g| g as i32));
                 latitude.push(float_to_decimal(lat).change_context(PostgresError::DataConversion)?);
                 longitude
                     .push(float_to_decimal(lon).change_context(PostgresError::DataConversion)?);
@@ -73,8 +73,9 @@ ORDER BY
                 message_type.push(v.message_type);
                 message_type_code.push(v.message_type_code);
                 registration_id.push(v.registration_id);
-                speed
-                    .push(float_to_decimal(v.speed).change_context(PostgresError::DataConversion)?);
+                speed.push(
+                    opt_float_to_decimal(v.speed).change_context(PostgresError::DataConversion)?,
+                );
                 timestamp.push(v.timestamp);
                 vessel_length.push(
                     float_to_decimal(v.vessel_length)
@@ -126,15 +127,15 @@ FROM
 ON CONFLICT (message_id) DO NOTHING
             "#,
             call_sign.as_slice(),
-            course.as_slice(),
-            gross_tonnage.as_slice(),
+            course.as_slice() as _,
+            gross_tonnage.as_slice() as _,
             latitude.as_slice(),
             longitude.as_slice(),
             message_id.as_slice(),
             message_type.as_slice(),
             message_type_code.as_slice(),
             registration_id.as_slice() as _,
-            speed.as_slice(),
+            speed.as_slice() as _,
             timestamp.as_slice(),
             vessel_length.as_slice(),
             vessel_name.as_slice(),

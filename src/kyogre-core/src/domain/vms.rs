@@ -5,11 +5,11 @@ use serde::Deserialize;
 #[derive(Deserialize, Debug, Clone)]
 pub struct VmsPosition {
     pub call_sign: CallSign,
-    pub course: u32,
+    pub course: Option<u32>,
     pub latitude: f64,
     pub longitude: f64,
     pub registration_id: Option<String>,
-    pub speed: f64,
+    pub speed: Option<f64>,
     pub timestamp: DateTime<Utc>,
     pub vessel_length: f64,
     pub vessel_name: String,
