@@ -67,10 +67,10 @@ pub async fn vms_positions<T: Database + 'static>(
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct VmsPosition {
-    pub course: u32,
+    pub course: Option<u32>,
     pub lat: f64,
     pub lon: f64,
-    pub speed: f64,
+    pub speed: Option<f64>,
     pub timestamp: DateTime<Utc>,
 }
 
