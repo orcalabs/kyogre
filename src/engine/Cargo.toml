@@ -11,7 +11,8 @@ postgres = { path = "../postgres" }
 scraper = { path = "../scraper" }
 trip-assembler = { path = "../trip-assembler" }
 
-orca-statemachine = { version = "0.37.0", registry = "orcalabs-orcastrator", features = [
+
+orca-statemachine = { version = "0.38.0", registry = "orcalabs-orcastrator", features = [
     "psql-adapter",
 ] }
 orca-core = { version = "0.20.0", registry = "orcalabs-orcastrator", features = [

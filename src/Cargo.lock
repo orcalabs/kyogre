@@ -2331,9 +2331,9 @@ dependencies = [
 
 [[package]]
 name = "orca-statemachine"
-version = "0.37.0"
+version = "0.38.0"
 source = "registry+https://dl.cloudsmith.io/basic/orcalabs/orcastrator/cargo/index.git"
-checksum = "a97f0759b4aeb6486c67fbdd2f64e55d7f693f6163f883e4cacdcbe641d9ef7a"
+checksum = "1138fc165a494cf0b6a5c93295ce0054dad63886c585d912de3887beff953b58"
 dependencies = [
  "async-trait",
  "chrono",
