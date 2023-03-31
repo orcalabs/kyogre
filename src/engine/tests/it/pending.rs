@@ -39,7 +39,7 @@ async fn test_restarts_scrape_chain_when_prior_destination_state_was_pending() {
     let config = Config {
         scrape_schedule: Schedule::Periodic(std::time::Duration::from_micros(0)),
     };
-    test(config, |helper| async move {
+    test(config, |mut helper| async move {
         assert_eq!(
             helper.run_step(EngineDiscriminants::Sleep).await,
             EngineDiscriminants::Pending
@@ -48,6 +48,7 @@ async fn test_restarts_scrape_chain_when_prior_destination_state_was_pending() {
             helper.run_step(EngineDiscriminants::Pending).await,
             EngineDiscriminants::Scrape
         );
+        helper.disable_scrape();
         assert_eq!(
             helper.run_step(EngineDiscriminants::Pending).await,
             EngineDiscriminants::Scrape
@@ -73,6 +74,50 @@ async fn test_restarts_scrape_chain_at_last_state_if_interrupted() {
         assert_eq!(
             helper.run_step(EngineDiscriminants::Pending).await,
             EngineDiscriminants::Trips
+        );
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_does_not_restart_scrape_if_chain_was_completed_but_was_interrupted_earlier() {
+    let config = Config {
+        scrape_schedule: Schedule::Periodic(std::time::Duration::from_micros(0)),
+    };
+
+    test(config, |mut helper| async move {
+        assert_eq!(
+            helper.run_step(EngineDiscriminants::Pending).await,
+            EngineDiscriminants::Scrape
+        );
+        assert_eq!(
+            helper.run_step(EngineDiscriminants::Pending).await,
+            EngineDiscriminants::Scrape
+        );
+        assert_eq!(
+            helper.run_step(EngineDiscriminants::Scrape).await,
+            EngineDiscriminants::Trips
+        );
+        assert_eq!(
+            helper.run_step(EngineDiscriminants::Trips).await,
+            EngineDiscriminants::UpdateDatabaseViews
+        );
+        assert_eq!(
+            helper
+                .run_step(EngineDiscriminants::UpdateDatabaseViews)
+                .await,
+            EngineDiscriminants::Pending
+        );
+        helper.disable_scrape();
+        assert_eq!(
+            helper
+                .run_step(EngineDiscriminants::UpdateDatabaseViews)
+                .await,
+            EngineDiscriminants::Pending
+        );
+        assert_eq!(
+            helper.run_step(EngineDiscriminants::Pending).await,
+            EngineDiscriminants::Sleep
         );
     })
     .await;
