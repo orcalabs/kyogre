@@ -22,9 +22,9 @@ fiskeridir-rs = { workspace = true }
 
 config = { version = "0.13.3", features = ["yaml"] }
 chrono = { version = "0.4.24", features = ["serde"] }
-tokio = "1.26.0"
+tokio = "1.27.0"
 tracing = "0.1.37"
-serde = { version = "1.0.158", features = ["derive"] }
+serde = { version = "1.0.159", features = ["derive"] }
 async-trait = "0.1.68"
 error-stack = { workspace = true }
 
@@ -34,7 +34,7 @@ strum_macros = "0.24.3"
 [dev-dependencies]
 tracing-subscriber = "0.3.16"
 rand = "0.8.5"
-futures = "0.3.27"
+futures = "0.3.28"
 dockertest = { version = "0.3.1", registry = "orcalabs-orcastrator" }
 orca-core = { version = "0.20.0", registry = "orcalabs-orcastrator", features = [
     "dockertest",

@@ -24,7 +24,7 @@ dockertest = { version = "0.3.1", registry = "orcalabs-orcastrator" }
 orca-core = { version = "0.20.0", registry = "orcalabs-orcastrator", features = [
     "dockertest",
 ] }
-tokio = { version = "1.26.0", features = ["rt-multi-thread", "macros"] }
-futures = "0.3.27"
+tokio = { version = "1.27.0", features = ["rt-multi-thread", "macros"] }
+futures = "0.3.28"
 fiskeridir-rs = { workspace = true }
 tracing-subscriber = "0.3.16"
