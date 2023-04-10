@@ -13,7 +13,7 @@ sqlx = ["dep:sqlx"]
 async-trait = "0.1.68"
 serde = "1.0.159"
 chrono = { version = "0.4.24", features = ["serde"] }
-chrono-tz = "0.8.1"
+chrono-tz = "0.8.2"
 fiskeridir-rs = { workspace = true }
 
 serde_repr = "0.1.12"
