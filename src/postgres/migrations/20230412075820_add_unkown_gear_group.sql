@@ -26,10 +26,6 @@ WHERE
     gear_main_group_id IS NULL;
 
 ALTER TABLE ers_dca
-ALTER COLUMN gear_fiskeridir_id
-SET NOT NULL;
-
-ALTER TABLE ers_dca
 ALTER COLUMN gear_group_id
 SET NOT NULL;
 
