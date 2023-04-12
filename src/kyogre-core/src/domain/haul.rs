@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use chrono::{DateTime, Utc};
-use fiskeridir_rs::{GearGroup, VesselLengthGroup, WhaleGender};
+use fiskeridir_rs::{Gear, GearGroup, VesselLengthGroup, WhaleGender};
 use serde::{Deserialize, Serialize};
 
 use crate::CatchLocationId;
@@ -17,8 +17,8 @@ pub struct Haul {
     pub duration: i32,
     pub ers_activity_id: String,
     pub fiskeridir_vessel_id: Option<i64>,
-    pub gear_fiskeridir_id: Option<i32>,
-    pub gear_group_id: Option<GearGroup>,
+    pub gear_group_id: GearGroup,
+    pub gear_id: Gear,
     pub haul_distance: Option<i32>,
     pub haul_id: HaulId,
     pub ocean_depth_end: i32,

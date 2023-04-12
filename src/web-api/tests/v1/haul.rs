@@ -117,8 +117,8 @@ async fn test_hauls_returns_hauls_with_gear_group_ids() {
         let ers3 = ErsDca::test_default(3, None);
         let ers4 = ErsDca::test_default(4, None);
 
-        ers1.gear.gear_group_code = Some(1);
-        ers2.gear.gear_group_code = Some(5);
+        ers1.gear.gear_group_code = GearGroup::Not;
+        ers2.gear.gear_group_code = GearGroup::BurOgRuser;
 
         helper
             .db
@@ -131,7 +131,7 @@ async fn test_hauls_returns_hauls_with_gear_group_ids() {
         let params = HaulsParams {
             gear_group_ids: Some(vec![
                 GearGroupId(GearGroup::Not),
-                GearGroupId(GearGroup::Traal),
+                GearGroupId(GearGroup::BurOgRuser),
             ]),
             ..Default::default()
         };
@@ -254,10 +254,12 @@ async fn test_hauls_grid_returns_grid_for_all_hauls() {
         ers1.start_latitude = Some(56.727258);
         ers1.start_longitude = Some(12.565410);
         ers1.catch.species.living_weight = Some(10);
+        ers1.gear.gear_group_code = GearGroup::Garn;
 
         ers2.start_latitude = Some(56.756293);
         ers2.start_longitude = Some(11.514740);
         ers2.catch.species.living_weight = Some(20);
+        ers2.gear.gear_group_code = GearGroup::Garn;
 
         let mut ers3 = ers1.clone();
         ers3.message_info.message_id = 3;
@@ -317,6 +319,7 @@ async fn test_hauls_grid_returns_grid_for_hauls_in_specified_month() {
         ers1.start_latitude = Some(56.727258);
         ers1.start_longitude = Some(12.565410);
         ers1.catch.species.living_weight = Some(10);
+        ers1.gear.gear_group_code = GearGroup::Garn;
 
         ers2.start_latitude = Some(56.756293);
         ers2.start_longitude = Some(11.514740);
@@ -325,6 +328,7 @@ async fn test_hauls_grid_returns_grid_for_hauls_in_specified_month() {
         ers2.stop_date = Some(month2.date_naive());
         ers2.stop_time = Some(month2.time());
         ers2.catch.species.living_weight = Some(20);
+        ers2.gear.gear_group_code = GearGroup::Garn;
 
         helper
             .db
@@ -375,10 +379,12 @@ async fn test_hauls_grid_returns_grid_for_hauls_in_catch_location() {
         ers1.start_latitude = Some(56.727258);
         ers1.start_longitude = Some(12.565410);
         ers1.catch.species.living_weight = Some(10);
+        ers1.gear.gear_group_code = GearGroup::Garn;
 
         ers2.start_latitude = Some(56.727258);
         ers2.start_longitude = Some(12.565410);
         ers2.catch.species.living_weight = Some(20);
+        ers2.gear.gear_group_code = GearGroup::Garn;
 
         helper
             .db
@@ -424,15 +430,17 @@ async fn test_hauls_grid_returns_grid_for_hauls_with_gear_group_ids() {
         let ers3 = ErsDca::test_default(3, None);
         let ers4 = ErsDca::test_default(4, None);
 
-        ers1.gear.gear_group_code = Some(1);
+        ers1.gear.gear_group_code = GearGroup::Not;
         ers1.start_latitude = Some(56.727258);
         ers1.start_longitude = Some(12.565410);
         ers1.catch.species.living_weight = Some(10);
+        ers1.catch.species.species_fdir_code = Some(201);
 
-        ers2.gear.gear_group_code = Some(5);
+        ers2.gear.gear_group_code = GearGroup::BurOgRuser;
         ers2.start_latitude = Some(56.727258);
         ers2.start_longitude = Some(12.565410);
         ers2.catch.species.living_weight = Some(20);
+        ers2.catch.species.species_fdir_code = Some(201);
 
         helper
             .db
@@ -445,7 +453,7 @@ async fn test_hauls_grid_returns_grid_for_hauls_with_gear_group_ids() {
         let params = HaulsParams {
             gear_group_ids: Some(vec![
                 GearGroupId(GearGroup::Not),
-                GearGroupId(GearGroup::Traal),
+                GearGroupId(GearGroup::BurOgRuser),
             ]),
             ..Default::default()
         };
@@ -461,7 +469,10 @@ async fn test_hauls_grid_returns_grid_for_hauls_with_gear_group_ids() {
                 grid: HashMap::from([("09-05".try_into().unwrap(), 30)]),
                 max_weight: 30,
                 min_weight: 30,
-                weight_by_gear_group: HashMap::from([(GearGroup::Not, 10), (GearGroup::Traal, 20)]),
+                weight_by_gear_group: HashMap::from([
+                    (GearGroup::Not, 10),
+                    (GearGroup::BurOgRuser, 20)
+                ]),
                 weight_by_species_group: HashMap::from([(201, 30)]),
                 weight_by_vessel_length_group: HashMap::from([(
                     VesselLengthGroup::TwentyEightAndAbove,
@@ -485,11 +496,13 @@ async fn test_hauls_grid_returns_grid_for_hauls_with_species_group_ids() {
         ers1.start_latitude = Some(56.727258);
         ers1.start_longitude = Some(12.565410);
         ers1.catch.species.living_weight = Some(10);
+        ers1.gear.gear_group_code = GearGroup::Garn;
 
         ers2.catch.species.species_group_code = Some(302);
         ers2.start_latitude = Some(56.727258);
         ers2.start_longitude = Some(12.565410);
         ers2.catch.species.living_weight = Some(20);
+        ers2.gear.gear_group_code = GearGroup::Garn;
 
         helper
             .db
@@ -539,11 +552,13 @@ async fn test_hauls_grid_returns_grid_for_hauls_with_vessel_length_ranges() {
         ers1.start_latitude = Some(56.727258);
         ers1.start_longitude = Some(12.565410);
         ers1.catch.species.living_weight = Some(10);
+        ers1.gear.gear_group_code = GearGroup::Garn;
 
         ers2.vessel_info.vessel_length = 12.;
         ers2.start_latitude = Some(56.727258);
         ers2.start_longitude = Some(12.565410);
         ers2.catch.species.living_weight = Some(20);
+        ers2.gear.gear_group_code = GearGroup::Garn;
 
         helper
             .db
@@ -592,10 +607,12 @@ async fn test_hauls_grid_returns_grid_for_hauls_with_fiskeridir_vessel_ids() {
         ers1.start_latitude = Some(56.727258);
         ers1.start_longitude = Some(12.565410);
         ers1.catch.species.living_weight = Some(10);
+        ers1.gear.gear_group_code = GearGroup::Garn;
 
         ers2.start_latitude = Some(56.727258);
         ers2.start_longitude = Some(12.565410);
         ers2.catch.species.living_weight = Some(20);
+        ers2.gear.gear_group_code = GearGroup::Garn;
 
         helper
             .db

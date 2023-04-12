@@ -23,8 +23,6 @@ impl PostgresAdapter {
         self.add_catch_areas(prepared_set.catch_areas, &mut tx)
             .await?;
         self.add_gear_fao(prepared_set.gear_fao, &mut tx).await?;
-        self.add_gear_fiskeridir(prepared_set.gear_fiskeridir, &mut tx)
-            .await?;
         self.add_gear_problems(prepared_set.gear_problems, &mut tx)
             .await?;
         self.add_municipalities(prepared_set.municipalities, &mut tx)
@@ -93,7 +91,7 @@ impl PostgresAdapter {
         let mut stop_timestamp = Vec::with_capacity(len);
         let mut gear_amount = Vec::with_capacity(len);
         let mut gear_fao_id = Vec::with_capacity(len);
-        let mut gear_fiskeridir_id = Vec::with_capacity(len);
+        let mut gear_id = Vec::with_capacity(len);
         let mut gear_group_id = Vec::with_capacity(len);
         let mut gear_main_group_id = Vec::with_capacity(len);
         let mut gear_mesh_width = Vec::with_capacity(len);
@@ -178,7 +176,7 @@ impl PostgresAdapter {
             stop_timestamp.push(e.stop_timestamp);
             gear_amount.push(e.gear_amount);
             gear_fao_id.push(e.gear_fao_id);
-            gear_fiskeridir_id.push(e.gear_fiskeridir_id);
+            gear_id.push(e.gear_id);
             gear_group_id.push(e.gear_group_id);
             gear_main_group_id.push(e.gear_main_group_id);
             gear_mesh_width.push(e.gear_mesh_width);
@@ -267,7 +265,7 @@ INSERT INTO
         stop_timestamp,
         gear_amount,
         gear_fao_id,
-        gear_fiskeridir_id,
+        gear_id,
         gear_group_id,
         gear_main_group_id,
         gear_mesh_width,
@@ -440,7 +438,7 @@ FROM
             stop_timestamp.as_slice() as _,
             gear_amount.as_slice() as _,
             gear_fao_id.as_slice() as _,
-            gear_fiskeridir_id.as_slice() as _,
+            gear_id.as_slice() as _,
             gear_group_id.as_slice() as _,
             gear_main_group_id.as_slice() as _,
             gear_mesh_width.as_slice() as _,

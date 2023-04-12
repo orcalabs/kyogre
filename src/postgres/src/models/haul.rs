@@ -1,7 +1,7 @@
 use bigdecimal::BigDecimal;
 use chrono::{DateTime, Utc};
 use error_stack::{IntoReport, Report, ResultExt};
-use fiskeridir_rs::{GearGroup, VesselLengthGroup, WhaleGender};
+use fiskeridir_rs::{Gear, GearGroup, VesselLengthGroup, WhaleGender};
 use kyogre_core::{CatchLocationId, HaulId};
 use serde::Deserialize;
 
@@ -23,8 +23,8 @@ pub struct Haul {
     pub start_longitude: BigDecimal,
     pub stop_latitude: BigDecimal,
     pub stop_longitude: BigDecimal,
-    pub gear_fiskeridir_id: Option<i32>,
-    pub gear_group_id: Option<GearGroup>,
+    pub gear_id: Gear,
+    pub gear_group_id: GearGroup,
     pub fiskeridir_vessel_id: Option<i64>,
     pub vessel_call_sign: Option<String>,
     pub vessel_call_sign_ers: String,
@@ -97,7 +97,7 @@ impl TryFrom<Haul> for kyogre_core::Haul {
             stop_longitude: decimal_to_float(v.stop_longitude)
                 .change_context(PostgresError::DataConversion)?,
             stop_timestamp: v.stop_timestamp,
-            gear_fiskeridir_id: v.gear_fiskeridir_id,
+            gear_id: v.gear_id,
             gear_group_id: v.gear_group_id,
             fiskeridir_vessel_id: v.fiskeridir_vessel_id,
             vessel_call_sign: v.vessel_call_sign,
