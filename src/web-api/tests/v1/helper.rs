@@ -262,6 +262,7 @@ where
                 api: ApiSettings {
                     ip: "127.0.0.1".to_string(),
                     port: 0,
+                    num_workers: Some(1),
                 },
                 postgres: db_settings.clone(),
                 environment: Environment::Test,
