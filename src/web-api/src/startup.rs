@@ -28,7 +28,13 @@ impl App {
             postgres.do_migrations().await;
         }
 
-        let server = create_server(postgres, listener, settings.environment).unwrap();
+        let server = create_server(
+            postgres,
+            listener,
+            settings.environment,
+            settings.api.num_workers,
+        )
+        .unwrap();
 
         App { server, port }
     }
@@ -46,13 +52,14 @@ fn create_server<T>(
     database: T,
     listener: TcpListener,
     environment: Environment,
+    num_workers: Option<u32>,
 ) -> Result<Server, Error>
 where
     T: Database + Clone + Send + 'static,
 {
     let not_prod = environment != Environment::Production;
 
-    let server = HttpServer::new(move || {
+    let mut server = HttpServer::new(move || {
         let app = actix_web::App::new()
             .app_data(Data::new(database.clone()))
             .wrap(Compress::default())
@@ -122,8 +129,11 @@ where
         }
     })
     .listen(listener)
-    .unwrap()
-    .run();
+    .unwrap();
 
-    Ok(server)
+    if let Some(workers) = num_workers {
+        server = server.workers(workers as usize);
+    }
+
+    Ok(server.run())
 }

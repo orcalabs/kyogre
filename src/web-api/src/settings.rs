@@ -21,6 +21,7 @@ pub struct HoneycombApiKey {
 pub struct ApiSettings {
     pub ip: String,
     pub port: u16,
+    pub num_workers: Option<u32>,
 }
 
 impl Settings {
