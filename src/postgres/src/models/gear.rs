@@ -22,12 +22,6 @@ impl NewGearFao {
     }
 }
 
-impl NewGearFiskeridir {
-    pub fn new(id: i32, name: String) -> Self {
-        Self { id, name }
-    }
-}
-
 impl NewGearProblem {
     pub fn new(id: i32, name: Option<String>) -> Self {
         Self { id, name }

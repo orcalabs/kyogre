@@ -6,7 +6,7 @@ use crate::{
 use bigdecimal::BigDecimal;
 use chrono::{DateTime, Utc};
 use error_stack::{report, IntoReport, Report, Result, ResultExt};
-use fiskeridir_rs::{GearGroup, VesselLengthGroup};
+use fiskeridir_rs::{Gear, GearGroup, VesselLengthGroup};
 use futures::{Stream, TryStreamExt};
 use kyogre_core::HaulsQuery;
 use sqlx::postgres::types::PgRange;
@@ -38,8 +38,8 @@ SELECT
     UPPER(h.period) AS "stop_timestamp!",
     h.stop_latitude AS "stop_latitude!",
     h.stop_longitude AS "stop_longitude!",
-    h.gear_fiskeridir_id AS gear_fiskeridir_id,
-    h.gear_group_id AS "gear_group_id: GearGroup",
+    h.gear_id AS "gear_id!: Gear",
+    h.gear_group_id AS "gear_group_id!: GearGroup",
     h.fiskeridir_vessel_id AS fiskeridir_vessel_id,
     h.vessel_call_sign AS vessel_call_sign,
     h.vessel_call_sign_ers AS "vessel_call_sign_ers!",

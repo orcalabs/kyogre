@@ -10,7 +10,6 @@ pub struct ErsDcaSet {
     main_areas: HashMap<i32, NewCatchMainArea>,
     catch_areas: HashMap<i32, NewCatchArea>,
     gear_fao: HashMap<String, NewGearFao>,
-    gear_fiskeridir: HashMap<i32, NewGearFiskeridir>,
     gear_problems: HashMap<i32, NewGearProblem>,
     vessels: HashMap<i64, fiskeridir_rs::Vessel>,
     ports: HashMap<String, NewPort>,
@@ -31,7 +30,6 @@ pub struct PreparedErsDcaSet {
     pub main_areas: Vec<NewCatchMainArea>,
     pub catch_areas: Vec<NewCatchArea>,
     pub gear_fao: Vec<NewGearFao>,
-    pub gear_fiskeridir: Vec<NewGearFiskeridir>,
     pub gear_problems: Vec<NewGearProblem>,
     pub vessels: Vec<fiskeridir_rs::Vessel>,
     pub ports: Vec<NewPort>,
@@ -53,7 +51,6 @@ impl ErsDcaSet {
         let main_areas = self.main_areas.into_values().collect();
         let catch_areas = self.catch_areas.into_values().collect();
         let gear_fao = self.gear_fao.into_values().collect();
-        let gear_fiskeridir = self.gear_fiskeridir.into_values().collect();
         let gear_problems = self.gear_problems.into_values().collect();
         let municipalities = self.municipalities.into_values().collect();
         let economic_zones = self.economic_zones.into_values().collect();
@@ -72,7 +69,6 @@ impl ErsDcaSet {
             main_areas,
             catch_areas,
             gear_fao,
-            gear_fiskeridir,
             gear_problems,
             vessels,
             ports,
@@ -99,7 +95,6 @@ impl ErsDcaSet {
             set.add_main_area(&e);
             set.add_catch_area(&e);
             set.add_gear_fao(&e);
-            set.add_gear_fiskeridir(&e)?;
             set.add_gear_problem(&e);
             set.add_vessel(&e)?;
             set.add_port(&e)?;
@@ -189,22 +184,6 @@ impl ErsDcaSet {
                 );
             }
         }
-    }
-
-    fn add_gear_fiskeridir(
-        &mut self,
-        ers_dca: &fiskeridir_rs::ErsDca,
-    ) -> Result<(), PostgresError> {
-        if let Some(code) = ers_dca.gear.gear_fdir_code {
-            let gear_fiskeridir = ers_dca.gear.gear_fdir.clone().ok_or_else(|| {
-                report!(PostgresError::DataConversion)
-                    .attach_printable("expected gear_fdir to be Some")
-            })?;
-            self.gear_fiskeridir
-                .entry(code as i32)
-                .or_insert_with(|| NewGearFiskeridir::new(code as i32, gear_fiskeridir));
-        }
-        Ok(())
     }
 
     fn add_gear_problem(&mut self, ers_dca: &fiskeridir_rs::ErsDca) {
