@@ -15,12 +15,6 @@ VALUES
 
 UPDATE ers_dca
 SET
-    gear_fiskeridir_id = 0
-WHERE
-    gear_fiskeridir_id IS NULL;
-
-UPDATE ers_dca
-SET
     gear_group_id = 0
 WHERE
     gear_group_id IS NULL;
@@ -48,7 +42,7 @@ ADD COLUMN gear_id INT REFERENCES gear (gear_id);
 
 UPDATE ers_dca
 SET
-    gear_id = gear_fiskeridir_id;
+    gear_id = COALESCE(gear_fiskeridir_id, 0);
 
 ALTER TABLE ers_dca
 ALTER COLUMN gear_id
