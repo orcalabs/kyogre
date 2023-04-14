@@ -1,7 +1,8 @@
-use crate::{error::ApiError, to_streaming_response, Database};
+use crate::{error::ApiError, response::Response, to_streaming_response, Database};
 use actix_web::{web, HttpResponse};
 use futures::TryStreamExt;
 use serde::{Deserialize, Serialize};
+use strum::IntoEnumIterator;
 use tracing::{event, Level};
 use utoipa::ToSchema;
 
@@ -31,16 +32,13 @@ pub async fn species<T: Database + 'static>(db: web::Data<T>) -> Result<HttpResp
         (status = 500, description = "an internal error occured", body = ErrorResponse),
     )
 )]
-#[tracing::instrument(skip(db))]
-pub async fn species_groups<T: Database + 'static + 'static>(
-    db: web::Data<T>,
-) -> Result<HttpResponse, ApiError> {
-    to_streaming_response! {
-        db.species_groups().map_ok(SpeciesGroup::from).map_err(|e| {
-            event!(Level::ERROR, "failed to retrieve species_groups: {:?}", e);
-            ApiError::InternalServerError
-        })
-    }
+#[tracing::instrument]
+pub async fn species_groups<T: Database + 'static + 'static>() -> Response<Vec<SpeciesGroup>> {
+    Response::new(
+        fiskeridir_rs::SpeciesGroup::iter()
+            .map(SpeciesGroup::from)
+            .collect(),
+    )
 }
 
 #[utoipa::path(
@@ -51,22 +49,13 @@ pub async fn species_groups<T: Database + 'static + 'static>(
         (status = 500, description = "an internal error occured", body = ErrorResponse),
     )
 )]
-#[tracing::instrument(skip(db))]
-pub async fn species_main_groups<T: Database + 'static>(
-    db: web::Data<T>,
-) -> Result<HttpResponse, ApiError> {
-    to_streaming_response! {
-        db.species_main_groups()
-            .map_ok(SpeciesMainGroup::from)
-            .map_err(|e| {
-                event!(
-                    Level::ERROR,
-                    "failed to retrieve species_main_groups: {:?}",
-                    e
-                );
-                ApiError::InternalServerError
-            })
-    }
+#[tracing::instrument]
+pub async fn species_main_groups<T: Database + 'static>() -> Response<Vec<SpeciesMainGroup>> {
+    Response::new(
+        fiskeridir_rs::SpeciesMainGroup::iter()
+            .map(SpeciesMainGroup::from)
+            .collect(),
+    )
 }
 
 #[utoipa::path(
@@ -125,14 +114,16 @@ pub struct Species {
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema, Ord, PartialOrd, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct SpeciesGroup {
-    pub id: u32,
+    #[schema(value_type = i32)]
+    pub id: fiskeridir_rs::SpeciesGroup,
     pub name: String,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema, Ord, PartialOrd, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct SpeciesMainGroup {
-    pub id: u32,
+    #[schema(value_type = i32)]
+    pub id: fiskeridir_rs::SpeciesMainGroup,
     pub name: String,
 }
 
@@ -159,20 +150,20 @@ impl From<kyogre_core::Species> for Species {
     }
 }
 
-impl From<kyogre_core::SpeciesGroup> for SpeciesGroup {
-    fn from(value: kyogre_core::SpeciesGroup) -> Self {
+impl From<fiskeridir_rs::SpeciesGroup> for SpeciesGroup {
+    fn from(value: fiskeridir_rs::SpeciesGroup) -> Self {
         SpeciesGroup {
-            id: value.id,
-            name: value.name,
+            name: value.name().to_owned(),
+            id: value,
         }
     }
 }
 
-impl From<kyogre_core::SpeciesMainGroup> for SpeciesMainGroup {
-    fn from(value: kyogre_core::SpeciesMainGroup) -> Self {
+impl From<fiskeridir_rs::SpeciesMainGroup> for SpeciesMainGroup {
+    fn from(value: fiskeridir_rs::SpeciesMainGroup) -> Self {
         SpeciesMainGroup {
-            id: value.id,
-            name: value.name,
+            name: value.name().to_owned(),
+            id: value,
         }
     }
 }

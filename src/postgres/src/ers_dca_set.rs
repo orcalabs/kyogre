@@ -15,8 +15,6 @@ pub struct ErsDcaSet {
     ports: HashMap<String, NewPort>,
     species_fao: HashMap<String, SpeciesFao>,
     species_fiskeridir: HashMap<i32, SpeciesFiskeridir>,
-    species_groups: HashMap<i32, SpeciesGroup>,
-    species_main_groups: HashMap<i32, SpeciesMainGroup>,
     municipalities: HashMap<i32, NewMunicipality>,
     economic_zones: HashMap<String, NewEconomicZone>,
     counties: HashMap<i32, NewCounty>,
@@ -35,8 +33,6 @@ pub struct PreparedErsDcaSet {
     pub ports: Vec<NewPort>,
     pub species_fao: Vec<SpeciesFao>,
     pub species_fiskeridir: Vec<SpeciesFiskeridir>,
-    pub species_groups: Vec<SpeciesGroup>,
-    pub species_main_groups: Vec<SpeciesMainGroup>,
     pub municipalities: Vec<NewMunicipality>,
     pub economic_zones: Vec<NewEconomicZone>,
     pub counties: Vec<NewCounty>,
@@ -59,8 +55,6 @@ impl ErsDcaSet {
         let ports = self.ports.into_values().collect();
         let species_fao = self.species_fao.into_values().collect();
         let species_fiskeridir = self.species_fiskeridir.into_values().collect();
-        let species_groups = self.species_groups.into_values().collect();
-        let species_main_groups = self.species_main_groups.into_values().collect();
 
         PreparedErsDcaSet {
             ers_message_types,
@@ -74,8 +68,6 @@ impl ErsDcaSet {
             ports,
             species_fao,
             species_fiskeridir,
-            species_groups,
-            species_main_groups,
             municipalities,
             economic_zones,
             counties,
@@ -103,8 +95,6 @@ impl ErsDcaSet {
             set.add_county(&e)?;
             set.add_species_fao(&e);
             set.add_species_fiskeridir(&e);
-            set.add_species_group(&e)?;
-            set.add_species_main_group(&e)?;
             set.add_ers_dca(&e)?;
         }
 
@@ -252,40 +242,6 @@ impl ErsDcaSet {
             &ers_dca.catch.species.species_fdir,
         );
         self.add_species_fiskeridir_impl(ers_dca.catch.majority_species_fdir_code, &None);
-    }
-
-    fn add_species_group(&mut self, ers_dca: &fiskeridir_rs::ErsDca) -> Result<(), PostgresError> {
-        if let Some(code) = ers_dca.catch.species.species_group_code {
-            let species_group = ers_dca.catch.species.species_group.clone().ok_or_else(|| {
-                report!(PostgresError::DataConversion)
-                    .attach_printable("expected species_group to be Some")
-            })?;
-            self.species_groups
-                .entry(code as i32)
-                .or_insert_with(|| SpeciesGroup::new(code as i32, species_group));
-        }
-        Ok(())
-    }
-
-    fn add_species_main_group(
-        &mut self,
-        ers_dca: &fiskeridir_rs::ErsDca,
-    ) -> Result<(), PostgresError> {
-        if let Some(code) = ers_dca.catch.species.species_main_group_code {
-            let species_main_group = ers_dca
-                .catch
-                .species
-                .species_main_group
-                .clone()
-                .ok_or_else(|| {
-                    report!(PostgresError::DataConversion)
-                        .attach_printable("expected species_main_group to be Some")
-                })?;
-            self.species_main_groups
-                .entry(code as i32)
-                .or_insert_with(|| SpeciesMainGroup::new(code as i32, species_main_group));
-        }
-        Ok(())
     }
 
     fn add_area_grouping_impl(&mut self, code: &String, name: &Option<String>) {

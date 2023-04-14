@@ -6,10 +6,8 @@ use std::collections::{HashMap, HashSet};
 #[derive(Default)]
 pub struct LandingSet {
     species: HashMap<i32, Species>,
-    species_group: HashMap<i32, SpeciesGroup>,
     species_fao: HashMap<String, SpeciesFao>,
     species_fiskeridir: HashMap<i32, SpeciesFiskeridir>,
-    species_main_group: HashMap<i32, SpeciesMainGroup>,
     landings: HashMap<LandingId, NewLanding>,
     landing_entries: Vec<NewLandingEntry>,
     vessels: HashMap<i64, fiskeridir_rs::Vessel>,
@@ -24,10 +22,8 @@ pub struct LandingSet {
 
 pub struct PreparedLandingSet {
     pub species: Vec<Species>,
-    pub species_groups: Vec<SpeciesGroup>,
     pub species_fao: Vec<SpeciesFao>,
     pub species_fiskeridir: Vec<SpeciesFiskeridir>,
-    pub species_main_groups: Vec<SpeciesMainGroup>,
     pub vessels: Vec<fiskeridir_rs::Vessel>,
     pub delivery_points: Vec<DeliveryPointId>,
     pub catch_areas: Vec<NewCatchArea>,
@@ -43,14 +39,12 @@ pub struct PreparedLandingSet {
 impl LandingSet {
     pub(crate) fn prepare(self) -> PreparedLandingSet {
         let species = self.species.into_values().collect();
-        let species_groups = self.species_group.into_values().collect();
         let species_fao = self.species_fao.into_values().collect();
         let vessels = self.vessels.into_values().collect();
         let delivery_points = self.delivery_points.into_iter().collect();
         let catch_areas = self.catch_areas.into_values().collect();
         let catch_main_areas = self.catch_main_areas.into_values().collect();
         let area_groupings = self.area_groupings.into_values().collect();
-        let species_main_groups = self.species_main_group.into_values().collect();
         let species_fiskeridir = self.species_fiskeridir.into_values().collect();
         let landings = self.landings.into_values().collect();
         let counties = self.counties.into_values().collect();
@@ -59,7 +53,6 @@ impl LandingSet {
 
         PreparedLandingSet {
             species,
-            species_groups,
             landings,
             landing_entries: self.landing_entries,
             vessels,
@@ -69,7 +62,6 @@ impl LandingSet {
             catch_main_areas,
             area_groupings,
             species_fiskeridir,
-            species_main_groups,
             counties,
             municipalities,
             catch_main_area_fao,
@@ -83,11 +75,8 @@ impl LandingSet {
         for l in landings.into_iter() {
             set.add_vessel(&l);
             set.add_species(&l);
-            set.add_species_group(&l);
             set.add_species_fao(&l);
             set.add_species_fiskeridir(&l);
-            set.add_species_main_group(&l);
-            set.add_species_group(&l);
             set.add_delivery_point(&l);
             set.add_catch_area(&l);
             set.add_main_catch_area(&l);
@@ -190,26 +179,12 @@ impl LandingSet {
         self.species.entry(species.id).or_insert(species);
     }
 
-    fn add_species_group(&mut self, landing: &fiskeridir_rs::Landing) {
-        let species_group = SpeciesGroup::from(&landing.product.species);
-        self.species_group
-            .entry(species_group.id)
-            .or_insert(species_group);
-    }
-
     fn add_species_fao(&mut self, landing: &fiskeridir_rs::Landing) {
         if let Some(species_fao) = SpeciesFao::from_landing_species(&landing.product.species) {
             self.species_fao
                 .entry(species_fao.id.clone())
                 .or_insert(species_fao);
         }
-    }
-
-    fn add_species_main_group(&mut self, landing: &fiskeridir_rs::Landing) {
-        let species_main_group = SpeciesMainGroup::from(&landing.product.species);
-        self.species_main_group
-            .entry(species_main_group.id)
-            .or_insert(species_main_group);
     }
 
     fn add_species_fiskeridir(&mut self, landing: &fiskeridir_rs::Landing) {

@@ -17,13 +17,9 @@ impl PostgresAdapter {
         self.add_fiskeridir_vessels(prepared_set.vessels, &mut tx)
             .await?;
 
-        self.add_species_main_groups(prepared_set.species_main_groups, &mut tx)
-            .await?;
         self.add_species_fiskeridir(prepared_set.species_fiskeridir, &mut tx)
             .await?;
         self.add_species(prepared_set.species, &mut tx).await?;
-        self.add_species_groups(prepared_set.species_groups, &mut tx)
-            .await?;
         self.add_species_fao(prepared_set.species_fao, &mut tx)
             .await?;
         self.add_catch_areas(prepared_set.catch_areas, &mut tx)

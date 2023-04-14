@@ -26,11 +26,6 @@ impl PostgresAdapter {
         self.add_fiskeridir_vessels(prepared_set.vessels, &mut tx)
             .await?;
         self.add_ports(prepared_set.ports, &mut tx).await?;
-        self.add_species_groups(prepared_set.species_groups, &mut tx)
-            .await?;
-        self.add_species_main_groups(prepared_set.species_main_groups, &mut tx)
-            .await?;
-
         self.add_ers_por(prepared_set.ers_por, &mut tx).await?;
 
         self.add_ers_por_catches(prepared_set.catches, &mut tx)

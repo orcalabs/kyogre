@@ -9,21 +9,9 @@ pub struct Species {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct SpeciesGroup {
-    pub id: i32,
-    pub name: String,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SpeciesFao {
     pub id: String,
     pub name: Option<String>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct SpeciesMainGroup {
-    pub id: i32,
-    pub name: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -37,24 +25,6 @@ impl From<&fiskeridir_rs::Species> for Species {
         Species {
             id: val.code as i32,
             name: val.name.clone(),
-        }
-    }
-}
-
-impl From<&fiskeridir_rs::Species> for SpeciesGroup {
-    fn from(val: &fiskeridir_rs::Species) -> SpeciesGroup {
-        SpeciesGroup {
-            id: val.group_code as i32,
-            name: val.group_name.clone(),
-        }
-    }
-}
-
-impl From<&fiskeridir_rs::Species> for SpeciesMainGroup {
-    fn from(val: &fiskeridir_rs::Species) -> SpeciesMainGroup {
-        SpeciesMainGroup {
-            id: val.main_group_code as i32,
-            name: val.main_group.clone(),
         }
     }
 }
@@ -81,17 +51,6 @@ impl SpeciesFao {
             }),
             _ => None,
         }
-    }
-}
-
-impl TryFrom<SpeciesGroup> for kyogre_core::SpeciesGroup {
-    type Error = Report<PostgresError>;
-
-    fn try_from(value: SpeciesGroup) -> Result<Self, Self::Error> {
-        Ok(kyogre_core::SpeciesGroup {
-            id: value.id as u32,
-            name: value.name,
-        })
     }
 }
 
@@ -128,31 +87,8 @@ impl TryFrom<SpeciesFiskeridir> for kyogre_core::SpeciesFiskeridir {
     }
 }
 
-impl TryFrom<SpeciesMainGroup> for kyogre_core::SpeciesMainGroup {
-    type Error = Report<PostgresError>;
-
-    fn try_from(value: SpeciesMainGroup) -> Result<Self, Self::Error> {
-        Ok(kyogre_core::SpeciesMainGroup {
-            id: value.id as u32,
-            name: value.name,
-        })
-    }
-}
-
 impl SpeciesFiskeridir {
     pub fn new(id: i32, name: Option<String>) -> Self {
-        Self { id, name }
-    }
-}
-
-impl SpeciesGroup {
-    pub fn new(id: i32, name: String) -> Self {
-        Self { id, name }
-    }
-}
-
-impl SpeciesMainGroup {
-    pub fn new(id: i32, name: String) -> Self {
         Self { id, name }
     }
 }

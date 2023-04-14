@@ -10,8 +10,6 @@ pub struct ErsTraSet {
     vessels: HashMap<i64, fiskeridir_rs::Vessel>,
     municipalities: HashMap<i32, NewMunicipality>,
     counties: HashMap<i32, NewCounty>,
-    species_groups: HashMap<i32, SpeciesGroup>,
-    species_main_groups: HashMap<i32, SpeciesMainGroup>,
     catches: Vec<NewErsTraCatch>,
     ers_tra: HashMap<i64, NewErsTra>,
 }
@@ -23,8 +21,6 @@ pub struct PreparedErsTraSet {
     pub vessels: Vec<fiskeridir_rs::Vessel>,
     pub municipalities: Vec<NewMunicipality>,
     pub counties: Vec<NewCounty>,
-    pub species_groups: Vec<SpeciesGroup>,
-    pub species_main_groups: Vec<SpeciesMainGroup>,
     pub catches: Vec<NewErsTraCatch>,
     pub ers_tra: Vec<NewErsTra>,
 }
@@ -37,8 +33,6 @@ impl ErsTraSet {
         let vessels = self.vessels.into_values().collect();
         let municipalities = self.municipalities.into_values().collect();
         let counties = self.counties.into_values().collect();
-        let species_groups = self.species_groups.into_values().collect();
-        let species_main_groups = self.species_main_groups.into_values().collect();
         let ers_tra = self.ers_tra.into_values().collect();
 
         PreparedErsTraSet {
@@ -48,8 +42,6 @@ impl ErsTraSet {
             vessels,
             municipalities,
             counties,
-            species_groups,
-            species_main_groups,
             catches: self.catches,
             ers_tra,
         }
@@ -66,8 +58,6 @@ impl ErsTraSet {
             set.add_catch(&e)?;
             set.add_municipality(&e);
             set.add_county(&e)?;
-            set.add_species_group(&e)?;
-            set.add_species_main_group(&e)?;
             set.add_ers_tra(&e)?;
         }
 
@@ -118,40 +108,6 @@ impl ErsTraSet {
                     .change_context(PostgresError::DataConversion)?;
                 self.vessels.entry(vessel_id as i64).or_insert(vessel);
             }
-        }
-        Ok(())
-    }
-
-    fn add_species_group(&mut self, ers_tra: &fiskeridir_rs::ErsTra) -> Result<(), PostgresError> {
-        if let Some(code) = ers_tra.catch.species.species_group_code {
-            let species_group = ers_tra.catch.species.species_group.clone().ok_or_else(|| {
-                report!(PostgresError::DataConversion)
-                    .attach_printable("expected species_group to be Some")
-            })?;
-            self.species_groups
-                .entry(code as i32)
-                .or_insert_with(|| SpeciesGroup::new(code as i32, species_group));
-        }
-        Ok(())
-    }
-
-    fn add_species_main_group(
-        &mut self,
-        ers_tra: &fiskeridir_rs::ErsTra,
-    ) -> Result<(), PostgresError> {
-        if let Some(code) = ers_tra.catch.species.species_main_group_code {
-            let species_main_group = ers_tra
-                .catch
-                .species
-                .species_main_group
-                .clone()
-                .ok_or_else(|| {
-                    report!(PostgresError::DataConversion)
-                        .attach_printable("expected species_main_group to be Some")
-                })?;
-            self.species_main_groups
-                .entry(code as i32)
-                .or_insert_with(|| SpeciesMainGroup::new(code as i32, species_main_group));
         }
         Ok(())
     }

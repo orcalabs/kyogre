@@ -37,10 +37,6 @@ impl PostgresAdapter {
             .await?;
         self.add_species_fiskeridir(prepared_set.species_fiskeridir, &mut tx)
             .await?;
-        self.add_species_groups(prepared_set.species_groups, &mut tx)
-            .await?;
-        self.add_species_main_groups(prepared_set.species_main_groups, &mut tx)
-            .await?;
         self.add_ers_dca(prepared_set.ers_dca, &mut tx).await?;
 
         tx.commit()

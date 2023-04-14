@@ -61,8 +61,8 @@ pub struct NewErsDepCatch {
     pub living_weight: Option<i32>,
     pub species_fao_id: Option<String>,
     pub species_fiskeridir_id: Option<i32>,
-    pub species_group_id: Option<i32>,
-    pub species_main_group_id: Option<i32>,
+    pub species_group_id: i32,
+    pub species_main_group_id: i32,
 }
 
 pub struct Departure {
@@ -149,8 +149,6 @@ impl NewErsDepCatch {
             || s.living_weight.is_some()
             || s.species_fao_code.is_some()
             || s.species_fdir_code.is_some()
-            || s.species_group_code.is_some()
-            || s.species_main_group_code.is_some()
         {
             Some(Self {
                 message_id: ers_dep.message_info.message_id as i64,
@@ -158,8 +156,8 @@ impl NewErsDepCatch {
                 living_weight: s.living_weight.map(|v| v as i32),
                 species_fao_id: s.species_fao_code.clone(),
                 species_fiskeridir_id: s.species_fdir_code.map(|v| v as i32),
-                species_group_id: s.species_group_code.map(|v| v as i32),
-                species_main_group_id: s.species_main_group_code.map(|v| v as i32),
+                species_group_id: s.species_group_code as i32,
+                species_main_group_id: s.species_main_group_code as i32,
             })
         } else {
             None
