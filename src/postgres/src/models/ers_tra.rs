@@ -53,8 +53,8 @@ pub struct NewErsTraCatch {
     pub living_weight: Option<i32>,
     pub species_fao_id: Option<String>,
     pub species_fiskeridir_id: Option<i32>,
-    pub species_group_id: Option<i32>,
-    pub species_main_group_id: Option<i32>,
+    pub species_group_id: i32,
+    pub species_main_group_id: i32,
 }
 
 impl TryFrom<fiskeridir_rs::ErsTra> for NewErsTra {
@@ -131,8 +131,6 @@ impl NewErsTraCatch {
             || s.living_weight.is_some()
             || s.species_fao_code.is_some()
             || s.species_fdir_code.is_some()
-            || s.species_group_code.is_some()
-            || s.species_main_group_code.is_some()
         {
             Some(Self {
                 message_id: ers_tra.message_info.message_id as i64,
@@ -140,12 +138,8 @@ impl NewErsTraCatch {
                 living_weight: s.living_weight.map(|v| v as i32),
                 species_fao_id: ers_tra.catch.species.species_fao_code.clone(),
                 species_fiskeridir_id: ers_tra.catch.species.species_fdir_code.map(|v| v as i32),
-                species_group_id: ers_tra.catch.species.species_group_code.map(|v| v as i32),
-                species_main_group_id: ers_tra
-                    .catch
-                    .species
-                    .species_main_group_code
-                    .map(|v| v as i32),
+                species_group_id: ers_tra.catch.species.species_group_code as i32,
+                species_main_group_id: ers_tra.catch.species.species_main_group_code as i32,
             })
         } else {
             None

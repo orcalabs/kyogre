@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use super::helper::test;
 use actix_web::http::StatusCode;
 use chrono::{DateTime, Utc};
-use fiskeridir_rs::{ErsDca, GearGroup, VesselLengthGroup};
+use fiskeridir_rs::{ErsDca, GearGroup, SpeciesGroup, VesselLengthGroup};
 use kyogre_core::{FiskeridirVesselId, ScraperInboundPort};
 use web_api::routes::{
     utils::{DateTimeUtc, GearGroupId, SpeciesGroupId},
@@ -154,8 +154,8 @@ async fn test_hauls_returns_hauls_with_species_group_ids() {
         let ers3 = ErsDca::test_default(3, None);
         let ers4 = ErsDca::test_default(4, None);
 
-        ers1.catch.species.species_group_code = Some(301);
-        ers2.catch.species.species_group_code = Some(302);
+        ers1.catch.species.species_group_code = SpeciesGroup::Blaakveite;
+        ers2.catch.species.species_group_code = SpeciesGroup::Uer;
 
         helper
             .db
@@ -492,13 +492,13 @@ async fn test_hauls_grid_returns_grid_for_hauls_with_species_group_ids() {
         let ers3 = ErsDca::test_default(3, None);
         let ers4 = ErsDca::test_default(4, None);
 
-        ers1.catch.species.species_group_code = Some(301);
+        ers1.catch.species.species_group_code = SpeciesGroup::Blaakveite;
         ers1.start_latitude = Some(56.727258);
         ers1.start_longitude = Some(12.565410);
         ers1.catch.species.living_weight = Some(10);
         ers1.gear.gear_group_code = GearGroup::Garn;
 
-        ers2.catch.species.species_group_code = Some(302);
+        ers2.catch.species.species_group_code = SpeciesGroup::Uer;
         ers2.start_latitude = Some(56.727258);
         ers2.start_longitude = Some(12.565410);
         ers2.catch.species.living_weight = Some(20);

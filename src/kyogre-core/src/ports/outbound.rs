@@ -34,8 +34,6 @@ pub trait WebApiPort {
     ) -> PinBoxStream<'_, VmsPosition, QueryError>;
     fn species(&self) -> PinBoxStream<'_, Species, QueryError>;
     fn species_fiskeridir(&self) -> PinBoxStream<'_, SpeciesFiskeridir, QueryError>;
-    fn species_groups(&self) -> PinBoxStream<'_, SpeciesGroup, QueryError>;
-    fn species_main_groups(&self) -> PinBoxStream<'_, SpeciesMainGroup, QueryError>;
     fn species_fao(&self) -> PinBoxStream<'_, SpeciesFao, QueryError>;
     fn vessels(&self) -> Pin<Box<dyn Stream<Item = Result<Vessel, QueryError>> + Send + '_>>;
     fn hauls(&self, query: HaulsQuery) -> Result<PinBoxStream<'_, Haul, QueryError>, QueryError>;

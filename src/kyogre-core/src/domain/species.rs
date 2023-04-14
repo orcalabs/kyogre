@@ -5,18 +5,6 @@ pub struct Species {
 }
 
 #[derive(Clone, PartialEq, Eq)]
-pub struct SpeciesGroup {
-    pub id: u32,
-    pub name: String,
-}
-
-#[derive(Clone, PartialEq, Eq)]
-pub struct SpeciesMainGroup {
-    pub id: u32,
-    pub name: String,
-}
-
-#[derive(Clone, PartialEq, Eq)]
 pub struct SpeciesFao {
     pub id: String,
     pub name: Option<String>,

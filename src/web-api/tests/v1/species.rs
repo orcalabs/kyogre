@@ -2,6 +2,7 @@ use super::helper::test;
 use actix_web::http::StatusCode;
 use fiskeridir_rs::Landing;
 use kyogre_core::ScraperInboundPort;
+use strum::IntoEnumIterator;
 use web_api::routes::v1::species::*;
 
 #[tokio::test]
@@ -44,31 +45,12 @@ async fn test_species_returns_all_species() {
 #[tokio::test]
 async fn test_species_groups_returns_all_species_groups() {
     test(|helper| async move {
-        let vessel_id = 1;
-        let landing = Landing::test_default(1, Some(vessel_id));
-        let mut landing2 = Landing::test_default(2, Some(vessel_id));
-        landing2.product.species.group_code = 203;
-
-        let mut expected = vec![
-            SpeciesGroup {
-                id: 0,
-                name: "Ukjent".into(),
-            },
-            SpeciesGroup {
-                id: landing.product.species.group_code,
-                name: landing.product.species.group_name.clone(),
-            },
-            SpeciesGroup {
-                id: landing2.product.species.group_code,
-                name: landing2.product.species.group_name.clone(),
-            },
-        ];
-
-        helper
-            .handle()
-            .add_landings(vec![landing, landing2])
-            .await
-            .unwrap();
+        let mut expected: Vec<SpeciesGroup> = fiskeridir_rs::SpeciesGroup::iter()
+            .map(|v| SpeciesGroup {
+                name: v.name().to_owned(),
+                id: v,
+            })
+            .collect();
 
         let response = helper.app.get_species_groups().await;
 
@@ -85,27 +67,12 @@ async fn test_species_groups_returns_all_species_groups() {
 #[tokio::test]
 async fn test_species_main_groups_returns_all_species_main_groups() {
     test(|helper| async move {
-        let vessel_id = 1;
-        let landing = Landing::test_default(1, Some(vessel_id));
-        let mut landing2 = Landing::test_default(2, Some(vessel_id));
-        landing2.product.species.main_group_code = 203;
-
-        let mut expected = vec![
-            SpeciesMainGroup {
-                id: landing.product.species.main_group_code,
-                name: landing.product.species.main_group.clone(),
-            },
-            SpeciesMainGroup {
-                id: landing2.product.species.main_group_code,
-                name: landing2.product.species.main_group.clone(),
-            },
-        ];
-
-        helper
-            .handle()
-            .add_landings(vec![landing, landing2])
-            .await
-            .unwrap();
+        let mut expected: Vec<SpeciesMainGroup> = fiskeridir_rs::SpeciesMainGroup::iter()
+            .map(|v| SpeciesMainGroup {
+                name: v.name().to_owned(),
+                id: v,
+            })
+            .collect();
 
         let response = helper.app.get_species_main_groups().await;
 

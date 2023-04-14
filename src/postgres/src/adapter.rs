@@ -251,18 +251,11 @@ impl WebApiPort for PostgresAdapter {
         convert_stream(self.vms_positions_impl(call_sign, range)).boxed()
     }
 
-    fn species_groups(&self) -> PinBoxStream<'_, SpeciesGroup, QueryError> {
-        convert_stream(self.species_groups_impl()).boxed()
-    }
-
     fn species_fiskeridir(&self) -> PinBoxStream<'_, SpeciesFiskeridir, QueryError> {
         convert_stream(self.species_fiskeridir_impl()).boxed()
     }
     fn species(&self) -> PinBoxStream<'_, Species, QueryError> {
         convert_stream(self.species_impl()).boxed()
-    }
-    fn species_main_groups(&self) -> PinBoxStream<'_, SpeciesMainGroup, QueryError> {
-        convert_stream(self.species_main_groups_impl()).boxed()
     }
     fn species_fao(&self) -> PinBoxStream<'_, SpeciesFao, QueryError> {
         convert_stream(self.species_fao_impl()).boxed()

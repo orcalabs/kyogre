@@ -40,81 +40,6 @@ SET
         .change_context(PostgresError::Query)
         .map(|_| ())
     }
-    pub(crate) async fn add_species_main_groups<'a>(
-        &'a self,
-        species: Vec<SpeciesMainGroup>,
-        tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<(), PostgresError> {
-        let len = species.len();
-
-        let mut species_main_group_id = Vec::with_capacity(len);
-        let mut name = Vec::with_capacity(len);
-
-        for s in species {
-            species_main_group_id.push(s.id);
-            name.push(s.name);
-        }
-
-        sqlx::query!(
-            r#"
-INSERT INTO
-    species_main_groups (species_main_group_id, "name")
-SELECT
-    *
-FROM
-    UNNEST($1::INT[], $2::VARCHAR[])
-ON CONFLICT (species_main_group_id) DO
-UPDATE
-SET
-    "name" = COALESCE(species_main_groups.name, EXCLUDED.name)
-            "#,
-            species_main_group_id.as_slice(),
-            name.as_slice(),
-        )
-        .execute(&mut *tx)
-        .await
-        .into_report()
-        .change_context(PostgresError::Query)
-        .map(|_| ())
-    }
-
-    pub(crate) async fn add_species_groups<'a>(
-        &'a self,
-        species: Vec<SpeciesGroup>,
-        tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<(), PostgresError> {
-        let len = species.len();
-
-        let mut species_group_id = Vec::with_capacity(len);
-        let mut name = Vec::with_capacity(len);
-
-        for s in species {
-            species_group_id.push(s.id);
-            name.push(s.name);
-        }
-
-        sqlx::query!(
-            r#"
-INSERT INTO
-    species_groups (species_group_id, "name")
-SELECT
-    *
-FROM
-    UNNEST($1::INT[], $2::VARCHAR[])
-ON CONFLICT (species_group_id) DO
-UPDATE
-SET
-    "name" = COALESCE(species_groups.name, EXCLUDED.name)
-            "#,
-            species_group_id.as_slice(),
-            name.as_slice(),
-        )
-        .execute(&mut *tx)
-        .await
-        .into_report()
-        .change_context(PostgresError::Query)
-        .map(|_| ())
-    }
 
     pub(crate) async fn add_species<'a>(
         &'a self,
@@ -192,23 +117,6 @@ SET
         .map(|_| ())
     }
 
-    pub(crate) fn species_groups_impl(
-        &self,
-    ) -> impl Stream<Item = Result<SpeciesGroup, PostgresError>> + '_ {
-        sqlx::query_as!(
-            SpeciesGroup,
-            r#"
-SELECT
-    species_group_id AS id,
-    "name"
-FROM
-    species_groups
-            "#,
-        )
-        .fetch(&self.pool)
-        .map_err(|e| report!(e).change_context(PostgresError::Query))
-    }
-
     pub(crate) fn species_fiskeridir_impl(
         &self,
     ) -> impl Stream<Item = Result<SpeciesFiskeridir, PostgresError>> + '_ {
@@ -220,23 +128,6 @@ SELECT
     "name" AS "name?"
 FROM
     species_fiskeridir
-            "#,
-        )
-        .fetch(&self.pool)
-        .map_err(|e| report!(e).change_context(PostgresError::Query))
-    }
-
-    pub(crate) fn species_main_groups_impl(
-        &self,
-    ) -> impl Stream<Item = Result<SpeciesMainGroup, PostgresError>> + '_ {
-        sqlx::query_as!(
-            SpeciesMainGroup,
-            r#"
-SELECT
-    species_main_group_id AS id,
-    "name"
-FROM
-    species_main_groups
             "#,
         )
         .fetch(&self.pool)

@@ -23,10 +23,6 @@ impl PostgresAdapter {
         self.add_counties(prepared_set.counties, &mut tx).await?;
         self.add_fiskeridir_vessels(prepared_set.vessels, &mut tx)
             .await?;
-        self.add_species_groups(prepared_set.species_groups, &mut tx)
-            .await?;
-        self.add_species_main_groups(prepared_set.species_main_groups, &mut tx)
-            .await?;
 
         self.add_ers_tra(prepared_set.ers_tra, &mut tx).await?;
 
