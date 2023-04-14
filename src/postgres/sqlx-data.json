@@ -1193,19 +1193,6 @@
     },
     "query": "\nSELECT\n    t.trip_id AS \"trip_id!\",\n    t.trip_assembler_id AS \"trip_assembler_id!: TripAssemblerId\",\n    t.fiskeridir_vessel_id AS \"fiskeridir_vessel_id!\",\n    t.period AS \"period!\",\n    t.period_precision,\n    t.landing_coverage AS \"landing_coverage!\",\n    t.start_port_id,\n    t.end_port_id,\n    t.num_deliveries AS \"num_deliveries!\",\n    t.total_living_weight AS \"total_living_weight!\",\n    t.total_gross_weight AS \"total_gross_weight!\",\n    t.total_product_weight AS \"total_product_weight!\",\n    t.delivery_points AS \"delivery_points!\",\n    t.latest_landing_timestamp,\n    t.catches::TEXT AS \"catches!\",\n    t.hauls::TEXT AS \"hauls!\",\n    t.delivery_point_catches::TEXT AS \"delivery_point_catches!\",\n    t.gear_ids AS \"gear_ids!: Vec<Gear>\"\nFROM\n    trips_view AS t\nWHERE\n    $1::TEXT[] <@ (t.haul_ids)\n            "
   },
-  "6e369828f897a776cfe64bcddbc4cdc49d906941885437f44b22e1626ffd875d": {
-    "describe": {
-      "columns": [],
-      "nullable": [],
-      "parameters": {
-        "Left": [
-          "Int4Array",
-          "VarcharArray"
-        ]
-      }
-    },
-    "query": "\nINSERT INTO\n    species_main_groups (species_main_group_id, \"name\")\nSELECT\n    *\nFROM\n    UNNEST($1::INT[], $2::VARCHAR[])\nON CONFLICT (species_main_group_id) DO\nUPDATE\nSET\n    \"name\" = COALESCE(species_main_groups.name, EXCLUDED.name)\n            "
-  },
   "731e852a607ae33927aaaa91f6bd6c4e7109590e46809605c1716efe82505628": {
     "describe": {
       "columns": [],
@@ -1341,30 +1328,6 @@
       }
     },
     "query": "\nSELECT\n    t.trip_id AS \"trip_id!\",\n    t.trip_assembler_id AS \"trip_assembler_id!: TripAssemblerId\",\n    t.fiskeridir_vessel_id AS \"fiskeridir_vessel_id!\",\n    t.period AS \"period!\",\n    t.period_precision,\n    t.start_port_id,\n    t.end_port_id,\n    t.num_deliveries AS \"num_deliveries!\",\n    t.landing_coverage AS \"landing_coverage!\",\n    t.total_living_weight AS \"total_living_weight!\",\n    t.total_gross_weight AS \"total_gross_weight!\",\n    t.total_product_weight AS \"total_product_weight!\",\n    t.delivery_points AS \"delivery_points!\",\n    t.latest_landing_timestamp,\n    t.catches::TEXT AS \"catches!\",\n    t.hauls::TEXT AS \"hauls!\",\n    t.delivery_point_catches::TEXT AS \"delivery_point_catches!\",\n    t.gear_ids AS \"gear_ids!: Vec<Gear>\"\nFROM\n    trips_view AS t\nWHERE\n    t.fiskeridir_vessel_id = $1\n            "
-  },
-  "781618072ae7d25ac07156de946b8cca767def1b91991e2f872328a8decf17d7": {
-    "describe": {
-      "columns": [
-        {
-          "name": "id",
-          "ordinal": 0,
-          "type_info": "Int4"
-        },
-        {
-          "name": "name",
-          "ordinal": 1,
-          "type_info": "Varchar"
-        }
-      ],
-      "nullable": [
-        false,
-        false
-      ],
-      "parameters": {
-        "Left": []
-      }
-    },
-    "query": "\nSELECT\n    species_main_group_id AS id,\n    \"name\"\nFROM\n    species_main_groups\n            "
   },
   "78a95933cf64d372b5690c2aaeb39dcdb137b2c7117d31399346bb70dc495f02": {
     "describe": {
@@ -1611,19 +1574,6 @@
       }
     },
     "query": "\nINSERT INTO\n    fiskeridir_vessels (\n        fiskeridir_vessel_id,\n        norwegian_municipality_id,\n        call_sign,\n        \"name\",\n        registration_id,\n        \"length\",\n        \"width\",\n        engine_power,\n        imo_number,\n        owners,\n        fiskeridir_vessel_source_id\n    )\nSELECT\n    *\nFROM\n    UNNEST(\n        $1::BIGINT[],\n        $2::INT[],\n        $3::VARCHAR[],\n        $4::VARCHAR[],\n        $5::VARCHAR[],\n        $6::DECIMAL[],\n        $7::DECIMAL[],\n        $8::INT[],\n        $9::BIGINT[],\n        $10::JSON[],\n        $11::INT[]\n    )\nON CONFLICT (fiskeridir_vessel_id) DO\nUPDATE\nSET\n    norwegian_municipality_id = EXCLUDED.norwegian_municipality_id,\n    call_sign = EXCLUDED.call_sign,\n    \"name\" = EXCLUDED.name,\n    registration_id = EXCLUDED.registration_id,\n    \"length\" = EXCLUDED.length,\n    \"width\" = EXCLUDED.width,\n    engine_power = EXCLUDED.engine_power,\n    imo_number = EXCLUDED.imo_number,\n    owners = EXCLUDED.owners,\n    fiskeridir_vessel_source_id = EXCLUDED.fiskeridir_vessel_source_id\n            "
-  },
-  "8f96f92148a3910aa00ae3a7621a4307f95c01df7786028ace7a068f47ec4ae5": {
-    "describe": {
-      "columns": [],
-      "nullable": [],
-      "parameters": {
-        "Left": [
-          "Int4Array",
-          "VarcharArray"
-        ]
-      }
-    },
-    "query": "\nINSERT INTO\n    species_groups (species_group_id, \"name\")\nSELECT\n    *\nFROM\n    UNNEST($1::INT[], $2::VARCHAR[])\nON CONFLICT (species_group_id) DO\nUPDATE\nSET\n    \"name\" = COALESCE(species_groups.name, EXCLUDED.name)\n            "
   },
   "90692aec2f77f36b2d8e4d3e122b8fd69a7d0f6b2dd960f90ce537bfad6836b5": {
     "describe": {
@@ -2021,30 +1971,6 @@
       }
     },
     "query": "\nSELECT\n    landing_timestamp\nFROM\n    landings\nWHERE\n    fiskeridir_vessel_id = $1\n    AND landing_timestamp >= $2\n            "
-  },
-  "a9edf164edbae7c8d059cfbfda567a4504bc42bd25f3fba04a4e92f11c651fd2": {
-    "describe": {
-      "columns": [
-        {
-          "name": "id",
-          "ordinal": 0,
-          "type_info": "Int4"
-        },
-        {
-          "name": "name",
-          "ordinal": 1,
-          "type_info": "Varchar"
-        }
-      ],
-      "nullable": [
-        false,
-        false
-      ],
-      "parameters": {
-        "Left": []
-      }
-    },
-    "query": "\nSELECT\n    species_group_id AS id,\n    \"name\"\nFROM\n    species_groups\n            "
   },
   "ae4a01d2a251e7d9be99a7e33be14885ab8070c67586cca322b84b85c9eec050": {
     "describe": {
