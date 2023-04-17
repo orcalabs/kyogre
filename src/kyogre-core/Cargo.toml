@@ -11,7 +11,7 @@ sqlx = ["dep:sqlx"]
 
 [dependencies]
 async-trait = "0.1.68"
-serde = "1.0.159"
+serde = "1.0.160"
 chrono = { version = "0.4.24", features = ["serde"] }
 chrono-tz = "0.8.2"
 fiskeridir-rs = { workspace = true }
@@ -24,7 +24,7 @@ error-stack = { workspace = true }
 rand = "0.8.5"
 futures = "0.3.28"
 
-utoipa = { version = "3.2", optional = true }
+utoipa = { version = "3.3", optional = true }
 remain = "0.2.8"
 sqlx = { version = "0.6.3", features = [
     "runtime-tokio-rustls",
