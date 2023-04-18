@@ -75,3 +75,11 @@ pub struct HaulsGrid {
     pub weight_by_species_group: HashMap<i32, i64>,
     pub weight_by_vessel_length_group: HashMap<VesselLengthGroup, i64>,
 }
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
+pub struct HaulsMatrix {
+    pub dates: Vec<i32>,
+    pub length_group: Vec<i32>,
+    pub gear_group: Vec<i32>,
+    pub species_group: Vec<i32>,
+}

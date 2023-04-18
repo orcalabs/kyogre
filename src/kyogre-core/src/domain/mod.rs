@@ -17,6 +17,8 @@ pub struct Coordinates {
     pub longitude: f64,
 }
 
+pub static NUM_CATCH_LOCATIONS: usize = 2113;
+
 pub use ais::*;
 pub use catch_location::*;
 pub use date_range::*;

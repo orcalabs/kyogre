@@ -1,7 +1,7 @@
 use super::test_client::ApiClient;
 use chrono::{DateTime, Duration, Utc};
 use dockertest::{DockerTest, Source, StaticManagementPolicy};
-use fiskeridir_rs::{ErsDep, ErsPor};
+use fiskeridir_rs::{ErsDep, ErsPor, GearGroup, SpeciesGroup, VesselLengthGroup};
 use futures::Future;
 use kyogre_core::*;
 use orca_core::{
@@ -11,9 +11,11 @@ use postgres::{PostgresAdapter, TestDb};
 use rand::random;
 use std::panic;
 use std::sync::Once;
+use strum::EnumCount;
 use tracing_subscriber::FmtSubscriber;
 use trip_assembler::{ErsTripAssembler, LandingTripAssembler, TripAssembler};
 use web_api::{
+    routes::v1::haul,
     settings::{ApiSettings, Settings},
     startup::App,
 };
@@ -234,7 +236,6 @@ where
     docker_test.add_composition(composition);
 
     let db_name = random::<u32>().to_string();
-
     docker_test
         .run_async(|ops| async move {
             let db_handle = ops.handle("postgres");
@@ -277,4 +278,86 @@ where
             test_db.drop_db(&db_name).await;
         })
         .await;
+}
+
+pub fn sum_area(matrix: &[i32], x0: usize, y0: usize, x1: usize, y1: usize, width: usize) -> i32 {
+    let mut sum = matrix[y1 * width + x1];
+    if x0 > 0 {
+        sum -= matrix[y1 * width + x0 - 1];
+    }
+
+    if y0 > 0 {
+        sum -= matrix[(y0 - 1) * width + x1];
+    }
+
+    if x0 > 0 && y0 > 0 {
+        sum += matrix[(y0 - 1) * width + x0 - 1];
+    }
+
+    sum
+}
+
+pub fn assert_matrix_content(
+    matrix: &haul::HaulsMatrix,
+    active_filter: ActiveHaulsFilter,
+    expected_total: i32,
+) {
+    let y_dimension = match active_filter {
+        ActiveHaulsFilter::Date => date_feature_matrix_size(),
+        ActiveHaulsFilter::GearGroup => GearGroup::COUNT,
+        ActiveHaulsFilter::SpeciesGroup => SpeciesGroup::COUNT,
+        ActiveHaulsFilter::VesselLength => VesselLengthGroup::COUNT,
+    };
+
+    assert_eq!(
+        (date_feature_matrix_size()
+            * if matches!(active_filter, ActiveHaulsFilter::Date) {
+                NUM_CATCH_LOCATIONS
+            } else {
+                y_dimension
+            }),
+        matrix.dates.len()
+    );
+    assert_eq!(
+        (GearGroup::COUNT
+            * if matches!(active_filter, ActiveHaulsFilter::GearGroup) {
+                NUM_CATCH_LOCATIONS
+            } else {
+                y_dimension
+            }),
+        matrix.gear_group.len()
+    );
+    assert_eq!(
+        (VesselLengthGroup::COUNT
+            * if matches!(active_filter, ActiveHaulsFilter::VesselLength) {
+                NUM_CATCH_LOCATIONS
+            } else {
+                y_dimension
+            }),
+        matrix.length_group.len()
+    );
+
+    assert_eq!(
+        (SpeciesGroup::COUNT
+            * if matches!(active_filter, ActiveHaulsFilter::SpeciesGroup) {
+                NUM_CATCH_LOCATIONS
+            } else {
+                y_dimension
+            }),
+        matrix.species_group.len()
+    );
+
+    assert_eq!(expected_total, matrix.dates[matrix.dates.len() - 1]);
+    assert_eq!(
+        expected_total,
+        matrix.gear_group[matrix.gear_group.len() - 1]
+    );
+    assert_eq!(
+        expected_total,
+        matrix.length_group[matrix.length_group.len() - 1]
+    );
+    assert_eq!(
+        expected_total,
+        matrix.species_group[matrix.species_group.len() - 1]
+    );
 }

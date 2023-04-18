@@ -34,3 +34,5 @@ sqlx = { version = "0.6.3", features = [
     "offline",
     "json",
 ], optional = true }
+enum_index = "0.2.0"
+enum_index_derive = "0.2.0"

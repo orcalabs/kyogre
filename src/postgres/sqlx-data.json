@@ -2398,6 +2398,30 @@
     },
     "query": "\nSELECT\n    species_fao_id AS id,\n    \"name\" AS \"name?\"\nFROM\n    species_fao\n            "
   },
+  "c3712a0c2bb2d1e9e4da2c0cc9afe7fc4592d40fa6e1faa0549d75331c8f3790": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Int4"
+        },
+        {
+          "name": "name?",
+          "ordinal": 1,
+          "type_info": "Varchar"
+        }
+      ],
+      "nullable": [
+        false,
+        true
+      ],
+      "parameters": {
+        "Left": []
+      }
+    },
+    "query": "\nSELECT\n    species_fiskeridir_id AS id,\n    \"name\" AS \"name?\"\nFROM\n    species_fiskeridir\nORDER BY\n    species_fiskeridir_id\n            "
+  },
   "c6e7c94971b39080cad2aaa1c4538d8ec01898cc9cdae74130fb6f671112f445": {
     "describe": {
       "columns": [],
@@ -2658,30 +2682,6 @@
     },
     "query": "\nINSERT INTO\n    ais_vessels (mmsi)\nVALUES\n    ($1)\nON CONFLICT (mmsi) DO NOTHING\n            "
   },
-  "e779e9953f3857967807104310164c3b65a65642a287d6849ceb23e858d10f8b": {
-    "describe": {
-      "columns": [
-        {
-          "name": "id",
-          "ordinal": 0,
-          "type_info": "Int4"
-        },
-        {
-          "name": "name?",
-          "ordinal": 1,
-          "type_info": "Varchar"
-        }
-      ],
-      "nullable": [
-        false,
-        true
-      ],
-      "parameters": {
-        "Left": []
-      }
-    },
-    "query": "\nSELECT\n    species_fiskeridir_id AS id,\n    \"name\" AS \"name?\"\nFROM\n    species_fiskeridir\n            "
-  },
   "f1e3f2f6719a6474e6533ef9b3161bbd25757e7aa84c8910aeefc0d40c5af42e": {
     "describe": {
       "columns": [
@@ -2855,6 +2855,45 @@
       }
     },
     "query": "\nSELECT\n    f.fiskeridir_vessel_id AS \"fiskeridir_vessel_id!\",\n    f.fiskeridir_vessel_type_id,\n    f.fiskeridir_length_group_id,\n    f.fiskeridir_nation_group_id,\n    f.norwegian_municipality_id AS fiskeridir_norwegian_municipality_id,\n    f.norwegian_county_id AS fiskeridir_norwegian_county_id,\n    f.nation_id AS \"fiskeridir_nation_id?\",\n    f.gross_tonnage_1969 AS fiskeridir_gross_tonnage_1969,\n    f.gross_tonnage_other AS fiskeridir_gross_tonnage_other,\n    f.call_sign AS fiskeridir_call_sign,\n    f.\"name\" AS fiskeridir_name,\n    f.registration_id AS fiskeridir_registration_id,\n    f.\"length\" AS fiskeridir_length,\n    f.\"width\" AS fiskeridir_width,\n    f.\"owner\" AS fiskeridir_owner,\n    f.engine_building_year AS fiskeridir_engine_building_year,\n    f.engine_power AS fiskeridir_engine_power,\n    f.building_year AS fiskeridir_building_year,\n    f.rebuilding_year AS fiskeridir_rebuilding_year,\n    a.mmsi AS \"ais_mmsi?\",\n    a.imo_number AS ais_imo_number,\n    a.call_sign AS ais_call_sign,\n    a.name AS ais_name,\n    a.ship_length AS ais_ship_length,\n    a.ship_width AS ais_ship_width,\n    a.eta AS ais_eta,\n    a.destination AS ais_destination\nFROM\n    fiskeridir_vessels AS f\n    LEFT JOIN ais_vessels AS a ON f.call_sign = a.call_sign\n            "
+  },
+  "f7a8a574ed708c726e08bd044d429da392d22bd6f199a4da27067322d7aaa906": {
+    "describe": {
+      "columns": [
+        {
+          "name": "x_index!",
+          "ordinal": 0,
+          "type_info": "Int4"
+        },
+        {
+          "name": "y_index!",
+          "ordinal": 1,
+          "type_info": "Int4"
+        },
+        {
+          "name": "sum_living!",
+          "ordinal": 2,
+          "type_info": "Int4"
+        }
+      ],
+      "nullable": [
+        null,
+        null,
+        null
+      ],
+      "parameters": {
+        "Left": [
+          "Int4",
+          "Int4",
+          "TstzRangeArray",
+          "VarcharArray",
+          "Int4Array",
+          "Int4Array",
+          "NumRangeArray",
+          "Int8Array"
+        ]
+      }
+    },
+    "query": "\nSELECT\n    CASE\n        WHEN $1 = 0 THEN h.matrix_month_bucket\n        WHEN $1 = 1 THEN h.gear_group_id\n        WHEN $1 = 2 THEN h.species_group_id\n        WHEN $1 = 3 THEN h.vessel_length_group\n        WHEN $1 = 4 THEN h.catch_location_start_matrix_index\n    END AS \"x_index!\",\n    CASE\n        WHEN $2 = 0 THEN h.matrix_month_bucket\n        WHEN $2 = 1 THEN h.gear_group_id\n        WHEN $2 = 2 THEN h.species_group_id\n        WHEN $2 = 3 THEN h.vessel_length_group\n    END AS \"y_index!\",\n    COALESCE(SUM(living_weight), 0)::INT AS \"sum_living!\"\nFROM\n    hauls_matrix_view h\nWHERE\n    (\n        $1::INT != 4\n        OR h.catch_location_start_matrix_index IS NOT NULL\n    )\n    AND (\n        $3::tstzrange[] IS NULL\n        OR h.period && ANY ($3)\n    )\n    AND (\n        $4::VARCHAR[] IS NULL\n        OR h.catch_location_start = ANY ($4)\n    )\n    AND (\n        $5::INT[] IS NULL\n        OR h.gear_group_id = ANY ($5)\n    )\n    AND (\n        $6::INT[] IS NULL\n        OR h.species_group_id = ANY ($6)\n    )\n    AND (\n        $7::numrange[] IS NULL\n        OR h.vessel_length <@ ANY ($7)\n    )\n    AND (\n        $8::BIGINT[] IS NULL\n        OR fiskeridir_vessel_id = ANY ($8)\n    )\nGROUP BY\n    1,\n    2\n            "
   },
   "f83c24e69093ba8fcc3f97951fbefaad78315e94ea14d79c973672053d4095e3": {
     "describe": {
