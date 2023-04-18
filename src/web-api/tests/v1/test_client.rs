@@ -1,7 +1,7 @@
 use std::{fmt::Write, string::ToString};
 
 use fiskeridir_rs::CallSign;
-use kyogre_core::{HaulId, Mmsi};
+use kyogre_core::{ActiveHaulsFilter, HaulId, Mmsi};
 use reqwest::{Client, Response};
 use web_api::routes::v1::{ais::AisTrackParameters, haul::HaulsParams, vms::VmsParameters};
 
@@ -62,6 +62,14 @@ impl ApiClient {
     }
     pub async fn get_hauls_grid(&self, params: HaulsParams) -> Response {
         self.get_hauls_impl("hauls_grid", params).await
+    }
+    pub async fn get_hauls_matrix(
+        &self,
+        params: HaulsParams,
+        active_filter: ActiveHaulsFilter,
+    ) -> Response {
+        self.get_hauls_impl(&format!("hauls_matrix/{}", active_filter.name()), params)
+            .await
     }
     pub async fn get_trip_of_haul(&self, haul_id: &HaulId) -> Response {
         self.get(format!("trip_of_haul/{}", haul_id.0), &[]).await

@@ -8,11 +8,17 @@ use crate::{
     },
     to_streaming_response, Database,
 };
-use actix_web::{web, HttpResponse};
+use actix_web::{
+    web::{self, Path},
+    HttpResponse,
+};
 use chrono::{DateTime, Datelike, Months, NaiveDate, Utc};
 use fiskeridir_rs::{Gear, GearGroup, VesselLengthGroup, WhaleGender};
 use futures::TryStreamExt;
-use kyogre_core::{CatchLocationId, FiskeridirVesselId, HaulId, HaulsQuery, Range};
+use kyogre_core::{
+    ActiveHaulsFilter, CatchLocationId, FiskeridirVesselId, HaulId, HaulsMatrixQuery, HaulsQuery,
+    Range,
+};
 use serde::{Deserialize, Serialize};
 use tracing::{event, Level};
 use utoipa::{IntoParams, ToSchema};
@@ -96,6 +102,32 @@ pub async fn hauls_grid<T: Database + 'static>(
     Ok(Response::new(HaulsGrid::from(grid)))
 }
 
+#[utoipa::path(
+    get,
+    path = "/hauls_matrix/{active_filter}",
+    params(HaulsParams),
+    responses(
+        (status = 200, description = "an aggregated matrix view of haul living weights", body = HaulsMatrix),
+        (status = 400, description = "the provided parameters were invalid"),
+        (status = 500, description = "an internal error occured", body = ErrorResponse),
+    )
+)]
+#[tracing::instrument(skip(db))]
+pub async fn hauls_matrix<T: Database + 'static>(
+    db: web::Data<T>,
+    params: web::Query<HaulsParams>,
+    active_filter: Path<ActiveHaulsFilter>,
+) -> Result<Response<HaulsMatrix>, ApiError> {
+    let query = matrix_params_to_query(params.into_inner(), active_filter.into_inner());
+
+    let matrix = db.hauls_matrix(query).await.map_err(|e| {
+        event!(Level::ERROR, "failed to retrieve hauls matrix: {:?}", e);
+        ApiError::InternalServerError
+    })?;
+
+    Ok(Response::new(HaulsMatrix::from(matrix)))
+}
+
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct Haul {
@@ -140,6 +172,15 @@ pub struct HaulCatch {
     pub species_fiskeridir_id: i32,
 }
 
+#[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct HaulsMatrix {
+    pub dates: Vec<i32>,
+    pub length_group: Vec<i32>,
+    pub gear_group: Vec<i32>,
+    pub species_group: Vec<i32>,
+}
+
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct WhaleCatch {
@@ -164,6 +205,17 @@ pub struct HaulsGrid {
     pub weight_by_gear_group: HashMap<GearGroup, i64>,
     pub weight_by_species_group: HashMap<i32, i64>,
     pub weight_by_vessel_length_group: HashMap<VesselLengthGroup, i64>,
+}
+
+impl From<kyogre_core::HaulsMatrix> for HaulsMatrix {
+    fn from(v: kyogre_core::HaulsMatrix) -> Self {
+        HaulsMatrix {
+            dates: v.dates,
+            length_group: v.length_group,
+            gear_group: v.gear_group,
+            species_group: v.species_group,
+        }
+    }
 }
 
 impl From<kyogre_core::Haul> for Haul {
@@ -289,6 +341,60 @@ impl From<HaulsParams> for HaulsQuery {
             vessel_length_ranges: v.vessel_length_ranges,
             vessel_ids: v.fiskeridir_vessel_ids,
         }
+    }
+}
+
+fn matrix_params_to_query(
+    params: HaulsParams,
+    active_filter: ActiveHaulsFilter,
+) -> HaulsMatrixQuery {
+    let ranges = params.months.map(|mut months| {
+        let mut vec = Vec::with_capacity(months.len());
+
+        months.sort();
+
+        let mut start_naive = None;
+        let mut end_naive = None;
+        for m in months {
+            if let (Some(start), Some(end)) = (start_naive, end_naive) {
+                let naive = NaiveDate::from_ymd_opt(m.0.year(), m.0.month(), 1).unwrap();
+                if end != naive {
+                    vec.push(Range {
+                        start: Bound::Included(utc_from_naive(start)),
+                        end: Bound::Excluded(utc_from_naive(end)),
+                    });
+                    start_naive = Some(naive);
+                }
+                end_naive = Some(naive.checked_add_months(Months::new(1)).unwrap());
+            } else {
+                let start = NaiveDate::from_ymd_opt(m.0.year(), m.0.month(), 1).unwrap();
+                end_naive = Some(start.checked_add_months(Months::new(1)).unwrap());
+                start_naive = Some(start);
+            }
+        }
+
+        if let (Some(start), Some(end)) = (start_naive, end_naive) {
+            vec.push(Range {
+                start: Bound::Included(utc_from_naive(start)),
+                end: Bound::Excluded(utc_from_naive(end)),
+            });
+        }
+
+        vec
+    });
+
+    HaulsMatrixQuery {
+        ranges,
+        catch_locations: params.catch_locations,
+        gear_group_ids: params
+            .gear_group_ids
+            .map(|gs| gs.into_iter().map(|g| g.0).collect()),
+        species_group_ids: params
+            .species_group_ids
+            .map(|gs| gs.into_iter().map(|g| g.0).collect()),
+        vessel_length_ranges: params.vessel_length_ranges,
+        active_filter,
+        vessel_ids: params.fiskeridir_vessel_ids,
     }
 }
 

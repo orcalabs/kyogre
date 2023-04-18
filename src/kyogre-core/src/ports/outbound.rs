@@ -42,6 +42,7 @@ pub trait WebApiPort {
         haul_id: &HaulId,
     ) -> Result<Option<TripDetailed>, QueryError>;
     async fn hauls_grid(&self, query: HaulsQuery) -> Result<HaulsGrid, QueryError>;
+    async fn hauls_matrix(&self, query: HaulsMatrixQuery) -> Result<HaulsMatrix, QueryError>;
 }
 
 #[async_trait]

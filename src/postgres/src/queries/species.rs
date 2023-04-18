@@ -128,6 +128,8 @@ SELECT
     "name" AS "name?"
 FROM
     species_fiskeridir
+ORDER BY
+    species_fiskeridir_id
             "#,
         )
         .fetch(&self.pool)

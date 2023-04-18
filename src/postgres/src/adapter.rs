@@ -1,3 +1,4 @@
+use crate::queries::haul::{HaulMatrixFeatures, HaulsArgs};
 use crate::{
     error::PostgresError, ers_dca_set::ErsDcaSet, ers_dep_set::ErsDepSet, ers_por_set::ErsPorSet,
     ers_tra_set::ErsTraSet, landing_set::LandingSet,
@@ -268,6 +269,57 @@ impl WebApiPort for PostgresAdapter {
     fn hauls(&self, query: HaulsQuery) -> Result<PinBoxStream<'_, Haul, QueryError>, QueryError> {
         let stream = self.hauls_impl(query).change_context(QueryError)?;
         Ok(convert_stream(stream).boxed())
+    }
+
+    async fn hauls_matrix(&self, query: HaulsMatrixQuery) -> Result<HaulsMatrix, QueryError> {
+        let active_filter = query.active_filter;
+        let args = HaulsArgs::try_from(query).change_context(QueryError)?;
+
+        let (dates, length_group, gear_group, species_group) = tokio::join!(
+            self.hauls_matrix_impl(
+                &args,
+                active_filter,
+                if matches!(active_filter, ActiveHaulsFilter::Date) {
+                    HaulMatrixFeatures::CatchLocation
+                } else {
+                    HaulMatrixFeatures::Date
+                }
+            ),
+            self.hauls_matrix_impl(
+                &args,
+                active_filter,
+                if matches!(active_filter, ActiveHaulsFilter::VesselLength) {
+                    HaulMatrixFeatures::CatchLocation
+                } else {
+                    HaulMatrixFeatures::VesselLength
+                }
+            ),
+            self.hauls_matrix_impl(
+                &args,
+                active_filter,
+                if matches!(active_filter, ActiveHaulsFilter::GearGroup) {
+                    HaulMatrixFeatures::CatchLocation
+                } else {
+                    HaulMatrixFeatures::GearGroup
+                }
+            ),
+            self.hauls_matrix_impl(
+                &args,
+                active_filter,
+                if matches!(active_filter, ActiveHaulsFilter::SpeciesGroup) {
+                    HaulMatrixFeatures::CatchLocation
+                } else {
+                    HaulMatrixFeatures::SpeciesGroup
+                }
+            ),
+        );
+
+        Ok(HaulsMatrix {
+            dates: dates.change_context(QueryError)?,
+            length_group: length_group.change_context(QueryError)?,
+            gear_group: gear_group.change_context(QueryError)?,
+            species_group: species_group.change_context(QueryError)?,
+        })
     }
 
     async fn hauls_grid(&self, query: HaulsQuery) -> Result<HaulsGrid, QueryError> {
