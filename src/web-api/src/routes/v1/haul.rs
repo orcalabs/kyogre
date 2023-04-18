@@ -105,7 +105,10 @@ pub async fn hauls_grid<T: Database + 'static>(
 #[utoipa::path(
     get,
     path = "/hauls_matrix/{active_filter}",
-    params(HaulsParams),
+    params(
+        HaulsParams,
+        ("active_filter" = ActiveHaulsFilter, Path, description = "What feature to group by on the y-axis of the output matrices"),
+    ),
     responses(
         (status = 200, description = "an aggregated matrix view of haul living weights", body = HaulsMatrix),
         (status = 400, description = "the provided parameters were invalid"),
