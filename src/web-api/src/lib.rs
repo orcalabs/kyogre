@@ -1,7 +1,7 @@
 #![deny(warnings)]
 #![deny(rust_2018_idioms)]
 
-use kyogre_core::{Catch, Delivery, WebApiPort};
+use kyogre_core::{ActiveHaulsFilter, Catch, Delivery, WebApiPort};
 use postgres::PostgresAdapter;
 use routes::v1;
 use utoipa::OpenApi;
@@ -37,6 +37,7 @@ impl Database for PostgresAdapter {}
     ),
     components(
         schemas(
+            ActiveHaulsFilter,
             Delivery,
             Catch,
             error::ErrorResponse,
