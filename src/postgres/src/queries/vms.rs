@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use super::{float_to_decimal, opt_float_to_decimal};
 use crate::{error::PostgresError, models::VmsPosition, PostgresAdapter};
 use error_stack::{report, IntoReport, Result, ResultExt};
@@ -61,9 +63,11 @@ ORDER BY
         let mut vessel_name = Vec::with_capacity(len);
         let mut vessel_type = Vec::with_capacity(len);
 
+        let mut call_signs_unique = HashSet::new();
+
         for v in vms {
             if let (Some(lat), Some(lon)) = (v.latitude, v.longitude) {
-                call_sign.push(v.call_sign.into_inner());
+                call_sign.push(v.call_sign.clone().into_inner());
                 course.push(v.course.map(|c| c as i32));
                 gross_tonnage.push(v.gross_tonnage.map(|g| g as i32));
                 latitude.push(float_to_decimal(lat).change_context(PostgresError::DataConversion)?);
@@ -83,8 +87,26 @@ ORDER BY
                 );
                 vessel_name.push(v.vessel_name);
                 vessel_type.push(v.vessel_type);
+
+                call_signs_unique.insert(v.call_sign.into_inner());
             }
         }
+
+        let call_signs_unique = call_signs_unique.into_iter().collect::<Vec<_>>();
+
+        let mut tx = self.begin().await?;
+
+        sqlx::query!(
+            r#"
+SELECT
+    add_vms_position_partitions ($1)
+            "#,
+            call_signs_unique.as_slice(),
+        )
+        .execute(&mut *tx)
+        .await
+        .into_report()
+        .change_context(PostgresError::Query)?;
 
         sqlx::query!(
             r#"
@@ -124,7 +146,7 @@ FROM
         $13::VARCHAR[],
         $14::VARCHAR[]
     )
-ON CONFLICT (message_id) DO NOTHING
+ON CONFLICT (message_id, call_sign) DO NOTHING
             "#,
             call_sign.as_slice(),
             course.as_slice() as _,
@@ -141,10 +163,16 @@ ON CONFLICT (message_id) DO NOTHING
             vessel_name.as_slice(),
             vessel_type.as_slice()
         )
-        .execute(&self.pool)
+        .execute(&mut *tx)
         .await
         .into_report()
-        .change_context(PostgresError::Query)
-        .map(|_| ())
+        .change_context(PostgresError::Query)?;
+
+        tx.commit()
+            .await
+            .into_report()
+            .change_context(PostgresError::Transaction)?;
+
+        Ok(())
     }
 }

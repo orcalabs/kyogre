@@ -252,6 +252,15 @@ impl WebApiPort for PostgresAdapter {
         convert_stream(self.vms_positions_impl(call_sign, range)).boxed()
     }
 
+    fn ais_vms_positions(
+        &self,
+        mmsi: Option<Mmsi>,
+        call_sign: Option<&CallSign>,
+        range: &DateRange,
+    ) -> PinBoxStream<'_, AisVmsPosition, QueryError> {
+        convert_stream(self.ais_vms_positions_impl(mmsi, call_sign, range)).boxed()
+    }
+
     fn species_fiskeridir(&self) -> PinBoxStream<'_, SpeciesFiskeridir, QueryError> {
         convert_stream(self.species_fiskeridir_impl()).boxed()
     }

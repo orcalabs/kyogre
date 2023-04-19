@@ -5,6 +5,7 @@ use bigdecimal::{BigDecimal, FromPrimitive};
 use error_stack::{report, Result};
 
 pub mod ais;
+pub mod ais_vms;
 pub mod catch_area;
 pub mod delivery_point;
 pub mod economic_zone;

@@ -71,6 +71,10 @@ where
                         "/ais_track/{mmsi}",
                         web::get().to(routes::v1::ais::ais_track::<T>),
                     )
+                    .route(
+                        "/ais_vms_positions",
+                        web::get().to(routes::v1::ais_vms::ais_vms_positions::<T>),
+                    )
                     .route("/species", web::get().to(routes::v1::species::species::<T>))
                     .route(
                         "/species_groups",

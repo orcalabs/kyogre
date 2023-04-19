@@ -32,6 +32,12 @@ pub trait WebApiPort {
         call_sign: &CallSign,
         range: &DateRange,
     ) -> PinBoxStream<'_, VmsPosition, QueryError>;
+    fn ais_vms_positions(
+        &self,
+        mmsi: Option<Mmsi>,
+        call_sign: Option<&CallSign>,
+        range: &DateRange,
+    ) -> PinBoxStream<'_, AisVmsPosition, QueryError>;
     fn species(&self) -> PinBoxStream<'_, Species, QueryError>;
     fn species_fiskeridir(&self) -> PinBoxStream<'_, SpeciesFiskeridir, QueryError>;
     fn species_fao(&self) -> PinBoxStream<'_, SpeciesFao, QueryError>;

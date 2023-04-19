@@ -1,4 +1,5 @@
 mod ais;
+mod ais_vms;
 mod catch_area;
 mod economic_zones;
 mod ers_dca;
@@ -19,6 +20,7 @@ mod vessel;
 mod vms;
 
 pub use ais::*;
+pub use ais_vms::*;
 pub use catch_area::*;
 pub use economic_zones::*;
 pub use ers_dca::*;

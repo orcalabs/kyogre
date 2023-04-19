@@ -1,4 +1,5 @@
 pub mod ais;
+pub mod ais_vms;
 pub mod haul;
 pub mod helper;
 pub mod species;

@@ -7,6 +7,7 @@ pub enum ApiError {
     InvalidCallSign,
     InvalidDateRange,
     InternalServerError,
+    MissingMmsiOrCallSign,
 }
 
 impl std::error::Error for ApiError {}
@@ -25,6 +26,9 @@ impl std::fmt::Display for ApiError {
             }
             ApiError::InternalServerError => f.write_str("an internal server error occured"),
             ApiError::InvalidCallSign => f.write_str("an invalid call sign was received"),
+            ApiError::MissingMmsiOrCallSign => {
+                f.write_str("either mmsi, call sign, or both must be provided")
+            }
         }
     }
 }
@@ -32,7 +36,9 @@ impl std::fmt::Display for ApiError {
 impl ResponseError for ApiError {
     fn status_code(&self) -> StatusCode {
         match self {
-            ApiError::InvalidDateRange | ApiError::InvalidCallSign => StatusCode::BAD_REQUEST,
+            ApiError::InvalidDateRange
+            | ApiError::InvalidCallSign
+            | ApiError::MissingMmsiOrCallSign => StatusCode::BAD_REQUEST,
             ApiError::InternalServerError => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
