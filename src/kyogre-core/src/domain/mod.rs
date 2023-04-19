@@ -1,4 +1,5 @@
 mod ais;
+mod ais_vms;
 mod catch_location;
 mod date_range;
 mod delivery_points;
@@ -20,6 +21,7 @@ pub struct Coordinates {
 pub static NUM_CATCH_LOCATIONS: usize = 2113;
 
 pub use ais::*;
+pub use ais_vms::*;
 pub use catch_location::*;
 pub use date_range::*;
 pub use delivery_points::*;

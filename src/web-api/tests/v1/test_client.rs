@@ -3,7 +3,9 @@ use std::{fmt::Write, string::ToString};
 use fiskeridir_rs::CallSign;
 use kyogre_core::{ActiveHaulsFilter, HaulId, Mmsi};
 use reqwest::{Client, Response};
-use web_api::routes::v1::{ais::AisTrackParameters, haul::HaulsParams, vms::VmsParameters};
+use web_api::routes::v1::{
+    ais::AisTrackParameters, ais_vms::AisVmsParameters, haul::HaulsParams, vms::VmsParameters,
+};
 
 #[derive(Debug, Clone)]
 pub struct ApiClient {
@@ -37,6 +39,28 @@ impl ApiClient {
 
         self.get(format!("ais_track/{}", mmsi.0), url_params.as_slice())
             .await
+    }
+
+    pub async fn get_ais_vms_positions(&self, params: AisVmsParameters) -> Response {
+        let mut url_params = Vec::new();
+
+        if let Some(s) = params.mmsi {
+            url_params.push((("mmsi".to_owned()), s.0.to_string()));
+        }
+
+        if let Some(s) = params.call_sign {
+            url_params.push((("callSign".to_owned()), s.into_inner()));
+        }
+
+        if let Some(s) = params.start {
+            url_params.push((("start".to_owned()), s.to_string()));
+        }
+
+        if let Some(s) = params.end {
+            url_params.push((("end".to_owned()), s.to_string()));
+        }
+
+        self.get("ais_vms_positions", url_params.as_slice()).await
     }
 
     pub async fn get_species(&self) -> Response {

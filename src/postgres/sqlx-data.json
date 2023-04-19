@@ -1376,6 +1376,31 @@
     },
     "query": "\nINSERT INTO\n    ers_tra (\n        message_id,\n        message_number,\n        message_timestamp,\n        ers_message_type_id,\n        message_year,\n        relevant_year,\n        sequence_number,\n        reloading_timestamp,\n        fiskeridir_vessel_id,\n        vessel_building_year,\n        vessel_call_sign,\n        vessel_call_sign_ers,\n        vessel_engine_building_year,\n        vessel_engine_power,\n        vessel_gross_tonnage_1969,\n        vessel_gross_tonnage_other,\n        vessel_county,\n        vessel_county_code,\n        vessel_greatest_length,\n        vessel_identification,\n        vessel_length,\n        vessel_length_group,\n        vessel_length_group_code,\n        vessel_material_code,\n        vessel_municipality,\n        vessel_municipality_code,\n        vessel_name,\n        vessel_name_ers,\n        vessel_nationality_code,\n        fiskeridir_vessel_nationality_group_id,\n        vessel_rebuilding_year,\n        vessel_registration_id,\n        vessel_registration_id_ers,\n        vessel_valid_until,\n        vessel_valid_from,\n        vessel_width\n    )\nSELECT\n    *\nFROM\n    UNNEST(\n        $1::BIGINT[],\n        $2::INT[],\n        $3::timestamptz[],\n        $4::VARCHAR[],\n        $5::INT[],\n        $6::INT[],\n        $7::INT[],\n        $8::timestamptz[],\n        $9::INT[],\n        $10::INT[],\n        $11::VARCHAR[],\n        $12::VARCHAR[],\n        $13::INT[],\n        $14::INT[],\n        $15::INT[],\n        $16::INT[],\n        $17::VARCHAR[],\n        $18::INT[],\n        $19::DECIMAL[],\n        $20::VARCHAR[],\n        $21::DECIMAL[],\n        $22::VARCHAR[],\n        $23::INT[],\n        $24::VARCHAR[],\n        $25::VARCHAR[],\n        $26::INT[],\n        $27::VARCHAR[],\n        $28::VARCHAR[],\n        $29::VARCHAR[],\n        $30::INT[],\n        $31::INT[],\n        $32::VARCHAR[],\n        $33::VARCHAR[],\n        $34::date[],\n        $35::date[],\n        $36::DECIMAL[]\n    )\nON CONFLICT (message_id) DO NOTHING\n            "
   },
+  "78cc7c8e345cdce9b3b7ad5e46c963fc044adc0abb2e25da682dcf95e4f24261": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "VarcharArray",
+          "Int4Array",
+          "Int4Array",
+          "NumericArray",
+          "NumericArray",
+          "Int4Array",
+          "VarcharArray",
+          "VarcharArray",
+          "VarcharArray",
+          "NumericArray",
+          "TimestamptzArray",
+          "NumericArray",
+          "VarcharArray",
+          "VarcharArray"
+        ]
+      }
+    },
+    "query": "\nINSERT INTO\n    vms_positions (\n        call_sign,\n        course,\n        gross_tonnage,\n        latitude,\n        longitude,\n        message_id,\n        message_type,\n        message_type_code,\n        registration_id,\n        speed,\n        \"timestamp\",\n        vessel_length,\n        vessel_name,\n        vessel_type\n    )\nSELECT\n    *\nFROM\n    UNNEST(\n        $1::VARCHAR[],\n        $2::INT[],\n        $3::INT[],\n        $4::DECIMAL[],\n        $5::DECIMAL[],\n        $6::INT[],\n        $7::VARCHAR[],\n        $8::VARCHAR[],\n        $9::VARCHAR[],\n        $10::DECIMAL[],\n        $11::timestamptz[],\n        $12::DECIMAL[],\n        $13::VARCHAR[],\n        $14::VARCHAR[]\n    )\nON CONFLICT (message_id, call_sign) DO NOTHING\n            "
+  },
   "7995adf5b81e38ca6af97cfc294b62272f4797a739ba668765b2598d1b848ba7": {
     "describe": {
       "columns": [],
@@ -1768,31 +1793,6 @@
       }
     },
     "query": "\nSELECT\n    h.haul_id AS \"haul_id!\",\n    h.ers_activity_id AS \"ers_activity_id!\",\n    h.duration AS \"duration!\",\n    h.haul_distance AS haul_distance,\n    h.catch_location_start AS catch_location_start,\n    h.ocean_depth_end AS \"ocean_depth_end!\",\n    h.ocean_depth_start AS \"ocean_depth_start!\",\n    h.quota_type_id AS \"quota_type_id!\",\n    h.start_latitude AS \"start_latitude!\",\n    h.start_longitude AS \"start_longitude!\",\n    LOWER(h.period) AS \"start_timestamp!\",\n    UPPER(h.period) AS \"stop_timestamp!\",\n    h.stop_latitude AS \"stop_latitude!\",\n    h.stop_longitude AS \"stop_longitude!\",\n    h.gear_id AS \"gear_id!: Gear\",\n    h.gear_group_id AS \"gear_group_id!: GearGroup\",\n    h.fiskeridir_vessel_id AS fiskeridir_vessel_id,\n    h.vessel_call_sign AS vessel_call_sign,\n    h.vessel_call_sign_ers AS \"vessel_call_sign_ers!\",\n    h.vessel_length AS \"vessel_length!\",\n    h.vessel_length_group AS \"vessel_length_group!: VesselLengthGroup\",\n    h.vessel_name AS vessel_name,\n    h.vessel_name_ers AS vessel_name_ers,\n    h.catches::TEXT AS \"catches!\",\n    h.whale_catches::TEXT AS \"whale_catches!\"\nFROM\n    hauls_view h\nWHERE\n    (\n        $1::tstzrange[] IS NULL\n        OR h.period && ANY ($1)\n    )\n    AND (\n        $2::VARCHAR[] IS NULL\n        OR h.catch_location_start = ANY ($2)\n    )\n    AND (\n        $3::INT[] IS NULL\n        OR h.gear_group_id = ANY ($3)\n    )\n    AND (\n        $4::INT[] IS NULL\n        OR h.species_group_ids && $4\n    )\n    AND (\n        $5::numrange[] IS NULL\n        OR h.vessel_length <@ ANY ($5)\n    )\n    AND (\n        $6::BIGINT[] IS NULL\n        OR fiskeridir_vessel_id = ANY ($6)\n    )\n            "
-  },
-  "9b4f2b3b02b0055124ddde8a9dc9e763b156d67a3babc87e21dcb7f5e1b7135b": {
-    "describe": {
-      "columns": [],
-      "nullable": [],
-      "parameters": {
-        "Left": [
-          "VarcharArray",
-          "Int4Array",
-          "Int4Array",
-          "NumericArray",
-          "NumericArray",
-          "Int4Array",
-          "VarcharArray",
-          "VarcharArray",
-          "VarcharArray",
-          "NumericArray",
-          "TimestamptzArray",
-          "NumericArray",
-          "VarcharArray",
-          "VarcharArray"
-        ]
-      }
-    },
-    "query": "\nINSERT INTO\n    vms_positions (\n        call_sign,\n        course,\n        gross_tonnage,\n        latitude,\n        longitude,\n        message_id,\n        message_type,\n        message_type_code,\n        registration_id,\n        speed,\n        \"timestamp\",\n        vessel_length,\n        vessel_name,\n        vessel_type\n    )\nSELECT\n    *\nFROM\n    UNNEST(\n        $1::VARCHAR[],\n        $2::INT[],\n        $3::INT[],\n        $4::DECIMAL[],\n        $5::DECIMAL[],\n        $6::INT[],\n        $7::VARCHAR[],\n        $8::VARCHAR[],\n        $9::VARCHAR[],\n        $10::DECIMAL[],\n        $11::timestamptz[],\n        $12::DECIMAL[],\n        $13::VARCHAR[],\n        $14::VARCHAR[]\n    )\nON CONFLICT (message_id) DO NOTHING\n            "
   },
   "9cd1c5dcb3702c1f36ba3a3a869ad3a36010357f2ddf7576635224b2c2bae6c6": {
     "describe": {
@@ -2513,6 +2513,26 @@
     },
     "query": "\nINSERT INTO\n    economic_zones (economic_zone_id, \"name\")\nSELECT\n    *\nFROM\n    UNNEST($1::VARCHAR[], $2::VARCHAR[])\nON CONFLICT (economic_zone_id) DO NOTHING\n            "
   },
+  "ca3756b080b784f708bf2b7d8f6bdffb2566f15aee96c69b40bd04a29cd2fa32": {
+    "describe": {
+      "columns": [
+        {
+          "name": "add_vms_position_partitions",
+          "ordinal": 0,
+          "type_info": "Void"
+        }
+      ],
+      "nullable": [
+        null
+      ],
+      "parameters": {
+        "Left": [
+          "TextArray"
+        ]
+      }
+    },
+    "query": "\nSELECT\n    add_vms_position_partitions ($1)\n            "
+  },
   "cc3ffc88f78f6c469c67a3f8e28456c14cf5da9f51cf791dac92dc2d1386df78": {
     "describe": {
       "columns": [
@@ -2681,6 +2701,77 @@
       }
     },
     "query": "\nINSERT INTO\n    ais_vessels (mmsi)\nVALUES\n    ($1)\nON CONFLICT (mmsi) DO NOTHING\n            "
+  },
+  "e9aee1709f4c227f01ae4d9eda3e7e5028655302b9c7d0ec7db2d9937ad44436": {
+    "describe": {
+      "columns": [
+        {
+          "name": "latitude!",
+          "ordinal": 0,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "longitude!",
+          "ordinal": 1,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "timestamp!",
+          "ordinal": 2,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "course_over_ground",
+          "ordinal": 3,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "speed",
+          "ordinal": 4,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "navigational_status",
+          "ordinal": 5,
+          "type_info": "Int4"
+        },
+        {
+          "name": "rate_of_turn",
+          "ordinal": 6,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "true_heading",
+          "ordinal": 7,
+          "type_info": "Int4"
+        },
+        {
+          "name": "distance_to_shore",
+          "ordinal": 8,
+          "type_info": "Numeric"
+        }
+      ],
+      "nullable": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "parameters": {
+        "Left": [
+          "Int4",
+          "Text",
+          "Timestamptz",
+          "Timestamptz"
+        ]
+      }
+    },
+    "query": "\nSELECT\n    latitude AS \"latitude!\",\n    longitude AS \"longitude!\",\n    \"timestamp\" AS \"timestamp!\",\n    course_over_ground,\n    speed,\n    navigational_status,\n    rate_of_turn,\n    true_heading,\n    distance_to_shore\nFROM\n    (\n        SELECT\n            latitude,\n            longitude,\n            \"timestamp\",\n            course_over_ground,\n            speed_over_ground AS speed,\n            navigation_status_id AS navigational_status,\n            rate_of_turn,\n            true_heading,\n            distance_to_shore\n        FROM\n            ais_positions a\n        WHERE\n            $1::INT IS NOT NULL\n            AND mmsi = $1\n        UNION ALL\n        SELECT\n            latitude,\n            longitude,\n            \"timestamp\",\n            course AS course_over_ground,\n            speed,\n            NULL AS navigational_status,\n            NULL AS rate_of_turn,\n            NULL AS true_heading,\n            NULL AS distance_to_shore\n        FROM\n            vms_positions v\n        WHERE\n            $2::TEXT IS NOT NULL\n            AND call_sign = $2\n    ) q\nWHERE\n    \"timestamp\" BETWEEN $3 AND $4\nORDER BY\n    \"timestamp\" ASC\n            "
   },
   "f1e3f2f6719a6474e6533ef9b3161bbd25757e7aa84c8910aeefc0d40c5af42e": {
     "describe": {
