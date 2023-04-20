@@ -1,10 +1,11 @@
-use std::{collections::HashMap, ops::Bound};
+use std::ops::Bound;
 
 use crate::{
     error::ApiError,
     response::Response,
     routes::utils::{
-        deserialize_range_list, deserialize_string_list, DateTimeUtc, GearGroupId, SpeciesGroupId,
+        self, deserialize_range_list, deserialize_string_list, DateTimeUtc, GearGroupId, Month,
+        SpeciesGroupId,
     },
     to_streaming_response, Database,
 };
@@ -46,6 +47,29 @@ pub struct HaulsParams {
     pub fiskeridir_vessel_ids: Option<Vec<FiskeridirVesselId>>,
 }
 
+#[derive(Default, Debug, Clone, Deserialize, IntoParams)]
+#[serde(rename_all = "camelCase")]
+pub struct HaulsMatrixParams {
+    #[param(value_type = Option<String>, example = "24278,24280")]
+    #[serde(deserialize_with = "deserialize_string_list", default)]
+    pub months: Option<Vec<Month>>,
+    #[param(value_type = Option<String>, example = "05-24,15-10")]
+    #[serde(deserialize_with = "deserialize_string_list", default)]
+    pub catch_locations: Option<Vec<CatchLocationId>>,
+    #[param(value_type = Option<String>, example = "2,5")]
+    #[serde(deserialize_with = "deserialize_string_list", default)]
+    pub gear_group_ids: Option<Vec<GearGroupId>>,
+    #[param(value_type = Option<String>, example = "201,302")]
+    #[serde(deserialize_with = "deserialize_string_list", default)]
+    pub species_group_ids: Option<Vec<SpeciesGroupId>>,
+    #[param(value_type = Option<String>, example = "1,3")]
+    #[serde(deserialize_with = "deserialize_string_list", default)]
+    pub vessel_length_groups: Option<Vec<utils::VesselLengthGroup>>,
+    #[param(value_type = Option<String>, example = "2000013801,2001015304")]
+    #[serde(deserialize_with = "deserialize_string_list", default)]
+    pub fiskeridir_vessel_ids: Option<Vec<FiskeridirVesselId>>,
+}
+
 #[utoipa::path(
     get,
     path = "/hauls",
@@ -79,34 +103,9 @@ pub async fn hauls<T: Database + 'static>(
 
 #[utoipa::path(
     get,
-    path = "/hauls_grid",
-    params(HaulsParams),
-    responses(
-        (status = 200, description = "an aggregated grid view of haul living weights", body = HaulsGrid),
-        (status = 400, description = "the provided parameters were invalid"),
-        (status = 500, description = "an internal error occured", body = ErrorResponse),
-    )
-)]
-#[tracing::instrument(skip(db))]
-pub async fn hauls_grid<T: Database + 'static>(
-    db: web::Data<T>,
-    params: web::Query<HaulsParams>,
-) -> Result<Response<HaulsGrid>, ApiError> {
-    let query = params.into_inner().into();
-
-    let grid = db.hauls_grid(query).await.map_err(|e| {
-        event!(Level::ERROR, "failed to retrieve hauls grid: {:?}", e);
-        ApiError::InternalServerError
-    })?;
-
-    Ok(Response::new(HaulsGrid::from(grid)))
-}
-
-#[utoipa::path(
-    get,
     path = "/hauls_matrix/{active_filter}",
     params(
-        HaulsParams,
+        HaulsMatrixParams,
         ("active_filter" = ActiveHaulsFilter, Path, description = "What feature to group by on the y-axis of the output matrices"),
     ),
     responses(
@@ -118,7 +117,7 @@ pub async fn hauls_grid<T: Database + 'static>(
 #[tracing::instrument(skip(db))]
 pub async fn hauls_matrix<T: Database + 'static>(
     db: web::Data<T>,
-    params: web::Query<HaulsParams>,
+    params: web::Query<HaulsMatrixParams>,
     active_filter: Path<ActiveHaulsFilter>,
 ) -> Result<Response<HaulsMatrix>, ApiError> {
     let query = matrix_params_to_query(params.into_inner(), active_filter.into_inner());
@@ -178,10 +177,10 @@ pub struct HaulCatch {
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct HaulsMatrix {
-    pub dates: Vec<i32>,
-    pub length_group: Vec<i32>,
-    pub gear_group: Vec<i32>,
-    pub species_group: Vec<i32>,
+    pub dates: Vec<u64>,
+    pub length_group: Vec<u64>,
+    pub gear_group: Vec<u64>,
+    pub species_group: Vec<u64>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
@@ -197,17 +196,6 @@ pub struct WhaleCatch {
     pub grenade_number: String,
     pub individual_number: Option<i32>,
     pub length: Option<i32>,
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-pub struct HaulsGrid {
-    pub grid: HashMap<CatchLocationId, i64>,
-    pub max_weight: i64,
-    pub min_weight: i64,
-    pub weight_by_gear_group: HashMap<GearGroup, i64>,
-    pub weight_by_species_group: HashMap<i32, i64>,
-    pub weight_by_vessel_length_group: HashMap<VesselLengthGroup, i64>,
 }
 
 impl From<kyogre_core::HaulsMatrix> for HaulsMatrix {
@@ -278,19 +266,6 @@ impl From<kyogre_core::WhaleCatch> for WhaleCatch {
     }
 }
 
-impl From<kyogre_core::HaulsGrid> for HaulsGrid {
-    fn from(v: kyogre_core::HaulsGrid) -> Self {
-        HaulsGrid {
-            grid: v.grid,
-            max_weight: v.max_weight,
-            min_weight: v.min_weight,
-            weight_by_gear_group: v.weight_by_gear_group,
-            weight_by_species_group: v.weight_by_species_group,
-            weight_by_vessel_length_group: v.weight_by_vessel_length_group,
-        }
-    }
-}
-
 fn utc_from_naive(naive_date: NaiveDate) -> DateTime<Utc> {
     DateTime::<Utc>::from_utc(naive_date.and_hms_opt(0, 0, 0).unwrap(), Utc)
 }
@@ -348,46 +323,13 @@ impl From<HaulsParams> for HaulsQuery {
 }
 
 fn matrix_params_to_query(
-    params: HaulsParams,
+    params: HaulsMatrixParams,
     active_filter: ActiveHaulsFilter,
 ) -> HaulsMatrixQuery {
-    let ranges = params.months.map(|mut months| {
-        let mut vec = Vec::with_capacity(months.len());
-
-        months.sort();
-
-        let mut start_naive = None;
-        let mut end_naive = None;
-        for m in months {
-            if let (Some(start), Some(end)) = (start_naive, end_naive) {
-                let naive = NaiveDate::from_ymd_opt(m.0.year(), m.0.month(), 1).unwrap();
-                if end != naive {
-                    vec.push(Range {
-                        start: Bound::Included(utc_from_naive(start)),
-                        end: Bound::Excluded(utc_from_naive(end)),
-                    });
-                    start_naive = Some(naive);
-                }
-                end_naive = Some(naive.checked_add_months(Months::new(1)).unwrap());
-            } else {
-                let start = NaiveDate::from_ymd_opt(m.0.year(), m.0.month(), 1).unwrap();
-                end_naive = Some(start.checked_add_months(Months::new(1)).unwrap());
-                start_naive = Some(start);
-            }
-        }
-
-        if let (Some(start), Some(end)) = (start_naive, end_naive) {
-            vec.push(Range {
-                start: Bound::Included(utc_from_naive(start)),
-                end: Bound::Excluded(utc_from_naive(end)),
-            });
-        }
-
-        vec
-    });
-
     HaulsMatrixQuery {
-        ranges,
+        months: params
+            .months
+            .map(|ms| ms.into_iter().map(|m| m.0).collect()),
         catch_locations: params.catch_locations,
         gear_group_ids: params
             .gear_group_ids
@@ -395,7 +337,9 @@ fn matrix_params_to_query(
         species_group_ids: params
             .species_group_ids
             .map(|gs| gs.into_iter().map(|g| g.0).collect()),
-        vessel_length_ranges: params.vessel_length_ranges,
+        vessel_length_groups: params
+            .vessel_length_groups
+            .map(|lgs| lgs.into_iter().map(|l| l.0).collect()),
         active_filter,
         vessel_ids: params.fiskeridir_vessel_ids,
     }

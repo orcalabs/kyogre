@@ -109,10 +109,6 @@ where
                     )
                     .route("/hauls", web::get().to(routes::v1::haul::hauls::<T>))
                     .route(
-                        "/hauls_grid",
-                        web::get().to(routes::v1::haul::hauls_grid::<T>),
-                    )
-                    .route(
                         "/hauls_matrix/{active_filter}",
                         web::get().to(routes::v1::haul::hauls_matrix::<T>),
                     ),

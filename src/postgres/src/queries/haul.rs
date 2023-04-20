@@ -1,7 +1,7 @@
 use super::bound_float_to_decimal;
 use crate::{
     error::{HaulMatrixIndexError, PostgresError},
-    models::{Haul, HaulsGrid},
+    models::Haul,
     PostgresAdapter,
 };
 use bigdecimal::BigDecimal;
@@ -15,11 +15,11 @@ use kyogre_core::{
     date_feature_matrix_size, ActiveHaulsFilter, HaulsMatrixQuery, HaulsQuery,
     ERS_OLDEST_DATA_MONTHS, NUM_CATCH_LOCATIONS,
 };
-use sqlx::postgres::types::PgRange;
+use sqlx::{postgres::types::PgRange, Pool, Postgres};
 use strum::EnumCount;
 
 struct MatrixQueryOutput {
-    sum_living: i32,
+    sum_living: i64,
     x_index: i32,
     y_index: i32,
 }
@@ -81,11 +81,11 @@ impl HaulMatrixFeatures {
 
 impl PostgresAdapter {
     pub(crate) async fn hauls_matrix_impl(
-        &self,
-        args: &HaulsArgs,
+        pool: Pool<Postgres>,
+        args: HaulsMatrixArgs,
         active_filter: ActiveHaulsFilter,
         x_feature: HaulMatrixFeatures,
-    ) -> Result<Vec<i32>, PostgresError> {
+    ) -> Result<Vec<u64>, PostgresError> {
         let data: Vec<MatrixQueryOutput> = sqlx::query_as!(
             MatrixQueryOutput,
             r#"
@@ -103,33 +103,50 @@ SELECT
         WHEN $2 = 2 THEN h.species_group_id
         WHEN $2 = 3 THEN h.vessel_length_group
     END AS "y_index!",
-    COALESCE(SUM(living_weight), 0)::INT AS "sum_living!"
+    COALESCE(SUM(living_weight::BIGINT), 0)::BIGINT AS "sum_living!"
 FROM
     hauls_matrix_view h
 WHERE
     (
-        $1::INT != 4
-        OR h.catch_location_start_matrix_index IS NOT NULL
+        $1 = 0
+        OR (
+            $1 = 4
+            AND $2 = 0
+        )
+        OR $3::INT[] IS NULL
+        OR h.matrix_month_bucket = ANY ($3)
     )
     AND (
-        $3::tstzrange[] IS NULL
-        OR h.period && ANY ($3)
-    )
-    AND (
-        $4::VARCHAR[] IS NULL
+        $1 = 4
+        OR $4::VARCHAR[] IS NULL
         OR h.catch_location_start = ANY ($4)
     )
     AND (
-        $5::INT[] IS NULL
+        $1 = 1
+        OR (
+            $1 = 4
+            AND $2 = 1
+        )
+        OR $5::INT[] IS NULL
         OR h.gear_group_id = ANY ($5)
     )
     AND (
-        $6::INT[] IS NULL
+        $1 = 2
+        OR (
+            $1 = 4
+            AND $2 = 2
+        )
+        OR $6::INT[] IS NULL
         OR h.species_group_id = ANY ($6)
     )
     AND (
-        $7::numrange[] IS NULL
-        OR h.vessel_length <@ ANY ($7)
+        $1 = 3
+        OR (
+            $1 = 4
+            AND $2 = 3
+        )
+        OR $7::INT[] IS NULL
+        OR h.vessel_length_group = ANY ($7)
     )
     AND (
         $8::BIGINT[] IS NULL
@@ -141,14 +158,14 @@ GROUP BY
             "#,
             x_feature as i32,
             active_filter as i32,
-            args.ranges,
+            args.months as _,
             args.catch_locations as _,
             args.gear_group_ids as _,
             args.species_group_ids as _,
-            args.vessel_length_ranges as _,
+            args.vessel_length_groups as _,
             args.fiskeridir_vessel_ids as _,
         )
-        .fetch_all(&self.pool)
+        .fetch_all(&pool)
         .await
         .into_report()
         .change_context(PostgresError::Query)?;
@@ -232,168 +249,6 @@ WHERE
 
         Ok(stream)
     }
-
-    pub(crate) async fn hauls_grid_impl(
-        &self,
-        query: HaulsQuery,
-    ) -> Result<HaulsGrid, PostgresError> {
-        let args = HaulsArgs::try_from(query)?;
-
-        sqlx::query_as!(
-            HaulsGrid,
-            r#"
-WITH
-    hauls AS (
-        SELECT
-            catch_location_start,
-            total_living_weight,
-            species_group_ids,
-            gear_group_id,
-            vessel_length,
-            vessel_length_group,
-            fiskeridir_vessel_id,
-            catches
-        FROM
-            hauls_view
-        WHERE
-            catch_location_start IS NOT NULL
-            AND (
-                $1::tstzrange[] IS NULL
-                OR period && ANY ($1)
-            )
-            AND (
-                $2::VARCHAR[] IS NULL
-                OR catch_location_start = ANY ($2)
-            )
-            AND (
-                $3::BIGINT[] IS NULL
-                OR fiskeridir_vessel_id = ANY ($3)
-            )
-    )
-SELECT
-    COALESCE(q1.grid::TEXT, '{}') AS "grid!",
-    COALESCE(q1.max_weight, 0)::BIGINT AS "max_weight!",
-    COALESCE(q1.min_weight, 0)::BIGINT AS "min_weight!",
-    COALESCE(q2.weight_by_gear_group::TEXT, '{}') AS "weight_by_gear_group!",
-    COALESCE(q3.weight_by_species_group::TEXT, '{}') AS "weight_by_species_group!",
-    COALESCE(q4.weight_by_vessel_length_group::TEXT, '{}') AS "weight_by_vessel_length_group!"
-FROM
-    (
-        SELECT
-            JSONB_OBJECT_AGG(h.catch_location_start, h.total_living_weight) AS grid,
-            MIN(h.total_living_weight) AS min_weight,
-            MAX(h.total_living_weight) AS max_weight
-        FROM
-            (
-                SELECT
-                    catch_location_start,
-                    COALESCE(SUM(total_living_weight), 0) AS total_living_weight
-                FROM
-                    hauls
-                WHERE
-                    (
-                        $4::INT[] IS NULL
-                        OR gear_group_id = ANY ($4)
-                    )
-                    AND (
-                        $5::INT[] IS NULL
-                        OR species_group_ids && $5
-                    )
-                    AND (
-                        $6::numrange[] IS NULL
-                        OR vessel_length <@ ANY ($6::numrange[])
-                    )
-                GROUP BY
-                    catch_location_start
-            ) h
-    ) q1,
-    (
-        SELECT
-            JSONB_OBJECT_AGG(h.gear_group_id, h.total_living_weight) AS weight_by_gear_group
-        FROM
-            (
-                SELECT
-                    gear_group_id,
-                    COALESCE(SUM(total_living_weight), 0) AS total_living_weight
-                FROM
-                    hauls
-                WHERE
-                    (
-                        $5::INT[] IS NULL
-                        OR species_group_ids && $5
-                    )
-                    AND (
-                        $6::numrange[] IS NULL
-                        OR vessel_length <@ ANY ($6::numrange[])
-                    )
-                GROUP BY
-                    gear_group_id
-            ) h
-    ) q2,
-    (
-        SELECT
-            JSONB_OBJECT_AGG(h2.species_group_id, h2.total_living_weight) AS weight_by_species_group
-        FROM
-            (
-                SELECT
-                    h1.catch['species_group_id']::INT AS species_group_id,
-                    COALESCE(SUM(h1.catch['living_weight']::INT), 0) AS total_living_weight
-                FROM
-                    (
-                        SELECT
-                            JSONB_ARRAY_ELEMENTS(catches) catch
-                        FROM
-                            hauls
-                        WHERE
-                            (
-                                $4::INT[] IS NULL
-                                OR gear_group_id = ANY ($4)
-                            )
-                            AND (
-                                $6::numrange[] IS NULL
-                                OR vessel_length <@ ANY ($6::numrange[])
-                            )
-                    ) h1
-                GROUP BY
-                    h1.catch['species_group_id']
-            ) h2
-    ) q3,
-    (
-        SELECT
-            JSONB_OBJECT_AGG(h.vessel_length_group, h.total_living_weight) AS weight_by_vessel_length_group
-        FROM
-            (
-                SELECT
-                    vessel_length_group,
-                    COALESCE(SUM(total_living_weight), 0) AS total_living_weight
-                FROM
-                    hauls
-                WHERE
-                    (
-                        $4::INT[] IS NULL
-                        OR gear_group_id = ANY ($4)
-                    )
-                    AND (
-                        $5::INT[] IS NULL
-                        OR species_group_ids && $5
-                    )
-                GROUP BY
-                    vessel_length_group
-            ) h
-    ) q4
-            "#,
-            args.ranges,
-            args.catch_locations as _,
-            args.fiskeridir_vessel_ids as _,
-            args.gear_group_ids as _,
-            args.species_group_ids as _,
-            args.vessel_length_ranges as _,
-        )
-        .fetch_one(&self.pool)
-        .await
-        .into_report()
-        .change_context(PostgresError::Query)
-    }
 }
 
 pub struct HaulsArgs {
@@ -450,20 +305,24 @@ impl TryFrom<HaulsQuery> for HaulsArgs {
     }
 }
 
-impl TryFrom<HaulsMatrixQuery> for HaulsArgs {
+#[derive(Debug, Clone)]
+pub struct HaulsMatrixArgs {
+    pub months: Option<Vec<i32>>,
+    pub catch_locations: Option<Vec<String>>,
+    pub gear_group_ids: Option<Vec<i32>>,
+    pub species_group_ids: Option<Vec<i32>>,
+    pub vessel_length_groups: Option<Vec<i32>>,
+    pub fiskeridir_vessel_ids: Option<Vec<i64>>,
+}
+
+impl TryFrom<HaulsMatrixQuery> for HaulsMatrixArgs {
     type Error = Report<PostgresError>;
 
     fn try_from(v: HaulsMatrixQuery) -> std::result::Result<Self, Self::Error> {
-        Ok(HaulsArgs {
-            ranges: v.ranges.map(|ranges| {
-                ranges
-                    .into_iter()
-                    .map(|m| PgRange {
-                        start: m.start,
-                        end: m.end,
-                    })
-                    .collect()
-            }),
+        Ok(HaulsMatrixArgs {
+            months: v
+                .months
+                .map(|months| months.into_iter().map(|m| m as i32).collect()),
             catch_locations: v
                 .catch_locations
                 .map(|cls| cls.into_iter().map(|c| c.into_inner()).collect()),
@@ -473,21 +332,9 @@ impl TryFrom<HaulsMatrixQuery> for HaulsArgs {
             species_group_ids: v
                 .species_group_ids
                 .map(|gs| gs.into_iter().map(|g| g as i32).collect()),
-            vessel_length_ranges: v
-                .vessel_length_ranges
-                .map(|ranges| {
-                    ranges
-                        .into_iter()
-                        .map(|r| {
-                            Ok(PgRange {
-                                start: bound_float_to_decimal(r.start)?,
-                                end: bound_float_to_decimal(r.end)?,
-                            })
-                        })
-                        .collect::<Result<Vec<_>, _>>()
-                })
-                .transpose()
-                .change_context(PostgresError::DataConversion)?,
+            vessel_length_groups: v
+                .vessel_length_groups
+                .map(|groups| groups.into_iter().map(|g| g as i32).collect()),
             fiskeridir_vessel_ids: v
                 .vessel_ids
                 .map(|ids| ids.into_iter().map(|i| i.0).collect()),
@@ -499,11 +346,11 @@ fn calculate_sum_area_table(
     x_feature: HaulMatrixFeatures,
     y_feature: HaulMatrixFeatures,
     data: Vec<MatrixQueryOutput>,
-) -> Result<Vec<i32>, PostgresError> {
+) -> Result<Vec<u64>, PostgresError> {
     let height = y_feature.size();
     let width = x_feature.size();
 
-    let mut matrix = vec![0; width * height];
+    let mut matrix: Vec<u64> = vec![0; width * height];
 
     for d in data {
         let x = x_feature
@@ -513,7 +360,7 @@ fn calculate_sum_area_table(
             .convert_from_row(d.y_index)
             .change_context_lazy(|| PostgresError::DataConversion)?;
 
-        matrix[(y * width) + x] = d.sum_living;
+        matrix[(y * width) + x] = d.sum_living as u64;
     }
 
     compute_sum_area_table(&mut matrix, width);
@@ -521,7 +368,7 @@ fn calculate_sum_area_table(
     Ok(matrix)
 }
 
-fn compute_sum_area_table(input: &mut [i32], width: usize) {
+fn compute_sum_area_table(input: &mut [u64], width: usize) {
     let mut i = 0;
 
     while i < input.len() {

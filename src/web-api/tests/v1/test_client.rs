@@ -4,7 +4,10 @@ use fiskeridir_rs::CallSign;
 use kyogre_core::{ActiveHaulsFilter, HaulId, Mmsi};
 use reqwest::{Client, Response};
 use web_api::routes::v1::{
-    ais::AisTrackParameters, ais_vms::AisVmsParameters, haul::HaulsParams, vms::VmsParameters,
+    ais::AisTrackParameters,
+    ais_vms::AisVmsParameters,
+    haul::{HaulsMatrixParams, HaulsParams},
+    vms::VmsParameters,
 };
 
 #[derive(Debug, Clone)]
@@ -82,36 +85,6 @@ impl ApiClient {
         self.get("vessels", &[]).await
     }
     pub async fn get_hauls(&self, params: HaulsParams) -> Response {
-        self.get_hauls_impl("hauls", params).await
-    }
-    pub async fn get_hauls_grid(&self, params: HaulsParams) -> Response {
-        self.get_hauls_impl("hauls_grid", params).await
-    }
-    pub async fn get_hauls_matrix(
-        &self,
-        params: HaulsParams,
-        active_filter: ActiveHaulsFilter,
-    ) -> Response {
-        self.get_hauls_impl(&format!("hauls_matrix/{}", active_filter.name()), params)
-            .await
-    }
-    pub async fn get_trip_of_haul(&self, haul_id: &HaulId) -> Response {
-        self.get(format!("trip_of_haul/{}", haul_id.0), &[]).await
-    }
-    pub async fn get_vms_positions(&self, call_sign: &CallSign, params: VmsParameters) -> Response {
-        let mut parameters = Vec::new();
-        if let Some(start) = params.start {
-            parameters.push(("start".to_string(), start.to_string()))
-        }
-
-        if let Some(end) = params.end {
-            parameters.push(("end".to_string(), end.to_string()))
-        }
-
-        self.get(format!("vms/{}", call_sign.as_ref()), &parameters)
-            .await
-    }
-    pub async fn get_hauls_impl(&self, url: &str, params: HaulsParams) -> Response {
         let mut parameters = Vec::new();
 
         if let Some(months) = params.months {
@@ -153,7 +126,78 @@ impl ApiClient {
             ))
         }
 
-        self.get(url, &parameters).await
+        self.get("hauls", &parameters).await
+    }
+    pub async fn get_hauls_matrix(
+        &self,
+        params: HaulsMatrixParams,
+        active_filter: ActiveHaulsFilter,
+    ) -> Response {
+        let mut parameters = Vec::new();
+
+        if let Some(months) = params.months {
+            parameters.push((
+                "months".to_string(),
+                create_comma_separated_list(months.into_iter().map(|m| m.0).collect()),
+            ))
+        }
+
+        if let Some(locations) = params.catch_locations {
+            parameters.push((
+                "catchLocations".to_string(),
+                create_comma_separated_list(locations),
+            ))
+        }
+
+        if let Some(gear) = params.gear_group_ids {
+            parameters.push((
+                "gearGroupIds".to_string(),
+                create_comma_separated_list(gear.into_iter().map(|g| g.0 as u8).collect()),
+            ))
+        }
+
+        if let Some(species) = params.species_group_ids {
+            parameters.push((
+                "speciesGroupIds".to_string(),
+                create_comma_separated_list(species.into_iter().map(|s| s.0).collect()),
+            ))
+        }
+
+        if let Some(groups) = params.vessel_length_groups {
+            parameters.push((
+                "vesselLengthGroups".to_string(),
+                create_comma_separated_list(groups.into_iter().map(|g| g.0 as u8).collect()),
+            ))
+        }
+
+        if let Some(id) = params.fiskeridir_vessel_ids {
+            parameters.push((
+                "fiskeridirVesselIds".to_string(),
+                create_comma_separated_list(id.into_iter().map(|i| i.0).collect()),
+            ))
+        }
+
+        self.get(
+            &format!("hauls_matrix/{}", active_filter.name()),
+            &parameters,
+        )
+        .await
+    }
+    pub async fn get_trip_of_haul(&self, haul_id: &HaulId) -> Response {
+        self.get(format!("trip_of_haul/{}", haul_id.0), &[]).await
+    }
+    pub async fn get_vms_positions(&self, call_sign: &CallSign, params: VmsParameters) -> Response {
+        let mut parameters = Vec::new();
+        if let Some(start) = params.start {
+            parameters.push(("start".to_string(), start.to_string()))
+        }
+
+        if let Some(end) = params.end {
+            parameters.push(("end".to_string(), end.to_string()))
+        }
+
+        self.get(format!("vms/{}", call_sign.as_ref()), &parameters)
+            .await
     }
 }
 

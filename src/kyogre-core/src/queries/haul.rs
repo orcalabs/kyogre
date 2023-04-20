@@ -1,7 +1,7 @@
 use crate::{CatchLocationId, FiskeridirVesselId, Range, ERS_OLDEST_DATA_MONTHS};
 use chrono::{DateTime, Datelike, Months, Utc};
 use enum_index_derive::EnumIndex;
-use fiskeridir_rs::GearGroup;
+use fiskeridir_rs::{GearGroup, VesselLengthGroup};
 use serde::{Deserialize, Serialize};
 
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
@@ -46,11 +46,11 @@ pub struct HaulsQuery {
 
 #[derive(Debug, Clone)]
 pub struct HaulsMatrixQuery {
-    pub ranges: Option<Vec<Range<DateTime<Utc>>>>,
+    pub months: Option<Vec<u32>>,
     pub catch_locations: Option<Vec<CatchLocationId>>,
     pub gear_group_ids: Option<Vec<GearGroup>>,
     pub species_group_ids: Option<Vec<u32>>,
-    pub vessel_length_ranges: Option<Vec<Range<f64>>>,
+    pub vessel_length_groups: Option<Vec<VesselLengthGroup>>,
     pub vessel_ids: Option<Vec<FiskeridirVesselId>>,
     pub active_filter: ActiveHaulsFilter,
 }
