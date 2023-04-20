@@ -383,61 +383,6 @@
     },
     "query": "\nSELECT\n    mmsi,\n    progress\nFROM\n    ais_data_migration_progress\nWHERE\n    progress < $1\n            "
   },
-  "2d0250be4efceff1de5bc5dd4a580574393c7968f8a588762a0608382394e495": {
-    "describe": {
-      "columns": [
-        {
-          "name": "grid!",
-          "ordinal": 0,
-          "type_info": "Text"
-        },
-        {
-          "name": "max_weight!",
-          "ordinal": 1,
-          "type_info": "Int8"
-        },
-        {
-          "name": "min_weight!",
-          "ordinal": 2,
-          "type_info": "Int8"
-        },
-        {
-          "name": "weight_by_gear_group!",
-          "ordinal": 3,
-          "type_info": "Text"
-        },
-        {
-          "name": "weight_by_species_group!",
-          "ordinal": 4,
-          "type_info": "Text"
-        },
-        {
-          "name": "weight_by_vessel_length_group!",
-          "ordinal": 5,
-          "type_info": "Text"
-        }
-      ],
-      "nullable": [
-        null,
-        null,
-        null,
-        null,
-        null,
-        null
-      ],
-      "parameters": {
-        "Left": [
-          "TstzRangeArray",
-          "VarcharArray",
-          "Int8Array",
-          "Int4Array",
-          "Int4Array",
-          "NumRangeArray"
-        ]
-      }
-    },
-    "query": "\nWITH\n    hauls AS (\n        SELECT\n            catch_location_start,\n            total_living_weight,\n            species_group_ids,\n            gear_group_id,\n            vessel_length,\n            vessel_length_group,\n            fiskeridir_vessel_id,\n            catches\n        FROM\n            hauls_view\n        WHERE\n            catch_location_start IS NOT NULL\n            AND (\n                $1::tstzrange[] IS NULL\n                OR period && ANY ($1)\n            )\n            AND (\n                $2::VARCHAR[] IS NULL\n                OR catch_location_start = ANY ($2)\n            )\n            AND (\n                $3::BIGINT[] IS NULL\n                OR fiskeridir_vessel_id = ANY ($3)\n            )\n    )\nSELECT\n    COALESCE(q1.grid::TEXT, '{}') AS \"grid!\",\n    COALESCE(q1.max_weight, 0)::BIGINT AS \"max_weight!\",\n    COALESCE(q1.min_weight, 0)::BIGINT AS \"min_weight!\",\n    COALESCE(q2.weight_by_gear_group::TEXT, '{}') AS \"weight_by_gear_group!\",\n    COALESCE(q3.weight_by_species_group::TEXT, '{}') AS \"weight_by_species_group!\",\n    COALESCE(q4.weight_by_vessel_length_group::TEXT, '{}') AS \"weight_by_vessel_length_group!\"\nFROM\n    (\n        SELECT\n            JSONB_OBJECT_AGG(h.catch_location_start, h.total_living_weight) AS grid,\n            MIN(h.total_living_weight) AS min_weight,\n            MAX(h.total_living_weight) AS max_weight\n        FROM\n            (\n                SELECT\n                    catch_location_start,\n                    COALESCE(SUM(total_living_weight), 0) AS total_living_weight\n                FROM\n                    hauls\n                WHERE\n                    (\n                        $4::INT[] IS NULL\n                        OR gear_group_id = ANY ($4)\n                    )\n                    AND (\n                        $5::INT[] IS NULL\n                        OR species_group_ids && $5\n                    )\n                    AND (\n                        $6::numrange[] IS NULL\n                        OR vessel_length <@ ANY ($6::numrange[])\n                    )\n                GROUP BY\n                    catch_location_start\n            ) h\n    ) q1,\n    (\n        SELECT\n            JSONB_OBJECT_AGG(h.gear_group_id, h.total_living_weight) AS weight_by_gear_group\n        FROM\n            (\n                SELECT\n                    gear_group_id,\n                    COALESCE(SUM(total_living_weight), 0) AS total_living_weight\n                FROM\n                    hauls\n                WHERE\n                    (\n                        $5::INT[] IS NULL\n                        OR species_group_ids && $5\n                    )\n                    AND (\n                        $6::numrange[] IS NULL\n                        OR vessel_length <@ ANY ($6::numrange[])\n                    )\n                GROUP BY\n                    gear_group_id\n            ) h\n    ) q2,\n    (\n        SELECT\n            JSONB_OBJECT_AGG(h2.species_group_id, h2.total_living_weight) AS weight_by_species_group\n        FROM\n            (\n                SELECT\n                    h1.catch['species_group_id']::INT AS species_group_id,\n                    COALESCE(SUM(h1.catch['living_weight']::INT), 0) AS total_living_weight\n                FROM\n                    (\n                        SELECT\n                            JSONB_ARRAY_ELEMENTS(catches) catch\n                        FROM\n                            hauls\n                        WHERE\n                            (\n                                $4::INT[] IS NULL\n                                OR gear_group_id = ANY ($4)\n                            )\n                            AND (\n                                $6::numrange[] IS NULL\n                                OR vessel_length <@ ANY ($6::numrange[])\n                            )\n                    ) h1\n                GROUP BY\n                    h1.catch['species_group_id']\n            ) h2\n    ) q3,\n    (\n        SELECT\n            JSONB_OBJECT_AGG(h.vessel_length_group, h.total_living_weight) AS weight_by_vessel_length_group\n        FROM\n            (\n                SELECT\n                    vessel_length_group,\n                    COALESCE(SUM(total_living_weight), 0) AS total_living_weight\n                FROM\n                    hauls\n                WHERE\n                    (\n                        $4::INT[] IS NULL\n                        OR gear_group_id = ANY ($4)\n                    )\n                    AND (\n                        $5::INT[] IS NULL\n                        OR species_group_ids && $5\n                    )\n                GROUP BY\n                    vessel_length_group\n            ) h\n    ) q4\n            "
-  },
   "2dd15b7e3f2309418479ed309d85ff7dc3a1e1710e41310c7093b79fd0f12b2f": {
     "describe": {
       "columns": [],
@@ -849,6 +794,45 @@
       }
     },
     "query": "\nSELECT\n    update_database_views ();\n            "
+  },
+  "53e34416d8c07c97e5d44c490278b1b7108bde846a9d77598cbd9ff2c3b8e9b0": {
+    "describe": {
+      "columns": [
+        {
+          "name": "x_index!",
+          "ordinal": 0,
+          "type_info": "Int4"
+        },
+        {
+          "name": "y_index!",
+          "ordinal": 1,
+          "type_info": "Int4"
+        },
+        {
+          "name": "sum_living!",
+          "ordinal": 2,
+          "type_info": "Int8"
+        }
+      ],
+      "nullable": [
+        null,
+        null,
+        null
+      ],
+      "parameters": {
+        "Left": [
+          "Int4",
+          "Int4",
+          "Int4Array",
+          "VarcharArray",
+          "Int4Array",
+          "Int4Array",
+          "Int4Array",
+          "Int8Array"
+        ]
+      }
+    },
+    "query": "\nSELECT\n    CASE\n        WHEN $1 = 0 THEN h.matrix_month_bucket\n        WHEN $1 = 1 THEN h.gear_group_id\n        WHEN $1 = 2 THEN h.species_group_id\n        WHEN $1 = 3 THEN h.vessel_length_group\n        WHEN $1 = 4 THEN h.catch_location_start_matrix_index\n    END AS \"x_index!\",\n    CASE\n        WHEN $2 = 0 THEN h.matrix_month_bucket\n        WHEN $2 = 1 THEN h.gear_group_id\n        WHEN $2 = 2 THEN h.species_group_id\n        WHEN $2 = 3 THEN h.vessel_length_group\n    END AS \"y_index!\",\n    COALESCE(SUM(living_weight::BIGINT), 0)::BIGINT AS \"sum_living!\"\nFROM\n    hauls_matrix_view h\nWHERE\n    (\n        $1 = 0\n        OR (\n            $1 = 4\n            AND $2 = 0\n        )\n        OR $3::INT[] IS NULL\n        OR h.matrix_month_bucket = ANY ($3)\n    )\n    AND (\n        $1 = 4\n        OR $4::VARCHAR[] IS NULL\n        OR h.catch_location_start = ANY ($4)\n    )\n    AND (\n        $1 = 1\n        OR (\n            $1 = 4\n            AND $2 = 1\n        )\n        OR $5::INT[] IS NULL\n        OR h.gear_group_id = ANY ($5)\n    )\n    AND (\n        $1 = 2\n        OR (\n            $1 = 4\n            AND $2 = 2\n        )\n        OR $6::INT[] IS NULL\n        OR h.species_group_id = ANY ($6)\n    )\n    AND (\n        $1 = 3\n        OR (\n            $1 = 4\n            AND $2 = 3\n        )\n        OR $7::INT[] IS NULL\n        OR h.vessel_length_group = ANY ($7)\n    )\n    AND (\n        $8::BIGINT[] IS NULL\n        OR fiskeridir_vessel_id = ANY ($8)\n    )\nGROUP BY\n    1,\n    2\n            "
   },
   "564ecbda445799ebe77b936a3199254676762e91b0006b9782f124f15f4b3778": {
     "describe": {
@@ -2946,45 +2930,6 @@
       }
     },
     "query": "\nSELECT\n    f.fiskeridir_vessel_id AS \"fiskeridir_vessel_id!\",\n    f.fiskeridir_vessel_type_id,\n    f.fiskeridir_length_group_id,\n    f.fiskeridir_nation_group_id,\n    f.norwegian_municipality_id AS fiskeridir_norwegian_municipality_id,\n    f.norwegian_county_id AS fiskeridir_norwegian_county_id,\n    f.nation_id AS \"fiskeridir_nation_id?\",\n    f.gross_tonnage_1969 AS fiskeridir_gross_tonnage_1969,\n    f.gross_tonnage_other AS fiskeridir_gross_tonnage_other,\n    f.call_sign AS fiskeridir_call_sign,\n    f.\"name\" AS fiskeridir_name,\n    f.registration_id AS fiskeridir_registration_id,\n    f.\"length\" AS fiskeridir_length,\n    f.\"width\" AS fiskeridir_width,\n    f.\"owner\" AS fiskeridir_owner,\n    f.engine_building_year AS fiskeridir_engine_building_year,\n    f.engine_power AS fiskeridir_engine_power,\n    f.building_year AS fiskeridir_building_year,\n    f.rebuilding_year AS fiskeridir_rebuilding_year,\n    a.mmsi AS \"ais_mmsi?\",\n    a.imo_number AS ais_imo_number,\n    a.call_sign AS ais_call_sign,\n    a.name AS ais_name,\n    a.ship_length AS ais_ship_length,\n    a.ship_width AS ais_ship_width,\n    a.eta AS ais_eta,\n    a.destination AS ais_destination\nFROM\n    fiskeridir_vessels AS f\n    LEFT JOIN ais_vessels AS a ON f.call_sign = a.call_sign\n            "
-  },
-  "f7a8a574ed708c726e08bd044d429da392d22bd6f199a4da27067322d7aaa906": {
-    "describe": {
-      "columns": [
-        {
-          "name": "x_index!",
-          "ordinal": 0,
-          "type_info": "Int4"
-        },
-        {
-          "name": "y_index!",
-          "ordinal": 1,
-          "type_info": "Int4"
-        },
-        {
-          "name": "sum_living!",
-          "ordinal": 2,
-          "type_info": "Int4"
-        }
-      ],
-      "nullable": [
-        null,
-        null,
-        null
-      ],
-      "parameters": {
-        "Left": [
-          "Int4",
-          "Int4",
-          "TstzRangeArray",
-          "VarcharArray",
-          "Int4Array",
-          "Int4Array",
-          "NumRangeArray",
-          "Int8Array"
-        ]
-      }
-    },
-    "query": "\nSELECT\n    CASE\n        WHEN $1 = 0 THEN h.matrix_month_bucket\n        WHEN $1 = 1 THEN h.gear_group_id\n        WHEN $1 = 2 THEN h.species_group_id\n        WHEN $1 = 3 THEN h.vessel_length_group\n        WHEN $1 = 4 THEN h.catch_location_start_matrix_index\n    END AS \"x_index!\",\n    CASE\n        WHEN $2 = 0 THEN h.matrix_month_bucket\n        WHEN $2 = 1 THEN h.gear_group_id\n        WHEN $2 = 2 THEN h.species_group_id\n        WHEN $2 = 3 THEN h.vessel_length_group\n    END AS \"y_index!\",\n    COALESCE(SUM(living_weight), 0)::INT AS \"sum_living!\"\nFROM\n    hauls_matrix_view h\nWHERE\n    (\n        $1::INT != 4\n        OR h.catch_location_start_matrix_index IS NOT NULL\n    )\n    AND (\n        $3::tstzrange[] IS NULL\n        OR h.period && ANY ($3)\n    )\n    AND (\n        $4::VARCHAR[] IS NULL\n        OR h.catch_location_start = ANY ($4)\n    )\n    AND (\n        $5::INT[] IS NULL\n        OR h.gear_group_id = ANY ($5)\n    )\n    AND (\n        $6::INT[] IS NULL\n        OR h.species_group_id = ANY ($6)\n    )\n    AND (\n        $7::numrange[] IS NULL\n        OR h.vessel_length <@ ANY ($7)\n    )\n    AND (\n        $8::BIGINT[] IS NULL\n        OR fiskeridir_vessel_id = ANY ($8)\n    )\nGROUP BY\n    1,\n    2\n            "
   },
   "f83c24e69093ba8fcc3f97951fbefaad78315e94ea14d79c973672053d4095e3": {
     "describe": {

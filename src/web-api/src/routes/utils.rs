@@ -3,7 +3,7 @@ use std::{
     str::FromStr,
 };
 
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Datelike, Utc};
 use fiskeridir_rs::GearGroup;
 use num_traits::FromPrimitive;
 use serde::{
@@ -88,10 +88,8 @@ where
         {
             v.split(';')
                 .map(|v| {
-                    T::from_str(v).map_err(|e| {
-                        serde::de::Error::custom(format!(
-                            "failed to parse str to Range<T>: value: {v}, error: {e}"
-                        ))
+                    T::from_str(v).map_err(|_| {
+                        serde::de::Error::invalid_value(serde::de::Unexpected::Str(v), &self)
                     })
                 })
                 .collect::<Result<_, _>>()
@@ -132,10 +130,8 @@ impl<'de> Deserialize<'de> for DateTimeUtc {
             where
                 E: serde::de::Error,
             {
-                let dt = v.parse::<DateTime<Utc>>().map_err(|e| {
-                    serde::de::Error::custom(format!(
-                        "failed to deserialize str to DateTime<Utc>, value: {v}, error: {e}"
-                    ))
+                let dt = v.parse::<DateTime<Utc>>().map_err(|_| {
+                    serde::de::Error::invalid_value(serde::de::Unexpected::Str(v), &self)
                 })?;
 
                 Ok(DateTimeUtc(dt))
@@ -181,12 +177,16 @@ impl<'de> Deserialize<'de> for GearGroupId {
             where
                 E: serde::de::Error,
             {
-                let id = v
-                    .parse::<u8>()
-                    .map_err(|_| serde::de::Error::custom("failed to deserialize str to u32"))?;
+                let id = v.parse::<u8>().map_err(|_| {
+                    serde::de::Error::invalid_value(serde::de::Unexpected::Str(v), &self)
+                })?;
 
-                let gear_id = GearGroup::from_u8(id)
-                    .ok_or_else(|| serde::de::Error::custom("invalid gear_group_id"))?;
+                let gear_id = GearGroup::from_u8(id).ok_or_else(|| {
+                    serde::de::Error::invalid_value(
+                        serde::de::Unexpected::Unsigned(id as u64),
+                        &self,
+                    )
+                })?;
 
                 Ok(GearGroupId(gear_id))
             }
@@ -219,10 +219,89 @@ impl<'de> Deserialize<'de> for SpeciesGroupId {
                 E: serde::de::Error,
             {
                 Ok(SpeciesGroupId(v.parse().map_err(|_| {
-                    serde::de::Error::custom("failed to deserialize str to u32")
+                    serde::de::Error::invalid_value(serde::de::Unexpected::Str(v), &self)
                 })?))
             }
         }
         deserializer.deserialize_newtype_struct("SpecieGroupId", SpecieVisitor)
+    }
+}
+
+/// NewType wrapper for a month id to customize the deserialize implementation
+/// such that it can be used in [crate::routes::utils::deserialize_string_list].
+#[derive(Debug, Clone)]
+pub struct Month(pub u32);
+
+impl From<DateTime<Utc>> for Month {
+    fn from(v: DateTime<Utc>) -> Self {
+        Self((v.year() * 12 + v.month() as i32 - 1) as u32)
+    }
+}
+
+impl<'de> Deserialize<'de> for Month {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        struct MonthVisitor;
+
+        impl<'de> Visitor<'de> for MonthVisitor {
+            type Value = Month;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+                formatter.write_str("an u32 integer")
+            }
+
+            fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                Ok(Month(v.parse().map_err(|_| {
+                    serde::de::Error::invalid_value(serde::de::Unexpected::Str(v), &self)
+                })?))
+            }
+        }
+        deserializer.deserialize_newtype_struct("Month", MonthVisitor)
+    }
+}
+
+/// NewType wrapper for a `VesselLengthGroup` to customize the deserialize implementation
+/// such that it can be used in [crate::routes::utils::deserialize_string_list].
+#[derive(Debug, Clone)]
+pub struct VesselLengthGroup(pub fiskeridir_rs::VesselLengthGroup);
+
+impl<'de> Deserialize<'de> for VesselLengthGroup {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        struct VesselLengthGroupVisitor;
+
+        impl<'de> Visitor<'de> for VesselLengthGroupVisitor {
+            type Value = VesselLengthGroup;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+                formatter.write_str("an u32 integer representing a vessel length group")
+            }
+
+            fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                let id = v.parse::<u8>().map_err(|_| {
+                    serde::de::Error::invalid_value(serde::de::Unexpected::Str(v), &self)
+                })?;
+
+                let gear_id = fiskeridir_rs::VesselLengthGroup::from_u8(id).ok_or_else(|| {
+                    serde::de::Error::invalid_value(
+                        serde::de::Unexpected::Unsigned(id as u64),
+                        &self,
+                    )
+                })?;
+
+                Ok(VesselLengthGroup(gear_id))
+            }
+        }
+        deserializer.deserialize_newtype_struct("VesselLengthGroupId", VesselLengthGroupVisitor)
     }
 }

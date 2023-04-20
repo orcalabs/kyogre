@@ -280,7 +280,7 @@ where
         .await;
 }
 
-pub fn sum_area(matrix: &[i32], x0: usize, y0: usize, x1: usize, y1: usize, width: usize) -> i32 {
+pub fn sum_area(matrix: &[u64], x0: usize, y0: usize, x1: usize, y1: usize, width: usize) -> u64 {
     let mut sum = matrix[y1 * width + x1];
     if x0 > 0 {
         sum -= matrix[y1 * width + x0 - 1];
@@ -300,7 +300,7 @@ pub fn sum_area(matrix: &[i32], x0: usize, y0: usize, x1: usize, y1: usize, widt
 pub fn assert_matrix_content(
     matrix: &haul::HaulsMatrix,
     active_filter: ActiveHaulsFilter,
-    expected_total: i32,
+    expected_total: u64,
 ) {
     let y_dimension = match active_filter {
         ActiveHaulsFilter::Date => date_feature_matrix_size(),
@@ -347,17 +347,25 @@ pub fn assert_matrix_content(
         matrix.species_group.len()
     );
 
-    assert_eq!(expected_total, matrix.dates[matrix.dates.len() - 1]);
-    assert_eq!(
-        expected_total,
-        matrix.gear_group[matrix.gear_group.len() - 1]
-    );
-    assert_eq!(
-        expected_total,
-        matrix.length_group[matrix.length_group.len() - 1]
-    );
-    assert_eq!(
-        expected_total,
-        matrix.species_group[matrix.species_group.len() - 1]
-    );
+    if !matches!(active_filter, ActiveHaulsFilter::Date) {
+        assert_eq!(expected_total, matrix.dates[matrix.dates.len() - 1]);
+    }
+    if !matches!(active_filter, ActiveHaulsFilter::GearGroup) {
+        assert_eq!(
+            expected_total,
+            matrix.gear_group[matrix.gear_group.len() - 1]
+        );
+    }
+    if !matches!(active_filter, ActiveHaulsFilter::VesselLength) {
+        assert_eq!(
+            expected_total,
+            matrix.length_group[matrix.length_group.len() - 1]
+        );
+    }
+    if !matches!(active_filter, ActiveHaulsFilter::SpeciesGroup) {
+        assert_eq!(
+            expected_total,
+            matrix.species_group[matrix.species_group.len() - 1]
+        );
+    }
 }

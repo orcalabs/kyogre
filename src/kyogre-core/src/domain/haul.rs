@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::{Gear, GearGroup, VesselLengthGroup, WhaleGender};
 use serde::{Deserialize, Serialize};
@@ -65,21 +63,10 @@ pub struct WhaleCatch {
     pub length: Option<i32>,
 }
 
-#[derive(Debug, Clone)]
-#[remain::sorted]
-pub struct HaulsGrid {
-    pub grid: HashMap<CatchLocationId, i64>,
-    pub max_weight: i64,
-    pub min_weight: i64,
-    pub weight_by_gear_group: HashMap<GearGroup, i64>,
-    pub weight_by_species_group: HashMap<i32, i64>,
-    pub weight_by_vessel_length_group: HashMap<VesselLengthGroup, i64>,
-}
-
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
 pub struct HaulsMatrix {
-    pub dates: Vec<i32>,
-    pub length_group: Vec<i32>,
-    pub gear_group: Vec<i32>,
-    pub species_group: Vec<i32>,
+    pub dates: Vec<u64>,
+    pub length_group: Vec<u64>,
+    pub gear_group: Vec<u64>,
+    pub species_group: Vec<u64>,
 }
