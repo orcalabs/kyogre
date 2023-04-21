@@ -354,13 +354,12 @@ FROM
         .map(|_| ())
     }
 
-    pub(crate) async fn delete_ers_dep_catches_impl(&self, year: u32) -> Result<(), PostgresError> {
+    pub(crate) async fn delete_ers_dep_impl(&self, year: u32) -> Result<(), PostgresError> {
         sqlx::query!(
             r#"
-DELETE FROM ers_departure_catches c USING ers_departures e
+DELETE FROM ers_departures c
 WHERE
-    e.message_id = c.message_id
-    AND e.relevant_year = $1
+    c.relevant_year = $1
             "#,
             year as i32
         )

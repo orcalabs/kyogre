@@ -157,18 +157,6 @@
     },
     "query": "\nSELECT\n    hash\nFROM\n    data_hashes\nWHERE\n    data_hash_id = $1\n            "
   },
-  "1eb59eb4935a78bc9ed387bac65c7c3b006ca15bdeac5274693210f3a237cb8c": {
-    "describe": {
-      "columns": [],
-      "nullable": [],
-      "parameters": {
-        "Left": [
-          "Int4"
-        ]
-      }
-    },
-    "query": "\nDELETE FROM ers_departure_catches c USING ers_departures e\nWHERE\n    e.message_id = c.message_id\n    AND e.relevant_year = $1\n            "
-  },
   "1ec530d8f145aad047ef664764c7b7aec1058aab0896a286e76121fadd72d33d": {
     "describe": {
       "columns": [],
@@ -202,18 +190,6 @@
       }
     },
     "query": "\nINSERT INTO\n    ais_data_migration_progress (mmsi, progress)\nVALUES\n    ($1, $2)\nON CONFLICT (mmsi) DO\nUPDATE\nSET\n    progress = excluded.progress\n            "
-  },
-  "22e529e16a86898f34ded502a045b6c293e79c8889dd1c9320ae8522befba9ed": {
-    "describe": {
-      "columns": [],
-      "nullable": [],
-      "parameters": {
-        "Left": [
-          "Int4"
-        ]
-      }
-    },
-    "query": "\nDELETE FROM ers_arrival_catches c USING ers_arrivals e\nWHERE\n    e.message_id = c.message_id\n    AND e.relevant_year = $1\n            "
   },
   "2843fbd8a5058813995a29b3bb8577d22abf97975e265d17a4816c5798e2de39": {
     "describe": {
@@ -1570,6 +1546,18 @@
     },
     "query": "\nINSERT INTO\n    species_fiskeridir (species_fiskeridir_id, \"name\")\nSELECT\n    *\nFROM\n    UNNEST($1::INT[], $2::VARCHAR[])\nON CONFLICT (species_fiskeridir_id) DO\nUPDATE\nSET\n    \"name\" = COALESCE(species_fiskeridir.name, EXCLUDED.name)\n            "
   },
+  "940f050808a1d10d1ab17f2401ace75f167ac4e31763d711f997be12e37c4d3e": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Int4"
+        ]
+      }
+    },
+    "query": "\nDELETE FROM ers_departures c\nWHERE\n    c.relevant_year = $1\n            "
+  },
   "97f8481d58740ff62ce9652a59ebf53470acc0371d5ee0a90c0649e37245708e": {
     "describe": {
       "columns": [],
@@ -2315,6 +2303,18 @@
       }
     },
     "query": "\nSELECT\n    call_sign,\n    course,\n    latitude,\n    longitude,\n    registration_id,\n    speed,\n    \"timestamp\",\n    vessel_length,\n    vessel_name,\n    vessel_type\nFROM\n    vms_positions\nWHERE\n    message_id = $1\n            "
+  },
+  "c0c83acf12895ec7a8efd6e1becf34b5820cfffe94fdfb1f7352596a88b91cd9": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Int4"
+        ]
+      }
+    },
+    "query": "\nDELETE FROM ers_arrivals e\nWHERE\n    e.relevant_year = $1\n            "
   },
   "c1133ee8fd33134dfe41ca538a51db2595ad5ea910ad913dc106db5735d21fc9": {
     "describe": {

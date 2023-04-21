@@ -390,8 +390,8 @@ impl ScraperInboundPort for PostgresAdapter {
         let set = ErsDepSet::new(ers_dep).change_context(InsertError)?;
         self.add_ers_dep_set(set).await.change_context(InsertError)
     }
-    async fn delete_ers_dep_catches(&self, year: u32) -> Result<(), DeleteError> {
-        self.delete_ers_dep_catches_impl(year)
+    async fn delete_ers_dep(&self, year: u32) -> Result<(), DeleteError> {
+        self.delete_ers_dep_impl(year)
             .await
             .change_context(DeleteError)
     }
@@ -399,8 +399,8 @@ impl ScraperInboundPort for PostgresAdapter {
         let set = ErsPorSet::new(ers_por).change_context(InsertError)?;
         self.add_ers_por_set(set).await.change_context(InsertError)
     }
-    async fn delete_ers_por_catches(&self, year: u32) -> Result<(), DeleteError> {
-        self.delete_ers_por_catches_impl(year)
+    async fn delete_ers_por(&self, year: u32) -> Result<(), DeleteError> {
+        self.delete_ers_por_impl(year)
             .await
             .change_context(DeleteError)
     }
