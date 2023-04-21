@@ -168,7 +168,12 @@ async fn test_trip_of_haul_returns_all_hauls_and_landings_connected_to_trip() {
         let mut landing = fiskeridir_rs::Landing::test_default(1, Some(fiskeridir_vessel_id.0));
         landing.landing_timestamp = start + Duration::hours(1);
 
-        helper.db.db.add_landings(vec![landing]).await.unwrap();
+        helper
+            .db
+            .db
+            .add_landings(vec![landing], 2023)
+            .await
+            .unwrap();
 
         let trip = helper
             .generate_ers_trip(fiskeridir_vessel_id, &start, &end)
@@ -213,7 +218,7 @@ async fn test_aggregates_landing_data_per_product_quality_and_species_id() {
         helper
             .db
             .db
-            .add_landings(vec![landing.clone(), landing2, landing3, landing4])
+            .add_landings(vec![landing.clone(), landing2, landing3, landing4], 2023)
             .await
             .unwrap();
 

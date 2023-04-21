@@ -1,7 +1,10 @@
+use std::collections::HashSet;
+
 use crate::*;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use error_stack::Result;
+use fiskeridir_rs::LandingId;
 
 #[async_trait]
 pub trait AisMigratorDestination {
@@ -43,7 +46,16 @@ pub trait ScraperInboundPort {
         &self,
         vessels: Vec<fiskeridir_rs::RegisterVessel>,
     ) -> Result<(), InsertError>;
-    async fn add_landings(&self, landings: Vec<fiskeridir_rs::Landing>) -> Result<(), InsertError>;
+    async fn add_landings(
+        &self,
+        landings: Vec<fiskeridir_rs::Landing>,
+        data_year: u32,
+    ) -> Result<(), InsertError>;
+    async fn delete_removed_landings(
+        &self,
+        existing_landing_ids: HashSet<LandingId>,
+        data_year: u32,
+    ) -> Result<(), DeleteError>;
     async fn delete_ers_dca(&self, year: u32) -> Result<(), DeleteError>;
     async fn add_ers_dca(&self, ers_dca: Vec<fiskeridir_rs::ErsDca>) -> Result<(), InsertError>;
     async fn add_ers_dep(&self, ers_dep: Vec<fiskeridir_rs::ErsDep>) -> Result<(), InsertError>;

@@ -1,4 +1,3 @@
-#![allow(dead_code)]
 #![deny(warnings)]
 #![deny(rust_2018_idioms)]
 
@@ -160,8 +159,6 @@ impl Scraper {
 
 pub enum ScraperId {
     Landings,
-    /// All existing landing ids (Fiskeridirektoratet can remove landings upon request)
-    LandingIds,
     ErsPor,
     ErsDep,
     ErsDca,
@@ -174,7 +171,6 @@ impl std::fmt::Display for ScraperId {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             ScraperId::Landings => write!(f, "landings_scraper"),
-            ScraperId::LandingIds => write!(f, "landing_ids_scraper"),
             ScraperId::ErsPor => write!(f, "ers_por_scraper"),
             ScraperId::ErsDep => write!(f, "ers_dep_scraper"),
             ScraperId::ErsDca => write!(f, "ers_dca_scraper"),

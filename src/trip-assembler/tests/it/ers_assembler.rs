@@ -485,7 +485,10 @@ async fn test_does_not_conflict_with_trip_from_landings_assembler_with_identical
         let mut landing2 = fiskeridir_rs::Landing::test_default(2, Some(fiskeridir_vessel_id.0));
         landing2.landing_time = end.time() + Duration::seconds(10);
         landing2.landing_timestamp = end + Duration::seconds(10);
-        helper.add_landings(vec![landing, landing2]).await.unwrap();
+        helper
+            .add_landings(vec![landing, landing2], 2023)
+            .await
+            .unwrap();
 
         let assembled = landings_assembler
             .assemble(&helper.db.db, &vessel, State::NoPriorState)
