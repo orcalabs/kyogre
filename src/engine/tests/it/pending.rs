@@ -100,6 +100,10 @@ async fn test_does_not_restart_scrape_if_chain_was_completed_but_was_interrupted
         );
         assert_eq!(
             helper.run_step(EngineDiscriminants::Trips).await,
+            EngineDiscriminants::TripsPrecision
+        );
+        assert_eq!(
+            helper.run_step(EngineDiscriminants::TripsPrecision).await,
             EngineDiscriminants::UpdateDatabaseViews
         );
         assert_eq!(
