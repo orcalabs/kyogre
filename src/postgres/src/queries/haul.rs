@@ -40,6 +40,7 @@ impl From<ActiveHaulsFilter> for HaulMatrixFeatures {
             ActiveHaulsFilter::GearGroup => HaulMatrixFeatures::GearGroup,
             ActiveHaulsFilter::SpeciesGroup => HaulMatrixFeatures::SpeciesGroup,
             ActiveHaulsFilter::VesselLength => HaulMatrixFeatures::VesselLength,
+            ActiveHaulsFilter::CatchLocation => HaulMatrixFeatures::CatchLocation,
         }
     }
 }
@@ -102,6 +103,7 @@ SELECT
         WHEN $2 = 1 THEN h.gear_group_id
         WHEN $2 = 2 THEN h.species_group_id
         WHEN $2 = 3 THEN h.vessel_length_group
+        WHEN $2 = 4 THEN h.catch_location_start_matrix_index
     END AS "y_index!",
     COALESCE(SUM(living_weight::BIGINT), 0)::BIGINT AS "sum_living!"
 FROM

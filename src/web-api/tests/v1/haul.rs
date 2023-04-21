@@ -764,3 +764,59 @@ async fn test_hauls_matrix_species_group_sum_area_table_is_correct() {
     })
     .await;
 }
+
+#[tokio::test]
+async fn test_hauls_matrix_catch_location_as_active_filter_produces_correct_matrices() {
+    test(|helper| async move {
+        let filter = ActiveHaulsFilter::CatchLocation;
+
+        let mut ers1 = ErsDca::test_default(1, None);
+        let mut ers2 = ErsDca::test_default(2, None);
+        let mut ers3 = ErsDca::test_default(3, None);
+        let mut ers4 = ErsDca::test_default(4, None);
+
+        let month1: DateTime<Utc> = "2013-01-1T00:00:00Z".parse().unwrap();
+        let month2: DateTime<Utc> = "2013-06-1T00:00:00Z".parse().unwrap();
+
+        ers1.start_date = Some(month1.date_naive());
+        ers1.start_time = Some(month1.time());
+        ers1.stop_date = Some(month1.date_naive());
+        ers1.stop_time = Some(month1.time());
+        ers1.start_latitude = Some(56.727258);
+        ers1.start_longitude = Some(12.565410);
+        ers1.catch.species.living_weight = Some(10);
+
+        ers2.start_latitude = Some(56.756293);
+        ers2.start_longitude = Some(11.514740);
+        ers2.start_date = Some(month2.date_naive());
+        ers2.start_time = Some(month2.time());
+        ers2.stop_date = Some(month2.date_naive());
+        ers2.stop_time = Some(month2.time());
+        ers2.catch.species.living_weight = Some(20);
+
+        ers3.start_latitude = Some(56.727258);
+        ers3.start_longitude = Some(12.565410);
+        ers3.catch.species.living_weight = Some(100);
+        ers4.start_latitude = Some(56.727258);
+        ers4.start_longitude = Some(12.565410);
+        ers4.catch.species.living_weight = Some(200);
+
+        helper
+            .db
+            .db
+            .add_ers_dca(vec![ers1, ers2, ers3, ers4])
+            .await
+            .unwrap();
+        helper.db.db.update_database_views().await.unwrap();
+
+        let response = helper
+            .app
+            .get_hauls_matrix(HaulsMatrixParams::default(), filter)
+            .await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let matrix: HaulsMatrix = response.json().await.unwrap();
+        assert_matrix_content(&matrix, filter, 330);
+    })
+    .await
+}

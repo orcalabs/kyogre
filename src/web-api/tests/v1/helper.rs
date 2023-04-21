@@ -307,6 +307,7 @@ pub fn assert_matrix_content(
         ActiveHaulsFilter::GearGroup => GearGroup::COUNT,
         ActiveHaulsFilter::SpeciesGroup => SpeciesGroup::COUNT,
         ActiveHaulsFilter::VesselLength => VesselLengthGroup::COUNT,
+        ActiveHaulsFilter::CatchLocation => NUM_CATCH_LOCATIONS,
     };
 
     assert_eq!(
