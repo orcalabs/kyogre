@@ -10,6 +10,8 @@ VALUES
     ('Trips', 'TripsPrecision'),
     ('TripsPrecision', 'UpdateDatabaseViews');
 
+DELETE FROM engine_transitions;
+
 DELETE FROM valid_engine_transitions
 WHERE
     source = 'Trips'
