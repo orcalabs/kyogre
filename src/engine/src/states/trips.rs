@@ -7,10 +7,10 @@ use kyogre_core::{FiskeridirVesselId, Vessel};
 use tracing::{event, instrument, Level};
 use trip_assembler::{State, TripAssemblerError};
 
-// Trips -> UpdateDatabaseViews
-impl<L, T> From<StepWrapper<L, T, Trips>> for StepWrapper<L, T, UpdateDatabaseViews> {
-    fn from(val: StepWrapper<L, T, Trips>) -> StepWrapper<L, T, UpdateDatabaseViews> {
-        val.inherit(UpdateDatabaseViews::default())
+// Trips -> TripsPrecision
+impl<L, T> From<StepWrapper<L, T, Trips>> for StepWrapper<L, T, TripsPrecision> {
+    fn from(val: StepWrapper<L, T, Trips>) -> StepWrapper<L, T, TripsPrecision> {
+        val.inherit(TripsPrecision::default())
     }
 }
 
@@ -35,9 +35,7 @@ where
                 event!(Level::ERROR, "failed to run trip assembler: {:?}", e);
             }
         }
-        Engine::UpdateDatabaseViews(StepWrapper::<A, SharedState<B>, UpdateDatabaseViews>::from(
-            self,
-        ))
+        Engine::TripsPrecision(StepWrapper::<A, SharedState<B>, TripsPrecision>::from(self))
     }
 
     #[instrument(name = "run_assembler", skip_all, fields(app.trip_assembler, app.vessels, app.conflicts, app.no_prior_state, app.produced_trips))]

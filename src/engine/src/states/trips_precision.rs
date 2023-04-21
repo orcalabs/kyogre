@@ -1,18 +1,17 @@
+use crate::*;
 use error_stack::{Result, ResultExt};
 use kyogre_core::Vessel;
 use tracing::{event, instrument, Level};
 use trip_assembler::TripPrecisionError;
 
-use crate::{Database, Engine, Pending, SharedState, StepWrapper, TripProcessor};
-
-// TripsPrecision -> Pending
-impl<L, T> From<StepWrapper<L, T, TripsPrecision>> for StepWrapper<L, T, Pending> {
-    fn from(val: StepWrapper<L, T, TripsPrecision>) -> StepWrapper<L, T, Pending> {
-        val.inherit(Pending::default())
+// TripsPrecision -> UpdateDatabaseViews
+impl<L, T> From<StepWrapper<L, T, TripsPrecision>> for StepWrapper<L, T, UpdateDatabaseViews> {
+    fn from(val: StepWrapper<L, T, TripsPrecision>) -> StepWrapper<L, T, UpdateDatabaseViews> {
+        val.inherit(UpdateDatabaseViews::default())
     }
 }
 
-// Pending -> Trips
+// Pending -> TripsPrecision
 impl<L, T> From<StepWrapper<L, T, Pending>> for StepWrapper<L, T, TripsPrecision> {
     fn from(val: StepWrapper<L, T, Pending>) -> StepWrapper<L, T, TripsPrecision> {
         val.inherit(TripsPrecision::default())
@@ -37,7 +36,9 @@ where
             }
         }
 
-        Engine::Pending(StepWrapper::<A, SharedState<B>, Pending>::from(self))
+        Engine::UpdateDatabaseViews(StepWrapper::<A, SharedState<B>, UpdateDatabaseViews>::from(
+            self,
+        ))
     }
 
     async fn run_precision_processors(&self, vessels: Vec<Vessel>) {
