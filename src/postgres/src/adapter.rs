@@ -566,12 +566,13 @@ impl TripPrecisionOutboundPort for PostgresAdapter {
                 .change_context(QueryError)?,
         )
     }
-    async fn ais_positions(
+    async fn ais_vms_positions(
         &self,
-        mmsi: Mmsi,
+        mmsi: Option<Mmsi>,
+        call_sign: Option<&CallSign>,
         range: &DateRange,
-    ) -> Result<Vec<AisPosition>, QueryError> {
-        let mut stream = convert_stream(self.ais_positions_impl(mmsi, range));
+    ) -> Result<Vec<AisVmsPosition>, QueryError> {
+        let mut stream = convert_stream(self.ais_vms_positions_impl(mmsi, call_sign, range));
 
         let mut positions = vec![];
 

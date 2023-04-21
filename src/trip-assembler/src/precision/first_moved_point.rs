@@ -6,7 +6,7 @@ use crate::{error::TripPrecisionError, precision::PrecisionConfig, Result};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use geoutils::Location;
-use kyogre_core::{AisPosition, Trip};
+use kyogre_core::{AisVmsPosition, Trip};
 use kyogre_core::{TripPrecisionOutboundPort, Vessel};
 use num_traits::ToPrimitive;
 
@@ -21,7 +21,7 @@ impl TripPrecision for FirstMovedPoint {
     async fn precision(
         &self,
         _adapter: &dyn TripPrecisionOutboundPort,
-        positions: &[AisPosition],
+        positions: &[AisVmsPosition],
         _trip: &Trip,
         _vessel: &Vessel,
     ) -> Result<Option<PrecisionStop>, TripPrecisionError> {
@@ -58,12 +58,12 @@ impl TripPrecision for FirstMovedPoint {
 }
 
 fn find_first_moved_point<'a, T>(
-    initial_position: &AisPosition,
+    initial_position: &AisVmsPosition,
     iter: T,
     threshold: f64,
 ) -> Option<DateTime<Utc>>
 where
-    T: IntoIterator<Item = &'a [AisPosition]>,
+    T: IntoIterator<Item = &'a [AisVmsPosition]>,
 {
     let initial_position = Location::new(
         initial_position.latitude.to_f64().unwrap(),
@@ -76,7 +76,7 @@ where
 
         if distance.meters() > threshold {
             let first_point = chunk.first().unwrap();
-            return Some(first_point.msgtime);
+            return Some(first_point.timestamp);
         }
     }
     None

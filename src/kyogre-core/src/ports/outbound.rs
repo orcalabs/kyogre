@@ -94,11 +94,12 @@ pub trait TripAssemblerOutboundPort: Send + Sync {
 pub trait TripPrecisionOutboundPort: Send + Sync {
     async fn ports_of_trip(&self, trip_id: TripId) -> Result<TripPorts, QueryError>;
     async fn dock_points_of_trip(&self, trip_id: TripId) -> Result<TripDockPoints, QueryError>;
-    async fn ais_positions(
+    async fn ais_vms_positions(
         &self,
-        mmsi: Mmsi,
+        mmsi: Option<Mmsi>,
+        call_sign: Option<&CallSign>,
         range: &DateRange,
-    ) -> Result<Vec<AisPosition>, QueryError>;
+    ) -> Result<Vec<AisVmsPosition>, QueryError>;
     async fn trip_prior_to(
         &self,
         vessel_id: FiskeridirVesselId,

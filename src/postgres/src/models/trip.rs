@@ -172,11 +172,34 @@ impl TryFrom<Trip> for kyogre_core::Trip {
             .into_report()
             .change_context(PostgresError::DataConversion)?;
 
+        let precision_period = value
+            .period_precision
+            .map(|v| {
+                let start = match v.start {
+                    std::ops::Bound::Included(b) => Ok(b),
+                    std::ops::Bound::Excluded(b) => Ok(b),
+                    std::ops::Bound::Unbounded => Err(report!(UnboundedRangeError)),
+                }
+                .change_context(PostgresError::DataConversion)?;
+                let end = match v.end {
+                    std::ops::Bound::Included(b) => Ok(b),
+                    std::ops::Bound::Excluded(b) => Ok(b),
+                    std::ops::Bound::Unbounded => Err(report!(UnboundedRangeError)),
+                }
+                .change_context(PostgresError::DataConversion)?;
+
+                DateRange::new(start, end)
+                    .into_report()
+                    .change_context(PostgresError::DataConversion)
+            })
+            .transpose()?;
+
         Ok(kyogre_core::Trip {
             trip_id: TripId(value.trip_id),
             period,
             landing_coverage,
             assembler_id: value.trip_assembler_id,
+            precision_period,
         })
     }
 }

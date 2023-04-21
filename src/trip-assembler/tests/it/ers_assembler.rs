@@ -75,6 +75,7 @@ async fn test_produces_new_trips_without_replacing_existing_ones() {
                 period: create_date_range(&departure, &arrival),
                 landing_coverage: create_date_range(&departure, &departure2),
                 assembler_id: TripAssemblerId::Ers,
+                precision_period: None,
             },
             Trip {
                 trip_id: TripId(2),
@@ -84,6 +85,7 @@ async fn test_produces_new_trips_without_replacing_existing_ones() {
                     &ers_last_trip_landing_coverage_end(),
                 ),
                 assembler_id: TripAssemblerId::Ers,
+                precision_period: None,
             },
         ];
         assert_eq!(expected, trips);
@@ -218,6 +220,7 @@ async fn test_extends_most_recent_trip_with_new_arrival() {
             period: create_date_range(&departure, &arrival2),
             landing_coverage: create_date_range(&departure, &ers_last_trip_landing_coverage_end()),
             assembler_id: TripAssemblerId::Ers,
+            precision_period: None,
         }];
         assert_eq!(expected, trips);
     })
@@ -327,12 +330,14 @@ async fn test_handles_conflict_correctly() {
                 period: create_date_range(&departure, &arrival),
                 landing_coverage: create_date_range(&departure, &departure3),
                 assembler_id: TripAssemblerId::Ers,
+                precision_period: None,
             },
             Trip {
                 trip_id: TripId(4),
                 period: create_date_range(&departure3, &arrival3),
                 landing_coverage: create_date_range(&departure3, &departure2),
                 assembler_id: TripAssemblerId::Ers,
+                precision_period: None,
             },
             Trip {
                 trip_id: TripId(5),
@@ -342,6 +347,7 @@ async fn test_handles_conflict_correctly() {
                     &ers_last_trip_landing_coverage_end(),
                 ),
                 assembler_id: TripAssemblerId::Ers,
+                precision_period: None,
             },
         ];
         assert_eq!(expected, trips);
@@ -428,6 +434,7 @@ async fn test_is_not_affected_of_other_vessels_trips() {
                     &ers_last_trip_landing_coverage_end(),
                 ),
                 assembler_id: TripAssemblerId::Ers,
+                precision_period: None,
             },
             Trip {
                 trip_id: TripId(2),
@@ -437,6 +444,7 @@ async fn test_is_not_affected_of_other_vessels_trips() {
                     &ers_last_trip_landing_coverage_end(),
                 ),
                 assembler_id: TripAssemblerId::Ers,
+                precision_period: None,
             },
         ];
         assert_eq!(expected, trips);

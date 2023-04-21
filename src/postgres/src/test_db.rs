@@ -1,8 +1,9 @@
 use std::collections::HashMap;
 
 use crate::{models::Haul, PostgresAdapter};
-use chrono::{DateTime, Utc};
-use fiskeridir_rs::{CallSign, ErsDca, Gear, GearGroup, VesselLengthGroup, Vms};
+use bigdecimal::{BigDecimal, FromPrimitive};
+use chrono::{DateTime, Duration, Utc};
+use fiskeridir_rs::{CallSign, ErsDca, ErsDep, ErsPor, Gear, GearGroup, VesselLengthGroup, Vms};
 use kyogre_core::*;
 
 /// Wrapper with additional methods inteded for testing purposes.
@@ -317,6 +318,105 @@ FROM
         ers_dca
     }
 
+    pub async fn set_port_coordinate(&self, port_id: &str, latitude: f64, longitude: f64) {
+        sqlx::query!(
+            r#"
+UPDATE ports
+SET
+    latitude = $1,
+    longitude = $2
+WHERE
+    port_id = $3
+            "#,
+            BigDecimal::from_f64(latitude).unwrap(),
+            BigDecimal::from_f64(longitude).unwrap(),
+            port_id,
+        )
+        .execute(&self.db.pool)
+        .await
+        .unwrap();
+    }
+    pub async fn set_dock_point_coordinate(
+        &self,
+        port_id: &str,
+        dock_point_id: u32,
+        latitude: f64,
+        longitude: f64,
+    ) {
+        sqlx::query!(
+            r#"
+UPDATE port_dock_points
+SET
+    latitude = $1,
+    longitude = $2
+WHERE
+    port_id = $3
+    AND port_dock_point_id = $4
+            "#,
+            BigDecimal::from_f64(latitude).unwrap(),
+            BigDecimal::from_f64(longitude).unwrap(),
+            port_id,
+            dock_point_id as i32,
+        )
+        .execute(&self.db.pool)
+        .await
+        .unwrap();
+    }
+
+    pub async fn generate_ais_vms_vessel_trail(
+        &self,
+        mmsi: Mmsi,
+        call_sign: &CallSign,
+        num_positions: usize,
+        start: DateTime<Utc>,
+        end: DateTime<Utc>,
+    ) -> Vec<AisVmsPosition> {
+        let time_step = (end - start).num_milliseconds() / num_positions as i64;
+
+        let range = DateRange::new(start, end).unwrap();
+
+        let mut ais_positions = Vec::with_capacity(num_positions / 2);
+        let mut vms_positions = Vec::with_capacity(num_positions / 2);
+        let mut last_generated_ais = true;
+        for i in 0..num_positions {
+            if last_generated_ais {
+                let mut pos = Vms::test_default(
+                    i as u32,
+                    call_sign.clone(),
+                    start + Duration::milliseconds(time_step * i as i64),
+                );
+                pos.latitude = Some(0.001 * i as f64);
+                pos.longitude = Some(0.001 * i as f64);
+                vms_positions.push(pos);
+                last_generated_ais = false;
+            } else {
+                let mut pos = NewAisPosition::test_default(
+                    mmsi,
+                    start + Duration::milliseconds(time_step * i as i64),
+                );
+                pos.latitude = 0.001 * i as f64;
+                pos.longitude = 0.001 * i as f64;
+                ais_positions.push(pos);
+                last_generated_ais = true;
+            }
+        }
+
+        self.db.add_ais_positions(&ais_positions).await.unwrap();
+        self.db.add_vms(vms_positions).await.unwrap();
+
+        let db_positions = kyogre_core::TripPrecisionOutboundPort::ais_vms_positions(
+            &self.db,
+            Some(mmsi),
+            Some(call_sign),
+            &range,
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(db_positions.len(), num_positions);
+        db_positions
+    }
+
     pub async fn add_ers_dca_value(&self, val: ErsDca) {
         self.db.add_ers_dca(vec![val]).await.unwrap();
         self.db.update_database_views().await.unwrap();
@@ -336,6 +436,36 @@ FROM
 
         assert_eq!(positions.len(), 1);
         positions.pop().unwrap()
+    }
+
+    pub async fn generate_ers_departure_with_port(
+        &self,
+        message_id: u64,
+        vessel_id: Option<FiskeridirVesselId>,
+        timestamp: DateTime<Utc>,
+        port_id: &str,
+    ) {
+        let mut departure = ErsDep::test_default(message_id, vessel_id.map(|v| v.0 as u64));
+        departure.port.code = Some(port_id.to_owned());
+        departure.departure_timestamp = timestamp;
+        departure.departure_time = timestamp.time();
+        departure.departure_date = timestamp.date_naive();
+        self.db.add_ers_dep(vec![departure]).await.unwrap();
+    }
+
+    pub async fn generate_ers_arrival_with_port(
+        &self,
+        message_id: u64,
+        vessel_id: Option<FiskeridirVesselId>,
+        timestamp: DateTime<Utc>,
+        port_id: &str,
+    ) {
+        let mut arrival = ErsPor::test_default(message_id, vessel_id.map(|v| v.0 as u64), true);
+        arrival.port.code = Some(port_id.to_owned());
+        arrival.arrival_timestamp = timestamp;
+        arrival.arrival_time = timestamp.time();
+        arrival.arrival_date = timestamp.date_naive();
+        self.db.add_ers_por(vec![arrival]).await.unwrap();
     }
 
     async fn single_vms_position(&self, message_id: u32) -> VmsPosition {

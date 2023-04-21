@@ -75,12 +75,14 @@ async fn test_produces_new_trips_without_replacing_existing_ones() {
                 period: expected_range_1.clone(),
                 landing_coverage: expected_range_1,
                 assembler_id: TripAssemblerId::Landings,
+                precision_period: None,
             },
             Trip {
                 trip_id: TripId(2),
                 period: expected_range_2.clone(),
                 landing_coverage: expected_range_2,
                 assembler_id: TripAssemblerId::Landings,
+                precision_period: None,
             },
         ];
         assert_eq!(expected, trips);
@@ -188,6 +190,7 @@ async fn test_sets_start_of_first_trip_one_day_earlier_than_landing_timestamp() 
             period: expected_range.clone(),
             landing_coverage: expected_range,
             assembler_id: TripAssemblerId::Landings,
+            precision_period: None,
         };
         assert_eq!(expected, trips[0]);
     })
@@ -291,12 +294,14 @@ async fn test_resolves_conflict_on_day_prior_to_most_recent_trip_end() {
                 period: expected_range_1.clone(),
                 landing_coverage: expected_range_1,
                 assembler_id: TripAssemblerId::Landings,
+                precision_period: None,
             },
             Trip {
                 trip_id: TripId(3),
                 period: expected_range_2.clone(),
                 landing_coverage: expected_range_2,
                 assembler_id: TripAssemblerId::Landings,
+                precision_period: None,
             },
             Trip {
                 // One trip is deleted so serial key is incremented
@@ -304,6 +309,7 @@ async fn test_resolves_conflict_on_day_prior_to_most_recent_trip_end() {
                 period: expected_range_3.clone(),
                 landing_coverage: expected_range_3,
                 assembler_id: TripAssemblerId::Landings,
+                precision_period: None,
             },
         ];
         assert_eq!(expected, trips);

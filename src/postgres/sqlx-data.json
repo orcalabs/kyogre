@@ -1570,6 +1570,21 @@
     },
     "query": "\nINSERT INTO\n    species_fiskeridir (species_fiskeridir_id, \"name\")\nSELECT\n    *\nFROM\n    UNNEST($1::INT[], $2::VARCHAR[])\nON CONFLICT (species_fiskeridir_id) DO\nUPDATE\nSET\n    \"name\" = COALESCE(species_fiskeridir.name, EXCLUDED.name)\n            "
   },
+  "97f8481d58740ff62ce9652a59ebf53470acc0371d5ee0a90c0649e37245708e": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Numeric",
+          "Numeric",
+          "Text",
+          "Int4"
+        ]
+      }
+    },
+    "query": "\nUPDATE port_dock_points\nSET\n    latitude = $1,\n    longitude = $2\nWHERE\n    port_id = $3\n    AND port_dock_point_id = $4\n            "
+  },
   "9aefabfb15b459591892b24ef44cf3313b8c8310eaf1a16333cb350026e207c6": {
     "describe": {
       "columns": [
@@ -2405,6 +2420,20 @@
       }
     },
     "query": "\nSELECT\n    species_fiskeridir_id AS id,\n    \"name\" AS \"name?\"\nFROM\n    species_fiskeridir\nORDER BY\n    species_fiskeridir_id\n            "
+  },
+  "c6e3ea79c2b6926f205c3e934af7816b626594cad96a667e02776e761feee0c4": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Numeric",
+          "Numeric",
+          "Text"
+        ]
+      }
+    },
+    "query": "\nUPDATE ports\nSET\n    latitude = $1,\n    longitude = $2\nWHERE\n    port_id = $3\n            "
   },
   "c6e7c94971b39080cad2aaa1c4538d8ec01898cc9cdae74130fb6f671112f445": {
     "describe": {

@@ -1,6 +1,7 @@
 use crate::{
-    precision::TripPrecisionCalculator, DeliveryPointPrecision, PortPrecision, PrecisionConfig,
-    StartSearchPoint, State, TripAssembler, TripAssemblerError, TripPrecisionError,
+    precision::TripPrecisionCalculator, DeliveryPointPrecision, DockPointPrecision, PortPrecision,
+    PrecisionConfig, StartSearchPoint, State, TripAssembler, TripAssemblerError,
+    TripPrecisionError,
 };
 use async_trait::async_trait;
 use chrono::{DateTime, TimeZone, Utc};
@@ -33,12 +34,12 @@ impl Default for ErsTripAssembler {
             PrecisionDirection::Extending,
             StartSearchPoint::End,
         ));
-        let dock_point_start = Box::new(PortPrecision::new(
+        let dock_point_start = Box::new(DockPointPrecision::new(
             config.clone(),
             PrecisionDirection::Extending,
             StartSearchPoint::Start,
         ));
-        let dock_point_end = Box::new(PortPrecision::new(
+        let dock_point_end = Box::new(DockPointPrecision::new(
             config,
             PrecisionDirection::Extending,
             StartSearchPoint::End,

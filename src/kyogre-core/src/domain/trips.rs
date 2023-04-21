@@ -13,6 +13,7 @@ pub struct TripId(pub i64);
 pub struct Trip {
     pub trip_id: TripId,
     pub period: DateRange,
+    pub precision_period: Option<DateRange>,
     pub landing_coverage: DateRange,
     pub assembler_id: TripAssemblerId,
 }
@@ -22,6 +23,15 @@ pub struct NewTrip {
     pub period: DateRange,
     pub start_port_code: Option<String>,
     pub end_port_code: Option<String>,
+}
+
+impl Trip {
+    pub fn precision_start(&self) -> Option<DateTime<Utc>> {
+        self.precision_period.as_ref().map(|v| v.start())
+    }
+    pub fn precision_end(&self) -> Option<DateTime<Utc>> {
+        self.precision_period.as_ref().map(|v| v.end())
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -245,6 +255,7 @@ impl From<TripDetailed> for Trip {
             period: value.period,
             landing_coverage: value.landing_coverage,
             assembler_id: value.assembler_id,
+            precision_period: value.period_precision,
         }
     }
 }
