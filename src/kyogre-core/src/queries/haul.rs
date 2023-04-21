@@ -12,6 +12,7 @@ pub enum ActiveHaulsFilter {
     GearGroup,
     SpeciesGroup,
     VesselLength,
+    CatchLocation,
 }
 
 impl ActiveHaulsFilter {
@@ -21,6 +22,7 @@ impl ActiveHaulsFilter {
             ActiveHaulsFilter::GearGroup => "gearGroup",
             ActiveHaulsFilter::SpeciesGroup => "speciesGroup",
             ActiveHaulsFilter::VesselLength => "vesselLength",
+            ActiveHaulsFilter::CatchLocation => "catchLocation",
         }
     }
 }
