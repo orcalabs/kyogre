@@ -103,7 +103,11 @@ impl TryFrom<FiskeridirAisVesselCombination> for kyogre_core::Vessel {
             norwegian_county_id: value.fiskeridir_norwegian_county_id.map(|v| v as u32),
             gross_tonnage_1969: value.fiskeridir_gross_tonnage_1969.map(|v| v as u32),
             gross_tonnage_other: value.fiskeridir_gross_tonnage_other.map(|v| v as u32),
-            call_sign: value.fiskeridir_call_sign,
+            call_sign: value
+                .fiskeridir_call_sign
+                .map(CallSign::try_from)
+                .transpose()
+                .change_context(PostgresError::DataConversion)?,
             name: value.fiskeridir_name,
             registration_id: value.fiskeridir_registration_id,
             length: opt_decimal_to_float(value.fiskeridir_length)

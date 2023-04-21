@@ -1,6 +1,7 @@
 use std::fmt;
 
 use crate::{AisVessel, Mmsi};
+use fiskeridir_rs::CallSign;
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 use serde::{de::Visitor, Deserialize, Serialize};
@@ -26,7 +27,7 @@ pub struct FiskeridirVessel {
     pub norwegian_county_id: Option<u32>,
     pub gross_tonnage_1969: Option<u32>,
     pub gross_tonnage_other: Option<u32>,
-    pub call_sign: Option<String>,
+    pub call_sign: Option<CallSign>,
     pub name: Option<String>,
     pub registration_id: Option<String>,
     pub length: Option<f64>,
