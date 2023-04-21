@@ -1,6 +1,6 @@
-use crate::chunks::{add_in_chunks, add_in_chunks_with_conversion};
+use crate::chunks::add_in_chunks;
 use crate::ScraperError;
-use error_stack::{Report, Result, ResultExt};
+use error_stack::{Result, ResultExt};
 use fiskeridir_rs::{ApiDownloader, DataFile, FileDownloader, FileSource};
 use kyogre_core::{DeleteError, FileHash, InsertError, ScraperFileHashInboundPort};
 use kyogre_core::{FileHashId, HashDiff};
@@ -83,48 +83,6 @@ impl FiskeridirSource {
 
                 let data = file.into_deserialize::<A>().change_context(ScraperError)?;
                 add_in_chunks(insert_closure, Box::new(data), chunk_size)
-                    .await
-                    .change_context(ScraperError)?;
-                self.hash_store
-                    .add(&hash_id, hash)
-                    .await
-                    .change_context(ScraperError)?;
-                Ok(HashDiff::Changed)
-            }
-        }
-    }
-
-    pub async fn scrape_year_with_conversion<A, B, C, D>(
-        &self,
-        file_hash: FileHash,
-        source: &FileSource,
-        insert_closure: D,
-        chunk_size: usize,
-    ) -> Result<HashDiff, ScraperError>
-    where
-        A: DeserializeOwned
-            + TryInto<B, Error = Report<fiskeridir_rs::Error>>
-            + 'static
-            + std::fmt::Debug
-            + Send,
-        C: Future<Output = Result<(), InsertError>>,
-        D: Fn(Vec<B>) -> C,
-    {
-        let file = self.download(source).await?;
-        let hash = file.hash().change_context(ScraperError)?;
-        let hash_id = FileHashId::new(file_hash, source.year());
-
-        let diff = self
-            .hash_store
-            .diff(&hash_id, &hash)
-            .await
-            .change_context(ScraperError)?;
-
-        match diff {
-            HashDiff::Equal => Ok(HashDiff::Equal),
-            HashDiff::Changed => {
-                let data = file.into_deserialize::<A>().change_context(ScraperError)?;
-                add_in_chunks_with_conversion(insert_closure, Box::new(data), chunk_size)
                     .await
                     .change_context(ScraperError)?;
                 self.hash_store

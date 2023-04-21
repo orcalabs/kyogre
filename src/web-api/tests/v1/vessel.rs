@@ -19,7 +19,7 @@ async fn test_vessels_returns_merged_data_from_fiskeridir_and_ais() {
 
         helper
             .handle()
-            .add_landings(vec![landing.clone()])
+            .add_landings(vec![landing.clone()], 2023)
             .await
             .unwrap();
 

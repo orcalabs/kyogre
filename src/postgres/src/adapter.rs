@@ -6,7 +6,7 @@ use crate::{
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use error_stack::{IntoReport, Report, Result, ResultExt};
-use fiskeridir_rs::CallSign;
+use fiskeridir_rs::{CallSign, LandingId};
 use futures::{Stream, StreamExt};
 use kyogre_core::*;
 use orca_core::{PsqlLogStatements, PsqlSettings};
@@ -14,6 +14,7 @@ use sqlx::{
     postgres::{PgConnectOptions, PgPoolOptions, PgSslMode},
     ConnectOptions, PgPool,
 };
+use std::collections::HashSet;
 use std::{collections::HashMap, pin::Pin};
 use tracing::{event, instrument, Level};
 
@@ -369,18 +370,31 @@ impl ScraperInboundPort for PostgresAdapter {
             .await
             .change_context(InsertError)
     }
-    async fn add_landings(&self, landings: Vec<fiskeridir_rs::Landing>) -> Result<(), InsertError> {
+    async fn add_landings(
+        &self,
+        landings: Vec<fiskeridir_rs::Landing>,
+        data_year: u32,
+    ) -> Result<(), InsertError> {
         let set = LandingSet::new(landings).change_context(InsertError)?;
 
-        self.add_landing_set(set).await.change_context(InsertError)
+        self.add_landing_set(set, data_year)
+            .await
+            .change_context(InsertError)
+    }
+    #[tracing::instrument(skip(self, existing_landing_ids))]
+    async fn delete_removed_landings(
+        &self,
+        existing_landing_ids: HashSet<LandingId>,
+        data_year: u32,
+    ) -> Result<(), DeleteError> {
+        self.delete_removed_landings_impl(existing_landing_ids, data_year)
+            .await
+            .change_context(DeleteError)
     }
     async fn delete_ers_dca(&self, year: u32) -> Result<(), DeleteError> {
         self.delete_ers_dca_impl(year)
             .await
             .change_context(DeleteError)
-    }
-    async fn add_vms(&self, vms: Vec<fiskeridir_rs::Vms>) -> Result<(), InsertError> {
-        self.add_vms_impl(vms).await.change_context(InsertError)
     }
     async fn add_ers_dca(&self, ers_dca: Vec<fiskeridir_rs::ErsDca>) -> Result<(), InsertError> {
         let set = ErsDcaSet::new(ers_dca).change_context(InsertError)?;
@@ -417,6 +431,9 @@ impl ScraperInboundPort for PostgresAdapter {
         self.update_database_views_impl()
             .await
             .change_context(UpdateError)
+    }
+    async fn add_vms(&self, vms: Vec<fiskeridir_rs::Vms>) -> Result<(), InsertError> {
+        self.add_vms_impl(vms).await.change_context(InsertError)
     }
 }
 

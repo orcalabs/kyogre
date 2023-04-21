@@ -13,7 +13,10 @@ async fn test_produces_new_trips_without_replacing_existing_ones() {
         let landings_assembler = LandingTripAssembler::default();
 
         let landing = fiskeridir_rs::Landing::test_default(1, Some(fiskeridir_vessel_id.0));
-        helper.add_landings(vec![landing.clone()]).await.unwrap();
+        helper
+            .add_landings(vec![landing.clone()], 2023)
+            .await
+            .unwrap();
 
         let vessel = helper.db.vessel(fiskeridir_vessel_id).await;
         let assembled = landings_assembler
@@ -35,7 +38,10 @@ async fn test_produces_new_trips_without_replacing_existing_ones() {
 
         let mut landing2 = fiskeridir_rs::Landing::test_default(2, Some(fiskeridir_vessel_id.0));
         landing2.landing_timestamp = landing.landing_timestamp + Duration::days(1);
-        helper.add_landings(vec![landing2.clone()]).await.unwrap();
+        helper
+            .add_landings(vec![landing2.clone()], 2023)
+            .await
+            .unwrap();
         let assembled = landings_assembler
             .assemble(
                 &helper.db.db,
@@ -96,7 +102,10 @@ async fn test_produces_no_trips_with_no_new_landings() {
         let fiskeridir_vessel_id = FiskeridirVesselId(11);
         let landings_assembler = LandingTripAssembler::default();
         let landing = fiskeridir_rs::Landing::test_default(1, Some(fiskeridir_vessel_id.0));
-        helper.add_landings(vec![landing.clone()]).await.unwrap();
+        helper
+            .add_landings(vec![landing.clone()], 2023)
+            .await
+            .unwrap();
 
         let vessel = helper.db.vessel(fiskeridir_vessel_id).await;
         let assembled = landings_assembler
@@ -135,7 +144,10 @@ async fn test_sets_start_of_first_trip_one_day_earlier_than_landing_timestamp() 
         let fiskeridir_vessel_id = FiskeridirVesselId(11);
         let landings_assembler = LandingTripAssembler::default();
         let landing = fiskeridir_rs::Landing::test_default(1, Some(fiskeridir_vessel_id.0));
-        helper.add_landings(vec![landing.clone()]).await.unwrap();
+        helper
+            .add_landings(vec![landing.clone()], 2023)
+            .await
+            .unwrap();
 
         let vessel = helper.db.vessel(fiskeridir_vessel_id).await;
         let assembled = landings_assembler
@@ -207,7 +219,7 @@ async fn test_resolves_conflict_on_day_prior_to_most_recent_trip_end() {
         landing2.landing_timestamp += Duration::days(3);
 
         helper
-            .add_landings(vec![landing.clone(), landing2.clone()])
+            .add_landings(vec![landing.clone(), landing2.clone()], 2023)
             .await
             .unwrap();
 
@@ -233,7 +245,10 @@ async fn test_resolves_conflict_on_day_prior_to_most_recent_trip_end() {
         let mut landing3 = fiskeridir_rs::Landing::test_default(3, Some(fiskeridir_vessel_id.0));
         landing3.landing_timestamp = landing2.landing_timestamp - Duration::days(1);
 
-        helper.add_landings(vec![landing3.clone()]).await.unwrap();
+        helper
+            .add_landings(vec![landing3.clone()], 2023)
+            .await
+            .unwrap();
 
         let conflict = helper
             .conflicts(TripAssemblerId::Landings)

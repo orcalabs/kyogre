@@ -1,5 +1,5 @@
 use super::test_client::ApiClient;
-use chrono::{DateTime, Duration, Utc};
+use chrono::{DateTime, Datelike, Duration, Utc};
 use dockertest::{DockerTest, Source, StaticManagementPolicy};
 use fiskeridir_rs::{ErsDep, ErsPor, GearGroup, SpeciesGroup, VesselLengthGroup};
 use futures::Future;
@@ -138,9 +138,11 @@ impl TestHelper {
         let mut landing2 = fiskeridir_rs::Landing::test_default(random(), Some(vessel_id.0));
         landing2.landing_timestamp = *end;
 
+        let year = landing.landing_timestamp.year() as u32;
+
         self.db
             .db
-            .add_landings(vec![landing, landing2])
+            .add_landings(vec![landing, landing2], year)
             .await
             .unwrap();
 

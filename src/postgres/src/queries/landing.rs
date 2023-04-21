@@ -1,10 +1,17 @@
+use std::collections::HashSet;
+
 use crate::{error::PostgresError, landing_set::LandingSet, models::NewLanding, PostgresAdapter};
 use chrono::{DateTime, Utc};
 use error_stack::{IntoReport, Result, ResultExt};
+use fiskeridir_rs::LandingId;
 use kyogre_core::FiskeridirVesselId;
 
 impl PostgresAdapter {
-    pub(crate) async fn add_landing_set(&self, set: LandingSet) -> Result<(), PostgresError> {
+    pub(crate) async fn add_landing_set(
+        &self,
+        set: LandingSet,
+        data_year: u32,
+    ) -> Result<(), PostgresError> {
         let prepared_set = set.prepare();
         let mut tx = self.begin().await?;
 
@@ -30,7 +37,8 @@ impl PostgresAdapter {
             .await?;
         self.add_area_groupings(prepared_set.area_groupings, &mut tx)
             .await?;
-        self.add_landings(prepared_set.landings, &mut tx).await?;
+        self.add_landings(prepared_set.landings, data_year, &mut tx)
+            .await?;
         self.add_landing_entries(prepared_set.landing_entries, &mut tx)
             .await?;
 
@@ -45,6 +53,7 @@ impl PostgresAdapter {
     async fn add_landings<'a>(
         &'a self,
         landings: Vec<NewLanding>,
+        data_year: u32,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
     ) -> Result<(), PostgresError> {
         let len = landings.len();
@@ -116,6 +125,7 @@ impl PostgresAdapter {
         let mut receiving_vessel_type = Vec::with_capacity(len);
         let mut receiving_vessel_nation_id = Vec::with_capacity(len);
         let mut receiving_vessel_nation = Vec::with_capacity(len);
+        let mut data_year_vec = Vec::with_capacity(len);
 
         for l in landings {
             landing_id.push(l.landing_id);
@@ -186,6 +196,7 @@ impl PostgresAdapter {
             receiving_vessel_type.push(l.receiving_vessel_type);
             receiving_vessel_nation_id.push(l.receiving_vessel_nation_id);
             receiving_vessel_nation.push(l.receiving_vessel_nation);
+            data_year_vec.push(data_year as i32);
         }
 
         sqlx::query!(
@@ -258,7 +269,8 @@ INSERT INTO
         receiving_vessel_mmsi_or_call_sign,
         receiving_vessel_type,
         receiving_vessel_nation_id,
-        receiving_vessel_nation
+        receiving_vessel_nation,
+        data_year
     )
 SELECT
     *
@@ -330,9 +342,13 @@ FROM
         $64::VARCHAR[],
         $65::INT[],
         $66::VARCHAR[],
-        $67::VARCHAR[]
+        $67::VARCHAR[],
+        $68::INT[]
     )
-ON CONFLICT (landing_id, "version") DO NOTHING
+ON CONFLICT (landing_id, "version") DO
+UPDATE
+SET
+    data_year = excluded.data_year
             "#,
             landing_id.as_slice(),
             document_id.as_slice(),
@@ -401,6 +417,7 @@ ON CONFLICT (landing_id, "version") DO NOTHING
             receiving_vessel_type.as_slice() as _,
             receiving_vessel_nation_id.as_slice() as _,
             receiving_vessel_nation.as_slice() as _,
+            data_year_vec.as_slice(),
         )
         .execute(&mut *tx)
         .await
@@ -438,5 +455,36 @@ WHERE
         .into_iter()
         .map(|v| v.landing_timestamp)
         .collect())
+    }
+
+    pub(crate) async fn delete_removed_landings_impl(
+        &self,
+        existing_landing_ids: HashSet<LandingId>,
+        data_year: u32,
+    ) -> Result<(), PostgresError> {
+        let ids: Vec<String> = existing_landing_ids
+            .into_iter()
+            .map(|v| v.into_inner())
+            .collect();
+        sqlx::query!(
+            r#"
+DELETE FROM landings
+WHERE
+    data_year = $1
+    AND landing_id NOT IN (
+        SELECT
+            *
+        FROM
+            UNNEST($2::VARCHAR[])
+    )
+            "#,
+            data_year as i32,
+            ids.as_slice(),
+        )
+        .execute(&self.pool)
+        .await
+        .into_report()
+        .change_context(PostgresError::Query)
+        .map(|_| ())
     }
 }

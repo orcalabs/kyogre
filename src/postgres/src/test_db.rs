@@ -468,6 +468,28 @@ WHERE
         self.db.add_ers_por(vec![arrival]).await.unwrap();
     }
 
+    pub async fn generate_landings_trip(
+        &self,
+        vessel_id: FiskeridirVesselId,
+        start: DateTime<Utc>,
+        end: DateTime<Utc>,
+    ) {
+        self.db
+            .add_trips_impl(
+                vessel_id,
+                end,
+                TripsConflictStrategy::Replace,
+                vec![NewTrip {
+                    period: DateRange::new(start, end).unwrap(),
+                    start_port_code: None,
+                    end_port_code: None,
+                }],
+                TripAssemblerId::Landings,
+            )
+            .await
+            .unwrap()
+    }
+
     async fn single_vms_position(&self, message_id: u32) -> VmsPosition {
         let pos = sqlx::query_as!(
             crate::models::VmsPosition,
