@@ -1,6 +1,7 @@
 use crate::{error::ApiError, to_streaming_response, Database};
 use actix_web::{web, HttpResponse};
 use chrono::{DateTime, Utc};
+use fiskeridir_rs::CallSign;
 use futures::TryStreamExt;
 use kyogre_core::{FiskeridirVesselId, Mmsi};
 use serde::{Deserialize, Serialize};
@@ -45,7 +46,8 @@ pub struct FiskeridirVessel {
     pub norwegian_county_id: Option<u32>,
     pub gross_tonnage_1969: Option<u32>,
     pub gross_tonnage_other: Option<u32>,
-    pub call_sign: Option<String>,
+    #[schema(value_type = String)]
+    pub call_sign: Option<CallSign>,
     pub name: Option<String>,
     pub registration_id: Option<String>,
     pub length: Option<f64>,
