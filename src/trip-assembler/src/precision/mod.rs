@@ -4,7 +4,7 @@ use chrono::{DateTime, Duration, Utc};
 use error_stack::{IntoReport, Result, ResultExt};
 use geoutils::Location;
 use kyogre_core::{
-    AisPosition, DateRange, PrecisionDirection, PrecisionId, PrecisionOutcome, PrecisionUpdate,
+    AisVmsPosition, DateRange, PrecisionDirection, PrecisionId, PrecisionOutcome, PrecisionUpdate,
     Trip, TripPrecisionOutboundPort, TripPrecisionUpdate, Vessel,
 };
 use num_traits::ToPrimitive;
@@ -40,7 +40,7 @@ pub trait TripPrecision: Send + Sync {
     async fn precision(
         &self,
         adapter: &dyn TripPrecisionOutboundPort,
-        positions: &[AisPosition],
+        positions: &[AisVmsPosition],
         trip: &Trip,
         vessel: &Vessel,
     ) -> Result<Option<PrecisionStop>, TripPrecisionError>;
@@ -98,14 +98,12 @@ impl TripPrecisionCalculator {
         }
     }
 
-    pub fn add_start_precision(mut self, precision: Box<dyn TripPrecision>) -> Self {
+    pub fn add_start_precision(&mut self, precision: Box<dyn TripPrecision>) {
         self.start_precisions.push(precision);
-        self
     }
 
-    pub fn add_end_precision(mut self, precision: Box<dyn TripPrecision>) -> Self {
+    pub fn add_end_precision(&mut self, precision: Box<dyn TripPrecision>) {
         self.end_precisions.push(precision);
-        self
     }
 
     pub async fn calculate_precision(
@@ -114,18 +112,19 @@ impl TripPrecisionCalculator {
         adapter: &dyn TripPrecisionOutboundPort,
         trips: Vec<Trip>,
     ) -> Result<Vec<TripPrecisionUpdate>, TripPrecisionError> {
-        if vessel.mmsi().is_none() {
+        if vessel.mmsi().is_none() && vessel.fiskeridir.call_sign.is_none() {
             return Ok(vec![]);
         }
-
-        // `unwrap` is safe because of `is_none` check above
-        let mmsi = vessel.mmsi().unwrap();
 
         let mut updates = Vec::with_capacity(trips.len());
 
         for t in trips {
             let positions = adapter
-                .ais_positions(mmsi, &t.period)
+                .ais_vms_positions(
+                    vessel.mmsi(),
+                    vessel.fiskeridir.call_sign.as_ref(),
+                    &t.period,
+                )
                 .await
                 .change_context(TripPrecisionError)?;
 
@@ -203,7 +202,7 @@ fn find_close_point<'a, T>(
     point_cluster_preference: &PointClusterPreference,
 ) -> Option<DateTime<Utc>>
 where
-    T: IntoIterator<Item = &'a [AisPosition]>,
+    T: IntoIterator<Item = &'a [AisVmsPosition]>,
 {
     for chunk in iter {
         let center = center_point_point_of_chunk(chunk);
@@ -213,11 +212,11 @@ where
             match point_cluster_preference {
                 PointClusterPreference::First => {
                     let first_point = chunk.first().unwrap();
-                    return Some(first_point.msgtime);
+                    return Some(first_point.timestamp);
                 }
                 PointClusterPreference::Last => {
                     let last_point = chunk.last().unwrap();
-                    return Some(last_point.msgtime);
+                    return Some(last_point.timestamp);
                 }
             }
         }
@@ -225,7 +224,7 @@ where
     None
 }
 
-fn center_point_point_of_chunk(chunk: &[AisPosition]) -> Location {
+fn center_point_point_of_chunk(chunk: &[AisVmsPosition]) -> Location {
     let locations: Vec<Location> = chunk
         .iter()
         .map(|c| Location::new(c.latitude.to_f64().unwrap(), c.longitude.to_f64().unwrap()))

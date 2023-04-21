@@ -5,9 +5,9 @@ use super::{
 use crate::error::TripPrecisionError;
 use async_trait::async_trait;
 use chrono::{TimeZone, Utc};
-use error_stack::{report, Result, ResultExt};
+use error_stack::{Result, ResultExt};
 use geoutils::Location;
-use kyogre_core::{AisPosition, DateRange, Trip};
+use kyogre_core::{AisVmsPosition, DateRange, Trip};
 use kyogre_core::{TripPrecisionOutboundPort, Vessel};
 
 /// Precision strategy where we try to find a collection of positions close to the dock points
@@ -24,7 +24,7 @@ impl TripPrecision for DockPointPrecision {
     async fn precision(
         &self,
         adapter: &dyn TripPrecisionOutboundPort,
-        positions: &[AisPosition],
+        positions: &[AisVmsPosition],
         trip: &Trip,
         vessel: &Vessel,
     ) -> Result<Option<PrecisionStop>, TripPrecisionError> {
@@ -70,13 +70,9 @@ impl DockPointPrecision {
         adapter: &dyn TripPrecisionOutboundPort,
         target: &Location,
         vessel: &Vessel,
-        positions: &[AisPosition],
+        positions: &[AisVmsPosition],
         trip: &Trip,
     ) -> Result<Option<PrecisionStop>, TripPrecisionError> {
-        let mmsi = vessel.mmsi().ok_or_else(|| {
-            report!(TripPrecisionError).attach_printable("expected mmsi to be Some")
-        })?;
-
         Ok(match self.start_search_point {
             StartSearchPoint::End => match self.direction {
                 PrecisionDirection::Shrinking => self.do_precision_impl(
@@ -94,7 +90,11 @@ impl DockPointPrecision {
                     )
                     .unwrap();
                     let positions = adapter
-                        .ais_positions(mmsi, &range)
+                        .ais_vms_positions(
+                            vessel.mmsi(),
+                            vessel.fiskeridir.call_sign.as_ref(),
+                            &range,
+                        )
                         .await
                         .change_context(TripPrecisionError)?;
                     self.do_precision_impl(
@@ -124,7 +124,11 @@ impl DockPointPrecision {
                     )
                     .unwrap();
                     let positions = adapter
-                        .ais_positions(mmsi, &range)
+                        .ais_vms_positions(
+                            vessel.mmsi(),
+                            vessel.fiskeridir.call_sign.as_ref(),
+                            &range,
+                        )
                         .await
                         .change_context(TripPrecisionError)?;
                     self.do_precision_impl(
@@ -144,7 +148,7 @@ impl DockPointPrecision {
         preference: &PointClusterPreference,
     ) -> Option<PrecisionStop>
     where
-        T: IntoIterator<Item = &'a [AisPosition]>,
+        T: IntoIterator<Item = &'a [AisVmsPosition]>,
     {
         find_close_point(target, iter, self.config.threshold, preference).map(|d| PrecisionStop {
             timestamp: d,

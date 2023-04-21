@@ -3,9 +3,9 @@ use super::{
     PrecisionStop, TripPrecision,
 };
 use crate::error::TripPrecisionError;
-use error_stack::{report, Result, ResultExt};
+use error_stack::{Result, ResultExt};
 use geoutils::Location;
-use kyogre_core::{AisPosition, DateRange, Trip, TripPrecisionOutboundPort, Vessel};
+use kyogre_core::{AisVmsPosition, DateRange, Trip, TripPrecisionOutboundPort, Vessel};
 use num_traits::ToPrimitive;
 
 use async_trait::async_trait;
@@ -25,7 +25,7 @@ impl TripPrecision for DeliveryPointPrecision {
     async fn precision(
         &self,
         adapter: &dyn TripPrecisionOutboundPort,
-        positions: &[AisPosition],
+        positions: &[AisVmsPosition],
         trip: &Trip,
         vessel: &Vessel,
     ) -> Result<Option<PrecisionStop>, TripPrecisionError> {
@@ -62,7 +62,7 @@ impl DeliveryPointPrecision {
         adapter: &dyn TripPrecisionOutboundPort,
         target: &Location,
         vessel: &Vessel,
-        positions: &[AisPosition],
+        positions: &[AisVmsPosition],
         trip: &Trip,
     ) -> Result<Option<PrecisionStop>, TripPrecisionError> {
         Ok(match self.direction {
@@ -82,12 +82,7 @@ impl DeliveryPointPrecision {
                 )
                 .unwrap();
                 let positions = adapter
-                    .ais_positions(
-                        vessel.mmsi().ok_or_else(|| {
-                            report!(TripPrecisionError).attach_printable("expected mmsi to be Some")
-                        })?,
-                        &range,
-                    )
+                    .ais_vms_positions(vessel.mmsi(), vessel.fiskeridir.call_sign.as_ref(), &range)
                     .await
                     .change_context(TripPrecisionError)?;
                 self.do_precision_impl(
@@ -106,7 +101,7 @@ impl DeliveryPointPrecision {
         preference: &PointClusterPreference,
     ) -> Option<PrecisionStop>
     where
-        T: IntoIterator<Item = &'a [AisPosition]>,
+        T: IntoIterator<Item = &'a [AisVmsPosition]>,
     {
         find_close_point(target, iter, self.config.threshold, preference).map(|d| PrecisionStop {
             timestamp: d,

@@ -8,12 +8,57 @@ use rand::random;
 use std::panic;
 use std::sync::Once;
 use tracing_subscriber::FmtSubscriber;
+use trip_assembler::{State, TripAssembler};
 
 static TRACING: Once = Once::new();
 static DATABASE_PASSWORD: &str = "test123";
 
 pub struct TestHelper {
     pub db: TestDb,
+}
+
+impl TestHelper {
+    pub async fn assemble_trips(
+        &self,
+        vessel: &Vessel,
+        assembler: &(dyn TripAssembler + Send + Sync),
+    ) -> Vec<Trip> {
+        let new_trips = assembler
+            .assemble(&self.db.db, vessel, State::NoPriorState)
+            .await
+            .unwrap()
+            .unwrap();
+
+        self.db
+            .db
+            .add_trips(
+                vessel.fiskeridir.id,
+                new_trips.new_trip_calculation_time,
+                new_trips.conflict_strategy,
+                new_trips.trips,
+                assembler.assembler_id(),
+            )
+            .await
+            .unwrap();
+
+        self.db.trips_of_vessel(vessel.fiskeridir.id).await
+    }
+
+    pub async fn update_trips_precision(
+        &self,
+        vessel: &Vessel,
+        trips: Vec<Trip>,
+        assembler: &(dyn TripAssembler + Send + Sync),
+    ) -> Vec<Trip> {
+        let updates = assembler
+            .calculate_precision(vessel, &self.db.db, trips)
+            .await
+            .unwrap();
+
+        self.db.db.update_trip_precisions(updates).await.unwrap();
+
+        self.db.trips_of_vessel(vessel.fiskeridir.id).await
+    }
 }
 
 impl std::ops::Deref for TestHelper {
