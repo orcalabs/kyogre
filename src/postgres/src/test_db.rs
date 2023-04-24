@@ -3,7 +3,9 @@ use std::collections::HashMap;
 use crate::{models::Haul, PostgresAdapter};
 use bigdecimal::{BigDecimal, FromPrimitive};
 use chrono::{DateTime, Duration, Utc};
-use fiskeridir_rs::{CallSign, ErsDca, ErsDep, ErsPor, Gear, GearGroup, VesselLengthGroup, Vms};
+use fiskeridir_rs::{
+    CallSign, ErsDca, ErsDep, ErsPor, Gear, GearGroup, LandingId, VesselLengthGroup, Vms,
+};
 use kyogre_core::*;
 
 /// Wrapper with additional methods inteded for testing purposes.
@@ -451,6 +453,28 @@ WHERE
         departure.departure_time = timestamp.time();
         departure.departure_date = timestamp.date_naive();
         self.db.add_ers_dep(vec![departure]).await.unwrap();
+    }
+
+    pub async fn landing_ids_of_vessel(&self, vessel_id: FiskeridirVesselId) -> Vec<LandingId> {
+        sqlx::query!(
+            r#"
+SELECT
+    landing_id
+FROM
+    landings
+WHERE
+    fiskeridir_vessel_id = $1
+ORDER BY
+    landing_id
+            "#,
+            vessel_id.0 as i64
+        )
+        .fetch_all(&self.db.pool)
+        .await
+        .unwrap()
+        .into_iter()
+        .map(|v| LandingId::try_from(v.landing_id).unwrap())
+        .collect()
     }
 
     pub async fn generate_ers_arrival_with_port(

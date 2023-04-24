@@ -1,6 +1,12 @@
+use sqlx::Row;
 use std::collections::HashSet;
 
-use crate::{error::PostgresError, landing_set::LandingSet, models::NewLanding, PostgresAdapter};
+use crate::{
+    error::{ErrorWrapper, PostgresError},
+    landing_set::LandingSet,
+    models::NewLanding,
+    PostgresAdapter,
+};
 use chrono::{DateTime, Utc};
 use error_stack::{IntoReport, Result, ResultExt};
 use fiskeridir_rs::LandingId;
@@ -462,29 +468,105 @@ WHERE
         existing_landing_ids: HashSet<LandingId>,
         data_year: u32,
     ) -> Result<(), PostgresError> {
+        let mut tx = self.begin().await?;
+
         let ids: Vec<String> = existing_landing_ids
             .into_iter()
             .map(|v| v.into_inner())
             .collect();
+
+        // With the naive sql approach `DELETE WHERE landing_id NOT IN (ALL($1)) the query takes
+        // forever as the input vector will be about 360k long.
+        // Instead we create a temporary table and index it and do a join operation to filter the
+        // rows to delete.
+        // (see https://dba.stackexchange.com/questions/91247/optimizing-a-postgres-query-with-a-large-in/91539#91539 for more details)
+        // SQLX does not like us referencing temporary tables in the query macros for type checking
+        // so we use the normal versions here.
+        sqlx::query(
+            r#"
+CREATE TEMPORARY TABLE
+    existing_landing_ids (landing_id VARCHAR NOT NULL, data_year int not null, PRIMARY KEY (landing_id, data_year)) ON
+COMMIT
+DROP;
+            "#,
+        )
+        .execute(&mut *tx)
+        .await
+        .into_report()
+        .change_context(PostgresError::Query)?;
+
+        sqlx::query(
+            r#"
+INSERT INTO
+    existing_landing_ids (landing_id, data_year) (
+        SELECT
+            ids, $2
+        FROM
+            UNNEST($1::VARCHAR[]) as ids
+    );
+            "#,
+        )
+        .bind(ids.as_slice())
+        .bind(data_year as i32)
+        .execute(&mut *tx)
+        .await
+        .into_report()
+        .change_context(PostgresError::Query)?;
+
+        let rows = sqlx::query(
+            r#"
+SELECT
+    l.landing_id
+FROM
+    landings AS l
+    LEFT JOIN existing_landing_ids AS e
+        ON l.landing_id = e.landing_id
+        AND l.data_year = e.data_year
+WHERE
+    e.landing_id IS NULL
+AND
+    l.data_year = $1
+            "#,
+        )
+        .bind(data_year as i32)
+        .fetch_all(&mut *tx)
+        .await
+        .into_report()
+        .change_context(PostgresError::Query)?;
+
+        let mut ids_to_delete = Vec::with_capacity(rows.len());
+
+        for r in rows {
+            let id = r
+                .try_get_raw(0)
+                .into_report()
+                .change_context(PostgresError::DataConversion)?
+                .as_str()
+                .map_err(|e| ErrorWrapper(e.to_string()))
+                .into_report()
+                .change_context(PostgresError::DataConversion)?
+                .to_string();
+            ids_to_delete.push(id)
+        }
+
+        tracing::Span::current().record("landings_to_delete", ids_to_delete.len());
+
         sqlx::query!(
             r#"
 DELETE FROM landings
 WHERE
-    data_year = $1
-    AND landing_id NOT IN (
-        SELECT
-            *
-        FROM
-            UNNEST($2::VARCHAR[])
-    )
+    landing_id = ANY ($1)
             "#,
-            data_year as i32,
-            ids.as_slice(),
+            &ids_to_delete,
         )
-        .execute(&self.pool)
+        .execute(&mut tx)
         .await
         .into_report()
-        .change_context(PostgresError::Query)
-        .map(|_| ())
+        .change_context(PostgresError::Query)?;
+
+        tx.commit()
+            .await
+            .into_report()
+            .change_context(PostgresError::Transaction)
     }
 }
