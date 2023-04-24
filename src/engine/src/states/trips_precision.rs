@@ -27,6 +27,10 @@ where
 {
     #[instrument(name = "trips_precision_state", skip_all)]
     pub async fn run(self) -> Engine<A, SharedState<B>> {
+        tracing::Span::current().record(
+            "app.engine_state",
+            EngineDiscriminants::TripsPrecision.as_ref(),
+        );
         match self.database().all_vessels().await {
             Err(e) => {
                 event!(Level::ERROR, "failed to retrieve vessels: {:?}", e);

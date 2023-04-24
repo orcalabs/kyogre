@@ -1,6 +1,5 @@
+use crate::*;
 use tracing::{event, instrument, Level};
-
-use crate::{Database, Engine, Pending, SharedState, StepWrapper};
 
 // Pending -> UpdateDatabaseViews
 impl<L, T> From<StepWrapper<L, T, Pending>> for StepWrapper<L, T, UpdateDatabaseViews> {
@@ -25,6 +24,10 @@ where
 {
     #[instrument(name = "update_database_views_state", skip_all)]
     pub async fn run(self) -> Engine<A, SharedState<B>> {
+        tracing::Span::current().record(
+            "app.engine_state",
+            EngineDiscriminants::UpdateDatabaseViews.as_ref(),
+        );
         if let Err(e) = self.database().update_database_views().await {
             event!(
                 Level::ERROR,

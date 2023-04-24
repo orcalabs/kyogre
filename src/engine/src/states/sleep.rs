@@ -1,4 +1,4 @@
-use crate::{Engine, Pending, SharedState, StepWrapper};
+use crate::*;
 use tracing::{event, instrument, Level};
 
 // Pending -> Sleep
@@ -37,6 +37,7 @@ pub struct Sleep {
 impl<A, B> StepWrapper<A, SharedState<B>, Sleep> {
     #[instrument(name = "sleep_state", skip_all)]
     pub async fn run(self) -> Engine<A, SharedState<B>> {
+        tracing::Span::current().record("app.engine_state", EngineDiscriminants::Sleep.as_ref());
         event!(
             Level::INFO,
             "sleeping {:?}",
