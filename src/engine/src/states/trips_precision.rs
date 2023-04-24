@@ -66,7 +66,7 @@ where
         let database = self.database();
 
         for vessel in vessels {
-            if vessel.mmsi().is_none() {
+            if vessel.mmsi().is_none() && vessel.fiskeridir.call_sign.is_none() {
                 continue;
             }
 
