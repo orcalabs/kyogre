@@ -28,8 +28,9 @@ impl<A, B> StepWrapper<A, SharedState<B>, Trips>
 where
     B: Database,
 {
-    #[instrument(name = "trips_state", skip_all)]
+    #[instrument(name = "trips_state", skip_all, fields(app.engine_state))]
     pub async fn run(self) -> Engine<A, SharedState<B>> {
+        tracing::Span::current().record("app.engine_state", EngineDiscriminants::Trips.as_ref());
         for a in self.trip_processors() {
             if let Err(e) = self.run_assembler(a.as_ref()).await {
                 event!(Level::ERROR, "failed to run trip assembler: {:?}", e);

@@ -40,6 +40,7 @@ where
 
     #[instrument(name = "pending_state", skip_all)]
     pub async fn run(mut self) -> Engine<A, SharedState<B>> {
+        tracing::Span::current().record("app.engine_state", EngineDiscriminants::Pending.as_ref());
         match self.next_transition().await {
             Ok(s) => {
                 event!(Level::INFO, "next state is: {:?}", s);

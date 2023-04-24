@@ -21,6 +21,7 @@ pub struct Scrape;
 impl<A, B> StepWrapper<A, SharedState<B>, Scrape> {
     #[instrument(name = "scrape_state", skip_all)]
     pub async fn run(self) -> Engine<A, SharedState<B>> {
+        tracing::Span::current().record("app.engine_state", EngineDiscriminants::Scrape.as_ref());
         self.scraper().run().await;
         Engine::Trips(StepWrapper::<A, SharedState<B>, Trips>::from(self))
     }
