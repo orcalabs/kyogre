@@ -32,7 +32,7 @@ strum = "0.24.1"
 strum_macros = "0.24.3"
 
 [dev-dependencies]
-tracing-subscriber = "0.3.16"
+tracing-subscriber = "0.3.17"
 rand = "0.8.5"
 futures = "0.3.28"
 dockertest = { version = "0.3.1", registry = "orcalabs-orcastrator" }

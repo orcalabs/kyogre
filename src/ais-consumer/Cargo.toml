@@ -36,7 +36,7 @@ lazy_static = "1.4.0"
 
 [dev-dependencies]
 lazy_static = "1.4.0"
-tracing-subscriber = "0.3.16"
+tracing-subscriber = "0.3.17"
 orca-core = { registry = "orcalabs-orcastrator", version = "0.20.0", features = [
     "dockertest",
 ] }

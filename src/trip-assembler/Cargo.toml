@@ -27,4 +27,4 @@ orca-core = { version = "0.20.0", registry = "orcalabs-orcastrator", features = 
 tokio = { version = "1.27.0", features = ["rt-multi-thread", "macros"] }
 futures = "0.3.28"
 fiskeridir-rs = { workspace = true }
-tracing-subscriber = "0.3.16"
+tracing-subscriber = "0.3.17"
