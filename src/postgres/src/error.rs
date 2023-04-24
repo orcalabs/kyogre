@@ -121,3 +121,16 @@ impl std::fmt::Display for HaulMatrixIndexError {
         }
     }
 }
+
+// Necesary evil when SQLX returns a boxed dyn Error + Send + Sync which we can't transform into a
+// report.
+// This type is used as an intermediate error type to then be converted into a error-stack Report.
+#[derive(Debug)]
+pub struct ErrorWrapper(pub String);
+
+impl std::fmt::Display for ErrorWrapper {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!("{:?}", self.0))
+    }
+}
+impl std::error::Error for ErrorWrapper {}
