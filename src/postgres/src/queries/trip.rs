@@ -500,7 +500,7 @@ WHERE
             "#,
             vessel_id.0,
             assembler_id as i32,
-            PrecisionStatus::Unprocessed as i32
+            PrecisionStatus::Unprocessed.name()
         )
         .fetch_all(&self.pool)
         .await
