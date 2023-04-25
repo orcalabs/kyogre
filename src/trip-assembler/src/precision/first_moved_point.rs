@@ -2,9 +2,11 @@ use super::{
     center_point_point_of_chunk, PrecisionDirection, PrecisionId, PrecisionStop, StartSearchPoint,
     TripPrecision,
 };
+use crate::LocationDistanceToError;
 use crate::{error::TripPrecisionError, precision::PrecisionConfig, Result};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
+use error_stack::{report, ResultExt};
 use geoutils::Location;
 use kyogre_core::{AisVmsPosition, Trip};
 use kyogre_core::{TripPrecisionOutboundPort, Vessel};
@@ -32,7 +34,8 @@ impl TripPrecision for FirstMovedPoint {
                     inital_start_position,
                     positions.rchunks(self.config.position_chunk_size),
                     self.config.threshold,
-                );
+                )
+                .change_context(TripPrecisionError)?;
 
                 Ok(timestamp.map(|t| PrecisionStop {
                     timestamp: t,
@@ -46,7 +49,9 @@ impl TripPrecision for FirstMovedPoint {
                     inital_end_position,
                     positions.chunks(self.config.position_chunk_size),
                     self.config.threshold,
-                );
+                )
+                .change_context(TripPrecisionError)?;
+
                 Ok(timestamp.map(|t| PrecisionStop {
                     timestamp: t,
                     direction: PrecisionDirection::Shrinking,
@@ -61,7 +66,7 @@ fn find_first_moved_point<'a, T>(
     initial_position: &AisVmsPosition,
     iter: T,
     threshold: f64,
-) -> Option<DateTime<Utc>>
+) -> Result<Option<DateTime<Utc>>, LocationDistanceToError>
 where
     T: IntoIterator<Item = &'a [AisVmsPosition]>,
 {
@@ -72,14 +77,20 @@ where
 
     for chunk in iter {
         let center = center_point_point_of_chunk(chunk);
-        let distance = initial_position.distance_to(&center).unwrap();
+        let distance = initial_position.distance_to(&center).map_err(|e| {
+            report!(LocationDistanceToError {
+                from: initial_position,
+                to: center,
+            })
+            .attach_printable(e)
+        })?;
 
         if distance.meters() > threshold {
             let first_point = chunk.first().unwrap();
-            return Some(first_point.timestamp);
+            return Ok(Some(first_point.timestamp));
         }
     }
-    None
+    Ok(None)
 }
 
 impl FirstMovedPoint {
