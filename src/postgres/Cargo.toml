@@ -26,7 +26,7 @@ sqlx = { version = "0.6.3", features = [
 ] }
 error-stack = { workspace = true }
 bigdecimal = "0.3.0"
-tokio = { version = "1.27.0", features = ["macros", "sync", "time"] }
+tokio = { version = "1.28.0", features = ["macros", "sync", "time"] }
 tracing = "0.1.37"
 async-trait = "0.1.68"
 serde_json = "1.0.96"
@@ -43,4 +43,4 @@ dockertest = { version = "0.3.1", registry = "orcalabs-orcastrator" }
 orca-core = { version = "0.20.0", registry = "orcalabs-orcastrator", features = [
     "dockertest",
 ] }
-tokio = { version = "1.27.0", features = ["rt-multi-thread", "macros"] }
+tokio = { version = "1.28.0", features = ["rt-multi-thread", "macros"] }
