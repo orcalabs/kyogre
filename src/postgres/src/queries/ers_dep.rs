@@ -386,7 +386,7 @@ FROM
     ers_departures
 WHERE
     fiskeridir_vessel_id = $1
-    AND departure_timestamp >= $2
+    AND departure_timestamp >= GREATEST($2, '1970-01-01T00:00:00Z'::TIMESTAMPTZ)
             "#,
             vessel_id.0,
             start,
