@@ -357,7 +357,7 @@ FROM
     ers_arrivals
 WHERE
     fiskeridir_vessel_id = $1
-    AND arrival_timestamp >= $2
+    AND arrival_timestamp >= GREATEST($2, '1970-01-01T00:00:00Z'::TIMESTAMPTZ)
     AND (
         $3::bool IS NULL
         OR landing_facility IS NOT NULL

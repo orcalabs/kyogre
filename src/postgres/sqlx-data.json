@@ -707,6 +707,39 @@
     },
     "query": "\nINSERT INTO\n    norwegian_municipalities (norwegian_municipality_id, \"name\")\nSELECT\n    *\nFROM\n    UNNEST($1::INT[], $2::VARCHAR[])\nON CONFLICT (norwegian_municipality_id) DO\nUPDATE\nSET\n    NAME = excluded.name\nWHERE\n    norwegian_municipalities.name IS NULL\n    AND excluded.name IS NOT NULL\n            "
   },
+  "47d0f250215c48234d76eb068c7b76971da04b5f084b11995819107b6357d980": {
+    "describe": {
+      "columns": [
+        {
+          "name": "fiskeridir_vessel_id!",
+          "ordinal": 0,
+          "type_info": "Int8"
+        },
+        {
+          "name": "timestamp",
+          "ordinal": 1,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "port_id",
+          "ordinal": 2,
+          "type_info": "Varchar"
+        }
+      ],
+      "nullable": [
+        true,
+        false,
+        true
+      ],
+      "parameters": {
+        "Left": [
+          "Int8",
+          "Timestamptz"
+        ]
+      }
+    },
+    "query": "\nSELECT\n    fiskeridir_vessel_id AS \"fiskeridir_vessel_id!\",\n    departure_timestamp AS \"timestamp\",\n    port_id\nFROM\n    ers_departures\nWHERE\n    fiskeridir_vessel_id = $1\n    AND departure_timestamp >= GREATEST($2, '1970-01-01T00:00:00Z'::TIMESTAMPTZ)\n            "
+  },
   "4e16660dbaaba147474f7afa552fd6bbe2da624f563166b1dfd8fa48b748a91a": {
     "describe": {
       "columns": [
@@ -2058,40 +2091,6 @@
     },
     "query": "\nSELECT\n    landing_timestamp\nFROM\n    landings\nWHERE\n    fiskeridir_vessel_id = $1\n    AND landing_timestamp >= $2\n            "
   },
-  "ae4a01d2a251e7d9be99a7e33be14885ab8070c67586cca322b84b85c9eec050": {
-    "describe": {
-      "columns": [
-        {
-          "name": "fiskeridir_vessel_id!",
-          "ordinal": 0,
-          "type_info": "Int8"
-        },
-        {
-          "name": "timestamp",
-          "ordinal": 1,
-          "type_info": "Timestamptz"
-        },
-        {
-          "name": "port_id",
-          "ordinal": 2,
-          "type_info": "Varchar"
-        }
-      ],
-      "nullable": [
-        true,
-        false,
-        true
-      ],
-      "parameters": {
-        "Left": [
-          "Int8",
-          "Timestamptz",
-          "Bool"
-        ]
-      }
-    },
-    "query": "\nSELECT\n    fiskeridir_vessel_id AS \"fiskeridir_vessel_id!\",\n    arrival_timestamp AS \"timestamp\",\n    port_id\nFROM\n    ers_arrivals\nWHERE\n    fiskeridir_vessel_id = $1\n    AND arrival_timestamp >= $2\n    AND (\n        $3::bool IS NULL\n        OR landing_facility IS NOT NULL\n    )\n            "
-  },
   "afab8a5cb3418938aa30de7bd22a9852b1b204e39858a3194974a12c5e61100c": {
     "describe": {
       "columns": [],
@@ -2567,39 +2566,6 @@
     },
     "query": "\nSELECT\n    add_vms_position_partitions ($1)\n            "
   },
-  "cc3ffc88f78f6c469c67a3f8e28456c14cf5da9f51cf791dac92dc2d1386df78": {
-    "describe": {
-      "columns": [
-        {
-          "name": "fiskeridir_vessel_id!",
-          "ordinal": 0,
-          "type_info": "Int8"
-        },
-        {
-          "name": "timestamp",
-          "ordinal": 1,
-          "type_info": "Timestamptz"
-        },
-        {
-          "name": "port_id",
-          "ordinal": 2,
-          "type_info": "Varchar"
-        }
-      ],
-      "nullable": [
-        true,
-        false,
-        true
-      ],
-      "parameters": {
-        "Left": [
-          "Int8",
-          "Timestamptz"
-        ]
-      }
-    },
-    "query": "\nSELECT\n    fiskeridir_vessel_id AS \"fiskeridir_vessel_id!\",\n    departure_timestamp AS \"timestamp\",\n    port_id\nFROM\n    ers_departures\nWHERE\n    fiskeridir_vessel_id = $1\n    AND departure_timestamp >= $2\n            "
-  },
   "cc7529bb4ecd6aa70d015d86abc5efdbb2cca25ed8019b40dbb30e76ad745e65": {
     "describe": {
       "columns": [],
@@ -2735,6 +2701,40 @@
       }
     },
     "query": "\nINSERT INTO\n    ais_vessels (mmsi)\nVALUES\n    ($1)\nON CONFLICT (mmsi) DO NOTHING\n            "
+  },
+  "de0a029221d26d9be25a15064304f83230ab2e5c0bcee72fe3645ac20c32b7a4": {
+    "describe": {
+      "columns": [
+        {
+          "name": "fiskeridir_vessel_id!",
+          "ordinal": 0,
+          "type_info": "Int8"
+        },
+        {
+          "name": "timestamp",
+          "ordinal": 1,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "port_id",
+          "ordinal": 2,
+          "type_info": "Varchar"
+        }
+      ],
+      "nullable": [
+        true,
+        false,
+        true
+      ],
+      "parameters": {
+        "Left": [
+          "Int8",
+          "Timestamptz",
+          "Bool"
+        ]
+      }
+    },
+    "query": "\nSELECT\n    fiskeridir_vessel_id AS \"fiskeridir_vessel_id!\",\n    arrival_timestamp AS \"timestamp\",\n    port_id\nFROM\n    ers_arrivals\nWHERE\n    fiskeridir_vessel_id = $1\n    AND arrival_timestamp >= GREATEST($2, '1970-01-01T00:00:00Z'::TIMESTAMPTZ)\n    AND (\n        $3::bool IS NULL\n        OR landing_facility IS NOT NULL\n    )\n            "
   },
   "e6606cba3ef41ddac861cdbf1930825984a508724acf033f9e54c4c708709249": {
     "describe": {
