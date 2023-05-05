@@ -83,14 +83,17 @@ where
                 continue;
             }
 
-            let updates = processor
-                .calculate_precision(vessel, database, trips)
-                .await?;
-
-            database
-                .update_trip_precisions(updates)
-                .await
-                .change_context(TripPrecisionError)?;
+            match processor.calculate_precision(vessel, database, trips).await {
+                Ok(updates) => {
+                    database
+                        .update_trip_precisions(updates)
+                        .await
+                        .change_context(TripPrecisionError)?;
+                }
+                Err(e) => {
+                    event!(Level::ERROR, "failed to calculate trips precision: {:?}", e);
+                }
+            }
         }
 
         Ok(())
