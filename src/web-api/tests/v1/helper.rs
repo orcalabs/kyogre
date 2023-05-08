@@ -9,11 +9,11 @@ use orca_core::{
 };
 use postgres::{PostgresAdapter, TestDb};
 use rand::random;
-use std::panic;
 use std::sync::Once;
+use std::{collections::HashMap, panic};
 use strum::EnumCount;
 use tracing_subscriber::FmtSubscriber;
-use trip_assembler::{ErsTripAssembler, LandingTripAssembler, TripAssembler};
+use trip_assembler::{ErsTripAssembler, LandingTripAssembler, State, TripAssembler};
 use web_api::{
     routes::v1::haul,
     settings::{ApiSettings, Settings},
@@ -116,9 +116,11 @@ impl TestHelper {
         let mut departure = ErsDep::test_default(random(), Some(vessel_id.0 as u64));
         departure.departure_date = start.date_naive();
         departure.departure_time = start.time();
+        departure.departure_timestamp = *start;
         let mut arrival = ErsPor::test_default(random(), Some(vessel_id.0 as u64), true);
         arrival.arrival_date = end.date_naive();
         arrival.arrival_time = end.time();
+        arrival.arrival_timestamp = *end;
         self.db.db.add_ers_dep(vec![departure]).await.unwrap();
         self.db.db.add_ers_por(vec![arrival]).await.unwrap();
 
@@ -167,16 +169,53 @@ impl TestHelper {
             .find(|v| v.fiskeridir.id == vessel_id)
             .unwrap();
 
+        let timer = self
+            .db
+            .db
+            .trip_calculation_timers(assembler)
+            .await
+            .unwrap()
+            .into_iter()
+            .map(|t| (t.fiskeridir_vessel_id, t.timestamp))
+            .collect::<HashMap<FiskeridirVesselId, DateTime<Utc>>>();
+
+        let conflict = self
+            .db
+            .db
+            .conflicts(assembler)
+            .await
+            .unwrap()
+            .into_iter()
+            .map(|t| (t.fiskeridir_vessel_id, t.timestamp))
+            .collect::<HashMap<FiskeridirVesselId, DateTime<Utc>>>();
+
+        let state = if let Some(conflict) = conflict.get(&vessel_id) {
+            let prior_trip = self
+                .db
+                .db
+                .trip_at_or_prior_to(vessel.fiskeridir.id, assembler, conflict)
+                .await
+                .unwrap();
+            State::Conflict {
+                conflict_timestamp: *conflict,
+                trip_prior_to_or_at_conflict: prior_trip,
+            }
+        } else if let Some(timer) = timer.get(&vessel_id) {
+            State::CurrentCalculationTime(*timer)
+        } else {
+            State::NoPriorState
+        };
+
         let assembled = match assembler {
             TripAssemblerId::Landings => self
                 .landings_assembler
-                .assemble(&self.db.db, &vessel, trip_assembler::State::NoPriorState)
+                .assemble(&self.db.db, &vessel, state)
                 .await
                 .unwrap()
                 .unwrap(),
             TripAssemblerId::Ers => self
                 .ers_assembler
-                .assemble(&self.db.db, &vessel, trip_assembler::State::NoPriorState)
+                .assemble(&self.db.db, &vessel, state)
                 .await
                 .unwrap()
                 .unwrap(),
@@ -198,7 +237,7 @@ impl TestHelper {
 
         let trips = self
             .db
-            .detailed_trips_of_vessels(vessel.fiskeridir.id)
+            .all_detailed_trips_of_vessels(vessel.fiskeridir.id)
             .await;
 
         trips

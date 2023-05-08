@@ -215,12 +215,12 @@ FROM
             .collect()
     }
 
-    pub async fn detailed_trips_of_vessels(
+    pub async fn all_detailed_trips_of_vessels(
         &self,
         vessel_id: FiskeridirVesselId,
     ) -> Vec<TripDetailed> {
         self.db
-            .detailed_trips_of_vessel_impl(vessel_id)
+            .all_detailed_trips_of_vessel_impl(vessel_id)
             .await
             .unwrap()
             .into_iter()

@@ -4,16 +4,73 @@ use crate::{
     PostgresAdapter,
 };
 use chrono::{DateTime, Utc};
-use error_stack::{IntoReport, Result, ResultExt};
+use error_stack::{report, IntoReport, Result, ResultExt};
 use fiskeridir_rs::Gear;
+use futures::Stream;
+use futures::TryStreamExt;
 use kyogre_core::{
-    FiskeridirVesselId, HaulId, NewTrip, PrecisionOutcome, PrecisionStatus, TripAssemblerId,
-    TripPrecisionUpdate, TripsConflictStrategy,
+    FiskeridirVesselId, HaulId, NewTrip, Ordering, Pagination, PrecisionOutcome, PrecisionStatus,
+    TripAssemblerId, TripPrecisionUpdate, Trips, TripsConflictStrategy,
 };
 use sqlx::postgres::types::PgRange;
 
 impl PostgresAdapter {
-    pub(crate) async fn detailed_trips_of_vessel_impl(
+    pub(crate) fn detailed_trips_of_vessel_impl(
+        &self,
+        id: FiskeridirVesselId,
+        pagination: Pagination<Trips>,
+        ordering: Ordering,
+    ) -> Result<impl Stream<Item = Result<TripDetailed, PostgresError>> + '_, PostgresError> {
+        let stream = sqlx::query_as!(
+            TripDetailed,
+            r#"
+SELECT
+    t.trip_id AS "trip_id!",
+    t.trip_assembler_id AS "trip_assembler_id!: TripAssemblerId",
+    t.fiskeridir_vessel_id AS "fiskeridir_vessel_id!",
+    t.period AS "period!",
+    t.period_precision,
+    t.start_port_id,
+    t.end_port_id,
+    t.num_deliveries AS "num_deliveries!",
+    t.landing_coverage AS "landing_coverage!",
+    t.total_living_weight AS "total_living_weight!",
+    t.total_gross_weight AS "total_gross_weight!",
+    t.total_product_weight AS "total_product_weight!",
+    t.delivery_points AS "delivery_points!",
+    t.latest_landing_timestamp,
+    t.catches::TEXT AS "catches!",
+    t.hauls::TEXT AS "hauls!",
+    t.delivery_point_catches::TEXT AS "delivery_point_catches!",
+    t.gear_ids AS "gear_ids!: Vec<Gear>"
+FROM
+    trips_view AS t
+WHERE
+    t.fiskeridir_vessel_id = $1
+ORDER BY
+    CASE
+        WHEN $2 = 1 THEN t.period
+    END ASC,
+    CASE
+        WHEN $2 = 2 THEN t.period
+    END DESC
+OFFSET
+    $3
+LIMIT
+    $4
+            "#,
+            id.0,
+            ordering as i32,
+            pagination.offset() as i64,
+            pagination.limit() as i64
+        )
+        .fetch(&self.pool)
+        .map_err(|e| report!(e).change_context(PostgresError::Query));
+
+        Ok(stream)
+    }
+
+    pub(crate) async fn all_detailed_trips_of_vessel_impl(
         &self,
         vessel_id: FiskeridirVesselId,
     ) -> Result<Vec<TripDetailed>, PostgresError> {

@@ -1,12 +1,13 @@
 use std::{fmt::Write, string::ToString};
 
 use fiskeridir_rs::CallSign;
-use kyogre_core::{ActiveHaulsFilter, HaulId, Mmsi};
+use kyogre_core::{ActiveHaulsFilter, FiskeridirVesselId, HaulId, Mmsi};
 use reqwest::{Client, Response};
 use web_api::routes::v1::{
     ais::AisTrackParameters,
     ais_vms::AisVmsParameters,
     haul::{HaulsMatrixParams, HaulsParams},
+    trip::TripsParameters,
     vms::VmsParameters,
 };
 
@@ -185,6 +186,27 @@ impl ApiClient {
     }
     pub async fn get_trip_of_haul(&self, haul_id: &HaulId) -> Response {
         self.get(format!("trip_of_haul/{}", haul_id.0), &[]).await
+    }
+    pub async fn get_trips_of_vessel(
+        &self,
+        id: FiskeridirVesselId,
+        params: TripsParameters,
+    ) -> Response {
+        let mut parameters = Vec::new();
+
+        if let Some(limit) = params.limit {
+            parameters.push(("limit".to_string(), limit.to_string()))
+        }
+
+        if let Some(offset) = params.offset {
+            parameters.push(("offset".to_string(), offset.to_string()))
+        }
+
+        if let Some(ordering) = params.ordering {
+            parameters.push(("ordering".to_string(), ordering.to_string()))
+        }
+
+        self.get(format!("trips/{}", id.0), &parameters).await
     }
     pub async fn get_vms_positions(&self, call_sign: &CallSign, params: VmsParameters) -> Response {
         let mut parameters = Vec::new();

@@ -1,7 +1,7 @@
 #![deny(warnings)]
 #![deny(rust_2018_idioms)]
 
-use kyogre_core::{ActiveHaulsFilter, Catch, Delivery, WebApiPort};
+use kyogre_core::{ActiveHaulsFilter, Catch, Delivery, Ordering, WebApiPort};
 use postgres::PostgresAdapter;
 use routes::v1;
 use utoipa::OpenApi;
@@ -32,6 +32,7 @@ impl Database for PostgresAdapter {}
         v1::haul::hauls,
         v1::haul::hauls_matrix,
         v1::trip::trip_of_haul,
+        v1::trip::trips,
         v1::vms::vms_positions,
         v1::ais_vms::ais_vms_positions,
     ),
@@ -40,6 +41,7 @@ impl Database for PostgresAdapter {}
             ActiveHaulsFilter,
             Delivery,
             Catch,
+            Ordering,
             error::ErrorResponse,
             error::ApiError,
             v1::ais::AisPosition,

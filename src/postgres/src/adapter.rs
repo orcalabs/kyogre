@@ -244,7 +244,6 @@ impl WebApiPort for PostgresAdapter {
     ) -> PinBoxStream<'_, AisPosition, QueryError> {
         convert_stream(self.ais_positions_impl(mmsi, range)).boxed()
     }
-
     fn vms_positions(
         &self,
         call_sign: &CallSign,
@@ -262,22 +261,45 @@ impl WebApiPort for PostgresAdapter {
         convert_stream(self.ais_vms_positions_impl(mmsi, call_sign, range)).boxed()
     }
 
-    fn species_fiskeridir(&self) -> PinBoxStream<'_, SpeciesFiskeridir, QueryError> {
-        convert_stream(self.species_fiskeridir_impl()).boxed()
-    }
     fn species(&self) -> PinBoxStream<'_, Species, QueryError> {
         convert_stream(self.species_impl()).boxed()
+    }
+
+    fn species_fiskeridir(&self) -> PinBoxStream<'_, SpeciesFiskeridir, QueryError> {
+        convert_stream(self.species_fiskeridir_impl()).boxed()
     }
     fn species_fao(&self) -> PinBoxStream<'_, SpeciesFao, QueryError> {
         convert_stream(self.species_fao_impl()).boxed()
     }
-
     fn vessels(&self) -> Pin<Box<dyn Stream<Item = Result<Vessel, QueryError>> + Send + '_>> {
         convert_stream(self.fiskeridir_ais_vessel_combinations()).boxed()
     }
 
     fn hauls(&self, query: HaulsQuery) -> Result<PinBoxStream<'_, Haul, QueryError>, QueryError> {
         let stream = self.hauls_impl(query).change_context(QueryError)?;
+        Ok(convert_stream(stream).boxed())
+    }
+
+    async fn detailed_trip_of_haul(
+        &self,
+        haul_id: &HaulId,
+    ) -> Result<Option<TripDetailed>, QueryError> {
+        convert_optional(
+            self.detailed_trip_of_haul_impl(haul_id)
+                .await
+                .change_context(QueryError)?,
+        )
+    }
+
+    fn detailed_trips_of_vessel(
+        &self,
+        id: FiskeridirVesselId,
+        pagination: Pagination<Trips>,
+        ordering: Ordering,
+    ) -> Result<PinBoxStream<'_, TripDetailed, QueryError>, QueryError> {
+        let stream = self
+            .detailed_trips_of_vessel_impl(id, pagination, ordering)
+            .change_context(QueryError)?;
         Ok(convert_stream(stream).boxed())
     }
 
@@ -346,17 +368,6 @@ impl WebApiPort for PostgresAdapter {
                 .change_context(QueryError)?
                 .change_context(QueryError)?,
         })
-    }
-
-    async fn detailed_trip_of_haul(
-        &self,
-        haul_id: &HaulId,
-    ) -> Result<Option<TripDetailed>, QueryError> {
-        convert_optional(
-            self.detailed_trip_of_haul_impl(haul_id)
-                .await
-                .change_context(QueryError)?,
-        )
     }
 }
 
