@@ -193,7 +193,6 @@ impl TryFrom<fiskeridir_rs::ErsDca> for NewErsDca {
             start_longitude: opt_float_to_decimal(v.start_longitude)
                 .change_context(PostgresError::DataConversion)?,
             start_timestamp: opt_timestamp_from_date_and_time(v.start_date, v.start_time)
-                .change_context(PostgresError::DataConversion)?
                 .ok_or_else(|| {
                     report!(PostgresError::DataConversion)
                         .attach_printable("expected start_timestamp to be `Some` for ers_dca")
@@ -202,12 +201,12 @@ impl TryFrom<fiskeridir_rs::ErsDca> for NewErsDca {
                 .change_context(PostgresError::DataConversion)?,
             stop_longitude: opt_float_to_decimal(v.stop_longitude)
                 .change_context(PostgresError::DataConversion)?,
-            stop_timestamp: opt_timestamp_from_date_and_time(v.stop_date, v.stop_time)
-                .change_context(PostgresError::DataConversion)?
-                .ok_or_else(|| {
+            stop_timestamp: opt_timestamp_from_date_and_time(v.stop_date, v.stop_time).ok_or_else(
+                || {
                     report!(PostgresError::DataConversion)
                         .attach_printable("expected stop_timestamp to be `Some` for ers_dca")
-                })?,
+                },
+            )?,
             gear_amount: v.gear.gear_amount.map(|v| v as i32),
             gear_fao_id: v.gear.gear_fao_code,
             gear_id: v.gear.gear_fdir_code as i32,
@@ -323,7 +322,6 @@ impl NewErsDcaCatch {
                         ers_dca.start_date,
                         ers_dca.start_time,
                     )
-                    .change_context(PostgresError::DataConversion)?
                     .ok_or_else(|| {
                         report!(PostgresError::DataConversion)
                             .attach_printable("expected start_timestamp to be `Some` for catch")
@@ -332,7 +330,6 @@ impl NewErsDcaCatch {
                         ers_dca.stop_date,
                         ers_dca.stop_time,
                     )
-                    .change_context(PostgresError::DataConversion)?
                     .ok_or_else(|| {
                         report!(PostgresError::DataConversion)
                             .attach_printable("expected stop_timestamp to be `Some` for catch")
@@ -364,7 +361,6 @@ impl NewErsDcaWhaleCatch {
                         ers_dca.start_date,
                         ers_dca.start_time,
                     )
-                    .change_context(PostgresError::DataConversion)?
                     .ok_or_else(|| {
                         report!(PostgresError::DataConversion).attach_printable(
                             "expected start_timestamp to be `Some` for whale_catch",
@@ -374,7 +370,6 @@ impl NewErsDcaWhaleCatch {
                         ers_dca.stop_date,
                         ers_dca.stop_time,
                     )
-                    .change_context(PostgresError::DataConversion)?
                     .ok_or_else(|| {
                         report!(PostgresError::DataConversion).attach_printable(
                             "expected stop_timestamp to be `Some` for whale_catch",

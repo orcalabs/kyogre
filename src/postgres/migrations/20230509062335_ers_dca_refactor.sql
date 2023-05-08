@@ -6,6 +6,10 @@ DROP MATERIALIZED VIEW hauls_matrix_view;
 
 DROP TABLE ers_dca;
 
+DELETE FROM data_hashes
+WHERE
+    data_hash_id LIKE 'ers_dca_%';
+
 CREATE TABLE
     ers_dca (
         message_id BIGINT NOT NULL,
@@ -80,14 +84,6 @@ CREATE TABLE
         PRIMARY KEY (message_id, start_timestamp, stop_timestamp)
     );
 
-CREATE INDEX ON ers_dca TSTZRANGE (start_timestamp, stop_timestamp, '[]');
-
-CREATE INDEX ON ers_dca (gear_group_id);
-
-CREATE INDEX ON ers_dca (fiskeridir_vessel_id);
-
-CREATE INDEX ON ers_dca USING GIST (vessel_length);
-
 CREATE TABLE
     ers_dca_other (
         message_id BIGINT NOT NULL PRIMARY KEY,
@@ -138,7 +134,7 @@ CREATE TABLE
         message_version INT NOT NULL,
         living_weight INT,
         species_fao_id VARCHAR NOT NULL REFERENCES species_fao (species_fao_id),
-        species_fiskeridir_id INT REFERENCES species_fiskeridir (species_fiskeridir_id),
+        species_fiskeridir_id INT NOT NULL REFERENCES species_fiskeridir (species_fiskeridir_id),
         species_group_id INT NOT NULL REFERENCES species_groups (species_group_id),
         species_main_group_id INT NOT NULL REFERENCES species_main_groups (species_main_group_id),
         PRIMARY KEY (
@@ -247,6 +243,109 @@ $$;
 
 CREATE TRIGGER ers_dca_whale_catches_before_insert BEFORE INSERT ON ers_dca_whale_catches FOR EACH ROW
 EXECUTE FUNCTION ers_dca_whale_catches_delete_old_version_number ();
+
+CREATE MATERIALIZED VIEW
+    hauls_view AS
+SELECT
+    MD5(
+        e.message_id::TEXT || e.start_timestamp::TEXT || e.stop_timestamp::TEXT
+    ) AS haul_id,
+    e.*,
+    TSTZRANGE (
+        MIN(e.start_timestamp),
+        MIN(e.stop_timestamp),
+        '[]'
+    ) AS period,
+    TO_VESSEL_LENGTH_GROUP (e.vessel_length) AS vessel_length_group_id,
+    ARRAY_REMOVE(ARRAY_AGG(DISTINCT c.species_fao_id), NULL) AS species_fao_ids,
+    ARRAY_REMOVE(ARRAY_AGG(DISTINCT c.species_fiskeridir_id), NULL) AS species_fiskeridir_ids,
+    ARRAY_REMOVE(ARRAY_AGG(DISTINCT c.species_group_id), NULL) AS species_group_ids,
+    ARRAY_REMOVE(ARRAY_AGG(DISTINCT c.species_main_group_id), NULL) AS species_main_group_ids,
+    COALESCE(SUM(c.living_weight), 0) AS total_living_weight,
+    MIN(l.catch_location_id) AS catch_location_start,
+    COALESCE(
+        JSONB_AGG(
+            JSONB_BUILD_OBJECT(
+                'living_weight',
+                c.living_weight,
+                'species_fao_id',
+                c.species_fao_id,
+                'species_fiskeridir_id',
+                c.species_fiskeridir_id,
+                'species_group_id',
+                c.species_group_id,
+                'species_main_group_id',
+                c.species_main_group_id
+            )
+        ) FILTER (
+            WHERE
+                c.species_fao_id IS NOT NULL
+        ),
+        '[]'
+    ) AS catches,
+    COALESCE(
+        JSONB_AGG(
+            JSONB_BUILD_OBJECT(
+                'grenade_number',
+                w.whale_grenade_number,
+                'blubber_measure_a',
+                w.whale_blubber_measure_a,
+                'blubber_measure_b',
+                w.whale_blubber_measure_b,
+                'blubber_measure_c',
+                w.whale_blubber_measure_c,
+                'circumference',
+                w.whale_circumference,
+                'fetus_length',
+                w.whale_fetus_length,
+                'gender_id',
+                w.whale_gender_id,
+                'individual_number',
+                w.whale_individual_number,
+                'length',
+                w.whale_length
+            )
+        ) FILTER (
+            WHERE
+                w.whale_grenade_number IS NOT NULL
+        ),
+        '[]'
+    ) AS whale_catches
+FROM
+    ers_dca e
+    LEFT JOIN ers_dca_catches c ON e.message_id = c.message_id
+    AND e.start_timestamp = c.start_timestamp
+    AND e.stop_timestamp = c.stop_timestamp
+    LEFT JOIN ers_dca_whale_catches w ON e.message_id = w.message_id
+    AND e.start_timestamp = w.start_timestamp
+    AND e.stop_timestamp = w.stop_timestamp
+    LEFT JOIN catch_locations l ON ST_CONTAINS (
+        l.polygon,
+        ST_POINT (e.start_longitude, e.start_latitude)
+    )
+WHERE
+    c.species_fao_id IS NOT NULL
+    OR w.whale_grenade_number IS NOT NULL
+GROUP BY
+    e.message_id,
+    e.start_timestamp,
+    e.stop_timestamp;
+
+CREATE UNIQUE INDEX ON hauls_view (haul_id);
+
+CREATE INDEX ON hauls_view (catch_location_start);
+
+CREATE INDEX ON hauls_view (gear_group_id);
+
+CREATE INDEX ON hauls_view USING GIST (vessel_length);
+
+CREATE INDEX ON hauls_view USING GIN (species_group_ids);
+
+CREATE INDEX ON hauls_view USING GIST (period);
+
+CREATE INDEX ON hauls_view (fiskeridir_vessel_id);
+
+CREATE INDEX ON hauls_view (vessel_length_group_id);
 
 CREATE MATERIALIZED VIEW
     hauls_matrix_view AS
@@ -468,103 +567,94 @@ FROM
         SELECT
             qi3.trip_id,
             ARRAY_AGG(DISTINCT qi3.haul_id) AS haul_ids,
-            COALESCE(JSONB_AGG(qi3.haul), '[]'::jsonb) AS hauls
+            COALESCE(JSONB_AGG(qi3.hauls), '[]'::jsonb) AS hauls
         FROM
             (
                 SELECT
                     t.trip_id,
-                    MD5(
-                        e.message_id::TEXT || e.start_timestamp::TEXT || e.stop_timestamp::TEXT
-                    ) AS haul_id,
+                    h.haul_id,
                     JSONB_BUILD_OBJECT(
                         'haul_id',
-                        MD5(
-                            e.message_id::TEXT || e.start_timestamp::TEXT || e.stop_timestamp::TEXT
-                        ),
+                        h.haul_id,
                         'ers_activity_id',
-                        e.ers_activity_id,
+                        h.ers_activity_id,
                         'duration',
-                        e.duration,
+                        h.duration,
                         'haul_distance',
-                        e.haul_distance,
+                        h.haul_distance,
                         'catch_location_start',
-                        MIN(l.catch_location_id),
+                        h.catch_location_start,
                         'ocean_depth_end',
-                        e.ocean_depth_end,
+                        h.ocean_depth_end,
                         'ocean_depth_start',
-                        e.ocean_depth_start,
+                        h.ocean_depth_start,
                         'quota_type_id',
-                        e.quota_type_id,
+                        h.quota_type_id,
                         'start_latitude',
-                        e.start_latitude,
+                        h.start_latitude,
                         'start_longitude',
-                        e.start_longitude,
+                        h.start_longitude,
                         'start_timestamp',
-                        e.start_timestamp,
+                        LOWER(h.period),
                         'stop_timestamp',
-                        e.stop_timestamp,
+                        UPPER(h.period),
                         'stop_latitude',
-                        e.stop_latitude,
+                        h.stop_latitude,
                         'stop_longitude',
-                        e.stop_longitude,
+                        h.stop_longitude,
                         'gear_group_id',
-                        e.gear_group_id,
+                        h.gear_group_id,
                         'gear_id',
-                        e.gear_id,
+                        h.gear_id,
                         'fiskeridir_vessel_id',
-                        e.fiskeridir_vessel_id,
+                        h.fiskeridir_vessel_id,
                         'vessel_call_sign',
-                        e.vessel_call_sign,
+                        h.vessel_call_sign,
                         'vessel_call_sign_ers',
-                        e.vessel_call_sign_ers,
+                        h.vessel_call_sign_ers,
                         'vessel_length',
-                        e.vessel_length,
+                        h.vessel_length,
                         'vessel_length_group',
-                        TO_VESSEL_LENGTH_GROUP (e.vessel_length),
+                        h.vessel_length_group_id,
                         'vessel_name',
-                        e.vessel_name,
+                        h.vessel_name,
                         'vessel_name_ers',
-                        e.vessel_name_ers,
+                        h.vessel_name_ers,
                         'catches',
-                        COALESCE(
-                            JSONB_AGG(
-                                JSON_BUILD_OBJECT(
-                                    'living_weight',
-                                    c.living_weight,
-                                    'species_fao_id',
-                                    c.species_fao_id,
-                                    'species_fiskeridir_id',
-                                    COALESCE(c.species_fiskeridir_id, 0),
-                                    'species_group_id',
-                                    c.species_group_id,
-                                    'species_main_group_id',
-                                    c.species_main_group_id
-                                )
-                            ),
-                            '[]'
-                        ),
+                        COALESCE((ARRAY_AGG(h.catches)) [1], '[]'::jsonb),
                         'whale_catches',
-                        '[]'::jsonb
-                    ) AS haul
+                        COALESCE((ARRAY_AGG(h.whale_catches)) [1], '[]'::jsonb)
+                    ) AS hauls
                 FROM
                     trips t
-                    INNER JOIN ers_dca e ON t.fiskeridir_vessel_id = e.fiskeridir_vessel_id
-                    AND e.start_timestamp <@ t.period
-                    AND e.stop_timestamp <@ t.period
-                    INNER JOIN ers_dca_catches c ON c.message_id = e.message_id
-                    AND c.start_timestamp = e.start_timestamp
-                    AND c.stop_timestamp = e.stop_timestamp
-                    LEFT JOIN catch_locations l ON ST_CONTAINS (
-                        l.polygon,
-                        ST_POINT (e.start_longitude, e.start_latitude)
-                    )
+                    JOIN hauls_view h ON h.period <@ t.period
+                    AND t.fiskeridir_vessel_id = h.fiskeridir_vessel_id
                 GROUP BY
                     t.trip_id,
-                    e.message_id,
-                    e.start_timestamp,
-                    e.stop_timestamp
+                    h.haul_id,
+                    h.ers_activity_id,
+                    h.duration,
+                    h.haul_distance,
+                    h.catch_location_start,
+                    h.ocean_depth_end,
+                    h.ocean_depth_start,
+                    h.quota_type_id,
+                    h.start_latitude,
+                    h.start_longitude,
+                    h.period,
+                    h.stop_latitude,
+                    h.stop_longitude,
+                    h.gear_group_id,
+                    h.gear_id,
+                    h.fiskeridir_vessel_id,
+                    h.vessel_call_sign,
+                    h.vessel_call_sign_ers,
+                    h.vessel_length,
+                    h.vessel_length_group_id,
+                    h.vessel_name,
+                    h.vessel_name_ers
                 ORDER BY
-                    e.start_timestamp
+                    (LOWER(h.period))
             ) qi3
         GROUP BY
             qi3.trip_id
@@ -632,15 +722,6 @@ FROM
             qi4.trip_id
     ) q4 ON q.trip_id = q4.trip_id;
 
-CREATE INDEX trips_view_haul_ids_idx ON public.trips_view USING gin (haul_ids);
+CREATE INDEX trips_view_haul_ids_idx ON trips_view USING GIN (haul_ids);
 
-CREATE UNIQUE INDEX trips_view_trip_id_idx ON public.trips_view USING btree (trip_id);
-
-CREATE
-OR REPLACE FUNCTION public.update_database_views () RETURNS void LANGUAGE plpgsql AS $$
-    BEGIN
-        -- EXECUTE 'REFRESH MATERIALIZED VIEW CONCURRENTLY hauls_view';
-        EXECUTE 'REFRESH MATERIALIZED VIEW CONCURRENTLY trips_view';
-        EXECUTE 'REFRESH MATERIALIZED VIEW CONCURRENTLY hauls_matrix_view';
-    END
-$$;
+CREATE UNIQUE INDEX trips_view_trip_id_idx ON trips_view USING BTREE (trip_id);

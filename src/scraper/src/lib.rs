@@ -123,20 +123,20 @@ impl Scraper {
         let landings_scraper =
             LandingScraper::new(arc.clone(), landing_sources.unwrap_or_default());
         let ers_dca_scraper = ErsDcaScraper::new(arc.clone(), ers_dca_sources);
-        let _ers_dep_scraper = ErsDepScraper::new(arc.clone(), ers_dep_sources);
-        let _ers_por_scraper = ErsPorScraper::new(arc.clone(), ers_por_sources);
-        let _ers_tra_scraper = ErsTraScraper::new(arc.clone(), ers_tra_sources);
-        let _vms_scraper = VmsScraper::new(arc.clone(), vms_sources);
+        let ers_dep_scraper = ErsDepScraper::new(arc.clone(), ers_dep_sources);
+        let ers_por_scraper = ErsPorScraper::new(arc.clone(), ers_por_sources);
+        let ers_tra_scraper = ErsTraScraper::new(arc.clone(), ers_tra_sources);
+        let vms_scraper = VmsScraper::new(arc.clone(), vms_sources);
         let register_vessels_scraper = RegisterVesselsScraper::new(arc, register_vessels_source);
         Scraper {
             scrapers: vec![
-                Box::new(ers_dca_scraper),
+                Box::new(vms_scraper),
                 Box::new(landings_scraper),
+                Box::new(ers_dca_scraper),
+                Box::new(ers_por_scraper),
+                Box::new(ers_dep_scraper),
+                Box::new(ers_tra_scraper),
                 Box::new(register_vessels_scraper),
-                // Box::new(vms_scraper),
-                // Box::new(ers_por_scraper),
-                // Box::new(ers_dep_scraper),
-                // Box::new(ers_tra_scraper),
             ],
             processor,
         }
