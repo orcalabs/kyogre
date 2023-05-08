@@ -57,7 +57,7 @@ WHERE
         haul_id: &HaulId,
     ) -> Result<Option<TripDetailed>, PostgresError> {
         let haul_id_vec = vec![haul_id.0.clone()];
-        let mut trips = sqlx::query_as!(
+        sqlx::query_as!(
             TripDetailed,
             r#"
 SELECT
@@ -86,18 +86,10 @@ WHERE
             "#,
             haul_id_vec.as_slice()
         )
-        .fetch_all(&self.pool)
+        .fetch_optional(&self.pool)
         .await
         .into_report()
-        .change_context(PostgresError::Query)?;
-
-        match trips.len() {
-            0 => Ok(None),
-            1 => Ok(trips.pop()),
-            _ => Ok(trips
-                .into_iter()
-                .find(|t| t.trip_assembler_id == TripAssemblerId::Ers)),
-        }
+        .change_context(PostgresError::Query)
     }
     pub(crate) async fn trip_at_or_prior_to_impl(
         &self,
@@ -273,7 +265,7 @@ INSERT INTO
     trip_calculation_timers (fiskeridir_vessel_id, trip_assembler_id, timer)
 VALUES
     ($1, $2, $3)
-ON CONFLICT (fiskeridir_vessel_id, trip_assembler_id) DO
+ON CONFLICT (fiskeridir_vessel_id) DO
 UPDATE
 SET
     timer = excluded.timer
