@@ -107,6 +107,10 @@ where
                         "/trip_of_haul/{haul_id}",
                         web::get().to(routes::v1::trip::trip_of_haul::<T>),
                     )
+                    .route(
+                        "/trips/{fiskeridir_vessel_id}",
+                        web::get().to(routes::v1::trip::trips::<T>),
+                    )
                     .route("/hauls", web::get().to(routes::v1::haul::hauls::<T>))
                     .route(
                         "/hauls_matrix/{active_filter}",

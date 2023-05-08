@@ -1,14 +1,26 @@
+use futures::TryStreamExt;
 use std::collections::HashMap;
 
 use crate::{error::ApiError, response::Response, *};
-use actix_web::web::{self, Path};
+use actix_web::{
+    web::{self, Path},
+    HttpResponse,
+};
 use chrono::{DateTime, Utc};
-use kyogre_core::{Delivery, FiskeridirVesselId, HaulId, TripId};
+use kyogre_core::{Delivery, FiskeridirVesselId, HaulId, Ordering, Pagination, TripId};
 use serde::{Deserialize, Serialize};
 use tracing::{event, Level};
-use utoipa::ToSchema;
+use utoipa::{IntoParams, ToSchema};
 
 use super::haul::Haul;
+
+#[derive(Debug, Deserialize, IntoParams, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct TripsParameters {
+    pub limit: Option<u64>,
+    pub offset: Option<u64>,
+    pub ordering: Option<Ordering>,
+}
 
 #[utoipa::path(
     get,
@@ -30,6 +42,41 @@ pub async fn trip_of_haul<T: Database + 'static>(
             event!(Level::ERROR, "failed to retrieve trip of haul: {:?}", e);
             ApiError::InternalServerError
         })
+}
+
+#[utoipa::path(
+    get,
+    path = "/trips/{fiskeridir_vessel_id}",
+    params(TripsParameters),
+    responses(
+        (status = 200, description = "trips of the given vessel", body = [Trip]),
+        (status = 500, description = "an internal error occured", body = ErrorResponse),
+    )
+)]
+#[tracing::instrument(skip(db))]
+pub async fn trips<T: Database + 'static>(
+    db: web::Data<T>,
+    fiskeridir_vessel_id: Path<u64>,
+    params: web::Query<TripsParameters>,
+) -> Result<HttpResponse, ApiError> {
+    let params = params.into_inner();
+
+    to_streaming_response! {
+        db.detailed_trips_of_vessel(
+            FiskeridirVesselId(fiskeridir_vessel_id.into_inner() as i64),
+            Pagination::new(params.limit, params.offset),
+            params.ordering.unwrap_or(Ordering::Asc)
+        )
+        .map_err(|e| {
+            event!(Level::ERROR, "failed to retrieve trips_of_vessel: {:?}", e);
+            ApiError::InternalServerError
+        })?
+        .map_ok(Trip::from)
+        .map_err(|e| {
+            event!(Level::ERROR, "failed to retrieve trips_of_vessel: {:?}", e);
+            ApiError::InternalServerError
+        })
+    }
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
@@ -92,5 +139,12 @@ impl PartialEq<Trip> for kyogre_core::TripDetailed {
     fn eq(&self, other: &Trip) -> bool {
         let converted: Trip = From::from(self.clone());
         converted.eq(other)
+    }
+}
+
+impl PartialEq<kyogre_core::TripDetailed> for Trip {
+    fn eq(&self, other: &kyogre_core::TripDetailed) -> bool {
+        let converted: Trip = From::from(other.clone());
+        converted.eq(self)
     }
 }

@@ -587,7 +587,6 @@ async fn test_new_arrival_does_not_cause_conflict_if_it_does_not_extend_most_rec
 
         let conflicts = helper.db.db.conflicts(TripAssemblerId::Ers).await.unwrap();
 
-        dbg!(&conflicts);
         assert!(conflicts.is_empty());
     })
     .await;
