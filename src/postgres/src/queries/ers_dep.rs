@@ -6,7 +6,7 @@ use crate::{
 };
 use chrono::{DateTime, Utc};
 use error_stack::{IntoReport, Result, ResultExt};
-use kyogre_core::FiskeridirVesselId;
+use kyogre_core::{FiskeridirVesselId, TripAssemblerId};
 
 impl PostgresAdapter {
     pub(crate) async fn add_ers_dep_set(&self, set: ErsDepSet) -> Result<(), PostgresError> {
@@ -136,6 +136,23 @@ impl PostgresAdapter {
             vessel_valid_until.push(e.vessel_valid_until);
             vessel_width.push(e.vessel_width);
         }
+
+        sqlx::query!(
+            r#"
+UPDATE fiskeridir_vessels
+SET
+    preferred_trip_assembler = $1
+WHERE
+    fiskeridir_vessel_id = ANY ($2::BIGINT[])
+    AND fiskeridir_vessel_id IS NOT NULL
+            "#,
+            TripAssemblerId::Ers as i32,
+            fiskeridir_vessel_id.as_slice() as _,
+        )
+        .execute(&mut *tx)
+        .await
+        .into_report()
+        .change_context(PostgresError::Query)?;
 
         sqlx::query!(
             r#"

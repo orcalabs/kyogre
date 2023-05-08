@@ -157,6 +157,19 @@
     },
     "query": "\nSELECT\n    hash\nFROM\n    data_hashes\nWHERE\n    data_hash_id = $1\n            "
   },
+  "17ba26750637390447eff59451cac22944e074ddd110226baab43832171da407": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Int4",
+          "Int8Array"
+        ]
+      }
+    },
+    "query": "\nUPDATE fiskeridir_vessels\nSET\n    preferred_trip_assembler = $1\nWHERE\n    fiskeridir_vessel_id = ANY ($2::BIGINT[])\n    AND fiskeridir_vessel_id IS NOT NULL\n            "
+  },
   "1ec530d8f145aad047ef664764c7b7aec1058aab0896a286e76121fadd72d33d": {
     "describe": {
       "columns": [],
