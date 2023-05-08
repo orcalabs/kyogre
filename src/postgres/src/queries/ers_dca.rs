@@ -677,7 +677,7 @@ ON CONFLICT (message_id) DO NOTHING
             message_version.push(c.message_version);
             living_weight.push(c.living_weight);
             species_fao_id.push(c.species_fao_id);
-            species_fiskeridir_id.push(c.species_fiskeridir_id);
+            species_fiskeridir_id.push(c.species_fiskeridir_id.unwrap_or(0));
             species_group_id.push(c.species_group_id);
             species_main_group_id.push(c.species_main_group_id);
         }
@@ -723,7 +723,7 @@ ON CONFLICT (
             message_version.as_slice(),
             living_weight.as_slice() as _,
             species_fao_id.as_slice(),
-            species_fiskeridir_id.as_slice() as _,
+            species_fiskeridir_id.as_slice(),
             species_group_id.as_slice(),
             species_main_group_id.as_slice(),
         )

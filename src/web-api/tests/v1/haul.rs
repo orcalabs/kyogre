@@ -56,6 +56,7 @@ async fn test_hauls_returns_hauls_in_specified_months() {
             .add_ers_dca(vec![ers1, ers2, ers3, ers4])
             .await
             .unwrap();
+        helper.db.db.update_database_views().await.unwrap();
 
         let params = HaulsParams {
             months: Some(vec![DateTimeUtc(month1), DateTimeUtc(month2)]),
@@ -91,6 +92,7 @@ async fn test_hauls_returns_hauls_in_catch_location() {
             .add_ers_dca(vec![ers1, ers2, ers3, ers4])
             .await
             .unwrap();
+        helper.db.db.update_database_views().await.unwrap();
 
         let params = HaulsParams {
             catch_locations: Some(vec![
@@ -127,6 +129,7 @@ async fn test_hauls_returns_hauls_with_gear_group_ids() {
             .add_ers_dca(vec![ers1, ers2, ers3, ers4])
             .await
             .unwrap();
+        helper.db.db.update_database_views().await.unwrap();
 
         let params = HaulsParams {
             gear_group_ids: Some(vec![
@@ -163,6 +166,7 @@ async fn test_hauls_returns_hauls_with_species_group_ids() {
             .add_ers_dca(vec![ers1, ers2, ers3, ers4])
             .await
             .unwrap();
+        helper.db.db.update_database_views().await.unwrap();
 
         let params = HaulsParams {
             species_group_ids: Some(vec![SpeciesGroupId(301), SpeciesGroupId(302)]),
@@ -196,6 +200,7 @@ async fn test_hauls_returns_hauls_with_vessel_length_ranges() {
             .add_ers_dca(vec![ers1, ers2, ers3, ers4])
             .await
             .unwrap();
+        helper.db.db.update_database_views().await.unwrap();
 
         let params = HaulsParams {
             vessel_length_ranges: Some(vec!["(,10)".parse().unwrap(), "[10,15)".parse().unwrap()]),
@@ -226,6 +231,7 @@ async fn test_hauls_returns_hauls_with_fiskeridir_vessel_ids() {
             .add_ers_dca(vec![ers1, ers2, ers3, ers4])
             .await
             .unwrap();
+        helper.db.db.update_database_views().await.unwrap();
 
         let params = HaulsParams {
             fiskeridir_vessel_ids: Some(vec![FiskeridirVesselId(1), FiskeridirVesselId(2)]),

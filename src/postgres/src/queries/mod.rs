@@ -4,7 +4,6 @@ use crate::error::{BigDecimalError, FromBigDecimalError};
 use bigdecimal::{BigDecimal, FromPrimitive};
 use chrono::{DateTime, NaiveDate, NaiveTime, Utc};
 use error_stack::{report, Result};
-use kyogre_core::ConversionError;
 
 pub mod ais;
 pub mod ais_vms;
@@ -66,13 +65,9 @@ pub(crate) fn bound_float_to_decimal(
 pub(crate) fn opt_timestamp_from_date_and_time(
     date: Option<NaiveDate>,
     time: Option<NaiveTime>,
-) -> Result<Option<DateTime<Utc>>, ConversionError> {
-    date.map(|date| {
-        let time = time.ok_or_else(|| {
-            report!(ConversionError).attach_printable("expected time to be `Some` due to date")
-        })?;
-
-        Ok(DateTime::<Utc>::from_utc(date.and_time(time), Utc))
-    })
-    .transpose()
+) -> Option<DateTime<Utc>> {
+    match (date, time) {
+        (Some(date), Some(time)) => Some(DateTime::from_utc(date.and_time(time), Utc)),
+        _ => None,
+    }
 }
