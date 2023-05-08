@@ -1,5 +1,5 @@
 postgres:
-  ip: scrape-db
+  ip: postgres
   port: 5432
   username: postgres
   password: test123
