@@ -6,7 +6,7 @@ source:
   max_connections: 1
   log_statements: "Disable"
 destination:
-  ip: scrape-db
+  ip: postgres
   db_name: postgres
   password: test123
   username: postgres

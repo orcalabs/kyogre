@@ -9,7 +9,7 @@ services:
     ports:
       - 5432:5432
 
-  scrape-db:
+  migration-db:
     image: postgis/postgis:14-3.3-alpine
     shm_size: 1g
     environment:
