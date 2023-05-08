@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::{AisVessel, Mmsi};
+use crate::{AisVessel, Mmsi, TripAssemblerId};
 use fiskeridir_rs::CallSign;
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
@@ -11,6 +11,7 @@ use serde_repr::{Deserialize_repr, Serialize_repr};
 pub struct Vessel {
     pub fiskeridir: FiskeridirVessel,
     pub ais: Option<AisVessel>,
+    pub preferred_trip_assembler: TripAssemblerId,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]

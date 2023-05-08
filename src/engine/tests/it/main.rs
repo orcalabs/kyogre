@@ -3,4 +3,5 @@
 
 pub mod helper;
 pub mod pending;
+pub mod trips;
 pub mod trips_precision;

@@ -8,7 +8,7 @@ use crate::{
 };
 use error_stack::{report, IntoReport, Result, ResultExt};
 use futures::{Stream, TryStreamExt};
-use kyogre_core::{FiskeridirVesselId, FiskeridirVesselSource};
+use kyogre_core::{FiskeridirVesselId, FiskeridirVesselSource, TripAssemblerId};
 
 impl PostgresAdapter {
     pub(crate) async fn add_fiskeridir_vessels<'a>(
@@ -276,6 +276,7 @@ SET
             FiskeridirAisVesselCombination,
             r#"
 SELECT
+    f.preferred_trip_assembler AS "preferred_trip_assembler!: TripAssemblerId",
     f.fiskeridir_vessel_id AS "fiskeridir_vessel_id!",
     f.fiskeridir_vessel_type_id,
     f.fiskeridir_length_group_id,
@@ -320,6 +321,7 @@ FROM
             FiskeridirAisVesselCombination,
             r#"
 SELECT
+    f.preferred_trip_assembler AS "preferred_trip_assembler!: TripAssemblerId",
     f.fiskeridir_vessel_id AS "fiskeridir_vessel_id!",
     f.fiskeridir_vessel_type_id,
     f.fiskeridir_length_group_id,

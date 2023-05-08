@@ -22,6 +22,9 @@ pub struct TestHelper {
 }
 
 impl TestHelper {
+    pub fn adapter(&self) -> &PostgresAdapter {
+        &self.db.db
+    }
     pub fn enable_scrape(&mut self) {
         self.settings.engine = engine::Config {
             scrape_schedule: Schedule::Periodic(std::time::Duration::from_micros(0)),

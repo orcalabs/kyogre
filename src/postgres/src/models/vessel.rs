@@ -3,7 +3,7 @@ use bigdecimal::BigDecimal;
 use chrono::{DateTime, Utc};
 use error_stack::{Report, ResultExt};
 use fiskeridir_rs::CallSign;
-use kyogre_core::{FiskeridirVesselId, Mmsi};
+use kyogre_core::{FiskeridirVesselId, Mmsi, TripAssemblerId};
 
 #[derive(Debug, Clone)]
 pub struct AisVessel {
@@ -66,6 +66,7 @@ pub struct FiskeridirAisVesselCombination {
     pub fiskeridir_engine_power: Option<i32>,
     pub fiskeridir_building_year: Option<i32>,
     pub fiskeridir_rebuilding_year: Option<i32>,
+    pub preferred_trip_assembler: TripAssemblerId,
 }
 
 impl TryFrom<FiskeridirAisVesselCombination> for kyogre_core::Vessel {
@@ -124,6 +125,7 @@ impl TryFrom<FiskeridirAisVesselCombination> for kyogre_core::Vessel {
         Ok(kyogre_core::Vessel {
             fiskeridir: fiskeridir_vessel,
             ais: ais_vessel?,
+            preferred_trip_assembler: value.preferred_trip_assembler,
         })
     }
 }

@@ -76,7 +76,12 @@ where
         let mut num_no_prior_state = 0;
         let mut num_trips = 0;
 
+        let trip_assembler_id = trip_assembler.assembler_id();
+
         for vessel in vessels {
+            if vessel.preferred_trip_assembler != trip_assembler_id {
+                continue;
+            }
             if let Some(conflict) = conflicts.get(&vessel.fiskeridir.id) {
                 num_conflicts += 1;
                 let prior_trip = database
