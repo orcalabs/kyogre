@@ -548,100 +548,6 @@
     },
     "query": "\nSELECT\n    fiskeridir_vessel_id,\n    timer AS \"timestamp\"\nFROM\n    trip_calculation_timers\nWHERE\n    trip_assembler_id = $1\n            "
   },
-  "3c3f765e343dc53ec8a7fbce309cffbb099129278d4b27ab076c54d443874937": {
-    "describe": {
-      "columns": [],
-      "nullable": [],
-      "parameters": {
-        "Left": [
-          "Int8Array",
-          "Int4Array",
-          "TimestamptzArray",
-          "VarcharArray",
-          "Int4Array",
-          "Int4Array",
-          "Int4Array",
-          "Int4Array",
-          "VarcharArray",
-          "VarcharArray",
-          "VarcharArray",
-          "VarcharArray",
-          "Int4Array",
-          "Int4Array",
-          "VarcharArray",
-          "Int4Array",
-          "VarcharArray",
-          "Int4Array",
-          "Int4Array",
-          "Int4Array",
-          "Int4Array",
-          "Int4Array",
-          "Int4Array",
-          "Int4Array",
-          "Int4Array",
-          "NumericArray",
-          "NumericArray",
-          "TimestamptzArray",
-          "NumericArray",
-          "NumericArray",
-          "TimestamptzArray",
-          "Int4Array",
-          "VarcharArray",
-          "Int4Array",
-          "Int4Array",
-          "Int4Array",
-          "Int4Array",
-          "Int4Array",
-          "Int4Array",
-          "VarcharArray",
-          "Int4Array",
-          "Int4Array",
-          "VarcharArray",
-          "VarcharArray",
-          "Int4Array",
-          "Int4Array",
-          "Int4Array",
-          "Int4Array",
-          "VarcharArray",
-          "Int4Array",
-          "NumericArray",
-          "VarcharArray",
-          "NumericArray",
-          "VarcharArray",
-          "Int4Array",
-          "VarcharArray",
-          "VarcharArray",
-          "Int4Array",
-          "VarcharArray",
-          "VarcharArray",
-          "VarcharArray",
-          "Int4Array",
-          "Int4Array",
-          "VarcharArray",
-          "VarcharArray",
-          "DateArray",
-          "NumericArray",
-          "VarcharArray",
-          "Int4Array",
-          "Int4Array",
-          "VarcharArray",
-          "Int4Array",
-          "Int4Array",
-          "Int4Array",
-          "Int4Array",
-          "Int4Array",
-          "Int4Array",
-          "Int4Array",
-          "Int4Array",
-          "Int4Array",
-          "VarcharArray",
-          "Int4Array",
-          "Int4Array"
-        ]
-      }
-    },
-    "query": "\nINSERT INTO\n    ers_dca (\n        message_id,\n        message_number,\n        message_timestamp,\n        ers_message_type_id,\n        message_year,\n        relevant_year,\n        sequence_number,\n        message_version,\n        ers_activity_id,\n        area_grouping_end_id,\n        area_grouping_start_id,\n        call_sign_of_loading_vessel,\n        catch_year,\n        duration,\n        economic_zone_id,\n        haul_distance,\n        herring_population_id,\n        herring_population_fiskeridir_id,\n        location_end_code,\n        location_start_code,\n        main_area_end_id,\n        main_area_start_id,\n        ocean_depth_end,\n        ocean_depth_start,\n        quota_type_id,\n        start_latitude,\n        start_longitude,\n        start_timestamp,\n        stop_latitude,\n        stop_longitude,\n        stop_timestamp,\n        gear_amount,\n        gear_fao_id,\n        gear_id,\n        gear_group_id,\n        gear_main_group_id,\n        gear_mesh_width,\n        gear_problem_id,\n        gear_specification_id,\n        port_id,\n        fiskeridir_vessel_id,\n        vessel_building_year,\n        vessel_call_sign,\n        vessel_call_sign_ers,\n        vessel_engine_building_year,\n        vessel_engine_power,\n        vessel_gross_tonnage_1969,\n        vessel_gross_tonnage_other,\n        vessel_county,\n        vessel_county_code,\n        vessel_greatest_length,\n        vessel_identification,\n        vessel_length,\n        vessel_length_group,\n        vessel_length_group_code,\n        vessel_material_code,\n        vessel_municipality,\n        vessel_municipality_code,\n        vessel_name,\n        vessel_name_ers,\n        vessel_nationality_code,\n        fiskeridir_vessel_nationality_group_id,\n        vessel_rebuilding_year,\n        vessel_registration_id,\n        vessel_registration_id_ers,\n        vessel_valid_until,\n        vessel_width,\n        majority_species_fao_id,\n        majority_species_fiskeridir_id,\n        living_weight,\n        species_fao_id,\n        species_fiskeridir_id,\n        species_group_id,\n        species_main_group_id,\n        whale_blubber_measure_a,\n        whale_blubber_measure_b,\n        whale_blubber_measure_c,\n        whale_circumference,\n        whale_fetus_length,\n        whale_gender_id,\n        whale_grenade_number,\n        whale_individual_number,\n        whale_length\n    )\nSELECT\n    *\nFROM\n    UNNEST(\n        $1::BIGINT[],\n        $2::INT[],\n        $3::timestamptz[],\n        $4::VARCHAR[],\n        $5::INT[],\n        $6::INT[],\n        $7::INT[],\n        $8::INT[],\n        $9::VARCHAR[],\n        $10::VARCHAR[],\n        $11::VARCHAR[],\n        $12::VARCHAR[],\n        $13::INT[],\n        $14::INT[],\n        $15::VARCHAR[],\n        $16::INT[],\n        $17::VARCHAR[],\n        $18::INT[],\n        $19::INT[],\n        $20::INT[],\n        $21::INT[],\n        $22::INT[],\n        $23::INT[],\n        $24::INT[],\n        $25::INT[],\n        $26::DECIMAL[],\n        $27::DECIMAL[],\n        $28::timestamptz[],\n        $29::DECIMAL[],\n        $30::DECIMAL[],\n        $31::timestamptz[],\n        $32::INT[],\n        $33::VARCHAR[],\n        $34::INT[],\n        $35::INT[],\n        $36::INT[],\n        $37::INT[],\n        $38::INT[],\n        $39::INT[],\n        $40::VARCHAR[],\n        $41::INT[],\n        $42::INT[],\n        $43::VARCHAR[],\n        $44::VARCHAR[],\n        $45::INT[],\n        $46::INT[],\n        $47::INT[],\n        $48::INT[],\n        $49::VARCHAR[],\n        $50::INT[],\n        $51::DECIMAL[],\n        $52::VARCHAR[],\n        $53::DECIMAL[],\n        $54::VARCHAR[],\n        $55::INT[],\n        $56::VARCHAR[],\n        $57::VARCHAR[],\n        $58::INT[],\n        $59::VARCHAR[],\n        $60::VARCHAR[],\n        $61::VARCHAR[],\n        $62::INT[],\n        $63::INT[],\n        $64::VARCHAR[],\n        $65::VARCHAR[],\n        $66::date[],\n        $67::DECIMAL[],\n        $68::VARCHAR[],\n        $69::INT[],\n        $70::INT[],\n        $71::VARCHAR[],\n        $72::INT[],\n        $73::INT[],\n        $74::INT[],\n        $75::INT[],\n        $76::INT[],\n        $77::INT[],\n        $78::INT[],\n        $79::INT[],\n        $80::INT[],\n        $81::VARCHAR[],\n        $82::INT[],\n        $83::INT[]\n    )\n            "
-  },
   "42d280b49c134606e1875c16d0a03ff9d90a4f7a9e461203ff3c283f2ce22a58": {
     "describe": {
       "columns": [],
@@ -1115,6 +1021,26 @@
     },
     "query": "\nSELECT\n    call_sign,\n    course,\n    latitude,\n    longitude,\n    registration_id,\n    speed,\n    \"timestamp\",\n    vessel_length,\n    vessel_name,\n    vessel_type\nFROM\n    vms_positions\nWHERE\n    call_sign = $1\n    AND \"timestamp\" BETWEEN $2 AND $3\nORDER BY\n    \"timestamp\" ASC\n            "
   },
+  "61b185f1f1c64af97d88aac5849e430192d876576511844e25d43adf87b59542": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Int8Array",
+          "TimestamptzArray",
+          "TimestamptzArray",
+          "Int4Array",
+          "Int4Array",
+          "VarcharArray",
+          "Int4Array",
+          "Int4Array",
+          "Int4Array"
+        ]
+      }
+    },
+    "query": "\nINSERT INTO\n    ers_dca_catches (\n        message_id,\n        start_timestamp,\n        stop_timestamp,\n        message_version,\n        living_weight,\n        species_fao_id,\n        species_fiskeridir_id,\n        species_group_id,\n        species_main_group_id\n    )\nSELECT\n    *\nFROM\n    UNNEST(\n        $1::BIGINT[],\n        $2::timestamptz[],\n        $3::timestamptz[],\n        $4::INT[],\n        $5::INT[],\n        $6::VARCHAR[],\n        $7::INT[],\n        $8::INT[],\n        $9::INT[]\n    )\nON CONFLICT (\n    message_id,\n    start_timestamp,\n    stop_timestamp,\n    species_fao_id\n) DO NOTHING\n            "
+  },
   "6b63083645ee5131c65b06de6940f6f49491cf5fc32b7d57e113b29b8244e6f6": {
     "describe": {
       "columns": [
@@ -1564,6 +1490,79 @@
       }
     },
     "query": "\nSELECT\n    trip_id,\n    period,\n    period_precision,\n    landing_coverage,\n    trip_assembler_id AS \"trip_assembler_id!: TripAssemblerId\"\nFROM\n    trips\nWHERE\n    fiskeridir_vessel_id = $1\n    AND trip_assembler_id = $2\n    AND (\n        UPPER(period) <= $3\n        OR period @> $3\n    )\nORDER BY\n    period DESC\nLIMIT\n    1\n            "
+  },
+  "7ef092ec17e3f3249255df9d1911ebef26ae67b364c2e2fc1b05e584317044a7": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Int8Array",
+          "Int4Array",
+          "TimestamptzArray",
+          "VarcharArray",
+          "Int4Array",
+          "Int4Array",
+          "Int4Array",
+          "Int4Array",
+          "VarcharArray",
+          "Int4Array",
+          "VarcharArray",
+          "Int4Array",
+          "Int4Array",
+          "VarcharArray",
+          "VarcharArray",
+          "Int4Array",
+          "Int4Array",
+          "Int4Array",
+          "Int4Array",
+          "VarcharArray",
+          "Int4Array",
+          "NumericArray",
+          "VarcharArray",
+          "NumericArray",
+          "VarcharArray",
+          "Int4Array",
+          "VarcharArray",
+          "VarcharArray",
+          "Int4Array",
+          "VarcharArray",
+          "VarcharArray",
+          "VarcharArray",
+          "Int4Array",
+          "Int4Array",
+          "VarcharArray",
+          "VarcharArray",
+          "DateArray",
+          "NumericArray"
+        ]
+      }
+    },
+    "query": "\nINSERT INTO\n    ers_dca_other (\n        message_id,\n        message_number,\n        message_timestamp,\n        ers_message_type_id,\n        message_year,\n        relevant_year,\n        sequence_number,\n        message_version,\n        ers_activity_id,\n        quota_type_id,\n        port_id,\n        fiskeridir_vessel_id,\n        vessel_building_year,\n        vessel_call_sign,\n        vessel_call_sign_ers,\n        vessel_engine_building_year,\n        vessel_engine_power,\n        vessel_gross_tonnage_1969,\n        vessel_gross_tonnage_other,\n        vessel_county,\n        vessel_county_code,\n        vessel_greatest_length,\n        vessel_identification,\n        vessel_length,\n        vessel_length_group,\n        vessel_length_group_code,\n        vessel_material_code,\n        vessel_municipality,\n        vessel_municipality_code,\n        vessel_name,\n        vessel_name_ers,\n        vessel_nationality_code,\n        fiskeridir_vessel_nationality_group_id,\n        vessel_rebuilding_year,\n        vessel_registration_id,\n        vessel_registration_id_ers,\n        vessel_valid_until,\n        vessel_width\n    )\nSELECT\n    *\nFROM\n    UNNEST(\n        $1::BIGINT[],\n        $2::INT[],\n        $3::timestamptz[],\n        $4::VARCHAR[],\n        $5::INT[],\n        $6::INT[],\n        $7::INT[],\n        $8::INT[],\n        $9::VARCHAR[],\n        $10::INT[],\n        $11::VARCHAR[],\n        $12::INT[],\n        $13::INT[],\n        $14::VARCHAR[],\n        $15::VARCHAR[],\n        $16::INT[],\n        $17::INT[],\n        $18::INT[],\n        $19::INT[],\n        $20::VARCHAR[],\n        $21::INT[],\n        $22::DECIMAL[],\n        $23::VARCHAR[],\n        $24::DECIMAL[],\n        $25::VARCHAR[],\n        $26::INT[],\n        $27::VARCHAR[],\n        $28::VARCHAR[],\n        $29::INT[],\n        $30::VARCHAR[],\n        $31::VARCHAR[],\n        $32::VARCHAR[],\n        $33::INT[],\n        $34::INT[],\n        $35::VARCHAR[],\n        $36::VARCHAR[],\n        $37::date[],\n        $38::DECIMAL[]\n    )\nON CONFLICT (message_id) DO NOTHING\n            "
+  },
+  "81516cd3fff7220bf8a111b4411fd681852691c65e352907bbc0867c5280860f": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Int8Array",
+          "TimestamptzArray",
+          "TimestamptzArray",
+          "Int4Array",
+          "VarcharArray",
+          "Int4Array",
+          "Int4Array",
+          "Int4Array",
+          "Int4Array",
+          "Int4Array",
+          "Int4Array",
+          "Int4Array",
+          "Int4Array"
+        ]
+      }
+    },
+    "query": "\nINSERT INTO\n    ers_dca_whale_catches (\n        message_id,\n        start_timestamp,\n        stop_timestamp,\n        message_version,\n        whale_grenade_number,\n        whale_blubber_measure_a,\n        whale_blubber_measure_b,\n        whale_blubber_measure_c,\n        whale_circumference,\n        whale_fetus_length,\n        whale_gender_id,\n        whale_individual_number,\n        whale_length\n    )\nSELECT\n    *\nFROM\n    UNNEST(\n        $1::BIGINT[],\n        $2::timestamptz[],\n        $3::timestamptz[],\n        $4::INT[],\n        $5::VARCHAR[],\n        $6::INT[],\n        $7::INT[],\n        $8::INT[],\n        $9::INT[],\n        $10::INT[],\n        $11::INT[],\n        $12::INT[],\n        $13::INT[]\n    )\nON CONFLICT (\n    message_id,\n    start_timestamp,\n    stop_timestamp,\n    whale_grenade_number\n) DO NOTHING\n            "
   },
   "85720e65ca627b504427389b69b979a8728fcf2acd2498b3106556ed40572780": {
     "describe": {
@@ -2029,175 +2028,6 @@
     },
     "query": "\nUPDATE port_dock_points\nSET\n    latitude = $1,\n    longitude = $2\nWHERE\n    port_id = $3\n    AND port_dock_point_id = $4\n            "
   },
-  "9aefabfb15b459591892b24ef44cf3313b8c8310eaf1a16333cb350026e207c6": {
-    "describe": {
-      "columns": [
-        {
-          "name": "haul_id!",
-          "ordinal": 0,
-          "type_info": "Text"
-        },
-        {
-          "name": "ers_activity_id!",
-          "ordinal": 1,
-          "type_info": "Text"
-        },
-        {
-          "name": "duration!",
-          "ordinal": 2,
-          "type_info": "Int4"
-        },
-        {
-          "name": "haul_distance",
-          "ordinal": 3,
-          "type_info": "Int4"
-        },
-        {
-          "name": "catch_location_start",
-          "ordinal": 4,
-          "type_info": "Text"
-        },
-        {
-          "name": "ocean_depth_end!",
-          "ordinal": 5,
-          "type_info": "Int4"
-        },
-        {
-          "name": "ocean_depth_start!",
-          "ordinal": 6,
-          "type_info": "Int4"
-        },
-        {
-          "name": "quota_type_id!",
-          "ordinal": 7,
-          "type_info": "Int4"
-        },
-        {
-          "name": "start_latitude!",
-          "ordinal": 8,
-          "type_info": "Numeric"
-        },
-        {
-          "name": "start_longitude!",
-          "ordinal": 9,
-          "type_info": "Numeric"
-        },
-        {
-          "name": "start_timestamp!",
-          "ordinal": 10,
-          "type_info": "Timestamptz"
-        },
-        {
-          "name": "stop_timestamp!",
-          "ordinal": 11,
-          "type_info": "Timestamptz"
-        },
-        {
-          "name": "stop_latitude!",
-          "ordinal": 12,
-          "type_info": "Numeric"
-        },
-        {
-          "name": "stop_longitude!",
-          "ordinal": 13,
-          "type_info": "Numeric"
-        },
-        {
-          "name": "gear_id!: Gear",
-          "ordinal": 14,
-          "type_info": "Int4"
-        },
-        {
-          "name": "gear_group_id!: GearGroup",
-          "ordinal": 15,
-          "type_info": "Int4"
-        },
-        {
-          "name": "fiskeridir_vessel_id",
-          "ordinal": 16,
-          "type_info": "Int8"
-        },
-        {
-          "name": "vessel_call_sign",
-          "ordinal": 17,
-          "type_info": "Text"
-        },
-        {
-          "name": "vessel_call_sign_ers!",
-          "ordinal": 18,
-          "type_info": "Text"
-        },
-        {
-          "name": "vessel_length!",
-          "ordinal": 19,
-          "type_info": "Numeric"
-        },
-        {
-          "name": "vessel_length_group!: VesselLengthGroup",
-          "ordinal": 20,
-          "type_info": "Int4"
-        },
-        {
-          "name": "vessel_name",
-          "ordinal": 21,
-          "type_info": "Text"
-        },
-        {
-          "name": "vessel_name_ers",
-          "ordinal": 22,
-          "type_info": "Text"
-        },
-        {
-          "name": "catches!",
-          "ordinal": 23,
-          "type_info": "Text"
-        },
-        {
-          "name": "whale_catches!",
-          "ordinal": 24,
-          "type_info": "Text"
-        }
-      ],
-      "nullable": [
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        null,
-        null,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        null,
-        null
-      ],
-      "parameters": {
-        "Left": [
-          "TstzRangeArray",
-          "VarcharArray",
-          "Int4Array",
-          "Int4Array",
-          "NumRangeArray",
-          "Int8Array"
-        ]
-      }
-    },
-    "query": "\nSELECT\n    h.haul_id AS \"haul_id!\",\n    h.ers_activity_id AS \"ers_activity_id!\",\n    h.duration AS \"duration!\",\n    h.haul_distance AS haul_distance,\n    h.catch_location_start AS catch_location_start,\n    h.ocean_depth_end AS \"ocean_depth_end!\",\n    h.ocean_depth_start AS \"ocean_depth_start!\",\n    h.quota_type_id AS \"quota_type_id!\",\n    h.start_latitude AS \"start_latitude!\",\n    h.start_longitude AS \"start_longitude!\",\n    LOWER(h.period) AS \"start_timestamp!\",\n    UPPER(h.period) AS \"stop_timestamp!\",\n    h.stop_latitude AS \"stop_latitude!\",\n    h.stop_longitude AS \"stop_longitude!\",\n    h.gear_id AS \"gear_id!: Gear\",\n    h.gear_group_id AS \"gear_group_id!: GearGroup\",\n    h.fiskeridir_vessel_id AS fiskeridir_vessel_id,\n    h.vessel_call_sign AS vessel_call_sign,\n    h.vessel_call_sign_ers AS \"vessel_call_sign_ers!\",\n    h.vessel_length AS \"vessel_length!\",\n    h.vessel_length_group AS \"vessel_length_group!: VesselLengthGroup\",\n    h.vessel_name AS vessel_name,\n    h.vessel_name_ers AS vessel_name_ers,\n    h.catches::TEXT AS \"catches!\",\n    h.whale_catches::TEXT AS \"whale_catches!\"\nFROM\n    hauls_view h\nWHERE\n    (\n        $1::tstzrange[] IS NULL\n        OR h.period && ANY ($1)\n    )\n    AND (\n        $2::VARCHAR[] IS NULL\n        OR h.catch_location_start = ANY ($2)\n    )\n    AND (\n        $3::INT[] IS NULL\n        OR h.gear_group_id = ANY ($3)\n    )\n    AND (\n        $4::INT[] IS NULL\n        OR h.species_group_ids && $4\n    )\n    AND (\n        $5::numrange[] IS NULL\n        OR h.vessel_length <@ ANY ($5)\n    )\n    AND (\n        $6::BIGINT[] IS NULL\n        OR fiskeridir_vessel_id = ANY ($6)\n    )\n            "
-  },
   "9cd1c5dcb3702c1f36ba3a3a869ad3a36010357f2ddf7576635224b2c2bae6c6": {
     "describe": {
       "columns": [],
@@ -2443,170 +2273,6 @@
     },
     "query": "\nINSERT INTO\n    catch_main_areas (catch_main_area_id, \"name\", latitude, longitude)\nSELECT\n    *\nFROM\n    UNNEST(\n        $1::INT[],\n        $2::VARCHAR[],\n        $3::DECIMAL[],\n        $4::DECIMAL[]\n    )\nON CONFLICT (catch_main_area_id) DO\nUPDATE\nSET\n    \"name\" = CASE\n        WHEN catch_main_areas.name IS NULL THEN excluded.name\n    END,\n    latitude = excluded.latitude,\n    longitude = excluded.longitude\nWHERE\n    catch_main_areas.latitude IS NULL\n    AND catch_main_areas.longitude IS NULL\n                "
   },
-  "b5f42f10f4080e8a20668100a5f377cbd403eb1d02e03b4cbefa30fe87dfbaad": {
-    "describe": {
-      "columns": [
-        {
-          "name": "haul_id!",
-          "ordinal": 0,
-          "type_info": "Text"
-        },
-        {
-          "name": "ers_activity_id!",
-          "ordinal": 1,
-          "type_info": "Text"
-        },
-        {
-          "name": "duration!",
-          "ordinal": 2,
-          "type_info": "Int4"
-        },
-        {
-          "name": "haul_distance",
-          "ordinal": 3,
-          "type_info": "Int4"
-        },
-        {
-          "name": "catch_location_start",
-          "ordinal": 4,
-          "type_info": "Text"
-        },
-        {
-          "name": "ocean_depth_end!",
-          "ordinal": 5,
-          "type_info": "Int4"
-        },
-        {
-          "name": "ocean_depth_start!",
-          "ordinal": 6,
-          "type_info": "Int4"
-        },
-        {
-          "name": "quota_type_id!",
-          "ordinal": 7,
-          "type_info": "Int4"
-        },
-        {
-          "name": "start_latitude!",
-          "ordinal": 8,
-          "type_info": "Numeric"
-        },
-        {
-          "name": "start_longitude!",
-          "ordinal": 9,
-          "type_info": "Numeric"
-        },
-        {
-          "name": "start_timestamp!",
-          "ordinal": 10,
-          "type_info": "Timestamptz"
-        },
-        {
-          "name": "stop_timestamp!",
-          "ordinal": 11,
-          "type_info": "Timestamptz"
-        },
-        {
-          "name": "stop_latitude!",
-          "ordinal": 12,
-          "type_info": "Numeric"
-        },
-        {
-          "name": "stop_longitude!",
-          "ordinal": 13,
-          "type_info": "Numeric"
-        },
-        {
-          "name": "gear_id!: Gear",
-          "ordinal": 14,
-          "type_info": "Int4"
-        },
-        {
-          "name": "gear_group_id!: GearGroup",
-          "ordinal": 15,
-          "type_info": "Int4"
-        },
-        {
-          "name": "fiskeridir_vessel_id",
-          "ordinal": 16,
-          "type_info": "Int8"
-        },
-        {
-          "name": "vessel_call_sign",
-          "ordinal": 17,
-          "type_info": "Text"
-        },
-        {
-          "name": "vessel_call_sign_ers!",
-          "ordinal": 18,
-          "type_info": "Text"
-        },
-        {
-          "name": "vessel_length!",
-          "ordinal": 19,
-          "type_info": "Numeric"
-        },
-        {
-          "name": "vessel_length_group!: VesselLengthGroup",
-          "ordinal": 20,
-          "type_info": "Int4"
-        },
-        {
-          "name": "vessel_name",
-          "ordinal": 21,
-          "type_info": "Text"
-        },
-        {
-          "name": "vessel_name_ers",
-          "ordinal": 22,
-          "type_info": "Text"
-        },
-        {
-          "name": "catches!",
-          "ordinal": 23,
-          "type_info": "Text"
-        },
-        {
-          "name": "whale_catches!",
-          "ordinal": 24,
-          "type_info": "Text"
-        }
-      ],
-      "nullable": [
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        null,
-        null,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        null,
-        null
-      ],
-      "parameters": {
-        "Left": [
-          "Int8"
-        ]
-      }
-    },
-    "query": "\nSELECT\n    h.haul_id AS \"haul_id!\",\n    h.ers_activity_id AS \"ers_activity_id!\",\n    h.duration AS \"duration!\",\n    h.haul_distance AS haul_distance,\n    h.catch_location_start AS catch_location_start,\n    h.ocean_depth_end AS \"ocean_depth_end!\",\n    h.ocean_depth_start AS \"ocean_depth_start!\",\n    h.quota_type_id AS \"quota_type_id!\",\n    h.start_latitude AS \"start_latitude!\",\n    h.start_longitude AS \"start_longitude!\",\n    LOWER(h.period) AS \"start_timestamp!\",\n    UPPER(h.period) AS \"stop_timestamp!\",\n    h.stop_latitude AS \"stop_latitude!\",\n    h.stop_longitude AS \"stop_longitude!\",\n    h.gear_id AS \"gear_id!: Gear\",\n    h.gear_group_id AS \"gear_group_id!: GearGroup\",\n    h.fiskeridir_vessel_id AS fiskeridir_vessel_id,\n    h.vessel_call_sign AS vessel_call_sign,\n    h.vessel_call_sign_ers AS \"vessel_call_sign_ers!\",\n    h.vessel_length AS \"vessel_length!\",\n    h.vessel_length_group AS \"vessel_length_group!: VesselLengthGroup\",\n    h.vessel_name AS vessel_name,\n    h.vessel_name_ers AS vessel_name_ers,\n    h.catches::TEXT AS \"catches!\",\n    h.whale_catches::TEXT AS \"whale_catches!\"\nFROM\n    hauls_view h\nWHERE\n    h.fiskeridir_vessel_id = $1\n            "
-  },
   "b73232f832f90bad7cc3d4ad435e1f329749e36c18f1ffeece363188dc10bbb7": {
     "describe": {
       "columns": [],
@@ -2638,6 +2304,175 @@
       }
     },
     "query": "\nINSERT INTO\n    ports (port_id, \"name\", nationality)\nSELECT\n    *\nFROM\n    UNNEST($1::VARCHAR[], $2::VARCHAR[], $3::VARCHAR[])\nON CONFLICT (port_id) DO NOTHING\n            "
+  },
+  "bb75a47f24ce56f6c6198bf045e7dad049e974146f905d80731f2603a960c126": {
+    "describe": {
+      "columns": [
+        {
+          "name": "haul_id!",
+          "ordinal": 0,
+          "type_info": "Text"
+        },
+        {
+          "name": "start_timestamp",
+          "ordinal": 1,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "stop_timestamp",
+          "ordinal": 2,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "ers_activity_id",
+          "ordinal": 3,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "duration!",
+          "ordinal": 4,
+          "type_info": "Int4"
+        },
+        {
+          "name": "haul_distance",
+          "ordinal": 5,
+          "type_info": "Int4"
+        },
+        {
+          "name": "catch_location_start",
+          "ordinal": 6,
+          "type_info": "Text"
+        },
+        {
+          "name": "ocean_depth_end!",
+          "ordinal": 7,
+          "type_info": "Int4"
+        },
+        {
+          "name": "ocean_depth_start!",
+          "ordinal": 8,
+          "type_info": "Int4"
+        },
+        {
+          "name": "quota_type_id",
+          "ordinal": 9,
+          "type_info": "Int4"
+        },
+        {
+          "name": "start_latitude!",
+          "ordinal": 10,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "start_longitude!",
+          "ordinal": 11,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "stop_latitude!",
+          "ordinal": 12,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "stop_longitude!",
+          "ordinal": 13,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "gear_id!: Gear",
+          "ordinal": 14,
+          "type_info": "Int4"
+        },
+        {
+          "name": "gear_group_id!: GearGroup",
+          "ordinal": 15,
+          "type_info": "Int4"
+        },
+        {
+          "name": "fiskeridir_vessel_id",
+          "ordinal": 16,
+          "type_info": "Int8"
+        },
+        {
+          "name": "vessel_call_sign",
+          "ordinal": 17,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "vessel_call_sign_ers",
+          "ordinal": 18,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "vessel_length",
+          "ordinal": 19,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "vessel_length_group!: VesselLengthGroup",
+          "ordinal": 20,
+          "type_info": "Int4"
+        },
+        {
+          "name": "vessel_name",
+          "ordinal": 21,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "vessel_name_ers",
+          "ordinal": 22,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "catches!",
+          "ordinal": 23,
+          "type_info": "Text"
+        },
+        {
+          "name": "whale_catches!",
+          "ordinal": 24,
+          "type_info": "Text"
+        }
+      ],
+      "nullable": [
+        null,
+        false,
+        false,
+        false,
+        true,
+        true,
+        null,
+        true,
+        true,
+        false,
+        true,
+        true,
+        true,
+        true,
+        false,
+        false,
+        true,
+        true,
+        false,
+        false,
+        null,
+        true,
+        true,
+        null,
+        null
+      ],
+      "parameters": {
+        "Left": [
+          "TstzRangeArray",
+          "TextArray",
+          "Int4Array",
+          "NumRangeArray",
+          "Int8Array",
+          "Int4Array"
+        ]
+      }
+    },
+    "query": "\nSELECT\n    MD5(\n        e.message_id::TEXT || e.start_timestamp::TEXT || e.stop_timestamp::TEXT\n    ) AS \"haul_id!\",\n    e.start_timestamp,\n    e.stop_timestamp,\n    e.ers_activity_id,\n    e.duration AS \"duration!\",\n    e.haul_distance,\n    MIN(l.catch_location_id) AS catch_location_start,\n    e.ocean_depth_end AS \"ocean_depth_end!\",\n    e.ocean_depth_start AS \"ocean_depth_start!\",\n    e.quota_type_id,\n    e.start_latitude AS \"start_latitude!\",\n    e.start_longitude AS \"start_longitude!\",\n    e.stop_latitude AS \"stop_latitude!\",\n    e.stop_longitude AS \"stop_longitude!\",\n    e.gear_id AS \"gear_id!: Gear\",\n    e.gear_group_id AS \"gear_group_id!: GearGroup\",\n    e.fiskeridir_vessel_id,\n    e.vessel_call_sign,\n    e.vessel_call_sign_ers,\n    e.vessel_length,\n    TO_VESSEL_LENGTH_GROUP (e.vessel_length) AS \"vessel_length_group!: VesselLengthGroup\",\n    e.vessel_name,\n    e.vessel_name_ers,\n    JSONB_AGG(\n        JSON_BUILD_OBJECT(\n            'living_weight',\n            c.living_weight,\n            'species_fao_id',\n            c.species_fao_id,\n            'species_fiskeridir_id',\n            COALESCE(c.species_fiskeridir_id, 0),\n            'species_group_id',\n            c.species_group_id,\n            'species_main_group_id',\n            c.species_main_group_id\n        )\n    )::TEXT AS \"catches!\",\n    '[]' AS \"whale_catches!\"\nFROM\n    ers_dca e\n    INNER JOIN ers_dca_catches c ON e.message_id = c.message_id\n    AND e.start_timestamp = c.start_timestamp\n    AND e.stop_timestamp = c.stop_timestamp\n    LEFT JOIN catch_locations l ON ST_CONTAINS (\n        l.polygon,\n        ST_POINT (e.start_longitude, e.start_latitude)\n    )\nWHERE\n    (\n        $1::tstzrange[] IS NULL\n        OR TSTZRANGE (e.start_timestamp, e.stop_timestamp, '[]') && ANY ($1)\n    )\n    AND (\n        $2::TEXT[] IS NULL\n        OR l.catch_location_id = ANY ($2)\n    )\n    AND (\n        $3::INT[] IS NULL\n        OR e.gear_group_id = ANY ($3)\n    )\n    AND (\n        $4::numrange[] IS NULL\n        OR e.vessel_length <@ ANY ($4::numrange[])\n    )\n    AND (\n        $5::BIGINT[] IS NULL\n        OR e.fiskeridir_vessel_id = ANY ($5)\n    )\nGROUP BY\n    e.message_id,\n    e.start_timestamp,\n    e.stop_timestamp\nHAVING\n    (\n        $6::INT[] IS NULL\n        OR ARRAY_AGG(c.species_group_id) && $6\n    )\n            "
   },
   "bff6cd57b7c80963830eb6bc6774187058373b603ee16bc61a15cd053c505f25": {
     "describe": {
@@ -3014,6 +2849,86 @@
     },
     "query": "\nINSERT INTO\n    ais_vessels (\n        mmsi,\n        imo_number,\n        call_sign,\n        NAME,\n        ship_width,\n        ship_length,\n        ship_type,\n        eta,\n        draught,\n        destination\n    )\nSELECT\n    *\nFROM\n    UNNEST(\n        $1::INT[],\n        $2::INT[],\n        $3::VARCHAR[],\n        $4::VARCHAR[],\n        $5::INT[],\n        $6::INT[],\n        $7::INT[],\n        $8::timestamptz[],\n        $9::INT[],\n        $10::VARCHAR[]\n    )\nON CONFLICT (mmsi) DO\nUPDATE\nSET\n    imo_number = excluded.imo_number,\n    call_sign = excluded.call_sign,\n    NAME = excluded.name,\n    ship_width = excluded.ship_width,\n    ship_length = excluded.ship_length,\n    ship_type = excluded.ship_type,\n    eta = excluded.eta,\n    draught = excluded.draught,\n    destination = excluded.destination\n            "
   },
+  "dda4aab610c2898da4d0473ac63726be8e242447ecd5f5b35edc45f7e620ad7b": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Int8Array",
+          "Int4Array",
+          "TimestamptzArray",
+          "VarcharArray",
+          "Int4Array",
+          "Int4Array",
+          "Int4Array",
+          "Int4Array",
+          "VarcharArray",
+          "VarcharArray",
+          "VarcharArray",
+          "VarcharArray",
+          "Int4Array",
+          "Int4Array",
+          "VarcharArray",
+          "Int4Array",
+          "VarcharArray",
+          "Int4Array",
+          "Int4Array",
+          "Int4Array",
+          "Int4Array",
+          "Int4Array",
+          "Int4Array",
+          "Int4Array",
+          "Int4Array",
+          "NumericArray",
+          "NumericArray",
+          "TimestamptzArray",
+          "NumericArray",
+          "NumericArray",
+          "TimestamptzArray",
+          "Int4Array",
+          "VarcharArray",
+          "Int4Array",
+          "Int4Array",
+          "Int4Array",
+          "Int4Array",
+          "Int4Array",
+          "Int4Array",
+          "VarcharArray",
+          "Int4Array",
+          "Int4Array",
+          "VarcharArray",
+          "VarcharArray",
+          "Int4Array",
+          "Int4Array",
+          "Int4Array",
+          "Int4Array",
+          "VarcharArray",
+          "Int4Array",
+          "NumericArray",
+          "VarcharArray",
+          "NumericArray",
+          "VarcharArray",
+          "Int4Array",
+          "VarcharArray",
+          "VarcharArray",
+          "Int4Array",
+          "VarcharArray",
+          "VarcharArray",
+          "VarcharArray",
+          "Int4Array",
+          "Int4Array",
+          "VarcharArray",
+          "VarcharArray",
+          "DateArray",
+          "NumericArray",
+          "VarcharArray",
+          "Int4Array"
+        ]
+      }
+    },
+    "query": "\nINSERT INTO\n    ers_dca (\n        message_id,\n        message_number,\n        message_timestamp,\n        ers_message_type_id,\n        message_year,\n        relevant_year,\n        sequence_number,\n        message_version,\n        ers_activity_id,\n        area_grouping_end_id,\n        area_grouping_start_id,\n        call_sign_of_loading_vessel,\n        catch_year,\n        duration,\n        economic_zone_id,\n        haul_distance,\n        herring_population_id,\n        herring_population_fiskeridir_id,\n        location_end_code,\n        location_start_code,\n        main_area_end_id,\n        main_area_start_id,\n        ocean_depth_end,\n        ocean_depth_start,\n        quota_type_id,\n        start_latitude,\n        start_longitude,\n        start_timestamp,\n        stop_latitude,\n        stop_longitude,\n        stop_timestamp,\n        gear_amount,\n        gear_fao_id,\n        gear_id,\n        gear_group_id,\n        gear_main_group_id,\n        gear_mesh_width,\n        gear_problem_id,\n        gear_specification_id,\n        port_id,\n        fiskeridir_vessel_id,\n        vessel_building_year,\n        vessel_call_sign,\n        vessel_call_sign_ers,\n        vessel_engine_building_year,\n        vessel_engine_power,\n        vessel_gross_tonnage_1969,\n        vessel_gross_tonnage_other,\n        vessel_county,\n        vessel_county_code,\n        vessel_greatest_length,\n        vessel_identification,\n        vessel_length,\n        vessel_length_group,\n        vessel_length_group_code,\n        vessel_material_code,\n        vessel_municipality,\n        vessel_municipality_code,\n        vessel_name,\n        vessel_name_ers,\n        vessel_nationality_code,\n        fiskeridir_vessel_nationality_group_id,\n        vessel_rebuilding_year,\n        vessel_registration_id,\n        vessel_registration_id_ers,\n        vessel_valid_until,\n        vessel_width,\n        majority_species_fao_id,\n        majority_species_fiskeridir_id\n    )\nSELECT\n    *\nFROM\n    UNNEST(\n        $1::BIGINT[],\n        $2::INT[],\n        $3::timestamptz[],\n        $4::VARCHAR[],\n        $5::INT[],\n        $6::INT[],\n        $7::INT[],\n        $8::INT[],\n        $9::VARCHAR[],\n        $10::VARCHAR[],\n        $11::VARCHAR[],\n        $12::VARCHAR[],\n        $13::INT[],\n        $14::INT[],\n        $15::VARCHAR[],\n        $16::INT[],\n        $17::VARCHAR[],\n        $18::INT[],\n        $19::INT[],\n        $20::INT[],\n        $21::INT[],\n        $22::INT[],\n        $23::INT[],\n        $24::INT[],\n        $25::INT[],\n        $26::DECIMAL[],\n        $27::DECIMAL[],\n        $28::timestamptz[],\n        $29::DECIMAL[],\n        $30::DECIMAL[],\n        $31::timestamptz[],\n        $32::INT[],\n        $33::VARCHAR[],\n        $34::INT[],\n        $35::INT[],\n        $36::INT[],\n        $37::INT[],\n        $38::INT[],\n        $39::INT[],\n        $40::VARCHAR[],\n        $41::INT[],\n        $42::INT[],\n        $43::VARCHAR[],\n        $44::VARCHAR[],\n        $45::INT[],\n        $46::INT[],\n        $47::INT[],\n        $48::INT[],\n        $49::VARCHAR[],\n        $50::INT[],\n        $51::DECIMAL[],\n        $52::VARCHAR[],\n        $53::DECIMAL[],\n        $54::VARCHAR[],\n        $55::INT[],\n        $56::VARCHAR[],\n        $57::VARCHAR[],\n        $58::INT[],\n        $59::VARCHAR[],\n        $60::VARCHAR[],\n        $61::VARCHAR[],\n        $62::INT[],\n        $63::INT[],\n        $64::VARCHAR[],\n        $65::VARCHAR[],\n        $66::date[],\n        $67::DECIMAL[],\n        $68::VARCHAR[],\n        $69::INT[]\n    )\nON CONFLICT (message_id, start_timestamp, stop_timestamp) DO NOTHING\n            "
+  },
   "ddca1bd0f4ee508c062c72f218fec496d22813659f8b650220a7df90d24b822a": {
     "describe": {
       "columns": [],
@@ -3059,6 +2974,170 @@
       }
     },
     "query": "\nSELECT\n    fiskeridir_vessel_id AS \"fiskeridir_vessel_id!\",\n    arrival_timestamp AS \"timestamp\",\n    port_id\nFROM\n    ers_arrivals\nWHERE\n    fiskeridir_vessel_id = $1\n    AND arrival_timestamp >= GREATEST($2, '1970-01-01T00:00:00Z'::TIMESTAMPTZ)\n    AND (\n        $3::bool IS NULL\n        OR landing_facility IS NOT NULL\n    )\n            "
+  },
+  "e4981a1ad59f392b3b5c49bb640e264d5f98c0a4a1026d5c2cab153ba9a68d23": {
+    "describe": {
+      "columns": [
+        {
+          "name": "haul_id!",
+          "ordinal": 0,
+          "type_info": "Text"
+        },
+        {
+          "name": "start_timestamp",
+          "ordinal": 1,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "stop_timestamp",
+          "ordinal": 2,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "ers_activity_id",
+          "ordinal": 3,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "duration!",
+          "ordinal": 4,
+          "type_info": "Int4"
+        },
+        {
+          "name": "haul_distance",
+          "ordinal": 5,
+          "type_info": "Int4"
+        },
+        {
+          "name": "catch_location_start",
+          "ordinal": 6,
+          "type_info": "Text"
+        },
+        {
+          "name": "ocean_depth_end!",
+          "ordinal": 7,
+          "type_info": "Int4"
+        },
+        {
+          "name": "ocean_depth_start!",
+          "ordinal": 8,
+          "type_info": "Int4"
+        },
+        {
+          "name": "quota_type_id",
+          "ordinal": 9,
+          "type_info": "Int4"
+        },
+        {
+          "name": "start_latitude!",
+          "ordinal": 10,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "start_longitude!",
+          "ordinal": 11,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "stop_latitude!",
+          "ordinal": 12,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "stop_longitude!",
+          "ordinal": 13,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "gear_id!: Gear",
+          "ordinal": 14,
+          "type_info": "Int4"
+        },
+        {
+          "name": "gear_group_id!: GearGroup",
+          "ordinal": 15,
+          "type_info": "Int4"
+        },
+        {
+          "name": "fiskeridir_vessel_id",
+          "ordinal": 16,
+          "type_info": "Int8"
+        },
+        {
+          "name": "vessel_call_sign",
+          "ordinal": 17,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "vessel_call_sign_ers",
+          "ordinal": 18,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "vessel_length",
+          "ordinal": 19,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "vessel_length_group!: VesselLengthGroup",
+          "ordinal": 20,
+          "type_info": "Int4"
+        },
+        {
+          "name": "vessel_name",
+          "ordinal": 21,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "vessel_name_ers",
+          "ordinal": 22,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "catches!",
+          "ordinal": 23,
+          "type_info": "Text"
+        },
+        {
+          "name": "whale_catches!",
+          "ordinal": 24,
+          "type_info": "Text"
+        }
+      ],
+      "nullable": [
+        null,
+        false,
+        false,
+        false,
+        true,
+        true,
+        null,
+        true,
+        true,
+        false,
+        true,
+        true,
+        true,
+        true,
+        false,
+        false,
+        true,
+        true,
+        false,
+        false,
+        null,
+        true,
+        true,
+        null,
+        null
+      ],
+      "parameters": {
+        "Left": [
+          "Int8"
+        ]
+      }
+    },
+    "query": "\nSELECT\n    MD5(\n        e.message_id::TEXT || e.start_timestamp::TEXT || e.stop_timestamp::TEXT\n    ) AS \"haul_id!\",\n    e.start_timestamp,\n    e.stop_timestamp,\n    e.ers_activity_id,\n    e.duration AS \"duration!\",\n    e.haul_distance,\n    MIN(l.catch_location_id) AS catch_location_start,\n    e.ocean_depth_end AS \"ocean_depth_end!\",\n    e.ocean_depth_start AS \"ocean_depth_start!\",\n    e.quota_type_id,\n    e.start_latitude AS \"start_latitude!\",\n    e.start_longitude AS \"start_longitude!\",\n    e.stop_latitude AS \"stop_latitude!\",\n    e.stop_longitude AS \"stop_longitude!\",\n    e.gear_id AS \"gear_id!: Gear\",\n    e.gear_group_id AS \"gear_group_id!: GearGroup\",\n    e.fiskeridir_vessel_id,\n    e.vessel_call_sign,\n    e.vessel_call_sign_ers,\n    e.vessel_length,\n    TO_VESSEL_LENGTH_GROUP (e.vessel_length) AS \"vessel_length_group!: VesselLengthGroup\",\n    e.vessel_name,\n    e.vessel_name_ers,\n    JSONB_AGG(\n        JSON_BUILD_OBJECT(\n            'living_weight',\n            c.living_weight,\n            'species_fao_id',\n            c.species_fao_id,\n            'species_fiskeridir_id',\n            COALESCE(c.species_fiskeridir_id, 0),\n            'species_group_id',\n            c.species_group_id,\n            'species_main_group_id',\n            c.species_main_group_id\n        )\n    )::TEXT AS \"catches!\",\n    '[]' AS \"whale_catches!\"\nFROM\n    ers_dca e\n    INNER JOIN ers_dca_catches c ON e.message_id = c.message_id\n    AND e.start_timestamp = c.start_timestamp\n    AND e.stop_timestamp = c.stop_timestamp\n    LEFT JOIN catch_locations l ON ST_CONTAINS (\n        l.polygon,\n        ST_POINT (e.start_longitude, e.start_latitude)\n    )\nWHERE\n    e.fiskeridir_vessel_id = $1\nGROUP BY\n    e.message_id,\n    e.start_timestamp,\n    e.stop_timestamp\n            "
   },
   "e6606cba3ef41ddac861cdbf1930825984a508724acf033f9e54c4c708709249": {
     "describe": {

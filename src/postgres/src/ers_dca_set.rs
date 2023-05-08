@@ -1,4 +1,5 @@
 use crate::{error::PostgresError, models::*};
+use chrono::{DateTime, Utc};
 use error_stack::{report, Result, ResultExt};
 use std::collections::{hash_map::Entry, HashMap};
 
@@ -18,7 +19,10 @@ pub struct ErsDcaSet {
     municipalities: HashMap<i32, NewMunicipality>,
     economic_zones: HashMap<String, NewEconomicZone>,
     counties: HashMap<i32, NewCounty>,
-    ers_dca: Vec<NewErsDca>,
+    catches: HashMap<(i64, DateTime<Utc>, DateTime<Utc>, String), NewErsDcaCatch>,
+    whale_catches: HashMap<(i64, DateTime<Utc>, DateTime<Utc>, String), NewErsDcaWhaleCatch>,
+    ers_dca: HashMap<(i64, DateTime<Utc>, DateTime<Utc>), NewErsDca>,
+    ers_dca_other: HashMap<i64, NewErsDcaOther>,
 }
 
 pub struct PreparedErsDcaSet {
@@ -36,7 +40,10 @@ pub struct PreparedErsDcaSet {
     pub municipalities: Vec<NewMunicipality>,
     pub economic_zones: Vec<NewEconomicZone>,
     pub counties: Vec<NewCounty>,
+    pub catches: Vec<NewErsDcaCatch>,
+    pub whale_catches: Vec<NewErsDcaWhaleCatch>,
     pub ers_dca: Vec<NewErsDca>,
+    pub ers_dca_other: Vec<NewErsDcaOther>,
 }
 
 impl ErsDcaSet {
@@ -55,6 +62,10 @@ impl ErsDcaSet {
         let ports = self.ports.into_values().collect();
         let species_fao = self.species_fao.into_values().collect();
         let species_fiskeridir = self.species_fiskeridir.into_values().collect();
+        let catches = self.catches.into_values().collect();
+        let whale_catches = self.whale_catches.into_values().collect();
+        let ers_dca = self.ers_dca.into_values().collect();
+        let ers_dca_other = self.ers_dca_other.into_values().collect();
 
         PreparedErsDcaSet {
             ers_message_types,
@@ -71,7 +82,10 @@ impl ErsDcaSet {
             municipalities,
             economic_zones,
             counties,
-            ers_dca: self.ers_dca,
+            catches,
+            whale_catches,
+            ers_dca,
+            ers_dca_other,
         }
     }
 
@@ -95,6 +109,8 @@ impl ErsDcaSet {
             set.add_county(&e)?;
             set.add_species_fao(&e);
             set.add_species_fiskeridir(&e);
+            set.add_catch(&e)?;
+            set.add_whale_catch(&e)?;
             set.add_ers_dca(&e)?;
         }
 
@@ -301,9 +317,89 @@ impl ErsDcaSet {
         self.add_catch_area_impl(ers_dca.location_end_code);
     }
 
+    fn add_catch(&mut self, ers_dca: &fiskeridir_rs::ErsDca) -> Result<(), PostgresError> {
+        if let Some(catch) = NewErsDcaCatch::from_ers_dca(ers_dca)? {
+            match self.catches.entry((
+                catch.message_id,
+                catch.start_timestamp,
+                catch.stop_timestamp,
+                catch.species_fao_id.clone(),
+            )) {
+                Entry::Occupied(mut e) => {
+                    let v = e.get_mut();
+                    if catch.message_version > v.message_version {
+                        *v = catch;
+                    }
+                }
+                Entry::Vacant(e) => {
+                    e.insert(catch);
+                }
+            }
+        }
+        Ok(())
+    }
+
+    fn add_whale_catch(&mut self, ers_dca: &fiskeridir_rs::ErsDca) -> Result<(), PostgresError> {
+        if let Some(whale) = NewErsDcaWhaleCatch::from_ers_dca(ers_dca)? {
+            match self.whale_catches.entry((
+                whale.message_id,
+                whale.start_timestamp,
+                whale.stop_timestamp,
+                whale.whale_grenade_number.clone(),
+            )) {
+                Entry::Occupied(mut e) => {
+                    let v = e.get_mut();
+                    if whale.message_version > v.message_version {
+                        *v = whale;
+                    }
+                }
+                Entry::Vacant(e) => {
+                    e.insert(whale);
+                }
+            }
+        }
+        Ok(())
+    }
+
     fn add_ers_dca(&mut self, ers_dca: &fiskeridir_rs::ErsDca) -> Result<(), PostgresError> {
-        let new_ers_dca = NewErsDca::try_from(ers_dca.clone())?;
-        self.ers_dca.push(new_ers_dca);
+        match (
+            ers_dca.start_date,
+            ers_dca.start_time,
+            ers_dca.stop_date,
+            ers_dca.stop_time,
+        ) {
+            (Some(_), Some(_), Some(_), Some(_)) => {
+                let new = NewErsDca::try_from(ers_dca.clone())?;
+                match self
+                    .ers_dca
+                    .entry((new.message_id, new.start_timestamp, new.stop_timestamp))
+                {
+                    Entry::Occupied(mut e) => {
+                        let v = e.get_mut();
+                        if new.message_version > v.message_version {
+                            *v = new;
+                        }
+                    }
+                    Entry::Vacant(e) => {
+                        e.insert(new);
+                    }
+                }
+            }
+            _ => {
+                let new = NewErsDcaOther::try_from(ers_dca.clone())?;
+                match self.ers_dca_other.entry(new.message_id) {
+                    Entry::Occupied(mut e) => {
+                        let v = e.get_mut();
+                        if new.message_version > v.message_version {
+                            *v = new;
+                        }
+                    }
+                    Entry::Vacant(e) => {
+                        e.insert(new);
+                    }
+                }
+            }
+        }
         Ok(())
     }
 }

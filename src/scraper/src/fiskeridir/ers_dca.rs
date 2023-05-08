@@ -34,7 +34,7 @@ impl DataSource for ErsDcaScraper {
 
     async fn scrape(&self, processor: &(dyn Processor)) -> Result<(), ScraperError> {
         let closure = |ers_dca| processor.add_ers_dca(ers_dca);
-        let delete_closure = |year| processor.delete_ers_dca(year);
+        let delete_closure = |_| async { Ok(()) };
 
         for source in &self.sources {
             match self
