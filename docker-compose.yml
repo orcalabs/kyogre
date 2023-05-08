@@ -9,6 +9,14 @@ services:
     ports:
       - 5432:5432
 
+  scrape-db:
+    image: postgis/postgis:14-3.3-alpine
+    shm_size: 1g
+    environment:
+      - POSTGRES_PASSWORD=test123
+    ports:
+      - 5433:5432
+
   test-db:
     image: ghcr.io/orcalabs/kyogre/test-postgres
     build:

@@ -1,6 +1,6 @@
 log_level: Debug
 postgres:
-  ip: postgres
+  ip: scrape-db
   port: 5432
   username: postgres
   password: test123
