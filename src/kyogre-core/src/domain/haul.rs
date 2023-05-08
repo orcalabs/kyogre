@@ -41,8 +41,6 @@ pub struct Haul {
 #[remain::sorted]
 pub struct HaulCatch {
     pub living_weight: i32,
-    pub majority_species_fao_id: String,
-    pub majority_species_fiskeridir_id: Option<i32>,
     pub species_fao_id: String,
     pub species_fiskeridir_id: i32,
     pub species_group_id: i32,

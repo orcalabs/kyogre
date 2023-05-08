@@ -1,7 +1,9 @@
 use crate::{
     error::PostgresError,
     ers_dca_set::ErsDcaSet,
-    models::{NewErsDca, NewHerringPopulation},
+    models::{
+        NewErsDca, NewErsDcaCatch, NewErsDcaOther, NewErsDcaWhaleCatch, NewHerringPopulation,
+    },
     PostgresAdapter,
 };
 use error_stack::{IntoReport, Result, ResultExt};
@@ -38,6 +40,13 @@ impl PostgresAdapter {
         self.add_species_fiskeridir(prepared_set.species_fiskeridir, &mut tx)
             .await?;
         self.add_ers_dca(prepared_set.ers_dca, &mut tx).await?;
+        self.add_ers_dca_other(prepared_set.ers_dca_other, &mut tx)
+            .await?;
+
+        self.add_ers_dca_catches(prepared_set.catches, &mut tx)
+            .await?;
+        self.add_ers_dca_whale_catches(prepared_set.whale_catches, &mut tx)
+            .await?;
 
         tx.commit()
             .await
@@ -123,20 +132,6 @@ impl PostgresAdapter {
         let mut vessel_width = Vec::with_capacity(len);
         let mut majority_species_fao_id = Vec::with_capacity(len);
         let mut majority_species_fiskeridir_id = Vec::with_capacity(len);
-        let mut living_weight = Vec::with_capacity(len);
-        let mut species_fao_id = Vec::with_capacity(len);
-        let mut species_fiskeridir_id = Vec::with_capacity(len);
-        let mut species_group_id = Vec::with_capacity(len);
-        let mut species_main_group_id = Vec::with_capacity(len);
-        let mut whale_blubber_measure_a = Vec::with_capacity(len);
-        let mut whale_blubber_measure_b = Vec::with_capacity(len);
-        let mut whale_blubber_measure_c = Vec::with_capacity(len);
-        let mut whale_circumference = Vec::with_capacity(len);
-        let mut whale_fetus_length = Vec::with_capacity(len);
-        let mut whale_gender_id = Vec::with_capacity(len);
-        let mut whale_grenade_number = Vec::with_capacity(len);
-        let mut whale_individual_number = Vec::with_capacity(len);
-        let mut whale_length = Vec::with_capacity(len);
 
         for e in ers_dca {
             message_id.push(e.message_id);
@@ -208,20 +203,6 @@ impl PostgresAdapter {
             vessel_width.push(e.vessel_width);
             majority_species_fao_id.push(e.majority_species_fao_id);
             majority_species_fiskeridir_id.push(e.majority_species_fiskeridir_id);
-            living_weight.push(e.living_weight);
-            species_fao_id.push(e.species_fao_id);
-            species_fiskeridir_id.push(e.species_fiskeridir_id);
-            species_group_id.push(e.species_group_id);
-            species_main_group_id.push(e.species_main_group_id);
-            whale_blubber_measure_a.push(e.whale_blubber_measure_a);
-            whale_blubber_measure_b.push(e.whale_blubber_measure_b);
-            whale_blubber_measure_c.push(e.whale_blubber_measure_c);
-            whale_circumference.push(e.whale_circumference);
-            whale_fetus_length.push(e.whale_fetus_length);
-            whale_gender_id.push(e.whale_gender_id);
-            whale_grenade_number.push(e.whale_grenade_number);
-            whale_individual_number.push(e.whale_individual_number);
-            whale_length.push(e.whale_length);
         }
 
         sqlx::query!(
@@ -296,21 +277,7 @@ INSERT INTO
         vessel_valid_until,
         vessel_width,
         majority_species_fao_id,
-        majority_species_fiskeridir_id,
-        living_weight,
-        species_fao_id,
-        species_fiskeridir_id,
-        species_group_id,
-        species_main_group_id,
-        whale_blubber_measure_a,
-        whale_blubber_measure_b,
-        whale_blubber_measure_c,
-        whale_circumference,
-        whale_fetus_length,
-        whale_gender_id,
-        whale_grenade_number,
-        whale_individual_number,
-        whale_length
+        majority_species_fiskeridir_id
     )
 SELECT
     *
@@ -384,22 +351,9 @@ FROM
         $66::date[],
         $67::DECIMAL[],
         $68::VARCHAR[],
-        $69::INT[],
-        $70::INT[],
-        $71::VARCHAR[],
-        $72::INT[],
-        $73::INT[],
-        $74::INT[],
-        $75::INT[],
-        $76::INT[],
-        $77::INT[],
-        $78::INT[],
-        $79::INT[],
-        $80::INT[],
-        $81::VARCHAR[],
-        $82::INT[],
-        $83::INT[]
+        $69::INT[]
     )
+ON CONFLICT (message_id, start_timestamp, stop_timestamp) DO NOTHING
             "#,
             message_id.as_slice(),
             message_number.as_slice(),
@@ -470,18 +424,407 @@ FROM
             vessel_width.as_slice() as _,
             majority_species_fao_id.as_slice() as _,
             majority_species_fiskeridir_id.as_slice() as _,
+        )
+        .execute(&mut *tx)
+        .await
+        .into_report()
+        .change_context(PostgresError::Query)
+        .map(|_| ())
+    }
+
+    async fn add_ers_dca_other<'a>(
+        &'a self,
+        ers_dca: Vec<NewErsDcaOther>,
+        tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
+    ) -> Result<(), PostgresError> {
+        let len = ers_dca.len();
+
+        let mut message_id = Vec::with_capacity(len);
+        let mut message_number = Vec::with_capacity(len);
+        let mut message_timestamp = Vec::with_capacity(len);
+        let mut ers_message_type_id = Vec::with_capacity(len);
+        let mut message_year = Vec::with_capacity(len);
+        let mut relevant_year = Vec::with_capacity(len);
+        let mut sequence_number = Vec::with_capacity(len);
+        let mut message_version = Vec::with_capacity(len);
+        let mut ers_activity_id = Vec::with_capacity(len);
+        let mut quota_type_id = Vec::with_capacity(len);
+        let mut port_id = Vec::with_capacity(len);
+        let mut fiskeridir_vessel_id = Vec::with_capacity(len);
+        let mut vessel_building_year = Vec::with_capacity(len);
+        let mut vessel_call_sign = Vec::with_capacity(len);
+        let mut vessel_call_sign_ers = Vec::with_capacity(len);
+        let mut vessel_engine_building_year = Vec::with_capacity(len);
+        let mut vessel_engine_power = Vec::with_capacity(len);
+        let mut vessel_gross_tonnage_1969 = Vec::with_capacity(len);
+        let mut vessel_gross_tonnage_other = Vec::with_capacity(len);
+        let mut vessel_county = Vec::with_capacity(len);
+        let mut vessel_county_code = Vec::with_capacity(len);
+        let mut vessel_greatest_length = Vec::with_capacity(len);
+        let mut vessel_identification = Vec::with_capacity(len);
+        let mut vessel_length = Vec::with_capacity(len);
+        let mut vessel_length_group = Vec::with_capacity(len);
+        let mut vessel_length_group_code = Vec::with_capacity(len);
+        let mut vessel_material_code = Vec::with_capacity(len);
+        let mut vessel_municipality = Vec::with_capacity(len);
+        let mut vessel_municipality_code = Vec::with_capacity(len);
+        let mut vessel_name = Vec::with_capacity(len);
+        let mut vessel_name_ers = Vec::with_capacity(len);
+        let mut vessel_nationality_code = Vec::with_capacity(len);
+        let mut fiskeridir_vessel_nationality_group_id = Vec::with_capacity(len);
+        let mut vessel_rebuilding_year = Vec::with_capacity(len);
+        let mut vessel_registration_id = Vec::with_capacity(len);
+        let mut vessel_registration_id_ers = Vec::with_capacity(len);
+        let mut vessel_valid_until = Vec::with_capacity(len);
+        let mut vessel_width = Vec::with_capacity(len);
+
+        for e in ers_dca {
+            message_id.push(e.message_id);
+            message_number.push(e.message_number);
+            message_timestamp.push(e.message_timestamp);
+            ers_message_type_id.push(e.ers_message_type_id);
+            message_year.push(e.message_year);
+            relevant_year.push(e.relevant_year);
+            sequence_number.push(e.sequence_number);
+            message_version.push(e.message_version);
+            ers_activity_id.push(e.ers_activity_id);
+            quota_type_id.push(e.quota_type_id);
+            port_id.push(e.port_id);
+            fiskeridir_vessel_id.push(e.fiskeridir_vessel_id);
+            vessel_building_year.push(e.vessel_building_year);
+            vessel_call_sign.push(e.vessel_call_sign);
+            vessel_call_sign_ers.push(e.vessel_call_sign_ers);
+            vessel_engine_building_year.push(e.vessel_engine_building_year);
+            vessel_engine_power.push(e.vessel_engine_power);
+            vessel_gross_tonnage_1969.push(e.vessel_gross_tonnage_1969);
+            vessel_gross_tonnage_other.push(e.vessel_gross_tonnage_other);
+            vessel_county.push(e.vessel_county);
+            vessel_county_code.push(e.vessel_county_code);
+            vessel_greatest_length.push(e.vessel_greatest_length);
+            vessel_identification.push(e.vessel_identification);
+            vessel_length.push(e.vessel_length);
+            vessel_length_group.push(e.vessel_length_group);
+            vessel_length_group_code.push(e.vessel_length_group_code);
+            vessel_material_code.push(e.vessel_material_code);
+            vessel_municipality.push(e.vessel_municipality);
+            vessel_municipality_code.push(e.vessel_municipality_code);
+            vessel_name.push(e.vessel_name);
+            vessel_name_ers.push(e.vessel_name_ers);
+            vessel_nationality_code.push(e.vessel_nationality_code);
+            fiskeridir_vessel_nationality_group_id.push(e.vessel_nationality_group_id as i32);
+            vessel_rebuilding_year.push(e.vessel_rebuilding_year);
+            vessel_registration_id.push(e.vessel_registration_id);
+            vessel_registration_id_ers.push(e.vessel_registration_id_ers);
+            vessel_valid_until.push(e.vessel_valid_until);
+            vessel_width.push(e.vessel_width);
+        }
+
+        sqlx::query!(
+            r#"
+INSERT INTO
+    ers_dca_other (
+        message_id,
+        message_number,
+        message_timestamp,
+        ers_message_type_id,
+        message_year,
+        relevant_year,
+        sequence_number,
+        message_version,
+        ers_activity_id,
+        quota_type_id,
+        port_id,
+        fiskeridir_vessel_id,
+        vessel_building_year,
+        vessel_call_sign,
+        vessel_call_sign_ers,
+        vessel_engine_building_year,
+        vessel_engine_power,
+        vessel_gross_tonnage_1969,
+        vessel_gross_tonnage_other,
+        vessel_county,
+        vessel_county_code,
+        vessel_greatest_length,
+        vessel_identification,
+        vessel_length,
+        vessel_length_group,
+        vessel_length_group_code,
+        vessel_material_code,
+        vessel_municipality,
+        vessel_municipality_code,
+        vessel_name,
+        vessel_name_ers,
+        vessel_nationality_code,
+        fiskeridir_vessel_nationality_group_id,
+        vessel_rebuilding_year,
+        vessel_registration_id,
+        vessel_registration_id_ers,
+        vessel_valid_until,
+        vessel_width
+    )
+SELECT
+    *
+FROM
+    UNNEST(
+        $1::BIGINT[],
+        $2::INT[],
+        $3::timestamptz[],
+        $4::VARCHAR[],
+        $5::INT[],
+        $6::INT[],
+        $7::INT[],
+        $8::INT[],
+        $9::VARCHAR[],
+        $10::INT[],
+        $11::VARCHAR[],
+        $12::INT[],
+        $13::INT[],
+        $14::VARCHAR[],
+        $15::VARCHAR[],
+        $16::INT[],
+        $17::INT[],
+        $18::INT[],
+        $19::INT[],
+        $20::VARCHAR[],
+        $21::INT[],
+        $22::DECIMAL[],
+        $23::VARCHAR[],
+        $24::DECIMAL[],
+        $25::VARCHAR[],
+        $26::INT[],
+        $27::VARCHAR[],
+        $28::VARCHAR[],
+        $29::INT[],
+        $30::VARCHAR[],
+        $31::VARCHAR[],
+        $32::VARCHAR[],
+        $33::INT[],
+        $34::INT[],
+        $35::VARCHAR[],
+        $36::VARCHAR[],
+        $37::date[],
+        $38::DECIMAL[]
+    )
+ON CONFLICT (message_id) DO NOTHING
+            "#,
+            message_id.as_slice(),
+            message_number.as_slice(),
+            message_timestamp.as_slice(),
+            ers_message_type_id.as_slice(),
+            message_year.as_slice(),
+            relevant_year.as_slice(),
+            sequence_number.as_slice() as _,
+            message_version.as_slice(),
+            ers_activity_id.as_slice(),
+            quota_type_id.as_slice(),
+            port_id.as_slice() as _,
+            fiskeridir_vessel_id.as_slice() as _,
+            vessel_building_year.as_slice() as _,
+            vessel_call_sign.as_slice() as _,
+            vessel_call_sign_ers.as_slice(),
+            vessel_engine_building_year.as_slice() as _,
+            vessel_engine_power.as_slice() as _,
+            vessel_gross_tonnage_1969.as_slice() as _,
+            vessel_gross_tonnage_other.as_slice() as _,
+            vessel_county.as_slice() as _,
+            vessel_county_code.as_slice() as _,
+            vessel_greatest_length.as_slice() as _,
+            vessel_identification.as_slice(),
+            vessel_length.as_slice(),
+            vessel_length_group.as_slice() as _,
+            vessel_length_group_code.as_slice() as _,
+            vessel_material_code.as_slice() as _,
+            vessel_municipality.as_slice() as _,
+            vessel_municipality_code.as_slice() as _,
+            vessel_name.as_slice() as _,
+            vessel_name_ers.as_slice() as _,
+            vessel_nationality_code.as_slice(),
+            fiskeridir_vessel_nationality_group_id.as_slice() as _,
+            vessel_rebuilding_year.as_slice() as _,
+            vessel_registration_id.as_slice() as _,
+            vessel_registration_id_ers.as_slice() as _,
+            vessel_valid_until.as_slice() as _,
+            vessel_width.as_slice() as _,
+        )
+        .execute(&mut *tx)
+        .await
+        .into_report()
+        .change_context(PostgresError::Query)
+        .map(|_| ())
+    }
+
+    async fn add_ers_dca_catches<'a>(
+        &'a self,
+        catches: Vec<NewErsDcaCatch>,
+        tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
+    ) -> Result<(), PostgresError> {
+        let len = catches.len();
+
+        let mut message_id = Vec::with_capacity(len);
+        let mut start_timestamp = Vec::with_capacity(len);
+        let mut stop_timestamp = Vec::with_capacity(len);
+        let mut message_version = Vec::with_capacity(len);
+        let mut living_weight = Vec::with_capacity(len);
+        let mut species_fao_id = Vec::with_capacity(len);
+        let mut species_fiskeridir_id = Vec::with_capacity(len);
+        let mut species_group_id = Vec::with_capacity(len);
+        let mut species_main_group_id = Vec::with_capacity(len);
+
+        for c in catches {
+            message_id.push(c.message_id);
+            start_timestamp.push(c.start_timestamp);
+            stop_timestamp.push(c.stop_timestamp);
+            message_version.push(c.message_version);
+            living_weight.push(c.living_weight);
+            species_fao_id.push(c.species_fao_id);
+            species_fiskeridir_id.push(c.species_fiskeridir_id);
+            species_group_id.push(c.species_group_id);
+            species_main_group_id.push(c.species_main_group_id);
+        }
+
+        sqlx::query!(
+            r#"
+INSERT INTO
+    ers_dca_catches (
+        message_id,
+        start_timestamp,
+        stop_timestamp,
+        message_version,
+        living_weight,
+        species_fao_id,
+        species_fiskeridir_id,
+        species_group_id,
+        species_main_group_id
+    )
+SELECT
+    *
+FROM
+    UNNEST(
+        $1::BIGINT[],
+        $2::timestamptz[],
+        $3::timestamptz[],
+        $4::INT[],
+        $5::INT[],
+        $6::VARCHAR[],
+        $7::INT[],
+        $8::INT[],
+        $9::INT[]
+    )
+ON CONFLICT (
+    message_id,
+    start_timestamp,
+    stop_timestamp,
+    species_fao_id
+) DO NOTHING
+            "#,
+            message_id.as_slice(),
+            start_timestamp.as_slice(),
+            stop_timestamp.as_slice(),
+            message_version.as_slice(),
             living_weight.as_slice() as _,
-            species_fao_id.as_slice() as _,
+            species_fao_id.as_slice(),
             species_fiskeridir_id.as_slice() as _,
-            species_group_id.as_slice() as _,
-            species_main_group_id.as_slice() as _,
+            species_group_id.as_slice(),
+            species_main_group_id.as_slice(),
+        )
+        .execute(&mut *tx)
+        .await
+        .into_report()
+        .change_context(PostgresError::Query)
+        .map(|_| ())
+    }
+
+    async fn add_ers_dca_whale_catches<'a>(
+        &'a self,
+        whale_catches: Vec<NewErsDcaWhaleCatch>,
+        tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
+    ) -> Result<(), PostgresError> {
+        let len = whale_catches.len();
+
+        let mut message_id = Vec::with_capacity(len);
+        let mut start_timestamp = Vec::with_capacity(len);
+        let mut stop_timestamp = Vec::with_capacity(len);
+        let mut message_version = Vec::with_capacity(len);
+        let mut whale_grenade_number = Vec::with_capacity(len);
+        let mut whale_blubber_measure_a = Vec::with_capacity(len);
+        let mut whale_blubber_measure_b = Vec::with_capacity(len);
+        let mut whale_blubber_measure_c = Vec::with_capacity(len);
+        let mut whale_circumference = Vec::with_capacity(len);
+        let mut whale_fetus_length = Vec::with_capacity(len);
+        let mut whale_gender_id = Vec::with_capacity(len);
+        let mut whale_individual_number = Vec::with_capacity(len);
+        let mut whale_length = Vec::with_capacity(len);
+
+        for w in whale_catches {
+            message_id.push(w.message_id);
+            start_timestamp.push(w.start_timestamp);
+            stop_timestamp.push(w.stop_timestamp);
+            message_version.push(w.message_version);
+            whale_grenade_number.push(w.whale_grenade_number);
+            whale_blubber_measure_a.push(w.whale_blubber_measure_a);
+            whale_blubber_measure_b.push(w.whale_blubber_measure_b);
+            whale_blubber_measure_c.push(w.whale_blubber_measure_c);
+            whale_circumference.push(w.whale_circumference);
+            whale_fetus_length.push(w.whale_fetus_length);
+            whale_gender_id.push(w.whale_gender_id);
+            whale_individual_number.push(w.whale_individual_number);
+            whale_length.push(w.whale_length);
+        }
+
+        sqlx::query!(
+            r#"
+INSERT INTO
+    ers_dca_whale_catches (
+        message_id,
+        start_timestamp,
+        stop_timestamp,
+        message_version,
+        whale_grenade_number,
+        whale_blubber_measure_a,
+        whale_blubber_measure_b,
+        whale_blubber_measure_c,
+        whale_circumference,
+        whale_fetus_length,
+        whale_gender_id,
+        whale_individual_number,
+        whale_length
+    )
+SELECT
+    *
+FROM
+    UNNEST(
+        $1::BIGINT[],
+        $2::timestamptz[],
+        $3::timestamptz[],
+        $4::INT[],
+        $5::VARCHAR[],
+        $6::INT[],
+        $7::INT[],
+        $8::INT[],
+        $9::INT[],
+        $10::INT[],
+        $11::INT[],
+        $12::INT[],
+        $13::INT[]
+    )
+ON CONFLICT (
+    message_id,
+    start_timestamp,
+    stop_timestamp,
+    whale_grenade_number
+) DO NOTHING
+            "#,
+            message_id.as_slice(),
+            start_timestamp.as_slice(),
+            stop_timestamp.as_slice(),
+            message_version.as_slice(),
+            whale_grenade_number.as_slice(),
             whale_blubber_measure_a.as_slice() as _,
             whale_blubber_measure_b.as_slice() as _,
             whale_blubber_measure_c.as_slice() as _,
             whale_circumference.as_slice() as _,
             whale_fetus_length.as_slice() as _,
             whale_gender_id.as_slice() as _,
-            whale_grenade_number.as_slice() as _,
             whale_individual_number.as_slice() as _,
             whale_length.as_slice() as _,
         )

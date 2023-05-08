@@ -34,35 +34,61 @@ impl TestDb {
             Haul,
             r#"
 SELECT
-    h.haul_id AS "haul_id!",
-    h.ers_activity_id AS "ers_activity_id!",
-    h.duration AS "duration!",
-    h.haul_distance AS haul_distance,
-    h.catch_location_start AS catch_location_start,
-    h.ocean_depth_end AS "ocean_depth_end!",
-    h.ocean_depth_start AS "ocean_depth_start!",
-    h.quota_type_id AS "quota_type_id!",
-    h.start_latitude AS "start_latitude!",
-    h.start_longitude AS "start_longitude!",
-    LOWER(h.period) AS "start_timestamp!",
-    UPPER(h.period) AS "stop_timestamp!",
-    h.stop_latitude AS "stop_latitude!",
-    h.stop_longitude AS "stop_longitude!",
-    h.gear_id AS "gear_id!: Gear",
-    h.gear_group_id AS "gear_group_id!: GearGroup",
-    h.fiskeridir_vessel_id AS fiskeridir_vessel_id,
-    h.vessel_call_sign AS vessel_call_sign,
-    h.vessel_call_sign_ers AS "vessel_call_sign_ers!",
-    h.vessel_length AS "vessel_length!",
-    h.vessel_length_group AS "vessel_length_group!: VesselLengthGroup",
-    h.vessel_name AS vessel_name,
-    h.vessel_name_ers AS vessel_name_ers,
-    h.catches::TEXT AS "catches!",
-    h.whale_catches::TEXT AS "whale_catches!"
+    MD5(
+        e.message_id::TEXT || e.start_timestamp::TEXT || e.stop_timestamp::TEXT
+    ) AS "haul_id!",
+    e.start_timestamp,
+    e.stop_timestamp,
+    e.ers_activity_id,
+    e.duration AS "duration!",
+    e.haul_distance,
+    MIN(l.catch_location_id) AS catch_location_start,
+    e.ocean_depth_end AS "ocean_depth_end!",
+    e.ocean_depth_start AS "ocean_depth_start!",
+    e.quota_type_id,
+    e.start_latitude AS "start_latitude!",
+    e.start_longitude AS "start_longitude!",
+    e.stop_latitude AS "stop_latitude!",
+    e.stop_longitude AS "stop_longitude!",
+    e.gear_id AS "gear_id!: Gear",
+    e.gear_group_id AS "gear_group_id!: GearGroup",
+    e.fiskeridir_vessel_id,
+    e.vessel_call_sign,
+    e.vessel_call_sign_ers,
+    e.vessel_length,
+    TO_VESSEL_LENGTH_GROUP (e.vessel_length) AS "vessel_length_group!: VesselLengthGroup",
+    e.vessel_name,
+    e.vessel_name_ers,
+    JSONB_AGG(
+        JSON_BUILD_OBJECT(
+            'living_weight',
+            c.living_weight,
+            'species_fao_id',
+            c.species_fao_id,
+            'species_fiskeridir_id',
+            COALESCE(c.species_fiskeridir_id, 0),
+            'species_group_id',
+            c.species_group_id,
+            'species_main_group_id',
+            c.species_main_group_id
+        )
+    )::TEXT AS "catches!",
+    '[]' AS "whale_catches!"
 FROM
-    hauls_view h
+    ers_dca e
+    INNER JOIN ers_dca_catches c ON e.message_id = c.message_id
+    AND e.start_timestamp = c.start_timestamp
+    AND e.stop_timestamp = c.stop_timestamp
+    LEFT JOIN catch_locations l ON ST_CONTAINS (
+        l.polygon,
+        ST_POINT (e.start_longitude, e.start_latitude)
+    )
 WHERE
-    h.fiskeridir_vessel_id = $1
+    e.fiskeridir_vessel_id = $1
+GROUP BY
+    e.message_id,
+    e.start_timestamp,
+    e.stop_timestamp
             "#,
             vessel_id.0
         )
