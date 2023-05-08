@@ -526,3 +526,69 @@ async fn test_does_not_conflict_with_trip_from_landings_assembler_with_identical
     })
     .await;
 }
+
+#[tokio::test]
+async fn test_new_arrival_does_not_cause_conflict_if_it_does_not_extend_most_recent_trip() {
+    test(|helper| async move {
+        let fiskeridir_vessel_id = FiskeridirVesselId(11);
+        let ers_assembler = ErsTripAssembler::default();
+
+        let start = Utc.timestamp_opt(100000, 1).unwrap();
+        let end = Utc.timestamp_opt(200000, 1).unwrap();
+
+        let mut departure =
+            fiskeridir_rs::ErsDep::test_default(1, Some(fiskeridir_vessel_id.0 as u64));
+        departure.departure_date = start.date_naive();
+        departure.departure_time = start.time();
+        departure.departure_timestamp = start;
+
+        let mut arrival =
+            fiskeridir_rs::ErsPor::test_default(1, Some(fiskeridir_vessel_id.0 as u64), true);
+        arrival.arrival_date = end.date_naive();
+        arrival.arrival_time = end.time();
+        arrival.arrival_timestamp = end;
+
+        helper.add_ers_dep(vec![departure]).await.unwrap();
+        helper.add_ers_por(vec![arrival]).await.unwrap();
+
+        let vessel = helper.db.vessel(fiskeridir_vessel_id).await;
+
+        let assembled = ers_assembler
+            .assemble(&helper.db.db, &vessel, State::NoPriorState)
+            .await
+            .unwrap()
+            .unwrap();
+
+        helper
+            .add_trips(
+                vessel.fiskeridir.id,
+                assembled.new_trip_calculation_time,
+                assembled.conflict_strategy,
+                assembled.trips,
+                TripAssemblerId::Ers,
+            )
+            .await
+            .unwrap();
+
+        let mut departure =
+            fiskeridir_rs::ErsDep::test_default(2, Some(fiskeridir_vessel_id.0 as u64));
+        departure.departure_date = end.date_naive().succ_opt().unwrap();
+        departure.departure_time = end.time();
+        departure.departure_timestamp = end + Duration::days(1);
+
+        let mut arrival =
+            fiskeridir_rs::ErsPor::test_default(2, Some(fiskeridir_vessel_id.0 as u64), true);
+        arrival.arrival_date = departure.departure_date.succ_opt().unwrap();
+        arrival.arrival_time = departure.departure_time;
+        arrival.arrival_timestamp = departure.departure_timestamp + Duration::days(1);
+
+        helper.add_ers_dep(vec![departure]).await.unwrap();
+        helper.add_ers_por(vec![arrival]).await.unwrap();
+
+        let conflicts = helper.db.db.conflicts(TripAssemblerId::Ers).await.unwrap();
+
+        dbg!(&conflicts);
+        assert!(conflicts.is_empty());
+    })
+    .await;
+}
