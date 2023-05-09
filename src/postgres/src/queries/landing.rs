@@ -351,10 +351,7 @@ FROM
         $67::VARCHAR[],
         $68::INT[]
     )
-ON CONFLICT (landing_id, "version") DO
-UPDATE
-SET
-    data_year = excluded.data_year
+ON CONFLICT (landing_id) DO NOTHING
             "#,
             landing_id.as_slice(),
             document_id.as_slice(),
