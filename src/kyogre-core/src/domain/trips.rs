@@ -51,6 +51,7 @@ pub struct TripDetailed {
     pub start_port_id: Option<String>,
     pub end_port_id: Option<String>,
     pub assembler_id: TripAssemblerId,
+    pub vessel_events: Vec<VesselEvent>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

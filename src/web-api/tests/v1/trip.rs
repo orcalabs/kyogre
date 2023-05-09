@@ -2,7 +2,9 @@ use super::helper::test;
 use actix_web::http::StatusCode;
 use chrono::{Duration, TimeZone, Utc};
 use fiskeridir_rs::{CallSign, Quality};
-use kyogre_core::{FiskeridirVesselId, HaulId, Mmsi, Ordering, ScraperInboundPort};
+use kyogre_core::{
+    FiskeridirVesselId, HaulId, Mmsi, Ordering, ScraperInboundPort, VesselEventType,
+};
 use web_api::routes::v1::trip::{Trip, TripsParameters};
 
 #[tokio::test]
@@ -425,10 +427,6 @@ async fn test_trips_of_vessel_orders_by_period() {
 async fn test_first_ers_data_triggers_trip_assembler_switch_to_ers() {
     test(|helper| async move {
         let fiskeridir_vessel_id = FiskeridirVesselId(1);
-        helper
-            .db
-            .generate_fiskeridir_vessel(fiskeridir_vessel_id, None, None)
-            .await;
 
         let start = Utc.timestamp_opt(10000, 0).unwrap();
         let end = Utc.timestamp_opt(100000, 0).unwrap();
@@ -460,6 +458,162 @@ async fn test_first_ers_data_triggers_trip_assembler_switch_to_ers() {
 
         let trips: Vec<Trip> = response.json().await.unwrap();
         assert_eq!(trips.len(), 1);
+        assert_eq!(trips[0], ers_trip);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_trips_contains_all_events_within_trip_period_ordered_ascendingly() {
+    test(|helper| async move {
+        let fiskeridir_vessel_id = FiskeridirVesselId(1);
+
+        helper
+            .db
+            .generate_fiskeridir_vessel(fiskeridir_vessel_id, None, None)
+            .await;
+
+        let start = Utc.timestamp_opt(10000, 0).unwrap();
+        let end = Utc.timestamp_opt(100000, 0).unwrap();
+
+        helper
+            .db
+            .generate_landing(1, fiskeridir_vessel_id, start + Duration::seconds(1))
+            .await;
+
+        helper
+            .db
+            .generate_tra(1, fiskeridir_vessel_id, start + Duration::seconds(2))
+            .await;
+
+        helper
+            .db
+            .generate_haul(
+                fiskeridir_vessel_id,
+                &(start + Duration::seconds(3)),
+                &(end - Duration::seconds(3)),
+            )
+            .await;
+
+        let ers_trip = helper
+            .generate_ers_trip(fiskeridir_vessel_id, &start, &end)
+            .await;
+
+        let response = helper
+            .app
+            .get_trips_of_vessel(fiskeridir_vessel_id, TripsParameters::default())
+            .await;
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let trips: Vec<Trip> = response.json().await.unwrap();
+        assert_eq!(trips.len(), 1);
+        assert_eq!(trips[0].events.len(), 5);
+        assert_eq!(trips[0].events[0].event_type, VesselEventType::ErsDep);
+        assert_eq!(trips[0].events[1].event_type, VesselEventType::Landing);
+        assert_eq!(trips[0].events[2].event_type, VesselEventType::ErsTra);
+        assert_eq!(trips[0].events[3].event_type, VesselEventType::ErsDca);
+        assert_eq!(trips[0].events[4].event_type, VesselEventType::ErsPor);
+        assert_eq!(trips[0], ers_trip);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_trips_events_are_isolated_per_vessel() {
+    test(|helper| async move {
+        let fiskeridir_vessel_id = FiskeridirVesselId(1);
+        let fiskeridir_vessel_id2 = FiskeridirVesselId(2);
+        helper
+            .db
+            .generate_fiskeridir_vessel(fiskeridir_vessel_id, None, None)
+            .await;
+        helper
+            .db
+            .generate_fiskeridir_vessel(fiskeridir_vessel_id2, None, None)
+            .await;
+
+        let start = Utc.timestamp_opt(10000, 0).unwrap();
+        let end = Utc.timestamp_opt(100000, 0).unwrap();
+
+        helper
+            .db
+            .generate_landing(1, fiskeridir_vessel_id, start + Duration::seconds(1))
+            .await;
+
+        helper
+            .db
+            .generate_tra(1, fiskeridir_vessel_id, start + Duration::seconds(1))
+            .await;
+
+        helper
+            .db
+            .generate_haul(
+                fiskeridir_vessel_id,
+                &(start + Duration::seconds(1)),
+                &(end - Duration::seconds(1)),
+            )
+            .await;
+
+        helper
+            .generate_ers_trip(fiskeridir_vessel_id, &start, &end)
+            .await;
+
+        let ers_trip = helper
+            .generate_ers_trip(fiskeridir_vessel_id2, &start, &end)
+            .await;
+
+        let response = helper
+            .app
+            .get_trips_of_vessel(fiskeridir_vessel_id2, TripsParameters::default())
+            .await;
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let trips: Vec<Trip> = response.json().await.unwrap();
+        assert_eq!(trips.len(), 1);
+        assert_eq!(trips[0].events.len(), 2);
+        assert_eq!(trips[0], ers_trip);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_trips_does_not_include_events_outside_period() {
+    test(|helper| async move {
+        let fiskeridir_vessel_id = FiskeridirVesselId(1);
+        let fiskeridir_vessel_id2 = FiskeridirVesselId(2);
+        helper
+            .db
+            .generate_fiskeridir_vessel(fiskeridir_vessel_id, None, None)
+            .await;
+        helper
+            .db
+            .generate_fiskeridir_vessel(fiskeridir_vessel_id2, None, None)
+            .await;
+
+        let start = Utc.timestamp_opt(10000, 0).unwrap();
+        let end = Utc.timestamp_opt(100000, 0).unwrap();
+
+        helper
+            .db
+            .generate_tra(1, fiskeridir_vessel_id, end + Duration::seconds(1))
+            .await;
+
+        let ers_trip = helper
+            .generate_ers_trip(fiskeridir_vessel_id, &start, &end)
+            .await;
+
+        let response = helper
+            .app
+            .get_trips_of_vessel(fiskeridir_vessel_id, TripsParameters::default())
+            .await;
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let trips: Vec<Trip> = response.json().await.unwrap();
+
+        assert_eq!(trips.len(), 1);
+        assert_eq!(trips[0].events.len(), 2);
+        assert_eq!(trips[0].events[0].event_type, VesselEventType::ErsDep);
+        assert_eq!(trips[0].events[1].event_type, VesselEventType::ErsPor);
         assert_eq!(trips[0], ers_trip);
     })
     .await;

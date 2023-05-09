@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::{models::Haul, PostgresAdapter};
 use bigdecimal::{BigDecimal, FromPrimitive};
-use chrono::{DateTime, Duration, Utc};
+use chrono::{DateTime, Datelike, Duration, Utc};
 use fiskeridir_rs::{
     CallSign, ErsDca, ErsDep, ErsPor, Gear, GearGroup, LandingId, VesselLengthGroup, Vms,
 };
@@ -281,6 +281,29 @@ FROM
         let pos = Vms::test_default(message_id, call_sign.clone(), timestamp);
         self.db.add_vms(vec![pos]).await.unwrap();
         self.single_vms_position(message_id).await
+    }
+
+    pub async fn generate_landing(
+        &self,
+        landing_id: i64,
+        vessel_id: FiskeridirVesselId,
+        timestamp: DateTime<Utc>,
+    ) {
+        let mut landing = fiskeridir_rs::Landing::test_default(landing_id, Some(vessel_id.0));
+        landing.landing_timestamp = timestamp;
+        let year = landing.landing_timestamp.year() as u32;
+        self.db.add_landings(vec![landing], year).await.unwrap();
+    }
+
+    pub async fn generate_tra(
+        &self,
+        message_id: u64,
+        vessel_id: FiskeridirVesselId,
+        timestamp: DateTime<Utc>,
+    ) {
+        let tra =
+            fiskeridir_rs::ErsTra::test_default(message_id, Some(vessel_id.0 as u64), timestamp);
+        self.db.add_ers_tra(vec![tra]).await.unwrap();
     }
 
     pub async fn generate_fiskeridir_vessel(
