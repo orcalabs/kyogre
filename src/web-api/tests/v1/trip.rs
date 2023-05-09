@@ -21,38 +21,6 @@ async fn test_trip_of_haul_returns_none_of_no_trip_is_connected_to_given_haul_id
 }
 
 #[tokio::test]
-async fn test_trip_of_haul_returns_ers_based_trip_in_favour_of_landings_if_both_exist() {
-    test(|helper| async move {
-        let fiskeridir_vessel_id = FiskeridirVesselId(11);
-        let start = Utc.timestamp_opt(10000, 0).unwrap();
-        let end = Utc.timestamp_opt(100000, 0).unwrap();
-
-        let haul = helper
-            .db
-            .generate_haul(
-                fiskeridir_vessel_id,
-                &(start + Duration::hours(1)),
-                &(end - Duration::hours(1)),
-            )
-            .await;
-
-        let ers_trip = helper
-            .generate_ers_trip(fiskeridir_vessel_id, &start, &end)
-            .await;
-        helper
-            .generate_landings_trip(fiskeridir_vessel_id, &start, &end)
-            .await;
-
-        let response = helper.app.get_trip_of_haul(&haul.haul_id).await;
-        assert_eq!(response.status(), StatusCode::OK);
-
-        let body: Trip = response.json().await.unwrap();
-        assert_eq!(ers_trip, body);
-    })
-    .await;
-}
-
-#[tokio::test]
 async fn test_trip_of_haul_returns_landings_based_trip_if_ers_based_does_not_exist() {
     test(|helper| async move {
         let fiskeridir_vessel_id = FiskeridirVesselId(11);
@@ -95,13 +63,6 @@ async fn test_trip_of_haul_does_not_return_trip_outside_haul_period() {
                 &(start - Duration::days(3)),
             )
             .await;
-        helper
-            .generate_landings_trip(
-                fiskeridir_vessel_id,
-                &(end + Duration::days(3)),
-                &(end + Duration::days(4)),
-            )
-            .await;
 
         let haul = helper
             .db
@@ -126,9 +87,6 @@ async fn test_trip_of_haul_does_not_return_trip_of_other_vessels() {
         let end = Utc.timestamp_opt(100000, 0).unwrap();
         helper
             .generate_ers_trip(fiskeridir_vessel_id, &start, &end)
-            .await;
-        helper
-            .generate_landings_trip(fiskeridir_vessel_id, &start, &end)
             .await;
 
         let haul = helper
@@ -459,6 +417,50 @@ async fn test_trips_of_vessel_orders_by_period() {
         assert_eq!(trips.len(), 2);
         assert_eq!(trips[0], ers_trip);
         assert_eq!(trips[1], ers_trip2);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_first_ers_data_triggers_trip_assembler_switch_to_ers() {
+    test(|helper| async move {
+        let fiskeridir_vessel_id = FiskeridirVesselId(1);
+        helper
+            .db
+            .generate_fiskeridir_vessel(fiskeridir_vessel_id, None, None)
+            .await;
+
+        let start = Utc.timestamp_opt(10000, 0).unwrap();
+        let end = Utc.timestamp_opt(100000, 0).unwrap();
+
+        let landings_trip = helper
+            .generate_landings_trip(fiskeridir_vessel_id, &start, &end)
+            .await;
+
+        let response = helper
+            .app
+            .get_trips_of_vessel(fiskeridir_vessel_id, TripsParameters::default())
+            .await;
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let trips: Vec<Trip> = response.json().await.unwrap();
+        // Landings generates two trips on the first landing
+        assert_eq!(trips.len(), 2);
+        assert_eq!(trips[1], landings_trip);
+
+        let ers_trip = helper
+            .generate_ers_trip(fiskeridir_vessel_id, &start, &end)
+            .await;
+
+        let response = helper
+            .app
+            .get_trips_of_vessel(fiskeridir_vessel_id, TripsParameters::default())
+            .await;
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let trips: Vec<Trip> = response.json().await.unwrap();
+        assert_eq!(trips.len(), 1);
+        assert_eq!(trips[0], ers_trip);
     })
     .await;
 }
