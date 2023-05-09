@@ -42,6 +42,7 @@ SELECT
     t.catches::TEXT AS "catches!",
     t.hauls::TEXT AS "hauls!",
     t.delivery_point_catches::TEXT AS "delivery_point_catches!",
+    t.vessel_events::TEXT AS "vessel_events!",
     t.gear_ids AS "gear_ids!: Vec<Gear>"
 FROM
     trips_view AS t
@@ -95,6 +96,7 @@ SELECT
     t.catches::TEXT AS "catches!",
     t.hauls::TEXT AS "hauls!",
     t.delivery_point_catches::TEXT AS "delivery_point_catches!",
+    t.vessel_events::TEXT AS "vessel_events!",
     t.gear_ids AS "gear_ids!: Vec<Gear>"
 FROM
     trips_view AS t
@@ -135,6 +137,7 @@ SELECT
     t.catches::TEXT AS "catches!",
     t.hauls::TEXT AS "hauls!",
     t.delivery_point_catches::TEXT AS "delivery_point_catches!",
+    t.vessel_events::TEXT AS "vessel_events!",
     t.gear_ids AS "gear_ids!: Vec<Gear>"
 FROM
     trips_view AS t
@@ -303,9 +306,15 @@ WHERE
         let mut fiskeridir_vessel_ids = Vec::with_capacity(trips.len());
 
         for t in trips {
-            let pg_range: PgRange<DateTime<Utc>> = PgRange {
-                start: std::ops::Bound::Excluded(t.period.start()),
-                end: std::ops::Bound::Included(t.period.end()),
+            let pg_range = match trip_assembler_id {
+                TripAssemblerId::Landings => PgRange {
+                    start: std::ops::Bound::Excluded(t.period.start()),
+                    end: std::ops::Bound::Included(t.period.end()),
+                },
+                TripAssemblerId::Ers => PgRange {
+                    start: std::ops::Bound::Included(t.period.start()),
+                    end: std::ops::Bound::Included(t.period.end()),
+                },
             };
             range.push(pg_range);
             start_port_id.push(t.start_port_code);

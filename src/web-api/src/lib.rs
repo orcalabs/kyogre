@@ -63,6 +63,7 @@ impl Database for PostgresAdapter {}
             v1::haul::HaulCatch,
             v1::haul::WhaleCatch,
             v1::trip::Trip,
+            v1::trip::VesselEvent,
             v1::vms::VmsPosition,
             v1::ais_vms::AisVmsPosition,
             v1::ais_vms::AisVmsPositionDetails,

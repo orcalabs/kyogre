@@ -1,6 +1,7 @@
 use std::fmt;
 
 use crate::{AisVessel, Mmsi, TripAssemblerId};
+use chrono::{DateTime, Utc};
 use fiskeridir_rs::CallSign;
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
@@ -12,6 +13,38 @@ pub struct Vessel {
     pub fiskeridir: FiskeridirVessel,
     pub ais: Option<AisVessel>,
     pub preferred_trip_assembler: TripAssemblerId,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct VesselEvent {
+    pub event_id: u64,
+    pub vessel_id: FiskeridirVesselId,
+    pub timestamp: DateTime<Utc>,
+    pub event_type: VesselEventType,
+}
+
+#[cfg_attr(feature = "sqlx", derive(sqlx::Type))]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
+#[repr(i32)]
+#[derive(
+    Debug,
+    Copy,
+    Clone,
+    PartialEq,
+    FromPrimitive,
+    Eq,
+    Hash,
+    Ord,
+    PartialOrd,
+    Serialize_repr,
+    Deserialize_repr,
+)]
+pub enum VesselEventType {
+    Landing = 1,
+    ErsDca = 2,
+    ErsPor = 3,
+    ErsDep = 4,
+    ErsTra = 5,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
@@ -84,6 +117,18 @@ pub enum FiskdirVesselNationalityGroup {
 pub enum FiskeridirVesselSource {
     Landings = 1,
     FiskeridirVesselRegister = 2,
+}
+
+impl VesselEventType {
+    pub fn name(&self) -> &'static str {
+        match self {
+            VesselEventType::Landing => "landing",
+            VesselEventType::ErsDca => "ers_dca",
+            VesselEventType::ErsTra => "ers_tra",
+            VesselEventType::ErsDep => "ers_dep",
+            VesselEventType::ErsPor => "ers_por",
+        }
+    }
 }
 
 impl From<fiskeridir_rs::FiskdirVesselNationalityGroup> for FiskdirVesselNationalityGroup {

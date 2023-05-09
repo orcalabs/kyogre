@@ -7,7 +7,9 @@ use actix_web::{
     HttpResponse,
 };
 use chrono::{DateTime, Utc};
-use kyogre_core::{Delivery, FiskeridirVesselId, HaulId, Ordering, Pagination, TripId};
+use kyogre_core::{
+    Delivery, FiskeridirVesselId, HaulId, Ordering, Pagination, TripId, VesselEventType,
+};
 use serde::{Deserialize, Serialize};
 use tracing::{event, Level};
 use utoipa::{IntoParams, ToSchema};
@@ -100,6 +102,17 @@ pub struct Trip {
     pub delivered_per_delivery_point: HashMap<fiskeridir_rs::DeliveryPointId, Delivery>,
     pub start_port_id: Option<String>,
     pub end_port_id: Option<String>,
+    pub events: Vec<VesselEvent>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct VesselEvent {
+    pub event_id: u64,
+    #[schema(value_type = i64)]
+    pub event_type: VesselEventType,
+    pub event_name: String,
+    pub timestamp: DateTime<Utc>,
 }
 
 impl From<kyogre_core::TripDetailed> for Trip {
@@ -123,6 +136,22 @@ impl From<kyogre_core::TripDetailed> for Trip {
             start_port_id: value.start_port_id,
             end_port_id: value.end_port_id,
             fiskeridir_vessel_id: value.fiskeridir_vessel_id,
+            events: value
+                .vessel_events
+                .into_iter()
+                .map(VesselEvent::from)
+                .collect(),
+        }
+    }
+}
+
+impl From<kyogre_core::VesselEvent> for VesselEvent {
+    fn from(value: kyogre_core::VesselEvent) -> Self {
+        VesselEvent {
+            event_id: value.event_id,
+            event_type: value.event_type,
+            event_name: value.event_type.name().to_owned(),
+            timestamp: value.timestamp,
         }
     }
 }

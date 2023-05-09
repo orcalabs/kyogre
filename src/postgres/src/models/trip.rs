@@ -9,6 +9,7 @@ use error_stack::{report, IntoReport, Report, ResultExt};
 use fiskeridir_rs::{DeliveryPointId, Gear, GearGroup, Quality, VesselLengthGroup};
 use kyogre_core::{
     CatchLocationId, DateRange, FiskeridirVesselId, HaulId, TripAssemblerId, TripId,
+    VesselEventType,
 };
 use num_traits::FromPrimitive;
 use serde::Deserialize;
@@ -51,6 +52,7 @@ pub struct TripDetailed {
     pub latest_landing_timestamp: Option<DateTime<Utc>>,
     pub catches: String,
     pub hauls: String,
+    pub vessel_events: String,
     pub delivery_point_catches: String,
     pub start_port_id: Option<String>,
     pub end_port_id: Option<String>,
@@ -124,6 +126,14 @@ struct Catch {
     product_weight: f64,
     species_fiskeridir_id: i32,
     product_quality_id: i32,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct VesselEvent {
+    vessel_event_id: i64,
+    fiskeridir_vessel_id: i64,
+    timestamp: DateTime<Utc>,
+    vessel_event_type_id: VesselEventType,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -275,7 +285,24 @@ impl TryFrom<TripDetailed> for kyogre_core::TripDetailed {
             end_port_id: value.end_port_id,
             delivered_per_delivery_point: delivery_point_catches,
             assembler_id: value.trip_assembler_id,
+            vessel_events: serde_json::from_str::<Vec<VesselEvent>>(&value.vessel_events)
+                .into_report()
+                .change_context(PostgresError::DataConversion)?
+                .into_iter()
+                .map(kyogre_core::VesselEvent::from)
+                .collect::<Vec<kyogre_core::VesselEvent>>(),
         })
+    }
+}
+
+impl From<VesselEvent> for kyogre_core::VesselEvent {
+    fn from(v: VesselEvent) -> Self {
+        kyogre_core::VesselEvent {
+            event_id: v.vessel_event_id as u64,
+            vessel_id: FiskeridirVesselId(v.fiskeridir_vessel_id),
+            timestamp: v.timestamp,
+            event_type: v.vessel_event_type_id,
+        }
     }
 }
 

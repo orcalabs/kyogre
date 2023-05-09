@@ -70,131 +70,6 @@
     },
     "query": "\nINSERT INTO\n    landing_entries (\n        landing_id,\n        size_grouping_code,\n        withdrawn_catch_value,\n        catch_value,\n        sales_team_fee,\n        post_payment,\n        support_fee_for_fisher,\n        price_for_buyer,\n        price_for_fisher,\n        unit_price_for_buyer,\n        unit_price_for_fisher,\n        landing_method_id,\n        conservation_method_id,\n        product_condition_id,\n        product_purpose_id,\n        product_purpose_group_id,\n        line_number,\n        num_fish,\n        product_weight,\n        product_weight_over_quota,\n        gross_weight,\n        living_weight,\n        living_weight_over_quota,\n        species_id,\n        species_fao_id,\n        species_group_id,\n        species_fiskeridir_id,\n        species_main_group_id\n    )\nSELECT\n    *\nFROM\n    UNNEST(\n        $1::VARCHAR[],\n        $2::VARCHAR[],\n        $3::DECIMAL[],\n        $4::DECIMAL[],\n        $5::DECIMAL[],\n        $6::DECIMAL[],\n        $7::DECIMAL[],\n        $8::DECIMAL[],\n        $9::DECIMAL[],\n        $10::DECIMAL[],\n        $11::DECIMAL[],\n        $12::INT[],\n        $13::INT[],\n        $14::INT[],\n        $15::INT[],\n        $16::INT[],\n        $17::INT[],\n        $18::INT[],\n        $19::DECIMAL[],\n        $20::DECIMAL[],\n        $21::DECIMAL[],\n        $22::DECIMAL[],\n        $23::DECIMAL[],\n        $24::INT[],\n        $25::VARCHAR[],\n        $26::INT[],\n        $27::INT[],\n        $28::INT[]\n    )\nON CONFLICT (landing_id, line_number) DO NOTHING\n                "
   },
-  "0981993c20bce559956fad5f68eb7f18b30ba7429e5d7faa03b0cfe104f042b3": {
-    "describe": {
-      "columns": [
-        {
-          "name": "trip_id!",
-          "ordinal": 0,
-          "type_info": "Int8"
-        },
-        {
-          "name": "trip_assembler_id!: TripAssemblerId",
-          "ordinal": 1,
-          "type_info": "Int4"
-        },
-        {
-          "name": "fiskeridir_vessel_id!",
-          "ordinal": 2,
-          "type_info": "Int8"
-        },
-        {
-          "name": "period!",
-          "ordinal": 3,
-          "type_info": "TstzRange"
-        },
-        {
-          "name": "period_precision",
-          "ordinal": 4,
-          "type_info": "TstzRange"
-        },
-        {
-          "name": "start_port_id",
-          "ordinal": 5,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "end_port_id",
-          "ordinal": 6,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "num_deliveries!",
-          "ordinal": 7,
-          "type_info": "Int8"
-        },
-        {
-          "name": "landing_coverage!",
-          "ordinal": 8,
-          "type_info": "TstzRange"
-        },
-        {
-          "name": "total_living_weight!",
-          "ordinal": 9,
-          "type_info": "Numeric"
-        },
-        {
-          "name": "total_gross_weight!",
-          "ordinal": 10,
-          "type_info": "Numeric"
-        },
-        {
-          "name": "total_product_weight!",
-          "ordinal": 11,
-          "type_info": "Numeric"
-        },
-        {
-          "name": "delivery_points!",
-          "ordinal": 12,
-          "type_info": "VarcharArray"
-        },
-        {
-          "name": "latest_landing_timestamp",
-          "ordinal": 13,
-          "type_info": "Timestamptz"
-        },
-        {
-          "name": "catches!",
-          "ordinal": 14,
-          "type_info": "Text"
-        },
-        {
-          "name": "hauls!",
-          "ordinal": 15,
-          "type_info": "Text"
-        },
-        {
-          "name": "delivery_point_catches!",
-          "ordinal": 16,
-          "type_info": "Text"
-        },
-        {
-          "name": "gear_ids!: Vec<Gear>",
-          "ordinal": 17,
-          "type_info": "Int4Array"
-        }
-      ],
-      "nullable": [
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        null,
-        null,
-        null,
-        true
-      ],
-      "parameters": {
-        "Left": [
-          "Int8",
-          "Int4",
-          "Int8",
-          "Int8"
-        ]
-      }
-    },
-    "query": "\nSELECT\n    t.trip_id AS \"trip_id!\",\n    t.trip_assembler_id AS \"trip_assembler_id!: TripAssemblerId\",\n    t.fiskeridir_vessel_id AS \"fiskeridir_vessel_id!\",\n    t.period AS \"period!\",\n    t.period_precision,\n    t.start_port_id,\n    t.end_port_id,\n    t.num_deliveries AS \"num_deliveries!\",\n    t.landing_coverage AS \"landing_coverage!\",\n    t.total_living_weight AS \"total_living_weight!\",\n    t.total_gross_weight AS \"total_gross_weight!\",\n    t.total_product_weight AS \"total_product_weight!\",\n    t.delivery_points AS \"delivery_points!\",\n    t.latest_landing_timestamp,\n    t.catches::TEXT AS \"catches!\",\n    t.hauls::TEXT AS \"hauls!\",\n    t.delivery_point_catches::TEXT AS \"delivery_point_catches!\",\n    t.gear_ids AS \"gear_ids!: Vec<Gear>\"\nFROM\n    trips_view AS t\nWHERE\n    t.fiskeridir_vessel_id = $1\nORDER BY\n    CASE\n        WHEN $2 = 1 THEN t.period\n    END ASC,\n    CASE\n        WHEN $2 = 2 THEN t.period\n    END DESC\nOFFSET\n    $3\nLIMIT\n    $4\n            "
-  },
   "0ef8600ed3dec02cfd9a260f004587fc2715180f308d47e5de8bb5ed52b87e91": {
     "describe": {
       "columns": [],
@@ -855,6 +730,134 @@
     },
     "query": "\nINSERT INTO\n    species (species_id, \"name\")\nSELECT\n    *\nFROM\n    UNNEST($1::INT[], $2::VARCHAR[])\nON CONFLICT (species_id) DO\nUPDATE\nSET\n    \"name\" = COALESCE(species.name, EXCLUDED.name)\n            "
   },
+  "3250e803502f9a9729a90eed3e6f083bdba0b2d67fb72a420593ee3717a2890b": {
+    "describe": {
+      "columns": [
+        {
+          "name": "trip_id!",
+          "ordinal": 0,
+          "type_info": "Int8"
+        },
+        {
+          "name": "trip_assembler_id!: TripAssemblerId",
+          "ordinal": 1,
+          "type_info": "Int4"
+        },
+        {
+          "name": "fiskeridir_vessel_id!",
+          "ordinal": 2,
+          "type_info": "Int8"
+        },
+        {
+          "name": "period!",
+          "ordinal": 3,
+          "type_info": "TstzRange"
+        },
+        {
+          "name": "period_precision",
+          "ordinal": 4,
+          "type_info": "TstzRange"
+        },
+        {
+          "name": "landing_coverage!",
+          "ordinal": 5,
+          "type_info": "TstzRange"
+        },
+        {
+          "name": "start_port_id",
+          "ordinal": 6,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "end_port_id",
+          "ordinal": 7,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "num_deliveries!",
+          "ordinal": 8,
+          "type_info": "Int8"
+        },
+        {
+          "name": "total_living_weight!",
+          "ordinal": 9,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "total_gross_weight!",
+          "ordinal": 10,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "total_product_weight!",
+          "ordinal": 11,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "delivery_points!",
+          "ordinal": 12,
+          "type_info": "VarcharArray"
+        },
+        {
+          "name": "latest_landing_timestamp",
+          "ordinal": 13,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "catches!",
+          "ordinal": 14,
+          "type_info": "Text"
+        },
+        {
+          "name": "hauls!",
+          "ordinal": 15,
+          "type_info": "Text"
+        },
+        {
+          "name": "delivery_point_catches!",
+          "ordinal": 16,
+          "type_info": "Text"
+        },
+        {
+          "name": "vessel_events!",
+          "ordinal": 17,
+          "type_info": "Text"
+        },
+        {
+          "name": "gear_ids!: Vec<Gear>",
+          "ordinal": 18,
+          "type_info": "Int4Array"
+        }
+      ],
+      "nullable": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        null,
+        null,
+        null,
+        null,
+        true
+      ],
+      "parameters": {
+        "Left": [
+          "TextArray"
+        ]
+      }
+    },
+    "query": "\nSELECT\n    t.trip_id AS \"trip_id!\",\n    t.trip_assembler_id AS \"trip_assembler_id!: TripAssemblerId\",\n    t.fiskeridir_vessel_id AS \"fiskeridir_vessel_id!\",\n    t.period AS \"period!\",\n    t.period_precision,\n    t.landing_coverage AS \"landing_coverage!\",\n    t.start_port_id,\n    t.end_port_id,\n    t.num_deliveries AS \"num_deliveries!\",\n    t.total_living_weight AS \"total_living_weight!\",\n    t.total_gross_weight AS \"total_gross_weight!\",\n    t.total_product_weight AS \"total_product_weight!\",\n    t.delivery_points AS \"delivery_points!\",\n    t.latest_landing_timestamp,\n    t.catches::TEXT AS \"catches!\",\n    t.hauls::TEXT AS \"hauls!\",\n    t.delivery_point_catches::TEXT AS \"delivery_point_catches!\",\n    t.vessel_events::TEXT AS \"vessel_events!\",\n    t.gear_ids AS \"gear_ids!: Vec<Gear>\"\nFROM\n    trips_view AS t\nWHERE\n    $1::TEXT[] <@ (t.haul_ids)\n            "
+  },
   "3a39569d2de907617d14506da3c5c15ee672765615f8d531c20bafea2af1288d": {
     "describe": {
       "columns": [
@@ -1076,6 +1079,134 @@
     },
     "query": "\nSELECT\n    f.preferred_trip_assembler AS \"preferred_trip_assembler!: TripAssemblerId\",\n    f.fiskeridir_vessel_id AS \"fiskeridir_vessel_id!\",\n    f.fiskeridir_vessel_type_id,\n    f.fiskeridir_length_group_id,\n    f.fiskeridir_nation_group_id,\n    f.norwegian_municipality_id AS fiskeridir_norwegian_municipality_id,\n    f.norwegian_county_id AS fiskeridir_norwegian_county_id,\n    f.nation_id AS \"fiskeridir_nation_id?\",\n    f.gross_tonnage_1969 AS fiskeridir_gross_tonnage_1969,\n    f.gross_tonnage_other AS fiskeridir_gross_tonnage_other,\n    f.call_sign AS fiskeridir_call_sign,\n    f.\"name\" AS fiskeridir_name,\n    f.registration_id AS fiskeridir_registration_id,\n    f.\"length\" AS fiskeridir_length,\n    f.\"width\" AS fiskeridir_width,\n    f.\"owner\" AS fiskeridir_owner,\n    f.engine_building_year AS fiskeridir_engine_building_year,\n    f.engine_power AS fiskeridir_engine_power,\n    f.building_year AS fiskeridir_building_year,\n    f.rebuilding_year AS fiskeridir_rebuilding_year,\n    a.mmsi AS \"ais_mmsi?\",\n    a.imo_number AS ais_imo_number,\n    a.call_sign AS ais_call_sign,\n    a.name AS ais_name,\n    a.ship_length AS ais_ship_length,\n    a.ship_width AS ais_ship_width,\n    a.eta AS ais_eta,\n    a.destination AS ais_destination\nFROM\n    fiskeridir_vessels AS f\n    LEFT JOIN ais_vessels AS a ON f.call_sign = a.call_sign\nWHERE\n    f.fiskeridir_vessel_id = $1\n            "
   },
+  "477dd0aa2f6a78bb203e211969f9d896a9917cb865572e2f705a6329a00cd4c3": {
+    "describe": {
+      "columns": [
+        {
+          "name": "trip_id!",
+          "ordinal": 0,
+          "type_info": "Int8"
+        },
+        {
+          "name": "trip_assembler_id!: TripAssemblerId",
+          "ordinal": 1,
+          "type_info": "Int4"
+        },
+        {
+          "name": "fiskeridir_vessel_id!",
+          "ordinal": 2,
+          "type_info": "Int8"
+        },
+        {
+          "name": "period!",
+          "ordinal": 3,
+          "type_info": "TstzRange"
+        },
+        {
+          "name": "period_precision",
+          "ordinal": 4,
+          "type_info": "TstzRange"
+        },
+        {
+          "name": "start_port_id",
+          "ordinal": 5,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "end_port_id",
+          "ordinal": 6,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "num_deliveries!",
+          "ordinal": 7,
+          "type_info": "Int8"
+        },
+        {
+          "name": "landing_coverage!",
+          "ordinal": 8,
+          "type_info": "TstzRange"
+        },
+        {
+          "name": "total_living_weight!",
+          "ordinal": 9,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "total_gross_weight!",
+          "ordinal": 10,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "total_product_weight!",
+          "ordinal": 11,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "delivery_points!",
+          "ordinal": 12,
+          "type_info": "VarcharArray"
+        },
+        {
+          "name": "latest_landing_timestamp",
+          "ordinal": 13,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "catches!",
+          "ordinal": 14,
+          "type_info": "Text"
+        },
+        {
+          "name": "hauls!",
+          "ordinal": 15,
+          "type_info": "Text"
+        },
+        {
+          "name": "delivery_point_catches!",
+          "ordinal": 16,
+          "type_info": "Text"
+        },
+        {
+          "name": "vessel_events!",
+          "ordinal": 17,
+          "type_info": "Text"
+        },
+        {
+          "name": "gear_ids!: Vec<Gear>",
+          "ordinal": 18,
+          "type_info": "Int4Array"
+        }
+      ],
+      "nullable": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        null,
+        null,
+        null,
+        null,
+        true
+      ],
+      "parameters": {
+        "Left": [
+          "Int8"
+        ]
+      }
+    },
+    "query": "\nSELECT\n    t.trip_id AS \"trip_id!\",\n    t.trip_assembler_id AS \"trip_assembler_id!: TripAssemblerId\",\n    t.fiskeridir_vessel_id AS \"fiskeridir_vessel_id!\",\n    t.period AS \"period!\",\n    t.period_precision,\n    t.start_port_id,\n    t.end_port_id,\n    t.num_deliveries AS \"num_deliveries!\",\n    t.landing_coverage AS \"landing_coverage!\",\n    t.total_living_weight AS \"total_living_weight!\",\n    t.total_gross_weight AS \"total_gross_weight!\",\n    t.total_product_weight AS \"total_product_weight!\",\n    t.delivery_points AS \"delivery_points!\",\n    t.latest_landing_timestamp,\n    t.catches::TEXT AS \"catches!\",\n    t.hauls::TEXT AS \"hauls!\",\n    t.delivery_point_catches::TEXT AS \"delivery_point_catches!\",\n    t.vessel_events::TEXT AS \"vessel_events!\",\n    t.gear_ids AS \"gear_ids!: Vec<Gear>\"\nFROM\n    trips_view AS t\nWHERE\n    t.fiskeridir_vessel_id = $1\n            "
+  },
   "47d0f250215c48234d76eb068c7b76971da04b5f084b11995819107b6357d980": {
     "describe": {
       "columns": [
@@ -1154,6 +1285,137 @@
       }
     },
     "query": "\nSELECT\n    trip_id,\n    period,\n    period_precision,\n    landing_coverage,\n    trip_assembler_id AS \"trip_assembler_id!: TripAssemblerId\"\nFROM\n    trips\nWHERE\n    fiskeridir_vessel_id = $1\n    AND trip_assembler_id = $2\n    AND trip_precision_status_id = $3\n            "
+  },
+  "4f77e5eecb8c659ecaeeee26a824ef797c92ac91fc83f1ab1ac40c7f9c15047a": {
+    "describe": {
+      "columns": [
+        {
+          "name": "trip_id!",
+          "ordinal": 0,
+          "type_info": "Int8"
+        },
+        {
+          "name": "trip_assembler_id!: TripAssemblerId",
+          "ordinal": 1,
+          "type_info": "Int4"
+        },
+        {
+          "name": "fiskeridir_vessel_id!",
+          "ordinal": 2,
+          "type_info": "Int8"
+        },
+        {
+          "name": "period!",
+          "ordinal": 3,
+          "type_info": "TstzRange"
+        },
+        {
+          "name": "period_precision",
+          "ordinal": 4,
+          "type_info": "TstzRange"
+        },
+        {
+          "name": "start_port_id",
+          "ordinal": 5,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "end_port_id",
+          "ordinal": 6,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "num_deliveries!",
+          "ordinal": 7,
+          "type_info": "Int8"
+        },
+        {
+          "name": "landing_coverage!",
+          "ordinal": 8,
+          "type_info": "TstzRange"
+        },
+        {
+          "name": "total_living_weight!",
+          "ordinal": 9,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "total_gross_weight!",
+          "ordinal": 10,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "total_product_weight!",
+          "ordinal": 11,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "delivery_points!",
+          "ordinal": 12,
+          "type_info": "VarcharArray"
+        },
+        {
+          "name": "latest_landing_timestamp",
+          "ordinal": 13,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "catches!",
+          "ordinal": 14,
+          "type_info": "Text"
+        },
+        {
+          "name": "hauls!",
+          "ordinal": 15,
+          "type_info": "Text"
+        },
+        {
+          "name": "delivery_point_catches!",
+          "ordinal": 16,
+          "type_info": "Text"
+        },
+        {
+          "name": "vessel_events!",
+          "ordinal": 17,
+          "type_info": "Text"
+        },
+        {
+          "name": "gear_ids!: Vec<Gear>",
+          "ordinal": 18,
+          "type_info": "Int4Array"
+        }
+      ],
+      "nullable": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        null,
+        null,
+        null,
+        null,
+        true
+      ],
+      "parameters": {
+        "Left": [
+          "Int8",
+          "Int4",
+          "Int8",
+          "Int8"
+        ]
+      }
+    },
+    "query": "\nSELECT\n    t.trip_id AS \"trip_id!\",\n    t.trip_assembler_id AS \"trip_assembler_id!: TripAssemblerId\",\n    t.fiskeridir_vessel_id AS \"fiskeridir_vessel_id!\",\n    t.period AS \"period!\",\n    t.period_precision,\n    t.start_port_id,\n    t.end_port_id,\n    t.num_deliveries AS \"num_deliveries!\",\n    t.landing_coverage AS \"landing_coverage!\",\n    t.total_living_weight AS \"total_living_weight!\",\n    t.total_gross_weight AS \"total_gross_weight!\",\n    t.total_product_weight AS \"total_product_weight!\",\n    t.delivery_points AS \"delivery_points!\",\n    t.latest_landing_timestamp,\n    t.catches::TEXT AS \"catches!\",\n    t.hauls::TEXT AS \"hauls!\",\n    t.delivery_point_catches::TEXT AS \"delivery_point_catches!\",\n    t.vessel_events::TEXT AS \"vessel_events!\",\n    t.gear_ids AS \"gear_ids!: Vec<Gear>\"\nFROM\n    trips_view AS t\nWHERE\n    t.fiskeridir_vessel_id = $1\nORDER BY\n    CASE\n        WHEN $2 = 1 THEN t.period\n    END ASC,\n    CASE\n        WHEN $2 = 2 THEN t.period\n    END DESC\nOFFSET\n    $3\nLIMIT\n    $4\n            "
   },
   "5101d466d5c5425c8f98f48cf5b82ff3497c642b369dcbf2ba25e69ead8ca917": {
     "describe": {
@@ -1434,128 +1696,6 @@
     },
     "query": "\nSELECT\n    mmsi,\n    imo_number,\n    call_sign,\n    NAME,\n    ship_width,\n    ship_length,\n    eta,\n    destination\nFROM\n    ais_vessels\n            "
   },
-  "6bc76688da0cfe5b39b2c853c0ffdf8e4f95fd3c93f911023c0c1570a2175bcc": {
-    "describe": {
-      "columns": [
-        {
-          "name": "trip_id!",
-          "ordinal": 0,
-          "type_info": "Int8"
-        },
-        {
-          "name": "trip_assembler_id!: TripAssemblerId",
-          "ordinal": 1,
-          "type_info": "Int4"
-        },
-        {
-          "name": "fiskeridir_vessel_id!",
-          "ordinal": 2,
-          "type_info": "Int8"
-        },
-        {
-          "name": "period!",
-          "ordinal": 3,
-          "type_info": "TstzRange"
-        },
-        {
-          "name": "period_precision",
-          "ordinal": 4,
-          "type_info": "TstzRange"
-        },
-        {
-          "name": "landing_coverage!",
-          "ordinal": 5,
-          "type_info": "TstzRange"
-        },
-        {
-          "name": "start_port_id",
-          "ordinal": 6,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "end_port_id",
-          "ordinal": 7,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "num_deliveries!",
-          "ordinal": 8,
-          "type_info": "Int8"
-        },
-        {
-          "name": "total_living_weight!",
-          "ordinal": 9,
-          "type_info": "Numeric"
-        },
-        {
-          "name": "total_gross_weight!",
-          "ordinal": 10,
-          "type_info": "Numeric"
-        },
-        {
-          "name": "total_product_weight!",
-          "ordinal": 11,
-          "type_info": "Numeric"
-        },
-        {
-          "name": "delivery_points!",
-          "ordinal": 12,
-          "type_info": "VarcharArray"
-        },
-        {
-          "name": "latest_landing_timestamp",
-          "ordinal": 13,
-          "type_info": "Timestamptz"
-        },
-        {
-          "name": "catches!",
-          "ordinal": 14,
-          "type_info": "Text"
-        },
-        {
-          "name": "hauls!",
-          "ordinal": 15,
-          "type_info": "Text"
-        },
-        {
-          "name": "delivery_point_catches!",
-          "ordinal": 16,
-          "type_info": "Text"
-        },
-        {
-          "name": "gear_ids!: Vec<Gear>",
-          "ordinal": 17,
-          "type_info": "Int4Array"
-        }
-      ],
-      "nullable": [
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        null,
-        null,
-        null,
-        true
-      ],
-      "parameters": {
-        "Left": [
-          "TextArray"
-        ]
-      }
-    },
-    "query": "\nSELECT\n    t.trip_id AS \"trip_id!\",\n    t.trip_assembler_id AS \"trip_assembler_id!: TripAssemblerId\",\n    t.fiskeridir_vessel_id AS \"fiskeridir_vessel_id!\",\n    t.period AS \"period!\",\n    t.period_precision,\n    t.landing_coverage AS \"landing_coverage!\",\n    t.start_port_id,\n    t.end_port_id,\n    t.num_deliveries AS \"num_deliveries!\",\n    t.total_living_weight AS \"total_living_weight!\",\n    t.total_gross_weight AS \"total_gross_weight!\",\n    t.total_product_weight AS \"total_product_weight!\",\n    t.delivery_points AS \"delivery_points!\",\n    t.latest_landing_timestamp,\n    t.catches::TEXT AS \"catches!\",\n    t.hauls::TEXT AS \"hauls!\",\n    t.delivery_point_catches::TEXT AS \"delivery_point_catches!\",\n    t.gear_ids AS \"gear_ids!: Vec<Gear>\"\nFROM\n    trips_view AS t\nWHERE\n    $1::TEXT[] <@ (t.haul_ids)\n            "
-  },
   "731e852a607ae33927aaaa91f6bd6c4e7109590e46809605c1716efe82505628": {
     "describe": {
       "columns": [],
@@ -1569,128 +1709,6 @@
       }
     },
     "query": "\nINSERT INTO\n    catch_areas (catch_area_id, latitude, longitude)\nSELECT\n    *\nFROM\n    UNNEST($1::INT[], $2::DECIMAL[], $3::DECIMAL[])\nON CONFLICT (catch_area_id) DO\nUPDATE\nSET\n    latitude = excluded.latitude,\n    longitude = excluded.longitude\nWHERE\n    catch_areas.latitude IS NULL\n    AND catch_areas.longitude IS NULL\n                "
-  },
-  "7594fa7f0072efd62d763922a4200e9c37cee2ea8a02066f41375326b00c55ef": {
-    "describe": {
-      "columns": [
-        {
-          "name": "trip_id!",
-          "ordinal": 0,
-          "type_info": "Int8"
-        },
-        {
-          "name": "trip_assembler_id!: TripAssemblerId",
-          "ordinal": 1,
-          "type_info": "Int4"
-        },
-        {
-          "name": "fiskeridir_vessel_id!",
-          "ordinal": 2,
-          "type_info": "Int8"
-        },
-        {
-          "name": "period!",
-          "ordinal": 3,
-          "type_info": "TstzRange"
-        },
-        {
-          "name": "period_precision",
-          "ordinal": 4,
-          "type_info": "TstzRange"
-        },
-        {
-          "name": "start_port_id",
-          "ordinal": 5,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "end_port_id",
-          "ordinal": 6,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "num_deliveries!",
-          "ordinal": 7,
-          "type_info": "Int8"
-        },
-        {
-          "name": "landing_coverage!",
-          "ordinal": 8,
-          "type_info": "TstzRange"
-        },
-        {
-          "name": "total_living_weight!",
-          "ordinal": 9,
-          "type_info": "Numeric"
-        },
-        {
-          "name": "total_gross_weight!",
-          "ordinal": 10,
-          "type_info": "Numeric"
-        },
-        {
-          "name": "total_product_weight!",
-          "ordinal": 11,
-          "type_info": "Numeric"
-        },
-        {
-          "name": "delivery_points!",
-          "ordinal": 12,
-          "type_info": "VarcharArray"
-        },
-        {
-          "name": "latest_landing_timestamp",
-          "ordinal": 13,
-          "type_info": "Timestamptz"
-        },
-        {
-          "name": "catches!",
-          "ordinal": 14,
-          "type_info": "Text"
-        },
-        {
-          "name": "hauls!",
-          "ordinal": 15,
-          "type_info": "Text"
-        },
-        {
-          "name": "delivery_point_catches!",
-          "ordinal": 16,
-          "type_info": "Text"
-        },
-        {
-          "name": "gear_ids!: Vec<Gear>",
-          "ordinal": 17,
-          "type_info": "Int4Array"
-        }
-      ],
-      "nullable": [
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        null,
-        null,
-        null,
-        true
-      ],
-      "parameters": {
-        "Left": [
-          "Int8"
-        ]
-      }
-    },
-    "query": "\nSELECT\n    t.trip_id AS \"trip_id!\",\n    t.trip_assembler_id AS \"trip_assembler_id!: TripAssemblerId\",\n    t.fiskeridir_vessel_id AS \"fiskeridir_vessel_id!\",\n    t.period AS \"period!\",\n    t.period_precision,\n    t.start_port_id,\n    t.end_port_id,\n    t.num_deliveries AS \"num_deliveries!\",\n    t.landing_coverage AS \"landing_coverage!\",\n    t.total_living_weight AS \"total_living_weight!\",\n    t.total_gross_weight AS \"total_gross_weight!\",\n    t.total_product_weight AS \"total_product_weight!\",\n    t.delivery_points AS \"delivery_points!\",\n    t.latest_landing_timestamp,\n    t.catches::TEXT AS \"catches!\",\n    t.hauls::TEXT AS \"hauls!\",\n    t.delivery_point_catches::TEXT AS \"delivery_point_catches!\",\n    t.gear_ids AS \"gear_ids!: Vec<Gear>\"\nFROM\n    trips_view AS t\nWHERE\n    t.fiskeridir_vessel_id = $1\n            "
   },
   "78a95933cf64d372b5690c2aaeb39dcdb137b2c7117d31399346bb70dc495f02": {
     "describe": {
