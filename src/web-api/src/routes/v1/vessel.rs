@@ -1,7 +1,7 @@
 use crate::{error::ApiError, to_streaming_response, Database};
 use actix_web::{web, HttpResponse};
 use chrono::{DateTime, Utc};
-use fiskeridir_rs::CallSign;
+use fiskeridir_rs::{CallSign, RegisterVesselOwner};
 use futures::TryStreamExt;
 use kyogre_core::{FiskeridirVesselId, Mmsi};
 use serde::{Deserialize, Serialize};
@@ -53,6 +53,7 @@ pub struct FiskeridirVessel {
     pub length: Option<f64>,
     pub width: Option<f64>,
     pub owner: Option<String>,
+    pub owners: Option<Vec<RegisterVesselOwner>>,
     pub engine_building_year: Option<u32>,
     pub engine_power: Option<u32>,
     pub building_year: Option<u32>,
@@ -116,6 +117,7 @@ impl From<kyogre_core::FiskeridirVessel> for FiskeridirVessel {
             length: value.length,
             width: value.width,
             owner: value.owner,
+            owners: value.owners,
             engine_building_year: value.engine_building_year,
             engine_power: value.engine_power,
             building_year: value.building_year,

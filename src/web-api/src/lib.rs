@@ -1,6 +1,7 @@
 #![deny(warnings)]
 #![deny(rust_2018_idioms)]
 
+use fiskeridir_rs::{RegisterVesselEntityType, RegisterVesselOwner};
 use kyogre_core::{ActiveHaulsFilter, Catch, Delivery, Ordering, WebApiPort};
 use postgres::PostgresAdapter;
 use routes::v1;
@@ -42,6 +43,8 @@ impl Database for PostgresAdapter {}
             Delivery,
             Catch,
             Ordering,
+            RegisterVesselOwner,
+            RegisterVesselEntityType,
             error::ErrorResponse,
             error::ApiError,
             v1::ais::AisPosition,

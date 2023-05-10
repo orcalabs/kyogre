@@ -897,188 +897,6 @@
     },
     "query": "\nINSERT INTO\n    norwegian_municipalities (norwegian_municipality_id, \"name\")\nSELECT\n    *\nFROM\n    UNNEST($1::INT[], $2::VARCHAR[])\nON CONFLICT (norwegian_municipality_id) DO\nUPDATE\nSET\n    NAME = excluded.name\nWHERE\n    norwegian_municipalities.name IS NULL\n    AND excluded.name IS NOT NULL\n            "
   },
-  "44ed46e4c95e756bd58ff11d54f21714220a39c1d928319885ebcb937ea0e7f0": {
-    "describe": {
-      "columns": [
-        {
-          "name": "preferred_trip_assembler!: TripAssemblerId",
-          "ordinal": 0,
-          "type_info": "Int4"
-        },
-        {
-          "name": "fiskeridir_vessel_id!",
-          "ordinal": 1,
-          "type_info": "Int8"
-        },
-        {
-          "name": "fiskeridir_vessel_type_id",
-          "ordinal": 2,
-          "type_info": "Int4"
-        },
-        {
-          "name": "fiskeridir_length_group_id",
-          "ordinal": 3,
-          "type_info": "Int4"
-        },
-        {
-          "name": "fiskeridir_nation_group_id",
-          "ordinal": 4,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "fiskeridir_norwegian_municipality_id",
-          "ordinal": 5,
-          "type_info": "Int4"
-        },
-        {
-          "name": "fiskeridir_norwegian_county_id",
-          "ordinal": 6,
-          "type_info": "Int4"
-        },
-        {
-          "name": "fiskeridir_nation_id?",
-          "ordinal": 7,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "fiskeridir_gross_tonnage_1969",
-          "ordinal": 8,
-          "type_info": "Int4"
-        },
-        {
-          "name": "fiskeridir_gross_tonnage_other",
-          "ordinal": 9,
-          "type_info": "Int4"
-        },
-        {
-          "name": "fiskeridir_call_sign",
-          "ordinal": 10,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "fiskeridir_name",
-          "ordinal": 11,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "fiskeridir_registration_id",
-          "ordinal": 12,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "fiskeridir_length",
-          "ordinal": 13,
-          "type_info": "Numeric"
-        },
-        {
-          "name": "fiskeridir_width",
-          "ordinal": 14,
-          "type_info": "Numeric"
-        },
-        {
-          "name": "fiskeridir_owner",
-          "ordinal": 15,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "fiskeridir_engine_building_year",
-          "ordinal": 16,
-          "type_info": "Int4"
-        },
-        {
-          "name": "fiskeridir_engine_power",
-          "ordinal": 17,
-          "type_info": "Int4"
-        },
-        {
-          "name": "fiskeridir_building_year",
-          "ordinal": 18,
-          "type_info": "Int4"
-        },
-        {
-          "name": "fiskeridir_rebuilding_year",
-          "ordinal": 19,
-          "type_info": "Int4"
-        },
-        {
-          "name": "ais_mmsi?",
-          "ordinal": 20,
-          "type_info": "Int4"
-        },
-        {
-          "name": "ais_imo_number",
-          "ordinal": 21,
-          "type_info": "Int4"
-        },
-        {
-          "name": "ais_call_sign",
-          "ordinal": 22,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "ais_name",
-          "ordinal": 23,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "ais_ship_length",
-          "ordinal": 24,
-          "type_info": "Int4"
-        },
-        {
-          "name": "ais_ship_width",
-          "ordinal": 25,
-          "type_info": "Int4"
-        },
-        {
-          "name": "ais_eta",
-          "ordinal": 26,
-          "type_info": "Timestamptz"
-        },
-        {
-          "name": "ais_destination",
-          "ordinal": 27,
-          "type_info": "Varchar"
-        }
-      ],
-      "nullable": [
-        false,
-        false,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        false,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true
-      ],
-      "parameters": {
-        "Left": [
-          "Int8"
-        ]
-      }
-    },
-    "query": "\nSELECT\n    f.preferred_trip_assembler AS \"preferred_trip_assembler!: TripAssemblerId\",\n    f.fiskeridir_vessel_id AS \"fiskeridir_vessel_id!\",\n    f.fiskeridir_vessel_type_id,\n    f.fiskeridir_length_group_id,\n    f.fiskeridir_nation_group_id,\n    f.norwegian_municipality_id AS fiskeridir_norwegian_municipality_id,\n    f.norwegian_county_id AS fiskeridir_norwegian_county_id,\n    f.nation_id AS \"fiskeridir_nation_id?\",\n    f.gross_tonnage_1969 AS fiskeridir_gross_tonnage_1969,\n    f.gross_tonnage_other AS fiskeridir_gross_tonnage_other,\n    f.call_sign AS fiskeridir_call_sign,\n    f.\"name\" AS fiskeridir_name,\n    f.registration_id AS fiskeridir_registration_id,\n    f.\"length\" AS fiskeridir_length,\n    f.\"width\" AS fiskeridir_width,\n    f.\"owner\" AS fiskeridir_owner,\n    f.engine_building_year AS fiskeridir_engine_building_year,\n    f.engine_power AS fiskeridir_engine_power,\n    f.building_year AS fiskeridir_building_year,\n    f.rebuilding_year AS fiskeridir_rebuilding_year,\n    a.mmsi AS \"ais_mmsi?\",\n    a.imo_number AS ais_imo_number,\n    a.call_sign AS ais_call_sign,\n    a.name AS ais_name,\n    a.ship_length AS ais_ship_length,\n    a.ship_width AS ais_ship_width,\n    a.eta AS ais_eta,\n    a.destination AS ais_destination\nFROM\n    fiskeridir_vessels AS f\n    LEFT JOIN ais_vessels AS a ON f.call_sign = a.call_sign\nWHERE\n    f.fiskeridir_vessel_id = $1\n            "
-  },
   "477dd0aa2f6a78bb203e211969f9d896a9917cb865572e2f705a6329a00cd4c3": {
     "describe": {
       "columns": [
@@ -2054,186 +1872,6 @@
     },
     "query": "\nINSERT INTO\n    fiskeridir_vessels (\n        fiskeridir_vessel_id,\n        norwegian_municipality_id,\n        call_sign,\n        \"name\",\n        registration_id,\n        \"length\",\n        \"width\",\n        engine_power,\n        imo_number,\n        owners,\n        fiskeridir_vessel_source_id\n    )\nSELECT\n    *\nFROM\n    UNNEST(\n        $1::BIGINT[],\n        $2::INT[],\n        $3::VARCHAR[],\n        $4::VARCHAR[],\n        $5::VARCHAR[],\n        $6::DECIMAL[],\n        $7::DECIMAL[],\n        $8::INT[],\n        $9::BIGINT[],\n        $10::JSON[],\n        $11::INT[]\n    )\nON CONFLICT (fiskeridir_vessel_id) DO\nUPDATE\nSET\n    norwegian_municipality_id = EXCLUDED.norwegian_municipality_id,\n    call_sign = EXCLUDED.call_sign,\n    \"name\" = EXCLUDED.name,\n    registration_id = EXCLUDED.registration_id,\n    \"length\" = EXCLUDED.length,\n    \"width\" = EXCLUDED.width,\n    engine_power = EXCLUDED.engine_power,\n    imo_number = EXCLUDED.imo_number,\n    owners = EXCLUDED.owners,\n    fiskeridir_vessel_source_id = EXCLUDED.fiskeridir_vessel_source_id\n            "
   },
-  "8f0200e36d3df2fcc868eef1729d81fb0c405df042f7184deb0806be60788691": {
-    "describe": {
-      "columns": [
-        {
-          "name": "preferred_trip_assembler!: TripAssemblerId",
-          "ordinal": 0,
-          "type_info": "Int4"
-        },
-        {
-          "name": "fiskeridir_vessel_id!",
-          "ordinal": 1,
-          "type_info": "Int8"
-        },
-        {
-          "name": "fiskeridir_vessel_type_id",
-          "ordinal": 2,
-          "type_info": "Int4"
-        },
-        {
-          "name": "fiskeridir_length_group_id",
-          "ordinal": 3,
-          "type_info": "Int4"
-        },
-        {
-          "name": "fiskeridir_nation_group_id",
-          "ordinal": 4,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "fiskeridir_norwegian_municipality_id",
-          "ordinal": 5,
-          "type_info": "Int4"
-        },
-        {
-          "name": "fiskeridir_norwegian_county_id",
-          "ordinal": 6,
-          "type_info": "Int4"
-        },
-        {
-          "name": "fiskeridir_nation_id?",
-          "ordinal": 7,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "fiskeridir_gross_tonnage_1969",
-          "ordinal": 8,
-          "type_info": "Int4"
-        },
-        {
-          "name": "fiskeridir_gross_tonnage_other",
-          "ordinal": 9,
-          "type_info": "Int4"
-        },
-        {
-          "name": "fiskeridir_call_sign",
-          "ordinal": 10,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "fiskeridir_name",
-          "ordinal": 11,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "fiskeridir_registration_id",
-          "ordinal": 12,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "fiskeridir_length",
-          "ordinal": 13,
-          "type_info": "Numeric"
-        },
-        {
-          "name": "fiskeridir_width",
-          "ordinal": 14,
-          "type_info": "Numeric"
-        },
-        {
-          "name": "fiskeridir_owner",
-          "ordinal": 15,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "fiskeridir_engine_building_year",
-          "ordinal": 16,
-          "type_info": "Int4"
-        },
-        {
-          "name": "fiskeridir_engine_power",
-          "ordinal": 17,
-          "type_info": "Int4"
-        },
-        {
-          "name": "fiskeridir_building_year",
-          "ordinal": 18,
-          "type_info": "Int4"
-        },
-        {
-          "name": "fiskeridir_rebuilding_year",
-          "ordinal": 19,
-          "type_info": "Int4"
-        },
-        {
-          "name": "ais_mmsi?",
-          "ordinal": 20,
-          "type_info": "Int4"
-        },
-        {
-          "name": "ais_imo_number",
-          "ordinal": 21,
-          "type_info": "Int4"
-        },
-        {
-          "name": "ais_call_sign",
-          "ordinal": 22,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "ais_name",
-          "ordinal": 23,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "ais_ship_length",
-          "ordinal": 24,
-          "type_info": "Int4"
-        },
-        {
-          "name": "ais_ship_width",
-          "ordinal": 25,
-          "type_info": "Int4"
-        },
-        {
-          "name": "ais_eta",
-          "ordinal": 26,
-          "type_info": "Timestamptz"
-        },
-        {
-          "name": "ais_destination",
-          "ordinal": 27,
-          "type_info": "Varchar"
-        }
-      ],
-      "nullable": [
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        false,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true
-      ],
-      "parameters": {
-        "Left": []
-      }
-    },
-    "query": "\nSELECT\n    f.preferred_trip_assembler AS \"preferred_trip_assembler!: TripAssemblerId\",\n    f.fiskeridir_vessel_id AS \"fiskeridir_vessel_id!\",\n    f.fiskeridir_vessel_type_id,\n    f.fiskeridir_length_group_id,\n    f.fiskeridir_nation_group_id,\n    f.norwegian_municipality_id AS fiskeridir_norwegian_municipality_id,\n    f.norwegian_county_id AS fiskeridir_norwegian_county_id,\n    f.nation_id AS \"fiskeridir_nation_id?\",\n    f.gross_tonnage_1969 AS fiskeridir_gross_tonnage_1969,\n    f.gross_tonnage_other AS fiskeridir_gross_tonnage_other,\n    f.call_sign AS fiskeridir_call_sign,\n    f.\"name\" AS fiskeridir_name,\n    f.registration_id AS fiskeridir_registration_id,\n    f.\"length\" AS fiskeridir_length,\n    f.\"width\" AS fiskeridir_width,\n    f.\"owner\" AS fiskeridir_owner,\n    f.engine_building_year AS fiskeridir_engine_building_year,\n    f.engine_power AS fiskeridir_engine_power,\n    f.building_year AS fiskeridir_building_year,\n    f.rebuilding_year AS fiskeridir_rebuilding_year,\n    a.mmsi AS \"ais_mmsi?\",\n    a.imo_number AS ais_imo_number,\n    a.call_sign AS ais_call_sign,\n    a.name AS ais_name,\n    a.ship_length AS ais_ship_length,\n    a.ship_width AS ais_ship_width,\n    a.eta AS ais_eta,\n    a.destination AS ais_destination\nFROM\n    fiskeridir_vessels AS f\n    LEFT JOIN ais_vessels AS a ON f.call_sign = a.call_sign\n            "
-  },
   "90692aec2f77f36b2d8e4d3e122b8fd69a7d0f6b2dd960f90ce537bfad6836b5": {
     "describe": {
       "columns": [],
@@ -2609,6 +2247,192 @@
     },
     "query": "\nINSERT INTO\n    norwegian_counties (norwegian_county_id, \"name\")\nSELECT\n    *\nFROM\n    UNNEST($1::INT[], $2::VARCHAR[])\nON CONFLICT (norwegian_county_id) DO NOTHING\n            "
   },
+  "b1283425d3c237efbd2e9de721ccdce7bf5695ed545ce3c56820ca1d9b89a537": {
+    "describe": {
+      "columns": [
+        {
+          "name": "preferred_trip_assembler!: TripAssemblerId",
+          "ordinal": 0,
+          "type_info": "Int4"
+        },
+        {
+          "name": "fiskeridir_vessel_id!",
+          "ordinal": 1,
+          "type_info": "Int8"
+        },
+        {
+          "name": "fiskeridir_vessel_type_id",
+          "ordinal": 2,
+          "type_info": "Int4"
+        },
+        {
+          "name": "fiskeridir_length_group_id",
+          "ordinal": 3,
+          "type_info": "Int4"
+        },
+        {
+          "name": "fiskeridir_nation_group_id",
+          "ordinal": 4,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "fiskeridir_norwegian_municipality_id",
+          "ordinal": 5,
+          "type_info": "Int4"
+        },
+        {
+          "name": "fiskeridir_norwegian_county_id",
+          "ordinal": 6,
+          "type_info": "Int4"
+        },
+        {
+          "name": "fiskeridir_nation_id?",
+          "ordinal": 7,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "fiskeridir_gross_tonnage_1969",
+          "ordinal": 8,
+          "type_info": "Int4"
+        },
+        {
+          "name": "fiskeridir_gross_tonnage_other",
+          "ordinal": 9,
+          "type_info": "Int4"
+        },
+        {
+          "name": "fiskeridir_call_sign",
+          "ordinal": 10,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "fiskeridir_name",
+          "ordinal": 11,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "fiskeridir_registration_id",
+          "ordinal": 12,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "fiskeridir_length",
+          "ordinal": 13,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "fiskeridir_width",
+          "ordinal": 14,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "fiskeridir_owner",
+          "ordinal": 15,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "fiskeridir_owners",
+          "ordinal": 16,
+          "type_info": "Text"
+        },
+        {
+          "name": "fiskeridir_engine_building_year",
+          "ordinal": 17,
+          "type_info": "Int4"
+        },
+        {
+          "name": "fiskeridir_engine_power",
+          "ordinal": 18,
+          "type_info": "Int4"
+        },
+        {
+          "name": "fiskeridir_building_year",
+          "ordinal": 19,
+          "type_info": "Int4"
+        },
+        {
+          "name": "fiskeridir_rebuilding_year",
+          "ordinal": 20,
+          "type_info": "Int4"
+        },
+        {
+          "name": "ais_mmsi?",
+          "ordinal": 21,
+          "type_info": "Int4"
+        },
+        {
+          "name": "ais_imo_number",
+          "ordinal": 22,
+          "type_info": "Int4"
+        },
+        {
+          "name": "ais_call_sign",
+          "ordinal": 23,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "ais_name",
+          "ordinal": 24,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "ais_ship_length",
+          "ordinal": 25,
+          "type_info": "Int4"
+        },
+        {
+          "name": "ais_ship_width",
+          "ordinal": 26,
+          "type_info": "Int4"
+        },
+        {
+          "name": "ais_eta",
+          "ordinal": 27,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "ais_destination",
+          "ordinal": 28,
+          "type_info": "Varchar"
+        }
+      ],
+      "nullable": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        null,
+        true,
+        true,
+        true,
+        true,
+        false,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "parameters": {
+        "Left": []
+      }
+    },
+    "query": "\nSELECT\n    f.preferred_trip_assembler AS \"preferred_trip_assembler!: TripAssemblerId\",\n    f.fiskeridir_vessel_id AS \"fiskeridir_vessel_id!\",\n    f.fiskeridir_vessel_type_id,\n    f.fiskeridir_length_group_id,\n    f.fiskeridir_nation_group_id,\n    f.norwegian_municipality_id AS fiskeridir_norwegian_municipality_id,\n    f.norwegian_county_id AS fiskeridir_norwegian_county_id,\n    f.nation_id AS \"fiskeridir_nation_id?\",\n    f.gross_tonnage_1969 AS fiskeridir_gross_tonnage_1969,\n    f.gross_tonnage_other AS fiskeridir_gross_tonnage_other,\n    f.call_sign AS fiskeridir_call_sign,\n    f.\"name\" AS fiskeridir_name,\n    f.registration_id AS fiskeridir_registration_id,\n    f.\"length\" AS fiskeridir_length,\n    f.\"width\" AS fiskeridir_width,\n    f.\"owner\" AS fiskeridir_owner,\n    f.owners::TEXT AS fiskeridir_owners,\n    f.engine_building_year AS fiskeridir_engine_building_year,\n    f.engine_power AS fiskeridir_engine_power,\n    f.building_year AS fiskeridir_building_year,\n    f.rebuilding_year AS fiskeridir_rebuilding_year,\n    a.mmsi AS \"ais_mmsi?\",\n    a.imo_number AS ais_imo_number,\n    a.call_sign AS ais_call_sign,\n    a.name AS ais_name,\n    a.ship_length AS ais_ship_length,\n    a.ship_width AS ais_ship_width,\n    a.eta AS ais_eta,\n    a.destination AS ais_destination\nFROM\n    fiskeridir_vessels AS f\n    LEFT JOIN ais_vessels AS a ON f.call_sign = a.call_sign\n            "
+  },
   "b5c70e436f13acf05bb30230a566a489385309a1751f5bdcfd4090101fd7e3b7": {
     "describe": {
       "columns": [],
@@ -2919,6 +2743,194 @@
       }
     },
     "query": "\nINSERT INTO\n    herring_populations (herring_population_id, \"name\")\nSELECT\n    *\nFROM\n    UNNEST($1::VARCHAR[], $2::VARCHAR[])\nON CONFLICT (herring_population_id) DO NOTHING\n            "
+  },
+  "cda4f12da1b4bd87aa52607e7fb8982c1dd8e46bc8d68815d38e354e2e8a6538": {
+    "describe": {
+      "columns": [
+        {
+          "name": "preferred_trip_assembler!: TripAssemblerId",
+          "ordinal": 0,
+          "type_info": "Int4"
+        },
+        {
+          "name": "fiskeridir_vessel_id!",
+          "ordinal": 1,
+          "type_info": "Int8"
+        },
+        {
+          "name": "fiskeridir_vessel_type_id",
+          "ordinal": 2,
+          "type_info": "Int4"
+        },
+        {
+          "name": "fiskeridir_length_group_id",
+          "ordinal": 3,
+          "type_info": "Int4"
+        },
+        {
+          "name": "fiskeridir_nation_group_id",
+          "ordinal": 4,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "fiskeridir_norwegian_municipality_id",
+          "ordinal": 5,
+          "type_info": "Int4"
+        },
+        {
+          "name": "fiskeridir_norwegian_county_id",
+          "ordinal": 6,
+          "type_info": "Int4"
+        },
+        {
+          "name": "fiskeridir_nation_id?",
+          "ordinal": 7,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "fiskeridir_gross_tonnage_1969",
+          "ordinal": 8,
+          "type_info": "Int4"
+        },
+        {
+          "name": "fiskeridir_gross_tonnage_other",
+          "ordinal": 9,
+          "type_info": "Int4"
+        },
+        {
+          "name": "fiskeridir_call_sign",
+          "ordinal": 10,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "fiskeridir_name",
+          "ordinal": 11,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "fiskeridir_registration_id",
+          "ordinal": 12,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "fiskeridir_length",
+          "ordinal": 13,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "fiskeridir_width",
+          "ordinal": 14,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "fiskeridir_owner",
+          "ordinal": 15,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "fiskeridir_owners",
+          "ordinal": 16,
+          "type_info": "Text"
+        },
+        {
+          "name": "fiskeridir_engine_building_year",
+          "ordinal": 17,
+          "type_info": "Int4"
+        },
+        {
+          "name": "fiskeridir_engine_power",
+          "ordinal": 18,
+          "type_info": "Int4"
+        },
+        {
+          "name": "fiskeridir_building_year",
+          "ordinal": 19,
+          "type_info": "Int4"
+        },
+        {
+          "name": "fiskeridir_rebuilding_year",
+          "ordinal": 20,
+          "type_info": "Int4"
+        },
+        {
+          "name": "ais_mmsi?",
+          "ordinal": 21,
+          "type_info": "Int4"
+        },
+        {
+          "name": "ais_imo_number",
+          "ordinal": 22,
+          "type_info": "Int4"
+        },
+        {
+          "name": "ais_call_sign",
+          "ordinal": 23,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "ais_name",
+          "ordinal": 24,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "ais_ship_length",
+          "ordinal": 25,
+          "type_info": "Int4"
+        },
+        {
+          "name": "ais_ship_width",
+          "ordinal": 26,
+          "type_info": "Int4"
+        },
+        {
+          "name": "ais_eta",
+          "ordinal": 27,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "ais_destination",
+          "ordinal": 28,
+          "type_info": "Varchar"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        null,
+        true,
+        true,
+        true,
+        true,
+        false,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "parameters": {
+        "Left": [
+          "Int8"
+        ]
+      }
+    },
+    "query": "\nSELECT\n    f.preferred_trip_assembler AS \"preferred_trip_assembler!: TripAssemblerId\",\n    f.fiskeridir_vessel_id AS \"fiskeridir_vessel_id!\",\n    f.fiskeridir_vessel_type_id,\n    f.fiskeridir_length_group_id,\n    f.fiskeridir_nation_group_id,\n    f.norwegian_municipality_id AS fiskeridir_norwegian_municipality_id,\n    f.norwegian_county_id AS fiskeridir_norwegian_county_id,\n    f.nation_id AS \"fiskeridir_nation_id?\",\n    f.gross_tonnage_1969 AS fiskeridir_gross_tonnage_1969,\n    f.gross_tonnage_other AS fiskeridir_gross_tonnage_other,\n    f.call_sign AS fiskeridir_call_sign,\n    f.\"name\" AS fiskeridir_name,\n    f.registration_id AS fiskeridir_registration_id,\n    f.\"length\" AS fiskeridir_length,\n    f.\"width\" AS fiskeridir_width,\n    f.\"owner\" AS fiskeridir_owner,\n    f.owners::TEXT AS fiskeridir_owners,\n    f.engine_building_year AS fiskeridir_engine_building_year,\n    f.engine_power AS fiskeridir_engine_power,\n    f.building_year AS fiskeridir_building_year,\n    f.rebuilding_year AS fiskeridir_rebuilding_year,\n    a.mmsi AS \"ais_mmsi?\",\n    a.imo_number AS ais_imo_number,\n    a.call_sign AS ais_call_sign,\n    a.name AS ais_name,\n    a.ship_length AS ais_ship_length,\n    a.ship_width AS ais_ship_width,\n    a.eta AS ais_eta,\n    a.destination AS ais_destination\nFROM\n    fiskeridir_vessels AS f\n    LEFT JOIN ais_vessels AS a ON f.call_sign = a.call_sign\nWHERE\n    f.fiskeridir_vessel_id = $1\n            "
   },
   "d0f5a1120264b570bd35e961a8e8650bac90a07b3ef7f3e9acbf6a59e99f169c": {
     "describe": {

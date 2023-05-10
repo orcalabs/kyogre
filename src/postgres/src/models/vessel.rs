@@ -1,7 +1,7 @@
 use crate::{error::PostgresError, queries::opt_decimal_to_float};
 use bigdecimal::BigDecimal;
 use chrono::{DateTime, Utc};
-use error_stack::{Report, ResultExt};
+use error_stack::{IntoReport, Report, ResultExt};
 use fiskeridir_rs::CallSign;
 use kyogre_core::{FiskeridirVesselId, Mmsi, TripAssemblerId};
 
@@ -62,6 +62,7 @@ pub struct FiskeridirAisVesselCombination {
     pub fiskeridir_length: Option<BigDecimal>,
     pub fiskeridir_width: Option<BigDecimal>,
     pub fiskeridir_owner: Option<String>,
+    pub fiskeridir_owners: Option<String>,
     pub fiskeridir_engine_building_year: Option<i32>,
     pub fiskeridir_engine_power: Option<i32>,
     pub fiskeridir_building_year: Option<i32>,
@@ -116,6 +117,14 @@ impl TryFrom<FiskeridirAisVesselCombination> for kyogre_core::Vessel {
             width: opt_decimal_to_float(value.fiskeridir_width)
                 .change_context(PostgresError::DataConversion)?,
             owner: value.fiskeridir_owner,
+            owners: value
+                .fiskeridir_owners
+                .map(|o| {
+                    serde_json::from_str(&o)
+                        .into_report()
+                        .change_context(PostgresError::DataConversion)
+                })
+                .transpose()?,
             engine_building_year: value.fiskeridir_engine_building_year.map(|v| v as u32),
             engine_power: value.fiskeridir_engine_power.map(|v| v as u32),
             building_year: value.fiskeridir_building_year.map(|v| v as u32),
