@@ -2,7 +2,7 @@ use std::fmt;
 
 use crate::{AisVessel, Mmsi, TripAssemblerId};
 use chrono::{DateTime, Utc};
-use fiskeridir_rs::CallSign;
+use fiskeridir_rs::{CallSign, RegisterVesselOwner};
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 use serde::{de::Visitor, Deserialize, Serialize};
@@ -67,6 +67,7 @@ pub struct FiskeridirVessel {
     pub length: Option<f64>,
     pub width: Option<f64>,
     pub owner: Option<String>,
+    pub owners: Option<Vec<RegisterVesselOwner>>,
     pub engine_building_year: Option<u32>,
     pub engine_power: Option<u32>,
     pub building_year: Option<u32>,
