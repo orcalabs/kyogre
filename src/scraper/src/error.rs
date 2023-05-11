@@ -10,3 +10,14 @@ impl std::fmt::Display for ScraperError {
         f.write_str("an error occurred while scraping a data source")
     }
 }
+
+#[derive(Debug)]
+pub struct DownloadError;
+
+impl Context for DownloadError {}
+
+impl std::fmt::Display for DownloadError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("an error occurred while downloading data")
+    }
+}

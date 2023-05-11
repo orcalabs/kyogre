@@ -1,5 +1,6 @@
 pub mod ais;
 pub mod ais_vms;
+pub mod fishing_facility;
 pub mod gear;
 pub mod haul;
 pub mod species;

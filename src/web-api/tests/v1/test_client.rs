@@ -221,6 +221,9 @@ impl ApiClient {
         self.get(format!("vms/{}", call_sign.as_ref()), &parameters)
             .await
     }
+    pub async fn get_fishing_facility_historic(&self) -> Response {
+        self.get("fishing_facility_historic", &[]).await
+    }
 }
 
 fn create_comma_separated_list<T: ToString>(vals: Vec<T>) -> String {

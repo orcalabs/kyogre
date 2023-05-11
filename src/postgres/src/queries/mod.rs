@@ -15,6 +15,7 @@ pub mod ers_dca;
 pub mod ers_dep;
 pub mod ers_por;
 pub mod ers_tra;
+pub mod fishing_facility;
 pub mod gear;
 pub mod hash;
 pub mod haul;

@@ -10,6 +10,7 @@ engine:
   scrape_schedule:
     Periodic: 30s
 scraper:
+  fishing_facility_historic_url: https://api.fiskeridir.no/vessel-api/api/v1/vessels
   register_vessels_url: https://api.fiskeridir.no/vessel-api/api/v1/vessels
   landings:
     min_year: 2000

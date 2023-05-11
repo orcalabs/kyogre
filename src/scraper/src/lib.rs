@@ -2,6 +2,7 @@
 #![deny(rust_2018_idioms)]
 
 use async_trait::async_trait;
+use barentswatch::FishingFacilityHistoricScraper;
 use error_stack::Result;
 use fiskeridir::{
     ErsDcaScraper, ErsDepScraper, ErsPorScraper, ErsTraScraper, LandingScraper,
@@ -13,12 +14,16 @@ use std::fmt::Debug;
 use std::sync::Arc;
 use tracing::{event, instrument, Level};
 
+mod barentswatch;
 mod chunks;
 mod error;
 mod fiskeridir;
+mod wrapped_http_client;
 
+pub use barentswatch::BarentswatchSource;
 pub use error::*;
 pub use fiskeridir::FiskeridirSource;
+pub use wrapped_http_client::*;
 
 pub trait Processor: ScraperInboundPort + Send + Sync {}
 impl<T> Processor for T where T: ScraperInboundPort + Send + Sync {}
@@ -37,6 +42,7 @@ pub struct Config {
     pub ers_tra: Option<Vec<FileYear>>,
     pub vms: Option<Vec<FileYear>>,
     pub register_vessels_url: Option<String>,
+    pub fishing_facility_historic_url: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -58,7 +64,12 @@ pub trait DataSource: Send + Sync {
 }
 
 impl Scraper {
-    pub fn new(config: Config, processor: Box<dyn Processor>, source: FiskeridirSource) -> Scraper {
+    pub fn new(
+        config: Config,
+        processor: Box<dyn Processor>,
+        fiskeridir_source: FiskeridirSource,
+        barentswatch_source: BarentswatchSource,
+    ) -> Scraper {
         let landing_sources = config.landings.map(|landings| {
             (landings.min_year..=landings.max_year)
                 .map(|year| fiskeridir_rs::FileSource::Landings { year, url: None })
@@ -119,17 +130,25 @@ impl Scraper {
             .register_vessels_url
             .map(|url| fiskeridir_rs::ApiSource::RegisterVessels { url });
 
-        let arc = Arc::new(source);
+        let fiskeridir_arc = Arc::new(fiskeridir_source);
         let landings_scraper =
-            LandingScraper::new(arc.clone(), landing_sources.unwrap_or_default());
-        let ers_dca_scraper = ErsDcaScraper::new(arc.clone(), ers_dca_sources);
-        let ers_dep_scraper = ErsDepScraper::new(arc.clone(), ers_dep_sources);
-        let ers_por_scraper = ErsPorScraper::new(arc.clone(), ers_por_sources);
-        let ers_tra_scraper = ErsTraScraper::new(arc.clone(), ers_tra_sources);
-        let vms_scraper = VmsScraper::new(arc.clone(), vms_sources);
-        let register_vessels_scraper = RegisterVesselsScraper::new(arc, register_vessels_source);
+            LandingScraper::new(fiskeridir_arc.clone(), landing_sources.unwrap_or_default());
+        let ers_dca_scraper = ErsDcaScraper::new(fiskeridir_arc.clone(), ers_dca_sources);
+        let ers_dep_scraper = ErsDepScraper::new(fiskeridir_arc.clone(), ers_dep_sources);
+        let ers_por_scraper = ErsPorScraper::new(fiskeridir_arc.clone(), ers_por_sources);
+        let ers_tra_scraper = ErsTraScraper::new(fiskeridir_arc.clone(), ers_tra_sources);
+        let vms_scraper = VmsScraper::new(fiskeridir_arc.clone(), vms_sources);
+        let register_vessels_scraper =
+            RegisterVesselsScraper::new(fiskeridir_arc, register_vessels_source);
+
+        let barentswatch_arc = Arc::new(barentswatch_source);
+        let fishing_facility_historic_scraper = FishingFacilityHistoricScraper::new(
+            barentswatch_arc,
+            config.fishing_facility_historic_url,
+        );
         Scraper {
             scrapers: vec![
+                Box::new(fishing_facility_historic_scraper),
                 Box::new(vms_scraper),
                 Box::new(landings_scraper),
                 Box::new(ers_dca_scraper),
@@ -165,6 +184,7 @@ pub enum ScraperId {
     ErsTra,
     RegisterVessels,
     Vms,
+    FishingFacilityHistoric,
 }
 
 impl std::fmt::Display for ScraperId {
@@ -177,6 +197,7 @@ impl std::fmt::Display for ScraperId {
             ScraperId::ErsTra => write!(f, "ers_tra_scraper"),
             ScraperId::RegisterVessels => write!(f, "register_vessels_scraper"),
             ScraperId::Vms => write!(f, "vms_scraper"),
+            ScraperId::FishingFacilityHistoric => write!(f, "fishing_facility_historic"),
         }
     }
 }

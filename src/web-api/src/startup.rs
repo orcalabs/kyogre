@@ -115,6 +115,10 @@ where
                     .route(
                         "/hauls_matrix/{active_filter}",
                         web::get().to(routes::v1::haul::hauls_matrix::<T>),
+                    )
+                    .route(
+                        "/fishing_facility_historic",
+                        web::get().to(routes::v1::fishing_facility::fishing_facility_historic::<T>),
                     ),
             );
 

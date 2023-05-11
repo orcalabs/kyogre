@@ -1416,10 +1416,38 @@ dependencies = [
 ]
 
 [[package]]
+name = "geojson"
+version = "0.24.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ff2cc39a555a57b2a5514e223d76e23779f853840cc3c67767f77f58dc2272b7"
+dependencies = [
+ "log",
+ "serde",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
 name = "geoutils"
 version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "36d244a08113319b5ebcabad2b8b7925732d15eec46d7e7ac3c11734f3b7a6ad"
+
+[[package]]
+name = "geozero"
+version = "0.9.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "153e8363d3cf965f18f87578e11577450df8ff123d4c2de5e9fb8128b61fe296"
+dependencies = [
+ "geo-types",
+ "geojson",
+ "log",
+ "scroll",
+ "serde_json",
+ "sqlx",
+ "thiserror",
+ "wkt",
+]
 
 [[package]]
 name = "getrandom"
@@ -1870,6 +1898,8 @@ dependencies = [
  "sqlx",
  "strum",
  "utoipa",
+ "uuid",
+ "wkt",
 ]
 
 [[package]]
@@ -2630,6 +2660,8 @@ dependencies = [
  "error-stack 0.3.1",
  "fiskeridir-rs",
  "futures",
+ "geo-types",
+ "geozero",
  "jurisdiction",
  "kyogre-core",
  "num-traits",
@@ -2641,6 +2673,8 @@ dependencies = [
  "strum",
  "tokio",
  "tracing",
+ "uuid",
+ "wkt",
 ]
 
 [[package]]
@@ -3114,11 +3148,15 @@ name = "scraper"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "chrono",
  "error-stack 0.3.1",
  "fiskeridir-rs",
  "kyogre-core",
+ "reqwest",
  "serde",
  "tracing",
+ "uuid",
+ "wkt",
 ]
 
 [[package]]
@@ -3126,6 +3164,12 @@ name = "scratch"
 version = "1.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1792db035ce95be60c3f8853017b3999209281c24e2ba5bc8e59bf97a0c590c1"
+
+[[package]]
+name = "scroll"
+version = "0.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "04c565b551bafbef4157586fa379538366e4385d42082f255bfd96e4fe8519da"
 
 [[package]]
 name = "sct"
@@ -3485,6 +3529,7 @@ dependencies = [
  "thiserror",
  "tokio-stream",
  "url",
+ "uuid",
  "webpki-roots 0.22.6",
  "whoami",
 ]
@@ -4186,6 +4231,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4dad5567ad0cf5b760e5665964bec1b47dfd077ba8a2544b513f3556d3d239a2"
 dependencies = [
  "getrandom",
+ "serde",
 ]
 
 [[package]]
@@ -4358,6 +4404,8 @@ dependencies = [
  "trip-assembler",
  "utoipa",
  "utoipa-swagger-ui",
+ "uuid",
+ "wkt",
 ]
 
 [[package]]
@@ -4623,6 +4671,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "80d0f4e272c85def139476380b12f9ac60926689dd2e01d4923222f40580869d"
 dependencies = [
  "winapi",
+]
+
+[[package]]
+name = "wkt"
+version = "0.10.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c3c2252781f8927974e8ba6a67c965a759a2b88ea2b1825f6862426bbb1c8f41"
+dependencies = [
+ "geo-types",
+ "log",
+ "num-traits",
+ "serde",
+ "thiserror",
 ]
 
 [[package]]

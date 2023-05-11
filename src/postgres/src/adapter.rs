@@ -369,10 +369,22 @@ impl WebApiPort for PostgresAdapter {
                 .change_context(QueryError)?,
         })
     }
+
+    fn fishing_facility_historic(&self) -> PinBoxStream<'_, FishingFacilityHistoric, QueryError> {
+        convert_stream(self.fishing_facility_historic_impl()).boxed()
+    }
 }
 
 #[async_trait]
 impl ScraperInboundPort for PostgresAdapter {
+    async fn add_fishing_facility_historic(
+        &self,
+        facilities: Vec<FishingFacilityHistoric>,
+    ) -> Result<(), InsertError> {
+        self.add_fishing_facility_historic_impl(facilities)
+            .await
+            .change_context(InsertError)
+    }
     async fn add_register_vessels(
         &self,
         vessels: Vec<fiskeridir_rs::RegisterVessel>,

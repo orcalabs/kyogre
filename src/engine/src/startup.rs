@@ -2,8 +2,8 @@ use crate::{settings::Settings, Engine, SharedState};
 use orca_core::Environment;
 use orca_statemachine::Machine;
 use postgres::PostgresAdapter;
-use scraper::{FiskeridirSource, Scraper};
-use std::path::PathBuf;
+use scraper::{BarentswatchSource, FiskeridirSource, Scraper, WrappedHttpClient};
+use std::{path::PathBuf, sync::Arc};
 
 pub struct App {
     pub shared_state: SharedState<PostgresAdapter>,
@@ -24,10 +24,15 @@ impl App {
         let fiskeridir_source =
             FiskeridirSource::new(Box::new(postgres.clone()), file_downloader, api_downloader);
 
+        let http_client = Arc::new(WrappedHttpClient::new().unwrap());
+
+        let barentswatch_source = BarentswatchSource::new(http_client);
+
         let scraper = Scraper::new(
             settings.scraper.clone(),
             Box::new(postgres.clone()),
             fiskeridir_source,
+            barentswatch_source,
         );
         let trip_assemblers = settings.trip_assemblers();
         let transition_log = orca_statemachine::Client::new(&settings.postgres)
