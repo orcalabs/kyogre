@@ -2,7 +2,9 @@
 #![deny(rust_2018_idioms)]
 
 use fiskeridir_rs::{RegisterVesselEntityType, RegisterVesselOwner};
-use kyogre_core::{ActiveHaulsFilter, Catch, Delivery, Ordering, WebApiPort};
+use kyogre_core::{
+    ActiveHaulsFilter, Catch, Delivery, FishingFacilityToolType, Ordering, WebApiPort,
+};
 use postgres::PostgresAdapter;
 use routes::v1;
 use utoipa::OpenApi;
@@ -36,6 +38,7 @@ impl Database for PostgresAdapter {}
         v1::trip::trips,
         v1::vms::vms_positions,
         v1::ais_vms::ais_vms_positions,
+        v1::fishing_facility::fishing_facility_historic,
     ),
     components(
         schemas(
@@ -45,6 +48,7 @@ impl Database for PostgresAdapter {}
             Ordering,
             RegisterVesselOwner,
             RegisterVesselEntityType,
+            FishingFacilityToolType,
             error::ErrorResponse,
             error::ApiError,
             v1::ais::AisPosition,
@@ -70,6 +74,7 @@ impl Database for PostgresAdapter {}
             v1::vms::VmsPosition,
             v1::ais_vms::AisVmsPosition,
             v1::ais_vms::AisVmsPositionDetails,
+            v1::fishing_facility::FishingFacilityHistoric,
         )
     ),
     tags(

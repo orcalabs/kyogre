@@ -23,6 +23,7 @@ sqlx = { version = "0.6.3", features = [
     "chrono",
     "offline",
     "json",
+    "uuid",
 ] }
 error-stack = { workspace = true }
 bigdecimal = "0.3.0"
@@ -36,6 +37,13 @@ rand = "0.8.5"
 strum = "0.24.1"
 enum_index = "0.2.0"
 enum_index_derive = "0.2.0"
+geozero = { version = "0.9.5", features = [
+    "with-postgis-sqlx",
+    "with-postgis-sqlx",
+] }
+geo-types = "0.7.9"
+wkt = "0.10.3"
+uuid = "1.3.2"
 
 [dev-dependencies]
 rand = "0.8.5"

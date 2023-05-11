@@ -2155,6 +2155,45 @@
     },
     "query": "\nSELECT\n    landing_timestamp\nFROM\n    landings\nWHERE\n    fiskeridir_vessel_id = $1\n    AND landing_timestamp >= $2\n            "
   },
+  "ad22f65629c671f0247152a08024125dcc29246729a8f2fece4a420d4245350c": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "UuidArray",
+          "TextArray",
+          "TextArray",
+          "Int4Array",
+          "Int8Array",
+          "TextArray",
+          "TextArray",
+          "Int4Array",
+          "TextArray",
+          "TextArray",
+          "TimestamptzArray",
+          "TimestamptzArray",
+          "TextArray",
+          "TimestamptzArray",
+          "TextArray",
+          {
+            "Custom": {
+              "kind": {
+                "Array": {
+                  "Custom": {
+                    "kind": "Simple",
+                    "name": "geometry"
+                  }
+                }
+              },
+              "name": "_geometry"
+            }
+          }
+        ]
+      }
+    },
+    "query": "\nINSERT INTO\n    fishing_facilities (\n        tool_id,\n        vessel_name,\n        call_sign,\n        mmsi,\n        imo,\n        reg_num,\n        sbr_reg_num,\n        tool_type,\n        tool_type_name,\n        tool_color,\n        setup_timestamp,\n        removed_timestamp,\n        source,\n        last_changed,\n        \"comment\",\n        geometry_wkt\n    )\nSELECT\n    *\nFROM\n    UNNEST(\n        $1::UUID[],\n        $2::TEXT[],\n        $3::TEXT[],\n        $4::INT[],\n        $5::BIGINT[],\n        $6::TEXT[],\n        $7::TEXT[],\n        $8::INT[],\n        $9::TEXT[],\n        $10::TEXT[],\n        $11::TIMESTAMPTZ[],\n        $12::TIMESTAMPTZ[],\n        $13::TEXT[],\n        $14::TIMESTAMPTZ[],\n        $15::TEXT[],\n        $16::GEOMETRY[]\n    )\n            "
+  },
   "af78b64d395c78a553f920fc8b726f0c4d62e286d2823a1554d43e626d97949d": {
     "describe": {
       "columns": [],
@@ -2730,6 +2769,119 @@
       }
     },
     "query": "\nSELECT\n    add_vms_position_partitions ($1)\n            "
+  },
+  "ca4db93747b15d55f516593fc12ef7ba656d27f70daf2b24ca4f1cdcc0e8f8e7": {
+    "describe": {
+      "columns": [
+        {
+          "name": "tool_id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "vessel_name",
+          "ordinal": 1,
+          "type_info": "Text"
+        },
+        {
+          "name": "call_sign",
+          "ordinal": 2,
+          "type_info": "Text"
+        },
+        {
+          "name": "mmsi",
+          "ordinal": 3,
+          "type_info": "Int4"
+        },
+        {
+          "name": "imo",
+          "ordinal": 4,
+          "type_info": "Int8"
+        },
+        {
+          "name": "reg_num",
+          "ordinal": 5,
+          "type_info": "Text"
+        },
+        {
+          "name": "sbr_reg_num",
+          "ordinal": 6,
+          "type_info": "Text"
+        },
+        {
+          "name": "tool_type!: FishingFacilityToolType",
+          "ordinal": 7,
+          "type_info": "Int4"
+        },
+        {
+          "name": "tool_type_name",
+          "ordinal": 8,
+          "type_info": "Text"
+        },
+        {
+          "name": "tool_color",
+          "ordinal": 9,
+          "type_info": "Text"
+        },
+        {
+          "name": "setup_timestamp!",
+          "ordinal": 10,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "removed_timestamp",
+          "ordinal": 11,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "source",
+          "ordinal": 12,
+          "type_info": "Text"
+        },
+        {
+          "name": "last_changed!",
+          "ordinal": 13,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "comment",
+          "ordinal": 14,
+          "type_info": "Text"
+        },
+        {
+          "name": "geometry_wkt: _",
+          "ordinal": 15,
+          "type_info": {
+            "Custom": {
+              "kind": "Simple",
+              "name": "geometry"
+            }
+          }
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
+        true,
+        false,
+        false,
+        false,
+        false,
+        true,
+        true,
+        true,
+        true,
+        false
+      ],
+      "parameters": {
+        "Left": []
+      }
+    },
+    "query": "\nSELECT\n    tool_id,\n    vessel_name,\n    call_sign,\n    mmsi,\n    imo,\n    reg_num,\n    sbr_reg_num,\n    tool_type AS \"tool_type!: FishingFacilityToolType\",\n    tool_type_name,\n    tool_color,\n    setup_timestamp AS \"setup_timestamp!\",\n    removed_timestamp,\n    source,\n    last_changed AS \"last_changed!\",\n    \"comment\",\n    geometry_wkt AS \"geometry_wkt: _\"\nFROM\n    fishing_facilities\n            "
   },
   "cc7529bb4ecd6aa70d015d86abc5efdbb2cca25ed8019b40dbb30e76ad745e65": {
     "describe": {

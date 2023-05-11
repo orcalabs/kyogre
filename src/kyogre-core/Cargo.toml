@@ -36,3 +36,5 @@ sqlx = { version = "0.6.3", features = [
 ], optional = true }
 enum_index = "0.2.0"
 enum_index_derive = "0.2.0"
+wkt = "0.10.3"
+uuid = { version = "1.3.2", features = ["v4"] }

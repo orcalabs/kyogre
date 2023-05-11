@@ -538,6 +538,15 @@ ORDER BY
             .unwrap()
     }
 
+    pub async fn generate_fishing_facility_historic(&self) -> FishingFacilityHistoric {
+        let facility = FishingFacilityHistoric::test_default();
+        self.db
+            .add_fishing_facility_historic(vec![facility.clone()])
+            .await
+            .unwrap();
+        facility
+    }
+
     async fn single_vms_position(&self, message_id: u32) -> VmsPosition {
         let pos = sqlx::query_as!(
             crate::models::VmsPosition,

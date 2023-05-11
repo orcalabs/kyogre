@@ -11,6 +11,7 @@ engine:
   scrape_schedule:
     Daily: 07:00:00
 scraper:
+  fishing_facility_historic_url: TODO
   register_vessels_url: https://api.fiskeridir.no/vessel-api/api/v1/vessels
   landings:
     min_year: 2000
