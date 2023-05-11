@@ -7,6 +7,7 @@ use fiskeridir_rs::{
     CallSign, ErsDca, ErsDep, ErsPor, Gear, GearGroup, LandingId, VesselLengthGroup, Vms,
 };
 use kyogre_core::*;
+use rand::random;
 
 /// Wrapper with additional methods inteded for testing purposes.
 #[derive(Debug, Clone)]
@@ -234,7 +235,7 @@ FROM
         start: &DateTime<Utc>,
         end: &DateTime<Utc>,
     ) -> kyogre_core::Haul {
-        let mut dca = ErsDca::test_default(1, Some(vessel_id.0 as u64));
+        let mut dca = ErsDca::test_default(random(), Some(vessel_id.0 as u64));
         dca.start_date = Some(start.date_naive());
         dca.start_time = Some(start.time());
         dca.stop_date = Some(end.date_naive());

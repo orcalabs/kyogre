@@ -555,12 +555,42 @@ async fn test_trips_events_are_isolated_per_vessel() {
             .await;
 
         helper
-            .generate_ers_trip(fiskeridir_vessel_id, &start, &end)
+            .db
+            .generate_landing(2, fiskeridir_vessel_id2, start + Duration::seconds(1))
+            .await;
+
+        helper
+            .db
+            .generate_tra(2, fiskeridir_vessel_id2, start + Duration::seconds(1))
+            .await;
+
+        helper
+            .db
+            .generate_haul(
+                fiskeridir_vessel_id2,
+                &(start + Duration::seconds(1)),
+                &(end - Duration::seconds(1)),
+            )
             .await;
 
         let ers_trip = helper
+            .generate_ers_trip(fiskeridir_vessel_id, &start, &end)
+            .await;
+
+        let ers_trip2 = helper
             .generate_ers_trip(fiskeridir_vessel_id2, &start, &end)
             .await;
+
+        let response = helper
+            .app
+            .get_trips_of_vessel(fiskeridir_vessel_id, TripsParameters::default())
+            .await;
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let trips: Vec<Trip> = response.json().await.unwrap();
+        assert_eq!(trips.len(), 1);
+        assert_eq!(trips[0].events.len(), 5);
+        assert_eq!(trips[0], ers_trip);
 
         let response = helper
             .app
@@ -570,8 +600,8 @@ async fn test_trips_events_are_isolated_per_vessel() {
 
         let trips: Vec<Trip> = response.json().await.unwrap();
         assert_eq!(trips.len(), 1);
-        assert_eq!(trips[0].events.len(), 2);
-        assert_eq!(trips[0], ers_trip);
+        assert_eq!(trips[0].events.len(), 5);
+        assert_eq!(trips[0], ers_trip2);
     })
     .await;
 }
