@@ -54,7 +54,7 @@ pub trait WebApiPort {
         haul_id: &HaulId,
     ) -> Result<Option<TripDetailed>, QueryError>;
     async fn hauls_matrix(&self, query: HaulsMatrixQuery) -> Result<HaulsMatrix, QueryError>;
-    fn fishing_facility_historic(&self) -> PinBoxStream<'_, FishingFacilityHistoric, QueryError>;
+    fn fishing_facility_historic(&self) -> PinBoxStream<'_, FishingFacility, QueryError>;
 }
 
 #[async_trait]

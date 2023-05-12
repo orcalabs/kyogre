@@ -74,7 +74,7 @@ impl Database for PostgresAdapter {}
             v1::vms::VmsPosition,
             v1::ais_vms::AisVmsPosition,
             v1::ais_vms::AisVmsPositionDetails,
-            v1::fishing_facility::FishingFacilityHistoric,
+            v1::fishing_facility::FishingFacility,
         )
     ),
     tags(
