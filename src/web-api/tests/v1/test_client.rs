@@ -221,8 +221,8 @@ impl ApiClient {
         self.get(format!("vms/{}", call_sign.as_ref()), &parameters)
             .await
     }
-    pub async fn get_fishing_facility_historic(&self) -> Response {
-        self.get("fishing_facility_historic", &[]).await
+    pub async fn get_fishing_facilities(&self) -> Response {
+        self.get("fishing_facilities", &[]).await
     }
 }
 

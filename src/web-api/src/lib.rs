@@ -38,7 +38,7 @@ impl Database for PostgresAdapter {}
         v1::trip::trips,
         v1::vms::vms_positions,
         v1::ais_vms::ais_vms_positions,
-        v1::fishing_facility::fishing_facility_historic,
+        v1::fishing_facility::fishing_facilities,
     ),
     components(
         schemas(

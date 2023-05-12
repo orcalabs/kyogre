@@ -48,6 +48,20 @@ impl Settings {
 
             let map = honeycomb.collect()?;
             builder = builder.set_override("honeycomb.api_key", map["api-key"].clone())?;
+
+            let oauth_settings =
+                config::File::with_name("/run/secrets/barentswatch-api-oauth.yaml")
+                    .required(true)
+                    .format(config::FileFormat::Yaml);
+            let map = oauth_settings.collect()?;
+            builder = builder.set_override(
+                "scraper.fishing_facility.client_id",
+                map["client_id"].clone(),
+            )?;
+            builder = builder.set_override(
+                "scraper.fishing_facility.client_secret",
+                map["client_secret"].clone(),
+            )?;
         }
 
         let config = builder.build()?;

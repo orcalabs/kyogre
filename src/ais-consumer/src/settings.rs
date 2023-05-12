@@ -1,8 +1,7 @@
 use config::{Config, File, Source};
+use kyogre_core::OauthConfig;
 use orca_core::{Environment, LogLevel, PsqlSettings};
 use serde::Deserialize;
-
-use crate::token::OauthConfig;
 
 #[derive(Deserialize, Debug)]
 pub struct Settings {

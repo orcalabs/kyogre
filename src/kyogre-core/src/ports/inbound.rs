@@ -42,7 +42,7 @@ pub trait TripPrecisionInboundPort {
 
 #[async_trait]
 pub trait ScraperInboundPort {
-    async fn add_fishing_facility_historic(
+    async fn add_fishing_facilities(
         &self,
         facilities: Vec<FishingFacility>,
     ) -> Result<(), InsertError>;

@@ -7,7 +7,7 @@ use kyogre_core::FishingFacilityToolType;
 use crate::{error::PostgresError, models::FishingFacility, PostgresAdapter};
 
 impl PostgresAdapter {
-    pub(crate) async fn add_fishing_facility_historic_impl(
+    pub(crate) async fn add_fishing_facilities_impl(
         &self,
         facilities: Vec<kyogre_core::FishingFacility>,
     ) -> Result<(), PostgresError> {
@@ -71,7 +71,7 @@ impl PostgresAdapter {
         sqlx::query!(
             r#"
 INSERT INTO
-    fishing_facilities (
+    fishing_facilities AS f (
         tool_id,
         barentswatch_vessel_id,
         vessel_name,
@@ -122,10 +122,43 @@ FROM
         $21::TEXT[],
         $22::GEOMETRY[]
     )
+ON CONFLICT (tool_id) DO
+UPDATE
+SET
+    barentswatch_vessel_id = COALESCE(
+        f.barentswatch_vessel_id,
+        EXCLUDED.barentswatch_vessel_id
+    ),
+    vessel_name = COALESCE(f.vessel_name, EXCLUDED.vessel_name),
+    call_sign = COALESCE(f.call_sign, EXCLUDED.call_sign),
+    mmsi = COALESCE(f.mmsi, EXCLUDED.mmsi),
+    imo = COALESCE(f.imo, EXCLUDED.imo),
+    reg_num = COALESCE(f.reg_num, EXCLUDED.reg_num),
+    sbr_reg_num = COALESCE(f.sbr_reg_num, EXCLUDED.sbr_reg_num),
+    contact_phone = COALESCE(f.contact_phone, EXCLUDED.contact_phone),
+    contact_email = COALESCE(f.contact_email, EXCLUDED.contact_email),
+    tool_type = COALESCE(f.tool_type, EXCLUDED.tool_type),
+    tool_type_name = COALESCE(f.tool_type_name, EXCLUDED.tool_type_name),
+    tool_color = COALESCE(f.tool_color, EXCLUDED.tool_color),
+    tool_count = COALESCE(f.tool_count, EXCLUDED.tool_count),
+    setup_timestamp = COALESCE(f.setup_timestamp, EXCLUDED.setup_timestamp),
+    setup_processed_timestamp = COALESCE(
+        f.setup_processed_timestamp,
+        EXCLUDED.setup_processed_timestamp
+    ),
+    removed_timestamp = COALESCE(f.removed_timestamp, EXCLUDED.removed_timestamp),
+    removed_processed_timestamp = COALESCE(
+        f.removed_processed_timestamp,
+        EXCLUDED.removed_processed_timestamp
+    ),
+    last_changed = COALESCE(f.last_changed, EXCLUDED.last_changed),
+    source = COALESCE(f.source, EXCLUDED.source),
+    "comment" = COALESCE(f."comment", EXCLUDED."comment"),
+    geometry_wkt = COALESCE(f.geometry_wkt, EXCLUDED.geometry_wkt)
             "#,
             tool_id.as_slice(),
             barentswatch_vessel_id.as_slice() as _,
-            vessel_name.as_slice(),
+            vessel_name.as_slice() as _,
             call_sign.as_slice() as _,
             mmsi.as_slice() as _,
             imo.as_slice() as _,
@@ -153,7 +186,7 @@ FROM
         .map(|_| ())
     }
 
-    pub(crate) fn fishing_facility_historic_impl(
+    pub(crate) fn fishing_facilities_impl(
         &self,
     ) -> impl Stream<Item = Result<FishingFacility, PostgresError>> + '_ {
         sqlx::query_as!(

@@ -1,4 +1,5 @@
 use error_stack::{report, IntoReport, Result, ResultExt};
+use kyogre_core::BearerToken;
 use reqwest::StatusCode;
 use serde::{de::DeserializeOwned, Serialize};
 
@@ -19,8 +20,13 @@ impl WrappedHttpClient {
         &self,
         url: &str,
         query: Option<&Q>,
+        token: Option<BearerToken>,
     ) -> Result<T, DownloadError> {
         let mut request = self.0.get(url);
+
+        if let Some(token) = token {
+            request = request.header("Authorization", format!("Bearer {}", token.as_ref()));
+        }
 
         if let Some(query) = query {
             request = request.query(&query);

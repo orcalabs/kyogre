@@ -157,51 +157,6 @@
     },
     "query": "\nSELECT\n    hash\nFROM\n    data_hashes\nWHERE\n    data_hash_id = $1\n            "
   },
-  "16c8bd13188cb1df6b099e3e8dac5a7bd53d90585bfd275fd8ff70b9e69d17c1": {
-    "describe": {
-      "columns": [],
-      "nullable": [],
-      "parameters": {
-        "Left": [
-          "UuidArray",
-          "UuidArray",
-          "TextArray",
-          "TextArray",
-          "Int4Array",
-          "Int8Array",
-          "TextArray",
-          "TextArray",
-          "TextArray",
-          "TextArray",
-          "Int4Array",
-          "TextArray",
-          "TextArray",
-          "Int4Array",
-          "TimestamptzArray",
-          "TimestamptzArray",
-          "TimestamptzArray",
-          "TimestamptzArray",
-          "TimestamptzArray",
-          "TextArray",
-          "TextArray",
-          {
-            "Custom": {
-              "kind": {
-                "Array": {
-                  "Custom": {
-                    "kind": "Simple",
-                    "name": "geometry"
-                  }
-                }
-              },
-              "name": "_geometry"
-            }
-          }
-        ]
-      }
-    },
-    "query": "\nINSERT INTO\n    fishing_facilities (\n        tool_id,\n        barentswatch_vessel_id,\n        vessel_name,\n        call_sign,\n        mmsi,\n        imo,\n        reg_num,\n        sbr_reg_num,\n        contact_phone,\n        contact_email,\n        tool_type,\n        tool_type_name,\n        tool_color,\n        tool_count,\n        setup_timestamp,\n        setup_processed_timestamp,\n        removed_timestamp,\n        removed_processed_timestamp,\n        last_changed,\n        source,\n        \"comment\",\n        geometry_wkt\n    )\nSELECT\n    *\nFROM\n    UNNEST(\n        $1::UUID[],\n        $2::UUID[],\n        $3::TEXT[],\n        $4::TEXT[],\n        $5::INT[],\n        $6::BIGINT[],\n        $7::TEXT[],\n        $8::TEXT[],\n        $9::TEXT[],\n        $10::TEXT[],\n        $11::INT[],\n        $12::TEXT[],\n        $13::TEXT[],\n        $14::INT[],\n        $15::TIMESTAMPTZ[],\n        $16::TIMESTAMPTZ[],\n        $17::TIMESTAMPTZ[],\n        $18::TIMESTAMPTZ[],\n        $19::TIMESTAMPTZ[],\n        $20::TEXT[],\n        $21::TEXT[],\n        $22::GEOMETRY[]\n    )\n            "
-  },
   "17ba26750637390447eff59451cac22944e074ddd110226baab43832171da407": {
     "describe": {
       "columns": [],
@@ -1492,15 +1447,11 @@
       "nullable": [
         false,
         true,
-        false,
         true,
         true,
         true,
         true,
         true,
-        true,
-        true,
-        false,
         true,
         true,
         true,
@@ -1508,7 +1459,11 @@
         true,
         true,
         true,
+        false,
         true,
+        true,
+        true,
+        false,
         true,
         true,
         false
@@ -1531,6 +1486,51 @@
       }
     },
     "query": "\nINSERT INTO\n    area_groupings (area_grouping_id, \"name\")\nSELECT\n    *\nFROM\n    UNNEST($1::VARCHAR[], $2::VARCHAR[])\nON CONFLICT (area_grouping_id) DO NOTHING\n                "
+  },
+  "58df09f030b603bc44716777c5df04f033212fb08a64c7bad10c29404bba0744": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "UuidArray",
+          "UuidArray",
+          "TextArray",
+          "TextArray",
+          "Int4Array",
+          "Int8Array",
+          "TextArray",
+          "TextArray",
+          "TextArray",
+          "TextArray",
+          "Int4Array",
+          "TextArray",
+          "TextArray",
+          "Int4Array",
+          "TimestamptzArray",
+          "TimestamptzArray",
+          "TimestamptzArray",
+          "TimestamptzArray",
+          "TimestamptzArray",
+          "TextArray",
+          "TextArray",
+          {
+            "Custom": {
+              "kind": {
+                "Array": {
+                  "Custom": {
+                    "kind": "Simple",
+                    "name": "geometry"
+                  }
+                }
+              },
+              "name": "_geometry"
+            }
+          }
+        ]
+      }
+    },
+    "query": "\nINSERT INTO\n    fishing_facilities AS f (\n        tool_id,\n        barentswatch_vessel_id,\n        vessel_name,\n        call_sign,\n        mmsi,\n        imo,\n        reg_num,\n        sbr_reg_num,\n        contact_phone,\n        contact_email,\n        tool_type,\n        tool_type_name,\n        tool_color,\n        tool_count,\n        setup_timestamp,\n        setup_processed_timestamp,\n        removed_timestamp,\n        removed_processed_timestamp,\n        last_changed,\n        source,\n        \"comment\",\n        geometry_wkt\n    )\nSELECT\n    *\nFROM\n    UNNEST(\n        $1::UUID[],\n        $2::UUID[],\n        $3::TEXT[],\n        $4::TEXT[],\n        $5::INT[],\n        $6::BIGINT[],\n        $7::TEXT[],\n        $8::TEXT[],\n        $9::TEXT[],\n        $10::TEXT[],\n        $11::INT[],\n        $12::TEXT[],\n        $13::TEXT[],\n        $14::INT[],\n        $15::TIMESTAMPTZ[],\n        $16::TIMESTAMPTZ[],\n        $17::TIMESTAMPTZ[],\n        $18::TIMESTAMPTZ[],\n        $19::TIMESTAMPTZ[],\n        $20::TEXT[],\n        $21::TEXT[],\n        $22::GEOMETRY[]\n    )\nON CONFLICT (tool_id) DO\nUPDATE\nSET\n    barentswatch_vessel_id = COALESCE(\n        f.barentswatch_vessel_id,\n        EXCLUDED.barentswatch_vessel_id\n    ),\n    vessel_name = COALESCE(f.vessel_name, EXCLUDED.vessel_name),\n    call_sign = COALESCE(f.call_sign, EXCLUDED.call_sign),\n    mmsi = COALESCE(f.mmsi, EXCLUDED.mmsi),\n    imo = COALESCE(f.imo, EXCLUDED.imo),\n    reg_num = COALESCE(f.reg_num, EXCLUDED.reg_num),\n    sbr_reg_num = COALESCE(f.sbr_reg_num, EXCLUDED.sbr_reg_num),\n    contact_phone = COALESCE(f.contact_phone, EXCLUDED.contact_phone),\n    contact_email = COALESCE(f.contact_email, EXCLUDED.contact_email),\n    tool_type = COALESCE(f.tool_type, EXCLUDED.tool_type),\n    tool_type_name = COALESCE(f.tool_type_name, EXCLUDED.tool_type_name),\n    tool_color = COALESCE(f.tool_color, EXCLUDED.tool_color),\n    tool_count = COALESCE(f.tool_count, EXCLUDED.tool_count),\n    setup_timestamp = COALESCE(f.setup_timestamp, EXCLUDED.setup_timestamp),\n    setup_processed_timestamp = COALESCE(\n        f.setup_processed_timestamp,\n        EXCLUDED.setup_processed_timestamp\n    ),\n    removed_timestamp = COALESCE(f.removed_timestamp, EXCLUDED.removed_timestamp),\n    removed_processed_timestamp = COALESCE(\n        f.removed_processed_timestamp,\n        EXCLUDED.removed_processed_timestamp\n    ),\n    last_changed = COALESCE(f.last_changed, EXCLUDED.last_changed),\n    source = COALESCE(f.source, EXCLUDED.source),\n    \"comment\" = COALESCE(f.\"comment\", EXCLUDED.\"comment\"),\n    geometry_wkt = COALESCE(f.geometry_wkt, EXCLUDED.geometry_wkt)\n            "
   },
   "5db74858b380d3057f2318276c64831d0f4fda727f21dc7553b06f3fb9b341d8": {
     "describe": {

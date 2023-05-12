@@ -3,7 +3,8 @@ use error_stack::{IntoReport, Result, ResultExt};
 use oauth2::AccessToken;
 use oauth2::TokenResponse;
 use oauth2::{
-    basic::BasicClient, reqwest::http_client, AuthUrl, ClientId, ClientSecret, Scope, TokenUrl,
+    basic::BasicClient, reqwest::async_http_client, AuthUrl, ClientId, ClientSecret, Scope,
+    TokenUrl,
 };
 use serde::Deserialize;
 use std::borrow::Borrow;
@@ -20,26 +21,27 @@ pub struct OauthConfig {
 pub struct BearerToken(AccessToken);
 
 impl BearerToken {
-    pub async fn acquire(config: OauthConfig) -> Result<BearerToken, BearerTokenError> {
-        let auth_url = AuthUrl::new(config.auth_url)
+    pub async fn acquire(config: &OauthConfig) -> Result<BearerToken, BearerTokenError> {
+        let auth_url = AuthUrl::new(config.auth_url.clone())
             .into_report()
             .change_context(BearerTokenError::Acquisition)?;
 
-        let token_url = TokenUrl::new(config.token_url)
+        let token_url = TokenUrl::new(config.token_url.clone())
             .into_report()
             .change_context(BearerTokenError::Acquisition)?;
 
         let client = BasicClient::new(
-            ClientId::new(config.client_id),
-            Some(ClientSecret::new(config.client_secret)),
+            ClientId::new(config.client_id.clone()),
+            Some(ClientSecret::new(config.client_secret.clone())),
             auth_url,
             Some(token_url),
         );
 
         let response = client
             .exchange_client_credentials()
-            .add_scope(Scope::new(config.scope))
-            .request(http_client)
+            .add_scope(Scope::new(config.scope.clone()))
+            .request_async(async_http_client)
+            .await
             .into_report()
             .change_context(BearerTokenError::Acquisition)?;
 

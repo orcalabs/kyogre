@@ -19,7 +19,7 @@ CREATE TABLE
     fishing_facilities (
         tool_id UUID PRIMARY KEY,
         barentswatch_vessel_id UUID,
-        vessel_name TEXT NOT NULL,
+        vessel_name TEXT,
         call_sign TEXT,
         mmsi INT,
         imo BIGINT,
@@ -35,7 +35,7 @@ CREATE TABLE
         setup_processed_timestamp TIMESTAMPTZ,
         removed_timestamp TIMESTAMPTZ,
         removed_processed_timestamp TIMESTAMPTZ,
-        last_changed TIMESTAMPTZ,
+        last_changed TIMESTAMPTZ NOT NULL,
         source TEXT,
         "comment" TEXT,
         geometry_wkt GEOMETRY NOT NULL

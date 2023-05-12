@@ -38,12 +38,12 @@ pub enum FishingFacilityToolType {
 pub struct FishingFacility {
     pub tool_id: Uuid,
     pub barentswatch_vessel_id: Option<Uuid>,
-    pub vessel_name: String,
+    pub vessel_name: Option<String>,
     pub call_sign: Option<String>,
     pub mmsi: Option<Mmsi>,
     pub imo: Option<i64>,
     pub reg_num: Option<String>,
-    // Registration number in Småbåtregisteret.
+    /// Registration number in Småbåtregisteret.
     pub sbr_reg_num: Option<String>,
     pub contact_phone: Option<String>,
     pub contact_email: Option<String>,
@@ -51,11 +51,17 @@ pub struct FishingFacility {
     pub tool_type_name: Option<String>,
     pub tool_color: Option<String>,
     pub tool_count: Option<i32>,
+    /// Timestamp when the tool was deployed (set up)
     pub setup_timestamp: DateTime<Utc>,
+    /// Timestamp when the report of the tool set up / deploy was processed by KVS
     pub setup_processed_timestamp: Option<DateTime<Utc>>,
+    /// Timestamp when the tool was removed, or null if it is still deployed.
     pub removed_timestamp: Option<DateTime<Utc>>,
+    /// Timestamp when the report of the tool removal was processed by KVS
     pub removed_processed_timestamp: Option<DateTime<Utc>>,
+    /// Timestamp when the information was updated
     pub last_changed: DateTime<Utc>,
+    /// Where this was reported first
     pub source: Option<String>,
     pub comment: Option<String>,
     pub geometry_wkt: wkt::Geometry<f64>,
@@ -66,7 +72,7 @@ impl FishingFacility {
         Self {
             tool_id: Uuid::new_v4(),
             barentswatch_vessel_id: Some(Uuid::new_v4()),
-            vessel_name: "Sjarken".into(),
+            vessel_name: Some("Sjarken".into()),
             call_sign: Some("LK-17".into()),
             mmsi: Some(Mmsi(123456)),
             imo: Some(12345678),

@@ -1,9 +1,10 @@
-use crate::{error::BarentswatchClientError, token::BearerToken};
+use crate::error::BarentswatchClientError;
 use error_stack::{bail, IntoReport, Result, ResultExt};
 
 use futures::{StreamExt, TryStreamExt};
 use hyper::{Body, Client, Request, StatusCode, Uri};
 use hyper_alpn::AlpnConnector;
+use kyogre_core::BearerToken;
 use serde::Serialize;
 use tokio::io::AsyncRead;
 

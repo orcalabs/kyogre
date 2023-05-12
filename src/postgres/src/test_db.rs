@@ -538,10 +538,10 @@ ORDER BY
             .unwrap()
     }
 
-    pub async fn generate_fishing_facility_historic(&self) -> FishingFacility {
+    pub async fn generate_fishing_facility(&self) -> FishingFacility {
         let facility = FishingFacility::test_default();
         self.db
-            .add_fishing_facility_historic(vec![facility.clone()])
+            .add_fishing_facilities(vec![facility.clone()])
             .await
             .unwrap();
         facility
