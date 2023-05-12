@@ -12,7 +12,7 @@ use crate::error::PostgresError;
 pub struct FishingFacility {
     pub tool_id: Uuid,
     pub barentswatch_vessel_id: Option<Uuid>,
-    pub vessel_name: String,
+    pub vessel_name: Option<String>,
     pub call_sign: Option<String>,
     pub mmsi: Option<i32>,
     pub imo: Option<i64>,

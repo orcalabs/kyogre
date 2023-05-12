@@ -11,23 +11,23 @@ use crate::{error::ApiError, to_streaming_response, Database};
 
 #[utoipa::path(
     get,
-    path = "/fishing_facility_historic",
+    path = "/fishing_facilities",
     responses(
-        (status = 200, description = "historic fishing facilities", body = [FishingFacility]),
+        (status = 200, description = "all fishing facilities", body = [FishingFacility]),
         (status = 500, description = "an internal error occured", body = ErrorResponse),
     )
 )]
 #[tracing::instrument(skip(db))]
-pub async fn fishing_facility_historic<T: Database + 'static>(
+pub async fn fishing_facilities<T: Database + 'static>(
     db: web::Data<T>,
 ) -> Result<HttpResponse, ApiError> {
     to_streaming_response! {
-        db.fishing_facility_historic()
+        db.fishing_facilities()
             .map_ok(FishingFacility::from)
             .map_err(|e| {
                 event!(
                     Level::ERROR,
-                    "failed to retrieve fishing_facility_historic: {:?}",
+                    "failed to retrieve fishing_facilities: {:?}",
                     e
                 );
                 ApiError::InternalServerError
@@ -40,7 +40,7 @@ pub async fn fishing_facility_historic<T: Database + 'static>(
 pub struct FishingFacility {
     pub tool_id: Uuid,
     pub barentswatch_vessel_id: Option<Uuid>,
-    pub vessel_name: String,
+    pub vessel_name: Option<String>,
     pub call_sign: Option<String>,
     #[schema(value_type = Option<i32>)]
     pub mmsi: Option<Mmsi>,

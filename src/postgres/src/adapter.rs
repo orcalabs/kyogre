@@ -370,18 +370,18 @@ impl WebApiPort for PostgresAdapter {
         })
     }
 
-    fn fishing_facility_historic(&self) -> PinBoxStream<'_, FishingFacility, QueryError> {
-        convert_stream(self.fishing_facility_historic_impl()).boxed()
+    fn fishing_facilities(&self) -> PinBoxStream<'_, FishingFacility, QueryError> {
+        convert_stream(self.fishing_facilities_impl()).boxed()
     }
 }
 
 #[async_trait]
 impl ScraperInboundPort for PostgresAdapter {
-    async fn add_fishing_facility_historic(
+    async fn add_fishing_facilities(
         &self,
         facilities: Vec<FishingFacility>,
     ) -> Result<(), InsertError> {
-        self.add_fishing_facility_historic_impl(facilities)
+        self.add_fishing_facilities_impl(facilities)
             .await
             .change_context(InsertError)
     }

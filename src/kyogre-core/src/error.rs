@@ -72,3 +72,20 @@ impl std::fmt::Display for ConversionError {
         f.write_str("an error occurred during data conversion")
     }
 }
+
+#[derive(Debug)]
+pub enum BearerTokenError {
+    Configuration,
+    Acquisition,
+}
+
+impl Context for BearerTokenError {}
+
+impl std::fmt::Display for BearerTokenError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            BearerTokenError::Configuration => f.write_str("invalid oauth configuration"),
+            BearerTokenError::Acquisition => f.write_str("failed to acquire token"),
+        }
+    }
+}

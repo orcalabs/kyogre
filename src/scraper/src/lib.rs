@@ -2,13 +2,13 @@
 #![deny(rust_2018_idioms)]
 
 use async_trait::async_trait;
-use barentswatch::FishingFacilityHistoricScraper;
+use barentswatch::FishingFacilityScraper;
 use error_stack::Result;
 use fiskeridir::{
     ErsDcaScraper, ErsDepScraper, ErsPorScraper, ErsTraScraper, LandingScraper,
     RegisterVesselsScraper, VmsScraper,
 };
-use kyogre_core::ScraperInboundPort;
+use kyogre_core::{OauthConfig, ScraperInboundPort};
 use serde::Deserialize;
 use std::fmt::Debug;
 use std::sync::Arc;
@@ -42,7 +42,7 @@ pub struct Config {
     pub ers_tra: Option<Vec<FileYear>>,
     pub vms: Option<Vec<FileYear>>,
     pub register_vessels_url: Option<String>,
-    pub fishing_facility_historic_url: Option<String>,
+    pub fishing_facility: Option<ApiClientConfig>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -55,6 +55,13 @@ pub struct FileYear {
 pub struct LandingFileYears {
     pub min_year: u32,
     pub max_year: u32,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct ApiClientConfig {
+    pub url: String,
+    #[serde(flatten)]
+    pub oauth: Option<OauthConfig>,
 }
 
 #[async_trait]
@@ -141,14 +148,11 @@ impl Scraper {
         let register_vessels_scraper =
             RegisterVesselsScraper::new(fiskeridir_arc, register_vessels_source);
 
-        let barentswatch_arc = Arc::new(barentswatch_source);
-        let fishing_facility_historic_scraper = FishingFacilityHistoricScraper::new(
-            barentswatch_arc,
-            config.fishing_facility_historic_url,
-        );
+        let barentswatch_source = Arc::new(barentswatch_source);
+        let fishing_facility_scraper =
+            FishingFacilityScraper::new(barentswatch_source, config.fishing_facility);
         Scraper {
             scrapers: vec![
-                Box::new(fishing_facility_historic_scraper),
                 Box::new(vms_scraper),
                 Box::new(landings_scraper),
                 Box::new(ers_dca_scraper),
@@ -156,6 +160,7 @@ impl Scraper {
                 Box::new(ers_dep_scraper),
                 Box::new(ers_tra_scraper),
                 Box::new(register_vessels_scraper),
+                Box::new(fishing_facility_scraper),
             ],
             processor,
         }
@@ -184,7 +189,7 @@ pub enum ScraperId {
     ErsTra,
     RegisterVessels,
     Vms,
-    FishingFacilityHistoric,
+    FishingFacility,
 }
 
 impl std::fmt::Display for ScraperId {
@@ -197,7 +202,7 @@ impl std::fmt::Display for ScraperId {
             ScraperId::ErsTra => write!(f, "ers_tra_scraper"),
             ScraperId::RegisterVessels => write!(f, "register_vessels_scraper"),
             ScraperId::Vms => write!(f, "vms_scraper"),
-            ScraperId::FishingFacilityHistoric => write!(f, "fishing_facility_historic"),
+            ScraperId::FishingFacility => write!(f, "fishing_facility_scraper"),
         }
     }
 }

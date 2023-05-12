@@ -1,10 +1,10 @@
 use crate::{
     barentswatch::BarentswatchAisClient, consumer::Consumer, error::ConsumerError,
-    settings::Settings, token::BearerToken,
+    settings::Settings,
 };
 use error_stack::Result;
 use hyper::Uri;
-use kyogre_core::DataMessage;
+use kyogre_core::{BearerToken, DataMessage};
 use orca_core::Environment;
 use postgres::PostgresAdapter;
 use std::str::FromStr;
@@ -28,7 +28,9 @@ impl App {
         let ais_source = if let Environment::Test = settings.environment {
             None
         } else {
-            let bearer_token = BearerToken::acquire(settings.oauth.unwrap()).await.unwrap();
+            let bearer_token = BearerToken::acquire(&settings.oauth.unwrap())
+                .await
+                .unwrap();
             let uri = Uri::from_str(&settings.api_address.unwrap()).unwrap();
             Some(BarentswatchAisClient::new(bearer_token, uri))
         };
