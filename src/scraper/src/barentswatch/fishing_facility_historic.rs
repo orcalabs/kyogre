@@ -43,7 +43,7 @@ impl DataSource for FishingFacilityHistoricScraper {
                 .await
                 .change_context(ScraperError)?
                 .into_iter()
-                .map(kyogre_core::FishingFacilityHistoric::try_from)
+                .map(kyogre_core::FishingFacility::try_from)
                 .collect::<Result<_, _>>()
                 .change_context(ScraperError)?;
 
@@ -63,18 +63,19 @@ impl DataSource for FishingFacilityHistoricScraper {
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "UPPERCASE")]
-pub enum ToolType {
+enum ToolType {
     Undefined,
     Crabpot,
     Danpurseine,
     Nets,
     Longline,
     Generic,
+    Sensorbuoy,
 }
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct FishingFacilityHistoric {
+struct FishingFacilityHistoric {
     tool_id: Uuid,
     vessel_name: String,
     // International radio call sign
@@ -95,34 +96,100 @@ pub struct FishingFacilityHistoric {
     geometry_wkt: wkt::Geometry<f64>,
 }
 
-impl TryFrom<FishingFacilityHistoric> for kyogre_core::FishingFacilityHistoric {
+#[allow(dead_code)]
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct FishingFacility {
+    tool_id: Uuid,
+    vessel_id: Option<Uuid>,
+    vessel_name: String,
+    // International radio call sign
+    ircs: Option<String>,
+    mmsi: Option<i32>,
+    imo: Option<i64>,
+    reg_num: Option<String>,
+    // Registration number in Småbåtregisteret.
+    sbr_reg_num: Option<String>,
+    contact_phone: Option<String>,
+    contact_email: Option<String>,
+    tool_type_code: ToolType,
+    tool_count: Option<i32>,
+    setup_date_time: DateTime<Utc>,
+    setup_processed_time: Option<DateTime<Utc>>,
+    removed_date_time: Option<DateTime<Utc>>,
+    removed_processed_time: Option<DateTime<Utc>>,
+    last_changed_date_time: DateTime<Utc>,
+    source: Option<String>,
+    comment: Option<String>,
+    geometry_wkt: wkt::Geometry<f64>,
+}
+
+impl TryFrom<FishingFacilityHistoric> for kyogre_core::FishingFacility {
     type Error = Report<ConversionError>;
 
     fn try_from(v: FishingFacilityHistoric) -> std::result::Result<Self, Self::Error> {
         Ok(Self {
             tool_id: v.tool_id,
+            barentswatch_vessel_id: None,
             vessel_name: v.vessel_name,
-            call_sign: v.ircs,
-            mmsi: Mmsi(
+            call_sign: Some(v.ircs),
+            mmsi: Some(Mmsi(
                 v.mmsi
                     .parse()
                     .into_report()
                     .change_context(ConversionError)?,
+            )),
+            imo: Some(
+                v.imo
+                    .parse()
+                    .into_report()
+                    .change_context(ConversionError)?,
             ),
-            imo: v
-                .imo
-                .parse()
-                .into_report()
-                .change_context(ConversionError)?,
             reg_num: v.reg_num,
             sbr_reg_num: v.sbr_reg_num,
+            contact_phone: None,
+            contact_email: None,
             tool_type: v.tool_type_code.into(),
-            tool_type_name: v.tool_type_name,
-            tool_color: v.tool_color,
+            tool_type_name: Some(v.tool_type_name),
+            tool_color: Some(v.tool_color),
+            tool_count: None,
             setup_timestamp: v.setup_date_time,
+            setup_processed_timestamp: None,
             removed_timestamp: v.removed_date_time,
-            source: v.source,
+            removed_processed_timestamp: None,
             last_changed: v.last_changed_date_time,
+            source: v.source,
+            comment: v.comment,
+            geometry_wkt: v.geometry_wkt,
+        })
+    }
+}
+
+impl TryFrom<FishingFacility> for kyogre_core::FishingFacility {
+    type Error = Report<ConversionError>;
+
+    fn try_from(v: FishingFacility) -> std::result::Result<Self, Self::Error> {
+        Ok(Self {
+            tool_id: v.tool_id,
+            barentswatch_vessel_id: v.vessel_id,
+            vessel_name: v.vessel_name,
+            call_sign: v.ircs,
+            mmsi: v.mmsi.map(Mmsi),
+            imo: v.imo,
+            reg_num: v.reg_num,
+            sbr_reg_num: v.sbr_reg_num,
+            contact_phone: v.contact_phone,
+            contact_email: v.contact_email,
+            tool_type: v.tool_type_code.into(),
+            tool_type_name: None,
+            tool_color: None,
+            tool_count: v.tool_count,
+            setup_timestamp: v.setup_date_time,
+            setup_processed_timestamp: v.setup_processed_time,
+            removed_timestamp: v.removed_date_time,
+            removed_processed_timestamp: v.removed_processed_time,
+            last_changed: v.last_changed_date_time,
+            source: v.source,
             comment: v.comment,
             geometry_wkt: v.geometry_wkt,
         })
@@ -138,6 +205,7 @@ impl From<ToolType> for kyogre_core::FishingFacilityToolType {
             ToolType::Nets => Self::Nets,
             ToolType::Longline => Self::Longline,
             ToolType::Generic => Self::Generic,
+            ToolType::Sensorbuoy => Self::Sensorbuoy,
         }
     }
 }

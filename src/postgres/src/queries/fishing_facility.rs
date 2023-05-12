@@ -4,47 +4,59 @@ use geo_types::geometry::Geometry;
 use geozero::wkb;
 use kyogre_core::FishingFacilityToolType;
 
-use crate::{error::PostgresError, models::FishingFacilityHistoric, PostgresAdapter};
+use crate::{error::PostgresError, models::FishingFacility, PostgresAdapter};
 
 impl PostgresAdapter {
     pub(crate) async fn add_fishing_facility_historic_impl(
         &self,
-        facilities: Vec<kyogre_core::FishingFacilityHistoric>,
+        facilities: Vec<kyogre_core::FishingFacility>,
     ) -> Result<(), PostgresError> {
         let len = facilities.len();
 
         let mut tool_id = Vec::with_capacity(len);
+        let mut barentswatch_vessel_id = Vec::with_capacity(len);
         let mut vessel_name = Vec::with_capacity(len);
         let mut call_sign = Vec::with_capacity(len);
         let mut mmsi = Vec::with_capacity(len);
         let mut imo = Vec::with_capacity(len);
         let mut reg_num = Vec::with_capacity(len);
         let mut sbr_reg_num = Vec::with_capacity(len);
+        let mut contact_phone = Vec::with_capacity(len);
+        let mut contact_email = Vec::with_capacity(len);
         let mut tool_type = Vec::with_capacity(len);
         let mut tool_type_name = Vec::with_capacity(len);
         let mut tool_color = Vec::with_capacity(len);
+        let mut tool_count = Vec::with_capacity(len);
         let mut setup_timestamp = Vec::with_capacity(len);
+        let mut setup_processed_timestamp = Vec::with_capacity(len);
         let mut removed_timestamp = Vec::with_capacity(len);
-        let mut source = Vec::with_capacity(len);
+        let mut removed_processed_timestamp = Vec::with_capacity(len);
         let mut last_changed = Vec::with_capacity(len);
+        let mut source = Vec::with_capacity(len);
         let mut comment = Vec::with_capacity(len);
         let mut geometry_wkt = Vec::with_capacity(len);
 
         for f in facilities {
             tool_id.push(f.tool_id);
+            barentswatch_vessel_id.push(f.barentswatch_vessel_id);
             vessel_name.push(f.vessel_name);
             call_sign.push(f.call_sign);
-            mmsi.push(f.mmsi.0);
+            mmsi.push(f.mmsi.map(|m| m.0));
             imo.push(f.imo);
             reg_num.push(f.reg_num);
             sbr_reg_num.push(f.sbr_reg_num);
+            contact_phone.push(f.contact_phone);
+            contact_email.push(f.contact_email);
             tool_type.push(f.tool_type as i32);
             tool_type_name.push(f.tool_type_name);
             tool_color.push(f.tool_color);
+            tool_count.push(f.tool_count);
             setup_timestamp.push(f.setup_timestamp);
+            setup_processed_timestamp.push(f.setup_processed_timestamp);
             removed_timestamp.push(f.removed_timestamp);
-            source.push(f.source);
+            removed_processed_timestamp.push(f.removed_processed_timestamp);
             last_changed.push(f.last_changed);
+            source.push(f.source);
             comment.push(f.comment);
 
             let geometry: Geometry<f64> =
@@ -61,19 +73,25 @@ impl PostgresAdapter {
 INSERT INTO
     fishing_facilities (
         tool_id,
+        barentswatch_vessel_id,
         vessel_name,
         call_sign,
         mmsi,
         imo,
         reg_num,
         sbr_reg_num,
+        contact_phone,
+        contact_email,
         tool_type,
         tool_type_name,
         tool_color,
+        tool_count,
         setup_timestamp,
+        setup_processed_timestamp,
         removed_timestamp,
-        source,
+        removed_processed_timestamp,
         last_changed,
+        source,
         "comment",
         geometry_wkt
     )
@@ -82,37 +100,49 @@ SELECT
 FROM
     UNNEST(
         $1::UUID[],
-        $2::TEXT[],
+        $2::UUID[],
         $3::TEXT[],
-        $4::INT[],
-        $5::BIGINT[],
-        $6::TEXT[],
+        $4::TEXT[],
+        $5::INT[],
+        $6::BIGINT[],
         $7::TEXT[],
-        $8::INT[],
+        $8::TEXT[],
         $9::TEXT[],
         $10::TEXT[],
-        $11::TIMESTAMPTZ[],
-        $12::TIMESTAMPTZ[],
+        $11::INT[],
+        $12::TEXT[],
         $13::TEXT[],
-        $14::TIMESTAMPTZ[],
-        $15::TEXT[],
-        $16::GEOMETRY[]
+        $14::INT[],
+        $15::TIMESTAMPTZ[],
+        $16::TIMESTAMPTZ[],
+        $17::TIMESTAMPTZ[],
+        $18::TIMESTAMPTZ[],
+        $19::TIMESTAMPTZ[],
+        $20::TEXT[],
+        $21::TEXT[],
+        $22::GEOMETRY[]
     )
             "#,
             tool_id.as_slice(),
+            barentswatch_vessel_id.as_slice() as _,
             vessel_name.as_slice(),
-            call_sign.as_slice(),
-            mmsi.as_slice(),
-            imo.as_slice(),
+            call_sign.as_slice() as _,
+            mmsi.as_slice() as _,
+            imo.as_slice() as _,
             reg_num.as_slice() as _,
             sbr_reg_num.as_slice() as _,
+            contact_phone.as_slice() as _,
+            contact_email.as_slice() as _,
             tool_type.as_slice(),
-            tool_type_name.as_slice(),
-            tool_color.as_slice(),
+            tool_type_name.as_slice() as _,
+            tool_color.as_slice() as _,
+            tool_count.as_slice() as _,
             setup_timestamp.as_slice(),
+            setup_processed_timestamp.as_slice() as _,
             removed_timestamp.as_slice() as _,
-            source.as_slice() as _,
+            removed_processed_timestamp.as_slice() as _,
             last_changed.as_slice(),
+            source.as_slice() as _,
             comment.as_slice() as _,
             geometry_wkt.as_slice() as _,
         )
@@ -125,25 +155,31 @@ FROM
 
     pub(crate) fn fishing_facility_historic_impl(
         &self,
-    ) -> impl Stream<Item = Result<FishingFacilityHistoric, PostgresError>> + '_ {
+    ) -> impl Stream<Item = Result<FishingFacility, PostgresError>> + '_ {
         sqlx::query_as!(
-            FishingFacilityHistoric,
+            FishingFacility,
             r#"
 SELECT
     tool_id,
+    barentswatch_vessel_id,
     vessel_name,
     call_sign,
     mmsi,
     imo,
     reg_num,
     sbr_reg_num,
+    contact_phone,
+    contact_email,
     tool_type AS "tool_type!: FishingFacilityToolType",
     tool_type_name,
     tool_color,
+    tool_count,
     setup_timestamp AS "setup_timestamp!",
+    setup_processed_timestamp,
     removed_timestamp,
-    source,
+    removed_processed_timestamp,
     last_changed AS "last_changed!",
+    source,
     "comment",
     geometry_wkt AS "geometry_wkt: _"
 FROM

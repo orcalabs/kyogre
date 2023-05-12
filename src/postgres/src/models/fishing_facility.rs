@@ -9,44 +9,56 @@ use wkt::ToWkt;
 use crate::error::PostgresError;
 
 #[derive(Debug)]
-pub struct FishingFacilityHistoric {
+pub struct FishingFacility {
     pub tool_id: Uuid,
+    pub barentswatch_vessel_id: Option<Uuid>,
     pub vessel_name: String,
-    pub call_sign: String,
-    pub mmsi: i32,
-    pub imo: i64,
+    pub call_sign: Option<String>,
+    pub mmsi: Option<i32>,
+    pub imo: Option<i64>,
     pub reg_num: Option<String>,
     pub sbr_reg_num: Option<String>,
+    pub contact_phone: Option<String>,
+    pub contact_email: Option<String>,
     pub tool_type: FishingFacilityToolType,
-    pub tool_type_name: String,
-    pub tool_color: String,
+    pub tool_type_name: Option<String>,
+    pub tool_color: Option<String>,
+    pub tool_count: Option<i32>,
     pub setup_timestamp: DateTime<Utc>,
+    pub setup_processed_timestamp: Option<DateTime<Utc>>,
     pub removed_timestamp: Option<DateTime<Utc>>,
-    pub source: Option<String>,
+    pub removed_processed_timestamp: Option<DateTime<Utc>>,
     pub last_changed: DateTime<Utc>,
+    pub source: Option<String>,
     pub comment: Option<String>,
     pub geometry_wkt: wkb::Decode<Geometry<f64>>,
 }
 
-impl TryFrom<FishingFacilityHistoric> for kyogre_core::FishingFacilityHistoric {
+impl TryFrom<FishingFacility> for kyogre_core::FishingFacility {
     type Error = Report<PostgresError>;
 
-    fn try_from(v: FishingFacilityHistoric) -> Result<Self, Self::Error> {
+    fn try_from(v: FishingFacility) -> Result<Self, Self::Error> {
         Ok(Self {
             tool_id: v.tool_id,
+            barentswatch_vessel_id: v.barentswatch_vessel_id,
             vessel_name: v.vessel_name,
             call_sign: v.call_sign,
-            mmsi: Mmsi(v.mmsi),
+            mmsi: v.mmsi.map(Mmsi),
             imo: v.imo,
             reg_num: v.reg_num,
             sbr_reg_num: v.sbr_reg_num,
+            contact_phone: v.contact_phone,
+            contact_email: v.contact_email,
             tool_type: v.tool_type,
             tool_type_name: v.tool_type_name,
             tool_color: v.tool_color,
+            tool_count: v.tool_count,
             setup_timestamp: v.setup_timestamp,
+            setup_processed_timestamp: v.setup_processed_timestamp,
             removed_timestamp: v.removed_timestamp,
-            source: v.source,
+            removed_processed_timestamp: v.removed_processed_timestamp,
             last_changed: v.last_changed,
+            source: v.source,
             comment: v.comment,
             geometry_wkt: v
                 .geometry_wkt
