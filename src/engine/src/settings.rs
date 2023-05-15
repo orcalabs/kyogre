@@ -34,7 +34,7 @@ impl Settings {
             .set_override("environment", environment.as_str())?;
 
         if environment == Environment::Development {
-            let database = config::File::with_name("/secrets/postgres-credentials.yaml")
+            let database = config::File::with_name("/run/secrets/postgres-credentials.yaml")
                 .required(true)
                 .format(config::FileFormat::Yaml);
             let map = database.collect()?;
@@ -42,7 +42,7 @@ impl Settings {
             builder = builder.set_override("postgres.username", map["username"].clone())?;
             builder = builder.set_override("postgres.password", map["password"].clone())?;
 
-            let honeycomb = config::File::with_name("/secrets/honeycomb-api-key")
+            let honeycomb = config::File::with_name("/run/secrets/honeycomb-api-key")
                 .required(true)
                 .format(config::FileFormat::Yaml);
 
