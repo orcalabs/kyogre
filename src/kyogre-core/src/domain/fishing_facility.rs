@@ -32,6 +32,7 @@ pub enum FishingFacilityToolType {
     Longline = 5,
     Generic = 6,
     Sensorbuoy = 7,
+    Sensorcable = 8,
 }
 
 #[derive(Debug, Clone)]

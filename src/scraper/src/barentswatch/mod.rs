@@ -27,6 +27,7 @@ pub(crate) enum FishingFacilityToolType {
     Longline,
     Generic,
     Sensorbuoy,
+    Sensorcable,
 }
 
 impl From<FishingFacilityToolType> for kyogre_core::FishingFacilityToolType {
@@ -39,6 +40,7 @@ impl From<FishingFacilityToolType> for kyogre_core::FishingFacilityToolType {
             FishingFacilityToolType::Longline => Self::Longline,
             FishingFacilityToolType::Generic => Self::Generic,
             FishingFacilityToolType::Sensorbuoy => Self::Sensorbuoy,
+            FishingFacilityToolType::Sensorcable => Self::Sensorcable,
         }
     }
 }
