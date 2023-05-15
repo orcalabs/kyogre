@@ -1,17 +1,44 @@
 use actix_web::{web, HttpResponse};
 use chrono::{DateTime, Utc};
+use fiskeridir_rs::CallSign;
 use futures::TryStreamExt;
-use kyogre_core::{FishingFacilityToolType, Mmsi};
+use kyogre_core::{FishingFacilitiesQuery, FishingFacilityToolType, Mmsi, Range};
 use serde::{Deserialize, Serialize};
 use tracing::{event, Level};
-use utoipa::ToSchema;
+use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
-use crate::{error::ApiError, to_streaming_response, Database};
+use crate::{
+    error::ApiError,
+    routes::utils::{deserialize_range_list, deserialize_string_list},
+    to_streaming_response, Database,
+};
+
+#[derive(Default, Debug, Clone, Deserialize, IntoParams)]
+#[serde(rename_all = "camelCase")]
+pub struct FishingFacilitiesParams {
+    #[param(value_type = Option<String>, example = "56342,32546")]
+    #[serde(deserialize_with = "deserialize_string_list", default)]
+    pub mmsis: Option<Vec<Mmsi>>,
+    #[param(value_type = Option<String>, example = "LK-17,NO-10")]
+    #[serde(deserialize_with = "deserialize_string_list", default)]
+    pub call_signs: Option<Vec<CallSign>>,
+    #[param(value_type = Option<String>, example = "2,7")]
+    #[serde(deserialize_with = "deserialize_string_list", default)]
+    pub tool_types: Option<Vec<FishingFacilityToolType>>,
+    pub active: Option<bool>,
+    #[param(value_type = Option<String>, example = "[2023-01-01T00:00:00Z,2023-02-01T00:00:00Z);[2023-04-10T10:00:00Z,)")]
+    #[serde(deserialize_with = "deserialize_range_list", default)]
+    pub setup_ranges: Option<Vec<Range<DateTime<Utc>>>>,
+    #[param(value_type = Option<String>, example = "[2023-01-01T00:00:00Z,2023-02-01T00:00:00Z);[2023-04-10T10:00:00Z,)")]
+    #[serde(deserialize_with = "deserialize_range_list", default)]
+    pub removed_ranges: Option<Vec<Range<DateTime<Utc>>>>,
+}
 
 #[utoipa::path(
     get,
     path = "/fishing_facilities",
+    params(FishingFacilitiesParams),
     responses(
         (status = 200, description = "all fishing facilities", body = [FishingFacility]),
         (status = 500, description = "an internal error occured", body = ErrorResponse),
@@ -20,9 +47,12 @@ use crate::{error::ApiError, to_streaming_response, Database};
 #[tracing::instrument(skip(db))]
 pub async fn fishing_facilities<T: Database + 'static>(
     db: web::Data<T>,
+    params: web::Query<FishingFacilitiesParams>,
 ) -> Result<HttpResponse, ApiError> {
+    let query = params.into_inner().into();
+
     to_streaming_response! {
-        db.fishing_facilities()
+        db.fishing_facilities(query)
             .map_ok(FishingFacility::from)
             .map_err(|e| {
                 event!(
@@ -41,7 +71,8 @@ pub struct FishingFacility {
     pub tool_id: Uuid,
     pub barentswatch_vessel_id: Option<Uuid>,
     pub vessel_name: Option<String>,
-    pub call_sign: Option<String>,
+    #[schema(value_type = Option<String>)]
+    pub call_sign: Option<CallSign>,
     #[schema(value_type = Option<i32>)]
     pub mmsi: Option<Mmsi>,
     pub imo: Option<i64>,
@@ -131,5 +162,18 @@ impl PartialEq<kyogre_core::FishingFacility> for FishingFacility {
             && self.source == other.source
             && self.comment == other.comment
             && self.geometry_wkt == other.geometry_wkt.to_string()
+    }
+}
+
+impl From<FishingFacilitiesParams> for FishingFacilitiesQuery {
+    fn from(v: FishingFacilitiesParams) -> Self {
+        Self {
+            mmsis: v.mmsis,
+            call_signs: v.call_signs,
+            tool_types: v.tool_types,
+            active: v.active,
+            setup_ranges: v.setup_ranges,
+            removed_ranges: v.removed_ranges,
+        }
     }
 }

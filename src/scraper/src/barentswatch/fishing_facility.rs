@@ -3,6 +3,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use chrono::{DateTime, Duration, Utc};
 use error_stack::{IntoReport, Report, Result, ResultExt};
+use fiskeridir_rs::CallSign;
 use geozero::{geojson::GeoJson, ToGeo};
 use kyogre_core::{BearerToken, ConversionError, Mmsi};
 use serde::{Deserialize, Serialize};
@@ -134,7 +135,11 @@ impl TryFrom<FishingFacility> for kyogre_core::FishingFacility {
             tool_id: v.tool_id,
             barentswatch_vessel_id: v.vessel_id,
             vessel_name: v.vessel_name,
-            call_sign: v.ircs,
+            call_sign: v
+                .ircs
+                .map(CallSign::try_from)
+                .transpose()
+                .change_context(ConversionError)?,
             mmsi: v.mmsi.map(Mmsi),
             imo: v.imo,
             reg_num: v.reg_num,

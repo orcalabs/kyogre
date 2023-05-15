@@ -1325,155 +1325,6 @@
     },
     "query": "\nSELECT\n    mmsi,\n    latitude,\n    longitude,\n    course_over_ground,\n    rate_of_turn,\n    true_heading,\n    speed_over_ground,\n    TIMESTAMP AS msgtime,\n    navigation_status_id AS navigational_status,\n    distance_to_shore\nFROM\n    current_ais_positions\n            "
   },
-  "57e0c1abee21d75e595f502096ad7cf39ba1acb98ac61c6b4ed82540b010ebf7": {
-    "describe": {
-      "columns": [
-        {
-          "name": "tool_id",
-          "ordinal": 0,
-          "type_info": "Uuid"
-        },
-        {
-          "name": "barentswatch_vessel_id",
-          "ordinal": 1,
-          "type_info": "Uuid"
-        },
-        {
-          "name": "vessel_name",
-          "ordinal": 2,
-          "type_info": "Text"
-        },
-        {
-          "name": "call_sign",
-          "ordinal": 3,
-          "type_info": "Text"
-        },
-        {
-          "name": "mmsi",
-          "ordinal": 4,
-          "type_info": "Int4"
-        },
-        {
-          "name": "imo",
-          "ordinal": 5,
-          "type_info": "Int8"
-        },
-        {
-          "name": "reg_num",
-          "ordinal": 6,
-          "type_info": "Text"
-        },
-        {
-          "name": "sbr_reg_num",
-          "ordinal": 7,
-          "type_info": "Text"
-        },
-        {
-          "name": "contact_phone",
-          "ordinal": 8,
-          "type_info": "Text"
-        },
-        {
-          "name": "contact_email",
-          "ordinal": 9,
-          "type_info": "Text"
-        },
-        {
-          "name": "tool_type!: FishingFacilityToolType",
-          "ordinal": 10,
-          "type_info": "Int4"
-        },
-        {
-          "name": "tool_type_name",
-          "ordinal": 11,
-          "type_info": "Text"
-        },
-        {
-          "name": "tool_color",
-          "ordinal": 12,
-          "type_info": "Text"
-        },
-        {
-          "name": "tool_count",
-          "ordinal": 13,
-          "type_info": "Int4"
-        },
-        {
-          "name": "setup_timestamp!",
-          "ordinal": 14,
-          "type_info": "Timestamptz"
-        },
-        {
-          "name": "setup_processed_timestamp",
-          "ordinal": 15,
-          "type_info": "Timestamptz"
-        },
-        {
-          "name": "removed_timestamp",
-          "ordinal": 16,
-          "type_info": "Timestamptz"
-        },
-        {
-          "name": "removed_processed_timestamp",
-          "ordinal": 17,
-          "type_info": "Timestamptz"
-        },
-        {
-          "name": "last_changed!",
-          "ordinal": 18,
-          "type_info": "Timestamptz"
-        },
-        {
-          "name": "source",
-          "ordinal": 19,
-          "type_info": "Text"
-        },
-        {
-          "name": "comment",
-          "ordinal": 20,
-          "type_info": "Text"
-        },
-        {
-          "name": "geometry_wkt: _",
-          "ordinal": 21,
-          "type_info": {
-            "Custom": {
-              "kind": "Simple",
-              "name": "geometry"
-            }
-          }
-        }
-      ],
-      "nullable": [
-        false,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        false,
-        true,
-        true,
-        true,
-        false,
-        true,
-        true,
-        true,
-        false,
-        true,
-        true,
-        false
-      ],
-      "parameters": {
-        "Left": []
-      }
-    },
-    "query": "\nSELECT\n    tool_id,\n    barentswatch_vessel_id,\n    vessel_name,\n    call_sign,\n    mmsi,\n    imo,\n    reg_num,\n    sbr_reg_num,\n    contact_phone,\n    contact_email,\n    tool_type AS \"tool_type!: FishingFacilityToolType\",\n    tool_type_name,\n    tool_color,\n    tool_count,\n    setup_timestamp AS \"setup_timestamp!\",\n    setup_processed_timestamp,\n    removed_timestamp,\n    removed_processed_timestamp,\n    last_changed AS \"last_changed!\",\n    source,\n    \"comment\",\n    geometry_wkt AS \"geometry_wkt: _\"\nFROM\n    fishing_facilities\n            "
-  },
   "5869234c9b9d67363dbc4a2188df4507bddf24b864a27cd5580aa8bb7ab62ba5": {
     "describe": {
       "columns": [],
@@ -2116,6 +1967,162 @@
       }
     },
     "query": "\nDELETE FROM ers_departures c\nWHERE\n    c.relevant_year = $1\n            "
+  },
+  "94fa10469420defb3f0c78fffabf44fc886594b5fe25abcccd0097b57f51180a": {
+    "describe": {
+      "columns": [
+        {
+          "name": "tool_id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "barentswatch_vessel_id",
+          "ordinal": 1,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "vessel_name",
+          "ordinal": 2,
+          "type_info": "Text"
+        },
+        {
+          "name": "call_sign",
+          "ordinal": 3,
+          "type_info": "Text"
+        },
+        {
+          "name": "mmsi",
+          "ordinal": 4,
+          "type_info": "Int4"
+        },
+        {
+          "name": "imo",
+          "ordinal": 5,
+          "type_info": "Int8"
+        },
+        {
+          "name": "reg_num",
+          "ordinal": 6,
+          "type_info": "Text"
+        },
+        {
+          "name": "sbr_reg_num",
+          "ordinal": 7,
+          "type_info": "Text"
+        },
+        {
+          "name": "contact_phone",
+          "ordinal": 8,
+          "type_info": "Text"
+        },
+        {
+          "name": "contact_email",
+          "ordinal": 9,
+          "type_info": "Text"
+        },
+        {
+          "name": "tool_type!: FishingFacilityToolType",
+          "ordinal": 10,
+          "type_info": "Int4"
+        },
+        {
+          "name": "tool_type_name",
+          "ordinal": 11,
+          "type_info": "Text"
+        },
+        {
+          "name": "tool_color",
+          "ordinal": 12,
+          "type_info": "Text"
+        },
+        {
+          "name": "tool_count",
+          "ordinal": 13,
+          "type_info": "Int4"
+        },
+        {
+          "name": "setup_timestamp!",
+          "ordinal": 14,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "setup_processed_timestamp",
+          "ordinal": 15,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "removed_timestamp",
+          "ordinal": 16,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "removed_processed_timestamp",
+          "ordinal": 17,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "last_changed!",
+          "ordinal": 18,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "source",
+          "ordinal": 19,
+          "type_info": "Text"
+        },
+        {
+          "name": "comment",
+          "ordinal": 20,
+          "type_info": "Text"
+        },
+        {
+          "name": "geometry_wkt: _",
+          "ordinal": 21,
+          "type_info": {
+            "Custom": {
+              "kind": "Simple",
+              "name": "geometry"
+            }
+          }
+        }
+      ],
+      "nullable": [
+        false,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        false,
+        true,
+        true,
+        true,
+        false,
+        true,
+        true,
+        true,
+        false,
+        true,
+        true,
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Int4Array",
+          "TextArray",
+          "Int4Array",
+          "Bool",
+          "TstzRangeArray",
+          "TstzRangeArray"
+        ]
+      }
+    },
+    "query": "\nSELECT\n    tool_id,\n    barentswatch_vessel_id,\n    vessel_name,\n    call_sign,\n    mmsi,\n    imo,\n    reg_num,\n    sbr_reg_num,\n    contact_phone,\n    contact_email,\n    tool_type AS \"tool_type!: FishingFacilityToolType\",\n    tool_type_name,\n    tool_color,\n    tool_count,\n    setup_timestamp AS \"setup_timestamp!\",\n    setup_processed_timestamp,\n    removed_timestamp,\n    removed_processed_timestamp,\n    last_changed AS \"last_changed!\",\n    source,\n    \"comment\",\n    geometry_wkt AS \"geometry_wkt: _\"\nFROM\n    fishing_facilities\nWHERE\n    (\n        $1::INT[] IS NULL\n        OR mmsi = ANY ($1)\n    )\n    AND (\n        $2::TEXT[] IS NULL\n        OR call_sign = ANY ($2)\n    )\n    AND (\n        $3::INT[] IS NULL\n        OR tool_type = ANY ($3)\n    )\n    AND (\n        $4::BOOLEAN IS NULL\n        OR CASE\n            WHEN $4 THEN removed_timestamp IS NULL\n            WHEN NOT $4 THEN removed_timestamp IS NOT NULL\n        END\n    )\n    AND (\n        $5::TSTZRANGE[] IS NULL\n        OR setup_timestamp <@ ANY ($5)\n    )\n    AND (\n        $6::TSTZRANGE[] IS NULL\n        OR removed_timestamp <@ ANY ($6)\n    )\n            "
   },
   "97f8481d58740ff62ce9652a59ebf53470acc0371d5ee0a90c0649e37245708e": {
     "describe": {

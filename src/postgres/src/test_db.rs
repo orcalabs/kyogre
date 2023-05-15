@@ -547,6 +547,10 @@ ORDER BY
         facility
     }
 
+    pub async fn add_fishing_facilities(&self, facilities: Vec<FishingFacility>) {
+        self.db.add_fishing_facilities(facilities).await.unwrap();
+    }
+
     async fn single_vms_position(&self, message_id: u32) -> VmsPosition {
         let pos = sqlx::query_as!(
             crate::models::VmsPosition,

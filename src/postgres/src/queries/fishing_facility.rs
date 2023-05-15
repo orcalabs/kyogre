@@ -1,8 +1,10 @@
+use chrono::{DateTime, Utc};
 use error_stack::{report, IntoReport, Result, ResultExt};
 use futures::{Stream, TryStreamExt};
 use geo_types::geometry::Geometry;
 use geozero::wkb;
-use kyogre_core::FishingFacilityToolType;
+use kyogre_core::{FishingFacilitiesQuery, FishingFacilityToolType};
+use sqlx::postgres::types::PgRange;
 
 use crate::{error::PostgresError, models::FishingFacility, PostgresAdapter};
 
@@ -40,7 +42,7 @@ impl PostgresAdapter {
             tool_id.push(f.tool_id);
             barentswatch_vessel_id.push(f.barentswatch_vessel_id);
             vessel_name.push(f.vessel_name);
-            call_sign.push(f.call_sign);
+            call_sign.push(f.call_sign.map(|c| c.into_inner()));
             mmsi.push(f.mmsi.map(|m| m.0));
             imo.push(f.imo);
             reg_num.push(f.reg_num);
@@ -188,7 +190,10 @@ SET
 
     pub(crate) fn fishing_facilities_impl(
         &self,
+        query: FishingFacilitiesQuery,
     ) -> impl Stream<Item = Result<FishingFacility, PostgresError>> + '_ {
+        let args: FishingFacilitiesArgs = query.into();
+
         sqlx::query_as!(
             FishingFacility,
             r#"
@@ -217,9 +222,84 @@ SELECT
     geometry_wkt AS "geometry_wkt: _"
 FROM
     fishing_facilities
-            "#
+WHERE
+    (
+        $1::INT[] IS NULL
+        OR mmsi = ANY ($1)
+    )
+    AND (
+        $2::TEXT[] IS NULL
+        OR call_sign = ANY ($2)
+    )
+    AND (
+        $3::INT[] IS NULL
+        OR tool_type = ANY ($3)
+    )
+    AND (
+        $4::BOOLEAN IS NULL
+        OR CASE
+            WHEN $4 THEN removed_timestamp IS NULL
+            WHEN NOT $4 THEN removed_timestamp IS NOT NULL
+        END
+    )
+    AND (
+        $5::TSTZRANGE[] IS NULL
+        OR setup_timestamp <@ ANY ($5)
+    )
+    AND (
+        $6::TSTZRANGE[] IS NULL
+        OR removed_timestamp <@ ANY ($6)
+    )
+            "#,
+            args.mmsis as _,
+            args.call_signs as _,
+            args.tool_types as _,
+            args.active,
+            args.setup_ranges,
+            args.removed_ranges,
         )
         .fetch(&self.pool)
         .map_err(|e| report!(e).change_context(PostgresError::Query))
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct FishingFacilitiesArgs {
+    pub mmsis: Option<Vec<i32>>,
+    pub call_signs: Option<Vec<String>>,
+    pub tool_types: Option<Vec<i32>>,
+    pub active: Option<bool>,
+    pub setup_ranges: Option<Vec<PgRange<DateTime<Utc>>>>,
+    pub removed_ranges: Option<Vec<PgRange<DateTime<Utc>>>>,
+}
+
+impl From<FishingFacilitiesQuery> for FishingFacilitiesArgs {
+    fn from(v: FishingFacilitiesQuery) -> Self {
+        Self {
+            mmsis: v.mmsis.map(|ms| ms.into_iter().map(|m| m.0).collect()),
+            call_signs: v
+                .call_signs
+                .map(|cs| cs.into_iter().map(|c| c.into_inner()).collect()),
+            tool_types: v
+                .tool_types
+                .map(|ts| ts.into_iter().map(|t| t as i32).collect()),
+            active: v.active,
+            setup_ranges: v.setup_ranges.map(|ss| {
+                ss.into_iter()
+                    .map(|s| PgRange {
+                        start: s.start,
+                        end: s.end,
+                    })
+                    .collect()
+            }),
+            removed_ranges: v.removed_ranges.map(|rs| {
+                rs.into_iter()
+                    .map(|r| PgRange {
+                        start: r.start,
+                        end: r.end,
+                    })
+                    .collect()
+            }),
+        }
     }
 }

@@ -1,8 +1,10 @@
 use serde::Deserialize;
 
+mod fishing_facility;
 mod haul;
 mod pagination;
 
+pub use fishing_facility::*;
 pub use haul::*;
 pub use pagination::*;
 

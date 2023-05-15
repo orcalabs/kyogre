@@ -1,25 +1,18 @@
 use std::str::FromStr;
 
 use chrono::{DateTime, Utc};
+use fiskeridir_rs::CallSign;
 use num_derive::FromPrimitive;
-use serde_repr::{Deserialize_repr, Serialize_repr};
+use num_traits::FromPrimitive;
+use serde::{de::Visitor, Deserialize};
+use serde_repr::Serialize_repr;
 use uuid::Uuid;
 use wkt::Wkt;
 
 use crate::Mmsi;
 
 #[derive(
-    Debug,
-    Copy,
-    Clone,
-    PartialEq,
-    FromPrimitive,
-    Eq,
-    Hash,
-    Ord,
-    PartialOrd,
-    Serialize_repr,
-    Deserialize_repr,
+    Debug, Copy, Clone, PartialEq, FromPrimitive, Eq, Hash, Ord, PartialOrd, Serialize_repr,
 )]
 #[repr(i32)]
 #[cfg_attr(feature = "sqlx", derive(sqlx::Type))]
@@ -40,7 +33,7 @@ pub struct FishingFacility {
     pub tool_id: Uuid,
     pub barentswatch_vessel_id: Option<Uuid>,
     pub vessel_name: Option<String>,
-    pub call_sign: Option<String>,
+    pub call_sign: Option<CallSign>,
     pub mmsi: Option<Mmsi>,
     pub imo: Option<i64>,
     pub reg_num: Option<String>,
@@ -74,7 +67,7 @@ impl FishingFacility {
             tool_id: Uuid::new_v4(),
             barentswatch_vessel_id: Some(Uuid::new_v4()),
             vessel_name: Some("Sjarken".into()),
-            call_sign: Some("LK-17".into()),
+            call_sign: Some(CallSign::try_from("LK-17").unwrap()),
             mmsi: Some(Mmsi(123456)),
             imo: Some(12345678),
             reg_num: Some("NO-342642".into()),
@@ -94,5 +87,53 @@ impl FishingFacility {
             comment: Some("This is a comment".into()),
             geometry_wkt: Wkt::from_str("POINT(5.7348 62.320717)").unwrap().item,
         }
+    }
+}
+
+impl<'de> Deserialize<'de> for FishingFacilityToolType {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        struct FishingFacilityToolTypeVisitor;
+
+        impl<'de> Visitor<'de> for FishingFacilityToolTypeVisitor {
+            type Value = FishingFacilityToolType;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                formatter.write_str("a FishingFacilityToolType value")
+            }
+
+            fn visit_i64<E>(self, v: i64) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                FishingFacilityToolType::from_i64(v).ok_or_else(|| {
+                    serde::de::Error::invalid_value(serde::de::Unexpected::Signed(v), &self)
+                })
+            }
+
+            fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                FishingFacilityToolType::from_u64(v).ok_or_else(|| {
+                    serde::de::Error::invalid_value(serde::de::Unexpected::Unsigned(v), &self)
+                })
+            }
+
+            fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                let val = v.parse().map_err(|_| {
+                    serde::de::Error::invalid_value(serde::de::Unexpected::Str(v), &self)
+                })?;
+
+                self.visit_i64(val)
+            }
+        }
+
+        deserializer.deserialize_i32(FishingFacilityToolTypeVisitor)
     }
 }
