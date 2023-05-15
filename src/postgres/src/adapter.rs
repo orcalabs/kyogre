@@ -370,8 +370,11 @@ impl WebApiPort for PostgresAdapter {
         })
     }
 
-    fn fishing_facilities(&self) -> PinBoxStream<'_, FishingFacility, QueryError> {
-        convert_stream(self.fishing_facilities_impl()).boxed()
+    fn fishing_facilities(
+        &self,
+        query: FishingFacilitiesQuery,
+    ) -> PinBoxStream<'_, FishingFacility, QueryError> {
+        convert_stream(self.fishing_facilities_impl(query)).boxed()
     }
 }
 

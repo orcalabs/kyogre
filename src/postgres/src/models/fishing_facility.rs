@@ -1,5 +1,6 @@
 use chrono::{DateTime, Utc};
-use error_stack::{report, Report};
+use error_stack::{report, Report, ResultExt};
+use fiskeridir_rs::CallSign;
 use geo_types::geometry::Geometry;
 use geozero::wkb;
 use kyogre_core::{FishingFacilityToolType, Mmsi};
@@ -42,7 +43,11 @@ impl TryFrom<FishingFacility> for kyogre_core::FishingFacility {
             tool_id: v.tool_id,
             barentswatch_vessel_id: v.barentswatch_vessel_id,
             vessel_name: v.vessel_name,
-            call_sign: v.call_sign,
+            call_sign: v
+                .call_sign
+                .map(CallSign::try_from)
+                .transpose()
+                .change_context(PostgresError::DataConversion)?,
             mmsi: v.mmsi.map(Mmsi),
             imo: v.imo,
             reg_num: v.reg_num,

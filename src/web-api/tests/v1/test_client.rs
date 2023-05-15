@@ -6,6 +6,7 @@ use reqwest::{Client, Response};
 use web_api::routes::v1::{
     ais::AisTrackParameters,
     ais_vms::AisVmsParameters,
+    fishing_facility::FishingFacilitiesParams,
     haul::{HaulsMatrixParams, HaulsParams},
     trip::TripsParameters,
     vms::VmsParameters,
@@ -221,8 +222,51 @@ impl ApiClient {
         self.get(format!("vms/{}", call_sign.as_ref()), &parameters)
             .await
     }
-    pub async fn get_fishing_facilities(&self) -> Response {
-        self.get("fishing_facilities", &[]).await
+    pub async fn get_fishing_facilities(&self, params: FishingFacilitiesParams) -> Response {
+        let mut parameters = Vec::new();
+
+        if let Some(mmsis) = params.mmsis {
+            parameters.push((
+                "mmsis".into(),
+                create_comma_separated_list(mmsis.into_iter().map(|m| m.0).collect()),
+            ))
+        }
+
+        if let Some(call_signs) = params.call_signs {
+            parameters.push((
+                "callSigns".into(),
+                create_comma_separated_list(
+                    call_signs.into_iter().map(|c| c.into_inner()).collect(),
+                ),
+            ))
+        }
+
+        if let Some(tool_types) = params.tool_types {
+            parameters.push((
+                "toolTypes".into(),
+                create_comma_separated_list(tool_types.into_iter().map(|t| t as i32).collect()),
+            ))
+        }
+
+        if let Some(active) = params.active {
+            parameters.push(("active".into(), active.to_string()))
+        }
+
+        if let Some(setup_ranges) = params.setup_ranges {
+            parameters.push((
+                "setupRanges".into(),
+                create_semicolon_separated_list(setup_ranges),
+            ))
+        }
+
+        if let Some(removed_ranges) = params.removed_ranges {
+            parameters.push((
+                "removedRanges".into(),
+                create_semicolon_separated_list(removed_ranges),
+            ))
+        }
+
+        self.get("fishing_facilities", &parameters).await
     }
 }
 

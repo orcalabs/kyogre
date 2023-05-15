@@ -1,6 +1,8 @@
 use super::helper::test;
 use actix_web::http::StatusCode;
-use web_api::routes::v1::fishing_facility::FishingFacility;
+use fiskeridir_rs::CallSign;
+use kyogre_core::{FishingFacilityToolType, Mmsi};
+use web_api::routes::v1::fishing_facility::{FishingFacilitiesParams, FishingFacility};
 
 #[tokio::test]
 async fn test_fishing_facilities_returns_all_fishing_facilities() {
@@ -11,7 +13,7 @@ async fn test_fishing_facilities_returns_all_fishing_facilities() {
             helper.db.generate_fishing_facility().await,
         ];
 
-        let response = helper.app.get_fishing_facilities().await;
+        let response = helper.app.get_fishing_facilities(Default::default()).await;
 
         assert_eq!(response.status(), StatusCode::OK);
         let mut facilities: Vec<FishingFacility> = response.json().await.unwrap();
@@ -20,6 +22,282 @@ async fn test_fishing_facilities_returns_all_fishing_facilities() {
         facilities.sort_by_key(|f| f.tool_id.as_u128());
 
         assert_eq!(facilities.len(), 3);
+        assert_eq!(facilities, expected);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_fishing_facilities_returns_fishing_facilities_with_mmsis() {
+    test(|helper| async move {
+        helper.db.generate_fishing_facility().await;
+        helper.db.generate_fishing_facility().await;
+        helper.db.generate_fishing_facility().await;
+
+        let mut expected = vec![
+            kyogre_core::FishingFacility::test_default(),
+            kyogre_core::FishingFacility::test_default(),
+        ];
+
+        let mmsi1 = Mmsi(42);
+        let mmsi2 = Mmsi(42);
+
+        expected[0].mmsi = Some(mmsi1);
+        expected[1].mmsi = Some(mmsi2);
+
+        helper.db.add_fishing_facilities(expected.clone()).await;
+
+        let params = FishingFacilitiesParams {
+            mmsis: Some(vec![mmsi1, mmsi2]),
+            ..Default::default()
+        };
+
+        let response = helper.app.get_fishing_facilities(params).await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let mut facilities: Vec<FishingFacility> = response.json().await.unwrap();
+
+        expected.sort_by_key(|f| f.tool_id.as_u128());
+        facilities.sort_by_key(|f| f.tool_id.as_u128());
+
+        assert_eq!(facilities.len(), 2);
+        assert_eq!(facilities, expected);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_fishing_facilities_returns_fishing_facilities_with_call_signs() {
+    test(|helper| async move {
+        helper.db.generate_fishing_facility().await;
+        helper.db.generate_fishing_facility().await;
+        helper.db.generate_fishing_facility().await;
+
+        let mut expected = vec![
+            kyogre_core::FishingFacility::test_default(),
+            kyogre_core::FishingFacility::test_default(),
+        ];
+
+        let call_sign1 = CallSign::try_from("NN-20").unwrap();
+        let call_sign2 = CallSign::try_from("NO-10").unwrap();
+
+        expected[0].call_sign = Some(call_sign1.clone());
+        expected[1].call_sign = Some(call_sign2.clone());
+
+        helper.db.add_fishing_facilities(expected.clone()).await;
+
+        let params = FishingFacilitiesParams {
+            call_signs: Some(vec![call_sign1, call_sign2]),
+            ..Default::default()
+        };
+
+        let response = helper.app.get_fishing_facilities(params).await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let mut facilities: Vec<FishingFacility> = response.json().await.unwrap();
+
+        expected.sort_by_key(|f| f.tool_id.as_u128());
+        facilities.sort_by_key(|f| f.tool_id.as_u128());
+
+        assert_eq!(facilities.len(), 2);
+        assert_eq!(facilities, expected);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_fishing_facilities_returns_fishing_facilities_with_tool_types() {
+    test(|helper| async move {
+        helper.db.generate_fishing_facility().await;
+        helper.db.generate_fishing_facility().await;
+        helper.db.generate_fishing_facility().await;
+
+        let mut expected = vec![
+            kyogre_core::FishingFacility::test_default(),
+            kyogre_core::FishingFacility::test_default(),
+        ];
+
+        expected[0].tool_type = FishingFacilityToolType::Sensorbuoy;
+        expected[1].tool_type = FishingFacilityToolType::Crabpot;
+
+        helper.db.add_fishing_facilities(expected.clone()).await;
+
+        let params = FishingFacilitiesParams {
+            tool_types: Some(vec![
+                FishingFacilityToolType::Sensorbuoy,
+                FishingFacilityToolType::Crabpot,
+            ]),
+            ..Default::default()
+        };
+
+        let response = helper.app.get_fishing_facilities(params).await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let mut facilities: Vec<FishingFacility> = response.json().await.unwrap();
+
+        expected.sort_by_key(|f| f.tool_id.as_u128());
+        facilities.sort_by_key(|f| f.tool_id.as_u128());
+
+        assert_eq!(facilities.len(), 2);
+        assert_eq!(facilities, expected);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_fishing_facilities_returns_active_fishing_facilities() {
+    test(|helper| async move {
+        helper.db.generate_fishing_facility().await;
+        helper.db.generate_fishing_facility().await;
+        helper.db.generate_fishing_facility().await;
+
+        let mut expected = vec![
+            kyogre_core::FishingFacility::test_default(),
+            kyogre_core::FishingFacility::test_default(),
+        ];
+
+        expected[0].removed_timestamp = None;
+        expected[1].removed_timestamp = None;
+
+        helper.db.add_fishing_facilities(expected.clone()).await;
+
+        let params = FishingFacilitiesParams {
+            active: Some(true),
+            ..Default::default()
+        };
+
+        let response = helper.app.get_fishing_facilities(params).await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let mut facilities: Vec<FishingFacility> = response.json().await.unwrap();
+
+        expected.sort_by_key(|f| f.tool_id.as_u128());
+        facilities.sort_by_key(|f| f.tool_id.as_u128());
+
+        assert_eq!(facilities.len(), 2);
+        assert_eq!(facilities, expected);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_fishing_facilities_returns_inactive_fishing_facilities() {
+    test(|helper| async move {
+        let mut expected = vec![
+            helper.db.generate_fishing_facility().await,
+            helper.db.generate_fishing_facility().await,
+        ];
+
+        let mut f1 = kyogre_core::FishingFacility::test_default();
+        let mut f2 = kyogre_core::FishingFacility::test_default();
+        let mut f3 = kyogre_core::FishingFacility::test_default();
+
+        f1.removed_timestamp = None;
+        f2.removed_timestamp = None;
+        f3.removed_timestamp = None;
+
+        helper.db.add_fishing_facilities(vec![f1, f2, f3]).await;
+
+        let params = FishingFacilitiesParams {
+            active: Some(false),
+            ..Default::default()
+        };
+
+        let response = helper.app.get_fishing_facilities(params).await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let mut facilities: Vec<FishingFacility> = response.json().await.unwrap();
+
+        expected.sort_by_key(|f| f.tool_id.as_u128());
+        facilities.sort_by_key(|f| f.tool_id.as_u128());
+
+        assert_eq!(facilities.len(), 2);
+        assert_eq!(facilities, expected);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_fishing_facilities_returns_fishing_facilities_in_setup_ranges() {
+    test(|helper| async move {
+        helper.db.generate_fishing_facility().await;
+        helper.db.generate_fishing_facility().await;
+        helper.db.generate_fishing_facility().await;
+
+        let mut expected = vec![
+            kyogre_core::FishingFacility::test_default(),
+            kyogre_core::FishingFacility::test_default(),
+        ];
+
+        expected[0].setup_timestamp = "2000-01-10T00:00:00Z".parse().unwrap();
+        expected[1].setup_timestamp = "2000-01-20T00:00:00Z".parse().unwrap();
+
+        helper.db.add_fishing_facilities(expected.clone()).await;
+
+        let params = FishingFacilitiesParams {
+            setup_ranges: Some(vec![
+                "[2000-01-05T00:00:00Z,2000-01-15T00:00:00Z]"
+                    .parse()
+                    .unwrap(),
+                "[2000-01-15T00:00:00Z,2000-01-25T00:00:00Z]"
+                    .parse()
+                    .unwrap(),
+            ]),
+            ..Default::default()
+        };
+
+        let response = helper.app.get_fishing_facilities(params).await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let mut facilities: Vec<FishingFacility> = response.json().await.unwrap();
+
+        expected.sort_by_key(|f| f.tool_id.as_u128());
+        facilities.sort_by_key(|f| f.tool_id.as_u128());
+
+        assert_eq!(facilities.len(), 2);
+        assert_eq!(facilities, expected);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_fishing_facilities_returns_fishing_facilities_in_removed_ranges() {
+    test(|helper| async move {
+        helper.db.generate_fishing_facility().await;
+        helper.db.generate_fishing_facility().await;
+        helper.db.generate_fishing_facility().await;
+
+        let mut expected = vec![
+            kyogre_core::FishingFacility::test_default(),
+            kyogre_core::FishingFacility::test_default(),
+        ];
+
+        expected[0].removed_timestamp = Some("2000-01-10T00:00:00Z".parse().unwrap());
+        expected[1].removed_timestamp = Some("2000-01-20T00:00:00Z".parse().unwrap());
+
+        helper.db.add_fishing_facilities(expected.clone()).await;
+
+        let params = FishingFacilitiesParams {
+            removed_ranges: Some(vec![
+                "[2000-01-05T00:00:00Z,2000-01-15T00:00:00Z]"
+                    .parse()
+                    .unwrap(),
+                "[2000-01-15T00:00:00Z,2000-01-25T00:00:00Z]"
+                    .parse()
+                    .unwrap(),
+            ]),
+            ..Default::default()
+        };
+
+        let response = helper.app.get_fishing_facilities(params).await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let mut facilities: Vec<FishingFacility> = response.json().await.unwrap();
+
+        expected.sort_by_key(|f| f.tool_id.as_u128());
+        facilities.sort_by_key(|f| f.tool_id.as_u128());
+
+        assert_eq!(facilities.len(), 2);
         assert_eq!(facilities, expected);
     })
     .await;
