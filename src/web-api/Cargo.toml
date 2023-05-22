@@ -40,7 +40,7 @@ async-stream = "0.3.5"
 num-traits = "0.2.15"
 enum_index = "0.2.0"
 enum_index_derive = "0.2.0"
-uuid = { version = "1.3.2", features = ["serde"] }
+uuid = { version = "1.3.3", features = ["serde"] }
 wkt = "0.10.3"
 
 [dev-dependencies]
@@ -51,7 +51,7 @@ orca-core = { version = "0.20.0", registry = "orcalabs-orcastrator", features = 
 ] }
 
 async-trait = "0.1.68"
-reqwest = { version = "0.11.17", default-features = false, features = [
+reqwest = { version = "0.11.18", default-features = false, features = [
     "json",
     "rustls-tls",
 ] }
