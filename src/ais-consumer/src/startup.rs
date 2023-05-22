@@ -12,6 +12,7 @@ use tokio::{
     io::AsyncRead,
     sync::broadcast::{self, Receiver, Sender},
 };
+use tracing::{event, Level};
 
 pub struct App {
     consumer: Consumer,
@@ -54,13 +55,17 @@ impl App {
     pub async fn run(self) {
         let receiver = self.subscribe();
         tokio::spawn(self.postgres.consume_loop(receiver, None));
-        self.consumer
+
+        if let Err(e) = self
+            .consumer
             .run(
                 self.ais_source.unwrap().streamer().await.unwrap(),
                 self.sender,
             )
             .await
-            .unwrap()
+        {
+            event!(Level::ERROR, "consumer failed: {:?}", e);
+        }
     }
 
     pub async fn run_test(
