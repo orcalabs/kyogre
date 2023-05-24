@@ -2,16 +2,14 @@
 #![deny(rust_2018_idioms)]
 
 use async_trait::async_trait;
-use kyogre_core::{
-    ScraperInboundPort, TripAssemblerOutboundPort, TripPrecisionInboundPort,
-    TripPrecisionOutboundPort,
-};
+use kyogre_core::*;
 use orca_statemachine::{Machine, Schedule, Step, TransitionLog};
 use scraper::Scraper;
 use serde::Deserialize;
 use states::{Pending, Scrape, Sleep, Trips, TripsPrecision, UpdateDatabaseViews};
 use strum_macros::{AsRefStr, EnumDiscriminants, EnumIter, EnumString};
 use trip_assembler::TripAssembler;
+use vessel_benchmark::*;
 
 pub mod error;
 pub mod settings;
@@ -28,22 +26,28 @@ pub trait Database:
     + TripPrecisionInboundPort
     + TripPrecisionOutboundPort
     + ScraperInboundPort
+    + VesselBenchmarkOutbound
+    + VesselBenchmarkInbound
     + Send
     + Sync
     + 'static
 {
 }
 pub trait TripProcessor: TripAssembler + Send + Sync + 'static {}
+// pub trait VesselBenchmark: vessel_benchmark::VesselBenchmark + Send + Sync + 'static {}
 
 impl<T> Database for T where
     T: TripAssemblerOutboundPort
         + TripPrecisionInboundPort
         + TripPrecisionOutboundPort
         + ScraperInboundPort
+        + VesselBenchmarkOutbound
+        + VesselBenchmarkInbound
         + 'static
 {
 }
 impl<T> TripProcessor for T where T: TripAssembler + 'static {}
+// impl<T> VesselBenchmark for T where T: vessel_benchmark::VesselBenchmark + 'static {}
 
 #[derive(EnumDiscriminants)]
 #[strum_discriminants(derive(AsRefStr, EnumString, EnumIter))]
@@ -54,6 +58,7 @@ pub enum Engine<A, B> {
     Trips(StepWrapper<A, B, Trips>),
     TripsPrecision(StepWrapper<A, B, TripsPrecision>),
     UpdateDatabaseViews(StepWrapper<A, B, UpdateDatabaseViews>),
+    Benchmark(StepWrapper<A, B, Benchmark>),
 }
 
 pub struct StepWrapper<A, B, C> {
@@ -70,6 +75,7 @@ pub struct SharedState<A> {
     database: A,
     scraper: Scraper,
     trip_processors: Vec<Box<dyn TripProcessor>>,
+    benchmarks: Vec<Box<dyn VesselBenchmark>>,
 }
 
 impl<A, B, C> StepWrapper<A, B, C> {
@@ -97,6 +103,9 @@ impl<A, B, C> StepWrapper<A, SharedState<B>, C> {
     pub fn database(&self) -> &B {
         &self.inner.shared_state.database
     }
+    pub fn vessel_benchmarks(&self) -> &[Box<dyn VesselBenchmark>] {
+        self.inner.shared_state.benchmarks.as_slice()
+    }
 }
 
 #[async_trait]
@@ -115,6 +124,7 @@ where
             Engine::Trips(s) => s.run().await,
             Engine::TripsPrecision(s) => s.run().await,
             Engine::UpdateDatabaseViews(s) => s.run().await,
+            Engine::Benchmark(s) => s.run().await,
         }
     }
     fn is_exit_state(&self) -> bool {
@@ -129,6 +139,7 @@ where
             Engine::Trips(s) => &s.inner.transition_log,
             Engine::TripsPrecision(s) => &s.inner.transition_log,
             Engine::UpdateDatabaseViews(s) => &s.inner.transition_log,
+            Engine::Benchmark(s) => &s.inner.transition_log,
         }
     }
 
@@ -150,12 +161,14 @@ where
         database: A,
         scraper: Scraper,
         trip_processors: Vec<Box<dyn TripProcessor>>,
+        benchmarks: Vec<Box<dyn VesselBenchmark>>,
     ) -> SharedState<A> {
         SharedState {
             config,
             database,
             scraper,
             trip_processors,
+            benchmarks,
         }
     }
 }
@@ -164,6 +177,7 @@ impl Config {
     pub fn schedule(&self, state: &EngineDiscriminants) -> Option<&Schedule> {
         match state {
             EngineDiscriminants::Pending
+            | EngineDiscriminants::Benchmark
             | EngineDiscriminants::Sleep
             | EngineDiscriminants::Trips
             | EngineDiscriminants::TripsPrecision

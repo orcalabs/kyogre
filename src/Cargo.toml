@@ -10,6 +10,7 @@ members = [
     "engine",
     "trip-assembler",
     "scraper",
+    "vessel-benchmark",
 ]
 
 [workspace.dependencies]

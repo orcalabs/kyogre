@@ -4,10 +4,10 @@ use kyogre_core::Vessel;
 use tracing::{event, instrument, Level};
 use trip_assembler::TripPrecisionError;
 
-// TripsPrecision -> UpdateDatabaseViews
-impl<L, T> From<StepWrapper<L, T, TripsPrecision>> for StepWrapper<L, T, UpdateDatabaseViews> {
-    fn from(val: StepWrapper<L, T, TripsPrecision>) -> StepWrapper<L, T, UpdateDatabaseViews> {
-        val.inherit(UpdateDatabaseViews::default())
+// TripsPrecision -> Benchmark
+impl<L, T> From<StepWrapper<L, T, TripsPrecision>> for StepWrapper<L, T, Benchmark> {
+    fn from(val: StepWrapper<L, T, TripsPrecision>) -> StepWrapper<L, T, Benchmark> {
+        val.inherit(Benchmark::default())
     }
 }
 
@@ -40,9 +40,7 @@ where
             }
         }
 
-        Engine::UpdateDatabaseViews(StepWrapper::<A, SharedState<B>, UpdateDatabaseViews>::from(
-            self,
-        ))
+        Engine::Benchmark(StepWrapper::<A, SharedState<B>, Benchmark>::from(self))
     }
 
     async fn run_precision_processors(&self, vessels: Vec<Vessel>) {

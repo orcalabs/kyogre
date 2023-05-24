@@ -304,10 +304,29 @@ SELECT
     a.ship_length AS ais_ship_length,
     a.ship_width AS ais_ship_width,
     a.eta AS ais_eta,
-    a.destination AS ais_destination
+    a.destination AS ais_destination,
+    COALESCE(
+        JSONB_AGG(
+            JSONB_BUILD_OBJECT(
+                'benchmark_id',
+                b.vessel_benchmark_id,
+                'value',
+                b.output
+            )
+        ) FILTER (
+            WHERE
+                b.output IS NOT NULL
+                AND b.vessel_benchmark_id IS NOT NULL
+        ),
+        '[]'::jsonb
+    )::TEXT AS "benchmarks!"
 FROM
     fiskeridir_vessels AS f
     LEFT JOIN ais_vessels AS a ON f.call_sign = a.call_sign
+    LEFT JOIN vessel_benchmark_outputs AS b ON b.fiskeridir_vessel_id = f.fiskeridir_vessel_id
+GROUP BY
+    f.fiskeridir_vessel_id,
+    a.mmsi
             "#
         )
         .fetch(&self.pool)
@@ -350,12 +369,31 @@ SELECT
     a.ship_length AS ais_ship_length,
     a.ship_width AS ais_ship_width,
     a.eta AS ais_eta,
-    a.destination AS ais_destination
+    a.destination AS ais_destination,
+    COALESCE(
+        JSONB_AGG(
+            JSONB_BUILD_OBJECT(
+                'benchmark_id',
+                b.vessel_benchmark_id,
+                'value',
+                b.output
+            )
+        ) FILTER (
+            WHERE
+                b.output IS NOT NULL
+                AND b.vessel_benchmark_id IS NOT NULL
+        ),
+        '[]'::jsonb
+    )::TEXT AS "benchmarks!"
 FROM
     fiskeridir_vessels AS f
     LEFT JOIN ais_vessels AS a ON f.call_sign = a.call_sign
+    LEFT JOIN vessel_benchmark_outputs AS b ON b.fiskeridir_vessel_id = f.fiskeridir_vessel_id
 WHERE
     f.fiskeridir_vessel_id = $1
+GROUP BY
+    f.fiskeridir_vessel_id,
+    a.mmsi
             "#,
             vessel_id.0
         )

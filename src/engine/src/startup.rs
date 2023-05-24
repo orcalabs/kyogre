@@ -39,8 +39,14 @@ impl App {
             .await
             .unwrap();
 
-        let shared_state =
-            SharedState::new(settings.engine.clone(), postgres, scraper, trip_assemblers);
+        let benchmarks = settings.benchmarks();
+        let shared_state = SharedState::new(
+            settings.engine.clone(),
+            postgres,
+            scraper,
+            trip_assemblers,
+            benchmarks,
+        );
 
         App {
             transition_log,

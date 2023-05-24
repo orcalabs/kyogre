@@ -1,3 +1,5 @@
+use bigdecimal::ToPrimitive;
+use kyogre_core::FiskeridirVesselId;
 use sqlx::Row;
 use std::collections::HashSet;
 
@@ -11,6 +13,32 @@ use error_stack::{IntoReport, Result, ResultExt};
 use fiskeridir_rs::LandingId;
 
 impl PostgresAdapter {
+    pub(crate) async fn sum_landing_weight_impl(
+        &self,
+        id: FiskeridirVesselId,
+    ) -> Result<Option<f64>, PostgresError> {
+        let weight = sqlx::query!(
+            r#"
+SELECT
+    SUM(le.living_weight) AS weight
+FROM
+    landings AS l
+    INNER JOIN landing_entries AS le ON l.landing_id = le.landing_id
+WHERE
+    fiskeridir_vessel_id = $1
+            "#,
+            id.0,
+        )
+        .fetch_one(&self.pool)
+        .await
+        .into_report()
+        .change_context(PostgresError::Query)?;
+
+        Ok(weight
+            .weight
+            .map(|v| v.to_f64().ok_or(PostgresError::DataConversion))
+            .transpose()?)
+    }
     pub(crate) async fn add_landing_set(
         &self,
         set: LandingSet,

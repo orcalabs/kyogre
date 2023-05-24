@@ -3,7 +3,8 @@ use bigdecimal::BigDecimal;
 use chrono::{DateTime, Utc};
 use error_stack::{IntoReport, Report, ResultExt};
 use fiskeridir_rs::CallSign;
-use kyogre_core::{FiskeridirVesselId, Mmsi, TripAssemblerId};
+use kyogre_core::{FiskeridirVesselId, Mmsi, TripAssemblerId, VesselBenchmarkId};
+use serde::Deserialize;
 
 #[derive(Debug, Clone)]
 pub struct AisVessel {
@@ -68,6 +69,13 @@ pub struct FiskeridirAisVesselCombination {
     pub fiskeridir_building_year: Option<i32>,
     pub fiskeridir_rebuilding_year: Option<i32>,
     pub preferred_trip_assembler: TripAssemblerId,
+    pub benchmarks: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct Benchmark {
+    pub benchmark_id: VesselBenchmarkId,
+    pub value: f64,
 }
 
 impl TryFrom<FiskeridirAisVesselCombination> for kyogre_core::Vessel {
@@ -94,6 +102,10 @@ impl TryFrom<FiskeridirAisVesselCombination> for kyogre_core::Vessel {
             } else {
                 Ok(None)
             };
+
+        let benchmarks: Vec<Benchmark> = serde_json::from_str(&value.benchmarks)
+            .into_report()
+            .change_context(PostgresError::DataConversion)?;
 
         let fiskeridir_vessel = kyogre_core::FiskeridirVessel {
             id: FiskeridirVesselId(value.fiskeridir_vessel_id),
@@ -135,6 +147,10 @@ impl TryFrom<FiskeridirAisVesselCombination> for kyogre_core::Vessel {
             fiskeridir: fiskeridir_vessel,
             ais: ais_vessel?,
             preferred_trip_assembler: value.preferred_trip_assembler,
+            fish_caught_per_hour: benchmarks
+                .iter()
+                .find(|v| v.benchmark_id == VesselBenchmarkId::WeightPerHour)
+                .map(|v| v.value),
         })
     }
 }

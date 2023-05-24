@@ -1,3 +1,4 @@
+use num_traits::ToPrimitive;
 use std::collections::HashMap;
 
 use crate::{models::Haul, PostgresAdapter};
@@ -548,6 +549,32 @@ ORDER BY
 
     pub async fn add_fishing_facilities(&self, facilities: Vec<FishingFacility>) {
         self.db.add_fishing_facilities(facilities).await.unwrap();
+    }
+
+    pub async fn benchmark(
+        &self,
+        vessel_id: FiskeridirVesselId,
+        benchmark: VesselBenchmarkId,
+    ) -> f64 {
+        sqlx::query!(
+            r#"
+SELECT
+    output
+FROM
+    vessel_benchmark_outputs
+WHERE
+    fiskeridir_vessel_id = $1
+    AND vessel_benchmark_id = $2
+            "#,
+            vessel_id.0,
+            benchmark as i32,
+        )
+        .fetch_one(&self.db.pool)
+        .await
+        .unwrap()
+        .output
+        .to_f64()
+        .unwrap()
     }
 
     async fn single_vms_position(&self, message_id: u32) -> VmsPosition {

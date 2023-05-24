@@ -13,6 +13,7 @@ pub struct Vessel {
     pub fiskeridir: FiskeridirVessel,
     pub ais: Option<AisVessel>,
     pub preferred_trip_assembler: TripAssemblerId,
+    pub fish_caught_per_hour: Option<f64>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -81,6 +82,19 @@ pub enum VesselEventType {
 pub enum RelevantEventType {
     Landing,
     ErsPorAndDep,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Deserialize_repr)]
+#[repr(i32)]
+pub enum VesselBenchmarkId {
+    WeightPerHour = 1,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct VesselBenchmarkOutput {
+    pub vessel_id: FiskeridirVesselId,
+    pub benchmark_id: VesselBenchmarkId,
+    pub value: f64,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
@@ -233,5 +247,13 @@ impl<'de> Deserialize<'de> for FiskeridirVesselId {
         }
 
         deserializer.deserialize_i64(FiskeridirVesselIdVisitor)
+    }
+}
+
+impl std::fmt::Display for VesselBenchmarkId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            VesselBenchmarkId::WeightPerHour => f.write_str("WeightPerHour"),
+        }
     }
 }

@@ -14,6 +14,7 @@ use std::sync::Once;
 use strum::EnumCount;
 use tracing_subscriber::FmtSubscriber;
 use trip_assembler::{ErsTripAssembler, LandingTripAssembler, TripAssembler};
+use vessel_benchmark::*;
 use web_api::{
     routes::v1::haul,
     settings::{ApiSettings, Settings},
@@ -28,6 +29,7 @@ pub struct TestHelper {
     pub db: TestDb,
     ers_assembler: ErsTripAssembler,
     landings_assembler: LandingTripAssembler,
+    weight_per_hour: WeightPerHour,
     ers_message_number: u32,
 }
 
@@ -46,7 +48,14 @@ impl TestHelper {
             ers_assembler: ErsTripAssembler::default(),
             landings_assembler: LandingTripAssembler::default(),
             ers_message_number: 1,
+            weight_per_hour: WeightPerHour::default(),
         }
+    }
+    pub async fn do_benchmarks(&self) {
+        self.weight_per_hour
+            .produce_and_store_benchmarks(&self.db.db, &self.db.db)
+            .await
+            .unwrap();
     }
 
     pub async fn add_precision_to_trip(&self, vessel: &Vessel, trip: &TripDetailed) -> DateRange {

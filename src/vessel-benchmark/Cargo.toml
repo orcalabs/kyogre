@@ -1,0 +1,13 @@
+[package]
+name = "vessel-benchmark"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+kyogre-core = { path = "../kyogre-core", features = ["utoipa"] }
+
+async-trait = "0.1.68"
+tracing = "0.1.37"
+error-stack = { workspace = true }

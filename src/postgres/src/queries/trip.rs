@@ -3,7 +3,7 @@ use crate::{
     models::{Trip, TripAssemblerConflict, TripCalculationTimer, TripDetailed},
     PostgresAdapter,
 };
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Duration, Utc};
 use error_stack::{report, IntoReport, Result, ResultExt};
 use fiskeridir_rs::Gear;
 use futures::Stream;
@@ -15,6 +15,30 @@ use kyogre_core::{
 use sqlx::postgres::types::PgRange;
 
 impl PostgresAdapter {
+    pub(crate) async fn sum_trip_time_impl(
+        &self,
+        id: FiskeridirVesselId,
+    ) -> Result<Option<Duration>, PostgresError> {
+        let duration = sqlx::query!(
+            r#"
+SELECT
+    SUM(UPPER(period) - LOWER(period)) AS duration
+FROM
+    trips
+WHERE
+    fiskeridir_vessel_id = $1
+            "#,
+            id.0,
+        )
+        .fetch_one(&self.pool)
+        .await
+        .into_report()
+        .change_context(PostgresError::Query)?;
+
+        Ok(duration
+            .duration
+            .map(|v| Duration::microseconds(v.microseconds)))
+    }
     pub(crate) fn detailed_trips_of_vessel_impl(
         &self,
         id: FiskeridirVesselId,
