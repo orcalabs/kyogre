@@ -46,19 +46,22 @@ impl std::fmt::Display for DeleteError {
 }
 
 #[derive(Debug)]
-pub struct DateRangeError {
-    pub start: DateTime<Utc>,
-    pub end: DateTime<Utc>,
+pub enum DateRangeError {
+    Ordering(DateTime<Utc>, DateTime<Utc>),
+    Unbounded,
 }
 
 impl std::error::Error for DateRangeError {}
 
 impl std::fmt::Display for DateRangeError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!(
-            "start of date range cannot be after end, start: {}, end: {}",
-            self.start, self.end
-        ))
+        match self {
+            DateRangeError::Ordering(start, end) => f.write_fmt(format_args!(
+                "start of date range cannot be after end, start: {}, end: {}",
+                start, end
+            )),
+            DateRangeError::Unbounded => f.write_str("encountered and unexpected unbounded range"),
+        }
     }
 }
 

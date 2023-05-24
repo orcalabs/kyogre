@@ -151,76 +151,6 @@ WHERE
         .into_report()
         .change_context(PostgresError::Query)
     }
-    pub(crate) async fn trip_at_or_prior_to_impl(
-        &self,
-        vessel_id: FiskeridirVesselId,
-        trip_assembler_id: TripAssemblerId,
-        time: &DateTime<Utc>,
-    ) -> Result<Option<Trip>, PostgresError> {
-        sqlx::query_as!(
-            Trip,
-            r#"
-SELECT
-    trip_id,
-    period,
-    period_precision,
-    landing_coverage,
-    trip_assembler_id AS "trip_assembler_id!: TripAssemblerId"
-FROM
-    trips
-WHERE
-    fiskeridir_vessel_id = $1
-    AND trip_assembler_id = $2
-    AND (
-        UPPER(period) <= $3
-        OR period @> $3
-    )
-ORDER BY
-    period DESC
-LIMIT
-    1
-            "#,
-            vessel_id.0,
-            trip_assembler_id as i32,
-            time
-        )
-        .fetch_optional(&self.pool)
-        .await
-        .into_report()
-        .change_context(PostgresError::Query)
-    }
-    pub(crate) async fn most_recent_trip_impl(
-        &self,
-        vessel_id: FiskeridirVesselId,
-        trip_assembler_id: TripAssemblerId,
-    ) -> Result<Option<Trip>, PostgresError> {
-        sqlx::query_as!(
-            Trip,
-            r#"
-SELECT
-    trip_id,
-    period,
-    period_precision,
-    landing_coverage,
-    trip_assembler_id AS "trip_assembler_id!: TripAssemblerId"
-FROM
-    trips
-WHERE
-    fiskeridir_vessel_id = $1
-    AND trip_assembler_id = $2
-ORDER BY
-    period DESC
-LIMIT
-    1
-            "#,
-            vessel_id.0,
-            trip_assembler_id as i32
-        )
-        .fetch_optional(&self.pool)
-        .await
-        .into_report()
-        .change_context(PostgresError::Query)
-    }
     pub(crate) async fn trip_calculation_timers_impl(
         &self,
         trip_assembler_id: TripAssemblerId,
@@ -299,29 +229,32 @@ WHERE
         trips: Vec<NewTrip>,
         trip_assembler_id: TripAssemblerId,
     ) -> Result<(), PostgresError> {
-        let mut range = Vec::with_capacity(trips.len());
+        let mut period = Vec::with_capacity(trips.len());
+        let mut landing_coverage = Vec::with_capacity(trips.len());
         let mut start_port_id = Vec::with_capacity(trips.len());
         let mut end_port_id = Vec::with_capacity(trips.len());
         let mut trip_assembler_ids = Vec::with_capacity(trips.len());
         let mut fiskeridir_vessel_ids = Vec::with_capacity(trips.len());
 
+        let earliest_trip_start = trips[0].period.start();
         for t in trips {
-            let pg_range = match trip_assembler_id {
-                TripAssemblerId::Landings => PgRange {
-                    start: std::ops::Bound::Excluded(t.period.start()),
-                    end: std::ops::Bound::Included(t.period.end()),
-                },
-                TripAssemblerId::Ers => PgRange {
-                    start: std::ops::Bound::Included(t.period.start()),
-                    end: std::ops::Bound::Included(t.period.end()),
-                },
-            };
-            range.push(pg_range);
+            period.push(
+                PgRange::try_from(&t.period)
+                    .into_report()
+                    .change_context(PostgresError::DataConversion)?,
+            );
+            landing_coverage.push(
+                PgRange::try_from(&t.landing_coverage)
+                    .into_report()
+                    .change_context(PostgresError::DataConversion)?,
+            );
             start_port_id.push(t.start_port_code);
             end_port_id.push(t.end_port_code);
             trip_assembler_ids.push(trip_assembler_id as i32);
             fiskeridir_vessel_ids.push(vessel_id.0);
         }
+
+        let earliest_trip_period = &period[0];
 
         let mut tx = self.begin().await?;
 
@@ -354,7 +287,7 @@ WHERE
     AND fiskeridir_vessel_id = $2
     AND trip_assembler_id = $3
             "#,
-                range,
+                period,
                 vessel_id.0,
                 trip_assembler_id as i32,
             )
@@ -366,11 +299,45 @@ WHERE
             TripsConflictStrategy::Error => Ok(()),
         }?;
 
+        match trip_assembler_id {
+            TripAssemblerId::Landings => Ok(()),
+            TripAssemblerId::Ers => sqlx::query!(
+                r#"
+UPDATE trips
+SET
+    landing_coverage = tstzrange (LOWER(period), $3)
+WHERE
+    trip_id = (
+        SELECT
+            trip_id
+        FROM
+            trips
+        WHERE
+            fiskeridir_vessel_id = $1
+            AND period < $2
+        ORDER BY
+            period DESC
+        LIMIT
+            1
+    )
+            "#,
+                vessel_id.0,
+                earliest_trip_period,
+                earliest_trip_start,
+            )
+            .execute(&mut tx)
+            .await
+            .into_report()
+            .change_context(PostgresError::Query)
+            .map(|_| ()),
+        }?;
+
         sqlx::query!(
             r#"
 INSERT INTO
     trips (
         period,
+        landing_coverage,
         start_port_id,
         end_port_id,
         trip_assembler_id,
@@ -381,13 +348,15 @@ SELECT
 FROM
     UNNEST(
         $1::tstzrange[],
-        $2::VARCHAR[],
+        $2::tstzrange[],
         $3::VARCHAR[],
-        $4::INT[],
-        $5::BIGINT[]
+        $4::VARCHAR[],
+        $5::INT[],
+        $6::BIGINT[]
     )
             "#,
-            range,
+            period,
+            landing_coverage,
             start_port_id as _,
             end_port_id as _,
             &trip_assembler_ids,
@@ -406,10 +375,9 @@ FROM
         Ok(())
     }
 
-    pub(crate) async fn trip_prior_to_impl(
+    pub(crate) async fn trip_prior_to_timestamp_exclusive(
         &self,
         vessel_id: FiskeridirVesselId,
-        assembler_id: TripAssemblerId,
         time: &DateTime<Utc>,
     ) -> Result<Option<Trip>, PostgresError> {
         sqlx::query_as!(
@@ -425,15 +393,46 @@ FROM
     trips
 WHERE
     fiskeridir_vessel_id = $1
-    AND trip_assembler_id = $2
-    AND UPPER(period) <= $3
+    AND UPPER(period) < $2
 ORDER BY
     period DESC
 LIMIT
     1
             "#,
             vessel_id.0,
-            assembler_id as i32,
+            time
+        )
+        .fetch_optional(&self.pool)
+        .await
+        .into_report()
+        .change_context(PostgresError::Query)
+    }
+
+    pub(crate) async fn trip_prior_to_timestamp_inclusive(
+        &self,
+        vessel_id: FiskeridirVesselId,
+        time: &DateTime<Utc>,
+    ) -> Result<Option<Trip>, PostgresError> {
+        sqlx::query_as!(
+            Trip,
+            r#"
+SELECT
+    trip_id,
+    period,
+    period_precision,
+    landing_coverage,
+    trip_assembler_id AS "trip_assembler_id!: TripAssemblerId"
+FROM
+    trips
+WHERE
+    fiskeridir_vessel_id = $1
+    AND UPPER(period) <= $2
+ORDER BY
+    period DESC
+LIMIT
+    1
+            "#,
+            vessel_id.0,
             time
         )
         .fetch_optional(&self.pool)

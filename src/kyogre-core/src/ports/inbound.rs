@@ -21,18 +21,6 @@ pub trait AisMigratorDestination {
 }
 
 #[async_trait]
-pub trait TripAssemblerInboundPort {
-    async fn add_trips(
-        &self,
-        vessel_id: FiskeridirVesselId,
-        new_trip_calculation_time: DateTime<Utc>,
-        conflict_strategy: TripsConflictStrategy,
-        trips: Vec<NewTrip>,
-        trip_assembler_id: TripAssemblerId,
-    ) -> Result<(), InsertError>;
-}
-
-#[async_trait]
 pub trait TripPrecisionInboundPort {
     async fn update_trip_precisions(
         &self,

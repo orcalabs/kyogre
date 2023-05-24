@@ -472,7 +472,6 @@ impl ScraperFileHashInboundPort for PostgresAdapter {
         self.diff_hash(id, hash).await.change_context(QueryError)
     }
 }
-
 #[async_trait]
 impl TripAssemblerOutboundPort for PostgresAdapter {
     async fn all_vessels(&self) -> Result<Vec<Vessel>, QueryError> {
@@ -500,79 +499,51 @@ impl TripAssemblerOutboundPort for PostgresAdapter {
     }
     async fn conflicts(
         &self,
-        id: TripAssemblerId,
+        trip_assembler_id: TripAssemblerId,
     ) -> Result<Vec<TripAssemblerConflict>, QueryError> {
         Ok(self
-            .trip_assembler_conflicts(id)
+            .trip_assembler_conflicts(trip_assembler_id)
             .await
             .change_context(QueryError)?
             .into_iter()
             .map(TripAssemblerConflict::from)
             .collect())
     }
-    async fn landing_dates(
+    async fn trip_prior_to_timestamp(
         &self,
         vessel_id: FiskeridirVesselId,
-        start: &DateTime<Utc>,
-    ) -> Result<Vec<DateTime<Utc>>, QueryError> {
-        self.landing_dates_impl(vessel_id, start)
-            .await
-            .change_context(QueryError)
-    }
-    async fn most_recent_trip(
-        &self,
-        vessel_id: FiskeridirVesselId,
-        trip_assembler_id: TripAssemblerId,
+        timestamp: &DateTime<Utc>,
+        bound: Bound,
     ) -> Result<Option<Trip>, QueryError> {
-        convert_optional(
-            self.most_recent_trip_impl(vessel_id, trip_assembler_id)
+        convert_optional(match bound {
+            Bound::Inclusive => self
+                .trip_prior_to_timestamp_inclusive(vessel_id, timestamp)
                 .await
                 .change_context(QueryError)?,
-        )
-    }
-    async fn ers_arrivals(
-        &self,
-        vessel_id: FiskeridirVesselId,
-        start: &DateTime<Utc>,
-        filter: ArrivalFilter,
-    ) -> Result<Vec<Arrival>, QueryError> {
-        Ok(self
-            .ers_arrivals_impl(vessel_id, start, filter)
-            .await
-            .change_context(QueryError)?
-            .into_iter()
-            .map(Arrival::from)
-            .collect())
-    }
-    async fn ers_departures(
-        &self,
-        vessel_id: FiskeridirVesselId,
-        start: &DateTime<Utc>,
-    ) -> Result<Vec<Departure>, QueryError> {
-        Ok(self
-            .ers_departures_impl(vessel_id, start)
-            .await
-            .change_context(QueryError)?
-            .into_iter()
-            .map(Departure::from)
-            .collect())
-    }
-    async fn trip_at_or_prior_to(
-        &self,
-        vessel_id: FiskeridirVesselId,
-        trip_assembler_id: TripAssemblerId,
-        time: &DateTime<Utc>,
-    ) -> Result<Option<Trip>, QueryError> {
-        convert_optional(
-            self.trip_at_or_prior_to_impl(vessel_id, trip_assembler_id, time)
+            Bound::Exclusive => self
+                .trip_prior_to_timestamp_exclusive(vessel_id, timestamp)
                 .await
                 .change_context(QueryError)?,
-        )
+        })
     }
-}
+    async fn relevant_events(
+        &self,
+        vessel_id: FiskeridirVesselId,
+        period: &QueryRange,
+        event_types: RelevantEventType,
+    ) -> Result<Vec<VesselEventDetailed>, QueryError> {
+        convert_vec(match event_types {
+            RelevantEventType::Landing => self
+                .landing_events(vessel_id, period)
+                .await
+                .change_context(QueryError),
+            RelevantEventType::ErsPorAndDep => self
+                .ers_por_and_dep_events(vessel_id, period)
+                .await
+                .change_context(QueryError),
+        }?)
+    }
 
-#[async_trait]
-impl TripAssemblerInboundPort for PostgresAdapter {
     async fn add_trips(
         &self,
         vessel_id: FiskeridirVesselId,
@@ -625,17 +596,22 @@ impl TripPrecisionOutboundPort for PostgresAdapter {
 
         Ok(positions)
     }
-    async fn trip_prior_to(
+    async fn trip_prior_to_timestamp(
         &self,
         vessel_id: FiskeridirVesselId,
-        assembler_id: TripAssemblerId,
-        time: &DateTime<Utc>,
+        timestamp: &DateTime<Utc>,
+        bound: Bound,
     ) -> Result<Option<Trip>, QueryError> {
-        convert_optional(
-            self.trip_prior_to_impl(vessel_id, assembler_id, time)
+        convert_optional(match bound {
+            Bound::Inclusive => self
+                .trip_prior_to_timestamp_inclusive(vessel_id, timestamp)
                 .await
                 .change_context(QueryError)?,
-        )
+            Bound::Exclusive => self
+                .trip_prior_to_timestamp_exclusive(vessel_id, timestamp)
+                .await
+                .change_context(QueryError)?,
+        })
     }
     async fn delivery_points_associated_with_trip(
         &self,

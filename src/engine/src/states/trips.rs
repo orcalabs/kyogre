@@ -1,11 +1,7 @@
 use crate::*;
-use std::collections::HashMap;
-
-use chrono::{DateTime, Utc};
-use error_stack::{Result, ResultExt};
-use kyogre_core::{FiskeridirVesselId, Vessel};
+use error_stack::Result;
 use tracing::{event, instrument, Level};
-use trip_assembler::{State, TripAssemblerError};
+use trip_assembler::TripAssemblerError;
 
 // Trips -> TripsPrecision
 impl<L, T> From<StepWrapper<L, T, Trips>> for StepWrapper<L, T, TripsPrecision> {
@@ -39,122 +35,27 @@ where
         Engine::TripsPrecision(StepWrapper::<A, SharedState<B>, TripsPrecision>::from(self))
     }
 
-    #[instrument(name = "run_assembler", skip_all, fields(app.trip_assembler, app.vessels, app.conflicts, app.no_prior_state, app.produced_trips))]
+    #[instrument(skip_all, fields(app.trip_assembler_id, app.vessels, app.produced_trips, app.conflicts, app.no_prior_state))]
     async fn run_assembler(
         &self,
         trip_assembler: &dyn TripProcessor,
     ) -> Result<(), TripAssemblerError> {
-        let trip_assembler_id = trip_assembler.assembler_id();
-        tracing::Span::current().record("app.trip_assembler", trip_assembler_id.to_string());
         let database = self.database();
 
-        let timers = database
-            .trip_calculation_timers(trip_assembler.assembler_id())
-            .await
-            .change_context(TripAssemblerError)?
-            .into_iter()
-            .map(|t| (t.fiskeridir_vessel_id, t.timestamp))
-            .collect::<HashMap<FiskeridirVesselId, DateTime<Utc>>>();
-
-        let conflicts = database
-            .conflicts(trip_assembler.assembler_id())
-            .await
-            .change_context(TripAssemblerError)?
-            .into_iter()
-            .map(|t| (t.fiskeridir_vessel_id, t.timestamp))
-            .collect::<HashMap<FiskeridirVesselId, DateTime<Utc>>>();
-
-        let vessels = database
-            .all_vessels()
-            .await
-            .change_context(TripAssemblerError)?;
-
-        let mut vessel_states = Vec::new();
-
-        let num_vessels = vessels.len();
-        let mut num_conflicts = 0;
-        let mut num_no_prior_state = 0;
-        let mut num_trips = 0;
-
-        let trip_assembler_id = trip_assembler.assembler_id();
-
-        for vessel in vessels {
-            if vessel.preferred_trip_assembler != trip_assembler_id {
-                continue;
+        match trip_assembler.produce_and_store_trips(database).await {
+            Ok(r) => {
+                tracing::Span::current().record(
+                    "app.trip_assembler",
+                    trip_assembler.assembler_id().to_string(),
+                );
+                tracing::Span::current().record("app.vessels", r.num_vessels);
+                tracing::Span::current().record("app.conflicts", r.num_conflicts);
+                tracing::Span::current().record("app.no_prior_state", r.num_no_prior_state);
+                tracing::Span::current().record("app.produced_trips", r.num_trips);
             }
-            if let Some(conflict) = conflicts.get(&vessel.fiskeridir.id) {
-                num_conflicts += 1;
-                let prior_trip = database
-                    .trip_at_or_prior_to(vessel.fiskeridir.id, trip_assembler_id, conflict)
-                    .await
-                    .change_context(TripAssemblerError)?;
-                vessel_states.push((
-                    vessel,
-                    State::Conflict {
-                        conflict_timestamp: *conflict,
-                        trip_prior_to_or_at_conflict: prior_trip,
-                    },
-                ));
-            } else if let Some(timer) = timers.get(&vessel.fiskeridir.id) {
-                vessel_states.push((vessel, State::CurrentCalculationTime(*timer)));
-            } else {
-                num_no_prior_state += 1;
-                vessel_states.push((vessel, State::NoPriorState));
-            }
+            Err(e) => event!(Level::ERROR, "failed to produce and store trips: {:?}", e),
         }
-
-        tracing::Span::current().record("app.vessels", num_vessels);
-        tracing::Span::current().record("app.conflicts", num_conflicts);
-        tracing::Span::current().record("app.no_prior_state", num_no_prior_state);
-
-        event!(Level::INFO, "starting..",);
-
-        for s in vessel_states {
-            let id = s.0.fiskeridir.id;
-            match self.run_assembler_on_vessel(trip_assembler, s.0, s.1).await {
-                Err(e) => {
-                    event!(
-                        Level::ERROR,
-                        "failed to run trip assembler for vessel: {:?}, err: {:?}",
-                        id,
-                        e
-                    )
-                }
-                Ok(produced) => {
-                    num_trips += produced;
-                }
-            }
-        }
-
-        tracing::Span::current().record("app.produced_trips", num_trips);
 
         Ok(())
-    }
-
-    async fn run_assembler_on_vessel(
-        &self,
-        trip_assembler: &dyn TripProcessor,
-        vessel: Vessel,
-        state: State,
-    ) -> Result<u32, TripAssemblerError> {
-        let database = self.database();
-        let trips = trip_assembler.assemble(database, &vessel, state).await?;
-        let mut num_trips = 0;
-
-        if let Some(trips) = trips {
-            num_trips = trips.trips.len() as u32;
-            database
-                .add_trips(
-                    vessel.fiskeridir.id,
-                    trips.new_trip_calculation_time,
-                    trips.conflict_strategy,
-                    trips.trips,
-                    trip_assembler.assembler_id(),
-                )
-                .await
-                .change_context(TripAssemblerError)?;
-        }
-
-        Ok(num_trips)
     }
 }

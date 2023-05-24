@@ -1,23 +1,25 @@
 #![deny(warnings)]
 #![deny(rust_2018_idioms)]
-#![allow(dead_code)]
+
+use std::collections::HashMap;
 
 use async_trait::async_trait;
 use chrono::{DateTime, NaiveDate, NaiveDateTime, NaiveTime, Utc};
-use error_stack::Result;
+use error_stack::{IntoReport, Result, ResultExt};
 use kyogre_core::{
-    NewTrip, Trip, TripAssemblerId, TripAssemblerOutboundPort, TripPrecisionOutboundPort,
-    TripPrecisionUpdate, TripsConflictStrategy, Vessel,
+    Bound, FiskeridirVesselId, NewTrip, QueryRange, RelevantEventType, Trip, TripAssemblerId,
+    TripAssemblerOutboundPort, TripPrecisionOutboundPort, TripPrecisionUpdate,
+    TripsConflictStrategy, Vessel, VesselEventDetailed,
 };
 
 mod error;
 mod ers;
-mod landing_assembler;
+mod landings;
 mod precision;
 
 pub use error::*;
 pub use ers::*;
-pub use landing_assembler::*;
+pub use landings::*;
 pub use precision::*;
 
 // TODO: make this a const when rust supports it
@@ -31,82 +33,235 @@ pub fn ers_last_trip_landing_coverage_end() -> DateTime<Utc> {
     )
 }
 
+#[derive(Debug)]
+pub struct TripAssemblerState {
+    pub new_trips: Vec<NewTrip>,
+    pub calculation_timer: DateTime<Utc>,
+    pub conflict_strategy: Option<TripsConflictStrategy>,
+}
+
+#[derive(Debug)]
+pub struct TripsReport {
+    pub num_trips: u32,
+    pub num_conflicts: u32,
+    pub num_no_prior_state: u32,
+    pub num_vessels: u32,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum AssemblerState {
+    Conflict(DateTime<Utc>),
+    NoPriorState,
+    Normal(DateTime<Utc>),
+}
+
 #[async_trait]
 pub trait TripAssembler: Send + Sync {
+    fn relevant_event_types(&self) -> RelevantEventType;
     fn assembler_id(&self) -> TripAssemblerId;
-    fn trip_calculation_time(&self, most_recent_trip: &NewTrip) -> DateTime<Utc>;
-    fn start_search_time(&self, state: &State) -> DateTime<Utc>;
-    async fn new_trips(
+    async fn assemble(
         &self,
-        adapter: &dyn TripAssemblerOutboundPort,
-        vessel: &Vessel,
-        start: &DateTime<Utc>,
-        no_prior_state: bool,
-    ) -> Result<Vec<NewTrip>, TripAssemblerError>;
-
+        prior_trip_events: Vec<VesselEventDetailed>,
+        vessel_events: Vec<VesselEventDetailed>,
+    ) -> Result<Option<TripAssemblerState>, TripAssemblerError>;
     async fn calculate_precision(
         &self,
         vessel: &Vessel,
         adapter: &dyn TripPrecisionOutboundPort,
         trips: Vec<Trip>,
     ) -> Result<Vec<TripPrecisionUpdate>, TripPrecisionError>;
-
-    async fn assemble(
+    async fn produce_and_store_trips(
         &self,
         adapter: &dyn TripAssemblerOutboundPort,
-        vessel: &Vessel,
-        state: State,
-    ) -> Result<Option<AssembledTrips>, TripAssemblerError> {
-        let start = self.start_search_time(&state);
+    ) -> Result<TripsReport, TripAssemblerError> {
+        let relevant_event_types = self.relevant_event_types();
+        let timers = adapter
+            .trip_calculation_timers(self.assembler_id())
+            .await
+            .change_context(TripAssemblerError)?
+            .into_iter()
+            .map(|v| (v.fiskeridir_vessel_id, v.timestamp))
+            .collect::<HashMap<FiskeridirVesselId, DateTime<Utc>>>();
 
-        let mut new_trips = self
-            .new_trips(
-                adapter,
-                vessel,
-                &start,
-                matches!(state, State::NoPriorState),
-            )
-            .await?;
-        new_trips.sort_by_key(|n| n.period.end());
+        let conflicts = adapter
+            .conflicts(self.assembler_id())
+            .await
+            .change_context(TripAssemblerError)?
+            .into_iter()
+            .map(|v| (v.fiskeridir_vessel_id, v.timestamp))
+            .collect::<HashMap<FiskeridirVesselId, DateTime<Utc>>>();
 
-        if new_trips.is_empty() {
-            Ok(None)
-        } else {
-            Ok(Some(AssembledTrips {
-                new_trip_calculation_time: self.trip_calculation_time(new_trips.last().unwrap()),
-                trips: new_trips,
-                conflict_strategy: state.conflict_strategy(),
-            }))
-        }
-    }
-}
+        let vessels = adapter
+            .all_vessels()
+            .await
+            .change_context(TripAssemblerError)?;
 
-#[derive(Debug, Clone)]
-pub struct AssembledTrips {
-    pub trips: Vec<NewTrip>,
-    pub new_trip_calculation_time: DateTime<Utc>,
-    pub conflict_strategy: TripsConflictStrategy,
-}
+        let num_vessels = vessels.len() as u32;
+        let mut num_conflicts = 0;
+        let mut num_no_prior_state = 0;
+        let mut num_trips = 0;
 
-#[derive(Debug, Clone)]
-pub enum State {
-    Conflict {
-        conflict_timestamp: DateTime<Utc>,
-        trip_prior_to_or_at_conflict: Option<Trip>,
-    },
-    CurrentCalculationTime(DateTime<Utc>),
-    NoPriorState,
-}
-
-impl State {
-    fn conflict_strategy(&self) -> TripsConflictStrategy {
-        match self {
-            State::Conflict {
-                conflict_timestamp: _,
-                trip_prior_to_or_at_conflict: _,
+        for v in vessels {
+            if v.preferred_trip_assembler != self.assembler_id() {
+                continue;
             }
-            | State::NoPriorState => TripsConflictStrategy::Replace,
-            State::CurrentCalculationTime(_) => TripsConflictStrategy::Error,
+            let vessel_id = v.fiskeridir.id;
+            let state = match (timers.get(&vessel_id), conflicts.get(&vessel_id)) {
+                (None, None) => AssemblerState::NoPriorState,
+                (None, Some(t)) => AssemblerState::Conflict(*t),
+                (Some(t), None) => AssemblerState::Normal(*t),
+                (Some(_), Some(t)) => AssemblerState::Conflict(*t),
+            };
+
+            let vessel_events = match state {
+                AssemblerState::Conflict(t) => {
+                    num_conflicts += 1;
+                    new_vessel_events(
+                        vessel_id,
+                        adapter,
+                        relevant_event_types,
+                        &t,
+                        Bound::Exclusive,
+                    )
+                    .await
+                }
+                AssemblerState::Normal(t) => {
+                    new_vessel_events(
+                        vessel_id,
+                        adapter,
+                        relevant_event_types,
+                        &t,
+                        Bound::Inclusive,
+                    )
+                    .await
+                }
+                AssemblerState::NoPriorState => {
+                    num_no_prior_state += 1;
+                    all_vessel_events(vessel_id, adapter, relevant_event_types).await
+                }
+            }?;
+            let trips = self
+                .assemble(
+                    vessel_events.prior_trip_events,
+                    vessel_events.new_vessel_events,
+                )
+                .await?;
+
+            if let Some(trips) = trips {
+                let conflict_strategy = match (state, trips.conflict_strategy) {
+                    (AssemblerState::NoPriorState, Some(r))
+                    | (AssemblerState::Normal(_), Some(r)) => r,
+                    (AssemblerState::NoPriorState, None) | (AssemblerState::Normal(_), None) => {
+                        TripsConflictStrategy::Error
+                    }
+                    (AssemblerState::Conflict(_), _) => TripsConflictStrategy::Replace,
+                };
+                num_trips += trips.new_trips.len() as u32;
+                adapter
+                    .add_trips(
+                        vessel_id,
+                        trips.calculation_timer,
+                        conflict_strategy,
+                        trips.new_trips,
+                        self.assembler_id(),
+                    )
+                    .await
+                    .change_context(TripAssemblerError)?;
+            }
         }
+
+        Ok(TripsReport {
+            num_conflicts,
+            num_vessels,
+            num_no_prior_state,
+            num_trips,
+        })
     }
+}
+
+#[derive(Debug)]
+struct VesselEvents {
+    prior_trip_events: Vec<VesselEventDetailed>,
+    new_vessel_events: Vec<VesselEventDetailed>,
+}
+
+async fn new_vessel_events(
+    vessel_id: FiskeridirVesselId,
+    adapter: &dyn TripAssemblerOutboundPort,
+    relevant_event_types: RelevantEventType,
+    search_timestamp: &DateTime<Utc>,
+    bound: Bound,
+) -> Result<VesselEvents, TripAssemblerError> {
+    let prior_trip = adapter
+        .trip_prior_to_timestamp(vessel_id, search_timestamp, bound)
+        .await
+        .change_context(TripAssemblerError)?;
+
+    let res: Result<(Vec<VesselEventDetailed>, QueryRange), TripAssemblerError> = match prior_trip {
+        Some(prior_trip) => {
+            let range = QueryRange::new(
+                match prior_trip.period.end_bound() {
+                    // We want all events not covered by the trip and therefore swap the bounds
+                    kyogre_core::Bound::Inclusive => std::ops::Bound::Excluded(prior_trip.end()),
+                    kyogre_core::Bound::Exclusive => std::ops::Bound::Included(prior_trip.end()),
+                },
+                std::ops::Bound::Unbounded,
+            )
+            .into_report()
+            .change_context(TripAssemblerError)?;
+
+            let events = adapter
+                .relevant_events(
+                    vessel_id,
+                    &QueryRange::from(prior_trip.period),
+                    relevant_event_types,
+                )
+                .await
+                .change_context(TripAssemblerError)?;
+
+            Ok((events, range))
+        }
+        None => {
+            let range = QueryRange::new(
+                std::ops::Bound::Included(*search_timestamp),
+                std::ops::Bound::Unbounded,
+            )
+            .into_report()
+            .change_context(TripAssemblerError)?;
+
+            Ok((vec![], range))
+        }
+    };
+
+    let (prior_trip_events, new_events_search_range) = res?;
+
+    let new_vessel_events = adapter
+        .relevant_events(vessel_id, &new_events_search_range, relevant_event_types)
+        .await
+        .change_context(TripAssemblerError)?;
+
+    Ok(VesselEvents {
+        prior_trip_events,
+        new_vessel_events,
+    })
+}
+
+async fn all_vessel_events(
+    vessel_id: FiskeridirVesselId,
+    adapter: &dyn TripAssemblerOutboundPort,
+    relevant_event_types: RelevantEventType,
+) -> Result<VesselEvents, TripAssemblerError> {
+    let range = QueryRange::new(std::ops::Bound::Unbounded, std::ops::Bound::Unbounded)
+        .into_report()
+        .change_context(TripAssemblerError)?;
+
+    let new_vessel_events = adapter
+        .relevant_events(vessel_id, &range, relevant_event_types)
+        .await
+        .change_context(TripAssemblerError)?;
+
+    Ok(VesselEvents {
+        prior_trip_events: vec![],
+        new_vessel_events,
+    })
 }

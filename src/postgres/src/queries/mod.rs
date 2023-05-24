@@ -26,6 +26,7 @@ pub mod port;
 pub mod species;
 pub mod trip;
 pub mod vessel;
+pub mod vessel_events;
 pub mod views;
 pub mod vms;
 

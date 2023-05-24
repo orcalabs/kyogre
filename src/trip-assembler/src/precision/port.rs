@@ -8,6 +8,7 @@ use error_stack::Result;
 use error_stack::ResultExt;
 use geoutils::Location;
 use kyogre_core::AisVmsPosition;
+use kyogre_core::Bound;
 use kyogre_core::Vessel;
 use kyogre_core::{DateRange, Trip, TripPrecisionOutboundPort};
 
@@ -118,7 +119,11 @@ impl PortPrecision {
                 ),
                 PrecisionDirection::Extending => {
                     let prior_trip_end = adapter
-                        .trip_prior_to(vessel.fiskeridir.id, trip.assembler_id, &trip.start())
+                        .trip_prior_to_timestamp(
+                            vessel.fiskeridir.id,
+                            &trip.start(),
+                            Bound::Inclusive,
+                        )
                         .await
                         .change_context(TripPrecisionError)?
                         .map(|t| t.landing_coverage.end())

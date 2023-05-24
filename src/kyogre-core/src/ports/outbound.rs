@@ -69,35 +69,28 @@ pub trait TripAssemblerOutboundPort: Send + Sync {
     ) -> Result<Vec<TripCalculationTimer>, QueryError>;
     async fn conflicts(
         &self,
-        id: TripAssemblerId,
-    ) -> Result<Vec<TripAssemblerConflict>, QueryError>;
-    async fn landing_dates(
-        &self,
-        vessel_id: FiskeridirVesselId,
-        start: &DateTime<Utc>,
-    ) -> Result<Vec<DateTime<Utc>>, QueryError>;
-    async fn most_recent_trip(
-        &self,
-        vessel_id: FiskeridirVesselId,
-        assembler_id: TripAssemblerId,
-    ) -> Result<Option<Trip>, QueryError>;
-    async fn ers_arrivals(
-        &self,
-        vessel_id: FiskeridirVesselId,
-        start: &DateTime<Utc>,
-        filter: ArrivalFilter,
-    ) -> Result<Vec<Arrival>, QueryError>;
-    async fn ers_departures(
-        &self,
-        vessel_id: FiskeridirVesselId,
-        start: &DateTime<Utc>,
-    ) -> Result<Vec<Departure>, QueryError>;
-    async fn trip_at_or_prior_to(
-        &self,
-        vessel_id: FiskeridirVesselId,
         trip_assembler_id: TripAssemblerId,
-        time: &DateTime<Utc>,
+    ) -> Result<Vec<TripAssemblerConflict>, QueryError>;
+    async fn trip_prior_to_timestamp(
+        &self,
+        vessel_id: FiskeridirVesselId,
+        timestamp: &DateTime<Utc>,
+        bound: Bound,
     ) -> Result<Option<Trip>, QueryError>;
+    async fn relevant_events(
+        &self,
+        vessel_id: FiskeridirVesselId,
+        period: &QueryRange,
+        event_types: RelevantEventType,
+    ) -> Result<Vec<VesselEventDetailed>, QueryError>;
+    async fn add_trips(
+        &self,
+        vessel_id: FiskeridirVesselId,
+        new_trip_calculation_time: DateTime<Utc>,
+        conflict_strategy: TripsConflictStrategy,
+        trips: Vec<NewTrip>,
+        trip_assembler_id: TripAssemblerId,
+    ) -> Result<(), InsertError>;
 }
 
 #[async_trait]
@@ -110,11 +103,11 @@ pub trait TripPrecisionOutboundPort: Send + Sync {
         call_sign: Option<&CallSign>,
         range: &DateRange,
     ) -> Result<Vec<AisVmsPosition>, QueryError>;
-    async fn trip_prior_to(
+    async fn trip_prior_to_timestamp(
         &self,
         vessel_id: FiskeridirVesselId,
-        assembler_id: TripAssemblerId,
-        time: &DateTime<Utc>,
+        timestamp: &DateTime<Utc>,
+        bound: Bound,
     ) -> Result<Option<Trip>, QueryError>;
     async fn delivery_points_associated_with_trip(
         &self,

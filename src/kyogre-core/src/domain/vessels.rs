@@ -23,6 +23,36 @@ pub struct VesselEvent {
     pub event_type: VesselEventType,
 }
 
+#[derive(Copy, Debug, Clone, PartialEq, Eq)]
+pub enum VesselEventOrdering {
+    Timestamp = 1,
+    ErsRelevantYearMessageNumber = 2,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum VesselEventData {
+    ErsDep {
+        port_id: Option<String>,
+        estimated_timestamp: DateTime<Utc>,
+    },
+    ErsPor {
+        port_id: Option<String>,
+        estimated_timestamp: DateTime<Utc>,
+    },
+    Landing,
+    ErsDca,
+    ErsTra,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct VesselEventDetailed {
+    pub event_id: u64,
+    pub vessel_id: FiskeridirVesselId,
+    pub timestamp: DateTime<Utc>,
+    pub event_type: VesselEventType,
+    pub event_data: VesselEventData,
+}
+
 #[cfg_attr(feature = "sqlx", derive(sqlx::Type))]
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 #[repr(i32)]
@@ -45,6 +75,12 @@ pub enum VesselEventType {
     ErsPor = 3,
     ErsDep = 4,
     ErsTra = 5,
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum RelevantEventType {
+    Landing,
+    ErsPorAndDep,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]

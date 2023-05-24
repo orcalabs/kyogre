@@ -3,8 +3,8 @@
 
 use async_trait::async_trait;
 use kyogre_core::{
-    ScraperInboundPort, TripAssemblerInboundPort, TripAssemblerOutboundPort,
-    TripPrecisionInboundPort, TripPrecisionOutboundPort,
+    ScraperInboundPort, TripAssemblerOutboundPort, TripPrecisionInboundPort,
+    TripPrecisionOutboundPort,
 };
 use orca_statemachine::{Machine, Schedule, Step, TransitionLog};
 use scraper::Scraper;
@@ -25,7 +25,6 @@ pub use states::*;
 
 pub trait Database:
     TripAssemblerOutboundPort
-    + TripAssemblerInboundPort
     + TripPrecisionInboundPort
     + TripPrecisionOutboundPort
     + ScraperInboundPort
@@ -38,7 +37,6 @@ pub trait TripProcessor: TripAssembler + Send + Sync + 'static {}
 
 impl<T> Database for T where
     T: TripAssemblerOutboundPort
-        + TripAssemblerInboundPort
         + TripPrecisionInboundPort
         + TripPrecisionOutboundPort
         + ScraperInboundPort

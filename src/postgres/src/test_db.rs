@@ -467,15 +467,14 @@ WHERE
     pub async fn generate_ers_departure_with_port(
         &self,
         message_id: u64,
-        vessel_id: Option<FiskeridirVesselId>,
+        vessel_id: FiskeridirVesselId,
         timestamp: DateTime<Utc>,
+        message_number: u32,
         port_id: &str,
     ) {
-        let mut departure = ErsDep::test_default(message_id, vessel_id.map(|v| v.0 as u64));
+        let mut departure =
+            ErsDep::test_default(message_id, vessel_id.0 as u64, timestamp, message_number);
         departure.port.code = Some(port_id.to_owned());
-        departure.departure_timestamp = timestamp;
-        departure.departure_time = timestamp.time();
-        departure.departure_date = timestamp.date_naive();
         self.db.add_ers_dep(vec![departure]).await.unwrap();
     }
 
@@ -504,15 +503,14 @@ ORDER BY
     pub async fn generate_ers_arrival_with_port(
         &self,
         message_id: u64,
-        vessel_id: Option<FiskeridirVesselId>,
+        vessel_id: FiskeridirVesselId,
         timestamp: DateTime<Utc>,
+        message_number: u32,
         port_id: &str,
     ) {
-        let mut arrival = ErsPor::test_default(message_id, vessel_id.map(|v| v.0 as u64), true);
+        let mut arrival =
+            ErsPor::test_default(message_id, vessel_id.0 as u64, timestamp, message_number);
         arrival.port.code = Some(port_id.to_owned());
-        arrival.arrival_timestamp = timestamp;
-        arrival.arrival_time = timestamp.time();
-        arrival.arrival_date = timestamp.date_naive();
         self.db.add_ers_por(vec![arrival]).await.unwrap();
     }
 
@@ -529,6 +527,7 @@ ORDER BY
                 TripsConflictStrategy::Replace,
                 vec![NewTrip {
                     period: DateRange::new(start, end).unwrap(),
+                    landing_coverage: DateRange::new(start, end).unwrap(),
                     start_port_code: None,
                     end_port_code: None,
                 }],
