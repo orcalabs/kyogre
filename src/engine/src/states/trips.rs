@@ -35,7 +35,7 @@ where
         Engine::TripsPrecision(StepWrapper::<A, SharedState<B>, TripsPrecision>::from(self))
     }
 
-    #[instrument(skip_all, fields(app.trip_assembler_id, app.vessels, app.produced_trips, app.conflicts, app.no_prior_state))]
+    #[instrument(skip_all, fields(app.trip_assembler_id))]
     async fn run_assembler(
         &self,
         trip_assembler: &dyn TripProcessor,
@@ -44,14 +44,21 @@ where
 
         match trip_assembler.produce_and_store_trips(database).await {
             Ok(r) => {
+                event!(
+                    Level::INFO,
+                    "num_conflicts: {}, num_vessels: {}, num_no_prior_state: {}
+                       num_trips: {}, num_failed: {}",
+                    r.num_conflicts,
+                    r.num_vessels,
+                    r.num_no_prior_state,
+                    r.num_trips,
+                    r.num_failed
+                );
+
                 tracing::Span::current().record(
                     "app.trip_assembler",
                     trip_assembler.assembler_id().to_string(),
                 );
-                tracing::Span::current().record("app.vessels", r.num_vessels);
-                tracing::Span::current().record("app.conflicts", r.num_conflicts);
-                tracing::Span::current().record("app.no_prior_state", r.num_no_prior_state);
-                tracing::Span::current().record("app.produced_trips", r.num_trips);
             }
             Err(e) => event!(Level::ERROR, "failed to produce and store trips: {:?}", e),
         }

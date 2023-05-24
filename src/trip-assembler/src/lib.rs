@@ -11,6 +11,7 @@ use kyogre_core::{
     TripAssemblerOutboundPort, TripPrecisionOutboundPort, TripPrecisionUpdate,
     TripsConflictStrategy, Vessel, VesselEventDetailed,
 };
+use tracing::{event, Level};
 
 mod error;
 mod ers;
@@ -46,6 +47,7 @@ pub struct TripsReport {
     pub num_conflicts: u32,
     pub num_no_prior_state: u32,
     pub num_vessels: u32,
+    pub num_failed: u32,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -100,6 +102,7 @@ pub trait TripAssembler: Send + Sync {
         let mut num_conflicts = 0;
         let mut num_no_prior_state = 0;
         let mut num_trips = 0;
+        let mut num_failed = 0;
 
         for v in vessels {
             if v.preferred_trip_assembler != self.assembler_id() {
@@ -157,7 +160,7 @@ pub trait TripAssembler: Send + Sync {
                     (AssemblerState::Conflict(_), _) => TripsConflictStrategy::Replace,
                 };
                 num_trips += trips.new_trips.len() as u32;
-                adapter
+                if let Err(e) = adapter
                     .add_trips(
                         vessel_id,
                         trips.calculation_timer,
@@ -166,7 +169,16 @@ pub trait TripAssembler: Send + Sync {
                         self.assembler_id(),
                     )
                     .await
-                    .change_context(TripAssemblerError)?;
+                    .change_context(TripAssemblerError)
+                {
+                    num_failed += 1;
+                    event!(
+                        Level::ERROR,
+                        "failed to store trips for vessel_id: {}, err: {:?}",
+                        vessel_id.0,
+                        e
+                    );
+                }
             }
         }
 
@@ -175,6 +187,7 @@ pub trait TripAssembler: Send + Sync {
             num_vessels,
             num_no_prior_state,
             num_trips,
+            num_failed,
         })
     }
 }
