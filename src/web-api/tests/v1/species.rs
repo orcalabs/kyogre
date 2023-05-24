@@ -25,7 +25,7 @@ async fn test_species_returns_all_species() {
         ];
 
         helper
-            .handle()
+            .adapter()
             .add_landings(vec![landing, landing2], 2023)
             .await
             .unwrap();
@@ -106,7 +106,7 @@ async fn test_species_fao_returns_all_species_fao() {
         ];
 
         helper
-            .handle()
+            .adapter()
             .add_landings(vec![landing, landing2], 2023)
             .await
             .unwrap();
@@ -147,7 +147,7 @@ async fn test_species_fiskeridir_returns_all_species_fiskeridir() {
         ];
 
         helper
-            .handle()
+            .adapter()
             .add_landings(vec![landing, landing2], 2023)
             .await
             .unwrap();

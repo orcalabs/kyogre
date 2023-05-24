@@ -1,11 +1,8 @@
 use super::{HaulCatch, WhaleCatch};
-use crate::{
-    error::{PostgresError, UnboundedRangeError},
-    queries::decimal_to_float,
-};
+use crate::{error::PostgresError, queries::decimal_to_float};
 use bigdecimal::BigDecimal;
 use chrono::{DateTime, Utc};
-use error_stack::{report, IntoReport, Report, ResultExt};
+use error_stack::{IntoReport, Report, ResultExt};
 use fiskeridir_rs::{DeliveryPointId, Gear, GearGroup, Quality, VesselLengthGroup};
 use kyogre_core::{
     CatchLocationId, DateRange, FiskeridirVesselId, HaulId, TripAssemblerId, TripId,
@@ -88,29 +85,6 @@ struct TripHaul {
     whale_catches: Vec<WhaleCatch>,
 }
 
-pub struct PgRangeWrapper(PgRange<DateTime<Utc>>);
-
-impl TryFrom<PgRangeWrapper> for DateRange {
-    type Error = Report<PostgresError>;
-    fn try_from(value: PgRangeWrapper) -> std::result::Result<Self, Self::Error> {
-        let start = match value.0.start {
-            std::ops::Bound::Included(t) | std::ops::Bound::Excluded(t) => Ok(t),
-            std::ops::Bound::Unbounded => Err(report!(UnboundedRangeError)),
-        }
-        .change_context(PostgresError::DataConversion)?;
-
-        let end = match value.0.end {
-            std::ops::Bound::Included(t) | std::ops::Bound::Excluded(t) => Ok(t),
-            std::ops::Bound::Unbounded => Err(report!(UnboundedRangeError)),
-        }
-        .change_context(PostgresError::DataConversion)?;
-
-        DateRange::new(start, end)
-            .into_report()
-            .change_context(PostgresError::DataConversion)
-    }
-}
-
 #[derive(Debug, Clone, Deserialize)]
 struct Delivery {
     total_living_weight: f64,
@@ -147,62 +121,20 @@ impl TryFrom<Trip> for kyogre_core::Trip {
     type Error = Report<PostgresError>;
 
     fn try_from(value: Trip) -> Result<Self, Self::Error> {
-        let period_start = match value.period.start {
-            std::ops::Bound::Included(b) => Ok(b),
-            std::ops::Bound::Excluded(b) => Ok(b),
-            std::ops::Bound::Unbounded => Err(report!(UnboundedRangeError)),
-        }
-        .change_context(PostgresError::DataConversion)?;
-
-        let period_end = match value.period.end {
-            std::ops::Bound::Included(b) => Ok(b),
-            std::ops::Bound::Excluded(b) => Ok(b),
-            std::ops::Bound::Unbounded => Err(report!(UnboundedRangeError)),
-        }
-        .change_context(PostgresError::DataConversion)?;
-
-        let landing_coverage_start = match value.landing_coverage.start {
-            std::ops::Bound::Included(b) => Ok(b),
-            std::ops::Bound::Excluded(b) => Ok(b),
-            std::ops::Bound::Unbounded => Err(report!(UnboundedRangeError)),
-        }
-        .change_context(PostgresError::DataConversion)?;
-
-        let landing_coverage_end = match value.landing_coverage.end {
-            std::ops::Bound::Included(b) => Ok(b),
-            std::ops::Bound::Excluded(b) => Ok(b),
-            std::ops::Bound::Unbounded => Err(report!(UnboundedRangeError)),
-        }
-        .change_context(PostgresError::DataConversion)?;
-
-        let period = DateRange::new(period_start, period_end)
+        let period = DateRange::try_from(value.period)
             .into_report()
             .change_context(PostgresError::DataConversion)?;
-        let landing_coverage = DateRange::new(landing_coverage_start, landing_coverage_end)
+
+        let landing_coverage = DateRange::try_from(value.landing_coverage)
             .into_report()
             .change_context(PostgresError::DataConversion)?;
 
         let precision_period = value
             .period_precision
-            .map(|v| {
-                let start = match v.start {
-                    std::ops::Bound::Included(b) => Ok(b),
-                    std::ops::Bound::Excluded(b) => Ok(b),
-                    std::ops::Bound::Unbounded => Err(report!(UnboundedRangeError)),
-                }
-                .change_context(PostgresError::DataConversion)?;
-                let end = match v.end {
-                    std::ops::Bound::Included(b) => Ok(b),
-                    std::ops::Bound::Excluded(b) => Ok(b),
-                    std::ops::Bound::Unbounded => Err(report!(UnboundedRangeError)),
-                }
-                .change_context(PostgresError::DataConversion)?;
-
-                DateRange::new(start, end)
-                    .into_report()
-                    .change_context(PostgresError::DataConversion)
-            })
-            .transpose()?;
+            .map(DateRange::try_from)
+            .transpose()
+            .into_report()
+            .change_context(PostgresError::DataConversion)?;
 
         Ok(kyogre_core::Trip {
             trip_id: TripId(value.trip_id),
@@ -226,12 +158,19 @@ impl TryFrom<TripDetailed> for kyogre_core::TripDetailed {
     type Error = Report<PostgresError>;
 
     fn try_from(value: TripDetailed) -> Result<Self, Self::Error> {
-        let period = DateRange::try_from(PgRangeWrapper(value.period))?;
+        let period = DateRange::try_from(value.period)
+            .into_report()
+            .change_context(PostgresError::DataConversion)?;
         let period_precision = value
             .period_precision
-            .map(|v| DateRange::try_from(PgRangeWrapper(v)))
-            .transpose()?;
-        let landing_coverage = DateRange::try_from(PgRangeWrapper(value.landing_coverage))?;
+            .map(DateRange::try_from)
+            .transpose()
+            .into_report()
+            .change_context(PostgresError::DataConversion)?;
+
+        let landing_coverage = DateRange::try_from(value.landing_coverage)
+            .into_report()
+            .change_context(PostgresError::DataConversion)?;
 
         let db_delivery_point_catches: Vec<DeliveryPointCatch> =
             serde_json::from_str(&value.delivery_point_catches)
@@ -331,7 +270,7 @@ impl From<TripAssemblerConflict> for kyogre_core::TripAssemblerConflict {
 }
 impl From<Catch> for kyogre_core::Catch {
     fn from(c: Catch) -> Self {
-        // remove when fiskeridir_rs has enum sqlx support
+        // TODO: remove when fiskeridir_rs has enum sqlx support
         let product_quality = Quality::from_i32(c.product_quality_id).unwrap();
         kyogre_core::Catch {
             living_weight: c.living_weight,

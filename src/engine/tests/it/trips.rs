@@ -1,5 +1,5 @@
 use crate::helper::*;
-use chrono::Duration;
+use chrono::{TimeZone, Utc};
 use engine::*;
 use kyogre_core::*;
 use orca_statemachine::Schedule;
@@ -10,12 +10,13 @@ async fn test_trips_only_generates_trips_for_ers_assembler_if_vessel_has_ers_dat
         scrape_schedule: Schedule::Disabled,
     };
     test(config, |helper| async move {
-        let fiskeridir_vessel_id = FiskeridirVesselId(11);
+        let vessel_id = FiskeridirVesselId(11);
 
-        let departure = fiskeridir_rs::ErsDep::test_default(1, Some(fiskeridir_vessel_id.0 as u64));
-        let mut arrival =
-            fiskeridir_rs::ErsPor::test_default(1, Some(fiskeridir_vessel_id.0 as u64), true);
-        arrival.arrival_date = departure.departure_date + Duration::days(1);
+        let start = Utc.timestamp_opt(100000, 1).unwrap();
+        let end = Utc.timestamp_opt(200000, 1).unwrap();
+
+        let departure = fiskeridir_rs::ErsDep::test_default(1, vessel_id.0 as u64, start, 1);
+        let arrival = fiskeridir_rs::ErsPor::test_default(1, vessel_id.0 as u64, end, 2);
 
         helper
             .adapter()
@@ -28,7 +29,7 @@ async fn test_trips_only_generates_trips_for_ers_assembler_if_vessel_has_ers_dat
             .await
             .unwrap();
 
-        let landing = fiskeridir_rs::Landing::test_default(1, Some(fiskeridir_vessel_id.0));
+        let landing = fiskeridir_rs::Landing::test_default(1, Some(vessel_id.0));
         helper
             .adapter()
             .add_landings(vec![landing.clone()], 2023)
@@ -37,7 +38,7 @@ async fn test_trips_only_generates_trips_for_ers_assembler_if_vessel_has_ers_dat
 
         helper.run_step(EngineDiscriminants::Trips).await;
 
-        let trips = helper.db.trips_of_vessel(fiskeridir_vessel_id).await;
+        let trips = helper.db.trips_of_vessel(vessel_id).await;
 
         assert_eq!(trips.len(), 1);
         assert_eq!(trips[0].assembler_id, TripAssemblerId::Ers);

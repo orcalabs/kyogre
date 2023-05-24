@@ -18,6 +18,7 @@ mod port;
 mod species;
 mod trip;
 mod vessel;
+mod vessel_events;
 mod vms;
 
 pub use ais::*;
@@ -40,4 +41,5 @@ pub use port::*;
 pub use species::*;
 pub use trip::*;
 pub use vessel::*;
+pub use vessel_events::*;
 pub use vms::*;

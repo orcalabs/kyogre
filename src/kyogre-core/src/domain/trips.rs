@@ -21,6 +21,7 @@ pub struct Trip {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NewTrip {
     pub period: DateRange,
+    pub landing_coverage: DateRange,
     pub start_port_code: Option<String>,
     pub end_port_code: Option<String>,
 }

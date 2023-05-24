@@ -18,7 +18,7 @@ async fn test_vessels_returns_merged_data_from_fiskeridir_and_ais() {
         landing.vessel.call_sign = Some(call_sign);
 
         helper
-            .handle()
+            .adapter()
             .add_landings(vec![landing.clone()], 2023)
             .await
             .unwrap();

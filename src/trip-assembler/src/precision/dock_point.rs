@@ -7,7 +7,7 @@ use async_trait::async_trait;
 use chrono::{TimeZone, Utc};
 use error_stack::{Result, ResultExt};
 use geoutils::Location;
-use kyogre_core::{AisVmsPosition, DateRange, Trip};
+use kyogre_core::{AisVmsPosition, Bound, DateRange, Trip};
 use kyogre_core::{TripPrecisionOutboundPort, Vessel};
 
 /// Precision strategy where we try to find a collection of positions close to the dock points
@@ -112,7 +112,11 @@ impl DockPointPrecision {
                 ),
                 PrecisionDirection::Extending => {
                     let prior_trip_end = adapter
-                        .trip_prior_to(vessel.fiskeridir.id, trip.assembler_id, &trip.start())
+                        .trip_prior_to_timestamp(
+                            vessel.fiskeridir.id,
+                            &trip.start(),
+                            Bound::Inclusive,
+                        )
                         .await
                         .change_context(TripPrecisionError)?
                         .map(|t| t.landing_coverage.end())

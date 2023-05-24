@@ -1,9 +1,9 @@
 use super::helper::test;
 use actix_web::http::StatusCode;
 use chrono::{Duration, TimeZone, Utc};
-use fiskeridir_rs::{CallSign, Quality};
+use fiskeridir_rs::{CallSign, ErsDep, ErsPor, Quality};
 use kyogre_core::{
-    FiskeridirVesselId, HaulId, Mmsi, Ordering, ScraperInboundPort, VesselEventType,
+    FiskeridirVesselId, HaulId, Mmsi, Ordering, ScraperInboundPort, TripId, VesselEventType,
 };
 use web_api::routes::v1::trip::{Trip, TripsParameters};
 
@@ -54,7 +54,7 @@ async fn test_trip_of_haul_returns_landings_based_trip_if_ers_based_does_not_exi
 
 #[tokio::test]
 async fn test_trip_of_haul_does_not_return_trip_outside_haul_period() {
-    test(|helper| async move {
+    test(|mut helper| async move {
         let fiskeridir_vessel_id = FiskeridirVesselId(11);
         let start = Utc.timestamp_opt(1000000, 0).unwrap();
         let end = Utc.timestamp_opt(10000000, 0).unwrap();
@@ -82,7 +82,7 @@ async fn test_trip_of_haul_does_not_return_trip_outside_haul_period() {
 
 #[tokio::test]
 async fn test_trip_of_haul_does_not_return_trip_of_other_vessels() {
-    test(|helper| async move {
+    test(|mut helper| async move {
         let fiskeridir_vessel_id = FiskeridirVesselId(11);
         let fiskeridir_vessel_id2 = FiskeridirVesselId(12);
         let start = Utc.timestamp_opt(10000, 0).unwrap();
@@ -111,7 +111,7 @@ async fn test_trip_of_haul_does_not_return_trip_of_other_vessels() {
 
 #[tokio::test]
 async fn test_trip_of_haul_returns_all_hauls_and_landings_connected_to_trip() {
-    test(|helper| async move {
+    test(|mut helper| async move {
         let fiskeridir_vessel_id = FiskeridirVesselId(1);
         let start = Utc.timestamp_opt(10000, 0).unwrap();
         let end = Utc.timestamp_opt(100000, 0).unwrap();
@@ -150,7 +150,7 @@ async fn test_trip_of_haul_returns_all_hauls_and_landings_connected_to_trip() {
 
 #[tokio::test]
 async fn test_aggregates_landing_data_per_product_quality_and_species_id() {
-    test(|helper| async move {
+    test(|mut helper| async move {
         let fiskeridir_vessel_id = FiskeridirVesselId(1);
         let start = Utc.timestamp_opt(10000, 0).unwrap();
         let end = Utc.timestamp_opt(100000, 0).unwrap();
@@ -214,7 +214,7 @@ async fn test_aggregates_landing_data_per_product_quality_and_species_id() {
 
 #[tokio::test]
 async fn test_trip_of_haul_returns_precision_range_of_trip_if_it_exists() {
-    test(|helper| async move {
+    test(|mut helper| async move {
         let call_sign = CallSign::try_from("LK-28").unwrap();
         let fiskeridir_vessel_id = FiskeridirVesselId(11);
         helper
@@ -255,7 +255,7 @@ async fn test_trip_of_haul_returns_precision_range_of_trip_if_it_exists() {
 
 #[tokio::test]
 async fn test_trips_of_vessel_only_returns_trips_of_specified_vessel() {
-    test(|helper| async move {
+    test(|mut helper| async move {
         let fiskeridir_vessel_id = FiskeridirVesselId(1);
         let fiskeridir_vessel_id2 = FiskeridirVesselId(2);
 
@@ -295,7 +295,7 @@ async fn test_trips_of_vessel_only_returns_trips_of_specified_vessel() {
 
 #[tokio::test]
 async fn test_trips_of_vessel_filters_by_limit() {
-    test(|helper| async move {
+    test(|mut helper| async move {
         let fiskeridir_vessel_id = FiskeridirVesselId(1);
 
         helper
@@ -338,7 +338,7 @@ async fn test_trips_of_vessel_filters_by_limit() {
 
 #[tokio::test]
 async fn test_trips_of_vessel_filters_by_offset() {
-    test(|helper| async move {
+    test(|mut helper| async move {
         let fiskeridir_vessel_id = FiskeridirVesselId(1);
 
         helper
@@ -381,7 +381,7 @@ async fn test_trips_of_vessel_filters_by_offset() {
 
 #[tokio::test]
 async fn test_trips_of_vessel_orders_by_period() {
-    test(|helper| async move {
+    test(|mut helper| async move {
         let fiskeridir_vessel_id = FiskeridirVesselId(1);
 
         helper
@@ -425,7 +425,7 @@ async fn test_trips_of_vessel_orders_by_period() {
 
 #[tokio::test]
 async fn test_first_ers_data_triggers_trip_assembler_switch_to_ers() {
-    test(|helper| async move {
+    test(|mut helper| async move {
         let fiskeridir_vessel_id = FiskeridirVesselId(1);
 
         let start = Utc.timestamp_opt(10000, 0).unwrap();
@@ -465,7 +465,7 @@ async fn test_first_ers_data_triggers_trip_assembler_switch_to_ers() {
 
 #[tokio::test]
 async fn test_trips_contains_all_events_within_trip_period_ordered_ascendingly() {
-    test(|helper| async move {
+    test(|mut helper| async move {
         let fiskeridir_vessel_id = FiskeridirVesselId(1);
 
         helper
@@ -520,7 +520,7 @@ async fn test_trips_contains_all_events_within_trip_period_ordered_ascendingly()
 
 #[tokio::test]
 async fn test_trips_events_are_isolated_per_vessel() {
-    test(|helper| async move {
+    test(|mut helper| async move {
         let fiskeridir_vessel_id = FiskeridirVesselId(1);
         let fiskeridir_vessel_id2 = FiskeridirVesselId(2);
         helper
@@ -608,7 +608,7 @@ async fn test_trips_events_are_isolated_per_vessel() {
 
 #[tokio::test]
 async fn test_trips_does_not_include_events_outside_period() {
-    test(|helper| async move {
+    test(|mut helper| async move {
         let fiskeridir_vessel_id = FiskeridirVesselId(1);
         let fiskeridir_vessel_id2 = FiskeridirVesselId(2);
         helper
@@ -651,7 +651,7 @@ async fn test_trips_does_not_include_events_outside_period() {
 
 #[tokio::test]
 async fn test_trips_does_not_tra_events_without_timestamps() {
-    test(|helper| async move {
+    test(|mut helper| async move {
         let fiskeridir_vessel_id = FiskeridirVesselId(1);
         let fiskeridir_vessel_id2 = FiskeridirVesselId(2);
         helper
@@ -691,10 +691,111 @@ async fn test_trips_does_not_tra_events_without_timestamps() {
         let trips: Vec<Trip> = response.json().await.unwrap();
 
         assert_eq!(trips.len(), 1);
+
         assert_eq!(trips[0].events.len(), 2);
         assert_eq!(trips[0].events[0].event_type, VesselEventType::ErsDep);
         assert_eq!(trips[0].events[1].event_type, VesselEventType::ErsPor);
         assert_eq!(trips[0], ers_trip);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_trips_returns_correct_ports() {
+    test(|helper| async move {
+        let vessel_id = FiskeridirVesselId(1);
+        helper
+            .db
+            .generate_fiskeridir_vessel(vessel_id, None, None)
+            .await;
+
+        let start = Utc.timestamp_opt(100000, 1).unwrap();
+        let end = Utc.timestamp_opt(200000, 1).unwrap();
+
+        let start_port = "NOTOS".to_string();
+        let end_port = "DENOR".to_string();
+        let mut departure = ErsDep::test_default(1, vessel_id.0 as u64, start, 1);
+        departure.port.code = Some(start_port.clone());
+        let mut arrival = ErsPor::test_default(1, vessel_id.0 as u64, end, 2);
+        arrival.port.code = Some(end_port.clone());
+
+        let ers_trip = helper
+            .generate_ers_trip_with_messages(vessel_id, departure, arrival)
+            .await;
+
+        let response = helper
+            .app
+            .get_trips_of_vessel(vessel_id, TripsParameters::default())
+            .await;
+        assert_eq!(response.status(), StatusCode::OK);
+
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let trips: Vec<Trip> = response.json().await.unwrap();
+
+        assert_eq!(trips.len(), 1);
+        assert_eq!(trips[0], ers_trip);
+        assert_eq!(trips[0].start_port_id.clone().unwrap(), start_port);
+        assert_eq!(trips[0].end_port_id.clone().unwrap(), end_port);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_trip_contains_correct_arrival_and_departure_with_adjacent_trips_with_equal_start_and_stop(
+) {
+    test(|helper| async move {
+        let vessel_id = FiskeridirVesselId(1);
+        helper
+            .db
+            .generate_fiskeridir_vessel(vessel_id, None, None)
+            .await;
+
+        let start = Utc.timestamp_opt(100000, 1).unwrap();
+        let end = Utc.timestamp_opt(200000, 1).unwrap();
+        let end2 = Utc.timestamp_opt(300000, 1).unwrap();
+        let end3 = Utc.timestamp_opt(400000, 1).unwrap();
+
+        let departure = ErsDep::test_default(1, vessel_id.0 as u64, start, 1);
+        let arrival = ErsPor::test_default(1, vessel_id.0 as u64, end, 2);
+
+        let departure2 = ErsDep::test_default(2, vessel_id.0 as u64, end, 3);
+        let arrival2 = ErsPor::test_default(2, vessel_id.0 as u64, end2, 4);
+
+        let departure3 = ErsDep::test_default(3, vessel_id.0 as u64, end2, 4);
+        let arrival3 = ErsPor::test_default(3, vessel_id.0 as u64, end3, 5);
+
+        let ers_trip = helper
+            .generate_ers_trip_with_messages(vessel_id, departure, arrival)
+            .await;
+
+        let mut ers_trip2 = helper
+            .generate_ers_trip_with_messages(vessel_id, departure2, arrival2)
+            .await;
+
+        let ers_trip3 = helper
+            .generate_ers_trip_with_messages(vessel_id, departure3, arrival3)
+            .await;
+
+        let response = helper
+            .app
+            .get_trips_of_vessel(vessel_id, TripsParameters::default())
+            .await;
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let trips: Vec<Trip> = response.json().await.unwrap();
+
+        // Generating the last trip creates a conflict causing us to re-generate the
+        // second trip.
+        ers_trip2.trip_id = TripId(3);
+
+        assert_eq!(trips.len(), 3);
+        assert_eq!(trips[0].events.len(), 2);
+        assert_eq!(trips[1].events.len(), 2);
+        assert_eq!(trips[2].events.len(), 2);
+        assert_eq!(trips[0], ers_trip);
+        assert_eq!(trips[1], ers_trip2);
+        assert_eq!(trips[2], ers_trip3);
     })
     .await;
 }

@@ -7,10 +7,8 @@ use crate::{
     models::NewLanding,
     PostgresAdapter,
 };
-use chrono::{DateTime, Utc};
 use error_stack::{IntoReport, Result, ResultExt};
 use fiskeridir_rs::LandingId;
-use kyogre_core::FiskeridirVesselId;
 
 impl PostgresAdapter {
     pub(crate) async fn add_landing_set(
@@ -427,37 +425,6 @@ ON CONFLICT (landing_id) DO NOTHING
         .into_report()
         .change_context(PostgresError::Query)
         .map(|_| ())
-    }
-
-    pub(crate) async fn landing_dates_impl(
-        &self,
-        vessel_id: FiskeridirVesselId,
-        start: &DateTime<Utc>,
-    ) -> Result<Vec<DateTime<Utc>>, PostgresError> {
-        struct Intermediate {
-            landing_timestamp: DateTime<Utc>,
-        }
-        Ok(sqlx::query_as!(
-            Intermediate,
-            r#"
-SELECT
-    landing_timestamp
-FROM
-    landings
-WHERE
-    fiskeridir_vessel_id = $1
-    AND landing_timestamp >= $2
-            "#,
-            vessel_id.0,
-            start,
-        )
-        .fetch_all(&self.pool)
-        .await
-        .into_report()
-        .change_context(PostgresError::Query)?
-        .into_iter()
-        .map(|v| v.landing_timestamp)
-        .collect())
     }
 
     pub(crate) async fn delete_removed_landings_impl(

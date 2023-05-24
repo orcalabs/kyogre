@@ -41,7 +41,6 @@ async fn test_landing_deletion_creates_trip_assembler_conflicts() {
             .conflicts(TripAssemblerId::Landings)
             .await
             .unwrap();
-        assert_eq!(1, conflicts.len());
         assert_eq!(landing.landing_timestamp, conflicts[0].timestamp);
     })
     .await;

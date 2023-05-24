@@ -62,16 +62,11 @@ async fn test_dock_point_precision_extends_start_and_end_of_trip() {
             .await;
         helper
             .db
-            .generate_ers_departure_with_port(
-                1,
-                Some(fiskeridir_vessel_id),
-                departure,
-                start_port_id,
-            )
+            .generate_ers_departure_with_port(1, fiskeridir_vessel_id, departure, 1, start_port_id)
             .await;
         helper
             .db
-            .generate_ers_arrival_with_port(2, Some(fiskeridir_vessel_id), arrival, end_port_id)
+            .generate_ers_arrival_with_port(2, fiskeridir_vessel_id, arrival, 2, end_port_id)
             .await;
 
         let config = PrecisionConfig::default();
@@ -162,16 +157,11 @@ async fn test_dock_point_precision_shrinks_start_and_end_of_trip() {
             .await;
         helper
             .db
-            .generate_ers_departure_with_port(
-                1,
-                Some(fiskeridir_vessel_id),
-                departure,
-                start_port_id,
-            )
+            .generate_ers_departure_with_port(1, fiskeridir_vessel_id, departure, 1, start_port_id)
             .await;
         helper
             .db
-            .generate_ers_arrival_with_port(2, Some(fiskeridir_vessel_id), arrival, end_port_id)
+            .generate_ers_arrival_with_port(2, fiskeridir_vessel_id, arrival, 2, end_port_id)
             .await;
 
         let config = PrecisionConfig::default();

@@ -8,7 +8,7 @@ use rand::random;
 use std::panic;
 use std::sync::Once;
 use tracing_subscriber::FmtSubscriber;
-use trip_assembler::{State, TripAssembler};
+use trip_assembler::TripAssembler;
 
 static TRACING: Once = Once::new();
 static DATABASE_PASSWORD: &str = "test123";
@@ -18,28 +18,18 @@ pub struct TestHelper {
 }
 
 impl TestHelper {
+    pub fn adapter(&self) -> &PostgresAdapter {
+        &self.db.db
+    }
+
     pub async fn assemble_trips(
         &self,
         vessel: &Vessel,
         assembler: &(dyn TripAssembler + Send + Sync),
     ) -> Vec<Trip> {
-        let new_trips = assembler
-            .assemble(&self.db.db, vessel, State::NoPriorState)
-            .await
-            .unwrap()
-            .unwrap();
+        let adapter = self.adapter();
 
-        self.db
-            .db
-            .add_trips(
-                vessel.fiskeridir.id,
-                new_trips.new_trip_calculation_time,
-                new_trips.conflict_strategy,
-                new_trips.trips,
-                assembler.assembler_id(),
-            )
-            .await
-            .unwrap();
+        assembler.produce_and_store_trips(adapter).await.unwrap();
 
         self.db.trips_of_vessel(vessel.fiskeridir.id).await
     }
@@ -139,10 +129,8 @@ where
     )
     .with_log_options(None);
 
-    composition.port_map(5432, 5433);
-
     composition.static_container(StaticManagementPolicy::Dynamic);
-
+    composition.port_map(5432, 5400);
     docker_test.add_composition(composition);
 
     let db_name = random::<u32>().to_string();
