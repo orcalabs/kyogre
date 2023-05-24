@@ -2,6 +2,7 @@ use crate::TripProcessor;
 use config::{Config, ConfigError, File, Source};
 use orca_core::{Environment, LogLevel, PsqlSettings, TelemetrySettings};
 use serde::Deserialize;
+use vessel_benchmark::*;
 
 #[derive(Debug, Deserialize)]
 pub struct Settings {
@@ -85,6 +86,13 @@ impl Settings {
             ers_assembler as Box<dyn TripProcessor>,
             landings_assembler as Box<dyn TripProcessor>,
         ];
+
+        vec
+    }
+    pub fn benchmarks(&self) -> Vec<Box<dyn VesselBenchmark>> {
+        let weight_per_hour = Box::<WeightPerHour>::default();
+
+        let vec = vec![weight_per_hour as Box<dyn VesselBenchmark>];
 
         vec
     }

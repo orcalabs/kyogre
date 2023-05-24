@@ -45,6 +45,7 @@ wkt = "0.10.3"
 
 [dev-dependencies]
 trip-assembler = { path = "../trip-assembler" }
+vessel-benchmark = { path = "../vessel-benchmark" }
 dockertest = { version = "0.3.1", registry = "orcalabs-orcastrator" }
 orca-core = { version = "0.20.0", registry = "orcalabs-orcastrator", features = [
     "dockertest",

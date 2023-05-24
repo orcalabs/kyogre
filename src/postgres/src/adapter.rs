@@ -4,7 +4,7 @@ use crate::{
     ers_tra_set::ErsTraSet, landing_set::LandingSet,
 };
 use async_trait::async_trait;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Duration, Utc};
 use error_stack::{IntoReport, Report, Result, ResultExt};
 use fiskeridir_rs::{CallSign, LandingId};
 use futures::{Stream, StreamExt};
@@ -644,6 +644,30 @@ impl TripPrecisionInboundPort for PostgresAdapter {
         self.update_trip_precisions_impl(updates)
             .await
             .change_context(UpdateError)
+    }
+}
+
+#[async_trait]
+impl VesselBenchmarkOutbound for PostgresAdapter {
+    async fn vessels(&self) -> Result<Vec<Vessel>, QueryError> {
+        self.all_vessels().await
+    }
+    async fn sum_trip_time(&self, id: FiskeridirVesselId) -> Result<Option<Duration>, QueryError> {
+        self.sum_trip_time_impl(id).await.change_context(QueryError)
+    }
+    async fn sum_landing_weight(&self, id: FiskeridirVesselId) -> Result<Option<f64>, QueryError> {
+        self.sum_landing_weight_impl(id)
+            .await
+            .change_context(QueryError)
+    }
+}
+
+#[async_trait]
+impl VesselBenchmarkInbound for PostgresAdapter {
+    async fn add_output(&self, values: Vec<VesselBenchmarkOutput>) -> Result<(), InsertError> {
+        self.add_benchmark_outputs(values)
+            .await
+            .change_context(InsertError)
     }
 }
 

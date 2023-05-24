@@ -111,6 +111,18 @@ impl TestHelper {
                 let to = engine.current_state_name();
                 (to, from)
             }
+            EngineDiscriminants::Benchmark => {
+                let step = StepWrapper::initial(
+                    app.transition_log.clone(),
+                    app.shared_state,
+                    Benchmark::default(),
+                );
+                let engine = Engine::Benchmark(step);
+                let from = engine.current_state_name();
+                let engine = engine.step().await;
+                let to = engine.current_state_name();
+                (to, from)
+            }
         };
         let current = EngineDiscriminants::from_str(&to).unwrap();
 

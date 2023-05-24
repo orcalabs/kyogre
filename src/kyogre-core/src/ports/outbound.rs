@@ -2,7 +2,7 @@ use std::pin::Pin;
 
 use crate::*;
 use async_trait::async_trait;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Duration, Utc};
 use error_stack::Result;
 use fiskeridir_rs::CallSign;
 use futures::Stream;
@@ -119,4 +119,11 @@ pub trait TripPrecisionOutboundPort: Send + Sync {
         vessel_id: FiskeridirVesselId,
         assembler_id: TripAssemblerId,
     ) -> Result<Vec<Trip>, QueryError>;
+}
+
+#[async_trait]
+pub trait VesselBenchmarkOutbound: Send + Sync {
+    async fn vessels(&self) -> Result<Vec<Vessel>, QueryError>;
+    async fn sum_trip_time(&self, id: FiskeridirVesselId) -> Result<Option<Duration>, QueryError>;
+    async fn sum_landing_weight(&self, id: FiskeridirVesselId) -> Result<Option<f64>, QueryError>;
 }

@@ -31,6 +31,7 @@ pub async fn vessels<T: Database + 'static>(db: web::Data<T>) -> Result<HttpResp
 pub struct Vessel {
     pub fiskeridir: FiskeridirVessel,
     pub ais: Option<AisVessel>,
+    pub fish_caught_per_hour: Option<f64>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
@@ -80,6 +81,7 @@ impl From<kyogre_core::Vessel> for Vessel {
         Vessel {
             fiskeridir: FiskeridirVessel::from(value.fiskeridir),
             ais: value.ais.map(AisVessel::from),
+            fish_caught_per_hour: value.fish_caught_per_hour,
         }
     }
 }

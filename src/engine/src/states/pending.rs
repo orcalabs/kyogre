@@ -1,8 +1,8 @@
 use std::str::FromStr;
 
 use crate::{
-    error::EngineError, Engine, EngineDiscriminants, Scrape, SharedState, Sleep, StepWrapper,
-    UpdateDatabaseViews,
+    error::EngineError, Benchmark, Engine, EngineDiscriminants, Scrape, SharedState, Sleep,
+    StepWrapper, UpdateDatabaseViews,
 };
 
 use chrono::{DateTime, Utc};
@@ -196,6 +196,9 @@ where
                 Engine::UpdateDatabaseViews(
                     StepWrapper::<A, SharedState<B>, UpdateDatabaseViews>::from(self),
                 )
+            }
+            EngineDiscriminants::Benchmark => {
+                Engine::Benchmark(StepWrapper::<A, SharedState<B>, Benchmark>::from(self))
             }
         }
     }
