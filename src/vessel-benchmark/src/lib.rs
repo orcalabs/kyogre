@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use async_trait::async_trait;
 use error_stack::{Context, Result, ResultExt};
 use kyogre_core::*;
@@ -26,10 +28,13 @@ pub trait VesselBenchmark: Send + Sync {
         let vessels = output_adapter
             .vessels()
             .await
-            .change_context(BenchmarkError)?;
+            .change_context(BenchmarkError)?
+            .into_iter()
+            .map(|v| (v.fiskeridir.id, v))
+            .collect::<HashMap<FiskeridirVesselId, Vessel>>();
 
         let mut outputs = Vec::with_capacity(vessels.len());
-        for v in vessels {
+        for v in vessels.into_values() {
             match self.benchmark(&v, output_adapter).await {
                 Ok(value) => {
                     outputs.push(VesselBenchmarkOutput {
