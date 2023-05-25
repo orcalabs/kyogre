@@ -22,6 +22,7 @@ impl<A, B> StepWrapper<A, SharedState<B>, Benchmark>
 where
     B: Database,
 {
+    #[instrument(name = "benchmark_state", skip_all, fields(app.engine_state))]
     pub async fn run(self) -> Engine<A, SharedState<B>> {
         tracing::Span::current()
             .record("app.engine_state", EngineDiscriminants::Benchmark.as_ref());
