@@ -438,3 +438,61 @@ async fn test_other_event_types_does_not_cause_conflicts() {
     })
     .await;
 }
+
+#[tokio::test]
+async fn test_after_resolving_conflicts_they_are_removed() {
+    test(|helper| async move {
+        let adapter = helper.adapter();
+        let vessel_id = FiskeridirVesselId(11);
+        let ers_assembler = ErsTripAssembler::default();
+
+        let start = Utc.timestamp_opt(10, 0).unwrap();
+        let end = Utc.timestamp_opt(20, 0).unwrap();
+        let start2 = Utc.timestamp_opt(30, 0).unwrap();
+        let end2 = Utc.timestamp_opt(40, 0).unwrap();
+        let start3 = Utc.timestamp_opt(22, 0).unwrap();
+        let end3 = Utc.timestamp_opt(27, 0).unwrap();
+
+        let departure = fiskeridir_rs::ErsDep::test_default(1, vessel_id.0 as u64, start, 1);
+        let arrival = fiskeridir_rs::ErsPor::test_default(1, vessel_id.0 as u64, end, 2);
+
+        let departure2 = fiskeridir_rs::ErsDep::test_default(2, vessel_id.0 as u64, start2, 5);
+        let arrival2 = fiskeridir_rs::ErsPor::test_default(2, vessel_id.0 as u64, end2, 6);
+
+        helper
+            .add_ers_dep(vec![departure.clone(), departure2.clone()])
+            .await
+            .unwrap();
+        helper
+            .add_ers_por(vec![arrival.clone(), arrival2.clone()])
+            .await
+            .unwrap();
+
+        ers_assembler
+            .produce_and_store_trips(adapter)
+            .await
+            .unwrap();
+
+        let departure3 = fiskeridir_rs::ErsDep::test_default(3, vessel_id.0 as u64, start3, 3);
+        let arrival3 = fiskeridir_rs::ErsPor::test_default(3, vessel_id.0 as u64, end3, 4);
+
+        helper.add_ers_dep(vec![departure3.clone()]).await.unwrap();
+        helper.add_ers_por(vec![arrival3.clone()]).await.unwrap();
+
+        ers_assembler
+            .produce_and_store_trips(adapter)
+            .await
+            .unwrap();
+
+        assert_eq!(
+            helper
+                .adapter()
+                .conflicts(TripAssemblerId::Ers)
+                .await
+                .unwrap()
+                .len(),
+            0
+        );
+    })
+    .await;
+}
