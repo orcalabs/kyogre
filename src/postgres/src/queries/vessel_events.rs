@@ -91,7 +91,8 @@ FROM
             AND v."timestamp" <@ $2::tstzrange
     ) q
 ORDER BY
-    "timestamp"
+    "timestamp",
+    message_number
            "#,
             &(vessel_id.0 as i32),
             PgRange::from(period),
