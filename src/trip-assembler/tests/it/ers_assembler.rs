@@ -400,3 +400,41 @@ async fn test_handles_dep_and_por_with_identical_timestamps() {
     })
     .await;
 }
+
+#[tokio::test]
+async fn test_other_event_types_does_not_cause_conflicts() {
+    test(|helper| async move {
+        let adapter = helper.adapter();
+        let vessel_id = FiskeridirVesselId(11);
+        let ers_assembler = ErsTripAssembler::default();
+
+        let start = Utc.timestamp_opt(100000, 1).unwrap();
+        let end = Utc.timestamp_opt(200000, 1).unwrap();
+
+        let departure = fiskeridir_rs::ErsDep::test_default(1, vessel_id.0 as u64, start, 1);
+        let arrival = fiskeridir_rs::ErsPor::test_default(1, vessel_id.0 as u64, end, 1);
+
+        helper.add_ers_dep(vec![departure.clone()]).await.unwrap();
+        helper.add_ers_por(vec![arrival.clone()]).await.unwrap();
+
+        ers_assembler
+            .produce_and_store_trips(adapter)
+            .await
+            .unwrap();
+
+        helper.db.generate_tra(1, vessel_id, start).await;
+        helper.db.generate_landing(1, vessel_id, start).await;
+        helper.db.generate_haul(vessel_id, &start, &end).await;
+
+        assert_eq!(
+            helper
+                .adapter()
+                .conflicts(TripAssemblerId::Ers)
+                .await
+                .unwrap()
+                .len(),
+            0
+        );
+    })
+    .await;
+}

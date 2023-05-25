@@ -799,3 +799,91 @@ async fn test_trip_contains_correct_arrival_and_departure_with_adjacent_trips_wi
     })
     .await;
 }
+
+#[tokio::test]
+async fn test_ers_trip_contains_events_added_after_trip_creation() {
+    test(|mut helper| async move {
+        let vessel_id = FiskeridirVesselId(1);
+        let start = Utc.timestamp_opt(10000, 0).unwrap();
+        let end = Utc.timestamp_opt(100000, 0).unwrap();
+
+        helper.generate_ers_trip(vessel_id, &start, &end).await;
+
+        helper
+            .db
+            .generate_landing(1, vessel_id, start + Duration::seconds(1))
+            .await;
+        helper
+            .db
+            .generate_tra(1, vessel_id, start + Duration::seconds(2))
+            .await;
+
+        helper
+            .db
+            .generate_haul(
+                vessel_id,
+                &(start + Duration::hours(1)),
+                &(end - Duration::hours(1)),
+            )
+            .await;
+
+        let response = helper
+            .app
+            .get_trips_of_vessel(vessel_id, TripsParameters::default())
+            .await;
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let trips: Vec<Trip> = response.json().await.unwrap();
+        assert_eq!(trips[0].events.len(), 5);
+        assert_eq!(trips[0].events[0].event_type, VesselEventType::ErsDep);
+        assert_eq!(trips[0].events[1].event_type, VesselEventType::Landing);
+        assert_eq!(trips[0].events[2].event_type, VesselEventType::ErsTra);
+        assert_eq!(trips[0].events[3].event_type, VesselEventType::ErsDca);
+        assert_eq!(trips[0].events[4].event_type, VesselEventType::ErsPor);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_landings_trip_contains_events_added_after_trip_creation() {
+    test(|helper| async move {
+        let vessel_id = FiskeridirVesselId(1);
+        let start = Utc.timestamp_opt(10000000, 0).unwrap();
+        let end = Utc.timestamp_opt(1000000000, 0).unwrap();
+
+        helper.generate_landings_trip(vessel_id, &start, &end).await;
+
+        helper
+            .db
+            .generate_ers_arrival_with_port(1, vessel_id, start + Duration::seconds(1), 1, "NOTOS")
+            .await;
+        helper
+            .db
+            .generate_tra(1, vessel_id, start + Duration::seconds(2))
+            .await;
+
+        helper
+            .db
+            .generate_haul(
+                vessel_id,
+                &(start + Duration::hours(1)),
+                &(end - Duration::hours(1)),
+            )
+            .await;
+
+        let response = helper
+            .app
+            .get_trips_of_vessel(vessel_id, TripsParameters::default())
+            .await;
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let trips: Vec<Trip> = response.json().await.unwrap();
+        assert_eq!(trips.len(), 2);
+        assert_eq!(trips[1].events.len(), 4);
+        assert_eq!(trips[1].events[0].event_type, VesselEventType::ErsPor);
+        assert_eq!(trips[1].events[1].event_type, VesselEventType::ErsTra);
+        assert_eq!(trips[1].events[2].event_type, VesselEventType::ErsDca);
+        assert_eq!(trips[1].events[3].event_type, VesselEventType::Landing);
+    })
+    .await;
+}

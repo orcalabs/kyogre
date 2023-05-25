@@ -2261,6 +2261,69 @@
     },
     "query": "\nINSERT INTO\n    ers_dca_whale_catches (\n        message_id,\n        start_timestamp,\n        stop_timestamp,\n        message_version,\n        whale_grenade_number,\n        whale_blubber_measure_a,\n        whale_blubber_measure_b,\n        whale_blubber_measure_c,\n        whale_circumference,\n        whale_fetus_length,\n        whale_gender_id,\n        whale_individual_number,\n        whale_length\n    )\nSELECT\n    *\nFROM\n    UNNEST(\n        $1::BIGINT[],\n        $2::timestamptz[],\n        $3::timestamptz[],\n        $4::INT[],\n        $5::VARCHAR[],\n        $6::INT[],\n        $7::INT[],\n        $8::INT[],\n        $9::INT[],\n        $10::INT[],\n        $11::INT[],\n        $12::INT[],\n        $13::INT[]\n    )\nON CONFLICT (\n    message_id,\n    start_timestamp,\n    stop_timestamp,\n    whale_grenade_number\n) DO NOTHING\n            "
   },
+  "8370d6f7fca8696fd5da3bdc9dde742d68ff896c09a942b497655537e8ef77bf": {
+    "describe": {
+      "columns": [
+        {
+          "name": "vessel_event_id!",
+          "ordinal": 0,
+          "type_info": "Int8"
+        },
+        {
+          "name": "fiskeridir_vessel_id!",
+          "ordinal": 1,
+          "type_info": "Int4"
+        },
+        {
+          "name": "timestamp!",
+          "ordinal": 2,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "vessel_event_type_id!: VesselEventType",
+          "ordinal": 3,
+          "type_info": "Int4"
+        },
+        {
+          "name": "port_id",
+          "ordinal": 4,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "arrival_port_id",
+          "ordinal": 5,
+          "type_info": "Text"
+        },
+        {
+          "name": "departure_port_id",
+          "ordinal": 6,
+          "type_info": "Text"
+        },
+        {
+          "name": "estimated_timestamp",
+          "ordinal": 7,
+          "type_info": "Timestamptz"
+        }
+      ],
+      "nullable": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "parameters": {
+        "Left": [
+          "Int4",
+          "TstzRange"
+        ]
+      }
+    },
+    "query": "\nSELECT\n    vessel_event_id AS \"vessel_event_id!\",\n    fiskeridir_vessel_id AS \"fiskeridir_vessel_id!\",\n    \"timestamp\" AS \"timestamp!\",\n    \"vessel_event_type_id!: VesselEventType\",\n    port_id,\n    NULL AS \"arrival_port_id\",\n    NULL AS \"departure_port_id\",\n    estimated_timestamp\nFROM\n    (\n        SELECT\n            v.vessel_event_id,\n            v.fiskeridir_vessel_id,\n            v.\"timestamp\",\n            v.vessel_event_type_id AS \"vessel_event_type_id!: VesselEventType\",\n            d.port_id,\n            d.relevant_year,\n            d.message_number,\n            d.departure_timestamp AS estimated_timestamp\n        FROM\n            vessel_events v\n            INNER JOIN ers_departures d ON d.vessel_event_id = v.vessel_event_id\n        WHERE\n            v.fiskeridir_vessel_id = $1\n            AND v.\"timestamp\" <@ $2::tstzrange\n        UNION\n        SELECT\n            v.vessel_event_id,\n            v.fiskeridir_vessel_id,\n            v.\"timestamp\",\n            v.vessel_event_type_id AS \"vessel_event_type_id!: VesselEventType\",\n            a.port_id,\n            a.relevant_year,\n            a.message_number,\n            a.arrival_timestamp AS estimated_timestamp\n        FROM\n            vessel_events v\n            INNER JOIN ers_arrivals a ON a.vessel_event_id = v.vessel_event_id\n        WHERE\n            v.fiskeridir_vessel_id = $1\n            AND v.\"timestamp\" <@ $2::tstzrange\n    ) q\nORDER BY\n    \"timestamp\",\n    message_number\n           "
+  },
   "85720e65ca627b504427389b69b979a8728fcf2acd2498b3106556ed40572780": {
     "describe": {
       "columns": [],
@@ -3566,69 +3629,6 @@
       }
     },
     "query": "\nSELECT\n    latitude AS \"latitude!\",\n    longitude AS \"longitude!\",\n    \"timestamp\" AS \"timestamp!\",\n    course_over_ground,\n    speed,\n    navigational_status,\n    rate_of_turn,\n    true_heading,\n    distance_to_shore\nFROM\n    (\n        SELECT\n            latitude,\n            longitude,\n            \"timestamp\",\n            course_over_ground,\n            speed_over_ground AS speed,\n            navigation_status_id AS navigational_status,\n            rate_of_turn,\n            true_heading,\n            distance_to_shore\n        FROM\n            ais_positions a\n        WHERE\n            $1::INT IS NOT NULL\n            AND mmsi = $1\n        UNION ALL\n        SELECT\n            latitude,\n            longitude,\n            \"timestamp\",\n            course AS course_over_ground,\n            speed,\n            NULL AS navigational_status,\n            NULL AS rate_of_turn,\n            NULL AS true_heading,\n            NULL AS distance_to_shore\n        FROM\n            vms_positions v\n        WHERE\n            $2::TEXT IS NOT NULL\n            AND call_sign = $2\n    ) q\nWHERE\n    \"timestamp\" BETWEEN $3 AND $4\nORDER BY\n    \"timestamp\" ASC\n            "
-  },
-  "fa7fd9e555289d6b0e33e0575e25ccc5e84e92b795782d5eb390fb2f72e5fba0": {
-    "describe": {
-      "columns": [
-        {
-          "name": "vessel_event_id!",
-          "ordinal": 0,
-          "type_info": "Int8"
-        },
-        {
-          "name": "fiskeridir_vessel_id!",
-          "ordinal": 1,
-          "type_info": "Int4"
-        },
-        {
-          "name": "timestamp!",
-          "ordinal": 2,
-          "type_info": "Timestamptz"
-        },
-        {
-          "name": "vessel_event_type_id!: VesselEventType",
-          "ordinal": 3,
-          "type_info": "Int4"
-        },
-        {
-          "name": "port_id",
-          "ordinal": 4,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "arrival_port_id",
-          "ordinal": 5,
-          "type_info": "Text"
-        },
-        {
-          "name": "departure_port_id",
-          "ordinal": 6,
-          "type_info": "Text"
-        },
-        {
-          "name": "estimated_timestamp",
-          "ordinal": 7,
-          "type_info": "Timestamptz"
-        }
-      ],
-      "nullable": [
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null
-      ],
-      "parameters": {
-        "Left": [
-          "Int4",
-          "TstzRange"
-        ]
-      }
-    },
-    "query": "\nSELECT\n    vessel_event_id AS \"vessel_event_id!\",\n    fiskeridir_vessel_id AS \"fiskeridir_vessel_id!\",\n    \"timestamp\" AS \"timestamp!\",\n    \"vessel_event_type_id!: VesselEventType\",\n    port_id,\n    NULL AS \"arrival_port_id\",\n    NULL AS \"departure_port_id\",\n    estimated_timestamp\nFROM\n    (\n        SELECT\n            v.vessel_event_id,\n            v.fiskeridir_vessel_id,\n            v.\"timestamp\",\n            v.vessel_event_type_id AS \"vessel_event_type_id!: VesselEventType\",\n            d.port_id,\n            d.relevant_year,\n            d.message_number,\n            d.departure_timestamp AS estimated_timestamp\n        FROM\n            vessel_events v\n            INNER JOIN ers_departures d ON d.vessel_event_id = v.vessel_event_id\n        WHERE\n            v.fiskeridir_vessel_id = $1\n            AND v.\"timestamp\" <@ $2::tstzrange\n        UNION\n        SELECT\n            v.vessel_event_id,\n            v.fiskeridir_vessel_id,\n            v.\"timestamp\",\n            v.vessel_event_type_id AS \"vessel_event_type_id!: VesselEventType\",\n            a.port_id,\n            a.relevant_year,\n            a.message_number,\n            a.arrival_timestamp AS estimated_timestamp\n        FROM\n            vessel_events v\n            INNER JOIN ers_arrivals a ON a.vessel_event_id = v.vessel_event_id\n        WHERE\n            v.fiskeridir_vessel_id = $1\n            AND v.\"timestamp\" <@ $2::tstzrange\n    ) q\nORDER BY\n    \"timestamp\"\n           "
   },
   "fb3aaf3ee1627012e7f1fe0386ae6c75e1320fb35f11df3de3bba049a269b1e6": {
     "describe": {
