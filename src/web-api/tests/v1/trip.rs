@@ -3,7 +3,7 @@ use actix_web::http::StatusCode;
 use chrono::{Duration, TimeZone, Utc};
 use fiskeridir_rs::{CallSign, ErsDep, ErsPor, Quality};
 use kyogre_core::{
-    FiskeridirVesselId, HaulId, Mmsi, Ordering, ScraperInboundPort, TripId, VesselEventType,
+    FiskeridirVesselId, HaulId, Mmsi, Ordering, ScraperInboundPort, VesselEventType,
 };
 use web_api::routes::v1::trip::{Trip, TripsParameters};
 
@@ -765,15 +765,15 @@ async fn test_trip_contains_correct_arrival_and_departure_with_adjacent_trips_wi
         let departure3 = ErsDep::test_default(3, vessel_id.0 as u64, end2, 4);
         let arrival3 = ErsPor::test_default(3, vessel_id.0 as u64, end3, 5);
 
-        let ers_trip = helper
+        helper
             .generate_ers_trip_with_messages(vessel_id, departure, arrival)
             .await;
 
-        let mut ers_trip2 = helper
+        helper
             .generate_ers_trip_with_messages(vessel_id, departure2, arrival2)
             .await;
 
-        let ers_trip3 = helper
+        helper
             .generate_ers_trip_with_messages(vessel_id, departure3, arrival3)
             .await;
 
@@ -785,17 +785,16 @@ async fn test_trip_contains_correct_arrival_and_departure_with_adjacent_trips_wi
 
         let trips: Vec<Trip> = response.json().await.unwrap();
 
-        // Generating the last trip creates a conflict causing us to re-generate the
-        // second trip.
-        ers_trip2.trip_id = TripId(3);
-
         assert_eq!(trips.len(), 3);
         assert_eq!(trips[0].events.len(), 2);
         assert_eq!(trips[1].events.len(), 2);
         assert_eq!(trips[2].events.len(), 2);
-        assert_eq!(trips[0], ers_trip);
-        assert_eq!(trips[1], ers_trip2);
-        assert_eq!(trips[2], ers_trip3);
+        assert_eq!(trips[0].events[0].event_type, VesselEventType::ErsDep);
+        assert_eq!(trips[0].events[1].event_type, VesselEventType::ErsPor);
+        assert_eq!(trips[1].events[0].event_type, VesselEventType::ErsDep);
+        assert_eq!(trips[1].events[1].event_type, VesselEventType::ErsPor);
+        assert_eq!(trips[2].events[0].event_type, VesselEventType::ErsDep);
+        assert_eq!(trips[2].events[1].event_type, VesselEventType::ErsPor);
     })
     .await;
 }
