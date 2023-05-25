@@ -1,7 +1,8 @@
 use crate::helper::test;
-use chrono::Duration;
+use chrono::{Duration, TimeZone, Utc};
 use kyogre_core::{
-    DateRange, FiskeridirVesselId, ScraperInboundPort, Trip, TripAssemblerId, TripId,
+    DateRange, FiskeridirVesselId, ScraperInboundPort, Trip, TripAssemblerId,
+    TripAssemblerOutboundPort, TripId,
 };
 use trip_assembler::{LandingTripAssembler, TripAssembler};
 
@@ -227,6 +228,45 @@ async fn test_resolves_conflict_on_day_prior_to_most_recent_trip_end() {
             },
         ];
         assert_eq!(expected, trips);
+    })
+    .await;
+}
+#[tokio::test]
+async fn test_other_event_types_does_not_cause_conflicts() {
+    test(|helper| async move {
+        let adapter = helper.adapter();
+        let vessel_id = FiskeridirVesselId(11);
+        let landing_assembler = LandingTripAssembler::default();
+
+        let start = Utc.timestamp_opt(100000, 1).unwrap();
+        let end = Utc.timestamp_opt(200000, 1).unwrap();
+
+        helper.db.generate_landing(1, vessel_id, start).await;
+        helper.db.generate_landing(1, vessel_id, end).await;
+
+        landing_assembler
+            .produce_and_store_trips(adapter)
+            .await
+            .unwrap();
+
+        let departure = fiskeridir_rs::ErsDep::test_default(1, vessel_id.0 as u64, start, 1);
+        let arrival = fiskeridir_rs::ErsPor::test_default(1, vessel_id.0 as u64, end, 1);
+
+        helper.add_ers_dep(vec![departure.clone()]).await.unwrap();
+        helper.add_ers_por(vec![arrival.clone()]).await.unwrap();
+
+        helper.db.generate_tra(1, vessel_id, start).await;
+        helper.db.generate_haul(vessel_id, &start, &end).await;
+
+        assert_eq!(
+            helper
+                .adapter()
+                .conflicts(TripAssemblerId::Ers)
+                .await
+                .unwrap()
+                .len(),
+            0
+        );
     })
     .await;
 }
