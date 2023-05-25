@@ -27,7 +27,7 @@ impl VesselBenchmark for WeightPerHour {
 
         Ok(match (trip_total, landing_total) {
             (Some(trip_total), Some(landing_total)) => {
-                let hours = dbg!(trip_total.num_seconds()) as f64 / 3600.0;
+                let hours = trip_total.num_seconds() as f64 / 3600.0;
 
                 if hours == 0.0 || landing_total == 0.0 {
                     0.0
