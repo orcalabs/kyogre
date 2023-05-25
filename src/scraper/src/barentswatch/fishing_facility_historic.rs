@@ -4,23 +4,21 @@ use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use error_stack::{IntoReport, Report, Result, ResultExt};
 use fiskeridir_rs::CallSign;
-use geozero::{geojson::GeoJson, ToGeo};
 use kyogre_core::{BearerToken, ConversionError, FishingFacilityApiSource, Mmsi};
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use tracing::{event, Level};
 use uuid::Uuid;
-use wkt::ToWkt;
 
 use crate::{ApiClientConfig, DataSource, Processor, ScraperError, ScraperId};
 
 use super::{BarentswatchSource, FishingFacilityToolType};
 
-pub struct FishingFacilityScraper {
+pub struct FishingFacilityHistoricScraper {
     config: Option<ApiClientConfig>,
     barentswatch_source: Arc<BarentswatchSource>,
 }
 
-impl FishingFacilityScraper {
+impl FishingFacilityHistoricScraper {
     pub fn new(
         barentswatch_source: Arc<BarentswatchSource>,
         config: Option<ApiClientConfig>,
@@ -33,21 +31,18 @@ impl FishingFacilityScraper {
 }
 
 #[async_trait]
-impl DataSource for FishingFacilityScraper {
+impl DataSource for FishingFacilityHistoricScraper {
     fn id(&self) -> ScraperId {
-        ScraperId::FishingFacility
+        ScraperId::FishingFacilityHistoric
     }
 
     async fn scrape(&self, processor: &(dyn Processor)) -> Result<(), ScraperError> {
         if let Some(config) = &self.config {
             let latest_timestamp = processor
-                .latest_fishing_facility_update(Some(FishingFacilityApiSource::Updates))
+                .latest_fishing_facility_update(Some(FishingFacilityApiSource::Historic))
                 .await
-                .change_context(ScraperError)?;
-
-            let query = FishingFacilityQuery {
-                since: latest_timestamp,
-            };
+                .change_context(ScraperError)?
+                .unwrap_or_default();
 
             let token = if let Some(ref oauth) = config.oauth {
                 let token = BearerToken::acquire(oauth)
@@ -58,15 +53,14 @@ impl DataSource for FishingFacilityScraper {
                 None
             };
 
-            let response = self
+            let url = format!("{}/{}", config.url, latest_timestamp.to_rfc3339());
+
+            let facilities = self
                 .barentswatch_source
                 .client
-                .download::<FishingFacilityResponse, _>(&config.url, Some(&query), token)
+                .download::<Vec<FishingFacilityHistoric>, _>(&url, None::<&()>, token)
                 .await
-                .change_context(ScraperError)?;
-
-            let facilities = response
-                .fishing_facilities
+                .change_context(ScraperError)?
                 .into_iter()
                 .map(kyogre_core::FishingFacility::try_from)
                 .collect::<Result<_, _>>()
@@ -77,93 +71,82 @@ impl DataSource for FishingFacilityScraper {
                 .await
                 .change_context(ScraperError)?;
 
-            event!(Level::INFO, "successfully scraped fishing_facility");
+            event!(
+                Level::INFO,
+                "successfully scraped fishing_facility_historic"
+            );
         }
         Ok(())
     }
 }
 
-#[derive(Debug, Default, Serialize)]
-#[serde(rename_all = "camelCase")]
-struct FishingFacilityQuery {
-    since: Option<DateTime<Utc>>,
-}
-
-#[allow(dead_code)]
-#[derive(Debug, Default, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct FishingFacilityResponse {
-    updated_timestamp: DateTime<Utc>,
-    fishing_facilities: Vec<FishingFacility>,
-}
-
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
-struct FishingFacility {
+struct FishingFacilityHistoric {
     tool_id: Uuid,
-    vessel_id: Option<Uuid>,
     vessel_name: Option<String>,
     // International radio call sign
     ircs: Option<String>,
-    mmsi: Option<i32>,
-    imo: Option<i64>,
+    mmsi: Option<String>,
+    imo: Option<String>,
     reg_num: Option<String>,
     // Registration number in Småbåtregisteret.
     sbr_reg_num: Option<String>,
-    contact_phone: Option<String>,
-    contact_email: Option<String>,
     tool_type_code: FishingFacilityToolType,
-    tool_count: Option<i32>,
+    tool_type_name: String,
+    tool_color: String,
     setup_date_time: DateTime<Utc>,
-    setup_processed_time: Option<DateTime<Utc>>,
     removed_date_time: Option<DateTime<Utc>>,
-    removed_processed_time: Option<DateTime<Utc>>,
-    last_changed_date_time: DateTime<Utc>,
     source: Option<String>,
+    last_changed_date_time: DateTime<Utc>,
     comment: Option<String>,
-    geometry: serde_json::Value,
+    #[serde(rename = "geometryWKT")]
+    geometry_wkt: wkt::Geometry<f64>,
 }
 
-impl TryFrom<FishingFacility> for kyogre_core::FishingFacility {
+impl TryFrom<FishingFacilityHistoric> for kyogre_core::FishingFacility {
     type Error = Report<ConversionError>;
 
-    fn try_from(v: FishingFacility) -> std::result::Result<Self, Self::Error> {
-        let geometry_string = v.geometry.to_string();
-        let geometry_wkt = GeoJson(&geometry_string)
-            .to_geo()
-            .into_report()
-            .change_context(ConversionError)?
-            .to_wkt()
-            .item;
-
+    fn try_from(v: FishingFacilityHistoric) -> std::result::Result<Self, Self::Error> {
         Ok(Self {
             tool_id: v.tool_id,
-            barentswatch_vessel_id: v.vessel_id,
+            barentswatch_vessel_id: None,
             vessel_name: v.vessel_name,
             call_sign: v
                 .ircs
                 .map(CallSign::try_from)
                 .transpose()
                 .change_context(ConversionError)?,
-            mmsi: v.mmsi.map(Mmsi),
-            imo: v.imo,
+            mmsi: v
+                .mmsi
+                .map(|m| m.parse())
+                .transpose()
+                .into_report()
+                .change_context(ConversionError)?
+                .map(Mmsi),
+            imo: v
+                .imo
+                .map(|i| i.parse())
+                .transpose()
+                .into_report()
+                .change_context(ConversionError)?,
             reg_num: v.reg_num,
             sbr_reg_num: v.sbr_reg_num,
-            contact_phone: v.contact_phone,
-            contact_email: v.contact_email,
+            contact_phone: None,
+            contact_email: None,
             tool_type: v.tool_type_code.into(),
-            tool_type_name: None,
-            tool_color: None,
-            tool_count: v.tool_count,
+            tool_type_name: Some(v.tool_type_name),
+            tool_color: Some(v.tool_color),
+            tool_count: None,
             setup_timestamp: v.setup_date_time,
-            setup_processed_timestamp: v.setup_processed_time,
+            setup_processed_timestamp: None,
             removed_timestamp: v.removed_date_time,
-            removed_processed_timestamp: v.removed_processed_time,
+            removed_processed_timestamp: None,
             last_changed: v.last_changed_date_time,
             source: v.source,
             comment: v.comment,
-            geometry_wkt,
-            api_source: FishingFacilityApiSource::Updates,
+            geometry_wkt: v.geometry_wkt,
+            api_source: FishingFacilityApiSource::Historic,
         })
     }
 }

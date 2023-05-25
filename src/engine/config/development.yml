@@ -16,6 +16,11 @@ scraper:
     auth_url: "https://id.barentswatch.no/connect/authorize"
     token_url: "https://id.barentswatch.no/connect/token"
     scope: "api"
+  fishing_facility_historic:
+    url: https://www.barentswatch.no/bwapi/v1/geodata/fishingfacilityhistoric
+    auth_url: "https://id.barentswatch.no/connect/authorize"
+    token_url: "https://id.barentswatch.no/connect/token"
+    scope: "api"
   register_vessels_url: https://api.fiskeridir.no/vessel-api/api/v1/vessels
   landings:
     min_year: 2000

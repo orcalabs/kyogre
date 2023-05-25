@@ -11,6 +11,7 @@ impl WrappedHttpClient {
     pub fn new() -> reqwest::Result<Self> {
         let client = reqwest::ClientBuilder::new()
             .timeout(std::time::Duration::new(60, 0))
+            .gzip(true)
             .build()?;
 
         Ok(Self(client))

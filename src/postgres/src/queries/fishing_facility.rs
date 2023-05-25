@@ -3,7 +3,7 @@ use error_stack::{report, IntoReport, Result, ResultExt};
 use futures::{Stream, TryStreamExt};
 use geo_types::geometry::Geometry;
 use geozero::wkb;
-use kyogre_core::{FishingFacilitiesQuery, FishingFacilityToolType};
+use kyogre_core::{FishingFacilitiesQuery, FishingFacilityApiSource, FishingFacilityToolType};
 use sqlx::postgres::types::PgRange;
 
 use crate::{error::PostgresError, models::FishingFacility, PostgresAdapter};
@@ -37,6 +37,7 @@ impl PostgresAdapter {
         let mut source = Vec::with_capacity(len);
         let mut comment = Vec::with_capacity(len);
         let mut geometry_wkt = Vec::with_capacity(len);
+        let mut api_source = Vec::with_capacity(len);
 
         for f in facilities {
             tool_id.push(f.tool_id);
@@ -68,6 +69,7 @@ impl PostgresAdapter {
                         report!(PostgresError::DataConversion).attach_printable(e.to_string())
                     })?;
             geometry_wkt.push(wkb::Encode(geometry));
+            api_source.push(f.api_source as i32);
         }
 
         sqlx::query!(
@@ -95,7 +97,8 @@ INSERT INTO
         last_changed,
         source,
         "comment",
-        geometry_wkt
+        geometry_wkt,
+        api_source
     )
 SELECT
     *
@@ -122,41 +125,43 @@ FROM
         $19::TIMESTAMPTZ[],
         $20::TEXT[],
         $21::TEXT[],
-        $22::GEOMETRY[]
+        $22::GEOMETRY[],
+        $23::INT[]
     )
 ON CONFLICT (tool_id) DO
 UPDATE
 SET
     barentswatch_vessel_id = COALESCE(
-        f.barentswatch_vessel_id,
-        EXCLUDED.barentswatch_vessel_id
+        EXCLUDED.barentswatch_vessel_id,
+        f.barentswatch_vessel_id
     ),
-    vessel_name = COALESCE(f.vessel_name, EXCLUDED.vessel_name),
-    call_sign = COALESCE(f.call_sign, EXCLUDED.call_sign),
-    mmsi = COALESCE(f.mmsi, EXCLUDED.mmsi),
-    imo = COALESCE(f.imo, EXCLUDED.imo),
-    reg_num = COALESCE(f.reg_num, EXCLUDED.reg_num),
-    sbr_reg_num = COALESCE(f.sbr_reg_num, EXCLUDED.sbr_reg_num),
-    contact_phone = COALESCE(f.contact_phone, EXCLUDED.contact_phone),
-    contact_email = COALESCE(f.contact_email, EXCLUDED.contact_email),
-    tool_type = COALESCE(f.tool_type, EXCLUDED.tool_type),
-    tool_type_name = COALESCE(f.tool_type_name, EXCLUDED.tool_type_name),
-    tool_color = COALESCE(f.tool_color, EXCLUDED.tool_color),
-    tool_count = COALESCE(f.tool_count, EXCLUDED.tool_count),
-    setup_timestamp = COALESCE(f.setup_timestamp, EXCLUDED.setup_timestamp),
+    vessel_name = COALESCE(EXCLUDED.vessel_name, f.vessel_name),
+    call_sign = COALESCE(EXCLUDED.call_sign, f.call_sign),
+    mmsi = COALESCE(EXCLUDED.mmsi, f.mmsi),
+    imo = COALESCE(EXCLUDED.imo, f.imo),
+    reg_num = COALESCE(EXCLUDED.reg_num, f.reg_num),
+    sbr_reg_num = COALESCE(EXCLUDED.sbr_reg_num, f.sbr_reg_num),
+    contact_phone = COALESCE(EXCLUDED.contact_phone, f.contact_phone),
+    contact_email = COALESCE(EXCLUDED.contact_email, f.contact_email),
+    tool_type = EXCLUDED.tool_type,
+    tool_type_name = COALESCE(EXCLUDED.tool_type_name, f.tool_type_name),
+    tool_color = COALESCE(EXCLUDED.tool_color, f.tool_color),
+    tool_count = COALESCE(EXCLUDED.tool_count, f.tool_count),
+    setup_timestamp = EXCLUDED.setup_timestamp,
     setup_processed_timestamp = COALESCE(
-        f.setup_processed_timestamp,
-        EXCLUDED.setup_processed_timestamp
+        EXCLUDED.setup_processed_timestamp,
+        f.setup_processed_timestamp
     ),
-    removed_timestamp = COALESCE(f.removed_timestamp, EXCLUDED.removed_timestamp),
+    removed_timestamp = COALESCE(EXCLUDED.removed_timestamp, f.removed_timestamp),
     removed_processed_timestamp = COALESCE(
-        f.removed_processed_timestamp,
-        EXCLUDED.removed_processed_timestamp
+        EXCLUDED.removed_processed_timestamp,
+        f.removed_processed_timestamp
     ),
-    last_changed = COALESCE(f.last_changed, EXCLUDED.last_changed),
-    source = COALESCE(f.source, EXCLUDED.source),
-    "comment" = COALESCE(f."comment", EXCLUDED."comment"),
-    geometry_wkt = COALESCE(f.geometry_wkt, EXCLUDED.geometry_wkt)
+    last_changed = EXCLUDED.last_changed,
+    source = COALESCE(EXCLUDED.source, f.source),
+    "comment" = COALESCE(EXCLUDED.comment, f.comment),
+    geometry_wkt = EXCLUDED.geometry_wkt,
+    api_source = EXCLUDED.api_source
             "#,
             tool_id.as_slice(),
             barentswatch_vessel_id.as_slice() as _,
@@ -180,6 +185,7 @@ SET
             source.as_slice() as _,
             comment.as_slice() as _,
             geometry_wkt.as_slice() as _,
+            api_source.as_slice(),
         )
         .execute(&self.pool)
         .await
@@ -219,7 +225,8 @@ SELECT
     last_changed AS "last_changed!",
     source,
     "comment",
-    geometry_wkt AS "geometry_wkt: _"
+    geometry_wkt AS "geometry_wkt: _",
+    api_source AS "api_source!: FishingFacilityApiSource"
 FROM
     fishing_facilities
 WHERE
@@ -260,6 +267,35 @@ WHERE
         )
         .fetch(&self.pool)
         .map_err(|e| report!(e).change_context(PostgresError::Query))
+    }
+
+    pub(crate) async fn latest_fishing_facility_update_impl(
+        &self,
+        source: Option<FishingFacilityApiSource>,
+    ) -> Result<Option<DateTime<Utc>>, PostgresError> {
+        Ok(sqlx::query!(
+            r#"
+SELECT
+    last_changed
+FROM
+    fishing_facilities
+WHERE
+    (
+        $1::INT IS NULL
+        OR api_source = $1
+    )
+ORDER BY
+    last_changed DESC
+LIMIT
+    1
+            "#,
+            source.map(|s| s as i32),
+        )
+        .fetch_optional(&self.pool)
+        .await
+        .into_report()
+        .change_context(PostgresError::Query)?
+        .map(|r| r.last_changed))
     }
 }
 
