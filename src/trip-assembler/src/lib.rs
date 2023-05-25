@@ -96,7 +96,10 @@ pub trait TripAssembler: Send + Sync {
         let vessels = adapter
             .all_vessels()
             .await
-            .change_context(TripAssemblerError)?;
+            .change_context(TripAssemblerError)?
+            .into_iter()
+            .map(|v| (v.fiskeridir.id, v))
+            .collect::<HashMap<FiskeridirVesselId, Vessel>>();
 
         let num_vessels = vessels.len() as u32;
         let mut num_conflicts = 0;
@@ -104,7 +107,7 @@ pub trait TripAssembler: Send + Sync {
         let mut num_trips = 0;
         let mut num_failed = 0;
 
-        for v in vessels {
+        for v in vessels.into_values() {
             if v.preferred_trip_assembler != self.assembler_id() {
                 continue;
             }
