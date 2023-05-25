@@ -3,7 +3,7 @@ use error_stack::{report, Report, ResultExt};
 use fiskeridir_rs::CallSign;
 use geo_types::geometry::Geometry;
 use geozero::wkb;
-use kyogre_core::{FishingFacilityToolType, Mmsi};
+use kyogre_core::{FishingFacilityApiSource, FishingFacilityToolType, Mmsi};
 use uuid::Uuid;
 use wkt::ToWkt;
 
@@ -33,6 +33,7 @@ pub struct FishingFacility {
     pub source: Option<String>,
     pub comment: Option<String>,
     pub geometry_wkt: wkb::Decode<Geometry<f64>>,
+    pub api_source: FishingFacilityApiSource,
 }
 
 impl TryFrom<FishingFacility> for kyogre_core::FishingFacility {
@@ -74,6 +75,7 @@ impl TryFrom<FishingFacility> for kyogre_core::FishingFacility {
                 })?
                 .to_wkt()
                 .item,
+            api_source: v.api_source,
         })
     }
 }

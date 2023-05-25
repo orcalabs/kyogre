@@ -63,6 +63,14 @@ impl Settings {
                 "scraper.fishing_facility.client_secret",
                 map["client_secret"].clone(),
             )?;
+            builder = builder.set_override(
+                "scraper.fishing_facility_historic.client_id",
+                map["client_id"].clone(),
+            )?;
+            builder = builder.set_override(
+                "scraper.fishing_facility_historic.client_secret",
+                map["client_secret"].clone(),
+            )?;
         }
 
         let config = builder.build()?;

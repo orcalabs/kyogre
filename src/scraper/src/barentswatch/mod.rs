@@ -4,8 +4,10 @@ use std::sync::Arc;
 use crate::wrapped_http_client::WrappedHttpClient;
 
 mod fishing_facility;
+mod fishing_facility_historic;
 
 pub use fishing_facility::*;
+pub use fishing_facility_historic::*;
 
 pub struct BarentswatchSource {
     pub client: Arc<WrappedHttpClient>,
@@ -28,6 +30,10 @@ pub(crate) enum FishingFacilityToolType {
     Generic,
     Sensorbuoy,
     Sensorcable,
+    #[serde(alias = "UNK")]
+    Unknown,
+    Seismic,
+    Mooring,
 }
 
 impl From<FishingFacilityToolType> for kyogre_core::FishingFacilityToolType {
@@ -41,6 +47,9 @@ impl From<FishingFacilityToolType> for kyogre_core::FishingFacilityToolType {
             FishingFacilityToolType::Generic => Self::Generic,
             FishingFacilityToolType::Sensorbuoy => Self::Sensorbuoy,
             FishingFacilityToolType::Sensorcable => Self::Sensorcable,
+            FishingFacilityToolType::Unknown => Self::Unknown,
+            FishingFacilityToolType::Seismic => Self::Seismic,
+            FishingFacilityToolType::Mooring => Self::Mooring,
         }
     }
 }

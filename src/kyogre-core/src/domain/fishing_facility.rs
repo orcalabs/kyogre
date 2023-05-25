@@ -5,7 +5,7 @@ use fiskeridir_rs::CallSign;
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 use serde::{de::Visitor, Deserialize};
-use serde_repr::Serialize_repr;
+use serde_repr::{Deserialize_repr, Serialize_repr};
 use uuid::Uuid;
 use wkt::Wkt;
 
@@ -26,6 +26,30 @@ pub enum FishingFacilityToolType {
     Generic = 6,
     Sensorbuoy = 7,
     Sensorcable = 8,
+    Unknown = 9,
+    Seismic = 10,
+    Mooring = 11,
+}
+
+#[derive(
+    Debug,
+    Copy,
+    Clone,
+    PartialEq,
+    FromPrimitive,
+    Eq,
+    Hash,
+    Ord,
+    PartialOrd,
+    Serialize_repr,
+    Deserialize_repr,
+)]
+#[repr(i32)]
+#[cfg_attr(feature = "sqlx", derive(sqlx::Type))]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
+pub enum FishingFacilityApiSource {
+    Updates = 1,
+    Historic = 2,
 }
 
 #[derive(Debug, Clone)]
@@ -59,6 +83,8 @@ pub struct FishingFacility {
     pub source: Option<String>,
     pub comment: Option<String>,
     pub geometry_wkt: wkt::Geometry<f64>,
+    /// Which API this fishing facility was last updated from
+    pub api_source: FishingFacilityApiSource,
 }
 
 impl FishingFacility {
@@ -86,6 +112,7 @@ impl FishingFacility {
             source: Some("SKYS".into()),
             comment: Some("This is a comment".into()),
             geometry_wkt: Wkt::from_str("POINT(5.7348 62.320717)").unwrap().item,
+            api_source: FishingFacilityApiSource::Updates,
         }
     }
 }

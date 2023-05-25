@@ -61,6 +61,14 @@ pub trait ScraperInboundPort {
 }
 
 #[async_trait]
+pub trait ScraperOutboundPort {
+    async fn latest_fishing_facility_update(
+        &self,
+        source: Option<FishingFacilityApiSource>,
+    ) -> Result<Option<DateTime<Utc>>, QueryError>;
+}
+
+#[async_trait]
 pub trait ScraperFileHashInboundPort {
     async fn add(&self, id: &FileHashId, hash: String) -> Result<(), InsertError>;
     async fn diff(&self, id: &FileHashId, hash: &str) -> Result<HashDiff, QueryError>;

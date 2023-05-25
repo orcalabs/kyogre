@@ -464,6 +464,18 @@ impl ScraperInboundPort for PostgresAdapter {
 }
 
 #[async_trait]
+impl ScraperOutboundPort for PostgresAdapter {
+    async fn latest_fishing_facility_update(
+        &self,
+        source: Option<FishingFacilityApiSource>,
+    ) -> Result<Option<DateTime<Utc>>, QueryError> {
+        self.latest_fishing_facility_update_impl(source)
+            .await
+            .change_context(QueryError)
+    }
+}
+
+#[async_trait]
 impl ScraperFileHashInboundPort for PostgresAdapter {
     async fn add(&self, id: &FileHashId, hash: String) -> Result<(), InsertError> {
         self.add_hash(id, hash).await.change_context(InsertError)
