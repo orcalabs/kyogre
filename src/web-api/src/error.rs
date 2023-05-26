@@ -8,6 +8,9 @@ pub enum ApiError {
     InvalidDateRange,
     InternalServerError,
     MissingMmsiOrCallSign,
+    Forbidden,
+    MissingBwToken,
+    InvalidBwToken,
 }
 
 impl std::error::Error for ApiError {}
@@ -29,6 +32,9 @@ impl std::fmt::Display for ApiError {
             ApiError::MissingMmsiOrCallSign => {
                 f.write_str("either mmsi, call sign, or both must be provided")
             }
+            ApiError::Forbidden => f.write_str("forbidden"),
+            ApiError::MissingBwToken => f.write_str("barentswatch token must be provided"),
+            ApiError::InvalidBwToken => f.write_str("an invalid barentswatch token was provided"),
         }
     }
 }
@@ -40,6 +46,8 @@ impl ResponseError for ApiError {
             | ApiError::InvalidCallSign
             | ApiError::MissingMmsiOrCallSign => StatusCode::BAD_REQUEST,
             ApiError::InternalServerError => StatusCode::INTERNAL_SERVER_ERROR,
+            ApiError::Forbidden => StatusCode::FORBIDDEN,
+            ApiError::MissingBwToken | ApiError::InvalidBwToken => StatusCode::UNAUTHORIZED,
         }
     }
 

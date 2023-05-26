@@ -10,6 +10,8 @@ use routes::v1;
 use utoipa::OpenApi;
 
 pub mod error;
+pub mod extractors;
+pub mod guards;
 pub mod response;
 pub mod routes;
 pub mod settings;
