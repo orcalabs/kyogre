@@ -1,6 +1,9 @@
 use config::{Config, ConfigError, File, Source};
+use once_cell::sync::OnceCell;
 use orca_core::{Environment, LogLevel, PsqlSettings, TelemetrySettings};
 use serde::Deserialize;
+
+pub static BW_PROFILES_URL: OnceCell<String> = OnceCell::new();
 
 #[derive(Debug, Deserialize)]
 pub struct Settings {
@@ -10,6 +13,8 @@ pub struct Settings {
     pub postgres: PsqlSettings,
     pub environment: Environment,
     pub honeycomb: Option<HoneycombApiKey>,
+    pub bw_jwks_url: Option<String>,
+    pub bw_profiles_url: Option<String>,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -58,7 +63,13 @@ impl Settings {
 
         let config = builder.build()?;
 
-        config.try_deserialize()
+        let settings: Settings = config.try_deserialize()?;
+
+        if let Some(ref url) = settings.bw_profiles_url {
+            BW_PROFILES_URL.set(url.clone()).unwrap();
+        }
+
+        Ok(settings)
     }
 
     pub fn telemetry_endpoint(&self) -> Option<String> {

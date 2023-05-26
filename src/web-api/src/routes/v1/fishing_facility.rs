@@ -10,6 +10,7 @@ use uuid::Uuid;
 
 use crate::{
     error::ApiError,
+    extractors::{BwPolicy, BwProfile},
     routes::utils::{deserialize_range_list, deserialize_string_list},
     to_streaming_response, Database,
 };
@@ -47,8 +48,16 @@ pub struct FishingFacilitiesParams {
 #[tracing::instrument(skip(db))]
 pub async fn fishing_facilities<T: Database + 'static>(
     db: web::Data<T>,
+    profile: BwProfile,
     params: web::Query<FishingFacilitiesParams>,
 ) -> Result<HttpResponse, ApiError> {
+    if !profile
+        .policies
+        .contains(&BwPolicy::BwReadExtendedFishingFacility)
+    {
+        return Err(ApiError::Forbidden);
+    }
+
     let query = params.into_inner().into();
 
     to_streaming_response! {

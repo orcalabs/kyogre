@@ -277,6 +277,8 @@ where
                 postgres: db_settings.clone(),
                 environment: Environment::Test,
                 honeycomb: None,
+                bw_jwks_url: None,     // TODO
+                bw_profiles_url: None, // TODO
             };
 
             let adapter = PostgresAdapter::new(&db_settings).await.unwrap();
