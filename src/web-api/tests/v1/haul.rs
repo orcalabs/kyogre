@@ -820,3 +820,42 @@ async fn test_hauls_matrix_catch_location_as_active_filter_produces_correct_matr
     })
     .await
 }
+
+#[tokio::test]
+async fn test_hauls_matrix_have_correct_totals_after_dca_message_is_replaced_by_newer_version_with_another_weight(
+) {
+    test(|helper| async move {
+        let filter = ActiveHaulsFilter::CatchLocation;
+
+        let mut ers1 = ErsDca::test_default(1, None);
+
+        let date: DateTime<Utc> = "2013-01-1T00:00:00Z".parse().unwrap();
+        ers1.start_date = Some(date.date_naive());
+        ers1.start_time = Some(date.time());
+        ers1.stop_date = Some(date.date_naive());
+        ers1.stop_time = Some(date.time());
+        ers1.start_latitude = Some(56.727258);
+        ers1.start_longitude = Some(12.565410);
+        ers1.catch.species.living_weight = Some(10);
+
+        let mut ers2 = ers1.clone();
+        ers2.message_version = ers1.message_version + 1;
+        ers2.catch.species.living_weight = Some(20);
+
+        helper.db.db.add_ers_dca(vec![ers1]).await.unwrap();
+        helper.db.db.update_database_views().await.unwrap();
+
+        helper.db.db.add_ers_dca(vec![ers2]).await.unwrap();
+        helper.db.db.update_database_views().await.unwrap();
+
+        let response = helper
+            .app
+            .get_hauls_matrix(HaulsMatrixParams::default(), filter)
+            .await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let matrix: HaulsMatrix = response.json().await.unwrap();
+        assert_matrix_content(&matrix, filter, 20);
+    })
+    .await
+}
