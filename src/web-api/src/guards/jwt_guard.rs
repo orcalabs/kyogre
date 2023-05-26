@@ -1,9 +1,13 @@
 use std::collections::HashMap;
 
 use actix_web::guard::Guard;
-use error_stack::{report, Context, IntoReport, Result, ResultExt};
-use jsonwebtoken::{decode, decode_header, jwk::Jwk, DecodingKey, TokenData, Validation};
-use serde::{de::DeserializeOwned, Deserialize};
+use error_stack::{report, IntoReport, Result, ResultExt};
+use jsonwebtoken::{
+    decode, decode_header,
+    jwk::{Jwk, JwkSet},
+    DecodingKey, TokenData, Validation,
+};
+use serde::de::DeserializeOwned;
 use tracing::{event, Level};
 
 #[derive(Debug, Clone)]
@@ -13,13 +17,13 @@ pub struct JwtGuard {
 
 impl JwtGuard {
     pub async fn new(jwks_url: String) -> Self {
-        let jwks: Jwks = reqwest::get(jwks_url).await.unwrap().json().await.unwrap();
+        let jwks: JwkSet = reqwest::get(jwks_url).await.unwrap().json().await.unwrap();
 
         JwtGuard {
             jwks: jwks
                 .keys
                 .into_iter()
-                .filter_map(|mut k| k.common.key_id.take().map(|kid| (kid, k)))
+                .filter_map(|k| k.common.key_id.clone().map(|kid| (kid, k)))
                 .collect(),
         }
     }
@@ -27,27 +31,27 @@ impl JwtGuard {
     pub fn decode<T: DeserializeOwned>(&self, token: &str) -> Result<TokenData<T>, JwtDecodeError> {
         let kid = decode_header(token)
             .into_report()
-            .change_context(JwtDecodeError)?
+            .change_context(JwtDecodeError::DecodeHeader)?
             .kid
-            .ok_or_else(|| {
-                report!(JwtDecodeError).attach_printable("kid missing in token headers")
-            })?;
+            .ok_or_else(|| report!(JwtDecodeError::MissingKidInHeaders))?;
 
         match self.jwks.get(&kid) {
             Some(jwk) => {
                 let key = DecodingKey::from_jwk(jwk)
                     .into_report()
-                    .change_context(JwtDecodeError)?;
+                    .change_context(JwtDecodeError::DecodeKeyFromJwk)?;
 
-                let validation = Validation::new(jwk.common.algorithm.ok_or_else(|| {
-                    report!(JwtDecodeError).attach_printable("algorithm missing in jwk")
-                })?);
+                let validation = Validation::new(
+                    jwk.common
+                        .algorithm
+                        .ok_or_else(|| report!(JwtDecodeError::MissingAlgorithmInJwk))?,
+                );
 
                 decode::<T>(token, &key, &validation)
                     .into_report()
-                    .change_context(JwtDecodeError)
+                    .change_context(JwtDecodeError::DecodeToken)
             }
-            None => Err(report!(JwtDecodeError).attach_printable("kid not found in jwks")),
+            None => Err(report!(JwtDecodeError::MissingKidInJwk)),
         }
     }
 }
@@ -70,18 +74,29 @@ impl Guard for JwtGuard {
     }
 }
 
-#[derive(Debug, Clone, Deserialize)]
-struct Jwks {
-    keys: Vec<Jwk>,
+#[derive(Debug)]
+pub enum JwtDecodeError {
+    DecodeHeader,
+    DecodeToken,
+    DecodeKeyFromJwk,
+    MissingKidInHeaders,
+    MissingAlgorithmInJwk,
+    MissingKidInJwk,
 }
 
-#[derive(Debug)]
-pub struct JwtDecodeError;
-
-impl Context for JwtDecodeError {}
+impl std::error::Error for JwtDecodeError {}
 
 impl std::fmt::Display for JwtDecodeError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str("an error occurred during JWT decoding")
+        match self {
+            JwtDecodeError::DecodeHeader => f.write_str("failed to decode token header"),
+            JwtDecodeError::DecodeToken => f.write_str("failed to decode token"),
+            JwtDecodeError::DecodeKeyFromJwk => {
+                f.write_str("failed to convert jwk to decoding key")
+            }
+            JwtDecodeError::MissingKidInHeaders => f.write_str("kid missing in headers"),
+            JwtDecodeError::MissingAlgorithmInJwk => f.write_str("algorithm missing in jwk"),
+            JwtDecodeError::MissingKidInJwk => f.write_str("kid missing in jwk"),
+        }
     }
 }
