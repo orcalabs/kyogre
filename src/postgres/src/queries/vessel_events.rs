@@ -73,6 +73,7 @@ FROM
         WHERE
             v.fiskeridir_vessel_id = $1
             AND v."timestamp" <@ $2::tstzrange
+            AND v."timestamp" >= '1970-01-01T00:00:00Z'::TIMESTAMPTZ
         UNION
         SELECT
             v.vessel_event_id,
@@ -89,6 +90,7 @@ FROM
         WHERE
             v.fiskeridir_vessel_id = $1
             AND v."timestamp" <@ $2::tstzrange
+            AND v."timestamp" >= '1970-01-01T00:00:00Z'::TIMESTAMPTZ
     ) q
 ORDER BY
     "timestamp",
