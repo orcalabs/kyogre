@@ -2,7 +2,7 @@ use std::{fmt::Write, string::ToString};
 
 use fiskeridir_rs::CallSign;
 use kyogre_core::{ActiveHaulsFilter, FiskeridirVesselId, HaulId, Mmsi};
-use reqwest::{Client, Response};
+use reqwest::{header::HeaderMap, Client, Response};
 use web_api::routes::v1::{
     ais::AisTrackParameters,
     ais_vms::AisVmsParameters,
@@ -22,13 +22,22 @@ impl ApiClient {
         ApiClient { address }
     }
 
-    async fn get<T: AsRef<str>>(&self, path: T, parameters: &[(String, String)]) -> Response {
+    async fn get<T: AsRef<str>>(
+        &self,
+        path: T,
+        parameters: &[(String, String)],
+        headers: Option<HeaderMap>,
+    ) -> Response {
         let url = format!("{}/{}", self.address, path.as_ref());
 
         let client = Client::new();
-        let request = client.get(url).query(parameters).build().unwrap();
+        let mut request = client.get(url).query(parameters);
 
-        client.execute(request).await.unwrap()
+        if let Some(headers) = headers {
+            request = request.headers(headers);
+        }
+
+        request.send().await.unwrap()
     }
 
     pub async fn get_ais_track(&self, mmsi: Mmsi, params: AisTrackParameters) -> Response {
@@ -42,7 +51,7 @@ impl ApiClient {
             url_params.push((("end".to_owned()), s.to_string()));
         }
 
-        self.get(format!("ais_track/{}", mmsi.0), url_params.as_slice())
+        self.get(format!("ais_track/{}", mmsi.0), url_params.as_slice(), None)
             .await
     }
 
@@ -65,26 +74,27 @@ impl ApiClient {
             url_params.push((("end".to_owned()), s.to_string()));
         }
 
-        self.get("ais_vms_positions", url_params.as_slice()).await
+        self.get("ais_vms_positions", url_params.as_slice(), None)
+            .await
     }
 
     pub async fn get_species(&self) -> Response {
-        self.get("species", &[]).await
+        self.get("species", &[], None).await
     }
     pub async fn get_species_groups(&self) -> Response {
-        self.get("species_groups", &[]).await
+        self.get("species_groups", &[], None).await
     }
     pub async fn get_species_main_groups(&self) -> Response {
-        self.get("species_main_groups", &[]).await
+        self.get("species_main_groups", &[], None).await
     }
     pub async fn get_species_fao(&self) -> Response {
-        self.get("species_fao", &[]).await
+        self.get("species_fao", &[], None).await
     }
     pub async fn get_species_fiskeridir(&self) -> Response {
-        self.get("species_fiskeridir", &[]).await
+        self.get("species_fiskeridir", &[], None).await
     }
     pub async fn get_vessels(&self) -> Response {
-        self.get("vessels", &[]).await
+        self.get("vessels", &[], None).await
     }
     pub async fn get_hauls(&self, params: HaulsParams) -> Response {
         let mut parameters = Vec::new();
@@ -128,7 +138,7 @@ impl ApiClient {
             ))
         }
 
-        self.get("hauls", &parameters).await
+        self.get("hauls", &parameters, None).await
     }
     pub async fn get_hauls_matrix(
         &self,
@@ -182,11 +192,13 @@ impl ApiClient {
         self.get(
             &format!("hauls_matrix/{}", active_filter.name()),
             &parameters,
+            None,
         )
         .await
     }
     pub async fn get_trip_of_haul(&self, haul_id: &HaulId) -> Response {
-        self.get(format!("trip_of_haul/{}", haul_id.0), &[]).await
+        self.get(format!("trip_of_haul/{}", haul_id.0), &[], None)
+            .await
     }
     pub async fn get_trips_of_vessel(
         &self,
@@ -207,7 +219,7 @@ impl ApiClient {
             parameters.push(("ordering".to_string(), ordering.to_string()))
         }
 
-        self.get(format!("trips/{}", id.0), &parameters).await
+        self.get(format!("trips/{}", id.0), &parameters, None).await
     }
     pub async fn get_vms_positions(&self, call_sign: &CallSign, params: VmsParameters) -> Response {
         let mut parameters = Vec::new();
@@ -219,10 +231,14 @@ impl ApiClient {
             parameters.push(("end".to_string(), end.to_string()))
         }
 
-        self.get(format!("vms/{}", call_sign.as_ref()), &parameters)
+        self.get(format!("vms/{}", call_sign.as_ref()), &parameters, None)
             .await
     }
-    pub async fn get_fishing_facilities(&self, params: FishingFacilitiesParams) -> Response {
+    pub async fn get_fishing_facilities(
+        &self,
+        params: FishingFacilitiesParams,
+        token: String,
+    ) -> Response {
         let mut parameters = Vec::new();
 
         if let Some(mmsis) = params.mmsis {
@@ -266,7 +282,11 @@ impl ApiClient {
             ))
         }
 
-        self.get("fishing_facilities", &parameters).await
+        let mut headers = HeaderMap::new();
+        headers.insert("bw-token", token.try_into().unwrap());
+
+        self.get("fishing_facilities", &parameters, Some(headers))
+            .await
     }
 }
 

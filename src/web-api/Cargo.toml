@@ -61,3 +61,6 @@ rand = "0.8.5"
 tokio = { version = "1.28.1", features = ["rt-multi-thread", "macros"] }
 fiskeridir-rs = { workspace = true }
 tracing-subscriber = "0.3.17"
+wiremock = "0.5.18"
+rsa = { version = "0.9.2", features = ["serde"] }
+base64 = "0.21.2"

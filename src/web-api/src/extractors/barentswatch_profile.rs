@@ -3,19 +3,20 @@ use std::pin::Pin;
 use actix_web::FromRequest;
 use futures::Future;
 use reqwest::StatusCode;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
+use strum::EnumIter;
 use tracing::{event, Level};
 
 use crate::{error::ApiError, settings::BW_PROFILES_URL};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, EnumIter)]
 pub enum BwPolicy {
     BwReadExtendedFishingFacility,
     #[serde(other)]
     Other,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct BwProfile {
     pub policies: Vec<BwPolicy>,
 }

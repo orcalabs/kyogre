@@ -1,4 +1,4 @@
-use super::test_client::ApiClient;
+use super::{barentswatch_helper::BarentswatchHelper, test_client::ApiClient};
 use chrono::{DateTime, Datelike, Duration, Utc};
 use dockertest::{DockerTest, Source, StaticManagementPolicy};
 use fiskeridir_rs::{ErsDep, ErsPor, GearGroup, SpeciesGroup, VesselLengthGroup};
@@ -12,21 +12,24 @@ use rand::random;
 use std::panic;
 use std::sync::Once;
 use strum::EnumCount;
+use tokio::sync::OnceCell;
 use tracing_subscriber::FmtSubscriber;
 use trip_assembler::{ErsTripAssembler, LandingTripAssembler, TripAssembler};
 use vessel_benchmark::*;
 use web_api::{
     routes::v1::haul,
-    settings::{ApiSettings, Settings},
+    settings::{ApiSettings, Settings, BW_PROFILES_URL},
     startup::App,
 };
 
 static TRACING: Once = Once::new();
 static DATABASE_PASSWORD: &str = "test123";
+static BARENTSWATCH_HELPER: OnceCell<BarentswatchHelper> = OnceCell::const_new();
 
 pub struct TestHelper {
     pub app: ApiClient,
     pub db: TestDb,
+    pub bw_helper: &'static BarentswatchHelper,
     ers_assembler: ErsTripAssembler,
     landings_assembler: LandingTripAssembler,
     weight_per_hour: WeightPerHour,
@@ -37,7 +40,11 @@ impl TestHelper {
     pub fn adapter(&self) -> &PostgresAdapter {
         &self.db.db
     }
-    async fn spawn_app(db: PostgresAdapter, app: App) -> TestHelper {
+    async fn spawn_app(
+        db: PostgresAdapter,
+        app: App,
+        bw_helper: &'static BarentswatchHelper,
+    ) -> TestHelper {
         let address = format!("http://127.0.0.1:{}/v1.0", app.port());
 
         tokio::spawn(async { app.run().await.unwrap() });
@@ -45,6 +52,7 @@ impl TestHelper {
         TestHelper {
             app: ApiClient::new(address),
             db: TestDb { db },
+            bw_helper,
             ers_assembler: ErsTripAssembler::default(),
             landings_assembler: LandingTripAssembler::default(),
             ers_message_number: 1,
@@ -265,6 +273,11 @@ where
 
             test_db.create_test_database_from_template(&db_name).await;
 
+            let bw_helper = BARENTSWATCH_HELPER
+                .get_or_init(|| async { BarentswatchHelper::new().await })
+                .await;
+            let bw_address = bw_helper.address();
+
             db_settings.db_name = Some(db_name.clone());
             let api_settings = Settings {
                 log_level: LogLevel::Debug,
@@ -277,12 +290,15 @@ where
                 postgres: db_settings.clone(),
                 environment: Environment::Test,
                 honeycomb: None,
-                bw_jwks_url: None,     // TODO
-                bw_profiles_url: None, // TODO
+                bw_jwks_url: Some(format!("{bw_address}/jwks")),
+                bw_profiles_url: Some(format!("{bw_address}/profiles")),
             };
 
+            let _ = BW_PROFILES_URL.set(api_settings.bw_profiles_url.clone().unwrap());
+
             let adapter = PostgresAdapter::new(&db_settings).await.unwrap();
-            let app = TestHelper::spawn_app(adapter, App::build(&api_settings).await).await;
+            let app =
+                TestHelper::spawn_app(adapter, App::build(&api_settings).await, bw_helper).await;
 
             test(app).await;
 

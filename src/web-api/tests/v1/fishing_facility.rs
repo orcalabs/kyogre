@@ -13,7 +13,11 @@ async fn test_fishing_facilities_returns_all_fishing_facilities() {
             helper.db.generate_fishing_facility().await,
         ];
 
-        let response = helper.app.get_fishing_facilities(Default::default()).await;
+        let token = helper.bw_helper.get_bw_token();
+        let response = helper
+            .app
+            .get_fishing_facilities(Default::default(), token)
+            .await;
 
         assert_eq!(response.status(), StatusCode::OK);
         let mut facilities: Vec<FishingFacility> = response.json().await.unwrap();
@@ -52,7 +56,8 @@ async fn test_fishing_facilities_returns_fishing_facilities_with_mmsis() {
             ..Default::default()
         };
 
-        let response = helper.app.get_fishing_facilities(params).await;
+        let token = helper.bw_helper.get_bw_token();
+        let response = helper.app.get_fishing_facilities(params, token).await;
 
         assert_eq!(response.status(), StatusCode::OK);
         let mut facilities: Vec<FishingFacility> = response.json().await.unwrap();
@@ -91,7 +96,8 @@ async fn test_fishing_facilities_returns_fishing_facilities_with_call_signs() {
             ..Default::default()
         };
 
-        let response = helper.app.get_fishing_facilities(params).await;
+        let token = helper.bw_helper.get_bw_token();
+        let response = helper.app.get_fishing_facilities(params, token).await;
 
         assert_eq!(response.status(), StatusCode::OK);
         let mut facilities: Vec<FishingFacility> = response.json().await.unwrap();
@@ -130,7 +136,8 @@ async fn test_fishing_facilities_returns_fishing_facilities_with_tool_types() {
             ..Default::default()
         };
 
-        let response = helper.app.get_fishing_facilities(params).await;
+        let token = helper.bw_helper.get_bw_token();
+        let response = helper.app.get_fishing_facilities(params, token).await;
 
         assert_eq!(response.status(), StatusCode::OK);
         let mut facilities: Vec<FishingFacility> = response.json().await.unwrap();
@@ -166,7 +173,8 @@ async fn test_fishing_facilities_returns_active_fishing_facilities() {
             ..Default::default()
         };
 
-        let response = helper.app.get_fishing_facilities(params).await;
+        let token = helper.bw_helper.get_bw_token();
+        let response = helper.app.get_fishing_facilities(params, token).await;
 
         assert_eq!(response.status(), StatusCode::OK);
         let mut facilities: Vec<FishingFacility> = response.json().await.unwrap();
@@ -203,7 +211,8 @@ async fn test_fishing_facilities_returns_inactive_fishing_facilities() {
             ..Default::default()
         };
 
-        let response = helper.app.get_fishing_facilities(params).await;
+        let token = helper.bw_helper.get_bw_token();
+        let response = helper.app.get_fishing_facilities(params, token).await;
 
         assert_eq!(response.status(), StatusCode::OK);
         let mut facilities: Vec<FishingFacility> = response.json().await.unwrap();
@@ -246,7 +255,8 @@ async fn test_fishing_facilities_returns_fishing_facilities_in_setup_ranges() {
             ..Default::default()
         };
 
-        let response = helper.app.get_fishing_facilities(params).await;
+        let token = helper.bw_helper.get_bw_token();
+        let response = helper.app.get_fishing_facilities(params, token).await;
 
         assert_eq!(response.status(), StatusCode::OK);
         let mut facilities: Vec<FishingFacility> = response.json().await.unwrap();
@@ -289,7 +299,8 @@ async fn test_fishing_facilities_returns_fishing_facilities_in_removed_ranges() 
             ..Default::default()
         };
 
-        let response = helper.app.get_fishing_facilities(params).await;
+        let token = helper.bw_helper.get_bw_token();
+        let response = helper.app.get_fishing_facilities(params, token).await;
 
         assert_eq!(response.status(), StatusCode::OK);
         let mut facilities: Vec<FishingFacility> = response.json().await.unwrap();
@@ -299,6 +310,31 @@ async fn test_fishing_facilities_returns_fishing_facilities_in_removed_ranges() 
 
         assert_eq!(facilities.len(), 2);
         assert_eq!(facilities, expected);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_fishing_facilities_fails_without_bw_token() {
+    test(|helper| async move {
+        let response = helper
+            .app
+            .get_fishing_facilities(Default::default(), "".into())
+            .await;
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_fishing_facilities_fails_without_bw_read_extended_fishing_facility() {
+    test(|helper| async move {
+        let token = helper.bw_helper.get_bw_token_with_policies(vec![]);
+        let response = helper
+            .app
+            .get_fishing_facilities(Default::default(), token)
+            .await;
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
     })
     .await;
 }

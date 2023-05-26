@@ -1,5 +1,6 @@
 pub mod ais;
 pub mod ais_vms;
+pub mod barentswatch_helper;
 pub mod fishing_facility;
 pub mod haul;
 pub mod helper;
