@@ -1,0 +1,9 @@
+DROP MATERIALIZED VIEW hauls_matrix_view;
+
+CREATE
+OR REPLACE FUNCTION update_database_views () RETURNS void LANGUAGE plpgsql AS $$
+    BEGIN
+        EXECUTE 'REFRESH MATERIALIZED VIEW CONCURRENTLY hauls_view';
+        EXECUTE 'REFRESH MATERIALIZED VIEW CONCURRENTLY trips_view';
+    END
+$$;
