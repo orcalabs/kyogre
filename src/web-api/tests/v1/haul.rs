@@ -264,7 +264,6 @@ async fn test_hauls_matrix_returns_correct_sum_for_all_hauls() {
         ers2.start_longitude = Some(21.957);
 
         helper.db.db.add_ers_dca(vec![ers1, ers2]).await.unwrap();
-        helper.db.db.update_database_views().await.unwrap();
 
         let response = helper
             .app
@@ -321,7 +320,6 @@ async fn test_hauls_matrix_filters_by_months() {
             .add_ers_dca(vec![ers1, ers2, ers3, ers4])
             .await
             .unwrap();
-        helper.db.db.update_database_views().await.unwrap();
 
         let params = HaulsMatrixParams {
             months: Some(vec![month1.into(), month2.into()]),
@@ -369,7 +367,6 @@ async fn test_hauls_matrix_filters_by_vessel_length() {
             .add_ers_dca(vec![ers1, ers2, ers3, ers4])
             .await
             .unwrap();
-        helper.db.db.update_database_views().await.unwrap();
 
         let params = HaulsMatrixParams {
             vessel_length_groups: Some(vec![
@@ -420,7 +417,6 @@ async fn test_hauls_matrix_filters_by_species_group() {
             .add_ers_dca(vec![ers1, ers2, ers3, ers4])
             .await
             .unwrap();
-        helper.db.db.update_database_views().await.unwrap();
 
         let params = HaulsMatrixParams {
             species_group_ids: Some(vec![SpeciesGroupId(301), SpeciesGroupId(302)]),
@@ -467,7 +463,6 @@ async fn test_hauls_matrix_filters_by_gear_group() {
             .add_ers_dca(vec![ers1, ers2, ers3, ers4])
             .await
             .unwrap();
-        helper.db.db.update_database_views().await.unwrap();
 
         let params = HaulsMatrixParams {
             gear_group_ids: Some(vec![
@@ -519,7 +514,6 @@ async fn test_hauls_matrix_filters_by_fiskeridir_vessel_ids() {
             .add_ers_dca(vec![ers1, ers2, ers3, ers4])
             .await
             .unwrap();
-        helper.db.db.update_database_views().await.unwrap();
 
         let params = HaulsMatrixParams {
             fiskeridir_vessel_ids: Some(vec![FiskeridirVesselId(1), FiskeridirVesselId(2)]),
@@ -577,7 +571,6 @@ async fn test_hauls_matrix_date_sum_area_table_is_correct() {
             .add_ers_dca(vec![ers1, ers2, ers3, ers4])
             .await
             .unwrap();
-        helper.db.db.update_database_views().await.unwrap();
 
         let response = helper
             .app
@@ -634,7 +627,6 @@ async fn test_hauls_matrix_gear_group_sum_area_table_is_correct() {
             .add_ers_dca(vec![ers1, ers2, ers3, ers4])
             .await
             .unwrap();
-        helper.db.db.update_database_views().await.unwrap();
 
         let response = helper
             .app
@@ -689,7 +681,6 @@ async fn test_hauls_matrix_vessel_length_sum_area_table_is_correct() {
             .add_ers_dca(vec![ers1, ers2, ers3, ers4])
             .await
             .unwrap();
-        helper.db.db.update_database_views().await.unwrap();
 
         let response = helper
             .app
@@ -743,7 +734,6 @@ async fn test_hauls_matrix_species_group_sum_area_table_is_correct() {
             .add_ers_dca(vec![ers1, ers2, ers3, ers4])
             .await
             .unwrap();
-        helper.db.db.update_database_views().await.unwrap();
 
         let response = helper
             .app
@@ -807,7 +797,6 @@ async fn test_hauls_matrix_catch_location_as_active_filter_produces_correct_matr
             .add_ers_dca(vec![ers1, ers2, ers3, ers4])
             .await
             .unwrap();
-        helper.db.db.update_database_views().await.unwrap();
 
         let response = helper
             .app
@@ -842,11 +831,7 @@ async fn test_hauls_matrix_have_correct_totals_after_dca_message_is_replaced_by_
         ers2.message_version = ers1.message_version + 1;
         ers2.catch.species.living_weight = Some(20);
 
-        helper.db.db.add_ers_dca(vec![ers1]).await.unwrap();
-        helper.db.db.update_database_views().await.unwrap();
-
-        helper.db.db.add_ers_dca(vec![ers2]).await.unwrap();
-        helper.db.db.update_database_views().await.unwrap();
+        helper.db.db.add_ers_dca(vec![ers1, ers2]).await.unwrap();
 
         let response = helper
             .app

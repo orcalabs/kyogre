@@ -1983,6 +1983,45 @@
     },
     "query": "\nINSERT INTO\n    ers_dca_catches (\n        message_id,\n        start_timestamp,\n        stop_timestamp,\n        message_version,\n        living_weight,\n        species_fao_id,\n        species_fiskeridir_id,\n        species_group_id,\n        species_main_group_id\n    )\nSELECT\n    *\nFROM\n    UNNEST(\n        $1::BIGINT[],\n        $2::timestamptz[],\n        $3::timestamptz[],\n        $4::INT[],\n        $5::INT[],\n        $6::VARCHAR[],\n        $7::INT[],\n        $8::INT[],\n        $9::INT[]\n    )\nON CONFLICT (\n    message_id,\n    start_timestamp,\n    stop_timestamp,\n    species_fao_id\n) DO NOTHING\n            "
   },
+  "6723e111b6f497178c384b0dc3f48caaf6c237297188e66309b32e4b8849cf94": {
+    "describe": {
+      "columns": [
+        {
+          "name": "x_index!",
+          "ordinal": 0,
+          "type_info": "Int4"
+        },
+        {
+          "name": "y_index!",
+          "ordinal": 1,
+          "type_info": "Int4"
+        },
+        {
+          "name": "sum_living!",
+          "ordinal": 2,
+          "type_info": "Int8"
+        }
+      ],
+      "nullable": [
+        null,
+        null,
+        null
+      ],
+      "parameters": {
+        "Left": [
+          "Int4",
+          "Int4",
+          "Int4Array",
+          "VarcharArray",
+          "Int4Array",
+          "Int4Array",
+          "Int4Array",
+          "Int8Array"
+        ]
+      }
+    },
+    "query": "\nSELECT\n    CASE\n        WHEN $1 = 0 THEN h.matrix_month_bucket\n        WHEN $1 = 1 THEN h.gear_group_id\n        WHEN $1 = 2 THEN h.species_group_id\n        WHEN $1 = 3 THEN h.vessel_length_group\n        WHEN $1 = 4 THEN h.catch_location_start_matrix_index\n    END AS \"x_index!\",\n    CASE\n        WHEN $2 = 0 THEN h.matrix_month_bucket\n        WHEN $2 = 1 THEN h.gear_group_id\n        WHEN $2 = 2 THEN h.species_group_id\n        WHEN $2 = 3 THEN h.vessel_length_group\n        WHEN $2 = 4 THEN h.catch_location_start_matrix_index\n    END AS \"y_index!\",\n    COALESCE(SUM(living_weight::BIGINT), 0)::BIGINT AS \"sum_living!\"\nFROM\n    hauls_matrix h\nWHERE\n    (\n        $1 = 0\n        OR (\n            $1 = 4\n            AND $2 = 0\n        )\n        OR $3::INT[] IS NULL\n        OR h.matrix_month_bucket = ANY ($3)\n    )\n    AND (\n        $1 = 4\n        OR $4::VARCHAR[] IS NULL\n        OR h.catch_location_start = ANY ($4)\n    )\n    AND (\n        $1 = 1\n        OR (\n            $1 = 4\n            AND $2 = 1\n        )\n        OR $5::INT[] IS NULL\n        OR h.gear_group_id = ANY ($5)\n    )\n    AND (\n        $1 = 2\n        OR (\n            $1 = 4\n            AND $2 = 2\n        )\n        OR $6::INT[] IS NULL\n        OR h.species_group_id = ANY ($6)\n    )\n    AND (\n        $1 = 3\n        OR (\n            $1 = 4\n            AND $2 = 3\n        )\n        OR $7::INT[] IS NULL\n        OR h.vessel_length_group = ANY ($7)\n    )\n    AND (\n        $8::BIGINT[] IS NULL\n        OR fiskeridir_vessel_id = ANY ($8)\n    )\nGROUP BY\n    1,\n    2\n            "
+  },
   "6b63083645ee5131c65b06de6940f6f49491cf5fc32b7d57e113b29b8244e6f6": {
     "describe": {
       "columns": [
@@ -2534,45 +2573,6 @@
       }
     },
     "query": "\nINSERT INTO\n    ers_arrivals (\n        message_id,\n        message_number,\n        message_timestamp,\n        ers_message_type_id,\n        message_year,\n        relevant_year,\n        sequence_number,\n        arrival_timestamp,\n        landing_facility,\n        port_id,\n        fiskeridir_vessel_id,\n        vessel_building_year,\n        vessel_call_sign,\n        vessel_call_sign_ers,\n        vessel_engine_building_year,\n        vessel_engine_power,\n        vessel_gross_tonnage_1969,\n        vessel_gross_tonnage_other,\n        vessel_county,\n        vessel_county_code,\n        vessel_greatest_length,\n        vessel_identification,\n        vessel_length,\n        vessel_length_group,\n        vessel_length_group_code,\n        vessel_material_code,\n        vessel_municipality,\n        vessel_municipality_code,\n        vessel_name,\n        vessel_name_ers,\n        vessel_nationality_code,\n        fiskeridir_vessel_nationality_group_id,\n        vessel_rebuilding_year,\n        vessel_registration_id,\n        vessel_registration_id_ers,\n        vessel_valid_until,\n        vessel_width\n    )\nSELECT\n    *\nFROM\n    UNNEST(\n        $1::BIGINT[],\n        $2::INT[],\n        $3::timestamptz[],\n        $4::VARCHAR[],\n        $5::INT[],\n        $6::INT[],\n        $7::INT[],\n        $8::timestamptz[],\n        $9::VARCHAR[],\n        $10::VARCHAR[],\n        $11::INT[],\n        $12::INT[],\n        $13::VARCHAR[],\n        $14::VARCHAR[],\n        $15::INT[],\n        $16::INT[],\n        $17::INT[],\n        $18::INT[],\n        $19::VARCHAR[],\n        $20::INT[],\n        $21::DECIMAL[],\n        $22::VARCHAR[],\n        $23::DECIMAL[],\n        $24::VARCHAR[],\n        $25::INT[],\n        $26::VARCHAR[],\n        $27::VARCHAR[],\n        $28::INT[],\n        $29::VARCHAR[],\n        $30::VARCHAR[],\n        $31::VARCHAR[],\n        $32::INT[],\n        $33::INT[],\n        $34::VARCHAR[],\n        $35::VARCHAR[],\n        $36::date[],\n        $37::DECIMAL[]\n    )\nON CONFLICT (message_id) DO NOTHING\n            "
-  },
-  "9d0169899b316aee5d247e56264a284906edaf3ecabe5478cb0424c71a46bfd2": {
-    "describe": {
-      "columns": [
-        {
-          "name": "x_index!",
-          "ordinal": 0,
-          "type_info": "Int4"
-        },
-        {
-          "name": "y_index!",
-          "ordinal": 1,
-          "type_info": "Int4"
-        },
-        {
-          "name": "sum_living!",
-          "ordinal": 2,
-          "type_info": "Int8"
-        }
-      ],
-      "nullable": [
-        null,
-        null,
-        null
-      ],
-      "parameters": {
-        "Left": [
-          "Int4",
-          "Int4",
-          "Int4Array",
-          "VarcharArray",
-          "Int4Array",
-          "Int4Array",
-          "Int4Array",
-          "Int8Array"
-        ]
-      }
-    },
-    "query": "\nSELECT\n    CASE\n        WHEN $1 = 0 THEN h.matrix_month_bucket\n        WHEN $1 = 1 THEN h.gear_group_id\n        WHEN $1 = 2 THEN h.species_group_id\n        WHEN $1 = 3 THEN h.vessel_length_group\n        WHEN $1 = 4 THEN h.catch_location_start_matrix_index\n    END AS \"x_index!\",\n    CASE\n        WHEN $2 = 0 THEN h.matrix_month_bucket\n        WHEN $2 = 1 THEN h.gear_group_id\n        WHEN $2 = 2 THEN h.species_group_id\n        WHEN $2 = 3 THEN h.vessel_length_group\n        WHEN $2 = 4 THEN h.catch_location_start_matrix_index\n    END AS \"y_index!\",\n    COALESCE(SUM(living_weight::BIGINT), 0)::BIGINT AS \"sum_living!\"\nFROM\n    hauls_matrix_view h\nWHERE\n    (\n        $1 = 0\n        OR (\n            $1 = 4\n            AND $2 = 0\n        )\n        OR $3::INT[] IS NULL\n        OR h.matrix_month_bucket = ANY ($3)\n    )\n    AND (\n        $1 = 4\n        OR $4::VARCHAR[] IS NULL\n        OR h.catch_location_start = ANY ($4)\n    )\n    AND (\n        $1 = 1\n        OR (\n            $1 = 4\n            AND $2 = 1\n        )\n        OR $5::INT[] IS NULL\n        OR h.gear_group_id = ANY ($5)\n    )\n    AND (\n        $1 = 2\n        OR (\n            $1 = 4\n            AND $2 = 2\n        )\n        OR $6::INT[] IS NULL\n        OR h.species_group_id = ANY ($6)\n    )\n    AND (\n        $1 = 3\n        OR (\n            $1 = 4\n            AND $2 = 3\n        )\n        OR $7::INT[] IS NULL\n        OR h.vessel_length_group = ANY ($7)\n    )\n    AND (\n        $8::BIGINT[] IS NULL\n        OR fiskeridir_vessel_id = ANY ($8)\n    )\nGROUP BY\n    1,\n    2\n            "
   },
   "9f9b965dc448ce53a78ad20637e40bc3b24dbcd6abc5a8bbede22343d08da84e": {
     "describe": {

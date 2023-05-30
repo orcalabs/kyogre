@@ -107,7 +107,7 @@ SELECT
     END AS "y_index!",
     COALESCE(SUM(living_weight::BIGINT), 0)::BIGINT AS "sum_living!"
 FROM
-    hauls_matrix_view h
+    hauls_matrix h
 WHERE
     (
         $1 = 0
