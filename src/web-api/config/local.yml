@@ -11,3 +11,5 @@ postgres:
   log_statements: Enable
 bw_jwks_url: https://id.barentswatch.no/.well-known/openid-configuration/jwks
 bw_profiles_url: https://www.barentswatch.no/bwapi/v2/user/profiles
+duck_db:
+  max_connections: 10

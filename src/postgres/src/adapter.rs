@@ -303,9 +303,9 @@ impl WebApiPort for PostgresAdapter {
         Ok(convert_stream(stream).boxed())
     }
 
-    async fn hauls_matrix(&self, query: HaulsMatrixQuery) -> Result<HaulsMatrix, QueryError> {
+    async fn hauls_matrix(&self, query: &HaulsMatrixQuery) -> Result<HaulsMatrix, QueryError> {
         let active_filter = query.active_filter;
-        let args = HaulsMatrixArgs::try_from(query).change_context(QueryError)?;
+        let args = HaulsMatrixArgs::try_from(query.clone()).change_context(QueryError)?;
 
         let j1 = tokio::spawn(PostgresAdapter::hauls_matrix_impl(
             self.pool.clone(),

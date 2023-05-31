@@ -17,6 +17,7 @@ use tracing_subscriber::FmtSubscriber;
 use trip_assembler::{ErsTripAssembler, LandingTripAssembler, TripAssembler};
 use vessel_benchmark::*;
 use web_api::{
+    duckdb::DuckdbSettings,
     routes::v1::haul,
     settings::{ApiSettings, Settings, BW_PROFILES_URL},
     startup::App,
@@ -292,6 +293,10 @@ where
                 honeycomb: None,
                 bw_jwks_url: Some(format!("{bw_address}/jwks")),
                 bw_profiles_url: Some(format!("{bw_address}/profiles")),
+                duck_db: DuckdbSettings {
+                    max_memory_mb: None,
+                    max_connections: 1,
+                },
             };
 
             let _ = BW_PROFILES_URL.set(api_settings.bw_profiles_url.clone().unwrap());

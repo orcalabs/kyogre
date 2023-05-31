@@ -3,6 +3,8 @@ use once_cell::sync::OnceCell;
 use orca_core::{Environment, LogLevel, PsqlSettings, TelemetrySettings};
 use serde::Deserialize;
 
+use crate::duckdb::DuckdbSettings;
+
 pub static BW_PROFILES_URL: OnceCell<String> = OnceCell::new();
 
 #[derive(Debug, Deserialize)]
@@ -15,6 +17,7 @@ pub struct Settings {
     pub honeycomb: Option<HoneycombApiKey>,
     pub bw_jwks_url: Option<String>,
     pub bw_profiles_url: Option<String>,
+    pub duck_db: DuckdbSettings,
 }
 
 #[derive(Clone, Debug, Deserialize)]
