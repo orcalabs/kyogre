@@ -9,7 +9,7 @@ use crate::{error::PostgresError, queries::decimal_to_float};
 
 #[derive(Deserialize)]
 pub struct Haul {
-    pub haul_id: String,
+    pub haul_id: i64,
     pub ers_activity_id: String,
     pub duration: i32,
     pub haul_distance: Option<i32>,

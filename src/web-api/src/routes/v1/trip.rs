@@ -35,7 +35,7 @@ pub struct TripsParameters {
 #[tracing::instrument(skip(db))]
 pub async fn trip_of_haul<T: Database + 'static>(
     db: web::Data<T>,
-    haul_id: Path<String>,
+    haul_id: Path<i64>,
 ) -> Result<Response<Option<Trip>>, ApiError> {
     db.detailed_trip_of_haul(&HaulId(haul_id.into_inner()))
         .await

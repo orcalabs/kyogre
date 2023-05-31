@@ -58,7 +58,7 @@ pub struct TripDetailed {
 
 #[derive(Deserialize)]
 struct TripHaul {
-    haul_id: String,
+    haul_id: i64,
     ers_activity_id: String,
     duration: i32,
     haul_distance: Option<i32>,
