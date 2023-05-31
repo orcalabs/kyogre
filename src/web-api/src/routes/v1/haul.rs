@@ -150,7 +150,7 @@ pub async fn hauls_matrix<T: Database + 'static, S: Cache>(
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct Haul {
-    #[schema(value_type = String)]
+    #[schema(value_type = i64)]
     pub haul_id: HaulId,
     pub ers_activity_id: String,
     pub duration: i32,

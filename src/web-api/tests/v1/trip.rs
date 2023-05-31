@@ -10,10 +10,7 @@ use web_api::routes::v1::trip::{Trip, TripsParameters};
 #[tokio::test]
 async fn test_trip_of_haul_returns_none_of_no_trip_is_connected_to_given_haul_id() {
     test(|helper| async move {
-        let response = helper
-            .app
-            .get_trip_of_haul(&HaulId("non-existing".into()))
-            .await;
+        let response = helper.app.get_trip_of_haul(&HaulId(7645323266)).await;
         assert_eq!(response.status(), StatusCode::OK);
 
         let body: Option<Trip> = response.json().await.unwrap();

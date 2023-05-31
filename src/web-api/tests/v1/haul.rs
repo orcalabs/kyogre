@@ -41,14 +41,10 @@ async fn test_hauls_returns_hauls_in_specified_months() {
         let month1: DateTime<Utc> = "2001-01-1T00:00:00Z".parse().unwrap();
         let month2: DateTime<Utc> = "2000-06-1T00:00:00Z".parse().unwrap();
 
-        ers1.start_date = Some(month1.date_naive());
-        ers1.start_time = Some(month1.time());
-        ers1.stop_date = Some(month1.date_naive());
-        ers1.stop_time = Some(month1.time());
-        ers2.start_date = Some(month2.date_naive());
-        ers2.start_time = Some(month2.time());
-        ers2.stop_date = Some(month2.date_naive());
-        ers2.stop_time = Some(month2.time());
+        ers1.set_start_timestamp(month1);
+        ers1.set_stop_timestamp(month1);
+        ers2.set_start_timestamp(month2);
+        ers2.set_stop_timestamp(month2);
 
         helper
             .db
@@ -56,7 +52,6 @@ async fn test_hauls_returns_hauls_in_specified_months() {
             .add_ers_dca(vec![ers1, ers2, ers3, ers4])
             .await
             .unwrap();
-        helper.db.db.update_database_views().await.unwrap();
 
         let params = HaulsParams {
             months: Some(vec![DateTimeUtc(month1), DateTimeUtc(month2)]),
@@ -92,7 +87,6 @@ async fn test_hauls_returns_hauls_in_catch_location() {
             .add_ers_dca(vec![ers1, ers2, ers3, ers4])
             .await
             .unwrap();
-        helper.db.db.update_database_views().await.unwrap();
 
         let params = HaulsParams {
             catch_locations: Some(vec![
@@ -129,7 +123,6 @@ async fn test_hauls_returns_hauls_with_gear_group_ids() {
             .add_ers_dca(vec![ers1, ers2, ers3, ers4])
             .await
             .unwrap();
-        helper.db.db.update_database_views().await.unwrap();
 
         let params = HaulsParams {
             gear_group_ids: Some(vec![
@@ -166,7 +159,6 @@ async fn test_hauls_returns_hauls_with_species_group_ids() {
             .add_ers_dca(vec![ers1, ers2, ers3, ers4])
             .await
             .unwrap();
-        helper.db.db.update_database_views().await.unwrap();
 
         let params = HaulsParams {
             species_group_ids: Some(vec![SpeciesGroupId(301), SpeciesGroupId(302)]),
@@ -200,7 +192,6 @@ async fn test_hauls_returns_hauls_with_vessel_length_ranges() {
             .add_ers_dca(vec![ers1, ers2, ers3, ers4])
             .await
             .unwrap();
-        helper.db.db.update_database_views().await.unwrap();
 
         let params = HaulsParams {
             vessel_length_ranges: Some(vec!["(,10)".parse().unwrap(), "[10,15)".parse().unwrap()]),
@@ -231,7 +222,6 @@ async fn test_hauls_returns_hauls_with_fiskeridir_vessel_ids() {
             .add_ers_dca(vec![ers1, ers2, ers3, ers4])
             .await
             .unwrap();
-        helper.db.db.update_database_views().await.unwrap();
 
         let params = HaulsParams {
             fiskeridir_vessel_ids: Some(vec![FiskeridirVesselId(1), FiskeridirVesselId(2)]),
@@ -291,20 +281,16 @@ async fn test_hauls_matrix_filters_by_months() {
         let month1: DateTime<Utc> = "2013-01-1T00:00:00Z".parse().unwrap();
         let month2: DateTime<Utc> = "2013-06-1T00:00:00Z".parse().unwrap();
 
-        ers1.start_date = Some(month1.date_naive());
-        ers1.start_time = Some(month1.time());
-        ers1.stop_date = Some(month1.date_naive());
-        ers1.stop_time = Some(month1.time());
+        ers1.set_start_timestamp(month1);
+        ers1.set_stop_timestamp(month1);
         ers1.start_latitude = Some(56.727258);
         ers1.start_longitude = Some(12.565410);
         ers1.catch.species.living_weight = Some(10);
 
         ers2.start_latitude = Some(56.756293);
         ers2.start_longitude = Some(11.514740);
-        ers2.start_date = Some(month2.date_naive());
-        ers2.start_time = Some(month2.time());
-        ers2.stop_date = Some(month2.date_naive());
-        ers2.stop_time = Some(month2.time());
+        ers2.set_start_timestamp(month2);
+        ers2.set_stop_timestamp(month2);
         ers2.catch.species.living_weight = Some(20);
 
         ers3.start_latitude = Some(56.727258);
@@ -542,20 +528,16 @@ async fn test_hauls_matrix_date_sum_area_table_is_correct() {
         let month1: DateTime<Utc> = "2013-01-1T00:00:00Z".parse().unwrap();
         let month2: DateTime<Utc> = "2013-06-1T00:00:00Z".parse().unwrap();
 
-        ers1.start_date = Some(month1.date_naive());
-        ers1.start_time = Some(month1.time());
-        ers1.stop_date = Some(month1.date_naive());
-        ers1.stop_time = Some(month1.time());
+        ers1.set_start_timestamp(month1);
+        ers1.set_stop_timestamp(month1);
         ers1.start_latitude = Some(56.727258);
         ers1.start_longitude = Some(12.565410);
         ers1.catch.species.living_weight = Some(10);
 
         ers2.start_latitude = Some(56.756293);
         ers2.start_longitude = Some(11.514740);
-        ers2.start_date = Some(month2.date_naive());
-        ers2.start_time = Some(month2.time());
-        ers2.stop_date = Some(month2.date_naive());
-        ers2.stop_time = Some(month2.time());
+        ers2.set_start_timestamp(month2);
+        ers2.set_stop_timestamp(month2);
         ers2.catch.species.living_weight = Some(20);
 
         ers3.start_latitude = Some(56.727258);
@@ -768,20 +750,16 @@ async fn test_hauls_matrix_catch_location_as_active_filter_produces_correct_matr
         let month1: DateTime<Utc> = "2013-01-1T00:00:00Z".parse().unwrap();
         let month2: DateTime<Utc> = "2013-06-1T00:00:00Z".parse().unwrap();
 
-        ers1.start_date = Some(month1.date_naive());
-        ers1.start_time = Some(month1.time());
-        ers1.stop_date = Some(month1.date_naive());
-        ers1.stop_time = Some(month1.time());
+        ers1.set_start_timestamp(month1);
+        ers1.set_stop_timestamp(month1);
         ers1.start_latitude = Some(56.727258);
         ers1.start_longitude = Some(12.565410);
         ers1.catch.species.living_weight = Some(10);
 
         ers2.start_latitude = Some(56.756293);
         ers2.start_longitude = Some(11.514740);
-        ers2.start_date = Some(month2.date_naive());
-        ers2.start_time = Some(month2.time());
-        ers2.stop_date = Some(month2.date_naive());
-        ers2.stop_time = Some(month2.time());
+        ers2.set_start_timestamp(month2);
+        ers2.set_stop_timestamp(month2);
         ers2.catch.species.living_weight = Some(20);
 
         ers3.start_latitude = Some(56.727258);
@@ -819,10 +797,8 @@ async fn test_hauls_matrix_have_correct_totals_after_dca_message_is_replaced_by_
         let mut ers1 = ErsDca::test_default(1, None);
 
         let date: DateTime<Utc> = "2013-01-1T00:00:00Z".parse().unwrap();
-        ers1.start_date = Some(date.date_naive());
-        ers1.start_time = Some(date.time());
-        ers1.stop_date = Some(date.date_naive());
-        ers1.stop_time = Some(date.time());
+        ers1.set_start_timestamp(date);
+        ers1.set_stop_timestamp(date);
         ers1.start_latitude = Some(56.727258);
         ers1.start_longitude = Some(12.565410);
         ers1.catch.species.living_weight = Some(10);

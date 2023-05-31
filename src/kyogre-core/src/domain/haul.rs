@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use crate::CatchLocationId;
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize)]
-pub struct HaulId(pub String);
+pub struct HaulId(pub i64);
 
 #[derive(Debug, Clone, PartialEq)]
 #[remain::sorted]
