@@ -3,12 +3,14 @@
 
 use fiskeridir_rs::{RegisterVesselEntityType, RegisterVesselOwner};
 use kyogre_core::{
-    ActiveHaulsFilter, Catch, Delivery, FishingFacilityToolType, Ordering, WebApiPort,
+    ActiveHaulsFilter, CacheOutboundPort, Catch, Delivery, FishingFacilityToolType, Ordering,
+    WebApiPort,
 };
 use postgres::PostgresAdapter;
 use routes::v1;
 use utoipa::OpenApi;
 
+pub mod duckdb;
 pub mod error;
 pub mod extractors;
 pub mod guards;
@@ -18,6 +20,7 @@ pub mod settings;
 pub mod startup;
 
 pub trait Database: WebApiPort {}
+pub trait Cache: CacheOutboundPort {}
 
 impl Database for PostgresAdapter {}
 

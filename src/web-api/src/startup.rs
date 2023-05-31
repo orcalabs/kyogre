@@ -10,7 +10,9 @@ use std::{io::Error, net::TcpListener};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
-use crate::{guards::JwtGuard, routes, settings::Settings, ApiDoc, Database};
+use crate::{
+    duckdb::DuckdbAdapter, guards::JwtGuard, routes, settings::Settings, ApiDoc, Cache, Database,
+};
 
 pub struct App {
     server: Server,
@@ -24,11 +26,15 @@ impl App {
 
         let postgres = PostgresAdapter::new(&settings.postgres).await.unwrap();
 
+        let duck_db = DuckdbAdapter::new(&settings.duck_db, &settings.postgres).unwrap();
+
         if settings.environment == Environment::Local {
             postgres.do_migrations().await;
         }
 
-        let server = create_server(postgres, listener, settings).await.unwrap();
+        let server = create_server(postgres, duck_db, listener, settings)
+            .await
+            .unwrap();
 
         App { server, port }
     }
@@ -42,13 +48,15 @@ impl App {
     }
 }
 
-async fn create_server<T>(
+async fn create_server<T, S>(
     database: T,
+    cache: S,
     listener: TcpListener,
     settings: &Settings,
 ) -> Result<Server, Error>
 where
     T: Database + Clone + Send + 'static,
+    S: Cache + Clone + Send + 'static,
 {
     let environment = settings.environment;
     let not_prod = environment != Environment::Production;
@@ -108,7 +116,7 @@ where
             .route("/hauls", web::get().to(routes::v1::haul::hauls::<T>))
             .route(
                 "/hauls_matrix/{active_filter}",
-                web::get().to(routes::v1::haul::hauls_matrix::<T>),
+                web::get().to(routes::v1::haul::hauls_matrix::<T, S>),
             );
 
         if let Some(ref guard) = bw_jwt_guard {
@@ -122,6 +130,7 @@ where
 
         let app = actix_web::App::new()
             .app_data(Data::new(database.clone()))
+            .app_data(Data::new(cache.clone()))
             .wrap(Compress::default())
             .wrap(Condition::new(not_prod, actix_cors::Cors::permissive()))
             .wrap(TracingLogger::<OrcaRootSpanBuilder>::new())

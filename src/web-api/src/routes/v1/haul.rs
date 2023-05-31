@@ -7,7 +7,7 @@ use crate::{
         self, deserialize_range_list, deserialize_string_list, DateTimeUtc, GearGroupId, Month,
         SpeciesGroupId,
     },
-    to_streaming_response, Database,
+    to_streaming_response, Cache, Database,
 };
 use actix_web::{
     web::{self, Path},
@@ -114,18 +114,35 @@ pub async fn hauls<T: Database + 'static>(
         (status = 500, description = "an internal error occured", body = ErrorResponse),
     )
 )]
-#[tracing::instrument(skip(db))]
-pub async fn hauls_matrix<T: Database + 'static>(
+#[tracing::instrument(skip(db, cache))]
+pub async fn hauls_matrix<T: Database + 'static, S: Cache>(
     db: web::Data<T>,
+    cache: web::Data<S>,
     params: web::Query<HaulsMatrixParams>,
     active_filter: Path<ActiveHaulsFilter>,
 ) -> Result<Response<HaulsMatrix>, ApiError> {
     let query = matrix_params_to_query(params.into_inner(), active_filter.into_inner());
 
-    let matrix = db.hauls_matrix(query).await.map_err(|e| {
-        event!(Level::ERROR, "failed to retrieve hauls matrix: {:?}", e);
-        ApiError::InternalServerError
-    })?;
+    let matrix = match cache.hauls_matrix(&query) {
+        Ok(matrix) => match matrix {
+            Some(matrix) => Ok(matrix),
+            None => db.hauls_matrix(&query).await.map_err(|e| {
+                event!(Level::ERROR, "failed to retrieve hauls matrix: {:?}", e);
+                ApiError::InternalServerError
+            }),
+        },
+        Err(e) => {
+            event!(
+                Level::ERROR,
+                "failed to retrieve hauls matrix from cache: {:?}",
+                e
+            );
+            db.hauls_matrix(&query).await.map_err(|e| {
+                event!(Level::ERROR, "failed to retrieve hauls matrix: {:?}", e);
+                ApiError::InternalServerError
+            })
+        }
+    }?;
 
     Ok(Response::new(HaulsMatrix::from(matrix)))
 }
@@ -324,7 +341,7 @@ impl From<HaulsParams> for HaulsQuery {
     }
 }
 
-fn matrix_params_to_query(
+pub fn matrix_params_to_query(
     params: HaulsMatrixParams,
     active_filter: ActiveHaulsFilter,
 ) -> HaulsMatrixQuery {

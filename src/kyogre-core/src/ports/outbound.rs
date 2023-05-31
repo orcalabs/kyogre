@@ -53,7 +53,7 @@ pub trait WebApiPort {
         &self,
         haul_id: &HaulId,
     ) -> Result<Option<TripDetailed>, QueryError>;
-    async fn hauls_matrix(&self, query: HaulsMatrixQuery) -> Result<HaulsMatrix, QueryError>;
+    async fn hauls_matrix(&self, query: &HaulsMatrixQuery) -> Result<HaulsMatrix, QueryError>;
     fn fishing_facilities(
         &self,
         query: FishingFacilitiesQuery,
@@ -126,4 +126,8 @@ pub trait VesselBenchmarkOutbound: Send + Sync {
     async fn vessels(&self) -> Result<Vec<Vessel>, QueryError>;
     async fn sum_trip_time(&self, id: FiskeridirVesselId) -> Result<Option<Duration>, QueryError>;
     async fn sum_landing_weight(&self, id: FiskeridirVesselId) -> Result<Option<f64>, QueryError>;
+}
+
+pub trait CacheOutboundPort: Send + Sync {
+    fn hauls_matrix(&self, query: &HaulsMatrixQuery) -> Result<Option<HaulsMatrix>, QueryError>;
 }
