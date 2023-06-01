@@ -17,7 +17,7 @@ pub struct Settings {
     pub honeycomb: Option<HoneycombApiKey>,
     pub bw_jwks_url: Option<String>,
     pub bw_profiles_url: Option<String>,
-    pub duck_db: DuckdbSettings,
+    pub duck_db: Option<DuckdbSettings>,
 }
 
 #[derive(Clone, Debug, Deserialize)]

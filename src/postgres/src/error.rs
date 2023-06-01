@@ -91,37 +91,6 @@ impl std::fmt::Display for PortCoordinateError {
     }
 }
 
-#[derive(Debug)]
-pub enum HaulMatrixIndexError {
-    Date(i32),
-    GearGroup(i32),
-    VesselLength(i32),
-    SpeciesGroup(i32),
-}
-
-impl std::error::Error for HaulMatrixIndexError {}
-
-impl std::fmt::Display for HaulMatrixIndexError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            HaulMatrixIndexError::Date(v) => f.write_fmt(format_args!(
-                "encountered a month bucket older than the oldest existing ers data: {}",
-                v
-            )),
-            HaulMatrixIndexError::GearGroup(v) => {
-                f.write_fmt(format_args!("encountered an unknown gear group: {}", v))
-            }
-            HaulMatrixIndexError::VesselLength(v) => f.write_fmt(format_args!(
-                "encountered an unknown vessel length group: {}",
-                v
-            )),
-            HaulMatrixIndexError::SpeciesGroup(v) => {
-                f.write_fmt(format_args!("encountered an species group {}", v))
-            }
-        }
-    }
-}
-
 // Necesary evil when SQLX returns a boxed dyn Error + Send + Sync which we can't transform into a
 // report.
 // This type is used as an intermediate error type to then be converted into a error-stack Report.

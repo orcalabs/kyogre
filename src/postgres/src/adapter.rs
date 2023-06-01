@@ -1,4 +1,4 @@
-use crate::queries::haul::{HaulMatrixFeatures, HaulsMatrixArgs};
+use crate::queries::haul::HaulsMatrixArgs;
 use crate::{
     error::PostgresError, ers_dca_set::ErsDcaSet, ers_dep_set::ErsDepSet, ers_por_set::ErsPorSet,
     ers_tra_set::ErsTraSet, landing_set::LandingSet,
