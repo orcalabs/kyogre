@@ -8,7 +8,7 @@ use actix_web::{
 };
 use chrono::{DateTime, Utc};
 use kyogre_core::{
-    Delivery, FiskeridirVesselId, HaulId, Ordering, Pagination, TripId, VesselEventType,
+    Delivery, FiskeridirVesselId, HaulId, Ordering, Pagination, TripId, Trips, VesselEventType,
 };
 use serde::{Deserialize, Serialize};
 use tracing::{event, Level};
@@ -66,7 +66,7 @@ pub async fn trips<T: Database + 'static>(
     to_streaming_response! {
         db.detailed_trips_of_vessel(
             FiskeridirVesselId(fiskeridir_vessel_id.into_inner() as i64),
-            Pagination::new(params.limit, params.offset),
+            Pagination::<Trips>::new(params.limit, params.offset),
             params.ordering.unwrap_or(Ordering::Asc)
         )
         .map_err(|e| {

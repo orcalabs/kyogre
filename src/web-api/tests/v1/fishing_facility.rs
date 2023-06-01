@@ -1,7 +1,7 @@
 use super::helper::test;
 use actix_web::http::StatusCode;
 use fiskeridir_rs::CallSign;
-use kyogre_core::{FishingFacilityToolType, Mmsi};
+use kyogre_core::{FishingFacilitiesSorting, FishingFacilityToolType, Mmsi, Ordering};
 use web_api::routes::v1::fishing_facility::{FishingFacilitiesParams, FishingFacility};
 
 #[tokio::test]
@@ -335,6 +335,98 @@ async fn test_fishing_facilities_fails_without_bw_read_extended_fishing_facility
             .get_fishing_facilities(Default::default(), token)
             .await;
         assert_eq!(response.status(), StatusCode::FORBIDDEN);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_fishing_facilities_filters_by_limit_and_offset() {
+    test(|helper| async move {
+        let mut expected = vec![
+            helper.db.generate_fishing_facility().await,
+            helper.db.generate_fishing_facility().await,
+            helper.db.generate_fishing_facility().await,
+            helper.db.generate_fishing_facility().await,
+            helper.db.generate_fishing_facility().await,
+            helper.db.generate_fishing_facility().await,
+        ];
+
+        let params = FishingFacilitiesParams {
+            offset: Some(2),
+            limit: Some(3),
+            ordering: Some(Ordering::Asc),
+            ..Default::default()
+        };
+
+        let token = helper.bw_helper.get_bw_token();
+        let response = helper.app.get_fishing_facilities(params, token).await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let facilities: Vec<FishingFacility> = response.json().await.unwrap();
+
+        expected.sort_by_key(|f| f.setup_timestamp);
+        expected = expected.into_iter().skip(2).take(3).collect();
+
+        assert_eq!(facilities.len(), 3);
+        assert_eq!(facilities, expected);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_fishing_facilities_sorts_by_removed_timestamp() {
+    test(|helper| async move {
+        let mut expected = vec![
+            helper.db.generate_fishing_facility().await,
+            helper.db.generate_fishing_facility().await,
+            helper.db.generate_fishing_facility().await,
+        ];
+
+        let params = FishingFacilitiesParams {
+            ordering: Some(Ordering::Asc),
+            sorting: Some(FishingFacilitiesSorting::Removed),
+            ..Default::default()
+        };
+
+        let token = helper.bw_helper.get_bw_token();
+        let response = helper.app.get_fishing_facilities(params, token).await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let facilities: Vec<FishingFacility> = response.json().await.unwrap();
+
+        expected.sort_by_key(|f| f.removed_timestamp);
+
+        assert_eq!(facilities.len(), 3);
+        assert_eq!(facilities, expected);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_fishing_facilities_sorts_by_last_changed() {
+    test(|helper| async move {
+        let mut expected = vec![
+            helper.db.generate_fishing_facility().await,
+            helper.db.generate_fishing_facility().await,
+            helper.db.generate_fishing_facility().await,
+        ];
+
+        let params = FishingFacilitiesParams {
+            ordering: Some(Ordering::Asc),
+            sorting: Some(FishingFacilitiesSorting::LastChanged),
+            ..Default::default()
+        };
+
+        let token = helper.bw_helper.get_bw_token();
+        let response = helper.app.get_fishing_facilities(params, token).await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let facilities: Vec<FishingFacility> = response.json().await.unwrap();
+
+        expected.sort_by_key(|f| f.last_changed);
+
+        assert_eq!(facilities.len(), 3);
+        assert_eq!(facilities, expected);
     })
     .await;
 }

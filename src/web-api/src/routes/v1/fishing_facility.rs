@@ -2,7 +2,10 @@ use actix_web::{web, HttpResponse};
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::CallSign;
 use futures::TryStreamExt;
-use kyogre_core::{FishingFacilitiesQuery, FishingFacilityToolType, Mmsi, Range};
+use kyogre_core::{
+    FishingFacilities, FishingFacilitiesQuery, FishingFacilitiesSorting, FishingFacilityToolType,
+    Mmsi, Ordering, Pagination, Range,
+};
 use serde::{Deserialize, Serialize};
 use tracing::{event, Level};
 use utoipa::{IntoParams, ToSchema};
@@ -34,6 +37,10 @@ pub struct FishingFacilitiesParams {
     #[param(value_type = Option<String>, example = "[2023-01-01T00:00:00Z,2023-02-01T00:00:00Z);[2023-04-10T10:00:00Z,)")]
     #[serde(deserialize_with = "deserialize_range_list", default)]
     pub removed_ranges: Option<Vec<Range<DateTime<Utc>>>>,
+    pub limit: Option<u64>,
+    pub offset: Option<u64>,
+    pub ordering: Option<Ordering>,
+    pub sorting: Option<FishingFacilitiesSorting>,
 }
 
 #[utoipa::path(
@@ -183,6 +190,9 @@ impl From<FishingFacilitiesParams> for FishingFacilitiesQuery {
             active: v.active,
             setup_ranges: v.setup_ranges,
             removed_ranges: v.removed_ranges,
+            pagination: Pagination::<FishingFacilities>::new(v.limit, v.offset),
+            ordering: v.ordering,
+            sorting: v.sorting,
         }
     }
 }

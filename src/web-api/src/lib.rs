@@ -3,8 +3,8 @@
 
 use fiskeridir_rs::{RegisterVesselEntityType, RegisterVesselOwner};
 use kyogre_core::{
-    ActiveHaulsFilter, CacheOutboundPort, Catch, Delivery, FishingFacilityToolType, Ordering,
-    WebApiPort,
+    ActiveHaulsFilter, CacheOutboundPort, Catch, Delivery, FishingFacilitiesSorting,
+    FishingFacilityToolType, Ordering, WebApiPort,
 };
 use postgres::PostgresAdapter;
 use routes::v1;
@@ -54,6 +54,7 @@ impl Database for PostgresAdapter {}
             RegisterVesselOwner,
             RegisterVesselEntityType,
             FishingFacilityToolType,
+            FishingFacilitiesSorting,
             error::ErrorResponse,
             error::ApiError,
             v1::ais::AisPosition,

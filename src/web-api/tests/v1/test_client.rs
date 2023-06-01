@@ -282,6 +282,22 @@ impl ApiClient {
             ))
         }
 
+        if let Some(offset) = params.offset {
+            parameters.push(("offset".into(), offset.to_string()))
+        }
+
+        if let Some(limit) = params.limit {
+            parameters.push(("limit".into(), limit.to_string()))
+        }
+
+        if let Some(ordering) = params.ordering {
+            parameters.push(("ordering".into(), ordering.to_string()))
+        }
+
+        if let Some(sorting) = params.sorting {
+            parameters.push(("sorting".into(), sorting.to_string()))
+        }
+
         let mut headers = HeaderMap::new();
         headers.insert("bw-token", token.try_into().unwrap());
 
