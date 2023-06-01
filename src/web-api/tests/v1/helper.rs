@@ -17,7 +17,7 @@ use tracing_subscriber::FmtSubscriber;
 use trip_assembler::{ErsTripAssembler, LandingTripAssembler, TripAssembler};
 use vessel_benchmark::*;
 use web_api::{
-    duckdb::DuckdbSettings,
+    duckdb::{CacheMode, CacheStorage, DuckdbAdapter, DuckdbSettings},
     routes::v1::haul,
     settings::{ApiSettings, Settings, BW_PROFILES_URL},
     startup::App,
@@ -31,6 +31,7 @@ pub struct TestHelper {
     pub app: ApiClient,
     pub db: TestDb,
     pub bw_helper: &'static BarentswatchHelper,
+    duck_db: Option<DuckdbAdapter>,
     ers_assembler: ErsTripAssembler,
     landings_assembler: LandingTripAssembler,
     weight_per_hour: WeightPerHour,
@@ -48,6 +49,8 @@ impl TestHelper {
     ) -> TestHelper {
         let address = format!("http://127.0.0.1:{}/v1.0", app.port());
 
+        let duck_db = app.duck_db.clone();
+
         tokio::spawn(async { app.run().await.unwrap() });
 
         TestHelper {
@@ -58,6 +61,7 @@ impl TestHelper {
             landings_assembler: LandingTripAssembler::default(),
             ers_message_number: 1,
             weight_per_hour: WeightPerHour::default(),
+            duck_db,
         }
     }
     pub async fn do_benchmarks(&self) {
@@ -65,6 +69,13 @@ impl TestHelper {
             .produce_and_store_benchmarks(&self.db.db, &self.db.db)
             .await
             .unwrap();
+    }
+    pub fn refresh_cache(&self) {
+        self.duck_db
+            .as_ref()
+            .unwrap()
+            .refresh_hauls_cache_impl()
+            .unwrap()
     }
 
     pub async fn add_precision_to_trip(&self, vessel: &Vessel, trip: &TripDetailed) -> DateRange {
@@ -231,6 +242,30 @@ where
     T: FnOnce(TestHelper) -> Fut + panic::UnwindSafe + Send + Sync + 'static,
     Fut: Future<Output = ()> + Send + 'static,
 {
+    test_impl(test, None).await;
+}
+
+pub async fn test_with_cache<T, Fut>(test: T)
+where
+    T: FnOnce(TestHelper) -> Fut + panic::UnwindSafe + Send + Sync + 'static,
+    Fut: Future<Output = ()> + Send + 'static,
+{
+    test_impl(
+        test,
+        Some(DuckdbSettings {
+            max_connections: 1,
+            mode: CacheMode::ReturnError,
+            storage: CacheStorage::Memory,
+        }),
+    )
+    .await;
+}
+
+async fn test_impl<T, Fut>(test: T, duck_db: Option<DuckdbSettings>)
+where
+    T: FnOnce(TestHelper) -> Fut + panic::UnwindSafe + Send + Sync + 'static,
+    Fut: Future<Output = ()> + Send + 'static,
+{
     let mut docker_test = DockerTest::new().with_default_source(Source::DockerHub);
     TRACING.call_once(|| {
         tracing::subscriber::set_global_default(
@@ -293,10 +328,7 @@ where
                 honeycomb: None,
                 bw_jwks_url: Some(format!("{bw_address}/jwks")),
                 bw_profiles_url: Some(format!("{bw_address}/profiles")),
-                duck_db: DuckdbSettings {
-                    max_memory_mb: None,
-                    max_connections: 1,
-                },
+                duck_db,
             };
 
             let _ = BW_PROFILES_URL.set(api_settings.bw_profiles_url.clone().unwrap());

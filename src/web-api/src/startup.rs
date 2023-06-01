@@ -17,6 +17,9 @@ use crate::{
 pub struct App {
     server: Server,
     port: u16,
+    // Necessary evil for testing, we need this reference to refresh the cache.
+    // TODO: find another approach.
+    pub duck_db: Option<DuckdbAdapter>,
 }
 
 impl App {
@@ -26,17 +29,28 @@ impl App {
 
         let postgres = PostgresAdapter::new(&settings.postgres).await.unwrap();
 
-        let duck_db = DuckdbAdapter::new(&settings.duck_db, &settings.postgres).unwrap();
-
         if settings.environment == Environment::Local {
             postgres.do_migrations().await;
         }
 
-        let server = create_server(postgres, duck_db, listener, settings)
+        let duck_db = match &settings.duck_db {
+            None => None,
+            Some(duck_db) => {
+                let duckdb = DuckdbAdapter::new(duck_db, settings.postgres.clone()).unwrap();
+                duckdb.refresh_hauls_cache_impl().unwrap();
+                Some(duckdb)
+            }
+        };
+
+        let server = create_server(postgres, duck_db.clone(), listener, settings)
             .await
             .unwrap();
 
-        App { server, port }
+        App {
+            server,
+            port,
+            duck_db,
+        }
     }
 
     pub async fn run(self) -> Result<(), std::io::Error> {
@@ -50,7 +64,7 @@ impl App {
 
 async fn create_server<T, S>(
     database: T,
-    cache: S,
+    cache: Option<S>,
     listener: TcpListener,
     settings: &Settings,
 ) -> Result<Server, Error>

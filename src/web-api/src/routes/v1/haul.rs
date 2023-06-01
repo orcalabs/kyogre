@@ -117,31 +117,35 @@ pub async fn hauls<T: Database + 'static>(
 #[tracing::instrument(skip(db, cache))]
 pub async fn hauls_matrix<T: Database + 'static, S: Cache>(
     db: web::Data<T>,
-    cache: web::Data<S>,
+    cache: web::Data<Option<S>>,
     params: web::Query<HaulsMatrixParams>,
     active_filter: Path<ActiveHaulsFilter>,
 ) -> Result<Response<HaulsMatrix>, ApiError> {
     let query = matrix_params_to_query(params.into_inner(), active_filter.into_inner());
 
-    let matrix = match cache.hauls_matrix(&query) {
-        Ok(matrix) => match matrix {
-            Some(matrix) => Ok(matrix),
-            None => db.hauls_matrix(&query).await.map_err(|e| {
-                event!(Level::ERROR, "failed to retrieve hauls matrix: {:?}", e);
-                ApiError::InternalServerError
-            }),
-        },
-        Err(e) => {
-            event!(
-                Level::ERROR,
-                "failed to retrieve hauls matrix from cache: {:?}",
-                e
-            );
-            db.hauls_matrix(&query).await.map_err(|e| {
-                event!(Level::ERROR, "failed to retrieve hauls matrix: {:?}", e);
-                ApiError::InternalServerError
-            })
+    let matrix = if let Some(cache) = cache.as_ref() {
+        match cache.hauls_matrix(&query) {
+            Ok(matrix) => match matrix {
+                Some(matrix) => Ok(matrix),
+                None => db.hauls_matrix(&query).await.map_err(|e| {
+                    event!(Level::ERROR, "failed to retrieve hauls matrix: {:?}", e);
+                    ApiError::InternalServerError
+                }),
+            },
+            Err(e) => {
+                event!(
+                    Level::ERROR,
+                    "failed to retrieve hauls matrix from cache: {:?}",
+                    e
+                );
+                Err(ApiError::InternalServerError)
+            }
         }
+    } else {
+        db.hauls_matrix(&query).await.map_err(|e| {
+            event!(Level::ERROR, "failed to retrieve hauls matrix: {:?}", e);
+            ApiError::InternalServerError
+        })
     }?;
 
     Ok(Response::new(HaulsMatrix::from(matrix)))
