@@ -9,7 +9,7 @@ pub use haul::*;
 pub use pagination::*;
 
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
-#[derive(Deserialize, Debug, Clone, Copy, strum::Display)]
+#[derive(Deserialize, Debug, Default, Clone, Copy, strum::Display)]
 #[serde(rename_all = "lowercase")]
 pub enum Ordering {
     #[serde(alias = "asc", alias = "Asc", alias = "ascending", alias = "Ascending")]
@@ -20,5 +20,6 @@ pub enum Ordering {
         alias = "Descending",
         alias = "descending"
     )]
+    #[default]
     Desc = 2,
 }

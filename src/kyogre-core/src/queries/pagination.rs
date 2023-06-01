@@ -1,8 +1,15 @@
+#[derive(Debug, Clone)]
 pub struct Trips;
+#[derive(Debug, Clone)]
+pub struct FishingFacilities;
 
 const MAX_TRIPS_OF_VESSELS_LIMIT: u64 = 100;
 const DEFAULT_TRIPS_OF_VESSELS_LIMIT: u64 = 20;
 
+const MAX_FISHING_FACILITIES_LIMIT: u64 = 100;
+const DEFAULT_FISHING_FACILITIES_LIMIT: u64 = 20;
+
+#[derive(Debug, Clone)]
 pub struct Pagination<T> {
     limit: u64,
     offset: u64,
@@ -23,6 +30,11 @@ impl_pagination!(
     Trips,
     MAX_TRIPS_OF_VESSELS_LIMIT,
     DEFAULT_TRIPS_OF_VESSELS_LIMIT
+);
+impl_pagination!(
+    FishingFacilities,
+    MAX_FISHING_FACILITIES_LIMIT,
+    DEFAULT_FISHING_FACILITIES_LIMIT
 );
 
 impl<T> Pagination<T> {

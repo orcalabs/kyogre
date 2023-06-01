@@ -3,7 +3,10 @@ use error_stack::{report, IntoReport, Result, ResultExt};
 use futures::{Stream, TryStreamExt};
 use geo_types::geometry::Geometry;
 use geozero::wkb;
-use kyogre_core::{FishingFacilitiesQuery, FishingFacilityApiSource, FishingFacilityToolType};
+use kyogre_core::{
+    FishingFacilitiesQuery, FishingFacilitiesSorting, FishingFacilityApiSource,
+    FishingFacilityToolType, Ordering,
+};
 use sqlx::postgres::types::PgRange;
 
 use crate::{error::PostgresError, models::FishingFacility, PostgresAdapter};
@@ -257,6 +260,25 @@ WHERE
         $6::TSTZRANGE[] IS NULL
         OR removed_timestamp <@ ANY ($6)
     )
+ORDER BY
+    CASE
+        WHEN $7 = 1 THEN CASE
+            WHEN $8 = 1 THEN setup_timestamp
+            WHEN $8 = 2 THEN removed_timestamp
+            WHEN $8 = 3 THEN last_changed
+        END
+    END ASC,
+    CASE
+        WHEN $7 = 2 THEN CASE
+            WHEN $8 = 1 THEN setup_timestamp
+            WHEN $8 = 2 THEN removed_timestamp
+            WHEN $8 = 3 THEN last_changed
+        END
+    END DESC
+OFFSET
+    $9
+LIMIT
+    $10
             "#,
             args.mmsis as _,
             args.call_signs as _,
@@ -264,6 +286,10 @@ WHERE
             args.active,
             args.setup_ranges,
             args.removed_ranges,
+            args.ordering as i32,
+            args.sorting as i32,
+            args.offset as i64,
+            args.limit as i64,
         )
         .fetch(&self.pool)
         .map_err(|e| report!(e).change_context(PostgresError::Query))
@@ -307,6 +333,10 @@ pub struct FishingFacilitiesArgs {
     pub active: Option<bool>,
     pub setup_ranges: Option<Vec<PgRange<DateTime<Utc>>>>,
     pub removed_ranges: Option<Vec<PgRange<DateTime<Utc>>>>,
+    pub limit: u64,
+    pub offset: u64,
+    pub ordering: Ordering,
+    pub sorting: FishingFacilitiesSorting,
 }
 
 impl From<FishingFacilitiesQuery> for FishingFacilitiesArgs {
@@ -336,6 +366,10 @@ impl From<FishingFacilitiesQuery> for FishingFacilitiesArgs {
                     })
                     .collect()
             }),
+            limit: v.pagination.limit(),
+            offset: v.pagination.offset(),
+            ordering: v.ordering.unwrap_or_default(),
+            sorting: v.sorting.unwrap_or_default(),
         }
     }
 }
