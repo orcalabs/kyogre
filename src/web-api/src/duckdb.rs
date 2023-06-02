@@ -273,7 +273,12 @@ fn push_where_statements(query: &mut String, params: &HaulsMatrixQuery) {
         } else {
             query.push_str("and ");
         }
-        query.push_str(&format!("catch_locations = ANY ({:?}) ", catch_locations));
+        let mut filter = String::new();
+        for c in catch_locations {
+            filter.push_str(&format!("'{}',", c.as_ref()));
+        }
+        filter.pop();
+        query.push_str(&format!("catch_location_start = ANY ([{filter}]) ",));
     }
     if let Some(gear_group_ids) = &params.gear_group_ids {
         if first {

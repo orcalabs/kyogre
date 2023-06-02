@@ -152,6 +152,47 @@ async fn test_cache_hauls_matrix_filters_by_vessel_length() {
 }
 
 #[tokio::test]
+async fn test_cache_hauls_matrix_filters_by_catch_location_id() {
+    test_with_cache(|helper| async move {
+        let filter = ActiveHaulsFilter::SpeciesGroup;
+
+        let mut ers1 = ErsDca::test_default(1, None);
+        let mut ers2 = ErsDca::test_default(2, None);
+        let ers3 = ErsDca::test_default(3, None);
+        let ers4 = ErsDca::test_default(4, None);
+
+        ers1.start_latitude = Some(56.727258);
+        ers1.start_longitude = Some(12.565410);
+        ers1.catch.species.living_weight = Some(10);
+        ers2.start_latitude = Some(56.756293);
+        ers2.start_longitude = Some(11.514740);
+        ers2.catch.species.living_weight = Some(20);
+
+        helper
+            .db
+            .db
+            .add_ers_dca(vec![ers1, ers2, ers3, ers4])
+            .await
+            .unwrap();
+
+        let params = HaulsMatrixParams {
+            catch_locations: Some(vec![
+                "09-05".try_into().unwrap(),
+                "09-04".try_into().unwrap(),
+            ]),
+            ..Default::default()
+        };
+
+        helper.refresh_cache();
+        let response = helper.app.get_hauls_matrix(params, filter).await;
+
+        let matrix: HaulsMatrix = response.json().await.unwrap();
+        assert_matrix_content(&matrix, filter, 30);
+    })
+    .await;
+}
+
+#[tokio::test]
 async fn test_cache_hauls_matrix_filters_by_species_group() {
     test_with_cache(|helper| async move {
         let filter = ActiveHaulsFilter::SpeciesGroup;
