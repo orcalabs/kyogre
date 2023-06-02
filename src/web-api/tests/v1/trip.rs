@@ -199,12 +199,6 @@ async fn test_aggregates_landing_data_per_product_quality_and_species_id() {
         assert_eq!(trip, body);
 
         assert_eq!(body.delivery.delivered.len(), 2);
-        assert_eq!(
-            body.delivered_per_delivery_point[&landing.delivery_point.id.unwrap()]
-                .delivered
-                .len(),
-            2
-        );
     })
     .await;
 }

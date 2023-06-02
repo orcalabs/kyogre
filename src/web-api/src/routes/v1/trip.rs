@@ -1,5 +1,4 @@
 use futures::TryStreamExt;
-use std::collections::HashMap;
 
 use crate::{error::ApiError, response::Response, *};
 use actix_web::{
@@ -98,8 +97,6 @@ pub struct Trip {
     pub delivery_point_ids: Vec<fiskeridir_rs::DeliveryPointId>,
     pub hauls: Vec<Haul>,
     pub delivery: Delivery,
-    #[schema(value_type = HashMap<String, Delivery>)]
-    pub delivered_per_delivery_point: HashMap<fiskeridir_rs::DeliveryPointId, Delivery>,
     pub start_port_id: Option<String>,
     pub end_port_id: Option<String>,
     pub events: Vec<VesselEvent>,
@@ -132,7 +129,6 @@ impl From<kyogre_core::TripDetailed> for Trip {
             delivery_point_ids: value.delivery_point_ids,
             hauls: value.hauls.into_iter().map(Haul::from).collect(),
             delivery: value.delivery,
-            delivered_per_delivery_point: value.delivered_per_delivery_point,
             start_port_id: value.start_port_id,
             end_port_id: value.end_port_id,
             fiskeridir_vessel_id: value.fiskeridir_vessel_id,
