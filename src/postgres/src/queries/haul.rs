@@ -13,8 +13,14 @@ impl PostgresAdapter {
         pool: Pool<Postgres>,
         args: HaulsMatrixArgs,
         active_filter: ActiveHaulsFilter,
-        x_feature: HaulMatrixFeatures,
+        x_feature: HaulMatrixXFeature,
     ) -> Result<Vec<u64>, PostgresError> {
+        let y_feature = if x_feature == active_filter {
+            HaulMatrixYFeature::CatchLocation
+        } else {
+            HaulMatrixYFeature::from(active_filter)
+        };
+
         let data: Vec<MatrixQueryOutput> = sqlx::query_as!(
             MatrixQueryOutput,
             r#"
@@ -24,7 +30,6 @@ SELECT
         WHEN $1 = 1 THEN h.gear_group_id
         WHEN $1 = 2 THEN h.species_group_id
         WHEN $1 = 3 THEN h.vessel_length_group
-        WHEN $1 = 4 THEN h.catch_location_start_matrix_index
     END AS "x_index!",
     CASE
         WHEN $2 = 0 THEN h.matrix_month_bucket
@@ -39,42 +44,30 @@ FROM
 WHERE
     (
         $1 = 0
-        OR (
-            $1 = 4
-            AND $2 = 0
-        )
+        OR $2 = 0
         OR $3::INT[] IS NULL
         OR h.matrix_month_bucket = ANY ($3)
     )
     AND (
-        $1 = 4
+        $2 = 4
         OR $4::VARCHAR[] IS NULL
         OR h.catch_location_start = ANY ($4)
     )
     AND (
         $1 = 1
-        OR (
-            $1 = 4
-            AND $2 = 1
-        )
+        OR $2 = 1
         OR $5::INT[] IS NULL
         OR h.gear_group_id = ANY ($5)
     )
     AND (
         $1 = 2
-        OR (
-            $1 = 4
-            AND $2 = 2
-        )
+        OR $2 = 2
         OR $6::INT[] IS NULL
         OR h.species_group_id = ANY ($6)
     )
     AND (
         $1 = 3
-        OR (
-            $1 = 4
-            AND $2 = 3
-        )
+        OR $2 = 3
         OR $7::INT[] IS NULL
         OR h.vessel_length_group = ANY ($7)
     )
@@ -87,7 +80,7 @@ GROUP BY
     2
             "#,
             x_feature as i32,
-            active_filter as i32,
+            y_feature as i32,
             args.months as _,
             args.catch_locations as _,
             args.gear_group_ids as _,
@@ -99,8 +92,6 @@ GROUP BY
         .await
         .into_report()
         .change_context(PostgresError::Query)?;
-
-        let y_feature = HaulMatrixFeatures::from(active_filter);
 
         calculate_sum_area_table(x_feature, y_feature, data)
             .change_context(PostgresError::DataConversion)
