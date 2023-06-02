@@ -72,6 +72,12 @@ impl TryFrom<&str> for CatchLocationId {
     }
 }
 
+impl AsRef<str> for CatchLocationId {
+    fn as_ref(&self) -> &str {
+        &self.0
+    }
+}
+
 impl TryFrom<String> for CatchLocationId {
     type Error = Report<CatchLocationIdError>;
 
