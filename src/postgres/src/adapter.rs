@@ -311,41 +311,25 @@ impl WebApiPort for PostgresAdapter {
             self.pool.clone(),
             args.clone(),
             active_filter,
-            if matches!(active_filter, ActiveHaulsFilter::Date) {
-                HaulMatrixFeatures::CatchLocation
-            } else {
-                HaulMatrixFeatures::Date
-            },
+            HaulMatrixXFeature::Date,
         ));
         let j2 = tokio::spawn(PostgresAdapter::hauls_matrix_impl(
             self.pool.clone(),
             args.clone(),
             active_filter,
-            if matches!(active_filter, ActiveHaulsFilter::VesselLength) {
-                HaulMatrixFeatures::CatchLocation
-            } else {
-                HaulMatrixFeatures::VesselLength
-            },
+            HaulMatrixXFeature::VesselLength,
         ));
         let j3 = tokio::spawn(PostgresAdapter::hauls_matrix_impl(
             self.pool.clone(),
             args.clone(),
             active_filter,
-            if matches!(active_filter, ActiveHaulsFilter::GearGroup) {
-                HaulMatrixFeatures::CatchLocation
-            } else {
-                HaulMatrixFeatures::GearGroup
-            },
+            HaulMatrixXFeature::GearGroup,
         ));
         let j4 = tokio::spawn(PostgresAdapter::hauls_matrix_impl(
             self.pool.clone(),
             args.clone(),
             active_filter,
-            if matches!(active_filter, ActiveHaulsFilter::SpeciesGroup) {
-                HaulMatrixFeatures::CatchLocation
-            } else {
-                HaulMatrixFeatures::SpeciesGroup
-            },
+            HaulMatrixXFeature::SpeciesGroup,
         ));
 
         let (dates, length_group, gear_group, species_group) = tokio::join!(j1, j2, j3, j4);

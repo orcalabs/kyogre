@@ -6,7 +6,7 @@ use error_stack::{IntoReport, Result};
 use fiskeridir_rs::{GearGroup, SpeciesGroup, VesselLengthGroup};
 use num_traits::FromPrimitive;
 use serde::{Deserialize, Serialize};
-use strum::EnumCount;
+use strum::{Display, EnumCount, EnumIter};
 
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 #[derive(Debug, Copy, Clone, Deserialize, Serialize, PartialEq, EnumIndex)]
@@ -16,7 +16,14 @@ pub enum ActiveHaulsFilter {
     GearGroup,
     SpeciesGroup,
     VesselLength,
-    CatchLocation,
+}
+
+#[derive(Debug, Copy, Clone, EnumIter, PartialEq, Eq, Display)]
+pub enum HaulMatrixes {
+    Date,
+    GearGroup,
+    SpeciesGroup,
+    VesselLength,
 }
 
 impl ActiveHaulsFilter {
@@ -26,8 +33,25 @@ impl ActiveHaulsFilter {
             ActiveHaulsFilter::GearGroup => "gearGroup",
             ActiveHaulsFilter::SpeciesGroup => "speciesGroup",
             ActiveHaulsFilter::VesselLength => "vesselLength",
-            ActiveHaulsFilter::CatchLocation => "catchLocation",
         }
+    }
+}
+
+impl PartialEq<HaulMatrixes> for ActiveHaulsFilter {
+    fn eq(&self, other: &HaulMatrixes) -> bool {
+        match self {
+            ActiveHaulsFilter::Date => matches!(other, HaulMatrixes::Date),
+            ActiveHaulsFilter::GearGroup => matches!(other, HaulMatrixes::GearGroup),
+            ActiveHaulsFilter::SpeciesGroup => matches!(other, HaulMatrixes::SpeciesGroup),
+            ActiveHaulsFilter::VesselLength => matches!(other, HaulMatrixes::VesselLength),
+        }
+    }
+}
+
+impl PartialEq<ActiveHaulsFilter> for HaulMatrixXFeature {
+    fn eq(&self, other: &ActiveHaulsFilter) -> bool {
+        let tmp: HaulMatrixXFeature = (*other).into();
+        self.eq(&tmp)
     }
 }
 
@@ -67,8 +91,16 @@ pub struct MatrixQueryOutput {
     pub y_index: i32,
 }
 
-#[derive(Debug, Copy, Clone)]
-pub enum HaulMatrixFeatures {
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub enum HaulMatrixXFeature {
+    Date = 0,
+    GearGroup = 1,
+    SpeciesGroup = 2,
+    VesselLength = 3,
+}
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub enum HaulMatrixYFeature {
     Date = 0,
     GearGroup = 1,
     SpeciesGroup = 2,
@@ -76,22 +108,52 @@ pub enum HaulMatrixFeatures {
     CatchLocation = 4,
 }
 
-impl From<ActiveHaulsFilter> for HaulMatrixFeatures {
+impl From<ActiveHaulsFilter> for HaulMatrixXFeature {
     fn from(value: ActiveHaulsFilter) -> Self {
         match value {
-            ActiveHaulsFilter::Date => HaulMatrixFeatures::Date,
-            ActiveHaulsFilter::GearGroup => HaulMatrixFeatures::GearGroup,
-            ActiveHaulsFilter::SpeciesGroup => HaulMatrixFeatures::SpeciesGroup,
-            ActiveHaulsFilter::VesselLength => HaulMatrixFeatures::VesselLength,
-            ActiveHaulsFilter::CatchLocation => HaulMatrixFeatures::CatchLocation,
+            ActiveHaulsFilter::Date => HaulMatrixXFeature::Date,
+            ActiveHaulsFilter::GearGroup => HaulMatrixXFeature::GearGroup,
+            ActiveHaulsFilter::SpeciesGroup => HaulMatrixXFeature::SpeciesGroup,
+            ActiveHaulsFilter::VesselLength => HaulMatrixXFeature::VesselLength,
         }
     }
 }
 
-impl HaulMatrixFeatures {
+impl From<ActiveHaulsFilter> for HaulMatrixYFeature {
+    fn from(value: ActiveHaulsFilter) -> Self {
+        match value {
+            ActiveHaulsFilter::Date => HaulMatrixYFeature::Date,
+            ActiveHaulsFilter::GearGroup => HaulMatrixYFeature::GearGroup,
+            ActiveHaulsFilter::SpeciesGroup => HaulMatrixYFeature::SpeciesGroup,
+            ActiveHaulsFilter::VesselLength => HaulMatrixYFeature::VesselLength,
+        }
+    }
+}
+
+impl HaulMatrixes {
+    pub fn size(&self) -> usize {
+        match self {
+            HaulMatrixes::Date => date_feature_matrix_size(),
+            HaulMatrixes::GearGroup => GearGroup::COUNT,
+            HaulMatrixes::SpeciesGroup => SpeciesGroup::COUNT,
+            HaulMatrixes::VesselLength => VesselLengthGroup::COUNT,
+        }
+    }
+}
+
+impl HaulMatrixYFeature {
+    pub fn column_name(&self) -> &'static str {
+        match self {
+            HaulMatrixYFeature::Date => "matrix_month_bucket",
+            HaulMatrixYFeature::GearGroup => "gear_group_id",
+            HaulMatrixYFeature::SpeciesGroup => "species_group_id",
+            HaulMatrixYFeature::VesselLength => "vessel_length_group",
+            HaulMatrixYFeature::CatchLocation => "catch_location_start_matrix_index",
+        }
+    }
     fn convert_from_val(&self, val: i32) -> Result<usize, HaulMatrixIndexError> {
         match self {
-            HaulMatrixFeatures::Date => {
+            HaulMatrixYFeature::Date => {
                 let converted = val as usize;
                 if converted >= ERS_OLDEST_DATA_MONTHS {
                     Ok(converted - ERS_OLDEST_DATA_MONTHS)
@@ -99,42 +161,75 @@ impl HaulMatrixFeatures {
                     Err(HaulMatrixIndexError::Date(val))
                 }
             }
-            HaulMatrixFeatures::GearGroup => GearGroup::from_i32(val)
+            HaulMatrixYFeature::GearGroup => GearGroup::from_i32(val)
                 .ok_or(HaulMatrixIndexError::GearGroup(val))
                 .map(|v| v.enum_index()),
-            HaulMatrixFeatures::SpeciesGroup => SpeciesGroup::from_i32(val)
+            HaulMatrixYFeature::SpeciesGroup => SpeciesGroup::from_i32(val)
                 .ok_or(HaulMatrixIndexError::SpeciesGroup(val))
                 .map(|v| v.enum_index()),
-            HaulMatrixFeatures::VesselLength => VesselLengthGroup::from_i32(val)
+            HaulMatrixYFeature::VesselLength => VesselLengthGroup::from_i32(val)
                 .ok_or(HaulMatrixIndexError::VesselLength(val))
                 .map(|v| v.enum_index()),
-            HaulMatrixFeatures::CatchLocation => Ok(val as usize),
+            HaulMatrixYFeature::CatchLocation => Ok(val as usize),
+        }
+        .into_report()
+    }
+
+    fn size(&self) -> usize {
+        match self {
+            HaulMatrixYFeature::Date => date_feature_matrix_size(),
+            HaulMatrixYFeature::GearGroup => GearGroup::COUNT,
+            HaulMatrixYFeature::SpeciesGroup => SpeciesGroup::COUNT,
+            HaulMatrixYFeature::VesselLength => VesselLengthGroup::COUNT,
+            HaulMatrixYFeature::CatchLocation => NUM_CATCH_LOCATIONS,
+        }
+    }
+}
+
+impl HaulMatrixXFeature {
+    fn convert_from_val(&self, val: i32) -> Result<usize, HaulMatrixIndexError> {
+        match self {
+            HaulMatrixXFeature::Date => {
+                let converted = val as usize;
+                if converted >= ERS_OLDEST_DATA_MONTHS {
+                    Ok(converted - ERS_OLDEST_DATA_MONTHS)
+                } else {
+                    Err(HaulMatrixIndexError::Date(val))
+                }
+            }
+            HaulMatrixXFeature::GearGroup => GearGroup::from_i32(val)
+                .ok_or(HaulMatrixIndexError::GearGroup(val))
+                .map(|v| v.enum_index()),
+            HaulMatrixXFeature::SpeciesGroup => SpeciesGroup::from_i32(val)
+                .ok_or(HaulMatrixIndexError::SpeciesGroup(val))
+                .map(|v| v.enum_index()),
+            HaulMatrixXFeature::VesselLength => VesselLengthGroup::from_i32(val)
+                .ok_or(HaulMatrixIndexError::VesselLength(val))
+                .map(|v| v.enum_index()),
         }
         .into_report()
     }
     fn size(&self) -> usize {
         match self {
-            HaulMatrixFeatures::Date => date_feature_matrix_size(),
-            HaulMatrixFeatures::GearGroup => GearGroup::COUNT,
-            HaulMatrixFeatures::SpeciesGroup => SpeciesGroup::COUNT,
-            HaulMatrixFeatures::VesselLength => VesselLengthGroup::COUNT,
-            HaulMatrixFeatures::CatchLocation => NUM_CATCH_LOCATIONS,
+            HaulMatrixXFeature::Date => date_feature_matrix_size(),
+            HaulMatrixXFeature::GearGroup => GearGroup::COUNT,
+            HaulMatrixXFeature::SpeciesGroup => SpeciesGroup::COUNT,
+            HaulMatrixXFeature::VesselLength => VesselLengthGroup::COUNT,
         }
     }
     pub fn column_name(&self) -> &'static str {
         match self {
-            HaulMatrixFeatures::Date => "matrix_month_bucket",
-            HaulMatrixFeatures::GearGroup => "gear_group_id",
-            HaulMatrixFeatures::SpeciesGroup => "species_group_id",
-            HaulMatrixFeatures::VesselLength => "vessel_length_group",
-            HaulMatrixFeatures::CatchLocation => "catch_location_start_matrix_index",
+            HaulMatrixXFeature::Date => "matrix_month_bucket",
+            HaulMatrixXFeature::GearGroup => "gear_group_id",
+            HaulMatrixXFeature::SpeciesGroup => "species_group_id",
+            HaulMatrixXFeature::VesselLength => "vessel_length_group",
         }
     }
 }
 
 pub fn calculate_sum_area_table(
-    x_feature: HaulMatrixFeatures,
-    y_feature: HaulMatrixFeatures,
+    x_feature: HaulMatrixXFeature,
+    y_feature: HaulMatrixYFeature,
     data: Vec<MatrixQueryOutput>,
 ) -> Result<Vec<u64>, HaulMatrixIndexError> {
     let height = y_feature.size();

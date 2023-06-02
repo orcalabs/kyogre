@@ -1,12 +1,10 @@
-use enum_index::EnumIndex;
-use kyogre_core::{date_feature_matrix_index, HaulMatrixes, NUM_CATCH_LOCATIONS};
-
+use super::helper::test;
 use crate::v1::helper::{assert_matrix_content, sum_area};
-
-use super::helper::test_with_cache;
 use actix_web::http::StatusCode;
 use chrono::{DateTime, Utc};
+use enum_index::EnumIndex;
 use fiskeridir_rs::{ErsDca, GearGroup, SpeciesGroup, VesselLengthGroup};
+use kyogre_core::{date_feature_matrix_index, HaulMatrixes, NUM_CATCH_LOCATIONS};
 use kyogre_core::{ActiveHaulsFilter, FiskeridirVesselId, ScraperInboundPort};
 use web_api::routes::{
     utils::{self, GearGroupId, SpeciesGroupId},
@@ -14,8 +12,8 @@ use web_api::routes::{
 };
 
 #[tokio::test]
-async fn test_cache_hauls_matrix_returns_correct_sum_for_all_hauls() {
-    test_with_cache(|helper| async move {
+async fn test_hauls_matrix_returns_correct_sum_for_all_hauls() {
+    test(|helper| async move {
         let filter = ActiveHaulsFilter::Date;
         let mut ers1 = ErsDca::test_default(1, Some(1));
         let mut ers2 = ErsDca::test_default(2, Some(2));
@@ -29,8 +27,6 @@ async fn test_cache_hauls_matrix_returns_correct_sum_for_all_hauls() {
         ers2.start_longitude = Some(21.957);
 
         helper.db.db.add_ers_dca(vec![ers1, ers2]).await.unwrap();
-
-        helper.refresh_cache();
 
         let response = helper
             .app
@@ -46,8 +42,8 @@ async fn test_cache_hauls_matrix_returns_correct_sum_for_all_hauls() {
 }
 
 #[tokio::test]
-async fn test_cache_hauls_matrix_filters_by_months() {
-    test_with_cache(|helper| async move {
+async fn test_hauls_matrix_filters_by_months() {
+    test(|helper| async move {
         let filter = ActiveHaulsFilter::GearGroup;
 
         let mut ers1 = ErsDca::test_default(1, None);
@@ -89,8 +85,6 @@ async fn test_cache_hauls_matrix_filters_by_months() {
             ..Default::default()
         };
 
-        helper.refresh_cache();
-
         let response = helper.app.get_hauls_matrix(params, filter).await;
 
         assert_eq!(response.status(), StatusCode::OK);
@@ -101,8 +95,8 @@ async fn test_cache_hauls_matrix_filters_by_months() {
 }
 
 #[tokio::test]
-async fn test_cache_hauls_matrix_filters_by_vessel_length() {
-    test_with_cache(|helper| async move {
+async fn test_hauls_matrix_filters_by_vessel_length() {
+    test(|helper| async move {
         let filter = ActiveHaulsFilter::SpeciesGroup;
         let mut ers1 = ErsDca::test_default(1, None);
         let mut ers2 = ErsDca::test_default(2, None);
@@ -141,7 +135,6 @@ async fn test_cache_hauls_matrix_filters_by_vessel_length() {
             ..Default::default()
         };
 
-        helper.refresh_cache();
         let response = helper.app.get_hauls_matrix(params, filter).await;
 
         assert_eq!(response.status(), StatusCode::OK);
@@ -152,49 +145,8 @@ async fn test_cache_hauls_matrix_filters_by_vessel_length() {
 }
 
 #[tokio::test]
-async fn test_cache_hauls_matrix_filters_by_catch_location_id() {
-    test_with_cache(|helper| async move {
-        let filter = ActiveHaulsFilter::SpeciesGroup;
-
-        let mut ers1 = ErsDca::test_default(1, None);
-        let mut ers2 = ErsDca::test_default(2, None);
-        let ers3 = ErsDca::test_default(3, None);
-        let ers4 = ErsDca::test_default(4, None);
-
-        ers1.start_latitude = Some(56.727258);
-        ers1.start_longitude = Some(12.565410);
-        ers1.catch.species.living_weight = Some(10);
-        ers2.start_latitude = Some(56.756293);
-        ers2.start_longitude = Some(11.514740);
-        ers2.catch.species.living_weight = Some(20);
-
-        helper
-            .db
-            .db
-            .add_ers_dca(vec![ers1, ers2, ers3, ers4])
-            .await
-            .unwrap();
-
-        let params = HaulsMatrixParams {
-            catch_locations: Some(vec![
-                "09-05".try_into().unwrap(),
-                "09-04".try_into().unwrap(),
-            ]),
-            ..Default::default()
-        };
-
-        helper.refresh_cache();
-        let response = helper.app.get_hauls_matrix(params, filter).await;
-
-        let matrix: HaulsMatrix = response.json().await.unwrap();
-        assert_matrix_content(&matrix, filter, 30, vec![]);
-    })
-    .await;
-}
-
-#[tokio::test]
-async fn test_cache_hauls_matrix_filters_by_species_group() {
-    test_with_cache(|helper| async move {
+async fn test_hauls_matrix_filters_by_species_group() {
+    test(|helper| async move {
         let filter = ActiveHaulsFilter::GearGroup;
         let mut ers1 = ErsDca::test_default(1, None);
         let mut ers2 = ErsDca::test_default(2, None);
@@ -230,7 +182,6 @@ async fn test_cache_hauls_matrix_filters_by_species_group() {
             ..Default::default()
         };
 
-        helper.refresh_cache();
         let response = helper.app.get_hauls_matrix(params, filter).await;
 
         let matrix: HaulsMatrix = response.json().await.unwrap();
@@ -240,8 +191,8 @@ async fn test_cache_hauls_matrix_filters_by_species_group() {
 }
 
 #[tokio::test]
-async fn test_cache_hauls_matrix_filters_by_gear_group() {
-    test_with_cache(|helper| async move {
+async fn test_hauls_matrix_filters_by_gear_group() {
+    test(|helper| async move {
         let filter = ActiveHaulsFilter::SpeciesGroup;
         let mut ers1 = ErsDca::test_default(1, None);
         let mut ers2 = ErsDca::test_default(2, None);
@@ -280,7 +231,6 @@ async fn test_cache_hauls_matrix_filters_by_gear_group() {
             ..Default::default()
         };
 
-        helper.refresh_cache();
         let response = helper.app.get_hauls_matrix(params, filter).await;
 
         let matrix: HaulsMatrix = response.json().await.unwrap();
@@ -290,8 +240,8 @@ async fn test_cache_hauls_matrix_filters_by_gear_group() {
 }
 
 #[tokio::test]
-async fn test_cache_hauls_matrix_filters_by_fiskeridir_vessel_ids() {
-    test_with_cache(|helper| async move {
+async fn test_hauls_matrix_filters_by_fiskeridir_vessel_ids() {
+    test(|helper| async move {
         let filter = ActiveHaulsFilter::Date;
 
         let mut ers1 = ErsDca::test_default(1, Some(1));
@@ -326,7 +276,6 @@ async fn test_cache_hauls_matrix_filters_by_fiskeridir_vessel_ids() {
             ..Default::default()
         };
 
-        helper.refresh_cache();
         let response = helper.app.get_hauls_matrix(params, filter).await;
 
         assert_eq!(response.status(), StatusCode::OK);
@@ -337,8 +286,8 @@ async fn test_cache_hauls_matrix_filters_by_fiskeridir_vessel_ids() {
 }
 
 #[tokio::test]
-async fn test_cache_hauls_matrix_date_sum_area_table_is_correct() {
-    test_with_cache(|helper| async move {
+async fn test_hauls_matrix_date_sum_area_table_is_correct() {
+    test(|helper| async move {
         let filter = ActiveHaulsFilter::Date;
 
         let mut ers1 = ErsDca::test_default(1, None);
@@ -375,7 +324,6 @@ async fn test_cache_hauls_matrix_date_sum_area_table_is_correct() {
             .await
             .unwrap();
 
-        helper.refresh_cache();
         let response = helper
             .app
             .get_hauls_matrix(HaulsMatrixParams::default(), filter)
@@ -397,8 +345,8 @@ async fn test_cache_hauls_matrix_date_sum_area_table_is_correct() {
 }
 
 #[tokio::test]
-async fn test_cache_hauls_matrix_gear_group_sum_area_table_is_correct() {
-    test_with_cache(|helper| async move {
+async fn test_hauls_matrix_gear_group_sum_area_table_is_correct() {
+    test(|helper| async move {
         let filter = ActiveHaulsFilter::GearGroup;
 
         let mut ers1 = ErsDca::test_default(1, None);
@@ -432,7 +380,6 @@ async fn test_cache_hauls_matrix_gear_group_sum_area_table_is_correct() {
             .await
             .unwrap();
 
-        helper.refresh_cache();
         let response = helper
             .app
             .get_hauls_matrix(HaulsMatrixParams::default(), filter)
@@ -454,8 +401,8 @@ async fn test_cache_hauls_matrix_gear_group_sum_area_table_is_correct() {
 }
 
 #[tokio::test]
-async fn test_cache_hauls_matrix_vessel_length_sum_area_table_is_correct() {
-    test_with_cache(|helper| async move {
+async fn test_hauls_matrix_vessel_length_sum_area_table_is_correct() {
+    test(|helper| async move {
         let filter = ActiveHaulsFilter::VesselLength;
 
         let mut ers1 = ErsDca::test_default(1, None);
@@ -487,7 +434,6 @@ async fn test_cache_hauls_matrix_vessel_length_sum_area_table_is_correct() {
             .await
             .unwrap();
 
-        helper.refresh_cache();
         let response = helper
             .app
             .get_hauls_matrix(HaulsMatrixParams::default(), filter)
@@ -509,8 +455,8 @@ async fn test_cache_hauls_matrix_vessel_length_sum_area_table_is_correct() {
 }
 
 #[tokio::test]
-async fn test_cache_hauls_matrix_species_group_sum_area_table_is_correct() {
-    test_with_cache(|helper| async move {
+async fn test_hauls_matrix_species_group_sum_area_table_is_correct() {
+    test(|helper| async move {
         let filter = ActiveHaulsFilter::SpeciesGroup;
         let mut ers1 = ErsDca::test_default(1, None);
         let mut ers2 = ErsDca::test_default(2, None);
@@ -541,7 +487,6 @@ async fn test_cache_hauls_matrix_species_group_sum_area_table_is_correct() {
             .await
             .unwrap();
 
-        helper.refresh_cache();
         let response = helper
             .app
             .get_hauls_matrix(HaulsMatrixParams::default(), filter)
@@ -563,9 +508,9 @@ async fn test_cache_hauls_matrix_species_group_sum_area_table_is_correct() {
 }
 
 #[tokio::test]
-async fn test_cache_hauls_matrix_have_correct_totals_after_dca_message_is_replaced_by_newer_version_with_another_weight(
+async fn test_hauls_matrix_have_correct_totals_after_dca_message_is_replaced_by_newer_version_with_another_weight(
 ) {
-    test_with_cache(|helper| async move {
+    test(|helper| async move {
         let filter = ActiveHaulsFilter::SpeciesGroup;
 
         let mut ers1 = ErsDca::test_default(1, None);
@@ -583,7 +528,6 @@ async fn test_cache_hauls_matrix_have_correct_totals_after_dca_message_is_replac
 
         helper.db.db.add_ers_dca(vec![ers1, ers2]).await.unwrap();
 
-        helper.refresh_cache();
         let response = helper
             .app
             .get_hauls_matrix(HaulsMatrixParams::default(), filter)

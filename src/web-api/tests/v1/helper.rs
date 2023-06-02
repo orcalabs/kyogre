@@ -11,7 +11,7 @@ use postgres::{PostgresAdapter, TestDb};
 use rand::random;
 use std::panic;
 use std::sync::Once;
-use strum::EnumCount;
+use strum::{EnumCount, IntoEnumIterator};
 use tokio::sync::OnceCell;
 use tracing_subscriber::FmtSubscriber;
 use trip_assembler::{ErsTripAssembler, LandingTripAssembler, TripAssembler};
@@ -365,72 +365,43 @@ pub fn assert_matrix_content(
     matrix: &haul::HaulsMatrix,
     active_filter: ActiveHaulsFilter,
     expected_total: u64,
+    specific_totals: Vec<(HaulMatrixes, u64)>,
 ) {
-    let y_dimension = match active_filter {
-        ActiveHaulsFilter::Date => date_feature_matrix_size(),
-        ActiveHaulsFilter::GearGroup => GearGroup::COUNT,
-        ActiveHaulsFilter::SpeciesGroup => SpeciesGroup::COUNT,
-        ActiveHaulsFilter::VesselLength => VesselLengthGroup::COUNT,
-        ActiveHaulsFilter::CatchLocation => NUM_CATCH_LOCATIONS,
-    };
+    for m in HaulMatrixes::iter() {
+        let y_dimension_size = if active_filter == m {
+            NUM_CATCH_LOCATIONS
+        } else {
+            match active_filter {
+                ActiveHaulsFilter::Date => date_feature_matrix_size(),
+                ActiveHaulsFilter::GearGroup => GearGroup::COUNT,
+                ActiveHaulsFilter::SpeciesGroup => SpeciesGroup::COUNT,
+                ActiveHaulsFilter::VesselLength => VesselLengthGroup::COUNT,
+            }
+        };
 
-    assert_eq!(
-        (date_feature_matrix_size()
-            * if matches!(active_filter, ActiveHaulsFilter::Date) {
-                NUM_CATCH_LOCATIONS
-            } else {
-                y_dimension
-            }),
-        matrix.dates.len()
-    );
-    assert_eq!(
-        (GearGroup::COUNT
-            * if matches!(active_filter, ActiveHaulsFilter::GearGroup) {
-                NUM_CATCH_LOCATIONS
-            } else {
-                y_dimension
-            }),
-        matrix.gear_group.len()
-    );
-    assert_eq!(
-        (VesselLengthGroup::COUNT
-            * if matches!(active_filter, ActiveHaulsFilter::VesselLength) {
-                NUM_CATCH_LOCATIONS
-            } else {
-                y_dimension
-            }),
-        matrix.length_group.len()
-    );
+        let x_dimension_size = m.size();
+        let (matrix_len, matrix_total) = match m {
+            HaulMatrixes::Date => (matrix.dates.len(), matrix.dates[matrix.dates.len() - 1]),
+            HaulMatrixes::GearGroup => (
+                matrix.gear_group.len(),
+                matrix.gear_group[matrix.gear_group.len() - 1],
+            ),
+            HaulMatrixes::SpeciesGroup => (
+                matrix.species_group.len(),
+                matrix.species_group[matrix.species_group.len() - 1],
+            ),
+            HaulMatrixes::VesselLength => (
+                matrix.length_group.len(),
+                matrix.length_group[matrix.length_group.len() - 1],
+            ),
+        };
 
-    assert_eq!(
-        (SpeciesGroup::COUNT
-            * if matches!(active_filter, ActiveHaulsFilter::SpeciesGroup) {
-                NUM_CATCH_LOCATIONS
-            } else {
-                y_dimension
-            }),
-        matrix.species_group.len()
-    );
+        assert_eq!(matrix_len, x_dimension_size * y_dimension_size, "{m}");
 
-    if !matches!(active_filter, ActiveHaulsFilter::Date) {
-        assert_eq!(expected_total, matrix.dates[matrix.dates.len() - 1]);
-    }
-    if !matches!(active_filter, ActiveHaulsFilter::GearGroup) {
-        assert_eq!(
-            expected_total,
-            matrix.gear_group[matrix.gear_group.len() - 1]
-        );
-    }
-    if !matches!(active_filter, ActiveHaulsFilter::VesselLength) {
-        assert_eq!(
-            expected_total,
-            matrix.length_group[matrix.length_group.len() - 1]
-        );
-    }
-    if !matches!(active_filter, ActiveHaulsFilter::SpeciesGroup) {
-        assert_eq!(
-            expected_total,
-            matrix.species_group[matrix.species_group.len() - 1]
-        );
+        if let Some(specific) = specific_totals.iter().find(|v| v.0 == m) {
+            assert_eq!(specific.1, matrix_total, "{m}");
+        } else {
+            assert_eq!(expected_total, matrix_total, "{m}");
+        }
     }
 }

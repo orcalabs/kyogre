@@ -3,6 +3,7 @@ pub mod ais_vms;
 pub mod barentswatch_helper;
 pub mod fishing_facility;
 pub mod haul;
+pub mod hauls_matrix;
 pub mod hauls_matrix_cache;
 pub mod helper;
 pub mod species;
