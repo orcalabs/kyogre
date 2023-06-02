@@ -11,7 +11,6 @@ use kyogre_core::{
 use num_traits::FromPrimitive;
 use serde::Deserialize;
 use sqlx::postgres::types::PgRange;
-use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
 pub struct Trip {
@@ -50,7 +49,6 @@ pub struct TripDetailed {
     pub catches: String,
     pub hauls: String,
     pub vessel_events: String,
-    pub delivery_point_catches: String,
     pub start_port_id: Option<String>,
     pub end_port_id: Option<String>,
     pub trip_assembler_id: TripAssemblerId,
@@ -110,13 +108,6 @@ struct VesselEvent {
     vessel_event_type_id: VesselEventType,
 }
 
-#[derive(Debug, Clone, Deserialize)]
-struct DeliveryPointCatch {
-    delivery_point_id: String,
-    #[serde(flatten)]
-    delivery: Delivery,
-}
-
 impl TryFrom<Trip> for kyogre_core::Trip {
     type Error = Report<PostgresError>;
 
@@ -172,20 +163,6 @@ impl TryFrom<TripDetailed> for kyogre_core::TripDetailed {
             .into_report()
             .change_context(PostgresError::DataConversion)?;
 
-        let db_delivery_point_catches: Vec<DeliveryPointCatch> =
-            serde_json::from_str(&value.delivery_point_catches)
-                .into_report()
-                .change_context(PostgresError::DataConversion)?;
-
-        let mut delivery_point_catches = HashMap::with_capacity(db_delivery_point_catches.len());
-        for d in db_delivery_point_catches {
-            let delivery_point_id = DeliveryPointId::try_from(d.delivery_point_id)
-                .change_context(PostgresError::DataConversion)?;
-            let delivery = kyogre_core::Delivery::from(d.delivery);
-
-            delivery_point_catches.insert(delivery_point_id, delivery);
-        }
-
         Ok(kyogre_core::TripDetailed {
             period_precision,
             fiskeridir_vessel_id: FiskeridirVesselId(value.fiskeridir_vessel_id),
@@ -222,7 +199,6 @@ impl TryFrom<TripDetailed> for kyogre_core::TripDetailed {
             },
             start_port_id: value.start_port_id,
             end_port_id: value.end_port_id,
-            delivered_per_delivery_point: delivery_point_catches,
             assembler_id: value.trip_assembler_id,
             vessel_events: serde_json::from_str::<Vec<VesselEvent>>(&value.vessel_events)
                 .into_report()

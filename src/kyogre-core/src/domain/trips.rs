@@ -4,7 +4,6 @@ use fiskeridir_rs::DeliveryPointId;
 use num_derive::FromPrimitive;
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
-use std::collections::HashMap;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize)]
 pub struct TripId(pub i64);
@@ -48,7 +47,6 @@ pub struct TripDetailed {
     pub delivery_point_ids: Vec<DeliveryPointId>,
     pub hauls: Vec<Haul>,
     pub delivery: Delivery,
-    pub delivered_per_delivery_point: HashMap<DeliveryPointId, Delivery>,
     pub start_port_id: Option<String>,
     pub end_port_id: Option<String>,
     pub assembler_id: TripAssemblerId,

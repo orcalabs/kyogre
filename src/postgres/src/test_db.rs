@@ -221,13 +221,235 @@ FROM
         &self,
         vessel_id: FiskeridirVesselId,
     ) -> Vec<TripDetailed> {
-        self.db
-            .all_detailed_trips_of_vessel_impl(vessel_id)
-            .await
-            .unwrap()
-            .into_iter()
-            .map(|v| TripDetailed::try_from(v).unwrap())
-            .collect()
+        sqlx::query_as!(
+            crate::models::TripDetailed,
+            r#"
+WITH
+    everything AS (
+        SELECT
+            t.trip_id AS t_trip_id,
+            t.fiskeridir_vessel_id AS t_fiskeridir_vessel_id,
+            t.period AS t_period,
+            t.period_precision AS t_period_precision,
+            t.landing_coverage AS t_landing_coverage,
+            t.trip_assembler_id AS t_trip_assembler_id,
+            t.start_port_id AS t_start_port_id,
+            t.end_port_id AS t_end_port_id,
+            v.vessel_event_id AS v_vessel_event_id,
+            v.fiskeridir_vessel_id AS v_fiskeridir_vessel_id,
+            v.timestamp AS v_timestamp,
+            v.vessel_event_type_id AS v_vessel_event_type_id,
+            l.landing_id AS l_landing_id,
+            l.landing_timestamp AS l_landing_timestamp,
+            l.gear_id AS l_gear_id,
+            l.product_quality_id AS l_product_quality_id,
+            l.delivery_point_id AS l_delivery_point_id,
+            le.gross_weight AS le_gross_weight,
+            le.living_weight AS le_living_weight,
+            le.product_weight AS le_product_weight,
+            le.species_fiskeridir_id AS le_species_fiskeridir_id,
+            h.haul_id AS h_haul_id,
+            h.ers_activity_id AS h_ers_activity_id,
+            h.duration AS h_duration,
+            h.haul_distance AS h_haul_distance,
+            h.catch_location_start AS h_catch_location_start,
+            h.ocean_depth_end AS h_ocean_depth_end,
+            h.ocean_depth_start AS h_ocean_depth_start,
+            h.quota_type_id AS h_quota_type_id,
+            h.start_latitude AS h_start_latitude,
+            h.start_longitude AS h_start_longitude,
+            h.start_timestamp AS h_start_timestamp,
+            h.stop_timestamp AS h_stop_timestamp,
+            h.stop_latitude AS h_stop_latitude,
+            h.stop_longitude AS h_stop_longitude,
+            h.gear_id AS h_gear_id,
+            h.gear_group_id AS h_gear_group_id,
+            h.fiskeridir_vessel_id AS h_fiskeridir_vessel_id,
+            h.vessel_call_sign AS h_vessel_call_sign,
+            h.vessel_call_sign_ers AS h_vessel_call_sign_ers,
+            h.vessel_length AS h_vessel_length,
+            h.vessel_length_group AS h_vessel_length_group,
+            h.vessel_name AS h_vessel_name,
+            h.vessel_name_ers AS h_vessel_name_ers,
+            h.catches AS h_catches,
+            h.whale_catches AS h_whale_catches
+        FROM
+            trips t
+            LEFT JOIN vessel_events v ON t.trip_id = v.trip_id
+            LEFT JOIN landings l ON l.vessel_event_id = v.vessel_event_id
+            LEFT JOIN landing_entries le ON l.landing_id = le.landing_id
+            LEFT JOIN hauls h ON h.vessel_event_id = v.vessel_event_id
+        WHERE
+            t.fiskeridir_vessel_id = $1
+    )
+SELECT
+    q1.t_trip_id AS trip_id,
+    t_fiskeridir_vessel_id AS fiskeridir_vessel_id,
+    t_period AS period,
+    t_period_precision AS period_precision,
+    t_landing_coverage AS landing_coverage,
+    t_trip_assembler_id AS "trip_assembler_id!: TripAssemblerId",
+    t_start_port_id AS start_port_id,
+    t_end_port_id AS end_port_id,
+    total_gross_weight AS "total_gross_weight!",
+    total_living_weight AS "total_living_weight!",
+    total_product_weight AS "total_product_weight!",
+    num_deliveries AS "num_deliveries!",
+    gear_ids AS "gear_ids!: Vec<Gear>",
+    delivery_points AS "delivery_points!",
+    latest_landing_timestamp,
+    vessel_events::TEXT AS "vessel_events!",
+    hauls::TEXT AS "hauls!",
+    COALESCE(catches, '[]')::TEXT AS "catches!"
+FROM
+    (
+        SELECT
+            t_trip_id,
+            t_fiskeridir_vessel_id,
+            t_period,
+            t_period_precision,
+            t_landing_coverage,
+            t_trip_assembler_id,
+            t_start_port_id,
+            t_end_port_id,
+            COALESCE(SUM(le_gross_weight), 0) AS total_gross_weight,
+            COALESCE(SUM(le_living_weight), 0) AS total_living_weight,
+            COALESCE(SUM(le_product_weight), 0) AS total_product_weight,
+            COUNT(DISTINCT l_landing_id) AS num_deliveries,
+            ARRAY_REMOVE(ARRAY_AGG(DISTINCT l_gear_id), NULL) AS gear_ids,
+            ARRAY_REMOVE(ARRAY_AGG(DISTINCT l_delivery_point_id), NULL) AS delivery_points,
+            MAX(l_landing_timestamp) AS latest_landing_timestamp,
+            COALESCE(
+                JSONB_AGG(
+                    JSONB_BUILD_OBJECT(
+                        'vessel_event_id',
+                        v_vessel_event_id,
+                        'fiskeridir_vessel_id',
+                        v_fiskeridir_vessel_id,
+                        'timestamp',
+                        v_timestamp,
+                        'vessel_event_type_id',
+                        v_vessel_event_type_id
+                    )
+                    ORDER BY
+                        v_timestamp
+                ),
+                '[]'
+            ) AS vessel_events,
+            COALESCE(
+                JSONB_AGG(
+                    JSONB_BUILD_OBJECT(
+                        'haul_id',
+                        h_haul_id,
+                        'ers_activity_id',
+                        h_ers_activity_id,
+                        'duration',
+                        h_duration,
+                        'haul_distance',
+                        h_haul_distance,
+                        'catch_location_start',
+                        h_catch_location_start,
+                        'ocean_depth_end',
+                        h_ocean_depth_end,
+                        'ocean_depth_start',
+                        h_ocean_depth_start,
+                        'quota_type_id',
+                        h_quota_type_id,
+                        'start_latitude',
+                        h_start_latitude,
+                        'start_longitude',
+                        h_start_longitude,
+                        'start_timestamp',
+                        h_start_timestamp,
+                        'stop_timestamp',
+                        h_stop_timestamp,
+                        'stop_latitude',
+                        h_stop_latitude,
+                        'stop_longitude',
+                        h_stop_longitude,
+                        'gear_id',
+                        h_gear_id,
+                        'gear_group_id',
+                        h_gear_group_id,
+                        'fiskeridir_vessel_id',
+                        h_fiskeridir_vessel_id,
+                        'vessel_call_sign',
+                        h_vessel_call_sign,
+                        'vessel_call_sign_ers',
+                        h_vessel_call_sign_ers,
+                        'vessel_length',
+                        h_vessel_length,
+                        'vessel_length_group',
+                        h_vessel_length_group,
+                        'vessel_name',
+                        h_vessel_name,
+                        'vessel_name_ers',
+                        h_vessel_name_ers,
+                        'catches',
+                        h_catches,
+                        'whale_catches',
+                        h_whale_catches
+                    )
+                ) FILTER (
+                    WHERE
+                        h_haul_id IS NOT NULL
+                ),
+                '[]'
+            ) AS hauls
+        FROM
+            everything
+        GROUP BY
+            t_trip_id,
+            t_fiskeridir_vessel_id,
+            t_period,
+            t_period_precision,
+            t_landing_coverage,
+            t_trip_assembler_id,
+            t_start_port_id,
+            t_end_port_id
+    ) q1
+    LEFT JOIN (
+        SELECT
+            qi.t_trip_id,
+            JSONB_AGG(qi.catches) AS catches
+        FROM
+            (
+                SELECT
+                    t_trip_id,
+                    JSONB_BUILD_OBJECT(
+                        'living_weight',
+                        SUM(le_living_weight),
+                        'gross_weight',
+                        SUM(le_gross_weight),
+                        'product_weight',
+                        SUM(le_product_weight),
+                        'species_fiskeridir_id',
+                        le_species_fiskeridir_id,
+                        'product_quality_id',
+                        l_product_quality_id
+                    ) AS catches
+                FROM
+                    everything
+                WHERE
+                    l_product_quality_id IS NOT NULL
+                    AND le_species_fiskeridir_id IS NOT NULL
+                GROUP BY
+                    t_trip_id,
+                    l_product_quality_id,
+                    le_species_fiskeridir_id
+            ) qi
+        GROUP BY
+            qi.t_trip_id
+    ) q2 ON q1.t_trip_id = q2.t_trip_id
+            "#,
+            vessel_id.0
+        )
+        .fetch_all(&self.db.pool)
+        .await
+        .unwrap()
+        .into_iter()
+        .map(|v| TripDetailed::try_from(v).unwrap())
+        .collect()
     }
 
     pub async fn generate_haul(
