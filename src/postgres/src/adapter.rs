@@ -439,11 +439,6 @@ impl ScraperInboundPort for PostgresAdapter {
             .await
             .change_context(DeleteError)
     }
-    async fn update_database_views(&self) -> Result<(), UpdateError> {
-        self.update_database_views_impl()
-            .await
-            .change_context(UpdateError)
-    }
     async fn add_vms(&self, vms: Vec<fiskeridir_rs::Vms>) -> Result<(), InsertError> {
         self.add_vms_impl(vms).await.change_context(InsertError)
     }

@@ -108,19 +108,11 @@ async fn test_does_not_restart_scrape_if_chain_was_completed_but_was_interrupted
         );
         assert_eq!(
             helper.run_step(EngineDiscriminants::Benchmark).await,
-            EngineDiscriminants::UpdateDatabaseViews
-        );
-        assert_eq!(
-            helper
-                .run_step(EngineDiscriminants::UpdateDatabaseViews)
-                .await,
             EngineDiscriminants::Pending
         );
         helper.disable_scrape();
         assert_eq!(
-            helper
-                .run_step(EngineDiscriminants::UpdateDatabaseViews)
-                .await,
+            helper.run_step(EngineDiscriminants::Benchmark).await,
             EngineDiscriminants::Pending
         );
         assert_eq!(
