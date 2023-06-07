@@ -2,6 +2,7 @@
 #![deny(rust_2018_idioms)]
 
 use async_trait::async_trait;
+use haul_distributor::*;
 use kyogre_core::*;
 use orca_statemachine::{Machine, Schedule, Step, TransitionLog};
 use scraper::Scraper;
@@ -28,6 +29,8 @@ pub trait Database:
     + ScraperInboundPort
     + VesselBenchmarkOutbound
     + VesselBenchmarkInbound
+    + HaulDistributorOutbound
+    + HaulDistributorInbound
     + Send
     + Sync
     + 'static
@@ -43,6 +46,8 @@ impl<T> Database for T where
         + ScraperInboundPort
         + VesselBenchmarkOutbound
         + VesselBenchmarkInbound
+        + HaulDistributorOutbound
+        + HaulDistributorInbound
         + 'static
 {
 }
@@ -58,6 +63,7 @@ pub enum Engine<A, B> {
     Trips(StepWrapper<A, B, Trips>),
     TripsPrecision(StepWrapper<A, B, TripsPrecision>),
     Benchmark(StepWrapper<A, B, Benchmark>),
+    HaulDistribution(StepWrapper<A, B, HaulDistribution>),
 }
 
 pub struct StepWrapper<A, B, C> {
@@ -75,6 +81,7 @@ pub struct SharedState<A> {
     scraper: Scraper,
     trip_processors: Vec<Box<dyn TripProcessor>>,
     benchmarks: Vec<Box<dyn VesselBenchmark>>,
+    haul_distributors: Vec<Box<dyn HaulDistributor>>,
 }
 
 impl<A, B, C> StepWrapper<A, B, C> {
@@ -105,6 +112,9 @@ impl<A, B, C> StepWrapper<A, SharedState<B>, C> {
     pub fn vessel_benchmarks(&self) -> &[Box<dyn VesselBenchmark>] {
         self.inner.shared_state.benchmarks.as_slice()
     }
+    pub fn haul_distributors(&self) -> &[Box<dyn HaulDistributor>] {
+        self.inner.shared_state.haul_distributors.as_slice()
+    }
 }
 
 #[async_trait]
@@ -123,6 +133,7 @@ where
             Engine::Trips(s) => s.run().await,
             Engine::TripsPrecision(s) => s.run().await,
             Engine::Benchmark(s) => s.run().await,
+            Engine::HaulDistribution(s) => s.run().await,
         }
     }
     fn is_exit_state(&self) -> bool {
@@ -137,6 +148,7 @@ where
             Engine::Trips(s) => &s.inner.transition_log,
             Engine::TripsPrecision(s) => &s.inner.transition_log,
             Engine::Benchmark(s) => &s.inner.transition_log,
+            Engine::HaulDistribution(s) => &s.inner.transition_log,
         }
     }
 
@@ -159,6 +171,7 @@ where
         scraper: Scraper,
         trip_processors: Vec<Box<dyn TripProcessor>>,
         benchmarks: Vec<Box<dyn VesselBenchmark>>,
+        haul_distributors: Vec<Box<dyn HaulDistributor>>,
     ) -> SharedState<A> {
         SharedState {
             config,
@@ -166,6 +179,7 @@ where
             scraper,
             trip_processors,
             benchmarks,
+            haul_distributors,
         }
     }
 }
@@ -174,6 +188,7 @@ impl Config {
     pub fn schedule(&self, state: &EngineDiscriminants) -> Option<&Schedule> {
         match state {
             EngineDiscriminants::Pending
+            | EngineDiscriminants::HaulDistribution
             | EngineDiscriminants::Benchmark
             | EngineDiscriminants::Sleep
             | EngineDiscriminants::Trips

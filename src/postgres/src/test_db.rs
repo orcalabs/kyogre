@@ -76,6 +76,49 @@ WHERE
         .collect()
     }
 
+    pub async fn hauls_matrix(
+        &self,
+        active_filter: ActiveHaulsFilter,
+        x_feature: HaulMatrixXFeature,
+    ) -> Vec<MatrixQueryOutput> {
+        let y_feature = if x_feature == active_filter {
+            HaulMatrixYFeature::CatchLocation
+        } else {
+            HaulMatrixYFeature::from(active_filter)
+        };
+
+        sqlx::query_as!(
+            MatrixQueryOutput,
+            r#"
+SELECT
+    CASE
+        WHEN $1 = 0 THEN matrix_month_bucket
+        WHEN $1 = 1 THEN gear_group_id
+        WHEN $1 = 2 THEN species_group_id
+        WHEN $1 = 3 THEN vessel_length_group
+    END AS "x_index!",
+    CASE
+        WHEN $2 = 0 THEN matrix_month_bucket
+        WHEN $2 = 1 THEN gear_group_id
+        WHEN $2 = 2 THEN species_group_id
+        WHEN $2 = 3 THEN vessel_length_group
+        WHEN $2 = 4 THEN catch_location_matrix_index
+    END AS "y_index!",
+    COALESCE(SUM(living_weight::BIGINT), 0)::BIGINT AS "sum_living!"
+FROM
+    hauls_matrix
+GROUP BY
+    1,
+    2
+            "#,
+            x_feature as i32,
+            y_feature as i32,
+        )
+        .fetch_all(&self.db.pool)
+        .await
+        .unwrap()
+    }
+
     pub async fn ais_positions(
         &self,
         mmsi: Option<Mmsi>,

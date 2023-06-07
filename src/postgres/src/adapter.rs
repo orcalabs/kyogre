@@ -7,7 +7,7 @@ use async_trait::async_trait;
 use chrono::{DateTime, Duration, Utc};
 use error_stack::{IntoReport, Report, Result, ResultExt};
 use fiskeridir_rs::{CallSign, LandingId};
-use futures::{Stream, StreamExt};
+use futures::{Stream, StreamExt, TryStreamExt};
 use kyogre_core::*;
 use orca_core::{PsqlLogStatements, PsqlSettings};
 use sqlx::{
@@ -468,15 +468,9 @@ impl ScraperFileHashInboundPort for PostgresAdapter {
 #[async_trait]
 impl TripAssemblerOutboundPort for PostgresAdapter {
     async fn all_vessels(&self) -> Result<Vec<Vessel>, QueryError> {
-        let mut stream = convert_stream(self.fiskeridir_ais_vessel_combinations());
-
-        let mut vessels = vec![];
-
-        while let Some(v) = stream.next().await {
-            vessels.push(v.change_context_lazy(|| QueryError)?);
-        }
-
-        Ok(vessels)
+        convert_stream(self.fiskeridir_ais_vessel_combinations())
+            .try_collect()
+            .await
     }
     async fn trip_calculation_timers(
         &self,
@@ -579,15 +573,9 @@ impl TripPrecisionOutboundPort for PostgresAdapter {
         call_sign: Option<&CallSign>,
         range: &DateRange,
     ) -> Result<Vec<AisVmsPosition>, QueryError> {
-        let mut stream = convert_stream(self.ais_vms_positions_impl(mmsi, call_sign, range));
-
-        let mut positions = vec![];
-
-        while let Some(a) = stream.next().await {
-            positions.push(a.change_context_lazy(|| QueryError)?);
-        }
-
-        Ok(positions)
+        convert_stream(self.ais_vms_positions_impl(mmsi, call_sign, range))
+            .try_collect()
+            .await
     }
     async fn trip_prior_to_timestamp(
         &self,
@@ -661,6 +649,52 @@ impl VesselBenchmarkInbound for PostgresAdapter {
         self.add_benchmark_outputs(values)
             .await
             .change_context(InsertError)
+    }
+}
+
+#[async_trait]
+impl HaulDistributorInbound for PostgresAdapter {
+    async fn add_output(&self, values: Vec<HaulDistributionOutput>) -> Result<(), UpdateError> {
+        self.add_haul_distribution_output(values)
+            .await
+            .change_context(UpdateError)
+    }
+}
+
+#[async_trait]
+impl HaulDistributorOutbound for PostgresAdapter {
+    async fn vessels(&self) -> Result<Vec<Vessel>, QueryError> {
+        self.all_vessels().await
+    }
+
+    async fn catch_locations(&self) -> Result<Vec<CatchLocation>, QueryError> {
+        convert_vec(
+            self.catch_locations_impl()
+                .await
+                .change_context(QueryError)?,
+        )
+    }
+
+    async fn haul_messages_of_vessel(
+        &self,
+        vessel_id: FiskeridirVesselId,
+    ) -> Result<Vec<HaulMessage>, QueryError> {
+        convert_vec(
+            self.haul_messages_of_vessel_impl(vessel_id)
+                .await
+                .change_context(QueryError)?,
+        )
+    }
+
+    async fn ais_vms_positions(
+        &self,
+        mmsi: Option<Mmsi>,
+        call_sign: Option<&CallSign>,
+        range: &DateRange,
+    ) -> Result<Vec<AisVmsPosition>, QueryError> {
+        convert_stream(self.ais_vms_positions_impl(mmsi, call_sign, range))
+            .try_collect()
+            .await
     }
 }
 

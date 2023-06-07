@@ -40,12 +40,15 @@ impl App {
             .unwrap();
 
         let benchmarks = settings.benchmarks();
+        let haul_distributors = settings.haul_distributors();
+
         let shared_state = SharedState::new(
             settings.engine.clone(),
             postgres,
             scraper,
             trip_assemblers,
             benchmarks,
+            haul_distributors,
         );
 
         App {

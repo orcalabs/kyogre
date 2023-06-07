@@ -1,5 +1,5 @@
-use super::bound_float_to_decimal;
-use crate::{error::PostgresError, models::Haul, PostgresAdapter};
+use super::{bound_float_to_decimal, float_to_decimal};
+use crate::{error::PostgresError, models::Haul, models::HaulMessage, PostgresAdapter};
 use bigdecimal::BigDecimal;
 use chrono::{DateTime, Utc};
 use error_stack::{report, IntoReport, Report, Result, ResultExt};
@@ -36,7 +36,7 @@ SELECT
         WHEN $2 = 1 THEN h.gear_group_id
         WHEN $2 = 2 THEN h.species_group_id
         WHEN $2 = 3 THEN h.vessel_length_group
-        WHEN $2 = 4 THEN h.catch_location_start_matrix_index
+        WHEN $2 = 4 THEN h.catch_location_matrix_index
     END AS "y_index!",
     COALESCE(SUM(living_weight::BIGINT), 0)::BIGINT AS "sum_living!"
 FROM
@@ -51,7 +51,7 @@ WHERE
     AND (
         $2 = 4
         OR $4::VARCHAR[] IS NULL
-        OR h.catch_location_start = ANY ($4)
+        OR h.catch_location = ANY ($4)
     )
     AND (
         $1 = 1
@@ -139,8 +139,11 @@ WHERE
         OR h.period && ANY ($1)
     )
     AND (
-        $2::VARCHAR[] IS NULL
-        OR h.catch_location_start = ANY ($2)
+        $2::TEXT[] IS NULL
+        OR CASE
+            WHEN catch_locations IS NULL THEN h.catch_location_start = ANY ($2)
+            ELSE h.catch_locations && $2
+        END
     )
     AND (
         $3::INT[] IS NULL
@@ -170,6 +173,204 @@ WHERE
         .map_err(|e| report!(e).change_context(PostgresError::Query));
 
         Ok(stream)
+    }
+
+    pub(crate) async fn haul_messages_of_vessel_impl(
+        &self,
+        vessel_id: FiskeridirVesselId,
+    ) -> Result<Vec<HaulMessage>, PostgresError> {
+        sqlx::query_as!(
+            HaulMessage,
+            r#"
+SELECT DISTINCT
+    h.message_id,
+    h.start_timestamp,
+    h.stop_timestamp
+FROM
+    hauls h
+    LEFT JOIN hauls_matrix m ON h.message_id = m.message_id
+    AND h.start_timestamp = m.start_timestamp
+    AND h.stop_timestamp = m.stop_timestamp
+WHERE
+    m.haul_distributor_id IS NULL
+    AND h.total_living_weight > 0
+    AND h.fiskeridir_vessel_id = $1
+            "#,
+            vessel_id.0,
+        )
+        .fetch_all(&self.pool)
+        .await
+        .into_report()
+        .change_context(PostgresError::Query)
+    }
+
+    pub(crate) async fn add_haul_distribution_output(
+        &self,
+        values: Vec<HaulDistributionOutput>,
+    ) -> Result<(), PostgresError> {
+        let len = values.len();
+
+        let mut message_id = Vec::with_capacity(len);
+        let mut start_timestamp = Vec::with_capacity(len);
+        let mut stop_timestamp = Vec::with_capacity(len);
+        let mut catch_location = Vec::with_capacity(len);
+        let mut factor = Vec::with_capacity(len);
+        let mut distributor_id = Vec::with_capacity(len);
+
+        for v in values {
+            message_id.push(v.message_id);
+            start_timestamp.push(v.start_timestamp);
+            stop_timestamp.push(v.stop_timestamp);
+            catch_location.push(v.catch_location.into_inner());
+            factor.push(float_to_decimal(v.factor).change_context(PostgresError::DataConversion)?);
+            distributor_id.push(v.distributor_id as i32);
+        }
+
+        let mut tx = self.begin().await?;
+
+        sqlx::query!(
+            r#"
+UPDATE hauls h
+SET
+    catch_locations = q.catch_locations
+FROM
+    (
+        SELECT
+            u.message_id,
+            u.start_timestamp,
+            u.stop_timestamp,
+            ARRAY_AGG(DISTINCT u.catch_location) AS catch_locations
+        FROM
+            UNNEST(
+                $1::BIGINT[],
+                $2::TIMESTAMPTZ[],
+                $3::TIMESTAMPTZ[],
+                $4::TEXT[]
+            ) u (
+                message_id,
+                start_timestamp,
+                stop_timestamp,
+                catch_location
+            )
+        GROUP BY
+            u.message_id,
+            u.start_timestamp,
+            u.stop_timestamp
+    ) q
+WHERE
+    h.message_id = q.message_id
+    AND h.start_timestamp = q.start_timestamp
+    AND h.stop_timestamp = q.stop_timestamp
+            "#,
+            message_id.as_slice(),
+            start_timestamp.as_slice(),
+            stop_timestamp.as_slice(),
+            catch_location.as_slice(),
+        )
+        .execute(&mut *tx)
+        .await
+        .into_report()
+        .change_context(PostgresError::Query)?;
+
+        sqlx::query!(
+            r#"
+DELETE FROM hauls_matrix h USING UNNEST(
+    $1::BIGINT[],
+    $2::TIMESTAMPTZ[],
+    $3::TIMESTAMPTZ[]
+) u (message_id, start_timestamp, stop_timestamp)
+WHERE
+    h.message_id = u.message_id
+    AND h.start_timestamp = u.start_timestamp
+    AND h.stop_timestamp = u.stop_timestamp
+            "#,
+            message_id.as_slice(),
+            start_timestamp.as_slice(),
+            stop_timestamp.as_slice(),
+        )
+        .execute(&mut *tx)
+        .await
+        .into_report()
+        .change_context(PostgresError::Query)?;
+
+        sqlx::query!(
+            r#"
+INSERT INTO
+    hauls_matrix (
+        message_id,
+        start_timestamp,
+        stop_timestamp,
+        catch_location_matrix_index,
+        catch_location,
+        matrix_month_bucket,
+        vessel_length_group,
+        fiskeridir_vessel_id,
+        gear_group_id,
+        species_group_id,
+        living_weight,
+        haul_distributor_id
+    )
+SELECT
+    e.message_id,
+    e.start_timestamp,
+    e.stop_timestamp,
+    l.matrix_index,
+    l.catch_location_id,
+    HAULS_MATRIX_MONTH_BUCKET (e.start_timestamp),
+    TO_VESSEL_LENGTH_GROUP (e.vessel_length),
+    e.fiskeridir_vessel_id,
+    e.gear_group_id,
+    c.species_group_id,
+    SUM(c.living_weight) * MIN(u.factor),
+    MIN(u.haul_distributor_id)
+FROM
+    UNNEST(
+        $1::BIGINT[],
+        $2::TIMESTAMPTZ[],
+        $3::TIMESTAMPTZ[],
+        $4::TEXT[],
+        $5::DECIMAL[],
+        $6::INT[]
+    ) u (
+        message_id,
+        start_timestamp,
+        stop_timestamp,
+        catch_location,
+        factor,
+        haul_distributor_id
+    )
+    INNER JOIN ers_dca e ON e.message_id = u.message_id
+    AND e.start_timestamp = u.start_timestamp
+    AND e.stop_timestamp = u.stop_timestamp
+    INNER JOIN ers_dca_catches c ON e.message_id = c.message_id
+    AND e.start_timestamp = c.start_timestamp
+    AND e.stop_timestamp = c.stop_timestamp
+    INNER JOIN catch_locations l ON u.catch_location = l.catch_location_id
+GROUP BY
+    e.message_id,
+    e.start_timestamp,
+    e.stop_timestamp,
+    c.species_group_id,
+    l.catch_location_id
+            "#,
+            message_id.as_slice(),
+            start_timestamp.as_slice(),
+            stop_timestamp.as_slice(),
+            catch_location.as_slice(),
+            factor.as_slice(),
+            distributor_id.as_slice(),
+        )
+        .execute(&mut *tx)
+        .await
+        .into_report()
+        .change_context(PostgresError::Query)?;
+
+        tx.commit()
+            .await
+            .into_report()
+            .change_context(PostgresError::Transaction)?;
+
+        Ok(())
     }
 }
 

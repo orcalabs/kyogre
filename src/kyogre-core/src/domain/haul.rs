@@ -1,6 +1,9 @@
+use std::fmt;
+
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::{Gear, GearGroup, VesselLengthGroup, WhaleGender};
 use serde::{Deserialize, Serialize};
+use serde_repr::Deserialize_repr;
 
 use crate::CatchLocationId;
 
@@ -67,4 +70,35 @@ pub struct HaulsMatrix {
     pub length_group: Vec<u64>,
     pub gear_group: Vec<u64>,
     pub species_group: Vec<u64>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Deserialize_repr)]
+#[repr(i32)]
+pub enum HaulDistributorId {
+    AisVms = 1,
+}
+
+impl std::fmt::Display for HaulDistributorId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            HaulDistributorId::AisVms => f.write_str("AisVms"),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct HaulMessage {
+    pub message_id: i64,
+    pub start_timestamp: DateTime<Utc>,
+    pub stop_timestamp: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct HaulDistributionOutput {
+    pub message_id: i64,
+    pub start_timestamp: DateTime<Utc>,
+    pub stop_timestamp: DateTime<Utc>,
+    pub catch_location: CatchLocationId,
+    pub factor: f64,
+    pub distributor_id: HaulDistributorId,
 }

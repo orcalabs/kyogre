@@ -18,7 +18,7 @@ pub trait AisMigratorSource {
     async fn existing_mmsis(&self) -> Result<Vec<Mmsi>, QueryError>;
 }
 
-pub type PinBoxStream<'a, T, E> = Pin<Box<dyn Stream<Item = Result<T, E>> + 'a>>;
+pub type PinBoxStream<'a, T, E> = Pin<Box<dyn Stream<Item = Result<T, E>> + Send + 'a>>;
 
 #[async_trait]
 pub trait WebApiPort {
@@ -132,4 +132,20 @@ pub trait VesselBenchmarkOutbound: Send + Sync {
 
 pub trait CacheOutboundPort: Send + Sync {
     fn hauls_matrix(&self, query: &HaulsMatrixQuery) -> Result<Option<HaulsMatrix>, QueryError>;
+}
+
+#[async_trait]
+pub trait HaulDistributorOutbound: Send + Sync {
+    async fn vessels(&self) -> Result<Vec<Vessel>, QueryError>;
+    async fn catch_locations(&self) -> Result<Vec<CatchLocation>, QueryError>;
+    async fn haul_messages_of_vessel(
+        &self,
+        vessel_id: FiskeridirVesselId,
+    ) -> Result<Vec<HaulMessage>, QueryError>;
+    async fn ais_vms_positions(
+        &self,
+        mmsi: Option<Mmsi>,
+        call_sign: Option<&CallSign>,
+        range: &DateRange,
+    ) -> Result<Vec<AisVmsPosition>, QueryError>;
 }

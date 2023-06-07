@@ -77,3 +77,8 @@ pub trait ScraperFileHashInboundPort {
 pub trait VesselBenchmarkInbound: Send + Sync {
     async fn add_output(&self, values: Vec<VesselBenchmarkOutput>) -> Result<(), InsertError>;
 }
+
+#[async_trait]
+pub trait HaulDistributorInbound: Send + Sync {
+    async fn add_output(&self, values: Vec<HaulDistributionOutput>) -> Result<(), UpdateError>;
+}
