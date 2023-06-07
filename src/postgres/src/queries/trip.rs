@@ -44,6 +44,7 @@ WHERE
         id: FiskeridirVesselId,
         pagination: Pagination<Trips>,
         ordering: Ordering,
+        read_fishing_facility: bool,
     ) -> Result<impl Stream<Item = Result<TripDetailed, PostgresError>> + '_, PostgresError> {
         let stream = sqlx::query_as!(
             TripDetailed,
@@ -96,7 +97,31 @@ WITH
             h.vessel_name AS h_vessel_name,
             h.vessel_name_ers AS h_vessel_name_ers,
             h.catches AS h_catches,
-            h.whale_catches AS h_whale_catches
+            h.whale_catches AS h_whale_catches,
+            f.tool_id AS f_tool_id,
+            f.barentswatch_vessel_id AS f_barentswatch_vessel_id,
+            f.fiskeridir_vessel_id AS f_fiskeridir_vessel_id,
+            f.vessel_name AS f_vessel_name,
+            f.call_sign AS f_call_sign,
+            f.mmsi AS f_mmsi,
+            f.imo AS f_imo,
+            f.reg_num AS f_reg_num,
+            f.sbr_reg_num AS f_sbr_reg_num,
+            f.contact_phone AS f_contact_phone,
+            f.contact_email AS f_contact_email,
+            f.tool_type AS f_tool_type,
+            f.tool_type_name AS f_tool_type_name,
+            f.tool_color AS f_tool_color,
+            f.tool_count AS f_tool_count,
+            f.setup_timestamp AS f_setup_timestamp,
+            f.setup_processed_timestamp AS f_setup_processed_timestamp,
+            f.removed_timestamp AS f_removed_timestamp,
+            f.removed_processed_timestamp AS f_removed_processed_timestamp,
+            f.last_changed AS f_last_changed,
+            f.source AS f_source,
+            f.comment AS f_comment,
+            f.geometry_wkt AS f_geometry_wkt,
+            f.api_source AS f_api_source
         FROM
             (
                 SELECT
@@ -121,6 +146,9 @@ WITH
             LEFT JOIN landings l ON l.vessel_event_id = v.vessel_event_id
             LEFT JOIN landing_entries le ON l.landing_id = le.landing_id
             LEFT JOIN hauls h ON h.vessel_event_id = v.vessel_event_id
+            LEFT JOIN fishing_facilities f ON $5
+            AND f.fiskeridir_vessel_id = t.fiskeridir_vessel_id
+            AND f.period && t.period
     )
 SELECT
     q1.t_trip_id AS trip_id,
@@ -140,6 +168,7 @@ SELECT
     latest_landing_timestamp,
     vessel_events::TEXT AS "vessel_events!",
     hauls::TEXT AS "hauls!",
+    fishing_facilities::TEXT AS "fishing_facilities!",
     COALESCE(catches, '[]')::TEXT AS "catches!"
 FROM
     (
@@ -235,7 +264,65 @@ FROM
                         h_haul_id IS NOT NULL
                 ),
                 '[]'
-            ) AS hauls
+            ) AS hauls,
+            COALESCE(
+                JSONB_AGG(
+                    DISTINCT JSONB_BUILD_OBJECT(
+                        'tool_id',
+                        f_tool_id,
+                        'barentswatch_vessel_id',
+                        f_barentswatch_vessel_id,
+                        'fiskeridir_vessel_id',
+                        f_fiskeridir_vessel_id,
+                        'vessel_name',
+                        f_vessel_name,
+                        'call_sign',
+                        f_call_sign,
+                        'mmsi',
+                        f_mmsi,
+                        'imo',
+                        f_imo,
+                        'reg_num',
+                        f_reg_num,
+                        'sbr_reg_num',
+                        f_sbr_reg_num,
+                        'contact_phone',
+                        f_contact_phone,
+                        'contact_email',
+                        f_contact_email,
+                        'tool_type',
+                        f_tool_type,
+                        'tool_type_name',
+                        f_tool_type_name,
+                        'tool_color',
+                        f_tool_color,
+                        'tool_count',
+                        f_tool_count,
+                        'setup_timestamp',
+                        f_setup_timestamp,
+                        'setup_processed_timestamp',
+                        f_setup_processed_timestamp,
+                        'removed_timestamp',
+                        f_removed_timestamp,
+                        'removed_processed_timestamp',
+                        f_removed_processed_timestamp,
+                        'last_changed',
+                        f_last_changed,
+                        'source',
+                        f_source,
+                        'comment',
+                        f_comment,
+                        'geometry_wkt',
+                        ST_ASTEXT (f_geometry_wkt),
+                        'api_source',
+                        f_api_source
+                    )
+                ) FILTER (
+                    WHERE
+                        f_tool_id IS NOT NULL
+                ),
+                '[]'
+            ) AS fishing_facilities
         FROM
             everything
         GROUP BY
@@ -285,7 +372,8 @@ FROM
             id.0,
             ordering as i32,
             pagination.offset() as i64,
-            pagination.limit() as i64
+            pagination.limit() as i64,
+            read_fishing_facility,
         )
         .fetch(&self.pool)
         .map_err(|e| report!(e).change_context(PostgresError::Query));
@@ -296,6 +384,7 @@ FROM
     pub(crate) async fn detailed_trip_of_haul_impl(
         &self,
         haul_id: &HaulId,
+        read_fishing_facility: bool,
     ) -> Result<Option<TripDetailed>, PostgresError> {
         sqlx::query_as!(
             TripDetailed,
@@ -358,7 +447,31 @@ WITH
             h.vessel_name AS h_vessel_name,
             h.vessel_name_ers AS h_vessel_name_ers,
             h.catches AS h_catches,
-            h.whale_catches AS h_whale_catches
+            h.whale_catches AS h_whale_catches,
+            f.tool_id AS f_tool_id,
+            f.barentswatch_vessel_id AS f_barentswatch_vessel_id,
+            f.fiskeridir_vessel_id AS f_fiskeridir_vessel_id,
+            f.vessel_name AS f_vessel_name,
+            f.call_sign AS f_call_sign,
+            f.mmsi AS f_mmsi,
+            f.imo AS f_imo,
+            f.reg_num AS f_reg_num,
+            f.sbr_reg_num AS f_sbr_reg_num,
+            f.contact_phone AS f_contact_phone,
+            f.contact_email AS f_contact_email,
+            f.tool_type AS f_tool_type,
+            f.tool_type_name AS f_tool_type_name,
+            f.tool_color AS f_tool_color,
+            f.tool_count AS f_tool_count,
+            f.setup_timestamp AS f_setup_timestamp,
+            f.setup_processed_timestamp AS f_setup_processed_timestamp,
+            f.removed_timestamp AS f_removed_timestamp,
+            f.removed_processed_timestamp AS f_removed_processed_timestamp,
+            f.last_changed AS f_last_changed,
+            f.source AS f_source,
+            f.comment AS f_comment,
+            f.geometry_wkt AS f_geometry_wkt,
+            f.api_source AS f_api_source
         FROM
             trips t
             INNER JOIN trip_ids ti ON t.trip_id = ti.trip_id
@@ -366,6 +479,9 @@ WITH
             LEFT JOIN landings l ON l.vessel_event_id = v.vessel_event_id
             LEFT JOIN landing_entries le ON l.landing_id = le.landing_id
             LEFT JOIN hauls h ON h.vessel_event_id = v.vessel_event_id
+            LEFT JOIN fishing_facilities f ON $2
+            AND f.fiskeridir_vessel_id = t.fiskeridir_vessel_id
+            AND f.period && t.period
     )
 SELECT
     q1.t_trip_id AS trip_id,
@@ -385,6 +501,7 @@ SELECT
     latest_landing_timestamp,
     vessel_events::TEXT AS "vessel_events!",
     hauls::TEXT AS "hauls!",
+    fishing_facilities::TEXT AS "fishing_facilities!",
     COALESCE(catches, '[]')::TEXT AS "catches!"
 FROM
     (
@@ -480,7 +597,65 @@ FROM
                         h_haul_id IS NOT NULL
                 ),
                 '[]'
-            ) AS hauls
+            ) AS hauls,
+            COALESCE(
+                JSONB_AGG(
+                    DISTINCT JSONB_BUILD_OBJECT(
+                        'tool_id',
+                        f_tool_id,
+                        'barentswatch_vessel_id',
+                        f_barentswatch_vessel_id,
+                        'fiskeridir_vessel_id',
+                        f_fiskeridir_vessel_id,
+                        'vessel_name',
+                        f_vessel_name,
+                        'call_sign',
+                        f_call_sign,
+                        'mmsi',
+                        f_mmsi,
+                        'imo',
+                        f_imo,
+                        'reg_num',
+                        f_reg_num,
+                        'sbr_reg_num',
+                        f_sbr_reg_num,
+                        'contact_phone',
+                        f_contact_phone,
+                        'contact_email',
+                        f_contact_email,
+                        'tool_type',
+                        f_tool_type,
+                        'tool_type_name',
+                        f_tool_type_name,
+                        'tool_color',
+                        f_tool_color,
+                        'tool_count',
+                        f_tool_count,
+                        'setup_timestamp',
+                        f_setup_timestamp,
+                        'setup_processed_timestamp',
+                        f_setup_processed_timestamp,
+                        'removed_timestamp',
+                        f_removed_timestamp,
+                        'removed_processed_timestamp',
+                        f_removed_processed_timestamp,
+                        'last_changed',
+                        f_last_changed,
+                        'source',
+                        f_source,
+                        'comment',
+                        f_comment,
+                        'geometry_wkt',
+                        ST_ASTEXT (f_geometry_wkt),
+                        'api_source',
+                        f_api_source
+                    )
+                ) FILTER (
+                    WHERE
+                        f_tool_id IS NOT NULL
+                ),
+                '[]'
+            ) AS fishing_facilities
         FROM
             everything
         GROUP BY
@@ -527,7 +702,8 @@ FROM
             qi.t_trip_id
     ) q2 ON q1.t_trip_id = q2.t_trip_id
             "#,
-            haul_id.0
+            haul_id.0,
+            read_fishing_facility,
         )
         .fetch_optional(&self.pool)
         .await

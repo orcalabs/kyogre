@@ -39,6 +39,138 @@
     },
     "query": "\nSELECT\n    CASE\n        WHEN $1 = 0 THEN h.matrix_month_bucket\n        WHEN $1 = 1 THEN h.gear_group_id\n        WHEN $1 = 2 THEN h.species_group_id\n        WHEN $1 = 3 THEN h.vessel_length_group\n    END AS \"x_index!\",\n    CASE\n        WHEN $2 = 0 THEN h.matrix_month_bucket\n        WHEN $2 = 1 THEN h.gear_group_id\n        WHEN $2 = 2 THEN h.species_group_id\n        WHEN $2 = 3 THEN h.vessel_length_group\n        WHEN $2 = 4 THEN h.catch_location_start_matrix_index\n    END AS \"y_index!\",\n    COALESCE(SUM(living_weight::BIGINT), 0)::BIGINT AS \"sum_living!\"\nFROM\n    hauls_matrix h\nWHERE\n    (\n        $1 = 0\n        OR $2 = 0\n        OR $3::INT[] IS NULL\n        OR h.matrix_month_bucket = ANY ($3)\n    )\n    AND (\n        $2 = 4\n        OR $4::VARCHAR[] IS NULL\n        OR h.catch_location_start = ANY ($4)\n    )\n    AND (\n        $1 = 1\n        OR $2 = 1\n        OR $5::INT[] IS NULL\n        OR h.gear_group_id = ANY ($5)\n    )\n    AND (\n        $1 = 2\n        OR $2 = 2\n        OR $6::INT[] IS NULL\n        OR h.species_group_id = ANY ($6)\n    )\n    AND (\n        $1 = 3\n        OR $2 = 3\n        OR $7::INT[] IS NULL\n        OR h.vessel_length_group = ANY ($7)\n    )\n    AND (\n        $8::BIGINT[] IS NULL\n        OR fiskeridir_vessel_id = ANY ($8)\n    )\nGROUP BY\n    1,\n    2\n            "
   },
+  "039138781979437d4bc4a56ba6832b79d4f37bf932aeb4d2b649f02c5d14c1d8": {
+    "describe": {
+      "columns": [
+        {
+          "name": "trip_id",
+          "ordinal": 0,
+          "type_info": "Int8"
+        },
+        {
+          "name": "fiskeridir_vessel_id",
+          "ordinal": 1,
+          "type_info": "Int8"
+        },
+        {
+          "name": "period",
+          "ordinal": 2,
+          "type_info": "TstzRange"
+        },
+        {
+          "name": "period_precision",
+          "ordinal": 3,
+          "type_info": "TstzRange"
+        },
+        {
+          "name": "landing_coverage",
+          "ordinal": 4,
+          "type_info": "TstzRange"
+        },
+        {
+          "name": "trip_assembler_id!: TripAssemblerId",
+          "ordinal": 5,
+          "type_info": "Int4"
+        },
+        {
+          "name": "start_port_id",
+          "ordinal": 6,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "end_port_id",
+          "ordinal": 7,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "total_gross_weight!",
+          "ordinal": 8,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "total_living_weight!",
+          "ordinal": 9,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "total_product_weight!",
+          "ordinal": 10,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "num_deliveries!",
+          "ordinal": 11,
+          "type_info": "Int8"
+        },
+        {
+          "name": "gear_ids!: Vec<Gear>",
+          "ordinal": 12,
+          "type_info": "Int4Array"
+        },
+        {
+          "name": "delivery_points!",
+          "ordinal": 13,
+          "type_info": "VarcharArray"
+        },
+        {
+          "name": "latest_landing_timestamp",
+          "ordinal": 14,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "vessel_events!",
+          "ordinal": 15,
+          "type_info": "Text"
+        },
+        {
+          "name": "hauls!",
+          "ordinal": 16,
+          "type_info": "Text"
+        },
+        {
+          "name": "fishing_facilities!",
+          "ordinal": 17,
+          "type_info": "Text"
+        },
+        {
+          "name": "catches!",
+          "ordinal": 18,
+          "type_info": "Text"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        true,
+        false,
+        false,
+        true,
+        true,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "parameters": {
+        "Left": [
+          "Int8",
+          "Int4",
+          "Int8",
+          "Int8",
+          "Bool"
+        ]
+      }
+    },
+    "query": "\nWITH\n    everything AS (\n        SELECT\n            t.trip_id AS t_trip_id,\n            t.fiskeridir_vessel_id AS t_fiskeridir_vessel_id,\n            t.period AS t_period,\n            t.period_precision AS t_period_precision,\n            t.landing_coverage AS t_landing_coverage,\n            t.trip_assembler_id AS t_trip_assembler_id,\n            t.start_port_id AS t_start_port_id,\n            t.end_port_id AS t_end_port_id,\n            v.vessel_event_id AS v_vessel_event_id,\n            v.fiskeridir_vessel_id AS v_fiskeridir_vessel_id,\n            v.timestamp AS v_timestamp,\n            v.vessel_event_type_id AS v_vessel_event_type_id,\n            l.landing_id AS l_landing_id,\n            l.landing_timestamp AS l_landing_timestamp,\n            l.gear_id AS l_gear_id,\n            l.product_quality_id AS l_product_quality_id,\n            l.delivery_point_id AS l_delivery_point_id,\n            le.gross_weight AS le_gross_weight,\n            le.living_weight AS le_living_weight,\n            le.product_weight AS le_product_weight,\n            le.species_fiskeridir_id AS le_species_fiskeridir_id,\n            h.haul_id AS h_haul_id,\n            h.ers_activity_id AS h_ers_activity_id,\n            h.duration AS h_duration,\n            h.haul_distance AS h_haul_distance,\n            h.catch_location_start AS h_catch_location_start,\n            h.ocean_depth_end AS h_ocean_depth_end,\n            h.ocean_depth_start AS h_ocean_depth_start,\n            h.quota_type_id AS h_quota_type_id,\n            h.start_latitude AS h_start_latitude,\n            h.start_longitude AS h_start_longitude,\n            h.start_timestamp AS h_start_timestamp,\n            h.stop_timestamp AS h_stop_timestamp,\n            h.stop_latitude AS h_stop_latitude,\n            h.stop_longitude AS h_stop_longitude,\n            h.gear_id AS h_gear_id,\n            h.gear_group_id AS h_gear_group_id,\n            h.fiskeridir_vessel_id AS h_fiskeridir_vessel_id,\n            h.vessel_call_sign AS h_vessel_call_sign,\n            h.vessel_call_sign_ers AS h_vessel_call_sign_ers,\n            h.vessel_length AS h_vessel_length,\n            h.vessel_length_group AS h_vessel_length_group,\n            h.vessel_name AS h_vessel_name,\n            h.vessel_name_ers AS h_vessel_name_ers,\n            h.catches AS h_catches,\n            h.whale_catches AS h_whale_catches,\n            f.tool_id AS f_tool_id,\n            f.barentswatch_vessel_id AS f_barentswatch_vessel_id,\n            f.fiskeridir_vessel_id AS f_fiskeridir_vessel_id,\n            f.vessel_name AS f_vessel_name,\n            f.call_sign AS f_call_sign,\n            f.mmsi AS f_mmsi,\n            f.imo AS f_imo,\n            f.reg_num AS f_reg_num,\n            f.sbr_reg_num AS f_sbr_reg_num,\n            f.contact_phone AS f_contact_phone,\n            f.contact_email AS f_contact_email,\n            f.tool_type AS f_tool_type,\n            f.tool_type_name AS f_tool_type_name,\n            f.tool_color AS f_tool_color,\n            f.tool_count AS f_tool_count,\n            f.setup_timestamp AS f_setup_timestamp,\n            f.setup_processed_timestamp AS f_setup_processed_timestamp,\n            f.removed_timestamp AS f_removed_timestamp,\n            f.removed_processed_timestamp AS f_removed_processed_timestamp,\n            f.last_changed AS f_last_changed,\n            f.source AS f_source,\n            f.comment AS f_comment,\n            f.geometry_wkt AS f_geometry_wkt,\n            f.api_source AS f_api_source\n        FROM\n            (\n                SELECT\n                    *\n                FROM\n                    trips\n                WHERE\n                    fiskeridir_vessel_id = $1\n                ORDER BY\n                    CASE\n                        WHEN $2 = 1 THEN period\n                    END ASC,\n                    CASE\n                        WHEN $2 = 2 THEN period\n                    END DESC\n                OFFSET\n                    $3\n                LIMIT\n                    $4\n            ) t\n            LEFT JOIN vessel_events v ON t.trip_id = v.trip_id\n            LEFT JOIN landings l ON l.vessel_event_id = v.vessel_event_id\n            LEFT JOIN landing_entries le ON l.landing_id = le.landing_id\n            LEFT JOIN hauls h ON h.vessel_event_id = v.vessel_event_id\n            LEFT JOIN fishing_facilities f ON $5\n            AND f.fiskeridir_vessel_id = t.fiskeridir_vessel_id\n            AND f.period && t.period\n    )\nSELECT\n    q1.t_trip_id AS trip_id,\n    t_fiskeridir_vessel_id AS fiskeridir_vessel_id,\n    t_period AS period,\n    t_period_precision AS period_precision,\n    t_landing_coverage AS landing_coverage,\n    t_trip_assembler_id AS \"trip_assembler_id!: TripAssemblerId\",\n    t_start_port_id AS start_port_id,\n    t_end_port_id AS end_port_id,\n    total_gross_weight AS \"total_gross_weight!\",\n    total_living_weight AS \"total_living_weight!\",\n    total_product_weight AS \"total_product_weight!\",\n    num_deliveries AS \"num_deliveries!\",\n    gear_ids AS \"gear_ids!: Vec<Gear>\",\n    delivery_points AS \"delivery_points!\",\n    latest_landing_timestamp,\n    vessel_events::TEXT AS \"vessel_events!\",\n    hauls::TEXT AS \"hauls!\",\n    fishing_facilities::TEXT AS \"fishing_facilities!\",\n    COALESCE(catches, '[]')::TEXT AS \"catches!\"\nFROM\n    (\n        SELECT\n            t_trip_id,\n            t_fiskeridir_vessel_id,\n            t_period,\n            t_period_precision,\n            t_landing_coverage,\n            t_trip_assembler_id,\n            t_start_port_id,\n            t_end_port_id,\n            COALESCE(SUM(le_gross_weight), 0) AS total_gross_weight,\n            COALESCE(SUM(le_living_weight), 0) AS total_living_weight,\n            COALESCE(SUM(le_product_weight), 0) AS total_product_weight,\n            COUNT(DISTINCT l_landing_id) AS num_deliveries,\n            ARRAY_REMOVE(ARRAY_AGG(DISTINCT l_gear_id), NULL) AS gear_ids,\n            ARRAY_REMOVE(ARRAY_AGG(DISTINCT l_delivery_point_id), NULL) AS delivery_points,\n            MAX(l_landing_timestamp) AS latest_landing_timestamp,\n            COALESCE(\n                JSONB_AGG(\n                    JSONB_BUILD_OBJECT(\n                        'vessel_event_id',\n                        v_vessel_event_id,\n                        'fiskeridir_vessel_id',\n                        v_fiskeridir_vessel_id,\n                        'timestamp',\n                        v_timestamp,\n                        'vessel_event_type_id',\n                        v_vessel_event_type_id\n                    )\n                    ORDER BY\n                        v_timestamp\n                ),\n                '[]'\n            ) AS vessel_events,\n            COALESCE(\n                JSONB_AGG(\n                    JSONB_BUILD_OBJECT(\n                        'haul_id',\n                        h_haul_id,\n                        'ers_activity_id',\n                        h_ers_activity_id,\n                        'duration',\n                        h_duration,\n                        'haul_distance',\n                        h_haul_distance,\n                        'catch_location_start',\n                        h_catch_location_start,\n                        'ocean_depth_end',\n                        h_ocean_depth_end,\n                        'ocean_depth_start',\n                        h_ocean_depth_start,\n                        'quota_type_id',\n                        h_quota_type_id,\n                        'start_latitude',\n                        h_start_latitude,\n                        'start_longitude',\n                        h_start_longitude,\n                        'start_timestamp',\n                        h_start_timestamp,\n                        'stop_timestamp',\n                        h_stop_timestamp,\n                        'stop_latitude',\n                        h_stop_latitude,\n                        'stop_longitude',\n                        h_stop_longitude,\n                        'gear_id',\n                        h_gear_id,\n                        'gear_group_id',\n                        h_gear_group_id,\n                        'fiskeridir_vessel_id',\n                        h_fiskeridir_vessel_id,\n                        'vessel_call_sign',\n                        h_vessel_call_sign,\n                        'vessel_call_sign_ers',\n                        h_vessel_call_sign_ers,\n                        'vessel_length',\n                        h_vessel_length,\n                        'vessel_length_group',\n                        h_vessel_length_group,\n                        'vessel_name',\n                        h_vessel_name,\n                        'vessel_name_ers',\n                        h_vessel_name_ers,\n                        'catches',\n                        h_catches,\n                        'whale_catches',\n                        h_whale_catches\n                    )\n                ) FILTER (\n                    WHERE\n                        h_haul_id IS NOT NULL\n                ),\n                '[]'\n            ) AS hauls,\n            COALESCE(\n                JSONB_AGG(\n                    DISTINCT JSONB_BUILD_OBJECT(\n                        'tool_id',\n                        f_tool_id,\n                        'barentswatch_vessel_id',\n                        f_barentswatch_vessel_id,\n                        'fiskeridir_vessel_id',\n                        f_fiskeridir_vessel_id,\n                        'vessel_name',\n                        f_vessel_name,\n                        'call_sign',\n                        f_call_sign,\n                        'mmsi',\n                        f_mmsi,\n                        'imo',\n                        f_imo,\n                        'reg_num',\n                        f_reg_num,\n                        'sbr_reg_num',\n                        f_sbr_reg_num,\n                        'contact_phone',\n                        f_contact_phone,\n                        'contact_email',\n                        f_contact_email,\n                        'tool_type',\n                        f_tool_type,\n                        'tool_type_name',\n                        f_tool_type_name,\n                        'tool_color',\n                        f_tool_color,\n                        'tool_count',\n                        f_tool_count,\n                        'setup_timestamp',\n                        f_setup_timestamp,\n                        'setup_processed_timestamp',\n                        f_setup_processed_timestamp,\n                        'removed_timestamp',\n                        f_removed_timestamp,\n                        'removed_processed_timestamp',\n                        f_removed_processed_timestamp,\n                        'last_changed',\n                        f_last_changed,\n                        'source',\n                        f_source,\n                        'comment',\n                        f_comment,\n                        'geometry_wkt',\n                        ST_ASTEXT (f_geometry_wkt),\n                        'api_source',\n                        f_api_source\n                    )\n                ) FILTER (\n                    WHERE\n                        f_tool_id IS NOT NULL\n                ),\n                '[]'\n            ) AS fishing_facilities\n        FROM\n            everything\n        GROUP BY\n            t_trip_id,\n            t_fiskeridir_vessel_id,\n            t_period,\n            t_period_precision,\n            t_landing_coverage,\n            t_trip_assembler_id,\n            t_start_port_id,\n            t_end_port_id\n    ) q1\n    LEFT JOIN (\n        SELECT\n            qi.t_trip_id,\n            JSONB_AGG(qi.catches) AS catches\n        FROM\n            (\n                SELECT\n                    t_trip_id,\n                    JSONB_BUILD_OBJECT(\n                        'living_weight',\n                        SUM(le_living_weight),\n                        'gross_weight',\n                        SUM(le_gross_weight),\n                        'product_weight',\n                        SUM(le_product_weight),\n                        'species_fiskeridir_id',\n                        le_species_fiskeridir_id,\n                        'product_quality_id',\n                        l_product_quality_id\n                    ) AS catches\n                FROM\n                    everything\n                WHERE\n                    l_product_quality_id IS NOT NULL\n                    AND le_species_fiskeridir_id IS NOT NULL\n                GROUP BY\n                    t_trip_id,\n                    l_product_quality_id,\n                    le_species_fiskeridir_id\n            ) qi\n        GROUP BY\n            qi.t_trip_id\n    ) q2 ON q1.t_trip_id = q2.t_trip_id\n            "
+  },
   "063ffe3ea8b5130ce0826bfca3da92147d6472f539da0b9e2ce34f83532da96c": {
     "describe": {
       "columns": [],
@@ -1142,6 +1274,134 @@
     },
     "query": "\nINSERT INTO\n    ais_vessels (mmsi)\nVALUES\n    (UNNEST($1::INT[]))\nON CONFLICT (mmsi) DO NOTHING\n            "
   },
+  "2f0756e110a881238802cdd87fcacc85fb341a1e4cb5916bed1cd69d05bf4fac": {
+    "describe": {
+      "columns": [
+        {
+          "name": "trip_id",
+          "ordinal": 0,
+          "type_info": "Int8"
+        },
+        {
+          "name": "fiskeridir_vessel_id",
+          "ordinal": 1,
+          "type_info": "Int8"
+        },
+        {
+          "name": "period",
+          "ordinal": 2,
+          "type_info": "TstzRange"
+        },
+        {
+          "name": "period_precision",
+          "ordinal": 3,
+          "type_info": "TstzRange"
+        },
+        {
+          "name": "landing_coverage",
+          "ordinal": 4,
+          "type_info": "TstzRange"
+        },
+        {
+          "name": "trip_assembler_id!: TripAssemblerId",
+          "ordinal": 5,
+          "type_info": "Int4"
+        },
+        {
+          "name": "start_port_id",
+          "ordinal": 6,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "end_port_id",
+          "ordinal": 7,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "total_gross_weight!",
+          "ordinal": 8,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "total_living_weight!",
+          "ordinal": 9,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "total_product_weight!",
+          "ordinal": 10,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "num_deliveries!",
+          "ordinal": 11,
+          "type_info": "Int8"
+        },
+        {
+          "name": "gear_ids!: Vec<Gear>",
+          "ordinal": 12,
+          "type_info": "Int4Array"
+        },
+        {
+          "name": "delivery_points!",
+          "ordinal": 13,
+          "type_info": "VarcharArray"
+        },
+        {
+          "name": "latest_landing_timestamp",
+          "ordinal": 14,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "vessel_events!",
+          "ordinal": 15,
+          "type_info": "Text"
+        },
+        {
+          "name": "hauls!",
+          "ordinal": 16,
+          "type_info": "Text"
+        },
+        {
+          "name": "fishing_facilities!",
+          "ordinal": 17,
+          "type_info": "Text"
+        },
+        {
+          "name": "catches!",
+          "ordinal": 18,
+          "type_info": "Text"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        true,
+        false,
+        false,
+        true,
+        true,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "parameters": {
+        "Left": [
+          "Int8"
+        ]
+      }
+    },
+    "query": "\nWITH\n    everything AS (\n        SELECT\n            t.trip_id AS t_trip_id,\n            t.fiskeridir_vessel_id AS t_fiskeridir_vessel_id,\n            t.period AS t_period,\n            t.period_precision AS t_period_precision,\n            t.landing_coverage AS t_landing_coverage,\n            t.trip_assembler_id AS t_trip_assembler_id,\n            t.start_port_id AS t_start_port_id,\n            t.end_port_id AS t_end_port_id,\n            v.vessel_event_id AS v_vessel_event_id,\n            v.fiskeridir_vessel_id AS v_fiskeridir_vessel_id,\n            v.timestamp AS v_timestamp,\n            v.vessel_event_type_id AS v_vessel_event_type_id,\n            l.landing_id AS l_landing_id,\n            l.landing_timestamp AS l_landing_timestamp,\n            l.gear_id AS l_gear_id,\n            l.product_quality_id AS l_product_quality_id,\n            l.delivery_point_id AS l_delivery_point_id,\n            le.gross_weight AS le_gross_weight,\n            le.living_weight AS le_living_weight,\n            le.product_weight AS le_product_weight,\n            le.species_fiskeridir_id AS le_species_fiskeridir_id,\n            h.haul_id AS h_haul_id,\n            h.ers_activity_id AS h_ers_activity_id,\n            h.duration AS h_duration,\n            h.haul_distance AS h_haul_distance,\n            h.catch_location_start AS h_catch_location_start,\n            h.ocean_depth_end AS h_ocean_depth_end,\n            h.ocean_depth_start AS h_ocean_depth_start,\n            h.quota_type_id AS h_quota_type_id,\n            h.start_latitude AS h_start_latitude,\n            h.start_longitude AS h_start_longitude,\n            h.start_timestamp AS h_start_timestamp,\n            h.stop_timestamp AS h_stop_timestamp,\n            h.stop_latitude AS h_stop_latitude,\n            h.stop_longitude AS h_stop_longitude,\n            h.gear_id AS h_gear_id,\n            h.gear_group_id AS h_gear_group_id,\n            h.fiskeridir_vessel_id AS h_fiskeridir_vessel_id,\n            h.vessel_call_sign AS h_vessel_call_sign,\n            h.vessel_call_sign_ers AS h_vessel_call_sign_ers,\n            h.vessel_length AS h_vessel_length,\n            h.vessel_length_group AS h_vessel_length_group,\n            h.vessel_name AS h_vessel_name,\n            h.vessel_name_ers AS h_vessel_name_ers,\n            h.catches AS h_catches,\n            h.whale_catches AS h_whale_catches,\n            f.tool_id AS f_tool_id,\n            f.barentswatch_vessel_id AS f_barentswatch_vessel_id,\n            f.fiskeridir_vessel_id AS f_fiskeridir_vessel_id,\n            f.vessel_name AS f_vessel_name,\n            f.call_sign AS f_call_sign,\n            f.mmsi AS f_mmsi,\n            f.imo AS f_imo,\n            f.reg_num AS f_reg_num,\n            f.sbr_reg_num AS f_sbr_reg_num,\n            f.contact_phone AS f_contact_phone,\n            f.contact_email AS f_contact_email,\n            f.tool_type AS f_tool_type,\n            f.tool_type_name AS f_tool_type_name,\n            f.tool_color AS f_tool_color,\n            f.tool_count AS f_tool_count,\n            f.setup_timestamp AS f_setup_timestamp,\n            f.setup_processed_timestamp AS f_setup_processed_timestamp,\n            f.removed_timestamp AS f_removed_timestamp,\n            f.removed_processed_timestamp AS f_removed_processed_timestamp,\n            f.last_changed AS f_last_changed,\n            f.source AS f_source,\n            f.comment AS f_comment,\n            f.geometry_wkt AS f_geometry_wkt,\n            f.api_source AS f_api_source\n        FROM\n            trips t\n            LEFT JOIN vessel_events v ON t.trip_id = v.trip_id\n            LEFT JOIN landings l ON l.vessel_event_id = v.vessel_event_id\n            LEFT JOIN landing_entries le ON l.landing_id = le.landing_id\n            LEFT JOIN hauls h ON h.vessel_event_id = v.vessel_event_id\n            LEFT JOIN fishing_facilities f ON f.fiskeridir_vessel_id = t.fiskeridir_vessel_id\n            AND f.period && t.period\n        WHERE\n            t.fiskeridir_vessel_id = $1\n    )\nSELECT\n    q1.t_trip_id AS trip_id,\n    t_fiskeridir_vessel_id AS fiskeridir_vessel_id,\n    t_period AS period,\n    t_period_precision AS period_precision,\n    t_landing_coverage AS landing_coverage,\n    t_trip_assembler_id AS \"trip_assembler_id!: TripAssemblerId\",\n    t_start_port_id AS start_port_id,\n    t_end_port_id AS end_port_id,\n    total_gross_weight AS \"total_gross_weight!\",\n    total_living_weight AS \"total_living_weight!\",\n    total_product_weight AS \"total_product_weight!\",\n    num_deliveries AS \"num_deliveries!\",\n    gear_ids AS \"gear_ids!: Vec<Gear>\",\n    delivery_points AS \"delivery_points!\",\n    latest_landing_timestamp,\n    vessel_events::TEXT AS \"vessel_events!\",\n    hauls::TEXT AS \"hauls!\",\n    fishing_facilities::TEXT AS \"fishing_facilities!\",\n    COALESCE(catches, '[]')::TEXT AS \"catches!\"\nFROM\n    (\n        SELECT\n            t_trip_id,\n            t_fiskeridir_vessel_id,\n            t_period,\n            t_period_precision,\n            t_landing_coverage,\n            t_trip_assembler_id,\n            t_start_port_id,\n            t_end_port_id,\n            COALESCE(SUM(le_gross_weight), 0) AS total_gross_weight,\n            COALESCE(SUM(le_living_weight), 0) AS total_living_weight,\n            COALESCE(SUM(le_product_weight), 0) AS total_product_weight,\n            COUNT(DISTINCT l_landing_id) AS num_deliveries,\n            ARRAY_REMOVE(ARRAY_AGG(DISTINCT l_gear_id), NULL) AS gear_ids,\n            ARRAY_REMOVE(ARRAY_AGG(DISTINCT l_delivery_point_id), NULL) AS delivery_points,\n            MAX(l_landing_timestamp) AS latest_landing_timestamp,\n            COALESCE(\n                JSONB_AGG(\n                    JSONB_BUILD_OBJECT(\n                        'vessel_event_id',\n                        v_vessel_event_id,\n                        'fiskeridir_vessel_id',\n                        v_fiskeridir_vessel_id,\n                        'timestamp',\n                        v_timestamp,\n                        'vessel_event_type_id',\n                        v_vessel_event_type_id\n                    )\n                    ORDER BY\n                        v_timestamp\n                ),\n                '[]'\n            ) AS vessel_events,\n            COALESCE(\n                JSONB_AGG(\n                    JSONB_BUILD_OBJECT(\n                        'haul_id',\n                        h_haul_id,\n                        'ers_activity_id',\n                        h_ers_activity_id,\n                        'duration',\n                        h_duration,\n                        'haul_distance',\n                        h_haul_distance,\n                        'catch_location_start',\n                        h_catch_location_start,\n                        'ocean_depth_end',\n                        h_ocean_depth_end,\n                        'ocean_depth_start',\n                        h_ocean_depth_start,\n                        'quota_type_id',\n                        h_quota_type_id,\n                        'start_latitude',\n                        h_start_latitude,\n                        'start_longitude',\n                        h_start_longitude,\n                        'start_timestamp',\n                        h_start_timestamp,\n                        'stop_timestamp',\n                        h_stop_timestamp,\n                        'stop_latitude',\n                        h_stop_latitude,\n                        'stop_longitude',\n                        h_stop_longitude,\n                        'gear_id',\n                        h_gear_id,\n                        'gear_group_id',\n                        h_gear_group_id,\n                        'fiskeridir_vessel_id',\n                        h_fiskeridir_vessel_id,\n                        'vessel_call_sign',\n                        h_vessel_call_sign,\n                        'vessel_call_sign_ers',\n                        h_vessel_call_sign_ers,\n                        'vessel_length',\n                        h_vessel_length,\n                        'vessel_length_group',\n                        h_vessel_length_group,\n                        'vessel_name',\n                        h_vessel_name,\n                        'vessel_name_ers',\n                        h_vessel_name_ers,\n                        'catches',\n                        h_catches,\n                        'whale_catches',\n                        h_whale_catches\n                    )\n                ) FILTER (\n                    WHERE\n                        h_haul_id IS NOT NULL\n                ),\n                '[]'\n            ) AS hauls,\n            COALESCE(\n                JSONB_AGG(\n                    DISTINCT JSONB_BUILD_OBJECT(\n                        'tool_id',\n                        f_tool_id,\n                        'barentswatch_vessel_id',\n                        f_barentswatch_vessel_id,\n                        'fiskeridir_vessel_id',\n                        f_fiskeridir_vessel_id,\n                        'vessel_name',\n                        f_vessel_name,\n                        'call_sign',\n                        f_call_sign,\n                        'mmsi',\n                        f_mmsi,\n                        'imo',\n                        f_imo,\n                        'reg_num',\n                        f_reg_num,\n                        'sbr_reg_num',\n                        f_sbr_reg_num,\n                        'contact_phone',\n                        f_contact_phone,\n                        'contact_email',\n                        f_contact_email,\n                        'tool_type',\n                        f_tool_type,\n                        'tool_type_name',\n                        f_tool_type_name,\n                        'tool_color',\n                        f_tool_color,\n                        'tool_count',\n                        f_tool_count,\n                        'setup_timestamp',\n                        f_setup_timestamp,\n                        'setup_processed_timestamp',\n                        f_setup_processed_timestamp,\n                        'removed_timestamp',\n                        f_removed_timestamp,\n                        'removed_processed_timestamp',\n                        f_removed_processed_timestamp,\n                        'last_changed',\n                        f_last_changed,\n                        'source',\n                        f_source,\n                        'comment',\n                        f_comment,\n                        'geometry_wkt',\n                        ST_ASTEXT (f_geometry_wkt),\n                        'api_source',\n                        f_api_source\n                    )\n                ) FILTER (\n                    WHERE\n                        f_tool_id IS NOT NULL\n                ),\n                '[]'\n            ) AS fishing_facilities\n        FROM\n            everything\n        GROUP BY\n            t_trip_id,\n            t_fiskeridir_vessel_id,\n            t_period,\n            t_period_precision,\n            t_landing_coverage,\n            t_trip_assembler_id,\n            t_start_port_id,\n            t_end_port_id\n    ) q1\n    LEFT JOIN (\n        SELECT\n            qi.t_trip_id,\n            JSONB_AGG(qi.catches) AS catches\n        FROM\n            (\n                SELECT\n                    t_trip_id,\n                    JSONB_BUILD_OBJECT(\n                        'living_weight',\n                        SUM(le_living_weight),\n                        'gross_weight',\n                        SUM(le_gross_weight),\n                        'product_weight',\n                        SUM(le_product_weight),\n                        'species_fiskeridir_id',\n                        le_species_fiskeridir_id,\n                        'product_quality_id',\n                        l_product_quality_id\n                    ) AS catches\n                FROM\n                    everything\n                WHERE\n                    l_product_quality_id IS NOT NULL\n                    AND le_species_fiskeridir_id IS NOT NULL\n                GROUP BY\n                    t_trip_id,\n                    l_product_quality_id,\n                    le_species_fiskeridir_id\n            ) qi\n        GROUP BY\n            qi.t_trip_id\n    ) q2 ON q1.t_trip_id = q2.t_trip_id\n            "
+  },
   "31b02dee387c64437123cb9de6d8e5d3100538adb9118d6cf71be1bc476b7a40": {
     "describe": {
       "columns": [],
@@ -1265,6 +1525,178 @@
     },
     "query": "\nSELECT\n    SUM(UPPER(period) - LOWER(period)) AS duration\nFROM\n    trips\nWHERE\n    fiskeridir_vessel_id = $1\n            "
   },
+  "3c16a137ae1003f988246fc3c056a60ac42eff85d234155b33d9facb05dbe216": {
+    "describe": {
+      "columns": [
+        {
+          "name": "tool_id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "barentswatch_vessel_id",
+          "ordinal": 1,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "fiskeridir_vessel_id",
+          "ordinal": 2,
+          "type_info": "Int8"
+        },
+        {
+          "name": "vessel_name",
+          "ordinal": 3,
+          "type_info": "Text"
+        },
+        {
+          "name": "call_sign",
+          "ordinal": 4,
+          "type_info": "Text"
+        },
+        {
+          "name": "mmsi",
+          "ordinal": 5,
+          "type_info": "Int4"
+        },
+        {
+          "name": "imo",
+          "ordinal": 6,
+          "type_info": "Int8"
+        },
+        {
+          "name": "reg_num",
+          "ordinal": 7,
+          "type_info": "Text"
+        },
+        {
+          "name": "sbr_reg_num",
+          "ordinal": 8,
+          "type_info": "Text"
+        },
+        {
+          "name": "contact_phone",
+          "ordinal": 9,
+          "type_info": "Text"
+        },
+        {
+          "name": "contact_email",
+          "ordinal": 10,
+          "type_info": "Text"
+        },
+        {
+          "name": "tool_type!: FishingFacilityToolType",
+          "ordinal": 11,
+          "type_info": "Int4"
+        },
+        {
+          "name": "tool_type_name",
+          "ordinal": 12,
+          "type_info": "Text"
+        },
+        {
+          "name": "tool_color",
+          "ordinal": 13,
+          "type_info": "Text"
+        },
+        {
+          "name": "tool_count",
+          "ordinal": 14,
+          "type_info": "Int4"
+        },
+        {
+          "name": "setup_timestamp!",
+          "ordinal": 15,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "setup_processed_timestamp",
+          "ordinal": 16,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "removed_timestamp",
+          "ordinal": 17,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "removed_processed_timestamp",
+          "ordinal": 18,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "last_changed!",
+          "ordinal": 19,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "source",
+          "ordinal": 20,
+          "type_info": "Text"
+        },
+        {
+          "name": "comment",
+          "ordinal": 21,
+          "type_info": "Text"
+        },
+        {
+          "name": "geometry_wkt: _",
+          "ordinal": 22,
+          "type_info": {
+            "Custom": {
+              "kind": "Simple",
+              "name": "geometry"
+            }
+          }
+        },
+        {
+          "name": "api_source!: FishingFacilityApiSource",
+          "ordinal": 23,
+          "type_info": "Int4"
+        }
+      ],
+      "nullable": [
+        false,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        false,
+        true,
+        true,
+        true,
+        false,
+        true,
+        true,
+        true,
+        false,
+        true,
+        true,
+        false,
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Int4Array",
+          "Int8Array",
+          "Int4Array",
+          "Bool",
+          "TstzRangeArray",
+          "TstzRangeArray",
+          "Int4",
+          "Int4",
+          "Int8",
+          "Int8"
+        ]
+      }
+    },
+    "query": "\nSELECT\n    tool_id,\n    barentswatch_vessel_id,\n    fiskeridir_vessel_id,\n    vessel_name,\n    call_sign,\n    mmsi,\n    imo,\n    reg_num,\n    sbr_reg_num,\n    contact_phone,\n    contact_email,\n    tool_type AS \"tool_type!: FishingFacilityToolType\",\n    tool_type_name,\n    tool_color,\n    tool_count,\n    setup_timestamp AS \"setup_timestamp!\",\n    setup_processed_timestamp,\n    removed_timestamp,\n    removed_processed_timestamp,\n    last_changed AS \"last_changed!\",\n    source,\n    \"comment\",\n    geometry_wkt AS \"geometry_wkt: _\",\n    api_source AS \"api_source!: FishingFacilityApiSource\"\nFROM\n    fishing_facilities\nWHERE\n    (\n        $1::INT[] IS NULL\n        OR mmsi = ANY ($1)\n    )\n    AND (\n        $2::BIGINT[] IS NULL\n        OR fiskeridir_vessel_id = ANY ($2)\n    )\n    AND (\n        $3::INT[] IS NULL\n        OR tool_type = ANY ($3)\n    )\n    AND (\n        $4::BOOLEAN IS NULL\n        OR CASE\n            WHEN $4 THEN removed_timestamp IS NULL\n            WHEN NOT $4 THEN removed_timestamp IS NOT NULL\n        END\n    )\n    AND (\n        $5::TSTZRANGE[] IS NULL\n        OR setup_timestamp <@ ANY ($5)\n    )\n    AND (\n        $6::TSTZRANGE[] IS NULL\n        OR removed_timestamp <@ ANY ($6)\n    )\nORDER BY\n    CASE\n        WHEN $7 = 1 THEN CASE\n            WHEN $8 = 1 THEN setup_timestamp\n            WHEN $8 = 2 THEN removed_timestamp\n            WHEN $8 = 3 THEN last_changed\n        END\n    END ASC,\n    CASE\n        WHEN $7 = 2 THEN CASE\n            WHEN $8 = 1 THEN setup_timestamp\n            WHEN $8 = 2 THEN removed_timestamp\n            WHEN $8 = 3 THEN last_changed\n        END\n    END DESC\nOFFSET\n    $9\nLIMIT\n    $10\n            "
+  },
   "42d280b49c134606e1875c16d0a03ff9d90a4f7a9e461203ff3c283f2ce22a58": {
     "describe": {
       "columns": [],
@@ -1277,134 +1709,6 @@
       }
     },
     "query": "\nINSERT INTO\n    norwegian_municipalities (norwegian_municipality_id, \"name\")\nSELECT\n    *\nFROM\n    UNNEST($1::INT[], $2::VARCHAR[])\nON CONFLICT (norwegian_municipality_id) DO\nUPDATE\nSET\n    NAME = excluded.name\nWHERE\n    norwegian_municipalities.name IS NULL\n    AND excluded.name IS NOT NULL\n            "
-  },
-  "477dd0aa2f6a78bb203e211969f9d896a9917cb865572e2f705a6329a00cd4c3": {
-    "describe": {
-      "columns": [
-        {
-          "name": "trip_id!",
-          "ordinal": 0,
-          "type_info": "Int8"
-        },
-        {
-          "name": "trip_assembler_id!: TripAssemblerId",
-          "ordinal": 1,
-          "type_info": "Int4"
-        },
-        {
-          "name": "fiskeridir_vessel_id!",
-          "ordinal": 2,
-          "type_info": "Int8"
-        },
-        {
-          "name": "period!",
-          "ordinal": 3,
-          "type_info": "TstzRange"
-        },
-        {
-          "name": "period_precision",
-          "ordinal": 4,
-          "type_info": "TstzRange"
-        },
-        {
-          "name": "start_port_id",
-          "ordinal": 5,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "end_port_id",
-          "ordinal": 6,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "num_deliveries!",
-          "ordinal": 7,
-          "type_info": "Int8"
-        },
-        {
-          "name": "landing_coverage!",
-          "ordinal": 8,
-          "type_info": "TstzRange"
-        },
-        {
-          "name": "total_living_weight!",
-          "ordinal": 9,
-          "type_info": "Numeric"
-        },
-        {
-          "name": "total_gross_weight!",
-          "ordinal": 10,
-          "type_info": "Numeric"
-        },
-        {
-          "name": "total_product_weight!",
-          "ordinal": 11,
-          "type_info": "Numeric"
-        },
-        {
-          "name": "delivery_points!",
-          "ordinal": 12,
-          "type_info": "VarcharArray"
-        },
-        {
-          "name": "latest_landing_timestamp",
-          "ordinal": 13,
-          "type_info": "Timestamptz"
-        },
-        {
-          "name": "catches!",
-          "ordinal": 14,
-          "type_info": "Text"
-        },
-        {
-          "name": "hauls!",
-          "ordinal": 15,
-          "type_info": "Text"
-        },
-        {
-          "name": "delivery_point_catches!",
-          "ordinal": 16,
-          "type_info": "Text"
-        },
-        {
-          "name": "vessel_events!",
-          "ordinal": 17,
-          "type_info": "Text"
-        },
-        {
-          "name": "gear_ids!: Vec<Gear>",
-          "ordinal": 18,
-          "type_info": "Int4Array"
-        }
-      ],
-      "nullable": [
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        null,
-        null,
-        null,
-        null,
-        true
-      ],
-      "parameters": {
-        "Left": [
-          "Int8"
-        ]
-      }
-    },
-    "query": "\nSELECT\n    t.trip_id AS \"trip_id!\",\n    t.trip_assembler_id AS \"trip_assembler_id!: TripAssemblerId\",\n    t.fiskeridir_vessel_id AS \"fiskeridir_vessel_id!\",\n    t.period AS \"period!\",\n    t.period_precision,\n    t.start_port_id,\n    t.end_port_id,\n    t.num_deliveries AS \"num_deliveries!\",\n    t.landing_coverage AS \"landing_coverage!\",\n    t.total_living_weight AS \"total_living_weight!\",\n    t.total_gross_weight AS \"total_gross_weight!\",\n    t.total_product_weight AS \"total_product_weight!\",\n    t.delivery_points AS \"delivery_points!\",\n    t.latest_landing_timestamp,\n    t.catches::TEXT AS \"catches!\",\n    t.hauls::TEXT AS \"hauls!\",\n    t.delivery_point_catches::TEXT AS \"delivery_point_catches!\",\n    t.vessel_events::TEXT AS \"vessel_events!\",\n    t.gear_ids AS \"gear_ids!: Vec<Gear>\"\nFROM\n    trips_view AS t\nWHERE\n    t.fiskeridir_vessel_id = $1\n            "
   },
   "47d0f250215c48234d76eb068c7b76971da04b5f084b11995819107b6357d980": {
     "describe": {
@@ -1485,137 +1789,6 @@
     },
     "query": "\nSELECT\n    trip_id,\n    period,\n    period_precision,\n    landing_coverage,\n    trip_assembler_id AS \"trip_assembler_id!: TripAssemblerId\"\nFROM\n    trips\nWHERE\n    fiskeridir_vessel_id = $1\n    AND trip_assembler_id = $2\n    AND trip_precision_status_id = $3\n            "
   },
-  "4f77e5eecb8c659ecaeeee26a824ef797c92ac91fc83f1ab1ac40c7f9c15047a": {
-    "describe": {
-      "columns": [
-        {
-          "name": "trip_id!",
-          "ordinal": 0,
-          "type_info": "Int8"
-        },
-        {
-          "name": "trip_assembler_id!: TripAssemblerId",
-          "ordinal": 1,
-          "type_info": "Int4"
-        },
-        {
-          "name": "fiskeridir_vessel_id!",
-          "ordinal": 2,
-          "type_info": "Int8"
-        },
-        {
-          "name": "period!",
-          "ordinal": 3,
-          "type_info": "TstzRange"
-        },
-        {
-          "name": "period_precision",
-          "ordinal": 4,
-          "type_info": "TstzRange"
-        },
-        {
-          "name": "start_port_id",
-          "ordinal": 5,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "end_port_id",
-          "ordinal": 6,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "num_deliveries!",
-          "ordinal": 7,
-          "type_info": "Int8"
-        },
-        {
-          "name": "landing_coverage!",
-          "ordinal": 8,
-          "type_info": "TstzRange"
-        },
-        {
-          "name": "total_living_weight!",
-          "ordinal": 9,
-          "type_info": "Numeric"
-        },
-        {
-          "name": "total_gross_weight!",
-          "ordinal": 10,
-          "type_info": "Numeric"
-        },
-        {
-          "name": "total_product_weight!",
-          "ordinal": 11,
-          "type_info": "Numeric"
-        },
-        {
-          "name": "delivery_points!",
-          "ordinal": 12,
-          "type_info": "VarcharArray"
-        },
-        {
-          "name": "latest_landing_timestamp",
-          "ordinal": 13,
-          "type_info": "Timestamptz"
-        },
-        {
-          "name": "catches!",
-          "ordinal": 14,
-          "type_info": "Text"
-        },
-        {
-          "name": "hauls!",
-          "ordinal": 15,
-          "type_info": "Text"
-        },
-        {
-          "name": "delivery_point_catches!",
-          "ordinal": 16,
-          "type_info": "Text"
-        },
-        {
-          "name": "vessel_events!",
-          "ordinal": 17,
-          "type_info": "Text"
-        },
-        {
-          "name": "gear_ids!: Vec<Gear>",
-          "ordinal": 18,
-          "type_info": "Int4Array"
-        }
-      ],
-      "nullable": [
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        null,
-        null,
-        null,
-        null,
-        true
-      ],
-      "parameters": {
-        "Left": [
-          "Int8",
-          "Int4",
-          "Int8",
-          "Int8"
-        ]
-      }
-    },
-    "query": "\nSELECT\n    t.trip_id AS \"trip_id!\",\n    t.trip_assembler_id AS \"trip_assembler_id!: TripAssemblerId\",\n    t.fiskeridir_vessel_id AS \"fiskeridir_vessel_id!\",\n    t.period AS \"period!\",\n    t.period_precision,\n    t.start_port_id,\n    t.end_port_id,\n    t.num_deliveries AS \"num_deliveries!\",\n    t.landing_coverage AS \"landing_coverage!\",\n    t.total_living_weight AS \"total_living_weight!\",\n    t.total_gross_weight AS \"total_gross_weight!\",\n    t.total_product_weight AS \"total_product_weight!\",\n    t.delivery_points AS \"delivery_points!\",\n    t.latest_landing_timestamp,\n    t.catches::TEXT AS \"catches!\",\n    t.hauls::TEXT AS \"hauls!\",\n    t.delivery_point_catches::TEXT AS \"delivery_point_catches!\",\n    t.vessel_events::TEXT AS \"vessel_events!\",\n    t.gear_ids AS \"gear_ids!: Vec<Gear>\"\nFROM\n    trips_view AS t\nWHERE\n    t.fiskeridir_vessel_id = $1\nORDER BY\n    CASE\n        WHEN $2 = 1 THEN t.period\n    END ASC,\n    CASE\n        WHEN $2 = 2 THEN t.period\n    END DESC\nOFFSET\n    $3\nLIMIT\n    $4\n            "
-  },
   "5101d466d5c5425c8f98f48cf5b82ff3497c642b369dcbf2ba25e69ead8ca917": {
     "describe": {
       "columns": [
@@ -1633,6 +1806,52 @@
       }
     },
     "query": "\nSELECT\n    update_database_views ();\n            "
+  },
+  "545e65186937b1236b4461b8fa0b1dfc1c8ccdd6e3cbb204622a08c6caeeccf2": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "UuidArray",
+          "UuidArray",
+          "TextArray",
+          "TextArray",
+          "Int4Array",
+          "Int8Array",
+          "TextArray",
+          "TextArray",
+          "TextArray",
+          "TextArray",
+          "Int4Array",
+          "TextArray",
+          "TextArray",
+          "Int4Array",
+          "TimestamptzArray",
+          "TimestamptzArray",
+          "TimestamptzArray",
+          "TimestamptzArray",
+          "TimestamptzArray",
+          "TextArray",
+          "TextArray",
+          {
+            "Custom": {
+              "kind": {
+                "Array": {
+                  "Custom": {
+                    "kind": "Simple",
+                    "name": "geometry"
+                  }
+                }
+              },
+              "name": "_geometry"
+            }
+          },
+          "Int4Array"
+        ]
+      }
+    },
+    "query": "\nINSERT INTO\n    fishing_facilities AS f (\n        tool_id,\n        barentswatch_vessel_id,\n        fiskeridir_vessel_id,\n        vessel_name,\n        call_sign,\n        mmsi,\n        imo,\n        reg_num,\n        sbr_reg_num,\n        contact_phone,\n        contact_email,\n        tool_type,\n        tool_type_name,\n        tool_color,\n        tool_count,\n        setup_timestamp,\n        setup_processed_timestamp,\n        removed_timestamp,\n        removed_processed_timestamp,\n        last_changed,\n        source,\n        \"comment\",\n        geometry_wkt,\n        api_source\n    )\nSELECT\n    u.tool_id,\n    u.barentswatch_vessel_id,\n    v.fiskeridir_vessel_id,\n    u.vessel_name,\n    u.call_sign,\n    u.mmsi,\n    u.imo,\n    u.reg_num,\n    u.sbr_reg_num,\n    u.contact_phone,\n    u.contact_email,\n    u.tool_type,\n    u.tool_type_name,\n    u.tool_color,\n    u.tool_count,\n    u.setup_timestamp,\n    u.setup_processed_timestamp,\n    u.removed_timestamp,\n    u.removed_processed_timestamp,\n    u.last_changed,\n    u.source,\n    u.comment,\n    u.geometry_wkt,\n    u.api_source\nFROM\n    UNNEST(\n        $1::UUID[],\n        $2::UUID[],\n        $3::TEXT[],\n        $4::TEXT[],\n        $5::INT[],\n        $6::BIGINT[],\n        $7::TEXT[],\n        $8::TEXT[],\n        $9::TEXT[],\n        $10::TEXT[],\n        $11::INT[],\n        $12::TEXT[],\n        $13::TEXT[],\n        $14::INT[],\n        $15::TIMESTAMPTZ[],\n        $16::TIMESTAMPTZ[],\n        $17::TIMESTAMPTZ[],\n        $18::TIMESTAMPTZ[],\n        $19::TIMESTAMPTZ[],\n        $20::TEXT[],\n        $21::TEXT[],\n        $22::GEOMETRY[],\n        $23::INT[]\n    ) u (\n        tool_id,\n        barentswatch_vessel_id,\n        vessel_name,\n        call_sign,\n        mmsi,\n        imo,\n        reg_num,\n        sbr_reg_num,\n        contact_phone,\n        contact_email,\n        tool_type,\n        tool_type_name,\n        tool_color,\n        tool_count,\n        setup_timestamp,\n        setup_processed_timestamp,\n        removed_timestamp,\n        removed_processed_timestamp,\n        last_changed,\n        source,\n        \"comment\",\n        geometry_wkt,\n        api_source\n    )\n    LEFT JOIN (\n        SELECT\n            call_sign,\n            MIN(fiskeridir_vessel_id) AS fiskeridir_vessel_id\n        FROM\n            fiskeridir_vessels\n        GROUP BY\n            call_sign\n        HAVING\n            COUNT(fiskeridir_vessel_id) = 1\n    ) v ON v.call_sign = u.call_sign\nON CONFLICT (tool_id) DO\nUPDATE\nSET\n    barentswatch_vessel_id = COALESCE(\n        EXCLUDED.barentswatch_vessel_id,\n        f.barentswatch_vessel_id\n    ),\n    fiskeridir_vessel_id = COALESCE(\n        EXCLUDED.fiskeridir_vessel_id,\n        f.fiskeridir_vessel_id\n    ),\n    vessel_name = COALESCE(EXCLUDED.vessel_name, f.vessel_name),\n    call_sign = COALESCE(EXCLUDED.call_sign, f.call_sign),\n    mmsi = COALESCE(EXCLUDED.mmsi, f.mmsi),\n    imo = COALESCE(EXCLUDED.imo, f.imo),\n    reg_num = COALESCE(EXCLUDED.reg_num, f.reg_num),\n    sbr_reg_num = COALESCE(EXCLUDED.sbr_reg_num, f.sbr_reg_num),\n    contact_phone = COALESCE(EXCLUDED.contact_phone, f.contact_phone),\n    contact_email = COALESCE(EXCLUDED.contact_email, f.contact_email),\n    tool_type = EXCLUDED.tool_type,\n    tool_type_name = COALESCE(EXCLUDED.tool_type_name, f.tool_type_name),\n    tool_color = COALESCE(EXCLUDED.tool_color, f.tool_color),\n    tool_count = COALESCE(EXCLUDED.tool_count, f.tool_count),\n    setup_timestamp = EXCLUDED.setup_timestamp,\n    setup_processed_timestamp = COALESCE(\n        EXCLUDED.setup_processed_timestamp,\n        f.setup_processed_timestamp\n    ),\n    removed_timestamp = COALESCE(EXCLUDED.removed_timestamp, f.removed_timestamp),\n    removed_processed_timestamp = COALESCE(\n        EXCLUDED.removed_processed_timestamp,\n        f.removed_processed_timestamp\n    ),\n    last_changed = EXCLUDED.last_changed,\n    source = COALESCE(EXCLUDED.source, f.source),\n    \"comment\" = COALESCE(EXCLUDED.comment, f.comment),\n    geometry_wkt = EXCLUDED.geometry_wkt,\n    api_source = EXCLUDED.api_source\n            "
   },
   "564ecbda445799ebe77b936a3199254676762e91b0006b9782f124f15f4b3778": {
     "describe": {
@@ -1954,52 +2173,6 @@
     },
     "query": "\nSELECT\n    mmsi,\n    imo_number,\n    call_sign,\n    NAME,\n    ship_width,\n    ship_length,\n    eta,\n    destination\nFROM\n    ais_vessels\n            "
   },
-  "6f9b2fcb29d2da527469cc4c7c78b403b6e4f052b34cfa4193d4f50a1bb17419": {
-    "describe": {
-      "columns": [],
-      "nullable": [],
-      "parameters": {
-        "Left": [
-          "UuidArray",
-          "UuidArray",
-          "TextArray",
-          "TextArray",
-          "Int4Array",
-          "Int8Array",
-          "TextArray",
-          "TextArray",
-          "TextArray",
-          "TextArray",
-          "Int4Array",
-          "TextArray",
-          "TextArray",
-          "Int4Array",
-          "TimestamptzArray",
-          "TimestamptzArray",
-          "TimestamptzArray",
-          "TimestamptzArray",
-          "TimestamptzArray",
-          "TextArray",
-          "TextArray",
-          {
-            "Custom": {
-              "kind": {
-                "Array": {
-                  "Custom": {
-                    "kind": "Simple",
-                    "name": "geometry"
-                  }
-                }
-              },
-              "name": "_geometry"
-            }
-          },
-          "Int4Array"
-        ]
-      }
-    },
-    "query": "\nINSERT INTO\n    fishing_facilities AS f (\n        tool_id,\n        barentswatch_vessel_id,\n        vessel_name,\n        call_sign,\n        mmsi,\n        imo,\n        reg_num,\n        sbr_reg_num,\n        contact_phone,\n        contact_email,\n        tool_type,\n        tool_type_name,\n        tool_color,\n        tool_count,\n        setup_timestamp,\n        setup_processed_timestamp,\n        removed_timestamp,\n        removed_processed_timestamp,\n        last_changed,\n        source,\n        \"comment\",\n        geometry_wkt,\n        api_source\n    )\nSELECT\n    *\nFROM\n    UNNEST(\n        $1::UUID[],\n        $2::UUID[],\n        $3::TEXT[],\n        $4::TEXT[],\n        $5::INT[],\n        $6::BIGINT[],\n        $7::TEXT[],\n        $8::TEXT[],\n        $9::TEXT[],\n        $10::TEXT[],\n        $11::INT[],\n        $12::TEXT[],\n        $13::TEXT[],\n        $14::INT[],\n        $15::TIMESTAMPTZ[],\n        $16::TIMESTAMPTZ[],\n        $17::TIMESTAMPTZ[],\n        $18::TIMESTAMPTZ[],\n        $19::TIMESTAMPTZ[],\n        $20::TEXT[],\n        $21::TEXT[],\n        $22::GEOMETRY[],\n        $23::INT[]\n    )\nON CONFLICT (tool_id) DO\nUPDATE\nSET\n    barentswatch_vessel_id = COALESCE(\n        EXCLUDED.barentswatch_vessel_id,\n        f.barentswatch_vessel_id\n    ),\n    vessel_name = COALESCE(EXCLUDED.vessel_name, f.vessel_name),\n    call_sign = COALESCE(EXCLUDED.call_sign, f.call_sign),\n    mmsi = COALESCE(EXCLUDED.mmsi, f.mmsi),\n    imo = COALESCE(EXCLUDED.imo, f.imo),\n    reg_num = COALESCE(EXCLUDED.reg_num, f.reg_num),\n    sbr_reg_num = COALESCE(EXCLUDED.sbr_reg_num, f.sbr_reg_num),\n    contact_phone = COALESCE(EXCLUDED.contact_phone, f.contact_phone),\n    contact_email = COALESCE(EXCLUDED.contact_email, f.contact_email),\n    tool_type = EXCLUDED.tool_type,\n    tool_type_name = COALESCE(EXCLUDED.tool_type_name, f.tool_type_name),\n    tool_color = COALESCE(EXCLUDED.tool_color, f.tool_color),\n    tool_count = COALESCE(EXCLUDED.tool_count, f.tool_count),\n    setup_timestamp = EXCLUDED.setup_timestamp,\n    setup_processed_timestamp = COALESCE(\n        EXCLUDED.setup_processed_timestamp,\n        f.setup_processed_timestamp\n    ),\n    removed_timestamp = COALESCE(EXCLUDED.removed_timestamp, f.removed_timestamp),\n    removed_processed_timestamp = COALESCE(\n        EXCLUDED.removed_processed_timestamp,\n        f.removed_processed_timestamp\n    ),\n    last_changed = EXCLUDED.last_changed,\n    source = COALESCE(EXCLUDED.source, f.source),\n    \"comment\" = COALESCE(EXCLUDED.comment, f.comment),\n    geometry_wkt = EXCLUDED.geometry_wkt,\n    api_source = EXCLUDED.api_source\n            "
-  },
   "731e852a607ae33927aaaa91f6bd6c4e7109590e46809605c1716efe82505628": {
     "describe": {
       "columns": [],
@@ -2100,134 +2273,6 @@
     },
     "query": "\nINSERT INTO\n    delivery_points (\n        delivery_point_id,\n        delivery_point_type_id,\n        delivery_point_source_id\n    )\nSELECT\n    *\nFROM\n    UNNEST($1::VARCHAR[], $2::INT[], $3::INT[])\nON CONFLICT (delivery_point_id) DO NOTHING\n            "
   },
-  "7ac962908cbefeb130b9864c5d5eb64f8d8c5305024718c1285a68bb589c7e4f": {
-    "describe": {
-      "columns": [
-        {
-          "name": "trip_id!",
-          "ordinal": 0,
-          "type_info": "Int8"
-        },
-        {
-          "name": "trip_assembler_id!: TripAssemblerId",
-          "ordinal": 1,
-          "type_info": "Int4"
-        },
-        {
-          "name": "fiskeridir_vessel_id!",
-          "ordinal": 2,
-          "type_info": "Int8"
-        },
-        {
-          "name": "period!",
-          "ordinal": 3,
-          "type_info": "TstzRange"
-        },
-        {
-          "name": "period_precision",
-          "ordinal": 4,
-          "type_info": "TstzRange"
-        },
-        {
-          "name": "landing_coverage!",
-          "ordinal": 5,
-          "type_info": "TstzRange"
-        },
-        {
-          "name": "start_port_id",
-          "ordinal": 6,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "end_port_id",
-          "ordinal": 7,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "num_deliveries!",
-          "ordinal": 8,
-          "type_info": "Int8"
-        },
-        {
-          "name": "total_living_weight!",
-          "ordinal": 9,
-          "type_info": "Numeric"
-        },
-        {
-          "name": "total_gross_weight!",
-          "ordinal": 10,
-          "type_info": "Numeric"
-        },
-        {
-          "name": "total_product_weight!",
-          "ordinal": 11,
-          "type_info": "Numeric"
-        },
-        {
-          "name": "delivery_points!",
-          "ordinal": 12,
-          "type_info": "VarcharArray"
-        },
-        {
-          "name": "latest_landing_timestamp",
-          "ordinal": 13,
-          "type_info": "Timestamptz"
-        },
-        {
-          "name": "catches!",
-          "ordinal": 14,
-          "type_info": "Text"
-        },
-        {
-          "name": "hauls!",
-          "ordinal": 15,
-          "type_info": "Text"
-        },
-        {
-          "name": "delivery_point_catches!",
-          "ordinal": 16,
-          "type_info": "Text"
-        },
-        {
-          "name": "vessel_events!",
-          "ordinal": 17,
-          "type_info": "Text"
-        },
-        {
-          "name": "gear_ids!: Vec<Gear>",
-          "ordinal": 18,
-          "type_info": "Int4Array"
-        }
-      ],
-      "nullable": [
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        null,
-        null,
-        null,
-        null,
-        true
-      ],
-      "parameters": {
-        "Left": [
-          "Int8Array"
-        ]
-      }
-    },
-    "query": "\nSELECT\n    t.trip_id AS \"trip_id!\",\n    t.trip_assembler_id AS \"trip_assembler_id!: TripAssemblerId\",\n    t.fiskeridir_vessel_id AS \"fiskeridir_vessel_id!\",\n    t.period AS \"period!\",\n    t.period_precision,\n    t.landing_coverage AS \"landing_coverage!\",\n    t.start_port_id,\n    t.end_port_id,\n    t.num_deliveries AS \"num_deliveries!\",\n    t.total_living_weight AS \"total_living_weight!\",\n    t.total_gross_weight AS \"total_gross_weight!\",\n    t.total_product_weight AS \"total_product_weight!\",\n    t.delivery_points AS \"delivery_points!\",\n    t.latest_landing_timestamp,\n    t.catches::TEXT AS \"catches!\",\n    t.hauls::TEXT AS \"hauls!\",\n    t.delivery_point_catches::TEXT AS \"delivery_point_catches!\",\n    t.vessel_events::TEXT AS \"vessel_events!\",\n    t.gear_ids AS \"gear_ids!: Vec<Gear>\"\nFROM\n    trips_view AS t\nWHERE\n    $1::BIGINT[] <@ (t.haul_ids)\n            "
-  },
   "7ef092ec17e3f3249255df9d1911ebef26ae67b364c2e2fc1b05e584317044a7": {
     "describe": {
       "columns": [],
@@ -2277,6 +2322,135 @@
     },
     "query": "\nINSERT INTO\n    ers_dca_other (\n        message_id,\n        message_number,\n        message_timestamp,\n        ers_message_type_id,\n        message_year,\n        relevant_year,\n        sequence_number,\n        message_version,\n        ers_activity_id,\n        quota_type_id,\n        port_id,\n        fiskeridir_vessel_id,\n        vessel_building_year,\n        vessel_call_sign,\n        vessel_call_sign_ers,\n        vessel_engine_building_year,\n        vessel_engine_power,\n        vessel_gross_tonnage_1969,\n        vessel_gross_tonnage_other,\n        vessel_county,\n        vessel_county_code,\n        vessel_greatest_length,\n        vessel_identification,\n        vessel_length,\n        vessel_length_group,\n        vessel_length_group_code,\n        vessel_material_code,\n        vessel_municipality,\n        vessel_municipality_code,\n        vessel_name,\n        vessel_name_ers,\n        vessel_nationality_code,\n        fiskeridir_vessel_nationality_group_id,\n        vessel_rebuilding_year,\n        vessel_registration_id,\n        vessel_registration_id_ers,\n        vessel_valid_until,\n        vessel_width\n    )\nSELECT\n    *\nFROM\n    UNNEST(\n        $1::BIGINT[],\n        $2::INT[],\n        $3::timestamptz[],\n        $4::VARCHAR[],\n        $5::INT[],\n        $6::INT[],\n        $7::INT[],\n        $8::INT[],\n        $9::VARCHAR[],\n        $10::INT[],\n        $11::VARCHAR[],\n        $12::INT[],\n        $13::INT[],\n        $14::VARCHAR[],\n        $15::VARCHAR[],\n        $16::INT[],\n        $17::INT[],\n        $18::INT[],\n        $19::INT[],\n        $20::VARCHAR[],\n        $21::INT[],\n        $22::DECIMAL[],\n        $23::VARCHAR[],\n        $24::DECIMAL[],\n        $25::VARCHAR[],\n        $26::INT[],\n        $27::VARCHAR[],\n        $28::VARCHAR[],\n        $29::INT[],\n        $30::VARCHAR[],\n        $31::VARCHAR[],\n        $32::VARCHAR[],\n        $33::INT[],\n        $34::INT[],\n        $35::VARCHAR[],\n        $36::VARCHAR[],\n        $37::date[],\n        $38::DECIMAL[]\n    )\nON CONFLICT (message_id) DO NOTHING\n            "
   },
+  "80f8284bc3b129649b07a2d7bbcc474adcb5d1c547ea89a74005652cd9ffce8d": {
+    "describe": {
+      "columns": [
+        {
+          "name": "trip_id",
+          "ordinal": 0,
+          "type_info": "Int8"
+        },
+        {
+          "name": "fiskeridir_vessel_id",
+          "ordinal": 1,
+          "type_info": "Int8"
+        },
+        {
+          "name": "period",
+          "ordinal": 2,
+          "type_info": "TstzRange"
+        },
+        {
+          "name": "period_precision",
+          "ordinal": 3,
+          "type_info": "TstzRange"
+        },
+        {
+          "name": "landing_coverage",
+          "ordinal": 4,
+          "type_info": "TstzRange"
+        },
+        {
+          "name": "trip_assembler_id!: TripAssemblerId",
+          "ordinal": 5,
+          "type_info": "Int4"
+        },
+        {
+          "name": "start_port_id",
+          "ordinal": 6,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "end_port_id",
+          "ordinal": 7,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "total_gross_weight!",
+          "ordinal": 8,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "total_living_weight!",
+          "ordinal": 9,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "total_product_weight!",
+          "ordinal": 10,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "num_deliveries!",
+          "ordinal": 11,
+          "type_info": "Int8"
+        },
+        {
+          "name": "gear_ids!: Vec<Gear>",
+          "ordinal": 12,
+          "type_info": "Int4Array"
+        },
+        {
+          "name": "delivery_points!",
+          "ordinal": 13,
+          "type_info": "VarcharArray"
+        },
+        {
+          "name": "latest_landing_timestamp",
+          "ordinal": 14,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "vessel_events!",
+          "ordinal": 15,
+          "type_info": "Text"
+        },
+        {
+          "name": "hauls!",
+          "ordinal": 16,
+          "type_info": "Text"
+        },
+        {
+          "name": "fishing_facilities!",
+          "ordinal": 17,
+          "type_info": "Text"
+        },
+        {
+          "name": "catches!",
+          "ordinal": 18,
+          "type_info": "Text"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        true,
+        false,
+        false,
+        true,
+        true,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "parameters": {
+        "Left": [
+          "Int8",
+          "Bool"
+        ]
+      }
+    },
+    "query": "\nWITH\n    trip_ids AS (\n        SELECT\n            t.trip_id\n        FROM\n            hauls h\n            RIGHT JOIN vessel_events v ON v.vessel_event_id = h.vessel_event_id\n            RIGHT JOIN trips t ON t.trip_id = v.trip_id\n        WHERE\n            haul_id = $1\n    ),\n    everything AS (\n        SELECT\n            t.trip_id AS t_trip_id,\n            t.fiskeridir_vessel_id AS t_fiskeridir_vessel_id,\n            t.period AS t_period,\n            t.period_precision AS t_period_precision,\n            t.landing_coverage AS t_landing_coverage,\n            t.trip_assembler_id AS t_trip_assembler_id,\n            t.start_port_id AS t_start_port_id,\n            t.end_port_id AS t_end_port_id,\n            v.vessel_event_id AS v_vessel_event_id,\n            v.fiskeridir_vessel_id AS v_fiskeridir_vessel_id,\n            v.timestamp AS v_timestamp,\n            v.vessel_event_type_id AS v_vessel_event_type_id,\n            l.landing_id AS l_landing_id,\n            l.landing_timestamp AS l_landing_timestamp,\n            l.gear_id AS l_gear_id,\n            l.product_quality_id AS l_product_quality_id,\n            l.delivery_point_id AS l_delivery_point_id,\n            le.gross_weight AS le_gross_weight,\n            le.living_weight AS le_living_weight,\n            le.product_weight AS le_product_weight,\n            le.species_fiskeridir_id AS le_species_fiskeridir_id,\n            h.haul_id AS h_haul_id,\n            h.ers_activity_id AS h_ers_activity_id,\n            h.duration AS h_duration,\n            h.haul_distance AS h_haul_distance,\n            h.catch_location_start AS h_catch_location_start,\n            h.ocean_depth_end AS h_ocean_depth_end,\n            h.ocean_depth_start AS h_ocean_depth_start,\n            h.quota_type_id AS h_quota_type_id,\n            h.start_latitude AS h_start_latitude,\n            h.start_longitude AS h_start_longitude,\n            h.start_timestamp AS h_start_timestamp,\n            h.stop_timestamp AS h_stop_timestamp,\n            h.stop_latitude AS h_stop_latitude,\n            h.stop_longitude AS h_stop_longitude,\n            h.gear_id AS h_gear_id,\n            h.gear_group_id AS h_gear_group_id,\n            h.fiskeridir_vessel_id AS h_fiskeridir_vessel_id,\n            h.vessel_call_sign AS h_vessel_call_sign,\n            h.vessel_call_sign_ers AS h_vessel_call_sign_ers,\n            h.vessel_length AS h_vessel_length,\n            h.vessel_length_group AS h_vessel_length_group,\n            h.vessel_name AS h_vessel_name,\n            h.vessel_name_ers AS h_vessel_name_ers,\n            h.catches AS h_catches,\n            h.whale_catches AS h_whale_catches,\n            f.tool_id AS f_tool_id,\n            f.barentswatch_vessel_id AS f_barentswatch_vessel_id,\n            f.fiskeridir_vessel_id AS f_fiskeridir_vessel_id,\n            f.vessel_name AS f_vessel_name,\n            f.call_sign AS f_call_sign,\n            f.mmsi AS f_mmsi,\n            f.imo AS f_imo,\n            f.reg_num AS f_reg_num,\n            f.sbr_reg_num AS f_sbr_reg_num,\n            f.contact_phone AS f_contact_phone,\n            f.contact_email AS f_contact_email,\n            f.tool_type AS f_tool_type,\n            f.tool_type_name AS f_tool_type_name,\n            f.tool_color AS f_tool_color,\n            f.tool_count AS f_tool_count,\n            f.setup_timestamp AS f_setup_timestamp,\n            f.setup_processed_timestamp AS f_setup_processed_timestamp,\n            f.removed_timestamp AS f_removed_timestamp,\n            f.removed_processed_timestamp AS f_removed_processed_timestamp,\n            f.last_changed AS f_last_changed,\n            f.source AS f_source,\n            f.comment AS f_comment,\n            f.geometry_wkt AS f_geometry_wkt,\n            f.api_source AS f_api_source\n        FROM\n            trips t\n            INNER JOIN trip_ids ti ON t.trip_id = ti.trip_id\n            LEFT JOIN vessel_events v ON t.trip_id = v.trip_id\n            LEFT JOIN landings l ON l.vessel_event_id = v.vessel_event_id\n            LEFT JOIN landing_entries le ON l.landing_id = le.landing_id\n            LEFT JOIN hauls h ON h.vessel_event_id = v.vessel_event_id\n            LEFT JOIN fishing_facilities f ON $2\n            AND f.fiskeridir_vessel_id = t.fiskeridir_vessel_id\n            AND f.period && t.period\n    )\nSELECT\n    q1.t_trip_id AS trip_id,\n    t_fiskeridir_vessel_id AS fiskeridir_vessel_id,\n    t_period AS period,\n    t_period_precision AS period_precision,\n    t_landing_coverage AS landing_coverage,\n    t_trip_assembler_id AS \"trip_assembler_id!: TripAssemblerId\",\n    t_start_port_id AS start_port_id,\n    t_end_port_id AS end_port_id,\n    total_gross_weight AS \"total_gross_weight!\",\n    total_living_weight AS \"total_living_weight!\",\n    total_product_weight AS \"total_product_weight!\",\n    num_deliveries AS \"num_deliveries!\",\n    gear_ids AS \"gear_ids!: Vec<Gear>\",\n    delivery_points AS \"delivery_points!\",\n    latest_landing_timestamp,\n    vessel_events::TEXT AS \"vessel_events!\",\n    hauls::TEXT AS \"hauls!\",\n    fishing_facilities::TEXT AS \"fishing_facilities!\",\n    COALESCE(catches, '[]')::TEXT AS \"catches!\"\nFROM\n    (\n        SELECT\n            t_trip_id,\n            t_fiskeridir_vessel_id,\n            t_period,\n            t_period_precision,\n            t_landing_coverage,\n            t_trip_assembler_id,\n            t_start_port_id,\n            t_end_port_id,\n            COALESCE(SUM(le_gross_weight), 0) AS total_gross_weight,\n            COALESCE(SUM(le_living_weight), 0) AS total_living_weight,\n            COALESCE(SUM(le_product_weight), 0) AS total_product_weight,\n            COUNT(DISTINCT l_landing_id) AS num_deliveries,\n            ARRAY_REMOVE(ARRAY_AGG(DISTINCT l_gear_id), NULL) AS gear_ids,\n            ARRAY_REMOVE(ARRAY_AGG(DISTINCT l_delivery_point_id), NULL) AS delivery_points,\n            MAX(l_landing_timestamp) AS latest_landing_timestamp,\n            COALESCE(\n                JSONB_AGG(\n                    JSONB_BUILD_OBJECT(\n                        'vessel_event_id',\n                        v_vessel_event_id,\n                        'fiskeridir_vessel_id',\n                        v_fiskeridir_vessel_id,\n                        'timestamp',\n                        v_timestamp,\n                        'vessel_event_type_id',\n                        v_vessel_event_type_id\n                    )\n                    ORDER BY\n                        v_timestamp\n                ),\n                '[]'\n            ) AS vessel_events,\n            COALESCE(\n                JSONB_AGG(\n                    JSONB_BUILD_OBJECT(\n                        'haul_id',\n                        h_haul_id,\n                        'ers_activity_id',\n                        h_ers_activity_id,\n                        'duration',\n                        h_duration,\n                        'haul_distance',\n                        h_haul_distance,\n                        'catch_location_start',\n                        h_catch_location_start,\n                        'ocean_depth_end',\n                        h_ocean_depth_end,\n                        'ocean_depth_start',\n                        h_ocean_depth_start,\n                        'quota_type_id',\n                        h_quota_type_id,\n                        'start_latitude',\n                        h_start_latitude,\n                        'start_longitude',\n                        h_start_longitude,\n                        'start_timestamp',\n                        h_start_timestamp,\n                        'stop_timestamp',\n                        h_stop_timestamp,\n                        'stop_latitude',\n                        h_stop_latitude,\n                        'stop_longitude',\n                        h_stop_longitude,\n                        'gear_id',\n                        h_gear_id,\n                        'gear_group_id',\n                        h_gear_group_id,\n                        'fiskeridir_vessel_id',\n                        h_fiskeridir_vessel_id,\n                        'vessel_call_sign',\n                        h_vessel_call_sign,\n                        'vessel_call_sign_ers',\n                        h_vessel_call_sign_ers,\n                        'vessel_length',\n                        h_vessel_length,\n                        'vessel_length_group',\n                        h_vessel_length_group,\n                        'vessel_name',\n                        h_vessel_name,\n                        'vessel_name_ers',\n                        h_vessel_name_ers,\n                        'catches',\n                        h_catches,\n                        'whale_catches',\n                        h_whale_catches\n                    )\n                ) FILTER (\n                    WHERE\n                        h_haul_id IS NOT NULL\n                ),\n                '[]'\n            ) AS hauls,\n            COALESCE(\n                JSONB_AGG(\n                    DISTINCT JSONB_BUILD_OBJECT(\n                        'tool_id',\n                        f_tool_id,\n                        'barentswatch_vessel_id',\n                        f_barentswatch_vessel_id,\n                        'fiskeridir_vessel_id',\n                        f_fiskeridir_vessel_id,\n                        'vessel_name',\n                        f_vessel_name,\n                        'call_sign',\n                        f_call_sign,\n                        'mmsi',\n                        f_mmsi,\n                        'imo',\n                        f_imo,\n                        'reg_num',\n                        f_reg_num,\n                        'sbr_reg_num',\n                        f_sbr_reg_num,\n                        'contact_phone',\n                        f_contact_phone,\n                        'contact_email',\n                        f_contact_email,\n                        'tool_type',\n                        f_tool_type,\n                        'tool_type_name',\n                        f_tool_type_name,\n                        'tool_color',\n                        f_tool_color,\n                        'tool_count',\n                        f_tool_count,\n                        'setup_timestamp',\n                        f_setup_timestamp,\n                        'setup_processed_timestamp',\n                        f_setup_processed_timestamp,\n                        'removed_timestamp',\n                        f_removed_timestamp,\n                        'removed_processed_timestamp',\n                        f_removed_processed_timestamp,\n                        'last_changed',\n                        f_last_changed,\n                        'source',\n                        f_source,\n                        'comment',\n                        f_comment,\n                        'geometry_wkt',\n                        ST_ASTEXT (f_geometry_wkt),\n                        'api_source',\n                        f_api_source\n                    )\n                ) FILTER (\n                    WHERE\n                        f_tool_id IS NOT NULL\n                ),\n                '[]'\n            ) AS fishing_facilities\n        FROM\n            everything\n        GROUP BY\n            t_trip_id,\n            t_fiskeridir_vessel_id,\n            t_period,\n            t_period_precision,\n            t_landing_coverage,\n            t_trip_assembler_id,\n            t_start_port_id,\n            t_end_port_id\n    ) q1\n    LEFT JOIN (\n        SELECT\n            qi.t_trip_id,\n            JSONB_AGG(qi.catches) AS catches\n        FROM\n            (\n                SELECT\n                    t_trip_id,\n                    JSONB_BUILD_OBJECT(\n                        'living_weight',\n                        SUM(le_living_weight),\n                        'gross_weight',\n                        SUM(le_gross_weight),\n                        'product_weight',\n                        SUM(le_product_weight),\n                        'species_fiskeridir_id',\n                        le_species_fiskeridir_id,\n                        'product_quality_id',\n                        l_product_quality_id\n                    ) AS catches\n                FROM\n                    everything\n                WHERE\n                    l_product_quality_id IS NOT NULL\n                    AND le_species_fiskeridir_id IS NOT NULL\n                GROUP BY\n                    t_trip_id,\n                    l_product_quality_id,\n                    le_species_fiskeridir_id\n            ) qi\n        GROUP BY\n            qi.t_trip_id\n    ) q2 ON q1.t_trip_id = q2.t_trip_id\n            "
+  },
   "81516cd3fff7220bf8a111b4411fd681852691c65e352907bbc0867c5280860f": {
     "describe": {
       "columns": [],
@@ -2313,172 +2487,6 @@
       }
     },
     "query": "\nINSERT INTO\n    catch_main_area_fao (catch_main_area_fao_id, \"name\")\nSELECT\n    *\nFROM\n    UNNEST($1::INT[], $2::VARCHAR[])\nON CONFLICT (catch_main_area_fao_id) DO NOTHING\n                "
-  },
-  "863d22ee6ef54ed34cd8b24db7f3b8151c9d0defb2b1b326eb01f1097c4cddab": {
-    "describe": {
-      "columns": [
-        {
-          "name": "tool_id",
-          "ordinal": 0,
-          "type_info": "Uuid"
-        },
-        {
-          "name": "barentswatch_vessel_id",
-          "ordinal": 1,
-          "type_info": "Uuid"
-        },
-        {
-          "name": "vessel_name",
-          "ordinal": 2,
-          "type_info": "Text"
-        },
-        {
-          "name": "call_sign",
-          "ordinal": 3,
-          "type_info": "Text"
-        },
-        {
-          "name": "mmsi",
-          "ordinal": 4,
-          "type_info": "Int4"
-        },
-        {
-          "name": "imo",
-          "ordinal": 5,
-          "type_info": "Int8"
-        },
-        {
-          "name": "reg_num",
-          "ordinal": 6,
-          "type_info": "Text"
-        },
-        {
-          "name": "sbr_reg_num",
-          "ordinal": 7,
-          "type_info": "Text"
-        },
-        {
-          "name": "contact_phone",
-          "ordinal": 8,
-          "type_info": "Text"
-        },
-        {
-          "name": "contact_email",
-          "ordinal": 9,
-          "type_info": "Text"
-        },
-        {
-          "name": "tool_type!: FishingFacilityToolType",
-          "ordinal": 10,
-          "type_info": "Int4"
-        },
-        {
-          "name": "tool_type_name",
-          "ordinal": 11,
-          "type_info": "Text"
-        },
-        {
-          "name": "tool_color",
-          "ordinal": 12,
-          "type_info": "Text"
-        },
-        {
-          "name": "tool_count",
-          "ordinal": 13,
-          "type_info": "Int4"
-        },
-        {
-          "name": "setup_timestamp!",
-          "ordinal": 14,
-          "type_info": "Timestamptz"
-        },
-        {
-          "name": "setup_processed_timestamp",
-          "ordinal": 15,
-          "type_info": "Timestamptz"
-        },
-        {
-          "name": "removed_timestamp",
-          "ordinal": 16,
-          "type_info": "Timestamptz"
-        },
-        {
-          "name": "removed_processed_timestamp",
-          "ordinal": 17,
-          "type_info": "Timestamptz"
-        },
-        {
-          "name": "last_changed!",
-          "ordinal": 18,
-          "type_info": "Timestamptz"
-        },
-        {
-          "name": "source",
-          "ordinal": 19,
-          "type_info": "Text"
-        },
-        {
-          "name": "comment",
-          "ordinal": 20,
-          "type_info": "Text"
-        },
-        {
-          "name": "geometry_wkt: _",
-          "ordinal": 21,
-          "type_info": {
-            "Custom": {
-              "kind": "Simple",
-              "name": "geometry"
-            }
-          }
-        },
-        {
-          "name": "api_source!: FishingFacilityApiSource",
-          "ordinal": 22,
-          "type_info": "Int4"
-        }
-      ],
-      "nullable": [
-        false,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        false,
-        true,
-        true,
-        true,
-        false,
-        true,
-        true,
-        true,
-        false,
-        true,
-        true,
-        false,
-        false
-      ],
-      "parameters": {
-        "Left": [
-          "Int4Array",
-          "TextArray",
-          "Int4Array",
-          "Bool",
-          "TstzRangeArray",
-          "TstzRangeArray",
-          "Int4",
-          "Int4",
-          "Int8",
-          "Int8"
-        ]
-      }
-    },
-    "query": "\nSELECT\n    tool_id,\n    barentswatch_vessel_id,\n    vessel_name,\n    call_sign,\n    mmsi,\n    imo,\n    reg_num,\n    sbr_reg_num,\n    contact_phone,\n    contact_email,\n    tool_type AS \"tool_type!: FishingFacilityToolType\",\n    tool_type_name,\n    tool_color,\n    tool_count,\n    setup_timestamp AS \"setup_timestamp!\",\n    setup_processed_timestamp,\n    removed_timestamp,\n    removed_processed_timestamp,\n    last_changed AS \"last_changed!\",\n    source,\n    \"comment\",\n    geometry_wkt AS \"geometry_wkt: _\",\n    api_source AS \"api_source!: FishingFacilityApiSource\"\nFROM\n    fishing_facilities\nWHERE\n    (\n        $1::INT[] IS NULL\n        OR mmsi = ANY ($1)\n    )\n    AND (\n        $2::TEXT[] IS NULL\n        OR call_sign = ANY ($2)\n    )\n    AND (\n        $3::INT[] IS NULL\n        OR tool_type = ANY ($3)\n    )\n    AND (\n        $4::BOOLEAN IS NULL\n        OR CASE\n            WHEN $4 THEN removed_timestamp IS NULL\n            WHEN NOT $4 THEN removed_timestamp IS NOT NULL\n        END\n    )\n    AND (\n        $5::TSTZRANGE[] IS NULL\n        OR setup_timestamp <@ ANY ($5)\n    )\n    AND (\n        $6::TSTZRANGE[] IS NULL\n        OR removed_timestamp <@ ANY ($6)\n    )\nORDER BY\n    CASE\n        WHEN $7 = 1 THEN CASE\n            WHEN $8 = 1 THEN setup_timestamp\n            WHEN $8 = 2 THEN removed_timestamp\n            WHEN $8 = 3 THEN last_changed\n        END\n    END ASC,\n    CASE\n        WHEN $7 = 2 THEN CASE\n            WHEN $8 = 1 THEN setup_timestamp\n            WHEN $8 = 2 THEN removed_timestamp\n            WHEN $8 = 3 THEN last_changed\n        END\n    END DESC\nOFFSET\n    $9\nLIMIT\n    $10\n            "
   },
   "8918bd19bb31b88fba67fde04509b22a4e74c743d14211d25020d61cd985f377": {
     "describe": {

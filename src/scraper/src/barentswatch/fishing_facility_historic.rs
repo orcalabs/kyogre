@@ -111,6 +111,7 @@ impl TryFrom<FishingFacilityHistoric> for kyogre_core::FishingFacility {
         Ok(Self {
             tool_id: v.tool_id,
             barentswatch_vessel_id: None,
+            fiskeridir_vessel_id: None,
             vessel_name: v.vessel_name,
             call_sign: v
                 .ircs

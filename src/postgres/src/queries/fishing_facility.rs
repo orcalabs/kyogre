@@ -81,6 +81,7 @@ INSERT INTO
     fishing_facilities AS f (
         tool_id,
         barentswatch_vessel_id,
+        fiskeridir_vessel_id,
         vessel_name,
         call_sign,
         mmsi,
@@ -104,7 +105,30 @@ INSERT INTO
         api_source
     )
 SELECT
-    *
+    u.tool_id,
+    u.barentswatch_vessel_id,
+    v.fiskeridir_vessel_id,
+    u.vessel_name,
+    u.call_sign,
+    u.mmsi,
+    u.imo,
+    u.reg_num,
+    u.sbr_reg_num,
+    u.contact_phone,
+    u.contact_email,
+    u.tool_type,
+    u.tool_type_name,
+    u.tool_color,
+    u.tool_count,
+    u.setup_timestamp,
+    u.setup_processed_timestamp,
+    u.removed_timestamp,
+    u.removed_processed_timestamp,
+    u.last_changed,
+    u.source,
+    u.comment,
+    u.geometry_wkt,
+    u.api_source
 FROM
     UNNEST(
         $1::UUID[],
@@ -130,13 +154,52 @@ FROM
         $21::TEXT[],
         $22::GEOMETRY[],
         $23::INT[]
+    ) u (
+        tool_id,
+        barentswatch_vessel_id,
+        vessel_name,
+        call_sign,
+        mmsi,
+        imo,
+        reg_num,
+        sbr_reg_num,
+        contact_phone,
+        contact_email,
+        tool_type,
+        tool_type_name,
+        tool_color,
+        tool_count,
+        setup_timestamp,
+        setup_processed_timestamp,
+        removed_timestamp,
+        removed_processed_timestamp,
+        last_changed,
+        source,
+        "comment",
+        geometry_wkt,
+        api_source
     )
+    LEFT JOIN (
+        SELECT
+            call_sign,
+            MIN(fiskeridir_vessel_id) AS fiskeridir_vessel_id
+        FROM
+            fiskeridir_vessels
+        GROUP BY
+            call_sign
+        HAVING
+            COUNT(fiskeridir_vessel_id) = 1
+    ) v ON v.call_sign = u.call_sign
 ON CONFLICT (tool_id) DO
 UPDATE
 SET
     barentswatch_vessel_id = COALESCE(
         EXCLUDED.barentswatch_vessel_id,
         f.barentswatch_vessel_id
+    ),
+    fiskeridir_vessel_id = COALESCE(
+        EXCLUDED.fiskeridir_vessel_id,
+        f.fiskeridir_vessel_id
     ),
     vessel_name = COALESCE(EXCLUDED.vessel_name, f.vessel_name),
     call_sign = COALESCE(EXCLUDED.call_sign, f.call_sign),
@@ -209,6 +272,7 @@ SET
 SELECT
     tool_id,
     barentswatch_vessel_id,
+    fiskeridir_vessel_id,
     vessel_name,
     call_sign,
     mmsi,
@@ -238,8 +302,8 @@ WHERE
         OR mmsi = ANY ($1)
     )
     AND (
-        $2::TEXT[] IS NULL
-        OR call_sign = ANY ($2)
+        $2::BIGINT[] IS NULL
+        OR fiskeridir_vessel_id = ANY ($2)
     )
     AND (
         $3::INT[] IS NULL
@@ -281,7 +345,7 @@ LIMIT
     $10
             "#,
             args.mmsis as _,
-            args.call_signs as _,
+            args.fiskeridir_vessel_ids as _,
             args.tool_types as _,
             args.active,
             args.setup_ranges,
@@ -328,7 +392,7 @@ LIMIT
 #[derive(Debug, Clone)]
 pub struct FishingFacilitiesArgs {
     pub mmsis: Option<Vec<i32>>,
-    pub call_signs: Option<Vec<String>>,
+    pub fiskeridir_vessel_ids: Option<Vec<i64>>,
     pub tool_types: Option<Vec<i32>>,
     pub active: Option<bool>,
     pub setup_ranges: Option<Vec<PgRange<DateTime<Utc>>>>,
@@ -343,9 +407,9 @@ impl From<FishingFacilitiesQuery> for FishingFacilitiesArgs {
     fn from(v: FishingFacilitiesQuery) -> Self {
         Self {
             mmsis: v.mmsis.map(|ms| ms.into_iter().map(|m| m.0).collect()),
-            call_signs: v
-                .call_signs
-                .map(|cs| cs.into_iter().map(|c| c.into_inner()).collect()),
+            fiskeridir_vessel_ids: v
+                .fiskeridir_vessel_ids
+                .map(|fs| fs.into_iter().map(|f| f.0).collect()),
             tool_types: v
                 .tool_types
                 .map(|ts| ts.into_iter().map(|t| t as i32).collect()),

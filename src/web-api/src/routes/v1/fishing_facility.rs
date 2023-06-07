@@ -4,7 +4,7 @@ use fiskeridir_rs::CallSign;
 use futures::TryStreamExt;
 use kyogre_core::{
     FishingFacilities, FishingFacilitiesQuery, FishingFacilitiesSorting, FishingFacilityToolType,
-    Mmsi, Ordering, Pagination, Range,
+    FiskeridirVesselId, Mmsi, Ordering, Pagination, Range,
 };
 use serde::{Deserialize, Serialize};
 use tracing::{event, Level};
@@ -24,9 +24,9 @@ pub struct FishingFacilitiesParams {
     #[param(value_type = Option<String>, example = "56342,32546")]
     #[serde(deserialize_with = "deserialize_string_list", default)]
     pub mmsis: Option<Vec<Mmsi>>,
-    #[param(value_type = Option<String>, example = "LK-17,NO-10")]
+    #[param(value_type = Option<String>, example = "2000013801,2001015304")]
     #[serde(deserialize_with = "deserialize_string_list", default)]
-    pub call_signs: Option<Vec<CallSign>>,
+    pub fiskeridir_vessel_ids: Option<Vec<FiskeridirVesselId>>,
     #[param(value_type = Option<String>, example = "2,7")]
     #[serde(deserialize_with = "deserialize_string_list", default)]
     pub tool_types: Option<Vec<FishingFacilityToolType>>,
@@ -81,11 +81,13 @@ pub async fn fishing_facilities<T: Database + 'static>(
     }
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize, ToSchema)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct FishingFacility {
     pub tool_id: Uuid,
     pub barentswatch_vessel_id: Option<Uuid>,
+    #[schema(value_type = Option<i64>)]
+    pub fiskeridir_vessel_id: Option<FiskeridirVesselId>,
     pub vessel_name: Option<String>,
     #[schema(value_type = Option<String>)]
     pub call_sign: Option<CallSign>,
@@ -121,6 +123,7 @@ impl From<kyogre_core::FishingFacility> for FishingFacility {
         Self {
             tool_id: v.tool_id,
             barentswatch_vessel_id: v.barentswatch_vessel_id,
+            fiskeridir_vessel_id: v.fiskeridir_vessel_id,
             vessel_name: v.vessel_name,
             call_sign: v.call_sign,
             mmsi: v.mmsi,
@@ -185,7 +188,7 @@ impl From<FishingFacilitiesParams> for FishingFacilitiesQuery {
     fn from(v: FishingFacilitiesParams) -> Self {
         Self {
             mmsis: v.mmsis,
-            call_signs: v.call_signs,
+            fiskeridir_vessel_ids: v.fiskeridir_vessel_ids,
             tool_types: v.tool_types,
             active: v.active,
             setup_ranges: v.setup_ranges,

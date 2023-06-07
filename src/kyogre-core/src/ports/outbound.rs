@@ -48,10 +48,12 @@ pub trait WebApiPort {
         id: FiskeridirVesselId,
         pagination: Pagination<Trips>,
         ordering: Ordering,
+        read_fishing_facility: bool,
     ) -> Result<PinBoxStream<'_, TripDetailed, QueryError>, QueryError>;
     async fn detailed_trip_of_haul(
         &self,
         haul_id: &HaulId,
+        read_fishing_facility: bool,
     ) -> Result<Option<TripDetailed>, QueryError>;
     async fn hauls_matrix(&self, query: &HaulsMatrixQuery) -> Result<HaulsMatrix, QueryError>;
     fn fishing_facilities(

@@ -1,4 +1,4 @@
-use super::{HaulCatch, WhaleCatch};
+use super::{FishingFacility, HaulCatch, WhaleCatch};
 use crate::{error::PostgresError, queries::decimal_to_float};
 use bigdecimal::BigDecimal;
 use chrono::{DateTime, Utc};
@@ -48,6 +48,7 @@ pub struct TripDetailed {
     pub latest_landing_timestamp: Option<DateTime<Utc>>,
     pub catches: String,
     pub hauls: String,
+    pub fishing_facilities: String,
     pub vessel_events: String,
     pub start_port_id: Option<String>,
     pub end_port_id: Option<String>,
@@ -183,6 +184,14 @@ impl TryFrom<TripDetailed> for kyogre_core::TripDetailed {
                 .into_iter()
                 .map(kyogre_core::Haul::try_from)
                 .collect::<Result<_, _>>()?,
+            fishing_facilities: serde_json::from_str::<Vec<FishingFacility>>(
+                &value.fishing_facilities,
+            )
+            .into_report()
+            .change_context(PostgresError::DataConversion)?
+            .into_iter()
+            .map(kyogre_core::FishingFacility::try_from)
+            .collect::<Result<_, _>>()?,
             delivery: kyogre_core::Delivery {
                 delivered: serde_json::from_str::<Vec<Catch>>(&value.catches)
                     .into_report()
