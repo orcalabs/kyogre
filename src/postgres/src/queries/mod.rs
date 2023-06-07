@@ -28,7 +28,6 @@ pub mod trip;
 pub mod vessel;
 pub mod vessel_benchmarks;
 pub mod vessel_events;
-pub mod views;
 pub mod vms;
 
 pub(crate) fn float_to_decimal(value: f64) -> Result<BigDecimal, BigDecimalError> {

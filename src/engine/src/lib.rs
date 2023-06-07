@@ -6,7 +6,7 @@ use kyogre_core::*;
 use orca_statemachine::{Machine, Schedule, Step, TransitionLog};
 use scraper::Scraper;
 use serde::Deserialize;
-use states::{Pending, Scrape, Sleep, Trips, TripsPrecision, UpdateDatabaseViews};
+use states::{Pending, Scrape, Sleep, Trips, TripsPrecision};
 use strum_macros::{AsRefStr, EnumDiscriminants, EnumIter, EnumString};
 use trip_assembler::TripAssembler;
 use vessel_benchmark::*;
@@ -57,7 +57,6 @@ pub enum Engine<A, B> {
     Scrape(StepWrapper<A, B, Scrape>),
     Trips(StepWrapper<A, B, Trips>),
     TripsPrecision(StepWrapper<A, B, TripsPrecision>),
-    UpdateDatabaseViews(StepWrapper<A, B, UpdateDatabaseViews>),
     Benchmark(StepWrapper<A, B, Benchmark>),
 }
 
@@ -123,7 +122,6 @@ where
             Engine::Scrape(s) => s.run().await,
             Engine::Trips(s) => s.run().await,
             Engine::TripsPrecision(s) => s.run().await,
-            Engine::UpdateDatabaseViews(s) => s.run().await,
             Engine::Benchmark(s) => s.run().await,
         }
     }
@@ -138,7 +136,6 @@ where
             Engine::Scrape(s) => &s.inner.transition_log,
             Engine::Trips(s) => &s.inner.transition_log,
             Engine::TripsPrecision(s) => &s.inner.transition_log,
-            Engine::UpdateDatabaseViews(s) => &s.inner.transition_log,
             Engine::Benchmark(s) => &s.inner.transition_log,
         }
     }
@@ -180,8 +177,7 @@ impl Config {
             | EngineDiscriminants::Benchmark
             | EngineDiscriminants::Sleep
             | EngineDiscriminants::Trips
-            | EngineDiscriminants::TripsPrecision
-            | EngineDiscriminants::UpdateDatabaseViews => None,
+            | EngineDiscriminants::TripsPrecision => None,
             EngineDiscriminants::Scrape => Some(&self.scrape_schedule),
         }
     }

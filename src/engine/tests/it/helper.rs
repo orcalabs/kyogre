@@ -1,5 +1,5 @@
 use dockertest::{DockerTest, Source, StaticManagementPolicy};
-use engine::states::{Pending, Scrape, Sleep, Trips, TripsPrecision, UpdateDatabaseViews};
+use engine::states::{Pending, Scrape, Sleep, Trips, TripsPrecision};
 use engine::*;
 use futures::Future;
 use orca_core::{
@@ -94,18 +94,6 @@ impl TestHelper {
                     TripsPrecision::default(),
                 );
                 let engine = Engine::TripsPrecision(step);
-                let from = engine.current_state_name();
-                let engine = engine.step().await;
-                let to = engine.current_state_name();
-                (to, from)
-            }
-            EngineDiscriminants::UpdateDatabaseViews => {
-                let step = StepWrapper::initial(
-                    app.transition_log.clone(),
-                    app.shared_state,
-                    UpdateDatabaseViews::default(),
-                );
-                let engine = Engine::UpdateDatabaseViews(step);
                 let from = engine.current_state_name();
                 let engine = engine.step().await;
                 let to = engine.current_state_name();

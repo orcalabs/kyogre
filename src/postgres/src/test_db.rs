@@ -645,10 +645,7 @@ FROM
 
     pub async fn generate_ers_dca(&self, message_id: u64, vessel_id: Option<u64>) -> ErsDca {
         let ers_dca = ErsDca::test_default(message_id, vessel_id);
-
         self.db.add_ers_dca(vec![ers_dca.clone()]).await.unwrap();
-        self.db.update_database_views().await.unwrap();
-
         ers_dca
     }
 
@@ -753,7 +750,6 @@ WHERE
 
     pub async fn add_ers_dca_value(&self, val: ErsDca) {
         self.db.add_ers_dca(vec![val]).await.unwrap();
-        self.db.update_database_views().await.unwrap();
     }
 
     async fn add_ais_position(&self, pos: NewAisPosition) -> AisPosition {

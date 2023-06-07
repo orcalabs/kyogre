@@ -8,10 +8,10 @@ impl<L, T> From<StepWrapper<L, T, Pending>> for StepWrapper<L, T, Benchmark> {
     }
 }
 
-// Benchmark -> UpdateDatabaseViews
-impl<L, T> From<StepWrapper<L, T, Benchmark>> for StepWrapper<L, T, UpdateDatabaseViews> {
-    fn from(val: StepWrapper<L, T, Benchmark>) -> StepWrapper<L, T, UpdateDatabaseViews> {
-        val.inherit(UpdateDatabaseViews::default())
+// Benchmark -> Pending
+impl<L, T> From<StepWrapper<L, T, Benchmark>> for StepWrapper<L, T, Pending> {
+    fn from(val: StepWrapper<L, T, Benchmark>) -> StepWrapper<L, T, Pending> {
+        val.inherit(Pending::default())
     }
 }
 
@@ -27,9 +27,7 @@ where
         tracing::Span::current()
             .record("app.engine_state", EngineDiscriminants::Benchmark.as_ref());
         self.do_step().await;
-        Engine::UpdateDatabaseViews(StepWrapper::<A, SharedState<B>, UpdateDatabaseViews>::from(
-            self,
-        ))
+        Engine::Pending(StepWrapper::<A, SharedState<B>, Pending>::from(self))
     }
 
     #[instrument(skip_all)]

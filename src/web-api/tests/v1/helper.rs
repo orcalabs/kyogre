@@ -126,7 +126,6 @@ impl TestHelper {
             .update_trip_precisions(updates.clone())
             .await
             .unwrap();
-        self.db.db.update_database_views().await.unwrap();
 
         match updates.pop().unwrap().outcome {
             PrecisionOutcome::Success {
@@ -221,8 +220,6 @@ impl TestHelper {
                 .await
                 .unwrap(),
         };
-
-        self.db.db.update_database_views().await.unwrap();
 
         let trips = self.db.all_detailed_trips_of_vessels(vessel_id).await;
 

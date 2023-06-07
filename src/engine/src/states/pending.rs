@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use crate::{
     error::EngineError, Benchmark, Engine, EngineDiscriminants, Scrape, SharedState, Sleep,
-    StepWrapper, UpdateDatabaseViews,
+    StepWrapper,
 };
 
 use chrono::{DateTime, Utc};
@@ -81,7 +81,7 @@ where
             .transition_log
             .last_in_chain(
                 EngineDiscriminants::Scrape.as_ref(),
-                EngineDiscriminants::UpdateDatabaseViews.as_ref(),
+                EngineDiscriminants::Benchmark.as_ref(),
                 EngineDiscriminants::Pending.as_ref(),
                 20,
             )
@@ -191,11 +191,6 @@ where
             }
             EngineDiscriminants::Scrape => {
                 Engine::Scrape(StepWrapper::<A, SharedState<B>, Scrape>::from(self))
-            }
-            EngineDiscriminants::UpdateDatabaseViews => {
-                Engine::UpdateDatabaseViews(
-                    StepWrapper::<A, SharedState<B>, UpdateDatabaseViews>::from(self),
-                )
             }
             EngineDiscriminants::Benchmark => {
                 Engine::Benchmark(StepWrapper::<A, SharedState<B>, Benchmark>::from(self))
