@@ -34,7 +34,7 @@ impl Trip {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub struct TripDetailed {
     pub fiskeridir_vessel_id: FiskeridirVesselId,
     pub trip_id: TripId,
@@ -46,6 +46,7 @@ pub struct TripDetailed {
     pub gear_ids: Vec<fiskeridir_rs::Gear>,
     pub delivery_point_ids: Vec<DeliveryPointId>,
     pub hauls: Vec<Haul>,
+    pub fishing_facilities: Vec<FishingFacility>,
     pub delivery: Delivery,
     pub start_port_id: Option<String>,
     pub end_port_id: Option<String>,

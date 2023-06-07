@@ -1,8 +1,10 @@
 use chrono::{DateTime, Utc};
-use fiskeridir_rs::CallSign;
 use serde::Deserialize;
 
-use crate::{FishingFacilities, FishingFacilityToolType, Mmsi, Ordering, Pagination, Range};
+use crate::{
+    FishingFacilities, FishingFacilityToolType, FiskeridirVesselId, Mmsi, Ordering, Pagination,
+    Range,
+};
 
 #[cfg_attr(feature = "sqlx", derive(sqlx::Type))]
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
@@ -21,7 +23,7 @@ pub enum FishingFacilitiesSorting {
 #[derive(Debug, Clone)]
 pub struct FishingFacilitiesQuery {
     pub mmsis: Option<Vec<Mmsi>>,
-    pub call_signs: Option<Vec<CallSign>>,
+    pub fiskeridir_vessel_ids: Option<Vec<FiskeridirVesselId>>,
     pub tool_types: Option<Vec<FishingFacilityToolType>>,
     pub active: Option<bool>,
     pub setup_ranges: Option<Vec<Range<DateTime<Utc>>>>,

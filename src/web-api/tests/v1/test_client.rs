@@ -204,6 +204,7 @@ impl ApiClient {
         &self,
         id: FiskeridirVesselId,
         params: TripsParameters,
+        token: Option<String>,
     ) -> Response {
         let mut parameters = Vec::new();
 
@@ -219,7 +220,14 @@ impl ApiClient {
             parameters.push(("ordering".to_string(), ordering.to_string()))
         }
 
-        self.get(format!("trips/{}", id.0), &parameters, None).await
+        let headers = token.map(|t| {
+            let mut headers = HeaderMap::new();
+            headers.insert("bw-token", t.try_into().unwrap());
+            headers
+        });
+
+        self.get(format!("trips/{}", id.0), &parameters, headers)
+            .await
     }
     pub async fn get_vms_positions(&self, call_sign: &CallSign, params: VmsParameters) -> Response {
         let mut parameters = Vec::new();
@@ -248,12 +256,10 @@ impl ApiClient {
             ))
         }
 
-        if let Some(call_signs) = params.call_signs {
+        if let Some(vessel_ids) = params.fiskeridir_vessel_ids {
             parameters.push((
-                "callSigns".into(),
-                create_comma_separated_list(
-                    call_signs.into_iter().map(|c| c.into_inner()).collect(),
-                ),
+                "fiskeridirVesselIds".into(),
+                create_comma_separated_list(vessel_ids.into_iter().map(|i| i.0).collect()),
             ))
         }
 

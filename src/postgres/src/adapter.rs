@@ -283,9 +283,10 @@ impl WebApiPort for PostgresAdapter {
     async fn detailed_trip_of_haul(
         &self,
         haul_id: &HaulId,
+        read_fishing_facility: bool,
     ) -> Result<Option<TripDetailed>, QueryError> {
         convert_optional(
-            self.detailed_trip_of_haul_impl(haul_id)
+            self.detailed_trip_of_haul_impl(haul_id, read_fishing_facility)
                 .await
                 .change_context(QueryError)?,
         )
@@ -296,9 +297,10 @@ impl WebApiPort for PostgresAdapter {
         id: FiskeridirVesselId,
         pagination: Pagination<Trips>,
         ordering: Ordering,
+        read_fishing_facility: bool,
     ) -> Result<PinBoxStream<'_, TripDetailed, QueryError>, QueryError> {
         let stream = self
-            .detailed_trips_of_vessel_impl(id, pagination, ordering)
+            .detailed_trips_of_vessel_impl(id, pagination, ordering, read_fishing_facility)
             .change_context(QueryError)?;
         Ok(convert_stream(stream).boxed())
     }

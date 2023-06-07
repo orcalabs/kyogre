@@ -9,7 +9,7 @@ use serde_repr::{Deserialize_repr, Serialize_repr};
 use uuid::Uuid;
 use wkt::Wkt;
 
-use crate::Mmsi;
+use crate::{FiskeridirVesselId, Mmsi};
 
 #[derive(
     Debug, Copy, Clone, PartialEq, FromPrimitive, Eq, Hash, Ord, PartialOrd, Serialize_repr,
@@ -56,6 +56,7 @@ pub enum FishingFacilityApiSource {
 pub struct FishingFacility {
     pub tool_id: Uuid,
     pub barentswatch_vessel_id: Option<Uuid>,
+    pub fiskeridir_vessel_id: Option<FiskeridirVesselId>,
     pub vessel_name: Option<String>,
     pub call_sign: Option<CallSign>,
     pub mmsi: Option<Mmsi>,
@@ -92,6 +93,7 @@ impl FishingFacility {
         Self {
             tool_id: Uuid::new_v4(),
             barentswatch_vessel_id: Some(Uuid::new_v4()),
+            fiskeridir_vessel_id: None,
             vessel_name: Some("Sjarken".into()),
             call_sign: Some(CallSign::try_from("LK-17").unwrap()),
             mmsi: Some(Mmsi(123456)),

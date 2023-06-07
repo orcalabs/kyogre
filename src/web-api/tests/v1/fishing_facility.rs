@@ -1,7 +1,9 @@
 use super::helper::test;
 use actix_web::http::StatusCode;
 use fiskeridir_rs::CallSign;
-use kyogre_core::{FishingFacilitiesSorting, FishingFacilityToolType, Mmsi, Ordering};
+use kyogre_core::{
+    FishingFacilitiesSorting, FishingFacilityToolType, FiskeridirVesselId, Mmsi, Ordering,
+};
 use web_api::routes::v1::fishing_facility::{FishingFacilitiesParams, FishingFacility};
 
 #[tokio::test]
@@ -44,7 +46,7 @@ async fn test_fishing_facilities_returns_fishing_facilities_with_mmsis() {
         ];
 
         let mmsi1 = Mmsi(42);
-        let mmsi2 = Mmsi(42);
+        let mmsi2 = Mmsi(43);
 
         expected[0].mmsi = Some(mmsi1);
         expected[1].mmsi = Some(mmsi2);
@@ -72,8 +74,21 @@ async fn test_fishing_facilities_returns_fishing_facilities_with_mmsis() {
 }
 
 #[tokio::test]
-async fn test_fishing_facilities_returns_fishing_facilities_with_call_signs() {
+async fn test_fishing_facilities_returns_fishing_facilities_with_vessel_ids() {
     test(|helper| async move {
+        let vessel_id1 = FiskeridirVesselId(10);
+        let vessel_id2 = FiskeridirVesselId(20);
+        let call_sign1 = CallSign::new_unchecked("AAAAAA");
+        let call_sign2 = CallSign::new_unchecked("BBBBBB");
+        helper
+            .db
+            .generate_fiskeridir_vessel(vessel_id1, None, Some(call_sign1.clone()))
+            .await;
+        helper
+            .db
+            .generate_fiskeridir_vessel(vessel_id2, None, Some(call_sign2.clone()))
+            .await;
+
         helper.db.generate_fishing_facility().await;
         helper.db.generate_fishing_facility().await;
         helper.db.generate_fishing_facility().await;
@@ -83,16 +98,13 @@ async fn test_fishing_facilities_returns_fishing_facilities_with_call_signs() {
             kyogre_core::FishingFacility::test_default(),
         ];
 
-        let call_sign1 = CallSign::try_from("NN-20").unwrap();
-        let call_sign2 = CallSign::try_from("NO-10").unwrap();
-
-        expected[0].call_sign = Some(call_sign1.clone());
-        expected[1].call_sign = Some(call_sign2.clone());
+        expected[0].call_sign = Some(call_sign1);
+        expected[1].call_sign = Some(call_sign2);
 
         helper.db.add_fishing_facilities(expected.clone()).await;
 
         let params = FishingFacilitiesParams {
-            call_signs: Some(vec![call_sign1, call_sign2]),
+            fiskeridir_vessel_ids: Some(vec![vessel_id1, vessel_id2]),
             ..Default::default()
         };
 

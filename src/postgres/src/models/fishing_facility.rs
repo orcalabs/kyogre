@@ -3,16 +3,19 @@ use error_stack::{report, Report, ResultExt};
 use fiskeridir_rs::CallSign;
 use geo_types::geometry::Geometry;
 use geozero::wkb;
-use kyogre_core::{FishingFacilityApiSource, FishingFacilityToolType, Mmsi};
+use kyogre_core::{FishingFacilityApiSource, FishingFacilityToolType, FiskeridirVesselId, Mmsi};
+use serde::Deserialize;
+use sqlx::{postgres::PgTypeInfo, Postgres};
 use uuid::Uuid;
 use wkt::ToWkt;
 
 use crate::error::PostgresError;
 
-#[derive(Debug)]
+#[derive(Debug, Deserialize)]
 pub struct FishingFacility {
     pub tool_id: Uuid,
     pub barentswatch_vessel_id: Option<Uuid>,
+    pub fiskeridir_vessel_id: Option<i64>,
     pub vessel_name: Option<String>,
     pub call_sign: Option<String>,
     pub mmsi: Option<i32>,
@@ -32,9 +35,12 @@ pub struct FishingFacility {
     pub last_changed: DateTime<Utc>,
     pub source: Option<String>,
     pub comment: Option<String>,
-    pub geometry_wkt: wkb::Decode<Geometry<f64>>,
+    pub geometry_wkt: GeometryWkt,
     pub api_source: FishingFacilityApiSource,
 }
+
+#[derive(Debug)]
+pub struct GeometryWkt(pub wkt::Geometry<f64>);
 
 impl TryFrom<FishingFacility> for kyogre_core::FishingFacility {
     type Error = Report<PostgresError>;
@@ -43,6 +49,7 @@ impl TryFrom<FishingFacility> for kyogre_core::FishingFacility {
         Ok(Self {
             tool_id: v.tool_id,
             barentswatch_vessel_id: v.barentswatch_vessel_id,
+            fiskeridir_vessel_id: v.fiskeridir_vessel_id.map(FiskeridirVesselId),
             vessel_name: v.vessel_name,
             call_sign: v
                 .call_sign
@@ -66,16 +73,47 @@ impl TryFrom<FishingFacility> for kyogre_core::FishingFacility {
             last_changed: v.last_changed,
             source: v.source,
             comment: v.comment,
-            geometry_wkt: v
-                .geometry_wkt
-                .geometry
-                .ok_or_else(|| {
-                    report!(PostgresError::DataConversion)
-                        .attach_printable("expected geometry to be `Some`")
-                })?
-                .to_wkt()
-                .item,
+            geometry_wkt: v.geometry_wkt.0,
             api_source: v.api_source,
         })
+    }
+}
+
+impl PartialEq for GeometryWkt {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.to_string() == other.0.to_string()
+    }
+}
+
+impl<'de> Deserialize<'de> for GeometryWkt {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        wkt::Geometry::<f64>::deserialize(deserializer).map(Self)
+    }
+}
+
+impl sqlx::Type<Postgres> for GeometryWkt {
+    fn type_info() -> PgTypeInfo {
+        PgTypeInfo::with_name("geometry")
+    }
+}
+
+impl<'r> sqlx::Decode<'r, Postgres> for GeometryWkt {
+    fn decode(
+        value: <Postgres as sqlx::database::HasValueRef<'r>>::ValueRef,
+    ) -> Result<Self, sqlx::error::BoxDynError> {
+        let decode = <wkb::Decode<Geometry<f64>> as sqlx::Decode<Postgres>>::decode(value)?;
+        let wkt = decode
+            .geometry
+            .ok_or_else(|| {
+                report!(PostgresError::DataConversion)
+                    .attach_printable("expected wkb::Decode<_>.geometry to be `Some`")
+            })?
+            .to_wkt()
+            .item;
+
+        Ok(Self(wkt))
     }
 }

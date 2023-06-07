@@ -1,6 +1,11 @@
 use futures::TryStreamExt;
 
-use crate::{error::ApiError, response::Response, *};
+use crate::{
+    error::ApiError,
+    extractors::{BwPolicy, BwProfile},
+    response::Response,
+    *,
+};
 use actix_web::{
     web::{self, Path},
     HttpResponse,
@@ -13,7 +18,7 @@ use serde::{Deserialize, Serialize};
 use tracing::{event, Level};
 use utoipa::{IntoParams, ToSchema};
 
-use super::haul::Haul;
+use super::{fishing_facility::FishingFacility, haul::Haul};
 
 #[derive(Debug, Deserialize, IntoParams, Default)]
 #[serde(rename_all = "camelCase")]
@@ -34,9 +39,17 @@ pub struct TripsParameters {
 #[tracing::instrument(skip(db))]
 pub async fn trip_of_haul<T: Database + 'static>(
     db: web::Data<T>,
+    profile: Option<BwProfile>,
     haul_id: Path<i64>,
 ) -> Result<Response<Option<Trip>>, ApiError> {
-    db.detailed_trip_of_haul(&HaulId(haul_id.into_inner()))
+    let read_fishing_facility = profile
+        .map(|p| {
+            p.policies
+                .contains(&BwPolicy::BwReadExtendedFishingFacility)
+        })
+        .unwrap_or(false);
+
+    db.detailed_trip_of_haul(&HaulId(haul_id.into_inner()), read_fishing_facility)
         .await
         .map(|t| Response::new(t.map(Trip::from)))
         .map_err(|e| {
@@ -57,16 +70,24 @@ pub async fn trip_of_haul<T: Database + 'static>(
 #[tracing::instrument(skip(db))]
 pub async fn trips<T: Database + 'static>(
     db: web::Data<T>,
+    profile: Option<BwProfile>,
     fiskeridir_vessel_id: Path<u64>,
     params: web::Query<TripsParameters>,
 ) -> Result<HttpResponse, ApiError> {
+    let read_fishing_facility = profile
+        .map(|p| {
+            p.policies
+                .contains(&BwPolicy::BwReadExtendedFishingFacility)
+        })
+        .unwrap_or(false);
     let params = params.into_inner();
 
     to_streaming_response! {
         db.detailed_trips_of_vessel(
             FiskeridirVesselId(fiskeridir_vessel_id.into_inner() as i64),
             Pagination::<Trips>::new(params.limit, params.offset),
-            params.ordering.unwrap_or(Ordering::Asc)
+            params.ordering.unwrap_or(Ordering::Asc),
+            read_fishing_facility,
         )
         .map_err(|e| {
             event!(Level::ERROR, "failed to retrieve trips_of_vessel: {:?}", e);
@@ -96,6 +117,7 @@ pub struct Trip {
     #[schema(value_type = Vec<String>)]
     pub delivery_point_ids: Vec<fiskeridir_rs::DeliveryPointId>,
     pub hauls: Vec<Haul>,
+    pub fishing_facilities: Vec<FishingFacility>,
     pub delivery: Delivery,
     pub start_port_id: Option<String>,
     pub end_port_id: Option<String>,
@@ -128,6 +150,11 @@ impl From<kyogre_core::TripDetailed> for Trip {
             gear_ids: value.gear_ids,
             delivery_point_ids: value.delivery_point_ids,
             hauls: value.hauls.into_iter().map(Haul::from).collect(),
+            fishing_facilities: value
+                .fishing_facilities
+                .into_iter()
+                .map(FishingFacility::from)
+                .collect(),
             delivery: value.delivery,
             start_port_id: value.start_port_id,
             end_port_id: value.end_port_id,

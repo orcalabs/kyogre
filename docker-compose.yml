@@ -25,7 +25,7 @@ services:
     environment:
       - POSTGRES_PASSWORD=test123
     ports:
-      - 5433:5432
+      - 5434:5432
 
   ais-consumer:
     image: gchr.io/orcalabs/kyogre/ais-consumer
