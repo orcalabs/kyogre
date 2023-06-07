@@ -11,6 +11,7 @@ members = [
     "trip-assembler",
     "scraper",
     "vessel-benchmark",
+    "haul-distributor",
 ]
 
 [workspace.dependencies]

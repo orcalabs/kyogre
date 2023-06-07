@@ -11,6 +11,7 @@ postgres = { path = "../postgres" }
 scraper = { path = "../scraper" }
 trip-assembler = { path = "../trip-assembler" }
 vessel-benchmark = { path = "../vessel-benchmark" }
+haul-distributor = { path = "../haul-distributor" }
 
 
 orca-statemachine = { version = "0.38.0", registry = "orcalabs-orcastrator", features = [

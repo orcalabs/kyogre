@@ -78,8 +78,8 @@ LOAD postgres;
 DROP TABLE IF EXISTS hauls_matrix_cache;
 CREATE TABLE
     hauls_matrix_cache (
-        catch_location_start_matrix_index INT NOT NULL,
-        catch_location_start TEXT NOT NULL,
+        catch_location_matrix_index INT NOT NULL,
+        catch_location TEXT NOT NULL,
         matrix_month_bucket INT NOT NULL,
         vessel_length_group INT NOT NULL,
         fiskeridir_vessel_id INT,
@@ -87,7 +87,7 @@ CREATE TABLE
         species_group_id INT NOT NULL,
         start_timestamp timestamptz NOT NULL,
         stop_timestamp timestamptz NOT NULL,
-        living_weight DOUBLE NOT NULL,
+        living_weight BIGINT NOT NULL,
     );
             ",
         )
@@ -96,9 +96,24 @@ CREATE TABLE
 
         let postgres_scan_command = format!(
             "
-select catch_location_start_matrix_index, catch_location_start, matrix_month_bucket, vessel_length_group,
- fiskeridir_vessel_id ,gear_group_id, species_group_id, start_timestamp, stop_timestamp,
- living_weight from POSTGRES_SCAN('dbname={} user={} host={} password={}', 'public', 'hauls_matrix')",
+SELECT
+    catch_location_matrix_index,
+    catch_location,
+    matrix_month_bucket,
+    vessel_length_group,
+    fiskeridir_vessel_id,
+    gear_group_id,
+    species_group_id,
+    start_timestamp,
+    stop_timestamp,
+    living_weight
+FROM
+    POSTGRES_SCAN (
+        'dbname={} user={} host={} password={}',
+        'public',
+        'hauls_matrix'
+    )
+            ",
             self.postgres_settings
                 .db_name
                 .clone()
@@ -109,9 +124,24 @@ select catch_location_start_matrix_index, catch_location_start, matrix_month_buc
         );
 
         conn.execute(
-            &format!("insert into hauls_matrix_cache(catch_location_start_matrix_index, catch_location_start,
-                matrix_month_bucket, vessel_length_group, fiskeridir_vessel_id, gear_group_id, species_group_id,
-                start_timestamp, stop_timestamp, living_weight) {}", postgres_scan_command),
+            &format!(
+                "
+INSERT INTO
+    hauls_matrix_cache (
+        catch_location_matrix_index,
+        catch_location,
+        matrix_month_bucket,
+        vessel_length_group,
+        fiskeridir_vessel_id,
+        gear_group_id,
+        species_group_id,
+        start_timestamp,
+        stop_timestamp,
+        living_weight
+    ) {}
+                ",
+                postgres_scan_command
+            ),
             [],
         )
         .into_report()
@@ -155,7 +185,14 @@ select catch_location_start_matrix_index, catch_location_start, matrix_month_buc
             HaulMatrixYFeature::from(params.active_filter)
         };
         let mut sql = format!(
-            "select {}, {}, sum(living_weight) from hauls_matrix_cache ",
+            "
+SELECT
+    {},
+    {},
+    SUM(living_weight)
+FROM
+    hauls_matrix_cache
+            ",
             x_feature.column_name(),
             y_feature.column_name()
         );
@@ -259,7 +296,7 @@ fn push_where_statements(
                 filter.push_str(&format!("'{}',", c.as_ref()));
             }
             filter.pop();
-            query.push_str(&format!("catch_location_start = ANY ([{filter}]) ",));
+            query.push_str(&format!("catch_location = ANY ([{filter}]) ",));
         }
     }
     if let Some(gear_group_ids) = &params.gear_group_ids {

@@ -64,7 +64,7 @@ pub fn date_feature_matrix_index(ts: &DateTime<Utc>) -> usize {
     ts.year() as usize * 12 + ts.month0() as usize - ERS_OLDEST_DATA_MONTHS
 }
 
-#[derive(Debug, Clone)]
+#[derive(Default, Debug, Clone)]
 pub struct HaulsQuery {
     pub ranges: Option<Vec<Range<DateTime<Utc>>>>,
     pub catch_locations: Option<Vec<CatchLocationId>>,
@@ -85,6 +85,7 @@ pub struct HaulsMatrixQuery {
     pub active_filter: ActiveHaulsFilter,
 }
 
+#[derive(Debug, Clone)]
 pub struct MatrixQueryOutput {
     pub sum_living: i64,
     pub x_index: i32,
@@ -148,7 +149,7 @@ impl HaulMatrixYFeature {
             HaulMatrixYFeature::GearGroup => "gear_group_id",
             HaulMatrixYFeature::SpeciesGroup => "species_group_id",
             HaulMatrixYFeature::VesselLength => "vessel_length_group",
-            HaulMatrixYFeature::CatchLocation => "catch_location_start_matrix_index",
+            HaulMatrixYFeature::CatchLocation => "catch_location_matrix_index",
         }
     }
     fn convert_from_val(&self, val: i32) -> Result<usize, HaulMatrixIndexError> {

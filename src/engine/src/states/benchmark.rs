@@ -8,10 +8,10 @@ impl<L, T> From<StepWrapper<L, T, Pending>> for StepWrapper<L, T, Benchmark> {
     }
 }
 
-// Benchmark -> Pending
-impl<L, T> From<StepWrapper<L, T, Benchmark>> for StepWrapper<L, T, Pending> {
-    fn from(val: StepWrapper<L, T, Benchmark>) -> StepWrapper<L, T, Pending> {
-        val.inherit(Pending::default())
+// Benchmark -> HaulDistribution
+impl<L, T> From<StepWrapper<L, T, Benchmark>> for StepWrapper<L, T, HaulDistribution> {
+    fn from(val: StepWrapper<L, T, Benchmark>) -> StepWrapper<L, T, HaulDistribution> {
+        val.inherit(HaulDistribution::default())
     }
 }
 
@@ -27,7 +27,9 @@ where
         tracing::Span::current()
             .record("app.engine_state", EngineDiscriminants::Benchmark.as_ref());
         self.do_step().await;
-        Engine::Pending(StepWrapper::<A, SharedState<B>, Pending>::from(self))
+        Engine::HaulDistribution(StepWrapper::<A, SharedState<B>, HaulDistribution>::from(
+            self,
+        ))
     }
 
     #[instrument(skip_all)]

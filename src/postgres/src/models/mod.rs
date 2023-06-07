@@ -1,6 +1,7 @@
 mod ais;
 mod ais_vms;
 mod catch_area;
+mod catch_location;
 mod economic_zones;
 mod ers_dca;
 mod ers_dep;
@@ -24,6 +25,7 @@ mod vms;
 pub use ais::*;
 pub use ais_vms::*;
 pub use catch_area::*;
+pub use catch_location::*;
 pub use economic_zones::*;
 pub use ers_dca::*;
 pub use ers_dep::*;

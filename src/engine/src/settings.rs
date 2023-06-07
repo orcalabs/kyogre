@@ -1,5 +1,6 @@
 use crate::TripProcessor;
 use config::{Config, ConfigError, File, Source};
+use haul_distributor::*;
 use orca_core::{Environment, LogLevel, PsqlSettings, TelemetrySettings};
 use serde::Deserialize;
 use vessel_benchmark::*;
@@ -103,5 +104,8 @@ impl Settings {
         let vec = vec![weight_per_hour as Box<dyn VesselBenchmark>];
 
         vec
+    }
+    pub fn haul_distributors(&self) -> Vec<Box<dyn HaulDistributor>> {
+        vec![Box::<AisVms>::default()]
     }
 }

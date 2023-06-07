@@ -58,6 +58,12 @@ pub struct WhaleCatch {
     pub length: Option<i32>,
 }
 
+pub struct HaulMessage {
+    pub message_id: i64,
+    pub start_timestamp: DateTime<Utc>,
+    pub stop_timestamp: DateTime<Utc>,
+}
+
 impl TryFrom<Haul> for kyogre_core::Haul {
     type Error = Report<PostgresError>;
 
@@ -139,6 +145,18 @@ impl TryFrom<WhaleCatch> for kyogre_core::WhaleCatch {
             grenade_number: v.grenade_number,
             individual_number: v.individual_number,
             length: v.length,
+        })
+    }
+}
+
+impl TryFrom<HaulMessage> for kyogre_core::HaulMessage {
+    type Error = Report<PostgresError>;
+
+    fn try_from(v: HaulMessage) -> Result<Self, Self::Error> {
+        Ok(Self {
+            message_id: v.message_id,
+            start_timestamp: v.start_timestamp,
+            stop_timestamp: v.stop_timestamp,
         })
     }
 }

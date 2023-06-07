@@ -1,4 +1,5 @@
 use error_stack::{report, IntoReport, Report, ResultExt};
+use geo::geometry::Polygon;
 use serde::{
     de::{self, Visitor},
     Deserialize, Serialize,
@@ -7,9 +8,19 @@ use serde::{
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize)]
 pub struct CatchLocationId(String);
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct CatchLocation {
+    pub id: CatchLocationId,
+    pub polygon: Polygon,
+}
+
 impl CatchLocationId {
     pub fn new(main_area: i32, catch_area: i32) -> Self {
         Self(format!("{main_area:02}-{catch_area:02}"))
+    }
+
+    pub fn new_unchecked(id: String) -> Self {
+        Self(id)
     }
 
     pub fn new_opt(main_area: Option<i32>, catch_area: Option<i32>) -> Option<Self> {
