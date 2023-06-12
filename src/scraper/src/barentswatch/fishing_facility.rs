@@ -1,7 +1,7 @@
-use std::sync::Arc;
+use std::{cmp, sync::Arc};
 
 use async_trait::async_trait;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Duration, Utc};
 use error_stack::{IntoReport, Report, Result, ResultExt};
 use fiskeridir_rs::CallSign;
 use geozero::{geojson::GeoJson, ToGeo};
@@ -46,7 +46,7 @@ impl DataSource for FishingFacilityScraper {
                 .change_context(ScraperError)?;
 
             let query = FishingFacilityQuery {
-                since: latest_timestamp,
+                since: latest_timestamp.map(|t| cmp::max(t, Utc::now() - Duration::hours(1))),
             };
 
             let token = if let Some(ref oauth) = config.oauth {
