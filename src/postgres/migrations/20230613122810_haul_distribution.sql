@@ -177,6 +177,8 @@ INSERT INTO
 VALUES
     ('HaulDistribution');
 
+DELETE FROM engine_transitions;
+
 DELETE FROM valid_engine_transitions
 WHERE
     source = 'Benchmark'
