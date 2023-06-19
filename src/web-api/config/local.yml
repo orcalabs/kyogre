@@ -15,3 +15,5 @@ duck_db:
   max_connections: 10
   mode: MissOnError
   storage: Memory
+  refresh_schedule:
+    Periodic: 1h

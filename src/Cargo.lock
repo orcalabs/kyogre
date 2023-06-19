@@ -5424,6 +5424,7 @@ dependencies = [
  "num-traits",
  "once_cell",
  "orca-core",
+ "orca-statemachine",
  "postgres",
  "r2d2",
  "rand 0.8.5",
