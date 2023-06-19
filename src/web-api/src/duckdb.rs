@@ -1,11 +1,13 @@
 use std::path::PathBuf;
 
+use chrono::Utc;
 use duckdb::DuckdbConnectionManager;
 use error_stack::{Context, IntoReport, Result, ResultExt};
 use kyogre_core::*;
 use orca_core::PsqlSettings;
+use orca_statemachine::Schedule;
 use serde::Deserialize;
-use tracing::{event, instrument, Level};
+use tracing::{event, instrument, span, Level};
 
 use crate::Cache;
 
@@ -35,6 +37,7 @@ pub struct DuckdbSettings {
     pub max_connections: u32,
     pub mode: CacheMode,
     pub storage: CacheStorage,
+    pub refresh_schedule: Option<Schedule>,
 }
 
 impl DuckdbAdapter {
@@ -61,6 +64,35 @@ impl DuckdbAdapter {
             postgres_settings,
             cache_mode: settings.mode,
         })
+    }
+
+    pub fn spawn_refresher(&self, schedule: Schedule) {
+        let th_duckdb = self.clone();
+
+        tokio::spawn(async move {
+            let mut previous_time = None;
+            loop {
+                let now = Utc::now();
+                let duration = schedule.next_transition(now, previous_time);
+                match duration {
+                    Some(d) => {
+                        tokio::time::sleep(d).await;
+
+                        span!(Level::INFO, "refresh_duckdb");
+                        match th_duckdb.refresh_hauls_cache_impl() {
+                            Ok(_) => {
+                                event!(Level::INFO, "successfully refreshed DuckDB");
+                            }
+                            Err(e) => {
+                                event!(Level::INFO, "failed to refresh DuckDB, err: {:?}", e);
+                            }
+                        }
+                        previous_time = Some(Utc::now());
+                    }
+                    None => return,
+                };
+            }
+        });
     }
 
     #[instrument(skip_all)]

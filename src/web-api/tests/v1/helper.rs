@@ -253,6 +253,7 @@ where
             max_connections: 1,
             mode: CacheMode::ReturnError,
             storage: CacheStorage::Memory,
+            refresh_schedule: None,
         }),
     )
     .await;
