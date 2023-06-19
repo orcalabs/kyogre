@@ -14,6 +14,7 @@ pub struct Haul {
     pub duration: i32,
     pub haul_distance: Option<i32>,
     pub catch_location_start: Option<String>,
+    pub catch_locations: Option<Vec<String>>,
     pub ocean_depth_end: i32,
     pub ocean_depth_start: i32,
     pub quota_type_id: i32,
@@ -76,6 +77,11 @@ impl TryFrom<Haul> for kyogre_core::Haul {
             catch_location_start: v
                 .catch_location_start
                 .map(CatchLocationId::try_from)
+                .transpose()
+                .change_context(PostgresError::DataConversion)?,
+            catch_locations: v
+                .catch_locations
+                .map(|c| c.into_iter().map(CatchLocationId::try_from).collect())
                 .transpose()
                 .change_context(PostgresError::DataConversion)?,
             ocean_depth_end: v.ocean_depth_end,

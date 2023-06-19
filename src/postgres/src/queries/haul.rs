@@ -111,6 +111,7 @@ SELECT
     h.duration,
     h.haul_distance,
     h.catch_location_start,
+    h.catch_locations,
     h.ocean_depth_end,
     h.ocean_depth_start,
     h.quota_type_id,
