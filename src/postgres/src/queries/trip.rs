@@ -368,6 +368,13 @@ FROM
         GROUP BY
             qi.t_trip_id
     ) q2 ON q1.t_trip_id = q2.t_trip_id
+ORDER BY
+    CASE
+        WHEN $2 = 1 THEN q1.t_period
+    END ASC,
+    CASE
+        WHEN $2 = 2 THEN q1.t_period
+    END DESC
             "#,
             id.0,
             ordering as i32,
