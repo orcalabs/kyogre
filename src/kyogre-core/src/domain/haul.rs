@@ -14,6 +14,7 @@ pub struct HaulId(pub i64);
 #[remain::sorted]
 pub struct Haul {
     pub catch_location_start: Option<CatchLocationId>,
+    pub catch_locations: Option<Vec<CatchLocationId>>,
     pub catches: Vec<HaulCatch>,
     pub duration: i32,
     pub ers_activity_id: String,

@@ -62,6 +62,7 @@ struct TripHaul {
     duration: i32,
     haul_distance: Option<i32>,
     catch_location_start: Option<String>,
+    catch_locations: Option<Vec<String>>,
     ocean_depth_end: i32,
     ocean_depth_start: i32,
     quota_type_id: i32,
@@ -280,6 +281,11 @@ impl TryFrom<TripHaul> for kyogre_core::Haul {
             catch_location_start: v
                 .catch_location_start
                 .map(CatchLocationId::try_from)
+                .transpose()
+                .change_context(PostgresError::DataConversion)?,
+            catch_locations: v
+                .catch_locations
+                .map(|c| c.into_iter().map(CatchLocationId::try_from).collect())
                 .transpose()
                 .change_context(PostgresError::DataConversion)?,
             ocean_depth_end: v.ocean_depth_end,

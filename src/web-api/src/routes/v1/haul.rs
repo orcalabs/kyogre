@@ -161,6 +161,8 @@ pub struct Haul {
     pub haul_distance: Option<i32>,
     #[schema(value_type = Option<String>, example = "05-24")]
     pub catch_location_start: Option<CatchLocationId>,
+    #[schema(value_type = Option<Vec<String>>, example = "[05-24,01-01]")]
+    pub catch_locations: Option<Vec<CatchLocationId>>,
     pub ocean_depth_end: i32,
     pub ocean_depth_start: i32,
     pub quota_type_id: i32,
@@ -239,6 +241,7 @@ impl From<kyogre_core::Haul> for Haul {
             duration: v.duration,
             haul_distance: v.haul_distance,
             catch_location_start: v.catch_location_start,
+            catch_locations: v.catch_locations,
             ocean_depth_end: v.ocean_depth_end,
             ocean_depth_start: v.ocean_depth_start,
             quota_type_id: v.quota_type_id,
