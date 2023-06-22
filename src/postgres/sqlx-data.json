@@ -1439,6 +1439,44 @@
     },
     "query": "\nSELECT\n    tool_id,\n    barentswatch_vessel_id,\n    fiskeridir_vessel_id,\n    vessel_name,\n    call_sign,\n    mmsi,\n    imo,\n    reg_num,\n    sbr_reg_num,\n    contact_phone,\n    contact_email,\n    tool_type AS \"tool_type!: FishingFacilityToolType\",\n    tool_type_name,\n    tool_color,\n    tool_count,\n    setup_timestamp AS \"setup_timestamp!\",\n    setup_processed_timestamp,\n    removed_timestamp,\n    removed_processed_timestamp,\n    last_changed AS \"last_changed!\",\n    source,\n    \"comment\",\n    geometry_wkt AS \"geometry_wkt: _\",\n    api_source AS \"api_source!: FishingFacilityApiSource\"\nFROM\n    fishing_facilities\nWHERE\n    (\n        $1::INT[] IS NULL\n        OR mmsi = ANY ($1)\n    )\n    AND (\n        $2::BIGINT[] IS NULL\n        OR fiskeridir_vessel_id = ANY ($2)\n    )\n    AND (\n        $3::INT[] IS NULL\n        OR tool_type = ANY ($3)\n    )\n    AND (\n        $4::BOOLEAN IS NULL\n        OR CASE\n            WHEN $4 THEN removed_timestamp IS NULL\n            WHEN NOT $4 THEN removed_timestamp IS NOT NULL\n        END\n    )\n    AND (\n        $5::TSTZRANGE[] IS NULL\n        OR setup_timestamp <@ ANY ($5)\n    )\n    AND (\n        $6::TSTZRANGE[] IS NULL\n        OR removed_timestamp <@ ANY ($6)\n    )\nORDER BY\n    CASE\n        WHEN $7 = 1 THEN CASE\n            WHEN $8 = 1 THEN setup_timestamp\n            WHEN $8 = 2 THEN removed_timestamp\n            WHEN $8 = 3 THEN last_changed\n        END\n    END ASC,\n    CASE\n        WHEN $7 = 2 THEN CASE\n            WHEN $8 = 1 THEN setup_timestamp\n            WHEN $8 = 2 THEN removed_timestamp\n            WHEN $8 = 3 THEN last_changed\n        END\n    END DESC\nOFFSET\n    $9\nLIMIT\n    $10\n            "
   },
+  "3ef539057fd7a4309e761701ac68c57cace24527174a2a934780c51703113d62": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Uuid"
+        ]
+      }
+    },
+    "query": "\nDELETE FROM user_follows\nWHERE\n    barentswatch_user_id = $1\n            "
+  },
+  "3f688456bf426b619bc406fe6f79b15f23e929d21e19eb26096295d7c10c1369": {
+    "describe": {
+      "columns": [
+        {
+          "name": "barentswatch_user_id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "following!",
+          "ordinal": 1,
+          "type_info": "Int8Array"
+        }
+      ],
+      "nullable": [
+        false,
+        null
+      ],
+      "parameters": {
+        "Left": [
+          "Uuid"
+        ]
+      }
+    },
+    "query": "\nSELECT\n    barentswatch_user_id,\n    ARRAY_AGG(fiskeridir_vessel_id) AS \"following!\"\nFROM\n    user_follows\nWHERE\n    barentswatch_user_id = $1\nGROUP BY\n    barentswatch_user_id\n            "
+  },
   "42d280b49c134606e1875c16d0a03ff9d90a4f7a9e461203ff3c283f2ce22a58": {
     "describe": {
       "columns": [],
@@ -2257,6 +2295,19 @@
       }
     },
     "query": "\nINSERT INTO\n    catch_main_area_fao (catch_main_area_fao_id, \"name\")\nSELECT\n    *\nFROM\n    UNNEST($1::INT[], $2::VARCHAR[])\nON CONFLICT (catch_main_area_fao_id) DO NOTHING\n                "
+  },
+  "860d9c3d3fe9e64c219669272e318556dbbf09a34ce667a4fa9ccebaed40bece": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Uuid",
+          "Int8Array"
+        ]
+      }
+    },
+    "query": "\nINSERT INTO\n    user_follows (barentswatch_user_id, fiskeridir_vessel_id)\nSELECT\n    $1,\n    *\nFROM\n    UNNEST($2::BIGINT[])\n            "
   },
   "8918bd19bb31b88fba67fde04509b22a4e74c743d14211d25020d61cd985f377": {
     "describe": {

@@ -21,7 +21,7 @@ pub trait AisMigratorSource {
 pub type PinBoxStream<'a, T, E> = Pin<Box<dyn Stream<Item = Result<T, E>> + Send + 'a>>;
 
 #[async_trait]
-pub trait WebApiPort {
+pub trait WebApiOutboundPort {
     fn ais_positions(
         &self,
         mmsi: Mmsi,
@@ -60,6 +60,7 @@ pub trait WebApiPort {
         &self,
         query: FishingFacilitiesQuery,
     ) -> PinBoxStream<'_, FishingFacility, QueryError>;
+    async fn get_user(&self, user_id: BarentswatchUserId) -> Result<Option<User>, QueryError>;
 }
 
 #[async_trait]

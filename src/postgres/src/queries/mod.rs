@@ -26,6 +26,7 @@ pub mod norwegian_land;
 pub mod port;
 pub mod species;
 pub mod trip;
+pub mod user;
 pub mod vessel;
 pub mod vessel_benchmarks;
 pub mod vessel_events;

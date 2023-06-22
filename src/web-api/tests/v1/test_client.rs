@@ -3,12 +3,14 @@ use std::{fmt::Write, string::ToString};
 use fiskeridir_rs::CallSign;
 use kyogre_core::{ActiveHaulsFilter, FiskeridirVesselId, HaulId, Mmsi};
 use reqwest::{header::HeaderMap, Client, Response};
+use serde::Serialize;
 use web_api::routes::v1::{
     ais::AisTrackParameters,
     ais_vms::AisVmsParameters,
     fishing_facility::FishingFacilitiesParams,
     haul::{HaulsMatrixParams, HaulsParams},
     trip::TripsParameters,
+    user::User,
     vms::VmsParameters,
 };
 
@@ -32,6 +34,23 @@ impl ApiClient {
 
         let client = Client::new();
         let mut request = client.get(url).query(parameters);
+
+        if let Some(headers) = headers {
+            request = request.headers(headers);
+        }
+
+        request.send().await.unwrap()
+    }
+    async fn put<T: AsRef<str>, S: Serialize>(
+        &self,
+        path: T,
+        body: S,
+        headers: Option<HeaderMap>,
+    ) -> Response {
+        let url = format!("{}/{}", self.address, path.as_ref());
+
+        let client = Client::new();
+        let mut request = client.put(url).json(&body);
 
         if let Some(headers) = headers {
             request = request.headers(headers);
@@ -309,6 +328,18 @@ impl ApiClient {
 
         self.get("fishing_facilities", &parameters, Some(headers))
             .await
+    }
+    pub async fn get_user(&self, token: String) -> Response {
+        let mut headers = HeaderMap::new();
+        headers.insert("bw-token", token.try_into().unwrap());
+
+        self.get("user", &[], Some(headers)).await
+    }
+    pub async fn update_user(&self, user: User, token: String) -> Response {
+        let mut headers = HeaderMap::new();
+        headers.insert("bw-token", token.try_into().unwrap());
+
+        self.put("user", user, Some(headers)).await
     }
 }
 

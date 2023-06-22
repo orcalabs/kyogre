@@ -21,6 +21,11 @@ pub trait AisMigratorDestination {
 }
 
 #[async_trait]
+pub trait WebApiInboundPort {
+    async fn update_user(&self, user: User) -> Result<(), UpdateError>;
+}
+
+#[async_trait]
 pub trait TripPrecisionInboundPort {
     async fn update_trip_precisions(
         &self,

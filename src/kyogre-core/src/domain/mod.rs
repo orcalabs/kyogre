@@ -10,6 +10,7 @@ mod ports;
 mod range;
 mod species;
 mod trips;
+mod user;
 mod vessels;
 mod vms;
 
@@ -33,5 +34,6 @@ pub use ports::*;
 pub use range::*;
 pub use species::*;
 pub use trips::*;
+pub use user::*;
 pub use vessels::*;
 pub use vms::*;

@@ -139,12 +139,25 @@ where
             );
 
         if let Some(ref guard) = bw_jwt_guard {
-            scope = scope.route(
-                "/fishing_facilities",
-                web::get()
-                    .guard(guard.clone())
-                    .to(routes::v1::fishing_facility::fishing_facilities::<T>),
-            );
+            scope = scope
+                .route(
+                    "/fishing_facilities",
+                    web::get()
+                        .guard(guard.clone())
+                        .to(routes::v1::fishing_facility::fishing_facilities::<T>),
+                )
+                .route(
+                    "/user",
+                    web::get()
+                        .guard(guard.clone())
+                        .to(routes::v1::user::get_user::<T>),
+                )
+                .route(
+                    "/user",
+                    web::put()
+                        .guard(guard.clone())
+                        .to(routes::v1::user::update_user::<T>),
+                );
         }
 
         let app = actix_web::App::new()

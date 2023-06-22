@@ -9,5 +9,6 @@ pub mod helper;
 pub mod species;
 pub mod test_client;
 pub mod trip;
+pub mod user;
 pub mod vessel;
 pub mod vms;
