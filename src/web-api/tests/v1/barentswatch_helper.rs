@@ -10,6 +10,7 @@ use rsa::{
 };
 use serde::{Deserialize, Serialize};
 use strum::IntoEnumIterator;
+use uuid::Uuid;
 use web_api::extractors::{BwPolicy, BwProfile};
 use wiremock::{
     matchers::{method, path},
@@ -72,6 +73,7 @@ impl BarentswatchHelper {
                         .unwrap();
 
                 let profile = BwProfile {
+                    id: decoded.claims.id,
                     policies: decoded.claims.policies,
                 };
 
@@ -99,6 +101,7 @@ impl BarentswatchHelper {
 
     pub fn get_bw_token(&self) -> String {
         let claims = Claims {
+            id: Uuid::new_v4(),
             exp: i64::MAX,
             policies: BwPolicy::iter().collect(),
         };
@@ -107,6 +110,7 @@ impl BarentswatchHelper {
 
     pub fn get_bw_token_with_policies(&self, policies: Vec<BwPolicy>) -> String {
         let claims = Claims {
+            id: Uuid::new_v4(),
             exp: i64::MAX,
             policies,
         };
@@ -120,6 +124,7 @@ impl BarentswatchHelper {
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Claims {
+    id: Uuid,
     exp: i64,
     policies: Vec<BwPolicy>,
 }

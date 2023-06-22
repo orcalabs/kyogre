@@ -6,6 +6,7 @@ use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 use strum::EnumIter;
 use tracing::{event, Level};
+use uuid::Uuid;
 
 use crate::{error::ApiError, settings::BW_PROFILES_URL};
 
@@ -18,6 +19,7 @@ pub enum BwPolicy {
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct BwProfile {
+    pub id: Uuid,
     pub policies: Vec<BwPolicy>,
 }
 

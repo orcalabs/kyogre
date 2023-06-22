@@ -236,7 +236,7 @@ impl AisMigratorDestination for PostgresAdapter {
 }
 
 #[async_trait]
-impl WebApiPort for PostgresAdapter {
+impl WebApiOutboundPort for PostgresAdapter {
     fn ais_positions(
         &self,
         mmsi: Mmsi,
@@ -361,6 +361,23 @@ impl WebApiPort for PostgresAdapter {
         query: FishingFacilitiesQuery,
     ) -> PinBoxStream<'_, FishingFacility, QueryError> {
         convert_stream(self.fishing_facilities_impl(query)).boxed()
+    }
+
+    async fn get_user(&self, user_id: BarentswatchUserId) -> Result<Option<User>, QueryError> {
+        convert_optional(
+            self.get_user_impl(user_id)
+                .await
+                .change_context(QueryError)?,
+        )
+    }
+}
+
+#[async_trait]
+impl WebApiInboundPort for PostgresAdapter {
+    async fn update_user(&self, user: User) -> Result<(), UpdateError> {
+        self.update_user_impl(user)
+            .await
+            .change_context(UpdateError)
     }
 }
 

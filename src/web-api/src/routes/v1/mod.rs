@@ -5,5 +5,6 @@ pub mod gear;
 pub mod haul;
 pub mod species;
 pub mod trip;
+pub mod user;
 pub mod vessel;
 pub mod vms;

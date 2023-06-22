@@ -4,7 +4,7 @@ use futures::TryStreamExt;
 use haul_distributor::{AisVms, HaulDistributor};
 use kyogre_core::{
     ActiveHaulsFilter, CatchLocationId, FiskeridirVesselId, Haul, HaulMatrixXFeature, HaulsQuery,
-    Mmsi, ScraperInboundPort, WebApiPort,
+    Mmsi, ScraperInboundPort, WebApiOutboundPort,
 };
 
 use crate::helper::test;
