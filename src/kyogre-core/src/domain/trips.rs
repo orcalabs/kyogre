@@ -1,3 +1,5 @@
+use std::fmt;
+
 use crate::*;
 use chrono::{DateTime, TimeZone, Utc};
 use fiskeridir_rs::DeliveryPointId;
@@ -8,12 +10,13 @@ use serde_repr::{Deserialize_repr, Serialize_repr};
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize)]
 pub struct TripId(pub i64);
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Trip {
     pub trip_id: TripId,
     pub period: DateRange,
     pub precision_period: Option<DateRange>,
     pub landing_coverage: DateRange,
+    pub distance: Option<f64>,
     pub assembler_id: TripAssemblerId,
 }
 
@@ -256,7 +259,37 @@ impl From<TripDetailed> for Trip {
             period: value.period,
             landing_coverage: value.landing_coverage,
             assembler_id: value.assembler_id,
+            // TODO
+            distance: None,
             precision_period: value.period_precision,
         }
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Deserialize_repr)]
+#[repr(i32)]
+pub enum TripDistancerId {
+    AisVms = 1,
+}
+
+impl std::fmt::Display for TripDistancerId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            TripDistancerId::AisVms => f.write_str("AisVms"),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct HaulMessage {
+    pub message_id: i64,
+    pub start_timestamp: DateTime<Utc>,
+    pub stop_timestamp: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct TripDistanceOutput {
+    pub trip_id: TripId,
+    pub distance: f64,
+    pub distancer_id: TripDistancerId,
 }

@@ -1454,6 +1454,7 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "trip-assembler",
+ "trip-distancer",
  "vessel-benchmark",
 ]
 
@@ -5095,6 +5096,26 @@ dependencies = [
  "postgres",
  "rand 0.8.5",
  "strum",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
+name = "trip-distancer"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "dockertest",
+ "error-stack 0.3.1",
+ "fiskeridir-rs",
+ "futures",
+ "geoutils",
+ "kyogre-core",
+ "orca-core",
+ "postgres",
+ "rand 0.8.5",
  "tokio",
  "tracing",
  "tracing-subscriber",

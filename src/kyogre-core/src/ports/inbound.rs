@@ -87,3 +87,8 @@ pub trait VesselBenchmarkInbound: Send + Sync {
 pub trait HaulDistributorInbound: Send + Sync {
     async fn add_output(&self, values: Vec<HaulDistributionOutput>) -> Result<(), UpdateError>;
 }
+
+#[async_trait]
+pub trait TripDistancerInbound: Send + Sync {
+    async fn add_output(&self, values: Vec<TripDistanceOutput>) -> Result<(), UpdateError>;
+}

@@ -150,3 +150,16 @@ pub trait HaulDistributorOutbound: Send + Sync {
         range: &DateRange,
     ) -> Result<Vec<AisVmsPosition>, QueryError>;
 }
+
+#[async_trait]
+pub trait TripDistancerOutbound: Send + Sync {
+    async fn vessels(&self) -> Result<Vec<Vessel>, QueryError>;
+    async fn trips_of_vessel(&self, vessel_id: FiskeridirVesselId)
+        -> Result<Vec<Trip>, QueryError>;
+    async fn ais_vms_positions(
+        &self,
+        mmsi: Option<Mmsi>,
+        call_sign: Option<&CallSign>,
+        range: &DateRange,
+    ) -> Result<Vec<AisVmsPosition>, QueryError>;
+}

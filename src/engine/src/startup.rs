@@ -41,6 +41,7 @@ impl App {
 
         let benchmarks = settings.benchmarks();
         let haul_distributors = settings.haul_distributors();
+        let trip_distancers = settings.trip_distancers();
 
         let shared_state = SharedState::new(
             settings.engine.clone(),
@@ -49,6 +50,7 @@ impl App {
             trip_assemblers,
             benchmarks,
             haul_distributors,
+            trip_distancers,
         );
 
         App {

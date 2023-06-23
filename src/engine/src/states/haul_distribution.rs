@@ -8,10 +8,10 @@ impl<L, T> From<StepWrapper<L, T, Pending>> for StepWrapper<L, T, HaulDistributi
     }
 }
 
-// HaulDistribution -> Pending
-impl<L, T> From<StepWrapper<L, T, HaulDistribution>> for StepWrapper<L, T, Pending> {
-    fn from(val: StepWrapper<L, T, HaulDistribution>) -> StepWrapper<L, T, Pending> {
-        val.inherit(Pending::default())
+// HaulDistribution -> TripDistance
+impl<L, T> From<StepWrapper<L, T, HaulDistribution>> for StepWrapper<L, T, TripDistance> {
+    fn from(val: StepWrapper<L, T, HaulDistribution>) -> StepWrapper<L, T, TripDistance> {
+        val.inherit(TripDistance::default())
     }
 }
 
@@ -29,7 +29,7 @@ where
             EngineDiscriminants::HaulDistribution.as_ref(),
         );
         self.do_step().await;
-        Engine::Pending(StepWrapper::<A, SharedState<B>, Pending>::from(self))
+        Engine::TripDistance(StepWrapper::<A, SharedState<B>, TripDistance>::from(self))
     }
 
     #[instrument(skip_all)]

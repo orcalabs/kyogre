@@ -10,9 +10,11 @@ use futures::Stream;
 use futures::TryStreamExt;
 use kyogre_core::{
     FiskeridirVesselId, HaulId, NewTrip, Ordering, Pagination, PrecisionOutcome, PrecisionStatus,
-    TripAssemblerId, TripPrecisionUpdate, Trips, TripsConflictStrategy,
+    TripAssemblerId, TripDistanceOutput, TripPrecisionUpdate, Trips, TripsConflictStrategy,
 };
 use sqlx::postgres::types::PgRange;
+
+use super::float_to_decimal;
 
 impl PostgresAdapter {
     pub(crate) async fn sum_trip_time_impl(
@@ -767,31 +769,6 @@ WHERE
         .into_report()
         .change_context(PostgresError::Query)
     }
-    pub(crate) async fn trips_of_vessel_impl(
-        &self,
-        vessel_id: FiskeridirVesselId,
-    ) -> Result<Vec<Trip>, PostgresError> {
-        sqlx::query_as!(
-            Trip,
-            r#"
-SELECT
-    trip_id,
-    period,
-    period_precision,
-    landing_coverage,
-    trip_assembler_id AS "trip_assembler_id!: TripAssemblerId"
-FROM
-    trips
-WHERE
-    fiskeridir_vessel_id = $1
-            "#,
-            vessel_id.0,
-        )
-        .fetch_all(&self.pool)
-        .await
-        .into_report()
-        .change_context(PostgresError::Query)
-    }
 
     pub(crate) async fn add_trips_impl(
         &self,
@@ -960,6 +937,7 @@ SELECT
     period,
     period_precision,
     landing_coverage,
+    distance,
     trip_assembler_id AS "trip_assembler_id!: TripAssemblerId"
 FROM
     trips
@@ -993,6 +971,7 @@ SELECT
     period,
     period_precision,
     landing_coverage,
+    distance,
     trip_assembler_id AS "trip_assembler_id!: TripAssemblerId"
 FROM
     trips
@@ -1119,6 +1098,7 @@ SELECT
     period,
     period_precision,
     landing_coverage,
+    distance,
     trip_assembler_id AS "trip_assembler_id!: TripAssemblerId"
 FROM
     trips
@@ -1130,6 +1110,79 @@ WHERE
             vessel_id.0,
             assembler_id as i32,
             PrecisionStatus::Unprocessed.name()
+        )
+        .fetch_all(&self.pool)
+        .await
+        .into_report()
+        .change_context(PostgresError::Query)
+    }
+
+    pub(crate) async fn add_trip_distance_output(
+        &self,
+        values: Vec<TripDistanceOutput>,
+    ) -> Result<(), PostgresError> {
+        let len = values.len();
+
+        let mut trip_id = Vec::with_capacity(len);
+        let mut distance = Vec::with_capacity(len);
+        let mut distancer_id = Vec::with_capacity(len);
+
+        for v in values {
+            trip_id.push(v.trip_id.0);
+            distance
+                .push(float_to_decimal(v.distance).change_context(PostgresError::DataConversion)?);
+            distancer_id.push(v.distancer_id as i32);
+        }
+
+        sqlx::query_as!(
+            Trip,
+            r#"
+UPDATE trips t
+SET
+    distance = q.distance,
+    distancer_id = q.distancer_id
+FROM
+    (
+        SELECT
+            *
+        FROM
+            UNNEST($1::BIGINT[], $2::DECIMAL[], $3::INT[]) u (trip_id, distance, distancer_id)
+    ) q
+WHERE
+    t.trip_id = q.trip_id
+            "#,
+            trip_id.as_slice(),
+            distance.as_slice(),
+            distancer_id.as_slice(),
+        )
+        .execute(&self.pool)
+        .await
+        .into_report()
+        .change_context(PostgresError::Query)
+        .map(|_| ())
+    }
+
+    pub(crate) async fn trips_without_distance_impl(
+        &self,
+        vessel_id: FiskeridirVesselId,
+    ) -> Result<Vec<Trip>, PostgresError> {
+        sqlx::query_as!(
+            Trip,
+            r#"
+SELECT
+    trip_id,
+    period,
+    period_precision,
+    landing_coverage,
+    distance,
+    trip_assembler_id AS "trip_assembler_id!: TripAssemblerId"
+FROM
+    trips
+WHERE
+    fiskeridir_vessel_id = $1
+    AND distancer_id IS NULL
+            "#,
+            vessel_id.0,
         )
         .fetch_all(&self.pool)
         .await
