@@ -715,6 +715,44 @@ impl HaulDistributorOutbound for PostgresAdapter {
     }
 }
 
+#[async_trait]
+impl TripDistancerInbound for PostgresAdapter {
+    async fn add_output(&self, values: Vec<TripDistanceOutput>) -> Result<(), UpdateError> {
+        self.add_trip_distance_output(values)
+            .await
+            .change_context(UpdateError)
+    }
+}
+
+#[async_trait]
+impl TripDistancerOutbound for PostgresAdapter {
+    async fn vessels(&self) -> Result<Vec<Vessel>, QueryError> {
+        self.all_vessels().await
+    }
+
+    async fn trips_of_vessel(
+        &self,
+        vessel_id: FiskeridirVesselId,
+    ) -> Result<Vec<Trip>, QueryError> {
+        convert_vec(
+            self.trips_without_distance_impl(vessel_id)
+                .await
+                .change_context(QueryError)?,
+        )
+    }
+
+    async fn ais_vms_positions(
+        &self,
+        mmsi: Option<Mmsi>,
+        call_sign: Option<&CallSign>,
+        range: &DateRange,
+    ) -> Result<Vec<AisVmsPosition>, QueryError> {
+        convert_stream(self.ais_vms_positions_impl(mmsi, call_sign, range))
+            .try_collect()
+            .await
+    }
+}
+
 pub(crate) fn convert_stream<I, A, B>(input: I) -> impl Stream<Item = Result<B, QueryError>>
 where
     I: Stream<Item = Result<A, PostgresError>>,

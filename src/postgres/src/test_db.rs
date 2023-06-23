@@ -252,13 +252,29 @@ FROM
     }
 
     pub async fn trips_of_vessel(&self, vessel_id: FiskeridirVesselId) -> Vec<Trip> {
-        self.db
-            .trips_of_vessel_impl(vessel_id)
-            .await
-            .unwrap()
-            .into_iter()
-            .map(|v| Trip::try_from(v).unwrap())
-            .collect()
+        sqlx::query_as!(
+            crate::models::Trip,
+            r#"
+SELECT
+    trip_id,
+    period,
+    period_precision,
+    landing_coverage,
+    distance,
+    trip_assembler_id AS "trip_assembler_id!: TripAssemblerId"
+FROM
+    trips
+WHERE
+    fiskeridir_vessel_id = $1
+            "#,
+            vessel_id.0,
+        )
+        .fetch_all(&self.db.pool)
+        .await
+        .unwrap()
+        .into_iter()
+        .map(|v| Trip::try_from(v).unwrap())
+        .collect()
     }
 
     pub async fn all_detailed_trips_of_vessels(

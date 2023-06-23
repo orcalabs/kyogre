@@ -1,8 +1,9 @@
 use crate::TripProcessor;
 use config::{Config, ConfigError, File, Source};
-use haul_distributor::*;
+use haul_distributor::HaulDistributor;
 use orca_core::{Environment, LogLevel, PsqlSettings, TelemetrySettings};
 use serde::Deserialize;
+use trip_distancer::TripDistancer;
 use vessel_benchmark::*;
 
 #[derive(Debug, Deserialize)]
@@ -106,6 +107,9 @@ impl Settings {
         vec
     }
     pub fn haul_distributors(&self) -> Vec<Box<dyn HaulDistributor>> {
-        vec![Box::<AisVms>::default()]
+        vec![Box::<haul_distributor::AisVms>::default()]
+    }
+    pub fn trip_distancers(&self) -> Vec<Box<dyn TripDistancer>> {
+        vec![Box::<trip_distancer::AisVms>::default()]
     }
 }

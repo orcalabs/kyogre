@@ -18,6 +18,7 @@ pub struct Trip {
     pub period: PgRange<DateTime<Utc>>,
     pub period_precision: Option<PgRange<DateTime<Utc>>>,
     pub landing_coverage: PgRange<DateTime<Utc>>,
+    pub distance: Option<BigDecimal>,
     pub trip_assembler_id: TripAssemblerId,
 }
 
@@ -129,10 +130,17 @@ impl TryFrom<Trip> for kyogre_core::Trip {
             .into_report()
             .change_context(PostgresError::DataConversion)?;
 
+        let distance = value
+            .distance
+            .map(decimal_to_float)
+            .transpose()
+            .change_context(PostgresError::DataConversion)?;
+
         Ok(kyogre_core::Trip {
             trip_id: TripId(value.trip_id),
             period,
             landing_coverage,
+            distance,
             assembler_id: value.trip_assembler_id,
             precision_period,
         })

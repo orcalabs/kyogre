@@ -12,6 +12,7 @@ members = [
     "scraper",
     "vessel-benchmark",
     "haul-distributor",
+    "trip-distancer",
 ]
 
 [workspace.dependencies]

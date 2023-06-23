@@ -10,6 +10,7 @@ use serde::Deserialize;
 use states::{Pending, Scrape, Sleep, Trips, TripsPrecision};
 use strum_macros::{AsRefStr, EnumDiscriminants, EnumIter, EnumString};
 use trip_assembler::TripAssembler;
+use trip_distancer::*;
 use vessel_benchmark::*;
 
 pub mod error;
@@ -31,6 +32,8 @@ pub trait Database:
     + VesselBenchmarkInbound
     + HaulDistributorOutbound
     + HaulDistributorInbound
+    + TripDistancerOutbound
+    + TripDistancerInbound
     + Send
     + Sync
     + 'static
@@ -48,6 +51,8 @@ impl<T> Database for T where
         + VesselBenchmarkInbound
         + HaulDistributorOutbound
         + HaulDistributorInbound
+        + TripDistancerOutbound
+        + TripDistancerInbound
         + 'static
 {
 }
@@ -64,6 +69,7 @@ pub enum Engine<A, B> {
     TripsPrecision(StepWrapper<A, B, TripsPrecision>),
     Benchmark(StepWrapper<A, B, Benchmark>),
     HaulDistribution(StepWrapper<A, B, HaulDistribution>),
+    TripDistance(StepWrapper<A, B, TripDistance>),
 }
 
 pub struct StepWrapper<A, B, C> {
@@ -82,6 +88,7 @@ pub struct SharedState<A> {
     trip_processors: Vec<Box<dyn TripProcessor>>,
     benchmarks: Vec<Box<dyn VesselBenchmark>>,
     haul_distributors: Vec<Box<dyn HaulDistributor>>,
+    trip_distancers: Vec<Box<dyn TripDistancer>>,
 }
 
 impl<A, B, C> StepWrapper<A, B, C> {
@@ -115,6 +122,9 @@ impl<A, B, C> StepWrapper<A, SharedState<B>, C> {
     pub fn haul_distributors(&self) -> &[Box<dyn HaulDistributor>] {
         self.inner.shared_state.haul_distributors.as_slice()
     }
+    pub fn trip_distancers(&self) -> &[Box<dyn TripDistancer>] {
+        self.inner.shared_state.trip_distancers.as_slice()
+    }
 }
 
 #[async_trait]
@@ -134,6 +144,7 @@ where
             Engine::TripsPrecision(s) => s.run().await,
             Engine::Benchmark(s) => s.run().await,
             Engine::HaulDistribution(s) => s.run().await,
+            Engine::TripDistance(s) => s.run().await,
         }
     }
     fn is_exit_state(&self) -> bool {
@@ -149,6 +160,7 @@ where
             Engine::TripsPrecision(s) => &s.inner.transition_log,
             Engine::Benchmark(s) => &s.inner.transition_log,
             Engine::HaulDistribution(s) => &s.inner.transition_log,
+            Engine::TripDistance(s) => &s.inner.transition_log,
         }
     }
 
@@ -172,6 +184,7 @@ where
         trip_processors: Vec<Box<dyn TripProcessor>>,
         benchmarks: Vec<Box<dyn VesselBenchmark>>,
         haul_distributors: Vec<Box<dyn HaulDistributor>>,
+        trip_distancers: Vec<Box<dyn TripDistancer>>,
     ) -> SharedState<A> {
         SharedState {
             config,
@@ -180,6 +193,7 @@ where
             trip_processors,
             benchmarks,
             haul_distributors,
+            trip_distancers,
         }
     }
 }
@@ -188,6 +202,7 @@ impl Config {
     pub fn schedule(&self, state: &EngineDiscriminants) -> Option<&Schedule> {
         match state {
             EngineDiscriminants::Pending
+            | EngineDiscriminants::TripDistance
             | EngineDiscriminants::HaulDistribution
             | EngineDiscriminants::Benchmark
             | EngineDiscriminants::Sleep

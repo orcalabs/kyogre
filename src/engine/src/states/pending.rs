@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use crate::{
     error::EngineError, Benchmark, Engine, EngineDiscriminants, HaulDistribution, Scrape,
-    SharedState, Sleep, StepWrapper,
+    SharedState, Sleep, StepWrapper, TripDistance,
 };
 
 use chrono::{DateTime, Utc};
@@ -199,6 +199,9 @@ where
                 Engine::HaulDistribution(StepWrapper::<A, SharedState<B>, HaulDistribution>::from(
                     self,
                 ))
+            }
+            EngineDiscriminants::TripDistance => {
+                Engine::TripDistance(StepWrapper::<A, SharedState<B>, TripDistance>::from(self))
             }
         }
     }
