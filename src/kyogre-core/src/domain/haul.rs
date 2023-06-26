@@ -32,6 +32,7 @@ pub struct Haul {
     pub stop_latitude: f64,
     pub stop_longitude: f64,
     pub stop_timestamp: DateTime<Utc>,
+    pub total_living_weight: i64,
     pub vessel_call_sign: Option<String>,
     pub vessel_call_sign_ers: String,
     pub vessel_length: f64,

@@ -1,8 +1,8 @@
 use super::helper::test;
 use actix_web::http::StatusCode;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, TimeZone, Utc};
 use fiskeridir_rs::{ErsDca, GearGroup, SpeciesGroup};
-use kyogre_core::{FiskeridirVesselId, ScraperInboundPort};
+use kyogre_core::{FiskeridirVesselId, HaulsSorting, Ordering, ScraperInboundPort};
 use web_api::routes::{
     utils::{DateTimeUtc, GearGroupId, SpeciesGroupId},
     v1::haul::{Haul, HaulsParams},
@@ -229,6 +229,154 @@ async fn test_hauls_returns_hauls_with_fiskeridir_vessel_ids() {
         let hauls: Vec<Haul> = response.json().await.unwrap();
 
         assert_eq!(hauls.len(), 2);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_hauls_sorts_by_start_timestamp() {
+    test(|helper| async move {
+        let mut expected = vec![
+            ErsDca::test_default(1, None),
+            ErsDca::test_default(2, None),
+            ErsDca::test_default(3, None),
+            ErsDca::test_default(4, None),
+        ];
+
+        expected[0].set_start_timestamp(Utc.timestamp_opt(1000, 0).unwrap());
+        expected[1].set_start_timestamp(Utc.timestamp_opt(2000, 0).unwrap());
+        expected[2].set_start_timestamp(Utc.timestamp_opt(3000, 0).unwrap());
+        expected[3].set_start_timestamp(Utc.timestamp_opt(4000, 0).unwrap());
+
+        helper.db.db.add_ers_dca(expected.clone()).await.unwrap();
+
+        let params = HaulsParams {
+            sorting: Some(HaulsSorting::StartDate),
+            ordering: Some(Ordering::Asc),
+            ..Default::default()
+        };
+
+        let response = helper.app.get_hauls(params).await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let hauls: Vec<Haul> = response.json().await.unwrap();
+
+        assert_eq!(
+            hauls[0].start_timestamp.timestamp_millis(),
+            expected[0].start_timestamp.unwrap().timestamp_millis()
+        );
+        assert_eq!(
+            hauls[1].start_timestamp.timestamp_millis(),
+            expected[1].start_timestamp.unwrap().timestamp_millis()
+        );
+        assert_eq!(
+            hauls[2].start_timestamp.timestamp_millis(),
+            expected[2].start_timestamp.unwrap().timestamp_millis()
+        );
+        assert_eq!(
+            hauls[3].start_timestamp.timestamp_millis(),
+            expected[3].start_timestamp.unwrap().timestamp_millis()
+        );
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_hauls_sorts_by_stop_timestamp() {
+    test(|helper| async move {
+        let mut expected = vec![
+            ErsDca::test_default(1, None),
+            ErsDca::test_default(2, None),
+            ErsDca::test_default(3, None),
+            ErsDca::test_default(4, None),
+        ];
+
+        expected[0].set_start_timestamp(Utc.timestamp_opt(1000, 0).unwrap());
+        expected[0].set_stop_timestamp(Utc.timestamp_opt(1000, 0).unwrap());
+        expected[1].set_start_timestamp(Utc.timestamp_opt(2000, 0).unwrap());
+        expected[1].set_stop_timestamp(Utc.timestamp_opt(2000, 0).unwrap());
+        expected[2].set_start_timestamp(Utc.timestamp_opt(3000, 0).unwrap());
+        expected[2].set_stop_timestamp(Utc.timestamp_opt(3000, 0).unwrap());
+        expected[3].set_start_timestamp(Utc.timestamp_opt(4000, 0).unwrap());
+        expected[3].set_stop_timestamp(Utc.timestamp_opt(4000, 0).unwrap());
+
+        helper.db.db.add_ers_dca(expected.clone()).await.unwrap();
+
+        let params = HaulsParams {
+            sorting: Some(HaulsSorting::StopDate),
+            ordering: Some(Ordering::Asc),
+            ..Default::default()
+        };
+
+        let response = helper.app.get_hauls(params).await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let hauls: Vec<Haul> = response.json().await.unwrap();
+
+        assert_eq!(
+            hauls[0].stop_timestamp.timestamp_millis(),
+            expected[0].stop_timestamp.unwrap().timestamp_millis()
+        );
+        assert_eq!(
+            hauls[1].stop_timestamp.timestamp_millis(),
+            expected[1].stop_timestamp.unwrap().timestamp_millis()
+        );
+        assert_eq!(
+            hauls[2].stop_timestamp.timestamp_millis(),
+            expected[2].stop_timestamp.unwrap().timestamp_millis()
+        );
+        assert_eq!(
+            hauls[3].stop_timestamp.timestamp_millis(),
+            expected[3].stop_timestamp.unwrap().timestamp_millis()
+        );
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_hauls_sorts_by_weight() {
+    test(|helper| async move {
+        let mut expected = vec![
+            ErsDca::test_default(1, None),
+            ErsDca::test_default(2, None),
+            ErsDca::test_default(3, None),
+            ErsDca::test_default(4, None),
+        ];
+
+        expected[0].catch.species.living_weight = Some(100);
+        expected[1].catch.species.living_weight = Some(200);
+        expected[2].catch.species.living_weight = Some(300);
+        expected[3].catch.species.living_weight = Some(400);
+
+        helper.db.db.add_ers_dca(expected.clone()).await.unwrap();
+
+        let params = HaulsParams {
+            sorting: Some(HaulsSorting::Weight),
+            ordering: Some(Ordering::Asc),
+            ..Default::default()
+        };
+
+        let response = helper.app.get_hauls(params).await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let hauls: Vec<Haul> = response.json().await.unwrap();
+
+        assert_eq!(
+            hauls[0].total_living_weight as u32,
+            expected[0].catch.species.living_weight.unwrap(),
+        );
+        assert_eq!(
+            hauls[1].total_living_weight as u32,
+            expected[1].catch.species.living_weight.unwrap(),
+        );
+        assert_eq!(
+            hauls[2].total_living_weight as u32,
+            expected[2].catch.species.living_weight.unwrap(),
+        );
+        assert_eq!(
+            hauls[3].total_living_weight as u32,
+            expected[3].catch.species.living_weight.unwrap(),
+        );
     })
     .await;
 }

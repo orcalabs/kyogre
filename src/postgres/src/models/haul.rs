@@ -24,6 +24,7 @@ pub struct Haul {
     pub start_longitude: BigDecimal,
     pub stop_latitude: BigDecimal,
     pub stop_longitude: BigDecimal,
+    pub total_living_weight: i64,
     pub gear_id: Gear,
     pub gear_group_id: GearGroup,
     pub fiskeridir_vessel_id: Option<i64>,
@@ -97,6 +98,7 @@ impl TryFrom<Haul> for kyogre_core::Haul {
             stop_longitude: decimal_to_float(v.stop_longitude)
                 .change_context(PostgresError::DataConversion)?,
             stop_timestamp: v.stop_timestamp,
+            total_living_weight: v.total_living_weight,
             gear_id: v.gear_id,
             gear_group_id: v.gear_group_id,
             fiskeridir_vessel_id: v.fiskeridir_vessel_id,

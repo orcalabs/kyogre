@@ -121,6 +121,7 @@ SELECT
     h.stop_timestamp,
     h.stop_latitude,
     h.stop_longitude,
+    h.total_living_weight,
     h.gear_id AS "gear_id!: Gear",
     h.gear_group_id AS "gear_group_id!: GearGroup",
     h.fiskeridir_vessel_id,
@@ -162,6 +163,31 @@ WHERE
         $6::BIGINT[] IS NULL
         OR fiskeridir_vessel_id = ANY ($6)
     )
+ORDER BY
+    CASE
+        WHEN $7 = 1
+        AND $8 = 1 THEN start_timestamp
+    END ASC,
+    CASE
+        WHEN $7 = 1
+        AND $8 = 2 THEN stop_timestamp
+    END ASC,
+    CASE
+        WHEN $7 = 1
+        AND $8 = 3 THEN total_living_weight
+    END ASC,
+    CASE
+        WHEN $7 = 2
+        AND $8 = 1 THEN start_timestamp
+    END DESC,
+    CASE
+        WHEN $7 = 2
+        AND $8 = 2 THEN stop_timestamp
+    END DESC,
+    CASE
+        WHEN $7 = 2
+        AND $8 = 3 THEN total_living_weight
+    END DESC
             "#,
             args.ranges,
             args.catch_locations as _,
@@ -169,6 +195,8 @@ WHERE
             args.species_group_ids as _,
             args.vessel_length_ranges as _,
             args.fiskeridir_vessel_ids as _,
+            args.ordering,
+            args.sorting,
         )
         .fetch(&self.pool)
         .map_err(|e| report!(e).change_context(PostgresError::Query));
@@ -382,6 +410,8 @@ pub struct HaulsArgs {
     pub species_group_ids: Option<Vec<i32>>,
     pub vessel_length_ranges: Option<Vec<PgRange<BigDecimal>>>,
     pub fiskeridir_vessel_ids: Option<Vec<i64>>,
+    pub sorting: Option<i32>,
+    pub ordering: Option<i32>,
 }
 
 impl TryFrom<HaulsQuery> for HaulsArgs {
@@ -425,6 +455,8 @@ impl TryFrom<HaulsQuery> for HaulsArgs {
             fiskeridir_vessel_ids: v
                 .vessel_ids
                 .map(|ids| ids.into_iter().map(|i| i.0).collect()),
+            sorting: v.sorting.map(|s| s as i32),
+            ordering: v.ordering.map(|o| o as i32),
         })
     }
 }
