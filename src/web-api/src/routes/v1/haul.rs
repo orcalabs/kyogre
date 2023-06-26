@@ -18,7 +18,7 @@ use fiskeridir_rs::{Gear, GearGroup, VesselLengthGroup, WhaleGender};
 use futures::TryStreamExt;
 use kyogre_core::{
     ActiveHaulsFilter, CatchLocationId, FiskeridirVesselId, HaulId, HaulsMatrixQuery, HaulsQuery,
-    Range,
+    HaulsSorting, Ordering, Range,
 };
 use serde::{Deserialize, Serialize};
 use tracing::{event, Level};
@@ -45,6 +45,8 @@ pub struct HaulsParams {
     #[param(value_type = Option<String>, example = "2000013801,2001015304")]
     #[serde(deserialize_with = "deserialize_string_list", default)]
     pub fiskeridir_vessel_ids: Option<Vec<FiskeridirVesselId>>,
+    pub sorting: Option<HaulsSorting>,
+    pub ordering: Option<Ordering>,
 }
 
 #[derive(Default, Debug, Clone, Deserialize, IntoParams)]
@@ -174,6 +176,7 @@ pub struct Haul {
     pub stop_longitude: f64,
     #[schema(value_type = String, example = "2023-02-24T11:08:20.409416682Z")]
     pub stop_timestamp: DateTime<Utc>,
+    pub total_living_weight: i64,
     #[schema(value_type = i32)]
     pub gear_id: Gear,
     #[schema(value_type = i32)]
@@ -251,6 +254,7 @@ impl From<kyogre_core::Haul> for Haul {
             stop_latitude: v.stop_latitude,
             stop_longitude: v.stop_longitude,
             stop_timestamp: v.stop_timestamp,
+            total_living_weight: v.total_living_weight,
             gear_id: v.gear_id,
             gear_group_id: v.gear_group_id,
             fiskeridir_vessel_id: v.fiskeridir_vessel_id,
@@ -344,6 +348,8 @@ impl From<HaulsParams> for HaulsQuery {
                 .map(|gs| gs.into_iter().map(|g| g.0).collect()),
             vessel_length_ranges: v.vessel_length_ranges,
             vessel_ids: v.fiskeridir_vessel_ids,
+            sorting: v.sorting,
+            ordering: v.ordering,
         }
     }
 }

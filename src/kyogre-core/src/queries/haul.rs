@@ -64,6 +64,20 @@ pub fn date_feature_matrix_index(ts: &DateTime<Utc>) -> usize {
     ts.year() as usize * 12 + ts.month0() as usize - ERS_OLDEST_DATA_MONTHS
 }
 
+#[cfg_attr(feature = "sqlx", derive(sqlx::Type))]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
+#[derive(Default, Debug, Clone, Copy, Deserialize, strum::Display)]
+#[serde(rename_all = "camelCase")]
+pub enum HaulsSorting {
+    #[serde(alias = "startDate", alias = "StartDate", alias = "START_DATE")]
+    #[default]
+    StartDate = 1,
+    #[serde(alias = "stopDate", alias = "StopDate", alias = "STOP_DATE")]
+    StopDate = 2,
+    #[serde(alias = "weight", alias = "Weight", alias = "WEIGHT")]
+    Weight = 3,
+}
+
 #[derive(Default, Debug, Clone)]
 pub struct HaulsQuery {
     pub ranges: Option<Vec<Range<DateTime<Utc>>>>,
@@ -72,6 +86,8 @@ pub struct HaulsQuery {
     pub species_group_ids: Option<Vec<u32>>,
     pub vessel_length_ranges: Option<Vec<Range<f64>>>,
     pub vessel_ids: Option<Vec<FiskeridirVesselId>>,
+    pub sorting: Option<HaulsSorting>,
+    pub ordering: Option<Ordering>,
 }
 
 #[derive(Debug, Clone)]

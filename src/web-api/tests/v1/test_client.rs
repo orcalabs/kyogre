@@ -157,6 +157,14 @@ impl ApiClient {
             ))
         }
 
+        if let Some(sorting) = params.sorting {
+            parameters.push(("sorting".to_string(), sorting.to_string()))
+        }
+
+        if let Some(ordering) = params.ordering {
+            parameters.push(("ordering".to_string(), ordering.to_string()))
+        }
+
         self.get("hauls", &parameters, None).await
     }
     pub async fn get_hauls_matrix(
