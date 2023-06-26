@@ -18,8 +18,13 @@ pub enum BwPolicy {
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct BwProfile {
+pub struct BwUser {
     pub id: Uuid,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct BwProfile {
+    pub user: BwUser,
     pub policies: Vec<BwPolicy>,
 }
 
@@ -67,16 +72,23 @@ impl FromRequest for BwProfile {
                 }
             }
 
-            let profile: BwProfile = response.json().await.map_err(|e| {
+            let text = response.text().await.map_err(|e| {
                 event!(
                     Level::WARN,
-                    "deserializing barentswatch response failed: {:?}",
+                    "failed to parse barentswatch response text, err: {:?}",
                     e
                 );
                 ApiError::InternalServerError
             })?;
 
-            Ok(profile)
+            serde_json::from_str(&text).map_err(|e| {
+                event!(
+                    Level::WARN,
+                    "failed to deserialize BwProfile from {text}, err: {:?}",
+                    e
+                );
+                ApiError::InternalServerError
+            })
         })
     }
 }

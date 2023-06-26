@@ -20,7 +20,7 @@ pub async fn get_user<T: Database + 'static>(
     profile: BwProfile,
 ) -> Result<Response<Option<User>>, ApiError> {
     Ok(Response::new(
-        db.get_user(BarentswatchUserId(profile.id))
+        db.get_user(BarentswatchUserId(profile.user.id))
             .await
             .map_err(|e| {
                 event!(Level::ERROR, "failed to get user: {:?}", e);
@@ -51,7 +51,7 @@ pub async fn update_user<T: Database + 'static>(
 ) -> Result<Response<()>, ApiError> {
     let user = user
         .into_inner()
-        .to_domain_user(BarentswatchUserId(profile.id));
+        .to_domain_user(BarentswatchUserId(profile.user.id));
 
     db.update_user(user)
         .await

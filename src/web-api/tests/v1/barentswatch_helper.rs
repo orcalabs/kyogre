@@ -11,7 +11,7 @@ use rsa::{
 use serde::{Deserialize, Serialize};
 use strum::IntoEnumIterator;
 use uuid::Uuid;
-use web_api::extractors::{BwPolicy, BwProfile};
+use web_api::extractors::{BwPolicy, BwProfile, BwUser};
 use wiremock::{
     matchers::{method, path},
     Mock, MockServer, ResponseTemplate,
@@ -73,7 +73,9 @@ impl BarentswatchHelper {
                         .unwrap();
 
                 let profile = BwProfile {
-                    id: decoded.claims.id,
+                    user: BwUser {
+                        id: decoded.claims.id,
+                    },
                     policies: decoded.claims.policies,
                 };
 
