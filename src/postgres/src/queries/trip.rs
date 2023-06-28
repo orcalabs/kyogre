@@ -1,6 +1,6 @@
 use crate::{
     error::PostgresError,
-    models::{Trip, TripAssemblerConflict, TripCalculationTimer, TripDetailed},
+    models::{CurrentTrip, Trip, TripAssemblerConflict, TripCalculationTimer, TripDetailed},
     PostgresAdapter,
 };
 use chrono::{DateTime, Duration, Utc};
@@ -731,6 +731,114 @@ FROM
         .into_report()
         .change_context(PostgresError::Query)
     }
+
+    pub(crate) async fn current_trip_impl(
+        &self,
+        vessel_id: FiskeridirVesselId,
+        read_fishing_facility: bool,
+    ) -> Result<Option<CurrentTrip>, PostgresError> {
+        sqlx::query_as!(
+            CurrentTrip,
+            r#"
+SELECT
+    d.departure_timestamp,
+    d.target_species_fiskeridir_id,
+    COALESCE(
+        JSONB_AGG(h) FILTER (
+            WHERE
+                h.haul_id IS NOT NULL
+        ),
+        '[]'
+    )::TEXT AS "hauls!",
+    COALESCE(
+        JSONB_AGG(
+            DISTINCT JSONB_BUILD_OBJECT(
+                'tool_id',
+                f.tool_id,
+                'barentswatch_vessel_id',
+                f.barentswatch_vessel_id,
+                'fiskeridir_vessel_id',
+                f.fiskeridir_vessel_id,
+                'vessel_name',
+                f.vessel_name,
+                'call_sign',
+                f.call_sign,
+                'mmsi',
+                f.mmsi,
+                'imo',
+                f.imo,
+                'reg_num',
+                f.reg_num,
+                'sbr_reg_num',
+                f.sbr_reg_num,
+                'contact_phone',
+                f.contact_phone,
+                'contact_email',
+                f.contact_email,
+                'tool_type',
+                f.tool_type,
+                'tool_type_name',
+                f.tool_type_name,
+                'tool_color',
+                f.tool_color,
+                'tool_count',
+                f.tool_count,
+                'setup_timestamp',
+                f.setup_timestamp,
+                'setup_processed_timestamp',
+                f.setup_processed_timestamp,
+                'removed_timestamp',
+                f.removed_timestamp,
+                'removed_processed_timestamp',
+                f.removed_processed_timestamp,
+                'last_changed',
+                f.last_changed,
+                'source',
+                f.source,
+                'comment',
+                f.comment,
+                'geometry_wkt',
+                ST_ASTEXT (f.geometry_wkt),
+                'api_source',
+                f.api_source
+            )
+        ) FILTER (
+            WHERE
+                f.tool_id IS NOT NULL
+        ),
+        '[]'
+    )::TEXT AS "fishing_facilities!"
+FROM
+    ers_departures d
+    LEFT JOIN hauls h ON h.fiskeridir_vessel_id = $1
+    AND h.start_timestamp > d.departure_timestamp
+    LEFT JOIN fishing_facilities f ON $2
+    AND f.fiskeridir_vessel_id = $1
+    AND LOWER(f.period) > d.departure_timestamp
+WHERE
+    d.fiskeridir_vessel_id = $1
+    AND d.departure_timestamp > (
+        SELECT
+            MAX(UPPER(COALESCE(t.period_precision, t.period)))
+        FROM
+            trips t
+        WHERE
+            t.fiskeridir_vessel_id = d.fiskeridir_vessel_id
+            AND t.trip_assembler_id = $3
+    )
+GROUP BY
+    d.message_id
+            "#,
+            vessel_id.0,
+            read_fishing_facility,
+            TripAssemblerId::Ers as i32,
+        )
+        .fetch_optional(&self.pool)
+        .await
+        .into_report()
+        .change_context(PostgresError::Query)
+    }
+
     pub(crate) async fn trip_calculation_timers_impl(
         &self,
         trip_assembler_id: TripAssemblerId,
