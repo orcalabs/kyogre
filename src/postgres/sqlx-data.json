@@ -1,45 +1,5 @@
 {
   "db": "PostgreSQL",
-  "012798b1f201499c33cfa1ffdc705a57c0289d6887d400d2e09ce2a1c90d0215": {
-    "describe": {
-      "columns": [
-        {
-          "name": "departure_timestamp",
-          "ordinal": 0,
-          "type_info": "Timestamptz"
-        },
-        {
-          "name": "target_species_fiskeridir_id",
-          "ordinal": 1,
-          "type_info": "Int4"
-        },
-        {
-          "name": "hauls!",
-          "ordinal": 2,
-          "type_info": "Text"
-        },
-        {
-          "name": "fishing_facilities!",
-          "ordinal": 3,
-          "type_info": "Text"
-        }
-      ],
-      "nullable": [
-        false,
-        true,
-        null,
-        null
-      ],
-      "parameters": {
-        "Left": [
-          "Int8",
-          "Bool",
-          "Int4"
-        ]
-      }
-    },
-    "query": "\nSELECT\n    d.departure_timestamp,\n    d.target_species_fiskeridir_id,\n    COALESCE(\n        JSONB_AGG(h) FILTER (\n            WHERE\n                h.haul_id IS NOT NULL\n        ),\n        '[]'\n    )::TEXT AS \"hauls!\",\n    COALESCE(\n        JSONB_AGG(\n            DISTINCT JSONB_BUILD_OBJECT(\n                'tool_id',\n                f.tool_id,\n                'barentswatch_vessel_id',\n                f.barentswatch_vessel_id,\n                'fiskeridir_vessel_id',\n                f.fiskeridir_vessel_id,\n                'vessel_name',\n                f.vessel_name,\n                'call_sign',\n                f.call_sign,\n                'mmsi',\n                f.mmsi,\n                'imo',\n                f.imo,\n                'reg_num',\n                f.reg_num,\n                'sbr_reg_num',\n                f.sbr_reg_num,\n                'contact_phone',\n                f.contact_phone,\n                'contact_email',\n                f.contact_email,\n                'tool_type',\n                f.tool_type,\n                'tool_type_name',\n                f.tool_type_name,\n                'tool_color',\n                f.tool_color,\n                'tool_count',\n                f.tool_count,\n                'setup_timestamp',\n                f.setup_timestamp,\n                'setup_processed_timestamp',\n                f.setup_processed_timestamp,\n                'removed_timestamp',\n                f.removed_timestamp,\n                'removed_processed_timestamp',\n                f.removed_processed_timestamp,\n                'last_changed',\n                f.last_changed,\n                'source',\n                f.source,\n                'comment',\n                f.comment,\n                'geometry_wkt',\n                ST_ASTEXT (f.geometry_wkt),\n                'api_source',\n                f.api_source\n            )\n        ) FILTER (\n            WHERE\n                f.tool_id IS NOT NULL\n        ),\n        '[]'\n    )::TEXT AS \"fishing_facilities!\"\nFROM\n    ers_departures d\n    LEFT JOIN hauls h ON h.fiskeridir_vessel_id = $1\n    AND h.start_timestamp > d.departure_timestamp\n    LEFT JOIN fishing_facilities f ON $2\n    AND f.fiskeridir_vessel_id = $1\n    AND LOWER(f.period) > d.departure_timestamp\nWHERE\n    d.fiskeridir_vessel_id = $1\n    AND d.departure_timestamp > (\n        SELECT\n            MAX(UPPER(COALESCE(t.period_precision, t.period)))\n        FROM\n            trips t\n        WHERE\n            t.fiskeridir_vessel_id = d.fiskeridir_vessel_id\n            AND t.trip_assembler_id = $3\n    )\nGROUP BY\n    d.message_id\n            "
-  },
   "063ffe3ea8b5130ce0826bfca3da92147d6472f539da0b9e2ce34f83532da96c": {
     "describe": {
       "columns": [],
@@ -984,6 +944,183 @@
       }
     },
     "query": "\nINSERT INTO\n    ais_vessels (mmsi)\nVALUES\n    (UNNEST($1::INT[]))\nON CONFLICT (mmsi) DO NOTHING\n            "
+  },
+  "2eb423e2492b6305fe90a2b9315b8673a3f2fae285d2c2ce27048ca39a9bdbec": {
+    "describe": {
+      "columns": [
+        {
+          "name": "haul_id",
+          "ordinal": 0,
+          "type_info": "Int8"
+        },
+        {
+          "name": "ers_activity_id",
+          "ordinal": 1,
+          "type_info": "Text"
+        },
+        {
+          "name": "duration",
+          "ordinal": 2,
+          "type_info": "Int4"
+        },
+        {
+          "name": "haul_distance",
+          "ordinal": 3,
+          "type_info": "Int4"
+        },
+        {
+          "name": "catch_location_start",
+          "ordinal": 4,
+          "type_info": "Text"
+        },
+        {
+          "name": "catch_locations",
+          "ordinal": 5,
+          "type_info": "TextArray"
+        },
+        {
+          "name": "ocean_depth_end",
+          "ordinal": 6,
+          "type_info": "Int4"
+        },
+        {
+          "name": "ocean_depth_start",
+          "ordinal": 7,
+          "type_info": "Int4"
+        },
+        {
+          "name": "quota_type_id",
+          "ordinal": 8,
+          "type_info": "Int4"
+        },
+        {
+          "name": "start_latitude",
+          "ordinal": 9,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "start_longitude",
+          "ordinal": 10,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "start_timestamp",
+          "ordinal": 11,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "stop_timestamp",
+          "ordinal": 12,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "stop_latitude",
+          "ordinal": 13,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "stop_longitude",
+          "ordinal": 14,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "total_living_weight",
+          "ordinal": 15,
+          "type_info": "Int8"
+        },
+        {
+          "name": "gear_id!: Gear",
+          "ordinal": 16,
+          "type_info": "Int4"
+        },
+        {
+          "name": "gear_group_id!: GearGroup",
+          "ordinal": 17,
+          "type_info": "Int4"
+        },
+        {
+          "name": "fiskeridir_vessel_id",
+          "ordinal": 18,
+          "type_info": "Int8"
+        },
+        {
+          "name": "vessel_call_sign",
+          "ordinal": 19,
+          "type_info": "Text"
+        },
+        {
+          "name": "vessel_call_sign_ers",
+          "ordinal": 20,
+          "type_info": "Text"
+        },
+        {
+          "name": "vessel_length",
+          "ordinal": 21,
+          "type_info": "Numeric"
+        },
+        {
+          "name": "vessel_length_group!: VesselLengthGroup",
+          "ordinal": 22,
+          "type_info": "Int4"
+        },
+        {
+          "name": "vessel_name",
+          "ordinal": 23,
+          "type_info": "Text"
+        },
+        {
+          "name": "vessel_name_ers",
+          "ordinal": 24,
+          "type_info": "Text"
+        },
+        {
+          "name": "catches!",
+          "ordinal": 25,
+          "type_info": "Text"
+        },
+        {
+          "name": "whale_catches!",
+          "ordinal": 26,
+          "type_info": "Text"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        true,
+        true,
+        true,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
+        true,
+        false,
+        false,
+        false,
+        true,
+        true,
+        null,
+        null
+      ],
+      "parameters": {
+        "Left": [
+          "Int8",
+          "Int8"
+        ]
+      }
+    },
+    "query": "\nSELECT\n    h.haul_id,\n    h.ers_activity_id,\n    h.duration,\n    h.haul_distance,\n    h.catch_location_start,\n    h.catch_locations,\n    h.ocean_depth_end,\n    h.ocean_depth_start,\n    h.quota_type_id,\n    h.start_latitude,\n    h.start_longitude,\n    h.start_timestamp,\n    h.stop_timestamp,\n    h.stop_latitude,\n    h.stop_longitude,\n    h.total_living_weight,\n    h.gear_id AS \"gear_id!: Gear\",\n    h.gear_group_id AS \"gear_group_id!: GearGroup\",\n    h.fiskeridir_vessel_id,\n    h.vessel_call_sign,\n    h.vessel_call_sign_ers,\n    h.vessel_length,\n    h.vessel_length_group AS \"vessel_length_group!: VesselLengthGroup\",\n    h.vessel_name,\n    h.vessel_name_ers,\n    h.catches::TEXT AS \"catches!\",\n    h.whale_catches::TEXT AS \"whale_catches!\"\nFROM\n    hauls h\nWHERE\n    h.fiskeridir_vessel_id = $1\n    AND h.message_id = $2\n            "
   },
   "31b02dee387c64437123cb9de6d8e5d3100538adb9118d6cf71be1bc476b7a40": {
     "describe": {
@@ -2688,182 +2825,6 @@
     },
     "query": "\nUPDATE port_dock_points\nSET\n    latitude = $1,\n    longitude = $2\nWHERE\n    port_id = $3\n    AND port_dock_point_id = $4\n            "
   },
-  "9ccbea9617d98b0851e30ce9f27ca16eff1eb555ce5d63fac9f06e8631743103": {
-    "describe": {
-      "columns": [
-        {
-          "name": "haul_id",
-          "ordinal": 0,
-          "type_info": "Int8"
-        },
-        {
-          "name": "ers_activity_id",
-          "ordinal": 1,
-          "type_info": "Text"
-        },
-        {
-          "name": "duration",
-          "ordinal": 2,
-          "type_info": "Int4"
-        },
-        {
-          "name": "haul_distance",
-          "ordinal": 3,
-          "type_info": "Int4"
-        },
-        {
-          "name": "catch_location_start",
-          "ordinal": 4,
-          "type_info": "Text"
-        },
-        {
-          "name": "catch_locations",
-          "ordinal": 5,
-          "type_info": "TextArray"
-        },
-        {
-          "name": "ocean_depth_end",
-          "ordinal": 6,
-          "type_info": "Int4"
-        },
-        {
-          "name": "ocean_depth_start",
-          "ordinal": 7,
-          "type_info": "Int4"
-        },
-        {
-          "name": "quota_type_id",
-          "ordinal": 8,
-          "type_info": "Int4"
-        },
-        {
-          "name": "start_latitude",
-          "ordinal": 9,
-          "type_info": "Numeric"
-        },
-        {
-          "name": "start_longitude",
-          "ordinal": 10,
-          "type_info": "Numeric"
-        },
-        {
-          "name": "start_timestamp",
-          "ordinal": 11,
-          "type_info": "Timestamptz"
-        },
-        {
-          "name": "stop_timestamp",
-          "ordinal": 12,
-          "type_info": "Timestamptz"
-        },
-        {
-          "name": "stop_latitude",
-          "ordinal": 13,
-          "type_info": "Numeric"
-        },
-        {
-          "name": "stop_longitude",
-          "ordinal": 14,
-          "type_info": "Numeric"
-        },
-        {
-          "name": "total_living_weight",
-          "ordinal": 15,
-          "type_info": "Int8"
-        },
-        {
-          "name": "gear_id!: Gear",
-          "ordinal": 16,
-          "type_info": "Int4"
-        },
-        {
-          "name": "gear_group_id!: GearGroup",
-          "ordinal": 17,
-          "type_info": "Int4"
-        },
-        {
-          "name": "fiskeridir_vessel_id",
-          "ordinal": 18,
-          "type_info": "Int8"
-        },
-        {
-          "name": "vessel_call_sign",
-          "ordinal": 19,
-          "type_info": "Text"
-        },
-        {
-          "name": "vessel_call_sign_ers",
-          "ordinal": 20,
-          "type_info": "Text"
-        },
-        {
-          "name": "vessel_length",
-          "ordinal": 21,
-          "type_info": "Numeric"
-        },
-        {
-          "name": "vessel_length_group!: VesselLengthGroup",
-          "ordinal": 22,
-          "type_info": "Int4"
-        },
-        {
-          "name": "vessel_name",
-          "ordinal": 23,
-          "type_info": "Text"
-        },
-        {
-          "name": "vessel_name_ers",
-          "ordinal": 24,
-          "type_info": "Text"
-        },
-        {
-          "name": "catches!",
-          "ordinal": 25,
-          "type_info": "Text"
-        },
-        {
-          "name": "whale_catches!",
-          "ordinal": 26,
-          "type_info": "Text"
-        }
-      ],
-      "nullable": [
-        false,
-        false,
-        false,
-        true,
-        true,
-        true,
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
-        true,
-        true,
-        false,
-        false,
-        false,
-        true,
-        true,
-        null,
-        null
-      ],
-      "parameters": {
-        "Left": [
-          "Int8"
-        ]
-      }
-    },
-    "query": "\nSELECT\n    h.haul_id,\n    h.ers_activity_id,\n    h.duration,\n    h.haul_distance,\n    h.catch_location_start,\n    h.catch_locations,\n    h.ocean_depth_end,\n    h.ocean_depth_start,\n    h.quota_type_id,\n    h.start_latitude,\n    h.start_longitude,\n    h.start_timestamp,\n    h.stop_timestamp,\n    h.stop_latitude,\n    h.stop_longitude,\n    h.total_living_weight,\n    h.gear_id AS \"gear_id!: Gear\",\n    h.gear_group_id AS \"gear_group_id!: GearGroup\",\n    h.fiskeridir_vessel_id,\n    h.vessel_call_sign,\n    h.vessel_call_sign_ers,\n    h.vessel_length,\n    h.vessel_length_group AS \"vessel_length_group!: VesselLengthGroup\",\n    h.vessel_name,\n    h.vessel_name_ers,\n    h.catches::TEXT AS \"catches!\",\n    h.whale_catches::TEXT AS \"whale_catches!\"\nFROM\n    hauls h\nWHERE\n    h.fiskeridir_vessel_id = $1\n            "
-  },
   "9cd1c5dcb3702c1f36ba3a3a869ad3a36010357f2ddf7576635224b2c2bae6c6": {
     "describe": {
       "columns": [],
@@ -3405,6 +3366,46 @@
       }
     },
     "query": "\nSELECT\n    output\nFROM\n    vessel_benchmark_outputs\nWHERE\n    fiskeridir_vessel_id = $1\n    AND vessel_benchmark_id = $2\n            "
+  },
+  "cfb90356067a3aa77f92dec733b481ab0ca7b5b6b14271353c4d70af8222bc8e": {
+    "describe": {
+      "columns": [
+        {
+          "name": "departure_timestamp",
+          "ordinal": 0,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "target_species_fiskeridir_id",
+          "ordinal": 1,
+          "type_info": "Int4"
+        },
+        {
+          "name": "hauls!",
+          "ordinal": 2,
+          "type_info": "Text"
+        },
+        {
+          "name": "fishing_facilities!",
+          "ordinal": 3,
+          "type_info": "Text"
+        }
+      ],
+      "nullable": [
+        false,
+        true,
+        null,
+        null
+      ],
+      "parameters": {
+        "Left": [
+          "Int8",
+          "Bool",
+          "Int4"
+        ]
+      }
+    },
+    "query": "\nSELECT\n    d.departure_timestamp,\n    d.target_species_fiskeridir_id,\n    COALESCE(\n        JSONB_AGG(DISTINCT h) FILTER (\n            WHERE\n                h.haul_id IS NOT NULL\n        ),\n        '[]'\n    )::TEXT AS \"hauls!\",\n    COALESCE(\n        JSONB_AGG(\n            DISTINCT JSONB_BUILD_OBJECT(\n                'tool_id',\n                f.tool_id,\n                'barentswatch_vessel_id',\n                f.barentswatch_vessel_id,\n                'fiskeridir_vessel_id',\n                f.fiskeridir_vessel_id,\n                'vessel_name',\n                f.vessel_name,\n                'call_sign',\n                f.call_sign,\n                'mmsi',\n                f.mmsi,\n                'imo',\n                f.imo,\n                'reg_num',\n                f.reg_num,\n                'sbr_reg_num',\n                f.sbr_reg_num,\n                'contact_phone',\n                f.contact_phone,\n                'contact_email',\n                f.contact_email,\n                'tool_type',\n                f.tool_type,\n                'tool_type_name',\n                f.tool_type_name,\n                'tool_color',\n                f.tool_color,\n                'tool_count',\n                f.tool_count,\n                'setup_timestamp',\n                f.setup_timestamp,\n                'setup_processed_timestamp',\n                f.setup_processed_timestamp,\n                'removed_timestamp',\n                f.removed_timestamp,\n                'removed_processed_timestamp',\n                f.removed_processed_timestamp,\n                'last_changed',\n                f.last_changed,\n                'source',\n                f.source,\n                'comment',\n                f.comment,\n                'geometry_wkt',\n                ST_ASTEXT (f.geometry_wkt),\n                'api_source',\n                f.api_source\n            )\n        ) FILTER (\n            WHERE\n                f.tool_id IS NOT NULL\n        ),\n        '[]'\n    )::TEXT AS \"fishing_facilities!\"\nFROM\n    ers_departures d\n    LEFT JOIN hauls h ON h.fiskeridir_vessel_id = $1\n    AND h.start_timestamp > d.departure_timestamp\n    LEFT JOIN fishing_facilities f ON $2\n    AND f.fiskeridir_vessel_id = $1\n    AND f.setup_timestamp > d.departure_timestamp\nWHERE\n    d.fiskeridir_vessel_id = $1\n    AND d.departure_timestamp > COALESCE(\n        (\n            SELECT\n                MAX(UPPER(COALESCE(t.period_precision, t.period)))\n            FROM\n                trips t\n            WHERE\n                t.fiskeridir_vessel_id = d.fiskeridir_vessel_id\n                AND t.trip_assembler_id = $3\n        ),\n        TO_TIMESTAMP(0)\n    )\nGROUP BY\n    d.message_id\n            "
   },
   "cfc421b188cca6947cfe3156ad0b250768f1fcb055ff578f9e37738b4b3aa629": {
     "describe": {

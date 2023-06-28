@@ -31,8 +31,12 @@ impl TestDb {
         self.ais_positions(None, None).await
     }
 
-    pub async fn hauls_of_vessel(&self, vessel_id: FiskeridirVesselId) -> Vec<kyogre_core::Haul> {
-        sqlx::query_as!(
+    pub async fn haul_of_vessel(
+        &self,
+        vessel_id: FiskeridirVesselId,
+        message_id: u64,
+    ) -> kyogre_core::Haul {
+        let haul = sqlx::query_as!(
             Haul,
             r#"
 SELECT
@@ -67,15 +71,16 @@ FROM
     hauls h
 WHERE
     h.fiskeridir_vessel_id = $1
+    AND h.message_id = $2
             "#,
-            vessel_id.0
+            vessel_id.0,
+            message_id as i64,
         )
-        .fetch_all(&self.db.pool)
+        .fetch_one(&self.db.pool)
         .await
-        .unwrap()
-        .into_iter()
-        .map(|h| kyogre_core::Haul::try_from(h).unwrap())
-        .collect()
+        .unwrap();
+
+        kyogre_core::Haul::try_from(haul).unwrap()
     }
 
     pub async fn hauls_matrix(
@@ -610,15 +615,14 @@ FROM
         start: &DateTime<Utc>,
         end: &DateTime<Utc>,
     ) -> kyogre_core::Haul {
-        let mut dca = ErsDca::test_default(random(), Some(vessel_id.0 as u64));
+        let message_id = random();
+        let mut dca = ErsDca::test_default(message_id, Some(vessel_id.0 as u64));
         dca.start_date = Some(start.date_naive());
         dca.start_time = Some(start.time());
         dca.stop_date = Some(end.date_naive());
         dca.stop_time = Some(end.time());
         self.add_ers_dca_value(dca).await;
-        let mut hauls = self.hauls_of_vessel(vessel_id).await;
-        assert_eq!(hauls.len(), 1);
-        hauls.pop().unwrap()
+        self.haul_of_vessel(vessel_id, message_id).await
     }
 
     pub async fn generate_ais_vessel(&self, mmsi: Mmsi, call_sign: &str) -> AisVessel {

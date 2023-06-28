@@ -744,7 +744,7 @@ SELECT
     d.departure_timestamp,
     d.target_species_fiskeridir_id,
     COALESCE(
-        JSONB_AGG(h) FILTER (
+        JSONB_AGG(DISTINCT h) FILTER (
             WHERE
                 h.haul_id IS NOT NULL
         ),
@@ -814,17 +814,20 @@ FROM
     AND h.start_timestamp > d.departure_timestamp
     LEFT JOIN fishing_facilities f ON $2
     AND f.fiskeridir_vessel_id = $1
-    AND LOWER(f.period) > d.departure_timestamp
+    AND f.setup_timestamp > d.departure_timestamp
 WHERE
     d.fiskeridir_vessel_id = $1
-    AND d.departure_timestamp > (
-        SELECT
-            MAX(UPPER(COALESCE(t.period_precision, t.period)))
-        FROM
-            trips t
-        WHERE
-            t.fiskeridir_vessel_id = d.fiskeridir_vessel_id
-            AND t.trip_assembler_id = $3
+    AND d.departure_timestamp > COALESCE(
+        (
+            SELECT
+                MAX(UPPER(COALESCE(t.period_precision, t.period)))
+            FROM
+                trips t
+            WHERE
+                t.fiskeridir_vessel_id = d.fiskeridir_vessel_id
+                AND t.trip_assembler_id = $3
+        ),
+        TO_TIMESTAMP(0)
     )
 GROUP BY
     d.message_id
