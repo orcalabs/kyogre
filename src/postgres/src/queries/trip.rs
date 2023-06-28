@@ -824,13 +824,17 @@ WHERE
             FROM
                 trips t
             WHERE
-                t.fiskeridir_vessel_id = d.fiskeridir_vessel_id
+                t.fiskeridir_vessel_id = $1
                 AND t.trip_assembler_id = $3
         ),
         TO_TIMESTAMP(0)
     )
 GROUP BY
     d.message_id
+ORDER BY
+    d.departure_timestamp ASC
+LIMIT
+    1
             "#,
             vessel_id.0,
             read_fishing_facility,
