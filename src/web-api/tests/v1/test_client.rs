@@ -256,6 +256,20 @@ impl ApiClient {
         self.get(format!("trips/{}", id.0), &parameters, headers)
             .await
     }
+    pub async fn get_current_trip(
+        &self,
+        id: FiskeridirVesselId,
+        token: Option<String>,
+    ) -> Response {
+        let headers = token.map(|t| {
+            let mut headers = HeaderMap::new();
+            headers.insert("bw-token", t.try_into().unwrap());
+            headers
+        });
+
+        self.get(format!("trips/current/{}", id.0), &[], headers)
+            .await
+    }
     pub async fn get_vms_positions(&self, call_sign: &CallSign, params: VmsParameters) -> Response {
         let mut parameters = Vec::new();
         if let Some(start) = params.start {
