@@ -1293,3 +1293,39 @@ async fn test_current_trip_does_not_include_fishing_facilities_without_permissio
     })
     .await;
 }
+
+#[tokio::test]
+async fn test_current_trip_returns_earliest_departure_since_previous_trip() {
+    test(|mut helper| async move {
+        let vessel_id = FiskeridirVesselId(10);
+        let call_sign = CallSign::new_unchecked("LK17");
+        helper
+            .db
+            .generate_fiskeridir_vessel(vessel_id, None, Some(call_sign.clone()))
+            .await;
+
+        let start1 = Utc.timestamp_opt(100000, 1).unwrap();
+        let end1 = Utc.timestamp_opt(200000, 1).unwrap();
+        let start2 = Utc.timestamp_opt(300000, 1).unwrap();
+        let start3 = Utc.timestamp_opt(400000, 1).unwrap();
+
+        helper.generate_ers_trip(vessel_id, &start1, &end1).await;
+
+        let departure1 = ErsDep::test_default(1, vessel_id.0 as u64, start3, 1);
+        let departure2 = ErsDep::test_default(2, vessel_id.0 as u64, start2, 2);
+        helper
+            .db
+            .db
+            .add_ers_dep(vec![departure2, departure1])
+            .await
+            .unwrap();
+
+        let response = helper.app.get_current_trip(vessel_id, None).await;
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let trip: CurrentTrip = response.json().await.unwrap();
+
+        assert_eq!(trip.departure.timestamp_millis(), start2.timestamp_millis());
+    })
+    .await;
+}
