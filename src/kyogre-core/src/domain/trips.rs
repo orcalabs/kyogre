@@ -20,6 +20,14 @@ pub struct Trip {
     pub assembler_id: TripAssemblerId,
 }
 
+#[derive(Debug, Clone)]
+pub struct CurrentTrip {
+    pub departure: DateTime<Utc>,
+    pub target_species_fiskeridir_id: Option<i32>,
+    pub hauls: Vec<Haul>,
+    pub fishing_facilities: Vec<FishingFacility>,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NewTrip {
     pub period: DateRange,

@@ -23,6 +23,14 @@ pub struct Trip {
 }
 
 #[derive(Debug, Clone)]
+pub struct CurrentTrip {
+    pub departure_timestamp: DateTime<Utc>,
+    pub target_species_fiskeridir_id: Option<i32>,
+    pub hauls: String,
+    pub fishing_facilities: String,
+}
+
+#[derive(Debug, Clone)]
 pub struct TripCalculationTimer {
     pub timestamp: DateTime<Utc>,
     pub fiskeridir_vessel_id: i64,
@@ -144,6 +152,29 @@ impl TryFrom<Trip> for kyogre_core::Trip {
             distance,
             assembler_id: value.trip_assembler_id,
             precision_period,
+        })
+    }
+}
+
+impl TryFrom<CurrentTrip> for kyogre_core::CurrentTrip {
+    type Error = Report<PostgresError>;
+
+    fn try_from(v: CurrentTrip) -> Result<Self, Self::Error> {
+        Ok(Self {
+            departure: v.departure_timestamp,
+            target_species_fiskeridir_id: v.target_species_fiskeridir_id,
+            hauls: serde_json::from_str::<Vec<TripHaul>>(&v.hauls)
+                .into_report()
+                .change_context(PostgresError::DataConversion)?
+                .into_iter()
+                .map(kyogre_core::Haul::try_from)
+                .collect::<Result<_, _>>()?,
+            fishing_facilities: serde_json::from_str::<Vec<FishingFacility>>(&v.fishing_facilities)
+                .into_report()
+                .change_context(PostgresError::DataConversion)?
+                .into_iter()
+                .map(kyogre_core::FishingFacility::try_from)
+                .collect::<Result<_, _>>()?,
         })
     }
 }

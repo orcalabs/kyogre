@@ -1,5 +1,45 @@
 {
   "db": "PostgreSQL",
+  "012798b1f201499c33cfa1ffdc705a57c0289d6887d400d2e09ce2a1c90d0215": {
+    "describe": {
+      "columns": [
+        {
+          "name": "departure_timestamp",
+          "ordinal": 0,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "target_species_fiskeridir_id",
+          "ordinal": 1,
+          "type_info": "Int4"
+        },
+        {
+          "name": "hauls!",
+          "ordinal": 2,
+          "type_info": "Text"
+        },
+        {
+          "name": "fishing_facilities!",
+          "ordinal": 3,
+          "type_info": "Text"
+        }
+      ],
+      "nullable": [
+        false,
+        true,
+        null,
+        null
+      ],
+      "parameters": {
+        "Left": [
+          "Int8",
+          "Bool",
+          "Int4"
+        ]
+      }
+    },
+    "query": "\nSELECT\n    d.departure_timestamp,\n    d.target_species_fiskeridir_id,\n    COALESCE(\n        JSONB_AGG(h) FILTER (\n            WHERE\n                h.haul_id IS NOT NULL\n        ),\n        '[]'\n    )::TEXT AS \"hauls!\",\n    COALESCE(\n        JSONB_AGG(\n            DISTINCT JSONB_BUILD_OBJECT(\n                'tool_id',\n                f.tool_id,\n                'barentswatch_vessel_id',\n                f.barentswatch_vessel_id,\n                'fiskeridir_vessel_id',\n                f.fiskeridir_vessel_id,\n                'vessel_name',\n                f.vessel_name,\n                'call_sign',\n                f.call_sign,\n                'mmsi',\n                f.mmsi,\n                'imo',\n                f.imo,\n                'reg_num',\n                f.reg_num,\n                'sbr_reg_num',\n                f.sbr_reg_num,\n                'contact_phone',\n                f.contact_phone,\n                'contact_email',\n                f.contact_email,\n                'tool_type',\n                f.tool_type,\n                'tool_type_name',\n                f.tool_type_name,\n                'tool_color',\n                f.tool_color,\n                'tool_count',\n                f.tool_count,\n                'setup_timestamp',\n                f.setup_timestamp,\n                'setup_processed_timestamp',\n                f.setup_processed_timestamp,\n                'removed_timestamp',\n                f.removed_timestamp,\n                'removed_processed_timestamp',\n                f.removed_processed_timestamp,\n                'last_changed',\n                f.last_changed,\n                'source',\n                f.source,\n                'comment',\n                f.comment,\n                'geometry_wkt',\n                ST_ASTEXT (f.geometry_wkt),\n                'api_source',\n                f.api_source\n            )\n        ) FILTER (\n            WHERE\n                f.tool_id IS NOT NULL\n        ),\n        '[]'\n    )::TEXT AS \"fishing_facilities!\"\nFROM\n    ers_departures d\n    LEFT JOIN hauls h ON h.fiskeridir_vessel_id = $1\n    AND h.start_timestamp > d.departure_timestamp\n    LEFT JOIN fishing_facilities f ON $2\n    AND f.fiskeridir_vessel_id = $1\n    AND LOWER(f.period) > d.departure_timestamp\nWHERE\n    d.fiskeridir_vessel_id = $1\n    AND d.departure_timestamp > (\n        SELECT\n            MAX(UPPER(COALESCE(t.period_precision, t.period)))\n        FROM\n            trips t\n        WHERE\n            t.fiskeridir_vessel_id = d.fiskeridir_vessel_id\n            AND t.trip_assembler_id = $3\n    )\nGROUP BY\n    d.message_id\n            "
+  },
   "063ffe3ea8b5130ce0826bfca3da92147d6472f539da0b9e2ce34f83532da96c": {
     "describe": {
       "columns": [],

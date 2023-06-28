@@ -101,6 +101,41 @@ pub async fn trips<T: Database + 'static>(
     }
 }
 
+#[utoipa::path(
+    get,
+    path = "/trips/current/{fiskeridir_vessel_id}",
+    responses(
+        (status = 200, description = "current trip of the given vessel", body = CurrentTrip),
+        (status = 500, description = "an internal error occured", body = ErrorResponse),
+    )
+)]
+#[tracing::instrument(skip(db))]
+pub async fn current_trip<T: Database + 'static>(
+    db: web::Data<T>,
+    profile: Option<BwProfile>,
+    fiskeridir_vessel_id: Path<u64>,
+) -> Result<Response<Option<CurrentTrip>>, ApiError> {
+    let read_fishing_facility = profile
+        .map(|p| {
+            p.policies
+                .contains(&BwPolicy::BwReadExtendedFishingFacility)
+        })
+        .unwrap_or(false);
+
+    Ok(Response::new(
+        db.current_trip(
+            FiskeridirVesselId(fiskeridir_vessel_id.into_inner() as i64),
+            read_fishing_facility,
+        )
+        .await
+        .map_err(|e| {
+            event!(Level::ERROR, "failed to retrieve current_trip: {:?}", e);
+            ApiError::InternalServerError
+        })?
+        .map(CurrentTrip::from),
+    ))
+}
+
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct Trip {
@@ -122,6 +157,15 @@ pub struct Trip {
     pub start_port_id: Option<String>,
     pub end_port_id: Option<String>,
     pub events: Vec<VesselEvent>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct CurrentTrip {
+    pub departure: DateTime<Utc>,
+    pub target_species_fiskeridir_id: Option<i32>,
+    pub hauls: Vec<Haul>,
+    pub fishing_facilities: Vec<FishingFacility>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
@@ -163,6 +207,21 @@ impl From<kyogre_core::TripDetailed> for Trip {
                 .vessel_events
                 .into_iter()
                 .map(VesselEvent::from)
+                .collect(),
+        }
+    }
+}
+
+impl From<kyogre_core::CurrentTrip> for CurrentTrip {
+    fn from(v: kyogre_core::CurrentTrip) -> Self {
+        Self {
+            departure: v.departure,
+            target_species_fiskeridir_id: v.target_species_fiskeridir_id,
+            hauls: v.hauls.into_iter().map(Haul::from).collect(),
+            fishing_facilities: v
+                .fishing_facilities
+                .into_iter()
+                .map(FishingFacility::from)
                 .collect(),
         }
     }

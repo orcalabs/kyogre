@@ -305,6 +305,18 @@ impl WebApiOutboundPort for PostgresAdapter {
         Ok(convert_stream(stream).boxed())
     }
 
+    async fn current_trip(
+        &self,
+        vessel_id: FiskeridirVesselId,
+        read_fishing_facility: bool,
+    ) -> Result<Option<CurrentTrip>, QueryError> {
+        convert_optional(
+            self.current_trip_impl(vessel_id, read_fishing_facility)
+                .await
+                .change_context(QueryError)?,
+        )
+    }
+
     async fn hauls_matrix(&self, query: &HaulsMatrixQuery) -> Result<HaulsMatrix, QueryError> {
         let active_filter = query.active_filter;
         let args = HaulsMatrixArgs::try_from(query.clone()).change_context(QueryError)?;

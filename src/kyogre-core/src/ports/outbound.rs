@@ -55,6 +55,11 @@ pub trait WebApiOutboundPort {
         haul_id: &HaulId,
         read_fishing_facility: bool,
     ) -> Result<Option<TripDetailed>, QueryError>;
+    async fn current_trip(
+        &self,
+        vessel_id: FiskeridirVesselId,
+        read_fishing_facility: bool,
+    ) -> Result<Option<CurrentTrip>, QueryError>;
     async fn hauls_matrix(&self, query: &HaulsMatrixQuery) -> Result<HaulsMatrix, QueryError>;
     fn fishing_facilities(
         &self,
