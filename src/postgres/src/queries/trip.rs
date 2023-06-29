@@ -743,78 +743,144 @@ FROM
 SELECT
     d.departure_timestamp,
     d.target_species_fiskeridir_id,
-    COALESCE(
-        JSONB_AGG(DISTINCT h) FILTER (
-            WHERE
-                h.haul_id IS NOT NULL
-        ),
-        '[]'
-    )::TEXT AS "hauls!",
-    COALESCE(
-        JSONB_AGG(
-            DISTINCT JSONB_BUILD_OBJECT(
-                'tool_id',
-                f.tool_id,
-                'barentswatch_vessel_id',
-                f.barentswatch_vessel_id,
-                'fiskeridir_vessel_id',
-                f.fiskeridir_vessel_id,
-                'vessel_name',
-                f.vessel_name,
-                'call_sign',
-                f.call_sign,
-                'mmsi',
-                f.mmsi,
-                'imo',
-                f.imo,
-                'reg_num',
-                f.reg_num,
-                'sbr_reg_num',
-                f.sbr_reg_num,
-                'contact_phone',
-                f.contact_phone,
-                'contact_email',
-                f.contact_email,
-                'tool_type',
-                f.tool_type,
-                'tool_type_name',
-                f.tool_type_name,
-                'tool_color',
-                f.tool_color,
-                'tool_count',
-                f.tool_count,
-                'setup_timestamp',
-                f.setup_timestamp,
-                'setup_processed_timestamp',
-                f.setup_processed_timestamp,
-                'removed_timestamp',
-                f.removed_timestamp,
-                'removed_processed_timestamp',
-                f.removed_processed_timestamp,
-                'last_changed',
-                f.last_changed,
-                'source',
-                f.source,
-                'comment',
-                f.comment,
-                'geometry_wkt',
-                ST_ASTEXT (f.geometry_wkt),
-                'api_source',
-                f.api_source
+    (
+        SELECT
+            COALESCE(
+                JSONB_AGG(
+                    JSONB_BUILD_OBJECT(
+                        'haul_id',
+                        h.haul_id,
+                        'ers_activity_id',
+                        h.ers_activity_id,
+                        'duration',
+                        h.duration,
+                        'haul_distance',
+                        h.haul_distance,
+                        'catch_location_start',
+                        h.catch_location_start,
+                        'catch_locations',
+                        h.catch_locations,
+                        'ocean_depth_end',
+                        h.ocean_depth_end,
+                        'ocean_depth_start',
+                        h.ocean_depth_start,
+                        'quota_type_id',
+                        h.quota_type_id,
+                        'start_latitude',
+                        h.start_latitude,
+                        'start_longitude',
+                        h.start_longitude,
+                        'start_timestamp',
+                        h.start_timestamp,
+                        'stop_timestamp',
+                        h.stop_timestamp,
+                        'stop_latitude',
+                        h.stop_latitude,
+                        'stop_longitude',
+                        h.stop_longitude,
+                        'total_living_weight',
+                        h.total_living_weight,
+                        'gear_id',
+                        h.gear_id,
+                        'gear_group_id',
+                        h.gear_group_id,
+                        'fiskeridir_vessel_id',
+                        h.fiskeridir_vessel_id,
+                        'vessel_call_sign',
+                        h.vessel_call_sign,
+                        'vessel_call_sign_ers',
+                        h.vessel_call_sign_ers,
+                        'vessel_length',
+                        h.vessel_length,
+                        'vessel_length_group',
+                        h.vessel_length_group,
+                        'vessel_name',
+                        h.vessel_name,
+                        'vessel_name_ers',
+                        h.vessel_name_ers,
+                        'catches',
+                        h.catches,
+                        'whale_catches',
+                        h.whale_catches
+                    )
+                ),
+                '[]'
+            )::TEXT
+        FROM
+            hauls h
+        WHERE
+            h.fiskeridir_vessel_id = $1
+            AND h.start_timestamp > d.departure_timestamp
+    ) AS "hauls!",
+    (
+        SELECT
+            COALESCE(
+                JSONB_AGG(
+                    JSONB_BUILD_OBJECT(
+                        'tool_id',
+                        f.tool_id,
+                        'barentswatch_vessel_id',
+                        f.barentswatch_vessel_id,
+                        'fiskeridir_vessel_id',
+                        f.fiskeridir_vessel_id,
+                        'vessel_name',
+                        f.vessel_name,
+                        'call_sign',
+                        f.call_sign,
+                        'mmsi',
+                        f.mmsi,
+                        'imo',
+                        f.imo,
+                        'reg_num',
+                        f.reg_num,
+                        'sbr_reg_num',
+                        f.sbr_reg_num,
+                        'contact_phone',
+                        f.contact_phone,
+                        'contact_email',
+                        f.contact_email,
+                        'tool_type',
+                        f.tool_type,
+                        'tool_type_name',
+                        f.tool_type_name,
+                        'tool_color',
+                        f.tool_color,
+                        'tool_count',
+                        f.tool_count,
+                        'setup_timestamp',
+                        f.setup_timestamp,
+                        'setup_processed_timestamp',
+                        f.setup_processed_timestamp,
+                        'removed_timestamp',
+                        f.removed_timestamp,
+                        'removed_processed_timestamp',
+                        f.removed_processed_timestamp,
+                        'last_changed',
+                        f.last_changed,
+                        'source',
+                        f.source,
+                        'comment',
+                        f.comment,
+                        'geometry_wkt',
+                        ST_ASTEXT (f.geometry_wkt),
+                        'api_source',
+                        f.api_source
+                    )
+                ),
+                '[]'
+            )::TEXT
+        FROM
+            fishing_facilities f
+        WHERE
+            $2
+            AND f.fiskeridir_vessel_id = $1
+            AND (
+                f.removed_timestamp IS NULL
+                OR f.removed_timestamp > d.departure_timestamp
             )
-        ) FILTER (
-            WHERE
-                f.tool_id IS NOT NULL
-        ),
-        '[]'
-    )::TEXT AS "fishing_facilities!"
+    ) AS "fishing_facilities!"
 FROM
     ers_departures d
-    LEFT JOIN hauls h ON h.fiskeridir_vessel_id = $1
-    AND h.start_timestamp > d.departure_timestamp
-    LEFT JOIN fishing_facilities f ON $2
-    AND f.fiskeridir_vessel_id = $1
-    AND f.setup_timestamp > d.departure_timestamp
 WHERE
     d.fiskeridir_vessel_id = $1
     AND d.departure_timestamp > COALESCE(
