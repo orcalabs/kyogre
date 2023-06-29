@@ -1316,8 +1316,12 @@ WHERE
 
         for v in values {
             trip_id.push(v.trip_id.0);
-            distance
-                .push(float_to_decimal(v.distance).change_context(PostgresError::DataConversion)?);
+            distance.push(
+                v.distance
+                    .map(float_to_decimal)
+                    .transpose()
+                    .change_context(PostgresError::DataConversion)?,
+            );
             distancer_id.push(v.distancer_id as i32);
         }
 
@@ -1339,7 +1343,7 @@ WHERE
     t.trip_id = q.trip_id
             "#,
             trip_id.as_slice(),
-            distance.as_slice(),
+            distance.as_slice() as _,
             distancer_id.as_slice(),
         )
         .execute(&self.pool)

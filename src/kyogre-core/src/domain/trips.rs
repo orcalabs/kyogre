@@ -298,6 +298,6 @@ pub struct HaulMessage {
 #[derive(Debug, Clone, PartialEq)]
 pub struct TripDistanceOutput {
     pub trip_id: TripId,
-    pub distance: f64,
+    pub distance: Option<f64>,
     pub distancer_id: TripDistancerId,
 }
