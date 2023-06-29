@@ -35,7 +35,7 @@ impl TripDistancer for AisVms {
             .await
             .change_context(TripDistancerError)?;
 
-        let mut output = Vec::new();
+        let mut output = Vec::with_capacity(trips.len());
 
         for t in trips {
             let positions = outbound
@@ -44,6 +44,11 @@ impl TripDistancer for AisVms {
                 .change_context(TripDistancerError)?;
 
             if positions.is_empty() {
+                output.push(TripDistanceOutput {
+                    trip_id: t.trip_id,
+                    distance: None,
+                    distancer_id: TripDistancerId::AisVms,
+                });
                 continue;
             }
 
@@ -79,7 +84,7 @@ impl TripDistancer for AisVms {
 
             output.push(TripDistanceOutput {
                 trip_id: t.trip_id,
-                distance,
+                distance: Some(distance),
                 distancer_id: TripDistancerId::AisVms,
             });
         }
