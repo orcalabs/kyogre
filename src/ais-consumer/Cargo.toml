@@ -12,10 +12,10 @@ orca-core = { registry = "orcalabs-orcastrator", version = "0.20.0", features = 
     "telemetry",
 ] }
 
-async-trait = "0.1.68"
+async-trait = "0.1.69"
 serde = "1.0.164"
 config = "0.13.3"
-tokio = { version = "1.28.2", features = ["macros", "sync", "time"] }
+tokio = { version = "1.29.1", features = ["macros", "sync", "time"] }
 tokio-util = { version = "0.7.8", features = ["codec", "compat"] }
 futures = "0.3.28"
 tracing = "0.1.37"
@@ -25,7 +25,7 @@ serde_json = "1.0.99"
 humantime-serde = "1.1.1"
 rand = "0.8.5"
 
-hyper = { version = "0.14.26", features = ["http2"] }
+hyper = { version = "0.14.27", features = ["http2"] }
 hyper-alpn = "=0.3.0"
 
 geo = "0.23.1"
