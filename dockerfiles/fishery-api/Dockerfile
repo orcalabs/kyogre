@@ -28,7 +28,7 @@ COPY src .
 RUN --mount=type=secret,id=git-credentials,target=~/.git-credentials,required=true \
     cargo build --release --bin web-api
 
-FROM gcr.io/distroless/cc
+FROM debian:latest
 
 COPY src/web-api/config config
 
