@@ -19,4 +19,4 @@ error-stack = { workspace = true }
 config = "0.13.3"
 serde = "1.0.164"
 humantime-serde = "1.1.1"
-tokio = { version = "1.28.2", features = ["macros"] }
+tokio = { version = "1.29.1", features = ["macros"] }
