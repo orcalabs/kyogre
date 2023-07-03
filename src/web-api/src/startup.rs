@@ -37,7 +37,7 @@ impl App {
             None => None,
             Some(duck_db) => {
                 let duckdb = DuckdbAdapter::new(duck_db, settings.postgres.clone()).unwrap();
-                duckdb.refresh_hauls_cache_impl().unwrap();
+                duckdb.create_hauls_cache().unwrap();
 
                 if let Some(schedule) = &duck_db.refresh_schedule {
                     duckdb.spawn_refresher(schedule.clone());

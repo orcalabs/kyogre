@@ -79,15 +79,26 @@ impl DuckdbAdapter {
                         tokio::time::sleep(d).await;
 
                         span!(Level::INFO, "refresh_duckdb");
-                        match th_duckdb.refresh_hauls_cache_impl() {
-                            Ok(_) => {
-                                event!(Level::INFO, "successfully refreshed DuckDB");
+                        match th_duckdb.pool.get() {
+                            Ok(conn) => {
+                                match th_duckdb.refresh_hauls_cache(&conn) {
+                                    Ok(_) => {
+                                        event!(Level::INFO, "successfully refreshed DuckDB");
+                                    }
+                                    Err(e) => {
+                                        event!(
+                                            Level::INFO,
+                                            "failed to refresh DuckDB, err: {:?}",
+                                            e
+                                        );
+                                    }
+                                }
+                                previous_time = Some(Utc::now());
                             }
                             Err(e) => {
-                                event!(Level::INFO, "failed to refresh DuckDB, err: {:?}", e);
+                                event!(Level::INFO, "failed to acquire DuckDB conn, err: {:?}", e);
                             }
                         }
-                        previous_time = Some(Utc::now());
                     }
                     None => return,
                 };
@@ -96,17 +107,12 @@ impl DuckdbAdapter {
     }
 
     #[instrument(skip_all)]
-    pub fn refresh_hauls_cache_impl(&self) -> Result<(), DuckdbError> {
-        let conn = self
-            .pool
-            .get()
-            .into_report()
-            .change_context(DuckdbError::Connection)?;
-
+    fn refresh_hauls_cache(
+        &self,
+        conn: &r2d2::PooledConnection<DuckdbConnectionManager>,
+    ) -> Result<(), DuckdbError> {
         conn.execute_batch(
             r"
-INSTALL postgres;
-LOAD postgres;
 DROP TABLE IF EXISTS hauls_matrix_cache;
 CREATE TABLE
     hauls_matrix_cache (
@@ -178,6 +184,42 @@ INSERT INTO
         )
         .into_report()
         .change_context(DuckdbError::Query)?;
+
+        Ok(())
+    }
+
+    #[instrument(skip_all)]
+    pub fn create_hauls_cache(&self) -> Result<(), DuckdbError> {
+        let conn = self
+            .pool
+            .get()
+            .into_report()
+            .change_context(DuckdbError::Connection)?;
+
+        conn.execute_batch(
+            r"
+INSTALL postgres;
+LOAD postgres;
+DROP TABLE IF EXISTS hauls_matrix_cache;
+CREATE TABLE
+    hauls_matrix_cache (
+        catch_location_matrix_index INT NOT NULL,
+        catch_location TEXT NOT NULL,
+        matrix_month_bucket INT NOT NULL,
+        vessel_length_group INT NOT NULL,
+        fiskeridir_vessel_id INT,
+        gear_group_id INT NOT NULL,
+        species_group_id INT NOT NULL,
+        start_timestamp timestamptz NOT NULL,
+        stop_timestamp timestamptz NOT NULL,
+        living_weight BIGINT NOT NULL,
+    );
+            ",
+        )
+        .into_report()
+        .change_context(DuckdbError::Query)?;
+
+        self.refresh_hauls_cache(&conn)?;
 
         Ok(())
     }
