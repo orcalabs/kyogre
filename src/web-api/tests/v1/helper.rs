@@ -71,11 +71,7 @@ impl TestHelper {
             .unwrap();
     }
     pub fn refresh_cache(&self) {
-        self.duck_db
-            .as_ref()
-            .unwrap()
-            .refresh_hauls_cache_impl()
-            .unwrap()
+        self.duck_db.as_ref().unwrap().create_hauls_cache().unwrap()
     }
 
     pub async fn add_precision_to_trip(&self, vessel: &Vessel, trip: &TripDetailed) -> DateRange {
