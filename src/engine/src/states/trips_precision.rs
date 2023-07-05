@@ -21,12 +21,12 @@ impl<L, T> From<StepWrapper<L, T, Pending>> for StepWrapper<L, T, TripsPrecision
 #[derive(Default)]
 pub struct TripsPrecision;
 
-impl<A, B> StepWrapper<A, SharedState<B>, TripsPrecision>
+impl<A, B, C> StepWrapper<A, SharedState<B, C>, TripsPrecision>
 where
     B: Database,
 {
     #[instrument(name = "trips_precision_state", skip_all)]
-    pub async fn run(self) -> Engine<A, SharedState<B>> {
+    pub async fn run(self) -> Engine<A, SharedState<B, C>> {
         tracing::Span::current().record(
             "app.engine_state",
             EngineDiscriminants::TripsPrecision.as_ref(),
@@ -40,7 +40,7 @@ where
             }
         }
 
-        Engine::Benchmark(StepWrapper::<A, SharedState<B>, Benchmark>::from(self))
+        Engine::Benchmark(StepWrapper::<A, SharedState<B, C>, Benchmark>::from(self))
     }
 
     async fn run_precision_processors(&self, vessels: Vec<Vessel>) {

@@ -315,7 +315,7 @@ fn get_matrix_output(
     Ok(data)
 }
 
-impl CacheOutboundPort for DuckdbAdapter {
+impl MatrixCacheOutbound for DuckdbAdapter {
     fn hauls_matrix(&self, query: &HaulsMatrixQuery) -> Result<Option<HaulsMatrix>, QueryError> {
         let res = self.get_matrixes(query).change_context(QueryError);
         match self.cache_mode {

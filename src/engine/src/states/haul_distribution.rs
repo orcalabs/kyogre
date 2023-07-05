@@ -18,18 +18,20 @@ impl<L, T> From<StepWrapper<L, T, HaulDistribution>> for StepWrapper<L, T, TripD
 #[derive(Default)]
 pub struct HaulDistribution;
 
-impl<A, B> StepWrapper<A, SharedState<B>, HaulDistribution>
+impl<A, B, C> StepWrapper<A, SharedState<B, C>, HaulDistribution>
 where
     B: Database,
 {
     #[instrument(name = "haul_distribution_state", skip_all, fields(app.engine_state))]
-    pub async fn run(self) -> Engine<A, SharedState<B>> {
+    pub async fn run(self) -> Engine<A, SharedState<B, C>> {
         tracing::Span::current().record(
             "app.engine_state",
             EngineDiscriminants::HaulDistribution.as_ref(),
         );
         self.do_step().await;
-        Engine::TripDistance(StepWrapper::<A, SharedState<B>, TripDistance>::from(self))
+        Engine::TripDistance(StepWrapper::<A, SharedState<B, C>, TripDistance>::from(
+            self,
+        ))
     }
 
     #[instrument(skip_all)]

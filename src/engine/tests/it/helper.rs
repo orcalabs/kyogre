@@ -1,4 +1,5 @@
 use dockertest::{DockerTest, Source, StaticManagementPolicy};
+use duckdb_rs::{CacheMode, CacheStorage, DuckdbSettings};
 use engine::states::{Pending, Scrape, Sleep, Trips, TripsPrecision};
 use engine::*;
 use futures::Future;
@@ -210,6 +211,11 @@ where
                 honeycomb: None,
                 engine: engine_config,
                 scraper: scraper::Config::default(),
+                duck_db: DuckdbSettings {
+                    max_connections: 1,
+                    mode: CacheMode::ReturnError,
+                    storage: CacheStorage::Memory,
+                },
             };
 
             let db = TestDb {

@@ -45,6 +45,8 @@ services:
       dockerfile: dockerfiles/engine/Dockerfile
       secrets:
         - source: git-credentials
+    volumes:
+      - duckdb-data:/duckdb-data
     environment:
       - RUST_BACKTRACE=1
       - APP_ENVIRONMENT=local
@@ -87,3 +89,5 @@ services:
 secrets:
   git-credentials:
     file: ~/.git-credentials
+volumes:
+    duckdb-data:

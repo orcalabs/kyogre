@@ -34,9 +34,9 @@ pub struct Sleep {
     sleep_duration: tokio::time::Duration,
 }
 
-impl<A, B> StepWrapper<A, SharedState<B>, Sleep> {
+impl<A, B, C> StepWrapper<A, SharedState<B, C>, Sleep> {
     #[instrument(name = "sleep_state", skip_all)]
-    pub async fn run(self) -> Engine<A, SharedState<B>> {
+    pub async fn run(self) -> Engine<A, SharedState<B, C>> {
         tracing::Span::current().record("app.engine_state", EngineDiscriminants::Sleep.as_ref());
         event!(
             Level::INFO,
@@ -44,6 +44,6 @@ impl<A, B> StepWrapper<A, SharedState<B>, Sleep> {
             self.inner.state.sleep_duration
         );
         tokio::time::sleep(self.inner.state.sleep_duration).await;
-        Engine::Pending(StepWrapper::<A, SharedState<B>, Pending>::from(self))
+        Engine::Pending(StepWrapper::<A, SharedState<B, C>, Pending>::from(self))
     }
 }

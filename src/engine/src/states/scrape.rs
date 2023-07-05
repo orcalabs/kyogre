@@ -18,11 +18,11 @@ impl<L, T> From<StepWrapper<L, T, Scrape>> for StepWrapper<L, T, Trips> {
 #[derive(Default)]
 pub struct Scrape;
 
-impl<A, B> StepWrapper<A, SharedState<B>, Scrape> {
+impl<A, B, C> StepWrapper<A, SharedState<B, C>, Scrape> {
     #[instrument(name = "scrape_state", skip_all)]
-    pub async fn run(self) -> Engine<A, SharedState<B>> {
+    pub async fn run(self) -> Engine<A, SharedState<B, C>> {
         tracing::Span::current().record("app.engine_state", EngineDiscriminants::Scrape.as_ref());
         self.scraper().run().await;
-        Engine::Trips(StepWrapper::<A, SharedState<B>, Trips>::from(self))
+        Engine::Trips(StepWrapper::<A, SharedState<B, C>, Trips>::from(self))
     }
 }
