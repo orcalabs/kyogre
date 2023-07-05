@@ -1,0 +1,14 @@
+log_level: Info
+port: 5000
+telemetry:
+  ip: api.honeycomb.io
+  port: 443
+postgres:
+  port: 5432
+  db_name: kyogre
+  max_connections: 10
+  log_statements: Disable
+duck_db:
+  max_connections: 10
+  mode: MissOnError
+  storage: Memory

@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package matrix_cache;
+
+service MatrixCache {
+    rpc GetHaulMatrix(HaulFeatures) returns (HaulMatrix) {}
+}
+
+message HaulFeatures {
+    uint32 active_filter = 1;
+    repeated uint32 months = 2;
+    repeated CatchLocation catch_locations = 3;
+    repeated uint32 gear_group_ids = 4;
+    repeated uint32 species_group_ids = 5;
+    repeated uint32 vessel_length_groups = 6;
+    repeated int64 fiskeridir_vessel_ids = 7;
+}
+
+message HaulMatrix {
+    repeated uint64 dates = 1;
+    repeated uint64 length_group = 2;
+    repeated uint64 gear_group  = 3;
+    repeated uint64 species_group = 4;
+}
+
+message CatchLocation {
+    uint32 main_area_id = 1;
+    uint32 catch_area_id = 2;
+}
