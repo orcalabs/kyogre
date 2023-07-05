@@ -5,3 +5,5 @@ pub mod adapter;
 pub mod api;
 pub mod settings;
 pub mod startup;
+
+pub use adapter::*;

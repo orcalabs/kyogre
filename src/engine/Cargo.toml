@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 kyogre-core = { path = "../kyogre-core" }
 postgres = { path = "../postgres" }
+duckdb-rs = { path = "../duckdb-rs" }
 scraper = { path = "../scraper" }
 trip-assembler = { path = "../trip-assembler" }
 vessel-benchmark = { path = "../vessel-benchmark" }

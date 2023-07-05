@@ -92,3 +92,7 @@ pub trait HaulDistributorInbound: Send + Sync {
 pub trait TripDistancerInbound: Send + Sync {
     async fn add_output(&self, values: Vec<TripDistanceOutput>) -> Result<(), UpdateError>;
 }
+
+pub trait MatrixCacheInbound: Send + Sync {
+    fn refresh(&self) -> Result<(), UpdateError>;
+}

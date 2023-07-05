@@ -10,7 +10,8 @@ pub struct App {
 
 impl App {
     pub async fn build(settings: &Settings) -> Self {
-        let duckdb = DuckdbAdapter::new(&settings.duck_db, settings.postgres.clone()).unwrap();
+        let duckdb =
+            DuckdbAdapter::new(&settings.duck_db, Some(settings.postgres.clone())).unwrap();
         let service = MatrixCacheService::new(duckdb);
         let addr = format!("0:{}", settings.port).parse().unwrap();
 

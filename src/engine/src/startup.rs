@@ -1,4 +1,5 @@
 use crate::{settings::Settings, Engine, SharedState};
+use duckdb_rs::DuckdbAdapter;
 use orca_core::Environment;
 use orca_statemachine::Machine;
 use postgres::PostgresAdapter;
@@ -6,13 +7,14 @@ use scraper::{BarentswatchSource, FiskeridirSource, Scraper, WrappedHttpClient};
 use std::{path::PathBuf, sync::Arc};
 
 pub struct App {
-    pub shared_state: SharedState<PostgresAdapter>,
+    pub shared_state: SharedState<PostgresAdapter, DuckdbAdapter>,
     pub transition_log: orca_statemachine::Client,
 }
 
 impl App {
     pub async fn build(settings: &Settings) -> App {
         let postgres = PostgresAdapter::new(&settings.postgres).await.unwrap();
+        let duck_db = DuckdbAdapter::new(&settings.duck_db, None).unwrap();
 
         if settings.environment == Environment::Local {
             postgres.do_migrations().await;
@@ -46,6 +48,7 @@ impl App {
         let shared_state = SharedState::new(
             settings.engine.clone(),
             postgres,
+            duck_db,
             scraper,
             trip_assemblers,
             benchmarks,

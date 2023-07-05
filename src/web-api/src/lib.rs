@@ -3,8 +3,8 @@
 
 use fiskeridir_rs::{RegisterVesselEntityType, RegisterVesselOwner};
 use kyogre_core::{
-    ActiveHaulsFilter, CacheOutboundPort, Catch, Delivery, FishingFacilitiesSorting,
-    FishingFacilityToolType, HaulsSorting, Ordering, WebApiInboundPort, WebApiOutboundPort,
+    ActiveHaulsFilter, Catch, Delivery, FishingFacilitiesSorting, FishingFacilityToolType,
+    HaulsSorting, MatrixCacheOutbound, Ordering, WebApiInboundPort, WebApiOutboundPort,
 };
 use postgres::PostgresAdapter;
 use routes::v1;
@@ -20,7 +20,7 @@ pub mod settings;
 pub mod startup;
 
 pub trait Database: WebApiOutboundPort + WebApiInboundPort {}
-pub trait Cache: CacheOutboundPort {}
+pub trait Cache: MatrixCacheOutbound {}
 
 impl Database for PostgresAdapter {}
 

@@ -1,4 +1,8 @@
 log_level: Info
+duck_db:
+  max_connections: 1
+  mode: ReturnError
+  storage: Memory
 postgres:
   port: 5432
   db_name: kyogre

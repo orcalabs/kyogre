@@ -10,7 +10,7 @@ use tracing::{event, instrument, Level};
 #[derive(Clone)]
 pub struct DuckdbAdapter {
     pool: r2d2::Pool<DuckdbConnectionManager>,
-    postgres_settings: PsqlSettings,
+    postgres_settings: Option<PsqlSettings>,
     cache_mode: CacheMode,
 }
 
@@ -35,10 +35,16 @@ pub enum CacheStorage {
     Disk(PathBuf),
 }
 
+impl MatrixCacheInbound for DuckdbAdapter {
+    fn refresh(&self) -> Result<(), UpdateError> {
+        self.create_hauls_cache().change_context(UpdateError)
+    }
+}
+
 impl DuckdbAdapter {
     pub fn new(
         settings: &DuckdbSettings,
-        postgres_settings: PsqlSettings,
+        postgres_settings: Option<PsqlSettings>,
     ) -> Result<DuckdbAdapter, DuckdbError> {
         let manager = match &settings.storage {
             CacheStorage::Memory => DuckdbConnectionManager::memory()
@@ -66,6 +72,7 @@ impl DuckdbAdapter {
         &self,
         conn: &r2d2::PooledConnection<DuckdbConnectionManager>,
     ) -> Result<(), DuckdbError> {
+        let postgres_settings = self.postgres_settings.as_ref().unwrap();
         conn.execute_batch(
             r"
 DROP TABLE IF EXISTS hauls_matrix_cache;
@@ -107,13 +114,13 @@ FROM
         'hauls_matrix'
     )
             ",
-            self.postgres_settings
+            postgres_settings
                 .db_name
                 .clone()
                 .unwrap_or("postgres".to_string()),
-            self.postgres_settings.username,
-            self.postgres_settings.ip,
-            self.postgres_settings.password,
+            postgres_settings.username,
+            postgres_settings.ip,
+            postgres_settings.password,
         );
 
         conn.execute(
@@ -273,7 +280,7 @@ fn get_matrix_output(
     Ok(data)
 }
 
-impl CacheOutboundPort for DuckdbAdapter {
+impl MatrixCacheOutbound for DuckdbAdapter {
     fn hauls_matrix(&self, query: &HaulsMatrixQuery) -> Result<Option<HaulsMatrix>, QueryError> {
         let res = self.get_matrixes(query).change_context(QueryError);
         match self.cache_mode {
