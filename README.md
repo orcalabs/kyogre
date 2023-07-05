@@ -62,6 +62,10 @@ the first run:
 docker-compose build test-db
 ```
 
+If you experience `Too many open files` errors from tests either increase your
+max amount of file descriptors (`ulimit -n NUM`, linux) or run `cargo test` with
+limited test threads `cargo test -- --test-threads=NUM`
+
 The following build dependencies are required:
 
 - docker
