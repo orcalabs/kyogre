@@ -13,6 +13,7 @@ use std::panic;
 use std::sync::Once;
 use strum::{EnumCount, IntoEnumIterator};
 use tokio::sync::OnceCell;
+use tracing::{event, Level};
 use tracing_subscriber::FmtSubscriber;
 use trip_assembler::{ErsTripAssembler, LandingTripAssembler, TripAssembler};
 use vessel_benchmark::*;
@@ -71,7 +72,9 @@ impl TestHelper {
             .unwrap();
     }
     pub fn refresh_cache(&self) {
-        self.duck_db.as_ref().unwrap().create_hauls_cache().unwrap()
+        if let Some(duck_db) = self.duck_db.as_ref() {
+            duck_db.create_hauls_cache().unwrap();
+        }
     }
 
     pub async fn add_precision_to_trip(&self, vessel: &Vessel, trip: &TripDetailed) -> DateRange {
@@ -240,11 +243,11 @@ where
 
 pub async fn test_with_cache<T, Fut>(test: T)
 where
-    T: FnOnce(TestHelper) -> Fut + panic::UnwindSafe + Send + Sync + 'static,
+    T: FnOnce(TestHelper) -> Fut + panic::UnwindSafe + Send + Sync + Clone + 'static,
     Fut: Future<Output = ()> + Send + 'static,
 {
     test_impl(
-        test,
+        test.clone(),
         Some(DuckdbSettings {
             max_connections: 1,
             mode: CacheMode::ReturnError,
@@ -253,6 +256,7 @@ where
         }),
     )
     .await;
+    test_impl(test.clone(), None).await;
 }
 
 async fn test_impl<T, Fut>(test: T, duck_db: Option<DuckdbSettings>)
@@ -281,6 +285,8 @@ where
     composition.static_container(StaticManagementPolicy::Dynamic);
 
     docker_test.add_composition(composition);
+
+    let cache_test = duck_db.is_some();
 
     let db_name = random::<u32>().to_string();
     docker_test
@@ -331,6 +337,9 @@ where
             let app =
                 TestHelper::spawn_app(adapter, App::build(&api_settings).await, bw_helper).await;
 
+            if cache_test {
+                event!(Level::INFO, "cache_test");
+            }
             test(app).await;
 
             test_db.drop_db(&db_name).await;
