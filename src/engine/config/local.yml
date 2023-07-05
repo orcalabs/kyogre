@@ -8,7 +8,7 @@ postgres:
   log_statements: Disable
 engine:
   scrape_schedule:
-    Periodic: 30s
+    Periodic: 1h
 scraper:
   register_vessels_url: https://api.fiskeridir.no/vessel-api/api/v1/vessels
   landings:
