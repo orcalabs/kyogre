@@ -66,7 +66,7 @@ pub struct WhaleCatch {
     pub length: Option<i32>,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, Deserialize, Serialize, PartialEq, Eq)]
 pub struct HaulsMatrix {
     pub dates: Vec<u64>,
     pub length_group: Vec<u64>,

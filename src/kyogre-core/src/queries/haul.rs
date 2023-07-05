@@ -4,18 +4,19 @@ use enum_index::EnumIndex;
 use enum_index_derive::EnumIndex;
 use error_stack::{IntoReport, Result};
 use fiskeridir_rs::{GearGroup, SpeciesGroup, VesselLengthGroup};
+use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 use serde::{Deserialize, Serialize};
 use strum::{Display, EnumCount, EnumIter};
 
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
-#[derive(Debug, Copy, Clone, Deserialize, Serialize, PartialEq, EnumIndex)]
+#[derive(Debug, Copy, Clone, Deserialize, FromPrimitive, Serialize, PartialEq, EnumIndex)]
 #[serde(rename_all = "camelCase")]
 pub enum ActiveHaulsFilter {
-    Date,
-    GearGroup,
-    SpeciesGroup,
-    VesselLength,
+    Date = 1,
+    GearGroup = 2,
+    SpeciesGroup = 3,
+    VesselLength = 4,
 }
 
 #[derive(Debug, Copy, Clone, EnumIter, PartialEq, Eq, Display)]

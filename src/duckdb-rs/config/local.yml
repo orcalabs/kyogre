@@ -1,0 +1,13 @@
+log_level: Debug
+port: 5000
+postgres:
+  ip: postgres
+  port: 5432
+  username: postgres
+  password: test123
+  max_connections: 10
+  log_statements: Enable
+duck_db:
+  max_connections: 10
+  mode: MissOnError
+  storage: Memory
