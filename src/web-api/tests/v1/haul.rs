@@ -94,6 +94,7 @@ async fn test_hauls_returns_hauls_in_catch_location() {
         let response = helper.app.get_hauls(params).await;
 
         assert_eq!(response.status(), StatusCode::OK);
+
         let hauls: Vec<Haul> = response.json().await.unwrap();
 
         assert_eq!(hauls.len(), 2);

@@ -1,4 +1,4 @@
-use error_stack::{report, Report};
+use error_stack::{report, Report, ResultExt};
 use geo_types::geometry::Geometry;
 use geozero::wkb;
 use kyogre_core::CatchLocationId;
@@ -25,7 +25,8 @@ impl TryFrom<CatchLocation> for kyogre_core::CatchLocation {
         };
 
         Ok(Self {
-            id: CatchLocationId::new_unchecked(v.catch_location_id),
+            id: CatchLocationId::try_from(v.catch_location_id)
+                .change_context(PostgresError::DataConversion)?,
             polygon,
         })
     }

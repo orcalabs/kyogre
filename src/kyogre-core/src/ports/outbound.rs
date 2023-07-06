@@ -141,6 +141,14 @@ pub trait MatrixCacheOutbound: Send + Sync {
 }
 
 #[async_trait]
+pub trait MatrixCacheOutboundAsync: Send + Sync {
+    async fn hauls_matrix(
+        &self,
+        query: HaulsMatrixQuery,
+    ) -> Result<Option<HaulsMatrix>, QueryError>;
+}
+
+#[async_trait]
 pub trait HaulDistributorOutbound: Send + Sync {
     async fn vessels(&self) -> Result<Vec<Vessel>, QueryError>;
     async fn catch_locations(&self) -> Result<Vec<CatchLocation>, QueryError>;
