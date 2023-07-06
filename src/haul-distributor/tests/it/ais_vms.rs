@@ -411,7 +411,7 @@ async fn test_hauls_filters_by_distributed_catch_locations_after_distribution() 
         let hauls: Vec<Haul> = helper
             .adapter()
             .hauls(HaulsQuery {
-                catch_locations: Some(vec![CatchLocationId::new_unchecked("01-01".into())]),
+                catch_locations: Some(vec![CatchLocationId::try_from("01-01").unwrap()]),
                 ..Default::default()
             })
             .unwrap()

@@ -6,7 +6,14 @@ use serde::{
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize)]
-pub struct CatchLocationId(String);
+#[serde(transparent)]
+pub struct CatchLocationId {
+    #[serde(skip)]
+    main_area: i32,
+    #[serde(skip)]
+    catch_area: i32,
+    val: String,
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct CatchLocation {
@@ -16,11 +23,19 @@ pub struct CatchLocation {
 
 impl CatchLocationId {
     pub fn new(main_area: i32, catch_area: i32) -> Self {
-        Self(format!("{main_area:02}-{catch_area:02}"))
+        Self {
+            val: format!("{main_area:02}-{catch_area:02}"),
+            main_area,
+            catch_area,
+        }
     }
 
-    pub fn new_unchecked(id: String) -> Self {
-        Self(id)
+    pub fn main_area(&self) -> i32 {
+        self.main_area
+    }
+
+    pub fn catch_area(&self) -> i32 {
+        self.catch_area
     }
 
     pub fn new_opt(main_area: Option<i32>, catch_area: Option<i32>) -> Option<Self> {
@@ -31,7 +46,7 @@ impl CatchLocationId {
     }
 
     pub fn into_inner(self) -> String {
-        self.0
+        self.val
     }
 }
 
@@ -85,7 +100,7 @@ impl TryFrom<&str> for CatchLocationId {
 
 impl AsRef<str> for CatchLocationId {
     fn as_ref(&self) -> &str {
-        &self.0
+        &self.val
     }
 }
 
@@ -99,7 +114,7 @@ impl TryFrom<String> for CatchLocationId {
 
 impl ToString for CatchLocationId {
     fn to_string(&self) -> String {
-        self.0.clone()
+        self.val.clone()
     }
 }
 
