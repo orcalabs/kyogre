@@ -105,6 +105,30 @@ LOAD postgres;
         .map(|_| ())
     }
 
+    pub fn create_test_setup(&self) -> Result<(), DuckdbError> {
+        let mut conn = self
+            .pool
+            .get()
+            .into_report()
+            .change_context(DuckdbError::Connection)?;
+
+        self.install_postgres_exstension(&conn)?;
+
+        let tx = conn
+            .transaction()
+            .into_report()
+            .change_context(DuckdbError::Connection)?;
+
+        self.create_hauls(CreateMode::Initial, &tx)?;
+        self.add_data_versions(&tx)?;
+
+        tx.commit()
+            .into_report()
+            .change_context(DuckdbError::Connection)?;
+
+        Ok(())
+    }
+
     #[instrument(skip_all)]
     pub fn initial_create(&self) -> Result<(), DuckdbError> {
         let mut conn = self
@@ -351,7 +375,9 @@ CREATE TABLE
 INSERT INTO
     data_versions ("version", source)
 VALUES
-    (0, 'hauls');
+    (0, 'hauls')
+ON CONFLICT (source)
+DO NOTHING;
             "#,
         )
         .into_report()
