@@ -13,7 +13,7 @@ impl App {
         let duckdb =
             DuckdbAdapter::new(&settings.duck_db, Some(settings.postgres.clone())).unwrap();
         let service = MatrixCacheService::new(duckdb);
-        let addr = format!("0:{}", settings.port).parse().unwrap();
+        let addr = format!("[::]:{}", settings.port).parse().unwrap();
 
         let router = Server::builder().add_service(MatrixCacheServer::new(service));
 
