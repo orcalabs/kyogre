@@ -23,9 +23,6 @@ pub use settings::*;
 pub use startup::*;
 pub use states::*;
 
-pub trait MatrixCache: MatrixCacheInbound + Send + Sync + 'static {}
-impl<T> MatrixCache for T where T: MatrixCacheInbound + 'static {}
-
 pub trait Database:
     TripAssemblerOutboundPort
     + TripPrecisionInboundPort
@@ -37,6 +34,7 @@ pub trait Database:
     + HaulDistributorInbound
     + TripDistancerOutbound
     + TripDistancerInbound
+    + MatrixCacheVersion
     + Send
     + Sync
     + 'static
@@ -55,6 +53,7 @@ impl<T> Database for T where
         + HaulDistributorInbound
         + TripDistancerOutbound
         + TripDistancerInbound
+        + MatrixCacheVersion
         + 'static
 {
 }
@@ -82,10 +81,9 @@ pub struct Config {
     pub scrape_schedule: Schedule,
 }
 
-pub struct SharedState<A, B> {
+pub struct SharedState<A> {
     config: Config,
     database: A,
-    matrix_cache: B,
     scraper: Scraper,
     trip_processors: Vec<Box<dyn TripProcessor>>,
     benchmarks: Vec<Box<dyn VesselBenchmark>>,
@@ -107,7 +105,7 @@ impl<A, B, C> StepWrapper<A, B, C> {
     }
 }
 
-impl<A, B, C, D> StepWrapper<A, SharedState<B, D>, C> {
+impl<A, B, C> StepWrapper<A, SharedState<B>, C> {
     pub fn scraper(&self) -> &Scraper {
         &self.inner.shared_state.scraper
     }
@@ -116,9 +114,6 @@ impl<A, B, C, D> StepWrapper<A, SharedState<B, D>, C> {
     }
     pub fn database(&self) -> &B {
         &self.inner.shared_state.database
-    }
-    pub fn matrix_cache(&self) -> &D {
-        &self.inner.shared_state.matrix_cache
     }
     pub fn vessel_benchmarks(&self) -> &[Box<dyn VesselBenchmark>] {
         self.inner.shared_state.benchmarks.as_slice()
@@ -132,13 +127,12 @@ impl<A, B, C, D> StepWrapper<A, SharedState<B, D>, C> {
 }
 
 #[async_trait]
-impl<A, B, C> Machine<A> for Engine<A, SharedState<B, C>>
+impl<A, B> Machine<A> for Engine<A, SharedState<B>>
 where
     A: TransitionLog + Send + Sync + 'static,
     B: Database,
-    C: MatrixCache,
 {
-    type SharedState = SharedState<B, C>;
+    type SharedState = SharedState<B>;
 
     async fn step(self) -> Self {
         match self {
@@ -169,7 +163,7 @@ where
         }
     }
 
-    fn initial(shared_state: SharedState<B, C>, log: A) -> Self {
+    fn initial(shared_state: SharedState<B>, log: A) -> Self {
         Engine::Pending(StepWrapper::initialize(shared_state, log))
     }
 
@@ -178,22 +172,19 @@ where
     }
 }
 
-impl<A, B> SharedState<A, B>
+impl<A> SharedState<A>
 where
     A: Database,
-    B: MatrixCache,
 {
-    #[allow(clippy::too_many_arguments)]
     pub fn new(
         config: Config,
         database: A,
-        matrix_cache: B,
         scraper: Scraper,
         trip_processors: Vec<Box<dyn TripProcessor>>,
         benchmarks: Vec<Box<dyn VesselBenchmark>>,
         haul_distributors: Vec<Box<dyn HaulDistributor>>,
         trip_distancers: Vec<Box<dyn TripDistancer>>,
-    ) -> SharedState<A, B> {
+    ) -> SharedState<A> {
         SharedState {
             config,
             database,
@@ -202,7 +193,6 @@ where
             benchmarks,
             haul_distributors,
             trip_distancers,
-            matrix_cache,
         }
     }
 }

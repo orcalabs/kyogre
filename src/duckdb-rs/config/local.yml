@@ -10,4 +10,5 @@ postgres:
 duck_db:
   max_connections: 10
   mode: MissOnError
-  storage: Memory
+  storage:
+    Disk: duckdb-data/data

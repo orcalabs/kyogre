@@ -30,7 +30,7 @@ impl Settings {
         let mut builder = Config::builder()
             .add_source(
                 File::with_name(&format!("config/{}", environment.as_str().to_lowercase()))
-                    .required(true),
+                    .required(false),
             )
             .add_source(config::Environment::with_prefix("KYOGRE_DUCKDB").separator("__"))
             .set_override("environment", environment.as_str())?;
@@ -51,7 +51,6 @@ impl Settings {
             let map = honeycomb.collect()?;
             builder = builder.set_override("honeycomb.api_key", map["api-key"].clone())?;
         }
-
         let config = builder.build()?;
 
         let settings: Settings = config.try_deserialize()?;

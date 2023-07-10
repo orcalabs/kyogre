@@ -10,6 +10,7 @@ pub mod ais_vms;
 pub mod catch_area;
 pub mod catch_location;
 pub mod delivery_point;
+pub mod duckdb;
 pub mod economic_zone;
 pub mod ers_common;
 pub mod ers_dca;

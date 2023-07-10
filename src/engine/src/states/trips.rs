@@ -20,21 +20,19 @@ impl<L, T> From<StepWrapper<L, T, Pending>> for StepWrapper<L, T, Trips> {
 #[derive(Default)]
 pub struct Trips;
 
-impl<A, B, C> StepWrapper<A, SharedState<B, C>, Trips>
+impl<A, B> StepWrapper<A, SharedState<B>, Trips>
 where
     B: Database,
 {
     #[instrument(name = "trips_state", skip_all, fields(app.engine_state))]
-    pub async fn run(self) -> Engine<A, SharedState<B, C>> {
+    pub async fn run(self) -> Engine<A, SharedState<B>> {
         tracing::Span::current().record("app.engine_state", EngineDiscriminants::Trips.as_ref());
         for a in self.trip_processors() {
             if let Err(e) = self.run_assembler(a.as_ref()).await {
                 event!(Level::ERROR, "failed to run trip assembler: {:?}", e);
             }
         }
-        Engine::TripsPrecision(StepWrapper::<A, SharedState<B, C>, TripsPrecision>::from(
-            self,
-        ))
+        Engine::TripsPrecision(StepWrapper::<A, SharedState<B>, TripsPrecision>::from(self))
     }
 
     #[instrument(skip_all, fields(app.trip_assembler_id))]

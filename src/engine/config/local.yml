@@ -1,9 +1,7 @@
 log_level: Debug
-duck_db:
-  max_connections: 1
-  mode: ReturnError
-  storage:
-    Disk: duckdb-data/data
+matrix_client:
+  ip: duckdb
+  port: 5000
 postgres:
   ip: postgres
   port: 5432

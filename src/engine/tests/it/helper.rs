@@ -1,5 +1,4 @@
-use dockertest::{DockerTest, Source, StaticManagementPolicy};
-use duckdb_rs::{CacheMode, CacheStorage, DuckdbSettings};
+use dockertest::{DockerTest, Source, StartPolicy, StaticManagementPolicy};
 use engine::states::{Pending, Scrape, Sleep, Trips, TripsPrecision};
 use engine::*;
 use futures::Future;
@@ -26,6 +25,7 @@ impl TestHelper {
     pub fn adapter(&self) -> &PostgresAdapter {
         &self.db.db
     }
+
     pub fn enable_scrape(&mut self) {
         self.settings.engine = engine::Config {
             scrape_schedule: Schedule::Periodic(std::time::Duration::from_micros(0)),
@@ -168,19 +168,20 @@ where
         .unwrap();
     });
 
-    let mut composition = postgres_composition(
+    let mut postgres = postgres_composition(
         DATABASE_PASSWORD,
         "postgres",
         "ghcr.io/orcalabs/kyogre/test-postgres",
         "latest",
     )
-    .with_log_options(None);
-
-    composition.static_container(StaticManagementPolicy::Dynamic);
-
-    docker_test.add_composition(composition);
+    .with_log_options(None)
+    .with_start_policy(StartPolicy::Strict);
 
     let db_name = random::<u32>().to_string();
+
+    postgres.static_container(StaticManagementPolicy::Dynamic);
+
+    docker_test.add_composition(postgres);
 
     docker_test
         .run_async(|ops| async move {
@@ -198,6 +199,7 @@ where
             };
 
             let adapter = PostgresAdapter::new(&db_settings).await.unwrap();
+
             let test_db = TestDb { db: adapter };
 
             test_db.create_test_database_from_template(&db_name).await;
@@ -211,16 +213,12 @@ where
                 honeycomb: None,
                 engine: engine_config,
                 scraper: scraper::Config::default(),
-                duck_db: DuckdbSettings {
-                    max_connections: 1,
-                    mode: CacheMode::ReturnError,
-                    storage: CacheStorage::Memory,
-                },
             };
 
             let db = TestDb {
                 db: PostgresAdapter::new(&db_settings).await.unwrap(),
             };
+
             test(TestHelper { settings, db }).await;
 
             test_db.drop_db(&db_name).await;

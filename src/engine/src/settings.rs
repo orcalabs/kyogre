@@ -1,6 +1,5 @@
 use crate::TripProcessor;
 use config::{Config, ConfigError, File, Source};
-use duckdb_rs::DuckdbSettings;
 use haul_distributor::HaulDistributor;
 use orca_core::{Environment, LogLevel, PsqlSettings, TelemetrySettings};
 use serde::Deserialize;
@@ -12,11 +11,16 @@ pub struct Settings {
     pub log_level: LogLevel,
     pub telemetry: Option<TelemetrySettings>,
     pub postgres: PsqlSettings,
-    pub duck_db: DuckdbSettings,
     pub engine: crate::Config,
     pub environment: Environment,
     pub scraper: scraper::Config,
     pub honeycomb: Option<HoneycombApiKey>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct MatrixClientSettings {
+    pub ip: String,
+    pub port: u16,
 }
 
 #[derive(Clone, Debug, Deserialize)]

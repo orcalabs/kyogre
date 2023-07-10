@@ -176,3 +176,9 @@ pub trait TripDistancerOutbound: Send + Sync {
         range: &DateRange,
     ) -> Result<Vec<AisVmsPosition>, QueryError>;
 }
+
+#[async_trait]
+pub trait MatrixCacheVersion: Send + Sync {
+    async fn increment(&self) -> Result<(), UpdateError>;
+    async fn current(&self) -> Result<u64, QueryError>;
+}

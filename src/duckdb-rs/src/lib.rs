@@ -3,7 +3,6 @@
 
 pub mod adapter;
 pub mod api;
+pub mod refresher;
 pub mod settings;
 pub mod startup;
-
-pub use adapter::*;
