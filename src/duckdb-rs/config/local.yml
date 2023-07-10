@@ -9,6 +9,7 @@ postgres:
   log_statements: Enable
 duck_db:
   max_connections: 10
-  mode: MissOnError
+  cache_mode: ReturnError
+  refresh_interval: 1m
   storage:
     Disk: duckdb-data/data
