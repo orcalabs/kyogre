@@ -1,0 +1,67 @@
+use fiskeridir_rs::ErsDca;
+use kyogre_core::{
+    ActiveHaulsFilter, FiskeridirVesselId, HaulsMatrixQuery, MatrixCacheOutboundAsync,
+    ScraperInboundPort,
+};
+
+use super::helper::test;
+
+#[tokio::test]
+async fn test_refresh_with_no_data_succeeds_and_returns_miss_on_subsequent_request() {
+    test(|helper| async move {
+        helper.cache.refresh().await.unwrap();
+
+        let cache_result = helper
+            .cache
+            .hauls_matrix(HaulsMatrixQuery {
+                months: None,
+                catch_locations: None,
+                gear_group_ids: None,
+                species_group_ids: None,
+                vessel_length_groups: None,
+                vessel_ids: None,
+                active_filter: ActiveHaulsFilter::Date,
+            })
+            .await
+            .unwrap();
+
+        assert!(cache_result.is_none());
+    })
+    .await;
+}
+#[tokio::test]
+async fn test_returns_hit_after_refreshing_with_data() {
+    test(|helper| async move {
+        helper
+            .db
+            .generate_fiskeridir_vessel(FiskeridirVesselId(1), None, None)
+            .await;
+        let mut ers_dca = ErsDca::test_default(1, Some(1));
+        ers_dca.start_latitude = Some(70.536);
+        ers_dca.start_longitude = Some(21.957);
+        helper
+            .adapter()
+            .add_ers_dca(vec![ers_dca.clone()])
+            .await
+            .unwrap();
+
+        helper.cache.refresh().await.unwrap();
+
+        let cache_result = helper
+            .cache
+            .hauls_matrix(HaulsMatrixQuery {
+                months: None,
+                catch_locations: None,
+                gear_group_ids: None,
+                species_group_ids: None,
+                vessel_length_groups: None,
+                vessel_ids: None,
+                active_filter: ActiveHaulsFilter::Date,
+            })
+            .await
+            .unwrap();
+
+        assert!(cache_result.is_some());
+    })
+    .await;
+}

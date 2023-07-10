@@ -28,7 +28,7 @@ services:
       - 5434:5432
 
   ais-consumer:
-    image: gchr.io/orcalabs/kyogre/ais-consumer
+    image: ghcr.io/orcalabs/kyogre/ais-consumer
     build:
       context: .
       dockerfile: dockerfiles/ais-consumer/Dockerfile
@@ -39,10 +39,21 @@ services:
       - APP_ENVIRONMENT=local
 
   engine:
-    image: gchr.io/orcalabs/kyogre/engine
+    image: ghcr.io/orcalabs/kyogre/engine
     build:
       context: .
       dockerfile: dockerfiles/engine/Dockerfile
+      secrets:
+        - source: git-credentials
+    environment:
+      - RUST_BACKTRACE=1
+      - APP_ENVIRONMENT=local
+
+  duckdb:
+    image: ghcr.io/orcalabs/kyogre/duckdb
+    build:
+      context: .
+      dockerfile: dockerfiles/duckdb/Dockerfile
       secrets:
         - source: git-credentials
     volumes:
@@ -52,7 +63,7 @@ services:
       - APP_ENVIRONMENT=local
 
   database-migrator:
-    image: gchr.io/orcalabs/kyogre/database-migrator
+    image: ghcr.io/orcalabs/kyogre/database-migrator
     build:
       context: .
       dockerfile: dockerfiles/database-migrator/Dockerfile
@@ -63,7 +74,7 @@ services:
       - APP_ENVIRONMENT=local
 
   ais-data-migrator:
-    image: gchr.io/orcalabs/kyogre/ais-data-migrator
+    image: ghcr.io/orcalabs/kyogre/ais-data-migrator
     build:
       context: .
       dockerfile: dockerfiles/ais-data-migrator/Dockerfile
@@ -74,7 +85,7 @@ services:
       - APP_ENVIRONMENT=local
 
   fishery-api:
-    image: gchr.io/orcalabs/kyogre/fishery-api
+    image: ghcr.io/orcalabs/kyogre/fishery-api
     build:
       context: .
       dockerfile: dockerfiles/fishery-api/Dockerfile

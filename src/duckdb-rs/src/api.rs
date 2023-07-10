@@ -8,14 +8,15 @@ use error_stack::{IntoReport, ResultExt};
 use fiskeridir_rs::{GearGroup, VesselLengthGroup};
 use kyogre_core::{
     ActiveHaulsFilter, CatchLocationId, FiskeridirVesselId, HaulsMatrixQuery,
-    MatrixCacheOutboundAsync, QueryError,
+    MatrixCacheOutboundAsync, QueryError, UpdateError,
 };
 use matrix_cache::matrix_cache_client::MatrixCacheClient;
 use matrix_cache::matrix_cache_server::MatrixCache;
-use matrix_cache::{CatchLocation, HaulFeatures, HaulMatrix};
+use matrix_cache::{CatchLocation, EmptyMessage, HaulFeatures, HaulMatrix};
 use num_traits::FromPrimitive;
+use tonic::transport::channel::Endpoint;
 use tonic::{Request, Response, Status};
-use tracing::{event, Level};
+use tracing::{event, instrument, Level};
 
 #[derive(Clone)]
 pub struct MatrixCacheService {
@@ -27,8 +28,39 @@ pub struct Client {
     inner: MatrixCacheClient<tonic::transport::Channel>,
 }
 
+impl Client {
+    pub async fn new(ip: std::net::IpAddr, port: u16) -> error_stack::Result<Client, Error> {
+        let addr: Endpoint = format!("https://{ip}:{port}")
+            .try_into()
+            .into_report()
+            .change_context(Error::Connection)?;
+        Ok(Client {
+            inner: MatrixCacheClient::connect(addr)
+                .await
+                .into_report()
+                .change_context(Error::Connection)?,
+        })
+    }
+
+    // Only used for test purposes
+    pub async fn refresh(&self) -> error_stack::Result<(), UpdateError> {
+        // Cloning a channel is cheap see
+        // https://docs.rs/tonic/latest/tonic/transport/struct.Channel.html for more
+        // explanation.
+        let mut client = self.inner.clone();
+
+        client
+            .refresh(EmptyMessage {})
+            .await
+            .into_report()
+            .change_context(UpdateError)
+            .map(|_| ())
+    }
+}
+
 #[async_trait]
 impl MatrixCacheOutboundAsync for Client {
+    #[instrument(skip(self))]
     async fn hauls_matrix(
         &self,
         query: HaulsMatrixQuery,
@@ -49,6 +81,8 @@ impl MatrixCacheOutboundAsync for Client {
             .change_context(QueryError)?
             .into_inner();
 
+        dbg!(&matrix);
+
         if matrix.dates.is_empty()
             || matrix.gear_group.is_empty()
             || matrix.length_group.is_empty()
@@ -63,6 +97,7 @@ impl MatrixCacheOutboundAsync for Client {
 
 #[tonic::async_trait]
 impl MatrixCache for MatrixCacheService {
+    #[instrument(skip(self))]
     async fn get_haul_matrix(
         &self,
         request: Request<HaulFeatures>,
@@ -78,6 +113,18 @@ impl MatrixCache for MatrixCacheService {
         })?;
 
         Ok(Response::new(HaulMatrix::from(matrix.unwrap_or_default())))
+    }
+    #[instrument(skip(self))]
+    async fn refresh(
+        &self,
+        _request: Request<EmptyMessage>,
+    ) -> Result<Response<EmptyMessage>, Status> {
+        self.adapter.refresh().await.map_err(|e| {
+            event!(Level::ERROR, "failed to refresh matrix cache: {:?}", e);
+            Status::internal(format!("{:?}", e))
+        })?;
+
+        Ok(Response::new(EmptyMessage {}))
     }
 }
 
@@ -193,14 +240,16 @@ impl TryFrom<HaulFeatures> for HaulQueryWrapper {
 #[derive(Debug)]
 pub enum Error {
     InvalidParameters,
+    Connection,
 }
 
-impl std::error::Error for Error {}
+impl error_stack::Context for Error {}
 
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Error::InvalidParameters => f.write_str("received invalid parameters"),
+            Error::Connection => f.write_str("failed to connect to server"),
         }
     }
 }

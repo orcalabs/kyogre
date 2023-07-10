@@ -1,24 +1,28 @@
-use std::path::PathBuf;
-
 use duckdb::DuckdbConnectionManager;
-use error_stack::{Context, IntoReport, Result, ResultExt};
+use error_stack::{report, Context, IntoReport, Result, ResultExt};
 use kyogre_core::*;
-use orca_core::PsqlSettings;
+use orca_core::{Environment, PsqlSettings};
 use serde::Deserialize;
-use tracing::{event, instrument, Level};
+use std::path::PathBuf;
+use tokio::sync::mpsc::{self, Sender};
+use tracing::{event, Level};
+
+use crate::refresher::{DuckdbRefresher, RefreshRequest};
 
 #[derive(Clone)]
 pub struct DuckdbAdapter {
     pool: r2d2::Pool<DuckdbConnectionManager>,
-    postgres_settings: Option<PsqlSettings>,
     cache_mode: CacheMode,
+    refresh_queue: Sender<RefreshRequest>,
 }
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct DuckdbSettings {
     pub max_connections: u32,
-    pub mode: CacheMode,
+    pub cache_mode: CacheMode,
     pub storage: CacheStorage,
+    #[serde(with = "humantime_serde")]
+    pub refresh_interval: std::time::Duration,
 }
 
 #[derive(Clone, Debug, Copy, Deserialize)]
@@ -35,16 +39,31 @@ pub enum CacheStorage {
     Disk(PathBuf),
 }
 
-impl MatrixCacheInbound for DuckdbAdapter {
-    fn refresh(&self) -> Result<(), UpdateError> {
-        self.create_hauls_cache().change_context(UpdateError)
+impl MatrixCacheOutbound for DuckdbAdapter {
+    fn hauls_matrix(&self, query: &HaulsMatrixQuery) -> Result<Option<HaulsMatrix>, QueryError> {
+        let res = self.get_matrixes(query).change_context(QueryError);
+        match self.cache_mode {
+            CacheMode::MissOnError => match res {
+                Ok(v) => Ok(v),
+                Err(e) => {
+                    event!(
+                        Level::ERROR,
+                        "failed to get hauls matrix from cache: {:?}",
+                        e
+                    );
+                    Ok(None)
+                }
+            },
+            CacheMode::ReturnError => res,
+        }
     }
 }
 
 impl DuckdbAdapter {
     pub fn new(
         settings: &DuckdbSettings,
-        postgres_settings: Option<PsqlSettings>,
+        postgres_settings: PsqlSettings,
+        environment: Environment,
     ) -> Result<DuckdbAdapter, DuckdbError> {
         let manager = match &settings.storage {
             CacheStorage::Memory => DuckdbConnectionManager::memory()
@@ -54,137 +73,61 @@ impl DuckdbAdapter {
                 .into_report()
                 .change_context(DuckdbError::Connection),
         }?;
+
         let pool = r2d2::Pool::builder()
             .max_size(settings.max_connections)
             .build(manager)
             .into_report()
             .change_context(DuckdbError::Connection)?;
 
-        Ok(DuckdbAdapter {
-            pool,
+        let (sender, recv) = mpsc::channel(1);
+
+        let refresher = DuckdbRefresher::new(
+            pool.clone(),
             postgres_settings,
-            cache_mode: settings.mode,
-        })
-    }
-
-    #[instrument(skip_all)]
-    fn refresh_hauls_cache(
-        &self,
-        conn: &r2d2::PooledConnection<DuckdbConnectionManager>,
-    ) -> Result<(), DuckdbError> {
-        let postgres_settings = self.postgres_settings.as_ref().unwrap();
-        conn.execute_batch(
-            r"
-DROP TABLE IF EXISTS hauls_matrix_cache;
-CREATE TABLE
-    hauls_matrix_cache (
-        catch_location_matrix_index INT NOT NULL,
-        catch_location TEXT NOT NULL,
-        matrix_month_bucket INT NOT NULL,
-        vessel_length_group INT NOT NULL,
-        fiskeridir_vessel_id INT,
-        gear_group_id INT NOT NULL,
-        species_group_id INT NOT NULL,
-        start_timestamp timestamptz NOT NULL,
-        stop_timestamp timestamptz NOT NULL,
-        living_weight BIGINT NOT NULL,
-    );
-            ",
-        )
-        .into_report()
-        .change_context(DuckdbError::Query)?;
-
-        let postgres_scan_command = format!(
-            "
-SELECT
-    catch_location_matrix_index,
-    catch_location,
-    matrix_month_bucket,
-    vessel_length_group,
-    fiskeridir_vessel_id,
-    gear_group_id,
-    species_group_id,
-    start_timestamp,
-    stop_timestamp,
-    living_weight
-FROM
-    POSTGRES_SCAN (
-        'dbname={} user={} host={} password={}',
-        'public',
-        'hauls_matrix'
-    )
-            ",
-            postgres_settings
-                .db_name
-                .clone()
-                .unwrap_or("postgres".to_string()),
-            postgres_settings.username,
-            postgres_settings.ip,
-            postgres_settings.password,
+            settings.refresh_interval,
+            recv,
         );
 
-        conn.execute(
-            &format!(
-                "
-INSERT INTO
-    hauls_matrix_cache (
-        catch_location_matrix_index,
-        catch_location,
-        matrix_month_bucket,
-        vessel_length_group,
-        fiskeridir_vessel_id,
-        gear_group_id,
-        species_group_id,
-        start_timestamp,
-        stop_timestamp,
-        living_weight
-    ) {}
-                ",
-                postgres_scan_command
-            ),
-            [],
-        )
-        .into_report()
-        .change_context(DuckdbError::Query)?;
+        let adapter = DuckdbAdapter {
+            pool,
+            cache_mode: settings.cache_mode,
+            refresh_queue: sender,
+        };
 
-        Ok(())
+        let res: Result<(), DuckdbError> = match environment {
+            Environment::Test => {
+                let conn = adapter
+                    .pool
+                    .get()
+                    .into_report()
+                    .change_context(DuckdbError::Connection)?;
+                refresher.install_postgres_exstension(&conn)?;
+                tokio::spawn(refresher.refresh_loop());
+                Ok(())
+            }
+            _ => {
+                refresher.initial_create()?;
+                tokio::spawn(refresher.refresh_loop());
+                Ok(())
+            }
+        };
+        res?;
+
+        Ok(adapter)
     }
 
-    #[instrument(skip_all)]
-    pub fn create_hauls_cache(&self) -> Result<(), DuckdbError> {
-        let conn = self
-            .pool
-            .get()
-            .into_report()
-            .change_context(DuckdbError::Connection)?;
-
-        conn.execute_batch(
-            r"
-INSTALL postgres;
-LOAD postgres;
-DROP TABLE IF EXISTS hauls_matrix_cache;
-CREATE TABLE
-    hauls_matrix_cache (
-        catch_location_matrix_index INT NOT NULL,
-        catch_location TEXT NOT NULL,
-        matrix_month_bucket INT NOT NULL,
-        vessel_length_group INT NOT NULL,
-        fiskeridir_vessel_id INT,
-        gear_group_id INT NOT NULL,
-        species_group_id INT NOT NULL,
-        start_timestamp timestamptz NOT NULL,
-        stop_timestamp timestamptz NOT NULL,
-        living_weight BIGINT NOT NULL,
-    );
-            ",
-        )
-        .into_report()
-        .change_context(DuckdbError::Query)?;
-
-        self.refresh_hauls_cache(&conn)?;
-
-        Ok(())
+    pub async fn refresh(&self) -> Result<(), DuckdbError> {
+        let (sender, mut recv) = mpsc::channel(1);
+        match self.refresh_queue.send(RefreshRequest(sender)).await {
+            Err(e) => Err(report!(DuckdbError::RefreshCommunication).attach_printable(e)),
+            Ok(_) => match recv.recv().await {
+                Some(v) => v.0,
+                None => Err(report!(DuckdbError::RefreshCommunication)),
+            },
+        }
     }
+
     pub fn get_matrixes(
         &self,
         params: &HaulsMatrixQuery,
@@ -280,33 +223,12 @@ fn get_matrix_output(
     Ok(data)
 }
 
-impl MatrixCacheOutbound for DuckdbAdapter {
-    fn hauls_matrix(&self, query: &HaulsMatrixQuery) -> Result<Option<HaulsMatrix>, QueryError> {
-        let res = self.get_matrixes(query).change_context(QueryError);
-        match self.cache_mode {
-            CacheMode::MissOnError => match res {
-                Ok(v) => Ok(v),
-                Err(e) => {
-                    event!(
-                        Level::ERROR,
-                        "failed to get hauls matrix from cache: {:?}",
-                        e
-                    );
-                    Ok(None)
-                }
-            },
-            CacheMode::ReturnError => res,
-        }
-    }
-}
-
 fn push_where_statements(
     query: &mut String,
     params: &HaulsMatrixQuery,
     x_feature: HaulMatrixXFeature,
 ) {
     let mut first = true;
-
     if let Some(months) = &params.months {
         if params.active_filter != ActiveHaulsFilter::Date && x_feature != HaulMatrixXFeature::Date
         {
@@ -408,6 +330,7 @@ pub enum DuckdbError {
     Connection,
     Query,
     Conversion,
+    RefreshCommunication,
 }
 
 impl std::fmt::Display for DuckdbError {
@@ -416,6 +339,9 @@ impl std::fmt::Display for DuckdbError {
             DuckdbError::Connection => f.write_str("failed to establish connection with duckdb"),
             DuckdbError::Query => f.write_str("failed to perfom a query"),
             DuckdbError::Conversion => f.write_str("failed to convert output of query"),
+            DuckdbError::RefreshCommunication => {
+                f.write_str("failed to communicate with the refresh task")
+            }
         }
     }
 }

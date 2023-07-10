@@ -30,19 +30,16 @@ enum NextState {
     Sleep(std::time::Duration),
 }
 
-impl<A, B, C> StepWrapper<A, SharedState<B, C>, Pending>
+impl<A, B> StepWrapper<A, SharedState<B>, Pending>
 where
     A: TransitionLog + Send + Sync + 'static,
 {
-    pub fn initialize(
-        shared: SharedState<B, C>,
-        log: A,
-    ) -> StepWrapper<A, SharedState<B, C>, Pending> {
+    pub fn initialize(shared: SharedState<B>, log: A) -> StepWrapper<A, SharedState<B>, Pending> {
         StepWrapper::initial(log, shared, Pending::default())
     }
 
     #[instrument(name = "pending_state", skip_all)]
-    pub async fn run(mut self) -> Engine<A, SharedState<B, C>> {
+    pub async fn run(mut self) -> Engine<A, SharedState<B>> {
         tracing::Span::current().record("app.engine_state", EngineDiscriminants::Pending.as_ref());
         match self.next_transition().await {
             Ok(s) => {
@@ -55,7 +52,7 @@ where
                     "failed to decide upon the next state transition: {:?}, entering sleep state..",
                     e
                 );
-                Engine::Sleep(StepWrapper::<A, SharedState<B, C>, Sleep>::from(self))
+                Engine::Sleep(StepWrapper::<A, SharedState<B>, Sleep>::from(self))
             }
         }
     }
@@ -178,37 +175,33 @@ where
         }
     }
 
-    fn transition(self, new_state: EngineDiscriminants) -> Engine<A, SharedState<B, C>> {
+    fn transition(self, new_state: EngineDiscriminants) -> Engine<A, SharedState<B>> {
         match new_state {
             EngineDiscriminants::Pending => {
                 panic!("tried to enter the Pending state from the Pending state")
             }
             EngineDiscriminants::Trips => {
-                Engine::Trips(StepWrapper::<A, SharedState<B, C>, Trips>::from(self))
+                Engine::Trips(StepWrapper::<A, SharedState<B>, Trips>::from(self))
             }
             EngineDiscriminants::TripsPrecision => {
-                Engine::TripsPrecision(StepWrapper::<A, SharedState<B, C>, TripsPrecision>::from(
-                    self,
-                ))
+                Engine::TripsPrecision(StepWrapper::<A, SharedState<B>, TripsPrecision>::from(self))
             }
             EngineDiscriminants::Sleep => {
-                Engine::Sleep(StepWrapper::<A, SharedState<B, C>, Sleep>::from(self))
+                Engine::Sleep(StepWrapper::<A, SharedState<B>, Sleep>::from(self))
             }
             EngineDiscriminants::Scrape => {
-                Engine::Scrape(StepWrapper::<A, SharedState<B, C>, Scrape>::from(self))
+                Engine::Scrape(StepWrapper::<A, SharedState<B>, Scrape>::from(self))
             }
             EngineDiscriminants::Benchmark => {
-                Engine::Benchmark(StepWrapper::<A, SharedState<B, C>, Benchmark>::from(self))
+                Engine::Benchmark(StepWrapper::<A, SharedState<B>, Benchmark>::from(self))
             }
             EngineDiscriminants::HaulDistribution => {
-                Engine::HaulDistribution(
-                    StepWrapper::<A, SharedState<B, C>, HaulDistribution>::from(self),
-                )
-            }
-            EngineDiscriminants::TripDistance => {
-                Engine::TripDistance(StepWrapper::<A, SharedState<B, C>, TripDistance>::from(
+                Engine::HaulDistribution(StepWrapper::<A, SharedState<B>, HaulDistribution>::from(
                     self,
                 ))
+            }
+            EngineDiscriminants::TripDistance => {
+                Engine::TripDistance(StepWrapper::<A, SharedState<B>, TripDistance>::from(self))
             }
         }
     }

@@ -4,6 +4,8 @@ package matrix_cache;
 
 service MatrixCache {
     rpc GetHaulMatrix(HaulFeatures) returns (HaulMatrix) {}
+    // Only needed for test purposes
+    rpc Refresh(EmptyMessage) returns (EmptyMessage) {}
 }
 
 message HaulFeatures {
@@ -27,3 +29,10 @@ message CatchLocation {
     uint32 main_area_id = 1;
     uint32 catch_area_id = 2;
 }
+
+
+message DatabaseName {
+    string name = 1;
+}
+// Protobuf requires us to have parameteres for each service function
+message EmptyMessage {}

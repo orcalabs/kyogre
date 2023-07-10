@@ -1,8 +1,7 @@
 log_level: Info
-duck_db:
-  max_connections: 1
-  mode: ReturnError
-  storage: Memory
+matrix_client:
+  ip: duckdb
+  port: 5000
 postgres:
   port: 5432
   db_name: kyogre

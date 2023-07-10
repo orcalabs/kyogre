@@ -1,5 +1,5 @@
 use crate::*;
-use tracing::instrument;
+use tracing::{event, instrument, Level};
 
 // Pending -> Scrape
 impl<L, T> From<StepWrapper<L, T, Pending>> for StepWrapper<L, T, Scrape> {
@@ -18,11 +18,14 @@ impl<L, T> From<StepWrapper<L, T, Scrape>> for StepWrapper<L, T, Trips> {
 #[derive(Default)]
 pub struct Scrape;
 
-impl<A, B, C> StepWrapper<A, SharedState<B, C>, Scrape> {
+impl<A, B: Database> StepWrapper<A, SharedState<B>, Scrape> {
     #[instrument(name = "scrape_state", skip_all)]
-    pub async fn run(self) -> Engine<A, SharedState<B, C>> {
+    pub async fn run(self) -> Engine<A, SharedState<B>> {
         tracing::Span::current().record("app.engine_state", EngineDiscriminants::Scrape.as_ref());
         self.scraper().run().await;
-        Engine::Trips(StepWrapper::<A, SharedState<B, C>, Trips>::from(self))
+        if let Err(e) = self.database().increment().await {
+            event!(Level::ERROR, "failed to queue matrix cache update: {:?}", e);
+        }
+        Engine::Trips(StepWrapper::<A, SharedState<B>, Trips>::from(self))
     }
 }
