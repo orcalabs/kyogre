@@ -196,6 +196,7 @@ SELECT
             }
             Ok(v) => {
                 if v.hauls.should_refresh {
+                    event!(Level::INFO, "hauls have been modified, starting refresh...",);
                     if let Err(e) = self.refresh_hauls(Some(v.hauls.version)) {
                         event!(Level::ERROR, "failed to set refresh hauls: {:?}", e);
                     }
@@ -203,6 +204,8 @@ SELECT
             }
         }
     }
+
+    #[instrument(skip(self))]
     fn refresh_hauls(&self, new_version: Option<u64>) -> Result<(), DuckdbError> {
         let mut conn = self
             .pool
