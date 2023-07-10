@@ -276,7 +276,7 @@ LOAD postgres;
         let version_command = format!(
             "
 SELECT
-    haul_version
+    version
 FROM
     POSTGRES_SCAN ('{}', 'public', '{}')
 WHERE
@@ -303,14 +303,14 @@ WHERE
     ) -> Result<u64, DuckdbError> {
         let version: u64 = conn
             .query_row(
-                "
+                r#"
 SELECT
-    VERSION
+    "version"
 FROM
     data_versions
 WHERE
     source = ?
-                ",
+                "#,
                 params![source.row_value_name()],
                 |row| row.get(0),
             )
