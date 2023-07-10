@@ -29,9 +29,9 @@ error-stack = { workspace = true }
 bigdecimal = "0.3.1"
 tokio = { version = "1.29.1", features = ["macros", "sync", "time"] }
 tracing = "0.1.37"
-async-trait = "0.1.69"
-serde_json = "1.0.99"
-serde = { version = "1.0.164", features = ["derive"] }
+async-trait = "0.1.71"
+serde_json = "1.0.100"
+serde = { version = "1.0.171", features = ["derive"] }
 futures = "0.3.28"
 rand = "0.8.5"
 strum = "0.24.1"
