@@ -97,12 +97,7 @@ impl DuckdbAdapter {
 
         let res: Result<(), DuckdbError> = match environment {
             Environment::Test => {
-                let conn = adapter
-                    .pool
-                    .get()
-                    .into_report()
-                    .change_context(DuckdbError::Connection)?;
-                refresher.install_postgres_exstension(&conn)?;
+                refresher.create_test_setup()?;
                 tokio::spawn(refresher.refresh_loop());
                 Ok(())
             }
