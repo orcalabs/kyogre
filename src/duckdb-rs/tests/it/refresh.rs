@@ -1,6 +1,6 @@
 use fiskeridir_rs::ErsDca;
 use kyogre_core::{
-    ActiveHaulsFilter, FiskeridirVesselId, HaulsMatrixQuery, MatrixCacheOutboundAsync,
+    ActiveHaulsFilter, FiskeridirVesselId, HaulsMatrixQuery, MatrixCacheOutbound,
     ScraperInboundPort,
 };
 

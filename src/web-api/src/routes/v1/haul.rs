@@ -126,7 +126,7 @@ pub async fn hauls_matrix<T: Database + 'static, S: Cache>(
     let query = matrix_params_to_query(params.into_inner(), active_filter.into_inner());
 
     let matrix = if let Some(cache) = cache.as_ref() {
-        match cache.hauls_matrix(&query) {
+        match cache.hauls_matrix(query.clone()).await {
             Ok(matrix) => match matrix {
                 Some(matrix) => Ok(matrix),
                 None => db.hauls_matrix(&query).await.map_err(|e| {

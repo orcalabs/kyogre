@@ -1,6 +1,7 @@
 use super::{barentswatch_helper::BarentswatchHelper, test_client::ApiClient};
 use chrono::{DateTime, Datelike, Duration, Utc};
 use dockertest::{DockerTest, Source, StaticManagementPolicy};
+use duckdb_rs::{adapter::CacheMode, CacheStorage};
 use fiskeridir_rs::{ErsDep, ErsPor, GearGroup, SpeciesGroup, VesselLengthGroup};
 use futures::Future;
 use kyogre_core::*;
@@ -18,9 +19,8 @@ use tracing_subscriber::FmtSubscriber;
 use trip_assembler::{ErsTripAssembler, LandingTripAssembler, TripAssembler};
 use vessel_benchmark::*;
 use web_api::{
-    duckdb::{CacheMode, CacheStorage, DuckdbAdapter, DuckdbSettings},
     routes::v1::haul,
-    settings::{ApiSettings, Settings, BW_PROFILES_URL},
+    settings::{ApiSettings, Duckdb, Settings, BW_PROFILES_URL},
     startup::App,
 };
 
@@ -32,7 +32,7 @@ pub struct TestHelper {
     pub app: ApiClient,
     pub db: TestDb,
     pub bw_helper: &'static BarentswatchHelper,
-    duck_db: Option<DuckdbAdapter>,
+    duck_db: Option<duckdb_rs::Client>,
     ers_assembler: ErsTripAssembler,
     landings_assembler: LandingTripAssembler,
     weight_per_hour: WeightPerHour,
@@ -47,10 +47,9 @@ impl TestHelper {
         db: PostgresAdapter,
         app: App,
         bw_helper: &'static BarentswatchHelper,
+        duck_db: Option<duckdb_rs::Client>,
     ) -> TestHelper {
         let address = format!("http://127.0.0.1:{}/v1.0", app.port());
-
-        let duck_db = app.duck_db.clone();
 
         tokio::spawn(async { app.run().await.unwrap() });
 
@@ -71,9 +70,9 @@ impl TestHelper {
             .await
             .unwrap();
     }
-    pub fn refresh_cache(&self) {
+    pub async fn refresh_cache(&self) {
         if let Some(duck_db) = self.duck_db.as_ref() {
-            duck_db.create_hauls_cache().unwrap();
+            duck_db.refresh().await.unwrap();
         }
     }
 
@@ -238,7 +237,7 @@ where
     T: FnOnce(TestHelper) -> Fut + panic::UnwindSafe + Send + Sync + 'static,
     Fut: Future<Output = ()> + Send + 'static,
 {
-    test_impl(test, None).await;
+    test_impl(test, false).await;
 }
 
 pub async fn test_with_cache<T, Fut>(test: T)
@@ -246,20 +245,10 @@ where
     T: FnOnce(TestHelper) -> Fut + panic::UnwindSafe + Send + Sync + Clone + 'static,
     Fut: Future<Output = ()> + Send + 'static,
 {
-    test_impl(
-        test.clone(),
-        Some(DuckdbSettings {
-            max_connections: 1,
-            mode: CacheMode::ReturnError,
-            storage: CacheStorage::Memory,
-            refresh_schedule: None,
-        }),
-    )
-    .await;
-    test_impl(test.clone(), None).await;
+    test_impl(test.clone(), true).await;
 }
 
-async fn test_impl<T, Fut>(test: T, duck_db: Option<DuckdbSettings>)
+async fn test_impl<T, Fut>(test: T, run_cache_test: bool)
 where
     T: FnOnce(TestHelper) -> Fut + panic::UnwindSafe + Send + Sync + 'static,
     Fut: Future<Output = ()> + Send + 'static,
@@ -274,7 +263,9 @@ where
         .unwrap();
     });
 
-    let mut composition = postgres_composition(
+    let db_name = random::<u32>().to_string();
+
+    let mut postgres = postgres_composition(
         DATABASE_PASSWORD,
         "postgres",
         "ghcr.io/orcalabs/kyogre/test-postgres",
@@ -282,13 +273,10 @@ where
     )
     .with_log_options(None);
 
-    composition.static_container(StaticManagementPolicy::Dynamic);
+    postgres.static_container(StaticManagementPolicy::Dynamic);
 
-    docker_test.add_composition(composition);
+    docker_test.add_composition(postgres);
 
-    let cache_test = duck_db.is_some();
-
-    let db_name = random::<u32>().to_string();
     docker_test
         .run_async(|ops| async move {
             let db_handle = ops.handle("postgres");
@@ -315,6 +303,38 @@ where
             let bw_address = bw_helper.address();
 
             db_settings.db_name = Some(db_name.clone());
+
+            let (duck_db_api, duck_db_client) = if run_cache_test {
+                let duckdb_app = duckdb_rs::App::build(&duckdb_rs::Settings {
+                    log_level: LogLevel::Debug,
+                    telemetry: None,
+                    postgres: db_settings.clone(),
+                    environment: Environment::Test,
+                    honeycomb: None,
+                    duck_db: duckdb_rs::adapter::DuckdbSettings {
+                        max_connections: 1,
+                        cache_mode: CacheMode::ReturnError,
+                        storage: CacheStorage::Memory,
+                        refresh_interval: std::time::Duration::from_secs(100000),
+                    },
+                    port: 0,
+                })
+                .await;
+                let port = duckdb_app.port();
+                let ip = "127.0.0.1".to_string();
+                tokio::spawn(duckdb_app.run());
+
+                (
+                    Some(Duckdb {
+                        ip: ip.clone(),
+                        port,
+                    }),
+                    Some(duckdb_rs::Client::new(ip, port).await.unwrap()),
+                )
+            } else {
+                (None, None)
+            };
+
             let api_settings = Settings {
                 log_level: LogLevel::Debug,
                 telemetry: None,
@@ -328,16 +348,21 @@ where
                 honeycomb: None,
                 bw_jwks_url: Some(format!("{bw_address}/jwks")),
                 bw_profiles_url: Some(format!("{bw_address}/profiles")),
-                duck_db,
+                duck_db_api,
             };
 
             let _ = BW_PROFILES_URL.set(api_settings.bw_profiles_url.clone().unwrap());
 
             let adapter = PostgresAdapter::new(&db_settings).await.unwrap();
-            let app =
-                TestHelper::spawn_app(adapter, App::build(&api_settings).await, bw_helper).await;
+            let app = TestHelper::spawn_app(
+                adapter,
+                App::build(&api_settings).await,
+                bw_helper,
+                duck_db_client,
+            )
+            .await;
 
-            if cache_test {
+            if run_cache_test {
                 event!(Level::INFO, "cache_test");
             }
             test(app).await;

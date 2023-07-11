@@ -136,12 +136,8 @@ pub trait VesselBenchmarkOutbound: Send + Sync {
     async fn sum_landing_weight(&self, id: FiskeridirVesselId) -> Result<Option<f64>, QueryError>;
 }
 
-pub trait MatrixCacheOutbound: Send + Sync {
-    fn hauls_matrix(&self, query: &HaulsMatrixQuery) -> Result<Option<HaulsMatrix>, QueryError>;
-}
-
 #[async_trait]
-pub trait MatrixCacheOutboundAsync: Send + Sync {
+pub trait MatrixCacheOutbound: Send + Sync {
     async fn hauls_matrix(
         &self,
         query: HaulsMatrixQuery,

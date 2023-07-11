@@ -10,16 +10,12 @@ use std::{io::Error, net::TcpListener};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
-use crate::{
-    duckdb::DuckdbAdapter, guards::JwtGuard, routes, settings::Settings, ApiDoc, Cache, Database,
-};
+use crate::{guards::JwtGuard, routes, settings::Settings, ApiDoc, Cache, Database};
+use duckdb_rs::Client;
 
 pub struct App {
     server: Server,
     port: u16,
-    // Necessary evil for testing, we need this reference to refresh the cache.
-    // TODO: find another approach.
-    pub duck_db: Option<DuckdbAdapter>,
 }
 
 impl App {
@@ -33,15 +29,10 @@ impl App {
             postgres.do_migrations().await;
         }
 
-        let duck_db = match &settings.duck_db {
+        let duck_db = match &settings.duck_db_api {
             None => None,
-            Some(duck_db) => {
-                let duckdb = DuckdbAdapter::new(duck_db, settings.postgres.clone()).unwrap();
-                duckdb.create_hauls_cache().unwrap();
-
-                if let Some(schedule) = &duck_db.refresh_schedule {
-                    duckdb.spawn_refresher(schedule.clone());
-                }
+            Some(duckdb) => {
+                let duckdb = Client::new(&duckdb.ip, duckdb.port).await.unwrap();
 
                 Some(duckdb)
             }
@@ -51,11 +42,7 @@ impl App {
             .await
             .unwrap();
 
-        App {
-            server,
-            port,
-            duck_db,
-        }
+        App { server, port }
     }
 
     pub async fn run(self) -> Result<(), std::io::Error> {
