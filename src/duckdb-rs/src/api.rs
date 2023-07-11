@@ -7,8 +7,8 @@ use async_trait::async_trait;
 use error_stack::{IntoReport, ResultExt};
 use fiskeridir_rs::{GearGroup, VesselLengthGroup};
 use kyogre_core::{
-    ActiveHaulsFilter, CatchLocationId, FiskeridirVesselId, HaulsMatrixQuery,
-    MatrixCacheOutboundAsync, QueryError, UpdateError,
+    ActiveHaulsFilter, CatchLocationId, FiskeridirVesselId, HaulsMatrixQuery, MatrixCacheOutbound,
+    QueryError, UpdateError,
 };
 use matrix_cache::matrix_cache_client::MatrixCacheClient;
 use matrix_cache::matrix_cache_server::MatrixCache;
@@ -29,8 +29,8 @@ pub struct Client {
 }
 
 impl Client {
-    pub async fn new(ip: std::net::IpAddr, port: u16) -> error_stack::Result<Client, Error> {
-        let addr: Endpoint = format!("https://{ip}:{port}")
+    pub async fn new(ip: impl AsRef<str>, port: u16) -> error_stack::Result<Client, Error> {
+        let addr: Endpoint = format!("https://{}:{port}", ip.as_ref())
             .try_into()
             .into_report()
             .change_context(Error::Connection)?;
@@ -59,7 +59,7 @@ impl Client {
 }
 
 #[async_trait]
-impl MatrixCacheOutboundAsync for Client {
+impl MatrixCacheOutbound for Client {
     #[instrument(skip(self))]
     async fn hauls_matrix(
         &self,
@@ -80,8 +80,6 @@ impl MatrixCacheOutboundAsync for Client {
             .into_report()
             .change_context(QueryError)?
             .into_inner();
-
-        dbg!(&matrix);
 
         if matrix.dates.is_empty()
             || matrix.gear_group.is_empty()
@@ -107,7 +105,7 @@ impl MatrixCache for MatrixCacheService {
             Status::invalid_argument(format!("{:?}", e))
         })?;
 
-        let matrix = self.adapter.get_matrixes(&parameters.0).map_err(|e| {
+        let matrix = self.adapter.hauls_matrix(&parameters.0).map_err(|e| {
             event!(Level::ERROR, "failed to retrive haul matrix: {:?}", e);
             Status::internal(format!("{:?}", e))
         })?;

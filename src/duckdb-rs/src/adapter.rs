@@ -1,7 +1,7 @@
 use duckdb::DuckdbConnectionManager;
 use error_stack::{report, Context, IntoReport, Result, ResultExt};
 use kyogre_core::*;
-use orca_core::{Environment, PsqlSettings};
+use orca_core::PsqlSettings;
 use serde::Deserialize;
 use std::path::PathBuf;
 use tokio::sync::mpsc::{self, Sender};
@@ -39,31 +39,10 @@ pub enum CacheStorage {
     Disk(PathBuf),
 }
 
-impl MatrixCacheOutbound for DuckdbAdapter {
-    fn hauls_matrix(&self, query: &HaulsMatrixQuery) -> Result<Option<HaulsMatrix>, QueryError> {
-        let res = self.get_matrixes(query).change_context(QueryError);
-        match self.cache_mode {
-            CacheMode::MissOnError => match res {
-                Ok(v) => Ok(v),
-                Err(e) => {
-                    event!(
-                        Level::ERROR,
-                        "failed to get hauls matrix from cache: {:?}",
-                        e
-                    );
-                    Ok(None)
-                }
-            },
-            CacheMode::ReturnError => res,
-        }
-    }
-}
-
 impl DuckdbAdapter {
     pub fn new(
         settings: &DuckdbSettings,
         postgres_settings: PsqlSettings,
-        environment: Environment,
     ) -> Result<DuckdbAdapter, DuckdbError> {
         let manager = match &settings.storage {
             CacheStorage::Memory => DuckdbConnectionManager::memory()
@@ -95,19 +74,8 @@ impl DuckdbAdapter {
             refresh_queue: sender,
         };
 
-        let res: Result<(), DuckdbError> = match environment {
-            Environment::Test => {
-                refresher.create_test_setup()?;
-                tokio::spawn(refresher.refresh_loop());
-                Ok(())
-            }
-            _ => {
-                refresher.initial_create()?;
-                tokio::spawn(refresher.refresh_loop());
-                Ok(())
-            }
-        };
-        res?;
+        refresher.initial_create()?;
+        tokio::spawn(refresher.refresh_loop());
 
         Ok(adapter)
     }
@@ -123,7 +91,28 @@ impl DuckdbAdapter {
         }
     }
 
-    pub fn get_matrixes(
+    pub fn hauls_matrix(
+        &self,
+        query: &HaulsMatrixQuery,
+    ) -> Result<Option<HaulsMatrix>, QueryError> {
+        let res = self.hauls_matrix_impl(query).change_context(QueryError);
+        match self.cache_mode {
+            CacheMode::MissOnError => match res {
+                Ok(v) => Ok(v),
+                Err(e) => {
+                    event!(
+                        Level::ERROR,
+                        "failed to get hauls matrix from cache: {:?}",
+                        e
+                    );
+                    Ok(None)
+                }
+            },
+            CacheMode::ReturnError => res,
+        }
+    }
+
+    fn hauls_matrix_impl(
         &self,
         params: &HaulsMatrixQuery,
     ) -> Result<Option<HaulsMatrix>, DuckdbError> {

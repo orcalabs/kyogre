@@ -12,12 +12,7 @@ pub struct App {
 
 impl App {
     pub async fn build(settings: &Settings) -> Self {
-        let duckdb = DuckdbAdapter::new(
-            &settings.duck_db,
-            settings.postgres.clone(),
-            settings.environment,
-        )
-        .unwrap();
+        let duckdb = DuckdbAdapter::new(&settings.duck_db, settings.postgres.clone()).unwrap();
         let service = MatrixCacheService::new(duckdb);
 
         let listener = TcpListener::bind(format!("[::]:{}", settings.port))

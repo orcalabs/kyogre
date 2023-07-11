@@ -28,7 +28,7 @@ async fn test_hauls_matrix_returns_correct_sum_for_all_hauls() {
 
         helper.db.db.add_ers_dca(vec![ers1, ers2]).await.unwrap();
 
-        helper.refresh_cache();
+        helper.refresh_cache().await;
 
         let response = helper
             .app
@@ -87,7 +87,7 @@ async fn test_hauls_matrix_filters_by_months() {
             ..Default::default()
         };
 
-        helper.refresh_cache();
+        helper.refresh_cache().await;
 
         let response = helper.app.get_hauls_matrix(params, filter).await;
 
@@ -131,7 +131,7 @@ async fn test_hauls_matrix_filters_by_vessel_length() {
             .await
             .unwrap();
 
-        helper.refresh_cache();
+        helper.refresh_cache().await;
         let params = HaulsMatrixParams {
             vessel_length_groups: Some(vec![
                 utils::VesselLengthGroup(VesselLengthGroup::UnderEleven),
@@ -182,7 +182,7 @@ async fn test_hauls_matrix_filters_by_species_group() {
             .await
             .unwrap();
 
-        helper.refresh_cache();
+        helper.refresh_cache().await;
         let params = HaulsMatrixParams {
             species_group_ids: Some(vec![SpeciesGroupId(301), SpeciesGroupId(302)]),
             ..Default::default()
@@ -237,7 +237,7 @@ async fn test_hauls_matrix_filters_by_gear_group() {
             ..Default::default()
         };
 
-        helper.refresh_cache();
+        helper.refresh_cache().await;
         let response = helper.app.get_hauls_matrix(params, filter).await;
 
         let matrix: HaulsMatrix = response.json().await.unwrap();
@@ -283,7 +283,7 @@ async fn test_hauls_matrix_filters_by_fiskeridir_vessel_ids() {
             ..Default::default()
         };
 
-        helper.refresh_cache();
+        helper.refresh_cache().await;
         let response = helper.app.get_hauls_matrix(params, filter).await;
 
         assert_eq!(response.status(), StatusCode::OK);
@@ -332,7 +332,7 @@ async fn test_hauls_matrix_date_sum_area_table_is_correct() {
             .await
             .unwrap();
 
-        helper.refresh_cache();
+        helper.refresh_cache().await;
         let response = helper
             .app
             .get_hauls_matrix(HaulsMatrixParams::default(), filter)
@@ -389,7 +389,7 @@ async fn test_hauls_matrix_gear_group_sum_area_table_is_correct() {
             .await
             .unwrap();
 
-        helper.refresh_cache();
+        helper.refresh_cache().await;
         let response = helper
             .app
             .get_hauls_matrix(HaulsMatrixParams::default(), filter)
@@ -444,7 +444,7 @@ async fn test_hauls_matrix_vessel_length_sum_area_table_is_correct() {
             .await
             .unwrap();
 
-        helper.refresh_cache();
+        helper.refresh_cache().await;
         let response = helper
             .app
             .get_hauls_matrix(HaulsMatrixParams::default(), filter)
@@ -498,7 +498,7 @@ async fn test_hauls_matrix_species_group_sum_area_table_is_correct() {
             .await
             .unwrap();
 
-        helper.refresh_cache();
+        helper.refresh_cache().await;
         let response = helper
             .app
             .get_hauls_matrix(HaulsMatrixParams::default(), filter)
@@ -540,7 +540,7 @@ async fn test_hauls_matrix_have_correct_totals_after_dca_message_is_replaced_by_
 
         helper.db.db.add_ers_dca(vec![ers1, ers2]).await.unwrap();
 
-        helper.refresh_cache();
+        helper.refresh_cache().await;
         let response = helper
             .app
             .get_hauls_matrix(HaulsMatrixParams::default(), filter)

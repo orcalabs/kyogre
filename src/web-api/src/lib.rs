@@ -1,6 +1,7 @@
 #![deny(warnings)]
 #![deny(rust_2018_idioms)]
 
+use duckdb_rs::Client;
 use fiskeridir_rs::{RegisterVesselEntityType, RegisterVesselOwner};
 use kyogre_core::{
     ActiveHaulsFilter, Catch, Delivery, FishingFacilitiesSorting, FishingFacilityToolType,
@@ -10,7 +11,6 @@ use postgres::PostgresAdapter;
 use routes::v1;
 use utoipa::OpenApi;
 
-pub mod duckdb;
 pub mod error;
 pub mod extractors;
 pub mod guards;
@@ -21,6 +21,8 @@ pub mod startup;
 
 pub trait Database: WebApiOutboundPort + WebApiInboundPort {}
 pub trait Cache: MatrixCacheOutbound {}
+
+impl Cache for Client {}
 
 impl Database for PostgresAdapter {}
 

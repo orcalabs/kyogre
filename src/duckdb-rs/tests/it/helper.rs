@@ -11,8 +11,8 @@ use orca_core::{
 };
 use postgres::{PostgresAdapter, TestDb};
 use rand::random;
+use std::panic;
 use std::sync::Once;
-use std::{net::Ipv4Addr, panic};
 use tracing_subscriber::FmtSubscriber;
 
 static TRACING: Once = Once::new();
@@ -55,33 +55,6 @@ where
     composition.static_container(StaticManagementPolicy::Dynamic);
 
     docker_test.add_composition(composition);
-
-    // let mut duckdb = Composition::with_repository("ghcr.io/orcalabs/kyogre/duckdb")
-    //     .with_start_policy(StartPolicy::Strict)
-    //     .with_container_name("duckdb")
-    //     .with_wait_for(Box::new(MessageWait {
-    //         message: "starting duckdb...".to_string(),
-    //         source: MessageSource::Stdout,
-    //         timeout: 60,
-    //     }))
-    //     .with_log_options(None);
-
-    // duckdb.static_container(StaticManagementPolicy::Dynamic);
-    // duckdb.inject_container_name(postgres.handle(), "KYOGRE_DUCKDB__POSTGRES__IP");
-    // duckdb.env("APP_ENVIRONMENT", "test");
-    // duckdb.env("KYOGRE_DUCKDB__POSTGRES__PORT", 5432);
-    // duckdb.env("KYOGRE_DUCKDB__POSTGRES__DB_NAME", db_name.clone());
-    // duckdb.env("KYOGRE_DUCKDB__POSTGRES__USERNAME", "postgres");
-    // duckdb.env("KYOGRE_DUCKDB__POSTGRES__PASSWORD", DATABASE_PASSWORD);
-    // duckdb.env("KYOGRE_DUCKDB__POSTGRES__MAX_CONNECTIONS", 1);
-    // duckdb.env("KYOGRE_DUCKDB__POSTGRES__LOG_STATEMENTS", "Enable");
-    // duckdb.env("KYOGRE_DUCKDB__DUCK_DB__MAX_CONNECTIONS", 1);
-    // duckdb.env("KYOGRE_DUCKDB__DUCK_DB__MODE", "ReturnError");
-    // duckdb.env("KYOGRE_DUCKDB__DUCK_DB__STORAGE", "Memory");
-    // duckdb.env("KYOGRE_DUCKDB__DUCK_DB__STORAGE", "Memory");
-    // duckdb.env("KYOGRE_DUCKDB__LOG_LEVEL", "Info");
-    // duckdb.env("KYOGRE_DUCKDB__ENVIRONMENT", "TEST");
-    // duckdb.env("KYOGRE_DUCKDB__PORT", 5000);
 
     let db_name = random::<u32>().to_string();
     docker_test
@@ -128,9 +101,7 @@ where
 
             let helper = TestHelper {
                 db: TestDb { db: adapter },
-                cache: Client::new(std::net::IpAddr::V4(Ipv4Addr::LOCALHOST), port)
-                    .await
-                    .unwrap(),
+                cache: Client::new("[::]", port).await.unwrap(),
             };
 
             test(helper).await;

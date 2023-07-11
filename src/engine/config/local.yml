@@ -1,5 +1,5 @@
 log_level: Debug
-matrix_client:
+duck_db_api:
   ip: duckdb
   port: 5000
 postgres:

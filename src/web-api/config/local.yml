@@ -11,9 +11,6 @@ postgres:
   log_statements: Enable
 bw_jwks_url: https://id.barentswatch.no/.well-known/openid-configuration/jwks
 bw_profiles_url: https://www.barentswatch.no/bwapi/v2/user/profiles
-duck_db:
-  max_connections: 10
-  mode: MissOnError
-  storage: Memory
-  refresh_schedule:
-    Periodic: 1h
+duck_db_api:
+  ip: duckdb
+  port: 5000
