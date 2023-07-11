@@ -140,7 +140,10 @@ pub async fn hauls_matrix<T: Database + 'static, S: Cache>(
                     "failed to retrieve hauls matrix from cache: {:?}",
                     e
                 );
-                Err(ApiError::InternalServerError)
+                db.hauls_matrix(&query).await.map_err(|e| {
+                    event!(Level::ERROR, "failed to retrieve hauls matrix: {:?}", e);
+                    ApiError::InternalServerError
+                })
             }
         }
     } else {
