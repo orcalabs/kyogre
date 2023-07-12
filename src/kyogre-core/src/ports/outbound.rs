@@ -61,6 +61,8 @@ pub trait WebApiOutboundPort {
         read_fishing_facility: bool,
     ) -> Result<Option<CurrentTrip>, QueryError>;
     async fn hauls_matrix(&self, query: &HaulsMatrixQuery) -> Result<HaulsMatrix, QueryError>;
+    async fn landing_matrix(&self, query: &LandingMatrixQuery)
+        -> Result<LandingMatrix, QueryError>;
     fn fishing_facilities(
         &self,
         query: FishingFacilitiesQuery,

@@ -127,6 +127,10 @@ where
             .route(
                 "/hauls_matrix/{active_filter}",
                 web::get().to(routes::v1::haul::hauls_matrix::<T, S>),
+            )
+            .route(
+                "/landing_matrix/{active_filter}",
+                web::get().to(routes::v1::landing_matrix::landing_matrix::<T, S>),
             );
 
         if let Some(ref guard) = bw_jwt_guard {

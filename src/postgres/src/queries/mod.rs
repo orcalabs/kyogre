@@ -23,6 +23,7 @@ pub mod hash;
 pub mod haul;
 pub mod landing;
 pub mod landing_entry;
+pub mod landing_matrix;
 pub mod norwegian_land;
 pub mod port;
 pub mod species;

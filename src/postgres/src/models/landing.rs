@@ -1,7 +1,9 @@
 use crate::{error::PostgresError, queries::opt_float_to_decimal};
 use bigdecimal::BigDecimal;
 use chrono::{DateTime, NaiveDate, NaiveTime, Utc};
-use error_stack::{Report, ResultExt};
+use error_stack::{report, Report, ResultExt};
+use kyogre_core::LandingMatrixQuery;
+use num_traits::ToPrimitive;
 
 pub struct NewLanding {
     // Dokumentnummer-SalgslagId-Dokumenttype
@@ -171,6 +173,65 @@ impl TryFrom<fiskeridir_rs::Landing> for NewLanding {
             receiving_vessel_type: landing.recipient_vessel_type_code.map(|v| v as i32),
             receiving_vessel_nation_id: landing.recipient_vessel_nation_code,
             receiving_vessel_nation: landing.recipient_vessel_nation,
+        })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct LandingMatrixQueryOutput {
+    pub sum_living: BigDecimal,
+    pub x_index: i32,
+    pub y_index: i32,
+}
+
+#[derive(Debug, Clone)]
+pub struct LandingMatrixArgs {
+    pub months: Option<Vec<i32>>,
+    pub catch_locations: Option<Vec<String>>,
+    pub gear_group_ids: Option<Vec<i32>>,
+    pub species_group_ids: Option<Vec<i32>>,
+    pub vessel_length_groups: Option<Vec<i32>>,
+    pub fiskeridir_vessel_ids: Option<Vec<i64>>,
+}
+
+impl TryFrom<LandingMatrixQueryOutput> for kyogre_core::LandingMatrixQueryOutput {
+    type Error = Report<PostgresError>;
+
+    fn try_from(value: LandingMatrixQueryOutput) -> Result<Self, Self::Error> {
+        Ok(kyogre_core::LandingMatrixQueryOutput {
+            sum_living: value
+                .sum_living
+                .to_f64()
+                .ok_or_else(|| report!(PostgresError::DataConversion))?,
+            x_index: value.x_index,
+            y_index: value.y_index,
+        })
+    }
+}
+
+impl TryFrom<LandingMatrixQuery> for LandingMatrixArgs {
+    type Error = Report<PostgresError>;
+
+    fn try_from(v: LandingMatrixQuery) -> std::result::Result<Self, Self::Error> {
+        Ok(LandingMatrixArgs {
+            months: v
+                .months
+                .map(|months| months.into_iter().map(|m| m as i32).collect()),
+            catch_locations: v
+                .catch_locations
+                .map(|cls| cls.into_iter().map(|c| c.into_inner()).collect()),
+            gear_group_ids: v
+                .gear_group_ids
+                .map(|gs| gs.into_iter().map(|g| g as i32).collect()),
+            species_group_ids: v
+                .species_group_ids
+                .map(|gs| gs.into_iter().map(|g| g as i32).collect()),
+            vessel_length_groups: v
+                .vessel_length_groups
+                .map(|groups| groups.into_iter().map(|g| g as i32).collect()),
+            fiskeridir_vessel_ids: v
+                .vessel_ids
+                .map(|ids| ids.into_iter().map(|i| i.0).collect()),
         })
     }
 }

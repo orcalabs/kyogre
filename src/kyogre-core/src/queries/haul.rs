@@ -9,6 +9,8 @@ use num_traits::FromPrimitive;
 use serde::{Deserialize, Serialize};
 use strum::{Display, EnumCount, EnumIter};
 
+use super::compute_sum_area_table;
+
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 #[derive(Debug, Copy, Clone, Deserialize, FromPrimitive, Serialize, PartialEq, EnumIndex)]
 #[serde(rename_all = "camelCase")]
@@ -56,12 +58,12 @@ impl PartialEq<ActiveHaulsFilter> for HaulMatrixXFeature {
     }
 }
 
-pub fn date_feature_matrix_size() -> usize {
+fn haul_date_feature_matrix_size() -> usize {
     let diff = chrono::Utc::now() - Months::new(ERS_OLDEST_DATA_MONTHS as u32);
     (diff.month() as i32 + (diff.year() * 12)) as usize
 }
 
-pub fn date_feature_matrix_index(ts: &DateTime<Utc>) -> usize {
+pub fn haul_date_feature_matrix_index(ts: &DateTime<Utc>) -> usize {
     ts.year() as usize * 12 + ts.month0() as usize - ERS_OLDEST_DATA_MONTHS
 }
 
@@ -103,7 +105,7 @@ pub struct HaulsMatrixQuery {
 }
 
 #[derive(Debug, Clone)]
-pub struct MatrixQueryOutput {
+pub struct HaulMatrixQueryOutput {
     pub sum_living: i64,
     pub x_index: i32,
     pub y_index: i32,
@@ -124,6 +126,17 @@ pub enum HaulMatrixYFeature {
     SpeciesGroup = 2,
     VesselLength = 3,
     CatchLocation = 4,
+}
+
+impl From<ActiveHaulsFilter> for HaulMatrixes {
+    fn from(value: ActiveHaulsFilter) -> Self {
+        match value {
+            ActiveHaulsFilter::Date => HaulMatrixes::Date,
+            ActiveHaulsFilter::GearGroup => HaulMatrixes::GearGroup,
+            ActiveHaulsFilter::SpeciesGroup => HaulMatrixes::SpeciesGroup,
+            ActiveHaulsFilter::VesselLength => HaulMatrixes::VesselLength,
+        }
+    }
 }
 
 impl From<ActiveHaulsFilter> for HaulMatrixXFeature {
@@ -151,7 +164,7 @@ impl From<ActiveHaulsFilter> for HaulMatrixYFeature {
 impl HaulMatrixes {
     pub fn size(&self) -> usize {
         match self {
-            HaulMatrixes::Date => date_feature_matrix_size(),
+            HaulMatrixes::Date => haul_date_feature_matrix_size(),
             HaulMatrixes::GearGroup => GearGroup::COUNT,
             HaulMatrixes::SpeciesGroup => SpeciesGroup::COUNT,
             HaulMatrixes::VesselLength => VesselLengthGroup::COUNT,
@@ -195,7 +208,7 @@ impl HaulMatrixYFeature {
 
     fn size(&self) -> usize {
         match self {
-            HaulMatrixYFeature::Date => date_feature_matrix_size(),
+            HaulMatrixYFeature::Date => haul_date_feature_matrix_size(),
             HaulMatrixYFeature::GearGroup => GearGroup::COUNT,
             HaulMatrixYFeature::SpeciesGroup => SpeciesGroup::COUNT,
             HaulMatrixYFeature::VesselLength => VesselLengthGroup::COUNT,
@@ -229,7 +242,7 @@ impl HaulMatrixXFeature {
     }
     fn size(&self) -> usize {
         match self {
-            HaulMatrixXFeature::Date => date_feature_matrix_size(),
+            HaulMatrixXFeature::Date => haul_date_feature_matrix_size(),
             HaulMatrixXFeature::GearGroup => GearGroup::COUNT,
             HaulMatrixXFeature::SpeciesGroup => SpeciesGroup::COUNT,
             HaulMatrixXFeature::VesselLength => VesselLengthGroup::COUNT,
@@ -245,10 +258,10 @@ impl HaulMatrixXFeature {
     }
 }
 
-pub fn calculate_sum_area_table(
+pub fn calculate_haul_sum_area_table(
     x_feature: HaulMatrixXFeature,
     y_feature: HaulMatrixYFeature,
-    data: Vec<MatrixQueryOutput>,
+    data: Vec<HaulMatrixQueryOutput>,
 ) -> Result<Vec<u64>, HaulMatrixIndexError> {
     let height = y_feature.size();
     let width = x_feature.size();
@@ -265,46 +278,4 @@ pub fn calculate_sum_area_table(
     compute_sum_area_table(&mut matrix, width);
 
     Ok(matrix)
-}
-
-fn compute_sum_area_table(input: &mut [u64], width: usize) {
-    let mut i = 0;
-
-    while i < input.len() {
-        let mut sum = input[i];
-
-        let y = i / width;
-        let x = i % width;
-
-        if y > 0 {
-            let idx = (width * (y - 1)) + x;
-            sum += input[idx];
-        }
-        if x > 0 {
-            let idx = (width * y) + (x - 1);
-            sum += input[idx];
-        }
-        if x > 0 && y > 0 {
-            let idx = (width * (y - 1)) + (x - 1);
-            sum -= input[idx];
-        }
-        input[i] = sum;
-
-        i += 1;
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn sum_area_table() {
-        let mut input = vec![1, 2, 3, 4, 6, 5, 3, 8, 1, 2, 4, 6, 7, 5, 5, 2, 4, 8, 9, 4];
-        compute_sum_area_table(&mut input, 5);
-        assert_eq!(
-            vec![1, 3, 6, 10, 16, 6, 11, 22, 27, 35, 10, 21, 39, 49, 62, 12, 27, 53, 72, 89],
-            input
-        );
-    }
 }

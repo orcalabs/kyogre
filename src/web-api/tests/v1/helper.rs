@@ -2,7 +2,7 @@ use super::{barentswatch_helper::BarentswatchHelper, test_client::ApiClient};
 use chrono::{DateTime, Datelike, Duration, Utc};
 use dockertest::{DockerTest, Source, StaticManagementPolicy};
 use duckdb_rs::{adapter::CacheMode, CacheStorage};
-use fiskeridir_rs::{ErsDep, ErsPor, GearGroup, SpeciesGroup, VesselLengthGroup};
+use fiskeridir_rs::{ErsDep, ErsPor};
 use futures::Future;
 use kyogre_core::*;
 use orca_core::{
@@ -10,16 +10,17 @@ use orca_core::{
 };
 use postgres::{PostgresAdapter, TestDb};
 use rand::random;
-use std::panic;
+use std::ops::AddAssign;
 use std::sync::Once;
-use strum::{EnumCount, IntoEnumIterator};
+use std::{ops::SubAssign, panic};
+use strum::IntoEnumIterator;
 use tokio::sync::OnceCell;
 use tracing::{event, Level};
 use tracing_subscriber::FmtSubscriber;
 use trip_assembler::{ErsTripAssembler, LandingTripAssembler, TripAssembler};
 use vessel_benchmark::*;
 use web_api::{
-    routes::v1::haul,
+    routes::v1::{haul, landing_matrix},
     settings::{ApiSettings, Duckdb, Settings, BW_PROFILES_URL},
     startup::App,
 };
@@ -27,6 +28,12 @@ use web_api::{
 static TRACING: Once = Once::new();
 static DATABASE_PASSWORD: &str = "test123";
 static BARENTSWATCH_HELPER: OnceCell<BarentswatchHelper> = OnceCell::const_new();
+
+//               Lon  Lat
+pub const CL_00_05: (f64, f64) = (13.5, 67.125);
+pub const CL_01_01: (f64, f64) = (41., 67.5);
+pub const CL_01_03: (f64, f64) = (43.5, 67.5);
+pub const CL_01_04: (f64, f64) = (47.5, 67.5);
 
 pub struct TestHelper {
     pub app: ApiClient,
@@ -264,6 +271,7 @@ where
     });
 
     let db_name = random::<u32>().to_string();
+    // let db_name = "test".to_string();
 
     let mut postgres = postgres_composition(
         DATABASE_PASSWORD,
@@ -272,6 +280,8 @@ where
         "latest",
     )
     .with_log_options(None);
+
+    // postgres.port_map(5432, 5400);
 
     postgres.static_container(StaticManagementPolicy::Dynamic);
 
@@ -372,7 +382,14 @@ where
         .await;
 }
 
-pub fn sum_area(matrix: &[u64], x0: usize, y0: usize, x1: usize, y1: usize, width: usize) -> u64 {
+pub fn sum_area<T: SubAssign + AddAssign + Copy>(
+    matrix: &[T],
+    x0: usize,
+    y0: usize,
+    x1: usize,
+    y1: usize,
+    width: usize,
+) -> T {
     let mut sum = matrix[y1 * width + x1];
     if x0 > 0 {
         sum -= matrix[y1 * width + x0 - 1];
@@ -389,7 +406,46 @@ pub fn sum_area(matrix: &[u64], x0: usize, y0: usize, x1: usize, y1: usize, widt
     sum
 }
 
-pub fn assert_matrix_content(
+pub fn assert_landing_matrix_content(
+    matrix: &landing_matrix::LandingMatrix,
+    active_filter: ActiveLandingFilter,
+    expected_total: u64,
+    specific_totals: Vec<(LandingMatrixes, u64)>,
+) {
+    for m in LandingMatrixes::iter() {
+        let y_dimension_size = if active_filter == m {
+            NUM_CATCH_LOCATIONS
+        } else {
+            LandingMatrixes::from(active_filter).size()
+        };
+
+        let x_dimension_size = m.size();
+        let (matrix_len, matrix_total) = match m {
+            LandingMatrixes::Date => (matrix.dates.len(), matrix.dates[matrix.dates.len() - 1]),
+            LandingMatrixes::GearGroup => (
+                matrix.gear_group.len(),
+                matrix.gear_group[matrix.gear_group.len() - 1],
+            ),
+            LandingMatrixes::SpeciesGroup => (
+                matrix.species_group.len(),
+                matrix.species_group[matrix.species_group.len() - 1],
+            ),
+            LandingMatrixes::VesselLength => (
+                matrix.length_group.len(),
+                matrix.length_group[matrix.length_group.len() - 1],
+            ),
+        };
+
+        assert_eq!(matrix_len, x_dimension_size * y_dimension_size, "{m}");
+
+        if let Some(specific) = specific_totals.iter().find(|v| v.0 == m) {
+            assert_eq!(specific.1, matrix_total as u64, "{m}");
+        } else {
+            assert_eq!(expected_total, matrix_total as u64, "{m}");
+        }
+    }
+}
+pub fn assert_haul_matrix_content(
     matrix: &haul::HaulsMatrix,
     active_filter: ActiveHaulsFilter,
     expected_total: u64,
@@ -399,12 +455,7 @@ pub fn assert_matrix_content(
         let y_dimension_size = if active_filter == m {
             NUM_CATCH_LOCATIONS
         } else {
-            match active_filter {
-                ActiveHaulsFilter::Date => date_feature_matrix_size(),
-                ActiveHaulsFilter::GearGroup => GearGroup::COUNT,
-                ActiveHaulsFilter::SpeciesGroup => SpeciesGroup::COUNT,
-                ActiveHaulsFilter::VesselLength => VesselLengthGroup::COUNT,
-            }
+            HaulMatrixes::from(active_filter).size()
         };
 
         let x_dimension_size = m.size();

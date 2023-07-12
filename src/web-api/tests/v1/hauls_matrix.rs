@@ -1,10 +1,10 @@
 use super::helper::test_with_cache;
-use crate::v1::helper::{assert_matrix_content, sum_area};
+use crate::v1::helper::{assert_haul_matrix_content, sum_area};
 use actix_web::http::StatusCode;
 use chrono::{DateTime, Utc};
 use enum_index::EnumIndex;
 use fiskeridir_rs::{ErsDca, GearGroup, SpeciesGroup, VesselLengthGroup};
-use kyogre_core::{date_feature_matrix_index, HaulMatrixes, NUM_CATCH_LOCATIONS};
+use kyogre_core::{haul_date_feature_matrix_index, HaulMatrixes, NUM_CATCH_LOCATIONS};
 use kyogre_core::{ActiveHaulsFilter, FiskeridirVesselId, ScraperInboundPort};
 use web_api::routes::{
     utils::{self, GearGroupId, SpeciesGroupId},
@@ -38,7 +38,7 @@ async fn test_hauls_matrix_returns_correct_sum_for_all_hauls() {
         assert_eq!(response.status(), StatusCode::OK);
         let matrix: HaulsMatrix = response.json().await.unwrap();
 
-        assert_matrix_content(&matrix, filter, 60, vec![]);
+        assert_haul_matrix_content(&matrix, filter, 60, vec![]);
     })
     .await;
 }
@@ -93,7 +93,7 @@ async fn test_hauls_matrix_filters_by_months() {
 
         assert_eq!(response.status(), StatusCode::OK);
         let matrix: HaulsMatrix = response.json().await.unwrap();
-        assert_matrix_content(&matrix, filter, 30, vec![(HaulMatrixes::Date, 330)]);
+        assert_haul_matrix_content(&matrix, filter, 30, vec![(HaulMatrixes::Date, 330)]);
     })
     .await;
 }
@@ -144,7 +144,7 @@ async fn test_hauls_matrix_filters_by_vessel_length() {
 
         assert_eq!(response.status(), StatusCode::OK);
         let matrix: HaulsMatrix = response.json().await.unwrap();
-        assert_matrix_content(&matrix, filter, 30, vec![(HaulMatrixes::VesselLength, 330)]);
+        assert_haul_matrix_content(&matrix, filter, 30, vec![(HaulMatrixes::VesselLength, 330)]);
     })
     .await;
 }
@@ -191,7 +191,7 @@ async fn test_hauls_matrix_filters_by_species_group() {
         let response = helper.app.get_hauls_matrix(params, filter).await;
 
         let matrix: HaulsMatrix = response.json().await.unwrap();
-        assert_matrix_content(&matrix, filter, 30, vec![(HaulMatrixes::SpeciesGroup, 330)]);
+        assert_haul_matrix_content(&matrix, filter, 30, vec![(HaulMatrixes::SpeciesGroup, 330)]);
     })
     .await;
 }
@@ -241,7 +241,7 @@ async fn test_hauls_matrix_filters_by_gear_group() {
         let response = helper.app.get_hauls_matrix(params, filter).await;
 
         let matrix: HaulsMatrix = response.json().await.unwrap();
-        assert_matrix_content(&matrix, filter, 30, vec![(HaulMatrixes::GearGroup, 330)]);
+        assert_haul_matrix_content(&matrix, filter, 30, vec![(HaulMatrixes::GearGroup, 330)]);
     })
     .await;
 }
@@ -288,7 +288,7 @@ async fn test_hauls_matrix_filters_by_fiskeridir_vessel_ids() {
 
         assert_eq!(response.status(), StatusCode::OK);
         let matrix: HaulsMatrix = response.json().await.unwrap();
-        assert_matrix_content(&matrix, filter, 30, vec![]);
+        assert_haul_matrix_content(&matrix, filter, 30, vec![]);
     })
     .await;
 }
@@ -342,12 +342,12 @@ async fn test_hauls_matrix_date_sum_area_table_is_correct() {
         let matrix: HaulsMatrix = response.json().await.unwrap();
 
         let width = HaulMatrixes::Date.size();
-        let x0 = date_feature_matrix_index(&month1);
-        let x1 = date_feature_matrix_index(&month2);
+        let x0 = haul_date_feature_matrix_index(&month1);
+        let x1 = haul_date_feature_matrix_index(&month2);
         let y0 = 0;
         let y1 = NUM_CATCH_LOCATIONS - 1;
 
-        assert_matrix_content(&matrix, filter, 330, vec![]);
+        assert_haul_matrix_content(&matrix, filter, 330, vec![]);
         assert_eq!(sum_area(&matrix.dates, x0, y0, x1, y1, width), 30);
     })
     .await
@@ -404,7 +404,7 @@ async fn test_hauls_matrix_gear_group_sum_area_table_is_correct() {
         let y0 = 0;
         let y1 = NUM_CATCH_LOCATIONS - 1;
 
-        assert_matrix_content(&matrix, filter, 330, vec![]);
+        assert_haul_matrix_content(&matrix, filter, 330, vec![]);
         assert_eq!(sum_area(&matrix.gear_group, x0, y0, x1, y1, width), 30);
     })
     .await
@@ -459,7 +459,7 @@ async fn test_hauls_matrix_vessel_length_sum_area_table_is_correct() {
         let y0 = 0;
         let y1 = NUM_CATCH_LOCATIONS - 1;
 
-        assert_matrix_content(&matrix, filter, 330, vec![]);
+        assert_haul_matrix_content(&matrix, filter, 330, vec![]);
         assert_eq!(sum_area(&matrix.length_group, x0, y0, x1, y1, width), 30);
     })
     .await
@@ -513,7 +513,7 @@ async fn test_hauls_matrix_species_group_sum_area_table_is_correct() {
         let y0 = 0;
         let y1 = NUM_CATCH_LOCATIONS - 1;
 
-        assert_matrix_content(&matrix, filter, 330, vec![]);
+        assert_haul_matrix_content(&matrix, filter, 330, vec![]);
         assert_eq!(sum_area(&matrix.species_group, x0, y0, x1, y1, width), 30);
     })
     .await;
@@ -548,7 +548,7 @@ async fn test_hauls_matrix_have_correct_totals_after_dca_message_is_replaced_by_
 
         assert_eq!(response.status(), StatusCode::OK);
         let matrix: HaulsMatrix = response.json().await.unwrap();
-        assert_matrix_content(&matrix, filter, 20, vec![]);
+        assert_haul_matrix_content(&matrix, filter, 20, vec![]);
     })
     .await
 }

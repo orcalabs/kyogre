@@ -1,3 +1,4 @@
+use crate::models::LandingMatrixArgs;
 use crate::queries::haul::HaulsMatrixArgs;
 use crate::{
     error::PostgresError, ers_dca_set::ErsDcaSet, ers_dep_set::ErsDepSet, ers_por_set::ErsPorSet,
@@ -315,6 +316,60 @@ impl WebApiOutboundPort for PostgresAdapter {
                 .await
                 .change_context(QueryError)?,
         )
+    }
+
+    async fn landing_matrix(
+        &self,
+        query: &LandingMatrixQuery,
+    ) -> Result<LandingMatrix, QueryError> {
+        let active_filter = query.active_filter;
+        let args = LandingMatrixArgs::try_from(query.clone()).change_context(QueryError)?;
+
+        let j1 = tokio::spawn(PostgresAdapter::landing_matrix_impl(
+            self.pool.clone(),
+            args.clone(),
+            active_filter,
+            LandingMatrixXFeature::Date,
+        ));
+        let j2 = tokio::spawn(PostgresAdapter::landing_matrix_impl(
+            self.pool.clone(),
+            args.clone(),
+            active_filter,
+            LandingMatrixXFeature::VesselLength,
+        ));
+        let j3 = tokio::spawn(PostgresAdapter::landing_matrix_impl(
+            self.pool.clone(),
+            args.clone(),
+            active_filter,
+            LandingMatrixXFeature::GearGroup,
+        ));
+        let j4 = tokio::spawn(PostgresAdapter::landing_matrix_impl(
+            self.pool.clone(),
+            args.clone(),
+            active_filter,
+            LandingMatrixXFeature::SpeciesGroup,
+        ));
+
+        let (dates, length_group, gear_group, species_group) = tokio::join!(j1, j2, j3, j4);
+
+        Ok(LandingMatrix {
+            dates: dates
+                .into_report()
+                .change_context(QueryError)?
+                .change_context(QueryError)?,
+            length_group: length_group
+                .into_report()
+                .change_context(QueryError)?
+                .change_context(QueryError)?,
+            gear_group: gear_group
+                .into_report()
+                .change_context(QueryError)?
+                .change_context(QueryError)?,
+            species_group: species_group
+                .into_report()
+                .change_context(QueryError)?
+                .change_context(QueryError)?,
+        })
     }
 
     async fn hauls_matrix(&self, query: &HaulsMatrixQuery) -> Result<HaulsMatrix, QueryError> {

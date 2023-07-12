@@ -1,0 +1,239 @@
+use crate::*;
+
+use chrono::{DateTime, Datelike, Months, Utc};
+use enum_index::EnumIndex;
+use enum_index_derive::EnumIndex;
+use error_stack::{IntoReport, Result};
+use fiskeridir_rs::*;
+use num_derive::FromPrimitive;
+use num_traits::FromPrimitive;
+use serde::{Deserialize, Serialize};
+use strum::{Display, EnumCount, EnumIter};
+
+use super::compute_sum_area_table;
+
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
+#[derive(Debug, Copy, Clone, Deserialize, FromPrimitive, Serialize, PartialEq, EnumIndex)]
+#[serde(rename_all = "camelCase")]
+pub enum ActiveLandingFilter {
+    Date = 1,
+    GearGroup = 2,
+    SpeciesGroup = 3,
+    VesselLength = 4,
+}
+
+#[derive(Debug, Clone)]
+pub struct LandingMatrixQuery {
+    pub months: Option<Vec<u32>>,
+    pub catch_locations: Option<Vec<CatchLocationId>>,
+    pub gear_group_ids: Option<Vec<GearGroup>>,
+    pub species_group_ids: Option<Vec<u32>>,
+    pub vessel_length_groups: Option<Vec<VesselLengthGroup>>,
+    pub vessel_ids: Option<Vec<FiskeridirVesselId>>,
+    pub active_filter: ActiveLandingFilter,
+}
+
+#[derive(Debug, Clone)]
+pub struct LandingMatrixQueryOutput {
+    pub sum_living: f64,
+    pub x_index: i32,
+    pub y_index: i32,
+}
+
+#[derive(Debug, Copy, Clone, EnumIter, PartialEq, Eq, Display)]
+pub enum LandingMatrixes {
+    Date,
+    GearGroup,
+    SpeciesGroup,
+    VesselLength,
+}
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub enum LandingMatrixXFeature {
+    Date = 0,
+    GearGroup = 1,
+    SpeciesGroup = 2,
+    VesselLength = 3,
+}
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub enum LandingMatrixYFeature {
+    Date = 0,
+    GearGroup = 1,
+    SpeciesGroup = 2,
+    VesselLength = 3,
+    CatchLocation = 4,
+}
+
+impl ActiveLandingFilter {
+    pub fn name(&self) -> &'static str {
+        match self {
+            ActiveLandingFilter::Date => "date",
+            ActiveLandingFilter::GearGroup => "gearGroup",
+            ActiveLandingFilter::SpeciesGroup => "speciesGroup",
+            ActiveLandingFilter::VesselLength => "vesselLength",
+        }
+    }
+}
+
+impl LandingMatrixXFeature {
+    fn convert_from_val(&self, val: i32) -> Result<usize, LandingMatrixIndexError> {
+        match self {
+            LandingMatrixXFeature::Date => {
+                let converted = val as usize;
+                if converted >= LANDING_OLDEST_DATA_MONTHS {
+                    Ok(converted - LANDING_OLDEST_DATA_MONTHS)
+                } else {
+                    Err(LandingMatrixIndexError::Date(val))
+                }
+            }
+            LandingMatrixXFeature::GearGroup => GearGroup::from_i32(val)
+                .ok_or(LandingMatrixIndexError::GearGroup(val))
+                .map(|v| v.enum_index()),
+            LandingMatrixXFeature::SpeciesGroup => SpeciesGroup::from_i32(val)
+                .ok_or(LandingMatrixIndexError::SpeciesGroup(val))
+                .map(|v| v.enum_index()),
+            LandingMatrixXFeature::VesselLength => VesselLengthGroup::from_i32(val)
+                .ok_or(LandingMatrixIndexError::VesselLength(val))
+                .map(|v| v.enum_index()),
+        }
+        .into_report()
+    }
+    fn size(&self) -> usize {
+        match self {
+            LandingMatrixXFeature::Date => landing_date_feature_matrix_size(),
+            LandingMatrixXFeature::GearGroup => GearGroup::COUNT,
+            LandingMatrixXFeature::SpeciesGroup => SpeciesGroup::COUNT,
+            LandingMatrixXFeature::VesselLength => VesselLengthGroup::COUNT,
+        }
+    }
+}
+
+impl LandingMatrixYFeature {
+    fn convert_from_val(&self, val: i32) -> Result<usize, LandingMatrixIndexError> {
+        match self {
+            LandingMatrixYFeature::Date => {
+                let converted = val as usize;
+                if converted >= LANDING_OLDEST_DATA_MONTHS {
+                    Ok(converted - LANDING_OLDEST_DATA_MONTHS)
+                } else {
+                    Err(LandingMatrixIndexError::Date(val))
+                }
+            }
+            LandingMatrixYFeature::GearGroup => GearGroup::from_i32(val)
+                .ok_or(LandingMatrixIndexError::GearGroup(val))
+                .map(|v| v.enum_index()),
+            LandingMatrixYFeature::SpeciesGroup => SpeciesGroup::from_i32(val)
+                .ok_or(LandingMatrixIndexError::SpeciesGroup(val))
+                .map(|v| v.enum_index()),
+            LandingMatrixYFeature::VesselLength => VesselLengthGroup::from_i32(val)
+                .ok_or(LandingMatrixIndexError::VesselLength(val))
+                .map(|v| v.enum_index()),
+            LandingMatrixYFeature::CatchLocation => Ok(val as usize),
+        }
+        .into_report()
+    }
+
+    fn size(&self) -> usize {
+        match self {
+            LandingMatrixYFeature::Date => landing_date_feature_matrix_size(),
+            LandingMatrixYFeature::GearGroup => GearGroup::COUNT,
+            LandingMatrixYFeature::SpeciesGroup => SpeciesGroup::COUNT,
+            LandingMatrixYFeature::VesselLength => VesselLengthGroup::COUNT,
+            LandingMatrixYFeature::CatchLocation => NUM_CATCH_LOCATIONS,
+        }
+    }
+}
+
+impl LandingMatrixes {
+    pub fn size(&self) -> usize {
+        match self {
+            LandingMatrixes::Date => landing_date_feature_matrix_size(),
+            LandingMatrixes::GearGroup => GearGroup::COUNT,
+            LandingMatrixes::SpeciesGroup => SpeciesGroup::COUNT,
+            LandingMatrixes::VesselLength => VesselLengthGroup::COUNT,
+        }
+    }
+}
+
+fn landing_date_feature_matrix_size() -> usize {
+    let diff = chrono::Utc::now() - Months::new(LANDING_OLDEST_DATA_MONTHS as u32);
+    (diff.month() as i32 + (diff.year() * 12)) as usize
+}
+
+pub fn landing_date_feature_matrix_index(ts: &DateTime<Utc>) -> usize {
+    ts.year() as usize * 12 + ts.month0() as usize - LANDING_OLDEST_DATA_MONTHS
+}
+
+impl From<ActiveLandingFilter> for LandingMatrixes {
+    fn from(value: ActiveLandingFilter) -> Self {
+        match value {
+            ActiveLandingFilter::Date => LandingMatrixes::Date,
+            ActiveLandingFilter::GearGroup => LandingMatrixes::GearGroup,
+            ActiveLandingFilter::SpeciesGroup => LandingMatrixes::SpeciesGroup,
+            ActiveLandingFilter::VesselLength => LandingMatrixes::VesselLength,
+        }
+    }
+}
+
+impl PartialEq<ActiveLandingFilter> for LandingMatrixXFeature {
+    fn eq(&self, other: &ActiveLandingFilter) -> bool {
+        let tmp: LandingMatrixXFeature = (*other).into();
+        self.eq(&tmp)
+    }
+}
+
+impl From<ActiveLandingFilter> for LandingMatrixXFeature {
+    fn from(value: ActiveLandingFilter) -> Self {
+        match value {
+            ActiveLandingFilter::Date => LandingMatrixXFeature::Date,
+            ActiveLandingFilter::GearGroup => LandingMatrixXFeature::GearGroup,
+            ActiveLandingFilter::SpeciesGroup => LandingMatrixXFeature::SpeciesGroup,
+            ActiveLandingFilter::VesselLength => LandingMatrixXFeature::VesselLength,
+        }
+    }
+}
+
+impl From<ActiveLandingFilter> for LandingMatrixYFeature {
+    fn from(value: ActiveLandingFilter) -> Self {
+        match value {
+            ActiveLandingFilter::Date => LandingMatrixYFeature::Date,
+            ActiveLandingFilter::GearGroup => LandingMatrixYFeature::GearGroup,
+            ActiveLandingFilter::SpeciesGroup => LandingMatrixYFeature::SpeciesGroup,
+            ActiveLandingFilter::VesselLength => LandingMatrixYFeature::VesselLength,
+        }
+    }
+}
+
+impl PartialEq<LandingMatrixes> for ActiveLandingFilter {
+    fn eq(&self, other: &LandingMatrixes) -> bool {
+        match self {
+            ActiveLandingFilter::Date => matches!(other, LandingMatrixes::Date),
+            ActiveLandingFilter::GearGroup => matches!(other, LandingMatrixes::GearGroup),
+            ActiveLandingFilter::SpeciesGroup => matches!(other, LandingMatrixes::SpeciesGroup),
+            ActiveLandingFilter::VesselLength => matches!(other, LandingMatrixes::VesselLength),
+        }
+    }
+}
+
+pub fn calculate_landing_sum_area_table(
+    x_feature: LandingMatrixXFeature,
+    y_feature: LandingMatrixYFeature,
+    data: Vec<LandingMatrixQueryOutput>,
+) -> Result<Vec<f64>, LandingMatrixIndexError> {
+    let height = y_feature.size();
+    let width = x_feature.size();
+
+    let mut matrix: Vec<f64> = vec![0.0; width * height];
+
+    for d in data {
+        let x = x_feature.convert_from_val(d.x_index)?;
+        let y = y_feature.convert_from_val(d.y_index)?;
+
+        matrix[(y * width) + x] = d.sum_living;
+    }
+
+    compute_sum_area_table(&mut matrix, width);
+
+    Ok(matrix)
+}
