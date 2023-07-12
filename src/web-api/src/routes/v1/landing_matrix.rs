@@ -35,7 +35,7 @@ pub struct LandingMatrixParams {
 
 #[utoipa::path(
     get,
-    path = "/landing_matrix",
+    path = "/landing_matrix/{active_filter}",
     params(
         LandingMatrixParams,
         ("active_filter" = ActiveLandingFilter, Path, description = "What feature to group by on the y-axis of the output matrices"),
