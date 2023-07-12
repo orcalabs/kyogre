@@ -48,9 +48,19 @@ impl DuckdbAdapter {
             CacheStorage::Memory => DuckdbConnectionManager::memory()
                 .into_report()
                 .change_context(DuckdbError::Connection),
-            CacheStorage::Disk(path) => DuckdbConnectionManager::file(path)
-                .into_report()
-                .change_context(DuckdbError::Connection),
+            CacheStorage::Disk(path) => match DuckdbConnectionManager::file(path) {
+                Err(e) => {
+                    event!(Level::ERROR, "failed to open duckdb: {}", e);
+                    event!(Level::INFO, "trying to delete db file and re-open...");
+                    std::fs::remove_file(path)
+                        .into_report()
+                        .change_context(DuckdbError::Connection)?;
+                    DuckdbConnectionManager::file(path)
+                        .into_report()
+                        .change_context(DuckdbError::Connection)
+                }
+                Ok(v) => Ok(v),
+            },
         }?;
 
         let pool = r2d2::Pool::builder()
