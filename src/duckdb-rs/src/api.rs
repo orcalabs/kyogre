@@ -60,7 +60,7 @@ impl Client {
 
 #[async_trait]
 impl MatrixCacheOutbound for Client {
-    #[instrument(skip(self))]
+    #[instrument(name = "cache_hauls_matrix", skip(self))]
     async fn hauls_matrix(
         &self,
         query: HaulsMatrixQuery,
