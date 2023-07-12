@@ -92,6 +92,36 @@ impl std::fmt::Display for BearerTokenError {
         }
     }
 }
+#[derive(Debug)]
+pub enum LandingMatrixIndexError {
+    Date(i32),
+    GearGroup(i32),
+    VesselLength(i32),
+    SpeciesGroup(i32),
+}
+
+impl std::error::Error for LandingMatrixIndexError {}
+
+impl std::fmt::Display for LandingMatrixIndexError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            LandingMatrixIndexError::Date(v) => f.write_fmt(format_args!(
+                "encountered a month bucket older than the oldest existing landing data: {}",
+                v
+            )),
+            LandingMatrixIndexError::GearGroup(v) => {
+                f.write_fmt(format_args!("encountered an unknown gear group: {}", v))
+            }
+            LandingMatrixIndexError::VesselLength(v) => f.write_fmt(format_args!(
+                "encountered an unknown vessel length group: {}",
+                v
+            )),
+            LandingMatrixIndexError::SpeciesGroup(v) => {
+                f.write_fmt(format_args!("encountered an species group {}", v))
+            }
+        }
+    }
+}
 
 #[derive(Debug)]
 pub enum HaulMatrixIndexError {

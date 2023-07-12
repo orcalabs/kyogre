@@ -87,7 +87,7 @@ WHERE
         &self,
         active_filter: ActiveHaulsFilter,
         x_feature: HaulMatrixXFeature,
-    ) -> Vec<MatrixQueryOutput> {
+    ) -> Vec<HaulMatrixQueryOutput> {
         let y_feature = if x_feature == active_filter {
             HaulMatrixYFeature::CatchLocation
         } else {
@@ -95,7 +95,7 @@ WHERE
         };
 
         sqlx::query_as!(
-            MatrixQueryOutput,
+            HaulMatrixQueryOutput,
             r#"
 SELECT
     CASE

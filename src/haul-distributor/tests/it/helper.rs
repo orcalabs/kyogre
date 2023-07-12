@@ -10,6 +10,12 @@ use tracing_subscriber::FmtSubscriber;
 static TRACING: Once = Once::new();
 static DATABASE_PASSWORD: &str = "test123";
 
+//               Lon  Lat
+pub const CL_00_05: (f64, f64) = (13.5, 67.125);
+pub const CL_01_01: (f64, f64) = (41., 67.5);
+pub const CL_01_03: (f64, f64) = (43.5, 67.5);
+pub const CL_01_04: (f64, f64) = (47.5, 67.5);
+
 pub struct TestHelper {
     pub db: TestDb,
 }

@@ -2292,6 +2292,45 @@
     },
     "query": "\nSELECT\n    mmsi,\n    imo_number,\n    call_sign,\n    NAME,\n    ship_width,\n    ship_length,\n    eta,\n    destination\nFROM\n    ais_vessels\n            "
   },
+  "6e35263ef1c3bf92246f6ed4b63645a45d477861b4e3b9255fe630079c3972d2": {
+    "describe": {
+      "columns": [
+        {
+          "name": "x_index!",
+          "ordinal": 0,
+          "type_info": "Int4"
+        },
+        {
+          "name": "y_index!",
+          "ordinal": 1,
+          "type_info": "Int4"
+        },
+        {
+          "name": "sum_living!",
+          "ordinal": 2,
+          "type_info": "Numeric"
+        }
+      ],
+      "nullable": [
+        null,
+        null,
+        null
+      ],
+      "parameters": {
+        "Left": [
+          "Int4",
+          "Int4",
+          "Int4Array",
+          "VarcharArray",
+          "Int4Array",
+          "Int4Array",
+          "Int4Array",
+          "Int8Array"
+        ]
+      }
+    },
+    "query": "\nSELECT\n    CASE\n        WHEN $1 = 0 THEN h.matrix_month_bucket\n        WHEN $1 = 1 THEN h.gear_group_id\n        WHEN $1 = 2 THEN h.species_group_id\n        WHEN $1 = 3 THEN h.vessel_length_group\n    END AS \"x_index!\",\n    CASE\n        WHEN $2 = 0 THEN h.matrix_month_bucket\n        WHEN $2 = 1 THEN h.gear_group_id\n        WHEN $2 = 2 THEN h.species_group_id\n        WHEN $2 = 3 THEN h.vessel_length_group\n        WHEN $2 = 4 THEN h.catch_location_matrix_index\n    END AS \"y_index!\",\n    COALESCE(SUM(living_weight), 0.0) AS \"sum_living!\"\nFROM\n    landing_matrix h\nWHERE\n    (\n        $1 = 0\n        OR $2 = 0\n        OR $3::INT[] IS NULL\n        OR h.matrix_month_bucket = ANY ($3)\n    )\n    AND (\n        $2 = 4\n        OR $4::VARCHAR[] IS NULL\n        OR h.catch_location_id = ANY ($4)\n    )\n    AND (\n        $1 = 1\n        OR $2 = 1\n        OR $5::INT[] IS NULL\n        OR h.gear_group_id = ANY ($5)\n    )\n    AND (\n        $1 = 2\n        OR $2 = 2\n        OR $6::INT[] IS NULL\n        OR h.species_group_id = ANY ($6)\n    )\n    AND (\n        $1 = 3\n        OR $2 = 3\n        OR $7::INT[] IS NULL\n        OR h.vessel_length_group = ANY ($7)\n    )\n    AND (\n        $8::BIGINT[] IS NULL\n        OR fiskeridir_vessel_id = ANY ($8)\n    )\nGROUP BY\n    1,\n    2\n            "
+  },
   "731e852a607ae33927aaaa91f6bd6c4e7109590e46809605c1716efe82505628": {
     "describe": {
       "columns": [],

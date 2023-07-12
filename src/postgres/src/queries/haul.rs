@@ -21,8 +21,8 @@ impl PostgresAdapter {
             HaulMatrixYFeature::from(active_filter)
         };
 
-        let data: Vec<MatrixQueryOutput> = sqlx::query_as!(
-            MatrixQueryOutput,
+        let data: Vec<HaulMatrixQueryOutput> = sqlx::query_as!(
+            HaulMatrixQueryOutput,
             r#"
 SELECT
     CASE
@@ -93,7 +93,7 @@ GROUP BY
         .into_report()
         .change_context(PostgresError::Query)?;
 
-        calculate_sum_area_table(x_feature, y_feature, data)
+        calculate_haul_sum_area_table(x_feature, y_feature, data)
             .change_context(PostgresError::DataConversion)
     }
     pub(crate) fn hauls_impl(

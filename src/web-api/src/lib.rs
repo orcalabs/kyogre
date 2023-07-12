@@ -4,8 +4,9 @@
 use duckdb_rs::Client;
 use fiskeridir_rs::{RegisterVesselEntityType, RegisterVesselOwner};
 use kyogre_core::{
-    ActiveHaulsFilter, Catch, Delivery, FishingFacilitiesSorting, FishingFacilityToolType,
-    HaulsSorting, MatrixCacheOutbound, Ordering, WebApiInboundPort, WebApiOutboundPort,
+    ActiveHaulsFilter, ActiveLandingFilter, Catch, Delivery, FishingFacilitiesSorting,
+    FishingFacilityToolType, HaulsSorting, MatrixCacheOutbound, Ordering, WebApiInboundPort,
+    WebApiOutboundPort,
 };
 use postgres::PostgresAdapter;
 use routes::v1;
@@ -49,10 +50,12 @@ impl Database for PostgresAdapter {}
         v1::fishing_facility::fishing_facilities,
         v1::user::get_user,
         v1::user::update_user,
+        v1::landing_matrix::landing_matrix,
     ),
     components(
         schemas(
             ActiveHaulsFilter,
+            ActiveLandingFilter,
             Delivery,
             Catch,
             Ordering,
@@ -89,7 +92,8 @@ impl Database for PostgresAdapter {}
             v1::ais_vms::AisVmsPositionDetails,
             v1::fishing_facility::FishingFacility,
             v1::user::User,
-        )
+            v1::landing_matrix::LandingMatrix,
+          )
     ),
     tags(
         (name = "kyogre-api", description = "kyogre api")
