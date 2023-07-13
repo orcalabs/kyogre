@@ -166,13 +166,6 @@ impl<'de> Deserialize<'de> for GearGroupId {
                 formatter.write_str("an u32 integer representing a gear group id")
             }
 
-            fn visit_none<E>(self) -> Result<Self::Value, E>
-            where
-                E: serde::de::Error,
-            {
-                Ok(GearGroupId(GearGroup::Not))
-            }
-
             fn visit_i64<E>(self, v: i64) -> Result<Self::Value, E>
             where
                 E: serde::de::Error,
