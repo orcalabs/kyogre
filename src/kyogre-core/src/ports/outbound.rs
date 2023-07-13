@@ -144,6 +144,10 @@ pub trait MatrixCacheOutbound: Send + Sync {
         &self,
         query: HaulsMatrixQuery,
     ) -> Result<Option<HaulsMatrix>, QueryError>;
+    async fn landing_matrix(
+        &self,
+        query: LandingMatrixQuery,
+    ) -> Result<Option<LandingMatrix>, QueryError>;
 }
 
 #[async_trait]
@@ -178,5 +182,4 @@ pub trait TripDistancerOutbound: Send + Sync {
 #[async_trait]
 pub trait MatrixCacheVersion: Send + Sync {
     async fn increment(&self) -> Result<(), UpdateError>;
-    async fn current(&self) -> Result<u64, QueryError>;
 }

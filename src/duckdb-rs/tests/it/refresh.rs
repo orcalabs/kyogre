@@ -1,14 +1,16 @@
-use fiskeridir_rs::ErsDca;
+use chrono::{TimeZone, Utc};
+use fiskeridir_rs::{ErsDca, Landing};
 use kyogre_core::{
-    ActiveHaulsFilter, FiskeridirVesselId, HaulsMatrixQuery, MatrixCacheOutbound,
-    MatrixCacheVersion, ScraperInboundPort,
+    ActiveHaulsFilter, ActiveLandingFilter, FiskeridirVesselId, HaulsMatrixQuery,
+    LandingMatrixQuery, MatrixCacheOutbound, MatrixCacheVersion, ScraperInboundPort,
 };
 
 use super::helper::test;
 
 #[tokio::test]
-async fn test_refresh_with_no_data_succeeds_and_returns_miss_on_subsequent_request() {
+async fn test_haul_refresh_with_no_data_succeeds_and_returns_miss_on_subsequent_request() {
     test(|helper| async move {
+        helper.adapter().increment().await.unwrap();
         helper.cache.refresh().await.unwrap();
 
         let cache_result = helper
@@ -30,7 +32,7 @@ async fn test_refresh_with_no_data_succeeds_and_returns_miss_on_subsequent_reque
     .await;
 }
 #[tokio::test]
-async fn test_returns_hit_after_refreshing_with_data() {
+async fn test_haul_returns_hit_after_refreshing_with_data() {
     test(|helper| async move {
         helper
             .db
@@ -58,6 +60,64 @@ async fn test_returns_hit_after_refreshing_with_data() {
                 vessel_length_groups: None,
                 vessel_ids: None,
                 active_filter: ActiveHaulsFilter::Date,
+            })
+            .await
+            .unwrap();
+
+        assert!(cache_result.is_some());
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_landing_refresh_with_no_data_succeeds_and_returns_miss_on_subsequent_request() {
+    test(|helper| async move {
+        helper.adapter().increment().await.unwrap();
+        helper.cache.refresh().await.unwrap();
+
+        let cache_result = helper
+            .cache
+            .landing_matrix(LandingMatrixQuery {
+                months: None,
+                catch_locations: None,
+                gear_group_ids: None,
+                species_group_ids: None,
+                vessel_length_groups: None,
+                vessel_ids: None,
+                active_filter: ActiveLandingFilter::Date,
+            })
+            .await
+            .unwrap();
+
+        assert!(cache_result.is_none());
+    })
+    .await;
+}
+#[tokio::test]
+async fn test_landing_returns_hit_after_refreshing_with_data() {
+    test(|helper| async move {
+        let mut landing = Landing::test_default(1, None);
+        landing.landing_timestamp = Utc.with_ymd_and_hms(2001, 1, 1, 0, 0, 0).unwrap();
+
+        helper
+            .adapter()
+            .add_landings(vec![landing.clone()], 2023)
+            .await
+            .unwrap();
+
+        helper.adapter().increment().await.unwrap();
+        helper.cache.refresh().await.unwrap();
+
+        let cache_result = helper
+            .cache
+            .landing_matrix(LandingMatrixQuery {
+                months: None,
+                catch_locations: None,
+                gear_group_ids: None,
+                species_group_ids: None,
+                vessel_length_groups: None,
+                vessel_ids: None,
+                active_filter: ActiveLandingFilter::Date,
             })
             .await
             .unwrap();

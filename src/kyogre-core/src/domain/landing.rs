@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 pub static LANDING_OLDEST_DATA_MONTHS: usize = 1999 * 12;
 
-#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Default)]
 #[serde(rename_all = "camelCase")]
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct LandingMatrix {

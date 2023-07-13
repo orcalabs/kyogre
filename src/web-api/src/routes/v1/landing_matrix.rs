@@ -46,19 +46,42 @@ pub struct LandingMatrixParams {
         (status = 500, description = "an internal error occured", body = ErrorResponse),
     )
 )]
-#[tracing::instrument(skip(db, _cache))]
+#[tracing::instrument(skip(db, cache))]
 pub async fn landing_matrix<T: Database + 'static, S: Cache>(
     db: web::Data<T>,
-    _cache: web::Data<Option<S>>,
+    cache: web::Data<Option<S>>,
     params: web::Query<LandingMatrixParams>,
     active_filter: Path<ActiveLandingFilter>,
 ) -> Result<Response<LandingMatrix>, ApiError> {
     let query = matrix_params_to_query(params.into_inner(), active_filter.into_inner());
 
-    let matrix = db.landing_matrix(&query).await.map_err(|e| {
-        event!(Level::ERROR, "failed to retrieve landing matrix: {:?}", e);
-        ApiError::InternalServerError
-    })?;
+    let matrix = if let Some(cache) = cache.as_ref() {
+        match cache.landing_matrix(query.clone()).await {
+            Ok(matrix) => match matrix {
+                Some(matrix) => Ok(matrix),
+                None => db.landing_matrix(&query).await.map_err(|e| {
+                    event!(Level::ERROR, "failed to retrieve landing matrix: {:?}", e);
+                    ApiError::InternalServerError
+                }),
+            },
+            Err(e) => {
+                event!(
+                    Level::ERROR,
+                    "failed to retrieve landing matrix from cache: {:?}",
+                    e
+                );
+                db.landing_matrix(&query).await.map_err(|e| {
+                    event!(Level::ERROR, "failed to retrieve landing matrix: {:?}", e);
+                    ApiError::InternalServerError
+                })
+            }
+        }
+    } else {
+        db.landing_matrix(&query).await.map_err(|e| {
+            event!(Level::ERROR, "failed to retrieve landing matrix: {:?}", e);
+            ApiError::InternalServerError
+        })
+    }?;
 
     Ok(Response::new(LandingMatrix::from(matrix)))
 }

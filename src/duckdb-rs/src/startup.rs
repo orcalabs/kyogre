@@ -2,6 +2,7 @@ use crate::api::matrix_cache::matrix_cache_server::MatrixCacheServer;
 use crate::{adapter::DuckdbAdapter, api::MatrixCacheService, settings::Settings};
 use tokio::net::TcpListener;
 use tokio_stream::wrappers::TcpListenerStream;
+use tonic::codegen::CompressionEncoding;
 use tonic::transport::{server::Router, Server};
 
 pub struct App {
@@ -20,7 +21,9 @@ impl App {
             .unwrap();
         let port = listener.local_addr().unwrap().port();
 
-        let router = Server::builder().add_service(MatrixCacheServer::new(service));
+        let router = Server::builder().add_service(
+            MatrixCacheServer::new(service).send_compressed(CompressionEncoding::Gzip),
+        );
 
         App {
             router,
