@@ -1,7 +1,7 @@
 use super::helper::test;
 use actix_web::http::StatusCode;
 use chrono::{Duration, TimeZone, Utc};
-use fiskeridir_rs::{CallSign, Landing};
+use fiskeridir_rs::{CallSign, GearGroup, Landing};
 use kyogre_core::{FiskeridirVesselId, Mmsi, ScraperInboundPort, VesselBenchmarkId};
 use web_api::routes::v1::vessel::Vessel;
 
@@ -286,6 +286,89 @@ async fn test_vessel_weight_per_hour_is_zero_if_there_are_landings_but_no_trips(
         let vessel = &body[0];
 
         assert_eq!(vessel.fish_caught_per_hour.unwrap(), 0.0);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_vessel_has_zero_gear_groups_with_no_landings() {
+    test(|helper| async move {
+        let vessel_id = FiskeridirVesselId(1);
+        helper
+            .db
+            .generate_fiskeridir_vessel(vessel_id, None, None)
+            .await;
+
+        let response = helper.app.get_vessels().await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let body: Vec<Vessel> = response.json().await.unwrap();
+        assert_eq!(body.len(), 1);
+
+        let vessel = &body[0];
+        assert!(vessel.gear_groups.is_empty());
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_vessel_has_gear_groups_of_landings() {
+    test(|helper| async move {
+        let vessel_id = 1;
+        let mut landing = Landing::test_default(1, Some(vessel_id));
+        landing.gear.group = GearGroup::Not;
+        let mut landing2 = Landing::test_default(2, Some(vessel_id));
+        landing2.gear.group = GearGroup::Garn;
+
+        helper
+            .adapter()
+            .add_landings(vec![landing, landing2], 2023)
+            .await
+            .unwrap();
+
+        let response = helper.app.get_vessels().await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let body: Vec<Vessel> = response.json().await.unwrap();
+        assert_eq!(body.len(), 1);
+
+        let vessel = &body[0];
+        assert_eq!(vec![GearGroup::Not, GearGroup::Garn], vessel.gear_groups);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_vessel_removes_gear_group_when_last_landing_is_replaced_with_new_gear_group() {
+    test(|helper| async move {
+        let vessel_id = 1;
+        let mut landing = Landing::test_default(1, Some(vessel_id));
+        landing.gear.group = GearGroup::Not;
+
+        let mut landing2 = landing.clone();
+        landing2.document_info.version_number += 1;
+        landing2.gear.group = GearGroup::Garn;
+
+        helper
+            .adapter()
+            .add_landings(vec![landing], 2023)
+            .await
+            .unwrap();
+
+        helper
+            .adapter()
+            .add_landings(vec![landing2], 2023)
+            .await
+            .unwrap();
+
+        let response = helper.app.get_vessels().await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let body: Vec<Vessel> = response.json().await.unwrap();
+        assert_eq!(body.len(), 1);
+
+        let vessel = &body[0];
+        assert_eq!(vec![GearGroup::Garn], vessel.gear_groups);
     })
     .await;
 }

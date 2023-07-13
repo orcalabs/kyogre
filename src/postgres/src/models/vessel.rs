@@ -2,7 +2,7 @@ use crate::{error::PostgresError, queries::opt_decimal_to_float};
 use bigdecimal::BigDecimal;
 use chrono::{DateTime, Utc};
 use error_stack::{IntoReport, Report, ResultExt};
-use fiskeridir_rs::CallSign;
+use fiskeridir_rs::{CallSign, GearGroup};
 use kyogre_core::{FiskeridirVesselId, Mmsi, TripAssemblerId, VesselBenchmarkId};
 use serde::Deserialize;
 
@@ -70,6 +70,7 @@ pub struct FiskeridirAisVesselCombination {
     pub fiskeridir_rebuilding_year: Option<i32>,
     pub preferred_trip_assembler: TripAssemblerId,
     pub benchmarks: String,
+    pub gear_group_ids: Vec<GearGroup>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -151,6 +152,7 @@ impl TryFrom<FiskeridirAisVesselCombination> for kyogre_core::Vessel {
                 .iter()
                 .find(|v| v.benchmark_id == VesselBenchmarkId::WeightPerHour)
                 .map(|v| v.value),
+            gear_groups: value.gear_group_ids,
         })
     }
 }
