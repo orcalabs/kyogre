@@ -1,7 +1,7 @@
 use fiskeridir_rs::ErsDca;
 use kyogre_core::{
     ActiveHaulsFilter, FiskeridirVesselId, HaulsMatrixQuery, MatrixCacheOutbound,
-    ScraperInboundPort,
+    MatrixCacheVersion, ScraperInboundPort,
 };
 
 use super::helper::test;
@@ -45,6 +45,7 @@ async fn test_returns_hit_after_refreshing_with_data() {
             .await
             .unwrap();
 
+        helper.adapter().increment().await.unwrap();
         helper.cache.refresh().await.unwrap();
 
         let cache_result = helper

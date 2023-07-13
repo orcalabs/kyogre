@@ -165,42 +165,52 @@ SELECT
             tokio::select! {
                 request = self.refresh_queue.recv() => {
                     match request {
-                        Some(v) => {
-                            let res = self.refresh_hauls(None);
-                            if let Err(e) = v.0.send(RefreshResponse(res)).await {
-                                event!(Level::ERROR, "sender half error, exiting refresh_loop: {:?}", e);
-                            }
-
-                        }
+                        Some(v) => self.do_periodic_refresh(Some(v.0)).await,
                         None => {
                             event!(Level::ERROR, "sender half closed, exiting refresh_loop");
 
                         }
                     }
                 }
-                _ = interval.tick() => self.do_periodic_refresh(),
-
+                _ = interval.tick() => self.do_periodic_refresh(None).await,
             }
         }
     }
 
     #[instrument(skip_all)]
-    fn do_periodic_refresh(&self) {
-        match self.refresh_status() {
+    async fn do_periodic_refresh(&self, response_channel: Option<Sender<RefreshResponse>>) {
+        let res = match self.refresh_status() {
             Err(e) => {
                 event!(
                     Level::ERROR,
                     "failed to check postgres for refresh status: {:?}",
                     e
                 );
+                Err(e)
             }
             Ok(v) => {
                 if v.hauls.should_refresh {
                     event!(Level::INFO, "hauls have been modified, starting refresh...",);
-                    if let Err(e) = self.refresh_hauls(Some(v.hauls.version)) {
-                        event!(Level::ERROR, "failed to set refresh hauls: {:?}", e);
+                    match self.refresh_hauls(Some(v.hauls.version)) {
+                        Err(e) => {
+                            event!(Level::ERROR, "failed to set refresh hauls: {:?}", e);
+                            Err(e)
+                        }
+                        Ok(v) => Ok(v),
                     }
+                } else {
+                    Ok(())
                 }
+            }
+        };
+
+        if let Some(sender) = response_channel {
+            if let Err(e) = sender.send(RefreshResponse(res)).await {
+                event!(
+                    Level::ERROR,
+                    "sender half error, exiting refresh_loop: {:?}",
+                    e
+                );
             }
         }
     }
@@ -329,12 +339,12 @@ WHERE
         tx.execute(
             r#"
 UPDATE data_versions
-WHERE
-    source = ?
 SET
     "version" = ?
+WHERE
+    source = ?
             "#,
-            params![source.row_value_name(), version],
+            params![version, source.row_value_name()],
         )
         .into_report()
         .change_context(DuckdbError::Query)?;
