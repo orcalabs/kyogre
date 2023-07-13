@@ -77,6 +77,14 @@ impl ActiveLandingFilter {
 }
 
 impl LandingMatrixXFeature {
+    pub fn column_name(&self) -> &'static str {
+        match self {
+            LandingMatrixXFeature::Date => "matrix_month_bucket",
+            LandingMatrixXFeature::GearGroup => "gear_group_id",
+            LandingMatrixXFeature::SpeciesGroup => "species_group_id",
+            LandingMatrixXFeature::VesselLength => "vessel_length_group",
+        }
+    }
     fn convert_from_val(&self, val: i32) -> Result<usize, LandingMatrixIndexError> {
         match self {
             LandingMatrixXFeature::Date => {
@@ -110,6 +118,15 @@ impl LandingMatrixXFeature {
 }
 
 impl LandingMatrixYFeature {
+    pub fn column_name(&self) -> &'static str {
+        match self {
+            LandingMatrixYFeature::Date => "matrix_month_bucket",
+            LandingMatrixYFeature::GearGroup => "gear_group_id",
+            LandingMatrixYFeature::SpeciesGroup => "species_group_id",
+            LandingMatrixYFeature::VesselLength => "vessel_length_group",
+            LandingMatrixYFeature::CatchLocation => "catch_location_matrix_index",
+        }
+    }
     fn convert_from_val(&self, val: i32) -> Result<usize, LandingMatrixIndexError> {
         match self {
             LandingMatrixYFeature::Date => {

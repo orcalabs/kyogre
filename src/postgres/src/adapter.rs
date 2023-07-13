@@ -827,11 +827,6 @@ impl MatrixCacheVersion for PostgresAdapter {
             .await
             .change_context(UpdateError)
     }
-    async fn current(&self) -> Result<u64, QueryError> {
-        self.current_duckdb_version()
-            .await
-            .change_context(QueryError)
-    }
 }
 
 pub(crate) fn convert_stream<I, A, B>(input: I) -> impl Stream<Item = Result<B, QueryError>>

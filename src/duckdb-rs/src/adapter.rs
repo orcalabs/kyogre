@@ -122,6 +122,57 @@ impl DuckdbAdapter {
         }
     }
 
+    pub fn landing_matrix(
+        &self,
+        query: &LandingMatrixQuery,
+    ) -> Result<Option<LandingMatrix>, QueryError> {
+        let res = self.landing_matrix_impl(query).change_context(QueryError);
+        match self.cache_mode {
+            CacheMode::MissOnError => match res {
+                Ok(v) => Ok(v),
+                Err(e) => {
+                    event!(
+                        Level::ERROR,
+                        "failed to get landing matrix from cache: {:?}",
+                        e
+                    );
+                    Ok(None)
+                }
+            },
+            CacheMode::ReturnError => res,
+        }
+    }
+
+    fn landing_matrix_impl(
+        &self,
+        params: &LandingMatrixQuery,
+    ) -> Result<Option<LandingMatrix>, DuckdbError> {
+        let conn = self
+            .pool
+            .get()
+            .into_report()
+            .change_context(DuckdbError::Connection)?;
+        let dates = self.get_landing_matrix(&conn, LandingMatrixXFeature::Date, params)?;
+        let length_group =
+            self.get_landing_matrix(&conn, LandingMatrixXFeature::VesselLength, params)?;
+        let gear_group =
+            self.get_landing_matrix(&conn, LandingMatrixXFeature::GearGroup, params)?;
+        let species_group =
+            self.get_landing_matrix(&conn, LandingMatrixXFeature::SpeciesGroup, params)?;
+
+        match (dates, length_group, gear_group, species_group) {
+            (Some(dates), Some(length_group), Some(gear_group), Some(species_group)) => {
+                Ok(Some(LandingMatrix {
+                    dates,
+                    length_group,
+                    gear_group,
+                    species_group,
+                }))
+            }
+            _ => Ok(None),
+        }
+    }
+
     fn hauls_matrix_impl(
         &self,
         params: &HaulsMatrixQuery,
@@ -131,10 +182,11 @@ impl DuckdbAdapter {
             .get()
             .into_report()
             .change_context(DuckdbError::Connection)?;
-        let dates = self.get_matrix(&conn, HaulMatrixXFeature::Date, params)?;
-        let length_group = self.get_matrix(&conn, HaulMatrixXFeature::VesselLength, params)?;
-        let gear_group = self.get_matrix(&conn, HaulMatrixXFeature::GearGroup, params)?;
-        let species_group = self.get_matrix(&conn, HaulMatrixXFeature::SpeciesGroup, params)?;
+        let dates = self.get_haul_matrix(&conn, HaulMatrixXFeature::Date, params)?;
+        let length_group = self.get_haul_matrix(&conn, HaulMatrixXFeature::VesselLength, params)?;
+        let gear_group = self.get_haul_matrix(&conn, HaulMatrixXFeature::GearGroup, params)?;
+        let species_group =
+            self.get_haul_matrix(&conn, HaulMatrixXFeature::SpeciesGroup, params)?;
 
         match (dates, length_group, gear_group, species_group) {
             (Some(dates), Some(length_group), Some(gear_group), Some(species_group)) => {
@@ -149,7 +201,59 @@ impl DuckdbAdapter {
         }
     }
 
-    fn get_matrix(
+    fn get_landing_matrix(
+        &self,
+        conn: &r2d2::PooledConnection<DuckdbConnectionManager>,
+        x_feature: LandingMatrixXFeature,
+        params: &LandingMatrixQuery,
+    ) -> Result<Option<Vec<f64>>, DuckdbError> {
+        let y_feature = if x_feature == params.active_filter {
+            LandingMatrixYFeature::CatchLocation
+        } else {
+            LandingMatrixYFeature::from(params.active_filter)
+        };
+        let mut sql = format!(
+            "
+SELECT
+    {},
+    {},
+    SUM(living_weight)
+FROM
+    landing_matrix_cache
+            ",
+            x_feature.column_name(),
+            y_feature.column_name()
+        );
+
+        push_landing_where_statements(&mut sql, params, x_feature);
+
+        sql.push_str("group by 1,2");
+
+        let mut stmt = conn
+            .prepare(&sql)
+            .into_report()
+            .change_context(DuckdbError::Query)?;
+
+        let rows = stmt
+            .query([])
+            .into_report()
+            .change_context(DuckdbError::Query)?;
+
+        let data = get_landing_matrix_output(rows)
+            .into_report()
+            .change_context(DuckdbError::Conversion)?;
+
+        if data.is_empty() {
+            Ok(None)
+        } else {
+            Ok(Some(
+                calculate_landing_sum_area_table(x_feature, y_feature, data)
+                    .change_context(DuckdbError::Conversion)?,
+            ))
+        }
+    }
+
+    fn get_haul_matrix(
         &self,
         conn: &r2d2::PooledConnection<DuckdbConnectionManager>,
         x_feature: HaulMatrixXFeature,
@@ -173,7 +277,7 @@ FROM
             y_feature.column_name()
         );
 
-        push_where_statements(&mut sql, params, x_feature);
+        push_haul_where_statements(&mut sql, params, x_feature);
 
         sql.push_str("group by 1,2");
 
@@ -187,7 +291,7 @@ FROM
             .into_report()
             .change_context(DuckdbError::Query)?;
 
-        let data = get_matrix_output(rows)
+        let data = get_haul_matrix_output(rows)
             .into_report()
             .change_context(DuckdbError::Conversion)?;
 
@@ -202,7 +306,22 @@ FROM
     }
 }
 
-fn get_matrix_output(
+fn get_landing_matrix_output(
+    mut rows: duckdb::Rows<'_>,
+) -> std::result::Result<Vec<LandingMatrixQueryOutput>, duckdb::Error> {
+    let mut data = Vec::new();
+    while let Some(row) = rows.next()? {
+        data.push(LandingMatrixQueryOutput {
+            x_index: row.get(0)?,
+            y_index: row.get(1)?,
+            sum_living: row.get(2)?,
+        });
+    }
+
+    Ok(data)
+}
+
+fn get_haul_matrix_output(
     mut rows: duckdb::Rows<'_>,
 ) -> std::result::Result<Vec<HaulMatrixQueryOutput>, duckdb::Error> {
     let mut data = Vec::new();
@@ -217,7 +336,110 @@ fn get_matrix_output(
     Ok(data)
 }
 
-fn push_where_statements(
+fn push_landing_where_statements(
+    query: &mut String,
+    params: &LandingMatrixQuery,
+    x_feature: LandingMatrixXFeature,
+) {
+    let mut first = true;
+    if let Some(months) = &params.months {
+        if params.active_filter != ActiveLandingFilter::Date
+            && x_feature != LandingMatrixXFeature::Date
+        {
+            if first {
+                first = false;
+                query.push_str("where ");
+            } else {
+                query.push_str("and ");
+            }
+            query.push_str(&format!("matrix_month_bucket = ANY ({:?}) ", months));
+        }
+    }
+    if let Some(catch_locations) = &params.catch_locations {
+        if params.active_filter != ActiveLandingFilter::Date
+            && x_feature != LandingMatrixXFeature::Date
+        {
+            if first {
+                first = false;
+                query.push_str("where ");
+            } else {
+                query.push_str("and ");
+            }
+            let mut filter = String::new();
+            for c in catch_locations {
+                filter.push_str(&format!("'{}',", c.as_ref()));
+            }
+            filter.pop();
+            query.push_str(&format!("catch_location = ANY ([{filter}]) ",));
+        }
+    }
+    if let Some(gear_group_ids) = &params.gear_group_ids {
+        if params.active_filter != ActiveLandingFilter::GearGroup
+            && x_feature != LandingMatrixXFeature::GearGroup
+        {
+            if first {
+                first = false;
+                query.push_str("where ");
+            } else {
+                query.push_str("and ");
+            }
+            query.push_str(&format!(
+                "gear_group_id = ANY ({:?}) ",
+                gear_group_ids
+                    .iter()
+                    .map(|v| *v as i32)
+                    .collect::<Vec<i32>>()
+            ));
+        }
+    }
+    if let Some(species_group_ids) = &params.species_group_ids {
+        if params.active_filter != ActiveLandingFilter::SpeciesGroup
+            && x_feature != LandingMatrixXFeature::SpeciesGroup
+        {
+            if first {
+                first = false;
+                query.push_str("where ");
+            } else {
+                query.push_str("and ");
+            }
+            query.push_str(&format!(
+                "species_group_id = ANY ({:?}) ",
+                species_group_ids
+            ));
+        }
+    }
+    if let Some(vessel_length_groups) = &params.vessel_length_groups {
+        if params.active_filter != ActiveLandingFilter::VesselLength
+            && x_feature != LandingMatrixXFeature::VesselLength
+        {
+            if first {
+                first = false;
+                query.push_str("where ");
+            } else {
+                query.push_str("and ");
+            }
+            query.push_str(&format!(
+                "vessel_length_group = ANY ({:?}) ",
+                vessel_length_groups
+                    .iter()
+                    .map(|v| *v as i32)
+                    .collect::<Vec<i32>>()
+            ));
+        }
+    }
+    if let Some(vessel_ids) = &params.vessel_ids {
+        if first {
+            query.push_str("where ");
+        } else {
+            query.push_str("and ");
+        }
+        query.push_str(&format!(
+            "fiskeridir_vessel_id = ANY ({:?}) ",
+            vessel_ids.iter().map(|v| v.0).collect::<Vec<i64>>()
+        ));
+    }
+}
+fn push_haul_where_statements(
     query: &mut String,
     params: &HaulsMatrixQuery,
     x_feature: HaulMatrixXFeature,

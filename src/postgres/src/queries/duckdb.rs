@@ -16,20 +16,4 @@ SET
         .change_context(PostgresError::Query)
         .map(|_| ())
     }
-
-    pub(crate) async fn current_duckdb_version(&self) -> Result<u64, PostgresError> {
-        Ok(sqlx::query!(
-            r#"
-SELECT
-    "version"
-FROM
-    duckdb_data_version
-            "#,
-        )
-        .fetch_one(&self.pool)
-        .await
-        .into_report()
-        .change_context(PostgresError::Query)?
-        .version as u64)
-    }
 }

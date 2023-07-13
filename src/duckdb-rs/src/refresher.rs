@@ -21,6 +21,19 @@ const HAULS_SCHEMA: &str = "CREATE TABLE
         stop_timestamp timestamptz NOT NULL,
         living_weight BIGINT NOT NULL,
     )";
+const LANDING_SCHEMA: &str = "CREATE TABLE
+    landing_matrix_cache (
+        landing_id VARCHAR NOT NULL,
+        catch_location_matrix_index INT NOT NULL,
+        catch_location_id VARCHAR NOT NULL ,
+        matrix_month_bucket INT NOT NULL,
+        vessel_length_group INT,
+        fiskeridir_vessel_id INT,
+        gear_group_id INT NOT NULL,
+        species_group_id INT NOT NULL,
+        living_weight DECIMAL NOT NULL,
+        PRIMARY KEY (landing_id, species_group_id)
+    )";
 
 pub struct RefreshRequest(pub Sender<RefreshResponse>);
 pub struct RefreshResponse(pub Result<(), DuckdbError>);
@@ -34,6 +47,7 @@ pub struct DuckdbRefresher {
 
 pub enum DataSource {
     Hauls,
+    Landings,
 }
 
 pub enum CreateMode {
@@ -45,23 +59,27 @@ impl DataSource {
     fn row_value_name(&self) -> &'static str {
         match self {
             DataSource::Hauls => "hauls",
+            DataSource::Landings => "landings",
         }
     }
     fn postgres_version_table_id(&self) -> &'static str {
         match self {
             DataSource::Hauls => "hauls",
+            DataSource::Landings => "landings",
         }
     }
 }
 
 pub struct RefreshStatus {
     hauls: SourceStatus,
+    landings: SourceStatus,
 }
 
 pub struct SourceStatus {
     version: u64,
     should_refresh: bool,
 }
+
 impl DuckdbRefresher {
     pub fn new(
         pool: r2d2::Pool<DuckdbConnectionManager>,
@@ -144,6 +162,7 @@ SELECT
 
         if !table_exists {
             self.create_hauls(CreateMode::Initial, &tx)?;
+            self.create_landings(CreateMode::Initial, &tx)?;
             self.add_data_versions(&tx)?;
         }
 
@@ -177,7 +196,6 @@ SELECT
         }
     }
 
-    #[instrument(skip_all)]
     async fn do_periodic_refresh(&self, response_channel: Option<Sender<RefreshResponse>>) {
         let res = match self.refresh_status() {
             Err(e) => {
@@ -189,7 +207,7 @@ SELECT
                 Err(e)
             }
             Ok(v) => {
-                if v.hauls.should_refresh {
+                let res = if v.hauls.should_refresh {
                     event!(Level::INFO, "hauls have been modified, starting refresh...",);
                     match self.refresh_hauls(Some(v.hauls.version)) {
                         Err(e) => {
@@ -200,6 +218,27 @@ SELECT
                     }
                 } else {
                     Ok(())
+                };
+                let res2 = if v.landings.should_refresh {
+                    event!(
+                        Level::INFO,
+                        "landings have been modified, starting refresh...",
+                    );
+                    match self.refresh_landings(Some(v.landings.version)) {
+                        Err(e) => {
+                            event!(Level::ERROR, "failed to set refresh landings: {:?}", e);
+                            Err(e)
+                        }
+                        Ok(v) => Ok(v),
+                    }
+                } else {
+                    Ok(())
+                };
+
+                match (res, res2) {
+                    (_, Err(e)) => Err(e),
+                    (Err(e), _) => Err(e),
+                    (_, _) => Ok(()),
                 }
             }
         };
@@ -213,6 +252,40 @@ SELECT
                 );
             }
         }
+    }
+
+    #[instrument(skip(self))]
+    fn refresh_landings(&self, new_version: Option<u64>) -> Result<(), DuckdbError> {
+        let mut conn = self
+            .pool
+            .get()
+            .into_report()
+            .change_context(DuckdbError::Connection)?;
+
+        conn.execute(
+            r"
+LOAD postgres;
+            ",
+            [],
+        )
+        .into_report()
+        .change_context(DuckdbError::Query)?;
+
+        let tx = conn
+            .transaction()
+            .into_report()
+            .change_context(DuckdbError::Connection)?;
+
+        self.create_landings(CreateMode::Refresh, &tx)?;
+
+        if let Some(new_version) = new_version {
+            self.set_data_source_version(DataSource::Landings, new_version, &tx)?;
+        }
+
+        tx.commit()
+            .into_report()
+            .change_context(DuckdbError::Connection)?;
+        Ok(())
     }
 
     #[instrument(skip(self))]
@@ -268,10 +341,18 @@ LOAD postgres;
         let postgres_haul_version = self.postgres_data_source_version(&conn, DataSource::Hauls)?;
         let local_haul_version = self.data_source_version(&conn, DataSource::Hauls)?;
 
+        let postgres_landing_version =
+            self.postgres_data_source_version(&conn, DataSource::Landings)?;
+        let local_landing_version = self.data_source_version(&conn, DataSource::Landings)?;
+
         let status = RefreshStatus {
             hauls: SourceStatus {
                 version: postgres_haul_version,
                 should_refresh: postgres_haul_version > local_haul_version,
+            },
+            landings: SourceStatus {
+                version: postgres_landing_version,
+                should_refresh: postgres_landing_version > local_landing_version,
             },
         };
 
@@ -361,6 +442,13 @@ CREATE TABLE
 INSERT INTO
     data_versions ("version", source)
 VALUES
+    (0, 'landings')
+ON CONFLICT (source)
+DO NOTHING;
+
+INSERT INTO
+    data_versions ("version", source)
+VALUES
     (0, 'hauls')
 ON CONFLICT (source)
 DO NOTHING;
@@ -368,6 +456,53 @@ DO NOTHING;
         )
         .into_report()
         .change_context(DuckdbError::Query)
+    }
+
+    fn create_landings(&self, mode: CreateMode, tx: &Transaction<'_>) -> Result<(), DuckdbError> {
+        let postgres_scan_command = format!(
+            "
+INSERT INTO
+    landing_matrix_cache (
+        landing_id,
+        catch_location_matrix_index,
+        catch_location_id,
+        matrix_month_bucket,
+        vessel_length_group,
+        fiskeridir_vessel_id,
+        gear_group_id,
+        species_group_id,
+        living_weight
+    )
+SELECT
+   landing_id,
+   catch_location_matrix_index,
+   catch_location_id,
+   matrix_month_bucket,
+   vessel_length_group,
+   fiskeridir_vessel_id,
+   gear_group_id,
+   species_group_id,
+   living_weight
+FROM
+    POSTGRES_SCAN ('{}', 'public', 'landing_matrix')
+            ",
+            self.postgres_credentials,
+        );
+
+        let queries = match mode {
+            CreateMode::Initial => {
+                format!("{};{};", LANDING_SCHEMA, postgres_scan_command)
+            }
+            CreateMode::Refresh => {
+                format!(
+                    "DROP TABLE landing_matrix_cache;{};{};",
+                    LANDING_SCHEMA, postgres_scan_command
+                )
+            }
+        };
+        tx.execute_batch(&queries)
+            .into_report()
+            .change_context(DuckdbError::Query)
     }
 
     fn create_hauls(&self, mode: CreateMode, tx: &Transaction<'_>) -> Result<(), DuckdbError> {
