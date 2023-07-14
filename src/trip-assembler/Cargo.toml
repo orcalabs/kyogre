@@ -21,9 +21,7 @@ num-traits = "0.2.15"
 postgres = { path = "../postgres" }
 rand = "0.8.5"
 dockertest = { version = "0.3.1", registry = "orcalabs-orcastrator" }
-orca-core = { version = "0.20.0", registry = "orcalabs-orcastrator", features = [
-    "dockertest",
-] }
+orca-core = { workspace = true, features = ["dockertest"] }
 tokio = { version = "1.29.1", features = ["rt-multi-thread", "macros"] }
 futures = "0.3.28"
 fiskeridir-rs = { workspace = true }

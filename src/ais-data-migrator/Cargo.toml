@@ -7,9 +7,7 @@ edition = "2021"
 
 [dependencies]
 kyogre-core = { path = "../kyogre-core" }
-orca-core = { registry = "orcalabs-orcastrator", version = "0.20.0", features = [
-    "telemetry",
-] }
+orca-core = { workspace = true, features = ["telemetry"] }
 postgres = { path = "../postgres" }
 leviathan-postgres = { path = "../leviathan-postgres" }
 

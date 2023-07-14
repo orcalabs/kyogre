@@ -285,7 +285,7 @@ dependencies = [
  "hyper-alpn",
  "kyogre-core",
  "lazy_static",
- "orca-core",
+ "orca-core 0.21.0",
  "postgres",
  "rand 0.8.5",
  "serde",
@@ -308,7 +308,7 @@ dependencies = [
  "humantime-serde",
  "kyogre-core",
  "leviathan-postgres",
- "orca-core",
+ "orca-core 0.21.0",
  "postgres",
  "serde",
  "tokio",
@@ -1295,7 +1295,7 @@ name = "database-migrator"
 version = "0.1.0"
 dependencies = [
  "config",
- "orca-core",
+ "orca-core 0.21.0",
  "postgres",
  "serde",
  "tokio",
@@ -1446,8 +1446,8 @@ dependencies = [
  "humantime-serde",
  "kyogre-core",
  "num-traits",
- "orca-core",
- "orca-statemachine",
+ "orca-core 0.21.0",
+ "orca-statemachine 0.38.0",
  "postgres",
  "prost",
  "r2d2",
@@ -1509,8 +1509,8 @@ dependencies = [
  "futures",
  "haul-distributor",
  "kyogre-core",
- "orca-core",
- "orca-statemachine",
+ "orca-core 0.21.0",
+ "orca-statemachine 0.39.0",
  "postgres",
  "rand 0.8.5",
  "scraper",
@@ -2060,7 +2060,7 @@ dependencies = [
  "futures",
  "geo 0.25.1",
  "kyogre-core",
- "orca-core",
+ "orca-core 0.21.0",
  "postgres",
  "rand 0.8.5",
  "tokio",
@@ -2529,7 +2529,7 @@ dependencies = [
  "chrono",
  "error-stack 0.3.1",
  "kyogre-core",
- "orca-core",
+ "orca-core 0.21.0",
  "sqlx",
 ]
 
@@ -3104,6 +3104,16 @@ version = "0.20.0"
 source = "registry+https://dl.cloudsmith.io/basic/orcalabs/orcastrator/cargo/index.git"
 checksum = "276d679fdb6b9a39d4d6028b8cf4f7f9d374a7b022be289a244a113b91e2eb6c"
 dependencies = [
+ "serde",
+ "tracing",
+]
+
+[[package]]
+name = "orca-core"
+version = "0.21.0"
+source = "registry+https://dl.cloudsmith.io/basic/orcalabs/orcastrator/cargo/index.git"
+checksum = "55488fe7cefeae28a1efe3fc080e7c9b6c3de53372bbf32d37536f7a4b0d34bd"
+dependencies = [
  "actix-web",
  "dockertest",
  "opentelemetry",
@@ -3129,7 +3139,22 @@ dependencies = [
  "chrono",
  "error-stack 0.2.4",
  "humantime-serde",
- "orca-core",
+ "orca-core 0.20.0",
+ "serde",
+ "tracing",
+]
+
+[[package]]
+name = "orca-statemachine"
+version = "0.39.0"
+source = "registry+https://dl.cloudsmith.io/basic/orcalabs/orcastrator/cargo/index.git"
+checksum = "ac345367a302821f5a866ec6bbf5ef255e14f687028c06823b62f0f3374eb998"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "error-stack 0.2.4",
+ "humantime-serde",
+ "orca-core 0.21.0",
  "serde",
  "sqlx",
  "tracing",
@@ -3451,7 +3476,7 @@ dependencies = [
  "jurisdiction",
  "kyogre-core",
  "num-traits",
- "orca-core",
+ "orca-core 0.21.0",
  "rand 0.8.5",
  "serde",
  "serde_json",
@@ -5229,7 +5254,7 @@ dependencies = [
  "geoutils",
  "kyogre-core",
  "num-traits",
- "orca-core",
+ "orca-core 0.21.0",
  "postgres",
  "rand 0.8.5",
  "strum",
@@ -5250,7 +5275,7 @@ dependencies = [
  "futures",
  "geoutils",
  "kyogre-core",
- "orca-core",
+ "orca-core 0.21.0",
  "postgres",
  "rand 0.8.5",
  "tokio",
@@ -5582,8 +5607,8 @@ dependencies = [
  "kyogre-core",
  "num-traits",
  "once_cell",
- "orca-core",
- "orca-statemachine",
+ "orca-core 0.21.0",
+ "orca-statemachine 0.38.0",
  "postgres",
  "rand 0.8.5",
  "reqwest",

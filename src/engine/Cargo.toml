@@ -15,12 +15,10 @@ haul-distributor = { path = "../haul-distributor" }
 trip-distancer = { path = "../trip-distancer" }
 
 
-orca-statemachine = { version = "0.38.0", registry = "orcalabs-orcastrator", features = [
+orca-statemachine = { version = "0.39.0", registry = "orcalabs-orcastrator", features = [
     "psql-adapter",
 ] }
-orca-core = { version = "0.20.0", registry = "orcalabs-orcastrator", features = [
-    "telemetry",
-] }
+orca-core = { workspace = true, features = ["telemetry"] }
 fiskeridir-rs = { workspace = true }
 
 config = { version = "0.13.3", features = ["yaml"] }
@@ -39,6 +37,4 @@ tracing-subscriber = "0.3.17"
 rand = "0.8.5"
 futures = "0.3.28"
 dockertest = { version = "0.3.1", registry = "orcalabs-orcastrator" }
-orca-core = { version = "0.20.0", registry = "orcalabs-orcastrator", features = [
-    "dockertest",
-] }
+orca-core = { workspace = true, features = ["dockertest"] }
