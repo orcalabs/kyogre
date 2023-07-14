@@ -7,7 +7,6 @@ use oauth2::{
     TokenUrl,
 };
 use serde::Deserialize;
-use std::borrow::Borrow;
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct OauthConfig {
@@ -51,6 +50,6 @@ impl BearerToken {
 
 impl AsRef<str> for BearerToken {
     fn as_ref(&self) -> &str {
-        self.0.borrow().secret()
+        self.0.secret()
     }
 }

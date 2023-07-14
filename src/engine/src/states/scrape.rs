@@ -4,14 +4,14 @@ use tracing::{event, instrument, Level};
 // Pending -> Scrape
 impl<L, T> From<StepWrapper<L, T, Pending>> for StepWrapper<L, T, Scrape> {
     fn from(val: StepWrapper<L, T, Pending>) -> StepWrapper<L, T, Scrape> {
-        val.inherit(Scrape::default())
+        val.inherit(Scrape)
     }
 }
 
 // Scrape -> Trips
 impl<L, T> From<StepWrapper<L, T, Scrape>> for StepWrapper<L, T, Trips> {
     fn from(val: StepWrapper<L, T, Scrape>) -> StepWrapper<L, T, Trips> {
-        val.inherit(Trips::default())
+        val.inherit(Trips)
     }
 }
 

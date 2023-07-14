@@ -4,14 +4,14 @@ use tracing::{event, instrument, Level};
 // Pending -> HaulDistribution
 impl<L, T> From<StepWrapper<L, T, Pending>> for StepWrapper<L, T, HaulDistribution> {
     fn from(val: StepWrapper<L, T, Pending>) -> StepWrapper<L, T, HaulDistribution> {
-        val.inherit(HaulDistribution::default())
+        val.inherit(HaulDistribution)
     }
 }
 
 // HaulDistribution -> TripDistance
 impl<L, T> From<StepWrapper<L, T, HaulDistribution>> for StepWrapper<L, T, TripDistance> {
     fn from(val: StepWrapper<L, T, HaulDistribution>) -> StepWrapper<L, T, TripDistance> {
-        val.inherit(TripDistance::default())
+        val.inherit(TripDistance)
     }
 }
 

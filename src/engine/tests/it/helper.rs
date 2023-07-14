@@ -41,11 +41,8 @@ impl TestHelper {
         let app = App::build(&self.settings).await;
         let (to, from) = match &state {
             EngineDiscriminants::Trips => {
-                let step = StepWrapper::initial(
-                    app.transition_log.clone(),
-                    app.shared_state,
-                    Trips::default(),
-                );
+                let step =
+                    StepWrapper::initial(app.transition_log.clone(), app.shared_state, Trips);
                 let engine = Engine::Trips(step);
                 let from = engine.current_state_name();
                 let engine = engine.step().await;
@@ -77,11 +74,8 @@ impl TestHelper {
                 (to, from)
             }
             EngineDiscriminants::Scrape => {
-                let step = StepWrapper::initial(
-                    app.transition_log.clone(),
-                    app.shared_state,
-                    Scrape::default(),
-                );
+                let step =
+                    StepWrapper::initial(app.transition_log.clone(), app.shared_state, Scrape);
                 let engine = Engine::Scrape(step);
                 let from = engine.current_state_name();
                 let engine = engine.step().await;
@@ -92,7 +86,7 @@ impl TestHelper {
                 let step = StepWrapper::initial(
                     app.transition_log.clone(),
                     app.shared_state,
-                    TripsPrecision::default(),
+                    TripsPrecision,
                 );
                 let engine = Engine::TripsPrecision(step);
                 let from = engine.current_state_name();
@@ -101,11 +95,8 @@ impl TestHelper {
                 (to, from)
             }
             EngineDiscriminants::Benchmark => {
-                let step = StepWrapper::initial(
-                    app.transition_log.clone(),
-                    app.shared_state,
-                    Benchmark::default(),
-                );
+                let step =
+                    StepWrapper::initial(app.transition_log.clone(), app.shared_state, Benchmark);
                 let engine = Engine::Benchmark(step);
                 let from = engine.current_state_name();
                 let engine = engine.step().await;
@@ -116,7 +107,7 @@ impl TestHelper {
                 let step = StepWrapper::initial(
                     app.transition_log.clone(),
                     app.shared_state,
-                    HaulDistribution::default(),
+                    HaulDistribution,
                 );
                 let engine = Engine::HaulDistribution(step);
                 let from = engine.current_state_name();
@@ -128,7 +119,7 @@ impl TestHelper {
                 let step = StepWrapper::initial(
                     app.transition_log.clone(),
                     app.shared_state,
-                    TripDistance::default(),
+                    TripDistance,
                 );
                 let engine = Engine::TripDistance(step);
                 let from = engine.current_state_name();
