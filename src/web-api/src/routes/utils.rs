@@ -4,7 +4,7 @@ use std::{
 };
 
 use chrono::{DateTime, Datelike, Utc};
-use fiskeridir_rs::GearGroup;
+use fiskeridir_rs::{GearGroup, SpeciesGroup};
 use num_traits::FromPrimitive;
 use serde::{
     de::{DeserializeOwned, IntoDeserializer, Visitor},
@@ -198,7 +198,7 @@ impl<'de> Deserialize<'de> for GearGroupId {
 /// NewType wrapper for a specie group id to customize the deserialize implementation
 /// such that it can be used in [crate::routes::utils::deserialize_string_list].
 #[derive(Debug, Clone)]
-pub struct SpeciesGroupId(pub u32);
+pub struct SpeciesGroupId(pub SpeciesGroup);
 
 impl<'de> Deserialize<'de> for SpeciesGroupId {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
@@ -218,9 +218,18 @@ impl<'de> Deserialize<'de> for SpeciesGroupId {
             where
                 E: serde::de::Error,
             {
-                Ok(SpeciesGroupId(v.parse().map_err(|_| {
+                let id = v.parse::<u32>().map_err(|_| {
                     serde::de::Error::invalid_value(serde::de::Unexpected::Str(v), &self)
-                })?))
+                })?;
+
+                let species_group_id = SpeciesGroup::from_u32(id).ok_or_else(|| {
+                    serde::de::Error::invalid_value(
+                        serde::de::Unexpected::Unsigned(id as u64),
+                        &self,
+                    )
+                })?;
+
+                Ok(SpeciesGroupId(species_group_id))
             }
         }
         deserializer.deserialize_newtype_struct("SpecieGroupId", SpecieVisitor)

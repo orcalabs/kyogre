@@ -5,7 +5,7 @@ pub mod matrix_cache {
 use crate::adapter::DuckdbAdapter;
 use async_trait::async_trait;
 use error_stack::{IntoReport, ResultExt};
-use fiskeridir_rs::{GearGroup, VesselLengthGroup};
+use fiskeridir_rs::{GearGroup, SpeciesGroup, VesselLengthGroup};
 use kyogre_core::{
     ActiveHaulsFilter, ActiveLandingFilter, CatchLocationId, FiskeridirVesselId, HaulsMatrixQuery,
     LandingMatrixQuery, MatrixCacheOutbound, QueryError, UpdateError,
@@ -211,7 +211,10 @@ impl From<LandingMatrixQuery> for LandingFeatures {
                         .collect()
                 })
                 .unwrap_or_default(),
-            species_group_ids: value.species_group_ids.unwrap_or_default(),
+            species_group_ids: value
+                .species_group_ids
+                .map(|v| v.into_iter().map(|v| v as u32).collect())
+                .unwrap_or_default(),
             gear_group_ids: value
                 .gear_group_ids
                 .map(|v| v.into_iter().map(|v| v as u32).collect())
@@ -275,7 +278,14 @@ impl TryFrom<LandingFeatures> for LandingQueryWrapper {
                 })
                 .transpose()?,
             species_group_ids: (!value.species_group_ids.is_empty())
-                .then_some(value.species_group_ids),
+                .then(|| {
+                    value
+                        .species_group_ids
+                        .into_iter()
+                        .map(|v| SpeciesGroup::from_u32(v).ok_or(Error::InvalidParameters))
+                        .collect::<std::result::Result<Vec<_>, Error>>()
+                })
+                .transpose()?,
             vessel_length_groups: (!value.vessel_length_groups.is_empty())
                 .then(|| {
                     value
@@ -314,7 +324,10 @@ impl From<HaulsMatrixQuery> for HaulFeatures {
                         .collect()
                 })
                 .unwrap_or_default(),
-            species_group_ids: value.species_group_ids.unwrap_or_default(),
+            species_group_ids: value
+                .species_group_ids
+                .map(|v| v.into_iter().map(|v| v as u32).collect())
+                .unwrap_or_default(),
             gear_group_ids: value
                 .gear_group_ids
                 .map(|v| v.into_iter().map(|v| v as u32).collect())
@@ -366,8 +379,15 @@ impl TryFrom<HaulFeatures> for HaulQueryWrapper {
                         .collect::<std::result::Result<Vec<_>, Error>>()
                 })
                 .transpose()?,
-            species_group_ids: (!value.species_group_ids.is_empty())
-                .then_some(value.species_group_ids),
+            species_group_ids: (!value.vessel_length_groups.is_empty())
+                .then(|| {
+                    value
+                        .species_group_ids
+                        .into_iter()
+                        .map(|v| SpeciesGroup::from_u32(v).ok_or(Error::InvalidParameters))
+                        .collect::<std::result::Result<Vec<_>, Error>>()
+                })
+                .transpose()?,
             vessel_length_groups: (!value.vessel_length_groups.is_empty())
                 .then(|| {
                     value

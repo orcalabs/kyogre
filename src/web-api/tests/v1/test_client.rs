@@ -140,7 +140,7 @@ impl ApiClient {
         if let Some(species) = params.species_group_ids {
             parameters.push((
                 "speciesGroupIds".to_string(),
-                create_comma_separated_list(species.into_iter().map(|s| s.0).collect()),
+                create_comma_separated_list(species.into_iter().map(|s| s.0 as u32).collect()),
             ))
         }
 
@@ -199,7 +199,7 @@ impl ApiClient {
         if let Some(species) = params.species_group_ids {
             parameters.push((
                 "speciesGroupIds".to_string(),
-                create_comma_separated_list(species.into_iter().map(|s| s.0).collect()),
+                create_comma_separated_list(species.into_iter().map(|s| s.0 as u32).collect()),
             ))
         }
 
@@ -255,7 +255,7 @@ impl ApiClient {
         if let Some(species) = params.species_group_ids {
             parameters.push((
                 "speciesGroupIds".to_string(),
-                create_comma_separated_list(species.into_iter().map(|s| s.0).collect()),
+                create_comma_separated_list(species.into_iter().map(|s| s.0 as u32).collect()),
             ))
         }
 
