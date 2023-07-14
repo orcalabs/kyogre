@@ -185,7 +185,7 @@ async fn test_hauls_matrix_filters_by_species_group() {
         helper.refresh_cache().await;
         let params = HaulsMatrixParams {
             species_group_ids: Some(vec![
-                SpeciesGroupId(SpeciesGroup::Sei),
+                SpeciesGroupId(SpeciesGroup::Uer),
                 SpeciesGroupId(SpeciesGroup::Blaakveite),
             ]),
             ..Default::default()

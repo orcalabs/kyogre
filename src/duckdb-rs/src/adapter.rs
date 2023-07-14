@@ -405,6 +405,9 @@ fn push_landing_where_statements(
             query.push_str(&format!(
                 "species_group_id = ANY ({:?}) ",
                 species_group_ids
+                    .iter()
+                    .map(|v| *v as i32)
+                    .collect::<Vec<i32>>()
             ));
         }
     }
@@ -506,6 +509,9 @@ fn push_haul_where_statements(
             query.push_str(&format!(
                 "species_group_id = ANY ({:?}) ",
                 species_group_ids
+                    .iter()
+                    .map(|v| *v as i32)
+                    .collect::<Vec<i32>>()
             ));
         }
     }
