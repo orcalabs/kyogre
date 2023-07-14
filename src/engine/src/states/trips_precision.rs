@@ -7,14 +7,14 @@ use trip_assembler::TripPrecisionError;
 // TripsPrecision -> Benchmark
 impl<L, T> From<StepWrapper<L, T, TripsPrecision>> for StepWrapper<L, T, Benchmark> {
     fn from(val: StepWrapper<L, T, TripsPrecision>) -> StepWrapper<L, T, Benchmark> {
-        val.inherit(Benchmark::default())
+        val.inherit(Benchmark)
     }
 }
 
 // Pending -> TripsPrecision
 impl<L, T> From<StepWrapper<L, T, Pending>> for StepWrapper<L, T, TripsPrecision> {
     fn from(val: StepWrapper<L, T, Pending>) -> StepWrapper<L, T, TripsPrecision> {
-        val.inherit(TripsPrecision::default())
+        val.inherit(TripsPrecision)
     }
 }
 

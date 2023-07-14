@@ -6,14 +6,14 @@ use trip_assembler::TripAssemblerError;
 // Trips -> TripsPrecision
 impl<L, T> From<StepWrapper<L, T, Trips>> for StepWrapper<L, T, TripsPrecision> {
     fn from(val: StepWrapper<L, T, Trips>) -> StepWrapper<L, T, TripsPrecision> {
-        val.inherit(TripsPrecision::default())
+        val.inherit(TripsPrecision)
     }
 }
 
 // Pending -> Trips
 impl<L, T> From<StepWrapper<L, T, Pending>> for StepWrapper<L, T, Trips> {
     fn from(val: StepWrapper<L, T, Pending>) -> StepWrapper<L, T, Trips> {
-        val.inherit(Trips::default())
+        val.inherit(Trips)
     }
 }
 

@@ -4,7 +4,7 @@ use tracing::{event, instrument, Level};
 // Pending -> TripDistance
 impl<L, T> From<StepWrapper<L, T, Pending>> for StepWrapper<L, T, TripDistance> {
     fn from(val: StepWrapper<L, T, Pending>) -> StepWrapper<L, T, TripDistance> {
-        val.inherit(TripDistance::default())
+        val.inherit(TripDistance)
     }
 }
 
