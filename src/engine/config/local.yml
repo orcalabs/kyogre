@@ -1,7 +1,4 @@
 log_level: Debug
-duck_db_api:
-  ip: duckdb
-  port: 5000
 postgres:
   ip: postgres
   port: 5432
