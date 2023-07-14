@@ -173,6 +173,28 @@ impl<'de> Deserialize<'de> for GearGroupId {
                 Ok(GearGroupId(GearGroup::Not))
             }
 
+            fn visit_i64<E>(self, v: i64) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                let gear_id = GearGroup::from_i64(v).ok_or_else(|| {
+                    serde::de::Error::invalid_value(serde::de::Unexpected::Signed(v), &self)
+                })?;
+
+                Ok(GearGroupId(gear_id))
+            }
+
+            fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                let gear_id = GearGroup::from_u64(v).ok_or_else(|| {
+                    serde::de::Error::invalid_value(serde::de::Unexpected::Unsigned(v), &self)
+                })?;
+
+                Ok(GearGroupId(gear_id))
+            }
+
             fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
             where
                 E: serde::de::Error,
@@ -211,7 +233,7 @@ impl<'de> Deserialize<'de> for SpeciesGroupId {
             type Value = SpeciesGroupId;
 
             fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-                formatter.write_str("an u32 integer")
+                formatter.write_str("an u32 integer representing a species group id")
             }
 
             fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
@@ -230,6 +252,27 @@ impl<'de> Deserialize<'de> for SpeciesGroupId {
                 })?;
 
                 Ok(SpeciesGroupId(species_group_id))
+            }
+            fn visit_i64<E>(self, v: i64) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                let val = SpeciesGroup::from_i64(v).ok_or_else(|| {
+                    serde::de::Error::invalid_value(serde::de::Unexpected::Signed(v), &self)
+                })?;
+
+                Ok(SpeciesGroupId(val))
+            }
+
+            fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                let val = SpeciesGroup::from_u64(v).ok_or_else(|| {
+                    serde::de::Error::invalid_value(serde::de::Unexpected::Unsigned(v), &self)
+                })?;
+
+                Ok(SpeciesGroupId(val))
             }
         }
         deserializer.deserialize_newtype_struct("SpecieGroupId", SpecieVisitor)
@@ -269,6 +312,19 @@ impl<'de> Deserialize<'de> for Month {
                     serde::de::Error::invalid_value(serde::de::Unexpected::Str(v), &self)
                 })?))
             }
+            fn visit_i64<E>(self, v: i64) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                Ok(Month(v as u32))
+            }
+
+            fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                Ok(Month(v as u32))
+            }
         }
         deserializer.deserialize_newtype_struct("Month", MonthVisitor)
     }
@@ -301,14 +357,35 @@ impl<'de> Deserialize<'de> for VesselLengthGroup {
                     serde::de::Error::invalid_value(serde::de::Unexpected::Str(v), &self)
                 })?;
 
-                let gear_id = fiskeridir_rs::VesselLengthGroup::from_u8(id).ok_or_else(|| {
+                let val = fiskeridir_rs::VesselLengthGroup::from_u8(id).ok_or_else(|| {
                     serde::de::Error::invalid_value(
                         serde::de::Unexpected::Unsigned(id as u64),
                         &self,
                     )
                 })?;
 
-                Ok(VesselLengthGroup(gear_id))
+                Ok(VesselLengthGroup(val))
+            }
+            fn visit_i64<E>(self, v: i64) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                let val = fiskeridir_rs::VesselLengthGroup::from_i64(v).ok_or_else(|| {
+                    serde::de::Error::invalid_value(serde::de::Unexpected::Signed(v), &self)
+                })?;
+
+                Ok(VesselLengthGroup(val))
+            }
+
+            fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                let val = fiskeridir_rs::VesselLengthGroup::from_u64(v).ok_or_else(|| {
+                    serde::de::Error::invalid_value(serde::de::Unexpected::Unsigned(v), &self)
+                })?;
+
+                Ok(VesselLengthGroup(val))
             }
         }
         deserializer.deserialize_newtype_struct("VesselLengthGroupId", VesselLengthGroupVisitor)
