@@ -27,7 +27,7 @@ pub struct LandingMatrixQuery {
     pub months: Option<Vec<u32>>,
     pub catch_locations: Option<Vec<CatchLocationId>>,
     pub gear_group_ids: Option<Vec<GearGroup>>,
-    pub species_group_ids: Option<Vec<u32>>,
+    pub species_group_ids: Option<Vec<SpeciesGroup>>,
     pub vessel_length_groups: Option<Vec<VesselLengthGroup>>,
     pub vessel_ids: Option<Vec<FiskeridirVesselId>>,
     pub active_filter: ActiveLandingFilter,

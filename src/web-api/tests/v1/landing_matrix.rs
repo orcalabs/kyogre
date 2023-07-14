@@ -166,7 +166,10 @@ async fn test_landing_matrix_filters_by_species_group() {
 
         helper.refresh_cache().await;
         let params = LandingMatrixParams {
-            species_group_ids: Some(vec![SpeciesGroupId(301), SpeciesGroupId(302)]),
+            species_group_ids: Some(vec![
+                SpeciesGroupId(SpeciesGroup::Uer),
+                SpeciesGroupId(SpeciesGroup::Blaakveite),
+            ]),
             ..Default::default()
         };
 

@@ -157,7 +157,10 @@ async fn test_hauls_returns_hauls_with_species_group_ids() {
             .unwrap();
 
         let params = HaulsParams {
-            species_group_ids: Some(vec![SpeciesGroupId(301), SpeciesGroupId(302)]),
+            species_group_ids: Some(vec![
+                SpeciesGroupId(SpeciesGroup::Blaakveite),
+                SpeciesGroupId(SpeciesGroup::Uer),
+            ]),
             ..Default::default()
         };
 
