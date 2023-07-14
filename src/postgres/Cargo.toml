@@ -8,9 +8,7 @@ edition = "2021"
 [dependencies]
 kyogre-core = { path = "../kyogre-core", features = ["sqlx"] }
 
-orca-core = { registry = "orcalabs-orcastrator", version = "0.20.0", features = [
-    "telemetry",
-] }
+orca-core = { workspace = true, features = ["telemetry"] }
 fiskeridir-rs = { workspace = true }
 jurisdiction = "0.1.1"
 
@@ -45,7 +43,5 @@ uuid = { version = "1.4.0", features = ["serde"] }
 [dev-dependencies]
 rand = "0.8.5"
 dockertest = { version = "0.3.1", registry = "orcalabs-orcastrator" }
-orca-core = { version = "0.20.0", registry = "orcalabs-orcastrator", features = [
-    "dockertest",
-] }
+orca-core = { workspace = true, features = ["dockertest"] }
 tokio = { version = "1.29.1", features = ["rt-multi-thread", "macros"] }
