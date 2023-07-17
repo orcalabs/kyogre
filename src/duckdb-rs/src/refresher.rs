@@ -458,6 +458,7 @@ DO NOTHING;
         .change_context(DuckdbError::Query)
     }
 
+    #[instrument(skip_all)]
     fn create_landings(&self, mode: CreateMode, tx: &Transaction<'_>) -> Result<(), DuckdbError> {
         let postgres_scan_command = format!(
             "
@@ -505,6 +506,7 @@ FROM
             .change_context(DuckdbError::Query)
     }
 
+    #[instrument(skip_all)]
     fn create_hauls(&self, mode: CreateMode, tx: &Transaction<'_>) -> Result<(), DuckdbError> {
         let postgres_scan_command = format!(
             "
