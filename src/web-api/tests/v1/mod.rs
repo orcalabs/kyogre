@@ -11,4 +11,5 @@ pub mod test_client;
 pub mod trip;
 pub mod user;
 pub mod vessel;
+pub mod vessel_event;
 pub mod vms;
