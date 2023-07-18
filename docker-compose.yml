@@ -8,6 +8,16 @@ services:
       - POSTGRES_PASSWORD=test123
     ports:
       - 5432:5432
+    command: |
+      postgres -c shared_preload_libraries='auto_explain'
+               -c auto_explain.log_min_duration=50ms
+               -c auto_explain.log_analyze=on
+               -c auto_explain.log_buffers=on
+               -c auto_explain.log_wal=on
+               -c auto_explain.log_timing=on
+               -c auto_explain.log_settings=on
+               -c auto_explain.log_nested_statements=on
+               -c auto_explain.log_triggers=on
 
   migration-db:
     image: postgis/postgis:14-3.3-alpine
