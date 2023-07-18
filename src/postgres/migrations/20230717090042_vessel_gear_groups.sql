@@ -77,6 +77,8 @@ SELECT
     gear_group_id
 FROM
     landings
+WHERE
+    fiskeridir_vessel_id IS NOT NULL
 GROUP BY
     fiskeridir_vessel_id,
     gear_group_id;
