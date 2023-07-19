@@ -492,7 +492,10 @@ FROM
 
         let queries = match mode {
             CreateMode::Initial => {
-                format!("{};{};", LANDING_SCHEMA, postgres_scan_command)
+                format!(
+                    "DROP TABLE IF EXISTS landing_matrix_cache;{};{};",
+                    LANDING_SCHEMA, postgres_scan_command
+                )
             }
             CreateMode::Refresh => {
                 format!(
@@ -542,7 +545,10 @@ FROM
 
         let queries = match mode {
             CreateMode::Initial => {
-                format!("{};{};", HAULS_SCHEMA, postgres_scan_command)
+                format!(
+                    "DROP TABLE IF EXISTS hauls_matrix_cache;{};{};",
+                    HAULS_SCHEMA, postgres_scan_command
+                )
             }
             CreateMode::Refresh => {
                 format!(
