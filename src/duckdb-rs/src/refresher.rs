@@ -149,12 +149,12 @@ SELECT
             FROM
                 information_schema.tables
             WHERE
-                table_name = ?
+                table_name = 'data_versions'
         ),
         FALSE
     );
                 ",
-                params![POSTGRES_DUCKDB_VERSION_TABLE],
+                params![],
                 |row| row.get(0),
             )
             .into_report()
