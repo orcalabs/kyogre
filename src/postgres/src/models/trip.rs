@@ -8,7 +8,6 @@ use kyogre_core::{
     CatchLocationId, DateRange, FiskeridirVesselId, HaulId, TripAssemblerId, TripId,
     VesselEventType,
 };
-use num_traits::FromPrimitive;
 use serde::Deserialize;
 use sqlx::postgres::types::PgRange;
 
@@ -109,7 +108,7 @@ struct Catch {
     gross_weight: f64,
     product_weight: f64,
     species_fiskeridir_id: i32,
-    product_quality_id: i32,
+    product_quality_id: Quality,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -296,15 +295,13 @@ impl From<TripAssemblerConflict> for kyogre_core::TripAssemblerConflict {
 }
 impl From<Catch> for kyogre_core::Catch {
     fn from(c: Catch) -> Self {
-        // TODO: remove when fiskeridir_rs has enum sqlx support
-        let product_quality = Quality::from_i32(c.product_quality_id).unwrap();
         kyogre_core::Catch {
             living_weight: c.living_weight,
             gross_weight: c.gross_weight,
             product_weight: c.product_weight,
             species_fiskeridir_id: c.species_fiskeridir_id,
             product_quality_id: c.product_quality_id,
-            product_quality_name: product_quality.name().to_owned(),
+            product_quality_name: c.product_quality_id.name().to_owned(),
         }
     }
 }
