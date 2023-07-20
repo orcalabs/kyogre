@@ -2,7 +2,7 @@ use std::fmt;
 
 use crate::*;
 use chrono::{DateTime, TimeZone, Utc};
-use fiskeridir_rs::DeliveryPointId;
+use fiskeridir_rs::{DeliveryPointId, Quality};
 use num_derive::FromPrimitive;
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
@@ -83,7 +83,8 @@ pub struct Catch {
     pub gross_weight: f64,
     pub product_weight: f64,
     pub species_fiskeridir_id: i32,
-    pub product_quality_id: i32,
+    #[cfg_attr(feature = "utoipa", schema(value_type = i32))]
+    pub product_quality_id: Quality,
     pub product_quality_name: String,
 }
 
