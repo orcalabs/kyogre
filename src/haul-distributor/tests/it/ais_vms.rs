@@ -422,3 +422,79 @@ async fn test_hauls_filters_by_distributed_catch_locations_after_distribution() 
     })
     .await
 }
+
+#[tokio::test]
+async fn test_distributed_hauls_includes_catch_location_start_in_catch_locations() {
+    test(|helper| async move {
+        let call_sign = CallSign::new_unchecked("LK17");
+        let vessel_id = FiskeridirVesselId(100);
+        let mmsi = Mmsi(200);
+
+        helper
+            .db
+            .generate_fiskeridir_vessel(vessel_id, None, Some(call_sign.clone()))
+            .await;
+        helper
+            .db
+            .generate_ais_vessel(mmsi, call_sign.into_inner().as_str())
+            .await;
+
+        let mut ers = ErsDca::test_default(1, Some(vessel_id.0 as u64));
+
+        let start: DateTime<Utc> = "2013-01-1T00:00:00Z".parse().unwrap();
+        let end = start + Duration::hours(10);
+
+        ers.set_start_timestamp(start);
+        ers.set_stop_timestamp(end);
+        ers.start_latitude = Some(CL_00_05.1);
+        ers.start_longitude = Some(CL_00_05.0);
+
+        helper.db.db.add_ers_dca(vec![ers]).await.unwrap();
+
+        helper
+            .db
+            .generate_ais_position_with_coordinates(
+                mmsi,
+                start + Duration::seconds(100),
+                CL_01_01.1,
+                CL_01_01.0,
+            )
+            .await;
+        helper
+            .db
+            .generate_ais_position_with_coordinates(
+                mmsi,
+                start + Duration::seconds(200),
+                CL_01_03.1,
+                CL_01_03.0,
+            )
+            .await;
+        helper
+            .db
+            .generate_ais_position_with_coordinates(
+                mmsi,
+                start + Duration::seconds(300),
+                CL_01_04.1,
+                CL_01_04.0,
+            )
+            .await;
+
+        let distributor = AisVms::default();
+        distributor
+            .distribute_hauls(helper.adapter(), helper.adapter())
+            .await
+            .unwrap();
+
+        let mut hauls: Vec<Haul> = helper
+            .adapter()
+            .hauls(HaulsQuery::default())
+            .unwrap()
+            .try_collect()
+            .await
+            .unwrap();
+
+        assert_eq!(hauls.len(), 1);
+        assert_eq!(hauls.pop().unwrap().catch_locations.unwrap().len(), 4);
+    })
+    .await;
+}
