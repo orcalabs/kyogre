@@ -10,7 +10,7 @@ services:
       - 5432:5432
     command: |
       postgres -c shared_preload_libraries='auto_explain'
-               -c auto_explain.log_min_duration=50ms
+               -c auto_explain.log_min_duration=0ms
                -c auto_explain.log_analyze=on
                -c auto_explain.log_buffers=on
                -c auto_explain.log_wal=on
