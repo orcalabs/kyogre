@@ -142,10 +142,7 @@ WHERE
     )
     AND (
         $2::TEXT[] IS NULL
-        OR CASE
-            WHEN catch_locations IS NULL THEN h.catch_location_start = ANY ($2)
-            ELSE h.catch_locations && $2
-        END
+        OR h.catch_locations && $2
     )
     AND (
         $3::INT[] IS NULL
@@ -261,7 +258,15 @@ WHERE
             r#"
 UPDATE hauls h
 SET
-    catch_locations = q.catch_locations
+    catch_locations = (
+        SELECT
+            ARRAY_AGG(DISTINCT e) FILTER (
+                WHERE
+                    e IS NOT NULL
+            )
+        FROM
+            UNNEST(q.catch_locations || h.catch_location_start) e
+    )
 FROM
     (
         SELECT
