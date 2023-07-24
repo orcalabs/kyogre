@@ -12,5 +12,5 @@ duck_db:
   max_connections: 10
   cache_mode: MissOnError
   refresh_interval: 30m
-  storage:
-    Disk: duckdb-data/data
+  storage: Memory
+
