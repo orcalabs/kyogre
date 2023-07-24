@@ -19,13 +19,13 @@ orca-statemachine = { version = "0.38.0", registry = "orcalabs-orcastrator", fea
 config = { version = "0.13.3", features = ["yaml"] }
 actix-web = "4.3.1"
 actix-cors = "0.6.4"
-serde = { version = "1.0.171", features = ["derive"] }
-serde_json = "1.0.100"
+serde = { version = "1.0.175", features = ["derive"] }
+serde_json = "1.0.103"
 chrono = { version = "0.4.26", features = ["serde"] }
 tokio = "1.29.1"
 tracing = "0.1.37"
 
-utoipa = { version = "3.3", features = [
+utoipa = { version = "3.4", features = [
     "actix_extras",
     "chrono",
     "uuid",
@@ -37,10 +37,10 @@ strum = "0.24.1"
 error-stack = { workspace = true }
 futures = "0.3.28"
 async-stream = "0.3.5"
-num-traits = "0.2.15"
+num-traits = "0.2.16"
 enum_index = "0.2.0"
 enum_index_derive = "0.2.0"
-uuid = { version = "1.4.0", features = ["serde"] }
+uuid = { version = "1.4.1", features = ["serde"] }
 wkt = "0.10.3"
 jsonwebtoken = "8.3.0"
 reqwest = { version = "0.11.18", default-features = false, features = [
@@ -54,7 +54,7 @@ vessel-benchmark = { path = "../vessel-benchmark" }
 dockertest = { version = "0.3.1", registry = "orcalabs-orcastrator" }
 orca-core = { workspace = true, features = ["dockertest"] }
 
-async-trait = "0.1.71"
+async-trait = "0.1.72"
 rand = "0.8.5"
 tokio = { version = "1.29.1", features = ["rt-multi-thread", "macros"] }
 fiskeridir-rs = { workspace = true }

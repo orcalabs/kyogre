@@ -25,8 +25,8 @@ config = { version = "0.13.3", features = ["yaml"] }
 chrono = { version = "0.4.26", features = ["serde"] }
 tokio = "1.29.1"
 tracing = "0.1.37"
-serde = { version = "1.0.171", features = ["derive"] }
-async-trait = "0.1.71"
+serde = { version = "1.0.175", features = ["derive"] }
+async-trait = "0.1.72"
 error-stack = { workspace = true }
 
 strum = "0.24.1"
