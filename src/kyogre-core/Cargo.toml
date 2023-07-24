@@ -10,22 +10,22 @@ utoipa = ["dep:utoipa"]
 sqlx = ["dep:sqlx"]
 
 [dependencies]
-async-trait = "0.1.71"
-serde = { version = "1.0.171", features = ["derive"] }
+async-trait = "0.1.72"
+serde = { version = "1.0.175", features = ["derive"] }
 chrono = { version = "0.4.26", features = ["serde"] }
 chrono-tz = "0.8.3"
 fiskeridir-rs = { workspace = true }
 
-serde_repr = "0.1.14"
+serde_repr = "0.1.15"
 strum = { version = "0.24.1", features = ["derive"] }
-num-traits = "0.2.15"
+num-traits = "0.2.16"
 num-derive = "0.3.3"
 error-stack = { workspace = true }
 rand = "0.8.5"
 futures = "0.3.28"
 
-utoipa = { version = "3.3", optional = true }
-remain = "0.2.10"
+utoipa = { version = "3.4", optional = true }
+remain = "0.2.11"
 sqlx = { version = "0.6.3", features = [
     "runtime-tokio-rustls",
     "postgres",
@@ -37,6 +37,6 @@ sqlx = { version = "0.6.3", features = [
 enum_index = "0.2.0"
 enum_index_derive = "0.2.0"
 wkt = "0.10.3"
-uuid = { version = "1.4.0", features = ["serde", "v4"] }
+uuid = { version = "1.4.1", features = ["serde", "v4"] }
 oauth2 = "4.4.1"
 geo = "0.25.1"

@@ -12,7 +12,7 @@ orca-core = { workspace = true, features = ["telemetry"] }
 fiskeridir-rs = { workspace = true }
 jurisdiction = "0.1.1"
 
-num-traits = "0.2.15"
+num-traits = "0.2.16"
 chrono = { version = "0.4.26", features = ["serde"] }
 sqlx = { version = "0.6.3", features = [
     "runtime-tokio-rustls",
@@ -27,18 +27,18 @@ error-stack = { workspace = true }
 bigdecimal = "0.3.1"
 tokio = { version = "1.29.1", features = ["macros", "sync", "time"] }
 tracing = "0.1.37"
-async-trait = "0.1.71"
-serde_json = "1.0.100"
-serde = { version = "1.0.171", features = ["derive"] }
+async-trait = "0.1.72"
+serde_json = "1.0.103"
+serde = { version = "1.0.175", features = ["derive"] }
 futures = "0.3.28"
 rand = "0.8.5"
 strum = "0.24.1"
 enum_index = "0.2.0"
 enum_index_derive = "0.2.0"
 geozero = { version = "0.9.9", features = ["with-postgis-sqlx"] }
-geo-types = "0.7.10"
+geo-types = "0.7.11"
 wkt = { version = "0.10.3", features = ["serde"] }
-uuid = { version = "1.4.0", features = ["serde"] }
+uuid = { version = "1.4.1", features = ["serde"] }
 
 [dev-dependencies]
 rand = "0.8.5"
