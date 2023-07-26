@@ -3,7 +3,7 @@ pub mod ais_vms;
 pub mod fishing_facility;
 pub mod gear;
 pub mod haul;
-pub mod landing_matrix;
+pub mod landing;
 pub mod species;
 pub mod trip;
 pub mod user;

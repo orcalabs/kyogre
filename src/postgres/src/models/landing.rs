@@ -1,8 +1,12 @@
-use crate::{error::PostgresError, queries::opt_float_to_decimal};
+use crate::{
+    error::PostgresError,
+    queries::{decimal_to_float, opt_decimal_to_float, opt_float_to_decimal},
+};
 use bigdecimal::BigDecimal;
 use chrono::{DateTime, NaiveDate, NaiveTime, Utc};
-use error_stack::{report, Report, ResultExt};
-use kyogre_core::LandingMatrixQuery;
+use error_stack::{report, IntoReport, Report, ResultExt};
+use fiskeridir_rs::VesselLengthGroup;
+use kyogre_core::{CatchLocationId, FiskeridirVesselId, LandingMatrixQuery};
 use num_traits::ToPrimitive;
 
 pub struct NewLanding {
@@ -83,6 +87,24 @@ pub struct NewLanding {
     pub receiving_vessel_type: Option<i32>,
     pub receiving_vessel_nation_id: Option<String>,
     pub receiving_vessel_nation: Option<String>,
+}
+
+pub struct Landing {
+    pub landing_id: String,
+    pub landing_timestamp: DateTime<Utc>,
+    pub catch_area_id: Option<i32>,
+    pub catch_main_area_id: Option<i32>,
+    pub gear_id: i32,
+    pub gear_group_id: i32,
+    pub fiskeridir_vessel_id: Option<i64>,
+    pub vessel_call_sign: Option<String>,
+    pub vessel_name: Option<String>,
+    pub vessel_length: Option<BigDecimal>,
+    pub vessel_length_group: Option<VesselLengthGroup>,
+    pub total_living_weight: BigDecimal,
+    pub total_product_weight: BigDecimal,
+    pub total_gross_weight: BigDecimal,
+    pub catches: String,
 }
 
 impl TryFrom<fiskeridir_rs::Landing> for NewLanding {
@@ -173,6 +195,38 @@ impl TryFrom<fiskeridir_rs::Landing> for NewLanding {
             receiving_vessel_type: landing.recipient_vessel_type_code.map(|v| v as i32),
             receiving_vessel_nation_id: landing.recipient_vessel_nation_code,
             receiving_vessel_nation: landing.recipient_vessel_nation,
+        })
+    }
+}
+
+impl TryFrom<Landing> for kyogre_core::Landing {
+    type Error = Report<PostgresError>;
+
+    fn try_from(v: Landing) -> Result<Self, Self::Error> {
+        Ok(Self {
+            landing_id: v
+                .landing_id
+                .try_into()
+                .change_context(PostgresError::DataConversion)?,
+            landing_timestamp: v.landing_timestamp,
+            catch_location: CatchLocationId::new_opt(v.catch_main_area_id, v.catch_area_id),
+            gear_id: v.gear_id,
+            gear_group_id: v.gear_group_id,
+            fiskeridir_vessel_id: v.fiskeridir_vessel_id.map(FiskeridirVesselId),
+            vessel_call_sign: v.vessel_call_sign,
+            vessel_name: v.vessel_name,
+            vessel_length: opt_decimal_to_float(v.vessel_length)
+                .change_context(PostgresError::DataConversion)?,
+            vessel_length_group: v.vessel_length_group,
+            total_gross_weight: decimal_to_float(v.total_gross_weight)
+                .change_context(PostgresError::DataConversion)?,
+            total_living_weight: decimal_to_float(v.total_living_weight)
+                .change_context(PostgresError::DataConversion)?,
+            total_product_weight: decimal_to_float(v.total_product_weight)
+                .change_context(PostgresError::DataConversion)?,
+            catches: serde_json::from_str(&v.catches)
+                .into_report()
+                .change_context(PostgresError::DataConversion)?,
         })
     }
 }

@@ -1,11 +1,9 @@
-use std::ops::Bound;
-
 use crate::{
     error::ApiError,
     response::Response,
     routes::utils::{
-        self, deserialize_range_list, deserialize_string_list, DateTimeUtc, GearGroupId, Month,
-        SpeciesGroupId,
+        self, deserialize_range_list, deserialize_string_list, months_to_date_ranges, DateTimeUtc,
+        GearGroupId, Month, SpeciesGroupId,
     },
     to_streaming_response, Cache, Database,
 };
@@ -13,7 +11,7 @@ use actix_web::{
     web::{self, Path},
     HttpResponse,
 };
-use chrono::{DateTime, Datelike, Months, NaiveDate, Utc};
+use chrono::{DateTime, Utc};
 use fiskeridir_rs::{Gear, GearGroup, VesselLengthGroup, WhaleGender};
 use futures::TryStreamExt;
 use kyogre_core::{
@@ -299,49 +297,10 @@ impl From<kyogre_core::WhaleCatch> for WhaleCatch {
     }
 }
 
-fn utc_from_naive(naive_date: NaiveDate) -> DateTime<Utc> {
-    DateTime::<Utc>::from_utc(naive_date.and_hms_opt(0, 0, 0).unwrap(), Utc)
-}
-
 impl From<HaulsParams> for HaulsQuery {
     fn from(v: HaulsParams) -> Self {
-        let ranges = v.months.map(|mut months| {
-            let mut vec = Vec::with_capacity(months.len());
-
-            months.sort();
-
-            let mut start_naive = None;
-            let mut end_naive = None;
-            for m in months {
-                if let (Some(start), Some(end)) = (start_naive, end_naive) {
-                    let naive = NaiveDate::from_ymd_opt(m.0.year(), m.0.month(), 1).unwrap();
-                    if end != naive {
-                        vec.push(Range {
-                            start: Bound::Included(utc_from_naive(start)),
-                            end: Bound::Excluded(utc_from_naive(end)),
-                        });
-                        start_naive = Some(naive);
-                    }
-                    end_naive = Some(naive.checked_add_months(Months::new(1)).unwrap());
-                } else {
-                    let start = NaiveDate::from_ymd_opt(m.0.year(), m.0.month(), 1).unwrap();
-                    end_naive = Some(start.checked_add_months(Months::new(1)).unwrap());
-                    start_naive = Some(start);
-                }
-            }
-
-            if let (Some(start), Some(end)) = (start_naive, end_naive) {
-                vec.push(Range {
-                    start: Bound::Included(utc_from_naive(start)),
-                    end: Bound::Excluded(utc_from_naive(end)),
-                });
-            }
-
-            vec
-        });
-
         Self {
-            ranges,
+            ranges: v.months.map(months_to_date_ranges),
             catch_locations: v.catch_locations,
             gear_group_ids: v
                 .gear_group_ids

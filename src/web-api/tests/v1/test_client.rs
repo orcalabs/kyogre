@@ -9,7 +9,7 @@ use web_api::routes::v1::{
     ais_vms::AisVmsParameters,
     fishing_facility::FishingFacilitiesParams,
     haul::{HaulsMatrixParams, HaulsParams},
-    landing_matrix::LandingMatrixParams,
+    landing::LandingMatrixParams,
     trip::TripsParameters,
     user::User,
     vms::VmsParameters,

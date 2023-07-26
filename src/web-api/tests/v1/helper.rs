@@ -20,7 +20,7 @@ use tracing_subscriber::FmtSubscriber;
 use trip_assembler::{ErsTripAssembler, LandingTripAssembler, TripAssembler};
 use vessel_benchmark::*;
 use web_api::{
-    routes::v1::{haul, landing_matrix},
+    routes::v1::{haul, landing},
     settings::{ApiSettings, Duckdb, Settings, BW_PROFILES_URL},
     startup::App,
 };
@@ -407,7 +407,7 @@ pub fn sum_area<T: SubAssign + AddAssign + Copy>(
 }
 
 pub fn assert_landing_matrix_content(
-    matrix: &landing_matrix::LandingMatrix,
+    matrix: &landing::LandingMatrix,
     active_filter: ActiveLandingFilter,
     expected_total: u64,
     specific_totals: Vec<(LandingMatrixes, u64)>,

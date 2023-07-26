@@ -5,8 +5,8 @@ use duckdb_rs::Client;
 use fiskeridir_rs::{RegisterVesselEntityType, RegisterVesselOwner};
 use kyogre_core::{
     ActiveHaulsFilter, ActiveLandingFilter, Catch, Delivery, FishingFacilitiesSorting,
-    FishingFacilityToolType, HaulsSorting, MatrixCacheOutbound, Ordering, WebApiInboundPort,
-    WebApiOutboundPort,
+    FishingFacilityToolType, HaulsSorting, LandingsSorting, MatrixCacheOutbound, Ordering,
+    WebApiInboundPort, WebApiOutboundPort,
 };
 use postgres::PostgresAdapter;
 use routes::v1;
@@ -43,6 +43,7 @@ impl Database for PostgresAdapter {}
         v1::haul::hauls,
         v1::haul::hauls_matrix,
         v1::trip::trip_of_haul,
+        v1::trip::trip_of_landing,
         v1::trip::trips,
         v1::trip::current_trip,
         v1::vms::vms_positions,
@@ -50,7 +51,8 @@ impl Database for PostgresAdapter {}
         v1::fishing_facility::fishing_facilities,
         v1::user::get_user,
         v1::user::update_user,
-        v1::landing_matrix::landing_matrix,
+        v1::landing::landings,
+        v1::landing::landing_matrix,
     ),
     components(
         schemas(
@@ -64,6 +66,7 @@ impl Database for PostgresAdapter {}
             FishingFacilityToolType,
             FishingFacilitiesSorting,
             HaulsSorting,
+            LandingsSorting,
             error::ErrorResponse,
             error::ApiError,
             v1::ais::AisPosition,
@@ -92,7 +95,9 @@ impl Database for PostgresAdapter {}
             v1::ais_vms::AisVmsPositionDetails,
             v1::fishing_facility::FishingFacility,
             v1::user::User,
-            v1::landing_matrix::LandingMatrix,
+            v1::landing::Landing,
+            v1::landing::LandingCatch,
+            v1::landing::LandingMatrix,
           )
     ),
     tags(

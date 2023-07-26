@@ -11,7 +11,7 @@ use kyogre_core::{
 };
 use kyogre_core::{FiskeridirVesselId, ScraperInboundPort};
 use web_api::routes::utils::{self, GearGroupId, SpeciesGroupId};
-use web_api::routes::v1::landing_matrix::{LandingMatrix, LandingMatrixParams};
+use web_api::routes::v1::landing::{LandingMatrix, LandingMatrixParams};
 
 #[tokio::test]
 async fn test_landing_matrix_returns_correct_sum_for_all_landings() {

@@ -2554,7 +2554,7 @@ dependencies = [
  "error-stack 0.3.1",
  "kyogre-core",
  "orca-core",
- "sqlx 0.6.3",
+ "sqlx 0.7.1",
 ]
 
 [[package]]

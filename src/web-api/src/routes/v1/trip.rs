@@ -60,6 +60,40 @@ pub async fn trip_of_haul<T: Database + 'static>(
 
 #[utoipa::path(
     get,
+    path = "/trip_of_landing/{landing_id}",
+    responses(
+        (status = 200, description = "trip associated with the given landing_id", body = Trip),
+        (status = 500, description = "an internal error occured", body = ErrorResponse),
+    )
+)]
+#[tracing::instrument(skip(db))]
+pub async fn trip_of_landing<T: Database + 'static>(
+    db: web::Data<T>,
+    profile: Option<BwProfile>,
+    landing_id: Path<String>,
+) -> Result<Response<Option<Trip>>, ApiError> {
+    let landing_id = landing_id.into_inner().try_into().map_err(|e| {
+        event!(Level::ERROR, "invalid landing id: {:?}", e);
+        ApiError::InvalidLandingId
+    })?;
+    let _read_fishing_facility = profile
+        .map(|p| {
+            p.policies
+                .contains(&BwPolicy::BwReadExtendedFishingFacility)
+        })
+        .unwrap_or(false);
+
+    db.detailed_trip_of_landing(&landing_id, true)
+        .await
+        .map(|t| Response::new(t.map(Trip::from)))
+        .map_err(|e| {
+            event!(Level::ERROR, "failed to retrieve trip of landing: {:?}", e);
+            ApiError::InternalServerError
+        })
+}
+
+#[utoipa::path(
+    get,
     path = "/trips/{fiskeridir_vessel_id}",
     params(TripsParameters),
     responses(

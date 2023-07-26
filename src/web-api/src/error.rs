@@ -11,6 +11,7 @@ pub enum ApiError {
     Forbidden,
     MissingBwToken,
     InvalidBwToken,
+    InvalidLandingId,
 }
 
 impl std::error::Error for ApiError {}
@@ -35,6 +36,7 @@ impl std::fmt::Display for ApiError {
             ApiError::Forbidden => f.write_str("forbidden"),
             ApiError::MissingBwToken => f.write_str("barentswatch token must be provided"),
             ApiError::InvalidBwToken => f.write_str("an invalid barentswatch token was provided"),
+            ApiError::InvalidLandingId => f.write_str("an invalid landing id was provided"),
         }
     }
 }
@@ -44,6 +46,7 @@ impl ResponseError for ApiError {
         match self {
             ApiError::InvalidDateRange
             | ApiError::InvalidCallSign
+            | ApiError::InvalidLandingId
             | ApiError::MissingMmsiOrCallSign => StatusCode::BAD_REQUEST,
             ApiError::InternalServerError => StatusCode::INTERNAL_SERVER_ERROR,
             ApiError::Forbidden => StatusCode::FORBIDDEN,
