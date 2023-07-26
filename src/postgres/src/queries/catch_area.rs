@@ -49,7 +49,7 @@ WHERE
             latitude.as_slice() as _,
             longitude.as_slice() as _,
         )
-        .execute(&mut *tx)
+        .execute(&mut **tx)
         .await
         .into_report()
         .change_context(PostgresError::Query)
@@ -109,7 +109,7 @@ WHERE
             latitude.as_slice() as _,
             longitude.as_slice() as _,
         )
-        .execute(&mut *tx)
+        .execute(&mut **tx)
         .await
         .into_report()
         .change_context(PostgresError::Query)
@@ -144,7 +144,7 @@ ON CONFLICT (area_grouping_id) DO NOTHING
             fishing_region_id.as_slice(),
             name.as_slice() as _,
         )
-        .execute(&mut *tx)
+        .execute(&mut **tx)
         .await
         .into_report()
         .change_context(PostgresError::Query)
@@ -179,7 +179,7 @@ ON CONFLICT (catch_main_area_fao_id) DO NOTHING
             catch_main_area_fao_id.as_slice(),
             name.as_slice() as _,
         )
-        .execute(&mut *tx)
+        .execute(&mut **tx)
         .await
         .into_report()
         .change_context(PostgresError::Query)

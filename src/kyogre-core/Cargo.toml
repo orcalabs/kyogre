@@ -17,26 +17,19 @@ chrono-tz = "0.8.3"
 fiskeridir-rs = { workspace = true }
 
 serde_repr = "0.1.15"
-strum = { version = "0.24.1", features = ["derive"] }
+strum = { version = "0.25.0", features = ["derive"] }
 num-traits = "0.2.16"
-num-derive = "0.3.3"
+num-derive = "0.4.0"
 error-stack = { workspace = true }
 rand = "0.8.5"
 futures = "0.3.28"
 
 utoipa = { version = "3.4", optional = true }
 remain = "0.2.11"
-sqlx = { version = "0.6.3", features = [
-    "runtime-tokio-rustls",
-    "postgres",
-    "bigdecimal",
-    "chrono",
-    "offline",
-    "json",
-], optional = true }
+sqlx = { workspace = true, optional = true }
 enum_index = "0.2.0"
 enum_index_derive = "0.2.0"
 wkt = "0.10.3"
 uuid = { version = "1.4.1", features = ["serde", "v4"] }
 oauth2 = "4.4.1"
-geo = "0.25.1"
+geo = "0.26.0"

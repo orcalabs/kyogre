@@ -1,0 +1,26 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    species_fiskeridir_id AS id,\n    \"name\" AS \"name?\"\nFROM\n    species_fiskeridir\nORDER BY\n    species_fiskeridir_id\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "name?",
+        "type_info": "Varchar"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      true
+    ]
+  },
+  "hash": "c3712a0c2bb2d1e9e4da2c0cc9afe7fc4592d40fa6e1faa0549d75331c8f3790"
+}

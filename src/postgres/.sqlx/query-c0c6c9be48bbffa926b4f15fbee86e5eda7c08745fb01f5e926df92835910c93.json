@@ -1,0 +1,76 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    call_sign,\n    course,\n    latitude,\n    longitude,\n    registration_id,\n    speed,\n    \"timestamp\",\n    vessel_length,\n    vessel_name,\n    vessel_type\nFROM\n    vms_positions\nWHERE\n    message_id = $1\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "call_sign",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 1,
+        "name": "course",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 2,
+        "name": "latitude",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 3,
+        "name": "longitude",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 4,
+        "name": "registration_id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 5,
+        "name": "speed",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 6,
+        "name": "timestamp",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 7,
+        "name": "vessel_length",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 8,
+        "name": "vessel_name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 9,
+        "name": "vessel_type",
+        "type_info": "Varchar"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      false,
+      false,
+      true,
+      true,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "c0c6c9be48bbffa926b4f15fbee86e5eda7c08745fb01f5e926df92835910c93"
+}

@@ -1,0 +1,26 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO\n    ers_dca_whale_catches (\n        message_id,\n        start_timestamp,\n        stop_timestamp,\n        message_version,\n        whale_grenade_number,\n        whale_blubber_measure_a,\n        whale_blubber_measure_b,\n        whale_blubber_measure_c,\n        whale_circumference,\n        whale_fetus_length,\n        whale_gender_id,\n        whale_individual_number,\n        whale_length\n    )\nSELECT\n    *\nFROM\n    UNNEST(\n        $1::BIGINT[],\n        $2::timestamptz[],\n        $3::timestamptz[],\n        $4::INT[],\n        $5::VARCHAR[],\n        $6::INT[],\n        $7::INT[],\n        $8::INT[],\n        $9::INT[],\n        $10::INT[],\n        $11::INT[],\n        $12::INT[],\n        $13::INT[]\n    )\nON CONFLICT (\n    message_id,\n    start_timestamp,\n    stop_timestamp,\n    whale_grenade_number\n) DO NOTHING\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8Array",
+        "TimestamptzArray",
+        "TimestamptzArray",
+        "Int4Array",
+        "VarcharArray",
+        "Int4Array",
+        "Int4Array",
+        "Int4Array",
+        "Int4Array",
+        "Int4Array",
+        "Int4Array",
+        "Int4Array",
+        "Int4Array"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "81516cd3fff7220bf8a111b4411fd681852691c65e352907bbc0867c5280860f"
+}

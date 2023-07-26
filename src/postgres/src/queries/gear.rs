@@ -39,7 +39,7 @@ SET
             gear_fao_ids.as_slice(),
             names.as_slice() as _,
         )
-        .execute(&mut *tx)
+        .execute(&mut **tx)
         .await
         .into_report()
         .change_context(PostgresError::Query)
@@ -79,7 +79,7 @@ SET
             ids.as_slice(),
             names.as_slice() as _,
         )
-        .execute(&mut *tx)
+        .execute(&mut **tx)
         .await
         .into_report()
         .change_context(PostgresError::Query)

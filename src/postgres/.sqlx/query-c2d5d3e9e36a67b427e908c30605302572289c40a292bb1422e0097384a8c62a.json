@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO\n    gear_fao (gear_fao_id, \"name\")\nSELECT\n    *\nFROM\n    UNNEST($1::VARCHAR[], $2::VARCHAR[])\nON CONFLICT (gear_fao_id) DO\nUPDATE\nSET\n    \"name\" = CASE\n        WHEN gear_fao.name IS NULL THEN excluded.name\n    END\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "VarcharArray",
+        "VarcharArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "c2d5d3e9e36a67b427e908c30605302572289c40a292bb1422e0097384a8c62a"
+}

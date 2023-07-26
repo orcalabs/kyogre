@@ -101,13 +101,13 @@ async fn test_landing_matrix_filters_by_vessel_length() {
 
         landing.product.living_weight = Some(20.0);
         landing.landing_timestamp = Utc.with_ymd_and_hms(2001, 1, 1, 0, 0, 0).unwrap();
-        landing.vessel.length_group_code = Some(VesselLengthGroup::UnderEleven);
+        landing.vessel.length_group_code = VesselLengthGroup::UnderEleven;
         landing2.product.living_weight = Some(40.0);
         landing2.landing_timestamp = Utc.with_ymd_and_hms(2001, 1, 1, 0, 0, 0).unwrap();
-        landing2.vessel.length_group_code = Some(VesselLengthGroup::ElevenToFifteen);
+        landing2.vessel.length_group_code = VesselLengthGroup::ElevenToFifteen;
         landing3.product.living_weight = Some(100.0);
         landing3.landing_timestamp = Utc.with_ymd_and_hms(2001, 1, 1, 0, 0, 0).unwrap();
-        landing3.vessel.length_group_code = Some(VesselLengthGroup::TwentyTwoToTwentyEight);
+        landing3.vessel.length_group_code = VesselLengthGroup::TwentyTwoToTwentyEight;
 
         helper
             .db
@@ -377,13 +377,13 @@ async fn test_landing_matrix_vessel_length_sum_area_table_is_correct() {
 
         landing.product.living_weight = Some(20.0);
         landing.landing_timestamp = Utc.with_ymd_and_hms(2001, 1, 1, 0, 0, 0).unwrap();
-        landing.vessel.length_group_code = Some(VesselLengthGroup::UnderEleven);
+        landing.vessel.length_group_code = VesselLengthGroup::UnderEleven;
         landing2.product.living_weight = Some(40.0);
         landing2.landing_timestamp = Utc.with_ymd_and_hms(2001, 1, 1, 0, 0, 0).unwrap();
-        landing2.vessel.length_group_code = Some(VesselLengthGroup::ElevenToFifteen);
+        landing2.vessel.length_group_code = VesselLengthGroup::ElevenToFifteen;
         landing3.product.living_weight = Some(100.0);
         landing3.landing_timestamp = Utc.with_ymd_and_hms(2001, 1, 1, 0, 0, 0).unwrap();
-        landing3.vessel.length_group_code = Some(VesselLengthGroup::TwentyTwoToTwentyEight);
+        landing3.vessel.length_group_code = VesselLengthGroup::TwentyTwoToTwentyEight;
 
         helper
             .db

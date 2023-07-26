@@ -7,7 +7,7 @@ use crate::{
     PostgresAdapter,
 };
 use error_stack::{report, IntoReport, Result, ResultExt};
-use fiskeridir_rs::GearGroup;
+use fiskeridir_rs::{GearGroup, VesselLengthGroup};
 use futures::{Stream, TryStreamExt};
 use kyogre_core::{FiskeridirVesselId, FiskeridirVesselSource, TripAssemblerId};
 
@@ -56,7 +56,7 @@ impl PostgresAdapter {
                 gross_tonnage_1969.push(v.gross_tonnage_1969.map(|v| v as i32));
                 gross_tonnage_other.push(v.gross_tonnage_other.map(|v| v as i32));
                 rebuilding_year.push(v.rebuilding_year.map(|v| v as i32));
-                fiskeridir_length_group_id.push(v.length_group_code.map(|v| v as i32));
+                fiskeridir_length_group_id.push(v.length_group_code as i32);
             }
         }
 
@@ -124,7 +124,7 @@ ON CONFLICT (fiskeridir_vessel_id) DO NOTHING
             rebuilding_year.as_slice() as _,
             fiskeridir_length_group_id.as_slice() as _,
         )
-        .execute(&mut *tx)
+        .execute(&mut **tx)
         .await
         .into_report()
         .change_context(PostgresError::Query)
@@ -262,7 +262,7 @@ SET
             owners.as_slice(),
             source_ids.as_slice(),
         )
-        .execute(tx)
+        .execute(&mut **tx)
         .await
         .into_report()
         .change_context(PostgresError::Query)?;
@@ -280,7 +280,7 @@ SELECT
     f.preferred_trip_assembler AS "preferred_trip_assembler!: TripAssemblerId",
     f.fiskeridir_vessel_id AS "fiskeridir_vessel_id!",
     f.fiskeridir_vessel_type_id,
-    f.fiskeridir_length_group_id,
+    f.fiskeridir_length_group_id AS "fiskeridir_length_group_id!: VesselLengthGroup",
     f.fiskeridir_nation_group_id,
     f.norwegian_municipality_id AS fiskeridir_norwegian_municipality_id,
     f.norwegian_county_id AS fiskeridir_norwegian_county_id,
@@ -357,7 +357,7 @@ SELECT
     f.preferred_trip_assembler AS "preferred_trip_assembler!: TripAssemblerId",
     f.fiskeridir_vessel_id AS "fiskeridir_vessel_id!",
     f.fiskeridir_vessel_type_id,
-    f.fiskeridir_length_group_id,
+    f.fiskeridir_length_group_id AS "fiskeridir_length_group_id!: VesselLengthGroup",
     f.fiskeridir_nation_group_id,
     f.norwegian_municipality_id AS fiskeridir_norwegian_municipality_id,
     f.norwegian_county_id AS fiskeridir_norwegian_county_id,

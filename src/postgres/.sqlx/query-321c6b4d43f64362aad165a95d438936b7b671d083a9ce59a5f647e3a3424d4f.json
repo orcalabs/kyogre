@@ -1,0 +1,66 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    v.vessel_event_id,\n    v.fiskeridir_vessel_id,\n    v.\"timestamp\",\n    v.vessel_event_type_id AS \"vessel_event_type_id!: VesselEventType\",\n    NULL AS \"port_id\",\n    NULL AS \"arrival_port_id\",\n    NULL AS \"departure_port_id\",\n    NULL AS \"estimated_timestamp: _\"\nFROM\n    vessel_events v\nWHERE\n    v.fiskeridir_vessel_id = $1\n    AND v.vessel_event_type_id = $2\n    AND v.\"timestamp\" <@ $3::tstzrange\nORDER BY\n    \"timestamp\"\n           ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "vessel_event_id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "fiskeridir_vessel_id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 2,
+        "name": "timestamp",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 3,
+        "name": "vessel_event_type_id!: VesselEventType",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 4,
+        "name": "port_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "arrival_port_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "departure_port_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "estimated_timestamp: _",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Int4",
+        "TstzRange"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "321c6b4d43f64362aad165a95d438936b7b671d083a9ce59a5f647e3a3424d4f"
+}

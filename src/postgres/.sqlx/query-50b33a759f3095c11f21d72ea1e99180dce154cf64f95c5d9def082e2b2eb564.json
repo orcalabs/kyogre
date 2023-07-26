@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nDELETE FROM hauls_matrix h USING UNNEST(\n    $1::BIGINT[],\n    $2::TIMESTAMPTZ[],\n    $3::TIMESTAMPTZ[]\n) u (message_id, start_timestamp, stop_timestamp)\nWHERE\n    h.message_id = u.message_id\n    AND h.start_timestamp = u.start_timestamp\n    AND h.stop_timestamp = u.stop_timestamp\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8Array",
+        "TimestamptzArray",
+        "TimestamptzArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "50b33a759f3095c11f21d72ea1e99180dce154cf64f95c5d9def082e2b2eb564"
+}

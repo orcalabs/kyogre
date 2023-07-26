@@ -1,0 +1,26 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO\n    current_ais_positions (\n        mmsi,\n        latitude,\n        longitude,\n        course_over_ground,\n        rate_of_turn,\n        true_heading,\n        speed_over_ground,\n        TIMESTAMP,\n        altitude,\n        distance_to_shore,\n        ais_class,\n        ais_message_type_id,\n        navigation_status_id\n    )\nVALUES\n    (\n        $1::INT,\n        $2::DECIMAL,\n        $3::DECIMAL,\n        $4::DECIMAL,\n        $5::DECIMAL,\n        $6::INT,\n        $7::DECIMAL,\n        $8::timestamptz,\n        $9::INT,\n        $10::DECIMAL,\n        $11::VARCHAR,\n        $12::INT,\n        $13::INT\n    )\nON CONFLICT (mmsi) DO\nUPDATE\nSET\n    latitude = excluded.latitude,\n    longitude = excluded.longitude,\n    course_over_ground = excluded.course_over_ground,\n    rate_of_turn = excluded.rate_of_turn,\n    true_heading = excluded.true_heading,\n    speed_over_ground = excluded.speed_over_ground,\n    TIMESTAMP = excluded.timestamp,\n    altitude = excluded.altitude,\n    distance_to_shore = excluded.distance_to_shore,\n    ais_class = excluded.ais_class,\n    ais_message_type_id = excluded.ais_message_type_id,\n    navigation_status_id = excluded.navigation_status_id\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Numeric",
+        "Numeric",
+        "Numeric",
+        "Numeric",
+        "Int4",
+        "Numeric",
+        "Timestamptz",
+        "Int4",
+        "Numeric",
+        "Varchar",
+        "Int4",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "2843fbd8a5058813995a29b3bb8577d22abf97975e265d17a4816c5798e2de39"
+}

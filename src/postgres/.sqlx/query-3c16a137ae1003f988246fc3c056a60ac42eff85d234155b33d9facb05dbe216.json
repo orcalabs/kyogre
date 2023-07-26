@@ -1,0 +1,174 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    tool_id,\n    barentswatch_vessel_id,\n    fiskeridir_vessel_id,\n    vessel_name,\n    call_sign,\n    mmsi,\n    imo,\n    reg_num,\n    sbr_reg_num,\n    contact_phone,\n    contact_email,\n    tool_type AS \"tool_type!: FishingFacilityToolType\",\n    tool_type_name,\n    tool_color,\n    tool_count,\n    setup_timestamp AS \"setup_timestamp!\",\n    setup_processed_timestamp,\n    removed_timestamp,\n    removed_processed_timestamp,\n    last_changed AS \"last_changed!\",\n    source,\n    \"comment\",\n    geometry_wkt AS \"geometry_wkt: _\",\n    api_source AS \"api_source!: FishingFacilityApiSource\"\nFROM\n    fishing_facilities\nWHERE\n    (\n        $1::INT[] IS NULL\n        OR mmsi = ANY ($1)\n    )\n    AND (\n        $2::BIGINT[] IS NULL\n        OR fiskeridir_vessel_id = ANY ($2)\n    )\n    AND (\n        $3::INT[] IS NULL\n        OR tool_type = ANY ($3)\n    )\n    AND (\n        $4::BOOLEAN IS NULL\n        OR CASE\n            WHEN $4 THEN removed_timestamp IS NULL\n            WHEN NOT $4 THEN removed_timestamp IS NOT NULL\n        END\n    )\n    AND (\n        $5::TSTZRANGE[] IS NULL\n        OR setup_timestamp <@ ANY ($5)\n    )\n    AND (\n        $6::TSTZRANGE[] IS NULL\n        OR removed_timestamp <@ ANY ($6)\n    )\nORDER BY\n    CASE\n        WHEN $7 = 1 THEN CASE\n            WHEN $8 = 1 THEN setup_timestamp\n            WHEN $8 = 2 THEN removed_timestamp\n            WHEN $8 = 3 THEN last_changed\n        END\n    END ASC,\n    CASE\n        WHEN $7 = 2 THEN CASE\n            WHEN $8 = 1 THEN setup_timestamp\n            WHEN $8 = 2 THEN removed_timestamp\n            WHEN $8 = 3 THEN last_changed\n        END\n    END DESC\nOFFSET\n    $9\nLIMIT\n    $10\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "tool_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "barentswatch_vessel_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "fiskeridir_vessel_id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 3,
+        "name": "vessel_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "call_sign",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "mmsi",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 6,
+        "name": "imo",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 7,
+        "name": "reg_num",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 8,
+        "name": "sbr_reg_num",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 9,
+        "name": "contact_phone",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 10,
+        "name": "contact_email",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 11,
+        "name": "tool_type!: FishingFacilityToolType",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 12,
+        "name": "tool_type_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 13,
+        "name": "tool_color",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 14,
+        "name": "tool_count",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 15,
+        "name": "setup_timestamp!",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 16,
+        "name": "setup_processed_timestamp",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 17,
+        "name": "removed_timestamp",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 18,
+        "name": "removed_processed_timestamp",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 19,
+        "name": "last_changed!",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 20,
+        "name": "source",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 21,
+        "name": "comment",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 22,
+        "name": "geometry_wkt: _",
+        "type_info": {
+          "Custom": {
+            "name": "geometry",
+            "kind": "Simple"
+          }
+        }
+      },
+      {
+        "ordinal": 23,
+        "name": "api_source!: FishingFacilityApiSource",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4Array",
+        "Int8Array",
+        "Int4Array",
+        "Bool",
+        "TstzRangeArray",
+        "TstzRangeArray",
+        "Int4",
+        "Int4",
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false,
+      true,
+      true,
+      true,
+      false,
+      true,
+      true,
+      true,
+      false,
+      true,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "3c16a137ae1003f988246fc3c056a60ac42eff85d234155b33d9facb05dbe216"
+}

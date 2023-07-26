@@ -60,7 +60,7 @@ impl PostgresAdapter {
         match settings.log_statements {
             PsqlLogStatements::Enable => (),
             PsqlLogStatements::Disable => {
-                opts.disable_statement_logging();
+                opts = opts.disable_statement_logging();
             }
         }
 

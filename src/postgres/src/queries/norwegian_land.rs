@@ -40,7 +40,7 @@ WHERE
             norwegian_municipality_id.as_slice(),
             name.as_slice() as _,
         )
-        .execute(&mut *tx)
+        .execute(&mut **tx)
         .await
         .into_report()
         .change_context(PostgresError::Query)
@@ -75,7 +75,7 @@ ON CONFLICT (norwegian_county_id) DO NOTHING
             norwegian_county_id.as_slice(),
             name.as_slice(),
         )
-        .execute(&mut *tx)
+        .execute(&mut **tx)
         .await
         .into_report()
         .change_context(PostgresError::Query)

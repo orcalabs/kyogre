@@ -147,7 +147,7 @@ ON CONFLICT (mmsi) DO NOTHING
             "#,
             &mmsis
         )
-        .execute(&mut tx)
+        .execute(&mut *tx)
         .await
         .into_report()
         .change_context(PostgresError::Query)?;
@@ -204,7 +204,7 @@ ON CONFLICT (mmsi, TIMESTAMP) DO NOTHING
             &ais_message_type as _,
             &navigation_status_id,
         )
-        .execute(&mut tx)
+        .execute(&mut *tx)
         .await
         .into_report()
         .change_context(PostgresError::Query)?;
@@ -321,7 +321,7 @@ SET
                 p.message_type_id,
                 p.navigational_status as i32,
             )
-            .execute(&mut tx)
+            .execute(&mut *tx)
             .await
             .into_report()
             .change_context(PostgresError::Query)?;
@@ -448,7 +448,7 @@ SET
             &draught as _,
             &destination as _,
         )
-        .execute(&mut tx)
+        .execute(&mut *tx)
         .await
         .into_report()
         .change_context(PostgresError::Query)?;
@@ -546,7 +546,7 @@ ON CONFLICT (mmsi) DO NOTHING
             "#,
             &mmsi.0,
         )
-        .execute(&mut tx)
+        .execute(&mut *tx)
         .await
         .into_report()
         .change_context(PostgresError::Query)?;
@@ -565,7 +565,7 @@ SET
             &mmsi.0,
             &progress
         )
-        .execute(&mut tx)
+        .execute(&mut *tx)
         .await
         .into_report()
         .change_context(PostgresError::Query)?;
@@ -613,7 +613,7 @@ ON CONFLICT (mmsi, TIMESTAMP) DO NOTHING
             &distance_to_shore,
             &navigation_status_id as _,
         )
-        .execute(&mut tx)
+        .execute(&mut *tx)
         .await
         .into_report()
         .change_context(PostgresError::Query)?;

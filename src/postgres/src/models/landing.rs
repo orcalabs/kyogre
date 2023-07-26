@@ -18,7 +18,7 @@ pub struct NewLanding {
     pub vessel_call_sign: Option<String>,
     pub vessel_registration_id: Option<String>,
     // Lengdegruppe (kode)
-    pub vessel_length_group_id: Option<i32>,
+    pub vessel_length_group_id: i32,
     // Fartøynasjonalitet gruppe
     pub vessel_nation_group_id: Option<String>,
     // Fartøynasjonalitet (kode)
@@ -96,7 +96,7 @@ impl TryFrom<fiskeridir_rs::Landing> for NewLanding {
             fiskeridir_vessel_type_id: landing.vessel.type_code.map(|v| v as i32),
             vessel_call_sign: landing.vessel.call_sign.map(|v| v.into_inner()),
             vessel_registration_id: landing.vessel.registration_id,
-            vessel_length_group_id: landing.vessel.length_group_code.map(|v| v as i32),
+            vessel_length_group_id: landing.vessel.length_group_code as i32,
             vessel_nation_group_id: landing.vessel.nation_group,
             vessel_nation_id: landing.vessel.nationality_code.alpha3().to_string(),
             vessel_norwegian_municipality_id: landing.vessel.municipality_code.map(|v| v as i32),

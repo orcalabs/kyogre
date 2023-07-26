@@ -1,0 +1,19 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO\n    trips (\n        period,\n        landing_coverage,\n        start_port_id,\n        end_port_id,\n        trip_assembler_id,\n        fiskeridir_vessel_id\n    )\nSELECT\n    *\nFROM\n    UNNEST(\n        $1::tstzrange[],\n        $2::tstzrange[],\n        $3::VARCHAR[],\n        $4::VARCHAR[],\n        $5::INT[],\n        $6::BIGINT[]\n    )\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "TstzRangeArray",
+        "TstzRangeArray",
+        "VarcharArray",
+        "VarcharArray",
+        "Int4Array",
+        "Int8Array"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "c37788fb49da61d2607dd1c96f5c29b0404ccf531432bd1c9473546a2c2652a3"
+}

@@ -1,7 +1,7 @@
 use crate::{error::ApiError, to_streaming_response, Database};
 use actix_web::{web, HttpResponse};
 use chrono::{DateTime, Utc};
-use fiskeridir_rs::{CallSign, GearGroup, RegisterVesselOwner};
+use fiskeridir_rs::{CallSign, GearGroup, RegisterVesselOwner, VesselLengthGroup};
 use futures::TryStreamExt;
 use kyogre_core::{FiskeridirVesselId, Mmsi};
 use serde::{Deserialize, Serialize};
@@ -42,7 +42,8 @@ pub struct FiskeridirVessel {
     #[schema(value_type = i64)]
     pub id: FiskeridirVesselId,
     pub vessel_type_id: Option<u32>,
-    pub length_group_id: Option<u32>,
+    #[schema(value_type = u32)]
+    pub length_group_id: VesselLengthGroup,
     pub nation_group_id: Option<String>,
     pub nation_id: Option<String>,
     pub norwegian_municipality_id: Option<u32>,
@@ -135,7 +136,7 @@ impl PartialEq<fiskeridir_rs::Vessel> for FiskeridirVessel {
     fn eq(&self, other: &fiskeridir_rs::Vessel) -> bool {
         self.id.0 == other.id.unwrap()
             && self.vessel_type_id == other.type_code.map(|v| v as u32)
-            && self.length_group_id == other.length_group_code.map(|v| v as u32)
+            && self.length_group_id == other.length_group_code
             && self.nation_group_id == other.nation_group.clone()
             && self.norwegian_municipality_id == other.municipality_code
             && self.norwegian_county_id == other.county_code
