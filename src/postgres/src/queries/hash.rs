@@ -24,7 +24,7 @@ SET
             hash,
             id.as_ref(),
         )
-        .execute(&mut tx)
+        .execute(&mut *tx)
         .await
         .into_report()
         .change_context(PostgresError::Query)?;

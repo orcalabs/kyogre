@@ -149,7 +149,7 @@ WHERE
             TripAssemblerId::Ers as i32,
             fiskeridir_vessel_id.as_slice() as _,
         )
-        .execute(&mut *tx)
+        .execute(&mut **tx)
         .await
         .into_report()
         .change_context(PostgresError::Query)?;
@@ -299,7 +299,7 @@ ON CONFLICT (message_id) DO NOTHING
             vessel_valid_until.as_slice() as _,
             vessel_width.as_slice() as _,
         )
-        .execute(&mut *tx)
+        .execute(&mut **tx)
         .await
         .into_report()
         .change_context(PostgresError::Query)
@@ -364,7 +364,7 @@ FROM
             species_group_id.as_slice() as _,
             species_main_group_id.as_slice() as _,
         )
-        .execute(&mut *tx)
+        .execute(&mut **tx)
         .await
         .into_report()
         .change_context(PostgresError::Query)

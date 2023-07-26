@@ -1009,7 +1009,7 @@ SET
             trip_assembler_id as i32,
             new_trip_calculation_time,
         )
-        .execute(&mut tx)
+        .execute(&mut *tx)
         .await
         .into_report()
         .change_context(PostgresError::Query)?;
@@ -1027,7 +1027,7 @@ WHERE
                 vessel_id.0,
                 trip_assembler_id as i32,
             )
-            .execute(&mut tx)
+            .execute(&mut *tx)
             .await
             .into_report()
             .change_context(PostgresError::Query)
@@ -1061,7 +1061,7 @@ WHERE
                 earliest_trip_period,
                 earliest_trip_start,
             )
-            .execute(&mut tx)
+            .execute(&mut *tx)
             .await
             .into_report()
             .change_context(PostgresError::Query)
@@ -1098,7 +1098,7 @@ FROM
             &trip_assembler_ids,
             &fiskeridir_vessel_ids,
         )
-        .execute(&mut tx)
+        .execute(&mut *tx)
         .await
         .into_report()
         .change_context(PostgresError::Query)?;

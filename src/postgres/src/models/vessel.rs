@@ -2,7 +2,7 @@ use crate::{error::PostgresError, queries::opt_decimal_to_float};
 use bigdecimal::BigDecimal;
 use chrono::{DateTime, Utc};
 use error_stack::{IntoReport, Report, ResultExt};
-use fiskeridir_rs::{CallSign, GearGroup};
+use fiskeridir_rs::{CallSign, GearGroup, VesselLengthGroup};
 use kyogre_core::{FiskeridirVesselId, Mmsi, TripAssemblerId, VesselBenchmarkId};
 use serde::Deserialize;
 
@@ -50,7 +50,7 @@ pub struct FiskeridirAisVesselCombination {
     pub ais_destination: Option<String>,
     pub fiskeridir_vessel_id: i64,
     pub fiskeridir_vessel_type_id: Option<i32>,
-    pub fiskeridir_length_group_id: Option<i32>,
+    pub fiskeridir_length_group_id: VesselLengthGroup,
     pub fiskeridir_nation_group_id: Option<String>,
     pub fiskeridir_nation_id: Option<String>,
     pub fiskeridir_norwegian_municipality_id: Option<i32>,
@@ -111,7 +111,7 @@ impl TryFrom<FiskeridirAisVesselCombination> for kyogre_core::Vessel {
         let fiskeridir_vessel = kyogre_core::FiskeridirVessel {
             id: FiskeridirVesselId(value.fiskeridir_vessel_id),
             vessel_type_id: value.fiskeridir_vessel_type_id.map(|v| v as u32),
-            length_group_id: value.fiskeridir_length_group_id.map(|v| v as u32),
+            length_group_id: value.fiskeridir_length_group_id,
             nation_group_id: value.fiskeridir_nation_group_id,
             nation_id: value.fiskeridir_nation_id,
             norwegian_municipality_id: value.fiskeridir_norwegian_municipality_id.map(|v| v as u32),

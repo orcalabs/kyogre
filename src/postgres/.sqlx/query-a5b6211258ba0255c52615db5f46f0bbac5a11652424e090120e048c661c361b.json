@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    last_changed\nFROM\n    fishing_facilities\nWHERE\n    (\n        $1::INT IS NULL\n        OR api_source = $1\n    )\nORDER BY\n    last_changed DESC\nLIMIT\n    1\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "last_changed",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "a5b6211258ba0255c52615db5f46f0bbac5a11652424e090120e048c661c361b"
+}

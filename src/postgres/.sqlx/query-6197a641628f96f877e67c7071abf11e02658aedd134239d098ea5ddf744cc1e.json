@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nUPDATE hauls h\nSET\n    catch_locations = (\n        SELECT\n            ARRAY_AGG(DISTINCT e) FILTER (\n                WHERE\n                    e IS NOT NULL\n            )\n        FROM\n            UNNEST(q.catch_locations || h.catch_location_start) e\n    )\nFROM\n    (\n        SELECT\n            u.message_id,\n            u.start_timestamp,\n            u.stop_timestamp,\n            ARRAY_AGG(DISTINCT u.catch_location) AS catch_locations\n        FROM\n            UNNEST(\n                $1::BIGINT[],\n                $2::TIMESTAMPTZ[],\n                $3::TIMESTAMPTZ[],\n                $4::TEXT[]\n            ) u (\n                message_id,\n                start_timestamp,\n                stop_timestamp,\n                catch_location\n            )\n        GROUP BY\n            u.message_id,\n            u.start_timestamp,\n            u.stop_timestamp\n    ) q\nWHERE\n    h.message_id = q.message_id\n    AND h.start_timestamp = q.start_timestamp\n    AND h.stop_timestamp = q.stop_timestamp\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8Array",
+        "TimestamptzArray",
+        "TimestamptzArray",
+        "TextArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "6197a641628f96f877e67c7071abf11e02658aedd134239d098ea5ddf744cc1e"
+}

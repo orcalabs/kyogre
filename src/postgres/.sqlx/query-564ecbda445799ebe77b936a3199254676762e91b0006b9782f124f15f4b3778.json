@@ -1,0 +1,74 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    mmsi,\n    latitude,\n    longitude,\n    course_over_ground,\n    rate_of_turn,\n    true_heading,\n    speed_over_ground,\n    TIMESTAMP AS msgtime,\n    navigation_status_id AS navigational_status,\n    distance_to_shore\nFROM\n    current_ais_positions\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "mmsi",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "latitude",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 2,
+        "name": "longitude",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 3,
+        "name": "course_over_ground",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 4,
+        "name": "rate_of_turn",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 5,
+        "name": "true_heading",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 6,
+        "name": "speed_over_ground",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 7,
+        "name": "msgtime",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 8,
+        "name": "navigational_status",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 9,
+        "name": "distance_to_shore",
+        "type_info": "Numeric"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      false,
+      true,
+      false
+    ]
+  },
+  "hash": "564ecbda445799ebe77b936a3199254676762e91b0006b9782f124f15f4b3778"
+}

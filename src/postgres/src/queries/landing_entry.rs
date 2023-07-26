@@ -166,7 +166,7 @@ ON CONFLICT (landing_id, line_number) DO NOTHING
             species_fiskeridir_id.as_slice(),
             species_main_group_id.as_slice()
         )
-        .execute(&mut *tx)
+        .execute(&mut **tx)
         .await
         .into_report()
         .change_context(PostgresError::Query)

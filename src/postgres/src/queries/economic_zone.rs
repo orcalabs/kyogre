@@ -30,7 +30,7 @@ ON CONFLICT (economic_zone_id) DO NOTHING
             ids.as_slice(),
             names.as_slice() as _,
         )
-        .execute(&mut *tx)
+        .execute(&mut **tx)
         .await
         .into_report()
         .change_context(PostgresError::Query)

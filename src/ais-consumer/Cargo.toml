@@ -26,7 +26,7 @@ rand = "0.8.5"
 hyper = { version = "0.14.27", features = ["http2"] }
 hyper-alpn = "=0.3.0"
 
-geo = "0.23.1"
+geo = "0.26.0"
 vpsearch = "2.0.1"
 flate2 = "1.0.26"
 lazy_static = "1.4.0"

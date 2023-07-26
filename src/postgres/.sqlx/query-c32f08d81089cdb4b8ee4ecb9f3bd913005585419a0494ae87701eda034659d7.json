@@ -1,0 +1,26 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    species_fao_id AS id,\n    \"name\" AS \"name?\"\nFROM\n    species_fao\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 1,
+        "name": "name?",
+        "type_info": "Varchar"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      true
+    ]
+  },
+  "hash": "c32f08d81089cdb4b8ee4ecb9f3bd913005585419a0494ae87701eda034659d7"
+}

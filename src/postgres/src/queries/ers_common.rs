@@ -30,7 +30,7 @@ ON CONFLICT (ers_message_type_id) DO NOTHING
             ids.as_slice(),
             names.as_slice(),
         )
-        .execute(&mut *tx)
+        .execute(&mut **tx)
         .await
         .into_report()
         .change_context(PostgresError::Query)

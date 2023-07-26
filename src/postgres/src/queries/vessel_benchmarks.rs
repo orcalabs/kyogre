@@ -40,7 +40,7 @@ SET
             vessel_benchmark_id.as_slice(),
             output.as_slice()
         )
-        .execute(&mut tx)
+        .execute(&mut *tx)
         .await
         .into_report()
         .change_context(PostgresError::Query)?;

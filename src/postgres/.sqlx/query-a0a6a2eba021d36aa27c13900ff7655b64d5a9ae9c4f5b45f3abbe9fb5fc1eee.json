@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nWITH\n    q1 AS (\n        SELECT\n            JSONB_AGG(\n                JSON_BUILD_OBJECT(\n                    'port_id',\n                    pd.port_id,\n                    'port_dock_point_id',\n                    pd.port_dock_point_id,\n                    'latitude',\n                    pd.latitude,\n                    'longitude',\n                    pd.longitude,\n                    'name',\n                    pd.name\n                )\n            ) AS \"start\"\n        FROM\n            trips AS t\n            INNER JOIN ports AS p ON t.start_port_id = p.port_id\n            INNER JOIN port_dock_points AS pd ON pd.port_id = p.port_id\n        WHERE\n            trip_id = $1\n    ),\n    q2 AS (\n        SELECT\n            JSONB_AGG(\n                JSON_BUILD_OBJECT(\n                    'port_id',\n                    pd.port_id,\n                    'port_dock_point_id',\n                    pd.port_dock_point_id,\n                    'latitude',\n                    pd.latitude,\n                    'longitude',\n                    pd.longitude,\n                    'name',\n                    pd.name\n                )\n            ) AS \"end\"\n        FROM\n            trips AS t\n            INNER JOIN ports AS p ON t.end_port_id = p.port_id\n            INNER JOIN port_dock_points AS pd ON pd.port_id = p.port_id\n        WHERE\n            trip_id = $1\n    )\nSELECT\n    \"start\"::TEXT,\n    \"end\"::TEXT\nFROM\n    q1\n    CROSS JOIN q2;\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "start",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "end",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      null,
+      null
+    ]
+  },
+  "hash": "a0a6a2eba021d36aa27c13900ff7655b64d5a9ae9c4f5b45f3abbe9fb5fc1eee"
+}

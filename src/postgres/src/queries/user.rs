@@ -61,7 +61,7 @@ WHERE
             "#,
             user_id.0,
         )
-        .execute(&mut *tx)
+        .execute(&mut **tx)
         .await
         .into_report()
         .change_context(PostgresError::Query)?;
@@ -79,7 +79,7 @@ FROM
             user_id.0,
             vessel_ids.as_slice(),
         )
-        .execute(&mut *tx)
+        .execute(&mut **tx)
         .await
         .into_report()
         .change_context(PostgresError::Query)

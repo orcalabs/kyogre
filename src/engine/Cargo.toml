@@ -29,8 +29,8 @@ serde = { version = "1.0.175", features = ["derive"] }
 async-trait = "0.1.72"
 error-stack = { workspace = true }
 
-strum = "0.24.1"
-strum_macros = "0.24.3"
+strum = "0.25.0"
+strum_macros = "0.25.1"
 
 [dev-dependencies]
 tracing-subscriber = "0.3.17"

@@ -425,7 +425,7 @@ ON CONFLICT (message_id, start_timestamp, stop_timestamp) DO NOTHING
             majority_species_fao_id.as_slice() as _,
             majority_species_fiskeridir_id.as_slice() as _,
         )
-        .execute(&mut *tx)
+        .execute(&mut **tx)
         .await
         .into_report()
         .change_context(PostgresError::Query)
@@ -646,7 +646,7 @@ ON CONFLICT (message_id) DO NOTHING
             vessel_valid_until.as_slice() as _,
             vessel_width.as_slice() as _,
         )
-        .execute(&mut *tx)
+        .execute(&mut **tx)
         .await
         .into_report()
         .change_context(PostgresError::Query)
@@ -727,7 +727,7 @@ ON CONFLICT (
             species_group_id.as_slice(),
             species_main_group_id.as_slice(),
         )
-        .execute(&mut *tx)
+        .execute(&mut **tx)
         .await
         .into_report()
         .change_context(PostgresError::Query)
@@ -828,7 +828,7 @@ ON CONFLICT (
             whale_individual_number.as_slice() as _,
             whale_length.as_slice() as _,
         )
-        .execute(&mut *tx)
+        .execute(&mut **tx)
         .await
         .into_report()
         .change_context(PostgresError::Query)
@@ -863,7 +863,7 @@ ON CONFLICT (herring_population_id) DO NOTHING
             ids.as_slice(),
             names.as_slice(),
         )
-        .execute(&mut *tx)
+        .execute(&mut **tx)
         .await
         .into_report()
         .change_context(PostgresError::Query)

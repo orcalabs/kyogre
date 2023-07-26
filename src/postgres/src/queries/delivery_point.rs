@@ -43,7 +43,7 @@ ON CONFLICT (delivery_point_id) DO NOTHING
             delivery_point_types.as_slice(),
             sources.as_slice(),
         )
-        .execute(&mut *tx)
+        .execute(&mut **tx)
         .await
         .into_report()
         .change_context(PostgresError::Query)

@@ -448,7 +448,7 @@ ON CONFLICT (landing_id) DO NOTHING
             receiving_vessel_nation.as_slice() as _,
             data_year_vec.as_slice(),
         )
-        .execute(&mut *tx)
+        .execute(&mut **tx)
         .await
         .into_report()
         .change_context(PostgresError::Query)
@@ -551,7 +551,7 @@ WHERE
             "#,
             &ids_to_delete,
         )
-        .execute(&mut tx)
+        .execute(&mut *tx)
         .await
         .into_report()
         .change_context(PostgresError::Query)?;

@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    landing_id\nFROM\n    landings\nWHERE\n    fiskeridir_vessel_id = $1\nORDER BY\n    landing_id\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "landing_id",
+        "type_info": "Varchar"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "5db74858b380d3057f2318276c64831d0f4fda727f21dc7553b06f3fb9b341d8"
+}

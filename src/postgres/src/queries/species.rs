@@ -34,7 +34,7 @@ SET
             species_fiskeridir_id.as_slice(),
             name.as_slice() as _,
         )
-        .execute(&mut *tx)
+        .execute(&mut **tx)
         .await
         .into_report()
         .change_context(PostgresError::Query)
@@ -72,7 +72,7 @@ SET
             species_id.as_slice(),
             name.as_slice(),
         )
-        .execute(&mut *tx)
+        .execute(&mut **tx)
         .await
         .into_report()
         .change_context(PostgresError::Query)
@@ -110,7 +110,7 @@ SET
             species_fao_id.as_slice(),
             name.as_slice() as _,
         )
-        .execute(&mut *tx)
+        .execute(&mut **tx)
         .await
         .into_report()
         .change_context(PostgresError::Query)

@@ -38,7 +38,7 @@ ON CONFLICT (port_id) DO NOTHING
             names.as_slice() as _,
             nationalities.as_slice(),
         )
-        .execute(&mut *tx)
+        .execute(&mut **tx)
         .await
         .into_report()
         .change_context(PostgresError::Query)

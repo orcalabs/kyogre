@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    add_vms_position_partitions ($1)\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "add_vms_position_partitions",
+        "type_info": "Void"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "TextArray"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "ca3756b080b784f708bf2b7d8f6bdffb2566f15aee96c69b40bd04a29cd2fa32"
+}

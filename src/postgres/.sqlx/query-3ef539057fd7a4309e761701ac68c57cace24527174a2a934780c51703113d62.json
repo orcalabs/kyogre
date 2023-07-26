@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nDELETE FROM user_follows\nWHERE\n    barentswatch_user_id = $1\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "3ef539057fd7a4309e761701ac68c57cace24527174a2a934780c51703113d62"
+}

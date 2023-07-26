@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nUPDATE trips\nSET\n    landing_coverage = tstzrange (LOWER(period), $3)\nWHERE\n    trip_id = (\n        SELECT\n            trip_id\n        FROM\n            trips\n        WHERE\n            fiskeridir_vessel_id = $1\n            AND period < $2\n        ORDER BY\n            period DESC\n        LIMIT\n            1\n    )\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "TstzRange",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "58db19ac9d5025bf20b8dfe529186f0dd0cd155962d213f5069010da49f616e6"
+}

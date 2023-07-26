@@ -1,0 +1,179 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    h.haul_id,\n    h.ers_activity_id,\n    h.duration,\n    h.haul_distance,\n    h.catch_location_start,\n    h.catch_locations,\n    h.ocean_depth_end,\n    h.ocean_depth_start,\n    h.quota_type_id,\n    h.start_latitude,\n    h.start_longitude,\n    h.start_timestamp,\n    h.stop_timestamp,\n    h.stop_latitude,\n    h.stop_longitude,\n    h.total_living_weight,\n    h.gear_id AS \"gear_id!: Gear\",\n    h.gear_group_id AS \"gear_group_id!: GearGroup\",\n    h.fiskeridir_vessel_id,\n    h.vessel_call_sign,\n    h.vessel_call_sign_ers,\n    h.vessel_length,\n    h.vessel_length_group AS \"vessel_length_group!: VesselLengthGroup\",\n    h.vessel_name,\n    h.vessel_name_ers,\n    h.catches::TEXT AS \"catches!\",\n    h.whale_catches::TEXT AS \"whale_catches!\"\nFROM\n    hauls h\nWHERE\n    h.fiskeridir_vessel_id = $1\n    AND h.message_id = $2\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "haul_id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "ers_activity_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "duration",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 3,
+        "name": "haul_distance",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 4,
+        "name": "catch_location_start",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "catch_locations",
+        "type_info": "TextArray"
+      },
+      {
+        "ordinal": 6,
+        "name": "ocean_depth_end",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 7,
+        "name": "ocean_depth_start",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 8,
+        "name": "quota_type_id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 9,
+        "name": "start_latitude",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 10,
+        "name": "start_longitude",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 11,
+        "name": "start_timestamp",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 12,
+        "name": "stop_timestamp",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 13,
+        "name": "stop_latitude",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 14,
+        "name": "stop_longitude",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 15,
+        "name": "total_living_weight",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 16,
+        "name": "gear_id!: Gear",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 17,
+        "name": "gear_group_id!: GearGroup",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 18,
+        "name": "fiskeridir_vessel_id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 19,
+        "name": "vessel_call_sign",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 20,
+        "name": "vessel_call_sign_ers",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 21,
+        "name": "vessel_length",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 22,
+        "name": "vessel_length_group!: VesselLengthGroup",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 23,
+        "name": "vessel_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 24,
+        "name": "vessel_name_ers",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 25,
+        "name": "catches!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 26,
+        "name": "whale_catches!",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      false,
+      false,
+      false,
+      true,
+      true,
+      null,
+      null
+    ]
+  },
+  "hash": "2eb423e2492b6305fe90a2b9315b8673a3f2fae285d2c2ce27048ca39a9bdbec"
+}
