@@ -189,10 +189,10 @@ pub struct LandingCatch {
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct LandingMatrix {
-    pub dates: Vec<f64>,
-    pub length_group: Vec<f64>,
-    pub gear_group: Vec<f64>,
-    pub species_group: Vec<f64>,
+    pub dates: Vec<u64>,
+    pub length_group: Vec<u64>,
+    pub gear_group: Vec<u64>,
+    pub species_group: Vec<u64>,
 }
 
 impl From<kyogre_core::Landing> for Landing {
@@ -224,8 +224,6 @@ impl From<kyogre_core::LandingCatch> for LandingCatch {
             product_weight: v.product_weight,
             species_fiskeridir_id: v.species_fiskeridir_id,
             species_group_id: v.species_group_id,
-            // product_quality_id: v.product_quality_id,
-            // product_quality_name: v.product_quality_name,
         }
     }
 }

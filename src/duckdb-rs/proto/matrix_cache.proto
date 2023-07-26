@@ -37,10 +37,10 @@ message HaulMatrix {
 }
 
 message LandingMatrix {
-    repeated double dates = 1;
-    repeated double length_group = 2;
-    repeated double gear_group  = 3;
-    repeated double species_group = 4;
+    repeated uint64 dates = 1;
+    repeated uint64 length_group = 2;
+    repeated uint64 gear_group  = 3;
+    repeated uint64 species_group = 4;
 }
 
 message CatchLocation {

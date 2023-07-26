@@ -310,7 +310,7 @@ async fn test_landing_matrix_date_sum_area_table_is_correct() {
         let y1 = NUM_CATCH_LOCATIONS - 1;
 
         assert_landing_matrix_content(&matrix, filter, 160, vec![]);
-        assert_eq!(sum_area(&matrix.dates, x0, y0, x1, y1, width) as u64, 60);
+        assert_eq!(sum_area(&matrix.dates, x0, y0, x1, y1, width), 60);
     })
     .await
 }
@@ -358,10 +358,7 @@ async fn test_landing_matrix_gear_group_sum_area_table_is_correct() {
         let y1 = NUM_CATCH_LOCATIONS - 1;
 
         assert_landing_matrix_content(&matrix, filter, 160, vec![]);
-        assert_eq!(
-            sum_area(&matrix.gear_group, x0, y0, x1, y1, width) as u64,
-            60
-        );
+        assert_eq!(sum_area(&matrix.gear_group, x0, y0, x1, y1, width), 60);
     })
     .await
 }
@@ -409,10 +406,7 @@ async fn test_landing_matrix_vessel_length_sum_area_table_is_correct() {
         let y1 = NUM_CATCH_LOCATIONS - 1;
 
         assert_landing_matrix_content(&matrix, filter, 160, vec![]);
-        assert_eq!(
-            sum_area(&matrix.length_group, x0, y0, x1, y1, width) as u64,
-            60
-        );
+        assert_eq!(sum_area(&matrix.length_group, x0, y0, x1, y1, width), 60);
     })
     .await
 }
@@ -460,10 +454,7 @@ async fn test_landing_matrix_species_group_sum_area_table_is_correct() {
         let y1 = NUM_CATCH_LOCATIONS - 1;
 
         assert_landing_matrix_content(&matrix, filter, 160, vec![]);
-        assert_eq!(
-            sum_area(&matrix.species_group, x0, y0, x1, y1, width) as u64,
-            60
-        );
+        assert_eq!(sum_area(&matrix.species_group, x0, y0, x1, y1, width), 60);
     })
     .await;
 }

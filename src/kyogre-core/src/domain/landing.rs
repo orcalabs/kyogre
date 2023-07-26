@@ -10,10 +10,10 @@ pub static LANDING_OLDEST_DATA_MONTHS: usize = 1999 * 12;
 #[serde(rename_all = "camelCase")]
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct LandingMatrix {
-    pub dates: Vec<f64>,
-    pub length_group: Vec<f64>,
-    pub gear_group: Vec<f64>,
-    pub species_group: Vec<f64>,
+    pub dates: Vec<u64>,
+    pub length_group: Vec<u64>,
+    pub gear_group: Vec<u64>,
+    pub species_group: Vec<u64>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

@@ -31,7 +31,7 @@ const LANDING_SCHEMA: &str = "CREATE TABLE
         fiskeridir_vessel_id INT,
         gear_group_id INT NOT NULL,
         species_group_id INT NOT NULL,
-        living_weight DECIMAL NOT NULL,
+        living_weight BIGINT NOT NULL,
         PRIMARY KEY (landing_id, species_group_id)
     )";
 

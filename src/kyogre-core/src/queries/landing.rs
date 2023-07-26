@@ -67,7 +67,7 @@ pub struct LandingMatrixQuery {
 
 #[derive(Debug, Clone)]
 pub struct LandingMatrixQueryOutput {
-    pub sum_living: f64,
+    pub sum_living: u64,
     pub x_index: i32,
     pub y_index: i32,
 }
@@ -269,11 +269,11 @@ pub fn calculate_landing_sum_area_table(
     x_feature: LandingMatrixXFeature,
     y_feature: LandingMatrixYFeature,
     data: Vec<LandingMatrixQueryOutput>,
-) -> Result<Vec<f64>, LandingMatrixIndexError> {
+) -> Result<Vec<u64>, LandingMatrixIndexError> {
     let height = y_feature.size();
     let width = x_feature.size();
 
-    let mut matrix: Vec<f64> = vec![0.0; width * height];
+    let mut matrix: Vec<u64> = vec![0; width * height];
 
     for d in data {
         let x = x_feature.convert_from_val(d.x_index)?;
