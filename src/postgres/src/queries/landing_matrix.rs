@@ -38,7 +38,7 @@ SELECT
         WHEN $2 = 3 THEN h.vessel_length_group
         WHEN $2 = 4 THEN h.catch_location_matrix_index
     END AS "y_index!",
-    COALESCE(SUM(living_weight::BIGINT), 0)::BIGINT AS "sum_living!"
+    COALESCE(SUM(living_weight), 0)::BIGINT AS "sum_living!"
 FROM
     landing_matrix h
 WHERE

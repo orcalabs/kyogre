@@ -1,0 +1,3 @@
+ALTER TABLE landing_matrix
+ALTER COLUMN living_weight
+TYPE DOUBLE PRECISION;
