@@ -5,6 +5,7 @@ pub mod fishing_facility;
 pub mod haul;
 pub mod hauls_matrix;
 pub mod helper;
+pub mod landing;
 pub mod landing_matrix;
 pub mod species;
 pub mod test_client;
