@@ -99,7 +99,7 @@ pub struct Landing {
     pub vessel_call_sign: Option<String>,
     pub vessel_name: Option<String>,
     pub vessel_length: Option<BigDecimal>,
-    pub vessel_length_group: Option<VesselLengthGroup>,
+    pub vessel_length_group: VesselLengthGroup,
     pub total_living_weight: BigDecimal,
     pub total_product_weight: BigDecimal,
     pub total_gross_weight: BigDecimal,

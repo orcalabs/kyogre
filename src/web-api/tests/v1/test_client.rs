@@ -1,6 +1,6 @@
 use std::{fmt::Write, string::ToString};
 
-use fiskeridir_rs::CallSign;
+use fiskeridir_rs::{CallSign, LandingId};
 use kyogre_core::{ActiveHaulsFilter, ActiveLandingFilter, FiskeridirVesselId, HaulId, Mmsi};
 use reqwest::{header::HeaderMap, Client, Response};
 use serde::Serialize;
@@ -9,7 +9,7 @@ use web_api::routes::v1::{
     ais_vms::AisVmsParameters,
     fishing_facility::FishingFacilitiesParams,
     haul::{HaulsMatrixParams, HaulsParams},
-    landing::LandingMatrixParams,
+    landing::{LandingMatrixParams, LandingsParams},
     trip::TripsParameters,
     user::User,
     vms::VmsParameters,
@@ -168,6 +168,58 @@ impl ApiClient {
 
         self.get("hauls", &parameters, None).await
     }
+    pub async fn get_landings(&self, params: LandingsParams) -> Response {
+        let mut parameters = Vec::new();
+
+        if let Some(months) = params.months {
+            parameters.push(("months".to_string(), create_comma_separated_list(months)))
+        }
+
+        if let Some(locations) = params.catch_locations {
+            parameters.push((
+                "catchLocations".to_string(),
+                create_comma_separated_list(locations),
+            ))
+        }
+
+        if let Some(gear) = params.gear_group_ids {
+            parameters.push((
+                "gearGroupIds".to_string(),
+                create_comma_separated_list(gear.into_iter().map(|g| g.0 as u8).collect()),
+            ))
+        }
+
+        if let Some(species) = params.species_group_ids {
+            parameters.push((
+                "speciesGroupIds".to_string(),
+                create_comma_separated_list(species.into_iter().map(|s| s.0 as u32).collect()),
+            ))
+        }
+
+        if let Some(ranges) = params.vessel_length_ranges {
+            parameters.push((
+                "vesselLengthRanges".to_string(),
+                create_semicolon_separated_list(ranges),
+            ))
+        }
+
+        if let Some(id) = params.fiskeridir_vessel_ids {
+            parameters.push((
+                "fiskeridirVesselIds".to_string(),
+                create_comma_separated_list(id.into_iter().map(|i| i.0).collect()),
+            ))
+        }
+
+        if let Some(sorting) = params.sorting {
+            parameters.push(("sorting".to_string(), sorting.to_string()))
+        }
+
+        if let Some(ordering) = params.ordering {
+            parameters.push(("ordering".to_string(), ordering.to_string()))
+        }
+
+        self.get("landings", &parameters, None).await
+    }
     pub async fn get_landing_matrix(
         &self,
         params: LandingMatrixParams,
@@ -283,6 +335,14 @@ impl ApiClient {
     pub async fn get_trip_of_haul(&self, haul_id: &HaulId) -> Response {
         self.get(format!("trip_of_haul/{}", haul_id.0), &[], None)
             .await
+    }
+    pub async fn get_trip_of_landing(&self, landing_id: &LandingId) -> Response {
+        self.get(
+            format!("trip_of_landing/{}", landing_id.clone().into_inner()),
+            &[],
+            None,
+        )
+        .await
     }
     pub async fn get_trips_of_vessel(
         &self,

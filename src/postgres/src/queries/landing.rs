@@ -38,7 +38,7 @@ SELECT
     l.vessel_call_sign,
     l.vessel_name,
     l.vessel_length,
-    l.vessel_length_group_id AS "vessel_length_group: VesselLengthGroup",
+    l.vessel_length_group_id AS "vessel_length_group!: VesselLengthGroup",
     COALESCE(SUM(le.gross_weight), 0) AS "total_gross_weight!",
     COALESCE(SUM(le.living_weight), 0) AS "total_living_weight!",
     COALESCE(SUM(le.product_weight), 0) AS "total_product_weight!",

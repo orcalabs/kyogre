@@ -186,10 +186,12 @@ impl TestHelper {
         start: &DateTime<Utc>,
         end: &DateTime<Utc>,
     ) -> TripDetailed {
-        let mut landing = fiskeridir_rs::Landing::test_default(random(), Some(vessel_id.0));
+        let mut landing =
+            fiskeridir_rs::Landing::test_default(random::<i64>().abs(), Some(vessel_id.0));
         landing.landing_timestamp = *start;
 
-        let mut landing2 = fiskeridir_rs::Landing::test_default(random(), Some(vessel_id.0));
+        let mut landing2 =
+            fiskeridir_rs::Landing::test_default(random::<i64>().abs(), Some(vessel_id.0));
         landing2.landing_timestamp = *end;
 
         let year = landing.landing_timestamp.year() as u32;

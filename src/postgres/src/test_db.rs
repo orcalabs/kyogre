@@ -1,3 +1,4 @@
+use futures::TryStreamExt;
 use num_traits::ToPrimitive;
 use std::collections::HashMap;
 
@@ -668,11 +669,27 @@ FROM
         landing_id: i64,
         vessel_id: FiskeridirVesselId,
         timestamp: DateTime<Utc>,
-    ) {
+    ) -> Landing {
         let mut landing = fiskeridir_rs::Landing::test_default(landing_id, Some(vessel_id.0));
         landing.landing_timestamp = timestamp;
         let year = landing.landing_timestamp.year() as u32;
-        self.db.add_landings(vec![landing], year).await.unwrap();
+        self.db
+            .add_landings(vec![landing.clone()], year)
+            .await
+            .unwrap();
+
+        let landings: Vec<Landing> = self
+            .db
+            .landings(Default::default())
+            .unwrap()
+            .try_collect()
+            .await
+            .unwrap();
+
+        landings
+            .into_iter()
+            .find(|l| l.landing_id == landing.id)
+            .unwrap()
     }
 
     pub async fn generate_tra(

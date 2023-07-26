@@ -169,7 +169,7 @@ pub struct Landing {
     pub vessel_name: Option<String>,
     pub vessel_length: Option<f64>,
     #[schema(value_type = i32)]
-    pub vessel_length_group: Option<VesselLengthGroup>,
+    pub vessel_length_group: VesselLengthGroup,
     pub total_living_weight: f64,
     pub total_product_weight: f64,
     pub total_gross_weight: f64,

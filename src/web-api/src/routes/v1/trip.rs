@@ -76,14 +76,14 @@ pub async fn trip_of_landing<T: Database + 'static>(
         event!(Level::ERROR, "invalid landing id: {:?}", e);
         ApiError::InvalidLandingId
     })?;
-    let _read_fishing_facility = profile
+    let read_fishing_facility = profile
         .map(|p| {
             p.policies
                 .contains(&BwPolicy::BwReadExtendedFishingFacility)
         })
         .unwrap_or(false);
 
-    db.detailed_trip_of_landing(&landing_id, true)
+    db.detailed_trip_of_landing(&landing_id, read_fishing_facility)
         .await
         .map(|t| Response::new(t.map(Trip::from)))
         .map_err(|e| {
