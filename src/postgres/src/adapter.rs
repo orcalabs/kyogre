@@ -293,6 +293,18 @@ impl WebApiOutboundPort for PostgresAdapter {
         )
     }
 
+    async fn detailed_trip_of_landing(
+        &self,
+        landing_id: &LandingId,
+        read_fishing_facility: bool,
+    ) -> Result<Option<TripDetailed>, QueryError> {
+        convert_optional(
+            self.detailed_trip_of_landing_impl(landing_id, read_fishing_facility)
+                .await
+                .change_context(QueryError)?,
+        )
+    }
+
     fn detailed_trips_of_vessel(
         &self,
         id: FiskeridirVesselId,
@@ -316,6 +328,14 @@ impl WebApiOutboundPort for PostgresAdapter {
                 .await
                 .change_context(QueryError)?,
         )
+    }
+
+    fn landings(
+        &self,
+        query: LandingsQuery,
+    ) -> Result<PinBoxStream<'_, Landing, QueryError>, QueryError> {
+        let stream = self.landings_impl(query).change_context(QueryError)?;
+        Ok(convert_stream(stream).boxed())
     }
 
     async fn landing_matrix(

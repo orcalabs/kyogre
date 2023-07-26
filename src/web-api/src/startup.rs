@@ -116,6 +116,10 @@ where
                 web::get().to(routes::v1::trip::trip_of_haul::<T>),
             )
             .route(
+                "/trip_of_landing/{landing_id}",
+                web::get().to(routes::v1::trip::trip_of_landing::<T>),
+            )
+            .route(
                 "/trips/{fiskeridir_vessel_id}",
                 web::get().to(routes::v1::trip::trips::<T>),
             )
@@ -129,8 +133,12 @@ where
                 web::get().to(routes::v1::haul::hauls_matrix::<T, S>),
             )
             .route(
+                "/landings",
+                web::get().to(routes::v1::landing::landings::<T>),
+            )
+            .route(
                 "/landing_matrix/{active_filter}",
-                web::get().to(routes::v1::landing_matrix::landing_matrix::<T, S>),
+                web::get().to(routes::v1::landing::landing_matrix::<T, S>),
             );
 
         if let Some(ref guard) = bw_jwt_guard {

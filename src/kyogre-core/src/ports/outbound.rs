@@ -4,7 +4,7 @@ use crate::*;
 use async_trait::async_trait;
 use chrono::{DateTime, Duration, Utc};
 use error_stack::Result;
-use fiskeridir_rs::CallSign;
+use fiskeridir_rs::{CallSign, LandingId};
 use futures::Stream;
 
 #[async_trait]
@@ -55,12 +55,21 @@ pub trait WebApiOutboundPort {
         haul_id: &HaulId,
         read_fishing_facility: bool,
     ) -> Result<Option<TripDetailed>, QueryError>;
+    async fn detailed_trip_of_landing(
+        &self,
+        landing_id: &LandingId,
+        read_fishing_facility: bool,
+    ) -> Result<Option<TripDetailed>, QueryError>;
     async fn current_trip(
         &self,
         vessel_id: FiskeridirVesselId,
         read_fishing_facility: bool,
     ) -> Result<Option<CurrentTrip>, QueryError>;
     async fn hauls_matrix(&self, query: &HaulsMatrixQuery) -> Result<HaulsMatrix, QueryError>;
+    fn landings(
+        &self,
+        query: LandingsQuery,
+    ) -> Result<PinBoxStream<'_, Landing, QueryError>, QueryError>;
     async fn landing_matrix(&self, query: &LandingMatrixQuery)
         -> Result<LandingMatrix, QueryError>;
     fn fishing_facilities(

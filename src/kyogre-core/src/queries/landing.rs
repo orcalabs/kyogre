@@ -22,6 +22,38 @@ pub enum ActiveLandingFilter {
     VesselLength = 4,
 }
 
+#[cfg_attr(feature = "sqlx", derive(sqlx::Type))]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
+#[derive(Default, Debug, Clone, Copy, Deserialize, strum::Display)]
+#[serde(rename_all = "camelCase")]
+pub enum LandingsSorting {
+    #[serde(
+        alias = "landingTimestamp",
+        alias = "LandingTimestamp",
+        alias = "LANDING_TIMESTAMP"
+    )]
+    #[default]
+    LandingTimestamp = 1,
+    #[serde(
+        alias = "livingWeight",
+        alias = "LivingWeight",
+        alias = "LIVING_WEIGHT"
+    )]
+    LivingWeight = 2,
+}
+
+#[derive(Default, Debug, Clone)]
+pub struct LandingsQuery {
+    pub ranges: Option<Vec<Range<DateTime<Utc>>>>,
+    pub catch_locations: Option<Vec<CatchLocationId>>,
+    pub gear_group_ids: Option<Vec<GearGroup>>,
+    pub species_group_ids: Option<Vec<SpeciesGroup>>,
+    pub vessel_length_ranges: Option<Vec<Range<f64>>>,
+    pub vessel_ids: Option<Vec<FiskeridirVesselId>>,
+    pub sorting: Option<LandingsSorting>,
+    pub ordering: Option<Ordering>,
+}
+
 #[derive(Debug, Clone)]
 pub struct LandingMatrixQuery {
     pub months: Option<Vec<u32>>,

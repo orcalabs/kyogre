@@ -1,10 +1,12 @@
 use std::{
     fmt::{self, Debug},
+    ops::Bound,
     str::FromStr,
 };
 
-use chrono::{DateTime, Datelike, Utc};
+use chrono::{DateTime, Datelike, Months, NaiveDate, Utc};
 use fiskeridir_rs::{GearGroup, SpeciesGroup};
+use kyogre_core::Range;
 use num_traits::FromPrimitive;
 use serde::{
     de::{DeserializeOwned, IntoDeserializer, Visitor},
@@ -383,4 +385,43 @@ impl<'de> Deserialize<'de> for VesselLengthGroup {
         }
         deserializer.deserialize_newtype_struct("VesselLengthGroupId", VesselLengthGroupVisitor)
     }
+}
+
+fn utc_from_naive(naive_date: NaiveDate) -> DateTime<Utc> {
+    DateTime::<Utc>::from_utc(naive_date.and_hms_opt(0, 0, 0).unwrap(), Utc)
+}
+
+pub(crate) fn months_to_date_ranges(mut months: Vec<DateTimeUtc>) -> Vec<Range<DateTime<Utc>>> {
+    let mut vec = Vec::with_capacity(months.len());
+
+    months.sort();
+
+    let mut start_naive = None;
+    let mut end_naive = None;
+    for m in months {
+        if let (Some(start), Some(end)) = (start_naive, end_naive) {
+            let naive = NaiveDate::from_ymd_opt(m.0.year(), m.0.month(), 1).unwrap();
+            if end != naive {
+                vec.push(Range {
+                    start: Bound::Included(utc_from_naive(start)),
+                    end: Bound::Excluded(utc_from_naive(end)),
+                });
+                start_naive = Some(naive);
+            }
+            end_naive = Some(naive.checked_add_months(Months::new(1)).unwrap());
+        } else {
+            let start = NaiveDate::from_ymd_opt(m.0.year(), m.0.month(), 1).unwrap();
+            end_naive = Some(start.checked_add_months(Months::new(1)).unwrap());
+            start_naive = Some(start);
+        }
+    }
+
+    if let (Some(start), Some(end)) = (start_naive, end_naive) {
+        vec.push(Range {
+            start: Bound::Included(utc_from_naive(start)),
+            end: Bound::Excluded(utc_from_naive(end)),
+        });
+    }
+
+    vec
 }
