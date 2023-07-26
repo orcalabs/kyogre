@@ -439,9 +439,9 @@ pub fn assert_landing_matrix_content(
         assert_eq!(matrix_len, x_dimension_size * y_dimension_size, "{m}");
 
         if let Some(specific) = specific_totals.iter().find(|v| v.0 == m) {
-            assert_eq!(specific.1, matrix_total as u64, "{m}");
+            assert_eq!(specific.1, matrix_total, "{m}");
         } else {
-            assert_eq!(expected_total, matrix_total as u64, "{m}");
+            assert_eq!(expected_total, matrix_total, "{m}");
         }
     }
 }

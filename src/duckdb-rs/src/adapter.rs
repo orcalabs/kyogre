@@ -206,7 +206,7 @@ impl DuckdbAdapter {
         conn: &r2d2::PooledConnection<DuckdbConnectionManager>,
         x_feature: LandingMatrixXFeature,
         params: &LandingMatrixQuery,
-    ) -> Result<Option<Vec<f64>>, DuckdbError> {
+    ) -> Result<Option<Vec<u64>>, DuckdbError> {
         let y_feature = if x_feature == params.active_filter {
             LandingMatrixYFeature::CatchLocation
         } else {

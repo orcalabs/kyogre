@@ -4,10 +4,9 @@ use crate::{
 };
 use bigdecimal::BigDecimal;
 use chrono::{DateTime, NaiveDate, NaiveTime, Utc};
-use error_stack::{report, IntoReport, Report, ResultExt};
+use error_stack::{IntoReport, Report, ResultExt};
 use fiskeridir_rs::VesselLengthGroup;
 use kyogre_core::{CatchLocationId, FiskeridirVesselId, LandingMatrixQuery};
-use num_traits::ToPrimitive;
 
 pub struct NewLanding {
     // Dokumentnummer-SalgslagId-Dokumenttype
@@ -233,7 +232,7 @@ impl TryFrom<Landing> for kyogre_core::Landing {
 
 #[derive(Debug, Clone)]
 pub struct LandingMatrixQueryOutput {
-    pub sum_living: BigDecimal,
+    pub sum_living: i64,
     pub x_index: i32,
     pub y_index: i32,
 }
@@ -248,18 +247,13 @@ pub struct LandingMatrixArgs {
     pub fiskeridir_vessel_ids: Option<Vec<i64>>,
 }
 
-impl TryFrom<LandingMatrixQueryOutput> for kyogre_core::LandingMatrixQueryOutput {
-    type Error = Report<PostgresError>;
-
-    fn try_from(value: LandingMatrixQueryOutput) -> Result<Self, Self::Error> {
-        Ok(kyogre_core::LandingMatrixQueryOutput {
-            sum_living: value
-                .sum_living
-                .to_f64()
-                .ok_or_else(|| report!(PostgresError::DataConversion))?,
+impl From<LandingMatrixQueryOutput> for kyogre_core::LandingMatrixQueryOutput {
+    fn from(value: LandingMatrixQueryOutput) -> Self {
+        Self {
+            sum_living: value.sum_living as u64,
             x_index: value.x_index,
             y_index: value.y_index,
-        })
+        }
     }
 }
 

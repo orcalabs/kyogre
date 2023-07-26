@@ -1,6 +1,6 @@
 use crate::models::LandingMatrixQueryOutput;
 use crate::{error::PostgresError, models::LandingMatrixArgs, PostgresAdapter};
-use error_stack::{IntoReport, Report};
+use error_stack::IntoReport;
 use error_stack::{Result, ResultExt};
 use kyogre_core::{
     calculate_landing_sum_area_table, ActiveLandingFilter, LandingMatrixXFeature,
@@ -14,7 +14,7 @@ impl PostgresAdapter {
         args: LandingMatrixArgs,
         active_filter: ActiveLandingFilter,
         x_feature: LandingMatrixXFeature,
-    ) -> Result<Vec<f64>, PostgresError> {
+    ) -> Result<Vec<u64>, PostgresError> {
         let y_feature = if x_feature == active_filter {
             LandingMatrixYFeature::CatchLocation
         } else {
@@ -38,7 +38,7 @@ SELECT
         WHEN $2 = 3 THEN h.vessel_length_group
         WHEN $2 = 4 THEN h.catch_location_matrix_index
     END AS "y_index!",
-    COALESCE(SUM(living_weight), 0.0) AS "sum_living!"
+    COALESCE(SUM(living_weight::BIGINT), 0)::BIGINT AS "sum_living!"
 FROM
     landing_matrix h
 WHERE
@@ -95,11 +95,9 @@ GROUP BY
 
         let converted: Vec<kyogre_core::LandingMatrixQueryOutput> = data
             .into_iter()
-            .map(kyogre_core::LandingMatrixQueryOutput::try_from)
-            .collect::<std::result::Result<
-                Vec<kyogre_core::LandingMatrixQueryOutput>,
-                Report<PostgresError>,
-            >>()?;
+            .map(kyogre_core::LandingMatrixQueryOutput::from)
+            .collect();
+
         calculate_landing_sum_area_table(x_feature, y_feature, converted)
             .change_context(PostgresError::DataConversion)
     }
