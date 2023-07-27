@@ -10,7 +10,7 @@ use web_api::routes::v1::{
     fishing_facility::FishingFacilitiesParams,
     haul::{HaulsMatrixParams, HaulsParams},
     landing::{LandingMatrixParams, LandingsParams},
-    trip::TripsParameters,
+    trip::{TripsOfVesselParameters, TripsParameters},
     user::User,
     vms::VmsParameters,
 };
@@ -336,6 +336,7 @@ impl ApiClient {
         self.get(format!("trip_of_haul/{}", haul_id.0), &[], None)
             .await
     }
+
     pub async fn get_trip_of_landing(&self, landing_id: &LandingId) -> Response {
         self.get(
             format!("trip_of_landing/{}", landing_id.clone().into_inner()),
@@ -344,10 +345,11 @@ impl ApiClient {
         )
         .await
     }
+
     pub async fn get_trips_of_vessel(
         &self,
         id: FiskeridirVesselId,
-        params: TripsParameters,
+        params: TripsOfVesselParameters,
         token: Option<String>,
     ) -> Response {
         let mut parameters = Vec::new();
@@ -372,6 +374,99 @@ impl ApiClient {
 
         self.get(format!("trips/{}", id.0), &parameters, headers)
             .await
+    }
+
+    pub async fn get_trips(&self, params: TripsParameters, token: Option<String>) -> Response {
+        let mut parameters = Vec::new();
+
+        if let Some(limit) = params.limit {
+            parameters.push(("limit".to_string(), limit.to_string()))
+        }
+
+        if let Some(offset) = params.offset {
+            parameters.push(("offset".to_string(), offset.to_string()))
+        }
+
+        if let Some(ordering) = params.ordering {
+            parameters.push(("ordering".to_string(), ordering.to_string()))
+        }
+
+        if let Some(delivery_points) = params.delivery_points {
+            parameters.push((
+                "deliveryPoints".to_string(),
+                create_comma_separated_list(delivery_points),
+            ))
+        }
+
+        if let Some(start_date) = params.start_date {
+            parameters.push(("startDate".to_string(), start_date.to_string()))
+        }
+
+        if let Some(end_date) = params.end_date {
+            parameters.push(("endDate".to_string(), end_date.to_string()))
+        }
+
+        if let Some(min_weight) = params.min_weight {
+            parameters.push(("minDeight".to_string(), min_weight.to_string()))
+        }
+
+        if let Some(max_weight) = params.max_weight {
+            parameters.push(("maxWeight".to_string(), max_weight.to_string()))
+        }
+
+        if let Some(sorting) = params.sorting {
+            parameters.push(("sorting".to_string(), sorting.to_string()))
+        }
+
+        if let Some(gear_group_ids) = params.gear_group_ids {
+            parameters.push((
+                "gearGroupIds".to_string(),
+                create_comma_separated_list(
+                    gear_group_ids.into_iter().map(|i| i.0 as i32).collect(),
+                ),
+            ))
+        }
+
+        if let Some(species_group_ids) = params.species_group_ids {
+            parameters.push((
+                "speciesGroupIds".to_string(),
+                create_comma_separated_list(
+                    species_group_ids.into_iter().map(|i| i.0 as i32).collect(),
+                ),
+            ))
+        }
+
+        if let Some(vessel_length_groups) = params.vessel_length_groups {
+            parameters.push((
+                "vesselLengthGroups".to_string(),
+                create_comma_separated_list(
+                    vessel_length_groups
+                        .into_iter()
+                        .map(|i| i.0 as i32)
+                        .collect(),
+                ),
+            ))
+        }
+
+        if let Some(fiskeridir_vessel_ids) = params.fiskeridir_vessel_ids {
+            parameters.push((
+                "fiskeridirVesselIds".to_string(),
+                create_comma_separated_list(
+                    fiskeridir_vessel_ids
+                        .into_iter()
+                        .map(|i| i.0 as i32)
+                        .collect(),
+                ),
+            ))
+        }
+
+        let headers = token.map(|t| {
+            let mut headers = HeaderMap::new();
+            headers.insert("bw-token", t.try_into().unwrap());
+            headers
+        });
+
+        self.get("trips", &parameters, headers).await
     }
     pub async fn get_current_trip(
         &self,

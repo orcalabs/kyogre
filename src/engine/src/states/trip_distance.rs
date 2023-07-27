@@ -8,10 +8,10 @@ impl<L, T> From<StepWrapper<L, T, Pending>> for StepWrapper<L, T, TripDistance> 
     }
 }
 
-// TripDistance -> Pending
-impl<L, T> From<StepWrapper<L, T, TripDistance>> for StepWrapper<L, T, Pending> {
-    fn from(val: StepWrapper<L, T, TripDistance>) -> StepWrapper<L, T, Pending> {
-        val.inherit(Pending::default())
+// TripDistance -> UpdateDatabaseViews
+impl<L, T> From<StepWrapper<L, T, TripDistance>> for StepWrapper<L, T, UpdateDatabaseViews> {
+    fn from(val: StepWrapper<L, T, TripDistance>) -> StepWrapper<L, T, UpdateDatabaseViews> {
+        val.inherit(UpdateDatabaseViews)
     }
 }
 
@@ -29,7 +29,9 @@ where
             EngineDiscriminants::TripDistance.as_ref(),
         );
         self.do_step().await;
-        Engine::Pending(StepWrapper::<A, SharedState<B>, Pending>::from(self))
+        Engine::UpdateDatabaseViews(StepWrapper::<A, SharedState<B>, UpdateDatabaseViews>::from(
+            self,
+        ))
     }
 
     #[instrument(skip_all)]

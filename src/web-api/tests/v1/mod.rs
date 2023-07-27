@@ -1,6 +1,7 @@
 pub mod ais;
 pub mod ais_vms;
 pub mod barentswatch_helper;
+pub mod current_trip;
 pub mod fishing_facility;
 pub mod haul;
 pub mod hauls_matrix;
@@ -10,6 +11,7 @@ pub mod landing_matrix;
 pub mod species;
 pub mod test_client;
 pub mod trip;
+pub mod trip_of_haul;
 pub mod user;
 pub mod vessel;
 pub mod vessel_event;

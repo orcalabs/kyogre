@@ -215,6 +215,15 @@ impl PostgresAdapter {
 }
 
 #[async_trait]
+impl DatabaseViewRefresher for PostgresAdapter {
+    async fn refresh(&self) -> Result<(), UpdateError> {
+        self.refresh_trip_detailed_view()
+            .await
+            .change_context(UpdateError)
+    }
+}
+
+#[async_trait]
 impl AisMigratorDestination for PostgresAdapter {
     async fn migrate_ais_data(
         &self,
@@ -238,6 +247,18 @@ impl AisMigratorDestination for PostgresAdapter {
 
 #[async_trait]
 impl WebApiOutboundPort for PostgresAdapter {
+    fn detailed_trips_of_vessel(
+        &self,
+        id: FiskeridirVesselId,
+        pagination: Pagination<Trips>,
+        ordering: Ordering,
+        read_fishing_facility: bool,
+    ) -> Result<PinBoxStream<'_, TripDetailed, QueryError>, QueryError> {
+        let stream = self
+            .detailed_trips_of_vessel_impl(id, pagination, ordering, read_fishing_facility)
+            .change_context(QueryError)?;
+        Ok(convert_stream(stream).boxed())
+    }
     fn ais_positions(
         &self,
         mmsi: Mmsi,
@@ -305,15 +326,13 @@ impl WebApiOutboundPort for PostgresAdapter {
         )
     }
 
-    fn detailed_trips_of_vessel(
+    fn detailed_trips(
         &self,
-        id: FiskeridirVesselId,
-        pagination: Pagination<Trips>,
-        ordering: Ordering,
+        query: TripsQuery,
         read_fishing_facility: bool,
     ) -> Result<PinBoxStream<'_, TripDetailed, QueryError>, QueryError> {
         let stream = self
-            .detailed_trips_of_vessel_impl(id, pagination, ordering, read_fishing_facility)
+            .detailed_trips_impl(query, read_fishing_facility)
             .change_context(QueryError)?;
         Ok(convert_stream(stream).boxed())
     }

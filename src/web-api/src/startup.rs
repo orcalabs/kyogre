@@ -25,10 +25,6 @@ impl App {
 
         let postgres = PostgresAdapter::new(&settings.postgres).await.unwrap();
 
-        if settings.environment == Environment::Local {
-            postgres.do_migrations().await;
-        }
-
         let duck_db = match &settings.duck_db_api {
             None => None,
             Some(duckdb) => {
@@ -121,8 +117,9 @@ where
             )
             .route(
                 "/trips/{fiskeridir_vessel_id}",
-                web::get().to(routes::v1::trip::trips::<T>),
+                web::get().to(routes::v1::trip::trips_of_vessel::<T>),
             )
+            .route("/trips", web::get().to(routes::v1::trip::trips::<T>))
             .route(
                 "/trips/current/{fiskeridir_vessel_id}",
                 web::get().to(routes::v1::trip::current_trip::<T>),

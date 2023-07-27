@@ -92,3 +92,8 @@ pub trait HaulDistributorInbound: Send + Sync {
 pub trait TripDistancerInbound: Send + Sync {
     async fn add_output(&self, values: Vec<TripDistanceOutput>) -> Result<(), UpdateError>;
 }
+
+#[async_trait]
+pub trait DatabaseViewRefresher {
+    async fn refresh(&self) -> Result<(), UpdateError>;
+}

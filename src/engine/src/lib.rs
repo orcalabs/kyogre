@@ -35,6 +35,7 @@ pub trait Database:
     + TripDistancerOutbound
     + TripDistancerInbound
     + MatrixCacheVersion
+    + DatabaseViewRefresher
     + Send
     + Sync
     + 'static
@@ -54,6 +55,7 @@ impl<T> Database for T where
         + TripDistancerOutbound
         + TripDistancerInbound
         + MatrixCacheVersion
+        + DatabaseViewRefresher
         + 'static
 {
 }
@@ -70,6 +72,7 @@ pub enum Engine<A, B> {
     Benchmark(StepWrapper<A, B, Benchmark>),
     HaulDistribution(StepWrapper<A, B, HaulDistribution>),
     TripDistance(StepWrapper<A, B, TripDistance>),
+    UpdateDatabaseViews(StepWrapper<A, B, UpdateDatabaseViews>),
 }
 
 pub struct StepWrapper<A, B, C> {
@@ -144,6 +147,7 @@ where
             Engine::Benchmark(s) => s.run().await,
             Engine::HaulDistribution(s) => s.run().await,
             Engine::TripDistance(s) => s.run().await,
+            Engine::UpdateDatabaseViews(s) => s.run().await,
         }
     }
     fn is_exit_state(&self) -> bool {
@@ -160,6 +164,7 @@ where
             Engine::Benchmark(s) => &s.inner.transition_log,
             Engine::HaulDistribution(s) => &s.inner.transition_log,
             Engine::TripDistance(s) => &s.inner.transition_log,
+            Engine::UpdateDatabaseViews(s) => &s.inner.transition_log,
         }
     }
 
@@ -204,6 +209,7 @@ impl Config {
             | EngineDiscriminants::TripDistance
             | EngineDiscriminants::HaulDistribution
             | EngineDiscriminants::Benchmark
+            | EngineDiscriminants::UpdateDatabaseViews
             | EngineDiscriminants::Sleep
             | EngineDiscriminants::Trips
             | EngineDiscriminants::TripsPrecision => None,

@@ -271,6 +271,19 @@ impl From<kyogre_core::Haul> for Haul {
     }
 }
 
+impl PartialEq<Haul> for kyogre_core::Haul {
+    fn eq(&self, other: &Haul) -> bool {
+        let converted: Haul = self.clone().into();
+        converted.eq(other)
+    }
+}
+
+impl PartialEq<kyogre_core::Haul> for Haul {
+    fn eq(&self, other: &kyogre_core::Haul) -> bool {
+        other.eq(self)
+    }
+}
+
 impl From<kyogre_core::HaulCatch> for HaulCatch {
     fn from(v: kyogre_core::HaulCatch) -> Self {
         Self {

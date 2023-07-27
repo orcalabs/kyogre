@@ -50,6 +50,11 @@ pub trait WebApiOutboundPort {
         ordering: Ordering,
         read_fishing_facility: bool,
     ) -> Result<PinBoxStream<'_, TripDetailed, QueryError>, QueryError>;
+    fn detailed_trips(
+        &self,
+        query: TripsQuery,
+        read_fishing_facility: bool,
+    ) -> Result<PinBoxStream<'_, TripDetailed, QueryError>, QueryError>;
     async fn detailed_trip_of_haul(
         &self,
         haul_id: &HaulId,

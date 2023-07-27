@@ -1,0 +1,142 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    t.trip_id AS \"trip_id!\",\n    t.fiskeridir_vessel_id AS \"fiskeridir_vessel_id!\",\n    t.period AS \"period!\",\n    t.period_precision,\n    t.landing_coverage AS \"landing_coverage!\",\n    COALESCE(t.num_landings::BIGINT, 0) AS \"num_deliveries!\",\n    COALESCE(t.landing_total_living_weight, 0.0) AS \"total_living_weight!\",\n    COALESCE(t.landing_total_gross_weight, 0.0) AS \"total_gross_weight!\",\n    COALESCE(t.landing_total_product_weight, 0.0) AS \"total_product_weight!\",\n    COALESCE(t.delivery_point_ids, '{}') AS \"delivery_points!\",\n    COALESCE(t.landing_gear_ids, '{}') AS \"gear_ids!: Vec<Gear>\",\n    t.most_recent_landing AS latest_landing_timestamp,\n    COALESCE(t.landings::TEXT, '[]') AS \"catches!\",\n    t.start_port_id,\n    t.end_port_id,\n    t.trip_assembler_id AS \"trip_assembler_id!: TripAssemblerId\",\n    COALESCE(t.vessel_events, '[]')::TEXT AS \"vessel_events!\",\n    COALESCE(t.hauls, '[]')::TEXT AS \"hauls!\",\n    CASE\n        WHEN $1 THEN COALESCE(t.fishing_facilities, '[]')::TEXT\n        ELSE '[]'\n    END AS \"fishing_facilities!\"\nFROM\n    trips_detailed AS t\nWHERE\n    (\n        $2::BIGINT[] IS NULL\n        OR t.fiskeridir_vessel_id = ANY ($2)\n    )\n    AND (\n        $3::VARCHAR[] IS NULL\n        OR t.delivery_point_ids && $3::VARCHAR[]\n    )\n    AND (\n        $4::timestamptz IS NULL\n        OR t.start_timestamp >= $4\n    )\n    AND (\n        $5::timestamptz IS NULL\n        OR t.stop_timestamp <= $5\n    )\n    AND (\n        $6::DECIMAL IS NULL\n        OR t.landing_total_living_weight >= $6\n    )\n    AND (\n        $7::DECIMAL IS NULL\n        OR t.landing_total_living_weight <= $7\n    )\n    AND (\n        $8::INT[] IS NULL\n        OR t.landing_gear_group_ids && $8\n    )\n    AND (\n        $9::INT[] IS NULL\n        OR t.landing_species_group_ids && $9\n    )\n    AND (\n        $10::INT[] IS NULL\n        OR t.fiskeridir_length_group_id = ANY ($10)\n    )\nORDER BY\n    CASE\n        WHEN $11::INT = 1 THEN t.start_timestamp\n    END ASC,\n    CASE\n        WHEN $11::INT = 2 THEN t.stop_timestamp\n    END ASC,\n    CASE\n        WHEN $11::INT = 3 THEN t.landing_total_living_weight\n    END ASC,\n    CASE\n        WHEN $11::INT = 4 THEN t.start_timestamp\n    END DESC,\n    CASE\n        WHEN $11::INT = 5 THEN t.stop_timestamp\n    END DESC,\n    CASE\n        WHEN $11::INT = 6 THEN t.landing_total_living_weight\n    END DESC\nOFFSET\n    $12\nLIMIT\n    $13\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "trip_id!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "fiskeridir_vessel_id!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 2,
+        "name": "period!",
+        "type_info": "TstzRange"
+      },
+      {
+        "ordinal": 3,
+        "name": "period_precision",
+        "type_info": "TstzRange"
+      },
+      {
+        "ordinal": 4,
+        "name": "landing_coverage!",
+        "type_info": "TstzRange"
+      },
+      {
+        "ordinal": 5,
+        "name": "num_deliveries!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 6,
+        "name": "total_living_weight!",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 7,
+        "name": "total_gross_weight!",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 8,
+        "name": "total_product_weight!",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 9,
+        "name": "delivery_points!",
+        "type_info": "VarcharArray"
+      },
+      {
+        "ordinal": 10,
+        "name": "gear_ids!: Vec<Gear>",
+        "type_info": "Int4Array"
+      },
+      {
+        "ordinal": 11,
+        "name": "latest_landing_timestamp",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 12,
+        "name": "catches!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 13,
+        "name": "start_port_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 14,
+        "name": "end_port_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 15,
+        "name": "trip_assembler_id!: TripAssemblerId",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 16,
+        "name": "vessel_events!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 17,
+        "name": "hauls!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 18,
+        "name": "fishing_facilities!",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Bool",
+        "Int8Array",
+        "VarcharArray",
+        "Timestamptz",
+        "Timestamptz",
+        "Numeric",
+        "Numeric",
+        "Int4Array",
+        "Int4Array",
+        "Int4Array",
+        "Int4",
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      true,
+      null,
+      true,
+      true,
+      true,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "b62edac41c03d49273b3dd9e73d4e6c9e5b4ac0d470c7174c75b4007dbe5eb59"
+}

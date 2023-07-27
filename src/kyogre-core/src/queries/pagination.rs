@@ -3,8 +3,8 @@ pub struct Trips;
 #[derive(Debug, Clone)]
 pub struct FishingFacilities;
 
-const MAX_TRIPS_OF_VESSELS_LIMIT: u64 = 100;
-const DEFAULT_TRIPS_OF_VESSELS_LIMIT: u64 = 20;
+const MAX_TRIPS_LIMIT: u64 = 100;
+const DEFAULT_TRIPS_LIMIT: u64 = 20;
 
 const MAX_FISHING_FACILITIES_LIMIT: u64 = 100;
 const DEFAULT_FISHING_FACILITIES_LIMIT: u64 = 20;
@@ -23,14 +23,15 @@ macro_rules! impl_pagination {
                 Pagination::inner_new(limit, offset, $max, $default)
             }
         }
+        impl Default for Pagination<$type> {
+            fn default() -> Self {
+                Pagination::<$type>::new(Some($default), None)
+            }
+        }
     };
 }
 
-impl_pagination!(
-    Trips,
-    MAX_TRIPS_OF_VESSELS_LIMIT,
-    DEFAULT_TRIPS_OF_VESSELS_LIMIT
-);
+impl_pagination!(Trips, MAX_TRIPS_LIMIT, DEFAULT_TRIPS_LIMIT);
 impl_pagination!(
     FishingFacilities,
     MAX_FISHING_FACILITIES_LIMIT,
