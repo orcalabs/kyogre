@@ -1,4 +1,5 @@
 use ais_consumer::{settings::Settings, startup::App};
+use error_stack::{fmt::ColorMode, Report};
 use orca_core::{Environment, TracingOutput};
 use tracing::{event, span, Level};
 
@@ -10,9 +11,12 @@ async fn main() {
         Environment::Test | Environment::Local | Environment::Production | Environment::Staging => {
             TracingOutput::Local
         }
-        Environment::Development => TracingOutput::Honeycomb {
-            api_key: settings.honeycomb.clone().unwrap().api_key,
-        },
+        Environment::Development => {
+            Report::<()>::set_color_mode(ColorMode::None);
+            TracingOutput::Honeycomb {
+                api_key: settings.honeycomb.clone().unwrap().api_key,
+            }
+        }
     };
 
     orca_core::init_tracer(
