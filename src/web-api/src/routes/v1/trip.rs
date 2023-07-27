@@ -1,3 +1,4 @@
+use crate::routes::utils::{self, *};
 use futures::TryStreamExt;
 
 use crate::{
@@ -12,7 +13,8 @@ use actix_web::{
 };
 use chrono::{DateTime, Utc};
 use kyogre_core::{
-    Delivery, FiskeridirVesselId, HaulId, Ordering, Pagination, TripId, Trips, VesselEventType,
+    Delivery, FiskeridirVesselId, HaulId, Ordering, Pagination, TripId, TripSorting, Trips,
+    TripsQuery, VesselEventType,
 };
 use serde::{Deserialize, Serialize};
 use tracing::{event, Level};
@@ -20,9 +22,37 @@ use utoipa::{IntoParams, ToSchema};
 
 use super::{fishing_facility::FishingFacility, haul::Haul};
 
-#[derive(Debug, Deserialize, IntoParams, Default)]
+#[derive(Default, Debug, Deserialize, IntoParams)]
 #[serde(rename_all = "camelCase")]
 pub struct TripsParameters {
+    pub limit: Option<u64>,
+    pub offset: Option<u64>,
+    pub ordering: Option<Ordering>,
+    #[param(value_type = Option<String>, example = "RKAI,FKAI")]
+    #[serde(deserialize_with = "deserialize_string_list", default)]
+    pub delivery_points: Option<Vec<String>>,
+    pub start_date: Option<DateTime<Utc>>,
+    pub end_date: Option<DateTime<Utc>>,
+    pub min_weight: Option<f64>,
+    pub max_weight: Option<f64>,
+    pub sorting: Option<TripSorting>,
+    #[param(value_type = Option<String>, example = "2,5")]
+    #[serde(deserialize_with = "deserialize_string_list", default)]
+    pub gear_group_ids: Option<Vec<GearGroupId>>,
+    #[param(value_type = Option<String>, example = "201,302")]
+    #[serde(deserialize_with = "deserialize_string_list", default)]
+    pub species_group_ids: Option<Vec<SpeciesGroupId>>,
+    #[param(value_type = Option<String>, example = "1,3")]
+    #[serde(deserialize_with = "deserialize_string_list", default)]
+    pub vessel_length_groups: Option<Vec<utils::VesselLengthGroup>>,
+    #[param(value_type = Option<String>, example = "2000013801,2001015304")]
+    #[serde(deserialize_with = "deserialize_string_list", default)]
+    pub fiskeridir_vessel_ids: Option<Vec<FiskeridirVesselId>>,
+}
+
+#[derive(Debug, Deserialize, IntoParams, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct TripsOfVesselParameters {
     pub limit: Option<u64>,
     pub offset: Option<u64>,
     pub ordering: Option<Ordering>,
@@ -57,7 +87,6 @@ pub async fn trip_of_haul<T: Database + 'static>(
             ApiError::InternalServerError
         })
 }
-
 #[utoipa::path(
     get,
     path = "/trip_of_landing/{landing_id}",
@@ -95,18 +124,18 @@ pub async fn trip_of_landing<T: Database + 'static>(
 #[utoipa::path(
     get,
     path = "/trips/{fiskeridir_vessel_id}",
-    params(TripsParameters),
+    params(TripsOfVesselParameters),
     responses(
         (status = 200, description = "trips of the given vessel", body = [Trip]),
         (status = 500, description = "an internal error occured", body = ErrorResponse),
     )
 )]
 #[tracing::instrument(skip(db))]
-pub async fn trips<T: Database + 'static>(
+pub async fn trips_of_vessel<T: Database + 'static>(
     db: web::Data<T>,
     profile: Option<BwProfile>,
     fiskeridir_vessel_id: Path<u64>,
-    params: web::Query<TripsParameters>,
+    params: web::Query<TripsOfVesselParameters>,
 ) -> Result<HttpResponse, ApiError> {
     let read_fishing_facility = profile
         .map(|p| {
@@ -121,6 +150,61 @@ pub async fn trips<T: Database + 'static>(
             FiskeridirVesselId(fiskeridir_vessel_id.into_inner() as i64),
             Pagination::<Trips>::new(params.limit, params.offset),
             params.ordering.unwrap_or(Ordering::Asc),
+            read_fishing_facility,
+        )
+        .map_err(|e| {
+            event!(Level::ERROR, "failed to retrieve trips_of_vessel: {:?}", e);
+            ApiError::InternalServerError
+        })?
+        .map_ok(Trip::from)
+        .map_err(|e| {
+            event!(Level::ERROR, "failed to retrieve trips_of_vessel: {:?}", e);
+            ApiError::InternalServerError
+        })
+    }
+}
+
+#[utoipa::path(
+    get,
+    path = "/trips",
+    params(TripsParameters),
+    responses(
+        (status = 200, description = "trips matching the given parameters", body = [Trip]),
+        (status = 500, description = "an internal error occured", body = ErrorResponse),
+    )
+)]
+#[tracing::instrument(skip(db))]
+pub async fn trips<T: Database + 'static>(
+    db: web::Data<T>,
+    profile: Option<BwProfile>,
+    params: web::Query<TripsParameters>,
+) -> Result<HttpResponse, ApiError> {
+    let read_fishing_facility = profile
+        .map(|p| {
+            p.policies
+                .contains(&BwPolicy::BwReadExtendedFishingFacility)
+        })
+        .unwrap_or(false);
+    let params = params.into_inner();
+
+    match (params.start_date, params.end_date) {
+        (Some(start), Some(end)) => {
+            if start > end {
+                let err = ApiError::StartAfterEnd { start, end };
+                event!(Level::WARN, "{:?}", err);
+                Err(err)
+            } else {
+                Ok(())
+            }
+        }
+        _ => Ok(()),
+    }?;
+
+    let query = TripsQuery::from(params);
+
+    to_streaming_response! {
+        db.detailed_trips(
+            query,
             read_fishing_facility,
         )
         .map_err(|e| {
@@ -210,6 +294,31 @@ pub struct VesselEvent {
     pub event_type: VesselEventType,
     pub event_name: String,
     pub timestamp: DateTime<Utc>,
+}
+
+impl From<TripsParameters> for TripsQuery {
+    fn from(value: TripsParameters) -> Self {
+        TripsQuery {
+            pagination: Pagination::<Trips>::new(value.limit, value.offset),
+            ordering: value.ordering.unwrap_or_default(),
+            sorting: value.sorting.unwrap_or_default(),
+            delivery_points: value.delivery_points,
+            start_date: value.start_date,
+            end_date: value.end_date,
+            min_weight: value.min_weight,
+            max_weight: value.max_weight,
+            gear_group_ids: value
+                .gear_group_ids
+                .map(|v| v.into_iter().map(|g| g.0).collect()),
+            species_group_ids: value
+                .species_group_ids
+                .map(|v| v.into_iter().map(|g| g.0).collect()),
+            vessel_length_groups: value
+                .vessel_length_groups
+                .map(|v| v.into_iter().map(|g| g.0).collect()),
+            fiskeridir_vessel_ids: value.fiskeridir_vessel_ids,
+        }
+    }
 }
 
 impl From<kyogre_core::TripDetailed> for Trip {

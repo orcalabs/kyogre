@@ -132,6 +132,8 @@ impl TestHelper {
             .await
             .unwrap();
 
+        self.db.db.refresh().await.unwrap();
+
         match updates.pop().unwrap().outcome {
             PrecisionOutcome::Success {
                 new_period: new_range,
@@ -228,6 +230,8 @@ impl TestHelper {
                 .unwrap(),
         };
 
+        adapter.refresh().await.unwrap();
+
         let trips = self.db.all_detailed_trips_of_vessels(vessel_id).await;
 
         trips
@@ -273,7 +277,6 @@ where
     });
 
     let db_name = random::<u32>().to_string();
-    // let db_name = "test".to_string();
 
     let mut postgres = postgres_composition(
         DATABASE_PASSWORD,
@@ -282,8 +285,6 @@ where
         "latest",
     )
     .with_log_options(None);
-
-    // postgres.port_map(5432, 5400);
 
     postgres.static_container(StaticManagementPolicy::Dynamic);
 

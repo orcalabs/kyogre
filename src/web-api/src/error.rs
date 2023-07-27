@@ -1,9 +1,14 @@
 use actix_web::{body::BoxBody, http::StatusCode, HttpResponse, ResponseError};
+use chrono::{DateTime, Utc};
 use serde::Serialize;
 use utoipa::ToSchema;
 
 #[derive(Clone, Copy, Debug, Serialize, ToSchema)]
 pub enum ApiError {
+    StartAfterEnd {
+        start: DateTime<Utc>,
+        end: DateTime<Utc>,
+    },
     InvalidCallSign,
     InvalidDateRange,
     InternalServerError,
@@ -37,6 +42,9 @@ impl std::fmt::Display for ApiError {
             ApiError::MissingBwToken => f.write_str("barentswatch token must be provided"),
             ApiError::InvalidBwToken => f.write_str("an invalid barentswatch token was provided"),
             ApiError::InvalidLandingId => f.write_str("an invalid landing id was provided"),
+            ApiError::StartAfterEnd { start, end } => f.write_fmt(format_args!(
+                "start date: {start} cannot be after end date: {end}"
+            )),
         }
     }
 }
@@ -47,6 +55,7 @@ impl ResponseError for ApiError {
             ApiError::InvalidDateRange
             | ApiError::InvalidCallSign
             | ApiError::InvalidLandingId
+            | ApiError::StartAfterEnd { start: _, end: _ }
             | ApiError::MissingMmsiOrCallSign => StatusCode::BAD_REQUEST,
             ApiError::InternalServerError => StatusCode::INTERNAL_SERVER_ERROR,
             ApiError::Forbidden => StatusCode::FORBIDDEN,

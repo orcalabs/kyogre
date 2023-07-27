@@ -6,7 +6,7 @@ use fiskeridir_rs::{RegisterVesselEntityType, RegisterVesselOwner};
 use kyogre_core::{
     ActiveHaulsFilter, ActiveLandingFilter, Catch, Delivery, FishingFacilitiesSorting,
     FishingFacilityToolType, HaulsSorting, LandingsSorting, MatrixCacheOutbound, Ordering,
-    WebApiInboundPort, WebApiOutboundPort,
+    TripSorting, WebApiInboundPort, WebApiOutboundPort,
 };
 use postgres::PostgresAdapter;
 use routes::v1;
@@ -45,6 +45,7 @@ impl Database for PostgresAdapter {}
         v1::trip::trip_of_haul,
         v1::trip::trip_of_landing,
         v1::trip::trips,
+        v1::trip::trips_of_vessel,
         v1::trip::current_trip,
         v1::vms::vms_positions,
         v1::ais_vms::ais_vms_positions,
@@ -67,6 +68,7 @@ impl Database for PostgresAdapter {}
             FishingFacilitiesSorting,
             HaulsSorting,
             LandingsSorting,
+            TripSorting,
             error::ErrorResponse,
             error::ApiError,
             v1::ais::AisPosition,

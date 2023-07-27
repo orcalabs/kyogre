@@ -29,10 +29,7 @@ async fn test_trips_does_not_contain_duplicated_tra_events() {
             .generate_ers_trip(fiskeridir_vessel_id, &start, &end)
             .await;
 
-        let response = helper
-            .app
-            .get_trips_of_vessel(fiskeridir_vessel_id, TripsParameters::default(), None)
-            .await;
+        let response = helper.app.get_trips(TripsParameters::default(), None).await;
         assert_eq!(response.status(), StatusCode::OK);
 
         let mut trips: Vec<Trip> = response.json().await.unwrap();
@@ -75,10 +72,7 @@ async fn test_trips_does_not_contain_duplicated_dca_events() {
             .generate_ers_trip(fiskeridir_vessel_id, &start, &end)
             .await;
 
-        let response = helper
-            .app
-            .get_trips_of_vessel(fiskeridir_vessel_id, TripsParameters::default(), None)
-            .await;
+        let response = helper.app.get_trips(TripsParameters::default(), None).await;
         assert_eq!(response.status(), StatusCode::OK);
 
         let mut trips: Vec<Trip> = response.json().await.unwrap();

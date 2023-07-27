@@ -1,3 +1,4 @@
+use crate::UpdateDatabaseViews;
 use std::str::FromStr;
 
 use crate::{
@@ -202,6 +203,11 @@ where
             }
             EngineDiscriminants::TripDistance => {
                 Engine::TripDistance(StepWrapper::<A, SharedState<B>, TripDistance>::from(self))
+            }
+            EngineDiscriminants::UpdateDatabaseViews => {
+                Engine::UpdateDatabaseViews(
+                    StepWrapper::<A, SharedState<B>, UpdateDatabaseViews>::from(self),
+                )
             }
         }
     }
