@@ -395,6 +395,34 @@ WHERE
         Ok(version)
     }
 
+    fn postgres_data_source_version_tx(
+        &self,
+        tx: &Transaction<'_>,
+        source: DataSource,
+    ) -> Result<u64, DuckdbError> {
+        let version_command = format!(
+            "
+SELECT
+    version
+FROM
+    POSTGRES_SCAN ('{}', 'public', '{}')
+WHERE
+    duckdb_data_version_id = ?
+            ",
+            self.postgres_credentials, POSTGRES_DUCKDB_VERSION_TABLE
+        );
+
+        let version: u64 = tx
+            .query_row(
+                &version_command,
+                params![source.postgres_version_table_id()],
+                |row| row.get(0),
+            )
+            .into_report()
+            .change_context(DuckdbError::Query)?;
+        Ok(version)
+    }
+
     fn data_source_version(
         &self,
         conn: &PooledConnection<DuckdbConnectionManager>,
@@ -442,28 +470,46 @@ WHERE
     }
 
     fn add_data_versions(&self, tx: &Transaction<'_>) -> Result<(), DuckdbError> {
+        let postgres_haul_version = self.postgres_data_source_version_tx(tx, DataSource::Hauls)?;
+        let postgres_landing_version =
+            self.postgres_data_source_version_tx(tx, DataSource::Landings)?;
+
         tx.execute_batch(
             r#"
 CREATE TABLE
     data_versions ("version" INT NOT NULL, source VARCHAR PRIMARY KEY,);
-
-INSERT INTO
-    data_versions ("version", source)
-VALUES
-    (0, 'landings')
-ON CONFLICT (source)
-DO NOTHING;
-
-INSERT INTO
-    data_versions ("version", source)
-VALUES
-    (0, 'hauls')
-ON CONFLICT (source)
-DO NOTHING;
             "#,
         )
         .into_report()
-        .change_context(DuckdbError::Query)
+        .change_context(DuckdbError::Query)?;
+
+        tx.execute(
+            r#"
+INSERT INTO
+    data_versions ("version", source)
+VALUES
+    (?, 'landings')
+ON CONFLICT (source) DO NOTHING;
+            "#,
+            [postgres_landing_version],
+        )
+        .into_report()
+        .change_context(DuckdbError::Query)?;
+
+        tx.execute(
+            r#"
+INSERT INTO
+    data_versions ("version", source)
+VALUES
+    (?, 'hauls')
+ON CONFLICT (source) DO NOTHING;
+            "#,
+            [postgres_haul_version],
+        )
+        .into_report()
+        .change_context(DuckdbError::Query)?;
+
+        Ok(())
     }
 
     #[instrument(skip_all)]
