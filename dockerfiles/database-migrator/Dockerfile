@@ -3,9 +3,9 @@ FROM lukemathwalker/cargo-chef:latest-rust-1.71.0-buster AS chef
 WORKDIR /app
 
 FROM chef AS planner
-ADD dockerfiles/cargo-config /app/.cargo/config
 
 COPY src .
+COPY .cargo .cargo
 
 RUN cargo chef prepare --recipe-path recipe.json
 
