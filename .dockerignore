@@ -1,4 +1,4 @@
 *
 !src
-!dockerfiles/cargo-config
+!.cargo
 **/target

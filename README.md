@@ -75,13 +75,9 @@ The following build dependencies are required:
 ## Cloudsmith access
 
 To access the private Orca Labs packages you will need to be invited to the Orca
-Labs cloudsmith organization, then create two config files with the following
-commands:
+Labs cloudsmith organization, then add your credentials to your credentials helper:
 
 ```
-echo "[registries]
-orcalabs-orcastrator = { index = "https://dl.cloudsmith.io/basic/orcalabs/orcastrator/cargo/index.git" }" > ~/.cargo/config
-
 git config --global credential.helper store
 
 echo "https://USERNAME:API-KEY@dl.cloudsmith.io" > ~/.git-credentials
