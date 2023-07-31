@@ -4,7 +4,9 @@ use actix_web::http::StatusCode;
 use chrono::{DateTime, Utc};
 use enum_index::EnumIndex;
 use fiskeridir_rs::{ErsDca, GearGroup, SpeciesGroup, VesselLengthGroup};
-use kyogre_core::{haul_date_feature_matrix_index, HaulMatrixes, NUM_CATCH_LOCATIONS};
+use kyogre_core::{
+    haul_date_feature_matrix_index, CatchLocationId, HaulMatrixes, NUM_CATCH_LOCATIONS,
+};
 use kyogre_core::{ActiveHaulsFilter, FiskeridirVesselId, ScraperInboundPort};
 use web_api::routes::{
     utils::{self, GearGroupId, SpeciesGroupId},
@@ -292,6 +294,39 @@ async fn test_hauls_matrix_filters_by_fiskeridir_vessel_ids() {
         assert_eq!(response.status(), StatusCode::OK);
         let matrix: HaulsMatrix = response.json().await.unwrap();
         assert_haul_matrix_content(&matrix, filter, 30, vec![]);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_hauls_matrix_filters_by_catch_locations() {
+    test_with_cache(|helper| async move {
+        let filter = ActiveHaulsFilter::Date;
+
+        let mut ers1 = ErsDca::test_default(1, Some(1));
+        let mut ers2 = ErsDca::test_default(2, Some(2));
+
+        ers1.start_latitude = Some(67.125);
+        ers1.start_longitude = Some(13.5);
+        ers1.catch.species.living_weight = Some(10);
+
+        ers2.catch.species.living_weight = Some(20);
+        ers2.start_latitude = Some(67.5);
+        ers2.start_longitude = Some(43.5);
+
+        helper.db.db.add_ers_dca(vec![ers1, ers2]).await.unwrap();
+
+        let params = HaulsMatrixParams {
+            catch_locations: Some(vec![CatchLocationId::new(0, 5)]),
+            ..Default::default()
+        };
+
+        helper.refresh_cache().await;
+        let response = helper.app.get_hauls_matrix(params, filter).await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let matrix: HaulsMatrix = response.json().await.unwrap();
+        assert_haul_matrix_content(&matrix, filter, 10, vec![(HaulMatrixes::Date, 30)]);
     })
     .await;
 }

@@ -6,8 +6,8 @@ use chrono::{DateTime, Utc};
 use enum_index::EnumIndex;
 use fiskeridir_rs::{GearGroup, Landing, SpeciesGroup, VesselLengthGroup};
 use kyogre_core::{
-    landing_date_feature_matrix_index, ActiveLandingFilter, HaulMatrixes, LandingMatrixes,
-    NUM_CATCH_LOCATIONS,
+    landing_date_feature_matrix_index, ActiveLandingFilter, CatchLocationId, HaulMatrixes,
+    LandingMatrixes, NUM_CATCH_LOCATIONS,
 };
 use kyogre_core::{FiskeridirVesselId, ScraperInboundPort};
 use web_api::routes::utils::{self, GearGroupId, SpeciesGroupId};
@@ -44,6 +44,48 @@ async fn test_landing_matrix_returns_correct_sum_for_all_landings() {
         let matrix: LandingMatrix = response.json().await.unwrap();
 
         assert_landing_matrix_content(&matrix, filter, 60, vec![]);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_landing_matrix_filters_by_catch_locations() {
+    test_with_cache(|helper| async move {
+        let filter = ActiveLandingFilter::GearGroup;
+
+        let mut landing = Landing::test_default(1, None);
+        let mut landing2 = Landing::test_default(2, None);
+        let mut landing3 = Landing::test_default(3, None);
+
+        landing.catch_location.main_area_code = Some(9);
+        landing.catch_location.location_code = Some(32);
+        landing.product.living_weight = Some(20.0);
+        landing.landing_timestamp = Utc.with_ymd_and_hms(2001, 1, 1, 0, 0, 0).unwrap();
+
+        landing2.product.living_weight = Some(40.0);
+        landing2.landing_timestamp = Utc.with_ymd_and_hms(2001, 1, 1, 0, 0, 0).unwrap();
+        landing3.product.living_weight = Some(100.0);
+        landing3.landing_timestamp = Utc.with_ymd_and_hms(2001, 1, 1, 0, 0, 0).unwrap();
+
+        helper
+            .db
+            .db
+            .add_landings(vec![landing, landing2, landing3], 2023)
+            .await
+            .unwrap();
+
+        let params = LandingMatrixParams {
+            catch_locations: Some(vec![CatchLocationId::new(9, 32)]),
+            ..Default::default()
+        };
+
+        helper.refresh_cache().await;
+
+        let response = helper.app.get_landing_matrix(params, filter).await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let matrix: LandingMatrix = response.json().await.unwrap();
+        assert_landing_matrix_content(&matrix, filter, 20, vec![(LandingMatrixes::GearGroup, 160)]);
     })
     .await;
 }
