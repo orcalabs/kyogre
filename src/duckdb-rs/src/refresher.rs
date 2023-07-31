@@ -11,7 +11,7 @@ const POSTGRES_DUCKDB_VERSION_TABLE: &str = "duckdb_data_version";
 const HAULS_SCHEMA: &str = "CREATE TABLE
     hauls_matrix_cache (
         catch_location_matrix_index INT NOT NULL,
-        catch_location TEXT NOT NULL,
+        catch_location_id TEXT NOT NULL,
         matrix_month_bucket INT NOT NULL,
         vessel_length_group INT NOT NULL,
         fiskeridir_vessel_id INT,
@@ -516,7 +516,7 @@ FROM
 INSERT INTO
     hauls_matrix_cache (
         catch_location_matrix_index,
-        catch_location,
+        catch_location_id,
         matrix_month_bucket,
         vessel_length_group,
         fiskeridir_vessel_id,

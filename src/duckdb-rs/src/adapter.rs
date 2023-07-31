@@ -370,7 +370,7 @@ fn push_landing_where_statements(
                 filter.push_str(&format!("'{}',", c.as_ref()));
             }
             filter.pop();
-            query.push_str(&format!("catch_location = ANY ([{filter}]) ",));
+            query.push_str(&format!("catch_location_id = ANY ([{filter}]) ",));
         }
     }
     if let Some(gear_group_ids) = &params.gear_group_ids {
@@ -474,7 +474,7 @@ fn push_haul_where_statements(
                 filter.push_str(&format!("'{}',", c.as_ref()));
             }
             filter.pop();
-            query.push_str(&format!("catch_location = ANY ([{filter}]) ",));
+            query.push_str(&format!("catch_location_id = ANY ([{filter}]) ",));
         }
     }
     if let Some(gear_group_ids) = &params.gear_group_ids {
