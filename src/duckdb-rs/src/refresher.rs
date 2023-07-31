@@ -262,6 +262,10 @@ SELECT
             .into_report()
             .change_context(DuckdbError::Connection)?;
 
+        conn.execute("DELETE FROM landing_matrix_cache", [])
+            .into_report()
+            .change_context(DuckdbError::Query)?;
+
         conn.execute(
             r"
 LOAD postgres;
@@ -295,6 +299,10 @@ LOAD postgres;
             .get()
             .into_report()
             .change_context(DuckdbError::Connection)?;
+
+        conn.execute("DELETE FROM hauls_matrix_cache", [])
+            .into_report()
+            .change_context(DuckdbError::Query)?;
 
         conn.execute(
             r"
@@ -497,12 +505,7 @@ FROM
                     LANDING_SCHEMA, postgres_scan_command
                 )
             }
-            CreateMode::Refresh => {
-                format!(
-                    "DROP TABLE landing_matrix_cache;{};{};",
-                    LANDING_SCHEMA, postgres_scan_command
-                )
-            }
+            CreateMode::Refresh => postgres_scan_command,
         };
         tx.execute_batch(&queries)
             .into_report()
@@ -550,12 +553,7 @@ FROM
                     HAULS_SCHEMA, postgres_scan_command
                 )
             }
-            CreateMode::Refresh => {
-                format!(
-                    "DROP TABLE hauls_matrix_cache;{};{};",
-                    HAULS_SCHEMA, postgres_scan_command
-                )
-            }
+            CreateMode::Refresh => postgres_scan_command,
         };
         tx.execute_batch(&queries)
             .into_report()
