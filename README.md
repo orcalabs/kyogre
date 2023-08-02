@@ -12,6 +12,7 @@ The following build dependencies are required:
 - OpenSSL
 - protobuf
 - cargo
+- [mold](https://github.com/rui314/mold)
 
 ## Local deployment
 
@@ -75,7 +76,8 @@ The following build dependencies are required:
 ## Cloudsmith access
 
 To access the private Orca Labs packages you will need to be invited to the Orca
-Labs cloudsmith organization, then add your credentials to your credentials helper:
+Labs cloudsmith organization, then add your credentials to your credentials
+helper:
 
 ```
 git config --global credential.helper store
