@@ -5,7 +5,7 @@ WORKDIR /app
 FROM chef AS planner
 
 COPY src .
-COPY .cargo .cargo
+COPY .cargo/release.toml .cargo/config.toml
 
 RUN cargo chef prepare --recipe-path recipe.json
 
