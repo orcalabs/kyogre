@@ -2,12 +2,15 @@ use bigdecimal::BigDecimal;
 use chrono::{DateTime, NaiveDate, Utc};
 use error_stack::{Report, ResultExt};
 use kyogre_core::{FiskdirVesselNationalityGroup, FiskeridirVesselId};
+use unnest_insert::UnnestInsert;
 
 use crate::{
     error::PostgresError,
-    queries::{float_to_decimal, opt_float_to_decimal},
+    queries::{enum_to_i32, float_to_decimal, opt_float_to_decimal},
 };
 
+#[derive(UnnestInsert)]
+#[unnest_insert(table_name = "ers_arrivals", conflict = "message_id")]
 pub struct NewErsPor {
     pub message_id: i64,
     pub message_number: i32,
@@ -40,7 +43,8 @@ pub struct NewErsPor {
     pub vessel_name: Option<String>,
     pub vessel_name_ers: Option<String>,
     pub vessel_nationality_code: String,
-    pub vessel_nationality_group_id: FiskdirVesselNationalityGroup,
+    #[unnest_insert(sql_type = "INT", type_conversion = "enum_to_i32")]
+    pub fiskeridir_vessel_nationality_group_id: FiskdirVesselNationalityGroup,
     pub vessel_rebuilding_year: Option<i32>,
     pub vessel_registration_id: Option<String>,
     pub vessel_registration_id_ers: Option<String>,
@@ -48,6 +52,8 @@ pub struct NewErsPor {
     pub vessel_width: Option<BigDecimal>,
 }
 
+#[derive(UnnestInsert)]
+#[unnest_insert(table_name = "ers_arrival_catches")]
 pub struct NewErsPorCatch {
     pub message_id: i64,
     pub ers_quantum_type_id: Option<String>,
@@ -110,7 +116,10 @@ impl TryFrom<fiskeridir_rs::ErsPor> for NewErsPor {
             vessel_name: v.vessel_info.vessel_name,
             vessel_name_ers: v.vessel_info.vessel_name_ers,
             vessel_nationality_code: v.vessel_info.vessel_nationality_code.into_inner(),
-            vessel_nationality_group_id: v.vessel_info.vessel_nationality_group_code.into(),
+            fiskeridir_vessel_nationality_group_id: v
+                .vessel_info
+                .vessel_nationality_group_code
+                .into(),
             vessel_rebuilding_year: v.vessel_info.vessel_rebuilding_year.map(|v| v as i32),
             vessel_registration_id: v.vessel_info.vessel_registration_id,
             vessel_registration_id_ers: v.vessel_info.vessel_registration_id_ers,

@@ -510,11 +510,9 @@ impl ScraperInboundPort for PostgresAdapter {
         landings: Vec<fiskeridir_rs::Landing>,
         data_year: u32,
     ) -> Result<(), InsertError> {
-        let set = LandingSet::new(landings).change_context(InsertError)?;
+        let set = LandingSet::new(landings, data_year).change_context(InsertError)?;
 
-        self.add_landing_set(set, data_year)
-            .await
-            .change_context(InsertError)
+        self.add_landing_set(set).await.change_context(InsertError)
     }
     #[tracing::instrument(skip(self, existing_landing_ids))]
     async fn delete_removed_landings(

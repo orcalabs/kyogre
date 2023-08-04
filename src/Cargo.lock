@@ -1657,9 +1657,9 @@ dependencies = [
 
 [[package]]
 name = "fiskeridir-rs"
-version = "0.18.0"
+version = "0.18.1"
 source = "registry+https://dl.cloudsmith.io/basic/orcalabs/orcastrator/cargo/index.git"
-checksum = "dcddb16a5affefe196536567216349a0becaf16c315962b1973dbd941317b27b"
+checksum = "2a7a24681f83e21adc08dbbf96c2e42d39ecc528b0d2e1d372f9a70fd4770fe3"
 dependencies = [
  "bigdecimal",
  "chrono",
@@ -3519,6 +3519,7 @@ dependencies = [
  "strum 0.25.0",
  "tokio",
  "tracing",
+ "unnest_insert",
  "uuid",
  "wkt",
 ]
@@ -5607,6 +5608,28 @@ name = "unicode_categories"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39ec24b3121d976906ece63c9daad25b85969647682eee313cb5779fdd69e14e"
+
+[[package]]
+name = "unnest_insert"
+version = "0.1.0"
+source = "registry+https://dl.cloudsmith.io/basic/orcalabs/orcastrator/cargo/index.git"
+checksum = "27706507942e2a3b4602859990ae42dc7105ccb46ca80c0eff8c1d75452bcfd0"
+dependencies = [
+ "async-trait",
+ "sqlx 0.7.1",
+ "unnest_insert_derive",
+]
+
+[[package]]
+name = "unnest_insert_derive"
+version = "0.1.0"
+source = "registry+https://dl.cloudsmith.io/basic/orcalabs/orcastrator/cargo/index.git"
+checksum = "13a3fda568a91d17528df7e47296b4bfb556a582ee74bf790b744d3f78f08588"
+dependencies = [
+ "proc-macro2",
+ "quote 1.0.32",
+ "syn 2.0.28",
+]
 
 [[package]]
 name = "untrusted"

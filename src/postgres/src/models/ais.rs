@@ -5,8 +5,33 @@ use bigdecimal::{BigDecimal, ToPrimitive};
 use chrono::{DateTime, Utc};
 use error_stack::{IntoReport, Report, ResultExt};
 use kyogre_core::{Mmsi, NavigationStatus};
+use unnest_insert::UnnestInsert;
 
 use crate::error::{FromBigDecimalError, NavigationStatusError, PostgresError};
+
+#[derive(Debug, Clone, UnnestInsert)]
+#[unnest_insert(table_name = "ais_vessels", conflict = "mmsi")]
+pub struct NewAisVessel {
+    pub mmsi: i32,
+    #[unnest_insert(update)]
+    pub imo_number: Option<i32>,
+    #[unnest_insert(update)]
+    pub call_sign: Option<String>,
+    #[unnest_insert(update)]
+    pub name: Option<String>,
+    #[unnest_insert(update)]
+    pub ship_width: Option<i32>,
+    #[unnest_insert(update)]
+    pub ship_length: Option<i32>,
+    #[unnest_insert(update)]
+    pub ship_type: Option<i32>,
+    #[unnest_insert(update)]
+    pub eta: Option<DateTime<Utc>>,
+    #[unnest_insert(update)]
+    pub draught: Option<i32>,
+    #[unnest_insert(update)]
+    pub destination: Option<String>,
+}
 
 #[derive(Debug, Clone)]
 pub struct AisVesselMigrationProgress {
@@ -39,6 +64,23 @@ impl fmt::Display for AisClass {
         match self {
             AisClass::A => f.write_str("A"),
             AisClass::B => f.write_str("B"),
+        }
+    }
+}
+
+impl From<kyogre_core::NewAisStatic> for NewAisVessel {
+    fn from(v: kyogre_core::NewAisStatic) -> Self {
+        Self {
+            mmsi: v.mmsi.0,
+            imo_number: v.imo_number,
+            call_sign: v.call_sign,
+            name: v.name,
+            ship_width: v.ship_width,
+            ship_length: v.ship_length,
+            ship_type: v.ship_type,
+            eta: v.eta,
+            draught: v.draught,
+            destination: v.destination,
         }
     }
 }

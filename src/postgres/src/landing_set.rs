@@ -70,6 +70,7 @@ impl LandingSet {
 
     pub(crate) fn new<T: IntoIterator<Item = fiskeridir_rs::Landing>>(
         landings: T,
+        data_year: u32,
     ) -> Result<LandingSet, PostgresError> {
         let mut set = LandingSet::default();
         for l in landings.into_iter() {
@@ -78,14 +79,13 @@ impl LandingSet {
             set.add_species_fao(&l);
             set.add_species_fiskeridir(&l);
             set.add_delivery_point(&l);
-            set.add_catch_area(&l);
-            set.add_main_catch_area(&l);
+            set.add_catch_area(&l)?;
+            set.add_main_catch_area(&l)?;
             set.add_main_catch_area_fao(&l);
-            set.add_catch_area(&l);
             set.add_fishing_region(&l);
             set.add_municipality(&l);
             set.add_county(&l);
-            set.add_landing(&l)?;
+            set.add_landing(&l, data_year)?;
             set.add_landing_entry(l)?;
         }
         Ok(set)
@@ -131,12 +131,13 @@ impl LandingSet {
         }
     }
 
-    fn add_catch_area(&mut self, landing: &fiskeridir_rs::Landing) {
-        if let Some(catch_area) = NewCatchArea::from_landing(landing) {
+    fn add_catch_area(&mut self, landing: &fiskeridir_rs::Landing) -> Result<(), PostgresError> {
+        if let Some(catch_area) = NewCatchArea::from_landing(landing)? {
             self.catch_areas
                 .entry(catch_area.id as u32)
                 .or_insert(catch_area);
         }
+        Ok(())
     }
 
     fn add_main_catch_area_fao(&mut self, landing: &fiskeridir_rs::Landing) {
@@ -145,24 +146,27 @@ impl LandingSet {
         }
     }
 
-    fn add_main_catch_area(&mut self, landing: &fiskeridir_rs::Landing) {
-        if let Some(id) = landing.catch_location.main_area_code {
+    fn add_main_catch_area(
+        &mut self,
+        landing: &fiskeridir_rs::Landing,
+    ) -> Result<(), PostgresError> {
+        if let Some(catch_area) = NewCatchMainArea::from_landing(landing)? {
             self.catch_main_areas
-                .entry(id)
-                .or_insert_with(|| NewCatchMainArea {
-                    id: id as i32,
-                    name: landing.catch_location.main_area.clone(),
-                    latitude: landing.catch_location.main_area_latitude,
-                    longitude: landing.catch_location.main_area_longitude,
-                });
+                .entry(catch_area.id as u32)
+                .or_insert(catch_area);
         }
+        Ok(())
     }
 
-    fn add_landing(&mut self, landing: &fiskeridir_rs::Landing) -> Result<(), PostgresError> {
+    fn add_landing(
+        &mut self,
+        landing: &fiskeridir_rs::Landing,
+        data_year: u32,
+    ) -> Result<(), PostgresError> {
         if self.landings.contains_key(&landing.id) {
             Ok(())
         } else {
-            let new_landing = NewLanding::try_from(landing.clone())?;
+            let new_landing = NewLanding::from_fiskeridir_landing(landing.clone(), data_year)?;
             self.landings.insert(landing.id.clone(), new_landing);
             Ok(())
         }

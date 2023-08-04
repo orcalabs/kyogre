@@ -1,10 +1,18 @@
-use crate::{error::PostgresError, queries::opt_decimal_to_float};
+use crate::{
+    error::PostgresError,
+    queries::{
+        enum_to_i32, float_to_decimal, opt_decimal_to_float, opt_enum_to_i32, opt_float_to_decimal,
+    },
+};
 use bigdecimal::BigDecimal;
 use chrono::{DateTime, Utc};
 use error_stack::{IntoReport, Report, ResultExt};
-use fiskeridir_rs::{CallSign, GearGroup, VesselLengthGroup};
-use kyogre_core::{FiskeridirVesselId, Mmsi, TripAssemblerId, VesselBenchmarkId};
+use fiskeridir_rs::{CallSign, GearGroup, VesselLengthGroup, VesselType};
+use kyogre_core::{
+    FiskeridirVesselId, FiskeridirVesselSource, Mmsi, TripAssemblerId, VesselBenchmarkId,
+};
 use serde::Deserialize;
+use unnest_insert::UnnestInsert;
 
 #[derive(Debug, Clone)]
 pub struct AisVessel {
@@ -16,6 +24,132 @@ pub struct AisVessel {
     pub ship_width: Option<i32>,
     pub eta: Option<DateTime<Utc>>,
     pub destination: Option<String>,
+}
+
+#[derive(Debug, Clone, UnnestInsert)]
+#[unnest_insert(table_name = "fiskeridir_vessels", conflict = "fiskeridir_vessel_id")]
+pub struct NewFiskeridirVessel {
+    pub fiskeridir_vessel_id: Option<i64>,
+    pub call_sign: Option<String>,
+    pub registration_id: Option<String>,
+    pub name: Option<String>,
+    pub length: Option<BigDecimal>,
+    pub building_year: Option<i32>,
+    pub engine_power: Option<i32>,
+    pub engine_building_year: Option<i32>,
+    #[unnest_insert(sql_type = "INT", type_conversion = "opt_enum_to_i32")]
+    pub fiskeridir_vessel_type_id: Option<VesselType>,
+    pub norwegian_municipality_id: Option<i32>,
+    pub norwegian_county_id: Option<i32>,
+    pub fiskeridir_nation_group_id: Option<String>,
+    pub nation_id: String,
+    pub gross_tonnage_1969: Option<i32>,
+    pub gross_tonnage_other: Option<i32>,
+    pub rebuilding_year: Option<i32>,
+    #[unnest_insert(sql_type = "INT", type_conversion = "enum_to_i32")]
+    pub fiskeridir_length_group_id: VesselLengthGroup,
+}
+
+#[derive(Debug, Clone, UnnestInsert)]
+#[unnest_insert(table_name = "fiskeridir_vessels", conflict = "fiskeridir_vessel_id")]
+pub struct NewRegisterVessel {
+    pub fiskeridir_vessel_id: i64,
+    #[unnest_insert(update)]
+    pub norwegian_municipality_id: i32,
+    #[unnest_insert(update)]
+    pub call_sign: Option<String>,
+    #[unnest_insert(update)]
+    pub name: String,
+    #[unnest_insert(update)]
+    pub registration_id: String,
+    #[unnest_insert(update)]
+    pub length: BigDecimal,
+    #[unnest_insert(update)]
+    pub width: Option<BigDecimal>,
+    #[unnest_insert(update)]
+    pub engine_power: Option<i32>,
+    #[unnest_insert(update)]
+    pub imo_number: Option<i64>,
+    #[unnest_insert(update, sql_type = "JSON")]
+    pub owners: serde_json::Value,
+    #[unnest_insert(update, sql_type = "INT", type_conversion = "enum_to_i32")]
+    pub fiskeridir_vessel_source_id: FiskeridirVesselSource,
+}
+
+#[derive(Debug, Clone, UnnestInsert)]
+#[unnest_insert(
+    table_name = "vessel_benchmark_outputs",
+    conflict = "fiskeridir_vessel_id,vessel_benchmark_id"
+)]
+pub struct VesselBenchmarkOutput {
+    pub fiskeridir_vessel_id: i64,
+    #[unnest_insert(sql_type = "INT", type_conversion = "enum_to_i32")]
+    pub vessel_benchmark_id: VesselBenchmarkId,
+    #[unnest_insert(update)]
+    pub output: BigDecimal,
+}
+
+impl TryFrom<fiskeridir_rs::Vessel> for NewFiskeridirVessel {
+    type Error = Report<PostgresError>;
+
+    fn try_from(v: fiskeridir_rs::Vessel) -> Result<Self, Self::Error> {
+        Ok(Self {
+            fiskeridir_vessel_id: v.id,
+            call_sign: v.call_sign.map(|c| c.into_inner()),
+            registration_id: v.registration_id,
+            name: v.name,
+            length: opt_float_to_decimal(v.length).change_context(PostgresError::DataConversion)?,
+            building_year: v.building_year.map(|x| x as i32),
+            engine_power: v.engine_power.map(|x| x as i32),
+            engine_building_year: v.engine_building_year.map(|x| x as i32),
+            fiskeridir_vessel_type_id: v.type_code,
+            norwegian_municipality_id: v.municipality_code.map(|x| x as i32),
+            norwegian_county_id: v.county_code.map(|x| x as i32),
+            fiskeridir_nation_group_id: v.nation_group,
+            nation_id: v.nationality_code.alpha3().to_string(),
+            gross_tonnage_1969: v.gross_tonnage_1969.map(|x| x as i32),
+            gross_tonnage_other: v.gross_tonnage_other.map(|x| x as i32),
+            rebuilding_year: v.rebuilding_year.map(|x| x as i32),
+            fiskeridir_length_group_id: v.length_group_code,
+        })
+    }
+}
+
+impl TryFrom<fiskeridir_rs::RegisterVessel> for NewRegisterVessel {
+    type Error = Report<PostgresError>;
+
+    fn try_from(v: fiskeridir_rs::RegisterVessel) -> Result<Self, Self::Error> {
+        Ok(Self {
+            fiskeridir_vessel_id: v.id,
+            norwegian_municipality_id: v.municipality_code,
+            call_sign: v.radio_call_sign.map(|c| c.into_inner()),
+            name: v.name,
+            registration_id: v.registration_mark,
+            length: float_to_decimal(v.length).change_context(PostgresError::DataConversion)?,
+            width: opt_float_to_decimal(v.width).change_context(PostgresError::DataConversion)?,
+            engine_power: v.engine_power,
+            imo_number: v.imo_number,
+            owners: serde_json::to_value(&v.owners)
+                .into_report()
+                .change_context(PostgresError::DataConversion)
+                .attach_printable_lazy(|| {
+                    format!("could not serialize vessel owners: {:?}", v.owners)
+                })?,
+            fiskeridir_vessel_source_id: FiskeridirVesselSource::FiskeridirVesselRegister,
+        })
+    }
+}
+
+impl TryFrom<kyogre_core::VesselBenchmarkOutput> for VesselBenchmarkOutput {
+    type Error = Report<PostgresError>;
+
+    fn try_from(v: kyogre_core::VesselBenchmarkOutput) -> Result<Self, Self::Error> {
+        Ok(Self {
+            fiskeridir_vessel_id: v.vessel_id.0,
+            vessel_benchmark_id: v.benchmark_id,
+            output: float_to_decimal(v.value).change_context(PostgresError::DataConversion)?,
+        })
+    }
 }
 
 impl TryFrom<AisVessel> for kyogre_core::AisVessel {

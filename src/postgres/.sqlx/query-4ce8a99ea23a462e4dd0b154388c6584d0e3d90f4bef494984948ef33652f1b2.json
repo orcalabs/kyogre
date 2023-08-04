@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO\n    species (\n    species_id,name\n   )\nSELECT\n    *\nFROM\n    UNNEST(\n        $1::INT[],$2::TEXT[]\n    )\n        ON CONFLICT (species_id) DO UPDATE SET name = COALESCE(species.name, EXCLUDED.name)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4Array",
+        "TextArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "4ce8a99ea23a462e4dd0b154388c6584d0e3d90f4bef494984948ef33652f1b2"
+}

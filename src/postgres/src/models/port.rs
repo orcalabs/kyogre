@@ -4,14 +4,17 @@ use error_stack::{report, Report, Result, ResultExt};
 use jurisdiction::Jurisdiction;
 use serde::Deserialize;
 use std::str::FromStr;
+use unnest_insert::UnnestInsert;
 
 use crate::{
     error::{PortCoordinateError, PostgresError},
     queries::decimal_to_float,
 };
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, UnnestInsert)]
+#[unnest_insert(table_name = "ports", conflict = "port_id")]
 pub struct NewPort {
+    #[unnest_insert(field_name = "port_id")]
     pub id: String,
     pub name: Option<String>,
     pub nationality: String,

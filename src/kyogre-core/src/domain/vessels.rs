@@ -3,7 +3,7 @@ use std::fmt;
 use crate::{AisVessel, Mmsi, TripAssemblerId};
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::{CallSign, GearGroup, RegisterVesselOwner, VesselLengthGroup};
-use num_derive::FromPrimitive;
+use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::FromPrimitive;
 use serde::{de::Visitor, Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
@@ -91,6 +91,12 @@ pub enum VesselBenchmarkId {
     WeightPerHour = 1,
 }
 
+impl From<VesselBenchmarkId> for i32 {
+    fn from(value: VesselBenchmarkId) -> Self {
+        value as i32
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct VesselBenchmarkOutput {
     pub vessel_id: FiskeridirVesselId,
@@ -135,6 +141,7 @@ impl Vessel {
     Copy,
     Clone,
     PartialEq,
+    ToPrimitive,
     FromPrimitive,
     Eq,
     Serialize_repr,
@@ -171,6 +178,12 @@ pub enum FiskeridirVesselSource {
     FiskeridirVesselRegister = 2,
 }
 
+impl From<FiskeridirVesselSource> for i32 {
+    fn from(value: FiskeridirVesselSource) -> Self {
+        value as i32
+    }
+}
+
 impl VesselEventType {
     pub fn name(&self) -> &'static str {
         match self {
@@ -180,6 +193,12 @@ impl VesselEventType {
             VesselEventType::ErsDep => "ers_dep",
             VesselEventType::ErsPor => "ers_por",
         }
+    }
+}
+
+impl From<FiskdirVesselNationalityGroup> for i32 {
+    fn from(value: FiskdirVesselNationalityGroup) -> Self {
+        value as i32
     }
 }
 

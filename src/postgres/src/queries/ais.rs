@@ -4,10 +4,11 @@ use bigdecimal::{BigDecimal, FromPrimitive};
 use chrono::{DateTime, Utc};
 use futures::{Stream, TryStreamExt};
 use kyogre_core::{AisVesselMigrate, DateRange, Mmsi, NewAisPosition, NewAisStatic};
+use unnest_insert::UnnestInsert;
 
 use crate::{
     error::{BigDecimalError, PostgresError},
-    models::{AisClass, AisPosition},
+    models::{AisClass, AisPosition, NewAisVessel},
     PostgresAdapter,
 };
 use error_stack::{report, IntoReport, Result, ResultExt};
@@ -368,97 +369,13 @@ WHERE
         &self,
         vessels: &HashMap<Mmsi, NewAisStatic>,
     ) -> Result<(), PostgresError> {
-        let mut mmsis = Vec::with_capacity(vessels.len());
-        let mut imo_number = Vec::with_capacity(vessels.len());
-        let mut call_sign = Vec::with_capacity(vessels.len());
-        let mut name = Vec::with_capacity(vessels.len());
-        let mut ship_width = Vec::with_capacity(vessels.len());
-        let mut ship_length = Vec::with_capacity(vessels.len());
-        let mut ship_type = Vec::with_capacity(vessels.len());
-        let mut eta = Vec::with_capacity(vessels.len());
-        let mut draught = Vec::with_capacity(vessels.len());
-        let mut destination = Vec::with_capacity(vessels.len());
+        let vessels = vessels.values().cloned().map(NewAisVessel::from).collect();
 
-        vessels.values().for_each(|v| {
-            mmsis.push(v.mmsi.0);
-            imo_number.push(v.imo_number);
-            call_sign.push(v.call_sign.clone());
-            name.push(v.name.clone());
-            ship_width.push(v.ship_width);
-            ship_length.push(v.ship_length);
-            ship_type.push(v.ship_type);
-            eta.push(v.eta);
-            draught.push(v.draught);
-            destination.push(v.destination.clone());
-        });
-
-        let mut tx = self.begin().await?;
-
-        sqlx::query!(
-            r#"
-INSERT INTO
-    ais_vessels (
-        mmsi,
-        imo_number,
-        call_sign,
-        NAME,
-        ship_width,
-        ship_length,
-        ship_type,
-        eta,
-        draught,
-        destination
-    )
-SELECT
-    *
-FROM
-    UNNEST(
-        $1::INT[],
-        $2::INT[],
-        $3::VARCHAR[],
-        $4::VARCHAR[],
-        $5::INT[],
-        $6::INT[],
-        $7::INT[],
-        $8::timestamptz[],
-        $9::INT[],
-        $10::VARCHAR[]
-    )
-ON CONFLICT (mmsi) DO
-UPDATE
-SET
-    imo_number = excluded.imo_number,
-    call_sign = excluded.call_sign,
-    NAME = excluded.name,
-    ship_width = excluded.ship_width,
-    ship_length = excluded.ship_length,
-    ship_type = excluded.ship_type,
-    eta = excluded.eta,
-    draught = excluded.draught,
-    destination = excluded.destination
-            "#,
-            &mmsis,
-            &imo_number as _,
-            &call_sign as _,
-            &name as _,
-            &ship_width as _,
-            &ship_length as _,
-            &ship_type as _,
-            &eta as _,
-            &draught as _,
-            &destination as _,
-        )
-        .execute(&mut *tx)
-        .await
-        .into_report()
-        .change_context(PostgresError::Query)?;
-
-        tx.commit()
+        NewAisVessel::unnest_insert(vessels, &self.pool)
             .await
             .into_report()
-            .change_context(PostgresError::Transaction)?;
-
-        Ok(())
+            .change_context(PostgresError::Query)
+            .map(|_| ())
     }
 
     pub(crate) async fn add_ais_migration_data(

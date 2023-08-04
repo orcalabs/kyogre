@@ -1,22 +1,32 @@
 use error_stack::Report;
+use unnest_insert::UnnestInsert;
 
 use crate::error::PostgresError;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, UnnestInsert)]
+#[unnest_insert(table_name = "species", conflict = "species_id")]
 pub struct Species {
+    #[unnest_insert(field_name = "species_id")]
     pub id: i32,
+    #[unnest_insert(update_coalesce)]
     pub name: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, UnnestInsert)]
+#[unnest_insert(table_name = "species_fao", conflict = "species_fao_id")]
 pub struct SpeciesFao {
+    #[unnest_insert(field_name = "species_fao_id")]
     pub id: String,
+    #[unnest_insert(update_coalesce)]
     pub name: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, UnnestInsert)]
+#[unnest_insert(table_name = "species_fiskeridir", conflict = "species_fiskeridir_id")]
 pub struct SpeciesFiskeridir {
+    #[unnest_insert(field_name = "species_fiskeridir_id")]
     pub id: i32,
+    #[unnest_insert(update_coalesce)]
     pub name: Option<String>,
 }
 

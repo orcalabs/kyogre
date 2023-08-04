@@ -2,13 +2,20 @@ use bigdecimal::BigDecimal;
 use chrono::{DateTime, NaiveDate, Utc};
 use error_stack::{report, Report, ResultExt};
 use kyogre_core::FiskdirVesselNationalityGroup;
+use unnest_insert::UnnestInsert;
 
 use crate::{
     error::PostgresError,
-    queries::{float_to_decimal, opt_float_to_decimal, opt_timestamp_from_date_and_time},
+    queries::{
+        enum_to_i32, float_to_decimal, opt_float_to_decimal, opt_timestamp_from_date_and_time,
+    },
 };
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, UnnestInsert)]
+#[unnest_insert(
+    table_name = "ers_dca",
+    conflict = "message_id,start_timestamp,stop_timestamp"
+)]
 pub struct NewErsDca {
     pub message_id: i64,
     pub message_number: i32,
@@ -71,7 +78,8 @@ pub struct NewErsDca {
     pub vessel_name: Option<String>,
     pub vessel_name_ers: Option<String>,
     pub vessel_nationality_code: String,
-    pub vessel_nationality_group_id: FiskdirVesselNationalityGroup,
+    #[unnest_insert(sql_type = "INT", type_conversion = "enum_to_i32")]
+    pub fiskeridir_vessel_nationality_group_id: FiskdirVesselNationalityGroup,
     pub vessel_rebuilding_year: Option<i32>,
     pub vessel_registration_id: Option<String>,
     pub vessel_registration_id_ers: Option<String>,
@@ -81,7 +89,8 @@ pub struct NewErsDca {
     pub majority_species_fiskeridir_id: Option<i32>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, UnnestInsert)]
+#[unnest_insert(table_name = "ers_dca_other", conflict = "message_id")]
 pub struct NewErsDcaOther {
     pub message_id: i64,
     pub message_number: i32,
@@ -115,7 +124,8 @@ pub struct NewErsDcaOther {
     pub vessel_name: Option<String>,
     pub vessel_name_ers: Option<String>,
     pub vessel_nationality_code: String,
-    pub vessel_nationality_group_id: FiskdirVesselNationalityGroup,
+    #[unnest_insert(sql_type = "INT", type_conversion = "enum_to_i32")]
+    pub fiskeridir_vessel_nationality_group_id: FiskdirVesselNationalityGroup,
     pub vessel_rebuilding_year: Option<i32>,
     pub vessel_registration_id: Option<String>,
     pub vessel_registration_id_ers: Option<String>,
@@ -123,7 +133,11 @@ pub struct NewErsDcaOther {
     pub vessel_width: Option<BigDecimal>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, UnnestInsert)]
+#[unnest_insert(
+    table_name = "ers_dca_catches",
+    conflict = "message_id,start_timestamp,stop_timestamp,species_fao_id"
+)]
 pub struct NewErsDcaCatch {
     pub message_id: i64,
     pub start_timestamp: DateTime<Utc>,
@@ -136,7 +150,11 @@ pub struct NewErsDcaCatch {
     pub species_main_group_id: i32,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, UnnestInsert)]
+#[unnest_insert(
+    table_name = "ers_dca_whale_catches",
+    conflict = "message_id,start_timestamp,stop_timestamp,whale_grenade_number"
+)]
 pub struct NewErsDcaWhaleCatch {
     pub message_id: i64,
     pub start_timestamp: DateTime<Utc>,
@@ -239,7 +257,10 @@ impl TryFrom<fiskeridir_rs::ErsDca> for NewErsDca {
             vessel_name: v.vessel_info.vessel_name,
             vessel_name_ers: v.vessel_info.vessel_name_ers,
             vessel_nationality_code: v.vessel_info.vessel_nationality_code.into_inner(),
-            vessel_nationality_group_id: v.vessel_info.vessel_nationality_group_code.into(),
+            fiskeridir_vessel_nationality_group_id: v
+                .vessel_info
+                .vessel_nationality_group_code
+                .into(),
             vessel_rebuilding_year: v.vessel_info.vessel_rebuilding_year.map(|v| v as i32),
             vessel_registration_id: v.vessel_info.vessel_registration_id,
             vessel_registration_id_ers: v.vessel_info.vessel_registration_id_ers,
@@ -296,7 +317,10 @@ impl TryFrom<fiskeridir_rs::ErsDca> for NewErsDcaOther {
             vessel_name: v.vessel_info.vessel_name,
             vessel_name_ers: v.vessel_info.vessel_name_ers,
             vessel_nationality_code: v.vessel_info.vessel_nationality_code.into_inner(),
-            vessel_nationality_group_id: v.vessel_info.vessel_nationality_group_code.into(),
+            fiskeridir_vessel_nationality_group_id: v
+                .vessel_info
+                .vessel_nationality_group_code
+                .into(),
             vessel_rebuilding_year: v.vessel_info.vessel_rebuilding_year.map(|v| v as i32),
             vessel_registration_id: v.vessel_info.vessel_registration_id,
             vessel_registration_id_ers: v.vessel_info.vessel_registration_id_ers,

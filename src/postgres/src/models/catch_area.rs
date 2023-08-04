@@ -1,26 +1,48 @@
-#[derive(Debug, Clone, PartialEq)]
+use bigdecimal::BigDecimal;
+use error_stack::{Report, ResultExt};
+use unnest_insert::UnnestInsert;
+
+use crate::{error::PostgresError, queries::opt_float_to_decimal};
+
+#[derive(Debug, Clone, PartialEq, UnnestInsert)]
+#[unnest_insert(table_name = "catch_areas", conflict = "catch_area_id")]
 pub struct NewCatchArea {
+    #[unnest_insert(field_name = "catch_area_id")]
     pub id: i32,
-    pub longitude: Option<f64>,
-    pub latitude: Option<f64>,
+    #[unnest_insert(update_coalesce)]
+    pub longitude: Option<BigDecimal>,
+    #[unnest_insert(update_coalesce)]
+    pub latitude: Option<BigDecimal>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, UnnestInsert)]
+#[unnest_insert(table_name = "catch_main_areas", conflict = "catch_main_area_id")]
 pub struct NewCatchMainArea {
+    #[unnest_insert(field_name = "catch_main_area_id")]
     pub id: i32,
+    #[unnest_insert(update_coalesce)]
     pub name: Option<String>,
-    pub longitude: Option<f64>,
-    pub latitude: Option<f64>,
+    #[unnest_insert(update_coalesce)]
+    pub longitude: Option<BigDecimal>,
+    #[unnest_insert(update_coalesce)]
+    pub latitude: Option<BigDecimal>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, UnnestInsert)]
+#[unnest_insert(table_name = "area_groupings", conflict = "area_grouping_id")]
 pub struct NewAreaGrouping {
+    #[unnest_insert(field_name = "area_grouping_id")]
     pub id: String,
     pub name: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, UnnestInsert)]
+#[unnest_insert(
+    table_name = "catch_main_area_fao",
+    conflict = "catch_main_area_fao_id"
+)]
 pub struct NewCatchMainAreaFao {
+    #[unnest_insert(field_name = "catch_main_area_fao_id")]
     pub id: i32,
     pub name: Option<String>,
 }
@@ -43,12 +65,42 @@ impl NewAreaGrouping {
 }
 
 impl NewCatchArea {
-    pub fn from_landing(landing: &fiskeridir_rs::Landing) -> Option<NewCatchArea> {
-        landing.catch_location.location_code.map(|id| NewCatchArea {
-            id: id as i32,
-            latitude: landing.catch_location.location_latitude,
-            longitude: landing.catch_location.location_longitude,
-        })
+    pub fn from_landing(
+        landing: &fiskeridir_rs::Landing,
+    ) -> Result<Option<NewCatchArea>, Report<PostgresError>> {
+        landing
+            .catch_location
+            .location_code
+            .map(|id| {
+                Ok(NewCatchArea {
+                    id: id as i32,
+                    latitude: opt_float_to_decimal(landing.catch_location.location_latitude)
+                        .change_context(PostgresError::DataConversion)?,
+                    longitude: opt_float_to_decimal(landing.catch_location.location_longitude)
+                        .change_context(PostgresError::DataConversion)?,
+                })
+            })
+            .transpose()
+    }
+}
+impl NewCatchMainArea {
+    pub fn from_landing(
+        landing: &fiskeridir_rs::Landing,
+    ) -> Result<Option<Self>, Report<PostgresError>> {
+        landing
+            .catch_location
+            .main_area_code
+            .map(|id| {
+                Ok(Self {
+                    id: id as i32,
+                    name: landing.catch_location.main_area.clone(),
+                    latitude: opt_float_to_decimal(landing.catch_location.main_area_latitude)
+                        .change_context(PostgresError::DataConversion)?,
+                    longitude: opt_float_to_decimal(landing.catch_location.main_area_longitude)
+                        .change_context(PostgresError::DataConversion)?,
+                })
+            })
+            .transpose()
     }
 }
 

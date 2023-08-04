@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO\n    gear_fao (\n    gear_fao_id,name\n   )\nSELECT\n    *\nFROM\n    UNNEST(\n        $1::TEXT[],$2::TEXT[]\n    )\n        ON CONFLICT (gear_fao_id) DO UPDATE SET name = COALESCE(gear_fao.name, EXCLUDED.name)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "TextArray",
+        "TextArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "40a34ff81612bead893c7398267cf690c894eca68e591aaaacf2a635f969d768"
+}
