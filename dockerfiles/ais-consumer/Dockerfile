@@ -35,4 +35,4 @@ COPY --from=builder /app/target/release/ais-consumer .
 COPY src/ais-consumer/config config
 COPY src/ais-consumer/shoreline.json.gz .
 
-CMD ["./ais-consumer"]
+ENTRYPOINT ["./ais-consumer"]

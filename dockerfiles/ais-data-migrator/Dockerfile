@@ -34,4 +34,4 @@ COPY --from=builder /app/target/release/ais-data-migrator .
 
 COPY src/ais-data-migrator/config config
 
-CMD ["./ais-data-migrator"]
+ENTRYPOINT ["./ais-data-migrator"]
