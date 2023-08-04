@@ -16,7 +16,7 @@ jobs:
     uses: orcalabs/github-actions/.github/workflows/rust_verify.yml@master
     secrets: inherit
     with:
-      dependencies: protobuf-compiler mold clang
+      dependencies: protobuf-compiler
       image-build-command: docker build -f dockerfiles/test-db/Dockerfile -t ghcr.io/orcalabs/kyogre/test-postgres .
       check-sqlx: true
       postgres-version: postgis/postgis:14-3.3-alpine

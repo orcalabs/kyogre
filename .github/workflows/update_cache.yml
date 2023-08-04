@@ -13,7 +13,7 @@ jobs:
     uses: orcalabs/github-actions/.github/workflows/rust_build_cache.yml@master
     secrets: inherit
     with:
-      dependencies: protobuf-compiler mold clang
+      dependencies: protobuf-compiler
       src-dir: src
       build-sqlx-cache: true
       postgres-version: postgis/postgis:14-3.3-alpine
