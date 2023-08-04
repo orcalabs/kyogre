@@ -28,7 +28,7 @@ COPY src .
 RUN --mount=type=secret,id=git-credentials,target=~/.git-credentials,required=true \
     cargo build --release --bin duckdb-rs
 
-FROM gcr.io/distroless/cc:debug
+FROM gcr.io/distroless/cc
 
 COPY src/duckdb-rs/config config
 

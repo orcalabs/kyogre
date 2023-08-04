@@ -34,4 +34,4 @@ COPY --from=builder /app/target/release/database-migrator .
 
 COPY src/database-migrator/config config
 
-CMD ["./database-migrator"]
+ENTRYPOINT ["./database-migrator"]

@@ -34,4 +34,4 @@ COPY --from=builder /app/target/release/engine .
 
 COPY src/engine/config config
 
-CMD ["./engine"]
+ENTRYPOINT ["./engine"]
