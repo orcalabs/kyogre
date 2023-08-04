@@ -1,17 +1,18 @@
 use crate::*;
 use error_stack::Result;
+use orca_statemachine::Pending;
 use tracing::{event, instrument, Level};
 use trip_assembler::TripAssemblerError;
 
 // Trips -> TripsPrecision
-impl<L, T> From<StepWrapper<L, T, Trips>> for StepWrapper<L, T, TripsPrecision> {
+impl<L: TransitionLog, T> From<StepWrapper<L, T, Trips>> for StepWrapper<L, T, TripsPrecision> {
     fn from(val: StepWrapper<L, T, Trips>) -> StepWrapper<L, T, TripsPrecision> {
         val.inherit(TripsPrecision)
     }
 }
 
 // Pending -> Trips
-impl<L, T> From<StepWrapper<L, T, Pending>> for StepWrapper<L, T, Trips> {
+impl<L: TransitionLog, T> From<StepWrapper<L, T, Pending>> for StepWrapper<L, T, Trips> {
     fn from(val: StepWrapper<L, T, Pending>) -> StepWrapper<L, T, Trips> {
         val.inherit(Trips)
     }
@@ -20,10 +21,7 @@ impl<L, T> From<StepWrapper<L, T, Pending>> for StepWrapper<L, T, Trips> {
 #[derive(Default)]
 pub struct Trips;
 
-impl<A, B> StepWrapper<A, SharedState<B>, Trips>
-where
-    B: Database,
-{
+impl<A: TransitionLog, B: Database> StepWrapper<A, SharedState<B>, Trips> {
     #[instrument(name = "trips_state", skip_all, fields(app.engine_state))]
     pub async fn run(self) -> Engine<A, SharedState<B>> {
         tracing::Span::current().record("app.engine_state", EngineDiscriminants::Trips.as_ref());

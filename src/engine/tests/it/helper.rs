@@ -1,15 +1,14 @@
 use dockertest::{DockerTest, Source, StartPolicy, StaticManagementPolicy};
-use engine::states::{Pending, Scrape, Sleep, Trips, TripsPrecision};
+use engine::states::{Scrape, Sleep, Trips, TripsPrecision};
 use engine::*;
 use futures::Future;
 use orca_core::{
     compositions::postgres_composition, Environment, LogLevel, PsqlLogStatements, PsqlSettings,
 };
-use orca_statemachine::{Machine, Schedule, Transition, TransitionLog};
+use orca_statemachine::{Machine, Pending, Schedule};
 use postgres::{PostgresAdapter, TestDb};
 use rand::random;
 use std::panic;
-use std::str::FromStr;
 use std::sync::Once;
 use tracing_subscriber::FmtSubscriber;
 
@@ -37,17 +36,13 @@ impl TestHelper {
             scrape_schedule: Schedule::Disabled,
         };
     }
-    pub async fn run_step(&self, state: EngineDiscriminants) -> EngineDiscriminants {
+    pub async fn run_step(&self, state: EngineDiscriminants) {
         let app = App::build(&self.settings).await;
-        let (to, from) = match &state {
+        let engine = match &state {
             EngineDiscriminants::Trips => {
                 let step =
                     StepWrapper::initial(app.transition_log.clone(), app.shared_state, Trips);
-                let engine = Engine::Trips(step);
-                let from = engine.current_state_name();
-                let engine = engine.step().await;
-                let to = engine.current_state_name();
-                (to, from)
+                Engine::Trips(step)
             }
             EngineDiscriminants::Pending => {
                 let step = StepWrapper::initial(
@@ -55,11 +50,7 @@ impl TestHelper {
                     app.shared_state,
                     Pending::default(),
                 );
-                let engine = Engine::Pending(step);
-                let from = engine.current_state_name();
-                let engine = engine.step().await;
-                let to = engine.current_state_name();
-                (to, from)
+                Engine::Pending(step)
             }
             EngineDiscriminants::Sleep => {
                 let step = StepWrapper::initial(
@@ -67,20 +58,12 @@ impl TestHelper {
                     app.shared_state,
                     Sleep::default(),
                 );
-                let engine = Engine::Sleep(step);
-                let from = engine.current_state_name();
-                let engine = engine.step().await;
-                let to = engine.current_state_name();
-                (to, from)
+                Engine::Sleep(step)
             }
             EngineDiscriminants::Scrape => {
                 let step =
                     StepWrapper::initial(app.transition_log.clone(), app.shared_state, Scrape);
-                let engine = Engine::Scrape(step);
-                let from = engine.current_state_name();
-                let engine = engine.step().await;
-                let to = engine.current_state_name();
-                (to, from)
+                Engine::Scrape(step)
             }
             EngineDiscriminants::TripsPrecision => {
                 let step = StepWrapper::initial(
@@ -88,20 +71,12 @@ impl TestHelper {
                     app.shared_state,
                     TripsPrecision,
                 );
-                let engine = Engine::TripsPrecision(step);
-                let from = engine.current_state_name();
-                let engine = engine.step().await;
-                let to = engine.current_state_name();
-                (to, from)
+                Engine::TripsPrecision(step)
             }
             EngineDiscriminants::Benchmark => {
                 let step =
                     StepWrapper::initial(app.transition_log.clone(), app.shared_state, Benchmark);
-                let engine = Engine::Benchmark(step);
-                let from = engine.current_state_name();
-                let engine = engine.step().await;
-                let to = engine.current_state_name();
-                (to, from)
+                Engine::Benchmark(step)
             }
             EngineDiscriminants::HaulDistribution => {
                 let step = StepWrapper::initial(
@@ -109,11 +84,7 @@ impl TestHelper {
                     app.shared_state,
                     HaulDistribution,
                 );
-                let engine = Engine::HaulDistribution(step);
-                let from = engine.current_state_name();
-                let engine = engine.step().await;
-                let to = engine.current_state_name();
-                (to, from)
+                Engine::HaulDistribution(step)
             }
             EngineDiscriminants::TripDistance => {
                 let step = StepWrapper::initial(
@@ -121,11 +92,7 @@ impl TestHelper {
                     app.shared_state,
                     TripDistance,
                 );
-                let engine = Engine::TripDistance(step);
-                let from = engine.current_state_name();
-                let engine = engine.step().await;
-                let to = engine.current_state_name();
-                (to, from)
+                Engine::TripDistance(step)
             }
             EngineDiscriminants::UpdateDatabaseViews => {
                 let step = StepWrapper::initial(
@@ -133,26 +100,11 @@ impl TestHelper {
                     app.shared_state,
                     UpdateDatabaseViews,
                 );
-                let engine = Engine::UpdateDatabaseViews(step);
-                let from = engine.current_state_name();
-                let engine = engine.step().await;
-                let to = engine.current_state_name();
-                (to, from)
+                Engine::UpdateDatabaseViews(step)
             }
         };
-        let current = EngineDiscriminants::from_str(&to).unwrap();
 
-        let transition = Transition {
-            date: chrono::offset::Utc::now(),
-            to,
-            from,
-        };
-        app.transition_log
-            .add_transition(&transition)
-            .await
-            .unwrap();
-
-        current
+        Machine::run_single(engine, &app.transition_log).await;
     }
 }
 
@@ -222,7 +174,7 @@ where
                 db: PostgresAdapter::new(&db_settings).await.unwrap(),
             };
 
-            test(TestHelper { settings, db }).await;
+            test(TestHelper { db, settings }).await;
 
             test_db.drop_db(&db_name).await;
         })
