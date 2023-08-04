@@ -1,15 +1,18 @@
 use crate::*;
+use orca_statemachine::Pending;
 use tracing::{event, instrument, Level};
 
 // Pending -> HaulDistribution
-impl<L, T> From<StepWrapper<L, T, Pending>> for StepWrapper<L, T, HaulDistribution> {
+impl<L: TransitionLog, T> From<StepWrapper<L, T, Pending>> for StepWrapper<L, T, HaulDistribution> {
     fn from(val: StepWrapper<L, T, Pending>) -> StepWrapper<L, T, HaulDistribution> {
         val.inherit(HaulDistribution)
     }
 }
 
 // HaulDistribution -> TripDistance
-impl<L, T> From<StepWrapper<L, T, HaulDistribution>> for StepWrapper<L, T, TripDistance> {
+impl<L: TransitionLog, T> From<StepWrapper<L, T, HaulDistribution>>
+    for StepWrapper<L, T, TripDistance>
+{
     fn from(val: StepWrapper<L, T, HaulDistribution>) -> StepWrapper<L, T, TripDistance> {
         val.inherit(TripDistance)
     }
@@ -18,10 +21,7 @@ impl<L, T> From<StepWrapper<L, T, HaulDistribution>> for StepWrapper<L, T, TripD
 #[derive(Default)]
 pub struct HaulDistribution;
 
-impl<A, B> StepWrapper<A, SharedState<B>, HaulDistribution>
-where
-    B: Database,
-{
+impl<A: TransitionLog, B: Database> StepWrapper<A, SharedState<B>, HaulDistribution> {
     #[instrument(name = "haul_distribution_state", skip_all, fields(app.engine_state))]
     pub async fn run(self) -> Engine<A, SharedState<B>> {
         tracing::Span::current().record(

@@ -1457,7 +1457,7 @@ dependencies = [
  "kyogre-core",
  "num-traits",
  "orca-core",
- "orca-statemachine",
+ "orca-statemachine 0.39.0",
  "postgres",
  "prost",
  "r2d2",
@@ -1520,7 +1520,7 @@ dependencies = [
  "haul-distributor",
  "kyogre-core",
  "orca-core",
- "orca-statemachine",
+ "orca-statemachine 0.40.0",
  "postgres",
  "rand 0.8.5",
  "scraper",
@@ -3175,7 +3175,23 @@ dependencies = [
  "humantime-serde",
  "orca-core",
  "serde",
+ "tracing",
+]
+
+[[package]]
+name = "orca-statemachine"
+version = "0.40.0"
+source = "registry+https://dl.cloudsmith.io/basic/orcalabs/orcastrator/cargo/index.git"
+checksum = "2ecb7ea2a113215387e8ee4e46aff047da65454cf832cb52bfec11d9e838b73f"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "error-stack 0.2.4",
+ "humantime-serde",
+ "orca-core",
+ "serde",
  "sqlx 0.6.3",
+ "tokio",
  "tracing",
 ]
 
@@ -5844,7 +5860,7 @@ dependencies = [
  "num-traits",
  "once_cell",
  "orca-core",
- "orca-statemachine",
+ "orca-statemachine 0.39.0",
  "postgres",
  "rand 0.8.5",
  "reqwest",

@@ -15,9 +15,10 @@ haul-distributor = { path = "../haul-distributor" }
 trip-distancer = { path = "../trip-distancer" }
 
 
-orca-statemachine = { version = "0.39.0", registry = "orcalabs-orcastrator", features = [
+orca-statemachine = { version = "0.40.0", registry = "orcalabs-orcastrator", features = [
     "psql-adapter",
 ] }
+
 orca-core = { workspace = true, features = ["telemetry"] }
 fiskeridir-rs = { workspace = true }
 

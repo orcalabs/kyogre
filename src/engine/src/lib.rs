@@ -4,11 +4,12 @@
 use async_trait::async_trait;
 use haul_distributor::*;
 use kyogre_core::*;
-use orca_statemachine::{Machine, Schedule, Step, TransitionLog};
+use orca_statemachine::{Machine, Schedule, State, Step, TransitionLog};
 use scraper::Scraper;
 use serde::Deserialize;
-use states::{Pending, Scrape, Sleep, Trips, TripsPrecision};
-use strum_macros::{AsRefStr, EnumDiscriminants, EnumIter, EnumString};
+use states::{Scrape, Sleep, Trips, TripsPrecision};
+use std::str::FromStr;
+use strum_macros::{AsRefStr, EnumDiscriminants, EnumIter, EnumString, IntoStaticStr};
 use trip_assembler::TripAssembler;
 use trip_distancer::*;
 use vessel_benchmark::*;
@@ -62,9 +63,9 @@ impl<T> Database for T where
 impl<T> TripProcessor for T where T: TripAssembler + 'static {}
 
 #[derive(EnumDiscriminants)]
-#[strum_discriminants(derive(AsRefStr, EnumString, EnumIter))]
+#[strum_discriminants(derive(AsRefStr, EnumString, EnumIter, IntoStaticStr))]
 pub enum Engine<A, B> {
-    Pending(StepWrapper<A, B, Pending>),
+    Pending(StepWrapper<A, B, orca_statemachine::Pending>),
     Sleep(StepWrapper<A, B, Sleep>),
     Scrape(StepWrapper<A, B, Scrape>),
     Trips(StepWrapper<A, B, Trips>),
@@ -85,7 +86,7 @@ pub struct Config {
 }
 
 pub struct SharedState<A> {
-    config: Config,
+    pub config: Config,
     database: A,
     scraper: Scraper,
     trip_processors: Vec<Box<dyn TripProcessor>>,
@@ -94,7 +95,19 @@ pub struct SharedState<A> {
     trip_distancers: Vec<Box<dyn TripDistancer>>,
 }
 
-impl<A, B, C> StepWrapper<A, B, C> {
+impl State for EngineDiscriminants {
+    fn name(&self) -> &'static str {
+        self.into()
+    }
+    fn from_name(name: String) -> Self {
+        EngineDiscriminants::from_str(&name).unwrap()
+    }
+}
+
+impl<A, B, C> StepWrapper<A, B, C>
+where
+    A: TransitionLog,
+{
     pub fn initial(log: A, shared_state: B, state: C) -> StepWrapper<A, B, C> {
         StepWrapper {
             inner: Step::initial(state, shared_state, log),
@@ -130,13 +143,11 @@ impl<A, B, C> StepWrapper<A, SharedState<B>, C> {
 }
 
 #[async_trait]
-impl<A, B> Machine<A> for Engine<A, SharedState<B>>
+impl<A, B> Machine<A, EngineDiscriminants> for Engine<A, SharedState<B>>
 where
     A: TransitionLog + Send + Sync + 'static,
     B: Database,
 {
-    type SharedState = SharedState<B>;
-
     async fn step(self) -> Self {
         match self {
             Engine::Pending(s) => s.run().await,
@@ -150,30 +161,10 @@ where
             Engine::UpdateDatabaseViews(s) => s.run().await,
         }
     }
-    fn is_exit_state(&self) -> bool {
-        false
-    }
 
-    fn transition_log(&self) -> &A {
-        match self {
-            Engine::Pending(s) => &s.inner.transition_log,
-            Engine::Sleep(s) => &s.inner.transition_log,
-            Engine::Scrape(s) => &s.inner.transition_log,
-            Engine::Trips(s) => &s.inner.transition_log,
-            Engine::TripsPrecision(s) => &s.inner.transition_log,
-            Engine::Benchmark(s) => &s.inner.transition_log,
-            Engine::HaulDistribution(s) => &s.inner.transition_log,
-            Engine::TripDistance(s) => &s.inner.transition_log,
-            Engine::UpdateDatabaseViews(s) => &s.inner.transition_log,
-        }
-    }
-
-    fn initial(shared_state: SharedState<B>, log: A) -> Self {
-        Engine::Pending(StepWrapper::initialize(shared_state, log))
-    }
-
-    fn current_state_name(&self) -> String {
-        EngineDiscriminants::from(self).as_ref().to_string()
+    fn current_state_name(&self) -> &'static str {
+        let discriminant: EngineDiscriminants = self.into();
+        discriminant.name()
     }
 }
 

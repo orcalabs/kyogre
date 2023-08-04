@@ -1,15 +1,18 @@
 use crate::*;
+use orca_statemachine::Pending;
 use tracing::{event, instrument, Level};
 
 // Pending -> Benchmark
-impl<L, T> From<StepWrapper<L, T, Pending>> for StepWrapper<L, T, Benchmark> {
+impl<L: TransitionLog, T> From<StepWrapper<L, T, Pending>> for StepWrapper<L, T, Benchmark> {
     fn from(val: StepWrapper<L, T, Pending>) -> StepWrapper<L, T, Benchmark> {
         val.inherit(Benchmark)
     }
 }
 
 // Benchmark -> HaulDistribution
-impl<L, T> From<StepWrapper<L, T, Benchmark>> for StepWrapper<L, T, HaulDistribution> {
+impl<L: TransitionLog, T> From<StepWrapper<L, T, Benchmark>>
+    for StepWrapper<L, T, HaulDistribution>
+{
     fn from(val: StepWrapper<L, T, Benchmark>) -> StepWrapper<L, T, HaulDistribution> {
         val.inherit(HaulDistribution)
     }
@@ -18,10 +21,7 @@ impl<L, T> From<StepWrapper<L, T, Benchmark>> for StepWrapper<L, T, HaulDistribu
 #[derive(Default)]
 pub struct Benchmark;
 
-impl<A, B> StepWrapper<A, SharedState<B>, Benchmark>
-where
-    B: Database,
-{
+impl<A: TransitionLog, B: Database> StepWrapper<A, SharedState<B>, Benchmark> {
     #[instrument(name = "benchmark_state", skip_all, fields(app.engine_state))]
     pub async fn run(self) -> Engine<A, SharedState<B>> {
         tracing::Span::current()

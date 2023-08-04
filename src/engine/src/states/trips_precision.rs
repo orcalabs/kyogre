@@ -1,18 +1,19 @@
 use crate::*;
 use error_stack::{Result, ResultExt};
 use kyogre_core::Vessel;
+use orca_statemachine::Pending;
 use tracing::{event, instrument, Level};
 use trip_assembler::TripPrecisionError;
 
 // TripsPrecision -> Benchmark
-impl<L, T> From<StepWrapper<L, T, TripsPrecision>> for StepWrapper<L, T, Benchmark> {
+impl<L: TransitionLog, T> From<StepWrapper<L, T, TripsPrecision>> for StepWrapper<L, T, Benchmark> {
     fn from(val: StepWrapper<L, T, TripsPrecision>) -> StepWrapper<L, T, Benchmark> {
         val.inherit(Benchmark)
     }
 }
 
 // Pending -> TripsPrecision
-impl<L, T> From<StepWrapper<L, T, Pending>> for StepWrapper<L, T, TripsPrecision> {
+impl<L: TransitionLog, T> From<StepWrapper<L, T, Pending>> for StepWrapper<L, T, TripsPrecision> {
     fn from(val: StepWrapper<L, T, Pending>) -> StepWrapper<L, T, TripsPrecision> {
         val.inherit(TripsPrecision)
     }
@@ -21,10 +22,7 @@ impl<L, T> From<StepWrapper<L, T, Pending>> for StepWrapper<L, T, TripsPrecision
 #[derive(Default)]
 pub struct TripsPrecision;
 
-impl<A, B> StepWrapper<A, SharedState<B>, TripsPrecision>
-where
-    B: Database,
-{
+impl<A: TransitionLog, B: Database> StepWrapper<A, SharedState<B>, TripsPrecision> {
     #[instrument(name = "trips_precision_state", skip_all)]
     pub async fn run(self) -> Engine<A, SharedState<B>> {
         tracing::Span::current().record(
