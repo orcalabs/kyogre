@@ -12,7 +12,6 @@ The following build dependencies are required:
 - OpenSSL
 - protobuf
 - cargo
-- [mold](https://github.com/rui314/mold)
 
 ## Local deployment
 
