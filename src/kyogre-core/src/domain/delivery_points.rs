@@ -58,3 +58,15 @@ pub enum DeliveryPointSourceId {
     /// Manual insertion or modification from us.
     Manual = 5,
 }
+
+impl From<DeliveryPointType> for i32 {
+    fn from(value: DeliveryPointType) -> Self {
+        value as i32
+    }
+}
+
+impl From<DeliveryPointSourceId> for i32 {
+    fn from(value: DeliveryPointSourceId) -> Self {
+        value as i32
+    }
+}

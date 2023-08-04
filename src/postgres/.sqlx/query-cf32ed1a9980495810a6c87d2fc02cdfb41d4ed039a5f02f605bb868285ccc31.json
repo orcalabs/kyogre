@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO\n    catch_areas (\n    catch_area_id,longitude,latitude\n   )\nSELECT\n    *\nFROM\n    UNNEST(\n        $1::INT[],$2::DECIMAL[],$3::DECIMAL[]\n    )\n        ON CONFLICT (catch_area_id) DO UPDATE SET longitude = COALESCE(catch_areas.longitude, EXCLUDED.longitude),latitude = COALESCE(catch_areas.latitude, EXCLUDED.latitude)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4Array",
+        "NumericArray",
+        "NumericArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "cf32ed1a9980495810a6c87d2fc02cdfb41d4ed039a5f02f605bb868285ccc31"
+}

@@ -1,6 +1,11 @@
-#[derive(Debug, Clone, PartialEq, Eq)]
+use unnest_insert::UnnestInsert;
+
+#[derive(Debug, Clone, PartialEq, Eq, UnnestInsert)]
+#[unnest_insert(table_name = "gear_fao", conflict = "gear_fao_id")]
 pub struct NewGearFao {
+    #[unnest_insert(field_name = "gear_fao_id")]
     pub id: String,
+    #[unnest_insert(update_coalesce)]
     pub name: Option<String>,
 }
 
@@ -10,9 +15,12 @@ pub struct NewGearFiskeridir {
     pub name: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, UnnestInsert)]
+#[unnest_insert(table_name = "gear_problems", conflict = "gear_problem_id")]
 pub struct NewGearProblem {
+    #[unnest_insert(field_name = "gear_problem_id")]
     pub id: i32,
+    #[unnest_insert(update_coalesce)]
     pub name: Option<String>,
 }
 

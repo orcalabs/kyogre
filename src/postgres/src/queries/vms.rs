@@ -1,11 +1,15 @@
 use std::collections::HashSet;
 
-use super::{float_to_decimal, opt_float_to_decimal};
-use crate::{error::PostgresError, models::VmsPosition, PostgresAdapter};
+use crate::{
+    error::PostgresError,
+    models::{NewVmsPosition, VmsPosition},
+    PostgresAdapter,
+};
 use error_stack::{report, IntoReport, Result, ResultExt};
 use fiskeridir_rs::CallSign;
 use futures::{Stream, TryStreamExt};
 use kyogre_core::DateRange;
+use unnest_insert::UnnestInsert;
 
 impl PostgresAdapter {
     pub(crate) fn vms_positions_impl(
@@ -47,50 +51,27 @@ ORDER BY
         &self,
         vms: Vec<fiskeridir_rs::Vms>,
     ) -> Result<(), PostgresError> {
-        let len = vms.len();
-        let mut call_sign = Vec::with_capacity(len);
-        let mut course = Vec::with_capacity(len);
-        let mut gross_tonnage = Vec::with_capacity(len);
-        let mut latitude = Vec::with_capacity(len);
-        let mut longitude = Vec::with_capacity(len);
-        let mut message_id = Vec::with_capacity(len);
-        let mut message_type = Vec::with_capacity(len);
-        let mut message_type_code = Vec::with_capacity(len);
-        let mut registration_id = Vec::with_capacity(len);
-        let mut speed = Vec::with_capacity(len);
-        let mut timestamp = Vec::with_capacity(len);
-        let mut vessel_length = Vec::with_capacity(len);
-        let mut vessel_name = Vec::with_capacity(len);
-        let mut vessel_type = Vec::with_capacity(len);
-
         let mut call_signs_unique = HashSet::new();
 
-        for v in vms {
-            if let (Some(lat), Some(lon)) = (v.latitude, v.longitude) {
-                call_sign.push(v.call_sign.clone().into_inner());
-                course.push(v.course.map(|c| c as i32));
-                gross_tonnage.push(v.gross_tonnage.map(|g| g as i32));
-                latitude.push(float_to_decimal(lat).change_context(PostgresError::DataConversion)?);
-                longitude
-                    .push(float_to_decimal(lon).change_context(PostgresError::DataConversion)?);
-                message_id.push(v.message_id as i32);
-                message_type.push(v.message_type);
-                message_type_code.push(v.message_type_code);
-                registration_id.push(v.registration_id);
-                speed.push(
-                    opt_float_to_decimal(v.speed).change_context(PostgresError::DataConversion)?,
-                );
-                timestamp.push(v.timestamp);
-                vessel_length.push(
-                    float_to_decimal(v.vessel_length)
-                        .change_context(PostgresError::DataConversion)?,
-                );
-                vessel_name.push(v.vessel_name);
-                vessel_type.push(v.vessel_type);
-
-                call_signs_unique.insert(v.call_sign.into_inner());
-            }
-        }
+        let vms = vms
+            .into_iter()
+            .map(NewVmsPosition::try_from)
+            .filter(|v| {
+                matches!(
+                    v,
+                    Ok(NewVmsPosition {
+                        latitude: Some(_),
+                        longitude: Some(_),
+                        ..
+                    })
+                )
+            })
+            .inspect(|v| {
+                if let Ok(ref v) = v {
+                    call_signs_unique.insert(v.call_sign.clone());
+                }
+            })
+            .collect::<Result<Vec<_>, _>>()?;
 
         let call_signs_unique = call_signs_unique.into_iter().collect::<Vec<_>>();
 
@@ -108,65 +89,10 @@ SELECT
         .into_report()
         .change_context(PostgresError::Query)?;
 
-        sqlx::query!(
-            r#"
-INSERT INTO
-    vms_positions (
-        call_sign,
-        course,
-        gross_tonnage,
-        latitude,
-        longitude,
-        message_id,
-        message_type,
-        message_type_code,
-        registration_id,
-        speed,
-        "timestamp",
-        vessel_length,
-        vessel_name,
-        vessel_type
-    )
-SELECT
-    *
-FROM
-    UNNEST(
-        $1::VARCHAR[],
-        $2::INT[],
-        $3::INT[],
-        $4::DECIMAL[],
-        $5::DECIMAL[],
-        $6::INT[],
-        $7::VARCHAR[],
-        $8::VARCHAR[],
-        $9::VARCHAR[],
-        $10::DECIMAL[],
-        $11::timestamptz[],
-        $12::DECIMAL[],
-        $13::VARCHAR[],
-        $14::VARCHAR[]
-    )
-ON CONFLICT (message_id, call_sign) DO NOTHING
-            "#,
-            call_sign.as_slice(),
-            course.as_slice() as _,
-            gross_tonnage.as_slice() as _,
-            latitude.as_slice(),
-            longitude.as_slice(),
-            message_id.as_slice(),
-            message_type.as_slice(),
-            message_type_code.as_slice(),
-            registration_id.as_slice() as _,
-            speed.as_slice() as _,
-            timestamp.as_slice(),
-            vessel_length.as_slice(),
-            vessel_name.as_slice(),
-            vessel_type.as_slice()
-        )
-        .execute(&mut *tx)
-        .await
-        .into_report()
-        .change_context(PostgresError::Query)?;
+        NewVmsPosition::unnest_insert(vms, &mut *tx)
+            .await
+            .into_report()
+            .change_context(PostgresError::Query)?;
 
         tx.commit()
             .await

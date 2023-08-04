@@ -1,0 +1,41 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO\n    landing_entries (\n    landing_id,size_grouping_code,withdrawn_catch_value,catch_value,sales_team_fee,post_payment,support_fee_for_fisher,price_for_buyer,price_for_fisher,unit_price_for_buyer,unit_price_for_fisher,landing_method_id,conservation_method_id,product_condition_id,product_purpose_id,product_purpose_group_id,line_number,num_fish,product_weight,product_weight_over_quota,gross_weight,living_weight,living_weight_over_quota,species_id,species_fao_id,species_group_id,species_fiskeridir_id,species_main_group_id\n   )\nSELECT\n    *\nFROM\n    UNNEST(\n        $1::TEXT[],$2::TEXT[],$3::DECIMAL[],$4::DECIMAL[],$5::DECIMAL[],$6::DECIMAL[],$7::DECIMAL[],$8::DECIMAL[],$9::DECIMAL[],$10::DECIMAL[],$11::DECIMAL[],$12::INT[],$13::INT[],$14::INT[],$15::INT[],$16::INT[],$17::INT[],$18::INT[],$19::DECIMAL[],$20::DECIMAL[],$21::DECIMAL[],$22::DECIMAL[],$23::DECIMAL[],$24::INT[],$25::TEXT[],$26::INT[],$27::INT[],$28::INT[]\n    )\n        ON CONFLICT (landing_id,line_number) DO NOTHING",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "TextArray",
+        "TextArray",
+        "NumericArray",
+        "NumericArray",
+        "NumericArray",
+        "NumericArray",
+        "NumericArray",
+        "NumericArray",
+        "NumericArray",
+        "NumericArray",
+        "NumericArray",
+        "Int4Array",
+        "Int4Array",
+        "Int4Array",
+        "Int4Array",
+        "Int4Array",
+        "Int4Array",
+        "Int4Array",
+        "NumericArray",
+        "NumericArray",
+        "NumericArray",
+        "NumericArray",
+        "NumericArray",
+        "Int4Array",
+        "TextArray",
+        "Int4Array",
+        "Int4Array",
+        "Int4Array"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "9c28c79df7dc49fc0caab9aa012c91f44c76ea9a550cbc517ab3293d170916e0"
+}

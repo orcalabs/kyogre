@@ -1,0 +1,27 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO\n    vms_positions (\n    call_sign,course,gross_tonnage,latitude,longitude,message_id,message_type,message_type_code,registration_id,speed,timestamp,vessel_length,vessel_name,vessel_type\n   )\nSELECT\n    *\nFROM\n    UNNEST(\n        $1::TEXT[],$2::INT[],$3::INT[],$4::DECIMAL[],$5::DECIMAL[],$6::INT[],$7::TEXT[],$8::TEXT[],$9::TEXT[],$10::DECIMAL[],$11::TIMESTAMPTZ[],$12::DECIMAL[],$13::TEXT[],$14::TEXT[]\n    )\n        ON CONFLICT (message_id,call_sign) DO NOTHING",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "TextArray",
+        "Int4Array",
+        "Int4Array",
+        "NumericArray",
+        "NumericArray",
+        "Int4Array",
+        "TextArray",
+        "TextArray",
+        "TextArray",
+        "NumericArray",
+        "TimestamptzArray",
+        "NumericArray",
+        "TextArray",
+        "TextArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "588d32798f78a1a7bd10c34f30577405d89b55a6723c57e9893857662005fa95"
+}

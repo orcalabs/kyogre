@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO\n    ports (\n    port_id,name,nationality\n   )\nSELECT\n    *\nFROM\n    UNNEST(\n        $1::TEXT[],$2::TEXT[],$3::TEXT[]\n    )\n        ON CONFLICT (port_id) DO NOTHING",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "TextArray",
+        "TextArray",
+        "TextArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "89391ddaca8d24a1b60af929371ea9b78f8f8741f9d90e0741e7bdc1aade96d1"
+}

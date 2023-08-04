@@ -4,7 +4,10 @@ use crate::{
 };
 use bigdecimal::BigDecimal;
 use error_stack::{Report, ResultExt};
+use unnest_insert::UnnestInsert;
 
+#[derive(UnnestInsert)]
+#[unnest_insert(table_name = "landing_entries", conflict = "landing_id,line_number")]
 pub struct NewLandingEntry {
     // Dokumentnummer-SalgslagId-Dokumenttype
     pub landing_id: String,

@@ -1,12 +1,32 @@
 use crate::{
     error::PostgresError,
-    queries::{decimal_to_float, opt_decimal_to_float},
+    queries::{decimal_to_float, float_to_decimal, opt_decimal_to_float, opt_float_to_decimal},
 };
 use bigdecimal::BigDecimal;
 use chrono::{DateTime, Utc};
 use error_stack::{Report, ResultExt};
 use fiskeridir_rs::CallSign;
 use serde::Deserialize;
+use unnest_insert::UnnestInsert;
+
+#[derive(Deserialize, Debug, Clone, UnnestInsert)]
+#[unnest_insert(table_name = "vms_positions", conflict = "message_id,call_sign")]
+pub struct NewVmsPosition {
+    pub call_sign: String,
+    pub course: Option<i32>,
+    pub gross_tonnage: Option<i32>,
+    pub latitude: Option<BigDecimal>,
+    pub longitude: Option<BigDecimal>,
+    pub message_id: i32,
+    pub message_type: String,
+    pub message_type_code: String,
+    pub registration_id: Option<String>,
+    pub speed: Option<BigDecimal>,
+    pub timestamp: DateTime<Utc>,
+    pub vessel_length: BigDecimal,
+    pub vessel_name: String,
+    pub vessel_type: String,
+}
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct VmsPosition {
@@ -20,6 +40,32 @@ pub struct VmsPosition {
     pub vessel_length: BigDecimal,
     pub vessel_name: String,
     pub vessel_type: String,
+}
+
+impl TryFrom<fiskeridir_rs::Vms> for NewVmsPosition {
+    type Error = Report<PostgresError>;
+
+    fn try_from(v: fiskeridir_rs::Vms) -> Result<Self, Self::Error> {
+        Ok(Self {
+            call_sign: v.call_sign.into_inner(),
+            course: v.course.map(|c| c as i32),
+            gross_tonnage: v.gross_tonnage.map(|c| c as i32),
+            latitude: opt_float_to_decimal(v.latitude)
+                .change_context(PostgresError::DataConversion)?,
+            longitude: opt_float_to_decimal(v.longitude)
+                .change_context(PostgresError::DataConversion)?,
+            message_id: v.message_id as i32,
+            message_type: v.message_type,
+            message_type_code: v.message_type_code,
+            registration_id: v.registration_id,
+            speed: opt_float_to_decimal(v.speed).change_context(PostgresError::DataConversion)?,
+            timestamp: v.timestamp,
+            vessel_length: float_to_decimal(v.vessel_length)
+                .change_context(PostgresError::DataConversion)?,
+            vessel_name: v.vessel_name,
+            vessel_type: v.vessel_type,
+        })
+    }
 }
 
 impl TryFrom<VmsPosition> for kyogre_core::VmsPosition {

@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO\n    norwegian_counties (\n    norwegian_county_id,name\n   )\nSELECT\n    *\nFROM\n    UNNEST(\n        $1::INT[],$2::TEXT[]\n    )\n        ON CONFLICT (norwegian_county_id) DO NOTHING",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4Array",
+        "TextArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "7de2381b6a8e3096cdb2b21305c7201cce2da43422bd787cc729fdd59314c35f"
+}

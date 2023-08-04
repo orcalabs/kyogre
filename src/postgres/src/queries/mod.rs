@@ -22,7 +22,6 @@ pub mod gear;
 pub mod hash;
 pub mod haul;
 pub mod landing;
-pub mod landing_entry;
 pub mod landing_matrix;
 pub mod norwegian_land;
 pub mod port;
@@ -76,4 +75,12 @@ pub(crate) fn opt_timestamp_from_date_and_time(
         (Some(date), Some(time)) => Some(DateTime::from_utc(date.and_time(time), Utc)),
         _ => None,
     }
+}
+
+pub fn enum_to_i32<T: Into<i32>>(value: T) -> i32 {
+    value.into()
+}
+
+pub fn opt_enum_to_i32<T: Into<i32>>(value: Option<T>) -> Option<i32> {
+    value.map(|v| v.into())
 }

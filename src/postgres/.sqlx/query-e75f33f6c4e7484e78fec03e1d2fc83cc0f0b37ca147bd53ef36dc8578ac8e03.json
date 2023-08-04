@@ -1,0 +1,20 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO\n    ers_departure_catches (\n    message_id,ers_quantum_type_id,living_weight,species_fao_id,species_fiskeridir_id,species_group_id,species_main_group_id\n   )\nSELECT\n    *\nFROM\n    UNNEST(\n        $1::BIGINT[],$2::TEXT[],$3::INT[],$4::TEXT[],$5::INT[],$6::INT[],$7::INT[]\n    )\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8Array",
+        "TextArray",
+        "Int4Array",
+        "TextArray",
+        "Int4Array",
+        "Int4Array",
+        "Int4Array"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "e75f33f6c4e7484e78fec03e1d2fc83cc0f0b37ca147bd53ef36dc8578ac8e03"
+}

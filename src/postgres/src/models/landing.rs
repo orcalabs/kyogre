@@ -7,7 +7,10 @@ use chrono::{DateTime, NaiveDate, NaiveTime, Utc};
 use error_stack::{IntoReport, Report, ResultExt};
 use fiskeridir_rs::VesselLengthGroup;
 use kyogre_core::{CatchLocationId, FiskeridirVesselId, LandingMatrixQuery};
+use unnest_insert::UnnestInsert;
 
+#[derive(UnnestInsert)]
+#[unnest_insert(table_name = "landings", conflict = "landing_id")]
 pub struct NewLanding {
     // Dokumentnummer-SalgslagId-Dokumenttype
     pub landing_id: String,
@@ -86,6 +89,7 @@ pub struct NewLanding {
     pub receiving_vessel_type: Option<i32>,
     pub receiving_vessel_nation_id: Option<String>,
     pub receiving_vessel_nation: Option<String>,
+    pub data_year: i32,
 }
 
 pub struct Landing {
@@ -106,11 +110,12 @@ pub struct Landing {
     pub catches: String,
 }
 
-impl TryFrom<fiskeridir_rs::Landing> for NewLanding {
-    type Error = Report<PostgresError>;
-
-    fn try_from(landing: fiskeridir_rs::Landing) -> Result<Self, Self::Error> {
-        Ok(NewLanding {
+impl NewLanding {
+    pub fn from_fiskeridir_landing(
+        landing: fiskeridir_rs::Landing,
+        data_year: u32,
+    ) -> Result<Self, Report<PostgresError>> {
+        Ok(Self {
             landing_id: landing.id.into_inner(),
             document_id: landing.document_info.id,
             fiskeridir_vessel_id: landing.vessel.id,
@@ -194,6 +199,7 @@ impl TryFrom<fiskeridir_rs::Landing> for NewLanding {
             receiving_vessel_type: landing.recipient_vessel_type_code.map(|v| v as i32),
             receiving_vessel_nation_id: landing.recipient_vessel_nation_code,
             receiving_vessel_nation: landing.recipient_vessel_nation,
+            data_year: data_year as i32,
         })
     }
 }
