@@ -16,7 +16,7 @@ use tracing::{event, Level};
 use utoipa::{IntoParams, ToSchema};
 
 pub static AIS_DETAILS_INTERVAL: Lazy<Duration> = Lazy::new(|| Duration::minutes(30));
-pub static MISSING_DATA_DURATION: Lazy<Duration> = Lazy::new(|| Duration::minutes(60));
+pub static MISSING_DATA_DURATION: Lazy<Duration> = Lazy::new(|| Duration::minutes(70));
 
 #[derive(Debug, Deserialize, IntoParams)]
 #[serde(rename_all = "camelCase")]
