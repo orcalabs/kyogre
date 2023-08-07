@@ -11,7 +11,7 @@ sqlx = ["dep:sqlx"]
 
 [dependencies]
 async-trait = "0.1.72"
-serde = { version = "1.0.179", features = ["derive"] }
+serde = { version = "1.0.183", features = ["derive"] }
 chrono = { version = "0.4.26", features = ["serde"] }
 chrono-tz = "0.8.3"
 fiskeridir-rs = { workspace = true }

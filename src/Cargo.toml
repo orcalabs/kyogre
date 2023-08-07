@@ -22,7 +22,7 @@ fiskeridir-rs = { version = "0.18.1", registry = "orcalabs-orcastrator", feature
     "sqlx",
 ] }
 error-stack = "0.3.1"
-orca-core = { version = "0.21.0", registry = "orcalabs-orcastrator" }
+orca-core = { version = "0.21.1", registry = "orcalabs-orcastrator" }
 sqlx = { version = "0.7.1", features = [
     "runtime-tokio-rustls",
     "postgres",
