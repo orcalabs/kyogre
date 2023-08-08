@@ -13,7 +13,7 @@ env:
 
 jobs:
   rust-check:
-    uses: orcalabs/github-actions/.github/workflows/rust_verify.yml@master
+    uses: orcalabs/github-actions/.github/workflows/rust_verify.yml@buildjet
     secrets: inherit
     with:
       dependencies: protobuf-compiler

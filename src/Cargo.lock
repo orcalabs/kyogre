@@ -1324,9 +1324,9 @@ checksum = "eaa37046cc0f6c3cc6090fbdbf73ef0b8ef4cfcc37f6befc0020f63e8cf121e1"
 
 [[package]]
 name = "der"
-version = "0.7.7"
+version = "0.7.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0c7ed52955ce76b1554f509074bb357d3fb8ac9b51288a65a3fd480d1dfba946"
+checksum = "fffa369a668c8af7dbf8b5e56c9f744fbd399949ed171606040001947de40b1c"
 dependencies = [
  "const-oid",
  "pem-rfc7468",
@@ -1458,7 +1458,7 @@ dependencies = [
  "kyogre-core",
  "num-traits",
  "orca-core",
- "orca-statemachine 0.39.0",
+ "orca-statemachine",
  "postgres",
  "prost",
  "r2d2",
@@ -1521,7 +1521,7 @@ dependencies = [
  "haul-distributor",
  "kyogre-core",
  "orca-core",
- "orca-statemachine 0.40.0",
+ "orca-statemachine",
  "postgres",
  "rand 0.8.5",
  "scraper",
@@ -3162,21 +3162,6 @@ dependencies = [
  "tracing-log",
  "tracing-opentelemetry",
  "tracing-subscriber",
-]
-
-[[package]]
-name = "orca-statemachine"
-version = "0.39.0"
-source = "registry+https://dl.cloudsmith.io/basic/orcalabs/orcastrator/cargo/index.git"
-checksum = "ac345367a302821f5a866ec6bbf5ef255e14f687028c06823b62f0f3374eb998"
-dependencies = [
- "async-trait",
- "chrono",
- "error-stack 0.2.4",
- "humantime-serde",
- "orca-core",
- "serde",
- "tracing",
 ]
 
 [[package]]
@@ -5046,9 +5031,9 @@ checksum = "55937e1799185b12863d447f42597ed69d9928686b8d88a1df17376a097d8369"
 
 [[package]]
 name = "tar"
-version = "0.4.39"
+version = "0.4.40"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ec96d2ffad078296368d46ff1cb309be1c23c513b4ab0e22a45de0185275ac96"
+checksum = "b16afcea1f22891c49a00c751c7b63b2233284064f11a200fc624137c51e2ddb"
 dependencies = [
  "filetime",
  "libc",
@@ -5885,7 +5870,7 @@ dependencies = [
  "num-traits",
  "once_cell",
  "orca-core",
- "orca-statemachine 0.39.0",
+ "orca-statemachine",
  "postgres",
  "rand 0.8.5",
  "reqwest",
@@ -6144,9 +6129,9 @@ dependencies = [
 
 [[package]]
 name = "xattr"
-version = "0.2.3"
+version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6d1526bbe5aaeb5eb06885f4d987bcdfa5e23187055de9b83fe00156a821fabc"
+checksum = "f4686009f71ff3e5c4dbcf1a282d0a44db3f021ba69350cd42086b3e5f1c6985"
 dependencies = [
  "libc",
 ]

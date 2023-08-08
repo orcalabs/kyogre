@@ -13,7 +13,7 @@ fiskeridir-rs = { workspace = true }
 duckdb-rs = { path = "../duckdb-rs" }
 
 orca-core = { workspace = true, features = ["actix-telemetry", "telemetry"] }
-orca-statemachine = { version = "0.39.0", registry = "orcalabs-orcastrator", features = [
+orca-statemachine = { version = "0.40.0", registry = "orcalabs-orcastrator", features = [
 ] }
 
 config = { version = "0.13.3", features = ["yaml"] }

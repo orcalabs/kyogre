@@ -1,6 +1,9 @@
 name: Update cache
 
 on:
+  pull_request:
+    branches:
+      - master
   push:
     branches:
       - master
@@ -10,7 +13,7 @@ env:
 
 jobs:
   update-rust-cache:
-    uses: orcalabs/github-actions/.github/workflows/rust_build_cache.yml@master
+    uses: orcalabs/github-actions/.github/workflows/rust_build_cache.yml@buildjet
     secrets: inherit
     with:
       dependencies: protobuf-compiler
