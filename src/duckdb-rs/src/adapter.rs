@@ -341,11 +341,15 @@ fn push_landing_where_statements(
     params: &LandingMatrixQuery,
     x_feature: LandingMatrixXFeature,
 ) {
+    let y_feature = if x_feature == params.active_filter {
+        LandingMatrixYFeature::CatchLocation
+    } else {
+        LandingMatrixYFeature::from(params.active_filter)
+    };
+
     let mut first = true;
     if let Some(months) = &params.months {
-        if params.active_filter != ActiveLandingFilter::Date
-            && x_feature != LandingMatrixXFeature::Date
-        {
+        if y_feature != LandingMatrixYFeature::Date && x_feature != LandingMatrixXFeature::Date {
             if first {
                 first = false;
                 query.push_str("where ");
@@ -356,9 +360,7 @@ fn push_landing_where_statements(
         }
     }
     if let Some(catch_locations) = &params.catch_locations {
-        if params.active_filter != ActiveLandingFilter::Date
-            && x_feature != LandingMatrixXFeature::Date
-        {
+        if y_feature != LandingMatrixYFeature::CatchLocation {
             if first {
                 first = false;
                 query.push_str("where ");
@@ -374,7 +376,7 @@ fn push_landing_where_statements(
         }
     }
     if let Some(gear_group_ids) = &params.gear_group_ids {
-        if params.active_filter != ActiveLandingFilter::GearGroup
+        if y_feature != LandingMatrixYFeature::GearGroup
             && x_feature != LandingMatrixXFeature::GearGroup
         {
             if first {
@@ -393,7 +395,7 @@ fn push_landing_where_statements(
         }
     }
     if let Some(species_group_ids) = &params.species_group_ids {
-        if params.active_filter != ActiveLandingFilter::SpeciesGroup
+        if y_feature != LandingMatrixYFeature::SpeciesGroup
             && x_feature != LandingMatrixXFeature::SpeciesGroup
         {
             if first {
@@ -412,7 +414,7 @@ fn push_landing_where_statements(
         }
     }
     if let Some(vessel_length_groups) = &params.vessel_length_groups {
-        if params.active_filter != ActiveLandingFilter::VesselLength
+        if y_feature != LandingMatrixYFeature::VesselLength
             && x_feature != LandingMatrixXFeature::VesselLength
         {
             if first {
@@ -447,10 +449,15 @@ fn push_haul_where_statements(
     params: &HaulsMatrixQuery,
     x_feature: HaulMatrixXFeature,
 ) {
+    let y_feature = if x_feature == params.active_filter {
+        HaulMatrixYFeature::CatchLocation
+    } else {
+        HaulMatrixYFeature::from(params.active_filter)
+    };
+
     let mut first = true;
     if let Some(months) = &params.months {
-        if params.active_filter != ActiveHaulsFilter::Date && x_feature != HaulMatrixXFeature::Date
-        {
+        if y_feature != HaulMatrixYFeature::Date && x_feature != HaulMatrixXFeature::Date {
             if first {
                 first = false;
                 query.push_str("where ");
@@ -461,8 +468,7 @@ fn push_haul_where_statements(
         }
     }
     if let Some(catch_locations) = &params.catch_locations {
-        if params.active_filter != ActiveHaulsFilter::Date && x_feature != HaulMatrixXFeature::Date
-        {
+        if y_feature != HaulMatrixYFeature::CatchLocation {
             if first {
                 first = false;
                 query.push_str("where ");
@@ -478,8 +484,7 @@ fn push_haul_where_statements(
         }
     }
     if let Some(gear_group_ids) = &params.gear_group_ids {
-        if params.active_filter != ActiveHaulsFilter::GearGroup
-            && x_feature != HaulMatrixXFeature::GearGroup
+        if y_feature != HaulMatrixYFeature::GearGroup && x_feature != HaulMatrixXFeature::GearGroup
         {
             if first {
                 first = false;
@@ -497,7 +502,7 @@ fn push_haul_where_statements(
         }
     }
     if let Some(species_group_ids) = &params.species_group_ids {
-        if params.active_filter != ActiveHaulsFilter::SpeciesGroup
+        if y_feature != HaulMatrixYFeature::SpeciesGroup
             && x_feature != HaulMatrixXFeature::SpeciesGroup
         {
             if first {
@@ -516,7 +521,7 @@ fn push_haul_where_statements(
         }
     }
     if let Some(vessel_length_groups) = &params.vessel_length_groups {
-        if params.active_filter != ActiveHaulsFilter::VesselLength
+        if y_feature != HaulMatrixYFeature::VesselLength
             && x_feature != HaulMatrixXFeature::VesselLength
         {
             if first {
