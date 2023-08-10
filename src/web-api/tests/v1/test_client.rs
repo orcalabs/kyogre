@@ -116,6 +116,9 @@ impl ApiClient {
     pub async fn get_vessels(&self) -> Response {
         self.get("vessels", &[], None).await
     }
+    pub async fn get_delivery_points(&self) -> Response {
+        self.get("delivery_points", &[], None).await
+    }
     pub async fn get_hauls(&self, params: HaulsParams) -> Response {
         let mut parameters = Vec::new();
 

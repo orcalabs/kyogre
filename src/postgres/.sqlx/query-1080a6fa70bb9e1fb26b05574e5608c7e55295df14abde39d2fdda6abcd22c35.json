@@ -1,0 +1,120 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    l.landing_id,\n    l.landing_timestamp,\n    l.catch_area_id,\n    l.catch_main_area_id,\n    l.gear_id,\n    l.gear_group_id,\n    COALESCE(MIN(d.new_delivery_point_id), l.delivery_point_id) AS delivery_point_id,\n    l.fiskeridir_vessel_id,\n    l.vessel_call_sign,\n    l.vessel_name,\n    l.vessel_length,\n    l.vessel_length_group_id AS \"vessel_length_group!: VesselLengthGroup\",\n    COALESCE(SUM(le.gross_weight), 0) AS \"total_gross_weight!\",\n    COALESCE(SUM(le.living_weight), 0) AS \"total_living_weight!\",\n    COALESCE(SUM(le.product_weight), 0) AS \"total_product_weight!\",\n    JSONB_AGG(\n        JSONB_BUILD_OBJECT(\n            'living_weight',\n            COALESCE(le.living_weight, 0),\n            'gross_weight',\n            COALESCE(le.gross_weight, 0),\n            'product_weight',\n            le.product_weight,\n            'species_fiskeridir_id',\n            le.species_fiskeridir_id,\n            'species_group_id',\n            le.species_group_id\n        )\n    )::TEXT AS \"catches!\"\nFROM\n    landings l\n    INNER JOIN landing_entries le ON l.landing_id = le.landing_id\n    LEFT JOIN deprecated_delivery_points d ON l.delivery_point_id = d.old_delivery_point_id\nWHERE\n    (\n        $1::tstzrange[] IS NULL\n        OR l.landing_timestamp <@ ANY ($1::tstzrange[])\n    )\n    AND (\n        $2::INT[] IS NULL\n        OR l.catch_area_id = ANY ($2::INT[])\n    )\n    AND (\n        $3::INT[] IS NULL\n        OR l.catch_main_area_id = ANY ($3::INT[])\n    )\n    AND (\n        $4::INT[] IS NULL\n        OR l.gear_group_id = ANY ($4)\n    )\n    AND (\n        $5::numrange[] IS NULL\n        OR l.vessel_length <@ ANY ($5::numrange[])\n    )\n    AND (\n        $6::BIGINT[] IS NULL\n        OR fiskeridir_vessel_id = ANY ($6)\n    )\nGROUP BY\n    l.landing_id\nHAVING\n    (\n        $7::INT[] IS NULL\n        OR ARRAY_AGG(le.species_group_id) && $7\n    )\nORDER BY\n    CASE\n        WHEN $8 = 1\n        AND $9 = 1 THEN l.landing_timestamp\n    END ASC,\n    CASE\n        WHEN $8 = 1\n        AND $9 = 2 THEN SUM(le.living_weight)\n    END ASC,\n    CASE\n        WHEN $8 = 2\n        AND $9 = 1 THEN l.landing_timestamp\n    END DESC,\n    CASE\n        WHEN $8 = 2\n        AND $9 = 2 THEN SUM(le.living_weight)\n    END DESC\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "landing_id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 1,
+        "name": "landing_timestamp",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 2,
+        "name": "catch_area_id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 3,
+        "name": "catch_main_area_id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 4,
+        "name": "gear_id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 5,
+        "name": "gear_group_id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 6,
+        "name": "delivery_point_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "fiskeridir_vessel_id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 8,
+        "name": "vessel_call_sign",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 9,
+        "name": "vessel_name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 10,
+        "name": "vessel_length",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 11,
+        "name": "vessel_length_group!: VesselLengthGroup",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 12,
+        "name": "total_gross_weight!",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 13,
+        "name": "total_living_weight!",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 14,
+        "name": "total_product_weight!",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 15,
+        "name": "catches!",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "TstzRangeArray",
+        "Int4Array",
+        "Int4Array",
+        "Int4Array",
+        "NumRangeArray",
+        "Int8Array",
+        "Int4Array",
+        "Int4",
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      true,
+      false,
+      false,
+      null,
+      true,
+      true,
+      true,
+      true,
+      false,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "1080a6fa70bb9e1fb26b05574e5608c7e55295df14abde39d2fdda6abcd22c35"
+}

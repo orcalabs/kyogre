@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO\n    manual_delivery_points (delivery_point_id, \"name\")\nVALUES\n    ($1, $2)\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "9a75ca277a935f2e62af46d9d3e951690f1f87946e117c457a0e326aae434e32"
+}

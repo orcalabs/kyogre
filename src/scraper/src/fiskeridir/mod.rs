@@ -7,6 +7,7 @@ use kyogre_core::{FileHashId, HashDiff};
 use serde::de::DeserializeOwned;
 use std::future::Future;
 
+mod aqua_culture_register;
 mod ers_dca;
 mod ers_dep;
 mod ers_por;
@@ -15,6 +16,7 @@ mod landings;
 mod register_vessel;
 mod vms;
 
+pub use aqua_culture_register::*;
 pub use ers_dca::*;
 pub use ers_dep::*;
 pub use ers_por::*;

@@ -11,6 +11,7 @@ fiskeridir-rs = { workspace = true }
 
 serde = { version = "1.0.183", features = ["derive"] }
 serde_json = "1.0.104"
+serde_with = "3.2.0"
 tracing = "0.1.37"
 async-trait = "0.1.72"
 error-stack = { workspace = true }
@@ -19,3 +20,4 @@ wkt = { version = "0.10.3", features = ["serde"] }
 uuid = { version = "1.4.1", features = ["serde"] }
 reqwest = { version = "0.11.18", features = ["gzip"] }
 geozero = "0.10.0"
+table-extract = "0.2.3"

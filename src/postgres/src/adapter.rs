@@ -476,6 +476,10 @@ impl WebApiOutboundPort for PostgresAdapter {
                 .change_context(QueryError)?,
         )
     }
+
+    fn delivery_points(&self) -> PinBoxStream<'_, DeliveryPoint, QueryError> {
+        convert_stream(self.delivery_points_impl()).boxed()
+    }
 }
 
 #[async_trait]
@@ -562,6 +566,22 @@ impl ScraperInboundPort for PostgresAdapter {
     }
     async fn add_vms(&self, vms: Vec<fiskeridir_rs::Vms>) -> Result<(), InsertError> {
         self.add_vms_impl(vms).await.change_context(InsertError)
+    }
+    async fn add_aqua_culture_register(
+        &self,
+        entries: Vec<fiskeridir_rs::AquaCultureEntry>,
+    ) -> Result<(), InsertError> {
+        self.add_aqua_culture_register_impl(entries)
+            .await
+            .change_context(InsertError)
+    }
+    async fn add_mattilsynet_delivery_points(
+        &self,
+        delivery_points: Vec<MattilsynetDeliveryPoint>,
+    ) -> Result<(), InsertError> {
+        self.add_mattilsynet_delivery_points_impl(delivery_points)
+            .await
+            .change_context(InsertError)
     }
 }
 
