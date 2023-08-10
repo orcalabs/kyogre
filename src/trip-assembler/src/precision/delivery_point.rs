@@ -35,17 +35,17 @@ impl TripPrecision for DeliveryPointPrecision {
             .change_context(TripPrecisionError)?;
 
         match delivery_points.len() {
-            1 => match &delivery_points[0].coordinates {
-                Some(cords) => {
-                    let target = Location::new(
-                        cords.latitude.to_f64().unwrap(),
-                        cords.longitude.to_f64().unwrap(),
-                    );
-                    self.do_precision(adapter, &target, vessel, positions, trip)
-                        .await
+            1 => {
+                let dp = &delivery_points[0];
+                match (dp.latitude, dp.longitude) {
+                    (Some(lat), Some(lon)) => {
+                        let target = Location::new(lat.to_f64().unwrap(), lon.to_f64().unwrap());
+                        self.do_precision(adapter, &target, vessel, positions, trip)
+                            .await
+                    }
+                    _ => Ok(None),
                 }
-                _ => Ok(None),
-            },
+            }
             _ => Ok(None),
         }
     }

@@ -36,6 +36,7 @@ SELECT
     l.catch_main_area_id,
     l.gear_id,
     l.gear_group_id,
+    COALESCE(MIN(d.new_delivery_point_id), l.delivery_point_id) AS delivery_point_id,
     l.fiskeridir_vessel_id,
     l.vessel_call_sign,
     l.vessel_name,
@@ -61,6 +62,7 @@ SELECT
 FROM
     landings l
     INNER JOIN landing_entries le ON l.landing_id = le.landing_id
+    LEFT JOIN deprecated_delivery_points d ON l.delivery_point_id = d.old_delivery_point_id
 WHERE
     (
         $1::tstzrange[] IS NULL
@@ -157,7 +159,7 @@ WHERE
         let prepared_set = set.prepare();
         let mut tx = self.begin().await?;
 
-        self.add_delivery_points(prepared_set.delivery_points, &mut tx)
+        self.add_delivery_point_ids(prepared_set.delivery_points, &mut tx)
             .await?;
 
         self.add_municipalities(prepared_set.municipalities, &mut tx)

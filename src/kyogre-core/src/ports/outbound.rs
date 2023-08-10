@@ -82,6 +82,7 @@ pub trait WebApiOutboundPort {
         query: FishingFacilitiesQuery,
     ) -> PinBoxStream<'_, FishingFacility, QueryError>;
     async fn get_user(&self, user_id: BarentswatchUserId) -> Result<Option<User>, QueryError>;
+    fn delivery_points(&self) -> PinBoxStream<'_, DeliveryPoint, QueryError>;
 }
 
 #[async_trait]

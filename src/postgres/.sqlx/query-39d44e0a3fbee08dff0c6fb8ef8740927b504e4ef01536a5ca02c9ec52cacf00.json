@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO\n    delivery_point_ids (\n    delivery_point_id\n   )\nSELECT\n    *\nFROM\n    UNNEST(\n        $1::TEXT[]\n    )\n        ON CONFLICT (delivery_point_id) DO NOTHING",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "TextArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "39d44e0a3fbee08dff0c6fb8ef8740927b504e4ef01536a5ca02c9ec52cacf00"
+}

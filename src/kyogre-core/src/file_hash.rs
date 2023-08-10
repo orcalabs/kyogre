@@ -6,6 +6,7 @@ pub enum FileHash {
     ErsPor,
     ErsTra,
     Vms,
+    AquaCultureRegister,
 }
 
 #[derive(Debug)]
@@ -20,6 +21,7 @@ impl FileHashId {
             FileHash::ErsPor => FileHashId(format!("ers_por_{year}")),
             FileHash::ErsTra => FileHashId(format!("ers_tra_{year}")),
             FileHash::Vms => FileHashId(format!("vms_{year}")),
+            FileHash::AquaCultureRegister => FileHashId("aqua_culture_register".into()),
         }
     }
 }

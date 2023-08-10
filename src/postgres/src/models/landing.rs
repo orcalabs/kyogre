@@ -5,7 +5,7 @@ use crate::{
 use bigdecimal::BigDecimal;
 use chrono::{DateTime, NaiveDate, NaiveTime, Utc};
 use error_stack::{IntoReport, Report, ResultExt};
-use fiskeridir_rs::VesselLengthGroup;
+use fiskeridir_rs::{DeliveryPointId, VesselLengthGroup};
 use kyogre_core::{CatchLocationId, FiskeridirVesselId, LandingMatrixQuery};
 use unnest_insert::UnnestInsert;
 
@@ -99,6 +99,7 @@ pub struct Landing {
     pub catch_main_area_id: Option<i32>,
     pub gear_id: i32,
     pub gear_group_id: i32,
+    pub delivery_point_id: Option<String>,
     pub fiskeridir_vessel_id: Option<i64>,
     pub vessel_call_sign: Option<String>,
     pub vessel_name: Option<String>,
@@ -217,6 +218,11 @@ impl TryFrom<Landing> for kyogre_core::Landing {
             catch_location: CatchLocationId::new_opt(v.catch_main_area_id, v.catch_area_id),
             gear_id: v.gear_id,
             gear_group_id: v.gear_group_id,
+            delivery_point_id: v
+                .delivery_point_id
+                .map(DeliveryPointId::try_from)
+                .transpose()
+                .change_context(PostgresError::DataConversion)?,
             fiskeridir_vessel_id: v.fiskeridir_vessel_id.map(FiskeridirVesselId),
             vessel_call_sign: v.vessel_call_sign,
             vessel_name: v.vessel_name,

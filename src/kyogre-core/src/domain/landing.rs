@@ -1,5 +1,5 @@
 use chrono::{DateTime, Utc};
-use fiskeridir_rs::{LandingId, VesselLengthGroup};
+use fiskeridir_rs::{DeliveryPointId, LandingId, VesselLengthGroup};
 use serde::{Deserialize, Serialize};
 
 use crate::{CatchLocationId, FiskeridirVesselId};
@@ -23,6 +23,7 @@ pub struct Landing {
     pub catch_location: Option<CatchLocationId>,
     pub gear_id: i32,
     pub gear_group_id: i32,
+    pub delivery_point_id: Option<DeliveryPointId>,
     pub fiskeridir_vessel_id: Option<FiskeridirVesselId>,
     pub vessel_call_sign: Option<String>,
     pub vessel_name: Option<String>,

@@ -5,10 +5,11 @@ use async_trait::async_trait;
 use barentswatch::{FishingFacilityHistoricScraper, FishingFacilityScraper};
 use error_stack::Result;
 use fiskeridir::{
-    ErsDcaScraper, ErsDepScraper, ErsPorScraper, ErsTraScraper, LandingScraper,
-    RegisterVesselsScraper, VmsScraper,
+    AquaCultureRegisterScraper, ErsDcaScraper, ErsDepScraper, ErsPorScraper, ErsTraScraper,
+    LandingScraper, RegisterVesselsScraper, VmsScraper,
 };
 use kyogre_core::{OauthConfig, ScraperInboundPort, ScraperOutboundPort};
+use mattilsynet::MattilsynetScraper;
 use serde::Deserialize;
 use std::fmt::Debug;
 use std::sync::Arc;
@@ -18,6 +19,7 @@ mod barentswatch;
 mod chunks;
 mod error;
 mod fiskeridir;
+mod mattilsynet;
 mod wrapped_http_client;
 
 pub use barentswatch::BarentswatchSource;
@@ -41,6 +43,9 @@ pub struct Config {
     pub ers_dep: Option<Vec<FileYear>>,
     pub ers_tra: Option<Vec<FileYear>>,
     pub vms: Option<Vec<FileYear>>,
+    pub aqua_culture_register_url: Option<String>,
+    pub mattilsynet_urls: Option<Vec<String>>,
+    pub mattilsynet_fishery_url: Option<String>,
     pub register_vessels_url: Option<String>,
     pub fishing_facility: Option<ApiClientConfig>,
     pub fishing_facility_historic: Option<ApiClientConfig>,
@@ -134,6 +139,10 @@ impl Scraper {
             })
             .collect();
 
+        let aqua_culture_register_source = config
+            .aqua_culture_register_url
+            .map(|url| fiskeridir_rs::FileSource::AquaCultureRegister { url });
+
         let register_vessels_source = config
             .register_vessels_url
             .map(|url| fiskeridir_rs::ApiSource::RegisterVessels { url });
@@ -146,6 +155,10 @@ impl Scraper {
         let ers_por_scraper = ErsPorScraper::new(fiskeridir_arc.clone(), ers_por_sources);
         let ers_tra_scraper = ErsTraScraper::new(fiskeridir_arc.clone(), ers_tra_sources);
         let vms_scraper = VmsScraper::new(fiskeridir_arc.clone(), vms_sources);
+        let aqua_culture_register_scraper =
+            AquaCultureRegisterScraper::new(fiskeridir_arc.clone(), aqua_culture_register_source);
+        let mattilsynet_scraper =
+            MattilsynetScraper::new(config.mattilsynet_urls, config.mattilsynet_fishery_url);
         let register_vessels_scraper =
             RegisterVesselsScraper::new(fiskeridir_arc, register_vessels_source);
 
@@ -167,6 +180,8 @@ impl Scraper {
                 Box::new(register_vessels_scraper),
                 Box::new(fishing_facility_scraper),
                 Box::new(fishing_facility_historic_scraper),
+                Box::new(aqua_culture_register_scraper),
+                Box::new(mattilsynet_scraper),
             ],
             processor,
         }
@@ -197,6 +212,8 @@ pub enum ScraperId {
     Vms,
     FishingFacility,
     FishingFacilityHistoric,
+    AquaCultureRegister,
+    Mattilsynet,
 }
 
 impl std::fmt::Display for ScraperId {
@@ -211,6 +228,8 @@ impl std::fmt::Display for ScraperId {
             ScraperId::Vms => write!(f, "vms_scraper"),
             ScraperId::FishingFacility => write!(f, "fishing_facility_scraper"),
             ScraperId::FishingFacilityHistoric => write!(f, "fishing_facility_historic_scraper"),
+            ScraperId::AquaCultureRegister => write!(f, "aqua_culture_register"),
+            ScraperId::Mattilsynet => write!(f, "mattilsynet"),
         }
     }
 }

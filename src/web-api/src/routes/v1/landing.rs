@@ -12,7 +12,7 @@ use actix_web::{
     HttpResponse,
 };
 use chrono::{DateTime, Utc};
-use fiskeridir_rs::VesselLengthGroup;
+use fiskeridir_rs::{DeliveryPointId, VesselLengthGroup};
 use futures::TryStreamExt;
 use kyogre_core::{
     ActiveLandingFilter, CatchLocationId, FiskeridirVesselId, LandingMatrixQuery, LandingsQuery,
@@ -163,6 +163,8 @@ pub struct Landing {
     pub catch_location: Option<CatchLocationId>,
     pub gear_id: i32,
     pub gear_group_id: i32,
+    #[schema(value_type = Option<String>)]
+    pub delivery_point_id: Option<DeliveryPointId>,
     #[schema(value_type = Option<i64>)]
     pub fiskeridir_vessel_id: Option<FiskeridirVesselId>,
     pub vessel_call_sign: Option<String>,
@@ -203,6 +205,7 @@ impl From<kyogre_core::Landing> for Landing {
             catch_location: v.catch_location,
             gear_id: v.gear_id,
             gear_group_id: v.gear_group_id,
+            delivery_point_id: v.delivery_point_id,
             fiskeridir_vessel_id: v.fiskeridir_vessel_id,
             vessel_call_sign: v.vessel_call_sign,
             vessel_name: v.vessel_name,

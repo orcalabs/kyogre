@@ -1,11 +1,23 @@
+use fiskeridir_rs::DeliveryPointId;
 use num_derive::FromPrimitive;
 use serde_repr::{Deserialize_repr, Serialize_repr};
 
-use crate::Coordinates;
-
 #[derive(Clone, Debug)]
 pub struct DeliveryPoint {
-    pub coordinates: Option<Coordinates>,
+    pub id: DeliveryPointId,
+    pub name: Option<String>,
+    pub address: Option<String>,
+    pub latitude: Option<f64>,
+    pub longitude: Option<f64>,
+}
+
+#[derive(Clone, Debug)]
+pub struct MattilsynetDeliveryPoint {
+    pub id: DeliveryPointId,
+    pub name: String,
+    pub address: Option<String>,
+    pub postal_city: Option<String>,
+    pub postal_code: Option<u32>,
 }
 
 /// Defines different types of delivery points, these values are our own creation and does not
@@ -47,16 +59,12 @@ pub enum DeliveryPointType {
 #[derive(Debug, Copy, Clone, PartialEq, FromPrimitive, Eq, Serialize_repr, Deserialize_repr)]
 #[repr(u8)]
 pub enum DeliveryPointSourceId {
-    /// From Fiskeridirektoratet main list.
-    Fiskeridirektoratet = 1,
-    /// From Fiskeridirektoratets aqua culture register.
-    AquaCultureRegister = 2,
-    /// From Mattilsynet.
-    Mattilsynet = 3,
-    /// From Sluttseddel/Landingseddel when we have not seen the delivery point id from any other source.
-    NoteData = 4,
     /// Manual insertion or modification from us.
-    Manual = 5,
+    Manual = 1,
+    /// From Mattilsynet.
+    Mattilsynet = 2,
+    /// From Fiskeridirektoratets aqua culture register.
+    AquaCultureRegister = 3,
 }
 
 impl From<DeliveryPointType> for i32 {
@@ -68,5 +76,29 @@ impl From<DeliveryPointType> for i32 {
 impl From<DeliveryPointSourceId> for i32 {
     fn from(value: DeliveryPointSourceId) -> Self {
         value as i32
+    }
+}
+
+impl MattilsynetDeliveryPoint {
+    pub fn test_default() -> Self {
+        Self {
+            id: DeliveryPointId::new_unchecked("LK17"),
+            name: "Name".into(),
+            address: Some("Address".into()),
+            postal_city: Some("Tromsø".into()),
+            postal_code: Some(1234),
+        }
+    }
+}
+
+impl From<MattilsynetDeliveryPoint> for DeliveryPoint {
+    fn from(v: MattilsynetDeliveryPoint) -> Self {
+        Self {
+            id: v.id,
+            name: Some(v.name),
+            address: v.address,
+            latitude: None,
+            longitude: None,
+        }
     }
 }

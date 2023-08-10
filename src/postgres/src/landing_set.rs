@@ -1,6 +1,6 @@
 use crate::{error::PostgresError, models::*};
 use error_stack::Result;
-use fiskeridir_rs::{DeliveryPointId, LandingId};
+use fiskeridir_rs::LandingId;
 use std::collections::{HashMap, HashSet};
 
 #[derive(Default)]
@@ -11,7 +11,7 @@ pub struct LandingSet {
     landings: HashMap<LandingId, NewLanding>,
     landing_entries: Vec<NewLandingEntry>,
     vessels: HashMap<i64, fiskeridir_rs::Vessel>,
-    delivery_points: HashSet<DeliveryPointId>,
+    delivery_points: HashSet<NewDeliveryPointId>,
     catch_areas: HashMap<u32, NewCatchArea>,
     catch_main_areas: HashMap<u32, NewCatchMainArea>,
     catch_main_area_fao: HashMap<i32, NewCatchMainAreaFao>,
@@ -25,7 +25,7 @@ pub struct PreparedLandingSet {
     pub species_fao: Vec<SpeciesFao>,
     pub species_fiskeridir: Vec<SpeciesFiskeridir>,
     pub vessels: Vec<fiskeridir_rs::Vessel>,
-    pub delivery_points: Vec<DeliveryPointId>,
+    pub delivery_points: Vec<NewDeliveryPointId>,
     pub catch_areas: Vec<NewCatchArea>,
     pub catch_main_areas: Vec<NewCatchMainArea>,
     pub catch_main_area_fao: Vec<NewCatchMainAreaFao>,
@@ -105,13 +105,13 @@ impl LandingSet {
 
     fn add_delivery_point(&mut self, landing: &fiskeridir_rs::Landing) {
         if let Some(id) = &landing.delivery_point.id {
-            self.delivery_points.insert(id.clone());
+            self.delivery_points.insert(id.clone().into());
         }
         if let Some(id) = &landing.partial_landing_next_delivery_point_id {
-            self.delivery_points.insert(id.clone());
+            self.delivery_points.insert(id.clone().into());
         }
         if let Some(id) = &landing.partial_landing_previous_delivery_point_id {
-            self.delivery_points.insert(id.clone());
+            self.delivery_points.insert(id.clone().into());
         }
     }
 
