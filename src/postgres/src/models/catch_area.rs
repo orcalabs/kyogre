@@ -5,26 +5,29 @@ use unnest_insert::UnnestInsert;
 use crate::{error::PostgresError, queries::opt_float_to_decimal};
 
 #[derive(Debug, Clone, PartialEq, UnnestInsert)]
-#[unnest_insert(table_name = "catch_areas", conflict = "catch_area_id")]
+#[unnest_insert(
+    table_name = "catch_areas",
+    conflict = "catch_area_id",
+    update_coalesce_all
+)]
 pub struct NewCatchArea {
     #[unnest_insert(field_name = "catch_area_id")]
     pub id: i32,
-    #[unnest_insert(update_coalesce)]
     pub longitude: Option<BigDecimal>,
-    #[unnest_insert(update_coalesce)]
     pub latitude: Option<BigDecimal>,
 }
 
 #[derive(Debug, Clone, PartialEq, UnnestInsert)]
-#[unnest_insert(table_name = "catch_main_areas", conflict = "catch_main_area_id")]
+#[unnest_insert(
+    table_name = "catch_main_areas",
+    conflict = "catch_main_area_id",
+    update_coalesce_all
+)]
 pub struct NewCatchMainArea {
     #[unnest_insert(field_name = "catch_main_area_id")]
     pub id: i32,
-    #[unnest_insert(update_coalesce)]
     pub name: Option<String>,
-    #[unnest_insert(update_coalesce)]
     pub longitude: Option<BigDecimal>,
-    #[unnest_insert(update_coalesce)]
     pub latitude: Option<BigDecimal>,
 }
 

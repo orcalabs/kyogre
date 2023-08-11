@@ -3,12 +3,12 @@ use unnest_insert::UnnestInsert;
 #[derive(Default, Debug, Clone, UnnestInsert)]
 #[unnest_insert(
     table_name = "norwegian_municipalities",
-    conflict = "norwegian_municipality_id"
+    conflict = "norwegian_municipality_id",
+    update_coalesce_all
 )]
 pub struct NewMunicipality {
     #[unnest_insert(field_name = "norwegian_municipality_id")]
     pub id: i32,
-    #[unnest_insert(update_coalesce)]
     pub name: Option<String>,
 }
 
