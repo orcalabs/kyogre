@@ -24,93 +24,73 @@ pub struct NewDeliveryPointId {
 }
 
 #[derive(Debug, Clone, UnnestInsert)]
-#[unnest_insert(table_name = "aqua_culture_register", conflict = "delivery_point_id")]
+#[unnest_insert(
+    table_name = "aqua_culture_register",
+    conflict = "delivery_point_id",
+    update_all
+)]
 pub struct AquaCultureEntry {
     pub delivery_point_id: String,
-    #[unnest_insert(update)]
     pub org_id: Option<i32>,
-    #[unnest_insert(update)]
     pub name: String,
-    #[unnest_insert(update)]
     pub address: Option<String>,
-    #[unnest_insert(update)]
     pub zip_code: Option<i32>,
-    #[unnest_insert(update)]
     pub city: Option<String>,
-    #[unnest_insert(update)]
     pub approval_date: NaiveDate,
-    #[unnest_insert(update)]
     pub approval_limit: Option<NaiveDate>,
-    #[unnest_insert(update)]
     pub purpose: String,
-    #[unnest_insert(update)]
     pub production_form: String,
-    #[unnest_insert(update)]
     pub locality_name: String,
-    #[unnest_insert(update)]
     pub locality_municipality_number: i32,
-    #[unnest_insert(update)]
     pub locality_municipality: String,
-    #[unnest_insert(update)]
     pub locality_location: String,
-    #[unnest_insert(update)]
     pub water_environment: String,
-    #[unnest_insert(update)]
     pub locality_kap: BigDecimal,
-    #[unnest_insert(update)]
     pub locality_unit: String,
-    #[unnest_insert(update)]
     pub expiration_date: Option<NaiveDate>,
-    #[unnest_insert(update)]
     pub latitude: BigDecimal,
-    #[unnest_insert(update)]
     pub longitude: BigDecimal,
-    #[unnest_insert(update)]
     pub prod_omr: Option<String>,
 }
 
 #[derive(Debug, Clone, UnnestInsert)]
 #[unnest_insert(
     table_name = "aqua_culture_register_tills",
-    conflict = "delivery_point_id,till_nr"
+    conflict = "delivery_point_id,till_nr",
+    update_all
 )]
 pub struct AquaCultureTill {
     pub delivery_point_id: String,
     pub till_nr: String,
-    #[unnest_insert(update)]
     pub till_municipality_number: i32,
-    #[unnest_insert(update)]
     pub till_municipality: String,
 }
 
 #[derive(Debug, Clone, UnnestInsert)]
 #[unnest_insert(
     table_name = "aqua_culture_register_species",
-    conflict = "till_nr,till_unit,species_fiskeridir_id"
+    conflict = "till_nr,till_unit,species_fiskeridir_id",
+    update_all
 )]
 pub struct AquaCultureSpecies {
     pub delivery_point_id: String,
     pub till_nr: String,
     pub till_unit: String,
     pub species_fiskeridir_id: i32,
-    #[unnest_insert(update)]
     pub till_kap: BigDecimal,
 }
 
 #[derive(Debug, Clone, UnnestInsert)]
 #[unnest_insert(
     table_name = "mattilsynet_delivery_points",
-    conflict = "delivery_point_id"
+    conflict = "delivery_point_id",
+    update_all
 )]
 pub struct MattilsynetDeliveryPoint {
     pub delivery_point_id: String,
-    #[unnest_insert(update)]
     pub name: String,
-    #[unnest_insert(update)]
     pub address: Option<String>,
-    #[unnest_insert(update)]
     pub postal_city: Option<String>,
-    #[unnest_insert(update)]
     pub postal_code: Option<i32>,
 }
 

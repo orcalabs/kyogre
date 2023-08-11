@@ -51,41 +51,37 @@ pub struct NewFiskeridirVessel {
 }
 
 #[derive(Debug, Clone, UnnestInsert)]
-#[unnest_insert(table_name = "fiskeridir_vessels", conflict = "fiskeridir_vessel_id")]
+#[unnest_insert(
+    table_name = "fiskeridir_vessels",
+    conflict = "fiskeridir_vessel_id",
+    update_all
+)]
 pub struct NewRegisterVessel {
     pub fiskeridir_vessel_id: i64,
-    #[unnest_insert(update)]
     pub norwegian_municipality_id: i32,
-    #[unnest_insert(update)]
     pub call_sign: Option<String>,
-    #[unnest_insert(update)]
     pub name: String,
-    #[unnest_insert(update)]
     pub registration_id: String,
-    #[unnest_insert(update)]
     pub length: BigDecimal,
-    #[unnest_insert(update)]
     pub width: Option<BigDecimal>,
-    #[unnest_insert(update)]
     pub engine_power: Option<i32>,
-    #[unnest_insert(update)]
     pub imo_number: Option<i64>,
-    #[unnest_insert(update, sql_type = "JSON")]
+    #[unnest_insert(sql_type = "JSON")]
     pub owners: serde_json::Value,
-    #[unnest_insert(update, sql_type = "INT", type_conversion = "enum_to_i32")]
+    #[unnest_insert(sql_type = "INT", type_conversion = "enum_to_i32")]
     pub fiskeridir_vessel_source_id: FiskeridirVesselSource,
 }
 
 #[derive(Debug, Clone, UnnestInsert)]
 #[unnest_insert(
     table_name = "vessel_benchmark_outputs",
-    conflict = "fiskeridir_vessel_id,vessel_benchmark_id"
+    conflict = "fiskeridir_vessel_id,vessel_benchmark_id",
+    update_all
 )]
 pub struct VesselBenchmarkOutput {
     pub fiskeridir_vessel_id: i64,
     #[unnest_insert(sql_type = "INT", type_conversion = "enum_to_i32")]
     pub vessel_benchmark_id: VesselBenchmarkId,
-    #[unnest_insert(update)]
     pub output: BigDecimal,
 }
 

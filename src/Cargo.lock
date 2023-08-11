@@ -5955,9 +5955,9 @@ checksum = "39ec24b3121d976906ece63c9daad25b85969647682eee313cb5779fdd69e14e"
 
 [[package]]
 name = "unnest_insert"
-version = "0.1.1"
+version = "0.1.2"
 source = "registry+https://dl.cloudsmith.io/basic/orcalabs/orcastrator/cargo/index.git"
-checksum = "ce2fa10af672d46df39dfbf779c149e30e418a2105af72df1f0d9c924dc281ec"
+checksum = "fe784c83e592746b1d5e9a6061c7cafd3be8cde39a8a209f2358fd9948d19db7"
 dependencies = [
  "async-trait",
  "sqlx 0.7.1",
@@ -5966,9 +5966,9 @@ dependencies = [
 
 [[package]]
 name = "unnest_insert_derive"
-version = "0.1.1"
+version = "0.1.2"
 source = "registry+https://dl.cloudsmith.io/basic/orcalabs/orcastrator/cargo/index.git"
-checksum = "16edaa1907ec041ab7000ceeb77f481f116571ab9e15df0fa3516e83a21b1e7d"
+checksum = "61899cf667f06eee6b2d2c6a8d3e60d7d5aa29b4144360ccdab98890951e095c"
 dependencies = [
  "proc-macro2",
  "quote 1.0.32",
