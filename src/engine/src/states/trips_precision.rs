@@ -1,97 +1,82 @@
-use crate::*;
-use error_stack::{Result, ResultExt};
-use kyogre_core::Vessel;
-use orca_statemachine::Pending;
+use crate::{SharedState, TripProcessor};
+use async_trait::async_trait;
+use error_stack::ResultExt;
+use kyogre_core::{
+    TripAssemblerOutboundPort, TripPrecisionInboundPort, TripPrecisionOutboundPort, Vessel,
+};
+use machine::Schedule;
+use postgres::PostgresAdapter;
 use tracing::{event, instrument, Level};
 use trip_assembler::TripPrecisionError;
 
-// TripsPrecision -> Benchmark
-impl<L: TransitionLog, T> From<StepWrapper<L, T, TripsPrecision>> for StepWrapper<L, T, Benchmark> {
-    fn from(val: StepWrapper<L, T, TripsPrecision>) -> StepWrapper<L, T, Benchmark> {
-        val.inherit(Benchmark)
-    }
-}
+pub struct TripsPrecisionState;
 
-// Pending -> TripsPrecision
-impl<L: TransitionLog, T> From<StepWrapper<L, T, Pending>> for StepWrapper<L, T, TripsPrecision> {
-    fn from(val: StepWrapper<L, T, Pending>) -> StepWrapper<L, T, TripsPrecision> {
-        val.inherit(TripsPrecision)
-    }
-}
+#[async_trait]
+impl machine::State for TripsPrecisionState {
+    type SharedState = SharedState;
 
-#[derive(Default)]
-pub struct TripsPrecision;
-
-impl<A: TransitionLog, B: Database> StepWrapper<A, SharedState<B>, TripsPrecision> {
-    #[instrument(name = "trips_precision_state", skip_all)]
-    pub async fn run(self) -> Engine<A, SharedState<B>> {
-        tracing::Span::current().record(
-            "app.engine_state",
-            EngineDiscriminants::TripsPrecision.as_ref(),
-        );
-        match self.database().all_vessels().await {
+    async fn run(&self, shared_state: &Self::SharedState) {
+        match shared_state.database.all_vessels().await {
             Err(e) => {
                 event!(Level::ERROR, "failed to retrieve vessels: {:?}", e);
             }
             Ok(vessels) => {
-                self.run_precision_processors(vessels).await;
-            }
-        }
-
-        Engine::Benchmark(StepWrapper::<A, SharedState<B>, Benchmark>::from(self))
-    }
-
-    async fn run_precision_processors(&self, vessels: Vec<Vessel>) {
-        for processor in self.trip_processors() {
-            if let Err(e) = self
-                .run_precision_processor(processor.as_ref(), &vessels)
-                .await
-            {
-                event!(
-                    Level::ERROR,
-                    "failed to run trips_precision assembler, error: {:?}",
-                    e
-                );
+                run_precision_processors(shared_state, vessels).await;
             }
         }
     }
+    fn schedule(&self) -> Schedule {
+        Schedule::Disabled
+    }
+}
 
-    #[instrument(name = "run_precision_assembler", skip_all, fields(app.trip_assembler))]
-    async fn run_precision_processor(
-        &self,
-        processor: &dyn TripProcessor,
-        vessels: &[Vessel],
-    ) -> Result<(), TripPrecisionError> {
-        tracing::Span::current().record("app.trip_assembler", processor.assembler_id().to_string());
-        let database = self.database();
+#[instrument(name = "run_precision_assembler", skip_all, fields(app.trip_assembler))]
+async fn run_precision_processor(
+    database: &PostgresAdapter,
+    processor: &dyn TripProcessor,
+    vessels: &[Vessel],
+) -> error_stack::Result<(), TripPrecisionError> {
+    tracing::Span::current().record("app.trip_assembler", processor.assembler_id().to_string());
 
-        for vessel in vessels {
-            if vessel.mmsi().is_none() && vessel.fiskeridir.call_sign.is_none() {
-                continue;
-            }
-
-            let trips = database
-                .trips_without_precision(vessel.fiskeridir.id, processor.assembler_id())
-                .await
-                .change_context(TripPrecisionError)?;
-
-            if trips.is_empty() {
-                continue;
-            }
-
-            match processor.calculate_precision(vessel, database, trips).await {
-                Ok(updates) => {
-                    database
-                        .update_trip_precisions(updates)
-                        .await
-                        .change_context(TripPrecisionError)?;
-                }
-                Err(e) => {
-                    event!(Level::ERROR, "failed to calculate trips precision: {:?}", e);
-                }
-            }
+    for vessel in vessels {
+        if vessel.mmsi().is_none() && vessel.fiskeridir.call_sign.is_none() {
+            continue;
         }
 
-        Ok(())
+        let trips = database
+            .trips_without_precision(vessel.fiskeridir.id, processor.assembler_id())
+            .await
+            .change_context(TripPrecisionError)?;
+
+        if trips.is_empty() {
+            continue;
+        }
+
+        match processor.calculate_precision(vessel, database, trips).await {
+            Ok(updates) => {
+                database
+                    .update_trip_precisions(updates)
+                    .await
+                    .change_context(TripPrecisionError)?;
+            }
+            Err(e) => {
+                event!(Level::ERROR, "failed to calculate trips precision: {:?}", e);
+            }
+        }
+    }
+
+    Ok(())
+}
+
+async fn run_precision_processors(shared_state: &SharedState, vessels: Vec<Vessel>) {
+    let database = shared_state.postgres_adapter();
+    for processor in &shared_state.trip_processors {
+        if let Err(e) = run_precision_processor(database, processor.as_ref(), &vessels).await {
+            event!(
+                Level::ERROR,
+                "failed to run trips_precision assembler, error: {:?}",
+                e
+            );
+        }
     }
 }

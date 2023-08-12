@@ -1,40 +1,21 @@
-use crate::*;
-use orca_statemachine::Pending;
-use tracing::{event, instrument, Level};
+use crate::SharedState;
+use async_trait::async_trait;
+use kyogre_core::DatabaseViewRefresher;
+use machine::Schedule;
+use tracing::{event, Level};
 
-// Pending -> UpdateDatabaseViews
-impl<L: TransitionLog, T> From<StepWrapper<L, T, Pending>>
-    for StepWrapper<L, T, UpdateDatabaseViews>
-{
-    fn from(val: StepWrapper<L, T, Pending>) -> StepWrapper<L, T, UpdateDatabaseViews> {
-        val.inherit(UpdateDatabaseViews)
-    }
-}
+pub struct UpdateDatabaseViewsState;
 
-// UpdateDatabaseViews -> Pending
-impl<L: TransitionLog, T> From<StepWrapper<L, T, UpdateDatabaseViews>>
-    for StepWrapper<L, T, Pending>
-{
-    fn from(val: StepWrapper<L, T, UpdateDatabaseViews>) -> StepWrapper<L, T, Pending> {
-        val.inherit(Pending::default())
-    }
-}
+#[async_trait]
+impl machine::State for UpdateDatabaseViewsState {
+    type SharedState = SharedState;
 
-#[derive(Default)]
-pub struct UpdateDatabaseViews;
-
-impl<A: TransitionLog, B: Database> StepWrapper<A, SharedState<B>, UpdateDatabaseViews> {
-    #[instrument(name = "update_database_views", skip_all, fields(app.engine_state))]
-    pub async fn run(self) -> Engine<A, SharedState<B>> {
-        tracing::Span::current().record(
-            "app.engine_state",
-            EngineDiscriminants::UpdateDatabaseViews.as_ref(),
-        );
-
-        if let Err(e) = self.database().refresh().await {
+    async fn run(&self, shared_state: &Self::SharedState) {
+        if let Err(e) = shared_state.database.refresh().await {
             event!(Level::ERROR, "failed to update database views {:?}", e);
         }
-
-        Engine::Pending(StepWrapper::<A, SharedState<B>, Pending>::from(self))
+    }
+    fn schedule(&self) -> Schedule {
+        Schedule::Disabled
     }
 }

@@ -1,66 +1,55 @@
-use crate::*;
-use error_stack::Result;
-use orca_statemachine::Pending;
+use crate::{SharedState, TripProcessor};
+use async_trait::async_trait;
+use machine::Schedule;
 use tracing::{event, instrument, Level};
 use trip_assembler::TripAssemblerError;
 
-// Trips -> TripsPrecision
-impl<L: TransitionLog, T> From<StepWrapper<L, T, Trips>> for StepWrapper<L, T, TripsPrecision> {
-    fn from(val: StepWrapper<L, T, Trips>) -> StepWrapper<L, T, TripsPrecision> {
-        val.inherit(TripsPrecision)
-    }
-}
+pub struct TripsState;
 
-// Pending -> Trips
-impl<L: TransitionLog, T> From<StepWrapper<L, T, Pending>> for StepWrapper<L, T, Trips> {
-    fn from(val: StepWrapper<L, T, Pending>) -> StepWrapper<L, T, Trips> {
-        val.inherit(Trips)
-    }
-}
+#[async_trait]
+impl machine::State for TripsState {
+    type SharedState = SharedState;
 
-#[derive(Default)]
-pub struct Trips;
-
-impl<A: TransitionLog, B: Database> StepWrapper<A, SharedState<B>, Trips> {
-    #[instrument(name = "trips_state", skip_all, fields(app.engine_state))]
-    pub async fn run(self) -> Engine<A, SharedState<B>> {
-        tracing::Span::current().record("app.engine_state", EngineDiscriminants::Trips.as_ref());
-        for a in self.trip_processors() {
-            if let Err(e) = self.run_assembler(a.as_ref()).await {
+    async fn run(&self, shared_state: &Self::SharedState) {
+        for a in &shared_state.trip_processors {
+            if let Err(e) = run_assembler(shared_state, a.as_ref()).await {
                 event!(Level::ERROR, "failed to run trip assembler: {:?}", e);
             }
         }
-        Engine::TripsPrecision(StepWrapper::<A, SharedState<B>, TripsPrecision>::from(self))
     }
+    fn schedule(&self) -> Schedule {
+        Schedule::Disabled
+    }
+}
 
-    #[instrument(skip_all, fields(app.trip_assembler_id))]
-    async fn run_assembler(
-        &self,
-        trip_assembler: &dyn TripProcessor,
-    ) -> Result<(), TripAssemblerError> {
-        let database = self.database();
-
-        match trip_assembler.produce_and_store_trips(database).await {
-            Ok(r) => {
-                event!(
-                    Level::INFO,
-                    "num_conflicts: {}, num_vessels: {}, num_no_prior_state: {}
+#[instrument(skip_all, fields(app.trip_assembler_id))]
+async fn run_assembler(
+    shared_state: &SharedState,
+    trip_assembler: &dyn TripProcessor,
+) -> Result<(), TripAssemblerError> {
+    match trip_assembler
+        .produce_and_store_trips(shared_state.postgres_adapter())
+        .await
+    {
+        Ok(r) => {
+            event!(
+                Level::INFO,
+                "num_conflicts: {}, num_vessels: {}, num_no_prior_state: {}
                        num_trips: {}, num_failed: {}",
-                    r.num_conflicts,
-                    r.num_vessels,
-                    r.num_no_prior_state,
-                    r.num_trips,
-                    r.num_failed
-                );
+                r.num_conflicts,
+                r.num_vessels,
+                r.num_no_prior_state,
+                r.num_trips,
+                r.num_failed
+            );
 
-                tracing::Span::current().record(
-                    "app.trip_assembler",
-                    trip_assembler.assembler_id().to_string(),
-                );
-            }
-            Err(e) => event!(Level::ERROR, "failed to produce and store trips: {:?}", e),
+            tracing::Span::current().record(
+                "app.trip_assembler",
+                trip_assembler.assembler_id().to_string(),
+            );
         }
-
-        Ok(())
+        Err(e) => event!(Level::ERROR, "failed to produce and store trips: {:?}", e),
     }
+
+    Ok(())
 }

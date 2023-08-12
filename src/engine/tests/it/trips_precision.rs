@@ -3,14 +3,11 @@ use chrono::{Duration, TimeZone, Utc};
 use engine::*;
 use fiskeridir_rs::CallSign;
 use kyogre_core::*;
-use orca_statemachine::Schedule;
+use machine::StateMachine;
 
 #[tokio::test]
 async fn test_trips_precision_updates_precision_of_trip() {
-    let config = Config {
-        scrape_schedule: Schedule::Disabled,
-    };
-    test(config, |helper| async move {
+    test(|helper, app| async move {
         let call_sign = CallSign::try_from("RK-45").unwrap();
         let mmsi = Mmsi(1);
         let fiskeridir_vessel_id = FiskeridirVesselId(1);
@@ -63,8 +60,13 @@ async fn test_trips_precision_updates_precision_of_trip() {
             .generate_ers_arrival_with_port(2, fiskeridir_vessel_id, arrival, 2, end_port_id)
             .await;
 
-        helper.run_step(EngineDiscriminants::Trips).await;
-        helper.run_step(EngineDiscriminants::TripsPrecision).await;
+        let mut engine = FisheryEngine::Trips(Step::initial(
+            TripsState,
+            app.shared_state,
+            Box::new(app.transition_log),
+        ));
+        engine = engine.run_single().await;
+        engine.run_single().await;
 
         let trips = helper.db.trips_of_vessel(fiskeridir_vessel_id).await;
 
