@@ -1,11 +1,9 @@
 use dockertest::{DockerTest, Source, StartPolicy, StaticManagementPolicy};
-use engine::states::{Scrape, Sleep, Trips, TripsPrecision};
 use engine::*;
 use futures::Future;
 use orca_core::{
     compositions::postgres_composition, Environment, LogLevel, PsqlLogStatements, PsqlSettings,
 };
-use orca_statemachine::{Machine, Pending, Schedule};
 use postgres::{PostgresAdapter, TestDb};
 use rand::random;
 use std::panic;
@@ -16,7 +14,6 @@ static TRACING: Once = Once::new();
 static DATABASE_PASSWORD: &str = "test123";
 
 pub struct TestHelper {
-    settings: Settings,
     pub db: TestDb,
 }
 
@@ -24,93 +21,11 @@ impl TestHelper {
     pub fn adapter(&self) -> &PostgresAdapter {
         &self.db.db
     }
-
-    pub fn enable_scrape(&mut self) {
-        self.settings.engine = engine::Config {
-            scrape_schedule: Schedule::Periodic(std::time::Duration::from_micros(0)),
-        };
-    }
-
-    pub fn disable_scrape(&mut self) {
-        self.settings.engine = engine::Config {
-            scrape_schedule: Schedule::Disabled,
-        };
-    }
-    pub async fn run_step(&self, state: EngineDiscriminants) {
-        let app = App::build(&self.settings).await;
-        let engine = match &state {
-            EngineDiscriminants::Trips => {
-                let step =
-                    StepWrapper::initial(app.transition_log.clone(), app.shared_state, Trips);
-                Engine::Trips(step)
-            }
-            EngineDiscriminants::Pending => {
-                let step = StepWrapper::initial(
-                    app.transition_log.clone(),
-                    app.shared_state,
-                    Pending::default(),
-                );
-                Engine::Pending(step)
-            }
-            EngineDiscriminants::Sleep => {
-                let step = StepWrapper::initial(
-                    app.transition_log.clone(),
-                    app.shared_state,
-                    Sleep::default(),
-                );
-                Engine::Sleep(step)
-            }
-            EngineDiscriminants::Scrape => {
-                let step =
-                    StepWrapper::initial(app.transition_log.clone(), app.shared_state, Scrape);
-                Engine::Scrape(step)
-            }
-            EngineDiscriminants::TripsPrecision => {
-                let step = StepWrapper::initial(
-                    app.transition_log.clone(),
-                    app.shared_state,
-                    TripsPrecision,
-                );
-                Engine::TripsPrecision(step)
-            }
-            EngineDiscriminants::Benchmark => {
-                let step =
-                    StepWrapper::initial(app.transition_log.clone(), app.shared_state, Benchmark);
-                Engine::Benchmark(step)
-            }
-            EngineDiscriminants::HaulDistribution => {
-                let step = StepWrapper::initial(
-                    app.transition_log.clone(),
-                    app.shared_state,
-                    HaulDistribution,
-                );
-                Engine::HaulDistribution(step)
-            }
-            EngineDiscriminants::TripDistance => {
-                let step = StepWrapper::initial(
-                    app.transition_log.clone(),
-                    app.shared_state,
-                    TripDistance,
-                );
-                Engine::TripDistance(step)
-            }
-            EngineDiscriminants::UpdateDatabaseViews => {
-                let step = StepWrapper::initial(
-                    app.transition_log.clone(),
-                    app.shared_state,
-                    UpdateDatabaseViews,
-                );
-                Engine::UpdateDatabaseViews(step)
-            }
-        };
-
-        Machine::run_single(engine, &app.transition_log).await;
-    }
 }
 
-pub async fn test<T, Fut>(engine_config: engine::Config, test: T)
+pub async fn test<T, Fut>(test: T)
 where
-    T: FnOnce(TestHelper) -> Fut + panic::UnwindSafe + Send + Sync + 'static,
+    T: FnOnce(TestHelper, App) -> Fut + panic::UnwindSafe + Send + Sync + 'static,
     Fut: Future<Output = ()> + Send + 'static,
 {
     let mut docker_test = DockerTest::new().with_default_source(Source::DockerHub);
@@ -166,7 +81,6 @@ where
                 postgres: db_settings.clone(),
                 environment: Environment::Test,
                 honeycomb: None,
-                engine: engine_config,
                 scraper: scraper::Config::default(),
             };
 
@@ -174,7 +88,7 @@ where
                 db: PostgresAdapter::new(&db_settings).await.unwrap(),
             };
 
-            test(TestHelper { db, settings }).await;
+            test(TestHelper { db }, App::build(&settings).await).await;
 
             test_db.drop_db(&db_name).await;
         })

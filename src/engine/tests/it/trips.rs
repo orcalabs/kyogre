@@ -2,14 +2,11 @@ use crate::helper::*;
 use chrono::{TimeZone, Utc};
 use engine::*;
 use kyogre_core::*;
-use orca_statemachine::Schedule;
+use machine::StateMachine;
 
 #[tokio::test]
 async fn test_trips_only_generates_trips_for_ers_assembler_if_vessel_has_ers_data() {
-    let config = Config {
-        scrape_schedule: Schedule::Disabled,
-    };
-    test(config, |helper| async move {
+    test(|helper, app| async move {
         let vessel_id = FiskeridirVesselId(11);
 
         let start = Utc.timestamp_opt(100000, 1).unwrap();
@@ -36,7 +33,12 @@ async fn test_trips_only_generates_trips_for_ers_assembler_if_vessel_has_ers_dat
             .await
             .unwrap();
 
-        helper.run_step(EngineDiscriminants::Trips).await;
+        let engine = FisheryEngine::Trips(Step::initial(
+            TripsState,
+            app.shared_state,
+            Box::new(app.transition_log),
+        ));
+        engine.run_single().await;
 
         let trips = helper.db.trips_of_vessel(vessel_id).await;
 
@@ -48,10 +50,7 @@ async fn test_trips_only_generates_trips_for_ers_assembler_if_vessel_has_ers_dat
 
 #[tokio::test]
 async fn test_trips_generates_trips_for_landings_assembler_if_vessel_has_no_ers_data() {
-    let config = Config {
-        scrape_schedule: Schedule::Disabled,
-    };
-    test(config, |helper| async move {
+    test(|helper, app| async move {
         let fiskeridir_vessel_id = FiskeridirVesselId(11);
 
         let landing = fiskeridir_rs::Landing::test_default(1, Some(fiskeridir_vessel_id.0));
@@ -61,7 +60,12 @@ async fn test_trips_generates_trips_for_landings_assembler_if_vessel_has_no_ers_
             .await
             .unwrap();
 
-        helper.run_step(EngineDiscriminants::Trips).await;
+        let engine = FisheryEngine::Trips(Step::initial(
+            TripsState,
+            app.shared_state,
+            Box::new(app.transition_log),
+        ));
+        engine.run_single().await;
 
         let trips = helper.db.trips_of_vessel(fiskeridir_vessel_id).await;
 

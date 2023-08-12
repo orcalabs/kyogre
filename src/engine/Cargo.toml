@@ -14,10 +14,7 @@ vessel-benchmark = { path = "../vessel-benchmark" }
 haul-distributor = { path = "../haul-distributor" }
 trip-distancer = { path = "../trip-distancer" }
 
-
-orca-statemachine = { version = "0.40.0", registry = "orcalabs-orcastrator", features = [
-    "psql-adapter",
-] }
+machine = { version = "0.1.1", registry = "orcalabs-orcastrator" }
 
 orca-core = { workspace = true, features = ["telemetry"] }
 fiskeridir-rs = { workspace = true }

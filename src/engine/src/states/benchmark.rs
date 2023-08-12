@@ -1,41 +1,16 @@
 use crate::*;
-use orca_statemachine::Pending;
-use tracing::{event, instrument, Level};
+use async_trait::async_trait;
+use tracing::{event, Level};
 
-// Pending -> Benchmark
-impl<L: TransitionLog, T> From<StepWrapper<L, T, Pending>> for StepWrapper<L, T, Benchmark> {
-    fn from(val: StepWrapper<L, T, Pending>) -> StepWrapper<L, T, Benchmark> {
-        val.inherit(Benchmark)
-    }
-}
+pub struct BenchmarkState;
 
-// Benchmark -> HaulDistribution
-impl<L: TransitionLog, T> From<StepWrapper<L, T, Benchmark>>
-    for StepWrapper<L, T, HaulDistribution>
-{
-    fn from(val: StepWrapper<L, T, Benchmark>) -> StepWrapper<L, T, HaulDistribution> {
-        val.inherit(HaulDistribution)
-    }
-}
+#[async_trait]
+impl machine::State for BenchmarkState {
+    type SharedState = SharedState;
 
-#[derive(Default)]
-pub struct Benchmark;
-
-impl<A: TransitionLog, B: Database> StepWrapper<A, SharedState<B>, Benchmark> {
-    #[instrument(name = "benchmark_state", skip_all, fields(app.engine_state))]
-    pub async fn run(self) -> Engine<A, SharedState<B>> {
-        tracing::Span::current()
-            .record("app.engine_state", EngineDiscriminants::Benchmark.as_ref());
-        self.do_step().await;
-        Engine::HaulDistribution(StepWrapper::<A, SharedState<B>, HaulDistribution>::from(
-            self,
-        ))
-    }
-
-    #[instrument(skip_all)]
-    async fn do_step(&self) {
-        let database = self.database();
-        for b in self.vessel_benchmarks() {
+    async fn run(&self, shared_state: &Self::SharedState) {
+        let database = shared_state.postgres_adapter();
+        for b in &shared_state.benchmarks {
             if let Err(e) = b.produce_and_store_benchmarks(database, database).await {
                 event!(
                     Level::ERROR,
@@ -45,5 +20,8 @@ impl<A: TransitionLog, B: Database> StepWrapper<A, SharedState<B>, Benchmark> {
                 );
             }
         }
+    }
+    fn schedule(&self) -> Schedule {
+        Schedule::Disabled
     }
 }

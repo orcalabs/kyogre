@@ -7,9 +7,6 @@ postgres:
 telemetry:
   ip: api.honeycomb.io
   port: 443
-engine:
-  scrape_schedule:
-    Daily: 07:00:00
 scraper:
   fishing_facility:
     url: https://www.barentswatch.no/bwapi/v2/geodata/fishingfacilityupdates

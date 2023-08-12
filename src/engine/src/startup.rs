@@ -1,13 +1,13 @@
-use crate::{settings::Settings, Engine, SharedState, StepWrapper};
+use crate::{settings::Settings, FisheryEngine, SharedState};
+use machine::StateMachine;
 use orca_core::Environment;
-use orca_statemachine::{Machine, Pending};
 use postgres::PostgresAdapter;
 use scraper::{BarentswatchSource, FiskeridirSource, Scraper, WrappedHttpClient};
 use std::{path::PathBuf, sync::Arc};
 
 pub struct App {
-    pub shared_state: SharedState<PostgresAdapter>,
-    pub transition_log: orca_statemachine::PostgresAdapter,
+    pub shared_state: SharedState,
+    pub transition_log: machine::PostgresAdapter,
 }
 
 impl App {
@@ -35,7 +35,7 @@ impl App {
             barentswatch_source,
         );
         let trip_assemblers = settings.trip_assemblers();
-        let transition_log = orca_statemachine::PostgresAdapter::new(&settings.postgres)
+        let transition_log = machine::PostgresAdapter::new(&settings.postgres)
             .await
             .unwrap();
 
@@ -44,7 +44,6 @@ impl App {
         let trip_distancers = settings.trip_distancers();
 
         let shared_state = SharedState::new(
-            settings.engine.clone(),
             postgres,
             scraper,
             trip_assemblers,
@@ -60,11 +59,12 @@ impl App {
     }
 
     pub async fn run(self) {
-        let step = StepWrapper::initial(
-            self.transition_log.clone(),
+        let step = crate::Step::initial(
+            crate::Pending::default(),
             self.shared_state,
-            Pending::default(),
+            Box::new(self.transition_log),
         );
-        Machine::run(Engine::Pending(step), self.transition_log).await
+        let engine = FisheryEngine::Pending(step);
+        engine.run().await;
     }
 }
