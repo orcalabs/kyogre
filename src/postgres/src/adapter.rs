@@ -899,6 +899,13 @@ impl MatrixCacheVersion for PostgresAdapter {
     }
 }
 
+#[async_trait]
+impl VerificationOutbound for PostgresAdapter {
+    async fn verify_database(&self) -> Result<(), QueryError> {
+        self.verify_database_impl().await.change_context(QueryError)
+    }
+}
+
 pub(crate) fn convert_stream<I, A, B>(input: I) -> impl Stream<Item = Result<B, QueryError>>
 where
     I: Stream<Item = Result<A, PostgresError>>,

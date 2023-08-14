@@ -371,7 +371,7 @@ where
 
             let adapter = PostgresAdapter::new(&db_settings).await.unwrap();
             let app = TestHelper::spawn_app(
-                adapter,
+                adapter.clone(),
                 App::build(&api_settings).await,
                 bw_helper,
                 duck_db_client,
@@ -382,6 +382,8 @@ where
                 event!(Level::INFO, "cache_test");
             }
             test(app).await;
+
+            adapter.verify_database().await.unwrap();
 
             test_db.drop_db(&db_name).await;
         })

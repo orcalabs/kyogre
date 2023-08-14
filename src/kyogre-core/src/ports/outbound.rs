@@ -198,3 +198,8 @@ pub trait TripDistancerOutbound: Send + Sync {
 pub trait MatrixCacheVersion: Send + Sync {
     async fn increment(&self) -> Result<(), UpdateError>;
 }
+
+#[async_trait]
+pub trait VerificationOutbound: Send + Sync {
+    async fn verify_database(&self) -> Result<(), QueryError>;
+}

@@ -6,6 +6,7 @@ use duckdb_rs::{
     startup::App,
 };
 use futures::Future;
+use kyogre_core::VerificationOutbound;
 use orca_core::{
     compositions::postgres_composition, Environment, LogLevel, PsqlLogStatements, PsqlSettings,
 };
@@ -100,11 +101,15 @@ where
             let adapter = PostgresAdapter::new(&db_settings).await.unwrap();
 
             let helper = TestHelper {
-                db: TestDb { db: adapter },
+                db: TestDb {
+                    db: adapter.clone(),
+                },
                 cache: Client::new("[::]", port).await.unwrap(),
             };
 
             test(helper).await;
+
+            adapter.verify_database().await.unwrap();
 
             test_db.drop_db(&db_name).await;
         })

@@ -33,6 +33,7 @@ pub trait Database:
     + TripDistancerInbound
     + MatrixCacheVersion
     + DatabaseViewRefresher
+    + VerificationOutbound
     + Send
     + Sync
     + 'static
@@ -53,6 +54,7 @@ impl<T> Database for T where
         + TripDistancerInbound
         + MatrixCacheVersion
         + DatabaseViewRefresher
+        + VerificationOutbound
         + 'static
 {
 }
@@ -68,6 +70,7 @@ pub enum Fishery {
     HaulDistribution(HaulDistributionState),
     TripDistance(TripsDistanceState),
     UpdateDatabaseViews(UpdateDatabaseViewsState),
+    VerifyDatabase(VerifyDatabaseState),
 }
 
 pub struct SharedState {

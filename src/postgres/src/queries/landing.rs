@@ -333,6 +333,43 @@ WHERE
             .into_report()
             .change_context(PostgresError::Transaction)
     }
+
+    pub(crate) async fn landing_matrix_vs_landings_living_weight(
+        &self,
+    ) -> Result<i64, PostgresError> {
+        sqlx::query!(
+            r#"
+SELECT
+    COALESCE(
+        (
+            SELECT
+                SUM(living_weight)
+            FROM
+                landing_entries
+        ) - (
+            SELECT
+                SUM(e.living_weight)
+            FROM
+                landing_entries e
+                LEFT JOIN landing_matrix l ON l.landing_id = e.landing_id
+            WHERE
+                l.landing_id IS NULL
+        ) - (
+            SELECT
+                SUM(living_weight)
+            FROM
+                landing_matrix
+        ),
+        0
+    )::BIGINT AS "sum!"
+            "#
+        )
+        .fetch_one(&self.pool)
+        .await
+        .into_report()
+        .change_context(PostgresError::Query)
+        .map(|r| r.sum)
+    }
 }
 
 pub struct LandingsArgs {

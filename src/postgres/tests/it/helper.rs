@@ -2,6 +2,7 @@ use std::panic;
 
 use dockertest::{DockerTest, Source, StaticManagementPolicy};
 use futures::Future;
+use kyogre_core::VerificationOutbound;
 use orca_core::{compositions::postgres_composition, PsqlLogStatements, PsqlSettings};
 use postgres::{PostgresAdapter, TestDb};
 use rand::random;
@@ -57,10 +58,14 @@ where
 
             let adapter = PostgresAdapter::new(&db_settings).await.unwrap();
             let helper = TestHelper {
-                db: TestDb { db: adapter },
+                db: TestDb {
+                    db: adapter.clone(),
+                },
             };
 
             test(helper).await;
+
+            adapter.verify_database().await.unwrap();
 
             test_db.drop_db(&db_name).await;
         })
