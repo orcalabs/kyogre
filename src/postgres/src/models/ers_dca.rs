@@ -145,7 +145,7 @@ pub struct NewErsDcaCatch {
     pub message_version: i32,
     pub living_weight: Option<i32>,
     pub species_fao_id: String,
-    pub species_fiskeridir_id: Option<i32>,
+    pub species_fiskeridir_id: i32,
     pub species_group_id: i32,
     pub species_main_group_id: i32,
 }
@@ -361,7 +361,7 @@ impl NewErsDcaCatch {
                     message_version: ers_dca.message_version as i32,
                     living_weight: s.living_weight.map(|ers_dca| ers_dca as i32),
                     species_fao_id: species_fao_id.clone(),
-                    species_fiskeridir_id: s.species_fdir_code.map(|v| v as i32),
+                    species_fiskeridir_id: s.species_fdir_code.map(|v| v as i32).unwrap_or(0),
                     species_group_id: s.species_group_code as i32,
                     species_main_group_id: s.species_main_group_code as i32,
                 })

@@ -384,3 +384,22 @@ async fn test_hauls_sorts_by_weight() {
     })
     .await;
 }
+
+#[tokio::test]
+async fn test_hauls_species_fiskeridir_defaults_to_zero() {
+    test(|helper| async move {
+        let mut ers = ErsDca::test_default(1, None);
+        ers.catch.species.species_fdir_code = None;
+
+        helper.db.db.add_ers_dca(vec![ers]).await.unwrap();
+
+        let response = helper.app.get_hauls(Default::default()).await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let hauls: Vec<Haul> = response.json().await.unwrap();
+
+        assert_eq!(hauls.len(), 1);
+        assert_eq!(hauls[0].catches[0].species_fiskeridir_id, 0);
+    })
+    .await;
+}
