@@ -1,5 +1,6 @@
 use bigdecimal::BigDecimal;
 use error_stack::Context;
+use kyogre_core::ErsDcaId;
 
 #[derive(Debug)]
 pub enum PostgresError {
@@ -7,6 +8,7 @@ pub enum PostgresError {
     Transaction,
     Query,
     DataConversion,
+    InconsistentState,
 }
 
 impl Context for PostgresError {}
@@ -19,6 +21,9 @@ impl std::fmt::Display for PostgresError {
             PostgresError::Query => f.write_str("a query related error occured"),
             PostgresError::DataConversion => {
                 f.write_str("failed to convert data to postgres specific data type")
+            }
+            PostgresError::InconsistentState => {
+                f.write_str("database found to be in an inconsistent state")
             }
         }
     }
@@ -103,3 +108,32 @@ impl std::fmt::Display for ErrorWrapper {
     }
 }
 impl std::error::Error for ErrorWrapper {}
+
+#[derive(Debug)]
+pub enum VerifyDatabaseError {
+    DanglingVesselEvents(i64),
+    IncorrectHaulCatches(Vec<ErsDcaId>),
+    IncorrectHaulsMatrixLivingWeight(i64),
+    IncorrectLandingMatrixLivingWeight(i64),
+}
+
+impl std::error::Error for VerifyDatabaseError {}
+
+impl std::fmt::Display for VerifyDatabaseError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            VerifyDatabaseError::DanglingVesselEvents(v) => {
+                f.write_fmt(format_args!("found {v} dangling vessel events"))
+            }
+            VerifyDatabaseError::IncorrectHaulCatches(v) => {
+                f.write_fmt(format_args!("found hauls with incorrect catch data: {v:?}"))
+            }
+            VerifyDatabaseError::IncorrectHaulsMatrixLivingWeight(v) => f.write_fmt(format_args!(
+                "hauls matrix and ers dca living weight differ by {v}"
+            )),
+            VerifyDatabaseError::IncorrectLandingMatrixLivingWeight(v) => f.write_fmt(
+                format_args!("landing matrix and landings living weight differ by {v}"),
+            ),
+        }
+    }
+}

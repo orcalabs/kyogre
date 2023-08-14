@@ -159,10 +159,14 @@ where
 
             let adapter = PostgresAdapter::new(&db_settings).await.unwrap();
             let helper = TestHelper {
-                db: TestDb { db: adapter },
+                db: TestDb {
+                    db: adapter.clone(),
+                },
             };
 
             test(helper).await;
+
+            adapter.verify_database().await.unwrap();
 
             test_db.drop_db(&db_name).await;
         })

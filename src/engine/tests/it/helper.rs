@@ -1,6 +1,7 @@
 use dockertest::{DockerTest, Source, StartPolicy, StaticManagementPolicy};
 use engine::*;
 use futures::Future;
+use kyogre_core::VerificationOutbound;
 use orca_core::{
     compositions::postgres_composition, Environment, LogLevel, PsqlLogStatements, PsqlSettings,
 };
@@ -84,11 +85,14 @@ where
                 scraper: scraper::Config::default(),
             };
 
+            let adapter = PostgresAdapter::new(&db_settings).await.unwrap();
             let db = TestDb {
-                db: PostgresAdapter::new(&db_settings).await.unwrap(),
+                db: adapter.clone(),
             };
 
             test(TestHelper { db }, App::build(&settings).await).await;
+
+            adapter.verify_database().await.unwrap();
 
             test_db.drop_db(&db_name).await;
         })

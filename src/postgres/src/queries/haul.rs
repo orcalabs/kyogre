@@ -406,6 +406,81 @@ GROUP BY
 
         Ok(())
     }
+
+    pub(crate) async fn hauls_with_incorrect_catches(
+        &self,
+    ) -> Result<Vec<ErsDcaId>, PostgresError> {
+        sqlx::query_as!(
+            ErsDcaId,
+            r#"
+WITH
+    haul_catches AS (
+        SELECT
+            message_id,
+            start_timestamp,
+            stop_timestamp,
+            JSONB_ARRAY_ELEMENTS(catches) AS catch
+        FROM
+            hauls
+    )
+SELECT
+    COALESCE(h.message_id, c.message_id) AS "message_id!",
+    COALESCE(h.start_timestamp, c.start_timestamp) AS "start_timestamp!",
+    COALESCE(h.stop_timestamp, c.stop_timestamp) AS "stop_timestamp!"
+FROM
+    haul_catches h
+    FULL JOIN ers_dca_catches c ON h.message_id = c.message_id
+    AND h.start_timestamp = c.start_timestamp
+    AND h.stop_timestamp = c.stop_timestamp
+    AND h.catch ->> 'species_fao_id' = c.species_fao_id
+WHERE
+    h.message_id IS NULL
+    OR c.message_id IS NULL
+    OR (h.catch ->> 'living_weight')::INT != c.living_weight
+            "#
+        )
+        .fetch_all(&self.pool)
+        .await
+        .into_report()
+        .change_context(PostgresError::Query)
+    }
+
+    pub(crate) async fn hauls_matrix_vs_ers_dca_living_weight(&self) -> Result<i64, PostgresError> {
+        sqlx::query!(
+            r#"
+SELECT
+    COALESCE(
+        (
+            SELECT
+                SUM(living_weight)
+            FROM
+                ers_dca_catches
+        ) - (
+            SELECT
+                SUM(c.living_weight)
+            FROM
+                ers_dca_catches c
+                LEFT JOIN hauls_matrix h ON h.message_id = c.message_id
+                AND h.start_timestamp = c.start_timestamp
+                AND h.stop_timestamp = c.stop_timestamp
+            WHERE
+                h.message_id IS NULL
+        ) - (
+            SELECT
+                SUM(living_weight)
+            FROM
+                hauls_matrix
+        ),
+        0
+    )::BIGINT AS "sum!"
+            "#
+        )
+        .fetch_one(&self.pool)
+        .await
+        .into_report()
+        .change_context(PostgresError::Query)
+        .map(|r| r.sum)
+    }
 }
 
 pub struct HaulsArgs {

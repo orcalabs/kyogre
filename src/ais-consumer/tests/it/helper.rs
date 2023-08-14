@@ -7,6 +7,7 @@ use ais_consumer::{
 };
 use dockertest::{DockerTest, Source, StaticManagementPolicy};
 use futures::{Future, TryStreamExt};
+use kyogre_core::VerificationOutbound;
 use lazy_static::{initialize, lazy_static};
 use orca_core::{
     compositions::postgres_composition, Environment, LogLevel, PsqlLogStatements, PsqlSettings,
@@ -133,6 +134,9 @@ where
             };
 
             test_closure(helper).await;
+
+            test_db.db.verify_database().await.unwrap();
+
             test_master_db.drop_db(&db_name).await;
         })
         .await;
