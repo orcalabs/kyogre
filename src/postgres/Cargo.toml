@@ -19,10 +19,10 @@ num-traits = "0.2.16"
 chrono = { version = "0.4.26", features = ["serde"] }
 error-stack = { workspace = true }
 bigdecimal = "0.3.1"
-tokio = { version = "1.29.1", features = ["macros", "sync", "time"] }
+tokio = { version = "1.31.0", features = ["macros", "sync", "time"] }
 sqlx = { workspace = true }
 tracing = "0.1.37"
-async-trait = "0.1.72"
+async-trait = "0.1.73"
 serde_json = "1.0.104"
 serde = { version = "1.0.183", features = ["derive"] }
 futures = "0.3.28"
@@ -39,4 +39,4 @@ uuid = { version = "1.4.1", features = ["serde"] }
 rand = "0.8.5"
 dockertest = { version = "0.3.1", registry = "orcalabs-orcastrator" }
 orca-core = { workspace = true, features = ["dockertest"] }
-tokio = { version = "1.29.1", features = ["rt-multi-thread", "macros"] }
+tokio = { version = "1.31.0", features = ["rt-multi-thread", "macros"] }

@@ -12,5 +12,5 @@ orca-core = { workspace = true, features = ["telemetry"] }
 sqlx = { workspace = true }
 error-stack = { workspace = true }
 bigdecimal = "0.3.1"
-async-trait = "0.1.72"
+async-trait = "0.1.73"
 chrono = { version = "0.4.26", features = ["serde"] }
