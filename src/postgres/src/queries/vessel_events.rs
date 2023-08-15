@@ -15,7 +15,8 @@ impl PostgresAdapter {
 SELECT
     v.vessel_event_id,
     v.fiskeridir_vessel_id,
-    v."timestamp",
+    v.report_timestamp,
+    v.occurence_timestamp,
     v.vessel_event_type_id AS "vessel_event_type_id!: VesselEventType",
     NULL AS "port_id",
     NULL AS "arrival_port_id",
@@ -26,9 +27,9 @@ FROM
 WHERE
     v.fiskeridir_vessel_id = $1
     AND v.vessel_event_type_id = $2
-    AND v."timestamp" <@ $3::tstzrange
+    AND v.report_timestamp <@ $3::tstzrange
 ORDER BY
-    "timestamp"
+    v.report_timestamp
            "#,
             &(vessel_id.0 as i32),
             VesselEventType::Landing as i32,
@@ -50,7 +51,8 @@ ORDER BY
 SELECT
     vessel_event_id AS "vessel_event_id!",
     fiskeridir_vessel_id AS "fiskeridir_vessel_id!",
-    "timestamp" AS "timestamp!",
+    report_timestamp AS "report_timestamp!",
+    occurence_timestamp,
     "vessel_event_type_id!: VesselEventType",
     port_id,
     NULL AS "arrival_port_id",
@@ -61,7 +63,8 @@ FROM
         SELECT
             v.vessel_event_id,
             v.fiskeridir_vessel_id,
-            v."timestamp",
+            v.report_timestamp,
+            v.occurence_timestamp,
             v.vessel_event_type_id AS "vessel_event_type_id!: VesselEventType",
             d.port_id,
             d.relevant_year,
@@ -72,13 +75,14 @@ FROM
             INNER JOIN ers_departures d ON d.vessel_event_id = v.vessel_event_id
         WHERE
             v.fiskeridir_vessel_id = $1
-            AND v."timestamp" <@ $2::tstzrange
-            AND v."timestamp" >= '1970-01-01T00:00:00Z'::TIMESTAMPTZ
+            AND v.report_timestamp <@ $2::tstzrange
+            AND v.report_timestamp >= '1970-01-01T00:00:00Z'::TIMESTAMPTZ
         UNION
         SELECT
             v.vessel_event_id,
             v.fiskeridir_vessel_id,
-            v."timestamp",
+            v.report_timestamp,
+            v.occurence_timestamp,
             v.vessel_event_type_id AS "vessel_event_type_id!: VesselEventType",
             a.port_id,
             a.relevant_year,
@@ -89,11 +93,11 @@ FROM
             INNER JOIN ers_arrivals a ON a.vessel_event_id = v.vessel_event_id
         WHERE
             v.fiskeridir_vessel_id = $1
-            AND v."timestamp" <@ $2::tstzrange
-            AND v."timestamp" >= '1970-01-01T00:00:00Z'::TIMESTAMPTZ
+            AND v.report_timestamp <@ $2::tstzrange
+            AND v.report_timestamp >= '1970-01-01T00:00:00Z'::TIMESTAMPTZ
     ) q
 ORDER BY
-    "timestamp",
+    report_timestamp,
     message_number
            "#,
             &(vessel_id.0 as i32),

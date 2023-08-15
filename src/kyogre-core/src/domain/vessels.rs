@@ -21,7 +21,8 @@ pub struct Vessel {
 pub struct VesselEvent {
     pub event_id: u64,
     pub vessel_id: FiskeridirVesselId,
-    pub timestamp: DateTime<Utc>,
+    pub report_timestamp: DateTime<Utc>,
+    pub occurence_timestamp: Option<DateTime<Utc>>,
     pub event_type: VesselEventType,
 }
 

@@ -751,7 +751,8 @@ async fn test_trips_does_not_include_events_outside_period() {
 }
 
 #[tokio::test]
-async fn test_trips_does_not_tra_events_without_timestamps() {
+async fn test_trip_connects_to_tra_event_based_on_message_timestamp_if_reloading_timestamp_is_none()
+{
     test(|mut helper| async move {
         let fiskeridir_vessel_id = FiskeridirVesselId(1);
         helper
@@ -762,13 +763,10 @@ async fn test_trips_does_not_tra_events_without_timestamps() {
         let start = Utc.timestamp_opt(10000, 0).unwrap();
         let end = Utc.timestamp_opt(100000, 0).unwrap();
 
-        helper
-            .db
-            .generate_tra(1, fiskeridir_vessel_id, end + Duration::seconds(1))
-            .await;
-
         let mut tra =
-            fiskeridir_rs::ErsTra::test_default(0, Some(fiskeridir_vessel_id.0 as u64), start);
+            fiskeridir_rs::ErsTra::test_default(1, Some(fiskeridir_vessel_id.0 as u64), start);
+        tra.message_info
+            .set_message_timestamp(start + Duration::seconds(10));
         tra.reloading_timestamp = None;
         tra.reloading_date = None;
         tra.reloading_time = None;
@@ -785,9 +783,10 @@ async fn test_trips_does_not_tra_events_without_timestamps() {
 
         assert_eq!(trips.len(), 1);
 
-        assert_eq!(trips[0].events.len(), 2);
+        assert_eq!(trips[0].events.len(), 3);
         assert_eq!(trips[0].events[0].event_type, VesselEventType::ErsDep);
-        assert_eq!(trips[0].events[1].event_type, VesselEventType::ErsPor);
+        assert_eq!(trips[0].events[1].event_type, VesselEventType::ErsTra);
+        assert_eq!(trips[0].events[2].event_type, VesselEventType::ErsPor);
         assert_eq!(trips[0], ers_trip);
     })
     .await;
