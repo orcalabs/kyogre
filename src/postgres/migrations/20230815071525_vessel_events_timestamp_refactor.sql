@@ -1,25 +1,14 @@
+TRUNCATE ers_tra CASCADE;
+
+DELETE FROM data_hashes
+WHERE
+    data_hash_id LIKE 'ers_tra%';
+
 ALTER TABLE vessel_events
 ADD COLUMN occurence_timestamp timestamptz;
 
 ALTER TABLE vessel_events
 RENAME COLUMN "timestamp" TO report_timestamp;
-
-ALTER TABLE ers_tra
-DROP CONSTRAINT ers_tra_check;
-
-ALTER TABLE ers_tra
-ADD CONSTRAINT ers_dca_check CHECK (
-    (
-        (
-            (vessel_event_id IS NULL)
-            AND (fiskeridir_vessel_id IS NULL)
-        )
-        OR (
-            (vessel_event_id IS NOT NULL)
-            AND (fiskeridir_vessel_id IS NOT NULL)
-        )
-    )
-);
 
 CREATE
 OR REPLACE FUNCTION public.add_vessel_event (
@@ -135,50 +124,6 @@ OR REPLACE FUNCTION public.add_landing_vessel_event () RETURNS TRIGGER LANGUAGE 
         RETURN NEW;
    END;
 $function$;
-
-UPDATE vessel_events e
-SET
-    report_timestamp = d.message_timestamp,
-    occurence_timestamp = d.start_timestamp
-FROM
-    ers_dca d
-WHERE
-    d.vessel_event_id = e.vessel_event_id;
-
-UPDATE vessel_events e
-SET
-    report_timestamp = d.message_timestamp,
-    occurence_timestamp = d.arrival_timestamp
-FROM
-    ers_arrivals d
-WHERE
-    d.vessel_event_id = e.vessel_event_id;
-
-UPDATE vessel_events e
-SET
-    report_timestamp = d.message_timestamp,
-    occurence_timestamp = d.departure_timestamp
-FROM
-    ers_departures d
-WHERE
-    d.vessel_event_id = e.vessel_event_id;
-
-INSERT INTO
-    vessel_events (
-        occurence_timestamp,
-        report_timestamp,
-        vessel_event_type_id,
-        fiskeridir_vessel_id
-    )
-SELECT
-    reloading_timestamp,
-    message_timestamp,
-    5,
-    fiskeridir_vessel_id
-FROM
-    ers_tra d
-WHERE
-    d.reloading_timestamp IS NULL;
 
 CREATE
 OR REPLACE FUNCTION connect_events_to_trip () RETURNS TRIGGER LANGUAGE plpgsql AS $function$
@@ -390,6 +335,50 @@ OR REPLACE FUNCTION public.add_trip_assembler_conflict () RETURNS TRIGGER LANGUA
         RETURN NEW;
     END
 $function$;
+
+UPDATE vessel_events e
+SET
+    report_timestamp = d.message_timestamp,
+    occurence_timestamp = d.start_timestamp
+FROM
+    ers_dca d
+WHERE
+    d.vessel_event_id = e.vessel_event_id;
+
+UPDATE vessel_events e
+SET
+    report_timestamp = d.message_timestamp,
+    occurence_timestamp = d.arrival_timestamp
+FROM
+    ers_arrivals d
+WHERE
+    d.vessel_event_id = e.vessel_event_id;
+
+UPDATE vessel_events e
+SET
+    report_timestamp = d.message_timestamp,
+    occurence_timestamp = d.departure_timestamp
+FROM
+    ers_departures d
+WHERE
+    d.vessel_event_id = e.vessel_event_id;
+
+ALTER TABLE ers_tra
+DROP CONSTRAINT ers_tra_check;
+
+ALTER TABLE ers_tra
+ADD CONSTRAINT ers_tra_check CHECK (
+    (
+        (
+            (vessel_event_id IS NULL)
+            AND (fiskeridir_vessel_id IS NULL)
+        )
+        OR (
+            (vessel_event_id IS NOT NULL)
+            AND (fiskeridir_vessel_id IS NOT NULL)
+        )
+    )
+);
 
 DROP MATERIALIZED VIEW trips_detailed;
 
