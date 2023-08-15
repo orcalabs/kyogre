@@ -225,7 +225,8 @@ WITH
             t.end_port_id AS t_end_port_id,
             v.vessel_event_id AS v_vessel_event_id,
             v.fiskeridir_vessel_id AS v_fiskeridir_vessel_id,
-            v.timestamp AS v_timestamp,
+            v.report_timestamp AS v_report_timestamp,
+            v.occurence_timestamp AS v_occurence_timestamp,
             v.vessel_event_type_id AS v_vessel_event_type_id,
             l.landing_id AS l_landing_id,
             l.landing_timestamp AS l_landing_timestamp,
@@ -360,13 +361,15 @@ FROM
                         v_vessel_event_id,
                         'fiskeridir_vessel_id',
                         v_fiskeridir_vessel_id,
-                        'timestamp',
-                        v_timestamp,
+                        'report_timestamp',
+                        v_report_timestamp,
+                        'occurence_timestamp',
+                        v_occurence_timestamp,
                         'vessel_event_type_id',
                         v_vessel_event_type_id
                     )
                     ORDER BY
-                        v_timestamp
+                        v_report_timestamp
                 ),
                 '[]'
             ) AS vessel_events,

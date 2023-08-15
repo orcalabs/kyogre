@@ -335,6 +335,7 @@ WHERE
     ) -> kyogre_core::Haul {
         let message_id = random();
         let mut dca = ErsDca::test_default(message_id, Some(vessel_id.0 as u64));
+        dca.message_info.set_message_timestamp(*start);
         dca.start_date = Some(start.date_naive());
         dca.start_time = Some(start.time());
         dca.stop_date = Some(end.date_naive());

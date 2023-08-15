@@ -293,7 +293,8 @@ pub struct VesselEvent {
     #[schema(value_type = i64)]
     pub event_type: VesselEventType,
     pub event_name: String,
-    pub timestamp: DateTime<Utc>,
+    pub report_timestamp: DateTime<Utc>,
+    pub occurence_timestamp: Option<DateTime<Utc>>,
 }
 
 impl From<TripsParameters> for TripsQuery {
@@ -376,7 +377,8 @@ impl From<kyogre_core::VesselEvent> for VesselEvent {
             event_id: value.event_id,
             event_type: value.event_type,
             event_name: value.event_type.name().to_owned(),
-            timestamp: value.timestamp,
+            report_timestamp: value.report_timestamp,
+            occurence_timestamp: value.occurence_timestamp,
         }
     }
 }

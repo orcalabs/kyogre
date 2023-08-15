@@ -8,7 +8,8 @@ use crate::error::PostgresError;
 pub struct VesselEvent {
     pub vessel_event_id: i64,
     pub fiskeridir_vessel_id: i32,
-    pub timestamp: DateTime<Utc>,
+    pub report_timestamp: DateTime<Utc>,
+    pub occurence_timestamp: Option<DateTime<Utc>>,
     pub vessel_event_type_id: VesselEventType,
 }
 
@@ -17,8 +18,9 @@ impl From<VesselEvent> for kyogre_core::VesselEvent {
         kyogre_core::VesselEvent {
             event_id: v.vessel_event_id as u64,
             vessel_id: FiskeridirVesselId(v.fiskeridir_vessel_id as i64),
-            timestamp: v.timestamp,
+            report_timestamp: v.report_timestamp,
             event_type: v.vessel_event_type_id,
+            occurence_timestamp: v.occurence_timestamp,
         }
     }
 }
@@ -27,7 +29,8 @@ impl From<VesselEvent> for kyogre_core::VesselEvent {
 pub struct VesselEventDetailed {
     pub vessel_event_id: i64,
     pub fiskeridir_vessel_id: i32,
-    pub timestamp: DateTime<Utc>,
+    pub report_timestamp: DateTime<Utc>,
+    pub occurence_timestamp: Option<DateTime<Utc>>,
     pub vessel_event_type_id: VesselEventType,
     pub departure_port_id: Option<String>,
     pub arrival_port_id: Option<String>,
@@ -66,7 +69,7 @@ impl TryFrom<VesselEventDetailed> for kyogre_core::VesselEventDetailed {
         Ok(kyogre_core::VesselEventDetailed {
             event_id: v.vessel_event_id as u64,
             vessel_id: FiskeridirVesselId(v.fiskeridir_vessel_id as i64),
-            timestamp: v.timestamp,
+            timestamp: v.report_timestamp,
             event_type: v.vessel_event_type_id,
             event_data: event_data?,
         })

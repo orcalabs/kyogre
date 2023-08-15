@@ -115,7 +115,8 @@ struct Catch {
 struct VesselEvent {
     vessel_event_id: i64,
     fiskeridir_vessel_id: i64,
-    timestamp: DateTime<Utc>,
+    report_timestamp: DateTime<Utc>,
+    occurence_timestamp: Option<DateTime<Utc>>,
     vessel_event_type_id: VesselEventType,
 }
 
@@ -204,6 +205,15 @@ impl TryFrom<TripDetailed> for kyogre_core::TripDetailed {
             .into_report()
             .change_context(PostgresError::DataConversion)?;
 
+        let mut vessel_events = serde_json::from_str::<Vec<VesselEvent>>(&value.vessel_events)
+            .into_report()
+            .change_context(PostgresError::DataConversion)?
+            .into_iter()
+            .map(kyogre_core::VesselEvent::from)
+            .collect::<Vec<kyogre_core::VesselEvent>>();
+
+        vessel_events.sort_by_key(|v| v.report_timestamp);
+
         Ok(kyogre_core::TripDetailed {
             period_precision,
             fiskeridir_vessel_id: FiskeridirVesselId(value.fiskeridir_vessel_id),
@@ -249,12 +259,7 @@ impl TryFrom<TripDetailed> for kyogre_core::TripDetailed {
             start_port_id: value.start_port_id,
             end_port_id: value.end_port_id,
             assembler_id: value.trip_assembler_id,
-            vessel_events: serde_json::from_str::<Vec<VesselEvent>>(&value.vessel_events)
-                .into_report()
-                .change_context(PostgresError::DataConversion)?
-                .into_iter()
-                .map(kyogre_core::VesselEvent::from)
-                .collect::<Vec<kyogre_core::VesselEvent>>(),
+            vessel_events,
         })
     }
 }
@@ -264,8 +269,9 @@ impl From<VesselEvent> for kyogre_core::VesselEvent {
         kyogre_core::VesselEvent {
             event_id: v.vessel_event_id as u64,
             vessel_id: FiskeridirVesselId(v.fiskeridir_vessel_id),
-            timestamp: v.timestamp,
+            report_timestamp: v.report_timestamp,
             event_type: v.vessel_event_type_id,
+            occurence_timestamp: v.occurence_timestamp,
         }
     }
 }
