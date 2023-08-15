@@ -33,6 +33,7 @@ pub struct CurrentTrip {
 pub struct TripCalculationTimer {
     pub timestamp: DateTime<Utc>,
     pub fiskeridir_vessel_id: i64,
+    pub queued_reset: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -184,6 +185,7 @@ impl From<TripCalculationTimer> for kyogre_core::TripCalculationTimer {
         Self {
             fiskeridir_vessel_id: FiskeridirVesselId(v.fiskeridir_vessel_id),
             timestamp: v.timestamp,
+            queued_reset: v.queued_reset,
         }
     }
 }

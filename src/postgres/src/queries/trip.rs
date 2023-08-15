@@ -839,7 +839,8 @@ LIMIT
             r#"
 SELECT
     fiskeridir_vessel_id,
-    timer AS "timestamp"
+    timer AS "timestamp",
+    queued_reset AS "queued_reset!"
 FROM
     trip_calculation_timers
 WHERE
@@ -915,17 +916,24 @@ WHERE
         sqlx::query!(
             r#"
 INSERT INTO
-    trip_calculation_timers (fiskeridir_vessel_id, trip_assembler_id, timer)
+    trip_calculation_timers (
+        fiskeridir_vessel_id,
+        trip_assembler_id,
+        timer,
+        queued_reset
+    )
 VALUES
-    ($1, $2, $3)
+    ($1, $2, $3, $4)
 ON CONFLICT (fiskeridir_vessel_id) DO
 UPDATE
 SET
-    timer = excluded.timer
+    timer = excluded.timer,
+    queued_reset = excluded.queued_reset
             "#,
             vessel_id.0,
             trip_assembler_id as i32,
             new_trip_calculation_time,
+            false
         )
         .execute(&mut *tx)
         .await

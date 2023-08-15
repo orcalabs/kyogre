@@ -33,6 +33,19 @@ impl TestDb {
         self.ais_positions(None, None).await
     }
 
+    pub async fn queue_trips_reset(&self) {
+        sqlx::query!(
+            r#"
+UPDATE trip_calculation_timers
+SET
+    queued_reset = TRUE
+            "#
+        )
+        .execute(&self.db.pool)
+        .await
+        .unwrap();
+    }
+
     pub async fn haul_of_vessel(
         &self,
         vessel_id: FiskeridirVesselId,
