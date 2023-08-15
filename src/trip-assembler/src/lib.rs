@@ -8,8 +8,8 @@ use chrono::{DateTime, NaiveDate, NaiveDateTime, NaiveTime, Utc};
 use error_stack::{IntoReport, Result, ResultExt};
 use kyogre_core::{
     Bound, FiskeridirVesselId, NewTrip, QueryRange, RelevantEventType, Trip, TripAssemblerId,
-    TripAssemblerOutboundPort, TripPrecisionOutboundPort, TripPrecisionUpdate,
-    TripsConflictStrategy, Vessel, VesselEventDetailed,
+    TripAssemblerOutboundPort, TripCalculationTimer, TripPrecisionOutboundPort,
+    TripPrecisionUpdate, TripsConflictStrategy, Vessel, VesselEventDetailed,
 };
 use tracing::{event, Level};
 
@@ -48,6 +48,7 @@ pub struct TripsReport {
     pub num_no_prior_state: u32,
     pub num_vessels: u32,
     pub num_failed: u32,
+    pub num_reset: u32,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -55,6 +56,7 @@ pub enum AssemblerState {
     Conflict(DateTime<Utc>),
     NoPriorState,
     Normal(DateTime<Utc>),
+    QueuedReset,
 }
 
 #[async_trait]
@@ -82,8 +84,8 @@ pub trait TripAssembler: Send + Sync {
             .await
             .change_context(TripAssemblerError)?
             .into_iter()
-            .map(|v| (v.fiskeridir_vessel_id, v.timestamp))
-            .collect::<HashMap<FiskeridirVesselId, DateTime<Utc>>>();
+            .map(|v| (v.fiskeridir_vessel_id, v))
+            .collect::<HashMap<FiskeridirVesselId, TripCalculationTimer>>();
 
         let conflicts = adapter
             .conflicts(self.assembler_id())
@@ -106,6 +108,7 @@ pub trait TripAssembler: Send + Sync {
         let mut num_no_prior_state = 0;
         let mut num_trips = 0;
         let mut num_failed = 0;
+        let mut num_reset = 0;
 
         for v in vessels.into_values() {
             if v.preferred_trip_assembler != self.assembler_id() {
@@ -114,10 +117,24 @@ pub trait TripAssembler: Send + Sync {
             let vessel_id = v.fiskeridir.id;
             let state = match (timers.get(&vessel_id), conflicts.get(&vessel_id)) {
                 (None, None) => AssemblerState::NoPriorState,
-                (None, Some(t)) => AssemblerState::Conflict(*t),
-                (Some(t), None) => AssemblerState::Normal(*t),
-                (Some(_), Some(t)) => AssemblerState::Conflict(*t),
+                (None, Some(c)) => AssemblerState::Conflict(*c),
+                (Some(t), None) => {
+                    if t.queued_reset {
+                        AssemblerState::QueuedReset
+                    } else {
+                        AssemblerState::Normal(t.timestamp)
+                    }
+                }
+                (Some(t), Some(c)) => {
+                    if t.queued_reset {
+                        AssemblerState::QueuedReset
+                    } else {
+                        AssemblerState::Conflict(*c)
+                    }
+                }
             };
+
+            dbg!(&state);
 
             let vessel_events = match state {
                 AssemblerState::Conflict(t) => {
@@ -145,6 +162,10 @@ pub trait TripAssembler: Send + Sync {
                     num_no_prior_state += 1;
                     all_vessel_events(vessel_id, adapter, relevant_event_types).await
                 }
+                AssemblerState::QueuedReset => {
+                    num_reset += 1;
+                    all_vessel_events(vessel_id, adapter, relevant_event_types).await
+                }
             }?;
             let trips = self
                 .assemble(
@@ -160,7 +181,9 @@ pub trait TripAssembler: Send + Sync {
                     (AssemblerState::NoPriorState, None) | (AssemblerState::Normal(_), None) => {
                         TripsConflictStrategy::Error
                     }
-                    (AssemblerState::Conflict(_), _) => TripsConflictStrategy::Replace,
+                    (AssemblerState::Conflict(_), _) | (AssemblerState::QueuedReset, _) => {
+                        TripsConflictStrategy::Replace
+                    }
                 };
                 num_trips += trips.new_trips.len() as u32;
                 if let Err(e) = adapter
@@ -191,6 +214,7 @@ pub trait TripAssembler: Send + Sync {
             num_no_prior_state,
             num_trips,
             num_failed,
+            num_reset,
         })
     }
 }

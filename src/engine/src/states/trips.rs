@@ -35,12 +35,13 @@ async fn run_assembler(
             event!(
                 Level::INFO,
                 "num_conflicts: {}, num_vessels: {}, num_no_prior_state: {}
-                       num_trips: {}, num_failed: {}",
+                       num_trips: {}, num_failed: {}, num_reset: {}",
                 r.num_conflicts,
                 r.num_vessels,
                 r.num_no_prior_state,
                 r.num_trips,
-                r.num_failed
+                r.num_failed,
+                r.num_reset
             );
 
             tracing::Span::current().record(
