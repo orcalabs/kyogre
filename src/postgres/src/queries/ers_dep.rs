@@ -1,13 +1,15 @@
+use std::{cmp::min, collections::HashMap};
+
 use crate::{
     error::PostgresError,
     ers_dep_set::ErsDepSet,
-    models::{Departure, NewErsDep, NewErsDepCatch},
+    models::{Departure, NewErsDep, NewErsDepCatch, TripAssemblerConflict},
     PostgresAdapter,
 };
 use chrono::{DateTime, Utc};
 use error_stack::{IntoReport, Result, ResultExt};
-use kyogre_core::{FiskeridirVesselId, TripAssemblerId};
-use unnest_insert::UnnestInsert;
+use kyogre_core::{FiskeridirVesselId, TripAssemblerId, VesselEventType};
+use unnest_insert::{UnnestInsert, UnnestInsertReturning};
 
 impl PostgresAdapter {
     pub(crate) async fn add_ers_dep_set(&self, set: ErsDepSet) -> Result<(), PostgresError> {
@@ -66,11 +68,38 @@ WHERE
         .into_report()
         .change_context(PostgresError::Query)?;
 
-        NewErsDep::unnest_insert(ers_dep, &mut **tx)
+        let inserted = NewErsDep::unnest_insert_returning(ers_dep, &mut **tx)
             .await
             .into_report()
-            .change_context(PostgresError::Query)
-            .map(|_| ())
+            .change_context(PostgresError::Query)?;
+
+        let len = inserted.len();
+        let mut conflicts = HashMap::<i64, TripAssemblerConflict>::with_capacity(len);
+        let mut event_ids = Vec::with_capacity(len);
+
+        for i in inserted {
+            if let (Some(id), Some(event_id)) = (i.fiskeridir_vessel_id, i.vessel_event_id) {
+                conflicts
+                    .entry(id)
+                    .and_modify(|v| v.timestamp = min(v.timestamp, i.message_timestamp))
+                    .or_insert_with(|| TripAssemblerConflict {
+                        fiskeridir_vessel_id: id,
+                        timestamp: i.message_timestamp,
+                    });
+                event_ids.push(event_id);
+            }
+        }
+
+        self.add_trip_assembler_conflicts(
+            conflicts.into_values().collect(),
+            TripAssemblerId::Ers,
+            tx,
+        )
+        .await?;
+        self.connect_trip_to_events(event_ids, VesselEventType::ErsDep, tx)
+            .await?;
+
+        Ok(())
     }
 
     pub(crate) async fn add_ers_dep_catches<'a>(
@@ -83,22 +112,6 @@ WHERE
             .into_report()
             .change_context(PostgresError::Query)
             .map(|_| ())
-    }
-
-    pub(crate) async fn delete_ers_dep_impl(&self, year: u32) -> Result<(), PostgresError> {
-        sqlx::query!(
-            r#"
-DELETE FROM ers_departures c
-WHERE
-    c.relevant_year = $1
-            "#,
-            year as i32
-        )
-        .execute(&self.pool)
-        .await
-        .into_report()
-        .change_context(PostgresError::Query)
-        .map(|_| ())
     }
 
     pub async fn ers_departures_impl(

@@ -95,6 +95,7 @@ impl ErsEvent {
             VesselEventData::Landing => None,
             VesselEventData::ErsDca => None,
             VesselEventData::ErsTra => None,
+            VesselEventData::Haul => None,
         }
         .map(|(event_type, port_id, estimated_timestamp)| ErsEvent {
             event_id: v.event_id,

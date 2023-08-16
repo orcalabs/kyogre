@@ -1,5 +1,5 @@
 use super::{barentswatch_helper::BarentswatchHelper, test_client::ApiClient};
-use chrono::{DateTime, Datelike, Duration, Utc};
+use chrono::{DateTime, Duration, Utc};
 use dockertest::{DockerTest, Source, StaticManagementPolicy};
 use duckdb_rs::{adapter::CacheMode, CacheStorage};
 use fiskeridir_rs::{ErsDep, ErsPor};
@@ -199,13 +199,7 @@ impl TestHelper {
             fiskeridir_rs::Landing::test_default(random::<i64>().abs(), Some(vessel_id.0));
         landing2.landing_timestamp = *end;
 
-        let year = landing.landing_timestamp.year() as u32;
-
-        self.db
-            .db
-            .add_landings(vec![landing, landing2], year)
-            .await
-            .unwrap();
+        self.db.add_landings(vec![landing, landing2]).await;
 
         self.add_trip(vessel_id, start, end, TripAssemblerId::Landings)
             .await

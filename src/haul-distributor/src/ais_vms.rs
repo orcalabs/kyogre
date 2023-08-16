@@ -70,9 +70,7 @@ impl HaulDistributor for AisVms {
 
             for (k, v) in map {
                 output.push(HaulDistributionOutput {
-                    message_id: h.message_id,
-                    start_timestamp: h.start_timestamp,
-                    stop_timestamp: h.stop_timestamp,
+                    haul_id: h.haul_id,
                     catch_location: k.clone(),
                     factor: v as f64 / total as f64,
                     distributor_id: HaulDistributorId::AisVms,

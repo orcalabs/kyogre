@@ -1,0 +1,20 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO\n    ers_arrival_catches (\n    message_id,ers_quantum_type_id,living_weight,species_fao_id,species_fiskeridir_id,species_group_id,species_main_group_id\n   )\nSELECT\n    *\nFROM\n    UNNEST(\n        $1::BIGINT[],$2::TEXT[],$3::INT[],$4::TEXT[],$5::INT[],$6::INT[],$7::INT[]\n    )\n        ON CONFLICT (message_id,ers_quantum_type_id,species_fao_id) DO NOTHING",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8Array",
+        "TextArray",
+        "Int4Array",
+        "TextArray",
+        "Int4Array",
+        "Int4Array",
+        "Int4Array"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "b05bea1e1886c3089c0c3f6fe0717ca5d3ef918f83007d509b9a4dc51434dccd"
+}

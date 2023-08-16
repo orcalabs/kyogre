@@ -1,0 +1,20 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    COUNT(*) AS \"count!\"\nFROM\n    vessel_events v\n    LEFT JOIN landings l ON l.vessel_event_id = v.vessel_event_id\n    LEFT JOIN ers_dca e ON e.vessel_event_id = v.vessel_event_id\n    LEFT JOIN ers_departures d ON d.vessel_event_id = v.vessel_event_id\n    LEFT JOIN ers_arrivals a ON a.vessel_event_id = v.vessel_event_id\n    LEFT JOIN ers_tra t ON t.vessel_event_id = v.vessel_event_id\n    LEFT JOIN hauls h ON h.vessel_event_id = v.vessel_event_id\nWHERE\n    l.landing_id IS NULL\n    AND e.message_id IS NULL\n    AND d.message_id IS NULL\n    AND a.message_id IS NULL\n    AND t.message_id IS NULL\n    AND h.haul_id IS NULL\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "count!",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "973f1c20f549b7b5ff79f08feb2c0ae810dc5771f2b7d99a9a17c4f7130afa89"
+}

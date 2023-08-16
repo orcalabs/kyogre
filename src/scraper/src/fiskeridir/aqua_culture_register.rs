@@ -34,18 +34,11 @@ impl DataSource for AquaCultureRegisterScraper {
 
     async fn scrape(&self, processor: &(dyn Processor)) -> Result<(), ScraperError> {
         let closure = |data| processor.add_aqua_culture_register(data);
-        let delete_closure = |_| async { Ok(()) };
 
         if let Some(source) = &self.source {
             match self
                 .fiskeridir_source
-                .scrape_year_if_changed(
-                    FileHash::AquaCultureRegister,
-                    source,
-                    closure,
-                    10000,
-                    delete_closure,
-                )
+                .scrape_year_if_changed(FileHash::AquaCultureRegister, source, closure, 10000)
                 .await
             {
                 Err(e) => event!(

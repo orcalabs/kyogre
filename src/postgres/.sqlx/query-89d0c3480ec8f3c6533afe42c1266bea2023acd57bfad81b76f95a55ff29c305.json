@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT\n    trip_id\nFROM trips t\nWHERE\n    LOWER(t.period) >= $1\nORDER BY trip_id\nLIMIT $2\nOFFSET $3\n                ",
+  "query": "\nSELECT\n    trip_id\nFROM\n    trips t\nWHERE\n    $1::TIMESTAMPTZ <@ t.period\n    OR LOWER(t.period) >= $1\nORDER BY\n    trip_id\nLIMIT\n    $2\nOFFSET\n    $3\n                ",
   "describe": {
     "columns": [
       {
@@ -20,5 +20,5 @@
       false
     ]
   },
-  "hash": "c0be88ba4a3a2846662dd28b690df342df8a53adc7a07310a5a58846e10042e4"
+  "hash": "89d0c3480ec8f3c6533afe42c1266bea2023acd57bfad81b76f95a55ff29c305"
 }

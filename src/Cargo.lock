@@ -2611,6 +2611,7 @@ dependencies = [
  "sqlx",
  "strum 0.25.0",
  "tokio",
+ "tracing",
  "utoipa",
  "uuid",
  "wkt",
@@ -5806,9 +5807,9 @@ checksum = "39ec24b3121d976906ece63c9daad25b85969647682eee313cb5779fdd69e14e"
 
 [[package]]
 name = "unnest_insert"
-version = "0.1.2"
+version = "0.2.0"
 source = "registry+https://dl.cloudsmith.io/basic/orcalabs/orcastrator/cargo/index.git"
-checksum = "fe784c83e592746b1d5e9a6061c7cafd3be8cde39a8a209f2358fd9948d19db7"
+checksum = "73d9bcc31003bdc6354408715c0b4eb8f644d8b346a0b94006bde49b521d9770"
 dependencies = [
  "async-trait",
  "sqlx",
@@ -5817,9 +5818,9 @@ dependencies = [
 
 [[package]]
 name = "unnest_insert_derive"
-version = "0.1.2"
+version = "0.2.0"
 source = "registry+https://dl.cloudsmith.io/basic/orcalabs/orcastrator/cargo/index.git"
-checksum = "61899cf667f06eee6b2d2c6a8d3e60d7d5aa29b4144360ccdab98890951e095c"
+checksum = "c5231ad767e1070deb78bcfd1820d0ab844332450b9702b4cbd100c0afd35052"
 dependencies = [
  "proc-macro2",
  "quote 1.0.33",

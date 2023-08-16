@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nDELETE FROM ers_dca e USING UNNEST($1::BIGINT[], $2::INT[]) u (message_id, message_version)\nWHERE\n    e.message_id = u.message_id\n    AND e.message_version < u.message_version\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8Array",
+        "Int4Array"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "b46cb8f068e475d939eba20dfff1a715391585208686cd79527dc297c98a074d"
+}

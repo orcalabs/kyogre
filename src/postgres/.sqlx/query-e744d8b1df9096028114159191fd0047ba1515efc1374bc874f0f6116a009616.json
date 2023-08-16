@@ -1,0 +1,20 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    COALESCE(\n        (\n            SELECT\n                SUM(living_weight)\n            FROM\n                ers_dca_bodies\n        ) - (\n            SELECT\n                SUM(b.living_weight)\n            FROM\n                ers_dca_bodies b\n                LEFT JOIN hauls h ON h.message_id = b.message_id\n                AND h.start_timestamp = b.start_timestamp\n                AND h.stop_timestamp = b.stop_timestamp\n                AND h.start_latitude = b.start_latitude\n                AND h.start_longitude = b.start_longitude\n                AND h.stop_latitude = b.stop_latitude\n                AND h.stop_longitude = b.stop_longitude\n                AND h.duration = b.duration\n                AND h.haul_distance IS NOT DISTINCT FROM b.haul_distance\n                AND h.gear_id = b.gear_id\n                LEFT JOIN hauls_matrix m ON h.haul_id = m.haul_id\n            WHERE\n                m.haul_id IS NULL\n        ) - (\n            SELECT\n                SUM(living_weight)\n            FROM\n                hauls_matrix\n        ),\n        0\n    )::BIGINT AS \"sum!\"\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "sum!",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "e744d8b1df9096028114159191fd0047ba1515efc1374bc874f0f6116a009616"
+}

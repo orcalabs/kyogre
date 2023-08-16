@@ -2,7 +2,7 @@ use super::helper::test;
 use actix_web::http::StatusCode;
 use chrono::{DateTime, TimeZone, Utc};
 use fiskeridir_rs::{GearGroup, SpeciesGroup};
-use kyogre_core::{FiskeridirVesselId, LandingsSorting, Ordering, ScraperInboundPort};
+use kyogre_core::{FiskeridirVesselId, LandingsSorting, Ordering};
 use web_api::routes::{
     utils::{DateTimeUtc, GearGroupId, SpeciesGroupId},
     v1::landing::{Landing, LandingsParams},
@@ -14,9 +14,14 @@ async fn test_landings_returns_all_landings() {
         let vessel_id = FiskeridirVesselId(111);
         let date = Utc.timestamp_opt(1000, 0).unwrap();
 
-        helper.db.generate_landing(1, vessel_id, date).await;
-        helper.db.generate_landing(2, vessel_id, date).await;
-        helper.db.generate_landing(3, vessel_id, date).await;
+        helper
+            .db
+            .generate_landings(vec![
+                (1, vessel_id, date),
+                (2, vessel_id, date),
+                (3, vessel_id, date),
+            ])
+            .await;
 
         let response = helper.app.get_landings(Default::default()).await;
 
@@ -44,10 +49,8 @@ async fn test_landings_returns_landings_in_specified_months() {
 
         helper
             .db
-            .db
-            .add_landings(vec![landing1, landing2, landing3, landing4], 2023)
-            .await
-            .unwrap();
+            .add_landings(vec![landing1, landing2, landing3, landing4])
+            .await;
 
         let params = LandingsParams {
             months: Some(vec![DateTimeUtc(month1), DateTimeUtc(month2)]),
@@ -79,10 +82,8 @@ async fn test_landings_returns_landings_in_catch_location() {
 
         helper
             .db
-            .db
-            .add_landings(vec![landing1, landing2, landing3, landing4], 2023)
-            .await
-            .unwrap();
+            .add_landings(vec![landing1, landing2, landing3, landing4])
+            .await;
 
         let params = LandingsParams {
             catch_locations: Some(vec![
@@ -116,10 +117,8 @@ async fn test_landings_returns_landings_with_gear_group_ids() {
 
         helper
             .db
-            .db
-            .add_landings(vec![landing1, landing2, landing3, landing4], 2023)
-            .await
-            .unwrap();
+            .add_landings(vec![landing1, landing2, landing3, landing4])
+            .await;
 
         let params = LandingsParams {
             gear_group_ids: Some(vec![
@@ -152,10 +151,8 @@ async fn test_landings_returns_landings_with_species_group_ids() {
 
         helper
             .db
-            .db
-            .add_landings(vec![landing1, landing2, landing3, landing4], 2023)
-            .await
-            .unwrap();
+            .add_landings(vec![landing1, landing2, landing3, landing4])
+            .await;
 
         let params = LandingsParams {
             species_group_ids: Some(vec![
@@ -188,10 +185,8 @@ async fn test_landings_returns_landings_with_vessel_length_ranges() {
 
         helper
             .db
-            .db
-            .add_landings(vec![landing1, landing2, landing3, landing4], 2023)
-            .await
-            .unwrap();
+            .add_landings(vec![landing1, landing2, landing3, landing4])
+            .await;
 
         let params = LandingsParams {
             vessel_length_ranges: Some(vec!["(,10)".parse().unwrap(), "[10,15)".parse().unwrap()]),
@@ -218,10 +213,8 @@ async fn test_landings_returns_landings_with_fiskeridir_vessel_ids() {
 
         helper
             .db
-            .db
-            .add_landings(vec![landing1, landing2, landing3, landing4], 2023)
-            .await
-            .unwrap();
+            .add_landings(vec![landing1, landing2, landing3, landing4])
+            .await;
 
         let params = LandingsParams {
             fiskeridir_vessel_ids: Some(vec![FiskeridirVesselId(1), FiskeridirVesselId(2)]),
@@ -253,12 +246,7 @@ async fn test_landings_sorts_by_landing_timestamp() {
         expected[2].landing_timestamp = Utc.timestamp_opt(3000, 0).unwrap();
         expected[3].landing_timestamp = Utc.timestamp_opt(4000, 0).unwrap();
 
-        helper
-            .db
-            .db
-            .add_landings(expected.clone(), 2023)
-            .await
-            .unwrap();
+        helper.db.add_landings(expected.clone()).await;
 
         let params = LandingsParams {
             sorting: Some(LandingsSorting::LandingTimestamp),
@@ -306,12 +294,7 @@ async fn test_landings_sorts_by_weight() {
         expected[2].product.living_weight = Some(300.0);
         expected[3].product.living_weight = Some(400.0);
 
-        helper
-            .db
-            .db
-            .add_landings(expected.clone(), 2023)
-            .await
-            .unwrap();
+        helper.db.add_landings(expected.clone()).await;
 
         let params = LandingsParams {
             sorting: Some(LandingsSorting::LivingWeight),

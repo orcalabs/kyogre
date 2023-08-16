@@ -446,31 +446,47 @@ WHERE
         self.single_vms_position(message_id).await
     }
 
+    pub async fn add_landings(&self, landings: Vec<fiskeridir_rs::Landing>) {
+        let year = landings[0].landing_timestamp.year() as u32;
+        self.db
+            .add_landings(Box::new(landings.into_iter().map(Ok)), year)
+            .await
+            .unwrap();
+    }
+
+    pub async fn generate_landings(
+        &self,
+        landings: Vec<(i64, FiskeridirVesselId, DateTime<Utc>)>,
+    ) -> Vec<Landing> {
+        let landings = landings
+            .into_iter()
+            .map(|(landing_id, vessel_id, timestamp)| {
+                let mut landing =
+                    fiskeridir_rs::Landing::test_default(landing_id, Some(vessel_id.0));
+                landing.landing_timestamp = timestamp;
+                landing
+            })
+            .collect::<Vec<_>>();
+
+        self.add_landings(landings.clone()).await;
+
+        self.db
+            .landings(Default::default())
+            .unwrap()
+            .try_collect()
+            .await
+            .unwrap()
+    }
+
     pub async fn generate_landing(
         &self,
         landing_id: i64,
         vessel_id: FiskeridirVesselId,
         timestamp: DateTime<Utc>,
     ) -> Landing {
-        let mut landing = fiskeridir_rs::Landing::test_default(landing_id, Some(vessel_id.0));
-        landing.landing_timestamp = timestamp;
-        let year = landing.landing_timestamp.year() as u32;
-        self.db
-            .add_landings(vec![landing.clone()], year)
+        self.generate_landings(vec![(landing_id, vessel_id, timestamp)])
             .await
-            .unwrap();
-
-        let landings: Vec<Landing> = self
-            .db
-            .landings(Default::default())
-            .unwrap()
-            .try_collect()
-            .await
-            .unwrap();
-
-        landings
-            .into_iter()
-            .find(|l| l.landing_id == landing.id)
+            .pop()
             .unwrap()
     }
 
@@ -515,7 +531,7 @@ WHERE
 
     pub async fn generate_ers_dca(&self, message_id: u64, vessel_id: Option<u64>) -> ErsDca {
         let ers_dca = ErsDca::test_default(message_id, vessel_id);
-        self.db.add_ers_dca(vec![ers_dca.clone()]).await.unwrap();
+        self.add_ers_dca_value(ers_dca.clone()).await;
         ers_dca
     }
 
@@ -619,7 +635,14 @@ WHERE
     }
 
     pub async fn add_ers_dca_value(&self, val: ErsDca) {
-        self.db.add_ers_dca(vec![val]).await.unwrap();
+        self.add_ers_dca(vec![val]).await;
+    }
+
+    pub async fn add_ers_dca(&self, values: Vec<ErsDca>) {
+        self.db
+            .add_ers_dca(Box::new(values.into_iter().map(Ok)))
+            .await
+            .unwrap();
     }
 
     async fn add_ais_position(&self, pos: NewAisPosition) -> AisPosition {

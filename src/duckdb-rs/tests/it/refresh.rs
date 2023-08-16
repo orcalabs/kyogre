@@ -2,7 +2,7 @@ use chrono::{TimeZone, Utc};
 use fiskeridir_rs::{ErsDca, Landing};
 use kyogre_core::{
     ActiveHaulsFilter, ActiveLandingFilter, FiskeridirVesselId, HaulsMatrixQuery,
-    LandingMatrixQuery, MatrixCacheOutbound, MatrixCacheVersion, ScraperInboundPort,
+    LandingMatrixQuery, MatrixCacheOutbound, MatrixCacheVersion,
 };
 
 use super::helper::test;
@@ -41,11 +41,7 @@ async fn test_haul_returns_hit_after_refreshing_with_data() {
         let mut ers_dca = ErsDca::test_default(1, Some(1));
         ers_dca.start_latitude = Some(70.536);
         ers_dca.start_longitude = Some(21.957);
-        helper
-            .adapter()
-            .add_ers_dca(vec![ers_dca.clone()])
-            .await
-            .unwrap();
+        helper.db.add_ers_dca_value(ers_dca.clone()).await;
 
         helper.adapter().increment().await.unwrap();
         helper.cache.refresh().await.unwrap();
@@ -99,11 +95,7 @@ async fn test_landing_returns_hit_after_refreshing_with_data() {
         let mut landing = Landing::test_default(1, None);
         landing.landing_timestamp = Utc.with_ymd_and_hms(2001, 1, 1, 0, 0, 0).unwrap();
 
-        helper
-            .adapter()
-            .add_landings(vec![landing.clone()], 2023)
-            .await
-            .unwrap();
+        helper.db.add_landings(vec![landing.clone()]).await;
 
         helper.adapter().increment().await.unwrap();
         helper.cache.refresh().await.unwrap();

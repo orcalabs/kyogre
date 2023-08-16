@@ -2,7 +2,7 @@ use super::helper::test;
 use actix_web::http::StatusCode;
 use chrono::{Duration, TimeZone, Utc};
 use fiskeridir_rs::{CallSign, GearGroup, Landing};
-use kyogre_core::{FiskeridirVesselId, Mmsi, ScraperInboundPort, VesselBenchmarkId};
+use kyogre_core::{FiskeridirVesselId, Mmsi, VesselBenchmarkId};
 use web_api::routes::v1::vessel::Vessel;
 
 #[tokio::test]
@@ -18,11 +18,7 @@ async fn test_vessels_returns_merged_data_from_fiskeridir_and_ais() {
         let mut landing = Landing::test_default(1, Some(vessel_id));
         landing.vessel.call_sign = Some(call_sign);
 
-        helper
-            .adapter()
-            .add_landings(vec![landing.clone()], 2023)
-            .await
-            .unwrap();
+        helper.db.add_landings(vec![landing.clone()]).await;
 
         let response = helper.app.get_vessels().await;
 
@@ -99,7 +95,10 @@ async fn test_vessel_weight_per_hour_is_correct_over_multiple_trips() {
 
         helper
             .db
-            .generate_landing(2, vessel_id, start2 + Duration::seconds(1))
+            .generate_landings(vec![
+                (1, vessel_id, start + Duration::seconds(1)),
+                (2, vessel_id, start2 + Duration::seconds(1)),
+            ])
             .await;
 
         let trip2 = helper.generate_ers_trip(vessel_id, &start2, &end2).await;
@@ -149,7 +148,10 @@ async fn test_vessel_weight_per_hour_includes_landings_not_covered_by_trips() {
 
         helper
             .db
-            .generate_landing(2, vessel_id, end + Duration::seconds(1))
+            .generate_landings(vec![
+                (1, vessel_id, start + Duration::seconds(1)),
+                (2, vessel_id, end + Duration::seconds(1)),
+            ])
             .await;
 
         helper.do_benchmarks().await;
@@ -205,7 +207,10 @@ async fn test_vessel_weight_per_hour_excludes_landings_from_other_vessels() {
 
         helper
             .db
-            .generate_landing(2, vessel_id2, start2 + Duration::seconds(1))
+            .generate_landings(vec![
+                (1, vessel_id, start + Duration::seconds(1)),
+                (2, vessel_id2, start2 + Duration::seconds(1)),
+            ])
             .await;
 
         helper.generate_ers_trip(vessel_id2, &start2, &end2).await;
@@ -320,11 +325,7 @@ async fn test_vessel_has_gear_groups_of_landings() {
         let mut landing2 = Landing::test_default(2, Some(vessel_id));
         landing2.gear.group = GearGroup::Garn;
 
-        helper
-            .adapter()
-            .add_landings(vec![landing, landing2], 2023)
-            .await
-            .unwrap();
+        helper.db.add_landings(vec![landing, landing2]).await;
 
         let response = helper.app.get_vessels().await;
 
@@ -349,17 +350,9 @@ async fn test_vessel_removes_gear_group_when_last_landing_is_replaced_with_new_g
         landing2.document_info.version_number += 1;
         landing2.gear.group = GearGroup::Garn;
 
-        helper
-            .adapter()
-            .add_landings(vec![landing], 2023)
-            .await
-            .unwrap();
+        helper.db.add_landings(vec![landing]).await;
 
-        helper
-            .adapter()
-            .add_landings(vec![landing2], 2023)
-            .await
-            .unwrap();
+        helper.db.add_landings(vec![landing2]).await;
 
         let response = helper.app.get_vessels().await;
 

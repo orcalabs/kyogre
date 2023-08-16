@@ -10,7 +10,11 @@ use kyogre_core::{CatchLocationId, FiskeridirVesselId, LandingMatrixQuery};
 use unnest_insert::UnnestInsert;
 
 #[derive(UnnestInsert)]
-#[unnest_insert(table_name = "landings", conflict = "landing_id")]
+#[unnest_insert(
+    table_name = "landings",
+    conflict = "landing_id",
+    returning = "landing_id,fiskeridir_vessel_id,landing_timestamp,vessel_event_id"
+)]
 pub struct NewLanding {
     // Dokumentnummer-SalgslagId-Dokumenttype
     pub landing_id: String,
@@ -90,6 +94,7 @@ pub struct NewLanding {
     pub receiving_vessel_nation_id: Option<String>,
     pub receiving_vessel_nation: Option<String>,
     pub data_year: i32,
+    pub vessel_event_id: Option<i64>,
 }
 
 pub struct Landing {
@@ -201,6 +206,7 @@ impl NewLanding {
             receiving_vessel_nation_id: landing.recipient_vessel_nation_code,
             receiving_vessel_nation: landing.recipient_vessel_nation,
             data_year: data_year as i32,
+            vessel_event_id: None,
         })
     }
 }

@@ -10,7 +10,11 @@ use crate::{
 };
 
 #[derive(UnnestInsert)]
-#[unnest_insert(table_name = "ers_arrivals", conflict = "message_id")]
+#[unnest_insert(
+    table_name = "ers_arrivals",
+    conflict = "message_id",
+    returning = "fiskeridir_vessel_id,message_timestamp,vessel_event_id"
+)]
 pub struct NewErsPor {
     pub message_id: i64,
     pub message_number: i32,
@@ -50,10 +54,14 @@ pub struct NewErsPor {
     pub vessel_registration_id_ers: Option<String>,
     pub vessel_valid_until: Option<NaiveDate>,
     pub vessel_width: Option<BigDecimal>,
+    pub vessel_event_id: Option<i64>,
 }
 
 #[derive(UnnestInsert)]
-#[unnest_insert(table_name = "ers_arrival_catches")]
+#[unnest_insert(
+    table_name = "ers_arrival_catches",
+    conflict = "message_id,ers_quantum_type_id,species_fao_id"
+)]
 pub struct NewErsPorCatch {
     pub message_id: i64,
     pub ers_quantum_type_id: Option<String>,
@@ -126,6 +134,7 @@ impl TryFrom<fiskeridir_rs::ErsPor> for NewErsPor {
             vessel_valid_until: v.vessel_info.vessel_valid_until,
             vessel_width: opt_float_to_decimal(v.vessel_info.vessel_width)
                 .change_context(PostgresError::DataConversion)?,
+            vessel_event_id: None,
         })
     }
 }
