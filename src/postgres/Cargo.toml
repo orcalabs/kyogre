@@ -11,7 +11,7 @@ kyogre-core = { path = "../kyogre-core", features = ["sqlx"] }
 orca-core = { workspace = true, features = ["telemetry"] }
 fiskeridir-rs = { workspace = true }
 jurisdiction = "0.1.1"
-unnest_insert = { version = "0.1.2", registry = "orcalabs-orcastrator", features = [
+unnest_insert = { version = "0.2.0", registry = "orcalabs-orcastrator", features = [
     "derive",
 ] }
 

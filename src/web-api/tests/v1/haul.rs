@@ -2,7 +2,7 @@ use super::helper::test;
 use actix_web::http::StatusCode;
 use chrono::{DateTime, TimeZone, Utc};
 use fiskeridir_rs::{ErsDca, GearGroup, SpeciesGroup};
-use kyogre_core::{FiskeridirVesselId, HaulsSorting, Ordering, ScraperInboundPort};
+use kyogre_core::{FiskeridirVesselId, HaulsSorting, Ordering};
 use web_api::routes::{
     utils::{DateTimeUtc, GearGroupId, SpeciesGroupId},
     v1::haul::{Haul, HaulsParams},
@@ -41,12 +41,7 @@ async fn test_hauls_returns_hauls_in_specified_months() {
         ers2.set_start_timestamp(month2);
         ers2.set_stop_timestamp(month2);
 
-        helper
-            .db
-            .db
-            .add_ers_dca(vec![ers1, ers2, ers3, ers4])
-            .await
-            .unwrap();
+        helper.db.add_ers_dca(vec![ers1, ers2, ers3, ers4]).await;
 
         let params = HaulsParams {
             months: Some(vec![DateTimeUtc(month1), DateTimeUtc(month2)]),
@@ -76,12 +71,7 @@ async fn test_hauls_returns_hauls_in_catch_location() {
         ers2.start_latitude = Some(56.756293);
         ers2.start_longitude = Some(11.514740);
 
-        helper
-            .db
-            .db
-            .add_ers_dca(vec![ers1, ers2, ers3, ers4])
-            .await
-            .unwrap();
+        helper.db.add_ers_dca(vec![ers1, ers2, ers3, ers4]).await;
 
         let params = HaulsParams {
             catch_locations: Some(vec![
@@ -113,12 +103,7 @@ async fn test_hauls_returns_hauls_with_gear_group_ids() {
         ers1.gear.gear_group_code = GearGroup::Not;
         ers2.gear.gear_group_code = GearGroup::BurOgRuser;
 
-        helper
-            .db
-            .db
-            .add_ers_dca(vec![ers1, ers2, ers3, ers4])
-            .await
-            .unwrap();
+        helper.db.add_ers_dca(vec![ers1, ers2, ers3, ers4]).await;
 
         let params = HaulsParams {
             gear_group_ids: Some(vec![
@@ -149,12 +134,7 @@ async fn test_hauls_returns_hauls_with_species_group_ids() {
         ers1.catch.species.species_group_code = SpeciesGroup::Blaakveite;
         ers2.catch.species.species_group_code = SpeciesGroup::Uer;
 
-        helper
-            .db
-            .db
-            .add_ers_dca(vec![ers1, ers2, ers3, ers4])
-            .await
-            .unwrap();
+        helper.db.add_ers_dca(vec![ers1, ers2, ers3, ers4]).await;
 
         let params = HaulsParams {
             species_group_ids: Some(vec![
@@ -185,12 +165,7 @@ async fn test_hauls_returns_hauls_with_vessel_length_ranges() {
         ers1.vessel_info.vessel_length = 9.;
         ers2.vessel_info.vessel_length = 12.;
 
-        helper
-            .db
-            .db
-            .add_ers_dca(vec![ers1, ers2, ers3, ers4])
-            .await
-            .unwrap();
+        helper.db.add_ers_dca(vec![ers1, ers2, ers3, ers4]).await;
 
         let params = HaulsParams {
             vessel_length_ranges: Some(vec!["(,10)".parse().unwrap(), "[10,15)".parse().unwrap()]),
@@ -215,12 +190,7 @@ async fn test_hauls_returns_hauls_with_fiskeridir_vessel_ids() {
         let ers3 = ErsDca::test_default(3, None);
         let ers4 = ErsDca::test_default(4, None);
 
-        helper
-            .db
-            .db
-            .add_ers_dca(vec![ers1, ers2, ers3, ers4])
-            .await
-            .unwrap();
+        helper.db.add_ers_dca(vec![ers1, ers2, ers3, ers4]).await;
 
         let params = HaulsParams {
             fiskeridir_vessel_ids: Some(vec![FiskeridirVesselId(1), FiskeridirVesselId(2)]),
@@ -252,7 +222,7 @@ async fn test_hauls_sorts_by_start_timestamp() {
         expected[2].set_start_timestamp(Utc.timestamp_opt(3000, 0).unwrap());
         expected[3].set_start_timestamp(Utc.timestamp_opt(4000, 0).unwrap());
 
-        helper.db.db.add_ers_dca(expected.clone()).await.unwrap();
+        helper.db.add_ers_dca(expected.clone()).await;
 
         let params = HaulsParams {
             sorting: Some(HaulsSorting::StartDate),
@@ -304,7 +274,7 @@ async fn test_hauls_sorts_by_stop_timestamp() {
         expected[3].set_start_timestamp(Utc.timestamp_opt(4000, 0).unwrap());
         expected[3].set_stop_timestamp(Utc.timestamp_opt(4000, 0).unwrap());
 
-        helper.db.db.add_ers_dca(expected.clone()).await.unwrap();
+        helper.db.add_ers_dca(expected.clone()).await;
 
         let params = HaulsParams {
             sorting: Some(HaulsSorting::StopDate),
@@ -352,7 +322,7 @@ async fn test_hauls_sorts_by_weight() {
         expected[2].catch.species.living_weight = Some(300);
         expected[3].catch.species.living_weight = Some(400);
 
-        helper.db.db.add_ers_dca(expected.clone()).await.unwrap();
+        helper.db.add_ers_dca(expected.clone()).await;
 
         let params = HaulsParams {
             sorting: Some(HaulsSorting::Weight),
@@ -391,7 +361,7 @@ async fn test_hauls_species_fiskeridir_defaults_to_zero() {
         let mut ers = ErsDca::test_default(1, None);
         ers.catch.species.species_fdir_code = None;
 
-        helper.db.db.add_ers_dca(vec![ers]).await.unwrap();
+        helper.db.add_ers_dca_value(ers).await;
 
         let response = helper.app.get_hauls(Default::default()).await;
 

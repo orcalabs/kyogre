@@ -7,7 +7,7 @@ use serde_repr::Deserialize_repr;
 
 use crate::CatchLocationId;
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize)]
 pub struct HaulId(pub i64);
 
 #[derive(Debug, Clone, PartialEq)]
@@ -90,16 +90,14 @@ impl std::fmt::Display for HaulDistributorId {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct HaulMessage {
-    pub message_id: i64,
+    pub haul_id: HaulId,
     pub start_timestamp: DateTime<Utc>,
     pub stop_timestamp: DateTime<Utc>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct HaulDistributionOutput {
-    pub message_id: i64,
-    pub start_timestamp: DateTime<Utc>,
-    pub stop_timestamp: DateTime<Utc>,
+    pub haul_id: HaulId,
     pub catch_location: CatchLocationId,
     pub factor: f64,
     pub distributor_id: HaulDistributorId,

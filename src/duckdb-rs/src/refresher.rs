@@ -17,8 +17,6 @@ const HAULS_SCHEMA: &str = "CREATE TABLE
         fiskeridir_vessel_id INT,
         gear_group_id INT NOT NULL,
         species_group_id INT NOT NULL,
-        start_timestamp timestamptz NOT NULL,
-        stop_timestamp timestamptz NOT NULL,
         living_weight BIGINT NOT NULL,
     )";
 const LANDING_SCHEMA: &str = "CREATE TABLE
@@ -571,8 +569,6 @@ INSERT INTO
         fiskeridir_vessel_id,
         gear_group_id,
         species_group_id,
-        start_timestamp,
-        stop_timestamp,
         living_weight
     )
 SELECT
@@ -583,8 +579,6 @@ SELECT
     fiskeridir_vessel_id,
     gear_group_id,
     species_group_id,
-    start_timestamp,
-    stop_timestamp,
     living_weight
 FROM
     POSTGRES_SCAN ('{}', 'public', 'hauls_matrix')

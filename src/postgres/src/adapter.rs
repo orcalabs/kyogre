@@ -1,8 +1,7 @@
 use crate::models::LandingMatrixArgs;
 use crate::queries::haul::HaulsMatrixArgs;
 use crate::{
-    error::PostgresError, ers_dca_set::ErsDcaSet, ers_dep_set::ErsDepSet, ers_por_set::ErsPorSet,
-    ers_tra_set::ErsTraSet, landing_set::LandingSet,
+    error::PostgresError, ers_dep_set::ErsDepSet, ers_por_set::ErsPorSet, ers_tra_set::ErsTraSet,
 };
 use async_trait::async_trait;
 use chrono::{DateTime, Duration, Utc};
@@ -15,7 +14,6 @@ use sqlx::{
     postgres::{PgConnectOptions, PgPoolOptions, PgSslMode},
     ConnectOptions, PgPool,
 };
-use std::collections::HashSet;
 use std::pin::Pin;
 use tracing::{event, instrument, Level};
 
@@ -535,58 +533,36 @@ impl ScraperInboundPort for PostgresAdapter {
     }
     async fn add_landings(
         &self,
-        landings: Vec<fiskeridir_rs::Landing>,
+        landings: Box<
+            dyn Iterator<Item = Result<fiskeridir_rs::Landing, fiskeridir_rs::Error>> + Send + Sync,
+        >,
         data_year: u32,
     ) -> Result<(), InsertError> {
-        let set = LandingSet::new(landings, data_year).change_context(InsertError)?;
-
-        self.add_landing_set(set).await.change_context(InsertError)
+        self.add_landings_impl(landings, data_year)
+            .await
+            .change_context(InsertError)
     }
-    #[tracing::instrument(skip(self, existing_landing_ids))]
-    async fn delete_removed_landings(
+    async fn add_ers_dca(
         &self,
-        existing_landing_ids: HashSet<LandingId>,
-        data_year: u32,
-    ) -> Result<(), DeleteError> {
-        self.delete_removed_landings_impl(existing_landing_ids, data_year)
+        ers_dca: Box<
+            dyn Iterator<Item = Result<fiskeridir_rs::ErsDca, fiskeridir_rs::Error>> + Send + Sync,
+        >,
+    ) -> Result<(), InsertError> {
+        self.add_ers_dca_impl(ers_dca)
             .await
-            .change_context(DeleteError)
-    }
-    async fn delete_ers_dca(&self, year: u32) -> Result<(), DeleteError> {
-        self.delete_ers_dca_impl(year)
-            .await
-            .change_context(DeleteError)
-    }
-    async fn add_ers_dca(&self, ers_dca: Vec<fiskeridir_rs::ErsDca>) -> Result<(), InsertError> {
-        let set = ErsDcaSet::new(ers_dca).change_context(InsertError)?;
-        self.add_ers_dca_set(set).await.change_context(InsertError)
+            .change_context(InsertError)
     }
     async fn add_ers_dep(&self, ers_dep: Vec<fiskeridir_rs::ErsDep>) -> Result<(), InsertError> {
         let set = ErsDepSet::new(ers_dep).change_context(InsertError)?;
         self.add_ers_dep_set(set).await.change_context(InsertError)
     }
-    async fn delete_ers_dep(&self, year: u32) -> Result<(), DeleteError> {
-        self.delete_ers_dep_impl(year)
-            .await
-            .change_context(DeleteError)
-    }
     async fn add_ers_por(&self, ers_por: Vec<fiskeridir_rs::ErsPor>) -> Result<(), InsertError> {
         let set = ErsPorSet::new(ers_por).change_context(InsertError)?;
         self.add_ers_por_set(set).await.change_context(InsertError)
     }
-    async fn delete_ers_por(&self, year: u32) -> Result<(), DeleteError> {
-        self.delete_ers_por_impl(year)
-            .await
-            .change_context(DeleteError)
-    }
     async fn add_ers_tra(&self, ers_tra: Vec<fiskeridir_rs::ErsTra>) -> Result<(), InsertError> {
         let set = ErsTraSet::new(ers_tra).change_context(InsertError)?;
         self.add_ers_tra_set(set).await.change_context(InsertError)
-    }
-    async fn delete_ers_tra_catches(&self, year: u32) -> Result<(), DeleteError> {
-        self.delete_ers_tra_catches_impl(year)
-            .await
-            .change_context(DeleteError)
     }
     async fn add_vms(&self, vms: Vec<fiskeridir_rs::Vms>) -> Result<(), InsertError> {
         self.add_vms_impl(vms).await.change_context(InsertError)

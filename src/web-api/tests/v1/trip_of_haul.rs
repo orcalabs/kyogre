@@ -2,7 +2,7 @@ use super::helper::test;
 use actix_web::http::StatusCode;
 use chrono::{Duration, TimeZone, Utc};
 use fiskeridir_rs::{CallSign, Quality};
-use kyogre_core::{FiskeridirVesselId, HaulId, Mmsi, ScraperInboundPort};
+use kyogre_core::{FiskeridirVesselId, HaulId, Mmsi};
 use web_api::routes::v1::trip::Trip;
 
 #[tokio::test]
@@ -13,36 +13,6 @@ async fn test_trip_of_haul_returns_none_of_no_trip_is_connected_to_given_haul_id
 
         let body: Option<Trip> = response.json().await.unwrap();
         assert!(body.is_none());
-    })
-    .await;
-}
-
-#[tokio::test]
-async fn test_trip_of_haul_returns_landings_based_trip_if_ers_based_does_not_exist() {
-    test(|helper| async move {
-        let fiskeridir_vessel_id = FiskeridirVesselId(11);
-        let start = Utc.timestamp_opt(10000, 0).unwrap();
-        let end = Utc.timestamp_opt(100000, 0).unwrap();
-
-        let haul = helper
-            .db
-            .generate_haul(
-                fiskeridir_vessel_id,
-                &(start + Duration::hours(1)),
-                &(end - Duration::hours(1)),
-            )
-            .await;
-
-        let landings_trip = helper
-            .generate_landings_trip(fiskeridir_vessel_id, &start, &end)
-            .await;
-
-        let response = helper.app.get_trip_of_haul(&haul.haul_id).await;
-        assert_eq!(response.status(), StatusCode::OK);
-
-        let body: Trip = response.json().await.unwrap();
-
-        assert_eq!(landings_trip, body);
     })
     .await;
 }
@@ -123,12 +93,7 @@ async fn test_trip_of_haul_returns_all_hauls_and_landings_connected_to_trip() {
         let mut landing = fiskeridir_rs::Landing::test_default(1, Some(fiskeridir_vessel_id.0));
         landing.landing_timestamp = start + Duration::hours(1);
 
-        helper
-            .db
-            .db
-            .add_landings(vec![landing], 2023)
-            .await
-            .unwrap();
+        helper.db.add_landings(vec![landing]).await;
 
         let trip = helper
             .generate_ers_trip(fiskeridir_vessel_id, &start, &end)
@@ -172,10 +137,8 @@ async fn test_aggregates_landing_data_per_product_quality_and_species_id() {
 
         helper
             .db
-            .db
-            .add_landings(vec![landing.clone(), landing2, landing3, landing4], 2023)
-            .await
-            .unwrap();
+            .add_landings(vec![landing.clone(), landing2, landing3, landing4])
+            .await;
 
         let haul = helper
             .db

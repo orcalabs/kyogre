@@ -45,6 +45,7 @@ pub enum VesselEventData {
     Landing,
     ErsDca,
     ErsTra,
+    Haul,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -78,6 +79,7 @@ pub enum VesselEventType {
     ErsPor = 3,
     ErsDep = 4,
     ErsTra = 5,
+    Haul = 6,
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -193,6 +195,7 @@ impl VesselEventType {
             VesselEventType::ErsTra => "ers_tra",
             VesselEventType::ErsDep => "ers_dep",
             VesselEventType::ErsPor => "ers_por",
+            VesselEventType::Haul => "haul",
         }
     }
 }

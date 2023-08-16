@@ -1,7 +1,6 @@
 use super::helper::test;
 use actix_web::http::StatusCode;
 use fiskeridir_rs::Landing;
-use kyogre_core::ScraperInboundPort;
 use strum::IntoEnumIterator;
 use web_api::routes::v1::species::*;
 
@@ -24,11 +23,7 @@ async fn test_species_returns_all_species() {
             },
         ];
 
-        helper
-            .adapter()
-            .add_landings(vec![landing, landing2], 2023)
-            .await
-            .unwrap();
+        helper.db.add_landings(vec![landing, landing2]).await;
 
         let response = helper.app.get_species().await;
 
@@ -105,11 +100,7 @@ async fn test_species_fao_returns_all_species_fao() {
             },
         ];
 
-        helper
-            .adapter()
-            .add_landings(vec![landing, landing2], 2023)
-            .await
-            .unwrap();
+        helper.db.add_landings(vec![landing, landing2]).await;
 
         let response = helper.app.get_species_fao().await;
 
@@ -146,11 +137,7 @@ async fn test_species_fiskeridir_returns_all_species_fiskeridir() {
             },
         ];
 
-        helper
-            .adapter()
-            .add_landings(vec![landing, landing2], 2023)
-            .await
-            .unwrap();
+        helper.db.add_landings(vec![landing, landing2]).await;
 
         let response = helper.app.get_species_fiskeridir().await;
 

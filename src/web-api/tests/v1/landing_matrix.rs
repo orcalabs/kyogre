@@ -5,11 +5,11 @@ use chrono::TimeZone;
 use chrono::{DateTime, Utc};
 use enum_index::EnumIndex;
 use fiskeridir_rs::{GearGroup, Landing, SpeciesGroup, VesselLengthGroup};
+use kyogre_core::FiskeridirVesselId;
 use kyogre_core::{
     landing_date_feature_matrix_index, ActiveLandingFilter, CatchLocationId, HaulMatrixes,
     LandingMatrixes, NUM_CATCH_LOCATIONS,
 };
-use kyogre_core::{FiskeridirVesselId, ScraperInboundPort};
 use web_api::routes::utils::{self, GearGroupId, SpeciesGroupId};
 use web_api::routes::v1::landing::{LandingMatrix, LandingMatrixParams};
 
@@ -26,12 +26,7 @@ async fn test_landing_matrix_returns_correct_sum_for_all_landings() {
         landing2.product.living_weight = Some(40.0);
         landing2.landing_timestamp = Utc.with_ymd_and_hms(2001, 1, 1, 0, 0, 0).unwrap();
 
-        helper
-            .db
-            .db
-            .add_landings(vec![landing, landing2], 2023)
-            .await
-            .unwrap();
+        helper.db.add_landings(vec![landing, landing2]).await;
 
         helper.refresh_cache().await;
 
@@ -69,10 +64,8 @@ async fn test_landing_matrix_filters_by_catch_locations() {
 
         helper
             .db
-            .db
-            .add_landings(vec![landing, landing2, landing3], 2023)
-            .await
-            .unwrap();
+            .add_landings(vec![landing, landing2, landing3])
+            .await;
 
         let params = LandingMatrixParams {
             catch_locations: Some(vec![CatchLocationId::new(9, 32)]),
@@ -111,10 +104,8 @@ async fn test_landing_matrix_filters_by_months() {
 
         helper
             .db
-            .db
-            .add_landings(vec![landing, landing2, landing3], 2023)
-            .await
-            .unwrap();
+            .add_landings(vec![landing, landing2, landing3])
+            .await;
 
         let params = LandingMatrixParams {
             months: Some(vec![month1.into(), month2.into()]),
@@ -153,10 +144,8 @@ async fn test_landing_matrix_filters_by_vessel_length() {
 
         helper
             .db
-            .db
-            .add_landings(vec![landing, landing2, landing3], 2023)
-            .await
-            .unwrap();
+            .add_landings(vec![landing, landing2, landing3])
+            .await;
 
         helper.refresh_cache().await;
         let params = LandingMatrixParams {
@@ -201,10 +190,8 @@ async fn test_landing_matrix_filters_by_species_group() {
 
         helper
             .db
-            .db
-            .add_landings(vec![landing, landing2, landing3], 2023)
-            .await
-            .unwrap();
+            .add_landings(vec![landing, landing2, landing3])
+            .await;
 
         helper.refresh_cache().await;
         let params = LandingMatrixParams {
@@ -248,10 +235,8 @@ async fn test_landing_matrix_filters_by_gear_group() {
 
         helper
             .db
-            .db
-            .add_landings(vec![landing, landing2, landing3], 2023)
-            .await
-            .unwrap();
+            .add_landings(vec![landing, landing2, landing3])
+            .await;
 
         helper.refresh_cache().await;
         let params = LandingMatrixParams {
@@ -290,10 +275,8 @@ async fn test_landing_matrix_filters_by_fiskeridir_vessel_ids() {
 
         helper
             .db
-            .db
-            .add_landings(vec![landing, landing2, landing3], 2023)
-            .await
-            .unwrap();
+            .add_landings(vec![landing, landing2, landing3])
+            .await;
 
         helper.refresh_cache().await;
         let params = LandingMatrixParams {
@@ -330,10 +313,8 @@ async fn test_landing_matrix_date_sum_area_table_is_correct() {
 
         helper
             .db
-            .db
-            .add_landings(vec![landing, landing2, landing3], 2023)
-            .await
-            .unwrap();
+            .add_landings(vec![landing, landing2, landing3])
+            .await;
 
         helper.refresh_cache().await;
 
@@ -378,10 +359,8 @@ async fn test_landing_matrix_gear_group_sum_area_table_is_correct() {
 
         helper
             .db
-            .db
-            .add_landings(vec![landing, landing2, landing3], 2023)
-            .await
-            .unwrap();
+            .add_landings(vec![landing, landing2, landing3])
+            .await;
 
         helper.refresh_cache().await;
 
@@ -426,10 +405,8 @@ async fn test_landing_matrix_vessel_length_sum_area_table_is_correct() {
 
         helper
             .db
-            .db
-            .add_landings(vec![landing, landing2, landing3], 2023)
-            .await
-            .unwrap();
+            .add_landings(vec![landing, landing2, landing3])
+            .await;
 
         helper.refresh_cache().await;
 
@@ -474,10 +451,8 @@ async fn test_landing_matrix_species_group_sum_area_table_is_correct() {
 
         helper
             .db
-            .db
-            .add_landings(vec![landing, landing2, landing3], 2023)
-            .await
-            .unwrap();
+            .add_landings(vec![landing, landing2, landing3])
+            .await;
 
         helper.refresh_cache().await;
 
@@ -511,23 +486,14 @@ async fn test_landing_matrix_have_correct_totals_after_landing_is_replaced_by_ne
         landing.landing_timestamp = Utc.with_ymd_and_hms(2001, 1, 1, 0, 0, 0).unwrap();
         landing.product.living_weight = Some(20.0);
 
+        helper.db.add_landings(vec![landing.clone()]).await;
+
         let mut landing2 = landing.clone();
         landing2.landing_timestamp = Utc.with_ymd_and_hms(2001, 1, 1, 0, 0, 0).unwrap();
         landing2.product.living_weight = Some(40.0);
         landing2.document_info.version_number += 1;
 
-        helper
-            .db
-            .db
-            .add_landings(vec![landing], 2023)
-            .await
-            .unwrap();
-        helper
-            .db
-            .db
-            .add_landings(vec![landing2], 2023)
-            .await
-            .unwrap();
+        helper.db.add_landings(vec![landing2]).await;
 
         helper.refresh_cache().await;
         let response = helper

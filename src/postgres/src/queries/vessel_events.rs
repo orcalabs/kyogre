@@ -121,12 +121,14 @@ FROM
     LEFT JOIN ers_departures d ON d.vessel_event_id = v.vessel_event_id
     LEFT JOIN ers_arrivals a ON a.vessel_event_id = v.vessel_event_id
     LEFT JOIN ers_tra t ON t.vessel_event_id = v.vessel_event_id
+    LEFT JOIN hauls h ON h.vessel_event_id = v.vessel_event_id
 WHERE
     l.landing_id IS NULL
     AND e.message_id IS NULL
     AND d.message_id IS NULL
     AND a.message_id IS NULL
     AND t.message_id IS NULL
+    AND h.haul_id IS NULL
             "#
         )
         .fetch_one(&self.pool)

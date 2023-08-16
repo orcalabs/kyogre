@@ -1,10 +1,7 @@
-use std::collections::HashSet;
-
 use crate::*;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use error_stack::Result;
-use fiskeridir_rs::LandingId;
 
 #[async_trait]
 pub trait AisConsumeLoop: Sync + Send {
@@ -54,22 +51,20 @@ pub trait ScraperInboundPort {
     ) -> Result<(), InsertError>;
     async fn add_landings(
         &self,
-        landings: Vec<fiskeridir_rs::Landing>,
+        landings: Box<
+            dyn Iterator<Item = Result<fiskeridir_rs::Landing, fiskeridir_rs::Error>> + Send + Sync,
+        >,
         data_year: u32,
     ) -> Result<(), InsertError>;
-    async fn delete_removed_landings(
+    async fn add_ers_dca(
         &self,
-        existing_landing_ids: HashSet<LandingId>,
-        data_year: u32,
-    ) -> Result<(), DeleteError>;
-    async fn delete_ers_dca(&self, year: u32) -> Result<(), DeleteError>;
-    async fn add_ers_dca(&self, ers_dca: Vec<fiskeridir_rs::ErsDca>) -> Result<(), InsertError>;
+        ers_dca: Box<
+            dyn Iterator<Item = Result<fiskeridir_rs::ErsDca, fiskeridir_rs::Error>> + Send + Sync,
+        >,
+    ) -> Result<(), InsertError>;
     async fn add_ers_dep(&self, ers_dep: Vec<fiskeridir_rs::ErsDep>) -> Result<(), InsertError>;
-    async fn delete_ers_dep(&self, year: u32) -> Result<(), DeleteError>;
     async fn add_ers_por(&self, ers_por: Vec<fiskeridir_rs::ErsPor>) -> Result<(), InsertError>;
-    async fn delete_ers_por(&self, year: u32) -> Result<(), DeleteError>;
     async fn add_ers_tra(&self, ers_tra: Vec<fiskeridir_rs::ErsTra>) -> Result<(), InsertError>;
-    async fn delete_ers_tra_catches(&self, year: u32) -> Result<(), DeleteError>;
     async fn add_vms(&self, vms: Vec<fiskeridir_rs::Vms>) -> Result<(), InsertError>;
     async fn add_aqua_culture_register(
         &self,

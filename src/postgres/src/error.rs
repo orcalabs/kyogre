@@ -1,6 +1,5 @@
 use bigdecimal::BigDecimal;
 use error_stack::Context;
-use kyogre_core::ErsDcaId;
 
 #[derive(Debug)]
 pub enum PostgresError {
@@ -96,23 +95,10 @@ impl std::fmt::Display for PortCoordinateError {
     }
 }
 
-// Necesary evil when SQLX returns a boxed dyn Error + Send + Sync which we can't transform into a
-// report.
-// This type is used as an intermediate error type to then be converted into a error-stack Report.
-#[derive(Debug)]
-pub struct ErrorWrapper(pub String);
-
-impl std::fmt::Display for ErrorWrapper {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!("{:?}", self.0))
-    }
-}
-impl std::error::Error for ErrorWrapper {}
-
 #[derive(Debug)]
 pub enum VerifyDatabaseError {
     DanglingVesselEvents(i64),
-    IncorrectHaulCatches(Vec<ErsDcaId>),
+    IncorrectHaulCatches(Vec<i64>),
     IncorrectHaulsMatrixLivingWeight(i64),
     IncorrectLandingMatrixLivingWeight(i64),
 }

@@ -1,6 +1,8 @@
 use crate::{
     error::PostgresError,
-    models::{CurrentTrip, Trip, TripAssemblerConflict, TripCalculationTimer, TripDetailed},
+    models::{
+        CurrentTrip, InsertedTrip, Trip, TripAssemblerConflict, TripCalculationTimer, TripDetailed,
+    },
     PostgresAdapter,
 };
 use bigdecimal::BigDecimal;
@@ -12,7 +14,7 @@ use futures::TryStreamExt;
 use kyogre_core::{
     FiskeridirVesselId, HaulId, NewTrip, Ordering, Pagination, PrecisionOutcome, PrecisionStatus,
     TripAssemblerId, TripDistanceOutput, TripPrecisionUpdate, TripSorting, Trips,
-    TripsConflictStrategy, TripsQuery,
+    TripsConflictStrategy, TripsQuery, VesselEventType,
 };
 use num_traits::FromPrimitive;
 use sqlx::postgres::types::PgRange;
@@ -99,12 +101,17 @@ WHERE
                     r#"
 SELECT
     trip_id
-FROM trips t
+FROM
+    trips t
 WHERE
-    LOWER(t.period) >= $1
-ORDER BY trip_id
-LIMIT $2
-OFFSET $3
+    $1::TIMESTAMPTZ <@ t.period
+    OR LOWER(t.period) >= $1
+ORDER BY
+    trip_id
+LIMIT
+    $2
+OFFSET
+    $3
                 "#,
                     refresh_boundary,
                     TRIP_REFRESH_BATCH_SIZE,
@@ -182,7 +189,6 @@ WITH
             f.api_source
         FROM
             trips t
-            INNER JOIN UNNEST($1::BIGINT[]) u (trip_id) on u.trip_id = t.trip_id
             INNER JOIN fiskeridir_vessels fv ON fv.fiskeridir_vessel_id = t.fiskeridir_vessel_id
             LEFT JOIN vessel_events v ON t.trip_id = v.trip_id
             LEFT JOIN landings l ON l.vessel_event_id = v.vessel_event_id
@@ -190,6 +196,8 @@ WITH
             LEFT JOIN hauls h ON h.vessel_event_id = v.vessel_event_id
             LEFT JOIN fishing_facilities f ON f.fiskeridir_vessel_id = t.fiskeridir_vessel_id
             AND f.period && t.period
+        WHERE
+            t.trip_id = ANY ($1::BIGINT[])
     )
 INSERT INTO
     trips_detailed (
@@ -1168,7 +1176,7 @@ RETURNING
                 .map(|v| v.ts)),
             };
 
-        sqlx::query!(
+        let inserted = sqlx::query!(
             r#"
 INSERT INTO
     trips (
@@ -1190,6 +1198,11 @@ FROM
         $5::INT[],
         $6::BIGINT[]
     )
+RETURNING
+    trip_id AS "trip_id!",
+    "period" AS "period!",
+    landing_coverage AS "landing_coverage!",
+    fiskeridir_vessel_id AS "fiskeridir_vessel_id!"
             "#,
             period,
             landing_coverage,
@@ -1198,10 +1211,18 @@ FROM
             &trip_assembler_ids,
             &fiskeridir_vessel_ids,
         )
-        .execute(&mut *tx)
+        .fetch_all(&mut *tx)
         .await
         .into_report()
-        .change_context(PostgresError::Query)?;
+        .change_context(PostgresError::Query)?
+        .into_iter()
+        .map(|r| InsertedTrip {
+            trip_id: r.trip_id,
+            period: r.period,
+            landing_coverage: r.landing_coverage,
+            fiskeridir_vessel_id: r.fiskeridir_vessel_id,
+        })
+        .collect();
 
         let earliest = if let Some(start_of_prior_trip) = start_of_prior_trip?.flatten() {
             std::cmp::min(earliest_trip_start, start_of_prior_trip)
@@ -1211,6 +1232,8 @@ FROM
 
         self.update_trips_refresh_boundary(earliest, &mut tx)
             .await?;
+        self.connect_events_to_trips(inserted, trip_assembler_id, &mut tx)
+            .await?;
 
         tx.commit()
             .await
@@ -1218,6 +1241,88 @@ FROM
             .change_context(PostgresError::Transaction)?;
 
         Ok(())
+    }
+
+    pub(crate) async fn connect_events_to_trips<'a>(
+        &'a self,
+        trips: Vec<InsertedTrip>,
+        trip_assembler_id: TripAssemblerId,
+        tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
+    ) -> Result<(), PostgresError> {
+        let len = trips.len();
+        let mut trip_id = Vec::with_capacity(len);
+        let mut period = Vec::with_capacity(len);
+        let mut landing_coverage = Vec::with_capacity(len);
+        let mut vessel_id = Vec::with_capacity(len);
+
+        for t in trips {
+            trip_id.push(t.trip_id);
+            period.push(t.period);
+            landing_coverage.push(t.landing_coverage);
+            vessel_id.push(t.fiskeridir_vessel_id);
+        }
+
+        sqlx::query!(
+            r#"
+UPDATE vessel_events v
+SET
+    trip_id = u.trip_id
+FROM
+    UNNEST(
+        $1::BIGINT[],
+        $2::TSTZRANGE[],
+        $3::TSTZRANGE[],
+        $4::BIGINT[]
+    ) u (
+        trip_id,
+        "period",
+        landing_coverage,
+        fiskeridir_vessel_id
+    )
+WHERE
+    (
+        $5 = 2
+        AND (
+            v.vessel_event_type_id = 2
+            OR v.vessel_event_type_id = 5
+            OR v.vessel_event_type_id = 6
+        )
+        AND COALESCE(v.occurence_timestamp, v.report_timestamp) >= LOWER(u.period)
+        AND COALESCE(v.occurence_timestamp, v.report_timestamp) < UPPER(u.period)
+        AND v.fiskeridir_vessel_id = u.fiskeridir_vessel_id
+    )
+    OR (
+        $5 = 2
+        AND v.vessel_event_type_id = 3
+        AND v.report_timestamp > LOWER(u.period)
+        AND v.report_timestamp <= UPPER(u.period)
+        AND v.fiskeridir_vessel_id = u.fiskeridir_vessel_id
+    )
+    OR (
+        $5 = 2
+        AND v.vessel_event_type_id = 4
+        AND v.report_timestamp >= LOWER(u.period)
+        AND v.report_timestamp < UPPER(u.period)
+        AND v.fiskeridir_vessel_id = u.fiskeridir_vessel_id
+    )
+    OR (
+        v.vessel_event_type_id = 1
+        AND COALESCE(v.occurence_timestamp, v.report_timestamp) >= LOWER(u.landing_coverage)
+        AND COALESCE(v.occurence_timestamp, v.report_timestamp) < UPPER(u.landing_coverage)
+        AND v.fiskeridir_vessel_id = u.fiskeridir_vessel_id
+    )
+            "#,
+            &trip_id,
+            &period,
+            &landing_coverage,
+            &vessel_id,
+            trip_assembler_id as i32
+        )
+        .execute(&mut **tx)
+        .await
+        .into_report()
+        .change_context(PostgresError::Query)
+        .map(|_| ())
     }
 
     pub(crate) async fn trip_prior_to_timestamp_exclusive(
@@ -1505,5 +1610,184 @@ WHERE
         .await
         .into_report()
         .change_context(PostgresError::Query)
+    }
+
+    pub(crate) async fn connect_trip_to_events<'a>(
+        &'a self,
+        event_ids: Vec<i64>,
+        event_type: VesselEventType,
+        tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
+    ) -> Result<(), PostgresError> {
+        match event_type {
+            VesselEventType::Landing => self.connect_trip_to_landing_events(event_ids, tx).await,
+            VesselEventType::ErsDep => self.connect_trip_to_ers_dep_events(event_ids, tx).await,
+            VesselEventType::ErsPor => self.connect_trip_to_ers_por_events(event_ids, tx).await,
+            VesselEventType::ErsDca | VesselEventType::ErsTra | VesselEventType::Haul => {
+                self.connect_trip_to_ers_dca_tra_haul_events(event_ids, tx)
+                    .await
+            }
+        }
+    }
+
+    pub(crate) async fn connect_trip_to_landing_events<'a>(
+        &'a self,
+        event_ids: Vec<i64>,
+        tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
+    ) -> Result<(), PostgresError> {
+        sqlx::query!(
+            r#"
+UPDATE vessel_events v
+SET
+    trip_id = t.trip_id
+FROM
+    trips t
+WHERE
+    v.vessel_event_id = ANY ($1::BIGINT[])
+    AND v.fiskeridir_vessel_id = t.fiskeridir_vessel_id
+    AND trip_assembler_id != 1
+    AND COALESCE(v.occurence_timestamp, v.report_timestamp) >= LOWER(t.landing_coverage)
+    AND COALESCE(v.occurence_timestamp, v.report_timestamp) < UPPER(t.landing_coverage)
+            "#,
+            &event_ids
+        )
+        .execute(&mut **tx)
+        .await
+        .into_report()
+        .change_context(PostgresError::Query)
+        .map(|_| ())
+    }
+
+    pub(crate) async fn connect_trip_to_ers_dep_events<'a>(
+        &'a self,
+        event_ids: Vec<i64>,
+        tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
+    ) -> Result<(), PostgresError> {
+        sqlx::query!(
+            r#"
+UPDATE vessel_events v
+SET
+    trip_id = t.trip_id
+FROM
+    trips t
+WHERE
+    v.vessel_event_id = ANY ($1::BIGINT[])
+    AND v.fiskeridir_vessel_id = t.fiskeridir_vessel_id
+    AND trip_assembler_id = 2
+    AND v.report_timestamp >= LOWER(t.period)
+    AND v.report_timestamp < UPPER(t.period)
+            "#,
+            &event_ids
+        )
+        .execute(&mut **tx)
+        .await
+        .into_report()
+        .change_context(PostgresError::Query)
+        .map(|_| ())
+    }
+
+    pub(crate) async fn connect_trip_to_ers_por_events<'a>(
+        &'a self,
+        event_ids: Vec<i64>,
+        tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
+    ) -> Result<(), PostgresError> {
+        sqlx::query!(
+            r#"
+UPDATE vessel_events v
+SET
+    trip_id = t.trip_id
+FROM
+    trips t
+WHERE
+    v.vessel_event_id = ANY ($1::BIGINT[])
+    AND v.fiskeridir_vessel_id = t.fiskeridir_vessel_id
+    AND trip_assembler_id = 2
+    AND v.report_timestamp > LOWER(t.period)
+    AND v.report_timestamp <= UPPER(t.period)
+            "#,
+            &event_ids
+        )
+        .execute(&mut **tx)
+        .await
+        .into_report()
+        .change_context(PostgresError::Query)
+        .map(|_| ())
+    }
+
+    pub(crate) async fn connect_trip_to_ers_dca_tra_haul_events<'a>(
+        &'a self,
+        event_ids: Vec<i64>,
+        tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
+    ) -> Result<(), PostgresError> {
+        sqlx::query!(
+            r#"
+UPDATE vessel_events v
+SET
+    trip_id = t.trip_id
+FROM
+    trips t
+WHERE
+    v.vessel_event_id = ANY ($1::BIGINT[])
+    AND v.fiskeridir_vessel_id = t.fiskeridir_vessel_id
+    AND trip_assembler_id = 2
+    AND COALESCE(v.occurence_timestamp, v.report_timestamp) >= LOWER(t.period)
+    AND COALESCE(v.occurence_timestamp, v.report_timestamp) < UPPER(t.period)
+            "#,
+            &event_ids
+        )
+        .execute(&mut **tx)
+        .await
+        .into_report()
+        .change_context(PostgresError::Query)
+        .map(|_| ())
+    }
+
+    pub(crate) async fn add_trip_assembler_conflicts<'a>(
+        &'a self,
+        conflicts: Vec<TripAssemblerConflict>,
+        event_type: TripAssemblerId,
+        tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
+    ) -> Result<(), PostgresError> {
+        let len = conflicts.len();
+        let mut vessel_id = Vec::with_capacity(len);
+        let mut timestamp = Vec::with_capacity(len);
+
+        for c in conflicts {
+            vessel_id.push(c.fiskeridir_vessel_id);
+            timestamp.push(c.timestamp);
+        }
+
+        sqlx::query!(
+            r#"
+INSERT INTO
+    trip_assembler_conflicts AS c (
+        fiskeridir_vessel_id,
+        "conflict",
+        trip_assembler_id
+    )
+SELECT
+    u.fiskeridir_vessel_id,
+    u.timestamp,
+    t.trip_assembler_id
+FROM
+    UNNEST($1::BIGINT[], $2::TIMESTAMPTZ[]) u (fiskeridir_vessel_id, "timestamp")
+    INNER JOIN trip_calculation_timers AS t ON t.fiskeridir_vessel_id = u.fiskeridir_vessel_id
+WHERE
+    t.trip_assembler_id = $3::INT
+ON CONFLICT (fiskeridir_vessel_id) DO
+UPDATE
+SET
+    "conflict" = EXCLUDED.conflict
+WHERE
+    c.conflict > EXCLUDED.conflict
+            "#,
+            &vessel_id,
+            &timestamp,
+            event_type as i32
+        )
+        .execute(&mut **tx)
+        .await
+        .into_report()
+        .change_context(PostgresError::Query)
+        .map(|_| ())
     }
 }

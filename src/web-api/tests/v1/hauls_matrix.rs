@@ -7,7 +7,7 @@ use fiskeridir_rs::{ErsDca, GearGroup, SpeciesGroup, VesselLengthGroup};
 use kyogre_core::{
     haul_date_feature_matrix_index, CatchLocationId, HaulMatrixes, NUM_CATCH_LOCATIONS,
 };
-use kyogre_core::{ActiveHaulsFilter, FiskeridirVesselId, ScraperInboundPort};
+use kyogre_core::{ActiveHaulsFilter, FiskeridirVesselId};
 use web_api::routes::{
     utils::{self, GearGroupId, SpeciesGroupId},
     v1::haul::{HaulsMatrix, HaulsMatrixParams},
@@ -28,7 +28,7 @@ async fn test_hauls_matrix_returns_correct_sum_for_all_hauls() {
         ers2.start_latitude = Some(70.536);
         ers2.start_longitude = Some(21.957);
 
-        helper.db.db.add_ers_dca(vec![ers1, ers2]).await.unwrap();
+        helper.db.add_ers_dca(vec![ers1, ers2]).await;
 
         helper.refresh_cache().await;
 
@@ -77,12 +77,7 @@ async fn test_hauls_matrix_filters_by_months() {
         ers4.start_longitude = Some(12.565410);
         ers4.catch.species.living_weight = Some(200);
 
-        helper
-            .db
-            .db
-            .add_ers_dca(vec![ers1, ers2, ers3, ers4])
-            .await
-            .unwrap();
+        helper.db.add_ers_dca(vec![ers1, ers2, ers3, ers4]).await;
 
         let params = HaulsMatrixParams {
             months: Some(vec![month1.into(), month2.into()]),
@@ -126,12 +121,7 @@ async fn test_hauls_matrix_filters_by_vessel_length() {
         ers4.start_longitude = Some(12.565410);
         ers4.catch.species.living_weight = Some(200);
 
-        helper
-            .db
-            .db
-            .add_ers_dca(vec![ers1, ers2, ers3, ers4])
-            .await
-            .unwrap();
+        helper.db.add_ers_dca(vec![ers1, ers2, ers3, ers4]).await;
 
         helper.refresh_cache().await;
         let params = HaulsMatrixParams {
@@ -177,12 +167,7 @@ async fn test_hauls_matrix_filters_by_species_group() {
         ers4.start_longitude = Some(12.565410);
         ers4.catch.species.living_weight = Some(200);
 
-        helper
-            .db
-            .db
-            .add_ers_dca(vec![ers1, ers2, ers3, ers4])
-            .await
-            .unwrap();
+        helper.db.add_ers_dca(vec![ers1, ers2, ers3, ers4]).await;
 
         helper.refresh_cache().await;
         let params = HaulsMatrixParams {
@@ -227,12 +212,7 @@ async fn test_hauls_matrix_filters_by_gear_group() {
         ers4.start_longitude = Some(12.565410);
         ers4.catch.species.living_weight = Some(200);
 
-        helper
-            .db
-            .db
-            .add_ers_dca(vec![ers1, ers2, ers3, ers4])
-            .await
-            .unwrap();
+        helper.db.add_ers_dca(vec![ers1, ers2, ers3, ers4]).await;
 
         let params = HaulsMatrixParams {
             gear_group_ids: Some(vec![
@@ -276,12 +256,7 @@ async fn test_hauls_matrix_filters_by_fiskeridir_vessel_ids() {
         ers4.start_longitude = Some(12.565410);
         ers4.catch.species.living_weight = Some(200);
 
-        helper
-            .db
-            .db
-            .add_ers_dca(vec![ers1, ers2, ers3, ers4])
-            .await
-            .unwrap();
+        helper.db.add_ers_dca(vec![ers1, ers2, ers3, ers4]).await;
 
         let params = HaulsMatrixParams {
             fiskeridir_vessel_ids: Some(vec![FiskeridirVesselId(1), FiskeridirVesselId(2)]),
@@ -314,7 +289,7 @@ async fn test_hauls_matrix_filters_by_catch_locations() {
         ers2.start_latitude = Some(67.5);
         ers2.start_longitude = Some(43.5);
 
-        helper.db.db.add_ers_dca(vec![ers1, ers2]).await.unwrap();
+        helper.db.add_ers_dca(vec![ers1, ers2]).await;
 
         let params = HaulsMatrixParams {
             catch_locations: Some(vec![CatchLocationId::new(0, 5)]),
@@ -363,12 +338,7 @@ async fn test_hauls_matrix_date_sum_area_table_is_correct() {
         ers4.start_longitude = Some(12.565410);
         ers4.catch.species.living_weight = Some(200);
 
-        helper
-            .db
-            .db
-            .add_ers_dca(vec![ers1, ers2, ers3, ers4])
-            .await
-            .unwrap();
+        helper.db.add_ers_dca(vec![ers1, ers2, ers3, ers4]).await;
 
         helper.refresh_cache().await;
         let response = helper
@@ -420,12 +390,7 @@ async fn test_hauls_matrix_gear_group_sum_area_table_is_correct() {
         ers4.gear.gear_group_code = GearGroup::Not;
         ers4.catch.species.living_weight = Some(200);
 
-        helper
-            .db
-            .db
-            .add_ers_dca(vec![ers1, ers2, ers3, ers4])
-            .await
-            .unwrap();
+        helper.db.add_ers_dca(vec![ers1, ers2, ers3, ers4]).await;
 
         helper.refresh_cache().await;
         let response = helper
@@ -475,12 +440,7 @@ async fn test_hauls_matrix_vessel_length_sum_area_table_is_correct() {
         ers4.start_longitude = Some(12.565410);
         ers4.catch.species.living_weight = Some(200);
 
-        helper
-            .db
-            .db
-            .add_ers_dca(vec![ers1, ers2, ers3, ers4])
-            .await
-            .unwrap();
+        helper.db.add_ers_dca(vec![ers1, ers2, ers3, ers4]).await;
 
         helper.refresh_cache().await;
         let response = helper
@@ -529,12 +489,7 @@ async fn test_hauls_matrix_species_group_sum_area_table_is_correct() {
         ers4.start_longitude = Some(12.565410);
         ers4.catch.species.living_weight = Some(200);
 
-        helper
-            .db
-            .db
-            .add_ers_dca(vec![ers1, ers2, ers3, ers4])
-            .await
-            .unwrap();
+        helper.db.add_ers_dca(vec![ers1, ers2, ers3, ers4]).await;
 
         helper.refresh_cache().await;
         let response = helper
@@ -572,11 +527,13 @@ async fn test_hauls_matrix_have_correct_totals_after_dca_message_is_replaced_by_
         ers1.start_longitude = Some(12.565410);
         ers1.catch.species.living_weight = Some(10);
 
+        helper.db.add_ers_dca_value(ers1.clone()).await;
+
         let mut ers2 = ers1.clone();
         ers2.message_version = ers1.message_version + 1;
         ers2.catch.species.living_weight = Some(20);
 
-        helper.db.db.add_ers_dca(vec![ers1, ers2]).await.unwrap();
+        helper.db.add_ers_dca_value(ers2).await;
 
         helper.refresh_cache().await;
         let response = helper

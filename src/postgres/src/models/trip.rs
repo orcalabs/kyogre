@@ -121,6 +121,14 @@ struct VesselEvent {
     vessel_event_type_id: VesselEventType,
 }
 
+#[derive(Debug, Clone)]
+pub struct InsertedTrip {
+    pub trip_id: i64,
+    pub period: PgRange<DateTime<Utc>>,
+    pub landing_coverage: PgRange<DateTime<Utc>>,
+    pub fiskeridir_vessel_id: i64,
+}
+
 impl TryFrom<Trip> for kyogre_core::Trip {
     type Error = Report<PostgresError>;
 
