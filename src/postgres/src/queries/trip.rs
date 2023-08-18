@@ -718,7 +718,6 @@ FROM
     trips_detailed t
 WHERE
     t.haul_ids && $2;
-
             "#,
             read_fishing_facility,
             &[haul_id.0],
@@ -1074,6 +1073,21 @@ WHERE
     AND trip_assembler_id = $3
             "#,
                 period,
+                vessel_id.0,
+                trip_assembler_id as i32,
+            )
+            .execute(&mut *tx)
+            .await
+            .into_report()
+            .change_context(PostgresError::Query)
+            .map(|_| ()),
+            TripsConflictStrategy::ReplaceAll => sqlx::query!(
+                r#"
+DELETE FROM trips
+WHERE
+    fiskeridir_vessel_id = $1
+    AND trip_assembler_id = $2
+            "#,
                 vessel_id.0,
                 trip_assembler_id as i32,
             )

@@ -92,6 +92,7 @@ pub struct Catch {
 pub enum TripsConflictStrategy {
     Error,
     Replace,
+    ReplaceAll,
 }
 
 #[repr(i32)]
