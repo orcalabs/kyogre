@@ -28,6 +28,17 @@ docker-compose up -d postgres
 docker-compose -d --build engine
 ```
 
+For a local api instance you will also need to start the duckdb service:
+
+```
+docker-compose up -d postgres
+docker-compose up -d duckdb
+docker-compose up -d fishery-api
+```
+
+The api will then be availabe at `http://localhost:8080`, swagger at
+`http://localhost:8080/swagger-ui/`.
+
 ## Complile time SQL queries
 
 We use [sqlx](https://github.com/launchbadge/sqlx) for all database interactions
