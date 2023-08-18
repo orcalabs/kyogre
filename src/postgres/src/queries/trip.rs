@@ -717,10 +717,11 @@ SELECT
 FROM
     trips_detailed t
 WHERE
-    $2 = ANY (t.haul_ids);
+    t.haul_ids && $2;
+
             "#,
             read_fishing_facility,
-            haul_id.0,
+            &[haul_id.0],
         )
         .fetch_optional(&self.pool)
         .await
@@ -762,10 +763,10 @@ SELECT
 FROM
     trips_detailed t
 WHERE
-    $2 = ANY (t.landing_ids);
+    t.landing_ids && $2::VARCHAR[];
             "#,
             read_fishing_facility,
-            landing_id.as_ref(),
+            &[landing_id.clone().into_inner()],
         )
         .fetch_optional(&self.pool)
         .await
