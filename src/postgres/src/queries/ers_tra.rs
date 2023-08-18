@@ -11,6 +11,18 @@ impl PostgresAdapter {
     pub(crate) async fn add_ers_tra_set(&self, set: ErsTraSet) -> Result<(), PostgresError> {
         let prepared_set = set.prepare();
 
+        let earliest_tra = prepared_set
+            .ers_tra
+            .iter()
+            .flat_map(|v| {
+                if let Some(ts) = v.reloading_timestamp {
+                    vec![v.message_timestamp, ts]
+                } else {
+                    vec![v.message_timestamp]
+                }
+            })
+            .min();
+
         let mut tx = self.begin().await?;
 
         self.add_ers_message_types(prepared_set.ers_message_types, &mut tx)
@@ -29,6 +41,10 @@ impl PostgresAdapter {
 
         self.add_ers_tra_catches(prepared_set.catches, &mut tx)
             .await?;
+
+        if let Some(ts) = earliest_tra {
+            self.update_trips_refresh_boundary(ts, &mut tx).await?;
+        }
 
         tx.commit()
             .await

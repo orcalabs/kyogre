@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nUPDATE trips\nSET\n    period_precision = u.period_precision,\n    trip_precision_status_id = u.precision_status,\n    start_precision_id = u.start_precision_id,\n    end_precision_id = u.end_precision_id,\n    start_precision_direction = u.start_precision_direction,\n    end_precision_direction = u.end_precision_direction\nFROM\n    UNNEST(\n        $1::BIGINT[],\n        $2::tstzrange[],\n        $3::VARCHAR[],\n        $4::INT[],\n        $5::INT[],\n        $6::VARCHAR[],\n        $7::VARCHAR[]\n    ) u (\n        trip_id,\n        period_precision,\n        precision_status,\n        start_precision_id,\n        end_precision_id,\n        start_precision_direction,\n        end_precision_direction\n    )\nWHERE\n    trips.trip_id = u.trip_id\nRETURNING\n    LOWER(\"period\") AS ts\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "ts",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8Array",
+        "TstzRangeArray",
+        "VarcharArray",
+        "Int4Array",
+        "Int4Array",
+        "VarcharArray",
+        "VarcharArray"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "4f525786354bd0c6c5fb0ea8b9befe7328e58418ec981f33e15ee4c891021b9f"
+}

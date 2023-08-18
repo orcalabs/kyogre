@@ -71,12 +71,12 @@
       {
         "ordinal": 13,
         "name": "start_port_id",
-        "type_info": "Text"
+        "type_info": "Varchar"
       },
       {
         "ordinal": 14,
         "name": "end_port_id",
-        "type_info": "Text"
+        "type_info": "Varchar"
       },
       {
         "ordinal": 15,
@@ -105,11 +105,11 @@
       ]
     },
     "nullable": [
+      false,
+      false,
+      false,
       true,
-      true,
-      true,
-      true,
-      true,
+      false,
       null,
       null,
       null,
@@ -120,7 +120,7 @@
       null,
       true,
       true,
-      true,
+      false,
       null,
       null,
       null

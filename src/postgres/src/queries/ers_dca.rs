@@ -13,6 +13,12 @@ impl PostgresAdapter {
     pub(crate) async fn add_ers_dca_set(&self, set: ErsDcaSet) -> Result<(), PostgresError> {
         let prepared_set = set.prepare();
 
+        let earliest_dca = prepared_set
+            .ers_dca
+            .iter()
+            .flat_map(|v| [v.message_timestamp, v.start_timestamp])
+            .min();
+
         let mut tx = self.begin().await?;
 
         self.add_ers_message_types(prepared_set.ers_message_types, &mut tx)
@@ -48,6 +54,10 @@ impl PostgresAdapter {
             .await?;
         self.add_ers_dca_whale_catches(prepared_set.whale_catches, &mut tx)
             .await?;
+
+        if let Some(ts) = earliest_dca {
+            self.update_trips_refresh_boundary(ts, &mut tx).await?;
+        }
 
         tx.commit()
             .await

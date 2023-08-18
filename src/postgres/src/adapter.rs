@@ -217,7 +217,7 @@ impl PostgresAdapter {
 #[async_trait]
 impl DatabaseViewRefresher for PostgresAdapter {
     async fn refresh(&self) -> Result<(), UpdateError> {
-        self.refresh_trip_detailed_view()
+        self.refresh_trip_detailed()
             .await
             .change_context(UpdateError)
     }

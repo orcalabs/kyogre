@@ -602,8 +602,6 @@ async fn test_trips_reset_is_cleared_on_next_run() {
             .await
             .unwrap();
 
-        dbg!("Goiing");
-
         ers_assembler
             .produce_and_store_trips(adapter)
             .await
