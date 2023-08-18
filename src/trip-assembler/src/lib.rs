@@ -134,8 +134,6 @@ pub trait TripAssembler: Send + Sync {
                 }
             };
 
-            dbg!(&state);
-
             let vessel_events = match state {
                 AssemblerState::Conflict(t) => {
                     num_conflicts += 1;

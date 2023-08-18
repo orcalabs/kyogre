@@ -157,6 +157,13 @@ WHERE
     }
     pub(crate) async fn add_landing_set(&self, set: LandingSet) -> Result<(), PostgresError> {
         let prepared_set = set.prepare();
+
+        let earliest_landing = prepared_set
+            .landings
+            .iter()
+            .map(|v| v.landing_timestamp)
+            .min();
+
         let mut tx = self.begin().await?;
 
         self.add_delivery_point_ids(prepared_set.delivery_points, &mut tx)
@@ -185,6 +192,9 @@ WHERE
         self.add_landing_entries(prepared_set.landing_entries, &mut tx)
             .await?;
 
+        if let Some(ts) = earliest_landing {
+            self.update_trips_refresh_boundary(ts, &mut tx).await?;
+        }
         tx.commit()
             .await
             .into_report()
