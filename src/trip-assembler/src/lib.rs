@@ -179,10 +179,10 @@ pub trait TripAssembler: Send + Sync {
                     (AssemblerState::NoPriorState, None) | (AssemblerState::Normal(_), None) => {
                         TripsConflictStrategy::Error
                     }
-                    (AssemblerState::Conflict(_), _) | (AssemblerState::QueuedReset, _) => {
-                        TripsConflictStrategy::Replace
-                    }
+                    (AssemblerState::Conflict(_), _) => TripsConflictStrategy::Replace,
+                    (AssemblerState::QueuedReset, _) => TripsConflictStrategy::ReplaceAll,
                 };
+
                 num_trips += trips.new_trips.len() as u32;
                 if let Err(e) = adapter
                     .add_trips(

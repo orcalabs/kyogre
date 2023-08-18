@@ -1,5 +1,5 @@
 use crate::helper::*;
-use chrono::{TimeZone, Utc};
+use chrono::{Duration, TimeZone, Utc};
 use kyogre_core::*;
 use trip_assembler::*;
 
@@ -611,6 +611,51 @@ async fn test_trips_reset_is_cleared_on_next_run() {
 
         assert_eq!(trips.len(), 1);
         assert_eq!(trips[0].trip_id.0, 2);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_trips_reset_deletes_all_trips_including_non_overlaps() {
+    test(|helper| async move {
+        let adapter = helper.adapter();
+        let vessel_id = FiskeridirVesselId(11);
+        let ers_assembler = ErsTripAssembler::default();
+
+        let start = Utc.timestamp_opt(100000, 0).unwrap();
+        let end = Utc.timestamp_opt(200000, 0).unwrap();
+
+        let departure = fiskeridir_rs::ErsDep::test_default(1, vessel_id.0 as u64, start, 1);
+        let arrival = fiskeridir_rs::ErsPor::test_default(1, vessel_id.0 as u64, end, 2);
+
+        let departure2 =
+            fiskeridir_rs::ErsDep::test_default(2, vessel_id.0 as u64, end + Duration::days(10), 3);
+        let arrival2 =
+            fiskeridir_rs::ErsPor::test_default(2, vessel_id.0 as u64, end + Duration::days(20), 4);
+
+        helper.add_ers_dep(vec![departure.clone()]).await.unwrap();
+        helper.add_ers_por(vec![arrival.clone()]).await.unwrap();
+
+        ers_assembler
+            .produce_and_store_trips(adapter)
+            .await
+            .unwrap();
+
+        helper.db.queue_trips_reset().await;
+
+        helper.add_ers_dep(vec![departure2.clone()]).await.unwrap();
+        helper.add_ers_por(vec![arrival2.clone()]).await.unwrap();
+
+        ers_assembler
+            .produce_and_store_trips(adapter)
+            .await
+            .unwrap();
+
+        let trips = helper.db.trips_of_vessel(vessel_id).await;
+
+        assert_eq!(trips.len(), 2);
+        assert_eq!(trips[0].trip_id.0, 2);
+        assert_eq!(trips[1].trip_id.0, 3);
     })
     .await;
 }
