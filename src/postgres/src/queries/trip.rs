@@ -19,6 +19,8 @@ use sqlx::postgres::types::PgRange;
 
 use super::float_to_decimal;
 
+const TRIP_REFRESH_BATCH_SIZE: i64 = 100000;
+
 impl PostgresAdapter {
     pub(crate) async fn trips_refresh_boundary<'a>(
         &self,
@@ -91,8 +93,39 @@ WHERE
         let refresh_boundary = self.trips_refresh_boundary(&mut tx).await?;
 
         if let Some(refresh_boundary) = refresh_boundary {
-            sqlx::query!(
-                r#"
+            let mut current = 0;
+            loop {
+                let trip_ids: Vec<i64> = sqlx::query!(
+                    r#"
+SELECT
+    trip_id
+FROM trips t
+WHERE
+    LOWER(t.period) >= $1
+ORDER BY trip_id
+LIMIT $2
+OFFSET $3
+                "#,
+                    refresh_boundary,
+                    TRIP_REFRESH_BATCH_SIZE,
+                    current,
+                )
+                .fetch_all(&mut *tx)
+                .await
+                .into_report()
+                .change_context(PostgresError::Query)?
+                .into_iter()
+                .map(|v| v.trip_id)
+                .collect();
+
+                if trip_ids.is_empty() {
+                    break;
+                }
+
+                current += TRIP_REFRESH_BATCH_SIZE;
+
+                sqlx::query!(
+                    r#"
 WITH
     everything AS (
         SELECT
@@ -149,6 +182,7 @@ WITH
             f.api_source
         FROM
             trips t
+            INNER JOIN UNNEST($1::BIGINT[]) u (trip_id) on u.trip_id = t.trip_id
             INNER JOIN fiskeridir_vessels fv ON fv.fiskeridir_vessel_id = t.fiskeridir_vessel_id
             LEFT JOIN vessel_events v ON t.trip_id = v.trip_id
             LEFT JOIN landings l ON l.vessel_event_id = v.vessel_event_id
@@ -156,8 +190,6 @@ WITH
             LEFT JOIN hauls h ON h.vessel_event_id = v.vessel_event_id
             LEFT JOIN fishing_facilities f ON f.fiskeridir_vessel_id = t.fiskeridir_vessel_id
             AND f.period && t.period
-        WHERE
-            LOWER(t.period) >= $1
     )
 INSERT INTO
     trips_detailed (
@@ -430,12 +462,13 @@ SET
     landing_ids = excluded.landing_ids,
     hauls = excluded.hauls;
                 "#,
-                refresh_boundary
-            )
-            .execute(&mut *tx)
-            .await
-            .into_report()
-            .change_context(PostgresError::Query)?;
+                    &trip_ids
+                )
+                .execute(&mut *tx)
+                .await
+                .into_report()
+                .change_context(PostgresError::Query)?;
+            }
 
             self.reset_trips_refresh_boundary(&mut tx).await?;
         }
