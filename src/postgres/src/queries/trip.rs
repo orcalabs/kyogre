@@ -19,7 +19,7 @@ use sqlx::postgres::types::PgRange;
 
 use super::float_to_decimal;
 
-const TRIP_REFRESH_BATCH_SIZE: i64 = 100000;
+const TRIP_REFRESH_BATCH_SIZE: i64 = 10000;
 
 impl PostgresAdapter {
     pub(crate) async fn trips_refresh_boundary<'a>(
