@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    trip_id\nFROM trips t\nWHERE\n    LOWER(t.period) >= $1\nORDER BY trip_id\nLIMIT $2\nOFFSET $3\n                ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "trip_id",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Timestamptz",
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "c0be88ba4a3a2846662dd28b690df342df8a53adc7a07310a5a58846e10042e4"
+}
