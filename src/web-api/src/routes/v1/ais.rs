@@ -1,22 +1,13 @@
-use std::pin::Pin;
-
-use crate::{error::ApiError, response::to_bytes, Database};
+use crate::{ais_to_streaming_response, error::ApiError, Database};
 use actix_web::{
-    http::header::ContentType,
     web::{self, Path},
     HttpResponse,
 };
-use async_stream::{__private::AsyncStream, try_stream};
 use chrono::{DateTime, Duration, Utc};
-use futures::{StreamExt, TryStreamExt};
 use kyogre_core::{DateRange, Mmsi};
-use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use tracing::{event, Level};
 use utoipa::{IntoParams, ToSchema};
-
-pub static AIS_DETAILS_INTERVAL: Lazy<Duration> = Lazy::new(|| Duration::minutes(30));
-pub static MISSING_DATA_DURATION: Lazy<Duration> = Lazy::new(|| Duration::minutes(70));
 
 #[derive(Debug, Deserialize, IntoParams)]
 #[serde(rename_all = "camelCase")]
@@ -56,71 +47,14 @@ pub async fn ais_track<T: Database + 'static>(
         ApiError::InvalidDateRange
     })?;
 
-    let stream: AsyncStream<Result<web::Bytes, ApiError>, _> = try_stream! {
-        let mut stream = db
-            .ais_positions(Mmsi(mmsi.into_inner()), &range)
+    ais_to_streaming_response! {
+        db.ais_positions(Mmsi(mmsi.into_inner()), &range)
             .map_err(|e| {
                 event!(Level::ERROR, "failed to retrieve ais positions: {:?}", e);
                 ApiError::InternalServerError
             })
-            .peekable();
-
-        yield web::Bytes::from_static(b"[");
-
-        if let Some(first) = stream.next().await {
-            let pos = AisPosition::from(first?);
-            yield to_bytes(&pos)?;
-
-            let mut current_detail_timstamp = pos.timestamp;
-
-            while let Some(item) = stream.next().await {
-                yield web::Bytes::from_static(b",");
-
-                let item = item?;
-                let next = Pin::new(&mut stream).peek().await;
-
-                let position = if next.is_none()
-                    || (item.msgtime - current_detail_timstamp >= *AIS_DETAILS_INTERVAL)
-                {
-                    let mut pos = AisPosition::from(item);
-
-                    if let Some(next) = next {
-                        if next.is_err() {
-                            // Error has already been logged in `map_err` above
-                            Err(ApiError::InternalServerError)?
-                        }
-
-                        // `unwrap` is safe because of `is_err` check above
-                        if next.as_ref().unwrap().msgtime - pos.timestamp >= *MISSING_DATA_DURATION
-                        {
-                            if let Some(ref mut det) = pos.det {
-                                det.missing_data = true;
-                            }
-                        }
-                    }
-
-                    current_detail_timstamp = pos.timestamp;
-                    pos
-                } else {
-                    AisPosition {
-                        lat: item.latitude,
-                        lon: item.longitude,
-                        cog: item.course_over_ground,
-                        timestamp: item.msgtime,
-                        det: None,
-                    }
-                };
-
-                yield to_bytes(&position)?;
-            }
-        };
-
-        yield web::Bytes::from_static(b"]");
-    };
-
-    Ok(HttpResponse::Ok()
-        .content_type(ContentType::json())
-        .streaming(Box::pin(stream)))
+            .map_ok(AisPosition::from)
+    }
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema)]

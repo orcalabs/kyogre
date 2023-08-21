@@ -2,8 +2,9 @@ use super::helper::test;
 use actix_web::http::StatusCode;
 use chrono::{Duration, TimeZone, Utc};
 use kyogre_core::Mmsi;
-use web_api::routes::v1::ais::{
-    AisPosition, AisTrackParameters, AIS_DETAILS_INTERVAL, MISSING_DATA_DURATION,
+use web_api::{
+    response::{AIS_DETAILS_INTERVAL, MISSING_DATA_DURATION},
+    routes::v1::ais::{AisPosition, AisTrackParameters},
 };
 
 #[tokio::test]

@@ -3,7 +3,10 @@ use actix_web::http::StatusCode;
 use chrono::{Duration, TimeZone, Utc};
 use fiskeridir_rs::CallSign;
 use kyogre_core::Mmsi;
-use web_api::routes::v1::ais_vms::{AisVmsParameters, AisVmsPosition};
+use web_api::{
+    response::MISSING_DATA_DURATION,
+    routes::v1::ais_vms::{AisVmsParameters, AisVmsPosition},
+};
 
 #[tokio::test]
 async fn test_ais_vms_positions_fails_without_mmsi_or_call_sign() {
@@ -173,6 +176,47 @@ async fn test_ais_vms_positions_returns_only_vms_without_mmsi() {
         assert_eq!(body.len(), 2);
         assert_eq!(body[0], pos2);
         assert_eq!(body[1], pos4);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_ais_vms_positions_returns_ais_and_vms_positions_with_missing_data() {
+    test(|helper| async move {
+        let call_sign = CallSign::new_unchecked("LK-28");
+        let vessel = helper
+            .db
+            .generate_ais_vessel(Mmsi(40), call_sign.as_ref())
+            .await;
+
+        let mut date = Utc.timestamp_opt(1000, 0).unwrap();
+
+        let mut pos = Vec::new();
+        for i in 0..10 {
+            pos.push(helper.db.generate_ais_position(vessel.mmsi, date).await);
+
+            if i == 2 {
+                date += *MISSING_DATA_DURATION;
+            } else {
+                date += Duration::seconds(1);
+            }
+        }
+
+        let response = helper
+            .app
+            .get_ais_vms_positions(AisVmsParameters {
+                mmsi: Some(vessel.mmsi),
+                call_sign: vessel.call_sign,
+                start: Some(pos[0].msgtime - Duration::seconds(1)),
+                end: Some(pos[pos.len() - 1].msgtime + Duration::seconds(1)),
+            })
+            .await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let body: Vec<AisVmsPosition> = response.json().await.unwrap();
+
+        assert_eq!(body.len(), 10);
+        assert_eq!(body[2].det.as_ref().map(|d| d.missing_data), Some(true));
     })
     .await;
 }
