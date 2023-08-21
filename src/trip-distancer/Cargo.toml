@@ -18,7 +18,7 @@ postgres = { path = "../postgres" }
 rand = "0.8.5"
 dockertest = { version = "0.3.1", registry = "orcalabs-orcastrator" }
 orca-core = { workspace = true, features = ["dockertest"] }
-tokio = { version = "1.31.0", features = ["rt-multi-thread", "macros"] }
+tokio = { version = "1.32.0", features = ["rt-multi-thread", "macros"] }
 futures = "0.3.28"
 fiskeridir-rs = { workspace = true }
 tracing-subscriber = "0.3.17"
