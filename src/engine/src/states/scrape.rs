@@ -1,6 +1,7 @@
 use crate::*;
 use async_trait::async_trait;
-use chrono::NaiveTime;
+use chrono::{Duration, NaiveTime};
+use orca_core::Environment;
 use tracing::{event, Level};
 
 pub struct ScrapeState;
@@ -20,6 +21,17 @@ impl machine::State for ScrapeState {
         }
     }
     fn schedule(&self) -> Schedule {
-        Schedule::Daily(NaiveTime::from_hms_opt(7, 0, 0).unwrap())
+        let environment: Environment = std::env::var("APP_ENVIRONMENT")
+            .unwrap()
+            .try_into()
+            .expect("failed to parse APP_ENVIRONMENT");
+
+        match environment {
+            Environment::Production
+            | Environment::Staging
+            | Environment::Development
+            | Environment::Test => Schedule::Daily(NaiveTime::from_hms_opt(7, 0, 0).unwrap()),
+            Environment::Local => Schedule::Periodic(Duration::hours(1)),
+        }
     }
 }
