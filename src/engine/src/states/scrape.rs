@@ -12,7 +12,11 @@ impl machine::State for ScrapeState {
     async fn run(&self, shared_state: &Self::SharedState) {
         shared_state.scraper.run().await;
         if let Err(e) = shared_state.postgres_adapter().increment().await {
-            event!(Level::ERROR, "failed to queue matrix cache update: {:?}", e);
+            event!(
+                Level::ERROR,
+                "failed to increment cache data version: {:?}",
+                e
+            );
         }
     }
     fn schedule(&self) -> Schedule {
