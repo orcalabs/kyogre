@@ -96,7 +96,7 @@ impl PostgresAdapter {
     }
 
     pub async fn consume_loop(
-        self,
+        &self,
         mut receiver: tokio::sync::broadcast::Receiver<DataMessage>,
         process_confirmation: Option<tokio::sync::mpsc::Sender<()>>,
     ) {
@@ -211,6 +211,19 @@ impl PostgresAdapter {
             .await
             .into_report()
             .change_context(PostgresError::Transaction)
+    }
+}
+
+impl TestStorage for PostgresAdapter {}
+
+#[async_trait]
+impl AisConsumeLoop for PostgresAdapter {
+    async fn consume(
+        &self,
+        receiver: tokio::sync::broadcast::Receiver<DataMessage>,
+        process_confirmation: Option<tokio::sync::mpsc::Sender<()>>,
+    ) {
+        self.consume_loop(receiver, process_confirmation).await
     }
 }
 
