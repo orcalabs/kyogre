@@ -1713,10 +1713,10 @@ async fn test_trips_filter_by_vessel_length_groups() {
         let fiskeridir_vessel_id2 = FiskeridirVesselId(2);
 
         let mut landing = fiskeridir_rs::Landing::test_default(1, Some(fiskeridir_vessel_id.0));
-        landing.vessel.length_group_code = VesselLengthGroup::UnderEleven;
+        landing.vessel.length = Some(9.00);
 
         let mut landing2 = fiskeridir_rs::Landing::test_default(1, Some(fiskeridir_vessel_id2.0));
-        landing2.vessel.length_group_code = VesselLengthGroup::ElevenToFifteen;
+        landing2.vessel.length = Some(13.00);
 
         helper
             .adapter()
