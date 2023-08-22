@@ -11,11 +11,13 @@ pub trait TestStorage:
 
 #[derive(Debug)]
 pub struct TestState {
+    pub vms_positions: Vec<VmsPosition>,
     pub ais_positions: Vec<AisPosition>,
     pub ais_vms_positions: Vec<crate::AisVmsPosition>,
     pub vessels: Vec<Vessel>,
     ais_positions_to_vessel: HashMap<VesselKey, Vec<AisPosition>>,
     ais_vms_positions_to_vessel: HashMap<VesselKey, Vec<crate::AisVmsPosition>>,
+    vms_positions_to_vessel: HashMap<VesselKey, Vec<crate::VmsPosition>>,
 }
 
 pub struct TestStateBuilder {
@@ -28,8 +30,9 @@ pub struct TestStateBuilder {
     position_timestamp_counter: HashMap<VesselKey, DateTime<Utc>>,
     position_gap: Duration,
     position_timestamp_start: DateTime<Utc>,
-    ais_positions: HashMap<AisVesselKey, Vec<AisPositionConstructor>>,
     ais_vms_positions: HashMap<AisVmsVesselKey, Vec<AisVmsPositionConstructor>>,
+    ais_positions: HashMap<AisVesselKey, Vec<AisPositionConstructor>>,
+    vms_positions: HashMap<VmsVesselKey, Vec<VmsPositionConstructor>>,
     ais_static_messages: Vec<NewAisStatic>,
 }
 
@@ -54,6 +57,11 @@ pub struct AisVmsPositionBuilder {
     current_index: usize,
 }
 
+pub struct VmsPositionBuilder {
+    state: VesselBuilder,
+    current_index: usize,
+}
+
 struct AisPositionConstructor {
     index: usize,
     position: NewAisPosition,
@@ -63,6 +71,12 @@ struct AisPositionConstructor {
 struct AisVmsPositionConstructor {
     index: usize,
     position: AisVmsPosition,
+}
+
+#[derive(Clone)]
+struct VmsPositionConstructor {
+    index: usize,
+    position: fiskeridir_rs::Vms,
 }
 
 struct VesselContructor {
@@ -85,6 +99,12 @@ struct AisVesselKey {
     vessel_key: VesselKey,
 }
 
+#[derive(PartialEq, Eq, Hash)]
+struct VmsVesselKey {
+    call_sign: CallSign,
+    vessel_key: VesselKey,
+}
+
 #[derive(PartialEq, Eq, Hash, Debug, Copy, Clone)]
 struct VesselKey {
     vessel_vec_index: usize,
@@ -100,6 +120,13 @@ impl AisVmsPosition {
 }
 
 impl TestState {
+    pub fn vms_positions_of_vessel(&self, index: usize) -> &[VmsPosition] {
+        self.vms_positions_to_vessel
+            .get(&VesselKey {
+                vessel_vec_index: index,
+            })
+            .unwrap()
+    }
     pub fn ais_positions_of_vessel(&self, index: usize) -> &[AisPosition] {
         self.ais_positions_to_vessel
             .get(&VesselKey {
@@ -141,6 +168,7 @@ impl TestStateBuilder {
             position_timestamp_start: Utc.with_ymd_and_hms(2010, 2, 5, 10, 0, 0).unwrap(),
             ais_static_messages: vec![],
             ais_vms_positions: HashMap::default(),
+            vms_positions: HashMap::default(),
         }
     }
 
@@ -210,11 +238,14 @@ impl TestStateBuilder {
         let mut vessels: Vec<Vessel> = self.storage.vessels().try_collect().await.unwrap();
         vessels.sort_by_key(|v| v.fiskeridir.id);
 
-        let mut ais_positions_by_vessel = HashMap::default();
+        let mut ais_positions_to_vessel = HashMap::default();
         let mut ais_positions = Vec::new();
 
-        let mut ais_vms_positions_by_vessel = HashMap::default();
+        let mut ais_vms_positions_to_vessel = HashMap::default();
         let mut ais_vms_positions = Vec::new();
+
+        let mut vms_positions_to_vessel = HashMap::default();
+        let mut vms_positions = Vec::new();
 
         for (key, positions) in self.ais_positions {
             let start = &positions[0].position.msgtime;
@@ -240,7 +271,7 @@ impl TestStateBuilder {
                 .unwrap();
 
             assert_eq!(stored_positions.len(), num_positions);
-            ais_positions_by_vessel.insert(key.vessel_key, stored_positions.clone());
+            ais_positions_to_vessel.insert(key.vessel_key, stored_positions.clone());
             ais_positions.append(&mut stored_positions);
         }
 
@@ -294,27 +325,108 @@ impl TestStateBuilder {
                 .collect();
 
             assert_eq!(stored_positions.len(), num_positions);
-            ais_vms_positions_by_vessel.insert(key.vessel_key, stored_positions);
+            ais_vms_positions_to_vessel.insert(key.vessel_key, stored_positions);
             ais_vms_positions.append(&mut mmsi_mapped_positions);
+        }
+
+        for (key, positions) in self.vms_positions {
+            let start = &positions[0].position.timestamp;
+            let end = &positions[positions.len() - 1].position.timestamp;
+
+            let range = DateRange::new(*start, *end).unwrap();
+            let num_positions = positions.len();
+
+            self.storage
+                .add_vms(positions.iter().cloned().map(|v| v.position).collect())
+                .await
+                .unwrap();
+
+            let mut stored_positions = self
+                .storage
+                .vms_positions(&key.call_sign, &range)
+                .try_collect::<Vec<VmsPosition>>()
+                .await
+                .unwrap();
+
+            assert_eq!(stored_positions.len(), num_positions);
+            vms_positions_to_vessel.insert(key.vessel_key, stored_positions.clone());
+            vms_positions.append(&mut stored_positions);
         }
 
         // We want all positions to be ordered by how they were created, we exploit the fact that
         // mmsis are an increasing counter and that msgtime is increased for each created position.
         ais_positions.sort_by_key(|v| (v.mmsi, v.msgtime));
         ais_vms_positions.sort_by_key(|v| (v.0, v.1.timestamp));
+        vms_positions.sort_by_key(|v| (v.call_sign.clone(), v.timestamp));
         assert_eq!(vessels.len(), num_vessels);
 
         TestState {
             ais_positions,
             vessels,
-            ais_positions_to_vessel: ais_positions_by_vessel,
+            ais_positions_to_vessel,
             ais_vms_positions: ais_vms_positions.into_iter().map(|v| v.1).collect(),
-            ais_vms_positions_to_vessel: ais_vms_positions_by_vessel,
+            ais_vms_positions_to_vessel,
+            vms_positions,
+            vms_positions_to_vessel,
         }
     }
 }
 
 impl VesselBuilder {
+    pub fn vms_positions(mut self, amount: usize) -> VmsPositionBuilder {
+        assert!(amount != 0);
+
+        let num_vessels = self.state.vessels[self.current_index..].len();
+
+        let (per_vessel, remainder) = positions_per_vessel(amount, num_vessels);
+
+        let mut current_position_index = 0;
+        for (i, vessel) in self.state.vessels[self.current_index..].iter().enumerate() {
+            let num_positions = if i == num_vessels - 1 {
+                remainder
+            } else {
+                per_vessel
+            };
+
+            let mut positions = Vec::with_capacity(num_positions);
+            let mut timestamps = Vec::with_capacity(num_positions);
+
+            let timestamp = self
+                .state
+                .position_timestamp_counter
+                .get_mut(&vessel.key)
+                .unwrap();
+
+            for _ in 0..num_positions {
+                timestamps.push(*timestamp);
+                let position = fiskeridir_rs::Vms::test_default(
+                    rand::random(),
+                    vessel.call_sign.clone(),
+                    *timestamp,
+                );
+                *timestamp += self.state.position_gap;
+                positions.push(VmsPositionConstructor {
+                    index: current_position_index,
+                    position,
+                });
+                current_position_index += 1;
+            }
+
+            self.state
+                .vms_positions
+                .entry(VmsVesselKey {
+                    vessel_key: vessel.key,
+                    call_sign: vessel.call_sign.clone(),
+                })
+                .and_modify(|v| v.append(&mut positions))
+                .or_insert(positions);
+        }
+
+        VmsPositionBuilder {
+            current_index: self.current_index + amount,
+            state: self,
+        }
+    }
     pub fn ais_vms_positions(mut self, amount: usize) -> AisVmsPositionBuilder {
         assert!(amount != 0);
 
@@ -428,6 +540,52 @@ impl VesselBuilder {
 
     pub async fn build(self) -> TestState {
         self.state.build().await
+    }
+}
+
+impl VmsPositionBuilder {
+    pub fn modify<F>(mut self, closure: F) -> VmsPositionBuilder
+    where
+        F: Fn(&mut fiskeridir_rs::Vms),
+    {
+        self.state
+            .state
+            .vms_positions
+            .iter_mut()
+            .for_each(|(_, positions)| {
+                for p in positions
+                    .iter_mut()
+                    .filter(|v| v.index < self.current_index)
+                {
+                    closure(&mut p.position)
+                }
+            });
+
+        self
+    }
+
+    pub fn modify_idx<F>(mut self, closure: F) -> VmsPositionBuilder
+    where
+        F: Fn(usize, &mut fiskeridir_rs::Vms),
+    {
+        self.state
+            .state
+            .vms_positions
+            .iter_mut()
+            .for_each(|(_, positions)| {
+                for p in positions
+                    .iter_mut()
+                    .filter(|v| v.index < self.current_index)
+                {
+                    closure(p.index, &mut p.position)
+                }
+            });
+
+        self
+    }
+
+    pub async fn build(self) -> TestState {
+        self.state.state.build().await
     }
 }
 
