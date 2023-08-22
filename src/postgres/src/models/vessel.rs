@@ -46,8 +46,6 @@ pub struct NewFiskeridirVessel {
     pub gross_tonnage_1969: Option<i32>,
     pub gross_tonnage_other: Option<i32>,
     pub rebuilding_year: Option<i32>,
-    #[unnest_insert(sql_type = "INT", type_conversion = "enum_to_i32")]
-    pub fiskeridir_length_group_id: VesselLengthGroup,
 }
 
 #[derive(Debug, Clone, UnnestInsert)]
@@ -106,7 +104,6 @@ impl TryFrom<fiskeridir_rs::Vessel> for NewFiskeridirVessel {
             gross_tonnage_1969: v.gross_tonnage_1969.map(|x| x as i32),
             gross_tonnage_other: v.gross_tonnage_other.map(|x| x as i32),
             rebuilding_year: v.rebuilding_year.map(|x| x as i32),
-            fiskeridir_length_group_id: v.length_group_code,
         })
     }
 }
