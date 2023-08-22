@@ -47,6 +47,9 @@ pub struct TestHelper {
 }
 
 impl TestHelper {
+    pub fn test_state_builder(&self) -> TestStateBuilder {
+        TestStateBuilder::new(Box::new(self.db.db.clone()), Box::new(self.db.db.clone()))
+    }
     pub fn adapter(&self) -> &PostgresAdapter {
         &self.db.db
     }
