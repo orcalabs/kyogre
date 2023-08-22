@@ -232,7 +232,21 @@ impl DatabaseViewRefresher for PostgresAdapter {
     async fn refresh(&self) -> Result<(), UpdateError> {
         self.refresh_trip_detailed()
             .await
-            .change_context(UpdateError)
+            .change_context(UpdateError)?;
+
+        // Alot of rows are updated and/or inserted when refreshing leading to outdated query
+        // analytics for the planner.
+        // Re-analyze to ensure we have recent statistics for the table.
+        sqlx::query!(
+            r#"
+ANALYZE trips_detailed
+            "#
+        )
+        .execute(&self.pool)
+        .await
+        .map(|_| ())
+        .into_report()
+        .change_context(UpdateError)
     }
 }
 
