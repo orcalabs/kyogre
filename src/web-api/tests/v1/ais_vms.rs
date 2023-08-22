@@ -29,40 +29,25 @@ async fn test_ais_vms_positions_fails_without_mmsi_or_call_sign() {
 #[tokio::test]
 async fn test_ais_vms_positions_returns_ais_and_vms_positions() {
     test(|helper| async move {
-        let call_sign = CallSign::new_unchecked("LK-28");
-        let vessel = helper
-            .db
-            .generate_ais_vessel(Mmsi(40), call_sign.as_ref())
+        let state = helper
+            .test_state_builder()
+            .vessels(1)
+            .ais_vms_positions(5)
+            .build()
             .await;
 
-        let pos = helper
-            .db
-            .generate_ais_position(vessel.mmsi, Utc.timestamp_opt(1000, 0).unwrap())
-            .await;
-        let pos2 = helper
-            .db
-            .generate_vms_position(2, &call_sign, Utc.timestamp_opt(2000, 0).unwrap())
-            .await;
-        let pos3 = helper
-            .db
-            .generate_ais_position(vessel.mmsi, Utc.timestamp_opt(3000, 0).unwrap())
-            .await;
-        let pos4 = helper
-            .db
-            .generate_vms_position(3, &call_sign, Utc.timestamp_opt(4000, 0).unwrap())
-            .await;
-        let pos5 = helper
-            .db
-            .generate_ais_position(vessel.mmsi, Utc.timestamp_opt(5000, 0).unwrap())
-            .await;
-
+        let pos = &state.ais_vms_positions[0];
+        let pos2 = &state.ais_vms_positions[1];
+        let pos3 = &state.ais_vms_positions[2];
+        let pos4 = &state.ais_vms_positions[3];
+        let pos5 = &state.ais_vms_positions[4];
         let response = helper
             .app
             .get_ais_vms_positions(AisVmsParameters {
-                mmsi: Some(vessel.mmsi),
-                call_sign: vessel.call_sign,
-                start: Some(pos.msgtime - Duration::seconds(1)),
-                end: Some(pos5.msgtime + Duration::seconds(1)),
+                mmsi: state.vessels[0].mmsi(),
+                call_sign: state.vessels[0].fiskeridir.call_sign.clone(),
+                start: Some(pos.timestamp - Duration::seconds(1)),
+                end: Some(pos5.timestamp + Duration::seconds(1)),
             })
             .await;
 
@@ -70,11 +55,11 @@ async fn test_ais_vms_positions_returns_ais_and_vms_positions() {
         let body: Vec<AisVmsPosition> = response.json().await.unwrap();
 
         assert_eq!(body.len(), 5);
-        assert_eq!(body[0], pos);
-        assert_eq!(body[1], pos2);
-        assert_eq!(body[2], pos3);
-        assert_eq!(body[3], pos4);
-        assert_eq!(body[4], pos5);
+        assert_eq!(body[0], *pos);
+        assert_eq!(body[1], *pos2);
+        assert_eq!(body[2], *pos3);
+        assert_eq!(body[3], *pos4);
+        assert_eq!(body[4], *pos5);
     })
     .await;
 }
@@ -82,40 +67,23 @@ async fn test_ais_vms_positions_returns_ais_and_vms_positions() {
 #[tokio::test]
 async fn test_ais_vms_positions_returns_only_ais_without_call_sign() {
     test(|helper| async move {
-        let call_sign = CallSign::new_unchecked("LK-28");
-        let vessel = helper
-            .db
-            .generate_ais_vessel(Mmsi(40), call_sign.as_ref())
+        let state = helper
+            .test_state_builder()
+            .vessels(1)
+            .ais_vms_positions(5)
+            .build()
             .await;
 
-        let pos = helper
-            .db
-            .generate_ais_position(vessel.mmsi, Utc.timestamp_opt(1000, 0).unwrap())
-            .await;
-        helper
-            .db
-            .generate_vms_position(2, &call_sign, Utc.timestamp_opt(2000, 0).unwrap())
-            .await;
-        let pos3 = helper
-            .db
-            .generate_ais_position(vessel.mmsi, Utc.timestamp_opt(3000, 0).unwrap())
-            .await;
-        helper
-            .db
-            .generate_vms_position(3, &call_sign, Utc.timestamp_opt(4000, 0).unwrap())
-            .await;
-        let pos5 = helper
-            .db
-            .generate_ais_position(vessel.mmsi, Utc.timestamp_opt(5000, 0).unwrap())
-            .await;
-
+        let pos = &state.ais_vms_positions[0];
+        let pos3 = &state.ais_vms_positions[2];
+        let pos5 = &state.ais_vms_positions[4];
         let response = helper
             .app
             .get_ais_vms_positions(AisVmsParameters {
-                mmsi: Some(vessel.mmsi),
+                mmsi: state.vessels[0].mmsi(),
                 call_sign: None,
-                start: Some(pos.msgtime - Duration::seconds(1)),
-                end: Some(pos5.msgtime + Duration::seconds(1)),
+                start: Some(pos.timestamp - Duration::seconds(1)),
+                end: Some(pos5.timestamp + Duration::seconds(1)),
             })
             .await;
 
@@ -123,9 +91,9 @@ async fn test_ais_vms_positions_returns_only_ais_without_call_sign() {
         let body: Vec<AisVmsPosition> = response.json().await.unwrap();
 
         assert_eq!(body.len(), 3);
-        assert_eq!(body[0], pos);
-        assert_eq!(body[1], pos3);
-        assert_eq!(body[2], pos5);
+        assert_eq!(body[0], *pos);
+        assert_eq!(body[1], *pos3);
+        assert_eq!(body[2], *pos5);
     })
     .await;
 }
@@ -133,40 +101,24 @@ async fn test_ais_vms_positions_returns_only_ais_without_call_sign() {
 #[tokio::test]
 async fn test_ais_vms_positions_returns_only_vms_without_mmsi() {
     test(|helper| async move {
-        let call_sign = CallSign::new_unchecked("LK-28");
-        let vessel = helper
-            .db
-            .generate_ais_vessel(Mmsi(40), call_sign.as_ref())
+        let state = helper
+            .test_state_builder()
+            .vessels(1)
+            .ais_vms_positions(5)
+            .build()
             .await;
 
-        let pos = helper
-            .db
-            .generate_ais_position(vessel.mmsi, Utc.timestamp_opt(1000, 0).unwrap())
-            .await;
-        let pos2 = helper
-            .db
-            .generate_vms_position(2, &call_sign, Utc.timestamp_opt(2000, 0).unwrap())
-            .await;
-        helper
-            .db
-            .generate_ais_position(vessel.mmsi, Utc.timestamp_opt(3000, 0).unwrap())
-            .await;
-        let pos4 = helper
-            .db
-            .generate_vms_position(3, &call_sign, Utc.timestamp_opt(4000, 0).unwrap())
-            .await;
-        let pos5 = helper
-            .db
-            .generate_ais_position(vessel.mmsi, Utc.timestamp_opt(5000, 0).unwrap())
-            .await;
-
+        let pos = &state.ais_vms_positions[0];
+        let pos2 = &state.ais_vms_positions[1];
+        let pos4 = &state.ais_vms_positions[3];
+        let pos5 = &state.ais_vms_positions[4];
         let response = helper
             .app
             .get_ais_vms_positions(AisVmsParameters {
                 mmsi: None,
-                call_sign: vessel.call_sign,
-                start: Some(pos.msgtime - Duration::seconds(1)),
-                end: Some(pos5.msgtime + Duration::seconds(1)),
+                call_sign: state.vessels[0].fiskeridir.call_sign.clone(),
+                start: Some(pos.timestamp - Duration::seconds(1)),
+                end: Some(pos5.timestamp + Duration::seconds(1)),
             })
             .await;
 
@@ -174,8 +126,8 @@ async fn test_ais_vms_positions_returns_only_vms_without_mmsi() {
         let body: Vec<AisVmsPosition> = response.json().await.unwrap();
 
         assert_eq!(body.len(), 2);
-        assert_eq!(body[0], pos2);
-        assert_eq!(body[1], pos4);
+        assert_eq!(body[0], *pos2);
+        assert_eq!(body[1], *pos4);
     })
     .await;
 }

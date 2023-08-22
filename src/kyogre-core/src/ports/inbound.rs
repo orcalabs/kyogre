@@ -7,6 +7,15 @@ use error_stack::Result;
 use fiskeridir_rs::LandingId;
 
 #[async_trait]
+pub trait AisConsumeLoop: Sync + Send {
+    async fn consume(
+        &self,
+        mut receiver: tokio::sync::broadcast::Receiver<DataMessage>,
+        process_confirmation: Option<tokio::sync::mpsc::Sender<()>>,
+    );
+}
+
+#[async_trait]
 pub trait AisMigratorDestination {
     async fn migrate_ais_data(
         &self,

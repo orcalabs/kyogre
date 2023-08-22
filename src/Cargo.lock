@@ -2610,6 +2610,7 @@ dependencies = [
  "serde_repr",
  "sqlx",
  "strum 0.25.0",
+ "tokio",
  "utoipa",
  "uuid",
  "wkt",
