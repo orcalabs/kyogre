@@ -54,7 +54,7 @@ impl App {
 
     pub async fn run(self) {
         let receiver = self.subscribe();
-        tokio::spawn(self.postgres.consume_loop(receiver, None));
+        tokio::spawn(async move { self.postgres.consume_loop(receiver, None).await });
 
         if let Err(e) = self
             .consumer
@@ -74,10 +74,11 @@ impl App {
         postgres_process_confirmation: tokio::sync::mpsc::Sender<()>,
     ) -> Result<(), ConsumerError> {
         let receiver = self.subscribe();
-        tokio::spawn(
+        tokio::spawn(async move {
             self.postgres
-                .consume_loop(receiver, Some(postgres_process_confirmation)),
-        );
+                .consume_loop(receiver, Some(postgres_process_confirmation))
+                .await
+        });
         self.consumer.run(source, self.sender).await
     }
 }
