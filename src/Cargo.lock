@@ -1558,6 +1558,7 @@ dependencies = [
  "fiskeridir-rs",
  "futures",
  "haul-distributor",
+ "humantime",
  "kyogre-core",
  "machine",
  "orca-core",
@@ -2801,9 +2802,9 @@ checksum = "c41e0c4fef86961ac6d6f8a82609f55f31b05e4fce149ac5710e439df7619ba4"
 
 [[package]]
 name = "machine"
-version = "0.1.2"
+version = "0.1.3"
 source = "registry+https://dl.cloudsmith.io/basic/orcalabs/orcastrator/cargo/index.git"
-checksum = "728c3413b6ca35e47bfd63a1e69daaacdc8d5fc405754b0928c7c1ec62a64cf5"
+checksum = "da82bec6b62e217e69c704a908285158e2a367db70060d5cce4931f9f5666089"
 dependencies = [
  "async-trait",
  "chrono",
@@ -2816,9 +2817,9 @@ dependencies = [
 
 [[package]]
 name = "machine_derive"
-version = "0.1.1"
+version = "0.1.2"
 source = "registry+https://dl.cloudsmith.io/basic/orcalabs/orcastrator/cargo/index.git"
-checksum = "db250a7f21db3670c2c6ac9436246136fe9427fcbd0dd800b20a60294805afcb"
+checksum = "3815501dc92e00056b435764a7e53cd7af02c298780ea836308442e6d679d328"
 dependencies = [
  "proc-macro2",
  "quote 1.0.33",
