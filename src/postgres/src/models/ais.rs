@@ -10,17 +10,26 @@ use unnest_insert::UnnestInsert;
 use crate::error::{FromBigDecimalError, NavigationStatusError, PostgresError};
 
 #[derive(Debug, Clone, UnnestInsert)]
-#[unnest_insert(table_name = "ais_vessels", conflict = "mmsi", update_all)]
+#[unnest_insert(table_name = "ais_vessels", conflict = "mmsi")]
 pub struct NewAisVessel {
     pub mmsi: i32,
+    #[unnest_insert(update_coalesce)]
     pub imo_number: Option<i32>,
+    #[unnest_insert(update_coalesce)]
     pub call_sign: Option<String>,
+    #[unnest_insert(update_coalesce)]
     pub name: Option<String>,
+    #[unnest_insert(update_coalesce)]
     pub ship_width: Option<i32>,
+    #[unnest_insert(update_coalesce)]
     pub ship_length: Option<i32>,
+    #[unnest_insert(update_coalesce)]
     pub ship_type: Option<i32>,
+    #[unnest_insert(update)]
     pub eta: Option<DateTime<Utc>>,
+    #[unnest_insert(update_coalesce)]
     pub draught: Option<i32>,
+    #[unnest_insert(update)]
     pub destination: Option<String>,
 }
 
