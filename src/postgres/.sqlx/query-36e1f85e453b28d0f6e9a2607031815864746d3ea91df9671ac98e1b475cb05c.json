@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO\n    ais_vessels (\n    mmsi,imo_number,call_sign,name,ship_width,ship_length,ship_type,eta,draught,destination\n   )\nSELECT\n    *\nFROM\n    UNNEST(\n        $1::INT[],$2::INT[],$3::TEXT[],$4::TEXT[],$5::INT[],$6::INT[],$7::INT[],$8::TIMESTAMPTZ[],$9::INT[],$10::TEXT[]\n    )\n        ON CONFLICT (mmsi) DO UPDATE SET imo_number = COALESCE(ais_vessels.imo_number, EXCLUDED.imo_number),call_sign = COALESCE(ais_vessels.call_sign, EXCLUDED.call_sign),name = COALESCE(ais_vessels.name, EXCLUDED.name),ship_width = COALESCE(ais_vessels.ship_width, EXCLUDED.ship_width),ship_length = COALESCE(ais_vessels.ship_length, EXCLUDED.ship_length),ship_type = COALESCE(ais_vessels.ship_type, EXCLUDED.ship_type),eta = EXCLUDED.eta,draught = COALESCE(ais_vessels.draught, EXCLUDED.draught),destination = EXCLUDED.destination",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4Array",
+        "Int4Array",
+        "TextArray",
+        "TextArray",
+        "Int4Array",
+        "Int4Array",
+        "Int4Array",
+        "TimestamptzArray",
+        "Int4Array",
+        "TextArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "36e1f85e453b28d0f6e9a2607031815864746d3ea91df9671ac98e1b475cb05c"
+}
