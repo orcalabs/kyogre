@@ -34,6 +34,7 @@ async fn test_postgres_updates_vessel_with_new_static_information() {
     test(|mut helper| async move {
         let vessel = AisStatic::test_default();
         let mut vessel_update = vessel.clone();
+        vessel_update.msgtime += Duration::seconds(1);
         helper.ais_source.send_static(&vessel).await;
 
         vessel_update.eta = Some(create_eta_string_value(
@@ -54,7 +55,8 @@ async fn test_postgres_updates_vessel_with_new_static_information() {
 async fn test_postgres_handles_multiple_static_messages_from_same_vessel() {
     test(|mut helper| async move {
         let vessel = AisStatic::test_default();
-        let vessel2 = vessel.clone();
+        let mut vessel2 = vessel.clone();
+        vessel2.msgtime += Duration::seconds(1);
         helper.ais_source.send_static(&vessel).await;
         helper.ais_source.send_static(&vessel2).await;
 
@@ -116,6 +118,7 @@ async fn test_existing_static_fields_are_not_replaced_by_null_values() {
     test(|mut helper| async move {
         let vessel = AisStatic::test_default();
         let mut vessel_update = vessel.clone();
+        vessel_update.msgtime += Duration::seconds(1);
 
         helper.ais_source.send_static(&vessel).await;
         helper.postgres_process_confirmation.recv().await.unwrap();
@@ -138,7 +141,8 @@ async fn test_existing_static_fields_are_not_replaced_by_null_values() {
 async fn test_new_static_message_overrides_null_values() {
     test(|mut helper| async move {
         let mut vessel = AisStatic::test_default();
-        let vessel_update = vessel.clone();
+        let mut vessel_update = vessel.clone();
+        vessel_update.msgtime += Duration::seconds(1);
 
         vessel.call_sign = None;
         vessel.imo_number = None;
@@ -154,6 +158,45 @@ async fn test_new_static_message_overrides_null_values() {
         helper.postgres_process_confirmation.recv().await.unwrap();
 
         assert_eq!(vec![vessel_update], helper.db.all_ais_vessels().await);
+    })
+    .await;
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn test_stores_historic_static_messages() {
+    test(|mut helper| async move {
+        let vessel = AisStatic::test_default();
+        let mut vessel2 = vessel.clone();
+        vessel2.msgtime += Duration::seconds(1);
+
+        helper.ais_source.send_static(&vessel).await;
+        helper.postgres_process_confirmation.recv().await.unwrap();
+        helper.ais_source.send_static(&vessel2).await;
+        helper.postgres_process_confirmation.recv().await.unwrap();
+
+        assert_eq!(
+            vec![vessel, vessel2],
+            helper.db.all_historic_static_ais_messages().await
+        );
+    })
+    .await;
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn test_does_not_store_historic_static_messages_with_equal_timestamp() {
+    test(|mut helper| async move {
+        let vessel = AisStatic::test_default();
+        let vessel2 = vessel.clone();
+
+        helper.ais_source.send_static(&vessel).await;
+        helper.postgres_process_confirmation.recv().await.unwrap();
+        helper.ais_source.send_static(&vessel2).await;
+        helper.postgres_process_confirmation.recv().await.unwrap();
+
+        assert_eq!(
+            vec![vessel],
+            helper.db.all_historic_static_ais_messages().await
+        );
     })
     .await;
 }

@@ -16,7 +16,7 @@ use sqlx::{
     ConnectOptions, PgPool,
 };
 use std::collections::HashSet;
-use std::{collections::HashMap, pin::Pin};
+use std::pin::Pin;
 use tracing::{event, instrument, Level};
 
 #[derive(Debug, Clone)]
@@ -30,7 +30,7 @@ enum AisProcessingAction {
     Continue,
     Retry {
         positions: Option<Vec<NewAisPosition>>,
-        unique_static: Option<HashMap<Mmsi, NewAisStatic>>,
+        static_messages: Option<Vec<NewAisStatic>>,
     },
 }
 
@@ -112,10 +112,10 @@ impl PostgresAdapter {
                 AisProcessingAction::Continue => (),
                 AisProcessingAction::Retry {
                     positions,
-                    unique_static,
+                    static_messages,
                 } => {
                     for _ in 0..2 {
-                        self.insertion_retry(positions.as_deref(), unique_static.as_ref())
+                        self.insertion_retry(positions.as_deref(), static_messages.as_deref())
                             .await;
                     }
                 }
@@ -127,7 +127,7 @@ impl PostgresAdapter {
     async fn insertion_retry(
         &self,
         positions: Option<&[NewAisPosition]>,
-        unique_static: Option<&HashMap<Mmsi, NewAisStatic>>,
+        static_messages: Option<&[NewAisStatic]>,
     ) {
         if let Some(positions) = positions {
             if let Err(e) = self.add_ais_positions(positions).await {
@@ -135,8 +135,8 @@ impl PostgresAdapter {
             }
         }
 
-        if let Some(unique_static) = unique_static {
-            if let Err(e) = self.add_ais_vessels(unique_static).await {
+        if let Some(static_messages) = static_messages {
+            if let Err(e) = self.add_ais_vessels(static_messages).await {
                 event!(Level::ERROR, "failed to add ais static: {:?}", e);
             }
         }
@@ -149,28 +149,23 @@ impl PostgresAdapter {
     ) -> AisProcessingAction {
         match incoming {
             Ok(message) => {
-                let mut unique_static = HashMap::new();
-                for v in message.static_messages {
-                    unique_static.entry(v.mmsi).or_insert(v);
-                }
-
                 match (
                     self.add_ais_positions(&message.positions).await,
-                    self.add_ais_vessels(&unique_static).await,
+                    self.add_ais_vessels(&message.static_messages).await,
                 ) {
                     (Ok(_), Ok(_)) => AisProcessingAction::Continue,
                     (Ok(_), Err(e)) => {
                         event!(Level::ERROR, "failed to add ais static: {:?}", e);
                         AisProcessingAction::Retry {
                             positions: None,
-                            unique_static: Some(unique_static),
+                            static_messages: Some(message.static_messages),
                         }
                     }
                     (Err(e), Ok(_)) => {
                         event!(Level::ERROR, "failed to add ais positions: {:?}", e);
                         AisProcessingAction::Retry {
                             positions: Some(message.positions),
-                            unique_static: None,
+                            static_messages: None,
                         }
                     }
                     (Err(e), Err(e2)) => {
@@ -178,7 +173,7 @@ impl PostgresAdapter {
                         event!(Level::ERROR, "failed to add ais static: {:?}", e2);
                         AisProcessingAction::Retry {
                             positions: Some(message.positions),
-                            unique_static: Some(unique_static),
+                            static_messages: Some(message.static_messages),
                         }
                     }
                 }

@@ -8,7 +8,7 @@ use unnest_insert::UnnestInsert;
 
 use crate::{
     error::{BigDecimalError, PostgresError},
-    models::{AisClass, AisPosition, NewAisVessel},
+    models::{AisClass, AisPosition, NewAisVessel, NewAisVesselHistoric},
     PostgresAdapter,
 };
 use error_stack::{report, IntoReport, Result, ResultExt};
@@ -367,11 +367,31 @@ WHERE
 
     pub(crate) async fn add_ais_vessels(
         &self,
-        vessels: &HashMap<Mmsi, NewAisStatic>,
+        static_messages: &[NewAisStatic],
     ) -> Result<(), PostgresError> {
-        let vessels = vessels.values().cloned().map(NewAisVessel::from).collect();
+        let mut unique_static: HashMap<Mmsi, NewAisStatic> = HashMap::new();
+        for v in static_messages {
+            unique_static.entry(v.mmsi).or_insert(v.clone());
+        }
+
+        let vessels = unique_static
+            .into_values()
+            .map(NewAisVessel::from)
+            .collect();
+
+        let vessels_historic = static_messages
+            .iter()
+            .cloned()
+            .map(NewAisVesselHistoric::from)
+            .collect();
 
         NewAisVessel::unnest_insert(vessels, &self.pool)
+            .await
+            .into_report()
+            .change_context(PostgresError::Query)
+            .map(|_| ())?;
+
+        NewAisVesselHistoric::unnest_insert(vessels_historic, &self.pool)
             .await
             .into_report()
             .change_context(PostgresError::Query)
