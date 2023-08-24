@@ -47,6 +47,12 @@ pub struct NewAisStatic {
     pub ship_length: Option<i32>,
     pub ship_width: Option<i32>,
     pub ship_type: Option<i32>,
+    pub dimension_a: Option<i32>,
+    pub dimension_b: Option<i32>,
+    pub dimension_c: Option<i32>,
+    pub dimension_d: Option<i32>,
+    pub position_fixing_device_type: Option<i32>,
+    pub report_class: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -61,6 +67,28 @@ pub struct AisPosition {
     pub speed_over_ground: Option<f64>,
     pub true_heading: Option<i32>,
     pub distance_to_shore: f64,
+}
+
+#[derive(Debug, Clone)]
+pub struct AisVesselHistoric {
+    pub mmsi: Mmsi,
+    pub imo_number: Option<i32>,
+    pub message_type_id: i32,
+    pub message_timestamp: DateTime<Utc>,
+    pub call_sign: Option<String>,
+    pub name: Option<String>,
+    pub ship_width: Option<i32>,
+    pub ship_length: Option<i32>,
+    pub ship_type: Option<i32>,
+    pub eta: Option<DateTime<Utc>>,
+    pub draught: Option<i32>,
+    pub destination: Option<String>,
+    pub dimension_a: Option<i32>,
+    pub dimension_b: Option<i32>,
+    pub dimension_c: Option<i32>,
+    pub dimension_d: Option<i32>,
+    pub position_fixing_device_type: Option<i32>,
+    pub report_class: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -142,6 +170,12 @@ impl NewAisStatic {
             msgtime: Utc.timestamp_opt(900, 0).unwrap(),
             draught: Some(50),
             ship_type: Some(1),
+            dimension_a: Some(1),
+            dimension_b: Some(1),
+            dimension_c: Some(1),
+            dimension_d: Some(1),
+            position_fixing_device_type: Some(1),
+            report_class: Some("A".to_string()),
         }
     }
 }

@@ -1,7 +1,3 @@
-use futures::TryStreamExt;
-use num_traits::ToPrimitive;
-use std::collections::HashMap;
-
 use crate::{models::Haul, PostgresAdapter};
 use bigdecimal::{BigDecimal, FromPrimitive};
 use chrono::{DateTime, Datelike, Duration, Utc};
@@ -9,7 +5,9 @@ use fiskeridir_rs::{
     CallSign, DeliveryPointId, ErsDca, ErsDep, ErsPor, Gear, GearGroup, LandingId,
     VesselLengthGroup, Vms,
 };
+use futures::TryStreamExt;
 use kyogre_core::*;
+use num_traits::ToPrimitive;
 use rand::random;
 
 /// Wrapper with additional methods inteded for testing purposes.
@@ -223,6 +221,61 @@ FROM
         converted
     }
 
+    pub async fn all_historic_static_ais_messages(&self) -> Vec<AisVesselHistoric> {
+        sqlx::query!(
+            r#"
+SELECT
+    mmsi,
+    imo_number,
+    message_type_id,
+    message_timestamp,
+    call_sign,
+    "name",
+    ship_width,
+    ship_length,
+    ship_type,
+    eta,
+    draught,
+    destination,
+    dimension_a,
+    dimension_b,
+    dimension_c,
+    dimension_d,
+    position_fixing_device_type,
+    report_class
+FROM
+    ais_vessels_historic
+ORDER BY
+    message_timestamp
+            "#
+        )
+        .fetch_all(&self.db.pool)
+        .await
+        .unwrap()
+        .into_iter()
+        .map(|v| AisVesselHistoric {
+            mmsi: Mmsi(v.mmsi),
+            imo_number: v.imo_number,
+            message_type_id: v.message_type_id,
+            message_timestamp: v.message_timestamp,
+            call_sign: v.call_sign,
+            name: v.name,
+            ship_width: v.ship_width,
+            ship_length: v.ship_length,
+            ship_type: v.ship_type,
+            eta: v.eta,
+            draught: v.draught,
+            destination: v.destination,
+            dimension_a: v.dimension_a,
+            dimension_b: v.dimension_b,
+            dimension_c: v.dimension_c,
+            dimension_d: v.dimension_d,
+            position_fixing_device_type: v.position_fixing_device_type,
+            report_class: v.report_class,
+        })
+        .collect()
+    }
+
     pub async fn all_ais_vessels(&self) -> Vec<AisVessel> {
         let positions = sqlx::query_as!(
             crate::models::AisVessel,
@@ -359,10 +412,8 @@ WHERE
 
     pub async fn generate_ais_vessel(&self, mmsi: Mmsi, call_sign: &str) -> AisVessel {
         let val = NewAisStatic::test_default(mmsi, call_sign);
-        let mut map = HashMap::new();
-        map.insert(val.mmsi, val);
 
-        self.db.add_ais_vessels(&map).await.unwrap();
+        self.db.add_ais_vessels(&[val]).await.unwrap();
 
         let mut vessels = self
             .all_ais_vessels()

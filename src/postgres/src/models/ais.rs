@@ -33,6 +33,29 @@ pub struct NewAisVessel {
     pub destination: Option<String>,
 }
 
+#[derive(Debug, Clone, UnnestInsert)]
+#[unnest_insert(table_name = "ais_vessels_historic")]
+pub struct NewAisVesselHistoric {
+    pub mmsi: i32,
+    pub imo_number: Option<i32>,
+    pub message_type_id: i32,
+    pub message_timestamp: DateTime<Utc>,
+    pub call_sign: Option<String>,
+    pub name: Option<String>,
+    pub ship_width: Option<i32>,
+    pub ship_length: Option<i32>,
+    pub ship_type: Option<i32>,
+    pub eta: Option<DateTime<Utc>>,
+    pub draught: Option<i32>,
+    pub destination: Option<String>,
+    pub dimension_a: Option<i32>,
+    pub dimension_b: Option<i32>,
+    pub dimension_c: Option<i32>,
+    pub dimension_d: Option<i32>,
+    pub position_fixing_device_type: Option<i32>,
+    pub report_class: Option<String>,
+}
+
 #[derive(Debug, Clone)]
 pub struct AisVesselMigrationProgress {
     pub mmsi: i32,
@@ -64,6 +87,31 @@ impl fmt::Display for AisClass {
         match self {
             AisClass::A => f.write_str("A"),
             AisClass::B => f.write_str("B"),
+        }
+    }
+}
+
+impl From<kyogre_core::NewAisStatic> for NewAisVesselHistoric {
+    fn from(v: kyogre_core::NewAisStatic) -> Self {
+        Self {
+            mmsi: v.mmsi.0,
+            imo_number: v.imo_number,
+            call_sign: v.call_sign,
+            name: v.name,
+            ship_width: v.ship_width,
+            ship_length: v.ship_length,
+            ship_type: v.ship_type,
+            eta: v.eta,
+            draught: v.draught,
+            destination: v.destination,
+            message_type_id: v.message_type_id as i32,
+            message_timestamp: v.msgtime,
+            dimension_a: v.dimension_a,
+            dimension_b: v.dimension_b,
+            dimension_c: v.dimension_c,
+            dimension_d: v.dimension_d,
+            position_fixing_device_type: v.position_fixing_device_type,
+            report_class: v.report_class,
         }
     }
 }
