@@ -1,4 +1,4 @@
-use super::ais_vms::AisVmsPosition;
+use super::ais_vms::AisOrVmsPosition;
 use super::*;
 
 pub struct VesselBuilder {
@@ -13,10 +13,8 @@ pub struct VesselKey {
 
 pub struct VesselContructor {
     pub key: VesselKey,
-
-    pub mmsi: Mmsi,
-    pub call_sign: CallSign,
-    pub vessel: fiskeridir_rs::RegisterVessel,
+    pub fiskeridir: fiskeridir_rs::RegisterVessel,
+    pub ais: NewAisStatic,
 }
 
 impl VesselBuilder {
@@ -44,13 +42,12 @@ impl VesselBuilder {
                 .get_mut(&vessel.key)
                 .unwrap();
 
+            let call_sign = vessel.fiskeridir.radio_call_sign.clone().unwrap();
+
             for _ in 0..num_positions {
                 timestamps.push(*timestamp);
-                let position = fiskeridir_rs::Vms::test_default(
-                    rand::random(),
-                    vessel.call_sign.clone(),
-                    *timestamp,
-                );
+                let position =
+                    fiskeridir_rs::Vms::test_default(rand::random(), call_sign.clone(), *timestamp);
                 *timestamp += self.state.position_gap;
                 positions.push(VmsPositionConstructor {
                     index: current_position_index,
@@ -63,7 +60,7 @@ impl VesselBuilder {
                 .vms_positions
                 .entry(VmsVesselKey {
                     vessel_key: vessel.key,
-                    call_sign: vessel.call_sign.clone(),
+                    call_sign,
                 })
                 .and_modify(|v| v.append(&mut positions))
                 .or_insert(positions);
@@ -98,16 +95,18 @@ impl VesselBuilder {
                 .get_mut(&vessel.key)
                 .unwrap();
 
+            let call_sign = vessel.fiskeridir.radio_call_sign.clone().unwrap();
+
             for i in 0..num_positions {
                 timestamps.push(*timestamp);
                 let position = if (i + 1) % 2 == 0 {
-                    AisVmsPosition::Vms(fiskeridir_rs::Vms::test_default(
+                    AisOrVmsPosition::Vms(fiskeridir_rs::Vms::test_default(
                         rand::random(),
-                        vessel.call_sign.clone(),
+                        call_sign.clone(),
                         *timestamp,
                     ))
                 } else {
-                    AisVmsPosition::Ais(NewAisPosition::test_default(vessel.mmsi, *timestamp))
+                    AisOrVmsPosition::Ais(NewAisPosition::test_default(vessel.ais.mmsi, *timestamp))
                 };
                 *timestamp += self.state.position_gap;
                 positions.push(AisVmsPositionConstructor {
@@ -120,9 +119,9 @@ impl VesselBuilder {
             self.state
                 .ais_vms_positions
                 .entry(AisVmsVesselKey {
-                    mmsi: vessel.mmsi,
+                    mmsi: vessel.ais.mmsi,
                     vessel_key: vessel.key,
-                    call_sign: vessel.call_sign.clone(),
+                    call_sign,
                 })
                 .and_modify(|v| v.append(&mut positions))
                 .or_insert(positions);
@@ -160,7 +159,7 @@ impl VesselBuilder {
 
             for _ in 0..num_positions {
                 timestamps.push(*timestamp);
-                let position = NewAisPosition::test_default(vessel.mmsi, *timestamp);
+                let position = NewAisPosition::test_default(vessel.ais.mmsi, *timestamp);
                 *timestamp += self.state.position_gap;
                 positions.push(AisPositionConstructor {
                     index: current_position_index,
@@ -172,7 +171,7 @@ impl VesselBuilder {
             self.state
                 .ais_positions
                 .entry(AisVesselKey {
-                    mmsi: vessel.mmsi,
+                    mmsi: vessel.ais.mmsi,
                     vessel_key: vessel.key,
                 })
                 .and_modify(|v| v.append(&mut positions))
@@ -183,6 +182,38 @@ impl VesselBuilder {
             current_index: self.current_index + amount,
             state: self,
         }
+    }
+
+    pub fn modify<F>(mut self, closure: F) -> VesselBuilder
+    where
+        F: Fn(&mut VesselContructor),
+    {
+        self.state
+            .vessels
+            .iter_mut()
+            .enumerate()
+            .for_each(|(i, vessel)| {
+                if i <= self.current_index {
+                    closure(vessel)
+                }
+            });
+        self
+    }
+
+    pub fn modify_idx<F>(mut self, closure: F) -> VesselBuilder
+    where
+        F: Fn(usize, &mut VesselContructor),
+    {
+        self.state
+            .vessels
+            .iter_mut()
+            .enumerate()
+            .for_each(|(i, vessel)| {
+                if i >= self.current_index {
+                    closure(i, vessel)
+                }
+            });
+        self
     }
 
     pub async fn build(self) -> TestState {

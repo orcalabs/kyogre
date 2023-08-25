@@ -5,6 +5,9 @@ use rand::random;
 use serde::{de::Visitor, Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 
+pub const LEISURE_VESSEL_SHIP_TYPES: [i32; 2] = [36, 37];
+pub const LEISURE_VESSEL_LENGTH_AIS_BOUNDARY: u32 = 45;
+
 #[derive(Debug, Clone, Default)]
 pub struct DataMessage {
     pub positions: Vec<NewAisPosition>,
