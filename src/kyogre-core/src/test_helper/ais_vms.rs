@@ -6,7 +6,7 @@ pub struct AisVmsPositionBuilder {
 }
 
 #[derive(Clone)]
-pub enum AisVmsPosition {
+pub enum AisOrVmsPosition {
     Ais(NewAisPosition),
     Vms(fiskeridir_rs::Vms),
 }
@@ -14,7 +14,7 @@ pub enum AisVmsPosition {
 #[derive(Clone)]
 pub struct AisVmsPositionConstructor {
     pub index: usize,
-    pub position: AisVmsPosition,
+    pub position: AisOrVmsPosition,
 }
 
 #[derive(PartialEq, Eq, Hash)]
@@ -24,11 +24,11 @@ pub struct AisVmsVesselKey {
     pub vessel_key: VesselKey,
 }
 
-impl AisVmsPosition {
+impl AisOrVmsPosition {
     pub fn timestamp(&self) -> DateTime<Utc> {
         match self {
-            AisVmsPosition::Ais(a) => a.msgtime,
-            AisVmsPosition::Vms(v) => v.timestamp,
+            AisOrVmsPosition::Ais(a) => a.msgtime,
+            AisOrVmsPosition::Vms(v) => v.timestamp,
         }
     }
 }
@@ -36,7 +36,7 @@ impl AisVmsPosition {
 impl AisVmsPositionBuilder {
     pub fn modify<F>(mut self, closure: F) -> AisVmsPositionBuilder
     where
-        F: Fn(&mut AisVmsPosition),
+        F: Fn(&mut AisOrVmsPosition),
     {
         self.state
             .state
@@ -56,7 +56,7 @@ impl AisVmsPositionBuilder {
 
     pub fn modify_idx<F>(mut self, closure: F) -> AisVmsPositionBuilder
     where
-        F: Fn(usize, &mut AisVmsPosition),
+        F: Fn(usize, &mut AisOrVmsPosition),
     {
         self.state
             .state

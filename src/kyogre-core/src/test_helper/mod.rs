@@ -3,6 +3,7 @@ use crate::{
     ScraperInboundPort, Vessel, VmsPosition, WebApiOutboundPort,
 };
 use ais::*;
+pub use ais_vms::AisOrVmsPosition;
 use ais_vms::*;
 use chrono::{DateTime, Duration, TimeZone, Utc};
 use fiskeridir_rs::CallSign;
@@ -45,7 +46,6 @@ pub struct TestStateBuilder {
     ais_vms_positions: HashMap<AisVmsVesselKey, Vec<AisVmsPositionConstructor>>,
     ais_positions: HashMap<AisVesselKey, Vec<AisPositionConstructor>>,
     vms_positions: HashMap<VmsVesselKey, Vec<VmsPositionConstructor>>,
-    ais_static_messages: Vec<NewAisStatic>,
 }
 
 impl TestState {
@@ -95,7 +95,6 @@ impl TestStateBuilder {
             ais_data_confirmation: confirmation_receiver,
             position_gap: Duration::seconds(30),
             position_timestamp_start: Utc.with_ymd_and_hms(2010, 2, 5, 10, 0, 0).unwrap(),
-            ais_static_messages: vec![],
             ais_vms_positions: HashMap::default(),
             vms_positions: HashMap::default(),
         }
@@ -122,15 +121,12 @@ impl TestStateBuilder {
             let ais_static = NewAisStatic::test_default(mmsi, call_sign.as_ref());
             vessel.radio_call_sign = Some(call_sign.clone());
 
-            self.ais_static_messages.push(ais_static);
-
             self.vessels.push(VesselContructor {
                 key: VesselKey {
                     vessel_vec_index: num_vessels + i,
                 },
-                mmsi,
-                vessel,
-                call_sign,
+                fiskeridir: vessel,
+                ais: ais_static,
             });
 
             self.position_timestamp_counter.insert(
@@ -153,7 +149,7 @@ impl TestStateBuilder {
         self.ais_data_sender
             .send(DataMessage {
                 positions: vec![],
-                static_messages: self.ais_static_messages,
+                static_messages: self.vessels.iter().map(|v| v.ais.clone()).collect(),
             })
             .unwrap();
 
@@ -161,7 +157,7 @@ impl TestStateBuilder {
 
         let num_vessels = self.vessels.len();
         self.storage
-            .add_register_vessels(self.vessels.into_iter().map(|v| v.vessel).collect())
+            .add_register_vessels(self.vessels.into_iter().map(|v| v.fiskeridir).collect())
             .await
             .unwrap();
         let mut vessels: Vec<Vessel> = self.storage.vessels().try_collect().await.unwrap();
@@ -181,8 +177,6 @@ impl TestStateBuilder {
             let end = &positions[positions.len() - 1].position.msgtime;
             let range = DateRange::new(*start, *end).unwrap();
 
-            let num_positions = positions.len();
-
             self.ais_data_sender
                 .send(DataMessage {
                     positions: positions.into_iter().map(|v| v.position).collect(),
@@ -199,7 +193,6 @@ impl TestStateBuilder {
                 .await
                 .unwrap();
 
-            assert_eq!(stored_positions.len(), num_positions);
             ais_positions_to_vessel.insert(key.vessel_key, stored_positions.clone());
             ais_positions.append(&mut stored_positions);
         }
@@ -216,16 +209,16 @@ impl TestStateBuilder {
                 .iter()
                 .cloned()
                 .filter_map(|v| match v.position {
-                    AisVmsPosition::Ais(a) => Some(a),
-                    AisVmsPosition::Vms(_) => None,
+                    AisOrVmsPosition::Ais(a) => Some(a),
+                    AisOrVmsPosition::Vms(_) => None,
                 })
                 .collect();
 
             let vms: Vec<fiskeridir_rs::Vms> = positions
                 .into_iter()
                 .filter_map(|v| match v.position {
-                    AisVmsPosition::Vms(a) => Some(a),
-                    AisVmsPosition::Ais(_) => None,
+                    AisOrVmsPosition::Vms(a) => Some(a),
+                    AisOrVmsPosition::Ais(_) => None,
                 })
                 .collect();
 

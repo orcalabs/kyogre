@@ -3,7 +3,10 @@ use std::collections::HashMap;
 use bigdecimal::{BigDecimal, FromPrimitive};
 use chrono::{DateTime, Utc};
 use futures::{Stream, TryStreamExt};
-use kyogre_core::{AisVesselMigrate, DateRange, Mmsi, NewAisPosition, NewAisStatic};
+use kyogre_core::{
+    AisVesselMigrate, DateRange, Mmsi, NewAisPosition, NewAisStatic,
+    LEISURE_VESSEL_LENGTH_AIS_BOUNDARY, LEISURE_VESSEL_SHIP_TYPES,
+};
 use unnest_insert::UnnestInsert;
 
 use crate::{
@@ -38,12 +41,33 @@ FROM
 WHERE
     mmsi = $1
     AND TIMESTAMP BETWEEN $2 AND $3
+    AND $1 NOT IN (
+        SELECT
+            a.mmsi
+        FROM
+            ais_vessels a
+            LEFT JOIN fiskeridir_vessels f ON a.call_sign = f.call_sign
+        WHERE
+            a.mmsi = $1
+            AND (
+                (
+                    a.ship_type IS NULL
+                    OR a.ship_type = ANY ($4::INT[])
+                )
+                AND (
+                    COALESCE(f.length, a.ship_length) IS NULL
+                    OR COALESCE(f.length, a.ship_length) < $5
+                )
+            )
+    )
 ORDER BY
     TIMESTAMP ASC
             "#,
             mmsi.0,
             range.start(),
             range.end(),
+            LEISURE_VESSEL_SHIP_TYPES.as_slice(),
+            LEISURE_VESSEL_LENGTH_AIS_BOUNDARY as i32,
         )
         .fetch(&self.ais_pool)
         .map_err(|e| report!(e).change_context(PostgresError::Query))
