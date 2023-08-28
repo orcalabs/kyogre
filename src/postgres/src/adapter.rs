@@ -285,8 +285,9 @@ impl WebApiOutboundPort for PostgresAdapter {
         &self,
         mmsi: Mmsi,
         range: &DateRange,
+        permission: AisPermission,
     ) -> PinBoxStream<'_, AisPosition, QueryError> {
-        convert_stream(self.ais_positions_impl(mmsi, range)).boxed()
+        convert_stream(self.ais_positions_impl(mmsi, range, permission)).boxed()
     }
     fn vms_positions(
         &self,
@@ -301,8 +302,9 @@ impl WebApiOutboundPort for PostgresAdapter {
         mmsi: Option<Mmsi>,
         call_sign: Option<&CallSign>,
         range: &DateRange,
+        permission: AisPermission,
     ) -> PinBoxStream<'_, AisVmsPosition, QueryError> {
-        convert_stream(self.ais_vms_positions_impl(mmsi, call_sign, range)).boxed()
+        convert_stream(self.ais_vms_positions_impl(mmsi, call_sign, range, permission)).boxed()
     }
 
     fn species(&self) -> PinBoxStream<'_, Species, QueryError> {
@@ -736,7 +738,7 @@ impl TripPrecisionOutboundPort for PostgresAdapter {
         call_sign: Option<&CallSign>,
         range: &DateRange,
     ) -> Result<Vec<AisVmsPosition>, QueryError> {
-        convert_stream(self.ais_vms_positions_impl(mmsi, call_sign, range))
+        convert_stream(self.ais_vms_positions_impl(mmsi, call_sign, range, AisPermission::All))
             .try_collect()
             .await
     }
@@ -855,7 +857,7 @@ impl HaulDistributorOutbound for PostgresAdapter {
         call_sign: Option<&CallSign>,
         range: &DateRange,
     ) -> Result<Vec<AisVmsPosition>, QueryError> {
-        convert_stream(self.ais_vms_positions_impl(mmsi, call_sign, range))
+        convert_stream(self.ais_vms_positions_impl(mmsi, call_sign, range, AisPermission::All))
             .try_collect()
             .await
     }
@@ -893,7 +895,7 @@ impl TripDistancerOutbound for PostgresAdapter {
         call_sign: Option<&CallSign>,
         range: &DateRange,
     ) -> Result<Vec<AisVmsPosition>, QueryError> {
-        convert_stream(self.ais_vms_positions_impl(mmsi, call_sign, range))
+        convert_stream(self.ais_vms_positions_impl(mmsi, call_sign, range, AisPermission::All))
             .try_collect()
             .await
     }

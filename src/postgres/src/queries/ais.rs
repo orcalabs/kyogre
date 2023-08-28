@@ -4,8 +4,9 @@ use bigdecimal::{BigDecimal, FromPrimitive};
 use chrono::{DateTime, Utc};
 use futures::{Stream, TryStreamExt};
 use kyogre_core::{
-    AisVesselMigrate, DateRange, Mmsi, NewAisPosition, NewAisStatic,
+    AisPermission, AisVesselMigrate, DateRange, Mmsi, NewAisPosition, NewAisStatic,
     LEISURE_VESSEL_LENGTH_AIS_BOUNDARY, LEISURE_VESSEL_SHIP_TYPES,
+    PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY,
 };
 use unnest_insert::UnnestInsert;
 
@@ -21,6 +22,7 @@ impl PostgresAdapter {
         &self,
         mmsi: Mmsi,
         range: &DateRange,
+        permission: AisPermission,
     ) -> impl Stream<Item = Result<AisPosition, PostgresError>> + '_ {
         sqlx::query_as!(
             AisPosition,
@@ -41,7 +43,7 @@ FROM
 WHERE
     mmsi = $1
     AND TIMESTAMP BETWEEN $2 AND $3
-    AND $1 NOT IN (
+    AND $1 IN (
         SELECT
             a.mmsi
         FROM
@@ -50,14 +52,15 @@ WHERE
         WHERE
             a.mmsi = $1
             AND (
-                (
-                    a.ship_type IS NULL
-                    OR a.ship_type = ANY ($4::INT[])
-                )
-                AND (
-                    COALESCE(f.length, a.ship_length) IS NULL
-                    OR COALESCE(f.length, a.ship_length) < $5
-                )
+                a.ship_type IS NOT NULL
+                AND NOT (a.ship_type = ANY ($4::INT[]))
+                OR COALESCE(f.length, a.ship_length) > $5
+            )
+            AND (
+                CASE
+                    WHEN $6 = 0 THEN TRUE
+                    WHEN $6 = 1 THEN COALESCE(f.length, a.ship_length) >= $7
+                END
             )
     )
 ORDER BY
@@ -68,6 +71,8 @@ ORDER BY
             range.end(),
             LEISURE_VESSEL_SHIP_TYPES.as_slice(),
             LEISURE_VESSEL_LENGTH_AIS_BOUNDARY as i32,
+            permission as i32,
+            PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY as i32,
         )
         .fetch(&self.ais_pool)
         .map_err(|e| report!(e).change_context(PostgresError::Query))

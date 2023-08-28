@@ -1,9 +1,10 @@
-use crate::{ais_to_streaming_response, error::ApiError, Database};
+use crate::{ais_to_streaming_response, error::ApiError, extractors::BwProfile, Database};
 use actix_web::{
     web::{self, Path},
     HttpResponse,
 };
 use chrono::{DateTime, Duration, Utc};
+use kyogre_core::AisPermission;
 use kyogre_core::{DateRange, Mmsi};
 use serde::{Deserialize, Serialize};
 use tracing::{event, Level};
@@ -31,6 +32,7 @@ pub async fn ais_track<T: Database + 'static>(
     db: web::Data<T>,
     params: web::Query<AisTrackParameters>,
     mmsi: Path<i32>,
+    profile: Option<BwProfile>,
 ) -> Result<HttpResponse, ApiError> {
     let (start, end) = match (params.start, params.end) {
         (None, None) => {
@@ -48,7 +50,7 @@ pub async fn ais_track<T: Database + 'static>(
     })?;
 
     ais_to_streaming_response! {
-        db.ais_positions(Mmsi(mmsi.into_inner()), &range)
+        db.ais_positions(Mmsi(mmsi.into_inner()), &range, profile.map(AisPermission::from).unwrap_or_default())
             .map_err(|e| {
                 event!(Level::ERROR, "failed to retrieve ais positions: {:?}", e);
                 ApiError::InternalServerError

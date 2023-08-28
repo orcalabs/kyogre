@@ -1,6 +1,6 @@
 use crate::{
-    AisConsumeLoop, AisPosition, DataMessage, DateRange, Mmsi, NewAisPosition, NewAisStatic,
-    ScraperInboundPort, Vessel, VmsPosition, WebApiOutboundPort,
+    AisConsumeLoop, AisPermission, AisPosition, DataMessage, DateRange, Mmsi, NewAisPosition,
+    NewAisStatic, ScraperInboundPort, Vessel, VmsPosition, WebApiOutboundPort,
 };
 use ais::*;
 pub use ais_vms::AisOrVmsPosition;
@@ -188,7 +188,7 @@ impl TestStateBuilder {
 
             let mut stored_positions: Vec<AisPosition> = self
                 .storage
-                .ais_positions(key.mmsi, &range)
+                .ais_positions(key.mmsi, &range, AisPermission::All)
                 .try_collect()
                 .await
                 .unwrap();
@@ -235,7 +235,12 @@ impl TestStateBuilder {
 
             let stored_positions = self
                 .storage
-                .ais_vms_positions(Some(key.mmsi), Some(&key.call_sign), &range)
+                .ais_vms_positions(
+                    Some(key.mmsi),
+                    Some(&key.call_sign),
+                    &range,
+                    AisPermission::All,
+                )
                 .try_collect::<Vec<crate::AisVmsPosition>>()
                 .await
                 .unwrap();

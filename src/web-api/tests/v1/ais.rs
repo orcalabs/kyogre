@@ -1,7 +1,10 @@
 use super::helper::test;
 use actix_web::http::StatusCode;
 use chrono::{Duration, TimeZone, Utc};
-use kyogre_core::{LEISURE_VESSEL_LENGTH_AIS_BOUNDARY, LEISURE_VESSEL_SHIP_TYPES};
+use kyogre_core::{
+    LEISURE_VESSEL_LENGTH_AIS_BOUNDARY, LEISURE_VESSEL_SHIP_TYPES,
+    PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY,
+};
 use web_api::{
     response::{AIS_DETAILS_INTERVAL, MISSING_DATA_DURATION},
     routes::v1::ais::{AisPosition, AisTrackParameters},
@@ -25,6 +28,7 @@ async fn test_ais_track_filters_by_start_and_end() {
                     start: Some(state.ais_positions[0].msgtime + Duration::seconds(1)),
                     end: Some(state.ais_positions.last().unwrap().msgtime - Duration::seconds(1)),
                 },
+                None,
             )
             .await;
 
@@ -56,6 +60,7 @@ async fn test_ais_track_returns_a_details_on_first_and_last_point() {
                     start: Some(pos.msgtime),
                     end: Some(pos2.msgtime),
                 },
+                None,
             )
             .await;
 
@@ -91,6 +96,7 @@ async fn test_ais_track_returns_a_details_every_interval() {
                     start: Some(pos.msgtime),
                     end: Some(pos3.msgtime),
                 },
+                None,
             )
             .await;
 
@@ -132,6 +138,7 @@ async fn test_ais_track_returns_missing_data_if_time_between_points_exceeds_limi
                     start: Some(pos.msgtime),
                     end: Some(pos3.msgtime),
                 },
+                None,
             )
             .await;
 
@@ -157,6 +164,7 @@ async fn test_ais_track_returns_bad_request_with_only_start_and_no_end_specified
                     start: Some(chrono::Utc::now()),
                     end: None,
                 },
+                None,
             )
             .await;
 
@@ -185,6 +193,7 @@ async fn test_ais_track_returns_24h_of_data_when_no_start_and_end_are_specified(
                     start: None,
                     end: None,
                 },
+                None,
             )
             .await;
 
@@ -214,8 +223,6 @@ async fn test_ais_track_does_not_return_positions_of_leisure_vessels_under_45_me
             .build()
             .await;
 
-        dbg!(&state.vessels);
-
         let response = helper
             .app
             .get_ais_track(
@@ -224,6 +231,7 @@ async fn test_ais_track_does_not_return_positions_of_leisure_vessels_under_45_me
                     start: Some(pos_timestamp - Duration::seconds(1)),
                     end: Some(pos_timestamp + Duration::seconds(1)),
                 },
+                None,
             )
             .await;
 
@@ -238,6 +246,7 @@ async fn test_ais_track_does_not_return_positions_of_leisure_vessels_under_45_me
                     start: Some(pos_timestamp - Duration::seconds(1)),
                     end: Some(pos_timestamp + Duration::seconds(1)),
                 },
+                None,
             )
             .await;
 
@@ -273,6 +282,7 @@ async fn test_ais_track_does_not_return_positions_of_vessel_with_unknown_ship_ty
                     start: Some(pos_timestamp - Duration::seconds(1)),
                     end: Some(pos_timestamp + Duration::seconds(1)),
                 },
+                None,
             )
             .await;
 
@@ -311,6 +321,7 @@ async fn test_ais_track_prioritizes_fiskeridir_length_over_ais_length_in_leisure
                     start: Some(pos_timestamp - Duration::seconds(1)),
                     end: Some(pos_timestamp + Duration::seconds(1)),
                 },
+                None,
             )
             .await;
 
@@ -318,6 +329,81 @@ async fn test_ais_track_prioritizes_fiskeridir_length_over_ais_length_in_leisure
         let body: Vec<AisPosition> = response.json().await.unwrap();
 
         assert_eq!(1, body.len());
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_ais_track_does_not_return_positions_for_vessels_under_15m_without_bw_read_ais_policy()
+{
+    test(|helper| async move {
+        let pos_timestamp = Utc.timestamp_opt(1000, 0).unwrap();
+        let state = helper
+            .test_state_builder()
+            .vessels(1)
+            .modify(|v| {
+                v.fiskeridir.length = PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY as f64 - 2.0;
+            })
+            .ais_positions(1)
+            .modify(|v| {
+                v.msgtime = pos_timestamp;
+            })
+            .build()
+            .await;
+
+        let response = helper
+            .app
+            .get_ais_track(
+                state.vessels[0].mmsi().unwrap(),
+                AisTrackParameters {
+                    start: Some(pos_timestamp - Duration::seconds(1)),
+                    end: Some(pos_timestamp + Duration::seconds(1)),
+                },
+                None,
+            )
+            .await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let body: Vec<AisPosition> = response.json().await.unwrap();
+
+        assert!(body.is_empty());
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_ais_track_return_positions_for_vessels_under_15m_with_bw_read_ais_policy() {
+    test(|helper| async move {
+        let pos_timestamp = Utc.timestamp_opt(1000, 0).unwrap();
+        let state = helper
+            .test_state_builder()
+            .vessels(1)
+            .modify(|v| {
+                v.fiskeridir.length = PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY as f64 - 1.0;
+            })
+            .ais_positions(1)
+            .modify(|v| {
+                v.msgtime = pos_timestamp;
+            })
+            .build()
+            .await;
+
+        let response = helper
+            .app
+            .get_ais_track(
+                state.vessels[0].mmsi().unwrap(),
+                AisTrackParameters {
+                    start: Some(pos_timestamp - Duration::seconds(1)),
+                    end: Some(pos_timestamp + Duration::seconds(1)),
+                },
+                Some(helper.bw_helper.get_bw_token()),
+            )
+            .await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let body: Vec<AisPosition> = response.json().await.unwrap();
+
+        assert!(!body.is_empty());
     })
     .await;
 }
