@@ -169,6 +169,8 @@ ADD CONSTRAINT hauls_unique UNIQUE (
 CREATE INDEX ON hauls (message_id);
 
 ALTER TABLE hauls_matrix
+ALTER COLUMN living_weight
+TYPE DOUBLE PRECISION,
 ADD COLUMN haul_id BIGINT REFERENCES hauls (haul_id) ON DELETE CASCADE,
 ADD PRIMARY KEY (haul_id, species_group_id, catch_location);
 
