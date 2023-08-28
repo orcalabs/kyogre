@@ -26,6 +26,7 @@ pub trait WebApiOutboundPort {
         &self,
         mmsi: Mmsi,
         range: &DateRange,
+        user_policy: AisPermission,
     ) -> PinBoxStream<'_, AisPosition, QueryError>;
     fn vms_positions(
         &self,
@@ -37,6 +38,7 @@ pub trait WebApiOutboundPort {
         mmsi: Option<Mmsi>,
         call_sign: Option<&CallSign>,
         range: &DateRange,
+        user_policy: AisPermission,
     ) -> PinBoxStream<'_, AisVmsPosition, QueryError>;
     fn species(&self) -> PinBoxStream<'_, Species, QueryError>;
     fn species_fiskeridir(&self) -> PinBoxStream<'_, SpeciesFiskeridir, QueryError>;

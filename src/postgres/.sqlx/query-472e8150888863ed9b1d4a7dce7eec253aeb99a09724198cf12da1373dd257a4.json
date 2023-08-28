@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT\n    latitude,\n    longitude,\n    mmsi,\n    TIMESTAMP AS msgtime,\n    course_over_ground,\n    navigation_status_id AS navigational_status,\n    rate_of_turn,\n    speed_over_ground,\n    true_heading,\n    distance_to_shore\nFROM\n    ais_positions\nWHERE\n    mmsi = $1\n    AND TIMESTAMP BETWEEN $2 AND $3\n    AND $1 NOT IN (\n        SELECT\n            a.mmsi\n        FROM\n            ais_vessels a\n            LEFT JOIN fiskeridir_vessels f ON a.call_sign = f.call_sign\n        WHERE\n            a.mmsi = $1\n            AND (\n                (\n                    a.ship_type IS NULL\n                    OR a.ship_type = ANY ($4::INT[])\n                )\n                AND (\n                    COALESCE(f.length, a.ship_length) IS NULL\n                    OR COALESCE(f.length, a.ship_length) < $5\n                )\n            )\n    )\nORDER BY\n    TIMESTAMP ASC\n            ",
+  "query": "\nSELECT\n    latitude,\n    longitude,\n    mmsi,\n    TIMESTAMP AS msgtime,\n    course_over_ground,\n    navigation_status_id AS navigational_status,\n    rate_of_turn,\n    speed_over_ground,\n    true_heading,\n    distance_to_shore\nFROM\n    ais_positions\nWHERE\n    mmsi = $1\n    AND TIMESTAMP BETWEEN $2 AND $3\n    AND $1 IN (\n        SELECT\n            a.mmsi\n        FROM\n            ais_vessels a\n            LEFT JOIN fiskeridir_vessels f ON a.call_sign = f.call_sign\n        WHERE\n            a.mmsi = $1\n            AND (\n                a.ship_type IS NOT NULL\n                AND NOT (a.ship_type = ANY ($4::INT[]))\n                OR COALESCE(f.length, a.ship_length) > $5\n            )\n            AND (\n                CASE\n                    WHEN $6 = 0 THEN TRUE\n                    WHEN $6 = 1 THEN COALESCE(f.length, a.ship_length) >= $7\n                END\n            )\n    )\nORDER BY\n    TIMESTAMP ASC\n            ",
   "describe": {
     "columns": [
       {
@@ -60,6 +60,8 @@
         "Timestamptz",
         "Timestamptz",
         "Int4Array",
+        "Numeric",
+        "Int4",
         "Numeric"
       ]
     },
@@ -76,5 +78,5 @@
       false
     ]
   },
-  "hash": "3d2b59f7add7a2317abfb9cb550d4eee1d961ea8b276f3211adfecb41afb0060"
+  "hash": "472e8150888863ed9b1d4a7dce7eec253aeb99a09724198cf12da1373dd257a4"
 }

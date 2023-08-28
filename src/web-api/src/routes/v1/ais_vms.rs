@@ -1,9 +1,9 @@
-use crate::{ais_to_streaming_response, error::ApiError, Database};
+use crate::{ais_to_streaming_response, error::ApiError, extractors::BwProfile, Database};
 use actix_web::{web, HttpResponse};
 use async_stream::try_stream;
 use chrono::{DateTime, Duration, Utc};
 use fiskeridir_rs::CallSign;
-use kyogre_core::{AisPosition, DateRange, Mmsi, VmsPosition};
+use kyogre_core::{AisPermission, AisPosition, DateRange, Mmsi, VmsPosition};
 use serde::{Deserialize, Serialize};
 use tracing::{event, Level};
 use utoipa::{IntoParams, ToSchema};
@@ -35,6 +35,7 @@ pub struct AisVmsParameters {
 pub async fn ais_vms_positions<T: Database + 'static>(
     db: web::Data<T>,
     params: web::Query<AisVmsParameters>,
+    profile: Option<BwProfile>,
 ) -> Result<HttpResponse, ApiError> {
     if params.mmsi.is_none() && params.call_sign.is_none() {
         return Err(ApiError::MissingMmsiOrCallSign);
@@ -56,7 +57,7 @@ pub async fn ais_vms_positions<T: Database + 'static>(
     })?;
 
     ais_to_streaming_response! {
-        db.ais_vms_positions(params.mmsi, params.call_sign.as_ref(), &range)
+        db.ais_vms_positions(params.mmsi, params.call_sign.as_ref(), &range, profile.map(AisPermission::from).unwrap_or_default())
             .map_err(|e| {
                 event!(
                     Level::ERROR,

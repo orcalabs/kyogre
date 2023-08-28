@@ -1,8 +1,10 @@
 use super::helper::test;
 use actix_web::http::StatusCode;
 use chrono::{Duration, TimeZone, Utc};
-use fiskeridir_rs::CallSign;
-use kyogre_core::{Mmsi, LEISURE_VESSEL_LENGTH_AIS_BOUNDARY, LEISURE_VESSEL_SHIP_TYPES};
+use kyogre_core::{
+    LEISURE_VESSEL_LENGTH_AIS_BOUNDARY, LEISURE_VESSEL_SHIP_TYPES,
+    PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY,
+};
 use web_api::{
     response::MISSING_DATA_DURATION,
     routes::v1::ais_vms::{AisVmsParameters, AisVmsPosition},
@@ -13,12 +15,15 @@ async fn test_ais_vms_positions_fails_without_mmsi_or_call_sign() {
     test(|helper| async move {
         let response = helper
             .app
-            .get_ais_vms_positions(AisVmsParameters {
-                mmsi: None,
-                call_sign: None,
-                start: Some(Utc.timestamp_opt(100, 0).unwrap()),
-                end: Some(Utc.timestamp_opt(200, 0).unwrap()),
-            })
+            .get_ais_vms_positions(
+                AisVmsParameters {
+                    mmsi: None,
+                    call_sign: None,
+                    start: Some(Utc.timestamp_opt(100, 0).unwrap()),
+                    end: Some(Utc.timestamp_opt(200, 0).unwrap()),
+                },
+                None,
+            )
             .await;
 
         assert_eq!(response.status(), StatusCode::BAD_REQUEST);
@@ -43,12 +48,15 @@ async fn test_ais_vms_positions_returns_ais_and_vms_positions() {
         let pos5 = &state.ais_vms_positions[4];
         let response = helper
             .app
-            .get_ais_vms_positions(AisVmsParameters {
-                mmsi: state.vessels[0].mmsi(),
-                call_sign: state.vessels[0].fiskeridir.call_sign.clone(),
-                start: Some(pos.timestamp - Duration::seconds(1)),
-                end: Some(pos5.timestamp + Duration::seconds(1)),
-            })
+            .get_ais_vms_positions(
+                AisVmsParameters {
+                    mmsi: state.vessels[0].mmsi(),
+                    call_sign: state.vessels[0].fiskeridir.call_sign.clone(),
+                    start: Some(pos.timestamp - Duration::seconds(1)),
+                    end: Some(pos5.timestamp + Duration::seconds(1)),
+                },
+                None,
+            )
             .await;
 
         assert_eq!(response.status(), StatusCode::OK);
@@ -79,12 +87,15 @@ async fn test_ais_vms_positions_returns_only_ais_without_call_sign() {
         let pos5 = &state.ais_vms_positions[4];
         let response = helper
             .app
-            .get_ais_vms_positions(AisVmsParameters {
-                mmsi: state.vessels[0].mmsi(),
-                call_sign: None,
-                start: Some(pos.timestamp - Duration::seconds(1)),
-                end: Some(pos5.timestamp + Duration::seconds(1)),
-            })
+            .get_ais_vms_positions(
+                AisVmsParameters {
+                    mmsi: state.vessels[0].mmsi(),
+                    call_sign: None,
+                    start: Some(pos.timestamp - Duration::seconds(1)),
+                    end: Some(pos5.timestamp + Duration::seconds(1)),
+                },
+                None,
+            )
             .await;
 
         assert_eq!(response.status(), StatusCode::OK);
@@ -114,12 +125,15 @@ async fn test_ais_vms_positions_returns_only_vms_without_mmsi() {
         let pos5 = &state.ais_vms_positions[4];
         let response = helper
             .app
-            .get_ais_vms_positions(AisVmsParameters {
-                mmsi: None,
-                call_sign: state.vessels[0].fiskeridir.call_sign.clone(),
-                start: Some(pos.timestamp - Duration::seconds(1)),
-                end: Some(pos5.timestamp + Duration::seconds(1)),
-            })
+            .get_ais_vms_positions(
+                AisVmsParameters {
+                    mmsi: None,
+                    call_sign: state.vessels[0].fiskeridir.call_sign.clone(),
+                    start: Some(pos.timestamp - Duration::seconds(1)),
+                    end: Some(pos5.timestamp + Duration::seconds(1)),
+                },
+                None,
+            )
             .await;
 
         assert_eq!(response.status(), StatusCode::OK);
@@ -135,39 +149,36 @@ async fn test_ais_vms_positions_returns_only_vms_without_mmsi() {
 #[tokio::test]
 async fn test_ais_vms_positions_returns_ais_and_vms_positions_with_missing_data() {
     test(|helper| async move {
-        let call_sign = CallSign::new_unchecked("LK-28");
-        let vessel = helper
-            .db
-            .generate_ais_vessel(Mmsi(40), call_sign.as_ref())
+        let state = helper
+            .test_state_builder()
+            .position_increments(*MISSING_DATA_DURATION)
+            .vessels(1)
+            .ais_vms_positions(4)
+            .build()
             .await;
-
-        let mut date = Utc.timestamp_opt(1000, 0).unwrap();
-
-        let mut pos = Vec::new();
-        for i in 0..10 {
-            pos.push(helper.db.generate_ais_position(vessel.mmsi, date).await);
-
-            if i == 2 {
-                date += *MISSING_DATA_DURATION;
-            } else {
-                date += Duration::seconds(1);
-            }
-        }
 
         let response = helper
             .app
-            .get_ais_vms_positions(AisVmsParameters {
-                mmsi: Some(vessel.mmsi),
-                call_sign: vessel.call_sign,
-                start: Some(pos[0].msgtime - Duration::seconds(1)),
-                end: Some(pos[pos.len() - 1].msgtime + Duration::seconds(1)),
-            })
+            .get_ais_vms_positions(
+                AisVmsParameters {
+                    mmsi: state.vessels[0].mmsi(),
+                    call_sign: state.vessels[0].fiskeridir.call_sign.clone(),
+                    start: Some(state.ais_vms_positions[0].timestamp - Duration::seconds(1)),
+                    end: Some(
+                        state.ais_vms_positions[state.ais_vms_positions.len() - 1].timestamp
+                            + Duration::seconds(1),
+                    ),
+                },
+                None,
+            )
             .await;
 
         assert_eq!(response.status(), StatusCode::OK);
         let body: Vec<AisVmsPosition> = response.json().await.unwrap();
 
-        assert_eq!(body.len(), 10);
+        assert_eq!(body.len(), 4);
+        assert_eq!(body[0].det.as_ref().map(|d| d.missing_data), Some(true));
+        assert_eq!(body[1].det.as_ref().map(|d| d.missing_data), Some(true));
         assert_eq!(body[2].det.as_ref().map(|d| d.missing_data), Some(true));
     })
     .await;
@@ -195,12 +206,15 @@ async fn test_ais_vms_does_not_return_positions_of_leisure_vessels_under_45_mete
         let vessel2 = &state.vessels[0];
         let response = helper
             .app
-            .get_ais_vms_positions(AisVmsParameters {
-                start: Some(pos_timestamp - Duration::seconds(1)),
-                end: Some(pos_timestamp + Duration::seconds(1)),
-                mmsi: vessel.mmsi(),
-                call_sign: None,
-            })
+            .get_ais_vms_positions(
+                AisVmsParameters {
+                    start: Some(pos_timestamp - Duration::seconds(1)),
+                    end: Some(pos_timestamp + Duration::seconds(1)),
+                    mmsi: vessel.mmsi(),
+                    call_sign: None,
+                },
+                None,
+            )
             .await;
 
         assert_eq!(response.status(), StatusCode::OK);
@@ -208,12 +222,15 @@ async fn test_ais_vms_does_not_return_positions_of_leisure_vessels_under_45_mete
 
         let response = helper
             .app
-            .get_ais_vms_positions(AisVmsParameters {
-                start: Some(pos_timestamp - Duration::seconds(1)),
-                end: Some(pos_timestamp + Duration::seconds(1)),
-                mmsi: vessel2.mmsi(),
-                call_sign: None,
-            })
+            .get_ais_vms_positions(
+                AisVmsParameters {
+                    start: Some(pos_timestamp - Duration::seconds(1)),
+                    end: Some(pos_timestamp + Duration::seconds(1)),
+                    mmsi: vessel2.mmsi(),
+                    call_sign: None,
+                },
+                None,
+            )
             .await;
 
         assert_eq!(response.status(), StatusCode::OK);
@@ -242,12 +259,15 @@ async fn test_ais_vms_does_not_return_positions_of_vessel_with_unknown_ship_type
 
         let response = helper
             .app
-            .get_ais_vms_positions(AisVmsParameters {
-                start: Some(pos_timestamp - Duration::seconds(1)),
-                end: Some(pos_timestamp + Duration::seconds(1)),
-                mmsi: state.vessels[0].mmsi(),
-                call_sign: None,
-            })
+            .get_ais_vms_positions(
+                AisVmsParameters {
+                    start: Some(pos_timestamp - Duration::seconds(1)),
+                    end: Some(pos_timestamp + Duration::seconds(1)),
+                    mmsi: state.vessels[0].mmsi(),
+                    call_sign: None,
+                },
+                None,
+            )
             .await;
 
         assert_eq!(response.status(), StatusCode::OK);
@@ -279,18 +299,98 @@ async fn test_ais_vms_prioritizes_fiskeridir_length_over_ais_length_in_leisure_v
 
         let response = helper
             .app
-            .get_ais_vms_positions(AisVmsParameters {
-                start: Some(pos_timestamp - Duration::seconds(1)),
-                end: Some(pos_timestamp + Duration::seconds(1)),
-                mmsi: state.vessels[0].mmsi(),
-                call_sign: None,
-            })
+            .get_ais_vms_positions(
+                AisVmsParameters {
+                    start: Some(pos_timestamp - Duration::seconds(1)),
+                    end: Some(pos_timestamp + Duration::seconds(1)),
+                    mmsi: state.vessels[0].mmsi(),
+                    call_sign: None,
+                },
+                None,
+            )
             .await;
 
         assert_eq!(response.status(), StatusCode::OK);
         let body: Vec<AisVmsPosition> = response.json().await.unwrap();
 
         assert_eq!(1, body.len());
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_ais_vms_does_not_return_ais_positions_for_vessels_under_15m_without_bw_read_ais_policy(
+) {
+    test(|helper| async move {
+        let pos_timestamp = Utc.timestamp_opt(1000, 0).unwrap();
+        let state = helper
+            .test_state_builder()
+            .vessels(1)
+            .modify(|v| {
+                v.fiskeridir.length = PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY as f64 - 1.0;
+            })
+            .ais_positions(1)
+            .modify(|v| {
+                v.msgtime = pos_timestamp;
+            })
+            .build()
+            .await;
+
+        let response = helper
+            .app
+            .get_ais_vms_positions(
+                AisVmsParameters {
+                    start: Some(pos_timestamp - Duration::seconds(1)),
+                    end: Some(pos_timestamp + Duration::seconds(1)),
+                    mmsi: state.vessels[0].mmsi(),
+                    call_sign: None,
+                },
+                None,
+            )
+            .await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let body: Vec<AisVmsPosition> = response.json().await.unwrap();
+
+        assert!(body.is_empty());
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_ais_track_return_positions_for_vessels_under_15m_with_bw_read_ais_policy() {
+    test(|helper| async move {
+        let pos_timestamp = Utc.timestamp_opt(1000, 0).unwrap();
+        let state = helper
+            .test_state_builder()
+            .vessels(1)
+            .modify(|v| {
+                v.fiskeridir.length = PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY as f64 - 1.0;
+            })
+            .ais_positions(1)
+            .modify(|v| {
+                v.msgtime = pos_timestamp;
+            })
+            .build()
+            .await;
+
+        let response = helper
+            .app
+            .get_ais_vms_positions(
+                AisVmsParameters {
+                    start: Some(pos_timestamp - Duration::seconds(1)),
+                    end: Some(pos_timestamp + Duration::seconds(1)),
+                    mmsi: state.vessels[0].mmsi(),
+                    call_sign: None,
+                },
+                Some(helper.bw_helper.get_bw_token()),
+            )
+            .await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let body: Vec<AisVmsPosition> = response.json().await.unwrap();
+
+        assert!(!body.is_empty());
     })
     .await;
 }

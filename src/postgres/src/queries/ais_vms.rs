@@ -1,6 +1,9 @@
 use fiskeridir_rs::CallSign;
 use futures::{Stream, TryStreamExt};
-use kyogre_core::{DateRange, Mmsi, LEISURE_VESSEL_LENGTH_AIS_BOUNDARY, LEISURE_VESSEL_SHIP_TYPES};
+use kyogre_core::{
+    AisPermission, DateRange, Mmsi, LEISURE_VESSEL_LENGTH_AIS_BOUNDARY, LEISURE_VESSEL_SHIP_TYPES,
+    PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY,
+};
 
 use crate::{error::PostgresError, models::AisVmsPosition, PostgresAdapter};
 use error_stack::{report, Result};
@@ -11,6 +14,7 @@ impl PostgresAdapter {
         mmsi: Option<Mmsi>,
         call_sign: Option<&CallSign>,
         range: &DateRange,
+        permission: AisPermission,
     ) -> impl Stream<Item = Result<AisVmsPosition, PostgresError>> + '_ {
         sqlx::query_as!(
             AisVmsPosition,
@@ -42,7 +46,7 @@ FROM
         WHERE
             $1::INT IS NOT NULL
             AND mmsi = $1
-            AND $1 NOT IN (
+            AND $1 IN (
                 SELECT
                     a.mmsi
                 FROM
@@ -51,14 +55,15 @@ FROM
                 WHERE
                     a.mmsi = $1
                     AND (
-                        (
-                            a.ship_type IS NULL
-                            OR a.ship_type = ANY ($5::INT[])
-                        )
-                        AND (
-                            COALESCE(f.length, a.ship_length) IS NULL
-                            OR COALESCE(f.length, a.ship_length) < $6
-                        )
+                        a.ship_type IS NOT NULL
+                        AND NOT (a.ship_type = ANY($5::INT[]))
+                        OR COALESCE(f.length, a.ship_length) > $6
+                    )
+                    AND (
+                        CASE
+                            WHEN $7 = 0 THEN TRUE
+                            WHEN $7 = 1 THEN COALESCE(f.length, a.ship_length) >= $8
+                        END
                     )
             )
         UNION ALL
@@ -89,6 +94,8 @@ ORDER BY
             range.end(),
             LEISURE_VESSEL_SHIP_TYPES.as_slice(),
             LEISURE_VESSEL_LENGTH_AIS_BOUNDARY as i32,
+            permission as i32,
+            PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY as i32,
         )
         .fetch(&self.ais_pool)
         .map_err(|e| report!(e).change_context(PostgresError::Query))

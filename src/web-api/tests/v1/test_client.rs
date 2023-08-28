@@ -60,7 +60,12 @@ impl ApiClient {
         request.send().await.unwrap()
     }
 
-    pub async fn get_ais_track(&self, mmsi: Mmsi, params: AisTrackParameters) -> Response {
+    pub async fn get_ais_track(
+        &self,
+        mmsi: Mmsi,
+        params: AisTrackParameters,
+        token: Option<String>,
+    ) -> Response {
         let mut url_params = Vec::new();
 
         if let Some(s) = params.start {
@@ -71,11 +76,25 @@ impl ApiClient {
             url_params.push((("end".to_owned()), s.to_string()));
         }
 
-        self.get(format!("ais_track/{}", mmsi.0), url_params.as_slice(), None)
-            .await
+        let headers = token.map(|v| {
+            let mut headers = HeaderMap::new();
+            headers.insert("bw-token", v.try_into().unwrap());
+            headers
+        });
+
+        self.get(
+            format!("ais_track/{}", mmsi.0),
+            url_params.as_slice(),
+            headers,
+        )
+        .await
     }
 
-    pub async fn get_ais_vms_positions(&self, params: AisVmsParameters) -> Response {
+    pub async fn get_ais_vms_positions(
+        &self,
+        params: AisVmsParameters,
+        token: Option<String>,
+    ) -> Response {
         let mut url_params = Vec::new();
 
         if let Some(s) = params.mmsi {
@@ -94,7 +113,13 @@ impl ApiClient {
             url_params.push((("end".to_owned()), s.to_string()));
         }
 
-        self.get("ais_vms_positions", url_params.as_slice(), None)
+        let headers = token.map(|v| {
+            let mut headers = HeaderMap::new();
+            headers.insert("bw-token", v.try_into().unwrap());
+            headers
+        });
+
+        self.get("ais_vms_positions", url_params.as_slice(), headers)
             .await
     }
 

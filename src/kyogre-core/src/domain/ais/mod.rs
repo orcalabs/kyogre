@@ -7,6 +7,16 @@ use serde_repr::{Deserialize_repr, Serialize_repr};
 
 pub const LEISURE_VESSEL_SHIP_TYPES: [i32; 2] = [36, 37];
 pub const LEISURE_VESSEL_LENGTH_AIS_BOUNDARY: u32 = 45;
+pub const PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY: u32 = 15;
+
+// What AIS user is allowed to read, AIS data of leisure vessels under 45 are implicitly
+// denied for all permissions
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AisPermission {
+    All,
+    #[default]
+    Above15m,
+}
 
 #[derive(Debug, Clone, Default)]
 pub struct DataMessage {

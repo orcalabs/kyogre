@@ -31,6 +31,12 @@ impl AisOrVmsPosition {
             AisOrVmsPosition::Vms(v) => v.timestamp,
         }
     }
+    pub fn set_timestamp(&mut self, timestamp: DateTime<Utc>) {
+        match self {
+            AisOrVmsPosition::Ais(a) => a.msgtime = timestamp,
+            AisOrVmsPosition::Vms(v) => v.timestamp = timestamp,
+        }
+    }
 }
 
 impl AisVmsPositionBuilder {

@@ -2,6 +2,7 @@ use std::pin::Pin;
 
 use actix_web::FromRequest;
 use futures::Future;
+use kyogre_core::AisPermission;
 use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 use strum::EnumIter;
@@ -13,6 +14,7 @@ use crate::{error::ApiError, settings::BW_PROFILES_URL};
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, EnumIter)]
 pub enum BwPolicy {
     BwReadExtendedFishingFacility,
+    BwAisFiskinfo,
     #[serde(other)]
     Other,
 }
@@ -26,6 +28,21 @@ pub struct BwUser {
 pub struct BwProfile {
     pub user: BwUser,
     pub policies: Vec<BwPolicy>,
+}
+
+impl From<BwProfile> for AisPermission {
+    fn from(value: BwProfile) -> Self {
+        let mut permission = AisPermission::default();
+        for p in &value.policies {
+            match p {
+                BwPolicy::BwReadExtendedFishingFacility | BwPolicy::Other => {
+                    permission = AisPermission::Above15m;
+                }
+                BwPolicy::BwAisFiskinfo => return AisPermission::All,
+            }
+        }
+        permission
+    }
 }
 
 impl FromRequest for BwProfile {
