@@ -17,7 +17,7 @@ const HAULS_SCHEMA: &str = "CREATE TABLE
         fiskeridir_vessel_id INT,
         gear_group_id INT NOT NULL,
         species_group_id INT NOT NULL,
-        living_weight BIGINT NOT NULL,
+        living_weight DOUBLE NOT NULL,
     )";
 const LANDING_SCHEMA: &str = "CREATE TABLE
     landing_matrix_cache (
