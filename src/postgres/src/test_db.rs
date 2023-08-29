@@ -838,12 +838,13 @@ FROM
         sqlx::query!(
             r#"
 INSERT INTO
-    manual_delivery_points (delivery_point_id, "name")
+    manual_delivery_points (delivery_point_id, "name", delivery_point_type_id)
 VALUES
-    ($1, $2)
+    ($1, $2, $3)
             "#,
             id.into_inner(),
             name,
+            DeliveryPointType::Ukjent as i32
         )
         .execute(&mut *tx)
         .await
