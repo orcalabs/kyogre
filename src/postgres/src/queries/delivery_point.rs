@@ -21,7 +21,7 @@ impl PostgresAdapter {
             DeliveryPoint,
             r#"
 SELECT
-    d.delivery_point_id,
+    d.delivery_point_id as "delivery_point_id!",
     COALESCE(m.name, a.name, mt.name) AS NAME,
     COALESCE(m.address, a.address, mt.address) AS address,
     COALESCE(m.latitude, a.latitude) AS latitude,
