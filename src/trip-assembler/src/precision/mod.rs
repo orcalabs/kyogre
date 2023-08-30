@@ -1,11 +1,10 @@
-use crate::TripPrecisionError;
 use async_trait::async_trait;
 use chrono::{DateTime, Duration, Utc};
 use error_stack::{IntoReport, Result, ResultExt};
 use geoutils::Location;
 use kyogre_core::{
     AisVmsPosition, DateRange, PrecisionDirection, PrecisionId, PrecisionOutcome, PrecisionUpdate,
-    Trip, TripPrecisionOutboundPort, TripPrecisionUpdate, Vessel,
+    Trip, TripPrecisionError, TripPrecisionOutboundPort, TripPrecisionUpdate, Vessel,
 };
 use num_traits::ToPrimitive;
 

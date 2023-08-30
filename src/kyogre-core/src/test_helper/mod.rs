@@ -1,6 +1,8 @@
 use crate::{
-    AisConsumeLoop, AisPermission, AisPosition, DataMessage, DateRange, Mmsi, NewAisPosition,
-    NewAisStatic, ScraperInboundPort, Vessel, VmsPosition, WebApiOutboundPort,
+    AisConsumeLoop, AisPermission, AisPosition, DataMessage, DateRange, FisheryEngine,
+    FiskeridirVesselId, Mmsi, NewAisPosition, NewAisStatic, Pagination, ScraperInboundPort,
+    TripAssemblerOutboundPort, TripDetailed, Trips, TripsQuery, Vessel, VmsPosition,
+    WebApiOutboundPort,
 };
 use ais::*;
 pub use ais_vms::AisOrVmsPosition;
@@ -8,17 +10,26 @@ use ais_vms::*;
 use chrono::{DateTime, Duration, TimeZone, Utc};
 use fiskeridir_rs::CallSign;
 use futures::TryStreamExt;
+use machine::StateMachine;
 use std::collections::HashMap;
+use trip::*;
 use vessel::*;
 use vms::*;
 
 pub trait TestStorage:
-    ScraperInboundPort + WebApiOutboundPort + AisConsumeLoop + Send + Sync + 'static
+    ScraperInboundPort
+    + WebApiOutboundPort
+    + AisConsumeLoop
+    + TripAssemblerOutboundPort
+    + Send
+    + Sync
+    + 'static
 {
 }
 
 mod ais;
 mod ais_vms;
+mod trip;
 mod vessel;
 mod vms;
 
@@ -28,11 +39,14 @@ pub struct TestState {
     pub ais_positions: Vec<AisPosition>,
     pub ais_vms_positions: Vec<crate::AisVmsPosition>,
     pub vessels: Vec<Vessel>,
+    pub trips: Vec<TripDetailed>,
     ais_positions_to_vessel: HashMap<VesselKey, Vec<AisPosition>>,
     ais_vms_positions_to_vessel: HashMap<VesselKey, Vec<crate::AisVmsPosition>>,
     vms_positions_to_vessel: HashMap<VesselKey, Vec<crate::VmsPosition>>,
+    trips_to_vessel: HashMap<VesselKey, Vec<TripDetailed>>,
 }
 
+#[allow(dead_code)]
 pub struct TestStateBuilder {
     storage: Box<dyn TestStorage>,
     vessels: Vec<VesselContructor>,
@@ -40,12 +54,17 @@ pub struct TestStateBuilder {
     ais_data_confirmation: tokio::sync::mpsc::Receiver<()>,
     // Used for `vessel_id`, `call_sign` and `mmsi`
     vessel_id_counter: i64,
-    position_timestamp_counter: HashMap<VesselKey, DateTime<Utc>>,
-    position_gap: Duration,
-    position_timestamp_start: DateTime<Utc>,
+    data_timestamp_counter: HashMap<VesselKey, DateTime<Utc>>,
+    data_timestamp_gap: Duration,
+    data_timestamp_start: DateTime<Utc>,
     ais_vms_positions: HashMap<AisVmsVesselKey, Vec<AisVmsPositionConstructor>>,
     ais_positions: HashMap<AisVesselKey, Vec<AisPositionConstructor>>,
     vms_positions: HashMap<VmsVesselKey, Vec<VmsPositionConstructor>>,
+    trips: HashMap<VesselKey, Vec<TripConstructor>>,
+    default_trip_duration: Duration,
+    ers_message_id_counter: u64,
+    ers_message_number_per_vessel: HashMap<VesselKey, u32>,
+    engine: FisheryEngine,
 }
 
 impl TestState {
@@ -70,12 +89,20 @@ impl TestState {
             })
             .unwrap()
     }
+    pub fn trips_of_vessel(&self, index: usize) -> &[TripDetailed] {
+        self.trips_to_vessel
+            .get(&VesselKey {
+                vessel_vec_index: index,
+            })
+            .unwrap()
+    }
 }
 
 impl TestStateBuilder {
     pub fn new(
         storage: Box<dyn TestStorage>,
         ais_consumer: Box<dyn AisConsumeLoop>,
+        engine: FisheryEngine,
     ) -> TestStateBuilder {
         let (sender, receiver) = tokio::sync::broadcast::channel::<DataMessage>(30);
 
@@ -85,28 +112,34 @@ impl TestStateBuilder {
                 .consume(receiver, Some(confirmation_sender))
                 .await
         });
+
         TestStateBuilder {
             storage,
             ais_positions: HashMap::default(),
             vessels: vec![],
             vessel_id_counter: 1,
-            position_timestamp_counter: HashMap::default(),
+            data_timestamp_counter: HashMap::default(),
             ais_data_sender: sender,
             ais_data_confirmation: confirmation_receiver,
-            position_gap: Duration::seconds(30),
-            position_timestamp_start: Utc.with_ymd_and_hms(2010, 2, 5, 10, 0, 0).unwrap(),
+            data_timestamp_gap: Duration::seconds(30),
+            data_timestamp_start: Utc.with_ymd_and_hms(2010, 2, 5, 10, 0, 0).unwrap(),
             ais_vms_positions: HashMap::default(),
             vms_positions: HashMap::default(),
+            trips: HashMap::default(),
+            default_trip_duration: Duration::weeks(1),
+            ers_message_id_counter: 1,
+            ers_message_number_per_vessel: HashMap::default(),
+            engine,
         }
     }
 
     pub fn position_increments(mut self, duration: Duration) -> TestStateBuilder {
-        self.position_gap = duration;
+        self.data_timestamp_gap = duration;
         self
     }
 
     pub fn position_start(mut self, time: DateTime<Utc>) -> TestStateBuilder {
-        self.position_timestamp_start = time;
+        self.data_timestamp_start = time;
         self
     }
 
@@ -121,20 +154,19 @@ impl TestStateBuilder {
             let ais_static = NewAisStatic::test_default(mmsi, call_sign.as_ref());
             vessel.radio_call_sign = Some(call_sign.clone());
 
+            let key = VesselKey {
+                vessel_vec_index: num_vessels + i,
+            };
             self.vessels.push(VesselContructor {
-                key: VesselKey {
-                    vessel_vec_index: num_vessels + i,
-                },
+                key,
                 fiskeridir: vessel,
                 ais: ais_static,
             });
 
-            self.position_timestamp_counter.insert(
-                VesselKey {
-                    vessel_vec_index: i + num_vessels,
-                },
-                self.position_timestamp_start,
-            );
+            self.data_timestamp_counter
+                .insert(key, self.data_timestamp_start);
+
+            self.ers_message_number_per_vessel.insert(key, 1);
 
             self.vessel_id_counter += 1;
         }
@@ -163,6 +195,19 @@ impl TestStateBuilder {
         let mut vessels: Vec<Vessel> = self.storage.vessels().try_collect().await.unwrap();
         vessels.sort_by_key(|v| v.fiskeridir.id);
 
+        let vessel_ids_keys: HashMap<FiskeridirVesselId, VesselKey> = vessels
+            .iter()
+            .enumerate()
+            .map(|(i, v)| {
+                (
+                    v.fiskeridir.id,
+                    VesselKey {
+                        vessel_vec_index: i,
+                    },
+                )
+            })
+            .collect();
+
         let mut ais_positions_to_vessel = HashMap::default();
         let mut ais_positions = Vec::new();
 
@@ -171,6 +216,25 @@ impl TestStateBuilder {
 
         let mut vms_positions_to_vessel = HashMap::default();
         let mut vms_positions = Vec::new();
+
+        let mut trips_to_vessel: HashMap<VesselKey, Vec<TripDetailed>> =
+            HashMap::with_capacity(self.trips.len());
+        let mut trips = Vec::new();
+
+        for (_, trips) in self.trips {
+            for t in trips {
+                match t.trip_specification {
+                    TripSpecification::Ers { dep, por } => {
+                        self.storage.add_ers_dep(vec![dep]).await.unwrap();
+                        self.storage.add_ers_por(vec![por]).await.unwrap();
+                    }
+                    TripSpecification::Landing {
+                        start_landing: _,
+                        end_landing: _,
+                    } => todo!(),
+                }
+            }
+        }
 
         for (key, positions) in self.ais_positions {
             let start = &positions[0].position.msgtime;
@@ -280,11 +344,45 @@ impl TestStateBuilder {
             vms_positions.append(&mut stored_positions);
         }
 
+        let mut engine = self.engine.run_single().await;
+        loop {
+            if engine.current_state_name() == "Pending" {
+                break;
+            }
+            engine = engine.run_single().await;
+        }
+
+        let vessel_trips = self
+            .storage
+            .detailed_trips(
+                TripsQuery {
+                    pagination: Pagination::<Trips>::new(Some(100), None),
+                    ..Default::default()
+                },
+                true,
+            )
+            .unwrap()
+            .try_collect::<Vec<TripDetailed>>()
+            .await
+            .unwrap();
+
+        assert!(vessel_trips.len() < 100);
+
+        for t in vessel_trips {
+            let key = vessel_ids_keys.get(&t.fiskeridir_vessel_id).unwrap();
+            trips.push(t.clone());
+            trips_to_vessel
+                .entry(*key)
+                .and_modify(|v| v.push(t.clone()))
+                .or_insert(vec![t]);
+        }
+
         // We want all positions to be ordered by how they were created, we exploit the fact that
         // mmsis are an increasing counter and that msgtime is increased for each created position.
         ais_positions.sort_by_key(|v| (v.mmsi, v.msgtime));
         ais_vms_positions.sort_by_key(|v| (v.0, v.1.timestamp));
         vms_positions.sort_by_key(|v| (v.call_sign.clone(), v.timestamp));
+        trips.sort_by_key(|v| (v.fiskeridir_vessel_id, v.period.start()));
         assert_eq!(vessels.len(), num_vessels);
 
         TestState {
@@ -295,11 +393,13 @@ impl TestStateBuilder {
             ais_vms_positions_to_vessel,
             vms_positions,
             vms_positions_to_vessel,
+            trips,
+            trips_to_vessel,
         }
     }
 }
 
-fn positions_per_vessel(amount: usize, num_vessels: usize) -> (usize, usize) {
+fn elements_per_vessel(amount: usize, num_vessels: usize) -> (usize, usize) {
     let per_vessel = amount / num_vessels;
     let remainder = if amount > num_vessels && amount % num_vessels != 0 {
         (amount % num_vessels) + per_vessel

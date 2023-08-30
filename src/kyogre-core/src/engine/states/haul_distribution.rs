@@ -1,5 +1,6 @@
 use crate::*;
 use async_trait::async_trait;
+use machine::Schedule;
 use tracing::{event, Level};
 
 pub struct HaulDistributionState;
@@ -9,9 +10,14 @@ impl machine::State for HaulDistributionState {
     type SharedState = SharedState;
 
     async fn run(&self, shared_state: &Self::SharedState) {
-        let database = shared_state.postgres_adapter();
         for b in &shared_state.haul_distributors {
-            if let Err(e) = b.distribute_hauls(database, database).await {
+            if let Err(e) = b
+                .distribute_hauls(
+                    shared_state.haul_distributor_inbound.as_ref(),
+                    shared_state.haul_distributor_outbound.as_ref(),
+                )
+                .await
+            {
                 event!(
                     Level::ERROR,
                     "failed to run haul distributor {}, err: {:?}",

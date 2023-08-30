@@ -8,7 +8,7 @@ use web_api::routes::v1::fishing_facility::{FishingFacilitiesParams, FishingFaci
 
 #[tokio::test]
 async fn test_fishing_facilities_returns_all_fishing_facilities() {
-    test(|helper| async move {
+    test(|helper, _builder| async move {
         let mut expected = vec![
             helper.db.generate_fishing_facility().await,
             helper.db.generate_fishing_facility().await,
@@ -35,7 +35,7 @@ async fn test_fishing_facilities_returns_all_fishing_facilities() {
 
 #[tokio::test]
 async fn test_fishing_facilities_returns_fishing_facilities_with_mmsis() {
-    test(|helper| async move {
+    test(|helper, _builder| async move {
         helper.db.generate_fishing_facility().await;
         helper.db.generate_fishing_facility().await;
         helper.db.generate_fishing_facility().await;
@@ -75,7 +75,7 @@ async fn test_fishing_facilities_returns_fishing_facilities_with_mmsis() {
 
 #[tokio::test]
 async fn test_fishing_facilities_returns_fishing_facilities_with_vessel_ids() {
-    test(|helper| async move {
+    test(|helper, _builder| async move {
         let vessel_id1 = FiskeridirVesselId(10);
         let vessel_id2 = FiskeridirVesselId(20);
         let call_sign1 = CallSign::new_unchecked("AAAAAA");
@@ -125,7 +125,7 @@ async fn test_fishing_facilities_returns_fishing_facilities_with_vessel_ids() {
 
 #[tokio::test]
 async fn test_fishing_facilities_returns_fishing_facilities_with_tool_types() {
-    test(|helper| async move {
+    test(|helper, _builder| async move {
         helper.db.generate_fishing_facility().await;
         helper.db.generate_fishing_facility().await;
         helper.db.generate_fishing_facility().await;
@@ -165,7 +165,7 @@ async fn test_fishing_facilities_returns_fishing_facilities_with_tool_types() {
 
 #[tokio::test]
 async fn test_fishing_facilities_returns_active_fishing_facilities() {
-    test(|helper| async move {
+    test(|helper, _builder| async move {
         helper.db.generate_fishing_facility().await;
         helper.db.generate_fishing_facility().await;
         helper.db.generate_fishing_facility().await;
@@ -202,7 +202,7 @@ async fn test_fishing_facilities_returns_active_fishing_facilities() {
 
 #[tokio::test]
 async fn test_fishing_facilities_returns_inactive_fishing_facilities() {
-    test(|helper| async move {
+    test(|helper, _builder| async move {
         let mut expected = vec![
             helper.db.generate_fishing_facility().await,
             helper.db.generate_fishing_facility().await,
@@ -240,7 +240,7 @@ async fn test_fishing_facilities_returns_inactive_fishing_facilities() {
 
 #[tokio::test]
 async fn test_fishing_facilities_returns_fishing_facilities_in_setup_ranges() {
-    test(|helper| async move {
+    test(|helper, _builder| async move {
         helper.db.generate_fishing_facility().await;
         helper.db.generate_fishing_facility().await;
         helper.db.generate_fishing_facility().await;
@@ -284,7 +284,7 @@ async fn test_fishing_facilities_returns_fishing_facilities_in_setup_ranges() {
 
 #[tokio::test]
 async fn test_fishing_facilities_returns_fishing_facilities_in_removed_ranges() {
-    test(|helper| async move {
+    test(|helper, _builder| async move {
         helper.db.generate_fishing_facility().await;
         helper.db.generate_fishing_facility().await;
         helper.db.generate_fishing_facility().await;
@@ -328,7 +328,7 @@ async fn test_fishing_facilities_returns_fishing_facilities_in_removed_ranges() 
 
 #[tokio::test]
 async fn test_fishing_facilities_fails_without_bw_token() {
-    test(|helper| async move {
+    test(|helper, _builder| async move {
         let response = helper
             .app
             .get_fishing_facilities(Default::default(), "".into())
@@ -340,7 +340,7 @@ async fn test_fishing_facilities_fails_without_bw_token() {
 
 #[tokio::test]
 async fn test_fishing_facilities_fails_without_bw_read_extended_fishing_facility() {
-    test(|helper| async move {
+    test(|helper, _builder| async move {
         let token = helper.bw_helper.get_bw_token_with_policies(vec![]);
         let response = helper
             .app
@@ -353,7 +353,7 @@ async fn test_fishing_facilities_fails_without_bw_read_extended_fishing_facility
 
 #[tokio::test]
 async fn test_fishing_facilities_filters_by_limit_and_offset() {
-    test(|helper| async move {
+    test(|helper, _builder| async move {
         let mut expected = vec![
             helper.db.generate_fishing_facility().await,
             helper.db.generate_fishing_facility().await,
@@ -387,7 +387,7 @@ async fn test_fishing_facilities_filters_by_limit_and_offset() {
 
 #[tokio::test]
 async fn test_fishing_facilities_sorts_by_removed_timestamp() {
-    test(|helper| async move {
+    test(|helper, _builder| async move {
         let mut expected = vec![
             helper.db.generate_fishing_facility().await,
             helper.db.generate_fishing_facility().await,
@@ -416,7 +416,7 @@ async fn test_fishing_facilities_sorts_by_removed_timestamp() {
 
 #[tokio::test]
 async fn test_fishing_facilities_sorts_by_last_changed() {
-    test(|helper| async move {
+    test(|helper, _builder| async move {
         let mut expected = vec![
             helper.db.generate_fishing_facility().await,
             helper.db.generate_fishing_facility().await,

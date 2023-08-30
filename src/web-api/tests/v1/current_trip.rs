@@ -7,7 +7,7 @@ use web_api::routes::v1::trip::CurrentTrip;
 
 #[tokio::test]
 async fn test_current_trip_returns_current_trip_without_prior_trip() {
-    test(|helper| async move {
+    test(|helper, _builder| async move {
         let vessel_id = FiskeridirVesselId(10);
         let call_sign = CallSign::new_unchecked("LK17");
         helper
@@ -55,7 +55,7 @@ async fn test_current_trip_returns_current_trip_without_prior_trip() {
 
 #[tokio::test]
 async fn test_current_trip_returns_current_trip_with_prior_trips() {
-    test(|mut helper| async move {
+    test(|mut helper, _builder| async move {
         let vessel_id = FiskeridirVesselId(10);
         let call_sign = CallSign::new_unchecked("LK17");
         helper
@@ -127,7 +127,7 @@ async fn test_current_trip_returns_current_trip_with_prior_trips() {
 
 #[tokio::test]
 async fn test_current_trip_returns_null_when_no_current_trip() {
-    test(|mut helper| async move {
+    test(|mut helper, _builder| async move {
         let vessel_id = FiskeridirVesselId(10);
         let call_sign = CallSign::new_unchecked("LK17");
         helper
@@ -152,7 +152,7 @@ async fn test_current_trip_returns_null_when_no_current_trip() {
 
 #[tokio::test]
 async fn test_current_trip_does_not_include_fishing_facilities_without_token() {
-    test(|helper| async move {
+    test(|helper, _builder| async move {
         let vessel_id = FiskeridirVesselId(10);
         let call_sign = CallSign::new_unchecked("LK17");
         helper
@@ -199,7 +199,7 @@ async fn test_current_trip_does_not_include_fishing_facilities_without_token() {
 
 #[tokio::test]
 async fn test_current_trip_does_not_include_fishing_facilities_without_permission() {
-    test(|helper| async move {
+    test(|helper, _builder| async move {
         let vessel_id = FiskeridirVesselId(10);
         let call_sign = CallSign::new_unchecked("LK17");
         helper
@@ -247,7 +247,7 @@ async fn test_current_trip_does_not_include_fishing_facilities_without_permissio
 
 #[tokio::test]
 async fn test_current_trip_returns_earliest_departure_since_previous_trip() {
-    test(|mut helper| async move {
+    test(|mut helper, _builder| async move {
         let vessel_id = FiskeridirVesselId(10);
         let call_sign = CallSign::new_unchecked("LK17");
         helper

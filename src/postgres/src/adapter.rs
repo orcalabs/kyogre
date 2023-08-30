@@ -694,6 +694,11 @@ impl TripAssemblerOutboundPort for PostgresAdapter {
 
 #[async_trait]
 impl TripPrecisionOutboundPort for PostgresAdapter {
+    async fn all_vessels(&self) -> Result<Vec<Vessel>, QueryError> {
+        convert_stream(self.fiskeridir_ais_vessel_combinations())
+            .try_collect()
+            .await
+    }
     async fn ports_of_trip(&self, trip_id: TripId) -> Result<TripPorts, QueryError> {
         convert_single(
             self.ports_of_trip_impl(trip_id)
@@ -772,7 +777,9 @@ impl TripPrecisionInboundPort for PostgresAdapter {
 #[async_trait]
 impl VesselBenchmarkOutbound for PostgresAdapter {
     async fn vessels(&self) -> Result<Vec<Vessel>, QueryError> {
-        self.all_vessels().await
+        convert_stream(self.fiskeridir_ais_vessel_combinations())
+            .try_collect()
+            .await
     }
     async fn sum_trip_time(&self, id: FiskeridirVesselId) -> Result<Option<Duration>, QueryError> {
         self.sum_trip_time_impl(id).await.change_context(QueryError)
@@ -805,7 +812,9 @@ impl HaulDistributorInbound for PostgresAdapter {
 #[async_trait]
 impl HaulDistributorOutbound for PostgresAdapter {
     async fn vessels(&self) -> Result<Vec<Vessel>, QueryError> {
-        self.all_vessels().await
+        convert_stream(self.fiskeridir_ais_vessel_combinations())
+            .try_collect()
+            .await
     }
 
     async fn catch_locations(&self) -> Result<Vec<CatchLocation>, QueryError> {
@@ -851,7 +860,9 @@ impl TripDistancerInbound for PostgresAdapter {
 #[async_trait]
 impl TripDistancerOutbound for PostgresAdapter {
     async fn vessels(&self) -> Result<Vec<Vessel>, QueryError> {
-        self.all_vessels().await
+        convert_stream(self.fiskeridir_ais_vessel_combinations())
+            .try_collect()
+            .await
     }
 
     async fn trips_of_vessel(

@@ -1,13 +1,9 @@
-use crate::{SharedState, TripProcessor};
+use crate::{SharedState, TripAssembler, TripPrecisionInboundPort};
+use crate::{TripPrecisionError, TripPrecisionOutboundPort, Vessel};
 use async_trait::async_trait;
 use error_stack::ResultExt;
-use kyogre_core::{
-    TripAssemblerOutboundPort, TripPrecisionInboundPort, TripPrecisionOutboundPort, Vessel,
-};
 use machine::Schedule;
-use postgres::PostgresAdapter;
 use tracing::{event, instrument, Level};
-use trip_assembler::TripPrecisionError;
 
 pub struct TripsPrecisionState;
 
@@ -16,7 +12,11 @@ impl machine::State for TripsPrecisionState {
     type SharedState = SharedState;
 
     async fn run(&self, shared_state: &Self::SharedState) {
-        match shared_state.database.all_vessels().await {
+        match shared_state
+            .trips_precision_outbound_port
+            .all_vessels()
+            .await
+        {
             Err(e) => {
                 event!(Level::ERROR, "failed to retrieve vessels: {:?}", e);
             }
@@ -32,8 +32,9 @@ impl machine::State for TripsPrecisionState {
 
 #[instrument(name = "run_precision_assembler", skip_all, fields(app.trip_assembler))]
 async fn run_precision_processor(
-    database: &PostgresAdapter,
-    processor: &dyn TripProcessor,
+    read_storage: &dyn TripPrecisionOutboundPort,
+    write_storage: &dyn TripPrecisionInboundPort,
+    processor: &dyn TripAssembler,
     vessels: &[Vessel],
 ) -> error_stack::Result<(), TripPrecisionError> {
     tracing::Span::current().record("app.trip_assembler", processor.assembler_id().to_string());
@@ -43,7 +44,7 @@ async fn run_precision_processor(
             continue;
         }
 
-        let trips = database
+        let trips = read_storage
             .trips_without_precision(vessel.fiskeridir.id, processor.assembler_id())
             .await
             .change_context(TripPrecisionError)?;
@@ -52,9 +53,12 @@ async fn run_precision_processor(
             continue;
         }
 
-        match processor.calculate_precision(vessel, database, trips).await {
+        match processor
+            .calculate_precision(vessel, read_storage, trips)
+            .await
+        {
             Ok(updates) => {
-                database
+                write_storage
                     .update_trip_precisions(updates)
                     .await
                     .change_context(TripPrecisionError)?;
@@ -69,9 +73,15 @@ async fn run_precision_processor(
 }
 
 async fn run_precision_processors(shared_state: &SharedState, vessels: Vec<Vessel>) {
-    let database = shared_state.postgres_adapter();
-    for processor in &shared_state.trip_processors {
-        if let Err(e) = run_precision_processor(database, processor.as_ref(), &vessels).await {
+    for processor in &shared_state.trip_assemblers {
+        if let Err(e) = run_precision_processor(
+            shared_state.trips_precision_outbound_port.as_ref(),
+            shared_state.trips_precision_inbound_port.as_ref(),
+            processor.as_ref(),
+            &vessels,
+        )
+        .await
+        {
             event!(
                 Level::ERROR,
                 "failed to run trips_precision assembler, error: {:?}",

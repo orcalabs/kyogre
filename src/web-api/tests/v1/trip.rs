@@ -11,7 +11,7 @@ use web_api::routes::v1::trip::{Trip, TripsOfVesselParameters, TripsParameters};
 
 #[tokio::test]
 async fn test_trip_of_landing_returns_none_of_no_trip_is_connected_to_given_landing_id() {
-    test(|helper| async move {
+    test(|helper, _builder| async move {
         let response = helper
             .app
             .get_trip_of_landing(&"1-7-0".try_into().unwrap())
@@ -26,7 +26,7 @@ async fn test_trip_of_landing_returns_none_of_no_trip_is_connected_to_given_land
 
 #[tokio::test]
 async fn test_trip_of_landing_does_not_return_trip_outside_landing_timestamp() {
-    test(|helper| async move {
+    test(|helper, _builder| async move {
         let fiskeridir_vessel_id = FiskeridirVesselId(11);
         let start = Utc.timestamp_opt(1000000, 0).unwrap();
 
@@ -54,7 +54,7 @@ async fn test_trip_of_landing_does_not_return_trip_outside_landing_timestamp() {
 
 #[tokio::test]
 async fn test_trip_of_landing_does_not_return_trip_of_other_vessels() {
-    test(|mut helper| async move {
+    test(|mut helper, _builder| async move {
         let fiskeridir_vessel_id = FiskeridirVesselId(11);
         let fiskeridir_vessel_id2 = FiskeridirVesselId(12);
         let start = Utc.timestamp_opt(10000, 0).unwrap();
@@ -79,7 +79,7 @@ async fn test_trip_of_landing_does_not_return_trip_of_other_vessels() {
 
 #[tokio::test]
 async fn test_trip_of_landing_returns_all_hauls_and_landings_connected_to_trip() {
-    test(|mut helper| async move {
+    test(|mut helper, _builder| async move {
         let fiskeridir_vessel_id = FiskeridirVesselId(1);
         let start = Utc.timestamp_opt(10000, 0).unwrap();
         let end = Utc.timestamp_opt(100000, 0).unwrap();
@@ -113,7 +113,7 @@ async fn test_trip_of_landing_returns_all_hauls_and_landings_connected_to_trip()
 
 #[tokio::test]
 async fn test_trips_of_vessel_only_returns_trips_of_specified_vessel() {
-    test(|mut helper| async move {
+    test(|mut helper, _builder| async move {
         let fiskeridir_vessel_id = FiskeridirVesselId(1);
         let fiskeridir_vessel_id2 = FiskeridirVesselId(2);
 
@@ -157,7 +157,7 @@ async fn test_trips_of_vessel_only_returns_trips_of_specified_vessel() {
 
 #[tokio::test]
 async fn test_trips_of_vessel_filters_by_limit() {
-    test(|mut helper| async move {
+    test(|mut helper, _builder| async move {
         let fiskeridir_vessel_id = FiskeridirVesselId(1);
 
         helper
@@ -200,7 +200,7 @@ async fn test_trips_of_vessel_filters_by_limit() {
 
 #[tokio::test]
 async fn test_trips_of_vessel_filters_by_offset() {
-    test(|mut helper| async move {
+    test(|mut helper, _builder| async move {
         let fiskeridir_vessel_id = FiskeridirVesselId(1);
 
         helper
@@ -243,7 +243,7 @@ async fn test_trips_of_vessel_filters_by_offset() {
 
 #[tokio::test]
 async fn test_trips_of_vessel_orders_by_period() {
-    test(|mut helper| async move {
+    test(|mut helper, _builder| async move {
         let fiskeridir_vessel_id = FiskeridirVesselId(1);
 
         helper
@@ -287,7 +287,7 @@ async fn test_trips_of_vessel_orders_by_period() {
 
 #[tokio::test]
 async fn test_first_ers_data_triggers_trip_assembler_switch_to_ers() {
-    test(|mut helper| async move {
+    test(|mut helper, _builder| async move {
         let fiskeridir_vessel_id = FiskeridirVesselId(1);
 
         let start = Utc.timestamp_opt(10000, 0).unwrap();
@@ -321,7 +321,7 @@ async fn test_first_ers_data_triggers_trip_assembler_switch_to_ers() {
 
 #[tokio::test]
 async fn test_trips_contains_all_events_within_trip_period_ordered_ascendingly() {
-    test(|mut helper| async move {
+    test(|mut helper, _builder| async move {
         let fiskeridir_vessel_id = FiskeridirVesselId(1);
 
         helper
@@ -374,7 +374,7 @@ async fn test_trips_contains_all_events_within_trip_period_ordered_ascendingly()
 
 #[tokio::test]
 async fn test_trips_events_are_isolated_per_vessel() {
-    test(|mut helper| async move {
+    test(|mut helper, _builder| async move {
         let fiskeridir_vessel_id = FiskeridirVesselId(1);
         let fiskeridir_vessel_id2 = FiskeridirVesselId(2);
         helper
@@ -472,7 +472,7 @@ async fn test_trips_events_are_isolated_per_vessel() {
 
 #[tokio::test]
 async fn test_trips_does_not_include_events_outside_period() {
-    test(|mut helper| async move {
+    test(|mut helper, _builder| async move {
         let fiskeridir_vessel_id = FiskeridirVesselId(1);
         helper
             .db
@@ -508,7 +508,7 @@ async fn test_trips_does_not_include_events_outside_period() {
 #[tokio::test]
 async fn test_trip_connects_to_tra_event_based_on_message_timestamp_if_reloading_timestamp_is_none()
 {
-    test(|mut helper| async move {
+    test(|mut helper, _builder| async move {
         let fiskeridir_vessel_id = FiskeridirVesselId(1);
         helper
             .db
@@ -549,7 +549,7 @@ async fn test_trip_connects_to_tra_event_based_on_message_timestamp_if_reloading
 
 #[tokio::test]
 async fn test_trips_returns_correct_ports() {
-    test(|helper| async move {
+    test(|helper, _builder| async move {
         let vessel_id = FiskeridirVesselId(1);
         helper
             .db
@@ -588,7 +588,7 @@ async fn test_trips_returns_correct_ports() {
 #[tokio::test]
 async fn test_trip_contains_correct_arrival_and_departure_with_adjacent_trips_with_equal_start_and_stop(
 ) {
-    test(|helper| async move {
+    test(|helper, _builder| async move {
         let vessel_id = FiskeridirVesselId(1);
         helper
             .db
@@ -642,7 +642,7 @@ async fn test_trip_contains_correct_arrival_and_departure_with_adjacent_trips_wi
 
 #[tokio::test]
 async fn test_ers_trip_contains_events_added_after_trip_creation() {
-    test(|mut helper| async move {
+    test(|mut helper, _builder| async move {
         let vessel_id = FiskeridirVesselId(1);
         let start = Utc.timestamp_opt(10000, 0).unwrap();
         let end = Utc.timestamp_opt(100000, 0).unwrap();
@@ -684,7 +684,7 @@ async fn test_ers_trip_contains_events_added_after_trip_creation() {
 
 #[tokio::test]
 async fn test_landings_trip_only_contains_landing_events() {
-    test(|helper| async move {
+    test(|helper, _builder| async move {
         let vessel_id = FiskeridirVesselId(1);
         let start = Utc.timestamp_opt(10000000, 0).unwrap();
         let end = Utc.timestamp_opt(1000000000, 0).unwrap();
@@ -722,7 +722,7 @@ async fn test_landings_trip_only_contains_landing_events() {
 
 #[tokio::test]
 async fn test_trip_contains_fishing_facilities() {
-    test(|helper| async move {
+    test(|helper, _builder| async move {
         let vessel_id = FiskeridirVesselId(10);
         let call_sign = CallSign::new_unchecked("LK17");
         helper
@@ -773,7 +773,7 @@ async fn test_trip_contains_fishing_facilities() {
 
 #[tokio::test]
 async fn test_trip_does_not_return_fishing_facilities_without_token() {
-    test(|helper| async move {
+    test(|helper, _builder| async move {
         let vessel_id = FiskeridirVesselId(10);
         let call_sign = CallSign::new_unchecked("LK17");
         helper
@@ -832,7 +832,7 @@ async fn test_trip_does_not_return_fishing_facilities_without_token() {
 
 #[tokio::test]
 async fn test_trip_does_not_return_fishing_facilities_without_read_fishing_facility() {
-    test(|helper| async move {
+    test(|helper, _builder| async move {
         let vessel_id = FiskeridirVesselId(10);
         let call_sign = CallSign::new_unchecked("LK17");
         helper
@@ -895,7 +895,7 @@ async fn test_trip_does_not_return_fishing_facilities_without_read_fishing_facil
 
 #[tokio::test]
 async fn test_trips_filter_by_offset() {
-    test(|mut helper| async move {
+    test(|mut helper, _builder| async move {
         let fiskeridir_vessel_id = FiskeridirVesselId(1);
         let trip = helper
             .generate_ers_trip(
@@ -933,7 +933,7 @@ async fn test_trips_filter_by_offset() {
 
 #[tokio::test]
 async fn test_trips_filter_by_limit() {
-    test(|mut helper| async move {
+    test(|mut helper, _builder| async move {
         let fiskeridir_vessel_id = FiskeridirVesselId(1);
         helper
             .generate_ers_trip(
@@ -971,7 +971,7 @@ async fn test_trips_filter_by_limit() {
 
 #[tokio::test]
 async fn test_trips_orders_ascendingly() {
-    test(|mut helper| async move {
+    test(|mut helper, _builder| async move {
         let fiskeridir_vessel_id = FiskeridirVesselId(1);
         let trip = helper
             .generate_ers_trip(
@@ -1010,7 +1010,7 @@ async fn test_trips_orders_ascendingly() {
 
 #[tokio::test]
 async fn test_trips_orders_descendingly() {
-    test(|mut helper| async move {
+    test(|mut helper, _builder| async move {
         let fiskeridir_vessel_id = FiskeridirVesselId(1);
         let trip = helper
             .generate_ers_trip(
@@ -1049,7 +1049,7 @@ async fn test_trips_orders_descendingly() {
 
 #[tokio::test]
 async fn test_trips_filter_by_delivery_point() {
-    test(|mut helper| async move {
+    test(|mut helper, _builder| async move {
         let fiskeridir_vessel_id = FiskeridirVesselId(1);
 
         let start = Utc.timestamp_opt(1, 0).unwrap();
@@ -1099,7 +1099,7 @@ async fn test_trips_filter_by_delivery_point() {
 
 #[tokio::test]
 async fn test_trips_filter_by_start_date() {
-    test(|mut helper| async move {
+    test(|mut helper, _builder| async move {
         let fiskeridir_vessel_id = FiskeridirVesselId(1);
         let start = Utc.timestamp_opt(20, 0).unwrap();
 
@@ -1140,7 +1140,7 @@ async fn test_trips_filter_by_start_date() {
 
 #[tokio::test]
 async fn test_trips_filter_by_end_date() {
-    test(|mut helper| async move {
+    test(|mut helper, _builder| async move {
         let fiskeridir_vessel_id = FiskeridirVesselId(1);
         let end = Utc.timestamp_opt(25, 0).unwrap();
 
@@ -1181,7 +1181,7 @@ async fn test_trips_filter_by_end_date() {
 
 #[tokio::test]
 async fn test_trips_returns_bad_request_if_start_date_is_after_end_date() {
-    test(|helper| async move {
+    test(|helper, _builder| async move {
         let start = Utc.timestamp_opt(30, 0).unwrap();
         let end = Utc.timestamp_opt(25, 0).unwrap();
 
@@ -1203,7 +1203,7 @@ async fn test_trips_returns_bad_request_if_start_date_is_after_end_date() {
 
 #[tokio::test]
 async fn test_trips_sorts_by_start_date() {
-    test(|mut helper| async move {
+    test(|mut helper, _builder| async move {
         let fiskeridir_vessel_id = FiskeridirVesselId(1);
 
         let trip = helper
@@ -1245,7 +1245,7 @@ async fn test_trips_sorts_by_start_date() {
 
 #[tokio::test]
 async fn test_trips_sorts_by_end_date() {
-    test(|mut helper| async move {
+    test(|mut helper, _builder| async move {
         let fiskeridir_vessel_id = FiskeridirVesselId(1);
 
         let trip = helper
@@ -1287,7 +1287,7 @@ async fn test_trips_sorts_by_end_date() {
 
 #[tokio::test]
 async fn test_trips_sorts_by_weight() {
-    test(|mut helper| async move {
+    test(|mut helper, _builder| async move {
         let fiskeridir_vessel_id = FiskeridirVesselId(1);
 
         let start = Utc.timestamp_opt(1, 0).unwrap();
@@ -1342,7 +1342,7 @@ async fn test_trips_sorts_by_weight() {
 
 #[tokio::test]
 async fn test_trips_filter_by_gear_group_ids() {
-    test(|mut helper| async move {
+    test(|mut helper, _builder| async move {
         let fiskeridir_vessel_id = FiskeridirVesselId(1);
 
         let start = Utc.timestamp_opt(1, 0).unwrap();
@@ -1393,7 +1393,7 @@ async fn test_trips_filter_by_gear_group_ids() {
 
 #[tokio::test]
 async fn test_trips_filter_by_species_group_ids() {
-    test(|mut helper| async move {
+    test(|mut helper, _builder| async move {
         let fiskeridir_vessel_id = FiskeridirVesselId(1);
 
         let start = Utc.timestamp_opt(1, 0).unwrap();
@@ -1447,7 +1447,7 @@ async fn test_trips_filter_by_species_group_ids() {
 
 #[tokio::test]
 async fn test_trips_filter_by_vessel_length_groups() {
-    test(|mut helper| async move {
+    test(|mut helper, _builder| async move {
         let fiskeridir_vessel_id = FiskeridirVesselId(1);
         let fiskeridir_vessel_id2 = FiskeridirVesselId(2);
 
@@ -1501,7 +1501,7 @@ async fn test_trips_filter_by_vessel_length_groups() {
 
 #[tokio::test]
 async fn test_trips_filter_by_fiskeridir_vessel_ids() {
-    test(|mut helper| async move {
+    test(|mut helper, _builder| async move {
         let fiskeridir_vessel_id = FiskeridirVesselId(1);
         let fiskeridir_vessel_id2 = FiskeridirVesselId(2);
 
@@ -1542,7 +1542,7 @@ async fn test_trips_filter_by_fiskeridir_vessel_ids() {
 
 #[tokio::test]
 async fn test_trips_contains_hauls() {
-    test(|mut helper| async move {
+    test(|mut helper, _builder| async move {
         let vessel_id = FiskeridirVesselId(1);
         let start = Utc.timestamp_opt(10000000, 0).unwrap();
         let end = Utc.timestamp_opt(1000000000, 0).unwrap();

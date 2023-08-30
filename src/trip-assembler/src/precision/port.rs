@@ -2,13 +2,13 @@ use super::{
     find_close_point, PointClusterPreference, PrecisionConfig, PrecisionDirection, PrecisionId,
     PrecisionStop, StartSearchPoint, TripPrecision,
 };
-use crate::error::TripPrecisionError;
 use chrono::{TimeZone, Utc};
 use error_stack::Result;
 use error_stack::ResultExt;
 use geoutils::Location;
 use kyogre_core::AisVmsPosition;
 use kyogre_core::Bound;
+use kyogre_core::TripPrecisionError;
 use kyogre_core::Vessel;
 use kyogre_core::{DateRange, Trip, TripPrecisionOutboundPort};
 

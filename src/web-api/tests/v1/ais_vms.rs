@@ -13,7 +13,7 @@ use web_api::{
 
 #[tokio::test]
 async fn test_ais_vms_positions_fails_without_mmsi_or_call_sign() {
-    test(|helper| async move {
+    test(|helper, _| async move {
         let response = helper
             .app
             .get_ais_vms_positions(
@@ -34,13 +34,8 @@ async fn test_ais_vms_positions_fails_without_mmsi_or_call_sign() {
 
 #[tokio::test]
 async fn test_ais_vms_positions_returns_ais_and_vms_positions() {
-    test(|helper| async move {
-        let state = helper
-            .test_state_builder()
-            .vessels(1)
-            .ais_vms_positions(5)
-            .build()
-            .await;
+    test(|helper, builder| async move {
+        let state = builder.vessels(1).ais_vms_positions(5).build().await;
 
         let pos = &state.ais_vms_positions[0];
         let pos2 = &state.ais_vms_positions[1];
@@ -75,13 +70,8 @@ async fn test_ais_vms_positions_returns_ais_and_vms_positions() {
 
 #[tokio::test]
 async fn test_ais_vms_positions_returns_only_ais_without_call_sign() {
-    test(|helper| async move {
-        let state = helper
-            .test_state_builder()
-            .vessels(1)
-            .ais_vms_positions(5)
-            .build()
-            .await;
+    test(|helper, builder| async move {
+        let state = builder.vessels(1).ais_vms_positions(5).build().await;
 
         let pos = &state.ais_vms_positions[0];
         let pos3 = &state.ais_vms_positions[2];
@@ -112,13 +102,8 @@ async fn test_ais_vms_positions_returns_only_ais_without_call_sign() {
 
 #[tokio::test]
 async fn test_ais_vms_positions_returns_only_vms_without_mmsi() {
-    test(|helper| async move {
-        let state = helper
-            .test_state_builder()
-            .vessels(1)
-            .ais_vms_positions(5)
-            .build()
-            .await;
+    test(|helper, builder| async move {
+        let state = builder.vessels(1).ais_vms_positions(5).build().await;
 
         let pos = &state.ais_vms_positions[0];
         let pos2 = &state.ais_vms_positions[1];
@@ -149,9 +134,8 @@ async fn test_ais_vms_positions_returns_only_vms_without_mmsi() {
 
 #[tokio::test]
 async fn test_ais_vms_positions_returns_ais_and_vms_positions_with_missing_data() {
-    test(|helper| async move {
-        let state = helper
-            .test_state_builder()
+    test(|helper, builder| async move {
+        let state = builder
             .position_increments(*MISSING_DATA_DURATION)
             .vessels(1)
             .ais_vms_positions(4)
@@ -187,10 +171,9 @@ async fn test_ais_vms_positions_returns_ais_and_vms_positions_with_missing_data(
 
 #[tokio::test]
 async fn test_ais_vms_does_not_return_positions_of_leisure_vessels_under_45_meters() {
-    test(|helper| async move {
+    test(|helper, builder| async move {
         let pos_timestamp = Utc.timestamp_opt(1000, 0).unwrap();
-        let state = helper
-            .test_state_builder()
+        let state = builder
             .vessels(2)
             .modify_idx(|i, v| {
                 v.ais.ship_type = Some(LEISURE_VESSEL_SHIP_TYPES[i]);
@@ -245,10 +228,9 @@ async fn test_ais_vms_does_not_return_positions_of_leisure_vessels_under_45_mete
 
 #[tokio::test]
 async fn test_ais_vms_does_not_return_positions_of_vessel_with_unknown_ship_type() {
-    test(|helper| async move {
+    test(|helper, builder| async move {
         let pos_timestamp = Utc.timestamp_opt(1000, 0).unwrap();
-        let state = helper
-            .test_state_builder()
+        let state = builder
             .vessels(1)
             .modify(|v| v.ais.ship_type = None)
             .ais_positions(1)
@@ -282,10 +264,9 @@ async fn test_ais_vms_does_not_return_positions_of_vessel_with_unknown_ship_type
 #[tokio::test]
 async fn test_ais_vms_prioritizes_fiskeridir_length_over_ais_length_in_leisure_vessel_length_check()
 {
-    test(|helper| async move {
+    test(|helper, builder| async move {
         let pos_timestamp = Utc.timestamp_opt(1000, 0).unwrap();
-        let state = helper
-            .test_state_builder()
+        let state = builder
             .vessels(1)
             .modify(|v| {
                 v.fiskeridir.length = LEISURE_VESSEL_LENGTH_AIS_BOUNDARY as f64 + 1.0;
@@ -321,10 +302,9 @@ async fn test_ais_vms_prioritizes_fiskeridir_length_over_ais_length_in_leisure_v
 
 #[tokio::test]
 async fn test_ais_vms_does_not_return_ais_positions_for_vessels_under_15m_without_bw_token() {
-    test(|helper| async move {
+    test(|helper, builder| async move {
         let pos_timestamp = Utc.timestamp_opt(1000, 0).unwrap();
-        let state = helper
-            .test_state_builder()
+        let state = builder
             .vessels(1)
             .modify(|v| {
                 v.fiskeridir.length = PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY as f64 - 1.0;
@@ -359,10 +339,9 @@ async fn test_ais_vms_does_not_return_ais_positions_for_vessels_under_15m_withou
 
 #[tokio::test]
 async fn test_ais_track_return_positions_for_vessels_under_15m_with_full_ais_permission() {
-    test(|helper| async move {
+    test(|helper, builder| async move {
         let pos_timestamp = Utc.timestamp_opt(1000, 0).unwrap();
-        let state = helper
-            .test_state_builder()
+        let state = builder
             .vessels(1)
             .modify(|v| {
                 v.fiskeridir.length = PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY as f64 - 1.0;
@@ -398,10 +377,9 @@ async fn test_ais_track_return_positions_for_vessels_under_15m_with_full_ais_per
 #[tokio::test]
 async fn test_ais_vms_does_not_return_positions_for_vessels_under_15m_with_correct_roles_but_missing_policy(
 ) {
-    test(|helper| async move {
+    test(|helper, builder| async move {
         let pos_timestamp = Utc.timestamp_opt(1000, 0).unwrap();
-        let state = helper
-            .test_state_builder()
+        let state = builder
             .vessels(1)
             .modify(|v| {
                 v.fiskeridir.length = PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY as f64 - 1.0;
@@ -440,10 +418,9 @@ async fn test_ais_vms_does_not_return_positions_for_vessels_under_15m_with_corre
 #[tokio::test]
 async fn test_ais_track_does_not_return_positions_for_vessels_under_15m_with_correct_policy_but_missing_role(
 ) {
-    test(|helper| async move {
+    test(|helper, builder| async move {
         let pos_timestamp = Utc.timestamp_opt(1000, 0).unwrap();
-        let state = helper
-            .test_state_builder()
+        let state = builder
             .vessels(1)
             .modify(|v| {
                 v.fiskeridir.length = PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY as f64 - 1.0;

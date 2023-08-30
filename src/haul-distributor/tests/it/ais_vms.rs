@@ -1,10 +1,10 @@
 use chrono::{DateTime, Duration, Utc};
 use fiskeridir_rs::{CallSign, ErsDca, SpeciesGroup};
 use futures::TryStreamExt;
-use haul_distributor::{AisVms, HaulDistributor};
+use haul_distributor::AisVms;
 use kyogre_core::{
-    ActiveHaulsFilter, CatchLocationId, FiskeridirVesselId, Haul, HaulMatrixXFeature, HaulsQuery,
-    Mmsi, WebApiOutboundPort,
+    ActiveHaulsFilter, CatchLocationId, FiskeridirVesselId, Haul, HaulDistributor,
+    HaulMatrixXFeature, HaulsQuery, Mmsi, WebApiOutboundPort,
 };
 
 use crate::helper::test;

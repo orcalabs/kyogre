@@ -15,7 +15,7 @@ use web_api::routes::{
 
 #[tokio::test]
 async fn test_hauls_matrix_returns_correct_sum_for_all_hauls() {
-    test_with_cache(|helper| async move {
+    test_with_cache(|helper, _builder| async move {
         let filter = ActiveHaulsFilter::Date;
         let mut ers1 = ErsDca::test_default(1, Some(1));
         let mut ers2 = ErsDca::test_default(2, Some(2));
@@ -47,7 +47,7 @@ async fn test_hauls_matrix_returns_correct_sum_for_all_hauls() {
 
 #[tokio::test]
 async fn test_hauls_matrix_filters_by_months() {
-    test_with_cache(|helper| async move {
+    test_with_cache(|helper, _builder| async move {
         let filter = ActiveHaulsFilter::GearGroup;
 
         let mut ers1 = ErsDca::test_default(1, None);
@@ -97,7 +97,7 @@ async fn test_hauls_matrix_filters_by_months() {
 
 #[tokio::test]
 async fn test_hauls_matrix_filters_by_vessel_length() {
-    test_with_cache(|helper| async move {
+    test_with_cache(|helper, _builder| async move {
         let filter = ActiveHaulsFilter::SpeciesGroup;
         let mut ers1 = ErsDca::test_default(1, None);
         let mut ers2 = ErsDca::test_default(2, None);
@@ -143,7 +143,7 @@ async fn test_hauls_matrix_filters_by_vessel_length() {
 
 #[tokio::test]
 async fn test_hauls_matrix_filters_by_species_group() {
-    test_with_cache(|helper| async move {
+    test_with_cache(|helper, _builder| async move {
         let filter = ActiveHaulsFilter::GearGroup;
         let mut ers1 = ErsDca::test_default(1, None);
         let mut ers2 = ErsDca::test_default(2, None);
@@ -188,7 +188,7 @@ async fn test_hauls_matrix_filters_by_species_group() {
 
 #[tokio::test]
 async fn test_hauls_matrix_filters_by_gear_group() {
-    test_with_cache(|helper| async move {
+    test_with_cache(|helper, _builder| async move {
         let filter = ActiveHaulsFilter::SpeciesGroup;
         let mut ers1 = ErsDca::test_default(1, None);
         let mut ers2 = ErsDca::test_default(2, None);
@@ -233,7 +233,7 @@ async fn test_hauls_matrix_filters_by_gear_group() {
 
 #[tokio::test]
 async fn test_hauls_matrix_filters_by_fiskeridir_vessel_ids() {
-    test_with_cache(|helper| async move {
+    test_with_cache(|helper, _builder| async move {
         let filter = ActiveHaulsFilter::Date;
 
         let mut ers1 = ErsDca::test_default(1, Some(1));
@@ -275,7 +275,7 @@ async fn test_hauls_matrix_filters_by_fiskeridir_vessel_ids() {
 
 #[tokio::test]
 async fn test_hauls_matrix_filters_by_catch_locations() {
-    test_with_cache(|helper| async move {
+    test_with_cache(|helper, _builder| async move {
         let filter = ActiveHaulsFilter::Date;
 
         let mut ers1 = ErsDca::test_default(1, Some(1));
@@ -308,7 +308,7 @@ async fn test_hauls_matrix_filters_by_catch_locations() {
 
 #[tokio::test]
 async fn test_hauls_matrix_date_sum_area_table_is_correct() {
-    test_with_cache(|helper| async move {
+    test_with_cache(|helper, _builder| async move {
         let filter = ActiveHaulsFilter::Date;
 
         let mut ers1 = ErsDca::test_default(1, None);
@@ -363,7 +363,7 @@ async fn test_hauls_matrix_date_sum_area_table_is_correct() {
 
 #[tokio::test]
 async fn test_hauls_matrix_gear_group_sum_area_table_is_correct() {
-    test_with_cache(|helper| async move {
+    test_with_cache(|helper, _builder| async move {
         let filter = ActiveHaulsFilter::GearGroup;
 
         let mut ers1 = ErsDca::test_default(1, None);
@@ -415,7 +415,7 @@ async fn test_hauls_matrix_gear_group_sum_area_table_is_correct() {
 
 #[tokio::test]
 async fn test_hauls_matrix_vessel_length_sum_area_table_is_correct() {
-    test_with_cache(|helper| async move {
+    test_with_cache(|helper, _builder| async move {
         let filter = ActiveHaulsFilter::VesselLength;
 
         let mut ers1 = ErsDca::test_default(1, None);
@@ -465,7 +465,7 @@ async fn test_hauls_matrix_vessel_length_sum_area_table_is_correct() {
 
 #[tokio::test]
 async fn test_hauls_matrix_species_group_sum_area_table_is_correct() {
-    test_with_cache(|helper| async move {
+    test_with_cache(|helper, _builder| async move {
         let filter = ActiveHaulsFilter::SpeciesGroup;
         let mut ers1 = ErsDca::test_default(1, None);
         let mut ers2 = ErsDca::test_default(2, None);
@@ -515,7 +515,7 @@ async fn test_hauls_matrix_species_group_sum_area_table_is_correct() {
 #[tokio::test]
 async fn test_hauls_matrix_have_correct_totals_after_dca_message_is_replaced_by_newer_version_with_another_weight(
 ) {
-    test_with_cache(|helper| async move {
+    test_with_cache(|helper, _builder| async move {
         let filter = ActiveHaulsFilter::SpeciesGroup;
 
         let mut ers1 = ErsDca::test_default(1, None);

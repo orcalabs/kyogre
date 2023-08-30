@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use chrono::{DateTime, Utc};
 use error_stack::Context;
 
@@ -6,7 +8,7 @@ pub struct InsertError;
 
 impl Context for InsertError {}
 
-impl std::fmt::Display for InsertError {
+impl Display for InsertError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str("an error occurred during data insertion")
     }
@@ -17,7 +19,7 @@ pub struct QueryError;
 
 impl Context for QueryError {}
 
-impl std::fmt::Display for QueryError {
+impl Display for QueryError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str("an error occurred during data retrieval")
     }
@@ -28,7 +30,7 @@ pub struct UpdateError;
 
 impl Context for UpdateError {}
 
-impl std::fmt::Display for UpdateError {
+impl Display for UpdateError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str("an error occurred while updating data")
     }
@@ -39,7 +41,7 @@ pub struct DeleteError;
 
 impl Context for DeleteError {}
 
-impl std::fmt::Display for DeleteError {
+impl Display for DeleteError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str("an error occurred while deleting data")
     }
@@ -53,7 +55,7 @@ pub enum DateRangeError {
 
 impl std::error::Error for DateRangeError {}
 
-impl std::fmt::Display for DateRangeError {
+impl Display for DateRangeError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             DateRangeError::Ordering(start, end) => f.write_fmt(format_args!(
@@ -70,7 +72,7 @@ pub struct ConversionError;
 
 impl Context for ConversionError {}
 
-impl std::fmt::Display for ConversionError {
+impl Display for ConversionError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str("an error occurred during data conversion")
     }
@@ -84,7 +86,7 @@ pub enum BearerTokenError {
 
 impl Context for BearerTokenError {}
 
-impl std::fmt::Display for BearerTokenError {
+impl Display for BearerTokenError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             BearerTokenError::Configuration => f.write_str("invalid oauth configuration"),
@@ -102,7 +104,7 @@ pub enum LandingMatrixIndexError {
 
 impl std::error::Error for LandingMatrixIndexError {}
 
-impl std::fmt::Display for LandingMatrixIndexError {
+impl Display for LandingMatrixIndexError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             LandingMatrixIndexError::Date(v) => f.write_fmt(format_args!(
@@ -133,7 +135,7 @@ pub enum HaulMatrixIndexError {
 
 impl std::error::Error for HaulMatrixIndexError {}
 
-impl std::fmt::Display for HaulMatrixIndexError {
+impl Display for HaulMatrixIndexError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             HaulMatrixIndexError::Date(v) => f.write_fmt(format_args!(
@@ -151,5 +153,66 @@ impl std::fmt::Display for HaulMatrixIndexError {
                 f.write_fmt(format_args!("encountered an species group {}", v))
             }
         }
+    }
+}
+
+#[derive(Debug)]
+pub struct TripAssemblerError;
+
+impl Context for TripAssemblerError {}
+
+impl Display for TripAssemblerError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("an error occured during trip assembly")
+    }
+}
+
+#[derive(Debug)]
+pub struct TripPrecisionError;
+
+impl Context for TripPrecisionError {}
+
+impl Display for TripPrecisionError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("an error occured during trip precision calculation")
+    }
+}
+
+#[derive(Debug)]
+pub enum EngineError {
+    Transition,
+}
+
+impl Context for EngineError {}
+
+impl Display for EngineError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            EngineError::Transition => {
+                f.write_str("an error occured when trying to figure out the next state transition")
+            }
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct BenchmarkError;
+
+impl Context for BenchmarkError {}
+
+impl Display for BenchmarkError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("an error occured while running a benchmark")
+    }
+}
+
+#[derive(Debug)]
+pub struct HaulDistributorError;
+
+impl std::error::Error for HaulDistributorError {}
+
+impl Display for HaulDistributorError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("an error occured while running a haul distributor")
     }
 }

@@ -8,6 +8,10 @@ use num_traits::FromPrimitive;
 use serde::{de::Visitor, Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 
+mod benchmark;
+
+pub use benchmark::*;
+
 #[derive(Debug, Clone)]
 pub struct Vessel {
     pub fiskeridir: FiskeridirVessel,

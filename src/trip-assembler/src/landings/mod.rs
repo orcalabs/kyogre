@@ -1,14 +1,12 @@
 use crate::precision::TripPrecisionCalculator;
-use crate::{
-    DeliveryPointPrecision, FirstMovedPoint, PrecisionConfig, StartSearchPoint, TripAssembler,
-    TripAssemblerError, TripAssemblerState, TripPrecisionError,
-};
+use crate::{DeliveryPointPrecision, FirstMovedPoint, PrecisionConfig, StartSearchPoint};
 use async_trait::async_trait;
 use chrono::Duration;
 use error_stack::Result;
 use error_stack::ResultExt;
 use kyogre_core::{
-    PrecisionDirection, RelevantEventType, Trip, TripAssemblerId, TripPrecisionOutboundPort,
+    PrecisionDirection, RelevantEventType, Trip, TripAssembler, TripAssemblerError,
+    TripAssemblerId, TripAssemblerState, TripPrecisionError, TripPrecisionOutboundPort,
     TripPrecisionUpdate, Vessel, VesselEventDetailed,
 };
 

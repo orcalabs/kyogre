@@ -7,7 +7,7 @@ use web_api::routes::v1::vessel::Vessel;
 
 #[tokio::test]
 async fn test_vessels_returns_merged_data_from_fiskeridir_and_ais() {
-    test(|helper| async move {
+    test(|helper, _builder| async move {
         let call_sign = CallSign::try_from("LK-28").unwrap();
         let ais_vessel = helper
             .db
@@ -34,7 +34,7 @@ async fn test_vessels_returns_merged_data_from_fiskeridir_and_ais() {
 
 #[tokio::test]
 async fn test_vessel_contains_weight_per_hour_benchmark() {
-    test(|mut helper| async move {
+    test(|mut helper, _builder| async move {
         let vessel_id = FiskeridirVesselId(1);
         helper
             .db
@@ -73,7 +73,7 @@ async fn test_vessel_contains_weight_per_hour_benchmark() {
 
 #[tokio::test]
 async fn test_vessel_weight_per_hour_is_correct_over_multiple_trips() {
-    test(|mut helper| async move {
+    test(|mut helper, _builder| async move {
         let vessel_id = FiskeridirVesselId(1);
         helper
             .db
@@ -129,7 +129,7 @@ async fn test_vessel_weight_per_hour_is_correct_over_multiple_trips() {
 
 #[tokio::test]
 async fn test_vessel_weight_per_hour_includes_landings_not_covered_by_trips() {
-    test(|mut helper| async move {
+    test(|mut helper, _builder| async move {
         let vessel_id = FiskeridirVesselId(1);
         helper
             .db
@@ -180,7 +180,7 @@ async fn test_vessel_weight_per_hour_includes_landings_not_covered_by_trips() {
 
 #[tokio::test]
 async fn test_vessel_weight_per_hour_excludes_landings_from_other_vessels() {
-    test(|mut helper| async move {
+    test(|mut helper, _builder| async move {
         let vessel_id = FiskeridirVesselId(1);
         let vessel_id2 = FiskeridirVesselId(2);
         helper
@@ -241,7 +241,7 @@ async fn test_vessel_weight_per_hour_excludes_landings_from_other_vessels() {
 
 #[tokio::test]
 async fn test_vessel_weight_per_hour_is_zero_if_there_are_trips_but_no_landings() {
-    test(|mut helper| async move {
+    test(|mut helper, _builder| async move {
         let vessel_id = FiskeridirVesselId(1);
         helper
             .db
@@ -269,7 +269,7 @@ async fn test_vessel_weight_per_hour_is_zero_if_there_are_trips_but_no_landings(
 
 #[tokio::test]
 async fn test_vessel_weight_per_hour_is_zero_if_there_are_landings_but_no_trips() {
-    test(|helper| async move {
+    test(|helper, _builder| async move {
         let vessel_id = FiskeridirVesselId(1);
         helper
             .db
@@ -297,7 +297,7 @@ async fn test_vessel_weight_per_hour_is_zero_if_there_are_landings_but_no_trips(
 
 #[tokio::test]
 async fn test_vessel_has_zero_gear_groups_with_no_landings() {
-    test(|helper| async move {
+    test(|helper, _builder| async move {
         let vessel_id = FiskeridirVesselId(1);
         helper
             .db
@@ -318,7 +318,7 @@ async fn test_vessel_has_zero_gear_groups_with_no_landings() {
 
 #[tokio::test]
 async fn test_vessel_has_gear_groups_of_landings() {
-    test(|helper| async move {
+    test(|helper, _builder| async move {
         let vessel_id = 1;
         let mut landing = Landing::test_default(1, Some(vessel_id));
         landing.gear.group = GearGroup::Not;
@@ -341,7 +341,7 @@ async fn test_vessel_has_gear_groups_of_landings() {
 
 #[tokio::test]
 async fn test_vessel_removes_gear_group_when_last_landing_is_replaced_with_new_gear_group() {
-    test(|helper| async move {
+    test(|helper, _builder| async move {
         let vessel_id = 1;
         let mut landing = Landing::test_default(1, Some(vessel_id));
         landing.gear.group = GearGroup::Not;
@@ -368,7 +368,7 @@ async fn test_vessel_removes_gear_group_when_last_landing_is_replaced_with_new_g
 
 #[tokio::test]
 async fn test_vessel_has_zero_species_groups_with_no_landings() {
-    test(|helper| async move {
+    test(|helper, _builder| async move {
         let vessel_id = FiskeridirVesselId(1);
         helper
             .db
@@ -389,7 +389,7 @@ async fn test_vessel_has_zero_species_groups_with_no_landings() {
 
 #[tokio::test]
 async fn test_vessel_has_species_groups_of_landings() {
-    test(|helper| async move {
+    test(|helper, _builder| async move {
         let vessel_id = 1;
         let mut landing = Landing::test_default(1, Some(vessel_id));
         landing.product.species.group_code = SpeciesGroup::Torsk;
@@ -415,7 +415,7 @@ async fn test_vessel_has_species_groups_of_landings() {
 
 #[tokio::test]
 async fn test_vessel_removes_species_group_when_last_landing_is_replaced_with_new_species_group() {
-    test(|helper| async move {
+    test(|helper, _builder| async move {
         let vessel_id = 1;
         let mut landing = Landing::test_default(1, Some(vessel_id));
         landing.product.species.group_code = SpeciesGroup::Torsk;

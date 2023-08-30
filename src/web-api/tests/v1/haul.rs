@@ -10,7 +10,7 @@ use web_api::routes::{
 
 #[tokio::test]
 async fn test_hauls_returns_all_hauls() {
-    test(|helper| async move {
+    test(|helper, _builder| async move {
         helper.db.generate_ers_dca(1, None).await;
         helper.db.generate_ers_dca(2, None).await;
         helper.db.generate_ers_dca(3, None).await;
@@ -27,7 +27,7 @@ async fn test_hauls_returns_all_hauls() {
 
 #[tokio::test]
 async fn test_hauls_returns_hauls_in_specified_months() {
-    test(|helper| async move {
+    test(|helper, _builder| async move {
         let mut ers1 = ErsDca::test_default(1, None);
         let mut ers2 = ErsDca::test_default(2, None);
         let ers3 = ErsDca::test_default(3, None);
@@ -60,7 +60,7 @@ async fn test_hauls_returns_hauls_in_specified_months() {
 
 #[tokio::test]
 async fn test_hauls_returns_hauls_in_catch_location() {
-    test(|helper| async move {
+    test(|helper, _builder| async move {
         let mut ers1 = ErsDca::test_default(1, None);
         let mut ers2 = ErsDca::test_default(2, None);
         let ers3 = ErsDca::test_default(3, None);
@@ -94,7 +94,7 @@ async fn test_hauls_returns_hauls_in_catch_location() {
 
 #[tokio::test]
 async fn test_hauls_returns_hauls_with_gear_group_ids() {
-    test(|helper| async move {
+    test(|helper, _builder| async move {
         let mut ers1 = ErsDca::test_default(1, None);
         let mut ers2 = ErsDca::test_default(2, None);
         let ers3 = ErsDca::test_default(3, None);
@@ -125,7 +125,7 @@ async fn test_hauls_returns_hauls_with_gear_group_ids() {
 
 #[tokio::test]
 async fn test_hauls_returns_hauls_with_species_group_ids() {
-    test(|helper| async move {
+    test(|helper, _builder| async move {
         let mut ers1 = ErsDca::test_default(1, None);
         let mut ers2 = ErsDca::test_default(2, None);
         let ers3 = ErsDca::test_default(3, None);
@@ -156,7 +156,7 @@ async fn test_hauls_returns_hauls_with_species_group_ids() {
 
 #[tokio::test]
 async fn test_hauls_returns_hauls_with_vessel_length_ranges() {
-    test(|helper| async move {
+    test(|helper, _builder| async move {
         let mut ers1 = ErsDca::test_default(1, None);
         let mut ers2 = ErsDca::test_default(2, None);
         let ers3 = ErsDca::test_default(3, None);
@@ -184,7 +184,7 @@ async fn test_hauls_returns_hauls_with_vessel_length_ranges() {
 
 #[tokio::test]
 async fn test_hauls_returns_hauls_with_fiskeridir_vessel_ids() {
-    test(|helper| async move {
+    test(|helper, _builder| async move {
         let ers1 = ErsDca::test_default(1, Some(1));
         let ers2 = ErsDca::test_default(2, Some(2));
         let ers3 = ErsDca::test_default(3, None);
@@ -209,7 +209,7 @@ async fn test_hauls_returns_hauls_with_fiskeridir_vessel_ids() {
 
 #[tokio::test]
 async fn test_hauls_sorts_by_start_timestamp() {
-    test(|helper| async move {
+    test(|helper, _builder| async move {
         let mut expected = vec![
             ErsDca::test_default(1, None),
             ErsDca::test_default(2, None),
@@ -257,7 +257,7 @@ async fn test_hauls_sorts_by_start_timestamp() {
 
 #[tokio::test]
 async fn test_hauls_sorts_by_stop_timestamp() {
-    test(|helper| async move {
+    test(|helper, _builder| async move {
         let mut expected = vec![
             ErsDca::test_default(1, None),
             ErsDca::test_default(2, None),
@@ -309,7 +309,7 @@ async fn test_hauls_sorts_by_stop_timestamp() {
 
 #[tokio::test]
 async fn test_hauls_sorts_by_weight() {
-    test(|helper| async move {
+    test(|helper, _builder| async move {
         let mut expected = vec![
             ErsDca::test_default(1, None),
             ErsDca::test_default(2, None),
@@ -357,7 +357,7 @@ async fn test_hauls_sorts_by_weight() {
 
 #[tokio::test]
 async fn test_hauls_species_fiskeridir_defaults_to_zero() {
-    test(|helper| async move {
+    test(|helper, _builder| async move {
         let mut ers = ErsDca::test_default(1, None);
         ers.catch.species.species_fdir_code = None;
 

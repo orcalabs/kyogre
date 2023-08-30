@@ -6,7 +6,7 @@ use kyogre_core::{
 };
 use tracing::{event, Level};
 
-use crate::{TripDistancer, TripDistancerError};
+use kyogre_core::{TripDistancer, TripDistancerError};
 
 #[derive(Default)]
 pub struct AisVms {}
