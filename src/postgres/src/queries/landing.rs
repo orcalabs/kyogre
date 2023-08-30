@@ -392,16 +392,8 @@ RETURNING
             r#"
 DELETE FROM landings
 WHERE
-    landing_id IN (
-        SELECT
-            l.landing_id
-        FROM
-            landings l
-            LEFT JOIN UNNEST($1::TEXT[]) u (landing_id) ON l.landing_id = u.landing_id
-        WHERE
-            u.landing_id IS NULL
-            AND l.data_year = $2::INT
-    )
+    (NOT landing_id = ANY ($1::TEXT[]))
+    AND data_year = $2::INT
 RETURNING
     fiskeridir_vessel_id,
     landing_timestamp AS "landing_timestamp!"
