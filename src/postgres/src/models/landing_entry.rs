@@ -67,13 +67,13 @@ pub struct NewLandingEntry {
     pub species_main_group_id: i32,
 }
 
-impl TryFrom<fiskeridir_rs::Landing> for NewLandingEntry {
+impl TryFrom<&fiskeridir_rs::Landing> for NewLandingEntry {
     type Error = Report<PostgresError>;
 
-    fn try_from(landing: fiskeridir_rs::Landing) -> Result<Self, Self::Error> {
+    fn try_from(landing: &fiskeridir_rs::Landing) -> Result<Self, Self::Error> {
         Ok(NewLandingEntry {
-            landing_id: landing.id.into_inner(),
-            size_grouping_code: landing.product.size_grouping_code,
+            landing_id: landing.id.clone().into_inner(),
+            size_grouping_code: landing.product.size_grouping_code.clone(),
             withdrawn_catch_value: opt_float_to_decimal(landing.finances.withdrawn_catch_value)
                 .change_context(PostgresError::DataConversion)?,
             catch_value: opt_float_to_decimal(landing.finances.catch_value)
@@ -116,7 +116,7 @@ impl TryFrom<fiskeridir_rs::Landing> for NewLandingEntry {
             )
             .change_context(PostgresError::DataConversion)?,
             species_id: landing.product.species.code as i32,
-            species_fao_id: landing.product.species.fao_code,
+            species_fao_id: landing.product.species.fao_code.clone(),
             species_group_id: landing.product.species.group_code as i32,
             species_fiskeridir_id: landing.product.species.fdir_code as i32,
             species_main_group_id: landing.product.species.main_group_code as i32,

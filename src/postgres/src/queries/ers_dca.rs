@@ -36,7 +36,7 @@ impl PostgresAdapter {
                 Ok(item) => {
                     chunk.push(item);
                     if i % CHUNK_SIZE == 0 && i > 0 {
-                        let set = ErsDcaSet::new(chunk)?;
+                        let set = ErsDcaSet::new(chunk.drain(0..))?;
                         self.add_ers_dca_set(
                             set,
                             &mut earliest_dca,
@@ -45,13 +45,12 @@ impl PostgresAdapter {
                             &mut tx,
                         )
                         .await?;
-                        chunk = Vec::with_capacity(CHUNK_SIZE);
                     }
                 }
             }
         }
         if !chunk.is_empty() {
-            let set = ErsDcaSet::new(chunk)?;
+            let set = ErsDcaSet::new(chunk.drain(0..))?;
             self.add_ers_dca_set(
                 set,
                 &mut earliest_dca,
