@@ -188,7 +188,7 @@ WHERE
                     existing_landing_ids.insert(item.id.clone().into_inner());
                     chunk.push(item);
                     if i % CHUNK_SIZE == 0 && i > 0 {
-                        let set = LandingSet::new(chunk, data_year)?;
+                        let set = LandingSet::new(chunk.drain(0..), data_year)?;
                         self.add_landing_set(
                             set,
                             &mut earliest_landing,
@@ -198,13 +198,12 @@ WHERE
                             &mut tx,
                         )
                         .await?;
-                        chunk = Vec::with_capacity(CHUNK_SIZE);
                     }
                 }
             }
         }
         if !chunk.is_empty() {
-            let set = LandingSet::new(chunk, data_year)?;
+            let set = LandingSet::new(chunk.drain(0..), data_year)?;
             self.add_landing_set(
                 set,
                 &mut earliest_landing,

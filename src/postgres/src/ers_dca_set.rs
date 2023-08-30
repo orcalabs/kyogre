@@ -79,12 +79,12 @@ impl ErsDcaSet {
         }
     }
 
-    pub(crate) fn new<T: IntoIterator<Item = fiskeridir_rs::ErsDca>>(
+    pub(crate) fn new<T: Iterator<Item = fiskeridir_rs::ErsDca>>(
         ers_dca: T,
     ) -> Result<ErsDcaSet, PostgresError> {
         let mut set = ErsDcaSet::default();
 
-        for e in ers_dca.into_iter() {
+        for e in ers_dca {
             set.add_ers_message_type(&e);
             set.add_area_grouping(&e);
             set.add_herring_population(&e)?;
