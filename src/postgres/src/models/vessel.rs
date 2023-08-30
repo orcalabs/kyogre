@@ -7,7 +7,7 @@ use crate::{
 use bigdecimal::BigDecimal;
 use chrono::{DateTime, Utc};
 use error_stack::{IntoReport, Report, ResultExt};
-use fiskeridir_rs::{CallSign, GearGroup, VesselLengthGroup, VesselType};
+use fiskeridir_rs::{CallSign, GearGroup, SpeciesGroup, VesselLengthGroup, VesselType};
 use kyogre_core::{
     FiskeridirVesselId, FiskeridirVesselSource, Mmsi, TripAssemblerId, VesselBenchmarkId,
 };
@@ -198,6 +198,7 @@ pub struct FiskeridirAisVesselCombination {
     pub preferred_trip_assembler: TripAssemblerId,
     pub benchmarks: String,
     pub gear_group_ids: Vec<GearGroup>,
+    pub species_group_ids: Vec<SpeciesGroup>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -280,6 +281,7 @@ impl TryFrom<FiskeridirAisVesselCombination> for kyogre_core::Vessel {
                 .find(|v| v.benchmark_id == VesselBenchmarkId::WeightPerHour)
                 .map(|v| v.value),
             gear_groups: value.gear_group_ids,
+            species_groups: value.species_group_ids,
         })
     }
 }

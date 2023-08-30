@@ -2,7 +2,7 @@ use std::fmt;
 
 use crate::{AisVessel, Mmsi, TripAssemblerId};
 use chrono::{DateTime, Utc};
-use fiskeridir_rs::{CallSign, GearGroup, RegisterVesselOwner, VesselLengthGroup};
+use fiskeridir_rs::{CallSign, GearGroup, RegisterVesselOwner, SpeciesGroup, VesselLengthGroup};
 use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::FromPrimitive;
 use serde::{de::Visitor, Deserialize, Serialize};
@@ -15,6 +15,7 @@ pub struct Vessel {
     pub preferred_trip_assembler: TripAssemblerId,
     pub fish_caught_per_hour: Option<f64>,
     pub gear_groups: Vec<GearGroup>,
+    pub species_groups: Vec<SpeciesGroup>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

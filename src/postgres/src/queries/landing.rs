@@ -238,6 +238,7 @@ WHERE
         .await?;
         self.connect_trip_to_events(vessel_event_ids, VesselEventType::Landing, &mut tx)
             .await?;
+        self.add_vessel_gear_and_species_groups(&mut tx).await?;
 
         tx.commit()
             .await
