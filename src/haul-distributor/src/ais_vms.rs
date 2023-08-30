@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use async_trait::async_trait;
 use error_stack::{IntoReport, Result, ResultExt};
 use geo::{coord, Contains};
@@ -7,8 +5,8 @@ use kyogre_core::{
     CatchLocation, DateRange, HaulDistributionOutput, HaulDistributorId, HaulDistributorInbound,
     HaulDistributorOutbound, Vessel,
 };
-
-use crate::{HaulDistributor, HaulDistributorError};
+use kyogre_core::{HaulDistributor, HaulDistributorError};
+use std::collections::HashMap;
 
 #[derive(Default)]
 pub struct AisVms {}

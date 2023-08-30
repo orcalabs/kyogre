@@ -7,6 +7,10 @@ use serde_repr::Deserialize_repr;
 
 use crate::CatchLocationId;
 
+mod distributor;
+
+pub use distributor::*;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize)]
 pub struct HaulId(pub i64);
 

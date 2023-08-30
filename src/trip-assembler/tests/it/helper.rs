@@ -8,7 +8,6 @@ use rand::random;
 use std::panic;
 use std::sync::Once;
 use tracing_subscriber::FmtSubscriber;
-use trip_assembler::TripAssembler;
 
 static TRACING: Once = Once::new();
 static DATABASE_PASSWORD: &str = "test123";

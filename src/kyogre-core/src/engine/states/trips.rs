@@ -1,8 +1,7 @@
-use crate::{SharedState, TripProcessor};
+use crate::{SharedState, TripAssembler, TripAssemblerError};
 use async_trait::async_trait;
 use machine::Schedule;
 use tracing::{event, instrument, Level};
-use trip_assembler::TripAssemblerError;
 
 pub struct TripsState;
 
@@ -11,7 +10,7 @@ impl machine::State for TripsState {
     type SharedState = SharedState;
 
     async fn run(&self, shared_state: &Self::SharedState) {
-        for a in &shared_state.trip_processors {
+        for a in &shared_state.trip_assemblers {
             if let Err(e) = run_assembler(shared_state, a.as_ref()).await {
                 event!(Level::ERROR, "failed to run trip assembler: {:?}", e);
             }
@@ -25,10 +24,10 @@ impl machine::State for TripsState {
 #[instrument(skip_all, fields(app.trip_assembler_id))]
 async fn run_assembler(
     shared_state: &SharedState,
-    trip_assembler: &dyn TripProcessor,
+    trip_assembler: &dyn TripAssembler,
 ) -> Result<(), TripAssemblerError> {
     match trip_assembler
-        .produce_and_store_trips(shared_state.postgres_adapter())
+        .produce_and_store_trips(shared_state.trip_assembler_outbound_port.as_ref())
         .await
     {
         Ok(r) => {

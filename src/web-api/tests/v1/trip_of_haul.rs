@@ -7,7 +7,7 @@ use web_api::routes::v1::trip::Trip;
 
 #[tokio::test]
 async fn test_trip_of_haul_returns_none_of_no_trip_is_connected_to_given_haul_id() {
-    test(|helper| async move {
+    test(|helper, _builder| async move {
         let response = helper.app.get_trip_of_haul(&HaulId(7645323266)).await;
         assert_eq!(response.status(), StatusCode::OK);
 
@@ -19,7 +19,7 @@ async fn test_trip_of_haul_returns_none_of_no_trip_is_connected_to_given_haul_id
 
 #[tokio::test]
 async fn test_trip_of_haul_does_not_return_trip_outside_haul_period() {
-    test(|mut helper| async move {
+    test(|mut helper, _builder| async move {
         let fiskeridir_vessel_id = FiskeridirVesselId(11);
         let start = Utc.timestamp_opt(1000000, 0).unwrap();
         let end = Utc.timestamp_opt(10000000, 0).unwrap();
@@ -47,7 +47,7 @@ async fn test_trip_of_haul_does_not_return_trip_outside_haul_period() {
 
 #[tokio::test]
 async fn test_trip_of_haul_does_not_return_trip_of_other_vessels() {
-    test(|mut helper| async move {
+    test(|mut helper, _builder| async move {
         let fiskeridir_vessel_id = FiskeridirVesselId(11);
         let fiskeridir_vessel_id2 = FiskeridirVesselId(12);
         let start = Utc.timestamp_opt(10000, 0).unwrap();
@@ -76,7 +76,7 @@ async fn test_trip_of_haul_does_not_return_trip_of_other_vessels() {
 
 #[tokio::test]
 async fn test_trip_of_haul_returns_all_hauls_and_landings_connected_to_trip() {
-    test(|mut helper| async move {
+    test(|mut helper, _builder| async move {
         let fiskeridir_vessel_id = FiskeridirVesselId(1);
         let start = Utc.timestamp_opt(10000, 0).unwrap();
         let end = Utc.timestamp_opt(100000, 0).unwrap();
@@ -110,7 +110,7 @@ async fn test_trip_of_haul_returns_all_hauls_and_landings_connected_to_trip() {
 
 #[tokio::test]
 async fn test_aggregates_landing_data_per_product_quality_and_species_id() {
-    test(|mut helper| async move {
+    test(|mut helper, _builder| async move {
         let fiskeridir_vessel_id = FiskeridirVesselId(1);
         let start = Utc.timestamp_opt(10000, 0).unwrap();
         let end = Utc.timestamp_opt(100000, 0).unwrap();
@@ -166,7 +166,7 @@ async fn test_aggregates_landing_data_per_product_quality_and_species_id() {
 
 #[tokio::test]
 async fn test_trip_of_haul_returns_precision_range_of_trip_if_it_exists() {
-    test(|mut helper| async move {
+    test(|mut helper, _builder| async move {
         let call_sign = CallSign::try_from("LK-28").unwrap();
         let fiskeridir_vessel_id = FiskeridirVesselId(11);
         helper

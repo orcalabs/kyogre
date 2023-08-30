@@ -10,7 +10,7 @@ use web_api::routes::{
 
 #[tokio::test]
 async fn test_landings_returns_all_landings() {
-    test(|helper| async move {
+    test(|helper, _builder| async move {
         let vessel_id = FiskeridirVesselId(111);
         let date = Utc.timestamp_opt(1000, 0).unwrap();
 
@@ -35,7 +35,7 @@ async fn test_landings_returns_all_landings() {
 
 #[tokio::test]
 async fn test_landings_returns_landings_in_specified_months() {
-    test(|helper| async move {
+    test(|helper, _builder| async move {
         let mut landing1 = fiskeridir_rs::Landing::test_default(1, None);
         let mut landing2 = fiskeridir_rs::Landing::test_default(2, None);
         let landing3 = fiskeridir_rs::Landing::test_default(3, None);
@@ -69,7 +69,7 @@ async fn test_landings_returns_landings_in_specified_months() {
 
 #[tokio::test]
 async fn test_landings_returns_landings_in_catch_location() {
-    test(|helper| async move {
+    test(|helper, _builder| async move {
         let mut landing1 = fiskeridir_rs::Landing::test_default(1, None);
         let mut landing2 = fiskeridir_rs::Landing::test_default(2, None);
         let landing3 = fiskeridir_rs::Landing::test_default(3, None);
@@ -106,7 +106,7 @@ async fn test_landings_returns_landings_in_catch_location() {
 
 #[tokio::test]
 async fn test_landings_returns_landings_with_gear_group_ids() {
-    test(|helper| async move {
+    test(|helper, _builder| async move {
         let mut landing1 = fiskeridir_rs::Landing::test_default(1, None);
         let mut landing2 = fiskeridir_rs::Landing::test_default(2, None);
         let landing3 = fiskeridir_rs::Landing::test_default(3, None);
@@ -140,7 +140,7 @@ async fn test_landings_returns_landings_with_gear_group_ids() {
 
 #[tokio::test]
 async fn test_landings_returns_landings_with_species_group_ids() {
-    test(|helper| async move {
+    test(|helper, _builder| async move {
         let mut landing1 = fiskeridir_rs::Landing::test_default(1, None);
         let mut landing2 = fiskeridir_rs::Landing::test_default(2, None);
         let landing3 = fiskeridir_rs::Landing::test_default(3, None);
@@ -174,7 +174,7 @@ async fn test_landings_returns_landings_with_species_group_ids() {
 
 #[tokio::test]
 async fn test_landings_returns_landings_with_vessel_length_ranges() {
-    test(|helper| async move {
+    test(|helper, _builder| async move {
         let mut landing1 = fiskeridir_rs::Landing::test_default(1, None);
         let mut landing2 = fiskeridir_rs::Landing::test_default(2, None);
         let landing3 = fiskeridir_rs::Landing::test_default(3, None);
@@ -205,7 +205,7 @@ async fn test_landings_returns_landings_with_vessel_length_ranges() {
 
 #[tokio::test]
 async fn test_landings_returns_landings_with_fiskeridir_vessel_ids() {
-    test(|helper| async move {
+    test(|helper, _builder| async move {
         let landing1 = fiskeridir_rs::Landing::test_default(1, Some(1));
         let landing2 = fiskeridir_rs::Landing::test_default(2, Some(2));
         let landing3 = fiskeridir_rs::Landing::test_default(3, None);
@@ -233,7 +233,7 @@ async fn test_landings_returns_landings_with_fiskeridir_vessel_ids() {
 
 #[tokio::test]
 async fn test_landings_sorts_by_landing_timestamp() {
-    test(|helper| async move {
+    test(|helper, _builder| async move {
         let mut expected = vec![
             fiskeridir_rs::Landing::test_default(1, None),
             fiskeridir_rs::Landing::test_default(2, None),
@@ -281,7 +281,7 @@ async fn test_landings_sorts_by_landing_timestamp() {
 
 #[tokio::test]
 async fn test_landings_sorts_by_weight() {
-    test(|helper| async move {
+    test(|helper, _builder| async move {
         let mut expected = vec![
             fiskeridir_rs::Landing::test_default(1, None),
             fiskeridir_rs::Landing::test_default(2, None),

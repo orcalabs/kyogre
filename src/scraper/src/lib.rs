@@ -187,17 +187,20 @@ impl Scraper {
         }
     }
 
-    pub async fn run(&self) {
-        for s in &self.scrapers {
-            self.run_scraper(s.as_ref()).await;
-        }
-    }
-
     #[instrument(skip_all, fields(app.scraper))]
     async fn run_scraper(&self, s: &(dyn DataSource)) {
         tracing::Span::current().record("app.scraper", s.id().to_string());
         if let Err(e) = s.scrape(self.processor.as_ref()).await {
             event!(Level::ERROR, "failed to run scraper: {:?}", e);
+        }
+    }
+}
+
+#[async_trait]
+impl kyogre_core::Scraper for Scraper {
+    async fn run(&self) {
+        for s in &self.scrapers {
+            self.run_scraper(s.as_ref()).await;
         }
     }
 }

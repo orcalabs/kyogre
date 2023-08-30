@@ -3,12 +3,12 @@ use super::{
     TripPrecision,
 };
 use crate::LocationDistanceToError;
-use crate::{error::TripPrecisionError, precision::PrecisionConfig, Result};
+use crate::{precision::PrecisionConfig, Result};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use error_stack::{report, ResultExt};
 use geoutils::Location;
-use kyogre_core::{AisVmsPosition, Trip};
+use kyogre_core::{AisVmsPosition, Trip, TripPrecisionError};
 use kyogre_core::{TripPrecisionOutboundPort, Vessel};
 use num_traits::ToPrimitive;
 

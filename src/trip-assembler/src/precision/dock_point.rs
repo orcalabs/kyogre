@@ -2,12 +2,11 @@ use super::{
     find_close_point, PointClusterPreference, PrecisionConfig, PrecisionDirection, PrecisionId,
     PrecisionStop, StartSearchPoint, TripPrecision,
 };
-use crate::error::TripPrecisionError;
 use async_trait::async_trait;
 use chrono::{TimeZone, Utc};
 use error_stack::{Result, ResultExt};
 use geoutils::Location;
-use kyogre_core::{AisVmsPosition, Bound, DateRange, Trip};
+use kyogre_core::{AisVmsPosition, Bound, DateRange, Trip, TripPrecisionError};
 use kyogre_core::{TripPrecisionOutboundPort, Vessel};
 
 /// Precision strategy where we try to find a collection of positions close to the dock points

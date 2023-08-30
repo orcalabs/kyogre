@@ -1,10 +1,10 @@
 use crate::helper::test;
 use chrono::{Duration, TimeZone, Utc};
 use kyogre_core::{
-    DateRange, FiskeridirVesselId, ScraperInboundPort, Trip, TripAssemblerId,
+    DateRange, FiskeridirVesselId, ScraperInboundPort, Trip, TripAssembler, TripAssemblerId,
     TripAssemblerOutboundPort, TripId,
 };
-use trip_assembler::{LandingTripAssembler, TripAssembler};
+use trip_assembler::LandingTripAssembler;
 
 #[tokio::test]
 async fn test_produces_new_trips_without_replacing_existing_ones() {

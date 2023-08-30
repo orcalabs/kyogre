@@ -1,18 +1,17 @@
 use crate::SharedState;
 use async_trait::async_trait;
-use kyogre_core::VerificationOutbound;
 use machine::Schedule;
 use tracing::{event, Level};
 
-pub struct VerifyDatabaseState;
+pub struct UpdateDatabaseViewsState;
 
 #[async_trait]
-impl machine::State for VerifyDatabaseState {
+impl machine::State for UpdateDatabaseViewsState {
     type SharedState = SharedState;
 
     async fn run(&self, shared_state: &Self::SharedState) {
-        if let Err(e) = shared_state.database.verify_database().await {
-            event!(Level::ERROR, "verify database failed with error: {:?}", e);
+        if let Err(e) = shared_state.refresher.refresh().await {
+            event!(Level::ERROR, "failed to update database views {:?}", e);
         }
     }
     fn schedule(&self) -> Schedule {

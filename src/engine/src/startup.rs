@@ -43,9 +43,22 @@ impl App {
         let haul_distributors = settings.haul_distributors();
         let trip_distancers = settings.trip_distancers();
 
+        let postgres = Box::new(postgres);
+
         let shared_state = SharedState::new(
+            postgres.clone(),
+            postgres.clone(),
+            postgres.clone(),
+            postgres.clone(),
+            postgres.clone(),
+            postgres.clone(),
+            postgres.clone(),
+            postgres.clone(),
+            postgres.clone(),
+            postgres.clone(),
+            postgres.clone(),
             postgres,
-            scraper,
+            Some(Box::new(scraper)),
             trip_assemblers,
             benchmarks,
             haul_distributors,

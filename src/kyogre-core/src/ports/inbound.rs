@@ -32,7 +32,7 @@ pub trait WebApiInboundPort {
 }
 
 #[async_trait]
-pub trait TripPrecisionInboundPort {
+pub trait TripPrecisionInboundPort: Send + Sync {
     async fn update_trip_precisions(
         &self,
         updates: Vec<TripPrecisionUpdate>,
@@ -106,6 +106,6 @@ pub trait TripDistancerInbound: Send + Sync {
 }
 
 #[async_trait]
-pub trait DatabaseViewRefresher {
+pub trait DatabaseViewRefresher: Send + Sync {
     async fn refresh(&self) -> Result<(), UpdateError>;
 }

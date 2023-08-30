@@ -122,6 +122,7 @@ pub trait TripAssemblerOutboundPort: Send + Sync {
 
 #[async_trait]
 pub trait TripPrecisionOutboundPort: Send + Sync {
+    async fn all_vessels(&self) -> Result<Vec<Vessel>, QueryError>;
     async fn ports_of_trip(&self, trip_id: TripId) -> Result<TripPorts, QueryError>;
     async fn dock_points_of_trip(&self, trip_id: TripId) -> Result<TripDockPoints, QueryError>;
     async fn ais_vms_positions(

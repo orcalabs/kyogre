@@ -5,7 +5,7 @@ use web_api::routes::v1::user::User;
 
 #[tokio::test]
 async fn test_cant_use_user_endpoints_without_bw_token() {
-    test(|helper| async move {
+    test(|helper, _builder| async move {
         let response = helper.app.get_user("".into()).await;
         assert_eq!(response.status(), StatusCode::NOT_FOUND);
 
@@ -20,7 +20,7 @@ async fn test_cant_use_user_endpoints_without_bw_token() {
 
 #[tokio::test]
 async fn test_update_and_get_user() {
-    test(|helper| async move {
+    test(|helper, _builder| async move {
         let token = helper.bw_helper.get_bw_token();
 
         let vessel_id1 = FiskeridirVesselId(100);

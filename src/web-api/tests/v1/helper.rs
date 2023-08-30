@@ -17,7 +17,7 @@ use strum::IntoEnumIterator;
 use tokio::sync::OnceCell;
 use tracing::{event, Level};
 use tracing_subscriber::FmtSubscriber;
-use trip_assembler::{ErsTripAssembler, LandingTripAssembler, TripAssembler};
+use trip_assembler::{ErsTripAssembler, LandingTripAssembler};
 use vessel_benchmark::*;
 use web_api::{
     routes::v1::{haul, landing},
@@ -47,9 +47,6 @@ pub struct TestHelper {
 }
 
 impl TestHelper {
-    pub fn test_state_builder(&self) -> TestStateBuilder {
-        TestStateBuilder::new(Box::new(self.db.db.clone()), Box::new(self.db.db.clone()))
-    }
     pub fn adapter(&self) -> &PostgresAdapter {
         &self.db.db
     }
@@ -244,7 +241,7 @@ impl TestHelper {
 
 pub async fn test<T, Fut>(test: T)
 where
-    T: FnOnce(TestHelper) -> Fut + panic::UnwindSafe + Send + Sync + 'static,
+    T: FnOnce(TestHelper, TestStateBuilder) -> Fut + panic::UnwindSafe + Send + Sync + 'static,
     Fut: Future<Output = ()> + Send + 'static,
 {
     test_impl(test, false).await;
@@ -252,7 +249,12 @@ where
 
 pub async fn test_with_cache<T, Fut>(test: T)
 where
-    T: FnOnce(TestHelper) -> Fut + panic::UnwindSafe + Send + Sync + Clone + 'static,
+    T: FnOnce(TestHelper, TestStateBuilder) -> Fut
+        + panic::UnwindSafe
+        + Send
+        + Sync
+        + Clone
+        + 'static,
     Fut: Future<Output = ()> + Send + 'static,
 {
     test_impl(test.clone(), true).await;
@@ -260,7 +262,7 @@ where
 
 async fn test_impl<T, Fut>(test: T, run_cache_test: bool)
 where
-    T: FnOnce(TestHelper) -> Fut + panic::UnwindSafe + Send + Sync + 'static,
+    T: FnOnce(TestHelper, TestStateBuilder) -> Fut + panic::UnwindSafe + Send + Sync + 'static,
     Fut: Future<Output = ()> + Send + 'static,
 {
     let mut docker_test = DockerTest::new().with_default_source(Source::DockerHub);
@@ -364,6 +366,50 @@ where
             let _ = BW_PROFILES_URL.set(api_settings.bw_profiles_url.clone().unwrap());
 
             let adapter = PostgresAdapter::new(&db_settings).await.unwrap();
+
+            let transition_log =
+                Box::new(machine::PostgresAdapter::new(&db_settings).await.unwrap());
+
+            let db = Box::new(adapter.clone());
+            let trip_assemblers = vec![
+                Box::<trip_assembler::LandingTripAssembler>::default() as Box<dyn TripAssembler>,
+                Box::<trip_assembler::ErsTripAssembler>::default() as Box<dyn TripAssembler>,
+            ];
+
+            let benchmarks = vec![Box::<WeightPerHour>::default() as Box<dyn VesselBenchmark>];
+            let haul_distributors =
+                vec![Box::<haul_distributor::AisVms>::default() as Box<dyn HaulDistributor>];
+
+            let trip_distancers =
+                vec![Box::<trip_distancer::AisVms>::default() as Box<dyn TripDistancer>];
+
+            let shared_state = SharedState::new(
+                db.clone(),
+                db.clone(),
+                db.clone(),
+                db.clone(),
+                db.clone(),
+                db.clone(),
+                db.clone(),
+                db.clone(),
+                db.clone(),
+                db.clone(),
+                db.clone(),
+                db,
+                None,
+                trip_assemblers,
+                benchmarks,
+                haul_distributors,
+                trip_distancers,
+            );
+
+            let step = Step::initial(ScrapeState, shared_state, transition_log);
+
+            let engine = FisheryEngine::Scrape(step);
+
+            let test_state_builder =
+                TestStateBuilder::new(Box::new(adapter.clone()), Box::new(adapter.clone()), engine);
+
             let app = TestHelper::spawn_app(
                 adapter.clone(),
                 App::build(&api_settings).await,
@@ -375,7 +421,7 @@ where
             if run_cache_test {
                 event!(Level::INFO, "cache_test");
             }
-            test(app).await;
+            test(app, test_state_builder).await;
 
             adapter.verify_database().await.unwrap();
 

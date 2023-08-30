@@ -18,14 +18,82 @@ pub struct VesselContructor {
 }
 
 impl VesselBuilder {
+    pub fn trips(mut self, amount: usize) -> TripBuilder {
+        assert!(amount != 0);
+
+        let num_vessels = self.state.vessels[self.current_index..].len();
+
+        let (per_vessel, remainder) = elements_per_vessel(amount, num_vessels);
+
+        for (i, vessel) in self.state.vessels[self.current_index..].iter().enumerate() {
+            let num_trips = if i == num_vessels - 1 {
+                remainder
+            } else {
+                per_vessel
+            };
+
+            let mut trips = Vec::with_capacity(num_trips);
+
+            let timestamp = self
+                .state
+                .data_timestamp_counter
+                .get_mut(&vessel.key)
+                .unwrap();
+
+            for index in 0..num_trips {
+                let start = *timestamp;
+                let end = *timestamp + self.state.default_trip_duration;
+
+                let message_number = self
+                    .state
+                    .ers_message_number_per_vessel
+                    .get_mut(&vessel.key)
+                    .unwrap();
+
+                let dep = fiskeridir_rs::ErsDep::test_default(
+                    self.state.ers_message_id_counter,
+                    vessel.fiskeridir.id as u64,
+                    start,
+                    *message_number,
+                );
+                *message_number += 1;
+                let por = fiskeridir_rs::ErsPor::test_default(
+                    self.state.ers_message_id_counter,
+                    vessel.fiskeridir.id as u64,
+                    end,
+                    *message_number,
+                );
+                *message_number += 1;
+
+                self.state.ers_message_id_counter += 1;
+
+                trips.push(TripConstructor {
+                    index,
+                    start,
+                    end,
+                    trip_specification: TripSpecification::Ers { dep, por },
+                });
+            }
+
+            self.state
+                .trips
+                .entry(vessel.key)
+                .and_modify(|v| v.append(&mut trips))
+                .or_insert(trips);
+        }
+
+        TripBuilder {
+            current_index: self.current_index + amount,
+            state: self,
+        }
+    }
     pub fn vms_positions(mut self, amount: usize) -> VmsPositionBuilder {
         assert!(amount != 0);
 
         let num_vessels = self.state.vessels[self.current_index..].len();
 
-        let (per_vessel, remainder) = positions_per_vessel(amount, num_vessels);
+        let (per_vessel, remainder) = elements_per_vessel(amount, num_vessels);
 
-        let mut current_position_index = 0;
         for (i, vessel) in self.state.vessels[self.current_index..].iter().enumerate() {
             let num_positions = if i == num_vessels - 1 {
                 remainder
@@ -38,22 +106,18 @@ impl VesselBuilder {
 
             let timestamp = self
                 .state
-                .position_timestamp_counter
+                .data_timestamp_counter
                 .get_mut(&vessel.key)
                 .unwrap();
 
             let call_sign = vessel.fiskeridir.radio_call_sign.clone().unwrap();
 
-            for _ in 0..num_positions {
+            for index in 0..num_positions {
                 timestamps.push(*timestamp);
                 let position =
                     fiskeridir_rs::Vms::test_default(rand::random(), call_sign.clone(), *timestamp);
-                *timestamp += self.state.position_gap;
-                positions.push(VmsPositionConstructor {
-                    index: current_position_index,
-                    position,
-                });
-                current_position_index += 1;
+                *timestamp += self.state.data_timestamp_gap;
+                positions.push(VmsPositionConstructor { index, position });
             }
 
             self.state
@@ -76,7 +140,7 @@ impl VesselBuilder {
 
         let num_vessels = self.state.vessels[self.current_index..].len();
 
-        let (per_vessel, remainder) = positions_per_vessel(amount, num_vessels);
+        let (per_vessel, remainder) = elements_per_vessel(amount, num_vessels);
 
         let mut current_position_index = 0;
         for (i, vessel) in self.state.vessels[self.current_index..].iter().enumerate() {
@@ -91,7 +155,7 @@ impl VesselBuilder {
 
             let timestamp = self
                 .state
-                .position_timestamp_counter
+                .data_timestamp_counter
                 .get_mut(&vessel.key)
                 .unwrap();
 
@@ -108,7 +172,7 @@ impl VesselBuilder {
                 } else {
                     AisOrVmsPosition::Ais(NewAisPosition::test_default(vessel.ais.mmsi, *timestamp))
                 };
-                *timestamp += self.state.position_gap;
+                *timestamp += self.state.data_timestamp_gap;
                 positions.push(AisVmsPositionConstructor {
                     index: current_position_index,
                     position,
@@ -137,7 +201,7 @@ impl VesselBuilder {
 
         let num_vessels = self.state.vessels[self.current_index..].len();
 
-        let (per_vessel, remainder) = positions_per_vessel(amount, num_vessels);
+        let (per_vessel, remainder) = elements_per_vessel(amount, num_vessels);
 
         let mut current_position_index = 0;
 
@@ -153,14 +217,14 @@ impl VesselBuilder {
 
             let timestamp = self
                 .state
-                .position_timestamp_counter
+                .data_timestamp_counter
                 .get_mut(&vessel.key)
                 .unwrap();
 
             for _ in 0..num_positions {
                 timestamps.push(*timestamp);
                 let position = NewAisPosition::test_default(vessel.ais.mmsi, *timestamp);
-                *timestamp += self.state.position_gap;
+                *timestamp += self.state.data_timestamp_gap;
                 positions.push(AisPositionConstructor {
                     index: current_position_index,
                     position,

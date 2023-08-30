@@ -1,9 +1,7 @@
-use crate::TripProcessor;
 use config::{Config, ConfigError, File, Source};
-use haul_distributor::HaulDistributor;
+use kyogre_core::*;
 use orca_core::{Environment, LogLevel, PsqlSettings, TelemetrySettings};
 use serde::Deserialize;
-use trip_distancer::TripDistancer;
 use vessel_benchmark::*;
 
 #[derive(Debug, Deserialize)]
@@ -93,13 +91,13 @@ impl Settings {
         self.honeycomb.clone().unwrap().api_key
     }
 
-    pub fn trip_assemblers(&self) -> Vec<Box<dyn TripProcessor>> {
+    pub fn trip_assemblers(&self) -> Vec<Box<dyn TripAssembler>> {
         let landings_assembler = Box::<trip_assembler::LandingTripAssembler>::default();
         let ers_assembler = Box::<trip_assembler::ErsTripAssembler>::default();
 
         let vec = vec![
-            ers_assembler as Box<dyn TripProcessor>,
-            landings_assembler as Box<dyn TripProcessor>,
+            ers_assembler as Box<dyn TripAssembler>,
+            landings_assembler as Box<dyn TripAssembler>,
         ];
 
         vec

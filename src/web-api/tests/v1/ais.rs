@@ -13,13 +13,8 @@ use web_api::{
 
 #[tokio::test]
 async fn test_ais_track_filters_by_start_and_end() {
-    test(|helper| async move {
-        let state = helper
-            .test_state_builder()
-            .vessels(1)
-            .ais_positions(3)
-            .build()
-            .await;
+    test(|helper, builder| async move {
+        let state = builder.vessels(1).ais_positions(3).build().await;
 
         let response = helper
             .app
@@ -43,13 +38,8 @@ async fn test_ais_track_filters_by_start_and_end() {
 
 #[tokio::test]
 async fn test_ais_track_returns_a_details_on_first_and_last_point() {
-    test(|helper| async move {
-        let state = helper
-            .test_state_builder()
-            .vessels(1)
-            .ais_positions(2)
-            .build()
-            .await;
+    test(|helper, builder| async move {
+        let state = builder.vessels(1).ais_positions(2).build().await;
 
         let pos = &state.ais_positions[0];
         let pos2 = &state.ais_positions[1];
@@ -77,9 +67,8 @@ async fn test_ais_track_returns_a_details_on_first_and_last_point() {
 
 #[tokio::test]
 async fn test_ais_track_returns_a_details_every_interval() {
-    test(|helper| async move {
-        let state = helper
-            .test_state_builder()
+    test(|helper, builder| async move {
+        let state = builder
             .position_increments(*AIS_DETAILS_INTERVAL / 2)
             .vessels(1)
             .ais_positions(7)
@@ -115,9 +104,8 @@ async fn test_ais_track_returns_a_details_every_interval() {
 
 #[tokio::test]
 async fn test_ais_track_returns_missing_data_if_time_between_points_exceeds_limit() {
-    test(|helper| async move {
-        let state = helper
-            .test_state_builder()
+    test(|helper, builder| async move {
+        let state = builder
             .vessels(1)
             .ais_positions(3)
             .modify_idx(|idx, position| {
@@ -156,8 +144,8 @@ async fn test_ais_track_returns_missing_data_if_time_between_points_exceeds_limi
 
 #[tokio::test]
 async fn test_ais_track_returns_bad_request_with_only_start_and_no_end_specified() {
-    test(|helper| async move {
-        let state = helper.test_state_builder().vessels(1).build().await;
+    test(|helper, builder| async move {
+        let state = builder.vessels(1).build().await;
 
         let response = helper
             .app
@@ -178,9 +166,8 @@ async fn test_ais_track_returns_bad_request_with_only_start_and_no_end_specified
 
 #[tokio::test]
 async fn test_ais_track_returns_24h_of_data_when_no_start_and_end_are_specified() {
-    test(|helper| async move {
-        let state = helper
-            .test_state_builder()
+    test(|helper, builder| async move {
+        let state = builder
             .position_start(Utc::now() - Duration::hours(26))
             .position_increments(Duration::hours(3))
             .vessels(1)
@@ -210,10 +197,9 @@ async fn test_ais_track_returns_24h_of_data_when_no_start_and_end_are_specified(
 
 #[tokio::test]
 async fn test_ais_track_does_not_return_positions_of_leisure_vessels_under_45_meters() {
-    test(|helper| async move {
+    test(|helper, builder| async move {
         let pos_timestamp = Utc.timestamp_opt(1000, 0).unwrap();
-        let state = helper
-            .test_state_builder()
+        let state = builder
             .vessels(2)
             .modify_idx(|i, v| {
                 v.ais.ship_type = Some(LEISURE_VESSEL_SHIP_TYPES[i]);
@@ -264,10 +250,9 @@ async fn test_ais_track_does_not_return_positions_of_leisure_vessels_under_45_me
 
 #[tokio::test]
 async fn test_ais_track_does_not_return_positions_of_vessel_with_unknown_ship_type() {
-    test(|helper| async move {
+    test(|helper, builder| async move {
         let pos_timestamp = Utc.timestamp_opt(1000, 0).unwrap();
-        let state = helper
-            .test_state_builder()
+        let state = builder
             .vessels(1)
             .modify(|v| v.ais.ship_type = None)
             .ais_positions(1)
@@ -300,10 +285,9 @@ async fn test_ais_track_does_not_return_positions_of_vessel_with_unknown_ship_ty
 #[tokio::test]
 async fn test_ais_track_prioritizes_fiskeridir_length_over_ais_length_in_leisure_vessel_length_check(
 ) {
-    test(|helper| async move {
+    test(|helper, builder| async move {
         let pos_timestamp = Utc.timestamp_opt(1000, 0).unwrap();
-        let state = helper
-            .test_state_builder()
+        let state = builder
             .vessels(1)
             .modify(|v| {
                 v.fiskeridir.length = LEISURE_VESSEL_LENGTH_AIS_BOUNDARY as f64 + 1.0;
@@ -338,10 +322,9 @@ async fn test_ais_track_prioritizes_fiskeridir_length_over_ais_length_in_leisure
 
 #[tokio::test]
 async fn test_ais_track_does_not_return_positions_for_vessels_under_15m_without_bw_token() {
-    test(|helper| async move {
+    test(|helper, builder| async move {
         let pos_timestamp = Utc.timestamp_opt(1000, 0).unwrap();
-        let state = helper
-            .test_state_builder()
+        let state = builder
             .vessels(1)
             .modify(|v| {
                 v.fiskeridir.length = PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY as f64 - 2.0;
@@ -375,10 +358,9 @@ async fn test_ais_track_does_not_return_positions_for_vessels_under_15m_without_
 
 #[tokio::test]
 async fn test_ais_track_return_positions_for_vessels_under_15m_with_full_ais_permission() {
-    test(|helper| async move {
+    test(|helper, builder| async move {
         let pos_timestamp = Utc.timestamp_opt(1000, 0).unwrap();
-        let state = helper
-            .test_state_builder()
+        let state = builder
             .vessels(1)
             .modify(|v| {
                 v.fiskeridir.length = PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY as f64 - 1.0;
@@ -413,10 +395,9 @@ async fn test_ais_track_return_positions_for_vessels_under_15m_with_full_ais_per
 #[tokio::test]
 async fn test_ais_track_does_not_return_positions_for_vessels_under_15m_with_correct_roles_but_missing_policy(
 ) {
-    test(|helper| async move {
+    test(|helper, builder| async move {
         let pos_timestamp = Utc.timestamp_opt(1000, 0).unwrap();
-        let state = helper
-            .test_state_builder()
+        let state = builder
             .vessels(1)
             .modify(|v| {
                 v.fiskeridir.length = PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY as f64 - 2.0;
@@ -454,10 +435,9 @@ async fn test_ais_track_does_not_return_positions_for_vessels_under_15m_with_cor
 #[tokio::test]
 async fn test_ais_track_does_not_return_positions_for_vessels_under_15m_with_correct_policy_but_missing_role(
 ) {
-    test(|helper| async move {
+    test(|helper, builder| async move {
         let pos_timestamp = Utc.timestamp_opt(1000, 0).unwrap();
-        let state = helper
-            .test_state_builder()
+        let state = builder
             .vessels(1)
             .modify(|v| {
                 v.fiskeridir.length = PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY as f64 - 2.0;

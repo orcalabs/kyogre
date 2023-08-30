@@ -8,7 +8,7 @@ use web_api::routes::v1::trip::{Trip, TripsParameters};
 
 #[tokio::test]
 async fn test_trips_does_not_contain_duplicated_tra_events() {
-    test(|mut helper| async move {
+    test(|mut helper, _builder| async move {
         let fiskeridir_vessel_id = FiskeridirVesselId(1);
 
         helper
@@ -50,7 +50,7 @@ async fn test_trips_does_not_contain_duplicated_tra_events() {
 
 #[tokio::test]
 async fn test_trips_does_not_contain_duplicated_dca_events() {
-    test(|mut helper| async move {
+    test(|mut helper, _builder| async move {
         let fiskeridir_vessel_id = FiskeridirVesselId(1);
 
         helper
@@ -93,7 +93,7 @@ async fn test_trips_does_not_contain_duplicated_dca_events() {
 
 #[tokio::test]
 async fn test_vessel_events_connect_to_existing_trip() {
-    test(|mut helper| async move {
+    test(|mut helper, _builder| async move {
         let vessel_id = FiskeridirVesselId(1);
 
         helper

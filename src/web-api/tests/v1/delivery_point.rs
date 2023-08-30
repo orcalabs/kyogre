@@ -7,7 +7,7 @@ use web_api::routes::v1::{delivery_point::DeliveryPoint, landing::Landing};
 
 #[tokio::test]
 async fn test_delivery_points_returns_aqua_culture_register() {
-    test(|helper| async move {
+    test(|helper, _builder| async move {
         let mut entries = vec![
             AquaCultureEntry::test_default(),
             AquaCultureEntry::test_default(),
@@ -47,7 +47,7 @@ async fn test_delivery_points_returns_aqua_culture_register() {
 
 #[tokio::test]
 async fn test_delivery_points_returns_mattilsynet_delivery_points() {
-    test(|helper| async move {
+    test(|helper, _builder| async move {
         let mut delivery_points = vec![
             MattilsynetDeliveryPoint::test_default(),
             MattilsynetDeliveryPoint::test_default(),
@@ -91,7 +91,7 @@ async fn test_delivery_points_returns_mattilsynet_delivery_points() {
 
 #[tokio::test]
 async fn test_delivery_points_returns_manual_delivery_points() {
-    test(|helper| async move {
+    test(|helper, _builder| async move {
         let response = helper.app.get_delivery_points().await;
 
         assert_eq!(response.status(), StatusCode::OK);
@@ -104,7 +104,7 @@ async fn test_delivery_points_returns_manual_delivery_points() {
 
 #[tokio::test]
 async fn test_delivery_points_prioritizes_manual_entries() {
-    test(|helper| async move {
+    test(|helper, _builder| async move {
         let id = DeliveryPointId::new_unchecked("A");
 
         let mut entry = AquaCultureEntry::test_default();
@@ -150,7 +150,7 @@ async fn test_delivery_points_prioritizes_manual_entries() {
 
 #[tokio::test]
 async fn test_delivery_points_adds_to_log_when_updated() {
-    test(|helper| async move {
+    test(|helper, _builder| async move {
         let mut entry = AquaCultureEntry::test_default();
 
         helper
@@ -214,7 +214,7 @@ async fn test_delivery_points_adds_to_log_when_updated() {
 
 #[tokio::test]
 async fn test_delivery_points_doesnt_add_to_log_when_updated_without_change() {
-    test(|helper| async move {
+    test(|helper, _builder| async move {
         let entry = vec![AquaCultureEntry::test_default()];
 
         helper
@@ -248,7 +248,7 @@ async fn test_delivery_points_doesnt_add_to_log_when_updated_without_change() {
 
 #[tokio::test]
 async fn test_delivery_points_cant_add_deprecation_chain() {
-    test(|helper| async move {
+    test(|helper, _builder| async move {
         let a = DeliveryPointId::new_unchecked("A");
         let b = DeliveryPointId::new_unchecked("B");
         let c = DeliveryPointId::new_unchecked("C");
@@ -267,7 +267,7 @@ async fn test_delivery_points_cant_add_deprecation_chain() {
 
 #[tokio::test]
 async fn test_landings_respect_delivery_point_deprecation() {
-    test(|helper| async move {
+    test(|helper, _builder| async move {
         let vessel_id = FiskeridirVesselId(111);
         let date = Utc.timestamp_opt(1000, 0).unwrap();
 

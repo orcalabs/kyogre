@@ -2,10 +2,11 @@ use super::{
     find_close_point, PointClusterPreference, PrecisionConfig, PrecisionDirection, PrecisionId,
     PrecisionStop, TripPrecision,
 };
-use crate::error::TripPrecisionError;
 use error_stack::{Result, ResultExt};
 use geoutils::Location;
-use kyogre_core::{AisVmsPosition, DateRange, Trip, TripPrecisionOutboundPort, Vessel};
+use kyogre_core::{
+    AisVmsPosition, DateRange, Trip, TripPrecisionError, TripPrecisionOutboundPort, Vessel,
+};
 use num_traits::ToPrimitive;
 
 use async_trait::async_trait;
