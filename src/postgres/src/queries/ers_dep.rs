@@ -81,10 +81,10 @@ WHERE
             if let (Some(id), Some(event_id)) = (i.fiskeridir_vessel_id, i.vessel_event_id) {
                 conflicts
                     .entry(id)
-                    .and_modify(|v| v.timestamp = min(v.timestamp, i.message_timestamp))
+                    .and_modify(|v| v.timestamp = min(v.timestamp, i.departure_timestamp))
                     .or_insert_with(|| TripAssemblerConflict {
                         fiskeridir_vessel_id: id,
-                        timestamp: i.message_timestamp,
+                        timestamp: i.departure_timestamp,
                     });
                 event_ids.push(event_id);
             }

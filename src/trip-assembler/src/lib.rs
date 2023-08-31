@@ -4,7 +4,7 @@
 use std::collections::HashMap;
 
 use async_trait::async_trait;
-use chrono::{DateTime, NaiveDate, NaiveDateTime, NaiveTime, Utc};
+use chrono::{DateTime, Duration, Utc};
 use error_stack::{IntoReport, Result, ResultExt};
 use kyogre_core::{
     Bound, FiskeridirVesselId, NewTrip, QueryRange, RelevantEventType, Trip, TripAssemblerId,
@@ -24,14 +24,8 @@ pub use landings::*;
 pub use precision::*;
 
 // TODO: make this a const when rust supports it
-pub fn ers_last_trip_landing_coverage_end() -> DateTime<Utc> {
-    DateTime::<Utc>::from_utc(
-        NaiveDateTime::new(
-            NaiveDate::from_ymd_opt(2200, 1, 1).unwrap(),
-            NaiveTime::from_hms_opt(0, 0, 0).unwrap(),
-        ),
-        Utc,
-    )
+pub fn ers_last_trip_landing_coverage_end(last_trip_end: &DateTime<Utc>) -> DateTime<Utc> {
+    *last_trip_end + Duration::days(3)
 }
 
 #[derive(Debug)]
