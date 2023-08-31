@@ -80,22 +80,24 @@ async fn test_ais_track_returns_a_details_every_interval() {
     test(|helper| async move {
         let state = helper
             .test_state_builder()
-            .position_increments(*AIS_DETAILS_INTERVAL)
+            .position_increments(*AIS_DETAILS_INTERVAL / 2)
             .vessels(1)
-            .ais_positions(3)
+            .ais_positions(7)
             .build()
             .await;
 
-        let pos = &state.ais_positions[0];
-        let pos2 = &state.ais_positions[1];
-        let pos3 = &state.ais_positions[2];
+        let first = &state.ais_positions[0];
+        let det_pos1 = &state.ais_positions[2];
+        let det_pos2 = &state.ais_positions[4];
+        let last = &state.ais_positions[6];
+
         let response = helper
             .app
             .get_ais_track(
                 state.vessels[0].mmsi().unwrap(),
                 AisTrackParameters {
-                    start: Some(pos.msgtime),
-                    end: Some(pos3.msgtime),
+                    start: Some(first.msgtime),
+                    end: Some(last.msgtime),
                 },
                 None,
             )
@@ -104,9 +106,9 @@ async fn test_ais_track_returns_a_details_every_interval() {
         assert_eq!(response.status(), StatusCode::OK);
         let body: Vec<AisPosition> = response.json().await.unwrap();
 
-        assert_eq!(body.len(), 3);
-        assert_eq!(body[1].clone().det.unwrap(), *pos2);
-        assert_eq!(body[2].clone().det.unwrap(), *pos3);
+        assert_eq!(body.len(), 7);
+        assert_eq!(body[2].clone().det.unwrap(), *det_pos1);
+        assert_eq!(body[4].clone().det.unwrap(), *det_pos2);
     })
     .await;
 }
