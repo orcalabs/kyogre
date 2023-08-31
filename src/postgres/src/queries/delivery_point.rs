@@ -17,11 +17,13 @@ impl PostgresAdapter {
     pub(crate) fn delivery_points_impl(
         &self,
     ) -> impl Stream<Item = Result<DeliveryPoint, PostgresError>> + '_ {
+        // Coalesce on delivery_point_id is needed due to a bug in sqlx prepare
+        // which flips the nullability on each run
         sqlx::query_as!(
             DeliveryPoint,
             r#"
 SELECT
-    d.delivery_point_id as "delivery_point_id!",
+    COALESCE(d.delivery_point_id, d.delivery_point_id) AS "delivery_point_id!",
     COALESCE(m.name, a.name, mt.name) AS NAME,
     COALESCE(m.address, a.address, mt.address) AS address,
     COALESCE(m.latitude, a.latitude) AS latitude,
