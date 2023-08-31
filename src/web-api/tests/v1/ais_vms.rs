@@ -6,6 +6,7 @@ use kyogre_core::{
     PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY,
 };
 use web_api::{
+    extractors::{BwPolicy, BwRole},
     response::MISSING_DATA_DURATION,
     routes::v1::ais_vms::{AisVmsParameters, AisVmsPosition},
 };
@@ -319,8 +320,7 @@ async fn test_ais_vms_prioritizes_fiskeridir_length_over_ais_length_in_leisure_v
 }
 
 #[tokio::test]
-async fn test_ais_vms_does_not_return_ais_positions_for_vessels_under_15m_without_bw_read_ais_policy(
-) {
+async fn test_ais_vms_does_not_return_ais_positions_for_vessels_under_15m_without_bw_token() {
     test(|helper| async move {
         let pos_timestamp = Utc.timestamp_opt(1000, 0).unwrap();
         let state = helper
@@ -358,7 +358,7 @@ async fn test_ais_vms_does_not_return_ais_positions_for_vessels_under_15m_withou
 }
 
 #[tokio::test]
-async fn test_ais_track_return_positions_for_vessels_under_15m_with_bw_read_ais_policy() {
+async fn test_ais_track_return_positions_for_vessels_under_15m_with_full_ais_permission() {
     test(|helper| async move {
         let pos_timestamp = Utc.timestamp_opt(1000, 0).unwrap();
         let state = helper
@@ -383,7 +383,7 @@ async fn test_ais_track_return_positions_for_vessels_under_15m_with_bw_read_ais_
                     mmsi: state.vessels[0].mmsi(),
                     call_sign: None,
                 },
-                Some(helper.bw_helper.get_bw_token()),
+                Some(helper.bw_helper.get_bw_token_with_full_ais_permission()),
             )
             .await;
 
@@ -391,6 +391,90 @@ async fn test_ais_track_return_positions_for_vessels_under_15m_with_bw_read_ais_
         let body: Vec<AisVmsPosition> = response.json().await.unwrap();
 
         assert!(!body.is_empty());
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_ais_vms_does_not_return_positions_for_vessels_under_15m_with_correct_roles_but_missing_policy(
+) {
+    test(|helper| async move {
+        let pos_timestamp = Utc.timestamp_opt(1000, 0).unwrap();
+        let state = helper
+            .test_state_builder()
+            .vessels(1)
+            .modify(|v| {
+                v.fiskeridir.length = PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY as f64 - 1.0;
+            })
+            .ais_positions(1)
+            .modify(|v| {
+                v.msgtime = pos_timestamp;
+            })
+            .build()
+            .await;
+
+        let response = helper
+            .app
+            .get_ais_vms_positions(
+                AisVmsParameters {
+                    start: Some(pos_timestamp - Duration::seconds(1)),
+                    end: Some(pos_timestamp + Duration::seconds(1)),
+                    mmsi: state.vessels[0].mmsi(),
+                    call_sign: None,
+                },
+                Some(helper.bw_helper.get_bw_token_with_policies_and_roles(
+                    vec![BwPolicy::Other],
+                    vec![BwRole::BwFiskinfoAdmin],
+                )),
+            )
+            .await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let body: Vec<AisVmsPosition> = response.json().await.unwrap();
+
+        assert!(body.is_empty());
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_ais_track_does_not_return_positions_for_vessels_under_15m_with_correct_policy_but_missing_role(
+) {
+    test(|helper| async move {
+        let pos_timestamp = Utc.timestamp_opt(1000, 0).unwrap();
+        let state = helper
+            .test_state_builder()
+            .vessels(1)
+            .modify(|v| {
+                v.fiskeridir.length = PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY as f64 - 1.0;
+            })
+            .ais_positions(1)
+            .modify(|v| {
+                v.msgtime = pos_timestamp;
+            })
+            .build()
+            .await;
+
+        let response = helper
+            .app
+            .get_ais_vms_positions(
+                AisVmsParameters {
+                    start: Some(pos_timestamp - Duration::seconds(1)),
+                    end: Some(pos_timestamp + Duration::seconds(1)),
+                    mmsi: state.vessels[0].mmsi(),
+                    call_sign: None,
+                },
+                Some(helper.bw_helper.get_bw_token_with_policies_and_roles(
+                    vec![BwPolicy::BwAisFiskinfo],
+                    vec![BwRole::Other],
+                )),
+            )
+            .await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let body: Vec<AisVmsPosition> = response.json().await.unwrap();
+
+        assert!(body.is_empty());
     })
     .await;
 }

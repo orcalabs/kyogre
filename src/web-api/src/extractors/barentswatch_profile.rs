@@ -19,6 +19,19 @@ pub enum BwPolicy {
     Other,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, EnumIter)]
+pub enum BwRole {
+    BwDownloadFishingfacility,
+    BwEksternFiskInfoUtvikler,
+    BwFiskerikyndig,
+    BwFiskinfoAdmin,
+    BwUtdanningsBruker,
+    BwViewAis,
+    BwYrkesfisker,
+    #[serde(other)]
+    Other,
+}
+
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct BwUser {
     pub id: Uuid,
@@ -28,20 +41,31 @@ pub struct BwUser {
 pub struct BwProfile {
     pub user: BwUser,
     pub policies: Vec<BwPolicy>,
+    pub roles: Vec<BwRole>,
 }
 
 impl From<BwProfile> for AisPermission {
     fn from(value: BwProfile) -> Self {
-        let mut permission = AisPermission::default();
-        for p in &value.policies {
-            match p {
-                BwPolicy::BwReadExtendedFishingFacility | BwPolicy::Other => {
-                    permission = AisPermission::Above15m;
-                }
-                BwPolicy::BwAisFiskinfo => return AisPermission::All,
-            }
+        let ais_policy = value.policies.iter().any(|v| *v == BwPolicy::BwAisFiskinfo);
+        if ais_policy {
+            value
+                .roles
+                .iter()
+                .find(|v| match v {
+                    BwRole::BwDownloadFishingfacility
+                    | BwRole::BwEksternFiskInfoUtvikler
+                    | BwRole::BwFiskerikyndig
+                    | BwRole::BwFiskinfoAdmin
+                    | BwRole::BwUtdanningsBruker
+                    | BwRole::BwViewAis
+                    | BwRole::BwYrkesfisker => true,
+                    BwRole::Other => false,
+                })
+                .map(|_| AisPermission::All)
+                .unwrap_or_default()
+        } else {
+            AisPermission::default()
         }
-        permission
     }
 }
 
