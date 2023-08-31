@@ -22,8 +22,8 @@ impl ErsStatemachine {
 
     fn add_trip(&mut self, arrival: Arrival) -> Result<(), DateRangeError> {
         let mut period = DateRange::new(
-            self.current_departure.message_timestamp,
-            arrival.message_timestamp,
+            self.current_departure.estimated_timestamp,
+            arrival.estimated_timestamp,
         )?;
 
         if period.start() == period.end() {
@@ -41,8 +41,10 @@ impl ErsStatemachine {
             prior_trip.landing_coverage = range;
         }
 
-        let mut landing_coverage =
-            DateRange::new(period.start(), ers_last_trip_landing_coverage_end())?;
+        let mut landing_coverage = DateRange::new(
+            period.start(),
+            ers_last_trip_landing_coverage_end(&period.end()),
+        )?;
         landing_coverage.set_start_bound(Bound::Inclusive);
         landing_coverage.set_end_bound(Bound::Exclusive);
 

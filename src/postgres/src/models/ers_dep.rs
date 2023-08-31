@@ -13,7 +13,7 @@ use crate::{
 #[unnest_insert(
     table_name = "ers_departures",
     conflict = "message_id",
-    returning = "fiskeridir_vessel_id,message_timestamp,vessel_event_id"
+    returning = "fiskeridir_vessel_id,departure_timestamp,vessel_event_id"
 )]
 pub struct NewErsDep {
     pub message_id: i64,

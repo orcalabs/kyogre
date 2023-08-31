@@ -75,8 +75,8 @@ FROM
             INNER JOIN ers_departures d ON d.vessel_event_id = v.vessel_event_id
         WHERE
             v.fiskeridir_vessel_id = $1
-            AND v.report_timestamp <@ $2::tstzrange
-            AND v.report_timestamp >= '1970-01-01T00:00:00Z'::TIMESTAMPTZ
+            AND v.occurence_timestamp <@ $2::tstzrange
+            AND v.occurence_timestamp >= '1970-01-01T00:00:00Z'::TIMESTAMPTZ
         UNION
         SELECT
             v.vessel_event_id,
@@ -93,11 +93,12 @@ FROM
             INNER JOIN ers_arrivals a ON a.vessel_event_id = v.vessel_event_id
         WHERE
             v.fiskeridir_vessel_id = $1
-            AND v.report_timestamp <@ $2::tstzrange
-            AND v.report_timestamp >= '1970-01-01T00:00:00Z'::TIMESTAMPTZ
+            AND v.occurence_timestamp <@ $2::tstzrange
+            AND v.occurence_timestamp >= '1970-01-01T00:00:00Z'::TIMESTAMPTZ
     ) q
 ORDER BY
-    report_timestamp,
+    estimated_timestamp,
+    relevant_year,
     message_number
            "#,
             &(vessel_id.0 as i32),
