@@ -11,7 +11,7 @@ use rsa::{
 use serde::{Deserialize, Serialize};
 use strum::IntoEnumIterator;
 use uuid::Uuid;
-use web_api::extractors::{BwPolicy, BwProfile, BwUser};
+use web_api::extractors::{BwPolicy, BwProfile, BwRole, BwUser};
 use wiremock::{
     matchers::{method, path},
     Mock, MockServer, ResponseTemplate,
@@ -77,6 +77,7 @@ impl BarentswatchHelper {
                         id: decoded.claims.id,
                     },
                     policies: decoded.claims.policies,
+                    roles: decoded.claims.roles,
                 };
 
                 ResponseTemplate::new(200).set_body_json(profile)
@@ -106,6 +107,39 @@ impl BarentswatchHelper {
             id: Uuid::new_v4(),
             exp: i64::MAX,
             policies: BwPolicy::iter().collect(),
+            roles: BwRole::iter().collect(),
+        };
+        self.get_bw_token_impl(claims)
+    }
+
+    pub fn get_bw_token_with_full_ais_permission(&self) -> String {
+        let claims = Claims {
+            id: Uuid::new_v4(),
+            exp: i64::MAX,
+            policies: vec![BwPolicy::BwAisFiskinfo],
+            roles: vec![
+                BwRole::BwDownloadFishingfacility,
+                BwRole::BwEksternFiskInfoUtvikler,
+                BwRole::BwFiskerikyndig,
+                BwRole::BwFiskinfoAdmin,
+                BwRole::BwUtdanningsBruker,
+                BwRole::BwViewAis,
+                BwRole::BwYrkesfisker,
+            ],
+        };
+        self.get_bw_token_impl(claims)
+    }
+
+    pub fn get_bw_token_with_policies_and_roles(
+        &self,
+        policies: Vec<BwPolicy>,
+        roles: Vec<BwRole>,
+    ) -> String {
+        let claims = Claims {
+            id: Uuid::new_v4(),
+            exp: i64::MAX,
+            policies,
+            roles,
         };
         self.get_bw_token_impl(claims)
     }
@@ -115,6 +149,7 @@ impl BarentswatchHelper {
             id: Uuid::new_v4(),
             exp: i64::MAX,
             policies,
+            roles: vec![],
         };
         self.get_bw_token_impl(claims)
     }
@@ -129,4 +164,5 @@ pub struct Claims {
     id: Uuid,
     exp: i64,
     policies: Vec<BwPolicy>,
+    roles: Vec<BwRole>,
 }
