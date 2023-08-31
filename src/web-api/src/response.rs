@@ -93,21 +93,25 @@ macro_rules! ais_to_streaming_response {
 
             if let Some((_, first)) = stream.next().await {
                 let mut pos = first?;
+                let mut prev_details = pos.timestamp;
 
                 while let Some((i, next)) = stream.next().await {
                     let next = next?;
 
-                    let diff = next.timestamp - pos.timestamp;
-                    if diff >= *MISSING_DATA_DURATION {
+                    if next.timestamp - pos.timestamp >= *MISSING_DATA_DURATION {
                         if let Some(ref mut det) = pos.det {
                             det.missing_data = true;
                             missing_flag = true;
                         }
                     } else {
-                        if !missing_flag && i != 1 && diff < *AIS_DETAILS_INTERVAL {
+                        if !missing_flag && i != 1 && pos.timestamp - prev_details < *AIS_DETAILS_INTERVAL {
                             pos.det = None;
                         }
                         missing_flag = false;
+                    }
+
+                    if pos.det.is_some() {
+                        prev_details = pos.timestamp;
                     }
 
                     yield to_bytes(&pos)?;
