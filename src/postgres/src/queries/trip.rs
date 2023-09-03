@@ -1294,21 +1294,21 @@ WHERE
     OR (
         $5 = 2
         AND v.vessel_event_type_id = 3
-        AND v.report_timestamp > LOWER(u.period)
-        AND v.report_timestamp <= UPPER(u.period)
+        AND v.occurence_timestamp > LOWER(u.period)
+        AND v.occurence_timestamp <= UPPER(u.period)
         AND v.fiskeridir_vessel_id = u.fiskeridir_vessel_id
     )
     OR (
         $5 = 2
         AND v.vessel_event_type_id = 4
-        AND v.report_timestamp >= LOWER(u.period)
-        AND v.report_timestamp < UPPER(u.period)
+        AND v.occurence_timestamp >= LOWER(u.period)
+        AND v.occurence_timestamp < UPPER(u.period)
         AND v.fiskeridir_vessel_id = u.fiskeridir_vessel_id
     )
     OR (
         v.vessel_event_type_id = 1
-        AND COALESCE(v.occurence_timestamp, v.report_timestamp) >= LOWER(u.landing_coverage)
-        AND COALESCE(v.occurence_timestamp, v.report_timestamp) < UPPER(u.landing_coverage)
+        AND v.occurence_timestamp >= LOWER(u.landing_coverage)
+        AND v.occurence_timestamp < UPPER(u.landing_coverage)
         AND v.fiskeridir_vessel_id = u.fiskeridir_vessel_id
     )
             "#,
@@ -1645,8 +1645,8 @@ WHERE
     v.vessel_event_id = ANY ($1::BIGINT[])
     AND v.fiskeridir_vessel_id = t.fiskeridir_vessel_id
     AND trip_assembler_id != 1
-    AND COALESCE(v.occurence_timestamp, v.report_timestamp) >= LOWER(t.landing_coverage)
-    AND COALESCE(v.occurence_timestamp, v.report_timestamp) < UPPER(t.landing_coverage)
+    AND v.occurence_timestamp >= LOWER(t.landing_coverage)
+    AND v.occurence_timestamp < UPPER(t.landing_coverage)
             "#,
             &event_ids
         )
@@ -1673,8 +1673,8 @@ WHERE
     v.vessel_event_id = ANY ($1::BIGINT[])
     AND v.fiskeridir_vessel_id = t.fiskeridir_vessel_id
     AND trip_assembler_id = 2
-    AND v.report_timestamp >= LOWER(t.period)
-    AND v.report_timestamp < UPPER(t.period)
+    AND v.occurence_timestamp >= LOWER(t.period)
+    AND v.occurence_timestamp < UPPER(t.period)
             "#,
             &event_ids
         )
@@ -1701,8 +1701,8 @@ WHERE
     v.vessel_event_id = ANY ($1::BIGINT[])
     AND v.fiskeridir_vessel_id = t.fiskeridir_vessel_id
     AND trip_assembler_id = 2
-    AND v.report_timestamp > LOWER(t.period)
-    AND v.report_timestamp <= UPPER(t.period)
+    AND v.occurence_timestamp > LOWER(t.period)
+    AND v.occurence_timestamp <= UPPER(t.period)
             "#,
             &event_ids
         )
