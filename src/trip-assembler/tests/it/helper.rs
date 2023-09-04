@@ -99,8 +99,11 @@ where
     S: TimeAndDate,
 {
     DateRange::new(
-        DateTime::<Utc>::from_utc(NaiveDateTime::new(start.date(), start.time()), Utc),
-        DateTime::<Utc>::from_utc(NaiveDateTime::new(end.date(), end.time()), Utc),
+        DateTime::<Utc>::from_naive_utc_and_offset(
+            NaiveDateTime::new(start.date(), start.time()),
+            Utc,
+        ),
+        DateTime::<Utc>::from_naive_utc_and_offset(NaiveDateTime::new(end.date(), end.time()), Utc),
     )
     .unwrap()
 }

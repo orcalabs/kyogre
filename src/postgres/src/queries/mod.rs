@@ -69,7 +69,7 @@ pub(crate) fn bound_float_to_decimal(
 }
 
 pub(crate) fn timestamp_from_date_and_time(date: NaiveDate, time: NaiveTime) -> DateTime<Utc> {
-    DateTime::from_utc(date.and_time(time), Utc)
+    DateTime::from_naive_utc_and_offset(date.and_time(time), Utc)
 }
 
 pub(crate) fn opt_timestamp_from_date_and_time(
