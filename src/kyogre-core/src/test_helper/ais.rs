@@ -29,7 +29,7 @@ impl AisPositionBuilder {
             .for_each(|(_, positions)| {
                 for p in positions
                     .iter_mut()
-                    .filter(|v| v.index < self.current_index)
+                    .filter(|v| v.index >= self.current_index)
                 {
                     closure(&mut p.position)
                 }
@@ -49,7 +49,7 @@ impl AisPositionBuilder {
             .for_each(|(_, positions)| {
                 for p in positions
                     .iter_mut()
-                    .filter(|v| v.index < self.current_index)
+                    .filter(|v| v.index >= self.current_index)
                 {
                     closure(p.index, &mut p.position)
                 }

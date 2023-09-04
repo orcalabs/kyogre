@@ -69,7 +69,7 @@ async fn test_ais_track_returns_a_details_on_first_and_last_point() {
 async fn test_ais_track_returns_a_details_every_interval() {
     test(|helper, builder| async move {
         let state = builder
-            .position_increments(*AIS_DETAILS_INTERVAL / 2)
+            .data_increment(*AIS_DETAILS_INTERVAL / 2)
             .vessels(1)
             .ais_positions(7)
             .build()
@@ -168,8 +168,8 @@ async fn test_ais_track_returns_bad_request_with_only_start_and_no_end_specified
 async fn test_ais_track_returns_24h_of_data_when_no_start_and_end_are_specified() {
     test(|helper, builder| async move {
         let state = builder
-            .position_start(Utc::now() - Duration::hours(26))
-            .position_increments(Duration::hours(3))
+            .data_start(Utc::now() - Duration::hours(26))
+            .data_increment(Duration::hours(3))
             .vessels(1)
             .ais_positions(3)
             .build()
@@ -286,7 +286,6 @@ async fn test_ais_track_does_not_return_positions_of_vessel_with_unknown_ship_ty
 async fn test_ais_track_prioritizes_fiskeridir_length_over_ais_length_in_leisure_vessel_length_check(
 ) {
     test(|helper, builder| async move {
-        let pos_timestamp = Utc.timestamp_opt(1000, 0).unwrap();
         let state = builder
             .vessels(1)
             .modify(|v| {
@@ -294,9 +293,6 @@ async fn test_ais_track_prioritizes_fiskeridir_length_over_ais_length_in_leisure
                 v.ais.ship_length = Some(LEISURE_VESSEL_LENGTH_AIS_BOUNDARY as i32 - 1);
             })
             .ais_positions(1)
-            .modify(|v| {
-                v.msgtime = pos_timestamp;
-            })
             .build()
             .await;
 
@@ -305,8 +301,8 @@ async fn test_ais_track_prioritizes_fiskeridir_length_over_ais_length_in_leisure
             .get_ais_track(
                 state.vessels[0].mmsi().unwrap(),
                 AisTrackParameters {
-                    start: Some(pos_timestamp - Duration::seconds(1)),
-                    end: Some(pos_timestamp + Duration::seconds(1)),
+                    start: Some(state.ais_positions[0].msgtime - Duration::seconds(1)),
+                    end: Some(state.ais_positions[0].msgtime + Duration::seconds(1)),
                 },
                 None,
             )

@@ -136,7 +136,7 @@ async fn test_ais_vms_positions_returns_only_vms_without_mmsi() {
 async fn test_ais_vms_positions_returns_ais_and_vms_positions_with_missing_data() {
     test(|helper, builder| async move {
         let state = builder
-            .position_increments(*MISSING_DATA_DURATION)
+            .data_increment(*MISSING_DATA_DURATION)
             .vessels(1)
             .ais_vms_positions(4)
             .build()
