@@ -6,7 +6,7 @@ use unnest_insert::UnnestInsert;
 
 use crate::{
     error::PostgresError,
-    queries::{enum_to_i32, float_to_decimal, opt_float_to_decimal},
+    queries::{enum_to_i32, float_to_decimal, opt_float_to_decimal, timestamp_from_date_and_time},
 };
 
 #[derive(UnnestInsert)]
@@ -92,25 +92,17 @@ impl TryFrom<fiskeridir_rs::ErsDep> for NewErsDep {
         Ok(Self {
             message_id: v.message_info.message_id as i64,
             message_number: v.message_info.message_number as i32,
-            message_timestamp: DateTime::<Utc>::from_utc(
-                v.message_info
-                    .message_date
-                    .and_time(v.message_info.message_time),
-                Utc,
+            message_timestamp: timestamp_from_date_and_time(
+                v.message_info.message_date,
+                v.message_info.message_time,
             ),
             ers_message_type_id: v.message_info.message_type_code.into_inner(),
             message_year: v.message_info.message_year as i32,
             relevant_year: v.message_info.relevant_year as i32,
             sequence_number: v.message_info.sequence_number.map(|v| v as i32),
             ers_activity_id: v.activity_code,
-            departure_timestamp: DateTime::<Utc>::from_utc(
-                v.departure_date.and_time(v.departure_time),
-                Utc,
-            ),
-            fishing_timestamp: DateTime::<Utc>::from_utc(
-                v.fishing_date.and_time(v.fishing_time),
-                Utc,
-            ),
+            departure_timestamp: timestamp_from_date_and_time(v.departure_date, v.departure_time),
+            fishing_timestamp: timestamp_from_date_and_time(v.fishing_date, v.fishing_time),
             start_latitude: float_to_decimal(v.start_latitude)
                 .change_context(PostgresError::DataConversion)?,
             start_latitude_sggdd: v.start_latitude_sggdd.into_inner(),
