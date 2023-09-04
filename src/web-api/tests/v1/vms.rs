@@ -60,8 +60,8 @@ async fn test_vms_return_bad_request_when_only_start_or_end_is_provided() {
 async fn test_vms_returns_the_last_24h_of_data_if_start_and_end_are_missing() {
     test(|helper, builder| async move {
         let state = builder
-            .position_start(Utc::now() - Duration::hours(26))
-            .position_increments(Duration::hours(3))
+            .data_start(Utc::now() - Duration::hours(26))
+            .data_increment(Duration::hours(3))
             .vessels(1)
             .vms_positions(3)
             .build()

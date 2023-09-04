@@ -1716,9 +1716,9 @@ dependencies = [
 
 [[package]]
 name = "fiskeridir-rs"
-version = "0.19.4"
+version = "0.19.5"
 source = "registry+https://dl.cloudsmith.io/basic/orcalabs/orcastrator/cargo/index.git"
-checksum = "df9357d3f38db7c59f218e10f80e5a49160564b23fa016d59c521734d9ecb2b5"
+checksum = "1f1ebb31944ef967409557518f6ced761753c593074d19b92a4a5d7e4b57b05e"
 dependencies = [
  "bigdecimal",
  "chrono",
