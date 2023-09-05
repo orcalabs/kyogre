@@ -1,90 +1,43 @@
 use super::helper::test;
 use actix_web::http::StatusCode;
-use chrono::{TimeZone, Utc};
-use fiskeridir_rs::{AquaCultureEntry, DeliveryPointId};
-use kyogre_core::{FiskeridirVesselId, MattilsynetDeliveryPoint, ScraperInboundPort};
+use fiskeridir_rs::DeliveryPointId;
+use kyogre_core::{TestHelperInbound, TestHelperOutbound};
 use web_api::routes::v1::{delivery_point::DeliveryPoint, landing::Landing};
 
 #[tokio::test]
 async fn test_delivery_points_returns_aqua_culture_register() {
-    test(|helper, _builder| async move {
-        let mut entries = vec![
-            AquaCultureEntry::test_default(),
-            AquaCultureEntry::test_default(),
-            AquaCultureEntry::test_default(),
-        ];
-
-        entries[0].delivery_point_id = DeliveryPointId::new_unchecked("A");
-        entries[1].delivery_point_id = DeliveryPointId::new_unchecked("B");
-        entries[2].delivery_point_id = DeliveryPointId::new_unchecked("C");
-
-        let ids = vec![
-            entries[0].delivery_point_id.clone(),
-            entries[1].delivery_point_id.clone(),
-            entries[2].delivery_point_id.clone(),
-        ];
-
-        helper
-            .db
-            .db
-            .add_aqua_culture_register(entries.clone())
-            .await
-            .unwrap();
+    test(|helper, builder| async move {
+        let state = builder.aqua_cultures(3).build().await;
 
         let response = helper.app.get_delivery_points().await;
 
         assert_eq!(response.status(), StatusCode::OK);
         let mut dps: Vec<DeliveryPoint> = response.json().await.unwrap();
 
-        dps.retain(|v| ids.contains(&v.id));
+        dps.retain(|v| state.delivery_points.iter().any(|d| d.id == v.id));
         dps.sort_by_key(|d| d.id.clone());
 
         assert_eq!(dps.len(), 3);
-        assert_eq!(dps, entries);
+        assert_eq!(dps, state.delivery_points);
     })
     .await;
 }
 
 #[tokio::test]
 async fn test_delivery_points_returns_mattilsynet_delivery_points() {
-    test(|helper, _builder| async move {
-        let mut delivery_points = vec![
-            MattilsynetDeliveryPoint::test_default(),
-            MattilsynetDeliveryPoint::test_default(),
-            MattilsynetDeliveryPoint::test_default(),
-        ];
-
-        delivery_points[0].id = DeliveryPointId::new_unchecked("A");
-        delivery_points[1].id = DeliveryPointId::new_unchecked("B");
-        delivery_points[2].id = DeliveryPointId::new_unchecked("C");
-
-        let ids = vec![
-            delivery_points[0].id.clone(),
-            delivery_points[1].id.clone(),
-            delivery_points[2].id.clone(),
-        ];
-
-        helper
-            .db
-            .db
-            .add_mattilsynet_delivery_points(delivery_points.clone())
-            .await
-            .unwrap();
+    test(|helper, builder| async move {
+        let state = builder.mattilsynet(3).build().await;
 
         let response = helper.app.get_delivery_points().await;
 
         assert_eq!(response.status(), StatusCode::OK);
         let mut dps: Vec<DeliveryPoint> = response.json().await.unwrap();
 
-        dps.retain(|v| ids.contains(&v.id));
+        dps.retain(|v| state.delivery_points.iter().any(|d| d.id == v.id));
         dps.sort_by_key(|d| d.id.clone());
-        let core = delivery_points
-            .into_iter()
-            .map(kyogre_core::DeliveryPoint::from)
-            .collect::<Vec<_>>();
 
         assert_eq!(dps.len(), 3);
-        assert_eq!(dps, core);
+        assert_eq!(dps, state.delivery_points);
     })
     .await;
 }
@@ -104,35 +57,26 @@ async fn test_delivery_points_returns_manual_delivery_points() {
 
 #[tokio::test]
 async fn test_delivery_points_prioritizes_manual_entries() {
-    test(|helper, _builder| async move {
+    test(|helper, builder| async move {
         let id = DeliveryPointId::new_unchecked("A");
 
-        let mut entry = AquaCultureEntry::test_default();
-        let mut dp = MattilsynetDeliveryPoint::test_default();
-
-        entry.delivery_point_id = id.clone();
-        entry.name = "A".into();
-
-        dp.id = id.clone();
-        dp.name = "B".into();
-
-        helper
-            .db
-            .db
-            .add_aqua_culture_register(vec![entry])
-            .await
-            .unwrap();
-
-        helper
-            .db
-            .db
-            .add_mattilsynet_delivery_points(vec![dp])
-            .await
-            .unwrap();
-
-        helper
-            .db
-            .add_manual_delivery_point(id.clone(), "C".into())
+        let state = builder
+            .aqua_cultures(1)
+            .modify(|v| {
+                v.val.delivery_point_id = id.clone();
+                v.val.name = "A".into()
+            })
+            .mattilsynet(1)
+            .modify(|v| {
+                v.val.id = id.clone();
+                v.val.name = "B".into()
+            })
+            .manual_delivery_points(1)
+            .modify(|v| {
+                v.val.id = id.clone();
+                v.val.name = "C".into()
+            })
+            .build()
             .await;
 
         let response = helper.app.get_delivery_points().await;
@@ -144,49 +88,54 @@ async fn test_delivery_points_prioritizes_manual_entries() {
         assert_eq!(dps.len(), 1);
         assert_eq!(dps[0].id, id);
         assert_eq!(dps[0].name, Some("C".into()));
+        assert_eq!(
+            dps[0],
+            *state.delivery_points.iter().find(|v| v.id == id).unwrap()
+        );
     })
     .await;
 }
 
 #[tokio::test]
 async fn test_delivery_points_adds_to_log_when_updated() {
-    test(|helper, _builder| async move {
-        let mut entry = AquaCultureEntry::test_default();
+    test(|helper, builder| async move {
+        let old_name = "old_name";
+        let new_name = "new_name";
+        let id = DeliveryPointId::new_unchecked("A");
 
-        helper
-            .db
-            .db
-            .add_aqua_culture_register(vec![entry.clone()])
+        let state = builder
+            .aqua_cultures(1)
+            .modify(|v| {
+                v.val.delivery_point_id = id.clone();
+                v.val.name = old_name.to_string();
+            })
+            .persist()
             .await
-            .unwrap();
-
-        let old_name = entry.name.clone();
-        entry.name = "New name".into();
-
-        helper
-            .db
-            .db
-            .add_aqua_culture_register(vec![entry.clone()])
-            .await
-            .unwrap();
+            .aqua_cultures(1)
+            .modify(|v| {
+                v.val.delivery_point_id = id.clone();
+                v.val.name = new_name.to_string();
+            })
+            .build()
+            .await;
 
         let response = helper.app.get_delivery_points().await;
 
         assert_eq!(response.status(), StatusCode::OK);
 
         let mut dps: Vec<DeliveryPoint> = response.json().await.unwrap();
-        dps.retain(|v| v.id == entry.delivery_point_id);
+        dps.retain(|v| v.id == state.delivery_points[0].id);
 
         assert_eq!(dps.len(), 1);
-        assert_eq!(dps[0].id, entry.delivery_point_id);
-        assert_eq!(dps[0].name, Some(entry.name.clone()));
+        let entry = &dps[0];
+        assert_eq!(dps[0], state.delivery_points[0]);
 
-        let log = helper.db.get_delivery_points_log().await;
+        let log = helper.db.db.delivery_points_log().await;
 
         assert_eq!(log.len(), 1);
         assert_eq!(
             log[0].get("delivery_point_id").unwrap().as_str().unwrap(),
-            entry.delivery_point_id.into_inner()
+            entry.id.as_ref()
         );
         assert_eq!(
             log[0]
@@ -206,7 +155,7 @@ async fn test_delivery_points_adds_to_log_when_updated() {
                 .unwrap()
                 .as_str()
                 .unwrap(),
-            entry.name
+            entry.name.clone().unwrap()
         );
     })
     .await;
@@ -214,33 +163,35 @@ async fn test_delivery_points_adds_to_log_when_updated() {
 
 #[tokio::test]
 async fn test_delivery_points_doesnt_add_to_log_when_updated_without_change() {
-    test(|helper, _builder| async move {
-        let entry = vec![AquaCultureEntry::test_default()];
+    test(|helper, builder| async move {
+        let name = "name";
+        let id = DeliveryPointId::new_unchecked("A");
 
-        helper
-            .db
-            .db
-            .add_aqua_culture_register(entry.clone())
+        let state = builder
+            .aqua_cultures(1)
+            .modify(|v| {
+                v.val.delivery_point_id = id.clone();
+                v.val.name = name.to_string();
+            })
+            .persist()
             .await
-            .unwrap();
-
-        helper
-            .db
-            .db
-            .add_aqua_culture_register(entry.clone())
-            .await
-            .unwrap();
+            .aqua_cultures(1)
+            .modify(|v| {
+                v.val.delivery_point_id = id.clone();
+                v.val.name = name.to_string();
+            })
+            .build()
+            .await;
 
         let response = helper.app.get_delivery_points().await;
 
         assert_eq!(response.status(), StatusCode::OK);
         let mut dps: Vec<DeliveryPoint> = response.json().await.unwrap();
-        dps.retain(|v| v.id == entry[0].delivery_point_id);
+        dps.retain(|v| v.id == state.delivery_points[0].id);
 
         assert_eq!(dps.len(), 1);
 
-        let log = helper.db.get_delivery_points_log().await;
-
+        let log = helper.db.db.delivery_points_log().await;
         assert_eq!(log.len(), 0);
     })
     .await;
@@ -248,17 +199,29 @@ async fn test_delivery_points_doesnt_add_to_log_when_updated_without_change() {
 
 #[tokio::test]
 async fn test_delivery_points_cant_add_deprecation_chain() {
-    test(|helper, _builder| async move {
+    test(|helper, builder| async move {
         let a = DeliveryPointId::new_unchecked("A");
         let b = DeliveryPointId::new_unchecked("B");
         let c = DeliveryPointId::new_unchecked("C");
 
+        builder
+            .aqua_cultures(3)
+            .modify_idx(|i, v| match i {
+                0 => v.val.delivery_point_id = a.clone(),
+                1 => v.val.delivery_point_id = b.clone(),
+                2 => v.val.delivery_point_id = c.clone(),
+                _ => unreachable!(),
+            })
+            .build()
+            .await;
+
         helper
+            .db
             .db
             .add_deprecated_delivery_point(a, b.clone())
             .await
             .unwrap();
-        let res = helper.db.add_deprecated_delivery_point(b, c).await;
+        let res = helper.db.db.add_deprecated_delivery_point(b, c).await;
 
         assert!(res.is_err());
     })
@@ -267,17 +230,29 @@ async fn test_delivery_points_cant_add_deprecation_chain() {
 
 #[tokio::test]
 async fn test_landings_respect_delivery_point_deprecation() {
-    test(|helper, _builder| async move {
-        let vessel_id = FiskeridirVesselId(111);
-        let date = Utc.timestamp_opt(1000, 0).unwrap();
+    test(|helper, builder| async move {
+        let new = DeliveryPointId::new_unchecked("A");
+        let old = DeliveryPointId::new_unchecked("A");
 
-        let landing = helper.db.generate_landing(1, vessel_id, date).await;
-
-        let id = DeliveryPointId::new_unchecked("A");
+        builder
+            .aqua_cultures(2)
+            .modify_idx(|i, v| match i {
+                0 => v.val.delivery_point_id = old.clone(),
+                1 => v.val.delivery_point_id = new.clone(),
+                _ => unreachable!(),
+            })
+            .vessels(1)
+            .landings(1)
+            .modify(|l| {
+                l.delivery_point.id = Some(old.clone());
+            })
+            .build()
+            .await;
 
         helper
             .db
-            .add_deprecated_delivery_point(landing.delivery_point_id.unwrap(), id.clone())
+            .db
+            .add_deprecated_delivery_point(old, new.clone())
             .await
             .unwrap();
 
@@ -287,7 +262,7 @@ async fn test_landings_respect_delivery_point_deprecation() {
         let landings: Vec<Landing> = response.json().await.unwrap();
 
         assert_eq!(landings.len(), 1);
-        assert_eq!(landings[0].delivery_point_id, Some(id));
+        assert_eq!(landings[0].delivery_point_id, Some(new));
     })
     .await;
 }

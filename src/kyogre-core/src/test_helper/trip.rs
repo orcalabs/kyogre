@@ -90,6 +90,9 @@ impl TripBuilder {
     pub fn trips(self, amount: usize) -> TripBuilder {
         self.state.trips(amount)
     }
+    pub fn up(self) -> VesselBuilder {
+        self.state
+    }
 
     pub fn adjacent(mut self) -> TripBuilder {
         let base = &mut self.state.state;

@@ -1,8 +1,4 @@
-use super::{haul::HaulTripBuilder, trip::TripBuilder, vessel::VesselBuilder};
-use crate::{
-    FishingFacilityTripBuilder, HaulBuilder, HaulVesselBuilder, TestState, TestStateBuilder,
-    TraBuilder, TraTripBuilder, TraVesselBuilder,
-};
+use crate::*;
 
 pub struct LandingBuilder {
     pub state: TestStateBuilder,
@@ -22,6 +18,9 @@ pub struct LandingTripBuilder {
 impl LandingTripBuilder {
     pub fn base(self) -> TestStateBuilder {
         self.state.state.state
+    }
+    pub fn up(self) -> VesselBuilder {
+        self.state.state
     }
     pub fn hauls(self, amount: usize) -> HaulTripBuilder {
         self.state.hauls(amount)
@@ -128,9 +127,17 @@ impl LandingVesselBuilder {
     pub fn tra(self, amount: usize) -> TraVesselBuilder {
         self.state.tra(amount)
     }
-
     pub fn hauls(self, amount: usize) -> HaulVesselBuilder {
         self.state.hauls(amount)
+    }
+    pub fn dep(self, amount: usize) -> DepVesselBuilder {
+        self.state.dep(amount)
+    }
+    pub fn por(self, amount: usize) -> PorVesselBuilder {
+        self.state.por(amount)
+    }
+    pub fn fishing_facilities(self, amount: usize) -> FishingFacilityVesselBuilder {
+        self.state.fishing_facilities(amount)
     }
 
     pub fn modify<F>(mut self, closure: F) -> LandingVesselBuilder

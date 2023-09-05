@@ -2,8 +2,7 @@ use crate::{models::Haul, PostgresAdapter};
 use bigdecimal::{BigDecimal, FromPrimitive};
 use chrono::{DateTime, Datelike, Duration, Utc};
 use fiskeridir_rs::{
-    CallSign, DeliveryPointId, ErsDca, ErsDep, ErsPor, Gear, GearGroup, LandingId,
-    VesselLengthGroup, Vms,
+    CallSign, ErsDca, ErsDep, ErsPor, Gear, GearGroup, LandingId, VesselLengthGroup, Vms,
 };
 use futures::TryStreamExt;
 use kyogre_core::*;
@@ -801,78 +800,5 @@ WHERE
         .unwrap();
 
         VmsPosition::try_from(pos).unwrap()
-    }
-
-    pub async fn add_deprecated_delivery_point(
-        &self,
-        old: DeliveryPointId,
-        new: DeliveryPointId,
-    ) -> Result<(), ()> {
-        let mut tx = self.db.begin().await.unwrap();
-        self.db
-            .add_delivery_point_ids(vec![old.clone().into(), new.clone().into()], &mut tx)
-            .await
-            .unwrap();
-
-        sqlx::query!(
-            r#"
-INSERT INTO
-    deprecated_delivery_points (old_delivery_point_id, new_delivery_point_id)
-VALUES
-    ($1, $2)
-            "#,
-            old.into_inner(),
-            new.into_inner(),
-        )
-        .execute(&mut *tx)
-        .await
-        .map(|_| ())
-        .map_err(|_| ())?;
-
-        tx.commit().await.unwrap();
-
-        Ok(())
-    }
-
-    pub async fn get_delivery_points_log(&self) -> Vec<serde_json::Value> {
-        sqlx::query!(
-            r#"
-SELECT
-    TO_JSONB(d.*) AS "json!"
-FROM
-    delivery_points_log d
-            "#,
-        )
-        .fetch_all(&self.db.pool)
-        .await
-        .unwrap()
-        .into_iter()
-        .map(|r| r.json)
-        .collect()
-    }
-
-    pub async fn add_manual_delivery_point(&self, id: DeliveryPointId, name: String) {
-        let mut tx = self.db.begin().await.unwrap();
-        self.db
-            .add_delivery_point_ids(vec![id.clone().into()], &mut tx)
-            .await
-            .unwrap();
-
-        sqlx::query!(
-            r#"
-INSERT INTO
-    manual_delivery_points (delivery_point_id, "name", delivery_point_type_id)
-VALUES
-    ($1, $2, $3)
-            "#,
-            id.into_inner(),
-            name,
-            DeliveryPointType::Ukjent as i32
-        )
-        .execute(&mut *tx)
-        .await
-        .unwrap();
-
-        tx.commit().await.unwrap();
     }
 }

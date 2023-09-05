@@ -2629,6 +2629,7 @@ dependencies = [
  "rand 0.8.5",
  "remain",
  "serde",
+ "serde_json",
  "serde_repr",
  "sqlx",
  "strum 0.25.0",

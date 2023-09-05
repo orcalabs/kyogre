@@ -6,7 +6,7 @@ use crate::{
 use async_trait::async_trait;
 use chrono::{DateTime, Duration, Utc};
 use error_stack::{IntoReport, Report, Result, ResultExt};
-use fiskeridir_rs::{CallSign, LandingId};
+use fiskeridir_rs::{CallSign, DeliveryPointId, LandingId};
 use futures::{Stream, StreamExt, TryStreamExt};
 use kyogre_core::*;
 use orca_core::{PsqlLogStatements, PsqlSettings};
@@ -179,7 +179,7 @@ impl PostgresAdapter {
             Err(e) => match e {
                 tokio::sync::broadcast::error::RecvError::Closed => {
                     event!(
-                        Level::ERROR,
+                        Level::WARN,
                         "sender half of ais broadcast channel closed unexpectedly, exiting"
                     );
                     AisProcessingAction::Exit
@@ -208,6 +208,53 @@ impl PostgresAdapter {
 }
 
 impl TestStorage for PostgresAdapter {}
+
+#[async_trait]
+impl TestHelperOutbound for PostgresAdapter {
+    async fn all_dep(&self) -> Vec<Departure> {
+        self.all_ers_departures_impl()
+            .await
+            .unwrap()
+            .into_iter()
+            .map(kyogre_core::Departure::from)
+            .collect()
+    }
+    async fn all_por(&self) -> Vec<Arrival> {
+        self.all_ers_arrivals_impl()
+            .await
+            .unwrap()
+            .into_iter()
+            .map(kyogre_core::Arrival::from)
+            .collect()
+    }
+
+    async fn delivery_points_log(&self) -> Vec<serde_json::Value> {
+        self.delivery_points_log_impl().await.unwrap()
+    }
+}
+
+#[async_trait]
+impl TestHelperInbound for PostgresAdapter {
+    async fn add_manual_delivery_points(&self, values: Vec<ManualDeliveryPoint>) {
+        self.add_manual_delivery_points_impl(
+            values
+                .into_iter()
+                .map(crate::models::ManualDeliveryPoint::from)
+                .collect(),
+        )
+        .await
+        .unwrap();
+    }
+    async fn add_deprecated_delivery_point(
+        &self,
+        old: DeliveryPointId,
+        new: DeliveryPointId,
+    ) -> Result<(), InsertError> {
+        self.add_deprecated_delivery_point_impl(old, new)
+            .await
+            .change_context(InsertError)
+    }
+}
 
 #[async_trait]
 impl AisConsumeLoop for PostgresAdapter {

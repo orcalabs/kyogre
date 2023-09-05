@@ -269,7 +269,7 @@ where
     TRACING.call_once(|| {
         tracing::subscriber::set_global_default(
             FmtSubscriber::builder()
-                .with_max_level(tracing::Level::INFO)
+                .with_max_level(tracing::Level::ERROR)
                 .finish(),
         )
         .unwrap();
