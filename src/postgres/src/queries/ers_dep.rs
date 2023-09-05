@@ -6,9 +6,8 @@ use crate::{
     models::{Departure, NewErsDep, NewErsDepCatch, TripAssemblerConflict},
     PostgresAdapter,
 };
-use chrono::{DateTime, Utc};
 use error_stack::{IntoReport, Result, ResultExt};
-use kyogre_core::{FiskeridirVesselId, TripAssemblerId, VesselEventType};
+use kyogre_core::{TripAssemblerId, VesselEventType};
 use unnest_insert::{UnnestInsert, UnnestInsertReturning};
 
 impl PostgresAdapter {
@@ -114,11 +113,7 @@ WHERE
             .map(|_| ())
     }
 
-    pub async fn ers_departures_impl(
-        &self,
-        vessel_id: FiskeridirVesselId,
-        start: &DateTime<Utc>,
-    ) -> Result<Vec<Departure>, PostgresError> {
+    pub(crate) async fn all_ers_departures_impl(&self) -> Result<Vec<Departure>, PostgresError> {
         sqlx::query_as!(
             Departure,
             r#"
@@ -128,12 +123,7 @@ SELECT
     port_id
 FROM
     ers_departures
-WHERE
-    fiskeridir_vessel_id = $1
-    AND departure_timestamp >= GREATEST($2, '1970-01-01T00:00:00Z'::TIMESTAMPTZ)
             "#,
-            vessel_id.0,
-            start,
         )
         .fetch_all(&self.pool)
         .await

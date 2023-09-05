@@ -1,6 +1,8 @@
+use crate::queries::enum_to_i32;
 use bigdecimal::BigDecimal;
 use chrono::NaiveDate;
 use error_stack::{Report, ResultExt};
+use kyogre_core::DeliveryPointType;
 use unnest_insert::UnnestInsert;
 
 use crate::{
@@ -21,6 +23,19 @@ pub struct DeliveryPoint {
 #[unnest_insert(table_name = "delivery_point_ids", conflict = "delivery_point_id")]
 pub struct NewDeliveryPointId {
     pub delivery_point_id: String,
+}
+
+#[derive(Debug, Clone, UnnestInsert)]
+#[unnest_insert(
+    table_name = "manual_delivery_points",
+    conflict = "delivery_point_id",
+    update_all
+)]
+pub struct ManualDeliveryPoint {
+    pub delivery_point_id: String,
+    #[unnest_insert(sql_type = "INT", type_conversion = "enum_to_i32")]
+    pub delivery_point_type_id: DeliveryPointType,
+    pub name: String,
 }
 
 #[derive(Debug, Clone, UnnestInsert)]
@@ -188,6 +203,16 @@ impl From<kyogre_core::MattilsynetDeliveryPoint> for MattilsynetDeliveryPoint {
             address: v.address,
             postal_city: v.postal_city,
             postal_code: v.postal_code.map(|p| p as i32),
+        }
+    }
+}
+
+impl From<kyogre_core::ManualDeliveryPoint> for ManualDeliveryPoint {
+    fn from(v: kyogre_core::ManualDeliveryPoint) -> Self {
+        Self {
+            delivery_point_id: v.id.into_inner(),
+            name: v.name,
+            delivery_point_type_id: v.type_id,
         }
     }
 }

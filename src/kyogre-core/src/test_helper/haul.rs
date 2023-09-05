@@ -1,11 +1,5 @@
+use crate::*;
 use fiskeridir_rs::ErsDca;
-
-use crate::{
-    FishingFacilityTripBuilder, LandingBuilder, LandingVesselBuilder, TestState, TestStateBuilder,
-    TraBuilder, TraTripBuilder, TraVesselBuilder, VesselBuilder,
-};
-
-use super::{landing::LandingTripBuilder, trip::TripBuilder};
 
 pub struct HaulBuilder {
     pub state: TestStateBuilder,
@@ -22,6 +16,7 @@ pub struct HaulVesselBuilder {
     pub current_index: usize,
 }
 
+#[derive(Clone)]
 pub struct HaulConstructor {
     pub dca: ErsDca,
 }
@@ -72,11 +67,20 @@ impl HaulVesselBuilder {
     pub fn trips(self, amount: usize) -> TripBuilder {
         self.state.trips(amount)
     }
+    pub fn fishing_facilities(self, amount: usize) -> FishingFacilityVesselBuilder {
+        self.state.fishing_facilities(amount)
+    }
     pub fn landings(self, amount: usize) -> LandingVesselBuilder {
         self.state.landings(amount)
     }
     pub fn tra(self, amount: usize) -> TraVesselBuilder {
         self.state.tra(amount)
+    }
+    pub fn dep(self, amount: usize) -> DepVesselBuilder {
+        self.state.dep(amount)
+    }
+    pub fn por(self, amount: usize) -> PorVesselBuilder {
+        self.state.por(amount)
     }
     pub async fn build(self) -> TestState {
         self.state.state.build().await
@@ -112,6 +116,9 @@ impl HaulVesselBuilder {
     }
 }
 impl HaulTripBuilder {
+    pub fn up(self) -> VesselBuilder {
+        self.state.state
+    }
     pub fn landings(self, amount: usize) -> LandingTripBuilder {
         self.state.landings(amount)
     }

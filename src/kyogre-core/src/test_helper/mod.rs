@@ -1,23 +1,26 @@
 use crate::{
-    AisConsumeLoop, AisPermission, AisPosition, DataMessage, DateRange, FisheryEngine,
-    FiskeridirVesselId, Haul, HaulsQuery, Mmsi, NewAisPosition, NewAisStatic, Pagination,
-    ScraperInboundPort, TripAssemblerOutboundPort, TripDetailed, Trips, TripsQuery, Vessel,
-    VmsPosition, WebApiOutboundPort,
+    AisConsumeLoop, AisPermission, AisPosition, Arrival, DataMessage, DateRange, DeliveryPoint,
+    DeliveryPointType, Departure, FisheryEngine, FiskeridirVesselId, Haul, HaulsQuery,
+    ManualDeliveryPoint, MattilsynetDeliveryPoint, Mmsi, NewAisPosition, NewAisStatic, Pagination,
+    ScraperInboundPort, TestHelperInbound, TestHelperOutbound, TripAssemblerOutboundPort,
+    TripDetailed, Trips, TripsQuery, Vessel, VmsPosition, WebApiOutboundPort,
 };
 use ais::*;
 use ais_vms::*;
 use chrono::{DateTime, Duration, TimeZone, Utc};
-use fiskeridir_rs::LandingMonth;
 use fiskeridir_rs::{CallSign, LandingId};
+use fiskeridir_rs::{DeliveryPointId, LandingMonth};
 use futures::TryStreamExt;
 use machine::StateMachine;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 pub trait TestStorage:
     ScraperInboundPort
     + WebApiOutboundPort
     + AisConsumeLoop
     + TripAssemblerOutboundPort
+    + TestHelperOutbound
+    + TestHelperInbound
     + Send
     + Sync
     + 'static
@@ -26,10 +29,13 @@ pub trait TestStorage:
 
 mod ais;
 mod ais_vms;
+mod delivery_points;
+mod dep;
 mod fishing_facility;
 mod haul;
 mod item_distribution;
 mod landing;
+mod por;
 mod tra;
 mod trip;
 mod vessel;
@@ -37,9 +43,12 @@ mod vms;
 
 pub use ais::*;
 pub use ais_vms::*;
+pub use delivery_points::*;
+pub use dep::*;
 pub use fishing_facility::*;
 pub use haul::*;
 pub use landing::*;
+pub use por::*;
 pub use tra::*;
 pub use trip::*;
 pub use vessel::*;
@@ -54,6 +63,12 @@ pub struct TestState {
     pub trips: Vec<TripDetailed>,
     pub landing_ids: Vec<LandingId>,
     pub hauls: Vec<Haul>,
+    pub dep: Vec<Departure>,
+    pub por: Vec<Arrival>,
+    // Includes the static delivery points from our migrations
+    pub all_delivery_points: Vec<DeliveryPoint>,
+    // Only includes the delivery points added by the builder
+    pub delivery_points: Vec<DeliveryPoint>,
     ais_positions_to_vessel: HashMap<VesselKey, Vec<AisPosition>>,
     ais_vms_positions_to_vessel: HashMap<VesselKey, Vec<crate::AisVmsPosition>>,
     vms_positions_to_vessel: HashMap<VesselKey, Vec<crate::VmsPosition>>,
@@ -77,6 +92,11 @@ pub struct TestStateBuilder {
     hauls: Vec<HaulConstructor>,
     landings: Vec<fiskeridir_rs::Landing>,
     tra: Vec<TraConstructor>,
+    dep: Vec<DepConstructor>,
+    por: Vec<PorConstructor>,
+    aqua_cultures: Vec<AquaCultureConstructor>,
+    mattilsynet: Vec<MattilsynetConstructor>,
+    manual_delivery_points: Vec<ManualDeliveryPointConstructor>,
     fishing_facilities: Vec<FishingFacilityConctructor>,
     default_trip_duration: Duration,
     default_haul_duration: Duration,
@@ -84,6 +104,7 @@ pub struct TestStateBuilder {
     trip_data_timestamp_gap: Duration,
     ers_message_id_counter: u64,
     ers_message_number_per_vessel: HashMap<VesselKey, u32>,
+    delivery_point_id_counter: u64,
     landing_id_counter: u64,
     engine: FisheryEngine,
 }
@@ -147,6 +168,7 @@ impl TestStateBuilder {
             trips: vec![],
             default_trip_duration: Duration::weeks(1),
             ers_message_id_counter: 1,
+            delivery_point_id_counter: 1,
             ers_message_number_per_vessel: HashMap::default(),
             engine,
             landings: vec![],
@@ -158,6 +180,11 @@ impl TestStateBuilder {
             global_data_timestamp_counter: Utc.with_ymd_and_hms(2010, 2, 5, 10, 0, 0).unwrap(),
             fishing_facilities: vec![],
             default_fishing_facility_duration: Duration::hours(1),
+            dep: vec![],
+            por: vec![],
+            aqua_cultures: vec![],
+            mattilsynet: vec![],
+            manual_delivery_points: vec![],
         }
     }
 
@@ -169,6 +196,66 @@ impl TestStateBuilder {
     pub fn data_start(mut self, time: DateTime<Utc>) -> TestStateBuilder {
         self.global_data_timestamp_counter = time;
         self
+    }
+
+    pub fn mattilsynet(mut self, amount: usize) -> MattilsynetBuilder {
+        assert!(amount != 0);
+
+        for _ in 0..amount {
+            let mut val = MattilsynetDeliveryPoint::test_default();
+            val.id =
+                DeliveryPointId::try_from(format!("DP{}", self.delivery_point_id_counter)).unwrap();
+            self.delivery_point_id_counter += 1;
+            self.mattilsynet.push(MattilsynetConstructor { val });
+        }
+
+        MattilsynetBuilder {
+            current_index: self.mattilsynet.len() - amount,
+            state: self,
+        }
+    }
+
+    pub fn manual_delivery_points(mut self, amount: usize) -> ManualDeliveryPointsBuilder {
+        assert!(amount != 0);
+
+        for _ in 0..amount {
+            let id =
+                DeliveryPointId::try_from(format!("DP{}", self.delivery_point_id_counter)).unwrap();
+
+            let name = format!("{}_name", id.as_ref());
+
+            self.delivery_point_id_counter += 1;
+            self.manual_delivery_points
+                .push(ManualDeliveryPointConstructor {
+                    val: ManualDeliveryPoint {
+                        id,
+                        name,
+                        type_id: DeliveryPointType::Fiskemottak,
+                    },
+                });
+        }
+
+        ManualDeliveryPointsBuilder {
+            current_index: self.manual_delivery_points.len() - amount,
+            state: self,
+        }
+    }
+
+    pub fn aqua_cultures(mut self, amount: usize) -> AquaCultureBuilder {
+        assert!(amount != 0);
+
+        for _ in 0..amount {
+            let mut val = fiskeridir_rs::AquaCultureEntry::test_default();
+            val.delivery_point_id =
+                DeliveryPointId::try_from(format!("DP{}", self.delivery_point_id_counter)).unwrap();
+            self.delivery_point_id_counter += 1;
+            self.aqua_cultures.push(AquaCultureConstructor { val });
+        }
+
+        AquaCultureBuilder {
+            current_index: self.aqua_cultures.len() - amount,
+            state: self,
+        }
     }
 
     pub fn landings(mut self, amount: usize) -> LandingBuilder {
@@ -311,6 +398,43 @@ impl TestStateBuilder {
             .add_ers_tra(self.tra.into_iter().map(|v| v.tra).collect())
             .await
             .unwrap();
+
+        self.storage
+            .add_ers_dep(self.dep.into_iter().map(|v| v.dep).collect())
+            .await
+            .unwrap();
+
+        self.storage
+            .add_ers_por(self.por.into_iter().map(|v| v.por).collect())
+            .await
+            .unwrap();
+
+        let delivery_point_ids: HashSet<DeliveryPointId> = self
+            .aqua_cultures
+            .iter()
+            .map(|v| v.val.delivery_point_id.clone())
+            .chain(self.mattilsynet.iter().map(|v| v.val.id.clone()))
+            .chain(self.manual_delivery_points.iter().map(|v| v.val.id.clone()))
+            .collect();
+
+        self.storage
+            .add_aqua_culture_register(self.aqua_cultures.into_iter().map(|v| v.val).collect())
+            .await
+            .unwrap();
+
+        self.storage
+            .add_mattilsynet_delivery_points(self.mattilsynet.into_iter().map(|v| v.val).collect())
+            .await
+            .unwrap();
+
+        self.storage
+            .add_manual_delivery_points(
+                self.manual_delivery_points
+                    .into_iter()
+                    .map(|v| v.val)
+                    .collect(),
+            )
+            .await;
 
         self.storage
             .add_fishing_facilities(
@@ -513,6 +637,21 @@ impl TestStateBuilder {
             .await
             .unwrap();
 
+        let mut dep = self.storage.all_dep().await;
+        let mut por = self.storage.all_por().await;
+        let all_delivery_points = self
+            .storage
+            .delivery_points()
+            .try_collect::<Vec<DeliveryPoint>>()
+            .await
+            .unwrap();
+
+        let mut delivery_points: Vec<DeliveryPoint> = all_delivery_points
+            .iter()
+            .filter(|v| delivery_point_ids.contains(&v.id))
+            .cloned()
+            .collect();
+
         // We want all positions to be ordered by how they were created, we exploit the fact that
         // mmsis are an increasing counter and that msgtime is increased for each created position.
         ais_positions.sort_by_key(|v| (v.mmsi, v.msgtime));
@@ -521,6 +660,9 @@ impl TestStateBuilder {
         trips.sort_by_key(|v| (v.fiskeridir_vessel_id, v.period.start()));
         landing_ids.sort_by_key(|v| (v.0, v.1));
         hauls.sort_by_key(|v| (v.start_timestamp, v.haul_id));
+        dep.sort_by_key(|v| (v.timestamp, v.fiskeridir_vessel_id));
+        por.sort_by_key(|v| (v.timestamp, v.fiskeridir_vessel_id));
+        delivery_points.sort_by_key(|v| v.id.clone());
         assert_eq!(vessels.len(), num_vessels);
 
         TestState {
@@ -535,6 +677,10 @@ impl TestStateBuilder {
             trips_to_vessel,
             landing_ids: landing_ids.into_iter().map(|v| v.2).collect(),
             hauls,
+            dep,
+            por,
+            all_delivery_points,
+            delivery_points,
         }
     }
 }

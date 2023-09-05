@@ -2,6 +2,7 @@ use crate::*;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use error_stack::Result;
+use fiskeridir_rs::DeliveryPointId;
 
 #[async_trait]
 pub trait AisConsumeLoop: Sync + Send {
@@ -108,4 +109,14 @@ pub trait TripDistancerInbound: Send + Sync {
 #[async_trait]
 pub trait DatabaseViewRefresher: Send + Sync {
     async fn refresh(&self) -> Result<(), UpdateError>;
+}
+
+#[async_trait]
+pub trait TestHelperInbound: Send + Sync {
+    async fn add_manual_delivery_points(&self, values: Vec<ManualDeliveryPoint>);
+    async fn add_deprecated_delivery_point(
+        &self,
+        old: DeliveryPointId,
+        new: DeliveryPointId,
+    ) -> Result<(), InsertError>;
 }

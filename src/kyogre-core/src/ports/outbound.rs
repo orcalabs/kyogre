@@ -206,3 +206,10 @@ pub trait MatrixCacheVersion: Send + Sync {
 pub trait VerificationOutbound: Send + Sync {
     async fn verify_database(&self) -> Result<(), QueryError>;
 }
+
+#[async_trait]
+pub trait TestHelperOutbound: Send + Sync {
+    async fn all_dep(&self) -> Vec<Departure>;
+    async fn all_por(&self) -> Vec<Arrival>;
+    async fn delivery_points_log(&self) -> Vec<serde_json::Value>;
+}

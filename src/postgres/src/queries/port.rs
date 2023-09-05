@@ -1,6 +1,6 @@
 use crate::{
     error::PostgresError,
-    models::{NewPort, TripDockPoints, TripPorts},
+    models::{Arrival, NewPort, TripDockPoints, TripPorts},
     PostgresAdapter,
 };
 use error_stack::{IntoReport, Result, ResultExt};
@@ -8,6 +8,23 @@ use kyogre_core::TripId;
 use unnest_insert::UnnestInsert;
 
 impl PostgresAdapter {
+    pub(crate) async fn all_ers_arrivals_impl(&self) -> Result<Vec<Arrival>, PostgresError> {
+        sqlx::query_as!(
+            Arrival,
+            r#"
+SELECT
+    fiskeridir_vessel_id AS "fiskeridir_vessel_id!",
+    arrival_timestamp AS "timestamp",
+    port_id
+FROM
+    ers_arrivals
+            "#,
+        )
+        .fetch_all(&self.pool)
+        .await
+        .into_report()
+        .change_context(PostgresError::Query)
+    }
     pub(crate) async fn add_ports<'a>(
         &'a self,
         ports: Vec<NewPort>,

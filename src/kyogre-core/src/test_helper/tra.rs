@@ -1,11 +1,6 @@
-use fiskeridir_rs::ErsTra;
-
-use crate::{
-    FishingFacilityTripBuilder, HaulBuilder, HaulTripBuilder, HaulVesselBuilder, LandingBuilder,
-    LandingVesselBuilder, TestState, TestStateBuilder, VesselBuilder,
-};
-
 use super::{landing::LandingTripBuilder, trip::TripBuilder};
+use crate::*;
+use fiskeridir_rs::ErsTra;
 
 pub struct TraBuilder {
     pub state: TestStateBuilder,
@@ -71,6 +66,15 @@ impl TraVesselBuilder {
     pub fn base(self) -> TestStateBuilder {
         self.state.state
     }
+    pub fn fishing_facilities(self, amount: usize) -> FishingFacilityVesselBuilder {
+        self.state.fishing_facilities(amount)
+    }
+    pub fn dep(self, amount: usize) -> DepVesselBuilder {
+        self.state.dep(amount)
+    }
+    pub fn por(self, amount: usize) -> PorVesselBuilder {
+        self.state.por(amount)
+    }
     pub async fn build(self) -> TestState {
         self.state.state.build().await
     }
@@ -129,6 +133,9 @@ impl TraTripBuilder {
     }
     pub fn hauls(self, amount: usize) -> HaulTripBuilder {
         self.state.hauls(amount)
+    }
+    pub fn up(self) -> VesselBuilder {
+        self.state.state
     }
     pub fn modify<F>(mut self, closure: F) -> TraTripBuilder
     where

@@ -1,10 +1,10 @@
 use fiskeridir_rs::LandingMonth;
 
-use crate::test_helper::item_distribution::ItemDistribution;
-
 use super::ais_vms::AisOrVmsPosition;
 use super::landing::LandingVesselBuilder;
 use super::*;
+use crate::test_helper::item_distribution::ItemDistribution;
+use crate::*;
 
 pub struct VesselBuilder {
     pub state: TestStateBuilder,
@@ -23,6 +23,43 @@ pub struct VesselContructor {
 }
 
 impl VesselBuilder {
+    pub fn fishing_facilities(mut self, amount: usize) -> FishingFacilityVesselBuilder {
+        assert!(amount != 0);
+        let base = &mut self.state;
+
+        let num_vessels = base.vessels[self.current_index..].len();
+        let distribution = ItemDistribution::new(amount, num_vessels);
+
+        for (i, vessel) in base.vessels[self.current_index..].iter_mut().enumerate() {
+            let num_facilities = distribution.num_elements(i);
+
+            let vessel_call_sign = vessel
+                .fiskeridir
+                .radio_call_sign
+                .as_ref()
+                .expect("cannot add fishing facilites to vessel without call sign");
+
+            for _ in 0..num_facilities {
+                let start = base.global_data_timestamp_counter;
+                let end = start + base.default_fishing_facility_duration;
+
+                let mut facility = FishingFacility::test_default();
+                facility.call_sign = Some(vessel_call_sign.clone());
+                facility.setup_timestamp = start;
+                facility.removed_timestamp = Some(end);
+
+                base.fishing_facilities
+                    .push(FishingFacilityConctructor { facility });
+
+                base.global_data_timestamp_counter = end + base.trip_data_timestamp_gap;
+            }
+        }
+
+        FishingFacilityVesselBuilder {
+            current_index: base.fishing_facilities.len() - amount,
+            state: self,
+        }
+    }
     pub fn hauls(mut self, amount: usize) -> HaulVesselBuilder {
         assert!(amount != 0);
         let base = &mut self.state;
@@ -56,6 +93,78 @@ impl VesselBuilder {
 
         HaulVesselBuilder {
             current_index: base.hauls.len() - amount,
+            state: self,
+        }
+    }
+
+    pub fn por(mut self, amount: usize) -> PorVesselBuilder {
+        assert!(amount != 0);
+        let base = &mut self.state;
+
+        let num_vessels = base.vessels[self.current_index..].len();
+        let distribution = ItemDistribution::new(amount, num_vessels);
+
+        for (i, vessel) in base.vessels[self.current_index..].iter_mut().enumerate() {
+            let num_por = distribution.num_elements(i);
+
+            for _ in 0..num_por {
+                let timestamp = base.global_data_timestamp_counter;
+                let message_number = base
+                    .ers_message_number_per_vessel
+                    .get_mut(&vessel.key)
+                    .unwrap();
+
+                let por = fiskeridir_rs::ErsPor::test_default(
+                    base.ers_message_id_counter,
+                    vessel.fiskeridir.id as u64,
+                    timestamp,
+                    *message_number,
+                );
+                *message_number += 1;
+                base.ers_message_id_counter += 1;
+
+                base.por.push(PorConstructor { por });
+                base.global_data_timestamp_counter += base.data_timestamp_gap;
+            }
+        }
+        PorVesselBuilder {
+            current_index: base.por.len() - amount,
+            state: self,
+        }
+    }
+    pub fn dep(mut self, amount: usize) -> DepVesselBuilder {
+        assert!(amount != 0);
+        let base = &mut self.state;
+
+        let num_vessels = base.vessels[self.current_index..].len();
+        let distribution = ItemDistribution::new(amount, num_vessels);
+
+        for (i, vessel) in base.vessels[self.current_index..].iter_mut().enumerate() {
+            let num_dep = distribution.num_elements(i);
+
+            for _ in 0..num_dep {
+                let timestamp = base.global_data_timestamp_counter;
+                let message_number = base
+                    .ers_message_number_per_vessel
+                    .get_mut(&vessel.key)
+                    .unwrap();
+
+                let dep = fiskeridir_rs::ErsDep::test_default(
+                    base.ers_message_id_counter,
+                    vessel.fiskeridir.id as u64,
+                    timestamp,
+                    *message_number,
+                );
+                *message_number += 1;
+                base.ers_message_id_counter += 1;
+
+                base.dep.push(DepConstructor { dep });
+                base.global_data_timestamp_counter += base.data_timestamp_gap;
+            }
+        }
+
+        DepVesselBuilder {
+            current_index: base.dep.len() - amount,
             state: self,
         }
     }
