@@ -33,6 +33,7 @@ pub mod vessel;
 pub mod vessel_benchmarks;
 pub mod vessel_events;
 pub mod vms;
+pub mod weather;
 
 pub(crate) fn float_to_decimal(value: f64) -> Result<BigDecimal, BigDecimalError> {
     BigDecimal::from_f64(value).ok_or_else(|| report!(BigDecimalError(value)))

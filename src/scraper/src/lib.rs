@@ -14,12 +14,14 @@ use serde::Deserialize;
 use std::fmt::Debug;
 use std::sync::Arc;
 use tracing::{event, instrument, Level};
+use weather::WeatherScraper;
 
 mod barentswatch;
 mod chunks;
 mod error;
 mod fiskeridir;
 mod mattilsynet;
+mod weather;
 mod wrapped_http_client;
 
 pub use barentswatch::BarentswatchSource;
@@ -169,6 +171,9 @@ impl Scraper {
             barentswatch_source,
             config.fishing_facility_historic,
         );
+
+        let _weather_scraper = WeatherScraper::new();
+
         Scraper {
             scrapers: vec![
                 Box::new(landings_scraper),
@@ -182,6 +187,7 @@ impl Scraper {
                 Box::new(fishing_facility_historic_scraper),
                 Box::new(aqua_culture_register_scraper),
                 Box::new(mattilsynet_scraper),
+                // Box::new(weather_scraper),
             ],
             processor,
         }
@@ -217,6 +223,7 @@ pub enum ScraperId {
     FishingFacilityHistoric,
     AquaCultureRegister,
     Mattilsynet,
+    Weather,
 }
 
 impl std::fmt::Display for ScraperId {
@@ -233,6 +240,7 @@ impl std::fmt::Display for ScraperId {
             ScraperId::FishingFacilityHistoric => write!(f, "fishing_facility_historic_scraper"),
             ScraperId::AquaCultureRegister => write!(f, "aqua_culture_register"),
             ScraperId::Mattilsynet => write!(f, "mattilsynet"),
+            ScraperId::Weather => write!(f, "weather"),
         }
     }
 }

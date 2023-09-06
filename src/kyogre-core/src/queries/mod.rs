@@ -7,12 +7,14 @@ mod haul;
 mod landing;
 mod pagination;
 mod trip;
+mod weather;
 
 pub use fishing_facility::*;
 pub use haul::*;
 pub use landing::*;
 pub use pagination::*;
 pub use trip::*;
+pub use weather::*;
 
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 #[derive(Deserialize, Debug, Default, Clone, Copy, strum::Display)]
