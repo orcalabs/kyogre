@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT\n    t.trip_id AS \"trip_id!\",\n    t.fiskeridir_vessel_id AS \"fiskeridir_vessel_id!\",\n    t.period AS \"period!\",\n    t.period_precision,\n    t.landing_coverage AS \"landing_coverage!\",\n    COALESCE(t.num_landings::BIGINT, 0) AS \"num_deliveries!\",\n    COALESCE(t.landing_total_living_weight, 0.0) AS \"total_living_weight!\",\n    COALESCE(t.landing_total_gross_weight, 0.0) AS \"total_gross_weight!\",\n    COALESCE(t.landing_total_product_weight, 0.0) AS \"total_product_weight!\",\n    COALESCE(t.delivery_point_ids, '{}') AS \"delivery_points!\",\n    COALESCE(t.landing_gear_ids, '{}') AS \"gear_ids!: Vec<Gear>\",\n    t.most_recent_landing AS latest_landing_timestamp,\n    COALESCE(t.landings::TEXT, '[]') AS \"catches!\",\n    t.start_port_id,\n    t.end_port_id,\n    t.trip_assembler_id AS \"trip_assembler_id!: TripAssemblerId\",\n    COALESCE(t.vessel_events, '[]')::TEXT AS \"vessel_events!\",\n    COALESCE(t.hauls, '[]')::TEXT AS \"hauls!\",\n    CASE\n        WHEN $1 THEN COALESCE(t.fishing_facilities, '[]')::TEXT\n        ELSE '[]'\n    END AS \"fishing_facilities!\"\nFROM\n    trips_detailed t\nWHERE\n    t.landing_ids && $2::VARCHAR[];\n            ",
+  "query": "\nSELECT\n    t.trip_id AS \"trip_id!\",\n    t.fiskeridir_vessel_id AS \"fiskeridir_vessel_id!\",\n    t.period AS \"period!\",\n    t.period_precision,\n    t.landing_coverage AS \"landing_coverage!\",\n    COALESCE(t.num_landings::BIGINT, 0) AS \"num_deliveries!\",\n    COALESCE(t.landing_total_living_weight, 0.0) AS \"total_living_weight!\",\n    COALESCE(t.landing_total_gross_weight, 0.0) AS \"total_gross_weight!\",\n    COALESCE(t.landing_total_product_weight, 0.0) AS \"total_product_weight!\",\n    COALESCE(t.delivery_point_ids, '{}') AS \"delivery_points!\",\n    COALESCE(t.landing_gear_ids, '{}') AS \"gear_ids!: Vec<Gear>\",\n    t.most_recent_landing AS latest_landing_timestamp,\n    COALESCE(t.landings::TEXT, '[]') AS \"catches!\",\n    t.start_port_id,\n    t.end_port_id,\n    t.trip_assembler_id AS \"trip_assembler_id!: TripAssemblerId\",\n    COALESCE(t.vessel_events, '[]')::TEXT AS \"vessel_events!\",\n    COALESCE(t.hauls, '[]')::TEXT AS \"hauls!\",\n    COALESCE(t.fishing_facilities, '[]')::TEXT AS \"fishing_facilities!\",\n    COALESCE(t.landing_ids, '{}') AS \"landing_ids!\"\nFROM\n    trips_detailed t\nWHERE\n    t.fiskeridir_vessel_id = $1;\n            ",
   "describe": {
     "columns": [
       {
@@ -97,12 +97,16 @@
         "ordinal": 18,
         "name": "fishing_facilities!",
         "type_info": "Text"
+      },
+      {
+        "ordinal": 19,
+        "name": "landing_ids!",
+        "type_info": "VarcharArray"
       }
     ],
     "parameters": {
       "Left": [
-        "Bool",
-        "VarcharArray"
+        "Int8"
       ]
     },
     "nullable": [
@@ -124,8 +128,9 @@
       false,
       null,
       null,
+      null,
       null
     ]
   },
-  "hash": "c2111f8b4fffdbf5f8de003a37953b288e73099aa46706ab40b7e4bd44b7ceb8"
+  "hash": "139b9fcce2cf4c1e46858721dfa05af2f9a7d1c62863032d19ef14d496ed6466"
 }

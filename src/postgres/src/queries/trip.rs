@@ -575,6 +575,7 @@ SELECT
     t.trip_assembler_id AS "trip_assembler_id!: TripAssemblerId",
     COALESCE(t.vessel_events, '[]')::TEXT AS "vessel_events!",
     COALESCE(t.hauls, '[]')::TEXT AS "hauls!",
+    COALESCE(t.landing_ids, '{}') AS "landing_ids!",
     CASE
         WHEN $1 THEN COALESCE(t.fishing_facilities, '[]')::TEXT
         ELSE '[]'
@@ -692,6 +693,7 @@ SELECT
     t.trip_assembler_id AS "trip_assembler_id!: TripAssemblerId",
     COALESCE(t.vessel_events, '[]')::TEXT AS "vessel_events!",
     COALESCE(t.hauls, '[]')::TEXT AS "hauls!",
+    COALESCE(t.landing_ids, '{}') AS "landing_ids!",
     CASE
         WHEN $5 THEN COALESCE(t.fishing_facilities, '[]')::TEXT
         ELSE '[]'
@@ -751,6 +753,7 @@ SELECT
     t.trip_assembler_id AS "trip_assembler_id!: TripAssemblerId",
     COALESCE(t.vessel_events, '[]')::TEXT AS "vessel_events!",
     COALESCE(t.hauls, '[]')::TEXT AS "hauls!",
+    COALESCE(t.landing_ids, '{}') AS "landing_ids!",
     CASE
         WHEN $1 THEN COALESCE(t.fishing_facilities, '[]')::TEXT
         ELSE '[]'
@@ -796,6 +799,7 @@ SELECT
     t.trip_assembler_id AS "trip_assembler_id!: TripAssemblerId",
     COALESCE(t.vessel_events, '[]')::TEXT AS "vessel_events!",
     COALESCE(t.hauls, '[]')::TEXT AS "hauls!",
+    COALESCE(t.landing_ids, '{}') AS "landing_ids!",
     CASE
         WHEN $1 THEN COALESCE(t.fishing_facilities, '[]')::TEXT
         ELSE '[]'

@@ -376,7 +376,8 @@ SELECT
     t.trip_assembler_id AS "trip_assembler_id!: TripAssemblerId",
     COALESCE(t.vessel_events, '[]')::TEXT AS "vessel_events!",
     COALESCE(t.hauls, '[]')::TEXT AS "hauls!",
-    COALESCE(t.fishing_facilities, '[]')::TEXT AS "fishing_facilities!"
+    COALESCE(t.fishing_facilities, '[]')::TEXT AS "fishing_facilities!",
+    COALESCE(t.landing_ids, '{}') AS "landing_ids!"
 FROM
     trips_detailed t
 WHERE

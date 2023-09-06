@@ -1,4 +1,5 @@
 use crate::routes::utils::{self, *};
+use fiskeridir_rs::LandingId;
 use futures::TryStreamExt;
 
 use crate::{
@@ -275,6 +276,8 @@ pub struct Trip {
     pub start_port_id: Option<String>,
     pub end_port_id: Option<String>,
     pub events: Vec<VesselEvent>,
+    #[schema(value_type = Vec<String>)]
+    pub landing_ids: Vec<LandingId>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
@@ -352,6 +355,7 @@ impl From<kyogre_core::TripDetailed> for Trip {
                 .into_iter()
                 .map(VesselEvent::from)
                 .collect(),
+            landing_ids: value.landing_ids,
         }
     }
 }
