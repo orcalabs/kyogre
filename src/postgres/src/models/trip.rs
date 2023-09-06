@@ -3,7 +3,7 @@ use crate::{error::PostgresError, queries::decimal_to_float};
 use bigdecimal::BigDecimal;
 use chrono::{DateTime, Utc};
 use error_stack::{IntoReport, Report, ResultExt};
-use fiskeridir_rs::{DeliveryPointId, Gear, GearGroup, Quality, VesselLengthGroup};
+use fiskeridir_rs::{DeliveryPointId, Gear, GearGroup, LandingId, Quality, VesselLengthGroup};
 use kyogre_core::{
     CatchLocationId, DateRange, FiskeridirVesselId, HaulId, TripAssemblerId, TripId,
     VesselEventType,
@@ -54,6 +54,7 @@ pub struct TripDetailed {
     pub total_product_weight: BigDecimal,
     pub delivery_points: Vec<String>,
     pub gear_ids: Vec<Gear>,
+    pub landing_ids: Vec<String>,
     pub latest_landing_timestamp: Option<DateTime<Utc>>,
     pub catches: String,
     pub hauls: String,
@@ -222,6 +223,13 @@ impl TryFrom<TripDetailed> for kyogre_core::TripDetailed {
             .map(kyogre_core::VesselEvent::from)
             .collect::<Vec<kyogre_core::VesselEvent>>();
 
+        let landing_ids = value
+            .landing_ids
+            .into_iter()
+            .map(LandingId::try_from)
+            .collect::<error_stack::Result<Vec<LandingId>, _>>()
+            .change_context(PostgresError::DataConversion)?;
+
         vessel_events.sort_by_key(|v| v.report_timestamp);
 
         Ok(kyogre_core::TripDetailed {
@@ -270,6 +278,7 @@ impl TryFrom<TripDetailed> for kyogre_core::TripDetailed {
             end_port_id: value.end_port_id,
             assembler_id: value.trip_assembler_id,
             vessel_events,
+            landing_ids,
         })
     }
 }

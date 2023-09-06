@@ -936,3 +936,22 @@ async fn test_trips_contains_hauls() {
     })
     .await;
 }
+
+#[tokio::test]
+async fn test_trips_contains_landing_ids() {
+    test(|helper, builder| async move {
+        let state = builder.vessels(1).trips(1).landings(3).build().await;
+
+        let response = helper.app.get_trips(TripsParameters::default(), None).await;
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let trips: Vec<Trip> = response.json().await.unwrap();
+        let landing_ids = &trips[0].landing_ids;
+
+        assert_eq!(trips.len(), 1);
+        assert_eq!(trips, state.trips);
+        assert_eq!(landing_ids.len(), 3);
+        assert_eq!(*landing_ids, state.landing_ids);
+    })
+    .await;
+}

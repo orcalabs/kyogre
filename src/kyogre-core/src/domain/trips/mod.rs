@@ -2,7 +2,7 @@ use std::fmt;
 
 use crate::*;
 use chrono::{DateTime, TimeZone, Utc};
-use fiskeridir_rs::{DeliveryPointId, Quality};
+use fiskeridir_rs::{DeliveryPointId, LandingId, Quality};
 use num_derive::FromPrimitive;
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
@@ -69,6 +69,7 @@ pub struct TripDetailed {
     pub end_port_id: Option<String>,
     pub assembler_id: TripAssemblerId,
     pub vessel_events: Vec<VesselEvent>,
+    pub landing_ids: Vec<LandingId>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
