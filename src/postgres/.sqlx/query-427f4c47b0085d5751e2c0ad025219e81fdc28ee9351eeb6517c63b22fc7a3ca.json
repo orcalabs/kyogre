@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO\n  engine_transitions (transition_date, source, destination)\nVALUES\n  ($1, $2, $3)\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Timestamptz",
+        "Varchar",
+        "Varchar"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "427f4c47b0085d5751e2c0ad025219e81fdc28ee9351eeb6517c63b22fc7a3ca"
+}

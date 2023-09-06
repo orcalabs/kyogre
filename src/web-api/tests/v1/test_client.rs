@@ -13,6 +13,7 @@ use web_api::routes::v1::{
     trip::{TripsOfVesselParameters, TripsParameters},
     user::User,
     vms::VmsParameters,
+    weather::WeatherParams,
 };
 
 #[derive(Debug, Clone)]
@@ -602,6 +603,19 @@ impl ApiClient {
         headers.insert("bw-token", token.try_into().unwrap());
 
         self.put("user", user, Some(headers)).await
+    }
+    pub async fn get_weather(&self, params: WeatherParams) -> Response {
+        let mut parameters = Vec::new();
+
+        if let Some(start_date) = params.start_date {
+            parameters.push(("startDate".to_string(), start_date.to_string()))
+        }
+
+        if let Some(end_date) = params.end_date {
+            parameters.push(("endDate".to_string(), end_date.to_string()))
+        }
+
+        self.get("weather", &parameters, None).await
     }
 }
 

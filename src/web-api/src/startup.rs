@@ -140,7 +140,8 @@ where
             .route(
                 "/ais_vms_positions",
                 web::get().to(routes::v1::ais_vms::ais_vms_positions::<T>),
-            );
+            )
+            .route("/weather", web::get().to(routes::v1::weather::weather::<T>));
 
         if let Some(ref guard) = bw_jwt_guard {
             scope = scope

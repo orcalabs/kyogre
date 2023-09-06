@@ -23,6 +23,7 @@ mod user;
 mod vessel;
 mod vessel_events;
 mod vms;
+mod weather;
 
 pub use ais::*;
 pub use ais_vms::*;
@@ -49,3 +50,4 @@ pub use user::*;
 pub use vessel::*;
 pub use vessel_events::*;
 pub use vms::*;
+pub use weather::*;

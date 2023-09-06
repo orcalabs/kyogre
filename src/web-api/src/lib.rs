@@ -55,6 +55,7 @@ impl Database for PostgresAdapter {}
         v1::landing::landings,
         v1::landing::landing_matrix,
         v1::delivery_point::delivery_points,
+        v1::weather::weather,
     ),
     components(
         schemas(
@@ -102,6 +103,7 @@ impl Database for PostgresAdapter {}
             v1::landing::LandingCatch,
             v1::landing::LandingMatrix,
             v1::delivery_point::DeliveryPoint,
+            v1::weather::Weather,
           )
     ),
     tags(

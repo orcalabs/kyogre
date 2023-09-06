@@ -2,3 +2,5 @@
 !src
 !.cargo
 **/target
+!scripts/python/weather/main.py
+!scripts/python/weather/requirements.txt

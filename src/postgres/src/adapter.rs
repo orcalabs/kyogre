@@ -605,6 +605,14 @@ impl WebApiOutboundPort for PostgresAdapter {
     fn delivery_points(&self) -> PinBoxStream<'_, DeliveryPoint, QueryError> {
         convert_stream(self.delivery_points_impl()).boxed()
     }
+
+    fn weather(
+        &self,
+        query: WeatherQuery,
+    ) -> Result<PinBoxStream<'_, Weather, QueryError>, QueryError> {
+        let stream = self.weather_impl(query).change_context(QueryError)?;
+        Ok(convert_stream(stream).boxed())
+    }
 }
 
 #[async_trait]
@@ -686,6 +694,11 @@ impl ScraperInboundPort for PostgresAdapter {
             .await
             .change_context(InsertError)
     }
+    async fn add_weather(&self, weather: Vec<NewWeather>) -> Result<(), InsertError> {
+        self.add_weather_impl(weather)
+            .await
+            .change_context(InsertError)
+    }
 }
 
 #[async_trait]
@@ -695,6 +708,11 @@ impl ScraperOutboundPort for PostgresAdapter {
         source: Option<FishingFacilityApiSource>,
     ) -> Result<Option<DateTime<Utc>>, QueryError> {
         self.latest_fishing_facility_update_impl(source)
+            .await
+            .change_context(QueryError)
+    }
+    async fn latest_weather_timestamp(&self) -> Result<Option<DateTime<Utc>>, QueryError> {
+        self.latest_weather_timestamp_impl()
             .await
             .change_context(QueryError)
     }

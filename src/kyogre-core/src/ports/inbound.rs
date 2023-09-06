@@ -76,6 +76,7 @@ pub trait ScraperInboundPort {
         &self,
         delivery_points: Vec<MattilsynetDeliveryPoint>,
     ) -> Result<(), InsertError>;
+    async fn add_weather(&self, weather: Vec<NewWeather>) -> Result<(), InsertError>;
 }
 
 #[async_trait]
@@ -84,6 +85,7 @@ pub trait ScraperOutboundPort {
         &self,
         source: Option<FishingFacilityApiSource>,
     ) -> Result<Option<DateTime<Utc>>, QueryError>;
+    async fn latest_weather_timestamp(&self) -> Result<Option<DateTime<Utc>>, QueryError>;
 }
 
 #[async_trait]
