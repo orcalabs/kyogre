@@ -161,7 +161,7 @@ pub enum NavigationStatus {
     NotDefined = 15,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct AisVesselMigrate {
     pub mmsi: Mmsi,
     pub progress: Option<DateTime<Utc>>,

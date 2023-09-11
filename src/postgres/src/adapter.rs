@@ -292,6 +292,9 @@ ANALYZE trips_detailed
 
 #[async_trait]
 impl AisMigratorDestination for PostgresAdapter {
+    async fn add_mmsis(&self, mmsis: Vec<Mmsi>) -> Result<(), InsertError> {
+        self.add_mmsis_impl(mmsis).await.change_context(InsertError)
+    }
     async fn migrate_ais_data(
         &self,
         mmsi: Mmsi,
