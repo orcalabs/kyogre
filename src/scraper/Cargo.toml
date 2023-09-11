@@ -10,12 +10,12 @@ kyogre-core = { path = "../kyogre-core" }
 fiskeridir-rs = { workspace = true }
 
 serde = { version = "1.0.188", features = ["derive"] }
-serde_json = "1.0.105"
+serde_json = "1.0.106"
 serde_with = "3.3.0"
 tracing = "0.1.37"
 async-trait = "0.1.73"
 error-stack = { workspace = true }
-chrono = { version = "0.4.28", features = ["serde"] }
+chrono = { version = "0.4.30", features = ["serde"] }
 wkt = { version = "0.10.3", features = ["serde"] }
 uuid = { version = "1.4.1", features = ["serde"] }
 reqwest = { version = "0.11.20", features = ["gzip"] }
