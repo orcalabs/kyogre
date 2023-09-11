@@ -15,7 +15,6 @@ use std::sync::Once;
 use std::{ops::SubAssign, panic};
 use strum::IntoEnumIterator;
 use tokio::sync::OnceCell;
-use tracing::{event, Level};
 use tracing_subscriber::FmtSubscriber;
 use trip_assembler::{ErsTripAssembler, LandingTripAssembler};
 use vessel_benchmark::*;
@@ -44,14 +43,66 @@ pub struct TestHelper {
     landings_assembler: LandingTripAssembler,
     weight_per_hour: WeightPerHour,
     ers_message_number: u32,
+    db_settings: PsqlSettings,
 }
 
 impl TestHelper {
+    pub async fn builder(&self) -> TestStateBuilder {
+        let transition_log = Box::new(
+            machine::PostgresAdapter::new(&self.db_settings)
+                .await
+                .unwrap(),
+        );
+
+        let db = Box::new(self.adapter().clone());
+        let trip_assemblers = vec![
+            Box::<trip_assembler::LandingTripAssembler>::default() as Box<dyn TripAssembler>,
+            Box::<trip_assembler::ErsTripAssembler>::default() as Box<dyn TripAssembler>,
+        ];
+
+        let benchmarks = vec![Box::<WeightPerHour>::default() as Box<dyn VesselBenchmark>];
+        let haul_distributors =
+            vec![Box::<haul_distributor::AisVms>::default() as Box<dyn HaulDistributor>];
+
+        let trip_distancers =
+            vec![Box::<trip_distancer::AisVms>::default() as Box<dyn TripDistancer>];
+
+        let shared_state = SharedState::new(
+            db.clone(),
+            db.clone(),
+            db.clone(),
+            db.clone(),
+            db.clone(),
+            db.clone(),
+            db.clone(),
+            db.clone(),
+            db.clone(),
+            db.clone(),
+            db.clone(),
+            db,
+            None,
+            trip_assemblers,
+            benchmarks,
+            haul_distributors,
+            trip_distancers,
+        );
+
+        let step = Step::initial(ScrapeState, shared_state, transition_log);
+
+        let engine = FisheryEngine::Scrape(step);
+
+        TestStateBuilder::new(
+            Box::new(self.adapter().clone()),
+            Box::new(self.adapter().clone()),
+            engine,
+        )
+    }
     pub fn adapter(&self) -> &PostgresAdapter {
         &self.db.db
     }
     async fn spawn_app(
         db: PostgresAdapter,
+        db_settings: PsqlSettings,
         app: App,
         bw_helper: &'static BarentswatchHelper,
         duck_db: Option<duckdb_rs::Client>,
@@ -69,6 +120,7 @@ impl TestHelper {
             ers_message_number: 1,
             weight_per_hour: WeightPerHour::default(),
             duck_db,
+            db_settings,
         }
     }
     pub async fn do_benchmarks(&self) {
@@ -257,7 +309,8 @@ where
         + 'static,
     Fut: Future<Output = ()> + Send + 'static,
 {
-    test_impl(test.clone(), true).await;
+    test_impl(test.clone(), false).await;
+    test_impl(test, true).await;
 }
 
 async fn test_impl<T, Fut>(test: T, run_cache_test: bool)
@@ -366,52 +419,9 @@ where
             let _ = BW_PROFILES_URL.set(api_settings.bw_profiles_url.clone().unwrap());
 
             let adapter = PostgresAdapter::new(&db_settings).await.unwrap();
-
-            let transition_log =
-                Box::new(machine::PostgresAdapter::new(&db_settings).await.unwrap());
-
-            let db = Box::new(adapter.clone());
-            let trip_assemblers = vec![
-                Box::<trip_assembler::LandingTripAssembler>::default() as Box<dyn TripAssembler>,
-                Box::<trip_assembler::ErsTripAssembler>::default() as Box<dyn TripAssembler>,
-            ];
-
-            let benchmarks = vec![Box::<WeightPerHour>::default() as Box<dyn VesselBenchmark>];
-            let haul_distributors =
-                vec![Box::<haul_distributor::AisVms>::default() as Box<dyn HaulDistributor>];
-
-            let trip_distancers =
-                vec![Box::<trip_distancer::AisVms>::default() as Box<dyn TripDistancer>];
-
-            let shared_state = SharedState::new(
-                db.clone(),
-                db.clone(),
-                db.clone(),
-                db.clone(),
-                db.clone(),
-                db.clone(),
-                db.clone(),
-                db.clone(),
-                db.clone(),
-                db.clone(),
-                db.clone(),
-                db,
-                None,
-                trip_assemblers,
-                benchmarks,
-                haul_distributors,
-                trip_distancers,
-            );
-
-            let step = Step::initial(ScrapeState, shared_state, transition_log);
-
-            let engine = FisheryEngine::Scrape(step);
-
-            let test_state_builder =
-                TestStateBuilder::new(Box::new(adapter.clone()), Box::new(adapter.clone()), engine);
-
             let app = TestHelper::spawn_app(
                 adapter.clone(),
+                db_settings,
                 App::build(&api_settings).await,
                 bw_helper,
                 duck_db_client,
@@ -419,9 +429,10 @@ where
             .await;
 
             if run_cache_test {
-                event!(Level::INFO, "cache_test");
+                dbg!("cache_test");
             }
-            test(app, test_state_builder).await;
+            let builder = app.builder().await;
+            test(app, builder).await;
 
             adapter.verify_database().await.unwrap();
 

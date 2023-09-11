@@ -20,6 +20,8 @@ pub struct TripConstructor {
     pub(crate) vessel_id: FiskeridirVesselId,
     pub(crate) vessel_call_sign: Option<CallSign>,
     pub(crate) current_data_timestamp: DateTime<Utc>,
+    pub(crate) precision_id: Option<PrecisionId>,
+    pub(crate) mmsi: Option<Mmsi>,
 }
 
 #[allow(clippy::large_enum_variant)]
@@ -92,6 +94,18 @@ impl TripBuilder {
     }
     pub fn up(self) -> VesselBuilder {
         self.state
+    }
+
+    pub fn precision(mut self, id: PrecisionId) -> TripBuilder {
+        let base = &mut self.state.state;
+        let num_trips = base.trips[self.current_index..].len();
+
+        assert!(num_trips > 0);
+
+        for trip in base.trips[self.current_index..].iter_mut() {
+            trip.precision_id = Some(id);
+        }
+        self
     }
 
     pub fn adjacent(mut self) -> TripBuilder {
@@ -281,7 +295,10 @@ impl TripBuilder {
             .iter_mut()
             .enumerate()
             .filter(|(i, _)| *i >= self.current_index)
-            .for_each(|(_, t)| closure(t));
+            .for_each(|(_, t)| {
+                closure(t);
+                t.current_data_timestamp = t.start();
+            });
 
         self
     }
@@ -296,7 +313,10 @@ impl TripBuilder {
             .iter_mut()
             .enumerate()
             .filter(|(i, _)| *i >= self.current_index)
-            .for_each(|(idx, t)| closure(idx, t));
+            .for_each(|(idx, t)| {
+                closure(idx, t);
+                t.current_data_timestamp = t.start();
+            });
 
         self
     }

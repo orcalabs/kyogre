@@ -1,0 +1,46 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    p.port_id,\n    p.port_dock_point_id,\n    p.latitude,\n    p.longitude,\n    p.name\nFROM\n    port_dock_points p\nWHERE\n    p.port_id = $1\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "port_id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 1,
+        "name": "port_dock_point_id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 2,
+        "name": "latitude",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 3,
+        "name": "longitude",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 4,
+        "name": "name",
+        "type_info": "Varchar"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "454df096547c909f0e1826ec19904f33b061026f3028d722fbf0a98e5491041f"
+}

@@ -1,0 +1,68 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    latitude AS \"latitude!\",\n    longitude AS \"longitude!\",\n    \"timestamp\" AS \"timestamp!\",\n    course_over_ground,\n    speed,\n    navigational_status,\n    rate_of_turn,\n    true_heading,\n    distance_to_shore\nFROM\n    (\n        SELECT\n            latitude,\n            longitude,\n            \"timestamp\",\n            course_over_ground,\n            speed_over_ground AS speed,\n            navigation_status_id AS navigational_status,\n            rate_of_turn,\n            true_heading,\n            distance_to_shore\n        FROM\n            ais_positions a\n        UNION ALL\n        SELECT\n            latitude,\n            longitude,\n            \"timestamp\",\n            course AS course_over_ground,\n            speed,\n            NULL AS navigational_status,\n            NULL AS rate_of_turn,\n            NULL AS true_heading,\n            NULL AS distance_to_shore\n        FROM\n            vms_positions v\n    ) q\nORDER BY\n    \"timestamp\" ASC\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "latitude!",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 1,
+        "name": "longitude!",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 2,
+        "name": "timestamp!",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 3,
+        "name": "course_over_ground",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 4,
+        "name": "speed",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 5,
+        "name": "navigational_status",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 6,
+        "name": "rate_of_turn",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 7,
+        "name": "true_heading",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 8,
+        "name": "distance_to_shore",
+        "type_info": "Numeric"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "3a24d0b98dde83519d92a063b9814c93fee9b32426f4a373f78f75786887fd8f"
+}

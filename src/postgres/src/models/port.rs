@@ -21,6 +21,23 @@ pub struct NewPort {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Port {
+    pub id: String,
+    pub name: Option<String>,
+    pub latitude: Option<BigDecimal>,
+    pub longitude: Option<BigDecimal>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PortDockPoint {
+    pub port_dock_point_id: i32,
+    pub port_id: String,
+    pub name: String,
+    pub latitude: BigDecimal,
+    pub longitude: BigDecimal,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TripPorts {
     pub start_port_id: Option<String>,
     pub start_port_name: Option<String>,
@@ -78,6 +95,45 @@ impl TryFrom<TripDockPoints> for kyogre_core::TripDockPoints {
             .unwrap_or_default();
 
         Ok(kyogre_core::TripDockPoints { start, end })
+    }
+}
+
+impl TryFrom<PortDockPoint> for kyogre_core::PortDockPoint {
+    type Error = Report<PostgresError>;
+
+    fn try_from(value: PortDockPoint) -> std::result::Result<Self, Self::Error> {
+        Ok(kyogre_core::PortDockPoint {
+            port_dock_point_id: value.port_dock_point_id,
+            port_id: value.port_id,
+            name: value.name,
+            latitude: decimal_to_float(value.latitude)
+                .change_context(PostgresError::DataConversion)?,
+            longitude: decimal_to_float(value.longitude)
+                .change_context(PostgresError::DataConversion)?,
+        })
+    }
+}
+
+impl TryFrom<Port> for kyogre_core::Port {
+    type Error = Report<PostgresError>;
+
+    fn try_from(value: Port) -> std::result::Result<Self, Self::Error> {
+        let coordinates = match (value.latitude, value.longitude) {
+            (None, None) => Ok(None),
+            (Some(lat), Some(lon)) => Ok(Some(kyogre_core::Coordinates {
+                latitude: decimal_to_float(lat).change_context(PostgresError::DataConversion)?,
+                longitude: decimal_to_float(lon).change_context(PostgresError::DataConversion)?,
+            })),
+            (None, Some(_)) | (Some(_), None) => {
+                Err(report!(PortCoordinateError(value.id.clone()))
+                    .change_context(PostgresError::DataConversion))
+            }
+        }?;
+
+        Ok(kyogre_core::Port {
+            id: value.id,
+            coordinates,
+        })
     }
 }
 

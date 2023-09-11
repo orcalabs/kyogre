@@ -23,6 +23,10 @@ pub struct VesselContructor {
 }
 
 impl VesselBuilder {
+    pub fn vessels(self, amount: usize) -> VesselBuilder {
+        self.state.vessels(amount)
+    }
+
     pub fn fishing_facilities(mut self, amount: usize) -> FishingFacilityVesselBuilder {
         assert!(amount != 0);
         let base = &mut self.state;
@@ -284,6 +288,8 @@ impl VesselBuilder {
                     current_data_timestamp: start + Duration::seconds(1),
                     vessel_id: FiskeridirVesselId(vessel.fiskeridir.id),
                     vessel_call_sign: vessel.fiskeridir.radio_call_sign.clone(),
+                    precision_id: None,
+                    mmsi: Some(vessel.ais.mmsi),
                 });
 
                 base.global_data_timestamp_counter = end + base.data_timestamp_gap;
@@ -339,6 +345,8 @@ impl VesselBuilder {
                     current_data_timestamp: start + Duration::seconds(1),
                     vessel_id: FiskeridirVesselId(vessel.fiskeridir.id),
                     vessel_call_sign: vessel.fiskeridir.radio_call_sign.clone(),
+                    precision_id: None,
+                    mmsi: Some(vessel.ais.mmsi),
                 });
                 base.global_data_timestamp_counter = end + base.data_timestamp_gap;
             }
@@ -357,7 +365,6 @@ impl VesselBuilder {
 
         let distribution = ItemDistribution::new(amount, num_vessels);
 
-        let mut index = 0;
         for (i, vessel) in base.vessels[self.current_index..].iter().enumerate() {
             let num_positions = distribution.num_elements(i);
 
@@ -372,21 +379,14 @@ impl VesselBuilder {
                 let position =
                     fiskeridir_rs::Vms::test_default(rand::random(), call_sign.clone(), timestamp);
                 base.global_data_timestamp_counter += base.data_timestamp_gap;
-                positions.push(VmsPositionConstructor { index, position });
-                index += 1;
+                positions.push(VmsPositionConstructor { position });
             }
 
-            base.vms_positions
-                .entry(VmsVesselKey {
-                    vessel_key: vessel.key,
-                    call_sign,
-                })
-                .and_modify(|v| v.append(&mut positions))
-                .or_insert(positions);
+            base.vms_positions.append(&mut positions)
         }
 
         VmsPositionBuilder {
-            current_index: base.vms_positions.values().map(|v| v.len()).sum::<usize>() - amount,
+            current_index: base.vms_positions.len() - amount,
             state: self,
         }
     }
@@ -424,23 +424,11 @@ impl VesselBuilder {
                 index += 1;
             }
 
-            base.ais_vms_positions
-                .entry(AisVmsVesselKey {
-                    mmsi: vessel.ais.mmsi,
-                    vessel_key: vessel.key,
-                    call_sign,
-                })
-                .and_modify(|v| v.append(&mut positions))
-                .or_insert(positions);
+            base.ais_vms_positions.append(&mut positions);
         }
 
         AisVmsPositionBuilder {
-            current_index: base
-                .ais_vms_positions
-                .values()
-                .map(|v| v.len())
-                .sum::<usize>()
-                - amount,
+            current_index: base.ais_vms_positions.len() - amount,
             state: self,
         }
     }
@@ -451,8 +439,6 @@ impl VesselBuilder {
         let num_vessels = base.vessels[self.current_index..].len();
 
         let distribution = ItemDistribution::new(amount, num_vessels);
-
-        let mut current_position_index = 0;
 
         for (i, vessel) in base.vessels[self.current_index..].iter().enumerate() {
             let num_positions = distribution.num_elements(i);
@@ -465,24 +451,14 @@ impl VesselBuilder {
                 timestamps.push(timestamp);
                 let position = NewAisPosition::test_default(vessel.ais.mmsi, timestamp);
                 base.global_data_timestamp_counter += base.data_timestamp_gap;
-                positions.push(AisPositionConstructor {
-                    index: current_position_index,
-                    position,
-                });
-                current_position_index += 1;
+                positions.push(AisPositionConstructor { position });
             }
 
-            base.ais_positions
-                .entry(AisVesselKey {
-                    mmsi: vessel.ais.mmsi,
-                    vessel_key: vessel.key,
-                })
-                .and_modify(|v| v.append(&mut positions))
-                .or_insert(positions);
+            base.ais_positions.append(&mut positions);
         }
 
         AisPositionBuilder {
-            current_index: base.ais_positions.values().map(|v| v.len()).sum::<usize>() - amount,
+            current_index: base.ais_positions.len() - amount,
             state: self,
         }
     }

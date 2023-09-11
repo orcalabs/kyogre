@@ -16,7 +16,7 @@ pub struct HaulVesselBuilder {
     pub current_index: usize,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct HaulConstructor {
     pub dca: ErsDca,
 }
@@ -30,6 +30,9 @@ impl HaulBuilder {
     }
     pub fn tra(self, amount: usize) -> TraBuilder {
         self.state.tra(amount)
+    }
+    pub fn vessels(self, amount: usize) -> VesselBuilder {
+        self.state.vessels(amount)
     }
     pub async fn build(self) -> TestState {
         self.state.build().await

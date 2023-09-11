@@ -18,6 +18,32 @@ use crate::{
 use error_stack::{report, IntoReport, Result, ResultExt};
 
 impl PostgresAdapter {
+    pub(crate) async fn all_ais_impl(&self) -> Result<Vec<AisPosition>, PostgresError> {
+        sqlx::query_as!(
+            AisPosition,
+            r#"
+SELECT
+    latitude,
+    longitude,
+    mmsi,
+    TIMESTAMP AS msgtime,
+    course_over_ground,
+    navigation_status_id AS navigational_status,
+    rate_of_turn,
+    speed_over_ground,
+    true_heading,
+    distance_to_shore
+FROM
+    ais_positions
+ORDER BY
+    TIMESTAMP ASC
+            "#,
+        )
+        .fetch_all(&self.ais_pool)
+        .await
+        .into_report()
+        .change_context(PostgresError::Query)
+    }
     pub(crate) fn ais_positions_impl(
         &self,
         mmsi: Mmsi,

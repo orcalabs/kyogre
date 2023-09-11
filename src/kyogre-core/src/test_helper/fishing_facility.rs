@@ -1,5 +1,10 @@
 use crate::*;
 
+pub struct FishingFacilityBuilder {
+    pub state: TestStateBuilder,
+    pub current_index: usize,
+}
+
 pub struct FishingFacilityTripBuilder {
     pub state: TripBuilder,
     pub current_index: usize,
@@ -12,6 +17,42 @@ pub struct FishingFacilityVesselBuilder {
 
 pub struct FishingFacilityConctructor {
     pub facility: FishingFacility,
+}
+
+impl FishingFacilityBuilder {
+    pub fn base(self) -> TestStateBuilder {
+        self.state
+    }
+    pub async fn build(self) -> TestState {
+        self.state.build().await
+    }
+    pub fn modify<F>(mut self, closure: F) -> FishingFacilityBuilder
+    where
+        F: Fn(&mut FishingFacilityConctructor),
+    {
+        self.state
+            .fishing_facilities
+            .iter_mut()
+            .enumerate()
+            .filter(|(i, _)| *i >= self.current_index)
+            .for_each(|(_, c)| closure(c));
+
+        self
+    }
+
+    pub fn modify_idx<F>(mut self, closure: F) -> FishingFacilityBuilder
+    where
+        F: Fn(usize, &mut FishingFacilityConctructor),
+    {
+        self.state
+            .fishing_facilities
+            .iter_mut()
+            .enumerate()
+            .filter(|(i, _)| *i >= self.current_index)
+            .for_each(|(idx, c)| closure(idx, c));
+
+        self
+    }
 }
 
 impl FishingFacilityVesselBuilder {

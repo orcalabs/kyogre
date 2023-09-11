@@ -4,7 +4,7 @@ use crate::*;
 use async_trait::async_trait;
 use chrono::{DateTime, Duration, Utc};
 use error_stack::Result;
-use fiskeridir_rs::{CallSign, LandingId};
+use fiskeridir_rs::{CallSign, DeliveryPointId, LandingId};
 use futures::Stream;
 
 #[async_trait]
@@ -211,5 +211,11 @@ pub trait VerificationOutbound: Send + Sync {
 pub trait TestHelperOutbound: Send + Sync {
     async fn all_dep(&self) -> Vec<Departure>;
     async fn all_por(&self) -> Vec<Arrival>;
+    async fn all_ais(&self) -> Vec<AisPosition>;
+    async fn all_vms(&self) -> Vec<VmsPosition>;
+    async fn all_ais_vms(&self) -> Vec<AisVmsPosition>;
     async fn delivery_points_log(&self) -> Vec<serde_json::Value>;
+    async fn port(&self, port_id: &str) -> Option<Port>;
+    async fn delivery_point(&self, id: &DeliveryPointId) -> Option<DeliveryPoint>;
+    async fn dock_points_of_port(&self, port_id: &str) -> Vec<PortDockPoint>;
 }
