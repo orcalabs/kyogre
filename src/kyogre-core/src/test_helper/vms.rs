@@ -7,7 +7,6 @@ pub struct VmsPositionBuilder {
 
 #[derive(Clone)]
 pub struct VmsPositionConstructor {
-    pub index: usize,
     pub position: fiskeridir_rs::Vms,
 }
 
@@ -26,14 +25,9 @@ impl VmsPositionBuilder {
             .state
             .vms_positions
             .iter_mut()
-            .for_each(|(_, positions)| {
-                for p in positions
-                    .iter_mut()
-                    .filter(|v| v.index >= self.current_index)
-                {
-                    closure(&mut p.position)
-                }
-            });
+            .enumerate()
+            .filter(|(i, _)| *i >= self.current_index)
+            .for_each(|(_, c)| closure(&mut c.position));
 
         self
     }
@@ -46,14 +40,9 @@ impl VmsPositionBuilder {
             .state
             .vms_positions
             .iter_mut()
-            .for_each(|(_, positions)| {
-                for p in positions
-                    .iter_mut()
-                    .filter(|v| v.index >= self.current_index)
-                {
-                    closure(p.index, &mut p.position)
-                }
-            });
+            .enumerate()
+            .filter(|(i, _)| *i >= self.current_index)
+            .for_each(|(idx, c)| closure(idx, &mut c.position));
 
         self
     }

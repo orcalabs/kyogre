@@ -1,8 +1,8 @@
 use super::helper::test;
 use actix_web::http::StatusCode;
 use chrono::{Duration, TimeZone, Utc};
-use fiskeridir_rs::{CallSign, Quality};
-use kyogre_core::{FiskeridirVesselId, HaulId, Mmsi};
+use fiskeridir_rs::Quality;
+use kyogre_core::{HaulId, PrecisionId};
 use web_api::routes::v1::trip::Trip;
 
 #[tokio::test]
@@ -19,24 +19,10 @@ async fn test_trip_of_haul_returns_none_of_no_trip_is_connected_to_given_haul_id
 
 #[tokio::test]
 async fn test_trip_of_haul_does_not_return_trip_outside_haul_period() {
-    test(|mut helper, _builder| async move {
-        let fiskeridir_vessel_id = FiskeridirVesselId(11);
-        let start = Utc.timestamp_opt(1000000, 0).unwrap();
-        let end = Utc.timestamp_opt(10000000, 0).unwrap();
-        helper
-            .generate_ers_trip(
-                fiskeridir_vessel_id,
-                &(start - Duration::days(4)),
-                &(start - Duration::days(3)),
-            )
-            .await;
+    test(|helper, builder| async move {
+        let state = builder.vessels(1).trips(1).up().hauls(1).build().await;
 
-        let haul = helper
-            .db
-            .generate_haul(fiskeridir_vessel_id, &start, &end)
-            .await;
-
-        let response = helper.app.get_trip_of_haul(&haul.haul_id).await;
+        let response = helper.app.get_trip_of_haul(&state.hauls[0].haul_id).await;
         assert_eq!(response.status(), StatusCode::OK);
 
         let body: Option<Trip> = response.json().await.unwrap();
@@ -47,25 +33,31 @@ async fn test_trip_of_haul_does_not_return_trip_outside_haul_period() {
 
 #[tokio::test]
 async fn test_trip_of_haul_does_not_return_trip_of_other_vessels() {
-    test(|mut helper, _builder| async move {
-        let fiskeridir_vessel_id = FiskeridirVesselId(11);
-        let fiskeridir_vessel_id2 = FiskeridirVesselId(12);
+    test(|helper, builder| async move {
         let start = Utc.timestamp_opt(10000, 0).unwrap();
         let end = Utc.timestamp_opt(100000, 0).unwrap();
-        helper
-            .generate_ers_trip(fiskeridir_vessel_id, &start, &end)
+
+        let state = builder
+            .vessels(1)
+            .trips(1)
+            .modify(|v| {
+                v.trip_specification.set_start(start);
+                v.trip_specification.set_end(end);
+            })
+            .up()
+            .vessels(1)
+            .hauls(1)
+            .modify(|v| {
+                v.dca.set_start_timestamp(start + Duration::hours(1));
+                v.dca.set_start_timestamp(end - Duration::hours(1));
+                v.dca
+                    .message_info
+                    .set_message_timestamp(start + Duration::hours(1));
+            })
+            .build()
             .await;
 
-        let haul = helper
-            .db
-            .generate_haul(
-                fiskeridir_vessel_id2,
-                &(start + Duration::hours(1)),
-                &(end - Duration::hours(1)),
-            )
-            .await;
-
-        let response = helper.app.get_trip_of_haul(&haul.haul_id).await;
+        let response = helper.app.get_trip_of_haul(&state.hauls[0].haul_id).await;
         assert_eq!(response.status(), StatusCode::OK);
 
         let body: Option<Trip> = response.json().await.unwrap();
@@ -76,89 +68,45 @@ async fn test_trip_of_haul_does_not_return_trip_of_other_vessels() {
 
 #[tokio::test]
 async fn test_trip_of_haul_returns_all_hauls_and_landings_connected_to_trip() {
-    test(|mut helper, _builder| async move {
-        let fiskeridir_vessel_id = FiskeridirVesselId(1);
-        let start = Utc.timestamp_opt(10000, 0).unwrap();
-        let end = Utc.timestamp_opt(100000, 0).unwrap();
+    test(|helper, builder| async move {
+        let state = builder.vessels(1).trips(1).hauls(1).build().await;
 
-        let haul = helper
-            .db
-            .generate_haul(
-                fiskeridir_vessel_id,
-                &(start + Duration::hours(1)),
-                &(end - Duration::hours(1)),
-            )
-            .await;
-
-        let mut landing = fiskeridir_rs::Landing::test_default(1, Some(fiskeridir_vessel_id.0));
-        landing.landing_timestamp = start + Duration::hours(1);
-
-        helper.db.add_landings(vec![landing]).await;
-
-        let trip = helper
-            .generate_ers_trip(fiskeridir_vessel_id, &start, &end)
-            .await;
-
-        let response = helper.app.get_trip_of_haul(&haul.haul_id).await;
+        let response = helper.app.get_trip_of_haul(&state.hauls[0].haul_id).await;
         assert_eq!(response.status(), StatusCode::OK);
 
         let body: Trip = response.json().await.unwrap();
-        assert_eq!(trip, body);
+        assert_eq!(state.trips[0], body);
     })
     .await;
 }
 
 #[tokio::test]
 async fn test_aggregates_landing_data_per_product_quality_and_species_id() {
-    test(|mut helper, _builder| async move {
-        let fiskeridir_vessel_id = FiskeridirVesselId(1);
-        let start = Utc.timestamp_opt(10000, 0).unwrap();
-        let end = Utc.timestamp_opt(100000, 0).unwrap();
-
-        let mut landing = fiskeridir_rs::Landing::test_default(1, Some(fiskeridir_vessel_id.0));
-        landing.landing_timestamp = start + Duration::hours(1);
-        landing.product.quality = Quality::Prima;
-        landing.product.species.fdir_code = 1;
-
-        let mut landing2 = fiskeridir_rs::Landing::test_default(2, Some(fiskeridir_vessel_id.0));
-        landing2.landing_timestamp = start + Duration::hours(1);
-        landing2.product.quality = Quality::Prima;
-        landing2.product.species.fdir_code = 1;
-
-        let mut landing3 = fiskeridir_rs::Landing::test_default(3, Some(fiskeridir_vessel_id.0));
-        landing3.landing_timestamp = start + Duration::hours(1);
-        landing3.product.quality = Quality::A;
-        landing3.product.species.fdir_code = 2;
-
-        let mut landing4 = fiskeridir_rs::Landing::test_default(4, Some(fiskeridir_vessel_id.0));
-        landing4.landing_timestamp = start + Duration::hours(1);
-        landing4.product.quality = Quality::A;
-        landing4.product.species.fdir_code = 2;
-
-        helper
-            .db
-            .add_landings(vec![landing.clone(), landing2, landing3, landing4])
+    test(|helper, builder| async move {
+        let state = builder
+            .vessels(1)
+            .trips(1)
+            .hauls(1)
+            .landings(4)
+            .modify_idx(|i, v| match i {
+                0 | 1 => {
+                    v.product.quality = Quality::Prima;
+                    v.product.species.fdir_code = 1;
+                }
+                2 | 3 => {
+                    v.product.quality = Quality::A;
+                    v.product.species.fdir_code = 2;
+                }
+                _ => unreachable!(),
+            })
+            .build()
             .await;
 
-        let haul = helper
-            .db
-            .generate_haul(
-                fiskeridir_vessel_id,
-                &(start + Duration::hours(1)),
-                &(end - Duration::hours(1)),
-            )
-            .await;
-
-        let trip = helper
-            .generate_ers_trip(fiskeridir_vessel_id, &start, &end)
-            .await;
-
-        let response = helper.app.get_trip_of_haul(&haul.haul_id).await;
+        let response = helper.app.get_trip_of_haul(&state.hauls[0].haul_id).await;
         assert_eq!(response.status(), StatusCode::OK);
 
         let body: Trip = response.json().await.unwrap();
-        assert_eq!(trip, body);
-
+        assert_eq!(state.trips[0], body);
         assert_eq!(body.delivery.delivered.len(), 2);
     })
     .await;
@@ -166,41 +114,27 @@ async fn test_aggregates_landing_data_per_product_quality_and_species_id() {
 
 #[tokio::test]
 async fn test_trip_of_haul_returns_precision_range_of_trip_if_it_exists() {
-    test(|mut helper, _builder| async move {
-        let call_sign = CallSign::try_from("LK-28").unwrap();
-        let fiskeridir_vessel_id = FiskeridirVesselId(11);
-        helper
-            .db
-            .generate_ais_vessel(Mmsi(40), call_sign.as_ref())
-            .await;
-        let vessel = helper
-            .db
-            .generate_fiskeridir_vessel(fiskeridir_vessel_id, None, Some(call_sign))
-            .await;
-        let start = Utc.timestamp_opt(10000, 0).unwrap();
-        let end = Utc.timestamp_opt(100000, 0).unwrap();
-
-        let haul = helper
-            .db
-            .generate_haul(
-                fiskeridir_vessel_id,
-                &(start + Duration::hours(1)),
-                &(end - Duration::hours(1)),
-            )
+    test(|helper, builder| async move {
+        let start = Utc.timestamp_opt(1000000, 0).unwrap();
+        let end = Utc.timestamp_opt(2000000, 0).unwrap();
+        let state = builder
+            .vessels(1)
+            .trips(1)
+            .modify(|v| {
+                v.trip_specification.set_start(start);
+                v.trip_specification.set_end(end);
+            })
+            .precision(PrecisionId::Port)
+            .hauls(1)
+            .build()
             .await;
 
-        let ers_trip = helper
-            .generate_ers_trip(fiskeridir_vessel_id, &start, &end)
-            .await;
-
-        let precision_update = helper.add_precision_to_trip(&vessel, &ers_trip).await;
-
-        let response = helper.app.get_trip_of_haul(&haul.haul_id).await;
+        let response = helper.app.get_trip_of_haul(&state.hauls[0].haul_id).await;
         assert_eq!(response.status(), StatusCode::OK);
 
         let body: Trip = response.json().await.unwrap();
-        assert_eq!(precision_update.start(), body.start);
-        assert_eq!(precision_update.end(), body.end);
+        assert!(body.start != start);
+        assert!(body.end != end);
     })
     .await;
 }

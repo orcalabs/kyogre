@@ -219,6 +219,19 @@ impl From<kyogre_core::Landing> for Landing {
     }
 }
 
+impl PartialEq<Landing> for kyogre_core::Landing {
+    fn eq(&self, other: &Landing) -> bool {
+        other.eq(self)
+    }
+}
+
+impl PartialEq<kyogre_core::Landing> for Landing {
+    fn eq(&self, other: &kyogre_core::Landing) -> bool {
+        let val = Landing::from(other.clone());
+        val.eq(self)
+    }
+}
+
 impl From<kyogre_core::LandingCatch> for LandingCatch {
     fn from(v: kyogre_core::LandingCatch) -> Self {
         Self {
@@ -255,8 +268,8 @@ impl From<LandingsParams> for LandingsQuery {
                 .map(|gs| gs.into_iter().map(|g| g.0).collect()),
             vessel_length_ranges: v.vessel_length_ranges,
             vessel_ids: v.fiskeridir_vessel_ids,
-            sorting: v.sorting,
-            ordering: v.ordering,
+            sorting: Some(v.sorting.unwrap_or_default()),
+            ordering: Some(v.ordering.unwrap_or_default()),
         }
     }
 }

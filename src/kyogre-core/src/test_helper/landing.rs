@@ -77,6 +77,9 @@ impl LandingBuilder {
         self.state.build().await
     }
 
+    pub fn vessels(self, amount: usize) -> VesselBuilder {
+        self.state.vessels(amount)
+    }
     pub fn tra(self, amount: usize) -> TraBuilder {
         self.state.tra(amount)
     }

@@ -1,7 +1,7 @@
 use super::helper::test;
 use actix_web::http::StatusCode;
 use chrono::{Duration, TimeZone, Utc};
-use fiskeridir_rs::{DeliveryPointId, GearGroup, SpeciesGroup, VesselLengthGroup};
+use fiskeridir_rs::{DeliveryPointId, GearGroup, LandingId, SpeciesGroup, VesselLengthGroup};
 use kyogre_core::{Ordering, TripSorting, TripSpecification, VesselEventType};
 use web_api::routes::utils::{self, GearGroupId, SpeciesGroupId};
 use web_api::routes::v1::trip::{Trip, TripsOfVesselParameters, TripsParameters};
@@ -26,7 +26,10 @@ async fn test_trip_of_landing_does_not_return_trip_outside_landing_timestamp() {
     test(|helper, builder| async move {
         let state = builder.vessels(1).landings(1).trips(1).build().await;
 
-        let response = helper.app.get_trip_of_landing(&state.landing_ids[0]).await;
+        let response = helper
+            .app
+            .get_trip_of_landing(&state.landings[0].landing_id)
+            .await;
         assert_eq!(response.status(), StatusCode::OK);
 
         let body: Option<Trip> = response.json().await.unwrap();
@@ -55,7 +58,10 @@ async fn test_trip_of_landing_does_not_return_trip_of_other_vessels() {
             .build()
             .await;
 
-        let response = helper.app.get_trip_of_landing(&state.landing_ids[0]).await;
+        let response = helper
+            .app
+            .get_trip_of_landing(&state.landings[0].landing_id)
+            .await;
         assert_eq!(response.status(), StatusCode::OK);
 
         let body: Option<Trip> = response.json().await.unwrap();
@@ -75,7 +81,10 @@ async fn test_trip_of_landing_returns_all_hauls_and_landings_connected_to_trip()
             .build()
             .await;
 
-        let response = helper.app.get_trip_of_landing(&state.landing_ids[0]).await;
+        let response = helper
+            .app
+            .get_trip_of_landing(&state.landings[0].landing_id)
+            .await;
         assert_eq!(response.status(), StatusCode::OK);
 
         let body: Trip = response.json().await.unwrap();
@@ -951,7 +960,14 @@ async fn test_trips_contains_landing_ids() {
         assert_eq!(trips.len(), 1);
         assert_eq!(trips, state.trips);
         assert_eq!(landing_ids.len(), 3);
-        assert_eq!(*landing_ids, state.landing_ids);
+        assert_eq!(
+            *landing_ids,
+            state
+                .landings
+                .into_iter()
+                .map(|v| v.landing_id)
+                .collect::<Vec<LandingId>>()
+        );
     })
     .await;
 }

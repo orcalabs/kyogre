@@ -1,6 +1,6 @@
 use super::helper::test;
 use actix_web::http::StatusCode;
-use chrono::{DateTime, TimeZone, Utc};
+use chrono::{DateTime, Utc};
 use fiskeridir_rs::{ErsDca, GearGroup, SpeciesGroup};
 use kyogre_core::{FiskeridirVesselId, HaulsSorting, Ordering};
 use web_api::routes::{
@@ -10,10 +10,8 @@ use web_api::routes::{
 
 #[tokio::test]
 async fn test_hauls_returns_all_hauls() {
-    test(|helper, _builder| async move {
-        helper.db.generate_ers_dca(1, None).await;
-        helper.db.generate_ers_dca(2, None).await;
-        helper.db.generate_ers_dca(3, None).await;
+    test(|helper, builder| async move {
+        let state = builder.hauls(3).build().await;
 
         let response = helper.app.get_hauls(Default::default()).await;
 
@@ -21,27 +19,32 @@ async fn test_hauls_returns_all_hauls() {
         let hauls: Vec<Haul> = response.json().await.unwrap();
 
         assert_eq!(hauls.len(), 3);
+        assert_eq!(hauls, state.hauls)
     })
     .await;
 }
 
 #[tokio::test]
 async fn test_hauls_returns_hauls_in_specified_months() {
-    test(|helper, _builder| async move {
-        let mut ers1 = ErsDca::test_default(1, None);
-        let mut ers2 = ErsDca::test_default(2, None);
-        let ers3 = ErsDca::test_default(3, None);
-        let ers4 = ErsDca::test_default(4, None);
+    test(|helper, builder| async move {
+        let month1: DateTime<Utc> = "2000-06-1T00:00:00Z".parse().unwrap();
+        let month2: DateTime<Utc> = "2001-01-1T00:00:00Z".parse().unwrap();
 
-        let month1: DateTime<Utc> = "2001-01-1T00:00:00Z".parse().unwrap();
-        let month2: DateTime<Utc> = "2000-06-1T00:00:00Z".parse().unwrap();
-
-        ers1.set_start_timestamp(month1);
-        ers1.set_stop_timestamp(month1);
-        ers2.set_start_timestamp(month2);
-        ers2.set_stop_timestamp(month2);
-
-        helper.db.add_ers_dca(vec![ers1, ers2, ers3, ers4]).await;
+        let state = builder
+            .hauls(4)
+            .modify_idx(|i, v| match i {
+                0 => {
+                    v.dca.set_start_timestamp(month1);
+                    v.dca.set_stop_timestamp(month1);
+                }
+                1 => {
+                    v.dca.set_start_timestamp(month2);
+                    v.dca.set_stop_timestamp(month2);
+                }
+                _ => (),
+            })
+            .build()
+            .await;
 
         let params = HaulsParams {
             months: Some(vec![DateTimeUtc(month1), DateTimeUtc(month2)]),
@@ -54,24 +57,29 @@ async fn test_hauls_returns_hauls_in_specified_months() {
         let hauls: Vec<Haul> = response.json().await.unwrap();
 
         assert_eq!(hauls.len(), 2);
+        assert_eq!(hauls, state.hauls[0..2])
     })
     .await;
 }
 
 #[tokio::test]
 async fn test_hauls_returns_hauls_in_catch_location() {
-    test(|helper, _builder| async move {
-        let mut ers1 = ErsDca::test_default(1, None);
-        let mut ers2 = ErsDca::test_default(2, None);
-        let ers3 = ErsDca::test_default(3, None);
-        let ers4 = ErsDca::test_default(4, None);
-
-        ers1.start_latitude = Some(56.727258);
-        ers1.start_longitude = Some(12.565410);
-        ers2.start_latitude = Some(56.756293);
-        ers2.start_longitude = Some(11.514740);
-
-        helper.db.add_ers_dca(vec![ers1, ers2, ers3, ers4]).await;
+    test(|helper, builder| async move {
+        let state = builder
+            .hauls(4)
+            .modify_idx(|i, v| match i {
+                0 => {
+                    v.dca.start_latitude = Some(56.727258);
+                    v.dca.start_longitude = Some(12.565410);
+                }
+                1 => {
+                    v.dca.start_latitude = Some(56.756293);
+                    v.dca.start_longitude = Some(11.514740);
+                }
+                _ => (),
+            })
+            .build()
+            .await;
 
         let params = HaulsParams {
             catch_locations: Some(vec![
@@ -88,22 +96,27 @@ async fn test_hauls_returns_hauls_in_catch_location() {
         let hauls: Vec<Haul> = response.json().await.unwrap();
 
         assert_eq!(hauls.len(), 2);
+        assert_eq!(hauls, state.hauls[0..2]);
     })
     .await;
 }
 
 #[tokio::test]
 async fn test_hauls_returns_hauls_with_gear_group_ids() {
-    test(|helper, _builder| async move {
-        let mut ers1 = ErsDca::test_default(1, None);
-        let mut ers2 = ErsDca::test_default(2, None);
-        let ers3 = ErsDca::test_default(3, None);
-        let ers4 = ErsDca::test_default(4, None);
-
-        ers1.gear.gear_group_code = GearGroup::Not;
-        ers2.gear.gear_group_code = GearGroup::BurOgRuser;
-
-        helper.db.add_ers_dca(vec![ers1, ers2, ers3, ers4]).await;
+    test(|helper, builder| async move {
+        let state = builder
+            .hauls(4)
+            .modify_idx(|i, v| match i {
+                0 => {
+                    v.dca.gear.gear_group_code = GearGroup::Not;
+                }
+                1 => {
+                    v.dca.gear.gear_group_code = GearGroup::BurOgRuser;
+                }
+                _ => (),
+            })
+            .build()
+            .await;
 
         let params = HaulsParams {
             gear_group_ids: Some(vec![
@@ -119,22 +132,27 @@ async fn test_hauls_returns_hauls_with_gear_group_ids() {
         let hauls: Vec<Haul> = response.json().await.unwrap();
 
         assert_eq!(hauls.len(), 2);
+        assert_eq!(hauls, state.hauls[0..2]);
     })
     .await;
 }
 
 #[tokio::test]
 async fn test_hauls_returns_hauls_with_species_group_ids() {
-    test(|helper, _builder| async move {
-        let mut ers1 = ErsDca::test_default(1, None);
-        let mut ers2 = ErsDca::test_default(2, None);
-        let ers3 = ErsDca::test_default(3, None);
-        let ers4 = ErsDca::test_default(4, None);
-
-        ers1.catch.species.species_group_code = SpeciesGroup::Blaakveite;
-        ers2.catch.species.species_group_code = SpeciesGroup::Uer;
-
-        helper.db.add_ers_dca(vec![ers1, ers2, ers3, ers4]).await;
+    test(|helper, builder| async move {
+        let state = builder
+            .hauls(4)
+            .modify_idx(|i, v| match i {
+                0 => {
+                    v.dca.catch.species.species_group_code = SpeciesGroup::Blaakveite;
+                }
+                1 => {
+                    v.dca.catch.species.species_group_code = SpeciesGroup::Uer;
+                }
+                _ => (),
+            })
+            .build()
+            .await;
 
         let params = HaulsParams {
             species_group_ids: Some(vec![
@@ -150,22 +168,27 @@ async fn test_hauls_returns_hauls_with_species_group_ids() {
         let hauls: Vec<Haul> = response.json().await.unwrap();
 
         assert_eq!(hauls.len(), 2);
+        assert_eq!(hauls, state.hauls[0..2]);
     })
     .await;
 }
 
 #[tokio::test]
 async fn test_hauls_returns_hauls_with_vessel_length_ranges() {
-    test(|helper, _builder| async move {
-        let mut ers1 = ErsDca::test_default(1, None);
-        let mut ers2 = ErsDca::test_default(2, None);
-        let ers3 = ErsDca::test_default(3, None);
-        let ers4 = ErsDca::test_default(4, None);
-
-        ers1.vessel_info.vessel_length = 9.;
-        ers2.vessel_info.vessel_length = 12.;
-
-        helper.db.add_ers_dca(vec![ers1, ers2, ers3, ers4]).await;
+    test(|helper, builder| async move {
+        let state = builder
+            .hauls(4)
+            .modify_idx(|i, v| match i {
+                0 => {
+                    v.dca.vessel_info.vessel_length = 9.;
+                }
+                1 => {
+                    v.dca.vessel_info.vessel_length = 12.;
+                }
+                _ => (),
+            })
+            .build()
+            .await;
 
         let params = HaulsParams {
             vessel_length_ranges: Some(vec!["(,10)".parse().unwrap(), "[10,15)".parse().unwrap()]),
@@ -178,19 +201,22 @@ async fn test_hauls_returns_hauls_with_vessel_length_ranges() {
         let hauls: Vec<Haul> = response.json().await.unwrap();
 
         assert_eq!(hauls.len(), 2);
+        assert_eq!(hauls, state.hauls[0..2]);
     })
     .await;
 }
 
 #[tokio::test]
 async fn test_hauls_returns_hauls_with_fiskeridir_vessel_ids() {
-    test(|helper, _builder| async move {
+    test(|helper, builder| async move {
         let ers1 = ErsDca::test_default(1, Some(1));
         let ers2 = ErsDca::test_default(2, Some(2));
         let ers3 = ErsDca::test_default(3, None);
         let ers4 = ErsDca::test_default(4, None);
 
         helper.db.add_ers_dca(vec![ers1, ers2, ers3, ers4]).await;
+
+        let state = builder.hauls(2).vessels(2).hauls(2).build().await;
 
         let params = HaulsParams {
             fiskeridir_vessel_ids: Some(vec![FiskeridirVesselId(1), FiskeridirVesselId(2)]),
@@ -203,26 +229,15 @@ async fn test_hauls_returns_hauls_with_fiskeridir_vessel_ids() {
         let hauls: Vec<Haul> = response.json().await.unwrap();
 
         assert_eq!(hauls.len(), 2);
+        assert_eq!(hauls, state.hauls[0..2]);
     })
     .await;
 }
 
 #[tokio::test]
 async fn test_hauls_sorts_by_start_timestamp() {
-    test(|helper, _builder| async move {
-        let mut expected = vec![
-            ErsDca::test_default(1, None),
-            ErsDca::test_default(2, None),
-            ErsDca::test_default(3, None),
-            ErsDca::test_default(4, None),
-        ];
-
-        expected[0].set_start_timestamp(Utc.timestamp_opt(1000, 0).unwrap());
-        expected[1].set_start_timestamp(Utc.timestamp_opt(2000, 0).unwrap());
-        expected[2].set_start_timestamp(Utc.timestamp_opt(3000, 0).unwrap());
-        expected[3].set_start_timestamp(Utc.timestamp_opt(4000, 0).unwrap());
-
-        helper.db.add_ers_dca(expected.clone()).await;
+    test(|helper, builder| async move {
+        let state = builder.hauls(4).build().await;
 
         let params = HaulsParams {
             sorting: Some(HaulsSorting::StartDate),
@@ -235,47 +250,16 @@ async fn test_hauls_sorts_by_start_timestamp() {
         assert_eq!(response.status(), StatusCode::OK);
         let hauls: Vec<Haul> = response.json().await.unwrap();
 
-        assert_eq!(
-            hauls[0].start_timestamp.timestamp_millis(),
-            expected[0].start_timestamp.unwrap().timestamp_millis()
-        );
-        assert_eq!(
-            hauls[1].start_timestamp.timestamp_millis(),
-            expected[1].start_timestamp.unwrap().timestamp_millis()
-        );
-        assert_eq!(
-            hauls[2].start_timestamp.timestamp_millis(),
-            expected[2].start_timestamp.unwrap().timestamp_millis()
-        );
-        assert_eq!(
-            hauls[3].start_timestamp.timestamp_millis(),
-            expected[3].start_timestamp.unwrap().timestamp_millis()
-        );
+        assert_eq!(hauls.len(), 4);
+        assert_eq!(hauls, state.hauls);
     })
     .await;
 }
 
 #[tokio::test]
 async fn test_hauls_sorts_by_stop_timestamp() {
-    test(|helper, _builder| async move {
-        let mut expected = vec![
-            ErsDca::test_default(1, None),
-            ErsDca::test_default(2, None),
-            ErsDca::test_default(3, None),
-            ErsDca::test_default(4, None),
-        ];
-
-        expected[0].set_start_timestamp(Utc.timestamp_opt(1000, 0).unwrap());
-        expected[0].set_stop_timestamp(Utc.timestamp_opt(1000, 0).unwrap());
-        expected[1].set_start_timestamp(Utc.timestamp_opt(2000, 0).unwrap());
-        expected[1].set_stop_timestamp(Utc.timestamp_opt(2000, 0).unwrap());
-        expected[2].set_start_timestamp(Utc.timestamp_opt(3000, 0).unwrap());
-        expected[2].set_stop_timestamp(Utc.timestamp_opt(3000, 0).unwrap());
-        expected[3].set_start_timestamp(Utc.timestamp_opt(4000, 0).unwrap());
-        expected[3].set_stop_timestamp(Utc.timestamp_opt(4000, 0).unwrap());
-
-        helper.db.add_ers_dca(expected.clone()).await;
-
+    test(|helper, builder| async move {
+        let state = builder.hauls(4).build().await;
         let params = HaulsParams {
             sorting: Some(HaulsSorting::StopDate),
             ordering: Some(Ordering::Asc),
@@ -287,42 +271,20 @@ async fn test_hauls_sorts_by_stop_timestamp() {
         assert_eq!(response.status(), StatusCode::OK);
         let hauls: Vec<Haul> = response.json().await.unwrap();
 
-        assert_eq!(
-            hauls[0].stop_timestamp.timestamp_millis(),
-            expected[0].stop_timestamp.unwrap().timestamp_millis()
-        );
-        assert_eq!(
-            hauls[1].stop_timestamp.timestamp_millis(),
-            expected[1].stop_timestamp.unwrap().timestamp_millis()
-        );
-        assert_eq!(
-            hauls[2].stop_timestamp.timestamp_millis(),
-            expected[2].stop_timestamp.unwrap().timestamp_millis()
-        );
-        assert_eq!(
-            hauls[3].stop_timestamp.timestamp_millis(),
-            expected[3].stop_timestamp.unwrap().timestamp_millis()
-        );
+        assert_eq!(hauls.len(), 4);
+        assert_eq!(hauls, state.hauls);
     })
     .await;
 }
 
 #[tokio::test]
 async fn test_hauls_sorts_by_weight() {
-    test(|helper, _builder| async move {
-        let mut expected = vec![
-            ErsDca::test_default(1, None),
-            ErsDca::test_default(2, None),
-            ErsDca::test_default(3, None),
-            ErsDca::test_default(4, None),
-        ];
-
-        expected[0].catch.species.living_weight = Some(100);
-        expected[1].catch.species.living_weight = Some(200);
-        expected[2].catch.species.living_weight = Some(300);
-        expected[3].catch.species.living_weight = Some(400);
-
-        helper.db.add_ers_dca(expected.clone()).await;
+    test(|helper, builder| async move {
+        let mut state = builder
+            .hauls(4)
+            .modify_idx(|i, v| v.dca.catch.species.living_weight = Some(i as u32))
+            .build()
+            .await;
 
         let params = HaulsParams {
             sorting: Some(HaulsSorting::Weight),
@@ -335,33 +297,22 @@ async fn test_hauls_sorts_by_weight() {
         assert_eq!(response.status(), StatusCode::OK);
         let hauls: Vec<Haul> = response.json().await.unwrap();
 
-        assert_eq!(
-            hauls[0].total_living_weight as u32,
-            expected[0].catch.species.living_weight.unwrap(),
-        );
-        assert_eq!(
-            hauls[1].total_living_weight as u32,
-            expected[1].catch.species.living_weight.unwrap(),
-        );
-        assert_eq!(
-            hauls[2].total_living_weight as u32,
-            expected[2].catch.species.living_weight.unwrap(),
-        );
-        assert_eq!(
-            hauls[3].total_living_weight as u32,
-            expected[3].catch.species.living_weight.unwrap(),
-        );
+        state.hauls.sort_by_key(|v| v.total_living_weight);
+
+        assert_eq!(hauls.len(), 4);
+        assert_eq!(hauls, state.hauls);
     })
     .await;
 }
 
 #[tokio::test]
 async fn test_hauls_species_fiskeridir_defaults_to_zero() {
-    test(|helper, _builder| async move {
-        let mut ers = ErsDca::test_default(1, None);
-        ers.catch.species.species_fdir_code = None;
-
-        helper.db.add_ers_dca_value(ers).await;
+    test(|helper, builder| async move {
+        let state = builder
+            .hauls(1)
+            .modify(|v| v.dca.catch.species.species_fdir_code = None)
+            .build()
+            .await;
 
         let response = helper.app.get_hauls(Default::default()).await;
 
@@ -369,6 +320,7 @@ async fn test_hauls_species_fiskeridir_defaults_to_zero() {
         let hauls: Vec<Haul> = response.json().await.unwrap();
 
         assert_eq!(hauls.len(), 1);
+        assert_eq!(hauls, state.hauls);
         assert_eq!(hauls[0].catches[0].species_fiskeridir_id, 0);
     })
     .await;

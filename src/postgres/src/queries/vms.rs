@@ -12,6 +12,32 @@ use kyogre_core::DateRange;
 use unnest_insert::UnnestInsert;
 
 impl PostgresAdapter {
+    pub(crate) async fn all_vms_impl(&self) -> Result<Vec<VmsPosition>, PostgresError> {
+        sqlx::query_as!(
+            VmsPosition,
+            r#"
+SELECT
+    call_sign,
+    course,
+    latitude,
+    longitude,
+    registration_id,
+    speed,
+    "timestamp",
+    vessel_length,
+    vessel_name,
+    vessel_type
+FROM
+    vms_positions
+ORDER BY
+    "timestamp" ASC
+            "#,
+        )
+        .fetch_all(&self.pool)
+        .await
+        .into_report()
+        .change_context(PostgresError::Query)
+    }
     pub(crate) fn vms_positions_impl(
         &self,
         call_sign: &CallSign,

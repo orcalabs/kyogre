@@ -1,3 +1,4 @@
+use error_stack::{IntoReport, ResultExt};
 use fiskeridir_rs::CallSign;
 use futures::{Stream, TryStreamExt};
 use kyogre_core::{
@@ -9,6 +10,57 @@ use crate::{error::PostgresError, models::AisVmsPosition, PostgresAdapter};
 use error_stack::{report, Result};
 
 impl PostgresAdapter {
+    pub(crate) async fn all_ais_vms_impl(&self) -> Result<Vec<AisVmsPosition>, PostgresError> {
+        sqlx::query_as!(
+            AisVmsPosition,
+            r#"
+SELECT
+    latitude AS "latitude!",
+    longitude AS "longitude!",
+    "timestamp" AS "timestamp!",
+    course_over_ground,
+    speed,
+    navigational_status,
+    rate_of_turn,
+    true_heading,
+    distance_to_shore
+FROM
+    (
+        SELECT
+            latitude,
+            longitude,
+            "timestamp",
+            course_over_ground,
+            speed_over_ground AS speed,
+            navigation_status_id AS navigational_status,
+            rate_of_turn,
+            true_heading,
+            distance_to_shore
+        FROM
+            ais_positions a
+        UNION ALL
+        SELECT
+            latitude,
+            longitude,
+            "timestamp",
+            course AS course_over_ground,
+            speed,
+            NULL AS navigational_status,
+            NULL AS rate_of_turn,
+            NULL AS true_heading,
+            NULL AS distance_to_shore
+        FROM
+            vms_positions v
+    ) q
+ORDER BY
+    "timestamp" ASC
+            "#,
+        )
+        .fetch_all(&self.ais_pool)
+        .await
+        .into_report()
+        .change_context(PostgresError::Query)
+    }
     pub(crate) fn ais_vms_positions_impl(
         &self,
         mmsi: Option<Mmsi>,

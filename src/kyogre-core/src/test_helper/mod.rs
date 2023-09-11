@@ -1,14 +1,15 @@
 use crate::{
-    AisConsumeLoop, AisPermission, AisPosition, Arrival, DataMessage, DateRange, DeliveryPoint,
-    DeliveryPointType, Departure, FisheryEngine, FiskeridirVesselId, Haul, HaulsQuery,
-    ManualDeliveryPoint, MattilsynetDeliveryPoint, Mmsi, NewAisPosition, NewAisStatic, Pagination,
-    ScraperInboundPort, TestHelperInbound, TestHelperOutbound, TripAssemblerOutboundPort,
-    TripDetailed, Trips, TripsQuery, Vessel, VmsPosition, WebApiOutboundPort,
+    AisConsumeLoop, AisPosition, Arrival, DataMessage, DeliveryPoint, DeliveryPointType, Departure,
+    FisheryEngine, FishingFacilities, FishingFacilitiesQuery, FishingFacility, Haul, HaulsQuery,
+    Landing, LandingsQuery, LandingsSorting, ManualDeliveryPoint, MattilsynetDeliveryPoint, Mmsi,
+    NewAisPosition, NewAisStatic, Ordering, Pagination, PrecisionId, ScraperInboundPort,
+    TestHelperInbound, TestHelperOutbound, TripAssemblerOutboundPort, TripDetailed, Trips,
+    TripsQuery, Vessel, VmsPosition, WebApiOutboundPort,
 };
 use ais::*;
 use ais_vms::*;
 use chrono::{DateTime, Duration, TimeZone, Utc};
-use fiskeridir_rs::{CallSign, LandingId};
+use fiskeridir_rs::CallSign;
 use fiskeridir_rs::{DeliveryPointId, LandingMonth};
 use futures::TryStreamExt;
 use machine::StateMachine;
@@ -61,7 +62,7 @@ pub struct TestState {
     pub ais_vms_positions: Vec<crate::AisVmsPosition>,
     pub vessels: Vec<Vessel>,
     pub trips: Vec<TripDetailed>,
-    pub landing_ids: Vec<LandingId>,
+    pub landings: Vec<Landing>,
     pub hauls: Vec<Haul>,
     pub dep: Vec<Departure>,
     pub por: Vec<Arrival>,
@@ -69,13 +70,9 @@ pub struct TestState {
     pub all_delivery_points: Vec<DeliveryPoint>,
     // Only includes the delivery points added by the builder
     pub delivery_points: Vec<DeliveryPoint>,
-    ais_positions_to_vessel: HashMap<VesselKey, Vec<AisPosition>>,
-    ais_vms_positions_to_vessel: HashMap<VesselKey, Vec<crate::AisVmsPosition>>,
-    vms_positions_to_vessel: HashMap<VesselKey, Vec<crate::VmsPosition>>,
-    trips_to_vessel: HashMap<VesselKey, Vec<TripDetailed>>,
+    pub fishing_facilities: Vec<FishingFacility>,
 }
 
-#[allow(dead_code)]
 pub struct TestStateBuilder {
     storage: Box<dyn TestStorage>,
     vessels: Vec<VesselContructor>,
@@ -85,9 +82,9 @@ pub struct TestStateBuilder {
     vessel_id_counter: i64,
     global_data_timestamp_counter: DateTime<Utc>,
     data_timestamp_gap: Duration,
-    ais_vms_positions: HashMap<AisVmsVesselKey, Vec<AisVmsPositionConstructor>>,
-    ais_positions: HashMap<AisVesselKey, Vec<AisPositionConstructor>>,
-    vms_positions: HashMap<VmsVesselKey, Vec<VmsPositionConstructor>>,
+    ais_vms_positions: Vec<AisVmsPositionConstructor>,
+    ais_positions: Vec<AisPositionConstructor>,
+    vms_positions: Vec<VmsPositionConstructor>,
     trips: Vec<TripConstructor>,
     hauls: Vec<HaulConstructor>,
     landings: Vec<fiskeridir_rs::Landing>,
@@ -109,35 +106,30 @@ pub struct TestStateBuilder {
     engine: FisheryEngine,
 }
 
-impl TestState {
-    pub fn vms_positions_of_vessel(&self, index: usize) -> &[VmsPosition] {
-        self.vms_positions_to_vessel
-            .get(&VesselKey {
-                vessel_vec_index: index,
-            })
-            .unwrap()
-    }
-    pub fn ais_positions_of_vessel(&self, index: usize) -> &[AisPosition] {
-        self.ais_positions_to_vessel
-            .get(&VesselKey {
-                vessel_vec_index: index,
-            })
-            .unwrap()
-    }
-    pub fn ais_vms_positions_of_vessel(&self, index: usize) -> &[crate::AisVmsPosition] {
-        self.ais_vms_positions_to_vessel
-            .get(&VesselKey {
-                vessel_vec_index: index,
-            })
-            .unwrap()
-    }
-    pub fn trips_of_vessel(&self, index: usize) -> &[TripDetailed] {
-        self.trips_to_vessel
-            .get(&VesselKey {
-                vessel_vec_index: index,
-            })
-            .unwrap()
-    }
+enum TripPrecisonStartPoint {
+    Port {
+        start_port: String,
+        end_port: String,
+        start: DateTime<Utc>,
+        end: DateTime<Utc>,
+        mmsi: Mmsi,
+    },
+    DockPoint {
+        start_port: String,
+        end_port: String,
+        end: DateTime<Utc>,
+        start: DateTime<Utc>,
+        mmsi: Mmsi,
+    },
+    DeliveryPoint {
+        id: DeliveryPointId,
+        end: DateTime<Utc>,
+        mmsi: Mmsi,
+    },
+    FirstPoint {
+        start: DateTime<Utc>,
+        mmsi: Mmsi,
+    },
 }
 
 impl TestStateBuilder {
@@ -157,14 +149,14 @@ impl TestStateBuilder {
 
         TestStateBuilder {
             storage,
-            ais_positions: HashMap::default(),
+            ais_positions: vec![],
             vessels: vec![],
             vessel_id_counter: 1,
             ais_data_sender: sender,
             ais_data_confirmation: confirmation_receiver,
             data_timestamp_gap: Duration::seconds(30),
-            ais_vms_positions: HashMap::default(),
-            vms_positions: HashMap::default(),
+            ais_vms_positions: vec![],
+            vms_positions: vec![],
             trips: vec![],
             default_trip_duration: Duration::weeks(1),
             ers_message_id_counter: 1,
@@ -211,6 +203,30 @@ impl TestStateBuilder {
 
         MattilsynetBuilder {
             current_index: self.mattilsynet.len() - amount,
+            state: self,
+        }
+    }
+
+    pub fn fishing_facilities(mut self, amount: usize) -> FishingFacilityBuilder {
+        assert!(amount != 0);
+
+        for _ in 0..amount {
+            let start = self.global_data_timestamp_counter;
+            let end = start + self.default_fishing_facility_duration;
+
+            let mut facility = FishingFacility::test_default();
+            facility.call_sign = None;
+            facility.setup_timestamp = start;
+            facility.removed_timestamp = Some(end);
+
+            self.fishing_facilities
+                .push(FishingFacilityConctructor { facility });
+
+            self.global_data_timestamp_counter = end + self.trip_data_timestamp_gap;
+        }
+
+        FishingFacilityBuilder {
+            current_index: self.fishing_facilities.len() - amount,
             state: self,
         }
     }
@@ -376,19 +392,6 @@ impl TestStateBuilder {
             .await
             .unwrap();
 
-        let mut ais_positions_to_vessel = HashMap::default();
-        let mut ais_positions = Vec::new();
-
-        let mut ais_vms_positions_to_vessel = HashMap::default();
-        let mut ais_vms_positions = Vec::new();
-
-        let mut vms_positions_to_vessel = HashMap::default();
-        let mut vms_positions = Vec::new();
-
-        let mut trips_to_vessel: HashMap<VesselKey, Vec<TripDetailed>> =
-            HashMap::with_capacity(self.trips.len());
-        let mut trips = Vec::new();
-
         self.storage
             .add_ers_dca(Box::new(self.hauls.into_iter().map(|v| Ok(v.dca))))
             .await
@@ -449,136 +452,119 @@ impl TestStateBuilder {
         for t in self.trips {
             match t.trip_specification {
                 TripSpecification::Ers { dep, por } => {
+                    let departure_timestamp = dep.departure_timestamp;
+                    let arrival_timestamp = por.arrival_timestamp;
+                    let start_port = dep.port.code.clone();
+                    let end_port = por.port.code.clone();
+
                     self.storage.add_ers_dep(vec![dep]).await.unwrap();
                     self.storage.add_ers_por(vec![por]).await.unwrap();
+                    if let Some(precision) = t.precision_id {
+                        let mmsi = t
+                            .mmsi
+                            .expect("cannot add precision to trip of vessel without mmsi");
+                        let start_point = match precision {
+                            PrecisionId::FirstMovedPoint => TripPrecisonStartPoint::FirstPoint {
+                                start: departure_timestamp,
+                                mmsi,
+                            },
+                            PrecisionId::DeliveryPoint => {
+                                panic!("cannot add precision type for ers trip")
+                            }
+                            PrecisionId::Port => TripPrecisonStartPoint::Port {
+                                start_port: start_port
+                                    .expect("cant add precision to dep without port code set"),
+                                end_port: end_port
+                                    .expect("cant add precision to por without port code set"),
+                                start: departure_timestamp,
+                                end: arrival_timestamp,
+                                mmsi,
+                            },
+                            PrecisionId::DockPoint => TripPrecisonStartPoint::DockPoint {
+                                start_port: start_port
+                                    .expect("cant add precision to dep without port code set"),
+                                end_port: end_port
+                                    .expect("cant add precision to por without port code set"),
+                                start: departure_timestamp,
+                                end: arrival_timestamp,
+                                mmsi,
+                            },
+                        };
+
+                        let mut ais_positions =
+                            add_precision_to_trip(self.storage.as_ref(), start_point).await;
+
+                        self.ais_positions.append(&mut ais_positions);
+                    }
                 }
                 TripSpecification::Landing {
                     start_landing,
                     end_landing,
                 } => {
+                    let start_landing_timestamp = start_landing.landing_timestamp;
+                    let end_landing_timestamp = end_landing.landing_timestamp;
+                    let delivery_point_id = end_landing.delivery_point.id.clone();
                     self.landings.append(&mut vec![start_landing, end_landing]);
+                    if let Some(precision) = t.precision_id {
+                        let mmsi = t
+                            .mmsi
+                            .expect("cannot add precision to trip of vessel without mmsi");
+                        let start_point = match precision {
+                            PrecisionId::FirstMovedPoint => TripPrecisonStartPoint::FirstPoint {
+                                start: start_landing_timestamp,
+                                mmsi,
+                            },
+                            PrecisionId::DeliveryPoint => TripPrecisonStartPoint::DeliveryPoint {
+                                end: end_landing_timestamp,
+                                mmsi,
+                                id: delivery_point_id
+                                    .expect("cannot add precision to trip without delivery point"),
+                            },
+                            PrecisionId::Port | PrecisionId::DockPoint => {
+                                panic!("cannot add precision type for Landings trip")
+                            }
+                        };
+
+                        let mut ais_positions =
+                            add_precision_to_trip(self.storage.as_ref(), start_point).await;
+
+                        self.ais_positions.append(&mut ais_positions);
+                    }
                 }
             }
         }
-
-        let mut landing_ids: Vec<(i64, DateTime<Utc>, LandingId)> = self
-            .landings
-            .iter()
-            .map(|l| (l.vessel.id.unwrap_or(0), l.landing_timestamp, l.id.clone()))
-            .collect();
 
         self.storage
             .add_landings(Box::new(self.landings.into_iter().map(Ok)), 2023)
             .await
             .unwrap();
 
-        for (key, positions) in self.ais_positions {
-            let start = &positions[0].position.msgtime;
-            let end = &positions[positions.len() - 1].position.msgtime;
-            let range = DateRange::new(*start, *end).unwrap();
+        self.ais_vms_positions
+            .into_iter()
+            .for_each(|v| match v.position {
+                AisOrVmsPosition::Ais(a) => self
+                    .ais_positions
+                    .push(AisPositionConstructor { position: a }),
+                AisOrVmsPosition::Vms(v) => self
+                    .vms_positions
+                    .push(VmsPositionConstructor { position: v }),
+            });
 
-            self.ais_data_sender
-                .send(DataMessage {
-                    positions: positions.into_iter().map(|v| v.position).collect(),
-                    static_messages: vec![],
-                })
-                .unwrap();
+        self.storage
+            .add_vms(self.vms_positions.into_iter().map(|v| v.position).collect())
+            .await
+            .unwrap();
+        self.ais_data_sender
+            .send(DataMessage {
+                positions: self.ais_positions.into_iter().map(|v| v.position).collect(),
+                static_messages: vec![],
+            })
+            .unwrap();
+        self.ais_data_confirmation.recv().await.unwrap();
 
-            self.ais_data_confirmation.recv().await.unwrap();
-
-            let mut stored_positions: Vec<AisPosition> = self
-                .storage
-                .ais_positions(key.mmsi, &range, AisPermission::All)
-                .try_collect()
-                .await
-                .unwrap();
-
-            ais_positions_to_vessel.insert(key.vessel_key, stored_positions.clone());
-            ais_positions.append(&mut stored_positions);
-        }
-
-        for (key, positions) in self.ais_vms_positions {
-            let start = &positions[0].position.timestamp();
-            let end = &positions[positions.len() - 1].position.timestamp();
-
-            let range = DateRange::new(*start, *end).unwrap();
-
-            let num_positions = positions.len();
-
-            let ais: Vec<NewAisPosition> = positions
-                .iter()
-                .cloned()
-                .filter_map(|v| match v.position {
-                    AisOrVmsPosition::Ais(a) => Some(a),
-                    AisOrVmsPosition::Vms(_) => None,
-                })
-                .collect();
-
-            let vms: Vec<fiskeridir_rs::Vms> = positions
-                .into_iter()
-                .filter_map(|v| match v.position {
-                    AisOrVmsPosition::Vms(a) => Some(a),
-                    AisOrVmsPosition::Ais(_) => None,
-                })
-                .collect();
-
-            self.ais_data_sender
-                .send(DataMessage {
-                    positions: ais,
-                    static_messages: vec![],
-                })
-                .unwrap();
-
-            self.ais_data_confirmation.recv().await.unwrap();
-
-            self.storage.add_vms(vms).await.unwrap();
-
-            let stored_positions = self
-                .storage
-                .ais_vms_positions(
-                    Some(key.mmsi),
-                    Some(&key.call_sign),
-                    &range,
-                    AisPermission::All,
-                )
-                .try_collect::<Vec<crate::AisVmsPosition>>()
-                .await
-                .unwrap();
-
-            let mut mmsi_mapped_positions: Vec<(Mmsi, crate::AisVmsPosition)> = stored_positions
-                .iter()
-                .cloned()
-                .map(|v| (key.mmsi, v))
-                .collect();
-
-            assert_eq!(stored_positions.len(), num_positions);
-            ais_vms_positions_to_vessel.insert(key.vessel_key, stored_positions);
-            ais_vms_positions.append(&mut mmsi_mapped_positions);
-        }
-
-        for (key, positions) in self.vms_positions {
-            let start = &positions[0].position.timestamp;
-            let end = &positions[positions.len() - 1].position.timestamp;
-
-            let range = DateRange::new(*start, *end).unwrap();
-            let num_positions = positions.len();
-
-            self.storage
-                .add_vms(positions.iter().cloned().map(|v| v.position).collect())
-                .await
-                .unwrap();
-
-            let mut stored_positions = self
-                .storage
-                .vms_positions(&key.call_sign, &range)
-                .try_collect::<Vec<VmsPosition>>()
-                .await
-                .unwrap();
-
-            assert_eq!(stored_positions.len(), num_positions);
-            vms_positions_to_vessel.insert(key.vessel_key, stored_positions.clone());
-            vms_positions.append(&mut stored_positions);
-        }
+        let mut ais_positions = self.storage.all_ais().await;
+        let mut vms_positions = self.storage.all_vms().await;
+        let mut ais_vms_positions = self.storage.all_ais_vms().await;
 
         let mut engine = self.engine.run_single().await;
         loop {
@@ -591,20 +577,7 @@ impl TestStateBuilder {
         let mut vessels: Vec<Vessel> = self.storage.vessels().try_collect().await.unwrap();
         vessels.sort_by_key(|v| v.fiskeridir.id);
 
-        let vessel_ids_keys: HashMap<FiskeridirVesselId, VesselKey> = vessels
-            .iter()
-            .enumerate()
-            .map(|(i, v)| {
-                (
-                    v.fiskeridir.id,
-                    VesselKey {
-                        vessel_vec_index: i,
-                    },
-                )
-            })
-            .collect();
-
-        let vessel_trips = self
+        let mut trips = self
             .storage
             .detailed_trips(
                 TripsQuery {
@@ -618,16 +591,7 @@ impl TestStateBuilder {
             .await
             .unwrap();
 
-        assert!(vessel_trips.len() < 100);
-
-        for t in vessel_trips {
-            let key = vessel_ids_keys.get(&t.fiskeridir_vessel_id).unwrap();
-            trips.push(t.clone());
-            trips_to_vessel
-                .entry(*key)
-                .and_modify(|v| v.push(t.clone()))
-                .or_insert(vec![t]);
-        }
+        assert!(trips.len() < 100);
 
         let mut hauls = self
             .storage
@@ -652,35 +616,178 @@ impl TestStateBuilder {
             .cloned()
             .collect();
 
+        let landings = self
+            .storage
+            .landings(LandingsQuery {
+                sorting: Some(LandingsSorting::LandingTimestamp),
+                ordering: Some(Ordering::Asc),
+                ..Default::default()
+            })
+            .unwrap()
+            .try_collect::<Vec<Landing>>()
+            .await
+            .unwrap();
+
+        let mut fishing_facilities = self
+            .storage
+            .fishing_facilities(FishingFacilitiesQuery {
+                mmsis: None,
+                fiskeridir_vessel_ids: None,
+                tool_types: None,
+                active: None,
+                setup_ranges: None,
+                removed_ranges: None,
+                ordering: None,
+                sorting: None,
+                pagination: Pagination::<FishingFacilities>::new(Some(100), Some(0)),
+            })
+            .try_collect::<Vec<FishingFacility>>()
+            .await
+            .unwrap();
+
+        assert!(fishing_facilities.len() < 100);
+
         // We want all positions to be ordered by how they were created, we exploit the fact that
         // mmsis are an increasing counter and that msgtime is increased for each created position.
         ais_positions.sort_by_key(|v| (v.mmsi, v.msgtime));
-        ais_vms_positions.sort_by_key(|v| (v.0, v.1.timestamp));
+        ais_vms_positions.sort_by_key(|v| v.timestamp);
         vms_positions.sort_by_key(|v| (v.call_sign.clone(), v.timestamp));
         trips.sort_by_key(|v| (v.fiskeridir_vessel_id, v.period.start()));
-        landing_ids.sort_by_key(|v| (v.0, v.1));
         hauls.sort_by_key(|v| (v.start_timestamp, v.haul_id));
-        dep.sort_by_key(|v| (v.timestamp, v.fiskeridir_vessel_id));
-        por.sort_by_key(|v| (v.timestamp, v.fiskeridir_vessel_id));
+        dep.sort_by_key(|v| (v.fiskeridir_vessel_id, v.timestamp));
+        por.sort_by_key(|v| (v.fiskeridir_vessel_id, v.timestamp));
         delivery_points.sort_by_key(|v| v.id.clone());
+        fishing_facilities.sort_by_key(|v| (v.fiskeridir_vessel_id, v.setup_timestamp));
         assert_eq!(vessels.len(), num_vessels);
 
         TestState {
             ais_positions,
             vessels,
-            ais_positions_to_vessel,
-            ais_vms_positions: ais_vms_positions.into_iter().map(|v| v.1).collect(),
-            ais_vms_positions_to_vessel,
+            ais_vms_positions,
             vms_positions,
-            vms_positions_to_vessel,
             trips,
-            trips_to_vessel,
-            landing_ids: landing_ids.into_iter().map(|v| v.2).collect(),
+            landings,
             hauls,
             dep,
             por,
             all_delivery_points,
             delivery_points,
+            fishing_facilities,
+        }
+    }
+}
+
+async fn add_precision_to_trip(
+    storage: &dyn TestStorage,
+    start: TripPrecisonStartPoint,
+) -> Vec<AisPositionConstructor> {
+    match start {
+        TripPrecisonStartPoint::Port {
+            start_port,
+            end_port,
+            start,
+            end,
+            mmsi,
+        } => {
+            let start_port = storage
+                .port(start_port.as_str())
+                .await
+                .expect("cannot add port precision to trip without start port");
+            let end_port = storage
+                .port(end_port.as_str())
+                .await
+                .expect("cannot add port precision to trip without end port");
+            let start_coords = start_port
+                .coordinates
+                .expect("cannot add port precision on start port without coordinates");
+            let end_coords = end_port
+                .coordinates
+                .expect("cannot add port precision on end port without coordinates");
+
+            let mut ais_positions = Vec::with_capacity(3);
+
+            let mut position = NewAisPosition::test_default(mmsi, start - Duration::seconds(1));
+            position.latitude = start_coords.latitude;
+            position.longitude = start_coords.longitude;
+            ais_positions.push(AisPositionConstructor { position });
+
+            // We need atleast a single point within trip to enable precision
+            let mut position = NewAisPosition::test_default(mmsi, end - Duration::seconds(1));
+            position.latitude = start_coords.latitude;
+            position.longitude = start_coords.longitude;
+            ais_positions.push(AisPositionConstructor { position });
+
+            let mut position = NewAisPosition::test_default(mmsi, end + Duration::seconds(1));
+            position.latitude = end_coords.latitude;
+            position.longitude = end_coords.longitude;
+            ais_positions.push(AisPositionConstructor { position });
+
+            ais_positions
+        }
+        TripPrecisonStartPoint::DeliveryPoint { id, end, mmsi } => {
+            let delivery_point = storage
+                .delivery_point(&id)
+                .await
+                .expect("cannot add delivery point precision to non-existing delivery point");
+
+            let latitude = delivery_point
+                .latitude
+                .expect("cannot add delivery point precision to delivery point without latitude");
+            let longitude = delivery_point
+                .longitude
+                .expect("cannot add delivery point precision to delivery point without longitude");
+
+            let mut ais_positions = Vec::with_capacity(1);
+            let mut position = NewAisPosition::test_default(mmsi, end + Duration::seconds(1));
+            position.latitude = latitude;
+            position.longitude = longitude;
+            ais_positions.push(AisPositionConstructor { position });
+            ais_positions
+        }
+        TripPrecisonStartPoint::FirstPoint { start, mmsi } => {
+            let mut ais_positions = Vec::with_capacity(20);
+            for i in 0..20 {
+                let mut position = NewAisPosition::test_default(mmsi, start + Duration::seconds(i));
+                position.latitude = 70.0 + i as f64 * 0.01;
+                position.longitude = 20.0 + i as f64 * 0.01;
+                ais_positions.push(AisPositionConstructor { position });
+            }
+            ais_positions
+        }
+        TripPrecisonStartPoint::DockPoint {
+            start_port,
+            end_port,
+            start,
+            end,
+            mmsi,
+        } => {
+            let start_dock_points = storage.dock_points_of_port(start_port.as_str()).await;
+            let end_dock_points = storage.dock_points_of_port(end_port.as_str()).await;
+
+            let start_dock_point = start_dock_points
+                .first()
+                .expect("cannot add dock point precision to trip without start dock points");
+            let end_dock_point = end_dock_points
+                .first()
+                .expect("cannot add dock point precision to trip without end dock points");
+
+            let mut ais_positions = Vec::with_capacity(3);
+            let mut position = NewAisPosition::test_default(mmsi, start - Duration::seconds(1));
+            position.latitude = start_dock_point.latitude;
+            position.longitude = start_dock_point.longitude;
+            ais_positions.push(AisPositionConstructor { position });
+
+            // We need atleast a single point within trip to enable precision
+            let mut position = NewAisPosition::test_default(mmsi, end - Duration::seconds(1));
+            position.latitude = start_dock_point.latitude;
+            position.longitude = end_dock_point.longitude;
+            ais_positions.push(AisPositionConstructor { position });
+
+            let mut position = NewAisPosition::test_default(mmsi, end + Duration::seconds(1));
+            position.latitude = end_dock_point.latitude;
+            position.longitude = end_dock_point.longitude;
+            ais_positions.push(AisPositionConstructor { position });
+            ais_positions
         }
     }
 }

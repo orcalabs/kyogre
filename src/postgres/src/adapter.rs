@@ -231,6 +231,59 @@ impl TestHelperOutbound for PostgresAdapter {
     async fn delivery_points_log(&self) -> Vec<serde_json::Value> {
         self.delivery_points_log_impl().await.unwrap()
     }
+
+    async fn all_ais(&self) -> Vec<AisPosition> {
+        self.all_ais_impl()
+            .await
+            .unwrap()
+            .into_iter()
+            .map(AisPosition::try_from)
+            .collect::<Result<Vec<AisPosition>, PostgresError>>()
+            .unwrap()
+    }
+    async fn all_vms(&self) -> Vec<VmsPosition> {
+        self.all_vms_impl()
+            .await
+            .unwrap()
+            .into_iter()
+            .map(VmsPosition::try_from)
+            .collect::<Result<Vec<VmsPosition>, PostgresError>>()
+            .unwrap()
+    }
+    async fn all_ais_vms(&self) -> Vec<AisVmsPosition> {
+        self.all_ais_vms_impl()
+            .await
+            .unwrap()
+            .into_iter()
+            .map(AisVmsPosition::try_from)
+            .collect::<Result<Vec<AisVmsPosition>, PostgresError>>()
+            .unwrap()
+    }
+    async fn port(&self, port_id: &str) -> Option<Port> {
+        self.port_impl(port_id)
+            .await
+            .unwrap()
+            .map(Port::try_from)
+            .transpose()
+            .unwrap()
+    }
+    async fn delivery_point(&self, id: &DeliveryPointId) -> Option<DeliveryPoint> {
+        self.delivery_point_impl(id)
+            .await
+            .unwrap()
+            .map(DeliveryPoint::try_from)
+            .transpose()
+            .unwrap()
+    }
+    async fn dock_points_of_port(&self, port_id: &str) -> Vec<PortDockPoint> {
+        self.dock_points_of_port_impl(port_id)
+            .await
+            .unwrap()
+            .into_iter()
+            .map(PortDockPoint::try_from)
+            .collect::<Result<Vec<PortDockPoint>, _>>()
+            .unwrap()
+    }
 }
 
 #[async_trait]

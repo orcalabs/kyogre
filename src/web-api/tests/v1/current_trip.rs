@@ -159,7 +159,6 @@ async fn test_current_trip_returns_earliest_departure_since_previous_trip() {
         assert_eq!(response.status(), StatusCode::OK);
 
         let trip: CurrentTrip = response.json().await.unwrap();
-        dbg!(&state);
 
         assert_eq!(
             trip.departure.timestamp_millis(),

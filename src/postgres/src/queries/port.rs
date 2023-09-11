@@ -1,6 +1,6 @@
 use crate::{
     error::PostgresError,
-    models::{Arrival, NewPort, TripDockPoints, TripPorts},
+    models::{Arrival, NewPort, Port, PortDockPoint, TripDockPoints, TripPorts},
     PostgresAdapter,
 };
 use error_stack::{IntoReport, Result, ResultExt};
@@ -8,6 +8,31 @@ use kyogre_core::TripId;
 use unnest_insert::UnnestInsert;
 
 impl PostgresAdapter {
+    pub(crate) async fn dock_points_of_port_impl(
+        &self,
+        port_id: &str,
+    ) -> Result<Vec<PortDockPoint>, PostgresError> {
+        sqlx::query_as!(
+            PortDockPoint,
+            r#"
+SELECT
+    p.port_id,
+    p.port_dock_point_id,
+    p.latitude,
+    p.longitude,
+    p.name
+FROM
+    port_dock_points p
+WHERE
+    p.port_id = $1
+            "#,
+            port_id
+        )
+        .fetch_all(&self.pool)
+        .await
+        .into_report()
+        .change_context(PostgresError::Query)
+    }
     pub(crate) async fn all_ers_arrivals_impl(&self) -> Result<Vec<Arrival>, PostgresError> {
         sqlx::query_as!(
             Arrival,
@@ -37,6 +62,27 @@ FROM
             .map(|_| ())
     }
 
+    pub(crate) async fn port_impl(&self, port_id: &str) -> Result<Option<Port>, PostgresError> {
+        sqlx::query_as!(
+            Port,
+            r#"
+SELECT
+    p.port_id AS "id!",
+    p.name,
+    p.latitude,
+    p.longitude
+FROM
+    ports AS p
+WHERE
+    p.port_id = $1
+            "#,
+            port_id,
+        )
+        .fetch_optional(&self.pool)
+        .await
+        .into_report()
+        .change_context(PostgresError::Query)
+    }
     pub async fn ports_of_trip_impl(&self, trip_id: TripId) -> Result<TripPorts, PostgresError> {
         sqlx::query_as!(
             TripPorts,
