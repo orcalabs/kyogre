@@ -20,7 +20,7 @@ orca-core = { workspace = true, features = ["telemetry"] }
 fiskeridir-rs = { workspace = true }
 
 config = { version = "0.13.3", features = ["yaml"] }
-chrono = { version = "0.4.28", features = ["serde"] }
+chrono = { version = "0.4.30", features = ["serde"] }
 tokio = "1.32.0"
 tracing = "0.1.37"
 serde = { version = "1.0.188", features = ["derive"] }

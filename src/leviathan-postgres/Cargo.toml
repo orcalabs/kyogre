@@ -13,4 +13,4 @@ sqlx = { workspace = true }
 error-stack = { workspace = true }
 bigdecimal = "0.3.1"
 async-trait = "0.1.73"
-chrono = { version = "0.4.28", features = ["serde"] }
+chrono = { version = "0.4.30", features = ["serde"] }
