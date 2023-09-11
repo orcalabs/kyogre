@@ -21,6 +21,7 @@ pub trait AisMigratorDestination {
         positions: Vec<AisPosition>,
         progress: DateTime<Utc>,
     ) -> Result<(), InsertError>;
+    async fn add_mmsis(&self, mmsi: Vec<Mmsi>) -> Result<(), InsertError>;
     async fn vessel_migration_progress(
         &self,
         migration_end_threshold: &DateTime<Utc>,

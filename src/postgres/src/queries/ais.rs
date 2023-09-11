@@ -426,6 +426,25 @@ WHERE
             .change_context(PostgresError::Query)
             .map(|_| ())
     }
+    pub(crate) async fn add_mmsis_impl(&self, mmsis: Vec<Mmsi>) -> Result<(), PostgresError> {
+        sqlx::query!(
+            r#"
+INSERT INTO
+    ais_vessels (mmsi)
+SELECT
+    *
+FROM
+    UNNEST($1::INT[])
+ON CONFLICT (mmsi) DO NOTHING
+            "#,
+            &mmsis.into_iter().map(|v| v.0).collect::<Vec<i32>>()
+        )
+        .execute(&self.pool)
+        .await
+        .map(|_| ())
+        .into_report()
+        .change_context(PostgresError::Query)
+    }
 
     pub(crate) async fn add_ais_migration_data(
         &self,
@@ -501,21 +520,6 @@ WHERE
         }
 
         let mut tx = self.begin().await?;
-
-        sqlx::query!(
-            r#"
-INSERT INTO
-    ais_vessels (mmsi)
-VALUES
-    ($1)
-ON CONFLICT (mmsi) DO NOTHING
-            "#,
-            &mmsi.0,
-        )
-        .execute(&mut *tx)
-        .await
-        .into_report()
-        .change_context(PostgresError::Query)?;
 
         sqlx::query!(
             r#"
