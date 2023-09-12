@@ -19,6 +19,7 @@ jobs:
       dependencies: protobuf-compiler
       image-build-command: docker build -f dockerfiles/test-db/Dockerfile -t ghcr.io/orcalabs/kyogre/test-postgres .
       check-sqlx: true
+      sqlx-migrations-dir: postgres
       postgres-version: postgis/postgis:15-3.4-alpine
       openapi-bins: |
         web-api-openapi
