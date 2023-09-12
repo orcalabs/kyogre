@@ -76,6 +76,10 @@ impl TestHelper {
             .produce_and_store_benchmarks(&self.db.db, &self.db.db)
             .await
             .unwrap();
+        self.weight_per
+            .produce_and_store_benchmarks(&self.db.db, &self.db.db)
+            .await
+            .unwrap();
     }
     pub async fn refresh_cache(&self) {
         if let Some(duck_db) = self.duck_db.as_ref() {

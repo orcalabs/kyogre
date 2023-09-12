@@ -90,6 +90,8 @@ pub enum RelevantEventType {
 #[repr(i32)]
 pub enum VesselBenchmarkId {
     WeightPerHour = 1,
+    DistancePerHour = 2,
+    WeightPerDate = 3,
 }
 
 impl From<VesselBenchmarkId> for i32 {
@@ -275,6 +277,8 @@ impl std::fmt::Display for VesselBenchmarkId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             VesselBenchmarkId::WeightPerHour => f.write_str("WeightPerHour"),
+            VesselBenchmarkId::DistancePerHour => f.write_str("DistancePerHour"),
+            VesselBenchmarkId::WeightPerDate => f.write_str("WeightPerDate"),
         }
     }
 }

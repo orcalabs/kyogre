@@ -52,6 +52,11 @@ cd src/postgres
 docker-compose up -d migration-db
 cargo sqlx migrate run
 ```
+### compile .sqlx query files 
+To update controller methods, you need to update compile new queries to .sqlx foder
+```
+cargo sqlx prepare
+```
 
 See the sqlx-cli crate [documentation](https://crates.io/crates/sqlx-cli) for
 more information on how it operates.

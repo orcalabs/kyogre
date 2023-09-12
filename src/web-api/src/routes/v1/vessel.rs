@@ -32,6 +32,8 @@ pub struct Vessel {
     pub fiskeridir: FiskeridirVessel,
     pub ais: Option<AisVessel>,
     pub fish_caught_per_hour: Option<f64>,
+    pub fish_caught_per_date: Vec<f64>,
+    pub distance_per_hour: Option<f64>,
     #[schema(value_type = Vec<u32>)]
     pub gear_groups: Vec<GearGroup>,
 }
@@ -85,6 +87,8 @@ impl From<kyogre_core::Vessel> for Vessel {
             fiskeridir: FiskeridirVessel::from(value.fiskeridir),
             ais: value.ais.map(AisVessel::from),
             fish_caught_per_hour: value.fish_caught_per_hour,
+            fish_caught_per_date: value.fish_caught_per_date,
+            distance_per_hour: value.distance_per_hour,
             gear_groups: value.gear_groups,
         }
     }

@@ -155,6 +155,38 @@ WHERE
             .map(|v| v.to_f64().ok_or(PostgresError::DataConversion))
             .transpose()?)
     }
+    pub(crate) async fn sum_landing_weight_on_date_impl(
+        &self,
+        id: FiskeridirVesselId,
+        date: DateTime<Utc>,
+    ) -> Result<Option<f64>, PostgresError> {
+        let weight = sqlx::query!(
+            r#"
+SELECT
+    SUM(le.living_weight) AS weight
+FROM
+    landings AS l
+    INNER JOIN landing_entries AS le ON l.landing_id = le.landing_id
+WHERE
+    fiskeridir_vessel_id = $1
+    AND l.landing_timestamp <= $2
+
+            "#,
+            id.0,
+        )
+        .fetch_one(&self.pool)
+        .await
+        .into_report()
+        .change_context(PostgresError::Query)?;
+
+        Ok(weight
+            .weight
+            .map(|v| v.to_f64().ok_or(PostgresError::DataConversion))
+            .transpose()?)
+    }
+    
+
+
     pub(crate) async fn add_landing_set(&self, set: LandingSet) -> Result<(), PostgresError> {
         let prepared_set = set.prepare();
         let mut tx = self.begin().await?;

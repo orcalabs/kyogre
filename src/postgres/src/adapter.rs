@@ -782,6 +782,16 @@ impl VesselBenchmarkOutbound for PostgresAdapter {
             .await
             .change_context(QueryError)
     }
+    async fn sum_landing_weight_on_date(&self, id: FiskeridirVesselId, date: DateTime<Utc>) -> Result<Option<f64>, QueryError> {
+        self.sum_landing_weight_on_date_impl(id, date)
+            .await
+            .change_context(QueryError)
+    }
+    async fn sum_distance(&self, id: FiskeridirVesselId) -> Result<Option<f64>, QueryError> {
+        self.sum_distance_impl(id)
+            .await
+            .change_context(QueryError)
+    }
 }
 
 #[async_trait]

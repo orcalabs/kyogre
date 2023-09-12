@@ -28,6 +28,15 @@ impl PostgresAdapter {
             .change_context(PostgresError::Query)?;
         Ok(())
     }
+
+    pub(crate) async fn sum_distance_impl(
+        &self,
+        _id: FiskeridirVesselId,
+    ) -> Result<Option<f64>, PostgresError> {
+        Ok(Some(1.2))
+    }
+
+
     pub(crate) async fn sum_trip_time_impl(
         &self,
         id: FiskeridirVesselId,
