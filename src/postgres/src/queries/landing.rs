@@ -172,7 +172,7 @@ WHERE
     AND l.landing_timestamp <= $2
 
             "#,
-            id.0,
+            id.0,date,
         )
         .fetch_one(&self.pool)
         .await
