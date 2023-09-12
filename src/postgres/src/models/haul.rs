@@ -61,6 +61,7 @@ pub struct WhaleCatch {
 }
 
 pub struct HaulMessage {
+    pub haul_id: i64,
     pub message_id: i64,
     pub start_timestamp: DateTime<Utc>,
     pub stop_timestamp: DateTime<Utc>,
@@ -162,7 +163,7 @@ impl TryFrom<HaulMessage> for kyogre_core::HaulMessage {
 
     fn try_from(v: HaulMessage) -> Result<Self, Self::Error> {
         Ok(Self {
-            message_id: v.message_id,
+            haul_id: HaulId(v.haul_id),
             start_timestamp: v.start_timestamp,
             stop_timestamp: v.stop_timestamp,
         })

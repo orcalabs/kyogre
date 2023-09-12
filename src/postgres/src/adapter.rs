@@ -1,13 +1,12 @@
 use crate::models::LandingMatrixArgs;
 use crate::queries::haul::HaulsMatrixArgs;
 use crate::{
-    error::PostgresError, ers_dca_set::ErsDcaSet, ers_dep_set::ErsDepSet, ers_por_set::ErsPorSet,
-    ers_tra_set::ErsTraSet, landing_set::LandingSet,
+    error::PostgresError, ers_dep_set::ErsDepSet, ers_por_set::ErsPorSet, ers_tra_set::ErsTraSet,
 };
 use async_trait::async_trait;
 use chrono::{DateTime, Duration, Utc};
 use error_stack::{IntoReport, Report, Result, ResultExt};
-use fiskeridir_rs::{CallSign, LandingId};
+use fiskeridir_rs::{CallSign, DeliveryPointId, LandingId};
 use futures::{Stream, StreamExt, TryStreamExt};
 use kyogre_core::*;
 use orca_core::{PsqlLogStatements, PsqlSettings};
@@ -15,8 +14,7 @@ use sqlx::{
     postgres::{PgConnectOptions, PgPoolOptions, PgSslMode},
     ConnectOptions, PgPool,
 };
-use std::collections::HashSet;
-use std::{collections::HashMap, pin::Pin};
+use std::pin::Pin;
 use tracing::{event, instrument, Level};
 
 #[derive(Debug, Clone)]
@@ -30,7 +28,7 @@ enum AisProcessingAction {
     Continue,
     Retry {
         positions: Option<Vec<NewAisPosition>>,
-        unique_static: Option<HashMap<Mmsi, NewAisStatic>>,
+        static_messages: Option<Vec<NewAisStatic>>,
     },
 }
 
@@ -96,7 +94,7 @@ impl PostgresAdapter {
     }
 
     pub async fn consume_loop(
-        self,
+        &self,
         mut receiver: tokio::sync::broadcast::Receiver<DataMessage>,
         process_confirmation: Option<tokio::sync::mpsc::Sender<()>>,
     ) {
@@ -112,10 +110,10 @@ impl PostgresAdapter {
                 AisProcessingAction::Continue => (),
                 AisProcessingAction::Retry {
                     positions,
-                    unique_static,
+                    static_messages,
                 } => {
                     for _ in 0..2 {
-                        self.insertion_retry(positions.as_deref(), unique_static.as_ref())
+                        self.insertion_retry(positions.as_deref(), static_messages.as_deref())
                             .await;
                     }
                 }
@@ -127,7 +125,7 @@ impl PostgresAdapter {
     async fn insertion_retry(
         &self,
         positions: Option<&[NewAisPosition]>,
-        unique_static: Option<&HashMap<Mmsi, NewAisStatic>>,
+        static_messages: Option<&[NewAisStatic]>,
     ) {
         if let Some(positions) = positions {
             if let Err(e) = self.add_ais_positions(positions).await {
@@ -135,8 +133,8 @@ impl PostgresAdapter {
             }
         }
 
-        if let Some(unique_static) = unique_static {
-            if let Err(e) = self.add_ais_vessels(unique_static).await {
+        if let Some(static_messages) = static_messages {
+            if let Err(e) = self.add_ais_vessels(static_messages).await {
                 event!(Level::ERROR, "failed to add ais static: {:?}", e);
             }
         }
@@ -149,28 +147,23 @@ impl PostgresAdapter {
     ) -> AisProcessingAction {
         match incoming {
             Ok(message) => {
-                let mut unique_static = HashMap::new();
-                for v in message.static_messages {
-                    unique_static.entry(v.mmsi).or_insert(v);
-                }
-
                 match (
                     self.add_ais_positions(&message.positions).await,
-                    self.add_ais_vessels(&unique_static).await,
+                    self.add_ais_vessels(&message.static_messages).await,
                 ) {
                     (Ok(_), Ok(_)) => AisProcessingAction::Continue,
                     (Ok(_), Err(e)) => {
                         event!(Level::ERROR, "failed to add ais static: {:?}", e);
                         AisProcessingAction::Retry {
                             positions: None,
-                            unique_static: Some(unique_static),
+                            static_messages: Some(message.static_messages),
                         }
                     }
                     (Err(e), Ok(_)) => {
                         event!(Level::ERROR, "failed to add ais positions: {:?}", e);
                         AisProcessingAction::Retry {
                             positions: Some(message.positions),
-                            unique_static: None,
+                            static_messages: None,
                         }
                     }
                     (Err(e), Err(e2)) => {
@@ -178,7 +171,7 @@ impl PostgresAdapter {
                         event!(Level::ERROR, "failed to add ais static: {:?}", e2);
                         AisProcessingAction::Retry {
                             positions: Some(message.positions),
-                            unique_static: Some(unique_static),
+                            static_messages: Some(message.static_messages),
                         }
                     }
                 }
@@ -186,7 +179,7 @@ impl PostgresAdapter {
             Err(e) => match e {
                 tokio::sync::broadcast::error::RecvError::Closed => {
                     event!(
-                        Level::ERROR,
+                        Level::WARN,
                         "sender half of ais broadcast channel closed unexpectedly, exiting"
                     );
                     AisProcessingAction::Exit
@@ -214,17 +207,147 @@ impl PostgresAdapter {
     }
 }
 
+impl TestStorage for PostgresAdapter {}
+
+#[async_trait]
+impl TestHelperOutbound for PostgresAdapter {
+    async fn all_dep(&self) -> Vec<Departure> {
+        self.all_ers_departures_impl()
+            .await
+            .unwrap()
+            .into_iter()
+            .map(kyogre_core::Departure::from)
+            .collect()
+    }
+    async fn all_por(&self) -> Vec<Arrival> {
+        self.all_ers_arrivals_impl()
+            .await
+            .unwrap()
+            .into_iter()
+            .map(kyogre_core::Arrival::from)
+            .collect()
+    }
+
+    async fn delivery_points_log(&self) -> Vec<serde_json::Value> {
+        self.delivery_points_log_impl().await.unwrap()
+    }
+
+    async fn all_ais(&self) -> Vec<AisPosition> {
+        self.all_ais_impl()
+            .await
+            .unwrap()
+            .into_iter()
+            .map(AisPosition::try_from)
+            .collect::<Result<Vec<AisPosition>, PostgresError>>()
+            .unwrap()
+    }
+    async fn all_vms(&self) -> Vec<VmsPosition> {
+        self.all_vms_impl()
+            .await
+            .unwrap()
+            .into_iter()
+            .map(VmsPosition::try_from)
+            .collect::<Result<Vec<VmsPosition>, PostgresError>>()
+            .unwrap()
+    }
+    async fn all_ais_vms(&self) -> Vec<AisVmsPosition> {
+        self.all_ais_vms_impl()
+            .await
+            .unwrap()
+            .into_iter()
+            .map(AisVmsPosition::try_from)
+            .collect::<Result<Vec<AisVmsPosition>, PostgresError>>()
+            .unwrap()
+    }
+    async fn port(&self, port_id: &str) -> Option<Port> {
+        self.port_impl(port_id)
+            .await
+            .unwrap()
+            .map(Port::try_from)
+            .transpose()
+            .unwrap()
+    }
+    async fn delivery_point(&self, id: &DeliveryPointId) -> Option<DeliveryPoint> {
+        self.delivery_point_impl(id)
+            .await
+            .unwrap()
+            .map(DeliveryPoint::try_from)
+            .transpose()
+            .unwrap()
+    }
+    async fn dock_points_of_port(&self, port_id: &str) -> Vec<PortDockPoint> {
+        self.dock_points_of_port_impl(port_id)
+            .await
+            .unwrap()
+            .into_iter()
+            .map(PortDockPoint::try_from)
+            .collect::<Result<Vec<PortDockPoint>, _>>()
+            .unwrap()
+    }
+}
+
+#[async_trait]
+impl TestHelperInbound for PostgresAdapter {
+    async fn add_manual_delivery_points(&self, values: Vec<ManualDeliveryPoint>) {
+        self.add_manual_delivery_points_impl(
+            values
+                .into_iter()
+                .map(crate::models::ManualDeliveryPoint::from)
+                .collect(),
+        )
+        .await
+        .unwrap();
+    }
+    async fn add_deprecated_delivery_point(
+        &self,
+        old: DeliveryPointId,
+        new: DeliveryPointId,
+    ) -> Result<(), InsertError> {
+        self.add_deprecated_delivery_point_impl(old, new)
+            .await
+            .change_context(InsertError)
+    }
+}
+
+#[async_trait]
+impl AisConsumeLoop for PostgresAdapter {
+    async fn consume(
+        &self,
+        receiver: tokio::sync::broadcast::Receiver<DataMessage>,
+        process_confirmation: Option<tokio::sync::mpsc::Sender<()>>,
+    ) {
+        self.consume_loop(receiver, process_confirmation).await
+    }
+}
+
 #[async_trait]
 impl DatabaseViewRefresher for PostgresAdapter {
     async fn refresh(&self) -> Result<(), UpdateError> {
-        self.refresh_trip_detailed_view()
+        self.refresh_trip_detailed()
             .await
-            .change_context(UpdateError)
+            .change_context(UpdateError)?;
+
+        // Alot of rows are updated and/or inserted when refreshing leading to outdated query
+        // analytics for the planner.
+        // Re-analyze to ensure we have recent statistics for the table.
+        sqlx::query!(
+            r#"
+ANALYZE trips_detailed
+            "#
+        )
+        .execute(&self.pool)
+        .await
+        .map(|_| ())
+        .into_report()
+        .change_context(UpdateError)
     }
 }
 
 #[async_trait]
 impl AisMigratorDestination for PostgresAdapter {
+    async fn add_mmsis(&self, mmsis: Vec<Mmsi>) -> Result<(), InsertError> {
+        self.add_mmsis_impl(mmsis).await.change_context(InsertError)
+    }
     async fn migrate_ais_data(
         &self,
         mmsi: Mmsi,
@@ -263,8 +386,9 @@ impl WebApiOutboundPort for PostgresAdapter {
         &self,
         mmsi: Mmsi,
         range: &DateRange,
+        permission: AisPermission,
     ) -> PinBoxStream<'_, AisPosition, QueryError> {
-        convert_stream(self.ais_positions_impl(mmsi, range)).boxed()
+        convert_stream(self.ais_positions_impl(mmsi, range, permission)).boxed()
     }
     fn vms_positions(
         &self,
@@ -279,8 +403,9 @@ impl WebApiOutboundPort for PostgresAdapter {
         mmsi: Option<Mmsi>,
         call_sign: Option<&CallSign>,
         range: &DateRange,
+        permission: AisPermission,
     ) -> PinBoxStream<'_, AisVmsPosition, QueryError> {
-        convert_stream(self.ais_vms_positions_impl(mmsi, call_sign, range)).boxed()
+        convert_stream(self.ais_vms_positions_impl(mmsi, call_sign, range, permission)).boxed()
     }
 
     fn species(&self) -> PinBoxStream<'_, Species, QueryError> {
@@ -480,6 +605,14 @@ impl WebApiOutboundPort for PostgresAdapter {
     fn delivery_points(&self) -> PinBoxStream<'_, DeliveryPoint, QueryError> {
         convert_stream(self.delivery_points_impl()).boxed()
     }
+
+    fn weather(
+        &self,
+        query: WeatherQuery,
+    ) -> Result<PinBoxStream<'_, Weather, QueryError>, QueryError> {
+        let stream = self.weather_impl(query).change_context(QueryError)?;
+        Ok(convert_stream(stream).boxed())
+    }
 }
 
 #[async_trait]
@@ -511,58 +644,36 @@ impl ScraperInboundPort for PostgresAdapter {
     }
     async fn add_landings(
         &self,
-        landings: Vec<fiskeridir_rs::Landing>,
+        landings: Box<
+            dyn Iterator<Item = Result<fiskeridir_rs::Landing, fiskeridir_rs::Error>> + Send + Sync,
+        >,
         data_year: u32,
     ) -> Result<(), InsertError> {
-        let set = LandingSet::new(landings, data_year).change_context(InsertError)?;
-
-        self.add_landing_set(set).await.change_context(InsertError)
+        self.add_landings_impl(landings, data_year)
+            .await
+            .change_context(InsertError)
     }
-    #[tracing::instrument(skip(self, existing_landing_ids))]
-    async fn delete_removed_landings(
+    async fn add_ers_dca(
         &self,
-        existing_landing_ids: HashSet<LandingId>,
-        data_year: u32,
-    ) -> Result<(), DeleteError> {
-        self.delete_removed_landings_impl(existing_landing_ids, data_year)
+        ers_dca: Box<
+            dyn Iterator<Item = Result<fiskeridir_rs::ErsDca, fiskeridir_rs::Error>> + Send + Sync,
+        >,
+    ) -> Result<(), InsertError> {
+        self.add_ers_dca_impl(ers_dca)
             .await
-            .change_context(DeleteError)
-    }
-    async fn delete_ers_dca(&self, year: u32) -> Result<(), DeleteError> {
-        self.delete_ers_dca_impl(year)
-            .await
-            .change_context(DeleteError)
-    }
-    async fn add_ers_dca(&self, ers_dca: Vec<fiskeridir_rs::ErsDca>) -> Result<(), InsertError> {
-        let set = ErsDcaSet::new(ers_dca).change_context(InsertError)?;
-        self.add_ers_dca_set(set).await.change_context(InsertError)
+            .change_context(InsertError)
     }
     async fn add_ers_dep(&self, ers_dep: Vec<fiskeridir_rs::ErsDep>) -> Result<(), InsertError> {
         let set = ErsDepSet::new(ers_dep).change_context(InsertError)?;
         self.add_ers_dep_set(set).await.change_context(InsertError)
     }
-    async fn delete_ers_dep(&self, year: u32) -> Result<(), DeleteError> {
-        self.delete_ers_dep_impl(year)
-            .await
-            .change_context(DeleteError)
-    }
     async fn add_ers_por(&self, ers_por: Vec<fiskeridir_rs::ErsPor>) -> Result<(), InsertError> {
         let set = ErsPorSet::new(ers_por).change_context(InsertError)?;
         self.add_ers_por_set(set).await.change_context(InsertError)
     }
-    async fn delete_ers_por(&self, year: u32) -> Result<(), DeleteError> {
-        self.delete_ers_por_impl(year)
-            .await
-            .change_context(DeleteError)
-    }
     async fn add_ers_tra(&self, ers_tra: Vec<fiskeridir_rs::ErsTra>) -> Result<(), InsertError> {
         let set = ErsTraSet::new(ers_tra).change_context(InsertError)?;
         self.add_ers_tra_set(set).await.change_context(InsertError)
-    }
-    async fn delete_ers_tra_catches(&self, year: u32) -> Result<(), DeleteError> {
-        self.delete_ers_tra_catches_impl(year)
-            .await
-            .change_context(DeleteError)
     }
     async fn add_vms(&self, vms: Vec<fiskeridir_rs::Vms>) -> Result<(), InsertError> {
         self.add_vms_impl(vms).await.change_context(InsertError)
@@ -583,6 +694,11 @@ impl ScraperInboundPort for PostgresAdapter {
             .await
             .change_context(InsertError)
     }
+    async fn add_weather(&self, weather: Vec<NewWeather>) -> Result<(), InsertError> {
+        self.add_weather_impl(weather)
+            .await
+            .change_context(InsertError)
+    }
 }
 
 #[async_trait]
@@ -592,6 +708,11 @@ impl ScraperOutboundPort for PostgresAdapter {
         source: Option<FishingFacilityApiSource>,
     ) -> Result<Option<DateTime<Utc>>, QueryError> {
         self.latest_fishing_facility_update_impl(source)
+            .await
+            .change_context(QueryError)
+    }
+    async fn latest_weather_timestamp(&self) -> Result<Option<DateTime<Utc>>, QueryError> {
+        self.latest_weather_timestamp_impl()
             .await
             .change_context(QueryError)
     }
@@ -694,6 +815,11 @@ impl TripAssemblerOutboundPort for PostgresAdapter {
 
 #[async_trait]
 impl TripPrecisionOutboundPort for PostgresAdapter {
+    async fn all_vessels(&self) -> Result<Vec<Vessel>, QueryError> {
+        convert_stream(self.fiskeridir_ais_vessel_combinations())
+            .try_collect()
+            .await
+    }
     async fn ports_of_trip(&self, trip_id: TripId) -> Result<TripPorts, QueryError> {
         convert_single(
             self.ports_of_trip_impl(trip_id)
@@ -714,7 +840,7 @@ impl TripPrecisionOutboundPort for PostgresAdapter {
         call_sign: Option<&CallSign>,
         range: &DateRange,
     ) -> Result<Vec<AisVmsPosition>, QueryError> {
-        convert_stream(self.ais_vms_positions_impl(mmsi, call_sign, range))
+        convert_stream(self.ais_vms_positions_impl(mmsi, call_sign, range, AisPermission::All))
             .try_collect()
             .await
     }
@@ -772,7 +898,9 @@ impl TripPrecisionInboundPort for PostgresAdapter {
 #[async_trait]
 impl VesselBenchmarkOutbound for PostgresAdapter {
     async fn vessels(&self) -> Result<Vec<Vessel>, QueryError> {
-        self.all_vessels().await
+        convert_stream(self.fiskeridir_ais_vessel_combinations())
+            .try_collect()
+            .await
     }
     async fn sum_trip_time(&self, id: FiskeridirVesselId) -> Result<Option<Duration>, QueryError> {
         self.sum_trip_time_impl(id).await.change_context(QueryError)
@@ -815,7 +943,9 @@ impl HaulDistributorInbound for PostgresAdapter {
 #[async_trait]
 impl HaulDistributorOutbound for PostgresAdapter {
     async fn vessels(&self) -> Result<Vec<Vessel>, QueryError> {
-        self.all_vessels().await
+        convert_stream(self.fiskeridir_ais_vessel_combinations())
+            .try_collect()
+            .await
     }
 
     async fn catch_locations(&self) -> Result<Vec<CatchLocation>, QueryError> {
@@ -843,7 +973,7 @@ impl HaulDistributorOutbound for PostgresAdapter {
         call_sign: Option<&CallSign>,
         range: &DateRange,
     ) -> Result<Vec<AisVmsPosition>, QueryError> {
-        convert_stream(self.ais_vms_positions_impl(mmsi, call_sign, range))
+        convert_stream(self.ais_vms_positions_impl(mmsi, call_sign, range, AisPermission::All))
             .try_collect()
             .await
     }
@@ -861,7 +991,9 @@ impl TripDistancerInbound for PostgresAdapter {
 #[async_trait]
 impl TripDistancerOutbound for PostgresAdapter {
     async fn vessels(&self) -> Result<Vec<Vessel>, QueryError> {
-        self.all_vessels().await
+        convert_stream(self.fiskeridir_ais_vessel_combinations())
+            .try_collect()
+            .await
     }
 
     async fn trips_of_vessel(
@@ -881,7 +1013,7 @@ impl TripDistancerOutbound for PostgresAdapter {
         call_sign: Option<&CallSign>,
         range: &DateRange,
     ) -> Result<Vec<AisVmsPosition>, QueryError> {
-        convert_stream(self.ais_vms_positions_impl(mmsi, call_sign, range))
+        convert_stream(self.ais_vms_positions_impl(mmsi, call_sign, range, AisPermission::All))
             .try_collect()
             .await
     }
@@ -893,6 +1025,13 @@ impl MatrixCacheVersion for PostgresAdapter {
         self.increment_duckdb_version()
             .await
             .change_context(UpdateError)
+    }
+}
+
+#[async_trait]
+impl VerificationOutbound for PostgresAdapter {
+    async fn verify_database(&self) -> Result<(), QueryError> {
+        self.verify_database_impl().await.change_context(QueryError)
     }
 }
 

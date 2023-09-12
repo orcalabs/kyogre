@@ -3,11 +3,11 @@ use crate::v1::helper::{assert_haul_matrix_content, sum_area};
 use actix_web::http::StatusCode;
 use chrono::{DateTime, Utc};
 use enum_index::EnumIndex;
-use fiskeridir_rs::{ErsDca, GearGroup, SpeciesGroup, VesselLengthGroup};
+use fiskeridir_rs::{GearGroup, SpeciesGroup, VesselLengthGroup};
+use kyogre_core::ActiveHaulsFilter;
 use kyogre_core::{
     haul_date_feature_matrix_index, CatchLocationId, HaulMatrixes, NUM_CATCH_LOCATIONS,
 };
-use kyogre_core::{ActiveHaulsFilter, FiskeridirVesselId, ScraperInboundPort};
 use web_api::routes::{
     utils::{self, GearGroupId, SpeciesGroupId},
     v1::haul::{HaulsMatrix, HaulsMatrixParams},
@@ -15,20 +15,26 @@ use web_api::routes::{
 
 #[tokio::test]
 async fn test_hauls_matrix_returns_correct_sum_for_all_hauls() {
-    test_with_cache(|helper| async move {
+    test_with_cache(|helper, builder| async move {
         let filter = ActiveHaulsFilter::Date;
-        let mut ers1 = ErsDca::test_default(1, Some(1));
-        let mut ers2 = ErsDca::test_default(2, Some(2));
-
-        ers1.catch.species.living_weight = Some(20);
-        ers2.catch.species.living_weight = Some(40);
-
-        ers1.start_latitude = Some(70.536);
-        ers1.start_longitude = Some(21.957);
-        ers2.start_latitude = Some(70.536);
-        ers2.start_longitude = Some(21.957);
-
-        helper.db.db.add_ers_dca(vec![ers1, ers2]).await.unwrap();
+        builder
+            .vessels(2)
+            .hauls(2)
+            .modify_idx(|i, v| match i {
+                0 => {
+                    v.dca.start_latitude = Some(70.536);
+                    v.dca.start_longitude = Some(21.957);
+                    v.dca.catch.species.living_weight = Some(20);
+                }
+                1 => {
+                    v.dca.start_latitude = Some(70.536);
+                    v.dca.start_longitude = Some(21.957);
+                    v.dca.catch.species.living_weight = Some(40);
+                }
+                _ => (),
+            })
+            .build()
+            .await;
 
         helper.refresh_cache().await;
 
@@ -47,42 +53,43 @@ async fn test_hauls_matrix_returns_correct_sum_for_all_hauls() {
 
 #[tokio::test]
 async fn test_hauls_matrix_filters_by_months() {
-    test_with_cache(|helper| async move {
+    test_with_cache(|helper, builder| async move {
         let filter = ActiveHaulsFilter::GearGroup;
-
-        let mut ers1 = ErsDca::test_default(1, None);
-        let mut ers2 = ErsDca::test_default(2, None);
-        let mut ers3 = ErsDca::test_default(3, None);
-        let mut ers4 = ErsDca::test_default(4, None);
 
         let month1: DateTime<Utc> = "2013-01-1T00:00:00Z".parse().unwrap();
         let month2: DateTime<Utc> = "2013-06-1T00:00:00Z".parse().unwrap();
 
-        ers1.set_start_timestamp(month1);
-        ers1.set_stop_timestamp(month1);
-        ers1.start_latitude = Some(56.727258);
-        ers1.start_longitude = Some(12.565410);
-        ers1.catch.species.living_weight = Some(10);
-
-        ers2.start_latitude = Some(56.756293);
-        ers2.start_longitude = Some(11.514740);
-        ers2.set_start_timestamp(month2);
-        ers2.set_stop_timestamp(month2);
-        ers2.catch.species.living_weight = Some(20);
-
-        ers3.start_latitude = Some(56.727258);
-        ers3.start_longitude = Some(12.565410);
-        ers3.catch.species.living_weight = Some(100);
-        ers4.start_latitude = Some(56.727258);
-        ers4.start_longitude = Some(12.565410);
-        ers4.catch.species.living_weight = Some(200);
-
-        helper
-            .db
-            .db
-            .add_ers_dca(vec![ers1, ers2, ers3, ers4])
-            .await
-            .unwrap();
+        builder
+            .hauls(4)
+            .modify_idx(|i, v| match i {
+                0 => {
+                    v.dca.set_start_timestamp(month1);
+                    v.dca.set_stop_timestamp(month1);
+                    v.dca.start_latitude = Some(56.727258);
+                    v.dca.start_longitude = Some(12.565410);
+                    v.dca.catch.species.living_weight = Some(10);
+                }
+                1 => {
+                    v.dca.start_latitude = Some(56.756293);
+                    v.dca.start_longitude = Some(11.514740);
+                    v.dca.set_start_timestamp(month2);
+                    v.dca.set_stop_timestamp(month2);
+                    v.dca.catch.species.living_weight = Some(20);
+                }
+                2 => {
+                    v.dca.start_latitude = Some(56.727258);
+                    v.dca.start_longitude = Some(12.565410);
+                    v.dca.catch.species.living_weight = Some(100);
+                }
+                3 => {
+                    v.dca.start_latitude = Some(56.727258);
+                    v.dca.start_longitude = Some(12.565410);
+                    v.dca.catch.species.living_weight = Some(200);
+                }
+                _ => (),
+            })
+            .build()
+            .await;
 
         let params = HaulsMatrixParams {
             months: Some(vec![month1.into(), month2.into()]),
@@ -102,36 +109,38 @@ async fn test_hauls_matrix_filters_by_months() {
 
 #[tokio::test]
 async fn test_hauls_matrix_filters_by_vessel_length() {
-    test_with_cache(|helper| async move {
+    test_with_cache(|helper, builder| async move {
         let filter = ActiveHaulsFilter::SpeciesGroup;
-        let mut ers1 = ErsDca::test_default(1, None);
-        let mut ers2 = ErsDca::test_default(2, None);
-        let mut ers3 = ErsDca::test_default(3, None);
-        let mut ers4 = ErsDca::test_default(4, None);
 
-        ers1.vessel_info.vessel_length = 9.;
-        ers1.start_latitude = Some(56.727258);
-        ers1.start_longitude = Some(12.565410);
-        ers1.catch.species.living_weight = Some(10);
-
-        ers2.vessel_info.vessel_length = 12.;
-        ers2.start_latitude = Some(56.727258);
-        ers2.start_longitude = Some(12.565410);
-        ers2.catch.species.living_weight = Some(20);
-
-        ers3.start_latitude = Some(56.727258);
-        ers3.start_longitude = Some(12.565410);
-        ers3.catch.species.living_weight = Some(100);
-        ers4.start_latitude = Some(56.727258);
-        ers4.start_longitude = Some(12.565410);
-        ers4.catch.species.living_weight = Some(200);
-
-        helper
-            .db
-            .db
-            .add_ers_dca(vec![ers1, ers2, ers3, ers4])
-            .await
-            .unwrap();
+        builder
+            .hauls(4)
+            .modify_idx(|i, v| match i {
+                0 => {
+                    v.dca.vessel_info.vessel_length = 9.;
+                    v.dca.start_latitude = Some(56.727258);
+                    v.dca.start_longitude = Some(12.565410);
+                    v.dca.catch.species.living_weight = Some(10);
+                }
+                1 => {
+                    v.dca.vessel_info.vessel_length = 12.;
+                    v.dca.start_latitude = Some(56.727258);
+                    v.dca.start_longitude = Some(12.565410);
+                    v.dca.catch.species.living_weight = Some(20);
+                }
+                2 => {
+                    v.dca.start_latitude = Some(56.727258);
+                    v.dca.start_longitude = Some(12.565410);
+                    v.dca.catch.species.living_weight = Some(100);
+                }
+                3 => {
+                    v.dca.start_latitude = Some(56.727258);
+                    v.dca.start_longitude = Some(12.565410);
+                    v.dca.catch.species.living_weight = Some(200);
+                }
+                _ => (),
+            })
+            .build()
+            .await;
 
         helper.refresh_cache().await;
         let params = HaulsMatrixParams {
@@ -153,36 +162,38 @@ async fn test_hauls_matrix_filters_by_vessel_length() {
 
 #[tokio::test]
 async fn test_hauls_matrix_filters_by_species_group() {
-    test_with_cache(|helper| async move {
+    test_with_cache(|helper, builder| async move {
         let filter = ActiveHaulsFilter::GearGroup;
-        let mut ers1 = ErsDca::test_default(1, None);
-        let mut ers2 = ErsDca::test_default(2, None);
-        let mut ers3 = ErsDca::test_default(3, None);
-        let mut ers4 = ErsDca::test_default(4, None);
 
-        ers1.catch.species.species_group_code = SpeciesGroup::Blaakveite;
-        ers1.start_latitude = Some(56.727258);
-        ers1.start_longitude = Some(12.565410);
-        ers1.catch.species.living_weight = Some(10);
-
-        ers2.catch.species.species_group_code = SpeciesGroup::Uer;
-        ers2.start_latitude = Some(56.727258);
-        ers2.start_longitude = Some(12.565410);
-        ers2.catch.species.living_weight = Some(20);
-
-        ers3.start_latitude = Some(56.727258);
-        ers3.start_longitude = Some(12.565410);
-        ers3.catch.species.living_weight = Some(100);
-        ers4.start_latitude = Some(56.727258);
-        ers4.start_longitude = Some(12.565410);
-        ers4.catch.species.living_weight = Some(200);
-
-        helper
-            .db
-            .db
-            .add_ers_dca(vec![ers1, ers2, ers3, ers4])
-            .await
-            .unwrap();
+        builder
+            .hauls(4)
+            .modify_idx(|i, v| match i {
+                0 => {
+                    v.dca.catch.species.species_group_code = SpeciesGroup::Blaakveite;
+                    v.dca.start_latitude = Some(56.727258);
+                    v.dca.start_longitude = Some(12.565410);
+                    v.dca.catch.species.living_weight = Some(10);
+                }
+                1 => {
+                    v.dca.catch.species.species_group_code = SpeciesGroup::Uer;
+                    v.dca.start_latitude = Some(56.727258);
+                    v.dca.start_longitude = Some(12.565410);
+                    v.dca.catch.species.living_weight = Some(20);
+                }
+                2 => {
+                    v.dca.start_latitude = Some(56.727258);
+                    v.dca.start_longitude = Some(12.565410);
+                    v.dca.catch.species.living_weight = Some(100);
+                }
+                3 => {
+                    v.dca.start_latitude = Some(56.727258);
+                    v.dca.start_longitude = Some(12.565410);
+                    v.dca.catch.species.living_weight = Some(200);
+                }
+                _ => (),
+            })
+            .build()
+            .await;
 
         helper.refresh_cache().await;
         let params = HaulsMatrixParams {
@@ -203,36 +214,38 @@ async fn test_hauls_matrix_filters_by_species_group() {
 
 #[tokio::test]
 async fn test_hauls_matrix_filters_by_gear_group() {
-    test_with_cache(|helper| async move {
+    test_with_cache(|helper, builder| async move {
         let filter = ActiveHaulsFilter::SpeciesGroup;
-        let mut ers1 = ErsDca::test_default(1, None);
-        let mut ers2 = ErsDca::test_default(2, None);
-        let mut ers3 = ErsDca::test_default(3, None);
-        let mut ers4 = ErsDca::test_default(4, None);
 
-        ers1.gear.gear_group_code = GearGroup::Not;
-        ers1.start_latitude = Some(56.727258);
-        ers1.start_longitude = Some(12.565410);
-        ers1.catch.species.living_weight = Some(10);
-
-        ers2.gear.gear_group_code = GearGroup::Garn;
-        ers2.start_latitude = Some(56.727258);
-        ers2.start_longitude = Some(12.565410);
-        ers2.catch.species.living_weight = Some(20);
-
-        ers3.start_latitude = Some(56.727258);
-        ers3.start_longitude = Some(12.565410);
-        ers3.catch.species.living_weight = Some(100);
-        ers4.start_latitude = Some(56.727258);
-        ers4.start_longitude = Some(12.565410);
-        ers4.catch.species.living_weight = Some(200);
-
-        helper
-            .db
-            .db
-            .add_ers_dca(vec![ers1, ers2, ers3, ers4])
-            .await
-            .unwrap();
+        builder
+            .hauls(4)
+            .modify_idx(|i, v| match i {
+                0 => {
+                    v.dca.gear.gear_group_code = GearGroup::Not;
+                    v.dca.start_latitude = Some(56.727258);
+                    v.dca.start_longitude = Some(12.565410);
+                    v.dca.catch.species.living_weight = Some(10);
+                }
+                1 => {
+                    v.dca.gear.gear_group_code = GearGroup::Garn;
+                    v.dca.start_latitude = Some(56.727258);
+                    v.dca.start_longitude = Some(12.565410);
+                    v.dca.catch.species.living_weight = Some(20);
+                }
+                2 => {
+                    v.dca.start_latitude = Some(56.727258);
+                    v.dca.start_longitude = Some(12.565410);
+                    v.dca.catch.species.living_weight = Some(100);
+                }
+                3 => {
+                    v.dca.start_latitude = Some(56.727258);
+                    v.dca.start_longitude = Some(12.565410);
+                    v.dca.catch.species.living_weight = Some(200);
+                }
+                _ => (),
+            })
+            .build()
+            .await;
 
         let params = HaulsMatrixParams {
             gear_group_ids: Some(vec![
@@ -253,38 +266,44 @@ async fn test_hauls_matrix_filters_by_gear_group() {
 
 #[tokio::test]
 async fn test_hauls_matrix_filters_by_fiskeridir_vessel_ids() {
-    test_with_cache(|helper| async move {
+    test_with_cache(|helper, builder| async move {
         let filter = ActiveHaulsFilter::Date;
 
-        let mut ers1 = ErsDca::test_default(1, Some(1));
-        let mut ers2 = ErsDca::test_default(2, Some(2));
-        let mut ers3 = ErsDca::test_default(3, None);
-        let mut ers4 = ErsDca::test_default(4, None);
-
-        ers1.start_latitude = Some(56.727258);
-        ers1.start_longitude = Some(12.565410);
-        ers1.catch.species.living_weight = Some(10);
-
-        ers2.start_latitude = Some(56.756293);
-        ers2.start_longitude = Some(11.514740);
-        ers2.catch.species.living_weight = Some(20);
-
-        ers3.start_latitude = Some(56.727258);
-        ers3.start_longitude = Some(12.565410);
-        ers3.catch.species.living_weight = Some(100);
-        ers4.start_latitude = Some(56.727258);
-        ers4.start_longitude = Some(12.565410);
-        ers4.catch.species.living_weight = Some(200);
-
-        helper
-            .db
-            .db
-            .add_ers_dca(vec![ers1, ers2, ers3, ers4])
-            .await
-            .unwrap();
+        let state = builder
+            .hauls(2)
+            .modify_idx(|i, v| match i {
+                0 => {
+                    v.dca.start_latitude = Some(56.727258);
+                    v.dca.start_longitude = Some(12.565410);
+                    v.dca.catch.species.living_weight = Some(100);
+                }
+                1 => {
+                    v.dca.start_latitude = Some(56.727258);
+                    v.dca.start_longitude = Some(12.565410);
+                    v.dca.catch.species.living_weight = Some(200);
+                }
+                _ => (),
+            })
+            .vessels(2)
+            .hauls(2)
+            .modify_idx(|i, v| match i {
+                2 => {
+                    v.dca.start_latitude = Some(56.727258);
+                    v.dca.start_longitude = Some(12.565410);
+                    v.dca.catch.species.living_weight = Some(10);
+                }
+                3 => {
+                    v.dca.start_latitude = Some(56.756293);
+                    v.dca.start_longitude = Some(11.514740);
+                    v.dca.catch.species.living_weight = Some(20);
+                }
+                _ => (),
+            })
+            .build()
+            .await;
 
         let params = HaulsMatrixParams {
-            fiskeridir_vessel_ids: Some(vec![FiskeridirVesselId(1), FiskeridirVesselId(2)]),
+            fiskeridir_vessel_ids: Some(state.vessels.iter().map(|v| v.fiskeridir.id).collect()),
             ..Default::default()
         };
 
@@ -300,21 +319,26 @@ async fn test_hauls_matrix_filters_by_fiskeridir_vessel_ids() {
 
 #[tokio::test]
 async fn test_hauls_matrix_filters_by_catch_locations() {
-    test_with_cache(|helper| async move {
+    test_with_cache(|helper, builder| async move {
         let filter = ActiveHaulsFilter::Date;
 
-        let mut ers1 = ErsDca::test_default(1, Some(1));
-        let mut ers2 = ErsDca::test_default(2, Some(2));
-
-        ers1.start_latitude = Some(67.125);
-        ers1.start_longitude = Some(13.5);
-        ers1.catch.species.living_weight = Some(10);
-
-        ers2.catch.species.living_weight = Some(20);
-        ers2.start_latitude = Some(67.5);
-        ers2.start_longitude = Some(43.5);
-
-        helper.db.db.add_ers_dca(vec![ers1, ers2]).await.unwrap();
+        builder
+            .hauls(2)
+            .modify_idx(|i, v| match i {
+                0 => {
+                    v.dca.start_latitude = Some(67.125);
+                    v.dca.start_longitude = Some(13.5);
+                    v.dca.catch.species.living_weight = Some(10);
+                }
+                1 => {
+                    v.dca.catch.species.living_weight = Some(20);
+                    v.dca.start_latitude = Some(67.5);
+                    v.dca.start_longitude = Some(43.5);
+                }
+                _ => (),
+            })
+            .build()
+            .await;
 
         let params = HaulsMatrixParams {
             catch_locations: Some(vec![CatchLocationId::new(0, 5)]),
@@ -333,42 +357,43 @@ async fn test_hauls_matrix_filters_by_catch_locations() {
 
 #[tokio::test]
 async fn test_hauls_matrix_date_sum_area_table_is_correct() {
-    test_with_cache(|helper| async move {
+    test_with_cache(|helper, builder| async move {
         let filter = ActiveHaulsFilter::Date;
-
-        let mut ers1 = ErsDca::test_default(1, None);
-        let mut ers2 = ErsDca::test_default(2, None);
-        let mut ers3 = ErsDca::test_default(3, None);
-        let mut ers4 = ErsDca::test_default(4, None);
 
         let month1: DateTime<Utc> = "2013-01-1T00:00:00Z".parse().unwrap();
         let month2: DateTime<Utc> = "2013-06-1T00:00:00Z".parse().unwrap();
 
-        ers1.set_start_timestamp(month1);
-        ers1.set_stop_timestamp(month1);
-        ers1.start_latitude = Some(56.727258);
-        ers1.start_longitude = Some(12.565410);
-        ers1.catch.species.living_weight = Some(10);
-
-        ers2.start_latitude = Some(56.756293);
-        ers2.start_longitude = Some(11.514740);
-        ers2.set_start_timestamp(month2);
-        ers2.set_stop_timestamp(month2);
-        ers2.catch.species.living_weight = Some(20);
-
-        ers3.start_latitude = Some(56.727258);
-        ers3.start_longitude = Some(12.565410);
-        ers3.catch.species.living_weight = Some(100);
-        ers4.start_latitude = Some(56.727258);
-        ers4.start_longitude = Some(12.565410);
-        ers4.catch.species.living_weight = Some(200);
-
-        helper
-            .db
-            .db
-            .add_ers_dca(vec![ers1, ers2, ers3, ers4])
-            .await
-            .unwrap();
+        builder
+            .hauls(4)
+            .modify_idx(|i, v| match i {
+                0 => {
+                    v.dca.set_start_timestamp(month1);
+                    v.dca.set_stop_timestamp(month1);
+                    v.dca.start_latitude = Some(56.727258);
+                    v.dca.start_longitude = Some(12.565410);
+                    v.dca.catch.species.living_weight = Some(10);
+                }
+                1 => {
+                    v.dca.start_latitude = Some(56.756293);
+                    v.dca.start_longitude = Some(11.514740);
+                    v.dca.set_start_timestamp(month2);
+                    v.dca.set_stop_timestamp(month2);
+                    v.dca.catch.species.living_weight = Some(20);
+                }
+                2 => {
+                    v.dca.start_latitude = Some(56.727258);
+                    v.dca.start_longitude = Some(12.565410);
+                    v.dca.catch.species.living_weight = Some(100);
+                }
+                3 => {
+                    v.dca.start_latitude = Some(56.727258);
+                    v.dca.start_longitude = Some(12.565410);
+                    v.dca.catch.species.living_weight = Some(200);
+                }
+                _ => (),
+            })
+            .build()
+            .await;
 
         helper.refresh_cache().await;
         let response = helper
@@ -393,39 +418,40 @@ async fn test_hauls_matrix_date_sum_area_table_is_correct() {
 
 #[tokio::test]
 async fn test_hauls_matrix_gear_group_sum_area_table_is_correct() {
-    test_with_cache(|helper| async move {
+    test_with_cache(|helper, builder| async move {
         let filter = ActiveHaulsFilter::GearGroup;
 
-        let mut ers1 = ErsDca::test_default(1, None);
-        let mut ers2 = ErsDca::test_default(2, None);
-        let mut ers3 = ErsDca::test_default(3, None);
-        let mut ers4 = ErsDca::test_default(4, None);
-
-        ers1.start_latitude = Some(56.727258);
-        ers1.start_longitude = Some(12.565410);
-        ers1.gear.gear_group_code = GearGroup::Traal;
-        ers1.catch.species.living_weight = Some(10);
-
-        ers2.start_latitude = Some(56.756293);
-        ers2.start_longitude = Some(11.514740);
-        ers2.gear.gear_group_code = GearGroup::Snurrevad;
-        ers2.catch.species.living_weight = Some(20);
-
-        ers3.start_latitude = Some(56.727258);
-        ers3.start_longitude = Some(12.565410);
-        ers3.gear.gear_group_code = GearGroup::Not;
-        ers3.catch.species.living_weight = Some(100);
-        ers4.start_latitude = Some(56.727258);
-        ers4.start_longitude = Some(12.565410);
-        ers4.gear.gear_group_code = GearGroup::Not;
-        ers4.catch.species.living_weight = Some(200);
-
-        helper
-            .db
-            .db
-            .add_ers_dca(vec![ers1, ers2, ers3, ers4])
-            .await
-            .unwrap();
+        builder
+            .hauls(4)
+            .modify_idx(|i, v| match i {
+                0 => {
+                    v.dca.start_latitude = Some(56.727258);
+                    v.dca.start_longitude = Some(12.565410);
+                    v.dca.gear.gear_group_code = GearGroup::Traal;
+                    v.dca.catch.species.living_weight = Some(10);
+                }
+                1 => {
+                    v.dca.start_latitude = Some(56.756293);
+                    v.dca.start_longitude = Some(11.514740);
+                    v.dca.gear.gear_group_code = GearGroup::Snurrevad;
+                    v.dca.catch.species.living_weight = Some(20);
+                }
+                2 => {
+                    v.dca.start_latitude = Some(56.727258);
+                    v.dca.start_longitude = Some(12.565410);
+                    v.dca.gear.gear_group_code = GearGroup::Not;
+                    v.dca.catch.species.living_weight = Some(100);
+                }
+                3 => {
+                    v.dca.start_latitude = Some(56.727258);
+                    v.dca.start_longitude = Some(12.565410);
+                    v.dca.gear.gear_group_code = GearGroup::Not;
+                    v.dca.catch.species.living_weight = Some(200);
+                }
+                _ => (),
+            })
+            .build()
+            .await;
 
         helper.refresh_cache().await;
         let response = helper
@@ -450,37 +476,38 @@ async fn test_hauls_matrix_gear_group_sum_area_table_is_correct() {
 
 #[tokio::test]
 async fn test_hauls_matrix_vessel_length_sum_area_table_is_correct() {
-    test_with_cache(|helper| async move {
+    test_with_cache(|helper, builder| async move {
         let filter = ActiveHaulsFilter::VesselLength;
 
-        let mut ers1 = ErsDca::test_default(1, None);
-        let mut ers2 = ErsDca::test_default(2, None);
-        let mut ers3 = ErsDca::test_default(3, None);
-        let mut ers4 = ErsDca::test_default(4, None);
-
-        ers1.vessel_info.vessel_length = 9.;
-        ers1.start_latitude = Some(56.727258);
-        ers1.start_longitude = Some(12.565410);
-        ers1.catch.species.living_weight = Some(10);
-
-        ers2.vessel_info.vessel_length = 12.;
-        ers2.start_latitude = Some(56.727258);
-        ers2.start_longitude = Some(12.565410);
-        ers2.catch.species.living_weight = Some(20);
-
-        ers3.start_latitude = Some(56.727258);
-        ers3.start_longitude = Some(12.565410);
-        ers3.catch.species.living_weight = Some(100);
-        ers4.start_latitude = Some(56.727258);
-        ers4.start_longitude = Some(12.565410);
-        ers4.catch.species.living_weight = Some(200);
-
-        helper
-            .db
-            .db
-            .add_ers_dca(vec![ers1, ers2, ers3, ers4])
-            .await
-            .unwrap();
+        builder
+            .hauls(4)
+            .modify_idx(|i, v| match i {
+                0 => {
+                    v.dca.vessel_info.vessel_length = 9.;
+                    v.dca.start_latitude = Some(56.727258);
+                    v.dca.start_longitude = Some(12.565410);
+                    v.dca.catch.species.living_weight = Some(10);
+                }
+                1 => {
+                    v.dca.vessel_info.vessel_length = 12.;
+                    v.dca.start_latitude = Some(56.727258);
+                    v.dca.start_longitude = Some(12.565410);
+                    v.dca.catch.species.living_weight = Some(20);
+                }
+                2 => {
+                    v.dca.start_latitude = Some(56.727258);
+                    v.dca.start_longitude = Some(12.565410);
+                    v.dca.catch.species.living_weight = Some(100);
+                }
+                3 => {
+                    v.dca.start_latitude = Some(56.727258);
+                    v.dca.start_longitude = Some(12.565410);
+                    v.dca.catch.species.living_weight = Some(200);
+                }
+                _ => (),
+            })
+            .build()
+            .await;
 
         helper.refresh_cache().await;
         let response = helper
@@ -505,36 +532,38 @@ async fn test_hauls_matrix_vessel_length_sum_area_table_is_correct() {
 
 #[tokio::test]
 async fn test_hauls_matrix_species_group_sum_area_table_is_correct() {
-    test_with_cache(|helper| async move {
+    test_with_cache(|helper, builder| async move {
         let filter = ActiveHaulsFilter::SpeciesGroup;
-        let mut ers1 = ErsDca::test_default(1, None);
-        let mut ers2 = ErsDca::test_default(2, None);
-        let mut ers3 = ErsDca::test_default(3, None);
-        let mut ers4 = ErsDca::test_default(4, None);
 
-        ers1.catch.species.species_group_code = SpeciesGroup::Blaakveite;
-        ers1.start_latitude = Some(56.727258);
-        ers1.start_longitude = Some(12.565410);
-        ers1.catch.species.living_weight = Some(10);
-
-        ers2.catch.species.species_group_code = SpeciesGroup::Uer;
-        ers2.start_latitude = Some(56.727258);
-        ers2.start_longitude = Some(12.565410);
-        ers2.catch.species.living_weight = Some(20);
-
-        ers3.start_latitude = Some(56.727258);
-        ers3.start_longitude = Some(12.565410);
-        ers3.catch.species.living_weight = Some(100);
-        ers4.start_latitude = Some(56.727258);
-        ers4.start_longitude = Some(12.565410);
-        ers4.catch.species.living_weight = Some(200);
-
-        helper
-            .db
-            .db
-            .add_ers_dca(vec![ers1, ers2, ers3, ers4])
-            .await
-            .unwrap();
+        builder
+            .hauls(4)
+            .modify_idx(|i, v| match i {
+                0 => {
+                    v.dca.catch.species.species_group_code = SpeciesGroup::Blaakveite;
+                    v.dca.start_latitude = Some(56.727258);
+                    v.dca.start_longitude = Some(12.565410);
+                    v.dca.catch.species.living_weight = Some(10);
+                }
+                1 => {
+                    v.dca.catch.species.species_group_code = SpeciesGroup::Uer;
+                    v.dca.start_latitude = Some(56.727258);
+                    v.dca.start_longitude = Some(12.565410);
+                    v.dca.catch.species.living_weight = Some(20);
+                }
+                2 => {
+                    v.dca.start_latitude = Some(56.727258);
+                    v.dca.start_longitude = Some(12.565410);
+                    v.dca.catch.species.living_weight = Some(100);
+                }
+                3 => {
+                    v.dca.start_latitude = Some(56.727258);
+                    v.dca.start_longitude = Some(12.565410);
+                    v.dca.catch.species.living_weight = Some(200);
+                }
+                _ => (),
+            })
+            .build()
+            .await;
 
         helper.refresh_cache().await;
         let response = helper
@@ -560,23 +589,40 @@ async fn test_hauls_matrix_species_group_sum_area_table_is_correct() {
 #[tokio::test]
 async fn test_hauls_matrix_have_correct_totals_after_dca_message_is_replaced_by_newer_version_with_another_weight(
 ) {
-    test_with_cache(|helper| async move {
+    test_with_cache(|helper, builder| async move {
         let filter = ActiveHaulsFilter::SpeciesGroup;
 
-        let mut ers1 = ErsDca::test_default(1, None);
-
+        let message_id = 1;
         let date: DateTime<Utc> = "2013-01-1T00:00:00Z".parse().unwrap();
-        ers1.set_start_timestamp(date);
-        ers1.set_stop_timestamp(date);
-        ers1.start_latitude = Some(56.727258);
-        ers1.start_longitude = Some(12.565410);
-        ers1.catch.species.living_weight = Some(10);
 
-        let mut ers2 = ers1.clone();
-        ers2.message_version = ers1.message_version + 1;
-        ers2.catch.species.living_weight = Some(20);
+        builder
+            .hauls(1)
+            .modify(|v| {
+                v.dca.message_info.message_id = message_id;
+                v.dca.set_start_timestamp(date);
+                v.dca.set_stop_timestamp(date);
+                v.dca.start_latitude = Some(56.727258);
+                v.dca.start_longitude = Some(12.565410);
+                v.dca.catch.species.living_weight = Some(10);
+            })
+            .build()
+            .await;
 
-        helper.db.db.add_ers_dca(vec![ers1, ers2]).await.unwrap();
+        helper
+            .builder()
+            .await
+            .hauls(1)
+            .modify(|v| {
+                v.dca.message_info.message_id = message_id;
+                v.dca.message_version = 2;
+                v.dca.catch.species.living_weight = Some(20);
+                v.dca.start_latitude = Some(56.727258);
+                v.dca.start_longitude = Some(12.565410);
+                v.dca.set_start_timestamp(date);
+                v.dca.set_stop_timestamp(date);
+            })
+            .build()
+            .await;
 
         helper.refresh_cache().await;
         let response = helper

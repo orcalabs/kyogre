@@ -1,8 +1,8 @@
 use super::helper::test;
 use actix_web::http::StatusCode;
-use chrono::{DateTime, TimeZone, Utc};
+use chrono::{DateTime, Utc};
 use fiskeridir_rs::{GearGroup, SpeciesGroup};
-use kyogre_core::{FiskeridirVesselId, LandingsSorting, Ordering, ScraperInboundPort};
+use kyogre_core::{LandingsSorting, Ordering};
 use web_api::routes::{
     utils::{DateTimeUtc, GearGroupId, SpeciesGroupId},
     v1::landing::{Landing, LandingsParams},
@@ -10,47 +10,45 @@ use web_api::routes::{
 
 #[tokio::test]
 async fn test_landings_returns_all_landings() {
-    test(|helper| async move {
-        let vessel_id = FiskeridirVesselId(111);
-        let date = Utc.timestamp_opt(1000, 0).unwrap();
+    test(|helper, builder| async move {
+        let state = builder.vessels(1).landings(3).build().await;
 
-        helper.db.generate_landing(1, vessel_id, date).await;
-        helper.db.generate_landing(2, vessel_id, date).await;
-        helper.db.generate_landing(3, vessel_id, date).await;
-
-        let response = helper.app.get_landings(Default::default()).await;
+        let response = helper
+            .app
+            .get_landings(LandingsParams {
+                ordering: Some(Ordering::Asc),
+                ..Default::default()
+            })
+            .await;
 
         assert_eq!(response.status(), StatusCode::OK);
         let landings: Vec<Landing> = response.json().await.unwrap();
 
         assert_eq!(landings.len(), 3);
+        assert_eq!(landings, state.landings);
     })
     .await;
 }
 
 #[tokio::test]
 async fn test_landings_returns_landings_in_specified_months() {
-    test(|helper| async move {
-        let mut landing1 = fiskeridir_rs::Landing::test_default(1, None);
-        let mut landing2 = fiskeridir_rs::Landing::test_default(2, None);
-        let landing3 = fiskeridir_rs::Landing::test_default(3, None);
-        let landing4 = fiskeridir_rs::Landing::test_default(4, None);
+    test(|helper, builder| async move {
+        let month1: DateTime<Utc> = "2000-06-1T00:00:00Z".parse().unwrap();
+        let month2: DateTime<Utc> = "2001-01-1T00:00:00Z".parse().unwrap();
 
-        let month1: DateTime<Utc> = "2001-01-1T00:00:00Z".parse().unwrap();
-        let month2: DateTime<Utc> = "2000-06-1T00:00:00Z".parse().unwrap();
-
-        landing1.landing_timestamp = month1;
-        landing2.landing_timestamp = month2;
-
-        helper
-            .db
-            .db
-            .add_landings(vec![landing1, landing2, landing3, landing4], 2023)
-            .await
-            .unwrap();
+        let state = builder
+            .landings(4)
+            .modify_idx(|i, v| match i {
+                0 => v.landing_timestamp = month1,
+                1 => v.landing_timestamp = month2,
+                _ => (),
+            })
+            .build()
+            .await;
 
         let params = LandingsParams {
             months: Some(vec![DateTimeUtc(month1), DateTimeUtc(month2)]),
+            ordering: Some(Ordering::Asc),
             ..Default::default()
         };
 
@@ -60,35 +58,36 @@ async fn test_landings_returns_landings_in_specified_months() {
         let landings: Vec<Landing> = response.json().await.unwrap();
 
         assert_eq!(landings.len(), 2);
+        assert_eq!(landings, state.landings[..2]);
     })
     .await;
 }
 
 #[tokio::test]
 async fn test_landings_returns_landings_in_catch_location() {
-    test(|helper| async move {
-        let mut landing1 = fiskeridir_rs::Landing::test_default(1, None);
-        let mut landing2 = fiskeridir_rs::Landing::test_default(2, None);
-        let landing3 = fiskeridir_rs::Landing::test_default(3, None);
-        let landing4 = fiskeridir_rs::Landing::test_default(4, None);
-
-        landing1.catch_location.main_area_code = Some(9);
-        landing1.catch_location.location_code = Some(5);
-        landing2.catch_location.main_area_code = Some(9);
-        landing2.catch_location.location_code = Some(4);
-
-        helper
-            .db
-            .db
-            .add_landings(vec![landing1, landing2, landing3, landing4], 2023)
-            .await
-            .unwrap();
+    test(|helper, builder| async move {
+        let state = builder
+            .landings(4)
+            .modify_idx(|i, v| match i {
+                0 => {
+                    v.catch_location.main_area_code = Some(9);
+                    v.catch_location.location_code = Some(5);
+                }
+                1 => {
+                    v.catch_location.main_area_code = Some(9);
+                    v.catch_location.location_code = Some(4);
+                }
+                _ => (),
+            })
+            .build()
+            .await;
 
         let params = LandingsParams {
             catch_locations: Some(vec![
                 "09-05".try_into().unwrap(),
                 "09-04".try_into().unwrap(),
             ]),
+            ordering: Some(Ordering::Asc),
             ..Default::default()
         };
 
@@ -99,33 +98,30 @@ async fn test_landings_returns_landings_in_catch_location() {
         let landings: Vec<Landing> = response.json().await.unwrap();
 
         assert_eq!(landings.len(), 2);
+        assert_eq!(landings, state.landings[..2]);
     })
     .await;
 }
 
 #[tokio::test]
 async fn test_landings_returns_landings_with_gear_group_ids() {
-    test(|helper| async move {
-        let mut landing1 = fiskeridir_rs::Landing::test_default(1, None);
-        let mut landing2 = fiskeridir_rs::Landing::test_default(2, None);
-        let landing3 = fiskeridir_rs::Landing::test_default(3, None);
-        let landing4 = fiskeridir_rs::Landing::test_default(4, None);
-
-        landing1.gear.group = GearGroup::Not;
-        landing2.gear.group = GearGroup::BurOgRuser;
-
-        helper
-            .db
-            .db
-            .add_landings(vec![landing1, landing2, landing3, landing4], 2023)
-            .await
-            .unwrap();
+    test(|helper, builder| async move {
+        let state = builder
+            .landings(4)
+            .modify_idx(|i, v| match i {
+                0 => v.gear.group = GearGroup::Not,
+                1 => v.gear.group = GearGroup::BurOgRuser,
+                _ => (),
+            })
+            .build()
+            .await;
 
         let params = LandingsParams {
             gear_group_ids: Some(vec![
                 GearGroupId(GearGroup::Not),
                 GearGroupId(GearGroup::BurOgRuser),
             ]),
+            ordering: Some(Ordering::Asc),
             ..Default::default()
         };
 
@@ -135,33 +131,30 @@ async fn test_landings_returns_landings_with_gear_group_ids() {
         let landings: Vec<Landing> = response.json().await.unwrap();
 
         assert_eq!(landings.len(), 2);
+        assert_eq!(landings, state.landings[..2]);
     })
     .await;
 }
 
 #[tokio::test]
 async fn test_landings_returns_landings_with_species_group_ids() {
-    test(|helper| async move {
-        let mut landing1 = fiskeridir_rs::Landing::test_default(1, None);
-        let mut landing2 = fiskeridir_rs::Landing::test_default(2, None);
-        let landing3 = fiskeridir_rs::Landing::test_default(3, None);
-        let landing4 = fiskeridir_rs::Landing::test_default(4, None);
-
-        landing1.product.species.group_code = SpeciesGroup::Blaakveite;
-        landing2.product.species.group_code = SpeciesGroup::Uer;
-
-        helper
-            .db
-            .db
-            .add_landings(vec![landing1, landing2, landing3, landing4], 2023)
-            .await
-            .unwrap();
+    test(|helper, builder| async move {
+        let state = builder
+            .landings(4)
+            .modify_idx(|i, v| match i {
+                0 => v.product.species.group_code = SpeciesGroup::Blaakveite,
+                1 => v.product.species.group_code = SpeciesGroup::Uer,
+                _ => (),
+            })
+            .build()
+            .await;
 
         let params = LandingsParams {
             species_group_ids: Some(vec![
                 SpeciesGroupId(SpeciesGroup::Blaakveite),
                 SpeciesGroupId(SpeciesGroup::Uer),
             ]),
+            ordering: Some(Ordering::Asc),
             ..Default::default()
         };
 
@@ -171,30 +164,27 @@ async fn test_landings_returns_landings_with_species_group_ids() {
         let landings: Vec<Landing> = response.json().await.unwrap();
 
         assert_eq!(landings.len(), 2);
+        assert_eq!(landings, state.landings[..2]);
     })
     .await;
 }
 
 #[tokio::test]
 async fn test_landings_returns_landings_with_vessel_length_ranges() {
-    test(|helper| async move {
-        let mut landing1 = fiskeridir_rs::Landing::test_default(1, None);
-        let mut landing2 = fiskeridir_rs::Landing::test_default(2, None);
-        let landing3 = fiskeridir_rs::Landing::test_default(3, None);
-        let landing4 = fiskeridir_rs::Landing::test_default(4, None);
-
-        landing1.vessel.length = Some(9.);
-        landing2.vessel.length = Some(12.);
-
-        helper
-            .db
-            .db
-            .add_landings(vec![landing1, landing2, landing3, landing4], 2023)
-            .await
-            .unwrap();
+    test(|helper, builder| async move {
+        let state = builder
+            .landings(4)
+            .modify_idx(|i, v| match i {
+                0 => v.vessel.length = Some(9.),
+                1 => v.vessel.length = Some(12.),
+                _ => (),
+            })
+            .build()
+            .await;
 
         let params = LandingsParams {
             vessel_length_ranges: Some(vec!["(,10)".parse().unwrap(), "[10,15)".parse().unwrap()]),
+            ordering: Some(Ordering::Asc),
             ..Default::default()
         };
 
@@ -204,27 +194,18 @@ async fn test_landings_returns_landings_with_vessel_length_ranges() {
         let landings: Vec<Landing> = response.json().await.unwrap();
 
         assert_eq!(landings.len(), 2);
+        assert_eq!(landings, state.landings[..2]);
     })
     .await;
 }
 
 #[tokio::test]
 async fn test_landings_returns_landings_with_fiskeridir_vessel_ids() {
-    test(|helper| async move {
-        let landing1 = fiskeridir_rs::Landing::test_default(1, Some(1));
-        let landing2 = fiskeridir_rs::Landing::test_default(2, Some(2));
-        let landing3 = fiskeridir_rs::Landing::test_default(3, None);
-        let landing4 = fiskeridir_rs::Landing::test_default(4, None);
-
-        helper
-            .db
-            .db
-            .add_landings(vec![landing1, landing2, landing3, landing4], 2023)
-            .await
-            .unwrap();
+    test(|helper, builder| async move {
+        let state = builder.landings(2).vessels(2).landings(2).build().await;
 
         let params = LandingsParams {
-            fiskeridir_vessel_ids: Some(vec![FiskeridirVesselId(1), FiskeridirVesselId(2)]),
+            fiskeridir_vessel_ids: Some(state.vessels.iter().map(|v| v.fiskeridir.id).collect()),
             ..Default::default()
         };
 
@@ -240,25 +221,8 @@ async fn test_landings_returns_landings_with_fiskeridir_vessel_ids() {
 
 #[tokio::test]
 async fn test_landings_sorts_by_landing_timestamp() {
-    test(|helper| async move {
-        let mut expected = vec![
-            fiskeridir_rs::Landing::test_default(1, None),
-            fiskeridir_rs::Landing::test_default(2, None),
-            fiskeridir_rs::Landing::test_default(3, None),
-            fiskeridir_rs::Landing::test_default(4, None),
-        ];
-
-        expected[0].landing_timestamp = Utc.timestamp_opt(1000, 0).unwrap();
-        expected[1].landing_timestamp = Utc.timestamp_opt(2000, 0).unwrap();
-        expected[2].landing_timestamp = Utc.timestamp_opt(3000, 0).unwrap();
-        expected[3].landing_timestamp = Utc.timestamp_opt(4000, 0).unwrap();
-
-        helper
-            .db
-            .db
-            .add_landings(expected.clone(), 2023)
-            .await
-            .unwrap();
+    test(|helper, builder| async move {
+        let state = builder.landings(4).build().await;
 
         let params = LandingsParams {
             sorting: Some(LandingsSorting::LandingTimestamp),
@@ -271,48 +235,22 @@ async fn test_landings_sorts_by_landing_timestamp() {
         assert_eq!(response.status(), StatusCode::OK);
         let landings: Vec<Landing> = response.json().await.unwrap();
 
-        assert_eq!(
-            landings[0].landing_timestamp.timestamp_millis(),
-            expected[0].landing_timestamp.timestamp_millis()
-        );
-        assert_eq!(
-            landings[1].landing_timestamp.timestamp_millis(),
-            expected[1].landing_timestamp.timestamp_millis()
-        );
-        assert_eq!(
-            landings[2].landing_timestamp.timestamp_millis(),
-            expected[2].landing_timestamp.timestamp_millis()
-        );
-        assert_eq!(
-            landings[3].landing_timestamp.timestamp_millis(),
-            expected[3].landing_timestamp.timestamp_millis()
-        );
+        assert_eq!(landings.len(), 4);
+        assert_eq!(landings, state.landings);
     })
     .await;
 }
 
 #[tokio::test]
 async fn test_landings_sorts_by_weight() {
-    test(|helper| async move {
-        let mut expected = vec![
-            fiskeridir_rs::Landing::test_default(1, None),
-            fiskeridir_rs::Landing::test_default(2, None),
-            fiskeridir_rs::Landing::test_default(3, None),
-            fiskeridir_rs::Landing::test_default(4, None),
-        ];
-
-        expected[0].product.living_weight = Some(100.0);
-        expected[1].product.living_weight = Some(200.0);
-        expected[2].product.living_weight = Some(300.0);
-        expected[3].product.living_weight = Some(400.0);
-
-        helper
-            .db
-            .db
-            .add_landings(expected.clone(), 2023)
-            .await
-            .unwrap();
-
+    test(|helper, builder| async move {
+        let state = builder
+            .landings(4)
+            .modify_idx(|i, v| {
+                v.product.living_weight = Some(i as f64);
+            })
+            .build()
+            .await;
         let params = LandingsParams {
             sorting: Some(LandingsSorting::LivingWeight),
             ordering: Some(Ordering::Asc),
@@ -324,22 +262,8 @@ async fn test_landings_sorts_by_weight() {
         assert_eq!(response.status(), StatusCode::OK);
         let landings: Vec<Landing> = response.json().await.unwrap();
 
-        assert_eq!(
-            landings[0].total_living_weight as u32,
-            expected[0].product.living_weight.unwrap() as u32,
-        );
-        assert_eq!(
-            landings[1].total_living_weight as u32,
-            expected[1].product.living_weight.unwrap() as u32,
-        );
-        assert_eq!(
-            landings[2].total_living_weight as u32,
-            expected[2].product.living_weight.unwrap() as u32,
-        );
-        assert_eq!(
-            landings[3].total_living_weight as u32,
-            expected[3].product.living_weight.unwrap() as u32,
-        );
+        assert_eq!(landings.len(), 4);
+        assert_eq!(landings, state.landings);
     })
     .await;
 }

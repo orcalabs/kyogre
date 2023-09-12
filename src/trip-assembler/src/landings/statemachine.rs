@@ -59,6 +59,7 @@ impl LandingEvent {
             VesselEventType::ErsPor => None,
             VesselEventType::ErsDep => None,
             VesselEventType::ErsTra => None,
+            VesselEventType::Haul => None,
         }
     }
 

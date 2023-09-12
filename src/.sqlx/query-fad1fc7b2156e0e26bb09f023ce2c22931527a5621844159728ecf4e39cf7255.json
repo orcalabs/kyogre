@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nUPDATE vessel_events v\nSET\n    trip_id = t.trip_id\nFROM\n    trips t\nWHERE\n    v.vessel_event_id = ANY ($1::BIGINT[])\n    AND v.fiskeridir_vessel_id = t.fiskeridir_vessel_id\n    AND trip_assembler_id = 2\n    AND v.occurence_timestamp > LOWER(t.period)\n    AND v.occurence_timestamp <= UPPER(t.period)\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8Array"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "fad1fc7b2156e0e26bb09f023ce2c22931527a5621844159728ecf4e39cf7255"
+}

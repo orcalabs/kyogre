@@ -1,50 +1,53 @@
 use super::helper::test;
 use actix_web::http::StatusCode;
-use fiskeridir_rs::Landing;
-use kyogre_core::ScraperInboundPort;
 use strum::IntoEnumIterator;
 use web_api::routes::v1::species::*;
 
 #[tokio::test]
 async fn test_species_returns_all_species() {
-    test(|helper| async move {
-        let vessel_id = 1;
-        let landing = Landing::test_default(1, Some(vessel_id));
-        let mut landing2 = Landing::test_default(2, Some(vessel_id));
-        landing2.product.species.code = 200;
-
-        let mut expected = vec![
-            Species {
-                id: landing.product.species.code,
-                name: landing.product.species.name.clone(),
-            },
-            Species {
-                id: landing2.product.species.code,
-                name: landing2.product.species.name.clone(),
-            },
-        ];
-
-        helper
-            .adapter()
-            .add_landings(vec![landing, landing2], 2023)
-            .await
-            .unwrap();
+    test(|helper, builder| async move {
+        builder
+            .landings(2)
+            .modify_idx(|i, v| match i {
+                0 => {
+                    v.product.species.code = 200;
+                    v.product.species.name = "test".into();
+                }
+                1 => {
+                    v.product.species.code = 201;
+                    v.product.species.name = "test2".into();
+                }
+                _ => (),
+            })
+            .build()
+            .await;
 
         let response = helper.app.get_species().await;
 
         assert_eq!(response.status(), StatusCode::OK);
         let mut body: Vec<Species> = response.json().await.unwrap();
-        body.sort();
-        expected.sort();
 
-        assert_eq!(expected, body);
+        body.sort_by_key(|v| v.id);
+        assert_eq!(
+            vec![
+                Species {
+                    id: 200,
+                    name: "test".into(),
+                },
+                Species {
+                    id: 201,
+                    name: "test2".into(),
+                },
+            ],
+            body
+        );
     })
     .await;
 }
 
 #[tokio::test]
 async fn test_species_groups_returns_all_species_groups() {
-    test(|helper| async move {
+    test(|helper, _builder| async move {
         let mut expected: Vec<SpeciesGroup> = fiskeridir_rs::SpeciesGroup::iter()
             .map(|v| SpeciesGroup {
                 name: v.name().to_owned(),
@@ -66,7 +69,7 @@ async fn test_species_groups_returns_all_species_groups() {
 
 #[tokio::test]
 async fn test_species_main_groups_returns_all_species_main_groups() {
-    test(|helper| async move {
+    test(|helper, _builder| async move {
         let mut expected: Vec<SpeciesMainGroup> = fiskeridir_rs::SpeciesMainGroup::iter()
             .map(|v| SpeciesMainGroup {
                 name: v.name().to_owned(),
@@ -88,35 +91,40 @@ async fn test_species_main_groups_returns_all_species_main_groups() {
 
 #[tokio::test]
 async fn test_species_fao_returns_all_species_fao() {
-    test(|helper| async move {
-        let vessel_id = 1;
-        let landing = Landing::test_default(1, Some(vessel_id));
-        let mut landing2 = Landing::test_default(2, Some(vessel_id));
-        landing2.product.species.fao_code = Some("test".to_owned());
-
-        let mut expected = vec![
+    test(|helper, builder| async move {
+        let expected = vec![
             SpeciesFao {
-                id: landing.product.species.fao_code.clone().unwrap(),
-                name: Some(landing.product.species.fao_name.clone().unwrap()),
+                id: "test".into(),
+                name: Some("test_name".into()),
             },
             SpeciesFao {
-                id: landing2.product.species.fao_code.clone().unwrap(),
-                name: Some(landing2.product.species.fao_name.clone().unwrap()),
+                id: "test2".into(),
+                name: Some("test_name2".into()),
             },
         ];
 
-        helper
-            .adapter()
-            .add_landings(vec![landing, landing2], 2023)
-            .await
-            .unwrap();
+        builder
+            .vessels(1)
+            .landings(2)
+            .modify_idx(|i, v| match i {
+                0 => {
+                    v.product.species.fao_code = Some(expected[0].id.clone());
+                    v.product.species.fao_name = expected[0].name.clone();
+                }
+                1 => {
+                    v.product.species.fao_code = Some(expected[1].id.clone());
+                    v.product.species.fao_name = expected[1].name.clone();
+                }
+                _ => (),
+            })
+            .build()
+            .await;
 
         let response = helper.app.get_species_fao().await;
 
         assert_eq!(response.status(), StatusCode::OK);
         let mut body: Vec<SpeciesFao> = response.json().await.unwrap();
-        body.sort();
-        expected.sort();
+        body.sort_by_key(|v| v.id.clone());
 
         assert_eq!(expected, body);
     })
@@ -125,39 +133,43 @@ async fn test_species_fao_returns_all_species_fao() {
 
 #[tokio::test]
 async fn test_species_fiskeridir_returns_all_species_fiskeridir() {
-    test(|helper| async move {
-        let vessel_id = 1;
-        let landing = Landing::test_default(1, Some(vessel_id));
-        let mut landing2 = Landing::test_default(2, Some(vessel_id));
-        landing2.product.species.fdir_code = 203;
-
-        let mut expected = vec![
+    test(|helper, builder| async move {
+        let expected = vec![
             SpeciesFiskeridir {
                 id: 0,
                 name: Some("Ukjent".into()),
             },
             SpeciesFiskeridir {
-                id: landing.product.species.fdir_code,
-                name: Some(landing.product.species.fdir_name.clone()),
+                id: 200,
+                name: Some("test".into()),
             },
             SpeciesFiskeridir {
-                id: landing2.product.species.fdir_code,
-                name: Some(landing2.product.species.fdir_name.clone()),
+                id: 201,
+                name: Some("test2".into()),
             },
         ];
 
-        helper
-            .adapter()
-            .add_landings(vec![landing, landing2], 2023)
-            .await
-            .unwrap();
+        builder
+            .vessels(1)
+            .landings(2)
+            .modify_idx(|i, v| match i {
+                0 => {
+                    v.product.species.fdir_code = expected[1].id;
+                    v.product.species.fdir_name = expected[1].name.clone().unwrap();
+                }
+                1 => {
+                    v.product.species.fdir_code = expected[2].id;
+                    v.product.species.fdir_name = expected[2].name.clone().unwrap();
+                }
+                _ => (),
+            })
+            .build()
+            .await;
 
         let response = helper.app.get_species_fiskeridir().await;
 
         assert_eq!(response.status(), StatusCode::OK);
-        let mut body: Vec<SpeciesFiskeridir> = response.json().await.unwrap();
-        body.sort();
-        expected.sort();
+        let body: Vec<SpeciesFiskeridir> = response.json().await.unwrap();
 
         assert_eq!(expected, body);
     })

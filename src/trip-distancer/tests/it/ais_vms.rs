@@ -1,7 +1,8 @@
 use chrono::{Duration, TimeZone, Utc};
 use fiskeridir_rs::CallSign;
+use kyogre_core::TripDistancer;
 use kyogre_core::{FiskeridirVesselId, Mmsi};
-use trip_distancer::{AisVms, TripDistancer};
+use trip_distancer::AisVms;
 
 use crate::helper::test;
 

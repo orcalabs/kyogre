@@ -8,7 +8,7 @@ use crate::{
     PostgresAdapter,
 };
 use error_stack::{report, IntoReport, Result, ResultExt};
-use fiskeridir_rs::{GearGroup, VesselLengthGroup};
+use fiskeridir_rs::{GearGroup, SpeciesGroup, VesselLengthGroup};
 use futures::{Stream, TryStreamExt};
 use kyogre_core::{FiskeridirVesselId, TripAssemblerId};
 use unnest_insert::UnnestInsert;
@@ -117,6 +117,8 @@ SELECT
     f.engine_power AS fiskeridir_engine_power,
     f.building_year AS fiskeridir_building_year,
     f.rebuilding_year AS fiskeridir_rebuilding_year,
+    f.gear_group_ids AS "gear_group_ids!: Vec<GearGroup>",
+    f.species_group_ids AS "species_group_ids!: Vec<SpeciesGroup>",
     a.mmsi AS "ais_mmsi?",
     a.imo_number AS ais_imo_number,
     a.call_sign AS ais_call_sign,
@@ -139,23 +141,11 @@ SELECT
                 AND b.vessel_benchmark_id IS NOT NULL
         ),
         '[]'::jsonb
-    )::TEXT AS "benchmarks!",
-    COALESCE(
-        ARRAY_AGG(
-            g.gear_group_id
-            ORDER BY
-                g.gear_group_id
-        ) FILTER (
-            WHERE
-                g.gear_group_id IS NOT NULL
-        ),
-        '{}'
-    ) AS "gear_group_ids!: Vec<GearGroup>"
+    )::TEXT AS "benchmarks!"
 FROM
     fiskeridir_vessels AS f
     LEFT JOIN ais_vessels AS a ON f.call_sign = a.call_sign
     LEFT JOIN vessel_benchmark_outputs AS b ON b.fiskeridir_vessel_id = f.fiskeridir_vessel_id
-    LEFT JOIN vessel_gear_groups AS g ON g.fiskeridir_vessel_id = f.fiskeridir_vessel_id
 GROUP BY
     f.fiskeridir_vessel_id,
     a.mmsi
@@ -194,6 +184,8 @@ SELECT
     f.engine_power AS fiskeridir_engine_power,
     f.building_year AS fiskeridir_building_year,
     f.rebuilding_year AS fiskeridir_rebuilding_year,
+    f.gear_group_ids AS "gear_group_ids!: Vec<GearGroup>",
+    f.species_group_ids AS "species_group_ids!: Vec<SpeciesGroup>",
     a.mmsi AS "ais_mmsi?",
     a.imo_number AS ais_imo_number,
     a.call_sign AS ais_call_sign,
@@ -216,23 +208,11 @@ SELECT
                 AND b.vessel_benchmark_id IS NOT NULL
         ),
         '[]'::jsonb
-    )::TEXT AS "benchmarks!",
-    COALESCE(
-        ARRAY_AGG(
-            g.gear_group_id
-            ORDER BY
-                g.gear_group_id
-        ) FILTER (
-            WHERE
-                g.gear_group_id IS NOT NULL
-        ),
-        '{}'
-    ) AS "gear_group_ids!: Vec<GearGroup>"
+    )::TEXT AS "benchmarks!"
 FROM
     fiskeridir_vessels AS f
     LEFT JOIN ais_vessels AS a ON f.call_sign = a.call_sign
     LEFT JOIN vessel_benchmark_outputs AS b ON b.fiskeridir_vessel_id = f.fiskeridir_vessel_id
-    LEFT JOIN vessel_gear_groups AS g ON g.fiskeridir_vessel_id = f.fiskeridir_vessel_id
 WHERE
     f.fiskeridir_vessel_id = $1
 GROUP BY
@@ -244,5 +224,40 @@ GROUP BY
         .fetch_optional(&self.pool)
         .await
         .map_err(|e| report!(e).change_context(PostgresError::Query))
+    }
+
+    pub(crate) async fn add_vessel_gear_and_species_groups<'a>(
+        &'a self,
+        tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
+    ) -> Result<(), PostgresError> {
+        sqlx::query!(
+            r#"
+UPDATE fiskeridir_vessels v
+SET
+    gear_group_ids = q.gear_group_ids,
+    species_group_ids = q.species_group_ids
+FROM
+    (
+        SELECT
+            fiskeridir_vessel_id,
+            ARRAY_AGG(DISTINCT gear_group_id) AS gear_group_ids,
+            ARRAY_AGG(DISTINCT species_group_id) AS species_group_ids
+        FROM
+            landings l
+            LEFT JOIN landing_entries e ON l.landing_id = e.landing_id
+        WHERE
+            fiskeridir_vessel_id IS NOT NULL
+        GROUP BY
+            fiskeridir_vessel_id
+    ) q
+WHERE
+    v.fiskeridir_vessel_id = q.fiskeridir_vessel_id
+            "#,
+        )
+        .execute(&mut **tx)
+        .await
+        .into_report()
+        .change_context(PostgresError::Query)
+        .map(|_| ())
     }
 }

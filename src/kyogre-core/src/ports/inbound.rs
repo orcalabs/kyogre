@@ -1,10 +1,17 @@
-use std::collections::HashSet;
-
 use crate::*;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use error_stack::Result;
-use fiskeridir_rs::LandingId;
+use fiskeridir_rs::DeliveryPointId;
+
+#[async_trait]
+pub trait AisConsumeLoop: Sync + Send {
+    async fn consume(
+        &self,
+        mut receiver: tokio::sync::broadcast::Receiver<DataMessage>,
+        process_confirmation: Option<tokio::sync::mpsc::Sender<()>>,
+    );
+}
 
 #[async_trait]
 pub trait AisMigratorDestination {
@@ -14,6 +21,7 @@ pub trait AisMigratorDestination {
         positions: Vec<AisPosition>,
         progress: DateTime<Utc>,
     ) -> Result<(), InsertError>;
+    async fn add_mmsis(&self, mmsi: Vec<Mmsi>) -> Result<(), InsertError>;
     async fn vessel_migration_progress(
         &self,
         migration_end_threshold: &DateTime<Utc>,
@@ -26,7 +34,7 @@ pub trait WebApiInboundPort {
 }
 
 #[async_trait]
-pub trait TripPrecisionInboundPort {
+pub trait TripPrecisionInboundPort: Send + Sync {
     async fn update_trip_precisions(
         &self,
         updates: Vec<TripPrecisionUpdate>,
@@ -45,22 +53,20 @@ pub trait ScraperInboundPort {
     ) -> Result<(), InsertError>;
     async fn add_landings(
         &self,
-        landings: Vec<fiskeridir_rs::Landing>,
+        landings: Box<
+            dyn Iterator<Item = Result<fiskeridir_rs::Landing, fiskeridir_rs::Error>> + Send + Sync,
+        >,
         data_year: u32,
     ) -> Result<(), InsertError>;
-    async fn delete_removed_landings(
+    async fn add_ers_dca(
         &self,
-        existing_landing_ids: HashSet<LandingId>,
-        data_year: u32,
-    ) -> Result<(), DeleteError>;
-    async fn delete_ers_dca(&self, year: u32) -> Result<(), DeleteError>;
-    async fn add_ers_dca(&self, ers_dca: Vec<fiskeridir_rs::ErsDca>) -> Result<(), InsertError>;
+        ers_dca: Box<
+            dyn Iterator<Item = Result<fiskeridir_rs::ErsDca, fiskeridir_rs::Error>> + Send + Sync,
+        >,
+    ) -> Result<(), InsertError>;
     async fn add_ers_dep(&self, ers_dep: Vec<fiskeridir_rs::ErsDep>) -> Result<(), InsertError>;
-    async fn delete_ers_dep(&self, year: u32) -> Result<(), DeleteError>;
     async fn add_ers_por(&self, ers_por: Vec<fiskeridir_rs::ErsPor>) -> Result<(), InsertError>;
-    async fn delete_ers_por(&self, year: u32) -> Result<(), DeleteError>;
     async fn add_ers_tra(&self, ers_tra: Vec<fiskeridir_rs::ErsTra>) -> Result<(), InsertError>;
-    async fn delete_ers_tra_catches(&self, year: u32) -> Result<(), DeleteError>;
     async fn add_vms(&self, vms: Vec<fiskeridir_rs::Vms>) -> Result<(), InsertError>;
     async fn add_aqua_culture_register(
         &self,
@@ -70,6 +76,7 @@ pub trait ScraperInboundPort {
         &self,
         delivery_points: Vec<MattilsynetDeliveryPoint>,
     ) -> Result<(), InsertError>;
+    async fn add_weather(&self, weather: Vec<NewWeather>) -> Result<(), InsertError>;
 }
 
 #[async_trait]
@@ -78,6 +85,7 @@ pub trait ScraperOutboundPort {
         &self,
         source: Option<FishingFacilityApiSource>,
     ) -> Result<Option<DateTime<Utc>>, QueryError>;
+    async fn latest_weather_timestamp(&self) -> Result<Option<DateTime<Utc>>, QueryError>;
 }
 
 #[async_trait]
@@ -102,6 +110,16 @@ pub trait TripDistancerInbound: Send + Sync {
 }
 
 #[async_trait]
-pub trait DatabaseViewRefresher {
+pub trait DatabaseViewRefresher: Send + Sync {
     async fn refresh(&self) -> Result<(), UpdateError>;
+}
+
+#[async_trait]
+pub trait TestHelperInbound: Send + Sync {
+    async fn add_manual_delivery_points(&self, values: Vec<ManualDeliveryPoint>);
+    async fn add_deprecated_delivery_point(
+        &self,
+        old: DeliveryPointId,
+        new: DeliveryPointId,
+    ) -> Result<(), InsertError>;
 }

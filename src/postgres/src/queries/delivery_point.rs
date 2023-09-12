@@ -3,25 +3,128 @@ use std::collections::{hash_map::Entry, HashMap};
 use crate::{
     error::PostgresError,
     models::{
-        AquaCultureEntry, AquaCultureSpecies, AquaCultureTill, DeliveryPoint,
+        AquaCultureEntry, AquaCultureSpecies, AquaCultureTill, DeliveryPoint, ManualDeliveryPoint,
         MattilsynetDeliveryPoint, NewDeliveryPointId, SpeciesFiskeridir,
     },
     PostgresAdapter,
 };
 use error_stack::{report, IntoReport, Result, ResultExt};
+use fiskeridir_rs::DeliveryPointId;
 use futures::{Stream, TryStreamExt};
 use kyogre_core::TripId;
 use unnest_insert::UnnestInsert;
 
 impl PostgresAdapter {
-    pub(crate) fn delivery_points_impl(
+    pub(crate) async fn delivery_point_impl(
         &self,
-    ) -> impl Stream<Item = Result<DeliveryPoint, PostgresError>> + '_ {
+        id: &DeliveryPointId,
+    ) -> Result<Option<DeliveryPoint>, PostgresError> {
+        // Coalesce on delivery_point_id is needed due to a bug in sqlx prepare
+        // which flips the nullability on each run
         sqlx::query_as!(
             DeliveryPoint,
             r#"
 SELECT
-    d.delivery_point_id,
+    COALESCE(d.delivery_point_id, d.delivery_point_id) AS "delivery_point_id!",
+    COALESCE(m.name, a.name, mt.name) AS NAME,
+    COALESCE(m.address, a.address, mt.address) AS address,
+    COALESCE(m.latitude, a.latitude) AS latitude,
+    COALESCE(m.longitude, a.longitude) AS longitude
+FROM
+    delivery_point_ids d
+    LEFT JOIN manual_delivery_points m ON m.delivery_point_id = d.delivery_point_id
+    LEFT JOIN aqua_culture_register a ON a.delivery_point_id = d.delivery_point_id
+    LEFT JOIN mattilsynet_delivery_points mt ON mt.delivery_point_id = d.delivery_point_id
+WHERE
+    d.delivery_point_id = $1
+            "#,
+            id.as_ref()
+        )
+        .fetch_optional(&self.pool)
+        .await
+        .into_report()
+        .change_context(PostgresError::Query)
+    }
+    pub(crate) async fn add_deprecated_delivery_point_impl(
+        &self,
+        old: DeliveryPointId,
+        new: DeliveryPointId,
+    ) -> Result<(), PostgresError> {
+        sqlx::query!(
+            r#"
+INSERT INTO
+    deprecated_delivery_points (old_delivery_point_id, new_delivery_point_id)
+VALUES
+    ($1, $2)
+            "#,
+            old.into_inner(),
+            new.into_inner(),
+        )
+        .execute(&self.pool)
+        .await
+        .into_report()
+        .change_context(PostgresError::Query)
+        .map(|_| ())?;
+
+        Ok(())
+    }
+    pub(crate) async fn delivery_points_log_impl(
+        &self,
+    ) -> Result<Vec<serde_json::Value>, PostgresError> {
+        Ok(sqlx::query!(
+            r#"
+SELECT
+    TO_JSONB(d.*) AS "json!"
+FROM
+    delivery_points_log d
+            "#,
+        )
+        .fetch_all(&self.pool)
+        .await
+        .into_report()
+        .change_context(PostgresError::Query)?
+        .into_iter()
+        .map(|r| r.json)
+        .collect())
+    }
+
+    pub(crate) async fn add_manual_delivery_points_impl(
+        &self,
+        values: Vec<ManualDeliveryPoint>,
+    ) -> Result<(), PostgresError> {
+        let mut tx = self.begin().await?;
+
+        let ids = values
+            .iter()
+            .map(|v| NewDeliveryPointId {
+                delivery_point_id: v.delivery_point_id.clone(),
+            })
+            .collect();
+        self.add_delivery_point_ids(ids, &mut tx).await?;
+
+        ManualDeliveryPoint::unnest_insert(values, &mut *tx)
+            .await
+            .into_report()
+            .change_context(PostgresError::Query)?;
+
+        tx.commit()
+            .await
+            .into_report()
+            .change_context(PostgresError::Transaction)?;
+
+        Ok(())
+    }
+
+    pub(crate) fn delivery_points_impl(
+        &self,
+    ) -> impl Stream<Item = Result<DeliveryPoint, PostgresError>> + '_ {
+        // Coalesce on delivery_point_id is needed due to a bug in sqlx prepare
+        // which flips the nullability on each run
+        sqlx::query_as!(
+            DeliveryPoint,
+            r#"
+SELECT
+    COALESCE(d.delivery_point_id, d.delivery_point_id) AS "delivery_point_id!",
     COALESCE(m.name, a.name, mt.name) AS NAME,
     COALESCE(m.address, a.address, mt.address) AS address,
     COALESCE(m.latitude, a.latitude) AS latitude,

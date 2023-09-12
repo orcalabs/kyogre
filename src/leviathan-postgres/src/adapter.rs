@@ -74,7 +74,9 @@ impl AisMigratorSource for LeviathanPostgresAdapter {
             WHERE
                 mmsi = $1
             AND
-                time BETWEEN $2 AND $3",
+                time BETWEEN $2 AND $3
+            order by time asc
+                ",
         )
         .bind(mmsi.0)
         .bind(start)

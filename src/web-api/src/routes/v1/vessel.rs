@@ -1,7 +1,7 @@
 use crate::{error::ApiError, to_streaming_response, Database};
 use actix_web::{web, HttpResponse};
 use chrono::{DateTime, Utc};
-use fiskeridir_rs::{CallSign, GearGroup, RegisterVesselOwner, VesselLengthGroup};
+use fiskeridir_rs::{CallSign, GearGroup, RegisterVesselOwner, SpeciesGroup, VesselLengthGroup};
 use futures::TryStreamExt;
 use kyogre_core::{FiskeridirVesselId, Mmsi};
 use serde::{Deserialize, Serialize};
@@ -36,6 +36,8 @@ pub struct Vessel {
     pub distance_per_hour: Option<f64>,
     #[schema(value_type = Vec<u32>)]
     pub gear_groups: Vec<GearGroup>,
+    #[schema(value_type = Vec<u32>)]
+    pub species_groups: Vec<SpeciesGroup>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
@@ -90,6 +92,7 @@ impl From<kyogre_core::Vessel> for Vessel {
             fish_caught_per_date: value.fish_caught_per_date,
             distance_per_hour: value.distance_per_hour,
             gear_groups: value.gear_groups,
+            species_groups: value.species_groups,
         }
     }
 }

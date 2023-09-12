@@ -1,0 +1,2 @@
+ALTER TABLE ais_vessels_historic
+DROP CONSTRAINT ais_vessels_historic_pkey;

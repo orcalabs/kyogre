@@ -1,15 +1,12 @@
-use futures::TryStreamExt;
-use num_traits::ToPrimitive;
-use std::collections::HashMap;
-
 use crate::{models::Haul, PostgresAdapter};
 use bigdecimal::{BigDecimal, FromPrimitive};
 use chrono::{DateTime, Datelike, Duration, Utc};
 use fiskeridir_rs::{
-    CallSign, DeliveryPointId, ErsDca, ErsDep, ErsPor, Gear, GearGroup, LandingId,
-    VesselLengthGroup, Vms,
+    CallSign, ErsDca, ErsDep, ErsPor, Gear, GearGroup, LandingId, VesselLengthGroup, Vms,
 };
+use futures::TryStreamExt;
 use kyogre_core::*;
+use num_traits::ToPrimitive;
 use rand::random;
 
 /// Wrapper with additional methods inteded for testing purposes.
@@ -126,7 +123,7 @@ SELECT
         WHEN $2 = 3 THEN vessel_length_group
         WHEN $2 = 4 THEN catch_location_matrix_index
     END AS "y_index!",
-    COALESCE(SUM(living_weight::BIGINT), 0)::BIGINT AS "sum_living!"
+    COALESCE(SUM(living_weight), 0)::BIGINT AS "sum_living!"
 FROM
     hauls_matrix
 GROUP BY
@@ -221,6 +218,61 @@ FROM
         }
 
         converted
+    }
+
+    pub async fn all_historic_static_ais_messages(&self) -> Vec<AisVesselHistoric> {
+        sqlx::query!(
+            r#"
+SELECT
+    mmsi,
+    imo_number,
+    message_type_id,
+    message_timestamp,
+    call_sign,
+    "name",
+    ship_width,
+    ship_length,
+    ship_type,
+    eta,
+    draught,
+    destination,
+    dimension_a,
+    dimension_b,
+    dimension_c,
+    dimension_d,
+    position_fixing_device_type,
+    report_class
+FROM
+    ais_vessels_historic
+ORDER BY
+    message_timestamp
+            "#
+        )
+        .fetch_all(&self.db.pool)
+        .await
+        .unwrap()
+        .into_iter()
+        .map(|v| AisVesselHistoric {
+            mmsi: Mmsi(v.mmsi),
+            imo_number: v.imo_number,
+            message_type_id: v.message_type_id,
+            message_timestamp: v.message_timestamp,
+            call_sign: v.call_sign,
+            name: v.name,
+            ship_width: v.ship_width,
+            ship_length: v.ship_length,
+            ship_type: v.ship_type,
+            eta: v.eta,
+            draught: v.draught,
+            destination: v.destination,
+            dimension_a: v.dimension_a,
+            dimension_b: v.dimension_b,
+            dimension_c: v.dimension_c,
+            dimension_d: v.dimension_d,
+            position_fixing_device_type: v.position_fixing_device_type,
+            report_class: v.report_class,
+        })
+        .collect()
     }
 
     pub async fn all_ais_vessels(&self) -> Vec<AisVessel> {
@@ -324,7 +376,8 @@ SELECT
     t.trip_assembler_id AS "trip_assembler_id!: TripAssemblerId",
     COALESCE(t.vessel_events, '[]')::TEXT AS "vessel_events!",
     COALESCE(t.hauls, '[]')::TEXT AS "hauls!",
-    COALESCE(t.fishing_facilities, '[]')::TEXT AS "fishing_facilities!"
+    COALESCE(t.fishing_facilities, '[]')::TEXT AS "fishing_facilities!",
+    COALESCE(t.landing_ids, '{}') AS "landing_ids!"
 FROM
     trips_detailed t
 WHERE
@@ -359,10 +412,8 @@ WHERE
 
     pub async fn generate_ais_vessel(&self, mmsi: Mmsi, call_sign: &str) -> AisVessel {
         let val = NewAisStatic::test_default(mmsi, call_sign);
-        let mut map = HashMap::new();
-        map.insert(val.mmsi, val);
 
-        self.db.add_ais_vessels(&map).await.unwrap();
+        self.db.add_ais_vessels(&[val]).await.unwrap();
 
         let mut vessels = self
             .all_ais_vessels()
@@ -395,31 +446,47 @@ WHERE
         self.single_vms_position(message_id).await
     }
 
+    pub async fn add_landings(&self, landings: Vec<fiskeridir_rs::Landing>) {
+        let year = landings[0].landing_timestamp.year() as u32;
+        self.db
+            .add_landings(Box::new(landings.into_iter().map(Ok)), year)
+            .await
+            .unwrap();
+    }
+
+    pub async fn generate_landings(
+        &self,
+        landings: Vec<(i64, FiskeridirVesselId, DateTime<Utc>)>,
+    ) -> Vec<Landing> {
+        let landings = landings
+            .into_iter()
+            .map(|(landing_id, vessel_id, timestamp)| {
+                let mut landing =
+                    fiskeridir_rs::Landing::test_default(landing_id, Some(vessel_id.0));
+                landing.landing_timestamp = timestamp;
+                landing
+            })
+            .collect::<Vec<_>>();
+
+        self.add_landings(landings.clone()).await;
+
+        self.db
+            .landings(Default::default())
+            .unwrap()
+            .try_collect()
+            .await
+            .unwrap()
+    }
+
     pub async fn generate_landing(
         &self,
         landing_id: i64,
         vessel_id: FiskeridirVesselId,
         timestamp: DateTime<Utc>,
     ) -> Landing {
-        let mut landing = fiskeridir_rs::Landing::test_default(landing_id, Some(vessel_id.0));
-        landing.landing_timestamp = timestamp;
-        let year = landing.landing_timestamp.year() as u32;
-        self.db
-            .add_landings(vec![landing.clone()], year)
+        self.generate_landings(vec![(landing_id, vessel_id, timestamp)])
             .await
-            .unwrap();
-
-        let landings: Vec<Landing> = self
-            .db
-            .landings(Default::default())
-            .unwrap()
-            .try_collect()
-            .await
-            .unwrap();
-
-        landings
-            .into_iter()
-            .find(|l| l.landing_id == landing.id)
+            .pop()
             .unwrap()
     }
 
@@ -464,7 +531,7 @@ WHERE
 
     pub async fn generate_ers_dca(&self, message_id: u64, vessel_id: Option<u64>) -> ErsDca {
         let ers_dca = ErsDca::test_default(message_id, vessel_id);
-        self.db.add_ers_dca(vec![ers_dca.clone()]).await.unwrap();
+        self.add_ers_dca_value(ers_dca.clone()).await;
         ers_dca
     }
 
@@ -568,7 +635,14 @@ WHERE
     }
 
     pub async fn add_ers_dca_value(&self, val: ErsDca) {
-        self.db.add_ers_dca(vec![val]).await.unwrap();
+        self.add_ers_dca(vec![val]).await;
+    }
+
+    pub async fn add_ers_dca(&self, values: Vec<ErsDca>) {
+        self.db
+            .add_ers_dca(Box::new(values.into_iter().map(Ok)))
+            .await
+            .unwrap();
     }
 
     async fn add_ais_position(&self, pos: NewAisPosition) -> AisPosition {
@@ -727,77 +801,5 @@ WHERE
         .unwrap();
 
         VmsPosition::try_from(pos).unwrap()
-    }
-
-    pub async fn add_deprecated_delivery_point(
-        &self,
-        old: DeliveryPointId,
-        new: DeliveryPointId,
-    ) -> Result<(), ()> {
-        let mut tx = self.db.begin().await.unwrap();
-        self.db
-            .add_delivery_point_ids(vec![old.clone().into(), new.clone().into()], &mut tx)
-            .await
-            .unwrap();
-
-        sqlx::query!(
-            r#"
-INSERT INTO
-    deprecated_delivery_points (old_delivery_point_id, new_delivery_point_id)
-VALUES
-    ($1, $2)
-            "#,
-            old.into_inner(),
-            new.into_inner(),
-        )
-        .execute(&mut *tx)
-        .await
-        .map(|_| ())
-        .map_err(|_| ())?;
-
-        tx.commit().await.unwrap();
-
-        Ok(())
-    }
-
-    pub async fn get_delivery_points_log(&self) -> Vec<serde_json::Value> {
-        sqlx::query!(
-            r#"
-SELECT
-    TO_JSONB(d.*) AS "json!"
-FROM
-    delivery_points_log d
-            "#,
-        )
-        .fetch_all(&self.db.pool)
-        .await
-        .unwrap()
-        .into_iter()
-        .map(|r| r.json)
-        .collect()
-    }
-
-    pub async fn add_manual_delivery_point(&self, id: DeliveryPointId, name: String) {
-        let mut tx = self.db.begin().await.unwrap();
-        self.db
-            .add_delivery_point_ids(vec![id.clone().into()], &mut tx)
-            .await
-            .unwrap();
-
-        sqlx::query!(
-            r#"
-INSERT INTO
-    manual_delivery_points (delivery_point_id, "name")
-VALUES
-    ($1, $2)
-            "#,
-            id.into_inner(),
-            name,
-        )
-        .execute(&mut *tx)
-        .await
-        .unwrap();
-
-        tx.commit().await.unwrap();
     }
 }

@@ -6,11 +6,15 @@ use unnest_insert::UnnestInsert;
 
 use crate::{
     error::PostgresError,
-    queries::{enum_to_i32, float_to_decimal, opt_float_to_decimal},
+    queries::{enum_to_i32, float_to_decimal, opt_float_to_decimal, timestamp_from_date_and_time},
 };
 
 #[derive(UnnestInsert)]
-#[unnest_insert(table_name = "ers_tra", conflict = "message_id")]
+#[unnest_insert(
+    table_name = "ers_tra",
+    conflict = "message_id",
+    returning = "vessel_event_id"
+)]
 pub struct NewErsTra {
     pub message_id: i64,
     pub message_number: i32,
@@ -49,10 +53,14 @@ pub struct NewErsTra {
     pub vessel_valid_until: Option<NaiveDate>,
     pub vessel_valid_from: Option<NaiveDate>,
     pub vessel_width: Option<BigDecimal>,
+    pub vessel_event_id: Option<i64>,
 }
 
 #[derive(UnnestInsert)]
-#[unnest_insert(table_name = "ers_tra_catches")]
+#[unnest_insert(
+    table_name = "ers_tra_catches",
+    conflict = "message_id,ers_quantum_type_id,species_fao_id"
+)]
 pub struct NewErsTraCatch {
     pub message_id: i64,
     pub ers_quantum_type_id: Option<String>,
@@ -70,11 +78,9 @@ impl TryFrom<fiskeridir_rs::ErsTra> for NewErsTra {
         Ok(Self {
             message_id: v.message_info.message_id as i64,
             message_number: v.message_info.message_number as i32,
-            message_timestamp: DateTime::<Utc>::from_utc(
-                v.message_info
-                    .message_date
-                    .and_time(v.message_info.message_time),
-                Utc,
+            message_timestamp: timestamp_from_date_and_time(
+                v.message_info.message_date,
+                v.message_info.message_time,
             ),
             ers_message_type_id: v.message_info.message_type_code.into_inner(),
             message_year: v.message_info.message_year as i32,
@@ -83,13 +89,13 @@ impl TryFrom<fiskeridir_rs::ErsTra> for NewErsTra {
             reloading_timestamp: v
                 .reloading_date
                 .map::<Result<_, Report<PostgresError>>, _>(|reloading_date| {
-                    Ok(DateTime::<Utc>::from_utc(
-                        reloading_date.and_time(v.reloading_time.ok_or_else(|| {
+                    Ok(timestamp_from_date_and_time(
+                        reloading_date,
+                        v.reloading_time.ok_or_else(|| {
                             report!(PostgresError::DataConversion).attach_printable(
                                 "expected reloading_time to be `Some` due to reloading_date",
                             )
-                        })?),
-                        Utc,
+                        })?,
                     ))
                 })
                 .transpose()?,
@@ -127,6 +133,7 @@ impl TryFrom<fiskeridir_rs::ErsTra> for NewErsTra {
             vessel_valid_from: v.vessel_info.vessel_valid_from,
             vessel_width: opt_float_to_decimal(v.vessel_info.vessel_width)
                 .change_context(PostgresError::DataConversion)?,
+            vessel_event_id: None,
         })
     }
 }

@@ -4,7 +4,7 @@ use crate::*;
 use async_trait::async_trait;
 use chrono::{DateTime, Duration, Utc};
 use error_stack::Result;
-use fiskeridir_rs::{CallSign, LandingId};
+use fiskeridir_rs::{CallSign, DeliveryPointId, LandingId};
 use futures::Stream;
 
 #[async_trait]
@@ -26,6 +26,7 @@ pub trait WebApiOutboundPort {
         &self,
         mmsi: Mmsi,
         range: &DateRange,
+        user_policy: AisPermission,
     ) -> PinBoxStream<'_, AisPosition, QueryError>;
     fn vms_positions(
         &self,
@@ -37,6 +38,7 @@ pub trait WebApiOutboundPort {
         mmsi: Option<Mmsi>,
         call_sign: Option<&CallSign>,
         range: &DateRange,
+        user_policy: AisPermission,
     ) -> PinBoxStream<'_, AisVmsPosition, QueryError>;
     fn species(&self) -> PinBoxStream<'_, Species, QueryError>;
     fn species_fiskeridir(&self) -> PinBoxStream<'_, SpeciesFiskeridir, QueryError>;
@@ -83,6 +85,10 @@ pub trait WebApiOutboundPort {
     ) -> PinBoxStream<'_, FishingFacility, QueryError>;
     async fn get_user(&self, user_id: BarentswatchUserId) -> Result<Option<User>, QueryError>;
     fn delivery_points(&self) -> PinBoxStream<'_, DeliveryPoint, QueryError>;
+    fn weather(
+        &self,
+        query: WeatherQuery,
+    ) -> Result<PinBoxStream<'_, Weather, QueryError>, QueryError>;
 }
 
 #[async_trait]
@@ -120,6 +126,7 @@ pub trait TripAssemblerOutboundPort: Send + Sync {
 
 #[async_trait]
 pub trait TripPrecisionOutboundPort: Send + Sync {
+    async fn all_vessels(&self) -> Result<Vec<Vessel>, QueryError>;
     async fn ports_of_trip(&self, trip_id: TripId) -> Result<TripPorts, QueryError>;
     async fn dock_points_of_trip(&self, trip_id: TripId) -> Result<TripDockPoints, QueryError>;
     async fn ais_vms_positions(
@@ -199,4 +206,22 @@ pub trait TripDistancerOutbound: Send + Sync {
 #[async_trait]
 pub trait MatrixCacheVersion: Send + Sync {
     async fn increment(&self) -> Result<(), UpdateError>;
+}
+
+#[async_trait]
+pub trait VerificationOutbound: Send + Sync {
+    async fn verify_database(&self) -> Result<(), QueryError>;
+}
+
+#[async_trait]
+pub trait TestHelperOutbound: Send + Sync {
+    async fn all_dep(&self) -> Vec<Departure>;
+    async fn all_por(&self) -> Vec<Arrival>;
+    async fn all_ais(&self) -> Vec<AisPosition>;
+    async fn all_vms(&self) -> Vec<VmsPosition>;
+    async fn all_ais_vms(&self) -> Vec<AisVmsPosition>;
+    async fn delivery_points_log(&self) -> Vec<serde_json::Value>;
+    async fn port(&self, port_id: &str) -> Option<Port>;
+    async fn delivery_point(&self, id: &DeliveryPointId) -> Option<DeliveryPoint>;
+    async fn dock_points_of_port(&self, port_id: &str) -> Vec<PortDockPoint>;
 }

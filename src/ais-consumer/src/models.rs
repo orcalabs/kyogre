@@ -123,6 +123,12 @@ impl TryFrom<AisStatic> for NewAisStatic {
             ship_length: a.ship_length,
             ship_width: a.ship_width,
             ship_type: a.ship_type,
+            dimension_a: a.dimension_a,
+            dimension_b: a.dimension_b,
+            dimension_c: a.dimension_c,
+            dimension_d: a.dimension_d,
+            position_fixing_device_type: a.position_fixing_device_type,
+            report_class: a.report_class,
         })
     }
 }
@@ -229,6 +235,37 @@ pub fn create_eta_string_value(timestamp: &DateTime<Utc>) -> String {
         timestamp.hour(),
         timestamp.minute()
     )
+}
+
+impl PartialEq<kyogre_core::AisVesselHistoric> for AisStatic {
+    fn eq(&self, other: &kyogre_core::AisVesselHistoric) -> bool {
+        other.mmsi == self.mmsi
+            && other.imo_number == self.imo_number
+            && other.call_sign.as_ref().map(|c| c.as_ref()) == self.call_sign.as_deref()
+            && other.name == self.name
+            && other.ship_width == self.ship_width
+            && other.ship_length == self.ship_length
+            && other.eta.map(|t| t.with_year(1980).unwrap().timestamp())
+                == self.eta.as_ref().map(|t| {
+                    let t = parse_eta_value(t).unwrap().unwrap();
+                    t.with_year(1980)
+                        .unwrap()
+                        .with_second(0)
+                        .unwrap()
+                        .with_nanosecond(0)
+                        .unwrap()
+                        .timestamp()
+                })
+            && other.destination == self.destination
+            && other.message_type_id == (self.message_type_id as i32)
+            && other.ship_type == self.ship_type
+            && other.dimension_a == self.dimension_a
+            && other.dimension_b == self.dimension_b
+            && other.dimension_c == self.dimension_c
+            && other.dimension_d == self.dimension_d
+            && other.position_fixing_device_type == self.position_fixing_device_type
+            && other.report_class == self.report_class
+    }
 }
 
 impl PartialEq<kyogre_core::AisVessel> for AisStatic {

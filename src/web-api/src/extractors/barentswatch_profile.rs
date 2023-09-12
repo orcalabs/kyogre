@@ -2,6 +2,7 @@ use std::pin::Pin;
 
 use actix_web::FromRequest;
 use futures::Future;
+use kyogre_core::AisPermission;
 use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 use strum::EnumIter;
@@ -13,6 +14,20 @@ use crate::{error::ApiError, settings::BW_PROFILES_URL};
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, EnumIter)]
 pub enum BwPolicy {
     BwReadExtendedFishingFacility,
+    BwAisFiskinfo,
+    #[serde(other)]
+    Other,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, EnumIter)]
+pub enum BwRole {
+    BwDownloadFishingfacility,
+    BwEksternFiskInfoUtvikler,
+    BwFiskerikyndig,
+    BwFiskinfoAdmin,
+    BwUtdanningsBruker,
+    BwViewAis,
+    BwYrkesfisker,
     #[serde(other)]
     Other,
 }
@@ -26,6 +41,32 @@ pub struct BwUser {
 pub struct BwProfile {
     pub user: BwUser,
     pub policies: Vec<BwPolicy>,
+    pub roles: Vec<BwRole>,
+}
+
+impl From<BwProfile> for AisPermission {
+    fn from(value: BwProfile) -> Self {
+        let ais_policy = value.policies.iter().any(|v| *v == BwPolicy::BwAisFiskinfo);
+        if ais_policy {
+            value
+                .roles
+                .iter()
+                .find(|v| match v {
+                    BwRole::BwDownloadFishingfacility
+                    | BwRole::BwEksternFiskInfoUtvikler
+                    | BwRole::BwFiskerikyndig
+                    | BwRole::BwFiskinfoAdmin
+                    | BwRole::BwUtdanningsBruker
+                    | BwRole::BwViewAis
+                    | BwRole::BwYrkesfisker => true,
+                    BwRole::Other => false,
+                })
+                .map(|_| AisPermission::All)
+                .unwrap_or_default()
+        } else {
+            AisPermission::default()
+        }
+    }
 }
 
 impl FromRequest for BwProfile {

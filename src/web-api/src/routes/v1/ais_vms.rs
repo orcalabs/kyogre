@@ -1,21 +1,14 @@
-use std::pin::Pin;
-
-use crate::{error::ApiError, response::to_bytes, Database};
-use actix_web::{http::header::ContentType, web, HttpResponse};
-use async_stream::{__private::AsyncStream, try_stream};
+use crate::{ais_to_streaming_response, error::ApiError, extractors::BwProfile, Database};
+use actix_web::{web, HttpResponse};
+use async_stream::try_stream;
 use chrono::{DateTime, Duration, Utc};
 use fiskeridir_rs::CallSign;
-use futures::{StreamExt, TryStreamExt};
-use kyogre_core::{AisPosition, DateRange, Mmsi, VmsPosition};
-use once_cell::sync::Lazy;
+use kyogre_core::{AisPermission, AisPosition, DateRange, Mmsi, VmsPosition};
 use serde::{Deserialize, Serialize};
 use tracing::{event, Level};
 use utoipa::{IntoParams, ToSchema};
 
 use super::ais::NavigationStatus;
-
-pub static AIS_VMS_DETAILS_INTERVAL: Lazy<Duration> = Lazy::new(|| Duration::minutes(30));
-pub static MISSING_DATA_DURATION: Lazy<Duration> = Lazy::new(|| Duration::minutes(70));
 
 #[derive(Debug, Deserialize, IntoParams)]
 #[serde(rename_all = "camelCase")]
@@ -42,6 +35,7 @@ pub struct AisVmsParameters {
 pub async fn ais_vms_positions<T: Database + 'static>(
     db: web::Data<T>,
     params: web::Query<AisVmsParameters>,
+    profile: Option<BwProfile>,
 ) -> Result<HttpResponse, ApiError> {
     if params.mmsi.is_none() && params.call_sign.is_none() {
         return Err(ApiError::MissingMmsiOrCallSign);
@@ -62,72 +56,18 @@ pub async fn ais_vms_positions<T: Database + 'static>(
         ApiError::InvalidDateRange
     })?;
 
-    let stream: AsyncStream<Result<web::Bytes, ApiError>, _> = try_stream! {
-        let mut stream = db
-            .ais_vms_positions(params.mmsi, params.call_sign.as_ref(), &range)
+    ais_to_streaming_response! {
+        db.ais_vms_positions(params.mmsi, params.call_sign.as_ref(), &range, profile.map(AisPermission::from).unwrap_or_default())
             .map_err(|e| {
-                event!(Level::ERROR, "failed to retrieve ais/vms positions: {:?}", e);
+                event!(
+                    Level::ERROR,
+                    "failed to retrieve ais/vms positions: {:?}",
+                    e
+                );
                 ApiError::InternalServerError
             })
-            .peekable();
-
-        yield web::Bytes::from_static(b"[");
-
-        if let Some(first) = stream.next().await {
-            let pos = AisVmsPosition::from(first?);
-            yield to_bytes(&pos)?;
-
-            let mut current_detail_timstamp = pos.timestamp;
-
-            while let Some(item) = stream.next().await {
-                yield web::Bytes::from_static(b",");
-
-                let item = item?;
-                let next = Pin::new(&mut stream).peek().await;
-
-                let position = if next.is_none()
-                    || (item.timestamp - current_detail_timstamp >= *AIS_VMS_DETAILS_INTERVAL)
-                {
-                    let mut pos = AisVmsPosition::from(item);
-
-                    if let Some(next) = next {
-                        if next.is_err() {
-                            // Error has already been logged in `map_err` above
-                            Err(ApiError::InternalServerError)?
-                        }
-
-                        // `unwrap` is safe because of `is_err` check above
-                        if next.as_ref().unwrap().timestamp - pos.timestamp >= *MISSING_DATA_DURATION
-                        {
-                            if let Some(ref mut det) = pos.det {
-                                det.missing_data = true;
-                            }
-                        }
-                    }
-
-                    current_detail_timstamp = pos.timestamp;
-                    pos
-                } else {
-                    AisVmsPosition {
-                        lat: item.latitude,
-                        lon: item.longitude,
-                        timestamp: item.timestamp,
-                        cog: item.course_over_ground,
-                        speed: item.speed,
-                        det: None,
-                    }
-                };
-
-                yield to_bytes(&position)?;
-            }
-        };
-
-        yield web::Bytes::from_static(b"]");
-    };
-
-    Ok(HttpResponse::Ok()
-        .content_type(ContentType::json())
-        .streaming(Box::pin(stream)))
+            .map_ok(AisVmsPosition::from)
+    }
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema)]

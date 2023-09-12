@@ -1,5 +1,5 @@
 use super::{barentswatch_helper::BarentswatchHelper, test_client::ApiClient};
-use chrono::{DateTime, Datelike, Duration, Utc};
+use chrono::{DateTime, Duration, Utc};
 use dockertest::{DockerTest, Source, StaticManagementPolicy};
 use duckdb_rs::{adapter::CacheMode, CacheStorage};
 use fiskeridir_rs::{ErsDep, ErsPor};
@@ -15,9 +15,8 @@ use std::sync::Once;
 use std::{ops::SubAssign, panic};
 use strum::IntoEnumIterator;
 use tokio::sync::OnceCell;
-use tracing::{event, Level};
 use tracing_subscriber::FmtSubscriber;
-use trip_assembler::{ErsTripAssembler, LandingTripAssembler, TripAssembler};
+use trip_assembler::{ErsTripAssembler, LandingTripAssembler};
 use vessel_benchmark::*;
 use web_api::{
     routes::v1::{haul, landing},
@@ -44,14 +43,66 @@ pub struct TestHelper {
     landings_assembler: LandingTripAssembler,
     weight_per_hour: WeightPerHour,
     ers_message_number: u32,
+    db_settings: PsqlSettings,
 }
 
 impl TestHelper {
+    pub async fn builder(&self) -> TestStateBuilder {
+        let transition_log = Box::new(
+            machine::PostgresAdapter::new(&self.db_settings)
+                .await
+                .unwrap(),
+        );
+
+        let db = Box::new(self.adapter().clone());
+        let trip_assemblers = vec![
+            Box::<trip_assembler::LandingTripAssembler>::default() as Box<dyn TripAssembler>,
+            Box::<trip_assembler::ErsTripAssembler>::default() as Box<dyn TripAssembler>,
+        ];
+
+        let benchmarks = vec![Box::<WeightPerHour>::default() as Box<dyn VesselBenchmark>];
+        let haul_distributors =
+            vec![Box::<haul_distributor::AisVms>::default() as Box<dyn HaulDistributor>];
+
+        let trip_distancers =
+            vec![Box::<trip_distancer::AisVms>::default() as Box<dyn TripDistancer>];
+
+        let shared_state = SharedState::new(
+            db.clone(),
+            db.clone(),
+            db.clone(),
+            db.clone(),
+            db.clone(),
+            db.clone(),
+            db.clone(),
+            db.clone(),
+            db.clone(),
+            db.clone(),
+            db.clone(),
+            db,
+            None,
+            trip_assemblers,
+            benchmarks,
+            haul_distributors,
+            trip_distancers,
+        );
+
+        let step = Step::initial(ScrapeState, shared_state, transition_log);
+
+        let engine = FisheryEngine::Scrape(step);
+
+        TestStateBuilder::new(
+            Box::new(self.adapter().clone()),
+            Box::new(self.adapter().clone()),
+            engine,
+        )
+    }
     pub fn adapter(&self) -> &PostgresAdapter {
         &self.db.db
     }
     async fn spawn_app(
         db: PostgresAdapter,
+        db_settings: PsqlSettings,
         app: App,
         bw_helper: &'static BarentswatchHelper,
         duck_db: Option<duckdb_rs::Client>,
@@ -69,6 +120,7 @@ impl TestHelper {
             ers_message_number: 1,
             weight_per_hour: WeightPerHour::default(),
             duck_db,
+            db_settings,
         }
     }
     pub async fn do_benchmarks(&self) {
@@ -200,13 +252,7 @@ impl TestHelper {
             fiskeridir_rs::Landing::test_default(random::<i64>().abs(), Some(vessel_id.0));
         landing2.landing_timestamp = *end;
 
-        let year = landing.landing_timestamp.year() as u32;
-
-        self.db
-            .db
-            .add_landings(vec![landing, landing2], year)
-            .await
-            .unwrap();
+        self.db.add_landings(vec![landing, landing2]).await;
 
         self.add_trip(vessel_id, start, end, TripAssemblerId::Landings)
             .await
@@ -251,7 +297,7 @@ impl TestHelper {
 
 pub async fn test<T, Fut>(test: T)
 where
-    T: FnOnce(TestHelper) -> Fut + panic::UnwindSafe + Send + Sync + 'static,
+    T: FnOnce(TestHelper, TestStateBuilder) -> Fut + panic::UnwindSafe + Send + Sync + 'static,
     Fut: Future<Output = ()> + Send + 'static,
 {
     test_impl(test, false).await;
@@ -259,22 +305,28 @@ where
 
 pub async fn test_with_cache<T, Fut>(test: T)
 where
-    T: FnOnce(TestHelper) -> Fut + panic::UnwindSafe + Send + Sync + Clone + 'static,
+    T: FnOnce(TestHelper, TestStateBuilder) -> Fut
+        + panic::UnwindSafe
+        + Send
+        + Sync
+        + Clone
+        + 'static,
     Fut: Future<Output = ()> + Send + 'static,
 {
-    test_impl(test.clone(), true).await;
+    test_impl(test.clone(), false).await;
+    test_impl(test, true).await;
 }
 
 async fn test_impl<T, Fut>(test: T, run_cache_test: bool)
 where
-    T: FnOnce(TestHelper) -> Fut + panic::UnwindSafe + Send + Sync + 'static,
+    T: FnOnce(TestHelper, TestStateBuilder) -> Fut + panic::UnwindSafe + Send + Sync + 'static,
     Fut: Future<Output = ()> + Send + 'static,
 {
     let mut docker_test = DockerTest::new().with_default_source(Source::DockerHub);
     TRACING.call_once(|| {
         tracing::subscriber::set_global_default(
             FmtSubscriber::builder()
-                .with_max_level(tracing::Level::INFO)
+                .with_max_level(tracing::Level::ERROR)
                 .finish(),
         )
         .unwrap();
@@ -372,7 +424,8 @@ where
 
             let adapter = PostgresAdapter::new(&db_settings).await.unwrap();
             let app = TestHelper::spawn_app(
-                adapter,
+                adapter.clone(),
+                db_settings,
                 App::build(&api_settings).await,
                 bw_helper,
                 duck_db_client,
@@ -380,9 +433,12 @@ where
             .await;
 
             if run_cache_test {
-                event!(Level::INFO, "cache_test");
+                dbg!("cache_test");
             }
-            test(app).await;
+            let builder = app.builder().await;
+            test(app, builder).await;
+
+            adapter.verify_database().await.unwrap();
 
             test_db.drop_db(&db_name).await;
         })

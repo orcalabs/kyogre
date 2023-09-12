@@ -20,6 +20,13 @@ pub struct MattilsynetDeliveryPoint {
     pub postal_code: Option<u32>,
 }
 
+#[derive(Clone, Debug)]
+pub struct ManualDeliveryPoint {
+    pub id: DeliveryPointId,
+    pub name: String,
+    pub type_id: DeliveryPointType,
+}
+
 /// Defines different types of delivery points, these values are our own creation and does not
 /// originate from a official register.
 #[derive(Debug, Copy, Clone, PartialEq, FromPrimitive, Eq, Serialize_repr, Deserialize_repr)]

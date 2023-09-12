@@ -71,14 +71,6 @@ where
 
     let mut server = HttpServer::new(move || {
         let mut scope = web::scope("/v1.0")
-            .route(
-                "/ais_track/{mmsi}",
-                web::get().to(routes::v1::ais::ais_track::<T>),
-            )
-            .route(
-                "/ais_vms_positions",
-                web::get().to(routes::v1::ais_vms::ais_vms_positions::<T>),
-            )
             .route("/species", web::get().to(routes::v1::species::species::<T>))
             .route(
                 "/species_groups",
@@ -140,7 +132,16 @@ where
             .route(
                 "/delivery_points",
                 web::get().to(routes::v1::delivery_point::delivery_points::<T>),
-            );
+            )
+            .route(
+                "/ais_track/{mmsi}",
+                web::get().to(routes::v1::ais::ais_track::<T>),
+            )
+            .route(
+                "/ais_vms_positions",
+                web::get().to(routes::v1::ais_vms::ais_vms_positions::<T>),
+            )
+            .route("/weather", web::get().to(routes::v1::weather::weather::<T>));
 
         if let Some(ref guard) = bw_jwt_guard {
             scope = scope

@@ -8,7 +8,6 @@ use rand::random;
 use std::panic;
 use std::sync::Once;
 use tracing_subscriber::FmtSubscriber;
-use trip_assembler::TripAssembler;
 
 static TRACING: Once = Once::new();
 static DATABASE_PASSWORD: &str = "test123";
@@ -100,8 +99,11 @@ where
     S: TimeAndDate,
 {
     DateRange::new(
-        DateTime::<Utc>::from_utc(NaiveDateTime::new(start.date(), start.time()), Utc),
-        DateTime::<Utc>::from_utc(NaiveDateTime::new(end.date(), end.time()), Utc),
+        DateTime::<Utc>::from_naive_utc_and_offset(
+            NaiveDateTime::new(start.date(), start.time()),
+            Utc,
+        ),
+        DateTime::<Utc>::from_naive_utc_and_offset(NaiveDateTime::new(end.date(), end.time()), Utc),
     )
     .unwrap()
 }
@@ -159,10 +161,14 @@ where
 
             let adapter = PostgresAdapter::new(&db_settings).await.unwrap();
             let helper = TestHelper {
-                db: TestDb { db: adapter },
+                db: TestDb {
+                    db: adapter.clone(),
+                },
             };
 
             test(helper).await;
+
+            adapter.verify_database().await.unwrap();
 
             test_db.drop_db(&db_name).await;
         })

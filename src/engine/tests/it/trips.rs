@@ -1,6 +1,5 @@
 use crate::helper::*;
 use chrono::{TimeZone, Utc};
-use engine::*;
 use kyogre_core::*;
 use machine::StateMachine;
 
@@ -27,11 +26,7 @@ async fn test_trips_only_generates_trips_for_ers_assembler_if_vessel_has_ers_dat
             .unwrap();
 
         let landing = fiskeridir_rs::Landing::test_default(1, Some(vessel_id.0));
-        helper
-            .adapter()
-            .add_landings(vec![landing.clone()], 2023)
-            .await
-            .unwrap();
+        helper.db.add_landings(vec![landing.clone()]).await;
 
         let engine = FisheryEngine::Trips(Step::initial(
             TripsState,
@@ -54,11 +49,7 @@ async fn test_trips_generates_trips_for_landings_assembler_if_vessel_has_no_ers_
         let fiskeridir_vessel_id = FiskeridirVesselId(11);
 
         let landing = fiskeridir_rs::Landing::test_default(1, Some(fiskeridir_vessel_id.0));
-        helper
-            .adapter()
-            .add_landings(vec![landing.clone()], 2023)
-            .await
-            .unwrap();
+        helper.db.add_landings(vec![landing.clone()]).await;
 
         let engine = FisheryEngine::Trips(Step::initial(
             TripsState,

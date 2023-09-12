@@ -68,12 +68,12 @@ impl LandingSet {
         }
     }
 
-    pub(crate) fn new<T: IntoIterator<Item = fiskeridir_rs::Landing>>(
+    pub(crate) fn new<T: Iterator<Item = fiskeridir_rs::Landing>>(
         landings: T,
         data_year: u32,
     ) -> Result<LandingSet, PostgresError> {
         let mut set = LandingSet::default();
-        for l in landings.into_iter() {
+        for l in landings {
             set.add_vessel(&l);
             set.add_species(&l);
             set.add_species_fao(&l);
@@ -86,7 +86,7 @@ impl LandingSet {
             set.add_municipality(&l);
             set.add_county(&l);
             set.add_landing(&l, data_year)?;
-            set.add_landing_entry(l)?;
+            set.add_landing_entry(&l)?;
         }
         Ok(set)
     }
@@ -172,7 +172,7 @@ impl LandingSet {
         }
     }
 
-    fn add_landing_entry(&mut self, landing: fiskeridir_rs::Landing) -> Result<(), PostgresError> {
+    fn add_landing_entry(&mut self, landing: &fiskeridir_rs::Landing) -> Result<(), PostgresError> {
         self.landing_entries
             .push(NewLandingEntry::try_from(landing)?);
         Ok(())

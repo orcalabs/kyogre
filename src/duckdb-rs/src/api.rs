@@ -379,7 +379,7 @@ impl TryFrom<HaulFeatures> for HaulQueryWrapper {
                         .collect::<std::result::Result<Vec<_>, Error>>()
                 })
                 .transpose()?,
-            species_group_ids: (!value.vessel_length_groups.is_empty())
+            species_group_ids: (!value.species_group_ids.is_empty())
                 .then(|| {
                     value
                         .species_group_ids

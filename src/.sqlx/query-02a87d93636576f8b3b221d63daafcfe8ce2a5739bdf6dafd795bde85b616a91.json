@@ -1,0 +1,72 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    AVG(altitude) AS \"altitude!\",\n    AVG(wind_speed_10m) AS \"wind_speed_10m\",\n    AVG(wind_direction_10m) AS \"wind_direction_10m\",\n    AVG(air_temperature_2m) AS \"air_temperature_2m\",\n    AVG(relative_humidity_2m) AS \"relative_humidity_2m\",\n    AVG(air_pressure_at_sea_level) AS \"air_pressure_at_sea_level\",\n    AVG(precipitation_amount) AS \"precipitation_amount\",\n    AVG(land_area_fraction) AS \"land_area_fraction!\",\n    AVG(cloud_area_fraction) AS \"cloud_area_fraction\"\nFROM\n    weather\nWHERE\n    \"timestamp\" BETWEEN $1::TIMESTAMPTZ AND $2::TIMESTAMPTZ\n    AND (\n        $3::INT[] IS NULL\n        OR weather_location_id = ANY ($3)\n    )\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "altitude!",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 1,
+        "name": "wind_speed_10m",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 2,
+        "name": "wind_direction_10m",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 3,
+        "name": "air_temperature_2m",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 4,
+        "name": "relative_humidity_2m",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 5,
+        "name": "air_pressure_at_sea_level",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 6,
+        "name": "precipitation_amount",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 7,
+        "name": "land_area_fraction!",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 8,
+        "name": "cloud_area_fraction",
+        "type_info": "Numeric"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Timestamptz",
+        "Timestamptz",
+        "Int4Array"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "02a87d93636576f8b3b221d63daafcfe8ce2a5739bdf6dafd795bde85b616a91"
+}

@@ -12,9 +12,9 @@ duckdb = { version = "0.8", features = ["r2d2", "bundled"] }
 r2d2 = { version = "0.8" }
 config = { version = "0.13.3", features = ["yaml"] }
 tracing = "0.1.37"
-serde = { version = "1.0.183", features = ["derive"] }
-serde_json = "1.0.104"
-chrono = { version = "0.4.26", features = ["serde"] }
+serde = { version = "1.0.188", features = ["derive"] }
+serde_json = "1.0.106"
+chrono = { version = "0.4.30", features = ["serde"] }
 error-stack = { workspace = true }
 orca-core = { workspace = true, features = ["telemetry"] }
 orca-statemachine = { version = "0.39.0", registry = "orcalabs-orcastrator", features = [
@@ -27,7 +27,7 @@ tonic = { version = "0.9.2", features = ["gzip"] }
 prost = "0.11"
 futures-core = "0.3"
 futures-util = "0.3"
-tokio = { version = "1.31.0", features = [
+tokio = { version = "1.32.0", features = [
     "rt-multi-thread",
     "macros",
     "sync",

@@ -1,13 +1,13 @@
 use crate::{
     ers::statemachine::ErsStatemachine, precision::TripPrecisionCalculator, DeliveryPointPrecision,
-    DockPointPrecision, PortPrecision, PrecisionConfig, StartSearchPoint, TripAssembler,
-    TripAssemblerError, TripAssemblerState, TripPrecisionError,
+    DockPointPrecision, PortPrecision, PrecisionConfig, StartSearchPoint,
 };
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use error_stack::{IntoReport, Result, ResultExt};
 use kyogre_core::{
-    FiskeridirVesselId, PrecisionDirection, RelevantEventType, Trip, TripAssemblerId,
+    FiskeridirVesselId, PrecisionDirection, RelevantEventType, Trip, TripAssembler,
+    TripAssemblerError, TripAssemblerId, TripAssemblerState, TripPrecisionError,
     TripPrecisionOutboundPort, TripPrecisionUpdate, TripsConflictStrategy, Vessel, VesselEventData,
     VesselEventDetailed,
 };
@@ -95,6 +95,7 @@ impl ErsEvent {
             VesselEventData::Landing => None,
             VesselEventData::ErsDca => None,
             VesselEventData::ErsTra => None,
+            VesselEventData::Haul => None,
         }
         .map(|(event_type, port_id, estimated_timestamp)| ErsEvent {
             event_id: v.event_id,

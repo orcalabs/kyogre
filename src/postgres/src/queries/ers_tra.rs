@@ -5,11 +5,24 @@ use crate::{
     PostgresAdapter,
 };
 use error_stack::{IntoReport, Result, ResultExt};
-use unnest_insert::UnnestInsert;
+use kyogre_core::VesselEventType;
+use unnest_insert::{UnnestInsert, UnnestInsertReturning};
 
 impl PostgresAdapter {
     pub(crate) async fn add_ers_tra_set(&self, set: ErsTraSet) -> Result<(), PostgresError> {
         let prepared_set = set.prepare();
+
+        let earliest_tra = prepared_set
+            .ers_tra
+            .iter()
+            .flat_map(|v| {
+                if let Some(ts) = v.reloading_timestamp {
+                    vec![v.message_timestamp, ts]
+                } else {
+                    vec![v.message_timestamp]
+                }
+            })
+            .min();
 
         let mut tx = self.begin().await?;
 
@@ -30,6 +43,10 @@ impl PostgresAdapter {
         self.add_ers_tra_catches(prepared_set.catches, &mut tx)
             .await?;
 
+        if let Some(ts) = earliest_tra {
+            self.update_trips_refresh_boundary(ts, &mut tx).await?;
+        }
+
         tx.commit()
             .await
             .into_report()
@@ -43,11 +60,18 @@ impl PostgresAdapter {
         ers_tra: Vec<NewErsTra>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
     ) -> Result<(), PostgresError> {
-        NewErsTra::unnest_insert(ers_tra, &mut **tx)
+        let event_ids = NewErsTra::unnest_insert_returning(ers_tra, &mut **tx)
             .await
             .into_report()
-            .change_context(PostgresError::Query)
-            .map(|_| ())
+            .change_context(PostgresError::Query)?
+            .into_iter()
+            .filter_map(|r| r.vessel_event_id)
+            .collect();
+
+        self.connect_trip_to_events(event_ids, VesselEventType::ErsTra, tx)
+            .await?;
+
+        Ok(())
     }
 
     pub(crate) async fn add_ers_tra_catches<'a>(
@@ -60,22 +84,5 @@ impl PostgresAdapter {
             .into_report()
             .change_context(PostgresError::Query)
             .map(|_| ())
-    }
-
-    pub(crate) async fn delete_ers_tra_catches_impl(&self, year: u32) -> Result<(), PostgresError> {
-        sqlx::query!(
-            r#"
-DELETE FROM ers_tra_catches c USING ers_tra e
-WHERE
-    e.message_id = c.message_id
-    AND e.relevant_year = $1
-            "#,
-            year as i32
-        )
-        .execute(&self.pool)
-        .await
-        .into_report()
-        .change_context(PostgresError::Query)
-        .map(|_| ())
     }
 }

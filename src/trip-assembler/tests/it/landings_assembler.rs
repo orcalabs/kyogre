@@ -1,10 +1,10 @@
 use crate::helper::test;
 use chrono::{Duration, TimeZone, Utc};
 use kyogre_core::{
-    DateRange, FiskeridirVesselId, ScraperInboundPort, Trip, TripAssemblerId,
+    DateRange, FiskeridirVesselId, ScraperInboundPort, Trip, TripAssembler, TripAssemblerId,
     TripAssemblerOutboundPort, TripId,
 };
-use trip_assembler::{LandingTripAssembler, TripAssembler};
+use trip_assembler::LandingTripAssembler;
 
 #[tokio::test]
 async fn test_produces_new_trips_without_replacing_existing_ones() {
@@ -14,10 +14,7 @@ async fn test_produces_new_trips_without_replacing_existing_ones() {
         let landings_assembler = LandingTripAssembler::default();
 
         let landing = fiskeridir_rs::Landing::test_default(1, Some(fiskeridir_vessel_id.0));
-        helper
-            .add_landings(vec![landing.clone()], 2023)
-            .await
-            .unwrap();
+        helper.db.add_landings(vec![landing.clone()]).await;
 
         let vessel = helper.db.vessel(fiskeridir_vessel_id).await;
         landings_assembler
@@ -27,10 +24,7 @@ async fn test_produces_new_trips_without_replacing_existing_ones() {
 
         let mut landing2 = fiskeridir_rs::Landing::test_default(2, Some(fiskeridir_vessel_id.0));
         landing2.landing_timestamp = landing.landing_timestamp + Duration::days(1);
-        helper
-            .add_landings(vec![landing2.clone()], 2023)
-            .await
-            .unwrap();
+        helper.db.add_landings(vec![landing2.clone()]).await;
 
         landings_assembler
             .produce_and_store_trips(adapter)
@@ -80,10 +74,7 @@ async fn test_produces_no_trips_with_no_new_landings() {
         let landings_assembler = LandingTripAssembler::default();
 
         let landing = fiskeridir_rs::Landing::test_default(1, Some(fiskeridir_vessel_id.0));
-        helper
-            .add_landings(vec![landing.clone()], 2023)
-            .await
-            .unwrap();
+        helper.db.add_landings(vec![landing.clone()]).await;
 
         landings_assembler
             .produce_and_store_trips(adapter)
@@ -126,10 +117,7 @@ async fn test_sets_start_of_first_trip_one_day_earlier_than_landing_timestamp() 
         let landings_assembler = LandingTripAssembler::default();
 
         let landing = fiskeridir_rs::Landing::test_default(1, Some(fiskeridir_vessel_id.0));
-        helper
-            .add_landings(vec![landing.clone()], 2023)
-            .await
-            .unwrap();
+        helper.db.add_landings(vec![landing.clone()]).await;
 
         landings_assembler
             .produce_and_store_trips(adapter)
@@ -169,9 +157,9 @@ async fn test_resolves_conflict_on_day_prior_to_most_recent_trip_end() {
         landing2.landing_timestamp += Duration::days(3);
 
         helper
-            .add_landings(vec![landing.clone(), landing2.clone()], 2023)
-            .await
-            .unwrap();
+            .db
+            .add_landings(vec![landing.clone(), landing2.clone()])
+            .await;
 
         landings_assembler
             .produce_and_store_trips(adapter)
@@ -182,9 +170,9 @@ async fn test_resolves_conflict_on_day_prior_to_most_recent_trip_end() {
         landing3.landing_timestamp = landing2.landing_timestamp - Duration::days(1);
 
         helper
-            .add_landings(vec![landing3.clone()], 2023)
-            .await
-            .unwrap();
+            .db
+            .add_landings(vec![landing.clone(), landing2.clone(), landing3.clone()])
+            .await;
 
         landings_assembler
             .produce_and_store_trips(adapter)
@@ -248,8 +236,10 @@ async fn test_other_event_types_does_not_cause_conflicts() {
         let start = Utc.timestamp_opt(100000, 1).unwrap();
         let end = Utc.timestamp_opt(200000, 1).unwrap();
 
-        helper.db.generate_landing(1, vessel_id, start).await;
-        helper.db.generate_landing(1, vessel_id, end).await;
+        helper
+            .db
+            .generate_landings(vec![(1, vessel_id, start), (1, vessel_id, end)])
+            .await;
 
         landing_assembler
             .produce_and_store_trips(adapter)

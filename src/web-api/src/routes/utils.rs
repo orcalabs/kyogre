@@ -388,7 +388,7 @@ impl<'de> Deserialize<'de> for VesselLengthGroup {
 }
 
 fn utc_from_naive(naive_date: NaiveDate) -> DateTime<Utc> {
-    DateTime::<Utc>::from_utc(naive_date.and_hms_opt(0, 0, 0).unwrap(), Utc)
+    DateTime::<Utc>::from_naive_utc_and_offset(naive_date.and_hms_opt(0, 0, 0).unwrap(), Utc)
 }
 
 pub(crate) fn months_to_date_ranges(mut months: Vec<DateTimeUtc>) -> Vec<Range<DateTime<Utc>>> {

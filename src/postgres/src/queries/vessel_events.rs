@@ -75,8 +75,8 @@ FROM
             INNER JOIN ers_departures d ON d.vessel_event_id = v.vessel_event_id
         WHERE
             v.fiskeridir_vessel_id = $1
-            AND v.report_timestamp <@ $2::tstzrange
-            AND v.report_timestamp >= '1970-01-01T00:00:00Z'::TIMESTAMPTZ
+            AND v.occurence_timestamp <@ $2::tstzrange
+            AND v.occurence_timestamp >= '1970-01-01T00:00:00Z'::TIMESTAMPTZ
         UNION
         SELECT
             v.vessel_event_id,
@@ -93,11 +93,12 @@ FROM
             INNER JOIN ers_arrivals a ON a.vessel_event_id = v.vessel_event_id
         WHERE
             v.fiskeridir_vessel_id = $1
-            AND v.report_timestamp <@ $2::tstzrange
-            AND v.report_timestamp >= '1970-01-01T00:00:00Z'::TIMESTAMPTZ
+            AND v.occurence_timestamp <@ $2::tstzrange
+            AND v.occurence_timestamp >= '1970-01-01T00:00:00Z'::TIMESTAMPTZ
     ) q
 ORDER BY
-    report_timestamp,
+    estimated_timestamp,
+    relevant_year,
     message_number
            "#,
             &(vessel_id.0 as i32),
@@ -107,5 +108,34 @@ ORDER BY
         .await
         .into_report()
         .change_context(PostgresError::Query)
+    }
+
+    pub(crate) async fn dangling_vessel_events(&self) -> Result<i64, PostgresError> {
+        sqlx::query!(
+            r#"
+SELECT
+    COUNT(*) AS "count!"
+FROM
+    vessel_events v
+    LEFT JOIN landings l ON l.vessel_event_id = v.vessel_event_id
+    LEFT JOIN ers_dca e ON e.vessel_event_id = v.vessel_event_id
+    LEFT JOIN ers_departures d ON d.vessel_event_id = v.vessel_event_id
+    LEFT JOIN ers_arrivals a ON a.vessel_event_id = v.vessel_event_id
+    LEFT JOIN ers_tra t ON t.vessel_event_id = v.vessel_event_id
+    LEFT JOIN hauls h ON h.vessel_event_id = v.vessel_event_id
+WHERE
+    l.landing_id IS NULL
+    AND e.message_id IS NULL
+    AND d.message_id IS NULL
+    AND a.message_id IS NULL
+    AND t.message_id IS NULL
+    AND h.haul_id IS NULL
+            "#
+        )
+        .fetch_one(&self.pool)
+        .await
+        .into_report()
+        .change_context(PostgresError::Query)
+        .map(|r| r.count)
     }
 }

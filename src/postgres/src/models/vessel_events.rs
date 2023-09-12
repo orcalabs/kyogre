@@ -48,6 +48,7 @@ impl TryFrom<VesselEventDetailed> for kyogre_core::VesselEventDetailed {
             VesselEventType::Landing => Ok(VesselEventData::Landing),
             VesselEventType::ErsDca => Ok(VesselEventData::ErsDca),
             VesselEventType::ErsTra => Ok(VesselEventData::ErsTra),
+            VesselEventType::Haul => Ok(VesselEventData::Haul),
             VesselEventType::ErsPor => Ok(VesselEventData::ErsPor {
                 port_id: if v.arrival_port_id.is_some() {
                     v.arrival_port_id

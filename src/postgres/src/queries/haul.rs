@@ -38,7 +38,7 @@ SELECT
         WHEN $2 = 3 THEN h.vessel_length_group
         WHEN $2 = 4 THEN h.catch_location_matrix_index
     END AS "y_index!",
-    COALESCE(SUM(living_weight::BIGINT), 0)::BIGINT AS "sum_living!"
+    COALESCE(SUM(living_weight), 0)::BIGINT AS "sum_living!"
 FROM
     hauls_matrix h
 WHERE
@@ -209,14 +209,13 @@ ORDER BY
             HaulMessage,
             r#"
 SELECT DISTINCT
+    h.haul_id,
     h.message_id,
     h.start_timestamp,
     h.stop_timestamp
 FROM
     hauls h
-    LEFT JOIN hauls_matrix m ON h.message_id = m.message_id
-    AND h.start_timestamp = m.start_timestamp
-    AND h.stop_timestamp = m.stop_timestamp
+    LEFT JOIN hauls_matrix m ON h.haul_id = m.haul_id
 WHERE
     m.haul_distributor_id IS NULL
     AND h.total_living_weight > 0
@@ -236,17 +235,13 @@ WHERE
     ) -> Result<(), PostgresError> {
         let len = values.len();
 
-        let mut message_id = Vec::with_capacity(len);
-        let mut start_timestamp = Vec::with_capacity(len);
-        let mut stop_timestamp = Vec::with_capacity(len);
+        let mut haul_id = Vec::with_capacity(len);
         let mut catch_location = Vec::with_capacity(len);
         let mut factor = Vec::with_capacity(len);
         let mut distributor_id = Vec::with_capacity(len);
 
         for v in values {
-            message_id.push(v.message_id);
-            start_timestamp.push(v.start_timestamp);
-            stop_timestamp.push(v.stop_timestamp);
+            haul_id.push(v.haul_id.0);
             catch_location.push(v.catch_location.into_inner());
             factor.push(float_to_decimal(v.factor).change_context(PostgresError::DataConversion)?);
             distributor_id.push(v.distributor_id as i32);
@@ -270,35 +265,17 @@ SET
 FROM
     (
         SELECT
-            u.message_id,
-            u.start_timestamp,
-            u.stop_timestamp,
+            u.haul_id,
             ARRAY_AGG(DISTINCT u.catch_location) AS catch_locations
         FROM
-            UNNEST(
-                $1::BIGINT[],
-                $2::TIMESTAMPTZ[],
-                $3::TIMESTAMPTZ[],
-                $4::TEXT[]
-            ) u (
-                message_id,
-                start_timestamp,
-                stop_timestamp,
-                catch_location
-            )
+            UNNEST($1::BIGINT[], $2::TEXT[]) u (haul_id, catch_location)
         GROUP BY
-            u.message_id,
-            u.start_timestamp,
-            u.stop_timestamp
+            u.haul_id
     ) q
 WHERE
-    h.message_id = q.message_id
-    AND h.start_timestamp = q.start_timestamp
-    AND h.stop_timestamp = q.stop_timestamp
+    h.haul_id = q.haul_id
             "#,
-            message_id.as_slice(),
-            start_timestamp.as_slice(),
-            stop_timestamp.as_slice(),
+            haul_id.as_slice(),
             catch_location.as_slice(),
         )
         .execute(&mut *tx)
@@ -308,19 +285,11 @@ WHERE
 
         sqlx::query!(
             r#"
-DELETE FROM hauls_matrix h USING UNNEST(
-    $1::BIGINT[],
-    $2::TIMESTAMPTZ[],
-    $3::TIMESTAMPTZ[]
-) u (message_id, start_timestamp, stop_timestamp)
+DELETE FROM hauls_matrix h USING UNNEST($1::BIGINT[]) u (haul_id)
 WHERE
-    h.message_id = u.message_id
-    AND h.start_timestamp = u.start_timestamp
-    AND h.stop_timestamp = u.stop_timestamp
+    h.haul_id = u.haul_id
             "#,
-            message_id.as_slice(),
-            start_timestamp.as_slice(),
-            stop_timestamp.as_slice(),
+            haul_id.as_slice(),
         )
         .execute(&mut *tx)
         .await
@@ -331,9 +300,7 @@ WHERE
             r#"
 INSERT INTO
     hauls_matrix (
-        message_id,
-        start_timestamp,
-        stop_timestamp,
+        haul_id,
         catch_location_matrix_index,
         catch_location,
         matrix_month_bucket,
@@ -345,51 +312,46 @@ INSERT INTO
         haul_distributor_id
     )
 SELECT
-    e.message_id,
-    e.start_timestamp,
-    e.stop_timestamp,
+    h.haul_id,
     l.matrix_index,
     l.catch_location_id,
-    HAULS_MATRIX_MONTH_BUCKET (e.start_timestamp),
-    TO_VESSEL_LENGTH_GROUP (e.vessel_length),
-    e.fiskeridir_vessel_id,
-    e.gear_group_id,
-    c.species_group_id,
-    SUM(c.living_weight) * MIN(u.factor),
+    HAULS_MATRIX_MONTH_BUCKET (h.start_timestamp),
+    TO_VESSEL_LENGTH_GROUP (h.vessel_length) AS vessel_length_group,
+    h.fiskeridir_vessel_id,
+    MIN(b.gear_group_id),
+    b.species_group_id,
+    COALESCE(SUM(b.living_weight) * MIN(u.factor), 0),
     MIN(u.haul_distributor_id)
 FROM
     UNNEST(
         $1::BIGINT[],
-        $2::TIMESTAMPTZ[],
-        $3::TIMESTAMPTZ[],
-        $4::TEXT[],
-        $5::DECIMAL[],
-        $6::INT[]
+        $2::TEXT[],
+        $3::DECIMAL[],
+        $4::INT[]
     ) u (
-        message_id,
-        start_timestamp,
-        stop_timestamp,
+        haul_id,
         catch_location,
         factor,
         haul_distributor_id
     )
-    INNER JOIN ers_dca e ON e.message_id = u.message_id
-    AND e.start_timestamp = u.start_timestamp
-    AND e.stop_timestamp = u.stop_timestamp
-    INNER JOIN ers_dca_catches c ON e.message_id = c.message_id
-    AND e.start_timestamp = c.start_timestamp
-    AND e.stop_timestamp = c.stop_timestamp
+    INNER JOIN hauls h ON h.haul_id = u.haul_id
+    INNER JOIN ers_dca_bodies b ON h.message_id = b.message_id
+    AND h.start_timestamp = b.start_timestamp
+    AND h.stop_timestamp = b.stop_timestamp
+    AND h.start_latitude = b.start_latitude
+    AND h.start_longitude = b.start_longitude
+    AND h.stop_latitude = b.stop_latitude
+    AND h.stop_longitude = b.stop_longitude
+    AND h.duration = b.duration
+    AND h.haul_distance IS NOT DISTINCT FROM b.haul_distance
+    AND h.gear_id = b.gear_id
     INNER JOIN catch_locations l ON u.catch_location = l.catch_location_id
 GROUP BY
-    e.message_id,
-    e.start_timestamp,
-    e.stop_timestamp,
-    c.species_group_id,
-    l.catch_location_id
+    h.haul_id,
+    b.species_group_id,
+    l.catch_location_id;
             "#,
-            message_id.as_slice(),
-            start_timestamp.as_slice(),
-            stop_timestamp.as_slice(),
+            haul_id.as_slice(),
             catch_location.as_slice(),
             factor.as_slice(),
             distributor_id.as_slice(),
@@ -405,6 +367,377 @@ GROUP BY
             .change_context(PostgresError::Transaction)?;
 
         Ok(())
+    }
+
+    pub(crate) async fn hauls_with_incorrect_catches(&self) -> Result<Vec<i64>, PostgresError> {
+        Ok(sqlx::query!(
+            r#"
+SELECT
+    COALESCE(h.message_id, c.message_id) AS "message_id!"
+FROM
+    (
+        SELECT
+            *,
+            JSONB_ARRAY_ELEMENTS(catches) AS catch
+        FROM
+            hauls
+    ) h
+    FULL JOIN (
+        SELECT
+            message_id,
+            start_timestamp,
+            stop_timestamp,
+            start_latitude,
+            start_longitude,
+            stop_latitude,
+            stop_longitude,
+            duration,
+            haul_distance,
+            gear_id,
+            species_fao_id,
+            SUM(living_weight) AS living_weight
+        FROM
+            ers_dca_bodies
+        WHERE
+            species_fao_id IS NOT NULL
+        GROUP BY
+            message_id,
+            start_timestamp,
+            stop_timestamp,
+            start_latitude,
+            start_longitude,
+            stop_latitude,
+            stop_longitude,
+            duration,
+            haul_distance,
+            gear_id,
+            species_fao_id
+    ) c ON h.message_id = c.message_id
+    AND h.start_timestamp = c.start_timestamp
+    AND h.stop_timestamp = c.stop_timestamp
+    AND h.start_latitude = c.start_latitude
+    AND h.start_longitude = c.start_longitude
+    AND h.stop_latitude = c.stop_latitude
+    AND h.stop_longitude = c.stop_longitude
+    AND h.duration = c.duration
+    AND h.haul_distance IS NOT DISTINCT FROM c.haul_distance
+    AND h.gear_id = c.gear_id
+    AND h.catch ->> 'species_fao_id' = c.species_fao_id
+WHERE
+    h.message_id IS NULL
+    OR c.message_id IS NULL
+    OR (h.catch ->> 'living_weight')::INT != c.living_weight
+            "#
+        )
+        .fetch_all(&self.pool)
+        .await
+        .into_report()
+        .change_context(PostgresError::Query)?
+        .into_iter()
+        .map(|r| r.message_id)
+        .collect())
+    }
+
+    pub(crate) async fn hauls_matrix_vs_ers_dca_living_weight(&self) -> Result<i64, PostgresError> {
+        sqlx::query!(
+            r#"
+SELECT
+    COALESCE(
+        (
+            SELECT
+                SUM(living_weight)
+            FROM
+                ers_dca_bodies
+        ) - (
+            SELECT
+                SUM(b.living_weight)
+            FROM
+                ers_dca_bodies b
+                LEFT JOIN hauls h ON h.message_id = b.message_id
+                AND h.start_timestamp = b.start_timestamp
+                AND h.stop_timestamp = b.stop_timestamp
+                AND h.start_latitude = b.start_latitude
+                AND h.start_longitude = b.start_longitude
+                AND h.stop_latitude = b.stop_latitude
+                AND h.stop_longitude = b.stop_longitude
+                AND h.duration = b.duration
+                AND h.haul_distance IS NOT DISTINCT FROM b.haul_distance
+                AND h.gear_id = b.gear_id
+                LEFT JOIN hauls_matrix m ON h.haul_id = m.haul_id
+            WHERE
+                m.haul_id IS NULL
+        ) - (
+            SELECT
+                SUM(living_weight)
+            FROM
+                hauls_matrix
+        ),
+        0
+    )::BIGINT AS "sum!"
+            "#
+        )
+        .fetch_one(&self.pool)
+        .await
+        .into_report()
+        .change_context(PostgresError::Query)
+        .map(|r| r.sum)
+    }
+
+    pub(crate) async fn add_hauls<'a>(
+        &'a self,
+        message_ids: &[i64],
+        tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
+    ) -> Result<(), PostgresError> {
+        let event_ids = sqlx::query!(
+            r#"
+INSERT INTO
+    hauls (
+        message_id,
+        message_timestamp,
+        start_timestamp,
+        stop_timestamp,
+        ers_activity_id,
+        duration,
+        haul_distance,
+        ocean_depth_end,
+        ocean_depth_start,
+        quota_type_id,
+        start_latitude,
+        start_longitude,
+        stop_latitude,
+        stop_longitude,
+        fiskeridir_vessel_id,
+        vessel_call_sign,
+        vessel_call_sign_ers,
+        vessel_name,
+        vessel_name_ers,
+        vessel_length,
+        catch_location_start,
+        catch_locations,
+        gear_id,
+        gear_group_id,
+        catches,
+        whale_catches
+    )
+SELECT
+    message_id,
+    MIN(message_timestamp),
+    start_timestamp,
+    stop_timestamp,
+    MIN(ers_activity_id),
+    duration,
+    haul_distance,
+    MIN(ocean_depth_end),
+    MIN(ocean_depth_start),
+    MIN(quota_type_id),
+    start_latitude,
+    start_longitude,
+    stop_latitude,
+    stop_longitude,
+    MIN(fiskeridir_vessel_id),
+    MIN(vessel_call_sign),
+    MIN(vessel_call_sign_ers),
+    MIN(vessel_name),
+    MIN(vessel_name_ers),
+    MIN(vessel_length),
+    MIN(catch_location_id),
+    CASE
+        WHEN MIN(catch_location_id) IS NULL THEN NULL
+        ELSE ARRAY[MIN(catch_location_id)]
+    END,
+    gear_id,
+    MIN(gear_group_id),
+    COALESCE(
+        JSONB_AGG(
+            JSONB_BUILD_OBJECT(
+                'living_weight',
+                COALESCE(living_weight, 0),
+                'species_fao_id',
+                species_fao_id,
+                'species_fiskeridir_id',
+                COALESCE(species_fiskeridir_id, 0),
+                'species_group_id',
+                species_group_id,
+                'species_main_group_id',
+                species_main_group_id
+            )
+        ) FILTER (
+            WHERE
+                species_fao_id IS NOT NULL
+        ),
+        '[]'
+    ),
+    COALESCE(
+        JSONB_AGG(
+            JSONB_BUILD_OBJECT(
+                'grenade_number',
+                whale_grenade_number,
+                'blubber_measure_a',
+                whale_blubber_measure_a,
+                'blubber_measure_b',
+                whale_blubber_measure_b,
+                'blubber_measure_c',
+                whale_blubber_measure_c,
+                'circumference',
+                whale_circumference,
+                'fetus_length',
+                whale_fetus_length,
+                'gender_id',
+                whale_gender_id,
+                'individual_number',
+                whale_individual_number,
+                'length',
+                whale_length
+            )
+        ) FILTER (
+            WHERE
+                whale_grenade_number IS NOT NULL
+        ),
+        '[]'
+    )
+FROM
+    (
+        SELECT
+            e.*,
+            start_timestamp,
+            stop_timestamp,
+            start_latitude,
+            start_longitude,
+            stop_latitude,
+            stop_longitude,
+            duration,
+            haul_distance,
+            gear_id,
+            MIN(gear_group_id) AS gear_group_id,
+            MIN(ocean_depth_end) AS ocean_depth_end,
+            MIN(ocean_depth_start) AS ocean_depth_start,
+            SUM(living_weight) AS living_weight,
+            species_fao_id,
+            MIN(species_fiskeridir_id) AS species_fiskeridir_id,
+            MIN(species_group_id) AS species_group_id,
+            MIN(species_main_group_id) AS species_main_group_id,
+            MIN(whale_grenade_number) AS whale_grenade_number,
+            MIN(whale_blubber_measure_a) AS whale_blubber_measure_a,
+            MIN(whale_blubber_measure_b) AS whale_blubber_measure_b,
+            MIN(whale_blubber_measure_c) AS whale_blubber_measure_c,
+            MIN(whale_circumference) AS whale_circumference,
+            MIN(whale_fetus_length) AS whale_fetus_length,
+            MIN(whale_gender_id) AS whale_gender_id,
+            MIN(whale_individual_number) AS whale_individual_number,
+            MIN(whale_length) AS whale_length,
+            MIN(catch_location_id) AS catch_location_id
+        FROM
+            ers_dca e
+            INNER JOIN ers_dca_bodies b ON e.message_id = b.message_id
+            LEFT JOIN catch_locations l ON ST_CONTAINS (
+                l.polygon,
+                ST_POINT (start_longitude, start_latitude)
+            )
+        WHERE
+            e.message_id = ANY ($1::BIGINT[])
+            AND (
+                species_fao_id IS NOT NULL
+                OR whale_grenade_number IS NOT NULL
+                OR gear_id != 0
+            )
+        GROUP BY
+            e.message_id,
+            start_timestamp,
+            stop_timestamp,
+            start_latitude,
+            start_longitude,
+            stop_latitude,
+            stop_longitude,
+            duration,
+            haul_distance,
+            gear_id,
+            species_fao_id
+    ) q
+GROUP BY
+    message_id,
+    start_timestamp,
+    stop_timestamp,
+    start_latitude,
+    start_longitude,
+    stop_latitude,
+    stop_longitude,
+    duration,
+    haul_distance,
+    gear_id
+RETURNING
+    vessel_event_id
+            "#,
+            message_ids,
+        )
+        .fetch_all(&mut **tx)
+        .await
+        .into_report()
+        .change_context(PostgresError::Query)?
+        .into_iter()
+        .filter_map(|r| r.vessel_event_id)
+        .collect();
+
+        self.connect_trip_to_events(event_ids, VesselEventType::Haul, tx)
+            .await
+    }
+
+    pub(crate) async fn add_hauls_matrix<'a>(
+        &'a self,
+        message_ids: &[i64],
+        tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
+    ) -> Result<(), PostgresError> {
+        sqlx::query!(
+            r#"
+INSERT INTO
+    hauls_matrix (
+        haul_id,
+        catch_location_matrix_index,
+        catch_location,
+        matrix_month_bucket,
+        vessel_length_group,
+        fiskeridir_vessel_id,
+        gear_group_id,
+        species_group_id,
+        living_weight
+    )
+SELECT
+    h.haul_id,
+    l.matrix_index,
+    l.catch_location_id,
+    HAULS_MATRIX_MONTH_BUCKET (h.start_timestamp),
+    TO_VESSEL_LENGTH_GROUP (h.vessel_length) AS vessel_length_group,
+    h.fiskeridir_vessel_id,
+    MIN(b.gear_group_id),
+    b.species_group_id,
+    COALESCE(SUM(b.living_weight), 0)
+FROM
+    ers_dca_bodies b
+    INNER JOIN hauls h ON h.message_id = b.message_id
+    AND h.start_timestamp = b.start_timestamp
+    AND h.stop_timestamp = b.stop_timestamp
+    AND h.start_latitude = b.start_latitude
+    AND h.start_longitude = b.start_longitude
+    AND h.stop_latitude = b.stop_latitude
+    AND h.stop_longitude = b.stop_longitude
+    AND h.duration = b.duration
+    AND h.haul_distance IS NOT DISTINCT FROM b.haul_distance
+    AND h.gear_id = b.gear_id
+    INNER JOIN catch_locations l ON h.catch_location_start = l.catch_location_id
+WHERE
+    b.message_id = ANY ($1::BIGINT[])
+    AND HAULS_MATRIX_MONTH_BUCKET (h.start_timestamp) >= 2010 * 12
+GROUP BY
+    h.haul_id,
+    b.species_group_id,
+    l.catch_location_id;
+            "#,
+            message_ids,
+        )
+        .execute(&mut **tx)
+        .await
+        .into_report()
+        .change_context(PostgresError::Query)
+        .map(|_| ())
     }
 }
 

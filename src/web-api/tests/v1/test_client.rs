@@ -13,6 +13,7 @@ use web_api::routes::v1::{
     trip::{TripsOfVesselParameters, TripsParameters},
     user::User,
     vms::VmsParameters,
+    weather::WeatherParams,
 };
 
 #[derive(Debug, Clone)]
@@ -60,7 +61,12 @@ impl ApiClient {
         request.send().await.unwrap()
     }
 
-    pub async fn get_ais_track(&self, mmsi: Mmsi, params: AisTrackParameters) -> Response {
+    pub async fn get_ais_track(
+        &self,
+        mmsi: Mmsi,
+        params: AisTrackParameters,
+        token: Option<String>,
+    ) -> Response {
         let mut url_params = Vec::new();
 
         if let Some(s) = params.start {
@@ -71,11 +77,25 @@ impl ApiClient {
             url_params.push((("end".to_owned()), s.to_string()));
         }
 
-        self.get(format!("ais_track/{}", mmsi.0), url_params.as_slice(), None)
-            .await
+        let headers = token.map(|v| {
+            let mut headers = HeaderMap::new();
+            headers.insert("bw-token", v.try_into().unwrap());
+            headers
+        });
+
+        self.get(
+            format!("ais_track/{}", mmsi.0),
+            url_params.as_slice(),
+            headers,
+        )
+        .await
     }
 
-    pub async fn get_ais_vms_positions(&self, params: AisVmsParameters) -> Response {
+    pub async fn get_ais_vms_positions(
+        &self,
+        params: AisVmsParameters,
+        token: Option<String>,
+    ) -> Response {
         let mut url_params = Vec::new();
 
         if let Some(s) = params.mmsi {
@@ -94,7 +114,13 @@ impl ApiClient {
             url_params.push((("end".to_owned()), s.to_string()));
         }
 
-        self.get("ais_vms_positions", url_params.as_slice(), None)
+        let headers = token.map(|v| {
+            let mut headers = HeaderMap::new();
+            headers.insert("bw-token", v.try_into().unwrap());
+            headers
+        });
+
+        self.get("ais_vms_positions", url_params.as_slice(), headers)
             .await
     }
 
@@ -577,6 +603,19 @@ impl ApiClient {
         headers.insert("bw-token", token.try_into().unwrap());
 
         self.put("user", user, Some(headers)).await
+    }
+    pub async fn get_weather(&self, params: WeatherParams) -> Response {
+        let mut parameters = Vec::new();
+
+        if let Some(start_date) = params.start_date {
+            parameters.push(("startDate".to_string(), start_date.to_string()))
+        }
+
+        if let Some(end_date) = params.end_date {
+            parameters.push(("endDate".to_string(), end_date.to_string()))
+        }
+
+        self.get("weather", &parameters, None).await
     }
 }
 

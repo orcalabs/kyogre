@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO\n    manual_delivery_points (\n    delivery_point_id,delivery_point_type_id,name\n   )\nSELECT\n    *\nFROM\n    UNNEST(\n        $1::TEXT[],$2::INT[],$3::TEXT[]\n    )\n        ON CONFLICT (delivery_point_id) DO UPDATE SET delivery_point_type_id = EXCLUDED.delivery_point_type_id,name = EXCLUDED.name",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "TextArray",
+        "Int4Array",
+        "TextArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "88962b9009529eb8771ffe6dd249b7184fab1eae05946d96c2a779e8485176a4"
+}

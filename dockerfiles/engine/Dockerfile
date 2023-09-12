@@ -1,16 +1,17 @@
-FROM lukemathwalker/cargo-chef:latest-rust-1.71.1-bullseye AS chef
+FROM lukemathwalker/cargo-chef:latest-rust-1.72.0-bullseye AS chef
 
 WORKDIR /app
 
 FROM chef AS planner
 
-COPY src .
-COPY .cargo .cargo
+COPY src src
+COPY .cargo src/.cargo
 
-RUN cargo chef prepare --recipe-path recipe.json
+RUN cd src && \
+    cargo chef prepare --recipe-path recipe.json
 
 FROM chef AS builder
-COPY --from=planner /app/recipe.json recipe.json
+COPY --from=planner /app/src/recipe.json src/recipe.json
 
 RUN apt update -y && \
     apt install -y \
@@ -18,19 +19,33 @@ RUN apt update -y && \
     libssl1.1 \
     libssl-dev \
     protobuf-compiler \
-    pkg-config && \
+    pkg-config \
+    python3.9 \
+    python3.9-dev && \
     git config --global credential.helper store
 
 RUN --mount=type=secret,id=git-credentials,target=/root/.git-credentials,required=true \
+    cd src && \
     cargo chef cook --release --recipe-path recipe.json
 
-COPY src .
+COPY src src
+COPY scripts scripts
+
 RUN --mount=type=secret,id=git-credentials,target=~/.git-credentials,required=true \
+    cd src && \
     cargo build --release --bin engine
 
-FROM gcr.io/distroless/cc
+FROM debian:bullseye-slim
 
-COPY --from=builder /app/target/release/engine .
+RUN apt update -y && \
+    apt install -y \
+    python3.9 \
+    python3-pip
+
+COPY scripts/python/weather/requirements.txt requirements.txt
+RUN pip install -r requirements.txt
+
+COPY --from=builder /app/src/target/release/engine .
 
 COPY src/engine/config config
 

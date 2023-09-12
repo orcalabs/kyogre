@@ -5,7 +5,7 @@ mod date_range;
 mod delivery_points;
 mod ers;
 mod fishing_facility;
-mod haul;
+mod hauls;
 mod landing;
 mod ports;
 mod range;
@@ -14,6 +14,7 @@ mod trips;
 mod user;
 mod vessels;
 mod vms;
+mod weather;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Coordinates {
@@ -30,7 +31,7 @@ pub use date_range::*;
 pub use delivery_points::*;
 pub use ers::*;
 pub use fishing_facility::*;
-pub use haul::*;
+pub use hauls::*;
 pub use landing::*;
 pub use ports::*;
 pub use range::*;
@@ -39,3 +40,4 @@ pub use trips::*;
 pub use user::*;
 pub use vessels::*;
 pub use vms::*;
+pub use weather::*;
