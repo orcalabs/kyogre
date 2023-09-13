@@ -14,8 +14,8 @@ use actix_web::{
 };
 use chrono::{DateTime, Utc};
 use kyogre_core::{
-    Delivery, FiskeridirVesselId, HaulId, Ordering, Pagination, TripId, TripSorting, Trips,
-    TripsQuery, VesselEventType,
+    Delivery, FiskeridirVesselId, HaulId, Ordering, Pagination, TripAssemblerId, TripId,
+    TripSorting, Trips, TripsQuery, VesselEventType,
 };
 use serde::{Deserialize, Serialize};
 use tracing::{event, Level};
@@ -276,6 +276,8 @@ pub struct Trip {
     pub start_port_id: Option<String>,
     pub end_port_id: Option<String>,
     pub events: Vec<VesselEvent>,
+    #[schema(value_type = i64)]
+    pub trip_assembler_id: TripAssemblerId,
     #[schema(value_type = Vec<String>)]
     pub landing_ids: Vec<LandingId>,
 }
@@ -356,6 +358,7 @@ impl From<kyogre_core::TripDetailed> for Trip {
                 .map(VesselEvent::from)
                 .collect(),
             landing_ids: value.landing_ids,
+            trip_assembler_id: value.assembler_id,
         }
     }
 }
