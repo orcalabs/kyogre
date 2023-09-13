@@ -20,18 +20,12 @@ jobs:
       keys: |
         database-migrator
         fishery-api
-        engine
         duckdb
       object: '{
            "database-migrator" : {
               "aks-path" : "pre-deploy/kyogre",
               "dockerfile" : "dockerfiles/database-migrator/Dockerfile",
               "registry" : "ghcr.io/orcalabs/kyogre/database-migrator"
-           },
-           "engine" : {
-              "aks-path" : "apps/base/kyogre",
-              "dockerfile" : "dockerfiles/engine/Dockerfile",
-              "registry" : "ghcr.io/orcalabs/kyogre/engine"
            },
            "fishery-api" : {
               "aks-path" : "apps/base/kyogre",

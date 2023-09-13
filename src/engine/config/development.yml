@@ -1,5 +1,6 @@
 log_level: Info
 postgres:
+  ip: orca-postgres-dev.postgres.database.azure.com
   port: 5432
   db_name: kyogre
   max_connections: 1
