@@ -26,7 +26,7 @@ jobs:
               "aks-path" : "apps/base/kyogre",
               "dockerfile" : "dockerfiles/duckdb/Dockerfile",
               "registry" : "ghcr.io/orcalabs/kyogre/duckdb"
-           }
+           },
            "fishery-api" : {
               "aks-path" : "apps/base/kyogre",
               "dockerfile" : "dockerfiles/fishery-api/Dockerfile",
@@ -36,7 +36,7 @@ jobs:
               "aks-path" : "apps/base/kyogre",
               "dockerfile" : "dockerfiles/ais-consumer/Dockerfile",
               "registry" : "ghcr.io/orcalabs/kyogre/ais-consumer"
-           },
+           }
         }'
 
   deploy:
