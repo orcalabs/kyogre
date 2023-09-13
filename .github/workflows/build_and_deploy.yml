@@ -21,6 +21,7 @@ jobs:
         duckdb
         fishery-api
         ais-consumer
+        engine
       object: '{
            "duckdb" : {
               "aks-path" : "apps/base/kyogre",
@@ -36,6 +37,11 @@ jobs:
               "aks-path" : "apps/base/kyogre",
               "dockerfile" : "dockerfiles/ais-consumer/Dockerfile",
               "registry" : "ghcr.io/orcalabs/kyogre/ais-consumer"
+           },
+           "engine" : {
+              "aks-path" : "apps/base/kyogre",
+              "dockerfile" : "dockerfiles/engine/Dockerfile",
+              "registry" : "ghcr.io/orcalabs/kyogre/engine"
            }
         }'
 
@@ -78,3 +84,11 @@ jobs:
          containerAppEnvironment: dev-app-environment
          resourceGroup: dev
          imageToDeploy: ghcr.io/orcalabs/kyogre/ais-consumer:${{ github.sha }}
+
+     - name: Deploy engine
+       uses: azure/container-apps-deploy-action@v1
+       with:
+         containerAppName: dev-kyogre-engine
+         containerAppEnvironment: dev-app-environment
+         resourceGroup: dev
+         imageToDeploy: ghcr.io/orcalabs/kyogre/engine:${{ github.sha }}

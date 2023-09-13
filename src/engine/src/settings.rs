@@ -1,4 +1,4 @@
-use config::{Config, ConfigError, File, Source};
+use config::{Config, ConfigError, File};
 use kyogre_core::*;
 use orca_core::{Environment, LogLevel, PsqlSettings, TelemetrySettings};
 use serde::Deserialize;
@@ -31,56 +31,15 @@ impl Settings {
             .try_into()
             .expect("failed to parse APP_ENVIRONMENT");
 
-        let mut builder = Config::builder()
+        Config::builder()
             .add_source(
                 File::with_name(&format!("config/{}", environment.as_str().to_lowercase()))
                     .required(true),
             )
             .add_source(config::Environment::with_prefix("KYOGRE_ENGINE").separator("__"))
-            .set_override("environment", environment.as_str())?;
-
-        if environment == Environment::Development {
-            let database = config::File::with_name("/run/secrets/postgres-credentials.yaml")
-                .required(true)
-                .format(config::FileFormat::Yaml);
-            let map = database.collect()?;
-            builder = builder.set_override("postgres.ip", map["ip"].clone())?;
-            builder = builder.set_override("postgres.username", map["username"].clone())?;
-            builder = builder.set_override("postgres.password", map["password"].clone())?;
-
-            let honeycomb = config::File::with_name("/run/secrets/honeycomb-api-key")
-                .required(true)
-                .format(config::FileFormat::Yaml);
-
-            let map = honeycomb.collect()?;
-            builder = builder.set_override("honeycomb.api_key", map["api-key"].clone())?;
-
-            let oauth_settings =
-                config::File::with_name("/run/secrets/barentswatch-api-oauth.yaml")
-                    .required(true)
-                    .format(config::FileFormat::Yaml);
-            let map = oauth_settings.collect()?;
-            builder = builder.set_override(
-                "scraper.fishing_facility.client_id",
-                map["client_id"].clone(),
-            )?;
-            builder = builder.set_override(
-                "scraper.fishing_facility.client_secret",
-                map["client_secret"].clone(),
-            )?;
-            builder = builder.set_override(
-                "scraper.fishing_facility_historic.client_id",
-                map["client_id"].clone(),
-            )?;
-            builder = builder.set_override(
-                "scraper.fishing_facility_historic.client_secret",
-                map["client_secret"].clone(),
-            )?;
-        }
-
-        let config = builder.build()?;
-
-        config.try_deserialize()
+            .set_override("environment", environment.as_str())?
+            .build()?
+            .try_deserialize()
     }
 
     pub fn telemetry_endpoint(&self) -> Option<String> {
