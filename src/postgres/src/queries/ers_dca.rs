@@ -8,6 +8,7 @@ use crate::{
 };
 use chrono::{DateTime, Utc};
 use error_stack::{IntoReport, Result, ResultExt};
+use futures::TryStreamExt;
 use kyogre_core::VesselEventType;
 use tracing::{event, Level};
 use unnest_insert::{UnnestInsert, UnnestInsertReturning};
@@ -146,7 +147,7 @@ impl PostgresAdapter {
 
     async fn add_ers_dca<'a>(
         &'a self,
-        ers_dca: Vec<NewErsDca>,
+        mut ers_dca: Vec<NewErsDca>,
         inserted_message_ids: &mut HashSet<i64>,
         vessel_event_ids: &mut Vec<i64>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
@@ -175,6 +176,9 @@ WHERE
         .into_report()
         .change_context(PostgresError::Query)?;
 
+        let to_insert = self.ers_dca_to_insert(&message_id, tx).await?;
+        ers_dca.retain(|e| to_insert.contains(&e.message_id));
+
         let inserted = NewErsDca::unnest_insert_returning(ers_dca, &mut **tx)
             .await
             .into_report()
@@ -188,6 +192,31 @@ WHERE
         }
 
         Ok(())
+    }
+
+    async fn ers_dca_to_insert<'a>(
+        &'a self,
+        message_ids: &[i64],
+        tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
+    ) -> Result<HashSet<i64>, PostgresError> {
+        sqlx::query!(
+            r#"
+SELECT
+    u.message_id AS "message_id!"
+FROM
+    UNNEST($1::BIGINT[]) u (message_id)
+    LEFT JOIN ers_dca e ON u.message_id = e.message_id
+WHERE
+    e.message_id IS NULL
+            "#,
+            &message_ids,
+        )
+        .fetch(&mut **tx)
+        .map_ok(|r| r.message_id)
+        .try_collect::<HashSet<_>>()
+        .await
+        .into_report()
+        .change_context(PostgresError::Query)
     }
 
     async fn add_ers_dca_bodies<'a>(

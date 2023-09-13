@@ -1,4 +1,7 @@
-use std::{cmp::min, collections::HashMap};
+use std::{
+    cmp::min,
+    collections::{HashMap, HashSet},
+};
 
 use crate::{
     error::PostgresError,
@@ -7,6 +10,7 @@ use crate::{
     PostgresAdapter,
 };
 use error_stack::{IntoReport, Result, ResultExt};
+use futures::TryStreamExt;
 use kyogre_core::{TripAssemblerId, VesselEventType};
 use unnest_insert::{UnnestInsert, UnnestInsertReturning};
 
@@ -42,10 +46,13 @@ impl PostgresAdapter {
 
     async fn add_ers_dep<'a>(
         &'a self,
-        ers_dep: Vec<NewErsDep>,
+        mut ers_dep: Vec<NewErsDep>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
     ) -> Result<(), PostgresError> {
-        let fiskeridir_vessel_ids = ers_dep
+        let to_insert = self.ers_dep_to_insert(&ers_dep, tx).await?;
+        ers_dep.retain(|e| to_insert.contains(&e.message_id));
+
+        let vessel_ids = ers_dep
             .iter()
             .filter_map(|e| e.fiskeridir_vessel_id)
             .collect::<Vec<_>>();
@@ -60,7 +67,7 @@ WHERE
     AND fiskeridir_vessel_id IS NOT NULL
             "#,
             TripAssemblerId::Ers as i32,
-            fiskeridir_vessel_ids.as_slice() as _,
+            vessel_ids.as_slice() as _,
         )
         .execute(&mut **tx)
         .await
@@ -99,6 +106,33 @@ WHERE
             .await?;
 
         Ok(())
+    }
+
+    async fn ers_dep_to_insert<'a>(
+        &'a self,
+        ers_dep: &[NewErsDep],
+        tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
+    ) -> Result<HashSet<i64>, PostgresError> {
+        let message_ids = ers_dep.iter().map(|e| e.message_id).collect::<Vec<_>>();
+
+        sqlx::query!(
+            r#"
+SELECT
+    u.message_id AS "message_id!"
+FROM
+    UNNEST($1::BIGINT[]) u (message_id)
+    LEFT JOIN ers_departures e ON u.message_id = e.message_id
+WHERE
+    e.message_id IS NULL
+            "#,
+            &message_ids,
+        )
+        .fetch(&mut **tx)
+        .map_ok(|r| r.message_id)
+        .try_collect::<HashSet<_>>()
+        .await
+        .into_report()
+        .change_context(PostgresError::Query)
     }
 
     pub(crate) async fn add_ers_dep_catches<'a>(
