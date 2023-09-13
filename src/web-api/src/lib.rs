@@ -9,7 +9,7 @@ use kyogre_core::{
     TripSorting, WebApiInboundPort, WebApiOutboundPort,
 };
 use postgres::PostgresAdapter;
-use routes::v1;
+use routes::v1::{self, trip::TripAssemblerId};
 use utoipa::OpenApi;
 
 pub mod error;
@@ -71,6 +71,7 @@ impl Database for PostgresAdapter {}
             HaulsSorting,
             LandingsSorting,
             TripSorting,
+            TripAssemblerId,
             error::ErrorResponse,
             error::ApiError,
             v1::ais::AisPosition,

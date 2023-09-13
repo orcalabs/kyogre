@@ -14,8 +14,8 @@ use actix_web::{
 };
 use chrono::{DateTime, Utc};
 use kyogre_core::{
-    Delivery, FiskeridirVesselId, HaulId, Ordering, Pagination, TripAssemblerId, TripId,
-    TripSorting, Trips, TripsQuery, VesselEventType,
+    Delivery, FiskeridirVesselId, HaulId, Ordering, Pagination, TripId, TripSorting, Trips,
+    TripsQuery, VesselEventType,
 };
 use serde::{Deserialize, Serialize};
 use tracing::{event, Level};
@@ -276,10 +276,15 @@ pub struct Trip {
     pub start_port_id: Option<String>,
     pub end_port_id: Option<String>,
     pub events: Vec<VesselEvent>,
-    #[schema(value_type = i64)]
     pub trip_assembler_id: TripAssemblerId,
     #[schema(value_type = Vec<String>)]
     pub landing_ids: Vec<LandingId>,
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Serialize, Deserialize, utoipa::ToSchema)]
+pub enum TripAssemblerId {
+    Landings,
+    Ers,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
@@ -358,7 +363,7 @@ impl From<kyogre_core::TripDetailed> for Trip {
                 .map(VesselEvent::from)
                 .collect(),
             landing_ids: value.landing_ids,
-            trip_assembler_id: value.assembler_id,
+            trip_assembler_id: value.assembler_id.into(),
         }
     }
 }
@@ -409,5 +414,14 @@ impl PartialEq<kyogre_core::TripDetailed> for Trip {
     fn eq(&self, other: &kyogre_core::TripDetailed) -> bool {
         let converted: Trip = From::from(other.clone());
         converted.eq(self)
+    }
+}
+
+impl From<kyogre_core::TripAssemblerId> for TripAssemblerId {
+    fn from(value: kyogre_core::TripAssemblerId) -> Self {
+        match value {
+            kyogre_core::TripAssemblerId::Landings => TripAssemblerId::Landings,
+            kyogre_core::TripAssemblerId::Ers => TripAssemblerId::Ers,
+        }
     }
 }
