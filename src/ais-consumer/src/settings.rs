@@ -33,7 +33,7 @@ impl Settings {
                 File::with_name(&format!("config/{}", environment.as_str().to_lowercase()))
                     .required(true),
             )
-            .add_source(config::Environment::with_prefix("AIS_CONSUMER").separator("__"))
+            .add_source(config::Environment::with_prefix("KYOGRE_AIS_CONSUMER").separator("__"))
             .set_override("environment", environment.as_str())?;
 
         if environment == Environment::Development {
