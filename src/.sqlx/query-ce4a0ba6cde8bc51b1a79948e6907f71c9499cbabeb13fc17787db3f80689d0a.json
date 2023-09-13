@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    u.message_id AS \"message_id!\"\nFROM\n    UNNEST($1::BIGINT[]) u (message_id)\n    LEFT JOIN ers_tra e ON u.message_id = e.message_id\nWHERE\n    e.message_id IS NULL\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "message_id!",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8Array"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "ce4a0ba6cde8bc51b1a79948e6907f71c9499cbabeb13fc17787db3f80689d0a"
+}

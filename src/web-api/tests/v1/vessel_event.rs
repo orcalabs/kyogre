@@ -1,6 +1,6 @@
 use super::helper::test;
 use actix_web::http::StatusCode;
-use chrono::{Duration, TimeZone, Utc};
+use chrono::{Datelike, Duration, TimeZone, Utc};
 use fiskeridir_rs::Gear;
 use kyogre_core::{DatabaseViewRefresher, ScraperInboundPort};
 use kyogre_core::{FiskeridirVesselId, VesselEventType};
@@ -152,6 +152,110 @@ async fn test_vessel_events_connect_to_existing_trip() {
         assert_eq!(trips[0].events[4].event_type, VesselEventType::Landing);
         assert_eq!(trips[0].events[5].event_type, VesselEventType::ErsDca);
         assert_eq!(trips[0].events[6].event_type, VesselEventType::ErsPor);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_inserting_same_landing_does_not_create_dangling_vessel_event() {
+    test(|helper, builder| async move {
+        let state = builder
+            .vessels(1)
+            .landings(1)
+            .modify(|l| l.document_info.version_number = 99)
+            .build()
+            .await;
+
+        let l = &state.landings[0];
+        let mut landing =
+            fiskeridir_rs::Landing::test_default(1, l.fiskeridir_vessel_id.map(|v| v.0));
+        landing.id = l.landing_id.clone();
+
+        helper
+            .db
+            .db
+            .add_landings(
+                Box::new(vec![Ok(landing)].into_iter()),
+                l.landing_timestamp.year() as u32,
+            )
+            .await
+            .unwrap();
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_inserting_same_ers_dca_does_not_create_dangling_vessel_event() {
+    test(|helper, builder| async move {
+        let state = builder.vessels(1).build().await;
+        let mut dca =
+            fiskeridir_rs::ErsDca::test_default(1, Some(state.vessels[0].fiskeridir.id.0 as u64));
+
+        dca.message_version = 99;
+        helper
+            .db
+            .db
+            .add_ers_dca(Box::new(vec![Ok(dca.clone())].into_iter()))
+            .await
+            .unwrap();
+
+        dca.message_version = 1;
+        helper
+            .db
+            .db
+            .add_ers_dca(Box::new(vec![Ok(dca)].into_iter()))
+            .await
+            .unwrap();
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_inserting_same_ers_dep_does_not_create_dangling_vessel_event() {
+    test(|helper, builder| async move {
+        let state = builder.vessels(1).build().await;
+        let dep = fiskeridir_rs::ErsDep::test_default(
+            1,
+            state.vessels[0].fiskeridir.id.0 as u64,
+            Utc::now(),
+            1,
+        );
+
+        helper.db.db.add_ers_dep(vec![dep.clone()]).await.unwrap();
+        helper.db.db.add_ers_dep(vec![dep.clone()]).await.unwrap();
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_inserting_same_ers_por_does_not_create_dangling_vessel_event() {
+    test(|helper, builder| async move {
+        let state = builder.vessels(1).build().await;
+        let por = fiskeridir_rs::ErsPor::test_default(
+            1,
+            state.vessels[0].fiskeridir.id.0 as u64,
+            Utc::now(),
+            1,
+        );
+
+        helper.db.db.add_ers_por(vec![por.clone()]).await.unwrap();
+        helper.db.db.add_ers_por(vec![por.clone()]).await.unwrap();
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_inserting_same_ers_tra_does_not_create_dangling_vessel_event() {
+    test(|helper, builder| async move {
+        let state = builder.vessels(1).build().await;
+        let tra = fiskeridir_rs::ErsTra::test_default(
+            1,
+            Some(state.vessels[0].fiskeridir.id.0 as u64),
+            Utc::now(),
+        );
+
+        helper.db.db.add_ers_tra(vec![tra.clone()]).await.unwrap();
+        helper.db.db.add_ers_tra(vec![tra.clone()]).await.unwrap();
     })
     .await;
 }

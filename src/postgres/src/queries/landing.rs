@@ -303,7 +303,7 @@ WHERE
 
     async fn add_landings<'a>(
         &'a self,
-        landings: Vec<NewLanding>,
+        mut landings: Vec<NewLanding>,
         inserted_landing_ids: &mut HashSet<String>,
         vessel_event_ids: &mut Vec<i64>,
         trip_assembler_conflicts: &mut HashMap<i64, TripAssemblerConflict>,
@@ -335,6 +335,9 @@ RETURNING
         .await
         .into_report()
         .change_context(PostgresError::Query)?;
+
+        let to_insert = self.landings_to_insert(&landing_id, tx).await?;
+        landings.retain(|l| to_insert.contains(&l.landing_id));
 
         let inserted = NewLanding::unnest_insert_returning(landings, &mut **tx)
             .await
@@ -368,6 +371,31 @@ RETURNING
         }
 
         Ok(())
+    }
+
+    async fn landings_to_insert<'a>(
+        &'a self,
+        landing_ids: &[&str],
+        tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
+    ) -> Result<HashSet<String>, PostgresError> {
+        sqlx::query!(
+            r#"
+SELECT
+    u.landing_id AS "landing_id!"
+FROM
+    UNNEST($1::TEXT[]) u (landing_id)
+    LEFT JOIN landings l ON u.landing_id = l.landing_id
+WHERE
+    l.landing_id IS NULL
+            "#,
+            &landing_ids as _,
+        )
+        .fetch(&mut **tx)
+        .map_ok(|r| r.landing_id)
+        .try_collect::<HashSet<_>>()
+        .await
+        .into_report()
+        .change_context(PostgresError::Query)
     }
 
     pub(crate) async fn add_landing_entries<'a>(

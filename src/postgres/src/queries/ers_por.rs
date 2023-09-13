@@ -1,4 +1,7 @@
-use std::{cmp::min, collections::HashMap};
+use std::{
+    cmp::min,
+    collections::{HashMap, HashSet},
+};
 
 use crate::{
     error::PostgresError,
@@ -8,6 +11,7 @@ use crate::{
 };
 use chrono::{DateTime, Utc};
 use error_stack::{IntoReport, Result, ResultExt};
+use futures::TryStreamExt;
 use kyogre_core::{ArrivalFilter, FiskeridirVesselId, TripAssemblerId, VesselEventType};
 use unnest_insert::{UnnestInsert, UnnestInsertReturning};
 
@@ -44,9 +48,12 @@ impl PostgresAdapter {
 
     async fn add_ers_por<'a>(
         &'a self,
-        ers_por: Vec<NewErsPor>,
+        mut ers_por: Vec<NewErsPor>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
     ) -> Result<(), PostgresError> {
+        let to_insert = self.ers_por_to_insert(&ers_por, tx).await?;
+        ers_por.retain(|e| to_insert.contains(&e.message_id));
+
         let inserted = NewErsPor::unnest_insert_returning(ers_por, &mut **tx)
             .await
             .into_report()
@@ -79,6 +86,33 @@ impl PostgresAdapter {
             .await?;
 
         Ok(())
+    }
+
+    async fn ers_por_to_insert<'a>(
+        &'a self,
+        ers_por: &[NewErsPor],
+        tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
+    ) -> Result<HashSet<i64>, PostgresError> {
+        let message_ids = ers_por.iter().map(|e| e.message_id).collect::<Vec<_>>();
+
+        sqlx::query!(
+            r#"
+SELECT
+    u.message_id AS "message_id!"
+FROM
+    UNNEST($1::BIGINT[]) u (message_id)
+    LEFT JOIN ers_arrivals e ON u.message_id = e.message_id
+WHERE
+    e.message_id IS NULL
+            "#,
+            &message_ids,
+        )
+        .fetch(&mut **tx)
+        .map_ok(|r| r.message_id)
+        .try_collect::<HashSet<_>>()
+        .await
+        .into_report()
+        .change_context(PostgresError::Query)
     }
 
     pub(crate) async fn add_ers_por_catches<'a>(

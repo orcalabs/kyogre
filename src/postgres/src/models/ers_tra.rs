@@ -10,11 +10,7 @@ use crate::{
 };
 
 #[derive(UnnestInsert)]
-#[unnest_insert(
-    table_name = "ers_tra",
-    conflict = "message_id",
-    returning = "vessel_event_id"
-)]
+#[unnest_insert(table_name = "ers_tra", returning = "vessel_event_id")]
 pub struct NewErsTra {
     pub message_id: i64,
     pub message_number: i32,

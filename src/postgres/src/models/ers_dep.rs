@@ -12,7 +12,6 @@ use crate::{
 #[derive(UnnestInsert)]
 #[unnest_insert(
     table_name = "ers_departures",
-    conflict = "message_id",
     returning = "fiskeridir_vessel_id,departure_timestamp,vessel_event_id"
 )]
 pub struct NewErsDep {

@@ -12,7 +12,6 @@ use unnest_insert::UnnestInsert;
 #[derive(UnnestInsert)]
 #[unnest_insert(
     table_name = "landings",
-    conflict = "landing_id",
     returning = "landing_id,fiskeridir_vessel_id,landing_timestamp,vessel_event_id"
 )]
 pub struct NewLanding {

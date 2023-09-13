@@ -1,0 +1,67 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO\n    ers_dca (\n    message_id,message_number,message_timestamp,ers_message_type_id,message_version,message_year,relevant_year,sequence_number,ers_activity_id,quota_type_id,port_id,fiskeridir_vessel_id,vessel_building_year,vessel_call_sign,vessel_call_sign_ers,vessel_engine_building_year,vessel_engine_power,vessel_gross_tonnage_1969,vessel_gross_tonnage_other,vessel_county,vessel_county_code,vessel_greatest_length,vessel_identification,vessel_length,vessel_length_group,vessel_length_group_code,vessel_material_code,vessel_municipality,vessel_municipality_code,vessel_name,vessel_name_ers,vessel_nationality_code,fiskeridir_vessel_nationality_group_id,vessel_rebuilding_year,vessel_registration_id,vessel_registration_id_ers,vessel_valid_from,vessel_valid_until,vessel_width,vessel_event_id\n   )\nSELECT\n    *\nFROM\n    UNNEST(\n        $1::BIGINT[],$2::INT[],$3::TIMESTAMPTZ[],$4::TEXT[],$5::INT[],$6::INT[],$7::INT[],$8::INT[],$9::TEXT[],$10::INT[],$11::TEXT[],$12::BIGINT[],$13::INT[],$14::TEXT[],$15::TEXT[],$16::INT[],$17::INT[],$18::INT[],$19::INT[],$20::TEXT[],$21::INT[],$22::DECIMAL[],$23::TEXT[],$24::DECIMAL[],$25::TEXT[],$26::INT[],$27::TEXT[],$28::TEXT[],$29::INT[],$30::TEXT[],$31::TEXT[],$32::TEXT[],$33::INT[],$34::INT[],$35::TEXT[],$36::TEXT[],$37::DATE[],$38::DATE[],$39::DECIMAL[],$40::BIGINT[]\n    )\n         RETURNING message_id AS \"message_id!\",vessel_event_id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "message_id!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "vessel_event_id",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8Array",
+        "Int4Array",
+        "TimestamptzArray",
+        "TextArray",
+        "Int4Array",
+        "Int4Array",
+        "Int4Array",
+        "Int4Array",
+        "TextArray",
+        "Int4Array",
+        "TextArray",
+        "Int8Array",
+        "Int4Array",
+        "TextArray",
+        "TextArray",
+        "Int4Array",
+        "Int4Array",
+        "Int4Array",
+        "Int4Array",
+        "TextArray",
+        "Int4Array",
+        "NumericArray",
+        "TextArray",
+        "NumericArray",
+        "TextArray",
+        "Int4Array",
+        "TextArray",
+        "TextArray",
+        "Int4Array",
+        "TextArray",
+        "TextArray",
+        "TextArray",
+        "Int4Array",
+        "Int4Array",
+        "TextArray",
+        "TextArray",
+        "DateArray",
+        "DateArray",
+        "NumericArray",
+        "Int8Array"
+      ]
+    },
+    "nullable": [
+      false,
+      true
+    ]
+  },
+  "hash": "2cb0bc26a5fa2b2bb2e60914f4124f8bf4206385a103c93ad00045b8cd8be9b6"
+}

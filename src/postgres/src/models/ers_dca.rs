@@ -14,11 +14,7 @@ use crate::{
 };
 
 #[derive(Debug, Clone, UnnestInsert)]
-#[unnest_insert(
-    table_name = "ers_dca",
-    conflict = "message_id,message_version",
-    returning = "message_id,vessel_event_id"
-)]
+#[unnest_insert(table_name = "ers_dca", returning = "message_id,vessel_event_id")]
 pub struct NewErsDca {
     pub message_id: i64,
     pub message_number: i32,
