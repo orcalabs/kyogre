@@ -1,4 +1,4 @@
-use config::{Config, File, Source};
+use config::{Config, File};
 use kyogre_core::OauthConfig;
 use orca_core::{Environment, LogLevel, PsqlSettings};
 use serde::Deserialize;
@@ -28,41 +28,14 @@ impl Settings {
             .try_into()
             .expect("Failed to parse APP_ENVIRONMENT.");
 
-        let mut builder = Config::builder()
+        Config::builder()
             .add_source(
                 File::with_name(&format!("config/{}", environment.as_str().to_lowercase()))
                     .required(true),
             )
             .add_source(config::Environment::with_prefix("KYOGRE_AIS_CONSUMER").separator("__"))
-            .set_override("environment", environment.as_str())?;
-
-        if environment == Environment::Development {
-            let database = config::File::with_name("/run/secrets/postgres-credentials.yaml")
-                .required(true)
-                .format(config::FileFormat::Yaml);
-
-            let map = database.collect()?;
-            builder = builder.set_override("postgres.ip", map["ip"].clone())?;
-            builder = builder.set_override("postgres.username", map["username"].clone())?;
-            builder = builder.set_override("postgres.password", map["password"].clone())?;
-
-            let honeycomb = config::File::with_name("/run/secrets/honeycomb-api-key")
-                .required(true)
-                .format(config::FileFormat::Yaml);
-            let map = honeycomb.collect()?;
-            builder = builder.set_override("honeycomb.api_key", map["api-key"].clone())?;
-
-            let oauth_settings =
-                config::File::with_name("/run/secrets/barentswatch-ais-oauth.yaml")
-                    .required(true)
-                    .format(config::FileFormat::Yaml);
-            let map = oauth_settings.collect()?;
-            builder = builder.set_override("oauth.client_secret", map["client_secret"].clone())?;
-            builder = builder.set_override("oauth.client_id", map["client_id"].clone())?;
-        }
-
-        let config = builder.build()?;
-
-        config.try_deserialize()
+            .set_override("environment", environment.as_str())?
+            .build()?
+            .try_deserialize()
     }
 }
