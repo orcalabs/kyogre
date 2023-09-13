@@ -19,7 +19,6 @@ jobs:
     with:
       keys: |
         database-migrator
-        ais-consumer
         fishery-api
         engine
         duckdb
@@ -28,11 +27,6 @@ jobs:
               "aks-path" : "pre-deploy/kyogre",
               "dockerfile" : "dockerfiles/database-migrator/Dockerfile",
               "registry" : "ghcr.io/orcalabs/kyogre/database-migrator"
-           },
-           "ais-consumer" : {
-              "aks-path" : "apps/base/kyogre",
-              "dockerfile" : "dockerfiles/ais-consumer/Dockerfile",
-              "registry" : "ghcr.io/orcalabs/kyogre/ais-consumer"
            },
            "engine" : {
               "aks-path" : "apps/base/kyogre",

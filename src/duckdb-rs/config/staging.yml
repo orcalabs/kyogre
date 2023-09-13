@@ -1,0 +1,17 @@
+log_level: Info
+port: 5000
+telemetry:
+  ip: api.honeycomb.io
+  port: 443
+postgres:
+  port: 5432
+  ip: orca-postgres-dev.postgres.database.azure.com
+  db_name: kyogre
+  max_connections: 10
+  log_statements: Disable
+duck_db:
+  max_connections: 10
+  cache_mode: ReturnError
+  refresh_interval: 30m
+  storage: Memory
+
