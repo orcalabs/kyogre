@@ -636,7 +636,7 @@ async fn test_trips_filter_by_delivery_point() {
 
         let trips: Vec<Trip> = response.json().await.unwrap();
         assert_eq!(trips.len(), 1);
-        assert_eq!(trips[0], state.trips[1]);
+        assert_eq!(trips[0], state.trips[0]);
     })
     .await;
 }

@@ -46,7 +46,7 @@ impl ItemDistribution {
                 }
             }
             ItemsPerElement::Uneven => {
-                if item_index >= self.num_items {
+                if item_index >= self.num_items - 1 {
                     0
                 } else {
                     1

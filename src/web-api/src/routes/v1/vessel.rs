@@ -172,6 +172,33 @@ impl PartialEq<kyogre_core::AisVessel> for AisVessel {
     }
 }
 
+impl PartialEq<kyogre_core::FiskeridirVessel> for FiskeridirVessel {
+    fn eq(&self, other: &kyogre_core::FiskeridirVessel) -> bool {
+        self.id == other.id
+            && self.vessel_type_id == other.vessel_type_id
+            && self.length_group_id == other.length_group_id
+            && self.nation_group_id == other.nation_group_id
+            && self.norwegian_municipality_id == other.norwegian_municipality_id
+            && self.norwegian_county_id == other.norwegian_county_id
+            && self.gross_tonnage_1969 == other.gross_tonnage_1969
+            && self.gross_tonnage_other == other.gross_tonnage_other
+            && self.call_sign == other.call_sign
+            && self.name == other.name
+            && self.registration_id == other.registration_id
+            && self.length == other.length
+            && self.engine_building_year == other.engine_building_year
+            && self.engine_power == other.engine_power
+            && self.building_year == other.building_year
+            && self.rebuilding_year == other.rebuilding_year
+    }
+}
+
+impl PartialEq<FiskeridirVessel> for kyogre_core::FiskeridirVessel {
+    fn eq(&self, other: &FiskeridirVessel) -> bool {
+        other.eq(self)
+    }
+}
+
 impl PartialEq<AisVessel> for kyogre_core::AisVessel {
     fn eq(&self, other: &AisVessel) -> bool {
         other.eq(self)

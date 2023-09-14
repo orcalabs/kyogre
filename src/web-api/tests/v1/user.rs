@@ -1,5 +1,4 @@
 use crate::v1::helper::test;
-use kyogre_core::FiskeridirVesselId;
 use reqwest::StatusCode;
 use web_api::routes::v1::user::User;
 
@@ -20,23 +19,13 @@ async fn test_cant_use_user_endpoints_without_bw_token() {
 
 #[tokio::test]
 async fn test_update_and_get_user() {
-    test(|helper, _builder| async move {
+    test(|helper, builder| async move {
         let token = helper.bw_helper.get_bw_token();
 
-        let vessel_id1 = FiskeridirVesselId(100);
-        let vessel_id2 = FiskeridirVesselId(200);
-
-        helper
-            .db
-            .generate_fiskeridir_vessel(vessel_id1, None, None)
-            .await;
-        helper
-            .db
-            .generate_fiskeridir_vessel(vessel_id2, None, None)
-            .await;
+        let state = builder.vessels(2).build().await;
 
         let update_user = User {
-            following: vec![vessel_id1, vessel_id2],
+            following: state.vessels.iter().map(|v| v.fiskeridir.id).collect(),
         };
 
         let response = helper
