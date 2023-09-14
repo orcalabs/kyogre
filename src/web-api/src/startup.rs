@@ -178,7 +178,7 @@ where
             _ => {
                 let mut doc = ApiDoc::openapi();
 
-                if matches!(environment, Environment::Local) {
+                if matches!(environment, Environment::Local | Environment::Development) {
                     doc.paths.paths = doc
                         .paths
                         .paths
