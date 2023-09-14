@@ -8,7 +8,7 @@ use crate::{
 };
 use ais::*;
 use ais_vms::*;
-use chrono::{DateTime, Duration, TimeZone, Utc};
+use chrono::{DateTime, Datelike, Duration, TimeZone, Utc};
 use fiskeridir_rs::CallSign;
 use fiskeridir_rs::{DeliveryPointId, LandingMonth};
 use futures::TryStreamExt;
@@ -546,10 +546,15 @@ impl TestStateBuilder {
             }
         }
 
-        self.storage
-            .add_landings(Box::new(self.landings.into_iter().map(Ok)), 2023)
-            .await
-            .unwrap();
+        if let Some(data_year) = self.landings.first().map(|l| l.landing_timestamp.year()) {
+            self.storage
+                .add_landings(
+                    Box::new(self.landings.into_iter().map(Ok)),
+                    data_year as u32,
+                )
+                .await
+                .unwrap();
+        }
 
         self.ais_vms_positions
             .into_iter()
