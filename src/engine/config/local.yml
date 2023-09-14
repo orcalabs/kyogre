@@ -7,6 +7,7 @@ postgres:
   max_connections: 10
   log_statements: Disable
 scraper:
+  file_download_dir: "/tmp/kyogre-engine-download-data"
   register_vessels_url: https://api.fiskeridir.no/vessel-api/api/v1/vessels
   aqua_culture_register_url: "https://api.fiskeridir.no/pub-aqua/api/v1/dump/new-legacy-csv"
   mattilsynet_fishery_url: "https://www.mattilsynet.no/om_mattilsynet/godkjente_produkter_og_virksomheter/fish_and_fishery_products/virksomheter_som_haandterer_fiskerivarer__fishery_establishmentscsv.25445-1823/binary/Virksomheter_som_haandterer_fiskerivarer_-_Fishery_establishments.csv"

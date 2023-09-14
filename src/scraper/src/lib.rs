@@ -11,8 +11,8 @@ use fiskeridir::{
 use kyogre_core::{OauthConfig, ScraperInboundPort, ScraperOutboundPort};
 use mattilsynet::MattilsynetScraper;
 use serde::Deserialize;
-use std::fmt::Debug;
 use std::sync::Arc;
+use std::{fmt::Debug, path::PathBuf};
 use tracing::{event, instrument, Level};
 use weather::WeatherScraper;
 
@@ -51,6 +51,7 @@ pub struct Config {
     pub register_vessels_url: Option<String>,
     pub fishing_facility: Option<ApiClientConfig>,
     pub fishing_facility_historic: Option<ApiClientConfig>,
+    pub file_download_dir: PathBuf,
 }
 
 #[derive(Debug, Deserialize, Clone)]
