@@ -78,6 +78,9 @@ impl DataSource for ErsDcaScraper {
                     };
                 }
             }
+            if let Err(e) = self.fiskeridir_source.fiskeridir_file.clean_download_dir() {
+                event!(Level::ERROR, "failed to clean download dir: {}", e);
+            }
         }
 
         Ok(())

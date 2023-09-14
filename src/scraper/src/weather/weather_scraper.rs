@@ -78,6 +78,10 @@ impl DataSource for WeatherScraper {
                     return Err(e);
                 }
             }
+
+            if let Err(e) = std::fs::remove_file(file) {
+                event!(Level::ERROR, "failed to delete weather file: {}", e);
+            }
         }
 
         Ok(())

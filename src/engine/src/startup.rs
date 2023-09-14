@@ -3,7 +3,7 @@ use machine::StateMachine;
 use orca_core::Environment;
 use postgres::PostgresAdapter;
 use scraper::{BarentswatchSource, FiskeridirSource, Scraper, WrappedHttpClient};
-use std::{path::PathBuf, sync::Arc};
+use std::sync::Arc;
 
 pub struct App {
     pub shared_state: SharedState,
@@ -21,7 +21,10 @@ impl App {
             postgres.do_migrations().await;
         }
 
-        let file_downloader = fiskeridir_rs::FileDownloader::new(PathBuf::from("/home")).unwrap();
+        std::fs::create_dir_all(&settings.scraper.file_download_dir)
+            .expect("failed to create download dir");
+        let file_downloader =
+            fiskeridir_rs::FileDownloader::new(settings.scraper.file_download_dir.clone()).unwrap();
         let api_downloader = fiskeridir_rs::ApiDownloader::new().unwrap();
 
         let fiskeridir_source =
