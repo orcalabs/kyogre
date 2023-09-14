@@ -3,6 +3,7 @@ api:
   ip: 0.0.0.0
   port: 8080
 postgres:
+  ip: orca-postgres-dev.postgres.database.azure.com
   port: 5432
   db_name: kyogre
   max_connections: 10
@@ -13,5 +14,5 @@ telemetry:
 bw_jwks_url: https://id.barentswatch.no/.well-known/openid-configuration/jwks
 bw_profiles_url: https://www.barentswatch.no/bwapi/v2/user/profiles
 duck_db_api:
-  ip: duckdb
+  ip: dev-kyogre-duck-db
   port: 5000
