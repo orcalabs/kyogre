@@ -1,10 +1,9 @@
 use super::helper::test_with_cache;
 use crate::v1::helper::*;
 use actix_web::http::StatusCode;
-use chrono::TimeZone;
 use chrono::{DateTime, Utc};
 use enum_index::EnumIndex;
-use fiskeridir_rs::{GearGroup, Landing, LandingId, SpeciesGroup, VesselLengthGroup};
+use fiskeridir_rs::{GearGroup, LandingId, SpeciesGroup, VesselLengthGroup};
 use kyogre_core::{
     landing_date_feature_matrix_index, levels::*, ActiveLandingFilter, CatchLocationId,
     HaulMatrixes, LandingMatrixes, NUM_CATCH_LOCATIONS,
@@ -481,24 +480,11 @@ async fn test_landing_matrix_have_correct_totals_after_landing_is_replaced_by_ne
     test_with_cache(|helper, builder| async move {
         let filter = ActiveLandingFilter::SpeciesGroup;
 
-        let mut landing = Landing::test_default(1, None);
-        landing.landing_timestamp = Utc.with_ymd_and_hms(2001, 1, 1, 0, 0, 0).unwrap();
-        landing.product.living_weight = Some(20.0);
-
-        helper.db.add_landings(vec![landing.clone()]).await;
-
-        let mut landing2 = landing.clone();
-        landing2.landing_timestamp = Utc.with_ymd_and_hms(2001, 1, 1, 0, 0, 0).unwrap();
-        landing2.product.living_weight = Some(40.0);
-        landing2.document_info.version_number += 1;
-
-        helper.db.add_landings(vec![landing2]).await;
-
         builder
             .landings(1)
             .modify(|v| {
                 v.product.living_weight = Some(20.0);
-                v.id = LandingId::try_from("1-7-0").unwrap();
+                v.id = LandingId::try_from("1-7-0-0").unwrap();
             })
             .build()
             .await;
@@ -509,7 +495,7 @@ async fn test_landing_matrix_have_correct_totals_after_landing_is_replaced_by_ne
             .landings(1)
             .modify(|v| {
                 v.product.living_weight = Some(40.0);
-                v.id = LandingId::try_from("1-7-0").unwrap();
+                v.id = LandingId::try_from("1-7-0-0").unwrap();
                 v.document_info.version_number += 1;
             })
             .build()

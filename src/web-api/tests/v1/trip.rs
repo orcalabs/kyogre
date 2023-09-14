@@ -11,7 +11,7 @@ async fn test_trip_of_landing_returns_none_of_no_trip_is_connected_to_given_land
     test(|helper, _builder| async move {
         let response = helper
             .app
-            .get_trip_of_landing(&"1-7-0".try_into().unwrap())
+            .get_trip_of_landing(&"1-7-0-0".try_into().unwrap())
             .await;
         assert_eq!(response.status(), StatusCode::OK);
 

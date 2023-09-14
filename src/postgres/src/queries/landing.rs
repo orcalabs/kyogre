@@ -11,6 +11,7 @@ use std::collections::{HashMap, HashSet};
 use tracing::{event, Level};
 use unnest_insert::{UnnestInsert, UnnestInsertReturning};
 
+use crate::landing_set::PreparedLandingSet;
 use crate::models::NewLandingEntry;
 use crate::models::TripAssemblerConflict;
 use crate::{
@@ -172,13 +173,15 @@ WHERE
     ) -> Result<(), PostgresError> {
         let mut tx = self.begin().await?;
 
+        let existing_landings = self.existing_landings(data_year, &mut tx).await?;
+
         let mut earliest_landing = Utc::now();
         let mut existing_landing_ids = HashSet::new();
         let mut inserted_landing_ids = HashSet::new();
         let mut vessel_event_ids = Vec::new();
         let mut trip_assembler_conflicts = HashMap::<i64, TripAssemblerConflict>::new();
 
-        let mut chunk = Vec::with_capacity(CHUNK_SIZE);
+        let mut landing_set = LandingSet::with_capacity(CHUNK_SIZE, data_year);
         for (i, item) in landings.enumerate() {
             match item {
                 Err(e) => {
@@ -186,12 +189,22 @@ WHERE
                 }
                 Ok(item) => {
                     existing_landing_ids.insert(item.id.clone().into_inner());
-                    chunk.push(item);
+
+                    if existing_landings
+                        .get(item.id.as_ref())
+                        .map(|version| version >= &item.document_info.version_number)
+                        .unwrap_or(false)
+                    {
+                        continue;
+                    }
+
+                    earliest_landing = min(earliest_landing, item.landing_timestamp);
+                    landing_set.add_landing(item)?;
+
                     if i % CHUNK_SIZE == 0 && i > 0 {
-                        let set = LandingSet::new(chunk.drain(0..), data_year)?;
+                        let set = landing_set.prepare();
                         self.add_landing_set(
                             set,
-                            &mut earliest_landing,
                             &mut inserted_landing_ids,
                             &mut vessel_event_ids,
                             &mut trip_assembler_conflicts,
@@ -202,11 +215,10 @@ WHERE
                 }
             }
         }
-        if !chunk.is_empty() {
-            let set = LandingSet::new(chunk.drain(0..), data_year)?;
+        if landing_set.len() > 0 {
+            let set = landing_set.prepare();
             self.add_landing_set(
                 set,
-                &mut earliest_landing,
                 &mut inserted_landing_ids,
                 &mut vessel_event_ids,
                 &mut trip_assembler_conflicts,
@@ -248,46 +260,29 @@ WHERE
 
     pub(crate) async fn add_landing_set<'a>(
         &'a self,
-        set: LandingSet,
-        earliest_landing: &mut DateTime<Utc>,
+        set: PreparedLandingSet,
         inserted_landing_ids: &mut HashSet<String>,
         vessel_event_ids: &mut Vec<i64>,
         trip_assembler_conflicts: &mut HashMap<i64, TripAssemblerConflict>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
     ) -> Result<(), PostgresError> {
-        let prepared_set = set.prepare();
+        self.add_delivery_point_ids(set.delivery_points, tx).await?;
 
-        if let Some(ts) = prepared_set
-            .landings
-            .iter()
-            .map(|v| v.landing_timestamp)
-            .min()
-        {
-            *earliest_landing = min(*earliest_landing, ts);
-        }
+        self.add_municipalities(set.municipalities, tx).await?;
+        self.add_counties(set.counties, tx).await?;
+        self.add_fiskeridir_vessels(set.vessels, tx).await?;
 
-        self.add_delivery_point_ids(prepared_set.delivery_points, tx)
+        self.add_species_fiskeridir(set.species_fiskeridir, tx)
             .await?;
-
-        self.add_municipalities(prepared_set.municipalities, tx)
+        self.add_species(set.species, tx).await?;
+        self.add_species_fao(set.species_fao, tx).await?;
+        self.add_catch_areas(set.catch_areas, tx).await?;
+        self.add_catch_main_areas(set.catch_main_areas, tx).await?;
+        self.add_catch_main_area_fao(set.catch_main_area_fao, tx)
             .await?;
-        self.add_counties(prepared_set.counties, tx).await?;
-        self.add_fiskeridir_vessels(prepared_set.vessels, tx)
-            .await?;
-
-        self.add_species_fiskeridir(prepared_set.species_fiskeridir, tx)
-            .await?;
-        self.add_species(prepared_set.species, tx).await?;
-        self.add_species_fao(prepared_set.species_fao, tx).await?;
-        self.add_catch_areas(prepared_set.catch_areas, tx).await?;
-        self.add_catch_main_areas(prepared_set.catch_main_areas, tx)
-            .await?;
-        self.add_catch_main_area_fao(prepared_set.catch_main_area_fao, tx)
-            .await?;
-        self.add_area_groupings(prepared_set.area_groupings, tx)
-            .await?;
+        self.add_area_groupings(set.area_groupings, tx).await?;
         self.add_landings(
-            prepared_set.landings,
+            set.landings,
             inserted_landing_ids,
             vessel_event_ids,
             trip_assembler_conflicts,
@@ -295,8 +290,7 @@ WHERE
         )
         .await?;
 
-        self.add_landing_entries(prepared_set.landing_entries, tx)
-            .await?;
+        self.add_landing_entries(set.landing_entries, tx).await?;
 
         Ok(())
     }
@@ -309,6 +303,8 @@ WHERE
         trip_assembler_conflicts: &mut HashMap<i64, TripAssemblerConflict>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
     ) -> Result<(), PostgresError> {
+        landings.retain(|l| !inserted_landing_ids.contains(&l.landing_id));
+
         let len = landings.len();
         let mut landing_id = Vec::with_capacity(len);
         let mut version = Vec::with_capacity(len);
@@ -335,9 +331,6 @@ RETURNING
         .await
         .into_report()
         .change_context(PostgresError::Query)?;
-
-        let to_insert = self.landings_to_insert(&landing_id, tx).await?;
-        landings.retain(|l| to_insert.contains(&l.landing_id));
 
         let inserted = NewLanding::unnest_insert_returning(landings, &mut **tx)
             .await
@@ -373,26 +366,26 @@ RETURNING
         Ok(())
     }
 
-    async fn landings_to_insert<'a>(
+    async fn existing_landings<'a>(
         &'a self,
-        landing_ids: &[&str],
+        data_year: u32,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<HashSet<String>, PostgresError> {
+    ) -> Result<HashMap<String, i32>, PostgresError> {
         sqlx::query!(
             r#"
 SELECT
-    u.landing_id AS "landing_id!"
+    landing_id,
+    "version"
 FROM
-    UNNEST($1::TEXT[]) u (landing_id)
-    LEFT JOIN landings l ON u.landing_id = l.landing_id
+    landings
 WHERE
-    l.landing_id IS NULL
+    data_year = $1
             "#,
-            &landing_ids as _,
+            data_year as i32,
         )
         .fetch(&mut **tx)
-        .map_ok(|r| r.landing_id)
-        .try_collect::<HashSet<_>>()
+        .map_ok(|r| (r.landing_id, r.version))
+        .try_collect::<HashMap<_, _>>()
         .await
         .into_report()
         .change_context(PostgresError::Query)
@@ -519,12 +512,11 @@ SELECT
     e.species_group_id,
     COALESCE(SUM(e.living_weight), 0)
 FROM
-    landings l
+    UNNEST($1::TEXT[]) u (landing_id)
+    INNER JOIN landings l ON l.landing_id = u.landing_id
     INNER JOIN landing_entries e ON l.landing_id = e.landing_id
     INNER JOIN catch_locations c ON l.catch_main_area_id = c.catch_main_area_id
     AND l.catch_area_id = c.catch_area_id
-WHERE
-    l.landing_id = ANY ($1::TEXT[])
 GROUP BY
     l.landing_id,
     e.species_group_id
