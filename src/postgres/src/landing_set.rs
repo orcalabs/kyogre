@@ -18,6 +18,7 @@ pub struct LandingSet {
     area_groupings: HashMap<String, NewAreaGrouping>,
     counties: HashMap<i32, NewCounty>,
     municipalities: HashMap<i32, NewMunicipality>,
+    data_year: u32,
 }
 
 pub struct PreparedLandingSet {
@@ -37,24 +38,25 @@ pub struct PreparedLandingSet {
 }
 
 impl LandingSet {
-    pub(crate) fn prepare(self) -> PreparedLandingSet {
-        let species = self.species.into_values().collect();
-        let species_fao = self.species_fao.into_values().collect();
-        let vessels = self.vessels.into_values().collect();
-        let delivery_points = self.delivery_points.into_iter().collect();
-        let catch_areas = self.catch_areas.into_values().collect();
-        let catch_main_areas = self.catch_main_areas.into_values().collect();
-        let area_groupings = self.area_groupings.into_values().collect();
-        let species_fiskeridir = self.species_fiskeridir.into_values().collect();
-        let landings = self.landings.into_values().collect();
-        let counties = self.counties.into_values().collect();
-        let municipalities = self.municipalities.into_values().collect();
-        let catch_main_area_fao = self.catch_main_area_fao.into_values().collect();
+    pub(crate) fn prepare(&mut self) -> PreparedLandingSet {
+        let species = self.species.drain().map(|(_, v)| v).collect();
+        let species_fao = self.species_fao.drain().map(|(_, v)| v).collect();
+        let vessels = self.vessels.drain().map(|(_, v)| v).collect();
+        let delivery_points = self.delivery_points.drain().collect();
+        let catch_areas = self.catch_areas.drain().map(|(_, v)| v).collect();
+        let catch_main_areas = self.catch_main_areas.drain().map(|(_, v)| v).collect();
+        let area_groupings = self.area_groupings.drain().map(|(_, v)| v).collect();
+        let species_fiskeridir = self.species_fiskeridir.drain().map(|(_, v)| v).collect();
+        let landings = self.landings.drain().map(|(_, v)| v).collect();
+        let landing_entries = self.landing_entries.drain(0..).collect();
+        let counties = self.counties.drain().map(|(_, v)| v).collect();
+        let municipalities = self.municipalities.drain().map(|(_, v)| v).collect();
+        let catch_main_area_fao = self.catch_main_area_fao.drain().map(|(_, v)| v).collect();
 
         PreparedLandingSet {
             species,
             landings,
-            landing_entries: self.landing_entries,
+            landing_entries,
             vessels,
             delivery_points,
             species_fao,
@@ -68,27 +70,47 @@ impl LandingSet {
         }
     }
 
-    pub(crate) fn new<T: Iterator<Item = fiskeridir_rs::Landing>>(
-        landings: T,
-        data_year: u32,
-    ) -> Result<LandingSet, PostgresError> {
-        let mut set = LandingSet::default();
-        for l in landings {
-            set.add_vessel(&l);
-            set.add_species(&l);
-            set.add_species_fao(&l);
-            set.add_species_fiskeridir(&l);
-            set.add_delivery_point(&l);
-            set.add_catch_area(&l)?;
-            set.add_main_catch_area(&l)?;
-            set.add_main_catch_area_fao(&l);
-            set.add_fishing_region(&l);
-            set.add_municipality(&l);
-            set.add_county(&l);
-            set.add_landing(&l, data_year)?;
-            set.add_landing_entry(&l)?;
+    pub(crate) fn with_capacity(capacity: usize, data_year: u32) -> Self {
+        Self {
+            species: HashMap::with_capacity(capacity),
+            species_fao: HashMap::with_capacity(capacity),
+            species_fiskeridir: HashMap::with_capacity(capacity),
+            landings: HashMap::with_capacity(capacity),
+            landing_entries: Vec::with_capacity(capacity),
+            vessels: HashMap::with_capacity(capacity),
+            delivery_points: HashSet::with_capacity(capacity),
+            catch_areas: HashMap::with_capacity(capacity),
+            catch_main_areas: HashMap::with_capacity(capacity),
+            catch_main_area_fao: HashMap::with_capacity(capacity),
+            area_groupings: HashMap::with_capacity(capacity),
+            counties: HashMap::with_capacity(capacity),
+            municipalities: HashMap::with_capacity(capacity),
+            data_year,
         }
-        Ok(set)
+    }
+
+    pub(crate) fn add_landing(
+        &mut self,
+        landing: fiskeridir_rs::Landing,
+    ) -> Result<(), PostgresError> {
+        self.add_vessel(&landing);
+        self.add_species(&landing);
+        self.add_species_fao(&landing);
+        self.add_species_fiskeridir(&landing);
+        self.add_delivery_point(&landing);
+        self.add_catch_area(&landing)?;
+        self.add_main_catch_area(&landing)?;
+        self.add_main_catch_area_fao(&landing);
+        self.add_fishing_region(&landing);
+        self.add_municipality(&landing);
+        self.add_county(&landing);
+        self.add_landing_impl(&landing)?;
+        self.add_landing_entry(&landing)?;
+        Ok(())
+    }
+
+    pub(crate) fn len(&self) -> usize {
+        self.landings.len()
     }
 
     fn add_municipality(&mut self, landing: &fiskeridir_rs::Landing) {
@@ -158,15 +180,11 @@ impl LandingSet {
         Ok(())
     }
 
-    fn add_landing(
-        &mut self,
-        landing: &fiskeridir_rs::Landing,
-        data_year: u32,
-    ) -> Result<(), PostgresError> {
+    fn add_landing_impl(&mut self, landing: &fiskeridir_rs::Landing) -> Result<(), PostgresError> {
         if self.landings.contains_key(&landing.id) {
             Ok(())
         } else {
-            let new_landing = NewLanding::from_fiskeridir_landing(landing.clone(), data_year)?;
+            let new_landing = NewLanding::from_fiskeridir_landing(landing.clone(), self.data_year)?;
             self.landings.insert(landing.id.clone(), new_landing);
             Ok(())
         }

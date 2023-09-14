@@ -57,15 +57,16 @@ impl DataSource for LandingScraper {
                     source.year()
                 );
             } else {
+                let data_year = source.year();
                 let data = file
                     .into_deserialize::<LandingRaw>()
                     .change_context(ScraperError)?
-                    .map(|v| match v {
-                        Ok(v) => Landing::try_from(v),
+                    .map(move |v| match v {
+                        Ok(v) => Landing::try_from_raw(v, data_year),
                         Err(e) => Err(e),
                     });
 
-                match processor.add_landings(Box::new(data), source.year()).await {
+                match processor.add_landings(Box::new(data), data_year).await {
                     Err(e) => {
                         event!(
                             Level::ERROR,
