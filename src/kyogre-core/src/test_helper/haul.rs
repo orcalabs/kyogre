@@ -119,6 +119,9 @@ impl HaulVesselBuilder {
     }
 }
 impl HaulTripBuilder {
+    pub fn base(self) -> TestStateBuilder {
+        self.state.state.state
+    }
     pub fn up(self) -> VesselBuilder {
         self.state.state
     }

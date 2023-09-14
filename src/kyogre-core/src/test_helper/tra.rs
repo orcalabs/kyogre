@@ -17,6 +17,7 @@ pub struct TraTripBuilder {
     pub current_index: usize,
 }
 
+#[derive(Clone, Debug)]
 pub struct TraConstructor {
     pub tra: ErsTra,
 }

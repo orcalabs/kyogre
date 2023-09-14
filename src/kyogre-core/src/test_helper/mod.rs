@@ -190,6 +190,11 @@ impl TestStateBuilder {
         self
     }
 
+    pub fn trip_duration(mut self, duration: Duration) -> TestStateBuilder {
+        self.default_trip_duration = duration;
+        self
+    }
+
     pub fn mattilsynet(mut self, amount: usize) -> MattilsynetBuilder {
         assert!(amount != 0);
 
