@@ -2,7 +2,7 @@ use super::helper::test;
 use actix_web::http::StatusCode;
 use chrono::{Datelike, Duration, TimeZone, Utc};
 use fiskeridir_rs::Gear;
-use kyogre_core::{ScraperInboundPort, VesselEventType};
+use kyogre_core::{levels::*, ScraperInboundPort, VesselEventType};
 use web_api::routes::v1::trip::{Trip, TripsParameters};
 
 #[tokio::test]

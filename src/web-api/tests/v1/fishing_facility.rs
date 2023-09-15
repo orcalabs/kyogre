@@ -1,6 +1,6 @@
 use super::helper::test;
 use actix_web::http::StatusCode;
-use kyogre_core::{FishingFacilitiesSorting, FishingFacilityToolType, Mmsi, Ordering};
+use kyogre_core::{levels::*, FishingFacilitiesSorting, FishingFacilityToolType, Mmsi, Ordering};
 use web_api::routes::v1::fishing_facility::{FishingFacilitiesParams, FishingFacility};
 
 #[tokio::test]

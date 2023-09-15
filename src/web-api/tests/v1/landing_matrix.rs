@@ -6,8 +6,8 @@ use chrono::{DateTime, Utc};
 use enum_index::EnumIndex;
 use fiskeridir_rs::{GearGroup, Landing, LandingId, SpeciesGroup, VesselLengthGroup};
 use kyogre_core::{
-    landing_date_feature_matrix_index, ActiveLandingFilter, CatchLocationId, HaulMatrixes,
-    LandingMatrixes, NUM_CATCH_LOCATIONS,
+    landing_date_feature_matrix_index, levels::*, ActiveLandingFilter, CatchLocationId,
+    HaulMatrixes, LandingMatrixes, NUM_CATCH_LOCATIONS,
 };
 use web_api::routes::utils::{self, GearGroupId, SpeciesGroupId};
 use web_api::routes::v1::landing::{LandingMatrix, LandingMatrixParams};

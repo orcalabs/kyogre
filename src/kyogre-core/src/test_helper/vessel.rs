@@ -23,10 +23,6 @@ pub struct VesselContructor {
 }
 
 impl VesselBuilder {
-    pub fn vessels(self, amount: usize) -> VesselBuilder {
-        self.state.vessels(amount)
-    }
-
     pub fn fishing_facilities(mut self, amount: usize) -> FishingFacilityVesselBuilder {
         assert!(amount != 0);
         let base = &mut self.state;
@@ -461,41 +457,5 @@ impl VesselBuilder {
             current_index: base.ais_positions.len() - amount,
             state: self,
         }
-    }
-
-    pub fn modify<F>(mut self, closure: F) -> VesselBuilder
-    where
-        F: Fn(&mut VesselContructor),
-    {
-        self.state
-            .vessels
-            .iter_mut()
-            .enumerate()
-            .for_each(|(i, vessel)| {
-                if i >= self.current_index {
-                    closure(vessel)
-                }
-            });
-        self
-    }
-
-    pub fn modify_idx<F>(mut self, closure: F) -> VesselBuilder
-    where
-        F: Fn(usize, &mut VesselContructor),
-    {
-        self.state
-            .vessels
-            .iter_mut()
-            .enumerate()
-            .for_each(|(i, vessel)| {
-                if i >= self.current_index {
-                    closure(i, vessel)
-                }
-            });
-        self
-    }
-
-    pub async fn build(self) -> TestState {
-        self.state.build().await
     }
 }

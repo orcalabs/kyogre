@@ -2,7 +2,7 @@ use super::helper::test;
 use actix_web::http::StatusCode;
 use chrono::{Duration, TimeZone, Utc};
 use kyogre_core::{
-    LEISURE_VESSEL_LENGTH_AIS_BOUNDARY, LEISURE_VESSEL_SHIP_TYPES,
+    levels::*, LEISURE_VESSEL_LENGTH_AIS_BOUNDARY, LEISURE_VESSEL_SHIP_TYPES,
     PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY,
 };
 use web_api::{
@@ -181,7 +181,7 @@ async fn test_ais_vms_does_not_return_positions_of_leisure_vessels_under_45_mete
             })
             .ais_positions(2)
             .modify(|v| {
-                v.msgtime = pos_timestamp;
+                v.position.msgtime = pos_timestamp;
             })
             .build()
             .await;
@@ -235,7 +235,7 @@ async fn test_ais_vms_does_not_return_positions_of_vessel_with_unknown_ship_type
             .modify(|v| v.ais.ship_type = None)
             .ais_positions(1)
             .modify(|v| {
-                v.msgtime = pos_timestamp;
+                v.position.msgtime = pos_timestamp;
             })
             .build()
             .await;
@@ -274,7 +274,7 @@ async fn test_ais_vms_prioritizes_fiskeridir_length_over_ais_length_in_leisure_v
             })
             .ais_positions(1)
             .modify(|v| {
-                v.msgtime = pos_timestamp;
+                v.position.msgtime = pos_timestamp;
             })
             .build()
             .await;
@@ -311,7 +311,7 @@ async fn test_ais_vms_does_not_return_ais_positions_for_vessels_under_15m_withou
             })
             .ais_positions(1)
             .modify(|v| {
-                v.msgtime = pos_timestamp;
+                v.position.msgtime = pos_timestamp;
             })
             .build()
             .await;
@@ -348,7 +348,7 @@ async fn test_ais_track_return_positions_for_vessels_under_15m_with_full_ais_per
             })
             .ais_positions(1)
             .modify(|v| {
-                v.msgtime = pos_timestamp;
+                v.position.msgtime = pos_timestamp;
             })
             .build()
             .await;
@@ -386,7 +386,7 @@ async fn test_ais_vms_does_not_return_positions_for_vessels_under_15m_with_corre
             })
             .ais_positions(1)
             .modify(|v| {
-                v.msgtime = pos_timestamp;
+                v.position.msgtime = pos_timestamp;
             })
             .build()
             .await;
@@ -427,7 +427,7 @@ async fn test_ais_track_does_not_return_positions_for_vessels_under_15m_with_cor
             })
             .ais_positions(1)
             .modify(|v| {
-                v.msgtime = pos_timestamp;
+                v.position.msgtime = pos_timestamp;
             })
             .build()
             .await;

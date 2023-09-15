@@ -89,13 +89,6 @@ impl TripConstructor {
     }
 }
 impl TripBuilder {
-    pub fn trips(self, amount: usize) -> TripBuilder {
-        self.state.trips(amount)
-    }
-    pub fn up(self) -> VesselBuilder {
-        self.state
-    }
-
     pub fn precision(mut self, id: PrecisionId) -> TripBuilder {
         let base = &mut self.state.state;
         let num_trips = base.trips[self.current_index..].len();
@@ -283,45 +276,5 @@ impl TripBuilder {
             current_index: base.landings.len() - amount,
             state: self,
         }
-    }
-
-    pub fn modify<F>(mut self, closure: F) -> TripBuilder
-    where
-        F: Fn(&mut TripConstructor),
-    {
-        self.state
-            .state
-            .trips
-            .iter_mut()
-            .enumerate()
-            .filter(|(i, _)| *i >= self.current_index)
-            .for_each(|(_, t)| {
-                closure(t);
-                t.current_data_timestamp = t.start();
-            });
-
-        self
-    }
-
-    pub fn modify_idx<F>(mut self, closure: F) -> TripBuilder
-    where
-        F: Fn(usize, &mut TripConstructor),
-    {
-        self.state
-            .state
-            .trips
-            .iter_mut()
-            .enumerate()
-            .filter(|(i, _)| *i >= self.current_index)
-            .for_each(|(idx, t)| {
-                closure(idx, t);
-                t.current_data_timestamp = t.start();
-            });
-
-        self
-    }
-
-    pub async fn build(self) -> TestState {
-        self.state.state.build().await
     }
 }
