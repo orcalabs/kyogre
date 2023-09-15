@@ -65,7 +65,7 @@ jobs:
        uses: azure/container-apps-deploy-action@v1
        with:
          containerAppName: dev-kyogre-duck-db
-         containerAppEnvironment: dev-app-environment
+         containerAppEnvironment: dev-kyogre
          resourceGroup: dev
          imageToDeploy: ghcr.io/orcalabs/kyogre/duckdb:${{ github.sha }}
 
@@ -73,7 +73,7 @@ jobs:
        uses: azure/container-apps-deploy-action@v1
        with:
          containerAppName: dev-kyogre-fishery-api
-         containerAppEnvironment: dev-app-environment
+         containerAppEnvironment: dev-kyogre
          resourceGroup: dev
          imageToDeploy: ghcr.io/orcalabs/kyogre/fishery-api:${{ github.sha }}
 
@@ -81,7 +81,7 @@ jobs:
        uses: azure/container-apps-deploy-action@v1
        with:
          containerAppName: dev-kyogre-ais-consumer
-         containerAppEnvironment: dev-app-environment
+         containerAppEnvironment: dev-kyogre
          resourceGroup: dev
          imageToDeploy: ghcr.io/orcalabs/kyogre/ais-consumer:${{ github.sha }}
 
@@ -89,6 +89,6 @@ jobs:
        uses: azure/container-apps-deploy-action@v1
        with:
          containerAppName: dev-kyogre-engine
-         containerAppEnvironment: dev-app-environment
+         containerAppEnvironment: dev-kyogre
          resourceGroup: dev
          imageToDeploy: ghcr.io/orcalabs/kyogre/engine:${{ github.sha }}
