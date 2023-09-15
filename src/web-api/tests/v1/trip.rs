@@ -2,7 +2,7 @@ use super::helper::test;
 use actix_web::http::StatusCode;
 use chrono::{Duration, TimeZone, Utc};
 use fiskeridir_rs::{DeliveryPointId, GearGroup, LandingId, SpeciesGroup, VesselLengthGroup};
-use kyogre_core::{Ordering, TripSorting, TripSpecification, VesselEventType};
+use kyogre_core::{levels::*, Ordering, TripSorting, TripSpecification, VesselEventType};
 use web_api::routes::utils::{self, GearGroupId, SpeciesGroupId};
 use web_api::routes::v1::trip::{Trip, TripsOfVesselParameters, TripsParameters};
 

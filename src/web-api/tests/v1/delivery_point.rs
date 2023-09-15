@@ -1,7 +1,7 @@
 use super::helper::test;
 use actix_web::http::StatusCode;
 use fiskeridir_rs::DeliveryPointId;
-use kyogre_core::{TestHelperInbound, TestHelperOutbound};
+use kyogre_core::{levels::*, TestHelperInbound, TestHelperOutbound};
 use web_api::routes::v1::{delivery_point::DeliveryPoint, landing::Landing};
 
 #[tokio::test]

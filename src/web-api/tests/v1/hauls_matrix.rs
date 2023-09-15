@@ -4,9 +4,9 @@ use actix_web::http::StatusCode;
 use chrono::{DateTime, Utc};
 use enum_index::EnumIndex;
 use fiskeridir_rs::{GearGroup, SpeciesGroup, VesselLengthGroup};
-use kyogre_core::ActiveHaulsFilter;
 use kyogre_core::{
-    haul_date_feature_matrix_index, CatchLocationId, HaulMatrixes, NUM_CATCH_LOCATIONS,
+    haul_date_feature_matrix_index, levels::*, ActiveHaulsFilter, CatchLocationId, HaulMatrixes,
+    NUM_CATCH_LOCATIONS,
 };
 use web_api::routes::{
     utils::{self, GearGroupId, SpeciesGroupId},

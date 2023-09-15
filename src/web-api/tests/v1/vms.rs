@@ -1,6 +1,7 @@
 use crate::v1::helper::test;
 use chrono::{Duration, TimeZone, Utc};
 use fiskeridir_rs::CallSign;
+use kyogre_core::levels::*;
 use reqwest::StatusCode;
 use web_api::routes::v1::vms::{VmsParameters, VmsPosition};
 

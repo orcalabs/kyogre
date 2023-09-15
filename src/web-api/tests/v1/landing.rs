@@ -2,7 +2,7 @@ use super::helper::test;
 use actix_web::http::StatusCode;
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::{GearGroup, SpeciesGroup};
-use kyogre_core::{LandingsSorting, Ordering};
+use kyogre_core::{levels::*, LandingsSorting, Ordering};
 use web_api::routes::{
     utils::{DateTimeUtc, GearGroupId, SpeciesGroupId},
     v1::landing::{Landing, LandingsParams},
