@@ -15,4 +15,4 @@ bw_jwks_url: https://id.barentswatch.no/.well-known/openid-configuration/jwks
 bw_profiles_url: https://www.barentswatch.no/bwapi/v2/user/profiles
 duck_db_api:
   ip: dev-kyogre-duck-db
-  port: 80
+  port: 5000
