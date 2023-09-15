@@ -1025,6 +1025,58 @@ impl VerificationOutbound for PostgresAdapter {
     }
 }
 
+#[async_trait]
+impl HaulWeatherInbound for PostgresAdapter {
+    async fn add_haul_weather(&self, values: Vec<HaulWeatherOutput>) -> Result<(), UpdateError> {
+        self.add_haul_weather_impl(values)
+            .await
+            .change_context(UpdateError)
+    }
+}
+
+#[async_trait]
+impl HaulWeatherOutbound for PostgresAdapter {
+    async fn all_vessels(&self) -> Result<Vec<Vessel>, QueryError> {
+        convert_stream(self.fiskeridir_ais_vessel_combinations())
+            .try_collect()
+            .await
+    }
+    async fn haul_messages_of_vessel_without_weather(
+        &self,
+        vessel_id: FiskeridirVesselId,
+    ) -> Result<Vec<HaulMessage>, QueryError> {
+        convert_vec(
+            self.haul_messages_of_vessel_without_weather_impl(vessel_id)
+                .await
+                .change_context(QueryError)?,
+        )
+    }
+    async fn ais_vms_positions(
+        &self,
+        mmsi: Option<Mmsi>,
+        call_sign: Option<&CallSign>,
+        range: &DateRange,
+    ) -> Result<Vec<AisVmsPosition>, QueryError> {
+        convert_stream(self.ais_vms_positions_impl(mmsi, call_sign, range, AisPermission::All))
+            .try_collect()
+            .await
+    }
+    async fn weather_locations(&self) -> Result<Vec<WeatherLocation>, QueryError> {
+        convert_vec(
+            self.weather_locations_impl()
+                .await
+                .change_context(QueryError)?,
+        )
+    }
+    async fn haul_weather(&self, query: WeatherQuery) -> Result<Option<HaulWeather>, QueryError> {
+        convert_optional(
+            self.haul_weather_impl(query)
+                .await
+                .change_context(QueryError)?,
+        )
+    }
+}
+
 pub(crate) fn convert_stream<I, A, B>(input: I) -> impl Stream<Item = Result<B, QueryError>>
 where
     I: Stream<Item = Result<A, PostgresError>>,

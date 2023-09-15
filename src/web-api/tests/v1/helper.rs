@@ -72,6 +72,8 @@ impl TestHelper {
             db.clone(),
             db.clone(),
             db.clone(),
+            db.clone(),
+            db.clone(),
             db,
             None,
             trip_assemblers,

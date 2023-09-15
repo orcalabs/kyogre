@@ -1,6 +1,8 @@
 use bigdecimal::BigDecimal;
 use chrono::{DateTime, Utc};
-use error_stack::{Report, ResultExt};
+use error_stack::{bail, report, Report, ResultExt};
+use geo_types::geometry::Geometry;
+use geozero::wkb;
 use unnest_insert::UnnestInsert;
 
 use crate::{
@@ -43,15 +45,19 @@ pub struct Weather {
 }
 
 #[derive(Debug)]
+pub struct WeatherLocation {
+    pub weather_location_id: i32,
+    pub polygon: wkb::Decode<Geometry<f64>>,
+}
+
+#[derive(Debug)]
 pub struct HaulWeather {
-    pub altitude: BigDecimal,
     pub wind_speed_10m: Option<BigDecimal>,
     pub wind_direction_10m: Option<BigDecimal>,
     pub air_temperature_2m: Option<BigDecimal>,
     pub relative_humidity_2m: Option<BigDecimal>,
     pub air_pressure_at_sea_level: Option<BigDecimal>,
     pub precipitation_amount: Option<BigDecimal>,
-    pub land_area_fraction: BigDecimal,
     pub cloud_area_fraction: Option<BigDecimal>,
 }
 
@@ -116,12 +122,31 @@ impl TryFrom<Weather> for kyogre_core::Weather {
     }
 }
 
+impl TryFrom<WeatherLocation> for kyogre_core::WeatherLocation {
+    type Error = Report<PostgresError>;
+
+    fn try_from(v: WeatherLocation) -> Result<Self, Self::Error> {
+        let geometry = v
+            .polygon
+            .geometry
+            .ok_or_else(|| report!(PostgresError::DataConversion))?;
+
+        let polygon = match geometry {
+            Geometry::Polygon(p) => p,
+            _ => bail!(PostgresError::DataConversion),
+        };
+
+        Ok(Self {
+            id: v.weather_location_id,
+            polygon,
+        })
+    }
+}
 impl TryFrom<HaulWeather> for kyogre_core::HaulWeather {
     type Error = Report<PostgresError>;
 
     fn try_from(v: HaulWeather) -> Result<Self, Self::Error> {
         Ok(Self {
-            altitude: decimal_to_float(v.altitude).change_context(PostgresError::DataConversion)?,
             wind_speed_10m: opt_decimal_to_float(v.wind_speed_10m)
                 .change_context(PostgresError::DataConversion)?,
             wind_direction_10m: opt_decimal_to_float(v.wind_direction_10m)
@@ -133,8 +158,6 @@ impl TryFrom<HaulWeather> for kyogre_core::HaulWeather {
             air_pressure_at_sea_level: opt_decimal_to_float(v.air_pressure_at_sea_level)
                 .change_context(PostgresError::DataConversion)?,
             precipitation_amount: opt_decimal_to_float(v.precipitation_amount)
-                .change_context(PostgresError::DataConversion)?,
-            land_area_fraction: decimal_to_float(v.land_area_fraction)
                 .change_context(PostgresError::DataConversion)?,
             cloud_area_fraction: opt_decimal_to_float(v.cloud_area_fraction)
                 .change_context(PostgresError::DataConversion)?,

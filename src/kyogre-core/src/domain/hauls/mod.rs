@@ -5,7 +5,7 @@ use fiskeridir_rs::{Gear, GearGroup, VesselLengthGroup, WhaleGender};
 use serde::{Deserialize, Serialize};
 use serde_repr::Deserialize_repr;
 
-use crate::CatchLocationId;
+use crate::{CatchLocationId, HaulWeather};
 
 mod distributor;
 
@@ -43,6 +43,7 @@ pub struct Haul {
     pub vessel_length_group: VesselLengthGroup,
     pub vessel_name: Option<String>,
     pub vessel_name_ers: Option<String>,
+    pub weather: HaulWeather,
     pub whale_catches: Vec<WhaleCatch>,
 }
 
@@ -82,6 +83,13 @@ pub struct HaulsMatrix {
 #[repr(i32)]
 pub enum HaulDistributorId {
     AisVms = 1,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum HaulWeatherStatus {
+    Unprocessed = 1,
+    Attempted = 2,
+    Successful = 3,
 }
 
 impl std::fmt::Display for HaulDistributorId {

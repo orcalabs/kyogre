@@ -1,4 +1,4 @@
-use super::{bound_float_to_decimal, float_to_decimal};
+use super::{bound_float_to_decimal, float_to_decimal, opt_float_to_decimal};
 use crate::{error::PostgresError, models::Haul, models::HaulMessage, PostgresAdapter};
 use bigdecimal::BigDecimal;
 use chrono::{DateTime, Utc};
@@ -131,6 +131,13 @@ SELECT
     h.vessel_length_group AS "vessel_length_group!: VesselLengthGroup",
     h.vessel_name,
     h.vessel_name_ers,
+    h.wind_speed_10m,
+    h.wind_direction_10m,
+    h.air_temperature_2m,
+    h.relative_humidity_2m,
+    h.air_pressure_at_sea_level,
+    h.precipitation_amount,
+    h.cloud_area_fraction,
     h.catches::TEXT AS "catches!",
     h.whale_catches::TEXT AS "whale_catches!"
 FROM
@@ -160,30 +167,46 @@ WHERE
         $6::BIGINT[] IS NULL
         OR fiskeridir_vessel_id = ANY ($6)
     )
+    AND (
+        $7::DECIMAL IS NULL
+        OR wind_speed_10m >= $7
+    )
+    AND (
+        $8::DECIMAL IS NULL
+        OR wind_speed_10m <= $8
+    )
+    AND (
+        $9::DECIMAL IS NULL
+        OR air_temperature_2m >= $9
+    )
+    AND (
+        $10::DECIMAL IS NULL
+        OR air_temperature_2m <= $10
+    )
 ORDER BY
     CASE
-        WHEN $7 = 1
-        AND $8 = 1 THEN start_timestamp
+        WHEN $11 = 1
+        AND $12 = 1 THEN start_timestamp
     END ASC,
     CASE
-        WHEN $7 = 1
-        AND $8 = 2 THEN stop_timestamp
+        WHEN $11 = 1
+        AND $12 = 2 THEN stop_timestamp
     END ASC,
     CASE
-        WHEN $7 = 1
-        AND $8 = 3 THEN total_living_weight
+        WHEN $11 = 1
+        AND $12 = 3 THEN total_living_weight
     END ASC,
     CASE
-        WHEN $7 = 2
-        AND $8 = 1 THEN start_timestamp
+        WHEN $11 = 2
+        AND $12 = 1 THEN start_timestamp
     END DESC,
     CASE
-        WHEN $7 = 2
-        AND $8 = 2 THEN stop_timestamp
+        WHEN $11 = 2
+        AND $12 = 2 THEN stop_timestamp
     END DESC,
     CASE
-        WHEN $7 = 2
-        AND $8 = 3 THEN total_living_weight
+        WHEN $11 = 2
+        AND $12 = 3 THEN total_living_weight
     END DESC
             "#,
             args.ranges,
@@ -192,6 +215,10 @@ ORDER BY
             args.species_group_ids as _,
             args.vessel_length_ranges as _,
             args.fiskeridir_vessel_ids as _,
+            args.min_wind_speed,
+            args.max_wind_speed,
+            args.min_air_temperature,
+            args.max_air_temperature,
             args.ordering,
             args.sorting,
         )
@@ -222,6 +249,33 @@ WHERE
     AND h.fiskeridir_vessel_id = $1
             "#,
             vessel_id.0,
+        )
+        .fetch_all(&self.pool)
+        .await
+        .into_report()
+        .change_context(PostgresError::Query)
+    }
+
+    pub(crate) async fn haul_messages_of_vessel_without_weather_impl(
+        &self,
+        vessel_id: FiskeridirVesselId,
+    ) -> Result<Vec<HaulMessage>, PostgresError> {
+        sqlx::query_as!(
+            HaulMessage,
+            r#"
+SELECT
+    haul_id,
+    message_id,
+    start_timestamp,
+    stop_timestamp
+FROM
+    hauls
+WHERE
+    fiskeridir_vessel_id = $1::BIGINT
+    AND haul_weather_status_id = $2::INT
+            "#,
+            vessel_id.0,
+            HaulWeatherStatus::Unprocessed as i32,
         )
         .fetch_all(&self.pool)
         .await
@@ -748,6 +802,10 @@ pub struct HaulsArgs {
     pub species_group_ids: Option<Vec<i32>>,
     pub vessel_length_ranges: Option<Vec<PgRange<BigDecimal>>>,
     pub fiskeridir_vessel_ids: Option<Vec<i64>>,
+    pub min_wind_speed: Option<BigDecimal>,
+    pub max_wind_speed: Option<BigDecimal>,
+    pub min_air_temperature: Option<BigDecimal>,
+    pub max_air_temperature: Option<BigDecimal>,
     pub sorting: Option<i32>,
     pub ordering: Option<i32>,
 }
@@ -793,6 +851,14 @@ impl TryFrom<HaulsQuery> for HaulsArgs {
             fiskeridir_vessel_ids: v
                 .vessel_ids
                 .map(|ids| ids.into_iter().map(|i| i.0).collect()),
+            min_wind_speed: opt_float_to_decimal(v.min_wind_speed)
+                .change_context(PostgresError::DataConversion)?,
+            max_wind_speed: opt_float_to_decimal(v.max_wind_speed)
+                .change_context(PostgresError::DataConversion)?,
+            min_air_temperature: opt_float_to_decimal(v.min_air_temperature)
+                .change_context(PostgresError::DataConversion)?,
+            max_air_temperature: opt_float_to_decimal(v.max_air_temperature)
+                .change_context(PostgresError::DataConversion)?,
             sorting: v.sorting.map(|s| s as i32),
             ordering: v.ordering.map(|o| o as i32),
         })

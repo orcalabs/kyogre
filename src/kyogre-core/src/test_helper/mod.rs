@@ -4,7 +4,7 @@ use crate::{
     Landing, LandingsQuery, LandingsSorting, ManualDeliveryPoint, MattilsynetDeliveryPoint, Mmsi,
     NewAisPosition, NewAisStatic, Ordering, Pagination, PrecisionId, ScraperInboundPort,
     TestHelperInbound, TestHelperOutbound, TripAssemblerOutboundPort, TripDetailed, Trips,
-    TripsQuery, Vessel, VmsPosition, WebApiOutboundPort,
+    TripsQuery, Vessel, VmsPosition, Weather, WebApiOutboundPort,
 };
 use ais::*;
 use ais_vms::*;
@@ -42,6 +42,7 @@ mod tra;
 mod trip;
 mod vessel;
 mod vms;
+mod weather;
 
 pub use ais::*;
 pub use ais_vms::*;
@@ -56,6 +57,7 @@ pub use tra::*;
 pub use trip::*;
 pub use vessel::*;
 pub use vms::*;
+pub use weather::*;
 
 #[derive(Debug)]
 pub struct TestState {
@@ -73,6 +75,7 @@ pub struct TestState {
     // Only includes the delivery points added by the builder
     pub delivery_points: Vec<DeliveryPoint>,
     pub fishing_facilities: Vec<FishingFacility>,
+    pub weather: Vec<Weather>,
 }
 
 pub struct TestStateBuilder {
@@ -97,6 +100,7 @@ pub struct TestStateBuilder {
     mattilsynet: Vec<MattilsynetConstructor>,
     manual_delivery_points: Vec<ManualDeliveryPointConstructor>,
     fishing_facilities: Vec<FishingFacilityConctructor>,
+    weather: Vec<WeatherConstructor>,
     default_trip_duration: Duration,
     default_haul_duration: Duration,
     default_fishing_facility_duration: Duration,
@@ -173,6 +177,7 @@ impl TestStateBuilder {
             tra: vec![],
             global_data_timestamp_counter: Utc.with_ymd_and_hms(2010, 2, 5, 10, 0, 0).unwrap(),
             fishing_facilities: vec![],
+            weather: vec![],
             default_fishing_facility_duration: Duration::hours(1),
             dep: vec![],
             por: vec![],
@@ -569,6 +574,15 @@ impl TestStateBuilder {
             .unwrap();
         self.ais_data_confirmation.recv().await.unwrap();
 
+        let new_weather = self
+            .weather
+            .into_iter()
+            .map(|w| w.weather)
+            .collect::<Vec<_>>();
+        let weather = new_weather.iter().map(Weather::from).collect();
+
+        self.storage.add_weather(new_weather).await.unwrap();
+
         let mut ais_positions = self.storage.all_ais().await;
         let mut vms_positions = self.storage.all_vms().await;
         let mut ais_vms_positions = self.storage.all_ais_vms().await;
@@ -680,6 +694,7 @@ impl TestStateBuilder {
             all_delivery_points,
             delivery_points,
             fishing_facilities,
+            weather,
         }
     }
 }
