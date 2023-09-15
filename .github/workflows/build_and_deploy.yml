@@ -13,7 +13,7 @@ on:
       - dockerfiles/**/*
 jobs:
   images:
-    uses: orcalabs/github-actions/.github/workflows/images.yml@master
+    uses: orcalabs/github-actions/.github/workflows/container-apps-deploy.yml@master
     secrets: inherit
     with:
       keys: |
@@ -23,71 +23,26 @@ jobs:
         engine
       object: '{
            "duckdb" : {
-              "aks-path" : "apps/base/kyogre",
+              "container-app-name" : "dev-kyogre-duck-db",
               "dockerfile" : "dockerfiles/duckdb/Dockerfile",
               "registry" : "ghcr.io/orcalabs/kyogre/duckdb"
            },
            "fishery-api" : {
-              "aks-path" : "apps/base/kyogre",
+              "container-app-name" : "dev-kyogre-fishery-api",
               "dockerfile" : "dockerfiles/fishery-api/Dockerfile",
               "registry" : "ghcr.io/orcalabs/kyogre/fishery-api"
            },
            "ais-consumer" : {
-              "aks-path" : "apps/base/kyogre",
+              "container-app-name" : "dev-kyogre-ais-consumer",
               "dockerfile" : "dockerfiles/ais-consumer/Dockerfile",
               "registry" : "ghcr.io/orcalabs/kyogre/ais-consumer"
            },
            "engine" : {
-              "aks-path" : "apps/base/kyogre",
+              "container-app-name" : "dev-kyogre-engine",
               "dockerfile" : "dockerfiles/engine/Dockerfile",
               "registry" : "ghcr.io/orcalabs/kyogre/engine"
            }
         }'
+      resource-group: dev
+      container-app-env-name: dev-kyogre
 
-  deploy:
-    runs-on: ubuntu-latest
-    needs: images
-    steps:
-     - name: Log in to Azure
-       uses: azure/login@v1
-       with:
-         creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-     - name: Login to Github container registry
-       uses: docker/login-action@v3
-       with:
-         registry: ghcr.io
-         username: ${{ github.actor }}
-         password: ${{ secrets.GITHUB_TOKEN }}
-
-     - name: Deploy duckdb
-       uses: azure/container-apps-deploy-action@v1
-       with:
-         containerAppName: dev-kyogre-duck-db
-         containerAppEnvironment: dev-kyogre
-         resourceGroup: dev
-         imageToDeploy: ghcr.io/orcalabs/kyogre/duckdb:${{ github.sha }}
-
-     - name: Deploy fishery-api
-       uses: azure/container-apps-deploy-action@v1
-       with:
-         containerAppName: dev-kyogre-fishery-api
-         containerAppEnvironment: dev-kyogre
-         resourceGroup: dev
-         imageToDeploy: ghcr.io/orcalabs/kyogre/fishery-api:${{ github.sha }}
-
-     - name: Deploy ais-consumer
-       uses: azure/container-apps-deploy-action@v1
-       with:
-         containerAppName: dev-kyogre-ais-consumer
-         containerAppEnvironment: dev-kyogre
-         resourceGroup: dev
-         imageToDeploy: ghcr.io/orcalabs/kyogre/ais-consumer:${{ github.sha }}
-
-     - name: Deploy engine
-       uses: azure/container-apps-deploy-action@v1
-       with:
-         containerAppName: dev-kyogre-engine
-         containerAppEnvironment: dev-kyogre
-         resourceGroup: dev
-         imageToDeploy: ghcr.io/orcalabs/kyogre/engine:${{ github.sha }}
