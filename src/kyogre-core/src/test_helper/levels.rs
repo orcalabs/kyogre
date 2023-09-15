@@ -113,6 +113,11 @@ impl_modifiable!(
     state.state.state.landings
 );
 impl_modifiable!(PorVesselBuilder, PorConstructor, state.state.por);
+impl_modifiable!(
+    WeatherHaulBuilder,
+    WeatherConstructor,
+    state.state.state.weather
+);
 
 impl Modifiable for TripBuilder {
     type Constructor = TripConstructor;
@@ -159,6 +164,33 @@ impl Modifiable for TripBuilder {
         self
     }
 }
+
+#[async_trait]
+pub trait HaulVesselLevel
+where
+    Self: Sized,
+{
+    fn up(self) -> HaulVesselBuilder;
+    fn base(self) -> TestStateBuilder;
+    async fn build(self) -> TestState {
+        self.base().build().await
+    }
+}
+
+macro_rules! impl_haul_vessel_level {
+    ($type: ty) => {
+        impl HaulVesselLevel for $type {
+            fn up(self) -> HaulVesselBuilder {
+                self.state
+            }
+            fn base(self) -> TestStateBuilder {
+                self.state.state.state
+            }
+        }
+    };
+}
+
+impl_haul_vessel_level!(WeatherHaulBuilder);
 
 #[async_trait]
 pub trait VesselLevel

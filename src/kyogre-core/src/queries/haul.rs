@@ -89,6 +89,10 @@ pub struct HaulsQuery {
     pub species_group_ids: Option<Vec<SpeciesGroup>>,
     pub vessel_length_ranges: Option<Vec<Range<f64>>>,
     pub vessel_ids: Option<Vec<FiskeridirVesselId>>,
+    pub min_wind_speed: Option<f64>,
+    pub max_wind_speed: Option<f64>,
+    pub min_air_temperature: Option<f64>,
+    pub max_air_temperature: Option<f64>,
     pub sorting: Option<HaulsSorting>,
     pub ordering: Option<Ordering>,
 }

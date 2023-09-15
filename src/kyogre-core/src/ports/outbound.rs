@@ -214,6 +214,23 @@ pub trait VerificationOutbound: Send + Sync {
 }
 
 #[async_trait]
+pub trait HaulWeatherOutbound: Send + Sync {
+    async fn all_vessels(&self) -> Result<Vec<Vessel>, QueryError>;
+    async fn haul_messages_of_vessel_without_weather(
+        &self,
+        vessel_id: FiskeridirVesselId,
+    ) -> Result<Vec<HaulMessage>, QueryError>;
+    async fn ais_vms_positions(
+        &self,
+        mmsi: Option<Mmsi>,
+        call_sign: Option<&CallSign>,
+        range: &DateRange,
+    ) -> Result<Vec<AisVmsPosition>, QueryError>;
+    async fn weather_locations(&self) -> Result<Vec<WeatherLocation>, QueryError>;
+    async fn haul_weather(&self, query: WeatherQuery) -> Result<Option<HaulWeather>, QueryError>;
+}
+
+#[async_trait]
 pub trait TestHelperOutbound: Send + Sync {
     async fn all_dep(&self) -> Vec<Departure>;
     async fn all_por(&self) -> Vec<Arrival>;

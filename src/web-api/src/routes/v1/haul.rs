@@ -43,6 +43,10 @@ pub struct HaulsParams {
     #[param(value_type = Option<String>, example = "2000013801,2001015304")]
     #[serde(deserialize_with = "deserialize_string_list", default)]
     pub fiskeridir_vessel_ids: Option<Vec<FiskeridirVesselId>>,
+    pub min_wind_speed: Option<f64>,
+    pub max_wind_speed: Option<f64>,
+    pub min_air_temperature: Option<f64>,
+    pub max_air_temperature: Option<f64>,
     pub sorting: Option<HaulsSorting>,
     pub ordering: Option<Ordering>,
 }
@@ -190,6 +194,8 @@ pub struct Haul {
     pub vessel_length_group: VesselLengthGroup,
     pub vessel_name: Option<String>,
     pub vessel_name_ers: Option<String>,
+    #[serde(flatten)]
+    pub weather: HaulWeather,
     pub catches: Vec<HaulCatch>,
     pub whale_catches: Vec<WhaleCatch>,
 }
@@ -224,6 +230,18 @@ pub struct WhaleCatch {
     pub grenade_number: String,
     pub individual_number: Option<i32>,
     pub length: Option<i32>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct HaulWeather {
+    pub wind_speed_10m: Option<f64>,
+    pub wind_direction_10m: Option<f64>,
+    pub air_temperature_2m: Option<f64>,
+    pub relative_humidity_2m: Option<f64>,
+    pub air_pressure_at_sea_level: Option<f64>,
+    pub precipitation_amount: Option<f64>,
+    pub cloud_area_fraction: Option<f64>,
 }
 
 impl From<kyogre_core::HaulsMatrix> for HaulsMatrix {
@@ -265,8 +283,23 @@ impl From<kyogre_core::Haul> for Haul {
             vessel_length_group: v.vessel_length_group,
             vessel_name: v.vessel_name,
             vessel_name_ers: v.vessel_name_ers,
+            weather: v.weather.into(),
             catches: v.catches.into_iter().map(HaulCatch::from).collect(),
             whale_catches: v.whale_catches.into_iter().map(WhaleCatch::from).collect(),
+        }
+    }
+}
+
+impl From<kyogre_core::HaulWeather> for HaulWeather {
+    fn from(v: kyogre_core::HaulWeather) -> Self {
+        Self {
+            wind_speed_10m: v.wind_speed_10m,
+            wind_direction_10m: v.wind_direction_10m,
+            air_temperature_2m: v.air_temperature_2m,
+            relative_humidity_2m: v.relative_humidity_2m,
+            air_pressure_at_sea_level: v.air_pressure_at_sea_level,
+            precipitation_amount: v.precipitation_amount,
+            cloud_area_fraction: v.cloud_area_fraction,
         }
     }
 }
@@ -323,6 +356,10 @@ impl From<HaulsParams> for HaulsQuery {
                 .map(|gs| gs.into_iter().map(|g| g.0).collect()),
             vessel_length_ranges: v.vessel_length_ranges,
             vessel_ids: v.fiskeridir_vessel_ids,
+            min_wind_speed: v.min_wind_speed,
+            max_wind_speed: v.max_wind_speed,
+            min_air_temperature: v.min_air_temperature,
+            max_air_temperature: v.max_air_temperature,
             sorting: v.sorting,
             ordering: v.ordering,
         }

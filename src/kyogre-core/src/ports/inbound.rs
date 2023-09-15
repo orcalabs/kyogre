@@ -123,3 +123,8 @@ pub trait TestHelperInbound: Send + Sync {
         new: DeliveryPointId,
     ) -> Result<(), InsertError>;
 }
+
+#[async_trait]
+pub trait HaulWeatherInbound: Send + Sync {
+    async fn add_haul_weather(&self, values: Vec<HaulWeatherOutput>) -> Result<(), UpdateError>;
+}
