@@ -31,7 +31,7 @@ pub struct Client {
 
 impl Client {
     pub async fn new(ip: impl AsRef<str>, port: u16) -> error_stack::Result<Client, Error> {
-        let addr: Endpoint = format!("https://{}:{port}", ip.as_ref())
+        let addr: Endpoint = format!("http://{}:{port}", ip.as_ref())
             .try_into()
             .into_report()
             .change_context(Error::Connection)?;
