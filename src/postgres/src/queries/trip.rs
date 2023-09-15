@@ -189,7 +189,6 @@ WITH
             f.api_source
         FROM
             trips t
-            INNER JOIN UNNEST($1::BIGINT[]) u (trip_id) ON u.trip_id = t.trip_id
             INNER JOIN fiskeridir_vessels fv ON fv.fiskeridir_vessel_id = t.fiskeridir_vessel_id
             LEFT JOIN vessel_events v ON t.trip_id = v.trip_id
             LEFT JOIN landings l ON l.vessel_event_id = v.vessel_event_id
@@ -197,6 +196,8 @@ WITH
             LEFT JOIN hauls h ON h.vessel_event_id = v.vessel_event_id
             LEFT JOIN fishing_facilities f ON f.fiskeridir_vessel_id = t.fiskeridir_vessel_id
             AND f.period && t.period
+        WHERE
+            t.trip_id = ANY ($1::BIGINT[])
     )
 INSERT INTO
     trips_detailed (
