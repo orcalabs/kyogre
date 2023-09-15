@@ -179,6 +179,17 @@ impl Display for TripPrecisionError {
 }
 
 #[derive(Debug)]
+pub struct HaulWeatherError;
+
+impl std::error::Error for HaulWeatherError {}
+
+impl Display for HaulWeatherError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("an error occured during haul weather processing")
+    }
+}
+
+#[derive(Debug)]
 pub enum EngineError {
     Transition,
 }

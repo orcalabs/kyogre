@@ -1,5 +1,8 @@
 use chrono::{DateTime, Utc};
+use geo::geometry::Polygon;
 use rand::Rng;
+
+use crate::{HaulId, HaulWeatherStatus};
 
 #[derive(Debug, Clone)]
 pub struct NewWeather {
@@ -35,16 +38,27 @@ pub struct Weather {
 }
 
 #[derive(Debug, Clone)]
+pub struct WeatherLocation {
+    pub id: i32,
+    pub polygon: Polygon,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct HaulWeather {
-    pub altitude: f64,
     pub wind_speed_10m: Option<f64>,
     pub wind_direction_10m: Option<f64>,
     pub air_temperature_2m: Option<f64>,
     pub relative_humidity_2m: Option<f64>,
     pub air_pressure_at_sea_level: Option<f64>,
     pub precipitation_amount: Option<f64>,
-    pub land_area_fraction: f64,
     pub cloud_area_fraction: Option<f64>,
+}
+
+#[derive(Debug, Clone)]
+pub struct HaulWeatherOutput {
+    pub haul_id: HaulId,
+    pub weather: Option<HaulWeather>,
+    pub status: HaulWeatherStatus,
 }
 
 static LATS_LONS: [(f64, f64); 20] = [
@@ -74,7 +88,7 @@ impl NewWeather {
     pub fn test_default(timestamp: DateTime<Utc>) -> Self {
         let mut rng = rand::thread_rng();
         let (latitude, longitude) = LATS_LONS[rng.gen::<usize>() % LATS_LONS.len()];
-        let num: f64 = rng.gen();
+        let num = rng.gen::<u8>() as f64;
 
         Self {
             timestamp,
@@ -90,5 +104,40 @@ impl NewWeather {
             land_area_fraction: 0.,
             cloud_area_fraction: Some(0.),
         }
+    }
+}
+
+impl From<&NewWeather> for Weather {
+    fn from(v: &NewWeather) -> Self {
+        Self {
+            timestamp: v.timestamp,
+            latitude: v.latitude,
+            longitude: v.longitude,
+            altitude: v.altitude,
+            wind_speed_10m: v.wind_speed_10m,
+            wind_direction_10m: v.wind_direction_10m,
+            air_temperature_2m: v.air_temperature_2m,
+            relative_humidity_2m: v.relative_humidity_2m,
+            air_pressure_at_sea_level: v.air_pressure_at_sea_level,
+            precipitation_amount: v.precipitation_amount,
+            land_area_fraction: v.land_area_fraction,
+            cloud_area_fraction: v.cloud_area_fraction,
+            weather_location_id: (((v.latitude / 0.1).floor() as i32 + 1000) * 100000)
+                + ((v.longitude / 0.1).floor() as i32 + 1000),
+        }
+    }
+}
+
+impl PartialEq for WeatherLocation {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
+}
+
+impl Eq for WeatherLocation {}
+
+impl std::hash::Hash for WeatherLocation {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.id.hash(state);
     }
 }

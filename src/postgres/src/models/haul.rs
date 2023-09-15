@@ -7,6 +7,8 @@ use serde::Deserialize;
 
 use crate::{error::PostgresError, queries::decimal_to_float};
 
+use super::HaulWeather;
+
 #[derive(Deserialize)]
 pub struct Haul {
     pub haul_id: i64,
@@ -34,6 +36,13 @@ pub struct Haul {
     pub vessel_length_group: VesselLengthGroup,
     pub vessel_name: Option<String>,
     pub vessel_name_ers: Option<String>,
+    pub wind_speed_10m: Option<BigDecimal>,
+    pub wind_direction_10m: Option<BigDecimal>,
+    pub air_temperature_2m: Option<BigDecimal>,
+    pub relative_humidity_2m: Option<BigDecimal>,
+    pub air_pressure_at_sea_level: Option<BigDecimal>,
+    pub precipitation_amount: Option<BigDecimal>,
+    pub cloud_area_fraction: Option<BigDecimal>,
     pub catches: String,
     pub whale_catches: String,
 }
@@ -110,6 +119,16 @@ impl TryFrom<Haul> for kyogre_core::Haul {
             vessel_length_group: v.vessel_length_group,
             vessel_name: v.vessel_name,
             vessel_name_ers: v.vessel_name_ers,
+            weather: HaulWeather {
+                wind_speed_10m: v.wind_speed_10m,
+                wind_direction_10m: v.wind_direction_10m,
+                air_temperature_2m: v.air_temperature_2m,
+                relative_humidity_2m: v.relative_humidity_2m,
+                air_pressure_at_sea_level: v.air_pressure_at_sea_level,
+                precipitation_amount: v.precipitation_amount,
+                cloud_area_fraction: v.cloud_area_fraction,
+            }
+            .try_into()?,
             catches: serde_json::from_str::<Vec<HaulCatch>>(&v.catches)
                 .into_report()
                 .change_context(PostgresError::DataConversion)?

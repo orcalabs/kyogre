@@ -1,5 +1,6 @@
 mod benchmark;
 mod haul_distribution;
+mod haul_weather;
 mod scrape;
 mod trip_distance;
 mod trips;
@@ -9,6 +10,7 @@ mod verify_database;
 
 pub use benchmark::*;
 pub use haul_distribution::*;
+pub use haul_weather::*;
 pub use scrape::*;
 pub use trip_distance::*;
 pub use trips::*;

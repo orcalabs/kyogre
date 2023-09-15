@@ -235,6 +235,66 @@ async fn test_hauls_returns_hauls_with_fiskeridir_vessel_ids() {
 }
 
 #[tokio::test]
+async fn test_hauls_filters_by_wind_speed() {
+    test(|helper, builder| async move {
+        let state = builder
+            .vessels(1)
+            .hauls(5)
+            .weather(5)
+            .modify_idx(|i, w| {
+                w.weather.wind_speed_10m = Some(i as f64);
+            })
+            .build()
+            .await;
+
+        let params = HaulsParams {
+            min_wind_speed: Some(0.5),
+            max_wind_speed: Some(2.5),
+            ..Default::default()
+        };
+
+        let response = helper.app.get_hauls(params).await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let hauls: Vec<Haul> = response.json().await.unwrap();
+
+        assert_eq!(hauls.len(), 2);
+        assert_eq!(hauls, state.hauls[1..=2]);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_hauls_filters_by_air_temperature() {
+    test(|helper, builder| async move {
+        let state = builder
+            .vessels(1)
+            .hauls(5)
+            .weather(5)
+            .modify_idx(|i, w| {
+                w.weather.air_temperature_2m = Some(i as f64);
+            })
+            .build()
+            .await;
+
+        let params = HaulsParams {
+            min_air_temperature: Some(0.5),
+            max_air_temperature: Some(2.5),
+            ..Default::default()
+        };
+
+        let response = helper.app.get_hauls(params).await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let hauls: Vec<Haul> = response.json().await.unwrap();
+
+        assert_eq!(hauls.len(), 2);
+        assert_eq!(hauls, state.hauls[1..=2]);
+    })
+    .await;
+}
+
+#[tokio::test]
 async fn test_hauls_sorts_by_start_timestamp() {
     test(|helper, builder| async move {
         let state = builder.hauls(4).build().await;

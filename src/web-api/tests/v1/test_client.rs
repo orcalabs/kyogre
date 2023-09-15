@@ -187,6 +187,22 @@ impl ApiClient {
             ))
         }
 
+        if let Some(value) = params.min_wind_speed {
+            parameters.push(("minWindSpeed".to_string(), value.to_string()))
+        }
+
+        if let Some(value) = params.max_wind_speed {
+            parameters.push(("maxWindSpeed".to_string(), value.to_string()))
+        }
+
+        if let Some(value) = params.min_air_temperature {
+            parameters.push(("minAirTemperature".to_string(), value.to_string()))
+        }
+
+        if let Some(value) = params.max_air_temperature {
+            parameters.push(("maxAirTemperature".to_string(), value.to_string()))
+        }
+
         if let Some(sorting) = params.sorting {
             parameters.push(("sorting".to_string(), sorting.to_string()))
         }

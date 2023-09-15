@@ -77,6 +77,13 @@ SELECT
     h.vessel_length_group AS "vessel_length_group!: VesselLengthGroup",
     h.vessel_name,
     h.vessel_name_ers,
+    h.wind_speed_10m,
+    h.wind_direction_10m,
+    h.air_temperature_2m,
+    h.relative_humidity_2m,
+    h.air_pressure_at_sea_level,
+    h.precipitation_amount,
+    h.cloud_area_fraction,
     h.catches::TEXT AS "catches!",
     h.whale_catches::TEXT AS "whale_catches!"
 FROM
