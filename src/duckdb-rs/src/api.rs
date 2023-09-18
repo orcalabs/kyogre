@@ -2,6 +2,8 @@ pub mod matrix_cache {
     tonic::include_proto!("matrix_cache");
 }
 
+use std::time::Duration;
+
 use crate::adapter::DuckdbAdapter;
 use async_trait::async_trait;
 use error_stack::{IntoReport, ResultExt};
@@ -36,7 +38,9 @@ impl Client {
             .change_context(Error::Connection)?;
 
         let channel = tonic::transport::Channel::builder(addr)
-            .timeout(std::time::Duration::from_secs(5))
+            .timeout(Duration::from_secs(5))
+            .http2_keep_alive_interval(Duration::from_secs(5))
+            .keep_alive_while_idle(true)
             .connect_lazy();
 
         Ok(Client {
