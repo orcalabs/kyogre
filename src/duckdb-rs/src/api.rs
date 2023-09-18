@@ -15,7 +15,6 @@ use matrix_cache::matrix_cache_server::MatrixCache;
 use matrix_cache::*;
 use num_traits::FromPrimitive;
 use tonic::codegen::CompressionEncoding;
-use tonic::transport::channel::Endpoint;
 use tonic::{Request, Response, Status};
 use tracing::{event, instrument, Level};
 
@@ -31,16 +30,17 @@ pub struct Client {
 
 impl Client {
     pub async fn new(ip: impl AsRef<str>, port: u16) -> error_stack::Result<Client, Error> {
-        let addr: Endpoint = format!("http://{}:{port}", ip.as_ref())
+        let addr: tonic::transport::Uri = format!("http://{}:{port}", ip.as_ref())
             .try_into()
             .into_report()
             .change_context(Error::Connection)?;
+
+        let channel = tonic::transport::Channel::builder(addr)
+            .timeout(std::time::Duration::from_secs(5))
+            .connect_lazy();
+
         Ok(Client {
-            inner: MatrixCacheClient::connect(addr)
-                .await
-                .into_report()
-                .change_context(Error::Connection)?
-                .accept_compressed(CompressionEncoding::Gzip),
+            inner: MatrixCacheClient::new(channel).accept_compressed(CompressionEncoding::Gzip),
         })
     }
 
