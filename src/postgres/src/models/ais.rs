@@ -34,7 +34,10 @@ pub struct NewAisVessel {
 }
 
 #[derive(Debug, Clone, UnnestInsert)]
-#[unnest_insert(table_name = "ais_vessels_historic")]
+#[unnest_insert(
+    table_name = "ais_vessels_historic",
+    conflict = "mmsi, message_timestamp"
+)]
 pub struct NewAisVesselHistoric {
     pub mmsi: i32,
     pub imo_number: Option<i32>,
