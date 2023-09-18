@@ -2,7 +2,7 @@ use std::{cmp, sync::Arc};
 
 use async_trait::async_trait;
 use chrono::{DateTime, Duration, Utc};
-use error_stack::{IntoReport, Report, Result, ResultExt};
+use error_stack::{Report, Result, ResultExt};
 use fiskeridir_rs::CallSign;
 use geozero::{geojson::GeoJson, ToGeo};
 use kyogre_core::{BearerToken, ConversionError, FishingFacilityApiSource, Mmsi};
@@ -131,7 +131,6 @@ impl TryFrom<FishingFacility> for kyogre_core::FishingFacility {
         let geometry_string = v.geometry.to_string();
         let geometry_wkt = GeoJson(&geometry_string)
             .to_geo()
-            .into_report()
             .change_context(ConversionError)?
             .to_wkt()
             .item;

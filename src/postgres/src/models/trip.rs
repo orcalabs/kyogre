@@ -2,7 +2,7 @@ use super::{FishingFacility, HaulCatch, HaulWeather, WhaleCatch};
 use crate::{error::PostgresError, queries::decimal_to_float};
 use bigdecimal::BigDecimal;
 use chrono::{DateTime, Utc};
-use error_stack::{IntoReport, Report, ResultExt};
+use error_stack::{Report, ResultExt};
 use fiskeridir_rs::{DeliveryPointId, Gear, GearGroup, LandingId, Quality, VesselLengthGroup};
 use kyogre_core::{
     CatchLocationId, DateRange, FiskeridirVesselId, HaulId, TripAssemblerId, TripId,
@@ -141,19 +141,16 @@ impl TryFrom<Trip> for kyogre_core::Trip {
     type Error = Report<PostgresError>;
 
     fn try_from(value: Trip) -> Result<Self, Self::Error> {
-        let period = DateRange::try_from(value.period)
-            .into_report()
-            .change_context(PostgresError::DataConversion)?;
+        let period =
+            DateRange::try_from(value.period).change_context(PostgresError::DataConversion)?;
 
         let landing_coverage = DateRange::try_from(value.landing_coverage)
-            .into_report()
             .change_context(PostgresError::DataConversion)?;
 
         let precision_period = value
             .period_precision
             .map(DateRange::try_from)
             .transpose()
-            .into_report()
             .change_context(PostgresError::DataConversion)?;
 
         let distance = value
@@ -181,13 +178,11 @@ impl TryFrom<CurrentTrip> for kyogre_core::CurrentTrip {
             departure: v.departure_timestamp,
             target_species_fiskeridir_id: v.target_species_fiskeridir_id,
             hauls: serde_json::from_str::<Vec<TripHaul>>(&v.hauls)
-                .into_report()
                 .change_context(PostgresError::DataConversion)?
                 .into_iter()
                 .map(kyogre_core::Haul::try_from)
                 .collect::<Result<_, _>>()?,
             fishing_facilities: serde_json::from_str::<Vec<FishingFacility>>(&v.fishing_facilities)
-                .into_report()
                 .change_context(PostgresError::DataConversion)?
                 .into_iter()
                 .map(kyogre_core::FishingFacility::try_from)
@@ -209,22 +204,18 @@ impl TryFrom<TripDetailed> for kyogre_core::TripDetailed {
     type Error = Report<PostgresError>;
 
     fn try_from(value: TripDetailed) -> Result<Self, Self::Error> {
-        let period = DateRange::try_from(value.period)
-            .into_report()
-            .change_context(PostgresError::DataConversion)?;
+        let period =
+            DateRange::try_from(value.period).change_context(PostgresError::DataConversion)?;
         let period_precision = value
             .period_precision
             .map(DateRange::try_from)
             .transpose()
-            .into_report()
             .change_context(PostgresError::DataConversion)?;
 
         let landing_coverage = DateRange::try_from(value.landing_coverage)
-            .into_report()
             .change_context(PostgresError::DataConversion)?;
 
         let mut vessel_events = serde_json::from_str::<Vec<VesselEvent>>(&value.vessel_events)
-            .into_report()
             .change_context(PostgresError::DataConversion)?
             .into_iter()
             .map(kyogre_core::VesselEvent::from)
@@ -254,7 +245,6 @@ impl TryFrom<TripDetailed> for kyogre_core::TripDetailed {
                 .map(|v| DeliveryPointId::try_from(v).change_context(PostgresError::DataConversion))
                 .collect::<Result<_, _>>()?,
             hauls: serde_json::from_str::<Vec<TripHaul>>(&value.hauls)
-                .into_report()
                 .change_context(PostgresError::DataConversion)?
                 .into_iter()
                 .map(kyogre_core::Haul::try_from)
@@ -262,14 +252,12 @@ impl TryFrom<TripDetailed> for kyogre_core::TripDetailed {
             fishing_facilities: serde_json::from_str::<Vec<FishingFacility>>(
                 &value.fishing_facilities,
             )
-            .into_report()
             .change_context(PostgresError::DataConversion)?
             .into_iter()
             .map(kyogre_core::FishingFacility::try_from)
             .collect::<Result<_, _>>()?,
             delivery: kyogre_core::Delivery {
                 delivered: serde_json::from_str::<Vec<Catch>>(&value.catches)
-                    .into_report()
                     .change_context(PostgresError::DataConversion)?
                     .into_iter()
                     .map(kyogre_core::Catch::from)

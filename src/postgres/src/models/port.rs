@@ -1,5 +1,4 @@
 use bigdecimal::BigDecimal;
-use error_stack::IntoReport;
 use error_stack::{report, Report, Result, ResultExt};
 use jurisdiction::Jurisdiction;
 use serde::Deserialize;
@@ -76,21 +75,13 @@ impl TryFrom<TripDockPoints> for kyogre_core::TripDockPoints {
     fn try_from(value: TripDockPoints) -> std::result::Result<Self, Self::Error> {
         let start: Vec<kyogre_core::PortDockPoint> = value
             .start
-            .map(|v| {
-                serde_json::from_str(&v)
-                    .into_report()
-                    .change_context(PostgresError::DataConversion)
-            })
+            .map(|v| serde_json::from_str(&v).change_context(PostgresError::DataConversion))
             .transpose()?
             .unwrap_or_default();
 
         let end: Vec<kyogre_core::PortDockPoint> = value
             .end
-            .map(|v| {
-                serde_json::from_str(&v)
-                    .into_report()
-                    .change_context(PostgresError::DataConversion)
-            })
+            .map(|v| serde_json::from_str(&v).change_context(PostgresError::DataConversion))
             .transpose()?
             .unwrap_or_default();
 

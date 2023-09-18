@@ -7,7 +7,7 @@ use crate::{
     },
     PostgresAdapter,
 };
-use error_stack::{report, IntoReport, Result, ResultExt};
+use error_stack::{report, Result, ResultExt};
 use fiskeridir_rs::{GearGroup, SpeciesGroup, VesselLengthGroup};
 use futures::{Stream, TryStreamExt};
 use kyogre_core::{FiskeridirVesselId, TripAssemblerId};
@@ -35,7 +35,6 @@ impl PostgresAdapter {
 
         NewFiskeridirVessel::unnest_insert(vessels, &mut **tx)
             .await
-            .into_report()
             .change_context(PostgresError::Query)
             .map(|_| ())
     }
@@ -66,7 +65,6 @@ impl PostgresAdapter {
 
         tx.commit()
             .await
-            .into_report()
             .change_context(PostgresError::Transaction)?;
 
         Ok(())
@@ -84,7 +82,6 @@ impl PostgresAdapter {
 
         NewRegisterVessel::unnest_insert(vessels, &mut **tx)
             .await
-            .into_report()
             .change_context(PostgresError::Query)
             .map(|_| ())
     }
@@ -256,7 +253,6 @@ WHERE
         )
         .execute(&mut **tx)
         .await
-        .into_report()
         .change_context(PostgresError::Query)
         .map(|_| ())
     }

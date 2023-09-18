@@ -6,7 +6,7 @@ use crate::{
 };
 use bigdecimal::BigDecimal;
 use chrono::{DateTime, Utc};
-use error_stack::{IntoReport, Report, ResultExt};
+use error_stack::{Report, ResultExt};
 use fiskeridir_rs::{CallSign, GearGroup, SpeciesGroup, VesselLengthGroup, VesselType};
 use kyogre_core::{
     FiskeridirVesselId, FiskeridirVesselSource, Mmsi, TripAssemblerId, VesselBenchmarkId,
@@ -123,7 +123,6 @@ impl TryFrom<fiskeridir_rs::RegisterVessel> for NewRegisterVessel {
             engine_power: v.engine_power,
             imo_number: v.imo_number,
             owners: serde_json::to_value(&v.owners)
-                .into_report()
                 .change_context(PostgresError::DataConversion)
                 .attach_printable_lazy(|| {
                     format!("could not serialize vessel owners: {:?}", v.owners)
@@ -233,7 +232,6 @@ impl TryFrom<FiskeridirAisVesselCombination> for kyogre_core::Vessel {
             };
 
         let benchmarks: Vec<Benchmark> = serde_json::from_str(&value.benchmarks)
-            .into_report()
             .change_context(PostgresError::DataConversion)?;
 
         let fiskeridir_vessel = kyogre_core::FiskeridirVessel {
@@ -260,11 +258,7 @@ impl TryFrom<FiskeridirAisVesselCombination> for kyogre_core::Vessel {
             owner: value.fiskeridir_owner,
             owners: value
                 .fiskeridir_owners
-                .map(|o| {
-                    serde_json::from_str(&o)
-                        .into_report()
-                        .change_context(PostgresError::DataConversion)
-                })
+                .map(|o| serde_json::from_str(&o).change_context(PostgresError::DataConversion))
                 .transpose()?,
             engine_building_year: value.fiskeridir_engine_building_year.map(|v| v as u32),
             engine_power: value.fiskeridir_engine_power.map(|v| v as u32),

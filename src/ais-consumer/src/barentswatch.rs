@@ -1,5 +1,5 @@
 use crate::error::BarentswatchClientError;
-use error_stack::{bail, IntoReport, Result, ResultExt};
+use error_stack::{bail, Result, ResultExt};
 
 use futures::{StreamExt, TryStreamExt};
 use hyper::{Body, Client, Request, StatusCode, Uri};
@@ -48,7 +48,6 @@ impl BarentswatchAisClient {
         };
 
         let body = serde_json::to_string(&args)
-            .into_report()
             .change_context(BarentswatchClientError::RequestCreation)?;
 
         let request = Request::post(&self.api_address)
@@ -58,7 +57,6 @@ impl BarentswatchAisClient {
             )
             .header("Content-type", "application/json")
             .body(Body::from(body))
-            .into_report()
             .change_context(BarentswatchClientError::RequestCreation)?;
 
         let alpn = AlpnConnector::new();
@@ -67,14 +65,12 @@ impl BarentswatchAisClient {
         let response = client
             .request(request)
             .await
-            .into_report()
             .change_context(BarentswatchClientError::SendingRequest)?;
 
         let status = response.status();
         if status != StatusCode::OK {
             let body = hyper::body::to_bytes(response.into_body())
                 .await
-                .into_report()
                 .change_context(BarentswatchClientError::Body)?;
             bail!(BarentswatchClientError::Server {
                 response_code: status.as_u16(),

@@ -4,7 +4,7 @@ use crate::{
 };
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use error_stack::{IntoReport, Result, ResultExt};
+use error_stack::{Result, ResultExt};
 use kyogre_core::{
     FiskeridirVesselId, PrecisionDirection, RelevantEventType, Trip, TripAssembler,
     TripAssemblerError, TripAssemblerId, TripAssemblerState, TripPrecisionError,
@@ -193,7 +193,6 @@ impl TripAssembler for ErsTripAssembler {
                 )),
             }
         }
-        .into_report()
         .change_context(TripAssemblerError)?;
 
         for e in events_to_process {

@@ -108,10 +108,7 @@ impl ErsDepSet {
     fn add_vessel(&mut self, ers_dep: &fiskeridir_rs::ErsDep) -> Result<(), PostgresError> {
         if let Some(vessel_id) = ers_dep.vessel_info.vessel_id {
             if !self.vessels.contains_key(&(vessel_id as i64)) {
-                let vessel = ers_dep
-                    .vessel_info
-                    .clone()
-                    .try_into()
+                let vessel = fiskeridir_rs::Vessel::try_from(ers_dep.vessel_info.clone())
                     .change_context(PostgresError::DataConversion)?;
                 self.vessels.entry(vessel_id as i64).or_insert(vessel);
             }

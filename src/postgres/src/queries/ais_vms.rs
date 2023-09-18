@@ -1,4 +1,4 @@
-use error_stack::{IntoReport, ResultExt};
+use error_stack::ResultExt;
 use fiskeridir_rs::CallSign;
 use futures::{Stream, TryStreamExt};
 use kyogre_core::{
@@ -58,7 +58,6 @@ ORDER BY
         )
         .fetch_all(&self.ais_pool)
         .await
-        .into_report()
         .change_context(PostgresError::Query)
     }
     pub(crate) fn ais_vms_positions_impl(

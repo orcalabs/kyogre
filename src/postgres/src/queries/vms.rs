@@ -5,7 +5,7 @@ use crate::{
     models::{NewVmsPosition, VmsPosition},
     PostgresAdapter,
 };
-use error_stack::{report, IntoReport, Result, ResultExt};
+use error_stack::{report, Result, ResultExt};
 use fiskeridir_rs::CallSign;
 use futures::{Stream, TryStreamExt};
 use kyogre_core::DateRange;
@@ -35,7 +35,6 @@ ORDER BY
         )
         .fetch_all(&self.pool)
         .await
-        .into_report()
         .change_context(PostgresError::Query)
     }
     pub(crate) fn vms_positions_impl(
@@ -112,17 +111,14 @@ SELECT
         )
         .execute(&mut *tx)
         .await
-        .into_report()
         .change_context(PostgresError::Query)?;
 
         NewVmsPosition::unnest_insert(vms, &mut *tx)
             .await
-            .into_report()
             .change_context(PostgresError::Query)?;
 
         tx.commit()
             .await
-            .into_report()
             .change_context(PostgresError::Transaction)?;
 
         Ok(())

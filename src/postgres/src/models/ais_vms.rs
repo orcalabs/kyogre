@@ -1,6 +1,6 @@
 use bigdecimal::{BigDecimal, FromPrimitive};
 use chrono::{DateTime, Utc};
-use error_stack::{IntoReport, Report, ResultExt};
+use error_stack::{Report, ResultExt};
 use kyogre_core::NavigationStatus;
 use serde::Deserialize;
 
@@ -39,7 +39,6 @@ impl TryFrom<AisVmsPosition> for kyogre_core::AisVmsPosition {
                 .map(|v| {
                     NavigationStatus::from_i32(v)
                         .ok_or(NavigationStatusError(v))
-                        .into_report()
                         .change_context(PostgresError::DataConversion)
                 })
                 .transpose()?,

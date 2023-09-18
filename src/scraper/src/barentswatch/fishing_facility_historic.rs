@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use error_stack::{IntoReport, Report, Result, ResultExt};
+use error_stack::{Report, Result, ResultExt};
 use fiskeridir_rs::CallSign;
 use kyogre_core::{BearerToken, ConversionError, FishingFacilityApiSource, Mmsi};
 use serde::Deserialize;
@@ -120,16 +120,14 @@ impl TryFrom<FishingFacilityHistoric> for kyogre_core::FishingFacility {
                 .change_context(ConversionError)?,
             mmsi: v
                 .mmsi
-                .map(|m| m.parse())
+                .map(|m| m.parse::<i32>())
                 .transpose()
-                .into_report()
                 .change_context(ConversionError)?
                 .map(Mmsi),
             imo: v
                 .imo
-                .map(|i| i.parse())
+                .map(|i| i.parse::<i64>())
                 .transpose()
-                .into_report()
                 .change_context(ConversionError)?,
             reg_num: v.reg_num,
             sbr_reg_num: v.sbr_reg_num,

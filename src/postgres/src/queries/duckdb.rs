@@ -1,5 +1,5 @@
 use crate::{error::PostgresError, PostgresAdapter};
-use error_stack::{IntoReport, Result, ResultExt};
+use error_stack::{Result, ResultExt};
 
 impl PostgresAdapter {
     pub(crate) async fn increment_duckdb_version(&self) -> Result<(), PostgresError> {
@@ -12,7 +12,6 @@ SET
         )
         .execute(&self.pool)
         .await
-        .into_report()
         .change_context(PostgresError::Query)
         .map(|_| ())
     }

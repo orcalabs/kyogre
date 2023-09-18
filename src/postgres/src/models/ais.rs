@@ -3,7 +3,7 @@ use std::fmt;
 use bigdecimal::FromPrimitive;
 use bigdecimal::{BigDecimal, ToPrimitive};
 use chrono::{DateTime, Utc};
-use error_stack::{IntoReport, Report, ResultExt};
+use error_stack::{Report, ResultExt};
 use kyogre_core::{Mmsi, NavigationStatus};
 use unnest_insert::UnnestInsert;
 
@@ -154,13 +154,11 @@ impl TryFrom<AisPosition> for kyogre_core::AisPosition {
                 .latitude
                 .to_f64()
                 .ok_or(FromBigDecimalError(value.latitude))
-                .into_report()
                 .change_context(PostgresError::DataConversion)?,
             longitude: value
                 .longitude
                 .to_f64()
                 .ok_or(FromBigDecimalError(value.longitude))
-                .into_report()
                 .change_context(PostgresError::DataConversion)?,
             mmsi: Mmsi(value.mmsi),
             msgtime: value.msgtime,
@@ -169,7 +167,6 @@ impl TryFrom<AisPosition> for kyogre_core::AisPosition {
                 .map(|v| {
                     v.to_f64()
                         .ok_or(FromBigDecimalError(v))
-                        .into_report()
                         .change_context(PostgresError::DataConversion)
                 })
                 .transpose()?,
@@ -178,7 +175,6 @@ impl TryFrom<AisPosition> for kyogre_core::AisPosition {
                 .map(|v| {
                     NavigationStatus::from_i32(v)
                         .ok_or(NavigationStatusError(v))
-                        .into_report()
                         .change_context(PostgresError::DataConversion)
                 })
                 .transpose()?,
@@ -187,7 +183,6 @@ impl TryFrom<AisPosition> for kyogre_core::AisPosition {
                 .map(|v| {
                     v.to_f64()
                         .ok_or(FromBigDecimalError(v))
-                        .into_report()
                         .change_context(PostgresError::DataConversion)
                 })
                 .transpose()?,
@@ -196,7 +191,6 @@ impl TryFrom<AisPosition> for kyogre_core::AisPosition {
                 .map(|v| {
                     v.to_f64()
                         .ok_or(FromBigDecimalError(v))
-                        .into_report()
                         .change_context(PostgresError::DataConversion)
                 })
                 .transpose()?,
@@ -205,7 +199,6 @@ impl TryFrom<AisPosition> for kyogre_core::AisPosition {
                 .distance_to_shore
                 .to_f64()
                 .ok_or(FromBigDecimalError(value.distance_to_shore))
-                .into_report()
                 .change_context(PostgresError::DataConversion)?,
         })
     }

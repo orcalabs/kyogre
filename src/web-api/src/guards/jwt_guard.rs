@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use actix_web::guard::Guard;
-use error_stack::{report, IntoReport, Result, ResultExt};
+use error_stack::{report, Result, ResultExt};
 use jsonwebtoken::{
     decode, decode_header,
     jwk::{Jwk, JwkSet},
@@ -30,16 +30,14 @@ impl JwtGuard {
 
     pub fn decode<T: DeserializeOwned>(&self, token: &str) -> Result<TokenData<T>, JwtDecodeError> {
         let kid = decode_header(token)
-            .into_report()
             .change_context(JwtDecodeError::DecodeHeader)?
             .kid
             .ok_or_else(|| report!(JwtDecodeError::MissingKidInHeaders))?;
 
         match self.jwks.get(&kid) {
             Some(jwk) => {
-                let key = DecodingKey::from_jwk(jwk)
-                    .into_report()
-                    .change_context(JwtDecodeError::DecodeKeyFromJwk)?;
+                let key =
+                    DecodingKey::from_jwk(jwk).change_context(JwtDecodeError::DecodeKeyFromJwk)?;
 
                 let validation = Validation::new(
                     jwk.common
@@ -47,9 +45,7 @@ impl JwtGuard {
                         .ok_or_else(|| report!(JwtDecodeError::MissingAlgorithmInJwk))?,
                 );
 
-                decode::<T>(token, &key, &validation)
-                    .into_report()
-                    .change_context(JwtDecodeError::DecodeToken)
+                decode::<T>(token, &key, &validation).change_context(JwtDecodeError::DecodeToken)
             }
             None => Err(report!(JwtDecodeError::MissingKidInJwk)),
         }

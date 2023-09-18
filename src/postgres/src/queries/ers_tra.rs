@@ -6,7 +6,7 @@ use crate::{
     models::{NewErsTra, NewErsTraCatch},
     PostgresAdapter,
 };
-use error_stack::{IntoReport, Result, ResultExt};
+use error_stack::{Result, ResultExt};
 use futures::TryStreamExt;
 use kyogre_core::VesselEventType;
 use unnest_insert::{UnnestInsert, UnnestInsertReturning};
@@ -52,7 +52,6 @@ impl PostgresAdapter {
 
         tx.commit()
             .await
-            .into_report()
             .change_context(PostgresError::Transaction)?;
 
         Ok(())
@@ -68,7 +67,6 @@ impl PostgresAdapter {
 
         let event_ids = NewErsTra::unnest_insert_returning(ers_tra, &mut **tx)
             .await
-            .into_report()
             .change_context(PostgresError::Query)?
             .into_iter()
             .filter_map(|r| r.vessel_event_id)
@@ -103,7 +101,6 @@ WHERE
         .map_ok(|r| r.message_id)
         .try_collect::<HashSet<_>>()
         .await
-        .into_report()
         .change_context(PostgresError::Query)
     }
 
@@ -114,7 +111,6 @@ WHERE
     ) -> Result<(), PostgresError> {
         NewErsTraCatch::unnest_insert(catches, &mut **tx)
             .await
-            .into_report()
             .change_context(PostgresError::Query)
             .map(|_| ())
     }
