@@ -264,6 +264,8 @@ pub struct Trip {
     pub trip_id: TripId,
     pub start: DateTime<Utc>,
     pub end: DateTime<Utc>,
+    pub landing_coverage_start: DateTime<Utc>,
+    pub landing_coverage_end: DateTime<Utc>,
     pub num_deliveries: u32,
     pub most_recent_delivery_date: Option<DateTime<Utc>>,
     #[schema(value_type = Vec<u32>)]
@@ -364,6 +366,8 @@ impl From<kyogre_core::TripDetailed> for Trip {
                 .collect(),
             landing_ids: value.landing_ids,
             trip_assembler_id: value.assembler_id.into(),
+            landing_coverage_start: value.landing_coverage.start(),
+            landing_coverage_end: value.landing_coverage.end(),
         }
     }
 }
