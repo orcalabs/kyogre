@@ -3,7 +3,7 @@ use crate::{
     models::{Arrival, NewPort, Port, PortDockPoint, TripDockPoints, TripPorts},
     PostgresAdapter,
 };
-use error_stack::{IntoReport, Result, ResultExt};
+use error_stack::{Result, ResultExt};
 use kyogre_core::TripId;
 use unnest_insert::UnnestInsert;
 
@@ -30,7 +30,6 @@ WHERE
         )
         .fetch_all(&self.pool)
         .await
-        .into_report()
         .change_context(PostgresError::Query)
     }
     pub(crate) async fn all_ers_arrivals_impl(&self) -> Result<Vec<Arrival>, PostgresError> {
@@ -47,7 +46,6 @@ FROM
         )
         .fetch_all(&self.pool)
         .await
-        .into_report()
         .change_context(PostgresError::Query)
     }
     pub(crate) async fn add_ports<'a>(
@@ -57,7 +55,6 @@ FROM
     ) -> Result<(), PostgresError> {
         NewPort::unnest_insert(ports, &mut **tx)
             .await
-            .into_report()
             .change_context(PostgresError::Query)
             .map(|_| ())
     }
@@ -80,7 +77,6 @@ WHERE
         )
         .fetch_optional(&self.pool)
         .await
-        .into_report()
         .change_context(PostgresError::Query)
     }
     pub async fn ports_of_trip_impl(&self, trip_id: TripId) -> Result<TripPorts, PostgresError> {
@@ -122,7 +118,6 @@ WHERE
         )
         .fetch_one(&self.pool)
         .await
-        .into_report()
         .change_context(PostgresError::Query)
     }
 
@@ -191,7 +186,6 @@ FROM
         )
         .fetch_one(&self.pool)
         .await
-        .into_report()
         .change_context(PostgresError::Query)
     }
 }

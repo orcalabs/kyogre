@@ -3,7 +3,7 @@ use crate::*;
 use chrono::{DateTime, Datelike, Months, Utc};
 use enum_index::EnumIndex;
 use enum_index_derive::EnumIndex;
-use error_stack::{IntoReport, Result};
+use error_stack::{Report, Result};
 use fiskeridir_rs::*;
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
@@ -137,7 +137,7 @@ impl LandingMatrixXFeature {
                 .ok_or(LandingMatrixIndexError::VesselLength(val))
                 .map(|v| v.enum_index()),
         }
-        .into_report()
+        .map_err(Report::from)
     }
     fn size(&self) -> usize {
         match self {
@@ -180,7 +180,7 @@ impl LandingMatrixYFeature {
                 .map(|v| v.enum_index()),
             LandingMatrixYFeature::CatchLocation => Ok(val as usize),
         }
-        .into_report()
+        .map_err(Report::from)
     }
 
     fn size(&self) -> usize {

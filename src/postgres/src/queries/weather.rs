@@ -1,5 +1,5 @@
 use chrono::{DateTime, Utc};
-use error_stack::{report, IntoReport, Report, Result, ResultExt};
+use error_stack::{report, Report, Result, ResultExt};
 use futures::{Stream, TryStreamExt};
 use kyogre_core::{HaulWeatherOutput, WeatherQuery};
 use unnest_insert::UnnestInsert;
@@ -97,7 +97,6 @@ WHERE
         )
         .fetch_optional(&self.pool)
         .await
-        .into_report()
         .change_context(PostgresError::Query)
     }
 
@@ -208,7 +207,6 @@ WHERE
         )
         .fetch_optional(&self.pool)
         .await
-        .into_report()
         .change_context(PostgresError::Query)
         .map(|_| ())
     }
@@ -224,7 +222,6 @@ WHERE
 
         NewWeather::unnest_insert(values, &self.pool)
             .await
-            .into_report()
             .change_context(PostgresError::Query)
             .map(|_| ())
     }
@@ -242,7 +239,6 @@ FROM
         )
         .fetch_one(&self.pool)
         .await
-        .into_report()
         .change_context(PostgresError::Query)
         .map(|r| r.ts)
     }
@@ -262,7 +258,6 @@ FROM
         )
         .fetch_all(&self.pool)
         .await
-        .into_report()
         .change_context(PostgresError::Query)
     }
 }

@@ -1,5 +1,5 @@
 use crate::{models::User, PostgresAdapter};
-use error_stack::{IntoReport, Result, ResultExt};
+use error_stack::{Result, ResultExt};
 use kyogre_core::{BarentswatchUserId, FiskeridirVesselId};
 
 use crate::error::PostgresError;
@@ -26,7 +26,6 @@ GROUP BY
         )
         .fetch_optional(&self.pool)
         .await
-        .into_report()
         .change_context(PostgresError::Query)
     }
 
@@ -39,10 +38,7 @@ GROUP BY
         self.update_user_follows(user.barentswatch_user_id, user.following, &mut tx)
             .await?;
 
-        tx.commit()
-            .await
-            .into_report()
-            .change_context(PostgresError::Transaction)
+        tx.commit().await.change_context(PostgresError::Transaction)
     }
 
     pub(crate) async fn update_user_follows<'a>(
@@ -63,7 +59,6 @@ WHERE
         )
         .execute(&mut **tx)
         .await
-        .into_report()
         .change_context(PostgresError::Query)?;
 
         sqlx::query!(
@@ -81,7 +76,6 @@ FROM
         )
         .execute(&mut **tx)
         .await
-        .into_report()
         .change_context(PostgresError::Query)
         .map(|_| ())
     }

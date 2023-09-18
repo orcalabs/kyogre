@@ -4,8 +4,8 @@ use crate::{
 };
 use bigdecimal::BigDecimal;
 use chrono::{DateTime, NaiveDate, NaiveTime, Utc};
-use error_stack::{IntoReport, Report, ResultExt};
-use fiskeridir_rs::{DeliveryPointId, VesselLengthGroup};
+use error_stack::{Report, ResultExt};
+use fiskeridir_rs::{DeliveryPointId, LandingId, VesselLengthGroup};
 use kyogre_core::{CatchLocationId, FiskeridirVesselId, LandingMatrixQuery};
 use unnest_insert::UnnestInsert;
 
@@ -215,9 +215,7 @@ impl TryFrom<Landing> for kyogre_core::Landing {
 
     fn try_from(v: Landing) -> Result<Self, Self::Error> {
         Ok(Self {
-            landing_id: v
-                .landing_id
-                .try_into()
+            landing_id: LandingId::try_from(v.landing_id)
                 .change_context(PostgresError::DataConversion)?,
             landing_timestamp: v.landing_timestamp,
             catch_location: CatchLocationId::new_opt(v.catch_main_area_id, v.catch_area_id),
@@ -241,7 +239,6 @@ impl TryFrom<Landing> for kyogre_core::Landing {
             total_product_weight: decimal_to_float(v.total_product_weight)
                 .change_context(PostgresError::DataConversion)?,
             catches: serde_json::from_str(&v.catches)
-                .into_report()
                 .change_context(PostgresError::DataConversion)?,
         })
     }

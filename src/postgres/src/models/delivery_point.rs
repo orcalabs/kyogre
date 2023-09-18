@@ -2,6 +2,7 @@ use crate::queries::enum_to_i32;
 use bigdecimal::BigDecimal;
 use chrono::NaiveDate;
 use error_stack::{Report, ResultExt};
+use fiskeridir_rs::DeliveryPointId;
 use kyogre_core::DeliveryPointType;
 use unnest_insert::UnnestInsert;
 
@@ -114,9 +115,7 @@ impl TryFrom<DeliveryPoint> for kyogre_core::DeliveryPoint {
 
     fn try_from(v: DeliveryPoint) -> Result<Self, Self::Error> {
         Ok(Self {
-            id: v
-                .delivery_point_id
-                .try_into()
+            id: DeliveryPointId::try_from(v.delivery_point_id)
                 .change_context(PostgresError::DataConversion)?,
             name: v.name,
             address: v.address,

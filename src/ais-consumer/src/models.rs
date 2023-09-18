@@ -1,4 +1,4 @@
-use error_stack::{bail, IntoReport, Report, Result, ResultExt};
+use error_stack::{bail, Report, Result, ResultExt};
 
 use chrono::{DateTime, Datelike, NaiveDate, NaiveDateTime, NaiveTime, TimeZone, Timelike, Utc};
 use kyogre_core::{AisClass, Mmsi, NavigationStatus, NewAisPosition, NewAisStatic};
@@ -305,20 +305,16 @@ fn parse_eta_value(val: &str) -> Result<Option<DateTime<Utc>>, AisMessageError> 
     } else {
         let month = &val[0..=1]
             .parse::<u32>()
-            .into_report()
             .change_context(AisMessageError::InvalidEta(val.to_string()))?;
         let day = &val[2..=3]
             .parse::<u32>()
-            .into_report()
             .change_context(AisMessageError::InvalidEta(val.to_string()))?;
 
         let hour = &val[4..=5]
             .parse::<u32>()
-            .into_report()
             .change_context(AisMessageError::InvalidEta(val.to_string()))?;
         let minute = &val[6..=7]
             .parse::<u32>()
-            .into_report()
             .change_context(AisMessageError::InvalidEta(val.to_string()))?;
         let year = chrono::Utc::now().year();
 
@@ -329,11 +325,9 @@ fn parse_eta_value(val: &str) -> Result<Option<DateTime<Utc>>, AisMessageError> 
         }
 
         let time = NaiveTime::from_hms_opt(*hour, *minute, 0)
-            .ok_or_else(|| AisMessageError::InvalidEta(val.to_string()))
-            .into_report()?;
+            .ok_or_else(|| AisMessageError::InvalidEta(val.to_string()))?;
         let date = NaiveDate::from_ymd_opt(year, *month, *day)
-            .ok_or_else(|| AisMessageError::InvalidEta(val.to_string()))
-            .into_report()?;
+            .ok_or_else(|| AisMessageError::InvalidEta(val.to_string()))?;
         let dt = NaiveDateTime::new(date, time);
 
         Ok(Some(Utc.from_utc_datetime(&dt)))

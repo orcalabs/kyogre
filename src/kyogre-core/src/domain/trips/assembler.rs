@@ -6,7 +6,7 @@ use crate::{
 };
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use error_stack::{IntoReport, Result, ResultExt};
+use error_stack::{Result, ResultExt};
 use std::collections::HashMap;
 use tracing::{event, Level};
 
@@ -221,7 +221,6 @@ async fn new_vessel_events(
                 },
                 std::ops::Bound::Unbounded,
             )
-            .into_report()
             .change_context(TripAssemblerError)?;
 
             let events = adapter
@@ -240,7 +239,6 @@ async fn new_vessel_events(
                 std::ops::Bound::Included(*search_timestamp),
                 std::ops::Bound::Unbounded,
             )
-            .into_report()
             .change_context(TripAssemblerError)?;
 
             Ok((vec![], range))
@@ -266,7 +264,6 @@ async fn all_vessel_events(
     relevant_event_types: RelevantEventType,
 ) -> Result<VesselEvents, TripAssemblerError> {
     let range = QueryRange::new(std::ops::Bound::Unbounded, std::ops::Bound::Unbounded)
-        .into_report()
         .change_context(TripAssemblerError)?;
 
     let new_vessel_events = adapter

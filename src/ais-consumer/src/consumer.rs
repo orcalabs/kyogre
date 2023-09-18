@@ -4,7 +4,7 @@ use crate::{
         AisMessage, AisMessageType, AisPosition, AisStatic, MessageType, NewAisPositionWrapper,
     },
 };
-use error_stack::{bail, IntoReport, Result, ResultExt};
+use error_stack::{bail, Result, ResultExt};
 use futures::StreamExt;
 use kyogre_core::{DataMessage, NewAisStatic};
 use tokio::io::AsyncRead;
@@ -83,7 +83,6 @@ where
     // Can only fail if the channel is closed.
     sender
         .send(data_message)
-        .into_report()
         .change_context(ConsumerError::InternalChannelClosed)?;
 
     tracing::Span::current().record("app.num_messages", num_messages);
@@ -92,22 +91,19 @@ where
 }
 
 fn parse_message(message: String) -> Result<AisMessage, AisMessageProcessingError> {
-    let message_type: MessageType = serde_json::from_str(&message)
-        .into_report()
-        .change_context(AisMessageProcessingError)?;
+    let message_type: MessageType =
+        serde_json::from_str(&message).change_context(AisMessageProcessingError)?;
 
     match message_type.message_type {
         AisMessageType::Position => {
-            let val: AisPosition = serde_json::from_str(&message)
-                .into_report()
-                .change_context(AisMessageProcessingError)?;
+            let val: AisPosition =
+                serde_json::from_str(&message).change_context(AisMessageProcessingError)?;
 
             Ok(AisMessage::Position(val))
         }
         AisMessageType::Static => {
-            let val: AisStatic = serde_json::from_str(&message)
-                .into_report()
-                .change_context(AisMessageProcessingError)?;
+            let val: AisStatic =
+                serde_json::from_str(&message).change_context(AisMessageProcessingError)?;
             Ok(AisMessage::Static(val))
         }
     }

@@ -1,6 +1,6 @@
 use bigdecimal::BigDecimal;
 use chrono::{DateTime, Utc};
-use error_stack::{IntoReport, Report, ResultExt};
+use error_stack::{Report, ResultExt};
 use fiskeridir_rs::{Gear, GearGroup, VesselLengthGroup, WhaleGender};
 use kyogre_core::{CatchLocationId, HaulId};
 use serde::Deserialize;
@@ -130,13 +130,11 @@ impl TryFrom<Haul> for kyogre_core::Haul {
             }
             .try_into()?,
             catches: serde_json::from_str::<Vec<HaulCatch>>(&v.catches)
-                .into_report()
                 .change_context(PostgresError::DataConversion)?
                 .into_iter()
                 .map(kyogre_core::HaulCatch::try_from)
                 .collect::<Result<_, _>>()?,
             whale_catches: serde_json::from_str::<Vec<WhaleCatch>>(&v.whale_catches)
-                .into_report()
                 .change_context(PostgresError::DataConversion)?
                 .into_iter()
                 .map(kyogre_core::WhaleCatch::try_from)

@@ -1,7 +1,7 @@
 use crate::adapter::DuckdbError;
 use duckdb::DuckdbConnectionManager;
 use duckdb::{params, Transaction};
-use error_stack::{IntoReport, Result, ResultExt};
+use error_stack::{Result, ResultExt};
 use orca_core::PsqlSettings;
 use r2d2::PooledConnection;
 use tokio::sync::mpsc::{Receiver, Sender};
@@ -116,25 +116,17 @@ INSTALL postgres;
 LOAD postgres;
             ",
         )
-        .into_report()
         .change_context(DuckdbError::Query)
         .map(|_| ())
     }
 
     #[instrument(skip_all)]
     pub fn initial_create(&self) -> Result<(), DuckdbError> {
-        let mut conn = self
-            .pool
-            .get()
-            .into_report()
-            .change_context(DuckdbError::Connection)?;
+        let mut conn = self.pool.get().change_context(DuckdbError::Connection)?;
 
         self.install_postgres_exstension(&conn)?;
 
-        let tx = conn
-            .transaction()
-            .into_report()
-            .change_context(DuckdbError::Connection)?;
+        let tx = conn.transaction().change_context(DuckdbError::Connection)?;
 
         let table_exists: bool = tx
             .query_row(
@@ -155,7 +147,6 @@ SELECT
                 params![],
                 |row| row.get(0),
             )
-            .into_report()
             .change_context(DuckdbError::Query)?;
 
         if !table_exists {
@@ -164,9 +155,7 @@ SELECT
             self.add_data_versions(&tx)?;
         }
 
-        tx.commit()
-            .into_report()
-            .change_context(DuckdbError::Connection)?;
+        tx.commit().change_context(DuckdbError::Connection)?;
 
         Ok(())
     }
@@ -254,14 +243,9 @@ SELECT
 
     #[instrument(skip(self))]
     fn refresh_landings(&self, new_version: Option<u64>) -> Result<(), DuckdbError> {
-        let mut conn = self
-            .pool
-            .get()
-            .into_report()
-            .change_context(DuckdbError::Connection)?;
+        let mut conn = self.pool.get().change_context(DuckdbError::Connection)?;
 
         conn.execute("DELETE FROM landing_matrix_cache", [])
-            .into_report()
             .change_context(DuckdbError::Query)?;
 
         conn.execute(
@@ -270,13 +254,9 @@ LOAD postgres;
             ",
             [],
         )
-        .into_report()
         .change_context(DuckdbError::Query)?;
 
-        let tx = conn
-            .transaction()
-            .into_report()
-            .change_context(DuckdbError::Connection)?;
+        let tx = conn.transaction().change_context(DuckdbError::Connection)?;
 
         self.create_landings(CreateMode::Refresh, &tx)?;
 
@@ -284,22 +264,15 @@ LOAD postgres;
             self.set_data_source_version(DataSource::Landings, new_version, &tx)?;
         }
 
-        tx.commit()
-            .into_report()
-            .change_context(DuckdbError::Connection)?;
+        tx.commit().change_context(DuckdbError::Connection)?;
         Ok(())
     }
 
     #[instrument(skip(self))]
     fn refresh_hauls(&self, new_version: Option<u64>) -> Result<(), DuckdbError> {
-        let mut conn = self
-            .pool
-            .get()
-            .into_report()
-            .change_context(DuckdbError::Connection)?;
+        let mut conn = self.pool.get().change_context(DuckdbError::Connection)?;
 
         conn.execute("DELETE FROM hauls_matrix_cache", [])
-            .into_report()
             .change_context(DuckdbError::Query)?;
 
         conn.execute(
@@ -308,13 +281,9 @@ LOAD postgres;
             ",
             [],
         )
-        .into_report()
         .change_context(DuckdbError::Query)?;
 
-        let tx = conn
-            .transaction()
-            .into_report()
-            .change_context(DuckdbError::Connection)?;
+        let tx = conn.transaction().change_context(DuckdbError::Connection)?;
 
         self.create_hauls(CreateMode::Refresh, &tx)?;
 
@@ -322,18 +291,12 @@ LOAD postgres;
             self.set_data_source_version(DataSource::Hauls, new_version, &tx)?;
         }
 
-        tx.commit()
-            .into_report()
-            .change_context(DuckdbError::Connection)?;
+        tx.commit().change_context(DuckdbError::Connection)?;
         Ok(())
     }
 
     fn refresh_status(&self) -> Result<RefreshStatus, DuckdbError> {
-        let conn = self
-            .pool
-            .get()
-            .into_report()
-            .change_context(DuckdbError::Connection)?;
+        let conn = self.pool.get().change_context(DuckdbError::Connection)?;
 
         conn.execute(
             r"
@@ -341,7 +304,6 @@ LOAD postgres;
             ",
             [],
         )
-        .into_report()
         .change_context(DuckdbError::Query)?;
 
         let postgres_haul_version = self.postgres_data_source_version(&conn, DataSource::Hauls)?;
@@ -388,7 +350,6 @@ WHERE
                 params![source.postgres_version_table_id()],
                 |row| row.get(0),
             )
-            .into_report()
             .change_context(DuckdbError::Query)?;
         Ok(version)
     }
@@ -416,7 +377,6 @@ WHERE
                 params![source.postgres_version_table_id()],
                 |row| row.get(0),
             )
-            .into_report()
             .change_context(DuckdbError::Query)?;
         Ok(version)
     }
@@ -439,7 +399,6 @@ WHERE
                 params![source.row_value_name()],
                 |row| row.get(0),
             )
-            .into_report()
             .change_context(DuckdbError::Query)?;
 
         Ok(version)
@@ -461,7 +420,6 @@ WHERE
             "#,
             params![version, source.row_value_name()],
         )
-        .into_report()
         .change_context(DuckdbError::Query)?;
 
         Ok(())
@@ -478,7 +436,6 @@ CREATE TABLE
     data_versions ("version" INT NOT NULL, source VARCHAR PRIMARY KEY,);
             "#,
         )
-        .into_report()
         .change_context(DuckdbError::Query)?;
 
         tx.execute(
@@ -491,7 +448,6 @@ ON CONFLICT (source) DO NOTHING;
             "#,
             [postgres_landing_version],
         )
-        .into_report()
         .change_context(DuckdbError::Query)?;
 
         tx.execute(
@@ -504,7 +460,6 @@ ON CONFLICT (source) DO NOTHING;
             "#,
             [postgres_haul_version],
         )
-        .into_report()
         .change_context(DuckdbError::Query)?;
 
         Ok(())
@@ -552,7 +507,6 @@ FROM
             CreateMode::Refresh => postgres_scan_command,
         };
         tx.execute_batch(&queries)
-            .into_report()
             .change_context(DuckdbError::Query)
     }
 
@@ -596,7 +550,6 @@ FROM
             CreateMode::Refresh => postgres_scan_command,
         };
         tx.execute_batch(&queries)
-            .into_report()
             .change_context(DuckdbError::Query)
     }
 }

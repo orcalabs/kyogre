@@ -20,7 +20,7 @@ use crate::{
     models::{Landing, NewLanding},
     PostgresAdapter,
 };
-use error_stack::{report, IntoReport, Report, Result, ResultExt};
+use error_stack::{report, Report, Result, ResultExt};
 use fiskeridir_rs::VesselLengthGroup;
 
 use super::bound_float_to_decimal;
@@ -155,7 +155,6 @@ WHERE
         )
         .fetch_one(&self.pool)
         .await
-        .into_report()
         .change_context(PostgresError::Query)?;
 
         Ok(weight
@@ -252,10 +251,7 @@ WHERE
             .await?;
         self.add_vessel_gear_and_species_groups(&mut tx).await?;
 
-        tx.commit()
-            .await
-            .into_report()
-            .change_context(PostgresError::Transaction)
+        tx.commit().await.change_context(PostgresError::Transaction)
     }
 
     pub(crate) async fn add_landing_set<'a>(
@@ -329,12 +325,10 @@ RETURNING
         )
         .fetch_all(&mut **tx)
         .await
-        .into_report()
         .change_context(PostgresError::Query)?;
 
         let inserted = NewLanding::unnest_insert_returning(landings, &mut **tx)
             .await
-            .into_report()
             .change_context(PostgresError::Query)?;
 
         for i in inserted {
@@ -387,7 +381,6 @@ WHERE
         .map_ok(|r| (r.landing_id, r.version))
         .try_collect::<HashMap<_, _>>()
         .await
-        .into_report()
         .change_context(PostgresError::Query)
     }
 
@@ -398,7 +391,6 @@ WHERE
     ) -> Result<(), PostgresError> {
         NewLandingEntry::unnest_insert(entries, &mut **tx)
             .await
-            .into_report()
             .change_context(PostgresError::Query)
             .map(|_| ())
     }
@@ -425,7 +417,6 @@ RETURNING
         )
         .fetch_all(&mut **tx)
         .await
-        .into_report()
         .change_context(PostgresError::Query)?;
 
         tracing::Span::current().record("landings_deleted", deleted.len());
@@ -477,7 +468,6 @@ SELECT
         )
         .fetch_one(&self.pool)
         .await
-        .into_report()
         .change_context(PostgresError::Query)
         .map(|r| r.sum)
     }
@@ -529,7 +519,6 @@ SET
         )
         .execute(&mut **tx)
         .await
-        .into_report()
         .change_context(PostgresError::Query)
         .map(|_| ())
     }

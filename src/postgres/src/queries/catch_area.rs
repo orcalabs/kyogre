@@ -3,7 +3,7 @@ use crate::{
     models::{NewAreaGrouping, NewCatchArea, NewCatchMainArea, NewCatchMainAreaFao},
     PostgresAdapter,
 };
-use error_stack::{IntoReport, Result, ResultExt};
+use error_stack::{Result, ResultExt};
 use unnest_insert::UnnestInsert;
 
 impl PostgresAdapter {
@@ -14,7 +14,6 @@ impl PostgresAdapter {
     ) -> Result<(), PostgresError> {
         NewCatchArea::unnest_insert(areas, &mut **tx)
             .await
-            .into_report()
             .change_context(PostgresError::Query)
             .map(|_| ())
     }
@@ -26,7 +25,6 @@ impl PostgresAdapter {
     ) -> Result<(), PostgresError> {
         NewCatchMainArea::unnest_insert(areas, &mut **tx)
             .await
-            .into_report()
             .change_context(PostgresError::Query)
             .map(|_| ())
     }
@@ -38,7 +36,6 @@ impl PostgresAdapter {
     ) -> Result<(), PostgresError> {
         NewAreaGrouping::unnest_insert(regions, &mut **tx)
             .await
-            .into_report()
             .change_context(PostgresError::Query)
             .map(|_| ())
     }
@@ -50,7 +47,6 @@ impl PostgresAdapter {
     ) -> Result<(), PostgresError> {
         NewCatchMainAreaFao::unnest_insert(areas, &mut **tx)
             .await
-            .into_report()
             .change_context(PostgresError::Query)
             .map(|_| ())
     }

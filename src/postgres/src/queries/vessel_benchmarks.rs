@@ -1,5 +1,5 @@
 use crate::{models::{VesselBenchmarkOutput, Benchmarks}, PostgresAdapter};
-use error_stack::{IntoReport, Result, ResultExt, report};
+use error_stack::{Result, ResultExt, report};
 use futures::{Stream, TryStreamExt};
 use unnest_insert::UnnestInsert;
 
@@ -17,7 +17,6 @@ impl PostgresAdapter {
     
         VesselBenchmarkOutput::unnest_insert(values, &self.pool)
             .await
-            .into_report()
             .change_context(PostgresError::Query)
             .map(|_| ())
     }

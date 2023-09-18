@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 
 use async_trait::async_trait;
-use error_stack::{report, IntoReport, Result, ResultExt};
+use error_stack::{report, Result, ResultExt};
+use fiskeridir_rs::DeliveryPointId;
 use reqwest::{Response, StatusCode};
 use table_extract::Table;
 use tracing::{event, Level};
@@ -83,7 +84,6 @@ impl MattilsynetScraper {
             .get(url)
             .send()
             .await
-            .into_report()
             .change_context(ScraperError)?;
 
         let status = response.status();
@@ -92,11 +92,7 @@ impl MattilsynetScraper {
             StatusCode::OK => Ok(response),
             _ => Err(report!(Error::Download {
                 status,
-                text: response
-                    .text()
-                    .await
-                    .into_report()
-                    .change_context(ScraperError)?
+                text: response.text().await.change_context(ScraperError)?
             })
             .change_context(ScraperError)),
         }
@@ -107,11 +103,7 @@ impl MattilsynetScraper {
         for url in &self.approved_establishments_urls {
             let response = self.get(url).await?;
 
-            let text = response
-                .text()
-                .await
-                .into_report()
-                .change_context(ScraperError)?;
+            let text = response.text().await.change_context(ScraperError)?;
 
             let table = Table::find_first(&text)
                 .ok_or_else(|| report!(Error::MissingTable).change_context(ScraperError))?;
@@ -126,7 +118,7 @@ impl MattilsynetScraper {
 
                 if let (Some(id), Some(name)) = (id, name) {
                     vec.push(DeliveryPoint {
-                        id: id.clone().try_into().change_context(ScraperError)?,
+                        id: DeliveryPointId::try_from(id.clone()).change_context(ScraperError)?,
                         name: name.to_string(),
                         address: None,
                         postal_code: None,
@@ -149,11 +141,7 @@ impl MattilsynetScraper {
                     .await?;
             }
 
-            let text = response
-                .text()
-                .await
-                .into_report()
-                .change_context(ScraperError)?;
+            let text = response.text().await.change_context(ScraperError)?;
 
             for l in text.lines().skip(10) {
                 if l.starts_with(";;;") || l.starts_with(";Approval") || l.starts_with("Approval") {
@@ -175,8 +163,7 @@ impl MattilsynetScraper {
                 } else {
                     Some(
                         post_code_stripped
-                            .parse()
-                            .into_report()
+                            .parse::<u32>()
                             .change_context(ScraperError)
                             .attach_printable_lazy(|| {
                                 format!("could not parse '{post_code_stripped}' as u32")
@@ -191,9 +178,7 @@ impl MattilsynetScraper {
                 };
 
                 vec.push(DeliveryPoint {
-                    id: split[id_idx]
-                        .to_string()
-                        .try_into()
+                    id: DeliveryPointId::try_from(split[id_idx].to_string())
                         .change_context(ScraperError)?,
                     name: split[name_idx].to_string(),
                     address,

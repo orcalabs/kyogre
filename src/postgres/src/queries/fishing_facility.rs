@@ -1,5 +1,5 @@
 use chrono::{DateTime, Utc};
-use error_stack::{report, IntoReport, Result, ResultExt};
+use error_stack::{report, Result, ResultExt};
 use futures::{Stream, TryStreamExt};
 use geo_types::geometry::Geometry;
 use geozero::wkb;
@@ -255,7 +255,6 @@ SET
         )
         .execute(&self.pool)
         .await
-        .into_report()
         .change_context(PostgresError::Query)
         .map(|_| ())
     }
@@ -383,7 +382,6 @@ LIMIT
         )
         .fetch_optional(&self.pool)
         .await
-        .into_report()
         .change_context(PostgresError::Query)?
         .map(|r| r.last_changed))
     }

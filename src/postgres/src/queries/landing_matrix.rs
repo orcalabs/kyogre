@@ -1,6 +1,5 @@
 use crate::models::LandingMatrixQueryOutput;
 use crate::{error::PostgresError, models::LandingMatrixArgs, PostgresAdapter};
-use error_stack::IntoReport;
 use error_stack::{Result, ResultExt};
 use kyogre_core::{
     calculate_landing_sum_area_table, ActiveLandingFilter, LandingMatrixXFeature,
@@ -90,7 +89,6 @@ GROUP BY
         )
         .fetch_all(&pool)
         .await
-        .into_report()
         .change_context(PostgresError::Query)?;
 
         let converted: Vec<kyogre_core::LandingMatrixQueryOutput> = data

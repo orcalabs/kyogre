@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use chrono::{DateTime, Duration, Utc};
 use csv::Reader;
-use error_stack::{IntoReport, Result, ResultExt};
+use error_stack::{Result, ResultExt};
 use pyo3::{
     types::{timezone_utc, PyDateTime, PyModule},
     Python,
@@ -35,9 +35,7 @@ impl DataSource for WeatherScraper {
         for file in files {
             let timestamp = timestamp_from_filename(&file).change_context(ScraperError)?;
 
-            let reader = Reader::from_path(&file)
-                .into_report()
-                .change_context(ScraperError)?;
+            let reader = Reader::from_path(&file).change_context(ScraperError)?;
 
             let weather = reader
                 .into_deserialize::<Weather>()
@@ -52,7 +50,6 @@ impl DataSource for WeatherScraper {
                     Err(e) => Some(Err(e)),
                 })
                 .collect::<std::result::Result<Vec<_>, _>>()
-                .into_report()
                 .change_context(ScraperError)?;
 
             match processor
@@ -100,27 +97,20 @@ fn download_weather_data(latest: DateTime<Utc>) -> Result<Vec<String>, PythonErr
     Python::with_gil(|py| {
         let py_datetime =
             PyDateTime::from_timestamp(py, latest.timestamp() as f64, Some(timezone_utc(py)))
-                .into_report()
                 .change_context(PythonError::DateTime(latest))?;
 
-        let py_module = PyModule::from_code(py, py_code, "", "")
-            .into_report()
-            .change_context(PythonError::PyModule)?;
+        let py_module =
+            PyModule::from_code(py, py_code, "", "").change_context(PythonError::PyModule)?;
 
         let py_main = py_module
             .getattr("main")
-            .into_report()
             .change_context_lazy(|| PythonError::GetAttr("main".to_string()))?;
 
         let result = py_main
             .call1((py_datetime,))
-            .into_report()
             .change_context(PythonError::Call)?;
 
-        result
-            .extract()
-            .into_report()
-            .change_context(PythonError::Extract)
+        result.extract().change_context(PythonError::Extract)
     })
 }
 

@@ -2,7 +2,7 @@ use crate::*;
 use chrono::{DateTime, Datelike, Months, Utc};
 use enum_index::EnumIndex;
 use enum_index_derive::EnumIndex;
-use error_stack::{IntoReport, Result};
+use error_stack::{Report, Result};
 use fiskeridir_rs::{GearGroup, SpeciesGroup, VesselLengthGroup};
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
@@ -207,7 +207,7 @@ impl HaulMatrixYFeature {
                 .map(|v| v.enum_index()),
             HaulMatrixYFeature::CatchLocation => Ok(val as usize),
         }
-        .into_report()
+        .map_err(Report::from)
     }
 
     fn size(&self) -> usize {
@@ -242,7 +242,7 @@ impl HaulMatrixXFeature {
                 .ok_or(HaulMatrixIndexError::VesselLength(val))
                 .map(|v| v.enum_index()),
         }
-        .into_report()
+        .map_err(Report::from)
     }
     fn size(&self) -> usize {
         match self {

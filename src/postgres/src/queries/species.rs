@@ -1,5 +1,5 @@
 use crate::{error::PostgresError, models::*, PostgresAdapter};
-use error_stack::{report, IntoReport, Result, ResultExt};
+use error_stack::{report, Result, ResultExt};
 use futures::{Stream, TryStreamExt};
 use unnest_insert::UnnestInsert;
 
@@ -11,7 +11,6 @@ impl PostgresAdapter {
     ) -> Result<(), PostgresError> {
         SpeciesFiskeridir::unnest_insert(species, &mut **tx)
             .await
-            .into_report()
             .change_context(PostgresError::Query)
             .map(|_| ())
     }
@@ -23,7 +22,6 @@ impl PostgresAdapter {
     ) -> Result<(), PostgresError> {
         Species::unnest_insert(species, &mut **tx)
             .await
-            .into_report()
             .change_context(PostgresError::Query)
             .map(|_| ())
     }
@@ -35,7 +33,6 @@ impl PostgresAdapter {
     ) -> Result<(), PostgresError> {
         SpeciesFao::unnest_insert(species, &mut **tx)
             .await
-            .into_report()
             .change_context(PostgresError::Query)
             .map(|_| ())
     }

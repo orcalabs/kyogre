@@ -1,5 +1,5 @@
 use duckdb::DuckdbConnectionManager;
-use error_stack::{report, Context, IntoReport, Result, ResultExt};
+use error_stack::{report, Context, Result, ResultExt};
 use kyogre_core::*;
 use orca_core::PsqlSettings;
 use serde::Deserialize;
@@ -45,19 +45,15 @@ impl DuckdbAdapter {
         postgres_settings: PsqlSettings,
     ) -> Result<DuckdbAdapter, DuckdbError> {
         let manager = match &settings.storage {
-            CacheStorage::Memory => DuckdbConnectionManager::memory()
-                .into_report()
-                .change_context(DuckdbError::Connection),
+            CacheStorage::Memory => {
+                DuckdbConnectionManager::memory().change_context(DuckdbError::Connection)
+            }
             CacheStorage::Disk(path) => match DuckdbConnectionManager::file(path) {
                 Err(e) => {
                     event!(Level::ERROR, "failed to open duckdb: {}", e);
                     event!(Level::INFO, "trying to delete db file and re-open...");
-                    std::fs::remove_file(path)
-                        .into_report()
-                        .change_context(DuckdbError::Connection)?;
-                    DuckdbConnectionManager::file(path)
-                        .into_report()
-                        .change_context(DuckdbError::Connection)
+                    std::fs::remove_file(path).change_context(DuckdbError::Connection)?;
+                    DuckdbConnectionManager::file(path).change_context(DuckdbError::Connection)
                 }
                 Ok(v) => Ok(v),
             },
@@ -66,7 +62,6 @@ impl DuckdbAdapter {
         let pool = r2d2::Pool::builder()
             .max_size(settings.max_connections)
             .build(manager)
-            .into_report()
             .change_context(DuckdbError::Connection)?;
 
         let (sender, recv) = mpsc::channel(1);
@@ -147,11 +142,7 @@ impl DuckdbAdapter {
         &self,
         params: &LandingMatrixQuery,
     ) -> Result<Option<LandingMatrix>, DuckdbError> {
-        let conn = self
-            .pool
-            .get()
-            .into_report()
-            .change_context(DuckdbError::Connection)?;
+        let conn = self.pool.get().change_context(DuckdbError::Connection)?;
         let dates = self.get_landing_matrix(&conn, LandingMatrixXFeature::Date, params)?;
         let length_group =
             self.get_landing_matrix(&conn, LandingMatrixXFeature::VesselLength, params)?;
@@ -177,11 +168,7 @@ impl DuckdbAdapter {
         &self,
         params: &HaulsMatrixQuery,
     ) -> Result<Option<HaulsMatrix>, DuckdbError> {
-        let conn = self
-            .pool
-            .get()
-            .into_report()
-            .change_context(DuckdbError::Connection)?;
+        let conn = self.pool.get().change_context(DuckdbError::Connection)?;
         let dates = self.get_haul_matrix(&conn, HaulMatrixXFeature::Date, params)?;
         let length_group = self.get_haul_matrix(&conn, HaulMatrixXFeature::VesselLength, params)?;
         let gear_group = self.get_haul_matrix(&conn, HaulMatrixXFeature::GearGroup, params)?;
@@ -229,19 +216,11 @@ FROM
 
         sql.push_str("group by 1,2");
 
-        let mut stmt = conn
-            .prepare(&sql)
-            .into_report()
-            .change_context(DuckdbError::Query)?;
+        let mut stmt = conn.prepare(&sql).change_context(DuckdbError::Query)?;
 
-        let rows = stmt
-            .query([])
-            .into_report()
-            .change_context(DuckdbError::Query)?;
+        let rows = stmt.query([]).change_context(DuckdbError::Query)?;
 
-        let data = get_landing_matrix_output(rows)
-            .into_report()
-            .change_context(DuckdbError::Conversion)?;
+        let data = get_landing_matrix_output(rows).change_context(DuckdbError::Conversion)?;
 
         if data.is_empty() {
             Ok(None)
@@ -281,19 +260,11 @@ FROM
 
         sql.push_str("group by 1,2");
 
-        let mut stmt = conn
-            .prepare(&sql)
-            .into_report()
-            .change_context(DuckdbError::Query)?;
+        let mut stmt = conn.prepare(&sql).change_context(DuckdbError::Query)?;
 
-        let rows = stmt
-            .query([])
-            .into_report()
-            .change_context(DuckdbError::Query)?;
+        let rows = stmt.query([]).change_context(DuckdbError::Query)?;
 
-        let data = get_haul_matrix_output(rows)
-            .into_report()
-            .change_context(DuckdbError::Conversion)?;
+        let data = get_haul_matrix_output(rows).change_context(DuckdbError::Conversion)?;
 
         if data.is_empty() {
             Ok(None)
