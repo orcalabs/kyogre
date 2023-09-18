@@ -3,7 +3,7 @@ use crate::{
     models::{NewGearFao, NewGearProblem},
     PostgresAdapter,
 };
-use error_stack::{IntoReport, Result, ResultExt};
+use error_stack::{Result, ResultExt};
 use unnest_insert::UnnestInsert;
 
 impl PostgresAdapter {
@@ -14,7 +14,6 @@ impl PostgresAdapter {
     ) -> Result<(), PostgresError> {
         NewGearFao::unnest_insert(gear, &mut **tx)
             .await
-            .into_report()
             .change_context(PostgresError::Query)
             .map(|_| ())
     }
@@ -26,7 +25,6 @@ impl PostgresAdapter {
     ) -> Result<(), PostgresError> {
         NewGearProblem::unnest_insert(gear, &mut **tx)
             .await
-            .into_report()
             .change_context(PostgresError::Query)
             .map(|_| ())
     }

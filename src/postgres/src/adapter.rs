@@ -5,7 +5,7 @@ use crate::{
 };
 use async_trait::async_trait;
 use chrono::{DateTime, Duration, Utc};
-use error_stack::{IntoReport, Report, Result, ResultExt};
+use error_stack::{Report, Result, ResultExt};
 use fiskeridir_rs::{CallSign, DeliveryPointId, LandingId};
 use futures::{Stream, StreamExt, TryStreamExt};
 use kyogre_core::*;
@@ -68,10 +68,9 @@ impl PostgresAdapter {
 
         let pool = PgPoolOptions::new()
             .max_connections(connections_per_pool)
-            .acquire_timeout(std::time::Duration::from_secs(20))
+            .acquire_timeout(std::time::Duration::from_secs(30))
             .connect_with(opts)
             .await
-            .into_report()
             .change_context(PostgresError::Connection)?;
 
         let ais_pool = PgPoolOptions::new()
@@ -79,7 +78,6 @@ impl PostgresAdapter {
             .acquire_timeout(std::time::Duration::from_secs(20))
             .connect_with(ais_opts)
             .await
-            .into_report()
             .change_context(PostgresError::Connection)?;
 
         Ok(PostgresAdapter { pool, ais_pool })
@@ -202,7 +200,6 @@ impl PostgresAdapter {
         self.pool
             .begin()
             .await
-            .into_report()
             .change_context(PostgresError::Transaction)
     }
 }
@@ -338,7 +335,6 @@ ANALYZE trips_detailed
         .execute(&self.pool)
         .await
         .map(|_| ())
-        .into_report()
         .change_context(UpdateError)
     }
 }
@@ -518,19 +514,15 @@ impl WebApiOutboundPort for PostgresAdapter {
 
         Ok(LandingMatrix {
             dates: dates
-                .into_report()
                 .change_context(QueryError)?
                 .change_context(QueryError)?,
             length_group: length_group
-                .into_report()
                 .change_context(QueryError)?
                 .change_context(QueryError)?,
             gear_group: gear_group
-                .into_report()
                 .change_context(QueryError)?
                 .change_context(QueryError)?,
             species_group: species_group
-                .into_report()
                 .change_context(QueryError)?
                 .change_context(QueryError)?,
         })
@@ -569,19 +561,15 @@ impl WebApiOutboundPort for PostgresAdapter {
 
         Ok(HaulsMatrix {
             dates: dates
-                .into_report()
                 .change_context(QueryError)?
                 .change_context(QueryError)?,
             length_group: length_group
-                .into_report()
                 .change_context(QueryError)?
                 .change_context(QueryError)?,
             gear_group: gear_group
-                .into_report()
                 .change_context(QueryError)?
                 .change_context(QueryError)?,
             species_group: species_group
-                .into_report()
                 .change_context(QueryError)?
                 .change_context(QueryError)?,
         })

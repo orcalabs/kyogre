@@ -6,7 +6,7 @@ use std::time::Duration;
 
 use crate::adapter::DuckdbAdapter;
 use async_trait::async_trait;
-use error_stack::{IntoReport, ResultExt};
+use error_stack::ResultExt;
 use fiskeridir_rs::{GearGroup, SpeciesGroup, VesselLengthGroup};
 use kyogre_core::{
     ActiveHaulsFilter, ActiveLandingFilter, CatchLocationId, FiskeridirVesselId, HaulsMatrixQuery,
@@ -32,9 +32,7 @@ pub struct Client {
 
 impl Client {
     pub async fn new(ip: impl AsRef<str>, port: u16) -> error_stack::Result<Client, Error> {
-        let addr: tonic::transport::Uri = format!("http://{}:{port}", ip.as_ref())
-            .try_into()
-            .into_report()
+        let addr = tonic::transport::Uri::try_from(format!("http://{}:{port}", ip.as_ref()))
             .change_context(Error::Connection)?;
 
         let channel = tonic::transport::Channel::builder(addr)
@@ -58,7 +56,6 @@ impl Client {
         client
             .refresh(EmptyMessage {})
             .await
-            .into_report()
             .change_context(UpdateError)
             .map(|_| ())
     }
@@ -71,9 +68,7 @@ impl MatrixCacheOutbound for Client {
         &self,
         query: LandingMatrixQuery,
     ) -> error_stack::Result<Option<kyogre_core::LandingMatrix>, QueryError> {
-        let parameters = LandingFeatures::try_from(query)
-            .into_report()
-            .change_context(QueryError)?;
+        let parameters = LandingFeatures::try_from(query).change_context(QueryError)?;
 
         // Cloning a channel is cheap see
         // https://docs.rs/tonic/latest/tonic/transport/struct.Channel.html for more
@@ -83,7 +78,6 @@ impl MatrixCacheOutbound for Client {
         let matrix = client
             .get_landing_matrix(parameters)
             .await
-            .into_report()
             .change_context(QueryError)?
             .into_inner();
 
@@ -102,9 +96,7 @@ impl MatrixCacheOutbound for Client {
         &self,
         query: HaulsMatrixQuery,
     ) -> error_stack::Result<Option<kyogre_core::HaulsMatrix>, QueryError> {
-        let parameters = HaulFeatures::try_from(query)
-            .into_report()
-            .change_context(QueryError)?;
+        let parameters = HaulFeatures::try_from(query).change_context(QueryError)?;
 
         // Cloning a channel is cheap see
         // https://docs.rs/tonic/latest/tonic/transport/struct.Channel.html for more
@@ -114,7 +106,6 @@ impl MatrixCacheOutbound for Client {
         let matrix = client
             .get_haul_matrix(parameters)
             .await
-            .into_report()
             .change_context(QueryError)?
             .into_inner();
 

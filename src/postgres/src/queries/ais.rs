@@ -15,7 +15,7 @@ use crate::{
     models::{AisClass, AisPosition, NewAisVessel, NewAisVesselHistoric},
     PostgresAdapter,
 };
-use error_stack::{report, IntoReport, Result, ResultExt};
+use error_stack::{report, Result, ResultExt};
 
 impl PostgresAdapter {
     pub(crate) async fn all_ais_impl(&self) -> Result<Vec<AisPosition>, PostgresError> {
@@ -41,7 +41,6 @@ ORDER BY
         )
         .fetch_all(&self.ais_pool)
         .await
-        .into_report()
         .change_context(PostgresError::Query)
     }
     pub(crate) fn ais_positions_impl(
@@ -137,13 +136,11 @@ ORDER BY
             latitude.push(
                 BigDecimal::from_f64(p.latitude)
                     .ok_or(BigDecimalError(p.latitude))
-                    .into_report()
                     .change_context(PostgresError::DataConversion)?,
             );
             longitude.push(
                 BigDecimal::from_f64(p.longitude)
                     .ok_or(BigDecimalError(p.longitude))
-                    .into_report()
                     .change_context(PostgresError::DataConversion)?,
             );
             course_over_ground.push(
@@ -151,7 +148,6 @@ ORDER BY
                     .map(|v| {
                         BigDecimal::from_f64(v)
                             .ok_or(BigDecimalError(v))
-                            .into_report()
                             .change_context(PostgresError::DataConversion)
                     })
                     .transpose()?,
@@ -161,7 +157,6 @@ ORDER BY
                     .map(|v| {
                         BigDecimal::from_f64(v)
                             .ok_or(BigDecimalError(v))
-                            .into_report()
                             .change_context(PostgresError::DataConversion)
                     })
                     .transpose()?,
@@ -173,7 +168,6 @@ ORDER BY
                     .map(|v| {
                         BigDecimal::from_f64(v)
                             .ok_or(BigDecimalError(v))
-                            .into_report()
                             .change_context(PostgresError::DataConversion)
                     })
                     .transpose()?,
@@ -182,7 +176,6 @@ ORDER BY
             distance_to_shore.push(
                 BigDecimal::from_f64(p.distance_to_shore)
                     .ok_or(BigDecimalError(p.distance_to_shore))
-                    .into_report()
                     .change_context(PostgresError::DataConversion)?,
             );
             navigation_status_id.push(p.navigational_status as i32);
@@ -205,7 +198,6 @@ ON CONFLICT (mmsi) DO NOTHING
         )
         .execute(&mut *tx)
         .await
-        .into_report()
         .change_context(PostgresError::Query)?;
 
         sqlx::query!(
@@ -262,18 +254,15 @@ ON CONFLICT (mmsi, TIMESTAMP) DO NOTHING
         )
         .execute(&mut *tx)
         .await
-        .into_report()
         .change_context(PostgresError::Query)?;
 
         for (_, p) in latest_position_per_vessel {
             let latitude = BigDecimal::from_f64(p.latitude)
                 .ok_or(BigDecimalError(p.latitude))
-                .into_report()
                 .change_context(PostgresError::DataConversion)?;
 
             let longitude = BigDecimal::from_f64(p.longitude)
                 .ok_or(BigDecimalError(p.longitude))
-                .into_report()
                 .change_context(PostgresError::DataConversion)?;
 
             let course_over_ground = p
@@ -281,7 +270,6 @@ ON CONFLICT (mmsi, TIMESTAMP) DO NOTHING
                 .map(|v| {
                     BigDecimal::from_f64(v)
                         .ok_or(BigDecimalError(v))
-                        .into_report()
                         .change_context(PostgresError::DataConversion)
                 })
                 .transpose()?;
@@ -291,7 +279,6 @@ ON CONFLICT (mmsi, TIMESTAMP) DO NOTHING
                 .map(|v| {
                     BigDecimal::from_f64(v)
                         .ok_or(BigDecimalError(v))
-                        .into_report()
                         .change_context(PostgresError::DataConversion)
                 })
                 .transpose()?;
@@ -301,14 +288,12 @@ ON CONFLICT (mmsi, TIMESTAMP) DO NOTHING
                 .map(|v| {
                     BigDecimal::from_f64(v)
                         .ok_or(BigDecimalError(v))
-                        .into_report()
                         .change_context(PostgresError::DataConversion)
                 })
                 .transpose()?;
 
             let distance_to_shore = BigDecimal::from_f64(p.distance_to_shore)
                 .ok_or(BigDecimalError(p.distance_to_shore))
-                .into_report()
                 .change_context(PostgresError::DataConversion)?;
 
             let ais_class = p.ais_class.map(|a| AisClass::from(a).to_string());
@@ -379,13 +364,11 @@ SET
             )
             .execute(&mut *tx)
             .await
-            .into_report()
             .change_context(PostgresError::Query)?;
         }
 
         tx.commit()
             .await
-            .into_report()
             .change_context(PostgresError::Transaction)?;
 
         Ok(())
@@ -410,7 +393,6 @@ WHERE
         )
         .fetch_all(&self.pool)
         .await
-        .into_report()
         .change_context(PostgresError::Query)?
         .into_iter()
         .map(|v| AisVesselMigrate {
@@ -442,13 +424,11 @@ WHERE
 
         NewAisVessel::unnest_insert(vessels, &self.pool)
             .await
-            .into_report()
             .change_context(PostgresError::Query)
             .map(|_| ())?;
 
         NewAisVesselHistoric::unnest_insert(vessels_historic, &self.pool)
             .await
-            .into_report()
             .change_context(PostgresError::Query)
             .map(|_| ())
     }
@@ -468,7 +448,6 @@ ON CONFLICT (mmsi) DO NOTHING
         .execute(&self.pool)
         .await
         .map(|_| ())
-        .into_report()
         .change_context(PostgresError::Query)
     }
 
@@ -494,13 +473,11 @@ ON CONFLICT (mmsi) DO NOTHING
             latitude.push(
                 BigDecimal::from_f64(p.latitude)
                     .ok_or(BigDecimalError(p.latitude))
-                    .into_report()
                     .change_context(PostgresError::DataConversion)?,
             );
             longitude.push(
                 BigDecimal::from_f64(p.longitude)
                     .ok_or(BigDecimalError(p.longitude))
-                    .into_report()
                     .change_context(PostgresError::DataConversion)?,
             );
             course_over_ground.push(
@@ -508,7 +485,6 @@ ON CONFLICT (mmsi) DO NOTHING
                     .map(|v| {
                         BigDecimal::from_f64(v)
                             .ok_or(BigDecimalError(v))
-                            .into_report()
                             .change_context(PostgresError::DataConversion)
                     })
                     .transpose()?,
@@ -518,7 +494,6 @@ ON CONFLICT (mmsi) DO NOTHING
                     .map(|v| {
                         BigDecimal::from_f64(v)
                             .ok_or(BigDecimalError(v))
-                            .into_report()
                             .change_context(PostgresError::DataConversion)
                     })
                     .transpose()?,
@@ -530,7 +505,6 @@ ON CONFLICT (mmsi) DO NOTHING
                     .map(|v| {
                         BigDecimal::from_f64(v)
                             .ok_or(BigDecimalError(v))
-                            .into_report()
                             .change_context(PostgresError::DataConversion)
                     })
                     .transpose()?,
@@ -538,7 +512,6 @@ ON CONFLICT (mmsi) DO NOTHING
             distance_to_shore.push(
                 BigDecimal::from_f64(p.distance_to_shore)
                     .ok_or(BigDecimalError(p.distance_to_shore))
-                    .into_report()
                     .change_context(PostgresError::DataConversion)?,
             );
             navigation_status_id.push(p.navigational_status.map(|v| v as i32));
@@ -563,7 +536,6 @@ SET
         )
         .execute(&mut *tx)
         .await
-        .into_report()
         .change_context(PostgresError::Query)?;
 
         sqlx::query!(
@@ -611,12 +583,10 @@ ON CONFLICT (mmsi, TIMESTAMP) DO NOTHING
         )
         .execute(&mut *tx)
         .await
-        .into_report()
         .change_context(PostgresError::Query)?;
 
         tx.commit()
             .await
-            .into_report()
             .change_context(PostgresError::Transaction)?;
 
         Ok(())

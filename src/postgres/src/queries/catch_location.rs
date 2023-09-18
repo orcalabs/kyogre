@@ -1,4 +1,4 @@
-use error_stack::{IntoReport, Result, ResultExt};
+use error_stack::{Result, ResultExt};
 
 use crate::{error::PostgresError, models::CatchLocation, PostgresAdapter};
 
@@ -16,7 +16,6 @@ FROM
         )
         .fetch_all(&self.pool)
         .await
-        .into_report()
         .change_context(PostgresError::Query)
     }
 }

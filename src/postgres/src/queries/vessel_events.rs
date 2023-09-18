@@ -1,5 +1,5 @@
 use crate::{error::PostgresError, models::VesselEventDetailed, PostgresAdapter};
-use error_stack::{IntoReport, Result, ResultExt};
+use error_stack::{Result, ResultExt};
 use kyogre_core::{FiskeridirVesselId, QueryRange, VesselEventType};
 use sqlx::postgres::types::PgRange;
 
@@ -37,7 +37,6 @@ ORDER BY
         )
         .fetch_all(&self.pool)
         .await
-        .into_report()
         .change_context(PostgresError::Query)
     }
     pub(crate) async fn ers_por_and_dep_events(
@@ -106,7 +105,6 @@ ORDER BY
         )
         .fetch_all(&self.pool)
         .await
-        .into_report()
         .change_context(PostgresError::Query)
     }
 
@@ -134,7 +132,6 @@ WHERE
         )
         .fetch_one(&self.pool)
         .await
-        .into_report()
         .change_context(PostgresError::Query)
         .map(|r| r.count)
     }

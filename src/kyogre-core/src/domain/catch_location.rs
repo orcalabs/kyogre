@@ -1,4 +1,4 @@
-use error_stack::{report, IntoReport, Report, ResultExt};
+use error_stack::{report, Report, ResultExt};
 use geo::geometry::Polygon;
 use serde::{
     de::{self, Visitor},
@@ -85,13 +85,11 @@ impl TryFrom<&str> for CatchLocationId {
         }
 
         let main_area = split[0]
-            .parse()
-            .into_report()
+            .parse::<i32>()
             .change_context(CatchLocationIdError::InvalidMainArea)?;
 
         let catch_area = split[1]
-            .parse()
-            .into_report()
+            .parse::<i32>()
             .change_context(CatchLocationIdError::InvalidCatchArea)?;
 
         Ok(Self::new(main_area, catch_area))

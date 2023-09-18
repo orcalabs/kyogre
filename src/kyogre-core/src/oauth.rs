@@ -1,5 +1,5 @@
 use crate::error::BearerTokenError;
-use error_stack::{IntoReport, Result, ResultExt};
+use error_stack::{Result, ResultExt};
 use oauth2::AccessToken;
 use oauth2::TokenResponse;
 use oauth2::{
@@ -21,12 +21,10 @@ pub struct BearerToken(AccessToken);
 
 impl BearerToken {
     pub async fn acquire(config: &OauthConfig) -> Result<BearerToken, BearerTokenError> {
-        let auth_url = AuthUrl::new(config.auth_url.clone())
-            .into_report()
-            .change_context(BearerTokenError::Acquisition)?;
+        let auth_url =
+            AuthUrl::new(config.auth_url.clone()).change_context(BearerTokenError::Acquisition)?;
 
         let token_url = TokenUrl::new(config.token_url.clone())
-            .into_report()
             .change_context(BearerTokenError::Acquisition)?;
 
         let client = BasicClient::new(
@@ -41,7 +39,6 @@ impl BearerToken {
             .add_scope(Scope::new(config.scope.clone()))
             .request_async(async_http_client)
             .await
-            .into_report()
             .change_context(BearerTokenError::Acquisition)?;
 
         Ok(BearerToken(response.access_token().clone()))

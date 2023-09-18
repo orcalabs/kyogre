@@ -1,5 +1,5 @@
 use chrono::{DateTime, NaiveDate, Utc};
-use error_stack::{report, IntoReport, Result, ResultExt};
+use error_stack::{report, Result, ResultExt};
 
 mod models;
 mod weather_scraper;
@@ -29,20 +29,16 @@ pub(crate) fn timestamp_from_filename(name: &str) -> Result<DateTime<Utc>, Times
         .ok_or_else(|| report!(TimestampError::InvalidFilename(name.to_string())))?;
 
     let year = date_part[0..4]
-        .parse()
-        .into_report()
+        .parse::<i32>()
         .change_context_lazy(|| TimestampError::InvalidFilename(name.to_string()))?;
     let month = date_part[4..6]
-        .parse()
-        .into_report()
+        .parse::<u32>()
         .change_context_lazy(|| TimestampError::InvalidFilename(name.to_string()))?;
     let day = date_part[6..8]
-        .parse()
-        .into_report()
+        .parse::<u32>()
         .change_context_lazy(|| TimestampError::InvalidFilename(name.to_string()))?;
     let hour = date_part[9..11]
-        .parse()
-        .into_report()
+        .parse::<u32>()
         .change_context_lazy(|| TimestampError::InvalidFilename(name.to_string()))?;
 
     let ts = NaiveDate::from_ymd_opt(year, month, day)

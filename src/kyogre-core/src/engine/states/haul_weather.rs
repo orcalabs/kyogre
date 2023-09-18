@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use crate::{DateRange, HaulWeatherOutput, HaulWeatherStatus, Vessel, WeatherQuery};
 use crate::{HaulWeatherError, HaulWeatherInbound, HaulWeatherOutbound, SharedState};
 use async_trait::async_trait;
-use error_stack::{IntoReport, ResultExt};
+use error_stack::ResultExt;
 use geo::{coord, Contains};
 use machine::Schedule;
 use tracing::{event, instrument, Level};
@@ -65,7 +65,6 @@ async fn process_haul_weather(
 
         for h in hauls {
             let range = DateRange::new(h.start_timestamp, h.stop_timestamp)
-                .into_report()
                 .change_context(HaulWeatherError)?;
 
             let positions = outbound

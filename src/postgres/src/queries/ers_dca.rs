@@ -7,7 +7,7 @@ use crate::{
     PostgresAdapter,
 };
 use chrono::{DateTime, Utc};
-use error_stack::{IntoReport, Result, ResultExt};
+use error_stack::{Result, ResultExt};
 use futures::TryStreamExt;
 use kyogre_core::VesselEventType;
 use tracing::{event, Level};
@@ -73,10 +73,7 @@ impl PostgresAdapter {
         self.update_trips_refresh_boundary(earliest_dca, &mut tx)
             .await?;
 
-        tx.commit()
-            .await
-            .into_report()
-            .change_context(PostgresError::Transaction)
+        tx.commit().await.change_context(PostgresError::Transaction)
     }
 
     pub(crate) async fn add_ers_dca_set<'a>(
@@ -173,7 +170,6 @@ WHERE
         )
         .execute(&mut **tx)
         .await
-        .into_report()
         .change_context(PostgresError::Query)?;
 
         let to_insert = self.ers_dca_to_insert(&message_id, tx).await?;
@@ -181,7 +177,6 @@ WHERE
 
         let inserted = NewErsDca::unnest_insert_returning(ers_dca, &mut **tx)
             .await
-            .into_report()
             .change_context(PostgresError::Query)?;
 
         for i in inserted {
@@ -215,7 +210,6 @@ WHERE
         .map_ok(|r| r.message_id)
         .try_collect::<HashSet<_>>()
         .await
-        .into_report()
         .change_context(PostgresError::Query)
     }
 
@@ -226,7 +220,6 @@ WHERE
     ) -> Result<(), PostgresError> {
         NewErsDcaBody::unnest_insert(ers_dca_bodies, &mut **tx)
             .await
-            .into_report()
             .change_context(PostgresError::Query)
             .map(|_| ())
     }
@@ -238,7 +231,6 @@ WHERE
     ) -> Result<(), PostgresError> {
         NewHerringPopulation::unnest_insert(herring_populations, &mut **tx)
             .await
-            .into_report()
             .change_context(PostgresError::Query)
             .map(|_| ())
     }

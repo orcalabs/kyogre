@@ -8,7 +8,7 @@ use crate::{
     },
     PostgresAdapter,
 };
-use error_stack::{report, IntoReport, Result, ResultExt};
+use error_stack::{report, Result, ResultExt};
 use fiskeridir_rs::DeliveryPointId;
 use futures::{Stream, TryStreamExt};
 use kyogre_core::TripId;
@@ -42,7 +42,6 @@ WHERE
         )
         .fetch_optional(&self.pool)
         .await
-        .into_report()
         .change_context(PostgresError::Query)
     }
     pub(crate) async fn add_deprecated_delivery_point_impl(
@@ -62,7 +61,6 @@ VALUES
         )
         .execute(&self.pool)
         .await
-        .into_report()
         .change_context(PostgresError::Query)
         .map(|_| ())?;
 
@@ -81,7 +79,6 @@ FROM
         )
         .fetch_all(&self.pool)
         .await
-        .into_report()
         .change_context(PostgresError::Query)?
         .into_iter()
         .map(|r| r.json)
@@ -104,12 +101,10 @@ FROM
 
         ManualDeliveryPoint::unnest_insert(values, &mut *tx)
             .await
-            .into_report()
             .change_context(PostgresError::Query)?;
 
         tx.commit()
             .await
-            .into_report()
             .change_context(PostgresError::Transaction)?;
 
         Ok(())
@@ -147,7 +142,6 @@ FROM
     ) -> Result<(), PostgresError> {
         NewDeliveryPointId::unnest_insert(delivery_point_ids, &mut **tx)
             .await
-            .into_report()
             .change_context(PostgresError::Query)
             .map(|_| ())
     }
@@ -196,17 +190,13 @@ FROM
 
         AquaCultureEntry::unnest_insert(values, &mut *tx)
             .await
-            .into_report()
             .change_context(PostgresError::Query)?;
 
         self.add_aqua_culture_register_tills(tills, &mut tx).await?;
         self.add_aqua_culture_register_species(aqua_species, &mut tx)
             .await?;
 
-        tx.commit()
-            .await
-            .into_report()
-            .change_context(PostgresError::Query)
+        tx.commit().await.change_context(PostgresError::Query)
     }
 
     pub(crate) async fn add_aqua_culture_register_tills<'a>(
@@ -216,7 +206,6 @@ FROM
     ) -> Result<(), PostgresError> {
         AquaCultureTill::unnest_insert(tills, &mut **tx)
             .await
-            .into_report()
             .change_context(PostgresError::Query)
             .map(|_| ())
     }
@@ -228,7 +217,6 @@ FROM
     ) -> Result<(), PostgresError> {
         AquaCultureSpecies::unnest_insert(species, &mut **tx)
             .await
-            .into_report()
             .change_context(PostgresError::Query)
             .map(|_| ())
     }
@@ -252,13 +240,9 @@ FROM
 
         MattilsynetDeliveryPoint::unnest_insert(items, &mut *tx)
             .await
-            .into_report()
             .change_context(PostgresError::Query)?;
 
-        tx.commit()
-            .await
-            .into_report()
-            .change_context(PostgresError::Query)
+        tx.commit().await.change_context(PostgresError::Query)
     }
 
     pub(crate) async fn delivery_points_associated_with_trip_impl(

@@ -1,5 +1,5 @@
 use crate::{error::PostgresError, models::NewErsMessageType, PostgresAdapter};
-use error_stack::{IntoReport, Result, ResultExt};
+use error_stack::{Result, ResultExt};
 use unnest_insert::UnnestInsert;
 
 impl PostgresAdapter {
@@ -10,7 +10,6 @@ impl PostgresAdapter {
     ) -> Result<(), PostgresError> {
         NewErsMessageType::unnest_insert(ers_message_types, &mut **tx)
             .await
-            .into_report()
             .change_context(PostgresError::Query)
             .map(|_| ())
     }

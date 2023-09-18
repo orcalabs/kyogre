@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use chrono::{DateTime, Duration, Utc};
-use error_stack::{IntoReport, Result, ResultExt};
+use error_stack::{Result, ResultExt};
 use geoutils::Location;
 use kyogre_core::{
     AisVmsPosition, DateRange, PrecisionDirection, PrecisionId, PrecisionOutcome, PrecisionUpdate,
@@ -174,7 +174,6 @@ impl TripPrecisionCalculator {
                     trip_id: t.trip_id,
                     outcome: PrecisionOutcome::Success {
                         new_period: DateRange::new(start, end)
-                            .into_report()
                             .change_context(TripPrecisionError)?,
                         start_precision: start_precision.map(PrecisionUpdate::from),
                         end_precision: end_precision.map(PrecisionUpdate::from),

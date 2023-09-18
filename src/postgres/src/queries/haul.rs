@@ -2,7 +2,7 @@ use super::{bound_float_to_decimal, float_to_decimal, opt_float_to_decimal};
 use crate::{error::PostgresError, models::Haul, models::HaulMessage, PostgresAdapter};
 use bigdecimal::BigDecimal;
 use chrono::{DateTime, Utc};
-use error_stack::{report, IntoReport, Report, Result, ResultExt};
+use error_stack::{report, Report, Result, ResultExt};
 use fiskeridir_rs::{Gear, GearGroup, VesselLengthGroup};
 use futures::{Stream, TryStreamExt};
 use kyogre_core::*;
@@ -90,7 +90,6 @@ GROUP BY
         )
         .fetch_all(&pool)
         .await
-        .into_report()
         .change_context(PostgresError::Query)?;
 
         calculate_haul_sum_area_table(x_feature, y_feature, data)
@@ -252,7 +251,6 @@ WHERE
         )
         .fetch_all(&self.pool)
         .await
-        .into_report()
         .change_context(PostgresError::Query)
     }
 
@@ -279,7 +277,6 @@ WHERE
         )
         .fetch_all(&self.pool)
         .await
-        .into_report()
         .change_context(PostgresError::Query)
     }
 
@@ -334,7 +331,6 @@ WHERE
         )
         .execute(&mut *tx)
         .await
-        .into_report()
         .change_context(PostgresError::Query)?;
 
         sqlx::query!(
@@ -347,7 +343,6 @@ WHERE
         )
         .execute(&mut *tx)
         .await
-        .into_report()
         .change_context(PostgresError::Query)?;
 
         sqlx::query!(
@@ -412,12 +407,10 @@ GROUP BY
         )
         .execute(&mut *tx)
         .await
-        .into_report()
         .change_context(PostgresError::Query)?;
 
         tx.commit()
             .await
-            .into_report()
             .change_context(PostgresError::Transaction)?;
 
         Ok(())
@@ -485,7 +478,6 @@ WHERE
         )
         .fetch_all(&self.pool)
         .await
-        .into_report()
         .change_context(PostgresError::Query)?
         .into_iter()
         .map(|r| r.message_id)
@@ -532,7 +524,6 @@ SELECT
         )
         .fetch_one(&self.pool)
         .await
-        .into_report()
         .change_context(PostgresError::Query)
         .map(|r| r.sum)
     }
@@ -725,7 +716,6 @@ RETURNING
         )
         .fetch_all(&mut **tx)
         .await
-        .into_report()
         .change_context(PostgresError::Query)?
         .into_iter()
         .filter_map(|r| r.vessel_event_id)
@@ -789,7 +779,6 @@ GROUP BY
         )
         .execute(&mut **tx)
         .await
-        .into_report()
         .change_context(PostgresError::Query)
         .map(|_| ())
     }

@@ -1,5 +1,5 @@
 use crate::{error::PostgresError, PostgresAdapter};
-use error_stack::{IntoReport, Result, ResultExt};
+use error_stack::{Result, ResultExt};
 use kyogre_core::{FileHashId, HashDiff};
 
 impl PostgresAdapter {
@@ -26,12 +26,10 @@ SET
         )
         .execute(&mut *tx)
         .await
-        .into_report()
         .change_context(PostgresError::Query)?;
 
         tx.commit()
             .await
-            .into_report()
             .change_context(PostgresError::Transaction)?;
 
         Ok(())
@@ -60,7 +58,6 @@ WHERE
         )
         .fetch_optional(&self.pool)
         .await
-        .into_report()
         .change_context(PostgresError::Query)?;
 
         if let Some(existing_hash) = existing_hash {
@@ -91,7 +88,6 @@ WHERE
         )
         .fetch_optional(&self.pool)
         .await
-        .into_report()
         .change_context(PostgresError::Query)?
         .map(|r| r.hash))
     }

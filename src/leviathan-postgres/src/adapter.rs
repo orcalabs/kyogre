@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use error_stack::{IntoReport, Result, ResultExt};
+use error_stack::{Result, ResultExt};
 use kyogre_core::{AisMigratorSource, AisPosition, Mmsi, QueryError};
 use orca_core::{PsqlLogStatements, PsqlSettings};
 use sqlx::{
@@ -50,7 +50,6 @@ impl LeviathanPostgresAdapter {
             .max_connections(max_connections)
             .connect_with(opts)
             .await
-            .into_report()
             .change_context(PostgresError::Connection)?;
 
         Ok(LeviathanPostgresAdapter { pool })
@@ -83,7 +82,6 @@ impl AisMigratorSource for LeviathanPostgresAdapter {
         .bind(end)
         .fetch_all(&self.pool)
         .await
-        .into_report()
         .change_context(PostgresError::Transaction)
         .change_context(kyogre_core::QueryError)?;
 
@@ -101,7 +99,6 @@ impl AisMigratorSource for LeviathanPostgresAdapter {
         let mmsis = sqlx::query("SELECT mmsi FROM mmsis")
             .fetch_all(&self.pool)
             .await
-            .into_report()
             .change_context(PostgresError::Transaction)
             .change_context(kyogre_core::QueryError)?
             .into_iter()

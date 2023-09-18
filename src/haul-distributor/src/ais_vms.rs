@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use error_stack::{IntoReport, Result, ResultExt};
+use error_stack::{Result, ResultExt};
 use geo::{coord, Contains};
 use kyogre_core::{
     CatchLocation, DateRange, HaulDistributionOutput, HaulDistributorId, HaulDistributorInbound,
@@ -40,7 +40,6 @@ impl HaulDistributor for AisVms {
 
         for h in hauls {
             let range = DateRange::new(h.start_timestamp, h.stop_timestamp)
-                .into_report()
                 .change_context(HaulDistributorError)?;
 
             let positions = outbound

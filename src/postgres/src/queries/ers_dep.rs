@@ -9,7 +9,7 @@ use crate::{
     models::{Departure, NewErsDep, NewErsDepCatch, TripAssemblerConflict},
     PostgresAdapter,
 };
-use error_stack::{IntoReport, Result, ResultExt};
+use error_stack::{Result, ResultExt};
 use futures::TryStreamExt;
 use kyogre_core::{TripAssemblerId, VesselEventType};
 use unnest_insert::{UnnestInsert, UnnestInsertReturning};
@@ -38,7 +38,6 @@ impl PostgresAdapter {
 
         tx.commit()
             .await
-            .into_report()
             .change_context(PostgresError::Transaction)?;
 
         Ok(())
@@ -71,12 +70,10 @@ WHERE
         )
         .execute(&mut **tx)
         .await
-        .into_report()
         .change_context(PostgresError::Query)?;
 
         let inserted = NewErsDep::unnest_insert_returning(ers_dep, &mut **tx)
             .await
-            .into_report()
             .change_context(PostgresError::Query)?;
 
         let len = inserted.len();
@@ -131,7 +128,6 @@ WHERE
         .map_ok(|r| r.message_id)
         .try_collect::<HashSet<_>>()
         .await
-        .into_report()
         .change_context(PostgresError::Query)
     }
 
@@ -142,7 +138,6 @@ WHERE
     ) -> Result<(), PostgresError> {
         NewErsDepCatch::unnest_insert(catches, &mut **tx)
             .await
-            .into_report()
             .change_context(PostgresError::Query)
             .map(|_| ())
     }
@@ -161,7 +156,6 @@ FROM
         )
         .fetch_all(&self.pool)
         .await
-        .into_report()
         .change_context(PostgresError::Query)
     }
 }

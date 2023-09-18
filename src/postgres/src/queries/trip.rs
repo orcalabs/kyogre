@@ -7,7 +7,7 @@ use crate::{
 };
 use bigdecimal::BigDecimal;
 use chrono::{DateTime, Duration, Utc};
-use error_stack::{report, IntoReport, Result, ResultExt};
+use error_stack::{report, Result, ResultExt};
 use fiskeridir_rs::{Gear, LandingId};
 use futures::Stream;
 use futures::TryStreamExt;
@@ -38,7 +38,6 @@ FROM
         )
         .fetch_one(&mut **tx)
         .await
-        .into_report()
         .change_context(PostgresError::Query)?
         .refresh_boundary)
     }
@@ -56,7 +55,6 @@ SET
         )
         .execute(&mut **tx)
         .await
-        .into_report()
         .change_context(PostgresError::Query)?;
 
         Ok(())
@@ -84,7 +82,6 @@ WHERE
         )
         .execute(&mut **tx)
         .await
-        .into_report()
         .change_context(PostgresError::Query)?;
 
         Ok(())
@@ -119,7 +116,6 @@ OFFSET
                 )
                 .fetch_all(&mut *tx)
                 .await
-                .into_report()
                 .change_context(PostgresError::Query)?
                 .into_iter()
                 .map(|v| v.trip_id)
@@ -474,17 +470,13 @@ SET
                 )
                 .execute(&mut *tx)
                 .await
-                .into_report()
                 .change_context(PostgresError::Query)?;
             }
 
             self.reset_trips_refresh_boundary(&mut tx).await?;
         }
 
-        tx.commit()
-            .await
-            .into_report()
-            .change_context(PostgresError::Query)?;
+        tx.commit().await.change_context(PostgresError::Query)?;
 
         Ok(())
     }
@@ -505,7 +497,6 @@ WHERE
         )
         .fetch_one(&self.pool)
         .await
-        .into_report()
         .change_context(PostgresError::Query)?;
 
         Ok(duration
@@ -768,7 +759,6 @@ WHERE
         )
         .fetch_optional(&self.pool)
         .await
-        .into_report()
         .change_context(PostgresError::Query)
     }
 
@@ -814,7 +804,6 @@ WHERE
         )
         .fetch_optional(&self.pool)
         .await
-        .into_report()
         .change_context(PostgresError::Query)
     }
 
@@ -1008,7 +997,6 @@ LIMIT
         )
         .fetch_optional(&self.pool)
         .await
-        .into_report()
         .change_context(PostgresError::Query)
     }
 
@@ -1032,7 +1020,6 @@ WHERE
         )
         .fetch_all(&self.pool)
         .await
-        .into_report()
         .change_context(PostgresError::Query)
     }
     pub(crate) async fn trip_assembler_conflicts(
@@ -1054,7 +1041,6 @@ WHERE
         )
         .fetch_all(&self.pool)
         .await
-        .into_report()
         .change_context(PostgresError::Query)
     }
 
@@ -1075,14 +1061,10 @@ WHERE
 
         let earliest_trip_start = trips[0].period.start();
         for t in trips {
-            period.push(
-                PgRange::try_from(&t.period)
-                    .into_report()
-                    .change_context(PostgresError::DataConversion)?,
-            );
+            period
+                .push(PgRange::try_from(&t.period).change_context(PostgresError::DataConversion)?);
             landing_coverage.push(
                 PgRange::try_from(&t.landing_coverage)
-                    .into_report()
                     .change_context(PostgresError::DataConversion)?,
             );
             start_port_id.push(t.start_port_code);
@@ -1119,7 +1101,6 @@ SET
         )
         .execute(&mut *tx)
         .await
-        .into_report()
         .change_context(PostgresError::Query)?;
 
         match conflict_strategy {
@@ -1137,7 +1118,6 @@ WHERE
             )
             .execute(&mut *tx)
             .await
-            .into_report()
             .change_context(PostgresError::Query)
             .map(|_| ()),
             TripsConflictStrategy::ReplaceAll => sqlx::query!(
@@ -1152,7 +1132,6 @@ WHERE
             )
             .execute(&mut *tx)
             .await
-            .into_report()
             .change_context(PostgresError::Query)
             .map(|_| ()),
             TripsConflictStrategy::Error => Ok(()),
@@ -1189,7 +1168,6 @@ RETURNING
                 )
                 .fetch_optional(&mut *tx)
                 .await
-                .into_report()
                 .change_context(PostgresError::Query)?
                 .map(|v| v.ts)),
             };
@@ -1231,7 +1209,6 @@ RETURNING
         )
         .fetch_all(&mut *tx)
         .await
-        .into_report()
         .change_context(PostgresError::Query)?
         .into_iter()
         .map(|r| InsertedTrip {
@@ -1255,7 +1232,6 @@ RETURNING
 
         tx.commit()
             .await
-            .into_report()
             .change_context(PostgresError::Transaction)?;
 
         Ok(())
@@ -1338,7 +1314,6 @@ WHERE
         )
         .execute(&mut **tx)
         .await
-        .into_report()
         .change_context(PostgresError::Query)
         .map(|_| ())
     }
@@ -1373,7 +1348,6 @@ LIMIT
         )
         .fetch_optional(&self.pool)
         .await
-        .into_report()
         .change_context(PostgresError::Query)
     }
 
@@ -1407,7 +1381,6 @@ LIMIT
         )
         .fetch_optional(&self.pool)
         .await
-        .into_report()
         .change_context(PostgresError::Query)
     }
     pub(crate) async fn update_trip_precisions_impl(
@@ -1502,7 +1475,6 @@ RETURNING
         )
         .fetch_all(&mut *tx)
         .await
-        .into_report()
         .change_context(PostgresError::Query)?
         .iter()
         .flat_map(|v| v.ts)
@@ -1515,7 +1487,6 @@ RETURNING
 
         tx.commit()
             .await
-            .into_report()
             .change_context(PostgresError::Transaction)?;
 
         Ok(())
@@ -1549,7 +1520,6 @@ WHERE
         )
         .fetch_all(&self.pool)
         .await
-        .into_report()
         .change_context(PostgresError::Query)
     }
 
@@ -1597,7 +1567,6 @@ WHERE
         )
         .execute(&self.pool)
         .await
-        .into_report()
         .change_context(PostgresError::Query)
         .map(|_| ())
     }
@@ -1626,7 +1595,6 @@ WHERE
         )
         .fetch_all(&self.pool)
         .await
-        .into_report()
         .change_context(PostgresError::Query)
     }
 
@@ -1670,7 +1638,6 @@ WHERE
         )
         .execute(&mut **tx)
         .await
-        .into_report()
         .change_context(PostgresError::Query)
         .map(|_| ())
     }
@@ -1698,7 +1665,6 @@ WHERE
         )
         .execute(&mut **tx)
         .await
-        .into_report()
         .change_context(PostgresError::Query)
         .map(|_| ())
     }
@@ -1726,7 +1692,6 @@ WHERE
         )
         .execute(&mut **tx)
         .await
-        .into_report()
         .change_context(PostgresError::Query)
         .map(|_| ())
     }
@@ -1754,7 +1719,6 @@ WHERE
         )
         .execute(&mut **tx)
         .await
-        .into_report()
         .change_context(PostgresError::Query)
         .map(|_| ())
     }
@@ -1804,7 +1768,6 @@ WHERE
         )
         .execute(&mut **tx)
         .await
-        .into_report()
         .change_context(PostgresError::Query)
         .map(|_| ())
     }
