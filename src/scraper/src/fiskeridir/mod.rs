@@ -2,7 +2,7 @@ use crate::chunks::add_in_chunks;
 use crate::ScraperError;
 use error_stack::{Result, ResultExt};
 use fiskeridir_rs::{ApiDownloader, DataFile, FileDownloader, FileSource};
-use kyogre_core::{FileHash, InsertError, ScraperFileHashInboundPort};
+use kyogre_core::{FileHash, InsertError, ScraperFileHashInboundPort, ScraperFileHashOutboundPort};
 use kyogre_core::{FileHashId, HashDiff};
 use serde::de::DeserializeOwned;
 use std::future::Future;
@@ -25,15 +25,25 @@ pub use landings::*;
 pub use register_vessel::*;
 pub use vms::*;
 
+pub trait ScraperFileHashPort:
+    ScraperFileHashInboundPort + ScraperFileHashOutboundPort + Send + Sync
+{
+}
+
+impl<T> ScraperFileHashPort for T where
+    T: ScraperFileHashInboundPort + ScraperFileHashOutboundPort + Send + Sync
+{
+}
+
 pub struct FiskeridirSource {
-    hash_store: Box<dyn ScraperFileHashInboundPort + Send + Sync>,
+    hash_store: Box<dyn ScraperFileHashPort>,
     fiskeridir_file: FileDownloader,
     pub fiskeridir_api: ApiDownloader,
 }
 
 impl FiskeridirSource {
     pub fn new(
-        hash_store: Box<dyn ScraperFileHashInboundPort + Send + Sync>,
+        hash_store: Box<dyn ScraperFileHashPort>,
         fiskeridir_file: FileDownloader,
         fiskeridir_api: ApiDownloader,
     ) -> FiskeridirSource {

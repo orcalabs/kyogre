@@ -73,4 +73,26 @@ WHERE
             Ok(HashDiff::Changed)
         }
     }
+
+    pub(crate) async fn get_hash_impl(
+        &self,
+        id: &FileHashId,
+    ) -> Result<Option<String>, PostgresError> {
+        Ok(sqlx::query!(
+            r#"
+SELECT
+    hash
+FROM
+    data_hashes
+WHERE
+    data_hash_id = $1
+            "#,
+            id.as_ref(),
+        )
+        .fetch_optional(&self.pool)
+        .await
+        .into_report()
+        .change_context(PostgresError::Query)?
+        .map(|r| r.hash))
+    }
 }

@@ -731,6 +731,14 @@ impl ScraperFileHashInboundPort for PostgresAdapter {
         self.diff_hash(id, hash).await.change_context(QueryError)
     }
 }
+
+#[async_trait]
+impl ScraperFileHashOutboundPort for PostgresAdapter {
+    async fn get_hash(&self, id: &FileHashId) -> Result<Option<String>, QueryError> {
+        self.get_hash_impl(id).await.change_context(QueryError)
+    }
+}
+
 #[async_trait]
 impl TripAssemblerOutboundPort for PostgresAdapter {
     async fn all_vessels(&self) -> Result<Vec<Vessel>, QueryError> {
