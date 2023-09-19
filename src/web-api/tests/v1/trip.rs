@@ -47,7 +47,7 @@ async fn test_trip_of_landing_does_not_return_trip_of_other_vessels() {
         let state = builder
             .vessels(1)
             .landings(1)
-            .modify(|l| l.landing_timestamp = start + Duration::seconds(1))
+            .modify(|l| l.landing.landing_timestamp = start + Duration::seconds(1))
             .base()
             .vessels(1)
             .trips(1)
@@ -617,7 +617,7 @@ async fn test_trips_filter_by_delivery_point() {
             .trips(2)
             .landings(1)
             .modify(|v| {
-                v.delivery_point.id = Some(delivery_point.clone());
+                v.landing.delivery_point.id = Some(delivery_point.clone());
             })
             .build()
             .await;
@@ -768,7 +768,7 @@ async fn test_trips_sorts_by_weight() {
             .trips(2)
             .landings(2)
             .modify_idx(|i, v| {
-                v.product.living_weight = Some(i as f64 + 1.0);
+                v.landing.product.living_weight = Some(i as f64 + 1.0);
             })
             .build()
             .await;
@@ -803,9 +803,9 @@ async fn test_trips_filter_by_gear_group_ids() {
             .landings(2)
             .modify_idx(|i, v| {
                 if i == 0 {
-                    v.gear.group = GearGroup::Not;
+                    v.landing.gear.group = GearGroup::Not;
                 } else {
-                    v.gear.group = GearGroup::Garn;
+                    v.landing.gear.group = GearGroup::Garn;
                 }
             })
             .build()
@@ -839,9 +839,9 @@ async fn test_trips_filter_by_species_group_ids() {
             .landings(2)
             .modify_idx(|i, v| {
                 if i == 0 {
-                    v.product.species.group_code = SpeciesGroup::Uer;
+                    v.landing.product.species.group_code = SpeciesGroup::Uer;
                 } else {
-                    v.product.species.group_code = SpeciesGroup::Sei;
+                    v.landing.product.species.group_code = SpeciesGroup::Sei;
                 }
             })
             .build()

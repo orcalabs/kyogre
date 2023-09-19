@@ -11,7 +11,8 @@ use crate::{
 use error_stack::{report, Result, ResultExt};
 use fiskeridir_rs::DeliveryPointId;
 use futures::{Stream, TryStreamExt};
-use kyogre_core::TripId;
+use kyogre_core::{DateRange, FiskeridirVesselId};
+use sqlx::postgres::types::PgRange;
 use unnest_insert::UnnestInsert;
 
 impl PostgresAdapter {
@@ -247,9 +248,35 @@ FROM
 
     pub(crate) async fn delivery_points_associated_with_trip_impl(
         &self,
-        _trip_id: TripId,
-    ) -> Result<Vec<kyogre_core::DeliveryPoint>, PostgresError> {
-        // TODO: implement when we have coordinates for delivery points
-        Ok(vec![])
+        vessel_id: FiskeridirVesselId,
+        trip_landing_coverage: &DateRange,
+    ) -> Result<Vec<DeliveryPoint>, PostgresError> {
+        let pg_range = PgRange::from(trip_landing_coverage);
+
+        sqlx::query_as!(
+            DeliveryPoint,
+            r#"
+SELECT
+    d.delivery_point_id AS "delivery_point_id!",
+    COALESCE(m.name, a.name, mt.name) AS NAME,
+    COALESCE(m.address, a.address, mt.address) AS address,
+    COALESCE(m.latitude, a.latitude) AS latitude,
+    COALESCE(m.longitude, a.longitude) AS longitude
+FROM
+    landings l
+    INNER JOIN delivery_point_ids d ON l.delivery_point_id = d.delivery_point_id
+    LEFT JOIN manual_delivery_points m ON m.delivery_point_id = d.delivery_point_id
+    LEFT JOIN aqua_culture_register a ON a.delivery_point_id = d.delivery_point_id
+    LEFT JOIN mattilsynet_delivery_points mt ON mt.delivery_point_id = d.delivery_point_id
+WHERE
+    l.fiskeridir_vessel_id = $1
+    AND l.landing_timestamp <@ $2::tstzrange
+            "#,
+            vessel_id.0,
+            pg_range
+        )
+        .fetch_all(&self.pool)
+        .await
+        .change_context(PostgresError::Query)
     }
 }

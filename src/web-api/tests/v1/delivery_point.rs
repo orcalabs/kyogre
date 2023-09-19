@@ -244,7 +244,7 @@ async fn test_landings_respect_delivery_point_deprecation() {
             .vessels(1)
             .landings(1)
             .modify(|l| {
-                l.delivery_point.id = Some(old.clone());
+                l.landing.delivery_point.id = Some(old.clone());
             })
             .build()
             .await;

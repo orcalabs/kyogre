@@ -95,14 +95,16 @@ pub trait WebApiOutboundPort {
 #[async_trait]
 pub trait TripAssemblerOutboundPort: Send + Sync {
     async fn all_vessels(&self) -> Result<Vec<Vessel>, QueryError>;
-    async fn trip_calculation_timers(
+    async fn trip_calculation_timer(
         &self,
+        vessel_id: FiskeridirVesselId,
         trip_assembler_id: TripAssemblerId,
-    ) -> Result<Vec<TripCalculationTimer>, QueryError>;
-    async fn conflicts(
+    ) -> Result<Option<TripCalculationTimer>, QueryError>;
+    async fn conflict(
         &self,
+        vessel_id: FiskeridirVesselId,
         trip_assembler_id: TripAssemblerId,
-    ) -> Result<Vec<TripAssemblerConflict>, QueryError>;
+    ) -> Result<Option<TripAssemblerConflict>, QueryError>;
     async fn trip_prior_to_timestamp(
         &self,
         vessel_id: FiskeridirVesselId,
@@ -115,43 +117,23 @@ pub trait TripAssemblerOutboundPort: Send + Sync {
         period: &QueryRange,
         event_types: RelevantEventType,
     ) -> Result<Vec<VesselEventDetailed>, QueryError>;
-    async fn add_trips(
-        &self,
-        vessel_id: FiskeridirVesselId,
-        new_trip_calculation_time: DateTime<Utc>,
-        conflict_strategy: TripsConflictStrategy,
-        trips: Vec<NewTrip>,
-        trip_assembler_id: TripAssemblerId,
-    ) -> Result<(), InsertError>;
+    async fn ports(&self) -> Result<Vec<Port>, QueryError>;
+    async fn dock_points(&self) -> Result<Vec<PortDockPoint>, QueryError>;
 }
 
 #[async_trait]
 pub trait TripPrecisionOutboundPort: Send + Sync {
-    async fn all_vessels(&self) -> Result<Vec<Vessel>, QueryError>;
-    async fn ports_of_trip(&self, trip_id: TripId) -> Result<TripPorts, QueryError>;
-    async fn dock_points_of_trip(&self, trip_id: TripId) -> Result<TripDockPoints, QueryError>;
     async fn ais_vms_positions(
         &self,
         mmsi: Option<Mmsi>,
         call_sign: Option<&CallSign>,
         range: &DateRange,
     ) -> Result<Vec<AisVmsPosition>, QueryError>;
-    async fn trip_prior_to_timestamp(
-        &self,
-        vessel_id: FiskeridirVesselId,
-        timestamp: &DateTime<Utc>,
-        bound: Bound,
-    ) -> Result<Option<Trip>, QueryError>;
     async fn delivery_points_associated_with_trip(
         &self,
-        trip_id: TripId,
-    ) -> Result<Vec<DeliveryPoint>, QueryError>;
-
-    async fn trips_without_precision(
-        &self,
         vessel_id: FiskeridirVesselId,
-        assembler_id: TripAssemblerId,
-    ) -> Result<Vec<Trip>, QueryError>;
+        trip_landing_coverage: &DateRange,
+    ) -> Result<Vec<DeliveryPoint>, QueryError>;
 }
 
 #[async_trait]
@@ -181,19 +163,6 @@ pub trait HaulDistributorOutbound: Send + Sync {
         &self,
         vessel_id: FiskeridirVesselId,
     ) -> Result<Vec<HaulMessage>, QueryError>;
-    async fn ais_vms_positions(
-        &self,
-        mmsi: Option<Mmsi>,
-        call_sign: Option<&CallSign>,
-        range: &DateRange,
-    ) -> Result<Vec<AisVmsPosition>, QueryError>;
-}
-
-#[async_trait]
-pub trait TripDistancerOutbound: Send + Sync {
-    async fn vessels(&self) -> Result<Vec<Vessel>, QueryError>;
-    async fn trips_of_vessel(&self, vessel_id: FiskeridirVesselId)
-        -> Result<Vec<Trip>, QueryError>;
     async fn ais_vms_positions(
         &self,
         mmsi: Option<Mmsi>,
@@ -236,6 +205,18 @@ pub trait HaulWeatherOutbound: Send + Sync {
 #[async_trait]
 pub trait ScraperFileHashOutboundPort {
     async fn get_hash(&self, id: &FileHashId) -> Result<Option<String>, QueryError>;
+}
+
+#[async_trait]
+pub trait TripPipelineOutbound: Send + Sync {
+    async fn trips_without_distance(
+        &self,
+        vessel_id: FiskeridirVesselId,
+    ) -> Result<Vec<Trip>, QueryError>;
+    async fn trips_without_precision(
+        &self,
+        vessel_id: FiskeridirVesselId,
+    ) -> Result<Vec<Trip>, QueryError>;
 }
 
 #[async_trait]

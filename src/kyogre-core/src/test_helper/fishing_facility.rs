@@ -1,5 +1,7 @@
 use crate::*;
 
+use super::cycle::Cycle;
+
 pub struct FishingFacilityBuilder {
     pub state: TestStateBuilder,
     pub current_index: usize,
@@ -17,4 +19,5 @@ pub struct FishingFacilityVesselBuilder {
 
 pub struct FishingFacilityConctructor {
     pub facility: FishingFacility,
+    pub cycle: Cycle,
 }

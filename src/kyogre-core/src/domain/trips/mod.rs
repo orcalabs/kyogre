@@ -24,6 +24,8 @@ pub struct Trip {
     pub landing_coverage: DateRange,
     pub distance: Option<f64>,
     pub assembler_id: TripAssemblerId,
+    pub start_port_code: Option<String>,
+    pub end_port_code: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -40,6 +42,13 @@ pub struct NewTrip {
     pub landing_coverage: DateRange,
     pub start_port_code: Option<String>,
     pub end_port_code: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct TripUpdate {
+    pub trip_id: TripId,
+    pub precision: Option<PrecisionOutcome>,
+    pub distance: Option<TripDistanceOutput>,
 }
 
 impl Trip {
@@ -70,6 +79,7 @@ pub struct TripDetailed {
     pub assembler_id: TripAssemblerId,
     pub vessel_events: Vec<VesselEvent>,
     pub landing_ids: Vec<LandingId>,
+    pub distance: Option<f64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -95,8 +105,9 @@ pub struct Catch {
     pub product_quality_name: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum TripsConflictStrategy {
+    #[default]
     Error,
     Replace,
     ReplaceAll,
@@ -120,6 +131,12 @@ pub enum TripsConflictStrategy {
 pub enum TripAssemblerId {
     Landings = 1,
     Ers = 2,
+}
+
+impl From<TripAssemblerId> for i32 {
+    fn from(value: TripAssemblerId) -> Self {
+        value as i32
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -178,6 +195,12 @@ pub enum PrecisionStatus {
     Successful = 3,
 }
 
+impl From<PrecisionStatus> for i32 {
+    fn from(value: PrecisionStatus) -> Self {
+        value as i32
+    }
+}
+
 impl PrecisionStatus {
     pub fn name(&self) -> &'static str {
         match self {
@@ -195,6 +218,12 @@ pub enum PrecisionDirection {
     Shrinking = 1,
     /// The trip has been extended.
     Extending = 2,
+}
+
+impl From<PrecisionDirection> for i32 {
+    fn from(value: PrecisionDirection) -> Self {
+        value as i32
+    }
 }
 
 impl PrecisionDirection {
@@ -217,6 +246,12 @@ pub enum PrecisionId {
     Port = 3,
     /// Tries to find positions close to the dock points associated with the trip.
     DockPoint = 4,
+}
+
+impl From<PrecisionId> for i32 {
+    fn from(value: PrecisionId) -> Self {
+        value as i32
+    }
 }
 
 impl TripLandingCoverage {
@@ -277,9 +312,10 @@ impl From<TripDetailed> for Trip {
             period: value.period,
             landing_coverage: value.landing_coverage,
             assembler_id: value.assembler_id,
-            // TODO
-            distance: None,
+            distance: value.distance,
             precision_period: value.period_precision,
+            start_port_code: value.start_port_id,
+            end_port_code: value.end_port_id,
         }
     }
 }
@@ -288,6 +324,12 @@ impl From<TripDetailed> for Trip {
 #[repr(i32)]
 pub enum TripDistancerId {
     AisVms = 1,
+}
+
+impl From<TripDistancerId> for i32 {
+    fn from(value: TripDistancerId) -> Self {
+        value as i32
+    }
 }
 
 impl std::fmt::Display for TripDistancerId {
@@ -307,7 +349,6 @@ pub struct HaulMessage {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct TripDistanceOutput {
-    pub trip_id: TripId,
     pub distance: Option<f64>,
     pub distancer_id: TripDistancerId,
 }

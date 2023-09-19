@@ -33,7 +33,7 @@ async fn test_vessel_contains_weight_per_hour_benchmark() {
             .trips(1)
             .landings(1)
             .modify(|v| {
-                v.product.living_weight = Some(1000.0);
+                v.landing.product.living_weight = Some(1000.0);
             })
             .build()
             .await;
@@ -59,7 +59,7 @@ async fn test_vessel_weight_per_hour_is_correct_over_multiple_trips() {
             .trips(2)
             .landings(1)
             .modify(|v| {
-                v.product.living_weight = Some(1000.0);
+                v.landing.product.living_weight = Some(1000.0);
             })
             .build()
             .await;
@@ -84,7 +84,7 @@ async fn test_vessel_weight_per_hour_includes_landings_not_covered_by_trips() {
             .vessels(1)
             .landings(1)
             .modify(|v| {
-                v.product.living_weight = Some(1000.0);
+                v.landing.product.living_weight = Some(1000.0);
             })
             .trips(1)
             .build()
@@ -111,7 +111,7 @@ async fn test_vessel_weight_per_hour_excludes_landings_from_other_vessels() {
             .trips(2)
             .landings(2)
             .modify(|v| {
-                v.product.living_weight = Some(1000.0);
+                v.landing.product.living_weight = Some(1000.0);
             })
             .build()
             .await;
@@ -183,8 +183,8 @@ async fn test_vessel_has_gear_groups_of_landings() {
             .vessels(1)
             .landings(2)
             .modify_idx(|idx, v| match idx {
-                0 => v.gear.group = GearGroup::Not,
-                1 => v.gear.group = GearGroup::Garn,
+                0 => v.landing.gear.group = GearGroup::Not,
+                1 => v.landing.gear.group = GearGroup::Garn,
                 _ => unreachable!(),
             })
             .build()
@@ -253,8 +253,8 @@ async fn test_vessel_has_species_groups_of_landings() {
             .vessels(1)
             .landings(2)
             .modify_idx(|idx, v| match idx {
-                0 => v.product.species.group_code = SpeciesGroup::Torsk,
-                1 => v.product.species.group_code = SpeciesGroup::Sei,
+                0 => v.landing.product.species.group_code = SpeciesGroup::Torsk,
+                1 => v.landing.product.species.group_code = SpeciesGroup::Sei,
                 _ => unreachable!(),
             })
             .build()

@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    refresh_boundary AS \"refresh_boundary?\"\nFROM\n    trips_refresh_boundary\nWHERE\n    fiskeridir_vessel_id = $1\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "refresh_boundary?",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "c49e2d527a0d79eeb0b8856b3860ecc64dffac0fa5ddf2330f8aa036082a7adf"
+}

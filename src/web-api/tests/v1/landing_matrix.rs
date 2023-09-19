@@ -19,8 +19,8 @@ async fn test_landing_matrix_returns_correct_sum_for_all_landings() {
         builder
             .landings(2)
             .modify_idx(|i, v| match i {
-                0 => v.product.living_weight = Some(20.0),
-                1 => v.product.living_weight = Some(40.0),
+                0 => v.landing.product.living_weight = Some(20.0),
+                1 => v.landing.product.living_weight = Some(40.0),
                 _ => (),
             })
             .build()
@@ -50,12 +50,12 @@ async fn test_landing_matrix_filters_by_catch_locations() {
             .landings(3)
             .modify_idx(|i, v| match i {
                 0 => {
-                    v.product.living_weight = Some(20.0);
-                    v.catch_location.main_area_code = Some(9);
-                    v.catch_location.location_code = Some(32);
+                    v.landing.product.living_weight = Some(20.0);
+                    v.landing.catch_location.main_area_code = Some(9);
+                    v.landing.catch_location.location_code = Some(32);
                 }
-                1 => v.product.living_weight = Some(40.0),
-                2 => v.product.living_weight = Some(100.0),
+                1 => v.landing.product.living_weight = Some(40.0),
+                2 => v.landing.product.living_weight = Some(100.0),
                 _ => (),
             })
             .build()
@@ -89,14 +89,14 @@ async fn test_landing_matrix_filters_by_months() {
             .landings(3)
             .modify_idx(|i, v| match i {
                 0 => {
-                    v.product.living_weight = Some(20.0);
-                    v.landing_timestamp = month1;
+                    v.landing.product.living_weight = Some(20.0);
+                    v.landing.landing_timestamp = month1;
                 }
                 1 => {
-                    v.product.living_weight = Some(40.0);
-                    v.landing_timestamp = month2;
+                    v.landing.product.living_weight = Some(40.0);
+                    v.landing.landing_timestamp = month2;
                 }
-                2 => v.product.living_weight = Some(100.0),
+                2 => v.landing.product.living_weight = Some(100.0),
                 _ => (),
             })
             .build()
@@ -127,16 +127,16 @@ async fn test_landing_matrix_filters_by_vessel_length() {
             .landings(3)
             .modify_idx(|i, v| match i {
                 0 => {
-                    v.product.living_weight = Some(20.0);
-                    v.vessel.length_group_code = VesselLengthGroup::UnderEleven;
+                    v.landing.product.living_weight = Some(20.0);
+                    v.landing.vessel.length_group_code = VesselLengthGroup::UnderEleven;
                 }
                 1 => {
-                    v.product.living_weight = Some(40.0);
-                    v.vessel.length_group_code = VesselLengthGroup::ElevenToFifteen;
+                    v.landing.product.living_weight = Some(40.0);
+                    v.landing.vessel.length_group_code = VesselLengthGroup::ElevenToFifteen;
                 }
                 2 => {
-                    v.product.living_weight = Some(100.0);
-                    v.vessel.length_group_code = VesselLengthGroup::TwentyTwoToTwentyEight;
+                    v.landing.product.living_weight = Some(100.0);
+                    v.landing.vessel.length_group_code = VesselLengthGroup::TwentyTwoToTwentyEight;
                 }
                 _ => (),
             })
@@ -175,18 +175,18 @@ async fn test_landing_matrix_filters_by_species_group() {
             .landings(3)
             .modify_idx(|i, v| match i {
                 0 => {
-                    v.product.living_weight = Some(20.0);
-                    v.vessel.length_group_code = VesselLengthGroup::UnderEleven;
-                    v.product.species.group_code = SpeciesGroup::Blaakveite;
+                    v.landing.product.living_weight = Some(20.0);
+                    v.landing.vessel.length_group_code = VesselLengthGroup::UnderEleven;
+                    v.landing.product.species.group_code = SpeciesGroup::Blaakveite;
                 }
                 1 => {
-                    v.product.living_weight = Some(40.0);
-                    v.vessel.length_group_code = VesselLengthGroup::ElevenToFifteen;
-                    v.product.species.group_code = SpeciesGroup::Uer;
+                    v.landing.product.living_weight = Some(40.0);
+                    v.landing.vessel.length_group_code = VesselLengthGroup::ElevenToFifteen;
+                    v.landing.product.species.group_code = SpeciesGroup::Uer;
                 }
                 2 => {
-                    v.product.living_weight = Some(100.0);
-                    v.product.species.group_code = SpeciesGroup::Sei;
+                    v.landing.product.living_weight = Some(100.0);
+                    v.landing.product.species.group_code = SpeciesGroup::Sei;
                 }
                 _ => (),
             })
@@ -224,16 +224,16 @@ async fn test_landing_matrix_filters_by_gear_group() {
             .landings(3)
             .modify_idx(|i, v| match i {
                 0 => {
-                    v.product.living_weight = Some(20.0);
-                    v.gear.group = GearGroup::Not;
+                    v.landing.product.living_weight = Some(20.0);
+                    v.landing.gear.group = GearGroup::Not;
                 }
                 1 => {
-                    v.product.living_weight = Some(40.0);
-                    v.gear.group = GearGroup::Garn;
+                    v.landing.product.living_weight = Some(40.0);
+                    v.landing.gear.group = GearGroup::Garn;
                 }
                 2 => {
-                    v.product.living_weight = Some(100.0);
-                    v.gear.group = GearGroup::Oppdrett;
+                    v.landing.product.living_weight = Some(100.0);
+                    v.landing.gear.group = GearGroup::Oppdrett;
                 }
                 _ => (),
             })
@@ -266,7 +266,7 @@ async fn test_landing_matrix_filters_by_fiskeridir_vessel_ids() {
             .landings(1)
             .vessels(2)
             .landings(2)
-            .modify(|v| v.product.living_weight = Some(30.0))
+            .modify(|v| v.landing.product.living_weight = Some(30.0))
             .build()
             .await;
 
@@ -296,14 +296,14 @@ async fn test_landing_matrix_date_sum_area_table_is_correct() {
             .landings(3)
             .modify_idx(|i, v| match i {
                 0 => {
-                    v.product.living_weight = Some(20.0);
-                    v.landing_timestamp = month1;
+                    v.landing.product.living_weight = Some(20.0);
+                    v.landing.landing_timestamp = month1;
                 }
                 1 => {
-                    v.product.living_weight = Some(40.0);
-                    v.landing_timestamp = month2;
+                    v.landing.product.living_weight = Some(40.0);
+                    v.landing.landing_timestamp = month2;
                 }
-                2 => v.product.living_weight = Some(100.0),
+                2 => v.landing.product.living_weight = Some(100.0),
                 _ => (),
             })
             .build()
@@ -340,16 +340,16 @@ async fn test_landing_matrix_gear_group_sum_area_table_is_correct() {
             .landings(3)
             .modify_idx(|i, v| match i {
                 0 => {
-                    v.product.living_weight = Some(20.0);
-                    v.gear.group = GearGroup::Traal;
+                    v.landing.product.living_weight = Some(20.0);
+                    v.landing.gear.group = GearGroup::Traal;
                 }
                 1 => {
-                    v.product.living_weight = Some(40.0);
-                    v.gear.group = GearGroup::Snurrevad;
+                    v.landing.product.living_weight = Some(40.0);
+                    v.landing.gear.group = GearGroup::Snurrevad;
                 }
                 2 => {
-                    v.product.living_weight = Some(100.0);
-                    v.gear.group = GearGroup::Not;
+                    v.landing.product.living_weight = Some(100.0);
+                    v.landing.gear.group = GearGroup::Not;
                 }
                 _ => (),
             })
@@ -387,16 +387,16 @@ async fn test_landing_matrix_vessel_length_sum_area_table_is_correct() {
             .landings(3)
             .modify_idx(|i, v| match i {
                 0 => {
-                    v.product.living_weight = Some(20.0);
-                    v.vessel.length_group_code = VesselLengthGroup::UnderEleven;
+                    v.landing.product.living_weight = Some(20.0);
+                    v.landing.vessel.length_group_code = VesselLengthGroup::UnderEleven;
                 }
                 1 => {
-                    v.product.living_weight = Some(40.0);
-                    v.vessel.length_group_code = VesselLengthGroup::ElevenToFifteen;
+                    v.landing.product.living_weight = Some(40.0);
+                    v.landing.vessel.length_group_code = VesselLengthGroup::ElevenToFifteen;
                 }
                 2 => {
-                    v.product.living_weight = Some(100.0);
-                    v.vessel.length_group_code = VesselLengthGroup::TwentyTwoToTwentyEight;
+                    v.landing.product.living_weight = Some(100.0);
+                    v.landing.vessel.length_group_code = VesselLengthGroup::TwentyTwoToTwentyEight;
                 }
                 _ => (),
             })
@@ -434,18 +434,18 @@ async fn test_landing_matrix_species_group_sum_area_table_is_correct() {
             .landings(3)
             .modify_idx(|i, v| match i {
                 0 => {
-                    v.product.living_weight = Some(20.0);
-                    v.vessel.length_group_code = VesselLengthGroup::UnderEleven;
-                    v.product.species.group_code = SpeciesGroup::Blaakveite;
+                    v.landing.product.living_weight = Some(20.0);
+                    v.landing.vessel.length_group_code = VesselLengthGroup::UnderEleven;
+                    v.landing.product.species.group_code = SpeciesGroup::Blaakveite;
                 }
                 1 => {
-                    v.product.living_weight = Some(40.0);
-                    v.vessel.length_group_code = VesselLengthGroup::ElevenToFifteen;
-                    v.product.species.group_code = SpeciesGroup::Uer;
+                    v.landing.product.living_weight = Some(40.0);
+                    v.landing.vessel.length_group_code = VesselLengthGroup::ElevenToFifteen;
+                    v.landing.product.species.group_code = SpeciesGroup::Uer;
                 }
                 2 => {
-                    v.product.living_weight = Some(100.0);
-                    v.product.species.group_code = SpeciesGroup::Sei;
+                    v.landing.product.living_weight = Some(100.0);
+                    v.landing.product.species.group_code = SpeciesGroup::Sei;
                 }
                 _ => (),
             })
@@ -483,20 +483,15 @@ async fn test_landing_matrix_have_correct_totals_after_landing_is_replaced_by_ne
         builder
             .landings(1)
             .modify(|v| {
-                v.product.living_weight = Some(20.0);
-                v.id = LandingId::try_from("1-7-0-0").unwrap();
+                v.landing.product.living_weight = Some(20.0);
+                v.landing.id = LandingId::try_from("1-7-0-0").unwrap();
             })
-            .build()
-            .await;
-
-        helper
-            .builder()
-            .await
+            .new_cycle()
             .landings(1)
             .modify(|v| {
-                v.product.living_weight = Some(40.0);
-                v.id = LandingId::try_from("1-7-0-0").unwrap();
-                v.document_info.version_number += 1;
+                v.landing.product.living_weight = Some(40.0);
+                v.landing.id = LandingId::try_from("1-7-0-0").unwrap();
+                v.landing.document_info.version_number += 1;
             })
             .build()
             .await;
