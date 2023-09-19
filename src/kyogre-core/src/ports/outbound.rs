@@ -229,6 +229,11 @@ pub trait HaulWeatherOutbound: Send + Sync {
 }
 
 #[async_trait]
+pub trait ScraperFileHashOutboundPort {
+    async fn get_hash(&self, id: &FileHashId) -> Result<Option<String>, QueryError>;
+}
+
+#[async_trait]
 pub trait TestHelperOutbound: Send + Sync {
     async fn all_dep(&self) -> Vec<Departure>;
     async fn all_por(&self) -> Vec<Arrival>;
