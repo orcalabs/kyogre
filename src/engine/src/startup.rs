@@ -49,13 +49,11 @@ impl App {
 
         let benchmarks = settings.benchmarks();
         let haul_distributors = settings.haul_distributors();
-        let trip_distancers = settings.trip_distancers();
+        let trip_distancer = settings.trip_distancer();
 
         let postgres = Box::new(postgres);
 
         let shared_state = SharedState::new(
-            postgres.clone(),
-            postgres.clone(),
             postgres.clone(),
             postgres.clone(),
             postgres.clone(),
@@ -72,7 +70,7 @@ impl App {
             trip_assemblers,
             benchmarks,
             haul_distributors,
-            trip_distancers,
+            trip_distancer,
         );
 
         App {
@@ -103,15 +101,6 @@ impl App {
                     let engine = FisheryEngine::Trips(step);
                     engine.run_single().await;
                 }
-                FisheryDiscriminants::TripsPrecision => {
-                    let step = crate::Step::initial(
-                        crate::TripsPrecisionState,
-                        self.shared_state,
-                        Box::new(self.transition_log),
-                    );
-                    let engine = FisheryEngine::TripsPrecision(step);
-                    engine.run_single().await;
-                }
                 FisheryDiscriminants::Benchmark => {
                     let step = crate::Step::initial(
                         crate::BenchmarkState,
@@ -137,24 +126,6 @@ impl App {
                         Box::new(self.transition_log),
                     );
                     let engine = FisheryEngine::HaulWeather(step);
-                    engine.run_single().await;
-                }
-                FisheryDiscriminants::TripDistance => {
-                    let step = crate::Step::initial(
-                        crate::TripsDistanceState,
-                        self.shared_state,
-                        Box::new(self.transition_log),
-                    );
-                    let engine = FisheryEngine::TripDistance(step);
-                    engine.run_single().await;
-                }
-                FisheryDiscriminants::UpdateDatabaseViews => {
-                    let step = crate::Step::initial(
-                        crate::UpdateDatabaseViewsState,
-                        self.shared_state,
-                        Box::new(self.transition_log),
-                    );
-                    let engine = FisheryEngine::UpdateDatabaseViews(step);
                     engine.run_single().await;
                 }
                 FisheryDiscriminants::VerifyDatabase => {

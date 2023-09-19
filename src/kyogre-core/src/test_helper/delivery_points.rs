@@ -2,6 +2,8 @@ use fiskeridir_rs::AquaCultureEntry;
 
 use crate::*;
 
+use super::cycle::Cycle;
+
 pub struct ManualDeliveryPointsBuilder {
     pub state: TestStateBuilder,
     pub current_index: usize,
@@ -9,6 +11,7 @@ pub struct ManualDeliveryPointsBuilder {
 
 pub struct ManualDeliveryPointConstructor {
     pub val: ManualDeliveryPoint,
+    pub cycle: Cycle,
 }
 
 pub struct MattilsynetBuilder {
@@ -18,6 +21,7 @@ pub struct MattilsynetBuilder {
 
 pub struct MattilsynetConstructor {
     pub val: MattilsynetDeliveryPoint,
+    pub cycle: Cycle,
 }
 
 pub struct AquaCultureBuilder {
@@ -27,6 +31,7 @@ pub struct AquaCultureBuilder {
 
 pub struct AquaCultureConstructor {
     pub val: AquaCultureEntry,
+    pub cycle: Cycle,
 }
 
 impl AquaCultureBuilder {

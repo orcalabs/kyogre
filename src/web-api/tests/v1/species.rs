@@ -11,12 +11,12 @@ async fn test_species_returns_all_species() {
             .landings(2)
             .modify_idx(|i, v| match i {
                 0 => {
-                    v.product.species.code = 200;
-                    v.product.species.name = "test".into();
+                    v.landing.product.species.code = 200;
+                    v.landing.product.species.name = "test".into();
                 }
                 1 => {
-                    v.product.species.code = 201;
-                    v.product.species.name = "test2".into();
+                    v.landing.product.species.code = 201;
+                    v.landing.product.species.name = "test2".into();
                 }
                 _ => (),
             })
@@ -109,12 +109,12 @@ async fn test_species_fao_returns_all_species_fao() {
             .landings(2)
             .modify_idx(|i, v| match i {
                 0 => {
-                    v.product.species.fao_code = Some(expected[0].id.clone());
-                    v.product.species.fao_name = expected[0].name.clone();
+                    v.landing.product.species.fao_code = Some(expected[0].id.clone());
+                    v.landing.product.species.fao_name = expected[0].name.clone();
                 }
                 1 => {
-                    v.product.species.fao_code = Some(expected[1].id.clone());
-                    v.product.species.fao_name = expected[1].name.clone();
+                    v.landing.product.species.fao_code = Some(expected[1].id.clone());
+                    v.landing.product.species.fao_name = expected[1].name.clone();
                 }
                 _ => (),
             })
@@ -155,12 +155,12 @@ async fn test_species_fiskeridir_returns_all_species_fiskeridir() {
             .landings(2)
             .modify_idx(|i, v| match i {
                 0 => {
-                    v.product.species.fdir_code = expected[1].id;
-                    v.product.species.fdir_name = expected[1].name.clone().unwrap();
+                    v.landing.product.species.fdir_code = expected[1].id;
+                    v.landing.product.species.fdir_name = expected[1].name.clone().unwrap();
                 }
                 1 => {
-                    v.product.species.fdir_code = expected[2].id;
-                    v.product.species.fdir_name = expected[2].name.clone().unwrap();
+                    v.landing.product.species.fdir_code = expected[2].id;
+                    v.landing.product.species.fdir_name = expected[2].name.clone().unwrap();
                 }
                 _ => (),
             })

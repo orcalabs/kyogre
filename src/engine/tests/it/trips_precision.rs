@@ -1,76 +1,134 @@
-use crate::helper::*;
-use chrono::{Duration, TimeZone, Utc};
-use fiskeridir_rs::CallSign;
+use crate::helper::test;
+use chrono::{DateTime, Duration, TimeZone, Utc};
 use kyogre_core::*;
-use machine::StateMachine;
 
 #[tokio::test]
-async fn test_trips_precision_updates_precision_of_trip() {
-    test(|helper, app| async move {
-        let call_sign = CallSign::try_from("RK-45").unwrap();
-        let mmsi = Mmsi(1);
-        let fiskeridir_vessel_id = FiskeridirVesselId(1);
-
-        helper
-            .db
-            .generate_ais_vessel(mmsi, call_sign.as_ref())
+async fn test_dock_point_precision_extends_start_and_end_of_trip() {
+    test(|_helper, builder| async move {
+        let start = Utc.timestamp_opt(10000000, 0).unwrap();
+        let end = Utc.timestamp_opt(1000000000, 0).unwrap();
+        let mut state = builder
+            .vessels(1)
+            .trips(1)
+            .modify(|v| {
+                v.trip_specification.set_start(start);
+                v.trip_specification.set_end(end);
+                v.trip_specification.set_ports("NOTOS");
+            })
+            .precision(PrecisionId::DockPoint)
+            .build()
             .await;
 
-        helper
-            .db
-            .generate_fiskeridir_vessel(fiskeridir_vessel_id, None, Some(call_sign.clone()))
-            .await;
-        let current_time = Utc.timestamp_opt(1000000000, 0).unwrap();
+        let period_precision = state.trips[0].period_precision.take().unwrap();
+        assert!(period_precision.start() < start);
+        assert!(period_precision.end() > end);
+    })
+    .await
+}
 
-        let departure = current_time - Duration::seconds(55);
-        let arrival = current_time - Duration::seconds(45);
-
-        let positions = helper
-            .db
-            .generate_ais_vms_vessel_trail(
-                mmsi,
-                &call_sign,
-                100,
-                current_time - Duration::seconds(100),
-                current_time,
-            )
-            .await;
-
-        let start_port_id = "ADCAN";
-        let end_port_id = "ADALV";
-        helper
-            .db
-            .set_port_coordinate(
-                start_port_id,
-                positions[15].latitude,
-                positions[15].longitude,
-            )
-            .await;
-        helper
-            .db
-            .set_port_coordinate(end_port_id, positions[85].latitude, positions[85].longitude)
-            .await;
-        helper
-            .db
-            .generate_ers_departure_with_port(1, fiskeridir_vessel_id, departure, 1, start_port_id)
-            .await;
-        helper
-            .db
-            .generate_ers_arrival_with_port(2, fiskeridir_vessel_id, arrival, 2, end_port_id)
+#[tokio::test]
+async fn test_port_precision_extends_start_and_end_of_trip() {
+    test(|_helper, builder| async move {
+        let start = Utc.timestamp_opt(10000000, 0).unwrap();
+        let end = Utc.timestamp_opt(1000000000, 0).unwrap();
+        let mut state = builder
+            .vessels(1)
+            .trips(1)
+            .modify(|v| {
+                v.trip_specification.set_start(start);
+                v.trip_specification.set_end(end);
+                v.trip_specification.set_ports("NOTOS");
+            })
+            .precision(PrecisionId::Port)
+            .build()
             .await;
 
-        let mut engine = FisheryEngine::Trips(Step::initial(
-            TripsState,
-            app.shared_state,
-            Box::new(app.transition_log),
-        ));
-        engine = engine.run_single().await;
-        engine.run_single().await;
+        let period_precision = state.trips[0].period_precision.take().unwrap();
+        assert!(period_precision.start() < start);
+        assert!(period_precision.end() > end);
+    })
+    .await
+}
 
-        let trips = helper.db.trips_of_vessel(fiskeridir_vessel_id).await;
+#[tokio::test]
+async fn tests_trips_runs_precision_on_existing_unprocessed_trips() {
+    test(|_helper, builder| async move {
+        let start = Utc.timestamp_opt(1000000, 0).unwrap();
+        let end = Utc.timestamp_opt(2000000, 0).unwrap();
+        let state = builder
+            .vessels(1)
+            .clear_trip_precision()
+            .trips(1)
+            .modify(|v| {
+                v.trip_specification.set_start(start);
+                v.trip_specification.set_end(end);
+            })
+            .new_cycle()
+            .ais_positions(3)
+            .modify_idx(|i, v| match i {
+                0 => {
+                    v.position.msgtime = start - Duration::seconds(1);
+                    v.position.latitude = 54.5;
+                    v.position.longitude = 8.883333333333333;
+                }
+                1 => {
+                    v.position.msgtime = end - Duration::seconds(1);
+                    v.position.latitude = 54.5;
+                    v.position.longitude = 8.883333333333333;
+                }
+                2 => {
+                    v.position.msgtime = end + Duration::seconds(1);
+                    v.position.latitude = 54.5;
+                    v.position.longitude = 8.883333333333333;
+                }
+                _ => unreachable!(),
+            })
+            .build()
+            .await;
 
-        assert_eq!(trips[0].precision_start().unwrap(), positions[25].timestamp);
-        assert_eq!(trips[0].precision_end().unwrap(), positions[75].timestamp);
+        assert_eq!(state.trips.len(), 1);
+        assert!(state.trips[0].period_precision.is_some());
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_extending_trip_overlapping_last_trips_landing_coverage_succeeds() {
+    test(|_helper, builder| async move {
+        let start = DateTime::parse_from_rfc3339("2023-07-20 23:29:00Z")
+            .unwrap()
+            .with_timezone(&Utc);
+        let end = DateTime::parse_from_rfc3339("2023-08-16 09:00:00Z")
+            .unwrap()
+            .with_timezone(&Utc);
+
+        let start2 = DateTime::parse_from_rfc3339("2023-08-18T18:30:00Z")
+            .unwrap()
+            .with_timezone(&Utc);
+        let end2 = DateTime::parse_from_rfc3339("2023-09-20T08:00:00Z")
+            .unwrap()
+            .with_timezone(&Utc);
+
+        let mut state = builder
+            .vessels(1)
+            .trips(1)
+            .modify(|v| {
+                v.trip_specification.set_start(start);
+                v.trip_specification.set_end(end);
+            })
+            .new_cycle()
+            .trips(1)
+            .modify(|v| {
+                v.trip_specification.set_start(start2);
+                v.trip_specification.set_end(end2);
+            })
+            .precision(PrecisionId::Port)
+            .build()
+            .await;
+
+        let period_precision = state.trips[1].period_precision.take().unwrap();
+        assert!(period_precision.start() < start2);
+        assert!(period_precision.end() > end2);
     })
     .await;
 }

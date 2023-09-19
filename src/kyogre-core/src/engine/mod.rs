@@ -50,12 +50,9 @@ use strum::EnumDiscriminants;
 pub enum Fishery {
     Scrape(ScrapeState),
     Trips(TripsState),
-    TripsPrecision(TripsPrecisionState),
     Benchmark(BenchmarkState),
     HaulDistribution(HaulDistributionState),
     HaulWeather(HaulWeatherState),
-    TripDistance(TripsDistanceState),
-    UpdateDatabaseViews(UpdateDatabaseViewsState),
     VerifyDatabase(VerifyDatabaseState),
 }
 
@@ -63,8 +60,8 @@ pub enum Fishery {
 pub struct SharedState {
     pub trip_assembler_outbound_port: Box<dyn TripAssemblerOutboundPort>,
     pub trips_precision_outbound_port: Box<dyn TripPrecisionOutboundPort>,
-    pub trips_precision_inbound_port: Box<dyn TripPrecisionInboundPort>,
-    pub refresher: Box<dyn DatabaseViewRefresher>,
+    pub trip_pipeline_inbound: Box<dyn TripPipelineInbound>,
+    pub trip_pipeline_outbound: Box<dyn TripPipelineOutbound>,
     pub verifier: Box<dyn VerificationOutbound>,
     pub matrix_cache: Box<dyn MatrixCacheVersion>,
     pub benchmark_inbound: Box<dyn VesselBenchmarkInbound>,
@@ -73,23 +70,35 @@ pub struct SharedState {
     pub haul_distributor_outbound: Box<dyn HaulDistributorOutbound>,
     pub haul_weather_inbound: Box<dyn HaulWeatherInbound>,
     pub haul_weather_outbound: Box<dyn HaulWeatherOutbound>,
-    pub trip_distancer_inbound: Box<dyn TripDistancerInbound>,
-    pub trip_distancer_outbound: Box<dyn TripDistancerOutbound>,
     pub scraper: Option<Box<dyn Scraper>>,
     pub trip_assemblers: Vec<Box<dyn TripAssembler>>,
     pub benchmarks: Vec<Box<dyn VesselBenchmark>>,
     pub haul_distributors: Vec<Box<dyn HaulDistributor>>,
-    pub trip_distancers: Vec<Box<dyn TripDistancer>>,
+    pub trip_distancer: Box<dyn TripDistancer>,
 }
 
 impl SharedState {
+    pub fn assembler_id_to_impl(&self, id: TripAssemblerId) -> &dyn TripAssembler {
+        let ers_idx = self
+            .trip_assemblers
+            .iter()
+            .position(|v| v.assembler_id() == id);
+        let landings_idx = self
+            .trip_assemblers
+            .iter()
+            .position(|v| v.assembler_id() == id);
+        match id {
+            TripAssemblerId::Landings => self.trip_assemblers[ers_idx.unwrap()].as_ref(),
+            TripAssemblerId::Ers => self.trip_assemblers[landings_idx.unwrap()].as_ref(),
+        }
+    }
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         trip_assembler_outbound_port: Box<dyn TripAssemblerOutboundPort>,
         trips_precision_outbound_port: Box<dyn TripPrecisionOutboundPort>,
-        trips_precision_inbound_port: Box<dyn TripPrecisionInboundPort>,
+        trip_pipeline_inbound: Box<dyn TripPipelineInbound>,
+        trip_pipeline_outbound: Box<dyn TripPipelineOutbound>,
         verifier: Box<dyn VerificationOutbound>,
-        refresher: Box<dyn DatabaseViewRefresher>,
         matrix_cache: Box<dyn MatrixCacheVersion>,
         benchmark_inbound: Box<dyn VesselBenchmarkInbound>,
         benchmark_outbound: Box<dyn VesselBenchmarkOutbound>,
@@ -97,24 +106,20 @@ impl SharedState {
         haul_distributor_outbound: Box<dyn HaulDistributorOutbound>,
         haul_weather_inbound: Box<dyn HaulWeatherInbound>,
         haul_weather_outbound: Box<dyn HaulWeatherOutbound>,
-        trip_distancer_inbound: Box<dyn TripDistancerInbound>,
-        trip_distancer_outbound: Box<dyn TripDistancerOutbound>,
         scraper: Option<Box<dyn Scraper>>,
         trip_assemblers: Vec<Box<dyn TripAssembler>>,
         benchmarks: Vec<Box<dyn VesselBenchmark>>,
         haul_distributors: Vec<Box<dyn HaulDistributor>>,
-        trip_distancers: Vec<Box<dyn TripDistancer>>,
+        trip_distancer: Box<dyn TripDistancer>,
     ) -> SharedState {
         SharedState {
             scraper,
             trip_assemblers,
             benchmarks,
             haul_distributors,
-            trip_distancers,
+            trip_distancer,
             trip_assembler_outbound_port,
             trips_precision_outbound_port,
-            trips_precision_inbound_port,
-            refresher,
             verifier,
             matrix_cache,
             benchmark_inbound,
@@ -123,8 +128,8 @@ impl SharedState {
             haul_distributor_outbound,
             haul_weather_inbound,
             haul_weather_outbound,
-            trip_distancer_inbound,
-            trip_distancer_outbound,
+            trip_pipeline_inbound,
+            trip_pipeline_outbound,
         }
     }
 }

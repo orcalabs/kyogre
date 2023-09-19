@@ -1,15 +1,17 @@
 use super::{FishingFacility, HaulCatch, HaulOceanClimate, HaulWeather, WhaleCatch};
+use crate::queries::{enum_to_i32, float_to_decimal, opt_enum_to_i32};
 use crate::{error::PostgresError, queries::decimal_to_float};
 use bigdecimal::BigDecimal;
 use chrono::{DateTime, Utc};
 use error_stack::{Report, ResultExt};
 use fiskeridir_rs::{DeliveryPointId, Gear, GearGroup, LandingId, Quality, VesselLengthGroup};
 use kyogre_core::{
-    CatchLocationId, DateRange, FiskeridirVesselId, HaulId, TripAssemblerId, TripId,
-    VesselEventType,
+    CatchLocationId, DateRange, FiskeridirVesselId, HaulId, PrecisionId, PrecisionOutcome,
+    PrecisionStatus, TripAssemblerId, TripDistancerId, TripId, TripProcessingUnit, VesselEventType,
 };
 use serde::Deserialize;
 use sqlx::postgres::types::PgRange;
+use unnest_insert::UnnestInsert;
 
 #[derive(Debug, Clone)]
 pub struct Trip {
@@ -19,6 +21,116 @@ pub struct Trip {
     pub landing_coverage: PgRange<DateTime<Utc>>,
     pub distance: Option<BigDecimal>,
     pub trip_assembler_id: TripAssemblerId,
+    pub start_port_id: Option<String>,
+    pub end_port_id: Option<String>,
+}
+
+#[derive(Debug, Clone, UnnestInsert)]
+#[unnest_insert(
+    table_name = "trips",
+    returning = "trip_id::bigint!, period, landing_coverage, fiskeridir_vessel_id"
+)]
+pub struct NewTrip {
+    #[unnest_insert(sql_type = "INT", type_conversion = "enum_to_i32")]
+    pub trip_assembler_id: TripAssemblerId,
+    pub fiskeridir_vessel_id: i64,
+    #[unnest_insert(sql_type = "tstzrange")]
+    pub landing_coverage: PgRange<DateTime<Utc>>,
+    #[unnest_insert(sql_type = "tstzrange")]
+    pub period: PgRange<DateTime<Utc>>,
+    #[unnest_insert(sql_type = "INT", type_conversion = "opt_enum_to_i32")]
+    pub start_precision_id: Option<PrecisionId>,
+    #[unnest_insert(sql_type = "INT", type_conversion = "opt_enum_to_i32")]
+    pub end_precision_id: Option<PrecisionId>,
+    pub start_precision_direction: Option<String>,
+    pub end_precision_direction: Option<String>,
+    pub trip_precision_status_id: String,
+    #[unnest_insert(sql_type = "tstzrange")]
+    pub period_precision: Option<PgRange<DateTime<Utc>>>,
+    pub distance: Option<BigDecimal>,
+    #[unnest_insert(sql_type = "INT", type_conversion = "opt_enum_to_i32")]
+    pub distancer_id: Option<TripDistancerId>,
+    pub start_port_id: Option<String>,
+    pub end_port_id: Option<String>,
+}
+
+impl TryFrom<TripProcessingUnit> for NewTrip {
+    type Error = Report<PostgresError>;
+
+    fn try_from(value: TripProcessingUnit) -> Result<Self, Self::Error> {
+        let (
+            start_precision_id,
+            start_precision_direction,
+            end_precision_id,
+            end_precision_direction,
+            period_precision,
+            trip_precision_status_id,
+        ) = match value.precision_outcome {
+            Some(v) => match v {
+                PrecisionOutcome::Success {
+                    new_period,
+                    start_precision,
+                    end_precision,
+                } => (
+                    start_precision.as_ref().map(|v| v.id),
+                    start_precision.as_ref().map(|v| v.direction),
+                    end_precision.as_ref().map(|v| v.id),
+                    end_precision.as_ref().map(|v| v.direction),
+                    Some(PgRange::from(&new_period)),
+                    PrecisionStatus::Successful.name(),
+                ),
+                PrecisionOutcome::Failed => (
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    PrecisionStatus::Attempted.name(),
+                ),
+            },
+            None => (
+                None,
+                None,
+                None,
+                None,
+                None,
+                PrecisionStatus::Unprocessed.name(),
+            ),
+        };
+
+        let (distance, distancer_id) = match value.distance_output {
+            Some(v) => (
+                match v
+                    .distance
+                    .map(float_to_decimal)
+                    .transpose()
+                    .change_context(PostgresError::DataConversion)
+                {
+                    Ok(v) => v,
+                    Err(e) => return Err(e),
+                },
+                Some(v.distancer_id),
+            ),
+            None => (None, None),
+        };
+
+        Ok(NewTrip {
+            period: PgRange::from(&value.trip.period),
+            period_precision,
+            landing_coverage: PgRange::from(&value.trip.landing_coverage),
+            trip_assembler_id: value.trip_assembler_id,
+            fiskeridir_vessel_id: value.vessel_id.0,
+            start_precision_id,
+            end_precision_id,
+            start_precision_direction: start_precision_direction.map(|v| v.name().to_string()),
+            end_precision_direction: end_precision_direction.map(|v| v.name().to_string()),
+            trip_precision_status_id: trip_precision_status_id.to_string(),
+            distance,
+            distancer_id,
+            start_port_id: value.start_port.map(|p| p.id),
+            end_port_id: value.end_port.map(|p| p.id),
+        })
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -42,6 +154,7 @@ pub struct TripAssemblerConflict {
     pub timestamp: DateTime<Utc>,
 }
 
+#[derive(Debug)]
 pub struct TripDetailed {
     pub trip_id: i64,
     pub fiskeridir_vessel_id: i64,
@@ -63,6 +176,7 @@ pub struct TripDetailed {
     pub start_port_id: Option<String>,
     pub end_port_id: Option<String>,
     pub trip_assembler_id: TripAssemblerId,
+    pub distance: Option<BigDecimal>,
 }
 
 #[derive(Deserialize)]
@@ -172,6 +286,8 @@ impl TryFrom<Trip> for kyogre_core::Trip {
             distance,
             assembler_id: value.trip_assembler_id,
             precision_period,
+            start_port_code: value.start_port_id,
+            end_port_code: value.end_port_id,
         })
     }
 }
@@ -280,6 +396,10 @@ impl TryFrom<TripDetailed> for kyogre_core::TripDetailed {
             assembler_id: value.trip_assembler_id,
             vessel_events,
             landing_ids,
+            distance: value
+                .distance
+                .map(|v| decimal_to_float(v).change_context(PostgresError::DataConversion))
+                .transpose()?,
         })
     }
 }

@@ -39,8 +39,8 @@ async fn test_landings_returns_landings_in_specified_months() {
         let state = builder
             .landings(4)
             .modify_idx(|i, v| match i {
-                0 => v.landing_timestamp = month1,
-                1 => v.landing_timestamp = month2,
+                0 => v.landing.landing_timestamp = month1,
+                1 => v.landing.landing_timestamp = month2,
                 _ => (),
             })
             .build()
@@ -70,12 +70,12 @@ async fn test_landings_returns_landings_in_catch_location() {
             .landings(4)
             .modify_idx(|i, v| match i {
                 0 => {
-                    v.catch_location.main_area_code = Some(9);
-                    v.catch_location.location_code = Some(5);
+                    v.landing.catch_location.main_area_code = Some(9);
+                    v.landing.catch_location.location_code = Some(5);
                 }
                 1 => {
-                    v.catch_location.main_area_code = Some(9);
-                    v.catch_location.location_code = Some(4);
+                    v.landing.catch_location.main_area_code = Some(9);
+                    v.landing.catch_location.location_code = Some(4);
                 }
                 _ => (),
             })
@@ -109,8 +109,8 @@ async fn test_landings_returns_landings_with_gear_group_ids() {
         let state = builder
             .landings(4)
             .modify_idx(|i, v| match i {
-                0 => v.gear.group = GearGroup::Not,
-                1 => v.gear.group = GearGroup::BurOgRuser,
+                0 => v.landing.gear.group = GearGroup::Not,
+                1 => v.landing.gear.group = GearGroup::BurOgRuser,
                 _ => (),
             })
             .build()
@@ -142,8 +142,8 @@ async fn test_landings_returns_landings_with_species_group_ids() {
         let state = builder
             .landings(4)
             .modify_idx(|i, v| match i {
-                0 => v.product.species.group_code = SpeciesGroup::Blaakveite,
-                1 => v.product.species.group_code = SpeciesGroup::Uer,
+                0 => v.landing.product.species.group_code = SpeciesGroup::Blaakveite,
+                1 => v.landing.product.species.group_code = SpeciesGroup::Uer,
                 _ => (),
             })
             .build()
@@ -175,8 +175,8 @@ async fn test_landings_returns_landings_with_vessel_length_ranges() {
         let state = builder
             .landings(4)
             .modify_idx(|i, v| match i {
-                0 => v.vessel.length = Some(9.),
-                1 => v.vessel.length = Some(12.),
+                0 => v.landing.vessel.length = Some(9.),
+                1 => v.landing.vessel.length = Some(12.),
                 _ => (),
             })
             .build()
@@ -247,7 +247,7 @@ async fn test_landings_sorts_by_weight() {
         let state = builder
             .landings(4)
             .modify_idx(|i, v| {
-                v.product.living_weight = Some(i as f64);
+                v.landing.product.living_weight = Some(i as f64);
             })
             .build()
             .await;

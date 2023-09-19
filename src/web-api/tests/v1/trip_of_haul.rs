@@ -90,12 +90,12 @@ async fn test_aggregates_landing_data_per_product_quality_and_species_id() {
             .landings(4)
             .modify_idx(|i, v| match i {
                 0 | 1 => {
-                    v.product.quality = Quality::Prima;
-                    v.product.species.fdir_code = 1;
+                    v.landing.product.quality = Quality::Prima;
+                    v.landing.product.species.fdir_code = 1;
                 }
                 2 | 3 => {
-                    v.product.quality = Quality::A;
-                    v.product.species.fdir_code = 2;
+                    v.landing.product.quality = Quality::A;
+                    v.landing.product.species.fdir_code = 2;
                 }
                 _ => unreachable!(),
             })

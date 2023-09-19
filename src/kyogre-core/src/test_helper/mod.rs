@@ -1,14 +1,15 @@
 use crate::{
     AisConsumeLoop, AisPosition, Arrival, DataMessage, DeliveryPoint, DeliveryPointType, Departure,
-    FisheryEngine, FishingFacilities, FishingFacilitiesQuery, FishingFacility, Haul, HaulsQuery,
-    Landing, LandingsQuery, LandingsSorting, ManualDeliveryPoint, MattilsynetDeliveryPoint, Mmsi,
-    NewAisPosition, NewAisStatic, OceanClimate, Ordering, Pagination, PrecisionId,
-    ScraperInboundPort, TestHelperInbound, TestHelperOutbound, TripAssemblerOutboundPort,
-    TripDetailed, Trips, TripsQuery, Vessel, VmsPosition, Weather, WebApiOutboundPort,
+    FisheryEngine, FishingFacilities, FishingFacilitiesQuery, FishingFacility, FiskeridirVesselId,
+    Haul, HaulsQuery, Landing, LandingsQuery, LandingsSorting, ManualDeliveryPoint,
+    MattilsynetDeliveryPoint, Mmsi, NewAisPosition, NewAisStatic, OceanClimate, Ordering,
+    Pagination, PrecisionId, ScraperInboundPort, TestHelperInbound, TestHelperOutbound,
+    TripAssemblerOutboundPort, TripDetailed, Trips, TripsQuery, Vessel, VmsPosition, Weather,
+    WebApiOutboundPort,
 };
 use ais::*;
 use ais_vms::*;
-use chrono::{DateTime, Datelike, Duration, TimeZone, Utc};
+use chrono::{DateTime, Duration, TimeZone, Utc};
 use fiskeridir_rs::CallSign;
 use fiskeridir_rs::{DeliveryPointId, LandingMonth};
 use futures::TryStreamExt;
@@ -30,6 +31,7 @@ pub trait TestStorage:
 
 mod ais;
 mod ais_vms;
+mod cycle;
 mod delivery_points;
 mod dep;
 mod fishing_facility;
@@ -60,6 +62,8 @@ pub use trip::*;
 pub use vessel::*;
 pub use vms::*;
 pub use weather::*;
+
+use self::cycle::Cycle;
 
 #[derive(Debug)]
 pub struct TestState {
@@ -95,7 +99,7 @@ pub struct TestStateBuilder {
     vms_positions: Vec<VmsPositionConstructor>,
     trips: Vec<TripConstructor>,
     hauls: Vec<HaulConstructor>,
-    landings: Vec<fiskeridir_rs::Landing>,
+    landings: Vec<LandingConstructor>,
     tra: Vec<TraConstructor>,
     dep: Vec<DepConstructor>,
     por: Vec<PorConstructor>,
@@ -114,6 +118,8 @@ pub struct TestStateBuilder {
     delivery_point_id_counter: u64,
     landing_id_counter: u64,
     engine: FisheryEngine,
+    cycle: Cycle,
+    trip_queue_reset: Option<Cycle>,
 }
 
 enum TripPrecisonStartPoint {
@@ -189,6 +195,8 @@ impl TestStateBuilder {
             aqua_cultures: vec![],
             mattilsynet: vec![],
             manual_delivery_points: vec![],
+            cycle: Cycle::new(),
+            trip_queue_reset: None,
         }
     }
 
@@ -199,6 +207,16 @@ impl TestStateBuilder {
 
     pub fn data_start(mut self, time: DateTime<Utc>) -> TestStateBuilder {
         self.global_data_timestamp_counter = time;
+        self
+    }
+
+    pub fn queue_trip_reset(mut self) -> TestStateBuilder {
+        self.trip_queue_reset = Some(self.cycle);
+        self
+    }
+
+    pub fn new_cycle(mut self) -> TestStateBuilder {
+        self.cycle.increment();
         self
     }
 
@@ -215,7 +233,10 @@ impl TestStateBuilder {
             val.id =
                 DeliveryPointId::try_from(format!("DP{}", self.delivery_point_id_counter)).unwrap();
             self.delivery_point_id_counter += 1;
-            self.mattilsynet.push(MattilsynetConstructor { val });
+            self.mattilsynet.push(MattilsynetConstructor {
+                val,
+                cycle: self.cycle,
+            });
         }
 
         MattilsynetBuilder {
@@ -236,8 +257,10 @@ impl TestStateBuilder {
             facility.setup_timestamp = start;
             facility.removed_timestamp = Some(end);
 
-            self.fishing_facilities
-                .push(FishingFacilityConctructor { facility });
+            self.fishing_facilities.push(FishingFacilityConctructor {
+                facility,
+                cycle: self.cycle,
+            });
 
             self.global_data_timestamp_counter = end + self.trip_data_timestamp_gap;
         }
@@ -260,6 +283,7 @@ impl TestStateBuilder {
             self.delivery_point_id_counter += 1;
             self.manual_delivery_points
                 .push(ManualDeliveryPointConstructor {
+                    cycle: self.cycle,
                     val: ManualDeliveryPoint {
                         id,
                         name,
@@ -282,7 +306,10 @@ impl TestStateBuilder {
             val.delivery_point_id =
                 DeliveryPointId::try_from(format!("DP{}", self.delivery_point_id_counter)).unwrap();
             self.delivery_point_id_counter += 1;
-            self.aqua_cultures.push(AquaCultureConstructor { val });
+            self.aqua_cultures.push(AquaCultureConstructor {
+                val,
+                cycle: self.cycle,
+            });
         }
 
         AquaCultureBuilder {
@@ -303,7 +330,10 @@ impl TestStateBuilder {
             landing.landing_time = ts.time();
             landing.landing_month = LandingMonth::from(ts);
 
-            self.landings.push(landing);
+            self.landings.push(LandingConstructor {
+                landing,
+                cycle: self.cycle,
+            });
 
             self.landing_id_counter += 1;
 
@@ -327,7 +357,10 @@ impl TestStateBuilder {
 
             self.ers_message_id_counter += 1;
 
-            self.tra.push(TraConstructor { tra });
+            self.tra.push(TraConstructor {
+                tra,
+                cycle: self.cycle,
+            });
             self.global_data_timestamp_counter += self.data_timestamp_gap;
         }
 
@@ -351,7 +384,10 @@ impl TestStateBuilder {
 
             dca.set_stop_timestamp(end);
 
-            self.hauls.push(HaulConstructor { dca });
+            self.hauls.push(HaulConstructor {
+                dca,
+                cycle: self.cycle,
+            });
 
             self.global_data_timestamp_counter = end + self.data_timestamp_gap;
         }
@@ -380,6 +416,9 @@ impl TestStateBuilder {
                 key,
                 fiskeridir: vessel,
                 ais: ais_static,
+                cycle: self.cycle,
+                clear_trip_precision: false,
+                clear_trip_distancing: false,
             });
 
             self.ers_message_number_per_vessel.insert(key, 1);
@@ -394,227 +433,414 @@ impl TestStateBuilder {
     }
 
     pub async fn build(mut self) -> TestState {
-        self.ais_data_sender
-            .send(DataMessage {
-                positions: vec![],
-                static_messages: self.vessels.iter().map(|v| v.ais.clone()).collect(),
-            })
-            .unwrap();
+        // TODO: get weather/climate from db and not conversion.
+        let mut weather = Vec::new();
+        let mut ocean_climate = Vec::new();
 
-        self.ais_data_confirmation.recv().await.unwrap();
+        let mut delivery_point_ids: HashSet<DeliveryPointId> = HashSet::new();
 
-        let num_vessels = self.vessels.len();
-        self.storage
-            .add_register_vessels(self.vessels.into_iter().map(|v| v.fiskeridir).collect())
-            .await
-            .unwrap();
-
-        self.storage
-            .add_ers_dca(Box::new(self.hauls.into_iter().map(|v| Ok(v.dca))))
-            .await
-            .unwrap();
-
-        self.storage
-            .add_ers_tra(self.tra.into_iter().map(|v| v.tra).collect())
-            .await
-            .unwrap();
-
-        self.storage
-            .add_ers_dep(self.dep.into_iter().map(|v| v.dep).collect())
-            .await
-            .unwrap();
-
-        self.storage
-            .add_ers_por(self.por.into_iter().map(|v| v.por).collect())
-            .await
-            .unwrap();
-
-        let delivery_point_ids: HashSet<DeliveryPointId> = self
-            .aqua_cultures
-            .iter()
-            .map(|v| v.val.delivery_point_id.clone())
-            .chain(self.mattilsynet.iter().map(|v| v.val.id.clone()))
-            .chain(self.manual_delivery_points.iter().map(|v| v.val.id.clone()))
-            .collect();
-
-        self.storage
-            .add_aqua_culture_register(self.aqua_cultures.into_iter().map(|v| v.val).collect())
-            .await
-            .unwrap();
-
-        self.storage
-            .add_mattilsynet_delivery_points(self.mattilsynet.into_iter().map(|v| v.val).collect())
-            .await
-            .unwrap();
-
-        self.storage
-            .add_manual_delivery_points(
-                self.manual_delivery_points
-                    .into_iter()
-                    .map(|v| v.val)
-                    .collect(),
-            )
-            .await;
-
-        self.storage
-            .add_fishing_facilities(
-                self.fishing_facilities
-                    .into_iter()
-                    .map(|v| v.facility)
-                    .collect(),
-            )
-            .await
-            .unwrap();
-
-        for t in self.trips {
-            match t.trip_specification {
-                TripSpecification::Ers { dep, por } => {
-                    let departure_timestamp = dep.departure_timestamp;
-                    let arrival_timestamp = por.arrival_timestamp;
-                    let start_port = dep.port.code.clone();
-                    let end_port = por.port.code.clone();
-
-                    self.storage.add_ers_dep(vec![dep]).await.unwrap();
-                    self.storage.add_ers_por(vec![por]).await.unwrap();
-                    if let Some(precision) = t.precision_id {
-                        let mmsi = t
-                            .mmsi
-                            .expect("cannot add precision to trip of vessel without mmsi");
-                        let start_point = match precision {
-                            PrecisionId::FirstMovedPoint => TripPrecisonStartPoint::FirstPoint {
-                                start: departure_timestamp,
-                                mmsi,
-                            },
-                            PrecisionId::DeliveryPoint => {
-                                panic!("cannot add precision type for ers trip")
-                            }
-                            PrecisionId::Port => TripPrecisonStartPoint::Port {
-                                start_port: start_port
-                                    .expect("cant add precision to dep without port code set"),
-                                end_port: end_port
-                                    .expect("cant add precision to por without port code set"),
-                                start: departure_timestamp,
-                                end: arrival_timestamp,
-                                mmsi,
-                            },
-                            PrecisionId::DockPoint => TripPrecisonStartPoint::DockPoint {
-                                start_port: start_port
-                                    .expect("cant add precision to dep without port code set"),
-                                end_port: end_port
-                                    .expect("cant add precision to por without port code set"),
-                                start: departure_timestamp,
-                                end: arrival_timestamp,
-                                mmsi,
-                            },
-                        };
-
-                        let mut ais_positions =
-                            add_precision_to_trip(self.storage.as_ref(), start_point).await;
-
-                        self.ais_positions.append(&mut ais_positions);
-                    }
-                }
-                TripSpecification::Landing {
-                    start_landing,
-                    end_landing,
-                } => {
-                    let start_landing_timestamp = start_landing.landing_timestamp;
-                    let end_landing_timestamp = end_landing.landing_timestamp;
-                    let delivery_point_id = end_landing.delivery_point.id.clone();
-                    self.landings.append(&mut vec![start_landing, end_landing]);
-                    if let Some(precision) = t.precision_id {
-                        let mmsi = t
-                            .mmsi
-                            .expect("cannot add precision to trip of vessel without mmsi");
-                        let start_point = match precision {
-                            PrecisionId::FirstMovedPoint => TripPrecisonStartPoint::FirstPoint {
-                                start: start_landing_timestamp,
-                                mmsi,
-                            },
-                            PrecisionId::DeliveryPoint => TripPrecisonStartPoint::DeliveryPoint {
-                                end: end_landing_timestamp,
-                                mmsi,
-                                id: delivery_point_id
-                                    .expect("cannot add precision to trip without delivery point"),
-                            },
-                            PrecisionId::Port | PrecisionId::DockPoint => {
-                                panic!("cannot add precision type for Landings trip")
-                            }
-                        };
-
-                        let mut ais_positions =
-                            add_precision_to_trip(self.storage.as_ref(), start_point).await;
-
-                        self.ais_positions.append(&mut ais_positions);
-                    }
+        // TODO: dont clone in cycles
+        // Use this (https://github.com/rust-lang/rust/issues/43244) if it ever merges
+        for i in 1..=self.cycle.val() {
+            if let Some(reset_cycle) = self.trip_queue_reset {
+                if reset_cycle == i {
+                    self.storage.queue_trip_reset().await;
                 }
             }
-        }
 
-        if let Some(data_year) = self.landings.first().map(|l| l.landing_timestamp.year()) {
+            self.ais_data_sender
+                .send(DataMessage {
+                    positions: vec![],
+                    static_messages: self
+                        .vessels
+                        .iter()
+                        .filter_map(|v| {
+                            if v.cycle == i {
+                                Some(v.ais.clone())
+                            } else {
+                                None
+                            }
+                        })
+                        .collect(),
+                })
+                .unwrap();
+            self.ais_data_confirmation.recv().await.unwrap();
+
             self.storage
-                .add_landings(
-                    Box::new(self.landings.into_iter().map(Ok)),
-                    data_year as u32,
+                .add_register_vessels(
+                    self.vessels
+                        .iter()
+                        .filter_map(|v| {
+                            if v.cycle == i {
+                                Some(v.fiskeridir.clone())
+                            } else {
+                                None
+                            }
+                        })
+                        .collect(),
                 )
                 .await
                 .unwrap();
-        }
 
-        self.ais_vms_positions
-            .into_iter()
-            .for_each(|v| match v.position {
-                AisOrVmsPosition::Ais(a) => self
-                    .ais_positions
-                    .push(AisPositionConstructor { position: a }),
-                AisOrVmsPosition::Vms(v) => self
-                    .vms_positions
-                    .push(VmsPositionConstructor { position: v }),
+            self.storage
+                .add_ers_dca(Box::new(self.hauls.clone().into_iter().filter_map(
+                    move |v| {
+                        if v.cycle == i {
+                            Some(Ok(v.dca))
+                        } else {
+                            None
+                        }
+                    },
+                )))
+                .await
+                .unwrap();
+
+            self.storage
+                .add_ers_tra(
+                    self.tra
+                        .iter()
+                        .filter_map(|v| {
+                            if v.cycle == i {
+                                Some(v.tra.clone())
+                            } else {
+                                None
+                            }
+                        })
+                        .collect(),
+                )
+                .await
+                .unwrap();
+
+            self.storage
+                .add_ers_dep(
+                    self.dep
+                        .iter()
+                        .filter_map(|v| {
+                            if v.cycle == i {
+                                Some(v.dep.clone())
+                            } else {
+                                None
+                            }
+                        })
+                        .collect(),
+                )
+                .await
+                .unwrap();
+            self.storage
+                .add_ers_por(
+                    self.por
+                        .iter()
+                        .filter_map(|v| {
+                            if v.cycle == i {
+                                Some(v.por.clone())
+                            } else {
+                                None
+                            }
+                        })
+                        .collect(),
+                )
+                .await
+                .unwrap();
+
+            delivery_point_ids.extend(
+                self.aqua_cultures
+                    .iter()
+                    .map(|v| v.val.delivery_point_id.clone())
+                    .chain(self.mattilsynet.iter().map(|v| v.val.id.clone()))
+                    .chain(self.manual_delivery_points.iter().map(|v| v.val.id.clone())),
+            );
+
+            self.storage
+                .add_aqua_culture_register(
+                    self.aqua_cultures
+                        .iter()
+                        .filter_map(|v| {
+                            if v.cycle == i {
+                                Some(v.val.clone())
+                            } else {
+                                None
+                            }
+                        })
+                        .collect(),
+                )
+                .await
+                .unwrap();
+
+            self.storage
+                .add_mattilsynet_delivery_points(
+                    self.mattilsynet
+                        .iter()
+                        .filter_map(|v| {
+                            if v.cycle == i {
+                                Some(v.val.clone())
+                            } else {
+                                None
+                            }
+                        })
+                        .collect(),
+                )
+                .await
+                .unwrap();
+
+            self.storage
+                .add_manual_delivery_points(
+                    self.manual_delivery_points
+                        .iter()
+                        .filter_map(|v| {
+                            if v.cycle == i {
+                                Some(v.val.clone())
+                            } else {
+                                None
+                            }
+                        })
+                        .collect(),
+                )
+                .await;
+
+            self.storage
+                .add_fishing_facilities(
+                    self.fishing_facilities
+                        .iter()
+                        .filter_map(|v| {
+                            if v.cycle == i {
+                                Some(v.facility.clone())
+                            } else {
+                                None
+                            }
+                        })
+                        .collect(),
+                )
+                .await
+                .unwrap();
+
+            for t in self.trips.iter() {
+                if t.cycle != i {
+                    continue;
+                }
+                match &t.trip_specification {
+                    TripSpecification::Ers { dep, por } => {
+                        let departure_timestamp = dep.departure_timestamp;
+                        let arrival_timestamp = por.arrival_timestamp;
+                        let start_port = dep.port.code.clone();
+                        let end_port = por.port.code.clone();
+
+                        self.storage.add_ers_dep(vec![dep.clone()]).await.unwrap();
+                        self.storage.add_ers_por(vec![por.clone()]).await.unwrap();
+                        if let Some(precision) = t.precision_id {
+                            let mmsi = t
+                                .mmsi
+                                .expect("cannot add precision to trip of vessel without mmsi");
+                            let start_point = match precision {
+                                PrecisionId::FirstMovedPoint => {
+                                    TripPrecisonStartPoint::FirstPoint {
+                                        start: departure_timestamp,
+                                        mmsi,
+                                    }
+                                }
+                                PrecisionId::DeliveryPoint => {
+                                    panic!("cannot add precision type for ers trip")
+                                }
+                                PrecisionId::Port => TripPrecisonStartPoint::Port {
+                                    start_port: start_port
+                                        .expect("cant add precision to dep without port code set"),
+                                    end_port: end_port
+                                        .expect("cant add precision to por without port code set"),
+                                    start: departure_timestamp,
+                                    end: arrival_timestamp,
+                                    mmsi,
+                                },
+                                PrecisionId::DockPoint => TripPrecisonStartPoint::DockPoint {
+                                    start_port: start_port
+                                        .expect("cant add precision to dep without port code set"),
+                                    end_port: end_port
+                                        .expect("cant add precision to por without port code set"),
+                                    start: departure_timestamp,
+                                    end: arrival_timestamp,
+                                    mmsi,
+                                },
+                            };
+
+                            let mut ais_positions =
+                                add_precision_to_trip(self.storage.as_ref(), start_point, t.cycle)
+                                    .await;
+
+                            self.ais_positions.append(&mut ais_positions);
+                        }
+                    }
+                    TripSpecification::Landing {
+                        start_landing,
+                        end_landing,
+                    } => {
+                        let start_landing_timestamp = start_landing.landing_timestamp;
+                        let end_landing_timestamp = end_landing.landing_timestamp;
+                        let delivery_point_id = end_landing.delivery_point.id.clone();
+                        self.landings.append(&mut vec![
+                            LandingConstructor {
+                                landing: start_landing.clone(),
+                                cycle: t.cycle,
+                            },
+                            LandingConstructor {
+                                landing: end_landing.clone(),
+                                cycle: t.cycle,
+                            },
+                        ]);
+                        if let Some(precision) = t.precision_id {
+                            let mmsi = t
+                                .mmsi
+                                .expect("cannot add precision to trip of vessel without mmsi");
+                            let start_point = match precision {
+                                PrecisionId::FirstMovedPoint => {
+                                    TripPrecisonStartPoint::FirstPoint {
+                                        start: start_landing_timestamp,
+                                        mmsi,
+                                    }
+                                }
+                                PrecisionId::DeliveryPoint => {
+                                    TripPrecisonStartPoint::DeliveryPoint {
+                                        end: end_landing_timestamp,
+                                        mmsi,
+                                        id: delivery_point_id.expect(
+                                            "cannot add precision to trip without delivery point",
+                                        ),
+                                    }
+                                }
+                                PrecisionId::Port | PrecisionId::DockPoint => {
+                                    panic!("cannot add precision type for Landings trip")
+                                }
+                            };
+
+                            let mut ais_positions =
+                                add_precision_to_trip(self.storage.as_ref(), start_point, t.cycle)
+                                    .await;
+
+                            self.ais_positions.append(&mut ais_positions);
+                        }
+                    }
+                }
+            }
+
+            self.storage
+                .add_landings(
+                    Box::new(self.landings.clone().into_iter().filter_map(move |v| {
+                        if v.cycle == i {
+                            Some(Ok(v.landing))
+                        } else {
+                            None
+                        }
+                    })),
+                    i as u32,
+                )
+                .await
+                .unwrap();
+
+            self.ais_vms_positions.iter().for_each(|v| {
+                if v.cycle == i {
+                    match &v.position {
+                        AisOrVmsPosition::Ais(a) => {
+                            self.ais_positions.push(AisPositionConstructor {
+                                position: a.clone(),
+                                cycle: v.cycle,
+                            })
+                        }
+                        AisOrVmsPosition::Vms(a) => {
+                            self.vms_positions.push(VmsPositionConstructor {
+                                position: a.clone(),
+                                cycle: v.cycle,
+                            })
+                        }
+                    }
+                }
             });
 
-        self.storage
-            .add_vms(self.vms_positions.into_iter().map(|v| v.position).collect())
-            .await
-            .unwrap();
-        self.ais_data_sender
-            .send(DataMessage {
-                positions: self.ais_positions.into_iter().map(|v| v.position).collect(),
-                static_messages: vec![],
-            })
-            .unwrap();
-        self.ais_data_confirmation.recv().await.unwrap();
+            self.storage
+                .add_vms(
+                    self.vms_positions
+                        .iter()
+                        .filter_map(|v| {
+                            if v.cycle == i {
+                                Some(v.position.clone())
+                            } else {
+                                None
+                            }
+                        })
+                        .collect(),
+                )
+                .await
+                .unwrap();
 
-        let new_weather = self
-            .weather
-            .into_iter()
-            .map(|w| w.weather)
-            .collect::<Vec<_>>();
-        let weather = new_weather.iter().map(Weather::from).collect();
+            self.ais_data_sender
+                .send(DataMessage {
+                    positions: self
+                        .ais_positions
+                        .iter()
+                        .filter_map(|v| {
+                            if v.cycle == i {
+                                Some(v.position.clone())
+                            } else {
+                                None
+                            }
+                        })
+                        .collect(),
+                    static_messages: vec![],
+                })
+                .unwrap();
 
-        self.storage.add_weather(new_weather).await.unwrap();
+            self.ais_data_confirmation.recv().await.unwrap();
 
-        let new_ocean_climate = self
-            .ocean_climate
-            .into_iter()
-            .map(|o| o.ocean_climate)
-            .collect::<Vec<_>>();
-        let ocean_climate = new_ocean_climate.iter().map(OceanClimate::from).collect();
+            let new_ocean_climate = self
+                .ocean_climate
+                .iter()
+                .filter_map(|w| {
+                    if w.cycle == i {
+                        Some(w.ocean_climate.clone())
+                    } else {
+                        None
+                    }
+                })
+                .collect::<Vec<_>>();
 
-        self.storage
-            .add_ocean_climate(new_ocean_climate)
-            .await
-            .unwrap();
+            ocean_climate.extend(new_ocean_climate.iter().map(OceanClimate::from));
 
-        let mut ais_positions = self.storage.all_ais().await;
-        let mut vms_positions = self.storage.all_vms().await;
-        let mut ais_vms_positions = self.storage.all_ais_vms().await;
+            self.storage
+                .add_ocean_climate(new_ocean_climate)
+                .await
+                .unwrap();
 
-        let mut engine = self.engine.run_single().await;
-        loop {
-            if engine.current_state_name() == "Pending" {
-                break;
+            let new_weather = self
+                .weather
+                .iter()
+                .filter_map(|w| {
+                    if w.cycle == i {
+                        Some(w.weather.clone())
+                    } else {
+                        None
+                    }
+                })
+                .collect::<Vec<_>>();
+
+            weather.extend(new_weather.iter().map(Weather::from));
+            self.storage.add_weather(new_weather).await.unwrap();
+
+            self.engine = self.engine.run_single().await;
+            loop {
+                if self.engine.current_state_name() == "Pending" {
+                    break;
+                }
+                self.engine = self.engine.run_single().await;
             }
-            engine = engine.run_single().await;
+
+            for v in self.vessels.iter().filter(|v| v.cycle == i) {
+                if v.clear_trip_precision {
+                    self.storage
+                        .clear_trip_precision(FiskeridirVesselId(v.fiskeridir.id))
+                        .await;
+                }
+                if v.clear_trip_distancing {
+                    self.storage
+                        .clear_trip_distancing(FiskeridirVesselId(v.fiskeridir.id))
+                        .await;
+                }
+            }
         }
 
         let mut vessels: Vec<Vessel> = self.storage.vessels().try_collect().await.unwrap();
@@ -690,6 +916,10 @@ impl TestStateBuilder {
 
         assert!(fishing_facilities.len() < 100);
 
+        let mut ais_positions = self.storage.all_ais().await;
+        let mut vms_positions = self.storage.all_vms().await;
+        let mut ais_vms_positions = self.storage.all_ais_vms().await;
+
         // We want all positions to be ordered by how they were created, we exploit the fact that
         // mmsis are an increasing counter and that msgtime is increased for each created position.
         ais_positions.sort_by_key(|v| (v.mmsi, v.msgtime));
@@ -701,7 +931,6 @@ impl TestStateBuilder {
         por.sort_by_key(|v| (v.fiskeridir_vessel_id, v.timestamp));
         delivery_points.sort_by_key(|v| v.id.clone());
         fishing_facilities.sort_by_key(|v| (v.fiskeridir_vessel_id, v.setup_timestamp));
-        assert_eq!(vessels.len(), num_vessels);
 
         TestState {
             ais_positions,
@@ -725,6 +954,7 @@ impl TestStateBuilder {
 async fn add_precision_to_trip(
     storage: &dyn TestStorage,
     start: TripPrecisonStartPoint,
+    cycle: Cycle,
 ) -> Vec<AisPositionConstructor> {
     match start {
         TripPrecisonStartPoint::Port {
@@ -754,18 +984,18 @@ async fn add_precision_to_trip(
             let mut position = NewAisPosition::test_default(mmsi, start - Duration::seconds(1));
             position.latitude = start_coords.latitude;
             position.longitude = start_coords.longitude;
-            ais_positions.push(AisPositionConstructor { position });
+            ais_positions.push(AisPositionConstructor { position, cycle });
 
             // We need atleast a single point within trip to enable precision
             let mut position = NewAisPosition::test_default(mmsi, end - Duration::seconds(1));
             position.latitude = start_coords.latitude;
             position.longitude = start_coords.longitude;
-            ais_positions.push(AisPositionConstructor { position });
+            ais_positions.push(AisPositionConstructor { position, cycle });
 
             let mut position = NewAisPosition::test_default(mmsi, end + Duration::seconds(1));
             position.latitude = end_coords.latitude;
             position.longitude = end_coords.longitude;
-            ais_positions.push(AisPositionConstructor { position });
+            ais_positions.push(AisPositionConstructor { position, cycle });
 
             ais_positions
         }
@@ -786,7 +1016,7 @@ async fn add_precision_to_trip(
             let mut position = NewAisPosition::test_default(mmsi, end + Duration::seconds(1));
             position.latitude = latitude;
             position.longitude = longitude;
-            ais_positions.push(AisPositionConstructor { position });
+            ais_positions.push(AisPositionConstructor { position, cycle });
             ais_positions
         }
         TripPrecisonStartPoint::FirstPoint { start, mmsi } => {
@@ -795,7 +1025,7 @@ async fn add_precision_to_trip(
                 let mut position = NewAisPosition::test_default(mmsi, start + Duration::seconds(i));
                 position.latitude = 70.0 + i as f64 * 0.01;
                 position.longitude = 20.0 + i as f64 * 0.01;
-                ais_positions.push(AisPositionConstructor { position });
+                ais_positions.push(AisPositionConstructor { position, cycle });
             }
             ais_positions
         }
@@ -820,18 +1050,18 @@ async fn add_precision_to_trip(
             let mut position = NewAisPosition::test_default(mmsi, start - Duration::seconds(1));
             position.latitude = start_dock_point.latitude;
             position.longitude = start_dock_point.longitude;
-            ais_positions.push(AisPositionConstructor { position });
+            ais_positions.push(AisPositionConstructor { position, cycle });
 
             // We need atleast a single point within trip to enable precision
             let mut position = NewAisPosition::test_default(mmsi, end - Duration::seconds(1));
             position.latitude = start_dock_point.latitude;
-            position.longitude = end_dock_point.longitude;
-            ais_positions.push(AisPositionConstructor { position });
+            position.longitude = start_dock_point.longitude;
+            ais_positions.push(AisPositionConstructor { position, cycle });
 
             let mut position = NewAisPosition::test_default(mmsi, end + Duration::seconds(1));
             position.latitude = end_dock_point.latitude;
             position.longitude = end_dock_point.longitude;
-            ais_positions.push(AisPositionConstructor { position });
+            ais_positions.push(AisPositionConstructor { position, cycle });
             ais_positions
         }
     }

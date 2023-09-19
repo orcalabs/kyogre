@@ -1,10 +1,18 @@
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::{CallSign, ErsDep, ErsPor, LandingMonth};
 
-use super::{haul::HaulTripBuilder, vessel::VesselBuilder};
+use super::{
+    ais::AisPositionTripBuilder, ais_vms::AisVmsPositionTripBuilder, haul::HaulTripBuilder,
+    vessel::VesselBuilder,
+};
 use crate::{
     test_helper::{
-        haul::HaulConstructor, item_distribution::ItemDistribution, landing::LandingTripBuilder,
+        ais::AisPositionConstructor,
+        ais_vms::{AisOrVmsPosition, AisVmsPositionConstructor},
+        cycle::Cycle,
+        haul::HaulConstructor,
+        item_distribution::ItemDistribution,
+        landing::LandingTripBuilder,
     },
     *,
 };
@@ -22,6 +30,7 @@ pub struct TripConstructor {
     pub(crate) current_data_timestamp: DateTime<Utc>,
     pub(crate) precision_id: Option<PrecisionId>,
     pub(crate) mmsi: Option<Mmsi>,
+    pub cycle: Cycle,
 }
 
 #[allow(clippy::large_enum_variant)]
@@ -49,6 +58,20 @@ impl TripSpecification {
                 end_landing: _,
             } => {
                 start_landing.landing_timestamp = time;
+            }
+        }
+    }
+    pub fn set_ports(&mut self, port_id: &str) {
+        match self {
+            TripSpecification::Ers { dep, por } => {
+                dep.port.code = Some(port_id.to_string());
+                por.port.code = Some(port_id.to_string());
+            }
+            TripSpecification::Landing {
+                start_landing: _,
+                end_landing: _,
+            } => {
+                panic!("cant set port of landing trip");
             }
         }
     }
@@ -143,8 +166,10 @@ impl TripBuilder {
                 facility.setup_timestamp = start;
                 facility.removed_timestamp = Some(end);
 
-                base.fishing_facilities
-                    .push(FishingFacilityConctructor { facility });
+                base.fishing_facilities.push(FishingFacilityConctructor {
+                    facility,
+                    cycle: base.cycle,
+                });
 
                 trip.current_data_timestamp = end + base.trip_data_timestamp_gap;
 
@@ -182,7 +207,10 @@ impl TripBuilder {
 
                 base.ers_message_id_counter += 1;
 
-                base.tra.push(TraConstructor { tra });
+                base.tra.push(TraConstructor {
+                    tra,
+                    cycle: base.cycle,
+                });
                 trip.current_data_timestamp += base.trip_data_timestamp_gap;
 
                 if trip.current_data_timestamp >= trip.end() {
@@ -225,7 +253,10 @@ impl TripBuilder {
 
                 dca.set_stop_timestamp(end);
 
-                base.hauls.push(HaulConstructor { dca });
+                base.hauls.push(HaulConstructor {
+                    dca,
+                    cycle: base.cycle,
+                });
                 trip.current_data_timestamp = end + base.trip_data_timestamp_gap;
 
                 if trip.current_data_timestamp >= trip.end() {
@@ -260,7 +291,10 @@ impl TripBuilder {
                 landing.landing_time = ts.time();
                 landing.landing_month = LandingMonth::from(ts);
 
-                base.landings.push(landing);
+                base.landings.push(LandingConstructor {
+                    landing,
+                    cycle: base.cycle,
+                });
 
                 base.landing_id_counter += 1;
 
@@ -274,6 +308,144 @@ impl TripBuilder {
 
         LandingTripBuilder {
             current_index: base.landings.len() - amount,
+            state: self,
+        }
+    }
+
+    pub fn vms_positions(mut self, amount: usize) -> VmsPositionTripBuilder {
+        assert!(amount != 0);
+
+        let base = &mut self.state.state;
+        let num_trips = base.trips[self.current_index..].len();
+
+        let distribution = ItemDistribution::new(amount, num_trips);
+
+        for (i, trip) in base.trips[self.current_index..].iter_mut().enumerate() {
+            let num_positions = distribution.num_elements(i);
+
+            let mut positions = Vec::with_capacity(num_positions);
+            let mut timestamps = Vec::with_capacity(num_positions);
+
+            let call_sign = trip.vessel_call_sign.clone().unwrap();
+
+            for _ in 0..num_positions {
+                let timestamp = trip.current_data_timestamp;
+                timestamps.push(timestamp);
+                let position =
+                    fiskeridir_rs::Vms::test_default(rand::random(), call_sign.clone(), timestamp);
+                base.global_data_timestamp_counter += base.data_timestamp_gap;
+                positions.push(VmsPositionConstructor {
+                    position,
+                    cycle: base.cycle,
+                });
+
+                if (trip.current_data_timestamp + base.trip_data_timestamp_gap) >= trip.end() {
+                    trip.current_data_timestamp = trip.end();
+                } else {
+                    trip.current_data_timestamp += base.trip_data_timestamp_gap;
+                }
+            }
+
+            base.vms_positions.append(&mut positions)
+        }
+
+        VmsPositionTripBuilder {
+            current_index: base.vms_positions.len() - amount,
+            state: self,
+        }
+    }
+
+    pub fn ais_vms_positions(mut self, amount: usize) -> AisVmsPositionTripBuilder {
+        assert!(amount != 0);
+        let base = &mut self.state.state;
+
+        let num_trips = base.trips[self.current_index..].len();
+
+        let distribution = ItemDistribution::new(amount, num_trips);
+
+        let mut index = 0;
+        for (i, trip) in base.trips[self.current_index..].iter_mut().enumerate() {
+            let num_positions = distribution.num_elements(i);
+
+            let mut positions = Vec::with_capacity(num_positions);
+            let mut timestamps = Vec::with_capacity(num_positions);
+
+            let call_sign = trip.vessel_call_sign.clone().unwrap();
+
+            for i in 0..num_positions {
+                let timestamp = trip.current_data_timestamp;
+                timestamps.push(timestamp);
+                let position = if (i + 1) % 2 == 0 {
+                    AisOrVmsPosition::Vms(fiskeridir_rs::Vms::test_default(
+                        rand::random(),
+                        call_sign.clone(),
+                        timestamp,
+                    ))
+                } else {
+                    AisOrVmsPosition::Ais(NewAisPosition::test_default(
+                        trip.mmsi.unwrap(),
+                        timestamp,
+                    ))
+                };
+                base.global_data_timestamp_counter += base.data_timestamp_gap;
+                positions.push(AisVmsPositionConstructor {
+                    index,
+                    position,
+                    cycle: base.cycle,
+                });
+                index += 1;
+                if (trip.current_data_timestamp + base.trip_data_timestamp_gap) >= trip.end() {
+                    trip.current_data_timestamp = trip.end();
+                } else {
+                    trip.current_data_timestamp += base.trip_data_timestamp_gap;
+                }
+            }
+
+            base.ais_vms_positions.append(&mut positions);
+        }
+
+        AisVmsPositionTripBuilder {
+            current_index: base.ais_vms_positions.len() - amount,
+            state: self,
+        }
+    }
+
+    pub fn ais_positions(mut self, amount: usize) -> AisPositionTripBuilder {
+        assert!(amount != 0);
+
+        let base = &mut self.state.state;
+        let num_trips = base.vessels[self.current_index..].len();
+
+        let distribution = ItemDistribution::new(amount, num_trips);
+
+        for (i, trip) in base.trips[self.current_index..].iter_mut().enumerate() {
+            let num_positions = distribution.num_elements(i);
+
+            let mut positions = Vec::with_capacity(num_positions);
+            let mut timestamps = Vec::with_capacity(num_positions);
+
+            for _ in 0..num_positions {
+                let timestamp = trip.current_data_timestamp;
+                timestamps.push(timestamp);
+                let position = NewAisPosition::test_default(trip.mmsi.unwrap(), timestamp);
+                base.global_data_timestamp_counter += base.data_timestamp_gap;
+                positions.push(AisPositionConstructor {
+                    position,
+                    cycle: base.cycle,
+                });
+
+                if (trip.current_data_timestamp + base.trip_data_timestamp_gap) >= trip.end() {
+                    trip.current_data_timestamp = trip.end();
+                } else {
+                    trip.current_data_timestamp += base.trip_data_timestamp_gap;
+                }
+            }
+
+            base.ais_positions.append(&mut positions);
+        }
+
+        AisPositionTripBuilder {
+            current_index: base.ais_positions.len() - amount,
             state: self,
         }
     }

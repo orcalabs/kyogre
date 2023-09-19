@@ -593,24 +593,16 @@ async fn test_hauls_matrix_have_correct_totals_after_dca_message_is_replaced_by_
         let filter = ActiveHaulsFilter::SpeciesGroup;
 
         let message_id = 1;
-        let date: DateTime<Utc> = "2013-01-1T00:00:00Z".parse().unwrap();
 
         builder
             .hauls(1)
             .modify(|v| {
                 v.dca.message_info.message_id = message_id;
-                v.dca.set_start_timestamp(date);
-                v.dca.set_stop_timestamp(date);
                 v.dca.start_latitude = Some(56.727258);
                 v.dca.start_longitude = Some(12.565410);
                 v.dca.catch.species.living_weight = Some(10);
             })
-            .build()
-            .await;
-
-        helper
-            .builder()
-            .await
+            .new_cycle()
             .hauls(1)
             .modify(|v| {
                 v.dca.message_info.message_id = message_id;
@@ -618,8 +610,6 @@ async fn test_hauls_matrix_have_correct_totals_after_dca_message_is_replaced_by_
                 v.dca.catch.species.living_weight = Some(20);
                 v.dca.start_latitude = Some(56.727258);
                 v.dca.start_longitude = Some(12.565410);
-                v.dca.set_start_timestamp(date);
-                v.dca.set_stop_timestamp(date);
             })
             .build()
             .await;

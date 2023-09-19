@@ -1,4 +1,4 @@
-use super::trip::TripBuilder;
+use super::{cycle::Cycle, trip::TripBuilder};
 use crate::*;
 use fiskeridir_rs::ErsTra;
 
@@ -20,4 +20,5 @@ pub struct TraTripBuilder {
 #[derive(Clone, Debug)]
 pub struct TraConstructor {
     pub tra: ErsTra,
+    pub cycle: Cycle,
 }

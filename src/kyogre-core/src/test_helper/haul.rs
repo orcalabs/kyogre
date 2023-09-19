@@ -2,6 +2,8 @@ use crate::{test_helper::item_distribution::ItemDistribution, *};
 use chrono::Duration;
 use fiskeridir_rs::ErsDca;
 
+use super::cycle::Cycle;
+
 pub struct HaulBuilder {
     pub state: TestStateBuilder,
     pub current_index: usize,
@@ -20,6 +22,7 @@ pub struct HaulVesselBuilder {
 #[derive(Clone, Debug)]
 pub struct HaulConstructor {
     pub dca: ErsDca,
+    pub cycle: Cycle,
 }
 
 impl HaulVesselBuilder {
@@ -45,7 +48,10 @@ impl HaulVesselBuilder {
                         start + Duration::milliseconds(increment * i as i64),
                     );
                     lats_lons_times.push((weather.latitude, weather.longitude, weather.timestamp));
-                    base.weather.push(WeatherConstructor { weather });
+                    base.weather.push(WeatherConstructor {
+                        weather,
+                        cycle: base.cycle,
+                    });
                 }
             }
             lats_lons_times
@@ -92,8 +98,10 @@ impl HaulVesselBuilder {
                         ocean_climate.longitude,
                         ocean_climate.timestamp,
                     ));
-                    base.ocean_climate
-                        .push(OceanClimateConstructor { ocean_climate });
+                    base.ocean_climate.push(OceanClimateConstructor {
+                        ocean_climate,
+                        cycle: base.cycle,
+                    });
                 }
             }
             lats_lons_times

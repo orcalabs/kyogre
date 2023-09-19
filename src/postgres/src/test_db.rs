@@ -30,19 +30,6 @@ impl TestDb {
         self.ais_positions(None, None).await
     }
 
-    pub async fn queue_trips_reset(&self) {
-        sqlx::query!(
-            r#"
-UPDATE trip_calculation_timers
-SET
-    queued_reset = TRUE
-            "#
-        )
-        .execute(&self.db.pool)
-        .await
-        .unwrap();
-    }
-
     pub async fn haul_of_vessel(
         &self,
         vessel_id: FiskeridirVesselId,
@@ -347,7 +334,9 @@ SELECT
     period_precision,
     landing_coverage,
     distance,
-    trip_assembler_id AS "trip_assembler_id!: TripAssemblerId"
+    trip_assembler_id AS "trip_assembler_id!: TripAssemblerId",
+    start_port_id,
+    end_port_id
 FROM
     trips
 WHERE
@@ -390,7 +379,8 @@ SELECT
     COALESCE(t.vessel_events, '[]')::TEXT AS "vessel_events!",
     COALESCE(t.hauls, '[]')::TEXT AS "hauls!",
     COALESCE(t.fishing_facilities, '[]')::TEXT AS "fishing_facilities!",
-    COALESCE(t.landing_ids, '{}') AS "landing_ids!"
+    COALESCE(t.landing_ids, '{}') AS "landing_ids!",
+    t.distance
 FROM
     trips_detailed t
 WHERE
@@ -722,30 +712,6 @@ ORDER BY
             ErsPor::test_default(message_id, vessel_id.0 as u64, timestamp, message_number);
         arrival.port.code = Some(port_id.to_owned());
         self.db.add_ers_por(vec![arrival]).await.unwrap();
-    }
-
-    pub async fn generate_landings_trip(
-        &self,
-        vessel_id: FiskeridirVesselId,
-        start: DateTime<Utc>,
-        end: DateTime<Utc>,
-    ) {
-        self.db
-            .add_trips_impl(
-                vessel_id,
-                end,
-                TripsConflictStrategy::Replace,
-                vec![NewTrip {
-                    period: DateRange::new(start, end).unwrap(),
-                    landing_coverage: DateRange::new(start, end).unwrap(),
-                    start_port_code: None,
-                    end_port_code: None,
-                }],
-                TripAssemblerId::Landings,
-            )
-            .await
-            .unwrap();
-        self.db.refresh().await.unwrap();
     }
 
     pub async fn generate_fishing_facility(&self) -> FishingFacility {

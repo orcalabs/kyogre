@@ -174,7 +174,6 @@ WHERE
 
         let existing_landings = self.existing_landings(data_year, &mut tx).await?;
 
-        let mut earliest_landing = Utc::now();
         let mut existing_landing_ids = HashSet::new();
         let mut inserted_landing_ids = HashSet::new();
         let mut vessel_event_ids = Vec::new();
@@ -197,7 +196,6 @@ WHERE
                         continue;
                     }
 
-                    earliest_landing = min(earliest_landing, item.landing_timestamp);
                     landing_set.add_landing(item)?;
 
                     if i % CHUNK_SIZE == 0 && i > 0 {
@@ -236,11 +234,10 @@ WHERE
             &mut tx,
         )
         .await?;
+
         self.add_landing_matrix(&inserted_landing_ids, &mut tx)
             .await?;
 
-        self.update_trips_refresh_boundary(earliest_landing, &mut tx)
-            .await?;
         self.add_trip_assembler_conflicts(
             trip_assembler_conflicts.into_values().collect(),
             TripAssemblerId::Landings,

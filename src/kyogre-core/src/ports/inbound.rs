@@ -34,14 +34,6 @@ pub trait WebApiInboundPort {
 }
 
 #[async_trait]
-pub trait TripPrecisionInboundPort: Send + Sync {
-    async fn update_trip_precisions(
-        &self,
-        updates: Vec<TripPrecisionUpdate>,
-    ) -> Result<(), UpdateError>;
-}
-
-#[async_trait]
 pub trait ScraperInboundPort {
     async fn add_fishing_facilities(
         &self,
@@ -110,17 +102,20 @@ pub trait HaulDistributorInbound: Send + Sync {
 }
 
 #[async_trait]
-pub trait TripDistancerInbound: Send + Sync {
-    async fn add_output(&self, values: Vec<TripDistanceOutput>) -> Result<(), UpdateError>;
-}
-
-#[async_trait]
-pub trait DatabaseViewRefresher: Send + Sync {
-    async fn refresh(&self) -> Result<(), UpdateError>;
+pub trait TripPipelineInbound: Send + Sync {
+    async fn update_trip(&self, update: TripUpdate) -> Result<(), UpdateError>;
+    async fn add_trip_set(&self, value: TripSet) -> Result<(), InsertError>;
+    async fn refresh_detailed_trips(
+        &self,
+        vessel_id: FiskeridirVesselId,
+    ) -> Result<(), UpdateError>;
 }
 
 #[async_trait]
 pub trait TestHelperInbound: Send + Sync {
+    async fn queue_trip_reset(&self);
+    async fn clear_trip_distancing(&self, vessel_id: FiskeridirVesselId);
+    async fn clear_trip_precision(&self, vessel_id: FiskeridirVesselId);
     async fn add_manual_delivery_points(&self, values: Vec<ManualDeliveryPoint>);
     async fn add_deprecated_delivery_point(
         &self,

@@ -8,6 +8,24 @@ use kyogre_core::TripId;
 use unnest_insert::UnnestInsert;
 
 impl PostgresAdapter {
+    pub(crate) async fn dock_points_impl(&self) -> Result<Vec<PortDockPoint>, PostgresError> {
+        sqlx::query_as!(
+            PortDockPoint,
+            r#"
+SELECT
+    p.port_id,
+    p.port_dock_point_id,
+    p.latitude,
+    p.longitude,
+    p.name
+FROM
+    port_dock_points p
+            "#,
+        )
+        .fetch_all(&self.pool)
+        .await
+        .change_context(PostgresError::Query)
+    }
     pub(crate) async fn dock_points_of_port_impl(
         &self,
         port_id: &str,
@@ -57,6 +75,24 @@ FROM
             .await
             .change_context(PostgresError::Query)
             .map(|_| ())
+    }
+
+    pub(crate) async fn ports_impl(&self) -> Result<Vec<Port>, PostgresError> {
+        sqlx::query_as!(
+            Port,
+            r#"
+SELECT
+    p.port_id AS "id!",
+    p.name,
+    p.latitude,
+    p.longitude
+FROM
+    ports AS p
+            "#,
+        )
+        .fetch_all(&self.pool)
+        .await
+        .change_context(PostgresError::Query)
     }
 
     pub(crate) async fn port_impl(&self, port_id: &str) -> Result<Option<Port>, PostgresError> {
