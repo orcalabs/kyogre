@@ -227,3 +227,26 @@ impl Display for HaulDistributorError {
         f.write_str("an error occured while running a haul distributor")
     }
 }
+
+#[derive(Debug)]
+pub enum TripPipelineError {
+    DataPreparation,
+    Assembly,
+    Precision,
+    Distance,
+}
+
+impl Display for TripPipelineError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            TripPipelineError::Assembly => f.write_str("an error occured during trip assembly"),
+            TripPipelineError::Precision => f.write_str("an error occured during trip precision"),
+            TripPipelineError::Distance => f.write_str("an error occured during trip distancing"),
+            TripPipelineError::DataPreparation => {
+                f.write_str("an error occured during data preparation")
+            }
+        }
+    }
+}
+
+impl Context for TripPipelineError {}

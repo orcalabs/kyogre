@@ -1,0 +1,35 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    fiskeridir_vessel_id,\n    timer AS \"timestamp\",\n    queued_reset AS \"queued_reset!\"\nFROM\n    trip_calculation_timers\nWHERE\n    trip_assembler_id = $1\n    AND fiskeridir_vessel_id = $2\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "fiskeridir_vessel_id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "timestamp",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 2,
+        "name": "queued_reset!",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "731c2f776e19372f9356dd5b57be85bfb29e4a2ce3331194e7a151e3fc7d1a6e"
+}

@@ -30,11 +30,11 @@ impl machine::State for ScrapeState {
             .expect("failed to parse APP_ENVIRONMENT");
 
         match environment {
-            Environment::Production
-            | Environment::Staging
-            | Environment::Development
-            | Environment::Test => Schedule::Daily(NaiveTime::from_hms_opt(7, 0, 0).unwrap()),
+            Environment::Production | Environment::Staging | Environment::Development => {
+                Schedule::Daily(NaiveTime::from_hms_opt(7, 0, 0).unwrap())
+            }
             Environment::Local => Schedule::Periodic(Duration::hours(1)),
+            Environment::Test => Schedule::Periodic(Duration::seconds(0)),
         }
     }
 }

@@ -1,6 +1,7 @@
 use super::{barentswatch_helper::BarentswatchHelper, test_client::ApiClient};
 use dockertest::{DockerTest, Source, StaticManagementPolicy};
 use duckdb_rs::{adapter::CacheMode, CacheStorage};
+use engine::{AisVms, ErsTripAssembler, LandingTripAssembler};
 use futures::Future;
 use kyogre_core::*;
 use orca_core::{
@@ -40,7 +41,7 @@ pub struct TestHelper {
 }
 
 impl TestHelper {
-    pub async fn builder(&self) -> TestStateBuilder {
+    async fn builder(&self) -> TestStateBuilder {
         let transition_log = Box::new(
             machine::PostgresAdapter::new(&self.db_settings)
                 .await
@@ -49,20 +50,17 @@ impl TestHelper {
 
         let db = Box::new(self.adapter().clone());
         let trip_assemblers = vec![
-            Box::<trip_assembler::LandingTripAssembler>::default() as Box<dyn TripAssembler>,
-            Box::<trip_assembler::ErsTripAssembler>::default() as Box<dyn TripAssembler>,
+            Box::<LandingTripAssembler>::default() as Box<dyn TripAssembler>,
+            Box::<ErsTripAssembler>::default() as Box<dyn TripAssembler>,
         ];
 
         let benchmarks = vec![Box::<WeightPerHour>::default() as Box<dyn VesselBenchmark>];
         let haul_distributors =
             vec![Box::<haul_distributor::AisVms>::default() as Box<dyn HaulDistributor>];
 
-        let trip_distancers =
-            vec![Box::<trip_distancer::AisVms>::default() as Box<dyn TripDistancer>];
+        let trip_distancer = Box::<AisVms>::default() as Box<dyn TripDistancer>;
 
         let shared_state = SharedState::new(
-            db.clone(),
-            db.clone(),
             db.clone(),
             db.clone(),
             db.clone(),
@@ -79,7 +77,7 @@ impl TestHelper {
             trip_assemblers,
             benchmarks,
             haul_distributors,
-            trip_distancers,
+            trip_distancer,
         );
 
         let step = Step::initial(ScrapeState, shared_state, transition_log);
@@ -168,9 +166,12 @@ where
     )
     .with_log_options(None);
 
+    postgres.port_map(5432, 5400);
+
     postgres.static_container(StaticManagementPolicy::Dynamic);
 
     docker_test.add_composition(postgres);
+    std::env::set_var("APP_ENVIRONMENT", "TEST");
 
     docker_test
         .run_async(|ops| async move {

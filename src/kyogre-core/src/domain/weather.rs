@@ -66,7 +66,7 @@ pub struct HaulWeatherOutput {
     pub status: HaulWeatherStatus,
 }
 
-pub(crate) static WEATHER_LOCATION_LATS_LONS: [(f64, f64); 20] = [
+pub static WEATHER_LOCATION_LATS_LONS: [(f64, f64); 20] = [
     (52.380, 1.8924),
     (52.352, 1.9485),
     (52.357, 2.0484),

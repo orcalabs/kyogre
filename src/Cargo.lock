@@ -1574,9 +1574,11 @@ dependencies = [
  "error-stack 0.4.1",
  "fiskeridir-rs",
  "futures",
+ "geoutils",
  "haul-distributor",
  "kyogre-core",
  "machine",
+ "num-traits",
  "orca-core",
  "postgres",
  "rand 0.8.5",
@@ -1587,8 +1589,6 @@ dependencies = [
  "tokio",
  "tracing",
  "tracing-subscriber",
- "trip-assembler",
- "trip-distancer",
  "vessel-benchmark",
 ]
 
@@ -5892,48 +5892,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "trip-assembler"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "chrono",
- "dockertest",
- "error-stack 0.4.1",
- "fiskeridir-rs",
- "futures",
- "geoutils",
- "kyogre-core",
- "num-traits",
- "orca-core",
- "postgres",
- "rand 0.8.5",
- "strum 0.25.0",
- "tokio",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
-name = "trip-distancer"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "chrono",
- "dockertest",
- "error-stack 0.4.1",
- "fiskeridir-rs",
- "futures",
- "geoutils",
- "kyogre-core",
- "orca-core",
- "postgres",
- "rand 0.8.5",
- "tokio",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
 name = "try-lock"
 version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6275,6 +6233,7 @@ dependencies = [
  "config",
  "dockertest",
  "duckdb-rs",
+ "engine",
  "enum_index",
  "enum_index_derive",
  "error-stack 0.4.1",
@@ -6298,8 +6257,6 @@ dependencies = [
  "tokio",
  "tracing",
  "tracing-subscriber",
- "trip-assembler",
- "trip-distancer",
  "utoipa",
  "utoipa-swagger-ui",
  "uuid",

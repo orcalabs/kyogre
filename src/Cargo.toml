@@ -9,11 +9,9 @@ members = [
     "leviathan-postgres",
     "web-api",
     "engine",
-    "trip-assembler",
     "scraper",
     "vessel-benchmark",
     "haul-distributor",
-    "trip-distancer",
     "duckdb-rs",
 ]
 

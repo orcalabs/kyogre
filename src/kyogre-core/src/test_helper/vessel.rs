@@ -20,9 +20,34 @@ pub struct VesselContructor {
     pub key: VesselKey,
     pub fiskeridir: fiskeridir_rs::RegisterVessel,
     pub ais: NewAisStatic,
+    pub cycle: Cycle,
+    pub(crate) clear_trip_precision: bool,
+    pub(crate) clear_trip_distancing: bool,
 }
 
 impl VesselBuilder {
+    pub fn clear_trip_distancing(mut self) -> VesselBuilder {
+        let base = &mut self.state;
+        let num_trips = base.vessels[self.current_index..].len();
+
+        assert!(num_trips > 0);
+
+        for v in base.vessels[self.current_index..].iter_mut() {
+            v.clear_trip_distancing = true;
+        }
+        self
+    }
+    pub fn clear_trip_precision(mut self) -> VesselBuilder {
+        let base = &mut self.state;
+        let num_trips = base.vessels[self.current_index..].len();
+
+        assert!(num_trips > 0);
+
+        for v in base.vessels[self.current_index..].iter_mut() {
+            v.clear_trip_precision = true;
+        }
+        self
+    }
     pub fn fishing_facilities(mut self, amount: usize) -> FishingFacilityVesselBuilder {
         assert!(amount != 0);
         let base = &mut self.state;
@@ -48,8 +73,10 @@ impl VesselBuilder {
                 facility.setup_timestamp = start;
                 facility.removed_timestamp = Some(end);
 
-                base.fishing_facilities
-                    .push(FishingFacilityConctructor { facility });
+                base.fishing_facilities.push(FishingFacilityConctructor {
+                    facility,
+                    cycle: base.cycle,
+                });
 
                 base.global_data_timestamp_counter = end + base.trip_data_timestamp_gap;
             }
@@ -85,7 +112,10 @@ impl VesselBuilder {
 
                 dca.set_stop_timestamp(end);
 
-                base.hauls.push(HaulConstructor { dca });
+                base.hauls.push(HaulConstructor {
+                    dca,
+                    cycle: base.cycle,
+                });
 
                 base.global_data_timestamp_counter = end + base.data_timestamp_gap;
             }
@@ -123,7 +153,10 @@ impl VesselBuilder {
                 *message_number += 1;
                 base.ers_message_id_counter += 1;
 
-                base.por.push(PorConstructor { por });
+                base.por.push(PorConstructor {
+                    por,
+                    cycle: base.cycle,
+                });
                 base.global_data_timestamp_counter += base.data_timestamp_gap;
             }
         }
@@ -158,7 +191,10 @@ impl VesselBuilder {
                 *message_number += 1;
                 base.ers_message_id_counter += 1;
 
-                base.dep.push(DepConstructor { dep });
+                base.dep.push(DepConstructor {
+                    dep,
+                    cycle: base.cycle,
+                });
                 base.global_data_timestamp_counter += base.data_timestamp_gap;
             }
         }
@@ -190,7 +226,10 @@ impl VesselBuilder {
 
                 base.ers_message_id_counter += 1;
 
-                base.tra.push(TraConstructor { tra });
+                base.tra.push(TraConstructor {
+                    tra,
+                    cycle: base.cycle,
+                });
                 base.global_data_timestamp_counter += base.data_timestamp_gap;
             }
         }
@@ -222,7 +261,10 @@ impl VesselBuilder {
                 landing.landing_time = ts.time();
                 landing.landing_month = LandingMonth::from(ts);
 
-                base.landings.push(landing);
+                base.landings.push(LandingConstructor {
+                    cycle: base.cycle,
+                    landing,
+                });
 
                 base.landing_id_counter += 1;
 
@@ -255,11 +297,15 @@ impl VesselBuilder {
                     Some(vessel.fiskeridir.id),
                 );
 
+                // FIXME: Why are we creating 4 landings here?
                 start_landing.landing_timestamp = start;
                 start_landing.landing_time = start.time();
                 start_landing.landing_month = LandingMonth::from(start);
 
-                base.landings.push(start_landing.clone());
+                base.landings.push(LandingConstructor {
+                    landing: start_landing.clone(),
+                    cycle: base.cycle,
+                });
 
                 base.landing_id_counter += 1;
 
@@ -272,7 +318,10 @@ impl VesselBuilder {
                 end_landing.landing_time = end.time();
                 end_landing.landing_month = LandingMonth::from(end);
 
-                base.landings.push(end_landing.clone());
+                base.landings.push(LandingConstructor {
+                    landing: end_landing.clone(),
+                    cycle: base.cycle,
+                });
 
                 base.landing_id_counter += 1;
 
@@ -286,6 +335,7 @@ impl VesselBuilder {
                     vessel_call_sign: vessel.fiskeridir.radio_call_sign.clone(),
                     precision_id: None,
                     mmsi: Some(vessel.ais.mmsi),
+                    cycle: base.cycle,
                 });
 
                 base.global_data_timestamp_counter = end + base.data_timestamp_gap;
@@ -343,6 +393,7 @@ impl VesselBuilder {
                     vessel_call_sign: vessel.fiskeridir.radio_call_sign.clone(),
                     precision_id: None,
                     mmsi: Some(vessel.ais.mmsi),
+                    cycle: base.cycle,
                 });
                 base.global_data_timestamp_counter = end + base.data_timestamp_gap;
             }
@@ -375,7 +426,10 @@ impl VesselBuilder {
                 let position =
                     fiskeridir_rs::Vms::test_default(rand::random(), call_sign.clone(), timestamp);
                 base.global_data_timestamp_counter += base.data_timestamp_gap;
-                positions.push(VmsPositionConstructor { position });
+                positions.push(VmsPositionConstructor {
+                    position,
+                    cycle: base.cycle,
+                });
             }
 
             base.vms_positions.append(&mut positions)
@@ -416,7 +470,11 @@ impl VesselBuilder {
                     AisOrVmsPosition::Ais(NewAisPosition::test_default(vessel.ais.mmsi, timestamp))
                 };
                 base.global_data_timestamp_counter += base.data_timestamp_gap;
-                positions.push(AisVmsPositionConstructor { index, position });
+                positions.push(AisVmsPositionConstructor {
+                    index,
+                    position,
+                    cycle: base.cycle,
+                });
                 index += 1;
             }
 
@@ -447,7 +505,10 @@ impl VesselBuilder {
                 timestamps.push(timestamp);
                 let position = NewAisPosition::test_default(vessel.ais.mmsi, timestamp);
                 base.global_data_timestamp_counter += base.data_timestamp_gap;
-                positions.push(AisPositionConstructor { position });
+                positions.push(AisPositionConstructor {
+                    position,
+                    cycle: base.cycle,
+                });
             }
 
             base.ais_positions.append(&mut positions);

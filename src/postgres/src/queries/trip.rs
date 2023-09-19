@@ -1,7 +1,8 @@
 use crate::{
     error::PostgresError,
     models::{
-        CurrentTrip, InsertedTrip, Trip, TripAssemblerConflict, TripCalculationTimer, TripDetailed,
+        CurrentTrip, NewTripReturning, Trip, TripAssemblerConflict, TripCalculationTimer,
+        TripDetailed,
     },
     PostgresAdapter,
 };
@@ -12,20 +13,175 @@ use fiskeridir_rs::{Gear, LandingId};
 use futures::Stream;
 use futures::TryStreamExt;
 use kyogre_core::{
-    FiskeridirVesselId, HaulId, NewTrip, Ordering, Pagination, PrecisionOutcome, PrecisionStatus,
-    TripAssemblerId, TripDistanceOutput, TripPrecisionUpdate, TripSorting, Trips,
-    TripsConflictStrategy, TripsQuery, VesselEventType,
+    FiskeridirVesselId, HaulId, Ordering, Pagination, PrecisionOutcome, PrecisionStatus,
+    TripAssemblerId, TripSet, TripSorting, TripUpdate, Trips, TripsConflictStrategy, TripsQuery,
+    VesselEventType,
 };
 use num_traits::{FromPrimitive, ToPrimitive};
 use sqlx::postgres::types::PgRange;
+use std::collections::HashSet;
+use unnest_insert::UnnestInsertReturning;
 
-use super::float_to_decimal;
-
-const TRIP_REFRESH_BATCH_SIZE: i64 = 10000;
+use super::opt_float_to_decimal;
 
 impl PostgresAdapter {
+    pub(crate) async fn clear_trip_precision_impl(
+        &self,
+        vessel_id: FiskeridirVesselId,
+    ) -> Result<(), PostgresError> {
+        sqlx::query!(
+            r#"
+UPDATE trips
+SET
+    start_precision_id = NULL,
+    start_precision_direction = NULL,
+    end_precision_id = NULL,
+    end_precision_direction = NULL,
+    period_precision = NULL,
+    trip_precision_status_id = $1
+WHERE
+    fiskeridir_vessel_id = $2
+            "#,
+            PrecisionStatus::Unprocessed.name(),
+            vessel_id.0
+        )
+        .execute(&self.pool)
+        .await
+        .change_context(PostgresError::Query)
+        .map(|_| ())
+    }
+    pub(crate) async fn clear_trip_distancing_impl(
+        &self,
+        vessel_id: FiskeridirVesselId,
+    ) -> Result<(), PostgresError> {
+        sqlx::query!(
+            r#"
+UPDATE trips
+SET
+    distancer_id = NULL,
+    distance = NULL
+WHERE
+    fiskeridir_vessel_id = $1
+            "#,
+            vessel_id.0
+        )
+        .execute(&self.pool)
+        .await
+        .change_context(PostgresError::Query)
+        .map(|_| ())
+    }
+    pub(crate) async fn update_trip_impl(&self, update: TripUpdate) -> Result<(), PostgresError> {
+        let mut tx = self.begin().await?;
+        if let Some(output) = update.distance {
+            let distance = opt_float_to_decimal(output.distance)
+                .change_context(PostgresError::DataConversion)?;
+            sqlx::query!(
+                r#"
+UPDATE trips
+SET
+    distancer_id = $1,
+    distance = $2
+WHERE
+    trip_id = $3
+            "#,
+                output.distancer_id as i32,
+                distance,
+                update.trip_id.0,
+            )
+            .execute(&mut *tx)
+            .await
+            .change_context(PostgresError::Query)?;
+        }
+        if let Some(precision) = update.precision {
+            let (
+                start_precision_id,
+                start_precision_direction,
+                end_precision_id,
+                end_precision_direction,
+                period_precision,
+                trip_precision_status_id,
+            ) = match precision {
+                PrecisionOutcome::Success {
+                    new_period,
+                    start_precision,
+                    end_precision,
+                } => (
+                    start_precision.as_ref().map(|v| v.id as i32),
+                    start_precision
+                        .as_ref()
+                        .map(|v| v.direction.name().to_string()),
+                    end_precision.as_ref().map(|v| v.id as i32),
+                    end_precision
+                        .as_ref()
+                        .map(|v| v.direction.name().to_string()),
+                    Some(PgRange::from(&new_period)),
+                    PrecisionStatus::Successful.name(),
+                ),
+                PrecisionOutcome::Failed => (
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    PrecisionStatus::Attempted.name(),
+                ),
+            };
+
+            sqlx::query!(
+                r#"
+UPDATE trips
+SET
+    start_precision_id = $1,
+    start_precision_direction = $2,
+    end_precision_id = $3,
+    end_precision_direction = $4,
+    period_precision = $5,
+    trip_precision_status_id = $6
+WHERE
+    trip_id = $7
+            "#,
+                start_precision_id,
+                start_precision_direction,
+                end_precision_id,
+                end_precision_direction,
+                period_precision,
+                trip_precision_status_id,
+                update.trip_id.0,
+            )
+            .execute(&mut *tx)
+            .await
+            .change_context(PostgresError::Query)?;
+        }
+
+        let mut trip_ids = HashSet::new();
+        trip_ids.insert(update.trip_id.0);
+
+        self.add_trips_detailed(trip_ids, &mut tx).await?;
+
+        tx.commit()
+            .await
+            .change_context(PostgresError::Transaction)?;
+
+        Ok(())
+    }
+
+    pub(crate) async fn queue_trip_reset_impl(&self) -> Result<(), PostgresError> {
+        sqlx::query!(
+            r#"
+UPDATE trip_calculation_timers
+SET
+    queued_reset = TRUE
+            "#
+        )
+        .execute(&self.pool)
+        .await
+        .change_context(PostgresError::Query)
+        .map(|_| ())
+    }
+
     pub(crate) async fn trips_refresh_boundary<'a>(
         &self,
+        vessel_id: FiskeridirVesselId,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
     ) -> Result<Option<DateTime<Utc>>, PostgresError> {
         Ok(sqlx::query!(
@@ -34,16 +190,20 @@ SELECT
     refresh_boundary AS "refresh_boundary?"
 FROM
     trips_refresh_boundary
+WHERE
+    fiskeridir_vessel_id = $1
             "#,
+            vessel_id.0
         )
-        .fetch_one(&mut **tx)
+        .fetch_optional(&mut **tx)
         .await
         .change_context(PostgresError::Query)?
-        .refresh_boundary)
+        .and_then(|v| v.refresh_boundary))
     }
 
     pub(crate) async fn reset_trips_refresh_boundary<'a>(
         &self,
+        vessel_id: FiskeridirVesselId,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
     ) -> Result<(), PostgresError> {
         sqlx::query!(
@@ -51,7 +211,10 @@ FROM
 UPDATE trips_refresh_boundary
 SET
     refresh_boundary = NULL
+WHERE
+    fiskeridir_vessel_id = $1
             "#,
+            vessel_id.0
         )
         .execute(&mut **tx)
         .await
@@ -59,80 +222,20 @@ SET
 
         Ok(())
     }
-    pub(crate) async fn update_trips_refresh_boundary<'a>(
-        &'a self,
-        timestamp: DateTime<Utc>,
+
+    pub(crate) async fn add_trips_detailed<'a>(
+        &self,
+        trip_ids: HashSet<i64>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
     ) -> Result<(), PostgresError> {
+        let trip_ids: Vec<i64> = trip_ids.into_iter().collect();
         sqlx::query!(
             r#"
-INSERT INTO
-    trips_refresh_boundary (refresh_boundary)
-VALUES
-    ($1)
-ON CONFLICT (onerow_id) DO
-UPDATE
-SET
-    refresh_boundary = excluded.refresh_boundary
-WHERE
-    trips_refresh_boundary.refresh_boundary IS NULL
-    OR trips_refresh_boundary.refresh_boundary > excluded.refresh_boundary
-            "#,
-            timestamp
-        )
-        .execute(&mut **tx)
-        .await
-        .change_context(PostgresError::Query)?;
-
-        Ok(())
-    }
-    pub(crate) async fn refresh_trip_detailed(&self) -> Result<(), PostgresError> {
-        let mut tx = self.begin().await?;
-
-        let refresh_boundary = self.trips_refresh_boundary(&mut tx).await?;
-
-        if let Some(refresh_boundary) = refresh_boundary {
-            let mut current = 0;
-            loop {
-                let trip_ids: Vec<i64> = sqlx::query!(
-                    r#"
-SELECT
-    trip_id
-FROM
-    trips t
-WHERE
-    $1::TIMESTAMPTZ <@ t.period
-    OR LOWER(t.period) >= $1
-ORDER BY
-    trip_id
-LIMIT
-    $2
-OFFSET
-    $3
-                "#,
-                    refresh_boundary,
-                    TRIP_REFRESH_BATCH_SIZE,
-                    current,
-                )
-                .fetch_all(&mut *tx)
-                .await
-                .change_context(PostgresError::Query)?
-                .into_iter()
-                .map(|v| v.trip_id)
-                .collect();
-
-                if trip_ids.is_empty() {
-                    break;
-                }
-
-                current += TRIP_REFRESH_BATCH_SIZE;
-
-                sqlx::query!(
-                    r#"
 WITH
     everything AS (
         SELECT
             t.trip_id,
+            t.distance,
             t.fiskeridir_vessel_id AS t_fiskeridir_vessel_id,
             t.period AS trip_period,
             t.trip_assembler_id AS t_trip_assembler_id,
@@ -198,6 +301,7 @@ WITH
 INSERT INTO
     trips_detailed (
         trip_id,
+        distance,
         fiskeridir_vessel_id,
         fiskeridir_length_group_id,
         "period",
@@ -223,6 +327,7 @@ FROM
     (
         SELECT
             e.trip_id,
+            MAX(e.distance) AS distance,
             MAX(e.t_fiskeridir_vessel_id) AS fiskeridir_vessel_id,
             MAX(e.fiskeridir_length_group_id) AS fiskeridir_length_group_id,
             (ARRAY_AGG(e.trip_period)) [1] AS "period",
@@ -447,6 +552,7 @@ ON CONFLICT (trip_id) DO
 UPDATE
 SET
     trip_id = excluded.trip_id,
+    distance = excluded.distance,
     fiskeridir_vessel_id = excluded.fiskeridir_vessel_id,
     fiskeridir_length_group_id = excluded.fiskeridir_length_group_id,
     "period" = excluded."period",
@@ -466,20 +572,14 @@ SET
     landing_ids = excluded.landing_ids,
     hauls = excluded.hauls;
                 "#,
-                    &trip_ids
-                )
-                .execute(&mut *tx)
-                .await
-                .change_context(PostgresError::Query)?;
-            }
-
-            self.reset_trips_refresh_boundary(&mut tx).await?;
-        }
-
-        tx.commit().await.change_context(PostgresError::Query)?;
-
-        Ok(())
+            &trip_ids
+        )
+        .execute(&mut **tx)
+        .await
+        .change_context(PostgresError::Query)
+        .map(|_| ())
     }
+
     pub(crate) async fn sum_trip_time_impl(
         &self,
         id: FiskeridirVesselId,
@@ -594,7 +694,8 @@ SELECT
     CASE
         WHEN $1 THEN COALESCE(t.fishing_facilities, '[]')::TEXT
         ELSE '[]'
-    END AS "fishing_facilities!"
+    END AS "fishing_facilities!",
+    t.distance
 FROM
     trips_detailed AS t
 WHERE
@@ -712,7 +813,8 @@ SELECT
     CASE
         WHEN $5 THEN COALESCE(t.fishing_facilities, '[]')::TEXT
         ELSE '[]'
-    END AS "fishing_facilities!"
+    END AS "fishing_facilities!",
+    t.distance
 FROM
     trips_detailed AS t
 WHERE
@@ -772,7 +874,8 @@ SELECT
     CASE
         WHEN $1 THEN COALESCE(t.fishing_facilities, '[]')::TEXT
         ELSE '[]'
-    END AS "fishing_facilities!"
+    END AS "fishing_facilities!",
+    t.distance
 FROM
     trips_detailed t
 WHERE
@@ -817,7 +920,8 @@ SELECT
     CASE
         WHEN $1 THEN COALESCE(t.fishing_facilities, '[]')::TEXT
         ELSE '[]'
-    END AS "fishing_facilities!"
+    END AS "fishing_facilities!",
+    t.distance
 FROM
     trips_detailed t
 WHERE
@@ -1036,10 +1140,11 @@ LIMIT
         .change_context(PostgresError::Query)
     }
 
-    pub(crate) async fn trip_calculation_timers_impl(
+    pub(crate) async fn trip_calculation_timer_impl(
         &self,
+        vessel_id: FiskeridirVesselId,
         trip_assembler_id: TripAssemblerId,
-    ) -> Result<Vec<TripCalculationTimer>, PostgresError> {
+    ) -> Result<Option<TripCalculationTimer>, PostgresError> {
         sqlx::query_as!(
             TripCalculationTimer,
             r#"
@@ -1051,17 +1156,20 @@ FROM
     trip_calculation_timers
 WHERE
     trip_assembler_id = $1
+    AND fiskeridir_vessel_id = $2
             "#,
-            trip_assembler_id as i32
+            trip_assembler_id as i32,
+            vessel_id.0
         )
-        .fetch_all(&self.pool)
+        .fetch_optional(&self.pool)
         .await
         .change_context(PostgresError::Query)
     }
-    pub(crate) async fn trip_assembler_conflicts(
+    pub(crate) async fn trip_assembler_conflict(
         &self,
+        vessel_id: FiskeridirVesselId,
         trip_assembler_id: TripAssemblerId,
-    ) -> Result<Vec<TripAssemblerConflict>, PostgresError> {
+    ) -> Result<Option<TripAssemblerConflict>, PostgresError> {
         sqlx::query_as!(
             TripAssemblerConflict,
             r#"
@@ -1072,44 +1180,26 @@ FROM
     trip_assembler_conflicts
 WHERE
     trip_assembler_id = $1
+    AND fiskeridir_vessel_id = $2
             "#,
-            trip_assembler_id as i32
+            trip_assembler_id as i32,
+            vessel_id.0
         )
-        .fetch_all(&self.pool)
+        .fetch_optional(&self.pool)
         .await
         .change_context(PostgresError::Query)
     }
 
-    pub(crate) async fn add_trips_impl(
-        &self,
-        vessel_id: FiskeridirVesselId,
-        new_trip_calculation_time: DateTime<Utc>,
-        conflict_strategy: TripsConflictStrategy,
-        trips: Vec<NewTrip>,
-        trip_assembler_id: TripAssemblerId,
-    ) -> Result<(), PostgresError> {
-        let mut period = Vec::with_capacity(trips.len());
-        let mut landing_coverage = Vec::with_capacity(trips.len());
-        let mut start_port_id = Vec::with_capacity(trips.len());
-        let mut end_port_id = Vec::with_capacity(trips.len());
-        let mut trip_assembler_ids = Vec::with_capacity(trips.len());
-        let mut fiskeridir_vessel_ids = Vec::with_capacity(trips.len());
+    pub(crate) async fn add_trip_set_impl(&self, value: TripSet) -> Result<(), PostgresError> {
+        let earliest_trip_start = value.values[0].start();
+        let new_trips = value
+            .values
+            .into_iter()
+            .map(crate::models::NewTrip::try_from)
+            .collect::<Result<Vec<crate::models::NewTrip>, _>>()
+            .change_context(PostgresError::Query)?;
 
-        let earliest_trip_start = trips[0].period.start();
-        for t in trips {
-            period
-                .push(PgRange::try_from(&t.period).change_context(PostgresError::DataConversion)?);
-            landing_coverage.push(
-                PgRange::try_from(&t.landing_coverage)
-                    .change_context(PostgresError::DataConversion)?,
-            );
-            start_port_id.push(t.start_port_code);
-            end_port_id.push(t.end_port_code);
-            trip_assembler_ids.push(trip_assembler_id as i32);
-            fiskeridir_vessel_ids.push(vessel_id.0);
-        }
-
-        let earliest_trip_period = &period[0];
+        let earliest_trip_period = &new_trips[0].period;
 
         let mut tx = self.begin().await?;
 
@@ -1130,32 +1220,36 @@ SET
     timer = excluded.timer,
     queued_reset = excluded.queued_reset
             "#,
-            vessel_id.0,
-            trip_assembler_id as i32,
-            new_trip_calculation_time,
+            value.fiskeridir_vessel_id.0,
+            value.trip_assembler_id as i32,
+            value.new_trip_calculation_time,
             false
         )
         .execute(&mut *tx)
         .await
         .change_context(PostgresError::Query)?;
 
-        match conflict_strategy {
-            TripsConflictStrategy::Replace => sqlx::query!(
-                r#"
+        match value.conflict_strategy {
+            TripsConflictStrategy::Replace => {
+                let periods: Vec<PgRange<DateTime<Utc>>> =
+                    new_trips.iter().map(|v| v.period.clone()).collect();
+                sqlx::query!(
+                    r#"
 DELETE FROM trips
 WHERE
     period && ANY ($1)
     AND fiskeridir_vessel_id = $2
     AND trip_assembler_id = $3
             "#,
-                period,
-                vessel_id.0,
-                trip_assembler_id as i32,
-            )
-            .execute(&mut *tx)
-            .await
-            .change_context(PostgresError::Query)
-            .map(|_| ()),
+                    periods,
+                    value.fiskeridir_vessel_id.0,
+                    value.trip_assembler_id as i32,
+                )
+                .execute(&mut *tx)
+                .await
+                .change_context(PostgresError::Query)
+                .map(|_| ())
+            }
             TripsConflictStrategy::ReplaceAll => sqlx::query!(
                 r#"
 DELETE FROM trips
@@ -1163,8 +1257,8 @@ WHERE
     fiskeridir_vessel_id = $1
     AND trip_assembler_id = $2
             "#,
-                vessel_id.0,
-                trip_assembler_id as i32,
+                value.fiskeridir_vessel_id.0,
+                value.trip_assembler_id as i32,
             )
             .execute(&mut *tx)
             .await
@@ -1174,7 +1268,7 @@ WHERE
         }?;
 
         let start_of_prior_trip: Result<Option<Option<DateTime<Utc>>>, PostgresError> =
-            match trip_assembler_id {
+            match value.trip_assembler_id {
                 TripAssemblerId::Landings => Ok(None),
                 TripAssemblerId::Ers => Ok(sqlx::query!(
                     r#"
@@ -1198,7 +1292,7 @@ WHERE
 RETURNING
     LOWER(period) AS ts
             "#,
-                    vessel_id.0,
+                    value.fiskeridir_vessel_id.0,
                     earliest_trip_period,
                     earliest_trip_start,
                 )
@@ -1208,63 +1302,103 @@ RETURNING
                 .map(|v| v.ts)),
             };
 
-        let inserted = sqlx::query!(
-            r#"
-INSERT INTO
-    trips (
-        period,
-        landing_coverage,
-        start_port_id,
-        end_port_id,
-        trip_assembler_id,
-        fiskeridir_vessel_id
-    )
-SELECT
-    *
-FROM
-    UNNEST(
-        $1::tstzrange[],
-        $2::tstzrange[],
-        $3::VARCHAR[],
-        $4::VARCHAR[],
-        $5::INT[],
-        $6::BIGINT[]
-    )
-RETURNING
-    trip_id AS "trip_id!",
-    "period" AS "period!",
-    landing_coverage AS "landing_coverage!",
-    fiskeridir_vessel_id AS "fiskeridir_vessel_id!"
-            "#,
-            period,
-            landing_coverage,
-            start_port_id as _,
-            end_port_id as _,
-            &trip_assembler_ids,
-            &fiskeridir_vessel_ids,
-        )
-        .fetch_all(&mut *tx)
-        .await
-        .change_context(PostgresError::Query)?
-        .into_iter()
-        .map(|r| InsertedTrip {
-            trip_id: r.trip_id,
-            period: r.period,
-            landing_coverage: r.landing_coverage,
-            fiskeridir_vessel_id: r.fiskeridir_vessel_id,
-        })
-        .collect();
-
         let earliest = if let Some(start_of_prior_trip) = start_of_prior_trip?.flatten() {
             std::cmp::min(earliest_trip_start, start_of_prior_trip)
         } else {
             earliest_trip_start
         };
 
-        self.update_trips_refresh_boundary(earliest, &mut tx)
+        let inserted_trips = crate::models::NewTrip::unnest_insert_returning(new_trips, &mut *tx)
+            .await
+            .change_context(PostgresError::Query)?;
+
+        let mut trip_ids = inserted_trips
+            .iter()
+            .map(|v| v.trip_id)
+            .collect::<HashSet<i64>>();
+
+        self.connect_events_to_trips(inserted_trips, value.trip_assembler_id, &mut tx)
             .await?;
-        self.connect_events_to_trips(inserted, trip_assembler_id, &mut tx)
+
+        let boundary = self
+            .trips_refresh_boundary(value.fiskeridir_vessel_id, &mut tx)
             .await?;
+
+        let boundary = if let Some(boundary) = boundary {
+            if boundary < earliest {
+                boundary
+            } else {
+                earliest
+            }
+        } else {
+            earliest
+        };
+
+        let refresh_trip_ids = sqlx::query!(
+            r#"
+SELECT
+    trip_id
+FROM
+    trips t
+WHERE
+    t.fiskeridir_vessel_id = $1
+    AND LOWER(t.period) <= $2
+    OR t.period @> $2
+            "#,
+            value.fiskeridir_vessel_id.0,
+            boundary
+        )
+        .fetch_all(&mut *tx)
+        .await
+        .change_context(PostgresError::Query)?;
+        trip_ids.extend(refresh_trip_ids.into_iter().map(|v| v.trip_id));
+
+        self.add_trips_detailed(trip_ids, &mut tx).await?;
+
+        self.reset_trips_refresh_boundary(value.fiskeridir_vessel_id, &mut tx)
+            .await?;
+
+        tx.commit()
+            .await
+            .change_context(PostgresError::Transaction)?;
+
+        Ok(())
+    }
+
+    pub(crate) async fn refresh_detailed_trips_impl(
+        &self,
+        vessel_id: FiskeridirVesselId,
+    ) -> Result<(), PostgresError> {
+        let mut tx = self.begin().await?;
+
+        let boundary = self.trips_refresh_boundary(vessel_id, &mut tx).await?;
+
+        if let Some(boundary) = boundary {
+            let refresh_trip_ids = sqlx::query!(
+                r#"
+SELECT
+    trip_id
+FROM
+    trips t
+WHERE
+    t.fiskeridir_vessel_id = $1
+    AND LOWER(t.period) <= $2
+    OR t.period @> $2
+            "#,
+                vessel_id.0,
+                boundary
+            )
+            .fetch_all(&mut *tx)
+            .await
+            .change_context(PostgresError::Query)?;
+            self.add_trips_detailed(
+                refresh_trip_ids.into_iter().map(|v| v.trip_id).collect(),
+                &mut tx,
+            )
+            .await?;
+            self.reset_trips_refresh_boundary(vessel_id, &mut tx)
+                .await?;
+        }
 
         tx.commit()
             .await
@@ -1275,7 +1409,7 @@ RETURNING
 
     pub(crate) async fn connect_events_to_trips<'a>(
         &'a self,
-        trips: Vec<InsertedTrip>,
+        trips: Vec<NewTripReturning>,
         trip_assembler_id: TripAssemblerId,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
     ) -> Result<(), PostgresError> {
@@ -1368,7 +1502,9 @@ SELECT
     period_precision,
     landing_coverage,
     distance,
-    trip_assembler_id AS "trip_assembler_id!: TripAssemblerId"
+    trip_assembler_id AS "trip_assembler_id!: TripAssemblerId",
+    start_port_id,
+    end_port_id
 FROM
     trips
 WHERE
@@ -1401,7 +1537,9 @@ SELECT
     period_precision,
     landing_coverage,
     distance,
-    trip_assembler_id AS "trip_assembler_id!: TripAssemblerId"
+    trip_assembler_id AS "trip_assembler_id!: TripAssemblerId",
+    start_port_id,
+    end_port_id
 FROM
     trips
 WHERE
@@ -1419,119 +1557,10 @@ LIMIT
         .await
         .change_context(PostgresError::Query)
     }
-    pub(crate) async fn update_trip_precisions_impl(
-        &self,
-        updates: Vec<TripPrecisionUpdate>,
-    ) -> Result<(), PostgresError> {
-        let len = updates.len();
-        let mut trip_id = Vec::with_capacity(len);
-        let mut period_precision = Vec::with_capacity(len);
-        let mut trip_precision_status_id = Vec::with_capacity(len);
-        let mut start_precision_id = Vec::with_capacity(len);
-        let mut start_precision_direction = Vec::with_capacity(len);
-        let mut end_precision_id = Vec::with_capacity(len);
-        let mut end_precision_direction = Vec::with_capacity(len);
-
-        for u in updates {
-            trip_id.push(u.trip_id.0);
-            match u.outcome {
-                PrecisionOutcome::Success {
-                    new_period,
-                    start_precision,
-                    end_precision,
-                } => {
-                    let pg_range: PgRange<DateTime<Utc>> = PgRange {
-                        start: std::ops::Bound::Excluded(new_period.start()),
-                        end: std::ops::Bound::Included(new_period.end()),
-                    };
-                    trip_precision_status_id.push(PrecisionStatus::Successful.name().to_string());
-                    period_precision.push(Some(pg_range));
-                    start_precision_id.push(start_precision.as_ref().map(|v| v.id as i32));
-                    start_precision_direction.push(
-                        start_precision
-                            .as_ref()
-                            .map(|v| v.direction.name().to_string()),
-                    );
-                    end_precision_id.push(end_precision.as_ref().map(|v| v.id as i32));
-                    end_precision_direction
-                        .push(end_precision.map(|v| v.direction.name().to_string()));
-                }
-                PrecisionOutcome::Failed => {
-                    trip_precision_status_id.push(PrecisionStatus::Attempted.name().to_string());
-                    period_precision.push(None);
-                    start_precision_id.push(None);
-                    start_precision_direction.push(None);
-                    end_precision_id.push(None);
-                    end_precision_direction.push(None);
-                }
-            };
-        }
-
-        let mut tx = self.begin().await?;
-        let earliest_trip_timestamp = sqlx::query!(
-            r#"
-UPDATE trips
-SET
-    period_precision = u.period_precision,
-    trip_precision_status_id = u.precision_status,
-    start_precision_id = u.start_precision_id,
-    end_precision_id = u.end_precision_id,
-    start_precision_direction = u.start_precision_direction,
-    end_precision_direction = u.end_precision_direction
-FROM
-    UNNEST(
-        $1::BIGINT[],
-        $2::tstzrange[],
-        $3::VARCHAR[],
-        $4::INT[],
-        $5::INT[],
-        $6::VARCHAR[],
-        $7::VARCHAR[]
-    ) u (
-        trip_id,
-        period_precision,
-        precision_status,
-        start_precision_id,
-        end_precision_id,
-        start_precision_direction,
-        end_precision_direction
-    )
-WHERE
-    trips.trip_id = u.trip_id
-RETURNING
-    LOWER("period") AS ts
-            "#,
-            trip_id.as_slice(),
-            period_precision.as_slice() as _,
-            trip_precision_status_id.as_slice(),
-            start_precision_id.as_slice() as _,
-            end_precision_id.as_slice() as _,
-            start_precision_direction.as_slice() as _,
-            end_precision_direction.as_slice() as _,
-        )
-        .fetch_all(&mut *tx)
-        .await
-        .change_context(PostgresError::Query)?
-        .iter()
-        .flat_map(|v| v.ts)
-        .min();
-
-        if let Some(earliest_trip_timestamp) = earliest_trip_timestamp {
-            self.update_trips_refresh_boundary(earliest_trip_timestamp, &mut tx)
-                .await?;
-        }
-
-        tx.commit()
-            .await
-            .change_context(PostgresError::Transaction)?;
-
-        Ok(())
-    }
 
     pub(crate) async fn trips_without_precision_impl(
         &self,
         vessel_id: FiskeridirVesselId,
-        assembler_id: TripAssemblerId,
     ) -> Result<Vec<Trip>, PostgresError> {
         sqlx::query_as!(
             Trip,
@@ -1542,69 +1571,21 @@ SELECT
     period_precision,
     landing_coverage,
     distance,
-    trip_assembler_id AS "trip_assembler_id!: TripAssemblerId"
+    trip_assembler_id AS "trip_assembler_id!: TripAssemblerId",
+    start_port_id,
+    end_port_id
 FROM
     trips
 WHERE
     fiskeridir_vessel_id = $1
-    AND trip_assembler_id = $2
-    AND trip_precision_status_id = $3
+    AND trip_precision_status_id = $2
             "#,
             vessel_id.0,
-            assembler_id as i32,
             PrecisionStatus::Unprocessed.name()
         )
         .fetch_all(&self.pool)
         .await
         .change_context(PostgresError::Query)
-    }
-
-    pub(crate) async fn add_trip_distance_output(
-        &self,
-        values: Vec<TripDistanceOutput>,
-    ) -> Result<(), PostgresError> {
-        let len = values.len();
-
-        let mut trip_id = Vec::with_capacity(len);
-        let mut distance = Vec::with_capacity(len);
-        let mut distancer_id = Vec::with_capacity(len);
-
-        for v in values {
-            trip_id.push(v.trip_id.0);
-            distance.push(
-                v.distance
-                    .map(float_to_decimal)
-                    .transpose()
-                    .change_context(PostgresError::DataConversion)?,
-            );
-            distancer_id.push(v.distancer_id as i32);
-        }
-
-        sqlx::query_as!(
-            Trip,
-            r#"
-UPDATE trips t
-SET
-    distance = q.distance,
-    distancer_id = q.distancer_id
-FROM
-    (
-        SELECT
-            *
-        FROM
-            UNNEST($1::BIGINT[], $2::DECIMAL[], $3::INT[]) u (trip_id, distance, distancer_id)
-    ) q
-WHERE
-    t.trip_id = q.trip_id
-            "#,
-            trip_id.as_slice(),
-            distance.as_slice() as _,
-            distancer_id.as_slice(),
-        )
-        .execute(&self.pool)
-        .await
-        .change_context(PostgresError::Query)
-        .map(|_| ())
     }
 
     pub(crate) async fn trips_without_distance_impl(
@@ -1620,7 +1601,9 @@ SELECT
     period_precision,
     landing_coverage,
     distance,
-    trip_assembler_id AS "trip_assembler_id!: TripAssemblerId"
+    trip_assembler_id AS "trip_assembler_id!: TripAssemblerId",
+    start_port_id,
+    end_port_id
 FROM
     trips
 WHERE

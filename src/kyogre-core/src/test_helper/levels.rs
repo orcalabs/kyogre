@@ -2,7 +2,127 @@ use crate::*;
 use async_trait::async_trait;
 use test_helper::{ais::AisPositionBuilder, ais_vms::AisVmsPositionBuilder};
 
-use super::ais::AisPositionConstructor;
+use super::{
+    ais::{AisPositionConstructor, AisPositionTripBuilder},
+    ais_vms::{AisVmsPositionConstructor, AisVmsPositionTripBuilder},
+    cycle::Cycle,
+};
+
+pub trait Cycleable
+where
+    Self: Sized,
+{
+    type Constructor;
+    fn new_cycle(self) -> Self;
+    fn cycle(constructor: Self::Constructor) -> Cycle;
+}
+
+macro_rules! impl_cycleable {
+    ($type: ty, $constructor: ty, $($field_path:ident).+, $($cycle_path:ident).+) => {
+        impl Cycleable for $type {
+            type Constructor = $constructor;
+            fn new_cycle(mut self) -> Self {
+                self.$($field_path).+.cycle.increment();
+                self
+            }
+            fn cycle(constructor: Self::Constructor) -> Cycle {
+                constructor.$($cycle_path).+
+            }
+        }
+    };
+}
+
+impl_cycleable!(
+    OceanClimateHaulBuilder,
+    OceanClimateConstructor,
+    state.state.state,
+    cycle
+);
+impl_cycleable!(
+    AisVmsPositionTripBuilder,
+    AisVmsPositionConstructor,
+    state.state.state,
+    cycle
+);
+impl_cycleable!(
+    AisPositionTripBuilder,
+    AisPositionConstructor,
+    state.state.state,
+    cycle
+);
+impl_cycleable!(
+    VmsPositionTripBuilder,
+    VmsPositionConstructor,
+    state.state.state,
+    cycle
+);
+impl_cycleable!(TripBuilder, TripConstructor, state.state, cycle);
+impl_cycleable!(
+    AisVmsPositionBuilder,
+    AisVmsPositionConstructor,
+    state.state,
+    cycle
+);
+impl_cycleable!(PorVesselBuilder, PorConstructor, state.state, cycle);
+impl_cycleable!(DepVesselBuilder, DepConstructor, state.state, cycle);
+impl_cycleable!(TraVesselBuilder, TraConstructor, state.state, cycle);
+impl_cycleable!(TraTripBuilder, TraConstructor, state.state.state, cycle);
+impl_cycleable!(VesselBuilder, VesselContructor, state, cycle);
+impl_cycleable!(HaulBuilder, HaulConstructor, state, cycle);
+impl_cycleable!(HaulTripBuilder, HaulConstructor, state.state.state, cycle);
+impl_cycleable!(HaulVesselBuilder, HaulConstructor, state.state, cycle);
+impl_cycleable!(
+    VmsPositionBuilder,
+    VmsPositionConstructor,
+    state.state,
+    cycle
+);
+impl_cycleable!(
+    AisPositionBuilder,
+    AisPositionConstructor,
+    state.state,
+    cycle
+);
+impl_cycleable!(
+    ManualDeliveryPointsBuilder,
+    ManualDeliveryPointConstructor,
+    state,
+    cycle
+);
+impl_cycleable!(AquaCultureBuilder, AquaCultureConstructor, state, cycle);
+impl_cycleable!(MattilsynetBuilder, MattilsynetConstructor, state, cycle);
+impl_cycleable!(
+    FishingFacilityBuilder,
+    FishingFacilityConctructor,
+    state,
+    cycle
+);
+impl_cycleable!(
+    FishingFacilityVesselBuilder,
+    FishingFacilityConctructor,
+    state.state,
+    cycle
+);
+impl_cycleable!(
+    FishingFacilityTripBuilder,
+    FishingFacilityConctructor,
+    state.state.state,
+    cycle
+);
+impl_cycleable!(LandingBuilder, LandingConstructor, state, cycle);
+impl_cycleable!(LandingVesselBuilder, LandingConstructor, state.state, cycle);
+impl_cycleable!(
+    LandingTripBuilder,
+    LandingConstructor,
+    state.state.state,
+    cycle
+);
+impl_cycleable!(
+    WeatherHaulBuilder,
+    WeatherConstructor,
+    state.state.state,
+    cycle
+);
 
 pub trait Modifiable
 where
@@ -76,6 +196,21 @@ impl_modifiable!(
     state.manual_delivery_points
 );
 impl_modifiable!(
+    AisPositionTripBuilder,
+    AisPositionConstructor,
+    state.state.state.ais_positions
+);
+impl_modifiable!(
+    AisVmsPositionTripBuilder,
+    AisVmsPositionConstructor,
+    state.state.state.ais_vms_positions
+);
+impl_modifiable!(
+    VmsPositionTripBuilder,
+    VmsPositionConstructor,
+    state.state.state.vms_positions
+);
+impl_modifiable!(
     AquaCultureBuilder,
     AquaCultureConstructor,
     state.aqua_cultures
@@ -101,15 +236,15 @@ impl_modifiable!(
     FishingFacilityConctructor,
     state.state.state.fishing_facilities
 );
-impl_modifiable!(LandingBuilder, fiskeridir_rs::Landing, state.landings);
+impl_modifiable!(LandingBuilder, LandingConstructor, state.landings);
 impl_modifiable!(
     LandingVesselBuilder,
-    fiskeridir_rs::Landing,
+    LandingConstructor,
     state.state.landings
 );
 impl_modifiable!(
     LandingTripBuilder,
-    fiskeridir_rs::Landing,
+    LandingConstructor,
     state.state.state.landings
 );
 impl_modifiable!(PorVesselBuilder, PorConstructor, state.state.por);
@@ -199,6 +334,7 @@ where
     Self: Sized,
 {
     fn up(self) -> VesselBuilder;
+    fn base_ref(&mut self) -> &mut TestStateBuilder;
     fn base(self) -> TestStateBuilder;
     async fn build(self) -> TestState {
         self.base().build().await
@@ -243,6 +379,9 @@ macro_rules! impl_vessel_level {
             }
             fn base(self) -> TestStateBuilder {
                 self.state.state
+            }
+            fn base_ref(&mut self) -> &mut TestStateBuilder {
+                &mut self.state.state
             }
         }
     };
@@ -332,12 +471,21 @@ where
     fn landings(self, amount: usize) -> LandingTripBuilder {
         self.up().landings(amount)
     }
+    fn ais_positions(self, amount: usize) -> AisPositionTripBuilder {
+        self.up().ais_positions(amount)
+    }
+    fn vms_positions(self, amount: usize) -> VmsPositionTripBuilder {
+        self.up().vms_positions(amount)
+    }
+    fn ais_vms_positions(self, amount: usize) -> AisVmsPositionTripBuilder {
+        self.up().ais_vms_positions(amount)
+    }
     fn fishing_facilities(self, amount: usize) -> FishingFacilityTripBuilder {
         self.up().fishing_facilities(amount)
     }
 }
 
-macro_rules! impl_global_level {
+macro_rules! impl_trip_level {
     ($type: ty) => {
         impl TripLevel for $type {
             fn base(self) -> TestStateBuilder {
@@ -350,7 +498,10 @@ macro_rules! impl_global_level {
     };
 }
 
-impl_global_level!(HaulTripBuilder);
-impl_global_level!(TraTripBuilder);
-impl_global_level!(LandingTripBuilder);
-impl_global_level!(FishingFacilityTripBuilder);
+impl_trip_level!(HaulTripBuilder);
+impl_trip_level!(TraTripBuilder);
+impl_trip_level!(LandingTripBuilder);
+impl_trip_level!(FishingFacilityTripBuilder);
+impl_trip_level!(AisVmsPositionTripBuilder);
+impl_trip_level!(AisPositionTripBuilder);
+impl_trip_level!(VmsPositionTripBuilder);

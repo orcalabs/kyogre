@@ -1,6 +1,6 @@
 use super::helper::test;
 use actix_web::http::StatusCode;
-use chrono::{Datelike, Duration, TimeZone, Utc};
+use chrono::{Duration, TimeZone, Utc};
 use fiskeridir_rs::Gear;
 use kyogre_core::{levels::*, ScraperInboundPort, VesselEventType};
 use web_api::routes::v1::trip::{Trip, TripsParameters};
@@ -96,29 +96,10 @@ async fn test_trips_does_not_contain_duplicated_dca_events() {
 #[tokio::test]
 async fn test_vessel_events_connect_to_existing_trip() {
     test(|helper, builder| async move {
-        let start = Utc.timestamp_opt(100000, 0).unwrap();
-        let end = start + Duration::hours(1);
-
-        builder
+        let state = builder
             .vessels(1)
-            .modify(|v| {
-                v.fiskeridir.id = 1;
-            })
             .trips(1)
-            .modify(|v| {
-                v.trip_specification.set_start(start);
-                v.trip_specification.set_end(end);
-            })
-            .build()
-            .await;
-
-        let state = helper
-            .builder()
-            .await
-            .vessels(1)
-            .modify(|v| {
-                v.fiskeridir.id = 1;
-            })
+            .new_cycle()
             .hauls(2)
             .modify_idx(|idx, v| {
                 if idx == 0 {
@@ -126,26 +107,10 @@ async fn test_vessel_events_connect_to_existing_trip() {
                     v.dca.catch.species.species_fao_code = None;
                     v.dca.catch.species.living_weight = None;
                     v.dca.whale_catch_info.grenade_number = None;
-                    v.dca.set_start_timestamp(start + Duration::seconds(1));
-                    v.dca.set_stop_timestamp(start + Duration::seconds(2));
-                    v.dca
-                        .message_info
-                        .set_message_timestamp(start + Duration::seconds(1));
-                } else {
-                    v.dca.set_start_timestamp(start + Duration::seconds(3));
-                    v.dca.set_stop_timestamp(start + Duration::seconds(4));
-                    v.dca.message_info.set_message_timestamp(start);
                 }
             })
             .tra(1)
-            .modify(|v| {
-                let ts = start + Duration::seconds(1);
-                v.tra.message_info.set_message_timestamp(ts);
-                v.tra.reloading_date = Some(ts.date_naive());
-                v.tra.reloading_time = Some(ts.time());
-            })
             .landings(1)
-            .modify(|v| v.landing_timestamp = start + Duration::seconds(1))
             .build()
             .await;
 
@@ -158,8 +123,8 @@ async fn test_vessel_events_connect_to_existing_trip() {
         assert_eq!(trips[0].events.len(), 7);
         assert_eq!(trips[0].events[0].event_type, VesselEventType::ErsDep);
         assert_eq!(trips[0].events[1].event_type, VesselEventType::ErsDca);
-        assert_eq!(trips[0].events[2].event_type, VesselEventType::Haul);
-        assert_eq!(trips[0].events[3].event_type, VesselEventType::ErsDca);
+        assert_eq!(trips[0].events[2].event_type, VesselEventType::ErsDca);
+        assert_eq!(trips[0].events[3].event_type, VesselEventType::Haul);
         assert_eq!(trips[0].events[4].event_type, VesselEventType::ErsTra);
         assert_eq!(trips[0].events[5].event_type, VesselEventType::Landing);
         assert_eq!(trips[0].events[6].event_type, VesselEventType::ErsPor);
@@ -174,7 +139,7 @@ async fn test_inserting_same_landing_does_not_create_dangling_vessel_event() {
         let state = builder
             .vessels(1)
             .landings(1)
-            .modify(|l| l.document_info.version_number = 99)
+            .modify(|l| l.landing.document_info.version_number = 99)
             .build()
             .await;
 
@@ -183,13 +148,11 @@ async fn test_inserting_same_landing_does_not_create_dangling_vessel_event() {
             fiskeridir_rs::Landing::test_default(1, l.fiskeridir_vessel_id.map(|v| v.0));
         landing.id = l.landing_id.clone();
 
+        // We use test builder cycle as data year
         helper
             .db
             .db
-            .add_landings(
-                Box::new(vec![Ok(landing)].into_iter()),
-                l.landing_timestamp.year() as u32,
-            )
+            .add_landings(Box::new(vec![Ok(landing)].into_iter()), 1)
             .await
             .unwrap();
     })

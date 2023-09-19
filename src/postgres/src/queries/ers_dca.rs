@@ -1,4 +1,4 @@
-use std::{cmp::min, collections::HashSet};
+use std::collections::HashSet;
 
 use crate::{
     error::PostgresError,
@@ -6,7 +6,6 @@ use crate::{
     models::{NewErsDca, NewErsDcaBody, NewHerringPopulation},
     PostgresAdapter,
 };
-use chrono::{DateTime, Utc};
 use error_stack::{Result, ResultExt};
 use futures::TryStreamExt;
 use kyogre_core::VesselEventType;
@@ -24,7 +23,6 @@ impl PostgresAdapter {
     ) -> Result<(), PostgresError> {
         let mut tx = self.begin().await?;
 
-        let mut earliest_dca = Utc::now();
         let mut inserted_message_ids = HashSet::new();
         let mut vessel_event_ids = Vec::new();
 
@@ -40,7 +38,6 @@ impl PostgresAdapter {
                         let set = ErsDcaSet::new(chunk.drain(0..))?;
                         self.add_ers_dca_set(
                             set,
-                            &mut earliest_dca,
                             &mut inserted_message_ids,
                             &mut vessel_event_ids,
                             &mut tx,
@@ -54,7 +51,6 @@ impl PostgresAdapter {
             let set = ErsDcaSet::new(chunk.drain(0..))?;
             self.add_ers_dca_set(
                 set,
-                &mut earliest_dca,
                 &mut inserted_message_ids,
                 &mut vessel_event_ids,
                 &mut tx,
@@ -70,36 +66,17 @@ impl PostgresAdapter {
         self.add_hauls(&message_ids, &mut tx).await?;
         self.add_hauls_matrix(&message_ids, &mut tx).await?;
 
-        self.update_trips_refresh_boundary(earliest_dca, &mut tx)
-            .await?;
-
         tx.commit().await.change_context(PostgresError::Transaction)
     }
 
     pub(crate) async fn add_ers_dca_set<'a>(
         &'a self,
         set: ErsDcaSet,
-        earliest_dca: &mut DateTime<Utc>,
         inserted_message_ids: &mut HashSet<i64>,
         vessel_event_ids: &mut Vec<i64>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
     ) -> Result<(), PostgresError> {
         let prepared_set = set.prepare();
-
-        if let Some(ts) = prepared_set
-            .ers_dca
-            .iter()
-            .map(|v| v.message_timestamp)
-            .chain(
-                prepared_set
-                    .ers_dca_bodies
-                    .iter()
-                    .filter_map(|v| v.start_timestamp),
-            )
-            .min()
-        {
-            *earliest_dca = min(*earliest_dca, ts);
-        }
 
         self.add_ers_message_types(prepared_set.ers_message_types, tx)
             .await?;

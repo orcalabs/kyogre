@@ -1,24 +1,70 @@
 use dockertest::{DockerTest, Source, StartPolicy, StaticManagementPolicy};
 use engine::*;
 use futures::Future;
-use kyogre_core::VerificationOutbound;
-use orca_core::{
-    compositions::postgres_composition, Environment, LogLevel, PsqlLogStatements, PsqlSettings,
+use kyogre_core::{
+    FisheryEngine, HaulDistributor, ScrapeState, SharedState, Step, TestStateBuilder,
+    TripAssembler, TripDistancer, VerificationOutbound, VesselBenchmark,
 };
+use orca_core::{compositions::postgres_composition, PsqlLogStatements, PsqlSettings};
 use postgres::{PostgresAdapter, TestDb};
 use rand::random;
 use std::panic;
 use std::sync::Once;
 use tracing_subscriber::FmtSubscriber;
+use vessel_benchmark::WeightPerHour;
 
 static TRACING: Once = Once::new();
 static DATABASE_PASSWORD: &str = "test123";
 
 pub struct TestHelper {
     pub db: TestDb,
+    db_settings: PsqlSettings,
 }
 
 impl TestHelper {
+    pub async fn builder(&self) -> TestStateBuilder {
+        let transition_log = Box::new(
+            machine::PostgresAdapter::new(&self.db_settings)
+                .await
+                .unwrap(),
+        );
+        let db = Box::new(self.adapter().clone());
+        let trip_assemblers = vec![
+            Box::<LandingTripAssembler>::default() as Box<dyn TripAssembler>,
+            Box::<ErsTripAssembler>::default() as Box<dyn TripAssembler>,
+        ];
+        let benchmarks = vec![Box::<WeightPerHour>::default() as Box<dyn VesselBenchmark>];
+        let haul_distributors =
+            vec![Box::<haul_distributor::AisVms>::default() as Box<dyn HaulDistributor>];
+        let trip_distancer = Box::<AisVms>::default() as Box<dyn TripDistancer>;
+        let shared_state = SharedState::new(
+            db.clone(),
+            db.clone(),
+            db.clone(),
+            db.clone(),
+            db.clone(),
+            db.clone(),
+            db.clone(),
+            db.clone(),
+            db.clone(),
+            db.clone(),
+            db.clone(),
+            db,
+            None,
+            trip_assemblers,
+            benchmarks,
+            haul_distributors,
+            trip_distancer,
+        );
+        let step = Step::initial(ScrapeState, shared_state, transition_log);
+        let engine = FisheryEngine::Scrape(step);
+
+        TestStateBuilder::new(
+            Box::new(self.adapter().clone()),
+            Box::new(self.adapter().clone()),
+            engine,
+        )
+    }
     pub fn adapter(&self) -> &PostgresAdapter {
         &self.db.db
     }
@@ -26,14 +72,14 @@ impl TestHelper {
 
 pub async fn test<T, Fut>(test: T)
 where
-    T: FnOnce(TestHelper, App) -> Fut + panic::UnwindSafe + Send + Sync + 'static,
+    T: FnOnce(TestHelper, TestStateBuilder) -> Fut + panic::UnwindSafe + Send + Sync + 'static,
     Fut: Future<Output = ()> + Send + 'static,
 {
     let mut docker_test = DockerTest::new().with_default_source(Source::DockerHub);
     TRACING.call_once(|| {
         tracing::subscriber::set_global_default(
             FmtSubscriber::builder()
-                .with_max_level(tracing::Level::INFO)
+                .with_max_level(tracing::Level::ERROR)
                 .finish(),
         )
         .unwrap();
@@ -51,8 +97,10 @@ where
     let db_name = random::<u32>().to_string();
 
     postgres.static_container(StaticManagementPolicy::Dynamic);
+    postgres.port_map(5432, 5400);
 
     docker_test.add_composition(postgres);
+    std::env::set_var("APP_ENVIRONMENT", "TEST");
 
     docker_test
         .run_async(|ops| async move {
@@ -76,22 +124,16 @@ where
             test_db.create_test_database_from_template(&db_name).await;
 
             db_settings.db_name = Some(db_name.clone());
-            let settings = Settings {
-                log_level: LogLevel::Debug,
-                telemetry: None,
-                postgres: db_settings.clone(),
-                environment: Environment::Test,
-                honeycomb: None,
-                scraper: scraper::Config::default(),
-                single_state_run: None,
-            };
 
             let adapter = PostgresAdapter::new(&db_settings).await.unwrap();
             let db = TestDb {
                 db: adapter.clone(),
             };
 
-            test(TestHelper { db }, App::build(&settings).await).await;
+            let helper = TestHelper { db, db_settings };
+            let builder = helper.builder().await;
+
+            test(helper, builder).await;
 
             adapter.verify_database().await.unwrap();
 
