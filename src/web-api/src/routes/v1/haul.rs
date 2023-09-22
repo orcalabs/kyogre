@@ -196,6 +196,8 @@ pub struct Haul {
     pub vessel_name_ers: Option<String>,
     #[serde(flatten)]
     pub weather: HaulWeather,
+    #[serde(flatten)]
+    pub ocean_climate: HaulOceanClimate,
     pub catches: Vec<HaulCatch>,
     pub whale_catches: Vec<WhaleCatch>,
 }
@@ -244,6 +246,17 @@ pub struct HaulWeather {
     pub cloud_area_fraction: Option<f64>,
 }
 
+#[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct HaulOceanClimate {
+    pub water_speed: Option<f64>,
+    pub water_direction: Option<f64>,
+    pub salinity: Option<f64>,
+    pub water_temperature: Option<f64>,
+    pub ocean_climate_depth: Option<f64>,
+    pub sea_floor_depth: Option<f64>,
+}
+
 impl From<kyogre_core::HaulsMatrix> for HaulsMatrix {
     fn from(v: kyogre_core::HaulsMatrix) -> Self {
         HaulsMatrix {
@@ -284,6 +297,7 @@ impl From<kyogre_core::Haul> for Haul {
             vessel_name: v.vessel_name,
             vessel_name_ers: v.vessel_name_ers,
             weather: v.weather.into(),
+            ocean_climate: v.ocean_climate.into(),
             catches: v.catches.into_iter().map(HaulCatch::from).collect(),
             whale_catches: v.whale_catches.into_iter().map(WhaleCatch::from).collect(),
         }
@@ -300,6 +314,19 @@ impl From<kyogre_core::HaulWeather> for HaulWeather {
             air_pressure_at_sea_level: v.air_pressure_at_sea_level,
             precipitation_amount: v.precipitation_amount,
             cloud_area_fraction: v.cloud_area_fraction,
+        }
+    }
+}
+
+impl From<kyogre_core::HaulOceanClimate> for HaulOceanClimate {
+    fn from(v: kyogre_core::HaulOceanClimate) -> Self {
+        Self {
+            water_speed: v.water_speed,
+            water_direction: v.water_direction,
+            salinity: v.salinity,
+            water_temperature: v.water_temperature,
+            ocean_climate_depth: v.ocean_climate_depth,
+            sea_floor_depth: v.sea_floor_depth,
         }
     }
 }

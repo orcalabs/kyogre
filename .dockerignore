@@ -4,3 +4,5 @@
 **/target
 !scripts/python/weather/main.py
 !scripts/python/weather/requirements.txt
+!scripts/python/ocean_climate/main.py
+!scripts/python/ocean_climate/requirements.txt

@@ -93,6 +93,7 @@ impl Database for PostgresAdapter {}
             v1::haul::HaulCatch,
             v1::haul::WhaleCatch,
             v1::haul::HaulWeather,
+            v1::haul::HaulOceanClimate,
             v1::trip::Trip,
             v1::trip::CurrentTrip,
             v1::trip::VesselEvent,

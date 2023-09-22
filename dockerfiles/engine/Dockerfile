@@ -42,8 +42,11 @@ RUN apt update -y && \
     python3.9 \
     python3-pip
 
-COPY scripts/python/weather/requirements.txt requirements.txt
-RUN pip install -r requirements.txt
+COPY scripts/python/weather/requirements.txt weather_requirements.txt
+COPY scripts/python/ocean_climate/requirements.txt ocean_requirements.txt
+RUN pip install \
+    -r weather_requirements.txt \
+    -r ocean_requirements.txt
 
 COPY --from=builder /app/src/target/release/engine .
 

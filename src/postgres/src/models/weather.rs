@@ -3,6 +3,7 @@ use chrono::{DateTime, Utc};
 use error_stack::{bail, report, Report, ResultExt};
 use geo_types::geometry::Geometry;
 use geozero::wkb;
+use kyogre_core::WeatherLocationId;
 use unnest_insert::UnnestInsert;
 
 use crate::{
@@ -117,7 +118,7 @@ impl TryFrom<Weather> for kyogre_core::Weather {
                 .change_context(PostgresError::DataConversion)?,
             cloud_area_fraction: opt_decimal_to_float(v.cloud_area_fraction)
                 .change_context(PostgresError::DataConversion)?,
-            weather_location_id: v.weather_location_id,
+            weather_location_id: WeatherLocationId(v.weather_location_id),
         })
     }
 }
@@ -137,7 +138,7 @@ impl TryFrom<WeatherLocation> for kyogre_core::WeatherLocation {
         };
 
         Ok(Self {
-            id: v.weather_location_id,
+            id: WeatherLocationId(v.weather_location_id),
             polygon,
         })
     }

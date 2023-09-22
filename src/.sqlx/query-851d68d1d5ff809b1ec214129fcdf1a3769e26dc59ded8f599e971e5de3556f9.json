@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT\n    h.haul_id,\n    h.ers_activity_id,\n    h.duration,\n    h.haul_distance,\n    h.catch_location_start,\n    h.catch_locations,\n    h.ocean_depth_end,\n    h.ocean_depth_start,\n    h.quota_type_id,\n    h.start_latitude,\n    h.start_longitude,\n    h.start_timestamp,\n    h.stop_timestamp,\n    h.stop_latitude,\n    h.stop_longitude,\n    h.total_living_weight,\n    h.gear_id AS \"gear_id!: Gear\",\n    h.gear_group_id AS \"gear_group_id!: GearGroup\",\n    h.fiskeridir_vessel_id,\n    h.vessel_call_sign,\n    h.vessel_call_sign_ers,\n    h.vessel_length,\n    h.vessel_length_group AS \"vessel_length_group!: VesselLengthGroup\",\n    h.vessel_name,\n    h.vessel_name_ers,\n    h.wind_speed_10m,\n    h.wind_direction_10m,\n    h.air_temperature_2m,\n    h.relative_humidity_2m,\n    h.air_pressure_at_sea_level,\n    h.precipitation_amount,\n    h.cloud_area_fraction,\n    h.catches::TEXT AS \"catches!\",\n    h.whale_catches::TEXT AS \"whale_catches!\"\nFROM\n    hauls h\nWHERE\n    h.fiskeridir_vessel_id = $1\n    AND h.message_id = $2\n            ",
+  "query": "\nSELECT\n    h.haul_id,\n    h.ers_activity_id,\n    h.duration,\n    h.haul_distance,\n    h.catch_location_start,\n    h.catch_locations,\n    h.ocean_depth_end,\n    h.ocean_depth_start,\n    h.quota_type_id,\n    h.start_latitude,\n    h.start_longitude,\n    h.start_timestamp,\n    h.stop_timestamp,\n    h.stop_latitude,\n    h.stop_longitude,\n    h.total_living_weight,\n    h.gear_id AS \"gear_id!: Gear\",\n    h.gear_group_id AS \"gear_group_id!: GearGroup\",\n    h.fiskeridir_vessel_id,\n    h.vessel_call_sign,\n    h.vessel_call_sign_ers,\n    h.vessel_length,\n    h.vessel_length_group AS \"vessel_length_group!: VesselLengthGroup\",\n    h.vessel_name,\n    h.vessel_name_ers,\n    h.wind_speed_10m,\n    h.wind_direction_10m,\n    h.air_temperature_2m,\n    h.relative_humidity_2m,\n    h.air_pressure_at_sea_level,\n    h.precipitation_amount,\n    h.cloud_area_fraction,\n    h.water_speed,\n    h.water_direction,\n    h.salinity,\n    h.water_temperature,\n    h.ocean_climate_depth,\n    h.sea_floor_depth,\n    h.catches::TEXT AS \"catches!\",\n    h.whale_catches::TEXT AS \"whale_catches!\"\nFROM\n    hauls h\nWHERE\n    h.fiskeridir_vessel_id = $1\n    AND h.message_id = $2\n            ",
   "describe": {
     "columns": [
       {
@@ -165,11 +165,41 @@
       },
       {
         "ordinal": 32,
+        "name": "water_speed",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 33,
+        "name": "water_direction",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 34,
+        "name": "salinity",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 35,
+        "name": "water_temperature",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 36,
+        "name": "ocean_climate_depth",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 37,
+        "name": "sea_floor_depth",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 38,
         "name": "catches!",
         "type_info": "Text"
       },
       {
-        "ordinal": 33,
+        "ordinal": 39,
         "name": "whale_catches!",
         "type_info": "Text"
       }
@@ -213,9 +243,15 @@
       true,
       true,
       true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
       null,
       null
     ]
   },
-  "hash": "6d61f8b7e45c69ef3cfa22c3c482d3c41dcdede096f72ba0c290c32b5ed86f2a"
+  "hash": "851d68d1d5ff809b1ec214129fcdf1a3769e26dc59ded8f599e971e5de3556f9"
 }

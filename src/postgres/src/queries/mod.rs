@@ -24,6 +24,7 @@ pub mod haul;
 pub mod landing;
 pub mod landing_matrix;
 pub mod norwegian_land;
+pub mod ocean_climate;
 pub mod port;
 pub mod species;
 pub mod trip;

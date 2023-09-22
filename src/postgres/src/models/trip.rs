@@ -1,4 +1,4 @@
-use super::{FishingFacility, HaulCatch, HaulWeather, WhaleCatch};
+use super::{FishingFacility, HaulCatch, HaulOceanClimate, HaulWeather, WhaleCatch};
 use crate::{error::PostgresError, queries::decimal_to_float};
 use bigdecimal::BigDecimal;
 use chrono::{DateTime, Utc};
@@ -99,6 +99,12 @@ struct TripHaul {
     air_pressure_at_sea_level: Option<BigDecimal>,
     precipitation_amount: Option<BigDecimal>,
     cloud_area_fraction: Option<BigDecimal>,
+    water_speed: Option<BigDecimal>,
+    water_direction: Option<BigDecimal>,
+    salinity: Option<BigDecimal>,
+    water_temperature: Option<BigDecimal>,
+    ocean_climate_depth: Option<BigDecimal>,
+    sea_floor_depth: Option<BigDecimal>,
     catches: Vec<HaulCatch>,
     whale_catches: Vec<WhaleCatch>,
 }
@@ -377,6 +383,15 @@ impl TryFrom<TripHaul> for kyogre_core::Haul {
                 air_pressure_at_sea_level: v.air_pressure_at_sea_level,
                 precipitation_amount: v.precipitation_amount,
                 cloud_area_fraction: v.cloud_area_fraction,
+            }
+            .try_into()?,
+            ocean_climate: HaulOceanClimate {
+                water_speed: v.water_speed,
+                water_direction: v.water_direction,
+                salinity: v.salinity,
+                water_temperature: v.water_temperature,
+                ocean_climate_depth: v.ocean_climate_depth,
+                sea_floor_depth: v.sea_floor_depth,
             }
             .try_into()?,
             catches: v
