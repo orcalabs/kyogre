@@ -613,6 +613,10 @@ impl WebApiOutboundPort for PostgresAdapter {
         let stream = self.weather_impl(query).change_context(QueryError)?;
         Ok(convert_stream(stream).boxed())
     }
+
+    fn benchmark(&self) -> PinBoxStream<'_,Benchmark,QueryError>{
+        convert_stream(self.benchmark_impl()).boxed()
+    }
 }
 
 #[async_trait]

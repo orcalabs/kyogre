@@ -11,3 +11,4 @@ pub mod user;
 pub mod vessel;
 pub mod vms;
 pub mod weather;
+pub mod benchmark;

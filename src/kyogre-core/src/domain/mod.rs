@@ -15,6 +15,7 @@ mod user;
 mod vessels;
 mod vms;
 mod weather;
+mod benchmark;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Coordinates {
@@ -41,3 +42,4 @@ pub use user::*;
 pub use vessels::*;
 pub use vms::*;
 pub use weather::*;
+pub use benchmark::*;

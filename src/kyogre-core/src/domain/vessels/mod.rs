@@ -93,7 +93,7 @@ pub enum RelevantEventType {
     ErsPorAndDep,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Deserialize_repr)]
+#[derive(Debug, Clone, Copy, PartialEq, Deserialize_repr,Serialize)]
 #[repr(i32)]
 pub enum VesselBenchmarkId {
     WeightPerHour = 1,
@@ -112,7 +112,7 @@ pub struct VesselBenchmarkOutput {
     pub value: f64,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize,)]
 pub struct FiskeridirVesselId(pub i64);
 
 #[derive(Debug, Clone)]

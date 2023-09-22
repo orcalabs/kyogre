@@ -24,6 +24,7 @@ mod vessel;
 mod vessel_events;
 mod vms;
 mod weather;
+mod benchmark;
 
 pub use ais::*;
 pub use ais_vms::*;
@@ -51,3 +52,4 @@ pub use vessel::*;
 pub use vessel_events::*;
 pub use vms::*;
 pub use weather::*;
+pub use benchmark::*;
