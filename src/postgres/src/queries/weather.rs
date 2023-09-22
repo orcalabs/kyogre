@@ -113,6 +113,12 @@ WHERE
         let mut air_pressure_at_sea_level = Vec::with_capacity(len);
         let mut precipitation_amount = Vec::with_capacity(len);
         let mut cloud_area_fraction = Vec::with_capacity(len);
+        let mut water_speed = Vec::with_capacity(len);
+        let mut water_direction = Vec::with_capacity(len);
+        let mut salinity = Vec::with_capacity(len);
+        let mut water_temperature = Vec::with_capacity(len);
+        let mut ocean_climate_depth = Vec::with_capacity(len);
+        let mut sea_floor_depth = Vec::with_capacity(len);
         let mut haul_weather_status_id = Vec::with_capacity(len);
 
         for v in values {
@@ -155,6 +161,39 @@ WHERE
                 precipitation_amount.push(None);
                 cloud_area_fraction.push(None);
             }
+            if let Some(o) = v.ocean_climate {
+                water_speed.push(
+                    opt_float_to_decimal(o.water_speed)
+                        .change_context(PostgresError::DataConversion)?,
+                );
+                water_direction.push(
+                    opt_float_to_decimal(o.water_direction)
+                        .change_context(PostgresError::DataConversion)?,
+                );
+                salinity.push(
+                    opt_float_to_decimal(o.salinity)
+                        .change_context(PostgresError::DataConversion)?,
+                );
+                water_temperature.push(
+                    opt_float_to_decimal(o.water_temperature)
+                        .change_context(PostgresError::DataConversion)?,
+                );
+                ocean_climate_depth.push(
+                    opt_float_to_decimal(o.ocean_climate_depth)
+                        .change_context(PostgresError::DataConversion)?,
+                );
+                sea_floor_depth.push(
+                    opt_float_to_decimal(o.sea_floor_depth)
+                        .change_context(PostgresError::DataConversion)?,
+                );
+            } else {
+                water_speed.push(None);
+                water_direction.push(None);
+                salinity.push(None);
+                water_temperature.push(None);
+                ocean_climate_depth.push(None);
+                sea_floor_depth.push(None);
+            }
             haul_weather_status_id.push(v.status as i32);
         }
 
@@ -169,6 +208,12 @@ SET
     air_pressure_at_sea_level = u.air_pressure_at_sea_level,
     precipitation_amount = u.precipitation_amount,
     cloud_area_fraction = u.cloud_area_fraction,
+    water_speed = u.water_speed,
+    water_direction = u.water_direction,
+    salinity = u.salinity,
+    water_temperature = u.water_temperature,
+    ocean_climate_depth = u.ocean_climate_depth,
+    sea_floor_depth = u.sea_floor_depth,
     haul_weather_status_id = u.haul_weather_status_id
 FROM
     UNNEST(
@@ -180,7 +225,13 @@ FROM
         $6::DECIMAL[],
         $7::DECIMAL[],
         $8::DECIMAL[],
-        $9::INT[]
+        $9::DECIMAL[],
+        $10::DECIMAL[],
+        $11::DECIMAL[],
+        $12::DECIMAL[],
+        $13::INT[],
+        $14::DECIMAL[],
+        $15::INT[]
     ) u (
         haul_id,
         wind_speed_10m,
@@ -190,6 +241,12 @@ FROM
         air_pressure_at_sea_level,
         precipitation_amount,
         cloud_area_fraction,
+        water_speed,
+        water_direction,
+        salinity,
+        water_temperature,
+        ocean_climate_depth,
+        sea_floor_depth,
         haul_weather_status_id
     )
 WHERE
@@ -203,6 +260,12 @@ WHERE
             &air_pressure_at_sea_level as _,
             &precipitation_amount as _,
             &cloud_area_fraction as _,
+            &water_speed as _,
+            &water_direction as _,
+            &salinity as _,
+            &water_temperature as _,
+            &ocean_climate_depth as _,
+            &sea_floor_depth as _,
             &haul_weather_status_id,
         )
         .fetch_optional(&self.pool)
@@ -275,7 +338,9 @@ impl TryFrom<WeatherQuery> for WeatherArgs {
         Ok(Self {
             start_date: v.start_date,
             end_date: v.end_date,
-            weather_location_ids: v.weather_location_ids,
+            weather_location_ids: v
+                .weather_location_ids
+                .map(|ids| ids.into_iter().map(|id| id.0).collect()),
         })
     }
 }

@@ -2,9 +2,9 @@ use crate::{
     AisConsumeLoop, AisPosition, Arrival, DataMessage, DeliveryPoint, DeliveryPointType, Departure,
     FisheryEngine, FishingFacilities, FishingFacilitiesQuery, FishingFacility, Haul, HaulsQuery,
     Landing, LandingsQuery, LandingsSorting, ManualDeliveryPoint, MattilsynetDeliveryPoint, Mmsi,
-    NewAisPosition, NewAisStatic, Ordering, Pagination, PrecisionId, ScraperInboundPort,
-    TestHelperInbound, TestHelperOutbound, TripAssemblerOutboundPort, TripDetailed, Trips,
-    TripsQuery, Vessel, VmsPosition, Weather, WebApiOutboundPort,
+    NewAisPosition, NewAisStatic, OceanClimate, Ordering, Pagination, PrecisionId,
+    ScraperInboundPort, TestHelperInbound, TestHelperOutbound, TripAssemblerOutboundPort,
+    TripDetailed, Trips, TripsQuery, Vessel, VmsPosition, Weather, WebApiOutboundPort,
 };
 use ais::*;
 use ais_vms::*;
@@ -37,6 +37,7 @@ mod haul;
 mod item_distribution;
 mod landing;
 pub mod levels;
+mod ocean_climate;
 mod por;
 mod tra;
 mod trip;
@@ -52,6 +53,7 @@ pub use fishing_facility::*;
 pub use haul::*;
 pub use landing::*;
 pub use levels::*;
+pub use ocean_climate::*;
 pub use por::*;
 pub use tra::*;
 pub use trip::*;
@@ -76,6 +78,7 @@ pub struct TestState {
     pub delivery_points: Vec<DeliveryPoint>,
     pub fishing_facilities: Vec<FishingFacility>,
     pub weather: Vec<Weather>,
+    pub ocean_climate: Vec<OceanClimate>,
 }
 
 pub struct TestStateBuilder {
@@ -101,6 +104,7 @@ pub struct TestStateBuilder {
     manual_delivery_points: Vec<ManualDeliveryPointConstructor>,
     fishing_facilities: Vec<FishingFacilityConctructor>,
     weather: Vec<WeatherConstructor>,
+    ocean_climate: Vec<OceanClimateConstructor>,
     default_trip_duration: Duration,
     default_haul_duration: Duration,
     default_fishing_facility_duration: Duration,
@@ -178,6 +182,7 @@ impl TestStateBuilder {
             global_data_timestamp_counter: Utc.with_ymd_and_hms(2010, 2, 5, 10, 0, 0).unwrap(),
             fishing_facilities: vec![],
             weather: vec![],
+            ocean_climate: vec![],
             default_fishing_facility_duration: Duration::hours(1),
             dep: vec![],
             por: vec![],
@@ -588,6 +593,18 @@ impl TestStateBuilder {
 
         self.storage.add_weather(new_weather).await.unwrap();
 
+        let new_ocean_climate = self
+            .ocean_climate
+            .into_iter()
+            .map(|o| o.ocean_climate)
+            .collect::<Vec<_>>();
+        let ocean_climate = new_ocean_climate.iter().map(OceanClimate::from).collect();
+
+        self.storage
+            .add_ocean_climate(new_ocean_climate)
+            .await
+            .unwrap();
+
         let mut ais_positions = self.storage.all_ais().await;
         let mut vms_positions = self.storage.all_vms().await;
         let mut ais_vms_positions = self.storage.all_ais_vms().await;
@@ -700,6 +717,7 @@ impl TestStateBuilder {
             delivery_points,
             fishing_facilities,
             weather,
+            ocean_climate,
         }
     }
 }

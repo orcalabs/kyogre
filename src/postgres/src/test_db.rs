@@ -84,6 +84,12 @@ SELECT
     h.air_pressure_at_sea_level,
     h.precipitation_amount,
     h.cloud_area_fraction,
+    h.water_speed,
+    h.water_direction,
+    h.salinity,
+    h.water_temperature,
+    h.ocean_climate_depth,
+    h.sea_floor_depth,
     h.catches::TEXT AS "catches!",
     h.whale_catches::TEXT AS "whale_catches!"
 FROM

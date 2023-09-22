@@ -1,8 +1,9 @@
 use chrono::{DateTime, Utc};
 use geo::geometry::Polygon;
 use rand::Rng;
+use serde::{Deserialize, Serialize};
 
-use crate::{HaulId, HaulWeatherStatus};
+use crate::{HaulId, HaulOceanClimate, HaulWeatherStatus};
 
 #[derive(Debug, Clone)]
 pub struct NewWeather {
@@ -34,12 +35,15 @@ pub struct Weather {
     pub precipitation_amount: Option<f64>,
     pub land_area_fraction: f64,
     pub cloud_area_fraction: Option<f64>,
-    pub weather_location_id: i32,
+    pub weather_location_id: WeatherLocationId,
 }
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize)]
+pub struct WeatherLocationId(pub i32);
 
 #[derive(Debug, Clone)]
 pub struct WeatherLocation {
-    pub id: i32,
+    pub id: WeatherLocationId,
     pub polygon: Polygon,
 }
 
@@ -58,10 +62,11 @@ pub struct HaulWeather {
 pub struct HaulWeatherOutput {
     pub haul_id: HaulId,
     pub weather: Option<HaulWeather>,
+    pub ocean_climate: Option<HaulOceanClimate>,
     pub status: HaulWeatherStatus,
 }
 
-static LATS_LONS: [(f64, f64); 20] = [
+pub(crate) static WEATHER_LOCATION_LATS_LONS: [(f64, f64); 20] = [
     (52.380, 1.8924),
     (52.352, 1.9485),
     (52.357, 2.0484),
@@ -87,7 +92,8 @@ static LATS_LONS: [(f64, f64); 20] = [
 impl NewWeather {
     pub fn test_default(timestamp: DateTime<Utc>) -> Self {
         let mut rng = rand::thread_rng();
-        let (latitude, longitude) = LATS_LONS[rng.gen::<usize>() % LATS_LONS.len()];
+        let (latitude, longitude) =
+            WEATHER_LOCATION_LATS_LONS[rng.gen::<usize>() % WEATHER_LOCATION_LATS_LONS.len()];
         let num = rng.gen::<u8>() as f64;
 
         Self {
@@ -122,9 +128,16 @@ impl From<&NewWeather> for Weather {
             precipitation_amount: v.precipitation_amount,
             land_area_fraction: v.land_area_fraction,
             cloud_area_fraction: v.cloud_area_fraction,
-            weather_location_id: (((v.latitude / 0.1).floor() as i32 + 1000) * 100000)
-                + ((v.longitude / 0.1).floor() as i32 + 1000),
+            weather_location_id: WeatherLocationId::from_lat_lon(v.latitude, v.longitude),
         }
+    }
+}
+
+impl WeatherLocationId {
+    pub fn from_lat_lon(lat: f64, lon: f64) -> Self {
+        Self(
+            (((lat / 0.1).floor() as i32 + 1_000) * 100_000) + ((lon / 0.1).floor() as i32 + 1_000),
+        )
     }
 }
 

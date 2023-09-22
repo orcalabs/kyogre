@@ -226,6 +226,10 @@ pub trait HaulWeatherOutbound: Send + Sync {
     ) -> Result<Vec<AisVmsPosition>, QueryError>;
     async fn weather_locations(&self) -> Result<Vec<WeatherLocation>, QueryError>;
     async fn haul_weather(&self, query: WeatherQuery) -> Result<Option<HaulWeather>, QueryError>;
+    async fn haul_ocean_climate(
+        &self,
+        query: OceanClimateQuery,
+    ) -> Result<Option<HaulOceanClimate>, QueryError>;
 }
 
 #[async_trait]

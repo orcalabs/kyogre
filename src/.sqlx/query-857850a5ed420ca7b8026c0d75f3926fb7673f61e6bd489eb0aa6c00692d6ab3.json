@@ -1,0 +1,97 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    TO_TIMESTAMP(\n        AVG(\n            EXTRACT(\n                epoch\n                FROM\n                    \"timestamp\"\n            )\n        )\n    ) AS \"timestamp!\",\n    AVG(\"depth\") AS \"depth!\",\n    AVG(latitude) AS \"latitude!\",\n    AVG(longitude) AS \"longitude!\",\n    AVG(water_speed) AS \"water_speed\",\n    AVG(water_direction) AS \"water_direction\",\n    AVG(upward_sea_velocity) AS \"upward_sea_velocity\",\n    AVG(wind_speed) AS \"wind_speed\",\n    AVG(wind_direction) AS \"wind_direction\",\n    AVG(salinity) AS \"salinity\",\n    AVG(temperature) AS \"temperature\",\n    AVG(sea_floor_depth) AS \"sea_floor_depth!\",\n    weather_location_id\nFROM\n    ocean_climate\nWHERE\n    \"timestamp\" BETWEEN $1::TIMESTAMPTZ AND $2::TIMESTAMPTZ\n    AND (\n        $3::INT[] IS NULL\n        OR \"depth\" = ANY ($3)\n    )\n    AND (\n        $4::INT[] IS NULL\n        OR weather_location_id = ANY ($4)\n    )\nGROUP BY\n    weather_location_id\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "timestamp!",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 1,
+        "name": "depth!",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 2,
+        "name": "latitude!",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 3,
+        "name": "longitude!",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 4,
+        "name": "water_speed",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 5,
+        "name": "water_direction",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 6,
+        "name": "upward_sea_velocity",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 7,
+        "name": "wind_speed",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 8,
+        "name": "wind_direction",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 9,
+        "name": "salinity",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 10,
+        "name": "temperature",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 11,
+        "name": "sea_floor_depth!",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 12,
+        "name": "weather_location_id",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Timestamptz",
+        "Timestamptz",
+        "Int4Array",
+        "Int4Array"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      false
+    ]
+  },
+  "hash": "857850a5ed420ca7b8026c0d75f3926fb7673f61e6bd489eb0aa6c00692d6ab3"
+}

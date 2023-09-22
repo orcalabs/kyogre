@@ -5,7 +5,7 @@ use fiskeridir_rs::{Gear, GearGroup, VesselLengthGroup, WhaleGender};
 use serde::{Deserialize, Serialize};
 use serde_repr::Deserialize_repr;
 
-use crate::{CatchLocationId, HaulWeather};
+use crate::{CatchLocationId, HaulOceanClimate, HaulWeather};
 
 mod distributor;
 
@@ -27,6 +27,7 @@ pub struct Haul {
     pub gear_id: Gear,
     pub haul_distance: Option<i32>,
     pub haul_id: HaulId,
+    pub ocean_climate: HaulOceanClimate,
     pub ocean_depth_end: i32,
     pub ocean_depth_start: i32,
     pub quota_type_id: i32,

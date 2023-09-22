@@ -387,6 +387,61 @@ impl<'de> Deserialize<'de> for VesselLengthGroup {
     }
 }
 
+/// NewType wrapper for a `WeatherLocationId` to customize the deserialize implementation
+/// such that it can be used in [crate::routes::utils::deserialize_string_list].
+#[derive(Debug, Clone)]
+pub struct WeatherLocationId(pub kyogre_core::WeatherLocationId);
+
+impl<'de> Deserialize<'de> for WeatherLocationId {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        struct WeatherLocationIdVisitor;
+
+        impl<'de> Visitor<'de> for WeatherLocationIdVisitor {
+            type Value = WeatherLocationId;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+                formatter.write_str("an i32 integer representing a vessel length group")
+            }
+
+            fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                let val = v.parse::<i32>().map_err(|_| {
+                    serde::de::Error::invalid_value(serde::de::Unexpected::Str(v), &self)
+                })?;
+
+                Ok(WeatherLocationId(kyogre_core::WeatherLocationId(val)))
+            }
+            fn visit_i64<E>(self, v: i64) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                let val = i32::from_i64(v).ok_or_else(|| {
+                    serde::de::Error::invalid_value(serde::de::Unexpected::Signed(v), &self)
+                })?;
+
+                Ok(WeatherLocationId(kyogre_core::WeatherLocationId(val)))
+            }
+
+            fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                let val = i32::from_u64(v).ok_or_else(|| {
+                    serde::de::Error::invalid_value(serde::de::Unexpected::Unsigned(v), &self)
+                })?;
+
+                Ok(WeatherLocationId(kyogre_core::WeatherLocationId(val)))
+            }
+        }
+        deserializer.deserialize_newtype_struct("WeatherLocationId", WeatherLocationIdVisitor)
+    }
+}
+
 fn utc_from_naive(naive_date: NaiveDate) -> DateTime<Utc> {
     DateTime::<Utc>::from_naive_utc_and_offset(naive_date.and_hms_opt(0, 0, 0).unwrap(), Utc)
 }
