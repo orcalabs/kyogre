@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nDELETE FROM hauls_matrix h USING UNNEST($1::BIGINT[]) u (haul_id)\nWHERE\n    h.haul_id = u.haul_id\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8Array"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "9c83195efeb08361824557f964972551b1c2c2a7cdcee275a537b27e7f647ff1"
+}

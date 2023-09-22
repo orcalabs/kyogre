@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nDELETE FROM landings\nWHERE\n    (NOT landing_id = ANY ($1::TEXT[]))\n    AND data_year = $2::INT\nRETURNING\n    fiskeridir_vessel_id,\n    landing_timestamp AS \"landing_timestamp!\"\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "fiskeridir_vessel_id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "landing_timestamp!",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "TextArray",
+        "Int4"
+      ]
+    },
+    "nullable": [
+      true,
+      false
+    ]
+  },
+  "hash": "90a289319536807ca01fcd952f04159836c9ab0a9dc7b39086b86a343f5487c3"
+}

@@ -1,0 +1,71 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    vessel_event_id AS \"vessel_event_id!\",\n    fiskeridir_vessel_id AS \"fiskeridir_vessel_id!\",\n    report_timestamp AS \"report_timestamp!\",\n    occurence_timestamp,\n    \"vessel_event_type_id!: VesselEventType\",\n    port_id,\n    NULL AS \"arrival_port_id\",\n    NULL AS \"departure_port_id\",\n    estimated_timestamp\nFROM\n    (\n        SELECT\n            v.vessel_event_id,\n            v.fiskeridir_vessel_id,\n            v.report_timestamp,\n            v.occurence_timestamp,\n            v.vessel_event_type_id AS \"vessel_event_type_id!: VesselEventType\",\n            d.port_id,\n            d.relevant_year,\n            d.message_number,\n            d.departure_timestamp AS estimated_timestamp\n        FROM\n            vessel_events v\n            INNER JOIN ers_departures d ON d.vessel_event_id = v.vessel_event_id\n        WHERE\n            v.fiskeridir_vessel_id = $1\n            AND v.occurence_timestamp <@ $2::tstzrange\n            AND v.occurence_timestamp >= '1970-01-01T00:00:00Z'::TIMESTAMPTZ\n        UNION\n        SELECT\n            v.vessel_event_id,\n            v.fiskeridir_vessel_id,\n            v.report_timestamp,\n            v.occurence_timestamp,\n            v.vessel_event_type_id AS \"vessel_event_type_id!: VesselEventType\",\n            a.port_id,\n            a.relevant_year,\n            a.message_number,\n            a.arrival_timestamp AS estimated_timestamp\n        FROM\n            vessel_events v\n            INNER JOIN ers_arrivals a ON a.vessel_event_id = v.vessel_event_id\n        WHERE\n            v.fiskeridir_vessel_id = $1\n            AND v.occurence_timestamp <@ $2::tstzrange\n            AND v.occurence_timestamp >= '1970-01-01T00:00:00Z'::TIMESTAMPTZ\n    ) q\nORDER BY\n    estimated_timestamp,\n    relevant_year,\n    message_number\n           ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "vessel_event_id!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "fiskeridir_vessel_id!",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 2,
+        "name": "report_timestamp!",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 3,
+        "name": "occurence_timestamp",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 4,
+        "name": "vessel_event_type_id!: VesselEventType",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 5,
+        "name": "port_id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 6,
+        "name": "arrival_port_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "departure_port_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 8,
+        "name": "estimated_timestamp",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "TstzRange"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "29fdfde248255b1a100ee25b0f1eae9f5d6469dbe8ab036080ec7ca37a96ecb5"
+}

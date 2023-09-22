@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO\n    deprecated_delivery_points (old_delivery_point_id, new_delivery_point_id)\nVALUES\n    ($1, $2)\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "9f06ff6c5ad13a07b9d32b1ed39bc07645eb2cd53493785c0c0386793b2ec0ef"
+}

@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    u.landing_id AS \"landing_id!\"\nFROM\n    UNNEST($1::TEXT[]) u (landing_id)\n    LEFT JOIN landings l ON u.landing_id = l.landing_id\nWHERE\n    l.landing_id IS NULL\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "landing_id!",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "TextArray"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "749ac96a5f058bc0b251f95c06fa39bd7bf0be0dcb5edce4af0d196c84b1a4c4"
+}

@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO\n    catch_main_area_fao (\n    catch_main_area_fao_id,name\n   )\nSELECT\n    *\nFROM\n    UNNEST(\n        $1::INT[],$2::TEXT[]\n    )\n        ON CONFLICT (catch_main_area_fao_id) DO NOTHING",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4Array",
+        "TextArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "61f906bcc75efd90ff2ffa40780cf8d61a0b80abe3e273bdd40bd0c7029f74c7"
+}

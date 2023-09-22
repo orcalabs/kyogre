@@ -1,0 +1,18 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO\n    mattilsynet_delivery_points (\n    delivery_point_id,name,address,postal_city,postal_code\n   )\nSELECT\n    *\nFROM\n    UNNEST(\n        $1::TEXT[],$2::TEXT[],$3::TEXT[],$4::TEXT[],$5::INT[]\n    )\n        ON CONFLICT (delivery_point_id) DO UPDATE SET name = EXCLUDED.name,address = EXCLUDED.address,postal_city = EXCLUDED.postal_city,postal_code = EXCLUDED.postal_code",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "TextArray",
+        "TextArray",
+        "TextArray",
+        "TextArray",
+        "Int4Array"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "8f1c40f61552259cff1b085a5495f2a1e2cca27dacc49cb0236d7922408a211b"
+}
