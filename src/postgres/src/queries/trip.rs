@@ -620,7 +620,6 @@ WHERE
         )
         .fetch_one(&self.pool)
         .await
-        .into_report()
         .change_context(PostgresError::Query)?;
 
         Ok(distance
