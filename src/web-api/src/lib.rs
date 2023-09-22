@@ -58,6 +58,7 @@ impl Database for PostgresAdapter {}
         v1::weather::weather,
         v1::benchmark::benchmark,
         v1::weather::weather_locations,
+        v1::benchmark::benchmark,
     ),
     components(
         schemas(
@@ -111,6 +112,7 @@ impl Database for PostgresAdapter {}
             v1::weather::Weather,
             v1::benchmark::Benchmark,
             v1::weather::WeatherLocation,
+            v1::benchmark::Benchmark,
           )
     ),
     tags(

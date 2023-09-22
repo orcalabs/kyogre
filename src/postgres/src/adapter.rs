@@ -596,6 +596,10 @@ impl WebApiOutboundPort for PostgresAdapter {
     fn weather_locations(&self) -> PinBoxStream<'_, WeatherLocation, QueryError> {
         convert_stream(self.weather_locations_impl()).boxed()
     }
+    
+    fn benchmark(&self) -> PinBoxStream<'_,Benchmark,QueryError>{
+        convert_stream(self.benchmark_impl()).boxed()
+    }
 }
 
 #[async_trait]
