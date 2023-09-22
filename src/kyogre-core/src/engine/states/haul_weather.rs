@@ -1,6 +1,8 @@
 use std::collections::HashSet;
 
-use crate::{DateRange, HaulWeatherOutput, HaulWeatherStatus, Vessel, WeatherQuery};
+use crate::{
+    DateRange, HaulWeatherOutput, HaulWeatherStatus, OceanClimateQuery, Vessel, WeatherQuery,
+};
 use crate::{HaulWeatherError, HaulWeatherInbound, HaulWeatherOutbound, SharedState};
 use async_trait::async_trait;
 use error_stack::ResultExt;
@@ -77,6 +79,7 @@ async fn process_haul_weather(
                     haul_id: h.haul_id,
                     status: HaulWeatherStatus::Attempted,
                     weather: None,
+                    ocean_climate: None,
                 });
                 continue;
             }
@@ -99,6 +102,7 @@ async fn process_haul_weather(
                     haul_id: h.haul_id,
                     status: HaulWeatherStatus::Attempted,
                     weather: None,
+                    ocean_climate: None,
                 });
                 continue;
             }
@@ -107,6 +111,16 @@ async fn process_haul_weather(
                 .haul_weather(WeatherQuery {
                     start_date: h.start_timestamp,
                     end_date: h.stop_timestamp,
+                    weather_location_ids: Some(locations.clone()),
+                })
+                .await
+                .change_context(HaulWeatherError)?;
+
+            let ocean_climate = outbound
+                .haul_ocean_climate(OceanClimateQuery {
+                    start_date: h.start_timestamp,
+                    end_date: h.stop_timestamp,
+                    depths: Some(vec![0]),
                     weather_location_ids: Some(locations),
                 })
                 .await
@@ -114,12 +128,13 @@ async fn process_haul_weather(
 
             outputs.push(HaulWeatherOutput {
                 haul_id: h.haul_id,
-                status: if weather.is_some() {
+                status: if weather.is_some() || ocean_climate.is_some() {
                     HaulWeatherStatus::Successful
                 } else {
                     HaulWeatherStatus::Attempted
                 },
                 weather,
+                ocean_climate,
             });
         }
 

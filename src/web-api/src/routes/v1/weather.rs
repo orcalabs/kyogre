@@ -9,7 +9,11 @@ use serde::{Deserialize, Serialize};
 use tracing::{event, Level};
 use utoipa::{IntoParams, ToSchema};
 
-use crate::{error::ApiError, routes::utils::deserialize_string_list, *};
+use crate::{
+    error::ApiError,
+    routes::utils::{deserialize_string_list, WeatherLocationId},
+    *,
+};
 
 #[derive(Default, Debug, Deserialize, IntoParams)]
 #[serde(rename_all = "camelCase")]
@@ -18,7 +22,7 @@ pub struct WeatherParams {
     pub end_date: Option<DateTime<Utc>>,
     #[param(value_type = Option<String>, example = "123,456,789")]
     #[serde(deserialize_with = "deserialize_string_list", default)]
-    pub weather_location_ids: Option<Vec<i32>>,
+    pub weather_location_ids: Option<Vec<WeatherLocationId>>,
 }
 
 #[utoipa::path(
@@ -96,7 +100,9 @@ impl From<WeatherParams> for WeatherQuery {
                 .start_date
                 .unwrap_or_else(|| Utc::now() - Duration::days(1)),
             end_date: v.end_date.unwrap_or_else(Utc::now),
-            weather_location_ids: v.weather_location_ids,
+            weather_location_ids: v
+                .weather_location_ids
+                .map(|ids| ids.into_iter().map(|id| id.0).collect()),
         }
     }
 }

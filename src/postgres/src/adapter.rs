@@ -691,6 +691,14 @@ impl ScraperInboundPort for PostgresAdapter {
             .await
             .change_context(InsertError)
     }
+    async fn add_ocean_climate(
+        &self,
+        ocean_climate: Vec<NewOceanClimate>,
+    ) -> Result<(), InsertError> {
+        self.add_ocean_climate_impl(ocean_climate)
+            .await
+            .change_context(InsertError)
+    }
 }
 
 #[async_trait]
@@ -705,6 +713,11 @@ impl ScraperOutboundPort for PostgresAdapter {
     }
     async fn latest_weather_timestamp(&self) -> Result<Option<DateTime<Utc>>, QueryError> {
         self.latest_weather_timestamp_impl()
+            .await
+            .change_context(QueryError)
+    }
+    async fn latest_ocean_climate_timestamp(&self) -> Result<Option<DateTime<Utc>>, QueryError> {
+        self.latest_ocean_climate_timestamp_impl()
             .await
             .change_context(QueryError)
     }
@@ -1075,6 +1088,16 @@ impl HaulWeatherOutbound for PostgresAdapter {
     async fn haul_weather(&self, query: WeatherQuery) -> Result<Option<HaulWeather>, QueryError> {
         convert_optional(
             self.haul_weather_impl(query)
+                .await
+                .change_context(QueryError)?,
+        )
+    }
+    async fn haul_ocean_climate(
+        &self,
+        query: OceanClimateQuery,
+    ) -> Result<Option<HaulOceanClimate>, QueryError> {
+        convert_optional(
+            self.haul_ocean_climate_impl(query)
                 .await
                 .change_context(QueryError)?,
         )

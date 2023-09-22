@@ -7,7 +7,7 @@ use serde::Deserialize;
 
 use crate::{error::PostgresError, queries::decimal_to_float};
 
-use super::HaulWeather;
+use super::{HaulOceanClimate, HaulWeather};
 
 #[derive(Deserialize)]
 pub struct Haul {
@@ -43,6 +43,12 @@ pub struct Haul {
     pub air_pressure_at_sea_level: Option<BigDecimal>,
     pub precipitation_amount: Option<BigDecimal>,
     pub cloud_area_fraction: Option<BigDecimal>,
+    pub water_speed: Option<BigDecimal>,
+    pub water_direction: Option<BigDecimal>,
+    pub salinity: Option<BigDecimal>,
+    pub water_temperature: Option<BigDecimal>,
+    pub ocean_climate_depth: Option<BigDecimal>,
+    pub sea_floor_depth: Option<BigDecimal>,
     pub catches: String,
     pub whale_catches: String,
 }
@@ -127,6 +133,15 @@ impl TryFrom<Haul> for kyogre_core::Haul {
                 air_pressure_at_sea_level: v.air_pressure_at_sea_level,
                 precipitation_amount: v.precipitation_amount,
                 cloud_area_fraction: v.cloud_area_fraction,
+            }
+            .try_into()?,
+            ocean_climate: HaulOceanClimate {
+                water_speed: v.water_speed,
+                water_direction: v.water_direction,
+                salinity: v.salinity,
+                water_temperature: v.water_temperature,
+                ocean_climate_depth: v.ocean_climate_depth,
+                sea_floor_depth: v.sea_floor_depth,
             }
             .try_into()?,
             catches: serde_json::from_str::<Vec<HaulCatch>>(&v.catches)

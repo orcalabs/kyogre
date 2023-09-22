@@ -191,6 +191,7 @@ macro_rules! impl_haul_vessel_level {
 }
 
 impl_haul_vessel_level!(WeatherHaulBuilder);
+impl_haul_vessel_level!(OceanClimateHaulBuilder);
 
 #[async_trait]
 pub trait VesselLevel

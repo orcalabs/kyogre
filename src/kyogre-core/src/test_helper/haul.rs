@@ -66,4 +66,52 @@ impl HaulVesselBuilder {
             state: self,
         }
     }
+    pub fn ocean_climate(mut self, amount: usize) -> OceanClimateHaulBuilder {
+        assert_ne!(amount, 0);
+        let lats_lons_times = {
+            let base = &mut self.state.state;
+
+            let hauls = &mut base.hauls[self.current_index..];
+            let distribution = ItemDistribution::new(amount, hauls.len());
+
+            let mut lats_lons_times = Vec::new();
+
+            for (i, haul) in hauls.iter_mut().enumerate() {
+                let num_ocean_climate = distribution.num_elements(i);
+
+                let start = haul.dca.start_timestamp.unwrap();
+                let diff = haul.dca.stop_timestamp.unwrap() - start;
+                let increment = diff.num_milliseconds() / num_ocean_climate as i64;
+
+                for i in 0..num_ocean_climate {
+                    let ocean_climate = NewOceanClimate::test_default(
+                        start + Duration::milliseconds(increment * i as i64),
+                    );
+                    lats_lons_times.push((
+                        ocean_climate.latitude,
+                        ocean_climate.longitude,
+                        ocean_climate.timestamp,
+                    ));
+                    base.ocean_climate
+                        .push(OceanClimateConstructor { ocean_climate });
+                }
+            }
+            lats_lons_times
+        };
+
+        self.state = self
+            .state
+            .ais_positions(lats_lons_times.len())
+            .modify_idx(|i, p| {
+                p.position.latitude = lats_lons_times[i].0;
+                p.position.longitude = lats_lons_times[i].1;
+                p.position.msgtime = lats_lons_times[i].2;
+            })
+            .state;
+
+        OceanClimateHaulBuilder {
+            current_index: self.state.state.ocean_climate.len() - amount,
+            state: self,
+        }
+    }
 }

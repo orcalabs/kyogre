@@ -10,6 +10,7 @@ use fiskeridir::{
 };
 use kyogre_core::{OauthConfig, ScraperInboundPort, ScraperOutboundPort};
 use mattilsynet::MattilsynetScraper;
+use ocean_climate::OceanClimateScraper;
 use serde::Deserialize;
 use std::sync::Arc;
 use std::{fmt::Debug, path::PathBuf};
@@ -21,6 +22,7 @@ mod chunks;
 mod error;
 mod fiskeridir;
 mod mattilsynet;
+mod ocean_climate;
 mod weather;
 mod wrapped_http_client;
 
@@ -174,6 +176,7 @@ impl Scraper {
         );
 
         let _weather_scraper = WeatherScraper::new();
+        let _ocean_climate_scraper = OceanClimateScraper::new();
 
         Scraper {
             scrapers: vec![
@@ -189,6 +192,7 @@ impl Scraper {
                 Box::new(aqua_culture_register_scraper),
                 Box::new(mattilsynet_scraper),
                 // Box::new(weather_scraper),
+                // Box::new(ocean_climate_scraper),
             ],
             processor,
         }
@@ -225,6 +229,7 @@ pub enum ScraperId {
     AquaCultureRegister,
     Mattilsynet,
     Weather,
+    OceanClimate,
 }
 
 impl std::fmt::Display for ScraperId {
@@ -242,6 +247,7 @@ impl std::fmt::Display for ScraperId {
             ScraperId::AquaCultureRegister => write!(f, "aqua_culture_register"),
             ScraperId::Mattilsynet => write!(f, "mattilsynet"),
             ScraperId::Weather => write!(f, "weather"),
+            ScraperId::OceanClimate => write!(f, "ocean_climate"),
         }
     }
 }
