@@ -21,3 +21,5 @@ jobs:
       check-sqlx: true
       sqlx-migrations-dir: postgres
       postgres-version: postgis/postgis:15-3.4-alpine
+      openapi-bins: |
+        web-api-openapi
