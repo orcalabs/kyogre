@@ -1,9 +1,11 @@
 use crate::*;
 use machine::{Machine, Schedule};
+use serde::Deserialize;
 
 pub mod states;
 
 pub use states::*;
+use strum::EnumDiscriminants;
 
 // pub trait Database:
 //     TripAssemblerOutboundPort
@@ -42,7 +44,8 @@ pub use states::*;
 // {
 // }
 
-#[derive(Machine)]
+#[derive(Machine, EnumDiscriminants)]
+#[strum_discriminants(derive(Deserialize))]
 #[machine(shared_state = SharedState, order_chain)]
 pub enum Fishery {
     Scrape(ScrapeState),
