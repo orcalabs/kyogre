@@ -12,6 +12,7 @@ pub struct Settings {
     pub environment: Environment,
     pub scraper: scraper::Config,
     pub honeycomb: Option<HoneycombApiKey>,
+    pub single_state_run: Option<FisheryDiscriminants>,
 }
 
 #[derive(Debug, Deserialize)]

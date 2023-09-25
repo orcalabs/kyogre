@@ -83,6 +83,7 @@ where
                 environment: Environment::Test,
                 honeycomb: None,
                 scraper: scraper::Config::default(),
+                single_state_run: None,
             };
 
             let adapter = PostgresAdapter::new(&db_settings).await.unwrap();

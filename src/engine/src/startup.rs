@@ -1,4 +1,5 @@
 use crate::{settings::Settings, FisheryEngine, SharedState};
+use kyogre_core::FisheryDiscriminants;
 use machine::StateMachine;
 use orca_core::Environment;
 use postgres::PostgresAdapter;
@@ -8,6 +9,7 @@ use std::sync::Arc;
 pub struct App {
     pub shared_state: SharedState,
     pub transition_log: machine::PostgresAdapter,
+    pub single_state_run: Option<FisheryDiscriminants>,
 }
 
 impl App {
@@ -76,16 +78,103 @@ impl App {
         App {
             transition_log,
             shared_state,
+            single_state_run: settings.single_state_run,
         }
     }
 
     pub async fn run(self) {
-        let step = crate::Step::initial(
-            crate::Pending::default(),
-            self.shared_state,
-            Box::new(self.transition_log),
-        );
-        let engine = FisheryEngine::Pending(step);
-        engine.run().await;
+        if let Some(start_state) = self.single_state_run {
+            match start_state {
+                FisheryDiscriminants::Scrape => {
+                    let step = crate::Step::initial(
+                        crate::ScrapeState,
+                        self.shared_state,
+                        Box::new(self.transition_log),
+                    );
+                    let engine = FisheryEngine::Scrape(step);
+                    engine.run_single().await;
+                }
+                FisheryDiscriminants::Trips => {
+                    let step = crate::Step::initial(
+                        crate::TripsState,
+                        self.shared_state,
+                        Box::new(self.transition_log),
+                    );
+                    let engine = FisheryEngine::Trips(step);
+                    engine.run_single().await;
+                }
+                FisheryDiscriminants::TripsPrecision => {
+                    let step = crate::Step::initial(
+                        crate::TripsPrecisionState,
+                        self.shared_state,
+                        Box::new(self.transition_log),
+                    );
+                    let engine = FisheryEngine::TripsPrecision(step);
+                    engine.run_single().await;
+                }
+                FisheryDiscriminants::Benchmark => {
+                    let step = crate::Step::initial(
+                        crate::BenchmarkState,
+                        self.shared_state,
+                        Box::new(self.transition_log),
+                    );
+                    let engine = FisheryEngine::Benchmark(step);
+                    engine.run_single().await;
+                }
+                FisheryDiscriminants::HaulDistribution => {
+                    let step = crate::Step::initial(
+                        crate::HaulDistributionState,
+                        self.shared_state,
+                        Box::new(self.transition_log),
+                    );
+                    let engine = FisheryEngine::HaulDistribution(step);
+                    engine.run_single().await;
+                }
+                FisheryDiscriminants::HaulWeather => {
+                    let step = crate::Step::initial(
+                        crate::HaulWeatherState,
+                        self.shared_state,
+                        Box::new(self.transition_log),
+                    );
+                    let engine = FisheryEngine::HaulWeather(step);
+                    engine.run_single().await;
+                }
+                FisheryDiscriminants::TripDistance => {
+                    let step = crate::Step::initial(
+                        crate::TripsDistanceState,
+                        self.shared_state,
+                        Box::new(self.transition_log),
+                    );
+                    let engine = FisheryEngine::TripDistance(step);
+                    engine.run_single().await;
+                }
+                FisheryDiscriminants::UpdateDatabaseViews => {
+                    let step = crate::Step::initial(
+                        crate::UpdateDatabaseViewsState,
+                        self.shared_state,
+                        Box::new(self.transition_log),
+                    );
+                    let engine = FisheryEngine::UpdateDatabaseViews(step);
+                    engine.run_single().await;
+                }
+                FisheryDiscriminants::VerifyDatabase => {
+                    let step = crate::Step::initial(
+                        crate::VerifyDatabaseState,
+                        self.shared_state,
+                        Box::new(self.transition_log),
+                    );
+                    let engine = FisheryEngine::VerifyDatabase(step);
+                    engine.run_single().await;
+                }
+            };
+        } else {
+            let step = crate::Step::initial(
+                crate::Pending::default(),
+                self.shared_state,
+                Box::new(self.transition_log),
+            );
+            let engine = FisheryEngine::Pending(step);
+            engine.run().await;
+        }
     }
 }
