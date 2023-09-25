@@ -14,7 +14,7 @@ async-trait = "0.1.73"
 serde = "1.0.188"
 config = "0.13.3"
 tokio = { version = "1.32.0", features = ["macros", "sync", "time"] }
-tokio-util = { version = "0.7.8", features = ["codec", "compat"] }
+tokio-util = { version = "0.7.9", features = ["codec", "compat"] }
 futures = "0.3.28"
 tracing = "0.1.37"
 chrono = { version = "0.4.31", features = ["serde"] }
