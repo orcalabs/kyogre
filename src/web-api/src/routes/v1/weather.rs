@@ -8,6 +8,7 @@ use kyogre_core::WeatherQuery;
 use serde::{Deserialize, Serialize};
 use tracing::{event, Level};
 use utoipa::{IntoParams, ToSchema};
+use wkt::ToWkt;
 
 use crate::{
     error::ApiError,
@@ -57,6 +58,33 @@ pub async fn weather<T: Database + 'static>(
     }
 }
 
+#[utoipa::path(
+    get,
+    path = "/weather_locations",
+    responses(
+        (status = 200, description = "all weather locations", body = [WeatherLocation]),
+        (status = 500, description = "an internal error occured", body = ErrorResponse),
+    )
+)]
+#[tracing::instrument(skip(db))]
+pub async fn weather_locations<T: Database + 'static>(
+    db: web::Data<T>,
+    params: web::Query<WeatherParams>,
+) -> Result<HttpResponse, ApiError> {
+    to_streaming_response! {
+        db.weather_locations()
+            .map_ok(WeatherLocation::from)
+            .map_err(|e| {
+                event!(
+                    Level::ERROR,
+                    "failed to retrieve weather_locations: {:?}",
+                    e
+                );
+                ApiError::InternalServerError
+            })
+    }
+}
+
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct Weather {
@@ -74,6 +102,13 @@ pub struct Weather {
     pub cloud_area_fraction: Option<f64>,
 }
 
+#[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct WeatherLocation {
+    pub id: i32,
+    pub polygon: String,
+}
+
 impl From<kyogre_core::Weather> for Weather {
     fn from(v: kyogre_core::Weather) -> Self {
         Self {
@@ -89,6 +124,15 @@ impl From<kyogre_core::Weather> for Weather {
             precipitation_amount: v.precipitation_amount,
             land_area_fraction: v.land_area_fraction,
             cloud_area_fraction: v.cloud_area_fraction,
+        }
+    }
+}
+
+impl From<kyogre_core::WeatherLocation> for WeatherLocation {
+    fn from(v: kyogre_core::WeatherLocation) -> Self {
+        Self {
+            id: v.id.0,
+            polygon: v.polygon.to_wkt().to_string(),
         }
     }
 }
