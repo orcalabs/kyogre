@@ -306,9 +306,9 @@ FROM
         .map(|r| r.ts)
     }
 
-    pub(crate) async fn weather_locations_impl(
+    pub(crate) fn weather_locations_impl(
         &self,
-    ) -> Result<Vec<WeatherLocation>, PostgresError> {
+    ) -> impl Stream<Item = Result<WeatherLocation, PostgresError>> + '_ {
         sqlx::query_as!(
             WeatherLocation,
             r#"
@@ -319,9 +319,8 @@ FROM
     weather_locations
             "#,
         )
-        .fetch_all(&self.pool)
-        .await
-        .change_context(PostgresError::Query)
+        .fetch(&self.pool)
+        .map_err(|e| report!(e).change_context(PostgresError::Query))
     }
 }
 
