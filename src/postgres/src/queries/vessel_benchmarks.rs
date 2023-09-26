@@ -11,10 +11,10 @@ impl PostgresAdapter {
         values: Vec<kyogre_core::VesselBenchmarkOutput>,
     ) -> Result<(), PostgresError> {
         let values = values
-            .into_iter()
-            .map(VesselBenchmarkOutput::try_from)
-            .collect::<Result<_, _>>()?;
-
+        .into_iter()
+        .map(VesselBenchmarkOutput::try_from)
+        .collect::<Result<_, _>>()?;
+    
         VesselBenchmarkOutput::unnest_insert(values, &self.pool)
             .await
             .into_report()

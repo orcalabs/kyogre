@@ -16,7 +16,7 @@ use kyogre_core::{
     TripAssemblerId, TripDistanceOutput, TripPrecisionUpdate, TripSorting, Trips,
     TripsConflictStrategy, TripsQuery, VesselEventType,
 };
-use num_traits::FromPrimitive;
+use num_traits::{FromPrimitive, ToPrimitive};
 use sqlx::postgres::types::PgRange;
 
 use super::float_to_decimal;
@@ -512,7 +512,31 @@ WHERE
             .duration
             .map(|v| Duration::microseconds(v.microseconds)))
     }
+    pub(crate) async fn sum_trip_distance_impl(
+        &self,
+        id: FiskeridirVesselId,
+    ) -> Result<Option<f64>, PostgresError> {
+        let distance = sqlx::query!(
+            r#"
+SELECT
+    SUM(distance) AS distance
+FROM
+    trips
+WHERE
+    fiskeridir_vessel_id = $1
+            "#,
+            id.0,
+        )
+        .fetch_one(&self.pool)
+        .await
+        .into_report()
+        .change_context(PostgresError::Query)?;
 
+        Ok(distance
+            .distance
+            .map(|v| v.to_f64().ok_or(PostgresError::DataConversion))
+            .transpose()?)
+    }
     pub(crate) fn detailed_trips_impl(
         &self,
         query: TripsQuery,

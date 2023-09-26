@@ -158,6 +158,7 @@ pub trait TripPrecisionOutboundPort: Send + Sync {
 pub trait VesselBenchmarkOutbound: Send + Sync {
     async fn vessels(&self) -> Result<Vec<Vessel>, QueryError>;
     async fn sum_trip_time(&self, id: FiskeridirVesselId) -> Result<Option<Duration>, QueryError>;
+    async fn sum_trip_distance(&self, id: FiskeridirVesselId) -> Result<Option<f64>, QueryError>;
     async fn sum_landing_weight(&self, id: FiskeridirVesselId) -> Result<Option<f64>, QueryError>;
 }
 

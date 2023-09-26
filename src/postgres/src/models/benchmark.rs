@@ -21,6 +21,7 @@ impl TryFrom<Benchmarks> for kyogre_core::Benchmark{
             vessel_id: FiskeridirVesselId(value.vessel_id), 
             benchmark_id: match value.benchmark_id {
                 1 => VesselBenchmarkId::WeightPerHour,
+                2 => VesselBenchmarkId::WeightPerDistance,
                 _ => {
                     return Err(PostgresError::DataConversion.into());
                 }

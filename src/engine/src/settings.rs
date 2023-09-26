@@ -63,8 +63,12 @@ impl Settings {
     }
     pub fn benchmarks(&self) -> Vec<Box<dyn VesselBenchmark>> {
         let weight_per_hour = Box::<WeightPerHour>::default();
+        let weight_per_distance = Box::<WeightPerDistance>::default();
 
-        let vec = vec![weight_per_hour as Box<dyn VesselBenchmark>];
+        let vec = vec![
+            weight_per_distance as Box<dyn VesselBenchmark>,
+            weight_per_hour as Box<dyn VesselBenchmark>, 
+        ];
 
         vec
     }
