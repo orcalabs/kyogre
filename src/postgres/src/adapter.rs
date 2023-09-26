@@ -601,6 +601,10 @@ impl WebApiOutboundPort for PostgresAdapter {
         let stream = self.weather_impl(query).change_context(QueryError)?;
         Ok(convert_stream(stream).boxed())
     }
+
+    fn weather_locations(&self) -> PinBoxStream<'_, WeatherLocation, QueryError> {
+        convert_stream(self.weather_locations_impl()).boxed()
+    }
 }
 
 #[async_trait]
@@ -1071,11 +1075,9 @@ impl HaulWeatherOutbound for PostgresAdapter {
             .await
     }
     async fn weather_locations(&self) -> Result<Vec<WeatherLocation>, QueryError> {
-        convert_vec(
-            self.weather_locations_impl()
-                .await
-                .change_context(QueryError)?,
-        )
+        convert_stream(self.weather_locations_impl())
+            .try_collect()
+            .await
     }
     async fn haul_weather(&self, query: WeatherQuery) -> Result<Option<HaulWeather>, QueryError> {
         convert_optional(
