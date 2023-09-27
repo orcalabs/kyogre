@@ -29,6 +29,7 @@ pub async fn benchmark<T: Database + 'static>(db: web::Data<T>) -> Result<HttpRe
 pub struct Benchmark {
     #[schema(value_type = i64)]
     pub vessel_id : FiskeridirVesselId,
+    #[schema(value_type = i64)]
     pub benchmark_id: VesselBenchmarkId,
     pub output : Option<f64>,
 }
