@@ -1,6 +1,8 @@
 #![deny(warnings)]
 #![deny(rust_2018_idioms)]
 
+pub static KEEP_DB_ENV: &str = "KEEP_TEST_DB";
+
 use async_trait::async_trait;
 
 mod domain;

@@ -3,7 +3,7 @@ use engine::*;
 use futures::Future;
 use kyogre_core::{
     FisheryEngine, HaulDistributor, ScrapeState, SharedState, Step, TestStateBuilder,
-    TripAssembler, TripDistancer, VerificationOutbound, VesselBenchmark,
+    TripAssembler, TripDistancer, VerificationOutbound, VesselBenchmark, KEEP_DB_ENV,
 };
 use orca_core::{compositions::postgres_composition, PsqlLogStatements, PsqlSettings};
 use postgres::{PostgresAdapter, TestDb};
@@ -94,7 +94,17 @@ where
     .with_log_options(None)
     .with_start_policy(StartPolicy::Strict);
 
-    let db_name = random::<u32>().to_string();
+    let mut keep_db = false;
+    let db_name = if let Ok(v) = std::env::var(KEEP_DB_ENV) {
+        if v == "true" {
+            keep_db = true;
+            "test".into()
+        } else {
+            random::<u32>().to_string()
+        }
+    } else {
+        random::<u32>().to_string()
+    };
 
     postgres.static_container(StaticManagementPolicy::Dynamic);
     postgres.port_map(5432, 5400);
@@ -118,8 +128,13 @@ where
             };
 
             let adapter = PostgresAdapter::new(&db_settings).await.unwrap();
+            let mut test_db = TestDb { db: adapter };
 
-            let test_db = TestDb { db: adapter };
+            if keep_db {
+                test_db.drop_db(&db_name).await;
+                let adapter = PostgresAdapter::new(&db_settings).await.unwrap();
+                test_db = TestDb { db: adapter };
+            }
 
             test_db.create_test_database_from_template(&db_name).await;
 
@@ -137,7 +152,9 @@ where
 
             adapter.verify_database().await.unwrap();
 
-            test_db.drop_db(&db_name).await;
+            if !keep_db {
+                test_db.drop_db(&db_name).await;
+            }
         })
         .await;
 }
