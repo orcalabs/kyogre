@@ -18,10 +18,12 @@ pub struct TestDb {
 impl TestDb {
     pub async fn drop_db(&self, db_name: &str) {
         {
-            sqlx::query(&format!("DROP DATABASE \"{db_name}\" WITH (FORCE);"))
-                .execute(&self.db.pool)
-                .await
-                .unwrap();
+            sqlx::query(&format!(
+                "DROP DATABASE IF EXISTS \"{db_name}\" WITH (FORCE);"
+            ))
+            .execute(&self.db.pool)
+            .await
+            .unwrap();
         }
         self.db.pool.close().await;
     }
