@@ -1,4 +1,6 @@
-log_level: Info
+log_level: Debug
+single_state_run: Benchmark
+
 postgres:
   ip: postgres
   port: 5432
@@ -152,5 +154,4 @@ scraper:
       url: https://www.fiskeridir.no/Tall-og-analyse/AApne-data/elektronisk-rapportering-ers/_/attachment/download/fab9f6b7-65d8-401c-805f-28d4f21b31ed:6df3611602349b1b9930b03924ef0ddd41bba8c9/elektronisk-rapportering-ers-2012.zip
     - year: 2011
       url: https://www.fiskeridir.no/Tall-og-analyse/AApne-data/elektronisk-rapportering-ers/_/attachment/download/04f14bc2-daf3-4e42-8c16-970afbe88290:3e9891ffb23a1092630e76a5dfcbff7dee891008/elektronisk-rapportering-ers-2011.zip
-
 

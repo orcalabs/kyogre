@@ -59,6 +59,17 @@ services:
       - RUST_BACKTRACE=1
       - APP_ENVIRONMENT=local
 
+  dev-engine:
+    image: ghcr.io/orcalabs/kyogre/engine
+    build:
+      context: .
+      dockerfile: dockerfiles/engine/Dockerfile
+      secrets:
+        - source: git-credentials
+    environment:
+      - RUST_BACKTRACE=1
+      - APP_ENVIRONMENT=local
+
   duckdb:
     image: ghcr.io/orcalabs/kyogre/duckdb
     build:

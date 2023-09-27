@@ -65,11 +65,60 @@ impl Settings {
     }
     pub fn benchmarks(&self) -> Vec<Box<dyn VesselBenchmark>> {
         let weight_per_hour = Box::<WeightPerHour>::default();
+        let weight_per_hour_day = Box::new(WeightPerHourInterval{
+            from: chrono::offset::Utc::now() - chrono::Duration::days(1),
+            to: chrono::offset::Utc::now(),
+            benchmark_id: VesselBenchmarkId::WeightPerHourDay
+        });
+        let weight_per_hour_week = Box::new(WeightPerHourInterval{
+            from: chrono::offset::Utc::now() - chrono::Duration::weeks(1),
+            to: chrono::offset::Utc::now(),
+            benchmark_id: VesselBenchmarkId::WeightPerHourWeek
+        });
+        let weight_per_hour_month = Box::new(WeightPerHourInterval{
+            from: chrono::offset::Utc::now() - chrono::Duration::days(30),
+            to: chrono::offset::Utc::now(),
+            benchmark_id: VesselBenchmarkId::WeightPerHourMonth
+        });
+        let weight_per_hour_year = Box::new(WeightPerHourInterval{
+            from: chrono::offset::Utc::now() - chrono::Duration::days(365),
+            to: chrono::offset::Utc::now(),
+            benchmark_id: VesselBenchmarkId::WeightPerHourYear
+        });
+        let weight_per_hour_prev_day = Box::new(WeightPerHourInterval{
+            from: chrono::offset::Utc::now() - chrono::Duration::days(2*1),
+            to: chrono::offset::Utc::now() - chrono::Duration::days(1),
+            benchmark_id: VesselBenchmarkId::WeightPerHourPrevDay
+        });
+        let weight_per_hour_prev_week = Box::new(WeightPerHourInterval{
+            from: chrono::offset::Utc::now() - chrono::Duration::weeks(2*1),
+            to: chrono::offset::Utc::now() - chrono::Duration::weeks(1),
+            benchmark_id: VesselBenchmarkId::WeightPerHourPrevWeek
+        });
+        let weight_per_hour_prev_month = Box::new(WeightPerHourInterval{
+            from: chrono::offset::Utc::now() - chrono::Duration::days(2*30),
+            to: chrono::offset::Utc::now() - chrono::Duration::days(30),
+            benchmark_id: VesselBenchmarkId::WeightPerHourPrevMonth
+        });
+        let weight_per_hour_prev_year = Box::new(WeightPerHourInterval{
+            from: chrono::offset::Utc::now() - chrono::Duration::days(2*365),
+            to: chrono::offset::Utc::now() - chrono::Duration::days(365),
+            benchmark_id: VesselBenchmarkId::WeightPerHourPrevYear
+        });
         let weight_per_distance = Box::<WeightPerDistance>::default();
 
         let vec = vec![
             weight_per_distance as Box<dyn VesselBenchmark>,
+            
             weight_per_hour as Box<dyn VesselBenchmark>, 
+            weight_per_hour_day as Box<dyn VesselBenchmark>, 
+            weight_per_hour_week as Box<dyn VesselBenchmark>, 
+            weight_per_hour_month as Box<dyn VesselBenchmark>, 
+            weight_per_hour_year as Box<dyn VesselBenchmark>, 
+            weight_per_hour_prev_day as Box<dyn VesselBenchmark>, 
+            weight_per_hour_prev_week as Box<dyn VesselBenchmark>, 
+            weight_per_hour_prev_month as Box<dyn VesselBenchmark>, 
+            weight_per_hour_prev_year as Box<dyn VesselBenchmark>, 
         ];
 
         vec

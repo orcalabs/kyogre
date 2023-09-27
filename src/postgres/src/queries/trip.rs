@@ -603,6 +603,35 @@ WHERE
             .duration
             .map(|v| Duration::microseconds(v.microseconds)))
     }
+    pub(crate) async fn sum_trip_time_interval_impl(
+        &self,
+        id: FiskeridirVesselId,
+        from: DateTime<Utc>,
+        to: DateTime<Utc>
+    ) -> Result<Option<Duration>, PostgresError> {
+        let duration = sqlx::query!(
+            r#"
+SELECT
+    SUM(UPPER(period) - LOWER(period)) AS duration
+FROM
+    trips
+WHERE
+    fiskeridir_vessel_id = $1 AND
+    LOWER(period) > $2 AND
+	LOWER(period) < $3
+            "#,
+            id.0,
+            from,
+            to
+        )
+        .fetch_one(&self.pool)
+        .await
+        .change_context(PostgresError::Query)?;
+
+        Ok(duration
+            .duration
+            .map(|v| Duration::microseconds(v.microseconds)))
+    }
     pub(crate) async fn sum_trip_distance_impl(
         &self,
         id: FiskeridirVesselId,

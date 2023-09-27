@@ -97,7 +97,15 @@ pub enum RelevantEventType {
 #[repr(i32)]
 pub enum VesselBenchmarkId {
     WeightPerHour = 1,
-    WeightPerDistance = 2,
+    WeightPerHourDay = 2,
+    WeightPerHourWeek = 3,
+    WeightPerHourMonth = 4,
+    WeightPerHourYear = 5,
+    WeightPerHourPrevDay = 6,
+    WeightPerHourPrevWeek = 7,
+    WeightPerHourPrevMonth = 8,
+    WeightPerHourPrevYear = 9,
+    WeightPerDistance = 10,
 }
 
 impl From<VesselBenchmarkId> for i32 {
@@ -285,6 +293,14 @@ impl std::fmt::Display for VesselBenchmarkId {
         match self {
             VesselBenchmarkId::WeightPerHour => f.write_str("WeightPerHour"),
             VesselBenchmarkId::WeightPerDistance => f.write_str("WeightPerDistance"),
+            VesselBenchmarkId::WeightPerHourDay => f.write_str("WeightPerHourDay"),
+            VesselBenchmarkId::WeightPerHourWeek => f.write_str("WeightPerHourWeek"),
+            VesselBenchmarkId::WeightPerHourMonth => f.write_str("WeightPerHourMonth"),
+            VesselBenchmarkId::WeightPerHourYear => f.write_str("WeightPerHourYear"),
+            VesselBenchmarkId::WeightPerHourPrevDay => f.write_str("WeightPerHourPrevDay"),
+            VesselBenchmarkId::WeightPerHourPrevWeek => f.write_str("WeightPerHourPrevWeek"),
+            VesselBenchmarkId::WeightPerHourPrevMonth => f.write_str("WeightPerHourPrevMonth"),
+            VesselBenchmarkId::WeightPerHourPrevYear => f.write_str("WeightPerHourPrevYear"),
         }
     }
 }

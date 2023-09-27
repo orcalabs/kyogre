@@ -163,6 +163,38 @@ WHERE
             .transpose()?)
     }
 
+    pub(crate) async fn sum_landing_weight_time_interval_impl(
+        &self,
+        id: FiskeridirVesselId,
+        from: DateTime<Utc>,
+        to: DateTime<Utc>
+    ) -> Result<Option<f64>, PostgresError> {
+        let weight = sqlx::query!(
+            r#"
+SELECT
+    SUM(le.living_weight) AS weight
+FROM
+    landings AS l
+    INNER JOIN landing_entries AS le ON l.landing_id = le.landing_id
+WHERE
+    fiskeridir_vessel_id = $1 AND
+    l.landing_timestamp > $2 AND
+    l.landing_timestamp < $3
+            "#,
+            id.0,
+            from,
+            to
+        )
+        .fetch_one(&self.pool)
+        .await
+        .change_context(PostgresError::Query)?;
+
+        Ok(weight
+            .weight
+            .map(|v| v.to_f64().ok_or(PostgresError::DataConversion))
+            .transpose()?)
+    }
+
     pub(crate) async fn add_landings_impl(
         &self,
         landings: Box<

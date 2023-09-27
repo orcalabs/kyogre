@@ -840,12 +840,21 @@ impl VesselBenchmarkOutbound for PostgresAdapter {
     async fn sum_trip_time(&self, id: FiskeridirVesselId) -> Result<Option<Duration>, QueryError> {
         self.sum_trip_time_impl(id).await.change_context(QueryError)
     }
+    async fn sum_trip_time_interval(&self, id: FiskeridirVesselId, from: DateTime<Utc>, to: DateTime<Utc>) -> Result<Option<Duration>, QueryError> {
+        self.sum_trip_time_interval_impl(id, from, to).await.change_context(QueryError)
+    }
     async fn sum_trip_distance(&self, id: FiskeridirVesselId) -> Result<Option<f64>, QueryError>{
         self.sum_trip_distance_impl(id).await.change_context(QueryError)
     }
 
     async fn sum_landing_weight(&self, id: FiskeridirVesselId) -> Result<Option<f64>, QueryError> {
         self.sum_landing_weight_impl(id)
+            .await
+            .change_context(QueryError)
+    }
+
+    async fn sum_landing_weight_time_interval(&self, id: FiskeridirVesselId, from: DateTime<Utc>, to: DateTime<Utc>) -> Result<Option<f64>, QueryError> {
+        self.sum_landing_weight_time_interval_impl(id, from , to)
             .await
             .change_context(QueryError)
     }

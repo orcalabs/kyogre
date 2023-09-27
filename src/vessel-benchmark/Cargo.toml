@@ -11,3 +11,5 @@ kyogre-core = { path = "../kyogre-core", features = ["utoipa"] }
 async-trait = "0.1.73"
 tracing = "0.1.37"
 error-stack = { workspace = true }
+chrono = { version = "0.4.31", features = ["serde"] }
+
