@@ -154,7 +154,7 @@ where
             .iter_mut()
             .enumerate()
             .filter(|(i, _)| *i >= current_index)
-            .for_each(|(idx, c)| closure(idx, c));
+            .for_each(|(idx, c)| closure(idx - current_index, c));
 
         self
     }
