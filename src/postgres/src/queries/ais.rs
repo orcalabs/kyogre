@@ -411,6 +411,8 @@ WHERE
             unique_static.entry(v.mmsi).or_insert(v.clone());
         }
 
+        let mut tx = self.begin().await?;
+
         let vessels = unique_static
             .into_values()
             .map(NewAisVessel::from)
@@ -422,15 +424,19 @@ WHERE
             .map(NewAisVesselHistoric::from)
             .collect();
 
-        NewAisVessel::unnest_insert(vessels, &self.pool)
+        NewAisVessel::unnest_insert(vessels, &mut *tx)
             .await
-            .change_context(PostgresError::Query)
-            .map(|_| ())?;
+            .change_context(PostgresError::Query)?;
 
-        NewAisVesselHistoric::unnest_insert(vessels_historic, &self.pool)
+        NewAisVesselHistoric::unnest_insert(vessels_historic, &mut *tx)
             .await
-            .change_context(PostgresError::Query)
-            .map(|_| ())
+            .change_context(PostgresError::Query)?;
+
+        tx.commit()
+            .await
+            .change_context(PostgresError::Transaction)?;
+
+        Ok(())
     }
     pub(crate) async fn add_mmsis_impl(&self, mmsis: Vec<Mmsi>) -> Result<(), PostgresError> {
         sqlx::query!(

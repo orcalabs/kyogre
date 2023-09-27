@@ -13,23 +13,27 @@ use crate::error::{FromBigDecimalError, NavigationStatusError, PostgresError};
 #[unnest_insert(table_name = "ais_vessels", conflict = "mmsi")]
 pub struct NewAisVessel {
     pub mmsi: i32,
-    #[unnest_insert(update_coalesce)]
+    #[unnest_insert(update = "imo_number = COALESCE(EXCLUDED.imo_number, ais_vessels.imo_number)")]
     pub imo_number: Option<i32>,
-    #[unnest_insert(update_coalesce)]
+    #[unnest_insert(update = "call_sign = COALESCE(EXCLUDED.call_sign, ais_vessels.call_sign)")]
     pub call_sign: Option<String>,
-    #[unnest_insert(update_coalesce)]
+    #[unnest_insert(update = "name = COALESCE(EXCLUDED.name, ais_vessels.name)")]
     pub name: Option<String>,
-    #[unnest_insert(update_coalesce)]
+    #[unnest_insert(update = "ship_width = COALESCE(EXCLUDED.ship_width, ais_vessels.ship_width)")]
     pub ship_width: Option<i32>,
-    #[unnest_insert(update_coalesce)]
+    #[unnest_insert(
+        update = "ship_length = COALESCE(EXCLUDED.ship_length, ais_vessels.ship_length)"
+    )]
     pub ship_length: Option<i32>,
-    #[unnest_insert(update_coalesce)]
+    #[unnest_insert(update = "ship_type = COALESCE(EXCLUDED.ship_type, ais_vessels.ship_type)")]
     pub ship_type: Option<i32>,
-    #[unnest_insert(update)]
+    #[unnest_insert(update = "eta = COALESCE(EXCLUDED.eta, ais_vessels.eta)")]
     pub eta: Option<DateTime<Utc>>,
-    #[unnest_insert(update_coalesce)]
+    #[unnest_insert(update = "draught = COALESCE(EXCLUDED.draught, ais_vessels.draught)")]
     pub draught: Option<i32>,
-    #[unnest_insert(update)]
+    #[unnest_insert(
+        update = "destination = COALESCE(EXCLUDED.destination, ais_vessels.destination)"
+    )]
     pub destination: Option<String>,
 }
 
@@ -99,7 +103,7 @@ impl From<kyogre_core::NewAisStatic> for NewAisVesselHistoric {
         Self {
             mmsi: v.mmsi.0,
             imo_number: v.imo_number,
-            call_sign: v.call_sign,
+            call_sign: v.call_sign.map(|v| v.into_inner()),
             name: v.name,
             ship_width: v.ship_width,
             ship_length: v.ship_length,
@@ -124,7 +128,7 @@ impl From<kyogre_core::NewAisStatic> for NewAisVessel {
         Self {
             mmsi: v.mmsi.0,
             imo_number: v.imo_number,
-            call_sign: v.call_sign,
+            call_sign: v.call_sign.map(|v| v.into_inner()),
             name: v.name,
             ship_width: v.ship_width,
             ship_length: v.ship_length,
