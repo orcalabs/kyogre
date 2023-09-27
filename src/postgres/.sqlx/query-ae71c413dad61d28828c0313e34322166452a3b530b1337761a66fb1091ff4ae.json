@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    SUM(le.living_weight) AS weight\nFROM\n    landings AS l\n    INNER JOIN landing_entries AS le ON l.landing_id = le.landing_id\nWHERE\n    fiskeridir_vessel_id = $1 AND\n    l.landing_timestamp > $2 AND\n    l.landing_timestamp < $3\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "weight",
+        "type_info": "Numeric"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Timestamptz",
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "ae71c413dad61d28828c0313e34322166452a3b530b1337761a66fb1091ff4ae"
+}

@@ -1,0 +1,38 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    p.port_id AS \"id!\",\n    p.name,\n    p.latitude,\n    p.longitude\nFROM\n    ports AS p\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id!",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 1,
+        "name": "name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 2,
+        "name": "latitude",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 3,
+        "name": "longitude",
+        "type_info": "Numeric"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "ac5972b5a3ce10a68ad9f78f10f41f78dbd9a31a6defb91af715cc1b0e515d81"
+}

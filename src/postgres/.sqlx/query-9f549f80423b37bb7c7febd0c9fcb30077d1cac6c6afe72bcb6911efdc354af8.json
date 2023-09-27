@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    SUM(UPPER(period) - LOWER(period)) AS duration\nFROM\n    trips\nWHERE\n    fiskeridir_vessel_id = $1 AND\n    LOWER(period) > $2 AND\n\tLOWER(period) < $3\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "duration",
+        "type_info": "Interval"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Timestamptz",
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "9f549f80423b37bb7c7febd0c9fcb30077d1cac6c6afe72bcb6911efdc354af8"
+}
