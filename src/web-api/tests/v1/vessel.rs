@@ -1,7 +1,7 @@
 use super::helper::test;
 use actix_web::http::StatusCode;
 use chrono::Duration;
-use fiskeridir_rs::{GearGroup, Landing, SpeciesGroup};
+use fiskeridir_rs::{GearGroup, LandingId, SpeciesGroup};
 use kyogre_core::levels::*;
 use web_api::routes::v1::vessel::Vessel;
 
@@ -204,18 +204,24 @@ async fn test_vessel_has_gear_groups_of_landings() {
 
 #[tokio::test]
 async fn test_vessel_removes_gear_group_when_last_landing_is_replaced_with_new_gear_group() {
-    test(|helper, _builder| async move {
-        let vessel_id = 1;
-        let mut landing = Landing::test_default(1, Some(vessel_id));
-        landing.gear.group = GearGroup::Not;
-
-        let mut landing2 = landing.clone();
-        landing2.document_info.version_number += 1;
-        landing2.gear.group = GearGroup::Garn;
-
-        helper.db.add_landings(vec![landing]).await;
-
-        helper.db.add_landings(vec![landing2]).await;
+    test(|helper, builder| async move {
+        builder
+            .vessels(1)
+            .landings(1)
+            .modify(|v| {
+                v.landing.id = LandingId::try_from("1-7-0-0").unwrap();
+                v.landing.document_info.version_number = 1;
+                v.landing.gear.group = GearGroup::Not;
+            })
+            .new_cycle()
+            .landings(1)
+            .modify(|v| {
+                v.landing.document_info.version_number = 2;
+                v.landing.id = LandingId::try_from("1-7-0-0").unwrap();
+                v.landing.gear.group = GearGroup::Garn;
+            })
+            .build()
+            .await;
 
         let response = helper.app.get_vessels().await;
 
@@ -277,18 +283,24 @@ async fn test_vessel_has_species_groups_of_landings() {
 
 #[tokio::test]
 async fn test_vessel_removes_species_group_when_last_landing_is_replaced_with_new_species_group() {
-    test(|helper, _builder| async move {
-        let vessel_id = 1;
-        let mut landing = Landing::test_default(1, Some(vessel_id));
-        landing.product.species.group_code = SpeciesGroup::Torsk;
-
-        let mut landing2 = landing.clone();
-        landing2.document_info.version_number += 1;
-        landing2.product.species.group_code = SpeciesGroup::Sei;
-
-        helper.db.add_landings(vec![landing]).await;
-
-        helper.db.add_landings(vec![landing2]).await;
+    test(|helper, builder| async move {
+        builder
+            .vessels(1)
+            .landings(1)
+            .modify(|v| {
+                v.landing.id = LandingId::try_from("1-7-0-0").unwrap();
+                v.landing.document_info.version_number = 1;
+                v.landing.product.species.group_code = SpeciesGroup::Torsk;
+            })
+            .new_cycle()
+            .landings(1)
+            .modify(|v| {
+                v.landing.document_info.version_number = 2;
+                v.landing.id = LandingId::try_from("1-7-0-0").unwrap();
+                v.landing.product.species.group_code = SpeciesGroup::Sei;
+            })
+            .build()
+            .await;
 
         let response = helper.app.get_vessels().await;
 
