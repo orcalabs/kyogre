@@ -52,7 +52,7 @@ pub struct NewAisStatic {
     pub mmsi: Mmsi,
     pub msgtime: DateTime<Utc>,
     pub imo_number: Option<i32>,
-    pub call_sign: Option<String>,
+    pub call_sign: Option<CallSign>,
     pub destination: Option<String>,
     pub eta: Option<DateTime<Utc>>,
     pub name: Option<String>,
@@ -172,7 +172,7 @@ impl NewAisStatic {
         NewAisStatic {
             mmsi,
             imo_number: Some(10),
-            call_sign: Some(call_sign.to_owned()),
+            call_sign: Some(call_sign.try_into().unwrap()),
             name: Some("test_vessel".to_string()),
             ship_length: Some(10),
             ship_width: Some(5),

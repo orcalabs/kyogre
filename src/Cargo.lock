@@ -264,6 +264,7 @@ dependencies = [
  "config",
  "dockertest",
  "error-stack 0.4.1",
+ "fiskeridir-rs",
  "flate2",
  "futures",
  "geo",

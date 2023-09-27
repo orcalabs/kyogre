@@ -1,6 +1,7 @@
 use error_stack::{bail, Report, Result, ResultExt};
 
 use chrono::{DateTime, Datelike, NaiveDate, NaiveDateTime, NaiveTime, TimeZone, Timelike, Utc};
+use fiskeridir_rs::CallSign;
 use kyogre_core::{AisClass, Mmsi, NavigationStatus, NewAisPosition, NewAisStatic};
 use rand::{random, Rng};
 use serde::{Deserialize, Serialize};
@@ -109,13 +110,24 @@ impl TryFrom<AisStatic> for NewAisStatic {
             }
         };
 
+        let call_sign: Result<Option<Option<CallSign>>, Report<fiskeridir_rs::Error>> = a
+            .call_sign
+            .map(|v| match CallSign::try_from(v) {
+                Ok(v) => Ok(Some(v)),
+                Err(e) => {
+                    event!(Level::WARN, "invalid call_sign: {:?}", e);
+                    Ok(None)
+                }
+            })
+            .transpose();
+
         Ok(NewAisStatic {
             message_type: a.message_type.map(kyogre_core::AisMessageType::from),
             message_type_id: a.message_type_id,
             mmsi: a.mmsi,
             msgtime: a.msgtime,
             imo_number: a.imo_number,
-            call_sign: a.call_sign,
+            call_sign: call_sign.unwrap().flatten(),
             destination: a.destination,
             eta: eta?.flatten(),
             name: a.name,
