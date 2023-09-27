@@ -1423,7 +1423,8 @@ WHERE
     (
         $5 = 2
         AND (
-            v.vessel_event_type_id = 2
+            v.vessel_event_type_id = 1
+            OR v.vessel_event_type_id = 2
             OR v.vessel_event_type_id = 5
             OR v.vessel_event_type_id = 6
         )
@@ -1446,9 +1447,10 @@ WHERE
         AND v.fiskeridir_vessel_id = u.fiskeridir_vessel_id
     )
     OR (
-        v.vessel_event_type_id = 1
-        AND v.occurence_timestamp >= LOWER(u.landing_coverage)
-        AND v.occurence_timestamp < UPPER(u.landing_coverage)
+        $5 = 1
+        AND v.vessel_event_type_id = 1
+        AND v.occurence_timestamp > LOWER(u.landing_coverage)
+        AND v.occurence_timestamp <= UPPER(u.landing_coverage)
         AND v.fiskeridir_vessel_id = u.fiskeridir_vessel_id
     )
             "#,

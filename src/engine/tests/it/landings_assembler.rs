@@ -97,6 +97,7 @@ async fn test_resolves_conflict_on_day_prior_to_most_recent_trip_end() {
     })
     .await;
 }
+
 #[tokio::test]
 async fn test_other_event_types_does_not_cause_conflicts() {
     test(|helper, builder| async move {

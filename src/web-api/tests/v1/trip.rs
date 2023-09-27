@@ -64,8 +64,8 @@ async fn test_trip_of_landing_does_not_return_trip_of_other_vessels() {
             .await;
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body: Option<Trip> = response.json().await.unwrap();
-        assert!(body.is_none());
+        let trip: Trip = response.json().await.unwrap();
+        assert_eq!(state.trips[0], trip);
     })
     .await;
 }
