@@ -287,12 +287,12 @@ async fn test_hauls_matrix_filters_by_fiskeridir_vessel_ids() {
             .vessels(2)
             .hauls(2)
             .modify_idx(|i, v| match i {
-                2 => {
+                0 => {
                     v.dca.start_latitude = Some(56.727258);
                     v.dca.start_longitude = Some(12.565410);
                     v.dca.catch.species.living_weight = Some(10);
                 }
-                3 => {
+                1 => {
                     v.dca.start_latitude = Some(56.756293);
                     v.dca.start_longitude = Some(11.514740);
                     v.dca.catch.species.living_weight = Some(20);
