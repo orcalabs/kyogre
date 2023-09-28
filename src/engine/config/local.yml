@@ -1,5 +1,5 @@
-log_level: Debug
-single_state_run: Benchmark
+log_level: Info
+# single_state_run: Benchmark
 
 postgres:
   ip: postgres

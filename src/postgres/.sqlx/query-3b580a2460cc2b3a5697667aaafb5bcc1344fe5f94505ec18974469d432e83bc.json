@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    SUM(distance) AS distance\nFROM\n    trips\nWHERE\n    fiskeridir_vessel_id = $1 AND\n    LOWER(period) > $2 AND\n\tLOWER(period) < $3\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "distance",
+        "type_info": "Numeric"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Timestamptz",
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "3b580a2460cc2b3a5697667aaafb5bcc1344fe5f94505ec18974469d432e83bc"
+}

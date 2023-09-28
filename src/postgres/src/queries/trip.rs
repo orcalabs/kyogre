@@ -656,6 +656,37 @@ WHERE
             .map(|v| v.to_f64().ok_or(PostgresError::DataConversion))
             .transpose()?)
     }
+
+    pub(crate) async fn sum_trip_distance_time_interval_impl(
+        &self,
+        id: FiskeridirVesselId,
+        from: DateTime<Utc>,
+        to: DateTime<Utc>
+    ) -> Result<Option<f64>, PostgresError> {
+        let distance = sqlx::query!(
+            r#"
+SELECT
+    SUM(distance) AS distance
+FROM
+    trips
+WHERE
+    fiskeridir_vessel_id = $1 AND
+    LOWER(period) > $2 AND
+	LOWER(period) < $3
+            "#,
+            id.0,
+            from,
+            to
+        )
+        .fetch_one(&self.pool)
+        .await
+        .change_context(PostgresError::Query)?;
+
+        Ok(distance
+            .distance
+            .map(|v| v.to_f64().ok_or(PostgresError::DataConversion))
+            .transpose()?)
+    }
     pub(crate) fn detailed_trips_impl(
         &self,
         query: TripsQuery,
