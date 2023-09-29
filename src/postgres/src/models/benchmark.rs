@@ -30,6 +30,14 @@ impl TryFrom<Benchmarks> for kyogre_core::Benchmark{
                 8 => VesselBenchmarkId::WeightPerHourPrevMonth,
                 9 => VesselBenchmarkId::WeightPerHourPrevYear,
                 10 => VesselBenchmarkId::WeightPerDistance,
+                11 => VesselBenchmarkId::WeightPerDistanceDay,
+                12 => VesselBenchmarkId::WeightPerDistanceWeek,
+                13 => VesselBenchmarkId::WeightPerDistanceMonth,
+                14 => VesselBenchmarkId::WeightPerDistanceYear,
+                15 => VesselBenchmarkId::WeightPerDistancePrevDay,
+                16 => VesselBenchmarkId::WeightPerDistancePrevWeek,
+                17 => VesselBenchmarkId::WeightPerDistancePrevMonth,
+                18 => VesselBenchmarkId::WeightPerDistancePrevYear,
                 _ => {
                     return Err(PostgresError::DataConversion.into());
                 }

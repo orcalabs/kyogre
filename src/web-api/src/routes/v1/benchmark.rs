@@ -10,7 +10,7 @@ use futures::TryStreamExt;
     get,
     path = "/benchmark",
     responses(
-        (status = 200, description = "all benchmarks", body = [i32]),
+        (status = 200, description = "all benchmarks", body = [Benchmark]),
         (status = 500, description = "an internal error occured", body = ErrorResponse),
     )
 )]
@@ -29,7 +29,8 @@ pub async fn benchmark<T: Database + 'static>(db: web::Data<T>) -> Result<HttpRe
 pub struct Benchmark {
     #[schema(value_type = i64)]
     pub vessel_id : FiskeridirVesselId,
-    #[schema(value_type = i64)]
+    // #[schema(value_type = &str)]
+    
     pub benchmark_id: VesselBenchmarkId,
     pub output : Option<f64>,
 }

@@ -93,7 +93,7 @@ pub enum RelevantEventType {
     ErsPorAndDep,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Deserialize_repr,Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Deserialize_repr,Serialize,utoipa::ToSchema)]
 #[repr(i32)]
 pub enum VesselBenchmarkId {
     WeightPerHour = 1,
