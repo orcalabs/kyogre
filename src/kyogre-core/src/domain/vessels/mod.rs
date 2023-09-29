@@ -119,6 +119,16 @@ pub enum VesselBenchmarkId {
     WeightPerDistancePrevWeek = 16,
     WeightPerDistancePrevMonth = 17,
     WeightPerDistancePrevYear = 18,
+
+    TotalWeightDay = 19,
+    TotalWeightWeek = 20,
+    TotalWeightMonth = 21,
+    TotalWeightYear = 22,
+    
+    TotalWeightPrevDay = 23,
+    TotalWeightPrevWeek = 24,
+    TotalWeightPrevMonth = 25,
+    TotalWeightPrevYear = 26,
 }
 
 impl From<VesselBenchmarkId> for i32 {
@@ -322,6 +332,14 @@ impl std::fmt::Display for VesselBenchmarkId {
             VesselBenchmarkId::WeightPerDistancePrevWeek => f.write_str("WeightPerDistancePrevWeek"),
             VesselBenchmarkId::WeightPerDistancePrevMonth => f.write_str("WeightPerDistancePrevMonth"),
             VesselBenchmarkId::WeightPerDistancePrevYear => f.write_str("WeightPerDistancePrevYear"),
+            VesselBenchmarkId::TotalWeightDay => f.write_str("TotalWeightDay"),
+            VesselBenchmarkId::TotalWeightWeek => f.write_str("TotalWeightWeek"),
+            VesselBenchmarkId::TotalWeightMonth => f.write_str("TotalWeightMonth"),
+            VesselBenchmarkId::TotalWeightYear => f.write_str("TotalWeightYear"),
+            VesselBenchmarkId::TotalWeightPrevDay => f.write_str("TotalWeightPrevDay"),
+            VesselBenchmarkId::TotalWeightPrevWeek => f.write_str("TotalWeightPrevWeek"),
+            VesselBenchmarkId::TotalWeightPrevMonth => f.write_str("TotalWeightPrevMonth"),
+            VesselBenchmarkId::TotalWeightPrevYear => f.write_str("TotalWeightPrevYear"),
         }
     }
 }
