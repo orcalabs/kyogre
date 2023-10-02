@@ -175,7 +175,7 @@ impl Scraper {
             config.fishing_facility_historic,
         );
 
-        let _weather_scraper = WeatherScraper::new();
+        let weather_scraper = WeatherScraper::new();
         let _ocean_climate_scraper = OceanClimateScraper::new();
 
         Scraper {
@@ -191,7 +191,7 @@ impl Scraper {
                 Box::new(fishing_facility_historic_scraper),
                 Box::new(aqua_culture_register_scraper),
                 Box::new(mattilsynet_scraper),
-                // Box::new(weather_scraper),
+                Box::new(weather_scraper),
                 // Box::new(ocean_climate_scraper),
             ],
             processor,
