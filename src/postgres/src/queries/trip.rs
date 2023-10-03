@@ -1123,7 +1123,14 @@ WHERE
     }
 
     pub(crate) async fn add_trip_set_impl(&self, value: TripSet) -> Result<(), PostgresError> {
-        let earliest_trip_start = value.values[0].start();
+        let earliest_trip_period = value
+            .values
+            .iter()
+            .map(|v| &v.trip.period)
+            .min_by_key(|v| v.start())
+            .unwrap()
+            .clone();
+
         let new_trips = value
             .values
             .into_iter()
@@ -1131,7 +1138,8 @@ WHERE
             .collect::<Result<Vec<crate::models::NewTrip>, _>>()
             .change_context(PostgresError::Query)?;
 
-        let earliest_trip_period = &new_trips[0].period;
+        let earliest_trip_start = earliest_trip_period.start();
+        let earliest_trip_period = PgRange::from(&earliest_trip_period);
 
         let mut tx = self.begin().await?;
 
@@ -1379,8 +1387,7 @@ WHERE
     (
         $5 = 2
         AND (
-            v.vessel_event_type_id = 1
-            OR v.vessel_event_type_id = 2
+            v.vessel_event_type_id = 2
             OR v.vessel_event_type_id = 5
             OR v.vessel_event_type_id = 6
         )
@@ -1407,6 +1414,13 @@ WHERE
         AND v.vessel_event_type_id = 1
         AND v.occurence_timestamp > LOWER(u.landing_coverage)
         AND v.occurence_timestamp <= UPPER(u.landing_coverage)
+        AND v.fiskeridir_vessel_id = u.fiskeridir_vessel_id
+    )
+    OR (
+        $5 = 2
+        AND v.vessel_event_type_id = 1
+        AND v.occurence_timestamp >= LOWER(u.landing_coverage)
+        AND v.occurence_timestamp < UPPER(u.landing_coverage)
         AND v.fiskeridir_vessel_id = u.fiskeridir_vessel_id
     )
             "#,

@@ -1,6 +1,6 @@
 use super::helper::test;
 use actix_web::http::StatusCode;
-use chrono::{Duration, TimeZone, Utc};
+use chrono::{DateTime, Duration, TimeZone, Utc};
 use fiskeridir_rs::{DeliveryPointId, GearGroup, LandingId, SpeciesGroup, VesselLengthGroup};
 use kyogre_core::{levels::*, Ordering, TripSorting, TripSpecification, VesselEventType};
 use web_api::routes::utils::{self, GearGroupId, SpeciesGroupId};
@@ -960,6 +960,56 @@ async fn test_trips_contains_landing_ids() {
         assert_eq!(trips.len(), 1);
         assert_eq!(trips, state.trips);
         assert_eq!(landing_ids.len(), 3);
+        assert_eq!(
+            *landing_ids,
+            state
+                .landings
+                .into_iter()
+                .map(|v| v.landing_id)
+                .collect::<Vec<LandingId>>()
+        );
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_trips_connects_to_existing_landings_outside_period_but_inside_landing_coverage() {
+    test(|helper, builder| async move {
+        let start: DateTime<Utc> = "2000-01-05T00:00:00Z".parse().unwrap();
+        let end: DateTime<Utc> = "2000-01-07T00:00:00Z".parse().unwrap();
+
+        let state = builder
+            .vessels(1)
+            .modify(|v| {
+                v.fiskeridir.id = 1;
+            })
+            .landings(1)
+            .modify(|v| {
+                v.landing.landing_timestamp = end + Duration::days(2);
+            })
+            .new_cycle()
+            .base()
+            .vessels(1)
+            .modify(|v| {
+                v.fiskeridir.id = 1;
+            })
+            .trips(1)
+            .modify(|v| {
+                v.trip_specification.set_start(start);
+                v.trip_specification.set_end(end);
+            })
+            .build()
+            .await;
+
+        let response = helper.app.get_trips(TripsParameters::default(), None).await;
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let trips: Vec<Trip> = response.json().await.unwrap();
+        let landing_ids = &trips[0].landing_ids;
+
+        assert_eq!(trips.len(), 1);
+        assert_eq!(landing_ids.len(), 1);
+        assert_eq!(trips, state.trips);
         assert_eq!(
             *landing_ids,
             state
