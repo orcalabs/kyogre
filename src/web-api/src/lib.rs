@@ -48,6 +48,7 @@ impl Database for PostgresAdapter {}
         v1::trip::trips_of_vessel,
         v1::trip::current_trip,
         v1::vms::vms_positions,
+        v1::vms::vms_positions_time_interval,
         v1::ais_vms::ais_vms_positions,
         v1::fishing_facility::fishing_facilities,
         v1::user::get_user,

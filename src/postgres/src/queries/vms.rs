@@ -72,6 +72,37 @@ ORDER BY
         .map_err(|e| report!(e).change_context(PostgresError::Query))
     }
 
+    pub(crate) fn vms_positions_time_interval_impl(
+        &self,
+        range: &DateRange,
+    ) -> impl Stream<Item = Result<VmsPosition, PostgresError>> + '_ {
+        sqlx::query_as!(
+            VmsPosition,
+            r#"
+SELECT
+    call_sign,
+    course,
+    latitude,
+    longitude,
+    registration_id,
+    speed,
+    "timestamp",
+    vessel_length,
+    vessel_name,
+    vessel_type
+FROM
+    vms_positions
+WHERE
+    "timestamp" BETWEEN $1 AND $2
+ORDER BY
+    "timestamp" ASC
+            "#,
+            range.start(),
+            range.end(),
+        )
+        .fetch(&self.pool)
+        .map_err(|e| report!(e).change_context(PostgresError::Query))
+    }
     pub(crate) async fn add_vms_impl(
         &self,
         vms: Vec<fiskeridir_rs::Vms>,

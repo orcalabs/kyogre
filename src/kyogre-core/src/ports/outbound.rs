@@ -33,6 +33,10 @@ pub trait WebApiOutboundPort {
         call_sign: &CallSign,
         range: &DateRange,
     ) -> PinBoxStream<'_, VmsPosition, QueryError>;
+    fn vms_positions_time_interval(
+        &self,
+        range: &DateRange,
+    ) -> PinBoxStream<'_, VmsPosition, QueryError>;
     fn ais_vms_positions(
         &self,
         mmsi: Option<Mmsi>,

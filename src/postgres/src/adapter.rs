@@ -380,6 +380,12 @@ impl WebApiOutboundPort for PostgresAdapter {
     ) -> PinBoxStream<'_, VmsPosition, QueryError> {
         convert_stream(self.vms_positions_impl(call_sign, range)).boxed()
     }
+    fn vms_positions_time_interval(
+        &self,
+        range: &DateRange,
+    ) -> PinBoxStream<'_, VmsPosition, QueryError> {
+        convert_stream(self.vms_positions_time_interval_impl(range)).boxed()
+    }
 
     fn ais_vms_positions(
         &self,

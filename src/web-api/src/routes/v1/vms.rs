@@ -64,6 +64,46 @@ pub async fn vms_positions<T: Database + 'static>(
     }
 }
 
+#[utoipa::path(
+    get,
+    path = "/vms/",
+    params(VmsParameters),
+    responses(
+        (status = 200, description = "vms positions for the given call sign", body = [VmsPosition]),
+        (status = 500, description = "an internal error occured", body = ErrorResponse),
+        (status = 400, description = "invalid parameters were provided", body = ErrorResponse),
+    )
+)]
+#[tracing::instrument(skip(db))]
+pub async fn vms_positions_time_interval<T: Database + 'static>(
+    db: web::Data<T>,
+    params: web::Query<VmsParameters>,
+) -> Result<HttpResponse, ApiError> {
+    let (start, end) = match (params.start, params.end) {
+        (None, None) => {
+            let end = chrono::Utc::now();
+            let start = end - Duration::hours(24);
+            Ok((start, end))
+        }
+        (Some(start), Some(end)) => Ok((start, end)),
+        _ => Err(ApiError::InvalidDateRange),
+    }?;
+
+    let range = DateRange::new(start, end).map_err(|e| {
+        event!(Level::WARN, "{:?}", e);
+        ApiError::InvalidDateRange
+    })?;
+
+    to_streaming_response! {
+        db.vms_positions_time_interval(&range)
+        .map_ok(VmsPosition::from)
+            .map_err(|e| {
+                event!(Level::ERROR, "failed to retrieve vms positions: {:?}", e);
+                ApiError::InternalServerError
+            })
+    }
+}
+
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct VmsPosition {

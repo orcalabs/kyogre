@@ -100,6 +100,10 @@ where
                 web::get().to(routes::v1::vms::vms_positions::<T>),
             )
             .route(
+                "/vms/",
+                web::get().to(routes::v1::vms::vms_positions_time_interval::<T>),
+            )
+            .route(
                 "/trip_of_haul/{haul_id}",
                 web::get().to(routes::v1::trip::trip_of_haul::<T>),
             )
