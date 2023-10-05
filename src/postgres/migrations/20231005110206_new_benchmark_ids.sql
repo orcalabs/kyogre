@@ -1,0 +1,28 @@
+INSERT INTO 
+ vessel_benchmarks(vessel_benchmark_id, description)
+VALUES
+ (2, 'weight per hour Day'),
+ (3, 'weight per hour Week'),
+ (4, 'weight per hour Month'),
+ (5, 'weight per hour Year'),
+ (6, 'weight per hour prev Day'),
+ (7, 'weight per hour prev week'),
+ (8, 'weight per hour prev month'),
+ (9, 'weight per hour prev year'),
+ (10, 'weight per distance'),
+ (11, 'weight per hour Day'),
+ (12, 'weight per hour Week'),
+ (13, 'weight per hour Month'),
+ (14, 'weight per hour Year'),
+ (15, 'weight per hour prev Day'),
+ (16, 'weight per hour prev week'),
+ (17, 'weight per hour prev month'),
+ (18, 'weight per hour prev year'),
+ (19, 'total weight Day'),
+ (20, 'total weight Week'),
+ (21, 'total weight Month'),
+ (22, 'total weight Year'),
+ (23, 'total weight prev Day'),
+ (24, 'total weight prev week'),
+ (25, 'total weight prev month'),
+ (26, 'total weight prev year');
