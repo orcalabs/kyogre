@@ -76,6 +76,7 @@ pub struct Weather {
     pub precipitation_amount: Option<f64>,
     pub land_area_fraction: f64,
     pub cloud_area_fraction: Option<f64>,
+    pub weather_location_id: i32,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
@@ -101,6 +102,7 @@ impl From<kyogre_core::Weather> for Weather {
             precipitation_amount: v.precipitation_amount,
             land_area_fraction: v.land_area_fraction,
             cloud_area_fraction: v.cloud_area_fraction,
+            weather_location_id: v.weather_location_id.0,
         }
     }
 }
