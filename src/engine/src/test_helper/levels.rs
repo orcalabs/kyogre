@@ -32,6 +32,7 @@ macro_rules! impl_cycleable {
     };
 }
 
+impl_cycleable!(AisVesselBuilder, AisVesselConstructor, state, cycle);
 impl_cycleable!(
     OceanClimateHaulBuilder,
     OceanClimateConstructor,
@@ -174,6 +175,7 @@ macro_rules! impl_modifiable {
     };
 }
 
+impl_modifiable!(AisVesselBuilder, AisVesselConstructor, state.ais_static);
 impl_modifiable!(TraVesselBuilder, TraConstructor, state.state.tra);
 impl_modifiable!(TraTripBuilder, TraConstructor, state.state.state.tra);
 impl_modifiable!(VesselBuilder, VesselContructor, state.vessels);
@@ -443,6 +445,7 @@ macro_rules! impl_global_level {
     };
 }
 
+impl_global_level!(AisVesselBuilder);
 impl_global_level!(VesselBuilder);
 impl_global_level!(HaulBuilder);
 impl_global_level!(TraBuilder);

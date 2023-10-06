@@ -2,8 +2,9 @@ use crate::{
     AisConsumeLoop, AisPosition, Arrival, DataMessage, DeliveryPoint, DeliveryPointType, Departure,
     FisheryEngine, FishingFacilities, FishingFacilitiesQuery, FishingFacility, FiskeridirVesselId,
     Haul, HaulsQuery, Landing, LandingsQuery, LandingsSorting, ManualDeliveryPoint,
-    MattilsynetDeliveryPoint, Mmsi, NewAisPosition, NewAisStatic, OceanClimate, Ordering,
-    Pagination, PrecisionId, TripDetailed, Trips, TripsQuery, Vessel, VmsPosition, Weather,
+    MattilsynetDeliveryPoint, Mmsi, NewAisPosition, NewAisStatic, NewVesselConflict, OceanClimate,
+    Ordering, Pagination, PrecisionId, TripDetailed, Trips, TripsQuery, Vessel, VmsPosition,
+    Weather,
 };
 
 use ais::*;
@@ -77,11 +78,13 @@ pub struct TestStateBuilder {
     vessels: Vec<VesselContructor>,
     ais_data_sender: tokio::sync::broadcast::Sender<DataMessage>,
     ais_data_confirmation: tokio::sync::mpsc::Receiver<()>,
-    // Used for `vessel_id`, `call_sign` and `mmsi`
     vessel_id_counter: i64,
+    mmsi_counter: i32,
+    call_sign_counter: i32,
     global_data_timestamp_counter: DateTime<Utc>,
     data_timestamp_gap: Duration,
     ais_vms_positions: Vec<AisVmsPositionConstructor>,
+    ais_static: Vec<AisVesselConstructor>,
     ais_positions: Vec<AisPositionConstructor>,
     vms_positions: Vec<VmsPositionConstructor>,
     trips: Vec<TripConstructor>,
@@ -168,6 +171,7 @@ impl TestStateBuilder {
             engine,
             landings: vec![],
             landing_id_counter: 1,
+            mmsi_counter: 1,
             trip_data_timestamp_gap: Duration::hours(1),
             hauls: vec![],
             default_haul_duration: Duration::hours(1),
@@ -184,6 +188,8 @@ impl TestStateBuilder {
             manual_delivery_points: vec![],
             cycle: Cycle::new(),
             trip_queue_reset: None,
+            ais_static: vec![],
+            call_sign_counter: 1,
         }
     }
 
@@ -332,6 +338,32 @@ impl TestStateBuilder {
             state: self,
         }
     }
+
+    pub fn ais_vessels(mut self, amount: usize) -> AisVesselBuilder {
+        assert!(amount != 0);
+
+        for _ in 0..amount {
+            let timestamp = self.global_data_timestamp_counter;
+            let call_sign = CallSign::try_from(format!("CS{}", self.vessel_id_counter)).unwrap();
+            let mut ais_static =
+                NewAisStatic::test_default(Mmsi(self.mmsi_counter), call_sign.as_ref());
+            ais_static.msgtime = timestamp;
+
+            self.ais_static.push(AisVesselConstructor {
+                vessel: ais_static,
+                cycle: self.cycle,
+            });
+            self.global_data_timestamp_counter += self.data_timestamp_gap;
+
+            self.mmsi_counter += 1;
+            self.call_sign_counter += 1;
+        }
+
+        AisVesselBuilder {
+            current_index: self.ais_static.len() - amount,
+            state: self,
+        }
+    }
     pub fn tra(mut self, amount: usize) -> TraBuilder {
         assert!(amount != 0);
 
@@ -391,9 +423,9 @@ impl TestStateBuilder {
             let vessel_id = self.vessel_id_counter;
 
             let mut vessel = fiskeridir_rs::RegisterVessel::test_default(vessel_id);
-            let call_sign = CallSign::try_from(format!("CS{}", self.vessel_id_counter)).unwrap();
-            let mmsi = Mmsi(self.vessel_id_counter as i32);
-            let ais_static = NewAisStatic::test_default(mmsi, call_sign.as_ref());
+            let call_sign = CallSign::try_from(format!("CS{}", self.call_sign_counter)).unwrap();
+            let ais_static =
+                NewAisStatic::test_default(Mmsi(self.mmsi_counter), call_sign.as_ref());
             vessel.radio_call_sign = Some(call_sign.clone());
 
             let key = VesselKey {
@@ -406,11 +438,15 @@ impl TestStateBuilder {
                 cycle: self.cycle,
                 clear_trip_precision: false,
                 clear_trip_distancing: false,
+                conflict_winner: false,
+                conflict_loser: false,
             });
 
             self.ers_message_number_per_vessel.insert(key, 1);
 
             self.vessel_id_counter += 1;
+            self.mmsi_counter += 1;
+            self.call_sign_counter += 1;
         }
 
         VesselBuilder {
@@ -448,10 +484,44 @@ impl TestStateBuilder {
                                 None
                             }
                         })
+                        .chain(self.ais_static.iter().filter_map(|v| {
+                            if v.cycle == i {
+                                Some(v.vessel.clone())
+                            } else {
+                                None
+                            }
+                        }))
                         .collect(),
                 })
                 .unwrap();
+
             self.ais_data_confirmation.recv().await.unwrap();
+
+            let conflict_overrides: Vec<NewVesselConflict> = self
+                .vessels
+                .iter()
+                .filter_map(|v| {
+                    if v.cycle == i && v.conflict_winner {
+                        Some(NewVesselConflict {
+                            vessel_id: FiskeridirVesselId(v.fiskeridir.id),
+                            call_sign: Some(v.fiskeridir.radio_call_sign.clone().unwrap()),
+                            mmsi: Some(v.ais.mmsi),
+                        })
+                    } else if v.cycle == i && v.conflict_loser {
+                        Some(NewVesselConflict {
+                            vessel_id: FiskeridirVesselId(v.fiskeridir.id),
+                            call_sign: None,
+                            mmsi: None,
+                        })
+                    } else {
+                        None
+                    }
+                })
+                .collect();
+
+            self.storage
+                .manual_vessel_conflict_override(conflict_overrides)
+                .await;
 
             self.storage
                 .add_register_vessels(

@@ -113,6 +113,7 @@ pub trait TripPipelineInbound: Send + Sync {
 
 #[async_trait]
 pub trait TestHelperInbound: Send + Sync {
+    async fn manual_vessel_conflict_override(&self, conflicts: Vec<NewVesselConflict>);
     async fn queue_trip_reset(&self);
     async fn clear_trip_distancing(&self, vessel_id: FiskeridirVesselId);
     async fn clear_trip_precision(&self, vessel_id: FiskeridirVesselId);

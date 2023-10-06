@@ -278,6 +278,7 @@ where
             if run_cache_test {
                 dbg!("cache_test");
             }
+
             let builder = app.builder().await;
             test(app, builder).await;
 

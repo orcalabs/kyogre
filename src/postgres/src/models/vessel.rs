@@ -6,13 +6,54 @@ use crate::{
 };
 use bigdecimal::BigDecimal;
 use chrono::{DateTime, Utc};
-use error_stack::{Report, ResultExt};
+use error_stack::{report, Report, ResultExt};
 use fiskeridir_rs::{CallSign, GearGroup, SpeciesGroup, VesselLengthGroup, VesselType};
 use kyogre_core::{
     FiskeridirVesselId, FiskeridirVesselSource, Mmsi, TripAssemblerId, VesselBenchmarkId,
 };
+use num_traits::FromPrimitive;
 use serde::Deserialize;
 use unnest_insert::UnnestInsert;
+
+#[derive(Debug, Clone)]
+pub struct ActiveVesselConflict {
+    pub fiskeridir_vessel_ids: Vec<Option<i64>>,
+    pub mmsis: Vec<Option<i32>>,
+    pub call_sign: String,
+    pub ais_vessel_names: Vec<Option<String>>,
+    pub fiskeridir_vessel_names: Vec<Option<String>>,
+    pub fiskeridir_vessel_source_ids: Vec<Option<i32>>,
+}
+
+#[derive(Debug, Clone, UnnestInsert)]
+#[unnest_insert(table_name = "fiskeridir_ais_vessel_mapping_whitelist", conflict = "")]
+pub struct VesselConflictInsert {
+    pub fiskeridir_vessel_id: i64,
+    pub call_sign: Option<String>,
+    pub mmsi: Option<i32>,
+    pub is_manual: bool,
+}
+
+impl From<kyogre_core::NewVesselConflict> for VesselConflictInsert {
+    fn from(value: kyogre_core::NewVesselConflict) -> Self {
+        VesselConflictInsert {
+            fiskeridir_vessel_id: value.vessel_id.0,
+            call_sign: value.call_sign.map(|v| v.into_inner()),
+            mmsi: value.mmsi.map(|v| v.0),
+            is_manual: true,
+        }
+    }
+}
+
+impl std::fmt::Display for ActiveVesselConflict {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!(
+            "found vessel conflict for call_sign: {:#?}, fiskeridir_vessel_ids: {:#?},
+                    mmsis: {:#?}",
+            self.call_sign, self.fiskeridir_vessel_ids, self.mmsis
+        ))
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct AisVessel {
@@ -276,6 +317,37 @@ impl TryFrom<FiskeridirAisVesselCombination> for kyogre_core::Vessel {
                 .map(|v| v.value),
             gear_groups: value.gear_group_ids,
             species_groups: value.species_group_ids,
+        })
+    }
+}
+
+impl TryFrom<ActiveVesselConflict> for kyogre_core::ActiveVesselConflict {
+    type Error = Report<PostgresError>;
+
+    fn try_from(value: ActiveVesselConflict) -> Result<Self, Self::Error> {
+        Ok(kyogre_core::ActiveVesselConflict {
+            vessel_ids: value
+                .fiskeridir_vessel_ids
+                .into_iter()
+                .map(|v| v.map(FiskeridirVesselId))
+                .collect(),
+            mmsis: value.mmsis.into_iter().map(|v| v.map(Mmsi)).collect(),
+            call_sign: std::convert::TryInto::<CallSign>::try_into(value.call_sign)
+                .change_context(PostgresError::DataConversion)?,
+            sources: value
+                .fiskeridir_vessel_source_ids
+                .into_iter()
+                .map(|v| {
+                    v.map(|v| {
+                        FiskeridirVesselSource::from_i32(v).ok_or(
+                            report!(PostgresError::DataConversion).attach_printable(format!(
+                                "unknown fiskeridir_vessel_source_id: {v}"
+                            )),
+                        )
+                    })
+                    .transpose()
+                })
+                .collect::<Result<Vec<Option<FiskeridirVesselSource>>, _>>()?,
         })
     }
 }

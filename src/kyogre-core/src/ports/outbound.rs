@@ -226,6 +226,7 @@ pub trait TestHelperOutbound: Send + Sync {
     async fn all_ais(&self) -> Vec<AisPosition>;
     async fn all_vms(&self) -> Vec<VmsPosition>;
     async fn all_ais_vms(&self) -> Vec<AisVmsPosition>;
+    async fn active_vessel_conflicts(&self) -> Vec<ActiveVesselConflict>;
     async fn delivery_points_log(&self) -> Vec<serde_json::Value>;
     async fn port(&self, port_id: &str) -> Option<Port>;
     async fn delivery_point(&self, id: &DeliveryPointId) -> Option<DeliveryPoint>;

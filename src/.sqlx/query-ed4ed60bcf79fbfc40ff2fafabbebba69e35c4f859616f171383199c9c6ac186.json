@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nUPDATE fiskeridir_vessels\nSET\n    call_sign = q.call_sign,\n    overriden_call_sign = fiskeridir_vessels.call_sign,\n    call_sign_override = TRUE\nFROM\n    (\n        SELECT\n            qi.fiskeridir_vessel_id,\n            (\n                ARRAY_AGG(\n                    vessel_call_sign\n                    ORDER BY\n                        qi.landing_ids DESC\n                )\n            ) [1] AS call_sign\n        FROM\n            (\n                SELECT\n                    fiskeridir_vessel_id,\n                    vessel_call_sign,\n                    COUNT(landing_id) AS landing_ids\n                FROM\n                    landings\n                WHERE\n                    vessel_call_sign IS NOT NULL\n                    AND NOT (vessel_call_sign = ANY ($2::VARCHAR[]))\n                GROUP BY\n                    fiskeridir_vessel_id,\n                    vessel_call_sign\n            ) qi\n        GROUP BY\n            qi.fiskeridir_vessel_id\n        HAVING\n            COUNT(DISTINCT vessel_call_sign) > 1\n    ) q\nWHERE\n    fiskeridir_vessels.fiskeridir_vessel_id = q.fiskeridir_vessel_id\n    AND fiskeridir_vessel_source_id = $1;\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "VarcharArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "ed4ed60bcf79fbfc40ff2fafabbebba69e35c4f859616f171383199c9c6ac186"
+}

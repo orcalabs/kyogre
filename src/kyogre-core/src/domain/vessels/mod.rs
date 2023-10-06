@@ -12,6 +12,23 @@ mod benchmark;
 
 pub use benchmark::*;
 
+pub static IGNORED_CONFLICT_CALL_SIGNS: &[&str] = &["00000000", "0"];
+
+#[derive(Debug, Clone)]
+pub struct NewVesselConflict {
+    pub vessel_id: FiskeridirVesselId,
+    pub call_sign: Option<CallSign>,
+    pub mmsi: Option<Mmsi>,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct ActiveVesselConflict {
+    pub vessel_ids: Vec<Option<FiskeridirVesselId>>,
+    pub call_sign: CallSign,
+    pub mmsis: Vec<Option<Mmsi>>,
+    pub sources: Vec<Option<FiskeridirVesselSource>>,
+}
+
 #[derive(Debug, Clone)]
 pub struct Vessel {
     pub fiskeridir: FiskeridirVessel,

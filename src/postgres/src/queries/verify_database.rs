@@ -1,4 +1,6 @@
 use error_stack::{report, Result};
+use orca_core::Environment;
+use tracing::{event, Level};
 
 use crate::{
     error::{PostgresError, VerifyDatabaseError},
@@ -35,6 +37,22 @@ impl PostgresAdapter {
             ),
         }?;
 
+        let conflicts = self.active_vessel_conflicts_impl().await?;
+        if !conflicts.is_empty() {
+            // We do not return an error here as we want to test this case in our tests and as a
+            // workaround we log the error here instead of the verify database step
+            let report = report!(VerifyDatabaseError::ConflictingVesselMappings(conflicts))
+                .change_context(PostgresError::InconsistentState);
+
+            // Dont want to spam test logs with this error message
+            if let Some(env) = self.environment {
+                if !matches!(env, Environment::Test) {
+                    event!(Level::ERROR, "found vessel conflicts: {:?}", report);
+                }
+            } else {
+                event!(Level::ERROR, "found vessel conflicts: {:?}", report);
+            }
+        }
         Ok(())
     }
 }

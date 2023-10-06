@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO\n    fiskeridir_vessels (fiskeridir_vessel_id)\nSELECT\n    *\nFROM\n    UNNEST($1::BIGINT[])\nON CONFLICT DO NOTHING\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8Array"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "37a972260a0a7380566b23b84c457fb3cb4cb341b70b241edcd541540daa1d2b"
+}

@@ -1,6 +1,8 @@
 use bigdecimal::BigDecimal;
 use error_stack::Context;
 
+use crate::models::ActiveVesselConflict;
+
 #[derive(Debug)]
 pub enum PostgresError {
     Connection,
@@ -101,6 +103,7 @@ pub enum VerifyDatabaseError {
     IncorrectHaulCatches(Vec<i64>),
     IncorrectHaulsMatrixLivingWeight(i64),
     IncorrectLandingMatrixLivingWeight(i64),
+    ConflictingVesselMappings(Vec<ActiveVesselConflict>),
 }
 
 impl std::error::Error for VerifyDatabaseError {}
@@ -120,6 +123,9 @@ impl std::fmt::Display for VerifyDatabaseError {
             VerifyDatabaseError::IncorrectLandingMatrixLivingWeight(v) => f.write_fmt(
                 format_args!("landing matrix and landings living weight differ by {v}"),
             ),
+            VerifyDatabaseError::ConflictingVesselMappings(v) => {
+                f.write_fmt(format_args!("vessel conflicts: {:#?}", v))
+            }
         }
     }
 }

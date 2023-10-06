@@ -1,0 +1,19 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO\n    fiskeridir_ais_vessel_active_conflicts (\n        call_sign,\n        mmsis,\n        fiskeridir_vessel_ids,\n        ais_vessel_names,\n        fiskeridir_vessel_names,\n        fiskeridir_vessel_source_ids\n    )\nVALUES\n    ($1, $2, $3, $4, $5, $6)\n                ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Varchar",
+        "Int4Array",
+        "Int8Array",
+        "VarcharArray",
+        "VarcharArray",
+        "Int4Array"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "6d6034cf4ca787b2951eb4ae1d82acc570201cff3f8531eb92e4fa341df07566"
+}
