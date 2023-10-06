@@ -341,13 +341,6 @@ impl std::fmt::Display for TripDistancerId {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct HaulMessage {
-    pub message_id: i64,
-    pub start_timestamp: DateTime<Utc>,
-    pub stop_timestamp: DateTime<Utc>,
-}
-
-#[derive(Debug, Clone, PartialEq)]
 pub struct TripDistanceOutput {
     pub distance: Option<f64>,
     pub distancer_id: TripDistancerId,
