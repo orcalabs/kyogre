@@ -3,17 +3,235 @@ use std::collections::HashMap;
 use crate::{
     error::PostgresError,
     models::{
-        FiskeridirAisVesselCombination, NewFiskeridirVessel, NewMunicipality, NewRegisterVessel,
+        ActiveVesselConflict, FiskeridirAisVesselCombination, NewFiskeridirVessel, NewMunicipality,
+        NewRegisterVessel, VesselConflictInsert,
     },
     PostgresAdapter,
 };
 use error_stack::{report, Result, ResultExt};
 use fiskeridir_rs::{GearGroup, SpeciesGroup, VesselLengthGroup};
 use futures::{Stream, TryStreamExt};
-use kyogre_core::{FiskeridirVesselId, TripAssemblerId};
+use kyogre_core::{FiskeridirVesselId, FiskeridirVesselSource, TripAssemblerId};
 use unnest_insert::UnnestInsert;
 
 impl PostgresAdapter {
+    pub(crate) async fn active_vessel_conflicts_impl(
+        &self,
+    ) -> Result<Vec<ActiveVesselConflict>, PostgresError> {
+        sqlx::query_as!(
+            ActiveVesselConflict,
+            r#"
+SELECT
+    call_sign,
+    mmsis as "mmsis!: Vec<Option<i32>>",
+    fiskeridir_vessel_ids as "fiskeridir_vessel_ids!: Vec<Option<i64>>",
+    ais_vessel_names as "ais_vessel_names!: Vec<Option<String>>",
+    fiskeridir_vessel_names as "fiskeridir_vessel_names!: Vec<Option<String>>",
+    fiskeridir_vessel_source_ids as "fiskeridir_vessel_source_ids!: Vec<Option<i32>>"
+FROM
+    fiskeridir_ais_vessel_active_conflicts
+            "#
+        )
+        .fetch_all(&self.pool)
+        .await
+        .change_context(PostgresError::Query)
+    }
+    pub(crate) async fn manual_conflict_override_impl(
+        &self,
+        overrides: Vec<kyogre_core::NewVesselConflict>,
+    ) -> Result<(), PostgresError> {
+        let mut mmsi = Vec::with_capacity(overrides.len());
+        let mut fiskeridir_vessel_id = Vec::with_capacity(overrides.len());
+
+        let mut tx = self.begin().await?;
+
+        overrides.iter().for_each(|v| {
+            if let Some(val) = v.mmsi {
+                mmsi.push(val.0);
+            }
+            fiskeridir_vessel_id.push(v.vessel_id.0);
+        });
+        sqlx::query!(
+            r#"
+INSERT INTO
+    ais_vessels (mmsi)
+SELECT
+    *
+FROM
+    UNNEST($1::INT[])
+ON CONFLICT DO NOTHING
+            "#,
+            &mmsi
+        )
+        .fetch_all(&mut *tx)
+        .await
+        .change_context(PostgresError::Query)?;
+
+        sqlx::query!(
+            r#"
+INSERT INTO
+    fiskeridir_vessels (fiskeridir_vessel_id)
+SELECT
+    *
+FROM
+    UNNEST($1::BIGINT[])
+ON CONFLICT DO NOTHING
+            "#,
+            &fiskeridir_vessel_id
+        )
+        .fetch_all(&mut *tx)
+        .await
+        .change_context(PostgresError::Query)?;
+
+        let overrides: Vec<VesselConflictInsert> = overrides
+            .into_iter()
+            .map(VesselConflictInsert::from)
+            .collect();
+
+        VesselConflictInsert::unnest_insert(overrides, &mut *tx)
+            .await
+            .change_context(PostgresError::Query)?;
+
+        tx.commit()
+            .await
+            .change_context(PostgresError::Transaction)?;
+
+        Ok(())
+    }
+
+    pub(crate) async fn refresh_vessel_mappings<'a>(
+        &self,
+        tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
+    ) -> Result<(), PostgresError> {
+        sqlx::query!(
+            r#"
+DELETE FROM fiskeridir_ais_vessel_mapping_whitelist
+WHERE
+    is_manual = FALSE;
+            "#,
+        )
+        .execute(&mut **tx)
+        .await
+        .change_context(PostgresError::Query)?;
+
+        sqlx::query!(
+            r#"
+DELETE FROM fiskeridir_ais_vessel_active_conflicts
+            "#,
+        )
+        .execute(&mut **tx)
+        .await
+        .change_context(PostgresError::Query)?;
+
+        sqlx::query!(
+            r#"
+INSERT INTO
+    fiskeridir_ais_vessel_mapping_whitelist (fiskeridir_vessel_id, mmsi, call_sign)
+SELECT
+    (ARRAY_AGG(f.fiskeridir_vessel_id)) [1],
+    (ARRAY_AGG(a.mmsi)) [1],
+    f.call_sign
+FROM
+    fiskeridir_vessels AS f
+    LEFT JOIN ais_vessels AS a ON f.call_sign = a.call_sign
+WHERE
+    f.call_sign IS NOT NULL
+    AND NOT (f.call_sign = ANY ($1::VARCHAR[]))
+GROUP BY
+    f.call_sign
+HAVING
+    COUNT(*) = 1
+ON CONFLICT DO NOTHING;
+            "#,
+            &self.ignored_conflict_call_signs
+        )
+        .execute(&mut **tx)
+        .await
+        .change_context(PostgresError::Query)?;
+
+        sqlx::query!(
+            r#"
+INSERT INTO
+    fiskeridir_ais_vessel_mapping_whitelist (fiskeridir_vessel_id)
+SELECT
+    f.fiskeridir_vessel_id
+FROM
+    fiskeridir_vessels AS f
+WHERE
+    f.call_sign IS NULL
+OR
+    f.call_sign = ANY ($1::VARCHAR[])
+            "#,
+            &self.ignored_conflict_call_signs
+        )
+        .execute(&mut **tx)
+        .await
+        .change_context(PostgresError::Query)?;
+
+        let conflicts = sqlx::query_as!(
+            ActiveVesselConflict,
+            r#"
+SELECT
+    ARRAY_AGG(DISTINCT f.fiskeridir_vessel_id) AS "fiskeridir_vessel_ids!: Vec<Option<i64>>",
+    f.call_sign AS "call_sign!",
+    COALESCE(ARRAY_AGG(DISTINCT a.mmsi), '{}') AS "mmsis!: Vec<Option<i32>>",
+    COALESCE(ARRAY_AGG(DISTINCT a.name), '{}') AS "ais_vessel_names!: Vec<Option<String>>",
+    COALESCE(ARRAY_AGG(DISTINCT f.name), '{}') AS "fiskeridir_vessel_names!: Vec<Option<String>>",
+    COALESCE(
+        ARRAY_AGG(DISTINCT f.fiskeridir_vessel_source_id),
+        '{}'
+    ) AS "fiskeridir_vessel_source_ids!: Vec<Option<i32>>"
+FROM
+    fiskeridir_vessels AS f
+    LEFT JOIN fiskeridir_ais_vessel_mapping_whitelist w ON f.fiskeridir_vessel_id = w.fiskeridir_vessel_id
+    LEFT JOIN ais_vessels AS a ON f.call_sign = a.call_sign
+WHERE
+    (
+        w.is_manual = FALSE
+        OR w.is_manual IS NULL
+    )
+    AND f.call_sign IS NOT NULL
+    AND NOT (f.call_sign = ANY ($1::VARCHAR[]))
+GROUP BY
+    f.call_sign
+HAVING
+    COUNT(*) > 1
+            "#,
+            &self.ignored_conflict_call_signs
+        )
+        .fetch_all(&mut **tx)
+        .await
+        .change_context(PostgresError::Query)?;
+
+        for c in &conflicts {
+            sqlx::query!(
+                r#"
+INSERT INTO
+    fiskeridir_ais_vessel_active_conflicts (
+        call_sign,
+        mmsis,
+        fiskeridir_vessel_ids,
+        ais_vessel_names,
+        fiskeridir_vessel_names,
+        fiskeridir_vessel_source_ids
+    )
+VALUES
+    ($1, $2, $3, $4, $5, $6)
+                "#,
+                c.call_sign,
+                &c.mmsis as _,
+                &c.fiskeridir_vessel_ids as _,
+                &c.ais_vessel_names as _,
+                &c.fiskeridir_vessel_names as _,
+                &c.fiskeridir_vessel_source_ids as _,
+            )
+            .execute(&mut **tx)
+            .await
+            .change_context(PostgresError::Query)?;
+        }
+
+        Ok(())
+    }
     pub(crate) async fn add_fiskeridir_vessels<'a>(
         &'a self,
         vessels: Vec<fiskeridir_rs::Vessel>,
@@ -39,6 +257,61 @@ impl PostgresAdapter {
             .map(|_| ())
     }
 
+    pub(crate) async fn set_landing_vessels_call_signs<'a>(
+        &self,
+        tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
+    ) -> Result<(), PostgresError> {
+        sqlx::query!(
+            r#"
+UPDATE fiskeridir_vessels
+SET
+    call_sign = q.call_sign,
+    overriden_call_sign = fiskeridir_vessels.call_sign,
+    call_sign_override = TRUE
+FROM
+    (
+        SELECT
+            qi.fiskeridir_vessel_id,
+            (
+                ARRAY_AGG(
+                    vessel_call_sign
+                    ORDER BY
+                        qi.landing_ids DESC
+                )
+            ) [1] AS call_sign
+        FROM
+            (
+                SELECT
+                    fiskeridir_vessel_id,
+                    vessel_call_sign,
+                    COUNT(landing_id) AS landing_ids
+                FROM
+                    landings
+                WHERE
+                    vessel_call_sign IS NOT NULL
+                    AND NOT (vessel_call_sign = ANY ($2::VARCHAR[]))
+                GROUP BY
+                    fiskeridir_vessel_id,
+                    vessel_call_sign
+            ) qi
+        GROUP BY
+            qi.fiskeridir_vessel_id
+        HAVING
+            COUNT(DISTINCT vessel_call_sign) > 1
+    ) q
+WHERE
+    fiskeridir_vessels.fiskeridir_vessel_id = q.fiskeridir_vessel_id
+    AND fiskeridir_vessel_source_id = $1;
+            "#,
+            FiskeridirVesselSource::Landings as i32,
+            &self.ignored_conflict_call_signs
+        )
+        .execute(&mut **tx)
+        .await
+        .change_context(PostgresError::Query)
+        .map(|_| ())
+    }
+
     pub(crate) async fn add_register_vessels_full(
         &self,
         vessels: Vec<fiskeridir_rs::RegisterVessel>,
@@ -62,6 +335,8 @@ impl PostgresAdapter {
             .await?;
 
         self.add_register_vessels_impl(vessels, &mut tx).await?;
+        self.set_landing_vessels_call_signs(&mut tx).await?;
+        self.refresh_vessel_mappings(&mut tx).await?;
 
         tx.commit()
             .await
@@ -103,7 +378,7 @@ SELECT
     f.nation_id AS "fiskeridir_nation_id?",
     f.gross_tonnage_1969 AS fiskeridir_gross_tonnage_1969,
     f.gross_tonnage_other AS fiskeridir_gross_tonnage_other,
-    f.call_sign AS fiskeridir_call_sign,
+    MAX(v.call_sign) AS fiskeridir_call_sign,
     f."name" AS fiskeridir_name,
     f.registration_id AS fiskeridir_registration_id,
     f."length" AS fiskeridir_length,
@@ -140,9 +415,10 @@ SELECT
         '[]'::jsonb
     )::TEXT AS "benchmarks!"
 FROM
-    fiskeridir_vessels AS f
-    LEFT JOIN ais_vessels AS a ON f.call_sign = a.call_sign
-    LEFT JOIN vessel_benchmark_outputs AS b ON b.fiskeridir_vessel_id = f.fiskeridir_vessel_id
+    fiskeridir_ais_vessel_mapping_whitelist AS v
+    INNER JOIN fiskeridir_vessels AS f ON v.fiskeridir_vessel_id = f.fiskeridir_vessel_id
+    LEFT JOIN ais_vessels AS a ON v.mmsi = a.mmsi
+    LEFT JOIN vessel_benchmark_outputs AS b ON b.fiskeridir_vessel_id = v.fiskeridir_vessel_id
 GROUP BY
     f.fiskeridir_vessel_id,
     a.mmsi
@@ -207,8 +483,9 @@ SELECT
         '[]'::jsonb
     )::TEXT AS "benchmarks!"
 FROM
-    fiskeridir_vessels AS f
-    LEFT JOIN ais_vessels AS a ON f.call_sign = a.call_sign
+    fiskeridir_ais_vessel_mapping_whitelist AS v
+    INNER JOIN fiskeridir_vessels AS f ON v.fiskeridir_vessel_id = f.fiskeridir_vessel_id
+    LEFT JOIN ais_vessels AS a ON v.mmsi = a.mmsi
     LEFT JOIN vessel_benchmark_outputs AS b ON b.fiskeridir_vessel_id = f.fiskeridir_vessel_id
 WHERE
     f.fiskeridir_vessel_id = $1

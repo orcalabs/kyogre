@@ -23,9 +23,34 @@ pub struct VesselContructor {
     pub cycle: Cycle,
     pub(crate) clear_trip_precision: bool,
     pub(crate) clear_trip_distancing: bool,
+    pub(crate) conflict_winner: bool,
+    pub(crate) conflict_loser: bool,
 }
 
 impl VesselBuilder {
+    pub fn conflict_winner(mut self) -> VesselBuilder {
+        let base = &mut self.state;
+        let num_vessels = base.vessels[self.current_index..].len();
+
+        assert!(num_vessels > 0);
+
+        for v in base.vessels[self.current_index..].iter_mut() {
+            v.conflict_winner = true;
+        }
+        self
+    }
+
+    pub fn conflict_loser(mut self) -> VesselBuilder {
+        let base = &mut self.state;
+        let num_vessels = base.vessels[self.current_index..].len();
+
+        assert!(num_vessels > 0);
+
+        for v in base.vessels[self.current_index..].iter_mut() {
+            v.conflict_loser = true;
+        }
+        self
+    }
     pub fn clear_trip_distancing(mut self) -> VesselBuilder {
         let base = &mut self.state;
         let num_trips = base.vessels[self.current_index..].len();

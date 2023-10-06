@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT\n    f.preferred_trip_assembler AS \"preferred_trip_assembler!: TripAssemblerId\",\n    f.fiskeridir_vessel_id AS \"fiskeridir_vessel_id!\",\n    f.fiskeridir_vessel_type_id,\n    f.fiskeridir_length_group_id AS \"fiskeridir_length_group_id!: VesselLengthGroup\",\n    f.fiskeridir_nation_group_id,\n    f.norwegian_municipality_id AS fiskeridir_norwegian_municipality_id,\n    f.norwegian_county_id AS fiskeridir_norwegian_county_id,\n    f.nation_id AS \"fiskeridir_nation_id?\",\n    f.gross_tonnage_1969 AS fiskeridir_gross_tonnage_1969,\n    f.gross_tonnage_other AS fiskeridir_gross_tonnage_other,\n    f.call_sign AS fiskeridir_call_sign,\n    f.\"name\" AS fiskeridir_name,\n    f.registration_id AS fiskeridir_registration_id,\n    f.\"length\" AS fiskeridir_length,\n    f.\"width\" AS fiskeridir_width,\n    f.\"owner\" AS fiskeridir_owner,\n    f.owners::TEXT AS fiskeridir_owners,\n    f.engine_building_year AS fiskeridir_engine_building_year,\n    f.engine_power AS fiskeridir_engine_power,\n    f.building_year AS fiskeridir_building_year,\n    f.rebuilding_year AS fiskeridir_rebuilding_year,\n    f.gear_group_ids AS \"gear_group_ids!: Vec<GearGroup>\",\n    f.species_group_ids AS \"species_group_ids!: Vec<SpeciesGroup>\",\n    a.mmsi AS \"ais_mmsi?\",\n    a.imo_number AS ais_imo_number,\n    a.call_sign AS ais_call_sign,\n    a.name AS ais_name,\n    a.ship_length AS ais_ship_length,\n    a.ship_width AS ais_ship_width,\n    a.eta AS ais_eta,\n    a.destination AS ais_destination,\n    COALESCE(\n        JSONB_AGG(\n            JSONB_BUILD_OBJECT(\n                'benchmark_id',\n                b.vessel_benchmark_id,\n                'value',\n                b.output\n            )\n        ) FILTER (\n            WHERE\n                b.output IS NOT NULL\n                AND b.vessel_benchmark_id IS NOT NULL\n        ),\n        '[]'::jsonb\n    )::TEXT AS \"benchmarks!\"\nFROM\n    fiskeridir_vessels AS f\n    LEFT JOIN ais_vessels AS a ON f.call_sign = a.call_sign\n    LEFT JOIN vessel_benchmark_outputs AS b ON b.fiskeridir_vessel_id = f.fiskeridir_vessel_id\nGROUP BY\n    f.fiskeridir_vessel_id,\n    a.mmsi\n            ",
+  "query": "\nSELECT\n    f.preferred_trip_assembler AS \"preferred_trip_assembler!: TripAssemblerId\",\n    f.fiskeridir_vessel_id AS \"fiskeridir_vessel_id!\",\n    f.fiskeridir_vessel_type_id,\n    f.fiskeridir_length_group_id AS \"fiskeridir_length_group_id!: VesselLengthGroup\",\n    f.fiskeridir_nation_group_id,\n    f.norwegian_municipality_id AS fiskeridir_norwegian_municipality_id,\n    f.norwegian_county_id AS fiskeridir_norwegian_county_id,\n    f.nation_id AS \"fiskeridir_nation_id?\",\n    f.gross_tonnage_1969 AS fiskeridir_gross_tonnage_1969,\n    f.gross_tonnage_other AS fiskeridir_gross_tonnage_other,\n    f.call_sign AS fiskeridir_call_sign,\n    f.\"name\" AS fiskeridir_name,\n    f.registration_id AS fiskeridir_registration_id,\n    f.\"length\" AS fiskeridir_length,\n    f.\"width\" AS fiskeridir_width,\n    f.\"owner\" AS fiskeridir_owner,\n    f.owners::TEXT AS fiskeridir_owners,\n    f.engine_building_year AS fiskeridir_engine_building_year,\n    f.engine_power AS fiskeridir_engine_power,\n    f.building_year AS fiskeridir_building_year,\n    f.rebuilding_year AS fiskeridir_rebuilding_year,\n    f.gear_group_ids AS \"gear_group_ids!: Vec<GearGroup>\",\n    f.species_group_ids AS \"species_group_ids!: Vec<SpeciesGroup>\",\n    a.mmsi AS \"ais_mmsi?\",\n    a.imo_number AS ais_imo_number,\n    a.call_sign AS ais_call_sign,\n    a.name AS ais_name,\n    a.ship_length AS ais_ship_length,\n    a.ship_width AS ais_ship_width,\n    a.eta AS ais_eta,\n    a.destination AS ais_destination,\n    COALESCE(\n        JSONB_AGG(\n            JSONB_BUILD_OBJECT(\n                'benchmark_id',\n                b.vessel_benchmark_id,\n                'value',\n                b.output\n            )\n        ) FILTER (\n            WHERE\n                b.output IS NOT NULL\n                AND b.vessel_benchmark_id IS NOT NULL\n        ),\n        '[]'::jsonb\n    )::TEXT AS \"benchmarks!\"\nFROM\n    fiskeridir_ais_vessel_mapping_whitelist AS v\n    INNER JOIN fiskeridir_vessels AS f ON v.fiskeridir_vessel_id = f.fiskeridir_vessel_id\n    LEFT JOIN ais_vessels AS a ON v.mmsi = a.mmsi\n    LEFT JOIN vessel_benchmark_outputs AS b ON b.fiskeridir_vessel_id = f.fiskeridir_vessel_id\nWHERE\n    f.fiskeridir_vessel_id = $1\nGROUP BY\n    f.fiskeridir_vessel_id,\n    a.mmsi\n            ",
   "describe": {
     "columns": [
       {
@@ -165,7 +165,9 @@
       }
     ],
     "parameters": {
-      "Left": []
+      "Left": [
+        "Int8"
+      ]
     },
     "nullable": [
       false,
@@ -202,5 +204,5 @@
       null
     ]
   },
-  "hash": "d7c1ced49f657aabd27e729dce3bfdcdcd48321f6f9cda2831c267762b6f926b"
+  "hash": "697c885c62eb11e8a41ddc1ef5bce1f8b130a029709198e0fecc8f3664eba59e"
 }

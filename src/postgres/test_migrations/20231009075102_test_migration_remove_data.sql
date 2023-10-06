@@ -38,4 +38,8 @@ WHERE
         VALUES
             ('NOTOS'),
             ('DENOR')
-    )
+    );
+
+DELETE FROM fiskeridir_vessels;
+
+DELETE FROM ais_vessels;

@@ -38,6 +38,18 @@ pub struct Vessel {
     pub species_groups: Vec<SpeciesGroup>,
 }
 
+impl Vessel {
+    pub fn mmsi(&self) -> Option<Mmsi> {
+        self.ais.as_ref().map(|v| v.mmsi)
+    }
+    pub fn ais_call_sign(&self) -> Option<&str> {
+        self.ais.as_ref().and_then(|v| v.call_sign.as_deref())
+    }
+    pub fn fiskeridir_call_sign(&self) -> Option<&str> {
+        self.fiskeridir.call_sign.as_ref().map(|v| v.as_ref())
+    }
+}
+
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct FiskeridirVessel {

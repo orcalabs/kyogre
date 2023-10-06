@@ -248,6 +248,9 @@ WHERE
             .await?;
         self.add_vessel_gear_and_species_groups(&mut tx).await?;
 
+        self.set_landing_vessels_call_signs(&mut tx).await?;
+        self.refresh_vessel_mappings(&mut tx).await?;
+
         tx.commit().await.change_context(PostgresError::Transaction)
     }
 

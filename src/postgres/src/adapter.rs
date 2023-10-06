@@ -9,7 +9,7 @@ use error_stack::{Report, Result, ResultExt};
 use fiskeridir_rs::{CallSign, DeliveryPointId, LandingId};
 use futures::{Stream, StreamExt, TryStreamExt};
 use kyogre_core::*;
-use orca_core::{PsqlLogStatements, PsqlSettings};
+use orca_core::{Environment, PsqlLogStatements, PsqlSettings};
 use sqlx::{
     postgres::{PgConnectOptions, PgPoolOptions, PgSslMode},
     ConnectOptions, PgPool,
@@ -21,6 +21,8 @@ use tracing::{event, instrument, Level};
 pub struct PostgresAdapter {
     pub(crate) pool: PgPool,
     pub(crate) ais_pool: PgPool,
+    pub(crate) ignored_conflict_call_signs: Vec<String>,
+    pub(crate) environment: Option<Environment>,
 }
 
 enum AisProcessingAction {
@@ -34,6 +36,10 @@ enum AisProcessingAction {
 
 impl PostgresAdapter {
     pub async fn new(settings: &PsqlSettings) -> Result<PostgresAdapter, PostgresError> {
+        let environment: Option<Environment> = std::env::var("APP_ENVIRONMENT")
+            .ok()
+            .and_then(|v| v.try_into().ok());
+
         let mut connections_per_pool = (settings.max_connections / 2) as u32;
         if connections_per_pool == 0 {
             connections_per_pool = 1;
@@ -80,7 +86,17 @@ impl PostgresAdapter {
             .await
             .change_context(PostgresError::Connection)?;
 
-        Ok(PostgresAdapter { pool, ais_pool })
+        let ignored_conflict_call_signs: Vec<String> = IGNORED_CONFLICT_CALL_SIGNS
+            .iter()
+            .map(|v| v.to_string())
+            .collect();
+
+        Ok(PostgresAdapter {
+            pool,
+            ais_pool,
+            ignored_conflict_call_signs,
+            environment,
+        })
     }
 
     pub async fn do_migrations(&self) {
@@ -208,6 +224,15 @@ impl TestStorage for PostgresAdapter {}
 
 #[async_trait]
 impl TestHelperOutbound for PostgresAdapter {
+    async fn active_vessel_conflicts(&self) -> Vec<ActiveVesselConflict> {
+        self.active_vessel_conflicts_impl()
+            .await
+            .unwrap()
+            .into_iter()
+            .map(ActiveVesselConflict::try_from)
+            .collect::<Result<Vec<ActiveVesselConflict>, PostgresError>>()
+            .unwrap()
+    }
     async fn all_dep(&self) -> Vec<Departure> {
         self.all_ers_departures_impl()
             .await
@@ -285,6 +310,9 @@ impl TestHelperOutbound for PostgresAdapter {
 
 #[async_trait]
 impl TestHelperInbound for PostgresAdapter {
+    async fn manual_vessel_conflict_override(&self, overrides: Vec<NewVesselConflict>) {
+        self.manual_conflict_override_impl(overrides).await.unwrap();
+    }
     async fn queue_trip_reset(&self) {
         self.queue_trip_reset_impl().await.unwrap();
     }
