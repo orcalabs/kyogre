@@ -1,8 +1,9 @@
 use super::helper::test;
 use actix_web::http::StatusCode;
 use chrono::{DateTime, Utc};
+use engine::*;
 use fiskeridir_rs::{ErsDca, GearGroup, SpeciesGroup};
-use kyogre_core::{levels::*, FiskeridirVesselId, HaulsSorting, Ordering};
+use kyogre_core::{FiskeridirVesselId, HaulsSorting, Ordering};
 use web_api::routes::{
     utils::{DateTimeUtc, GearGroupId, SpeciesGroupId},
     v1::haul::{Haul, HaulsParams},

@@ -1,6 +1,7 @@
 use super::{barentswatch_helper::BarentswatchHelper, test_client::ApiClient};
 use dockertest::{DockerTest, Source, StaticManagementPolicy};
 use duckdb_rs::{adapter::CacheMode, CacheStorage};
+use engine::*;
 use engine::{AisVms, ErsTripAssembler, LandingTripAssembler};
 use futures::Future;
 use kyogre_core::*;

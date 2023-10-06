@@ -3,31 +3,18 @@ use crate::{
     FisheryEngine, FishingFacilities, FishingFacilitiesQuery, FishingFacility, FiskeridirVesselId,
     Haul, HaulsQuery, Landing, LandingsQuery, LandingsSorting, ManualDeliveryPoint,
     MattilsynetDeliveryPoint, Mmsi, NewAisPosition, NewAisStatic, OceanClimate, Ordering,
-    Pagination, PrecisionId, ScraperInboundPort, TestHelperInbound, TestHelperOutbound,
-    TripAssemblerOutboundPort, TripDetailed, Trips, TripsQuery, Vessel, VmsPosition, Weather,
-    WebApiOutboundPort,
+    Pagination, PrecisionId, TripDetailed, Trips, TripsQuery, Vessel, VmsPosition, Weather,
 };
+
 use ais::*;
 use ais_vms::*;
 use chrono::{DateTime, Duration, TimeZone, Utc};
 use fiskeridir_rs::CallSign;
 use fiskeridir_rs::{DeliveryPointId, LandingMonth};
 use futures::TryStreamExt;
+use kyogre_core::TestStorage;
 use machine::StateMachine;
 use std::collections::{HashMap, HashSet};
-
-pub trait TestStorage:
-    ScraperInboundPort
-    + WebApiOutboundPort
-    + AisConsumeLoop
-    + TripAssemblerOutboundPort
-    + TestHelperOutbound
-    + TestHelperInbound
-    + Send
-    + Sync
-    + 'static
-{
-}
 
 mod ais;
 mod ais_vms;

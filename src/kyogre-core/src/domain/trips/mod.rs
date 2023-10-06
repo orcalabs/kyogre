@@ -28,6 +28,29 @@ pub struct Trip {
     pub end_port_code: Option<String>,
 }
 
+#[derive(Debug)]
+pub struct TripSet {
+    pub fiskeridir_vessel_id: FiskeridirVesselId,
+    pub conflict_strategy: TripsConflictStrategy,
+    pub new_trip_calculation_time: DateTime<Utc>,
+    pub trip_assembler_id: TripAssemblerId,
+    pub values: Vec<TripProcessingUnit>,
+}
+
+#[derive(Debug)]
+pub struct TripProcessingUnit {
+    pub vessel_id: FiskeridirVesselId,
+    pub trip: NewTrip,
+    pub trip_assembler_id: TripAssemblerId,
+    pub start_port: Option<Port>,
+    pub end_port: Option<Port>,
+    pub start_dock_points: Vec<PortDockPoint>,
+    pub end_dock_points: Vec<PortDockPoint>,
+    pub positions: Vec<AisVmsPosition>,
+    pub precision_outcome: Option<PrecisionOutcome>,
+    pub distance_output: Option<TripDistanceOutput>,
+}
+
 #[derive(Debug, Clone)]
 pub struct CurrentTrip {
     pub departure: DateTime<Utc>,
@@ -131,6 +154,21 @@ pub enum TripsConflictStrategy {
 pub enum TripAssemblerId {
     Landings = 1,
     Ers = 2,
+}
+
+impl TripProcessingUnit {
+    pub fn start(&self) -> DateTime<Utc> {
+        self.trip.period.start()
+    }
+    pub fn end(&self) -> DateTime<Utc> {
+        self.trip.period.end()
+    }
+    pub fn landing_coverage_start(&self) -> DateTime<Utc> {
+        self.trip.landing_coverage.start()
+    }
+    pub fn landing_coverage_end(&self) -> DateTime<Utc> {
+        self.trip.landing_coverage.end()
+    }
 }
 
 impl From<TripAssemblerId> for i32 {

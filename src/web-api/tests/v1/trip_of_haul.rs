@@ -1,8 +1,9 @@
 use super::helper::test;
 use actix_web::http::StatusCode;
 use chrono::{Duration, TimeZone, Utc};
+use engine::*;
 use fiskeridir_rs::Quality;
-use kyogre_core::{levels::*, HaulId, PrecisionId};
+use kyogre_core::{HaulId, PrecisionId};
 use web_api::routes::v1::trip::Trip;
 
 #[tokio::test]

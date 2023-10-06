@@ -1,6 +1,6 @@
 use super::helper::test;
 use actix_web::http::StatusCode;
-use kyogre_core::levels::*;
+use engine::*;
 use web_api::routes::v1::trip::CurrentTrip;
 
 #[tokio::test]

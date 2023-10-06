@@ -1,8 +1,8 @@
 use super::helper::test;
 use actix_web::http::StatusCode;
 use chrono::Duration;
+use engine::*;
 use fiskeridir_rs::{GearGroup, LandingId, SpeciesGroup};
-use kyogre_core::levels::*;
 use web_api::routes::v1::vessel::Vessel;
 
 #[tokio::test]
