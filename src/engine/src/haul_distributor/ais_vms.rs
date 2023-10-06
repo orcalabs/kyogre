@@ -1,3 +1,4 @@
+use crate::AisVms;
 use async_trait::async_trait;
 use error_stack::{Result, ResultExt};
 use geo::{coord, Contains};
@@ -7,9 +8,6 @@ use kyogre_core::{
 };
 use kyogre_core::{HaulDistributor, HaulDistributorError};
 use std::collections::HashMap;
-
-#[derive(Default)]
-pub struct AisVms {}
 
 #[async_trait]
 impl HaulDistributor for AisVms {

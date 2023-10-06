@@ -1575,8 +1575,8 @@ dependencies = [
  "error-stack 0.4.1",
  "fiskeridir-rs",
  "futures",
+ "geo",
  "geoutils",
- "haul-distributor",
  "kyogre-core",
  "machine",
  "num-traits",
@@ -2156,26 +2156,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e8094feaf31ff591f651a2664fb9cfd92bba7a60ce3197265e9482ebe753c8f7"
 dependencies = [
  "hashbrown 0.14.1",
-]
-
-[[package]]
-name = "haul-distributor"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "chrono",
- "dockertest",
- "error-stack 0.4.1",
- "fiskeridir-rs",
- "futures",
- "geo",
- "kyogre-core",
- "orca-core",
- "postgres",
- "rand 0.8.5",
- "tokio",
- "tracing",
- "tracing-subscriber",
 ]
 
 [[package]]
@@ -6239,7 +6219,6 @@ dependencies = [
  "error-stack 0.4.1",
  "fiskeridir-rs",
  "futures",
- "haul-distributor",
  "jsonwebtoken",
  "kyogre-core",
  "machine",

@@ -34,8 +34,7 @@ impl TestHelper {
             Box::<ErsTripAssembler>::default() as Box<dyn TripAssembler>,
         ];
         let benchmarks = vec![Box::<WeightPerHour>::default() as Box<dyn VesselBenchmark>];
-        let haul_distributors =
-            vec![Box::<haul_distributor::AisVms>::default() as Box<dyn HaulDistributor>];
+        let haul_distributors = vec![Box::<AisVms>::default() as Box<dyn HaulDistributor>];
         let trip_distancer = Box::<AisVms>::default() as Box<dyn TripDistancer>;
         let shared_state = SharedState::new(
             db.clone(),

@@ -1,4 +1,4 @@
-use crate::{trip_distancer::AisVms, ErsTripAssembler, LandingTripAssembler};
+use crate::{AisVms, ErsTripAssembler, LandingTripAssembler};
 use config::{Config, ConfigError, File};
 use kyogre_core::*;
 use orca_core::{Environment, LogLevel, PsqlSettings, TelemetrySettings};
@@ -71,7 +71,7 @@ impl Settings {
         vec
     }
     pub fn haul_distributors(&self) -> Vec<Box<dyn HaulDistributor>> {
-        vec![Box::<haul_distributor::AisVms>::default()]
+        vec![Box::<AisVms>::default()]
     }
     pub fn trip_distancer(&self) -> Box<dyn TripDistancer> {
         Box::<AisVms>::default()
