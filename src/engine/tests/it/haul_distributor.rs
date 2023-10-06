@@ -1,7 +1,8 @@
 use chrono::{DateTime, Duration, Utc};
+use engine::levels::*;
 use fiskeridir_rs::SpeciesGroup;
 use futures::TryStreamExt;
-use kyogre_core::{levels::*, ActiveHaulsFilter, Haul, HaulMatrixXFeature, WebApiOutboundPort};
+use kyogre_core::{ActiveHaulsFilter, Haul, HaulMatrixXFeature, WebApiOutboundPort};
 use kyogre_core::{CatchLocationId, HaulsQuery};
 
 use crate::helper::test;

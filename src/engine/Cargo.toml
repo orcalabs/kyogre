@@ -23,17 +23,19 @@ tracing = "0.1.37"
 serde = { version = "1.0.188", features = ["derive"] }
 async-trait = "0.1.73"
 error-stack = { workspace = true }
+futures = "0.3.28"
 
 strum = "0.25.0"
 strum_macros = "0.25.2"
 
 geoutils = "0.5.1"
 num-traits = "0.2.16"
+humantime = "2.1.0"
 geo = "0.26.0"
+rand = "0.8.5"
 
 [dev-dependencies]
 tracing-subscriber = "0.3.17"
-rand = "0.8.5"
 futures = "0.3.28"
 dockertest = { version = "0.3.1", registry = "orcalabs-orcastrator" }
 orca-core = { workspace = true, features = ["dockertest"] }

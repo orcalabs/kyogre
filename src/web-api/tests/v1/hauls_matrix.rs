@@ -2,10 +2,11 @@ use super::helper::test_with_cache;
 use crate::v1::helper::{assert_haul_matrix_content, sum_area};
 use actix_web::http::StatusCode;
 use chrono::{DateTime, Utc};
+use engine::*;
 use enum_index::EnumIndex;
 use fiskeridir_rs::{GearGroup, SpeciesGroup, VesselLengthGroup};
 use kyogre_core::{
-    haul_date_feature_matrix_index, levels::*, ActiveHaulsFilter, CatchLocationId, HaulMatrixes,
+    haul_date_feature_matrix_index, ActiveHaulsFilter, CatchLocationId, HaulMatrixes,
     NUM_CATCH_LOCATIONS,
 };
 use web_api::routes::{

@@ -1,4 +1,4 @@
-use crate::{AisVms, ErsTripAssembler, LandingTripAssembler};
+use crate::{AisVms, ErsTripAssembler, FisheryDiscriminants, LandingTripAssembler};
 use config::{Config, ConfigError, File};
 use kyogre_core::*;
 use orca_core::{Environment, LogLevel, PsqlSettings, TelemetrySettings};

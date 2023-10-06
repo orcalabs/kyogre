@@ -19,7 +19,6 @@ chrono-tz = "0.8.3"
 fiskeridir-rs = { workspace = true }
 tokio = { version = "1.32.0", features = ["sync"] }
 orca-core = { workspace = true }
-humantime = "2.1.0"
 
 serde_json = "1.0.107"
 serde_repr = "0.1.16"

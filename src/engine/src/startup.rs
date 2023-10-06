@@ -1,5 +1,4 @@
-use crate::{settings::Settings, FisheryEngine, SharedState};
-use kyogre_core::FisheryDiscriminants;
+use crate::{settings::Settings, FisheryDiscriminants, FisheryEngine, SharedState};
 use machine::StateMachine;
 use orca_core::Environment;
 use postgres::PostgresAdapter;
