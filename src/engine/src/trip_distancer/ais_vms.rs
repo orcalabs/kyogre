@@ -1,3 +1,4 @@
+use crate::AisVms;
 use async_trait::async_trait;
 use error_stack::Result;
 use geoutils::Location;
@@ -5,9 +6,6 @@ use kyogre_core::{TripDistanceOutput, TripDistancerId, TripProcessingUnit};
 use tracing::{event, Level};
 
 use kyogre_core::{TripDistancer, TripDistancerError};
-
-#[derive(Default)]
-pub struct AisVms {}
 
 #[async_trait]
 impl TripDistancer for AisVms {
