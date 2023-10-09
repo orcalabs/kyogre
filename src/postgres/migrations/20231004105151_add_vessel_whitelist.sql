@@ -69,20 +69,6 @@ WHERE
     AND fiskeridir_vessel_source_id = 1;
 
 INSERT INTO
-    fiskeridir_ais_vessel_mapping_whitelist (fiskeridir_vessel_id, mmsi, call_sign)
-SELECT
-    (ARRAY_AGG(f.fiskeridir_vessel_id)) [1],
-    (ARRAY_AGG(a.mmsi)) [1],
-    f.call_sign
-FROM
-    fiskeridir_vessels AS f
-    LEFT JOIN ais_vessels AS a ON f.call_sign = a.call_sign
-GROUP BY
-    f.call_sign
-HAVING
-    COUNT(*) = 1;
-
-INSERT INTO
     ais_vessels (mmsi)
 VALUES
     (259154000),
@@ -462,3 +448,32 @@ VALUES
     (NULL, 1996010718, NULL, TRUE),
     ('LNYZ', 1985007410, 257435500, TRUE),
     ('LNYC', 1997005974, NULL, TRUE);
+
+INSERT INTO
+    fiskeridir_ais_vessel_mapping_whitelist (fiskeridir_vessel_id, mmsi, call_sign)
+SELECT
+    (ARRAY_AGG(f.fiskeridir_vessel_id)) [1],
+    (ARRAY_AGG(a.mmsi)) [1],
+    f.call_sign
+FROM
+    fiskeridir_vessels AS f
+    LEFT JOIN ais_vessels AS a ON f.call_sign = a.call_sign
+WHERE
+    f.call_sign IS NOT NULL
+    AND NOT (f.call_sign = ANY ('{00000000, 0}'))
+GROUP BY
+    f.call_sign
+HAVING
+    COUNT(*) = 1
+ON CONFLICT DO NOTHING;
+
+INSERT INTO
+    fiskeridir_ais_vessel_mapping_whitelist (fiskeridir_vessel_id)
+SELECT
+    f.fiskeridir_vessel_id
+FROM
+    fiskeridir_vessels AS f
+WHERE
+    f.call_sign IS NULL
+    OR f.call_sign = ANY ('{00000000, 0}')
+ON CONFLICT DO NOTHING;
