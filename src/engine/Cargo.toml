@@ -29,7 +29,7 @@ strum = "0.25.0"
 strum_macros = "0.25.2"
 
 geoutils = "0.5.1"
-num-traits = "0.2.16"
+num-traits = "0.2.17"
 humantime = "2.1.0"
 geo = "0.26.0"
 rand = "0.8.5"

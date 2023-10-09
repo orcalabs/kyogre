@@ -19,7 +19,7 @@ error-stack = { workspace = true }
 orca-core = { workspace = true, features = ["telemetry"] }
 orca-statemachine = { version = "0.40.0", registry = "orcalabs-orcastrator", features = [
 ] }
-num-traits = "0.2.16"
+num-traits = "0.2.17"
 async-trait = "0.1.73"
 humantime-serde = "1.1.1"
 
