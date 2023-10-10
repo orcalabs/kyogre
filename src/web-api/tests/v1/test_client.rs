@@ -16,7 +16,7 @@ use web_api::routes::v1::{
     trip::TripsParameters,
     user::User,
     vms::VmsParameters,
-    weather::WeatherParams,
+    weather::WeatherAvgParams,
 };
 
 #[derive(Debug, Clone)]
@@ -335,8 +335,8 @@ impl ApiClient {
 
         self.put("user", user, Some(headers)).await
     }
-    pub async fn get_weather(&self, params: WeatherParams) -> Response {
-        self.get("weather", Some(params), None).await
+    pub async fn get_weather_avg(&self, params: WeatherAvgParams) -> Response {
+        self.get("weather_avg", Some(params), None).await
     }
     pub async fn get_fuel_measurements(
         &self,

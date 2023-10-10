@@ -333,7 +333,7 @@ FROM
         .collect())
     }
 
-    pub(crate) fn weather_impl(
+    pub(crate) fn weather_avg_impl(
         &self,
         query: WeatherQuery,
     ) -> impl Stream<Item = Result<Weather>> + '_ {

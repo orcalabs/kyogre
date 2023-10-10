@@ -14,7 +14,7 @@ use crate::{error::Result, *};
 
 #[derive(Default, Debug, Deserialize, Serialize, IntoParams)]
 #[serde(rename_all = "camelCase")]
-pub struct WeatherParams {
+pub struct WeatherAvgParams {
     pub start_date: Option<DateTime<Utc>>,
     pub end_date: Option<DateTime<Utc>>,
     #[param(rename = "weatherLocationIds[]", value_type = Option<Vec<i64>>)]
@@ -23,22 +23,22 @@ pub struct WeatherParams {
 
 #[utoipa::path(
     get,
-    path = "/weather",
-    params(WeatherParams),
+    path = "/weather_avg",
+    params(WeatherAvgParams),
     responses(
-        (status = 200, description = "all weather data matching parameters", body = [Weather]),
+        (status = 200, description = "average weather data matching parameters", body = [Weather]),
         (status = 500, description = "an internal error occured", body = ErrorResponse),
     )
 )]
 #[tracing::instrument(skip(db))]
-pub async fn weather<T: Database + 'static>(
+pub async fn weather_avg<T: Database + 'static>(
     db: web::Data<T>,
-    params: Query<WeatherParams>,
+    params: Query<WeatherAvgParams>,
 ) -> Result<HttpResponse> {
     let query = params.into_inner().into();
 
     to_streaming_response! {
-        db.weather(query).map_ok(Weather::from)
+        db.weather_avg(query).map_ok(Weather::from)
     }
 }
 
@@ -51,13 +51,9 @@ pub async fn weather<T: Database + 'static>(
     )
 )]
 #[tracing::instrument(skip(db))]
-pub async fn weather_locations<T: Database + 'static>(
-    db: web::Data<T>,
-    params: web::Query<WeatherParams>,
-) -> Result<HttpResponse> {
+pub async fn weather_locations<T: Database + 'static>(db: web::Data<T>) -> Result<HttpResponse> {
     to_streaming_response! {
-        db.weather_locations()
-            .map_ok(WeatherLocation::from)
+        db.weather_locations().map_ok(WeatherLocation::from)
     }
 }
 
@@ -76,7 +72,8 @@ pub struct Weather {
     pub precipitation_amount: Option<f64>,
     pub land_area_fraction: f64,
     pub cloud_area_fraction: Option<f64>,
-    pub weather_location_id: i32,
+    #[schema(value_type = i32)]
+    pub weather_location_id: WeatherLocationId,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
@@ -102,7 +99,7 @@ impl From<kyogre_core::Weather> for Weather {
             precipitation_amount: v.precipitation_amount,
             land_area_fraction: v.land_area_fraction,
             cloud_area_fraction: v.cloud_area_fraction,
-            weather_location_id: v.weather_location_id.0,
+            weather_location_id: v.weather_location_id,
         }
     }
 }
@@ -116,8 +113,8 @@ impl From<kyogre_core::WeatherLocation> for WeatherLocation {
     }
 }
 
-impl From<WeatherParams> for WeatherQuery {
-    fn from(v: WeatherParams) -> Self {
+impl From<WeatherAvgParams> for WeatherQuery {
+    fn from(v: WeatherAvgParams) -> Self {
         Self {
             start_date: v
                 .start_date

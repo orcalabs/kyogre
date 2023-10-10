@@ -760,8 +760,8 @@ impl WebApiOutboundPort for PostgresAdapter {
         convert_stream(self.delivery_points_impl()).boxed()
     }
 
-    fn weather(&self, query: WeatherQuery) -> PinBoxStream<'_, Weather> {
-        self.weather_impl(query).map_err(From::from).boxed()
+    fn weather_avg(&self, query: WeatherQuery) -> PinBoxStream<'_, Weather> {
+        self.weather_avg_impl(query).map_err(From::from).boxed()
     }
 
     fn weather_locations(&self) -> PinBoxStream<'_, WeatherLocation> {
