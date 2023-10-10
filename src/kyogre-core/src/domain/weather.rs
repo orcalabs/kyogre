@@ -41,6 +41,9 @@ impl WindSpeed {
             WindSpeed(None)
         }
     }
+    pub fn is_none(&self) -> bool {
+        self.0.is_none()
+    }
 }
 
 #[derive(Default, Clone, Debug, Copy)]
@@ -55,6 +58,9 @@ impl AirTemperature {
         } else {
             AirTemperature(None)
         }
+    }
+    pub fn is_none(&self) -> bool {
+        self.0.is_none()
     }
 }
 
@@ -73,6 +79,9 @@ impl RelativeHumidity {
             RelativeHumidity(None)
         }
     }
+    pub fn is_none(&self) -> bool {
+        self.0.is_none()
+    }
 }
 
 #[derive(Default, Clone, Debug, Copy)]
@@ -88,6 +97,9 @@ impl AirPressureAtSeaLevel {
             AirPressureAtSeaLevel(None)
         }
     }
+    pub fn is_none(&self) -> bool {
+        self.0.is_none()
+    }
 }
 
 #[derive(Default, Clone, Debug, Copy)]
@@ -102,6 +114,9 @@ impl PrecipitationAmount {
         } else {
             PrecipitationAmount(None)
         }
+    }
+    pub fn is_none(&self) -> bool {
+        self.0.is_none()
     }
 }
 
@@ -119,6 +134,9 @@ impl CloudAreaFraction {
         } else {
             CloudAreaFraction(None)
         }
+    }
+    pub fn is_none(&self) -> bool {
+        self.0.is_none()
     }
 }
 
@@ -167,6 +185,23 @@ pub struct Weather {
     pub land_area_fraction: f64,
     pub cloud_area_fraction: Option<f64>,
     pub weather_location_id: WeatherLocationId,
+}
+
+#[derive(Debug, Clone)]
+pub struct WeatherFft {
+    pub timestamp: DateTime<Utc>,
+    pub wind_speed_10m: Vec<WeatherFftEntry>,
+    pub air_temperature_2m: Vec<WeatherFftEntry>,
+    pub relative_humidity_2m: Vec<WeatherFftEntry>,
+    pub air_pressure_at_sea_level: Vec<WeatherFftEntry>,
+    pub precipitation_amount: Vec<WeatherFftEntry>,
+}
+
+#[derive(Debug, Clone)]
+pub struct WeatherFftEntry {
+    pub idx: i32,
+    pub re: f64,
+    pub im: f64,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize)]

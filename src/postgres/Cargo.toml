@@ -39,6 +39,7 @@ geo = "0.28.0"
 geo-types = "0.7.13"
 wkt = { version = "0.11.0", features = ["serde"] }
 uuid = { version = "1.10.0", features = ["serde"] }
+realfft = "3.3.0"
 
 [dev-dependencies]
 rand = "0.8.5"

@@ -190,6 +190,10 @@ where
                 web::get().to(routes::v1::weather::weather_avg::<T>),
             )
             .route(
+                "/weather_fft",
+                web::get().to(routes::v1::weather::weather_fft::<T>),
+            )
+            .route(
                 "/weather_locations",
                 web::get().to(routes::v1::weather::weather_locations::<T>),
             );

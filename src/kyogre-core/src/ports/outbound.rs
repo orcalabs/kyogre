@@ -90,6 +90,11 @@ pub trait WebApiOutboundPort {
     async fn get_user(&self, user_id: BarentswatchUserId) -> CoreResult<Option<User>>;
     fn delivery_points(&self) -> PinBoxStream<'_, DeliveryPoint>;
     fn weather_avg(&self, query: WeatherQuery) -> PinBoxStream<'_, Weather>;
+    fn weather_fft(
+        &self,
+        start_date: DateTime<Utc>,
+        end_date: DateTime<Utc>,
+    ) -> PinBoxStream<'_, WeatherFft>;
     fn weather_locations(&self) -> PinBoxStream<'_, WeatherLocation>;
     async fn fishing_spot_prediction(
         &self,
