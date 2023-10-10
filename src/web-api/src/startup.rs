@@ -185,7 +185,10 @@ where
                 "/ais_vms_positions",
                 web::get().to(routes::v1::ais_vms::ais_vms_positions::<T>),
             )
-            .route("/weather", web::get().to(routes::v1::weather::weather::<T>))
+            .route(
+                "/weather_avg",
+                web::get().to(routes::v1::weather::weather_avg::<T>),
+            )
             .route(
                 "/weather_locations",
                 web::get().to(routes::v1::weather::weather_locations::<T>),

@@ -61,7 +61,7 @@ impl Database for PostgresAdapter {}
         v1::landing::landings,
         v1::landing::landing_matrix,
         v1::delivery_point::delivery_points,
-        v1::weather::weather,
+        v1::weather::weather_avg,
         v1::weather::weather_locations,
         v1::fishing_prediction::fishing_weight_predictions,
         v1::fishing_prediction::fishing_spot_predictions,
