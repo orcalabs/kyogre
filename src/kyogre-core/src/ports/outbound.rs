@@ -85,10 +85,15 @@ pub trait WebApiOutboundPort {
     ) -> PinBoxStream<'_, FishingFacility, QueryError>;
     async fn get_user(&self, user_id: BarentswatchUserId) -> Result<Option<User>, QueryError>;
     fn delivery_points(&self) -> PinBoxStream<'_, DeliveryPoint, QueryError>;
-    fn weather(
+    fn weather_avg(
         &self,
         query: WeatherQuery,
     ) -> Result<PinBoxStream<'_, Weather, QueryError>, QueryError>;
+    fn weather_fft(
+        &self,
+        start_date: DateTime<Utc>,
+        end_date: DateTime<Utc>,
+    ) -> PinBoxStream<'_, WeatherFft, QueryError>;
     fn weather_locations(&self) -> PinBoxStream<'_, WeatherLocation, QueryError>;
 }
 

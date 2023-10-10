@@ -617,6 +617,14 @@ impl WebApiOutboundPort for PostgresAdapter {
         Ok(convert_stream(stream).boxed())
     }
 
+    fn weather_fft(
+        &self,
+        start_date: DateTime<Utc>,
+        end_date: DateTime<Utc>,
+    ) -> PinBoxStream<'_, WeatherFft, QueryError> {
+        convert_stream(self.weather_fft_impl(start_date, end_date)).boxed()
+    }
+
     fn weather_locations(&self) -> PinBoxStream<'_, WeatherLocation, QueryError> {
         convert_stream(self.weather_locations_impl()).boxed()
     }

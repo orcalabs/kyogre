@@ -38,6 +38,23 @@ pub struct Weather {
     pub weather_location_id: WeatherLocationId,
 }
 
+#[derive(Debug, Clone)]
+pub struct WeatherFft {
+    pub timestamp: DateTime<Utc>,
+    pub wind_speed_10m: Vec<WeatherFftEntry>,
+    pub air_temperature_2m: Vec<WeatherFftEntry>,
+    pub relative_humidity_2m: Vec<WeatherFftEntry>,
+    pub air_pressure_at_sea_level: Vec<WeatherFftEntry>,
+    pub precipitation_amount: Vec<WeatherFftEntry>,
+}
+
+#[derive(Debug, Clone)]
+pub struct WeatherFftEntry {
+    pub idx: i32,
+    pub re: f64,
+    pub im: f64,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize)]
 pub struct WeatherLocationId(pub i32);
 

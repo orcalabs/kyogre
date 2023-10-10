@@ -1,0 +1,154 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO\n    weather_fft (\n        \"timestamp\",\n        wind_speed_10m,\n        air_temperature_2m,\n        relative_humidity_2m,\n        air_pressure_at_sea_level,\n        precipitation_amount\n    )\nVALUES\n    (\n        $1::TIMESTAMPTZ,\n        $2::fft_entry[],\n        $3::fft_entry[],\n        $4::fft_entry[],\n        $5::fft_entry[],\n        $6::fft_entry[]\n    )\nON CONFLICT DO NOTHING\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Timestamptz",
+        {
+          "Custom": {
+            "name": "_fft_entry",
+            "kind": {
+              "Array": {
+                "Custom": {
+                  "name": "fft_entry",
+                  "kind": {
+                    "Composite": [
+                      [
+                        "idx",
+                        "Int4"
+                      ],
+                      [
+                        "re",
+                        "Float8"
+                      ],
+                      [
+                        "im",
+                        "Float8"
+                      ]
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "Custom": {
+            "name": "_fft_entry",
+            "kind": {
+              "Array": {
+                "Custom": {
+                  "name": "fft_entry",
+                  "kind": {
+                    "Composite": [
+                      [
+                        "idx",
+                        "Int4"
+                      ],
+                      [
+                        "re",
+                        "Float8"
+                      ],
+                      [
+                        "im",
+                        "Float8"
+                      ]
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "Custom": {
+            "name": "_fft_entry",
+            "kind": {
+              "Array": {
+                "Custom": {
+                  "name": "fft_entry",
+                  "kind": {
+                    "Composite": [
+                      [
+                        "idx",
+                        "Int4"
+                      ],
+                      [
+                        "re",
+                        "Float8"
+                      ],
+                      [
+                        "im",
+                        "Float8"
+                      ]
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "Custom": {
+            "name": "_fft_entry",
+            "kind": {
+              "Array": {
+                "Custom": {
+                  "name": "fft_entry",
+                  "kind": {
+                    "Composite": [
+                      [
+                        "idx",
+                        "Int4"
+                      ],
+                      [
+                        "re",
+                        "Float8"
+                      ],
+                      [
+                        "im",
+                        "Float8"
+                      ]
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "Custom": {
+            "name": "_fft_entry",
+            "kind": {
+              "Array": {
+                "Custom": {
+                  "name": "fft_entry",
+                  "kind": {
+                    "Composite": [
+                      [
+                        "idx",
+                        "Int4"
+                      ],
+                      [
+                        "re",
+                        "Float8"
+                      ],
+                      [
+                        "im",
+                        "Float8"
+                      ]
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "8838c6910ef14032b9dde5bbf6a354638edf66fa9cdcf8671e7400fad3cba52a"
+}

@@ -2,11 +2,13 @@ use chrono::{DateTime, Utc};
 use error_stack::{report, Report, Result, ResultExt};
 use futures::{Stream, TryStreamExt};
 use kyogre_core::{HaulWeatherOutput, WeatherQuery};
+use tracing::{event, Level};
 use unnest_insert::UnnestInsert;
 
 use crate::{
     error::PostgresError,
-    models::{HaulWeather, NewWeather, Weather, WeatherLocation},
+    fft::{rfft, FftEntry},
+    models::{HaulWeather, NewWeather, Weather, WeatherFft, WeatherLocation},
     PostgresAdapter,
 };
 
@@ -63,6 +65,33 @@ GROUP BY
         .map_err(|e| report!(e).change_context(PostgresError::Query));
 
         Ok(stream)
+    }
+
+    pub(crate) fn weather_fft_impl(
+        &self,
+        start_date: DateTime<Utc>,
+        end_date: DateTime<Utc>,
+    ) -> impl Stream<Item = Result<WeatherFft, PostgresError>> + '_ {
+        sqlx::query_as!(
+            WeatherFft,
+            r#"
+SELECT
+    "timestamp",
+    wind_speed_10m AS "wind_speed_10m!: Vec<FftEntry>",
+    air_temperature_2m AS "air_temperature_2m!: Vec<FftEntry>",
+    relative_humidity_2m AS "relative_humidity_2m!: Vec<FftEntry>",
+    air_pressure_at_sea_level AS "air_pressure_at_sea_level!: Vec<FftEntry>",
+    precipitation_amount AS "precipitation_amount!: Vec<FftEntry>"
+FROM
+    weather_fft
+WHERE
+    "timestamp" BETWEEN $1::TIMESTAMPTZ AND $2::TIMESTAMPTZ
+            "#,
+            start_date,
+            end_date,
+        )
+        .fetch(&self.pool)
+        .map_err(|e| report!(e).change_context(PostgresError::Query))
     }
 
     pub(crate) async fn haul_weather_impl(
@@ -279,14 +308,141 @@ WHERE
         weather: Vec<kyogre_core::NewWeather>,
     ) -> Result<(), PostgresError> {
         let values = weather
-            .into_iter()
+            .iter()
             .map(NewWeather::try_from)
             .collect::<Result<Vec<_>, _>>()?;
 
-        NewWeather::unnest_insert(values, &self.pool)
+        let mut tx = self.begin().await?;
+
+        NewWeather::unnest_insert(values, &mut *tx)
             .await
-            .change_context(PostgresError::Query)
-            .map(|_| ())
+            .change_context(PostgresError::Query)?;
+
+        self.add_weather_fft(weather, &mut tx).await?;
+
+        tx.commit()
+            .await
+            .change_context(PostgresError::Transaction)?;
+
+        Ok(())
+    }
+
+    pub(crate) async fn add_weather_fft<'a>(
+        &'a self,
+        weather: Vec<kyogre_core::NewWeather>,
+        _tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
+    ) -> Result<(), PostgresError> {
+        let len = weather.len();
+        if len != 49_060 {
+            event!(
+                Level::WARN,
+                "weather data for timestamp '{}' contains {} values",
+                weather[0].timestamp,
+                len,
+            );
+            return Ok(());
+        }
+        if weather.iter().any(|v| {
+            v.wind_speed_10m.is_none()
+                || v.air_temperature_2m.is_none()
+                || v.relative_humidity_2m.is_none()
+                || v.air_pressure_at_sea_level.is_none()
+                || v.precipitation_amount.is_none()
+        }) {
+            event!(
+                Level::WARN,
+                "weather data for timestamp '{}' contains `None` values",
+                weather[0].timestamp
+            );
+            return Ok(());
+        }
+
+        let timestamp = weather[0].timestamp;
+
+        let mut values = weather
+            .into_iter()
+            .map(|v| {
+                (
+                    (
+                        (v.latitude * 10.).floor() as i64,
+                        (v.longitude * 10.).floor() as i64,
+                    ),
+                    v.clone(),
+                )
+            })
+            .collect::<Vec<_>>();
+
+        values.sort_by(|((a_lat, a_lon), _), ((b_lat, b_lon), _)| {
+            if a_lat != b_lat {
+                a_lat.cmp(b_lat)
+            } else if a_lat % 2 == 0 {
+                a_lon.cmp(b_lon)
+            } else {
+                b_lon.cmp(a_lon)
+            }
+        });
+
+        let len = values.len();
+        let mut wind_speed_10m = Vec::with_capacity(len);
+        let mut air_temperature_2m = Vec::with_capacity(len);
+        let mut relative_humidity_2m = Vec::with_capacity(len);
+        let mut air_pressure_at_sea_level = Vec::with_capacity(len);
+        let mut precipitation_amount = Vec::with_capacity(len);
+
+        for (_, v) in values {
+            // `unwrap` is safe because of `is_none` checks above
+            wind_speed_10m.push(v.wind_speed_10m.unwrap());
+            air_temperature_2m.push(v.air_temperature_2m.unwrap());
+            relative_humidity_2m.push(v.relative_humidity_2m.unwrap());
+            air_pressure_at_sea_level.push(v.air_pressure_at_sea_level.unwrap());
+            precipitation_amount.push(v.precipitation_amount.unwrap());
+        }
+
+        let retain = 0.1;
+        let wind_speed_10m =
+            rfft(wind_speed_10m, retain).change_context(PostgresError::DataConversion)?;
+        let air_temperature_2m =
+            rfft(air_temperature_2m, retain).change_context(PostgresError::DataConversion)?;
+        let relative_humidity_2m =
+            rfft(relative_humidity_2m, retain).change_context(PostgresError::DataConversion)?;
+        let air_pressure_at_sea_level = rfft(air_pressure_at_sea_level, retain)
+            .change_context(PostgresError::DataConversion)?;
+        let precipitation_amount =
+            rfft(precipitation_amount, retain).change_context(PostgresError::DataConversion)?;
+
+        sqlx::query!(
+            r#"
+INSERT INTO
+    weather_fft (
+        "timestamp",
+        wind_speed_10m,
+        air_temperature_2m,
+        relative_humidity_2m,
+        air_pressure_at_sea_level,
+        precipitation_amount
+    )
+VALUES
+    (
+        $1::TIMESTAMPTZ,
+        $2::fft_entry[],
+        $3::fft_entry[],
+        $4::fft_entry[],
+        $5::fft_entry[],
+        $6::fft_entry[]
+    )
+ON CONFLICT DO NOTHING
+            "#,
+            timestamp,
+            &wind_speed_10m as _,
+            &air_temperature_2m as _,
+            &relative_humidity_2m as _,
+            &air_pressure_at_sea_level as _,
+            &precipitation_amount as _,
+        )
+        .execute(&self.pool)
+        .await
+        .change_context(PostgresError::Query)
+        .map(|_| ())
     }
 
     pub(crate) async fn latest_weather_timestamp_impl(

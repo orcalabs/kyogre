@@ -250,3 +250,20 @@ impl Display for TripPipelineError {
 }
 
 impl Context for TripPipelineError {}
+
+#[derive(Debug)]
+pub enum WeatherFftError {
+    DataPreparation,
+}
+
+impl std::error::Error for WeatherFftError {}
+
+impl Display for WeatherFftError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            WeatherFftError::DataPreparation => {
+                f.write_str("an error occured during data preparation")
+            }
+        }
+    }
+}

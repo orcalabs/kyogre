@@ -176,7 +176,7 @@ impl Scraper {
         );
 
         let weather_scraper = WeatherScraper::new();
-        let _ocean_climate_scraper = OceanClimateScraper::new();
+        let ocean_climate_scraper = OceanClimateScraper::new();
 
         Scraper {
             scrapers: vec![
@@ -192,7 +192,7 @@ impl Scraper {
                 Box::new(aqua_culture_register_scraper),
                 Box::new(mattilsynet_scraper),
                 Box::new(weather_scraper),
-                // Box::new(ocean_climate_scraper),
+                Box::new(ocean_climate_scraper),
             ],
             processor,
         }

@@ -3,15 +3,16 @@ use chrono::{DateTime, Utc};
 use error_stack::{bail, report, Report, ResultExt};
 use geo_types::geometry::Geometry;
 use geozero::wkb;
-use kyogre_core::WeatherLocationId;
+use kyogre_core::{WeatherFftEntry, WeatherLocationId};
 use unnest_insert::UnnestInsert;
 
 use crate::{
     error::PostgresError,
+    fft::FftEntry,
     queries::{decimal_to_float, float_to_decimal, opt_decimal_to_float, opt_float_to_decimal},
 };
 
-#[derive(UnnestInsert)]
+#[derive(Debug, Clone, UnnestInsert)]
 #[unnest_insert(table_name = "weather", conflict = "timestamp,weather_location_id")]
 pub struct NewWeather {
     pub timestamp: DateTime<Utc>,
@@ -45,6 +46,16 @@ pub struct Weather {
     pub weather_location_id: i32,
 }
 
+#[derive(Debug, Clone)]
+pub struct WeatherFft {
+    pub timestamp: DateTime<Utc>,
+    pub wind_speed_10m: Vec<FftEntry>,
+    pub air_temperature_2m: Vec<FftEntry>,
+    pub relative_humidity_2m: Vec<FftEntry>,
+    pub air_pressure_at_sea_level: Vec<FftEntry>,
+    pub precipitation_amount: Vec<FftEntry>,
+}
+
 #[derive(Debug)]
 pub struct WeatherLocation {
     pub weather_location_id: i32,
@@ -62,10 +73,10 @@ pub struct HaulWeather {
     pub cloud_area_fraction: Option<BigDecimal>,
 }
 
-impl TryFrom<kyogre_core::NewWeather> for NewWeather {
+impl TryFrom<&kyogre_core::NewWeather> for NewWeather {
     type Error = Report<PostgresError>;
 
-    fn try_from(v: kyogre_core::NewWeather) -> Result<Self, Self::Error> {
+    fn try_from(v: &kyogre_core::NewWeather) -> Result<Self, Self::Error> {
         Ok(Self {
             timestamp: v.timestamp,
             latitude: float_to_decimal(v.latitude).change_context(PostgresError::DataConversion)?,
@@ -119,6 +130,41 @@ impl TryFrom<Weather> for kyogre_core::Weather {
             cloud_area_fraction: opt_decimal_to_float(v.cloud_area_fraction)
                 .change_context(PostgresError::DataConversion)?,
             weather_location_id: WeatherLocationId(v.weather_location_id),
+        })
+    }
+}
+
+impl TryFrom<WeatherFft> for kyogre_core::WeatherFft {
+    type Error = Report<PostgresError>;
+
+    fn try_from(v: WeatherFft) -> Result<Self, Self::Error> {
+        Ok(Self {
+            timestamp: v.timestamp,
+            wind_speed_10m: v
+                .wind_speed_10m
+                .into_iter()
+                .map(WeatherFftEntry::from)
+                .collect(),
+            air_temperature_2m: v
+                .air_temperature_2m
+                .into_iter()
+                .map(WeatherFftEntry::from)
+                .collect(),
+            relative_humidity_2m: v
+                .relative_humidity_2m
+                .into_iter()
+                .map(WeatherFftEntry::from)
+                .collect(),
+            air_pressure_at_sea_level: v
+                .air_pressure_at_sea_level
+                .into_iter()
+                .map(WeatherFftEntry::from)
+                .collect(),
+            precipitation_amount: v
+                .precipitation_amount
+                .into_iter()
+                .map(WeatherFftEntry::from)
+                .collect(),
         })
     }
 }

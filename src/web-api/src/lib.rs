@@ -56,6 +56,7 @@ impl Database for PostgresAdapter {}
         v1::landing::landing_matrix,
         v1::delivery_point::delivery_points,
         v1::weather::weather_avg,
+        v1::weather::weather_fft,
         v1::weather::weather_locations,
     ),
     components(
@@ -108,6 +109,8 @@ impl Database for PostgresAdapter {}
             v1::landing::LandingMatrix,
             v1::delivery_point::DeliveryPoint,
             v1::weather::Weather,
+            v1::weather::WeatherFft,
+            v1::weather::WeatherFftEntry,
             v1::weather::WeatherLocation,
           )
     ),
