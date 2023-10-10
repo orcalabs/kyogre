@@ -13,7 +13,7 @@ use crate::{
 use super::opt_float_to_decimal;
 
 impl PostgresAdapter {
-    pub(crate) fn weather_impl(
+    pub(crate) fn weather_avg_impl(
         &self,
         query: WeatherQuery,
     ) -> Result<impl Stream<Item = Result<Weather, PostgresError>> + '_, PostgresError> {

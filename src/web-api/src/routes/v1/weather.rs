@@ -18,7 +18,7 @@ use crate::{
 
 #[derive(Default, Debug, Deserialize, IntoParams)]
 #[serde(rename_all = "camelCase")]
-pub struct WeatherParams {
+pub struct WeatherAvgParams {
     pub start_date: Option<DateTime<Utc>>,
     pub end_date: Option<DateTime<Utc>>,
     #[param(value_type = Option<String>, example = "123,456,789")]
@@ -28,31 +28,31 @@ pub struct WeatherParams {
 
 #[utoipa::path(
     get,
-    path = "/weather",
-    params(WeatherParams),
+    path = "/weather_avg",
+    params(WeatherAvgParams),
     responses(
-        (status = 200, description = "all weather data matching parameters", body = [Weather]),
+        (status = 200, description = "average weather data matching parameters", body = [Weather]),
         (status = 500, description = "an internal error occured", body = ErrorResponse),
     )
 )]
 #[tracing::instrument(skip(db))]
-pub async fn weather<T: Database + 'static>(
+pub async fn weather_avg<T: Database + 'static>(
     db: web::Data<T>,
-    params: web::Query<WeatherParams>,
+    params: web::Query<WeatherAvgParams>,
 ) -> Result<HttpResponse, ApiError> {
     let query = params.into_inner().into();
 
     to_streaming_response! {
-        db.weather(
+        db.weather_avg(
             query
         )
         .map_err(|e| {
-            event!(Level::ERROR, "failed to retrieve weather: {:?}", e);
+            event!(Level::ERROR, "failed to retrieve weather_avg: {:?}", e);
             ApiError::InternalServerError
         })?
         .map_ok(Weather::from)
         .map_err(|e| {
-            event!(Level::ERROR, "failed to retrieve weather: {:?}", e);
+            event!(Level::ERROR, "failed to retrieve weather_avg: {:?}", e);
             ApiError::InternalServerError
         })
     }
@@ -69,7 +69,6 @@ pub async fn weather<T: Database + 'static>(
 #[tracing::instrument(skip(db))]
 pub async fn weather_locations<T: Database + 'static>(
     db: web::Data<T>,
-    params: web::Query<WeatherParams>,
 ) -> Result<HttpResponse, ApiError> {
     to_streaming_response! {
         db.weather_locations()
@@ -139,8 +138,8 @@ impl From<kyogre_core::WeatherLocation> for WeatherLocation {
     }
 }
 
-impl From<WeatherParams> for WeatherQuery {
-    fn from(v: WeatherParams) -> Self {
+impl From<WeatherAvgParams> for WeatherQuery {
+    fn from(v: WeatherAvgParams) -> Self {
         Self {
             start_date: v
                 .start_date

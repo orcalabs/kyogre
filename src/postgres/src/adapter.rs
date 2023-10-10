@@ -609,11 +609,11 @@ impl WebApiOutboundPort for PostgresAdapter {
         convert_stream(self.delivery_points_impl()).boxed()
     }
 
-    fn weather(
+    fn weather_avg(
         &self,
         query: WeatherQuery,
     ) -> Result<PinBoxStream<'_, Weather, QueryError>, QueryError> {
-        let stream = self.weather_impl(query).change_context(QueryError)?;
+        let stream = self.weather_avg_impl(query).change_context(QueryError)?;
         Ok(convert_stream(stream).boxed())
     }
 
