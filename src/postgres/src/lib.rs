@@ -11,6 +11,7 @@ mod landing_set;
 mod models;
 mod queries;
 mod test_db;
+mod fft;
 
 pub use adapter::PostgresAdapter;
 pub use test_db::TestDb;

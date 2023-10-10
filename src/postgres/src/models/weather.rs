@@ -4,7 +4,10 @@ use geozero::wkb;
 use kyogre_core::WeatherLocationId;
 use unnest_insert::UnnestInsert;
 
-use crate::error::{Error, MissingValueSnafu};
+use crate::{
+    error::{Error, MissingValueSnafu},
+    fft::FftEntry,
+};
 
 #[derive(UnnestInsert)]
 #[unnest_insert(table_name = "daily_weather_dirty", conflict = "date")]
@@ -12,7 +15,7 @@ pub struct NewWeatherDailyDirty {
     pub date: NaiveDate,
 }
 
-#[derive(UnnestInsert)]
+#[derive(Debug, Clone, UnnestInsert)]
 #[unnest_insert(table_name = "weather", conflict = "timestamp,weather_location_id")]
 pub struct NewWeather {
     pub timestamp: DateTime<Utc>,
@@ -29,17 +32,25 @@ pub struct NewWeather {
     pub cloud_area_fraction: Option<f64>,
 }
 
+#[derive(Debug, Clone)]
+pub struct WeatherFft {
+    pub timestamp: DateTime<Utc>,
+    pub wind_speed_10m: Vec<FftEntry>,
+    pub air_temperature_2m: Vec<FftEntry>,
+    pub relative_humidity_2m: Vec<FftEntry>,
+    pub air_pressure_at_sea_level: Vec<FftEntry>,
+    pub precipitation_amount: Vec<FftEntry>,
+}
+
 #[derive(Debug)]
 pub struct WeatherLocation {
     pub weather_location_id: WeatherLocationId,
     pub polygon: wkb::Decode<Geometry<f64>>,
 }
 
-impl TryFrom<kyogre_core::NewWeather> for NewWeather {
-    type Error = Error;
-
-    fn try_from(v: kyogre_core::NewWeather) -> Result<Self, Self::Error> {
-        Ok(Self {
+impl From<&kyogre_core::NewWeather> for NewWeather {
+    fn from(v: &kyogre_core::NewWeather) -> Self {
+        Self {
             timestamp: v.timestamp,
             latitude: v.latitude,
             longitude: v.longitude,
@@ -52,7 +63,24 @@ impl TryFrom<kyogre_core::NewWeather> for NewWeather {
             precipitation_amount: v.precipitation_amount.into_inner(),
             land_area_fraction: v.land_area_fraction,
             cloud_area_fraction: v.cloud_area_fraction.into_inner(),
-        })
+        }
+    }
+}
+
+impl From<WeatherFft> for kyogre_core::WeatherFft {
+    fn from(v: WeatherFft) -> Self {
+        Self {
+            timestamp: v.timestamp,
+            wind_speed_10m: v.wind_speed_10m.into_iter().map(From::from).collect(),
+            air_temperature_2m: v.air_temperature_2m.into_iter().map(From::from).collect(),
+            relative_humidity_2m: v.relative_humidity_2m.into_iter().map(From::from).collect(),
+            air_pressure_at_sea_level: v
+                .air_pressure_at_sea_level
+                .into_iter()
+                .map(From::from)
+                .collect(),
+            precipitation_amount: v.precipitation_amount.into_iter().map(From::from).collect(),
+        }
     }
 }
 

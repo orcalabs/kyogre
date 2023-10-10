@@ -21,6 +21,13 @@ pub struct WeatherAvgParams {
     pub weather_location_ids: Option<Vec<WeatherLocationId>>,
 }
 
+#[derive(Default, Debug, Deserialize, IntoParams)]
+#[serde(rename_all = "camelCase")]
+pub struct WeatherFftParams {
+    pub start_date: DateTime<Utc>,
+    pub end_date: DateTime<Utc>,
+}
+
 #[utoipa::path(
     get,
     path = "/weather_avg",
@@ -39,6 +46,28 @@ pub async fn weather_avg<T: Database + 'static>(
 
     to_streaming_response! {
         db.weather_avg(query).map_ok(Weather::from)
+    }
+}
+
+#[utoipa::path(
+    get,
+    path = "/weather_fft",
+    params(WeatherFftParams),
+    responses(
+        (status = 200, description = "fft transform of weather data matching date range", body = [WeatherFft]),
+        (status = 500, description = "an internal error occured", body = ErrorResponse),
+    )
+)]
+#[tracing::instrument(skip(db))]
+pub async fn weather_fft<T: Database + 'static>(
+    db: web::Data<T>,
+    params: web::Query<WeatherFftParams>,
+) -> Result<HttpResponse> {
+    let params = params.into_inner();
+
+    to_streaming_response! {
+        db.weather_fft(params.start_date, params.end_date)
+            .map_ok(WeatherFft::from)
     }
 }
 
@@ -78,6 +107,25 @@ pub struct Weather {
 
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
 #[serde(rename_all = "camelCase")]
+pub struct WeatherFft {
+    pub timestamp: DateTime<Utc>,
+    pub wind_speed_10m: Vec<WeatherFftEntry>,
+    pub air_temperature_2m: Vec<WeatherFftEntry>,
+    pub relative_humidity_2m: Vec<WeatherFftEntry>,
+    pub air_pressure_at_sea_level: Vec<WeatherFftEntry>,
+    pub precipitation_amount: Vec<WeatherFftEntry>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct WeatherFftEntry {
+    pub idx: i32,
+    pub re: f64,
+    pub im: f64,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
+#[serde(rename_all = "camelCase")]
 pub struct WeatherLocation {
     #[schema(value_type = i32)]
     pub id: WeatherLocationId,
@@ -100,6 +148,33 @@ impl From<kyogre_core::Weather> for Weather {
             land_area_fraction: v.land_area_fraction,
             cloud_area_fraction: v.cloud_area_fraction,
             weather_location_id: v.weather_location_id,
+        }
+    }
+}
+
+impl From<kyogre_core::WeatherFft> for WeatherFft {
+    fn from(v: kyogre_core::WeatherFft) -> Self {
+        Self {
+            timestamp: v.timestamp,
+            wind_speed_10m: v.wind_speed_10m.into_iter().map(From::from).collect(),
+            air_temperature_2m: v.air_temperature_2m.into_iter().map(From::from).collect(),
+            relative_humidity_2m: v.relative_humidity_2m.into_iter().map(From::from).collect(),
+            air_pressure_at_sea_level: v
+                .air_pressure_at_sea_level
+                .into_iter()
+                .map(From::from)
+                .collect(),
+            precipitation_amount: v.precipitation_amount.into_iter().map(From::from).collect(),
+        }
+    }
+}
+
+impl From<kyogre_core::WeatherFftEntry> for WeatherFftEntry {
+    fn from(v: kyogre_core::WeatherFftEntry) -> Self {
+        Self {
+            idx: v.idx,
+            re: v.re,
+            im: v.im,
         }
     }
 }

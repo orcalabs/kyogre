@@ -1,0 +1,188 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    \"timestamp\",\n    wind_speed_10m AS \"wind_speed_10m!: Vec<FftEntry>\",\n    air_temperature_2m AS \"air_temperature_2m!: Vec<FftEntry>\",\n    relative_humidity_2m AS \"relative_humidity_2m!: Vec<FftEntry>\",\n    air_pressure_at_sea_level AS \"air_pressure_at_sea_level!: Vec<FftEntry>\",\n    precipitation_amount AS \"precipitation_amount!: Vec<FftEntry>\"\nFROM\n    weather_fft\nWHERE\n    \"timestamp\" BETWEEN $1::TIMESTAMPTZ AND $2::TIMESTAMPTZ\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "timestamp",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 1,
+        "name": "wind_speed_10m!: Vec<FftEntry>",
+        "type_info": {
+          "Custom": {
+            "name": "_fft_entry",
+            "kind": {
+              "Array": {
+                "Custom": {
+                  "name": "fft_entry",
+                  "kind": {
+                    "Composite": [
+                      [
+                        "idx",
+                        "Int4"
+                      ],
+                      [
+                        "re",
+                        "Float8"
+                      ],
+                      [
+                        "im",
+                        "Float8"
+                      ]
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "air_temperature_2m!: Vec<FftEntry>",
+        "type_info": {
+          "Custom": {
+            "name": "_fft_entry",
+            "kind": {
+              "Array": {
+                "Custom": {
+                  "name": "fft_entry",
+                  "kind": {
+                    "Composite": [
+                      [
+                        "idx",
+                        "Int4"
+                      ],
+                      [
+                        "re",
+                        "Float8"
+                      ],
+                      [
+                        "im",
+                        "Float8"
+                      ]
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "relative_humidity_2m!: Vec<FftEntry>",
+        "type_info": {
+          "Custom": {
+            "name": "_fft_entry",
+            "kind": {
+              "Array": {
+                "Custom": {
+                  "name": "fft_entry",
+                  "kind": {
+                    "Composite": [
+                      [
+                        "idx",
+                        "Int4"
+                      ],
+                      [
+                        "re",
+                        "Float8"
+                      ],
+                      [
+                        "im",
+                        "Float8"
+                      ]
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "air_pressure_at_sea_level!: Vec<FftEntry>",
+        "type_info": {
+          "Custom": {
+            "name": "_fft_entry",
+            "kind": {
+              "Array": {
+                "Custom": {
+                  "name": "fft_entry",
+                  "kind": {
+                    "Composite": [
+                      [
+                        "idx",
+                        "Int4"
+                      ],
+                      [
+                        "re",
+                        "Float8"
+                      ],
+                      [
+                        "im",
+                        "Float8"
+                      ]
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "precipitation_amount!: Vec<FftEntry>",
+        "type_info": {
+          "Custom": {
+            "name": "_fft_entry",
+            "kind": {
+              "Array": {
+                "Custom": {
+                  "name": "fft_entry",
+                  "kind": {
+                    "Composite": [
+                      [
+                        "idx",
+                        "Int4"
+                      ],
+                      [
+                        "re",
+                        "Float8"
+                      ],
+                      [
+                        "im",
+                        "Float8"
+                      ]
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Timestamptz",
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "3bcbde1017a2a3a13182b320c3c282509d0ee047d1965e842472f1e4ff4018b7"
+}

@@ -26,6 +26,13 @@ pub enum Error {
         #[snafu(source)]
         error: sqlx::Error,
     },
+    #[snafu(display("Fft error"))]
+    Fft {
+        #[snafu(implicit)]
+        location: Location,
+        #[snafu(source)]
+        error: realfft::FftError,
+    },
     #[snafu(display("Migrate error"))]
     Migrate {
         #[snafu(implicit)]
@@ -187,6 +194,7 @@ impl From<Error> for kyogre_core::Error {
             Error::Conversion { .. }
             | Error::MissingValue { .. }
             | Error::Json { .. }
+            | Error::Fft { .. }
             | Error::TripPositionMatch { .. }
             | Error::Sqlx { .. }
             | Error::VerifyDatabase { .. }
