@@ -1,0 +1,52 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    \"timestamp\",\n    wind_speed_10m,\n    air_temperature_2m,\n    relative_humidity_2m,\n    air_pressure_at_sea_level,\n    precipitation_amount\nFROM\n    weather_images\nWHERE\n    \"timestamp\" = $1::TIMESTAMPTZ\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "timestamp",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 1,
+        "name": "wind_speed_10m",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 2,
+        "name": "air_temperature_2m",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 3,
+        "name": "relative_humidity_2m",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 4,
+        "name": "air_pressure_at_sea_level",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 5,
+        "name": "precipitation_amount",
+        "type_info": "Bytea"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "f49254691d16513ec51439b2aa2b5a55de54b559a4be23d4ce76125737e1e0ee"
+}

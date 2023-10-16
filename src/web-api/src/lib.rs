@@ -6,7 +6,7 @@ use fiskeridir_rs::{RegisterVesselEntityType, RegisterVesselOwner};
 use kyogre_core::{
     ActiveHaulsFilter, ActiveLandingFilter, Catch, Delivery, FishingFacilitiesSorting,
     FishingFacilityToolType, HaulsSorting, LandingsSorting, MatrixCacheOutbound, Ordering,
-    TripSorting, WebApiInboundPort, WebApiOutboundPort,
+    TripSorting, WeatherFeature, WebApiInboundPort, WebApiOutboundPort,
 };
 use postgres::PostgresAdapter;
 use routes::v1::{self, trip::TripAssemblerId};
@@ -56,6 +56,8 @@ impl Database for PostgresAdapter {}
         v1::landing::landing_matrix,
         v1::delivery_point::delivery_points,
         v1::weather::weather,
+        v1::weather::weather_image,
+        v1::weather::weather_images,
         v1::weather::weather_locations,
     ),
     components(
@@ -73,6 +75,7 @@ impl Database for PostgresAdapter {}
             LandingsSorting,
             TripSorting,
             TripAssemblerId,
+            WeatherFeature,
             error::ErrorResponse,
             error::ApiError,
             v1::ais::AisPosition,
@@ -108,6 +111,7 @@ impl Database for PostgresAdapter {}
             v1::landing::LandingMatrix,
             v1::delivery_point::DeliveryPoint,
             v1::weather::Weather,
+            v1::weather::WeatherImages,
             v1::weather::WeatherLocation,
           )
     ),

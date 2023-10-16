@@ -62,10 +62,10 @@ pub struct HaulWeather {
     pub cloud_area_fraction: Option<BigDecimal>,
 }
 
-impl TryFrom<kyogre_core::NewWeather> for NewWeather {
+impl TryFrom<&kyogre_core::NewWeather> for NewWeather {
     type Error = Report<PostgresError>;
 
-    fn try_from(v: kyogre_core::NewWeather) -> Result<Self, Self::Error> {
+    fn try_from(v: &kyogre_core::NewWeather) -> Result<Self, Self::Error> {
         Ok(Self {
             timestamp: v.timestamp,
             latitude: float_to_decimal(v.latitude).change_context(PostgresError::DataConversion)?,

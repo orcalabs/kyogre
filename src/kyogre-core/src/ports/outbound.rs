@@ -89,6 +89,15 @@ pub trait WebApiOutboundPort {
         &self,
         query: WeatherQuery,
     ) -> Result<PinBoxStream<'_, Weather, QueryError>, QueryError>;
+    async fn weather_image(
+        &self,
+        timestamp: DateTime<Utc>,
+        feature: WeatherFeature,
+    ) -> Result<Option<Vec<u8>>, QueryError>;
+    async fn weather_images(
+        &self,
+        timestamp: DateTime<Utc>,
+    ) -> Result<Option<WeatherImages>, QueryError>;
     fn weather_locations(&self) -> PinBoxStream<'_, WeatherLocation, QueryError>;
 }
 

@@ -1,10 +1,10 @@
 use actix_web::{
-    web::{self},
-    HttpResponse,
+    http::header::{self, ContentType},
+    web, HttpResponse,
 };
 use chrono::{DateTime, Duration, Utc};
 use futures::TryStreamExt;
-use kyogre_core::WeatherQuery;
+use kyogre_core::{WeatherFeature, WeatherQuery};
 use serde::{Deserialize, Serialize};
 use tracing::{event, Level};
 use utoipa::{IntoParams, ToSchema};
@@ -12,6 +12,7 @@ use wkt::ToWkt;
 
 use crate::{
     error::ApiError,
+    response::Response,
     routes::utils::{deserialize_string_list, WeatherLocationId},
     *,
 };
@@ -24,6 +25,19 @@ pub struct WeatherParams {
     #[param(value_type = Option<String>, example = "123,456,789")]
     #[serde(deserialize_with = "deserialize_string_list", default)]
     pub weather_location_ids: Option<Vec<WeatherLocationId>>,
+}
+
+#[derive(Debug, Deserialize, IntoParams)]
+#[serde(rename_all = "camelCase")]
+pub struct WeatherImageParams {
+    pub timestamp: DateTime<Utc>,
+    pub feature: WeatherFeature,
+}
+
+#[derive(Default, Debug, Deserialize, IntoParams)]
+#[serde(rename_all = "camelCase")]
+pub struct WeatherImagesParams {
+    pub timestamp: DateTime<Utc>,
 }
 
 #[utoipa::path(
@@ -56,6 +70,67 @@ pub async fn weather<T: Database + 'static>(
             ApiError::InternalServerError
         })
     }
+}
+
+#[utoipa::path(
+    get,
+    path = "/weather_image",
+    params(WeatherImageParams),
+    responses(
+        (status = 200, description = "stuff", body = WeatherImages),
+        (status = 500, description = "an internal error occured", body = ErrorResponse),
+    )
+)]
+#[tracing::instrument(skip(db))]
+pub async fn weather_image<T: Database + 'static>(
+    db: web::Data<T>,
+    params: web::Query<WeatherImageParams>,
+) -> Result<HttpResponse, ApiError> {
+    let params = params.into_inner();
+
+    let image = db
+        .weather_image(params.timestamp, params.feature)
+        .await
+        .map_err(|e| {
+            event!(Level::ERROR, "failed to retrieve weather image: {:?}", e);
+            ApiError::InternalServerError
+        })?;
+
+    Ok(match image {
+        Some(bytes) => HttpResponse::Ok()
+            .content_type(ContentType::png())
+            .append_header(header::ContentEncoding::Gzip)
+            .body(bytes),
+        None => HttpResponse::NotFound().finish(),
+    })
+}
+
+#[utoipa::path(
+    get,
+    path = "/weather_images",
+    params(WeatherImagesParams),
+    responses(
+        (status = 200, description = "stuff", body = WeatherImages),
+        (status = 500, description = "an internal error occured", body = ErrorResponse),
+    )
+)]
+#[tracing::instrument(skip(db))]
+pub async fn weather_images<T: Database + 'static>(
+    db: web::Data<T>,
+    params: web::Query<WeatherImagesParams>,
+) -> Result<Response<Option<WeatherImages>>, ApiError> {
+    let timestamp = params.into_inner().timestamp;
+
+    let image = db
+        .weather_images(timestamp)
+        .await
+        .map_err(|e| {
+            event!(Level::ERROR, "failed to retrieve weather images: {:?}", e);
+            ApiError::InternalServerError
+        })?
+        .map(WeatherImages::from);
+
+    Ok(Response::new(image))
 }
 
 #[utoipa::path(
@@ -105,6 +180,17 @@ pub struct Weather {
 
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
 #[serde(rename_all = "camelCase")]
+pub struct WeatherImages {
+    pub timestamp: DateTime<Utc>,
+    pub wind_speed_10m: Vec<u8>,
+    pub air_temperature_2m: Vec<u8>,
+    pub relative_humidity_2m: Vec<u8>,
+    pub air_pressure_at_sea_level: Vec<u8>,
+    pub precipitation_amount: Vec<u8>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
+#[serde(rename_all = "camelCase")]
 pub struct WeatherLocation {
     pub id: i32,
     pub polygon: String,
@@ -126,6 +212,19 @@ impl From<kyogre_core::Weather> for Weather {
             land_area_fraction: v.land_area_fraction,
             cloud_area_fraction: v.cloud_area_fraction,
             weather_location_id: v.weather_location_id.0,
+        }
+    }
+}
+
+impl From<kyogre_core::WeatherImages> for WeatherImages {
+    fn from(v: kyogre_core::WeatherImages) -> Self {
+        Self {
+            timestamp: v.timestamp,
+            wind_speed_10m: v.wind_speed_10m,
+            air_temperature_2m: v.air_temperature_2m,
+            relative_humidity_2m: v.relative_humidity_2m,
+            air_pressure_at_sea_level: v.air_pressure_at_sea_level,
+            precipitation_amount: v.precipitation_amount,
         }
     }
 }

@@ -1,7 +1,15 @@
+use std::{
+    collections::HashMap,
+    io::{Cursor, Write},
+};
+
 use chrono::{DateTime, Utc};
+use colorgrad::{Gradient, GradientBuilder, LinearGradient};
 use error_stack::{report, Report, Result, ResultExt};
+use flate2::{write::GzEncoder, Compression};
 use futures::{Stream, TryStreamExt};
-use kyogre_core::{HaulWeatherOutput, WeatherQuery};
+use image::{ImageFormat, Rgba, RgbaImage};
+use kyogre_core::{HaulWeatherOutput, WeatherFeature, WeatherImages, WeatherQuery};
 use unnest_insert::UnnestInsert;
 
 use crate::{
@@ -63,6 +71,62 @@ GROUP BY
         .map_err(|e| report!(e).change_context(PostgresError::Query));
 
         Ok(stream)
+    }
+
+    pub(crate) async fn weather_image_impl(
+        &self,
+        timestamp: DateTime<Utc>,
+        feature: WeatherFeature,
+    ) -> Result<Option<Vec<u8>>, PostgresError> {
+        Ok(sqlx::query!(
+            r#"
+SELECT
+    "timestamp",
+    CASE
+        WHEN $1 = 1 THEN wind_speed_10m
+        WHEN $1 = 2 THEN air_temperature_2m
+        WHEN $1 = 3 THEN relative_humidity_2m
+        WHEN $1 = 4 THEN air_pressure_at_sea_level
+        WHEN $1 = 5 THEN precipitation_amount
+    END AS "bytes!"
+FROM
+    weather_images
+WHERE
+    "timestamp" = $2::TIMESTAMPTZ
+            "#,
+            feature as i32,
+            timestamp,
+        )
+        .fetch_optional(&self.pool)
+        .await
+        .change_context(PostgresError::Query)?
+        .map(|r| r.bytes))
+    }
+
+    pub(crate) async fn weather_images_impl(
+        &self,
+        timestamp: DateTime<Utc>,
+    ) -> Result<Option<WeatherImages>, PostgresError> {
+        sqlx::query_as!(
+            WeatherImages,
+            r#"
+SELECT
+    "timestamp",
+    wind_speed_10m,
+    air_temperature_2m,
+    relative_humidity_2m,
+    air_pressure_at_sea_level,
+    precipitation_amount
+FROM
+    weather_images
+WHERE
+    "timestamp" = $1::TIMESTAMPTZ
+            "#,
+            timestamp,
+        )
+        .fetch_optional(&self.pool)
+        .await
+        .change_context(PostgresError::Query)
     }
 
     pub(crate) async fn haul_weather_impl(
@@ -279,14 +343,214 @@ WHERE
         weather: Vec<kyogre_core::NewWeather>,
     ) -> Result<(), PostgresError> {
         let values = weather
-            .into_iter()
+            .iter()
             .map(NewWeather::try_from)
             .collect::<Result<Vec<_>, _>>()?;
 
+        let mut tx = self.begin().await?;
+
         NewWeather::unnest_insert(values, &self.pool)
             .await
-            .change_context(PostgresError::Query)
-            .map(|_| ())
+            .change_context(PostgresError::Query)?;
+
+        self.add_weather_images_impl(weather, &mut tx).await?;
+
+        tx.commit().await.change_context(PostgresError::Query)?;
+
+        Ok(())
+    }
+
+    pub(crate) async fn add_weather_images_impl<'a>(
+        &'a self,
+        weather: Vec<kyogre_core::NewWeather>,
+        tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
+    ) -> Result<(), PostgresError> {
+        if weather.is_empty() {
+            return Ok(());
+        }
+
+        let timestamp = weather[0].timestamp;
+
+        // MAGIC NUMBERS!
+        // Derived from the bounding box of all weather locations (not including ocean climate
+        // locations), multiplied by 10 to get an int instead of float.
+        let lat_min: i32 = 523;
+        let lat_max: i32 = 738;
+        let lon_min: i32 = -118;
+        let lon_max: i32 = 417;
+
+        // MAGIC NUMBERS!
+        // Size of each weather location in pixels.
+        // Derived from visual inspection + reasonable file size.
+        // Y is twice as large as X because the locations are, on average, roughly twice as tall as
+        // wide.
+        let x_mult = 10;
+        let y_mult = 20;
+
+        let celcius_kelvin_diff = 273.15;
+
+        // MAGIC NUMBERS!
+        // Derived from the min/max values in the dataset as of 2023-9
+        let wind_range = (0., 40.);
+        let temp_range = (-40. + celcius_kelvin_diff, 40. + celcius_kelvin_diff);
+        let hum_range = (0.1, 1.);
+        let press_range = (93870., 105600.);
+        let prec_range = (0., 1300.);
+
+        let wind_grad = gradient("#bea86d00, #bea86dff, #a64c4c, #9f214a, #460e27");
+        let temp_grad =
+            gradient("#e5eeff, #99b0d6, #284d7e, #277492, #bea86d, #a64c4c, #9f214a, #460e27");
+        let hum_grad = gradient(
+            "#f00101, #c64111, #c08541, #76ccbe, #37aeaf, #3b9eaf, #1395a8, #3985ae, #394675",
+        );
+        // 1 atm = 101325 Pa
+        let press_grad = gradient(
+            "#012064, #148892, #3499c2 62.555%, #d6d6d7 63.555%, #e0a551 64.555%, #c08541, #973b35",
+        );
+        let prec_grad = gradient("#3985ae00, #3985aeaa 0.5%, #394675, #012064");
+
+        let width = (lon_max - lon_min + 1) as u32 * x_mult;
+        let height = (lat_max - lat_min + 1) as u32 * y_mult;
+
+        let mut wind_img = RgbaImage::new(width, height);
+        let mut temp_img = RgbaImage::new(width, height);
+        let mut hum_img = RgbaImage::new(width, height);
+        let mut press_img = RgbaImage::new(width, height);
+        let mut prec_img = RgbaImage::new(width, height);
+
+        let mut weather: HashMap<_, _> = weather
+            .into_iter()
+            .map(|v| {
+                (
+                    (
+                        (v.latitude * 10.).floor() as i32,
+                        (v.longitude * 10.).floor() as i32,
+                    ),
+                    v,
+                )
+            })
+            .collect();
+
+        let add_pixels = |value: Option<f64>,
+                          range: (f64, f64),
+                          img: &mut RgbaImage,
+                          grad: &LinearGradient,
+                          x: u32,
+                          y: u32| {
+            if let Some(v) = value {
+                let at = (v - range.0) / (range.1 - range.0);
+                let color = Rgba(grad.at(at as f32).to_rgba8());
+                for i in 0..x_mult {
+                    for j in 0..y_mult {
+                        img.put_pixel(x + i, y + j, color)
+                    }
+                }
+            }
+        };
+
+        for (x, lon) in (lon_min..=lon_max).enumerate() {
+            for (y, lat) in (lat_min..=lat_max).enumerate() {
+                let x = x as u32 * x_mult;
+                let y = height - y_mult - (y as u32 * y_mult);
+
+                if let Some(w) = weather.remove(&(lat, lon)) {
+                    add_pixels(
+                        w.wind_speed_10m,
+                        wind_range,
+                        &mut wind_img,
+                        &wind_grad,
+                        x,
+                        y,
+                    );
+                    add_pixels(
+                        w.air_temperature_2m,
+                        temp_range,
+                        &mut temp_img,
+                        &temp_grad,
+                        x,
+                        y,
+                    );
+                    add_pixels(
+                        w.relative_humidity_2m,
+                        hum_range,
+                        &mut hum_img,
+                        &hum_grad,
+                        x,
+                        y,
+                    );
+                    add_pixels(
+                        w.air_pressure_at_sea_level,
+                        press_range,
+                        &mut press_img,
+                        &press_grad,
+                        x,
+                        y,
+                    );
+                    add_pixels(
+                        w.precipitation_amount,
+                        prec_range,
+                        &mut prec_img,
+                        &prec_grad,
+                        x,
+                        y,
+                    );
+                }
+            }
+        }
+
+        let process_img = |img: RgbaImage| {
+            let mut cursor = Cursor::new(Vec::with_capacity(600_000));
+            img.write_to(&mut cursor, ImageFormat::Png).unwrap();
+
+            let mut encoder = GzEncoder::new(Vec::with_capacity(100_000), Compression::new(9));
+            encoder
+                .write_all(&cursor.into_inner())
+                .change_context(PostgresError::DataConversion)?;
+
+            encoder
+                .finish()
+                .change_context(PostgresError::DataConversion)
+        };
+
+        let wind = process_img(wind_img)?;
+        let temp = process_img(temp_img)?;
+        let hum = process_img(hum_img)?;
+        let press = process_img(press_img)?;
+        let prec = process_img(prec_img)?;
+
+        sqlx::query!(
+            r#"
+INSERT INTO
+    weather_images (
+        "timestamp",
+        wind_speed_10m,
+        air_temperature_2m,
+        relative_humidity_2m,
+        air_pressure_at_sea_level,
+        precipitation_amount
+    )
+VALUES
+    (
+        $1::TIMESTAMPTZ,
+        $2::BYTEA,
+        $3::BYTEA,
+        $4::BYTEA,
+        $5::BYTEA,
+        $6::BYTEA
+    )
+ON CONFLICT DO NOTHING
+            "#,
+            timestamp,
+            &wind,
+            &temp,
+            &hum,
+            &press,
+            &prec,
+        )
+        .execute(&mut **tx)
+        .await
+        .change_context(PostgresError::Query)
+        .map(|_| ())
     }
 
     pub(crate) async fn latest_weather_timestamp_impl(
@@ -342,4 +606,8 @@ impl TryFrom<WeatherQuery> for WeatherArgs {
                 .map(|ids| ids.into_iter().map(|id| id.0).collect()),
         })
     }
+}
+
+fn gradient(colors: &'static str) -> LinearGradient {
+    GradientBuilder::new().css(colors).build().unwrap()
 }

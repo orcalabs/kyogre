@@ -617,6 +617,25 @@ impl WebApiOutboundPort for PostgresAdapter {
         Ok(convert_stream(stream).boxed())
     }
 
+    async fn weather_image(
+        &self,
+        timestamp: DateTime<Utc>,
+        feature: WeatherFeature,
+    ) -> Result<Option<Vec<u8>>, QueryError> {
+        self.weather_image_impl(timestamp, feature)
+            .await
+            .change_context(QueryError)
+    }
+
+    async fn weather_images(
+        &self,
+        timestamp: DateTime<Utc>,
+    ) -> Result<Option<WeatherImages>, QueryError> {
+        self.weather_images_impl(timestamp)
+            .await
+            .change_context(QueryError)
+    }
+
     fn weather_locations(&self) -> PinBoxStream<'_, WeatherLocation, QueryError> {
         convert_stream(self.weather_locations_impl()).boxed()
     }
