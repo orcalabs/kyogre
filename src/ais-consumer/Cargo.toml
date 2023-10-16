@@ -11,13 +11,13 @@ fiskeridir-rs = { workspace = true }
 
 kyogre-core = { path = "../kyogre-core" }
 postgres = { path = "../postgres" }
-async-trait = "0.1.73"
-serde = "1.0.188"
+async-trait = "0.1.74"
+serde = "1.0.189"
 config = "0.13.3"
-tokio = { version = "1.32.0", features = ["macros", "sync", "time"] }
+tokio = { version = "1.33.0", features = ["macros", "sync", "time"] }
 tokio-util = { version = "0.7.9", features = ["codec", "compat"] }
 futures = "0.3.28"
-tracing = "0.1.37"
+tracing = "0.1.39"
 chrono = { version = "0.4.31", features = ["serde"] }
 error-stack = { workspace = true }
 serde_json = "1.0.107"
@@ -29,7 +29,7 @@ hyper-alpn = "=0.3.0"
 
 geo = "0.26.0"
 vpsearch = "2.0.1"
-flate2 = "1.0.27"
+flate2 = "1.0.28"
 lazy_static = "1.4.0"
 
 [dev-dependencies]

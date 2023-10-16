@@ -18,15 +18,15 @@ fiskeridir-rs = { workspace = true }
 
 config = { version = "0.13.3", features = ["yaml"] }
 chrono = { version = "0.4.31", features = ["serde"] }
-tokio = "1.32.0"
-tracing = "0.1.37"
-serde = { version = "1.0.188", features = ["derive"] }
-async-trait = "0.1.73"
+tokio = "1.33.0"
+tracing = "0.1.39"
+serde = { version = "1.0.189", features = ["derive"] }
+async-trait = "0.1.74"
 error-stack = { workspace = true }
 futures = "0.3.28"
 
 strum = "0.25.0"
-strum_macros = "0.25.2"
+strum_macros = "0.25.3"
 
 geoutils = "0.5.1"
 num-traits = "0.2.17"
