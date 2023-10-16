@@ -169,6 +169,26 @@ pub struct Weather {
     pub weather_location_id: WeatherLocationId,
 }
 
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
+#[derive(Debug, Clone, Copy, Deserialize, strum::Display)]
+pub enum WeatherFeature {
+    WindSpeed10m = 1,
+    AirTemperature2m = 2,
+    RelativeHumidity2m = 3,
+    AirPressureAtSeaLevel = 4,
+    PrecipitationAmount = 5,
+}
+
+#[derive(Debug, Clone)]
+pub struct WeatherImages {
+    pub timestamp: DateTime<Utc>,
+    pub wind_speed_10m: Vec<u8>,
+    pub air_temperature_2m: Vec<u8>,
+    pub relative_humidity_2m: Vec<u8>,
+    pub air_pressure_at_sea_level: Vec<u8>,
+    pub precipitation_amount: Vec<u8>,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize)]
 #[cfg_attr(feature = "sqlx", derive(sqlx::Type), sqlx(transparent))]
 pub struct WeatherLocationId(i32);

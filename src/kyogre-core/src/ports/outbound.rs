@@ -90,6 +90,12 @@ pub trait WebApiOutboundPort {
     async fn get_user(&self, user_id: BarentswatchUserId) -> CoreResult<Option<User>>;
     fn delivery_points(&self) -> PinBoxStream<'_, DeliveryPoint>;
     fn weather(&self, query: WeatherQuery) -> PinBoxStream<'_, Weather>;
+    async fn weather_image(
+        &self,
+        timestamp: DateTime<Utc>,
+        feature: WeatherFeature,
+    ) -> CoreResult<Option<Vec<u8>>>;
+    async fn weather_images(&self, timestamp: DateTime<Utc>) -> CoreResult<Option<WeatherImages>>;
     fn weather_locations(&self) -> PinBoxStream<'_, WeatherLocation>;
     async fn fishing_spot_prediction(
         &self,

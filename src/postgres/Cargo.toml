@@ -39,6 +39,9 @@ geo = "0.28.0"
 geo-types = "0.7.13"
 wkt = { version = "0.11.0", features = ["serde"] }
 uuid = { version = "1.10.0", features = ["serde"] }
+image = "0.24.7"
+flate2 = "1.0.27"
+colorgrad = { git = "https://github.com/mazznoer/colorgrad-rs" }
 
 [dev-dependencies]
 rand = "0.8.5"

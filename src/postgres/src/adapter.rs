@@ -764,6 +764,18 @@ impl WebApiOutboundPort for PostgresAdapter {
         self.weather_impl(query).map_err(From::from).boxed()
     }
 
+    async fn weather_image(
+        &self,
+        timestamp: DateTime<Utc>,
+        feature: WeatherFeature,
+    ) -> CoreResult<Option<Vec<u8>>> {
+        Ok(self.weather_image_impl(timestamp, feature).await?)
+    }
+
+    async fn weather_images(&self, timestamp: DateTime<Utc>) -> CoreResult<Option<WeatherImages>> {
+        Ok(self.weather_images_impl(timestamp).await?)
+    }
+
     fn weather_locations(&self) -> PinBoxStream<'_, WeatherLocation> {
         convert_stream(self.weather_locations_impl()).boxed()
     }

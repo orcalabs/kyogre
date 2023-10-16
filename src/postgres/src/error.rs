@@ -11,6 +11,13 @@ pub(crate) type Result<T> = std::result::Result<T, Error>;
 #[derive(Snafu, StackError)]
 #[snafu(visibility(pub(crate)))]
 pub enum Error {
+    #[snafu(display("IO error"))]
+    IO {
+        #[snafu(implicit)]
+        location: Location,
+        #[snafu(source)]
+        error: std::io::Error,
+    },
     #[snafu(display("Json error"))]
     Json {
         #[snafu(implicit)]
@@ -186,6 +193,7 @@ impl From<Error> for kyogre_core::Error {
             },
             Error::Conversion { .. }
             | Error::MissingValue { .. }
+            | Error::IO { .. }
             | Error::Json { .. }
             | Error::TripPositionMatch { .. }
             | Error::Sqlx { .. }

@@ -187,6 +187,14 @@ where
             )
             .route("/weather", web::get().to(routes::v1::weather::weather::<T>))
             .route(
+                "/weather_image",
+                web::get().to(routes::v1::weather::weather_image::<T>),
+            )
+            .route(
+                "/weather_images",
+                web::get().to(routes::v1::weather::weather_images::<T>),
+            )
+            .route(
                 "/weather_locations",
                 web::get().to(routes::v1::weather::weather_locations::<T>),
             );
