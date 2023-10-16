@@ -35,11 +35,9 @@ pub struct WeatherLocation {
     pub polygon: wkb::Decode<Geometry<f64>>,
 }
 
-impl TryFrom<kyogre_core::NewWeather> for NewWeather {
-    type Error = Error;
-
-    fn try_from(v: kyogre_core::NewWeather) -> Result<Self, Self::Error> {
-        Ok(Self {
+impl From<&kyogre_core::NewWeather> for NewWeather {
+    fn from(v: &kyogre_core::NewWeather) -> Self {
+        Self {
             timestamp: v.timestamp,
             latitude: v.latitude,
             longitude: v.longitude,
@@ -52,7 +50,7 @@ impl TryFrom<kyogre_core::NewWeather> for NewWeather {
             precipitation_amount: v.precipitation_amount.into_inner(),
             land_area_fraction: v.land_area_fraction,
             cloud_area_fraction: v.cloud_area_fraction.into_inner(),
-        })
+        }
     }
 }
 

@@ -8,7 +8,7 @@ use fiskeridir_rs::{
 use kyogre_core::{
     ActiveHaulsFilter, ActiveLandingFilter, FishingFacilitiesSorting, FishingFacilityToolType,
     HaulsSorting, LandingsSorting, MatrixCacheOutbound, MeilisearchOutbound, NavigationStatus,
-    Ordering, TripAssemblerId, TripPositionLayerId, TripSorting, VesselEventType,
+    Ordering, TripAssemblerId, TripPositionLayerId, TripSorting, VesselEventType, WeatherFeature,
     WebApiInboundPort, WebApiOutboundPort,
 };
 use postgres::PostgresAdapter;
@@ -62,6 +62,8 @@ impl Database for PostgresAdapter {}
         v1::landing::landing_matrix,
         v1::delivery_point::delivery_points,
         v1::weather::weather,
+        v1::weather::weather_image,
+        v1::weather::weather_images,
         v1::weather::weather_locations,
         v1::fishing_prediction::fishing_weight_predictions,
         v1::fishing_prediction::fishing_spot_predictions,
@@ -96,6 +98,7 @@ impl Database for PostgresAdapter {}
             VesselEventType,
             WhaleGender,
             VesselLengthGroup,
+            WeatherFeature,
             error::ErrorResponse,
             error::ErrorDiscriminants,
             v1::ais::AisPosition,
@@ -135,6 +138,7 @@ impl Database for PostgresAdapter {}
             v1::landing::LandingMatrix,
             v1::delivery_point::DeliveryPoint,
             v1::weather::Weather,
+            v1::weather::WeatherImages,
             v1::weather::WeatherLocation,
             v1::fishing_prediction::FishingSpotPrediction,
             v1::fishing_prediction::FishingWeightPrediction,

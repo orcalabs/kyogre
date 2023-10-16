@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    \"timestamp\",\n    CASE\n        WHEN $1 = 1 THEN wind_speed_10m\n        WHEN $1 = 2 THEN air_temperature_2m\n        WHEN $1 = 3 THEN relative_humidity_2m\n        WHEN $1 = 4 THEN air_pressure_at_sea_level\n        WHEN $1 = 5 THEN precipitation_amount\n    END AS \"bytes!\"\nFROM\n    weather_images\nWHERE\n    \"timestamp\" = $2::TIMESTAMPTZ\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "timestamp",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 1,
+        "name": "bytes!",
+        "type_info": "Bytea"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      false,
+      null
+    ]
+  },
+  "hash": "453e7452b65624da00a0a78cc9972e235935210f0929a5c4d5093c37e3550a64"
+}
