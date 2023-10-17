@@ -1,3 +1,5 @@
+use crate::DistanceToShorePrecision;
+
 use super::{
     ers::statemachine::ErsStatemachine, precision::TripPrecisionCalculator, DeliveryPointPrecision,
     DockPointPrecision, PortPrecision, PrecisionConfig, StartSearchPoint,
@@ -43,14 +45,24 @@ impl Default for ErsTripAssembler {
             StartSearchPoint::Start,
         ));
         let dock_point_end = Box::new(DockPointPrecision::new(
+            config.clone(),
+            PrecisionDirection::Extending,
+            StartSearchPoint::End,
+        ));
+        let distance_to_shore_start = Box::new(DistanceToShorePrecision::new(
+            config.clone(),
+            PrecisionDirection::Extending,
+            StartSearchPoint::Start,
+        ));
+        let distance_to_shore_end = Box::new(DistanceToShorePrecision::new(
             config,
             PrecisionDirection::Extending,
             StartSearchPoint::End,
         ));
         ErsTripAssembler {
             precision_calculator: TripPrecisionCalculator::new(
-                vec![port_start, dock_point_start],
-                vec![dp_end, port_end, dock_point_end],
+                vec![port_start, dock_point_start, distance_to_shore_start],
+                vec![dp_end, port_end, dock_point_end, distance_to_shore_end],
             ),
         }
     }

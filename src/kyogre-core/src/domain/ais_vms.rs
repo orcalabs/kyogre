@@ -13,5 +13,5 @@ pub struct AisVmsPosition {
     pub navigational_status: Option<NavigationStatus>,
     pub rate_of_turn: Option<f64>,
     pub true_heading: Option<i32>,
-    pub distance_to_shore: Option<f64>,
+    pub distance_to_shore: f64,
 }

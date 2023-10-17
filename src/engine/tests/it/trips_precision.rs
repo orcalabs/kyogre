@@ -28,6 +28,29 @@ async fn test_dock_point_precision_extends_start_and_end_of_trip() {
 }
 
 #[tokio::test]
+async fn test_distance_to_shore_precision_extends_start_and_end_of_trip() {
+    test(|_helper, builder| async move {
+        let start = Utc.timestamp_opt(10000000, 0).unwrap();
+        let end = Utc.timestamp_opt(1000000000, 0).unwrap();
+        let mut state = builder
+            .vessels(1)
+            .trips(1)
+            .modify(|v| {
+                v.trip_specification.set_start(start);
+                v.trip_specification.set_end(end);
+            })
+            .precision(PrecisionId::DistanceToShore)
+            .build()
+            .await;
+
+        let period_precision = state.trips[0].period_precision.take().unwrap();
+        assert!(period_precision.start() < start);
+        assert!(period_precision.end() > end);
+    })
+    .await
+}
+
+#[tokio::test]
 async fn test_port_precision_extends_start_and_end_of_trip() {
     test(|_helper, builder| async move {
         let start = Utc.timestamp_opt(10000000, 0).unwrap();

@@ -141,10 +141,12 @@ impl PortPrecision {
     where
         T: IntoIterator<Item = &'a [AisVmsPosition]>,
     {
-        find_close_point(target, iter, self.config.threshold, preference).map(|d| PrecisionStop {
-            timestamp: d,
-            direction: self.direction,
-            id: PrecisionId::Port,
+        find_close_point(target, iter, self.config.distance_threshold, preference).map(|d| {
+            PrecisionStop {
+                timestamp: d,
+                direction: self.direction,
+                id: PrecisionId::Port,
+            }
         })
     }
 }

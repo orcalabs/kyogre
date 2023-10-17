@@ -9,11 +9,13 @@ use kyogre_core::{
 use num_traits::ToPrimitive;
 
 mod delivery_point;
+mod distance_to_shore;
 mod dock_point;
 mod first_moved_point;
 mod port;
 
 pub use delivery_point::*;
+pub use distance_to_shore::*;
 pub use dock_point::*;
 pub use first_moved_point::*;
 pub use port::*;
@@ -27,7 +29,9 @@ pub struct TripPrecisionCalculator {
 #[derive(Debug, Clone)]
 pub struct PrecisionConfig {
     /// How far a set of points has to be to end the search.
-    pub threshold: f64,
+    pub distance_threshold: f64,
+    /// How slow a set of points has to be to end the search.
+    pub speed_threshold: f64,
     /// How many positions to consider at a time.
     pub position_chunk_size: usize,
     /// How far back/forward in time to search.
@@ -78,7 +82,8 @@ pub enum StartSearchPoint {
 impl Default for PrecisionConfig {
     fn default() -> Self {
         PrecisionConfig {
-            threshold: 1000.0,
+            distance_threshold: 1000.0,
+            speed_threshold: 1.0,
             position_chunk_size: 10,
             search_threshold: Duration::hours(3),
         }

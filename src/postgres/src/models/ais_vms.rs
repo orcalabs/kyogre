@@ -19,7 +19,7 @@ pub struct AisVmsPosition {
     pub navigational_status: Option<i32>,
     pub rate_of_turn: Option<BigDecimal>,
     pub true_heading: Option<i32>,
-    pub distance_to_shore: Option<BigDecimal>,
+    pub distance_to_shore: BigDecimal,
 }
 
 impl TryFrom<AisVmsPosition> for kyogre_core::AisVmsPosition {
@@ -45,7 +45,7 @@ impl TryFrom<AisVmsPosition> for kyogre_core::AisVmsPosition {
             rate_of_turn: opt_decimal_to_float(v.rate_of_turn)
                 .change_context(PostgresError::DataConversion)?,
             true_heading: v.true_heading,
-            distance_to_shore: opt_decimal_to_float(v.distance_to_shore)
+            distance_to_shore: decimal_to_float(v.distance_to_shore)
                 .change_context(PostgresError::DataConversion)?,
         })
     }

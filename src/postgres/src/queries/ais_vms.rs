@@ -23,7 +23,7 @@ SELECT
     navigational_status,
     rate_of_turn,
     true_heading,
-    distance_to_shore
+    distance_to_shore AS "distance_to_shore!"
 FROM
     (
         SELECT
@@ -79,7 +79,7 @@ SELECT
     navigational_status,
     rate_of_turn,
     true_heading,
-    distance_to_shore
+    distance_to_shore AS "distance_to_shore!"
 FROM
     (
         SELECT

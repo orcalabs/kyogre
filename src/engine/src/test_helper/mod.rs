@@ -136,6 +136,11 @@ enum TripPrecisonStartPoint {
         start: DateTime<Utc>,
         mmsi: Mmsi,
     },
+    DistanceToShore {
+        end: DateTime<Utc>,
+        start: DateTime<Utc>,
+        mmsi: Mmsi,
+    },
 }
 
 impl TestStateBuilder {
@@ -715,6 +720,13 @@ impl TestStateBuilder {
                                     end: arrival_timestamp,
                                     mmsi,
                                 },
+                                PrecisionId::DistanceToShore => {
+                                    TripPrecisonStartPoint::DistanceToShore {
+                                        end: arrival_timestamp,
+                                        start: departure_timestamp,
+                                        mmsi,
+                                    }
+                                }
                             };
 
                             let mut ais_positions =
@@ -759,6 +771,13 @@ impl TestStateBuilder {
                                         id: delivery_point_id.expect(
                                             "cannot add precision to trip without delivery point",
                                         ),
+                                    }
+                                }
+                                PrecisionId::DistanceToShore => {
+                                    TripPrecisonStartPoint::DistanceToShore {
+                                        end: end_landing_timestamp,
+                                        start: start_landing_timestamp,
+                                        mmsi,
                                     }
                                 }
                                 PrecisionId::Port | PrecisionId::DockPoint => {
@@ -1118,6 +1137,31 @@ async fn add_precision_to_trip(
             let mut position = NewAisPosition::test_default(mmsi, end + Duration::seconds(1));
             position.latitude = end_dock_point.latitude;
             position.longitude = end_dock_point.longitude;
+            ais_positions.push(AisPositionConstructor { position, cycle });
+            ais_positions
+        }
+        TripPrecisonStartPoint::DistanceToShore { start, end, mmsi } => {
+            let mut ais_positions = Vec::with_capacity(3);
+            let mut position = NewAisPosition::test_default(mmsi, start - Duration::seconds(1));
+            // Close to shore
+            position.latitude = 69.126682;
+            position.longitude = 15.551766;
+            position.speed_over_ground = Some(0.);
+            ais_positions.push(AisPositionConstructor { position, cycle });
+
+            // We need atleast a single point within trip to enable precision
+            let mut position = NewAisPosition::test_default(mmsi, end - Duration::seconds(1));
+            // Far from shore
+            position.latitude = 72.166153;
+            position.longitude = 4.474086;
+            position.speed_over_ground = Some(1000.);
+            ais_positions.push(AisPositionConstructor { position, cycle });
+
+            let mut position = NewAisPosition::test_default(mmsi, end + Duration::seconds(1));
+            // Close to shore
+            position.latitude = 61.867577;
+            position.longitude = 4.841976;
+            position.speed_over_ground = Some(0.);
             ais_positions.push(AisPositionConstructor { position, cycle });
             ais_positions
         }
