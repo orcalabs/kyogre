@@ -1,15 +1,10 @@
 use flate2::read::GzDecoder;
-use geo::point;
-use geo::prelude::*;
-use lazy_static::lazy_static;
+use geo::{point, prelude::*};
 use orca_core::Environment;
 use serde::Deserialize;
-use std::fs;
-use std::io::prelude::*;
+use std::{fs, io::prelude::*, sync::OnceLock};
 
-lazy_static! {
-    static ref SHORELINE: vpsearch::Tree<Coordinate> = create_vp_tree();
-}
+static SHORELINE: OnceLock<vpsearch::Tree<Coordinate>> = OnceLock::new();
 
 #[derive(Copy, Clone, Debug, Deserialize)]
 struct Coordinate {
@@ -27,10 +22,12 @@ pub fn distance_to_shore(latitude: f64, longitude: f64) -> f64 {
     if running_in_test() {
         0.0
     } else {
-        let (_, val) = SHORELINE.find_nearest(&Coordinate {
-            longitude,
-            latitude,
-        });
+        let (_, val) = SHORELINE
+            .get_or_init(create_vp_tree)
+            .find_nearest(&Coordinate {
+                longitude,
+                latitude,
+            });
 
         val
     }

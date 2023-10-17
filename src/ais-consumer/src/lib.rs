@@ -3,7 +3,6 @@
 
 pub mod barentswatch;
 pub mod consumer;
-pub mod distance_to_shore;
 pub mod error;
 pub mod models;
 pub mod settings;

@@ -1,4 +1,4 @@
-use std::panic;
+use std::{panic, sync::Once};
 
 use ais_consumer::{
     models::{AisPosition, AisStatic},
@@ -8,7 +8,6 @@ use ais_consumer::{
 use dockertest::{DockerTest, Source, StaticManagementPolicy};
 use futures::{Future, TryStreamExt};
 use kyogre_core::VerificationOutbound;
-use lazy_static::{initialize, lazy_static};
 use orca_core::{
     compositions::postgres_composition, Environment, LogLevel, PsqlLogStatements, PsqlSettings,
 };
@@ -17,14 +16,7 @@ use rand::random;
 use tokio_stream::wrappers::ReceiverStream;
 use tracing_subscriber::FmtSubscriber;
 
-lazy_static! {
-    static ref TRACING: () = tracing::subscriber::set_global_default(
-        FmtSubscriber::builder()
-            .with_max_level(tracing::Level::INFO)
-            .finish(),
-    )
-    .unwrap();
-}
+static TRACING: Once = Once::new();
 
 static DATABASE_PASSWORD: &str = "test123";
 
@@ -46,7 +38,15 @@ where
     T: FnOnce(TestHelper) -> Fut + panic::UnwindSafe + Send + 'static,
     Fut: Future<Output = ()> + Send + 'static,
 {
-    initialize(&TRACING);
+    TRACING.call_once(|| {
+        tracing::subscriber::set_global_default(
+            FmtSubscriber::builder()
+                .with_max_level(tracing::Level::INFO)
+                .finish(),
+        )
+        .unwrap();
+    });
+
     let mut docker_test = DockerTest::new().with_default_source(Source::DockerHub);
 
     let mut db_composition = postgres_composition(

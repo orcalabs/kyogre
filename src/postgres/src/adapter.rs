@@ -74,14 +74,14 @@ impl PostgresAdapter {
 
         let pool = PgPoolOptions::new()
             .max_connections(connections_per_pool)
-            .acquire_timeout(std::time::Duration::from_secs(30))
+            .acquire_timeout(std::time::Duration::from_secs(60))
             .connect_with(opts)
             .await
             .change_context(PostgresError::Connection)?;
 
         let ais_pool = PgPoolOptions::new()
             .max_connections(connections_per_pool)
-            .acquire_timeout(std::time::Duration::from_secs(20))
+            .acquire_timeout(std::time::Duration::from_secs(60))
             .connect_with(ais_opts)
             .await
             .change_context(PostgresError::Connection)?;

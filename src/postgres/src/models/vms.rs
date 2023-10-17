@@ -4,8 +4,9 @@ use crate::{
 };
 use bigdecimal::BigDecimal;
 use chrono::{DateTime, Utc};
-use error_stack::{Report, ResultExt};
+use error_stack::{report, Report, ResultExt};
 use fiskeridir_rs::CallSign;
+use kyogre_core::distance_to_shore;
 use serde::Deserialize;
 use unnest_insert::UnnestInsert;
 
@@ -15,8 +16,8 @@ pub struct NewVmsPosition {
     pub call_sign: String,
     pub course: Option<i32>,
     pub gross_tonnage: Option<i32>,
-    pub latitude: Option<BigDecimal>,
-    pub longitude: Option<BigDecimal>,
+    pub latitude: BigDecimal,
+    pub longitude: BigDecimal,
     pub message_id: i32,
     pub message_type: String,
     pub message_type_code: String,
@@ -26,6 +27,7 @@ pub struct NewVmsPosition {
     pub vessel_length: BigDecimal,
     pub vessel_name: String,
     pub vessel_type: String,
+    pub distance_to_shore: f64,
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -40,20 +42,26 @@ pub struct VmsPosition {
     pub vessel_length: BigDecimal,
     pub vessel_name: String,
     pub vessel_type: String,
+    pub distance_to_shore: f64,
 }
 
 impl TryFrom<fiskeridir_rs::Vms> for NewVmsPosition {
     type Error = Report<PostgresError>;
 
     fn try_from(v: fiskeridir_rs::Vms) -> Result<Self, Self::Error> {
+        let latitude = v
+            .latitude
+            .ok_or_else(|| report!(PostgresError::DataConversion))?;
+        let longitude = v
+            .longitude
+            .ok_or_else(|| report!(PostgresError::DataConversion))?;
+
         Ok(Self {
             call_sign: v.call_sign.into_inner(),
             course: v.course.map(|c| c as i32),
             gross_tonnage: v.gross_tonnage.map(|c| c as i32),
-            latitude: opt_float_to_decimal(v.latitude)
-                .change_context(PostgresError::DataConversion)?,
-            longitude: opt_float_to_decimal(v.longitude)
-                .change_context(PostgresError::DataConversion)?,
+            latitude: float_to_decimal(latitude).change_context(PostgresError::DataConversion)?,
+            longitude: float_to_decimal(longitude).change_context(PostgresError::DataConversion)?,
             message_id: v.message_id as i32,
             message_type: v.message_type,
             message_type_code: v.message_type_code,
@@ -64,6 +72,7 @@ impl TryFrom<fiskeridir_rs::Vms> for NewVmsPosition {
                 .change_context(PostgresError::DataConversion)?,
             vessel_name: v.vessel_name,
             vessel_type: v.vessel_type,
+            distance_to_shore: distance_to_shore(latitude, longitude),
         })
     }
 }
@@ -88,6 +97,7 @@ impl TryFrom<VmsPosition> for kyogre_core::VmsPosition {
                 .change_context(PostgresError::DataConversion)?,
             vessel_name: value.vessel_name,
             vessel_type: value.vessel_type,
+            distance_to_shore: value.distance_to_shore,
         })
     }
 }

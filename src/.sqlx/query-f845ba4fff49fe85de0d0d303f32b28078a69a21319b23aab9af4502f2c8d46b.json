@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT\n    latitude AS \"latitude!\",\n    longitude AS \"longitude!\",\n    \"timestamp\" AS \"timestamp!\",\n    course_over_ground,\n    speed,\n    navigational_status,\n    rate_of_turn,\n    true_heading,\n    distance_to_shore\nFROM\n    (\n        SELECT\n            latitude,\n            longitude,\n            \"timestamp\",\n            course_over_ground,\n            speed_over_ground AS speed,\n            navigation_status_id AS navigational_status,\n            rate_of_turn,\n            true_heading,\n            distance_to_shore\n        FROM\n            ais_positions a\n        UNION ALL\n        SELECT\n            latitude,\n            longitude,\n            \"timestamp\",\n            course AS course_over_ground,\n            speed,\n            NULL AS navigational_status,\n            NULL AS rate_of_turn,\n            NULL AS true_heading,\n            NULL AS distance_to_shore\n        FROM\n            vms_positions v\n    ) q\nORDER BY\n    \"timestamp\" ASC\n            ",
+  "query": "\nSELECT\n    latitude AS \"latitude!\",\n    longitude AS \"longitude!\",\n    \"timestamp\" AS \"timestamp!\",\n    course_over_ground,\n    speed,\n    navigational_status,\n    rate_of_turn,\n    true_heading,\n    distance_to_shore\nFROM\n    (\n        SELECT\n            latitude,\n            longitude,\n            \"timestamp\",\n            course_over_ground,\n            speed_over_ground AS speed,\n            navigation_status_id AS navigational_status,\n            rate_of_turn,\n            true_heading,\n            distance_to_shore\n        FROM\n            ais_positions a\n        UNION ALL\n        SELECT\n            latitude,\n            longitude,\n            \"timestamp\",\n            course AS course_over_ground,\n            speed,\n            NULL AS navigational_status,\n            NULL AS rate_of_turn,\n            NULL AS true_heading,\n            distance_to_shore::DECIMAL\n        FROM\n            vms_positions v\n    ) q\nORDER BY\n    \"timestamp\" ASC\n            ",
   "describe": {
     "columns": [
       {
@@ -64,5 +64,5 @@
       null
     ]
   },
-  "hash": "3a24d0b98dde83519d92a063b9814c93fee9b32426f4a373f78f75786887fd8f"
+  "hash": "f845ba4fff49fe85de0d0d303f32b28078a69a21319b23aab9af4502f2c8d46b"
 }

@@ -72,6 +72,7 @@ pub struct VmsPosition {
     pub lon: f64,
     pub speed: Option<f64>,
     pub timestamp: DateTime<Utc>,
+    pub distance_to_shore: f64,
 }
 
 impl From<kyogre_core::VmsPosition> for VmsPosition {
@@ -82,6 +83,7 @@ impl From<kyogre_core::VmsPosition> for VmsPosition {
             timestamp: value.timestamp,
             course: value.course,
             speed: value.speed,
+            distance_to_shore: value.distance_to_shore,
         }
     }
 }

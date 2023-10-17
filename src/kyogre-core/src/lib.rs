@@ -5,6 +5,7 @@ pub static KEEP_DB_ENV: &str = "KEEP_TEST_DB";
 
 use async_trait::async_trait;
 
+mod distance_to_shore;
 mod domain;
 mod error;
 mod file_hash;
@@ -12,6 +13,7 @@ mod oauth;
 mod ports;
 mod queries;
 
+pub use distance_to_shore::*;
 pub use domain::*;
 pub use error::*;
 pub use file_hash::*;
