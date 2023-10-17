@@ -522,6 +522,24 @@ SET
         .change_context(PostgresError::Query)
         .map(|_| ())
     }
+
+    pub(crate) async fn landings_without_trip(&self) -> Result<i64, PostgresError> {
+        sqlx::query!(
+            r#"
+SELECT
+    COUNT(*) AS "c!"
+FROM
+    vessel_events
+WHERE
+    vessel_event_type_id = 1
+    AND trip_id IS NULL
+            "#,
+        )
+        .fetch_one(&self.pool)
+        .await
+        .change_context(PostgresError::Query)
+        .map(|r| r.c)
+    }
 }
 
 pub struct LandingsArgs {

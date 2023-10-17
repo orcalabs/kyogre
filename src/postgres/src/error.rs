@@ -104,6 +104,7 @@ pub enum VerifyDatabaseError {
     IncorrectHaulsMatrixLivingWeight(i64),
     IncorrectLandingMatrixLivingWeight(i64),
     ConflictingVesselMappings(Vec<ActiveVesselConflict>),
+    LandingsWithoutTrip(i64),
 }
 
 impl std::error::Error for VerifyDatabaseError {}
@@ -125,6 +126,9 @@ impl std::fmt::Display for VerifyDatabaseError {
             ),
             VerifyDatabaseError::ConflictingVesselMappings(v) => {
                 f.write_fmt(format_args!("vessel conflicts: {:#?}", v))
+            }
+            VerifyDatabaseError::LandingsWithoutTrip(v) => {
+                f.write_fmt(format_args!("landings without trip: {}", v))
             }
         }
     }
