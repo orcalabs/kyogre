@@ -1,5 +1,8 @@
 use crate::trip_assembler::precision::TripPrecisionCalculator;
-use crate::{DeliveryPointPrecision, FirstMovedPoint, PrecisionConfig, StartSearchPoint};
+use crate::{
+    DeliveryPointPrecision, DistanceToShorePrecision, FirstMovedPoint, PrecisionConfig,
+    StartSearchPoint,
+};
 use async_trait::async_trait;
 use chrono::Duration;
 use error_stack::Result;
@@ -35,11 +38,24 @@ impl Default for LandingTripAssembler {
         ));
         let end = Box::new(FirstMovedPoint::new(config.clone(), StartSearchPoint::End));
         let dp_end = Box::new(DeliveryPointPrecision::new(
-            config,
+            config.clone(),
             PrecisionDirection::Shrinking,
         ));
+        let distance_to_shore_start = Box::new(DistanceToShorePrecision::new(
+            config.clone(),
+            PrecisionDirection::Extending,
+            StartSearchPoint::Start,
+        ));
+        let distance_to_shore_end = Box::new(DistanceToShorePrecision::new(
+            config,
+            PrecisionDirection::Shrinking,
+            StartSearchPoint::End,
+        ));
         LandingTripAssembler {
-            precision_calculator: TripPrecisionCalculator::new(vec![start], vec![dp_end, end]),
+            precision_calculator: TripPrecisionCalculator::new(
+                vec![start, distance_to_shore_start],
+                vec![dp_end, end, distance_to_shore_end],
+            ),
         }
     }
 }

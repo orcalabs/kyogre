@@ -32,7 +32,7 @@ impl TripPrecision for FirstMovedPoint {
                 let timestamp = find_first_moved_point(
                     inital_start_position,
                     trip.positions.rchunks(self.config.position_chunk_size),
-                    self.config.threshold,
+                    self.config.distance_threshold,
                 )
                 .change_context(TripPrecisionError)?;
 
@@ -47,7 +47,7 @@ impl TripPrecision for FirstMovedPoint {
                 let timestamp = find_first_moved_point(
                     inital_end_position,
                     trip.positions.chunks(self.config.position_chunk_size),
-                    self.config.threshold,
+                    self.config.distance_threshold,
                 )
                 .change_context(TripPrecisionError)?;
 

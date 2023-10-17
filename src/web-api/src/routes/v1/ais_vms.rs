@@ -87,7 +87,7 @@ pub struct AisVmsPositionDetails {
     pub navigational_status: Option<NavigationStatus>,
     pub rate_of_turn: Option<f64>,
     pub true_heading: Option<i32>,
-    pub distance_to_shore: Option<f64>,
+    pub distance_to_shore: f64,
     pub missing_data: bool,
 }
 
@@ -121,8 +121,7 @@ impl PartialEq<kyogre_core::AisVmsPosition> for AisVmsPosition {
                 d.navigational_status == other.navigational_status.map(NavigationStatus::from)
                     && d.rate_of_turn.map(|s| s as i32) == other.rate_of_turn.map(|s| s as i32)
                     && d.true_heading == other.true_heading
-                    && d.distance_to_shore.map(|s| s as i32)
-                        == other.distance_to_shore.map(|s| s as i32)
+                    && d.distance_to_shore as i32 == other.distance_to_shore as i32
             })
     }
 }
@@ -139,7 +138,7 @@ impl PartialEq<AisVmsPosition> for AisPosition {
                     == d.navigational_status.map(|n| n as i32)
                     && self.rate_of_turn.map(|s| s as i32) == d.rate_of_turn.map(|s| s as i32)
                     && self.true_heading == d.true_heading
-                    && Some(self.distance_to_shore as i32) == d.distance_to_shore.map(|s| s as i32)
+                    && self.distance_to_shore as i32 == d.distance_to_shore as i32
                     && self.speed_over_ground.map(|s| s as i32) == other.speed.map(|s| s as i32)
             })
     }

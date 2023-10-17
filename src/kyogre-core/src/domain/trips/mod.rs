@@ -284,6 +284,8 @@ pub enum PrecisionId {
     Port = 3,
     /// Tries to find positions close to the dock points associated with the trip.
     DockPoint = 4,
+    /// Tries to find positions close to the shore.
+    DistanceToShore = 5,
 }
 
 impl From<PrecisionId> for i32 {
