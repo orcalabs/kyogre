@@ -53,6 +53,13 @@ impl PostgresAdapter {
                 event!(Level::ERROR, "found vessel conflicts: {:?}", report);
             }
         }
+
+        match self.landings_without_trip().await? {
+            0 => Ok(()),
+            v => Err(report!(VerifyDatabaseError::LandingsWithoutTrip(v))
+                .change_context(PostgresError::InconsistentState)),
+        }?;
+
         Ok(())
     }
 }
