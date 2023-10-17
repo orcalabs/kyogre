@@ -26,7 +26,8 @@ SELECT
     "timestamp",
     vessel_length,
     vessel_name,
-    vessel_type
+    vessel_type,
+    distance_to_shore
 FROM
     vms_positions
 ORDER BY
@@ -55,7 +56,8 @@ SELECT
     "timestamp",
     vessel_length,
     vessel_name,
-    vessel_type
+    vessel_type,
+    distance_to_shore
 FROM
     vms_positions
 WHERE
@@ -80,17 +82,8 @@ ORDER BY
 
         let vms = vms
             .into_iter()
+            .filter(|v| v.latitude.is_some() && v.longitude.is_some())
             .map(NewVmsPosition::try_from)
-            .filter(|v| {
-                matches!(
-                    v,
-                    Ok(NewVmsPosition {
-                        latitude: Some(_),
-                        longitude: Some(_),
-                        ..
-                    })
-                )
-            })
             .inspect(|v| {
                 if let Ok(ref v) = v {
                     call_signs_unique.insert(v.call_sign.clone());

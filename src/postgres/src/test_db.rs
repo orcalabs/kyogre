@@ -769,7 +769,8 @@ SELECT
     "timestamp",
     vessel_length,
     vessel_name,
-    vessel_type
+    vessel_type,
+    distance_to_shore
 FROM
     vms_positions
 WHERE

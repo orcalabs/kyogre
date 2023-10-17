@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT\n    call_sign,\n    course,\n    latitude,\n    longitude,\n    registration_id,\n    speed,\n    \"timestamp\",\n    vessel_length,\n    vessel_name,\n    vessel_type\nFROM\n    vms_positions\nWHERE\n    message_id = $1\n            ",
+  "query": "\nSELECT\n    call_sign,\n    course,\n    latitude,\n    longitude,\n    registration_id,\n    speed,\n    \"timestamp\",\n    vessel_length,\n    vessel_name,\n    vessel_type,\n    distance_to_shore\nFROM\n    vms_positions\nORDER BY\n    \"timestamp\" ASC\n            ",
   "describe": {
     "columns": [
       {
@@ -52,12 +52,15 @@
         "ordinal": 9,
         "name": "vessel_type",
         "type_info": "Varchar"
+      },
+      {
+        "ordinal": 10,
+        "name": "distance_to_shore",
+        "type_info": "Float8"
       }
     ],
     "parameters": {
-      "Left": [
-        "Int4"
-      ]
+      "Left": []
     },
     "nullable": [
       false,
@@ -69,8 +72,9 @@
       false,
       false,
       false,
+      false,
       false
     ]
   },
-  "hash": "c0c6c9be48bbffa926b4f15fbee86e5eda7c08745fb01f5e926df92835910c93"
+  "hash": "c99c8a4f07dbfde1262dd1870b133beb64ec4d9ca46a5359547c0d82a9d1a8bc"
 }

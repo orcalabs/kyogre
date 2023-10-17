@@ -48,7 +48,7 @@ FROM
             NULL AS navigational_status,
             NULL AS rate_of_turn,
             NULL AS true_heading,
-            NULL AS distance_to_shore
+            distance_to_shore::DECIMAL
         FROM
             vms_positions v
     ) q
@@ -107,7 +107,7 @@ FROM
                     a.mmsi = $1
                     AND (
                         a.ship_type IS NOT NULL
-                        AND NOT (a.ship_type = ANY($5::INT[]))
+                        AND NOT (a.ship_type = ANY ($5::INT[]))
                         OR COALESCE(f.length, a.ship_length) > $6
                     )
                     AND (
@@ -127,7 +127,7 @@ FROM
             NULL AS navigational_status,
             NULL AS rate_of_turn,
             NULL AS true_heading,
-            NULL AS distance_to_shore
+            distance_to_shore::DECIMAL
         FROM
             vms_positions v
         WHERE

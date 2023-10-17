@@ -14,4 +14,5 @@ pub struct VmsPosition {
     pub vessel_length: f64,
     pub vessel_name: String,
     pub vessel_type: String,
+    pub distance_to_shore: f64,
 }

@@ -2,12 +2,14 @@ use error_stack::{bail, Report, Result, ResultExt};
 
 use chrono::{DateTime, Datelike, NaiveDate, NaiveDateTime, NaiveTime, TimeZone, Timelike, Utc};
 use fiskeridir_rs::CallSign;
-use kyogre_core::{AisClass, Mmsi, NavigationStatus, NewAisPosition, NewAisStatic};
+use kyogre_core::{
+    distance_to_shore, AisClass, Mmsi, NavigationStatus, NewAisPosition, NewAisStatic,
+};
 use rand::{random, Rng};
 use serde::{Deserialize, Serialize};
 use tracing::{event, Level};
 
-use crate::{distance_to_shore::distance_to_shore, error::AisMessageError};
+use crate::error::AisMessageError;
 
 /// Vessel related data that is emitted every 6th minute from vessels.
 #[derive(Debug, Clone, Deserialize, Serialize)]

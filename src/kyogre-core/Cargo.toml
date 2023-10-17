@@ -39,3 +39,5 @@ uuid = { version = "1.4.1", features = ["serde", "v4"] }
 oauth2 = "4.4.2"
 geo = "0.26.0"
 tracing = "0.1.39"
+flate2 = "1.0.28"
+vpsearch = "2.0.1"
