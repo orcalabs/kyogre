@@ -103,6 +103,7 @@ pub trait HaulDistributorInbound: Send + Sync {
 
 #[async_trait]
 pub trait TripPipelineInbound: Send + Sync {
+    async fn update_preferred_trip_assemblers(&self) -> Result<(), UpdateError>;
     async fn update_trip(&self, update: TripUpdate) -> Result<(), UpdateError>;
     async fn add_trip_set(&self, value: TripSet) -> Result<(), InsertError>;
     async fn refresh_detailed_trips(
