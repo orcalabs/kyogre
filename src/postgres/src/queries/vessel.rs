@@ -23,11 +23,11 @@ impl PostgresAdapter {
             r#"
 SELECT
     call_sign,
-    mmsis as "mmsis!: Vec<Option<i32>>",
-    fiskeridir_vessel_ids as "fiskeridir_vessel_ids!: Vec<Option<i64>>",
-    ais_vessel_names as "ais_vessel_names!: Vec<Option<String>>",
-    fiskeridir_vessel_names as "fiskeridir_vessel_names!: Vec<Option<String>>",
-    fiskeridir_vessel_source_ids as "fiskeridir_vessel_source_ids!: Vec<Option<i32>>"
+    mmsis AS "mmsis!: Vec<Option<i32>>",
+    fiskeridir_vessel_ids AS "fiskeridir_vessel_ids!: Vec<Option<i64>>",
+    ais_vessel_names AS "ais_vessel_names!: Vec<Option<String>>",
+    fiskeridir_vessel_names AS "fiskeridir_vessel_names!: Vec<Option<String>>",
+    fiskeridir_vessel_source_ids AS "fiskeridir_vessel_source_ids!: Vec<Option<i32>>"
 FROM
     fiskeridir_ais_vessel_active_conflicts
             "#
@@ -159,8 +159,8 @@ FROM
     fiskeridir_vessels AS f
 WHERE
     f.call_sign IS NULL
-OR
-    f.call_sign = ANY ($1::VARCHAR[])
+    OR f.call_sign = ANY ($1::VARCHAR[])
+ON CONFLICT DO NOTHING
             "#,
             &self.ignored_conflict_call_signs
         )

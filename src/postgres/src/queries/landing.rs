@@ -419,7 +419,7 @@ RETURNING
         .await
         .change_context(PostgresError::Query)?;
 
-        tracing::Span::current().record("landings_deleted", deleted.len());
+        event!(Level::INFO, "landings_deleted: {}", deleted.len());
 
         for d in deleted {
             if let Some(id) = d.fiskeridir_vessel_id {
@@ -524,21 +524,83 @@ SET
     }
 
     pub(crate) async fn landings_without_trip(&self) -> Result<i64, PostgresError> {
-        sqlx::query!(
+        let c = sqlx::query!(
             r#"
 SELECT
     COUNT(*) AS "c!"
 FROM
-    vessel_events
+    vessel_events v
+    INNER JOIN fiskeridir_vessels f ON v.fiskeridir_vessel_id = f.fiskeridir_vessel_id
 WHERE
     vessel_event_type_id = 1
+    AND f.preferred_trip_assembler = 1
     AND trip_id IS NULL
             "#,
         )
         .fetch_one(&self.pool)
         .await
         .change_context(PostgresError::Query)
-        .map(|r| r.c)
+        .map(|r| r.c)?;
+
+        let c2 = sqlx::query!(
+            r#"
+SELECT
+    COUNT(*) AS "c!"
+FROM
+    vessel_events v
+    INNER JOIN fiskeridir_vessels f ON v.fiskeridir_vessel_id = f.fiskeridir_vessel_id
+    LEFT JOIN trips t ON v.fiskeridir_vessel_id = t.fiskeridir_vessel_id
+    AND v.report_timestamp <@ t.landing_coverage
+WHERE
+    v.vessel_event_type_id = 1
+    AND v.trip_id IS NULL
+    AND f.preferred_trip_assembler = 2
+    AND v.report_timestamp > (
+        SELECT
+            HSTORE (
+                ARRAY_AGG(fiskeridir_vessel_id::TEXT),
+                ARRAY_AGG(departure_timestamp::TEXT)
+            )
+        FROM
+            (
+                SELECT
+                    MIN(departure_timestamp) AS departure_timestamp,
+                    fiskeridir_vessel_id
+                FROM
+                    ers_departures
+                WHERE
+                    fiskeridir_vessel_id IS NOT NULL
+                GROUP BY
+                    fiskeridir_vessel_id
+            ) q
+    ) [v.fiskeridir_vessel_id::TEXT]::TIMESTAMPTZ
+    AND v.report_timestamp < (
+        SELECT
+            hstore (
+                ARRAY_AGG(fiskeridir_vessel_id::TEXT),
+                ARRAY_AGG(arrival_timestamp::TEXT)
+            )
+        FROM
+            (
+                SELECT
+                    MAX(arrival_timestamp) AS arrival_timestamp,
+                    fiskeridir_vessel_id
+                FROM
+                    ers_arrivals
+                WHERE
+                    fiskeridir_vessel_id IS NOT NULL
+                GROUP BY
+                    fiskeridir_vessel_id
+            ) q
+    ) [v.fiskeridir_vessel_id::TEXT]::TIMESTAMPTZ
+            "#,
+        )
+        .fetch_one(&self.pool)
+        .await
+        .change_context(PostgresError::Query)
+        .map(|r| r.c)?;
+
+        Ok(c + c2)
     }
 }
 

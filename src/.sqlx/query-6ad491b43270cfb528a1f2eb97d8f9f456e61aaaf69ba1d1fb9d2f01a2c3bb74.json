@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO\n    fiskeridir_ais_vessel_mapping_whitelist (fiskeridir_vessel_id)\nSELECT\n    f.fiskeridir_vessel_id\nFROM\n    fiskeridir_vessels AS f\nWHERE\n    f.call_sign IS NULL\n    OR f.call_sign = ANY ($1::VARCHAR[])\nON CONFLICT DO NOTHING\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "VarcharArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "6ad491b43270cfb528a1f2eb97d8f9f456e61aaaf69ba1d1fb9d2f01a2c3bb74"
+}

@@ -19,9 +19,21 @@ impl LandingStatemachine {
 
     pub fn advance(&mut self, event: LandingEvent) -> Result<(), DateRangeError> {
         // We group landing trips per day and want them to end as late as possible to cover
-        // all trips for that day.
+        // all landings for that day.
         if event.timestamp.date_naive() == self.current_landing.timestamp.date_naive() {
             if event.timestamp > self.current_landing.timestamp {
+                if !self.new_trips.is_empty() {
+                    let idx = self.new_trips.len() - 1;
+
+                    let mut period =
+                        DateRange::new(self.new_trips[idx].period.start(), event.timestamp)?;
+                    period.set_start_bound(Bound::Exclusive);
+                    period.set_end_bound(Bound::Inclusive);
+
+                    self.new_trips[idx].period = period.clone();
+                    self.new_trips[idx].landing_coverage = period;
+                }
+
                 self.current_landing = event;
             }
         } else {
@@ -44,7 +56,7 @@ impl LandingStatemachine {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct LandingEvent {
     pub timestamp: DateTime<Utc>,
 }
