@@ -953,6 +953,11 @@ impl TripPipelineOutbound for PostgresAdapter {
 
 #[async_trait]
 impl TripPipelineInbound for PostgresAdapter {
+    async fn update_preferred_trip_assemblers(&self) -> Result<(), UpdateError> {
+        self.update_preferred_trip_assemblers_impl()
+            .await
+            .change_context(UpdateError)
+    }
     async fn update_trip(&self, update: TripUpdate) -> Result<(), UpdateError> {
         self.update_trip_impl(update)
             .await

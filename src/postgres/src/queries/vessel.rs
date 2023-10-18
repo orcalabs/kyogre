@@ -533,4 +533,68 @@ WHERE
         .change_context(PostgresError::Query)
         .map(|_| ())
     }
+
+    pub(crate) async fn update_preferred_trip_assemblers_impl(&self) -> Result<(), PostgresError> {
+        let mut tx = self.begin().await?;
+
+        let vessel_ids = sqlx::query!(
+            r#"
+UPDATE fiskeridir_vessels f
+SET
+    preferred_trip_assembler = $1
+FROM
+    (
+        SELECT
+            v.fiskeridir_vessel_id
+        FROM
+            fiskeridir_vessels v
+            INNER JOIN landings l ON v.fiskeridir_vessel_id = l.fiskeridir_vessel_id
+            INNER JOIN ers_arrivals e ON v.fiskeridir_vessel_id = e.fiskeridir_vessel_id
+        GROUP BY
+            v.fiskeridir_vessel_id
+        HAVING
+            MAX(l.landing_timestamp) - MAX(e.arrival_timestamp) > INTERVAL '1 year'
+    ) q
+WHERE
+    f.fiskeridir_vessel_id = q.fiskeridir_vessel_id
+RETURNING
+    f.fiskeridir_vessel_id
+            "#,
+            TripAssemblerId::Landings as i32,
+        )
+        .fetch_all(&mut *tx)
+        .await
+        .change_context(PostgresError::Query)?
+        .into_iter()
+        .map(|r| r.fiskeridir_vessel_id)
+        .collect::<Vec<_>>();
+
+        sqlx::query!(
+            r#"
+UPDATE fiskeridir_vessels f
+SET
+    preferred_trip_assembler = $1
+FROM
+    (
+        SELECT DISTINCT
+            v.fiskeridir_vessel_id
+        FROM
+            fiskeridir_vessels v
+            INNER JOIN ers_departures e ON v.fiskeridir_vessel_id = e.fiskeridir_vessel_id
+    ) q
+WHERE
+    f.fiskeridir_vessel_id = q.fiskeridir_vessel_id
+    AND NOT (f.fiskeridir_vessel_id = ANY ($2::BIGINT[]))
+            "#,
+            TripAssemblerId::Ers as i32,
+            &vessel_ids,
+        )
+        .execute(&mut *tx)
+        .await
+        .change_context(PostgresError::Query)?;
+
+        tx.commit().await.change_context(PostgresError::Query)?;
+
+        Ok(())
+    }
 }

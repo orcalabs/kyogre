@@ -51,27 +51,6 @@ impl PostgresAdapter {
         let to_insert = self.ers_dep_to_insert(&ers_dep, tx).await?;
         ers_dep.retain(|e| to_insert.contains(&e.message_id));
 
-        let vessel_ids = ers_dep
-            .iter()
-            .filter_map(|e| e.fiskeridir_vessel_id)
-            .collect::<Vec<_>>();
-
-        sqlx::query!(
-            r#"
-UPDATE fiskeridir_vessels
-SET
-    preferred_trip_assembler = $1
-WHERE
-    fiskeridir_vessel_id = ANY ($2::BIGINT[])
-    AND fiskeridir_vessel_id IS NOT NULL
-            "#,
-            TripAssemblerId::Ers as i32,
-            vessel_ids.as_slice() as _,
-        )
-        .execute(&mut **tx)
-        .await
-        .change_context(PostgresError::Query)?;
-
         let inserted = NewErsDep::unnest_insert_returning(ers_dep, &mut **tx)
             .await
             .change_context(PostgresError::Query)?;

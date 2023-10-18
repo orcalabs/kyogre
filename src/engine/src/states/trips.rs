@@ -84,6 +84,13 @@ impl machine::State for TripsState {
 
 async fn run_state(shared_state: &SharedState) -> Result<TripsReport, TripPipelineError> {
     let mut trips_report = TripsReport::default();
+
+    shared_state
+        .trip_pipeline_inbound
+        .update_preferred_trip_assemblers()
+        .await
+        .change_context(TripPipelineError::DataPreparation)?;
+
     let vessels = shared_state
         .trip_assembler_outbound_port
         .all_vessels()

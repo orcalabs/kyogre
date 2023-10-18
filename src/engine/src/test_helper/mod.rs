@@ -795,19 +795,19 @@ impl TestStateBuilder {
                 }
             }
 
-            self.storage
-                .add_landings(
-                    Box::new(self.landings.clone().into_iter().filter_map(move |v| {
-                        if v.cycle == i {
-                            Some(Ok(v.landing))
-                        } else {
-                            None
-                        }
-                    })),
-                    i as u32,
-                )
-                .await
-                .unwrap();
+            let landings = self
+                .landings
+                .clone()
+                .into_iter()
+                .filter_map(move |v| (v.cycle == i).then_some(Ok(v.landing)))
+                .collect::<Vec<_>>();
+
+            if !landings.is_empty() {
+                self.storage
+                    .add_landings(Box::new(landings.into_iter()), i as u32)
+                    .await
+                    .unwrap();
+            }
 
             self.ais_vms_positions.iter().for_each(|v| {
                 if v.cycle == i {
