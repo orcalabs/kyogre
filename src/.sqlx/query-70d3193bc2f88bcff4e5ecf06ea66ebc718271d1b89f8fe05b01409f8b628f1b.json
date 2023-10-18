@@ -1,0 +1,20 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    COUNT(*) AS \"c!\"\nFROM\n    vessel_events v\n    INNER JOIN fiskeridir_vessels f ON v.fiskeridir_vessel_id = f.fiskeridir_vessel_id\nWHERE\n    vessel_event_type_id = 1\n    AND f.preferred_trip_assembler = 1\n    AND trip_id IS NULL\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "c!",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "70d3193bc2f88bcff4e5ecf06ea66ebc718271d1b89f8fe05b01409f8b628f1b"
+}

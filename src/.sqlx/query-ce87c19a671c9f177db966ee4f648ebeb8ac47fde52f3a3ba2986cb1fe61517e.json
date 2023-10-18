@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT\n    call_sign,\n    mmsis as \"mmsis!: Vec<Option<i32>>\",\n    fiskeridir_vessel_ids as \"fiskeridir_vessel_ids!: Vec<Option<i64>>\",\n    ais_vessel_names as \"ais_vessel_names!: Vec<Option<String>>\",\n    fiskeridir_vessel_names as \"fiskeridir_vessel_names!: Vec<Option<String>>\",\n    fiskeridir_vessel_source_ids as \"fiskeridir_vessel_source_ids!: Vec<Option<i32>>\"\nFROM\n    fiskeridir_ais_vessel_active_conflicts\n            ",
+  "query": "\nSELECT\n    call_sign,\n    mmsis AS \"mmsis!: Vec<Option<i32>>\",\n    fiskeridir_vessel_ids AS \"fiskeridir_vessel_ids!: Vec<Option<i64>>\",\n    ais_vessel_names AS \"ais_vessel_names!: Vec<Option<String>>\",\n    fiskeridir_vessel_names AS \"fiskeridir_vessel_names!: Vec<Option<String>>\",\n    fiskeridir_vessel_source_ids AS \"fiskeridir_vessel_source_ids!: Vec<Option<i32>>\"\nFROM\n    fiskeridir_ais_vessel_active_conflicts\n            ",
   "describe": {
     "columns": [
       {
@@ -46,5 +46,5 @@
       false
     ]
   },
-  "hash": "d910ec4420968d9845736c92c49220a76cb50ddaeab8c288ee82976593cf6562"
+  "hash": "ce87c19a671c9f177db966ee4f648ebeb8ac47fde52f3a3ba2986cb1fe61517e"
 }
