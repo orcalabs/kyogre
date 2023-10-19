@@ -1282,8 +1282,7 @@ FROM
     trips t
 WHERE
     t.fiskeridir_vessel_id = $1
-    AND LOWER(t.period) <= $2
-    OR t.period @> $2
+    AND $2 >= LOWER(t.period)
             "#,
             value.fiskeridir_vessel_id.0,
             boundary
