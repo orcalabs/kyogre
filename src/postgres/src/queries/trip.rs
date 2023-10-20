@@ -1,8 +1,8 @@
 use crate::{
     error::PostgresError,
     models::{
-        CurrentTrip, NewTripReturning, Trip, TripAssemblerConflict, TripCalculationTimer,
-        TripDetailed,
+        CurrentTrip, NewTripReturning, Trip, TripAisVmsPosition, TripAssemblerConflict,
+        TripCalculationTimer, TripDetailed,
     },
     PostgresAdapter,
 };
@@ -12,18 +12,115 @@ use error_stack::{report, Result, ResultExt};
 use fiskeridir_rs::{Gear, LandingId};
 use futures::Stream;
 use futures::TryStreamExt;
+use kyogre_core::DateRange;
+use kyogre_core::ProcessingStatus;
 use kyogre_core::{
     FiskeridirVesselId, HaulId, Ordering, PrecisionOutcome, PrecisionStatus, TripAssemblerId,
-    TripSet, TripSorting, TripUpdate, TripsConflictStrategy, TripsQuery, VesselEventType,
+    TripPositionLayerOutput, TripSet, TripSorting, TripUpdate, TripsConflictStrategy, TripsQuery,
+    VesselEventType,
 };
 use num_traits::FromPrimitive;
 use sqlx::postgres::types::PgRange;
-use std::collections::HashSet;
-use unnest_insert::UnnestInsertReturning;
+use std::collections::{HashMap, HashSet};
+use unnest_insert::{UnnestInsert, UnnestInsertReturning};
 
 use super::opt_float_to_decimal;
 
 impl PostgresAdapter {
+    pub(crate) async fn add_trip_position<'a>(
+        &self,
+        trip_id: i64,
+        output: TripPositionLayerOutput,
+        tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
+    ) -> Result<(), PostgresError> {
+        let mut trip_positions = Vec::with_capacity(output.trip_positions.len());
+
+        for p in output.trip_positions {
+            trip_positions.push(TripAisVmsPosition {
+                trip_id,
+                latitude: p.latitude,
+                longitude: p.longitude,
+                timestamp: p.timestamp,
+                course_over_ground: p.course_over_ground,
+                speed: p.speed,
+                navigation_status_id: p.navigational_status.map(|v| v as i32),
+                rate_of_turn: p.rate_of_turn,
+                true_heading: p.true_heading,
+                distance_to_shore: p.distance_to_shore,
+                position_type_id: p.position_type,
+            });
+        }
+
+        // We assume that the caller of this method is updating an existing trip
+        // and we therefore have to remove any existing trip_positions if they exist
+        sqlx::query!(
+            r#"
+DELETE FROM trip_positions
+WHERE
+    trip_id = $1
+            "#,
+            trip_id,
+        )
+        .execute(&mut **tx)
+        .await
+        .change_context(PostgresError::Query)?;
+
+        TripAisVmsPosition::unnest_insert(trip_positions, &mut **tx)
+            .await
+            .change_context(PostgresError::Query)?;
+
+        sqlx::query!(
+            r#"
+UPDATE trips
+SET
+    position_layers_status = $1
+WHERE
+    trip_id = $2
+            "#,
+            ProcessingStatus::Successful as i32,
+            trip_id,
+        )
+        .execute(&mut **tx)
+        .await
+        .change_context(PostgresError::Query)?;
+
+        Ok(())
+    }
+    pub(crate) async fn add_trip_positions<'a>(
+        &self,
+        outputs: Vec<(i64, TripPositionLayerOutput)>,
+        tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
+    ) -> Result<(), PostgresError> {
+        let mut trip_positions = Vec::with_capacity(outputs.len());
+
+        for (trip_id, output) in outputs {
+            let mut positions = Vec::with_capacity(output.trip_positions.len());
+            for p in output.trip_positions {
+                positions.push(TripAisVmsPosition {
+                    trip_id,
+                    latitude: p.latitude,
+                    longitude: p.longitude,
+                    timestamp: p.timestamp,
+                    course_over_ground: p.course_over_ground,
+                    speed: p.speed,
+                    navigation_status_id: p.navigational_status.map(|v| v as i32),
+                    rate_of_turn: p.rate_of_turn,
+                    true_heading: p.true_heading,
+                    distance_to_shore: p.distance_to_shore,
+                    position_type_id: p.position_type,
+                });
+            }
+
+            trip_positions.append(&mut positions);
+        }
+
+        TripAisVmsPosition::unnest_insert(trip_positions, &mut **tx)
+            .await
+            .change_context(PostgresError::Query)?;
+
+        Ok(())
+    }
+
     pub(crate) async fn clear_trip_precision_impl(
         &self,
         vessel_id: FiskeridirVesselId,
@@ -71,6 +168,12 @@ WHERE
     }
     pub(crate) async fn update_trip_impl(&self, update: TripUpdate) -> Result<(), PostgresError> {
         let mut tx = self.begin().await?;
+
+        if let Some(output) = update.position_layers {
+            self.add_trip_position(update.trip_id.0, output, &mut tx)
+                .await?;
+        }
+
         if let Some(output) = update.distance {
             let distance = opt_float_to_decimal(output.distance)
                 .change_context(PostgresError::DataConversion)?;
@@ -1033,12 +1136,18 @@ WHERE
             .unwrap()
             .clone();
 
-        let new_trips = value
-            .values
-            .into_iter()
-            .map(crate::models::NewTrip::try_from)
-            .collect::<Result<Vec<crate::models::NewTrip>, _>>()
-            .change_context(PostgresError::Query)?;
+        let mut new_trips = Vec::with_capacity(value.values.len());
+        let mut trip_positions = Vec::new();
+
+        let mut trip_positions_insert_mapping: HashMap<i64, i64> = HashMap::new();
+
+        for v in value.values {
+            if let Some(positions) = &v.trip_position_output {
+                // FIXME: dont clone
+                trip_positions.push((positions.clone(), v.trip.period.start().timestamp()));
+            }
+            new_trips.push(crate::models::NewTrip::try_from(v)?);
+        }
 
         let earliest_trip_start = earliest_trip_period.start();
         let earliest_trip_period = PgRange::from(&earliest_trip_period);
@@ -1152,6 +1261,28 @@ RETURNING
         let inserted_trips = crate::models::NewTrip::unnest_insert_returning(new_trips, &mut *tx)
             .await
             .change_context(PostgresError::Query)?;
+
+        for t in &inserted_trips {
+            let range =
+                DateRange::try_from(&t.period).change_context(PostgresError::DataConversion)?;
+            trip_positions_insert_mapping.insert(range.start().timestamp(), t.trip_id);
+        }
+
+        // We use the start of the trips period to map the inserted trips trip_ids to the trip positions,
+        // as trips cannot overlap we are guranteed that the start of trips are unique
+        let mut trip_positions_with_trip_id = Vec::with_capacity(trip_positions.len());
+        for (positions, period_start) in trip_positions {
+            let trip_id = trip_positions_insert_mapping.remove(&period_start).ok_or(
+                report!(PostgresError::DataConversion).attach_printable(
+                    "could not map inserted trip to back to its corresponding trip positions",
+                ),
+            )?;
+
+            trip_positions_with_trip_id.push((trip_id, positions));
+        }
+
+        self.add_trip_positions(trip_positions_with_trip_id, &mut tx)
+            .await?;
 
         let mut trip_ids = inserted_trips
             .iter()
@@ -1429,6 +1560,36 @@ WHERE
             "#,
             vessel_id.0,
             PrecisionStatus::Unprocessed.name()
+        )
+        .fetch_all(&self.pool)
+        .await
+        .change_context(PostgresError::Query)
+    }
+
+    pub(crate) async fn trips_without_trip_layers_impl(
+        &self,
+        vessel_id: FiskeridirVesselId,
+    ) -> Result<Vec<Trip>, PostgresError> {
+        sqlx::query_as!(
+            Trip,
+            r#"
+SELECT
+    trip_id,
+    period,
+    period_precision,
+    landing_coverage,
+    distance,
+    trip_assembler_id AS "trip_assembler_id!: TripAssemblerId",
+    start_port_id,
+    end_port_id
+FROM
+    trips
+WHERE
+    fiskeridir_vessel_id = $1
+    AND position_layers_status = $2
+            "#,
+            vessel_id.0,
+            ProcessingStatus::Unprocessed as i32
         )
         .fetch_all(&self.pool)
         .await

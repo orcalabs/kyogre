@@ -19,6 +19,19 @@ mod vms;
 mod weather;
 
 #[derive(Clone, Debug, PartialEq)]
+pub enum ProcessingStatus {
+    Unprocessed = 1,
+    Attempted = 2,
+    Successful = 3,
+}
+
+impl From<ProcessingStatus> for i32 {
+    fn from(value: ProcessingStatus) -> Self {
+        value as i32
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
 pub struct Coordinates {
     pub latitude: f64,
     pub longitude: f64,

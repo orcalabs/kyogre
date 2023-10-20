@@ -20,6 +20,7 @@ async fn test_ais_vms_positions_fails_without_mmsi_or_call_sign() {
                     call_sign: None,
                     start: Some(Utc.timestamp_opt(100, 0).unwrap()),
                     end: Some(Utc.timestamp_opt(200, 0).unwrap()),
+                    trip_id: None,
                 },
                 None,
             )
@@ -48,6 +49,7 @@ async fn test_ais_vms_positions_returns_ais_and_vms_positions() {
                     call_sign: state.vessels[0].fiskeridir.call_sign.clone(),
                     start: Some(pos.timestamp - Duration::seconds(1)),
                     end: Some(pos5.timestamp + Duration::seconds(1)),
+                    trip_id: None,
                 },
                 None,
             )
@@ -79,6 +81,7 @@ async fn test_ais_vms_positions_returns_only_ais_without_call_sign() {
             .get_ais_vms_positions(
                 AisVmsParameters {
                     mmsi: state.vessels[0].mmsi(),
+                    trip_id: None,
                     call_sign: None,
                     start: Some(pos.timestamp - Duration::seconds(1)),
                     end: Some(pos5.timestamp + Duration::seconds(1)),
@@ -112,6 +115,7 @@ async fn test_ais_vms_positions_returns_only_vms_without_mmsi() {
             .get_ais_vms_positions(
                 AisVmsParameters {
                     mmsi: None,
+                    trip_id: None,
                     call_sign: state.vessels[0].fiskeridir.call_sign.clone(),
                     start: Some(pos.timestamp - Duration::seconds(1)),
                     end: Some(pos5.timestamp + Duration::seconds(1)),
@@ -146,6 +150,7 @@ async fn test_ais_vms_positions_returns_ais_and_vms_positions_with_missing_data(
                 AisVmsParameters {
                     mmsi: state.vessels[0].mmsi(),
                     call_sign: state.vessels[0].fiskeridir.call_sign.clone(),
+                    trip_id: None,
                     start: Some(state.ais_vms_positions[0].timestamp - Duration::seconds(1)),
                     end: Some(
                         state.ais_vms_positions[state.ais_vms_positions.len() - 1].timestamp
@@ -193,6 +198,7 @@ async fn test_ais_vms_does_not_return_positions_of_leisure_vessels_under_45_mete
                     start: Some(pos_timestamp - Duration::seconds(1)),
                     end: Some(pos_timestamp + Duration::seconds(1)),
                     mmsi: vessel.mmsi(),
+                    trip_id: None,
                     call_sign: None,
                 },
                 None,
@@ -209,6 +215,7 @@ async fn test_ais_vms_does_not_return_positions_of_leisure_vessels_under_45_mete
                     start: Some(pos_timestamp - Duration::seconds(1)),
                     end: Some(pos_timestamp + Duration::seconds(1)),
                     mmsi: vessel2.mmsi(),
+                    trip_id: None,
                     call_sign: None,
                 },
                 None,
@@ -245,6 +252,7 @@ async fn test_ais_vms_does_not_return_positions_of_vessel_with_unknown_ship_type
                     start: Some(pos_timestamp - Duration::seconds(1)),
                     end: Some(pos_timestamp + Duration::seconds(1)),
                     mmsi: state.vessels[0].mmsi(),
+                    trip_id: None,
                     call_sign: None,
                 },
                 None,
@@ -285,6 +293,7 @@ async fn test_ais_vms_prioritizes_fiskeridir_length_over_ais_length_in_leisure_v
                     end: Some(pos_timestamp + Duration::seconds(1)),
                     mmsi: state.vessels[0].mmsi(),
                     call_sign: None,
+                    trip_id: None,
                 },
                 None,
             )
@@ -322,6 +331,7 @@ async fn test_ais_vms_does_not_return_ais_positions_for_vessels_under_15m_withou
                     end: Some(pos_timestamp + Duration::seconds(1)),
                     mmsi: state.vessels[0].mmsi(),
                     call_sign: None,
+                    trip_id: None,
                 },
                 None,
             )
@@ -336,7 +346,7 @@ async fn test_ais_vms_does_not_return_ais_positions_for_vessels_under_15m_withou
 }
 
 #[tokio::test]
-async fn test_ais_track_return_positions_for_vessels_under_15m_with_full_ais_permission() {
+async fn test_ais_vms_return_positions_for_vessels_under_15m_with_full_ais_permission() {
     test(|helper, builder| async move {
         let pos_timestamp = Utc.timestamp_opt(1000, 0).unwrap();
         let state = builder
@@ -357,6 +367,7 @@ async fn test_ais_track_return_positions_for_vessels_under_15m_with_full_ais_per
                 AisVmsParameters {
                     start: Some(pos_timestamp - Duration::seconds(1)),
                     end: Some(pos_timestamp + Duration::seconds(1)),
+                    trip_id: None,
                     mmsi: state.vessels[0].mmsi(),
                     call_sign: None,
                 },
@@ -395,6 +406,7 @@ async fn test_ais_vms_does_not_return_positions_for_vessels_under_15m_with_corre
                 AisVmsParameters {
                     start: Some(pos_timestamp - Duration::seconds(1)),
                     end: Some(pos_timestamp + Duration::seconds(1)),
+                    trip_id: None,
                     mmsi: state.vessels[0].mmsi(),
                     call_sign: None,
                 },
@@ -414,7 +426,7 @@ async fn test_ais_vms_does_not_return_positions_for_vessels_under_15m_with_corre
 }
 
 #[tokio::test]
-async fn test_ais_track_does_not_return_positions_for_vessels_under_15m_with_correct_policy_but_missing_role(
+async fn test_ais_vms_does_not_return_positions_for_vessels_under_15m_with_correct_policy_but_missing_role(
 ) {
     test(|helper, builder| async move {
         let pos_timestamp = Utc.timestamp_opt(1000, 0).unwrap();
@@ -436,6 +448,7 @@ async fn test_ais_track_does_not_return_positions_for_vessels_under_15m_with_cor
                 AisVmsParameters {
                     start: Some(pos_timestamp - Duration::seconds(1)),
                     end: Some(pos_timestamp + Duration::seconds(1)),
+                    trip_id: None,
                     mmsi: state.vessels[0].mmsi(),
                     call_sign: None,
                 },
@@ -450,6 +463,398 @@ async fn test_ais_track_does_not_return_positions_for_vessels_under_15m_with_cor
         let body: Vec<AisVmsPosition> = response.json().await.unwrap();
 
         assert!(body.is_empty());
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_ais_vms_by_trip_returns_only_positions_within_trip() {
+    test(|helper, builder| async move {
+        let state = builder
+            .vessels(1)
+            .ais_vms_positions(2)
+            .modify_idx(|i, v| {
+                if i == 0 {
+                    v.position
+                        .set_timestamp(Utc.timestamp_opt(100000, 0).unwrap())
+                } else {
+                    v.position
+                        .set_timestamp(Utc.timestamp_opt(100000000000, 0).unwrap())
+                }
+            })
+            .trips(1)
+            .ais_vms_positions(3)
+            .build()
+            .await;
+
+        let response = helper
+            .app
+            .get_ais_vms_positions(
+                AisVmsParameters {
+                    start: None,
+                    end: None,
+                    trip_id: Some(state.trips[0].trip_id),
+                    mmsi: None,
+                    call_sign: None,
+                },
+                None,
+            )
+            .await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let body: Vec<AisVmsPosition> = response.json().await.unwrap();
+
+        assert_eq!(body.len(), 3);
+        assert_eq!(state.ais_vms_positions[1], body[0]);
+        assert_eq!(state.ais_vms_positions[2], body[1]);
+        assert_eq!(state.ais_vms_positions[3], body[2]);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_ais_vms_by_trip_does_not_return_positions_for_vessels_under_15m_with_correct_policy_but_missing_role(
+) {
+    test(|helper, builder| async move {
+        let state = builder
+            .vessels(1)
+            .modify(|v| {
+                v.fiskeridir.length = PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY as f64 - 1.0;
+            })
+            .trips(1)
+            .ais_positions(1)
+            .build()
+            .await;
+
+        let response = helper
+            .app
+            .get_ais_vms_positions(
+                AisVmsParameters {
+                    start: None,
+                    end: None,
+                    trip_id: Some(state.trips[0].trip_id),
+                    mmsi: None,
+                    call_sign: None,
+                },
+                Some(helper.bw_helper.get_bw_token_with_policies_and_roles(
+                    vec![BwPolicy::BwAisFiskinfo],
+                    vec![BwRole::Other],
+                )),
+            )
+            .await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let body: Vec<AisVmsPosition> = response.json().await.unwrap();
+
+        assert!(body.is_empty());
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_ais_vms_by_trip_does_not_return_positions_for_vessels_under_15m_with_correct_roles_but_missing_policy(
+) {
+    test(|helper, builder| async move {
+        let state = builder
+            .vessels(1)
+            .modify(|v| {
+                v.fiskeridir.length = PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY as f64 - 1.0;
+            })
+            .trips(1)
+            .ais_positions(1)
+            .build()
+            .await;
+
+        let response = helper
+            .app
+            .get_ais_vms_positions(
+                AisVmsParameters {
+                    start: None,
+                    end: None,
+                    trip_id: Some(state.trips[0].trip_id),
+                    mmsi: None,
+                    call_sign: None,
+                },
+                Some(helper.bw_helper.get_bw_token_with_policies_and_roles(
+                    vec![BwPolicy::Other],
+                    vec![BwRole::BwFiskinfoAdmin],
+                )),
+            )
+            .await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let body: Vec<AisVmsPosition> = response.json().await.unwrap();
+
+        assert!(body.is_empty());
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_ais_vms_by_trip_return_positions_for_vessels_under_15m_with_full_ais_permission() {
+    test(|helper, builder| async move {
+        let state = builder
+            .vessels(1)
+            .modify(|v| {
+                v.fiskeridir.length = PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY as f64 - 1.0;
+            })
+            .trips(1)
+            .ais_positions(1)
+            .build()
+            .await;
+
+        let response = helper
+            .app
+            .get_ais_vms_positions(
+                AisVmsParameters {
+                    start: None,
+                    end: None,
+                    trip_id: Some(state.trips[0].trip_id),
+                    mmsi: None,
+                    call_sign: None,
+                },
+                Some(helper.bw_helper.get_bw_token_with_full_ais_permission()),
+            )
+            .await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let body: Vec<AisVmsPosition> = response.json().await.unwrap();
+
+        assert!(!body.is_empty());
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_ais_vms_by_trip_does_not_return_ais_positions_for_vessels_under_15m_without_bw_token()
+{
+    test(|helper, builder| async move {
+        let state = builder
+            .vessels(1)
+            .modify(|v| {
+                v.fiskeridir.length = PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY as f64 - 1.0;
+            })
+            .trips(1)
+            .ais_positions(1)
+            .build()
+            .await;
+
+        let response = helper
+            .app
+            .get_ais_vms_positions(
+                AisVmsParameters {
+                    start: None,
+                    end: None,
+                    mmsi: None,
+                    call_sign: None,
+                    trip_id: Some(state.trips[0].trip_id),
+                },
+                None,
+            )
+            .await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let body: Vec<AisVmsPosition> = response.json().await.unwrap();
+
+        assert!(body.is_empty());
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_ais_vms_by_trip_prioritizes_fiskeridir_length_over_ais_length_in_leisure_vessel_length_check(
+) {
+    test(|helper, builder| async move {
+        let state = builder
+            .vessels(1)
+            .modify(|v| {
+                v.fiskeridir.length = LEISURE_VESSEL_LENGTH_AIS_BOUNDARY as f64 + 1.0;
+                v.ais.ship_length = Some(LEISURE_VESSEL_LENGTH_AIS_BOUNDARY as i32 - 1);
+            })
+            .trips(1)
+            .ais_positions(1)
+            .build()
+            .await;
+
+        let response = helper
+            .app
+            .get_ais_vms_positions(
+                AisVmsParameters {
+                    start: None,
+                    end: None,
+                    mmsi: None,
+                    call_sign: None,
+                    trip_id: Some(state.trips[0].trip_id),
+                },
+                None,
+            )
+            .await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let body: Vec<AisVmsPosition> = response.json().await.unwrap();
+
+        assert_eq!(1, body.len());
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_ais_vms_by_trip_does_not_return_positions_of_vessel_with_unknown_ship_type() {
+    test(|helper, builder| async move {
+        let state = builder
+            .vessels(1)
+            .modify(|v| v.ais.ship_type = None)
+            .trips(1)
+            .ais_positions(1)
+            .build()
+            .await;
+
+        let response = helper
+            .app
+            .get_ais_vms_positions(
+                AisVmsParameters {
+                    start: None,
+                    end: None,
+                    mmsi: None,
+                    call_sign: None,
+                    trip_id: Some(state.trips[0].trip_id),
+                },
+                None,
+            )
+            .await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let body: Vec<AisVmsPosition> = response.json().await.unwrap();
+
+        assert!(body.is_empty());
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_ais_vms_by_trip_does_not_return_positions_of_leisure_vessels_under_45_meters() {
+    test(|helper, builder| async move {
+        let state = builder
+            .vessels(2)
+            .modify_idx(|i, v| {
+                v.ais.ship_type = Some(LEISURE_VESSEL_SHIP_TYPES[i]);
+                v.fiskeridir.length = LEISURE_VESSEL_LENGTH_AIS_BOUNDARY as f64 - 1.0;
+            })
+            .trips(2)
+            .ais_positions(2)
+            .build()
+            .await;
+
+        let response = helper
+            .app
+            .get_ais_vms_positions(
+                AisVmsParameters {
+                    start: None,
+                    end: None,
+                    trip_id: Some(state.trips[0].trip_id),
+                    mmsi: None,
+                    call_sign: None,
+                },
+                None,
+            )
+            .await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let body: Vec<AisVmsPosition> = response.json().await.unwrap();
+
+        let response = helper
+            .app
+            .get_ais_vms_positions(
+                AisVmsParameters {
+                    start: None,
+                    end: None,
+                    trip_id: Some(state.trips[0].trip_id),
+                    mmsi: None,
+                    call_sign: None,
+                },
+                None,
+            )
+            .await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let body2: Vec<AisVmsPosition> = response.json().await.unwrap();
+
+        assert!(body.is_empty());
+        assert!(body2.is_empty());
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_ais_vms_by_trip_returns_vms_data_regardless_of_ais_access_restrictions() {
+    test(|helper, builder| async move {
+        let state = builder
+            .vessels(1)
+            .modify(|v| v.ais.ship_type = None)
+            .trips(1)
+            .ais_positions(1)
+            .vms_positions(1)
+            .build()
+            .await;
+
+        let response = helper
+            .app
+            .get_ais_vms_positions(
+                AisVmsParameters {
+                    start: None,
+                    end: None,
+                    trip_id: Some(state.trips[0].trip_id),
+                    mmsi: None,
+                    call_sign: None,
+                },
+                None,
+            )
+            .await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let body: Vec<AisVmsPosition> = response.json().await.unwrap();
+
+        assert_eq!(body.len(), 1);
+        assert_eq!(body[0], state.vms_positions[0]);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_ais_vms_by_trip_does_not_return_positions_with_unrealistic_movement() {
+    test(|helper, builder| async move {
+        let state = builder
+            .vessels(1)
+            .trips(1)
+            .ais_vms_positions(3)
+            .modify_idx(|i, v| match i {
+                0 => v.position.set_location(59.11, 38.32),
+                1 => v.position.set_location(85.11, 38.32),
+                2 => v.position.set_location(88.11, 38.32),
+                _ => unreachable!(),
+            })
+            .build()
+            .await;
+
+        let response = helper
+            .app
+            .get_ais_vms_positions(
+                AisVmsParameters {
+                    mmsi: None,
+                    call_sign: None,
+                    start: None,
+                    end: None,
+                    trip_id: Some(state.trips[0].trip_id),
+                },
+                None,
+            )
+            .await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let body: Vec<AisVmsPosition> = response.json().await.unwrap();
+
+        assert_eq!(body.len(), 1);
+        assert_eq!(body[0], state.ais_vms_positions[0]);
     })
     .await;
 }

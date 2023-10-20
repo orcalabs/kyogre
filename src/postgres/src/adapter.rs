@@ -433,12 +433,25 @@ impl WebApiOutboundPort for PostgresAdapter {
 
     fn ais_vms_positions(
         &self,
-        mmsi: Option<Mmsi>,
-        call_sign: Option<&CallSign>,
-        range: &DateRange,
+        params: AisVmsParams,
         permission: AisPermission,
     ) -> PinBoxStream<'_, AisVmsPosition, QueryError> {
-        convert_stream(self.ais_vms_positions_impl(mmsi, call_sign, range, permission)).boxed()
+        match params {
+            AisVmsParams::Trip(trip_id) => {
+                convert_stream(self.trip_positions_impl(trip_id, permission)).boxed()
+            }
+            AisVmsParams::Range {
+                mmsi,
+                call_sign,
+                range,
+            } => convert_stream(self.ais_vms_positions_impl(
+                mmsi,
+                call_sign.as_ref(),
+                &range,
+                permission,
+            ))
+            .boxed(),
+        }
     }
 
     fn species(&self) -> PinBoxStream<'_, Species, QueryError> {
@@ -951,6 +964,16 @@ impl HaulDistributorOutbound for PostgresAdapter {
 
 #[async_trait]
 impl TripPipelineOutbound for PostgresAdapter {
+    async fn trips_without_position_layers(
+        &self,
+        vessel_id: FiskeridirVesselId,
+    ) -> Result<Vec<Trip>, QueryError> {
+        convert_vec(
+            self.trips_without_trip_layers_impl(vessel_id)
+                .await
+                .change_context(QueryError)?,
+        )
+    }
     async fn trips_without_distance(
         &self,
         vessel_id: FiskeridirVesselId,

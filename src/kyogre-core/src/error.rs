@@ -230,23 +230,36 @@ impl Display for HaulDistributorError {
 
 #[derive(Debug)]
 pub enum TripPipelineError {
+    NewTripProcessing,
+    ExistingTripProcessing,
     DataPreparation,
-    Assembly,
-    Precision,
-    Distance,
 }
 
 impl Display for TripPipelineError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            TripPipelineError::Assembly => f.write_str("an error occured during trip assembly"),
-            TripPipelineError::Precision => f.write_str("an error occured during trip precision"),
-            TripPipelineError::Distance => f.write_str("an error occured during trip distancing"),
+            TripPipelineError::NewTripProcessing => {
+                f.write_str("an error occured while processing new trips")
+            }
+            TripPipelineError::ExistingTripProcessing => {
+                f.write_str("an error occured while processing existing trips")
+            }
             TripPipelineError::DataPreparation => {
-                f.write_str("an error occured during data preparation")
+                f.write_str("an error occured while preparing data for processing")
             }
         }
     }
 }
 
 impl Context for TripPipelineError {}
+
+#[derive(Debug)]
+pub struct TripLayerError;
+
+impl Context for TripLayerError {}
+
+impl Display for TripLayerError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("an error occured while running a trip layer")
+    }
+}

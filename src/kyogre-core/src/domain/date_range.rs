@@ -180,6 +180,14 @@ impl From<&DateRange> for PgRange<DateTime<Utc>> {
 impl TryFrom<PgRange<DateTime<Utc>>> for DateRange {
     type Error = DateRangeError;
     fn try_from(value: PgRange<DateTime<Utc>>) -> Result<Self, Self::Error> {
+        DateRange::try_from(&value)
+    }
+}
+
+#[cfg(feature = "sqlx")]
+impl TryFrom<&PgRange<DateTime<Utc>>> for DateRange {
+    type Error = DateRangeError;
+    fn try_from(value: &PgRange<DateTime<Utc>>) -> Result<Self, Self::Error> {
         let start = match value.start {
             std::ops::Bound::Included(t) | std::ops::Bound::Excluded(t) => Ok(t),
             std::ops::Bound::Unbounded => Err(DateRangeError::Unbounded),

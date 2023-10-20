@@ -328,11 +328,15 @@ impl TripBuilder {
 
             let call_sign = trip.vessel_call_sign.clone().unwrap();
 
-            for _ in 0..num_positions {
+            for i in 0..num_positions {
                 let timestamp = trip.current_data_timestamp;
                 timestamps.push(timestamp);
-                let position =
+                let mut position =
                     fiskeridir_rs::Vms::test_default(rand::random(), call_sign.clone(), timestamp);
+
+                position.latitude = Some(72.12 + 0.001 * i as f64);
+                position.longitude = Some(25.12 + 0.001 * i as f64);
+
                 base.global_data_timestamp_counter += base.data_timestamp_gap;
                 positions.push(VmsPositionConstructor {
                     position,
@@ -375,17 +379,23 @@ impl TripBuilder {
             for i in 0..num_positions {
                 let timestamp = trip.current_data_timestamp;
                 timestamps.push(timestamp);
+                let lat = 72.12 + 0.001 * i as f64;
+                let lon = 25.12 + 0.001 * i as f64;
+
                 let position = if (i + 1) % 2 == 0 {
-                    AisOrVmsPosition::Vms(fiskeridir_rs::Vms::test_default(
+                    let mut pos = fiskeridir_rs::Vms::test_default(
                         rand::random(),
                         call_sign.clone(),
                         timestamp,
-                    ))
+                    );
+                    pos.latitude = Some(lat);
+                    pos.longitude = Some(lon);
+                    AisOrVmsPosition::Vms(pos)
                 } else {
-                    AisOrVmsPosition::Ais(NewAisPosition::test_default(
-                        trip.mmsi.unwrap(),
-                        timestamp,
-                    ))
+                    let mut pos = NewAisPosition::test_default(trip.mmsi.unwrap(), timestamp);
+                    pos.latitude = lat;
+                    pos.longitude = lon;
+                    AisOrVmsPosition::Ais(pos)
                 };
                 base.global_data_timestamp_counter += base.data_timestamp_gap;
                 positions.push(AisVmsPositionConstructor {
@@ -427,7 +437,10 @@ impl TripBuilder {
             for _ in 0..num_positions {
                 let timestamp = trip.current_data_timestamp;
                 timestamps.push(timestamp);
-                let position = NewAisPosition::test_default(trip.mmsi.unwrap(), timestamp);
+                let mut position = NewAisPosition::test_default(trip.mmsi.unwrap(), timestamp);
+                position.latitude = 72.12 + 0.001 * i as f64;
+                position.longitude = 25.12 + 0.001 * i as f64;
+
                 base.global_data_timestamp_counter += base.data_timestamp_gap;
                 positions.push(AisPositionConstructor {
                     position,

@@ -110,6 +110,10 @@ impl ApiClient {
             url_params.push((("callSign".to_owned()), s.into_inner()));
         }
 
+        if let Some(s) = params.trip_id {
+            url_params.push((("tripId".to_owned()), s.0.to_string()));
+        }
+
         if let Some(s) = params.start {
             url_params.push((("start".to_owned()), s.to_string()));
         }
@@ -572,6 +576,7 @@ impl ApiClient {
         self.get(format!("vms/{}", call_sign.as_ref()), &parameters, None)
             .await
     }
+
     pub async fn get_fishing_facilities(
         &self,
         params: FishingFacilitiesParams,

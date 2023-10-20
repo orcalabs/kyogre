@@ -16,6 +16,27 @@ pub enum AisOrVmsPosition {
     Vms(fiskeridir_rs::Vms),
 }
 
+impl AisOrVmsPosition {
+    pub fn set_timestamp(&mut self, ts: DateTime<Utc>) {
+        match self {
+            AisOrVmsPosition::Ais(p) => p.msgtime = ts,
+            AisOrVmsPosition::Vms(p) => p.timestamp = ts,
+        }
+    }
+    pub fn set_location(&mut self, latitude: f64, longitude: f64) {
+        match self {
+            AisOrVmsPosition::Ais(p) => {
+                p.longitude = longitude;
+                p.latitude = latitude;
+            }
+            AisOrVmsPosition::Vms(p) => {
+                p.latitude = Some(latitude);
+                p.longitude = Some(longitude);
+            }
+        }
+    }
+}
+
 #[derive(Clone)]
 pub struct AisVmsPositionConstructor {
     pub index: usize,

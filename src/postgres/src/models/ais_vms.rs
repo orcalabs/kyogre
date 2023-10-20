@@ -1,15 +1,14 @@
 use bigdecimal::{BigDecimal, FromPrimitive};
 use chrono::{DateTime, Utc};
 use error_stack::{Report, ResultExt};
-use kyogre_core::NavigationStatus;
-use serde::Deserialize;
+use kyogre_core::{NavigationStatus, PositionType};
 
 use crate::{
     error::{NavigationStatusError, PostgresError},
     queries::{decimal_to_float, opt_decimal_to_float},
 };
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Debug, Clone)]
 pub struct AisVmsPosition {
     pub latitude: BigDecimal,
     pub longitude: BigDecimal,
@@ -20,6 +19,7 @@ pub struct AisVmsPosition {
     pub rate_of_turn: Option<BigDecimal>,
     pub true_heading: Option<i32>,
     pub distance_to_shore: BigDecimal,
+    pub position_type_id: PositionType,
 }
 
 impl TryFrom<AisVmsPosition> for kyogre_core::AisVmsPosition {
@@ -47,6 +47,7 @@ impl TryFrom<AisVmsPosition> for kyogre_core::AisVmsPosition {
             true_heading: v.true_heading,
             distance_to_shore: decimal_to_float(v.distance_to_shore)
                 .change_context(PostgresError::DataConversion)?,
+            position_type: v.position_type_id,
         })
     }
 }

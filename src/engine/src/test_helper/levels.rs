@@ -176,6 +176,11 @@ macro_rules! impl_modifiable {
     };
 }
 
+impl_modifiable!(
+    AisVmsPositionBuilder,
+    AisVmsPositionConstructor,
+    state.state.ais_vms_positions
+);
 impl_modifiable!(AisVesselBuilder, AisVesselConstructor, state.ais_static);
 impl_modifiable!(TraVesselBuilder, TraConstructor, state.state.tra);
 impl_modifiable!(TraTripBuilder, TraConstructor, state.state.state.tra);

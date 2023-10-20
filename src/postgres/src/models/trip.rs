@@ -6,8 +6,9 @@ use chrono::{DateTime, Utc};
 use error_stack::{Report, ResultExt};
 use fiskeridir_rs::{DeliveryPointId, Gear, GearGroup, LandingId, Quality};
 use kyogre_core::{
-    DateRange, FiskeridirVesselId, HaulId, PrecisionId, PrecisionOutcome, PrecisionStatus,
-    TripAssemblerId, TripDistancerId, TripId, TripProcessingUnit, VesselEventType,
+    DateRange, FiskeridirVesselId, HaulId, PositionType, PrecisionId, PrecisionOutcome,
+    PrecisionStatus, ProcessingStatus, TripAssemblerId, TripDistancerId, TripId,
+    TripProcessingUnit, VesselEventType,
 };
 use serde::Deserialize;
 use sqlx::postgres::types::PgRange;
@@ -52,6 +53,25 @@ pub struct NewTrip {
     pub distancer_id: Option<TripDistancerId>,
     pub start_port_id: Option<String>,
     pub end_port_id: Option<String>,
+    #[unnest_insert(sql_type = "INT", type_conversion = "enum_to_i32")]
+    pub position_layers_status: ProcessingStatus,
+}
+
+#[derive(Debug, Clone, UnnestInsert)]
+#[unnest_insert(table_name = "trip_positions")]
+pub struct TripAisVmsPosition {
+    pub trip_id: i64,
+    pub latitude: f64,
+    pub longitude: f64,
+    pub timestamp: DateTime<Utc>,
+    pub course_over_ground: Option<f64>,
+    pub speed: Option<f64>,
+    pub navigation_status_id: Option<i32>,
+    pub rate_of_turn: Option<f64>,
+    pub true_heading: Option<i32>,
+    pub distance_to_shore: f64,
+    #[unnest_insert(sql_type = "INT", type_conversion = "enum_to_i32")]
+    pub position_type_id: PositionType,
 }
 
 impl TryFrom<TripProcessingUnit> for NewTrip {
@@ -114,6 +134,11 @@ impl TryFrom<TripProcessingUnit> for NewTrip {
             None => (None, None),
         };
 
+        let position_layers_status = match value.trip_position_output {
+            Some(_) => ProcessingStatus::Successful,
+            None => ProcessingStatus::Unprocessed,
+        };
+
         Ok(NewTrip {
             period: PgRange::from(&value.trip.period),
             period_precision,
@@ -129,6 +154,7 @@ impl TryFrom<TripProcessingUnit> for NewTrip {
             distancer_id,
             start_port_id: value.start_port.map(|p| p.id),
             end_port_id: value.end_port.map(|p| p.id),
+            position_layers_status,
         })
     }
 }
