@@ -50,6 +50,7 @@ impl App {
         let haul_distributors = settings.haul_distributors();
         let trip_distancer = settings.trip_distancer();
         let ml_models = settings.ml_models();
+        let trip_position_layers = settings.trip_position_layers();
 
         let postgres = Box::new(postgres);
 
@@ -74,6 +75,7 @@ impl App {
             haul_distributors,
             trip_distancer,
             ml_models,
+            trip_position_layers,
         );
 
         App {

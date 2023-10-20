@@ -6,7 +6,7 @@ use engine::*;
 async fn test_ais_vms_calculates_distance_of_trip() {
     test(|_helper, builder| async move {
         let start = Utc.timestamp_opt(10000000, 0).unwrap();
-        let end = Utc.timestamp_opt(1000000000, 0).unwrap();
+        let end = Utc.timestamp_opt(100000000000, 0).unwrap();
         let state = builder
             .vessels(1)
             .trips(1)
@@ -17,17 +17,17 @@ async fn test_ais_vms_calculates_distance_of_trip() {
             .ais_positions(3)
             .modify_idx(|i, v| match i {
                 0 => {
-                    v.position.msgtime = start + Duration::seconds(100);
+                    v.position.msgtime = start + Duration::seconds(100000);
                     v.position.latitude = 13.5;
                     v.position.longitude = 67.5;
                 }
                 1 => {
-                    v.position.msgtime = start + Duration::seconds(200);
+                    v.position.msgtime = start + Duration::seconds(200000);
                     v.position.latitude = 14.5;
                     v.position.longitude = 68.5;
                 }
                 2 => {
-                    v.position.msgtime = start + Duration::seconds(300);
+                    v.position.msgtime = start + Duration::seconds(300000);
                     v.position.latitude = 15.5;
                     v.position.longitude = 69.5;
                 }

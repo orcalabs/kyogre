@@ -12,7 +12,7 @@ pub enum ApiError {
     InvalidCallSign,
     InvalidDateRange,
     InternalServerError,
-    MissingMmsiOrCallSign,
+    MissingMmsiOrCallSignOrTripId,
     Forbidden,
     MissingBwToken,
     InvalidBwToken,
@@ -38,8 +38,8 @@ impl std::fmt::Display for ApiError {
             }
             ApiError::InternalServerError => f.write_str("an internal server error occured"),
             ApiError::InvalidCallSign => f.write_str("an invalid call sign was received"),
-            ApiError::MissingMmsiOrCallSign => {
-                f.write_str("either mmsi, call sign, or both must be provided")
+            ApiError::MissingMmsiOrCallSignOrTripId => {
+                f.write_str("either trip_id, mmsi or call sign must be provided")
             }
             ApiError::Forbidden => f.write_str("forbidden"),
             ApiError::MissingBwToken => f.write_str("barentswatch token must be provided"),
@@ -65,7 +65,7 @@ impl ResponseError for ApiError {
             | ApiError::InvalidLandingId
             | ApiError::StartAfterEnd { start: _, end: _ }
             | ApiError::InvalidSpeciesGroupId(_)
-            | ApiError::MissingMmsiOrCallSign => StatusCode::BAD_REQUEST,
+            | ApiError::MissingMmsiOrCallSignOrTripId => StatusCode::BAD_REQUEST,
             ApiError::InternalServerError => StatusCode::INTERNAL_SERVER_ERROR,
             ApiError::Forbidden => StatusCode::FORBIDDEN,
             ApiError::MissingBwToken

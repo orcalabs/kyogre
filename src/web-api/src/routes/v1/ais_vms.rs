@@ -8,7 +8,7 @@ use actix_web::{web, HttpResponse};
 use async_stream::try_stream;
 use chrono::{DateTime, Duration, Utc};
 use fiskeridir_rs::CallSign;
-use kyogre_core::{AisPermission, AisPosition, DateRange, Mmsi, VmsPosition};
+use kyogre_core::{AisPermission, AisPosition, AisVmsParams, DateRange, Mmsi, TripId, VmsPosition};
 use serde::{Deserialize, Serialize};
 use tracing::{event, Level};
 use utoipa::{IntoParams, ToSchema};
@@ -22,6 +22,8 @@ pub struct AisVmsParameters {
     pub mmsi: Option<Mmsi>,
     #[param(value_type = Option<String>)]
     pub call_sign: Option<CallSign>,
+    #[param(value_type = Option<u64>)]
+    pub trip_id: Option<TripId>,
     pub start: Option<DateTime<Utc>>,
     pub end: Option<DateTime<Utc>>,
 }
@@ -35,7 +37,7 @@ pub struct AisVmsParameters {
         ("auth0" = ["read:ais:under_15m"]),
     ),
     responses(
-        (status = 200, description = "ais and vms positions for the given mmsi and/or call sign", body = [AisVmsPosition]),
+        (status = 200, description = "ais and vms positions for the given mmsi/call_sign or trip_id", body = [AisVmsPosition]),
         (status = 500, description = "an internal error occured", body = ErrorResponse),
         (status = 400, description = "invalid parameters were provided", body = ErrorResponse),
     )
@@ -47,24 +49,35 @@ pub async fn ais_vms_positions<T: Database + 'static>(
     bw_profile: Option<BwProfile>,
     auth: Option<Auth0Profile>,
 ) -> Result<HttpResponse, ApiError> {
-    if params.mmsi.is_none() && params.call_sign.is_none() {
-        return Err(ApiError::MissingMmsiOrCallSign);
+    let params = params.into_inner();
+    if params.mmsi.is_none() && params.call_sign.is_none() && params.trip_id.is_none() {
+        return Err(ApiError::MissingMmsiOrCallSignOrTripId);
     }
 
-    let (start, end) = match (params.start, params.end) {
-        (None, None) => {
-            let end = chrono::Utc::now();
-            let start = end - Duration::hours(24);
-            Ok((start, end))
-        }
-        (Some(start), Some(end)) => Ok((start, end)),
-        _ => Err(ApiError::InvalidDateRange),
-    }?;
+    let params = if let Some(trip_id) = params.trip_id {
+        Ok(AisVmsParams::Trip(trip_id))
+    } else {
+        let (start, end) = match (params.start, params.end) {
+            (None, None) => {
+                let end = chrono::Utc::now();
+                let start = end - Duration::hours(24);
+                Ok((start, end))
+            }
+            (Some(start), Some(end)) => Ok((start, end)),
+            _ => Err(ApiError::InvalidDateRange),
+        }?;
 
-    let range = DateRange::new(start, end).map_err(|e| {
-        event!(Level::WARN, "{:?}", e);
-        ApiError::InvalidDateRange
-    })?;
+        let range = DateRange::new(start, end).map_err(|e| {
+            event!(Level::WARN, "{:?}", e);
+            ApiError::InvalidDateRange
+        })?;
+
+        Ok(AisVmsParams::Range {
+            mmsi: params.mmsi,
+            call_sign: params.call_sign,
+            range,
+        })
+    }?;
 
     let bw_policy = bw_profile.map(AisPermission::from).unwrap_or_default();
     let auth0_policy = auth.map(AisPermission::from).unwrap_or_default();
@@ -75,7 +88,7 @@ pub async fn ais_vms_positions<T: Database + 'static>(
     };
 
     ais_to_streaming_response! {
-        db.ais_vms_positions(params.mmsi, params.call_sign.as_ref(), &range, policy)
+        db.ais_vms_positions(params, policy)
             .map_err(|e| {
                 event!(
                     Level::ERROR,
@@ -169,6 +182,12 @@ impl PartialEq<AisVmsPosition> for VmsPosition {
             && self.timestamp.timestamp_millis() == other.timestamp.timestamp_millis()
             && self.course == other.cog.map(|c| c as u32)
             && self.speed.map(|s| s as i32) == other.speed.map(|s| s as i32)
+    }
+}
+
+impl PartialEq<AisVmsPosition> for kyogre_core::AisVmsPosition {
+    fn eq(&self, other: &AisVmsPosition) -> bool {
+        other.eq(self)
     }
 }
 

@@ -9,9 +9,11 @@ use serde_repr::{Deserialize_repr, Serialize_repr};
 
 mod assembler;
 mod distancer;
+mod layer;
 
 pub use assembler::*;
 pub use distancer::*;
+pub use layer::*;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize)]
 pub struct TripId(pub i64);
@@ -49,6 +51,7 @@ pub struct TripProcessingUnit {
     pub positions: Vec<AisVmsPosition>,
     pub precision_outcome: Option<PrecisionOutcome>,
     pub distance_output: Option<TripDistanceOutput>,
+    pub trip_position_output: Option<TripPositionLayerOutput>,
 }
 
 #[derive(Debug, Clone)]
@@ -67,11 +70,12 @@ pub struct NewTrip {
     pub end_port_code: Option<String>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct TripUpdate {
     pub trip_id: TripId,
     pub precision: Option<PrecisionOutcome>,
     pub distance: Option<TripDistanceOutput>,
+    pub position_layers: Option<TripPositionLayerOutput>,
 }
 
 impl Trip {
@@ -189,6 +193,17 @@ impl TripProcessingUnit {
     pub fn landing_coverage_end(&self) -> DateTime<Utc> {
         self.trip.landing_coverage.end()
     }
+
+    pub fn precision_period(&self) -> Option<DateRange> {
+        self.precision_outcome.as_ref().and_then(|v| match v {
+            PrecisionOutcome::Success {
+                new_period,
+                start_precision: _,
+                end_precision: _,
+            } => Some(new_period.clone()),
+            PrecisionOutcome::Failed => None,
+        })
+    }
 }
 
 impl From<TripAssemblerId> for i32 {
@@ -221,6 +236,19 @@ pub enum PrecisionOutcome {
         end_precision: Option<PrecisionUpdate>,
     },
     Failed,
+}
+
+impl TripUpdate {
+    pub fn precision_period(&self) -> Option<DateRange> {
+        self.precision.as_ref().and_then(|v| match v {
+            PrecisionOutcome::Success {
+                new_period,
+                start_precision: _,
+                end_precision: _,
+            } => Some(new_period.clone()),
+            PrecisionOutcome::Failed => None,
+        })
+    }
 }
 
 impl PrecisionOutcome {

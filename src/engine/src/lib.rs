@@ -11,6 +11,7 @@ mod haul_distributor;
 mod ml_models;
 mod trip_assembler;
 mod trip_distancer;
+mod trip_layer;
 
 pub mod settings;
 pub mod startup;
@@ -25,6 +26,7 @@ pub use states::*;
 pub use test_helper::*;
 pub use trip_assembler::*;
 pub use trip_distancer::*;
+pub use trip_layer::*;
 
 #[derive(Default)]
 pub struct AisVms {}
@@ -101,6 +103,7 @@ pub struct SharedState {
     pub haul_distributors: Vec<Box<dyn HaulDistributor>>,
     pub trip_distancer: Box<dyn TripDistancer>,
     pub ml_models: Vec<Box<dyn MLModel>>,
+    pub trip_position_layers: Vec<Box<dyn TripPositionLayer>>,
 }
 
 impl FisheryEngine {
@@ -158,6 +161,7 @@ impl SharedState {
         haul_distributors: Vec<Box<dyn HaulDistributor>>,
         trip_distancer: Box<dyn TripDistancer>,
         ml_models: Vec<Box<dyn MLModel>>,
+        trip_position_layers: Vec<Box<dyn TripPositionLayer>>,
     ) -> SharedState {
         SharedState {
             scraper,
@@ -180,6 +184,7 @@ impl SharedState {
             ml_models,
             ml_models_inbound,
             ml_models_outbound,
+            trip_position_layers,
         }
     }
 }

@@ -6,7 +6,8 @@ use crate::{
     LandingTripAssembler, LandingsQuery, LandingsSorting, ManualDeliveryPoint,
     MattilsynetDeliveryPoint, Mmsi, NewAisPosition, NewAisStatic, OceanClimate, Ordering,
     Pagination, PrecisionId, PredictionRange, ScrapeState, SharedState, SpotPredictorSettings,
-    Step, TripDetailed, Trips, TripsQuery, Vessel, VmsPosition, Weather, WeightPredictorSettings,
+    Step, TripDetailed, Trips, TripsQuery, UnrealisticSpeed, Vessel, VmsPosition, Weather,
+    WeightPredictorSettings,
 };
 
 use chrono::{DateTime, Duration, TimeZone, Utc};
@@ -15,7 +16,7 @@ use fiskeridir_rs::{DeliveryPointId, LandingMonth};
 use futures::TryStreamExt;
 use kyogre_core::{
     CatchLocationId, HaulDistributor, HaulPredictionLimit, MLModel, NewVesselConflict, NewWeather,
-    TestStorage, TripAssembler, TripDistancer, VesselBenchmark,
+    TestStorage, TripAssembler, TripDistancer, TripPositionLayer, VesselBenchmark,
 };
 use machine::StateMachine;
 use orca_core::PsqlSettings;
@@ -218,6 +219,7 @@ pub async fn engine(adapter: PostgresAdapter, db_settings: &PsqlSettings) -> Fis
     let benchmarks = vec![Box::<WeightPerHour>::default() as Box<dyn VesselBenchmark>];
     let haul_distributors = vec![Box::<AisVms>::default() as Box<dyn HaulDistributor>];
     let trip_distancer = Box::<AisVms>::default() as Box<dyn TripDistancer>;
+    let trip_layers = vec![Box::<UnrealisticSpeed>::default() as Box<dyn TripPositionLayer>];
 
     let shared_state = SharedState::new(
         db.clone(),
@@ -240,6 +242,7 @@ pub async fn engine(adapter: PostgresAdapter, db_settings: &PsqlSettings) -> Fis
         haul_distributors,
         trip_distancer,
         vec![],
+        trip_layers,
     );
     let step = Step::initial(ScrapeState, shared_state, transition_log);
     FisheryEngine::Scrape(step)

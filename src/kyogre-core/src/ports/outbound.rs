@@ -35,9 +35,7 @@ pub trait WebApiOutboundPort {
     ) -> PinBoxStream<'_, VmsPosition, QueryError>;
     fn ais_vms_positions(
         &self,
-        mmsi: Option<Mmsi>,
-        call_sign: Option<&CallSign>,
-        range: &DateRange,
+        params: AisVmsParams,
         user_policy: AisPermission,
     ) -> PinBoxStream<'_, AisVmsPosition, QueryError>;
     fn species(&self) -> PinBoxStream<'_, Species, QueryError>;
@@ -223,6 +221,10 @@ pub trait ScraperFileHashOutboundPort {
 
 #[async_trait]
 pub trait TripPipelineOutbound: Send + Sync {
+    async fn trips_without_position_layers(
+        &self,
+        vessel_id: FiskeridirVesselId,
+    ) -> Result<Vec<Trip>, QueryError>;
     async fn trips_without_distance(
         &self,
         vessel_id: FiskeridirVesselId,
