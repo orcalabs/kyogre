@@ -12,7 +12,7 @@ postgres = { path = "../postgres" }
 leviathan-postgres = { path = "../leviathan-postgres" }
 
 chrono = { version = "0.4.31", features = ["serde"] }
-tracing = "0.1.39"
+tracing = "0.1.40"
 error-stack = { workspace = true }
 config = "0.13.3"
 serde = "1.0.189"

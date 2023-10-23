@@ -21,7 +21,7 @@ error-stack = { workspace = true }
 bigdecimal = "0.3.1"
 tokio = { version = "1.33.0", features = ["macros", "sync", "time"] }
 sqlx = { workspace = true }
-tracing = "0.1.39"
+tracing = "0.1.40"
 async-trait = "0.1.74"
 serde_json = "1.0.107"
 serde = { version = "1.0.189", features = ["derive"] }
@@ -33,7 +33,7 @@ enum_index_derive = "0.2.0"
 geozero = { version = "0.11.0", features = ["with-postgis-sqlx"] }
 geo-types = "0.7.11"
 wkt = { version = "0.10.3", features = ["serde"] }
-uuid = { version = "1.4.1", features = ["serde"] }
+uuid = { version = "1.5.0", features = ["serde"] }
 
 [dev-dependencies]
 rand = "0.8.5"
