@@ -19,7 +19,7 @@ fiskeridir-rs = { workspace = true }
 config = { version = "0.13.3", features = ["yaml"] }
 chrono = { version = "0.4.31", features = ["serde"] }
 tokio = "1.33.0"
-tracing = "0.1.39"
+tracing = "0.1.40"
 serde = { version = "1.0.189", features = ["derive"] }
 async-trait = "0.1.74"
 error-stack = { workspace = true }
