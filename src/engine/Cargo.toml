@@ -11,7 +11,7 @@ postgres = { path = "../postgres" }
 scraper = { path = "../scraper" }
 vessel-benchmark = { path = "../vessel-benchmark" }
 
-machine = { version = "0.1.3", registry = "orcalabs-orcastrator" }
+machine = { workspace = true }
 
 orca-core = { workspace = true, features = ["telemetry"] }
 fiskeridir-rs = { workspace = true }
@@ -37,5 +37,5 @@ rand = "0.8.5"
 [dev-dependencies]
 tracing-subscriber = "0.3.17"
 futures = "0.3.28"
-dockertest = { version = "0.3.1", registry = "orcalabs-orcastrator" }
+dockertest = { workspace = true }
 orca-core = { workspace = true, features = ["dockertest"] }

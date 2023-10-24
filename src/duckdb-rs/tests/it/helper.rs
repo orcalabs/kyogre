@@ -1,4 +1,4 @@
-use dockertest::{DockerTest, Source, StaticManagementPolicy};
+use dockertest::{DockerTest, Source};
 use duckdb_rs::{
     adapter::{CacheMode, CacheStorage, DuckdbSettings},
     api::Client,
@@ -45,17 +45,15 @@ where
         .unwrap();
     });
 
-    let mut composition = postgres_composition(
+    let composition = postgres_composition(
         DATABASE_PASSWORD,
         "postgres",
         "ghcr.io/orcalabs/kyogre/test-postgres",
         "latest",
     )
-    .with_log_options(None);
+    .set_log_options(None);
 
-    composition.static_container(StaticManagementPolicy::Dynamic);
-
-    docker_test.add_composition(composition);
+    docker_test.provide_container(composition);
 
     let db_name = random::<u32>().to_string();
     docker_test

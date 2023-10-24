@@ -1,5 +1,5 @@
 use super::{barentswatch_helper::BarentswatchHelper, test_client::ApiClient};
-use dockertest::{DockerTest, Source, StaticManagementPolicy};
+use dockertest::{DockerTest, Source};
 use duckdb_rs::{adapter::CacheMode, CacheStorage};
 use engine::*;
 use engine::{AisVms, ErsTripAssembler, LandingTripAssembler};
@@ -174,13 +174,11 @@ where
         "ghcr.io/orcalabs/kyogre/test-postgres",
         "latest",
     )
-    .with_log_options(None);
+    .set_log_options(None);
 
-    postgres.port_map(5432, 5400);
+    postgres.modify_port_map(5432, 5400);
 
-    postgres.static_container(StaticManagementPolicy::Dynamic);
-
-    docker_test.add_composition(postgres);
+    docker_test.provide_container(postgres);
     std::env::set_var("APP_ENVIRONMENT", "TEST");
 
     docker_test

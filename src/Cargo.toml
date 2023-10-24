@@ -19,8 +19,10 @@ fiskeridir-rs = { version = "0.21.0", registry = "orcalabs-orcastrator", feature
     "utoipa",
     "sqlx",
 ] }
+machine = { version = "0.2.0", registry = "orcalabs-orcastrator" }
 error-stack = "0.4.1"
-orca-core = { version = "0.21.1", registry = "orcalabs-orcastrator" }
+orca-core = { version = "0.22.0", registry = "orcalabs-orcastrator" }
+dockertest = "0.4.0"
 sqlx = { version = "0.7.2", features = [
     "runtime-tokio-rustls",
     "postgres",
