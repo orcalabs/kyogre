@@ -30,6 +30,6 @@ hyper-alpn = "=0.3.0"
 [dev-dependencies]
 tracing-subscriber = "0.3.17"
 orca-core = { workspace = true, features = ["dockertest"] }
-dockertest = { version = "0.3.1", registry = "orcalabs-orcastrator" }
+dockertest = { workspace = true }
 rand = "0.8.5"
 tokio-stream = "0.1.14"

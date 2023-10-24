@@ -40,7 +40,7 @@ futures = "0.3.28"
 tokio-stream = { version = "0.1.14", features = ["net"] }
 tracing-subscriber = "0.3.17"
 rand = "0.8.5"
-dockertest = { version = "0.3.1", registry = "orcalabs-orcastrator" }
+dockertest = { workspace = true }
 postgres = { path = "../postgres" }
 orca-core = { workspace = true, features = ["dockertest"] }
 

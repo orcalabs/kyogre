@@ -1,4 +1,4 @@
-use dockertest::{DockerTest, Source, StartPolicy, StaticManagementPolicy};
+use dockertest::{DockerTest, Source, StartPolicy};
 use engine::*;
 use futures::Future;
 use kyogre_core::{
@@ -90,8 +90,8 @@ where
         "ghcr.io/orcalabs/kyogre/test-postgres",
         "latest",
     )
-    .with_log_options(None)
-    .with_start_policy(StartPolicy::Strict);
+    .set_log_options(None)
+    .set_start_policy(StartPolicy::Strict);
 
     let mut keep_db = false;
     let db_name = if let Ok(v) = std::env::var(KEEP_DB_ENV) {
@@ -105,10 +105,9 @@ where
         random::<u32>().to_string()
     };
 
-    postgres.static_container(StaticManagementPolicy::Dynamic);
-    postgres.port_map(5432, 5400);
+    postgres.modify_port_map(5432, 5400);
 
-    docker_test.add_composition(postgres);
+    docker_test.provide_container(postgres);
     std::env::set_var("APP_ENVIRONMENT", "TEST");
 
     docker_test

@@ -10,7 +10,7 @@ utoipa = ["dep:utoipa"]
 sqlx = ["dep:sqlx"]
 
 [dependencies]
-machine = { version = "0.1.3", registry = "orcalabs-orcastrator" }
+# machine = { version = "0.1.3", registry = "orcalabs-orcastrator" }
 
 async-trait = "0.1.74"
 serde = { version = "1.0.189", features = ["derive"] }

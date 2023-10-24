@@ -37,6 +37,6 @@ uuid = { version = "1.5.0", features = ["serde"] }
 
 [dev-dependencies]
 rand = "0.8.5"
-dockertest = { version = "0.3.1", registry = "orcalabs-orcastrator" }
+dockertest = { workspace = true }
 orca-core = { workspace = true, features = ["dockertest"] }
 tokio = { version = "1.33.0", features = ["rt-multi-thread", "macros"] }
