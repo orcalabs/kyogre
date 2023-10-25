@@ -483,9 +483,9 @@ FROM
                 ),
                 '[]'
             ) AS landings,
-            ARRAY_AGG(DISTINCT qi.species_group_ids) FILTER (
-                WHERE
-                    qi.species_group_ids IS NOT NULL
+            ARRAY (
+                SELECT DISTINCT
+                    UNNEST(ARRAY_AGG(qi.species_group_ids))
             ) AS landing_species_group_ids
         FROM
             (
