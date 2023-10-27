@@ -5,7 +5,7 @@ use chrono::{DateTime, Duration, Utc};
 use error_stack::{Report, Result, ResultExt};
 use fiskeridir_rs::CallSign;
 use geozero::{geojson::GeoJson, ToGeo};
-use kyogre_core::{BearerToken, ConversionError, FishingFacilityApiSource, Mmsi};
+use kyogre_core::{BearerToken, ConversionError, FishingFacilityApiSource, GeometryWkt, Mmsi};
 use serde::{Deserialize, Serialize};
 use tracing::{event, Level};
 use uuid::Uuid;
@@ -162,7 +162,7 @@ impl TryFrom<FishingFacility> for kyogre_core::FishingFacility {
             last_changed: v.last_changed_date_time,
             source: v.source,
             comment: v.comment,
-            geometry_wkt,
+            geometry_wkt: GeometryWkt(geometry_wkt),
             api_source: FishingFacilityApiSource::Updates,
         })
     }

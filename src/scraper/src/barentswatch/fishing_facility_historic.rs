@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use error_stack::{Report, Result, ResultExt};
 use fiskeridir_rs::CallSign;
-use kyogre_core::{BearerToken, ConversionError, FishingFacilityApiSource, Mmsi};
+use kyogre_core::{BearerToken, ConversionError, FishingFacilityApiSource, GeometryWkt, Mmsi};
 use serde::Deserialize;
 use tracing::{event, Level};
 use uuid::Uuid;
@@ -144,7 +144,7 @@ impl TryFrom<FishingFacilityHistoric> for kyogre_core::FishingFacility {
             last_changed: v.last_changed_date_time,
             source: v.source,
             comment: v.comment,
-            geometry_wkt: v.geometry_wkt,
+            geometry_wkt: GeometryWkt(v.geometry_wkt),
             api_source: FishingFacilityApiSource::Historic,
         })
     }

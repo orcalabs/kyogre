@@ -1243,6 +1243,22 @@ impl HaulWeatherOutbound for PostgresAdapter {
     }
 }
 
+#[async_trait]
+impl MeilisearchSource for PostgresAdapter {
+    async fn trips(&self, trip_ids: &[TripId]) -> Result<Vec<TripDetailed>, QueryError> {
+        convert_vec(
+            self.detailed_trips_by_ids_impl(trip_ids)
+                .await
+                .change_context(QueryError)?,
+        )
+    }
+    async fn all_trip_versions(&self) -> Result<Vec<(TripId, i64)>, QueryError> {
+        self.all_trip_cache_versions_impl()
+            .await
+            .change_context(QueryError)
+    }
+}
+
 pub(crate) fn convert_stream<I, A, B>(input: I) -> impl Stream<Item = Result<B, QueryError>>
 where
     I: Stream<Item = Result<A, PostgresError>>,

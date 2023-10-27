@@ -1,5 +1,6 @@
 use chrono::{DateTime, Utc};
 use rand::Rng;
+use serde::{Deserialize, Serialize};
 
 use crate::{WeatherLocationId, WEATHER_LOCATION_LATS_LONS};
 
@@ -36,7 +37,7 @@ pub struct OceanClimate {
     pub weather_location_id: WeatherLocationId,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct HaulOceanClimate {
     pub water_speed: Option<f64>,
     pub water_direction: Option<f64>,

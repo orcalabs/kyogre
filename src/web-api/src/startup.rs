@@ -4,15 +4,18 @@ use actix_web::{
     web::{self, Data},
     HttpServer,
 };
+use meilisearch::MeilisearchAdapter;
 use orca_core::{Environment, OrcaRootSpanBuilder, TracingLogger};
 use postgres::PostgresAdapter;
-use std::{io::Error, net::TcpListener};
+use std::{io::Error, net::TcpListener, sync::Arc};
 use utoipa::{openapi::security::SecurityScheme, OpenApi};
 use utoipa_swagger_ui::SwaggerUi;
 
 use crate::{
     auth0::Auth0State, guards::JwtGuard, routes, settings::Settings, ApiDoc, Cache, Database,
+    Meilisearch,
 };
+
 use duckdb_rs::Client;
 
 pub struct App {
@@ -36,7 +39,14 @@ impl App {
             }
         };
 
-        let server = create_server(postgres, duck_db.clone(), listener, settings)
+        let meilisearch = if let Some(settings) = &settings.meilisearch {
+            let source = Arc::new(postgres.clone());
+            Some(MeilisearchAdapter::new(settings, source))
+        } else {
+            None
+        };
+
+        let server = create_server(postgres, duck_db.clone(), meilisearch, listener, settings)
             .await
             .unwrap();
 
@@ -52,15 +62,17 @@ impl App {
     }
 }
 
-async fn create_server<T, S>(
+async fn create_server<T, S, M>(
     database: T,
     cache: Option<S>,
+    meilisearch: Option<M>,
     listener: TcpListener,
     settings: &Settings,
 ) -> Result<Server, Error>
 where
     T: Database + Clone + Send + 'static,
     S: Cache + Clone + Send + 'static,
+    M: Meilisearch + Clone + Send + 'static,
 {
     let environment = settings.environment;
     let not_prod = environment != Environment::Production;
@@ -116,7 +128,7 @@ where
                 "/trip_of_partial_landing/{landing_id}",
                 web::get().to(routes::v1::trip::trip_of_partial_landing::<T>),
             )
-            .route("/trips", web::get().to(routes::v1::trip::trips::<T>))
+            .route("/trips", web::get().to(routes::v1::trip::trips::<T, M>))
             .route(
                 "/trips/current/{fiskeridir_vessel_id}",
                 web::get().to(routes::v1::trip::current_trip::<T>),
@@ -194,6 +206,7 @@ where
             .app_data(Data::new(database.clone()))
             .app_data(Data::new(cache.clone()))
             .app_data(Data::new(auth0_state.clone()))
+            .app_data(Data::new(meilisearch.clone()))
             .wrap(Compress::default())
             .wrap(Condition::new(not_prod, actix_cors::Cors::permissive()))
             .wrap(TracingLogger::<OrcaRootSpanBuilder>::new())

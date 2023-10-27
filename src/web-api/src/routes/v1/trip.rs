@@ -172,9 +172,10 @@ pub async fn trip_of_partial_landing<T: Database + 'static>(
         (status = 500, description = "an internal error occured", body = ErrorResponse),
     )
 )]
-#[tracing::instrument(skip(db))]
-pub async fn trips<T: Database + 'static>(
+#[tracing::instrument(skip(db, meilisearch))]
+pub async fn trips<T: Database + 'static, M: Meilisearch + 'static>(
     db: web::Data<T>,
+    meilisearch: web::Data<Option<M>>,
     profile: Option<BwProfile>,
     params: web::Query<TripsParameters>,
 ) -> Result<HttpResponse, ApiError> {
@@ -200,6 +201,23 @@ pub async fn trips<T: Database + 'static>(
     }?;
 
     let query = TripsQuery::from(params);
+
+    if let Some(meilisearch) = meilisearch.as_ref() {
+        match meilisearch
+            .trips(query.clone(), read_fishing_facility)
+            .await
+        {
+            Ok(trips) => {
+                let trips = trips.into_iter().map(Trip::from).collect::<Vec<_>>();
+                return Ok(Response::new(trips).into());
+            }
+            Err(e) => event!(
+                Level::ERROR,
+                "failed to retrieve trips from meilisearch: {:?}",
+                e
+            ),
+        }
+    }
 
     to_streaming_response! {
         db.detailed_trips(

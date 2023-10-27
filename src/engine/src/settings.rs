@@ -14,6 +14,7 @@ pub struct Settings {
     pub log_level: LogLevel,
     pub telemetry: Option<TelemetrySettings>,
     pub postgres: PsqlSettings,
+    pub meilisearch: Option<meilisearch::Settings>,
     pub environment: Environment,
     pub scraper: scraper::Config,
     pub honeycomb: Option<HoneycombApiKey>,

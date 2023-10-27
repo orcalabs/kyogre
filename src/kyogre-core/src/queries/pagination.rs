@@ -1,6 +1,6 @@
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct Trips;
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct FishingFacilities;
 
 const MAX_TRIPS_LIMIT: u64 = 100;
@@ -9,7 +9,7 @@ const DEFAULT_TRIPS_LIMIT: u64 = 20;
 const MAX_FISHING_FACILITIES_LIMIT: u64 = 100;
 const DEFAULT_FISHING_FACILITIES_LIMIT: u64 = 20;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct Pagination<T> {
     limit: u64,
     offset: u64,

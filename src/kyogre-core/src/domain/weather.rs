@@ -66,7 +66,7 @@ pub struct WeatherLocation {
     pub polygon: Polygon,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct HaulWeather {
     pub wind_speed_10m: Option<f64>,
     pub wind_direction_10m: Option<f64>,

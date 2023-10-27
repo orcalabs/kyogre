@@ -39,7 +39,7 @@ pub struct Vessel {
     pub species_groups: Vec<SpeciesGroup>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct VesselEvent {
     pub event_id: u64,
     pub vessel_id: FiskeridirVesselId,

@@ -2,7 +2,7 @@ use std::fmt;
 
 use crate::*;
 use chrono::{DateTime, TimeZone, Utc};
-use fiskeridir_rs::{DeliveryPointId, Gear, GearGroup, LandingId, Quality};
+use fiskeridir_rs::{DeliveryPointId, Gear, GearGroup, LandingId, Quality, VesselLengthGroup};
 use num_derive::FromPrimitive;
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
@@ -90,6 +90,7 @@ impl Trip {
 #[derive(Debug, Clone)]
 pub struct TripDetailed {
     pub fiskeridir_vessel_id: FiskeridirVesselId,
+    pub fiskeridir_length_group_id: VesselLengthGroup,
     pub trip_id: TripId,
     pub period: DateRange,
     pub period_precision: Option<DateRange>,
@@ -97,6 +98,8 @@ pub struct TripDetailed {
     pub num_deliveries: u32,
     pub most_recent_delivery_date: Option<DateTime<Utc>>,
     pub gear_ids: Vec<fiskeridir_rs::Gear>,
+    pub gear_group_ids: Vec<fiskeridir_rs::GearGroup>,
+    pub species_group_ids: Vec<fiskeridir_rs::SpeciesGroup>,
     pub delivery_point_ids: Vec<DeliveryPointId>,
     pub hauls: Vec<TripHaul>,
     pub fishing_facilities: Vec<FishingFacility>,
@@ -107,9 +110,10 @@ pub struct TripDetailed {
     pub vessel_events: Vec<VesselEvent>,
     pub landing_ids: Vec<LandingId>,
     pub distance: Option<f64>,
+    pub cache_version: i64,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct TripHaul {
     pub haul_id: HaulId,
     pub duration: i32,

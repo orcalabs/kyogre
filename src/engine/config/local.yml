@@ -8,6 +8,9 @@ postgres:
   password: test123
   max_connections: 10
   log_statements: Disable
+meilisearch:
+  host: http://meilisearch:7700
+  api_key: test123
 scraper:
   file_download_dir: "/tmp/kyogre-engine-download-data"
   register_vessels_url: https://api.fiskeridir.no/vessel-api/api/v1/vessels

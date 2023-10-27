@@ -34,7 +34,11 @@ RUN --mount=type=secret,id=git-credentials,target=~/.git-credentials,required=tr
     cd src && \
     cargo build --release --bin web-api
 
-FROM gcr.io/distroless/cc
+FROM debian:bullseye-slim
+
+RUN apt update -y && \
+    apt install -y \
+    ca-certificates
 
 COPY src/web-api/config config
 
