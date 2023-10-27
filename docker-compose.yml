@@ -77,6 +77,13 @@ services:
       - RUST_BACKTRACE=1
       - APP_ENVIRONMENT=local
 
+  meilisearch:
+    image: getmeili/meilisearch:v1.4.2
+    environment:
+      - MEILI_MASTER_KEY=test123
+    ports:
+      - 7700:7700
+
   database-migrator:
     image: ghcr.io/orcalabs/kyogre/database-migrator
     build:

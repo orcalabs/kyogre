@@ -10,6 +10,7 @@ kyogre-core = { path = "../kyogre-core" }
 postgres = { path = "../postgres" }
 scraper = { path = "../scraper" }
 vessel-benchmark = { path = "../vessel-benchmark" }
+meilisearch = { path = "../meilisearch" }
 
 machine = { workspace = true }
 

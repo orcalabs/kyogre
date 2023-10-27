@@ -32,6 +32,15 @@ where
     }
 }
 
+impl<T> From<Response<T>> for HttpResponse
+where
+    T: Serialize,
+{
+    fn from(v: Response<T>) -> Self {
+        HttpResponse::Ok().json(v.body)
+    }
+}
+
 pub fn to_bytes<T: Serialize>(value: &T) -> Result<Bytes, ApiError> {
     let json = serde_json::to_vec(value).map_err(|e| {
         event!(Level::ERROR, "failed to serialize value: {:?}", e);

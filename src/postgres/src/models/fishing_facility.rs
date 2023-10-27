@@ -73,9 +73,15 @@ impl TryFrom<FishingFacility> for kyogre_core::FishingFacility {
             last_changed: v.last_changed,
             source: v.source,
             comment: v.comment,
-            geometry_wkt: v.geometry_wkt.0,
+            geometry_wkt: v.geometry_wkt.into(),
             api_source: v.api_source,
         })
+    }
+}
+
+impl From<GeometryWkt> for kyogre_core::GeometryWkt {
+    fn from(v: GeometryWkt) -> Self {
+        Self(v.0)
     }
 }
 

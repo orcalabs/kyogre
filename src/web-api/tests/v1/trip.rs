@@ -732,31 +732,6 @@ async fn test_trips_returns_bad_request_if_start_date_is_after_end_date() {
 }
 
 #[tokio::test]
-async fn test_trips_sorts_by_start_date() {
-    test(|helper, builder| async move {
-        let state = builder.vessels(1).trips(2).build().await;
-        let response = helper
-            .app
-            .get_trips(
-                TripsParameters {
-                    sorting: Some(TripSorting::StartDate),
-                    ordering: Some(Ordering::Asc),
-                    ..Default::default()
-                },
-                None,
-            )
-            .await;
-        assert_eq!(response.status(), StatusCode::OK);
-
-        let trips: Vec<Trip> = response.json().await.unwrap();
-        assert_eq!(trips.len(), 2);
-        assert_eq!(trips[0], state.trips[0]);
-        assert_eq!(trips[1], state.trips[1]);
-    })
-    .await;
-}
-
-#[tokio::test]
 async fn test_trips_sorts_by_end_date() {
     test(|helper, builder| async move {
         let state = builder.vessels(1).trips(2).build().await;

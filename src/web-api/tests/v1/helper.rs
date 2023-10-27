@@ -213,6 +213,7 @@ where
                     num_workers: Some(1),
                 },
                 postgres: db_settings.clone(),
+                meilisearch: None,
                 environment: Environment::Test,
                 honeycomb: None,
                 bw_jwks_url: Some(format!("{bw_address}/jwks")),

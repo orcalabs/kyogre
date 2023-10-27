@@ -1,10 +1,10 @@
-use std::str::FromStr;
+use std::{ops::Deref, str::FromStr};
 
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::CallSign;
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
-use serde::{de::Visitor, Deserialize};
+use serde::{de::Visitor, Deserialize, Serialize, Serializer};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use uuid::Uuid;
 use wkt::Wkt;
@@ -52,7 +52,7 @@ pub enum FishingFacilityApiSource {
     Historic = 2,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct FishingFacility {
     pub tool_id: Uuid,
     pub barentswatch_vessel_id: Option<Uuid>,
@@ -83,10 +83,13 @@ pub struct FishingFacility {
     /// Where this was reported first
     pub source: Option<String>,
     pub comment: Option<String>,
-    pub geometry_wkt: wkt::Geometry<f64>,
+    pub geometry_wkt: GeometryWkt,
     /// Which API this fishing facility was last updated from
     pub api_source: FishingFacilityApiSource,
 }
+
+#[derive(Debug, Clone)]
+pub struct GeometryWkt(pub wkt::Geometry<f64>);
 
 impl FishingFacility {
     pub fn test_default() -> Self {
@@ -113,7 +116,7 @@ impl FishingFacility {
             last_changed: Utc::now(),
             source: Some("SKYS".into()),
             comment: Some("This is a comment".into()),
-            geometry_wkt: Wkt::from_str("POINT(5.7348 62.320717)").unwrap().item,
+            geometry_wkt: GeometryWkt(Wkt::from_str("POINT(5.7348 62.320717)").unwrap().item),
             api_source: FishingFacilityApiSource::Updates,
         }
     }
@@ -164,5 +167,31 @@ impl<'de> Deserialize<'de> for FishingFacilityToolType {
         }
 
         deserializer.deserialize_i32(FishingFacilityToolTypeVisitor)
+    }
+}
+
+impl Deref for GeometryWkt {
+    type Target = wkt::Geometry<f64>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl<'de> Deserialize<'de> for GeometryWkt {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        wkt::Geometry::<f64>::deserialize(deserializer).map(Self)
+    }
+}
+
+impl Serialize for GeometryWkt {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(&self.0.to_string())
     }
 }

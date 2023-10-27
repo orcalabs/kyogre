@@ -9,16 +9,14 @@ use crate::{FiskeridirVesselId, Ordering, Pagination, Trips};
 #[derive(Default, Debug, Clone, Copy, Deserialize, strum::Display)]
 #[serde(rename_all = "camelCase")]
 pub enum TripSorting {
-    #[serde(alias = "startDate", alias = "StartDate", alias = "START_DATE")]
-    #[default]
-    StartDate = 1,
     #[serde(alias = "stopDate", alias = "StopDate", alias = "STOP_DATE")]
-    StopDate = 2,
+    #[default]
+    StopDate = 1,
     #[serde(alias = "weight", alias = "Weight", alias = "WEIGHT")]
-    Weight = 3,
+    Weight = 2,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct TripsQuery {
     pub pagination: Pagination<Trips>,
     pub ordering: Ordering,

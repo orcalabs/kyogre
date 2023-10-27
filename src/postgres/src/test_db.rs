@@ -2,7 +2,8 @@ use crate::{models::Haul, PostgresAdapter};
 use bigdecimal::{BigDecimal, FromPrimitive};
 use chrono::{DateTime, Datelike, Duration, Utc};
 use fiskeridir_rs::{
-    CallSign, ErsDca, ErsDep, ErsPor, Gear, GearGroup, LandingId, VesselLengthGroup, Vms,
+    CallSign, ErsDca, ErsDep, ErsPor, Gear, GearGroup, LandingId, SpeciesGroup, VesselLengthGroup,
+    Vms,
 };
 use futures::TryStreamExt;
 use kyogre_core::*;
@@ -364,6 +365,7 @@ WHERE
 SELECT
     t.trip_id AS "trip_id!",
     t.fiskeridir_vessel_id AS "fiskeridir_vessel_id!",
+    t.fiskeridir_length_group_id AS "fiskeridir_length_group_id!: VesselLengthGroup",
     t.period AS "period!",
     t.period_precision,
     t.landing_coverage AS "landing_coverage!",
@@ -373,6 +375,8 @@ SELECT
     COALESCE(t.landing_total_product_weight, 0.0) AS "total_product_weight!",
     COALESCE(t.delivery_point_ids, '{}') AS "delivery_points!",
     COALESCE(t.landing_gear_ids, '{}') AS "gear_ids!: Vec<Gear>",
+    COALESCE(t.landing_gear_group_ids, '{}') AS "gear_group_ids!: Vec<GearGroup>",
+    COALESCE(t.landing_species_group_ids, '{}') AS "species_group_ids!: Vec<SpeciesGroup>",
     t.most_recent_landing AS latest_landing_timestamp,
     COALESCE(t.landings::TEXT, '[]') AS "catches!",
     t.start_port_id,
@@ -382,7 +386,8 @@ SELECT
     COALESCE(t.hauls, '[]')::TEXT AS "hauls!",
     COALESCE(t.fishing_facilities, '[]')::TEXT AS "fishing_facilities!",
     COALESCE(t.landing_ids, '{}') AS "landing_ids!",
-    t.distance
+    t.distance,
+    t.cache_version
 FROM
     trips_detailed t
 WHERE

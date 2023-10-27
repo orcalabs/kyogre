@@ -1,5 +1,6 @@
 use crate::{settings::Settings, FisheryDiscriminants, FisheryEngine, SharedState};
 use machine::StateMachine;
+use meilisearch::MeilisearchAdapter;
 use orca_core::Environment;
 use postgres::PostgresAdapter;
 use scraper::{BarentswatchSource, FiskeridirSource, Scraper, WrappedHttpClient};
@@ -12,7 +13,7 @@ pub struct App {
 }
 
 impl App {
-    pub async fn build(settings: &Settings) -> App {
+    pub async fn build(settings: &Settings) -> (App, Option<MeilisearchAdapter>) {
         let postgres = PostgresAdapter::new(&settings.postgres).await.unwrap();
 
         if matches!(
@@ -21,6 +22,19 @@ impl App {
         ) {
             postgres.do_migrations().await;
         }
+
+        let meilisearch: Option<MeilisearchAdapter> = if let Some(s) = &settings.meilisearch {
+            let meilisearch = MeilisearchAdapter::new(s, Arc::new(postgres.clone()));
+            if matches!(
+                settings.environment,
+                Environment::Local | Environment::Development
+            ) {
+                meilisearch.create_indexes().await.unwrap();
+            }
+            Some(meilisearch)
+        } else {
+            None
+        };
 
         std::fs::create_dir_all(&settings.scraper.file_download_dir)
             .expect("failed to create download dir");
@@ -78,11 +92,14 @@ impl App {
             trip_position_layers,
         );
 
-        App {
-            transition_log,
-            shared_state,
-            single_state_run: settings.single_state_run,
-        }
+        (
+            App {
+                transition_log,
+                shared_state,
+                single_state_run: settings.single_state_run,
+            },
+            meilisearch,
+        )
     }
 
     pub async fn run(self) {

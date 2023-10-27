@@ -11,6 +11,7 @@ kyogre-core = { path = "../kyogre-core", features = ["utoipa"] }
 postgres = { path = "../postgres" }
 fiskeridir-rs = { workspace = true }
 duckdb-rs = { path = "../duckdb-rs" }
+meilisearch = { path = "../meilisearch" }
 
 orca-core = { workspace = true, features = ["actix-telemetry", "telemetry"] }
 orca-statemachine = { version = "0.40.0", registry = "orcalabs-orcastrator", features = [

@@ -9,11 +9,11 @@ use crate::{
 use bigdecimal::BigDecimal;
 use chrono::{DateTime, Duration, Utc};
 use error_stack::{report, Result, ResultExt};
-use fiskeridir_rs::{Gear, LandingId};
+use fiskeridir_rs::{Gear, GearGroup, LandingId, SpeciesGroup, VesselLengthGroup};
 use futures::Stream;
 use futures::TryStreamExt;
-use kyogre_core::DateRange;
 use kyogre_core::ProcessingStatus;
+use kyogre_core::{DateRange, TripId};
 use kyogre_core::{
     FiskeridirVesselId, HaulId, Ordering, PrecisionOutcome, PrecisionStatus, TripAssemblerId,
     TripPositionLayerOutput, TripSet, TripSorting, TripUpdate, TripsConflictStrategy, TripsQuery,
@@ -551,7 +551,8 @@ SET
 UPDATE trips_detailed
 SET
     landings = q.landings,
-    landing_species_group_ids = q.landing_species_group_ids
+    landing_species_group_ids = q.landing_species_group_ids,
+    cache_version = cache_version + 1
 FROM
     (
         SELECT
@@ -656,12 +657,10 @@ WHERE
             .transpose()?;
 
         let order_by = match (query.ordering, query.sorting) {
-            (Ordering::Asc, TripSorting::StartDate) => 1,
-            (Ordering::Asc, TripSorting::StopDate) => 2,
-            (Ordering::Asc, TripSorting::Weight) => 3,
-            (Ordering::Desc, TripSorting::StartDate) => 4,
-            (Ordering::Desc, TripSorting::StopDate) => 5,
-            (Ordering::Desc, TripSorting::Weight) => 6,
+            (Ordering::Asc, TripSorting::StopDate) => 1,
+            (Ordering::Asc, TripSorting::Weight) => 2,
+            (Ordering::Desc, TripSorting::StopDate) => 3,
+            (Ordering::Desc, TripSorting::Weight) => 4,
         };
 
         let gear_groups = query
@@ -686,6 +685,7 @@ WHERE
 SELECT
     t.trip_id AS "trip_id!",
     t.fiskeridir_vessel_id AS "fiskeridir_vessel_id!",
+    t.fiskeridir_length_group_id AS "fiskeridir_length_group_id!: VesselLengthGroup",
     t.period AS "period!",
     t.period_precision,
     t.landing_coverage AS "landing_coverage!",
@@ -695,6 +695,8 @@ SELECT
     COALESCE(t.landing_total_product_weight, 0.0) AS "total_product_weight!",
     COALESCE(t.delivery_point_ids, '{}') AS "delivery_points!",
     COALESCE(t.landing_gear_ids, '{}') AS "gear_ids!: Vec<Gear>",
+    COALESCE(t.landing_gear_group_ids, '{}') AS "gear_group_ids!: Vec<GearGroup>",
+    COALESCE(t.landing_species_group_ids, '{}') AS "species_group_ids!: Vec<SpeciesGroup>",
     t.most_recent_landing AS latest_landing_timestamp,
     COALESCE(t.landings::TEXT, '[]') AS "catches!",
     t.start_port_id,
@@ -707,7 +709,8 @@ SELECT
         WHEN $1 THEN COALESCE(t.fishing_facilities, '[]')::TEXT
         ELSE '[]'
     END AS "fishing_facilities!",
-    t.distance
+    t.distance,
+    t.cache_version
 FROM
     trips_detailed AS t
 WHERE
@@ -749,22 +752,16 @@ WHERE
     )
 ORDER BY
     CASE
-        WHEN $11::INT = 1 THEN t.start_timestamp
+        WHEN $11::INT = 1 THEN t.stop_timestamp
     END ASC,
     CASE
-        WHEN $11::INT = 2 THEN t.stop_timestamp
+        WHEN $11::INT = 2 THEN t.landing_total_living_weight
     END ASC,
     CASE
-        WHEN $11::INT = 3 THEN t.landing_total_living_weight
-    END ASC,
-    CASE
-        WHEN $11::INT = 4 THEN t.start_timestamp
+        WHEN $11::INT = 3 THEN t.stop_timestamp
     END DESC,
     CASE
-        WHEN $11::INT = 5 THEN t.stop_timestamp
-    END DESC,
-    CASE
-        WHEN $11::INT = 6 THEN t.landing_total_living_weight
+        WHEN $11::INT = 4 THEN t.landing_total_living_weight
     END DESC
 OFFSET
     $12
@@ -791,6 +788,73 @@ LIMIT
         Ok(stream)
     }
 
+    pub(crate) async fn detailed_trips_by_ids_impl(
+        &self,
+        trip_ids: &[TripId],
+    ) -> Result<Vec<TripDetailed>, PostgresError> {
+        let ids = trip_ids.iter().map(|t| t.0).collect::<Vec<_>>();
+
+        sqlx::query_as!(
+            TripDetailed,
+            r#"
+SELECT
+    t.trip_id AS "trip_id!",
+    t.fiskeridir_vessel_id AS "fiskeridir_vessel_id!",
+    t.fiskeridir_length_group_id AS "fiskeridir_length_group_id!: VesselLengthGroup",
+    t.period AS "period!",
+    t.period_precision,
+    t.landing_coverage AS "landing_coverage!",
+    COALESCE(t.num_landings::BIGINT, 0) AS "num_deliveries!",
+    COALESCE(t.landing_total_living_weight, 0.0) AS "total_living_weight!",
+    COALESCE(t.landing_total_gross_weight, 0.0) AS "total_gross_weight!",
+    COALESCE(t.landing_total_product_weight, 0.0) AS "total_product_weight!",
+    COALESCE(t.delivery_point_ids, '{}') AS "delivery_points!",
+    COALESCE(t.landing_gear_ids, '{}') AS "gear_ids!: Vec<Gear>",
+    COALESCE(t.landing_gear_group_ids, '{}') AS "gear_group_ids!: Vec<GearGroup>",
+    COALESCE(t.landing_species_group_ids, '{}') AS "species_group_ids!: Vec<SpeciesGroup>",
+    t.most_recent_landing AS latest_landing_timestamp,
+    COALESCE(t.landings::TEXT, '[]') AS "catches!",
+    t.start_port_id,
+    t.end_port_id,
+    t.trip_assembler_id AS "trip_assembler_id!: TripAssemblerId",
+    COALESCE(t.vessel_events, '[]')::TEXT AS "vessel_events!",
+    COALESCE(t.hauls, '[]')::TEXT AS "hauls!",
+    COALESCE(t.landing_ids, '{}') AS "landing_ids!",
+    COALESCE(t.fishing_facilities, '[]')::TEXT AS "fishing_facilities!",
+    t.distance,
+    t.cache_version
+FROM
+    trips_detailed AS t
+WHERE
+    trip_id = ANY ($1)
+            "#,
+            &ids,
+        )
+        .fetch_all(&self.pool)
+        .await
+        .change_context(PostgresError::Query)
+    }
+
+    pub(crate) async fn all_trip_cache_versions_impl(
+        &self,
+    ) -> Result<Vec<(TripId, i64)>, PostgresError> {
+        Ok(sqlx::query!(
+            r#"
+SELECT
+    t.trip_id,
+    t.cache_version
+FROM
+    trips_detailed AS t
+            "#,
+        )
+        .fetch_all(&self.pool)
+        .await
+        .change_context(PostgresError::Query)?
+        .into_iter()
+        .map(|r| (TripId(r.trip_id), r.cache_version))
+        .collect())
+    }
+
     pub(crate) async fn detailed_trip_of_haul_impl(
         &self,
         haul_id: &HaulId,
@@ -802,6 +866,7 @@ LIMIT
 SELECT
     t.trip_id AS "trip_id!",
     t.fiskeridir_vessel_id AS "fiskeridir_vessel_id!",
+    t.fiskeridir_length_group_id AS "fiskeridir_length_group_id!: VesselLengthGroup",
     t.period AS "period!",
     t.period_precision,
     t.landing_coverage AS "landing_coverage!",
@@ -811,6 +876,8 @@ SELECT
     COALESCE(t.landing_total_product_weight, 0.0) AS "total_product_weight!",
     COALESCE(t.delivery_point_ids, '{}') AS "delivery_points!",
     COALESCE(t.landing_gear_ids, '{}') AS "gear_ids!: Vec<Gear>",
+    COALESCE(t.landing_gear_group_ids, '{}') AS "gear_group_ids!: Vec<GearGroup>",
+    COALESCE(t.landing_species_group_ids, '{}') AS "species_group_ids!: Vec<SpeciesGroup>",
     t.most_recent_landing AS latest_landing_timestamp,
     COALESCE(t.landings::TEXT, '[]') AS "catches!",
     t.start_port_id,
@@ -823,7 +890,8 @@ SELECT
         WHEN $1 THEN COALESCE(t.fishing_facilities, '[]')::TEXT
         ELSE '[]'
     END AS "fishing_facilities!",
-    t.distance
+    t.distance,
+    t.cache_version
 FROM
     trips_detailed t
 WHERE
@@ -848,6 +916,7 @@ WHERE
 SELECT
     t.trip_id AS "trip_id!",
     t.fiskeridir_vessel_id AS "fiskeridir_vessel_id!",
+    t.fiskeridir_length_group_id AS "fiskeridir_length_group_id!: VesselLengthGroup",
     t.period AS "period!",
     t.period_precision,
     t.landing_coverage AS "landing_coverage!",
@@ -857,6 +926,8 @@ SELECT
     COALESCE(t.landing_total_product_weight, 0.0) AS "total_product_weight!",
     COALESCE(t.delivery_point_ids, '{}') AS "delivery_points!",
     COALESCE(t.landing_gear_ids, '{}') AS "gear_ids!: Vec<Gear>",
+    COALESCE(t.landing_gear_group_ids, '{}') AS "gear_group_ids!: Vec<GearGroup>",
+    COALESCE(t.landing_species_group_ids, '{}') AS "species_group_ids!: Vec<SpeciesGroup>",
     t.most_recent_landing AS latest_landing_timestamp,
     COALESCE(t.landings::TEXT, '[]') AS "catches!",
     t.start_port_id,
@@ -869,7 +940,8 @@ SELECT
         WHEN $1 THEN COALESCE(t.fishing_facilities, '[]')::TEXT
         ELSE '[]'
     END AS "fishing_facilities!",
-    t.distance
+    t.distance,
+    t.cache_version
 FROM
     trips_detailed t
 WHERE
@@ -894,6 +966,7 @@ WHERE
 SELECT
     trip_id AS "trip_id!",
     fiskeridir_vessel_id AS "fiskeridir_vessel_id!",
+    fiskeridir_length_group_id AS "fiskeridir_length_group_id!: VesselLengthGroup",
     period AS "period!",
     period_precision,
     landing_coverage AS "landing_coverage!",
@@ -903,6 +976,8 @@ SELECT
     COALESCE(landing_total_product_weight, 0.0) AS "total_product_weight!",
     COALESCE(delivery_point_ids, '{}') AS "delivery_points!",
     COALESCE(landing_gear_ids, '{}') AS "gear_ids!: Vec<Gear>",
+    COALESCE(landing_gear_group_ids, '{}') AS "gear_group_ids!: Vec<GearGroup>",
+    COALESCE(landing_species_group_ids, '{}') AS "species_group_ids!: Vec<SpeciesGroup>",
     most_recent_landing AS latest_landing_timestamp,
     COALESCE(landings::TEXT, '[]') AS "catches!",
     start_port_id,
@@ -915,7 +990,8 @@ SELECT
         WHEN $1 THEN COALESCE(fishing_facilities, '[]')::TEXT
         ELSE '[]'
     END AS "fishing_facilities!",
-    distance
+    distance,
+    cache_version
 FROM
     trips_detailed
 WHERE

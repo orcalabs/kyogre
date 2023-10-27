@@ -5,9 +5,10 @@ use duckdb_rs::Client;
 use fiskeridir_rs::{RegisterVesselEntityType, RegisterVesselOwner};
 use kyogre_core::{
     ActiveHaulsFilter, ActiveLandingFilter, Catch, Delivery, FishingFacilitiesSorting,
-    FishingFacilityToolType, HaulsSorting, LandingsSorting, MatrixCacheOutbound, Ordering,
-    TripSorting, WebApiInboundPort, WebApiOutboundPort,
+    FishingFacilityToolType, HaulsSorting, LandingsSorting, MatrixCacheOutbound,
+    MeilisearchOutbound, Ordering, TripSorting, WebApiInboundPort, WebApiOutboundPort,
 };
+use meilisearch::MeilisearchAdapter;
 use postgres::PostgresAdapter;
 use routes::v1::{self, trip::TripAssemblerId};
 use utoipa::OpenApi;
@@ -23,10 +24,13 @@ pub mod startup;
 
 pub trait Database: WebApiOutboundPort + WebApiInboundPort {}
 pub trait Cache: MatrixCacheOutbound {}
+pub trait Meilisearch: MeilisearchOutbound {}
 
 impl Cache for Client {}
 
 impl Database for PostgresAdapter {}
+
+impl Meilisearch for MeilisearchAdapter {}
 
 #[derive(OpenApi)]
 #[openapi(

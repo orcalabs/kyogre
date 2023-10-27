@@ -11,6 +11,7 @@ pub struct Settings {
     pub telemetry: Option<TelemetrySettings>,
     pub api: ApiSettings,
     pub postgres: PsqlSettings,
+    pub meilisearch: Option<meilisearch::Settings>,
     pub environment: Environment,
     pub honeycomb: Option<HoneycombApiKey>,
     pub bw_jwks_url: Option<String>,

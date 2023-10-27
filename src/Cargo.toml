@@ -12,6 +12,7 @@ members = [
     "scraper",
     "vessel-benchmark",
     "duckdb-rs",
+    "meilisearch",
 ]
 
 [workspace.dependencies]

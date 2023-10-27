@@ -168,6 +168,21 @@ pub trait MatrixCacheOutbound: Send + Sync {
 }
 
 #[async_trait]
+pub trait MeilisearchOutbound: Send + Sync {
+    async fn trips(
+        &self,
+        query: TripsQuery,
+        read_fishing_facility: bool,
+    ) -> Result<Vec<TripDetailed>, QueryError>;
+}
+
+#[async_trait]
+pub trait MeilisearchSource: Send + Sync {
+    async fn trips(&self, trip_ids: &[TripId]) -> Result<Vec<TripDetailed>, QueryError>;
+    async fn all_trip_versions(&self) -> Result<Vec<(TripId, i64)>, QueryError>;
+}
+
+#[async_trait]
 pub trait HaulDistributorOutbound: Send + Sync {
     async fn vessels(&self) -> Result<Vec<Vessel>, QueryError>;
     async fn catch_locations(&self) -> Result<Vec<CatchLocation>, QueryError>;

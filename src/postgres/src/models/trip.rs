@@ -4,7 +4,9 @@ use crate::{error::PostgresError, queries::decimal_to_float};
 use bigdecimal::BigDecimal;
 use chrono::{DateTime, Utc};
 use error_stack::{Report, ResultExt};
-use fiskeridir_rs::{DeliveryPointId, Gear, GearGroup, LandingId, Quality};
+use fiskeridir_rs::{
+    DeliveryPointId, Gear, GearGroup, LandingId, Quality, SpeciesGroup, VesselLengthGroup,
+};
 use kyogre_core::{
     DateRange, FiskeridirVesselId, HaulId, PositionType, PrecisionId, PrecisionOutcome,
     PrecisionStatus, ProcessingStatus, TripAssemblerId, TripDistancerId, TripId,
@@ -185,6 +187,7 @@ pub struct TripAssemblerConflict {
 pub struct TripDetailed {
     pub trip_id: i64,
     pub fiskeridir_vessel_id: i64,
+    pub fiskeridir_length_group_id: VesselLengthGroup,
     pub period: PgRange<DateTime<Utc>>,
     pub period_precision: Option<PgRange<DateTime<Utc>>>,
     pub landing_coverage: PgRange<DateTime<Utc>>,
@@ -194,6 +197,8 @@ pub struct TripDetailed {
     pub total_product_weight: BigDecimal,
     pub delivery_points: Vec<String>,
     pub gear_ids: Vec<Gear>,
+    pub gear_group_ids: Vec<GearGroup>,
+    pub species_group_ids: Vec<SpeciesGroup>,
     pub landing_ids: Vec<String>,
     pub latest_landing_timestamp: Option<DateTime<Utc>>,
     pub catches: String,
@@ -204,6 +209,7 @@ pub struct TripDetailed {
     pub end_port_id: Option<String>,
     pub trip_assembler_id: TripAssemblerId,
     pub distance: Option<BigDecimal>,
+    pub cache_version: i64,
 }
 
 #[derive(Deserialize)]
@@ -359,12 +365,15 @@ impl TryFrom<TripDetailed> for kyogre_core::TripDetailed {
         Ok(kyogre_core::TripDetailed {
             period_precision,
             fiskeridir_vessel_id: FiskeridirVesselId(value.fiskeridir_vessel_id),
+            fiskeridir_length_group_id: value.fiskeridir_length_group_id,
             landing_coverage,
             trip_id: TripId(value.trip_id),
             period,
             num_deliveries: value.num_deliveries as u32,
             most_recent_delivery_date: value.latest_landing_timestamp,
             gear_ids: value.gear_ids,
+            gear_group_ids: value.gear_group_ids,
+            species_group_ids: value.species_group_ids,
             delivery_point_ids: value
                 .delivery_points
                 .into_iter()
@@ -404,6 +413,7 @@ impl TryFrom<TripDetailed> for kyogre_core::TripDetailed {
                 .distance
                 .map(|v| decimal_to_float(v).change_context(PostgresError::DataConversion))
                 .transpose()?,
+            cache_version: value.cache_version,
         })
     }
 }

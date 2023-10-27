@@ -67,6 +67,7 @@ impl PostgresAdapter {
 
             let geometry: Geometry<f64> =
                 f.geometry_wkt
+                    .0
                     .try_into()
                     .map_err(|e: wkt::geo_types_from_wkt::Error| {
                         report!(PostgresError::DataConversion).attach_printable(e.to_string())

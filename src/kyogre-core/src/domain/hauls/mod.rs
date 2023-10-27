@@ -14,7 +14,7 @@ pub use distributor::*;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize)]
 pub struct HaulId(pub i64);
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[remain::sorted]
 pub struct Haul {
     pub catch_location_start: Option<CatchLocationId>,
@@ -48,7 +48,7 @@ pub struct Haul {
     pub whale_catches: Vec<WhaleCatch>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[remain::sorted]
 pub struct HaulCatch {
     pub living_weight: i32,
@@ -58,7 +58,7 @@ pub struct HaulCatch {
     pub species_main_group_id: Option<i32>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[remain::sorted]
 pub struct WhaleCatch {
     pub blubber_measure_a: Option<i32>,
