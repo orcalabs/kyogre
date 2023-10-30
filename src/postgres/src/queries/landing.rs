@@ -1,5 +1,6 @@
 use bigdecimal::{BigDecimal, ToPrimitive};
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, TimeZone, Utc};
+use chrono::{NaiveDateTime, NaiveTime};
 use futures::Stream;
 use futures::TryStreamExt;
 use kyogre_core::TripAssemblerId;
@@ -338,7 +339,10 @@ RETURNING
                     .and_modify(|v| v.timestamp = min(v.timestamp, i.landing_timestamp))
                     .or_insert_with(|| TripAssemblerConflict {
                         fiskeridir_vessel_id: id,
-                        timestamp: i.landing_timestamp,
+                        timestamp: Utc.from_utc_datetime(&NaiveDateTime::new(
+                            i.landing_timestamp.date_naive(),
+                            NaiveTime::from_hms_opt(0, 0, 0).unwrap(),
+                        )),
                     });
                 vessel_event_ids.push(event_id);
             }

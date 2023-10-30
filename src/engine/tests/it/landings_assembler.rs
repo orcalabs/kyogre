@@ -123,6 +123,43 @@ async fn test_other_event_types_does_not_cause_conflicts() {
     .await;
 }
 
+#[tokio::test]
+async fn test_resolves_conflict_on_same_day_as_most_recent_trip_end() {
+    test(|_helper, builder| async move {
+        let landing = Utc.timestamp_opt(10000000, 0).unwrap();
+        let landing2 = Utc.timestamp_opt(30000000, 0).unwrap();
+        let landing3 = landing2 + Duration::seconds(1);
+
+        let state = builder
+            .vessels(1)
+            .landings(2)
+            .modify_idx(|i, v| {
+                if i == 0 {
+                    v.landing.landing_timestamp = landing;
+                } else if i == 1 {
+                    v.landing.landing_timestamp = landing2;
+                }
+            })
+            .new_cycle()
+            .landings(1)
+            .modify(|v| v.landing.landing_timestamp = landing3)
+            .build()
+            .await;
+
+        assert_eq!(state.trips.len(), 2);
+        assert_eq!(
+            state.trips[0].period.start(),
+            state.landings[0].landing_timestamp - Duration::days(1)
+        );
+        assert_eq!(state.trips[0].period.end(), landing,);
+        assert_eq!(state.trips[0].period, state.trips[0].landing_coverage);
+        assert_eq!(state.trips[1].period.start(), landing);
+        assert_eq!(state.trips[1].period.end(), landing3);
+        assert_eq!(state.trips[1].period, state.trips[1].landing_coverage);
+    })
+    .await;
+}
+
 // // // TODO: figure out of we want to support this case
 // // // #[tokio::test]
 // // // async fn test_landing_later_on_same_day_as_first_trip_causes_conflict_and_results_in_trip_extension(
