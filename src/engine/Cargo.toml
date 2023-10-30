@@ -20,10 +20,10 @@ config = { version = "0.13.3", features = ["yaml"] }
 chrono = { version = "0.4.31", features = ["serde"] }
 tokio = "1.33.0"
 tracing = "0.1.40"
-serde = { version = "1.0.189", features = ["derive"] }
+serde = { version = "1.0.190", features = ["derive"] }
 async-trait = "0.1.74"
 error-stack = { workspace = true }
-futures = "0.3.28"
+futures = "0.3.29"
 
 strum = "0.25.0"
 strum_macros = "0.25.3"
@@ -36,6 +36,6 @@ rand = "0.8.5"
 
 [dev-dependencies]
 tracing-subscriber = "0.3.17"
-futures = "0.3.28"
+futures = "0.3.29"
 dockertest = { workspace = true }
 orca-core = { workspace = true, features = ["dockertest"] }

@@ -12,7 +12,7 @@ duckdb = { version = "0.8", features = ["r2d2", "bundled"] }
 r2d2 = { version = "0.8" }
 config = { version = "0.13.3", features = ["yaml"] }
 tracing = "0.1.40"
-serde = { version = "1.0.189", features = ["derive"] }
+serde = { version = "1.0.190", features = ["derive"] }
 serde_json = "1.0.107"
 chrono = { version = "0.4.31", features = ["serde"] }
 error-stack = { workspace = true }
@@ -36,7 +36,7 @@ tokio = { version = "1.33.0", features = [
 tokio-stream = { version = "0.1.14", features = ["net"] }
 
 [dev-dependencies]
-futures = "0.3.28"
+futures = "0.3.29"
 tokio-stream = { version = "0.1.14", features = ["net"] }
 tracing-subscriber = "0.3.17"
 rand = "0.8.5"
