@@ -1,6 +1,6 @@
 use std::{fmt::Write, string::ToString};
 
-use fiskeridir_rs::{CallSign, LandingId};
+use fiskeridir_rs::{CallSign, LandingId, SpeciesGroup};
 use kyogre_core::{ActiveHaulsFilter, ActiveLandingFilter, FiskeridirVesselId, HaulId, Mmsi};
 use reqwest::{header::HeaderMap, Client, Response};
 use serde::Serialize;
@@ -8,6 +8,7 @@ use web_api::routes::v1::{
     ais::AisTrackParameters,
     ais_vms::AisVmsParameters,
     fishing_facility::FishingFacilitiesParams,
+    fishing_prediction::{FishingSpotPredictionParams, FishingWeightPredictionParams},
     haul::{HaulsMatrixParams, HaulsParams},
     landing::{LandingMatrixParams, LandingsParams},
     trip::{TripsOfVesselParameters, TripsParameters},
@@ -145,6 +146,50 @@ impl ApiClient {
     pub async fn get_delivery_points(&self) -> Response {
         self.get("delivery_points", &[], None).await
     }
+    pub async fn get_all_fishing_spot_predictions(&self) -> Response {
+        self.get("fishing_spot_predictions", &[], None).await
+    }
+    pub async fn get_all_fishing_weight_predictions(&self) -> Response {
+        self.get("fishing_weight_predictions", &[], None).await
+    }
+
+    pub async fn get_fishing_spot_predictions(
+        &self,
+        species: SpeciesGroup,
+        params: FishingSpotPredictionParams,
+    ) -> Response {
+        let mut parameters = Vec::new();
+        if let Some(week) = params.week {
+            parameters.push(("week".to_string(), week.to_string()))
+        }
+        self.get(
+            format!("fishing_spot_predictions/{}", species as i32),
+            &parameters,
+            None,
+        )
+        .await
+    }
+
+    pub async fn get_fishing_weight_predictions(
+        &self,
+        species: SpeciesGroup,
+        params: FishingWeightPredictionParams,
+    ) -> Response {
+        let mut parameters = Vec::new();
+        if let Some(week) = params.week {
+            parameters.push(("week".to_string(), week.to_string()))
+        }
+        if let Some(limit) = params.limit {
+            parameters.push(("limit".to_string(), limit.to_string()))
+        }
+        self.get(
+            format!("fishing_weight_predictions/{}", species as i32),
+            &parameters,
+            None,
+        )
+        .await
+    }
+
     pub async fn get_hauls(&self, params: HaulsParams) -> Response {
         let mut parameters = Vec::new();
 

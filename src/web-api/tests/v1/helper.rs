@@ -2,7 +2,6 @@ use super::{barentswatch_helper::BarentswatchHelper, test_client::ApiClient};
 use dockertest::{DockerTest, Source};
 use duckdb_rs::{adapter::CacheMode, CacheStorage};
 use engine::*;
-use engine::{AisVms, ErsTripAssembler, LandingTripAssembler};
 use futures::Future;
 use kyogre_core::*;
 use orca_core::{
@@ -16,7 +15,6 @@ use std::{ops::SubAssign, panic};
 use strum::IntoEnumIterator;
 use tokio::sync::OnceCell;
 use tracing_subscriber::FmtSubscriber;
-use vessel_benchmark::*;
 use web_api::{
     routes::v1::{haul, landing},
     settings::{ApiSettings, Duckdb, Settings, BW_PROFILES_URL},
@@ -43,46 +41,7 @@ pub struct TestHelper {
 
 impl TestHelper {
     async fn builder(&self) -> TestStateBuilder {
-        let transition_log = Box::new(
-            machine::PostgresAdapter::new(&self.db_settings)
-                .await
-                .unwrap(),
-        );
-
-        let db = Box::new(self.adapter().clone());
-        let trip_assemblers = vec![
-            Box::<LandingTripAssembler>::default() as Box<dyn TripAssembler>,
-            Box::<ErsTripAssembler>::default() as Box<dyn TripAssembler>,
-        ];
-
-        let benchmarks = vec![Box::<WeightPerHour>::default() as Box<dyn VesselBenchmark>];
-        let haul_distributors = vec![Box::<AisVms>::default() as Box<dyn HaulDistributor>];
-
-        let trip_distancer = Box::<AisVms>::default() as Box<dyn TripDistancer>;
-
-        let shared_state = SharedState::new(
-            db.clone(),
-            db.clone(),
-            db.clone(),
-            db.clone(),
-            db.clone(),
-            db.clone(),
-            db.clone(),
-            db.clone(),
-            db.clone(),
-            db.clone(),
-            db.clone(),
-            db,
-            None,
-            trip_assemblers,
-            benchmarks,
-            haul_distributors,
-            trip_distancer,
-        );
-
-        let step = Step::initial(ScrapeState, shared_state, transition_log);
-
-        let engine = FisheryEngine::Scrape(step);
+        let engine = engine(self.adapter().clone(), &self.db_settings).await;
 
         TestStateBuilder::new(
             Box::new(self.adapter().clone()),

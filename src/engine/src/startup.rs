@@ -49,10 +49,13 @@ impl App {
         let benchmarks = settings.benchmarks();
         let haul_distributors = settings.haul_distributors();
         let trip_distancer = settings.trip_distancer();
+        let ml_models = settings.ml_models();
 
         let postgres = Box::new(postgres);
 
         let shared_state = SharedState::new(
+            postgres.clone(),
+            postgres.clone(),
             postgres.clone(),
             postgres.clone(),
             postgres.clone(),
@@ -70,6 +73,7 @@ impl App {
             benchmarks,
             haul_distributors,
             trip_distancer,
+            ml_models,
         );
 
         App {
@@ -134,6 +138,15 @@ impl App {
                         Box::new(self.transition_log),
                     );
                     let engine = FisheryEngine::VerifyDatabase(step);
+                    engine.run_single().await;
+                }
+                FisheryDiscriminants::MLModels => {
+                    let step = crate::Step::initial(
+                        crate::MLModelsState,
+                        self.shared_state,
+                        Box::new(self.transition_log),
+                    );
+                    let engine = FisheryEngine::MLModels(step);
                     engine.run_single().await;
                 }
             };

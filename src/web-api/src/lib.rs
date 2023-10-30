@@ -57,6 +57,10 @@ impl Database for PostgresAdapter {}
         v1::delivery_point::delivery_points,
         v1::weather::weather,
         v1::weather::weather_locations,
+        v1::fishing_prediction::fishing_weight_predictions,
+        v1::fishing_prediction::fishing_spot_predictions,
+        v1::fishing_prediction::all_fishing_spot_predictions,
+        v1::fishing_prediction::all_fishing_weight_predictions
     ),
     components(
         schemas(
@@ -109,6 +113,8 @@ impl Database for PostgresAdapter {}
             v1::delivery_point::DeliveryPoint,
             v1::weather::Weather,
             v1::weather::WeatherLocation,
+            kyogre_core::FishingSpotPrediction,
+            kyogre_core::FishingWeightPrediction,
           )
     ),
     tags(

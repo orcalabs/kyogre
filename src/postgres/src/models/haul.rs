@@ -1,13 +1,23 @@
 use bigdecimal::BigDecimal;
 use chrono::{DateTime, Utc};
 use error_stack::{Report, ResultExt};
-use fiskeridir_rs::{Gear, GearGroup, VesselLengthGroup, WhaleGender};
+use fiskeridir_rs::{Gear, GearGroup, SpeciesGroup, VesselLengthGroup, WhaleGender};
 use kyogre_core::{CatchLocationId, HaulId};
 use serde::Deserialize;
 
 use crate::{error::PostgresError, queries::decimal_to_float};
 
 use super::{HaulOceanClimate, HaulWeather};
+
+#[derive(Debug)]
+pub struct FishingSpotTrainingData {
+    pub haul_id: i64,
+    pub latitude: BigDecimal,
+    pub longitude: BigDecimal,
+    pub species: SpeciesGroup,
+    pub week: i32,
+    pub weight: f64,
+}
 
 #[derive(Deserialize)]
 pub struct Haul {
@@ -198,6 +208,22 @@ impl TryFrom<HaulMessage> for kyogre_core::HaulMessage {
             haul_id: HaulId(v.haul_id),
             start_timestamp: v.start_timestamp,
             stop_timestamp: v.stop_timestamp,
+        })
+    }
+}
+
+impl TryFrom<FishingSpotTrainingData> for kyogre_core::FishingSpotTrainingData {
+    type Error = Report<PostgresError>;
+
+    fn try_from(v: FishingSpotTrainingData) -> Result<Self, Self::Error> {
+        Ok(Self {
+            haul_id: v.haul_id,
+            latitude: decimal_to_float(v.latitude).change_context(PostgresError::DataConversion)?,
+            longitude: decimal_to_float(v.longitude)
+                .change_context(PostgresError::DataConversion)?,
+            species: v.species,
+            week: v.week,
+            weight: v.weight,
         })
     }
 }

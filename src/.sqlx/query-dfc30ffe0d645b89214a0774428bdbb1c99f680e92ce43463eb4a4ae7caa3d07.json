@@ -1,0 +1,46 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    catch_location_id,\n    week,\n    species_group_id AS \"species_group_id: SpeciesGroup\",\n    weight,\n    \"year\"\nFROM\n    fishing_weight_predictions\nWHERE\n    \"year\" = $1\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "catch_location_id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 1,
+        "name": "week",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 2,
+        "name": "species_group_id: SpeciesGroup",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 3,
+        "name": "weight",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 4,
+        "name": "year",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "dfc30ffe0d645b89214a0774428bdbb1c99f680e92ce43463eb4a4ae7caa3d07"
+}

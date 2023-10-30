@@ -4,6 +4,7 @@ pub mod barentswatch_helper;
 pub mod current_trip;
 pub mod delivery_point;
 pub mod fishing_facility;
+pub mod fishing_predictions;
 pub mod haul;
 pub mod haul_ocean_climate;
 pub mod haul_weather;

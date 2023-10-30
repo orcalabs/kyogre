@@ -6,3 +6,6 @@
 !scripts/python/weather/requirements.txt
 !scripts/python/ocean_climate/main.py
 !scripts/python/ocean_climate/requirements.txt
+!scripts/python/fishing_predictor/requirements.txt
+!scripts/python/fishing_predictor/fishing_weight_predictor.py
+!scripts/python/fishing_predictor/fishing_spot_predictor.py

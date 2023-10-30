@@ -6,7 +6,7 @@ use crate::{
 use async_trait::async_trait;
 use chrono::{DateTime, Duration, Utc};
 use error_stack::{Report, Result, ResultExt};
-use fiskeridir_rs::{CallSign, DeliveryPointId, LandingId};
+use fiskeridir_rs::{CallSign, DeliveryPointId, LandingId, SpeciesGroup};
 use futures::{Stream, StreamExt, TryStreamExt};
 use kyogre_core::*;
 use orca_core::{Environment, PsqlLogStatements, PsqlSettings};
@@ -381,6 +381,34 @@ impl AisMigratorDestination for PostgresAdapter {
 
 #[async_trait]
 impl WebApiOutboundPort for PostgresAdapter {
+    fn fishing_weight_predictions(
+        &self,
+        species: SpeciesGroup,
+        week: u32,
+        limit: u32,
+    ) -> PinBoxStream<'_, FishingWeightPrediction, QueryError> {
+        convert_stream(self.fishing_weight_predictions_impl(species, week, limit)).boxed()
+    }
+    fn all_fishing_weight_predictions(
+        &self,
+    ) -> PinBoxStream<'_, FishingWeightPrediction, QueryError> {
+        convert_stream(self.all_fishing_weight_predictions_impl()).boxed()
+    }
+
+    fn all_fishing_spot_predictions(&self) -> PinBoxStream<'_, FishingSpotPrediction, QueryError> {
+        self.all_fishing_spot_predictions_impl()
+            .map_err(|e| e.change_context(QueryError))
+            .boxed()
+    }
+    async fn fishing_spot_prediction(
+        &self,
+        species: SpeciesGroup,
+        week: u32,
+    ) -> Result<Option<FishingSpotPrediction>, QueryError> {
+        self.fishing_spot_prediction_impl(species, week)
+            .await
+            .change_context(QueryError)
+    }
     fn detailed_trips_of_vessel(
         &self,
         id: FiskeridirVesselId,
@@ -991,6 +1019,99 @@ impl MatrixCacheVersion for PostgresAdapter {
 impl VerificationOutbound for PostgresAdapter {
     async fn verify_database(&self) -> Result<(), QueryError> {
         self.verify_database_impl().await.change_context(QueryError)
+    }
+}
+
+#[async_trait]
+impl MLModelsOutbound for PostgresAdapter {
+    async fn model(&self, model_id: ModelId) -> Result<Vec<u8>, QueryError> {
+        self.model_impl(model_id).await.change_context(QueryError)
+    }
+    async fn fishing_weight_predictor_training_data(
+        &self,
+    ) -> Result<Vec<WeightPredictorTrainingData>, QueryError> {
+        Ok(self
+            .fishing_weight_predictor_training_data_impl()
+            .await
+            .change_context(QueryError)?
+            .into_iter()
+            .map(WeightPredictorTrainingData::from)
+            .collect())
+    }
+
+    async fn fishing_spot_predictor_training_data(
+        &self,
+    ) -> Result<Vec<FishingSpotTrainingData>, QueryError> {
+        convert_vec(
+            self.fishing_spot_predictor_training_data_impl()
+                .await
+                .change_context(QueryError)?,
+        )
+    }
+
+    async fn commit_hauls_training(
+        &self,
+        model_id: ModelId,
+        haul_ids: Vec<HaulId>,
+    ) -> Result<(), InsertError> {
+        self.commit_hauls_training_impl(model_id, haul_ids)
+            .await
+            .change_context(InsertError)
+    }
+}
+
+#[async_trait]
+impl MLModelsInbound for PostgresAdapter {
+    async fn species_caught_with_traal(&self) -> Result<Vec<SpeciesGroup>, QueryError> {
+        self.species_caught_with_traal_impl()
+            .await
+            .change_context(QueryError)
+    }
+    async fn existing_fishing_weight_predictions(
+        &self,
+        year: u32,
+    ) -> Result<Vec<FishingWeightPrediction>, QueryError> {
+        convert_vec(
+            self.existing_fishing_weight_predictions_impl(year)
+                .await
+                .change_context(QueryError)?,
+        )
+    }
+    async fn existing_fishing_spot_predictions(
+        &self,
+        year: u32,
+    ) -> Result<Vec<FishingSpotPrediction>, QueryError> {
+        self.existing_fishing_spot_predictions_impl(year)
+            .await
+            .change_context(QueryError)
+    }
+    async fn catch_locations(&self) -> Result<Vec<CatchLocation>, QueryError> {
+        convert_vec(
+            self.catch_locations_impl()
+                .await
+                .change_context(QueryError)?,
+        )
+    }
+    async fn add_fishing_spot_predictions(
+        &self,
+        predictions: Vec<NewFishingSpotPrediction>,
+    ) -> Result<(), InsertError> {
+        self.add_fishing_spot_predictions_impl(predictions)
+            .await
+            .change_context(InsertError)
+    }
+    async fn add_fishing_weight_predictions(
+        &self,
+        predictions: Vec<NewFishingWeightPrediction>,
+    ) -> Result<(), InsertError> {
+        self.add_weight_predictions_impl(predictions)
+            .await
+            .change_context(InsertError)
+    }
+    async fn save_model(&self, model_id: ModelId, model: &[u8]) -> Result<(), InsertError> {
+        self.save_model_impl(model_id, model)
+            .await
+            .change_context(InsertError)
     }
 }
 
