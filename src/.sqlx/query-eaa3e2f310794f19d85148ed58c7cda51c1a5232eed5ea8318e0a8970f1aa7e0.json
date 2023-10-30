@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nUPDATE ml_models\nSET\n    model = $1\nWHERE\n    ml_model_id = $2\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Bytea",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "eaa3e2f310794f19d85148ed58c7cda51c1a5232eed5ea8318e0a8970f1aa7e0"
+}

@@ -126,6 +126,22 @@ where
                 web::get().to(routes::v1::landing::landings::<T>),
             )
             .route(
+                "/fishing_spot_predictions/{species_group_id}",
+                web::get().to(routes::v1::fishing_prediction::fishing_spot_predictions::<T>),
+            )
+            .route(
+                "/fishing_spot_predictions",
+                web::get().to(routes::v1::fishing_prediction::all_fishing_spot_predictions::<T>),
+            )
+            .route(
+                "/fishing_weight_predictions",
+                web::get().to(routes::v1::fishing_prediction::all_fishing_weight_predictions::<T>),
+            )
+            .route(
+                "/fishing_weight_predictions/{species_group_id}",
+                web::get().to(routes::v1::fishing_prediction::fishing_weight_predictions::<T>),
+            )
+            .route(
                 "/landing_matrix/{active_filter}",
                 web::get().to(routes::v1::landing::landing_matrix::<T, S>),
             )

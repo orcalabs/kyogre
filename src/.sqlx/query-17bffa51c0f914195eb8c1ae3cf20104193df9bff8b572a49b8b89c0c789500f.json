@@ -1,0 +1,53 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nWITH\n    sums AS (\n        SELECT DISTINCT\n            ON (\n                (DATE_PART('week', h.start_timestamp))::INT,\n                hm.species_group_id\n            ) (DATE_PART('week', h.start_timestamp))::INT AS week,\n            hm.species_group_id,\n            ST_X (ST_CENTROID (cl.polygon))::DECIMAL AS longitude,\n            ST_Y (ST_CENTROID (cl.polygon))::DECIMAL AS latitude,\n            SUM(hm.living_weight) OVER (\n                PARTITION BY\n                    (\n                        (DATE_PART('week', h.start_timestamp))::INT,\n                        hm.species_group_id,\n                        hm.gear_group_id\n                    )\n            ) AS weight\n        FROM\n            hauls h\n            INNER JOIN hauls_matrix hm ON h.haul_id = hm.haul_id\n            INNER JOIN catch_locations cl ON cl.catch_location_id = hm.catch_location\n            LEFT JOIN ml_hauls_training_log m ON h.haul_id = m.haul_id\n            AND m.ml_model_id = $2\n        WHERE\n            (h.stop_timestamp - h.start_timestamp) < INTERVAL '2 day'\n            AND h.gear_group_id = $1\n            AND m.haul_id IS NULL\n        ORDER BY\n            week,\n            hm.species_group_id,\n            weight DESC\n    )\nSELECT\n    sums.longitude AS \"longitude!\",\n    sums.latitude AS \"latitude!\",\n    (DATE_PART('week', h.start_timestamp))::INT AS \"week!\",\n    hm.species_group_id AS \"species: SpeciesGroup\",\n    h.haul_id,\n    hm.living_weight AS weight\nFROM\n    hauls_matrix hm\n    INNER JOIN hauls h ON hm.haul_id = h.haul_id\n    INNER JOIN catch_locations cl ON cl.catch_location_id = hm.catch_location\n    INNER JOIN sums ON sums.species_group_id = hm.species_group_id\n    AND sums.week = (DATE_PART('week', h.start_timestamp))::INT\n    LEFT JOIN ml_hauls_training_log m ON h.haul_id = m.haul_id\n    AND m.ml_model_id = $2\nWHERE\n    (h.stop_timestamp - h.start_timestamp) < INTERVAL '2 day'\n    AND hm.gear_group_id = $1\n    AND m.haul_id IS NULL\nORDER BY\n    hm.species_group_id DESC;\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "longitude!",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 1,
+        "name": "latitude!",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 2,
+        "name": "week!",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 3,
+        "name": "species: SpeciesGroup",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 4,
+        "name": "haul_id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 5,
+        "name": "weight",
+        "type_info": "Float8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Int4"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "17bffa51c0f914195eb8c1ae3cf20104193df9bff8b572a49b8b89c0c789500f"
+}

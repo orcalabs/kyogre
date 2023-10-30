@@ -4,7 +4,7 @@ use crate::*;
 use async_trait::async_trait;
 use chrono::{DateTime, Duration, Utc};
 use error_stack::Result;
-use fiskeridir_rs::{CallSign, DeliveryPointId, LandingId};
+use fiskeridir_rs::{CallSign, DeliveryPointId, LandingId, SpeciesGroup};
 use futures::Stream;
 
 #[async_trait]
@@ -90,6 +90,21 @@ pub trait WebApiOutboundPort {
         query: WeatherQuery,
     ) -> Result<PinBoxStream<'_, Weather, QueryError>, QueryError>;
     fn weather_locations(&self) -> PinBoxStream<'_, WeatherLocation, QueryError>;
+    async fn fishing_spot_prediction(
+        &self,
+        species: SpeciesGroup,
+        week_of_year: u32,
+    ) -> Result<Option<FishingSpotPrediction>, QueryError>;
+    fn fishing_weight_predictions(
+        &self,
+        species: SpeciesGroup,
+        week: u32,
+        limit: u32,
+    ) -> PinBoxStream<'_, FishingWeightPrediction, QueryError>;
+    fn all_fishing_spot_predictions(&self) -> PinBoxStream<'_, FishingSpotPrediction, QueryError>;
+    fn all_fishing_weight_predictions(
+        &self,
+    ) -> PinBoxStream<'_, FishingWeightPrediction, QueryError>;
 }
 
 #[async_trait]
@@ -217,6 +232,22 @@ pub trait TripPipelineOutbound: Send + Sync {
         &self,
         vessel_id: FiskeridirVesselId,
     ) -> Result<Vec<Trip>, QueryError>;
+}
+
+#[async_trait]
+pub trait MLModelsOutbound: Send + Sync {
+    async fn fishing_spot_predictor_training_data(
+        &self,
+    ) -> Result<Vec<FishingSpotTrainingData>, QueryError>;
+    async fn fishing_weight_predictor_training_data(
+        &self,
+    ) -> Result<Vec<WeightPredictorTrainingData>, QueryError>;
+    async fn commit_hauls_training(
+        &self,
+        model_id: ModelId,
+        haul_ids: Vec<HaulId>,
+    ) -> Result<(), InsertError>;
+    async fn model(&self, model_id: ModelId) -> Result<Vec<u8>, QueryError>;
 }
 
 #[async_trait]

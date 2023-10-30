@@ -8,6 +8,7 @@ use strum::EnumDiscriminants;
 
 mod error;
 mod haul_distributor;
+mod ml_models;
 mod trip_assembler;
 mod trip_distancer;
 
@@ -17,6 +18,7 @@ pub mod states;
 pub mod test_helper;
 
 pub use haul_distributor::*;
+pub use ml_models::*;
 pub use settings::*;
 pub use startup::*;
 pub use states::*;
@@ -73,11 +75,14 @@ pub enum Fishery {
     Benchmark(BenchmarkState),
     HaulDistribution(HaulDistributionState),
     HaulWeather(HaulWeatherState),
+    MLModels(MLModelsState),
     VerifyDatabase(VerifyDatabaseState),
 }
 
 // TODO: change do Box<dyn Database> after (https://github.com/rust-lang/rust/issues/65991) resolves.
 pub struct SharedState {
+    pub ml_models_inbound: Box<dyn MLModelsInbound>,
+    pub ml_models_outbound: Box<dyn MLModelsOutbound>,
     pub trip_assembler_outbound_port: Box<dyn TripAssemblerOutboundPort>,
     pub trips_precision_outbound_port: Box<dyn TripPrecisionOutboundPort>,
     pub trip_pipeline_inbound: Box<dyn TripPipelineInbound>,
@@ -95,6 +100,25 @@ pub struct SharedState {
     pub benchmarks: Vec<Box<dyn VesselBenchmark>>,
     pub haul_distributors: Vec<Box<dyn HaulDistributor>>,
     pub trip_distancer: Box<dyn TripDistancer>,
+    pub ml_models: Vec<Box<dyn MLModel>>,
+}
+
+impl FisheryEngine {
+    pub fn add_ml_models(&mut self, models: Vec<Box<dyn MLModel>>) {
+        let shared = match self {
+            FisheryEngine::Pending(s) => &mut s.shared_state,
+            FisheryEngine::Sleep(s) => &mut s.shared_state,
+            FisheryEngine::Scrape(s) => &mut s.shared_state,
+            FisheryEngine::Trips(s) => &mut s.shared_state,
+            FisheryEngine::Benchmark(s) => &mut s.shared_state,
+            FisheryEngine::HaulDistribution(s) => &mut s.shared_state,
+            FisheryEngine::HaulWeather(s) => &mut s.shared_state,
+            FisheryEngine::VerifyDatabase(s) => &mut s.shared_state,
+            FisheryEngine::MLModels(s) => &mut s.shared_state,
+        };
+
+        shared.ml_models = models;
+    }
 }
 
 impl SharedState {
@@ -114,6 +138,8 @@ impl SharedState {
     }
     #[allow(clippy::too_many_arguments)]
     pub fn new(
+        ml_models_inbound: Box<dyn MLModelsInbound>,
+        ml_models_outbound: Box<dyn MLModelsOutbound>,
         trip_assembler_outbound_port: Box<dyn TripAssemblerOutboundPort>,
         trips_precision_outbound_port: Box<dyn TripPrecisionOutboundPort>,
         trip_pipeline_inbound: Box<dyn TripPipelineInbound>,
@@ -131,6 +157,7 @@ impl SharedState {
         benchmarks: Vec<Box<dyn VesselBenchmark>>,
         haul_distributors: Vec<Box<dyn HaulDistributor>>,
         trip_distancer: Box<dyn TripDistancer>,
+        ml_models: Vec<Box<dyn MLModel>>,
     ) -> SharedState {
         SharedState {
             scraper,
@@ -150,6 +177,9 @@ impl SharedState {
             haul_weather_outbound,
             trip_pipeline_inbound,
             trip_pipeline_outbound,
+            ml_models,
+            ml_models_inbound,
+            ml_models_outbound,
         }
     }
 }

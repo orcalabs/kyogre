@@ -1,17 +1,13 @@
 use dockertest::{DockerTest, Source, StartPolicy};
 use engine::*;
 use futures::Future;
-use kyogre_core::{
-    HaulDistributor, TripAssembler, TripDistancer, VerificationOutbound, VesselBenchmark,
-    KEEP_DB_ENV,
-};
+use kyogre_core::{VerificationOutbound, KEEP_DB_ENV};
 use orca_core::{compositions::postgres_composition, PsqlLogStatements, PsqlSettings};
 use postgres::{PostgresAdapter, TestDb};
 use rand::random;
 use std::panic;
 use std::sync::Once;
 use tracing_subscriber::FmtSubscriber;
-use vessel_benchmark::WeightPerHour;
 
 static TRACING: Once = Once::new();
 static DATABASE_PASSWORD: &str = "test123";
@@ -23,40 +19,7 @@ pub struct TestHelper {
 
 impl TestHelper {
     pub async fn builder(&self) -> TestStateBuilder {
-        let transition_log = Box::new(
-            machine::PostgresAdapter::new(&self.db_settings)
-                .await
-                .unwrap(),
-        );
-        let db = Box::new(self.adapter().clone());
-        let trip_assemblers = vec![
-            Box::<LandingTripAssembler>::default() as Box<dyn TripAssembler>,
-            Box::<ErsTripAssembler>::default() as Box<dyn TripAssembler>,
-        ];
-        let benchmarks = vec![Box::<WeightPerHour>::default() as Box<dyn VesselBenchmark>];
-        let haul_distributors = vec![Box::<AisVms>::default() as Box<dyn HaulDistributor>];
-        let trip_distancer = Box::<AisVms>::default() as Box<dyn TripDistancer>;
-        let shared_state = SharedState::new(
-            db.clone(),
-            db.clone(),
-            db.clone(),
-            db.clone(),
-            db.clone(),
-            db.clone(),
-            db.clone(),
-            db.clone(),
-            db.clone(),
-            db.clone(),
-            db.clone(),
-            db,
-            None,
-            trip_assemblers,
-            benchmarks,
-            haul_distributors,
-            trip_distancer,
-        );
-        let step = Step::initial(ScrapeState, shared_state, transition_log);
-        let engine = FisheryEngine::Scrape(step);
+        let engine = engine(self.adapter().clone(), &self.db_settings).await;
 
         TestStateBuilder::new(
             Box::new(self.adapter().clone()),

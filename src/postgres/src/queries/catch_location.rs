@@ -9,7 +9,9 @@ impl PostgresAdapter {
             r#"
 SELECT
     catch_location_id,
-    "polygon" AS "polygon!: _"
+    "polygon" AS "polygon!: _",
+    longitude,
+    latitude
 FROM
     catch_locations
             "#

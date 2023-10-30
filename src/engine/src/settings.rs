@@ -1,4 +1,7 @@
-use crate::{AisVms, ErsTripAssembler, FisheryDiscriminants, LandingTripAssembler};
+use crate::{
+    AisVms, ErsTripAssembler, FisheryDiscriminants, FishingSpotPredictor, FishingWeightPredictor,
+    LandingTripAssembler,
+};
 use config::{Config, ConfigError, File};
 use kyogre_core::*;
 use orca_core::{Environment, LogLevel, PsqlSettings, TelemetrySettings};
@@ -14,6 +17,12 @@ pub struct Settings {
     pub scraper: scraper::Config,
     pub honeycomb: Option<HoneycombApiKey>,
     pub single_state_run: Option<FisheryDiscriminants>,
+    pub fishing_predictors: Option<FishingPredictorSettings>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct FishingPredictorSettings {
+    pub training_rounds: u32,
 }
 
 #[derive(Debug, Deserialize)]
@@ -60,6 +69,27 @@ impl Settings {
             ers_assembler as Box<dyn TripAssembler>,
             landings_assembler as Box<dyn TripAssembler>,
         ];
+
+        vec
+    }
+    pub fn ml_models(&self) -> Vec<Box<dyn MLModel>> {
+        let mut vec = Vec::new();
+
+        if let Some(s) = &self.fishing_predictors {
+            let model = Box::new(FishingSpotPredictor::new(
+                s.training_rounds,
+                self.environment,
+                None,
+            ));
+            let model2 = Box::new(FishingWeightPredictor::new(
+                s.training_rounds,
+                self.environment,
+                None,
+                None,
+            ));
+            vec.push(model as Box<dyn MLModel>);
+            vec.push(model2 as Box<dyn MLModel>);
+        }
 
         vec
     }

@@ -82,6 +82,8 @@ The following build dependencies are required:
 - docker
 - docker buildkit
 - docker-compose (to simplify image building)
+- python 3.9 with the packages specified
+  [here](scripts/python/fishing_predictor/requirements.txt)
 
 ## Cloudsmith access
 

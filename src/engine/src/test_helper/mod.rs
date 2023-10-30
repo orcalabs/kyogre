@@ -1,10 +1,11 @@
 use crate::{
-    AisConsumeLoop, AisPosition, Arrival, DataMessage, DeliveryPoint, DeliveryPointType, Departure,
-    FisheryEngine, FishingFacilities, FishingFacilitiesQuery, FishingFacility, FiskeridirVesselId,
-    Haul, HaulsQuery, Landing, LandingsQuery, LandingsSorting, ManualDeliveryPoint,
-    MattilsynetDeliveryPoint, Mmsi, NewAisPosition, NewAisStatic, NewVesselConflict, OceanClimate,
-    Ordering, Pagination, PrecisionId, TripDetailed, Trips, TripsQuery, Vessel, VmsPosition,
-    Weather,
+    AisConsumeLoop, AisPosition, AisVms, Arrival, DataMessage, DeliveryPoint, DeliveryPointType,
+    Departure, ErsTripAssembler, FisheryEngine, FishingFacilities, FishingFacilitiesQuery,
+    FishingFacility, FishingSpotPredictor, FishingWeightPredictor, FiskeridirVesselId, Haul,
+    HaulsQuery, Landing, LandingTripAssembler, LandingsQuery, LandingsSorting, ManualDeliveryPoint,
+    MattilsynetDeliveryPoint, Mmsi, NewAisPosition, NewAisStatic, OceanClimate, Ordering,
+    Pagination, PrecisionId, ScrapeState, SharedState, Step, TripDetailed, Trips, TripsQuery,
+    Vessel, VmsPosition, Weather,
 };
 
 use ais::*;
@@ -13,9 +14,15 @@ use chrono::{DateTime, Duration, TimeZone, Utc};
 use fiskeridir_rs::CallSign;
 use fiskeridir_rs::{DeliveryPointId, LandingMonth};
 use futures::TryStreamExt;
-use kyogre_core::TestStorage;
+use kyogre_core::{
+    HaulDistributor, MLModel, NewVesselConflict, TestStorage, TripAssembler, TripDistancer,
+    VesselBenchmark,
+};
 use machine::StateMachine;
+use orca_core::{Environment, PsqlSettings};
+use postgres::PostgresAdapter;
 use std::collections::{HashMap, HashSet};
+use vessel_benchmark::WeightPerHour;
 
 mod ais;
 mod ais_vms;
@@ -52,6 +59,10 @@ pub use vms::*;
 pub use weather::*;
 
 use self::cycle::Cycle;
+
+pub static FISHING_SPOT_PREDICTOR_NUM_WEEKS: u32 = 2;
+pub static FISHING_WEIGHT_PREDICTOR_NUM_WEEKS: u32 = 2;
+pub static FISHING_WEIGHT_PREDICTOR_NUM_CL: u32 = 3;
 
 #[derive(Debug)]
 pub struct TestState {
@@ -110,6 +121,7 @@ pub struct TestStateBuilder {
     engine: FisheryEngine,
     cycle: Cycle,
     trip_queue_reset: Option<Cycle>,
+    enabled_ml_models: Vec<Box<dyn MLModel>>,
 }
 
 enum TripPrecisonStartPoint {
@@ -141,6 +153,60 @@ enum TripPrecisonStartPoint {
         start: DateTime<Utc>,
         mmsi: Mmsi,
     },
+}
+
+pub fn default_fishing_spot_predictor() -> Box<dyn MLModel> {
+    Box::new(FishingSpotPredictor::new(
+        1,
+        Environment::Test,
+        Some(FISHING_SPOT_PREDICTOR_NUM_WEEKS),
+    ))
+}
+
+pub fn default_fishing_weight_predictor() -> Box<dyn MLModel> {
+    Box::new(FishingWeightPredictor::new(
+        1,
+        Environment::Test,
+        Some(FISHING_WEIGHT_PREDICTOR_NUM_WEEKS),
+        Some(FISHING_WEIGHT_PREDICTOR_NUM_CL),
+    ))
+}
+
+pub async fn engine(adapter: PostgresAdapter, db_settings: &PsqlSettings) -> FisheryEngine {
+    let transition_log = Box::new(machine::PostgresAdapter::new(db_settings).await.unwrap());
+    let db = Box::new(adapter);
+    let trip_assemblers = vec![
+        Box::<LandingTripAssembler>::default() as Box<dyn TripAssembler>,
+        Box::<ErsTripAssembler>::default() as Box<dyn TripAssembler>,
+    ];
+    let benchmarks = vec![Box::<WeightPerHour>::default() as Box<dyn VesselBenchmark>];
+    let haul_distributors = vec![Box::<AisVms>::default() as Box<dyn HaulDistributor>];
+    let trip_distancer = Box::<AisVms>::default() as Box<dyn TripDistancer>;
+
+    let shared_state = SharedState::new(
+        db.clone(),
+        db.clone(),
+        db.clone(),
+        db.clone(),
+        db.clone(),
+        db.clone(),
+        db.clone(),
+        db.clone(),
+        db.clone(),
+        db.clone(),
+        db.clone(),
+        db.clone(),
+        db.clone(),
+        db,
+        None,
+        trip_assemblers,
+        benchmarks,
+        haul_distributors,
+        trip_distancer,
+        vec![],
+    );
+    let step = Step::initial(ScrapeState, shared_state, transition_log);
+    FisheryEngine::Scrape(step)
 }
 
 impl TestStateBuilder {
@@ -195,7 +261,18 @@ impl TestStateBuilder {
             trip_queue_reset: None,
             ais_static: vec![],
             call_sign_counter: 1,
+            enabled_ml_models: vec![],
         }
+    }
+
+    pub fn add_ml_models(mut self, models: Vec<Box<dyn MLModel>>) -> TestStateBuilder {
+        self.enabled_ml_models = models;
+        self
+    }
+
+    pub fn add_ml_model(mut self, model: Box<dyn MLModel>) -> TestStateBuilder {
+        self.enabled_ml_models.push(model);
+        self
     }
 
     pub fn data_increment(mut self, duration: Duration) -> TestStateBuilder {
@@ -466,6 +543,8 @@ impl TestStateBuilder {
         let mut ocean_climate = Vec::new();
 
         let mut delivery_point_ids: HashSet<DeliveryPointId> = HashSet::new();
+
+        self.engine.add_ml_models(self.enabled_ml_models);
 
         // TODO: dont clone in cycles
         // Use this (https://github.com/rust-lang/rust/issues/43244) if it ever merges

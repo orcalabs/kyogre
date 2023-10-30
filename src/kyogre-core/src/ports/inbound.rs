@@ -2,7 +2,30 @@ use crate::*;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use error_stack::Result;
-use fiskeridir_rs::DeliveryPointId;
+use fiskeridir_rs::{DeliveryPointId, SpeciesGroup};
+
+#[async_trait]
+pub trait MLModelsInbound: Send + Sync {
+    async fn add_fishing_spot_predictions(
+        &self,
+        predictions: Vec<NewFishingSpotPrediction>,
+    ) -> Result<(), InsertError>;
+    async fn add_fishing_weight_predictions(
+        &self,
+        predictions: Vec<NewFishingWeightPrediction>,
+    ) -> Result<(), InsertError>;
+    async fn catch_locations(&self) -> Result<Vec<CatchLocation>, QueryError>;
+    async fn existing_fishing_spot_predictions(
+        &self,
+        year: u32,
+    ) -> Result<Vec<FishingSpotPrediction>, QueryError>;
+    async fn existing_fishing_weight_predictions(
+        &self,
+        year: u32,
+    ) -> Result<Vec<FishingWeightPrediction>, QueryError>;
+    async fn save_model(&self, model_id: ModelId, model: &[u8]) -> Result<(), InsertError>;
+    async fn species_caught_with_traal(&self) -> Result<Vec<SpeciesGroup>, QueryError>;
+}
 
 #[async_trait]
 pub trait AisConsumeLoop: Sync + Send {

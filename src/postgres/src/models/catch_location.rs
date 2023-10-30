@@ -8,6 +8,8 @@ use crate::error::PostgresError;
 pub struct CatchLocation {
     pub catch_location_id: String,
     pub polygon: wkb::Decode<Geometry<f64>>,
+    pub latitude: f64,
+    pub longitude: f64,
 }
 
 impl TryFrom<CatchLocation> for kyogre_core::CatchLocation {
@@ -28,6 +30,8 @@ impl TryFrom<CatchLocation> for kyogre_core::CatchLocation {
             id: CatchLocationId::try_from(v.catch_location_id)
                 .change_context(PostgresError::DataConversion)?,
             polygon,
+            latitude: v.latitude,
+            longitude: v.longitude,
         })
     }
 }

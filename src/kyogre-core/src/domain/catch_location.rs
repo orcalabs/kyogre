@@ -19,6 +19,8 @@ pub struct CatchLocationId {
 pub struct CatchLocation {
     pub id: CatchLocationId,
     pub polygon: Polygon,
+    pub latitude: f64,
+    pub longitude: f64,
 }
 
 impl CatchLocationId {
