@@ -11,7 +11,7 @@ use web_api::routes::v1::{
     fishing_prediction::{FishingSpotPredictionParams, FishingWeightPredictionParams},
     haul::{HaulsMatrixParams, HaulsParams},
     landing::{LandingMatrixParams, LandingsParams},
-    trip::{TripsOfVesselParameters, TripsParameters},
+    trip::TripsParameters,
     user::User,
     vms::VmsParameters,
     weather::WeatherParams,
@@ -434,36 +434,6 @@ impl ApiClient {
             None,
         )
         .await
-    }
-
-    pub async fn get_trips_of_vessel(
-        &self,
-        id: FiskeridirVesselId,
-        params: TripsOfVesselParameters,
-        token: Option<String>,
-    ) -> Response {
-        let mut parameters = Vec::new();
-
-        if let Some(limit) = params.limit {
-            parameters.push(("limit".to_string(), limit.to_string()))
-        }
-
-        if let Some(offset) = params.offset {
-            parameters.push(("offset".to_string(), offset.to_string()))
-        }
-
-        if let Some(ordering) = params.ordering {
-            parameters.push(("ordering".to_string(), ordering.to_string()))
-        }
-
-        let headers = token.map(|t| {
-            let mut headers = HeaderMap::new();
-            headers.insert("bw-token", t.try_into().unwrap());
-            headers
-        });
-
-        self.get(format!("trips/{}", id.0), &parameters, headers)
-            .await
     }
 
     pub async fn get_trips(&self, params: TripsParameters, token: Option<String>) -> Response {

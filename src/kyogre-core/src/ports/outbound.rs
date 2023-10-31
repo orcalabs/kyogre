@@ -45,13 +45,6 @@ pub trait WebApiOutboundPort {
     fn species_fao(&self) -> PinBoxStream<'_, SpeciesFao, QueryError>;
     fn vessels(&self) -> Pin<Box<dyn Stream<Item = Result<Vessel, QueryError>> + Send + '_>>;
     fn hauls(&self, query: HaulsQuery) -> Result<PinBoxStream<'_, Haul, QueryError>, QueryError>;
-    fn detailed_trips_of_vessel(
-        &self,
-        id: FiskeridirVesselId,
-        pagination: Pagination<Trips>,
-        ordering: Ordering,
-        read_fishing_facility: bool,
-    ) -> Result<PinBoxStream<'_, TripDetailed, QueryError>, QueryError>;
     fn detailed_trips(
         &self,
         query: TripsQuery,

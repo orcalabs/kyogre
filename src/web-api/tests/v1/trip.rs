@@ -5,7 +5,7 @@ use engine::*;
 use fiskeridir_rs::{DeliveryPointId, GearGroup, LandingId, SpeciesGroup, VesselLengthGroup};
 use kyogre_core::{Ordering, TripSorting, VesselEventType};
 use web_api::routes::utils::{self, GearGroupId, SpeciesGroupId};
-use web_api::routes::v1::trip::{Trip, TripsOfVesselParameters, TripsParameters};
+use web_api::routes::v1::trip::{Trip, TripsParameters};
 
 #[tokio::test]
 async fn test_trip_of_landing_returns_none_of_no_trip_is_connected_to_given_landing_id() {
@@ -90,100 +90,6 @@ async fn test_trip_of_landing_returns_all_hauls_and_landings_connected_to_trip()
 
         let body: Trip = response.json().await.unwrap();
         assert_eq!(state.trips[0], body);
-    })
-    .await;
-}
-
-#[tokio::test]
-async fn test_trips_of_vessel_only_returns_trips_of_specified_vessel() {
-    test(|helper, builder| async move {
-        let state = builder.vessels(2).trips(2).build().await;
-
-        let response = helper
-            .app
-            .get_trips_of_vessel(
-                state.vessels[0].fiskeridir.id,
-                TripsOfVesselParameters::default(),
-                None,
-            )
-            .await;
-        assert_eq!(response.status(), StatusCode::OK);
-
-        let trips: Vec<Trip> = response.json().await.unwrap();
-        assert_eq!(trips.len(), 1);
-        assert_eq!(trips[0], state.trips[0]);
-    })
-    .await;
-}
-
-#[tokio::test]
-async fn test_trips_of_vessel_filters_by_limit() {
-    test(|helper, builder| async move {
-        let state = builder.vessels(1).trips(2).build().await;
-
-        let params = TripsOfVesselParameters {
-            limit: Some(1),
-            offset: None,
-            ordering: Some(Ordering::Asc),
-        };
-
-        let response = helper
-            .app
-            .get_trips_of_vessel(state.vessels[0].fiskeridir.id, params, None)
-            .await;
-        assert_eq!(response.status(), StatusCode::OK);
-
-        let trips: Vec<Trip> = response.json().await.unwrap();
-        assert_eq!(trips.len(), 1);
-        assert_eq!(trips[0], state.trips[0]);
-    })
-    .await;
-}
-
-#[tokio::test]
-async fn test_trips_of_vessel_filters_by_offset() {
-    test(|helper, builder| async move {
-        let state = builder.vessels(1).trips(2).build().await;
-
-        let params = TripsOfVesselParameters {
-            limit: None,
-            offset: Some(1),
-            ordering: Some(Ordering::Desc),
-        };
-
-        let response = helper
-            .app
-            .get_trips_of_vessel(state.vessels[0].fiskeridir.id, params, None)
-            .await;
-        assert_eq!(response.status(), StatusCode::OK);
-
-        let trips: Vec<Trip> = response.json().await.unwrap();
-        assert_eq!(trips.len(), 1);
-        assert_eq!(trips[0], state.trips[0]);
-    })
-    .await;
-}
-
-#[tokio::test]
-async fn test_trips_of_vessel_orders_by_period() {
-    test(|helper, builder| async move {
-        let state = builder.vessels(1).trips(2).build().await;
-        let params = TripsOfVesselParameters {
-            limit: None,
-            offset: None,
-            ordering: Some(Ordering::Asc),
-        };
-
-        let response = helper
-            .app
-            .get_trips_of_vessel(state.vessels[0].fiskeridir.id, params, None)
-            .await;
-        assert_eq!(response.status(), StatusCode::OK);
-
-        let trips: Vec<Trip> = response.json().await.unwrap();
-        assert_eq!(trips.len(), 2);
-        assert_eq!(trips[0], state.trips[0]);
-        assert_eq!(trips[1], state.trips[1]);
     })
     .await;
 }
