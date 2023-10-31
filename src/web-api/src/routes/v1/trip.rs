@@ -51,14 +51,6 @@ pub struct TripsParameters {
     pub fiskeridir_vessel_ids: Option<Vec<FiskeridirVesselId>>,
 }
 
-#[derive(Debug, Deserialize, IntoParams, Default)]
-#[serde(rename_all = "camelCase")]
-pub struct TripsOfVesselParameters {
-    pub limit: Option<u64>,
-    pub offset: Option<u64>,
-    pub ordering: Option<Ordering>,
-}
-
 #[utoipa::path(
     get,
     path = "/trip_of_haul/{haul_id}",
@@ -120,49 +112,6 @@ pub async fn trip_of_landing<T: Database + 'static>(
             event!(Level::ERROR, "failed to retrieve trip of landing: {:?}", e);
             ApiError::InternalServerError
         })
-}
-
-#[utoipa::path(
-    get,
-    path = "/trips/{fiskeridir_vessel_id}",
-    params(TripsOfVesselParameters),
-    responses(
-        (status = 200, description = "trips of the given vessel", body = [Trip]),
-        (status = 500, description = "an internal error occured", body = ErrorResponse),
-    )
-)]
-#[tracing::instrument(skip(db))]
-pub async fn trips_of_vessel<T: Database + 'static>(
-    db: web::Data<T>,
-    profile: Option<BwProfile>,
-    fiskeridir_vessel_id: Path<u64>,
-    params: web::Query<TripsOfVesselParameters>,
-) -> Result<HttpResponse, ApiError> {
-    let read_fishing_facility = profile
-        .map(|p| {
-            p.policies
-                .contains(&BwPolicy::BwReadExtendedFishingFacility)
-        })
-        .unwrap_or(false);
-    let params = params.into_inner();
-
-    to_streaming_response! {
-        db.detailed_trips_of_vessel(
-            FiskeridirVesselId(fiskeridir_vessel_id.into_inner() as i64),
-            Pagination::<Trips>::new(params.limit, params.offset),
-            params.ordering.unwrap_or(Ordering::Asc),
-            read_fishing_facility,
-        )
-        .map_err(|e| {
-            event!(Level::ERROR, "failed to retrieve trips_of_vessel: {:?}", e);
-            ApiError::InternalServerError
-        })?
-        .map_ok(Trip::from)
-        .map_err(|e| {
-            event!(Level::ERROR, "failed to retrieve trips_of_vessel: {:?}", e);
-            ApiError::InternalServerError
-        })
-    }
 }
 
 #[utoipa::path(

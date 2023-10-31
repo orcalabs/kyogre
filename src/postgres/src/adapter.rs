@@ -409,18 +409,6 @@ impl WebApiOutboundPort for PostgresAdapter {
             .await
             .change_context(QueryError)
     }
-    fn detailed_trips_of_vessel(
-        &self,
-        id: FiskeridirVesselId,
-        pagination: Pagination<Trips>,
-        ordering: Ordering,
-        read_fishing_facility: bool,
-    ) -> Result<PinBoxStream<'_, TripDetailed, QueryError>, QueryError> {
-        let stream = self
-            .detailed_trips_of_vessel_impl(id, pagination, ordering, read_fishing_facility)
-            .change_context(QueryError)?;
-        Ok(convert_stream(stream).boxed())
-    }
     fn ais_positions(
         &self,
         mmsi: Mmsi,

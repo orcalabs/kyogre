@@ -13,9 +13,8 @@ use fiskeridir_rs::{Gear, LandingId};
 use futures::Stream;
 use futures::TryStreamExt;
 use kyogre_core::{
-    FiskeridirVesselId, HaulId, Ordering, Pagination, PrecisionOutcome, PrecisionStatus,
-    TripAssemblerId, TripSet, TripSorting, TripUpdate, Trips, TripsConflictStrategy, TripsQuery,
-    VesselEventType,
+    FiskeridirVesselId, HaulId, Ordering, PrecisionOutcome, PrecisionStatus, TripAssemblerId,
+    TripSet, TripSorting, TripUpdate, TripsConflictStrategy, TripsQuery, VesselEventType,
 };
 use num_traits::FromPrimitive;
 use sqlx::postgres::types::PgRange;
@@ -704,70 +703,6 @@ LIMIT
             order_by,
             query.pagination.offset() as i64,
             query.pagination.limit() as i64,
-        )
-        .fetch(&self.pool)
-        .map_err(|e| report!(e).change_context(PostgresError::Query));
-
-        Ok(stream)
-    }
-
-    pub(crate) fn detailed_trips_of_vessel_impl(
-        &self,
-        id: FiskeridirVesselId,
-        pagination: Pagination<Trips>,
-        ordering: Ordering,
-        read_fishing_facility: bool,
-    ) -> Result<impl Stream<Item = Result<TripDetailed, PostgresError>> + '_, PostgresError> {
-        let stream = sqlx::query_as!(
-            TripDetailed,
-            r#"
-
-SELECT
-    t.trip_id AS "trip_id!",
-    t.fiskeridir_vessel_id AS "fiskeridir_vessel_id!",
-    t.period AS "period!",
-    t.period_precision,
-    t.landing_coverage AS "landing_coverage!",
-    COALESCE(t.num_landings::BIGINT, 0) AS "num_deliveries!",
-    COALESCE(t.landing_total_living_weight, 0.0) AS "total_living_weight!",
-    COALESCE(t.landing_total_gross_weight, 0.0) AS "total_gross_weight!",
-    COALESCE(t.landing_total_product_weight, 0.0) AS "total_product_weight!",
-    COALESCE(t.delivery_point_ids, '{}') AS "delivery_points!",
-    COALESCE(t.landing_gear_ids, '{}') AS "gear_ids!: Vec<Gear>",
-    t.most_recent_landing AS latest_landing_timestamp,
-    COALESCE(t.landings::TEXT, '[]') AS "catches!",
-    t.start_port_id,
-    t.end_port_id,
-    t.trip_assembler_id AS "trip_assembler_id!: TripAssemblerId",
-    COALESCE(t.vessel_events, '[]')::TEXT AS "vessel_events!",
-    COALESCE(t.hauls, '[]')::TEXT AS "hauls!",
-    COALESCE(t.landing_ids, '{}') AS "landing_ids!",
-    CASE
-        WHEN $5 THEN COALESCE(t.fishing_facilities, '[]')::TEXT
-        ELSE '[]'
-    END AS "fishing_facilities!",
-    t.distance
-FROM
-    trips_detailed AS t
-WHERE
-    fiskeridir_vessel_id = $1
-ORDER BY
-    CASE
-        WHEN $2 = 1 THEN period
-    END ASC,
-    CASE
-        WHEN $2 = 2 THEN period
-    END DESC
-OFFSET
-    $3
-LIMIT
-    $4
-            "#,
-            id.0,
-            ordering as i32,
-            pagination.offset() as i64,
-            pagination.limit() as i64,
-            read_fishing_facility,
         )
         .fetch(&self.pool)
         .map_err(|e| report!(e).change_context(PostgresError::Query));
