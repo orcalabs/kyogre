@@ -17,6 +17,7 @@ pub enum ApiError {
     MissingBwToken,
     InvalidBwToken,
     InvalidLandingId,
+    InvalidSpeciesGroupId(u32),
 }
 
 impl std::error::Error for ApiError {}
@@ -45,6 +46,9 @@ impl std::fmt::Display for ApiError {
             ApiError::StartAfterEnd { start, end } => f.write_fmt(format_args!(
                 "start date: {start} cannot be after end date: {end}"
             )),
+            ApiError::InvalidSpeciesGroupId(val) => {
+                f.write_fmt(format_args!("invalid species group id specified: {val}"))
+            }
         }
     }
 }
@@ -56,6 +60,7 @@ impl ResponseError for ApiError {
             | ApiError::InvalidCallSign
             | ApiError::InvalidLandingId
             | ApiError::StartAfterEnd { start: _, end: _ }
+            | ApiError::InvalidSpeciesGroupId(_)
             | ApiError::MissingMmsiOrCallSign => StatusCode::BAD_REQUEST,
             ApiError::InternalServerError => StatusCode::INTERNAL_SERVER_ERROR,
             ApiError::Forbidden => StatusCode::FORBIDDEN,
