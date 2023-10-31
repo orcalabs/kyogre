@@ -77,7 +77,6 @@ impl Database for PostgresAdapter {}
             LandingsSorting,
             TripSorting,
             TripAssemblerId,
-            fiskeridir_rs::SpeciesGroup,
             error::ErrorResponse,
             error::ApiError,
             v1::ais::AisPosition,

@@ -7,6 +7,7 @@ use chrono::Utc;
 use fiskeridir_rs::SpeciesGroup;
 use futures::TryStreamExt;
 use kyogre_core::FishingSpotPrediction;
+use num_traits::FromPrimitive;
 use serde::Deserialize;
 use tracing::{event, Level};
 use utoipa::IntoParams;
@@ -40,14 +41,15 @@ pub struct FishingWeightPredictionParams {
 pub async fn fishing_spot_predictions<T: Database + 'static>(
     db: web::Data<T>,
     params: web::Query<FishingSpotPredictionParams>,
-    species_group_id: Path<SpeciesGroup>,
+    species_group_id: Path<u32>,
 ) -> Result<Response<Option<FishingSpotPrediction>>, ApiError> {
+    let species_group_id = species_group_id.into_inner();
+    let species_group_id = SpeciesGroup::from_u32(species_group_id)
+        .ok_or(ApiError::InvalidSpeciesGroupId(species_group_id))?;
+
     let week = params.week.unwrap_or_else(|| Utc::now().iso_week().week());
 
-    match db
-        .fishing_spot_prediction(species_group_id.into_inner(), week)
-        .await
-    {
+    match db.fishing_spot_prediction(species_group_id, week).await {
         Ok(v) => Ok(Response::new(v)),
         Err(e) => {
             event!(
@@ -99,8 +101,12 @@ pub async fn all_fishing_spot_predictions<T: Database + 'static>(
 pub async fn fishing_weight_predictions<T: Database + 'static>(
     db: web::Data<T>,
     params: web::Query<FishingWeightPredictionParams>,
-    species_group_id: Path<SpeciesGroup>,
+    species_group_id: Path<u32>,
 ) -> Result<HttpResponse, ApiError> {
+    let species_group_id = species_group_id.into_inner();
+    let species_group_id = SpeciesGroup::from_u32(species_group_id)
+        .ok_or(ApiError::InvalidSpeciesGroupId(species_group_id))?;
+
     let week = params.week.unwrap_or_else(|| Utc::now().iso_week().week());
     let mut limit = params.limit.unwrap_or(DEFAULT_FISHING_WEIGHT_PREDICTIONS);
 
@@ -110,7 +116,7 @@ pub async fn fishing_weight_predictions<T: Database + 'static>(
 
     to_streaming_response! {
         db
-         .fishing_weight_predictions(species_group_id.into_inner(), week, limit)
+         .fishing_weight_predictions(species_group_id, week, limit)
          .map_err(|e| {
             event!(
                 Level::ERROR,
