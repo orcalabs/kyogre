@@ -1,13 +1,13 @@
-use super::{FishingFacility, HaulCatch, HaulOceanClimate, HaulWeather, WhaleCatch};
+use super::{FishingFacility, HaulCatch, WhaleCatch};
 use crate::queries::{enum_to_i32, float_to_decimal, opt_enum_to_i32};
 use crate::{error::PostgresError, queries::decimal_to_float};
 use bigdecimal::BigDecimal;
 use chrono::{DateTime, Utc};
 use error_stack::{Report, ResultExt};
-use fiskeridir_rs::{DeliveryPointId, Gear, GearGroup, LandingId, Quality, VesselLengthGroup};
+use fiskeridir_rs::{DeliveryPointId, Gear, GearGroup, LandingId, Quality};
 use kyogre_core::{
-    CatchLocationId, DateRange, FiskeridirVesselId, HaulId, PrecisionId, PrecisionOutcome,
-    PrecisionStatus, TripAssemblerId, TripDistancerId, TripId, TripProcessingUnit, VesselEventType,
+    DateRange, FiskeridirVesselId, HaulId, PrecisionId, PrecisionOutcome, PrecisionStatus,
+    TripAssemblerId, TripDistancerId, TripId, TripProcessingUnit, VesselEventType,
 };
 use serde::Deserialize;
 use sqlx::postgres::types::PgRange;
@@ -185,11 +185,6 @@ struct TripHaul {
     ers_activity_id: String,
     duration: i32,
     haul_distance: Option<i32>,
-    catch_location_start: Option<String>,
-    catch_locations: Option<Vec<String>>,
-    ocean_depth_end: i32,
-    ocean_depth_start: i32,
-    quota_type_id: i32,
     start_timestamp: DateTime<Utc>,
     stop_timestamp: DateTime<Utc>,
     start_latitude: BigDecimal,
@@ -200,25 +195,6 @@ struct TripHaul {
     gear_id: Gear,
     gear_group_id: GearGroup,
     fiskeridir_vessel_id: Option<i64>,
-    vessel_call_sign: Option<String>,
-    vessel_call_sign_ers: String,
-    vessel_length: BigDecimal,
-    vessel_length_group: VesselLengthGroup,
-    vessel_name: Option<String>,
-    vessel_name_ers: Option<String>,
-    wind_speed_10m: Option<BigDecimal>,
-    wind_direction_10m: Option<BigDecimal>,
-    air_temperature_2m: Option<BigDecimal>,
-    relative_humidity_2m: Option<BigDecimal>,
-    air_pressure_at_sea_level: Option<BigDecimal>,
-    precipitation_amount: Option<BigDecimal>,
-    cloud_area_fraction: Option<BigDecimal>,
-    water_speed: Option<BigDecimal>,
-    water_direction: Option<BigDecimal>,
-    salinity: Option<BigDecimal>,
-    water_temperature: Option<BigDecimal>,
-    ocean_climate_depth: Option<BigDecimal>,
-    sea_floor_depth: Option<BigDecimal>,
     catches: Vec<HaulCatch>,
     whale_catches: Vec<WhaleCatch>,
 }
@@ -302,7 +278,7 @@ impl TryFrom<CurrentTrip> for kyogre_core::CurrentTrip {
             hauls: serde_json::from_str::<Vec<TripHaul>>(&v.hauls)
                 .change_context(PostgresError::DataConversion)?
                 .into_iter()
-                .map(kyogre_core::Haul::try_from)
+                .map(kyogre_core::TripHaul::try_from)
                 .collect::<Result<_, _>>()?,
             fishing_facilities: serde_json::from_str::<Vec<FishingFacility>>(&v.fishing_facilities)
                 .change_context(PostgresError::DataConversion)?
@@ -369,7 +345,7 @@ impl TryFrom<TripDetailed> for kyogre_core::TripDetailed {
             hauls: serde_json::from_str::<Vec<TripHaul>>(&value.hauls)
                 .change_context(PostgresError::DataConversion)?
                 .into_iter()
-                .map(kyogre_core::Haul::try_from)
+                .map(kyogre_core::TripHaul::try_from)
                 .collect::<Result<_, _>>()?,
             fishing_facilities: serde_json::from_str::<Vec<FishingFacility>>(
                 &value.fishing_facilities,
@@ -452,7 +428,7 @@ impl From<Catch> for kyogre_core::Catch {
     }
 }
 
-impl TryFrom<TripHaul> for kyogre_core::Haul {
+impl TryFrom<TripHaul> for kyogre_core::TripHaul {
     type Error = Report<PostgresError>;
 
     fn try_from(v: TripHaul) -> Result<Self, Self::Error> {
@@ -461,19 +437,6 @@ impl TryFrom<TripHaul> for kyogre_core::Haul {
             ers_activity_id: v.ers_activity_id,
             duration: v.duration,
             haul_distance: v.haul_distance,
-            catch_location_start: v
-                .catch_location_start
-                .map(CatchLocationId::try_from)
-                .transpose()
-                .change_context(PostgresError::DataConversion)?,
-            catch_locations: v
-                .catch_locations
-                .map(|c| c.into_iter().map(CatchLocationId::try_from).collect())
-                .transpose()
-                .change_context(PostgresError::DataConversion)?,
-            ocean_depth_end: v.ocean_depth_end,
-            ocean_depth_start: v.ocean_depth_start,
-            quota_type_id: v.quota_type_id,
             start_latitude: decimal_to_float(v.start_latitude)
                 .change_context(PostgresError::DataConversion)?,
             start_longitude: decimal_to_float(v.start_longitude)
@@ -488,32 +451,6 @@ impl TryFrom<TripHaul> for kyogre_core::Haul {
             gear_id: v.gear_id,
             gear_group_id: v.gear_group_id,
             fiskeridir_vessel_id: v.fiskeridir_vessel_id,
-            vessel_call_sign: v.vessel_call_sign,
-            vessel_call_sign_ers: v.vessel_call_sign_ers,
-            vessel_length: decimal_to_float(v.vessel_length)
-                .change_context(PostgresError::DataConversion)?,
-            vessel_length_group: v.vessel_length_group,
-            vessel_name: v.vessel_name,
-            vessel_name_ers: v.vessel_name_ers,
-            weather: HaulWeather {
-                wind_speed_10m: v.wind_speed_10m,
-                wind_direction_10m: v.wind_direction_10m,
-                air_temperature_2m: v.air_temperature_2m,
-                relative_humidity_2m: v.relative_humidity_2m,
-                air_pressure_at_sea_level: v.air_pressure_at_sea_level,
-                precipitation_amount: v.precipitation_amount,
-                cloud_area_fraction: v.cloud_area_fraction,
-            }
-            .try_into()?,
-            ocean_climate: HaulOceanClimate {
-                water_speed: v.water_speed,
-                water_direction: v.water_direction,
-                salinity: v.salinity,
-                water_temperature: v.water_temperature,
-                ocean_climate_depth: v.ocean_climate_depth,
-                sea_floor_depth: v.sea_floor_depth,
-            }
-            .try_into()?,
             catches: v
                 .catches
                 .into_iter()

@@ -100,6 +100,7 @@ impl Database for PostgresAdapter {}
             v1::haul::HaulOceanClimate,
             v1::trip::Trip,
             v1::trip::CurrentTrip,
+            v1::trip::TripHaul,
             v1::trip::VesselEvent,
             v1::vms::VmsPosition,
             v1::ais_vms::AisVmsPosition,
