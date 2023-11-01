@@ -1,4 +1,4 @@
-use std::fmt;
+use std::fmt::{self, Display};
 
 use crate::*;
 use chrono::{DateTime, TimeZone, Utc};
@@ -437,4 +437,15 @@ impl std::fmt::Display for TripDistancerId {
 pub struct TripDistanceOutput {
     pub distance: Option<f64>,
     pub distancer_id: TripDistancerId,
+}
+
+impl From<i64> for TripId {
+    fn from(value: i64) -> Self {
+        TripId(value)
+    }
+}
+impl Display for TripId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(f)
+    }
 }

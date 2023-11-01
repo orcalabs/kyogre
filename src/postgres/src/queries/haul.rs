@@ -144,7 +144,8 @@ SELECT
     h.ocean_climate_depth,
     h.sea_floor_depth,
     h.catches::TEXT AS "catches!",
-    h.whale_catches::TEXT AS "whale_catches!"
+    h.whale_catches::TEXT AS "whale_catches!",
+    h.cache_version
 FROM
     hauls h
 WHERE
@@ -233,6 +234,89 @@ ORDER BY
         Ok(stream)
     }
 
+    pub(crate) async fn hauls_by_ids_impl(
+        &self,
+        haul_ids: &[HaulId],
+    ) -> Result<Vec<Haul>, PostgresError> {
+        let ids = haul_ids.iter().map(|i| i.0).collect::<Vec<_>>();
+
+        sqlx::query_as!(
+            Haul,
+            r#"
+SELECT
+    haul_id,
+    ers_activity_id,
+    duration,
+    haul_distance,
+    catch_location_start,
+    catch_locations,
+    ocean_depth_end,
+    ocean_depth_start,
+    quota_type_id,
+    start_latitude,
+    start_longitude,
+    start_timestamp,
+    stop_timestamp,
+    stop_latitude,
+    stop_longitude,
+    total_living_weight,
+    gear_id AS "gear_id!: Gear",
+    gear_group_id AS "gear_group_id!: GearGroup",
+    fiskeridir_vessel_id,
+    vessel_call_sign,
+    vessel_call_sign_ers,
+    vessel_length,
+    vessel_length_group AS "vessel_length_group!: VesselLengthGroup",
+    vessel_name,
+    vessel_name_ers,
+    wind_speed_10m,
+    wind_direction_10m,
+    air_temperature_2m,
+    relative_humidity_2m,
+    air_pressure_at_sea_level,
+    precipitation_amount,
+    cloud_area_fraction,
+    water_speed,
+    water_direction,
+    salinity,
+    water_temperature,
+    ocean_climate_depth,
+    sea_floor_depth,
+    catches::TEXT AS "catches!",
+    whale_catches::TEXT AS "whale_catches!",
+    cache_version
+FROM
+    hauls
+WHERE
+    haul_id = ANY ($1)
+            "#,
+            &ids,
+        )
+        .fetch_all(&self.pool)
+        .await
+        .change_context(PostgresError::Query)
+    }
+
+    pub(crate) async fn all_haul_cache_versions_impl(
+        &self,
+    ) -> Result<Vec<(HaulId, i64)>, PostgresError> {
+        Ok(sqlx::query!(
+            r#"
+SELECT
+    haul_id,
+    cache_version
+FROM
+    hauls
+            "#,
+        )
+        .fetch_all(&self.pool)
+        .await
+        .change_context(PostgresError::Query)?
+        .into_iter()
+        .map(|r| (HaulId(r.haul_id), r.cache_version))
+        .collect())
+    }
+
     pub(crate) async fn haul_messages_of_vessel_impl(
         &self,
         vessel_id: FiskeridirVesselId,
@@ -318,7 +402,8 @@ SET
             )
         FROM
             UNNEST(q.catch_locations || h.catch_location_start) e
-    )
+    ),
+    cache_version = cache_version + 1
 FROM
     (
         SELECT

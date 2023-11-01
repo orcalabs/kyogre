@@ -81,7 +81,8 @@ SELECT
     h.ocean_climate_depth,
     h.sea_floor_depth,
     h.catches::TEXT AS "catches!",
-    h.whale_catches::TEXT AS "whale_catches!"
+    h.whale_catches::TEXT AS "whale_catches!",
+    h.cache_version
 FROM
     hauls h
 WHERE

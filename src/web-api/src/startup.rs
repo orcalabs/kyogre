@@ -133,7 +133,7 @@ where
                 "/trips/current/{fiskeridir_vessel_id}",
                 web::get().to(routes::v1::trip::current_trip::<T>),
             )
-            .route("/hauls", web::get().to(routes::v1::haul::hauls::<T>))
+            .route("/hauls", web::get().to(routes::v1::haul::hauls::<T, M>))
             .route(
                 "/hauls_matrix/{active_filter}",
                 web::get().to(routes::v1::haul::hauls_matrix::<T, S>),
