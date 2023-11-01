@@ -59,3 +59,21 @@ async fn tests_trips_runs_distance_on_existing_unprocessed_trips() {
     })
     .await;
 }
+
+#[tokio::test]
+async fn tests_distance_is_refreshed_on_existing_trips() {
+    test(|_helper, builder| async move {
+        let state = builder
+            .vessels(1)
+            .clear_trip_distancing()
+            .trips(1)
+            .new_cycle()
+            .ais_vms_positions(3)
+            .build()
+            .await;
+
+        assert_eq!(state.trips.len(), 1);
+        assert!(state.trips[0].distance.is_some());
+    })
+    .await;
+}
