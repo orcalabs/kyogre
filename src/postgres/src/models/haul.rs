@@ -63,6 +63,7 @@ pub struct Haul {
     pub sea_floor_depth: Option<BigDecimal>,
     pub catches: String,
     pub whale_catches: String,
+    pub cache_version: i64,
 }
 
 #[derive(Deserialize)]
@@ -166,6 +167,7 @@ impl TryFrom<Haul> for kyogre_core::Haul {
                 .into_iter()
                 .map(kyogre_core::WhaleCatch::try_from)
                 .collect::<Result<_, _>>()?,
+            cache_version: v.cache_version,
         })
     }
 }

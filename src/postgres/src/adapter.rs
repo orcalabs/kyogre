@@ -1252,8 +1252,20 @@ impl MeilisearchSource for PostgresAdapter {
                 .change_context(QueryError)?,
         )
     }
+    async fn hauls(&self, haul_ids: &[HaulId]) -> Result<Vec<Haul>, QueryError> {
+        convert_vec(
+            self.hauls_by_ids_impl(haul_ids)
+                .await
+                .change_context(QueryError)?,
+        )
+    }
     async fn all_trip_versions(&self) -> Result<Vec<(TripId, i64)>, QueryError> {
         self.all_trip_cache_versions_impl()
+            .await
+            .change_context(QueryError)
+    }
+    async fn all_haul_versions(&self) -> Result<Vec<(HaulId, i64)>, QueryError> {
+        self.all_haul_cache_versions_impl()
             .await
             .change_context(QueryError)
     }

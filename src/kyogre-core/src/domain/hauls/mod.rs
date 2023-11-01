@@ -1,4 +1,4 @@
-use std::fmt;
+use std::fmt::{self, Display};
 
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::{Gear, GearGroup, VesselLengthGroup, WhaleGender};
@@ -17,6 +17,7 @@ pub struct HaulId(pub i64);
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[remain::sorted]
 pub struct Haul {
+    pub cache_version: i64,
     pub catch_location_start: Option<CatchLocationId>,
     pub catch_locations: Option<Vec<CatchLocationId>>,
     pub catches: Vec<HaulCatch>,
@@ -114,4 +115,15 @@ pub struct HaulDistributionOutput {
     pub catch_location: CatchLocationId,
     pub factor: f64,
     pub distributor_id: HaulDistributorId,
+}
+
+impl From<i64> for HaulId {
+    fn from(value: i64) -> Self {
+        HaulId(value)
+    }
+}
+impl Display for HaulId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(f)
+    }
 }

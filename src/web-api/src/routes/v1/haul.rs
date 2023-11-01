@@ -5,7 +5,7 @@ use crate::{
         self, deserialize_range_list, deserialize_string_list, months_to_date_ranges, DateTimeUtc,
         GearGroupId, Month, SpeciesGroupId,
     },
-    to_streaming_response, Cache, Database,
+    to_streaming_response, Cache, Database, Meilisearch,
 };
 use actix_web::{
     web::{self, Path},
@@ -84,12 +84,27 @@ pub struct HaulsMatrixParams {
         (status = 500, description = "an internal error occured", body = ErrorResponse),
     )
 )]
-#[tracing::instrument(skip(db))]
-pub async fn hauls<T: Database + 'static>(
+#[tracing::instrument(skip(db, meilisearch))]
+pub async fn hauls<T: Database + 'static, M: Meilisearch + 'static>(
     db: web::Data<T>,
+    meilisearch: web::Data<Option<M>>,
     params: web::Query<HaulsParams>,
 ) -> Result<HttpResponse, ApiError> {
-    let query = params.into_inner().into();
+    let query: HaulsQuery = params.into_inner().into();
+
+    if let Some(meilisearch) = meilisearch.as_ref() {
+        match meilisearch.hauls(query.clone()).await {
+            Ok(hauls) => {
+                let hauls = hauls.into_iter().map(Haul::from).collect::<Vec<_>>();
+                return Ok(Response::new(hauls).into());
+            }
+            Err(e) => event!(
+                Level::ERROR,
+                "failed to retrieve hauls from meilisearch: {:?}",
+                e
+            ),
+        }
+    }
 
     to_streaming_response! {
         db.hauls(query)

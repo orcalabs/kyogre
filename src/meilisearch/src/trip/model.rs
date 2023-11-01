@@ -1,13 +1,17 @@
-use std::time::Duration;
+use std::{collections::BTreeMap, time::Duration};
 
-use chrono::{DateTime, TimeZone, Utc};
+use async_trait::async_trait;
+use chrono::{DateTime, Utc};
 use error_stack::{report, Report, Result, ResultExt};
 use fiskeridir_rs::{DeliveryPointId, Gear, GearGroup, LandingId, SpeciesGroup, VesselLengthGroup};
-use kyogre_core::{DateRange, FiskeridirVesselId, TripAssemblerId, TripDetailed, TripId};
+use kyogre_core::{
+    DateRange, FiskeridirVesselId, MeilisearchSource, TripAssemblerId, TripDetailed, TripId,
+};
 use meilisearch_sdk::{Client, PaginationSetting, Settings};
 use serde::{Deserialize, Serialize};
+use tracing::{event, Level};
 
-use crate::error::MeilisearchError;
+use crate::{error::MeilisearchError, utc_from_millis, Id, IdVersion, Indexable};
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Trip {
@@ -74,25 +78,96 @@ impl Trip {
 
         Ok(())
     }
+}
 
-    pub const fn index_name() -> &'static str {
+#[derive(Deserialize)]
+pub(crate) struct TripIdVersion {
+    trip_id: TripId,
+    cache_version: i64,
+}
+
+impl IdVersion for TripIdVersion {
+    type Id = TripId;
+
+    fn id(&self) -> Self::Id {
+        self.trip_id
+    }
+    fn version(&self) -> i64 {
+        self.cache_version
+    }
+}
+
+impl Id for Trip {
+    type Id = TripId;
+
+    fn id(&self) -> Self::Id {
+        self.trip_id
+    }
+}
+
+#[async_trait]
+impl Indexable for Trip {
+    type Id = TripId;
+    type Item = Trip;
+    type IdVersion = TripIdVersion;
+
+    fn index_name() -> &'static str {
         "trips"
     }
-    pub const fn primary_key() -> &'static str {
+    fn primary_key() -> &'static str {
         "trip_id"
     }
+    async fn refresh<'a>(
+        client: &'a Client,
+        source: &(dyn MeilisearchSource),
+    ) -> Result<(), MeilisearchError> {
+        let cache_versions = Self::all_versions(client).await?;
 
+        let source_versions = source
+            .all_trip_versions()
+            .await
+            .change_context(MeilisearchError::Source)?
+            .into_iter()
+            .collect::<BTreeMap<_, _>>();
+
+        let (to_insert, to_delete) = Self::to_insert_and_delete(cache_versions, source_versions);
+
+        event!(Level::INFO, "trips to delete: {}", to_delete.len());
+        event!(Level::INFO, "trips to insert: {}", to_insert.len());
+
+        let mut tasks = Vec::new();
+
+        let index = client.index(Self::index_name());
+
+        if let Some(task) = Self::delete_items(&index, &to_delete).await? {
+            tasks.push(task);
+        }
+
+        for ids in to_insert.chunks(20_000) {
+            let trips = source
+                .trips(ids)
+                .await
+                .change_context(MeilisearchError::Source)?
+                .into_iter()
+                .map(Trip::try_from)
+                .collect::<Result<Vec<_>, _>>()?;
+
+            Self::add_items(&index, &mut tasks, &trips).await;
+        }
+
+        Self::wait_for_completion(client, tasks).await?;
+
+        Ok(())
+    }
+}
+
+impl Trip {
     pub fn try_to_trip_detailed(
         self,
         read_fishing_facility: bool,
     ) -> Result<TripDetailed, MeilisearchError> {
-        let secs = self.start / 1000;
-        let nsecs = (self.start % 1000) * 1_000_000;
-        let start = Utc.timestamp_opt(secs, nsecs as u32).unwrap();
-
-        let secs = self.end / 1000;
-        let nsecs = (self.end % 1000) * 1_000_000;
-        let end = Utc.timestamp_opt(secs, nsecs as u32).unwrap();
+        let start = utc_from_millis(self.start)?;
+        let end = utc_from_millis(self.end)?;
 
         let period_precision = match (self.period_precision_start, self.period_precision_end) {
             (Some(start), Some(end)) => {
