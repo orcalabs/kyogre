@@ -2,7 +2,7 @@ use std::fmt;
 
 use crate::*;
 use chrono::{DateTime, TimeZone, Utc};
-use fiskeridir_rs::{DeliveryPointId, LandingId, Quality};
+use fiskeridir_rs::{DeliveryPointId, Gear, GearGroup, LandingId, Quality};
 use num_derive::FromPrimitive;
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
@@ -55,7 +55,7 @@ pub struct TripProcessingUnit {
 pub struct CurrentTrip {
     pub departure: DateTime<Utc>,
     pub target_species_fiskeridir_id: Option<i32>,
-    pub hauls: Vec<Haul>,
+    pub hauls: Vec<TripHaul>,
     pub fishing_facilities: Vec<FishingFacility>,
 }
 
@@ -94,7 +94,7 @@ pub struct TripDetailed {
     pub most_recent_delivery_date: Option<DateTime<Utc>>,
     pub gear_ids: Vec<fiskeridir_rs::Gear>,
     pub delivery_point_ids: Vec<DeliveryPointId>,
-    pub hauls: Vec<Haul>,
+    pub hauls: Vec<TripHaul>,
     pub fishing_facilities: Vec<FishingFacility>,
     pub delivery: Delivery,
     pub start_port_id: Option<String>,
@@ -103,6 +103,26 @@ pub struct TripDetailed {
     pub vessel_events: Vec<VesselEvent>,
     pub landing_ids: Vec<LandingId>,
     pub distance: Option<f64>,
+}
+
+#[derive(Debug, Clone)]
+pub struct TripHaul {
+    pub haul_id: HaulId,
+    pub duration: i32,
+    pub ers_activity_id: String,
+    pub fiskeridir_vessel_id: Option<i64>,
+    pub gear_id: Gear,
+    pub gear_group_id: GearGroup,
+    pub haul_distance: Option<i32>,
+    pub start_latitude: f64,
+    pub start_longitude: f64,
+    pub start_timestamp: DateTime<Utc>,
+    pub stop_latitude: f64,
+    pub stop_longitude: f64,
+    pub stop_timestamp: DateTime<Utc>,
+    pub total_living_weight: i64,
+    pub catches: Vec<HaulCatch>,
+    pub whale_catches: Vec<WhaleCatch>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
