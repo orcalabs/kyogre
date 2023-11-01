@@ -1187,7 +1187,6 @@ FROM
 WHERE
     t.fiskeridir_vessel_id = $1
     AND LOWER(t.period) <= $2
-    OR t.period @> $2
             "#,
                 vessel_id.0,
                 boundary

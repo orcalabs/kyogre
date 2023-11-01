@@ -4,8 +4,122 @@ use chrono::{DateTime, Duration, TimeZone, Utc};
 use engine::*;
 use fiskeridir_rs::{DeliveryPointId, GearGroup, LandingId, SpeciesGroup, VesselLengthGroup};
 use kyogre_core::{Ordering, TripSorting, VesselEventType};
+use uuid::Uuid;
 use web_api::routes::utils::{self, GearGroupId, SpeciesGroupId};
 use web_api::routes::v1::trip::{Trip, TripsParameters};
+
+#[tokio::test]
+async fn test_trips_contains_hauls_added_after_trip_creation() {
+    test(|helper, builder| async move {
+        let state = builder
+            .vessels(1)
+            .trips(1)
+            .new_cycle()
+            .hauls(1)
+            .build()
+            .await;
+
+        let response = helper
+            .app
+            .get_trips(
+                TripsParameters {
+                    ..Default::default()
+                },
+                None,
+            )
+            .await;
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let trips: Vec<Trip> = response.json().await.unwrap();
+        assert_eq!(trips.len(), 1);
+        assert_eq!(trips[0].hauls.len(), 1);
+        assert_eq!(trips[0].hauls, state.hauls);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_trips_contains_refreshed_fishing_facilities() {
+    test(|helper, builder| async move {
+        let tool_id = Uuid::new_v4();
+        let state = builder
+            .vessels(1)
+            .trips(1)
+            .fishing_facilities(1)
+            .modify(|v| {
+                v.facility.tool_id = tool_id;
+                v.facility.imo = Some(1);
+            })
+            .new_cycle()
+            .fishing_facilities(1)
+            .modify(|v| {
+                v.facility.tool_id = tool_id;
+                v.facility.imo = Some(2);
+            })
+            .build()
+            .await;
+
+        let response = helper
+            .app
+            .get_trips(
+                TripsParameters {
+                    ..Default::default()
+                },
+                Some(helper.bw_helper.get_bw_token()),
+            )
+            .await;
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let trips: Vec<Trip> = response.json().await.unwrap();
+        assert_eq!(trips.len(), 1);
+        assert_eq!(trips[0].fishing_facilities.len(), 1);
+        assert_eq!(trips[0].fishing_facilities, state.fishing_facilities);
+        assert_eq!(trips[0].fishing_facilities[0].imo.unwrap(), 2);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_trips_contains_refreshed_hauls() {
+    test(|helper, builder| async move {
+        let state = builder
+            .vessels(1)
+            .trips(1)
+            .hauls(1)
+            .modify(|v| {
+                v.dca.message_info.message_id = 1;
+                v.dca.message_version = 1;
+                v.dca.catch.species.living_weight = Some(10);
+            })
+            .new_cycle()
+            .hauls(1)
+            .modify(|v| {
+                v.dca.message_info.message_id = 1;
+                v.dca.message_version = 2;
+                v.dca.catch.species.living_weight = Some(20);
+            })
+            .build()
+            .await;
+
+        let response = helper
+            .app
+            .get_trips(
+                TripsParameters {
+                    ..Default::default()
+                },
+                None,
+            )
+            .await;
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let trips: Vec<Trip> = response.json().await.unwrap();
+        assert_eq!(trips.len(), 1);
+        assert_eq!(trips[0].hauls.len(), 1);
+        assert_eq!(trips[0].hauls, state.hauls);
+        assert_eq!(trips[0].hauls[0].catches[0].living_weight, 20);
+    })
+    .await;
+}
 
 #[tokio::test]
 async fn test_trip_of_landing_returns_none_of_no_trip_is_connected_to_given_landing_id() {

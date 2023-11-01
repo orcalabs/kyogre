@@ -138,17 +138,6 @@ async fn run_state(shared_state: &SharedState) -> Result<TripsReport, TripPipeli
                             e
                         );
                     }
-                } else if let Err(e) = shared_state
-                    .trip_pipeline_inbound
-                    .refresh_detailed_trips(v.fiskeridir.id)
-                    .await
-                {
-                    event!(
-                        Level::ERROR,
-                        "failed to refresh detailed trips for vessel: {}, err: {:?}",
-                        v.fiskeridir.id.0,
-                        e
-                    );
                 }
 
                 if let Err(e) =
@@ -157,6 +146,19 @@ async fn run_state(shared_state: &SharedState) -> Result<TripsReport, TripPipeli
                     event!(
                         Level::ERROR,
                         "failed to process unprocessed trips  for vessel: {}, err: {:?}",
+                        v.fiskeridir.id.0,
+                        e
+                    );
+                }
+
+                if let Err(e) = shared_state
+                    .trip_pipeline_inbound
+                    .refresh_detailed_trips(v.fiskeridir.id)
+                    .await
+                {
+                    event!(
+                        Level::ERROR,
+                        "failed to refresh detailed trips for vessel: {}, err: {:?}",
                         v.fiskeridir.id.0,
                         e
                     );
