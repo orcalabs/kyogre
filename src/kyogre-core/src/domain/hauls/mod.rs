@@ -1,7 +1,9 @@
 use std::fmt::{self, Display};
 
 use chrono::{DateTime, Utc};
-use fiskeridir_rs::{Gear, GearGroup, VesselLengthGroup, WhaleGender};
+use fiskeridir_rs::{
+    Gear, GearGroup, SpeciesGroup, SpeciesMainGroup, VesselLengthGroup, WhaleGender,
+};
 use serde::{Deserialize, Serialize};
 use serde_repr::Deserialize_repr;
 
@@ -55,8 +57,8 @@ pub struct HaulCatch {
     pub living_weight: i32,
     pub species_fao_id: String,
     pub species_fiskeridir_id: i32,
-    pub species_group_id: i32,
-    pub species_main_group_id: Option<i32>,
+    pub species_group_id: SpeciesGroup,
+    pub species_main_group_id: Option<SpeciesMainGroup>,
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]

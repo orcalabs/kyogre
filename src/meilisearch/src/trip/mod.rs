@@ -1,7 +1,7 @@
 use error_stack::{Result, ResultExt};
 use kyogre_core::{Ordering, TripDetailed, TripSorting, TripsQuery};
 
-use crate::{error::MeilisearchError, join_comma, join_comma_fn, MeilisearchAdapter};
+use crate::{error::MeilisearchError, join_comma, join_comma_fn, to_nanos, MeilisearchAdapter};
 
 mod model;
 
@@ -28,10 +28,10 @@ impl MeilisearchAdapter {
             ));
         }
         if let Some(start_date) = query.start_date {
-            filter.push(format!("start >= {}", start_date.timestamp_millis()));
+            filter.push(format!("start >= {}", to_nanos(start_date)?));
         }
         if let Some(end_date) = query.end_date {
-            filter.push(format!("end <= {}", end_date.timestamp_millis()));
+            filter.push(format!("end <= {}", to_nanos(end_date)?));
         }
         if let Some(min_weight) = query.min_weight {
             filter.push(format!("total_living_weight >= {}", min_weight));

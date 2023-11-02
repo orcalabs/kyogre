@@ -1,17 +1,15 @@
 use std::{collections::BTreeMap, time::Duration};
 
 use async_trait::async_trait;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, TimeZone, Utc};
 use error_stack::{report, Report, Result, ResultExt};
 use fiskeridir_rs::{DeliveryPointId, Gear, GearGroup, LandingId, SpeciesGroup, VesselLengthGroup};
-use kyogre_core::{
-    DateRange, FiskeridirVesselId, MeilisearchSource, TripAssemblerId, TripDetailed, TripId,
-};
-use meilisearch_sdk::{Client, PaginationSetting, Settings};
+use kyogre_core::{DateRange, FiskeridirVesselId, TripAssemblerId, TripDetailed, TripId};
+use meilisearch_sdk::{Index, PaginationSetting, Settings};
 use serde::{Deserialize, Serialize};
 use tracing::{event, Level};
 
-use crate::{error::MeilisearchError, timestamp_from_millis, Id, IdVersion, Indexable};
+use crate::{error::MeilisearchError, to_nanos, Id, IdVersion, Indexable, MeilisearchAdapter};
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Trip {
@@ -44,10 +42,9 @@ pub struct Trip {
 }
 
 impl Trip {
-    pub async fn create_index(client: &Client) -> Result<(), MeilisearchError> {
+    pub async fn create_index(adapter: &MeilisearchAdapter) -> Result<(), MeilisearchError> {
         let settings = Settings::new()
             .with_filterable_attributes([
-                "trip_id",
                 "fiskeridir_vessel_id",
                 "fiskeridir_length_group_id",
                 "start",
@@ -62,12 +59,11 @@ impl Trip {
                 max_total_hits: usize::MAX,
             });
 
-        let task = client
-            .index(Self::index_name())
+        let task = Self::index(adapter)
             .set_settings(&settings)
             .await
             .change_context(MeilisearchError::Index)?
-            .wait_for_completion(client, None, Some(Duration::from_secs(60 * 10)))
+            .wait_for_completion(&adapter.client, None, Some(Duration::from_secs(60 * 10)))
             .await
             .change_context(MeilisearchError::Index)?;
 
@@ -111,19 +107,19 @@ impl Indexable for Trip {
     type Item = Trip;
     type IdVersion = TripIdVersion;
 
-    fn index_name() -> &'static str {
-        "trips"
+    fn index(adapter: &MeilisearchAdapter) -> Index {
+        adapter.trips_index()
     }
     fn primary_key() -> &'static str {
         "trip_id"
     }
-    async fn refresh<'a>(
-        client: &'a Client,
-        source: &(dyn MeilisearchSource),
-    ) -> Result<(), MeilisearchError> {
-        let cache_versions = Self::all_versions(client).await?;
+    async fn refresh(adapter: &MeilisearchAdapter) -> Result<(), MeilisearchError> {
+        let index = Self::index(adapter);
 
-        let source_versions = source
+        let cache_versions = Self::all_versions(&index).await?;
+
+        let source_versions = adapter
+            .source
             .all_trip_versions()
             .await
             .change_context(MeilisearchError::Source)?
@@ -137,14 +133,13 @@ impl Indexable for Trip {
 
         let mut tasks = Vec::new();
 
-        let index = client.index(Self::index_name());
-
         if let Some(task) = Self::delete_items(&index, &to_delete).await? {
             tasks.push(task);
         }
 
         for ids in to_insert.chunks(20_000) {
-            let trips = source
+            let trips = adapter
+                .source
                 .trips_by_ids(ids)
                 .await
                 .change_context(MeilisearchError::Source)?
@@ -155,7 +150,7 @@ impl Indexable for Trip {
             Self::add_items(&index, &mut tasks, &trips).await;
         }
 
-        Self::wait_for_completion(client, tasks).await?;
+        Self::wait_for_completion(&adapter.client, tasks).await?;
 
         Ok(())
     }
@@ -166,8 +161,8 @@ impl Trip {
         self,
         read_fishing_facility: bool,
     ) -> Result<TripDetailed, MeilisearchError> {
-        let start = timestamp_from_millis(self.start)?;
-        let end = timestamp_from_millis(self.end)?;
+        let start = Utc.timestamp_nanos(self.start);
+        let end = Utc.timestamp_nanos(self.end);
 
         let period_precision = match (self.period_precision_start, self.period_precision_end) {
             (Some(start), Some(end)) => {
@@ -224,8 +219,8 @@ impl TryFrom<TripDetailed> for Trip {
             trip_id: v.trip_id,
             fiskeridir_vessel_id: v.fiskeridir_vessel_id,
             fiskeridir_length_group_id: v.fiskeridir_length_group_id,
-            start: v.period.start().timestamp_millis(),
-            end: v.period.end().timestamp_millis(),
+            start: to_nanos(v.period.start())?,
+            end: to_nanos(v.period.end())?,
             period_precision_start: v.period_precision.as_ref().map(|p| p.start()),
             period_precision_end: v.period_precision.map(|p| p.end()),
             landing_coverage_start: v.landing_coverage.start(),

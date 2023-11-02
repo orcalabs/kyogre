@@ -12,7 +12,7 @@ use actix_web::{
     HttpResponse,
 };
 use chrono::{DateTime, Utc};
-use fiskeridir_rs::{Gear, GearGroup, VesselLengthGroup, WhaleGender};
+use fiskeridir_rs::{Gear, GearGroup, SpeciesGroup, VesselLengthGroup, WhaleGender};
 use futures::TryStreamExt;
 use kyogre_core::{
     ActiveHaulsFilter, CatchLocationId, FiskeridirVesselId, HaulId, HaulsMatrixQuery, HaulsQuery,
@@ -222,7 +222,8 @@ pub struct Haul {
 pub struct HaulCatch {
     pub living_weight: i32,
     pub species_fiskeridir_id: i32,
-    pub species_group_id: i32,
+    #[schema(value_type = i32)]
+    pub species_group_id: SpeciesGroup,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq, Eq)]

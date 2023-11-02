@@ -1,7 +1,9 @@
 use bigdecimal::BigDecimal;
 use chrono::{DateTime, Utc};
 use error_stack::{Report, ResultExt};
-use fiskeridir_rs::{Gear, GearGroup, SpeciesGroup, VesselLengthGroup, WhaleGender};
+use fiskeridir_rs::{
+    Gear, GearGroup, SpeciesGroup, SpeciesMainGroup, VesselLengthGroup, WhaleGender,
+};
 use kyogre_core::{CatchLocationId, HaulId};
 use serde::Deserialize;
 
@@ -71,8 +73,8 @@ pub struct HaulCatch {
     pub living_weight: i32,
     pub species_fao_id: String,
     pub species_fiskeridir_id: i32,
-    pub species_group_id: i32,
-    pub species_main_group_id: Option<i32>,
+    pub species_group_id: SpeciesGroup,
+    pub species_main_group_id: Option<SpeciesMainGroup>,
 }
 
 #[derive(Deserialize)]

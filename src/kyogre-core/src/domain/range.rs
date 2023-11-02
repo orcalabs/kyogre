@@ -12,6 +12,24 @@ pub struct Range<T> {
     pub end: Bound<T>,
 }
 
+impl<T> Range<T> {
+    pub fn try_map<S, E>(self, f: impl Fn(T) -> Result<S, E>) -> Result<Range<S>, E> {
+        // TODO: Use `Bound::map` when https://github.com/rust-lang/rust/issues/86026 resolves.
+        let map = |v| {
+            Ok(match v {
+                Bound::Included(v) => Bound::Included(f(v)?),
+                Bound::Excluded(v) => Bound::Excluded(f(v)?),
+                Bound::Unbounded => Bound::Unbounded,
+            })
+        };
+
+        Ok(Range {
+            start: map(self.start)?,
+            end: map(self.end)?,
+        })
+    }
+}
+
 #[derive(Debug)]
 pub enum RangeError {
     InvalidLength,

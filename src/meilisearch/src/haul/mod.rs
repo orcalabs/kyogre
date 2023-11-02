@@ -2,7 +2,8 @@ use error_stack::{Result, ResultExt};
 use kyogre_core::{HaulsQuery, HaulsSorting, Ordering};
 
 use crate::{
-    create_ranges_filter, error::MeilisearchError, join_comma, join_comma_fn, MeilisearchAdapter,
+    create_ranges_filter, error::MeilisearchError, join_comma, join_comma_fn, to_nanos,
+    MeilisearchAdapter,
 };
 
 mod model;
@@ -23,6 +24,11 @@ impl MeilisearchAdapter {
             ));
         }
         if let Some(ranges) = query.ranges {
+            let ranges = ranges
+                .into_iter()
+                .map(|r| r.try_map(to_nanos))
+                .collect::<Result<Vec<_>, _>>()?;
+
             filter.push(create_ranges_filter(
                 ranges,
                 "stop_timestamp",
@@ -37,20 +43,20 @@ impl MeilisearchAdapter {
             ));
         }
         if let Some(value) = query.min_wind_speed {
-            filter.push(format!("wind_speed >= {}", value));
+            filter.push(format!("wind_speed_10m >= {}", value));
         }
         if let Some(value) = query.max_wind_speed {
-            filter.push(format!("wind_speed <= {}", value));
+            filter.push(format!("wind_speed_10m <= {}", value));
         }
         if let Some(value) = query.min_air_temperature {
-            filter.push(format!("air_temperature >= {}", value));
+            filter.push(format!("air_temperature_2m >= {}", value));
         }
         if let Some(value) = query.max_air_temperature {
-            filter.push(format!("air_temperature <= {}", value));
+            filter.push(format!("air_temperature_2m <= {}", value));
         }
         if let Some(ids) = query.gear_group_ids {
             filter.push(format!(
-                "gear_group_ids IN [{}]",
+                "gear_group_id IN [{}]",
                 join_comma_fn(ids, |g| g as i32)
             ));
         }
@@ -98,9 +104,8 @@ impl MeilisearchAdapter {
         let hauls = result
             .hits
             .into_iter()
-            .map(|h| h.result.try_into())
-            .collect::<Result<_, _>>()
-            .change_context(MeilisearchError::Query)?;
+            .map(|h| h.result.into())
+            .collect::<Vec<_>>();
 
         Ok(hauls)
     }

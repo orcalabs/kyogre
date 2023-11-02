@@ -113,6 +113,7 @@ pub struct Landing {
     pub total_product_weight: BigDecimal,
     pub total_gross_weight: BigDecimal,
     pub catches: String,
+    pub version: i32,
 }
 
 impl NewLanding {
@@ -240,6 +241,7 @@ impl TryFrom<Landing> for kyogre_core::Landing {
                 .change_context(PostgresError::DataConversion)?,
             catches: serde_json::from_str(&v.catches)
                 .change_context(PostgresError::DataConversion)?,
+            version: v.version,
         })
     }
 }

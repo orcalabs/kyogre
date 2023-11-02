@@ -1,16 +1,18 @@
 use super::{barentswatch_helper::BarentswatchHelper, test_client::ApiClient};
 use dockertest::{DockerTest, Source};
-use duckdb_rs::{adapter::CacheMode, CacheStorage};
+use duckdb_rs::{adapter, CacheStorage};
 use engine::*;
 use futures::Future;
 use kyogre_core::*;
+use meilisearch::MeilisearchAdapter;
 use orca_core::{
-    compositions::postgres_composition, Environment, LogLevel, PsqlLogStatements, PsqlSettings,
+    compositions::{meilisearch_composition, postgres_composition},
+    Environment, LogLevel, PsqlLogStatements, PsqlSettings,
 };
 use postgres::{PostgresAdapter, TestDb};
 use rand::random;
 use std::ops::AddAssign;
-use std::sync::Once;
+use std::sync::{Arc, Once};
 use std::{ops::SubAssign, panic};
 use strum::IntoEnumIterator;
 use tokio::sync::OnceCell;
@@ -37,6 +39,7 @@ pub struct TestHelper {
     pub bw_helper: &'static BarentswatchHelper,
     duck_db: Option<duckdb_rs::Client>,
     db_settings: PsqlSettings,
+    meilisearch: Option<MeilisearchAdapter>,
 }
 
 impl TestHelper {
@@ -58,6 +61,7 @@ impl TestHelper {
         app: App,
         bw_helper: &'static BarentswatchHelper,
         duck_db: Option<duckdb_rs::Client>,
+        meilisearch: Option<MeilisearchAdapter>,
     ) -> TestHelper {
         let address = format!("http://127.0.0.1:{}/v1.0", app.port());
 
@@ -69,11 +73,18 @@ impl TestHelper {
             bw_helper,
             duck_db,
             db_settings,
+            meilisearch,
+        }
+    }
+    pub async fn refresh_matrix_cache(&self) {
+        if let Some(duck_db) = self.duck_db.as_ref() {
+            duck_db.refresh().await.unwrap();
         }
     }
     pub async fn refresh_cache(&self) {
-        if let Some(duck_db) = self.duck_db.as_ref() {
-            duck_db.refresh().await.unwrap();
+        if let Some(meilisearch) = self.meilisearch.as_ref() {
+            meilisearch.create_indexes().await.unwrap();
+            meilisearch.refresh().await.unwrap();
         }
     }
 }
@@ -83,7 +94,21 @@ where
     T: FnOnce(TestHelper, TestStateBuilder) -> Fut + panic::UnwindSafe + Send + Sync + 'static,
     Fut: Future<Output = ()> + Send + 'static,
 {
-    test_impl(test, false).await;
+    test_impl(test, CacheMode::NoCache).await;
+}
+
+pub async fn test_with_matrix_cache<T, Fut>(test: T)
+where
+    T: FnOnce(TestHelper, TestStateBuilder) -> Fut
+        + panic::UnwindSafe
+        + Send
+        + Sync
+        + Clone
+        + 'static,
+    Fut: Future<Output = ()> + Send + 'static,
+{
+    test_impl(test.clone(), CacheMode::NoCache).await;
+    test_impl(test, CacheMode::MatrixCache).await;
 }
 
 pub async fn test_with_cache<T, Fut>(test: T)
@@ -96,11 +121,18 @@ where
         + 'static,
     Fut: Future<Output = ()> + Send + 'static,
 {
-    test_impl(test.clone(), false).await;
-    test_impl(test, true).await;
+    test_impl(test.clone(), CacheMode::NoCache).await;
+    test_impl(test, CacheMode::Meilisearch).await;
 }
 
-async fn test_impl<T, Fut>(test: T, run_cache_test: bool)
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum CacheMode {
+    NoCache,
+    MatrixCache,
+    Meilisearch,
+}
+
+async fn test_impl<T, Fut>(test: T, cache_mode: CacheMode)
 where
     T: FnOnce(TestHelper, TestStateBuilder) -> Fut + panic::UnwindSafe + Send + Sync + 'static,
     Fut: Future<Output = ()> + Send + 'static,
@@ -136,8 +168,16 @@ where
     .set_log_options(None);
 
     postgres.modify_port_map(5432, 5400);
-
     docker_test.provide_container(postgres);
+
+    if cache_mode == CacheMode::Meilisearch {
+        let mut meilisearch =
+            meilisearch_composition("test123", "meilisearch", "getmeili/meilisearch", "v1.4.2")
+                .set_log_options(None);
+        meilisearch.modify_port_map(7700, 7500);
+        docker_test.provide_container(meilisearch);
+    }
+
     std::env::set_var("APP_ENVIRONMENT", "TEST");
 
     docker_test
@@ -172,8 +212,9 @@ where
             let bw_address = bw_helper.address();
 
             db_settings.db_name = Some(db_name.clone());
+            let adapter = PostgresAdapter::new(&db_settings).await.unwrap();
 
-            let (duck_db_api, duck_db_client) = if run_cache_test {
+            let (duck_db_api, duck_db_client) = if cache_mode == CacheMode::MatrixCache {
                 let duckdb_app = duckdb_rs::App::build(&duckdb_rs::Settings {
                     log_level: LogLevel::Debug,
                     telemetry: None,
@@ -182,7 +223,7 @@ where
                     honeycomb: None,
                     duck_db: duckdb_rs::adapter::DuckdbSettings {
                         max_connections: 1,
-                        cache_mode: CacheMode::ReturnError,
+                        cache_mode: adapter::CacheMode::ReturnError,
                         storage: CacheStorage::Memory,
                         refresh_interval: std::time::Duration::from_secs(100000),
                     },
@@ -204,6 +245,19 @@ where
                 (None, None)
             };
 
+            let (meilisearch, m_settings) = if cache_mode == CacheMode::Meilisearch {
+                let handle = ops.handle("meilisearch");
+                let settings = meilisearch::Settings {
+                    host: format!("http://{}:7700", handle.ip()),
+                    api_key: "test123".to_string(),
+                    index_suffix: Some(db_name.clone()),
+                };
+                let meilisearch = MeilisearchAdapter::new(&settings, Arc::new(adapter.clone()));
+                (Some(meilisearch), Some(settings))
+            } else {
+                (None, None)
+            };
+
             let api_settings = Settings {
                 log_level: LogLevel::Debug,
                 telemetry: None,
@@ -213,7 +267,7 @@ where
                     num_workers: Some(1),
                 },
                 postgres: db_settings.clone(),
-                meilisearch: None,
+                meilisearch: m_settings,
                 environment: Environment::Test,
                 honeycomb: None,
                 bw_jwks_url: Some(format!("{bw_address}/jwks")),
@@ -224,19 +278,17 @@ where
 
             let _ = BW_PROFILES_URL.set(api_settings.bw_profiles_url.clone().unwrap());
 
-            let adapter = PostgresAdapter::new(&db_settings).await.unwrap();
             let app = TestHelper::spawn_app(
                 adapter.clone(),
                 db_settings,
                 App::build(&api_settings).await,
                 bw_helper,
                 duck_db_client,
+                meilisearch.clone(),
             )
             .await;
 
-            if run_cache_test {
-                dbg!("cache_test");
-            }
+            dbg!(cache_mode);
 
             let builder = app.builder().await;
             test(app, builder).await;
@@ -245,6 +297,9 @@ where
 
             if !keep_db {
                 test_db.drop_db(&db_name).await;
+            }
+            if cache_mode == CacheMode::Meilisearch {
+                meilisearch.unwrap().cleanup().await.unwrap();
             }
         })
         .await;

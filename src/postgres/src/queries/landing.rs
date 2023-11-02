@@ -67,7 +67,8 @@ SELECT
             'species_group_id',
             le.species_group_id
         )
-    )::TEXT AS "catches!"
+    )::TEXT AS "catches!",
+    "version"
 FROM
     landings l
     INNER JOIN landing_entries le ON l.landing_id = le.landing_id
@@ -176,7 +177,8 @@ SELECT
             'species_group_id',
             le.species_group_id
         )
-    )::TEXT AS "catches!"
+    )::TEXT AS "catches!",
+    "version"
 FROM
     landings l
     INNER JOIN landing_entries le ON l.landing_id = le.landing_id

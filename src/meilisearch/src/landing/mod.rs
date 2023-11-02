@@ -2,7 +2,8 @@ use error_stack::{Result, ResultExt};
 use kyogre_core::{LandingsQuery, LandingsSorting, Ordering};
 
 use crate::{
-    create_ranges_filter, error::MeilisearchError, join_comma, join_comma_fn, MeilisearchAdapter,
+    create_ranges_filter, error::MeilisearchError, join_comma, join_comma_fn, to_nanos,
+    MeilisearchAdapter,
 };
 
 mod model;
@@ -30,15 +31,20 @@ impl MeilisearchAdapter {
             ));
         }
         if let Some(ranges) = query.ranges {
+            let ranges = ranges
+                .into_iter()
+                .map(|r| r.try_map(to_nanos))
+                .collect::<Result<Vec<_>, _>>()?;
+
             filter.push(create_ranges_filter(
                 ranges,
                 "landing_timestamp",
-                "vessel_length",
+                "landing_timestamp",
             ));
         }
         if let Some(ids) = query.gear_group_ids {
             filter.push(format!(
-                "gear_group_ids IN [{}]",
+                "gear_group_id IN [{}]",
                 join_comma_fn(ids, |g| g as i32)
             ));
         }
@@ -49,7 +55,7 @@ impl MeilisearchAdapter {
             ));
         }
         if let Some(locs) = query.catch_locations {
-            filter.push(format!("catch_locations IN [{}]", join_comma(locs)));
+            filter.push(format!("catch_location IN [{}]", join_comma(locs)));
         }
 
         let filter = filter.iter().map(|f| f.as_str()).collect();
@@ -59,7 +65,7 @@ impl MeilisearchAdapter {
                 "{}:{}",
                 match sorting {
                     LandingsSorting::LandingTimestamp => "landing_timestamp",
-                    LandingsSorting::LivingWeight => "living_weight",
+                    LandingsSorting::LivingWeight => "total_living_weight",
                 },
                 match query.ordering.unwrap_or_default() {
                     Ordering::Asc => "asc",
@@ -85,9 +91,8 @@ impl MeilisearchAdapter {
         let landings = result
             .hits
             .into_iter()
-            .map(|h| h.result.try_into())
-            .collect::<Result<_, _>>()
-            .change_context(MeilisearchError::Query)?;
+            .map(|h| h.result.into())
+            .collect::<Vec<_>>();
 
         Ok(landings)
     }

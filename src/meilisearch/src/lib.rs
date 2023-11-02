@@ -10,13 +10,13 @@ use std::{
 };
 
 use async_trait::async_trait;
-use chrono::{DateTime, TimeZone, Utc};
+use chrono::{DateTime, Utc};
 use error::MeilisearchError;
 use error_stack::{report, Result, ResultExt};
 use futures::{future::BoxFuture, FutureExt};
 use kyogre_core::{
-    HaulsQuery, LandingsQuery, MeilisearchOutbound, MeilisearchSource, QueryError, Range,
-    TripDetailed, TripsQuery,
+    running_in_test, HaulsQuery, LandingsQuery, MeilisearchOutbound, MeilisearchSource, QueryError,
+    Range, TripDetailed, TripsQuery,
 };
 use meilisearch_sdk::{Client, Index, Selectors, TaskInfo};
 
@@ -37,6 +37,7 @@ use trip::*;
 pub struct MeilisearchAdapter {
     pub client: Client,
     pub source: Arc<dyn MeilisearchSource>,
+    pub index_suffix: String,
 }
 
 impl MeilisearchAdapter {
@@ -44,31 +45,42 @@ impl MeilisearchAdapter {
         Self {
             client: Client::new(&settings.host, Some(&settings.api_key)),
             source,
+            index_suffix: settings.index_suffix.clone().unwrap_or_default(),
         }
     }
 
     pub(crate) fn trips_index(&self) -> Index {
-        self.client.index(Trip::index_name())
+        let index_name = format!("trips{}", self.index_suffix);
+        self.client.index(index_name)
     }
     pub(crate) fn hauls_index(&self) -> Index {
-        self.client.index(Haul::index_name())
+        let index_name = format!("hauls{}", self.index_suffix);
+        self.client.index(index_name)
     }
     pub(crate) fn landings_index(&self) -> Index {
-        self.client.index(Landing::index_name())
+        let index_name = format!("landings{}", self.index_suffix);
+        self.client.index(index_name)
     }
 
     pub async fn create_indexes(&self) -> Result<(), MeilisearchError> {
-        Trip::create_index(&self.client).await?;
-        Haul::create_index(&self.client).await?;
-        Landing::create_index(&self.client).await?;
+        Trip::create_index(self).await?;
+        Haul::create_index(self).await?;
+        Landing::create_index(self).await?;
+        Ok(())
+    }
+
+    pub async fn cleanup(&self) -> Result<(), MeilisearchError> {
+        Trip::cleanup(self).await?;
+        Haul::cleanup(self).await?;
+        Landing::cleanup(self).await?;
         Ok(())
     }
 
     #[instrument(name = "refresh_meilisearch", skip(self))]
     pub async fn refresh(&self) -> Result<(), MeilisearchError> {
-        Trip::refresh(&self.client, self.source.as_ref()).await?;
-        Haul::refresh(&self.client, self.source.as_ref()).await?;
-        Landing::refresh(&self.client, self.source.as_ref()).await?;
+        Trip::refresh(self).await?;
+        Haul::refresh(self).await?;
+        Landing::refresh(self).await?;
         Ok(())
     }
 
@@ -126,18 +138,14 @@ pub(crate) trait Indexable {
     type Item: Id + Serialize + Debug + Sync;
     type IdVersion: IdVersion<Id = Self::Id> + DeserializeOwned + 'static;
 
-    fn index_name() -> &'static str;
+    fn index(adapter: &MeilisearchAdapter) -> Index;
     fn primary_key() -> &'static str;
-    async fn refresh(
-        client: &Client,
-        source: &(dyn MeilisearchSource),
-    ) -> Result<(), MeilisearchError>;
+    async fn refresh(adapter: &MeilisearchAdapter) -> Result<(), MeilisearchError>;
 
-    async fn all_versions(client: &Client) -> Result<BTreeMap<Self::Id, i64>, MeilisearchError> {
+    async fn all_versions(index: &Index) -> Result<BTreeMap<Self::Id, i64>, MeilisearchError> {
         let primary_key = Self::primary_key();
 
-        let result = client
-            .index(Self::index_name())
+        let result = index
             .search()
             .with_attributes_to_retrieve(Selectors::Some(&[primary_key, "cache_version"]))
             .with_limit(usize::MAX)
@@ -233,11 +241,17 @@ pub(crate) trait Indexable {
         client: &Client,
         tasks: Vec<TaskInfo>,
     ) -> Result<(), MeilisearchError> {
+        let interval = if running_in_test() {
+            None
+        } else {
+            Some(Duration::from_secs(30))
+        };
+
         for task in tasks {
             let task = task
                 .wait_for_completion(
                     client,
-                    Some(Duration::from_secs(30)),
+                    interval,
                     // We insert a lot of items, so use a decently large timeout.
                     Some(Duration::from_secs(60 * 60)),
                 )
@@ -251,24 +265,32 @@ pub(crate) trait Indexable {
 
         Ok(())
     }
-}
 
-pub(crate) fn timestamp_from_millis(millis: i64) -> Result<DateTime<Utc>, MeilisearchError> {
-    use chrono::LocalResult;
+    async fn cleanup(adapter: &MeilisearchAdapter) -> Result<(), MeilisearchError> {
+        let task = Self::index(adapter)
+            .delete()
+            .await
+            .change_context(MeilisearchError::Delete)?
+            .wait_for_completion(&adapter.client, None, Some(Duration::from_secs(60)))
+            .await
+            .change_context(MeilisearchError::Delete)?;
 
-    match Utc.timestamp_millis_opt(millis) {
-        LocalResult::None => Err(report!(MeilisearchError::DataConversion).attach_printable(
-            format!("tried to parse invalid timestamp from millis {millis}"),
-        )),
-        LocalResult::Single(v) => Ok(v),
-        LocalResult::Ambiguous(a, b) => {
-            event!(
-                Level::WARN,
-                "timestamp from millis {millis} is ambiguous: {a} / {b}"
-            );
-            Ok(a)
+        if task.is_success() {
+            Ok(())
+        } else {
+            Err(report!(MeilisearchError::Delete)
+                .attach_printable(format!("failed to delete index: {task:?}")))
         }
     }
+}
+
+pub(crate) fn to_nanos(timestamp: DateTime<Utc>) -> Result<i64, MeilisearchError> {
+    timestamp.timestamp_nanos_opt().ok_or_else(|| {
+        report!(MeilisearchError::DataConversion).attach_printable(format!(
+            "{} could not be converted to timestamp nanos",
+            timestamp
+        ))
+    })
 }
 
 pub(crate) fn join_comma<T: ToString>(values: Vec<T>) -> String {
@@ -286,8 +308,9 @@ pub(crate) fn join_comma_fn<T, S: ToString, F: Fn(T) -> S>(values: Vec<T>, closu
         .join(",")
 }
 
-pub(crate) fn create_ranges_filter<T, S>(ranges: Vec<Range<T>>, attr1: S, attr2: S) -> String
+pub(crate) fn create_ranges_filter<I, T, S>(ranges: I, attr1: S, attr2: S) -> String
 where
+    I: IntoIterator<Item = Range<T>>,
     T: Display,
     S: Display,
 {

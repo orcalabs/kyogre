@@ -1,4 +1,4 @@
-use super::helper::test;
+use super::helper::{test, test_with_cache};
 use actix_web::http::StatusCode;
 use chrono::{Duration, TimeZone, Utc};
 use engine::*;
@@ -8,7 +8,7 @@ use web_api::routes::v1::trip::{Trip, TripsParameters};
 
 #[tokio::test]
 async fn test_trips_does_not_contain_duplicated_tra_events() {
-    test(|helper, builder| async move {
+    test_with_cache(|helper, builder| async move {
         let start = Utc.timestamp_opt(100000, 0).unwrap();
         let end = start + Duration::hours(1);
 
@@ -33,6 +33,8 @@ async fn test_trips_does_not_contain_duplicated_tra_events() {
 
         helper.db.db.add_ers_tra(vec![tra]).await.unwrap();
 
+        helper.refresh_cache().await;
+
         let response = helper.app.get_trips(TripsParameters::default(), None).await;
         assert_eq!(response.status(), StatusCode::OK);
 
@@ -47,7 +49,7 @@ async fn test_trips_does_not_contain_duplicated_tra_events() {
 
 #[tokio::test]
 async fn test_trips_does_not_contain_duplicated_dca_events() {
-    test(|helper, builder| async move {
+    test_with_cache(|helper, builder| async move {
         let start = Utc.timestamp_opt(100000, 0).unwrap();
         let end = start + Duration::hours(1);
 
@@ -81,6 +83,8 @@ async fn test_trips_does_not_contain_duplicated_dca_events() {
             .await
             .unwrap();
 
+        helper.refresh_cache().await;
+
         let response = helper.app.get_trips(TripsParameters::default(), None).await;
         assert_eq!(response.status(), StatusCode::OK);
 
@@ -96,7 +100,7 @@ async fn test_trips_does_not_contain_duplicated_dca_events() {
 
 #[tokio::test]
 async fn test_vessel_events_connect_to_existing_trip() {
-    test(|helper, builder| async move {
+    test_with_cache(|helper, builder| async move {
         let state = builder
             .vessels(1)
             .trips(1)
@@ -114,6 +118,8 @@ async fn test_vessel_events_connect_to_existing_trip() {
             .landings(1)
             .build()
             .await;
+
+        helper.refresh_cache().await;
 
         let response = helper.app.get_trips(TripsParameters::default(), None).await;
         assert_eq!(response.status(), StatusCode::OK);
