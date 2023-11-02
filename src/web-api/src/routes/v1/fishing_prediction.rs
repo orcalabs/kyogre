@@ -93,7 +93,7 @@ pub async fn all_fishing_spot_predictions<T: Database + 'static>(
     path = "/fishing_weight_predictions/{species_group_id}",
     params(FishingWeightPredictionParams),
     responses(
-        (status = 200, description = "fishing weight predictions for the requested filter", body = FishingWeightPrediction),
+        (status = 200, description = "fishing weight predictions for the requested filter", body = [FishingWeightPrediction]),
         (status = 500, description = "an internal error occured", body = ErrorResponse),
     )
 )]
