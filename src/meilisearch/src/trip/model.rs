@@ -44,6 +44,7 @@ pub struct Trip {
 impl Trip {
     pub async fn create_index(adapter: &MeilisearchAdapter) -> Result<(), MeilisearchError> {
         let settings = Settings::new()
+            .with_searchable_attributes(Vec::<String>::new())
             .with_filterable_attributes([
                 "fiskeridir_vessel_id",
                 "fiskeridir_length_group_id",

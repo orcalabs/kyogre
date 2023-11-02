@@ -35,6 +35,7 @@ pub struct Landing {
 impl Landing {
     pub async fn create_index(adapter: &MeilisearchAdapter) -> Result<(), MeilisearchError> {
         let settings = Settings::new()
+            .with_searchable_attributes(Vec::<String>::new())
             .with_filterable_attributes([
                 "landing_timestamp",
                 "fiskeridir_vessel_id",
