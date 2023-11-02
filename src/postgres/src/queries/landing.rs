@@ -22,7 +22,7 @@ use crate::{
     PostgresAdapter,
 };
 use error_stack::{report, Report, Result, ResultExt};
-use fiskeridir_rs::VesselLengthGroup;
+use fiskeridir_rs::{Gear, GearGroup, LandingId, VesselLengthGroup};
 
 use super::bound_float_to_decimal;
 
@@ -43,8 +43,8 @@ SELECT
     l.landing_timestamp,
     l.catch_area_id,
     l.catch_main_area_id,
-    l.gear_id,
-    l.gear_group_id,
+    l.gear_id AS "gear_id!: Gear",
+    l.gear_group_id AS "gear_group_id!: GearGroup",
     COALESCE(MIN(d.new_delivery_point_id), l.delivery_point_id) AS delivery_point_id,
     l.fiskeridir_vessel_id,
     l.vessel_call_sign,
@@ -136,6 +136,86 @@ ORDER BY
         .map_err(|e| report!(e).change_context(PostgresError::Query));
 
         Ok(stream)
+    }
+
+    pub(crate) async fn landings_by_ids_impl(
+        &self,
+        landing_ids: &[LandingId],
+    ) -> Result<Vec<Landing>, PostgresError> {
+        let ids = landing_ids.iter().map(|i| i.as_ref()).collect::<Vec<_>>();
+
+        sqlx::query_as!(
+            Landing,
+            r#"
+SELECT
+    l.landing_id,
+    l.landing_timestamp,
+    l.catch_area_id,
+    l.catch_main_area_id,
+    l.gear_id AS "gear_id!: Gear",
+    l.gear_group_id AS "gear_group_id!: GearGroup",
+    COALESCE(MIN(d.new_delivery_point_id), l.delivery_point_id) AS delivery_point_id,
+    l.fiskeridir_vessel_id,
+    l.vessel_call_sign,
+    l.vessel_name,
+    l.vessel_length,
+    l.vessel_length_group_id AS "vessel_length_group!: VesselLengthGroup",
+    COALESCE(SUM(le.gross_weight), 0) AS "total_gross_weight!",
+    COALESCE(SUM(le.living_weight), 0) AS "total_living_weight!",
+    COALESCE(SUM(le.product_weight), 0) AS "total_product_weight!",
+    JSONB_AGG(
+        JSONB_BUILD_OBJECT(
+            'living_weight',
+            COALESCE(le.living_weight, 0),
+            'gross_weight',
+            COALESCE(le.gross_weight, 0),
+            'product_weight',
+            le.product_weight,
+            'species_fiskeridir_id',
+            le.species_fiskeridir_id,
+            'species_group_id',
+            le.species_group_id
+        )
+    )::TEXT AS "catches!"
+FROM
+    landings l
+    INNER JOIN landing_entries le ON l.landing_id = le.landing_id
+    LEFT JOIN deprecated_delivery_points d ON l.delivery_point_id = d.old_delivery_point_id
+WHERE
+    l.landing_id = ANY ($1)
+GROUP BY
+    l.landing_id
+            "#,
+            ids.as_slice() as _,
+        )
+        .fetch_all(&self.pool)
+        .await
+        .change_context(PostgresError::Query)
+    }
+
+    pub(crate) async fn all_landing_versions_impl(
+        &self,
+    ) -> Result<Vec<(LandingId, i64)>, PostgresError> {
+        sqlx::query!(
+            r#"
+SELECT
+    landing_id,
+    "version"
+FROM
+    landings
+            "#
+        )
+        .fetch_all(&self.pool)
+        .await
+        .change_context(PostgresError::Query)?
+        .into_iter()
+        .map(|r| {
+            Ok((
+                LandingId::try_from(r.landing_id).change_context(PostgresError::DataConversion)?,
+                r.version as i64,
+            ))
+        })
+        .collect::<Result<_, _>>()
     }
 
     pub(crate) async fn sum_landing_weight_impl(

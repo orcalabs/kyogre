@@ -140,7 +140,7 @@ where
             )
             .route(
                 "/landings",
-                web::get().to(routes::v1::landing::landings::<T>),
+                web::get().to(routes::v1::landing::landings::<T, M>),
             )
             .route(
                 "/fishing_spot_predictions/{model_id}/{species_group_id}",

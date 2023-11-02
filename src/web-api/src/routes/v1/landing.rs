@@ -5,14 +5,14 @@ use crate::{
         self, deserialize_range_list, deserialize_string_list, months_to_date_ranges, DateTimeUtc,
         GearGroupId, Month, SpeciesGroupId,
     },
-    to_streaming_response, Cache, Database,
+    to_streaming_response, Cache, Database, Meilisearch,
 };
 use actix_web::{
     web::{self, Path},
     HttpResponse,
 };
 use chrono::{DateTime, Utc};
-use fiskeridir_rs::{DeliveryPointId, VesselLengthGroup};
+use fiskeridir_rs::{DeliveryPointId, Gear, GearGroup, SpeciesGroup, VesselLengthGroup};
 use futures::TryStreamExt;
 use kyogre_core::{
     ActiveLandingFilter, CatchLocationId, FiskeridirVesselId, LandingMatrixQuery, LandingsQuery,
@@ -80,12 +80,27 @@ pub struct LandingMatrixParams {
         (status = 500, description = "an internal error occured", body = ErrorResponse),
     )
 )]
-#[tracing::instrument(skip(db))]
-pub async fn landings<T: Database + 'static>(
+#[tracing::instrument(skip(db, meilisearch))]
+pub async fn landings<T: Database + 'static, M: Meilisearch + 'static>(
     db: web::Data<T>,
+    meilisearch: web::Data<Option<M>>,
     params: web::Query<LandingsParams>,
 ) -> Result<HttpResponse, ApiError> {
-    let query = params.into_inner().into();
+    let query: LandingsQuery = params.into_inner().into();
+
+    if let Some(meilisearch) = meilisearch.as_ref() {
+        match meilisearch.landings(query.clone()).await {
+            Ok(landings) => {
+                let landings = landings.into_iter().map(Landing::from).collect::<Vec<_>>();
+                return Ok(Response::new(landings).into());
+            }
+            Err(e) => event!(
+                Level::ERROR,
+                "failed to retrieve landings from meilisearch: {:?}",
+                e
+            ),
+        }
+    }
 
     to_streaming_response! {
         db.landings(query)
@@ -161,8 +176,10 @@ pub struct Landing {
     pub landing_timestamp: DateTime<Utc>,
     #[schema(value_type = Option<String>, example = "05-24")]
     pub catch_location: Option<CatchLocationId>,
-    pub gear_id: i32,
-    pub gear_group_id: i32,
+    #[schema(value_type = i32)]
+    pub gear_id: Gear,
+    #[schema(value_type = i32)]
+    pub gear_group_id: GearGroup,
     #[schema(value_type = Option<String>)]
     pub delivery_point_id: Option<DeliveryPointId>,
     #[schema(value_type = Option<i64>)]
@@ -185,7 +202,8 @@ pub struct LandingCatch {
     pub gross_weight: f64,
     pub product_weight: f64,
     pub species_fiskeridir_id: i32,
-    pub species_group_id: i32,
+    #[schema(value_type = i32)]
+    pub species_group_id: SpeciesGroup,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq)]

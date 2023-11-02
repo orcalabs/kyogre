@@ -11,7 +11,7 @@ use meilisearch_sdk::{Client, PaginationSetting, Settings};
 use serde::{Deserialize, Serialize};
 use tracing::{event, Level};
 
-use crate::{error::MeilisearchError, utc_from_millis, Id, IdVersion, Indexable};
+use crate::{error::MeilisearchError, timestamp_from_millis, Id, IdVersion, Indexable};
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Trip {
@@ -145,7 +145,7 @@ impl Indexable for Trip {
 
         for ids in to_insert.chunks(20_000) {
             let trips = source
-                .trips(ids)
+                .trips_by_ids(ids)
                 .await
                 .change_context(MeilisearchError::Source)?
                 .into_iter()
@@ -166,8 +166,8 @@ impl Trip {
         self,
         read_fishing_facility: bool,
     ) -> Result<TripDetailed, MeilisearchError> {
-        let start = utc_from_millis(self.start)?;
-        let end = utc_from_millis(self.end)?;
+        let start = timestamp_from_millis(self.start)?;
+        let end = timestamp_from_millis(self.end)?;
 
         let period_precision = match (self.period_precision_start, self.period_precision_end) {
             (Some(start), Some(end)) => {
