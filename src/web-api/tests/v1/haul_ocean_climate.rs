@@ -1,12 +1,14 @@
-use super::helper::test;
+use super::helper::test_with_cache;
 use actix_web::http::StatusCode;
 use engine::*;
 use web_api::routes::v1::haul::Haul;
 
 #[tokio::test]
 async fn test_ocean_climate_gets_added_to_haul() {
-    test(|helper, builder| async move {
+    test_with_cache(|helper, builder| async move {
         let state = builder.vessels(1).hauls(5).ocean_climate(5).build().await;
+
+        helper.refresh_cache().await;
 
         let response = helper.app.get_hauls(Default::default()).await;
         assert_eq!(response.status(), StatusCode::OK);
@@ -25,8 +27,10 @@ async fn test_ocean_climate_gets_added_to_haul() {
 
 #[tokio::test]
 async fn test_ocean_climate_added_to_haul_gets_averaged() {
-    test(|helper, builder| async move {
+    test_with_cache(|helper, builder| async move {
         let state = builder.vessels(1).hauls(1).ocean_climate(4).build().await;
+
+        helper.refresh_cache().await;
 
         let response = helper.app.get_hauls(Default::default()).await;
         assert_eq!(response.status(), StatusCode::OK);

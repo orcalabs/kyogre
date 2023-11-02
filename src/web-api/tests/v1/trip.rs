@@ -1,4 +1,4 @@
-use super::helper::test;
+use super::helper::{test, test_with_cache};
 use actix_web::http::StatusCode;
 use chrono::{DateTime, Duration, TimeZone, Utc};
 use engine::*;
@@ -210,8 +210,10 @@ async fn test_trip_of_landing_returns_all_hauls_and_landings_connected_to_trip()
 
 #[tokio::test]
 async fn test_first_ers_data_triggers_trip_assembler_switch_to_ers() {
-    test(|helper, builder| async move {
+    test_with_cache(|helper, builder| async move {
         let state = builder.vessels(1).landing_trips(1).trips(1).build().await;
+
+        helper.refresh_cache().await;
 
         let response = helper.app.get_trips(TripsParameters::default(), None).await;
         assert_eq!(response.status(), StatusCode::OK);
@@ -225,7 +227,7 @@ async fn test_first_ers_data_triggers_trip_assembler_switch_to_ers() {
 
 #[tokio::test]
 async fn test_trips_contains_all_events_within_trip_period_ordered_ascendingly() {
-    test(|helper, builder| async move {
+    test_with_cache(|helper, builder| async move {
         let state = builder
             .vessels(1)
             .trips(1)
@@ -234,6 +236,8 @@ async fn test_trips_contains_all_events_within_trip_period_ordered_ascendingly()
             .hauls(1)
             .build()
             .await;
+
+        helper.refresh_cache().await;
 
         let response = helper.app.get_trips(TripsParameters::default(), None).await;
         assert_eq!(response.status(), StatusCode::OK);
@@ -254,7 +258,7 @@ async fn test_trips_contains_all_events_within_trip_period_ordered_ascendingly()
 
 #[tokio::test]
 async fn test_trips_events_are_isolated_per_vessel() {
-    test(|helper, builder| async move {
+    test_with_cache(|helper, builder| async move {
         let state = builder
             .vessels(2)
             .trips(2)
@@ -263,6 +267,8 @@ async fn test_trips_events_are_isolated_per_vessel() {
             .hauls(2)
             .build()
             .await;
+
+        helper.refresh_cache().await;
 
         let response = helper
             .app
@@ -303,7 +309,7 @@ async fn test_trips_events_are_isolated_per_vessel() {
 
 #[tokio::test]
 async fn test_trips_does_not_include_events_outside_period() {
-    test(|helper, builder| async move {
+    test_with_cache(|helper, builder| async move {
         let state = builder
             .vessels(1)
             .landings(1)
@@ -312,6 +318,8 @@ async fn test_trips_does_not_include_events_outside_period() {
             .trips(1)
             .build()
             .await;
+
+        helper.refresh_cache().await;
 
         let response = helper.app.get_trips(TripsParameters::default(), None).await;
         assert_eq!(response.status(), StatusCode::OK);
@@ -330,7 +338,7 @@ async fn test_trips_does_not_include_events_outside_period() {
 #[tokio::test]
 async fn test_trip_connects_to_tra_event_based_on_message_timestamp_if_reloading_timestamp_is_none()
 {
-    test(|helper, builder| async move {
+    test_with_cache(|helper, builder| async move {
         let state = builder
             .vessels(1)
             .trips(1)
@@ -342,6 +350,8 @@ async fn test_trip_connects_to_tra_event_based_on_message_timestamp_if_reloading
             })
             .build()
             .await;
+
+        helper.refresh_cache().await;
 
         let response = helper.app.get_trips(TripsParameters::default(), None).await;
         assert_eq!(response.status(), StatusCode::OK);
@@ -361,7 +371,7 @@ async fn test_trip_connects_to_tra_event_based_on_message_timestamp_if_reloading
 
 #[tokio::test]
 async fn test_trips_returns_correct_ports() {
-    test(|helper, builder| async move {
+    test_with_cache(|helper, builder| async move {
         let start_port = "NOTOS".to_string();
         let end_port = "DENOR".to_string();
         let state = builder
@@ -380,6 +390,8 @@ async fn test_trips_returns_correct_ports() {
             .build()
             .await;
 
+        helper.refresh_cache().await;
+
         let response = helper.app.get_trips(TripsParameters::default(), None).await;
         assert_eq!(response.status(), StatusCode::OK);
 
@@ -396,8 +408,10 @@ async fn test_trips_returns_correct_ports() {
 #[tokio::test]
 async fn test_trip_contains_correct_arrival_and_departure_with_adjacent_trips_with_equal_start_and_stop(
 ) {
-    test(|helper, builder| async move {
+    test_with_cache(|helper, builder| async move {
         let state = builder.vessels(1).trips(3).adjacent().build().await;
+
+        helper.refresh_cache().await;
 
         let response = helper
             .app
@@ -430,7 +444,7 @@ async fn test_trip_contains_correct_arrival_and_departure_with_adjacent_trips_wi
 
 #[tokio::test]
 async fn test_landings_trip_only_contains_landing_events() {
-    test(|helper, builder| async move {
+    test_with_cache(|helper, builder| async move {
         let state = builder
             .vessels(1)
             .landing_trips(1)
@@ -438,6 +452,8 @@ async fn test_landings_trip_only_contains_landing_events() {
             .hauls(1)
             .build()
             .await;
+
+        helper.refresh_cache().await;
 
         let response = helper
             .app
@@ -462,13 +478,15 @@ async fn test_landings_trip_only_contains_landing_events() {
 
 #[tokio::test]
 async fn test_trip_contains_fishing_facilities() {
-    test(|helper, builder| async move {
+    test_with_cache(|helper, builder| async move {
         let state = builder
             .vessels(1)
             .trips(1)
             .fishing_facilities(1)
             .build()
             .await;
+
+        helper.refresh_cache().await;
 
         let token = helper.bw_helper.get_bw_token();
         let response = helper
@@ -488,13 +506,15 @@ async fn test_trip_contains_fishing_facilities() {
 
 #[tokio::test]
 async fn test_trip_does_not_return_fishing_facilities_without_token() {
-    test(|helper, builder| async move {
+    test_with_cache(|helper, builder| async move {
         builder
             .vessels(1)
             .trips(1)
             .fishing_facilities(1)
             .build()
             .await;
+
+        helper.refresh_cache().await;
 
         let response = helper.app.get_trips(TripsParameters::default(), None).await;
         assert_eq!(response.status(), StatusCode::OK);
@@ -509,13 +529,15 @@ async fn test_trip_does_not_return_fishing_facilities_without_token() {
 
 #[tokio::test]
 async fn test_trip_does_not_return_fishing_facilities_without_read_fishing_facility() {
-    test(|helper, builder| async move {
+    test_with_cache(|helper, builder| async move {
         builder
             .vessels(1)
             .trips(1)
             .fishing_facilities(1)
             .build()
             .await;
+
+        helper.refresh_cache().await;
 
         let token = helper.bw_helper.get_bw_token_with_policies(vec![]);
         let response = helper
@@ -534,8 +556,10 @@ async fn test_trip_does_not_return_fishing_facilities_without_read_fishing_facil
 
 #[tokio::test]
 async fn test_trips_filter_by_offset() {
-    test(|helper, builder| async move {
+    test_with_cache(|helper, builder| async move {
         let state = builder.vessels(1).trips(2).build().await;
+
+        helper.refresh_cache().await;
 
         let response = helper
             .app
@@ -558,8 +582,11 @@ async fn test_trips_filter_by_offset() {
 
 #[tokio::test]
 async fn test_trips_filter_by_limit() {
-    test(|helper, builder| async move {
+    test_with_cache(|helper, builder| async move {
         let state = builder.vessels(1).trips(2).build().await;
+
+        helper.refresh_cache().await;
+
         let response = helper
             .app
             .get_trips(
@@ -581,8 +608,11 @@ async fn test_trips_filter_by_limit() {
 
 #[tokio::test]
 async fn test_trips_orders_ascendingly() {
-    test(|helper, builder| async move {
+    test_with_cache(|helper, builder| async move {
         let state = builder.vessels(1).trips(2).build().await;
+
+        helper.refresh_cache().await;
+
         let response = helper
             .app
             .get_trips(
@@ -605,8 +635,10 @@ async fn test_trips_orders_ascendingly() {
 
 #[tokio::test]
 async fn test_trips_orders_descendingly() {
-    test(|helper, builder| async move {
+    test_with_cache(|helper, builder| async move {
         let state = builder.vessels(1).trips(2).build().await;
+
+        helper.refresh_cache().await;
 
         let response = helper
             .app
@@ -630,7 +662,7 @@ async fn test_trips_orders_descendingly() {
 
 #[tokio::test]
 async fn test_trips_filter_by_delivery_point() {
-    test(|helper, builder| async move {
+    test_with_cache(|helper, builder| async move {
         let delivery_point = DeliveryPointId::try_from("FKAI").unwrap();
 
         let state = builder
@@ -642,6 +674,8 @@ async fn test_trips_filter_by_delivery_point() {
             })
             .build()
             .await;
+
+        helper.refresh_cache().await;
 
         let response = helper
             .app
@@ -664,8 +698,10 @@ async fn test_trips_filter_by_delivery_point() {
 
 #[tokio::test]
 async fn test_trips_filter_by_start_date() {
-    test(|helper, builder| async move {
+    test_with_cache(|helper, builder| async move {
         let state = builder.vessels(1).trips(2).build().await;
+
+        helper.refresh_cache().await;
 
         let response = helper
             .app
@@ -688,8 +724,11 @@ async fn test_trips_filter_by_start_date() {
 
 #[tokio::test]
 async fn test_trips_filter_by_end_date() {
-    test(|helper, builder| async move {
+    test_with_cache(|helper, builder| async move {
         let state = builder.vessels(1).trips(2).build().await;
+
+        helper.refresh_cache().await;
+
         let response = helper
             .app
             .get_trips(
@@ -733,8 +772,11 @@ async fn test_trips_returns_bad_request_if_start_date_is_after_end_date() {
 
 #[tokio::test]
 async fn test_trips_sorts_by_end_date() {
-    test(|helper, builder| async move {
+    test_with_cache(|helper, builder| async move {
         let state = builder.vessels(1).trips(2).build().await;
+
+        helper.refresh_cache().await;
+
         let response = helper
             .app
             .get_trips(
@@ -758,7 +800,7 @@ async fn test_trips_sorts_by_end_date() {
 
 #[tokio::test]
 async fn test_trips_sorts_by_weight() {
-    test(|helper, builder| async move {
+    test_with_cache(|helper, builder| async move {
         let state = builder
             .vessels(1)
             .trips(2)
@@ -768,6 +810,8 @@ async fn test_trips_sorts_by_weight() {
             })
             .build()
             .await;
+
+        helper.refresh_cache().await;
 
         let response = helper
             .app
@@ -792,7 +836,7 @@ async fn test_trips_sorts_by_weight() {
 
 #[tokio::test]
 async fn test_trips_filter_by_gear_group_ids() {
-    test(|helper, builder| async move {
+    test_with_cache(|helper, builder| async move {
         let state = builder
             .vessels(1)
             .trips(2)
@@ -806,6 +850,8 @@ async fn test_trips_filter_by_gear_group_ids() {
             })
             .build()
             .await;
+
+        helper.refresh_cache().await;
 
         let response = helper
             .app
@@ -828,7 +874,7 @@ async fn test_trips_filter_by_gear_group_ids() {
 
 #[tokio::test]
 async fn test_trips_filter_by_species_group_ids() {
-    test(|helper, builder| async move {
+    test_with_cache(|helper, builder| async move {
         let state = builder
             .vessels(1)
             .trips(2)
@@ -842,6 +888,8 @@ async fn test_trips_filter_by_species_group_ids() {
             })
             .build()
             .await;
+
+        helper.refresh_cache().await;
 
         let response = helper
             .app
@@ -864,7 +912,7 @@ async fn test_trips_filter_by_species_group_ids() {
 
 #[tokio::test]
 async fn test_trips_filter_by_vessel_length_groups() {
-    test(|helper, builder| async move {
+    test_with_cache(|helper, builder| async move {
         let state = builder
             .vessels(2)
             .modify_idx(|i, v| {
@@ -877,6 +925,8 @@ async fn test_trips_filter_by_vessel_length_groups() {
             .trips(2)
             .build()
             .await;
+
+        helper.refresh_cache().await;
 
         let response = helper
             .app
@@ -901,8 +951,10 @@ async fn test_trips_filter_by_vessel_length_groups() {
 
 #[tokio::test]
 async fn test_trips_filter_by_fiskeridir_vessel_ids() {
-    test(|helper, builder| async move {
+    test_with_cache(|helper, builder| async move {
         let state = builder.vessels(2).trips(2).build().await;
+
+        helper.refresh_cache().await;
 
         let response = helper
             .app
@@ -925,8 +977,10 @@ async fn test_trips_filter_by_fiskeridir_vessel_ids() {
 
 #[tokio::test]
 async fn test_trips_contains_hauls() {
-    test(|helper, builder| async move {
+    test_with_cache(|helper, builder| async move {
         let state = builder.vessels(1).trips(1).hauls(1).build().await;
+
+        helper.refresh_cache().await;
 
         let response = helper.app.get_trips(TripsParameters::default(), None).await;
         assert_eq!(response.status(), StatusCode::OK);
@@ -944,8 +998,10 @@ async fn test_trips_contains_hauls() {
 
 #[tokio::test]
 async fn test_trips_contains_landing_ids() {
-    test(|helper, builder| async move {
+    test_with_cache(|helper, builder| async move {
         let state = builder.vessels(1).trips(1).landings(3).build().await;
+
+        helper.refresh_cache().await;
 
         let response = helper.app.get_trips(TripsParameters::default(), None).await;
         assert_eq!(response.status(), StatusCode::OK);
@@ -970,7 +1026,7 @@ async fn test_trips_contains_landing_ids() {
 
 #[tokio::test]
 async fn test_trips_connects_to_existing_landings_outside_period_but_inside_landing_coverage() {
-    test(|helper, builder| async move {
+    test_with_cache(|helper, builder| async move {
         let start: DateTime<Utc> = "2000-01-05T00:00:00Z".parse().unwrap();
         let end: DateTime<Utc> = "2000-01-07T00:00:00Z".parse().unwrap();
 
@@ -996,6 +1052,8 @@ async fn test_trips_connects_to_existing_landings_outside_period_but_inside_land
             })
             .build()
             .await;
+
+        helper.refresh_cache().await;
 
         let response = helper.app.get_trips(TripsParameters::default(), None).await;
         assert_eq!(response.status(), StatusCode::OK);

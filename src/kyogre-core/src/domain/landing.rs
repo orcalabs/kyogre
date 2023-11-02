@@ -33,6 +33,7 @@ pub struct Landing {
     pub total_product_weight: f64,
     pub total_gross_weight: f64,
     pub catches: Vec<LandingCatch>,
+    pub version: i32,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
