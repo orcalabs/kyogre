@@ -56,7 +56,7 @@ impl FishingSpotPredictor {
             training_rounds,
             running_in_test: matches!(environment, Environment::Test),
             num_weeks,
-            use_gpu: matches!(environment, Environment::Development),
+            use_gpu: matches!(environment, Environment::Local),
         }
     }
 }
