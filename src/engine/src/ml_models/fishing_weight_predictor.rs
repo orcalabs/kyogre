@@ -278,7 +278,7 @@ impl FishingWeightPredictor {
             running_in_test: matches!(environment, Environment::Test),
             num_weeks,
             num_catch_locations,
-            use_gpu: matches!(environment, Environment::Development),
+            use_gpu: matches!(environment, Environment::Local),
         }
     }
 }
