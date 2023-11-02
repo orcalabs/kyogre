@@ -11,7 +11,7 @@ use meilisearch_sdk::{Client, PaginationSetting, Settings};
 use serde::{Deserialize, Serialize};
 use tracing::{event, Level};
 
-use crate::{error::MeilisearchError, utc_from_millis, Id, IdVersion, Indexable};
+use crate::{error::MeilisearchError, timestamp_from_millis, Id, IdVersion, Indexable};
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Haul {
@@ -154,7 +154,7 @@ impl Indexable for Haul {
 
         for ids in to_insert.chunks(20_000) {
             let hauls = source
-                .hauls(ids)
+                .hauls_by_ids(ids)
                 .await
                 .change_context(MeilisearchError::Source)?
                 .into_iter()
@@ -227,10 +227,10 @@ impl TryFrom<Haul> for kyogre_core::Haul {
             quota_type_id: v.quota_type_id,
             start_latitude: v.start_latitude,
             start_longitude: v.start_longitude,
-            start_timestamp: utc_from_millis(v.start_timestamp)?,
+            start_timestamp: timestamp_from_millis(v.start_timestamp)?,
             stop_latitude: v.stop_latitude,
             stop_longitude: v.stop_longitude,
-            stop_timestamp: utc_from_millis(v.stop_timestamp)?,
+            stop_timestamp: timestamp_from_millis(v.stop_timestamp)?,
             total_living_weight: v.total_living_weight,
             vessel_call_sign: v.vessel_call_sign,
             vessel_call_sign_ers: v.vessel_call_sign_ers,

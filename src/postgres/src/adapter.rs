@@ -1245,16 +1245,23 @@ impl HaulWeatherOutbound for PostgresAdapter {
 
 #[async_trait]
 impl MeilisearchSource for PostgresAdapter {
-    async fn trips(&self, trip_ids: &[TripId]) -> Result<Vec<TripDetailed>, QueryError> {
+    async fn trips_by_ids(&self, trip_ids: &[TripId]) -> Result<Vec<TripDetailed>, QueryError> {
         convert_vec(
             self.detailed_trips_by_ids_impl(trip_ids)
                 .await
                 .change_context(QueryError)?,
         )
     }
-    async fn hauls(&self, haul_ids: &[HaulId]) -> Result<Vec<Haul>, QueryError> {
+    async fn hauls_by_ids(&self, haul_ids: &[HaulId]) -> Result<Vec<Haul>, QueryError> {
         convert_vec(
             self.hauls_by_ids_impl(haul_ids)
+                .await
+                .change_context(QueryError)?,
+        )
+    }
+    async fn landings_by_ids(&self, landing_ids: &[LandingId]) -> Result<Vec<Landing>, QueryError> {
+        convert_vec(
+            self.landings_by_ids_impl(landing_ids)
                 .await
                 .change_context(QueryError)?,
         )
@@ -1266,6 +1273,11 @@ impl MeilisearchSource for PostgresAdapter {
     }
     async fn all_haul_versions(&self) -> Result<Vec<(HaulId, i64)>, QueryError> {
         self.all_haul_cache_versions_impl()
+            .await
+            .change_context(QueryError)
+    }
+    async fn all_landing_versions(&self) -> Result<Vec<(LandingId, i64)>, QueryError> {
+        self.all_landing_versions_impl()
             .await
             .change_context(QueryError)
     }

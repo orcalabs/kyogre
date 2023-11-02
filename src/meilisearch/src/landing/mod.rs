@@ -1,5 +1,5 @@
 use error_stack::{Result, ResultExt};
-use kyogre_core::{HaulsQuery, HaulsSorting, Ordering};
+use kyogre_core::{LandingsQuery, LandingsSorting, Ordering};
 
 use crate::{
     create_ranges_filter, error::MeilisearchError, join_comma, join_comma_fn, MeilisearchAdapter,
@@ -10,23 +10,16 @@ mod model;
 pub use model::*;
 
 impl MeilisearchAdapter {
-    pub(crate) async fn hauls_impl(
+    pub(crate) async fn landings_impl(
         &self,
-        query: HaulsQuery,
-    ) -> Result<Vec<kyogre_core::Haul>, MeilisearchError> {
+        query: LandingsQuery,
+    ) -> Result<Vec<kyogre_core::Landing>, MeilisearchError> {
         let mut filter = Vec::with_capacity(9);
 
         if let Some(ids) = query.vessel_ids {
             filter.push(format!(
                 "fiskeridir_vessel_id IN [{}]",
                 join_comma_fn(ids, |i| i.0)
-            ));
-        }
-        if let Some(ranges) = query.ranges {
-            filter.push(create_ranges_filter(
-                ranges,
-                "stop_timestamp",
-                "start_timestamp",
             ));
         }
         if let Some(ranges) = query.vessel_length_ranges {
@@ -36,17 +29,12 @@ impl MeilisearchAdapter {
                 "vessel_length",
             ));
         }
-        if let Some(value) = query.min_wind_speed {
-            filter.push(format!("wind_speed >= {}", value));
-        }
-        if let Some(value) = query.max_wind_speed {
-            filter.push(format!("wind_speed <= {}", value));
-        }
-        if let Some(value) = query.min_air_temperature {
-            filter.push(format!("air_temperature >= {}", value));
-        }
-        if let Some(value) = query.max_air_temperature {
-            filter.push(format!("air_temperature <= {}", value));
+        if let Some(ranges) = query.ranges {
+            filter.push(create_ranges_filter(
+                ranges,
+                "landing_timestamp",
+                "vessel_length",
+            ));
         }
         if let Some(ids) = query.gear_group_ids {
             filter.push(format!(
@@ -70,9 +58,8 @@ impl MeilisearchAdapter {
             format!(
                 "{}:{}",
                 match sorting {
-                    HaulsSorting::StartDate => "start_timestamp",
-                    HaulsSorting::StopDate => "stop_timestamp",
-                    HaulsSorting::Weight => "total_living_weight",
+                    LandingsSorting::LandingTimestamp => "landing_timestamp",
+                    LandingsSorting::LivingWeight => "living_weight",
                 },
                 match query.ordering.unwrap_or_default() {
                     Ordering::Asc => "asc",
@@ -86,22 +73,22 @@ impl MeilisearchAdapter {
             .unwrap_or_default();
 
         let result = self
-            .hauls_index()
+            .landings_index()
             .search()
             .with_array_filter(filter)
             .with_limit(usize::MAX)
             .with_sort(&sort)
-            .execute::<Haul>()
+            .execute::<Landing>()
             .await
             .change_context(MeilisearchError::Query)?;
 
-        let hauls = result
+        let landings = result
             .hits
             .into_iter()
             .map(|h| h.result.try_into())
             .collect::<Result<_, _>>()
             .change_context(MeilisearchError::Query)?;
 
-        Ok(hauls)
+        Ok(landings)
     }
 }

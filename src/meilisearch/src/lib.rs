@@ -4,6 +4,7 @@
 use std::{
     collections::BTreeMap,
     fmt::{Debug, Display},
+    ops::Bound,
     sync::Arc,
     time::Duration,
 };
@@ -14,16 +15,19 @@ use error::MeilisearchError;
 use error_stack::{report, Result, ResultExt};
 use futures::{future::BoxFuture, FutureExt};
 use kyogre_core::{
-    HaulsQuery, MeilisearchOutbound, MeilisearchSource, QueryError, TripDetailed, TripsQuery,
+    HaulsQuery, LandingsQuery, MeilisearchOutbound, MeilisearchSource, QueryError, Range,
+    TripDetailed, TripsQuery,
 };
 use meilisearch_sdk::{Client, Index, Selectors, TaskInfo};
 
 mod error;
 mod haul;
+mod landing;
 pub mod settings;
 mod trip;
 
 use haul::*;
+use landing::*;
 use serde::{de::DeserializeOwned, Serialize};
 pub use settings::Settings;
 use tracing::{event, instrument, Level};
@@ -49,17 +53,22 @@ impl MeilisearchAdapter {
     pub(crate) fn hauls_index(&self) -> Index {
         self.client.index(Haul::index_name())
     }
+    pub(crate) fn landings_index(&self) -> Index {
+        self.client.index(Landing::index_name())
+    }
 
     pub async fn create_indexes(&self) -> Result<(), MeilisearchError> {
         Trip::create_index(&self.client).await?;
         Haul::create_index(&self.client).await?;
+        Landing::create_index(&self.client).await?;
         Ok(())
     }
 
     #[instrument(name = "refresh_meilisearch", skip(self))]
-    async fn refresh(&self) -> Result<(), MeilisearchError> {
+    pub async fn refresh(&self) -> Result<(), MeilisearchError> {
         Trip::refresh(&self.client, self.source.as_ref()).await?;
         Haul::refresh(&self.client, self.source.as_ref()).await?;
+        Landing::refresh(&self.client, self.source.as_ref()).await?;
         Ok(())
     }
 
@@ -91,6 +100,12 @@ impl MeilisearchOutbound for MeilisearchAdapter {
     async fn hauls(&self, query: HaulsQuery) -> Result<Vec<kyogre_core::Haul>, QueryError> {
         self.hauls_impl(query).await.change_context(QueryError)
     }
+    async fn landings(
+        &self,
+        query: LandingsQuery,
+    ) -> Result<Vec<kyogre_core::Landing>, QueryError> {
+        self.landings_impl(query).await.change_context(QueryError)
+    }
 }
 
 pub(crate) trait IdVersion {
@@ -107,7 +122,7 @@ pub(crate) trait Id {
 
 #[async_trait]
 pub(crate) trait Indexable {
-    type Id: Copy + Eq + Ord + Debug + Display + Serialize + Sync;
+    type Id: Clone + Eq + Ord + Debug + Display + Serialize + Sync;
     type Item: Id + Serialize + Debug + Sync;
     type IdVersion: IdVersion<Id = Self::Id> + DeserializeOwned + 'static;
 
@@ -145,8 +160,8 @@ pub(crate) trait Indexable {
     ) -> (Vec<Self::Id>, Vec<Self::Id>) {
         let to_delete = cache_versions
             .keys()
-            .copied()
             .filter(|i| !source_versions.contains_key(i))
+            .cloned()
             .collect::<Vec<_>>();
 
         let to_insert = source_versions
@@ -165,11 +180,11 @@ pub(crate) trait Indexable {
         if ids.is_empty() {
             Ok(None)
         } else {
-            let task = index
+            index
                 .delete_documents(ids)
                 .await
-                .change_context(MeilisearchError::Delete)?;
-            Ok(Some(task))
+                .change_context(MeilisearchError::Delete)
+                .map(Some)
         }
     }
 
@@ -238,7 +253,7 @@ pub(crate) trait Indexable {
     }
 }
 
-pub(crate) fn utc_from_millis(millis: i64) -> Result<DateTime<Utc>, MeilisearchError> {
+pub(crate) fn timestamp_from_millis(millis: i64) -> Result<DateTime<Utc>, MeilisearchError> {
     use chrono::LocalResult;
 
     match Utc.timestamp_millis_opt(millis) {
@@ -269,4 +284,33 @@ pub(crate) fn join_comma_fn<T, S: ToString, F: Fn(T) -> S>(values: Vec<T>, closu
         .map(|v| closure(v).to_string())
         .collect::<Vec<_>>()
         .join(",")
+}
+
+pub(crate) fn create_ranges_filter<T, S>(ranges: Vec<Range<T>>, attr1: S, attr2: S) -> String
+where
+    T: Display,
+    S: Display,
+{
+    ranges
+        .into_iter()
+        .flat_map(|range| {
+            let start = match range.start {
+                Bound::Included(v) => Some(format!("{attr1} >= {v}")),
+                Bound::Excluded(v) => Some(format!("{attr1} > {v}")),
+                Bound::Unbounded => None,
+            };
+            let end = match range.end {
+                Bound::Included(v) => Some(format!("{attr2} <= {v}")),
+                Bound::Excluded(v) => Some(format!("{attr2} < {v}")),
+                Bound::Unbounded => None,
+            };
+            match (start, end) {
+                (Some(a), Some(b)) => Some(format!("({a} AND {b})")),
+                (Some(a), None) => Some(a),
+                (None, Some(b)) => Some(b),
+                (None, None) => None,
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(" OR ")
 }
