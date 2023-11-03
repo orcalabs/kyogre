@@ -4,7 +4,8 @@ use error_stack::{Result, ResultExt};
 use fiskeridir_rs::SpeciesGroup;
 use kyogre_core::{
     distance_to_shore, CatchLocation, CatchLocationId, HaulId, MLModel, MLModelError,
-    MLModelsInbound, MLModelsOutbound, ModelId, NewFishingWeightPrediction, NUM_CATCH_LOCATIONS,
+    MLModelsInbound, MLModelsOutbound, ModelId, NewFishingWeightPrediction, WeatherData,
+    WeatherLocationOverlap, NUM_CATCH_LOCATIONS,
 };
 use num_traits::FromPrimitive;
 use orca_core::Environment;
@@ -17,10 +18,9 @@ use std::collections::{HashMap, HashSet};
 use strum::{EnumCount, IntoEnumIterator};
 use tracing::{event, Level};
 
-use super::max_week;
+use crate::ml_models::fishing_weight_predictor::PYTHON_FISHING_WEIGHT_PREDICTOR_CODE;
 
-static PYTHON_FISHING_WEIGHT_PREDICTOR_CODE: &str =
-    include_str!("../../../../scripts/python/fishing_predictor/fishing_weight_predictor.py");
+use super::super::max_week;
 
 pub struct FishingWeightPredictor {
     training_rounds: u32,
@@ -28,7 +28,7 @@ pub struct FishingWeightPredictor {
     // produce in tests to make them finish within a reasonable timeframe
     running_in_test: bool,
     num_weeks: Option<u32>,
-    num_catch_locations: Option<u32>,
+    catch_locations: Vec<CatchLocationId>,
     use_gpu: bool,
 }
 
@@ -75,7 +75,7 @@ impl MLModel for FishingWeightPredictor {
         let mut haul_ids = HashSet::new();
 
         let data: Vec<PythonTrainingData> = adapter
-            .fishing_weight_predictor_training_data()
+            .fishing_weight_predictor_training_data(self.id(), WeatherData::Optional)
             .await
             .unwrap()
             .into_iter()
@@ -148,7 +148,7 @@ impl MLModel for FishingWeightPredictor {
             HashSet::with_capacity(SpeciesGroup::COUNT * NUM_CATCH_LOCATIONS * 52);
 
         let all_catch_locations: HashMap<String, CatchLocation> = adapter
-            .catch_locations()
+            .catch_locations(WeatherLocationOverlap::All)
             .await
             .change_context(MLModelError::DataPreparation)?
             .into_iter()
@@ -161,14 +161,14 @@ impl MLModel for FishingWeightPredictor {
             (1..=max_week).collect()
         };
 
-        let active_catch_locations = if let Some(num_catch_locations) = self.num_catch_locations {
+        let active_catch_locations = if self.catch_locations.is_empty() {
             all_catch_locations
                 .values()
-                .take(num_catch_locations as usize)
                 .collect::<Vec<&CatchLocation>>()
         } else {
             all_catch_locations
                 .values()
+                .filter(|v| self.catch_locations.contains(&v.id))
                 .collect::<Vec<&CatchLocation>>()
         };
 
@@ -199,7 +199,7 @@ impl MLModel for FishingWeightPredictor {
         }
 
         let existing_predictions = adapter
-            .existing_fishing_weight_predictions(current_year as u32)
+            .existing_fishing_weight_predictions(self.id(), current_year as u32)
             .await
             .change_context(MLModelError::StoreOutput)?;
 
@@ -216,17 +216,18 @@ impl MLModel for FishingWeightPredictor {
 
         let data: Vec<PythonPredictionInput> = predictions
             .into_iter()
-            .map(|v| {
+            .map(|value| {
                 let cl = all_catch_locations
-                    .get(v.catch_location_id.as_ref())
+                    .get(value.catch_location_id.as_ref())
                     .unwrap();
+
                 PythonPredictionInput {
                     latitude: cl.latitude,
                     longitude: cl.longitude,
-                    catch_location_id: v.catch_location_id,
-                    year: v.year,
-                    week: v.week,
-                    species_group_id: v.species_group_id,
+                    catch_location_id: value.catch_location_id,
+                    year: value.year,
+                    week: value.week,
+                    species_group_id: value.species_group_id,
                 }
             })
             .collect();
@@ -253,6 +254,7 @@ impl MLModel for FishingWeightPredictor {
             week: data[i].week,
             weight: v,
             year: data[i].year,
+            model: self.id(),
         })
         .collect::<Vec<NewFishingWeightPrediction>>();
 
@@ -271,13 +273,13 @@ impl FishingWeightPredictor {
         training_rounds: u32,
         environment: Environment,
         num_weeks: Option<u32>,
-        num_catch_locations: Option<u32>,
+        catch_locations: Vec<CatchLocationId>,
     ) -> FishingWeightPredictor {
         FishingWeightPredictor {
             training_rounds,
             running_in_test: matches!(environment, Environment::Test),
             num_weeks,
-            num_catch_locations,
+            catch_locations,
             use_gpu: matches!(environment, Environment::Local),
         }
     }

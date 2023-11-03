@@ -5,6 +5,22 @@ use serde::{Deserialize, Serialize};
 
 use crate::{HaulId, HaulOceanClimate, HaulWeatherStatus};
 
+pub enum WeatherData {
+    Require,
+    Optional,
+}
+
+#[derive(Debug, Clone)]
+pub struct CatchLocationWeather {
+    pub wind_speed_10m: f64,
+    pub wind_direction_10m: f64,
+    pub air_temperature_2m: f64,
+    pub relative_humidity_2m: f64,
+    pub air_pressure_at_sea_level: f64,
+    pub precipitation_amount: f64,
+    pub cloud_area_fraction: f64,
+}
+
 #[derive(Debug, Clone)]
 pub struct NewWeather {
     pub timestamp: DateTime<Utc>,
@@ -66,34 +82,33 @@ pub struct HaulWeatherOutput {
     pub status: HaulWeatherStatus,
 }
 
-pub static WEATHER_LOCATION_LATS_LONS: [(f64, f64); 20] = [
-    (52.380, 1.8924),
-    (52.352, 1.9485),
-    (52.357, 2.0484),
-    (52.363, 2.1499),
-    (52.369, 2.2486),
-    (52.376, 2.3474),
-    (52.381, 2.4476),
-    (52.387, 2.5453),
-    (52.392, 2.6376),
-    (52.399, 2.7079),
-    (52.458, 1.8801),
-    (52.448, 1.9519),
-    (52.450, 2.0505),
-    (52.450, 2.1503),
-    (52.449, 2.2514),
-    (52.450, 2.3504),
-    (52.450, 2.4490),
-    (52.449, 2.5493),
-    (52.449, 2.6498),
-    (52.450, 2.7498),
+pub static WEATHER_LOCATION_LATS_LONS: [(f64, f64, i64); 20] = [
+    (71.05, 28.05, 171001280),
+    (71.05, 27.95, 171001279),
+    (71.05, 25.95, 171001259),
+    (71.04, 25.85, 171001258),
+    (71.05, 25.75, 171001257),
+    (71.04, 25.65, 171001256),
+    (71.05, 25.55, 171001255),
+    (70.95, 28.35, 170901283),
+    (70.95, 28.24, 170901282),
+    (70.95, 28.15, 170901281),
+    (70.95, 28.05, 170901280),
+    (70.95, 27.95, 170901279),
+    (70.95, 27.84, 170901278),
+    (70.95, 27.55, 170901275),
+    (70.95, 27.44, 170901274),
+    (70.95, 27.34, 170901273),
+    (70.95, 26.65, 170901266),
+    (70.95, 26.55, 170901265),
+    (70.95, 25.55, 170901255),
+    (70.95, 25.45, 170901254),
 ];
 
 impl NewWeather {
     pub fn test_default(timestamp: DateTime<Utc>) -> Self {
         let mut rng = rand::thread_rng();
-        let (latitude, longitude) =
-            WEATHER_LOCATION_LATS_LONS[rng.gen::<usize>() % WEATHER_LOCATION_LATS_LONS.len()];
+        let (latitude, longitude, _) = WEATHER_LOCATION_LATS_LONS[0];
         let num = rng.gen::<u8>() as f64;
 
         Self {

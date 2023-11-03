@@ -14,17 +14,27 @@ pub trait MLModelsInbound: Send + Sync {
         &self,
         predictions: Vec<NewFishingWeightPrediction>,
     ) -> Result<(), InsertError>;
-    async fn catch_locations(&self) -> Result<Vec<CatchLocation>, QueryError>;
+    async fn catch_locations(
+        &self,
+        overlap: WeatherLocationOverlap,
+    ) -> Result<Vec<CatchLocation>, QueryError>;
     async fn existing_fishing_spot_predictions(
         &self,
         year: u32,
     ) -> Result<Vec<FishingSpotPrediction>, QueryError>;
     async fn existing_fishing_weight_predictions(
         &self,
+        model_id: ModelId,
         year: u32,
     ) -> Result<Vec<FishingWeightPrediction>, QueryError>;
     async fn save_model(&self, model_id: ModelId, model: &[u8]) -> Result<(), InsertError>;
     async fn species_caught_with_traal(&self) -> Result<Vec<SpeciesGroup>, QueryError>;
+    async fn catch_location_weather(
+        &self,
+        year: u32,
+        week: u32,
+        catch_location_id: &CatchLocationId,
+    ) -> Result<Option<CatchLocationWeather>, QueryError>;
 }
 
 #[async_trait]

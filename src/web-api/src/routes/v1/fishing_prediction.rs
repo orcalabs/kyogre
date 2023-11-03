@@ -6,7 +6,7 @@ use chrono::Datelike;
 use chrono::Utc;
 use fiskeridir_rs::SpeciesGroup;
 use futures::TryStreamExt;
-use kyogre_core::FishingSpotPrediction;
+use kyogre_core::{FishingSpotPrediction, ModelId};
 use num_traits::FromPrimitive;
 use serde::Deserialize;
 use tracing::{event, Level};
@@ -90,8 +90,12 @@ pub async fn all_fishing_spot_predictions<T: Database + 'static>(
 
 #[utoipa::path(
     get,
-    path = "/fishing_weight_predictions/{species_group_id}",
-    params(FishingWeightPredictionParams),
+    path = "/fishing_weight_predictions/{model_id}/{species_group_id}",
+    params(
+        FishingWeightPredictionParams,
+        ("model_id" = ModelId, Path, description = "what model data to retrieve"),
+        ("species_group_id" = u32, Path, description = "what species group to retrieve a prediction for")
+    ),
     responses(
         (status = 200, description = "fishing weight predictions for the requested filter", body = [FishingWeightPrediction]),
         (status = 500, description = "an internal error occured", body = ErrorResponse),
@@ -101,11 +105,11 @@ pub async fn all_fishing_spot_predictions<T: Database + 'static>(
 pub async fn fishing_weight_predictions<T: Database + 'static>(
     db: web::Data<T>,
     params: web::Query<FishingWeightPredictionParams>,
-    species_group_id: Path<u32>,
+    path_params: Path<(ModelId, u32)>,
 ) -> Result<HttpResponse, ApiError> {
-    let species_group_id = species_group_id.into_inner();
-    let species_group_id = SpeciesGroup::from_u32(species_group_id)
-        .ok_or(ApiError::InvalidSpeciesGroupId(species_group_id))?;
+    let path_args = path_params.into_inner();
+    let species_group_id =
+        SpeciesGroup::from_u32(path_args.1).ok_or(ApiError::InvalidSpeciesGroupId(path_args.1))?;
 
     let week = params.week.unwrap_or_else(|| Utc::now().iso_week().week());
     let mut limit = params.limit.unwrap_or(DEFAULT_FISHING_WEIGHT_PREDICTIONS);
@@ -116,7 +120,7 @@ pub async fn fishing_weight_predictions<T: Database + 'static>(
 
     to_streaming_response! {
         db
-         .fishing_weight_predictions(species_group_id, week, limit)
+         .fishing_weight_predictions(path_args.0,species_group_id, week, limit)
          .map_err(|e| {
             event!(
                 Level::ERROR,
@@ -130,7 +134,10 @@ pub async fn fishing_weight_predictions<T: Database + 'static>(
 
 #[utoipa::path(
     get,
-    path = "/fishing_weight_predictions",
+    path = "/fishing_weight_predictions/{model_id}",
+    params(
+        ("model_id" = ModelId, Path, description = "what model data to retrieve")
+    ),
     responses(
         (status = 200, description = "all fishing weight predictions", body = [FishingWeightPrediction]),
         (status = 500, description = "an internal error occured", body = ErrorResponse),
@@ -139,10 +146,11 @@ pub async fn fishing_weight_predictions<T: Database + 'static>(
 #[tracing::instrument(skip(db))]
 pub async fn all_fishing_weight_predictions<T: Database + 'static>(
     db: web::Data<T>,
+    model_id: Path<ModelId>,
 ) -> Result<HttpResponse, ApiError> {
     to_streaming_response! {
         db
-         .all_fishing_weight_predictions()
+         .all_fishing_weight_predictions(model_id.into_inner())
          .map_err(|e| {
             event!(
                 Level::ERROR,

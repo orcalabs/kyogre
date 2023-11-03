@@ -5,6 +5,11 @@ use serde::{
     Deserialize, Serialize,
 };
 
+pub enum WeatherLocationOverlap {
+    OnlyOverlaps,
+    All,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize)]
 #[serde(transparent)]
 pub struct CatchLocationId {
@@ -21,6 +26,7 @@ pub struct CatchLocation {
     pub polygon: Polygon,
     pub latitude: f64,
     pub longitude: f64,
+    pub weather_location_ids: Vec<i64>,
 }
 
 impl CatchLocationId {

@@ -1,9 +1,10 @@
 use error_stack::{Report, ResultExt};
 use fiskeridir_rs::SpeciesGroup;
-use kyogre_core::CatchLocationId;
+use kyogre_core::{CatchLocationId, ModelId};
 use unnest_insert::UnnestInsert;
 
 use crate::error::PostgresError;
+use crate::queries::enum_to_i32;
 
 #[derive(Debug, Clone, UnnestInsert)]
 #[unnest_insert(
@@ -23,7 +24,7 @@ pub struct NewFishingSpotPrediction {
 #[derive(Debug, Clone, UnnestInsert)]
 #[unnest_insert(
     table_name = "fishing_weight_predictions",
-    conflict = "catch_location_id, species_group_id, week, year"
+    conflict = "ml_model_id, catch_location_id, species_group_id, week, year"
 )]
 pub struct NewFishingWeightPrediction {
     #[unnest_insert(update)]
@@ -32,6 +33,8 @@ pub struct NewFishingWeightPrediction {
     pub species_group_id: i32,
     pub week: i32,
     pub year: i32,
+    #[unnest_insert(sql_type = "INT", type_conversion = "enum_to_i32")]
+    pub ml_model_id: ModelId,
 }
 
 #[derive(Debug, Clone)]
@@ -53,6 +56,13 @@ pub struct WeightPredictorTrainingData {
     pub catch_location_main_area_id: i32,
     pub species: SpeciesGroup,
     pub week: i32,
+    pub wind_speed_10m: Option<f64>,
+    pub wind_direction_10m: Option<f64>,
+    pub air_temperature_2m: Option<f64>,
+    pub relative_humidity_2m: Option<f64>,
+    pub air_pressure_at_sea_level: Option<f64>,
+    pub precipitation_amount: Option<f64>,
+    pub cloud_area_fraction: Option<f64>,
 }
 
 #[derive(Debug, Clone, UnnestInsert)]
@@ -80,18 +90,25 @@ impl TryFrom<FishingWeightPrediction> for kyogre_core::FishingWeightPrediction {
 }
 
 impl From<WeightPredictorTrainingData> for kyogre_core::WeightPredictorTrainingData {
-    fn from(value: WeightPredictorTrainingData) -> Self {
+    fn from(v: WeightPredictorTrainingData) -> Self {
         Self {
-            weight: value.weight,
-            latitude: value.latitude,
-            longitude: value.longitude,
+            weight: v.weight,
+            latitude: v.latitude,
+            longitude: v.longitude,
             catch_location: CatchLocationId::new(
-                value.catch_location_main_area_id,
-                value.catch_location_area_id,
+                v.catch_location_main_area_id,
+                v.catch_location_area_id,
             ),
-            species: value.species,
-            week: value.week,
-            haul_id: value.haul_id,
+            species: v.species,
+            week: v.week,
+            haul_id: v.haul_id,
+            wind_speed_10m: v.wind_speed_10m,
+            wind_direction_10m: v.wind_speed_10m,
+            air_temperature_2m: v.air_temperature_2m,
+            relative_humidity_2m: v.relative_humidity_2m,
+            air_pressure_at_sea_level: v.air_pressure_at_sea_level,
+            precipitation_amount: v.precipitation_amount,
+            cloud_area_fraction: v.cloud_area_fraction,
         }
     }
 }
@@ -116,6 +133,7 @@ impl From<kyogre_core::NewFishingWeightPrediction> for NewFishingWeightPredictio
             weight: value.weight,
             catch_location_id: value.catch_location_id.into_inner(),
             year: value.year as i32,
+            ml_model_id: value.model,
         }
     }
 }

@@ -383,16 +383,18 @@ impl AisMigratorDestination for PostgresAdapter {
 impl WebApiOutboundPort for PostgresAdapter {
     fn fishing_weight_predictions(
         &self,
+        model_id: ModelId,
         species: SpeciesGroup,
         week: u32,
         limit: u32,
     ) -> PinBoxStream<'_, FishingWeightPrediction, QueryError> {
-        convert_stream(self.fishing_weight_predictions_impl(species, week, limit)).boxed()
+        convert_stream(self.fishing_weight_predictions_impl(model_id, species, week, limit)).boxed()
     }
     fn all_fishing_weight_predictions(
         &self,
+        model_id: ModelId,
     ) -> PinBoxStream<'_, FishingWeightPrediction, QueryError> {
-        convert_stream(self.all_fishing_weight_predictions_impl()).boxed()
+        convert_stream(self.all_fishing_weight_predictions_impl(model_id)).boxed()
     }
 
     fn all_fishing_spot_predictions(&self) -> PinBoxStream<'_, FishingSpotPrediction, QueryError> {
@@ -914,7 +916,7 @@ impl HaulDistributorOutbound for PostgresAdapter {
 
     async fn catch_locations(&self) -> Result<Vec<CatchLocation>, QueryError> {
         convert_vec(
-            self.catch_locations_impl()
+            self.catch_locations_impl(WeatherLocationOverlap::All)
                 .await
                 .change_context(QueryError)?,
         )
@@ -1017,9 +1019,11 @@ impl MLModelsOutbound for PostgresAdapter {
     }
     async fn fishing_weight_predictor_training_data(
         &self,
+        model_id: ModelId,
+        weather_data: WeatherData,
     ) -> Result<Vec<WeightPredictorTrainingData>, QueryError> {
         Ok(self
-            .fishing_weight_predictor_training_data_impl()
+            .fishing_weight_predictor_training_data_impl(model_id, weather_data)
             .await
             .change_context(QueryError)?
             .into_iter()
@@ -1050,6 +1054,16 @@ impl MLModelsOutbound for PostgresAdapter {
 
 #[async_trait]
 impl MLModelsInbound for PostgresAdapter {
+    async fn catch_location_weather(
+        &self,
+        year: u32,
+        week: u32,
+        catch_location_id: &CatchLocationId,
+    ) -> Result<Option<CatchLocationWeather>, QueryError> {
+        self.catch_location_weather_impl(year, week, catch_location_id)
+            .await
+            .change_context(QueryError)
+    }
     async fn species_caught_with_traal(&self) -> Result<Vec<SpeciesGroup>, QueryError> {
         self.species_caught_with_traal_impl()
             .await
@@ -1057,10 +1071,11 @@ impl MLModelsInbound for PostgresAdapter {
     }
     async fn existing_fishing_weight_predictions(
         &self,
+        model_id: ModelId,
         year: u32,
     ) -> Result<Vec<FishingWeightPrediction>, QueryError> {
         convert_vec(
-            self.existing_fishing_weight_predictions_impl(year)
+            self.existing_fishing_weight_predictions_impl(model_id, year)
                 .await
                 .change_context(QueryError)?,
         )
@@ -1073,9 +1088,12 @@ impl MLModelsInbound for PostgresAdapter {
             .await
             .change_context(QueryError)
     }
-    async fn catch_locations(&self) -> Result<Vec<CatchLocation>, QueryError> {
+    async fn catch_locations(
+        &self,
+        overlap: WeatherLocationOverlap,
+    ) -> Result<Vec<CatchLocation>, QueryError> {
         convert_vec(
-            self.catch_locations_impl()
+            self.catch_locations_impl(overlap)
                 .await
                 .change_context(QueryError)?,
         )

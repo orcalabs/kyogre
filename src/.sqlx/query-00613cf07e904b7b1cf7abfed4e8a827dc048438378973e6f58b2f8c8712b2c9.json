@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT\n    catch_location_id,\n    week,\n    species_group_id AS \"species_group_id: SpeciesGroup\",\n    weight,\n    \"year\"\nFROM\n    fishing_weight_predictions\n            ",
+  "query": "\nSELECT\n    catch_location_id,\n    week,\n    species_group_id AS \"species_group_id: SpeciesGroup\",\n    weight,\n    \"year\"\nFROM\n    fishing_weight_predictions\nWHERE\n    \"year\" = $1\n    AND ml_model_id = $2\n            ",
   "describe": {
     "columns": [
       {
@@ -30,7 +30,10 @@
       }
     ],
     "parameters": {
-      "Left": []
+      "Left": [
+        "Int4",
+        "Int4"
+      ]
     },
     "nullable": [
       false,
@@ -40,5 +43,5 @@
       false
     ]
   },
-  "hash": "cdd9f9fec1e8f3183c9a69d05b80bbd57cb102713004edf2aab77f4c1a9c98fb"
+  "hash": "00613cf07e904b7b1cf7abfed4e8a827dc048438378973e6f58b2f8c8712b2c9"
 }

@@ -49,7 +49,7 @@ pub struct HaulOceanClimate {
 impl NewOceanClimate {
     pub fn test_default(timestamp: DateTime<Utc>) -> Self {
         let mut rng = rand::thread_rng();
-        let (latitude, longitude) =
+        let (latitude, longitude, _) =
             WEATHER_LOCATION_LATS_LONS[rng.gen::<usize>() % WEATHER_LOCATION_LATS_LONS.len()];
         let num = rng.gen::<u8>() as f64;
 

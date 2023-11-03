@@ -130,11 +130,11 @@ where
                 web::get().to(routes::v1::fishing_prediction::all_fishing_spot_predictions::<T>),
             )
             .route(
-                "/fishing_weight_predictions",
+                "/fishing_weight_predictions/{model_id}",
                 web::get().to(routes::v1::fishing_prediction::all_fishing_weight_predictions::<T>),
             )
             .route(
-                "/fishing_weight_predictions/{species_group_id}",
+                "/fishing_weight_predictions/{model_id}/{species_group_id}",
                 web::get().to(routes::v1::fishing_prediction::fishing_weight_predictions::<T>),
             )
             .route(

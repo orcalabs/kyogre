@@ -1,5 +1,6 @@
 use super::helper::test;
 use actix_web::http::StatusCode;
+use chrono::{Datelike, Utc};
 use engine::*;
 use fiskeridir_rs::{GearGroup, SpeciesGroup};
 use kyogre_core::*;
@@ -79,6 +80,7 @@ async fn test_fishing_weight_predictions_filters_by_week_and_species_group() {
         let response = helper
             .app
             .get_fishing_weight_predictions(
+                ModelId::FishingWeightPredictor,
                 SpeciesGroup::Sei,
                 FishingWeightPredictionParams {
                     week: Some(1),
@@ -95,27 +97,46 @@ async fn test_fishing_weight_predictions_filters_by_week_and_species_group() {
 }
 
 #[tokio::test]
-async fn test_fishing_weight_predictions_returns_all() {
+async fn test_fishing_weight_predictions_filters_by_model() {
     test(|helper, builder| async move {
         builder
-            .add_ml_model(default_fishing_weight_predictor())
+            .add_ml_models(vec![
+                default_fishing_weight_predictor(),
+                default_fishing_weight_weather_predictor(),
+            ])
+            .data_start(Utc::now().with_ordinal(7).unwrap())
+            .weather(5)
             .vessels(1)
             .hauls(5)
             .modify(|v| {
                 v.dca.gear.gear_group_code = GearGroup::Traal;
             })
+            .weather(5)
             .build()
             .await;
 
-        let response = helper.app.get_all_fishing_weight_predictions().await;
+        let response = helper
+            .app
+            .get_all_fishing_weight_predictions(ModelId::FishingWeightPredictor)
+            .await;
         assert_eq!(response.status(), StatusCode::OK);
-
         let predictions: Vec<FishingWeightPrediction> = response.json().await.unwrap();
         assert_eq!(
             predictions.len() as u32,
             FISHING_WEIGHT_PREDICTOR_NUM_WEEKS
                 * FISHING_WEIGHT_PREDICTOR_NUM_CL
                 * SpeciesGroup::COUNT as u32
+        );
+
+        let response = helper
+            .app
+            .get_all_fishing_weight_predictions(ModelId::FishingWeightWeatherPredictor)
+            .await;
+        assert_eq!(response.status(), StatusCode::OK);
+        let predictions: Vec<FishingWeightPrediction> = response.json().await.unwrap();
+        assert_eq!(
+            predictions.len() as u32,
+            FISHING_WEIGHT_PREDICTOR_NUM_WEEKS * SpeciesGroup::COUNT as u32
         );
     })
     .await;
@@ -137,6 +158,7 @@ async fn test_fishing_weight_predictions_filters_by_limit_and_orders_by_weight_d
         let response = helper
             .app
             .get_fishing_weight_predictions(
+                ModelId::FishingWeightPredictor,
                 SpeciesGroup::Sei,
                 FishingWeightPredictionParams {
                     week: Some(1),
