@@ -90,6 +90,7 @@ pub trait WebApiOutboundPort {
     ) -> Result<Option<FishingSpotPrediction>, QueryError>;
     fn fishing_weight_predictions(
         &self,
+        model_id: ModelId,
         species: SpeciesGroup,
         week: u32,
         limit: u32,
@@ -97,6 +98,7 @@ pub trait WebApiOutboundPort {
     fn all_fishing_spot_predictions(&self) -> PinBoxStream<'_, FishingSpotPrediction, QueryError>;
     fn all_fishing_weight_predictions(
         &self,
+        model_id: ModelId,
     ) -> PinBoxStream<'_, FishingWeightPrediction, QueryError>;
 }
 
@@ -234,6 +236,8 @@ pub trait MLModelsOutbound: Send + Sync {
     ) -> Result<Vec<FishingSpotTrainingData>, QueryError>;
     async fn fishing_weight_predictor_training_data(
         &self,
+        model_id: ModelId,
+        weather: WeatherData,
     ) -> Result<Vec<WeightPredictorTrainingData>, QueryError>;
     async fn commit_hauls_training(
         &self,

@@ -25,18 +25,21 @@ impl Display for MLModelError {
 
 impl Context for MLModelError {}
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Deserialize, Serialize, strum::Display)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
+#[serde(rename_all = "camelCase")]
 pub enum ModelId {
+    #[strum(serialize = "fishingSpotPredictor")]
     FishingSpotPredictor = 1,
+    #[strum(serialize = "fishingWeightPredictor")]
     FishingWeightPredictor = 2,
+    #[strum(serialize = "fishingWeightWeatherPredictor")]
+    FishingWeightWeatherPredictor = 3,
 }
 
-impl std::fmt::Display for ModelId {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            ModelId::FishingSpotPredictor => f.write_str("fishing_spot_predictor"),
-            ModelId::FishingWeightPredictor => f.write_str("fishing_weight_predictor"),
-        }
+impl From<ModelId> for i32 {
+    fn from(value: ModelId) -> Self {
+        value as i32
     }
 }
 
@@ -59,6 +62,13 @@ pub struct WeightPredictorTrainingData {
     pub catch_location: CatchLocationId,
     pub species: SpeciesGroup,
     pub week: i32,
+    pub wind_speed_10m: Option<f64>,
+    pub wind_direction_10m: Option<f64>,
+    pub air_temperature_2m: Option<f64>,
+    pub relative_humidity_2m: Option<f64>,
+    pub air_pressure_at_sea_level: Option<f64>,
+    pub precipitation_amount: Option<f64>,
+    pub cloud_area_fraction: Option<f64>,
 }
 
 #[async_trait]
@@ -87,6 +97,7 @@ pub struct NewFishingSpotPrediction {
 
 #[derive(Debug, Clone)]
 pub struct NewFishingWeightPrediction {
+    pub model: ModelId,
     pub catch_location_id: CatchLocationId,
     pub weight: f64,
     pub species: SpeciesGroup,

@@ -76,6 +76,7 @@ impl Database for PostgresAdapter {}
             LandingsSorting,
             TripSorting,
             TripAssemblerId,
+            kyogre_core::ModelId,
             error::ErrorResponse,
             error::ApiError,
             v1::ais::AisPosition,

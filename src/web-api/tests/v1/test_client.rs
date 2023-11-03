@@ -1,7 +1,9 @@
 use std::{fmt::Write, string::ToString};
 
 use fiskeridir_rs::{CallSign, LandingId, SpeciesGroup};
-use kyogre_core::{ActiveHaulsFilter, ActiveLandingFilter, FiskeridirVesselId, HaulId, Mmsi};
+use kyogre_core::{
+    ActiveHaulsFilter, ActiveLandingFilter, FiskeridirVesselId, HaulId, Mmsi, ModelId,
+};
 use reqwest::{header::HeaderMap, Client, Response};
 use serde::Serialize;
 use web_api::routes::v1::{
@@ -149,8 +151,13 @@ impl ApiClient {
     pub async fn get_all_fishing_spot_predictions(&self) -> Response {
         self.get("fishing_spot_predictions", &[], None).await
     }
-    pub async fn get_all_fishing_weight_predictions(&self) -> Response {
-        self.get("fishing_weight_predictions", &[], None).await
+    pub async fn get_all_fishing_weight_predictions(&self, model_id: ModelId) -> Response {
+        self.get(
+            format!("fishing_weight_predictions/{}", model_id),
+            &[],
+            None,
+        )
+        .await
     }
 
     pub async fn get_fishing_spot_predictions(
@@ -172,6 +179,7 @@ impl ApiClient {
 
     pub async fn get_fishing_weight_predictions(
         &self,
+        model_id: ModelId,
         species: SpeciesGroup,
         params: FishingWeightPredictionParams,
     ) -> Response {
@@ -183,7 +191,7 @@ impl ApiClient {
             parameters.push(("limit".to_string(), limit.to_string()))
         }
         self.get(
-            format!("fishing_weight_predictions/{}", species as i32),
+            format!("fishing_weight_predictions/{}/{}", model_id, species as i32),
             &parameters,
             None,
         )

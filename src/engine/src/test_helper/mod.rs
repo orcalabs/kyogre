@@ -1,11 +1,11 @@
 use crate::{
     AisConsumeLoop, AisPosition, AisVms, Arrival, DataMessage, DeliveryPoint, DeliveryPointType,
     Departure, ErsTripAssembler, FisheryEngine, FishingFacilities, FishingFacilitiesQuery,
-    FishingFacility, FishingSpotPredictor, FishingWeightPredictor, FiskeridirVesselId, Haul,
-    HaulsQuery, Landing, LandingTripAssembler, LandingsQuery, LandingsSorting, ManualDeliveryPoint,
-    MattilsynetDeliveryPoint, Mmsi, NewAisPosition, NewAisStatic, OceanClimate, Ordering,
-    Pagination, PrecisionId, ScrapeState, SharedState, Step, TripDetailed, Trips, TripsQuery,
-    Vessel, VmsPosition, Weather,
+    FishingFacility, FishingSpotPredictor, FishingWeightPredictor, FishingWeightWeatherPredictor,
+    FiskeridirVesselId, Haul, HaulsQuery, Landing, LandingTripAssembler, LandingsQuery,
+    LandingsSorting, ManualDeliveryPoint, MattilsynetDeliveryPoint, Mmsi, NewAisPosition,
+    NewAisStatic, OceanClimate, Ordering, Pagination, PrecisionId, ScrapeState, SharedState, Step,
+    TripDetailed, Trips, TripsQuery, Vessel, VmsPosition, Weather,
 };
 
 use ais::*;
@@ -15,8 +15,8 @@ use fiskeridir_rs::CallSign;
 use fiskeridir_rs::{DeliveryPointId, LandingMonth};
 use futures::TryStreamExt;
 use kyogre_core::{
-    HaulDistributor, MLModel, NewVesselConflict, TestStorage, TripAssembler, TripDistancer,
-    VesselBenchmark,
+    CatchLocationId, HaulDistributor, MLModel, NewVesselConflict, NewWeather, TestStorage,
+    TripAssembler, TripDistancer, VesselBenchmark,
 };
 use machine::StateMachine;
 use orca_core::{Environment, PsqlSettings};
@@ -62,7 +62,7 @@ use self::cycle::Cycle;
 
 pub static FISHING_SPOT_PREDICTOR_NUM_WEEKS: u32 = 2;
 pub static FISHING_WEIGHT_PREDICTOR_NUM_WEEKS: u32 = 2;
-pub static FISHING_WEIGHT_PREDICTOR_NUM_CL: u32 = 3;
+pub static FISHING_WEIGHT_PREDICTOR_NUM_CL: u32 = 2;
 
 #[derive(Debug)]
 pub struct TestState {
@@ -168,7 +168,16 @@ pub fn default_fishing_weight_predictor() -> Box<dyn MLModel> {
         1,
         Environment::Test,
         Some(FISHING_WEIGHT_PREDICTOR_NUM_WEEKS),
-        Some(FISHING_WEIGHT_PREDICTOR_NUM_CL),
+        vec![CatchLocationId::new(3, 12), CatchLocationId::new(3, 5)],
+    ))
+}
+
+pub fn default_fishing_weight_weather_predictor() -> Box<dyn MLModel> {
+    Box::new(FishingWeightWeatherPredictor::new(
+        1,
+        Environment::Test,
+        Some(FISHING_WEIGHT_PREDICTOR_NUM_WEEKS),
+        vec![CatchLocationId::new(3, 12), CatchLocationId::new(3, 5)],
     ))
 }
 
@@ -495,6 +504,24 @@ impl TestStateBuilder {
 
         HaulBuilder {
             current_index: self.hauls.len() - amount,
+            state: self,
+        }
+    }
+
+    pub fn weather(mut self, amount: usize) -> WeatherBuilder {
+        assert_ne!(amount, 0);
+
+        for _ in 0..amount {
+            let weather = NewWeather::test_default(self.global_data_timestamp_counter);
+            self.weather.push(WeatherConstructor {
+                weather,
+                cycle: self.cycle,
+            });
+            self.global_data_timestamp_counter += self.data_timestamp_gap;
+        }
+
+        WeatherBuilder {
+            current_index: self.weather.len() - amount,
             state: self,
         }
     }

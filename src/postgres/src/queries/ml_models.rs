@@ -7,7 +7,7 @@ use error_stack::{report, Result, ResultExt};
 use fiskeridir_rs::{GearGroup, SpeciesGroup};
 use futures::Stream;
 use futures::TryStreamExt;
-use kyogre_core::{FishingSpotPrediction, HaulId, ModelId};
+use kyogre_core::{FishingSpotPrediction, HaulId, ModelId, WeatherData};
 use unnest_insert::UnnestInsert;
 
 impl PostgresAdapter {
@@ -70,6 +70,7 @@ WHERE
     }
     pub(crate) async fn existing_fishing_weight_predictions_impl(
         &self,
+        model_id: ModelId,
         year: u32,
     ) -> Result<Vec<FishingWeightPrediction>, PostgresError> {
         sqlx::query_as!(
@@ -85,8 +86,10 @@ FROM
     fishing_weight_predictions
 WHERE
     "year" = $1
+    AND ml_model_id = $2
             "#,
-            year as i32
+            year as i32,
+            model_id as i32
         )
         .fetch_all(&self.pool)
         .await
@@ -149,7 +152,14 @@ WHERE
 
     pub(crate) async fn fishing_weight_predictor_training_data_impl(
         &self,
+        model_id: ModelId,
+        weather_data: WeatherData,
     ) -> Result<Vec<WeightPredictorTrainingData>, PostgresError> {
+        let require_weather = match weather_data {
+            WeatherData::Require => false,
+            WeatherData::Optional => true,
+        };
+
         sqlx::query_as!(
             WeightPredictorTrainingData,
             r#"
@@ -161,7 +171,14 @@ SELECT
     (DATE_PART('week', h.start_timestamp))::INT AS "week!",
     hm.living_weight AS "weight",
     hm.species_group_id AS "species: SpeciesGroup",
-    hm.haul_id
+    hm.haul_id,
+    h.wind_speed_10m::DOUBLE PRECISION,
+    h.wind_direction_10m::DOUBLE PRECISION,
+    h.air_temperature_2m::DOUBLE PRECISION,
+    h.relative_humidity_2m::DOUBLE PRECISION,
+    h.air_pressure_at_sea_level::DOUBLE PRECISION,
+    h.precipitation_amount::DOUBLE PRECISION,
+    h.cloud_area_fraction::DOUBLE PRECISION
 FROM
     hauls_matrix hm
     INNER JOIN hauls h ON hm.haul_id = h.haul_id
@@ -172,11 +189,23 @@ WHERE
     (h.stop_timestamp - h.start_timestamp) < INTERVAL '2 day'
     AND hm.gear_group_id = $1
     AND m.haul_id IS NULL
+    AND (
+        (
+            h.air_temperature_2m IS NOT NULL
+            AND h.relative_humidity_2m IS NOT NULL
+            AND h.air_pressure_at_sea_level IS NOT NULL
+            AND h.wind_direction_10m IS NOT NULL
+            AND h.precipitation_amount IS NOT NULL
+            AND h.cloud_area_fraction IS NOT NULL
+        )
+        OR $3
+    )
 ORDER BY
     hm.species_group_id DESC;
             "#,
             GearGroup::Traal as i32,
-            ModelId::FishingWeightPredictor as i32,
+            model_id as i32,
+            require_weather,
         )
         .fetch_all(&self.pool)
         .await
@@ -254,6 +283,7 @@ ORDER BY
 
     pub(crate) fn fishing_weight_predictions_impl(
         &self,
+        model_id: ModelId,
         species: SpeciesGroup,
         week: u32,
         limit: u32,
@@ -270,13 +300,15 @@ SELECT
 FROM
     fishing_weight_predictions
 WHERE
-    species_group_id = $1
-    AND week = $2
+    ml_model_id = $1
+    AND species_group_id = $2
+    AND week = $3
 ORDER BY
     weight DESC
 LIMIT
-    $3
+    $4
             "#,
+            model_id as i32,
             species as i32,
             week as i32,
             limit as i32
@@ -315,6 +347,7 @@ WHERE
 
     pub(crate) fn all_fishing_weight_predictions_impl(
         &self,
+        model_id: ModelId,
     ) -> impl Stream<Item = Result<FishingWeightPrediction, PostgresError>> + '_ {
         sqlx::query_as!(
             FishingWeightPrediction,
@@ -327,7 +360,10 @@ SELECT
     "year"
 FROM
     fishing_weight_predictions
+WHERE
+    ml_model_id = $1
             "#,
+            model_id as i32
         )
         .fetch(&self.pool)
         .map_err(|e| report!(e).change_context(PostgresError::Query))

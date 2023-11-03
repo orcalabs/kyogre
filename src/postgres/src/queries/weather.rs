@@ -1,7 +1,7 @@
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, NaiveDate, TimeZone, Utc, Weekday};
 use error_stack::{report, Report, Result, ResultExt};
 use futures::{Stream, TryStreamExt};
-use kyogre_core::{HaulWeatherOutput, WeatherQuery};
+use kyogre_core::{CatchLocationId, CatchLocationWeather, HaulWeatherOutput, WeatherQuery};
 use unnest_insert::UnnestInsert;
 
 use crate::{
@@ -13,6 +13,61 @@ use crate::{
 use super::opt_float_to_decimal;
 
 impl PostgresAdapter {
+    pub(crate) async fn catch_location_weather_impl(
+        &self,
+        year: u32,
+        week: u32,
+        catch_location_id: &CatchLocationId,
+    ) -> Result<Option<CatchLocationWeather>, PostgresError> {
+        let start_naive_date = NaiveDate::from_isoywd_opt(year as i32, week, Weekday::Mon)
+            .ok_or(PostgresError::DataConversion)?
+            .and_hms_opt(0, 0, 0)
+            .unwrap();
+
+        let end_naive_date = NaiveDate::from_isoywd_opt(year as i32, week, Weekday::Sun)
+            .ok_or(PostgresError::DataConversion)?
+            .and_hms_opt(23, 59, 59)
+            .unwrap();
+
+        let start = Utc.from_utc_datetime(&start_naive_date);
+        let end = Utc.from_utc_datetime(&end_naive_date);
+
+        sqlx::query_as!(
+            CatchLocationWeather,
+            r#"
+SELECT
+    AVG(wind_speed_10m)::DOUBLE PRECISION AS "wind_speed_10m!",
+    AVG(wind_direction_10m)::DOUBLE PRECISION AS "wind_direction_10m!",
+    AVG(air_temperature_2m)::DOUBLE PRECISION AS "air_temperature_2m!",
+    AVG(relative_humidity_2m)::DOUBLE PRECISION AS "relative_humidity_2m!",
+    AVG(air_pressure_at_sea_level)::DOUBLE PRECISION AS "air_pressure_at_sea_level!",
+    AVG(precipitation_amount)::DOUBLE PRECISION AS "precipitation_amount!",
+    AVG(cloud_area_fraction)::DOUBLE PRECISION AS "cloud_area_fraction!"
+FROM
+    catch_locations c
+    INNER JOIN weather w ON w.weather_location_id = ANY (c.weather_location_ids)
+WHERE
+    catch_location_id = $1
+    AND "timestamp" BETWEEN $2 AND $3
+    AND wind_speed_10m IS NOT NULL
+    AND wind_direction_10m IS NOT NULL
+    AND air_temperature_2m IS NOT NULL
+    AND relative_humidity_2m IS NOT NULL
+    AND air_pressure_at_sea_level IS NOT NULL
+    AND precipitation_amount IS NOT NULL
+    AND cloud_area_fraction IS NOT NULL
+GROUP BY
+    c.catch_location_id
+            "#,
+            catch_location_id.as_ref(),
+            start,
+            end,
+        )
+        .fetch_optional(&self.pool)
+        .await
+        .change_context(PostgresError::Query)
+    }
+
     pub(crate) fn weather_impl(
         &self,
         query: WeatherQuery,

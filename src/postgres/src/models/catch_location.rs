@@ -10,6 +10,7 @@ pub struct CatchLocation {
     pub polygon: wkb::Decode<Geometry<f64>>,
     pub latitude: f64,
     pub longitude: f64,
+    pub weather_location_ids: Vec<i64>,
 }
 
 impl TryFrom<CatchLocation> for kyogre_core::CatchLocation {
@@ -32,6 +33,7 @@ impl TryFrom<CatchLocation> for kyogre_core::CatchLocation {
             polygon,
             latitude: v.latitude,
             longitude: v.longitude,
+            weather_location_ids: v.weather_location_ids,
         })
     }
 }

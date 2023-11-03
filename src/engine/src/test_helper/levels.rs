@@ -32,6 +32,7 @@ macro_rules! impl_cycleable {
     };
 }
 
+impl_cycleable!(WeatherBuilder, WeatherConstructor, state, cycle);
 impl_cycleable!(AisVesselBuilder, AisVesselConstructor, state, cycle);
 impl_cycleable!(
     OceanClimateHaulBuilder,
@@ -255,6 +256,7 @@ impl_modifiable!(
     WeatherConstructor,
     state.state.state.weather
 );
+impl_modifiable!(WeatherBuilder, WeatherConstructor, state.weather);
 
 impl Modifiable for TripBuilder {
     type Constructor = TripConstructor;
@@ -454,6 +456,7 @@ impl_global_level!(MattilsynetBuilder);
 impl_global_level!(AquaCultureBuilder);
 impl_global_level!(FishingFacilityBuilder);
 impl_global_level!(ManualDeliveryPointsBuilder);
+impl_global_level!(WeatherBuilder);
 
 #[async_trait]
 pub trait TripLevel
