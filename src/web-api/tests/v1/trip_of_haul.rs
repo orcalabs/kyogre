@@ -1,4 +1,4 @@
-use super::helper::test;
+use super::helper::test_with_cache;
 use actix_web::http::StatusCode;
 use chrono::{Duration, TimeZone, Utc};
 use engine::*;
@@ -8,7 +8,9 @@ use web_api::routes::v1::trip::Trip;
 
 #[tokio::test]
 async fn test_trip_of_haul_returns_none_of_no_trip_is_connected_to_given_haul_id() {
-    test(|helper, _builder| async move {
+    test_with_cache(|helper, _builder| async move {
+        helper.refresh_cache().await;
+
         let response = helper.app.get_trip_of_haul(&HaulId(7645323266)).await;
         assert_eq!(response.status(), StatusCode::OK);
 
@@ -20,8 +22,10 @@ async fn test_trip_of_haul_returns_none_of_no_trip_is_connected_to_given_haul_id
 
 #[tokio::test]
 async fn test_trip_of_haul_does_not_return_trip_outside_haul_period() {
-    test(|helper, builder| async move {
+    test_with_cache(|helper, builder| async move {
         let state = builder.vessels(1).trips(1).up().hauls(1).build().await;
+
+        helper.refresh_cache().await;
 
         let response = helper.app.get_trip_of_haul(&state.hauls[0].haul_id).await;
         assert_eq!(response.status(), StatusCode::OK);
@@ -34,7 +38,7 @@ async fn test_trip_of_haul_does_not_return_trip_outside_haul_period() {
 
 #[tokio::test]
 async fn test_trip_of_haul_does_not_return_trip_of_other_vessels() {
-    test(|helper, builder| async move {
+    test_with_cache(|helper, builder| async move {
         let start = Utc.timestamp_opt(10000, 0).unwrap();
         let end = Utc.timestamp_opt(100000, 0).unwrap();
 
@@ -58,6 +62,8 @@ async fn test_trip_of_haul_does_not_return_trip_of_other_vessels() {
             .build()
             .await;
 
+        helper.refresh_cache().await;
+
         let response = helper.app.get_trip_of_haul(&state.hauls[0].haul_id).await;
         assert_eq!(response.status(), StatusCode::OK);
 
@@ -69,8 +75,10 @@ async fn test_trip_of_haul_does_not_return_trip_of_other_vessels() {
 
 #[tokio::test]
 async fn test_trip_of_haul_returns_all_hauls_and_landings_connected_to_trip() {
-    test(|helper, builder| async move {
+    test_with_cache(|helper, builder| async move {
         let state = builder.vessels(1).trips(1).hauls(1).build().await;
+
+        helper.refresh_cache().await;
 
         let response = helper.app.get_trip_of_haul(&state.hauls[0].haul_id).await;
         assert_eq!(response.status(), StatusCode::OK);
@@ -83,7 +91,7 @@ async fn test_trip_of_haul_returns_all_hauls_and_landings_connected_to_trip() {
 
 #[tokio::test]
 async fn test_aggregates_landing_data_per_product_quality_and_species_id() {
-    test(|helper, builder| async move {
+    test_with_cache(|helper, builder| async move {
         let state = builder
             .vessels(1)
             .trips(1)
@@ -103,6 +111,8 @@ async fn test_aggregates_landing_data_per_product_quality_and_species_id() {
             .build()
             .await;
 
+        helper.refresh_cache().await;
+
         let response = helper.app.get_trip_of_haul(&state.hauls[0].haul_id).await;
         assert_eq!(response.status(), StatusCode::OK);
 
@@ -115,7 +125,7 @@ async fn test_aggregates_landing_data_per_product_quality_and_species_id() {
 
 #[tokio::test]
 async fn test_trip_of_haul_returns_precision_range_of_trip_if_it_exists() {
-    test(|helper, builder| async move {
+    test_with_cache(|helper, builder| async move {
         let start = Utc.timestamp_opt(1000000, 0).unwrap();
         let end = Utc.timestamp_opt(2000000, 0).unwrap();
         let state = builder
@@ -129,6 +139,8 @@ async fn test_trip_of_haul_returns_precision_range_of_trip_if_it_exists() {
             .hauls(1)
             .build()
             .await;
+
+        helper.refresh_cache().await;
 
         let response = helper.app.get_trip_of_haul(&state.hauls[0].haul_id).await;
         assert_eq!(response.status(), StatusCode::OK);

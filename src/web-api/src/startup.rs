@@ -118,11 +118,11 @@ where
             )
             .route(
                 "/trip_of_haul/{haul_id}",
-                web::get().to(routes::v1::trip::trip_of_haul::<T>),
+                web::get().to(routes::v1::trip::trip_of_haul::<T, M>),
             )
             .route(
                 "/trip_of_landing/{landing_id}",
-                web::get().to(routes::v1::trip::trip_of_landing::<T>),
+                web::get().to(routes::v1::trip::trip_of_landing::<T, M>),
             )
             .route(
                 "/trip_of_partial_landing/{landing_id}",

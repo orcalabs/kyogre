@@ -174,6 +174,16 @@ pub trait MeilisearchOutbound: Send + Sync {
         query: TripsQuery,
         read_fishing_facility: bool,
     ) -> Result<Vec<TripDetailed>, QueryError>;
+    async fn trip_of_haul(
+        &self,
+        haul_id: &HaulId,
+        read_fishing_facility: bool,
+    ) -> Result<Option<TripDetailed>, QueryError>;
+    async fn trip_of_landing(
+        &self,
+        landing_id: &LandingId,
+        read_fishing_facility: bool,
+    ) -> Result<Option<TripDetailed>, QueryError>;
     async fn hauls(&self, query: HaulsQuery) -> Result<Vec<Haul>, QueryError>;
     async fn landings(&self, query: LandingsQuery) -> Result<Vec<Landing>, QueryError>;
 }

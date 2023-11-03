@@ -13,10 +13,11 @@ use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use error::MeilisearchError;
 use error_stack::{report, Result, ResultExt};
+use fiskeridir_rs::LandingId;
 use futures::{future::BoxFuture, FutureExt};
 use kyogre_core::{
-    running_in_test, HaulsQuery, LandingsQuery, MeilisearchOutbound, MeilisearchSource, QueryError,
-    Range, TripDetailed, TripsQuery,
+    running_in_test, HaulId, HaulsQuery, LandingsQuery, MeilisearchOutbound, MeilisearchSource,
+    QueryError, Range, TripDetailed, TripsQuery,
 };
 use meilisearch_sdk::{Client, Index, Selectors, TaskInfo};
 
@@ -84,7 +85,7 @@ impl MeilisearchAdapter {
         Ok(())
     }
 
-    pub async fn run(self) {
+    pub async fn run(self) -> ! {
         loop {
             if let Err(e) = self.refresh().await {
                 event!(
@@ -106,6 +107,24 @@ impl MeilisearchOutbound for MeilisearchAdapter {
         read_fishing_facility: bool,
     ) -> Result<Vec<TripDetailed>, QueryError> {
         self.trips_impl(query, read_fishing_facility)
+            .await
+            .change_context(QueryError)
+    }
+    async fn trip_of_haul(
+        &self,
+        haul_id: &HaulId,
+        read_fishing_facility: bool,
+    ) -> Result<Option<TripDetailed>, QueryError> {
+        self.trip_of_haul_impl(haul_id, read_fishing_facility)
+            .await
+            .change_context(QueryError)
+    }
+    async fn trip_of_landing(
+        &self,
+        landing_id: &LandingId,
+        read_fishing_facility: bool,
+    ) -> Result<Option<TripDetailed>, QueryError> {
+        self.trip_of_landing_impl(landing_id, read_fishing_facility)
             .await
             .change_context(QueryError)
     }

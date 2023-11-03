@@ -30,7 +30,7 @@ async fn main() {
         tracing,
     );
 
-    let (app, meilisearch) = App::build(&settings).await;
+    let (engine, meilisearch) = App::build(&settings).await;
 
     let span = span!(Level::TRACE, "engine");
     let _enter = span.enter();
@@ -38,7 +38,7 @@ async fn main() {
     event!(Level::INFO, "starting engine...");
 
     if let Some(meilisearch) = meilisearch {
-        let engine = tokio::spawn(app.run());
+        let engine = tokio::spawn(engine.run());
         let meilisearch = tokio::spawn(meilisearch.run());
 
         select! {
@@ -50,6 +50,6 @@ async fn main() {
             },
         }
     } else {
-        app.run().await;
+        engine.run().await;
     }
 }

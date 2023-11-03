@@ -123,7 +123,9 @@ async fn test_trips_contains_refreshed_hauls() {
 
 #[tokio::test]
 async fn test_trip_of_landing_returns_none_of_no_trip_is_connected_to_given_landing_id() {
-    test(|helper, _builder| async move {
+    test_with_cache(|helper, _builder| async move {
+        helper.refresh_cache().await;
+
         let response = helper
             .app
             .get_trip_of_landing(&"1-7-0-0".try_into().unwrap())
@@ -138,8 +140,10 @@ async fn test_trip_of_landing_returns_none_of_no_trip_is_connected_to_given_land
 
 #[tokio::test]
 async fn test_trip_of_landing_does_not_return_trip_outside_landing_timestamp() {
-    test(|helper, builder| async move {
+    test_with_cache(|helper, builder| async move {
         let state = builder.vessels(1).landings(1).trips(1).build().await;
+
+        helper.refresh_cache().await;
 
         let response = helper
             .app
@@ -155,7 +159,7 @@ async fn test_trip_of_landing_does_not_return_trip_outside_landing_timestamp() {
 
 #[tokio::test]
 async fn test_trip_of_landing_does_not_return_trip_of_other_vessels() {
-    test(|helper, builder| async move {
+    test_with_cache(|helper, builder| async move {
         let start = Utc.timestamp_opt(10000000, 0).unwrap();
         let end = Utc.timestamp_opt(20000000, 0).unwrap();
 
@@ -173,6 +177,8 @@ async fn test_trip_of_landing_does_not_return_trip_of_other_vessels() {
             .build()
             .await;
 
+        helper.refresh_cache().await;
+
         let response = helper
             .app
             .get_trip_of_landing(&state.landings[0].landing_id)
@@ -187,7 +193,7 @@ async fn test_trip_of_landing_does_not_return_trip_of_other_vessels() {
 
 #[tokio::test]
 async fn test_trip_of_landing_returns_all_hauls_and_landings_connected_to_trip() {
-    test(|helper, builder| async move {
+    test_with_cache(|helper, builder| async move {
         let state = builder
             .vessels(1)
             .trips(1)
@@ -195,6 +201,8 @@ async fn test_trip_of_landing_returns_all_hauls_and_landings_connected_to_trip()
             .hauls(1)
             .build()
             .await;
+
+        helper.refresh_cache().await;
 
         let response = helper
             .app

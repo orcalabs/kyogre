@@ -52,6 +52,7 @@ impl Haul {
     pub async fn create_index(adapter: &MeilisearchAdapter) -> Result<(), MeilisearchError> {
         let settings = Settings::new()
             .with_searchable_attributes(Vec::<String>::new())
+            .with_ranking_rules(["sort"])
             .with_filterable_attributes([
                 "start_timestamp",
                 "stop_timestamp",
