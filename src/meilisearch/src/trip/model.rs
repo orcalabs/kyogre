@@ -4,7 +4,10 @@ use async_trait::async_trait;
 use chrono::{DateTime, TimeZone, Utc};
 use error_stack::{report, Report, Result, ResultExt};
 use fiskeridir_rs::{DeliveryPointId, Gear, GearGroup, LandingId, SpeciesGroup, VesselLengthGroup};
-use kyogre_core::{DateRange, FiskeridirVesselId, TripAssemblerId, TripDetailed, TripId};
+use kyogre_core::{
+    DateRange, Delivery, FishingFacility, FiskeridirVesselId, HaulId, TripAssemblerId,
+    TripDetailed, TripHaul, TripId, VesselEvent,
+};
 use meilisearch_sdk::{Index, PaginationSetting, Settings};
 use serde::{Deserialize, Serialize};
 use tracing::{event, Level};
@@ -28,14 +31,15 @@ pub struct Trip {
     pub gear_group_ids: Vec<GearGroup>,
     pub species_group_ids: Vec<SpeciesGroup>,
     pub delivery_point_ids: Vec<DeliveryPointId>,
-    pub hauls: String,
-    pub fishing_facilities: String,
-    pub delivery: String,
+    pub hauls: Vec<TripHaul>,
+    pub fishing_facilities: Vec<FishingFacility>,
+    pub delivery: Delivery,
     pub start_port_id: Option<String>,
     pub end_port_id: Option<String>,
     pub assembler_id: TripAssemblerId,
-    pub vessel_events: String,
+    pub vessel_events: Vec<VesselEvent>,
     pub landing_ids: Vec<LandingId>,
+    pub haul_ids: Vec<HaulId>,
     pub distance: Option<f64>,
     pub cache_version: i64,
     pub total_living_weight: f64,
@@ -45,6 +49,7 @@ impl Trip {
     pub async fn create_index(adapter: &MeilisearchAdapter) -> Result<(), MeilisearchError> {
         let settings = Settings::new()
             .with_searchable_attributes(Vec::<String>::new())
+            .with_ranking_rules(["sort"])
             .with_filterable_attributes([
                 "fiskeridir_vessel_id",
                 "fiskeridir_length_group_id",
@@ -54,6 +59,8 @@ impl Trip {
                 "gear_group_ids",
                 "species_group_ids",
                 "delivery_point_ids",
+                "landing_ids",
+                "haul_ids",
             ])
             .with_sortable_attributes(["end", "total_living_weight"])
             .with_pagination(PaginationSetting {
@@ -190,21 +197,17 @@ impl Trip {
             gear_group_ids: self.gear_group_ids,
             species_group_ids: self.species_group_ids,
             delivery_point_ids: self.delivery_point_ids,
-            hauls: serde_json::from_str(&self.hauls)
-                .change_context(MeilisearchError::DataConversion)?,
+            hauls: self.hauls,
             fishing_facilities: if read_fishing_facility {
-                serde_json::from_str(&self.fishing_facilities)
-                    .change_context(MeilisearchError::DataConversion)?
+                self.fishing_facilities
             } else {
                 vec![]
             },
-            delivery: serde_json::from_str(&self.delivery)
-                .change_context(MeilisearchError::DataConversion)?,
+            delivery: self.delivery,
             start_port_id: self.start_port_id,
             end_port_id: self.end_port_id,
             assembler_id: self.assembler_id,
-            vessel_events: serde_json::from_str(&self.vessel_events)
-                .change_context(MeilisearchError::DataConversion)?,
+            vessel_events: self.vessel_events,
             landing_ids: self.landing_ids,
             distance: self.distance,
             cache_version: self.cache_version,
@@ -232,21 +235,18 @@ impl TryFrom<TripDetailed> for Trip {
             gear_group_ids: v.gear_group_ids,
             species_group_ids: v.species_group_ids,
             delivery_point_ids: v.delivery_point_ids,
-            hauls: serde_json::to_string(&v.hauls)
-                .change_context(MeilisearchError::DataConversion)?,
-            fishing_facilities: serde_json::to_string(&v.fishing_facilities)
-                .change_context(MeilisearchError::DataConversion)?,
-            delivery: serde_json::to_string(&v.delivery)
-                .change_context(MeilisearchError::DataConversion)?,
+            haul_ids: v.hauls.iter().map(|h| h.haul_id).collect(),
+            hauls: v.hauls,
+            fishing_facilities: v.fishing_facilities,
+            total_living_weight: v.delivery.total_living_weight,
+            delivery: v.delivery,
             start_port_id: v.start_port_id,
             end_port_id: v.end_port_id,
             assembler_id: v.assembler_id,
-            vessel_events: serde_json::to_string(&v.vessel_events)
-                .change_context(MeilisearchError::DataConversion)?,
+            vessel_events: v.vessel_events,
             landing_ids: v.landing_ids,
             distance: v.distance,
             cache_version: v.cache_version,
-            total_living_weight: v.delivery.total_living_weight,
         })
     }
 }

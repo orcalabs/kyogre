@@ -65,12 +65,14 @@ pub struct TripsParameters {
         (status = 500, description = "an internal error occured", body = ErrorResponse),
     )
 )]
-#[tracing::instrument(skip(db))]
-pub async fn trip_of_haul<T: Database + 'static>(
+#[tracing::instrument(skip(db, meilisearch))]
+pub async fn trip_of_haul<T: Database + 'static, M: Meilisearch + 'static>(
     db: web::Data<T>,
+    meilisearch: web::Data<Option<M>>,
     profile: Option<BwProfile>,
     haul_id: Path<i64>,
 ) -> Result<Response<Option<Trip>>, ApiError> {
+    let haul_id = HaulId(haul_id.into_inner());
     let read_fishing_facility = profile
         .map(|p| {
             p.policies
@@ -78,7 +80,23 @@ pub async fn trip_of_haul<T: Database + 'static>(
         })
         .unwrap_or(false);
 
-    db.detailed_trip_of_haul(&HaulId(haul_id.into_inner()), read_fishing_facility)
+    if let Some(meilisearch) = meilisearch.as_ref() {
+        match meilisearch
+            .trip_of_haul(&haul_id, read_fishing_facility)
+            .await
+        {
+            Ok(trip) => {
+                return Ok(Response::new(trip.map(Trip::from)));
+            }
+            Err(e) => event!(
+                Level::ERROR,
+                "failed to retrieve trip_of_haul from meilisearch: {:?}",
+                e
+            ),
+        }
+    }
+
+    db.detailed_trip_of_haul(&haul_id, read_fishing_facility)
         .await
         .map(|t| Response::new(t.map(Trip::from)))
         .map_err(|e| {
@@ -95,9 +113,10 @@ pub async fn trip_of_haul<T: Database + 'static>(
         (status = 500, description = "an internal error occured", body = ErrorResponse),
     )
 )]
-#[tracing::instrument(skip(db))]
-pub async fn trip_of_landing<T: Database + 'static>(
+#[tracing::instrument(skip(db, meilisearch))]
+pub async fn trip_of_landing<T: Database + 'static, M: Meilisearch + 'static>(
     db: web::Data<T>,
+    meilisearch: web::Data<Option<M>>,
     profile: Option<BwProfile>,
     landing_id: Path<String>,
 ) -> Result<Response<Option<Trip>>, ApiError> {
@@ -111,6 +130,22 @@ pub async fn trip_of_landing<T: Database + 'static>(
                 .contains(&BwPolicy::BwReadExtendedFishingFacility)
         })
         .unwrap_or(false);
+
+    if let Some(meilisearch) = meilisearch.as_ref() {
+        match meilisearch
+            .trip_of_landing(&landing_id, read_fishing_facility)
+            .await
+        {
+            Ok(trip) => {
+                return Ok(Response::new(trip.map(Trip::from)));
+            }
+            Err(e) => event!(
+                Level::ERROR,
+                "failed to retrieve trip_of_landing from meilisearch: {:?}",
+                e
+            ),
+        }
+    }
 
     db.detailed_trip_of_landing(&landing_id, read_fishing_facility)
         .await
