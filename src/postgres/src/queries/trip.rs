@@ -948,33 +948,10 @@ LIMIT
 SELECT
     fiskeridir_vessel_id,
     timer AS "timestamp",
-    queued_reset AS "queued_reset!"
+    queued_reset AS "queued_reset!",
+    "conflict"
 FROM
     trip_calculation_timers
-WHERE
-    trip_assembler_id = $1
-    AND fiskeridir_vessel_id = $2
-            "#,
-            trip_assembler_id as i32,
-            vessel_id.0
-        )
-        .fetch_optional(&self.pool)
-        .await
-        .change_context(PostgresError::Query)
-    }
-    pub(crate) async fn trip_assembler_conflict(
-        &self,
-        vessel_id: FiskeridirVesselId,
-        trip_assembler_id: TripAssemblerId,
-    ) -> Result<Option<TripAssemblerConflict>, PostgresError> {
-        sqlx::query_as!(
-            TripAssemblerConflict,
-            r#"
-SELECT
-    fiskeridir_vessel_id,
-    "conflict" AS "timestamp"
-FROM
-    trip_assembler_conflicts
 WHERE
     trip_assembler_id = $1
     AND fiskeridir_vessel_id = $2
@@ -1008,27 +985,30 @@ WHERE
 
         let mut tx = self.begin().await?;
 
+        // We assume that trip assemblers process all events and conflicts on each run and can
+        // therefore set conflict to NULL.
+        // Additionally, we assume that no data that can produce conflicts are added concurrently
+        // while running trip assemblers.
         sqlx::query!(
             r#"
 INSERT INTO
     trip_calculation_timers (
         fiskeridir_vessel_id,
         trip_assembler_id,
-        timer,
-        queued_reset
+        timer
     )
 VALUES
-    ($1, $2, $3, $4)
+    ($1, $2, $3)
 ON CONFLICT (fiskeridir_vessel_id) DO
 UPDATE
 SET
     timer = excluded.timer,
-    queued_reset = excluded.queued_reset
+    queued_reset = FALSE,
+    "conflict" = NULL
             "#,
             value.fiskeridir_vessel_id.0,
             value.trip_assembler_id as i32,
             value.new_trip_calculation_time,
-            false
         )
         .execute(&mut *tx)
         .await
@@ -1570,27 +1550,14 @@ WHERE
 
         sqlx::query!(
             r#"
-INSERT INTO
-    trip_assembler_conflicts AS c (
-        fiskeridir_vessel_id,
-        "conflict",
-        trip_assembler_id
-    )
-SELECT
-    u.fiskeridir_vessel_id,
-    u.timestamp,
-    t.trip_assembler_id
+UPDATE trip_calculation_timers
+SET
+    "conflict" = u.timestamp
 FROM
     UNNEST($1::BIGINT[], $2::TIMESTAMPTZ[]) u (fiskeridir_vessel_id, "timestamp")
     INNER JOIN trip_calculation_timers AS t ON t.fiskeridir_vessel_id = u.fiskeridir_vessel_id
-WHERE
-    t.trip_assembler_id = $3::INT
-ON CONFLICT (fiskeridir_vessel_id) DO
-UPDATE
-SET
-    "conflict" = EXCLUDED.conflict
-WHERE
-    c.conflict > EXCLUDED.conflict
+    AND t.timer >= u.timestamp
+    AND t.trip_assembler_id = $3::INT
             "#,
             &vessel_id,
             &timestamp,

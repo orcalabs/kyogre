@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT\n    fiskeridir_vessel_id,\n    timer AS \"timestamp\",\n    queued_reset AS \"queued_reset!\"\nFROM\n    trip_calculation_timers\nWHERE\n    trip_assembler_id = $1\n    AND fiskeridir_vessel_id = $2\n            ",
+  "query": "\nSELECT\n    fiskeridir_vessel_id,\n    timer AS \"timestamp\",\n    queued_reset AS \"queued_reset!\",\n    \"conflict\"\nFROM\n    trip_calculation_timers\nWHERE\n    trip_assembler_id = $1\n    AND fiskeridir_vessel_id = $2\n            ",
   "describe": {
     "columns": [
       {
@@ -17,6 +17,11 @@
         "ordinal": 2,
         "name": "queued_reset!",
         "type_info": "Bool"
+      },
+      {
+        "ordinal": 3,
+        "name": "conflict",
+        "type_info": "Timestamptz"
       }
     ],
     "parameters": {
@@ -28,8 +33,9 @@
     "nullable": [
       false,
       false,
+      true,
       true
     ]
   },
-  "hash": "731c2f776e19372f9356dd5b57be85bfb29e4a2ce3331194e7a151e3fc7d1a6e"
+  "hash": "ba62857ca2b98b90e1cfb1168ef4c5c710032f0fda9b6c2900b0668779f0d3a0"
 }

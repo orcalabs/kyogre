@@ -110,11 +110,6 @@ pub trait TripAssemblerOutboundPort: Send + Sync {
         vessel_id: FiskeridirVesselId,
         trip_assembler_id: TripAssemblerId,
     ) -> Result<Option<TripCalculationTimer>, QueryError>;
-    async fn conflict(
-        &self,
-        vessel_id: FiskeridirVesselId,
-        trip_assembler_id: TripAssemblerId,
-    ) -> Result<Option<TripAssemblerConflict>, QueryError>;
     async fn trip_prior_to_timestamp(
         &self,
         vessel_id: FiskeridirVesselId,

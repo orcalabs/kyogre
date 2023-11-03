@@ -345,6 +345,7 @@ pub struct TripCalculationTimer {
     pub timestamp: DateTime<Utc>,
     pub fiskeridir_vessel_id: FiskeridirVesselId,
     pub queued_reset: bool,
+    pub conflict: Option<DateTime<Utc>>,
 }
 
 impl Trip {

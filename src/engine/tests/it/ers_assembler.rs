@@ -134,9 +134,11 @@ async fn test_handles_conflict_correctly() {
         );
         assert!(helper
             .adapter()
-            .conflict(state.vessels[0].fiskeridir.id, TripAssemblerId::Ers)
+            .trip_calculation_timer(state.vessels[0].fiskeridir.id, TripAssemblerId::Ers)
             .await
             .unwrap()
+            .unwrap()
+            .conflict
             .is_none());
     })
     .await;
@@ -246,9 +248,11 @@ async fn test_other_event_types_does_not_cause_conflicts() {
 
         assert!(helper
             .adapter()
-            .conflict(state.vessels[0].fiskeridir.id, TripAssemblerId::Ers)
+            .trip_calculation_timer(state.vessels[0].fiskeridir.id, TripAssemblerId::Ers)
             .await
             .unwrap()
+            .unwrap()
+            .conflict
             .is_none());
     })
     .await;
