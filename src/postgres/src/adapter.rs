@@ -799,17 +799,6 @@ impl TripAssemblerOutboundPort for PostgresAdapter {
             .change_context(QueryError)?
             .map(TripCalculationTimer::from))
     }
-    async fn conflict(
-        &self,
-        vessel_id: FiskeridirVesselId,
-        trip_assembler_id: TripAssemblerId,
-    ) -> Result<Option<TripAssemblerConflict>, QueryError> {
-        Ok(self
-            .trip_assembler_conflict(vessel_id, trip_assembler_id)
-            .await
-            .change_context(QueryError)?
-            .map(TripAssemblerConflict::from))
-    }
     async fn trip_prior_to_timestamp(
         &self,
         vessel_id: FiskeridirVesselId,

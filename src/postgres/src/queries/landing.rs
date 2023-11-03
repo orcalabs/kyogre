@@ -356,7 +356,10 @@ RETURNING
                     .and_modify(|v| v.timestamp = min(v.timestamp, d.landing_timestamp))
                     .or_insert_with(|| TripAssemblerConflict {
                         fiskeridir_vessel_id: id,
-                        timestamp: d.landing_timestamp,
+                        timestamp: Utc.from_utc_datetime(&NaiveDateTime::new(
+                            d.landing_timestamp.date_naive(),
+                            NaiveTime::from_hms_opt(0, 0, 0).unwrap(),
+                        )),
                     });
             }
         }
@@ -432,7 +435,10 @@ RETURNING
                     .and_modify(|v| v.timestamp = min(v.timestamp, d.landing_timestamp))
                     .or_insert_with(|| TripAssemblerConflict {
                         fiskeridir_vessel_id: id,
-                        timestamp: d.landing_timestamp,
+                        timestamp: Utc.from_utc_datetime(&NaiveDateTime::new(
+                            d.landing_timestamp.date_naive(),
+                            NaiveTime::from_hms_opt(0, 0, 0).unwrap(),
+                        )),
                     });
             }
         }

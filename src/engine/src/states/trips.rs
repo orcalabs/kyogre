@@ -274,28 +274,14 @@ async fn run_trip_assembler(
         .await
         .change_context(TripPipelineError::Assembly)?;
 
-    let conflict = adapter
-        .conflict(vessel.fiskeridir.id, assembler.assembler_id())
-        .await
-        .change_context(TripPipelineError::Assembly)?;
-
-    let state = match (timer, conflict) {
-        (None, None) => AssemblerState::NoPriorState,
-        (None, Some(c)) => AssemblerState::Conflict(c.timestamp),
-        (Some(t), None) => {
-            if t.queued_reset {
-                AssemblerState::QueuedReset
-            } else {
-                AssemblerState::Normal(t.timestamp)
-            }
+    let state = if let Some(timer) = timer {
+        match (timer.conflict, timer.queued_reset) {
+            (_, true) => AssemblerState::QueuedReset,
+            (Some(c), false) => AssemblerState::Conflict(c),
+            (None, false) => AssemblerState::Normal(timer.timestamp),
         }
-        (Some(t), Some(c)) => {
-            if t.queued_reset {
-                AssemblerState::QueuedReset
-            } else {
-                AssemblerState::Conflict(c.timestamp)
-            }
-        }
+    } else {
+        AssemblerState::NoPriorState
     };
 
     let vessel_events = match state {

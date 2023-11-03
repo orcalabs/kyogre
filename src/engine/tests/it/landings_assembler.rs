@@ -105,7 +105,6 @@ async fn test_other_event_types_does_not_cause_conflicts() {
         let state = builder
             .vessels(1)
             .landings(1)
-            .dep(1)
             .hauls(1)
             .tra(1)
             .por(1)
@@ -115,9 +114,11 @@ async fn test_other_event_types_does_not_cause_conflicts() {
 
         assert!(helper
             .adapter()
-            .conflict(state.vessels[0].fiskeridir.id, TripAssemblerId::Landings)
+            .trip_calculation_timer(state.vessels[0].fiskeridir.id, TripAssemblerId::Landings)
             .await
             .unwrap()
+            .unwrap()
+            .conflict
             .is_none());
     })
     .await;
