@@ -13,7 +13,7 @@ r2d2 = { version = "0.8" }
 config = { version = "0.13.3", features = ["yaml"] }
 tracing = "0.1.40"
 serde = { version = "1.0.190", features = ["derive"] }
-serde_json = "1.0.107"
+serde_json = "1.0.108"
 chrono = { version = "0.4.31", features = ["serde"] }
 error-stack = { workspace = true }
 orca-core = { workspace = true, features = ["telemetry"] }
