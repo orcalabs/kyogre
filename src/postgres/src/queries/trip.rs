@@ -780,6 +780,66 @@ WHERE
         .change_context(PostgresError::Query)
     }
 
+    pub(crate) async fn detailed_trip_of_partial_landing_impl(
+        &self,
+        landing_id: String,
+        read_fishing_facility: bool,
+    ) -> Result<Option<TripDetailed>, PostgresError> {
+        let mut trips = sqlx::query_as!(
+            TripDetailed,
+            r#"
+SELECT
+    trip_id AS "trip_id!",
+    fiskeridir_vessel_id AS "fiskeridir_vessel_id!",
+    period AS "period!",
+    period_precision,
+    landing_coverage AS "landing_coverage!",
+    COALESCE(num_landings::BIGINT, 0) AS "num_deliveries!",
+    COALESCE(landing_total_living_weight, 0.0) AS "total_living_weight!",
+    COALESCE(landing_total_gross_weight, 0.0) AS "total_gross_weight!",
+    COALESCE(landing_total_product_weight, 0.0) AS "total_product_weight!",
+    COALESCE(delivery_point_ids, '{}') AS "delivery_points!",
+    COALESCE(landing_gear_ids, '{}') AS "gear_ids!: Vec<Gear>",
+    most_recent_landing AS latest_landing_timestamp,
+    COALESCE(landings::TEXT, '[]') AS "catches!",
+    start_port_id,
+    end_port_id,
+    trip_assembler_id AS "trip_assembler_id!: TripAssemblerId",
+    COALESCE(vessel_events, '[]')::TEXT AS "vessel_events!",
+    COALESCE(hauls, '[]')::TEXT AS "hauls!",
+    COALESCE(landing_ids, '{}') AS "landing_ids!",
+    CASE
+        WHEN $1 THEN COALESCE(fishing_facilities, '[]')::TEXT
+        ELSE '[]'
+    END AS "fishing_facilities!",
+    distance
+FROM
+    trips_detailed
+WHERE
+    landing_ids && (
+        SELECT
+            ARRAY_AGG(landing_id)
+        FROM
+            landings l
+        WHERE
+            landing_id LIKE $2
+    )
+            "#,
+            read_fishing_facility,
+            &landing_id,
+        )
+        .fetch_all(&self.pool)
+        .await
+        .change_context(PostgresError::Query)?;
+
+        match trips.len() {
+            0 => Ok(None),
+            1 => Ok(trips.pop()),
+            i => Err(report!(PostgresError::Query)
+                .attach_printable(format!("landing_id '{landing_id}' matched {i} trips"))),
+        }
+    }
+
     pub(crate) async fn current_trip_impl(
         &self,
         vessel_id: FiskeridirVesselId,
@@ -992,11 +1052,7 @@ WHERE
         sqlx::query!(
             r#"
 INSERT INTO
-    trip_calculation_timers (
-        fiskeridir_vessel_id,
-        trip_assembler_id,
-        timer
-    )
+    trip_calculation_timers (fiskeridir_vessel_id, trip_assembler_id, timer)
 VALUES
     ($1, $2, $3)
 ON CONFLICT (fiskeridir_vessel_id) DO

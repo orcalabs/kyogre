@@ -479,6 +479,17 @@ impl WebApiOutboundPort for PostgresAdapter {
                 .change_context(QueryError)?,
         )
     }
+    async fn detailed_trip_of_partial_landing(
+        &self,
+        landing_id: String,
+        read_fishing_facility: bool,
+    ) -> Result<Option<TripDetailed>, QueryError> {
+        convert_optional(
+            self.detailed_trip_of_partial_landing_impl(landing_id, read_fishing_facility)
+                .await
+                .change_context(QueryError)?,
+        )
+    }
 
     fn detailed_trips(
         &self,
