@@ -83,6 +83,7 @@ pub async fn trip_of_haul<T: Database + 'static>(
             ApiError::InternalServerError
         })
 }
+
 #[utoipa::path(
     get,
     path = "/trip_of_landing/{landing_id}",
@@ -113,6 +114,41 @@ pub async fn trip_of_landing<T: Database + 'static>(
         .map(|t| Response::new(t.map(Trip::from)))
         .map_err(|e| {
             event!(Level::ERROR, "failed to retrieve trip of landing: {:?}", e);
+            ApiError::InternalServerError
+        })
+}
+
+#[utoipa::path(
+    get,
+    path = "/trip_of_partial_landing/{landing_id}",
+    responses(
+        (status = 200, description = "trip associated with the given partial landing_id", body = Trip),
+        (status = 500, description = "an internal error occured", body = ErrorResponse),
+    )
+)]
+#[tracing::instrument(skip(db))]
+pub async fn trip_of_partial_landing<T: Database + 'static>(
+    db: web::Data<T>,
+    profile: Option<BwProfile>,
+    landing_id: Path<String>,
+) -> Result<Response<Option<Trip>>, ApiError> {
+    let landing_id = landing_id.into_inner();
+    let read_fishing_facility = profile
+        .map(|p| {
+            p.policies
+                .contains(&BwPolicy::BwReadExtendedFishingFacility)
+        })
+        .unwrap_or(false);
+
+    db.detailed_trip_of_partial_landing(landing_id, read_fishing_facility)
+        .await
+        .map(|t| Response::new(t.map(Trip::from)))
+        .map_err(|e| {
+            event!(
+                Level::ERROR,
+                "failed to retrieve trip of partial landing: {:?}",
+                e
+            );
             ApiError::InternalServerError
         })
 }
