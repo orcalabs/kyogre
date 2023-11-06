@@ -1608,12 +1608,20 @@ WHERE
             r#"
 UPDATE trip_calculation_timers
 SET
-    "conflict" = u.timestamp
+    "conflict" = q.timestamp
 FROM
-    UNNEST($1::BIGINT[], $2::TIMESTAMPTZ[]) u (fiskeridir_vessel_id, "timestamp")
-    INNER JOIN trip_calculation_timers AS t ON t.fiskeridir_vessel_id = u.fiskeridir_vessel_id
-    AND t.timer >= u.timestamp
-    AND t.trip_assembler_id = $3::INT
+    (
+        SELECT
+            t.fiskeridir_vessel_id,
+            u.timestamp
+        FROM
+            UNNEST($1::BIGINT[], $2::TIMESTAMPTZ[]) u (fiskeridir_vessel_id, "timestamp")
+            INNER JOIN trip_calculation_timers AS t ON t.fiskeridir_vessel_id = u.fiskeridir_vessel_id
+            AND t.timer >= u.timestamp
+            AND t.trip_assembler_id = $3::INT
+    ) q
+WHERE
+    q.fiskeridir_vessel_id = trip_calculation_timers.fiskeridir_vessel_id
             "#,
             &vessel_id,
             &timestamp,
