@@ -1,12 +1,12 @@
-use chrono::{DateTime, NaiveDate, TimeZone, Utc, Weekday};
+use chrono::{DateTime, Duration, NaiveDate, TimeZone, Utc, Weekday};
 use error_stack::{report, Report, Result, ResultExt};
 use futures::{Stream, TryStreamExt};
-use kyogre_core::{CatchLocationId, CatchLocationWeather, HaulWeatherOutput, WeatherQuery};
+use kyogre_core::{CatchLocationId, HaulWeatherOutput, WeatherQuery};
 use unnest_insert::UnnestInsert;
 
 use crate::{
     error::PostgresError,
-    models::{HaulWeather, NewWeather, Weather, WeatherLocation},
+    models::{CatchLocationWeather, HaulWeather, NewWeather, Weather, WeatherLocation},
     PostgresAdapter,
 };
 
@@ -20,22 +20,22 @@ impl PostgresAdapter {
         catch_location_id: &CatchLocationId,
     ) -> Result<Option<CatchLocationWeather>, PostgresError> {
         let start_naive_date = NaiveDate::from_isoywd_opt(year as i32, week, Weekday::Mon)
-            .ok_or(PostgresError::DataConversion)?
+            .ok_or(
+                report!(PostgresError::DataConversion)
+                    .attach_printable(format!("year: {year}, week: {week}")),
+            )?
             .and_hms_opt(0, 0, 0)
             .unwrap();
 
-        let end_naive_date = NaiveDate::from_isoywd_opt(year as i32, week, Weekday::Sun)
-            .ok_or(PostgresError::DataConversion)?
-            .and_hms_opt(23, 59, 59)
-            .unwrap();
-
         let start = Utc.from_utc_datetime(&start_naive_date);
-        let end = Utc.from_utc_datetime(&end_naive_date);
+        let end = start + Duration::days(7);
 
         sqlx::query_as!(
             CatchLocationWeather,
             r#"
 SELECT
+    c.catch_area_id,
+    c.catch_main_area_id,
     AVG(wind_speed_10m)::DOUBLE PRECISION AS "wind_speed_10m!",
     AVG(wind_direction_10m)::DOUBLE PRECISION AS "wind_direction_10m!",
     AVG(air_temperature_2m)::DOUBLE PRECISION AS "air_temperature_2m!",

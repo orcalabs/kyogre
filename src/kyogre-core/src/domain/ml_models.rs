@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use crate::{CatchLocationId, HaulId, MLModelsInbound, MLModelsOutbound};
 use async_trait::async_trait;
-use chrono::{DateTime, Datelike, Duration, Utc};
+use chrono::{Datelike, Duration, Utc};
 use error_stack::{Context, Result};
 use fiskeridir_rs::SpeciesGroup;
 use serde::{Deserialize, Serialize};
@@ -36,6 +36,8 @@ pub enum ModelId {
     FishingWeightPredictor = 2,
     #[strum(serialize = "fishingWeightWeatherPredictor")]
     FishingWeightWeatherPredictor = 3,
+    #[strum(serialize = "fishingSpotWeatherPredictor")]
+    FishingSpotWeatherPredictor = 4,
 }
 
 impl From<ModelId> for i32 {
@@ -65,6 +67,7 @@ pub struct FishingSpotTrainingData {
     pub species: SpeciesGroup,
     pub week: i32,
     pub catch_location_id: CatchLocationId,
+    pub year: i32,
 }
 
 #[derive(Debug)]
@@ -110,6 +113,7 @@ pub struct NewFishingSpotPrediction {
     pub species: SpeciesGroup,
     pub week: u32,
     pub year: u32,
+    pub model: ModelId,
 }
 
 #[derive(Debug, Clone)]
@@ -146,14 +150,6 @@ pub struct FishingWeightPrediction {
     pub year: u32,
 }
 
-fn is_last_week_of_year(current_time: DateTime<Utc>) -> bool {
-    let current_week = current_time.iso_week().week();
-    let current_year = current_time.year();
-
-    (current_week == 52 || current_week == 53)
-        && (current_time + Duration::weeks(1)).year() != current_year
-}
-
 pub enum PredictionRange {
     CurrentYear,
     CurrentWeekAndNextWeek,
@@ -168,9 +164,12 @@ pub struct PredictionTarget {
 impl PredictionRange {
     pub fn prediction_targets(&self) -> Vec<PredictionTarget> {
         let now = Utc::now();
-        let current_week = now.iso_week().week();
-        let current_year = now.year() as u32;
-        let is_end_of_year = is_last_week_of_year(now);
+        let iso_week = now.iso_week();
+        let current_week = iso_week.week();
+        let current_year = iso_week.year() as u32;
+
+        let is_end_of_year = (current_week == 52 || current_week == 53)
+            && (now + Duration::weeks(1)).iso_week().year() != current_year as i32;
 
         match self {
             PredictionRange::CurrentYear => {

@@ -9,7 +9,7 @@ use crate::queries::enum_to_i32;
 #[derive(Debug, Clone, UnnestInsert)]
 #[unnest_insert(
     table_name = "fishing_spot_predictions",
-    conflict = "species_group_id, week, year"
+    conflict = "ml_model_id, species_group_id, week, year"
 )]
 pub struct NewFishingSpotPrediction {
     #[unnest_insert(update)]
@@ -19,6 +19,8 @@ pub struct NewFishingSpotPrediction {
     pub species_group_id: i32,
     pub week: i32,
     pub year: i32,
+    #[unnest_insert(sql_type = "INT", type_conversion = "enum_to_i32")]
+    pub ml_model_id: ModelId,
 }
 
 #[derive(Debug, Clone, UnnestInsert)]
@@ -125,6 +127,7 @@ impl From<kyogre_core::NewFishingSpotPrediction> for NewFishingSpotPrediction {
             species_group_id: value.species.into(),
             week: value.week as i32,
             year: value.year as i32,
+            ml_model_id: value.model,
         }
     }
 }

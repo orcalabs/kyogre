@@ -397,17 +397,21 @@ impl WebApiOutboundPort for PostgresAdapter {
         convert_stream(self.all_fishing_weight_predictions_impl(model_id)).boxed()
     }
 
-    fn all_fishing_spot_predictions(&self) -> PinBoxStream<'_, FishingSpotPrediction, QueryError> {
-        self.all_fishing_spot_predictions_impl()
+    fn all_fishing_spot_predictions(
+        &self,
+        model_id: ModelId,
+    ) -> PinBoxStream<'_, FishingSpotPrediction, QueryError> {
+        self.all_fishing_spot_predictions_impl(model_id)
             .map_err(|e| e.change_context(QueryError))
             .boxed()
     }
     async fn fishing_spot_prediction(
         &self,
+        model_id: ModelId,
         species: SpeciesGroup,
         week: u32,
     ) -> Result<Option<FishingSpotPrediction>, QueryError> {
-        self.fishing_spot_prediction_impl(species, week)
+        self.fishing_spot_prediction_impl(model_id, species, week)
             .await
             .change_context(QueryError)
     }
@@ -1014,6 +1018,28 @@ impl VerificationOutbound for PostgresAdapter {
 
 #[async_trait]
 impl MLModelsOutbound for PostgresAdapter {
+    async fn catch_locations(
+        &self,
+        overlap: WeatherLocationOverlap,
+    ) -> Result<Vec<CatchLocation>, QueryError> {
+        convert_vec(
+            self.catch_locations_impl(overlap)
+                .await
+                .change_context(QueryError)?,
+        )
+    }
+    async fn catch_location_weather(
+        &self,
+        year: u32,
+        week: u32,
+        catch_location_id: &CatchLocationId,
+    ) -> Result<Option<CatchLocationWeather>, QueryError> {
+        Ok(self
+            .catch_location_weather_impl(year, week, catch_location_id)
+            .await
+            .change_context(QueryError)?
+            .map(CatchLocationWeather::from))
+    }
     async fn model(&self, model_id: ModelId) -> Result<Vec<u8>, QueryError> {
         self.model_impl(model_id).await.change_context(QueryError)
     }
@@ -1034,9 +1060,11 @@ impl MLModelsOutbound for PostgresAdapter {
 
     async fn fishing_spot_predictor_training_data(
         &self,
+        model_id: ModelId,
+        limit: Option<u32>,
     ) -> Result<Vec<FishingSpotTrainingData>, QueryError> {
         convert_vec(
-            self.fishing_spot_predictor_training_data_impl()
+            self.fishing_spot_predictor_training_data_impl(model_id, limit)
                 .await
                 .change_context(QueryError)?,
         )
@@ -1061,9 +1089,11 @@ impl MLModelsInbound for PostgresAdapter {
         week: u32,
         catch_location_id: &CatchLocationId,
     ) -> Result<Option<CatchLocationWeather>, QueryError> {
-        self.catch_location_weather_impl(year, week, catch_location_id)
+        Ok(self
+            .catch_location_weather_impl(year, week, catch_location_id)
             .await
-            .change_context(QueryError)
+            .change_context(QueryError)?
+            .map(CatchLocationWeather::from))
     }
     async fn species_caught_with_traal(&self) -> Result<Vec<SpeciesGroup>, QueryError> {
         self.species_caught_with_traal_impl()
@@ -1083,9 +1113,10 @@ impl MLModelsInbound for PostgresAdapter {
     }
     async fn existing_fishing_spot_predictions(
         &self,
+        model_id: ModelId,
         year: u32,
     ) -> Result<Vec<FishingSpotPrediction>, QueryError> {
-        self.existing_fishing_spot_predictions_impl(year)
+        self.existing_fishing_spot_predictions_impl(model_id, year)
             .await
             .change_context(QueryError)
     }

@@ -17,7 +17,6 @@ def train(model, training_data, num_train_rounds, use_gpu):
     dtrain_reg = xgb.DMatrix(x_train, label=y_train,enable_categorical=CAT)
     dtest_reg = xgb.DMatrix(x_test, label=y_test,enable_categorical=CAT)
 
-
     params = {"objective":"reg:squarederror"}
 
     if use_gpu == True:
@@ -44,3 +43,7 @@ def predict(model, prediction_data):
     data = xgb.DMatrix(input, enable_categorical=CAT)
     preds = loaded_model.predict(data)
     return preds.tolist()
+
+if __name__ == "__main__":
+    data = "INSERT_TEST_JSON_DATA"
+    train(None, data, 1, True)

@@ -49,3 +49,7 @@ def predict(model, prediction_data):
     data = xgb.DMatrix(input, enable_categorical=CAT)
     preds = loaded_model.predict(data)
     return preds.tolist()
+
+if __name__ == "__main__":
+    data = "INSERT_TEST_JSON_DATA"
+    train(None, data, 1, True)

@@ -90,6 +90,7 @@ pub trait WebApiOutboundPort {
     fn weather_locations(&self) -> PinBoxStream<'_, WeatherLocation, QueryError>;
     async fn fishing_spot_prediction(
         &self,
+        model_id: ModelId,
         species: SpeciesGroup,
         week_of_year: u32,
     ) -> Result<Option<FishingSpotPrediction>, QueryError>;
@@ -100,7 +101,10 @@ pub trait WebApiOutboundPort {
         week: u32,
         limit: u32,
     ) -> PinBoxStream<'_, FishingWeightPrediction, QueryError>;
-    fn all_fishing_spot_predictions(&self) -> PinBoxStream<'_, FishingSpotPrediction, QueryError>;
+    fn all_fishing_spot_predictions(
+        &self,
+        model_id: ModelId,
+    ) -> PinBoxStream<'_, FishingSpotPrediction, QueryError>;
     fn all_fishing_weight_predictions(
         &self,
         model_id: ModelId,
@@ -233,6 +237,8 @@ pub trait TripPipelineOutbound: Send + Sync {
 pub trait MLModelsOutbound: Send + Sync {
     async fn fishing_spot_predictor_training_data(
         &self,
+        model_id: ModelId,
+        limit: Option<u32>,
     ) -> Result<Vec<FishingSpotTrainingData>, QueryError>;
     async fn fishing_weight_predictor_training_data(
         &self,
@@ -246,6 +252,16 @@ pub trait MLModelsOutbound: Send + Sync {
         haul: Vec<TrainingHaul>,
     ) -> Result<(), InsertError>;
     async fn model(&self, model_id: ModelId) -> Result<Vec<u8>, QueryError>;
+    async fn catch_location_weather(
+        &self,
+        year: u32,
+        week: u32,
+        catch_location_id: &CatchLocationId,
+    ) -> Result<Option<CatchLocationWeather>, QueryError>;
+    async fn catch_locations(
+        &self,
+        overlap: WeatherLocationOverlap,
+    ) -> Result<Vec<CatchLocation>, QueryError>;
 }
 
 #[async_trait]
