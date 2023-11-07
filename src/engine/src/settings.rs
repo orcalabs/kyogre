@@ -79,16 +79,23 @@ impl Settings {
             let model = Box::new(FishingSpotPredictor::new(
                 s.training_rounds,
                 self.environment,
-                None,
+                PredictionRange::CurrentYear,
             ));
             let model2 = Box::new(FishingWeightPredictor::new(
                 s.training_rounds,
                 self.environment,
-                None,
+                PredictionRange::CurrentYear,
+                vec![],
+            ));
+            let model3 = Box::new(FishingWeightWeatherPredictor::new(
+                s.training_rounds,
+                self.environment,
+                PredictionRange::CurrentWeekAndNextWeek,
                 vec![],
             ));
             vec.push(model as Box<dyn MLModel>);
             vec.push(model2 as Box<dyn MLModel>);
+            vec.push(model3 as Box<dyn MLModel>);
         }
 
         vec
