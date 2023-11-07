@@ -1,4 +1,5 @@
-use super::max_week;
+use crate::PredictionRange;
+
 use async_trait::async_trait;
 use chrono::{Datelike, Utc};
 use error_stack::{Result, ResultExt};
@@ -15,7 +16,7 @@ use pyo3::{
 };
 use serde::Serialize;
 use std::collections::HashSet;
-use strum::{EnumCount, IntoEnumIterator};
+use strum::EnumCount;
 use tracing::{event, Level};
 
 static PYTHON_FISHING_ORACLE_CODE: &str =
@@ -26,7 +27,7 @@ pub struct FishingSpotPredictor {
     // We use this flag to limit the amount of prediction data we
     // produce in tests to make them finish within a reasonable timeframe
     running_in_test: bool,
-    num_weeks: Option<u32>,
+    range: PredictionRange,
     use_gpu: bool,
 }
 
@@ -50,12 +51,12 @@ impl FishingSpotPredictor {
     pub fn new(
         training_rounds: u32,
         environment: Environment,
-        num_weeks: Option<u32>,
+        range: PredictionRange,
     ) -> FishingSpotPredictor {
         FishingSpotPredictor {
             training_rounds,
             running_in_test: matches!(environment, Environment::Test),
-            num_weeks,
+            range,
             use_gpu: matches!(environment, Environment::Local),
         }
     }
@@ -137,52 +138,41 @@ impl MLModel for FishingSpotPredictor {
 
         let mut predictions = HashSet::with_capacity(SpeciesGroup::COUNT * 52);
 
-        let now = Utc::now();
-        let current_week = now.iso_week().week();
-        let current_year = now.year();
-        let (max_week, is_end_of_year) = max_week(now);
-
-        let weeks = if let Some(num_weeks) = self.num_weeks {
-            1..=num_weeks
-        } else {
-            1..=max_week
-        };
-
         let species = adapter
             .species_caught_with_traal()
             .await
             .change_context(MLModelError::DataPreparation)?;
 
-        for w in weeks {
+        let targets = self.range.prediction_targets();
+
+        for t in targets {
             for s in &species {
                 if *s == SpeciesGroup::Ukjent {
                     continue;
                 }
-                predictions.insert((current_year, w, *s as i32));
+                predictions.insert((t.year, t.week, *s as i32));
             }
         }
 
-        if is_end_of_year && self.num_weeks.is_none() {
-            for s in SpeciesGroup::iter() {
-                predictions.insert((current_year + 1, 1, s as i32));
-            }
-        }
+        let now = Utc::now();
+        let current_week = now.iso_week().week();
+        let current_year = now.year() as u32;
 
         let existing_predictions = adapter
-            .existing_fishing_spot_predictions(current_year as u32)
+            .existing_fishing_spot_predictions(current_year)
             .await
             .change_context(MLModelError::DataPreparation)?;
 
         for v in existing_predictions {
-            if !(v.year == current_year && v.week as u32 == current_week) {
-                predictions.remove(&(v.year, v.week as u32, v.species));
+            if !(v.year as u32 == current_year && v.week as u32 == current_week) {
+                predictions.remove(&(v.year as u32, v.week as u32, v.species));
             }
         }
 
         let data: Vec<PythonPredictionInput> = predictions
             .into_iter()
             .map(|v| PythonPredictionInput {
-                year: v.0 as u32,
+                year: v.0,
                 week: v.1,
                 species_group_id: v.2,
             })

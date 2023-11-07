@@ -4,8 +4,8 @@ use crate::{
     FishingFacility, FishingSpotPredictor, FishingWeightPredictor, FishingWeightWeatherPredictor,
     FiskeridirVesselId, Haul, HaulsQuery, Landing, LandingTripAssembler, LandingsQuery,
     LandingsSorting, ManualDeliveryPoint, MattilsynetDeliveryPoint, Mmsi, NewAisPosition,
-    NewAisStatic, OceanClimate, Ordering, Pagination, PrecisionId, ScrapeState, SharedState, Step,
-    TripDetailed, Trips, TripsQuery, Vessel, VmsPosition, Weather,
+    NewAisStatic, OceanClimate, Ordering, Pagination, PrecisionId, PredictionRange, ScrapeState,
+    SharedState, Step, TripDetailed, Trips, TripsQuery, Vessel, VmsPosition, Weather,
 };
 
 use ais::*;
@@ -159,7 +159,7 @@ pub fn default_fishing_spot_predictor() -> Box<dyn MLModel> {
     Box::new(FishingSpotPredictor::new(
         1,
         Environment::Test,
-        Some(FISHING_SPOT_PREDICTOR_NUM_WEEKS),
+        PredictionRange::WeeksFromStartOfYear(FISHING_SPOT_PREDICTOR_NUM_WEEKS),
     ))
 }
 
@@ -167,7 +167,7 @@ pub fn default_fishing_weight_predictor() -> Box<dyn MLModel> {
     Box::new(FishingWeightPredictor::new(
         1,
         Environment::Test,
-        Some(FISHING_WEIGHT_PREDICTOR_NUM_WEEKS),
+        PredictionRange::WeeksFromStartOfYear(FISHING_WEIGHT_PREDICTOR_NUM_WEEKS),
         vec![CatchLocationId::new(3, 12), CatchLocationId::new(3, 5)],
     ))
 }
@@ -176,7 +176,7 @@ pub fn default_fishing_weight_weather_predictor() -> Box<dyn MLModel> {
     Box::new(FishingWeightWeatherPredictor::new(
         1,
         Environment::Test,
-        Some(FISHING_WEIGHT_PREDICTOR_NUM_WEEKS),
+        PredictionRange::WeeksFromStartOfYear(FISHING_WEIGHT_PREDICTOR_NUM_WEEKS),
         vec![CatchLocationId::new(3, 12), CatchLocationId::new(3, 5)],
     ))
 }

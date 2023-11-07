@@ -18,18 +18,18 @@ use std::collections::{HashMap, HashSet};
 use strum::{EnumCount, IntoEnumIterator};
 use tracing::{event, Level};
 
-use crate::ml_models::fishing_weight_predictor::PYTHON_FISHING_WEIGHT_PREDICTOR_CODE;
-
-use super::super::max_week;
+use crate::{
+    ml_models::fishing_weight_predictor::PYTHON_FISHING_WEIGHT_PREDICTOR_CODE, PredictionRange,
+};
 
 pub struct FishingWeightPredictor {
     training_rounds: u32,
     // We use this flag to limit the amount of prediction data we
     // produce in tests to make them finish within a reasonable timeframe
     running_in_test: bool,
-    num_weeks: Option<u32>,
     catch_locations: Vec<CatchLocationId>,
     use_gpu: bool,
+    range: PredictionRange,
 }
 
 #[derive(Debug, Serialize)]
@@ -138,12 +138,6 @@ impl MLModel for FishingWeightPredictor {
             return Ok(());
         }
 
-        let now = Utc::now();
-        let current_week = now.iso_week().week();
-        let current_year = now.year();
-
-        let (max_week, is_end_of_year) = max_week(now);
-
         let mut predictions =
             HashSet::with_capacity(SpeciesGroup::COUNT * NUM_CATCH_LOCATIONS * 52);
 
@@ -154,12 +148,6 @@ impl MLModel for FishingWeightPredictor {
             .into_iter()
             .map(|v| (v.id.clone().into_inner(), v))
             .collect();
-
-        let weeks: Vec<u32> = if let Some(num_weeks) = self.num_weeks {
-            (1..=num_weeks).collect()
-        } else {
-            (1..=max_week).collect()
-        };
 
         let active_catch_locations = if self.catch_locations.is_empty() {
             all_catch_locations
@@ -172,39 +160,32 @@ impl MLModel for FishingWeightPredictor {
                 .collect::<Vec<&CatchLocation>>()
         };
 
+        let prediction_targets = self.range.prediction_targets();
+
         for c in &active_catch_locations {
-            for w in &weeks {
+            for t in &prediction_targets {
                 for s in SpeciesGroup::iter() {
                     predictions.insert(PythonPredictionInputKey {
                         species_group_id: s as i32,
-                        week: *w,
-                        year: current_year as u32,
+                        week: t.week,
+                        year: t.year,
                         catch_location_id: c.id.clone(),
                     });
                 }
             }
         }
 
-        if is_end_of_year && self.num_weeks.is_none() {
-            for c in active_catch_locations {
-                for s in SpeciesGroup::iter() {
-                    predictions.insert(PythonPredictionInputKey {
-                        species_group_id: s as i32,
-                        week: 1,
-                        year: (current_year + 1) as u32,
-                        catch_location_id: c.id.clone(),
-                    });
-                }
-            }
-        }
+        let now = Utc::now();
+        let current_week = now.iso_week().week();
+        let current_year = now.year() as u32;
 
         let existing_predictions = adapter
-            .existing_fishing_weight_predictions(self.id(), current_year as u32)
+            .existing_fishing_weight_predictions(self.id(), current_year)
             .await
             .change_context(MLModelError::StoreOutput)?;
 
         for v in existing_predictions {
-            if !(v.year == current_year as u32 && v.week >= current_week) {
+            if !(v.year == current_year && v.week >= current_week) {
                 predictions.remove(&PythonPredictionInputKey {
                     species_group_id: v.species_group_id as i32,
                     week: v.week,
@@ -272,13 +253,13 @@ impl FishingWeightPredictor {
     pub fn new(
         training_rounds: u32,
         environment: Environment,
-        num_weeks: Option<u32>,
+        range: PredictionRange,
         catch_locations: Vec<CatchLocationId>,
     ) -> FishingWeightPredictor {
         FishingWeightPredictor {
             training_rounds,
             running_in_test: matches!(environment, Environment::Test),
-            num_weeks,
+            range,
             catch_locations,
             use_gpu: matches!(environment, Environment::Local),
         }

@@ -1,6 +1,6 @@
 use crate::{
     AisVms, ErsTripAssembler, FisheryDiscriminants, FishingSpotPredictor, FishingWeightPredictor,
-    LandingTripAssembler,
+    FishingWeightWeatherPredictor, LandingTripAssembler, PredictionRange,
 };
 use config::{Config, ConfigError, File};
 use kyogre_core::*;
