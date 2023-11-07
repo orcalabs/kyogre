@@ -100,6 +100,7 @@ WHERE
 
     pub(crate) async fn existing_fishing_spot_predictions_impl(
         &self,
+        model_id: ModelId,
         year: u32,
     ) -> Result<Vec<FishingSpotPrediction>, PostgresError> {
         sqlx::query_as!(
@@ -115,8 +116,10 @@ FROM
     fishing_spot_predictions
 WHERE
     "year" = $1
+    AND ml_model_id = $2
             "#,
-            year as i32
+            year as i32,
+            model_id as i32
         )
         .fetch_all(&self.pool)
         .await
@@ -222,6 +225,8 @@ LIMIT
 
     pub(crate) async fn fishing_spot_predictor_training_data_impl(
         &self,
+        model_id: ModelId,
+        limit: Option<u32>,
     ) -> Result<Vec<FishingSpotTrainingData>, PostgresError> {
         sqlx::query_as!(
             FishingSpotTrainingData,
@@ -263,6 +268,7 @@ SELECT
     sums.longitude AS "longitude!",
     sums.latitude AS "latitude!",
     (DATE_PART('week', h.start_timestamp))::INT AS "week!",
+    (DATE_PART('isoyear', h.start_timestamp))::INT AS "year!",
     hm.species_group_id AS "species: SpeciesGroup",
     h.haul_id,
     hm.living_weight AS weight,
@@ -282,10 +288,13 @@ WHERE
     AND hm.gear_group_id = $1
     AND m.haul_id IS NULL
 ORDER BY
-    hm.species_group_id DESC;
+    h.start_timestamp
+LIMIT
+    $3
             "#,
             GearGroup::Traal as i32,
-            ModelId::FishingSpotPredictor as i32
+            model_id as i32,
+            limit.map(|v| v as i64)
         )
         .fetch_all(&self.pool)
         .await
@@ -330,6 +339,7 @@ LIMIT
 
     pub(crate) async fn fishing_spot_prediction_impl(
         &self,
+        model_id: ModelId,
         species: SpeciesGroup,
         week: u32,
     ) -> Result<Option<FishingSpotPrediction>, PostgresError> {
@@ -347,9 +357,11 @@ FROM
 WHERE
     species_group_id = $1
     AND week = $2
+    AND ml_model_id = $3
             "#,
             species as i32,
-            week as i32
+            week as i32,
+            model_id as i32
         )
         .fetch_optional(&self.pool)
         .await
@@ -382,6 +394,7 @@ WHERE
 
     pub(crate) fn all_fishing_spot_predictions_impl(
         &self,
+        model_id: ModelId,
     ) -> impl Stream<Item = Result<FishingSpotPrediction, PostgresError>> + '_ {
         sqlx::query_as!(
             FishingSpotPrediction,
@@ -394,7 +407,10 @@ SELECT
     "year"
 FROM
     fishing_spot_predictions
+WHERE
+    ml_model_id = $1
             "#,
+            model_id as i32
         )
         .fetch(&self.pool)
         .map_err(|e| report!(e).change_context(PostgresError::Query))

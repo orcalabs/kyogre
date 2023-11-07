@@ -1,11 +1,12 @@
 use crate::{
     AisConsumeLoop, AisPosition, AisVms, Arrival, DataMessage, DeliveryPoint, DeliveryPointType,
     Departure, ErsTripAssembler, FisheryEngine, FishingFacilities, FishingFacilitiesQuery,
-    FishingFacility, FishingSpotPredictor, FishingWeightPredictor, FishingWeightWeatherPredictor,
-    FiskeridirVesselId, Haul, HaulsQuery, Landing, LandingTripAssembler, LandingsQuery,
-    LandingsSorting, ManualDeliveryPoint, MattilsynetDeliveryPoint, Mmsi, NewAisPosition,
-    NewAisStatic, OceanClimate, Ordering, Pagination, PrecisionId, PredictionRange, ScrapeState,
-    SharedState, Step, TripDetailed, Trips, TripsQuery, Vessel, VmsPosition, Weather,
+    FishingFacility, FishingSpotPredictor, FishingSpotWeatherPredictor, FishingWeightPredictor,
+    FishingWeightWeatherPredictor, FiskeridirVesselId, Haul, HaulsQuery, Landing,
+    LandingTripAssembler, LandingsQuery, LandingsSorting, ManualDeliveryPoint,
+    MattilsynetDeliveryPoint, Mmsi, NewAisPosition, NewAisStatic, OceanClimate, Ordering,
+    Pagination, PrecisionId, PredictionRange, ScrapeState, SharedState, Step, TripDetailed, Trips,
+    TripsQuery, Vessel, VmsPosition, Weather,
 };
 
 use ais::*;
@@ -153,6 +154,15 @@ enum TripPrecisonStartPoint {
         start: DateTime<Utc>,
         mmsi: Mmsi,
     },
+}
+
+pub fn default_fishing_spot_weather_predictor() -> Box<dyn MLModel> {
+    Box::new(FishingSpotWeatherPredictor::new(
+        1,
+        Environment::Test,
+        PredictionRange::WeeksFromStartOfYear(FISHING_SPOT_PREDICTOR_NUM_WEEKS),
+        None,
+    ))
 }
 
 pub fn default_fishing_spot_predictor() -> Box<dyn MLModel> {

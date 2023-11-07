@@ -131,11 +131,11 @@ where
                 web::get().to(routes::v1::landing::landings::<T>),
             )
             .route(
-                "/fishing_spot_predictions/{species_group_id}",
+                "/fishing_spot_predictions/{model_id}/{species_group_id}",
                 web::get().to(routes::v1::fishing_prediction::fishing_spot_predictions::<T>),
             )
             .route(
-                "/fishing_spot_predictions",
+                "/fishing_spot_predictions/{model_id}",
                 web::get().to(routes::v1::fishing_prediction::all_fishing_spot_predictions::<T>),
             )
             .route(

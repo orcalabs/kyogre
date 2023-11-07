@@ -10,23 +10,40 @@ use web_api::routes::v1::fishing_prediction::{
 };
 
 #[tokio::test]
-async fn test_fishing_spot_predictions_returns_all() {
+async fn test_fishing_spot_predictions_filters_by_model_id() {
     test(|helper, builder| async move {
         builder
-            .add_ml_model(default_fishing_spot_predictor())
+            .add_ml_models(vec![
+                default_fishing_spot_predictor(),
+                default_fishing_spot_weather_predictor(),
+            ])
+            .data_start(Utc::now().with_ordinal(7).unwrap())
+            .weather(5)
             .vessels(1)
             .hauls(5)
             .modify(|v| {
                 v.dca.gear.gear_group_code = GearGroup::Traal;
             })
+            .weather(5)
             .build()
             .await;
 
-        let response = helper.app.get_all_fishing_spot_predictions().await;
+        let response = helper
+            .app
+            .get_all_fishing_spot_predictions(ModelId::FishingSpotPredictor)
+            .await;
         assert_eq!(response.status(), StatusCode::OK);
-
         let predictions: Vec<FishingSpotPrediction> = response.json().await.unwrap();
         assert_eq!(predictions.len() as u32, FISHING_SPOT_PREDICTOR_NUM_WEEKS);
+
+        let response = helper
+            .app
+            .get_all_fishing_spot_predictions(ModelId::FishingSpotWeatherPredictor)
+            .await;
+        assert_eq!(response.status(), StatusCode::OK);
+        let predictions: Vec<FishingSpotPrediction> = response.json().await.unwrap();
+        // We only have weather data for the first week
+        assert_eq!(predictions.len(), 1);
     })
     .await;
 }
@@ -52,6 +69,7 @@ async fn test_fishing_spot_predictions_filters_by_week_and_species_group() {
         let response = helper
             .app
             .get_fishing_spot_predictions(
+                ModelId::FishingSpotPredictor,
                 SpeciesGroup::Sei,
                 FishingSpotPredictionParams { week: Some(1) },
             )

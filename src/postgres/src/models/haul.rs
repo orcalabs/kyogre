@@ -18,6 +18,7 @@ pub struct FishingSpotTrainingData {
     pub week: i32,
     pub weight: f64,
     pub catch_location: String,
+    pub year: i32,
 }
 
 #[derive(Deserialize)]
@@ -227,6 +228,7 @@ impl TryFrom<FishingSpotTrainingData> for kyogre_core::FishingSpotTrainingData {
             weight: v.weight,
             catch_location_id: CatchLocationId::try_from(v.catch_location)
                 .change_context(PostgresError::DataConversion)?,
+            year: v.year,
         })
     }
 }

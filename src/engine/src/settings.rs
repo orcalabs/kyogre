@@ -1,6 +1,7 @@
 use crate::{
-    AisVms, ErsTripAssembler, FisheryDiscriminants, FishingSpotPredictor, FishingWeightPredictor,
-    FishingWeightWeatherPredictor, LandingTripAssembler, PredictionRange,
+    AisVms, ErsTripAssembler, FisheryDiscriminants, FishingSpotPredictor,
+    FishingSpotWeatherPredictor, FishingWeightPredictor, FishingWeightWeatherPredictor,
+    LandingTripAssembler, PredictionRange,
 };
 use config::{Config, ConfigError, File};
 use kyogre_core::*;
@@ -95,9 +96,16 @@ impl Settings {
                 vec![],
                 s.training_batch_size,
             ));
+            let model4 = Box::new(FishingSpotWeatherPredictor::new(
+                s.training_rounds,
+                self.environment,
+                PredictionRange::CurrentWeekAndNextWeek,
+                s.training_batch_size,
+            ));
             vec.push(model as Box<dyn MLModel>);
             vec.push(model2 as Box<dyn MLModel>);
             vec.push(model3 as Box<dyn MLModel>);
+            vec.push(model4 as Box<dyn MLModel>);
         }
 
         vec

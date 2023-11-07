@@ -3,15 +3,17 @@ use geo::geometry::Polygon;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 
-use crate::{HaulId, HaulOceanClimate, HaulWeatherStatus};
+use crate::{CatchLocationId, HaulId, HaulOceanClimate, HaulWeatherStatus};
 
 pub enum WeatherData {
     Require,
     Optional,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct CatchLocationWeather {
+    #[serde(skip_serializing)]
+    pub id: CatchLocationId,
     pub wind_speed_10m: f64,
     pub wind_direction_10m: f64,
     pub air_temperature_2m: f64,

@@ -20,6 +20,7 @@ pub trait MLModelsInbound: Send + Sync {
     ) -> Result<Vec<CatchLocation>, QueryError>;
     async fn existing_fishing_spot_predictions(
         &self,
+        model_id: ModelId,
         year: u32,
     ) -> Result<Vec<FishingSpotPrediction>, QueryError>;
     async fn existing_fishing_weight_predictions(

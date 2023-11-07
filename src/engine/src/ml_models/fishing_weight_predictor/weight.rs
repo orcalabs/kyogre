@@ -66,6 +66,7 @@ impl MLModel for FishingWeightPredictor {
     fn id(&self) -> ModelId {
         ModelId::FishingWeightPredictor
     }
+
     fn prediction_targets(&self) -> Vec<PredictionTarget> {
         self.range.prediction_targets()
     }
@@ -186,8 +187,9 @@ impl MLModel for FishingWeightPredictor {
         }
 
         let now = Utc::now();
-        let current_week = now.iso_week().week();
-        let current_year = now.year() as u32;
+        let iso_week = now.iso_week();
+        let current_week = iso_week.week();
+        let current_year = iso_week.year() as u32;
 
         let existing_predictions = adapter
             .existing_fishing_weight_predictions(self.id(), current_year)

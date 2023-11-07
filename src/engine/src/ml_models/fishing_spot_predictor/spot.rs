@@ -1,3 +1,4 @@
+use crate::ml_models::fishing_spot_predictor::PYTHON_FISHING_SPOT_CODE;
 use crate::PredictionRange;
 
 use async_trait::async_trait;
@@ -18,9 +19,6 @@ use serde::Serialize;
 use std::collections::HashSet;
 use strum::EnumCount;
 use tracing::{event, instrument, Level};
-
-static PYTHON_FISHING_ORACLE_CODE: &str =
-    include_str!("../../../../scripts/python/fishing_predictor/fishing_spot_predictor.py");
 
 pub struct FishingSpotPredictor {
     training_rounds: u32,
@@ -83,7 +81,7 @@ impl MLModel for FishingSpotPredictor {
     ) -> Result<TrainingOutcome, MLModelError> {
         let mut hauls = HashSet::new();
         let data: Vec<PythonTrainingData> = adapter
-            .fishing_spot_predictor_training_data()
+            .fishing_spot_predictor_training_data(self.id(), None)
             .await
             .change_context(MLModelError::DataPreparation)?
             .into_iter()
@@ -113,7 +111,7 @@ impl MLModel for FishingSpotPredictor {
             serde_json::to_string(&data).change_context(MLModelError::DataPreparation)?;
 
         let new_model: Vec<u8> = Python::with_gil(|py| {
-            let py_module = PyModule::from_code(py, PYTHON_FISHING_ORACLE_CODE, "", "").unwrap();
+            let py_module = PyModule::from_code(py, PYTHON_FISHING_SPOT_CODE, "", "").unwrap();
             let py_main = py_module.getattr("train").unwrap();
 
             let model = if model.is_empty() {
@@ -166,11 +164,12 @@ impl MLModel for FishingSpotPredictor {
         }
 
         let now = Utc::now();
-        let current_week = now.iso_week().week();
-        let current_year = now.year() as u32;
+        let iso_week = now.iso_week();
+        let current_week = iso_week.week();
+        let current_year = iso_week.year() as u32;
 
         let existing_predictions = adapter
-            .existing_fishing_spot_predictions(current_year)
+            .existing_fishing_spot_predictions(self.id(), current_year)
             .await
             .change_context(MLModelError::DataPreparation)?;
 
@@ -190,6 +189,7 @@ impl MLModel for FishingSpotPredictor {
             .collect();
 
         if data.is_empty() {
+            event!(Level::INFO, "no new predictions to make");
             return Ok(());
         }
 
@@ -197,7 +197,7 @@ impl MLModel for FishingSpotPredictor {
             serde_json::to_string(&data).change_context(MLModelError::DataPreparation)?;
 
         let predictions = Python::with_gil(|py| {
-            let py_module = PyModule::from_code(py, PYTHON_FISHING_ORACLE_CODE, "", "")?;
+            let py_module = PyModule::from_code(py, PYTHON_FISHING_SPOT_CODE, "", "")?;
             let py_main = py_module.getattr("predict")?;
 
             let model = PyByteArray::new(py, model);
@@ -215,6 +215,7 @@ impl MLModel for FishingSpotPredictor {
             species: SpeciesGroup::from_i32(data[i].species_group_id).unwrap(),
             week: data[i].week,
             year: data[i].year,
+            model: self.id(),
         })
         .collect::<Vec<NewFishingSpotPrediction>>();
 

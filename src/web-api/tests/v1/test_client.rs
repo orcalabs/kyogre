@@ -148,8 +148,9 @@ impl ApiClient {
     pub async fn get_delivery_points(&self) -> Response {
         self.get("delivery_points", &[], None).await
     }
-    pub async fn get_all_fishing_spot_predictions(&self) -> Response {
-        self.get("fishing_spot_predictions", &[], None).await
+    pub async fn get_all_fishing_spot_predictions(&self, model_id: ModelId) -> Response {
+        self.get(format!("fishing_spot_predictions/{}", model_id), &[], None)
+            .await
     }
     pub async fn get_all_fishing_weight_predictions(&self, model_id: ModelId) -> Response {
         self.get(
@@ -162,6 +163,7 @@ impl ApiClient {
 
     pub async fn get_fishing_spot_predictions(
         &self,
+        model_id: ModelId,
         species: SpeciesGroup,
         params: FishingSpotPredictionParams,
     ) -> Response {
@@ -170,7 +172,7 @@ impl ApiClient {
             parameters.push(("week".to_string(), week.to_string()))
         }
         self.get(
-            format!("fishing_spot_predictions/{}", species as i32),
+            format!("fishing_spot_predictions/{}/{}", model_id, species as i32),
             &parameters,
             None,
         )

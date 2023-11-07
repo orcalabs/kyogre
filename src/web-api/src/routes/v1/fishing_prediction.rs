@@ -30,8 +30,11 @@ pub struct FishingWeightPredictionParams {
 
 #[utoipa::path(
     get,
-    path = "/fishing_spot_predictions/{species_group_id}",
-    params(FishingSpotPredictionParams),
+    path = "/fishing_spot_predictions/{model_id}/{species_group_id}",
+    params(
+        FishingSpotPredictionParams,
+        ("model_id" = ModelId, Path, description = "what model data to retrieve")
+    ),
     responses(
         (status = 200, description = "fishing spot predictions for the requested filter", body = FishingSpotPrediction),
         (status = 500, description = "an internal error occured", body = ErrorResponse),
@@ -41,15 +44,18 @@ pub struct FishingWeightPredictionParams {
 pub async fn fishing_spot_predictions<T: Database + 'static>(
     db: web::Data<T>,
     params: web::Query<FishingSpotPredictionParams>,
-    species_group_id: Path<u32>,
+    path_params: Path<(ModelId, u32)>,
 ) -> Result<Response<Option<FishingSpotPrediction>>, ApiError> {
-    let species_group_id = species_group_id.into_inner();
-    let species_group_id = SpeciesGroup::from_u32(species_group_id)
-        .ok_or(ApiError::InvalidSpeciesGroupId(species_group_id))?;
+    let path_params = path_params.into_inner();
+    let species_group_id = SpeciesGroup::from_u32(path_params.1)
+        .ok_or(ApiError::InvalidSpeciesGroupId(path_params.1))?;
 
     let week = params.week.unwrap_or_else(|| Utc::now().iso_week().week());
 
-    match db.fishing_spot_prediction(species_group_id, week).await {
+    match db
+        .fishing_spot_prediction(path_params.0, species_group_id, week)
+        .await
+    {
         Ok(v) => Ok(Response::new(v)),
         Err(e) => {
             event!(
@@ -64,7 +70,10 @@ pub async fn fishing_spot_predictions<T: Database + 'static>(
 
 #[utoipa::path(
     get,
-    path = "/fishing_spot_predictions",
+    path = "/fishing_spot_predictions/{model_id}",
+    params(
+        ("model_id" = ModelId, Path, description = "what model data to retrieve")
+    ),
     responses(
         (status = 200, description = "all fishing spot predictions", body = [FishingSpotPrediction]),
         (status = 500, description = "an internal error occured", body = ErrorResponse),
@@ -73,10 +82,11 @@ pub async fn fishing_spot_predictions<T: Database + 'static>(
 #[tracing::instrument(skip(db))]
 pub async fn all_fishing_spot_predictions<T: Database + 'static>(
     db: web::Data<T>,
+    model_id: Path<ModelId>,
 ) -> Result<HttpResponse, ApiError> {
     to_streaming_response! {
         db
-         .all_fishing_spot_predictions()
+         .all_fishing_spot_predictions(model_id.into_inner())
          .map_err(|e| {
             event!(
                 Level::ERROR,
