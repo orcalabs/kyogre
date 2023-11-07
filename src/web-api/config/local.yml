@@ -14,3 +14,8 @@ bw_profiles_url: https://www.barentswatch.no/bwapi/v2/user/profiles
 duck_db_api:
   ip: duckdb
   port: 5000
+auth0:
+  jwk_url: https://dev-orcalabs.eu.auth0.com/.well-known/jwks.json
+  authorization_url: https://dev-orcalabs.eu.auth0.com/authorize
+  client_id: QYCH29iCoaNEfvYWmVMs2m3vbpUv9Gug
+  audience: https://api.dev.datafangst.orcalabs.no/

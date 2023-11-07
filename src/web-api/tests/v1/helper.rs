@@ -218,6 +218,7 @@ where
                 bw_jwks_url: Some(format!("{bw_address}/jwks")),
                 bw_profiles_url: Some(format!("{bw_address}/profiles")),
                 duck_db_api,
+                auth0: None,
             };
 
             let _ = BW_PROFILES_URL.set(api_settings.bw_profiles_url.clone().unwrap());

@@ -16,6 +16,7 @@ pub struct Settings {
     pub bw_jwks_url: Option<String>,
     pub bw_profiles_url: Option<String>,
     pub duck_db_api: Option<Duckdb>,
+    pub auth0: Option<Auth0Settings>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -34,6 +35,14 @@ pub struct ApiSettings {
     pub ip: String,
     pub port: u16,
     pub num_workers: Option<u32>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct Auth0Settings {
+    pub jwk_url: String,
+    pub authorization_url: String,
+    pub client_id: String,
+    pub audience: String,
 }
 
 impl Settings {

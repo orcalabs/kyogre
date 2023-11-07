@@ -18,6 +18,8 @@ pub enum ApiError {
     InvalidBwToken,
     InvalidLandingId,
     InvalidSpeciesGroupId(u32),
+    InvalidAuthToken,
+    MissingAuthToken,
 }
 
 impl std::error::Error for ApiError {}
@@ -49,6 +51,8 @@ impl std::fmt::Display for ApiError {
             ApiError::InvalidSpeciesGroupId(val) => {
                 f.write_fmt(format_args!("invalid species group id specified: {val}"))
             }
+            ApiError::InvalidAuthToken => f.write_str("received an invalid authorization token"),
+            ApiError::MissingAuthToken => f.write_str("missing authorization token"),
         }
     }
 }
@@ -64,7 +68,10 @@ impl ResponseError for ApiError {
             | ApiError::MissingMmsiOrCallSign => StatusCode::BAD_REQUEST,
             ApiError::InternalServerError => StatusCode::INTERNAL_SERVER_ERROR,
             ApiError::Forbidden => StatusCode::FORBIDDEN,
-            ApiError::MissingBwToken | ApiError::InvalidBwToken => StatusCode::UNAUTHORIZED,
+            ApiError::MissingBwToken
+            | ApiError::InvalidBwToken
+            | ApiError::InvalidAuthToken
+            | ApiError::MissingAuthToken => StatusCode::UNAUTHORIZED,
         }
     }
 
