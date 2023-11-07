@@ -7,10 +7,12 @@ use actix_web::{
 use orca_core::{Environment, OrcaRootSpanBuilder, TracingLogger};
 use postgres::PostgresAdapter;
 use std::{io::Error, net::TcpListener};
-use utoipa::OpenApi;
+use utoipa::{openapi::security::SecurityScheme, OpenApi};
 use utoipa_swagger_ui::SwaggerUi;
 
-use crate::{guards::JwtGuard, routes, settings::Settings, ApiDoc, Cache, Database};
+use crate::{
+    auth0::Auth0State, guards::JwtGuard, routes, settings::Settings, ApiDoc, Cache, Database,
+};
 use duckdb_rs::Client;
 
 pub struct App {
@@ -68,6 +70,9 @@ where
     } else {
         None
     };
+
+    let auth0_settings = settings.auth0.clone();
+    let auth0_state = Auth0State::new(auth0_settings.as_ref().map(|s| s.jwk_url.clone())).await;
 
     let mut server = HttpServer::new(move || {
         let mut scope = web::scope("/v1.0")
@@ -188,6 +193,7 @@ where
         let app = actix_web::App::new()
             .app_data(Data::new(database.clone()))
             .app_data(Data::new(cache.clone()))
+            .app_data(Data::new(auth0_state.clone()))
             .wrap(Compress::default())
             .wrap(Condition::new(not_prod, actix_cors::Cors::permissive()))
             .wrap(TracingLogger::<OrcaRootSpanBuilder>::new())
@@ -207,7 +213,41 @@ where
                         .collect();
                 }
 
-                app.service(SwaggerUi::new("/swagger-ui/{_:.*}").url("/api-doc/openapi.json", doc))
+                let mut swagger = SwaggerUi::new("/swagger-ui/{_:.*}").config(
+                    utoipa_swagger_ui::Config::default()
+                        .with_credentials(true)
+                        .try_it_out_enabled(true)
+                        .persist_authorization(true)
+                        .show_mutated_request(true),
+                );
+
+                if let Some(ref auth0) = auth0_settings {
+                    use utoipa::openapi::security::{Flow, Implicit, OAuth2, Scopes};
+                    use utoipa_swagger_ui::oauth::Config;
+
+                    if let Some(ref mut c) = doc.components {
+                        c.add_security_scheme(
+                            "auth0",
+                            SecurityScheme::OAuth2(OAuth2::new([Flow::Implicit(Implicit::new(
+                                &auth0.authorization_url,
+                                Scopes::from_iter([(
+                                    "read:ais:under_15m",
+                                    "Read AIS data of vessels under 15m",
+                                )]),
+                            ))])),
+                        );
+                    }
+
+                    swagger = swagger.oauth(
+                        Config::default()
+                            .client_id(&auth0.client_id)
+                            .additional_query_string_params(
+                                [("audience".to_string(), auth0.audience.clone())].into(),
+                            ),
+                    );
+                }
+
+                app.service(swagger.url("/api-doc/openapi.json", doc))
             }
         }
     })

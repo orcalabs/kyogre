@@ -12,6 +12,7 @@ use postgres::PostgresAdapter;
 use routes::v1::{self, trip::TripAssemblerId};
 use utoipa::OpenApi;
 
+pub mod auth0;
 pub mod error;
 pub mod extractors;
 pub mod guards;
@@ -118,6 +119,10 @@ impl Database for PostgresAdapter {}
             kyogre_core::FishingSpotPrediction,
             kyogre_core::FishingWeightPrediction,
           )
+    ),
+    security(
+        (),
+        ("auth0" = []),
     ),
     tags(
         (name = "kyogre-api", description = "kyogre api")

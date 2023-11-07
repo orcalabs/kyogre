@@ -1,4 +1,9 @@
-use crate::{ais_to_streaming_response, error::ApiError, extractors::BwProfile, Database};
+use crate::{
+    ais_to_streaming_response,
+    error::ApiError,
+    extractors::{Auth0Profile, BwProfile},
+    Database,
+};
 use actix_web::{web, HttpResponse};
 use async_stream::try_stream;
 use chrono::{DateTime, Duration, Utc};
@@ -25,6 +30,10 @@ pub struct AisVmsParameters {
     get,
     path = "/ais_vms_positions",
     params(AisVmsParameters),
+    security(
+        (),
+        ("auth0" = ["read:ais:under_15m"]),
+    ),
     responses(
         (status = 200, description = "ais and vms positions for the given mmsi and/or call sign", body = [AisVmsPosition]),
         (status = 500, description = "an internal error occured", body = ErrorResponse),
@@ -35,7 +44,8 @@ pub struct AisVmsParameters {
 pub async fn ais_vms_positions<T: Database + 'static>(
     db: web::Data<T>,
     params: web::Query<AisVmsParameters>,
-    profile: Option<BwProfile>,
+    bw_profile: Option<BwProfile>,
+    auth: Option<Auth0Profile>,
 ) -> Result<HttpResponse, ApiError> {
     if params.mmsi.is_none() && params.call_sign.is_none() {
         return Err(ApiError::MissingMmsiOrCallSign);
@@ -56,8 +66,16 @@ pub async fn ais_vms_positions<T: Database + 'static>(
         ApiError::InvalidDateRange
     })?;
 
+    let bw_policy = bw_profile.map(AisPermission::from).unwrap_or_default();
+    let auth0_policy = dbg!(auth).map(AisPermission::from).unwrap_or_default();
+    let policy = if bw_policy == AisPermission::All || dbg!(auth0_policy) == AisPermission::All {
+        AisPermission::All
+    } else {
+        AisPermission::Above15m
+    };
+
     ais_to_streaming_response! {
-        db.ais_vms_positions(params.mmsi, params.call_sign.as_ref(), &range, profile.map(AisPermission::from).unwrap_or_default())
+        db.ais_vms_positions(params.mmsi, params.call_sign.as_ref(), &range, policy)
             .map_err(|e| {
                 event!(
                     Level::ERROR,

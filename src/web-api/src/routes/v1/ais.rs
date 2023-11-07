@@ -1,4 +1,9 @@
-use crate::{ais_to_streaming_response, error::ApiError, extractors::BwProfile, Database};
+use crate::{
+    ais_to_streaming_response,
+    error::ApiError,
+    extractors::{Auth0Profile, BwProfile},
+    Database,
+};
 use actix_web::{
     web::{self, Path},
     HttpResponse,
@@ -21,6 +26,10 @@ pub struct AisTrackParameters {
     get,
     path = "/ais_track/{mmsi}",
     params(AisTrackParameters),
+    security(
+        (),
+        ("auth0" = ["read:ais:under_15m"]),
+    ),
     responses(
         (status = 200, description = "ais positions for the given mmsi", body = [AisPosition]),
         (status = 500, description = "an internal error occured", body = ErrorResponse),
@@ -32,7 +41,8 @@ pub async fn ais_track<T: Database + 'static>(
     db: web::Data<T>,
     params: web::Query<AisTrackParameters>,
     mmsi: Path<i32>,
-    profile: Option<BwProfile>,
+    bw_profile: Option<BwProfile>,
+    auth: Option<Auth0Profile>,
 ) -> Result<HttpResponse, ApiError> {
     let (start, end) = match (params.start, params.end) {
         (None, None) => {
@@ -44,13 +54,21 @@ pub async fn ais_track<T: Database + 'static>(
         _ => Err(ApiError::InvalidDateRange),
     }?;
 
+    let bw_policy = bw_profile.map(AisPermission::from).unwrap_or_default();
+    let auth0_policy = auth.map(AisPermission::from).unwrap_or_default();
+    let policy = if bw_policy == AisPermission::All || auth0_policy == AisPermission::All {
+        AisPermission::All
+    } else {
+        AisPermission::Above15m
+    };
+
     let range = DateRange::new(start, end).map_err(|e| {
         event!(Level::WARN, "{:?}", e);
         ApiError::InvalidDateRange
     })?;
 
     ais_to_streaming_response! {
-        db.ais_positions(Mmsi(mmsi.into_inner()), &range, profile.map(AisPermission::from).unwrap_or_default())
+        db.ais_positions(Mmsi(mmsi.into_inner()), &range, policy)
             .map_err(|e| {
                 event!(Level::ERROR, "failed to retrieve ais positions: {:?}", e);
                 ApiError::InternalServerError
