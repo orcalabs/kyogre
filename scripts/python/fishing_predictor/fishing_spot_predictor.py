@@ -21,7 +21,7 @@ def train(model, training_data, num_train_rounds, use_gpu):
     params = {"objective":"reg:squarederror"}
 
     if use_gpu == True:
-        params["tree_method"] = "gpu_hist"
+        params["device"] = "cuda"
     else:
         params["tree_method"] = "hist"
 
