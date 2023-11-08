@@ -17,7 +17,7 @@ use pyo3::{
 use serde::Serialize;
 use std::collections::HashSet;
 use strum::EnumCount;
-use tracing::{event, Level};
+use tracing::{event, instrument, Level};
 
 static PYTHON_FISHING_ORACLE_CODE: &str =
     include_str!("../../../../scripts/python/fishing_predictor/fishing_spot_predictor.py");
@@ -68,6 +68,7 @@ impl MLModel for FishingSpotPredictor {
         ModelId::FishingSpotPredictor
     }
 
+    #[instrument(skip_all)]
     async fn train(
         &self,
         model: &[u8],
@@ -130,6 +131,7 @@ impl MLModel for FishingSpotPredictor {
         Ok(TrainingOutcome::Progress { new_model })
     }
 
+    #[instrument(skip_all)]
     async fn predict(
         &self,
         model: &[u8],
