@@ -68,7 +68,9 @@ async fn run_ml_model(
 
     let mut i = 1;
 
+    println!("Starting to run model: {}", model.id());
     loop {
+        dbg!("Entering train loop");
         match model
             .train(&current_model, outbound)
             .await
@@ -76,6 +78,7 @@ async fn run_ml_model(
         {
             TrainingOutcome::Finished => {
                 event!(Level::INFO, "finished training rounds, starting prediction");
+                dbg!("Predicting");
                 model
                     .predict(&current_model, inbound)
                     .await
@@ -83,6 +86,7 @@ async fn run_ml_model(
                 break;
             }
             TrainingOutcome::Progress { new_model } => {
+                dbg!("Trained");
                 inbound
                     .save_model(model.id(), &new_model)
                     .await
