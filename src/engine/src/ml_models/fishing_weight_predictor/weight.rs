@@ -16,7 +16,7 @@ use pyo3::{
 use serde::Serialize;
 use std::collections::{HashMap, HashSet};
 use strum::{EnumCount, IntoEnumIterator};
-use tracing::{event, Level};
+use tracing::{event, instrument, Level};
 
 use crate::{
     ml_models::fishing_weight_predictor::PYTHON_FISHING_WEIGHT_PREDICTOR_CODE, PredictionRange,
@@ -67,6 +67,7 @@ impl MLModel for FishingWeightPredictor {
         ModelId::FishingWeightPredictor
     }
 
+    #[instrument(skip_all)]
     async fn train(
         &self,
         model: &[u8],
@@ -132,6 +133,7 @@ impl MLModel for FishingWeightPredictor {
         Ok(TrainingOutcome::Progress { new_model })
     }
 
+    #[instrument(skip_all)]
     async fn predict(
         &self,
         model: &[u8],
