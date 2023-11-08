@@ -4,13 +4,15 @@ WORKDIR /app
 
 FROM chef AS planner
 
-COPY src .
-COPY .cargo .cargo
+COPY src src
+COPY .cargo src/.cargo
 
-RUN cargo chef prepare --recipe-path recipe.json
+
+RUN cd src && \
+    cargo chef prepare --recipe-path recipe.json
 
 FROM chef AS builder
-COPY --from=planner /app/recipe.json recipe.json
+COPY --from=planner /app/src/recipe.json src/recipe.json
 
 RUN apt update -y && \
     apt install -y \
@@ -24,15 +26,17 @@ RUN apt update -y && \
     git config --global credential.helper store
 
 RUN --mount=type=secret,id=git-credentials,target=/root/.git-credentials,required=true \
+    cd src && \
     cargo chef cook --release --recipe-path recipe.json
 
-COPY src .
+COPY src src
 RUN --mount=type=secret,id=git-credentials,target=~/.git-credentials,required=true \
+    cd src && \
     cargo build --release --bin ais-consumer
 
 FROM gcr.io/distroless/cc
 
-COPY --from=builder /app/target/release/ais-consumer .
+COPY --from=builder /app/src/target/release/ais-consumer .
 
 COPY src/ais-consumer/config config
 COPY src/kyogre-core/shoreline.json.gz .
