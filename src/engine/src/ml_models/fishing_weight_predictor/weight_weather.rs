@@ -103,7 +103,7 @@ impl MLModel for FishingWeightWeatherPredictor {
                 self.training_batch_size,
             )
             .await
-            .unwrap()
+            .change_context(MLModelError::DataPreparation)?
             .into_iter()
             .filter_map(|v| {
                 hauls.insert(TrainingHaul {
