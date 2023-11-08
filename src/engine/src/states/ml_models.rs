@@ -55,7 +55,7 @@ impl machine::State for MLModelsState {
     }
 }
 
-#[instrument(skip_all, fields(app.model))]
+#[instrument(skip_all, fields(app.model = model.id().to_string()))]
 async fn run_ml_model(
     inbound: &dyn MLModelsInbound,
     outbound: &dyn MLModelsOutbound,
@@ -94,6 +94,5 @@ async fn run_ml_model(
         i += 1;
     }
 
-    tracing::Span::current().record("app.model", model.id().to_string());
     Ok(())
 }

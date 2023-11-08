@@ -77,7 +77,7 @@ impl MLModel for FishingSpotPredictor {
         let data: Vec<PythonTrainingData> = adapter
             .fishing_spot_predictor_training_data()
             .await
-            .unwrap()
+            .change_context(MLModelError::DataPreparation)?
             .into_iter()
             .filter_map(|v| {
                 hauls.insert(TrainingHaul {
