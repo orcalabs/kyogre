@@ -96,6 +96,7 @@ impl MLModel for FishingWeightWeatherPredictor {
     ) -> Result<TrainingOutcome, MLModelError> {
         let mut hauls = HashSet::new();
 
+        dbg!("PRE-QUERY");
         let data: Vec<PythonTrainingData> = adapter
             .fishing_weight_predictor_training_data(
                 self.id(),
@@ -132,12 +133,15 @@ impl MLModel for FishingWeightWeatherPredictor {
             })
             .collect();
 
+        dbg!("POST-QUERY");
         if data.is_empty() {
             return Ok(TrainingOutcome::Finished);
         }
+        dbg!("PRE-JSON-DATA");
         let training_data =
             serde_json::to_string(&data).change_context(MLModelError::DataPreparation)?;
 
+        dbg!("POST-JSON-DATA");
         let new_model = Python::with_gil(|py| {
             let py_module =
                 PyModule::from_code(py, PYTHON_FISHING_WEIGHT_PREDICTOR_CODE, "", "").unwrap();
@@ -154,6 +158,7 @@ impl MLModel for FishingWeightWeatherPredictor {
                 .extract::<Vec<u8>>()
         })
         .change_context(MLModelError::Python)?;
+        dbg!("POST-PYTHON");
 
         event!(Level::INFO, "trained on {} new hauls", hauls.len());
 
@@ -162,6 +167,7 @@ impl MLModel for FishingWeightWeatherPredictor {
             .await
             .change_context(MLModelError::StoreOutput)?;
 
+        dbg!("POST-COMMIT");
         Ok(TrainingOutcome::Progress { new_model })
     }
 
