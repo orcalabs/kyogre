@@ -12,13 +12,16 @@ RUN cargo chef prepare --recipe-path recipe.json
 FROM chef AS builder
 COPY --from=planner /app/recipe.json recipe.json
 
+
 RUN apt update -y && \
     apt install -y \
     git \
     libssl1.1 \
     libssl-dev \
     protobuf-compiler \
-    pkg-config && \
+    pkg-config \
+    python3.9 \
+    python3.9-dev && \
     git config --global credential.helper store
 
 RUN --mount=type=secret,id=git-credentials,target=/root/.git-credentials,required=true \

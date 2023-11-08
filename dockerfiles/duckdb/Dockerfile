@@ -18,7 +18,9 @@ RUN apt update -y && \
     libssl1.1 \
     libssl-dev \
     protobuf-compiler \
-    pkg-config && \
+    pkg-config \
+    python3.9 \
+    python3.9-dev && \
     git config --global credential.helper store
 
 RUN --mount=type=secret,id=git-credentials,target=/root/.git-credentials,required=true \
