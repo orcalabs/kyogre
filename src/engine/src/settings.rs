@@ -1,6 +1,6 @@
 use crate::{
     AisVms, ErsTripAssembler, FisheryDiscriminants, FishingSpotPredictor, FishingWeightPredictor,
-    LandingTripAssembler, PredictionRange,
+    FishingWeightWeatherPredictor, LandingTripAssembler, PredictionRange,
 };
 use config::{Config, ConfigError, File};
 use kyogre_core::*;
@@ -23,6 +23,7 @@ pub struct Settings {
 #[derive(Debug, Deserialize)]
 pub struct FishingPredictorSettings {
     pub training_rounds: u32,
+    pub training_batch_size: Option<u32>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -87,8 +88,16 @@ impl Settings {
                 PredictionRange::CurrentYear,
                 vec![],
             ));
+            let model3 = Box::new(FishingWeightWeatherPredictor::new(
+                s.training_rounds,
+                self.environment,
+                PredictionRange::CurrentWeekAndNextWeek,
+                vec![],
+                s.training_batch_size,
+            ));
             vec.push(model as Box<dyn MLModel>);
             vec.push(model2 as Box<dyn MLModel>);
+            vec.push(model3 as Box<dyn MLModel>);
         }
 
         vec

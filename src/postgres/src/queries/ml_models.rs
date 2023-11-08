@@ -7,20 +7,22 @@ use error_stack::{report, Result, ResultExt};
 use fiskeridir_rs::{GearGroup, SpeciesGroup};
 use futures::Stream;
 use futures::TryStreamExt;
-use kyogre_core::{FishingSpotPrediction, HaulId, ModelId, WeatherData};
+use kyogre_core::{FishingSpotPrediction, ModelId, TrainingHaul, WeatherData};
 use unnest_insert::UnnestInsert;
 
 impl PostgresAdapter {
     pub(crate) async fn commit_hauls_training_impl(
         &self,
         model_id: ModelId,
-        haul_ids: Vec<HaulId>,
+        hauls: Vec<TrainingHaul>,
     ) -> Result<(), PostgresError> {
-        let insert: Vec<MLTrainingLog> = haul_ids
+        let insert: Vec<MLTrainingLog> = hauls
             .into_iter()
             .map(|v| MLTrainingLog {
-                ml_model_id: model_id as i32,
-                haul_id: v.0,
+                ml_model_id: model_id,
+                haul_id: v.haul_id.0,
+                species_group_id: v.species,
+                catch_location_id: v.catch_location_id.into_inner(),
             })
             .collect();
 
@@ -154,6 +156,7 @@ WHERE
         &self,
         model_id: ModelId,
         weather_data: WeatherData,
+        limit: Option<u32>,
     ) -> Result<Vec<WeightPredictorTrainingData>, PostgresError> {
         let require_weather = match weather_data {
             WeatherData::Require => false,
@@ -183,8 +186,10 @@ FROM
     hauls_matrix hm
     INNER JOIN hauls h ON hm.haul_id = h.haul_id
     INNER JOIN catch_locations cl ON cl.catch_location_id = hm.catch_location
-    LEFT JOIN ml_hauls_training_log m ON h.haul_id = m.haul_id
-    AND m.ml_model_id = $2
+    LEFT JOIN ml_hauls_training_log m ON m.ml_model_id = $2
+    AND hm.haul_id = m.haul_id
+    AND hm.species_group_id = m.species_group_id
+    AND hm.catch_location = m.catch_location_id
 WHERE
     (h.stop_timestamp - h.start_timestamp) < INTERVAL '2 day'
     AND hm.gear_group_id = $1
@@ -201,11 +206,14 @@ WHERE
         OR $3
     )
 ORDER BY
-    hm.species_group_id DESC;
+    h.start_timestamp
+LIMIT
+    $4
             "#,
             GearGroup::Traal as i32,
             model_id as i32,
             require_weather,
+            limit.map(|v| v as i64)
         )
         .fetch_all(&self.pool)
         .await
@@ -257,15 +265,18 @@ SELECT
     (DATE_PART('week', h.start_timestamp))::INT AS "week!",
     hm.species_group_id AS "species: SpeciesGroup",
     h.haul_id,
-    hm.living_weight AS weight
+    hm.living_weight AS weight,
+    hm.catch_location
 FROM
     hauls_matrix hm
     INNER JOIN hauls h ON hm.haul_id = h.haul_id
     INNER JOIN catch_locations cl ON cl.catch_location_id = hm.catch_location
     INNER JOIN sums ON sums.species_group_id = hm.species_group_id
     AND sums.week = (DATE_PART('week', h.start_timestamp))::INT
-    LEFT JOIN ml_hauls_training_log m ON h.haul_id = m.haul_id
-    AND m.ml_model_id = $2
+    LEFT JOIN ml_hauls_training_log m ON m.ml_model_id = $2
+    AND hm.haul_id = m.haul_id
+    AND hm.species_group_id = m.species_group_id
+    AND hm.catch_location = m.catch_location_id
 WHERE
     (h.stop_timestamp - h.start_timestamp) < INTERVAL '2 day'
     AND hm.gear_group_id = $1

@@ -1,6 +1,7 @@
 log_level: Info
 fishing_predictors:
   training_rounds: 200
+  training_batch_size: 10000
 postgres:
   ip: orca-postgres-dev.postgres.database.azure.com
   port: 5432
