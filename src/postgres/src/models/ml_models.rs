@@ -68,8 +68,12 @@ pub struct WeightPredictorTrainingData {
 #[derive(Debug, Clone, UnnestInsert)]
 #[unnest_insert(table_name = "ml_hauls_training_log")]
 pub struct MLTrainingLog {
-    pub ml_model_id: i32,
+    #[unnest_insert(sql_type = "INT", type_conversion = "enum_to_i32")]
+    pub ml_model_id: ModelId,
     pub haul_id: i64,
+    #[unnest_insert(sql_type = "INT", type_conversion = "enum_to_i32")]
+    pub species_group_id: SpeciesGroup,
+    pub catch_location_id: String,
 }
 
 impl TryFrom<FishingWeightPrediction> for kyogre_core::FishingWeightPrediction {

@@ -238,11 +238,12 @@ pub trait MLModelsOutbound: Send + Sync {
         &self,
         model_id: ModelId,
         weather: WeatherData,
+        limit: Option<u32>,
     ) -> Result<Vec<WeightPredictorTrainingData>, QueryError>;
     async fn commit_hauls_training(
         &self,
         model_id: ModelId,
-        haul_ids: Vec<HaulId>,
+        haul: Vec<TrainingHaul>,
     ) -> Result<(), InsertError>;
     async fn model(&self, model_id: ModelId) -> Result<Vec<u8>, QueryError>;
 }

@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use crate::{CatchLocationId, MLModelsInbound, MLModelsOutbound};
+use crate::{CatchLocationId, HaulId, MLModelsInbound, MLModelsOutbound};
 use async_trait::async_trait;
 use error_stack::{Context, Result};
 use fiskeridir_rs::SpeciesGroup;
@@ -43,6 +43,18 @@ impl From<ModelId> for i32 {
     }
 }
 
+pub enum TrainingOutcome {
+    Finished,
+    Progress { new_model: Vec<u8> },
+}
+
+#[derive(Debug, Hash, Eq, PartialEq)]
+pub struct TrainingHaul {
+    pub haul_id: HaulId,
+    pub species: SpeciesGroup,
+    pub catch_location_id: CatchLocationId,
+}
+
 #[derive(Debug)]
 pub struct FishingSpotTrainingData {
     pub haul_id: i64,
@@ -51,6 +63,7 @@ pub struct FishingSpotTrainingData {
     pub weight: f64,
     pub species: SpeciesGroup,
     pub week: i32,
+    pub catch_location_id: CatchLocationId,
 }
 
 #[derive(Debug)]
@@ -76,9 +89,9 @@ pub trait MLModel: Send + Sync {
     fn id(&self) -> ModelId;
     async fn train(
         &self,
-        model: Vec<u8>,
+        model: &[u8],
         adapter: &dyn MLModelsOutbound,
-    ) -> Result<Vec<u8>, MLModelError>;
+    ) -> Result<TrainingOutcome, MLModelError>;
     async fn predict(
         &self,
         model: &[u8],

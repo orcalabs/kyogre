@@ -61,23 +61,38 @@ async fn run_ml_model(
     outbound: &dyn MLModelsOutbound,
     model: &dyn MLModel,
 ) -> Result<(), MLError> {
-    let current_model = outbound
+    let mut current_model = outbound
         .model(model.id())
         .await
         .change_context(MLError::ModelSaveLoad)?;
-    let new_model = model
-        .train(current_model, outbound)
-        .await
-        .change_context(MLError::Training)?;
 
-    model
-        .predict(&new_model, inbound)
-        .await
-        .change_context(MLError::Prediction)?;
-    inbound
-        .save_model(model.id(), &new_model)
-        .await
-        .change_context(MLError::ModelSaveLoad)?;
+    let mut i = 1;
+
+    loop {
+        match model
+            .train(&current_model, outbound)
+            .await
+            .change_context(MLError::Training)?
+        {
+            TrainingOutcome::Finished => {
+                event!(Level::INFO, "finished training rounds, starting prediction");
+                model
+                    .predict(&current_model, inbound)
+                    .await
+                    .change_context(MLError::Prediction)?;
+                break;
+            }
+            TrainingOutcome::Progress { new_model } => {
+                inbound
+                    .save_model(model.id(), &new_model)
+                    .await
+                    .change_context(MLError::ModelSaveLoad)?;
+                current_model = new_model;
+                event!(Level::INFO, "finished training round {i}");
+            }
+        }
+        i += 1;
+    }
 
     tracing::Span::current().record("app.model", model.id().to_string());
     Ok(())

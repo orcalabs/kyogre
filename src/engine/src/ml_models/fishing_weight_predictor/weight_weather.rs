@@ -5,7 +5,7 @@ use fiskeridir_rs::SpeciesGroup;
 use kyogre_core::{
     distance_to_shore, CatchLocation, CatchLocationId, CatchLocationWeather, HaulId, MLModel,
     MLModelError, MLModelsInbound, MLModelsOutbound, ModelId, NewFishingWeightPrediction,
-    WeatherData, WeatherLocationOverlap, NUM_CATCH_LOCATIONS,
+    TrainingHaul, TrainingOutcome, WeatherData, WeatherLocationOverlap, NUM_CATCH_LOCATIONS,
 };
 use num_traits::FromPrimitive;
 use orca_core::Environment;
@@ -30,6 +30,7 @@ pub struct FishingWeightWeatherPredictor {
     range: PredictionRange,
     catch_locations: Vec<CatchLocationId>,
     use_gpu: bool,
+    training_batch_size: Option<u32>,
 }
 
 #[derive(Debug, Serialize)]
@@ -90,18 +91,26 @@ impl MLModel for FishingWeightWeatherPredictor {
 
     async fn train(
         &self,
-        model: Vec<u8>,
+        model: &[u8],
         adapter: &dyn MLModelsOutbound,
-    ) -> Result<Vec<u8>, MLModelError> {
-        let mut haul_ids = HashSet::new();
+    ) -> Result<TrainingOutcome, MLModelError> {
+        let mut hauls = HashSet::new();
 
         let data: Vec<PythonTrainingData> = adapter
-            .fishing_weight_predictor_training_data(self.id(), WeatherData::Require)
+            .fishing_weight_predictor_training_data(
+                self.id(),
+                WeatherData::Require,
+                self.training_batch_size,
+            )
             .await
             .unwrap()
             .into_iter()
             .filter_map(|v| {
-                haul_ids.insert(HaulId(v.haul_id));
+                hauls.insert(TrainingHaul {
+                    haul_id: HaulId(v.haul_id),
+                    species: v.species,
+                    catch_location_id: v.catch_location.clone(),
+                });
                 if self.running_in_test || distance_to_shore(v.latitude, v.longitude) > 2000.0 {
                     Some(PythonTrainingData {
                         latitude: v.latitude,
@@ -124,8 +133,7 @@ impl MLModel for FishingWeightWeatherPredictor {
             .collect();
 
         if data.is_empty() {
-            event!(Level::INFO, "now new training_data, skipping training");
-            return Ok(vec![]);
+            return Ok(TrainingOutcome::Finished);
         }
         let training_data =
             serde_json::to_string(&data).change_context(MLModelError::DataPreparation)?;
@@ -138,7 +146,7 @@ impl MLModel for FishingWeightWeatherPredictor {
             let model = if model.is_empty() {
                 None
             } else {
-                Some(PyByteArray::new(py, model.as_slice()))
+                Some(PyByteArray::new(py, model))
             };
 
             py_main
@@ -147,14 +155,14 @@ impl MLModel for FishingWeightWeatherPredictor {
         })
         .change_context(MLModelError::Python)?;
 
-        event!(Level::INFO, "trained on {} new hauls", haul_ids.len());
+        event!(Level::INFO, "trained on {} new hauls", hauls.len());
 
         adapter
-            .commit_hauls_training(self.id(), haul_ids.into_iter().collect())
+            .commit_hauls_training(self.id(), hauls.into_iter().collect())
             .await
             .change_context(MLModelError::StoreOutput)?;
 
-        Ok(new_model)
+        Ok(TrainingOutcome::Progress { new_model })
     }
 
     async fn predict(
@@ -325,6 +333,7 @@ impl FishingWeightWeatherPredictor {
         environment: Environment,
         range: PredictionRange,
         catch_locations: Vec<CatchLocationId>,
+        training_batch_size: Option<u32>,
     ) -> FishingWeightWeatherPredictor {
         FishingWeightWeatherPredictor {
             training_rounds,
@@ -332,6 +341,7 @@ impl FishingWeightWeatherPredictor {
             range,
             catch_locations,
             use_gpu: matches!(environment, Environment::Local),
+            training_batch_size,
         }
     }
 }

@@ -1021,9 +1021,10 @@ impl MLModelsOutbound for PostgresAdapter {
         &self,
         model_id: ModelId,
         weather_data: WeatherData,
+        limit: Option<u32>,
     ) -> Result<Vec<WeightPredictorTrainingData>, QueryError> {
         Ok(self
-            .fishing_weight_predictor_training_data_impl(model_id, weather_data)
+            .fishing_weight_predictor_training_data_impl(model_id, weather_data, limit)
             .await
             .change_context(QueryError)?
             .into_iter()
@@ -1044,9 +1045,9 @@ impl MLModelsOutbound for PostgresAdapter {
     async fn commit_hauls_training(
         &self,
         model_id: ModelId,
-        haul_ids: Vec<HaulId>,
+        hauls: Vec<TrainingHaul>,
     ) -> Result<(), InsertError> {
-        self.commit_hauls_training_impl(model_id, haul_ids)
+        self.commit_hauls_training_impl(model_id, hauls)
             .await
             .change_context(InsertError)
     }

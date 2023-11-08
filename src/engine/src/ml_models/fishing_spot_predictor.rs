@@ -6,7 +6,7 @@ use error_stack::{Result, ResultExt};
 use fiskeridir_rs::SpeciesGroup;
 use kyogre_core::{
     distance_to_shore, HaulId, MLModel, MLModelError, MLModelsInbound, MLModelsOutbound, ModelId,
-    NewFishingSpotPrediction,
+    NewFishingSpotPrediction, TrainingHaul, TrainingOutcome,
 };
 use num_traits::FromPrimitive;
 use orca_core::Environment;
@@ -70,17 +70,21 @@ impl MLModel for FishingSpotPredictor {
 
     async fn train(
         &self,
-        model: Vec<u8>,
+        model: &[u8],
         adapter: &dyn MLModelsOutbound,
-    ) -> Result<Vec<u8>, MLModelError> {
-        let mut haul_ids = HashSet::new();
+    ) -> Result<TrainingOutcome, MLModelError> {
+        let mut hauls = HashSet::new();
         let data: Vec<PythonTrainingData> = adapter
             .fishing_spot_predictor_training_data()
             .await
             .unwrap()
             .into_iter()
             .filter_map(|v| {
-                haul_ids.insert(HaulId(v.haul_id));
+                hauls.insert(TrainingHaul {
+                    haul_id: HaulId(v.haul_id),
+                    species: v.species,
+                    catch_location_id: v.catch_location_id.clone(),
+                });
                 if self.running_in_test || distance_to_shore(v.latitude, v.longitude) > 2000.0 {
                     Some(PythonTrainingData {
                         latitude: v.latitude,
@@ -95,8 +99,7 @@ impl MLModel for FishingSpotPredictor {
             .collect();
 
         if data.is_empty() {
-            event!(Level::INFO, "now new trainig_data, skipping training");
-            return Ok(vec![]);
+            return Ok(TrainingOutcome::Finished);
         }
         let training_data =
             serde_json::to_string(&data).change_context(MLModelError::DataPreparation)?;
@@ -108,7 +111,7 @@ impl MLModel for FishingSpotPredictor {
             let model = if model.is_empty() {
                 None
             } else {
-                Some(PyByteArray::new(py, model.as_slice()))
+                Some(PyByteArray::new(py, model))
             };
 
             py_main
@@ -117,14 +120,14 @@ impl MLModel for FishingSpotPredictor {
         })
         .change_context(MLModelError::Python)?;
 
-        event!(Level::INFO, "trained on {} new hauls", haul_ids.len());
+        event!(Level::INFO, "trained on {} new hauls", hauls.len());
 
         adapter
-            .commit_hauls_training(self.id(), haul_ids.into_iter().collect())
+            .commit_hauls_training(self.id(), hauls.into_iter().collect())
             .await
             .change_context(MLModelError::StoreOutput)?;
 
-        Ok(new_model)
+        Ok(TrainingOutcome::Progress { new_model })
     }
 
     async fn predict(
