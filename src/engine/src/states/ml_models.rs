@@ -79,10 +79,14 @@ async fn run_ml_model(
             TrainingOutcome::Finished => {
                 event!(Level::INFO, "finished training rounds, starting prediction");
                 dbg!("Predicting");
-                model
-                    .predict(&current_model, inbound)
-                    .await
-                    .change_context(MLError::Prediction)?;
+                let targets = model.prediction_targets();
+                let batch_size = model.prediction_batch_size();
+                for chunk in targets.chunks(batch_size) {
+                    model
+                        .predict(&current_model, inbound, chunk)
+                        .await
+                        .change_context(MLError::Prediction)?;
+                }
                 break;
             }
             TrainingOutcome::Progress { new_model } => {

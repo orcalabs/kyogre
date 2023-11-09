@@ -4,8 +4,8 @@ use error_stack::{Result, ResultExt};
 use fiskeridir_rs::SpeciesGroup;
 use kyogre_core::{
     distance_to_shore, CatchLocation, CatchLocationId, HaulId, MLModel, MLModelError,
-    MLModelsInbound, MLModelsOutbound, ModelId, NewFishingWeightPrediction, TrainingHaul,
-    TrainingOutcome, WeatherData, WeatherLocationOverlap, NUM_CATCH_LOCATIONS,
+    MLModelsInbound, MLModelsOutbound, ModelId, NewFishingWeightPrediction, PredictionTarget,
+    TrainingHaul, TrainingOutcome, WeatherData, WeatherLocationOverlap, NUM_CATCH_LOCATIONS,
 };
 use num_traits::FromPrimitive;
 use orca_core::Environment;
@@ -65,6 +65,12 @@ struct PythonPredictionInput {
 impl MLModel for FishingWeightPredictor {
     fn id(&self) -> ModelId {
         ModelId::FishingWeightPredictor
+    }
+    fn prediction_targets(&self) -> Vec<PredictionTarget> {
+        self.range.prediction_targets()
+    }
+    fn prediction_batch_size(&self) -> usize {
+        10
     }
 
     #[instrument(skip_all)]
@@ -138,6 +144,7 @@ impl MLModel for FishingWeightPredictor {
         &self,
         model: &[u8],
         adapter: &dyn MLModelsInbound,
+        targets: &[PredictionTarget],
     ) -> Result<(), MLModelError> {
         if model.is_empty() {
             return Ok(());
@@ -165,10 +172,8 @@ impl MLModel for FishingWeightPredictor {
                 .collect::<Vec<&CatchLocation>>()
         };
 
-        let prediction_targets = self.range.prediction_targets();
-
-        for c in &active_catch_locations {
-            for t in &prediction_targets {
+        for t in targets {
+            for c in &active_catch_locations {
                 for s in SpeciesGroup::iter() {
                     predictions.insert(PythonPredictionInputKey {
                         species_group_id: s as i32,
