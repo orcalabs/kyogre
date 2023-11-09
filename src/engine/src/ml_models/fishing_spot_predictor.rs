@@ -6,7 +6,7 @@ use error_stack::{Result, ResultExt};
 use fiskeridir_rs::SpeciesGroup;
 use kyogre_core::{
     distance_to_shore, HaulId, MLModel, MLModelError, MLModelsInbound, MLModelsOutbound, ModelId,
-    NewFishingSpotPrediction, TrainingHaul, TrainingOutcome,
+    NewFishingSpotPrediction, PredictionTarget, TrainingHaul, TrainingOutcome,
 };
 use num_traits::FromPrimitive;
 use orca_core::Environment;
@@ -66,6 +66,13 @@ impl FishingSpotPredictor {
 impl MLModel for FishingSpotPredictor {
     fn id(&self) -> ModelId {
         ModelId::FishingSpotPredictor
+    }
+
+    fn prediction_targets(&self) -> Vec<PredictionTarget> {
+        self.range.prediction_targets()
+    }
+    fn prediction_batch_size(&self) -> usize {
+        53
     }
 
     #[instrument(skip_all)]
@@ -136,6 +143,7 @@ impl MLModel for FishingSpotPredictor {
         &self,
         model: &[u8],
         adapter: &dyn MLModelsInbound,
+        targets: &[PredictionTarget],
     ) -> Result<(), MLModelError> {
         if model.is_empty() {
             return Ok(());
@@ -147,8 +155,6 @@ impl MLModel for FishingSpotPredictor {
             .species_caught_with_traal()
             .await
             .change_context(MLModelError::DataPreparation)?;
-
-        let targets = self.range.prediction_targets();
 
         for t in targets {
             for s in &species {
