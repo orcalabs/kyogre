@@ -67,8 +67,8 @@ pub async fn ais_vms_positions<T: Database + 'static>(
     })?;
 
     let bw_policy = bw_profile.map(AisPermission::from).unwrap_or_default();
-    let auth0_policy = dbg!(auth).map(AisPermission::from).unwrap_or_default();
-    let policy = if bw_policy == AisPermission::All || dbg!(auth0_policy) == AisPermission::All {
+    let auth0_policy = auth.map(AisPermission::from).unwrap_or_default();
+    let policy = if bw_policy == AisPermission::All || auth0_policy == AisPermission::All {
         AisPermission::All
     } else {
         AisPermission::Above15m
