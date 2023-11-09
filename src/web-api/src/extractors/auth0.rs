@@ -11,6 +11,8 @@ use crate::{auth0::Auth0State, error::ApiError};
 pub enum Auth0Permission {
     #[serde(rename = "read:ais:under_15m")]
     ReadAisUnder15m,
+    #[serde(rename = "read:fishing_facility")]
+    ReadFishingFacility,
     #[serde(other)]
     Other,
 }

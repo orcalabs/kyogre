@@ -1,4 +1,7 @@
-use crate::routes::utils::{self, *};
+use crate::{
+    extractors::{Auth0Permission, Auth0Profile},
+    routes::utils::{self, *},
+};
 use fiskeridir_rs::{Gear, GearGroup, LandingId};
 use futures::TryStreamExt;
 
@@ -129,16 +132,23 @@ pub async fn trip_of_landing<T: Database + 'static>(
 #[tracing::instrument(skip(db))]
 pub async fn trip_of_partial_landing<T: Database + 'static>(
     db: web::Data<T>,
-    profile: Option<BwProfile>,
+    bw_profile: Option<BwProfile>,
+    auth: Option<Auth0Profile>,
     landing_id: Path<String>,
 ) -> Result<Response<Option<Trip>>, ApiError> {
     let landing_id = landing_id.into_inner();
-    let read_fishing_facility = profile
+    let read_fishing_facility = bw_profile
         .map(|p| {
             p.policies
                 .contains(&BwPolicy::BwReadExtendedFishingFacility)
         })
-        .unwrap_or(false);
+        .unwrap_or(false)
+        || auth
+            .map(|a| {
+                a.permissions
+                    .contains(&Auth0Permission::ReadFishingFacility)
+            })
+            .unwrap_or(false);
 
     db.detailed_trip_of_partial_landing(landing_id, read_fishing_facility)
         .await

@@ -230,10 +230,10 @@ where
                             "auth0",
                             SecurityScheme::OAuth2(OAuth2::new([Flow::Implicit(Implicit::new(
                                 &auth0.authorization_url,
-                                Scopes::from_iter([(
-                                    "read:ais:under_15m",
-                                    "Read AIS data of vessels under 15m",
-                                )]),
+                                Scopes::from_iter([
+                                    ("read:ais:under_15m", "Read AIS data of vessels under 15m"),
+                                    ("read:fishing_facility", "Read fishing facilities"),
+                                ]),
                             ))])),
                         );
                     }
