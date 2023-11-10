@@ -1,7 +1,13 @@
 use error_stack::Report;
+use fiskeridir_rs::SpeciesGroup;
 use unnest_insert::UnnestInsert;
 
 use crate::error::PostgresError;
+
+pub struct SpeciesGroupWeek {
+    pub species: SpeciesGroup,
+    pub weeks: Vec<i32>,
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, UnnestInsert)]
 #[unnest_insert(table_name = "species", conflict = "species_id", update_coalesce_all)]
@@ -49,6 +55,15 @@ impl From<&fiskeridir_rs::Species> for SpeciesFiskeridir {
         SpeciesFiskeridir {
             id: val.fdir_code as i32,
             name: Some(val.fdir_name.clone()),
+        }
+    }
+}
+
+impl From<SpeciesGroupWeek> for kyogre_core::SpeciesGroupWeek {
+    fn from(value: SpeciesGroupWeek) -> Self {
+        Self {
+            species: value.species,
+            weeks: value.weeks.into_iter().map(|v| v as u32).collect(),
         }
     }
 }

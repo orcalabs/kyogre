@@ -6,6 +6,8 @@ mod fishing_weight_predictor;
 pub use fishing_spot_predictor::*;
 pub use fishing_weight_predictor::*;
 
+pub static HAUL_LIMIT_PER_SPECIES: u32 = 100;
+
 #[derive(Debug, Hash, Eq, PartialEq)]
 struct CatchLocationWeatherKey {
     pub week: u32,
