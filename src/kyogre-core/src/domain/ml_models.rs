@@ -4,13 +4,21 @@ use chrono::{Datelike, Duration, Utc};
 use error_stack::{Context, Result};
 use fiskeridir_rs::SpeciesGroup;
 use serde::{Deserialize, Serialize};
-use std::fmt::Display;
+use std::{collections::HashSet, fmt::Display};
 
 #[derive(Debug)]
 pub enum MLModelError {
     StoreOutput,
     Python,
     DataPreparation,
+}
+
+/// How many hauls have to exist for a given week and species_group pair to trigger us to
+/// create a prediction for said pair.
+#[derive(Copy, Clone)]
+pub enum HaulPredictionLimit {
+    NoLimit,
+    Limit(u32),
 }
 
 impl Display for MLModelError {
@@ -43,6 +51,11 @@ impl From<ModelId> for i32 {
     fn from(value: ModelId) -> Self {
         value as i32
     }
+}
+
+pub struct SpeciesGroupWeek {
+    pub species: SpeciesGroup,
+    pub weeks: HashSet<u32>,
 }
 
 pub enum TrainingOutcome {

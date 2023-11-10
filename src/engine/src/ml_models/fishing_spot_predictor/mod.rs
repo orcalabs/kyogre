@@ -3,9 +3,9 @@ use chrono::{Datelike, Utc};
 use error_stack::{Result, ResultExt};
 use fiskeridir_rs::SpeciesGroup;
 use kyogre_core::{
-    distance_to_shore, CatchLocationWeather, FishingSpotTrainingData, HaulId, MLModelError,
-    MLModelsInbound, MLModelsOutbound, ModelId, NewFishingSpotPrediction, TrainingHaul,
-    WeatherData, WeatherLocationOverlap,
+    distance_to_shore, CatchLocationWeather, FishingSpotTrainingData, HaulId, HaulPredictionLimit,
+    MLModelError, MLModelsInbound, MLModelsOutbound, ModelId, NewFishingSpotPrediction,
+    TrainingHaul, WeatherData, WeatherLocationOverlap,
 };
 use num_traits::FromPrimitive;
 use pyo3::{
@@ -31,6 +31,7 @@ pub struct SpotPredictorSettings {
     pub use_gpu: bool,
     pub training_rounds: u32,
     pub predict_batch_size: u32,
+    pub hauls_limit_per_species: HaulPredictionLimit,
     pub range: PredictionRange,
 }
 
@@ -142,8 +143,6 @@ where
         let training_data =
             serde_json::to_string(&training_data).change_context(MLModelError::DataPreparation)?;
 
-        dbg!(&training_data);
-
         let new_model: Vec<u8> = Python::with_gil(|py| {
             let py_module = PyModule::from_code(py, PYTHON_FISHING_SPOT_CODE, "", "").unwrap();
             let py_main = py_module.getattr("train").unwrap();
@@ -207,16 +206,15 @@ where
         let mut predictions = HashSet::new();
 
         let species = adapter
-            .species_caught_with_traal()
+            .species_caught_with_traal(settings.hauls_limit_per_species)
             .await
             .change_context(MLModelError::DataPreparation)?;
 
-        for t in chunk {
+        for c in chunk {
             for s in &species {
-                if *s == SpeciesGroup::Ukjent {
-                    continue;
+                if s.weeks.contains(&c.week) {
+                    predictions.insert((c.year, c.week, s.species as i32));
                 }
-                predictions.insert((t.year, t.week, *s as i32));
             }
         }
 

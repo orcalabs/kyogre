@@ -1100,10 +1100,17 @@ impl MLModelsInbound for PostgresAdapter {
             .change_context(QueryError)?
             .map(CatchLocationWeather::from))
     }
-    async fn species_caught_with_traal(&self) -> Result<Vec<SpeciesGroup>, QueryError> {
-        self.species_caught_with_traal_impl()
+    async fn species_caught_with_traal(
+        &self,
+        limit: HaulPredictionLimit,
+    ) -> Result<Vec<SpeciesGroupWeek>, QueryError> {
+        Ok(self
+            .species_caught_with_traal_impl(limit)
             .await
-            .change_context(QueryError)
+            .change_context(QueryError)?
+            .into_iter()
+            .map(SpeciesGroupWeek::from)
+            .collect())
     }
     async fn existing_fishing_weight_predictions(
         &self,

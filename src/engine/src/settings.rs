@@ -2,6 +2,7 @@ use crate::{
     AisVms, ErsTripAssembler, FisheryDiscriminants, FishingSpotPredictor,
     FishingSpotWeatherPredictor, FishingWeightPredictor, FishingWeightWeatherPredictor,
     LandingTripAssembler, PredictionRange, SpotPredictorSettings, WeightPredictorSettings,
+    HAUL_LIMIT_PER_SPECIES,
 };
 use config::{Config, ConfigError, File};
 use kyogre_core::*;
@@ -86,6 +87,7 @@ impl Settings {
                 training_rounds: s.training_rounds,
                 predict_batch_size: 53,
                 range: PredictionRange::CurrentYear,
+                hauls_limit_per_species: HaulPredictionLimit::Limit(HAUL_LIMIT_PER_SPECIES),
             }));
             let model2 = Box::new(FishingWeightPredictor::new(WeightPredictorSettings {
                 running_in_test: false,
@@ -95,6 +97,7 @@ impl Settings {
                 predict_batch_size: 53,
                 range: PredictionRange::CurrentYear,
                 catch_locations: vec![],
+                hauls_limit_per_species: HaulPredictionLimit::Limit(HAUL_LIMIT_PER_SPECIES),
             }));
             let model3 = Box::new(FishingWeightWeatherPredictor::new(
                 WeightPredictorSettings {
@@ -105,6 +108,7 @@ impl Settings {
                     predict_batch_size: 10,
                     range: PredictionRange::CurrentWeekAndNextWeek,
                     catch_locations: vec![],
+                    hauls_limit_per_species: HaulPredictionLimit::Limit(HAUL_LIMIT_PER_SPECIES),
                 },
             ));
             let model4 = Box::new(FishingSpotWeatherPredictor::new(SpotPredictorSettings {
@@ -114,6 +118,7 @@ impl Settings {
                 training_rounds: s.training_rounds,
                 predict_batch_size: 10,
                 range: PredictionRange::CurrentWeekAndNextWeek,
+                hauls_limit_per_species: HaulPredictionLimit::Limit(HAUL_LIMIT_PER_SPECIES),
             }));
             vec.push(model as Box<dyn MLModel>);
             vec.push(model2 as Box<dyn MLModel>);

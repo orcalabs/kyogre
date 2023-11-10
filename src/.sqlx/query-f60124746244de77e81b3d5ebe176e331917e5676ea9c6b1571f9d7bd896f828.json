@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT DISTINCT\n    (UNNEST(species_group_ids)) AS \"species!: SpeciesGroup\",\n    ARRAY (\n        SELECT\n            a.n\n        FROM\n            GENERATE_SERIES(1, 53) AS a (n)\n    ) as \"weeks!\"\nFROM\n    hauls\nWHERE\n    gear_group_id = $1\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "species!: SpeciesGroup",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "weeks!",
+        "type_info": "Int4Array"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      null,
+      null
+    ]
+  },
+  "hash": "f60124746244de77e81b3d5ebe176e331917e5676ea9c6b1571f9d7bd896f828"
+}

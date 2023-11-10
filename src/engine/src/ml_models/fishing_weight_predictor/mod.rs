@@ -3,9 +3,10 @@ use derivative::Derivative;
 use error_stack::{Result, ResultExt};
 use fiskeridir_rs::SpeciesGroup;
 use kyogre_core::{
-    distance_to_shore, CatchLocation, CatchLocationId, CatchLocationWeather, HaulId, MLModelError,
-    MLModelsInbound, MLModelsOutbound, ModelId, NewFishingWeightPrediction, PredictionRange,
-    TrainingHaul, WeatherData, WeatherLocationOverlap, WeightPredictorTrainingData,
+    distance_to_shore, CatchLocation, CatchLocationId, CatchLocationWeather, HaulId,
+    HaulPredictionLimit, MLModelError, MLModelsInbound, MLModelsOutbound, ModelId,
+    NewFishingWeightPrediction, PredictionRange, TrainingHaul, WeatherData, WeatherLocationOverlap,
+    WeightPredictorTrainingData,
 };
 use num_traits::FromPrimitive;
 use pyo3::{
@@ -34,6 +35,7 @@ pub struct WeightPredictorSettings {
     pub predict_batch_size: u32,
     pub range: PredictionRange,
     pub catch_locations: Vec<CatchLocationId>,
+    pub hauls_limit_per_species: HaulPredictionLimit,
 }
 
 #[derive(Debug, Derivative)]
@@ -175,21 +177,23 @@ where
         };
 
         let species = adapter
-            .species_caught_with_traal()
+            .species_caught_with_traal(settings.hauls_limit_per_species)
             .await
             .change_context(MLModelError::DataPreparation)?;
 
         for t in chunk {
             for c in &active_catch_locations {
                 for s in &species {
-                    predictions.insert(PredictionInputKey {
-                        species_group_id: *s as i32,
-                        week: t.week,
-                        year: t.year,
-                        catch_location_id: c.id.clone(),
-                        latitude: c.latitude,
-                        longitude: c.longitude,
-                    });
+                    if s.weeks.contains(&t.week) {
+                        predictions.insert(PredictionInputKey {
+                            species_group_id: s.species as i32,
+                            week: t.week,
+                            year: t.year,
+                            catch_location_id: c.id.clone(),
+                            latitude: c.latitude,
+                            longitude: c.longitude,
+                        });
+                    }
                 }
             }
         }
