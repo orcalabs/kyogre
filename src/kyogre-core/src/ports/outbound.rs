@@ -235,6 +235,7 @@ pub trait TripPipelineOutbound: Send + Sync {
 
 #[async_trait]
 pub trait MLModelsOutbound: Send + Sync {
+    async fn save_model(&self, model_id: ModelId, model: &[u8]) -> Result<(), InsertError>;
     async fn fishing_spot_predictor_training_data(
         &self,
         model_id: ModelId,

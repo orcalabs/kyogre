@@ -4,7 +4,6 @@ use chrono::{Datelike, Utc};
 use engine::*;
 use fiskeridir_rs::{GearGroup, SpeciesGroup};
 use kyogre_core::*;
-use strum::EnumCount;
 use web_api::routes::v1::fishing_prediction::{
     FishingSpotPredictionParams, FishingWeightPredictionParams,
 };
@@ -91,6 +90,7 @@ async fn test_fishing_weight_predictions_filters_by_week_and_species_group() {
             .hauls(5)
             .modify(|v| {
                 v.dca.gear.gear_group_code = GearGroup::Traal;
+                v.dca.catch.species.species_group_code = SpeciesGroup::Sei;
             })
             .build()
             .await;
@@ -141,9 +141,7 @@ async fn test_fishing_weight_predictions_filters_by_model() {
         let predictions: Vec<FishingWeightPrediction> = response.json().await.unwrap();
         assert_eq!(
             predictions.len() as u32,
-            FISHING_WEIGHT_PREDICTOR_NUM_WEEKS
-                * FISHING_WEIGHT_PREDICTOR_NUM_CL
-                * SpeciesGroup::COUNT as u32
+            FISHING_WEIGHT_PREDICTOR_NUM_WEEKS * FISHING_WEIGHT_PREDICTOR_NUM_CL
         );
 
         let response = helper
@@ -152,10 +150,7 @@ async fn test_fishing_weight_predictions_filters_by_model() {
             .await;
         assert_eq!(response.status(), StatusCode::OK);
         let predictions: Vec<FishingWeightPrediction> = response.json().await.unwrap();
-        assert_eq!(
-            predictions.len() as u32,
-            FISHING_WEIGHT_PREDICTOR_NUM_WEEKS * SpeciesGroup::COUNT as u32
-        );
+        assert_eq!(predictions.len() as u32, FISHING_WEIGHT_PREDICTOR_NUM_WEEKS);
     })
     .await;
 }
@@ -169,6 +164,7 @@ async fn test_fishing_weight_predictions_filters_by_limit_and_orders_by_weight_d
             .hauls(5)
             .modify(|v| {
                 v.dca.gear.gear_group_code = GearGroup::Traal;
+                v.dca.catch.species.species_group_code = SpeciesGroup::Sei;
             })
             .build()
             .await;

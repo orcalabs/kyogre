@@ -1,11 +1,10 @@
-use std::fmt::Display;
-
 use crate::{CatchLocationId, HaulId, MLModelsInbound, MLModelsOutbound};
 use async_trait::async_trait;
 use chrono::{Datelike, Duration, Utc};
 use error_stack::{Context, Result};
 use fiskeridir_rs::SpeciesGroup;
 use serde::{Deserialize, Serialize};
+use std::fmt::Display;
 
 #[derive(Debug)]
 pub enum MLModelError {
@@ -91,18 +90,15 @@ pub struct WeightPredictorTrainingData {
 #[async_trait]
 pub trait MLModel: Send + Sync {
     fn id(&self) -> ModelId;
-    fn prediction_targets(&self) -> Vec<PredictionTarget>;
-    fn prediction_batch_size(&self) -> usize;
     async fn train(
         &self,
-        model: &[u8],
+        model: Vec<u8>,
         adapter: &dyn MLModelsOutbound,
-    ) -> Result<TrainingOutcome, MLModelError>;
+    ) -> Result<Vec<u8>, MLModelError>;
     async fn predict(
         &self,
         model: &[u8],
         adapter: &dyn MLModelsInbound,
-        targets: &[PredictionTarget],
     ) -> Result<(), MLModelError>;
 }
 

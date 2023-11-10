@@ -1,7 +1,7 @@
 use crate::{
     AisVms, ErsTripAssembler, FisheryDiscriminants, FishingSpotPredictor,
     FishingSpotWeatherPredictor, FishingWeightPredictor, FishingWeightWeatherPredictor,
-    LandingTripAssembler, PredictionRange,
+    LandingTripAssembler, PredictionRange, SpotPredictorSettings, WeightPredictorSettings,
 };
 use config::{Config, ConfigError, File};
 use kyogre_core::*;
@@ -78,30 +78,43 @@ impl Settings {
         let mut vec = Vec::new();
 
         if let Some(s) = &self.fishing_predictors {
-            let model = Box::new(FishingSpotPredictor::new(
-                s.training_rounds,
-                self.environment,
-                PredictionRange::CurrentYear,
-            ));
-            let model2 = Box::new(FishingWeightPredictor::new(
-                s.training_rounds,
-                self.environment,
-                PredictionRange::CurrentYear,
-                vec![],
-            ));
+            let use_gpu = matches!(self.environment, Environment::Local);
+            let model = Box::new(FishingSpotPredictor::new(SpotPredictorSettings {
+                running_in_test: false,
+                training_batch_size: None,
+                use_gpu,
+                training_rounds: s.training_rounds,
+                predict_batch_size: 53,
+                range: PredictionRange::CurrentYear,
+            }));
+            let model2 = Box::new(FishingWeightPredictor::new(WeightPredictorSettings {
+                running_in_test: false,
+                training_batch_size: s.training_batch_size,
+                use_gpu,
+                training_rounds: s.training_rounds,
+                predict_batch_size: 53,
+                range: PredictionRange::CurrentYear,
+                catch_locations: vec![],
+            }));
             let model3 = Box::new(FishingWeightWeatherPredictor::new(
-                s.training_rounds,
-                self.environment,
-                PredictionRange::CurrentWeekAndNextWeek,
-                vec![],
-                s.training_batch_size,
+                WeightPredictorSettings {
+                    running_in_test: false,
+                    training_batch_size: s.training_batch_size,
+                    use_gpu,
+                    training_rounds: s.training_rounds,
+                    predict_batch_size: 10,
+                    range: PredictionRange::CurrentWeekAndNextWeek,
+                    catch_locations: vec![],
+                },
             ));
-            let model4 = Box::new(FishingSpotWeatherPredictor::new(
-                s.training_rounds,
-                self.environment,
-                PredictionRange::CurrentWeekAndNextWeek,
-                s.training_batch_size,
-            ));
+            let model4 = Box::new(FishingSpotWeatherPredictor::new(SpotPredictorSettings {
+                running_in_test: false,
+                training_batch_size: None,
+                use_gpu,
+                training_rounds: s.training_rounds,
+                predict_batch_size: 10,
+                range: PredictionRange::CurrentWeekAndNextWeek,
+            }));
             vec.push(model as Box<dyn MLModel>);
             vec.push(model2 as Box<dyn MLModel>);
             vec.push(model3 as Box<dyn MLModel>);

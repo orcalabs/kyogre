@@ -1018,6 +1018,11 @@ impl VerificationOutbound for PostgresAdapter {
 
 #[async_trait]
 impl MLModelsOutbound for PostgresAdapter {
+    async fn save_model(&self, model_id: ModelId, model: &[u8]) -> Result<(), InsertError> {
+        self.save_model_impl(model_id, model)
+            .await
+            .change_context(InsertError)
+    }
     async fn catch_locations(
         &self,
         overlap: WeatherLocationOverlap,
@@ -1143,11 +1148,6 @@ impl MLModelsInbound for PostgresAdapter {
         predictions: Vec<NewFishingWeightPrediction>,
     ) -> Result<(), InsertError> {
         self.add_weight_predictions_impl(predictions)
-            .await
-            .change_context(InsertError)
-    }
-    async fn save_model(&self, model_id: ModelId, model: &[u8]) -> Result<(), InsertError> {
-        self.save_model_impl(model_id, model)
             .await
             .change_context(InsertError)
     }

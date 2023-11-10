@@ -61,43 +61,18 @@ async fn run_ml_model(
     outbound: &dyn MLModelsOutbound,
     model: &dyn MLModel,
 ) -> Result<(), MLError> {
-    let mut current_model = outbound
+    let current_model = outbound
         .model(model.id())
         .await
         .change_context(MLError::ModelSaveLoad)?;
 
-    let mut i = 1;
+    let new_model = model
+        .train(current_model, outbound)
+        .await
+        .change_context(MLError::Training)?;
 
-    loop {
-        match model
-            .train(&current_model, outbound)
-            .await
-            .change_context(MLError::Training)?
-        {
-            TrainingOutcome::Finished => {
-                event!(Level::INFO, "finished training rounds, starting prediction");
-                let targets = model.prediction_targets();
-                let batch_size = model.prediction_batch_size();
-
-                for chunk in targets.chunks(batch_size) {
-                    model
-                        .predict(&current_model, inbound, chunk)
-                        .await
-                        .change_context(MLError::Prediction)?;
-                }
-                break;
-            }
-            TrainingOutcome::Progress { new_model } => {
-                inbound
-                    .save_model(model.id(), &new_model)
-                    .await
-                    .change_context(MLError::ModelSaveLoad)?;
-                current_model = new_model;
-                event!(Level::INFO, "finished training round {i}");
-            }
-        }
-        i += 1;
-    }
-
-    Ok(())
+    model
+        .predict(&new_model, inbound)
+        .await
+        .change_context(MLError::Prediction)
 }

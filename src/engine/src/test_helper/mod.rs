@@ -5,8 +5,8 @@ use crate::{
     FishingWeightWeatherPredictor, FiskeridirVesselId, Haul, HaulsQuery, Landing,
     LandingTripAssembler, LandingsQuery, LandingsSorting, ManualDeliveryPoint,
     MattilsynetDeliveryPoint, Mmsi, NewAisPosition, NewAisStatic, OceanClimate, Ordering,
-    Pagination, PrecisionId, PredictionRange, ScrapeState, SharedState, Step, TripDetailed, Trips,
-    TripsQuery, Vessel, VmsPosition, Weather,
+    Pagination, PrecisionId, PredictionRange, ScrapeState, SharedState, SpotPredictorSettings,
+    Step, TripDetailed, Trips, TripsQuery, Vessel, VmsPosition, Weather, WeightPredictorSettings,
 };
 
 use ais::*;
@@ -20,7 +20,7 @@ use kyogre_core::{
     TripAssembler, TripDistancer, VesselBenchmark,
 };
 use machine::StateMachine;
-use orca_core::{Environment, PsqlSettings};
+use orca_core::PsqlSettings;
 use postgres::PostgresAdapter;
 use std::collections::{HashMap, HashSet};
 use vessel_benchmark::WeightPerHour;
@@ -157,38 +157,50 @@ enum TripPrecisonStartPoint {
 }
 
 pub fn default_fishing_spot_weather_predictor() -> Box<dyn MLModel> {
-    Box::new(FishingSpotWeatherPredictor::new(
-        1,
-        Environment::Test,
-        PredictionRange::WeeksFromStartOfYear(FISHING_SPOT_PREDICTOR_NUM_WEEKS),
-        None,
-    ))
+    Box::new(FishingSpotWeatherPredictor::new(SpotPredictorSettings {
+        running_in_test: true,
+        training_batch_size: None,
+        use_gpu: false,
+        training_rounds: 1,
+        predict_batch_size: 53,
+        range: PredictionRange::WeeksFromStartOfYear(FISHING_SPOT_PREDICTOR_NUM_WEEKS),
+    }))
 }
 
 pub fn default_fishing_spot_predictor() -> Box<dyn MLModel> {
-    Box::new(FishingSpotPredictor::new(
-        1,
-        Environment::Test,
-        PredictionRange::WeeksFromStartOfYear(FISHING_SPOT_PREDICTOR_NUM_WEEKS),
-    ))
+    Box::new(FishingSpotPredictor::new(SpotPredictorSettings {
+        running_in_test: true,
+        training_batch_size: None,
+        use_gpu: false,
+        training_rounds: 1,
+        predict_batch_size: 53,
+        range: PredictionRange::WeeksFromStartOfYear(FISHING_SPOT_PREDICTOR_NUM_WEEKS),
+    }))
 }
 
 pub fn default_fishing_weight_predictor() -> Box<dyn MLModel> {
-    Box::new(FishingWeightPredictor::new(
-        1,
-        Environment::Test,
-        PredictionRange::WeeksFromStartOfYear(FISHING_WEIGHT_PREDICTOR_NUM_WEEKS),
-        vec![CatchLocationId::new(3, 12), CatchLocationId::new(3, 5)],
-    ))
+    Box::new(FishingWeightPredictor::new(WeightPredictorSettings {
+        running_in_test: true,
+        training_batch_size: None,
+        use_gpu: false,
+        training_rounds: 1,
+        predict_batch_size: 100,
+        range: PredictionRange::WeeksFromStartOfYear(FISHING_WEIGHT_PREDICTOR_NUM_WEEKS),
+        catch_locations: vec![CatchLocationId::new(3, 12), CatchLocationId::new(3, 5)],
+    }))
 }
 
 pub fn default_fishing_weight_weather_predictor() -> Box<dyn MLModel> {
     Box::new(FishingWeightWeatherPredictor::new(
-        1,
-        Environment::Test,
-        PredictionRange::WeeksFromStartOfYear(FISHING_WEIGHT_PREDICTOR_NUM_WEEKS),
-        vec![CatchLocationId::new(3, 12), CatchLocationId::new(3, 5)],
-        None,
+        WeightPredictorSettings {
+            running_in_test: true,
+            training_batch_size: None,
+            use_gpu: false,
+            training_rounds: 1,
+            predict_batch_size: 100,
+            range: PredictionRange::WeeksFromStartOfYear(FISHING_WEIGHT_PREDICTOR_NUM_WEEKS),
+            catch_locations: vec![CatchLocationId::new(3, 12), CatchLocationId::new(3, 5)],
+        },
     ))
 }
 

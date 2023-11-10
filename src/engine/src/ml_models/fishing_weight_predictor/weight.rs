@@ -1,35 +1,16 @@
+use crate::WeightPredictorSettings;
 use async_trait::async_trait;
-use chrono::{Datelike, Utc};
 use error_stack::{Result, ResultExt};
-use fiskeridir_rs::SpeciesGroup;
 use kyogre_core::{
-    distance_to_shore, CatchLocation, CatchLocationId, HaulId, MLModel, MLModelError,
-    MLModelsInbound, MLModelsOutbound, ModelId, NewFishingWeightPrediction, PredictionTarget,
-    TrainingHaul, TrainingOutcome, WeatherData, WeatherLocationOverlap, NUM_CATCH_LOCATIONS,
-};
-use num_traits::FromPrimitive;
-use orca_core::Environment;
-use pyo3::{
-    types::{PyByteArray, PyModule},
-    Python,
+    CatchLocationId, MLModel, MLModelError, MLModelsInbound, MLModelsOutbound, ModelId, WeatherData,
 };
 use serde::Serialize;
-use std::collections::{HashMap, HashSet};
-use strum::{EnumCount, IntoEnumIterator};
-use tracing::{event, instrument, Level};
+use tracing::instrument;
 
-use crate::{
-    ml_models::fishing_weight_predictor::PYTHON_FISHING_WEIGHT_PREDICTOR_CODE, PredictionRange,
-};
+use super::{weight_predict_impl, weight_train_impl};
 
 pub struct FishingWeightPredictor {
-    training_rounds: u32,
-    // We use this flag to limit the amount of prediction data we
-    // produce in tests to make them finish within a reasonable timeframe
-    running_in_test: bool,
-    catch_locations: Vec<CatchLocationId>,
-    use_gpu: bool,
-    range: PredictionRange,
+    settings: WeightPredictorSettings,
 }
 
 #[derive(Debug, Serialize)]
@@ -55,10 +36,6 @@ struct PythonPredictionInput {
     pub longitude: f64,
     pub species_group_id: i32,
     pub week: u32,
-    #[serde(skip)]
-    pub year: u32,
-    #[serde(skip)]
-    pub catch_location_id: CatchLocationId,
 }
 
 #[async_trait]
@@ -67,77 +44,34 @@ impl MLModel for FishingWeightPredictor {
         ModelId::FishingWeightPredictor
     }
 
-    fn prediction_targets(&self) -> Vec<PredictionTarget> {
-        self.range.prediction_targets()
-    }
-    fn prediction_batch_size(&self) -> usize {
-        10
-    }
-
     #[instrument(skip_all)]
     async fn train(
         &self,
-        model: &[u8],
+        model: Vec<u8>,
         adapter: &dyn MLModelsOutbound,
-    ) -> Result<TrainingOutcome, MLModelError> {
-        let mut hauls = HashSet::new();
-
-        let data: Vec<PythonTrainingData> = adapter
-            .fishing_weight_predictor_training_data(self.id(), WeatherData::Optional, None)
-            .await
-            .unwrap()
-            .into_iter()
-            .filter_map(|v| {
-                hauls.insert(TrainingHaul {
-                    haul_id: HaulId(v.haul_id),
-                    species: v.species,
-                    catch_location_id: v.catch_location.clone(),
-                });
-                if self.running_in_test || distance_to_shore(v.latitude, v.longitude) > 2000.0 {
-                    Some(PythonTrainingData {
+    ) -> Result<Vec<u8>, MLModelError> {
+        weight_train_impl(
+            self.id(),
+            &self.settings,
+            model,
+            adapter,
+            WeatherData::Optional,
+            |data| {
+                let data: Vec<PythonTrainingData> = data
+                    .into_iter()
+                    .map(|v| PythonTrainingData {
                         latitude: v.latitude,
                         longitude: v.longitude,
-                        species_group_id: v.species as i32,
+                        species_group_id: v.species.into(),
                         week: v.week as u32,
                         weight: v.weight,
                     })
-                } else {
-                    None
-                }
-            })
-            .collect();
+                    .collect();
 
-        if data.is_empty() {
-            return Ok(TrainingOutcome::Finished);
-        }
-        let training_data =
-            serde_json::to_string(&data).change_context(MLModelError::DataPreparation)?;
-
-        let new_model = Python::with_gil(|py| {
-            let py_module =
-                PyModule::from_code(py, PYTHON_FISHING_WEIGHT_PREDICTOR_CODE, "", "").unwrap();
-            let py_main = py_module.getattr("train").unwrap();
-
-            let model = if model.is_empty() {
-                None
-            } else {
-                Some(PyByteArray::new(py, model))
-            };
-
-            py_main
-                .call1((model, training_data, self.training_rounds, self.use_gpu))?
-                .extract::<Vec<u8>>()
-        })
-        .change_context(MLModelError::Python)?;
-
-        event!(Level::INFO, "trained on {} new hauls", hauls.len());
-
-        adapter
-            .commit_hauls_training(self.id(), hauls.into_iter().collect())
-            .await
-            .change_context(MLModelError::StoreOutput)?;
-
-        Ok(TrainingOutcome::Progress { new_model })
+                serde_json::to_string(&data).change_context(MLModelError::DataPreparation)
+            },
+        )
+        .await
     }
 
     #[instrument(skip_all)]
@@ -145,135 +79,33 @@ impl MLModel for FishingWeightPredictor {
         &self,
         model: &[u8],
         adapter: &dyn MLModelsInbound,
-        targets: &[PredictionTarget],
     ) -> Result<(), MLModelError> {
-        if model.is_empty() {
-            return Ok(());
-        }
+        weight_predict_impl(
+            self.id(),
+            &self.settings,
+            model,
+            adapter,
+            WeatherData::Optional,
+            |data, _weather| {
+                let data: Vec<PythonPredictionInput> = data
+                    .iter()
+                    .map(|v| PythonPredictionInput {
+                        latitude: v.latitude,
+                        longitude: v.longitude,
+                        species_group_id: v.species_group_id,
+                        week: v.week,
+                    })
+                    .collect();
 
-        let mut predictions =
-            HashSet::with_capacity(SpeciesGroup::COUNT * NUM_CATCH_LOCATIONS * 52);
-
-        let all_catch_locations: HashMap<String, CatchLocation> = adapter
-            .catch_locations(WeatherLocationOverlap::All)
-            .await
-            .change_context(MLModelError::DataPreparation)?
-            .into_iter()
-            .map(|v| (v.id.clone().into_inner(), v))
-            .collect();
-
-        let active_catch_locations = if self.catch_locations.is_empty() {
-            all_catch_locations
-                .values()
-                .collect::<Vec<&CatchLocation>>()
-        } else {
-            all_catch_locations
-                .values()
-                .filter(|v| self.catch_locations.contains(&v.id))
-                .collect::<Vec<&CatchLocation>>()
-        };
-
-        for t in targets {
-            for c in &active_catch_locations {
-                for s in SpeciesGroup::iter() {
-                    predictions.insert(PythonPredictionInputKey {
-                        species_group_id: s as i32,
-                        week: t.week,
-                        year: t.year,
-                        catch_location_id: c.id.clone(),
-                    });
-                }
-            }
-        }
-
-        let now = Utc::now();
-        let iso_week = now.iso_week();
-        let current_week = iso_week.week();
-        let current_year = iso_week.year() as u32;
-
-        let existing_predictions = adapter
-            .existing_fishing_weight_predictions(self.id(), current_year)
-            .await
-            .change_context(MLModelError::StoreOutput)?;
-
-        for v in existing_predictions {
-            if !(v.year == current_year && v.week >= current_week) {
-                predictions.remove(&PythonPredictionInputKey {
-                    species_group_id: v.species_group_id as i32,
-                    week: v.week,
-                    year: v.year,
-                    catch_location_id: v.catch_location_id,
-                });
-            }
-        }
-
-        let data: Vec<PythonPredictionInput> = predictions
-            .into_iter()
-            .map(|value| {
-                let cl = all_catch_locations
-                    .get(value.catch_location_id.as_ref())
-                    .unwrap();
-
-                PythonPredictionInput {
-                    latitude: cl.latitude,
-                    longitude: cl.longitude,
-                    catch_location_id: value.catch_location_id,
-                    year: value.year,
-                    week: value.week,
-                    species_group_id: value.species_group_id,
-                }
-            })
-            .collect();
-
-        let prediction_data =
-            serde_json::to_string(&data).change_context(MLModelError::DataPreparation)?;
-
-        let predictions = Python::with_gil(|py| {
-            let py_module = PyModule::from_code(py, PYTHON_FISHING_WEIGHT_PREDICTOR_CODE, "", "")?;
-            let py_main = py_module.getattr("predict")?;
-
-            let model = PyByteArray::new(py, model);
-
-            py_main
-                .call1((model, prediction_data))?
-                .extract::<Vec<f64>>()
-        })
-        .change_context(MLModelError::Python)?
-        .into_iter()
-        .enumerate()
-        .map(|(i, v)| NewFishingWeightPrediction {
-            catch_location_id: data[i].catch_location_id.clone(),
-            species: SpeciesGroup::from_i32(data[i].species_group_id).unwrap(),
-            week: data[i].week,
-            weight: v,
-            year: data[i].year,
-            model: self.id(),
-        })
-        .collect::<Vec<NewFishingWeightPrediction>>();
-
-        event!(Level::INFO, "added {} new predictions", predictions.len());
-        adapter
-            .add_fishing_weight_predictions(predictions)
-            .await
-            .change_context(MLModelError::StoreOutput)?;
-
-        Ok(())
+                serde_json::to_string(&data).change_context(MLModelError::DataPreparation)
+            },
+        )
+        .await
     }
 }
 
 impl FishingWeightPredictor {
-    pub fn new(
-        training_rounds: u32,
-        environment: Environment,
-        range: PredictionRange,
-        catch_locations: Vec<CatchLocationId>,
-    ) -> FishingWeightPredictor {
-        FishingWeightPredictor {
-            training_rounds,
-            running_in_test: matches!(environment, Environment::Test),
-            range,
-            catch_locations,
-            use_gpu: matches!(environment, Environment::Local),
-        }
+    pub fn new(settings: WeightPredictorSettings) -> FishingWeightPredictor {
+        FishingWeightPredictor { settings }
     }
 }
