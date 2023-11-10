@@ -28,7 +28,6 @@ pub trait MLModelsInbound: Send + Sync {
         model_id: ModelId,
         year: u32,
     ) -> Result<Vec<FishingWeightPrediction>, QueryError>;
-    async fn save_model(&self, model_id: ModelId, model: &[u8]) -> Result<(), InsertError>;
     async fn species_caught_with_traal(&self) -> Result<Vec<SpeciesGroup>, QueryError>;
     async fn catch_location_weather(
         &self,

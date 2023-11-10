@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{CatchLocationId, HaulId, HaulOceanClimate, HaulWeatherStatus};
 
+#[derive(Copy, Clone, Debug)]
 pub enum WeatherData {
     Require,
     Optional,

@@ -10,7 +10,7 @@ pub enum WeatherLocationOverlap {
     All,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Ord, PartialOrd)]
 #[serde(transparent)]
 pub struct CatchLocationId {
     #[serde(skip)]
