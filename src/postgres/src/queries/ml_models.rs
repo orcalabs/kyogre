@@ -110,7 +110,7 @@ SELECT
     latitude,
     longitude,
     week,
-    species_group_id AS species,
+    species_group_id AS "species_group_id: SpeciesGroup",
     "year"
 FROM
     fishing_spot_predictions
@@ -350,7 +350,7 @@ SELECT
     latitude,
     longitude,
     week,
-    species_group_id AS species,
+    species_group_id AS "species_group_id: SpeciesGroup",
     "year"
 FROM
     fishing_spot_predictions
@@ -403,7 +403,7 @@ SELECT
     latitude,
     longitude,
     week,
-    species_group_id AS species,
+    species_group_id AS "species_group_id: SpeciesGroup",
     "year"
 FROM
     fishing_spot_predictions

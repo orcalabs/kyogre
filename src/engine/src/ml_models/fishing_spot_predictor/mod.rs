@@ -7,7 +7,6 @@ use kyogre_core::{
     MLModelError, MLModelsInbound, MLModelsOutbound, ModelId, NewFishingSpotPrediction,
     TrainingHaul, WeatherData, WeatherLocationOverlap,
 };
-use num_traits::FromPrimitive;
 use pyo3::{
     types::{PyByteArray, PyModule},
     Python,
@@ -43,7 +42,7 @@ struct CLWeatherKey {
 
 #[derive(Debug)]
 struct PredictionInputKey {
-    pub species_group_id: i32,
+    pub species_group_id: SpeciesGroup,
     pub week: u32,
     pub year: u32,
 }
@@ -213,7 +212,7 @@ where
         for c in chunk {
             for s in &species {
                 if s.weeks.contains(&c.week) {
-                    predictions.insert((c.year, c.week, s.species as i32));
+                    predictions.insert((c.year, c.week, s.species));
                 }
             }
         }
@@ -225,7 +224,7 @@ where
 
         for v in existing_predictions {
             if !(v.year as u32 == current_year && v.week as u32 == current_week) {
-                predictions.remove(&(v.year as u32, v.week as u32, v.species));
+                predictions.remove(&(v.year as u32, v.week as u32, v.species_group_id));
             }
         }
 
@@ -306,7 +305,7 @@ where
         .map(|(i, v)| NewFishingSpotPrediction {
             latitude: v[1],
             longitude: v[0],
-            species: SpeciesGroup::from_i32(data[i].species_group_id).unwrap(),
+            species: data[i].species_group_id,
             week: data[i].week,
             year: data[i].year,
             model: model_id,

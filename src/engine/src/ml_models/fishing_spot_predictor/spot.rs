@@ -2,6 +2,7 @@ use super::{spot_predict_impl, spot_train_impl};
 use crate::SpotPredictorSettings;
 use async_trait::async_trait;
 use error_stack::Result;
+use fiskeridir_rs::SpeciesGroup;
 use kyogre_core::{MLModel, MLModelError, MLModelsInbound, MLModelsOutbound, ModelId, WeatherData};
 use serde::Serialize;
 use tracing::instrument;
@@ -20,7 +21,7 @@ struct PythonTrainingData {
 
 #[derive(Debug, Serialize)]
 struct PythonPredictionInput {
-    pub species_group_id: i32,
+    pub species_group_id: SpeciesGroup,
     pub week: u32,
 }
 
