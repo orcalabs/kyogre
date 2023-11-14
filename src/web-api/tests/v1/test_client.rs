@@ -1,16 +1,17 @@
 use std::{fmt::Write, string::ToString};
 
 use fiskeridir_rs::{CallSign, LandingId, SpeciesGroup};
-use kyogre_core::{
-    ActiveHaulsFilter, ActiveLandingFilter, FiskeridirVesselId, HaulId, Mmsi, ModelId,
-};
+use kyogre_core::{ActiveHaulsFilter, ActiveLandingFilter, FiskeridirVesselId, HaulId, Mmsi};
 use reqwest::{header::HeaderMap, Client, Response};
 use serde::Serialize;
 use web_api::routes::v1::{
     ais::AisTrackParameters,
     ais_vms::AisVmsParameters,
     fishing_facility::FishingFacilitiesParams,
-    fishing_prediction::{FishingSpotPredictionParams, FishingWeightPredictionParams},
+    fishing_prediction::{
+        FishingSpotPredictionParams, FishingSpotPredictor, FishingWeightPredictionParams,
+        FishingWeightPredictor,
+    },
     haul::{HaulsMatrixParams, HaulsParams},
     landing::{LandingMatrixParams, LandingsParams},
     trip::TripsParameters,
@@ -148,11 +149,17 @@ impl ApiClient {
     pub async fn get_delivery_points(&self) -> Response {
         self.get("delivery_points", &[], None).await
     }
-    pub async fn get_all_fishing_spot_predictions(&self, model_id: ModelId) -> Response {
+    pub async fn get_all_fishing_spot_predictions(
+        &self,
+        model_id: FishingSpotPredictor,
+    ) -> Response {
         self.get(format!("fishing_spot_predictions/{}", model_id), &[], None)
             .await
     }
-    pub async fn get_all_fishing_weight_predictions(&self, model_id: ModelId) -> Response {
+    pub async fn get_all_fishing_weight_predictions(
+        &self,
+        model_id: FishingWeightPredictor,
+    ) -> Response {
         self.get(
             format!("fishing_weight_predictions/{}", model_id),
             &[],
@@ -163,7 +170,7 @@ impl ApiClient {
 
     pub async fn get_fishing_spot_predictions(
         &self,
-        model_id: ModelId,
+        model_id: FishingSpotPredictor,
         species: SpeciesGroup,
         params: FishingSpotPredictionParams,
     ) -> Response {
@@ -181,7 +188,7 @@ impl ApiClient {
 
     pub async fn get_fishing_weight_predictions(
         &self,
-        model_id: ModelId,
+        model_id: FishingWeightPredictor,
         species: SpeciesGroup,
         params: FishingWeightPredictionParams,
     ) -> Response {

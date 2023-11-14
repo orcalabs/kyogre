@@ -78,7 +78,6 @@ impl Database for PostgresAdapter {}
             LandingsSorting,
             TripSorting,
             TripAssemblerId,
-            kyogre_core::ModelId,
             error::ErrorResponse,
             error::ApiError,
             v1::ais::AisPosition,
@@ -116,6 +115,8 @@ impl Database for PostgresAdapter {}
             v1::delivery_point::DeliveryPoint,
             v1::weather::Weather,
             v1::weather::WeatherLocation,
+            v1::fishing_prediction::FishingSpotPredictor,
+            v1::fishing_prediction::FishingWeightPredictor,
             kyogre_core::FishingSpotPrediction,
             kyogre_core::FishingWeightPrediction,
           )
