@@ -141,7 +141,8 @@ pub struct NewFishingWeightPrediction {
 pub struct FishingSpotPrediction {
     pub latitude: f64,
     pub longitude: f64,
-    pub species: i32,
+    #[cfg_attr(feature = "utoipa", schema(value_type = i32))]
+    pub species_group_id: SpeciesGroup,
     pub week: i32,
     pub year: i32,
 }
