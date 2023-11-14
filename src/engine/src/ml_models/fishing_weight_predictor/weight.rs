@@ -1,6 +1,7 @@
 use crate::WeightPredictorSettings;
 use async_trait::async_trait;
 use error_stack::{Result, ResultExt};
+use fiskeridir_rs::SpeciesGroup;
 use kyogre_core::{
     CatchLocationId, MLModel, MLModelError, MLModelsInbound, MLModelsOutbound, ModelId, WeatherData,
 };
@@ -34,7 +35,7 @@ struct PythonPredictionInputKey {
 struct PythonPredictionInput {
     pub latitude: f64,
     pub longitude: f64,
-    pub species_group_id: i32,
+    pub species_group_id: SpeciesGroup,
     pub week: u32,
 }
 
@@ -97,7 +98,7 @@ impl MLModel for FishingWeightPredictor {
                     })
                     .collect();
 
-                serde_json::to_string(&data).change_context(MLModelError::DataPreparation)
+                data
             },
         )
         .await

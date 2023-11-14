@@ -85,7 +85,8 @@ pub struct HaulWeatherOutput {
     pub status: HaulWeatherStatus,
 }
 
-pub static WEATHER_LOCATION_LATS_LONS: [(f64, f64, i64); 20] = [
+pub static WEATHER_LOCATION_LATS_LONS: [(f64, f64, i64); 21] = [
+    (71.35, 35.95, 171301359),
     (71.05, 28.05, 171001280),
     (71.05, 27.95, 171001279),
     (71.05, 25.95, 171001259),
