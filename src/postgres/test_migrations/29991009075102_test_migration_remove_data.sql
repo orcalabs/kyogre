@@ -2,6 +2,7 @@ DELETE FROM weather_locations
 WHERE
     weather_location_id NOT IN (
         VALUES
+            (171301359),
             (171001280),
             (171001279),
             (171001259),

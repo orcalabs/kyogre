@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use error_stack::{Result, ResultExt};
+use fiskeridir_rs::SpeciesGroup;
 use kyogre_core::{MLModel, MLModelError, MLModelsInbound, MLModelsOutbound, ModelId, WeatherData};
 
 use serde::Serialize;
@@ -33,7 +34,7 @@ struct PythonTrainingData {
 struct PythonPredictionInput {
     pub latitude: f64,
     pub longitude: f64,
-    pub species_group_id: i32,
+    pub species_group_id: SpeciesGroup,
     pub week: u32,
     pub wind_speed_10m: f64,
     pub wind_direction_10m: f64,
@@ -145,8 +146,7 @@ impl MLModel for FishingWeightWeatherPredictor {
                         })
                     })
                     .collect();
-
-                serde_json::to_string(&data).change_context(MLModelError::DataPreparation)
+                data
             },
         )
         .await

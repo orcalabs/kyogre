@@ -8,11 +8,11 @@ use kyogre_core::{
     NewFishingWeightPrediction, PredictionRange, TrainingHaul, WeatherData, WeatherLocationOverlap,
     WeightPredictorTrainingData,
 };
-use num_traits::FromPrimitive;
 use pyo3::{
     types::{PyByteArray, PyModule},
     Python,
 };
+use serde::Serialize;
 use std::collections::{HashMap, HashSet};
 use tracing::{event, Level};
 
@@ -41,7 +41,7 @@ pub struct WeightPredictorSettings {
 #[derive(Debug, Derivative)]
 #[derivative(Hash, Eq, PartialEq)]
 struct PredictionInputKey {
-    pub species_group_id: i32,
+    pub species_group_id: SpeciesGroup,
     pub week: u32,
     pub year: u32,
     pub catch_location_id: CatchLocationId,
@@ -129,19 +129,20 @@ where
     }
 }
 
-async fn weight_predict_impl<T>(
+async fn weight_predict_impl<T, S>(
     model_id: ModelId,
     settings: &WeightPredictorSettings,
     model: &[u8],
     adapter: &dyn MLModelsInbound,
     weather: WeatherData,
-    prediction_keys_to_json: T,
+    prediction_keys_convert: T,
 ) -> Result<(), MLModelError>
 where
+    S: Serialize,
     T: Fn(
         &[PredictionInputKey],
         &Option<HashMap<CatchLocationWeatherKey, CatchLocationWeather>>,
-    ) -> Result<String, MLModelError>,
+    ) -> Vec<S>,
 {
     if model.is_empty() {
         return Ok(());
@@ -186,7 +187,7 @@ where
                 for s in &species {
                     if s.weeks.contains(&t.week) {
                         predictions.insert(PredictionInputKey {
-                            species_group_id: s.species as i32,
+                            species_group_id: s.species,
                             week: t.week,
                             year: t.year,
                             catch_location_id: c.id.clone(),
@@ -209,7 +210,7 @@ where
                     .get(v.catch_location_id.as_ref())
                     .unwrap();
                 predictions.remove(&PredictionInputKey {
-                    species_group_id: v.species_group_id as i32,
+                    species_group_id: v.species_group_id,
                     week: v.week,
                     year: v.year,
                     catch_location_id: v.catch_location_id,
@@ -235,6 +236,7 @@ where
                         catch_location_id: p.catch_location_id.clone(),
                     });
                 }
+
                 for v in weather_queries {
                     let cl_weather = adapter
                         .catch_location_weather(v.year, v.week, &v.catch_location_id)
@@ -248,8 +250,15 @@ where
             }
         };
 
-        let prediction_data: Vec<PredictionInputKey> = predictions.into_iter().collect();
-        let prediction_input = prediction_keys_to_json(&prediction_data, &(weather?))?;
+        let data: Vec<PredictionInputKey> = predictions.into_iter().collect();
+
+        let prediction_input = prediction_keys_convert(&data, &(weather?));
+        if prediction_input.is_empty() {
+            return Ok(());
+        }
+
+        let prediction_input = serde_json::to_string(&prediction_input)
+            .change_context(MLModelError::DataPreparation)?;
 
         let predictions = Python::with_gil(|py| {
             let py_module = PyModule::from_code(py, PYTHON_FISHING_WEIGHT_PREDICTOR_CODE, "", "")?;
@@ -265,11 +274,11 @@ where
         .into_iter()
         .enumerate()
         .map(|(i, v)| NewFishingWeightPrediction {
-            catch_location_id: prediction_data[i].catch_location_id.clone(),
-            species: SpeciesGroup::from_i32(prediction_data[i].species_group_id).unwrap(),
-            week: prediction_data[i].week,
+            catch_location_id: data[i].catch_location_id.clone(),
+            species: data[i].species_group_id,
+            week: data[i].week,
             weight: v,
-            year: prediction_data[i].year,
+            year: data[i].year,
             model: model_id,
         })
         .collect::<Vec<NewFishingWeightPrediction>>();

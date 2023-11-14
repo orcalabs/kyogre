@@ -2,6 +2,7 @@ use crate::PredictionRange;
 use chrono::{Datelike, Utc};
 use error_stack::{Result, ResultExt};
 use fiskeridir_rs::SpeciesGroup;
+use kyogre_core::CatchLocationId;
 use kyogre_core::{
     distance_to_shore, CatchLocationWeather, FishingSpotTrainingData, HaulId, HaulPredictionLimit,
     MLModelError, MLModelsInbound, MLModelsOutbound, ModelId, NewFishingSpotPrediction,
@@ -32,6 +33,7 @@ pub struct SpotPredictorSettings {
     pub predict_batch_size: u32,
     pub hauls_limit_per_species: HaulPredictionLimit,
     pub range: PredictionRange,
+    pub catch_locations: Vec<CatchLocationId>,
 }
 
 #[derive(Hash, Eq, PartialEq, Debug, Clone)]
@@ -88,10 +90,14 @@ where
             return Ok(model);
         }
 
-        let catch_locations = adapter
+        let mut catch_locations = adapter
             .catch_locations(WeatherLocationOverlap::OnlyOverlaps)
             .await
             .change_context(MLModelError::DataPreparation)?;
+
+        if !settings.catch_locations.is_empty() {
+            catch_locations.retain(|v| settings.catch_locations.contains(&v.id));
+        };
 
         let weather: Result<
             Option<HashMap<CLWeatherKey, Vec<CatchLocationWeather>>>,

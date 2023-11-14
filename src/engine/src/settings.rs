@@ -88,6 +88,7 @@ impl Settings {
                 predict_batch_size: 53,
                 range: PredictionRange::CurrentYear,
                 hauls_limit_per_species: HaulPredictionLimit::Limit(HAUL_LIMIT_PER_SPECIES),
+                catch_locations: vec![],
             }));
             let model2 = Box::new(FishingWeightPredictor::new(WeightPredictorSettings {
                 running_in_test: false,
@@ -119,6 +120,7 @@ impl Settings {
                 predict_batch_size: 10,
                 range: PredictionRange::CurrentWeekAndNextWeek,
                 hauls_limit_per_species: HaulPredictionLimit::Limit(HAUL_LIMIT_PER_SPECIES),
+                catch_locations: vec![],
             }));
             vec.push(model as Box<dyn MLModel>);
             vec.push(model2 as Box<dyn MLModel>);
