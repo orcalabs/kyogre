@@ -2,6 +2,7 @@ use crate::{CatchLocationId, SpotPredictorSettings};
 
 use async_trait::async_trait;
 use error_stack::Result;
+use fiskeridir_rs::SpeciesGroup;
 use itertools::Itertools;
 use kyogre_core::{
     CatchLocationWeather, MLModel, MLModelError, MLModelsInbound, MLModelsOutbound, ModelId,
@@ -27,7 +28,7 @@ struct PythonTrainingData {
 
 #[derive(Debug)]
 struct PythonPredictionInput {
-    pub species_group_id: i32,
+    pub species_group_id: SpeciesGroup,
     pub weather: HashMap<CatchLocationId, CatchLocationWeather>,
     pub week: u32,
 }
