@@ -114,7 +114,7 @@ impl Settings {
             ));
             let model4 = Box::new(FishingSpotWeatherPredictor::new(SpotPredictorSettings {
                 running_in_test: false,
-                training_batch_size: None,
+                training_batch_size: s.training_batch_size,
                 use_gpu,
                 training_rounds: s.training_rounds,
                 predict_batch_size: 10,
