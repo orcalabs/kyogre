@@ -9,8 +9,6 @@ use crate::{
     Step, TripDetailed, Trips, TripsQuery, Vessel, VmsPosition, Weather, WeightPredictorSettings,
 };
 
-use ais::*;
-use ais_vms::*;
 use chrono::{DateTime, Duration, TimeZone, Utc};
 use fiskeridir_rs::CallSign;
 use fiskeridir_rs::{DeliveryPointId, LandingMonth};
