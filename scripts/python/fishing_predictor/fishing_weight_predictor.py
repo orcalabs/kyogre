@@ -24,13 +24,6 @@ def train(model, training_data, num_train_rounds, use_gpu):
     else:
         params["tree_method"] = "hist"
 
-
-    model = xgb.train(
-        params,
-        dtrain_reg,
-        num_boost_round=num_train_rounds,
-        evals = [(dtest_reg, "test")], verbose_eval=10)
-
     return xgb.train(
         params,
         dtrain_reg,
