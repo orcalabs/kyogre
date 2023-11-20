@@ -39,7 +39,7 @@ rand = "0.8.5"
 pyo3 = { version = "0.19.2", features = ["chrono", "auto-initialize"] }
 
 [dev-dependencies]
-tracing-subscriber = "0.3.17"
+tracing-subscriber = "0.3.18"
 futures = "0.3.29"
 dockertest = { workspace = true }
 orca-core = { workspace = true, features = ["dockertest"] }

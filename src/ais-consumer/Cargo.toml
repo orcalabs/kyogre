@@ -28,7 +28,7 @@ hyper = { version = "0.14.27", features = ["http2"] }
 hyper-alpn = "=0.3.0"
 
 [dev-dependencies]
-tracing-subscriber = "0.3.17"
+tracing-subscriber = "0.3.18"
 orca-core = { workspace = true, features = ["dockertest"] }
 dockertest = { workspace = true }
 rand = "0.8.5"
