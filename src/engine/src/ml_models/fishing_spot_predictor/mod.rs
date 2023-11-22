@@ -137,11 +137,13 @@ where
             }
         };
 
-        if data.is_empty() {
-            return Ok(model);
-        }
         let training_data = training_data_convert(data, &(weather?), catch_locations.len());
         if training_data.is_empty() {
+            adapter
+                .commit_hauls_training(model_id, hauls.into_iter().collect())
+                .await
+                .change_context(MLModelError::StoreOutput)?;
+
             continue;
         }
 
