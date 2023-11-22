@@ -12,7 +12,7 @@ use orca_core::{
 use postgres::{PostgresAdapter, TestDb};
 use rand::random;
 use std::ops::AddAssign;
-use std::sync::{Arc, Once};
+use std::sync::Once;
 use std::{ops::SubAssign, panic};
 use strum::IntoEnumIterator;
 use tokio::sync::OnceCell;
@@ -39,7 +39,7 @@ pub struct TestHelper {
     pub bw_helper: &'static BarentswatchHelper,
     duck_db: Option<duckdb_rs::Client>,
     db_settings: PsqlSettings,
-    meilisearch: Option<MeilisearchAdapter>,
+    meilisearch: Option<MeilisearchAdapter<PostgresAdapter>>,
 }
 
 impl TestHelper {
@@ -61,7 +61,7 @@ impl TestHelper {
         app: App,
         bw_helper: &'static BarentswatchHelper,
         duck_db: Option<duckdb_rs::Client>,
-        meilisearch: Option<MeilisearchAdapter>,
+        meilisearch: Option<MeilisearchAdapter<PostgresAdapter>>,
     ) -> TestHelper {
         let address = format!("http://127.0.0.1:{}/v1.0", app.port());
 
@@ -252,7 +252,7 @@ where
                     api_key: "test123".to_string(),
                     index_suffix: Some(db_name.clone()),
                 };
-                let meilisearch = MeilisearchAdapter::new(&settings, Arc::new(adapter.clone()));
+                let meilisearch = MeilisearchAdapter::new(&settings, adapter.clone());
                 (Some(meilisearch), Some(settings))
             } else {
                 (None, None)

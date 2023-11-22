@@ -189,7 +189,7 @@ pub trait MeilisearchOutbound: Send + Sync {
 }
 
 #[async_trait]
-pub trait MeilisearchSource: Send + Sync {
+pub trait MeilisearchSource: Send + Sync + Clone {
     async fn trips_by_ids(&self, trip_ids: &[TripId]) -> Result<Vec<TripDetailed>, QueryError>;
     async fn hauls_by_ids(&self, haul_ids: &[HaulId]) -> Result<Vec<Haul>, QueryError>;
     async fn landings_by_ids(&self, haul_ids: &[LandingId]) -> Result<Vec<Landing>, QueryError>;

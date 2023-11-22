@@ -10,7 +10,7 @@ mod model;
 
 pub use model::*;
 
-impl MeilisearchAdapter {
+impl<T> MeilisearchAdapter<T> {
     pub(crate) async fn hauls_impl(
         &self,
         query: HaulsQuery,

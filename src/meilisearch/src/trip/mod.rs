@@ -8,7 +8,7 @@ mod model;
 
 pub use model::*;
 
-impl MeilisearchAdapter {
+impl<T> MeilisearchAdapter<T> {
     pub(crate) async fn trips_impl(
         &self,
         query: TripsQuery,

@@ -7,7 +7,7 @@ use actix_web::{
 use meilisearch::MeilisearchAdapter;
 use orca_core::{Environment, OrcaRootSpanBuilder, TracingLogger};
 use postgres::PostgresAdapter;
-use std::{io::Error, net::TcpListener, sync::Arc};
+use std::{io::Error, net::TcpListener};
 use utoipa::{openapi::security::SecurityScheme, OpenApi};
 use utoipa_swagger_ui::SwaggerUi;
 
@@ -42,7 +42,7 @@ impl App {
         let meilisearch = settings
             .meilisearch
             .as_ref()
-            .map(|s| MeilisearchAdapter::new(s, Arc::new(postgres.clone())));
+            .map(|s| MeilisearchAdapter::new(s, postgres.clone()));
 
         let server = create_server(postgres, duck_db, meilisearch, listener, settings)
             .await

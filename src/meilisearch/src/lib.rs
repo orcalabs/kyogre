@@ -5,7 +5,6 @@ use std::{
     collections::BTreeMap,
     fmt::{Debug, Display},
     ops::Bound,
-    sync::Arc,
     time::Duration,
 };
 
@@ -35,14 +34,14 @@ use tracing::{event, instrument, Level};
 use trip::*;
 
 #[derive(Clone)]
-pub struct MeilisearchAdapter {
+pub struct MeilisearchAdapter<T> {
     pub client: Client,
-    pub source: Arc<dyn MeilisearchSource>,
+    pub source: T,
     pub index_suffix: String,
 }
 
-impl MeilisearchAdapter {
-    pub fn new(settings: &Settings, source: Arc<dyn MeilisearchSource>) -> Self {
+impl<T> MeilisearchAdapter<T> {
+    pub fn new(settings: &Settings, source: T) -> Self {
         Self {
             client: Client::new(&settings.host, Some(&settings.api_key)),
             source,
@@ -62,7 +61,9 @@ impl MeilisearchAdapter {
         let index_name = format!("landings{}", self.index_suffix);
         self.client.index(index_name)
     }
+}
 
+impl<T: Sync> MeilisearchAdapter<T> {
     pub async fn create_indexes(&self) -> Result<(), MeilisearchError> {
         Trip::create_index(self).await?;
         Haul::create_index(self).await?;
@@ -76,7 +77,9 @@ impl MeilisearchAdapter {
         Landing::cleanup(self).await?;
         Ok(())
     }
+}
 
+impl<T: MeilisearchSource> MeilisearchAdapter<T> {
     #[instrument(name = "refresh_meilisearch", skip(self))]
     pub async fn refresh(&self) -> Result<(), MeilisearchError> {
         Trip::refresh(self).await?;
@@ -100,7 +103,7 @@ impl MeilisearchAdapter {
 }
 
 #[async_trait]
-impl MeilisearchOutbound for MeilisearchAdapter {
+impl<T: Send + Sync> MeilisearchOutbound for MeilisearchAdapter<T> {
     async fn trips(
         &self,
         query: TripsQuery,
@@ -157,9 +160,11 @@ pub(crate) trait Indexable {
     type Item: Id + Serialize + Debug + Sync;
     type IdVersion: IdVersion<Id = Self::Id> + DeserializeOwned + 'static;
 
-    fn index(adapter: &MeilisearchAdapter) -> Index;
+    fn index<T>(adapter: &MeilisearchAdapter<T>) -> Index;
     fn primary_key() -> &'static str;
-    async fn refresh(adapter: &MeilisearchAdapter) -> Result<(), MeilisearchError>;
+    async fn refresh<T: MeilisearchSource>(
+        adapter: &MeilisearchAdapter<T>,
+    ) -> Result<(), MeilisearchError>;
 
     async fn all_versions(index: &Index) -> Result<BTreeMap<Self::Id, i64>, MeilisearchError> {
         let primary_key = Self::primary_key();
@@ -285,7 +290,7 @@ pub(crate) trait Indexable {
         Ok(())
     }
 
-    async fn cleanup(adapter: &MeilisearchAdapter) -> Result<(), MeilisearchError> {
+    async fn cleanup<T: Sync>(adapter: &MeilisearchAdapter<T>) -> Result<(), MeilisearchError> {
         let task = Self::index(adapter)
             .delete()
             .await
