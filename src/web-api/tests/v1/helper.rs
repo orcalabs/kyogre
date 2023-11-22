@@ -253,6 +253,9 @@ where
                     index_suffix: Some(db_name.clone()),
                 };
                 let meilisearch = MeilisearchAdapter::new(&settings, adapter.clone());
+                if keep_db {
+                    meilisearch.cleanup().await.unwrap();
+                }
                 (Some(meilisearch), Some(settings))
             } else {
                 (None, None)
@@ -297,9 +300,9 @@ where
 
             if !keep_db {
                 test_db.drop_db(&db_name).await;
-            }
-            if cache_mode == CacheMode::Meilisearch {
-                meilisearch.unwrap().cleanup().await.unwrap();
+                if cache_mode == CacheMode::Meilisearch {
+                    meilisearch.unwrap().cleanup().await.unwrap();
+                }
             }
         })
         .await;
