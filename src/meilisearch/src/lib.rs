@@ -156,15 +156,87 @@ pub(crate) trait Id {
 
 #[async_trait]
 pub(crate) trait Indexable {
-    type Id: Clone + Eq + Ord + Debug + Display + Serialize + Sync;
-    type Item: Id + Serialize + Debug + Sync;
+    type Id: Clone + Eq + Ord + Debug + Display + Serialize + Send + Sync;
+    type Item: Id + Serialize + Debug + Send + Sync;
     type IdVersion: IdVersion<Id = Self::Id> + DeserializeOwned + 'static;
 
     fn index<T>(adapter: &MeilisearchAdapter<T>) -> Index;
     fn primary_key() -> &'static str;
+    fn chunk_size() -> usize;
+    async fn source_versions<T: MeilisearchSource>(
+        source: &T,
+    ) -> Result<Vec<(Self::Id, i64)>, MeilisearchError>;
+    async fn items_by_ids<T: MeilisearchSource>(
+        source: &T,
+        ids: &[Self::Id],
+    ) -> Result<Vec<Self::Item>, MeilisearchError>;
+
     async fn refresh<T: MeilisearchSource>(
         adapter: &MeilisearchAdapter<T>,
-    ) -> Result<(), MeilisearchError>;
+    ) -> Result<(), MeilisearchError> {
+        let index = Self::index(adapter);
+
+        let cache_versions = Self::all_versions(&index).await?;
+
+        let source_versions = Self::source_versions(&adapter.source)
+            .await?
+            .into_iter()
+            .collect::<BTreeMap<_, _>>();
+
+        let to_delete = cache_versions
+            .keys()
+            .filter(|i| !source_versions.contains_key(i))
+            .cloned()
+            .collect::<Vec<_>>();
+
+        let to_insert = source_versions
+            .into_iter()
+            .filter(|(id, sv)| cache_versions.get(id).map(|cv| sv > cv).unwrap_or(true))
+            .map(|(id, _)| id)
+            .collect::<Vec<_>>();
+
+        event!(Level::INFO, "{} to delete: {}", index.uid, to_delete.len());
+        event!(Level::INFO, "{} to insert: {}", index.uid, to_insert.len());
+
+        let mut tasks = Vec::new();
+
+        if !to_delete.is_empty() {
+            let task = index
+                .delete_documents(&to_delete)
+                .await
+                .change_context(MeilisearchError::Delete)?;
+            tasks.push(task);
+        }
+
+        for ids in to_insert.chunks(Self::chunk_size()) {
+            let items = Self::items_by_ids(&adapter.source, ids).await?;
+            Self::add_items(&index, &mut tasks, &items).await;
+        }
+
+        let interval = if running_in_test() {
+            None
+        } else {
+            Some(Duration::from_secs(30))
+        };
+
+        for task in tasks {
+            let task = task
+                .wait_for_completion(
+                    &adapter.client,
+                    interval,
+                    // We insert a lot of items, so use a decently large timeout.
+                    Some(Duration::from_secs(60 * 60)),
+                )
+                .await
+                .change_context(MeilisearchError::Query)?;
+
+            if !task.is_success() {
+                event!(Level::ERROR, "insert/delete task did not succeed: {task:?}");
+            }
+        }
+
+        Ok(())
+    }
 
     async fn all_versions(index: &Index) -> Result<BTreeMap<Self::Id, i64>, MeilisearchError> {
         let primary_key = Self::primary_key();
@@ -184,40 +256,6 @@ pub(crate) trait Indexable {
             .collect();
 
         Ok(result)
-    }
-
-    fn to_insert_and_delete(
-        cache_versions: BTreeMap<Self::Id, i64>,
-        source_versions: BTreeMap<Self::Id, i64>,
-    ) -> (Vec<Self::Id>, Vec<Self::Id>) {
-        let to_delete = cache_versions
-            .keys()
-            .filter(|i| !source_versions.contains_key(i))
-            .cloned()
-            .collect::<Vec<_>>();
-
-        let to_insert = source_versions
-            .into_iter()
-            .filter(|(id, sv)| cache_versions.get(id).map(|cv| sv > cv).unwrap_or(true))
-            .map(|(id, _)| id)
-            .collect::<Vec<_>>();
-
-        (to_insert, to_delete)
-    }
-
-    async fn delete_items(
-        index: &Index,
-        ids: &[Self::Id],
-    ) -> Result<Option<TaskInfo>, MeilisearchError> {
-        if ids.is_empty() {
-            Ok(None)
-        } else {
-            index
-                .delete_documents(ids)
-                .await
-                .change_context(MeilisearchError::Delete)
-                .map(Some)
-        }
     }
 
     fn add_items<'a>(
@@ -245,8 +283,9 @@ pub(crate) trait Indexable {
                         } else {
                             event!(
                                 Level::WARN,
-                                "Insert payload too large with {} items",
+                                "insert payload too large with {} {}",
                                 items.len(),
+                                index.uid,
                             );
 
                             let (left, right) = items.split_at(items.len() / 2);
@@ -259,35 +298,6 @@ pub(crate) trait Indexable {
             }
         }
         .boxed()
-    }
-
-    async fn wait_for_completion(
-        client: &Client,
-        tasks: Vec<TaskInfo>,
-    ) -> Result<(), MeilisearchError> {
-        let interval = if running_in_test() {
-            None
-        } else {
-            Some(Duration::from_secs(30))
-        };
-
-        for task in tasks {
-            let task = task
-                .wait_for_completion(
-                    client,
-                    interval,
-                    // We insert a lot of items, so use a decently large timeout.
-                    Some(Duration::from_secs(60 * 60)),
-                )
-                .await
-                .change_context(MeilisearchError::Query)?;
-
-            if !task.is_success() {
-                event!(Level::ERROR, "insert/delete task did not succeed: {task:?}");
-            }
-        }
-
-        Ok(())
     }
 
     async fn cleanup<T: Sync>(adapter: &MeilisearchAdapter<T>) -> Result<(), MeilisearchError> {

@@ -1,4 +1,4 @@
-use std::{collections::BTreeMap, time::Duration};
+use std::time::Duration;
 
 use async_trait::async_trait;
 use chrono::{TimeZone, Utc};
@@ -7,7 +7,6 @@ use fiskeridir_rs::{DeliveryPointId, Gear, GearGroup, LandingId, SpeciesGroup, V
 use kyogre_core::{CatchLocationId, FiskeridirVesselId, LandingCatch, MeilisearchSource};
 use meilisearch_sdk::{Index, PaginationSetting, Settings};
 use serde::{Deserialize, Serialize};
-use tracing::{event, Level};
 
 use crate::{error::MeilisearchError, to_nanos, Id, IdVersion, Indexable, MeilisearchAdapter};
 
@@ -104,48 +103,28 @@ impl Indexable for Landing {
     fn primary_key() -> &'static str {
         "landing_id"
     }
-    async fn refresh<T: MeilisearchSource>(
-        adapter: &MeilisearchAdapter<T>,
-    ) -> Result<(), MeilisearchError> {
-        let index = Self::index(adapter);
-
-        let cache_versions = Self::all_versions(&index).await?;
-
-        let source_versions = adapter
-            .source
+    fn chunk_size() -> usize {
+        50_000
+    }
+    async fn source_versions<T: MeilisearchSource>(
+        source: &T,
+    ) -> Result<Vec<(Self::Id, i64)>, MeilisearchError> {
+        source
             .all_landing_versions()
+            .await
+            .change_context(MeilisearchError::Source)
+    }
+    async fn items_by_ids<T: MeilisearchSource>(
+        source: &T,
+        ids: &[Self::Id],
+    ) -> Result<Vec<Self::Item>, MeilisearchError> {
+        source
+            .landings_by_ids(ids)
             .await
             .change_context(MeilisearchError::Source)?
             .into_iter()
-            .collect::<BTreeMap<_, _>>();
-
-        let (to_insert, to_delete) = Self::to_insert_and_delete(cache_versions, source_versions);
-
-        event!(Level::INFO, "landings to delete: {}", to_delete.len());
-        event!(Level::INFO, "landings to insert: {}", to_insert.len());
-
-        let mut tasks = Vec::new();
-
-        if let Some(task) = Self::delete_items(&index, &to_delete).await? {
-            tasks.push(task);
-        }
-
-        for ids in to_insert.chunks(50_000) {
-            let landings = adapter
-                .source
-                .landings_by_ids(ids)
-                .await
-                .change_context(MeilisearchError::Source)?
-                .into_iter()
-                .map(Landing::try_from)
-                .collect::<Result<Vec<_>, _>>()?;
-
-            Self::add_items(&index, &mut tasks, &landings).await;
-        }
-
-        Self::wait_for_completion(&adapter.client, tasks).await?;
-
-        Ok(())
+            .map(Landing::try_from)
+            .collect::<Result<Vec<_>, _>>()
     }
 }
 
