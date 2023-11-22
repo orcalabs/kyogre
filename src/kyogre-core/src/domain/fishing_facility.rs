@@ -88,7 +88,8 @@ pub struct FishingFacility {
     pub api_source: FishingFacilityApiSource,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Deserialize)]
+#[serde(transparent)]
 pub struct GeometryWkt(pub wkt::Geometry<f64>);
 
 impl FishingFacility {
@@ -175,15 +176,6 @@ impl Deref for GeometryWkt {
 
     fn deref(&self) -> &Self::Target {
         &self.0
-    }
-}
-
-impl<'de> Deserialize<'de> for GeometryWkt {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        wkt::Geometry::<f64>::deserialize(deserializer).map(Self)
     }
 }
 

@@ -39,14 +39,12 @@ impl App {
             }
         };
 
-        let meilisearch = if let Some(settings) = &settings.meilisearch {
-            let source = Arc::new(postgres.clone());
-            Some(MeilisearchAdapter::new(settings, source))
-        } else {
-            None
-        };
+        let meilisearch = settings
+            .meilisearch
+            .as_ref()
+            .map(|s| MeilisearchAdapter::new(s, Arc::new(postgres.clone())));
 
-        let server = create_server(postgres, duck_db.clone(), meilisearch, listener, settings)
+        let server = create_server(postgres, duck_db, meilisearch, listener, settings)
             .await
             .unwrap();
 
