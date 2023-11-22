@@ -5,15 +5,18 @@ use orca_core::Environment;
 use postgres::PostgresAdapter;
 use scraper::{BarentswatchSource, FiskeridirSource, Scraper, WrappedHttpClient};
 use std::sync::Arc;
+use tokio::select;
+use tracing::{event, Level};
 
 pub struct App {
     pub shared_state: SharedState,
     pub transition_log: machine::PostgresAdapter,
     pub single_state_run: Option<FisheryDiscriminants>,
+    meilisearch: Option<MeilisearchAdapter>,
 }
 
 impl App {
-    pub async fn build(settings: &Settings) -> (App, Option<MeilisearchAdapter>) {
+    pub async fn build(settings: &Settings) -> App {
         let postgres = PostgresAdapter::new(&settings.postgres).await.unwrap();
 
         if matches!(
@@ -23,7 +26,7 @@ impl App {
             postgres.do_migrations().await;
         }
 
-        let meilisearch: Option<MeilisearchAdapter> = if let Some(s) = &settings.meilisearch {
+        let meilisearch = if let Some(s) = &settings.meilisearch {
             let meilisearch = MeilisearchAdapter::new(s, Arc::new(postgres.clone()));
             if matches!(
                 settings.environment,
@@ -92,14 +95,12 @@ impl App {
             trip_position_layers,
         );
 
-        (
-            App {
-                transition_log,
-                shared_state,
-                single_state_run: settings.single_state_run,
-            },
+        App {
+            transition_log,
+            shared_state,
+            single_state_run: settings.single_state_run,
             meilisearch,
-        )
+        }
     }
 
     pub async fn run(self) {
@@ -176,7 +177,22 @@ impl App {
                 Box::new(self.transition_log),
             );
             let engine = FisheryEngine::Pending(step);
-            engine.run().await;
+
+            if let Some(meilisearch) = self.meilisearch {
+                let engine = tokio::spawn(engine.run());
+                let meilisearch = tokio::spawn(meilisearch.run());
+
+                select! {
+                    _ = engine => {
+                        event!(Level::ERROR, "engine exited unexpectedly");
+                    },
+                    _ = meilisearch => {
+                        event!(Level::ERROR, "meilisearch exited unexpectedly");
+                    },
+                }
+            } else {
+                engine.run().await;
+            }
         }
     }
 }
