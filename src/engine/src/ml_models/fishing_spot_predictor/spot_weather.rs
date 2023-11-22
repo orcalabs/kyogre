@@ -122,7 +122,7 @@ impl Serialize for PythonPredictionInput {
 #[async_trait]
 impl MLModel for FishingSpotWeatherPredictor {
     fn id(&self) -> ModelId {
-        ModelId::FishingSpotWeatherPredictor
+        ModelId::SpotWeather
     }
     async fn train(
         &self,

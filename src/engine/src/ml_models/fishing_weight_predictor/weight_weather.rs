@@ -48,7 +48,7 @@ struct PythonPredictionInput {
 #[async_trait]
 impl MLModel for FishingWeightWeatherPredictor {
     fn id(&self) -> ModelId {
-        ModelId::FishingWeightWeatherPredictor
+        ModelId::WeightWeather
     }
 
     #[instrument(skip_all)]
