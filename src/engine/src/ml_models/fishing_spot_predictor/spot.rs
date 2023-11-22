@@ -34,7 +34,7 @@ impl FishingSpotPredictor {
 #[async_trait]
 impl MLModel for FishingSpotPredictor {
     fn id(&self) -> ModelId {
-        ModelId::FishingSpotPredictor
+        ModelId::Spot
     }
 
     #[instrument(skip_all)]

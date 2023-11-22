@@ -37,14 +37,14 @@ impl Context for MLModelError {}
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 #[serde(rename_all = "camelCase")]
 pub enum ModelId {
-    #[strum(serialize = "fishingSpotPredictor")]
-    FishingSpotPredictor = 1,
-    #[strum(serialize = "fishingWeightPredictor")]
-    FishingWeightPredictor = 2,
-    #[strum(serialize = "fishingWeightWeatherPredictor")]
-    FishingWeightWeatherPredictor = 3,
-    #[strum(serialize = "fishingSpotWeatherPredictor")]
-    FishingSpotWeatherPredictor = 4,
+    #[strum(serialize = "spot")]
+    Spot = 1,
+    #[strum(serialize = "weight")]
+    Weight = 2,
+    #[strum(serialize = "weightWeather")]
+    WeightWeather = 3,
+    #[strum(serialize = "spotWeather")]
+    SpotWeather = 4,
 }
 
 impl From<ModelId> for i32 {

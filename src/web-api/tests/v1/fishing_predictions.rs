@@ -5,8 +5,7 @@ use engine::*;
 use fiskeridir_rs::{GearGroup, SpeciesGroup};
 use kyogre_core::*;
 use web_api::routes::v1::fishing_prediction::{
-    FishingSpotPredictionParams, FishingSpotPredictor, FishingWeightPredictionParams,
-    FishingWeightPredictor,
+    FishingSpotPredictionParams, FishingWeightPredictionParams,
 };
 
 #[tokio::test]
@@ -30,7 +29,7 @@ async fn test_fishing_spot_predictions_filters_by_model_id() {
 
         let response = helper
             .app
-            .get_all_fishing_spot_predictions(FishingSpotPredictor::Base)
+            .get_all_fishing_spot_predictions(ModelId::Spot)
             .await;
         assert_eq!(response.status(), StatusCode::OK);
         let predictions: Vec<FishingSpotPrediction> = response.json().await.unwrap();
@@ -38,7 +37,7 @@ async fn test_fishing_spot_predictions_filters_by_model_id() {
 
         let response = helper
             .app
-            .get_all_fishing_spot_predictions(FishingSpotPredictor::Weather)
+            .get_all_fishing_spot_predictions(ModelId::SpotWeather)
             .await;
         assert_eq!(response.status(), StatusCode::OK);
         let predictions: Vec<FishingSpotPrediction> = response.json().await.unwrap();
@@ -69,7 +68,7 @@ async fn test_fishing_spot_predictions_filters_by_week_and_species_group() {
         let response = helper
             .app
             .get_fishing_spot_predictions(
-                FishingSpotPredictor::Base,
+                ModelId::Spot,
                 SpeciesGroup::Sei,
                 FishingSpotPredictionParams { week: Some(1) },
             )
@@ -99,7 +98,7 @@ async fn test_fishing_weight_predictions_filters_by_week_and_species_group() {
         let response = helper
             .app
             .get_fishing_weight_predictions(
-                FishingWeightPredictor::Base,
+                ModelId::Weight,
                 SpeciesGroup::Sei,
                 FishingWeightPredictionParams {
                     week: Some(1),
@@ -136,7 +135,7 @@ async fn test_fishing_weight_predictions_filters_by_model() {
 
         let response = helper
             .app
-            .get_all_fishing_weight_predictions(FishingWeightPredictor::Base)
+            .get_all_fishing_weight_predictions(ModelId::Weight)
             .await;
         assert_eq!(response.status(), StatusCode::OK);
         let predictions: Vec<FishingWeightPrediction> = response.json().await.unwrap();
@@ -147,7 +146,7 @@ async fn test_fishing_weight_predictions_filters_by_model() {
 
         let response = helper
             .app
-            .get_all_fishing_weight_predictions(FishingWeightPredictor::Weather)
+            .get_all_fishing_weight_predictions(ModelId::WeightWeather)
             .await;
         assert_eq!(response.status(), StatusCode::OK);
         let predictions: Vec<FishingWeightPrediction> = response.json().await.unwrap();
@@ -173,7 +172,7 @@ async fn test_fishing_weight_predictions_filters_by_limit_and_orders_by_weight_d
         let response = helper
             .app
             .get_fishing_weight_predictions(
-                FishingWeightPredictor::Base,
+                ModelId::Weight,
                 SpeciesGroup::Sei,
                 FishingWeightPredictionParams {
                     week: Some(1),

@@ -42,7 +42,7 @@ struct PythonPredictionInput {
 #[async_trait]
 impl MLModel for FishingWeightPredictor {
     fn id(&self) -> ModelId {
-        ModelId::FishingWeightPredictor
+        ModelId::Weight
     }
 
     #[instrument(skip_all)]
