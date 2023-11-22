@@ -11,22 +11,29 @@ use serde::Deserialize;
 use unnest_insert::UnnestInsert;
 
 #[derive(Deserialize, Debug, Clone, UnnestInsert)]
-#[unnest_insert(table_name = "vms_positions", conflict = "message_id,call_sign")]
+#[unnest_insert(table_name = "vms_positions", conflict = "call_sign, timestamp")]
 pub struct NewVmsPosition {
     pub call_sign: String,
+    #[unnest_insert(conflict = "COALESCE(NULLIF(course, 0), excluded.course)")]
     pub course: Option<i32>,
+    #[unnest_insert(update_coalesce)]
     pub gross_tonnage: Option<i32>,
+    #[unnest_insert(update)]
     pub latitude: BigDecimal,
+    #[unnest_insert(update)]
     pub longitude: BigDecimal,
     pub message_id: i32,
     pub message_type: String,
     pub message_type_code: String,
+    #[unnest_insert(update_coalesce)]
     pub registration_id: Option<String>,
+    #[unnest_insert(conflict = "COALESCE(NULLIF(speed, 0), excluded.speed)")]
     pub speed: Option<BigDecimal>,
     pub timestamp: DateTime<Utc>,
     pub vessel_length: BigDecimal,
     pub vessel_name: String,
     pub vessel_type: String,
+    #[unnest_insert(update)]
     pub distance_to_shore: f64,
 }
 
