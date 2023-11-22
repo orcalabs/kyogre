@@ -1,10 +1,13 @@
-use std::collections::HashSet;
+use num_traits::FromPrimitive;
+use std::collections::{HashMap, HashSet};
 
 use crate::{
     error::PostgresError,
     models::{NewVmsPosition, VmsPosition},
     PostgresAdapter,
 };
+use bigdecimal::BigDecimal;
+use chrono::{DateTime, Utc};
 use error_stack::{report, Result, ResultExt};
 use fiskeridir_rs::CallSign;
 use futures::{Stream, TryStreamExt};
@@ -79,17 +82,46 @@ ORDER BY
         vms: Vec<fiskeridir_rs::Vms>,
     ) -> Result<(), PostgresError> {
         let mut call_signs_unique = HashSet::new();
+        let mut vms_unique: HashMap<(String, DateTime<Utc>), NewVmsPosition> = HashMap::new();
 
-        let vms = vms
-            .into_iter()
-            .filter(|v| v.latitude.is_some() && v.longitude.is_some())
-            .map(NewVmsPosition::try_from)
-            .inspect(|v| {
-                if let Ok(ref v) = v {
-                    call_signs_unique.insert(v.call_sign.clone());
-                }
-            })
-            .collect::<Result<Vec<_>, _>>()?;
+        let speed_threshold = BigDecimal::from_f64(0.001).unwrap();
+        for v in vms {
+            if v.latitude.is_none() || v.longitude.is_none() {
+                continue;
+            }
+
+            let pos = NewVmsPosition::try_from(v)?;
+            call_signs_unique.insert(pos.call_sign.clone());
+            vms_unique
+                .entry((pos.call_sign.clone(), pos.timestamp))
+                .and_modify(|e| {
+                    let mut replace = false;
+
+                    match (e.course, pos.course) {
+                        (Some(_), None) | (None, None) => (),
+                        (None, Some(_)) => replace = true,
+                        (Some(c), Some(c2)) => {
+                            if c == 0 && c2 != 0 {
+                                replace = true;
+                            }
+                        }
+                    }
+                    match (&e.speed, &pos.speed) {
+                        (Some(_), None) | (None, None) => (),
+                        (None, Some(_)) => replace = true,
+                        (Some(c), Some(c2)) => {
+                            if *c < speed_threshold && *c2 > speed_threshold {
+                                replace = true;
+                            }
+                        }
+                    }
+
+                    if replace {
+                        *e = pos.clone();
+                    }
+                })
+                .or_insert(pos);
+        }
 
         let call_signs_unique = call_signs_unique.into_iter().collect::<Vec<_>>();
 
@@ -106,6 +138,7 @@ SELECT
         .await
         .change_context(PostgresError::Query)?;
 
+        let vms: Vec<NewVmsPosition> = vms_unique.into_values().collect();
         NewVmsPosition::unnest_insert(vms, &mut *tx)
             .await
             .change_context(PostgresError::Query)?;
