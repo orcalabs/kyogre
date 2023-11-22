@@ -10,7 +10,7 @@ mod model;
 
 pub use model::*;
 
-impl MeilisearchAdapter {
+impl<T> MeilisearchAdapter<T> {
     pub(crate) async fn landings_impl(
         &self,
         query: LandingsQuery,

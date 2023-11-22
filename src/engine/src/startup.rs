@@ -12,7 +12,7 @@ pub struct App {
     pub shared_state: SharedState,
     pub transition_log: machine::PostgresAdapter,
     pub single_state_run: Option<FisheryDiscriminants>,
-    meilisearch: Option<MeilisearchAdapter>,
+    meilisearch: Option<MeilisearchAdapter<PostgresAdapter>>,
 }
 
 impl App {
@@ -27,7 +27,7 @@ impl App {
         }
 
         let meilisearch = if let Some(s) = &settings.meilisearch {
-            let meilisearch = MeilisearchAdapter::new(s, Arc::new(postgres.clone()));
+            let meilisearch = MeilisearchAdapter::new(s, postgres.clone());
             if matches!(
                 settings.environment,
                 Environment::Local | Environment::Development

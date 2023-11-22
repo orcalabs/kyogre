@@ -5,8 +5,8 @@ use chrono::{DateTime, TimeZone, Utc};
 use error_stack::{report, Report, Result, ResultExt};
 use fiskeridir_rs::{DeliveryPointId, Gear, GearGroup, LandingId, SpeciesGroup, VesselLengthGroup};
 use kyogre_core::{
-    DateRange, Delivery, FishingFacility, FiskeridirVesselId, HaulId, TripAssemblerId,
-    TripDetailed, TripHaul, TripId, VesselEvent,
+    DateRange, Delivery, FishingFacility, FiskeridirVesselId, HaulId, MeilisearchSource,
+    TripAssemblerId, TripDetailed, TripHaul, TripId, VesselEvent,
 };
 use meilisearch_sdk::{Index, PaginationSetting, Settings};
 use serde::{Deserialize, Serialize};
@@ -46,7 +46,7 @@ pub struct Trip {
 }
 
 impl Trip {
-    pub async fn create_index(adapter: &MeilisearchAdapter) -> Result<(), MeilisearchError> {
+    pub async fn create_index<T>(adapter: &MeilisearchAdapter<T>) -> Result<(), MeilisearchError> {
         let settings = Settings::new()
             .with_searchable_attributes(Vec::<String>::new())
             .with_ranking_rules(["sort"])
@@ -115,13 +115,15 @@ impl Indexable for Trip {
     type Item = Trip;
     type IdVersion = TripIdVersion;
 
-    fn index(adapter: &MeilisearchAdapter) -> Index {
+    fn index<T>(adapter: &MeilisearchAdapter<T>) -> Index {
         adapter.trips_index()
     }
     fn primary_key() -> &'static str {
         "trip_id"
     }
-    async fn refresh(adapter: &MeilisearchAdapter) -> Result<(), MeilisearchError> {
+    async fn refresh<T: MeilisearchSource>(
+        adapter: &MeilisearchAdapter<T>,
+    ) -> Result<(), MeilisearchError> {
         let index = Self::index(adapter);
 
         let cache_versions = Self::all_versions(&index).await?;

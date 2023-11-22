@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use chrono::{TimeZone, Utc};
 use error_stack::{report, Report, Result, ResultExt};
 use fiskeridir_rs::{DeliveryPointId, Gear, GearGroup, LandingId, SpeciesGroup, VesselLengthGroup};
-use kyogre_core::{CatchLocationId, FiskeridirVesselId, LandingCatch};
+use kyogre_core::{CatchLocationId, FiskeridirVesselId, LandingCatch, MeilisearchSource};
 use meilisearch_sdk::{Index, PaginationSetting, Settings};
 use serde::{Deserialize, Serialize};
 use tracing::{event, Level};
@@ -33,7 +33,7 @@ pub struct Landing {
 }
 
 impl Landing {
-    pub async fn create_index(adapter: &MeilisearchAdapter) -> Result<(), MeilisearchError> {
+    pub async fn create_index<T>(adapter: &MeilisearchAdapter<T>) -> Result<(), MeilisearchError> {
         let settings = Settings::new()
             .with_searchable_attributes(Vec::<String>::new())
             .with_ranking_rules(["sort"])
@@ -98,13 +98,15 @@ impl Indexable for Landing {
     type Item = Landing;
     type IdVersion = LandingIdVersion;
 
-    fn index(adapter: &MeilisearchAdapter) -> Index {
+    fn index<T>(adapter: &MeilisearchAdapter<T>) -> Index {
         adapter.landings_index()
     }
     fn primary_key() -> &'static str {
         "landing_id"
     }
-    async fn refresh(adapter: &MeilisearchAdapter) -> Result<(), MeilisearchError> {
+    async fn refresh<T: MeilisearchSource>(
+        adapter: &MeilisearchAdapter<T>,
+    ) -> Result<(), MeilisearchError> {
         let index = Self::index(adapter);
 
         let cache_versions = Self::all_versions(&index).await?;

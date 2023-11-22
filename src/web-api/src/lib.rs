@@ -30,7 +30,7 @@ impl Cache for Client {}
 
 impl Database for PostgresAdapter {}
 
-impl Meilisearch for MeilisearchAdapter {}
+impl Meilisearch for MeilisearchAdapter<PostgresAdapter> {}
 
 #[derive(OpenApi)]
 #[openapi(
