@@ -1,35 +1,31 @@
 #![deny(warnings)]
 #![deny(rust_2018_idioms)]
 
-use std::{
-    collections::BTreeMap,
-    fmt::{Debug, Display},
-    ops::Bound,
-    time::Duration,
-};
+use std::time::Duration;
 
 use async_trait::async_trait;
-use chrono::{DateTime, Utc};
 use error::MeilisearchError;
-use error_stack::{report, Result, ResultExt};
+use error_stack::{Result, ResultExt};
 use fiskeridir_rs::LandingId;
-use futures::{future::BoxFuture, FutureExt};
+use indexable::Indexable;
 use kyogre_core::{
-    running_in_test, HaulId, HaulsQuery, LandingsQuery, MeilisearchOutbound, MeilisearchSource,
-    QueryError, Range, TripDetailed, TripsQuery,
+    HaulId, HaulsQuery, LandingsQuery, MeilisearchOutbound, MeilisearchSource, QueryError,
+    TripDetailed, TripsQuery,
 };
-use meilisearch_sdk::{Client, Index, Selectors, TaskInfo};
+use meilisearch_sdk::Client;
 
 mod error;
 mod haul;
+mod indexable;
 mod landing;
 pub mod settings;
 mod trip;
+mod utils;
 
 use haul::*;
 use landing::*;
-use serde::{de::DeserializeOwned, Serialize};
 pub use settings::Settings;
+use strum::{EnumIter, IntoEnumIterator};
 use tracing::{event, instrument, Level};
 use trip::*;
 
@@ -40,6 +36,13 @@ pub struct MeilisearchAdapter<T> {
     pub index_suffix: String,
 }
 
+#[derive(EnumIter)]
+enum CacheIndex {
+    Trips,
+    Hauls,
+    Landings,
+}
+
 impl<T> MeilisearchAdapter<T> {
     pub fn new(settings: &Settings, source: T) -> Self {
         Self {
@@ -48,33 +51,30 @@ impl<T> MeilisearchAdapter<T> {
             index_suffix: settings.index_suffix.clone().unwrap_or_default(),
         }
     }
-
-    pub(crate) fn trips_index(&self) -> Index {
-        let index_name = format!("trips{}", self.index_suffix);
-        self.client.index(index_name)
-    }
-    pub(crate) fn hauls_index(&self) -> Index {
-        let index_name = format!("hauls{}", self.index_suffix);
-        self.client.index(index_name)
-    }
-    pub(crate) fn landings_index(&self) -> Index {
-        let index_name = format!("landings{}", self.index_suffix);
-        self.client.index(index_name)
-    }
 }
 
 impl<T: Sync> MeilisearchAdapter<T> {
     pub async fn create_indexes(&self) -> Result<(), MeilisearchError> {
-        Trip::create_index(self).await?;
-        Haul::create_index(self).await?;
-        Landing::create_index(self).await?;
+        for c in CacheIndex::iter() {
+            match c {
+                CacheIndex::Trips => Trip::create_index(self).await,
+                CacheIndex::Hauls => Haul::create_index(self).await,
+                CacheIndex::Landings => Landing::create_index(self).await,
+            }?;
+        }
+
         Ok(())
     }
 
     pub async fn cleanup(&self) -> Result<(), MeilisearchError> {
-        Trip::cleanup(self).await?;
-        Haul::cleanup(self).await?;
-        Landing::cleanup(self).await?;
+        for c in CacheIndex::iter() {
+            match c {
+                CacheIndex::Trips => Trip::cleanup(self).await,
+                CacheIndex::Hauls => Haul::cleanup(self).await,
+                CacheIndex::Landings => Landing::cleanup(self).await,
+            }?;
+        }
+
         Ok(())
     }
 }
@@ -82,9 +82,14 @@ impl<T: Sync> MeilisearchAdapter<T> {
 impl<T: MeilisearchSource> MeilisearchAdapter<T> {
     #[instrument(name = "refresh_meilisearch", skip(self))]
     pub async fn refresh(&self) -> Result<(), MeilisearchError> {
-        Trip::refresh(self).await?;
-        Haul::refresh(self).await?;
-        Landing::refresh(self).await?;
+        for c in CacheIndex::iter() {
+            match c {
+                CacheIndex::Trips => Trip::refresh(self).await,
+                CacheIndex::Hauls => Haul::refresh(self).await,
+                CacheIndex::Landings => Landing::refresh(self).await,
+            }?;
+        }
+
         Ok(())
     }
 
@@ -140,234 +145,4 @@ impl<T: Send + Sync> MeilisearchOutbound for MeilisearchAdapter<T> {
     ) -> Result<Vec<kyogre_core::Landing>, QueryError> {
         self.landings_impl(query).await.change_context(QueryError)
     }
-}
-
-pub(crate) trait IdVersion {
-    type Id;
-
-    fn id(&self) -> Self::Id;
-    fn version(&self) -> i64;
-}
-pub(crate) trait Id {
-    type Id: Display;
-
-    fn id(&self) -> Self::Id;
-}
-
-#[async_trait]
-pub(crate) trait Indexable {
-    type Id: Clone + Eq + Ord + Debug + Display + Serialize + Send + Sync;
-    type Item: Id + Serialize + Debug + Send + Sync;
-    type IdVersion: IdVersion<Id = Self::Id> + DeserializeOwned + 'static;
-
-    fn index<T>(adapter: &MeilisearchAdapter<T>) -> Index;
-    fn primary_key() -> &'static str;
-    fn chunk_size() -> usize;
-    async fn source_versions<T: MeilisearchSource>(
-        source: &T,
-    ) -> Result<Vec<(Self::Id, i64)>, MeilisearchError>;
-    async fn items_by_ids<T: MeilisearchSource>(
-        source: &T,
-        ids: &[Self::Id],
-    ) -> Result<Vec<Self::Item>, MeilisearchError>;
-
-    async fn refresh<T: MeilisearchSource>(
-        adapter: &MeilisearchAdapter<T>,
-    ) -> Result<(), MeilisearchError> {
-        let index = Self::index(adapter);
-
-        let cache_versions = Self::all_versions(&index).await?;
-
-        let source_versions = Self::source_versions(&adapter.source)
-            .await?
-            .into_iter()
-            .collect::<BTreeMap<_, _>>();
-
-        let to_delete = cache_versions
-            .keys()
-            .filter(|i| !source_versions.contains_key(i))
-            .cloned()
-            .collect::<Vec<_>>();
-
-        let to_insert = source_versions
-            .into_iter()
-            .filter(|(id, sv)| cache_versions.get(id).map(|cv| sv > cv).unwrap_or(true))
-            .map(|(id, _)| id)
-            .collect::<Vec<_>>();
-
-        event!(Level::INFO, "{} to delete: {}", index.uid, to_delete.len());
-        event!(Level::INFO, "{} to insert: {}", index.uid, to_insert.len());
-
-        let mut tasks = Vec::new();
-
-        if !to_delete.is_empty() {
-            let task = index
-                .delete_documents(&to_delete)
-                .await
-                .change_context(MeilisearchError::Delete)?;
-            tasks.push(task);
-        }
-
-        for ids in to_insert.chunks(Self::chunk_size()) {
-            let items = Self::items_by_ids(&adapter.source, ids).await?;
-            Self::add_items(&index, &mut tasks, &items).await;
-        }
-
-        let interval = if running_in_test() {
-            None
-        } else {
-            Some(Duration::from_secs(30))
-        };
-
-        for task in tasks {
-            let task = task
-                .wait_for_completion(
-                    &adapter.client,
-                    interval,
-                    // We insert a lot of items, so use a decently large timeout.
-                    Some(Duration::from_secs(60 * 60)),
-                )
-                .await
-                .change_context(MeilisearchError::Query)?;
-
-            if !task.is_success() {
-                event!(Level::ERROR, "insert/delete task did not succeed: {task:?}");
-            }
-        }
-
-        Ok(())
-    }
-
-    async fn all_versions(index: &Index) -> Result<BTreeMap<Self::Id, i64>, MeilisearchError> {
-        let primary_key = Self::primary_key();
-
-        let result = index
-            .search()
-            .with_attributes_to_retrieve(Selectors::Some(&[primary_key, "cache_version"]))
-            .with_limit(usize::MAX)
-            .execute::<Self::IdVersion>()
-            .await
-            .change_context(MeilisearchError::Query)?;
-
-        let result = result
-            .hits
-            .into_iter()
-            .map(|h| (h.result.id(), h.result.version()))
-            .collect();
-
-        Ok(result)
-    }
-
-    fn add_items<'a>(
-        index: &'a Index,
-        tasks: &'a mut Vec<TaskInfo>,
-        items: &'a [Self::Item],
-    ) -> BoxFuture<'a, ()> {
-        use meilisearch_sdk::{Error, ErrorCode, MeilisearchError};
-
-        async move {
-            match index.add_documents(items, Some(Self::primary_key())).await {
-                Ok(task) => tasks.push(task),
-                Err(e) => match e {
-                    Error::Meilisearch(MeilisearchError {
-                        error_code: ErrorCode::PayloadTooLarge,
-                        ..
-                    }) => {
-                        if items.len() == 1 {
-                            event!(
-                                Level::ERROR,
-                                "item with {} {} is too large to insert into meilisearch",
-                                Self::primary_key(),
-                                items[0].id(),
-                            );
-                        } else {
-                            event!(
-                                Level::WARN,
-                                "insert payload too large with {} {}",
-                                items.len(),
-                                index.uid,
-                            );
-
-                            let (left, right) = items.split_at(items.len() / 2);
-                            Self::add_items(index, tasks, left).await;
-                            Self::add_items(index, tasks, right).await;
-                        }
-                    }
-                    _ => event!(Level::ERROR, "failed to insert items, error: {e:?}"),
-                },
-            }
-        }
-        .boxed()
-    }
-
-    async fn cleanup<T: Sync>(adapter: &MeilisearchAdapter<T>) -> Result<(), MeilisearchError> {
-        let task = Self::index(adapter)
-            .delete()
-            .await
-            .change_context(MeilisearchError::Delete)?
-            .wait_for_completion(&adapter.client, None, Some(Duration::from_secs(60)))
-            .await
-            .change_context(MeilisearchError::Delete)?;
-
-        if task.is_success() {
-            Ok(())
-        } else {
-            Err(report!(MeilisearchError::Delete)
-                .attach_printable(format!("failed to delete index: {task:?}")))
-        }
-    }
-}
-
-pub(crate) fn to_nanos(timestamp: DateTime<Utc>) -> Result<i64, MeilisearchError> {
-    timestamp.timestamp_nanos_opt().ok_or_else(|| {
-        report!(MeilisearchError::DataConversion).attach_printable(format!(
-            "{} could not be converted to timestamp nanos",
-            timestamp
-        ))
-    })
-}
-
-pub(crate) fn join_comma<T: ToString>(values: Vec<T>) -> String {
-    values
-        .into_iter()
-        .map(|v| v.to_string())
-        .collect::<Vec<_>>()
-        .join(",")
-}
-pub(crate) fn join_comma_fn<T, S: ToString, F: Fn(T) -> S>(values: Vec<T>, closure: F) -> String {
-    values
-        .into_iter()
-        .map(|v| closure(v).to_string())
-        .collect::<Vec<_>>()
-        .join(",")
-}
-
-pub(crate) fn create_ranges_filter<I, T, S>(ranges: I, attr1: S, attr2: S) -> String
-where
-    I: IntoIterator<Item = Range<T>>,
-    T: Display,
-    S: Display,
-{
-    ranges
-        .into_iter()
-        .flat_map(|range| {
-            let start = match range.start {
-                Bound::Included(v) => Some(format!("{attr1} >= {v}")),
-                Bound::Excluded(v) => Some(format!("{attr1} > {v}")),
-                Bound::Unbounded => None,
-            };
-            let end = match range.end {
-                Bound::Included(v) => Some(format!("{attr2} <= {v}")),
-                Bound::Excluded(v) => Some(format!("{attr2} < {v}")),
-                Bound::Unbounded => None,
-            };
-            match (start, end) {
-                (Some(a), Some(b)) => Some(format!("({a} AND {b})")),
-                (Some(a), None) => Some(a),
-                (None, Some(b)) => Some(b),
-                (None, None) => None,
-            }
-        })
-        .collect::<Vec<_>>()
-        .join(" OR ")
 }
