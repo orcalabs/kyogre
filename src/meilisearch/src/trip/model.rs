@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 use async_trait::async_trait;
 use chrono::{DateTime, TimeZone, Utc};
 use error_stack::{report, Report, Result, ResultExt};
@@ -8,10 +6,16 @@ use kyogre_core::{
     DateRange, Delivery, FishingFacility, FiskeridirVesselId, HaulId, MeilisearchSource,
     TripAssemblerId, TripDetailed, TripHaul, TripId, VesselEvent,
 };
-use meilisearch_sdk::{Index, PaginationSetting, Settings};
+use meilisearch_sdk::Index;
 use serde::{Deserialize, Serialize};
 
-use crate::{error::MeilisearchError, to_nanos, Id, IdVersion, Indexable, MeilisearchAdapter};
+use super::query::{TripFilterDiscriminants, TripSort};
+use crate::{
+    error::MeilisearchError,
+    indexable::{Id, IdVersion, Indexable},
+    utils::to_nanos,
+    CacheIndex, MeilisearchAdapter,
+};
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Trip {
@@ -44,47 +48,8 @@ pub struct Trip {
     pub total_living_weight: f64,
 }
 
-impl Trip {
-    pub async fn create_index<T>(adapter: &MeilisearchAdapter<T>) -> Result<(), MeilisearchError> {
-        let settings = Settings::new()
-            .with_searchable_attributes(Vec::<String>::new())
-            .with_ranking_rules(["sort"])
-            .with_filterable_attributes([
-                "fiskeridir_vessel_id",
-                "fiskeridir_length_group_id",
-                "start",
-                "end",
-                "total_living_weight",
-                "gear_group_ids",
-                "species_group_ids",
-                "delivery_point_ids",
-                "landing_ids",
-                "haul_ids",
-            ])
-            .with_sortable_attributes(["end", "total_living_weight"])
-            .with_pagination(PaginationSetting {
-                max_total_hits: usize::MAX,
-            });
-
-        let task = Self::index(adapter)
-            .set_settings(&settings)
-            .await
-            .change_context(MeilisearchError::Index)?
-            .wait_for_completion(&adapter.client, None, Some(Duration::from_secs(60 * 10)))
-            .await
-            .change_context(MeilisearchError::Index)?;
-
-        if !task.is_success() {
-            return Err(report!(MeilisearchError::Index)
-                .attach_printable(format!("create index did not succeed: {task:?}")));
-        }
-
-        Ok(())
-    }
-}
-
 #[derive(Deserialize)]
-pub(crate) struct TripIdVersion {
+pub struct TripIdVersion {
     trip_id: TripId,
     cache_version: i64,
 }
@@ -113,9 +78,15 @@ impl Indexable for Trip {
     type Id = TripId;
     type Item = Trip;
     type IdVersion = TripIdVersion;
+    type FilterableAttributes = TripFilterDiscriminants;
+    type SortableAttributes = TripSort;
 
+    fn cache_index() -> CacheIndex {
+        CacheIndex::Trips
+    }
     fn index<T>(adapter: &MeilisearchAdapter<T>) -> Index {
-        adapter.trips_index()
+        let index_name = format!("trips{}", adapter.index_suffix);
+        adapter.client.index(index_name)
     }
     fn primary_key() -> &'static str {
         "trip_id"

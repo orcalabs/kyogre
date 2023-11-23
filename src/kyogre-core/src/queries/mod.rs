@@ -21,6 +21,7 @@ pub use weather::*;
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 #[derive(Deserialize, Debug, Default, Clone, Copy, strum::Display)]
 #[serde(rename_all = "lowercase")]
+#[strum(serialize_all = "lowercase")]
 pub enum Ordering {
     #[serde(alias = "asc", alias = "Asc", alias = "ascending", alias = "Ascending")]
     Asc = 1,

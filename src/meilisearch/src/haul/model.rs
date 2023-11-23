@@ -1,17 +1,22 @@
-use std::time::Duration;
-
 use async_trait::async_trait;
 use chrono::{TimeZone, Utc};
-use error_stack::{report, Report, Result, ResultExt};
+use error_stack::{Report, Result, ResultExt};
 use fiskeridir_rs::{Gear, GearGroup, SpeciesGroup, VesselLengthGroup};
 use kyogre_core::{
     CatchLocationId, HaulCatch, HaulId, HaulOceanClimate, HaulWeather, MeilisearchSource,
     WhaleCatch,
 };
-use meilisearch_sdk::{Index, PaginationSetting, Settings};
+use meilisearch_sdk::Index;
 use serde::{Deserialize, Serialize};
 
-use crate::{error::MeilisearchError, to_nanos, Id, IdVersion, Indexable, MeilisearchAdapter};
+use crate::{
+    error::MeilisearchError,
+    indexable::{Id, IdVersion, Indexable},
+    utils::to_nanos,
+    CacheIndex, MeilisearchAdapter,
+};
+
+use super::query::{HaulFilterDiscriminants, HaulSort};
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Haul {
@@ -50,46 +55,8 @@ pub struct Haul {
     pub whale_catches: Vec<WhaleCatch>,
 }
 
-impl Haul {
-    pub async fn create_index<T>(adapter: &MeilisearchAdapter<T>) -> Result<(), MeilisearchError> {
-        let settings = Settings::new()
-            .with_searchable_attributes(Vec::<String>::new())
-            .with_ranking_rules(["sort"])
-            .with_filterable_attributes([
-                "start_timestamp",
-                "stop_timestamp",
-                "fiskeridir_vessel_id",
-                "vessel_length",
-                "gear_group_id",
-                "species_group_ids",
-                "catch_locations",
-                "wind_speed_10m",
-                "air_temperature_2m",
-            ])
-            .with_sortable_attributes(["start_timestamp", "stop_timestamp", "total_living_weight"])
-            .with_pagination(PaginationSetting {
-                max_total_hits: usize::MAX,
-            });
-
-        let task = Self::index(adapter)
-            .set_settings(&settings)
-            .await
-            .change_context(MeilisearchError::Index)?
-            .wait_for_completion(&adapter.client, None, Some(Duration::from_secs(60 * 10)))
-            .await
-            .change_context(MeilisearchError::Index)?;
-
-        if !task.is_success() {
-            return Err(report!(MeilisearchError::Index)
-                .attach_printable(format!("create index did not succeed: {task:?}")));
-        }
-
-        Ok(())
-    }
-}
-
 #[derive(Deserialize)]
-pub(crate) struct HaulIdVersion {
+pub struct HaulIdVersion {
     haul_id: HaulId,
     cache_version: i64,
 }
@@ -118,9 +85,15 @@ impl Indexable for Haul {
     type Id = HaulId;
     type Item = Haul;
     type IdVersion = HaulIdVersion;
+    type FilterableAttributes = HaulFilterDiscriminants;
+    type SortableAttributes = HaulSort;
 
+    fn cache_index() -> CacheIndex {
+        CacheIndex::Hauls
+    }
     fn index<T>(adapter: &MeilisearchAdapter<T>) -> Index {
-        adapter.hauls_index()
+        let index_name = format!("hauls{}", adapter.index_suffix);
+        adapter.client.index(index_name)
     }
     fn primary_key() -> &'static str {
         "haul_id"

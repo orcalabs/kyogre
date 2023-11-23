@@ -1,12 +1,15 @@
 use error_stack::{Result, ResultExt};
 use fiskeridir_rs::LandingId;
-use kyogre_core::{HaulId, Ordering, TripDetailed, TripSorting, TripsQuery};
+use kyogre_core::{HaulId, TripDetailed, TripsQuery};
 
-use crate::{error::MeilisearchError, join_comma, join_comma_fn, to_nanos, MeilisearchAdapter};
+use crate::{error::MeilisearchError, indexable::Indexable, MeilisearchAdapter};
 
 mod model;
+mod query;
 
 pub use model::*;
+
+use query::{Query, TripFilter, TripSort};
 
 impl<T> MeilisearchAdapter<T> {
     pub(crate) async fn trips_impl(
@@ -14,67 +17,21 @@ impl<T> MeilisearchAdapter<T> {
         query: TripsQuery,
         read_fishing_facility: bool,
     ) -> Result<Vec<TripDetailed>, MeilisearchError> {
-        let mut filter = Vec::with_capacity(9);
+        let pagination = query.pagination;
+        let ordering = query.ordering;
 
-        if let Some(ids) = query.fiskeridir_vessel_ids {
-            filter.push(format!(
-                "fiskeridir_vessel_id IN [{}]",
-                join_comma_fn(ids, |i| i.0)
-            ));
-        }
-        if let Some(groups) = query.vessel_length_groups {
-            filter.push(format!(
-                "fiskeridir_length_group_id IN [{}]",
-                join_comma_fn(groups, |g| g as i32)
-            ));
-        }
-        if let Some(start_date) = query.start_date {
-            filter.push(format!("start >= {}", to_nanos(start_date)?));
-        }
-        if let Some(end_date) = query.end_date {
-            filter.push(format!("end <= {}", to_nanos(end_date)?));
-        }
-        if let Some(min_weight) = query.min_weight {
-            filter.push(format!("total_living_weight >= {}", min_weight));
-        }
-        if let Some(max_weight) = query.max_weight {
-            filter.push(format!("total_living_weight <= {}", max_weight));
-        }
-        if let Some(gears) = query.gear_group_ids {
-            filter.push(format!(
-                "gear_group_ids IN [{}]",
-                join_comma_fn(gears, |g| g as i32)
-            ));
-        }
-        if let Some(species) = query.species_group_ids {
-            filter.push(format!(
-                "species_group_ids IN [{}]",
-                join_comma_fn(species, |s| s as i32)
-            ));
-        }
-        if let Some(ids) = query.delivery_points {
-            filter.push(format!("delivery_point_ids IN [{}]", join_comma(ids)));
-        }
+        let sort = TripSort::from(query.sorting);
+        let query = Query::from(query);
 
+        let filter = query.filter_strs()?;
         let filter = filter.iter().map(|f| f.as_str()).collect();
 
-        let result = self
-            .trips_index()
+        let result = Trip::index(self)
             .search()
             .with_array_filter(filter)
-            .with_sort(&[&format!(
-                "{}:{}",
-                match query.sorting {
-                    TripSorting::StopDate => "end",
-                    TripSorting::Weight => "total_living_weight",
-                },
-                match query.ordering {
-                    Ordering::Asc => "asc",
-                    Ordering::Desc => "desc",
-                }
-            )])
-            .with_limit(query.pagination.limit() as usize)
-            .with_offset(query.pagination.offset() as usize)
+            .with_sort(&[&format!("{sort}:{ordering}")])
+            .with_limit(pagination.limit() as usize)
+            .with_offset(pagination.offset() as usize)
             .execute::<Trip>()
             .await
             .change_context(MeilisearchError::Query)?;
@@ -94,10 +51,11 @@ impl<T> MeilisearchAdapter<T> {
         haul_id: &HaulId,
         read_fishing_facility: bool,
     ) -> Result<Option<TripDetailed>, MeilisearchError> {
-        let result = self
-            .trips_index()
+        let filter = TripFilter::from(haul_id).filter_str()?;
+
+        let result = Trip::index(self)
             .search()
-            .with_filter(&format!("haul_ids = {haul_id}"))
+            .with_filter(&filter)
             .with_limit(1)
             .execute::<Trip>()
             .await
@@ -118,10 +76,11 @@ impl<T> MeilisearchAdapter<T> {
         landing_id: &LandingId,
         read_fishing_facility: bool,
     ) -> Result<Option<TripDetailed>, MeilisearchError> {
-        let result = self
-            .trips_index()
+        let filter = TripFilter::from(landing_id).filter_str()?;
+
+        let result = Trip::index(self)
             .search()
-            .with_filter(&format!("landing_ids = {landing_id}"))
+            .with_filter(&filter)
             .with_limit(1)
             .execute::<Trip>()
             .await
