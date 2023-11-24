@@ -1,8 +1,7 @@
 use crate::{
-    AisVms, ErsTripAssembler, FisheryDiscriminants, FishingSpotPredictor,
-    FishingSpotWeatherPredictor, FishingWeightPredictor, FishingWeightWeatherPredictor,
-    LandingTripAssembler, PredictionRange, SpotPredictorSettings, UnrealisticSpeed,
-    WeightPredictorSettings, HAUL_LIMIT_PER_SPECIES,
+    AisVms, ErsTripAssembler, FisheryDiscriminants, FishingSpotPredictor, FishingWeightPredictor,
+    FishingWeightWeatherPredictor, LandingTripAssembler, PredictionRange, SpotPredictorSettings,
+    UnrealisticSpeed, WeightPredictorSettings, HAUL_LIMIT_PER_SPECIES,
 };
 use config::{Config, ConfigError, File};
 use kyogre_core::*;
@@ -112,20 +111,10 @@ impl Settings {
                     hauls_limit_per_species: HaulPredictionLimit::Limit(HAUL_LIMIT_PER_SPECIES),
                 },
             ));
-            let model4 = Box::new(FishingSpotWeatherPredictor::new(SpotPredictorSettings {
-                running_in_test: false,
-                training_batch_size: s.training_batch_size,
-                use_gpu,
-                training_rounds: s.training_rounds,
-                predict_batch_size: 10,
-                range: PredictionRange::CurrentWeekAndNextWeek,
-                hauls_limit_per_species: HaulPredictionLimit::Limit(HAUL_LIMIT_PER_SPECIES),
-                catch_locations: vec![],
-            }));
+
             vec.push(model as Box<dyn MLModel>);
             vec.push(model2 as Box<dyn MLModel>);
             vec.push(model3 as Box<dyn MLModel>);
-            vec.push(model4 as Box<dyn MLModel>);
         }
 
         vec
