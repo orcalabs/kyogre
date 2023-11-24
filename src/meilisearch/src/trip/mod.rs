@@ -1,15 +1,19 @@
 use error_stack::{Result, ResultExt};
 use fiskeridir_rs::LandingId;
-use kyogre_core::{HaulId, TripDetailed, TripsQuery};
+use kyogre_core::{HaulId, Pagination, TripDetailed, Trips, TripsQuery};
 
-use crate::{error::MeilisearchError, indexable::Indexable, MeilisearchAdapter};
+use crate::{
+    error::MeilisearchError,
+    indexable::Indexable,
+    query::{Filter, Query},
+    MeilisearchAdapter,
+};
 
+mod filter;
 mod model;
-mod query;
 
+pub use filter::*;
 pub use model::*;
-
-use query::{Query, TripFilter, TripSort};
 
 impl<T> MeilisearchAdapter<T> {
     pub(crate) async fn trips_impl(
@@ -17,11 +21,12 @@ impl<T> MeilisearchAdapter<T> {
         query: TripsQuery,
         read_fishing_facility: bool,
     ) -> Result<Vec<TripDetailed>, MeilisearchError> {
-        let pagination = query.pagination;
-        let ordering = query.ordering;
+        let query = Query::<TripFilter, TripSort, Pagination<Trips>>::from(query);
 
-        let sort = TripSort::from(query.sorting);
-        let query = Query::from(query);
+        let pagination = query.pagination;
+
+        let sort_string = query.sort_str();
+        let sort = vec![sort_string.as_str()];
 
         let filter = query.filter_strs()?;
         let filter = filter.iter().map(|f| f.as_str()).collect();
@@ -29,7 +34,7 @@ impl<T> MeilisearchAdapter<T> {
         let result = Trip::index(self)
             .search()
             .with_array_filter(filter)
-            .with_sort(&[&format!("{sort}:{ordering}")])
+            .with_sort(&sort)
             .with_limit(pagination.limit() as usize)
             .with_offset(pagination.offset() as usize)
             .execute::<Trip>()

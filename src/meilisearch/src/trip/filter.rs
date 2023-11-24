@@ -1,13 +1,12 @@
-use std::collections::BTreeSet;
-
 use chrono::{DateTime, Utc};
 use error_stack::Result;
 use fiskeridir_rs::{GearGroup, LandingId, SpeciesGroup, VesselLengthGroup};
-use kyogre_core::{FiskeridirVesselId, HaulId, MinMaxBoth, TripSorting, TripsQuery};
+use kyogre_core::{FiskeridirVesselId, HaulId, MinMaxBoth, TripSorting};
 use strum_macros::{EnumDiscriminants, EnumIter};
 
 use crate::{
     error::MeilisearchError,
+    query::Filter,
     utils::{join_comma, join_comma_fn, to_nanos},
 };
 
@@ -26,9 +25,7 @@ pub enum TripFilter {
     SpeciesGroupIds(Vec<SpeciesGroup>),
     FiskeridirLengthGroupId(Vec<VesselLengthGroup>),
     FiskeridirVesselId(Vec<FiskeridirVesselId>),
-
     HaulIds(HaulId),
-
     LandingIds(LandingId),
 }
 
@@ -39,8 +36,8 @@ pub enum TripSort {
     TotalLivingWeight,
 }
 
-impl TripFilter {
-    pub fn filter_str(self) -> Result<String, MeilisearchError> {
+impl Filter for TripFilter {
+    fn filter_str(self) -> Result<String, MeilisearchError> {
         Ok(match self {
             TripFilter::DeliveryPointIds(ids) => format!(
                 "{} IN [{}]",
@@ -92,65 +89,6 @@ impl TripFilter {
                 format!("{} = {}", TripFilterDiscriminants::LandingIds, id)
             }
         })
-    }
-}
-
-pub struct Query(BTreeSet<TripFilter>);
-
-impl Query {
-    pub fn filter_strs(self) -> Result<Vec<String>, MeilisearchError> {
-        self.0
-            .into_iter()
-            .map(|f| f.filter_str())
-            .collect::<Result<_, _>>()
-    }
-}
-
-impl From<TripsQuery> for Query {
-    fn from(value: TripsQuery) -> Self {
-        let TripsQuery {
-            pagination: _,
-            ordering: _,
-            sorting: _,
-            delivery_points,
-            start_date,
-            end_date,
-            min_weight,
-            max_weight,
-            gear_group_ids,
-            species_group_ids,
-            vessel_length_groups,
-            fiskeridir_vessel_ids,
-        } = value;
-
-        let mut set = BTreeSet::new();
-
-        if let Some(ids) = delivery_points {
-            set.insert(TripFilter::DeliveryPointIds(ids));
-        }
-        if let Some(start) = start_date {
-            set.insert(TripFilter::Start(start));
-        }
-        if let Some(end) = end_date {
-            set.insert(TripFilter::End(end));
-        }
-        if let Some(weight) = MinMaxBoth::new(min_weight, max_weight) {
-            set.insert(TripFilter::TotalLivingWeight(weight));
-        }
-        if let Some(ids) = gear_group_ids {
-            set.insert(TripFilter::GearGroupIds(ids));
-        }
-        if let Some(ids) = species_group_ids {
-            set.insert(TripFilter::SpeciesGroupIds(ids));
-        }
-        if let Some(ids) = vessel_length_groups {
-            set.insert(TripFilter::FiskeridirLengthGroupId(ids));
-        }
-        if let Some(ids) = fiskeridir_vessel_ids {
-            set.insert(TripFilter::FiskeridirVesselId(ids));
-        }
-
-        Self(set)
     }
 }
 

@@ -18,6 +18,7 @@ mod error;
 mod haul;
 mod indexable;
 mod landing;
+mod query;
 pub mod settings;
 mod trip;
 mod utils;
@@ -37,7 +38,8 @@ pub struct MeilisearchAdapter<T> {
     pub index_suffix: Option<String>,
 }
 
-#[derive(EnumIter)]
+#[derive(EnumIter, strum::Display)]
+#[strum(serialize_all = "snake_case")]
 enum CacheIndex {
     Trips,
     Hauls,

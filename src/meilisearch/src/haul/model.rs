@@ -6,17 +6,16 @@ use kyogre_core::{
     CatchLocationId, HaulCatch, HaulId, HaulOceanClimate, HaulWeather, MeilisearchSource,
     WhaleCatch,
 };
-use meilisearch_sdk::Index;
 use serde::{Deserialize, Serialize};
 
 use crate::{
     error::MeilisearchError,
     indexable::{Id, IdVersion, Indexable},
     utils::to_nanos,
-    CacheIndex, MeilisearchAdapter,
+    CacheIndex,
 };
 
-use super::query::{HaulFilterDiscriminants, HaulSort};
+use super::filter::{HaulFilterDiscriminants, HaulSort};
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Haul {
@@ -90,10 +89,6 @@ impl Indexable for Haul {
 
     fn cache_index() -> CacheIndex {
         CacheIndex::Hauls
-    }
-    fn index<T>(adapter: &MeilisearchAdapter<T>) -> Index {
-        let index_name = format!("hauls{}", adapter.index_suffix);
-        adapter.client.index(index_name)
     }
     fn primary_key() -> &'static str {
         "haul_id"
