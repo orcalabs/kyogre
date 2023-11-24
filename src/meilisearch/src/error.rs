@@ -1,3 +1,5 @@
+use error_stack::Context;
+
 #[derive(Debug, Clone)]
 pub enum MeilisearchError {
     Insert,
@@ -8,7 +10,7 @@ pub enum MeilisearchError {
     DataConversion,
 }
 
-impl std::error::Error for MeilisearchError {}
+impl Context for MeilisearchError {}
 
 impl std::fmt::Display for MeilisearchError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

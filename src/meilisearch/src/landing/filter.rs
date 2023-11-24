@@ -1,13 +1,12 @@
-use std::collections::BTreeSet;
-
 use chrono::{DateTime, Utc};
 use error_stack::Result;
 use fiskeridir_rs::{GearGroup, SpeciesGroup};
-use kyogre_core::{CatchLocationId, FiskeridirVesselId, LandingsQuery, LandingsSorting, Range};
+use kyogre_core::{CatchLocationId, FiskeridirVesselId, LandingsSorting, Range};
 use strum_macros::{EnumDiscriminants, EnumIter};
 
 use crate::{
     error::MeilisearchError,
+    query::Filter,
     utils::{create_ranges_filter, join_comma, join_comma_fn, to_nanos},
 };
 
@@ -33,8 +32,8 @@ pub enum LandingSort {
     TotalLivingWeight,
 }
 
-impl LandingFilter {
-    pub fn filter_str(self) -> Result<String, MeilisearchError> {
+impl Filter for LandingFilter {
+    fn filter_str(self) -> Result<String, MeilisearchError> {
         Ok(match self {
             LandingFilter::LandingTimestamp(ranges) => create_ranges_filter(
                 ranges
@@ -70,55 +69,6 @@ impl LandingFilter {
                 join_comma(locs)
             ),
         })
-    }
-}
-
-pub struct Query(BTreeSet<LandingFilter>);
-
-impl Query {
-    pub fn filter_strs(self) -> Result<Vec<String>, MeilisearchError> {
-        self.0
-            .into_iter()
-            .map(|f| f.filter_str())
-            .collect::<Result<_, _>>()
-    }
-}
-
-impl From<LandingsQuery> for Query {
-    fn from(value: LandingsQuery) -> Self {
-        let LandingsQuery {
-            ordering: _,
-            sorting: _,
-            ranges,
-            catch_locations,
-            gear_group_ids,
-            species_group_ids,
-            vessel_length_ranges,
-            vessel_ids,
-        } = value;
-
-        let mut set = BTreeSet::new();
-
-        if let Some(ranges) = ranges {
-            set.insert(LandingFilter::LandingTimestamp(ranges));
-        }
-        if let Some(ids) = gear_group_ids {
-            set.insert(LandingFilter::GearGroupId(ids));
-        }
-        if let Some(ids) = species_group_ids {
-            set.insert(LandingFilter::SpeciesGroupIds(ids));
-        }
-        if let Some(lengths) = vessel_length_ranges {
-            set.insert(LandingFilter::VesselLength(lengths));
-        }
-        if let Some(ids) = vessel_ids {
-            set.insert(LandingFilter::FiskeridirVesselId(ids));
-        }
-        if let Some(locs) = catch_locations {
-            set.insert(LandingFilter::CatchLocation(locs));
-        }
-
-        Self(set)
     }
 }
 

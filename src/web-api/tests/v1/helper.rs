@@ -250,6 +250,7 @@ where
                 let settings = meilisearch::Settings {
                     host: format!("http://{}:7700", handle.ip()),
                     api_key: "test123".to_string(),
+                    refresh_timeout: None,
                     index_suffix: Some(db_name.clone()),
                 };
                 let meilisearch = MeilisearchAdapter::new(&settings, adapter.clone());

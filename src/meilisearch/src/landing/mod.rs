@@ -1,35 +1,26 @@
 use error_stack::{Result, ResultExt};
 use kyogre_core::LandingsQuery;
 
-use crate::{
-    error::MeilisearchError, indexable::Indexable, landing::query::LandingSort, MeilisearchAdapter,
-};
+use crate::{error::MeilisearchError, indexable::Indexable, query::Query, MeilisearchAdapter};
 
+mod filter;
 mod model;
-mod query;
 
+pub use filter::*;
 pub use model::*;
-
-use self::query::Query;
 
 impl<T> MeilisearchAdapter<T> {
     pub(crate) async fn landings_impl(
         &self,
         query: LandingsQuery,
     ) -> Result<Vec<kyogre_core::Landing>, MeilisearchError> {
-        let sort_string = query.sorting.map(|sorting| {
-            format!(
-                "{}:{}",
-                LandingSort::from(sorting),
-                query.ordering.unwrap_or_default(),
-            )
-        });
+        let query = Query::<LandingFilter, Option<LandingSort>, _>::from(query);
+
+        let sort_string = query.sort_str_opt();
         let sort = sort_string
             .as_ref()
             .map(|s| vec![s.as_str()])
             .unwrap_or_default();
-
-        let query = Query::from(query);
 
         let filter = query.filter_strs()?;
         let filter = filter.iter().map(|f| f.as_str()).collect();

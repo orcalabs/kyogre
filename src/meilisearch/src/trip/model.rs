@@ -6,15 +6,14 @@ use kyogre_core::{
     DateRange, Delivery, FishingFacility, FiskeridirVesselId, HaulId, MeilisearchSource,
     TripAssemblerId, TripDetailed, TripHaul, TripId, VesselEvent,
 };
-use meilisearch_sdk::Index;
 use serde::{Deserialize, Serialize};
 
-use super::query::{TripFilterDiscriminants, TripSort};
+use super::filter::{TripFilterDiscriminants, TripSort};
 use crate::{
     error::MeilisearchError,
     indexable::{Id, IdVersion, Indexable},
     utils::to_nanos,
-    CacheIndex, MeilisearchAdapter,
+    CacheIndex,
 };
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -83,10 +82,6 @@ impl Indexable for Trip {
 
     fn cache_index() -> CacheIndex {
         CacheIndex::Trips
-    }
-    fn index<T>(adapter: &MeilisearchAdapter<T>) -> Index {
-        let index_name = format!("trips{}", adapter.index_suffix);
-        adapter.client.index(index_name)
     }
     fn primary_key() -> &'static str {
         "trip_id"

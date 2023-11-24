@@ -36,7 +36,6 @@ pub trait Indexable {
     type SortableAttributes: IntoEnumIterator + Display;
 
     fn cache_index() -> CacheIndex;
-    fn index<T>(adapter: &MeilisearchAdapter<T>) -> Index;
     fn primary_key() -> &'static str;
     fn chunk_size() -> usize;
     async fn source_versions<T: MeilisearchSource>(
@@ -46,6 +45,14 @@ pub trait Indexable {
         source: &T,
         ids: &[Self::Id],
     ) -> Result<Vec<Self::Item>, MeilisearchError>;
+
+    fn index<T>(adapter: &MeilisearchAdapter<T>) -> Index {
+        let uid = match &adapter.index_suffix {
+            Some(suffix) => format!("{}_{}", Self::cache_index(), suffix),
+            None => Self::cache_index().to_string(),
+        };
+        adapter.client.index(uid)
+    }
 
     async fn create_index<T: Sync>(
         adapter: &MeilisearchAdapter<T>,
