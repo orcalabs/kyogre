@@ -6,7 +6,7 @@ use serde::Deserialize;
 pub struct Settings {
     pub host: String,
     pub api_key: String,
-    #[serde(with = "humantime_serde")]
+    #[serde(with = "humantime_serde", default)]
     pub refresh_timeout: Option<Duration>,
     pub index_suffix: Option<String>,
 }
