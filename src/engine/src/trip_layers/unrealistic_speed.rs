@@ -20,39 +20,23 @@ impl TripPositionLayer for UnrealisticSpeed {
         positions: Vec<AisVmsPosition>,
     ) -> Result<Vec<AisVmsPosition>, TripLayerError> {
         let num_positions = positions.len();
-        let mut new_positions = Vec::with_capacity(num_positions);
-        let mut current_index = 0;
-
-        let mut i = 0;
-
-        if positions.len() == 1 || positions.is_empty() {
+        if num_positions <= 1 {
             return Ok(positions);
         }
 
-        while i < num_positions - 1 {
-            let current_position = &positions[current_index];
+        let mut new_positions = Vec::with_capacity(num_positions);
 
-            let next_position_idx = if i == 0 {
-                1
-            } else if current_index + 1 == i {
-                i + 1
-            } else {
-                i
-            };
+        let mut iter = positions.into_iter();
 
-            if i == 0 {
-                new_positions.push(current_position.clone());
-            }
+        new_positions.push(iter.next().unwrap());
 
-            let next_position = &positions[next_position_idx];
+        for next in iter {
+            let current = new_positions.last().unwrap();
 
-            let speed = estimated_speed_between_points(current_position, next_position)?;
+            let speed = estimated_speed_between_points(current, &next)?;
             if speed < self.knots_limit {
-                current_index = i;
-                new_positions.push(next_position.clone());
+                new_positions.push(next);
             }
-
-            i += 1;
         }
 
         Ok(new_positions)

@@ -484,6 +484,7 @@ async fn test_ais_vms_by_trip_returns_only_positions_within_trip() {
             })
             .trips(1)
             .ais_vms_positions(3)
+            .modify_idx(|i, p| p.position.add_location(i as f64, i as f64))
             .build()
             .await;
 

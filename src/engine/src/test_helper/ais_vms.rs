@@ -35,6 +35,18 @@ impl AisOrVmsPosition {
             }
         }
     }
+    pub fn add_location(&mut self, latitude: f64, longitude: f64) {
+        match self {
+            AisOrVmsPosition::Ais(p) => {
+                p.longitude += longitude;
+                p.latitude += latitude;
+            }
+            AisOrVmsPosition::Vms(p) => {
+                p.latitude = Some(p.latitude.unwrap_or_default() + latitude);
+                p.longitude = Some(p.longitude.unwrap_or_default() + longitude);
+            }
+        }
+    }
 }
 
 #[derive(Clone)]

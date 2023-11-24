@@ -12,6 +12,7 @@ pub trait TripPositionLayer: Send + Sync {
 #[derive(Debug, Copy, Clone)]
 pub enum TripPositionLayerId {
     UnrealisticSpeed = 1,
+    Cluster = 2,
 }
 
 #[derive(Debug, Clone)]
