@@ -2980,6 +2980,7 @@ dependencies = [
  "error-stack 0.4.1",
  "fiskeridir-rs",
  "futures",
+ "humantime-serde",
  "kyogre-core",
  "meilisearch-sdk",
  "serde",

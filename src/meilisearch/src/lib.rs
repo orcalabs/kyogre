@@ -33,7 +33,8 @@ use trip::*;
 pub struct MeilisearchAdapter<T> {
     pub client: Client,
     pub source: T,
-    pub index_suffix: String,
+    pub refresh_timeout: Duration,
+    pub index_suffix: Option<String>,
 }
 
 #[derive(EnumIter)]
@@ -48,7 +49,10 @@ impl<T> MeilisearchAdapter<T> {
         Self {
             client: Client::new(&settings.host, Some(&settings.api_key)),
             source,
-            index_suffix: settings.index_suffix.clone().unwrap_or_default(),
+            refresh_timeout: settings
+                .refresh_timeout
+                .unwrap_or_else(|| Duration::from_secs(600)),
+            index_suffix: settings.index_suffix.clone(),
         }
     }
 }
@@ -102,7 +106,7 @@ impl<T: MeilisearchSource> MeilisearchAdapter<T> {
                 );
             }
 
-            tokio::time::sleep(Duration::from_secs(60 * 10)).await;
+            tokio::time::sleep(self.refresh_timeout).await;
         }
     }
 }

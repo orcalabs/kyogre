@@ -11,6 +11,7 @@ postgres:
 meilisearch:
   host: http://meilisearch:7700
   api_key: test123
+  refresh_timeout: 10m
 scraper:
   file_download_dir: "/tmp/kyogre-engine-download-data"
   register_vessels_url: https://api.fiskeridir.no/vessel-api/api/v1/vessels
