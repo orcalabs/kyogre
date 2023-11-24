@@ -1,7 +1,7 @@
 use crate::{
-    AisVms, ErsTripAssembler, FisheryDiscriminants, FishingSpotPredictor, FishingWeightPredictor,
-    FishingWeightWeatherPredictor, LandingTripAssembler, PredictionRange, SpotPredictorSettings,
-    UnrealisticSpeed, WeightPredictorSettings, HAUL_LIMIT_PER_SPECIES,
+    AisVms, Cluster, ErsTripAssembler, FisheryDiscriminants, FishingSpotPredictor,
+    FishingWeightPredictor, FishingWeightWeatherPredictor, LandingTripAssembler, PredictionRange,
+    SpotPredictorSettings, UnrealisticSpeed, WeightPredictorSettings, HAUL_LIMIT_PER_SPECIES,
 };
 use config::{Config, ConfigError, File};
 use kyogre_core::*;
@@ -135,10 +135,9 @@ impl Settings {
     }
 
     pub fn trip_position_layers(&self) -> Vec<Box<dyn TripPositionLayer>> {
-        let unrealistic_speed = Box::<UnrealisticSpeed>::default();
-
-        let vec = vec![unrealistic_speed as Box<dyn TripPositionLayer>];
-
-        vec
+        vec![
+            Box::<UnrealisticSpeed>::default(),
+            Box::<Cluster>::default(),
+        ]
     }
 }

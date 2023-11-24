@@ -11,7 +11,7 @@ mod haul_distributor;
 mod ml_models;
 mod trip_assembler;
 mod trip_distancer;
-mod trip_layer;
+mod trip_layers;
 
 pub mod settings;
 pub mod startup;
@@ -26,7 +26,7 @@ pub use states::*;
 pub use test_helper::*;
 pub use trip_assembler::*;
 pub use trip_distancer::*;
-pub use trip_layer::*;
+pub use trip_layers::*;
 
 #[derive(Default)]
 pub struct AisVms {}
