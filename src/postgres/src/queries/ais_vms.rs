@@ -179,35 +179,37 @@ SELECT
     navigation_status_id AS navigational_status,
     rate_of_turn::DECIMAL,
     true_heading,
-    distance_to_shore::DECIMAL as "distance_to_shore!",
+    distance_to_shore::DECIMAL AS "distance_to_shore!",
     position_type_id AS "position_type_id: PositionType"
 FROM
     trip_positions
 WHERE
     trip_id = $1
-    AND trip_id IN (
-        SELECT
-            t.trip_id
-        FROM
-            trips t
-            INNER JOIN fiskeridir_ais_vessel_mapping_whitelist fw ON t.fiskeridir_vessel_id = fw.fiskeridir_vessel_id
-            INNER JOIN fiskeridir_vessels fv ON fv.fiskeridir_vessel_id = fw.fiskeridir_vessel_id
-            INNER JOIN ais_vessels a ON fw.mmsi = a.mmsi
-        WHERE
-            t.trip_id = $1
-            AND (
-                a.ship_type IS NOT NULL
-                AND NOT (a.ship_type = ANY ($2::INT[]))
-                OR COALESCE(fv.length, a.ship_length) > $3
-            )
-            AND (
-                CASE
-                    WHEN $4 = 0 THEN TRUE
-                    WHEN $4 = 1 THEN COALESCE(fv.length, a.ship_length) >= $5
-                END
-            )
+    AND (
+        trip_id IN (
+            SELECT
+                t.trip_id
+            FROM
+                trips t
+                INNER JOIN fiskeridir_ais_vessel_mapping_whitelist fw ON t.fiskeridir_vessel_id = fw.fiskeridir_vessel_id
+                INNER JOIN fiskeridir_vessels fv ON fv.fiskeridir_vessel_id = fw.fiskeridir_vessel_id
+                INNER JOIN ais_vessels a ON fw.mmsi = a.mmsi
+            WHERE
+                t.trip_id = $1
+                AND (
+                    a.ship_type IS NOT NULL
+                    AND NOT (a.ship_type = ANY ($2::INT[]))
+                    OR COALESCE(fv.length, a.ship_length) > $3
+                )
+                AND (
+                    CASE
+                        WHEN $4 = 0 THEN TRUE
+                        WHEN $4 = 1 THEN COALESCE(fv.length, a.ship_length) >= $5
+                    END
+                )
+        )
+        OR position_type_id = $6
     )
-    OR position_type_id = $6
 ORDER BY
     "timestamp" ASC
             "#,
