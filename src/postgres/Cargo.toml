@@ -24,7 +24,7 @@ sqlx = { workspace = true }
 tracing = "0.1.40"
 async-trait = "0.1.74"
 serde_json = "1.0.108"
-serde = { version = "1.0.192", features = ["derive"] }
+serde = { version = "1.0.193", features = ["derive"] }
 futures = "0.3.29"
 rand = "0.8.5"
 strum = "0.25.0"
@@ -33,7 +33,7 @@ enum_index_derive = "0.2.0"
 geozero = { version = "0.11.0", features = ["with-postgis-sqlx"] }
 geo-types = "0.7.12"
 wkt = { version = "0.10.3", features = ["serde"] }
-uuid = { version = "1.6.0", features = ["serde"] }
+uuid = { version = "1.6.1", features = ["serde"] }
 
 [dev-dependencies]
 rand = "0.8.5"
