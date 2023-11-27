@@ -10,9 +10,9 @@ kyogre-core = { path = "../kyogre-core", features = ["utoipa"] }
 fiskeridir-rs = { workspace = true }
 duckdb = { version = "0.8", features = ["r2d2", "bundled"] }
 r2d2 = { version = "0.8" }
-config = { version = "0.13.3", features = ["yaml"] }
+config = { version = "0.13.4", features = ["yaml"] }
 tracing = "0.1.40"
-serde = { version = "1.0.192", features = ["derive"] }
+serde = { version = "1.0.193", features = ["derive"] }
 serde_json = "1.0.108"
 chrono = { version = "0.4.31", features = ["serde"] }
 error-stack = { workspace = true }
