@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nDELETE FROM trip_positions_pruned\nWHERE\n    trip_id = $1\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "4a9d1399a0dc4bba2e50b53e9c201f0428b9bd5ce1d331e26a821125de959020"
+}

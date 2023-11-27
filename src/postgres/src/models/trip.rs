@@ -10,7 +10,7 @@ use fiskeridir_rs::{
 use kyogre_core::{
     DateRange, FiskeridirVesselId, HaulId, PositionType, PrecisionId, PrecisionOutcome,
     PrecisionStatus, ProcessingStatus, TripAssemblerId, TripDistancerId, TripId,
-    TripProcessingUnit, VesselEventType,
+    TripPositionLayerId, TripProcessingUnit, VesselEventType,
 };
 use serde::Deserialize;
 use sqlx::postgres::types::PgRange;
@@ -76,10 +76,22 @@ pub struct TripAisVmsPosition {
     pub position_type_id: PositionType,
 }
 
-impl TryFrom<TripProcessingUnit> for NewTrip {
+#[derive(Debug, Clone, UnnestInsert)]
+#[unnest_insert(table_name = "trip_positions_pruned")]
+pub struct TripPrunedAisVmsPosition {
+    pub trip_id: i64,
+    #[unnest_insert(sql_type = "JSONB")]
+    pub positions: serde_json::Value,
+    #[unnest_insert(sql_type = "JSONB")]
+    pub value: serde_json::Value,
+    #[unnest_insert(sql_type = "INT", type_conversion = "enum_to_i32")]
+    pub trip_position_layer_id: TripPositionLayerId,
+}
+
+impl TryFrom<&TripProcessingUnit> for NewTrip {
     type Error = Report<PostgresError>;
 
-    fn try_from(value: TripProcessingUnit) -> Result<Self, Self::Error> {
+    fn try_from(value: &TripProcessingUnit) -> Result<Self, Self::Error> {
         let (
             start_precision_id,
             start_precision_direction,
@@ -87,7 +99,7 @@ impl TryFrom<TripProcessingUnit> for NewTrip {
             end_precision_direction,
             period_precision,
             trip_precision_status_id,
-        ) = match value.precision_outcome {
+        ) = match &value.precision_outcome {
             Some(v) => match v {
                 PrecisionOutcome::Success {
                     new_period,
@@ -98,7 +110,7 @@ impl TryFrom<TripProcessingUnit> for NewTrip {
                     start_precision.as_ref().map(|v| v.direction),
                     end_precision.as_ref().map(|v| v.id),
                     end_precision.as_ref().map(|v| v.direction),
-                    Some(PgRange::from(&new_period)),
+                    Some(PgRange::from(new_period)),
                     PrecisionStatus::Successful.name(),
                 ),
                 PrecisionOutcome::Failed => (
@@ -154,8 +166,8 @@ impl TryFrom<TripProcessingUnit> for NewTrip {
             trip_precision_status_id: trip_precision_status_id.to_string(),
             distance,
             distancer_id,
-            start_port_id: value.start_port.map(|p| p.id),
-            end_port_id: value.end_port.map(|p| p.id),
+            start_port_id: value.start_port.clone().map(|p| p.id),
+            end_port_id: value.end_port.clone().map(|p| p.id),
             position_layers_status,
         })
     }

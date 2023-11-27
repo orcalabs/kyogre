@@ -646,16 +646,19 @@ fn run_trip_position_layers(
     shared: &SharedState,
     mut unit: TripProcessingUnit,
 ) -> Result<TripProcessingUnit, TripLayerError> {
-    let mut positions = unit.positions;
+    let mut trip_positions = unit.positions;
+    let mut pruned_positions = Vec::new();
 
     for l in &shared.trip_position_layers {
-        let pruned_positions = l.prune_positions(positions)?;
-        positions = pruned_positions;
+        let (positions, pruned) = l.prune_positions(trip_positions)?;
+        trip_positions = positions;
+        pruned_positions.extend(pruned);
     }
 
-    unit.positions = positions.clone();
+    unit.positions = trip_positions.clone();
     unit.trip_position_output = Some(TripPositionLayerOutput {
-        trip_positions: positions,
+        trip_positions,
+        pruned_positions,
     });
 
     Ok(unit)

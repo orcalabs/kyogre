@@ -2,8 +2,9 @@ use error_stack::ResultExt;
 use fiskeridir_rs::CallSign;
 use futures::{Stream, TryStreamExt};
 use kyogre_core::{
-    AisPermission, DateRange, Mmsi, PositionType, TripId, LEISURE_VESSEL_LENGTH_AIS_BOUNDARY,
-    LEISURE_VESSEL_SHIP_TYPES, PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY,
+    AisPermission, DateRange, Mmsi, PositionType, TripId, TripPositionLayerId,
+    LEISURE_VESSEL_LENGTH_AIS_BOUNDARY, LEISURE_VESSEL_SHIP_TYPES,
+    PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY,
 };
 
 use crate::{error::PostgresError, models::AisVmsPosition, PostgresAdapter};
@@ -24,7 +25,8 @@ SELECT
     rate_of_turn,
     true_heading,
     distance_to_shore AS "distance_to_shore!",
-    position_type_id AS "position_type_id!: PositionType"
+    position_type_id AS "position_type_id!: PositionType",
+    NULL AS "pruned_by: TripPositionLayerId"
 FROM
     (
         SELECT
@@ -85,7 +87,8 @@ SELECT
     rate_of_turn,
     true_heading,
     distance_to_shore AS "distance_to_shore!",
-    position_type_id AS "position_type_id!: PositionType"
+    position_type_id AS "position_type_id!: PositionType",
+    NULL AS "pruned_by: TripPositionLayerId"
 FROM
     (
         SELECT
@@ -180,7 +183,8 @@ SELECT
     rate_of_turn::DECIMAL,
     true_heading,
     distance_to_shore::DECIMAL AS "distance_to_shore!",
-    position_type_id AS "position_type_id: PositionType"
+    position_type_id AS "position_type_id: PositionType",
+    pruned_by AS "pruned_by: TripPositionLayerId"
 FROM
     trip_positions
 WHERE

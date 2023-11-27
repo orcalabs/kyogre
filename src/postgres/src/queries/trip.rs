@@ -2,7 +2,7 @@ use crate::{
     error::PostgresError,
     models::{
         CurrentTrip, NewTripReturning, Trip, TripAisVmsPosition, TripAssemblerConflict,
-        TripCalculationTimer, TripDetailed,
+        TripCalculationTimer, TripDetailed, TripPrunedAisVmsPosition,
     },
     PostgresAdapter,
 };
@@ -29,15 +29,16 @@ use super::opt_float_to_decimal;
 impl PostgresAdapter {
     pub(crate) async fn add_trip_position<'a>(
         &self,
-        trip_id: i64,
+        trip_id: TripId,
         output: TripPositionLayerOutput,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
     ) -> Result<(), PostgresError> {
         let mut trip_positions = Vec::with_capacity(output.trip_positions.len());
+        let mut pruned_positions = Vec::with_capacity(output.pruned_positions.len());
 
         for p in output.trip_positions {
             trip_positions.push(TripAisVmsPosition {
-                trip_id,
+                trip_id: trip_id.0,
                 latitude: p.latitude,
                 longitude: p.longitude,
                 timestamp: p.timestamp,
@@ -50,6 +51,14 @@ impl PostgresAdapter {
                 position_type_id: p.position_type,
             });
         }
+        for p in output.pruned_positions {
+            pruned_positions.push(TripPrunedAisVmsPosition {
+                trip_id: trip_id.0,
+                positions: p.positions,
+                value: p.value,
+                trip_position_layer_id: p.trip_layer,
+            });
+        }
 
         // We assume that the caller of this method is updating an existing trip
         // and we therefore have to remove any existing trip_positions if they exist
@@ -59,13 +68,29 @@ DELETE FROM trip_positions
 WHERE
     trip_id = $1
             "#,
-            trip_id,
+            trip_id.0,
+        )
+        .execute(&mut **tx)
+        .await
+        .change_context(PostgresError::Query)?;
+
+        sqlx::query!(
+            r#"
+DELETE FROM trip_positions_pruned
+WHERE
+    trip_id = $1
+            "#,
+            trip_id.0,
         )
         .execute(&mut **tx)
         .await
         .change_context(PostgresError::Query)?;
 
         TripAisVmsPosition::unnest_insert(trip_positions, &mut **tx)
+            .await
+            .change_context(PostgresError::Query)?;
+
+        TripPrunedAisVmsPosition::unnest_insert(pruned_positions, &mut **tx)
             .await
             .change_context(PostgresError::Query)?;
 
@@ -78,7 +103,7 @@ WHERE
     trip_id = $2
             "#,
             ProcessingStatus::Successful as i32,
-            trip_id,
+            trip_id.0,
         )
         .execute(&mut **tx)
         .await
@@ -88,16 +113,19 @@ WHERE
     }
     pub(crate) async fn add_trip_positions<'a>(
         &self,
-        outputs: Vec<(i64, TripPositionLayerOutput)>,
+        outputs: Vec<(TripId, TripPositionLayerOutput)>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
     ) -> Result<(), PostgresError> {
         let mut trip_positions = Vec::with_capacity(outputs.len());
+        let mut pruned_positions = Vec::with_capacity(outputs.len());
 
         for (trip_id, output) in outputs {
             let mut positions = Vec::with_capacity(output.trip_positions.len());
+            let mut pruned = Vec::with_capacity(output.pruned_positions.len());
+
             for p in output.trip_positions {
                 positions.push(TripAisVmsPosition {
-                    trip_id,
+                    trip_id: trip_id.0,
                     latitude: p.latitude,
                     longitude: p.longitude,
                     timestamp: p.timestamp,
@@ -110,11 +138,24 @@ WHERE
                     position_type_id: p.position_type,
                 });
             }
+            for p in output.pruned_positions {
+                pruned.push(TripPrunedAisVmsPosition {
+                    trip_id: trip_id.0,
+                    positions: p.positions,
+                    value: p.value,
+                    trip_position_layer_id: p.trip_layer,
+                });
+            }
 
             trip_positions.append(&mut positions);
+            pruned_positions.append(&mut pruned);
         }
 
         TripAisVmsPosition::unnest_insert(trip_positions, &mut **tx)
+            .await
+            .change_context(PostgresError::Query)?;
+
+        TripPrunedAisVmsPosition::unnest_insert(pruned_positions, &mut **tx)
             .await
             .change_context(PostgresError::Query)?;
 
@@ -170,7 +211,7 @@ WHERE
         let mut tx = self.begin().await?;
 
         if let Some(output) = update.position_layers {
-            self.add_trip_position(update.trip_id.0, output, &mut tx)
+            self.add_trip_position(update.trip_id, output, &mut tx)
                 .await?;
         }
 
@@ -1215,14 +1256,13 @@ WHERE
         let mut new_trips = Vec::with_capacity(value.values.len());
         let mut trip_positions = Vec::new();
 
-        let mut trip_positions_insert_mapping: HashMap<i64, i64> = HashMap::new();
+        let mut trip_positions_insert_mapping: HashMap<i64, TripId> = HashMap::new();
 
         for v in value.values {
-            if let Some(positions) = &v.trip_position_output {
-                // FIXME: dont clone
-                trip_positions.push((positions.clone(), v.trip.period.start().timestamp()));
+            new_trips.push(crate::models::NewTrip::try_from(&v)?);
+            if let Some(output) = v.trip_position_output {
+                trip_positions.push((output, v.trip.period.start().timestamp()));
             }
-            new_trips.push(crate::models::NewTrip::try_from(v)?);
         }
 
         let earliest_trip_start = earliest_trip_period.start();
@@ -1341,7 +1381,7 @@ RETURNING
         for t in &inserted_trips {
             let range =
                 DateRange::try_from(&t.period).change_context(PostgresError::DataConversion)?;
-            trip_positions_insert_mapping.insert(range.start().timestamp(), t.trip_id);
+            trip_positions_insert_mapping.insert(range.start().timestamp(), TripId(t.trip_id));
         }
 
         // We use the start of the trips period to map the inserted trips trip_ids to the trip positions,
