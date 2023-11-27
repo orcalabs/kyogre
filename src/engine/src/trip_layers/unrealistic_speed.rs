@@ -1,6 +1,9 @@
 use error_stack::{report, Result};
 use geoutils::Location;
-use kyogre_core::{AisVmsPosition, TripLayerError, TripPositionLayer, TripPositionLayerId};
+use kyogre_core::{
+    AisVmsPosition, PrunedTripPosition, TripLayerError, TripPositionLayer, TripPositionLayerId,
+};
+use serde_json::json;
 
 static METER_TO_NAUTICAL_MILES: f64 = 0.0005399568;
 
@@ -18,28 +21,44 @@ impl TripPositionLayer for UnrealisticSpeed {
     fn prune_positions(
         &self,
         positions: Vec<AisVmsPosition>,
-    ) -> Result<Vec<AisVmsPosition>, TripLayerError> {
+    ) -> Result<(Vec<AisVmsPosition>, Vec<PrunedTripPosition>), TripLayerError> {
         let num_positions = positions.len();
         if num_positions <= 1 {
-            return Ok(positions);
+            return Ok((positions, vec![]));
         }
 
         let mut new_positions = Vec::with_capacity(num_positions);
+        let mut pruned = Vec::new();
 
         let mut iter = positions.into_iter();
 
         new_positions.push(iter.next().unwrap());
 
-        for next in iter {
-            let current = new_positions.last().unwrap();
+        let mut next_pruned_by = false;
+
+        for mut next in iter {
+            let current = new_positions.last_mut().unwrap();
 
             let speed = estimated_speed_between_points(current, &next)?;
             if speed < self.knots_limit {
+                if next_pruned_by {
+                    next.pruned_by = Some(TripPositionLayerId::UnrealisticSpeed);
+                    next_pruned_by = false;
+                }
                 new_positions.push(next);
+            } else {
+                pruned.push(PrunedTripPosition {
+                    positions: json!([current, next]),
+                    value: json!({ "speed": speed }),
+                    trip_layer: TripPositionLayerId::UnrealisticSpeed,
+                });
+
+                current.pruned_by = Some(TripPositionLayerId::UnrealisticSpeed);
+                next_pruned_by = true;
             }
         }
 
-        Ok(new_positions)
+        Ok((new_positions, pruned))
     }
 
     fn layer_id(&self) -> TripPositionLayerId {
@@ -85,6 +104,7 @@ mod tests {
             true_heading: None,
             distance_to_shore: 21.1,
             position_type: PositionType::Vms,
+            pruned_by: None,
         };
 
         let second = AisVmsPosition {
@@ -98,6 +118,7 @@ mod tests {
             true_heading: None,
             distance_to_shore: 21.1,
             position_type: PositionType::Vms,
+            pruned_by: None,
         };
 
         let res = estimated_speed_between_points(&first, &second).unwrap();

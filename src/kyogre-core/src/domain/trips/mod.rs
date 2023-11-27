@@ -433,7 +433,7 @@ impl std::fmt::Display for TripDistancerId {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct TripDistanceOutput {
     pub distance: Option<f64>,
     pub distancer_id: TripDistancerId,

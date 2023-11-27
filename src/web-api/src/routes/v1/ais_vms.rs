@@ -8,7 +8,10 @@ use actix_web::{web, HttpResponse};
 use async_stream::try_stream;
 use chrono::{DateTime, Duration, Utc};
 use fiskeridir_rs::CallSign;
-use kyogre_core::{AisPermission, AisPosition, AisVmsParams, DateRange, Mmsi, TripId, VmsPosition};
+use kyogre_core::{
+    AisPermission, AisPosition, AisVmsParams, DateRange, Mmsi, TripId, TripPositionLayerId,
+    VmsPosition,
+};
 use serde::{Deserialize, Serialize};
 use tracing::{event, Level};
 use utoipa::{IntoParams, ToSchema};
@@ -107,16 +110,24 @@ pub struct AisVmsPosition {
     pub lat: f64,
     pub lon: f64,
     pub timestamp: DateTime<Utc>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub cog: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub speed: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pruned_by: Option<TripPositionLayerId>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub det: Option<AisVmsPositionDetails>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct AisVmsPositionDetails {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub navigational_status: Option<NavigationStatus>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub rate_of_turn: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub true_heading: Option<i32>,
     pub distance_to_shore: f64,
     pub missing_data: bool,
@@ -130,6 +141,7 @@ impl From<kyogre_core::AisVmsPosition> for AisVmsPosition {
             timestamp: v.timestamp,
             cog: v.course_over_ground,
             speed: v.speed,
+            pruned_by: v.pruned_by,
             det: Some(AisVmsPositionDetails {
                 navigational_status: v.navigational_status.map(NavigationStatus::from),
                 rate_of_turn: v.rate_of_turn,

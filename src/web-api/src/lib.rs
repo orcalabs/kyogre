@@ -6,7 +6,8 @@ use fiskeridir_rs::{RegisterVesselEntityType, RegisterVesselOwner};
 use kyogre_core::{
     ActiveHaulsFilter, ActiveLandingFilter, Catch, Delivery, FishingFacilitiesSorting,
     FishingFacilityToolType, HaulsSorting, LandingsSorting, MatrixCacheOutbound,
-    MeilisearchOutbound, Ordering, TripSorting, WebApiInboundPort, WebApiOutboundPort,
+    MeilisearchOutbound, Ordering, TripPositionLayerId, TripSorting, WebApiInboundPort,
+    WebApiOutboundPort,
 };
 use meilisearch::MeilisearchAdapter;
 use postgres::PostgresAdapter;
@@ -82,6 +83,7 @@ impl Meilisearch for MeilisearchAdapter<PostgresAdapter> {}
             LandingsSorting,
             TripSorting,
             TripAssemblerId,
+            TripPositionLayerId,
             error::ErrorResponse,
             error::ApiError,
             v1::ais::AisPosition,

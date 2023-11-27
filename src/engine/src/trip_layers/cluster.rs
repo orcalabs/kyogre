@@ -1,6 +1,9 @@
 use error_stack::{report, Result};
 use geoutils::Location;
-use kyogre_core::{AisVmsPosition, TripLayerError, TripPositionLayer, TripPositionLayerId};
+use kyogre_core::{
+    AisVmsPosition, PrunedTripPosition, TripLayerError, TripPositionLayer, TripPositionLayerId,
+};
+use serde_json::json;
 
 pub struct Cluster {
     pub chunk_size: usize,
@@ -23,16 +26,19 @@ impl TripPositionLayer for Cluster {
 
     fn prune_positions(
         &self,
-        positions: Vec<AisVmsPosition>,
-    ) -> Result<Vec<AisVmsPosition>, TripLayerError> {
+        mut positions: Vec<AisVmsPosition>,
+    ) -> Result<(Vec<AisVmsPosition>, Vec<PrunedTripPosition>), TripLayerError> {
         let num_positions = positions.len();
         if num_positions <= 1 {
-            return Ok(positions);
+            return Ok((positions, vec![]));
         }
 
         let mut new_positions = Vec::with_capacity(num_positions);
+        let mut pruned = Vec::new();
 
-        for chunk in positions.chunks(self.chunk_size) {
+        let mut next_pruned_by = false;
+
+        for chunk in positions.chunks_mut(self.chunk_size) {
             if chunk.len() <= 1 {
                 new_positions.extend_from_slice(chunk);
                 break;
@@ -40,11 +46,26 @@ impl TripPositionLayer for Cluster {
 
             let distance = avg_distance_from_center(chunk)?;
             if distance > self.distance_limit {
+                if next_pruned_by {
+                    chunk[0].pruned_by = Some(TripPositionLayerId::Cluster);
+                    next_pruned_by = false;
+                }
                 new_positions.extend_from_slice(chunk);
+            } else {
+                pruned.push(PrunedTripPosition {
+                    positions: json!(chunk),
+                    value: json!({ "distance": distance }),
+                    trip_layer: TripPositionLayerId::Cluster,
+                });
+
+                if let Some(prev) = new_positions.last_mut() {
+                    prev.pruned_by = Some(TripPositionLayerId::Cluster);
+                }
+                next_pruned_by = true;
             }
         }
 
-        Ok(new_positions)
+        Ok((new_positions, pruned))
     }
 }
 
