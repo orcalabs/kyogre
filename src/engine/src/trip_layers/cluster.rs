@@ -4,6 +4,7 @@ use kyogre_core::{
     AisVmsPosition, PrunedTripPosition, TripLayerError, TripPositionLayer, TripPositionLayerId,
 };
 use serde_json::json;
+use tracing::{event, Level};
 
 pub struct Cluster {
     pub chunk_size: usize,
@@ -44,7 +45,18 @@ impl TripPositionLayer for Cluster {
                 break;
             }
 
-            let distance = avg_distance_from_center(chunk)?;
+            let distance = match avg_distance_from_center(chunk) {
+                Ok(distance) => distance,
+                Err(e) => {
+                    event!(
+                        Level::WARN,
+                        "failed to compute avg distance from center, err: {e:?}"
+                    );
+                    // Since the computation failed, just return a value that will add this chunk
+                    self.distance_limit + 1.
+                }
+            };
+
             if distance > self.distance_limit {
                 if next_pruned_by {
                     chunk[0].pruned_by = Some(TripPositionLayerId::Cluster);
