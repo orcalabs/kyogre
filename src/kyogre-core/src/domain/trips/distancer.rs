@@ -1,12 +1,10 @@
 use crate::*;
-use async_trait::async_trait;
 use error_stack::Result;
 
-#[async_trait]
 pub trait TripDistancer: Send + Sync {
     fn trip_distancer_id(&self) -> TripDistancerId;
 
-    async fn calculate_trip_distance(
+    fn calculate_trip_distance(
         &self,
         trip: &TripProcessingUnit,
     ) -> Result<TripDistanceOutput, TripDistancerError>;

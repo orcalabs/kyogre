@@ -232,6 +232,7 @@ impl Display for HaulDistributorError {
 pub enum TripPipelineError {
     NewTripProcessing,
     ExistingTripProcessing,
+    TripComputationStep,
     DataPreparation,
 }
 
@@ -243,6 +244,9 @@ impl Display for TripPipelineError {
             }
             TripPipelineError::ExistingTripProcessing => {
                 f.write_str("an error occured while processing existing trips")
+            }
+            TripPipelineError::TripComputationStep => {
+                f.write_str("an error occured during a trip computation step")
             }
             TripPipelineError::DataPreparation => {
                 f.write_str("an error occured while preparing data for processing")
