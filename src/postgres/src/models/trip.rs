@@ -74,6 +74,8 @@ pub struct TripAisVmsPosition {
     pub distance_to_shore: f64,
     #[unnest_insert(sql_type = "INT", type_conversion = "enum_to_i32")]
     pub position_type_id: PositionType,
+    #[unnest_insert(sql_type = "INT", type_conversion = "opt_enum_to_i32")]
+    pub pruned_by: Option<TripPositionLayerId>,
 }
 
 #[derive(Debug, Clone, UnnestInsert)]
