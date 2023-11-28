@@ -1,11 +1,21 @@
-use std::collections::{HashMap, HashSet};
+use std::{cmp::min, collections::HashMap};
 
 use crate::*;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use error_stack::{Result, ResultExt};
 use machine::Schedule;
+use once_cell::sync::Lazy;
 use tracing::{event, Level};
+
+static TRIP_COMPUTATION_STEPS: Lazy<Vec<Box<dyn TripComputationStep>>> = Lazy::new(|| {
+    vec![
+        Box::<TripPrecisionStep>::default(),
+        Box::<UnrealisticSpeed>::default(),
+        Box::<Cluster>::default(),
+        Box::<AisVms>::default(),
+    ]
+});
 
 pub struct TripsState;
 
@@ -79,6 +89,149 @@ impl machine::State for TripsState {
     }
     fn schedule(&self) -> Schedule {
         Schedule::Disabled
+    }
+}
+
+#[async_trait]
+trait TripComputationStep: Send + Sync {
+    async fn run(
+        &self,
+        shared: &SharedState,
+        vessel: &Vessel,
+        unit: TripProcessingUnit,
+    ) -> Result<TripProcessingUnit, TripPipelineError>;
+    async fn fetch_missing(
+        &self,
+        shared: &SharedState,
+        vessel: &Vessel,
+    ) -> Result<Vec<Trip>, TripPipelineError>;
+}
+
+#[async_trait]
+impl TripComputationStep for AisVms {
+    async fn run(
+        &self,
+        _shared: &SharedState,
+        _vessel: &Vessel,
+        mut unit: TripProcessingUnit,
+    ) -> Result<TripProcessingUnit, TripPipelineError> {
+        unit.distance_output = Some(
+            self.calculate_trip_distance(&unit)
+                .change_context(TripPipelineError::TripComputationStep)?,
+        );
+        Ok(unit)
+    }
+    async fn fetch_missing(
+        &self,
+        shared: &SharedState,
+        vessel: &Vessel,
+    ) -> Result<Vec<Trip>, TripPipelineError> {
+        shared
+            .trip_pipeline_outbound
+            .trips_without_distance(vessel.fiskeridir.id)
+            .await
+            .change_context(TripPipelineError::TripComputationStep)
+    }
+}
+
+macro_rules! impl_trip_computation_step_for_trip_position_layer {
+    ($type: ty) => {
+        #[async_trait]
+        impl TripComputationStep for $type {
+            async fn run(
+                &self,
+                shared: &SharedState,
+                _vessel: &Vessel,
+                mut unit: TripProcessingUnit,
+            ) -> Result<TripProcessingUnit, TripPipelineError> {
+                let mut trip_positions = unit.positions;
+                let mut pruned_positions = Vec::new();
+
+                for l in &shared.trip_position_layers {
+                    let (positions, pruned) = l
+                        .prune_positions(trip_positions)
+                        .change_context(TripPipelineError::TripComputationStep)?;
+                    trip_positions = positions;
+                    pruned_positions.extend(pruned);
+                }
+
+                unit.positions = trip_positions.clone();
+                unit.trip_position_output = Some(TripPositionLayerOutput {
+                    trip_positions,
+                    pruned_positions,
+                });
+
+                Ok(unit)
+            }
+            async fn fetch_missing(
+                &self,
+                shared: &SharedState,
+                vessel: &Vessel,
+            ) -> Result<Vec<Trip>, TripPipelineError> {
+                shared
+                    .trip_pipeline_outbound
+                    .trips_without_position_layers(vessel.fiskeridir.id)
+                    .await
+                    .change_context(TripPipelineError::TripComputationStep)
+            }
+        }
+    };
+}
+impl_trip_computation_step_for_trip_position_layer!(UnrealisticSpeed);
+impl_trip_computation_step_for_trip_position_layer!(Cluster);
+
+#[derive(Default)]
+struct TripPrecisionStep {
+    landing: LandingTripAssembler,
+    ers: ErsTripAssembler,
+}
+
+#[async_trait]
+impl TripComputationStep for TripPrecisionStep {
+    async fn run(
+        &self,
+        shared: &SharedState,
+        vessel: &Vessel,
+        mut unit: TripProcessingUnit,
+    ) -> Result<TripProcessingUnit, TripPipelineError> {
+        if vessel.mmsi().is_none() && vessel.fiskeridir.call_sign.is_none() {
+            return Ok(unit);
+        }
+
+        let adapter = shared.trips_precision_outbound_port.as_ref();
+        let precision = match vessel.preferred_trip_assembler {
+            TripAssemblerId::Landings => self.landing.calculate_precision(vessel, adapter, &unit),
+            TripAssemblerId::Ers => self.ers.calculate_precision(vessel, adapter, &unit),
+        }
+        .await
+        .change_context(TripPipelineError::TripComputationStep)?;
+
+        unit.precision_outcome = Some(precision);
+
+        if let Some(period_precison) = unit.precision_period() {
+            unit.positions = shared
+                .trips_precision_outbound_port
+                .ais_vms_positions(
+                    vessel.mmsi(),
+                    vessel.fiskeridir.call_sign.as_ref(),
+                    &period_precison,
+                )
+                .await
+                .change_context(TripPipelineError::TripComputationStep)?;
+        }
+
+        Ok(unit)
+    }
+    async fn fetch_missing(
+        &self,
+        shared: &SharedState,
+        vessel: &Vessel,
+    ) -> Result<Vec<Trip>, TripPipelineError> {
+        shared
+            .trip_pipeline_outbound
+            .trips_without_precision(vessel.fiskeridir.id)
+            .await
+            .change_context(TripPipelineError::TripComputationStep)
     }
 }
 
@@ -201,7 +354,6 @@ async fn process_vessel(
             values: vec![],
         };
         for t in trips.trips {
-            let trip_period = t.period.clone();
             let mut unit = TripProcessingUnit {
                 precision_outcome: None,
                 distance_output: None,
@@ -225,7 +377,7 @@ async fn process_vessel(
                     .ais_vms_positions(
                         vessel.mmsi(),
                         vessel.fiskeridir.call_sign.as_ref(),
-                        &trip_period,
+                        &t.period,
                     )
                     .await
                     .change_context(TripPipelineError::NewTripProcessing)?,
@@ -235,40 +387,8 @@ async fn process_vessel(
                 trip: t,
             };
 
-            if vessel.mmsi().is_some() || vessel.fiskeridir.call_sign.is_some() {
-                unit.precision_outcome = Some(
-                    assembler_impl
-                        .calculate_precision(
-                            vessel,
-                            shared.trips_precision_outbound_port.as_ref(),
-                            &unit,
-                        )
-                        .await
-                        .change_context(TripPipelineError::NewTripProcessing)?,
-                );
-
-                if let Some(period_precison) = unit.precision_period() {
-                    unit.positions = shared
-                        .trips_precision_outbound_port
-                        .ais_vms_positions(
-                            vessel.mmsi(),
-                            vessel.fiskeridir.call_sign.as_ref(),
-                            &period_precison,
-                        )
-                        .await
-                        .change_context(TripPipelineError::NewTripProcessing)?;
-                }
-
-                unit = run_trip_position_layers(shared, unit)
-                    .change_context(TripPipelineError::NewTripProcessing)?;
-
-                unit.distance_output = Some(
-                    shared
-                        .trip_distancer
-                        .calculate_trip_distance(&unit)
-                        .await
-                        .change_context(TripPipelineError::NewTripProcessing)?,
-                );
+            for step in TRIP_COMPUTATION_STEPS.iter() {
+                unit = step.run(shared, vessel, unit).await?;
             }
 
             output.values.push(unit);
@@ -452,214 +572,80 @@ async fn process_unprocessed_trips(
     ports: &HashMap<String, Port>,
     dock_points: &HashMap<String, Vec<PortDockPoint>>,
 ) -> Result<(), TripPipelineError> {
-    let assembler_impl = shared_state.assembler_id_to_impl(vessel.preferred_trip_assembler);
+    let mut trips = HashMap::new();
 
-    let without_precision = shared_state
-        .trip_pipeline_outbound
-        .trips_without_precision(vessel.fiskeridir.id)
-        .await
-        .change_context(TripPipelineError::ExistingTripProcessing)?;
+    for (i, step) in TRIP_COMPUTATION_STEPS.iter().enumerate() {
+        for trip in step.fetch_missing(shared_state, vessel).await? {
+            trips
+                .entry(trip.trip_id)
+                .and_modify(|(_, idx)| *idx = min(*idx, i))
+                .or_insert((trip, i));
+        }
+    }
 
-    let without_distance = shared_state
-        .trip_pipeline_outbound
-        .trips_without_distance(vessel.fiskeridir.id)
-        .await
-        .change_context(TripPipelineError::ExistingTripProcessing)?;
+    for (t, idx) in trips.into_values() {
+        let mut unit = TripProcessingUnit {
+            precision_outcome: None,
+            distance_output: None,
+            start_port: t
+                .start_port_code
+                .as_ref()
+                .and_then(|v| ports.get(v).cloned()),
+            end_port: t.end_port_code.as_ref().and_then(|v| ports.get(v).cloned()),
+            start_dock_points: t
+                .start_port_code
+                .as_ref()
+                .and_then(|v| dock_points.get(v).cloned())
+                .unwrap_or_default(),
+            end_dock_points: t
+                .end_port_code
+                .as_ref()
+                .and_then(|v| dock_points.get(v).cloned())
+                .unwrap_or_default(),
+            positions: shared_state
+                .trips_precision_outbound_port
+                .ais_vms_positions(
+                    vessel.mmsi(),
+                    vessel.fiskeridir.call_sign.as_ref(),
+                    &t.period,
+                )
+                .await
+                .change_context(TripPipelineError::ExistingTripProcessing)?,
+            vessel_id: vessel.fiskeridir.id,
+            trip_assembler_id: vessel.preferred_trip_assembler,
+            trip: NewTrip {
+                period: t.period.clone(),
+                landing_coverage: t.landing_coverage,
+                start_port_code: t.start_port_code,
+                end_port_code: t.end_port_code,
+            },
+            trip_position_output: None,
+        };
 
-    let without_trip_layers = shared_state
-        .trip_pipeline_outbound
-        .trips_without_position_layers(vessel.fiskeridir.id)
-        .await
-        .change_context(TripPipelineError::ExistingTripProcessing)?;
+        for step in &TRIP_COMPUTATION_STEPS[idx..] {
+            unit = step.run(shared_state, vessel, unit).await?;
+        }
 
-    let trips = without_precision
-        .iter()
-        .cloned()
-        .map(|v| (v.trip_id, v))
-        .chain(without_distance.iter().cloned().map(|v| (v.trip_id, v)))
-        .chain(without_trip_layers.iter().cloned().map(|v| (v.trip_id, v)))
-        .collect::<HashMap<TripId, Trip>>()
-        .into_values()
-        .collect::<Vec<Trip>>();
+        let trip_update = TripUpdate {
+            trip_id: t.trip_id,
+            precision: unit.precision_outcome,
+            distance: unit.distance_output,
+            position_layers: unit.trip_position_output,
+        };
 
-    let without_precision: HashSet<TripId> =
-        without_precision.into_iter().map(|v| v.trip_id).collect();
-
-    let mut without_distance: HashSet<TripId> =
-        without_distance.into_iter().map(|v| v.trip_id).collect();
-
-    let mut without_trip_layers: HashSet<TripId> =
-        without_trip_layers.into_iter().map(|v| v.trip_id).collect();
-
-    for t in trips {
-        let mut do_update = false;
-        if vessel.mmsi().is_some() || vessel.fiskeridir.call_sign.is_some() {
-            let mut trip_update = TripUpdate {
-                trip_id: t.trip_id,
-                precision: None,
-                distance: None,
-                position_layers: None,
-            };
-            let mut unit = TripProcessingUnit {
-                precision_outcome: None,
-                distance_output: None,
-                start_port: t
-                    .start_port_code
-                    .as_ref()
-                    .and_then(|v| ports.get(v).cloned()),
-                end_port: t.end_port_code.as_ref().and_then(|v| ports.get(v).cloned()),
-                start_dock_points: t
-                    .start_port_code
-                    .as_ref()
-                    .and_then(|v| dock_points.get(v).cloned())
-                    .unwrap_or_default(),
-                end_dock_points: t
-                    .end_port_code
-                    .as_ref()
-                    .and_then(|v| dock_points.get(v).cloned())
-                    .unwrap_or_default(),
-                positions: shared_state
-                    .trips_precision_outbound_port
-                    .ais_vms_positions(
-                        vessel.mmsi(),
-                        vessel.fiskeridir.call_sign.as_ref(),
-                        &t.period,
-                    )
-                    .await
-                    .change_context(TripPipelineError::ExistingTripProcessing)?,
-                vessel_id: vessel.fiskeridir.id,
-                trip_assembler_id: vessel.preferred_trip_assembler,
-                trip: NewTrip {
-                    period: t.period.clone(),
-                    landing_coverage: t.landing_coverage,
-                    start_port_code: t.start_port_code,
-                    end_port_code: t.end_port_code,
-                },
-                trip_position_output: None,
-            };
-
-            if let Some(period_precison) = t.precision_period {
-                unit.positions = shared_state
-                    .trips_precision_outbound_port
-                    .ais_vms_positions(
-                        vessel.mmsi(),
-                        vessel.fiskeridir.call_sign.as_ref(),
-                        &period_precison,
-                    )
-                    .await
-                    .change_context(TripPipelineError::ExistingTripProcessing)?;
-            }
-
-            if without_precision.contains(&t.trip_id) {
-                do_update = true;
-                trip_update.precision = Some(
-                    assembler_impl
-                        .calculate_precision(
-                            vessel,
-                            shared_state.trips_precision_outbound_port.as_ref(),
-                            &unit,
-                        )
-                        .await
-                        .change_context(TripPipelineError::ExistingTripProcessing)?,
-                );
-
-                if let Some(period_precison) = trip_update.precision_period() {
-                    unit.positions = shared_state
-                        .trips_precision_outbound_port
-                        .ais_vms_positions(
-                            vessel.mmsi(),
-                            vessel.fiskeridir.call_sign.as_ref(),
-                            &period_precison,
-                        )
-                        .await
-                        .change_context(TripPipelineError::ExistingTripProcessing)?;
-                }
-
-                if without_trip_layers.remove(&t.trip_id) {
-                    do_update = true;
-                    unit = run_trip_position_layers(shared_state, unit)
-                        .change_context(TripPipelineError::ExistingTripProcessing)?;
-                }
-
-                if without_distance.remove(&t.trip_id) {
-                    do_update = true;
-                    trip_update.distance = Some(
-                        shared_state
-                            .trip_distancer
-                            .calculate_trip_distance(&unit)
-                            .await
-                            .change_context(TripPipelineError::ExistingTripProcessing)?,
-                    );
-                }
-            }
-
-            if without_trip_layers.contains(&t.trip_id) {
-                do_update = true;
-                unit = run_trip_position_layers(shared_state, unit)
-                    .change_context(TripPipelineError::ExistingTripProcessing)?;
-
-                if without_distance.remove(&t.trip_id) {
-                    do_update = true;
-                    trip_update.distance = Some(
-                        shared_state
-                            .trip_distancer
-                            .calculate_trip_distance(&unit)
-                            .await
-                            .change_context(TripPipelineError::ExistingTripProcessing)?,
-                    );
-                }
-            }
-
-            if without_distance.contains(&t.trip_id) {
-                do_update = true;
-                trip_update.distance = Some(
-                    shared_state
-                        .trip_distancer
-                        .calculate_trip_distance(&unit)
-                        .await
-                        .change_context(TripPipelineError::ExistingTripProcessing)?,
-                );
-            }
-
-            if do_update {
-                trip_update.position_layers = unit.trip_position_output;
-                if let Err(e) = shared_state
-                    .trip_pipeline_inbound
-                    .update_trip(trip_update)
-                    .await
-                {
-                    event!(
-                        Level::ERROR,
-                        "failed to update trip_id: {}, err: {:?}",
-                        t.trip_id.0,
-                        e
-                    );
-                }
-            }
+        if let Err(e) = shared_state
+            .trip_pipeline_inbound
+            .update_trip(trip_update)
+            .await
+        {
+            event!(
+                Level::ERROR,
+                "failed to update trip_id: {}, err: {:?}",
+                t.trip_id.0,
+                e
+            );
         }
     }
 
     Ok(())
-}
-
-fn run_trip_position_layers(
-    shared: &SharedState,
-    mut unit: TripProcessingUnit,
-) -> Result<TripProcessingUnit, TripLayerError> {
-    let mut trip_positions = unit.positions;
-    let mut pruned_positions = Vec::new();
-
-    for l in &shared.trip_position_layers {
-        let (positions, pruned) = l.prune_positions(trip_positions)?;
-        trip_positions = positions;
-        pruned_positions.extend(pruned);
-    }
-
-    unit.positions = trip_positions.clone();
-    unit.trip_position_output = Some(TripPositionLayerOutput {
-        trip_positions,
-        pruned_positions,
-    });
-
-    Ok(unit)
 }

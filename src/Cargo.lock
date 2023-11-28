@@ -1599,6 +1599,7 @@ dependencies = [
  "machine",
  "meilisearch",
  "num-traits",
+ "once_cell",
  "orca-core 0.22.1",
  "postgres",
  "pyo3",
