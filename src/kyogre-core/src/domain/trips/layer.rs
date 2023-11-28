@@ -14,6 +14,7 @@ pub trait TripPositionLayer: Send + Sync {
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 #[derive(Debug, Copy, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
+#[repr(i32)]
 pub enum TripPositionLayerId {
     UnrealisticSpeed = 1,
     Cluster = 2,

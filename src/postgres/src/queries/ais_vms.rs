@@ -224,7 +224,7 @@ ORDER BY
             PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY as i32,
             PositionType::Vms as i32
         )
-        .fetch(&self.ais_pool)
+        .fetch(&self.pool)
         .map_err(|e| report!(e).change_context(PostgresError::Query))
     }
 }
