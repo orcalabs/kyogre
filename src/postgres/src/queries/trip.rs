@@ -49,6 +49,7 @@ impl PostgresAdapter {
                 true_heading: p.true_heading,
                 distance_to_shore: p.distance_to_shore,
                 position_type_id: p.position_type,
+                pruned_by: p.pruned_by,
             });
         }
         for p in output.pruned_positions {
@@ -136,6 +137,7 @@ WHERE
                     true_heading: p.true_heading,
                     distance_to_shore: p.distance_to_shore,
                     position_type_id: p.position_type,
+                    pruned_by: p.pruned_by,
                 });
             }
             for p in output.pruned_positions {
