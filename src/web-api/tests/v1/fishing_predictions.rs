@@ -16,7 +16,7 @@ async fn test_fishing_spot_predictions_filters_by_model_id() {
                 default_fishing_spot_predictor(),
                 default_fishing_spot_weather_predictor(),
             ])
-            .data_start(Utc::now().with_ordinal(7).unwrap())
+            .data_start(Utc::now().with_ordinal(1).unwrap())
             .weather(5)
             .vessels(1)
             .hauls(5)
@@ -33,7 +33,7 @@ async fn test_fishing_spot_predictions_filters_by_model_id() {
             .await;
         assert_eq!(response.status(), StatusCode::OK);
         let predictions: Vec<FishingSpotPrediction> = response.json().await.unwrap();
-        assert_eq!(predictions.len() as u32, FISHING_SPOT_PREDICTOR_NUM_WEEKS);
+        assert_eq!(predictions.len() as u32, FISHING_SPOT_PREDICTOR_NUM_DAYS);
 
         let response = helper
             .app
@@ -70,7 +70,9 @@ async fn test_fishing_spot_predictions_filters_by_week_and_species_group() {
             .get_fishing_spot_predictions(
                 ModelId::Spot,
                 SpeciesGroup::Sei,
-                FishingSpotPredictionParams { week: Some(1) },
+                FishingSpotPredictionParams {
+                    date: Utc::now().date_naive().with_ordinal(1),
+                },
             )
             .await;
         assert_eq!(response.status(), StatusCode::OK);
@@ -101,7 +103,7 @@ async fn test_fishing_weight_predictions_filters_by_week_and_species_group() {
                 ModelId::Weight,
                 SpeciesGroup::Sei,
                 FishingWeightPredictionParams {
-                    week: Some(1),
+                    date: Utc::now().date_naive().with_ordinal(1),
                     limit: None,
                 },
             )
@@ -122,7 +124,7 @@ async fn test_fishing_weight_predictions_filters_by_model() {
                 default_fishing_weight_predictor(),
                 default_fishing_weight_weather_predictor(),
             ])
-            .data_start(Utc::now().with_ordinal(7).unwrap())
+            .data_start(Utc::now().with_ordinal(1).unwrap())
             .weather(5)
             .vessels(1)
             .hauls(5)
@@ -141,7 +143,7 @@ async fn test_fishing_weight_predictions_filters_by_model() {
         let predictions: Vec<FishingWeightPrediction> = response.json().await.unwrap();
         assert_eq!(
             predictions.len() as u32,
-            FISHING_WEIGHT_PREDICTOR_NUM_WEEKS * FISHING_WEIGHT_PREDICTOR_NUM_CL
+            FISHING_WEIGHT_PREDICTOR_NUM_DAYS * FISHING_WEIGHT_PREDICTOR_NUM_CL
         );
 
         let response = helper
@@ -150,7 +152,7 @@ async fn test_fishing_weight_predictions_filters_by_model() {
             .await;
         assert_eq!(response.status(), StatusCode::OK);
         let predictions: Vec<FishingWeightPrediction> = response.json().await.unwrap();
-        assert_eq!(predictions.len() as u32, FISHING_WEIGHT_PREDICTOR_NUM_WEEKS);
+        assert_eq!(predictions.len() as u32, FISHING_WEIGHT_PREDICTOR_NUM_DAYS);
     })
     .await;
 }
@@ -175,7 +177,7 @@ async fn test_fishing_weight_predictions_filters_by_limit_and_orders_by_weight_d
                 ModelId::Weight,
                 SpeciesGroup::Sei,
                 FishingWeightPredictionParams {
-                    week: Some(1),
+                    date: Utc::now().date_naive().with_ordinal(1),
                     limit: Some(2),
                 },
             )

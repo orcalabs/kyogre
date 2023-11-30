@@ -3109,6 +3109,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "ml-trainer"
+version = "0.1.0"
+dependencies = [
+ "engine",
+ "kyogre-core",
+ "orca-core 0.22.1",
+ "postgres",
+ "tokio",
+]
+
+[[package]]
 name = "multimap"
 version = "0.8.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"

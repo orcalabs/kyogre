@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT\n    catch_location_id,\n    week,\n    species_group_id AS \"species_group_id: SpeciesGroup\",\n    weight,\n    \"year\"\nFROM\n    fishing_weight_predictions\nWHERE\n    ml_model_id = $1\n            ",
+  "query": "\nSELECT\n    catch_location_id,\n    species_group_id AS \"species_group_id: SpeciesGroup\",\n    weight,\n    \"date\"\nFROM\n    fishing_weight_predictions\nWHERE\n    DATE_PART('year', \"date\") = $1\n    AND ml_model_id = $2\n            ",
   "describe": {
     "columns": [
       {
@@ -10,27 +10,23 @@
       },
       {
         "ordinal": 1,
-        "name": "week",
-        "type_info": "Int4"
-      },
-      {
-        "ordinal": 2,
         "name": "species_group_id: SpeciesGroup",
         "type_info": "Int4"
       },
       {
-        "ordinal": 3,
+        "ordinal": 2,
         "name": "weight",
         "type_info": "Float8"
       },
       {
-        "ordinal": 4,
-        "name": "year",
-        "type_info": "Int4"
+        "ordinal": 3,
+        "name": "date",
+        "type_info": "Date"
       }
     ],
     "parameters": {
       "Left": [
+        "Float8",
         "Int4"
       ]
     },
@@ -38,9 +34,8 @@
       false,
       false,
       false,
-      false,
       false
     ]
   },
-  "hash": "4f2344697c266fcc0da5f2971de3de7e8e2c9217c3c79a4d17c28c2dde85d033"
+  "hash": "b32f3b805b17f0b6a30b45682214a619fd12be3213fb74ff0d37182fe2674e77"
 }

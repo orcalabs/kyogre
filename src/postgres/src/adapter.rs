@@ -4,7 +4,7 @@ use crate::{
     error::PostgresError, ers_dep_set::ErsDepSet, ers_por_set::ErsPorSet, ers_tra_set::ErsTraSet,
 };
 use async_trait::async_trait;
-use chrono::{DateTime, Duration, Utc};
+use chrono::{DateTime, Duration, NaiveDate, Utc};
 use error_stack::{Report, Result, ResultExt};
 use fiskeridir_rs::{CallSign, DeliveryPointId, LandingId, SpeciesGroup};
 use futures::{Stream, StreamExt, TryStreamExt};
@@ -385,10 +385,10 @@ impl WebApiOutboundPort for PostgresAdapter {
         &self,
         model_id: ModelId,
         species: SpeciesGroup,
-        week: u32,
+        date: NaiveDate,
         limit: u32,
     ) -> PinBoxStream<'_, FishingWeightPrediction, QueryError> {
-        convert_stream(self.fishing_weight_predictions_impl(model_id, species, week, limit)).boxed()
+        convert_stream(self.fishing_weight_predictions_impl(model_id, species, date, limit)).boxed()
     }
     fn all_fishing_weight_predictions(
         &self,
@@ -409,9 +409,9 @@ impl WebApiOutboundPort for PostgresAdapter {
         &self,
         model_id: ModelId,
         species: SpeciesGroup,
-        week: u32,
+        date: NaiveDate,
     ) -> Result<Option<FishingSpotPrediction>, QueryError> {
-        self.fishing_spot_prediction_impl(model_id, species, week)
+        self.fishing_spot_prediction_impl(model_id, species, date)
             .await
             .change_context(QueryError)
     }
@@ -1058,12 +1058,11 @@ impl MLModelsOutbound for PostgresAdapter {
     }
     async fn catch_location_weather(
         &self,
-        year: u32,
-        week: u32,
+        date: NaiveDate,
         catch_location_id: &CatchLocationId,
     ) -> Result<Option<CatchLocationWeather>, QueryError> {
         Ok(self
-            .catch_location_weather_impl(year, week, catch_location_id)
+            .catch_location_weather_impl(date, catch_location_id)
             .await
             .change_context(QueryError)?
             .map(CatchLocationWeather::from))
@@ -1113,27 +1112,19 @@ impl MLModelsOutbound for PostgresAdapter {
 impl MLModelsInbound for PostgresAdapter {
     async fn catch_location_weather(
         &self,
-        year: u32,
-        week: u32,
+        date: NaiveDate,
         catch_location_id: &CatchLocationId,
     ) -> Result<Option<CatchLocationWeather>, QueryError> {
         Ok(self
-            .catch_location_weather_impl(year, week, catch_location_id)
+            .catch_location_weather_impl(date, catch_location_id)
             .await
             .change_context(QueryError)?
             .map(CatchLocationWeather::from))
     }
-    async fn species_caught_with_traal(
-        &self,
-        limit: HaulPredictionLimit,
-    ) -> Result<Vec<SpeciesGroupWeek>, QueryError> {
-        Ok(self
-            .species_caught_with_traal_impl(limit)
+    async fn species_caught_with_traal(&self) -> Result<Vec<SpeciesGroup>, QueryError> {
+        self.species_caught_with_traal_impl()
             .await
-            .change_context(QueryError)?
-            .into_iter()
-            .map(SpeciesGroupWeek::from)
-            .collect())
+            .change_context(QueryError)
     }
     async fn existing_fishing_weight_predictions(
         &self,

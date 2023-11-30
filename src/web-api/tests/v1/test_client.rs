@@ -172,8 +172,8 @@ impl ApiClient {
         params: FishingSpotPredictionParams,
     ) -> Response {
         let mut parameters = Vec::new();
-        if let Some(week) = params.week {
-            parameters.push(("week".to_string(), week.to_string()))
+        if let Some(date) = params.date {
+            parameters.push(("date".to_string(), date.to_string()))
         }
         self.get(
             format!("fishing_spot_predictions/{}/{}", model_id, species as i32),
@@ -190,8 +190,8 @@ impl ApiClient {
         params: FishingWeightPredictionParams,
     ) -> Response {
         let mut parameters = Vec::new();
-        if let Some(week) = params.week {
-            parameters.push(("week".to_string(), week.to_string()))
+        if let Some(date) = params.date {
+            parameters.push(("date".to_string(), date.to_string()))
         }
         if let Some(limit) = params.limit {
             parameters.push(("limit".to_string(), limit.to_string()))

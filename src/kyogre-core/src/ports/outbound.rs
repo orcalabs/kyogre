@@ -2,7 +2,7 @@ use std::pin::Pin;
 
 use crate::*;
 use async_trait::async_trait;
-use chrono::{DateTime, Duration, Utc};
+use chrono::{DateTime, Duration, NaiveDate, Utc};
 use error_stack::Result;
 use fiskeridir_rs::{CallSign, DeliveryPointId, LandingId, SpeciesGroup};
 use futures::Stream;
@@ -90,13 +90,13 @@ pub trait WebApiOutboundPort {
         &self,
         model_id: ModelId,
         species: SpeciesGroup,
-        week_of_year: u32,
+        date: NaiveDate,
     ) -> Result<Option<FishingSpotPrediction>, QueryError>;
     fn fishing_weight_predictions(
         &self,
         model_id: ModelId,
         species: SpeciesGroup,
-        week: u32,
+        date: NaiveDate,
         limit: u32,
     ) -> PinBoxStream<'_, FishingWeightPrediction, QueryError>;
     fn all_fishing_spot_predictions(
@@ -288,8 +288,7 @@ pub trait MLModelsOutbound: Send + Sync {
     async fn model(&self, model_id: ModelId) -> Result<Vec<u8>, QueryError>;
     async fn catch_location_weather(
         &self,
-        year: u32,
-        week: u32,
+        date: NaiveDate,
         catch_location_id: &CatchLocationId,
     ) -> Result<Option<CatchLocationWeather>, QueryError>;
     async fn catch_locations(

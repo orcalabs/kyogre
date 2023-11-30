@@ -1,12 +1,12 @@
 use crate::PredictionRange;
-use chrono::{Datelike, Utc};
+use chrono::{Datelike, NaiveDate, Utc};
 use error_stack::{Result, ResultExt};
 use fiskeridir_rs::SpeciesGroup;
 use kyogre_core::CatchLocationId;
 use kyogre_core::{
-    distance_to_shore, CatchLocationWeather, FishingSpotTrainingData, HaulId, HaulPredictionLimit,
-    MLModelError, MLModelsInbound, MLModelsOutbound, ModelId, NewFishingSpotPrediction,
-    TrainingHaul, WeatherData, WeatherLocationOverlap,
+    distance_to_shore, CatchLocationWeather, FishingSpotTrainingData, HaulId, MLModelError,
+    MLModelsInbound, MLModelsOutbound, ModelId, NewFishingSpotPrediction, TrainingHaul,
+    WeatherData, WeatherLocationOverlap,
 };
 use pyo3::{
     types::{PyByteArray, PyModule},
@@ -31,22 +31,14 @@ pub struct SpotPredictorSettings {
     pub use_gpu: bool,
     pub training_rounds: u32,
     pub predict_batch_size: u32,
-    pub hauls_limit_per_species: HaulPredictionLimit,
     pub range: PredictionRange,
     pub catch_locations: Vec<CatchLocationId>,
 }
 
-#[derive(Hash, Eq, PartialEq, Debug, Clone)]
-struct CLWeatherKey {
-    pub week: u32,
-    pub year: u32,
-}
-
-#[derive(Debug)]
+#[derive(Debug, Hash, Eq, PartialEq)]
 struct PredictionInputKey {
     pub species_group_id: SpeciesGroup,
-    pub week: u32,
-    pub year: u32,
+    pub date: NaiveDate,
 }
 
 async fn spot_train_impl<T, S>(
@@ -61,7 +53,7 @@ where
     S: Serialize,
     T: Fn(
         Vec<FishingSpotTrainingData>,
-        &Option<HashMap<CLWeatherKey, Vec<CatchLocationWeather>>>,
+        &Option<HashMap<NaiveDate, Vec<CatchLocationWeather>>>,
         usize,
     ) -> Vec<S>,
 {
@@ -90,8 +82,13 @@ where
             return Ok(model);
         }
 
+        let overlap = match weather {
+            WeatherData::Require => WeatherLocationOverlap::OnlyOverlaps,
+            WeatherData::Optional => WeatherLocationOverlap::All,
+        };
+
         let mut catch_locations = adapter
-            .catch_locations(WeatherLocationOverlap::OnlyOverlaps)
+            .catch_locations(overlap)
             .await
             .change_context(MLModelError::DataPreparation)?;
 
@@ -99,43 +96,32 @@ where
             catch_locations.retain(|v| settings.catch_locations.contains(&v.id));
         };
 
-        let weather: Result<
-            Option<HashMap<CLWeatherKey, Vec<CatchLocationWeather>>>,
-            MLModelError,
-        > = match weather {
-            WeatherData::Optional => Ok(None),
-            WeatherData::Require => {
-                let mut weather: HashMap<CLWeatherKey, Vec<CatchLocationWeather>> = HashMap::new();
-                let weather_keys = data
-                    .iter()
-                    .map(|v| CLWeatherKey {
-                        week: v.week as u32,
-                        year: v.year as u32,
-                    })
-                    .collect::<HashSet<CLWeatherKey>>();
+        let weather: Result<Option<HashMap<NaiveDate, Vec<CatchLocationWeather>>>, MLModelError> =
+            match weather {
+                WeatherData::Optional => Ok(None),
+                WeatherData::Require => {
+                    let mut weather: HashMap<NaiveDate, Vec<CatchLocationWeather>> = HashMap::new();
+                    let weather_keys = data.iter().map(|v| v.date).collect::<HashSet<NaiveDate>>();
 
-                for v in &weather_keys {
-                    for c in &catch_locations {
-                        let cl_weather = adapter
-                            .catch_location_weather(v.year, v.week, &c.id)
-                            .await
-                            .change_context(MLModelError::DataPreparation)?;
+                    for v in &weather_keys {
+                        for c in &catch_locations {
+                            let cl_weather = adapter
+                                .catch_location_weather(*v, &c.id)
+                                .await
+                                .change_context(MLModelError::DataPreparation)?;
 
-                        if let Some(w) = cl_weather {
-                            weather
-                                .entry(CLWeatherKey {
-                                    week: v.week,
-                                    year: v.year,
-                                })
-                                .and_modify(|v| v.push(w.clone()))
-                                .or_insert(vec![w]);
+                            if let Some(w) = cl_weather {
+                                weather
+                                    .entry(*v)
+                                    .and_modify(|v| v.push(w.clone()))
+                                    .or_insert(vec![w]);
+                            }
                         }
                     }
-                }
 
-                Ok(Some(weather))
-            }
-        };
+                    Ok(Some(weather))
+                }
+            };
 
         let training_data = training_data_convert(data, &(weather?), catch_locations.len());
         if training_data.is_empty() {
@@ -194,7 +180,7 @@ where
     S: Serialize,
     T: Fn(
         &[PredictionInputKey],
-        &Option<HashMap<CLWeatherKey, Vec<CatchLocationWeather>>>,
+        &Option<HashMap<NaiveDate, Vec<CatchLocationWeather>>>,
         usize,
     ) -> Vec<S>,
 {
@@ -202,26 +188,26 @@ where
         return Ok(());
     }
 
-    let targets = settings.range.prediction_targets();
+    let targets = settings.range.prediction_dates();
 
     let now = Utc::now();
-    let iso_week = now.iso_week();
-    let current_week = iso_week.week();
-    let current_year = iso_week.year() as u32;
+    let current_date = now.date_naive();
+    let current_year = now.year() as u32;
 
     for chunk in targets.chunks(settings.predict_batch_size as usize) {
         let mut predictions = HashSet::new();
 
         let species = adapter
-            .species_caught_with_traal(settings.hauls_limit_per_species)
+            .species_caught_with_traal()
             .await
             .change_context(MLModelError::DataPreparation)?;
 
         for c in chunk {
             for s in &species {
-                if s.weeks.contains(&c.week) {
-                    predictions.insert((c.year, c.week, s.species));
-                }
+                predictions.insert(PredictionInputKey {
+                    species_group_id: *s,
+                    date: *c,
+                });
             }
         }
 
@@ -231,62 +217,51 @@ where
             .change_context(MLModelError::DataPreparation)?;
 
         for v in existing_predictions {
-            if !(v.year as u32 == current_year && v.week as u32 == current_week) {
-                predictions.remove(&(v.year as u32, v.week as u32, v.species_group_id));
+            if v.date < current_date {
+                predictions.remove(&PredictionInputKey {
+                    species_group_id: v.species_group_id,
+                    date: v.date,
+                });
             }
         }
 
-        let data: Vec<PredictionInputKey> = predictions
-            .into_iter()
-            .map(|v| PredictionInputKey {
-                year: v.0,
-                week: v.1,
-                species_group_id: v.2,
-            })
-            .collect();
+        let data: Vec<PredictionInputKey> = predictions.into_iter().collect();
 
-        let weather_keys = data
-            .iter()
-            .map(|v| CLWeatherKey {
-                week: v.week,
-                year: v.year,
-            })
-            .collect::<HashSet<CLWeatherKey>>();
+        let weather_keys = data.iter().map(|v| v.date).collect::<HashSet<NaiveDate>>();
+
+        let overlap = match weather {
+            WeatherData::Require => WeatherLocationOverlap::OnlyOverlaps,
+            WeatherData::Optional => WeatherLocationOverlap::All,
+        };
 
         let catch_locations = adapter
-            .catch_locations(WeatherLocationOverlap::OnlyOverlaps)
+            .catch_locations(overlap)
             .await
             .change_context(MLModelError::DataPreparation)?;
 
-        let weather: Result<
-            Option<HashMap<CLWeatherKey, Vec<CatchLocationWeather>>>,
-            MLModelError,
-        > = match weather {
-            WeatherData::Optional => Ok(None),
-            WeatherData::Require => {
-                let mut weather_map: HashMap<CLWeatherKey, Vec<CatchLocationWeather>> =
-                    HashMap::new();
-                for v in &weather_keys {
-                    for c in &catch_locations {
-                        let cl_weather = adapter
-                            .catch_location_weather(v.year, v.week, &c.id)
-                            .await
-                            .change_context(MLModelError::DataPreparation)?;
-
-                        if let Some(w) = cl_weather {
-                            weather_map
-                                .entry(CLWeatherKey {
-                                    week: v.week,
-                                    year: v.year,
-                                })
-                                .and_modify(|v| v.push(w.clone()))
-                                .or_insert(vec![w]);
+        let weather: Result<Option<HashMap<NaiveDate, Vec<CatchLocationWeather>>>, MLModelError> =
+            match weather {
+                WeatherData::Optional => Ok(None),
+                WeatherData::Require => {
+                    let mut weather_map: HashMap<NaiveDate, Vec<CatchLocationWeather>> =
+                        HashMap::new();
+                    for v in &weather_keys {
+                        for c in &catch_locations {
+                            let cl_weather = adapter
+                                .catch_location_weather(*v, &c.id)
+                                .await
+                                .change_context(MLModelError::DataPreparation)?;
+                            if let Some(w) = cl_weather {
+                                weather_map
+                                    .entry(*v)
+                                    .and_modify(|v| v.push(w.clone()))
+                                    .or_insert(vec![w]);
+                            }
                         }
                     }
+                    Ok(Some(weather_map))
                 }
-                Ok(Some(weather_map))
-            }
-        };
+            };
 
         let prediction_data = prediction_keys_convert(&data, &(weather?), catch_locations.len());
 
@@ -314,8 +289,7 @@ where
             latitude: v[1],
             longitude: v[0],
             species: data[i].species_group_id,
-            week: data[i].week,
-            year: data[i].year,
+            date: data[i].date,
             model: model_id,
         })
         .collect::<Vec<NewFishingSpotPrediction>>();
@@ -327,5 +301,6 @@ where
             .await
             .change_context(MLModelError::StoreOutput)?;
     }
+
     Ok(())
 }

@@ -1,0 +1,18 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO\n    fishing_spot_predictions (\n    latitude,longitude,species_group_id,date,ml_model_id\n   )\nSELECT\n    *\nFROM\n    UNNEST(\n        $1::DOUBLE PRECISION[],$2::DOUBLE PRECISION[],$3::INT[],$4::DATE[],$5::INT[]\n    )\n        ON CONFLICT (ml_model_id, species_group_id, date) DO UPDATE SET latitude = EXCLUDED.latitude,longitude = EXCLUDED.longitude",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Float8Array",
+        "Float8Array",
+        "Int4Array",
+        "DateArray",
+        "Int4Array"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "23b0d4ff613c019cced0706a2e085473137f66d9b5fa2f3c34345a63bdbb1320"
+}

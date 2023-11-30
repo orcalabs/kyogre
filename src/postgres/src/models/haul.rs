@@ -1,5 +1,5 @@
 use bigdecimal::BigDecimal;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, NaiveDate, Utc};
 use error_stack::{Report, ResultExt};
 use fiskeridir_rs::{
     Gear, GearGroup, SpeciesGroup, SpeciesMainGroup, VesselLengthGroup, WhaleGender,
@@ -17,10 +17,8 @@ pub struct FishingSpotTrainingData {
     pub latitude: BigDecimal,
     pub longitude: BigDecimal,
     pub species: SpeciesGroup,
-    pub week: i32,
-    pub weight: f64,
     pub catch_location: String,
-    pub year: i32,
+    pub date: NaiveDate,
 }
 
 #[derive(Deserialize)]
@@ -228,11 +226,9 @@ impl TryFrom<FishingSpotTrainingData> for kyogre_core::FishingSpotTrainingData {
             longitude: decimal_to_float(v.longitude)
                 .change_context(PostgresError::DataConversion)?,
             species: v.species,
-            week: v.week,
-            weight: v.weight,
             catch_location_id: CatchLocationId::try_from(v.catch_location)
                 .change_context(PostgresError::DataConversion)?,
-            year: v.year,
+            date: v.date,
         })
     }
 }

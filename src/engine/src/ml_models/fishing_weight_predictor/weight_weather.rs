@@ -1,41 +1,29 @@
 use async_trait::async_trait;
-use error_stack::{Result, ResultExt};
+use chrono::Datelike;
+use error_stack::Result;
 use fiskeridir_rs::SpeciesGroup;
 use kyogre_core::{MLModel, MLModelError, MLModelsInbound, MLModelsOutbound, ModelId, WeatherData};
 
 use serde::Serialize;
 use tracing::instrument;
 
-use crate::WeightPredictorSettings;
+use crate::{ml_models::CatchLocationWeatherKey, WeightPredictorSettings};
 
-use super::{weight_predict_impl, weight_train_impl, CatchLocationWeatherKey};
+use super::{weight_predict_impl, weight_train_impl};
 
 pub struct FishingWeightWeatherPredictor {
     settings: WeightPredictorSettings,
 }
 
 #[derive(Debug, Serialize)]
-struct PythonTrainingData {
-    pub latitude: f64,
-    pub longitude: f64,
-    pub species_group_id: i32,
-    pub week: u32,
-    pub weight: f64,
-    pub wind_speed_10m: f64,
-    pub wind_direction_10m: f64,
-    pub air_temperature_2m: f64,
-    pub relative_humidity_2m: f64,
-    pub air_pressure_at_sea_level: f64,
-    pub precipitation_amount: f64,
-    pub cloud_area_fraction: f64,
-}
-
-#[derive(Debug, Serialize)]
-struct PythonPredictionInput {
+struct ModelData {
     pub latitude: f64,
     pub longitude: f64,
     pub species_group_id: SpeciesGroup,
-    pub week: u32,
+    pub year: u32,
+    pub day: u32,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub weight: Option<f64>,
     pub wind_speed_10m: f64,
     pub wind_direction_10m: f64,
     pub air_temperature_2m: f64,
@@ -64,7 +52,7 @@ impl MLModel for FishingWeightWeatherPredictor {
             adapter,
             WeatherData::Require,
             |data| {
-                let data: Vec<PythonTrainingData> = data
+                let data: Vec<ModelData> = data
                     .into_iter()
                     .filter_map(|v| {
                         match (
@@ -84,12 +72,13 @@ impl MLModel for FishingWeightWeatherPredictor {
                                 Some(air_pressure_at_sea_level),
                                 Some(precipitation_amount),
                                 Some(cloud_area_fraction),
-                            ) => Some(PythonTrainingData {
+                            ) => Some(ModelData {
                                 latitude: v.latitude,
                                 longitude: v.longitude,
-                                species_group_id: v.species.into(),
-                                week: v.week as u32,
-                                weight: v.weight,
+                                species_group_id: v.species,
+                                weight: Some(v.weight),
+                                day: v.date.ordinal(),
+                                year: v.date.year_ce().1,
                                 wind_speed_10m,
                                 wind_direction_10m,
                                 air_temperature_2m,
@@ -102,7 +91,7 @@ impl MLModel for FishingWeightWeatherPredictor {
                         }
                     })
                     .collect();
-                serde_json::to_string(&data).change_context(MLModelError::DataPreparation)
+                data
             },
         )
         .await
@@ -123,18 +112,16 @@ impl MLModel for FishingWeightWeatherPredictor {
             |data, weather| {
                 // This is safe as we require weather data for this model
                 let weather = weather.as_ref().unwrap();
-                let data: Vec<PythonPredictionInput> = data
+                let data: Vec<ModelData> = data
                     .iter()
                     .filter_map(|value| {
                         let key = CatchLocationWeatherKey {
-                            week: value.week,
-                            year: value.year,
+                            date: value.date,
                             catch_location_id: value.catch_location_id.clone(),
                         };
-                        weather.get(&key).map(|weather| PythonPredictionInput {
+                        weather.get(&key).map(|weather| ModelData {
                             latitude: value.latitude,
                             longitude: value.longitude,
-                            week: value.week,
                             species_group_id: value.species_group_id,
                             wind_speed_10m: weather.wind_speed_10m,
                             wind_direction_10m: weather.wind_speed_10m,
@@ -143,6 +130,9 @@ impl MLModel for FishingWeightWeatherPredictor {
                             air_pressure_at_sea_level: weather.air_pressure_at_sea_level,
                             precipitation_amount: weather.precipitation_amount,
                             cloud_area_fraction: weather.cloud_area_fraction,
+                            day: value.date.ordinal(),
+                            year: value.date.year_ce().1,
+                            weight: None,
                         })
                     })
                     .collect();

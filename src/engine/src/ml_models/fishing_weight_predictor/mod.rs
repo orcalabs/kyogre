@@ -1,12 +1,11 @@
-use chrono::{Datelike, Utc};
+use chrono::{Datelike, NaiveDate, Utc};
 use derivative::Derivative;
 use error_stack::{Result, ResultExt};
 use fiskeridir_rs::SpeciesGroup;
 use kyogre_core::{
-    distance_to_shore, CatchLocation, CatchLocationId, CatchLocationWeather, HaulId,
-    HaulPredictionLimit, MLModelError, MLModelsInbound, MLModelsOutbound, ModelId,
-    NewFishingWeightPrediction, PredictionRange, TrainingHaul, WeatherData, WeatherLocationOverlap,
-    WeightPredictorTrainingData,
+    distance_to_shore, CatchLocation, CatchLocationId, CatchLocationWeather, HaulId, MLModelError,
+    MLModelsInbound, MLModelsOutbound, ModelId, NewFishingWeightPrediction, PredictionRange,
+    TrainingHaul, WeatherData, WeatherLocationOverlap, WeightPredictorTrainingData,
 };
 use pyo3::{
     types::{PyByteArray, PyModule},
@@ -35,15 +34,13 @@ pub struct WeightPredictorSettings {
     pub predict_batch_size: u32,
     pub range: PredictionRange,
     pub catch_locations: Vec<CatchLocationId>,
-    pub hauls_limit_per_species: HaulPredictionLimit,
 }
 
 #[derive(Debug, Derivative)]
 #[derivative(Hash, Eq, PartialEq)]
 struct PredictionInputKey {
     pub species_group_id: SpeciesGroup,
-    pub week: u32,
-    pub year: u32,
+    pub date: NaiveDate,
     pub catch_location_id: CatchLocationId,
     #[derivative(Hash = "ignore", PartialEq = "ignore")]
     pub latitude: f64,
@@ -51,16 +48,17 @@ struct PredictionInputKey {
     pub longitude: f64,
 }
 
-async fn weight_train_impl<T>(
+async fn weight_train_impl<T, S>(
     model_id: ModelId,
     settings: &WeightPredictorSettings,
     mut model: Vec<u8>,
     adapter: &dyn MLModelsOutbound,
     weather: WeatherData,
-    training_data_to_json: T,
+    training_data_convert: T,
 ) -> Result<Vec<u8>, MLModelError>
 where
-    T: Fn(Vec<WeightPredictorTrainingData>) -> Result<String, MLModelError>,
+    S: Serialize,
+    T: Fn(Vec<WeightPredictorTrainingData>) -> Vec<S>,
 {
     loop {
         let mut hauls = HashSet::new();
@@ -86,10 +84,18 @@ where
         if training_data.is_empty() {
             return Ok(model);
         }
-        let training_data = training_data_to_json(training_data)?;
+
+        let training_data = training_data_convert(training_data);
         if training_data.is_empty() {
+            adapter
+                .commit_hauls_training(model_id, hauls.into_iter().collect())
+                .await
+                .change_context(MLModelError::StoreOutput)?;
             continue;
         }
+
+        let training_data =
+            serde_json::to_string(&training_data).change_context(MLModelError::DataPreparation)?;
 
         let new_model = Python::with_gil(|py| {
             let py_module =
@@ -125,7 +131,7 @@ where
             .await
             .change_context(MLModelError::StoreOutput)?;
 
-        model = new_model;
+        model = new_model
     }
 }
 
@@ -148,18 +154,22 @@ where
         return Ok(());
     }
 
-    let targets = settings.range.prediction_targets();
+    let targets = settings.range.prediction_dates();
 
     let now = Utc::now();
-    let iso_week = now.iso_week();
-    let current_week = iso_week.week();
-    let current_year = iso_week.year() as u32;
+    let current_date = now.date_naive();
+    let current_year = now.year() as u32;
 
     for chunk in targets.chunks(settings.predict_batch_size as usize) {
         let mut predictions = HashSet::new();
 
+        let overlap = match weather {
+            WeatherData::Require => WeatherLocationOverlap::OnlyOverlaps,
+            WeatherData::Optional => WeatherLocationOverlap::All,
+        };
+
         let all_catch_locations: HashMap<String, CatchLocation> = adapter
-            .catch_locations(WeatherLocationOverlap::All)
+            .catch_locations(overlap)
             .await
             .change_context(MLModelError::DataPreparation)?
             .into_iter()
@@ -178,23 +188,20 @@ where
         };
 
         let species = adapter
-            .species_caught_with_traal(settings.hauls_limit_per_species)
+            .species_caught_with_traal()
             .await
             .change_context(MLModelError::DataPreparation)?;
 
         for t in chunk {
             for c in &active_catch_locations {
                 for s in &species {
-                    if s.weeks.contains(&t.week) {
-                        predictions.insert(PredictionInputKey {
-                            species_group_id: s.species,
-                            week: t.week,
-                            year: t.year,
-                            catch_location_id: c.id.clone(),
-                            latitude: c.latitude,
-                            longitude: c.longitude,
-                        });
-                    }
+                    predictions.insert(PredictionInputKey {
+                        species_group_id: *s,
+                        catch_location_id: c.id.clone(),
+                        latitude: c.latitude,
+                        longitude: c.longitude,
+                        date: *t,
+                    });
                 }
             }
         }
@@ -205,14 +212,13 @@ where
             .change_context(MLModelError::StoreOutput)?;
 
         for v in existing_predictions {
-            if !(v.year == current_year && v.week >= current_week) {
+            if v.date < current_date {
                 let cl = all_catch_locations
                     .get(v.catch_location_id.as_ref())
                     .unwrap();
                 predictions.remove(&PredictionInputKey {
                     species_group_id: v.species_group_id,
-                    week: v.week,
-                    year: v.year,
+                    date: v.date,
                     catch_location_id: v.catch_location_id,
                     latitude: cl.latitude,
                     longitude: cl.longitude,
@@ -229,17 +235,17 @@ where
                 let mut weather: HashMap<CatchLocationWeatherKey, CatchLocationWeather> =
                     HashMap::new();
                 let mut weather_queries: HashSet<CatchLocationWeatherKey> = HashSet::new();
+
                 for p in &predictions {
                     weather_queries.insert(CatchLocationWeatherKey {
-                        week: p.week,
-                        year: p.year,
                         catch_location_id: p.catch_location_id.clone(),
+                        date: p.date,
                     });
                 }
 
                 for v in weather_queries {
                     let cl_weather = adapter
-                        .catch_location_weather(v.year, v.week, &v.catch_location_id)
+                        .catch_location_weather(v.date, &v.catch_location_id)
                         .await
                         .change_context(MLModelError::DataPreparation)?;
                     if let Some(cl_weather) = cl_weather {
@@ -263,9 +269,7 @@ where
         let predictions = Python::with_gil(|py| {
             let py_module = PyModule::from_code(py, PYTHON_FISHING_WEIGHT_PREDICTOR_CODE, "", "")?;
             let py_main = py_module.getattr("predict")?;
-
             let model = PyByteArray::new(py, model);
-
             py_main
                 .call1((model, prediction_input))?
                 .extract::<Vec<f64>>()
@@ -276,9 +280,8 @@ where
         .map(|(i, v)| NewFishingWeightPrediction {
             catch_location_id: data[i].catch_location_id.clone(),
             species: data[i].species_group_id,
-            week: data[i].week,
+            date: data[i].date,
             weight: v,
-            year: data[i].year,
             model: model_id,
         })
         .collect::<Vec<NewFishingWeightPrediction>>();

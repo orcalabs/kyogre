@@ -1,6 +1,6 @@
 use crate::{CatchLocationId, HaulId, MLModelsInbound, MLModelsOutbound};
 use async_trait::async_trait;
-use chrono::{Datelike, Duration, Utc};
+use chrono::{Datelike, Duration, NaiveDate, Utc};
 use error_stack::{Context, Result};
 use fiskeridir_rs::SpeciesGroup;
 use serde::{Deserialize, Serialize};
@@ -11,14 +11,6 @@ pub enum MLModelError {
     StoreOutput,
     Python,
     DataPreparation,
-}
-
-/// How many hauls have to exist for a given week and species_group pair to trigger us to
-/// create a prediction for said pair.
-#[derive(Copy, Clone)]
-pub enum HaulPredictionLimit {
-    NoLimit,
-    Limit(u32),
 }
 
 impl Display for MLModelError {
@@ -75,11 +67,9 @@ pub struct FishingSpotTrainingData {
     pub haul_id: i64,
     pub latitude: f64,
     pub longitude: f64,
-    pub weight: f64,
     pub species: SpeciesGroup,
-    pub week: i32,
+    pub date: NaiveDate,
     pub catch_location_id: CatchLocationId,
-    pub year: i32,
 }
 
 #[derive(Debug)]
@@ -90,7 +80,7 @@ pub struct WeightPredictorTrainingData {
     pub longitude: f64,
     pub catch_location: CatchLocationId,
     pub species: SpeciesGroup,
-    pub week: i32,
+    pub date: NaiveDate,
     pub wind_speed_10m: Option<f64>,
     pub wind_direction_10m: Option<f64>,
     pub air_temperature_2m: Option<f64>,
@@ -120,9 +110,8 @@ pub struct NewFishingSpotPrediction {
     pub latitude: f64,
     pub longitude: f64,
     pub species: SpeciesGroup,
-    pub week: u32,
-    pub year: u32,
     pub model: ModelId,
+    pub date: NaiveDate,
 }
 
 #[derive(Debug, Clone)]
@@ -131,8 +120,7 @@ pub struct NewFishingWeightPrediction {
     pub catch_location_id: CatchLocationId,
     pub weight: f64,
     pub species: SpeciesGroup,
-    pub week: u32,
-    pub year: u32,
+    pub date: NaiveDate,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -143,8 +131,7 @@ pub struct FishingSpotPrediction {
     pub longitude: f64,
     #[cfg_attr(feature = "utoipa", schema(value_type = i32))]
     pub species_group_id: SpeciesGroup,
-    pub week: i32,
-    pub year: i32,
+    pub date: NaiveDate,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -156,75 +143,60 @@ pub struct FishingWeightPrediction {
     pub weight: f64,
     #[cfg_attr(feature = "utoipa", schema(value_type = i32))]
     pub species_group_id: SpeciesGroup,
-    pub week: u32,
-    pub year: u32,
+    pub date: NaiveDate,
 }
 
 pub enum PredictionRange {
     CurrentYear,
-    CurrentWeekAndNextWeek,
-    WeeksFromStartOfYear(u32),
-}
-
-pub struct PredictionTarget {
-    pub week: u32,
-    pub year: u32,
+    DaysFromStartOfYear(u32),
+    PriorCurrentAndNextWeek,
 }
 
 impl PredictionRange {
-    pub fn prediction_targets(&self) -> Vec<PredictionTarget> {
+    pub fn prediction_dates(&self) -> Vec<NaiveDate> {
         let now = Utc::now();
-        let iso_week = now.iso_week();
-        let current_week = iso_week.week();
-        let current_year = iso_week.year() as u32;
-
-        let is_end_of_year = (current_week == 52 || current_week == 53)
-            && (now + Duration::weeks(1)).iso_week().year() != current_year as i32;
+        let current_day = now.ordinal();
+        let current_year = now.year() as u32;
 
         match self {
             PredictionRange::CurrentYear => {
-                let mut targets = Vec::with_capacity(current_week as usize);
-                for i in 1..=current_week {
-                    targets.push(PredictionTarget {
-                        week: i,
-                        year: current_year,
-                    });
+                let mut targets = Vec::with_capacity(current_day as usize);
+
+                let mut current = NaiveDate::from_ymd_opt(current_year as i32, 1, 1).unwrap();
+                let end = now.date_naive();
+
+                while current <= end {
+                    targets.push(current);
+                    current = current.succ_opt().unwrap();
                 }
+
                 targets
             }
-            PredictionRange::CurrentWeekAndNextWeek => {
-                if is_end_of_year {
-                    vec![
-                        PredictionTarget {
-                            week: current_week,
-                            year: current_year,
-                        },
-                        PredictionTarget {
-                            week: 1,
-                            year: current_year + 1,
-                        },
-                    ]
-                } else {
-                    vec![
-                        PredictionTarget {
-                            week: current_week,
-                            year: current_year,
-                        },
-                        PredictionTarget {
-                            week: current_week + 1,
-                            year: current_year,
-                        },
-                    ]
+            PredictionRange::DaysFromStartOfYear(max_day) => {
+                let mut targets = Vec::with_capacity(*max_day as usize);
+
+                let mut current = NaiveDate::from_ymd_opt(current_year as i32, 1, 1).unwrap();
+
+                while current.ordinal() <= *max_day {
+                    targets.push(current);
+                    current = current.succ_opt().unwrap();
                 }
+
+                targets
             }
-            PredictionRange::WeeksFromStartOfYear(max_week) => {
-                let mut targets = Vec::with_capacity(*max_week as usize);
-                for i in 1..=*max_week {
-                    targets.push(PredictionTarget {
-                        week: i,
-                        year: current_year,
-                    });
+            PredictionRange::PriorCurrentAndNextWeek => {
+                let mut targets = Vec::with_capacity(21);
+
+                let start = (now - Duration::days(7)).date_naive();
+                let end = (now + Duration::days(7)).date_naive();
+
+                let mut current = start;
+
+                while current <= end {
+                    targets.push(current);
+                    current = current.succ_opt().unwrap();
                 }
+
                 targets
             }
         }
