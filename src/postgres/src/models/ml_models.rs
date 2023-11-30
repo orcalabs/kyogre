@@ -1,3 +1,4 @@
+use chrono::NaiveDate;
 use error_stack::{Report, ResultExt};
 use fiskeridir_rs::SpeciesGroup;
 use kyogre_core::{CatchLocationId, ModelId};
@@ -9,7 +10,7 @@ use crate::queries::enum_to_i32;
 #[derive(Debug, Clone, UnnestInsert)]
 #[unnest_insert(
     table_name = "fishing_spot_predictions",
-    conflict = "ml_model_id, species_group_id, week, year"
+    conflict = "ml_model_id, species_group_id, date"
 )]
 pub struct NewFishingSpotPrediction {
     #[unnest_insert(update)]
@@ -17,8 +18,7 @@ pub struct NewFishingSpotPrediction {
     #[unnest_insert(update)]
     pub longitude: f64,
     pub species_group_id: i32,
-    pub week: i32,
-    pub year: i32,
+    pub date: NaiveDate,
     #[unnest_insert(sql_type = "INT", type_conversion = "enum_to_i32")]
     pub ml_model_id: ModelId,
 }
@@ -26,15 +26,14 @@ pub struct NewFishingSpotPrediction {
 #[derive(Debug, Clone, UnnestInsert)]
 #[unnest_insert(
     table_name = "fishing_weight_predictions",
-    conflict = "ml_model_id, catch_location_id, species_group_id, week, year"
+    conflict = "ml_model_id, catch_location_id, species_group_id, date"
 )]
 pub struct NewFishingWeightPrediction {
     #[unnest_insert(update)]
     pub weight: f64,
     pub catch_location_id: String,
     pub species_group_id: i32,
-    pub week: i32,
-    pub year: i32,
+    pub date: NaiveDate,
     #[unnest_insert(sql_type = "INT", type_conversion = "enum_to_i32")]
     pub ml_model_id: ModelId,
 }
@@ -44,8 +43,7 @@ pub struct FishingWeightPrediction {
     pub catch_location_id: String,
     pub weight: f64,
     pub species_group_id: SpeciesGroup,
-    pub week: i32,
-    pub year: i32,
+    pub date: NaiveDate,
 }
 
 #[derive(Debug, Clone)]
@@ -57,7 +55,7 @@ pub struct WeightPredictorTrainingData {
     pub catch_location_area_id: i32,
     pub catch_location_main_area_id: i32,
     pub species: SpeciesGroup,
-    pub week: i32,
+    pub date: NaiveDate,
     pub wind_speed_10m: Option<f64>,
     pub wind_direction_10m: Option<f64>,
     pub air_temperature_2m: Option<f64>,
@@ -89,8 +87,7 @@ impl TryFrom<FishingWeightPrediction> for kyogre_core::FishingWeightPrediction {
             catch_location_id,
             weight: value.weight,
             species_group_id: value.species_group_id,
-            week: value.week as u32,
-            year: value.year as u32,
+            date: value.date,
         })
     }
 }
@@ -106,7 +103,7 @@ impl From<WeightPredictorTrainingData> for kyogre_core::WeightPredictorTrainingD
                 v.catch_location_area_id,
             ),
             species: v.species,
-            week: v.week,
+            date: v.date,
             haul_id: v.haul_id,
             wind_speed_10m: v.wind_speed_10m,
             wind_direction_10m: v.wind_speed_10m,
@@ -125,8 +122,7 @@ impl From<kyogre_core::NewFishingSpotPrediction> for NewFishingSpotPrediction {
             latitude: value.latitude,
             longitude: value.longitude,
             species_group_id: value.species.into(),
-            week: value.week as i32,
-            year: value.year as i32,
+            date: value.date,
             ml_model_id: value.model,
         }
     }
@@ -136,11 +132,10 @@ impl From<kyogre_core::NewFishingWeightPrediction> for NewFishingWeightPredictio
     fn from(value: kyogre_core::NewFishingWeightPrediction) -> Self {
         Self {
             species_group_id: value.species as i32,
-            week: value.week as i32,
             weight: value.weight,
             catch_location_id: value.catch_location_id.into_inner(),
-            year: value.year as i32,
             ml_model_id: value.model,
+            date: value.date,
         }
     }
 }

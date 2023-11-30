@@ -1,4 +1,4 @@
-use chrono::{DateTime, Duration, NaiveDate, TimeZone, Utc, Weekday};
+use chrono::{DateTime, NaiveDate, TimeZone, Utc};
 use error_stack::{report, Report, Result, ResultExt};
 use futures::{Stream, TryStreamExt};
 use kyogre_core::{CatchLocationId, HaulWeatherOutput, WeatherQuery};
@@ -15,20 +15,11 @@ use super::opt_float_to_decimal;
 impl PostgresAdapter {
     pub(crate) async fn catch_location_weather_impl(
         &self,
-        year: u32,
-        week: u32,
+        date: NaiveDate,
         catch_location_id: &CatchLocationId,
     ) -> Result<Option<CatchLocationWeather>, PostgresError> {
-        let start_naive_date = NaiveDate::from_isoywd_opt(year as i32, week, Weekday::Mon)
-            .ok_or(
-                report!(PostgresError::DataConversion)
-                    .attach_printable(format!("year: {year}, week: {week}")),
-            )?
-            .and_hms_opt(0, 0, 0)
-            .unwrap();
-
-        let start = Utc.from_utc_datetime(&start_naive_date);
-        let end = start + Duration::days(7);
+        let start = Utc.from_utc_datetime(&date.and_hms_opt(0, 0, 0).unwrap());
+        let end = Utc.from_utc_datetime(&date.and_hms_opt(23, 59, 59).unwrap());
 
         sqlx::query_as!(
             CatchLocationWeather,

@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT DISTINCT\n    (UNNEST(species_group_ids)) AS \"species!: SpeciesGroup\"\nFROM\n    hauls\nWHERE\n    gear_group_id = $1\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "species!: SpeciesGroup",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "18613a52472a60665ff6d94de1f1f91a957bc69c5b237467eab6878e8f617c9f"
+}

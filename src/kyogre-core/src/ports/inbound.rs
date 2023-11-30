@@ -1,8 +1,8 @@
 use crate::*;
 use async_trait::async_trait;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, NaiveDate, Utc};
 use error_stack::Result;
-use fiskeridir_rs::DeliveryPointId;
+use fiskeridir_rs::{DeliveryPointId, SpeciesGroup};
 
 #[async_trait]
 pub trait MLModelsInbound: Send + Sync {
@@ -28,14 +28,10 @@ pub trait MLModelsInbound: Send + Sync {
         model_id: ModelId,
         year: u32,
     ) -> Result<Vec<FishingWeightPrediction>, QueryError>;
-    async fn species_caught_with_traal(
-        &self,
-        limit: HaulPredictionLimit,
-    ) -> Result<Vec<SpeciesGroupWeek>, QueryError>;
+    async fn species_caught_with_traal(&self) -> Result<Vec<SpeciesGroup>, QueryError>;
     async fn catch_location_weather(
         &self,
-        year: u32,
-        week: u32,
+        date: NaiveDate,
         catch_location_id: &CatchLocationId,
     ) -> Result<Option<CatchLocationWeather>, QueryError>;
 }

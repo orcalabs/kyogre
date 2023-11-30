@@ -3,6 +3,7 @@ use crate::models::{
     NewFishingWeightPrediction, WeightPredictorTrainingData,
 };
 use crate::{error::PostgresError, PostgresAdapter};
+use chrono::NaiveDate;
 use error_stack::{report, Result, ResultExt};
 use fiskeridir_rs::{GearGroup, SpeciesGroup};
 use futures::Stream;
@@ -80,14 +81,13 @@ WHERE
             r#"
 SELECT
     catch_location_id,
-    week,
     species_group_id AS "species_group_id: SpeciesGroup",
     weight,
-    "year"
+    "date"
 FROM
     fishing_weight_predictions
 WHERE
-    "year" = $1
+    DATE_PART('year', "date") = $1
     AND ml_model_id = $2
             "#,
             year as i32,
@@ -109,13 +109,12 @@ WHERE
 SELECT
     latitude,
     longitude,
-    week,
-    species_group_id AS "species_group_id: SpeciesGroup",
-    "year"
+    "date",
+    species_group_id AS "species_group_id: SpeciesGroup"
 FROM
     fishing_spot_predictions
 WHERE
-    "year" = $1
+    DATE_PART('year', "date") = $1
     AND ml_model_id = $2
             "#,
             year as i32,
@@ -174,7 +173,7 @@ SELECT
     cl.latitude AS "latitude!",
     cl.catch_area_id AS "catch_location_area_id!",
     cl.catch_main_area_id AS "catch_location_main_area_id!",
-    (DATE_PART('week', h.start_timestamp))::INT AS "week!",
+    h.start_timestamp::DATE AS "date!",
     hm.living_weight AS "weight",
     hm.species_group_id AS "species: SpeciesGroup",
     hm.haul_id,
@@ -234,51 +233,44 @@ LIMIT
 WITH
     sums AS (
         SELECT DISTINCT
-            ON (
-                (DATE_PART('week', h.start_timestamp))::INT,
-                hm.species_group_id
-            ) (DATE_PART('week', h.start_timestamp))::INT AS week,
+            ON (hm.species_group_id, h.start_timestamp::DATE) h.start_timestamp::DATE AS "date",
             hm.species_group_id,
-            ST_X (ST_CENTROID (cl.polygon))::DECIMAL AS longitude,
-            ST_Y (ST_CENTROID (cl.polygon))::DECIMAL AS latitude,
+            cl.longitude::DECIMAL AS longitude,
+            cl.latitude::DECIMAL AS latitude,
+            cl.catch_location_id,
             SUM(hm.living_weight) OVER (
                 PARTITION BY
-                    (
-                        (DATE_PART('week', h.start_timestamp))::INT,
-                        hm.species_group_id,
-                        hm.gear_group_id
-                    )
+                    (hm.species_group_id, h.start_timestamp::DATE, cl.catch_location_id)
             ) AS weight
         FROM
             hauls h
             INNER JOIN hauls_matrix hm ON h.haul_id = hm.haul_id
             INNER JOIN catch_locations cl ON cl.catch_location_id = hm.catch_location
             LEFT JOIN ml_hauls_training_log m ON h.haul_id = m.haul_id
+            AND hm.species_group_id = m.species_group_id
+            AND hm.catch_location = m.catch_location_id
             AND m.ml_model_id = $2
         WHERE
             (h.stop_timestamp - h.start_timestamp) < INTERVAL '2 day'
             AND h.gear_group_id = $1
             AND m.haul_id IS NULL
         ORDER BY
-            week,
             hm.species_group_id,
+            h.start_timestamp::DATE,
             weight DESC
     )
 SELECT
     sums.longitude AS "longitude!",
     sums.latitude AS "latitude!",
-    (DATE_PART('week', h.start_timestamp))::INT AS "week!",
-    (DATE_PART('isoyear', h.start_timestamp))::INT AS "year!",
+    hm.catch_location,
+    h.start_timestamp::DATE AS "date!",
     hm.species_group_id AS "species: SpeciesGroup",
-    h.haul_id,
-    hm.living_weight AS weight,
-    hm.catch_location
+    h.haul_id
 FROM
     hauls_matrix hm
     INNER JOIN hauls h ON hm.haul_id = h.haul_id
-    INNER JOIN catch_locations cl ON cl.catch_location_id = hm.catch_location
     INNER JOIN sums ON sums.species_group_id = hm.species_group_id
-    AND sums.week = (DATE_PART('week', h.start_timestamp))::INT
+    AND sums."date" = h.start_timestamp::DATE
     LEFT JOIN ml_hauls_training_log m ON m.ml_model_id = $2
     AND hm.haul_id = m.haul_id
     AND hm.species_group_id = m.species_group_id
@@ -305,7 +297,7 @@ LIMIT
         &self,
         model_id: ModelId,
         species: SpeciesGroup,
-        week: u32,
+        date: NaiveDate,
         limit: u32,
     ) -> impl Stream<Item = Result<FishingWeightPrediction, PostgresError>> + '_ {
         sqlx::query_as!(
@@ -313,16 +305,15 @@ LIMIT
             r#"
 SELECT
     catch_location_id,
-    week,
     species_group_id AS "species_group_id: SpeciesGroup",
     weight,
-    "year"
+    "date"
 FROM
     fishing_weight_predictions
 WHERE
     ml_model_id = $1
     AND species_group_id = $2
-    AND week = $3
+    AND "date" = $3
 ORDER BY
     weight DESC
 LIMIT
@@ -330,7 +321,7 @@ LIMIT
             "#,
             model_id as i32,
             species as i32,
-            week as i32,
+            date,
             limit as i32
         )
         .fetch(&self.pool)
@@ -341,7 +332,7 @@ LIMIT
         &self,
         model_id: ModelId,
         species: SpeciesGroup,
-        week: u32,
+        date: NaiveDate,
     ) -> Result<Option<FishingSpotPrediction>, PostgresError> {
         sqlx::query_as!(
             FishingSpotPrediction,
@@ -349,18 +340,17 @@ LIMIT
 SELECT
     latitude,
     longitude,
-    week,
     species_group_id AS "species_group_id: SpeciesGroup",
-    "year"
+    date
 FROM
     fishing_spot_predictions
 WHERE
     species_group_id = $1
-    AND week = $2
+    AND "date" = $2
     AND ml_model_id = $3
             "#,
             species as i32,
-            week as i32,
+            date,
             model_id as i32
         )
         .fetch_optional(&self.pool)
@@ -377,10 +367,9 @@ WHERE
             r#"
 SELECT
     catch_location_id,
-    week,
     species_group_id AS "species_group_id: SpeciesGroup",
     weight,
-    "year"
+    "date"
 FROM
     fishing_weight_predictions
 WHERE
@@ -402,9 +391,8 @@ WHERE
 SELECT
     latitude,
     longitude,
-    week,
-    species_group_id AS "species_group_id: SpeciesGroup",
-    "year"
+    "date",
+    species_group_id AS "species_group_id: SpeciesGroup"
 FROM
     fishing_spot_predictions
 WHERE

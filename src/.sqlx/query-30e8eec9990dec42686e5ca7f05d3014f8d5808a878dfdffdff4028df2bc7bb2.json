@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT\n    latitude,\n    longitude,\n    week,\n    species_group_id AS \"species_group_id: SpeciesGroup\",\n    \"year\"\nFROM\n    fishing_spot_predictions\nWHERE\n    \"year\" = $1\n    AND ml_model_id = $2\n            ",
+  "query": "\nSELECT\n    latitude,\n    longitude,\n    \"date\",\n    species_group_id AS \"species_group_id: SpeciesGroup\"\nFROM\n    fishing_spot_predictions\nWHERE\n    ml_model_id = $1\n            ",
   "describe": {
     "columns": [
       {
@@ -15,23 +15,17 @@
       },
       {
         "ordinal": 2,
-        "name": "week",
-        "type_info": "Int4"
+        "name": "date",
+        "type_info": "Date"
       },
       {
         "ordinal": 3,
         "name": "species_group_id: SpeciesGroup",
         "type_info": "Int4"
-      },
-      {
-        "ordinal": 4,
-        "name": "year",
-        "type_info": "Int4"
       }
     ],
     "parameters": {
       "Left": [
-        "Int4",
         "Int4"
       ]
     },
@@ -39,9 +33,8 @@
       false,
       false,
       false,
-      false,
       false
     ]
   },
-  "hash": "5faa4f85a05e601f6652afeb73c459c9fb74e0cef732102680c85077a8ee7297"
+  "hash": "30e8eec9990dec42686e5ca7f05d3014f8d5808a878dfdffdff4028df2bc7bb2"
 }

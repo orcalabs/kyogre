@@ -15,8 +15,8 @@ use fiskeridir_rs::CallSign;
 use fiskeridir_rs::{DeliveryPointId, LandingMonth};
 use futures::TryStreamExt;
 use kyogre_core::{
-    CatchLocationId, HaulDistributor, HaulPredictionLimit, MLModel, NewVesselConflict, NewWeather,
-    TestStorage, TripAssembler, TripDistancer, TripPositionLayer, VesselBenchmark,
+    CatchLocationId, HaulDistributor, MLModel, NewVesselConflict, NewWeather, TestStorage,
+    TripAssembler, TripDistancer, TripPositionLayer, VesselBenchmark,
 };
 use machine::StateMachine;
 use orca_core::PsqlSettings;
@@ -60,8 +60,8 @@ pub use weather::*;
 
 use self::cycle::Cycle;
 
-pub static FISHING_SPOT_PREDICTOR_NUM_WEEKS: u32 = 2;
-pub static FISHING_WEIGHT_PREDICTOR_NUM_WEEKS: u32 = 2;
+pub static FISHING_SPOT_PREDICTOR_NUM_DAYS: u32 = 2;
+pub static FISHING_WEIGHT_PREDICTOR_NUM_DAYS: u32 = 2;
 pub static FISHING_WEIGHT_PREDICTOR_NUM_CL: u32 = 2;
 
 #[derive(Debug)]
@@ -163,8 +163,7 @@ pub fn default_fishing_spot_weather_predictor() -> Box<dyn MLModel> {
         training_rounds: 1,
         predict_batch_size: 53,
         catch_locations: vec![CatchLocationId::new(10, 4), CatchLocationId::new(10, 5)],
-        range: PredictionRange::WeeksFromStartOfYear(FISHING_SPOT_PREDICTOR_NUM_WEEKS),
-        hauls_limit_per_species: HaulPredictionLimit::NoLimit,
+        range: PredictionRange::DaysFromStartOfYear(FISHING_SPOT_PREDICTOR_NUM_DAYS),
     }))
 }
 
@@ -175,9 +174,8 @@ pub fn default_fishing_spot_predictor() -> Box<dyn MLModel> {
         use_gpu: false,
         training_rounds: 1,
         predict_batch_size: 53,
-        range: PredictionRange::WeeksFromStartOfYear(FISHING_SPOT_PREDICTOR_NUM_WEEKS),
+        range: PredictionRange::DaysFromStartOfYear(FISHING_SPOT_PREDICTOR_NUM_DAYS),
         catch_locations: vec![CatchLocationId::new(10, 4), CatchLocationId::new(10, 5)],
-        hauls_limit_per_species: HaulPredictionLimit::NoLimit,
     }))
 }
 
@@ -188,9 +186,8 @@ pub fn default_fishing_weight_predictor() -> Box<dyn MLModel> {
         use_gpu: false,
         training_rounds: 1,
         predict_batch_size: 100,
-        range: PredictionRange::WeeksFromStartOfYear(FISHING_WEIGHT_PREDICTOR_NUM_WEEKS),
+        range: PredictionRange::DaysFromStartOfYear(FISHING_WEIGHT_PREDICTOR_NUM_DAYS),
         catch_locations: vec![CatchLocationId::new(10, 4), CatchLocationId::new(10, 5)],
-        hauls_limit_per_species: HaulPredictionLimit::NoLimit,
     }))
 }
 
@@ -202,9 +199,8 @@ pub fn default_fishing_weight_weather_predictor() -> Box<dyn MLModel> {
             use_gpu: false,
             training_rounds: 1,
             predict_batch_size: 100,
-            range: PredictionRange::WeeksFromStartOfYear(FISHING_WEIGHT_PREDICTOR_NUM_WEEKS),
+            range: PredictionRange::DaysFromStartOfYear(FISHING_WEIGHT_PREDICTOR_NUM_DAYS),
             catch_locations: vec![CatchLocationId::new(10, 4), CatchLocationId::new(10, 5)],
-            hauls_limit_per_species: HaulPredictionLimit::NoLimit,
         },
     ))
 }

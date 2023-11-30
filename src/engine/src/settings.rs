@@ -1,7 +1,7 @@
 use crate::{
     AisVms, Cluster, ErsTripAssembler, FisheryDiscriminants, FishingSpotPredictor,
     FishingWeightPredictor, FishingWeightWeatherPredictor, LandingTripAssembler, PredictionRange,
-    SpotPredictorSettings, UnrealisticSpeed, WeightPredictorSettings, HAUL_LIMIT_PER_SPECIES,
+    SpotPredictorSettings, UnrealisticSpeed, WeightPredictorSettings,
 };
 use config::{Config, ConfigError, File};
 use kyogre_core::*;
@@ -38,6 +38,7 @@ pub struct MatrixClientSettings {
 pub struct HoneycombApiKey {
     pub api_key: String,
 }
+
 impl Settings {
     pub fn new() -> Result<Self, ConfigError> {
         let environment: Environment = std::env::var("APP_ENVIRONMENT")
@@ -82,12 +83,11 @@ impl Settings {
             let use_gpu = matches!(self.environment, Environment::Local);
             let model = Box::new(FishingSpotPredictor::new(SpotPredictorSettings {
                 running_in_test: false,
-                training_batch_size: None,
+                training_batch_size: s.training_batch_size,
                 use_gpu,
                 training_rounds: s.training_rounds,
-                predict_batch_size: 53,
-                range: PredictionRange::CurrentYear,
-                hauls_limit_per_species: HaulPredictionLimit::Limit(HAUL_LIMIT_PER_SPECIES),
+                predict_batch_size: 21,
+                range: PredictionRange::PriorCurrentAndNextWeek,
                 catch_locations: vec![],
             }));
             let model2 = Box::new(FishingWeightPredictor::new(WeightPredictorSettings {
@@ -95,10 +95,9 @@ impl Settings {
                 training_batch_size: s.training_batch_size,
                 use_gpu,
                 training_rounds: s.training_rounds,
-                predict_batch_size: 53,
-                range: PredictionRange::CurrentYear,
+                predict_batch_size: 21,
+                range: PredictionRange::PriorCurrentAndNextWeek,
                 catch_locations: vec![],
-                hauls_limit_per_species: HaulPredictionLimit::Limit(HAUL_LIMIT_PER_SPECIES),
             }));
             let model3 = Box::new(FishingWeightWeatherPredictor::new(
                 WeightPredictorSettings {
@@ -106,10 +105,9 @@ impl Settings {
                     training_batch_size: s.training_batch_size,
                     use_gpu,
                     training_rounds: s.training_rounds,
-                    predict_batch_size: 10,
-                    range: PredictionRange::CurrentWeekAndNextWeek,
+                    predict_batch_size: 21,
+                    range: PredictionRange::PriorCurrentAndNextWeek,
                     catch_locations: vec![],
-                    hauls_limit_per_species: HaulPredictionLimit::Limit(HAUL_LIMIT_PER_SPECIES),
                 },
             ));
 

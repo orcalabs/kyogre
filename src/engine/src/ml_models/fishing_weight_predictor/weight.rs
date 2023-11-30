@@ -1,10 +1,9 @@
 use crate::WeightPredictorSettings;
 use async_trait::async_trait;
-use error_stack::{Result, ResultExt};
+use chrono::Datelike;
+use error_stack::Result;
 use fiskeridir_rs::SpeciesGroup;
-use kyogre_core::{
-    CatchLocationId, MLModel, MLModelError, MLModelsInbound, MLModelsOutbound, ModelId, WeatherData,
-};
+use kyogre_core::{MLModel, MLModelError, MLModelsInbound, MLModelsOutbound, ModelId, WeatherData};
 use serde::Serialize;
 use tracing::instrument;
 
@@ -15,28 +14,14 @@ pub struct FishingWeightPredictor {
 }
 
 #[derive(Debug, Serialize)]
-struct PythonTrainingData {
-    pub latitude: f64,
-    pub longitude: f64,
-    pub species_group_id: i32,
-    pub week: u32,
-    pub weight: f64,
-}
-
-#[derive(Debug, Hash, Eq, PartialEq)]
-struct PythonPredictionInputKey {
-    pub species_group_id: i32,
-    pub week: u32,
-    pub year: u32,
-    pub catch_location_id: CatchLocationId,
-}
-
-#[derive(Debug, Serialize)]
-struct PythonPredictionInput {
+struct ModelData {
     pub latitude: f64,
     pub longitude: f64,
     pub species_group_id: SpeciesGroup,
-    pub week: u32,
+    pub year: u32,
+    pub day: u32,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub weight: Option<f64>,
 }
 
 #[async_trait]
@@ -58,18 +43,19 @@ impl MLModel for FishingWeightPredictor {
             adapter,
             WeatherData::Optional,
             |data| {
-                let data: Vec<PythonTrainingData> = data
+                let data: Vec<ModelData> = data
                     .into_iter()
-                    .map(|v| PythonTrainingData {
+                    .map(|v| ModelData {
                         latitude: v.latitude,
                         longitude: v.longitude,
-                        species_group_id: v.species.into(),
-                        week: v.week as u32,
-                        weight: v.weight,
+                        species_group_id: v.species,
+                        weight: Some(v.weight),
+                        day: v.date.ordinal(),
+                        year: v.date.year_ce().1,
                     })
                     .collect();
 
-                serde_json::to_string(&data).change_context(MLModelError::DataPreparation)
+                data
             },
         )
         .await
@@ -88,13 +74,15 @@ impl MLModel for FishingWeightPredictor {
             adapter,
             WeatherData::Optional,
             |data, _weather| {
-                let data: Vec<PythonPredictionInput> = data
+                let data: Vec<ModelData> = data
                     .iter()
-                    .map(|v| PythonPredictionInput {
+                    .map(|v| ModelData {
                         latitude: v.latitude,
                         longitude: v.longitude,
                         species_group_id: v.species_group_id,
-                        week: v.week,
+                        day: v.date.ordinal(),
+                        year: v.date.year_ce().1,
+                        weight: None,
                     })
                     .collect();
 
