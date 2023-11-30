@@ -164,6 +164,11 @@ where
             .await
             .change_context(MLModelError::StoreOutput)?;
 
+        adapter
+            .save_model(model_id, &new_model)
+            .await
+            .change_context(MLModelError::StoreOutput)?;
+
         model = new_model;
     }
 }
