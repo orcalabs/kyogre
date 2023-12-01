@@ -1,7 +1,5 @@
 use crate::{
-    AisVms, Cluster, ErsTripAssembler, FisheryDiscriminants, FishingSpotPredictor,
-    FishingWeightPredictor, FishingWeightWeatherPredictor, LandingTripAssembler, PredictionRange,
-    SpotPredictorSettings, UnrealisticSpeed, WeightPredictorSettings,
+    AisVms, Cluster, ErsTripAssembler, FisheryDiscriminants, LandingTripAssembler, UnrealisticSpeed,
 };
 use config::{Config, ConfigError, File};
 use kyogre_core::*;
@@ -77,46 +75,7 @@ impl Settings {
         vec
     }
     pub fn ml_models(&self) -> Vec<Box<dyn MLModel>> {
-        let mut vec = Vec::new();
-
-        if let Some(s) = &self.fishing_predictors {
-            let use_gpu = matches!(self.environment, Environment::Local);
-            let model = Box::new(FishingSpotPredictor::new(SpotPredictorSettings {
-                running_in_test: false,
-                training_batch_size: s.training_batch_size,
-                use_gpu,
-                training_rounds: s.training_rounds,
-                predict_batch_size: 7,
-                range: PredictionRange::PriorCurrentAndNextWeek,
-                catch_locations: vec![],
-            }));
-            let model2 = Box::new(FishingWeightPredictor::new(WeightPredictorSettings {
-                running_in_test: false,
-                training_batch_size: s.training_batch_size,
-                use_gpu,
-                training_rounds: s.training_rounds,
-                predict_batch_size: 7,
-                range: PredictionRange::PriorCurrentAndNextWeek,
-                catch_locations: vec![],
-            }));
-            let model3 = Box::new(FishingWeightWeatherPredictor::new(
-                WeightPredictorSettings {
-                    running_in_test: false,
-                    training_batch_size: s.training_batch_size,
-                    use_gpu,
-                    training_rounds: s.training_rounds,
-                    predict_batch_size: 7,
-                    range: PredictionRange::PriorCurrentAndNextWeek,
-                    catch_locations: vec![],
-                },
-            ));
-
-            vec.push(model as Box<dyn MLModel>);
-            vec.push(model2 as Box<dyn MLModel>);
-            vec.push(model3 as Box<dyn MLModel>);
-        }
-
-        vec
+        vec![]
     }
     pub fn benchmarks(&self) -> Vec<Box<dyn VesselBenchmark>> {
         let weight_per_hour = Box::<WeightPerHour>::default();
