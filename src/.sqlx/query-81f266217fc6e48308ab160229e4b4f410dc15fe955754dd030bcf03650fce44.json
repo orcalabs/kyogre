@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT\n    cl.longitude AS \"longitude!\",\n    cl.latitude AS \"latitude!\",\n    cl.catch_area_id AS \"catch_location_area_id!\",\n    cl.catch_main_area_id AS \"catch_location_main_area_id!\",\n    h.start_timestamp::DATE AS \"date!\",\n    hm.living_weight AS \"weight\",\n    hm.species_group_id AS \"species: SpeciesGroup\",\n    hm.haul_id,\n    h.wind_speed_10m::DOUBLE PRECISION,\n    h.wind_direction_10m::DOUBLE PRECISION,\n    h.air_temperature_2m::DOUBLE PRECISION,\n    h.relative_humidity_2m::DOUBLE PRECISION,\n    h.air_pressure_at_sea_level::DOUBLE PRECISION,\n    h.precipitation_amount::DOUBLE PRECISION,\n    h.cloud_area_fraction::DOUBLE PRECISION\nFROM\n    hauls_matrix hm\n    INNER JOIN hauls h ON hm.haul_id = h.haul_id\n    INNER JOIN catch_locations cl ON cl.catch_location_id = hm.catch_location\n    LEFT JOIN ml_hauls_training_log m ON m.ml_model_id = $2\n    AND hm.haul_id = m.haul_id\n    AND hm.species_group_id = m.species_group_id\n    AND hm.catch_location = m.catch_location_id\nWHERE\n    (h.stop_timestamp - h.start_timestamp) < INTERVAL '2 day'\n    AND hm.gear_group_id = $1\n    AND m.haul_id IS NULL\n    AND (\n        (\n            h.air_temperature_2m IS NOT NULL\n            AND h.relative_humidity_2m IS NOT NULL\n            AND h.air_pressure_at_sea_level IS NOT NULL\n            AND h.wind_direction_10m IS NOT NULL\n            AND h.precipitation_amount IS NOT NULL\n            AND h.cloud_area_fraction IS NOT NULL\n        )\n        OR $3\n    )\nORDER BY\n    h.start_timestamp\nLIMIT\n    $4\n            ",
+  "query": "\nSELECT\n    cl.longitude AS \"longitude!\",\n    cl.latitude AS \"latitude!\",\n    cl.catch_area_id AS \"catch_location_area_id!\",\n    cl.catch_main_area_id AS \"catch_location_main_area_id!\",\n    h.start_timestamp::DATE AS \"date!\",\n    hm.living_weight AS \"weight\",\n    hm.species_group_id AS \"species: SpeciesGroup\",\n    hm.haul_id,\n    h.wind_speed_10m::DOUBLE PRECISION,\n    h.wind_direction_10m::DOUBLE PRECISION,\n    h.air_temperature_2m::DOUBLE PRECISION,\n    h.relative_humidity_2m::DOUBLE PRECISION,\n    h.air_pressure_at_sea_level::DOUBLE PRECISION,\n    h.precipitation_amount::DOUBLE PRECISION,\n    h.cloud_area_fraction::DOUBLE PRECISION\nFROM\n    hauls_matrix hm\n    INNER JOIN hauls h ON hm.haul_id = h.haul_id\n    INNER JOIN catch_locations cl ON cl.catch_location_id = hm.catch_location\n    LEFT JOIN ml_hauls_training_log m ON m.ml_model_id = $1\n    AND hm.haul_id = m.haul_id\n    AND hm.species_group_id = m.species_group_id\n    AND hm.catch_location = m.catch_location_id\nWHERE\n    (h.stop_timestamp - h.start_timestamp) < INTERVAL '2 day'\n    AND hm.gear_group_id = $2\n    AND m.haul_id IS NULL\n    AND (\n        $3::INT IS NULL\n        OR hm.species_group_id = $3\n    )\n    AND (\n        (\n            h.air_temperature_2m IS NOT NULL\n            AND h.relative_humidity_2m IS NOT NULL\n            AND h.air_pressure_at_sea_level IS NOT NULL\n            AND h.wind_direction_10m IS NOT NULL\n            AND h.precipitation_amount IS NOT NULL\n            AND h.cloud_area_fraction IS NOT NULL\n        )\n        OR $4\n    )\nORDER BY\n    h.start_timestamp\nLIMIT\n    $5\n            ",
   "describe": {
     "columns": [
       {
@@ -83,6 +83,7 @@
       "Left": [
         "Int4",
         "Int4",
+        "Int4",
         "Bool",
         "Int8"
       ]
@@ -105,5 +106,5 @@
       null
     ]
   },
-  "hash": "7694719977c5c790535071c97943168d5ebd4e7eebc410c1e42547b6b7dc497b"
+  "hash": "81f266217fc6e48308ab160229e4b4f410dc15fe955754dd030bcf03650fce44"
 }

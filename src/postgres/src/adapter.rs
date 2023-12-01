@@ -99,6 +99,54 @@ impl PostgresAdapter {
         })
     }
 
+    pub async fn reset_models(&self, models: &[ModelId]) -> Result<(), PostgresError> {
+        let mut tx = self.begin().await?;
+
+        let models: Vec<i32> = models.iter().map(|v| *v as i32).collect();
+
+        sqlx::query!(
+            r#"
+DELETE FROM ml_hauls_training_log
+WHERE
+    ml_model_id = ANY ($1)
+            "#,
+            &models
+        )
+        .execute(&mut *tx)
+        .await
+        .change_context(PostgresError::Query)?;
+
+        sqlx::query!(
+            r#"
+DELETE FROM fishing_spot_predictions
+WHERE
+    ml_model_id = ANY ($1)
+            "#,
+            &models
+        )
+        .execute(&mut *tx)
+        .await
+        .change_context(PostgresError::Query)?;
+
+        sqlx::query!(
+            r#"
+DELETE FROM fishing_weight_predictions
+WHERE
+    ml_model_id = ANY ($1)
+            "#,
+            &models
+        )
+        .execute(&mut *tx)
+        .await
+        .change_context(PostgresError::Query)?;
+
+        tx.commit()
+            .await
+            .change_context(PostgresError::Transaction)?;
+
+        Ok(())
+    }
+
     pub async fn do_migrations(&self) {
         sqlx::migrate!()
             .set_ignore_missing(true)
@@ -1075,9 +1123,15 @@ impl MLModelsOutbound for PostgresAdapter {
         model_id: ModelId,
         weather_data: WeatherData,
         limit: Option<u32>,
+        single_species_mode: Option<SpeciesGroup>,
     ) -> Result<Vec<WeightPredictorTrainingData>, QueryError> {
         Ok(self
-            .fishing_weight_predictor_training_data_impl(model_id, weather_data, limit)
+            .fishing_weight_predictor_training_data_impl(
+                model_id,
+                weather_data,
+                limit,
+                single_species_mode,
+            )
             .await
             .change_context(QueryError)?
             .into_iter()
@@ -1089,9 +1143,10 @@ impl MLModelsOutbound for PostgresAdapter {
         &self,
         model_id: ModelId,
         limit: Option<u32>,
+        single_species_mode: Option<SpeciesGroup>,
     ) -> Result<Vec<FishingSpotTrainingData>, QueryError> {
         convert_vec(
-            self.fishing_spot_predictor_training_data_impl(model_id, limit)
+            self.fishing_spot_predictor_training_data_impl(model_id, limit, single_species_mode)
                 .await
                 .change_context(QueryError)?,
         )

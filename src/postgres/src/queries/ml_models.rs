@@ -159,6 +159,7 @@ WHERE
         model_id: ModelId,
         weather_data: WeatherData,
         limit: Option<u32>,
+        single_species_mode: Option<SpeciesGroup>,
     ) -> Result<Vec<WeightPredictorTrainingData>, PostgresError> {
         let require_weather = match weather_data {
             WeatherData::Require => false,
@@ -188,14 +189,18 @@ FROM
     hauls_matrix hm
     INNER JOIN hauls h ON hm.haul_id = h.haul_id
     INNER JOIN catch_locations cl ON cl.catch_location_id = hm.catch_location
-    LEFT JOIN ml_hauls_training_log m ON m.ml_model_id = $2
+    LEFT JOIN ml_hauls_training_log m ON m.ml_model_id = $1
     AND hm.haul_id = m.haul_id
     AND hm.species_group_id = m.species_group_id
     AND hm.catch_location = m.catch_location_id
 WHERE
     (h.stop_timestamp - h.start_timestamp) < INTERVAL '2 day'
-    AND hm.gear_group_id = $1
+    AND hm.gear_group_id = $2
     AND m.haul_id IS NULL
+    AND (
+        $3::INT IS NULL
+        OR hm.species_group_id = $3
+    )
     AND (
         (
             h.air_temperature_2m IS NOT NULL
@@ -205,15 +210,16 @@ WHERE
             AND h.precipitation_amount IS NOT NULL
             AND h.cloud_area_fraction IS NOT NULL
         )
-        OR $3
+        OR $4
     )
 ORDER BY
     h.start_timestamp
 LIMIT
-    $4
+    $5
             "#,
-            GearGroup::Traal as i32,
             model_id as i32,
+            GearGroup::Traal as i32,
+            single_species_mode.map(|v| v as i32),
             require_weather,
             limit.map(|v| v as i64)
         )
@@ -226,6 +232,7 @@ LIMIT
         &self,
         model_id: ModelId,
         limit: Option<u32>,
+        single_species_mode: Option<SpeciesGroup>,
     ) -> Result<Vec<FishingSpotTrainingData>, PostgresError> {
         sqlx::query_as!(
             FishingSpotTrainingData,
@@ -240,7 +247,11 @@ WITH
             cl.catch_location_id,
             SUM(hm.living_weight) OVER (
                 PARTITION BY
-                    (hm.species_group_id, h.start_timestamp::DATE, cl.catch_location_id)
+                    (
+                        hm.species_group_id,
+                        h.start_timestamp::DATE,
+                        cl.catch_location_id
+                    )
             ) AS weight
         FROM
             hauls h
@@ -249,11 +260,15 @@ WITH
             LEFT JOIN ml_hauls_training_log m ON h.haul_id = m.haul_id
             AND hm.species_group_id = m.species_group_id
             AND hm.catch_location = m.catch_location_id
-            AND m.ml_model_id = $2
+            AND m.ml_model_id = $1
         WHERE
             (h.stop_timestamp - h.start_timestamp) < INTERVAL '2 day'
-            AND h.gear_group_id = $1
+            AND h.gear_group_id = $2
             AND m.haul_id IS NULL
+            AND (
+                $3::INT IS NULL
+                OR hm.species_group_id = $3
+            )
         ORDER BY
             hm.species_group_id,
             h.start_timestamp::DATE,
@@ -271,21 +286,26 @@ FROM
     INNER JOIN hauls h ON hm.haul_id = h.haul_id
     INNER JOIN sums ON sums.species_group_id = hm.species_group_id
     AND sums."date" = h.start_timestamp::DATE
-    LEFT JOIN ml_hauls_training_log m ON m.ml_model_id = $2
+    LEFT JOIN ml_hauls_training_log m ON m.ml_model_id = $1
     AND hm.haul_id = m.haul_id
     AND hm.species_group_id = m.species_group_id
     AND hm.catch_location = m.catch_location_id
 WHERE
     (h.stop_timestamp - h.start_timestamp) < INTERVAL '2 day'
-    AND hm.gear_group_id = $1
+    AND hm.gear_group_id = $2
     AND m.haul_id IS NULL
+    AND (
+        $3::INT IS NULL
+        OR hm.species_group_id = $3
+    )
 ORDER BY
     h.start_timestamp
 LIMIT
-    $3
+    $4
             "#,
-            GearGroup::Traal as i32,
             model_id as i32,
+            GearGroup::Traal as i32,
+            single_species_mode.map(|v| v as i32),
             limit.map(|v| v as i64)
         )
         .fetch_all(&self.pool)

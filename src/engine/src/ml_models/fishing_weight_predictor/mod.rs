@@ -5,7 +5,7 @@ use fiskeridir_rs::SpeciesGroup;
 use kyogre_core::{
     distance_to_shore, CatchLocation, CatchLocationId, CatchLocationWeather, HaulId, MLModelError,
     MLModelsInbound, MLModelsOutbound, ModelId, NewFishingWeightPrediction, PredictionRange,
-    TrainingHaul, WeatherData, WeatherLocationOverlap, WeightPredictorTrainingData,
+    TrainingHaul, TrainingMode, WeatherData, WeatherLocationOverlap, WeightPredictorTrainingData,
 };
 use pyo3::{
     types::{PyByteArray, PyModule},
@@ -26,14 +26,22 @@ pub use weight_weather::*;
 
 use super::CatchLocationWeatherKey;
 
+pub enum TrainingOutcome {
+    Finished,
+    Progress(HashSet<TrainingHaul>),
+}
+
+#[derive(Clone)]
 pub struct WeightPredictorSettings {
     pub running_in_test: bool,
-    pub training_batch_size: Option<u32>,
     pub use_gpu: bool,
     pub training_rounds: u32,
     pub predict_batch_size: u32,
     pub range: PredictionRange,
     pub catch_locations: Vec<CatchLocationId>,
+    pub single_species_mode: Option<SpeciesGroup>,
+    pub training_mode: TrainingMode,
+    pub test_fraction: Option<f64>,
 }
 
 #[derive(Debug, Derivative)]
@@ -60,79 +68,124 @@ where
     S: Serialize,
     T: Fn(Vec<WeightPredictorTrainingData>) -> Vec<S>,
 {
-    loop {
-        let mut hauls = HashSet::new();
-        let training_data: Vec<WeightPredictorTrainingData> = adapter
-            .fishing_weight_predictor_training_data(model_id, weather, settings.training_batch_size)
-            .await
-            .change_context(MLModelError::DataPreparation)?
-            .into_iter()
-            .filter_map(|v| {
-                hauls.insert(TrainingHaul {
-                    haul_id: HaulId(v.haul_id),
-                    species: v.species,
-                    catch_location_id: v.catch_location.clone(),
-                });
-                if settings.running_in_test || distance_to_shore(v.latitude, v.longitude) > 2000.0 {
-                    Some(v)
-                } else {
-                    None
+    match settings.training_mode {
+        TrainingMode::Single | TrainingMode::Batches(_) => loop {
+            match training_run(
+                model_id,
+                settings,
+                &mut model,
+                adapter,
+                weather,
+                &training_data_convert,
+            )
+            .await?
+            {
+                TrainingOutcome::Finished => break,
+                TrainingOutcome::Progress(hauls) => {
+                    adapter
+                        .commit_hauls_training(model_id, hauls.into_iter().collect())
+                        .await
+                        .change_context(MLModelError::StoreOutput)?;
+                    adapter
+                        .save_model(model_id, &model)
+                        .await
+                        .change_context(MLModelError::StoreOutput)?;
                 }
-            })
-            .collect();
-
-        if training_data.is_empty() {
-            return Ok(model);
+            }
+        },
+        TrainingMode::Local => {
+            training_run(
+                model_id,
+                settings,
+                &mut model,
+                adapter,
+                weather,
+                &training_data_convert,
+            )
+            .await?;
         }
-
-        let training_data = training_data_convert(training_data);
-        if training_data.is_empty() {
-            adapter
-                .commit_hauls_training(model_id, hauls.into_iter().collect())
-                .await
-                .change_context(MLModelError::StoreOutput)?;
-            continue;
-        }
-
-        let training_data =
-            serde_json::to_string(&training_data).change_context(MLModelError::DataPreparation)?;
-
-        let new_model = Python::with_gil(|py| {
-            let py_module =
-                PyModule::from_code(py, PYTHON_FISHING_WEIGHT_PREDICTOR_CODE, "", "").unwrap();
-            let py_main = py_module.getattr("train").unwrap();
-
-            let model = if model.is_empty() {
-                None
-            } else {
-                Some(PyByteArray::new(py, &model))
-            };
-
-            py_main
-                .call1((
-                    model,
-                    training_data,
-                    settings.training_rounds,
-                    settings.use_gpu,
-                ))?
-                .extract::<Vec<u8>>()
-        })
-        .change_context(MLModelError::Python)?;
-
-        event!(Level::INFO, "trained on {} new hauls", hauls.len());
-
-        adapter
-            .commit_hauls_training(model_id, hauls.into_iter().collect())
-            .await
-            .change_context(MLModelError::StoreOutput)?;
-
-        adapter
-            .save_model(model_id, &new_model)
-            .await
-            .change_context(MLModelError::StoreOutput)?;
-
-        model = new_model
     }
+
+    Ok(model)
+}
+
+async fn training_run<T, S>(
+    model_id: ModelId,
+    settings: &WeightPredictorSettings,
+    model: &mut Vec<u8>,
+    adapter: &dyn MLModelsOutbound,
+    weather: WeatherData,
+    training_data_convert: &T,
+) -> Result<TrainingOutcome, MLModelError>
+where
+    S: Serialize,
+    T: Fn(Vec<WeightPredictorTrainingData>) -> Vec<S>,
+{
+    let mut hauls = HashSet::new();
+    let training_data: Vec<WeightPredictorTrainingData> = adapter
+        .fishing_weight_predictor_training_data(
+            model_id,
+            weather,
+            settings.training_mode.batch_size(),
+            settings.single_species_mode,
+        )
+        .await
+        .change_context(MLModelError::DataPreparation)?
+        .into_iter()
+        .filter_map(|v| {
+            hauls.insert(TrainingHaul {
+                haul_id: HaulId(v.haul_id),
+                species: v.species,
+                catch_location_id: v.catch_location.clone(),
+            });
+            if settings.running_in_test || distance_to_shore(v.latitude, v.longitude) > 2000.0 {
+                Some(v)
+            } else {
+                None
+            }
+        })
+        .collect();
+
+    if training_data.is_empty() {
+        return Ok(TrainingOutcome::Finished);
+    }
+
+    let training_data = training_data_convert(training_data);
+    if training_data.is_empty() {
+        return Ok(TrainingOutcome::Progress(hauls));
+    }
+
+    let training_data =
+        serde_json::to_string(&training_data).change_context(MLModelError::DataPreparation)?;
+
+    let new_model = Python::with_gil(|py| {
+        let py_module =
+            PyModule::from_code(py, PYTHON_FISHING_WEIGHT_PREDICTOR_CODE, "", "").unwrap();
+        let py_main = py_module.getattr("train").unwrap();
+
+        let model = if model.is_empty() {
+            None
+        } else {
+            Some(PyByteArray::new(py, model))
+        };
+
+        py_main
+            .call1((
+                model,
+                training_data,
+                settings.training_rounds,
+                settings.use_gpu,
+                settings.test_fraction,
+            ))?
+            .extract::<Vec<u8>>()
+    })
+    .change_context(MLModelError::Python)?;
+
+    event!(Level::INFO, "trained on {} new hauls", hauls.len());
+
+    *model = new_model;
+
+    Ok(TrainingOutcome::Progress(hauls))
 }
 
 async fn weight_predict_impl<T, S>(
@@ -195,6 +248,11 @@ where
         for t in chunk {
             for c in &active_catch_locations {
                 for s in &species {
+                    if let Some(single) = settings.single_species_mode {
+                        if *s != single {
+                            continue;
+                        }
+                    }
                     predictions.insert(PredictionInputKey {
                         species_group_id: *s,
                         catch_location_id: c.id.clone(),

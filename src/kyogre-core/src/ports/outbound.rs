@@ -273,12 +273,14 @@ pub trait MLModelsOutbound: Send + Sync {
         &self,
         model_id: ModelId,
         limit: Option<u32>,
+        single_species_mode: Option<SpeciesGroup>,
     ) -> Result<Vec<FishingSpotTrainingData>, QueryError>;
     async fn fishing_weight_predictor_training_data(
         &self,
         model_id: ModelId,
         weather: WeatherData,
         limit: Option<u32>,
+        single_species_mode: Option<SpeciesGroup>,
     ) -> Result<Vec<WeightPredictorTrainingData>, QueryError>;
     async fn commit_hauls_training(
         &self,

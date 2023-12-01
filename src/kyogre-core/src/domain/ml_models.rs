@@ -5,6 +5,7 @@ use error_stack::{Context, Result};
 use fiskeridir_rs::SpeciesGroup;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashSet, fmt::Display};
+use strum::EnumIter;
 
 #[derive(Debug)]
 pub enum MLModelError {
@@ -25,17 +26,14 @@ impl Display for MLModelError {
 
 impl Context for MLModelError {}
 
-#[derive(Debug, Copy, Clone, Deserialize, Serialize, strum::Display)]
+#[derive(Debug, Copy, Clone, Deserialize, Serialize, strum::Display, EnumIter)]
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 #[serde(rename_all = "camelCase")]
+#[strum(serialize_all = "camelCase")]
 pub enum ModelId {
-    #[strum(serialize = "spot")]
     Spot = 1,
-    #[strum(serialize = "weight")]
     Weight = 2,
-    #[strum(serialize = "weightWeather")]
     WeightWeather = 3,
-    #[strum(serialize = "spotWeather")]
     SpotWeather = 4,
 }
 
@@ -50,9 +48,23 @@ pub struct SpeciesGroupWeek {
     pub weeks: HashSet<u32>,
 }
 
-pub enum TrainingOutcome {
-    Finished,
-    Progress { new_model: Vec<u8> },
+#[derive(Debug, Copy, Clone, Deserialize)]
+pub enum TrainingMode {
+    Single,
+    Batches(u32),
+    // Run in single mode without storing the model in the db
+    // and hauls in the training log.
+    // Intended for faster runs locally.
+    Local,
+}
+
+impl TrainingMode {
+    pub fn batch_size(&self) -> Option<u32> {
+        match self {
+            TrainingMode::Local | TrainingMode::Single => None,
+            TrainingMode::Batches(b) => Some(*b),
+        }
+    }
 }
 
 #[derive(Debug, Hash, Eq, PartialEq)]
@@ -146,6 +158,7 @@ pub struct FishingWeightPrediction {
     pub date: NaiveDate,
 }
 
+#[derive(Clone)]
 pub enum PredictionRange {
     CurrentYear,
     DaysFromStartOfYear(u32),

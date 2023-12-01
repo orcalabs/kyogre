@@ -5,32 +5,39 @@ from io import StringIO
 
 CAT = True
 
-def train(model, training_data, num_train_rounds, use_gpu):
+def train(model, training_data, num_train_rounds, use_gpu, test_fraction):
     input = pd.read_json(StringIO(training_data), orient='records')
 
     cats = ['species_group_id']
     for col in cats:
         input[col] = input[col].astype('category')
 
-    x_train, x_test, y_train, y_test = train_test_split(input.drop('weight',axis=1), input['weight'], test_size=0.2, random_state=42)
-
-    dtrain_reg = xgb.DMatrix(x_train, label=y_train,enable_categorical=CAT)
-    dtest_reg = xgb.DMatrix(x_test, label=y_test,enable_categorical=CAT)
-
     params = {"objective":"reg:squarederror"}
-
     if use_gpu == True:
         params["device"] = "cuda"
     else:
         params["tree_method"] = "hist"
 
-    return xgb.train(
-        params,
-        dtrain_reg,
-        num_boost_round=num_train_rounds,
-        evals = [(dtest_reg, "test")], verbose_eval=10,
-        xgb_model = model).save_raw(raw_format="ubj")
 
+    if test_fraction is None:
+        labels = input['weight']
+        train = input.drop('weight',axis=1)
+        dtrain_reg = xgb.DMatrix(train, label=labels,enable_categorical=CAT)
+        return xgb.train(
+            params,
+            dtrain_reg,
+            num_boost_round=num_train_rounds,
+            xgb_model = model).save_raw(raw_format="ubj")
+    else:
+        x_train, x_test, y_train, y_test = train_test_split(input.drop('weight',axis=1), input['weight'], test_size=0.2, random_state=42)
+        dtest_reg = xgb.DMatrix(x_test, label=y_test,enable_categorical=CAT)
+        dtrain_reg = xgb.DMatrix(x_train, label=y_train,enable_categorical=CAT)
+        return xgb.train(
+            params,
+            dtrain_reg,
+            num_boost_round=num_train_rounds,
+            evals = [(dtest_reg, "test")], verbose_eval=10,
+            xgb_model = model).save_raw(raw_format="ubj")
 
 def predict(model, prediction_data):
     loaded_model = xgb.Booster(model_file=model)
@@ -45,4 +52,4 @@ def predict(model, prediction_data):
 
 if __name__ == "__main__":
     data = "INSERT_TEST_JSON_DATA"
-    train(None, data, 1, True)
+    train(None, data, 1, True, 0.2)

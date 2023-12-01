@@ -16,7 +16,7 @@ use fiskeridir_rs::{DeliveryPointId, LandingMonth};
 use futures::TryStreamExt;
 use kyogre_core::{
     CatchLocationId, HaulDistributor, MLModel, NewVesselConflict, NewWeather, TestStorage,
-    TripAssembler, TripDistancer, TripPositionLayer, VesselBenchmark,
+    TrainingMode, TripAssembler, TripDistancer, TripPositionLayer, VesselBenchmark,
 };
 use machine::StateMachine;
 use orca_core::PsqlSettings;
@@ -158,36 +158,42 @@ enum TripPrecisonStartPoint {
 pub fn default_fishing_spot_weather_predictor() -> Box<dyn MLModel> {
     Box::new(FishingSpotWeatherPredictor::new(SpotPredictorSettings {
         running_in_test: true,
-        training_batch_size: None,
+        test_fraction: None,
         use_gpu: false,
         training_rounds: 1,
         predict_batch_size: 53,
         catch_locations: vec![CatchLocationId::new(10, 4), CatchLocationId::new(10, 5)],
         range: PredictionRange::DaysFromStartOfYear(FISHING_SPOT_PREDICTOR_NUM_DAYS),
+        single_species_mode: None,
+        training_mode: TrainingMode::Single,
     }))
 }
 
 pub fn default_fishing_spot_predictor() -> Box<dyn MLModel> {
     Box::new(FishingSpotPredictor::new(SpotPredictorSettings {
         running_in_test: true,
-        training_batch_size: None,
+        training_mode: TrainingMode::Single,
+        test_fraction: None,
         use_gpu: false,
         training_rounds: 1,
         predict_batch_size: 53,
         range: PredictionRange::DaysFromStartOfYear(FISHING_SPOT_PREDICTOR_NUM_DAYS),
         catch_locations: vec![CatchLocationId::new(10, 4), CatchLocationId::new(10, 5)],
+        single_species_mode: None,
     }))
 }
 
 pub fn default_fishing_weight_predictor() -> Box<dyn MLModel> {
     Box::new(FishingWeightPredictor::new(WeightPredictorSettings {
         running_in_test: true,
-        training_batch_size: None,
         use_gpu: false,
         training_rounds: 1,
         predict_batch_size: 100,
         range: PredictionRange::DaysFromStartOfYear(FISHING_WEIGHT_PREDICTOR_NUM_DAYS),
         catch_locations: vec![CatchLocationId::new(10, 4), CatchLocationId::new(10, 5)],
+        single_species_mode: None,
+        training_mode: TrainingMode::Single,
+        test_fraction: None,
     }))
 }
 
@@ -195,12 +201,14 @@ pub fn default_fishing_weight_weather_predictor() -> Box<dyn MLModel> {
     Box::new(FishingWeightWeatherPredictor::new(
         WeightPredictorSettings {
             running_in_test: true,
-            training_batch_size: None,
+            test_fraction: None,
+            training_mode: TrainingMode::Single,
             use_gpu: false,
             training_rounds: 1,
             predict_batch_size: 100,
             range: PredictionRange::DaysFromStartOfYear(FISHING_WEIGHT_PREDICTOR_NUM_DAYS),
             catch_locations: vec![CatchLocationId::new(10, 4), CatchLocationId::new(10, 5)],
+            single_species_mode: None,
         },
     ))
 }

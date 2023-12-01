@@ -23,7 +23,7 @@ pub struct Settings {
 #[derive(Debug, Deserialize)]
 pub struct FishingPredictorSettings {
     pub training_rounds: u32,
-    pub training_batch_size: Option<u32>,
+    pub training_mode: TrainingMode,
 }
 
 #[derive(Debug, Deserialize)]
