@@ -851,9 +851,9 @@ async fn test_trips_filter_by_gear_group_ids() {
             .landings(2)
             .modify_idx(|i, v| {
                 if i == 0 {
-                    v.landing.gear.group = GearGroup::Not;
+                    v.landing.gear.group = GearGroup::Seine;
                 } else {
-                    v.landing.gear.group = GearGroup::Garn;
+                    v.landing.gear.group = GearGroup::Net;
                 }
             })
             .build()
@@ -865,7 +865,7 @@ async fn test_trips_filter_by_gear_group_ids() {
             .app
             .get_trips(
                 TripsParameters {
-                    gear_group_ids: Some(vec![GearGroupId(GearGroup::Not)]),
+                    gear_group_ids: Some(vec![GearGroupId(GearGroup::Seine)]),
                     ..Default::default()
                 },
                 None,
@@ -889,9 +889,9 @@ async fn test_trips_filter_by_species_group_ids() {
             .landings(2)
             .modify_idx(|i, v| {
                 if i == 0 {
-                    v.landing.product.species.group_code = SpeciesGroup::Uer;
+                    v.landing.product.species.group_code = SpeciesGroup::GoldenRedfish;
                 } else {
-                    v.landing.product.species.group_code = SpeciesGroup::Sei;
+                    v.landing.product.species.group_code = SpeciesGroup::Saithe;
                 }
             })
             .build()
@@ -903,7 +903,7 @@ async fn test_trips_filter_by_species_group_ids() {
             .app
             .get_trips(
                 TripsParameters {
-                    species_group_ids: Some(vec![SpeciesGroupId(SpeciesGroup::Uer)]),
+                    species_group_ids: Some(vec![SpeciesGroupId(SpeciesGroup::GoldenRedfish)]),
                     ..Default::default()
                 },
                 None,

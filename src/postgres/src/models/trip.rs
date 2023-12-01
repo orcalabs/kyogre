@@ -475,7 +475,7 @@ impl From<Catch> for kyogre_core::Catch {
             product_weight: c.product_weight,
             species_fiskeridir_id: c.species_fiskeridir_id,
             product_quality_id: c.product_quality_id,
-            product_quality_name: c.product_quality_id.name().to_owned(),
+            product_quality_name: c.product_quality_id.norwegian_name().to_owned(),
         }
     }
 }

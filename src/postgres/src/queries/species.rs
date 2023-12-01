@@ -17,14 +17,14 @@ FROM
 WHERE
     gear_group_id = $1
             "#,
-            GearGroup::Traal as i32,
+            GearGroup::Trawl as i32,
         )
         .fetch_all(&self.pool)
         .await
         .change_context(PostgresError::Query)?
         .into_iter()
         .filter_map(|v| {
-            if matches!(v.species, SpeciesGroup::Ukjent) {
+            if matches!(v.species, SpeciesGroup::Unknown) {
                 None
             } else {
                 Some(v.species)

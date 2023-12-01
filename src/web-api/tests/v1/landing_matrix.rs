@@ -178,16 +178,16 @@ async fn test_landing_matrix_filters_by_species_group() {
                 0 => {
                     v.landing.product.living_weight = Some(20.0);
                     v.landing.vessel.length_group_code = VesselLengthGroup::UnderEleven;
-                    v.landing.product.species.group_code = SpeciesGroup::Blaakveite;
+                    v.landing.product.species.group_code = SpeciesGroup::GreenlandHalibut;
                 }
                 1 => {
                     v.landing.product.living_weight = Some(40.0);
                     v.landing.vessel.length_group_code = VesselLengthGroup::ElevenToFifteen;
-                    v.landing.product.species.group_code = SpeciesGroup::Uer;
+                    v.landing.product.species.group_code = SpeciesGroup::GoldenRedfish;
                 }
                 2 => {
                     v.landing.product.living_weight = Some(100.0);
-                    v.landing.product.species.group_code = SpeciesGroup::Sei;
+                    v.landing.product.species.group_code = SpeciesGroup::Saithe;
                 }
                 _ => (),
             })
@@ -197,8 +197,8 @@ async fn test_landing_matrix_filters_by_species_group() {
         helper.refresh_matrix_cache().await;
         let params = LandingMatrixParams {
             species_group_ids: Some(vec![
-                SpeciesGroupId(SpeciesGroup::Uer),
-                SpeciesGroupId(SpeciesGroup::Blaakveite),
+                SpeciesGroupId(SpeciesGroup::GoldenRedfish),
+                SpeciesGroupId(SpeciesGroup::GreenlandHalibut),
             ]),
             ..Default::default()
         };
@@ -226,15 +226,15 @@ async fn test_landing_matrix_filters_by_gear_group() {
             .modify_idx(|i, v| match i {
                 0 => {
                     v.landing.product.living_weight = Some(20.0);
-                    v.landing.gear.group = GearGroup::Not;
+                    v.landing.gear.group = GearGroup::Seine;
                 }
                 1 => {
                     v.landing.product.living_weight = Some(40.0);
-                    v.landing.gear.group = GearGroup::Garn;
+                    v.landing.gear.group = GearGroup::Net;
                 }
                 2 => {
                     v.landing.product.living_weight = Some(100.0);
-                    v.landing.gear.group = GearGroup::Oppdrett;
+                    v.landing.gear.group = GearGroup::FishFarming;
                 }
                 _ => (),
             })
@@ -244,8 +244,8 @@ async fn test_landing_matrix_filters_by_gear_group() {
         helper.refresh_matrix_cache().await;
         let params = LandingMatrixParams {
             gear_group_ids: Some(vec![
-                GearGroupId(GearGroup::Not),
-                GearGroupId(GearGroup::Garn),
+                GearGroupId(GearGroup::Seine),
+                GearGroupId(GearGroup::Net),
             ]),
             ..Default::default()
         };
@@ -342,15 +342,15 @@ async fn test_landing_matrix_gear_group_sum_area_table_is_correct() {
             .modify_idx(|i, v| match i {
                 0 => {
                     v.landing.product.living_weight = Some(20.0);
-                    v.landing.gear.group = GearGroup::Traal;
+                    v.landing.gear.group = GearGroup::Trawl;
                 }
                 1 => {
                     v.landing.product.living_weight = Some(40.0);
-                    v.landing.gear.group = GearGroup::Snurrevad;
+                    v.landing.gear.group = GearGroup::DanishSeine;
                 }
                 2 => {
                     v.landing.product.living_weight = Some(100.0);
-                    v.landing.gear.group = GearGroup::Not;
+                    v.landing.gear.group = GearGroup::Seine;
                 }
                 _ => (),
             })
@@ -368,8 +368,8 @@ async fn test_landing_matrix_gear_group_sum_area_table_is_correct() {
         let matrix: LandingMatrix = response.json().await.unwrap();
 
         let width = LandingMatrixes::GearGroup.size();
-        let x0 = GearGroup::Traal.enum_index();
-        let x1 = GearGroup::Snurrevad.enum_index();
+        let x0 = GearGroup::Trawl.enum_index();
+        let x1 = GearGroup::DanishSeine.enum_index();
         let y0 = 0;
         let y1 = NUM_CATCH_LOCATIONS - 1;
 
@@ -437,16 +437,16 @@ async fn test_landing_matrix_species_group_sum_area_table_is_correct() {
                 0 => {
                     v.landing.product.living_weight = Some(20.0);
                     v.landing.vessel.length_group_code = VesselLengthGroup::UnderEleven;
-                    v.landing.product.species.group_code = SpeciesGroup::Blaakveite;
+                    v.landing.product.species.group_code = SpeciesGroup::GreenlandHalibut;
                 }
                 1 => {
                     v.landing.product.living_weight = Some(40.0);
                     v.landing.vessel.length_group_code = VesselLengthGroup::ElevenToFifteen;
-                    v.landing.product.species.group_code = SpeciesGroup::Uer;
+                    v.landing.product.species.group_code = SpeciesGroup::GoldenRedfish;
                 }
                 2 => {
                     v.landing.product.living_weight = Some(100.0);
-                    v.landing.product.species.group_code = SpeciesGroup::Sei;
+                    v.landing.product.species.group_code = SpeciesGroup::Saithe;
                 }
                 _ => (),
             })
@@ -464,8 +464,8 @@ async fn test_landing_matrix_species_group_sum_area_table_is_correct() {
         let matrix: LandingMatrix = response.json().await.unwrap();
 
         let width = LandingMatrixes::SpeciesGroup.size();
-        let x0 = SpeciesGroup::Blaakveite.enum_index();
-        let x1 = SpeciesGroup::Uer.enum_index();
+        let x0 = SpeciesGroup::GreenlandHalibut.enum_index();
+        let x1 = SpeciesGroup::GoldenRedfish.enum_index();
         let y0 = 0;
         let y1 = NUM_CATCH_LOCATIONS - 1;
 

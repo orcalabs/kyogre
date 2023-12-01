@@ -74,7 +74,7 @@ impl From<fiskeridir_rs::Gear> for Gear {
     fn from(value: fiskeridir_rs::Gear) -> Self {
         Gear {
             id: value as u32,
-            name: value.name(),
+            name: value.norwegian_name(),
         }
     }
 }
@@ -83,7 +83,7 @@ impl From<fiskeridir_rs::GearGroup> for GearGroup {
     fn from(value: fiskeridir_rs::GearGroup) -> Self {
         GearGroup {
             id: value as u32,
-            name: value.name(),
+            name: value.norwegian_name(),
         }
     }
 }
@@ -92,7 +92,7 @@ impl From<fiskeridir_rs::MainGearGroup> for GearMainGroup {
     fn from(value: fiskeridir_rs::MainGearGroup) -> Self {
         GearMainGroup {
             id: value as u32,
-            name: value.name(),
+            name: value.norwegian_name(),
         }
     }
 }

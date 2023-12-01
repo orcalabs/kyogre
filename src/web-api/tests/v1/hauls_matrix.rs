@@ -170,13 +170,13 @@ async fn test_hauls_matrix_filters_by_species_group() {
             .hauls(4)
             .modify_idx(|i, v| match i {
                 0 => {
-                    v.dca.catch.species.species_group_code = SpeciesGroup::Blaakveite;
+                    v.dca.catch.species.species_group_code = SpeciesGroup::GreenlandHalibut;
                     v.dca.start_latitude = Some(56.727258);
                     v.dca.start_longitude = Some(12.565410);
                     v.dca.catch.species.living_weight = Some(10);
                 }
                 1 => {
-                    v.dca.catch.species.species_group_code = SpeciesGroup::Uer;
+                    v.dca.catch.species.species_group_code = SpeciesGroup::GoldenRedfish;
                     v.dca.start_latitude = Some(56.727258);
                     v.dca.start_longitude = Some(12.565410);
                     v.dca.catch.species.living_weight = Some(20);
@@ -199,8 +199,8 @@ async fn test_hauls_matrix_filters_by_species_group() {
         helper.refresh_matrix_cache().await;
         let params = HaulsMatrixParams {
             species_group_ids: Some(vec![
-                SpeciesGroupId(SpeciesGroup::Uer),
-                SpeciesGroupId(SpeciesGroup::Blaakveite),
+                SpeciesGroupId(SpeciesGroup::GoldenRedfish),
+                SpeciesGroupId(SpeciesGroup::GreenlandHalibut),
             ]),
             ..Default::default()
         };
@@ -222,13 +222,13 @@ async fn test_hauls_matrix_filters_by_gear_group() {
             .hauls(4)
             .modify_idx(|i, v| match i {
                 0 => {
-                    v.dca.gear.gear_group_code = GearGroup::Not;
+                    v.dca.gear.gear_group_code = GearGroup::Seine;
                     v.dca.start_latitude = Some(56.727258);
                     v.dca.start_longitude = Some(12.565410);
                     v.dca.catch.species.living_weight = Some(10);
                 }
                 1 => {
-                    v.dca.gear.gear_group_code = GearGroup::Garn;
+                    v.dca.gear.gear_group_code = GearGroup::Net;
                     v.dca.start_latitude = Some(56.727258);
                     v.dca.start_longitude = Some(12.565410);
                     v.dca.catch.species.living_weight = Some(20);
@@ -250,8 +250,8 @@ async fn test_hauls_matrix_filters_by_gear_group() {
 
         let params = HaulsMatrixParams {
             gear_group_ids: Some(vec![
-                GearGroupId(GearGroup::Not),
-                GearGroupId(GearGroup::Garn),
+                GearGroupId(GearGroup::Seine),
+                GearGroupId(GearGroup::Net),
             ]),
             ..Default::default()
         };
@@ -428,25 +428,25 @@ async fn test_hauls_matrix_gear_group_sum_area_table_is_correct() {
                 0 => {
                     v.dca.start_latitude = Some(56.727258);
                     v.dca.start_longitude = Some(12.565410);
-                    v.dca.gear.gear_group_code = GearGroup::Traal;
+                    v.dca.gear.gear_group_code = GearGroup::Trawl;
                     v.dca.catch.species.living_weight = Some(10);
                 }
                 1 => {
                     v.dca.start_latitude = Some(56.756293);
                     v.dca.start_longitude = Some(11.514740);
-                    v.dca.gear.gear_group_code = GearGroup::Snurrevad;
+                    v.dca.gear.gear_group_code = GearGroup::DanishSeine;
                     v.dca.catch.species.living_weight = Some(20);
                 }
                 2 => {
                     v.dca.start_latitude = Some(56.727258);
                     v.dca.start_longitude = Some(12.565410);
-                    v.dca.gear.gear_group_code = GearGroup::Not;
+                    v.dca.gear.gear_group_code = GearGroup::Seine;
                     v.dca.catch.species.living_weight = Some(100);
                 }
                 3 => {
                     v.dca.start_latitude = Some(56.727258);
                     v.dca.start_longitude = Some(12.565410);
-                    v.dca.gear.gear_group_code = GearGroup::Not;
+                    v.dca.gear.gear_group_code = GearGroup::Seine;
                     v.dca.catch.species.living_weight = Some(200);
                 }
                 _ => (),
@@ -464,8 +464,8 @@ async fn test_hauls_matrix_gear_group_sum_area_table_is_correct() {
         let matrix: HaulsMatrix = response.json().await.unwrap();
 
         let width = HaulMatrixes::GearGroup.size();
-        let x0 = GearGroup::Traal.enum_index();
-        let x1 = GearGroup::Snurrevad.enum_index();
+        let x0 = GearGroup::Trawl.enum_index();
+        let x1 = GearGroup::DanishSeine.enum_index();
         let y0 = 0;
         let y1 = NUM_CATCH_LOCATIONS - 1;
 
@@ -540,13 +540,13 @@ async fn test_hauls_matrix_species_group_sum_area_table_is_correct() {
             .hauls(4)
             .modify_idx(|i, v| match i {
                 0 => {
-                    v.dca.catch.species.species_group_code = SpeciesGroup::Blaakveite;
+                    v.dca.catch.species.species_group_code = SpeciesGroup::GreenlandHalibut;
                     v.dca.start_latitude = Some(56.727258);
                     v.dca.start_longitude = Some(12.565410);
                     v.dca.catch.species.living_weight = Some(10);
                 }
                 1 => {
-                    v.dca.catch.species.species_group_code = SpeciesGroup::Uer;
+                    v.dca.catch.species.species_group_code = SpeciesGroup::GoldenRedfish;
                     v.dca.start_latitude = Some(56.727258);
                     v.dca.start_longitude = Some(12.565410);
                     v.dca.catch.species.living_weight = Some(20);
@@ -576,8 +576,8 @@ async fn test_hauls_matrix_species_group_sum_area_table_is_correct() {
         let matrix: HaulsMatrix = response.json().await.unwrap();
 
         let width = HaulMatrixes::SpeciesGroup.size();
-        let x0 = SpeciesGroup::Blaakveite.enum_index();
-        let x1 = SpeciesGroup::Uer.enum_index();
+        let x0 = SpeciesGroup::GreenlandHalibut.enum_index();
+        let x1 = SpeciesGroup::GoldenRedfish.enum_index();
         let y0 = 0;
         let y1 = NUM_CATCH_LOCATIONS - 1;
 
