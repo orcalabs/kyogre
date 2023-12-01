@@ -86,7 +86,7 @@ impl Settings {
                 training_batch_size: s.training_batch_size,
                 use_gpu,
                 training_rounds: s.training_rounds,
-                predict_batch_size: 21,
+                predict_batch_size: 7,
                 range: PredictionRange::PriorCurrentAndNextWeek,
                 catch_locations: vec![],
             }));
@@ -95,7 +95,7 @@ impl Settings {
                 training_batch_size: s.training_batch_size,
                 use_gpu,
                 training_rounds: s.training_rounds,
-                predict_batch_size: 21,
+                predict_batch_size: 7,
                 range: PredictionRange::PriorCurrentAndNextWeek,
                 catch_locations: vec![],
             }));
@@ -105,7 +105,7 @@ impl Settings {
                     training_batch_size: s.training_batch_size,
                     use_gpu,
                     training_rounds: s.training_rounds,
-                    predict_batch_size: 21,
+                    predict_batch_size: 7,
                     range: PredictionRange::PriorCurrentAndNextWeek,
                     catch_locations: vec![],
                 },
