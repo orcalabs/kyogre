@@ -174,7 +174,7 @@ impl NewLanding {
             north_south_62_degrees_id: landing
                 .catch_location
                 .north_or_south_of_62_degrees
-                .into_inner(),
+                .to_string(),
             within_12_mile_border: landing.catch_location.coast_ocean_code as i32,
             fishing_diary_number: landing.fishing_diary_number.map(|v| v as i32),
             fishing_diary_trip_number: landing.fishing_diary_trip_number.map(|v| v as i32),

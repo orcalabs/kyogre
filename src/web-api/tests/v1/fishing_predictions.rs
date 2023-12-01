@@ -21,7 +21,7 @@ async fn test_fishing_spot_predictions_filters_by_model_id() {
             .vessels(1)
             .hauls(5)
             .modify(|v| {
-                v.dca.gear.gear_group_code = GearGroup::Traal;
+                v.dca.gear.gear_group_code = GearGroup::Trawl;
             })
             .weather(5)
             .build()
@@ -55,11 +55,11 @@ async fn test_fishing_spot_predictions_filters_by_week_and_species_group() {
             .vessels(1)
             .hauls(2)
             .modify_idx(|i, v| {
-                v.dca.gear.gear_group_code = GearGroup::Traal;
+                v.dca.gear.gear_group_code = GearGroup::Trawl;
                 if i == 0 {
-                    v.dca.catch.species.species_group_code = SpeciesGroup::Sei;
+                    v.dca.catch.species.species_group_code = SpeciesGroup::Saithe;
                 } else {
-                    v.dca.catch.species.species_group_code = SpeciesGroup::Torsk;
+                    v.dca.catch.species.species_group_code = SpeciesGroup::AtlanticCod;
                 }
             })
             .build()
@@ -69,7 +69,7 @@ async fn test_fishing_spot_predictions_filters_by_week_and_species_group() {
             .app
             .get_fishing_spot_predictions(
                 ModelId::Spot,
-                SpeciesGroup::Sei,
+                SpeciesGroup::Saithe,
                 FishingSpotPredictionParams {
                     date: Utc::now().date_naive().with_ordinal(1),
                 },
@@ -91,8 +91,8 @@ async fn test_fishing_weight_predictions_filters_by_week_and_species_group() {
             .vessels(1)
             .hauls(5)
             .modify(|v| {
-                v.dca.gear.gear_group_code = GearGroup::Traal;
-                v.dca.catch.species.species_group_code = SpeciesGroup::Sei;
+                v.dca.gear.gear_group_code = GearGroup::Trawl;
+                v.dca.catch.species.species_group_code = SpeciesGroup::Saithe;
             })
             .build()
             .await;
@@ -101,7 +101,7 @@ async fn test_fishing_weight_predictions_filters_by_week_and_species_group() {
             .app
             .get_fishing_weight_predictions(
                 ModelId::Weight,
-                SpeciesGroup::Sei,
+                SpeciesGroup::Saithe,
                 FishingWeightPredictionParams {
                     date: Utc::now().date_naive().with_ordinal(1),
                     limit: None,
@@ -129,7 +129,7 @@ async fn test_fishing_weight_predictions_filters_by_model() {
             .vessels(1)
             .hauls(5)
             .modify(|v| {
-                v.dca.gear.gear_group_code = GearGroup::Traal;
+                v.dca.gear.gear_group_code = GearGroup::Trawl;
             })
             .weather(5)
             .build()
@@ -165,8 +165,8 @@ async fn test_fishing_weight_predictions_filters_by_limit_and_orders_by_weight_d
             .vessels(1)
             .hauls(5)
             .modify(|v| {
-                v.dca.gear.gear_group_code = GearGroup::Traal;
-                v.dca.catch.species.species_group_code = SpeciesGroup::Sei;
+                v.dca.gear.gear_group_code = GearGroup::Trawl;
+                v.dca.catch.species.species_group_code = SpeciesGroup::Saithe;
             })
             .build()
             .await;
@@ -175,7 +175,7 @@ async fn test_fishing_weight_predictions_filters_by_limit_and_orders_by_weight_d
             .app
             .get_fishing_weight_predictions(
                 ModelId::Weight,
-                SpeciesGroup::Sei,
+                SpeciesGroup::Saithe,
                 FishingWeightPredictionParams {
                     date: Utc::now().date_naive().with_ordinal(1),
                     limit: Some(2),

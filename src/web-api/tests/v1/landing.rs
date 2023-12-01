@@ -116,8 +116,8 @@ async fn test_landings_returns_landings_with_gear_group_ids() {
         let state = builder
             .landings(4)
             .modify_idx(|i, v| match i {
-                0 => v.landing.gear.group = GearGroup::Not,
-                1 => v.landing.gear.group = GearGroup::BurOgRuser,
+                0 => v.landing.gear.group = GearGroup::Seine,
+                1 => v.landing.gear.group = GearGroup::LobsterTrapAndFykeNets,
                 _ => (),
             })
             .build()
@@ -127,8 +127,8 @@ async fn test_landings_returns_landings_with_gear_group_ids() {
 
         let params = LandingsParams {
             gear_group_ids: Some(vec![
-                GearGroupId(GearGroup::Not),
-                GearGroupId(GearGroup::BurOgRuser),
+                GearGroupId(GearGroup::Seine),
+                GearGroupId(GearGroup::LobsterTrapAndFykeNets),
             ]),
             ordering: Some(Ordering::Asc),
             ..Default::default()
@@ -151,8 +151,8 @@ async fn test_landings_returns_landings_with_species_group_ids() {
         let state = builder
             .landings(4)
             .modify_idx(|i, v| match i {
-                0 => v.landing.product.species.group_code = SpeciesGroup::Blaakveite,
-                1 => v.landing.product.species.group_code = SpeciesGroup::Uer,
+                0 => v.landing.product.species.group_code = SpeciesGroup::GreenlandHalibut,
+                1 => v.landing.product.species.group_code = SpeciesGroup::GoldenRedfish,
                 _ => (),
             })
             .build()
@@ -162,8 +162,8 @@ async fn test_landings_returns_landings_with_species_group_ids() {
 
         let params = LandingsParams {
             species_group_ids: Some(vec![
-                SpeciesGroupId(SpeciesGroup::Blaakveite),
-                SpeciesGroupId(SpeciesGroup::Uer),
+                SpeciesGroupId(SpeciesGroup::GreenlandHalibut),
+                SpeciesGroupId(SpeciesGroup::GoldenRedfish),
             ]),
             ordering: Some(Ordering::Asc),
             ..Default::default()

@@ -51,7 +51,7 @@ async fn test_species_groups_returns_all_species_groups() {
     test(|helper, _builder| async move {
         let mut expected: Vec<SpeciesGroup> = fiskeridir_rs::SpeciesGroup::iter()
             .map(|v| SpeciesGroup {
-                name: v.name().to_owned(),
+                name: v.norwegian_name().to_owned(),
                 id: v,
             })
             .collect();
@@ -73,7 +73,7 @@ async fn test_species_main_groups_returns_all_species_main_groups() {
     test(|helper, _builder| async move {
         let mut expected: Vec<SpeciesMainGroup> = fiskeridir_rs::SpeciesMainGroup::iter()
             .map(|v| SpeciesMainGroup {
-                name: v.name().to_owned(),
+                name: v.norwegian_name().to_owned(),
                 id: v,
             })
             .collect();

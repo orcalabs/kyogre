@@ -153,7 +153,7 @@ impl From<kyogre_core::Species> for Species {
 impl From<fiskeridir_rs::SpeciesGroup> for SpeciesGroup {
     fn from(value: fiskeridir_rs::SpeciesGroup) -> Self {
         SpeciesGroup {
-            name: value.name().to_owned(),
+            name: value.norwegian_name().to_owned(),
             id: value,
         }
     }
@@ -162,7 +162,7 @@ impl From<fiskeridir_rs::SpeciesGroup> for SpeciesGroup {
 impl From<fiskeridir_rs::SpeciesMainGroup> for SpeciesMainGroup {
     fn from(value: fiskeridir_rs::SpeciesMainGroup) -> Self {
         SpeciesMainGroup {
-            name: value.name().to_owned(),
+            name: value.norwegian_name().to_owned(),
             id: value,
         }
     }

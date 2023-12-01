@@ -218,7 +218,7 @@ LIMIT
     $5
             "#,
             model_id as i32,
-            GearGroup::Traal as i32,
+            GearGroup::Trawl as i32,
             single_species_mode.map(|v| v as i32),
             require_weather,
             limit.map(|v| v as i64)
@@ -304,7 +304,7 @@ LIMIT
     $4
             "#,
             model_id as i32,
-            GearGroup::Traal as i32,
+            GearGroup::Trawl as i32,
             single_species_mode.map(|v| v as i32),
             limit.map(|v| v as i64)
         )

@@ -115,10 +115,10 @@ async fn test_hauls_returns_hauls_with_gear_group_ids() {
             .hauls(4)
             .modify_idx(|i, v| match i {
                 0 => {
-                    v.dca.gear.gear_group_code = GearGroup::Not;
+                    v.dca.gear.gear_group_code = GearGroup::Seine;
                 }
                 1 => {
-                    v.dca.gear.gear_group_code = GearGroup::BurOgRuser;
+                    v.dca.gear.gear_group_code = GearGroup::LobsterTrapAndFykeNets;
                 }
                 _ => (),
             })
@@ -129,8 +129,8 @@ async fn test_hauls_returns_hauls_with_gear_group_ids() {
 
         let params = HaulsParams {
             gear_group_ids: Some(vec![
-                GearGroupId(GearGroup::Not),
-                GearGroupId(GearGroup::BurOgRuser),
+                GearGroupId(GearGroup::Seine),
+                GearGroupId(GearGroup::LobsterTrapAndFykeNets),
             ]),
             ..Default::default()
         };
@@ -153,10 +153,10 @@ async fn test_hauls_returns_hauls_with_species_group_ids() {
             .hauls(4)
             .modify_idx(|i, v| match i {
                 0 => {
-                    v.dca.catch.species.species_group_code = SpeciesGroup::Blaakveite;
+                    v.dca.catch.species.species_group_code = SpeciesGroup::GreenlandHalibut;
                 }
                 1 => {
-                    v.dca.catch.species.species_group_code = SpeciesGroup::Uer;
+                    v.dca.catch.species.species_group_code = SpeciesGroup::GoldenRedfish;
                 }
                 _ => (),
             })
@@ -167,8 +167,8 @@ async fn test_hauls_returns_hauls_with_species_group_ids() {
 
         let params = HaulsParams {
             species_group_ids: Some(vec![
-                SpeciesGroupId(SpeciesGroup::Blaakveite),
-                SpeciesGroupId(SpeciesGroup::Uer),
+                SpeciesGroupId(SpeciesGroup::GreenlandHalibut),
+                SpeciesGroupId(SpeciesGroup::GoldenRedfish),
             ]),
             ..Default::default()
         };

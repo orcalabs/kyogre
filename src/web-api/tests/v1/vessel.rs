@@ -186,8 +186,8 @@ async fn test_vessel_has_gear_groups_of_landings() {
             .vessels(1)
             .landings(2)
             .modify_idx(|idx, v| match idx {
-                0 => v.landing.gear.group = GearGroup::Not,
-                1 => v.landing.gear.group = GearGroup::Garn,
+                0 => v.landing.gear.group = GearGroup::Seine,
+                1 => v.landing.gear.group = GearGroup::Net,
                 _ => unreachable!(),
             })
             .build()
@@ -200,7 +200,7 @@ async fn test_vessel_has_gear_groups_of_landings() {
         assert_eq!(body.len(), 1);
 
         let vessel = &body[0];
-        assert_eq!(vec![GearGroup::Not, GearGroup::Garn], vessel.gear_groups);
+        assert_eq!(vec![GearGroup::Seine, GearGroup::Net], vessel.gear_groups);
     })
     .await;
 }
@@ -214,14 +214,14 @@ async fn test_vessel_removes_gear_group_when_last_landing_is_replaced_with_new_g
             .modify(|v| {
                 v.landing.id = LandingId::try_from("1-7-0-0").unwrap();
                 v.landing.document_info.version_number = 1;
-                v.landing.gear.group = GearGroup::Not;
+                v.landing.gear.group = GearGroup::Seine;
             })
             .new_cycle()
             .landings(1)
             .modify(|v| {
                 v.landing.document_info.version_number = 2;
                 v.landing.id = LandingId::try_from("1-7-0-0").unwrap();
-                v.landing.gear.group = GearGroup::Garn;
+                v.landing.gear.group = GearGroup::Net;
             })
             .build()
             .await;
@@ -233,7 +233,7 @@ async fn test_vessel_removes_gear_group_when_last_landing_is_replaced_with_new_g
         assert_eq!(body.len(), 1);
 
         let vessel = &body[0];
-        assert_eq!(vec![GearGroup::Garn], vessel.gear_groups);
+        assert_eq!(vec![GearGroup::Net], vessel.gear_groups);
     })
     .await;
 }
@@ -262,8 +262,8 @@ async fn test_vessel_has_species_groups_of_landings() {
             .vessels(1)
             .landings(2)
             .modify_idx(|idx, v| match idx {
-                0 => v.landing.product.species.group_code = SpeciesGroup::Torsk,
-                1 => v.landing.product.species.group_code = SpeciesGroup::Sei,
+                0 => v.landing.product.species.group_code = SpeciesGroup::AtlanticCod,
+                1 => v.landing.product.species.group_code = SpeciesGroup::Saithe,
                 _ => unreachable!(),
             })
             .build()
@@ -277,7 +277,7 @@ async fn test_vessel_has_species_groups_of_landings() {
 
         let vessel = &body[0];
         assert_eq!(
-            vec![SpeciesGroup::Torsk, SpeciesGroup::Sei],
+            vec![SpeciesGroup::AtlanticCod, SpeciesGroup::Saithe],
             vessel.species_groups
         );
     })
@@ -293,14 +293,14 @@ async fn test_vessel_removes_species_group_when_last_landing_is_replaced_with_ne
             .modify(|v| {
                 v.landing.id = LandingId::try_from("1-7-0-0").unwrap();
                 v.landing.document_info.version_number = 1;
-                v.landing.product.species.group_code = SpeciesGroup::Torsk;
+                v.landing.product.species.group_code = SpeciesGroup::AtlanticCod;
             })
             .new_cycle()
             .landings(1)
             .modify(|v| {
                 v.landing.document_info.version_number = 2;
                 v.landing.id = LandingId::try_from("1-7-0-0").unwrap();
-                v.landing.product.species.group_code = SpeciesGroup::Sei;
+                v.landing.product.species.group_code = SpeciesGroup::Saithe;
             })
             .build()
             .await;
@@ -312,7 +312,7 @@ async fn test_vessel_removes_species_group_when_last_landing_is_replaced_with_ne
         assert_eq!(body.len(), 1);
 
         let vessel = &body[0];
-        assert_eq!(vec![SpeciesGroup::Sei], vessel.species_groups);
+        assert_eq!(vec![SpeciesGroup::Saithe], vessel.species_groups);
     })
     .await;
 }
