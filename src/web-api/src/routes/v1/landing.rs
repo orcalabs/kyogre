@@ -1,11 +1,6 @@
 use crate::{
-    error::ApiError,
-    response::Response,
-    routes::utils::{
-        self, deserialize_range_list, deserialize_string_list, months_to_date_ranges, DateTimeUtc,
-        GearGroupId, Month, SpeciesGroupId,
-    },
-    to_streaming_response, Cache, Database, Meilisearch,
+    error::ApiError, response::Response, routes::utils::*, to_streaming_response, Cache, Database,
+    Meilisearch,
 };
 use actix_web::{
     web::{self, Path},
@@ -31,12 +26,12 @@ pub struct LandingsParams {
     #[param(value_type = Option<String>, example = "05-24,15-10")]
     #[serde(deserialize_with = "deserialize_string_list", default)]
     pub catch_locations: Option<Vec<CatchLocationId>>,
-    #[param(value_type = Option<String>, example = "2,5")]
-    #[serde(deserialize_with = "deserialize_string_list", default)]
-    pub gear_group_ids: Option<Vec<GearGroupId>>,
-    #[param(value_type = Option<String>, example = "201,302")]
-    #[serde(deserialize_with = "deserialize_string_list", default)]
-    pub species_group_ids: Option<Vec<SpeciesGroupId>>,
+    #[param(value_type = Option<String>, example = "Seine,Net")]
+    #[serde(deserialize_with = "opt_vec_from_string_list", default)]
+    pub gear_group_ids: Option<Vec<GearGroup>>,
+    #[param(value_type = Option<String>, example = "Capelin,Saithe")]
+    #[serde(deserialize_with = "opt_vec_from_string_list", default)]
+    pub species_group_ids: Option<Vec<SpeciesGroup>>,
     #[param(value_type = Option<String>, example = "[0,11);[15,)")]
     #[serde(deserialize_with = "deserialize_range_list", default)]
     pub vessel_length_ranges: Option<Vec<Range<f64>>>,
@@ -56,15 +51,15 @@ pub struct LandingMatrixParams {
     #[param(value_type = Option<String>, example = "05-24,15-10")]
     #[serde(deserialize_with = "deserialize_string_list", default)]
     pub catch_locations: Option<Vec<CatchLocationId>>,
-    #[param(value_type = Option<String>, example = "2,5")]
-    #[serde(deserialize_with = "deserialize_string_list", default)]
-    pub gear_group_ids: Option<Vec<GearGroupId>>,
-    #[param(value_type = Option<String>, example = "201,302")]
-    #[serde(deserialize_with = "deserialize_string_list", default)]
-    pub species_group_ids: Option<Vec<SpeciesGroupId>>,
-    #[param(value_type = Option<String>, example = "1,3")]
-    #[serde(deserialize_with = "deserialize_string_list", default)]
-    pub vessel_length_groups: Option<Vec<utils::VesselLengthGroup>>,
+    #[param(value_type = Option<String>, example = "Seine,Net")]
+    #[serde(deserialize_with = "opt_vec_from_string_list", default)]
+    pub gear_group_ids: Option<Vec<GearGroup>>,
+    #[param(value_type = Option<String>, example = "Capelin,Saithe")]
+    #[serde(deserialize_with = "opt_vec_from_string_list", default)]
+    pub species_group_ids: Option<Vec<SpeciesGroup>>,
+    #[param(value_type = Option<String>, example = "UnderEleven,FifteenToTwentyOne")]
+    #[serde(deserialize_with = "opt_vec_from_string_list", default)]
+    pub vessel_length_groups: Option<Vec<VesselLengthGroup>>,
     #[param(value_type = Option<String>, example = "2000013801,2001015304")]
     #[serde(deserialize_with = "deserialize_string_list", default)]
     pub fiskeridir_vessel_ids: Option<Vec<FiskeridirVesselId>>,
@@ -116,12 +111,18 @@ pub async fn landings<T: Database + 'static, M: Meilisearch + 'static>(
     }
 }
 
+#[derive(Debug, Deserialize, IntoParams)]
+pub struct LandingMatrixPath {
+    #[serde(deserialize_with = "from_string")]
+    pub active_filter: ActiveLandingFilter,
+}
+
 #[utoipa::path(
     get,
     path = "/landing_matrix/{active_filter}",
     params(
         LandingMatrixParams,
-        ("active_filter" = ActiveLandingFilter, Path, description = "What feature to group by on the y-axis of the output matrices"),
+        LandingMatrixPath,
     ),
     responses(
         (status = 200, description = "an aggregated matrix view of landing living weights", body = LandingMatrix),
@@ -134,9 +135,9 @@ pub async fn landing_matrix<T: Database + 'static, S: Cache>(
     db: web::Data<T>,
     cache: web::Data<Option<S>>,
     params: web::Query<LandingMatrixParams>,
-    active_filter: Path<ActiveLandingFilter>,
+    path: Path<LandingMatrixPath>,
 ) -> Result<Response<LandingMatrix>, ApiError> {
-    let query = matrix_params_to_query(params.into_inner(), active_filter.into_inner());
+    let query = matrix_params_to_query(params.into_inner(), path.active_filter);
 
     let matrix = if let Some(cache) = cache.as_ref() {
         match cache.landing_matrix(query.clone()).await {
@@ -176,9 +177,9 @@ pub struct Landing {
     pub landing_timestamp: DateTime<Utc>,
     #[schema(value_type = Option<String>, example = "05-24")]
     pub catch_location: Option<CatchLocationId>,
-    #[schema(value_type = i32)]
+    #[serde(serialize_with = "to_string", deserialize_with = "from_string")]
     pub gear_id: Gear,
-    #[schema(value_type = i32)]
+    #[serde(serialize_with = "to_string", deserialize_with = "from_string")]
     pub gear_group_id: GearGroup,
     #[schema(value_type = Option<String>)]
     pub delivery_point_id: Option<DeliveryPointId>,
@@ -187,7 +188,7 @@ pub struct Landing {
     pub vessel_call_sign: Option<String>,
     pub vessel_name: Option<String>,
     pub vessel_length: Option<f64>,
-    #[schema(value_type = i32)]
+    #[serde(serialize_with = "to_string", deserialize_with = "from_string")]
     pub vessel_length_group: VesselLengthGroup,
     pub total_living_weight: f64,
     pub total_product_weight: f64,
@@ -202,7 +203,7 @@ pub struct LandingCatch {
     pub gross_weight: f64,
     pub product_weight: f64,
     pub species_fiskeridir_id: i32,
-    #[schema(value_type = i32)]
+    #[serde(serialize_with = "to_string", deserialize_with = "from_string")]
     pub species_group_id: SpeciesGroup,
 }
 
@@ -278,12 +279,8 @@ impl From<LandingsParams> for LandingsQuery {
         Self {
             ranges: v.months.map(months_to_date_ranges),
             catch_locations: v.catch_locations,
-            gear_group_ids: v
-                .gear_group_ids
-                .map(|gs| gs.into_iter().map(|g| g.0).collect()),
-            species_group_ids: v
-                .species_group_ids
-                .map(|gs| gs.into_iter().map(|g| g.0).collect()),
+            gear_group_ids: v.gear_group_ids,
+            species_group_ids: v.species_group_ids,
             vessel_length_ranges: v.vessel_length_ranges,
             vessel_ids: v.fiskeridir_vessel_ids,
             sorting: Some(v.sorting.unwrap_or_default()),
@@ -301,15 +298,9 @@ pub fn matrix_params_to_query(
             .months
             .map(|ms| ms.into_iter().map(|m| m.0).collect()),
         catch_locations: params.catch_locations,
-        gear_group_ids: params
-            .gear_group_ids
-            .map(|gs| gs.into_iter().map(|g| g.0).collect()),
-        species_group_ids: params
-            .species_group_ids
-            .map(|gs| gs.into_iter().map(|g| g.0).collect()),
-        vessel_length_groups: params
-            .vessel_length_groups
-            .map(|lgs| lgs.into_iter().map(|l| l.0).collect()),
+        gear_group_ids: params.gear_group_ids,
+        species_group_ids: params.species_group_ids,
+        vessel_length_groups: params.vessel_length_groups,
         active_filter,
         vessel_ids: params.fiskeridir_vessel_ids,
     }

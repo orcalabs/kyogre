@@ -156,7 +156,7 @@ SELECT
     mmsi,
     "timestamp" AS msgtime,
     course_over_ground,
-    navigation_status_id AS navigational_status,
+    navigation_status_id AS "navigational_status: NavigationStatus",
     rate_of_turn,
     speed_over_ground,
     true_heading,
@@ -204,7 +204,7 @@ SELECT
     true_heading,
     speed_over_ground,
     TIMESTAMP AS msgtime,
-    navigation_status_id AS navigational_status,
+    navigation_status_id AS "navigational_status: NavigationStatus",
     distance_to_shore
 FROM
     current_ais_positions

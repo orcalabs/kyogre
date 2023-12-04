@@ -1,16 +1,17 @@
 use std::{
     fmt::{self, Debug},
+    marker::PhantomData,
     ops::Bound,
     str::FromStr,
 };
 
 use chrono::{DateTime, Datelike, Months, NaiveDate, Utc};
-use fiskeridir_rs::{GearGroup, SpeciesGroup};
 use kyogre_core::Range;
 use num_traits::FromPrimitive;
 use serde::{
-    de::{DeserializeOwned, IntoDeserializer, Visitor},
-    Deserialize, Deserializer,
+    de::{self, DeserializeOwned, IntoDeserializer, Visitor},
+    ser::SerializeSeq,
+    Deserialize, Deserializer, Serializer,
 };
 
 /// Deserializes an input string that is assumed to be a comma separate list of values to a vector
@@ -149,131 +150,6 @@ impl ToString for DateTimeUtc {
     }
 }
 
-/// NewType wrapper for a core `GearGroup` to customize the deserialize implementation
-/// such that it can be used in [crate::routes::utils::deserialize_string_list].
-#[derive(Debug, Clone)]
-pub struct GearGroupId(pub GearGroup);
-
-impl<'de> Deserialize<'de> for GearGroupId {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        struct GearGroupVisitor;
-
-        impl<'de> Visitor<'de> for GearGroupVisitor {
-            type Value = GearGroupId;
-
-            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-                formatter.write_str("an u32 integer representing a gear group id")
-            }
-
-            fn visit_i64<E>(self, v: i64) -> Result<Self::Value, E>
-            where
-                E: serde::de::Error,
-            {
-                let gear_id = GearGroup::from_i64(v).ok_or_else(|| {
-                    serde::de::Error::invalid_value(serde::de::Unexpected::Signed(v), &self)
-                })?;
-
-                Ok(GearGroupId(gear_id))
-            }
-
-            fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
-            where
-                E: serde::de::Error,
-            {
-                let gear_id = GearGroup::from_u64(v).ok_or_else(|| {
-                    serde::de::Error::invalid_value(serde::de::Unexpected::Unsigned(v), &self)
-                })?;
-
-                Ok(GearGroupId(gear_id))
-            }
-
-            fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
-            where
-                E: serde::de::Error,
-            {
-                let id = v.parse::<u8>().map_err(|_| {
-                    serde::de::Error::invalid_value(serde::de::Unexpected::Str(v), &self)
-                })?;
-
-                let gear_id = GearGroup::from_u8(id).ok_or_else(|| {
-                    serde::de::Error::invalid_value(
-                        serde::de::Unexpected::Unsigned(id as u64),
-                        &self,
-                    )
-                })?;
-
-                Ok(GearGroupId(gear_id))
-            }
-        }
-        deserializer.deserialize_newtype_struct("GearGroupId", GearGroupVisitor)
-    }
-}
-
-/// NewType wrapper for a specie group id to customize the deserialize implementation
-/// such that it can be used in [crate::routes::utils::deserialize_string_list].
-#[derive(Debug, Clone)]
-pub struct SpeciesGroupId(pub SpeciesGroup);
-
-impl<'de> Deserialize<'de> for SpeciesGroupId {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        struct SpecieVisitor;
-
-        impl<'de> Visitor<'de> for SpecieVisitor {
-            type Value = SpeciesGroupId;
-
-            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-                formatter.write_str("an u32 integer representing a species group id")
-            }
-
-            fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
-            where
-                E: serde::de::Error,
-            {
-                let id = v.parse::<u32>().map_err(|_| {
-                    serde::de::Error::invalid_value(serde::de::Unexpected::Str(v), &self)
-                })?;
-
-                let species_group_id = SpeciesGroup::from_u32(id).ok_or_else(|| {
-                    serde::de::Error::invalid_value(
-                        serde::de::Unexpected::Unsigned(id as u64),
-                        &self,
-                    )
-                })?;
-
-                Ok(SpeciesGroupId(species_group_id))
-            }
-            fn visit_i64<E>(self, v: i64) -> Result<Self::Value, E>
-            where
-                E: serde::de::Error,
-            {
-                let val = SpeciesGroup::from_i64(v).ok_or_else(|| {
-                    serde::de::Error::invalid_value(serde::de::Unexpected::Signed(v), &self)
-                })?;
-
-                Ok(SpeciesGroupId(val))
-            }
-
-            fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
-            where
-                E: serde::de::Error,
-            {
-                let val = SpeciesGroup::from_u64(v).ok_or_else(|| {
-                    serde::de::Error::invalid_value(serde::de::Unexpected::Unsigned(v), &self)
-                })?;
-
-                Ok(SpeciesGroupId(val))
-            }
-        }
-        deserializer.deserialize_newtype_struct("SpecieGroupId", SpecieVisitor)
-    }
-}
-
 /// NewType wrapper for a month id to customize the deserialize implementation
 /// such that it can be used in [crate::routes::utils::deserialize_string_list].
 #[derive(Debug, Clone)]
@@ -322,68 +198,6 @@ impl<'de> Deserialize<'de> for Month {
             }
         }
         deserializer.deserialize_newtype_struct("Month", MonthVisitor)
-    }
-}
-
-/// NewType wrapper for a `VesselLengthGroup` to customize the deserialize implementation
-/// such that it can be used in [crate::routes::utils::deserialize_string_list].
-#[derive(Debug, Clone)]
-pub struct VesselLengthGroup(pub fiskeridir_rs::VesselLengthGroup);
-
-impl<'de> Deserialize<'de> for VesselLengthGroup {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        struct VesselLengthGroupVisitor;
-
-        impl<'de> Visitor<'de> for VesselLengthGroupVisitor {
-            type Value = VesselLengthGroup;
-
-            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-                formatter.write_str("an u32 integer representing a vessel length group")
-            }
-
-            fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
-            where
-                E: serde::de::Error,
-            {
-                let id = v.parse::<u8>().map_err(|_| {
-                    serde::de::Error::invalid_value(serde::de::Unexpected::Str(v), &self)
-                })?;
-
-                let val = fiskeridir_rs::VesselLengthGroup::from_u8(id).ok_or_else(|| {
-                    serde::de::Error::invalid_value(
-                        serde::de::Unexpected::Unsigned(id as u64),
-                        &self,
-                    )
-                })?;
-
-                Ok(VesselLengthGroup(val))
-            }
-            fn visit_i64<E>(self, v: i64) -> Result<Self::Value, E>
-            where
-                E: serde::de::Error,
-            {
-                let val = fiskeridir_rs::VesselLengthGroup::from_i64(v).ok_or_else(|| {
-                    serde::de::Error::invalid_value(serde::de::Unexpected::Signed(v), &self)
-                })?;
-
-                Ok(VesselLengthGroup(val))
-            }
-
-            fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
-            where
-                E: serde::de::Error,
-            {
-                let val = fiskeridir_rs::VesselLengthGroup::from_u64(v).ok_or_else(|| {
-                    serde::de::Error::invalid_value(serde::de::Unexpected::Unsigned(v), &self)
-                })?;
-
-                Ok(VesselLengthGroup(val))
-            }
-        }
-        deserializer.deserialize_newtype_struct("VesselLengthGroupId", VesselLengthGroupVisitor)
     }
 }
 
@@ -479,4 +293,164 @@ pub(crate) fn months_to_date_ranges(mut months: Vec<DateTimeUtc>) -> Vec<Range<D
     }
 
     vec
+}
+
+pub fn to_string<T: AsRef<str>, S>(value: &T, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    serializer.serialize_str(value.as_ref())
+}
+
+pub fn opt_to_string<T: AsRef<str>, S>(value: &Option<T>, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    match value {
+        Some(value) => serializer.serialize_str(value.as_ref()),
+        None => serializer.serialize_none(),
+    }
+}
+
+pub fn vec_to_string<T: AsRef<str>, S>(values: &Vec<T>, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    let mut seq = serializer.serialize_seq(Some(values.len()))?;
+    for v in values {
+        seq.serialize_element(v.as_ref())?;
+    }
+    seq.end()
+}
+
+pub fn from_string<'de, D, T: FromStr>(deserializer: D) -> Result<T, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    struct FromStringVisitor<T>(PhantomData<T>);
+
+    impl<'de, T: FromStr> Visitor<'de> for FromStringVisitor<T> {
+        type Value = T;
+
+        fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+            formatter.write_str("an enum value")
+        }
+
+        fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            v.parse()
+                .map_err(|_| de::Error::invalid_value(de::Unexpected::Str(v), &self))
+        }
+    }
+
+    deserializer.deserialize_str(FromStringVisitor(PhantomData))
+}
+
+pub fn opt_from_string<'de, D, T: FromStr>(deserializer: D) -> Result<Option<T>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    struct OptFromStringVisitor<T>(PhantomData<T>);
+
+    impl<'de, T: FromStr> Visitor<'de> for OptFromStringVisitor<T> {
+        type Value = Option<T>;
+
+        fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+            formatter.write_str("an enum value")
+        }
+
+        fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            v.parse()
+                .map_err(|_| de::Error::invalid_value(de::Unexpected::Str(v), &self))
+                .map(Some)
+        }
+
+        fn visit_none<E>(self) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            Ok(None)
+        }
+    }
+
+    deserializer.deserialize_str(OptFromStringVisitor(PhantomData))
+}
+
+pub fn vec_from_string<'de, D, T: FromStr>(deserializer: D) -> Result<Vec<T>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    struct VecFromStringVisitor<T>(PhantomData<T>);
+
+    impl<'de, T: FromStr> Visitor<'de> for VecFromStringVisitor<T> {
+        type Value = Vec<T>;
+
+        fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+            formatter.write_str("a list of enum values")
+        }
+
+        fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+        where
+            A: de::SeqAccess<'de>,
+        {
+            let mut vec = Vec::new();
+            while let Some(v) = seq.next_element::<&str>()? {
+                vec.push(
+                    v.parse()
+                        .map_err(|_| de::Error::invalid_value(de::Unexpected::Str(v), &self))?,
+                );
+            }
+            Ok(vec)
+        }
+    }
+
+    deserializer.deserialize_seq(VecFromStringVisitor(PhantomData))
+}
+
+pub fn opt_vec_from_string_list<'de, D, T: FromStr>(
+    deserializer: D,
+) -> Result<Option<Vec<T>>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    struct OptVecFromStringListVisitor<T>(PhantomData<T>);
+
+    impl<'de, T: FromStr> Visitor<'de> for OptVecFromStringListVisitor<T> {
+        type Value = Option<Vec<T>>;
+
+        fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+            formatter.write_str("a comma separated list of enum values")
+        }
+
+        fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            if v.is_empty() {
+                Ok(None)
+            } else {
+                v.split(',')
+                    .map(|i| {
+                        i.parse()
+                            .map_err(|_| de::Error::invalid_value(de::Unexpected::Str(v), &self))
+                    })
+                    .collect::<Result<_, _>>()
+                    .map(Some)
+            }
+        }
+
+        fn visit_none<E>(self) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            Ok(None)
+        }
+    }
+
+    deserializer.deserialize_str(OptVecFromStringListVisitor(PhantomData))
 }

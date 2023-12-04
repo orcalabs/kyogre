@@ -5,7 +5,7 @@ use engine::*;
 use fiskeridir_rs::{ErsDca, GearGroup, SpeciesGroup};
 use kyogre_core::{FiskeridirVesselId, HaulsSorting, Ordering};
 use web_api::routes::{
-    utils::{DateTimeUtc, GearGroupId, SpeciesGroupId},
+    utils::DateTimeUtc,
     v1::haul::{Haul, HaulsParams},
 };
 
@@ -128,10 +128,7 @@ async fn test_hauls_returns_hauls_with_gear_group_ids() {
         helper.refresh_cache().await;
 
         let params = HaulsParams {
-            gear_group_ids: Some(vec![
-                GearGroupId(GearGroup::Seine),
-                GearGroupId(GearGroup::LobsterTrapAndFykeNets),
-            ]),
+            gear_group_ids: Some(vec![GearGroup::Seine, GearGroup::LobsterTrapAndFykeNets]),
             ..Default::default()
         };
 
@@ -167,8 +164,8 @@ async fn test_hauls_returns_hauls_with_species_group_ids() {
 
         let params = HaulsParams {
             species_group_ids: Some(vec![
-                SpeciesGroupId(SpeciesGroup::GreenlandHalibut),
-                SpeciesGroupId(SpeciesGroup::GoldenRedfish),
+                SpeciesGroup::GreenlandHalibut,
+                SpeciesGroup::GoldenRedfish,
             ]),
             ..Default::default()
         };

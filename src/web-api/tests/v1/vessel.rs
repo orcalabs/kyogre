@@ -4,7 +4,7 @@ use chrono::Duration;
 use engine::*;
 use fiskeridir_rs::{GearGroup, LandingId, SpeciesGroup};
 use kyogre_core::{
-    ActiveVesselConflict, FiskeridirVesselId, FiskeridirVesselSource, Mmsi, TestHelperOutbound,
+    ActiveVesselConflict, FiskeridirVesselId, Mmsi, TestHelperOutbound, VesselSource,
 };
 use web_api::routes::v1::vessel::Vessel;
 
@@ -394,7 +394,7 @@ async fn test_vessels_does_not_return_vessel_with_an_active_conflict() {
                 vessel_ids: vec![Some(FiskeridirVesselId(0)), Some(FiskeridirVesselId(1))],
                 call_sign: "test".try_into().unwrap(),
                 mmsis: vec![Some(Mmsi(1)), Some(Mmsi(2))],
-                sources: vec![Some(FiskeridirVesselSource::FiskeridirVesselRegister)],
+                sources: vec![Some(VesselSource::FiskeridirVesselRegister)],
             }
         );
         assert!(vessels.is_empty());
@@ -528,7 +528,7 @@ async fn test_vessels_does_not_return_vessels_with_an_active_mmsi_conflict() {
                 vessel_ids: vec![Some(FiskeridirVesselId(0)), Some(FiskeridirVesselId(1))],
                 call_sign: "test".try_into().unwrap(),
                 mmsis: vec![Some(Mmsi(1))],
-                sources: vec![Some(FiskeridirVesselSource::FiskeridirVesselRegister)],
+                sources: vec![Some(VesselSource::FiskeridirVesselRegister)],
             },
         );
     })
@@ -601,7 +601,7 @@ async fn test_vessels_does_not_return_an_active_mmsi_conflict() {
                 vessel_ids: vec![Some(FiskeridirVesselId(1))],
                 call_sign: "test".try_into().unwrap(),
                 mmsis: vec![Some(Mmsi(1)), Some(Mmsi(2))],
-                sources: vec![Some(FiskeridirVesselSource::FiskeridirVesselRegister)],
+                sources: vec![Some(VesselSource::FiskeridirVesselRegister)],
             },
         );
     })

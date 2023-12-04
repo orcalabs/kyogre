@@ -2,6 +2,7 @@ use crate::{
     ais_to_streaming_response,
     error::ApiError,
     extractors::{Auth0Profile, BwProfile},
+    routes::utils::*,
     Database,
 };
 use actix_web::{web, HttpResponse};
@@ -9,14 +10,13 @@ use async_stream::try_stream;
 use chrono::{DateTime, Duration, Utc};
 use fiskeridir_rs::CallSign;
 use kyogre_core::{
-    AisPermission, AisPosition, AisVmsParams, DateRange, Mmsi, TripId, TripPositionLayerId,
-    VmsPosition,
+    AisPermission, AisPosition, AisVmsParams, DateRange, Mmsi, NavigationStatus, TripId,
+    TripPositionLayerId, VmsPosition,
 };
 use serde::{Deserialize, Serialize};
+use std::string::ToString;
 use tracing::{event, Level};
 use utoipa::{IntoParams, ToSchema};
-
-use super::ais::NavigationStatus;
 
 #[derive(Debug, Deserialize, IntoParams)]
 #[serde(rename_all = "camelCase")]
@@ -110,24 +110,34 @@ pub struct AisVmsPosition {
     pub lat: f64,
     pub lon: f64,
     pub timestamp: DateTime<Utc>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none", default)]
     pub cog: Option<f64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none", default)]
     pub speed: Option<f64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        serialize_with = "opt_to_string",
+        deserialize_with = "opt_from_string",
+        default
+    )]
     pub pruned_by: Option<TripPositionLayerId>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none", default)]
     pub det: Option<AisVmsPositionDetails>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct AisVmsPositionDetails {
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        serialize_with = "opt_to_string",
+        deserialize_with = "opt_from_string",
+        default
+    )]
     pub navigational_status: Option<NavigationStatus>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none", default)]
     pub rate_of_turn: Option<f64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none", default)]
     pub true_heading: Option<i32>,
     pub distance_to_shore: f64,
     pub missing_data: bool,
@@ -143,7 +153,7 @@ impl From<kyogre_core::AisVmsPosition> for AisVmsPosition {
             speed: v.speed,
             pruned_by: v.pruned_by,
             det: Some(AisVmsPositionDetails {
-                navigational_status: v.navigational_status.map(NavigationStatus::from),
+                navigational_status: v.navigational_status,
                 rate_of_turn: v.rate_of_turn,
                 true_heading: v.true_heading,
                 distance_to_shore: v.distance_to_shore,
@@ -161,7 +171,7 @@ impl PartialEq<kyogre_core::AisVmsPosition> for AisVmsPosition {
             && self.cog.map(|c| c as i32) == other.course_over_ground.map(|c| c as i32)
             && self.speed.map(|s| s as i32) == other.speed.map(|s| s as i32)
             && self.det.as_ref().map_or(true, |d| {
-                d.navigational_status == other.navigational_status.map(NavigationStatus::from)
+                d.navigational_status == other.navigational_status
                     && d.rate_of_turn.map(|s| s as i32) == other.rate_of_turn.map(|s| s as i32)
                     && d.true_heading == other.true_heading
                     && d.distance_to_shore as i32 == other.distance_to_shore as i32

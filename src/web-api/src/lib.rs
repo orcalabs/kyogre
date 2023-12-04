@@ -2,16 +2,19 @@
 #![deny(rust_2018_idioms)]
 
 use duckdb_rs::Client;
-use fiskeridir_rs::{RegisterVesselEntityType, RegisterVesselOwner};
+use fiskeridir_rs::{
+    Gear, GearGroup, MainGearGroup, Quality, RegisterVesselEntityType, RegisterVesselOwner,
+    SpeciesGroup, SpeciesMainGroup, VesselLengthGroup, WhaleGender,
+};
 use kyogre_core::{
-    ActiveHaulsFilter, ActiveLandingFilter, Catch, Delivery, FishingFacilitiesSorting,
-    FishingFacilityToolType, HaulsSorting, LandingsSorting, MatrixCacheOutbound,
-    MeilisearchOutbound, Ordering, TripPositionLayerId, TripSorting, WebApiInboundPort,
-    WebApiOutboundPort,
+    ActiveHaulsFilter, ActiveLandingFilter, FishingFacilitiesSorting, FishingFacilityToolType,
+    HaulsSorting, LandingsSorting, MatrixCacheOutbound, MeilisearchOutbound, NavigationStatus,
+    Ordering, TripAssemblerId, TripPositionLayerId, TripSorting, VesselEventType,
+    WebApiInboundPort, WebApiOutboundPort,
 };
 use meilisearch::MeilisearchAdapter;
 use postgres::PostgresAdapter;
-use routes::v1::{self, trip::TripAssemblerId};
+use routes::v1::{self};
 use utoipa::OpenApi;
 
 pub mod auth0;
@@ -72,8 +75,6 @@ impl Meilisearch for MeilisearchAdapter<PostgresAdapter> {}
         schemas(
             ActiveHaulsFilter,
             ActiveLandingFilter,
-            Delivery,
-            Catch,
             Ordering,
             RegisterVesselOwner,
             RegisterVesselEntityType,
@@ -84,19 +85,28 @@ impl Meilisearch for MeilisearchAdapter<PostgresAdapter> {}
             TripSorting,
             TripAssemblerId,
             TripPositionLayerId,
+            NavigationStatus,
+            Gear,
+            GearGroup,
+            MainGearGroup,
+            SpeciesGroup,
+            SpeciesMainGroup,
+            Quality,
+            VesselEventType,
+            WhaleGender,
+            VesselLengthGroup,
             error::ErrorResponse,
             error::ApiError,
             v1::ais::AisPosition,
             v1::ais::AisPositionDetails,
-            v1::ais::NavigationStatus,
-            v1::species::SpeciesGroup,
+            v1::species::SpeciesGroupDetailed,
             v1::species::SpeciesFiskeridir,
             v1::species::Species,
-            v1::species::SpeciesMainGroup,
+            v1::species::SpeciesMainGroupDetailed,
             v1::species::SpeciesFao,
-            v1::gear::Gear,
-            v1::gear::GearGroup,
-            v1::gear::GearMainGroup,
+            v1::gear::GearDetailed,
+            v1::gear::GearGroupDetailed,
+            v1::gear::GearMainGroupDetailed,
             v1::vessel::Vessel,
             v1::vessel::AisVessel,
             v1::vessel::FiskeridirVessel,
@@ -107,6 +117,8 @@ impl Meilisearch for MeilisearchAdapter<PostgresAdapter> {}
             v1::haul::HaulWeather,
             v1::haul::HaulOceanClimate,
             v1::trip::Trip,
+            v1::trip::Delivery,
+            v1::trip::Catch,
             v1::trip::CurrentTrip,
             v1::trip::TripHaul,
             v1::trip::VesselEvent,

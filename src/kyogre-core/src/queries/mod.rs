@@ -15,12 +15,12 @@ pub use haul::*;
 pub use landing::*;
 pub use ocean_climate::*;
 pub use pagination::*;
+use strum::{AsRefStr, EnumString};
 pub use trip::*;
 pub use weather::*;
 
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
-#[derive(Deserialize, Debug, Default, Clone, Copy, strum::Display)]
-#[serde(rename_all = "lowercase")]
+#[derive(Deserialize, Debug, Default, Clone, Copy, strum::Display, AsRefStr, EnumString)]
 #[strum(serialize_all = "lowercase")]
 pub enum Ordering {
     #[serde(alias = "asc", alias = "Asc", alias = "ascending", alias = "Ascending")]

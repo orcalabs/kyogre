@@ -9,7 +9,6 @@ use kyogre_core::{
     landing_date_feature_matrix_index, ActiveLandingFilter, CatchLocationId, HaulMatrixes,
     LandingMatrixes, NUM_CATCH_LOCATIONS,
 };
-use web_api::routes::utils::{self, GearGroupId, SpeciesGroupId};
 use web_api::routes::v1::landing::{LandingMatrix, LandingMatrixParams};
 
 #[tokio::test]
@@ -147,8 +146,8 @@ async fn test_landing_matrix_filters_by_vessel_length() {
         helper.refresh_matrix_cache().await;
         let params = LandingMatrixParams {
             vessel_length_groups: Some(vec![
-                utils::VesselLengthGroup(VesselLengthGroup::UnderEleven),
-                utils::VesselLengthGroup(VesselLengthGroup::ElevenToFifteen),
+                VesselLengthGroup::UnderEleven,
+                VesselLengthGroup::ElevenToFifteen,
             ]),
             ..Default::default()
         };
@@ -197,8 +196,8 @@ async fn test_landing_matrix_filters_by_species_group() {
         helper.refresh_matrix_cache().await;
         let params = LandingMatrixParams {
             species_group_ids: Some(vec![
-                SpeciesGroupId(SpeciesGroup::GoldenRedfish),
-                SpeciesGroupId(SpeciesGroup::GreenlandHalibut),
+                SpeciesGroup::GoldenRedfish,
+                SpeciesGroup::GreenlandHalibut,
             ]),
             ..Default::default()
         };
@@ -243,10 +242,7 @@ async fn test_landing_matrix_filters_by_gear_group() {
 
         helper.refresh_matrix_cache().await;
         let params = LandingMatrixParams {
-            gear_group_ids: Some(vec![
-                GearGroupId(GearGroup::Seine),
-                GearGroupId(GearGroup::Net),
-            ]),
+            gear_group_ids: Some(vec![GearGroup::Seine, GearGroup::Net]),
             ..Default::default()
         };
 

@@ -176,7 +176,7 @@ impl ApiClient {
             parameters.push(("date".to_string(), date.to_string()))
         }
         self.get(
-            format!("fishing_spot_predictions/{}/{}", model_id, species as i32),
+            format!("fishing_spot_predictions/{}/{}", model_id, species),
             &parameters,
             None,
         )
@@ -197,7 +197,7 @@ impl ApiClient {
             parameters.push(("limit".to_string(), limit.to_string()))
         }
         self.get(
-            format!("fishing_weight_predictions/{}/{}", model_id, species as i32),
+            format!("fishing_weight_predictions/{}/{}", model_id, species),
             &parameters,
             None,
         )
@@ -221,14 +221,14 @@ impl ApiClient {
         if let Some(gear) = params.gear_group_ids {
             parameters.push((
                 "gearGroupIds".to_string(),
-                create_comma_separated_list(gear.into_iter().map(|g| g.0 as u8).collect()),
+                create_comma_separated_list(gear),
             ))
         }
 
         if let Some(species) = params.species_group_ids {
             parameters.push((
                 "speciesGroupIds".to_string(),
-                create_comma_separated_list(species.into_iter().map(|s| s.0 as u32).collect()),
+                create_comma_separated_list(species),
             ))
         }
 
@@ -289,14 +289,14 @@ impl ApiClient {
         if let Some(gear) = params.gear_group_ids {
             parameters.push((
                 "gearGroupIds".to_string(),
-                create_comma_separated_list(gear.into_iter().map(|g| g.0 as u8).collect()),
+                create_comma_separated_list(gear),
             ))
         }
 
         if let Some(species) = params.species_group_ids {
             parameters.push((
                 "speciesGroupIds".to_string(),
-                create_comma_separated_list(species.into_iter().map(|s| s.0 as u32).collect()),
+                create_comma_separated_list(species),
             ))
         }
 
@@ -348,21 +348,21 @@ impl ApiClient {
         if let Some(gear) = params.gear_group_ids {
             parameters.push((
                 "gearGroupIds".to_string(),
-                create_comma_separated_list(gear.into_iter().map(|g| g.0 as u8).collect()),
+                create_comma_separated_list(gear),
             ))
         }
 
         if let Some(species) = params.species_group_ids {
             parameters.push((
                 "speciesGroupIds".to_string(),
-                create_comma_separated_list(species.into_iter().map(|s| s.0 as u32).collect()),
+                create_comma_separated_list(species),
             ))
         }
 
         if let Some(groups) = params.vessel_length_groups {
             parameters.push((
                 "vesselLengthGroups".to_string(),
-                create_comma_separated_list(groups.into_iter().map(|g| g.0 as u8).collect()),
+                create_comma_separated_list(groups),
             ))
         }
 
@@ -374,7 +374,7 @@ impl ApiClient {
         }
 
         self.get(
-            &format!("landing_matrix/{}", active_filter.name()),
+            &format!("landing_matrix/{}", active_filter),
             &parameters,
             None,
         )
@@ -404,21 +404,21 @@ impl ApiClient {
         if let Some(gear) = params.gear_group_ids {
             parameters.push((
                 "gearGroupIds".to_string(),
-                create_comma_separated_list(gear.into_iter().map(|g| g.0 as u8).collect()),
+                create_comma_separated_list(gear),
             ))
         }
 
         if let Some(species) = params.species_group_ids {
             parameters.push((
                 "speciesGroupIds".to_string(),
-                create_comma_separated_list(species.into_iter().map(|s| s.0 as u32).collect()),
+                create_comma_separated_list(species),
             ))
         }
 
         if let Some(groups) = params.vessel_length_groups {
             parameters.push((
                 "vesselLengthGroups".to_string(),
-                create_comma_separated_list(groups.into_iter().map(|g| g.0 as u8).collect()),
+                create_comma_separated_list(groups),
             ))
         }
 
@@ -430,7 +430,7 @@ impl ApiClient {
         }
 
         self.get(
-            &format!("hauls_matrix/{}", active_filter.name()),
+            &format!("hauls_matrix/{}", active_filter),
             &parameters,
             None,
         )
@@ -495,30 +495,21 @@ impl ApiClient {
         if let Some(gear_group_ids) = params.gear_group_ids {
             parameters.push((
                 "gearGroupIds".to_string(),
-                create_comma_separated_list(
-                    gear_group_ids.into_iter().map(|i| i.0 as i32).collect(),
-                ),
+                create_comma_separated_list(gear_group_ids),
             ))
         }
 
         if let Some(species_group_ids) = params.species_group_ids {
             parameters.push((
                 "speciesGroupIds".to_string(),
-                create_comma_separated_list(
-                    species_group_ids.into_iter().map(|i| i.0 as i32).collect(),
-                ),
+                create_comma_separated_list(species_group_ids),
             ))
         }
 
         if let Some(vessel_length_groups) = params.vessel_length_groups {
             parameters.push((
                 "vesselLengthGroups".to_string(),
-                create_comma_separated_list(
-                    vessel_length_groups
-                        .into_iter()
-                        .map(|i| i.0 as i32)
-                        .collect(),
-                ),
+                create_comma_separated_list(vessel_length_groups),
             ))
         }
 

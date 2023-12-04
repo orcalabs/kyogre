@@ -1,4 +1,4 @@
-use crate::{error::ApiError, to_streaming_response, Database};
+use crate::{error::ApiError, routes::utils::*, to_streaming_response, Database};
 use actix_web::{web, HttpResponse};
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::{CallSign, GearGroup, RegisterVesselOwner, SpeciesGroup, VesselLengthGroup};
@@ -32,9 +32,9 @@ pub struct Vessel {
     pub fiskeridir: FiskeridirVessel,
     pub ais: Option<AisVessel>,
     pub fish_caught_per_hour: Option<f64>,
-    #[schema(value_type = Vec<u32>)]
+    #[serde(serialize_with = "vec_to_string", deserialize_with = "vec_from_string")]
     pub gear_groups: Vec<GearGroup>,
-    #[schema(value_type = Vec<u32>)]
+    #[serde(serialize_with = "vec_to_string", deserialize_with = "vec_from_string")]
     pub species_groups: Vec<SpeciesGroup>,
 }
 
@@ -56,7 +56,7 @@ pub struct FiskeridirVessel {
     #[schema(value_type = i64)]
     pub id: FiskeridirVesselId,
     pub vessel_type_id: Option<u32>,
-    #[schema(value_type = u32)]
+    #[serde(serialize_with = "to_string", deserialize_with = "from_string")]
     pub length_group_id: VesselLengthGroup,
     pub nation_group_id: Option<String>,
     pub nation_id: Option<String>,

@@ -14,6 +14,7 @@ mod layer;
 pub use assembler::*;
 pub use distancer::*;
 pub use layer::*;
+use strum::{AsRefStr, EnumString};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize)]
 pub struct TripId(pub i64);
@@ -134,8 +135,6 @@ pub struct TripHaul {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct Delivery {
     pub delivered: Vec<Catch>,
     pub total_living_weight: f64,
@@ -144,14 +143,11 @@ pub struct Delivery {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct Catch {
     pub living_weight: f64,
     pub gross_weight: f64,
     pub product_weight: f64,
     pub species_fiskeridir_id: i32,
-    #[cfg_attr(feature = "utoipa", schema(value_type = i32))]
     pub product_quality_id: Quality,
     pub product_quality_name: String,
 }
@@ -177,8 +173,12 @@ pub enum TripsConflictStrategy {
     PartialOrd,
     Serialize_repr,
     Deserialize_repr,
+    strum::Display,
+    AsRefStr,
+    EnumString,
 )]
 #[cfg_attr(feature = "sqlx", derive(sqlx::Type))]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub enum TripAssemblerId {
     Landings = 1,
     Ers = 2,
@@ -386,15 +386,6 @@ impl Trip {
     }
     pub fn end(&self) -> DateTime<Utc> {
         self.period.end()
-    }
-}
-
-impl std::fmt::Display for TripAssemblerId {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            TripAssemblerId::Landings => write!(f, "landings_assembler"),
-            TripAssemblerId::Ers => write!(f, "ers_assembler"),
-        }
     }
 }
 

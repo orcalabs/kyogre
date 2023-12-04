@@ -1,13 +1,12 @@
 use std::fmt;
 
-use bigdecimal::FromPrimitive;
 use bigdecimal::{BigDecimal, ToPrimitive};
 use chrono::{DateTime, Utc};
 use error_stack::{Report, ResultExt};
 use kyogre_core::{Mmsi, NavigationStatus};
 use unnest_insert::UnnestInsert;
 
-use crate::error::{FromBigDecimalError, NavigationStatusError, PostgresError};
+use crate::error::{FromBigDecimalError, PostgresError};
 
 #[derive(Debug, Clone, UnnestInsert)]
 #[unnest_insert(table_name = "ais_vessels", conflict = "mmsi")]
@@ -76,7 +75,7 @@ pub struct AisPosition {
     pub mmsi: i32,
     pub msgtime: DateTime<Utc>,
     pub course_over_ground: Option<BigDecimal>,
-    pub navigational_status: Option<i32>,
+    pub navigational_status: Option<NavigationStatus>,
     pub rate_of_turn: Option<BigDecimal>,
     pub speed_over_ground: Option<BigDecimal>,
     pub true_heading: Option<i32>,
@@ -174,14 +173,7 @@ impl TryFrom<AisPosition> for kyogre_core::AisPosition {
                         .change_context(PostgresError::DataConversion)
                 })
                 .transpose()?,
-            navigational_status: value
-                .navigational_status
-                .map(|v| {
-                    NavigationStatus::from_i32(v)
-                        .ok_or(NavigationStatusError(v))
-                        .change_context(PostgresError::DataConversion)
-                })
-                .transpose()?,
+            navigational_status: value.navigational_status,
             rate_of_turn: value
                 .rate_of_turn
                 .map(|v| {

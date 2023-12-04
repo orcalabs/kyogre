@@ -4,8 +4,8 @@ use bigdecimal::{BigDecimal, FromPrimitive};
 use chrono::{DateTime, Utc};
 use futures::{Stream, TryStreamExt};
 use kyogre_core::{
-    AisPermission, AisVesselMigrate, DateRange, Mmsi, NewAisPosition, NewAisStatic,
-    LEISURE_VESSEL_LENGTH_AIS_BOUNDARY, LEISURE_VESSEL_SHIP_TYPES,
+    AisPermission, AisVesselMigrate, DateRange, Mmsi, NavigationStatus, NewAisPosition,
+    NewAisStatic, LEISURE_VESSEL_LENGTH_AIS_BOUNDARY, LEISURE_VESSEL_SHIP_TYPES,
     PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY,
 };
 use unnest_insert::UnnestInsert;
@@ -28,7 +28,7 @@ SELECT
     mmsi,
     TIMESTAMP AS msgtime,
     course_over_ground,
-    navigation_status_id AS navigational_status,
+    navigation_status_id AS "navigational_status: NavigationStatus",
     rate_of_turn,
     speed_over_ground,
     true_heading,
@@ -58,7 +58,7 @@ SELECT
     mmsi,
     TIMESTAMP AS msgtime,
     course_over_ground,
-    navigation_status_id AS navigational_status,
+    navigation_status_id AS "navigational_status: NavigationStatus",
     rate_of_turn,
     speed_over_ground,
     true_heading,

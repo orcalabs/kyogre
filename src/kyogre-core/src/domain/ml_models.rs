@@ -4,8 +4,9 @@ use chrono::{Datelike, Duration, NaiveDate, Utc};
 use error_stack::{Context, Result};
 use fiskeridir_rs::SpeciesGroup;
 use serde::{Deserialize, Serialize};
+use serde_repr::{Deserialize_repr, Serialize_repr};
 use std::{collections::HashSet, fmt::Display};
-use strum::EnumIter;
+use strum::{AsRefStr, EnumIter, EnumString};
 
 #[derive(Debug)]
 pub enum MLModelError {
@@ -26,10 +27,20 @@ impl Display for MLModelError {
 
 impl Context for MLModelError {}
 
-#[derive(Debug, Copy, Clone, Deserialize, Serialize, strum::Display, EnumIter)]
+#[repr(i32)]
+#[derive(
+    Debug,
+    Copy,
+    Clone,
+    Deserialize_repr,
+    Serialize_repr,
+    strum::Display,
+    AsRefStr,
+    EnumString,
+    EnumIter,
+)]
+#[cfg_attr(feature = "sqlx", derive(sqlx::Type))]
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
-#[serde(rename_all = "camelCase")]
-#[strum(serialize_all = "camelCase")]
 pub enum ModelId {
     Spot = 1,
     Weight = 2,

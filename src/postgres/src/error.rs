@@ -70,20 +70,6 @@ impl std::fmt::Display for FromBigDecimalError {
 }
 
 #[derive(Debug)]
-pub struct NavigationStatusError(pub i32);
-
-impl std::error::Error for NavigationStatusError {}
-
-impl std::fmt::Display for NavigationStatusError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!(
-            "failed to convert int value to navigation status, value: {}",
-            self.0
-        ))
-    }
-}
-
-#[derive(Debug)]
 pub struct PortCoordinateError(pub String);
 
 impl std::error::Error for PortCoordinateError {}

@@ -1,5 +1,6 @@
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
+use strum::{AsRefStr, EnumString};
 
 use crate::{
     FishingFacilities, FishingFacilityToolType, FiskeridirVesselId, Mmsi, Ordering, Pagination,
@@ -8,8 +9,7 @@ use crate::{
 
 #[cfg_attr(feature = "sqlx", derive(sqlx::Type))]
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
-#[derive(Default, Debug, Clone, Copy, Deserialize, strum::Display)]
-#[serde(rename_all = "camelCase")]
+#[derive(Default, Debug, Clone, Copy, Deserialize, strum::Display, AsRefStr, EnumString)]
 pub enum FishingFacilitiesSorting {
     #[serde(alias = "setup", alias = "Setup", alias = "SETUP")]
     #[default]

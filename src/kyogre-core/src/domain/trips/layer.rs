@@ -1,6 +1,7 @@
 use crate::*;
 use error_stack::Result;
-use serde::{Deserialize, Serialize};
+use serde_repr::{Deserialize_repr, Serialize_repr};
+use strum::{AsRefStr, EnumString};
 
 pub trait TripPositionLayer: Send + Sync {
     fn layer_id(&self) -> TripPositionLayerId;
@@ -12,8 +13,9 @@ pub trait TripPositionLayer: Send + Sync {
 
 #[cfg_attr(feature = "sqlx", derive(sqlx::Type))]
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
-#[derive(Debug, Copy, Clone, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(
+    Debug, Copy, Clone, Deserialize_repr, Serialize_repr, strum::Display, AsRefStr, EnumString,
+)]
 #[repr(i32)]
 pub enum TripPositionLayerId {
     UnrealisticSpeed = 1,

@@ -14,7 +14,7 @@ use uuid::Uuid;
 use crate::{
     error::ApiError,
     extractors::{BwPolicy, BwProfile},
-    routes::utils::{deserialize_range_list, deserialize_string_list},
+    routes::utils::{deserialize_range_list, deserialize_string_list, from_string, to_string},
     to_streaming_response, Database,
 };
 
@@ -27,7 +27,7 @@ pub struct FishingFacilitiesParams {
     #[param(value_type = Option<String>, example = "2000013801,2001015304")]
     #[serde(deserialize_with = "deserialize_string_list", default)]
     pub fiskeridir_vessel_ids: Option<Vec<FiskeridirVesselId>>,
-    #[param(value_type = Option<String>, example = "2,7")]
+    #[param(value_type = Option<String>, example = "Crabpot,Nets")]
     #[serde(deserialize_with = "deserialize_string_list", default)]
     pub tool_types: Option<Vec<FishingFacilityToolType>>,
     pub active: Option<bool>,
@@ -98,7 +98,7 @@ pub struct FishingFacility {
     pub sbr_reg_num: Option<String>,
     pub contact_phone: Option<String>,
     pub contact_email: Option<String>,
-    #[schema(value_type = i32)]
+    #[serde(serialize_with = "to_string", deserialize_with = "from_string")]
     pub tool_type: FishingFacilityToolType,
     pub tool_type_name: Option<String>,
     pub tool_color: Option<String>,

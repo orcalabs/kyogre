@@ -6,13 +6,26 @@ use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 use serde::{de::Visitor, Deserialize, Serialize, Serializer};
 use serde_repr::{Deserialize_repr, Serialize_repr};
+use strum::{AsRefStr, EnumString};
 use uuid::Uuid;
 use wkt::Wkt;
 
 use crate::{FiskeridirVesselId, Mmsi};
 
 #[derive(
-    Debug, Copy, Clone, PartialEq, FromPrimitive, Eq, Hash, Ord, PartialOrd, Serialize_repr,
+    Debug,
+    Copy,
+    Clone,
+    PartialEq,
+    FromPrimitive,
+    Eq,
+    Hash,
+    Ord,
+    PartialOrd,
+    Serialize_repr,
+    strum::Display,
+    AsRefStr,
+    EnumString,
 )]
 #[repr(i32)]
 #[cfg_attr(feature = "sqlx", derive(sqlx::Type))]
@@ -46,7 +59,6 @@ pub enum FishingFacilityToolType {
 )]
 #[repr(i32)]
 #[cfg_attr(feature = "sqlx", derive(sqlx::Type))]
-#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub enum FishingFacilityApiSource {
     Updates = 1,
     Historic = 2,

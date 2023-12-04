@@ -16,7 +16,7 @@ members = [
 ]
 
 [workspace.dependencies]
-fiskeridir-rs = { path = "./fiskeridir-rs", registry = "orcalabs-orcastrator", features = [
+fiskeridir-rs = { version = "0.22.0", registry = "orcalabs-orcastrator", features = [
     "utoipa",
     "sqlx",
 ] }

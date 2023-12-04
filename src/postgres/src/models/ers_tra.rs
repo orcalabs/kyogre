@@ -1,7 +1,7 @@
 use bigdecimal::BigDecimal;
 use chrono::{DateTime, NaiveDate, Utc};
 use error_stack::{report, Report, ResultExt};
-use kyogre_core::FiskdirVesselNationalityGroup;
+use fiskeridir_rs::FiskdirVesselNationalityGroup;
 use unnest_insert::UnnestInsert;
 
 use crate::{
@@ -121,10 +121,7 @@ impl TryFrom<fiskeridir_rs::ErsTra> for NewErsTra {
             vessel_name: v.vessel_info.vessel_name,
             vessel_name_ers: v.vessel_info.vessel_name_ers,
             vessel_nationality_code: v.vessel_info.vessel_nationality_code.into_inner(),
-            fiskeridir_vessel_nationality_group_id: v
-                .vessel_info
-                .vessel_nationality_group_code
-                .into(),
+            fiskeridir_vessel_nationality_group_id: v.vessel_info.vessel_nationality_group_code,
             vessel_rebuilding_year: v.vessel_info.vessel_rebuilding_year.map(|v| v as i32),
             vessel_registration_id: v.vessel_info.vessel_registration_id,
             vessel_registration_id_ers: v.vessel_info.vessel_registration_id_ers,
