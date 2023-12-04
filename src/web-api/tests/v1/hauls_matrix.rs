@@ -1,7 +1,7 @@
 use super::helper::test_with_matrix_cache;
 use crate::v1::helper::{assert_haul_matrix_content, sum_area};
 use actix_web::http::StatusCode;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Duration, Utc};
 use engine::*;
 use enum_index::EnumIndex;
 use fiskeridir_rs::{GearGroup, SpeciesGroup, VesselLengthGroup};
@@ -11,6 +11,118 @@ use kyogre_core::{
 };
 use web_api::routes::v1::haul::{HaulsMatrix, HaulsMatrixParams};
 
+#[tokio::test]
+async fn test_hauls_matrix_filters_majority_species() {
+    test_with_matrix_cache(|helper, builder| async move {
+        let filter = ActiveHaulsFilter::Date;
+        let start = Utc::now();
+        let end = start + Duration::hours(1);
+        builder
+            .vessels(2)
+            .hauls(2)
+            .modify_idx(|i, v| match i {
+                0 => {
+                    v.dca.message_info.message_id = 1;
+                    v.dca.set_start_timestamp(start);
+                    v.dca.set_stop_timestamp(end);
+                    v.dca.start_latitude = Some(70.536);
+                    v.dca.start_longitude = Some(21.957);
+                    v.dca.catch.species.living_weight = Some(100);
+                    v.dca.catch.species.species_group_code = SpeciesGroup::AtlanticCod;
+                    v.dca.catch.species.species_fao_code = Some("test".into());
+                }
+                1 => {
+                    v.dca.message_info.message_id = 1;
+                    v.dca.set_start_timestamp(start);
+                    v.dca.set_stop_timestamp(end);
+                    v.dca.start_latitude = Some(70.536);
+                    v.dca.start_longitude = Some(21.957);
+                    v.dca.catch.species.living_weight = Some(90);
+                    v.dca.catch.species.species_group_code = SpeciesGroup::GoldenRedfish;
+                    v.dca.catch.species.species_fao_code = Some("test2".into());
+                }
+                _ => (),
+            })
+            .build()
+            .await;
+
+        helper.refresh_matrix_cache().await;
+
+        let response = helper
+            .app
+            .get_hauls_matrix(
+                HaulsMatrixParams {
+                    majority_species_group: Some(true),
+                    bycatch_percentage: Some(0.1),
+                    ..Default::default()
+                },
+                filter,
+            )
+            .await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let matrix: HaulsMatrix = response.json().await.unwrap();
+
+        assert_haul_matrix_content(&matrix, filter, 100, vec![]);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_hauls_matrix_filters_bycatch() {
+    test_with_matrix_cache(|helper, builder| async move {
+        let filter = ActiveHaulsFilter::Date;
+        let start = Utc::now();
+        let end = start + Duration::hours(1);
+        builder
+            .vessels(2)
+            .hauls(2)
+            .modify_idx(|i, v| match i {
+                0 => {
+                    v.dca.message_info.message_id = 1;
+                    v.dca.set_start_timestamp(start);
+                    v.dca.set_stop_timestamp(end);
+                    v.dca.start_latitude = Some(70.536);
+                    v.dca.start_longitude = Some(21.957);
+                    v.dca.catch.species.living_weight = Some(100);
+                    v.dca.catch.species.species_group_code = SpeciesGroup::AtlanticCod;
+                    v.dca.catch.species.species_fao_code = Some("test".into());
+                }
+                1 => {
+                    v.dca.message_info.message_id = 1;
+                    v.dca.set_start_timestamp(start);
+                    v.dca.set_stop_timestamp(end);
+                    v.dca.start_latitude = Some(70.536);
+                    v.dca.start_longitude = Some(21.957);
+                    v.dca.catch.species.living_weight = Some(10);
+                    v.dca.catch.species.species_group_code = SpeciesGroup::GoldenRedfish;
+                    v.dca.catch.species.species_fao_code = Some("test2".into());
+                }
+                _ => (),
+            })
+            .build()
+            .await;
+
+        helper.refresh_matrix_cache().await;
+
+        let response = helper
+            .app
+            .get_hauls_matrix(
+                HaulsMatrixParams {
+                    bycatch_percentage: Some(15.0),
+                    ..Default::default()
+                },
+                filter,
+            )
+            .await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let matrix: HaulsMatrix = response.json().await.unwrap();
+
+        assert_haul_matrix_content(&matrix, filter, 100, vec![]);
+    })
+    .await;
+}
 #[tokio::test]
 async fn test_hauls_matrix_returns_correct_sum_for_all_hauls() {
     test_with_matrix_cache(|helper, builder| async move {

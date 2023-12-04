@@ -969,6 +969,11 @@ impl HaulDistributorInbound for PostgresAdapter {
             .await
             .change_context(UpdateError)
     }
+    async fn update_bycatch_status(&self) -> Result<(), UpdateError> {
+        self.update_bycatch_status_impl()
+            .await
+            .change_context(UpdateError)
+    }
 }
 
 #[async_trait]

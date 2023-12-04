@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nUPDATE hauls_matrix\nSET\n    species_group_weight_percentage_of_haul = q.percentage\nFROM\n    (\n        SELECT DISTINCT\n            ON (haul_id, species_group_id) haul_id,\n            species_group_id,\n            100 * SUM(living_weight) OVER (\n                PARTITION BY\n                    haul_id,\n                    species_group_id\n            ) / SUM(living_weight) OVER (\n                PARTITION BY\n                    haul_id\n            ) AS percentage\n        FROM\n            hauls_matrix hm\n        WHERE\n            species_group_weight_percentage_of_haul IS NULL\n    ) q\nWHERE\n    q.haul_id = hauls_matrix.haul_id\n    AND q.species_group_id = hauls_matrix.species_group_id\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "77d2c6f78fdd77e476b0c01f475f34c10656f5d0bbe0f5e798d23594f9441e9f"
+}

@@ -75,6 +75,14 @@ WHERE
         $8::BIGINT[] IS NULL
         OR fiskeridir_vessel_id = ANY ($8)
     )
+    AND (
+        $9::DOUBLE PRECISION IS NULL
+        OR species_group_weight_percentage_of_haul >= $9
+    )
+    AND (
+        $10 IS FALSE
+        OR is_majority_species_group_of_haul = $10
+    )
 GROUP BY
     1,
     2
@@ -87,6 +95,8 @@ GROUP BY
             args.species_group_ids as _,
             args.vessel_length_groups as _,
             args.fiskeridir_vessel_ids as _,
+            args.bycatch_percentage,
+            args.majority_species_group,
         )
         .fetch_all(&pool)
         .await
@@ -368,6 +378,94 @@ WHERE
         .fetch_all(&self.pool)
         .await
         .change_context(PostgresError::Query)
+    }
+
+    pub(crate) async fn update_bycatch_status_impl(&self) -> Result<(), PostgresError> {
+        let mut tx = self.begin().await?;
+
+        sqlx::query!(
+            r#"
+UPDATE hauls_matrix
+SET
+    species_group_weight_percentage_of_haul = 0.0
+WHERE
+    living_weight = 0
+           "#
+        )
+        .execute(&mut *tx)
+        .await
+        .change_context(PostgresError::Query)?;
+
+        sqlx::query!(
+            r#"
+UPDATE hauls_matrix
+SET
+    species_group_weight_percentage_of_haul = q.percentage
+FROM
+    (
+        SELECT DISTINCT
+            ON (haul_id, species_group_id) haul_id,
+            species_group_id,
+            100 * SUM(living_weight) OVER (
+                PARTITION BY
+                    haul_id,
+                    species_group_id
+            ) / SUM(living_weight) OVER (
+                PARTITION BY
+                    haul_id
+            ) AS percentage
+        FROM
+            hauls_matrix hm
+        WHERE
+            species_group_weight_percentage_of_haul IS NULL
+    ) q
+WHERE
+    q.haul_id = hauls_matrix.haul_id
+    AND q.species_group_id = hauls_matrix.species_group_id
+            "#,
+        )
+        .execute(&mut *tx)
+        .await
+        .change_context(PostgresError::Query)?;
+
+        sqlx::query!(
+            r#"
+UPDATE hauls_matrix
+SET
+    is_majority_species_group_of_haul = (
+        q.species_group_id = hauls_matrix.species_group_id
+    )
+FROM
+    (
+        SELECT DISTINCT
+            ON (haul_id) haul_id,
+            species_group_id,
+            SUM(living_weight) OVER (
+                PARTITION BY
+                    haul_id,
+                    species_group_id
+            ) AS weight
+        FROM
+            hauls_matrix hm
+        WHERE
+            is_majority_species_group_of_haul IS NULL
+        ORDER BY
+            haul_id,
+            weight DESC
+    ) q
+WHERE
+    q.haul_id = hauls_matrix.haul_id
+            "#,
+        )
+        .execute(&mut *tx)
+        .await
+        .change_context(PostgresError::Query)?;
+
+        tx.commit()
+            .await
+            .change_context(PostgresError::Transaction)?;
+
+        Ok(())
     }
 
     pub(crate) async fn add_haul_distribution_output(
@@ -953,6 +1051,8 @@ pub struct HaulsMatrixArgs {
     pub species_group_ids: Option<Vec<i32>>,
     pub vessel_length_groups: Option<Vec<i32>>,
     pub fiskeridir_vessel_ids: Option<Vec<i64>>,
+    pub bycatch_percentage: Option<f64>,
+    pub majority_species_group: bool,
 }
 
 impl TryFrom<HaulsMatrixQuery> for HaulsMatrixArgs {
@@ -978,6 +1078,8 @@ impl TryFrom<HaulsMatrixQuery> for HaulsMatrixArgs {
             fiskeridir_vessel_ids: v
                 .vessel_ids
                 .map(|ids| ids.into_iter().map(|i| i.0).collect()),
+            bycatch_percentage: v.bycatch_percentage,
+            majority_species_group: v.majority_species_group,
         })
     }
 }

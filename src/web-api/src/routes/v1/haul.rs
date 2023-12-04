@@ -67,6 +67,8 @@ pub struct HaulsMatrixParams {
     #[param(value_type = Option<String>, example = "2000013801,2001015304")]
     #[serde(deserialize_with = "deserialize_string_list", default)]
     pub fiskeridir_vessel_ids: Option<Vec<FiskeridirVesselId>>,
+    pub bycatch_percentage: Option<f64>,
+    pub majority_species_group: Option<bool>,
 }
 
 #[utoipa::path(
@@ -420,6 +422,8 @@ pub fn matrix_params_to_query(
         vessel_length_groups: params.vessel_length_groups,
         active_filter,
         vessel_ids: params.fiskeridir_vessel_ids,
+        bycatch_percentage: params.bycatch_percentage,
+        majority_species_group: params.majority_species_group.unwrap_or(false),
     }
 }
 

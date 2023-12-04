@@ -105,6 +105,8 @@ pub struct HaulsMatrixQuery {
     pub vessel_length_groups: Option<Vec<VesselLengthGroup>>,
     pub vessel_ids: Option<Vec<FiskeridirVesselId>>,
     pub active_filter: ActiveHaulsFilter,
+    pub bycatch_percentage: Option<f64>,
+    pub majority_species_group: bool,
 }
 
 #[derive(Debug, Clone)]

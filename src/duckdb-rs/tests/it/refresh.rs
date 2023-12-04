@@ -23,6 +23,8 @@ async fn test_haul_refresh_with_no_data_succeeds_and_returns_miss_on_subsequent_
                 vessel_length_groups: None,
                 vessel_ids: None,
                 active_filter: ActiveHaulsFilter::Date,
+                bycatch_percentage: None,
+                majority_species_group: false,
             })
             .await
             .unwrap();
@@ -56,6 +58,8 @@ async fn test_haul_returns_hit_after_refreshing_with_data() {
                 vessel_length_groups: None,
                 vessel_ids: None,
                 active_filter: ActiveHaulsFilter::Date,
+                bycatch_percentage: None,
+                majority_species_group: false,
             })
             .await
             .unwrap();

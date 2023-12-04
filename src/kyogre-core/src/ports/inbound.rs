@@ -131,6 +131,7 @@ pub trait VesselBenchmarkInbound: Send + Sync {
 #[async_trait]
 pub trait HaulDistributorInbound: Send + Sync {
     async fn add_output(&self, values: Vec<HaulDistributionOutput>) -> Result<(), UpdateError>;
+    async fn update_bycatch_status(&self) -> Result<(), UpdateError>;
 }
 
 #[async_trait]

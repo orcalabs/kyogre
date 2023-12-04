@@ -387,6 +387,20 @@ impl ApiClient {
     ) -> Response {
         let mut parameters = Vec::new();
 
+        if let Some(majority_species_group) = params.majority_species_group {
+            parameters.push((
+                "majoritySpeciesGroup".to_string(),
+                majority_species_group.to_string(),
+            ));
+        }
+
+        if let Some(bycatch_percentage) = params.bycatch_percentage {
+            parameters.push((
+                "bycatchPercentage".to_string(),
+                bycatch_percentage.to_string(),
+            ))
+        }
+
         if let Some(months) = params.months {
             parameters.push((
                 "months".to_string(),

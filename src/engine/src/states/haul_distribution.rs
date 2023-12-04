@@ -26,6 +26,13 @@ impl machine::State for HaulDistributionState {
                 );
             }
         }
+        if let Err(e) = shared_state
+            .haul_distributor_inbound
+            .update_bycatch_status()
+            .await
+        {
+            event!(Level::ERROR, "failed to update bycatch status: {:?}", e);
+        }
     }
     fn schedule(&self) -> Schedule {
         Schedule::Disabled

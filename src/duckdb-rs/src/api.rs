@@ -335,6 +335,8 @@ impl From<HaulsMatrixQuery> for HaulFeatures {
                 .vessel_ids
                 .map(|v| v.into_iter().map(|v| v.0).collect())
                 .unwrap_or_default(),
+            bycatch_percentage: value.bycatch_percentage,
+            majority_species_group: value.majority_species_group,
         }
     }
 }
@@ -401,6 +403,8 @@ impl TryFrom<HaulFeatures> for HaulQueryWrapper {
             }),
             active_filter: ActiveHaulsFilter::from_u32(value.active_filter)
                 .ok_or(Error::InvalidParameters)?,
+            bycatch_percentage: value.bycatch_percentage,
+            majority_species_group: value.majority_species_group,
         }))
     }
 }
