@@ -3,7 +3,7 @@ use std::fmt;
 use crate::{AisVessel, Mmsi, TripAssemblerId};
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::{CallSign, GearGroup, RegisterVesselOwner, SpeciesGroup, VesselLengthGroup};
-use num_derive::{FromPrimitive, ToPrimitive};
+use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 use serde::{de::Visitor, Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
@@ -11,6 +11,7 @@ use serde_repr::{Deserialize_repr, Serialize_repr};
 mod benchmark;
 
 pub use benchmark::*;
+use strum::{AsRefStr, EnumString};
 
 pub static IGNORED_CONFLICT_CALL_SIGNS: &[&str] = &["00000000", "0"];
 
@@ -26,7 +27,7 @@ pub struct ActiveVesselConflict {
     pub vessel_ids: Vec<Option<FiskeridirVesselId>>,
     pub call_sign: CallSign,
     pub mmsis: Vec<Option<Mmsi>>,
-    pub sources: Vec<Option<FiskeridirVesselSource>>,
+    pub sources: Vec<Option<VesselSource>>,
 }
 
 #[derive(Debug, Clone)]
@@ -94,6 +95,9 @@ pub struct VesselEventDetailed {
     PartialOrd,
     Serialize_repr,
     Deserialize_repr,
+    strum::Display,
+    AsRefStr,
+    EnumString,
 )]
 pub enum VesselEventType {
     Landing = 1,
@@ -161,27 +165,6 @@ impl Vessel {
         self.ais.as_ref().map(|v| v.mmsi)
     }
 }
-#[derive(
-    Debug,
-    Copy,
-    Clone,
-    PartialEq,
-    ToPrimitive,
-    FromPrimitive,
-    Eq,
-    Serialize_repr,
-    Deserialize_repr,
-    Hash,
-    Ord,
-    PartialOrd,
-)]
-#[repr(u8)]
-#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
-pub enum FiskdirVesselNationalityGroup {
-    Foreign = 1,
-    Norwegian = 2,
-    Test = 3,
-}
 
 #[derive(
     Debug,
@@ -196,15 +179,16 @@ pub enum FiskdirVesselNationalityGroup {
     Ord,
     PartialOrd,
 )]
-#[repr(u8)]
+#[repr(i32)]
+#[cfg_attr(feature = "sqlx", derive(sqlx::Type))]
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
-pub enum FiskeridirVesselSource {
+pub enum VesselSource {
     Landings = 1,
     FiskeridirVesselRegister = 2,
 }
 
-impl From<FiskeridirVesselSource> for i32 {
-    fn from(value: FiskeridirVesselSource) -> Self {
+impl From<VesselSource> for i32 {
+    fn from(value: VesselSource) -> Self {
         value as i32
     }
 }
@@ -218,32 +202,6 @@ impl VesselEventType {
             VesselEventType::ErsDep => "ers_dep",
             VesselEventType::ErsPor => "ers_por",
             VesselEventType::Haul => "haul",
-        }
-    }
-}
-
-impl From<FiskdirVesselNationalityGroup> for i32 {
-    fn from(value: FiskdirVesselNationalityGroup) -> Self {
-        value as i32
-    }
-}
-
-impl From<fiskeridir_rs::FiskdirVesselNationalityGroup> for FiskdirVesselNationalityGroup {
-    fn from(v: fiskeridir_rs::FiskdirVesselNationalityGroup) -> Self {
-        match v {
-            fiskeridir_rs::FiskdirVesselNationalityGroup::Foreign => Self::Foreign,
-            fiskeridir_rs::FiskdirVesselNationalityGroup::Norwegian => Self::Norwegian,
-            fiskeridir_rs::FiskdirVesselNationalityGroup::Test => Self::Test,
-        }
-    }
-}
-
-impl From<FiskdirVesselNationalityGroup> for fiskeridir_rs::FiskdirVesselNationalityGroup {
-    fn from(v: FiskdirVesselNationalityGroup) -> Self {
-        match v {
-            FiskdirVesselNationalityGroup::Foreign => Self::Foreign,
-            FiskdirVesselNationalityGroup::Norwegian => Self::Norwegian,
-            FiskdirVesselNationalityGroup::Test => Self::Test,
         }
     }
 }

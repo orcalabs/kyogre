@@ -9,10 +9,7 @@ use kyogre_core::{
     haul_date_feature_matrix_index, ActiveHaulsFilter, CatchLocationId, HaulMatrixes,
     NUM_CATCH_LOCATIONS,
 };
-use web_api::routes::{
-    utils::{self, GearGroupId, SpeciesGroupId},
-    v1::haul::{HaulsMatrix, HaulsMatrixParams},
-};
+use web_api::routes::v1::haul::{HaulsMatrix, HaulsMatrixParams};
 
 #[tokio::test]
 async fn test_hauls_matrix_returns_correct_sum_for_all_hauls() {
@@ -146,8 +143,8 @@ async fn test_hauls_matrix_filters_by_vessel_length() {
         helper.refresh_matrix_cache().await;
         let params = HaulsMatrixParams {
             vessel_length_groups: Some(vec![
-                utils::VesselLengthGroup(VesselLengthGroup::UnderEleven),
-                utils::VesselLengthGroup(VesselLengthGroup::ElevenToFifteen),
+                VesselLengthGroup::UnderEleven,
+                VesselLengthGroup::ElevenToFifteen,
             ]),
             ..Default::default()
         };
@@ -199,8 +196,8 @@ async fn test_hauls_matrix_filters_by_species_group() {
         helper.refresh_matrix_cache().await;
         let params = HaulsMatrixParams {
             species_group_ids: Some(vec![
-                SpeciesGroupId(SpeciesGroup::GoldenRedfish),
-                SpeciesGroupId(SpeciesGroup::GreenlandHalibut),
+                SpeciesGroup::GoldenRedfish,
+                SpeciesGroup::GreenlandHalibut,
             ]),
             ..Default::default()
         };
@@ -249,10 +246,7 @@ async fn test_hauls_matrix_filters_by_gear_group() {
             .await;
 
         let params = HaulsMatrixParams {
-            gear_group_ids: Some(vec![
-                GearGroupId(GearGroup::Seine),
-                GearGroupId(GearGroup::Net),
-            ]),
+            gear_group_ids: Some(vec![GearGroup::Seine, GearGroup::Net]),
             ..Default::default()
         };
 

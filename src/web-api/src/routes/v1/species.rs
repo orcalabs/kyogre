@@ -1,5 +1,11 @@
-use crate::{error::ApiError, response::Response, to_streaming_response, Database};
+use crate::{
+    error::ApiError,
+    response::Response,
+    routes::utils::{from_string, to_string},
+    to_streaming_response, Database,
+};
 use actix_web::{web, HttpResponse};
+use fiskeridir_rs::{SpeciesGroup, SpeciesMainGroup};
 use futures::TryStreamExt;
 use serde::{Deserialize, Serialize};
 use strum::IntoEnumIterator;
@@ -28,15 +34,16 @@ pub async fn species<T: Database + 'static>(db: web::Data<T>) -> Result<HttpResp
     get,
     path = "/species_groups",
     responses(
-        (status = 200, description = "all species groups", body = [SpeciesGroup]),
+        (status = 200, description = "all species groups", body = [SpeciesGroupDetailed]),
         (status = 500, description = "an internal error occured", body = ErrorResponse),
     )
 )]
 #[tracing::instrument]
-pub async fn species_groups<T: Database + 'static + 'static>() -> Response<Vec<SpeciesGroup>> {
+pub async fn species_groups<T: Database + 'static + 'static>() -> Response<Vec<SpeciesGroupDetailed>>
+{
     Response::new(
         fiskeridir_rs::SpeciesGroup::iter()
-            .map(SpeciesGroup::from)
+            .map(SpeciesGroupDetailed::from)
             .collect(),
     )
 }
@@ -45,15 +52,16 @@ pub async fn species_groups<T: Database + 'static + 'static>() -> Response<Vec<S
     get,
     path = "/species_main_groups",
     responses(
-        (status = 200, description = "all species main groups", body = [SpeciesMainGroup]),
+        (status = 200, description = "all species main groups", body = [SpeciesMainGroupDetailed]),
         (status = 500, description = "an internal error occured", body = ErrorResponse),
     )
 )]
 #[tracing::instrument]
-pub async fn species_main_groups<T: Database + 'static>() -> Response<Vec<SpeciesMainGroup>> {
+pub async fn species_main_groups<T: Database + 'static>() -> Response<Vec<SpeciesMainGroupDetailed>>
+{
     Response::new(
         fiskeridir_rs::SpeciesMainGroup::iter()
-            .map(SpeciesMainGroup::from)
+            .map(SpeciesMainGroupDetailed::from)
             .collect(),
     )
 }
@@ -113,17 +121,17 @@ pub struct Species {
 
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema, Ord, PartialOrd, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
-pub struct SpeciesGroup {
-    #[schema(value_type = i32)]
-    pub id: fiskeridir_rs::SpeciesGroup,
+pub struct SpeciesGroupDetailed {
+    #[serde(serialize_with = "to_string", deserialize_with = "from_string")]
+    pub id: SpeciesGroup,
     pub name: String,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema, Ord, PartialOrd, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
-pub struct SpeciesMainGroup {
-    #[schema(value_type = i32)]
-    pub id: fiskeridir_rs::SpeciesMainGroup,
+pub struct SpeciesMainGroupDetailed {
+    #[serde(serialize_with = "to_string", deserialize_with = "from_string")]
+    pub id: SpeciesMainGroup,
     pub name: String,
 }
 
@@ -150,18 +158,18 @@ impl From<kyogre_core::Species> for Species {
     }
 }
 
-impl From<fiskeridir_rs::SpeciesGroup> for SpeciesGroup {
+impl From<fiskeridir_rs::SpeciesGroup> for SpeciesGroupDetailed {
     fn from(value: fiskeridir_rs::SpeciesGroup) -> Self {
-        SpeciesGroup {
+        SpeciesGroupDetailed {
             name: value.norwegian_name().to_owned(),
             id: value,
         }
     }
 }
 
-impl From<fiskeridir_rs::SpeciesMainGroup> for SpeciesMainGroup {
+impl From<fiskeridir_rs::SpeciesMainGroup> for SpeciesMainGroupDetailed {
     fn from(value: fiskeridir_rs::SpeciesMainGroup) -> Self {
-        SpeciesMainGroup {
+        SpeciesMainGroupDetailed {
             name: value.norwegian_name().to_owned(),
             id: value,
         }

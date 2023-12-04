@@ -4,6 +4,7 @@ use num_derive::FromPrimitive;
 use rand::random;
 use serde::{de::Visitor, Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
+use strum::{AsRefStr, EnumString};
 
 pub const LEISURE_VESSEL_SHIP_TYPES: [i32; 2] = [36, 37];
 pub const LEISURE_VESSEL_LENGTH_AIS_BOUNDARY: u32 = 45;
@@ -130,6 +131,8 @@ pub enum AisClass {
     B,
 }
 
+#[cfg_attr(feature = "sqlx", derive(sqlx::Type))]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 #[derive(
     Debug,
     Copy,
@@ -140,8 +143,10 @@ pub enum AisClass {
     Serialize_repr,
     Deserialize_repr,
     strum::Display,
+    AsRefStr,
+    EnumString,
 )]
-#[repr(u8)]
+#[repr(i32)]
 pub enum NavigationStatus {
     UnderWayUsingEngine = 0,
     AtAnchor = 1,

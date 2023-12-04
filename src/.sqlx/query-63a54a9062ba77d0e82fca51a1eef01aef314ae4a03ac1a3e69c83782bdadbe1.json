@@ -1,0 +1,82 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    latitude,\n    longitude,\n    mmsi,\n    TIMESTAMP AS msgtime,\n    course_over_ground,\n    navigation_status_id AS \"navigational_status: NavigationStatus\",\n    rate_of_turn,\n    speed_over_ground,\n    true_heading,\n    distance_to_shore\nFROM\n    ais_positions\nWHERE\n    mmsi = $1\n    AND TIMESTAMP BETWEEN $2 AND $3\n    AND $1 IN (\n        SELECT\n            a.mmsi\n        FROM\n            ais_vessels a\n            LEFT JOIN fiskeridir_vessels f ON a.call_sign = f.call_sign\n        WHERE\n            a.mmsi = $1\n            AND (\n                a.ship_type IS NOT NULL\n                AND NOT (a.ship_type = ANY ($4::INT[]))\n                OR COALESCE(f.length, a.ship_length) > $5\n            )\n            AND (\n                CASE\n                    WHEN $6 = 0 THEN TRUE\n                    WHEN $6 = 1 THEN COALESCE(f.length, a.ship_length) >= $7\n                END\n            )\n    )\nORDER BY\n    TIMESTAMP ASC\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "latitude",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 1,
+        "name": "longitude",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 2,
+        "name": "mmsi",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 3,
+        "name": "msgtime",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 4,
+        "name": "course_over_ground",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 5,
+        "name": "navigational_status: NavigationStatus",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 6,
+        "name": "rate_of_turn",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 7,
+        "name": "speed_over_ground",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 8,
+        "name": "true_heading",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 9,
+        "name": "distance_to_shore",
+        "type_info": "Numeric"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Timestamptz",
+        "Timestamptz",
+        "Int4Array",
+        "Numeric",
+        "Int4",
+        "Numeric"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "63a54a9062ba77d0e82fca51a1eef01aef314ae4a03ac1a3e69c83782bdadbe1"
+}

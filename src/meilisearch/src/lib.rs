@@ -27,6 +27,7 @@ use haul::*;
 use landing::*;
 pub use settings::Settings;
 use strum::{EnumIter, IntoEnumIterator};
+use strum_macros::{AsRefStr, EnumString};
 use tracing::{event, instrument, Level};
 use trip::*;
 
@@ -38,7 +39,7 @@ pub struct MeilisearchAdapter<T> {
     pub index_suffix: Option<String>,
 }
 
-#[derive(EnumIter, strum::Display)]
+#[derive(EnumIter, strum::Display, AsRefStr, EnumString)]
 #[strum(serialize_all = "snake_case")]
 enum CacheIndex {
     Trips,

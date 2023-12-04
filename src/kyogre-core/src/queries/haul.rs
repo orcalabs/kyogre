@@ -7,13 +7,24 @@ use fiskeridir_rs::{GearGroup, SpeciesGroup, VesselLengthGroup};
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 use serde::{Deserialize, Serialize};
-use strum::{Display, EnumCount, EnumIter};
+use strum::{AsRefStr, Display, EnumCount, EnumIter, EnumString};
 
 use super::compute_sum_area_table;
 
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
-#[derive(Debug, Copy, Clone, Deserialize, FromPrimitive, Serialize, PartialEq, EnumIndex)]
-#[serde(rename_all = "camelCase")]
+#[derive(
+    Debug,
+    Copy,
+    Clone,
+    Deserialize,
+    FromPrimitive,
+    Serialize,
+    PartialEq,
+    EnumIndex,
+    strum::Display,
+    AsRefStr,
+    EnumString,
+)]
 pub enum ActiveHaulsFilter {
     Date = 1,
     GearGroup = 2,
@@ -27,17 +38,6 @@ pub enum HaulMatrixes {
     GearGroup,
     SpeciesGroup,
     VesselLength,
-}
-
-impl ActiveHaulsFilter {
-    pub fn name(&self) -> &'static str {
-        match self {
-            ActiveHaulsFilter::Date => "date",
-            ActiveHaulsFilter::GearGroup => "gearGroup",
-            ActiveHaulsFilter::SpeciesGroup => "speciesGroup",
-            ActiveHaulsFilter::VesselLength => "vesselLength",
-        }
-    }
 }
 
 impl PartialEq<HaulMatrixes> for ActiveHaulsFilter {
@@ -69,8 +69,7 @@ pub fn haul_date_feature_matrix_index(ts: &DateTime<Utc>) -> usize {
 
 #[cfg_attr(feature = "sqlx", derive(sqlx::Type))]
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
-#[derive(Default, Debug, Clone, Copy, Deserialize, strum::Display)]
-#[serde(rename_all = "camelCase")]
+#[derive(Default, Debug, Clone, Copy, Deserialize, strum::Display, AsRefStr, EnumString)]
 pub enum HaulsSorting {
     #[serde(alias = "startDate", alias = "StartDate", alias = "START_DATE")]
     #[default]

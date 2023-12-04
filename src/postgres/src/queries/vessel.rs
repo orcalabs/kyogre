@@ -11,7 +11,7 @@ use crate::{
 use error_stack::{report, Result, ResultExt};
 use fiskeridir_rs::{GearGroup, SpeciesGroup, VesselLengthGroup};
 use futures::{Stream, TryStreamExt};
-use kyogre_core::{FiskeridirVesselId, FiskeridirVesselSource, TripAssemblerId};
+use kyogre_core::{FiskeridirVesselId, TripAssemblerId, VesselSource};
 use unnest_insert::UnnestInsert;
 
 impl PostgresAdapter {
@@ -27,7 +27,7 @@ SELECT
     fiskeridir_vessel_ids AS "fiskeridir_vessel_ids!: Vec<Option<i64>>",
     ais_vessel_names AS "ais_vessel_names!: Vec<Option<String>>",
     fiskeridir_vessel_names AS "fiskeridir_vessel_names!: Vec<Option<String>>",
-    fiskeridir_vessel_source_ids AS "fiskeridir_vessel_source_ids!: Vec<Option<i32>>"
+    fiskeridir_vessel_source_ids AS "fiskeridir_vessel_source_ids!: Vec<Option<VesselSource>>"
 FROM
     fiskeridir_ais_vessel_active_conflicts
             "#
@@ -180,7 +180,7 @@ SELECT
     COALESCE(
         ARRAY_AGG(DISTINCT f.fiskeridir_vessel_source_id),
         '{}'
-    ) AS "fiskeridir_vessel_source_ids!: Vec<Option<i32>>"
+    ) AS "fiskeridir_vessel_source_ids!: Vec<Option<VesselSource>>"
 FROM
     fiskeridir_vessels AS f
     LEFT JOIN fiskeridir_ais_vessel_mapping_whitelist w ON f.fiskeridir_vessel_id = w.fiskeridir_vessel_id
@@ -223,7 +223,10 @@ VALUES
                 &c.fiskeridir_vessel_ids as _,
                 &c.ais_vessel_names as _,
                 &c.fiskeridir_vessel_names as _,
-                &c.fiskeridir_vessel_source_ids as _,
+                &c.fiskeridir_vessel_source_ids
+                    .iter()
+                    .map(|i| i.map(|v| v as i32))
+                    .collect::<Vec<_>>() as _,
             )
             .execute(&mut **tx)
             .await
@@ -303,7 +306,7 @@ WHERE
     fiskeridir_vessels.fiskeridir_vessel_id = q.fiskeridir_vessel_id
     AND fiskeridir_vessel_source_id = $1;
             "#,
-            FiskeridirVesselSource::Landings as i32,
+            VesselSource::Landings as i32,
             &self.ignored_conflict_call_signs
         )
         .execute(&mut **tx)

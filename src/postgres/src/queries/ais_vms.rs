@@ -2,7 +2,7 @@ use error_stack::ResultExt;
 use fiskeridir_rs::CallSign;
 use futures::{Stream, TryStreamExt};
 use kyogre_core::{
-    AisPermission, DateRange, Mmsi, PositionType, TripId, TripPositionLayerId,
+    AisPermission, DateRange, Mmsi, NavigationStatus, PositionType, TripId, TripPositionLayerId,
     LEISURE_VESSEL_LENGTH_AIS_BOUNDARY, LEISURE_VESSEL_SHIP_TYPES,
     PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY,
 };
@@ -21,7 +21,7 @@ SELECT
     "timestamp" AS "timestamp!",
     course_over_ground,
     speed,
-    navigational_status,
+    navigational_status AS "navigational_status: NavigationStatus",
     rate_of_turn,
     true_heading,
     distance_to_shore AS "distance_to_shore!",
@@ -83,7 +83,7 @@ SELECT
     "timestamp" AS "timestamp!",
     course_over_ground,
     speed,
-    navigational_status,
+    navigational_status AS "navigational_status: NavigationStatus",
     rate_of_turn,
     true_heading,
     distance_to_shore AS "distance_to_shore!",
@@ -179,7 +179,7 @@ SELECT
     "timestamp" AS "timestamp!",
     course_over_ground::DECIMAL,
     speed::DECIMAL,
-    navigation_status_id AS navigational_status,
+    navigation_status_id AS "navigational_status: NavigationStatus",
     rate_of_turn::DECIMAL,
     true_heading,
     distance_to_shore::DECIMAL AS "distance_to_shore!",

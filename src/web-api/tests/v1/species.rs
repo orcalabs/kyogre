@@ -49,8 +49,8 @@ async fn test_species_returns_all_species() {
 #[tokio::test]
 async fn test_species_groups_returns_all_species_groups() {
     test(|helper, _builder| async move {
-        let mut expected: Vec<SpeciesGroup> = fiskeridir_rs::SpeciesGroup::iter()
-            .map(|v| SpeciesGroup {
+        let mut expected: Vec<SpeciesGroupDetailed> = fiskeridir_rs::SpeciesGroup::iter()
+            .map(|v| SpeciesGroupDetailed {
                 name: v.norwegian_name().to_owned(),
                 id: v,
             })
@@ -59,7 +59,7 @@ async fn test_species_groups_returns_all_species_groups() {
         let response = helper.app.get_species_groups().await;
 
         assert_eq!(response.status(), StatusCode::OK);
-        let mut body: Vec<SpeciesGroup> = response.json().await.unwrap();
+        let mut body: Vec<SpeciesGroupDetailed> = response.json().await.unwrap();
         body.sort();
         expected.sort();
 
@@ -71,8 +71,8 @@ async fn test_species_groups_returns_all_species_groups() {
 #[tokio::test]
 async fn test_species_main_groups_returns_all_species_main_groups() {
     test(|helper, _builder| async move {
-        let mut expected: Vec<SpeciesMainGroup> = fiskeridir_rs::SpeciesMainGroup::iter()
-            .map(|v| SpeciesMainGroup {
+        let mut expected: Vec<SpeciesMainGroupDetailed> = fiskeridir_rs::SpeciesMainGroup::iter()
+            .map(|v| SpeciesMainGroupDetailed {
                 name: v.norwegian_name().to_owned(),
                 id: v,
             })
@@ -81,7 +81,7 @@ async fn test_species_main_groups_returns_all_species_main_groups() {
         let response = helper.app.get_species_main_groups().await;
 
         assert_eq!(response.status(), StatusCode::OK);
-        let mut body: Vec<SpeciesMainGroup> = response.json().await.unwrap();
+        let mut body: Vec<SpeciesMainGroupDetailed> = response.json().await.unwrap();
         body.sort();
         expected.sort();
 

@@ -5,7 +5,6 @@ use engine::*;
 use fiskeridir_rs::{DeliveryPointId, GearGroup, LandingId, SpeciesGroup, VesselLengthGroup};
 use kyogre_core::{Ordering, TripSorting, VesselEventType};
 use uuid::Uuid;
-use web_api::routes::utils::{self, GearGroupId, SpeciesGroupId};
 use web_api::routes::v1::trip::{Trip, TripsParameters};
 
 #[tokio::test]
@@ -865,7 +864,7 @@ async fn test_trips_filter_by_gear_group_ids() {
             .app
             .get_trips(
                 TripsParameters {
-                    gear_group_ids: Some(vec![GearGroupId(GearGroup::Seine)]),
+                    gear_group_ids: Some(vec![GearGroup::Seine]),
                     ..Default::default()
                 },
                 None,
@@ -903,7 +902,7 @@ async fn test_trips_filter_by_species_group_ids() {
             .app
             .get_trips(
                 TripsParameters {
-                    species_group_ids: Some(vec![SpeciesGroupId(SpeciesGroup::GoldenRedfish)]),
+                    species_group_ids: Some(vec![SpeciesGroup::GoldenRedfish]),
                     ..Default::default()
                 },
                 None,
@@ -940,9 +939,7 @@ async fn test_trips_filter_by_vessel_length_groups() {
             .app
             .get_trips(
                 TripsParameters {
-                    vessel_length_groups: Some(vec![utils::VesselLengthGroup(
-                        VesselLengthGroup::UnderEleven,
-                    )]),
+                    vessel_length_groups: Some(vec![VesselLengthGroup::UnderEleven]),
                     ..Default::default()
                 },
                 None,

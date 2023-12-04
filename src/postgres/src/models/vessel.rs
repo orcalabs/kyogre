@@ -6,12 +6,9 @@ use crate::{
 };
 use bigdecimal::BigDecimal;
 use chrono::{DateTime, Utc};
-use error_stack::{report, Report, ResultExt};
+use error_stack::{Report, ResultExt};
 use fiskeridir_rs::{CallSign, GearGroup, SpeciesGroup, VesselLengthGroup, VesselType};
-use kyogre_core::{
-    FiskeridirVesselId, FiskeridirVesselSource, Mmsi, TripAssemblerId, VesselBenchmarkId,
-};
-use num_traits::FromPrimitive;
+use kyogre_core::{FiskeridirVesselId, Mmsi, TripAssemblerId, VesselBenchmarkId, VesselSource};
 use serde::Deserialize;
 use unnest_insert::UnnestInsert;
 
@@ -22,7 +19,7 @@ pub struct ActiveVesselConflict {
     pub call_sign: String,
     pub ais_vessel_names: Vec<Option<String>>,
     pub fiskeridir_vessel_names: Vec<Option<String>>,
-    pub fiskeridir_vessel_source_ids: Vec<Option<i32>>,
+    pub fiskeridir_vessel_source_ids: Vec<Option<VesselSource>>,
 }
 
 #[derive(Debug, Clone, UnnestInsert)]
@@ -108,7 +105,7 @@ pub struct NewRegisterVessel {
     #[unnest_insert(sql_type = "JSON")]
     pub owners: serde_json::Value,
     #[unnest_insert(sql_type = "INT", type_conversion = "enum_to_i32")]
-    pub fiskeridir_vessel_source_id: FiskeridirVesselSource,
+    pub fiskeridir_vessel_source_id: VesselSource,
 }
 
 #[derive(Debug, Clone, UnnestInsert)]
@@ -168,7 +165,7 @@ impl TryFrom<fiskeridir_rs::RegisterVessel> for NewRegisterVessel {
                 .attach_printable_lazy(|| {
                     format!("could not serialize vessel owners: {:?}", v.owners)
                 })?,
-            fiskeridir_vessel_source_id: FiskeridirVesselSource::FiskeridirVesselRegister,
+            fiskeridir_vessel_source_id: VesselSource::FiskeridirVesselRegister,
         })
     }
 }
@@ -334,20 +331,7 @@ impl TryFrom<ActiveVesselConflict> for kyogre_core::ActiveVesselConflict {
             mmsis: value.mmsis.into_iter().map(|v| v.map(Mmsi)).collect(),
             call_sign: std::convert::TryInto::<CallSign>::try_into(value.call_sign)
                 .change_context(PostgresError::DataConversion)?,
-            sources: value
-                .fiskeridir_vessel_source_ids
-                .into_iter()
-                .map(|v| {
-                    v.map(|v| {
-                        FiskeridirVesselSource::from_i32(v).ok_or(
-                            report!(PostgresError::DataConversion).attach_printable(format!(
-                                "unknown fiskeridir_vessel_source_id: {v}"
-                            )),
-                        )
-                    })
-                    .transpose()
-                })
-                .collect::<Result<Vec<Option<FiskeridirVesselSource>>, _>>()?,
+            sources: value.fiskeridir_vessel_source_ids,
         })
     }
 }

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT\n    call_sign,\n    mmsis AS \"mmsis!: Vec<Option<i32>>\",\n    fiskeridir_vessel_ids AS \"fiskeridir_vessel_ids!: Vec<Option<i64>>\",\n    ais_vessel_names AS \"ais_vessel_names!: Vec<Option<String>>\",\n    fiskeridir_vessel_names AS \"fiskeridir_vessel_names!: Vec<Option<String>>\",\n    fiskeridir_vessel_source_ids AS \"fiskeridir_vessel_source_ids!: Vec<Option<i32>>\"\nFROM\n    fiskeridir_ais_vessel_active_conflicts\n            ",
+  "query": "\nSELECT\n    call_sign,\n    mmsis AS \"mmsis!: Vec<Option<i32>>\",\n    fiskeridir_vessel_ids AS \"fiskeridir_vessel_ids!: Vec<Option<i64>>\",\n    ais_vessel_names AS \"ais_vessel_names!: Vec<Option<String>>\",\n    fiskeridir_vessel_names AS \"fiskeridir_vessel_names!: Vec<Option<String>>\",\n    fiskeridir_vessel_source_ids AS \"fiskeridir_vessel_source_ids!: Vec<Option<VesselSource>>\"\nFROM\n    fiskeridir_ais_vessel_active_conflicts\n            ",
   "describe": {
     "columns": [
       {
@@ -30,7 +30,7 @@
       },
       {
         "ordinal": 5,
-        "name": "fiskeridir_vessel_source_ids!: Vec<Option<i32>>",
+        "name": "fiskeridir_vessel_source_ids!: Vec<Option<VesselSource>>",
         "type_info": "Int4Array"
       }
     ],
@@ -46,5 +46,5 @@
       false
     ]
   },
-  "hash": "ce87c19a671c9f177db966ee4f648ebeb8ac47fde52f3a3ba2986cb1fe61517e"
+  "hash": "5f4412414b8a0c113c17bdab2ac07df2aa7578f3f14af90a5635d86e4c27a6f4"
 }

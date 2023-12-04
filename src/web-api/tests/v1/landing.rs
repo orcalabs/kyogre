@@ -5,7 +5,7 @@ use engine::*;
 use fiskeridir_rs::{GearGroup, SpeciesGroup};
 use kyogre_core::{FiskeridirVesselId, LandingsSorting, Ordering};
 use web_api::routes::{
-    utils::{DateTimeUtc, GearGroupId, SpeciesGroupId},
+    utils::DateTimeUtc,
     v1::landing::{Landing, LandingsParams},
 };
 
@@ -126,10 +126,7 @@ async fn test_landings_returns_landings_with_gear_group_ids() {
         helper.refresh_cache().await;
 
         let params = LandingsParams {
-            gear_group_ids: Some(vec![
-                GearGroupId(GearGroup::Seine),
-                GearGroupId(GearGroup::LobsterTrapAndFykeNets),
-            ]),
+            gear_group_ids: Some(vec![GearGroup::Seine, GearGroup::LobsterTrapAndFykeNets]),
             ordering: Some(Ordering::Asc),
             ..Default::default()
         };
@@ -162,8 +159,8 @@ async fn test_landings_returns_landings_with_species_group_ids() {
 
         let params = LandingsParams {
             species_group_ids: Some(vec![
-                SpeciesGroupId(SpeciesGroup::GreenlandHalibut),
-                SpeciesGroupId(SpeciesGroup::GoldenRedfish),
+                SpeciesGroup::GreenlandHalibut,
+                SpeciesGroup::GoldenRedfish,
             ]),
             ordering: Some(Ordering::Asc),
             ..Default::default()

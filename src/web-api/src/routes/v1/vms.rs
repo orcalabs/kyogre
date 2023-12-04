@@ -18,10 +18,16 @@ pub struct VmsParameters {
     pub end: Option<DateTime<Utc>>,
 }
 
+#[derive(Debug, Deserialize, IntoParams)]
+pub struct VmsPath {
+    #[param(value_type = String)]
+    pub call_sign: CallSign,
+}
+
 #[utoipa::path(
     get,
     path = "/vms/{call_sign}",
-    params(VmsParameters),
+    params(VmsParameters, VmsPath),
     responses(
         (status = 200, description = "vms positions for the given call sign", body = [VmsPosition]),
         (status = 500, description = "an internal error occured", body = ErrorResponse),
@@ -32,7 +38,7 @@ pub struct VmsParameters {
 pub async fn vms_positions<T: Database + 'static>(
     db: web::Data<T>,
     params: web::Query<VmsParameters>,
-    call_sign: Path<String>,
+    path: Path<VmsPath>,
 ) -> Result<HttpResponse, ApiError> {
     let (start, end) = match (params.start, params.end) {
         (None, None) => {
@@ -49,14 +55,9 @@ pub async fn vms_positions<T: Database + 'static>(
         ApiError::InvalidDateRange
     })?;
 
-    let call_sign = CallSign::try_from(call_sign.into_inner()).map_err(|e| {
-        event!(Level::WARN, "{:?}", e);
-        ApiError::InvalidCallSign
-    })?;
-
     to_streaming_response! {
-        db.vms_positions(&call_sign, &range)
-        .map_ok(VmsPosition::from)
+        db.vms_positions(&path.call_sign, &range)
+            .map_ok(VmsPosition::from)
             .map_err(|e| {
                 event!(Level::ERROR, "failed to retrieve vms positions: {:?}", e);
                 ApiError::InternalServerError
