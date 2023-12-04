@@ -1,6 +1,8 @@
 log_level: Info
 fishing_predictors:
   training_rounds: 200
+  training_mode:
+    Batches: 1000
 postgres:
   ip: postgres
   port: 5432

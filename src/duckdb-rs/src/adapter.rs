@@ -427,6 +427,33 @@ fn push_haul_where_statements(
     };
 
     let mut first = true;
+
+    if params.majority_species_group {
+        if first {
+            first = false;
+            query.push_str("where ");
+        } else {
+            query.push_str("and ");
+        }
+        query.push_str(&format!(
+            "is_majority_species_group_of_haul = {} ",
+            params.majority_species_group
+        ));
+    }
+
+    if let Some(bycatch_percentage) = &params.bycatch_percentage {
+        if first {
+            first = false;
+            query.push_str("where ");
+        } else {
+            query.push_str("and ");
+        }
+        query.push_str(&format!(
+            "species_group_weight_percentage_of_haul >= {}",
+            bycatch_percentage
+        ));
+    }
+
     if let Some(months) = &params.months {
         if y_feature != HaulMatrixYFeature::Date && x_feature != HaulMatrixXFeature::Date {
             if first {

@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nUPDATE hauls_matrix\nSET\n    is_majority_species_group_of_haul = (\n        q.species_group_id = hauls_matrix.species_group_id\n    )\nFROM\n    (\n        SELECT DISTINCT\n            ON (haul_id) haul_id,\n            species_group_id,\n            SUM(living_weight) OVER (\n                PARTITION BY\n                    haul_id,\n                    species_group_id\n            ) AS weight\n        FROM\n            hauls_matrix hm\n        WHERE\n            is_majority_species_group_of_haul IS NULL\n        ORDER BY\n            haul_id,\n            weight DESC\n    ) q\nWHERE\n    q.haul_id = hauls_matrix.haul_id\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "8871dddcc249b7098d45ccc29126883701b2756c84542b132dc29943d4d0bbbe"
+}

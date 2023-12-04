@@ -18,6 +18,8 @@ const HAULS_SCHEMA: &str = "CREATE TABLE
         gear_group_id INT NOT NULL,
         species_group_id INT NOT NULL,
         living_weight DOUBLE NOT NULL,
+        species_group_weight_percentage_of_haul BOOLEAN,
+        is_majority_species_group_of_haul BOOLEAN,
     )";
 const LANDING_SCHEMA: &str = "CREATE TABLE
     landing_matrix_cache (
@@ -523,7 +525,9 @@ INSERT INTO
         fiskeridir_vessel_id,
         gear_group_id,
         species_group_id,
-        living_weight
+        living_weight,
+        species_group_weight_percentage_of_haul,
+        is_majority_species_group_of_haul
     )
 SELECT
     catch_location_matrix_index,
@@ -533,7 +537,9 @@ SELECT
     fiskeridir_vessel_id,
     gear_group_id,
     species_group_id,
-    living_weight
+    living_weight,
+    species_group_weight_percentage_of_haul,
+    is_majority_species_group_of_haul
 FROM
     POSTGRES_SCAN ('{}', 'public', 'hauls_matrix')
             ",

@@ -17,6 +17,8 @@ message HaulFeatures {
     repeated uint32 species_group_ids = 5;
     repeated uint32 vessel_length_groups = 6;
     repeated int64 fiskeridir_vessel_ids = 7;
+    optional double bycatch_percentage = 8;
+    bool majority_species_group = 9;
 }
 
 message LandingFeatures {
