@@ -104,30 +104,30 @@ checksum = "7079075b41f533b8c61d2a4d073c4676e1f8b249ff94a393b0595db304e0dd87"
 
 [[package]]
 name = "anstyle-parse"
-version = "0.2.2"
+version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "317b9a89c1868f5ea6ff1d9539a69f45dffc21ce321ac1fd1160dfa48c8e2140"
+checksum = "c75ac65da39e5fe5ab759307499ddad880d724eed2f6ce5b5e8a26f4f387928c"
 dependencies = [
  "utf8parse",
 ]
 
 [[package]]
 name = "anstyle-query"
-version = "1.0.0"
+version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5ca11d4be1bab0c8bc8734a9aa7bf4ee8316d462a08c6ac5052f888fef5b494b"
+checksum = "a3a318f1f38d2418400f8209655bfd825785afd25aa30bb7ba6cc792e4596748"
 dependencies = [
- "windows-sys 0.48.0",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
 name = "anstyle-wincon"
-version = "3.0.1"
+version = "3.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f0699d10d2f4d628a98ee7b57b289abbc98ff3bad977cb3152709d4bf2330628"
+checksum = "1cd54b81ec8d6180e24654d0b371ad22fc3dd083b6ff8ba325b72e00c87660a7"
 dependencies = [
  "anstyle",
- "windows-sys 0.48.0",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -213,9 +213,9 @@ dependencies = [
 
 [[package]]
 name = "atomic-polyfill"
-version = "0.1.11"
+version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e3ff7eb3f316534d83a8a2c3d1674ace8a5a71198eba31e2e2b597833f699b28"
+checksum = "8cf2bce30dfe09ef0bfaef228b9d414faaf7e563035494d7fe092dba54b300f4"
 dependencies = [
  "critical-section",
 ]
@@ -460,9 +460,9 @@ dependencies = [
 
 [[package]]
 name = "clap"
-version = "4.4.10"
+version = "4.4.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "41fffed7514f420abec6d183b1d3acfd9099c79c3a10a06ade4f8203f1411272"
+checksum = "bfaff671f6b22ca62406885ece523383b9b64022e341e53e009a62ebc47a45f2"
 dependencies = [
  "clap_builder",
  "clap_derive",
@@ -470,9 +470,9 @@ dependencies = [
 
 [[package]]
 name = "clap_builder"
-version = "4.4.9"
+version = "4.4.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "63361bae7eef3771745f02d8d892bec2fee5f6e34af316ba556e7f97a7069ff1"
+checksum = "a216b506622bb1d316cd51328dce24e07bdff4a6128a47c7e7fad11878d5adbb"
 dependencies = [
  "anstream",
  "anstyle",
@@ -506,9 +506,9 @@ checksum = "acbf1af155f9b9ef647e42cdc158db4b64a1b61f743629225fde6f3e0be2a7c7"
 
 [[package]]
 name = "concurrent-queue"
-version = "2.3.0"
+version = "2.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f057a694a54f12365049b0958a1685bb52d567f5593b355fbf685838e873d400"
+checksum = "d16048cd947b08fa32c24458a22f5dc5e835264f689f4f5653210c69fd107363"
 dependencies = [
  "crossbeam-utils",
 ]
@@ -793,9 +793,9 @@ dependencies = [
 
 [[package]]
 name = "deranged"
-version = "0.3.9"
+version = "0.3.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0f32d04922c60427da6f9fef14d042d9edddef64cb9d4ce0d64d0685fbeb1fd3"
+checksum = "8eb30d70a07a3b04884d2677f06bec33509dc67ca60d92949e5535352d3191dc"
 dependencies = [
  "powerfmt",
  "serde",
@@ -1014,15 +1014,9 @@ checksum = "8fcfdc7a0362c9f4444381a9e697c79d435fe65b52a37466fc2c1184cee9edc6"
 
 [[package]]
 name = "fiskeridir-rs"
-<<<<<<< HEAD:src/ml-trainer/Cargo.lock
-version = "0.21.2"
-source = "registry+https://dl.cloudsmith.io/basic/orcalabs/orcastrator/cargo/index.git"
-checksum = "b27ca6f52824b80b6b15abfa7d870e91b3f5626c7635734a6012878039617b3d"
-=======
 version = "0.22.0"
 source = "registry+https://dl.cloudsmith.io/basic/orcalabs/orcastrator/cargo/index.git"
 checksum = "94ae2d842b12796dfd2915c3151b1856fb721ee39f188119d9002967d564fc3b"
->>>>>>> c0e55c5 (The Great Enum Refactor):src/Cargo.lock
 dependencies = [
  "bigdecimal",
  "chrono",
@@ -1044,13 +1038,8 @@ dependencies = [
  "serde_with",
  "sha3",
  "sqlx",
-<<<<<<< HEAD:src/ml-trainer/Cargo.lock
  "strum",
  "strum_macros",
-=======
- "strum 0.25.0",
- "strum_macros 0.25.3",
->>>>>>> c0e55c5 (The Great Enum Refactor):src/Cargo.lock
  "thiserror",
  "tracing",
  "utoipa",
@@ -1432,9 +1421,9 @@ dependencies = [
 
 [[package]]
 name = "heapless"
-version = "0.7.16"
+version = "0.7.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "db04bc24a18b9ea980628ecf00e6c0264f3c1426dac36c00cb49b6fbad8b0743"
+checksum = "cdc6457c0eb62c71aac4bc17216026d8410337c4126773b9c5daba343f17964f"
 dependencies = [
  "atomic-polyfill",
  "hash32",
@@ -2151,6 +2140,7 @@ dependencies = [
  "orca-core",
  "postgres",
  "strum",
+ "strum_macros",
  "tokio",
 ]
 
@@ -2338,9 +2328,9 @@ checksum = "dd8b5dd2ae5ed71462c540258bedcb51965123ad7e7ccf4b9a8cafaa4a63576d"
 
 [[package]]
 name = "openssl"
-version = "0.10.60"
+version = "0.10.61"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "79a4c6c3a2b158f7f8f2a2fc5a969fa3a068df6fc9dbb4a43845436e3af7c800"
+checksum = "6b8419dc8cc6d866deb801274bba2e6f8f6108c1bb7fcc10ee5ab864931dbb45"
 dependencies = [
  "bitflags 2.4.1",
  "cfg-if",
@@ -2370,9 +2360,9 @@ checksum = "ff011a302c396a5197692431fc1948019154afc178baf7d8e37367442a4601cf"
 
 [[package]]
 name = "openssl-sys"
-version = "0.9.96"
+version = "0.9.97"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3812c071ba60da8b5677cc12bcb1d42989a65553772897a7e0355545a819838f"
+checksum = "c3eaad34cdd97d81de97964fc7f29e2d104f483840d906ef56daa1912338460b"
 dependencies = [
  "cc",
  "libc",
@@ -3331,9 +3321,9 @@ dependencies = [
 
 [[package]]
 name = "rsa"
-version = "0.9.5"
+version = "0.9.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "af6c4b23d99685a1408194da11270ef8e9809aff951cc70ec9b17350b087e474"
+checksum = "5d0e5124fcb30e76a7e79bfee683a2746db83784b86289f6251b54b7950a0dfc"
 dependencies = [
  "const-oid",
  "digest",
@@ -4694,9 +4684,9 @@ checksum = "711b9620af191e0cdc7468a8d14e709c3dcdb115b36f838e601583af800a370a"
 
 [[package]]
 name = "utoipa"
-version = "3.5.0"
+version = "4.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d82b1bc5417102a73e8464c686eef947bdfb99fcdfc0a4f228e81afa9526470a"
+checksum = "0ff05e3bac2c9428f57ade702667753ca3f5cf085e2011fe697de5bfd49aa72d"
 dependencies = [
  "indexmap 2.1.0",
  "serde",
@@ -4706,9 +4696,9 @@ dependencies = [
 
 [[package]]
 name = "utoipa-gen"
-version = "3.5.0"
+version = "4.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "05d96dcd6fc96f3df9b3280ef480770af1b7c5d14bc55192baa9b067976d920c"
+checksum = "5f0b6f4667edd64be0e820d6631a60433a269710b6ee89ac39525b872b76d61d"
 dependencies = [
  "proc-macro-error",
  "proc-macro2",

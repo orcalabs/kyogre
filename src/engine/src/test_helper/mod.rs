@@ -194,6 +194,8 @@ pub fn default_fishing_weight_predictor() -> Box<dyn MLModel> {
         single_species_mode: None,
         training_mode: TrainingMode::Single,
         test_fraction: None,
+        bycatch_percentage: None,
+        majority_species_group: false,
     }))
 }
 
@@ -209,6 +211,8 @@ pub fn default_fishing_weight_weather_predictor() -> Box<dyn MLModel> {
             range: PredictionRange::DaysFromStartOfYear(FISHING_WEIGHT_PREDICTOR_NUM_DAYS),
             catch_locations: vec![CatchLocationId::new(10, 4), CatchLocationId::new(10, 5)],
             single_species_mode: None,
+            bycatch_percentage: None,
+            majority_species_group: false,
         },
     ))
 }

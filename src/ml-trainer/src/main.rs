@@ -1,4 +1,4 @@
-use clap::Parser;
+use clap::{Args, Parser, Subcommand};
 use engine::{
     FishingSpotPredictor, FishingWeightPredictor, FishingWeightWeatherPredictor,
     SpotPredictorSettings, WeightPredictorSettings,
@@ -18,33 +18,129 @@ enum ModelId {
     SpotWeather = 4,
 }
 
-#[derive(Parser, Debug)]
+#[derive(clap::ValueEnum, Debug, Copy, Clone)]
+enum Mode {
+    Train,
+    Full,
+}
+
+#[derive(Debug, Clone)]
+enum SpeciesMode {
+    All,
+    Multilple(Vec<SpeciesGroup>),
+}
+
+#[derive(Parser)]
 #[command(author, version, about, long_about = None)]
-struct Args {
-    #[arg(short, long, value_enum)]
+#[command(propagate_version = true)]
+struct Cli {
+    #[command(subcommand)]
+    command: Commands,
+}
+
+#[derive(Args, Debug)]
+struct BaseArgs {
+    #[arg(long, value_enum)]
     model: Option<ModelId>,
 
-    #[arg(short, long)]
-    species_group_id: Option<u32>,
+    #[arg(short, long, value_delimiter = ' ')]
+    species: Option<Vec<u32>>,
 
     #[arg(short, long, default_value_t = 200)]
     training_rounds: u32,
+
+    #[arg(short, long, default_value_t = false)]
+    majority_species_group: bool,
+
+    #[arg(short, long)]
+    bycatch: Option<f64>,
+}
+
+#[derive(Args, Debug)]
+struct InteractiveArgs {
+    #[arg(long, value_enum, default_value_t = Mode::Full)]
+    mode: Mode,
 
     #[arg(short, long, default_value_t = 10)]
     predict_num_days: u32,
 }
 
+#[derive(Args, Debug)]
+struct ExperimentArgs {}
+
+struct Experiment {
+    majority_species_group: bool,
+    bycatch: Option<f64>,
+    species: Option<SpeciesGroup>,
+    model: Box<dyn MLModel>,
+}
+
+impl std::fmt::Display for Experiment {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let species = self
+            .species
+            .map(|v| v.norwegian_name().to_owned())
+            .unwrap_or("All".to_owned());
+
+        f.write_fmt(format_args!(
+            "model: {}\n species: {}\n majority_species_group: {}\n bycatch_percentage: {}",
+            self.model.id(),
+            species,
+            self.majority_species_group,
+            self.bycatch.unwrap_or_default()
+        ))
+    }
+}
+
+#[derive(Subcommand)]
+enum Commands {
+    Interactive {
+        #[command(flatten)]
+        base: BaseArgs,
+        #[command(flatten)]
+        args: InteractiveArgs,
+    },
+    Experiment {
+        #[command(flatten)]
+        base: BaseArgs,
+        #[command(flatten)]
+        args: ExperimentArgs,
+    },
+}
+
+impl Commands {
+    fn species(&self) -> Vec<SpeciesGroup> {
+        match self {
+            Commands::Interactive { base, args: _ } | Commands::Experiment { base, args: _ } => {
+                base.species
+                    .clone()
+                    .map(|s| {
+                        s.into_iter()
+                            .map(|v| SpeciesGroup::from_u32(v).unwrap())
+                            .collect()
+                    })
+                    .unwrap_or_default()
+            }
+        }
+    }
+    fn enabled_models(&self) -> Vec<kyogre_core::ModelId> {
+        match self {
+            Commands::Interactive { base, args: _ } | Commands::Experiment { base, args: _ } => {
+                base.model
+                    .map(|v| vec![kyogre_core::ModelId::from(v)])
+                    .unwrap_or_else(|| {
+                        kyogre_core::ModelId::iter()
+                            .filter(|v| !matches!(v, kyogre_core::ModelId::SpotWeather))
+                            .collect()
+                    })
+            }
+        }
+    }
+}
+
 #[tokio::main]
 async fn main() {
-    let args = Args::parse();
-    let enabled_models = args
-        .model
-        .map(|v| vec![kyogre_core::ModelId::from(v)])
-        .unwrap_or_else(|| kyogre_core::ModelId::iter().collect());
-
-    let single_species_mode = args
-        .species_group_id
-        .map(|v| SpeciesGroup::from_u32(v).unwrap());
+    let cli = Cli::parse();
 
     let adapter = PostgresAdapter::new(&PsqlSettings {
         ip: "127.0.0.0".to_string(),
@@ -59,35 +155,220 @@ async fn main() {
     .await
     .unwrap();
 
-    adapter.reset_models(&enabled_models).await.unwrap();
+    let species = cli.command.species();
+    let models = cli.command.enabled_models();
+
+    match cli.command {
+        Commands::Interactive { base, args } => {
+            run_interactive(args, base, adapter, models, species).await
+        }
+        Commands::Experiment { base, args } => {
+            run_experiment(args, base, adapter, models, species).await
+        }
+    }
+}
+
+async fn run_experiment(
+    _args: ExperimentArgs,
+    base_args: BaseArgs,
+    adapter: PostgresAdapter,
+    enabled_models: Vec<kyogre_core::ModelId>,
+    species: Vec<SpeciesGroup>,
+) {
+    let species_mode = match species.is_empty() {
+        true => SpeciesMode::All,
+        false => SpeciesMode::Multilple(species),
+    };
+
+    let mut experiments = Vec::new();
 
     let weight_settings = WeightPredictorSettings {
         running_in_test: true,
         use_gpu: true,
-        training_rounds: args.training_rounds,
+        training_rounds: 1,
+        predict_batch_size: 1000000,
+        range: PredictionRange::DaysFromStartOfYear(0),
+        catch_locations: vec![],
+        single_species_mode: None,
+        training_mode: TrainingMode::Local,
+        test_fraction: Some(0.2),
+        bycatch_percentage: base_args.bycatch,
+        majority_species_group: base_args.majority_species_group,
+    };
+
+    let spot_settings = SpotPredictorSettings {
+        running_in_test: true,
+        use_gpu: true,
+        training_rounds: base_args.training_rounds,
+        predict_batch_size: 1000000,
+        range: PredictionRange::DaysFromStartOfYear(0),
+        catch_locations: vec![],
+        single_species_mode: None,
+        training_mode: TrainingMode::Local,
+        test_fraction: Some(0.2),
+    };
+
+    match species_mode {
+        SpeciesMode::All => {
+            for m in enabled_models {
+                match m {
+                    kyogre_core::ModelId::Spot => {
+                        let model = Box::new(FishingSpotPredictor::new(spot_settings.clone()));
+                        experiments.push(Experiment {
+                            majority_species_group: base_args.majority_species_group,
+                            bycatch: base_args.bycatch,
+                            model,
+                            species: None,
+                        });
+                    }
+                    kyogre_core::ModelId::Weight => {
+                        let model = Box::new(FishingWeightPredictor::new(weight_settings.clone()));
+                        experiments.push(Experiment {
+                            majority_species_group: base_args.majority_species_group,
+                            bycatch: base_args.bycatch,
+                            model,
+                            species: None,
+                        });
+                    }
+                    kyogre_core::ModelId::WeightWeather => {
+                        let model =
+                            Box::new(FishingWeightWeatherPredictor::new(weight_settings.clone()));
+                        experiments.push(Experiment {
+                            majority_species_group: base_args.majority_species_group,
+                            bycatch: base_args.bycatch,
+                            model,
+                            species: None,
+                        });
+                    }
+                    kyogre_core::ModelId::SpotWeather => unimplemented!(),
+                }
+            }
+        }
+        SpeciesMode::Multilple(species) => {
+            for s in species {
+                for m in &enabled_models {
+                    match m {
+                        kyogre_core::ModelId::Spot => {
+                            let mut settings = spot_settings.clone();
+                            settings.single_species_mode = Some(s);
+                            let model = Box::new(FishingSpotPredictor::new(settings));
+                            experiments.push(Experiment {
+                                majority_species_group: base_args.majority_species_group,
+                                bycatch: base_args.bycatch,
+                                model,
+                                species: Some(s),
+                            });
+                        }
+                        kyogre_core::ModelId::Weight => {
+                            let mut settings = weight_settings.clone();
+                            settings.single_species_mode = Some(s);
+                            let model = Box::new(FishingWeightPredictor::new(settings));
+                            experiments.push(Experiment {
+                                majority_species_group: base_args.majority_species_group,
+                                bycatch: base_args.bycatch,
+                                model,
+                                species: Some(s),
+                            });
+                        }
+                        kyogre_core::ModelId::WeightWeather => {
+                            let mut settings = weight_settings.clone();
+                            settings.single_species_mode = Some(s);
+                            let model = Box::new(FishingWeightWeatherPredictor::new(settings));
+                            experiments.push(Experiment {
+                                majority_species_group: base_args.majority_species_group,
+                                bycatch: base_args.bycatch,
+                                model,
+                                species: Some(s),
+                            });
+                        }
+                        kyogre_core::ModelId::SpotWeather => unimplemented!(),
+                    }
+                }
+            }
+        }
+    };
+
+    let mut outputs: Vec<(Experiment, f64)> = Vec::new();
+    for e in experiments {
+        let output = e
+            .model
+            .train(adapter.model(e.model.id()).await.unwrap(), &adapter)
+            .await
+            .unwrap();
+        outputs.push((e, output.best_score.unwrap()));
+    }
+
+    outputs.sort_by_key(|v| v.0.model.id());
+
+    for o in outputs {
+        println!("Experiment:\n {}\n score: {}", o.0, o.1);
+    }
+}
+
+async fn run_interactive(
+    args: InteractiveArgs,
+    base_args: BaseArgs,
+    adapter: PostgresAdapter,
+    enabled_models: Vec<kyogre_core::ModelId>,
+    species: Vec<SpeciesGroup>,
+) {
+    let species_mode = match species.is_empty() {
+        true => SpeciesMode::All,
+        false => SpeciesMode::Multilple(species),
+    };
+
+    adapter.reset_models(&enabled_models).await.unwrap();
+
+    match species_mode {
+        SpeciesMode::All => {
+            run_models_on_species(&adapter, &args, &base_args, &enabled_models, None).await
+        }
+        SpeciesMode::Multilple(species) => {
+            for s in species {
+                run_models_on_species(&adapter, &args, &base_args, &enabled_models, Some(s)).await;
+            }
+        }
+    };
+}
+
+async fn run_models_on_species(
+    adapter: &PostgresAdapter,
+    args: &InteractiveArgs,
+    base_args: &BaseArgs,
+    enabled_models: &[kyogre_core::ModelId],
+    species: Option<SpeciesGroup>,
+) {
+    let spot_settings = SpotPredictorSettings {
+        running_in_test: true,
+        use_gpu: true,
+        training_rounds: base_args.training_rounds,
         predict_batch_size: 1000000,
         range: PredictionRange::DaysFromStartOfYear(args.predict_num_days),
         catch_locations: vec![],
-        single_species_mode,
+        single_species_mode: species,
         training_mode: TrainingMode::Local,
         test_fraction: Some(0.2),
+    };
+
+    let weight_settings = WeightPredictorSettings {
+        running_in_test: true,
+        use_gpu: true,
+        training_rounds: base_args.training_rounds,
+        predict_batch_size: 1000000,
+        range: PredictionRange::DaysFromStartOfYear(args.predict_num_days),
+        catch_locations: vec![],
+        single_species_mode: species,
+        training_mode: TrainingMode::Local,
+        test_fraction: Some(0.2),
+        bycatch_percentage: base_args.bycatch,
+        majority_species_group: base_args.majority_species_group,
     };
 
     let mut models = Vec::new();
     for m in enabled_models {
         match m {
             kyogre_core::ModelId::Spot => {
-                let model = Box::new(FishingSpotPredictor::new(SpotPredictorSettings {
-                    running_in_test: true,
-                    use_gpu: true,
-                    training_rounds: args.training_rounds,
-                    predict_batch_size: 1000000,
-                    range: PredictionRange::DaysFromStartOfYear(args.predict_num_days),
-                    catch_locations: vec![],
-                    single_species_mode,
-                    training_mode: TrainingMode::Local,
-                    test_fraction: Some(0.2),
-                }));
+                let model = Box::new(FishingSpotPredictor::new(spot_settings.clone()));
                 models.push(model as Box<dyn MLModel>);
             }
             kyogre_core::ModelId::Weight => {
@@ -102,12 +383,34 @@ async fn main() {
         }
     }
 
+    let mut outputs: Vec<(kyogre_core::ModelId, f64)> = Vec::new();
     for m in models {
-        let trained = m
-            .train(adapter.model(m.id()).await.unwrap(), &adapter)
-            .await
-            .unwrap();
-        m.predict(&trained, &adapter).await.unwrap();
+        match args.mode {
+            Mode::Train => {
+                let output = m
+                    .train(adapter.model(m.id()).await.unwrap(), adapter)
+                    .await
+                    .unwrap();
+                outputs.push((m.id(), output.best_score.unwrap()));
+            }
+            Mode::Full => {
+                let output = m
+                    .train(adapter.model(m.id()).await.unwrap(), adapter)
+                    .await
+                    .unwrap();
+                m.predict(&output.model, adapter).await.unwrap();
+            }
+        }
+    }
+
+    outputs.sort_by_key(|v| v.0);
+
+    let species = species
+        .map(|v| v.norwegian_name().to_owned())
+        .unwrap_or("All".to_owned());
+
+    for o in outputs {
+        println!("species: {}, model: {}, score: {}", species, o.0, o.1);
     }
 }
 

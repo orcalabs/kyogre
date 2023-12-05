@@ -1129,6 +1129,8 @@ impl MLModelsOutbound for PostgresAdapter {
         weather_data: WeatherData,
         limit: Option<u32>,
         single_species_mode: Option<SpeciesGroup>,
+        bycatch_percentage: Option<f64>,
+        majority_species_group: bool,
     ) -> Result<Vec<WeightPredictorTrainingData>, QueryError> {
         Ok(self
             .fishing_weight_predictor_training_data_impl(
@@ -1136,6 +1138,8 @@ impl MLModelsOutbound for PostgresAdapter {
                 weather_data,
                 limit,
                 single_species_mode,
+                bycatch_percentage,
+                majority_species_group,
             )
             .await
             .change_context(QueryError)?
