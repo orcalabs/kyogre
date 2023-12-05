@@ -1,4 +1,4 @@
-use crate::routes::utils::from_string;
+use crate::routes::utils::{from_string, to_string};
 use crate::{error::ApiError, response::Response};
 use crate::{to_streaming_response, Database};
 use actix_web::HttpResponse;
@@ -7,10 +7,10 @@ use chrono::NaiveDate;
 use chrono::Utc;
 use fiskeridir_rs::SpeciesGroup;
 use futures::TryStreamExt;
-use kyogre_core::{FishingSpotPrediction, ModelId};
-use serde::Deserialize;
+use kyogre_core::{CatchLocationId, ModelId};
+use serde::{Deserialize, Serialize};
 use tracing::{event, Level};
-use utoipa::IntoParams;
+use utoipa::{IntoParams, ToSchema};
 
 pub const MAX_FISHING_WEIGHT_PREDICTIONS: u32 = 20;
 pub const DEFAULT_FISHING_WEIGHT_PREDICTIONS: u32 = 5;
@@ -66,7 +66,7 @@ pub async fn fishing_spot_predictions<T: Database + 'static>(
         .fishing_spot_prediction(path_params.model_id, path_params.species_group_id, date)
         .await
     {
-        Ok(v) => Ok(Response::new(v)),
+        Ok(v) => Ok(Response::new(v.map(FishingSpotPrediction::from))),
         Err(e) => {
             event!(
                 Level::ERROR,
@@ -170,5 +170,48 @@ pub async fn all_fishing_weight_predictions<T: Database + 'static>(
             );
             ApiError::InternalServerError
          })
+    }
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct FishingSpotPrediction {
+    pub latitude: f64,
+    pub longitude: f64,
+    #[serde(serialize_with = "to_string", deserialize_with = "from_string")]
+    pub species_group_id: SpeciesGroup,
+    pub date: NaiveDate,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct FishingWeightPrediction {
+    #[schema(value_type = String)]
+    pub catch_location_id: CatchLocationId,
+    pub weight: f64,
+    #[serde(serialize_with = "to_string", deserialize_with = "from_string")]
+    pub species_group_id: SpeciesGroup,
+    pub date: NaiveDate,
+}
+
+impl From<kyogre_core::FishingSpotPrediction> for FishingSpotPrediction {
+    fn from(v: kyogre_core::FishingSpotPrediction) -> Self {
+        Self {
+            latitude: v.latitude,
+            longitude: v.longitude,
+            species_group_id: v.species_group_id,
+            date: v.date,
+        }
+    }
+}
+
+impl From<kyogre_core::FishingWeightPrediction> for FishingWeightPrediction {
+    fn from(v: kyogre_core::FishingWeightPrediction) -> Self {
+        Self {
+            catch_location_id: v.catch_location_id,
+            weight: v.weight,
+            species_group_id: v.species_group_id,
+            date: v.date,
+        }
     }
 }

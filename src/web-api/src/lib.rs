@@ -133,8 +133,8 @@ impl Meilisearch for MeilisearchAdapter<PostgresAdapter> {}
             v1::delivery_point::DeliveryPoint,
             v1::weather::Weather,
             v1::weather::WeatherLocation,
-            kyogre_core::FishingSpotPrediction,
-            kyogre_core::FishingWeightPrediction,
+            v1::fishing_prediction::FishingSpotPrediction,
+            v1::fishing_prediction::FishingWeightPrediction,
             kyogre_core::ModelId,
           )
     ),
