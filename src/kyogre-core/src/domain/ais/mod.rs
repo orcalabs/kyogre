@@ -2,7 +2,7 @@ use chrono::{DateTime, TimeZone, Utc};
 use fiskeridir_rs::CallSign;
 use num_derive::FromPrimitive;
 use rand::random;
-use serde::{de::Visitor, Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use strum::{AsRefStr, EnumString};
 
@@ -25,7 +25,7 @@ pub struct DataMessage {
     pub static_messages: Vec<NewAisStatic>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize)]
 pub struct Mmsi(pub i32);
 
 #[derive(Debug, Clone)]
@@ -216,47 +216,5 @@ impl NewAisPosition {
             true_heading: Some(random()),
             distance_to_shore: random(),
         }
-    }
-}
-
-impl<'de> Deserialize<'de> for Mmsi {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        struct MmsiVisitor;
-
-        impl<'de> Visitor<'de> for MmsiVisitor {
-            type Value = Mmsi;
-
-            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                formatter.write_str("a Mmsi value")
-            }
-
-            fn visit_i64<E>(self, v: i64) -> Result<Self::Value, E>
-            where
-                E: serde::de::Error,
-            {
-                Ok(Mmsi(v as i32))
-            }
-
-            fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
-            where
-                E: serde::de::Error,
-            {
-                Ok(Mmsi(v as i32))
-            }
-
-            fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
-            where
-                E: serde::de::Error,
-            {
-                Ok(Mmsi(v.parse().map_err(|_| {
-                    serde::de::Error::invalid_value(serde::de::Unexpected::Str(v), &self)
-                })?))
-            }
-        }
-
-        deserializer.deserialize_i64(MmsiVisitor)
     }
 }

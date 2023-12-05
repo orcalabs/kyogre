@@ -1,10 +1,11 @@
-use crate::{error::ApiError, routes::utils::*, to_streaming_response, Database};
+use crate::{error::ApiError, to_streaming_response, Database};
 use actix_web::{web, HttpResponse};
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::{CallSign, GearGroup, RegisterVesselOwner, SpeciesGroup, VesselLengthGroup};
 use futures::TryStreamExt;
 use kyogre_core::{FiskeridirVesselId, Mmsi};
 use serde::{Deserialize, Serialize};
+use serde_with::{serde_as, DisplayFromStr};
 use tracing::{event, Level};
 use utoipa::ToSchema;
 
@@ -26,15 +27,16 @@ pub async fn vessels<T: Database + 'static>(db: web::Data<T>) -> Result<HttpResp
     }
 }
 
+#[serde_as]
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct Vessel {
     pub fiskeridir: FiskeridirVessel,
     pub ais: Option<AisVessel>,
     pub fish_caught_per_hour: Option<f64>,
-    #[serde(serialize_with = "vec_to_string", deserialize_with = "vec_from_string")]
+    #[serde_as(as = "Vec<DisplayFromStr>")]
     pub gear_groups: Vec<GearGroup>,
-    #[serde(serialize_with = "vec_to_string", deserialize_with = "vec_from_string")]
+    #[serde_as(as = "Vec<DisplayFromStr>")]
     pub species_groups: Vec<SpeciesGroup>,
 }
 
@@ -50,13 +52,14 @@ impl Vessel {
     }
 }
 
+#[serde_as]
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct FiskeridirVessel {
     #[schema(value_type = i64)]
     pub id: FiskeridirVesselId,
     pub vessel_type_id: Option<u32>,
-    #[serde(serialize_with = "to_string", deserialize_with = "from_string")]
+    #[serde_as(as = "DisplayFromStr")]
     pub length_group_id: VesselLengthGroup,
     pub nation_group_id: Option<String>,
     pub nation_id: Option<String>,

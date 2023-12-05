@@ -1,5 +1,5 @@
 use chrono::{DateTime, Utc};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use strum::{AsRefStr, EnumString};
 
 use crate::{
@@ -9,7 +9,9 @@ use crate::{
 
 #[cfg_attr(feature = "sqlx", derive(sqlx::Type))]
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
-#[derive(Default, Debug, Clone, Copy, Deserialize, strum::Display, AsRefStr, EnumString)]
+#[derive(
+    Default, Debug, Clone, Copy, Deserialize, Serialize, strum::Display, AsRefStr, EnumString,
+)]
 pub enum FishingFacilitiesSorting {
     #[serde(alias = "setup", alias = "Setup", alias = "SETUP")]
     #[default]

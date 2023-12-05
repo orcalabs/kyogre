@@ -2,7 +2,6 @@ use crate::{
     ais_to_streaming_response,
     error::ApiError,
     extractors::{Auth0Profile, BwProfile},
-    routes::utils::*,
     Database,
 };
 use actix_web::{web, HttpResponse};
@@ -14,11 +13,13 @@ use kyogre_core::{
     TripPositionLayerId, VmsPosition,
 };
 use serde::{Deserialize, Serialize};
+use serde_qs::actix::QsQuery as Query;
+use serde_with::{serde_as, skip_serializing_none, DisplayFromStr};
 use std::string::ToString;
 use tracing::{event, Level};
 use utoipa::{IntoParams, ToSchema};
 
-#[derive(Debug, Deserialize, IntoParams)]
+#[derive(Debug, Deserialize, Serialize, IntoParams)]
 #[serde(rename_all = "camelCase")]
 pub struct AisVmsParameters {
     #[param(value_type = Option<i32>)]
@@ -48,7 +49,7 @@ pub struct AisVmsParameters {
 #[tracing::instrument(skip(db))]
 pub async fn ais_vms_positions<T: Database + 'static>(
     db: web::Data<T>,
-    params: web::Query<AisVmsParameters>,
+    params: Query<AisVmsParameters>,
     bw_profile: Option<BwProfile>,
     auth: Option<Auth0Profile>,
 ) -> Result<HttpResponse, ApiError> {
@@ -104,40 +105,29 @@ pub async fn ais_vms_positions<T: Database + 'static>(
     }
 }
 
+#[serde_as]
+#[skip_serializing_none]
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct AisVmsPosition {
     pub lat: f64,
     pub lon: f64,
     pub timestamp: DateTime<Utc>,
-    #[serde(skip_serializing_if = "Option::is_none", default)]
     pub cog: Option<f64>,
-    #[serde(skip_serializing_if = "Option::is_none", default)]
     pub speed: Option<f64>,
-    #[serde(
-        skip_serializing_if = "Option::is_none",
-        serialize_with = "opt_to_string",
-        deserialize_with = "opt_from_string",
-        default
-    )]
+    #[serde_as(as = "Option<DisplayFromStr>")]
     pub pruned_by: Option<TripPositionLayerId>,
-    #[serde(skip_serializing_if = "Option::is_none", default)]
     pub det: Option<AisVmsPositionDetails>,
 }
 
+#[serde_as]
+#[skip_serializing_none]
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct AisVmsPositionDetails {
-    #[serde(
-        skip_serializing_if = "Option::is_none",
-        serialize_with = "opt_to_string",
-        deserialize_with = "opt_from_string",
-        default
-    )]
+    #[serde_as(as = "Option<DisplayFromStr>")]
     pub navigational_status: Option<NavigationStatus>,
-    #[serde(skip_serializing_if = "Option::is_none", default)]
     pub rate_of_turn: Option<f64>,
-    #[serde(skip_serializing_if = "Option::is_none", default)]
     pub true_heading: Option<i32>,
     pub distance_to_shore: f64,
     pub missing_data: bool,

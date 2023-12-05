@@ -1,13 +1,15 @@
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::{GearGroup, SpeciesGroup, VesselLengthGroup};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use strum::{AsRefStr, EnumString};
 
 use crate::{FiskeridirVesselId, Ordering, Pagination, Trips};
 
 #[cfg_attr(feature = "sqlx", derive(sqlx::Type))]
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
-#[derive(Default, Debug, Clone, Copy, Deserialize, strum::Display, AsRefStr, EnumString)]
+#[derive(
+    Default, Debug, Clone, Copy, Deserialize, Serialize, strum::Display, AsRefStr, EnumString,
+)]
 pub enum TripSorting {
     #[serde(alias = "stopDate", alias = "StopDate", alias = "STOP_DATE")]
     #[default]

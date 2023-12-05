@@ -2,7 +2,6 @@ use crate::{
     ais_to_streaming_response,
     error::ApiError,
     extractors::{Auth0Profile, BwProfile},
-    routes::utils::*,
     Database,
 };
 use actix_web::{
@@ -13,10 +12,12 @@ use chrono::{DateTime, Duration, Utc};
 use kyogre_core::{AisPermission, NavigationStatus};
 use kyogre_core::{DateRange, Mmsi};
 use serde::{Deserialize, Serialize};
+use serde_qs::actix::QsQuery as Query;
+use serde_with::{serde_as, DisplayFromStr};
 use tracing::{event, Level};
 use utoipa::{IntoParams, ToSchema};
 
-#[derive(Debug, Deserialize, IntoParams)]
+#[derive(Debug, Deserialize, Serialize, IntoParams)]
 #[serde(rename_all = "camelCase")]
 pub struct AisTrackParameters {
     pub start: Option<DateTime<Utc>>,
@@ -49,7 +50,7 @@ pub struct AisTrackPath {
 #[tracing::instrument(skip(db))]
 pub async fn ais_track<T: Database + 'static>(
     db: web::Data<T>,
-    params: web::Query<AisTrackParameters>,
+    params: Query<AisTrackParameters>,
     path: Path<AisTrackPath>,
     bw_profile: Option<BwProfile>,
     auth: Option<Auth0Profile>,
@@ -97,10 +98,11 @@ pub struct AisPosition {
     pub det: Option<AisPositionDetails>,
 }
 
+#[serde_as]
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct AisPositionDetails {
-    #[serde(serialize_with = "opt_to_string", deserialize_with = "opt_from_string")]
+    #[serde_as(as = "Option<DisplayFromStr>")]
     pub navigational_status: Option<NavigationStatus>,
     pub rate_of_turn: Option<f64>,
     pub speed_over_ground: Option<f64>,

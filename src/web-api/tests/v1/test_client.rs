@@ -1,5 +1,3 @@
-use std::{fmt::Write, string::ToString};
-
 use fiskeridir_rs::{CallSign, LandingId, SpeciesGroup};
 use kyogre_core::{
     ActiveHaulsFilter, ActiveLandingFilter, FiskeridirVesselId, HaulId, Mmsi, ModelId,
@@ -29,16 +27,22 @@ impl ApiClient {
         ApiClient { address }
     }
 
-    async fn get<T: AsRef<str>>(
+    async fn get<T: AsRef<str>, P: Serialize>(
         &self,
         path: T,
-        parameters: &[(String, String)],
+        parameters: Option<P>,
         headers: Option<HeaderMap>,
     ) -> Response {
-        let url = format!("{}/{}", self.address, path.as_ref());
+        let url = match parameters {
+            Some(p) => {
+                let params = serde_qs::to_string(&p).unwrap();
+                format!("{}/{}?{}", self.address, path.as_ref(), params)
+            }
+            None => format!("{}/{}", self.address, path.as_ref()),
+        };
 
         let client = Client::new();
-        let mut request = client.get(url).query(parameters);
+        let mut request = client.get(url);
 
         if let Some(headers) = headers {
             request = request.headers(headers);
@@ -46,6 +50,7 @@ impl ApiClient {
 
         request.send().await.unwrap()
     }
+
     async fn put<T: AsRef<str>, S: Serialize>(
         &self,
         path: T,
@@ -70,28 +75,14 @@ impl ApiClient {
         params: AisTrackParameters,
         token: Option<String>,
     ) -> Response {
-        let mut url_params = Vec::new();
-
-        if let Some(s) = params.start {
-            url_params.push((("start".to_owned()), s.to_string()));
-        }
-
-        if let Some(s) = params.end {
-            url_params.push((("end".to_owned()), s.to_string()));
-        }
-
         let headers = token.map(|v| {
             let mut headers = HeaderMap::new();
             headers.insert("bw-token", v.try_into().unwrap());
             headers
         });
 
-        self.get(
-            format!("ais_track/{}", mmsi.0),
-            url_params.as_slice(),
-            headers,
-        )
-        .await
+        self.get(format!("ais_track/{}", mmsi.0), Some(params), headers)
+            .await
     }
 
     pub async fn get_ais_vms_positions(
@@ -99,67 +90,48 @@ impl ApiClient {
         params: AisVmsParameters,
         token: Option<String>,
     ) -> Response {
-        let mut url_params = Vec::new();
-
-        if let Some(s) = params.mmsi {
-            url_params.push((("mmsi".to_owned()), s.0.to_string()));
-        }
-
-        if let Some(s) = params.call_sign {
-            url_params.push((("callSign".to_owned()), s.into_inner()));
-        }
-
-        if let Some(s) = params.trip_id {
-            url_params.push((("tripId".to_owned()), s.0.to_string()));
-        }
-
-        if let Some(s) = params.start {
-            url_params.push((("start".to_owned()), s.to_string()));
-        }
-
-        if let Some(s) = params.end {
-            url_params.push((("end".to_owned()), s.to_string()));
-        }
-
         let headers = token.map(|v| {
             let mut headers = HeaderMap::new();
             headers.insert("bw-token", v.try_into().unwrap());
             headers
         });
 
-        self.get("ais_vms_positions", url_params.as_slice(), headers)
-            .await
+        self.get("ais_vms_positions", Some(params), headers).await
     }
 
     pub async fn get_species(&self) -> Response {
-        self.get("species", &[], None).await
+        self.get("species", None::<()>, None).await
     }
     pub async fn get_species_groups(&self) -> Response {
-        self.get("species_groups", &[], None).await
+        self.get("species_groups", None::<()>, None).await
     }
     pub async fn get_species_main_groups(&self) -> Response {
-        self.get("species_main_groups", &[], None).await
+        self.get("species_main_groups", None::<()>, None).await
     }
     pub async fn get_species_fao(&self) -> Response {
-        self.get("species_fao", &[], None).await
+        self.get("species_fao", None::<()>, None).await
     }
     pub async fn get_species_fiskeridir(&self) -> Response {
-        self.get("species_fiskeridir", &[], None).await
+        self.get("species_fiskeridir", None::<()>, None).await
     }
     pub async fn get_vessels(&self) -> Response {
-        self.get("vessels", &[], None).await
+        self.get("vessels", None::<()>, None).await
     }
     pub async fn get_delivery_points(&self) -> Response {
-        self.get("delivery_points", &[], None).await
+        self.get("delivery_points", None::<()>, None).await
     }
     pub async fn get_all_fishing_spot_predictions(&self, model_id: ModelId) -> Response {
-        self.get(format!("fishing_spot_predictions/{}", model_id), &[], None)
-            .await
+        self.get(
+            format!("fishing_spot_predictions/{}", model_id),
+            None::<()>,
+            None,
+        )
+        .await
     }
     pub async fn get_all_fishing_weight_predictions(&self, model_id: ModelId) -> Response {
         self.get(
             format!("fishing_weight_predictions/{}", model_id),
-            &[],
+            None::<()>,
             None,
         )
         .await
@@ -171,13 +143,9 @@ impl ApiClient {
         species: SpeciesGroup,
         params: FishingSpotPredictionParams,
     ) -> Response {
-        let mut parameters = Vec::new();
-        if let Some(date) = params.date {
-            parameters.push(("date".to_string(), date.to_string()))
-        }
         self.get(
             format!("fishing_spot_predictions/{}/{}", model_id, species),
-            &parameters,
+            Some(params),
             None,
         )
         .await
@@ -189,193 +157,28 @@ impl ApiClient {
         species: SpeciesGroup,
         params: FishingWeightPredictionParams,
     ) -> Response {
-        let mut parameters = Vec::new();
-        if let Some(date) = params.date {
-            parameters.push(("date".to_string(), date.to_string()))
-        }
-        if let Some(limit) = params.limit {
-            parameters.push(("limit".to_string(), limit.to_string()))
-        }
         self.get(
             format!("fishing_weight_predictions/{}/{}", model_id, species),
-            &parameters,
+            Some(params),
             None,
         )
         .await
     }
 
     pub async fn get_hauls(&self, params: HaulsParams) -> Response {
-        let mut parameters = Vec::new();
-
-        if let Some(months) = params.months {
-            parameters.push(("months".to_string(), create_comma_separated_list(months)))
-        }
-
-        if let Some(locations) = params.catch_locations {
-            parameters.push((
-                "catchLocations".to_string(),
-                create_comma_separated_list(locations),
-            ))
-        }
-
-        if let Some(gear) = params.gear_group_ids {
-            parameters.push((
-                "gearGroupIds".to_string(),
-                create_comma_separated_list(gear),
-            ))
-        }
-
-        if let Some(species) = params.species_group_ids {
-            parameters.push((
-                "speciesGroupIds".to_string(),
-                create_comma_separated_list(species),
-            ))
-        }
-
-        if let Some(ranges) = params.vessel_length_ranges {
-            parameters.push((
-                "vesselLengthRanges".to_string(),
-                create_semicolon_separated_list(ranges),
-            ))
-        }
-
-        if let Some(id) = params.fiskeridir_vessel_ids {
-            parameters.push((
-                "fiskeridirVesselIds".to_string(),
-                create_comma_separated_list(id.into_iter().map(|i| i.0).collect()),
-            ))
-        }
-
-        if let Some(value) = params.min_wind_speed {
-            parameters.push(("minWindSpeed".to_string(), value.to_string()))
-        }
-
-        if let Some(value) = params.max_wind_speed {
-            parameters.push(("maxWindSpeed".to_string(), value.to_string()))
-        }
-
-        if let Some(value) = params.min_air_temperature {
-            parameters.push(("minAirTemperature".to_string(), value.to_string()))
-        }
-
-        if let Some(value) = params.max_air_temperature {
-            parameters.push(("maxAirTemperature".to_string(), value.to_string()))
-        }
-
-        if let Some(sorting) = params.sorting {
-            parameters.push(("sorting".to_string(), sorting.to_string()))
-        }
-
-        if let Some(ordering) = params.ordering {
-            parameters.push(("ordering".to_string(), ordering.to_string()))
-        }
-
-        self.get("hauls", &parameters, None).await
+        self.get("hauls", Some(params), None).await
     }
     pub async fn get_landings(&self, params: LandingsParams) -> Response {
-        let mut parameters = Vec::new();
-
-        if let Some(months) = params.months {
-            parameters.push(("months".to_string(), create_comma_separated_list(months)))
-        }
-
-        if let Some(locations) = params.catch_locations {
-            parameters.push((
-                "catchLocations".to_string(),
-                create_comma_separated_list(locations),
-            ))
-        }
-
-        if let Some(gear) = params.gear_group_ids {
-            parameters.push((
-                "gearGroupIds".to_string(),
-                create_comma_separated_list(gear),
-            ))
-        }
-
-        if let Some(species) = params.species_group_ids {
-            parameters.push((
-                "speciesGroupIds".to_string(),
-                create_comma_separated_list(species),
-            ))
-        }
-
-        if let Some(ranges) = params.vessel_length_ranges {
-            parameters.push((
-                "vesselLengthRanges".to_string(),
-                create_semicolon_separated_list(ranges),
-            ))
-        }
-
-        if let Some(id) = params.fiskeridir_vessel_ids {
-            parameters.push((
-                "fiskeridirVesselIds".to_string(),
-                create_comma_separated_list(id.into_iter().map(|i| i.0).collect()),
-            ))
-        }
-
-        if let Some(sorting) = params.sorting {
-            parameters.push(("sorting".to_string(), sorting.to_string()))
-        }
-
-        if let Some(ordering) = params.ordering {
-            parameters.push(("ordering".to_string(), ordering.to_string()))
-        }
-
-        self.get("landings", &parameters, None).await
+        self.get("landings", Some(params), None).await
     }
     pub async fn get_landing_matrix(
         &self,
         params: LandingMatrixParams,
         active_filter: ActiveLandingFilter,
     ) -> Response {
-        let mut parameters = Vec::new();
-
-        if let Some(months) = params.months {
-            parameters.push((
-                "months".to_string(),
-                create_comma_separated_list(months.into_iter().map(|m| m.0).collect()),
-            ))
-        }
-
-        if let Some(locations) = params.catch_locations {
-            parameters.push((
-                "catchLocations".to_string(),
-                create_comma_separated_list(locations),
-            ))
-        }
-
-        if let Some(gear) = params.gear_group_ids {
-            parameters.push((
-                "gearGroupIds".to_string(),
-                create_comma_separated_list(gear),
-            ))
-        }
-
-        if let Some(species) = params.species_group_ids {
-            parameters.push((
-                "speciesGroupIds".to_string(),
-                create_comma_separated_list(species),
-            ))
-        }
-
-        if let Some(groups) = params.vessel_length_groups {
-            parameters.push((
-                "vesselLengthGroups".to_string(),
-                create_comma_separated_list(groups),
-            ))
-        }
-
-        if let Some(id) = params.fiskeridir_vessel_ids {
-            parameters.push((
-                "fiskeridirVesselIds".to_string(),
-                create_comma_separated_list(id.into_iter().map(|i| i.0).collect()),
-            ))
-        }
-
         self.get(
             &format!("landing_matrix/{}", active_filter),
-            &parameters,
+            Some(params),
             None,
         )
         .await
@@ -385,167 +188,35 @@ impl ApiClient {
         params: HaulsMatrixParams,
         active_filter: ActiveHaulsFilter,
     ) -> Response {
-        let mut parameters = Vec::new();
-
-        if let Some(majority_species_group) = params.majority_species_group {
-            parameters.push((
-                "majoritySpeciesGroup".to_string(),
-                majority_species_group.to_string(),
-            ));
-        }
-
-        if let Some(bycatch_percentage) = params.bycatch_percentage {
-            parameters.push((
-                "bycatchPercentage".to_string(),
-                bycatch_percentage.to_string(),
-            ))
-        }
-
-        if let Some(months) = params.months {
-            parameters.push((
-                "months".to_string(),
-                create_comma_separated_list(months.into_iter().map(|m| m.0).collect()),
-            ))
-        }
-
-        if let Some(locations) = params.catch_locations {
-            parameters.push((
-                "catchLocations".to_string(),
-                create_comma_separated_list(locations),
-            ))
-        }
-
-        if let Some(gear) = params.gear_group_ids {
-            parameters.push((
-                "gearGroupIds".to_string(),
-                create_comma_separated_list(gear),
-            ))
-        }
-
-        if let Some(species) = params.species_group_ids {
-            parameters.push((
-                "speciesGroupIds".to_string(),
-                create_comma_separated_list(species),
-            ))
-        }
-
-        if let Some(groups) = params.vessel_length_groups {
-            parameters.push((
-                "vesselLengthGroups".to_string(),
-                create_comma_separated_list(groups),
-            ))
-        }
-
-        if let Some(id) = params.fiskeridir_vessel_ids {
-            parameters.push((
-                "fiskeridirVesselIds".to_string(),
-                create_comma_separated_list(id.into_iter().map(|i| i.0).collect()),
-            ))
-        }
-
         self.get(
             &format!("hauls_matrix/{}", active_filter),
-            &parameters,
+            Some(params),
             None,
         )
         .await
     }
     pub async fn get_trip_of_haul(&self, haul_id: &HaulId) -> Response {
-        self.get(format!("trip_of_haul/{}", haul_id.0), &[], None)
+        self.get(format!("trip_of_haul/{}", haul_id.0), None::<()>, None)
             .await
     }
 
     pub async fn get_trip_of_landing(&self, landing_id: &LandingId) -> Response {
         self.get(
             format!("trip_of_landing/{}", landing_id.clone().into_inner()),
-            &[],
+            None::<()>,
             None,
         )
         .await
     }
 
     pub async fn get_trips(&self, params: TripsParameters, token: Option<String>) -> Response {
-        let mut parameters = Vec::new();
-
-        if let Some(limit) = params.limit {
-            parameters.push(("limit".to_string(), limit.to_string()))
-        }
-
-        if let Some(offset) = params.offset {
-            parameters.push(("offset".to_string(), offset.to_string()))
-        }
-
-        if let Some(ordering) = params.ordering {
-            parameters.push(("ordering".to_string(), ordering.to_string()))
-        }
-
-        if let Some(delivery_points) = params.delivery_points {
-            parameters.push((
-                "deliveryPoints".to_string(),
-                create_comma_separated_list(delivery_points),
-            ))
-        }
-
-        if let Some(start_date) = params.start_date {
-            parameters.push(("startDate".to_string(), start_date.to_string()))
-        }
-
-        if let Some(end_date) = params.end_date {
-            parameters.push(("endDate".to_string(), end_date.to_string()))
-        }
-
-        if let Some(min_weight) = params.min_weight {
-            parameters.push(("minDeight".to_string(), min_weight.to_string()))
-        }
-
-        if let Some(max_weight) = params.max_weight {
-            parameters.push(("maxWeight".to_string(), max_weight.to_string()))
-        }
-
-        if let Some(sorting) = params.sorting {
-            parameters.push(("sorting".to_string(), sorting.to_string()))
-        }
-
-        if let Some(gear_group_ids) = params.gear_group_ids {
-            parameters.push((
-                "gearGroupIds".to_string(),
-                create_comma_separated_list(gear_group_ids),
-            ))
-        }
-
-        if let Some(species_group_ids) = params.species_group_ids {
-            parameters.push((
-                "speciesGroupIds".to_string(),
-                create_comma_separated_list(species_group_ids),
-            ))
-        }
-
-        if let Some(vessel_length_groups) = params.vessel_length_groups {
-            parameters.push((
-                "vesselLengthGroups".to_string(),
-                create_comma_separated_list(vessel_length_groups),
-            ))
-        }
-
-        if let Some(fiskeridir_vessel_ids) = params.fiskeridir_vessel_ids {
-            parameters.push((
-                "fiskeridirVesselIds".to_string(),
-                create_comma_separated_list(
-                    fiskeridir_vessel_ids
-                        .into_iter()
-                        .map(|i| i.0 as i32)
-                        .collect(),
-                ),
-            ))
-        }
-
         let headers = token.map(|t| {
             let mut headers = HeaderMap::new();
             headers.insert("bw-token", t.try_into().unwrap());
             headers
         });
 
-        self.get("trips", &parameters, headers).await
+        self.get("trips", Some(params), headers).await
     }
     pub async fn get_current_trip(
         &self,
@@ -558,20 +229,11 @@ impl ApiClient {
             headers
         });
 
-        self.get(format!("trips/current/{}", id.0), &[], headers)
+        self.get(format!("trips/current/{}", id.0), None::<()>, headers)
             .await
     }
     pub async fn get_vms_positions(&self, call_sign: &CallSign, params: VmsParameters) -> Response {
-        let mut parameters = Vec::new();
-        if let Some(start) = params.start {
-            parameters.push(("start".to_string(), start.to_string()))
-        }
-
-        if let Some(end) = params.end {
-            parameters.push(("end".to_string(), end.to_string()))
-        }
-
-        self.get(format!("vms/{}", call_sign.as_ref()), &parameters, None)
+        self.get(format!("vms/{}", call_sign.as_ref()), Some(params), None)
             .await
     }
 
@@ -580,74 +242,17 @@ impl ApiClient {
         params: FishingFacilitiesParams,
         token: String,
     ) -> Response {
-        let mut parameters = Vec::new();
-
-        if let Some(mmsis) = params.mmsis {
-            parameters.push((
-                "mmsis".into(),
-                create_comma_separated_list(mmsis.into_iter().map(|m| m.0).collect()),
-            ))
-        }
-
-        if let Some(vessel_ids) = params.fiskeridir_vessel_ids {
-            parameters.push((
-                "fiskeridirVesselIds".into(),
-                create_comma_separated_list(vessel_ids.into_iter().map(|i| i.0).collect()),
-            ))
-        }
-
-        if let Some(tool_types) = params.tool_types {
-            parameters.push((
-                "toolTypes".into(),
-                create_comma_separated_list(tool_types.into_iter().map(|t| t as i32).collect()),
-            ))
-        }
-
-        if let Some(active) = params.active {
-            parameters.push(("active".into(), active.to_string()))
-        }
-
-        if let Some(setup_ranges) = params.setup_ranges {
-            parameters.push((
-                "setupRanges".into(),
-                create_semicolon_separated_list(setup_ranges),
-            ))
-        }
-
-        if let Some(removed_ranges) = params.removed_ranges {
-            parameters.push((
-                "removedRanges".into(),
-                create_semicolon_separated_list(removed_ranges),
-            ))
-        }
-
-        if let Some(offset) = params.offset {
-            parameters.push(("offset".into(), offset.to_string()))
-        }
-
-        if let Some(limit) = params.limit {
-            parameters.push(("limit".into(), limit.to_string()))
-        }
-
-        if let Some(ordering) = params.ordering {
-            parameters.push(("ordering".into(), ordering.to_string()))
-        }
-
-        if let Some(sorting) = params.sorting {
-            parameters.push(("sorting".into(), sorting.to_string()))
-        }
-
         let mut headers = HeaderMap::new();
         headers.insert("bw-token", token.try_into().unwrap());
 
-        self.get("fishing_facilities", &parameters, Some(headers))
+        self.get("fishing_facilities", Some(params), Some(headers))
             .await
     }
     pub async fn get_user(&self, token: String) -> Response {
         let mut headers = HeaderMap::new();
         headers.insert("bw-token", token.try_into().unwrap());
 
-        self.get("user", &[], Some(headers)).await
+        self.get("user", None::<()>, Some(headers)).await
     }
     pub async fn update_user(&self, user: User, token: String) -> Response {
         let mut headers = HeaderMap::new();
@@ -656,38 +261,6 @@ impl ApiClient {
         self.put("user", user, Some(headers)).await
     }
     pub async fn get_weather(&self, params: WeatherParams) -> Response {
-        let mut parameters = Vec::new();
-
-        if let Some(start_date) = params.start_date {
-            parameters.push(("startDate".to_string(), start_date.to_string()))
-        }
-
-        if let Some(end_date) = params.end_date {
-            parameters.push(("endDate".to_string(), end_date.to_string()))
-        }
-
-        self.get("weather", &parameters, None).await
+        self.get("weather", Some(params), None).await
     }
-}
-
-fn create_comma_separated_list<T: ToString>(vals: Vec<T>) -> String {
-    create_separated_list(vals, ',')
-}
-
-fn create_semicolon_separated_list<T: ToString>(vals: Vec<T>) -> String {
-    create_separated_list(vals, ';')
-}
-
-fn create_separated_list<T: ToString>(vals: Vec<T>, separator: char) -> String {
-    let len = vals.len();
-    let mut string_list = String::new();
-    for (i, v) in vals.iter().enumerate() {
-        if i == len - 1 {
-            write!(string_list, "{}", v.to_string()).unwrap();
-        } else {
-            write!(string_list, "{}{separator}", v.to_string()).unwrap();
-        }
-    }
-
-    string_list
 }

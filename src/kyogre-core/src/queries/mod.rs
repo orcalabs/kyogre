@@ -1,6 +1,6 @@
 use std::ops::{Add, AddAssign, Sub, SubAssign};
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 mod fishing_facility;
 mod haul;
@@ -20,7 +20,9 @@ pub use trip::*;
 pub use weather::*;
 
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
-#[derive(Deserialize, Debug, Default, Clone, Copy, strum::Display, AsRefStr, EnumString)]
+#[derive(
+    Deserialize, Serialize, Debug, Default, Clone, Copy, strum::Display, AsRefStr, EnumString,
+)]
 #[strum(serialize_all = "lowercase")]
 pub enum Ordering {
     #[serde(alias = "asc", alias = "Asc", alias = "ascending", alias = "Ascending")]

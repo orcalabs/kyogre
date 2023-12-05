@@ -7,6 +7,7 @@ use actix_web::{
 use meilisearch::MeilisearchAdapter;
 use orca_core::{Environment, OrcaRootSpanBuilder, TracingLogger};
 use postgres::PostgresAdapter;
+use serde_qs::actix::QsQueryConfig;
 use std::{io::Error, net::TcpListener};
 use utoipa::{openapi::security::SecurityScheme, OpenApi};
 use utoipa_swagger_ui::SwaggerUi;
@@ -205,6 +206,7 @@ where
             .app_data(Data::new(cache.clone()))
             .app_data(Data::new(auth0_state.clone()))
             .app_data(Data::new(meilisearch.clone()))
+            .app_data(QsQueryConfig::default().qs_config(serde_qs::Config::new(5, false)))
             .wrap(Compress::default())
             .wrap(Condition::new(not_prod, actix_cors::Cors::permissive()))
             .wrap(TracingLogger::<OrcaRootSpanBuilder>::new())

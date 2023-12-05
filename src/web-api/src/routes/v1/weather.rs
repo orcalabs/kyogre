@@ -4,25 +4,21 @@ use actix_web::{
 };
 use chrono::{DateTime, Duration, Utc};
 use futures::TryStreamExt;
-use kyogre_core::WeatherQuery;
+use kyogre_core::{WeatherLocationId, WeatherQuery};
 use serde::{Deserialize, Serialize};
+use serde_qs::actix::QsQuery as Query;
 use tracing::{event, Level};
 use utoipa::{IntoParams, ToSchema};
 use wkt::ToWkt;
 
-use crate::{
-    error::ApiError,
-    routes::utils::{deserialize_string_list, WeatherLocationId},
-    *,
-};
+use crate::{error::ApiError, *};
 
-#[derive(Default, Debug, Deserialize, IntoParams)]
+#[derive(Default, Debug, Deserialize, Serialize, IntoParams)]
 #[serde(rename_all = "camelCase")]
 pub struct WeatherParams {
     pub start_date: Option<DateTime<Utc>>,
     pub end_date: Option<DateTime<Utc>>,
-    #[param(value_type = Option<String>, example = "123,456,789")]
-    #[serde(deserialize_with = "deserialize_string_list", default)]
+    #[param(rename = "weatherLocationIds[]", value_type = Option<Vec<i64>>)]
     pub weather_location_ids: Option<Vec<WeatherLocationId>>,
 }
 
@@ -38,7 +34,7 @@ pub struct WeatherParams {
 #[tracing::instrument(skip(db))]
 pub async fn weather<T: Database + 'static>(
     db: web::Data<T>,
-    params: web::Query<WeatherParams>,
+    params: Query<WeatherParams>,
 ) -> Result<HttpResponse, ApiError> {
     let query = params.into_inner().into();
 
@@ -144,9 +140,7 @@ impl From<WeatherParams> for WeatherQuery {
                 .start_date
                 .unwrap_or_else(|| Utc::now() - Duration::days(1)),
             end_date: v.end_date.unwrap_or_else(Utc::now),
-            weather_location_ids: v
-                .weather_location_ids
-                .map(|ids| ids.into_iter().map(|id| id.0).collect()),
+            weather_location_ids: v.weather_location_ids,
         }
     }
 }

@@ -1,13 +1,9 @@
-use crate::{
-    error::ApiError,
-    response::Response,
-    routes::utils::{from_string, to_string},
-    to_streaming_response, Database,
-};
+use crate::{error::ApiError, response::Response, to_streaming_response, Database};
 use actix_web::{web, HttpResponse};
 use fiskeridir_rs::{SpeciesGroup, SpeciesMainGroup};
 use futures::TryStreamExt;
 use serde::{Deserialize, Serialize};
+use serde_with::{serde_as, DisplayFromStr};
 use strum::IntoEnumIterator;
 use tracing::{event, Level};
 use utoipa::ToSchema;
@@ -119,18 +115,20 @@ pub struct Species {
     pub name: String,
 }
 
+#[serde_as]
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema, Ord, PartialOrd, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct SpeciesGroupDetailed {
-    #[serde(serialize_with = "to_string", deserialize_with = "from_string")]
+    #[serde_as(as = "DisplayFromStr")]
     pub id: SpeciesGroup,
     pub name: String,
 }
 
+#[serde_as]
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema, Ord, PartialOrd, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct SpeciesMainGroupDetailed {
-    #[serde(serialize_with = "to_string", deserialize_with = "from_string")]
+    #[serde_as(as = "DisplayFromStr")]
     pub id: SpeciesMainGroup,
     pub name: String,
 }

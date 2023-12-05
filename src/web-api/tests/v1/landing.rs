@@ -4,10 +4,7 @@ use chrono::{DateTime, Utc};
 use engine::*;
 use fiskeridir_rs::{GearGroup, SpeciesGroup};
 use kyogre_core::{FiskeridirVesselId, LandingsSorting, Ordering};
-use web_api::routes::{
-    utils::DateTimeUtc,
-    v1::landing::{Landing, LandingsParams},
-};
+use web_api::routes::v1::landing::{Landing, LandingsParams};
 
 #[tokio::test]
 async fn test_landings_returns_all_landings() {
@@ -52,7 +49,7 @@ async fn test_landings_returns_landings_in_specified_months() {
         helper.refresh_cache().await;
 
         let params = LandingsParams {
-            months: Some(vec![DateTimeUtc(month1), DateTimeUtc(month2)]),
+            months: Some(vec![month1, month2]),
             ordering: Some(Ordering::Asc),
             ..Default::default()
         };
