@@ -41,6 +41,7 @@ impl Context for MLModelError {}
 )]
 #[cfg_attr(feature = "sqlx", derive(sqlx::Type))]
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
+#[serde(rename_all = "camelCase")]
 pub enum ModelId {
     Spot = 1,
     Weight = 2,
