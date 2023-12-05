@@ -5,7 +5,8 @@ use fiskeridir_rs::SpeciesGroup;
 use kyogre_core::{
     distance_to_shore, CatchLocation, CatchLocationId, CatchLocationWeather, HaulId, MLModelError,
     MLModelsInbound, MLModelsOutbound, ModelId, NewFishingWeightPrediction, PredictionRange,
-    TrainingHaul, TrainingMode, WeatherData, WeatherLocationOverlap, WeightPredictorTrainingData,
+    TrainingHaul, TrainingMode, TrainingOutput, WeatherData, WeatherLocationOverlap,
+    WeightPredictorTrainingData,
 };
 use pyo3::{
     types::{PyByteArray, PyModule},
@@ -42,6 +43,8 @@ pub struct WeightPredictorSettings {
     pub single_species_mode: Option<SpeciesGroup>,
     pub training_mode: TrainingMode,
     pub test_fraction: Option<f64>,
+    pub bycatch_percentage: Option<f64>,
+    pub majority_species_group: bool,
 }
 
 #[derive(Debug, Derivative)]
@@ -59,21 +62,26 @@ struct PredictionInputKey {
 async fn weight_train_impl<T, S>(
     model_id: ModelId,
     settings: &WeightPredictorSettings,
-    mut model: Vec<u8>,
+    model: Vec<u8>,
     adapter: &dyn MLModelsOutbound,
     weather: WeatherData,
     training_data_convert: T,
-) -> Result<Vec<u8>, MLModelError>
+) -> Result<TrainingOutput, MLModelError>
 where
     S: Serialize,
     T: Fn(Vec<WeightPredictorTrainingData>) -> Vec<S>,
 {
+    let mut training_output = TrainingOutput {
+        model,
+        best_score: None,
+    };
+
     match settings.training_mode {
         TrainingMode::Single | TrainingMode::Batches(_) => loop {
             match training_run(
                 model_id,
                 settings,
-                &mut model,
+                &mut training_output,
                 adapter,
                 weather,
                 &training_data_convert,
@@ -87,7 +95,7 @@ where
                         .await
                         .change_context(MLModelError::StoreOutput)?;
                     adapter
-                        .save_model(model_id, &model)
+                        .save_model(model_id, &training_output.model)
                         .await
                         .change_context(MLModelError::StoreOutput)?;
                 }
@@ -97,7 +105,7 @@ where
             training_run(
                 model_id,
                 settings,
-                &mut model,
+                &mut training_output,
                 adapter,
                 weather,
                 &training_data_convert,
@@ -106,13 +114,13 @@ where
         }
     }
 
-    Ok(model)
+    Ok(training_output)
 }
 
 async fn training_run<T, S>(
     model_id: ModelId,
     settings: &WeightPredictorSettings,
-    model: &mut Vec<u8>,
+    output: &mut TrainingOutput,
     adapter: &dyn MLModelsOutbound,
     weather: WeatherData,
     training_data_convert: &T,
@@ -128,6 +136,8 @@ where
             weather,
             settings.training_mode.batch_size(),
             settings.single_species_mode,
+            settings.bycatch_percentage,
+            settings.majority_species_group,
         )
         .await
         .change_context(MLModelError::DataPreparation)?
@@ -158,15 +168,15 @@ where
     let training_data =
         serde_json::to_string(&training_data).change_context(MLModelError::DataPreparation)?;
 
-    let new_model = Python::with_gil(|py| {
+    let out: (Vec<u8>, Option<f64>) = Python::with_gil(|py| {
         let py_module =
             PyModule::from_code(py, PYTHON_FISHING_WEIGHT_PREDICTOR_CODE, "", "").unwrap();
         let py_main = py_module.getattr("train").unwrap();
 
-        let model = if model.is_empty() {
+        let model = if output.model.is_empty() {
             None
         } else {
-            Some(PyByteArray::new(py, model))
+            Some(PyByteArray::new(py, &output.model))
         };
 
         py_main
@@ -177,13 +187,14 @@ where
                 settings.use_gpu,
                 settings.test_fraction,
             ))?
-            .extract::<Vec<u8>>()
+            .extract::<(Vec<u8>, Option<f64>)>()
     })
     .change_context(MLModelError::Python)?;
 
     event!(Level::INFO, "trained on {} new hauls", hauls.len());
 
-    *model = new_model;
+    output.model = out.0;
+    output.best_score = out.1;
 
     Ok(TrainingOutcome::Progress(hauls))
 }

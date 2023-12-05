@@ -281,6 +281,8 @@ pub trait MLModelsOutbound: Send + Sync {
         weather: WeatherData,
         limit: Option<u32>,
         single_species_mode: Option<SpeciesGroup>,
+        bycatch_percentage: Option<f64>,
+        majority_species_group: bool,
     ) -> Result<Vec<WeightPredictorTrainingData>, QueryError>;
     async fn commit_hauls_training(
         &self,

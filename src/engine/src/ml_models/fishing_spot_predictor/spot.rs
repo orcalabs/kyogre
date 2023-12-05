@@ -4,7 +4,9 @@ use async_trait::async_trait;
 use chrono::Datelike;
 use error_stack::Result;
 use fiskeridir_rs::SpeciesGroup;
-use kyogre_core::{MLModel, MLModelError, MLModelsInbound, MLModelsOutbound, ModelId, WeatherData};
+use kyogre_core::{
+    MLModel, MLModelError, MLModelsInbound, MLModelsOutbound, ModelId, TrainingOutput, WeatherData,
+};
 use serde::Serialize;
 use tracing::instrument;
 
@@ -40,7 +42,7 @@ impl MLModel for FishingSpotPredictor {
         &self,
         model: Vec<u8>,
         adapter: &dyn MLModelsOutbound,
-    ) -> Result<Vec<u8>, MLModelError> {
+    ) -> Result<TrainingOutput, MLModelError> {
         spot_train_impl(
             self.id(),
             &self.settings,

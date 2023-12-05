@@ -66,13 +66,13 @@ async fn run_ml_model(
         .await
         .change_context(MLError::ModelSaveLoad)?;
 
-    let new_model = model
+    let output = model
         .train(current_model, outbound)
         .await
         .change_context(MLError::Training)?;
 
     model
-        .predict(&new_model, inbound)
+        .predict(&output.model, inbound)
         .await
         .change_context(MLError::Prediction)
 }

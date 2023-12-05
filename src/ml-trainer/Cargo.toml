@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 orca-core = { version = "0.22.1", registry = "orcalabs-orcastrator" }
-fiskeridir-rs = { version = "0.21.2", registry = "orcalabs-orcastrator", features = [
+fiskeridir-rs = { version = "0.22.0", registry = "orcalabs-orcastrator", features = [
     "utoipa",
     "sqlx",
 ] }
@@ -16,7 +16,8 @@ kyogre-core = { path = "../kyogre-core" }
 postgres = { path = "../postgres" }
 engine = { path = "../engine" }
 clap = { version = "4.4", features = ["derive"] }
-strum = "0.25.0"
 num-traits = "0.2.17"
+strum = "0.25.0"
+strum_macros = "0.25.3"
 
 [workspace]

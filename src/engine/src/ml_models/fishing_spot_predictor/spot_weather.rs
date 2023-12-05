@@ -7,7 +7,7 @@ use fiskeridir_rs::SpeciesGroup;
 use itertools::Itertools;
 use kyogre_core::{
     CatchLocationWeather, MLModel, MLModelError, MLModelsInbound, MLModelsOutbound, ModelId,
-    WeatherData,
+    TrainingOutput, WeatherData,
 };
 use serde::{Serialize, Serializer};
 use std::collections::HashMap;
@@ -134,7 +134,7 @@ impl MLModel for FishingSpotWeatherPredictor {
         &self,
         model: Vec<u8>,
         adapter: &dyn MLModelsOutbound,
-    ) -> Result<Vec<u8>, MLModelError> {
+    ) -> Result<TrainingOutput, MLModelError> {
         spot_train_impl(
             self.id(),
             &self.settings,

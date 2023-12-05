@@ -5,7 +5,7 @@ use fiskeridir_rs::SpeciesGroup;
 use kyogre_core::{
     distance_to_shore, CatchLocationWeather, FishingSpotTrainingData, HaulId, MLModelError,
     MLModelsInbound, MLModelsOutbound, ModelId, NewFishingSpotPrediction, TrainingHaul,
-    WeatherData, WeatherLocationOverlap,
+    TrainingOutput, WeatherData, WeatherLocationOverlap,
 };
 use kyogre_core::{CatchLocationId, TrainingMode};
 use pyo3::{
@@ -25,6 +25,7 @@ pub use spot_weather::*;
 static PYTHON_FISHING_SPOT_CODE: &str =
     include_str!("../../../../../scripts/python/fishing_predictor/fishing_spot_predictor.py");
 
+#[derive(Clone)]
 pub struct SpotPredictorSettings {
     pub running_in_test: bool,
     pub use_gpu: bool,
@@ -46,11 +47,11 @@ struct PredictionInputKey {
 async fn spot_train_impl<T, S>(
     model_id: ModelId,
     settings: &SpotPredictorSettings,
-    mut model: Vec<u8>,
+    model: Vec<u8>,
     adapter: &dyn MLModelsOutbound,
     weather: WeatherData,
     training_data_convert: T,
-) -> Result<Vec<u8>, MLModelError>
+) -> Result<TrainingOutput, MLModelError>
 where
     S: Serialize,
     T: Fn(
@@ -59,12 +60,17 @@ where
         usize,
     ) -> Vec<S>,
 {
+    let mut training_output = TrainingOutput {
+        model,
+        best_score: None,
+    };
+
     match settings.training_mode {
         TrainingMode::Single | TrainingMode::Batches(_) => loop {
             match training_run(
                 model_id,
                 settings,
-                &mut model,
+                &mut training_output,
                 adapter,
                 weather,
                 &training_data_convert,
@@ -78,7 +84,7 @@ where
                         .await
                         .change_context(MLModelError::StoreOutput)?;
                     adapter
-                        .save_model(model_id, &model)
+                        .save_model(model_id, &training_output.model)
                         .await
                         .change_context(MLModelError::StoreOutput)?;
                 }
@@ -88,7 +94,7 @@ where
             training_run(
                 model_id,
                 settings,
-                &mut model,
+                &mut training_output,
                 adapter,
                 weather,
                 &training_data_convert,
@@ -97,13 +103,13 @@ where
         }
     }
 
-    Ok(model)
+    Ok(training_output)
 }
 
 async fn training_run<T, S>(
     model_id: ModelId,
     settings: &SpotPredictorSettings,
-    model: &mut Vec<u8>,
+    output: &mut TrainingOutput,
     adapter: &dyn MLModelsOutbound,
     weather: WeatherData,
     training_data_convert: T,
@@ -196,14 +202,14 @@ where
     let training_data =
         serde_json::to_string(&training_data).change_context(MLModelError::DataPreparation)?;
 
-    let new_model: Vec<u8> = Python::with_gil(|py| {
+    let out: (Vec<u8>, Option<f64>) = Python::with_gil(|py| {
         let py_module = PyModule::from_code(py, PYTHON_FISHING_SPOT_CODE, "", "").unwrap();
         let py_main = py_module.getattr("train").unwrap();
 
-        let model = if model.is_empty() {
+        let model = if output.model.is_empty() {
             None
         } else {
-            Some(PyByteArray::new(py, model))
+            Some(PyByteArray::new(py, &output.model))
         };
 
         py_main
@@ -214,13 +220,14 @@ where
                 settings.use_gpu,
                 settings.test_fraction,
             ))?
-            .extract::<Vec<u8>>()
+            .extract::<(Vec<u8>, Option<f64>)>()
     })
     .change_context(MLModelError::Python)?;
 
     event!(Level::INFO, "trained on {} new hauls", hauls.len());
 
-    *model = new_model;
+    output.model = out.0;
+    output.best_score = out.1;
 
     Ok(TrainingOutcome::Progress(hauls))
 }

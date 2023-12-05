@@ -160,6 +160,8 @@ WHERE
         weather_data: WeatherData,
         limit: Option<u32>,
         single_species_mode: Option<SpeciesGroup>,
+        bycatch_percentage: Option<f64>,
+        majority_species_group: bool,
     ) -> Result<Vec<WeightPredictorTrainingData>, PostgresError> {
         let require_weather = match weather_data {
             WeatherData::Require => false,
@@ -212,15 +214,25 @@ WHERE
         )
         OR $4
     )
+    AND (
+        $5::DOUBLE PRECISION IS NULL
+        OR hm.species_group_weight_percentage_of_haul >= $5
+    )
+    AND (
+        $6::BOOLEAN IS FALSE
+        OR hm.is_majority_species_group_of_haul = $6
+    )
 ORDER BY
     h.start_timestamp
 LIMIT
-    $5
+    $7
             "#,
             model_id as i32,
             GearGroup::Trawl as i32,
             single_species_mode.map(|v| v as i32),
             require_weather,
+            bycatch_percentage,
+            majority_species_group,
             limit.map(|v| v as i64)
         )
         .fetch_all(&self.pool)

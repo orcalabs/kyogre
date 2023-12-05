@@ -38,6 +38,11 @@ impl Context for MLModelError {}
     AsRefStr,
     EnumString,
     EnumIter,
+    PartialEq,
+    Eq,
+    Hash,
+    PartialOrd,
+    Ord,
 )]
 #[cfg_attr(feature = "sqlx", derive(sqlx::Type))]
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
@@ -76,6 +81,12 @@ impl TrainingMode {
             TrainingMode::Batches(b) => Some(*b),
         }
     }
+}
+
+#[derive(Debug, Clone)]
+pub struct TrainingOutput {
+    pub model: Vec<u8>,
+    pub best_score: Option<f64>,
 }
 
 #[derive(Debug, Hash, Eq, PartialEq)]
@@ -120,7 +131,7 @@ pub trait MLModel: Send + Sync {
         &self,
         model: Vec<u8>,
         adapter: &dyn MLModelsOutbound,
-    ) -> Result<Vec<u8>, MLModelError>;
+    ) -> Result<TrainingOutput, MLModelError>;
     async fn predict(
         &self,
         model: &[u8],
