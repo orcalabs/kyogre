@@ -5,7 +5,8 @@ use engine::*;
 use fiskeridir_rs::{GearGroup, SpeciesGroup};
 use kyogre_core::*;
 use web_api::routes::v1::fishing_prediction::{
-    FishingSpotPredictionParams, FishingWeightPredictionParams,
+    FishingSpotPrediction, FishingSpotPredictionParams, FishingWeightPrediction,
+    FishingWeightPredictionParams,
 };
 
 #[tokio::test]
