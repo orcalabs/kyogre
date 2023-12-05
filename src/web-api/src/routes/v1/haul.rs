@@ -14,29 +14,28 @@ use kyogre_core::{
     HaulsSorting, Ordering, Range,
 };
 use serde::{Deserialize, Serialize};
+use serde_qs::actix::QsQuery as Query;
+use serde_with::{serde_as, DisplayFromStr};
 use tracing::{event, Level};
 use utoipa::{IntoParams, ToSchema};
 
-#[derive(Default, Debug, Clone, Deserialize, IntoParams)]
+#[serde_as]
+#[derive(Default, Debug, Clone, Deserialize, Serialize, IntoParams)]
 #[serde(rename_all = "camelCase")]
 pub struct HaulsParams {
-    #[param(value_type = Option<String>, example = "2023-01-01T00:00:00Z,2023-02-01T00:00:00Z")]
-    #[serde(deserialize_with = "deserialize_string_list", default)]
-    pub months: Option<Vec<DateTimeUtc>>,
-    #[param(value_type = Option<String>, example = "05-24,15-10")]
-    #[serde(deserialize_with = "deserialize_string_list", default)]
+    #[param(rename = "months[]")]
+    pub months: Option<Vec<DateTime<Utc>>>,
+    #[param(rename = "catchLocations[]", value_type = Option<Vec<String>>)]
     pub catch_locations: Option<Vec<CatchLocationId>>,
-    #[param(value_type = Option<String>, example = "Seine,Net")]
-    #[serde(deserialize_with = "opt_vec_from_string_list", default)]
+    #[param(rename = "gearGroupIds[]", value_type = Option<Vec<String>>)]
+    #[serde_as(as = "Option<Vec<DisplayFromStr>>")]
     pub gear_group_ids: Option<Vec<GearGroup>>,
-    #[param(value_type = Option<String>, example = "Capelin,Saithe")]
-    #[serde(deserialize_with = "opt_vec_from_string_list", default)]
+    #[param(rename = "speciesGroupIds[]", value_type = Option<Vec<String>>)]
+    #[serde_as(as = "Option<Vec<DisplayFromStr>>")]
     pub species_group_ids: Option<Vec<SpeciesGroup>>,
-    #[param(value_type = Option<String>, example = "[0,11);[15,)")]
-    #[serde(deserialize_with = "deserialize_range_list", default)]
+    #[param(rename = "vesselLengthRanges[]", value_type = Option<Vec<String>>)]
     pub vessel_length_ranges: Option<Vec<Range<f64>>>,
-    #[param(value_type = Option<String>, example = "2000013801,2001015304")]
-    #[serde(deserialize_with = "deserialize_string_list", default)]
+    #[param(rename = "fiskeridirVesselIds[]", value_type = Option<Vec<i64>>)]
     pub fiskeridir_vessel_ids: Option<Vec<FiskeridirVesselId>>,
     pub min_wind_speed: Option<f64>,
     pub max_wind_speed: Option<f64>,
@@ -46,26 +45,24 @@ pub struct HaulsParams {
     pub ordering: Option<Ordering>,
 }
 
-#[derive(Default, Debug, Clone, Deserialize, IntoParams)]
+#[serde_as]
+#[derive(Default, Debug, Clone, Deserialize, Serialize, IntoParams)]
 #[serde(rename_all = "camelCase")]
 pub struct HaulsMatrixParams {
-    #[param(value_type = Option<String>, example = "24278,24280")]
-    #[serde(deserialize_with = "deserialize_string_list", default)]
-    pub months: Option<Vec<Month>>,
-    #[param(value_type = Option<String>, example = "05-24,15-10")]
-    #[serde(deserialize_with = "deserialize_string_list", default)]
+    #[param(rename = "months[]")]
+    pub months: Option<Vec<u32>>,
+    #[param(rename = "catchLocations[]", value_type = Option<Vec<String>>)]
     pub catch_locations: Option<Vec<CatchLocationId>>,
-    #[param(value_type = Option<String>, example = "Seine,Net")]
-    #[serde(deserialize_with = "opt_vec_from_string_list", default)]
+    #[param(rename = "gearGroupIds[]", value_type = Option<Vec<String>>)]
+    #[serde_as(as = "Option<Vec<DisplayFromStr>>")]
     pub gear_group_ids: Option<Vec<GearGroup>>,
-    #[param(value_type = Option<String>, example = "Capelin,Saithe")]
-    #[serde(deserialize_with = "opt_vec_from_string_list", default)]
+    #[param(rename = "speciesGroupIds[]", value_type = Option<Vec<String>>)]
+    #[serde_as(as = "Option<Vec<DisplayFromStr>>")]
     pub species_group_ids: Option<Vec<SpeciesGroup>>,
-    #[param(value_type = Option<String>, example = "UnderEleven,FifteenToTwentyOne")]
-    #[serde(deserialize_with = "opt_vec_from_string_list", default)]
+    #[param(rename = "vesselLengthGroups[]", value_type = Option<Vec<String>>)]
+    #[serde_as(as = "Option<Vec<DisplayFromStr>>")]
     pub vessel_length_groups: Option<Vec<VesselLengthGroup>>,
-    #[param(value_type = Option<String>, example = "2000013801,2001015304")]
-    #[serde(deserialize_with = "deserialize_string_list", default)]
+    #[param(rename = "fiskeridirVesselIds[]", value_type = Option<Vec<i64>>)]
     pub fiskeridir_vessel_ids: Option<Vec<FiskeridirVesselId>>,
     pub bycatch_percentage: Option<f64>,
     pub majority_species_group: Option<bool>,
@@ -85,7 +82,7 @@ pub struct HaulsMatrixParams {
 pub async fn hauls<T: Database + 'static, M: Meilisearch + 'static>(
     db: web::Data<T>,
     meilisearch: web::Data<Option<M>>,
-    params: web::Query<HaulsParams>,
+    params: Query<HaulsParams>,
 ) -> Result<HttpResponse, ApiError> {
     let query: HaulsQuery = params.into_inner().into();
 
@@ -117,9 +114,10 @@ pub async fn hauls<T: Database + 'static, M: Meilisearch + 'static>(
     }
 }
 
+#[serde_as]
 #[derive(Debug, Deserialize, IntoParams)]
 pub struct HaulsMatrixPath {
-    #[serde(deserialize_with = "from_string")]
+    #[serde_as(as = "DisplayFromStr")]
     pub active_filter: ActiveHaulsFilter,
 }
 
@@ -140,7 +138,7 @@ pub struct HaulsMatrixPath {
 pub async fn hauls_matrix<T: Database + 'static, S: Cache>(
     db: web::Data<T>,
     cache: web::Data<Option<S>>,
-    params: web::Query<HaulsMatrixParams>,
+    params: Query<HaulsMatrixParams>,
     path: Path<HaulsMatrixPath>,
 ) -> Result<Response<HaulsMatrix>, ApiError> {
     let query = matrix_params_to_query(params.into_inner(), path.active_filter);
@@ -176,6 +174,7 @@ pub async fn hauls_matrix<T: Database + 'static, S: Cache>(
     Ok(Response::new(HaulsMatrix::from(matrix)))
 }
 
+#[serde_as]
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct Haul {
@@ -200,9 +199,9 @@ pub struct Haul {
     #[schema(value_type = String, example = "2023-02-24T11:08:20.409416682Z")]
     pub stop_timestamp: DateTime<Utc>,
     pub total_living_weight: i64,
-    #[serde(serialize_with = "to_string", deserialize_with = "from_string")]
+    #[serde_as(as = "DisplayFromStr")]
     pub gear_id: Gear,
-    #[serde(serialize_with = "to_string", deserialize_with = "from_string")]
+    #[serde_as(as = "DisplayFromStr")]
     pub gear_group_id: GearGroup,
     pub fiskeridir_vessel_id: Option<i64>,
     pub vessel_call_sign: Option<String>,
@@ -220,12 +219,13 @@ pub struct Haul {
     pub whale_catches: Vec<WhaleCatch>,
 }
 
+#[serde_as]
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct HaulCatch {
     pub living_weight: i32,
     pub species_fiskeridir_id: i32,
-    #[serde(serialize_with = "to_string", deserialize_with = "from_string")]
+    #[serde_as(as = "DisplayFromStr")]
     pub species_group_id: SpeciesGroup,
 }
 
@@ -238,6 +238,7 @@ pub struct HaulsMatrix {
     pub species_group: Vec<u64>,
 }
 
+#[serde_as]
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct WhaleCatch {
@@ -246,7 +247,7 @@ pub struct WhaleCatch {
     pub blubber_measure_c: Option<i32>,
     pub circumference: Option<i32>,
     pub fetus_length: Option<i32>,
-    #[serde(serialize_with = "opt_to_string", deserialize_with = "opt_from_string")]
+    #[serde_as(as = "Option<DisplayFromStr>")]
     pub gender_id: Option<WhaleGender>,
     pub grenade_number: String,
     pub individual_number: Option<i32>,
@@ -413,9 +414,7 @@ pub fn matrix_params_to_query(
     active_filter: ActiveHaulsFilter,
 ) -> HaulsMatrixQuery {
     HaulsMatrixQuery {
-        months: params
-            .months
-            .map(|ms| ms.into_iter().map(|m| m.0).collect()),
+        months: params.months,
         catch_locations: params.catch_locations,
         gear_group_ids: params.gear_group_ids,
         species_group_ids: params.species_group_ids,
@@ -434,8 +433,6 @@ mod tests {
     use chrono::{DateTime, Utc};
     use kyogre_core::HaulsQuery;
 
-    use crate::routes::utils::DateTimeUtc;
-
     use super::HaulsParams;
 
     #[test]
@@ -451,14 +448,7 @@ mod tests {
         let res2: DateTime<Utc> = "2002-09-1T00:00:00Z".parse().unwrap();
 
         let params = HaulsParams {
-            months: Some(vec![
-                DateTimeUtc(month1),
-                DateTimeUtc(month2),
-                DateTimeUtc(month3),
-                DateTimeUtc(month4),
-                DateTimeUtc(month5),
-                DateTimeUtc(month6),
-            ]),
+            months: Some(vec![month1, month2, month3, month4, month5, month6]),
             ..Default::default()
         };
 

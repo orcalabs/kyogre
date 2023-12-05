@@ -1,4 +1,3 @@
-use crate::routes::utils::{from_string, to_string};
 use crate::{error::ApiError, response::Response};
 use crate::{to_streaming_response, Database};
 use actix_web::HttpResponse;
@@ -9,36 +8,40 @@ use fiskeridir_rs::SpeciesGroup;
 use futures::TryStreamExt;
 use kyogre_core::{CatchLocationId, ModelId};
 use serde::{Deserialize, Serialize};
+use serde_qs::actix::QsQuery as Query;
+use serde_with::{serde_as, DisplayFromStr};
 use tracing::{event, Level};
 use utoipa::{IntoParams, ToSchema};
 
 pub const MAX_FISHING_WEIGHT_PREDICTIONS: u32 = 20;
 pub const DEFAULT_FISHING_WEIGHT_PREDICTIONS: u32 = 5;
 
-#[derive(Default, Debug, Clone, Deserialize, IntoParams)]
+#[derive(Default, Debug, Clone, Deserialize, Serialize, IntoParams)]
 #[serde(rename_all = "camelCase")]
 pub struct FishingSpotPredictionParams {
     pub date: Option<NaiveDate>,
 }
 
-#[derive(Default, Debug, Clone, Deserialize, IntoParams)]
+#[derive(Default, Debug, Clone, Deserialize, Serialize, IntoParams)]
 #[serde(rename_all = "camelCase")]
 pub struct FishingWeightPredictionParams {
     pub date: Option<NaiveDate>,
     pub limit: Option<u32>,
 }
 
-#[derive(Debug, Clone, Deserialize, IntoParams)]
+#[serde_as]
+#[derive(Debug, Clone, Deserialize, Serialize, IntoParams)]
 pub struct FishingPredictionsPath {
-    #[serde(deserialize_with = "from_string")]
+    #[serde_as(as = "DisplayFromStr")]
     pub model_id: ModelId,
-    #[serde(deserialize_with = "from_string")]
+    #[serde_as(as = "DisplayFromStr")]
     pub species_group_id: SpeciesGroup,
 }
 
-#[derive(Debug, Clone, Deserialize, IntoParams)]
+#[serde_as]
+#[derive(Debug, Clone, Deserialize, Serialize, IntoParams)]
 pub struct AllFishingPredictionsPath {
-    #[serde(deserialize_with = "from_string")]
+    #[serde_as(as = "DisplayFromStr")]
     pub model_id: ModelId,
 }
 
@@ -57,7 +60,7 @@ pub struct AllFishingPredictionsPath {
 #[tracing::instrument(skip(db))]
 pub async fn fishing_spot_predictions<T: Database + 'static>(
     db: web::Data<T>,
-    params: web::Query<FishingSpotPredictionParams>,
+    params: Query<FishingSpotPredictionParams>,
     path_params: Path<FishingPredictionsPath>,
 ) -> Result<Response<Option<FishingSpotPrediction>>, ApiError> {
     let date = params.date.unwrap_or_else(|| Utc::now().date_naive());
@@ -178,21 +181,23 @@ pub async fn all_fishing_weight_predictions<T: Database + 'static>(
 
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
+#[serde_as]
 pub struct FishingSpotPrediction {
     pub latitude: f64,
     pub longitude: f64,
-    #[serde(serialize_with = "to_string", deserialize_with = "from_string")]
+    #[serde_as(as = "DisplayFromStr")]
     pub species_group_id: SpeciesGroup,
     pub date: NaiveDate,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
+#[serde_as]
 pub struct FishingWeightPrediction {
     #[schema(value_type = String)]
     pub catch_location_id: CatchLocationId,
     pub weight: f64,
-    #[serde(serialize_with = "to_string", deserialize_with = "from_string")]
+    #[serde_as(as = "DisplayFromStr")]
     pub species_group_id: SpeciesGroup,
     pub date: NaiveDate,
 }

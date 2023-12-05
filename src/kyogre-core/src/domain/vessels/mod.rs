@@ -4,8 +4,7 @@ use crate::{AisVessel, Mmsi, TripAssemblerId};
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::{CallSign, GearGroup, RegisterVesselOwner, SpeciesGroup, VesselLengthGroup};
 use num_derive::FromPrimitive;
-use num_traits::FromPrimitive;
-use serde::{de::Visitor, Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 
 mod benchmark;
@@ -133,7 +132,7 @@ pub struct VesselBenchmarkOutput {
     pub value: f64,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize)]
 pub struct FiskeridirVesselId(pub i64);
 
 #[derive(Debug, Clone)]
@@ -203,54 +202,6 @@ impl VesselEventType {
             VesselEventType::ErsPor => "ers_por",
             VesselEventType::Haul => "haul",
         }
-    }
-}
-
-impl<'de> Deserialize<'de> for FiskeridirVesselId {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        struct FiskeridirVesselIdVisitor;
-
-        impl<'de> Visitor<'de> for FiskeridirVesselIdVisitor {
-            type Value = FiskeridirVesselId;
-
-            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-                formatter.write_str("a FiskeridirVesselId value")
-            }
-
-            fn visit_i64<E>(self, v: i64) -> Result<Self::Value, E>
-            where
-                E: serde::de::Error,
-            {
-                Ok(FiskeridirVesselId(v))
-            }
-
-            fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
-            where
-                E: serde::de::Error,
-            {
-                i64::from_u64(v).map(FiskeridirVesselId).ok_or_else(|| {
-                    serde::de::Error::custom(format!(
-                        "failed to deserialize i64 from u64, value: {v}"
-                    ))
-                })
-            }
-
-            fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
-            where
-                E: serde::de::Error,
-            {
-                Ok(FiskeridirVesselId(v.parse().map_err(|e| {
-                    serde::de::Error::custom(format!(
-                        "failed to deserialize str to i64, error: {e}"
-                    ))
-                })?))
-            }
-        }
-
-        deserializer.deserialize_i64(FiskeridirVesselIdVisitor)
     }
 }
 

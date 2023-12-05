@@ -9,7 +9,10 @@ use kyogre_core::{
     landing_date_feature_matrix_index, ActiveLandingFilter, CatchLocationId, HaulMatrixes,
     LandingMatrixes, NUM_CATCH_LOCATIONS,
 };
-use web_api::routes::v1::landing::{LandingMatrix, LandingMatrixParams};
+use web_api::routes::{
+    utils::datetime_to_month,
+    v1::landing::{LandingMatrix, LandingMatrixParams},
+};
 
 #[tokio::test]
 async fn test_landing_matrix_returns_correct_sum_for_all_landings() {
@@ -103,7 +106,7 @@ async fn test_landing_matrix_filters_by_months() {
             .await;
 
         let params = LandingMatrixParams {
-            months: Some(vec![month1.into(), month2.into()]),
+            months: Some(vec![datetime_to_month(month1), datetime_to_month(month2)]),
             ..Default::default()
         };
 

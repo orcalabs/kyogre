@@ -9,7 +9,10 @@ use kyogre_core::{
     haul_date_feature_matrix_index, ActiveHaulsFilter, CatchLocationId, HaulMatrixes,
     NUM_CATCH_LOCATIONS,
 };
-use web_api::routes::v1::haul::{HaulsMatrix, HaulsMatrixParams};
+use web_api::routes::{
+    utils::datetime_to_month,
+    v1::haul::{HaulsMatrix, HaulsMatrixParams},
+};
 
 #[tokio::test]
 async fn test_hauls_matrix_filters_majority_species() {
@@ -202,7 +205,7 @@ async fn test_hauls_matrix_filters_by_months() {
             .await;
 
         let params = HaulsMatrixParams {
-            months: Some(vec![month1.into(), month2.into()]),
+            months: Some(vec![datetime_to_month(month1), datetime_to_month(month2)]),
             ..Default::default()
         };
 

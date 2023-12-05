@@ -1,12 +1,15 @@
 use std::fmt::Debug;
 use std::fmt::Display;
+use std::marker::PhantomData;
 use std::ops::Bound;
 use std::str::FromStr;
 
 use error_stack::{report, Report};
+use serde::de;
+use serde::de::Visitor;
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Range<T> {
     pub start: Bound<T>,
     pub end: Bound<T>,
@@ -119,7 +122,7 @@ impl<T: FromStr> TryFrom<String> for Range<T> {
     }
 }
 
-impl<T: ToString + Display> ToString for Range<T> {
+impl<T: Display> ToString for Range<T> {
     fn to_string(&self) -> String {
         format!(
             "{},{}",
@@ -134,5 +137,41 @@ impl<T: ToString + Display> ToString for Range<T> {
                 Bound::Included(v) => format!("{v}]"),
             },
         )
+    }
+}
+
+impl<T: Display> Serialize for Range<T> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(self.to_string().as_str())
+    }
+}
+
+impl<'de, T: FromStr> Deserialize<'de> for Range<T> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        struct RangeVisitor<T>(PhantomData<T>);
+
+        impl<'de, T: FromStr> Visitor<'de> for RangeVisitor<T> {
+            type Value = Range<T>;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                formatter.write_str("a valid Range")
+            }
+
+            fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                v.parse()
+                    .map_err(|_| de::Error::invalid_value(de::Unexpected::Str(v), &self))
+            }
+        }
+
+        deserializer.deserialize_str(RangeVisitor(PhantomData))
     }
 }

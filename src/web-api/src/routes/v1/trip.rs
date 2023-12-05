@@ -1,9 +1,8 @@
-use crate::{
-    extractors::{Auth0Permission, Auth0Profile},
-    routes::utils::*,
-};
+use crate::extractors::{Auth0Permission, Auth0Profile};
 use fiskeridir_rs::{Gear, GearGroup, LandingId};
 use futures::TryStreamExt;
+use serde_qs::actix::QsQuery as Query;
+use serde_with::{serde_as, DisplayFromStr};
 
 use crate::{
     error::ApiError,
@@ -29,31 +28,30 @@ use super::{
     haul::{HaulCatch, WhaleCatch},
 };
 
-#[derive(Default, Debug, Deserialize, IntoParams)]
+#[serde_as]
+#[derive(Default, Debug, Deserialize, Serialize, IntoParams)]
 #[serde(rename_all = "camelCase")]
 pub struct TripsParameters {
     pub limit: Option<u64>,
     pub offset: Option<u64>,
     pub ordering: Option<Ordering>,
-    #[param(value_type = Option<String>, example = "RKAI,FKAI")]
-    #[serde(deserialize_with = "deserialize_string_list", default)]
+    #[param(rename = "deliveryPoints[]", value_type = Option<Vec<String>>)]
     pub delivery_points: Option<Vec<String>>,
     pub start_date: Option<DateTime<Utc>>,
     pub end_date: Option<DateTime<Utc>>,
     pub min_weight: Option<f64>,
     pub max_weight: Option<f64>,
     pub sorting: Option<TripSorting>,
-    #[param(value_type = Option<String>, example = "Seine,Net")]
-    #[serde(deserialize_with = "opt_vec_from_string_list", default)]
+    #[param(rename = "gearGroupIds[]", value_type = Option<Vec<String>>)]
+    #[serde_as(as = "Option<Vec<DisplayFromStr>>")]
     pub gear_group_ids: Option<Vec<GearGroup>>,
-    #[param(value_type = Option<String>, example = "Capelin,Saithe")]
-    #[serde(deserialize_with = "opt_vec_from_string_list", default)]
+    #[param(rename = "speciesGroupIds[]", value_type = Option<Vec<String>>)]
+    #[serde_as(as = "Option<Vec<DisplayFromStr>>")]
     pub species_group_ids: Option<Vec<SpeciesGroup>>,
-    #[param(value_type = Option<String>, example = "UnderEleven,FifteenToTwentyOne")]
-    #[serde(deserialize_with = "opt_vec_from_string_list", default)]
+    #[param(rename = "vesselLengthGroups[]", value_type = Option<Vec<String>>)]
+    #[serde_as(as = "Option<Vec<DisplayFromStr>>")]
     pub vessel_length_groups: Option<Vec<VesselLengthGroup>>,
-    #[param(value_type = Option<String>, example = "2000013801,2001015304")]
-    #[serde(deserialize_with = "deserialize_string_list", default)]
+    #[param(rename = "fiskeridirVesselIds[]", value_type = Option<Vec<i64>>)]
     pub fiskeridir_vessel_ids: Option<Vec<FiskeridirVesselId>>,
 }
 
@@ -232,7 +230,7 @@ pub async fn trips<T: Database + 'static, M: Meilisearch + 'static>(
     db: web::Data<T>,
     meilisearch: web::Data<Option<M>>,
     profile: Option<BwProfile>,
-    params: web::Query<TripsParameters>,
+    params: Query<TripsParameters>,
 ) -> Result<HttpResponse, ApiError> {
     let read_fishing_facility = profile
         .map(|p| {
@@ -324,6 +322,7 @@ pub async fn current_trip<T: Database + 'static>(
     ))
 }
 
+#[serde_as]
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct Trip {
@@ -337,7 +336,7 @@ pub struct Trip {
     pub landing_coverage_end: DateTime<Utc>,
     pub num_deliveries: u32,
     pub most_recent_delivery_date: Option<DateTime<Utc>>,
-    #[serde(serialize_with = "vec_to_string", deserialize_with = "vec_from_string")]
+    #[serde_as(as = "Vec<DisplayFromStr>")]
     pub gear_ids: Vec<Gear>,
     #[schema(value_type = Vec<String>)]
     pub delivery_point_ids: Vec<fiskeridir_rs::DeliveryPointId>,
@@ -347,7 +346,7 @@ pub struct Trip {
     pub start_port_id: Option<String>,
     pub end_port_id: Option<String>,
     pub events: Vec<VesselEvent>,
-    #[serde(serialize_with = "to_string", deserialize_with = "from_string")]
+    #[serde_as(as = "DisplayFromStr")]
     pub trip_assembler_id: TripAssemblerId,
     #[schema(value_type = Vec<String>)]
     pub landing_ids: Vec<LandingId>,
@@ -362,6 +361,7 @@ pub struct Delivery {
     pub total_gross_weight: f64,
 }
 
+#[serde_as]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct Catch {
@@ -369,7 +369,7 @@ pub struct Catch {
     pub gross_weight: f64,
     pub product_weight: f64,
     pub species_fiskeridir_id: i32,
-    #[serde(serialize_with = "to_string", deserialize_with = "from_string")]
+    #[serde_as(as = "DisplayFromStr")]
     pub product_quality_id: Quality,
     pub product_quality_name: String,
 }
@@ -383,17 +383,19 @@ pub struct CurrentTrip {
     pub fishing_facilities: Vec<FishingFacility>,
 }
 
+#[serde_as]
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct VesselEvent {
     pub event_id: u64,
-    #[serde(serialize_with = "to_string", deserialize_with = "from_string")]
+    #[serde_as(as = "DisplayFromStr")]
     pub event_type: VesselEventType,
     pub event_name: String,
     pub report_timestamp: DateTime<Utc>,
     pub occurence_timestamp: Option<DateTime<Utc>>,
 }
 
+#[serde_as]
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct TripHaul {
@@ -409,9 +411,9 @@ pub struct TripHaul {
     pub stop_longitude: f64,
     pub stop_timestamp: DateTime<Utc>,
     pub total_living_weight: i64,
-    #[serde(serialize_with = "to_string", deserialize_with = "from_string")]
+    #[serde_as(as = "DisplayFromStr")]
     pub gear_id: Gear,
-    #[serde(serialize_with = "to_string", deserialize_with = "from_string")]
+    #[serde_as(as = "DisplayFromStr")]
     pub gear_group_id: GearGroup,
     pub fiskeridir_vessel_id: Option<i64>,
     pub catches: Vec<HaulCatch>,

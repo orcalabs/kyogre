@@ -14,54 +14,51 @@ use kyogre_core::{
     LandingsSorting, Ordering, Range,
 };
 use serde::{Deserialize, Serialize};
+use serde_qs::actix::QsQuery as Query;
+use serde_with::{serde_as, DisplayFromStr};
 use tracing::{event, Level};
 use utoipa::{IntoParams, ToSchema};
 
-#[derive(Default, Debug, Clone, Deserialize, IntoParams)]
+#[serde_as]
+#[derive(Default, Debug, Clone, Deserialize, Serialize, IntoParams)]
 #[serde(rename_all = "camelCase")]
 pub struct LandingsParams {
-    #[param(value_type = Option<String>, example = "2023-01-01T00:00:00Z,2023-02-01T00:00:00Z")]
-    #[serde(deserialize_with = "deserialize_string_list", default)]
-    pub months: Option<Vec<DateTimeUtc>>,
-    #[param(value_type = Option<String>, example = "05-24,15-10")]
-    #[serde(deserialize_with = "deserialize_string_list", default)]
+    #[param(rename = "months[]")]
+    pub months: Option<Vec<DateTime<Utc>>>,
+    #[param(rename = "catchLocations[]", value_type = Option<Vec<String>>)]
     pub catch_locations: Option<Vec<CatchLocationId>>,
-    #[param(value_type = Option<String>, example = "Seine,Net")]
-    #[serde(deserialize_with = "opt_vec_from_string_list", default)]
+    #[param(rename = "gearGroupIds[]", value_type = Option<Vec<String>>)]
+    #[serde_as(as = "Option<Vec<DisplayFromStr>>")]
     pub gear_group_ids: Option<Vec<GearGroup>>,
-    #[param(value_type = Option<String>, example = "Capelin,Saithe")]
-    #[serde(deserialize_with = "opt_vec_from_string_list", default)]
+    #[param(rename = "speciesGroupIds[]", value_type = Option<Vec<String>>)]
+    #[serde_as(as = "Option<Vec<DisplayFromStr>>")]
     pub species_group_ids: Option<Vec<SpeciesGroup>>,
-    #[param(value_type = Option<String>, example = "[0,11);[15,)")]
-    #[serde(deserialize_with = "deserialize_range_list", default)]
+    #[param(rename = "vesselLengthRanges[]", value_type = Option<Vec<String>>)]
     pub vessel_length_ranges: Option<Vec<Range<f64>>>,
-    #[param(value_type = Option<String>, example = "2000013801,2001015304")]
-    #[serde(deserialize_with = "deserialize_string_list", default)]
+    #[param(rename = "fiskeridirVesselIds[]", value_type = Option<Vec<i64>>)]
     pub fiskeridir_vessel_ids: Option<Vec<FiskeridirVesselId>>,
     pub sorting: Option<LandingsSorting>,
     pub ordering: Option<Ordering>,
 }
 
-#[derive(Default, Debug, Clone, Deserialize, IntoParams)]
+#[serde_as]
+#[derive(Default, Debug, Clone, Deserialize, Serialize, IntoParams)]
 #[serde(rename_all = "camelCase")]
 pub struct LandingMatrixParams {
-    #[param(value_type = Option<String>, example = "24278,24280")]
-    #[serde(deserialize_with = "deserialize_string_list", default)]
-    pub months: Option<Vec<Month>>,
-    #[param(value_type = Option<String>, example = "05-24,15-10")]
-    #[serde(deserialize_with = "deserialize_string_list", default)]
+    #[param(rename = "months[]")]
+    pub months: Option<Vec<u32>>,
+    #[param(rename = "catchLocations[]", value_type = Option<Vec<String>>)]
     pub catch_locations: Option<Vec<CatchLocationId>>,
-    #[param(value_type = Option<String>, example = "Seine,Net")]
-    #[serde(deserialize_with = "opt_vec_from_string_list", default)]
+    #[param(rename = "gearGroupIds[]", value_type = Option<Vec<String>>)]
+    #[serde_as(as = "Option<Vec<DisplayFromStr>>")]
     pub gear_group_ids: Option<Vec<GearGroup>>,
-    #[param(value_type = Option<String>, example = "Capelin,Saithe")]
-    #[serde(deserialize_with = "opt_vec_from_string_list", default)]
+    #[param(rename = "speciesGroupIds[]", value_type = Option<Vec<String>>)]
+    #[serde_as(as = "Option<Vec<DisplayFromStr>>")]
     pub species_group_ids: Option<Vec<SpeciesGroup>>,
-    #[param(value_type = Option<String>, example = "UnderEleven,FifteenToTwentyOne")]
-    #[serde(deserialize_with = "opt_vec_from_string_list", default)]
+    #[param(rename = "vesselLengthGroups[]", value_type = Option<Vec<String>>)]
+    #[serde_as(as = "Option<Vec<DisplayFromStr>>")]
     pub vessel_length_groups: Option<Vec<VesselLengthGroup>>,
-    #[param(value_type = Option<String>, example = "2000013801,2001015304")]
-    #[serde(deserialize_with = "deserialize_string_list", default)]
+    #[param(rename = "fiskeridirVesselIds[]", value_type = Option<Vec<i64>>)]
     pub fiskeridir_vessel_ids: Option<Vec<FiskeridirVesselId>>,
 }
 
@@ -79,7 +76,7 @@ pub struct LandingMatrixParams {
 pub async fn landings<T: Database + 'static, M: Meilisearch + 'static>(
     db: web::Data<T>,
     meilisearch: web::Data<Option<M>>,
-    params: web::Query<LandingsParams>,
+    params: Query<LandingsParams>,
 ) -> Result<HttpResponse, ApiError> {
     let query: LandingsQuery = params.into_inner().into();
 
@@ -111,9 +108,10 @@ pub async fn landings<T: Database + 'static, M: Meilisearch + 'static>(
     }
 }
 
+#[serde_as]
 #[derive(Debug, Deserialize, IntoParams)]
 pub struct LandingMatrixPath {
-    #[serde(deserialize_with = "from_string")]
+    #[serde_as(as = "DisplayFromStr")]
     pub active_filter: ActiveLandingFilter,
 }
 
@@ -134,7 +132,7 @@ pub struct LandingMatrixPath {
 pub async fn landing_matrix<T: Database + 'static, S: Cache>(
     db: web::Data<T>,
     cache: web::Data<Option<S>>,
-    params: web::Query<LandingMatrixParams>,
+    params: Query<LandingMatrixParams>,
     path: Path<LandingMatrixPath>,
 ) -> Result<Response<LandingMatrix>, ApiError> {
     let query = matrix_params_to_query(params.into_inner(), path.active_filter);
@@ -170,6 +168,7 @@ pub async fn landing_matrix<T: Database + 'static, S: Cache>(
     Ok(Response::new(LandingMatrix::from(matrix)))
 }
 
+#[serde_as]
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct Landing {
@@ -177,9 +176,9 @@ pub struct Landing {
     pub landing_timestamp: DateTime<Utc>,
     #[schema(value_type = Option<String>, example = "05-24")]
     pub catch_location: Option<CatchLocationId>,
-    #[serde(serialize_with = "to_string", deserialize_with = "from_string")]
+    #[serde_as(as = "DisplayFromStr")]
     pub gear_id: Gear,
-    #[serde(serialize_with = "to_string", deserialize_with = "from_string")]
+    #[serde_as(as = "DisplayFromStr")]
     pub gear_group_id: GearGroup,
     #[schema(value_type = Option<String>)]
     pub delivery_point_id: Option<DeliveryPointId>,
@@ -188,7 +187,7 @@ pub struct Landing {
     pub vessel_call_sign: Option<String>,
     pub vessel_name: Option<String>,
     pub vessel_length: Option<f64>,
-    #[serde(serialize_with = "to_string", deserialize_with = "from_string")]
+    #[serde_as(as = "DisplayFromStr")]
     pub vessel_length_group: VesselLengthGroup,
     pub total_living_weight: f64,
     pub total_product_weight: f64,
@@ -196,6 +195,7 @@ pub struct Landing {
     pub catches: Vec<LandingCatch>,
 }
 
+#[serde_as]
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct LandingCatch {
@@ -203,7 +203,7 @@ pub struct LandingCatch {
     pub gross_weight: f64,
     pub product_weight: f64,
     pub species_fiskeridir_id: i32,
-    #[serde(serialize_with = "to_string", deserialize_with = "from_string")]
+    #[serde_as(as = "DisplayFromStr")]
     pub species_group_id: SpeciesGroup,
 }
 
@@ -294,9 +294,7 @@ pub fn matrix_params_to_query(
     active_filter: ActiveLandingFilter,
 ) -> LandingMatrixQuery {
     LandingMatrixQuery {
-        months: params
-            .months
-            .map(|ms| ms.into_iter().map(|m| m.0).collect()),
+        months: params.months,
         catch_locations: params.catch_locations,
         gear_group_ids: params.gear_group_ids,
         species_group_ids: params.species_group_ids,

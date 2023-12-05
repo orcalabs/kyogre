@@ -1,10 +1,7 @@
-use crate::{
-    error::ApiError,
-    response::Response,
-    routes::utils::{from_string, to_string},
-};
+use crate::{error::ApiError, response::Response};
 use fiskeridir_rs::{Gear, GearGroup, MainGearGroup};
 use serde::{Deserialize, Serialize};
+use serde_with::{serde_as, DisplayFromStr};
 use strum::IntoEnumIterator;
 use utoipa::ToSchema;
 
@@ -52,26 +49,29 @@ pub async fn gear_main_groups() -> Result<Response<Vec<GearMainGroupDetailed>>, 
     Ok(Response::new(gear))
 }
 
+#[serde_as]
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema, Ord, PartialOrd, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct GearDetailed {
-    #[serde(serialize_with = "to_string", deserialize_with = "from_string")]
+    #[serde_as(as = "DisplayFromStr")]
     pub id: Gear,
     pub name: &'static str,
 }
 
+#[serde_as]
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema, Ord, PartialOrd, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct GearGroupDetailed {
-    #[serde(serialize_with = "to_string", deserialize_with = "from_string")]
+    #[serde_as(as = "DisplayFromStr")]
     pub id: GearGroup,
     pub name: &'static str,
 }
 
+#[serde_as]
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema, Ord, PartialOrd, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct GearMainGroupDetailed {
-    #[serde(serialize_with = "to_string", deserialize_with = "from_string")]
+    #[serde_as(as = "DisplayFromStr")]
     pub id: MainGearGroup,
     pub name: &'static str,
 }

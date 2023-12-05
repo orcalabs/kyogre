@@ -8,17 +8,18 @@ use fiskeridir_rs::CallSign;
 use futures::TryStreamExt;
 use kyogre_core::DateRange;
 use serde::{Deserialize, Serialize};
+use serde_qs::actix::QsQuery as Query;
 use tracing::{event, Level};
 use utoipa::{IntoParams, ToSchema};
 
-#[derive(Debug, Deserialize, IntoParams)]
+#[derive(Debug, Deserialize, Serialize, IntoParams)]
 #[serde(rename_all = "camelCase")]
 pub struct VmsParameters {
     pub start: Option<DateTime<Utc>>,
     pub end: Option<DateTime<Utc>>,
 }
 
-#[derive(Debug, Deserialize, IntoParams)]
+#[derive(Debug, Deserialize, Serialize, IntoParams)]
 pub struct VmsPath {
     #[param(value_type = String)]
     pub call_sign: CallSign,
@@ -37,7 +38,7 @@ pub struct VmsPath {
 #[tracing::instrument(skip(db))]
 pub async fn vms_positions<T: Database + 'static>(
     db: web::Data<T>,
-    params: web::Query<VmsParameters>,
+    params: Query<VmsParameters>,
     path: Path<VmsPath>,
 ) -> Result<HttpResponse, ApiError> {
     let (start, end) = match (params.start, params.end) {

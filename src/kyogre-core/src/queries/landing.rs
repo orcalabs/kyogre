@@ -35,7 +35,9 @@ pub enum ActiveLandingFilter {
 
 #[cfg_attr(feature = "sqlx", derive(sqlx::Type))]
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
-#[derive(Default, Debug, Clone, Copy, Deserialize, strum::Display, AsRefStr, EnumString)]
+#[derive(
+    Default, Debug, Clone, Copy, Deserialize, Serialize, strum::Display, AsRefStr, EnumString,
+)]
 pub enum LandingsSorting {
     #[serde(
         alias = "landingTimestamp",

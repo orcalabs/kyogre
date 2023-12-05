@@ -7,6 +7,8 @@ use kyogre_core::{
     FiskeridirVesselId, Mmsi, Ordering, Pagination, Range,
 };
 use serde::{Deserialize, Serialize};
+use serde_qs::actix::QsQuery as Query;
+use serde_with::{serde_as, DisplayFromStr};
 use tracing::{event, Level};
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
@@ -14,28 +16,24 @@ use uuid::Uuid;
 use crate::{
     error::ApiError,
     extractors::{BwPolicy, BwProfile},
-    routes::utils::{deserialize_range_list, deserialize_string_list, from_string, to_string},
     to_streaming_response, Database,
 };
 
-#[derive(Default, Debug, Clone, Deserialize, IntoParams)]
+#[serde_as]
+#[derive(Default, Debug, Clone, Deserialize, Serialize, IntoParams)]
 #[serde(rename_all = "camelCase")]
 pub struct FishingFacilitiesParams {
-    #[param(value_type = Option<String>, example = "56342,32546")]
-    #[serde(deserialize_with = "deserialize_string_list", default)]
+    #[param(rename = "mmsis[]", value_type = Option<Vec<i32>>)]
     pub mmsis: Option<Vec<Mmsi>>,
-    #[param(value_type = Option<String>, example = "2000013801,2001015304")]
-    #[serde(deserialize_with = "deserialize_string_list", default)]
+    #[param(rename = "fiskeridirVesselIds[]", value_type = Option<Vec<i64>>)]
     pub fiskeridir_vessel_ids: Option<Vec<FiskeridirVesselId>>,
-    #[param(value_type = Option<String>, example = "Crabpot,Nets")]
-    #[serde(deserialize_with = "deserialize_string_list", default)]
+    #[param(rename = "toolTypes[]", value_type = Option<Vec<String>>)]
+    #[serde_as(as = "Option<Vec<DisplayFromStr>>")]
     pub tool_types: Option<Vec<FishingFacilityToolType>>,
     pub active: Option<bool>,
-    #[param(value_type = Option<String>, example = "[2023-01-01T00:00:00Z,2023-02-01T00:00:00Z);[2023-04-10T10:00:00Z,)")]
-    #[serde(deserialize_with = "deserialize_range_list", default)]
+    #[param(rename = "setupRanges[]", value_type = Option<Vec<String>>)]
     pub setup_ranges: Option<Vec<Range<DateTime<Utc>>>>,
-    #[param(value_type = Option<String>, example = "[2023-01-01T00:00:00Z,2023-02-01T00:00:00Z);[2023-04-10T10:00:00Z,)")]
-    #[serde(deserialize_with = "deserialize_range_list", default)]
+    #[param(rename = "removedRanges[]", value_type = Option<Vec<String>>)]
     pub removed_ranges: Option<Vec<Range<DateTime<Utc>>>>,
     pub limit: Option<u64>,
     pub offset: Option<u64>,
@@ -56,7 +54,7 @@ pub struct FishingFacilitiesParams {
 pub async fn fishing_facilities<T: Database + 'static>(
     db: web::Data<T>,
     profile: BwProfile,
-    params: web::Query<FishingFacilitiesParams>,
+    params: Query<FishingFacilitiesParams>,
 ) -> Result<HttpResponse, ApiError> {
     if !profile
         .policies
@@ -81,6 +79,7 @@ pub async fn fishing_facilities<T: Database + 'static>(
     }
 }
 
+#[serde_as]
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct FishingFacility {
@@ -98,7 +97,7 @@ pub struct FishingFacility {
     pub sbr_reg_num: Option<String>,
     pub contact_phone: Option<String>,
     pub contact_email: Option<String>,
-    #[serde(serialize_with = "to_string", deserialize_with = "from_string")]
+    #[serde_as(as = "DisplayFromStr")]
     pub tool_type: FishingFacilityToolType,
     pub tool_type_name: Option<String>,
     pub tool_color: Option<String>,

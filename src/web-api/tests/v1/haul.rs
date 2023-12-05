@@ -4,10 +4,7 @@ use chrono::{DateTime, Utc};
 use engine::*;
 use fiskeridir_rs::{ErsDca, GearGroup, SpeciesGroup};
 use kyogre_core::{FiskeridirVesselId, HaulsSorting, Ordering};
-use web_api::routes::{
-    utils::DateTimeUtc,
-    v1::haul::{Haul, HaulsParams},
-};
+use web_api::routes::v1::haul::{Haul, HaulsParams};
 
 #[tokio::test]
 async fn test_hauls_returns_all_hauls() {
@@ -52,7 +49,7 @@ async fn test_hauls_returns_hauls_in_specified_months() {
         helper.refresh_cache().await;
 
         let params = HaulsParams {
-            months: Some(vec![DateTimeUtc(month1), DateTimeUtc(month2)]),
+            months: Some(vec![month1, month2]),
             ..Default::default()
         };
 

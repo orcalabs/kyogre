@@ -69,7 +69,9 @@ pub fn haul_date_feature_matrix_index(ts: &DateTime<Utc>) -> usize {
 
 #[cfg_attr(feature = "sqlx", derive(sqlx::Type))]
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
-#[derive(Default, Debug, Clone, Copy, Deserialize, strum::Display, AsRefStr, EnumString)]
+#[derive(
+    Default, Debug, Clone, Copy, Deserialize, Serialize, strum::Display, AsRefStr, EnumString,
+)]
 pub enum HaulsSorting {
     #[serde(alias = "startDate", alias = "StartDate", alias = "START_DATE")]
     #[default]
