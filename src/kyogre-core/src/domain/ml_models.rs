@@ -147,24 +147,17 @@ pub struct NewFishingWeightPrediction {
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct FishingSpotPrediction {
     pub latitude: f64,
     pub longitude: f64,
-    #[cfg_attr(feature = "utoipa", schema(value_type = i32))]
     pub species_group_id: SpeciesGroup,
     pub date: NaiveDate,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct FishingWeightPrediction {
-    #[cfg_attr(feature = "utoipa", schema(value_type = String))]
     pub catch_location_id: CatchLocationId,
     pub weight: f64,
-    #[cfg_attr(feature = "utoipa", schema(value_type = i32))]
     pub species_group_id: SpeciesGroup,
     pub date: NaiveDate,
 }
