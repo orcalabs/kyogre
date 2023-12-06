@@ -11,8 +11,7 @@ use tracing::{event, Level};
 static TRIP_COMPUTATION_STEPS: Lazy<Vec<Box<dyn TripComputationStep>>> = Lazy::new(|| {
     vec![
         Box::<TripPrecisionStep>::default(),
-        Box::<UnrealisticSpeed>::default(),
-        Box::<Cluster>::default(),
+        Box::<TripPositionLayers>::default(),
         Box::<AisVms>::default(),
     ]
 });
@@ -134,51 +133,48 @@ impl TripComputationStep for AisVms {
     }
 }
 
-macro_rules! impl_trip_computation_step_for_trip_position_layer {
-    ($type: ty) => {
-        #[async_trait]
-        impl TripComputationStep for $type {
-            async fn run(
-                &self,
-                shared: &SharedState,
-                _vessel: &Vessel,
-                mut unit: TripProcessingUnit,
-            ) -> Result<TripProcessingUnit, TripPipelineError> {
-                let mut trip_positions = unit.positions;
-                let mut pruned_positions = Vec::new();
+#[derive(Default)]
+struct TripPositionLayers;
 
-                for l in &shared.trip_position_layers {
-                    let (positions, pruned) = l
-                        .prune_positions(trip_positions)
-                        .change_context(TripPipelineError::TripComputationStep)?;
-                    trip_positions = positions;
-                    pruned_positions.extend(pruned);
-                }
+#[async_trait]
+impl TripComputationStep for TripPositionLayers {
+    async fn run(
+        &self,
+        shared: &SharedState,
+        _vessel: &Vessel,
+        mut unit: TripProcessingUnit,
+    ) -> Result<TripProcessingUnit, TripPipelineError> {
+        let mut trip_positions = unit.positions;
+        let mut pruned_positions = Vec::new();
 
-                unit.positions = trip_positions.clone();
-                unit.trip_position_output = Some(TripPositionLayerOutput {
-                    trip_positions,
-                    pruned_positions,
-                });
-
-                Ok(unit)
-            }
-            async fn fetch_missing(
-                &self,
-                shared: &SharedState,
-                vessel: &Vessel,
-            ) -> Result<Vec<Trip>, TripPipelineError> {
-                shared
-                    .trip_pipeline_outbound
-                    .trips_without_position_layers(vessel.fiskeridir.id)
-                    .await
-                    .change_context(TripPipelineError::TripComputationStep)
-            }
+        for l in &shared.trip_position_layers {
+            let (positions, pruned) = l
+                .prune_positions(trip_positions)
+                .change_context(TripPipelineError::TripComputationStep)?;
+            trip_positions = positions;
+            pruned_positions.extend(pruned);
         }
-    };
+
+        unit.positions = trip_positions.clone();
+        unit.trip_position_output = Some(TripPositionLayerOutput {
+            trip_positions,
+            pruned_positions,
+        });
+
+        Ok(unit)
+    }
+    async fn fetch_missing(
+        &self,
+        shared: &SharedState,
+        vessel: &Vessel,
+    ) -> Result<Vec<Trip>, TripPipelineError> {
+        shared
+            .trip_pipeline_outbound
+            .trips_without_position_layers(vessel.fiskeridir.id)
+            .await
+            .change_context(TripPipelineError::TripComputationStep)
+    }
 }
-impl_trip_computation_step_for_trip_position_layer!(UnrealisticSpeed);
-impl_trip_computation_step_for_trip_position_layer!(Cluster);
 
 #[derive(Default)]
 struct TripPrecisionStep {
