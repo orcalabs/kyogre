@@ -30,6 +30,7 @@ impl FileHashId {
 pub enum HashDiff {
     Equal,
     Changed,
+    Skipped,
 }
 
 impl AsRef<str> for FileHashId {

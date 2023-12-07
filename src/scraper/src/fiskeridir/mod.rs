@@ -67,35 +67,41 @@ impl FiskeridirSource {
         source: &FileSource,
         insert_closure: C,
         chunk_size: usize,
+        skip_boundary: Option<u32>,
     ) -> Result<HashDiff, ScraperError>
     where
         A: DeserializeOwned + 'static + std::fmt::Debug + Send,
         B: Future<Output = Result<(), InsertError>>,
         C: Fn(Vec<A>) -> B,
     {
-        let file = self.download(source).await?;
-        let hash = file.hash().change_context(ScraperError)?;
-        let hash_id = FileHashId::new(file_hash, source.year());
+        let year = source.year();
 
-        let diff = self
+        let hash_id = FileHashId::new(file_hash, year);
+        let hash = self
             .hash_store
-            .diff(&hash_id, &hash)
+            .get_hash(&hash_id)
             .await
             .change_context(ScraperError)?;
 
-        match diff {
-            HashDiff::Equal => Ok(HashDiff::Equal),
-            HashDiff::Changed => {
-                let data = file.into_deserialize::<A>().change_context(ScraperError)?;
-                add_in_chunks(insert_closure, Box::new(data), chunk_size)
-                    .await
-                    .change_context(ScraperError)?;
-                self.hash_store
-                    .add(&hash_id, hash)
-                    .await
-                    .change_context(ScraperError)?;
-                Ok(HashDiff::Changed)
-            }
+        if Some(year) < skip_boundary && hash.is_some() {
+            return Ok(HashDiff::Skipped);
         }
+
+        let file = self.download(source).await?;
+        let file_hash = file.hash().change_context(ScraperError)?;
+
+        if hash.as_ref() == Some(&file_hash) {
+            return Ok(HashDiff::Equal);
+        }
+
+        let data = file.into_deserialize::<A>().change_context(ScraperError)?;
+        add_in_chunks(insert_closure, Box::new(data), chunk_size)
+            .await
+            .change_context(ScraperError)?;
+        self.hash_store
+            .add(&hash_id, file_hash)
+            .await
+            .change_context(ScraperError)?;
+        Ok(HashDiff::Changed)
     }
 }

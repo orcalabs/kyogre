@@ -1,6 +1,6 @@
 use crate::{error::PostgresError, PostgresAdapter};
 use error_stack::{Result, ResultExt};
-use kyogre_core::{FileHashId, HashDiff};
+use kyogre_core::FileHashId;
 
 impl PostgresAdapter {
     pub(crate) async fn add_hash(
@@ -33,42 +33,6 @@ SET
             .change_context(PostgresError::Transaction)?;
 
         Ok(())
-    }
-
-    pub(crate) async fn diff_hash(
-        &self,
-        id: &FileHashId,
-        hash: &str,
-    ) -> Result<HashDiff, PostgresError> {
-        struct ExistingHash {
-            hash: String,
-        }
-
-        let existing_hash = sqlx::query_as!(
-            ExistingHash,
-            r#"
-SELECT
-    hash
-FROM
-    data_hashes
-WHERE
-    data_hash_id = $1
-            "#,
-            id.as_ref(),
-        )
-        .fetch_optional(&self.pool)
-        .await
-        .change_context(PostgresError::Query)?;
-
-        if let Some(existing_hash) = existing_hash {
-            if existing_hash.hash == hash {
-                Ok(HashDiff::Equal)
-            } else {
-                Ok(HashDiff::Changed)
-            }
-        } else {
-            Ok(HashDiff::Changed)
-        }
     }
 
     pub(crate) async fn get_hash_impl(
