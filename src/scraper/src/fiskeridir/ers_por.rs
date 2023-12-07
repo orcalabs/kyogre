@@ -38,7 +38,7 @@ impl DataSource for ErsPorScraper {
         for source in &self.sources {
             match self
                 .fiskeridir_source
-                .scrape_year_if_changed(FileHash::ErsPor, source, closure, 10000)
+                .scrape_year_if_changed(FileHash::ErsPor, source, closure, 10000, Some(2020))
                 .await
             {
                 Err(e) => event!(
@@ -47,6 +47,9 @@ impl DataSource for ErsPorScraper {
                     source.year(),
                     e,
                 ),
+                Ok(HashDiff::Skipped) => {
+                    event!(Level::INFO, "skipping ers_por year: {}", source.year())
+                }
                 Ok(HashDiff::Changed) => event!(
                     Level::INFO,
                     "successfully scraped ers_por year: {}",

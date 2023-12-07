@@ -38,7 +38,7 @@ impl DataSource for AquaCultureRegisterScraper {
         if let Some(source) = &self.source {
             match self
                 .fiskeridir_source
-                .scrape_year_if_changed(FileHash::AquaCultureRegister, source, closure, 10000)
+                .scrape_year_if_changed(FileHash::AquaCultureRegister, source, closure, 10000, None)
                 .await
             {
                 Err(e) => event!(
@@ -46,6 +46,11 @@ impl DataSource for AquaCultureRegisterScraper {
                     "failed to scrape aqua_culture_register for year: {}, err: {:?}",
                     source.year(),
                     e,
+                ),
+                Ok(HashDiff::Skipped) => event!(
+                    Level::INFO,
+                    "skipping aqua_culture_register year: {}",
+                    source.year()
                 ),
                 Ok(HashDiff::Changed) => event!(
                     Level::INFO,

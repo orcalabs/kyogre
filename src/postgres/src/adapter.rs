@@ -837,9 +837,6 @@ impl ScraperFileHashInboundPort for PostgresAdapter {
     async fn add(&self, id: &FileHashId, hash: String) -> Result<(), InsertError> {
         self.add_hash(id, hash).await.change_context(InsertError)
     }
-    async fn diff(&self, id: &FileHashId, hash: &str) -> Result<HashDiff, QueryError> {
-        self.diff_hash(id, hash).await.change_context(QueryError)
-    }
 }
 
 #[async_trait]

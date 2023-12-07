@@ -120,7 +120,6 @@ pub trait ScraperOutboundPort {
 #[async_trait]
 pub trait ScraperFileHashInboundPort {
     async fn add(&self, id: &FileHashId, hash: String) -> Result<(), InsertError>;
-    async fn diff(&self, id: &FileHashId, hash: &str) -> Result<HashDiff, QueryError>;
 }
 
 #[async_trait]

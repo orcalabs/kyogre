@@ -2,9 +2,9 @@ use std::sync::Arc;
 
 use crate::{DataSource, Processor, ScraperError, ScraperId};
 use async_trait::async_trait;
-use error_stack::{Result, ResultExt};
+use error_stack::Result;
 use fiskeridir_rs::FileSource;
-use kyogre_core::{FileHash, FileHashId, HashDiff};
+use kyogre_core::{FileHash, HashDiff};
 use tracing::{event, Level};
 
 use super::FiskeridirSource;
@@ -32,23 +32,9 @@ impl DataSource for VmsScraper {
         let closure = |ers_dca| processor.add_vms(ers_dca);
 
         for source in &self.sources {
-            if source.year() < 2023 {
-                let hash_id = FileHashId::new(FileHash::Vms, source.year());
-                let hash = self
-                    .fiskeridir_source
-                    .hash_store
-                    .get_hash(&hash_id)
-                    .await
-                    .change_context(ScraperError)?;
-                if hash.is_some() {
-                    event!(Level::INFO, "skipping vms year: {}", source.year());
-                    continue;
-                }
-            }
-
             match self
                 .fiskeridir_source
-                .scrape_year_if_changed(FileHash::Vms, source, closure, 10000)
+                .scrape_year_if_changed(FileHash::Vms, source, closure, 10000, Some(2023))
                 .await
             {
                 Err(e) => event!(
@@ -57,6 +43,9 @@ impl DataSource for VmsScraper {
                     source.year(),
                     e,
                 ),
+                Ok(HashDiff::Skipped) => {
+                    event!(Level::INFO, "skipping vms year: {}", source.year())
+                }
                 Ok(HashDiff::Changed) => event!(
                     Level::INFO,
                     "successfully scraped vms year: {}",
