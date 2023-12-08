@@ -9,7 +9,7 @@ pub struct BenchmarkState;
 impl machine::State for BenchmarkState {
     type SharedState = SharedState;
 
-    async fn run(&self, shared_state: &Self::SharedState) {
+    async fn run(&self, shared_state: Self::SharedState) -> Self::SharedState {
         for b in &shared_state.benchmarks {
             if let Err(e) = b
                 .produce_and_store_benchmarks(
@@ -26,6 +26,8 @@ impl machine::State for BenchmarkState {
                 );
             }
         }
+
+        shared_state
     }
     fn schedule(&self) -> Schedule {
         Schedule::Disabled

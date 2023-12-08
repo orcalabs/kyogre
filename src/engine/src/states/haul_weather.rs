@@ -16,7 +16,7 @@ pub struct HaulWeatherState;
 impl machine::State for HaulWeatherState {
     type SharedState = SharedState;
 
-    async fn run(&self, shared_state: &Self::SharedState) {
+    async fn run(&self, shared_state: Self::SharedState) -> Self::SharedState {
         match shared_state.haul_weather_outbound.all_vessels().await {
             Ok(vessels) => {
                 if let Err(e) = process_haul_weather(
@@ -33,6 +33,8 @@ impl machine::State for HaulWeatherState {
                 event!(Level::ERROR, "failed to retrieve vessels: {:?}", e);
             }
         }
+
+        shared_state
     }
     fn schedule(&self) -> Schedule {
         Schedule::Disabled

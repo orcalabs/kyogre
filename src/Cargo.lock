@@ -2913,9 +2913,9 @@ checksum = "c41e0c4fef86961ac6d6f8a82609f55f31b05e4fce149ac5710e439df7619ba4"
 
 [[package]]
 name = "machine"
-version = "0.2.0"
+version = "0.3.0"
 source = "registry+https://dl.cloudsmith.io/basic/orcalabs/orcastrator/cargo/index.git"
-checksum = "4fe626bf453dcbe198bcafdb45f0996fbde76a745902a90094fb39abccc9e149"
+checksum = "87a98b8789216eb2cc4f759c7141aeaffcb950afe6c394ba66addabd340ce96e"
 dependencies = [
  "async-trait",
  "chrono",
@@ -2928,9 +2928,9 @@ dependencies = [
 
 [[package]]
 name = "machine_derive"
-version = "0.1.2"
+version = "0.2.0"
 source = "registry+https://dl.cloudsmith.io/basic/orcalabs/orcastrator/cargo/index.git"
-checksum = "3815501dc92e00056b435764a7e53cd7af02c298780ea836308442e6d679d328"
+checksum = "6553c4a431a37d1705069536fcdc1eaa4ba43d96c93bdc9d6d863a731066e416"
 dependencies = [
  "proc-macro2",
  "quote 1.0.33",

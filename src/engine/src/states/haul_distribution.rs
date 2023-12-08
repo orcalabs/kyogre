@@ -9,7 +9,7 @@ pub struct HaulDistributionState;
 impl machine::State for HaulDistributionState {
     type SharedState = SharedState;
 
-    async fn run(&self, shared_state: &Self::SharedState) {
+    async fn run(&self, shared_state: Self::SharedState) -> Self::SharedState {
         for b in &shared_state.haul_distributors {
             if let Err(e) = b
                 .distribute_hauls(
@@ -33,6 +33,8 @@ impl machine::State for HaulDistributionState {
         {
             event!(Level::ERROR, "failed to update bycatch status: {:?}", e);
         }
+
+        shared_state
     }
     fn schedule(&self) -> Schedule {
         Schedule::Disabled
