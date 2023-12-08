@@ -53,8 +53,9 @@ impl App {
         let barentswatch_source = BarentswatchSource::new(http_client);
 
         let scraper = Scraper::new(
+            settings.environment,
             settings.scraper.clone(),
-            Box::new(postgres.clone()),
+            Arc::new(postgres.clone()),
             fiskeridir_source,
             barentswatch_source,
         );

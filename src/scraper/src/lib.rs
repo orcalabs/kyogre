@@ -11,6 +11,7 @@ use fiskeridir::{
 use kyogre_core::{OauthConfig, ScraperInboundPort, ScraperOutboundPort};
 use mattilsynet::MattilsynetScraper;
 use ocean_climate::OceanClimateScraper;
+use orca_core::Environment;
 use serde::Deserialize;
 use std::sync::Arc;
 use std::{fmt::Debug, path::PathBuf};
@@ -35,8 +36,9 @@ pub trait Processor: ScraperInboundPort + ScraperOutboundPort + Send + Sync {}
 impl<T> Processor for T where T: ScraperInboundPort + ScraperOutboundPort + Send + Sync {}
 
 pub struct Scraper {
-    scrapers: Vec<Box<dyn DataSource + Send + Sync>>,
-    processor: Box<dyn Processor>,
+    environment: Environment,
+    scrapers: Vec<Vec<Arc<dyn DataSource + Send + Sync>>>,
+    processor: Arc<dyn Processor>,
 }
 
 #[derive(Debug, Deserialize, Clone, Default)]
@@ -83,8 +85,9 @@ pub trait DataSource: Send + Sync {
 
 impl Scraper {
     pub fn new(
+        environment: Environment,
         config: Config,
-        processor: Box<dyn Processor>,
+        processor: Arc<dyn Processor>,
         fiskeridir_source: FiskeridirSource,
         barentswatch_source: BarentswatchSource,
     ) -> Scraper {
@@ -179,39 +182,72 @@ impl Scraper {
         let _ocean_climate_scraper = OceanClimateScraper::new();
 
         Scraper {
+            environment,
             scrapers: vec![
-                Box::new(landings_scraper),
-                Box::new(vms_scraper),
-                Box::new(ers_dca_scraper),
-                Box::new(ers_por_scraper),
-                Box::new(ers_dep_scraper),
-                Box::new(ers_tra_scraper),
-                Box::new(register_vessels_scraper),
-                Box::new(fishing_facility_scraper),
-                Box::new(fishing_facility_historic_scraper),
-                Box::new(aqua_culture_register_scraper),
-                Box::new(mattilsynet_scraper),
-                Box::new(weather_scraper),
-                // Box::new(ocean_climate_scraper),
+                vec![
+                    Arc::new(landings_scraper),
+                    Arc::new(ers_dca_scraper),
+                    Arc::new(ers_por_scraper),
+                    Arc::new(ers_dep_scraper),
+                    Arc::new(ers_tra_scraper),
+                    Arc::new(register_vessels_scraper),
+                    Arc::new(fishing_facility_scraper),
+                    Arc::new(fishing_facility_historic_scraper),
+                    Arc::new(aqua_culture_register_scraper),
+                ],
+                vec![Arc::new(vms_scraper)],
+                vec![Arc::new(mattilsynet_scraper)],
+                vec![Arc::new(weather_scraper)],
+                // vec![Box::new(ocean_climate_scraper)],
             ],
             processor,
         }
     }
+}
 
-    #[instrument(skip_all, fields(app.scraper))]
-    async fn run_scraper(&self, s: &(dyn DataSource)) {
-        tracing::Span::current().record("app.scraper", s.id().to_string());
-        if let Err(e) = s.scrape(self.processor.as_ref()).await {
-            event!(Level::ERROR, "failed to run scraper: {:?}", e);
-        }
+#[instrument(skip_all, fields(app.scraper))]
+async fn run_scraper(s: &(dyn DataSource), processor: &(dyn Processor)) {
+    tracing::Span::current().record("app.scraper", s.id().to_string());
+    if let Err(e) = s.scrape(processor).await {
+        event!(Level::ERROR, "failed to run scraper: {:?}", e);
     }
 }
 
 #[async_trait]
 impl kyogre_core::Scraper for Scraper {
     async fn run(&self) {
-        for s in &self.scrapers {
-            self.run_scraper(s.as_ref()).await;
+        match self.environment {
+            Environment::Local => {
+                let handles = self
+                    .scrapers
+                    .iter()
+                    .map(|scrapers| {
+                        let scrapers = scrapers.clone();
+                        let processor = self.processor.clone();
+                        tokio::spawn(async move {
+                            for s in scrapers {
+                                run_scraper(s.as_ref(), processor.as_ref()).await;
+                            }
+                        })
+                    })
+                    .collect::<Vec<_>>();
+
+                for h in handles {
+                    if let Err(e) = h.await {
+                        event!(Level::ERROR, "failed to run scraper: {:?}", e);
+                    }
+                }
+            }
+            Environment::Production
+            | Environment::Staging
+            | Environment::Development
+            | Environment::Test => {
+                for ss in &self.scrapers {
+                    for s in ss {
+                        run_scraper(s.as_ref(), self.processor.as_ref()).await;
+                    }
+                }
+            }
         }
     }
 }
