@@ -72,6 +72,7 @@ impl App {
         let postgres = Box::new(postgres);
 
         let shared_state = SharedState::new(
+            settings.num_workers,
             postgres.clone(),
             postgres.clone(),
             postgres.clone(),
