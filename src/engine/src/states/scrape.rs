@@ -11,7 +11,7 @@ pub struct ScrapeState;
 impl machine::State for ScrapeState {
     type SharedState = SharedState;
 
-    async fn run(&self, shared_state: &Self::SharedState) {
+    async fn run(&self, shared_state: Self::SharedState) -> Self::SharedState {
         if let Some(scraper) = &shared_state.scraper {
             scraper.run().await;
             if let Err(e) = shared_state.matrix_cache.increment().await {
@@ -22,6 +22,8 @@ impl machine::State for ScrapeState {
                 );
             }
         }
+
+        shared_state
     }
     fn schedule(&self) -> Schedule {
         let environment: Environment = std::env::var("APP_ENVIRONMENT")

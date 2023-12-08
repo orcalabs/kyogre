@@ -32,7 +32,7 @@ impl Display for MLError {
 impl machine::State for MLModelsState {
     type SharedState = SharedState;
 
-    async fn run(&self, shared_state: &Self::SharedState) {
+    async fn run(&self, shared_state: Self::SharedState) -> Self::SharedState {
         for m in &shared_state.ml_models {
             if let Err(e) = run_ml_model(
                 shared_state.ml_models_inbound.as_ref(),
@@ -49,6 +49,8 @@ impl machine::State for MLModelsState {
                 );
             }
         }
+
+        shared_state
     }
     fn schedule(&self) -> Schedule {
         Schedule::Disabled
