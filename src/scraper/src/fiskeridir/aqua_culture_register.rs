@@ -1,27 +1,33 @@
 use std::sync::Arc;
 
-use crate::{DataSource, Processor, ScraperError, ScraperId};
+use crate::{
+    chunks::add_in_chunks, utils::prefetch_and_scrape, DataSource, Processor, ScraperError,
+    ScraperId,
+};
 use async_trait::async_trait;
-use error_stack::Result;
+use error_stack::{Result, ResultExt};
 use fiskeridir_rs::FileSource;
-use kyogre_core::{FileHash, HashDiff};
-use tracing::{event, Level};
+use kyogre_core::FileId;
+use orca_core::Environment;
 
 use super::FiskeridirSource;
 
 pub struct AquaCultureRegisterScraper {
     source: Option<FileSource>,
     fiskeridir_source: Arc<FiskeridirSource>,
+    environment: Environment,
 }
 
 impl AquaCultureRegisterScraper {
     pub fn new(
         fiskeridir_source: Arc<FiskeridirSource>,
         source: Option<FileSource>,
+        environment: Environment,
     ) -> AquaCultureRegisterScraper {
         AquaCultureRegisterScraper {
             source,
             fiskeridir_source,
+            environment,
         }
     }
 }
@@ -33,37 +39,23 @@ impl DataSource for AquaCultureRegisterScraper {
     }
 
     async fn scrape(&self, processor: &(dyn Processor)) -> Result<(), ScraperError> {
-        let closure = |data| processor.add_aqua_culture_register(data);
-
-        if let Some(source) = &self.source {
-            match self
-                .fiskeridir_source
-                .scrape_year_if_changed(FileHash::AquaCultureRegister, source, closure, 10000, None)
+        prefetch_and_scrape(
+            self.environment,
+            self.fiskeridir_source.clone(),
+            self.source.clone().map(|s| vec![s]).unwrap_or_default(),
+            FileId::AquaCultureRegister,
+            Some(2020),
+            |_, file| async move {
+                let data = file.into_deserialize().change_context(ScraperError)?;
+                add_in_chunks(
+                    |data| processor.add_aqua_culture_register(data),
+                    Box::new(data),
+                    10000,
+                )
                 .await
-            {
-                Err(e) => event!(
-                    Level::ERROR,
-                    "failed to scrape aqua_culture_register for year: {}, err: {:?}",
-                    source.year(),
-                    e,
-                ),
-                Ok(HashDiff::Skipped) => event!(
-                    Level::INFO,
-                    "skipping aqua_culture_register year: {}",
-                    source.year()
-                ),
-                Ok(HashDiff::Changed) => event!(
-                    Level::INFO,
-                    "successfully scraped aqua_culture_register year: {}",
-                    source.year()
-                ),
-                Ok(HashDiff::Equal) => event!(
-                    Level::INFO,
-                    "no changes for aqua_culture_register year: {}",
-                    source.year()
-                ),
-            }
-        }
-        Ok(())
+                .change_context(ScraperError)
+            },
+        )
+        .await
     }
 }

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT\n    hash\nFROM\n    data_hashes\nWHERE\n    data_hash_id = $1\n            ",
+  "query": "\nSELECT\n    hash\nFROM\n    file_hashes\nWHERE\n    file_hash_id = $1\n            ",
   "describe": {
     "columns": [
       {
@@ -18,5 +18,5 @@
       false
     ]
   },
-  "hash": "13041c559dae3b4a2972bf672ab879da750bad4bd0816aab29693d19f28a422e"
+  "hash": "d3779150e3a1b6d09bd4dfe623652c0aa3fa13d6b90ea100724ce6ec673d7314"
 }

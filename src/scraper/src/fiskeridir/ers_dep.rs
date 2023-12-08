@@ -1,27 +1,33 @@
 use std::sync::Arc;
 
-use crate::{DataSource, Processor, ScraperError, ScraperId};
+use crate::{
+    chunks::add_in_chunks, utils::prefetch_and_scrape, DataSource, Processor, ScraperError,
+    ScraperId,
+};
 use async_trait::async_trait;
-use error_stack::Result;
+use error_stack::{Result, ResultExt};
 use fiskeridir_rs::FileSource;
-use kyogre_core::{FileHash, HashDiff};
-use tracing::{event, Level};
+use kyogre_core::FileId;
+use orca_core::Environment;
 
 use super::FiskeridirSource;
 
 pub struct ErsDepScraper {
     sources: Vec<FileSource>,
     fiskeridir_source: Arc<FiskeridirSource>,
+    environment: Environment,
 }
 
 impl ErsDepScraper {
     pub fn new(
         fiskeridir_source: Arc<FiskeridirSource>,
         sources: Vec<FileSource>,
+        environment: Environment,
     ) -> ErsDepScraper {
         ErsDepScraper {
             sources,
             fiskeridir_source,
+            environment,
         }
     }
 }
@@ -33,38 +39,23 @@ impl DataSource for ErsDepScraper {
     }
 
     async fn scrape(&self, processor: &(dyn Processor)) -> Result<(), ScraperError> {
-        let closure = |ers_dep| processor.add_ers_dep(ers_dep);
-
-        for source in &self.sources {
-            match self
-                .fiskeridir_source
-                .scrape_year_if_changed(FileHash::ErsDep, source, closure, 10000, Some(2020))
+        prefetch_and_scrape(
+            self.environment,
+            self.fiskeridir_source.clone(),
+            self.sources.clone(),
+            FileId::ErsDep,
+            Some(2020),
+            |_, file| async move {
+                let data = file.into_deserialize().change_context(ScraperError)?;
+                add_in_chunks(
+                    |ers_dep| processor.add_ers_dep(ers_dep),
+                    Box::new(data),
+                    10000,
+                )
                 .await
-            {
-                Err(e) => event!(
-                    Level::ERROR,
-                    "failed to scrape ers_dep for year: {}, err: {:?}",
-                    source.year(),
-                    e,
-                ),
-                Ok(HashDiff::Skipped) => {
-                    event!(Level::INFO, "skipping ers_dep year: {}", source.year())
-                }
-                Ok(HashDiff::Changed) => event!(
-                    Level::INFO,
-                    "successfully scraped ers_dep year: {}",
-                    source.year()
-                ),
-                Ok(HashDiff::Equal) => event!(
-                    Level::INFO,
-                    "no changes for ers_dep year: {}",
-                    source.year()
-                ),
-            }
-            if let Err(e) = self.fiskeridir_source.fiskeridir_file.clean_download_dir() {
-                event!(Level::ERROR, "failed to clean download dir: {}", e);
-            }
-        }
-        Ok(())
+                .change_context(ScraperError)
+            },
+        )
+        .await
     }
 }

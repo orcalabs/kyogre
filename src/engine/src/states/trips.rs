@@ -387,8 +387,8 @@ async fn run_state(shared_state: Arc<SharedState>) -> Result<TripsReport, TripPi
     let mut i = 0;
     let mut trips_report = TripsReport::default();
 
-    while let Some(temp) = master_rx.recv().await {
-        match temp {
+    while let Some(task) = master_rx.recv().await {
+        match task {
             MasterTask::New(vessel, report, trips) => {
                 trips_report = trips_report + report;
 
