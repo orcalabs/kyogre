@@ -1,27 +1,30 @@
 use std::sync::Arc;
 
-use crate::{DataSource, Processor, ScraperError, ScraperId};
+use crate::{utils::prefetch_and_scrape, DataSource, Processor, ScraperError, ScraperId};
 use async_trait::async_trait;
 use error_stack::{Result, ResultExt};
 use fiskeridir_rs::{FileSource, Landing, LandingRaw};
-use kyogre_core::{FileHash, FileHashId};
-use tracing::{event, Level};
+use kyogre_core::FileId;
+use orca_core::Environment;
 
 use super::FiskeridirSource;
 
 pub struct LandingScraper {
     sources: Vec<FileSource>,
     fiskeridir_source: Arc<FiskeridirSource>,
+    environment: Environment,
 }
 
 impl LandingScraper {
     pub fn new(
         fiskeridir_source: Arc<FiskeridirSource>,
         sources: Vec<FileSource>,
+        environment: Environment,
     ) -> LandingScraper {
         LandingScraper {
             sources,
             fiskeridir_source,
+            environment,
         }
     }
 }
@@ -33,68 +36,27 @@ impl DataSource for LandingScraper {
     }
 
     async fn scrape(&self, processor: &(dyn Processor)) -> Result<(), ScraperError> {
-        for source in &self.sources {
-            let hash_id = FileHashId::new(FileHash::Landings, source.year());
-            let hash = self
-                .fiskeridir_source
-                .hash_store
-                .get_hash(&hash_id)
-                .await
-                .change_context(ScraperError)?;
-
-            if source.year() < 2020 && hash.is_some() {
-                event!(Level::INFO, "skipping landings year: {}", source.year());
-                continue;
-            }
-
-            let file = self.fiskeridir_source.download(source).await?;
-            let file_hash = file.hash().change_context(ScraperError)?;
-
-            if hash.as_ref() == Some(&file_hash) {
-                event!(
-                    Level::INFO,
-                    "no changes for landings year: {}",
-                    source.year()
-                );
-            } else {
-                let data_year = source.year();
+        prefetch_and_scrape(
+            self.environment,
+            self.fiskeridir_source.clone(),
+            self.sources.clone(),
+            FileId::Landings,
+            Some(2020),
+            |year, file| async move {
                 let data = file
                     .into_deserialize::<LandingRaw>()
                     .change_context(ScraperError)?
                     .map(move |v| match v {
-                        Ok(v) => Landing::try_from_raw(v, data_year),
+                        Ok(v) => Landing::try_from_raw(v, year),
                         Err(e) => Err(e),
                     });
 
-                match processor.add_landings(Box::new(data), data_year).await {
-                    Err(e) => {
-                        event!(
-                            Level::ERROR,
-                            "failed to scrape landings for year: {}, err: {:?}",
-                            source.year(),
-                            e,
-                        );
-                    }
-                    Ok(()) => {
-                        event!(
-                            Level::INFO,
-                            "successfully scraped landings year: {}",
-                            source.year()
-                        );
-                        self.fiskeridir_source
-                            .hash_store
-                            .add(&hash_id, file_hash)
-                            .await
-                            .change_context(ScraperError)?;
-                    }
-                };
-            }
-
-            if let Err(e) = self.fiskeridir_source.fiskeridir_file.clean_download_dir() {
-                event!(Level::ERROR, "failed to clean download dir: {}", e);
-            }
-        }
-
-        Ok(())
+                processor
+                    .add_landings(Box::new(data), year)
+                    .await
+                    .change_context(ScraperError)
+            },
+        )
+        .await
     }
 }

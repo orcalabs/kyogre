@@ -13,10 +13,10 @@ impl PostgresAdapter {
         sqlx::query!(
             r#"
 INSERT INTO
-    data_hashes (hash, data_hash_id)
+    file_hashes (hash, file_hash_id)
 VALUES
     ($1, $2)
-ON CONFLICT (data_hash_id) DO
+ON CONFLICT (file_hash_id) DO
 UPDATE
 SET
     hash = excluded.hash
@@ -44,9 +44,9 @@ SET
 SELECT
     hash
 FROM
-    data_hashes
+    file_hashes
 WHERE
-    data_hash_id = $1
+    file_hash_id = $1
             "#,
             id.as_ref(),
         )

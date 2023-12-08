@@ -1,5 +1,6 @@
-#[derive(Debug, Copy, Clone)]
-pub enum FileHash {
+#[derive(Debug, Copy, Clone, strum::Display)]
+#[strum(serialize_all = "snake_case")]
+pub enum FileId {
     Landings,
     ErsDca,
     ErsDep,
@@ -13,24 +14,17 @@ pub enum FileHash {
 pub struct FileHashId(String);
 
 impl FileHashId {
-    pub fn new(source: FileHash, year: u32) -> FileHashId {
+    pub fn new(source: FileId, year: u32) -> FileHashId {
         match source {
-            FileHash::Landings => FileHashId(format!("landings_{year}")),
-            FileHash::ErsDca => FileHashId(format!("ers_dca_{year}")),
-            FileHash::ErsDep => FileHashId(format!("ers_dep_{year}")),
-            FileHash::ErsPor => FileHashId(format!("ers_por_{year}")),
-            FileHash::ErsTra => FileHashId(format!("ers_tra_{year}")),
-            FileHash::Vms => FileHashId(format!("vms_{year}")),
-            FileHash::AquaCultureRegister => FileHashId("aqua_culture_register".into()),
+            FileId::Landings => FileHashId(format!("landings_{year}")),
+            FileId::ErsDca => FileHashId(format!("ers_dca_{year}")),
+            FileId::ErsDep => FileHashId(format!("ers_dep_{year}")),
+            FileId::ErsPor => FileHashId(format!("ers_por_{year}")),
+            FileId::ErsTra => FileHashId(format!("ers_tra_{year}")),
+            FileId::Vms => FileHashId(format!("vms_{year}")),
+            FileId::AquaCultureRegister => FileHashId("aqua_culture_register".into()),
         }
     }
-}
-
-#[derive(Debug)]
-pub enum HashDiff {
-    Equal,
-    Changed,
-    Skipped,
 }
 
 impl AsRef<str> for FileHashId {

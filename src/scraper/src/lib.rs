@@ -24,6 +24,7 @@ mod error;
 mod fiskeridir;
 mod mattilsynet;
 mod ocean_climate;
+mod utils;
 mod weather;
 mod wrapped_http_client;
 
@@ -156,15 +157,25 @@ impl Scraper {
             .map(|url| fiskeridir_rs::ApiSource::RegisterVessels { url });
 
         let fiskeridir_arc = Arc::new(fiskeridir_source);
-        let landings_scraper =
-            LandingScraper::new(fiskeridir_arc.clone(), landing_sources.unwrap_or_default());
-        let ers_dca_scraper = ErsDcaScraper::new(fiskeridir_arc.clone(), ers_dca_sources);
-        let ers_dep_scraper = ErsDepScraper::new(fiskeridir_arc.clone(), ers_dep_sources);
-        let ers_por_scraper = ErsPorScraper::new(fiskeridir_arc.clone(), ers_por_sources);
-        let ers_tra_scraper = ErsTraScraper::new(fiskeridir_arc.clone(), ers_tra_sources);
-        let vms_scraper = VmsScraper::new(fiskeridir_arc.clone(), vms_sources);
-        let aqua_culture_register_scraper =
-            AquaCultureRegisterScraper::new(fiskeridir_arc.clone(), aqua_culture_register_source);
+        let landings_scraper = LandingScraper::new(
+            fiskeridir_arc.clone(),
+            landing_sources.unwrap_or_default(),
+            environment,
+        );
+        let ers_dca_scraper =
+            ErsDcaScraper::new(fiskeridir_arc.clone(), ers_dca_sources, environment);
+        let ers_dep_scraper =
+            ErsDepScraper::new(fiskeridir_arc.clone(), ers_dep_sources, environment);
+        let ers_por_scraper =
+            ErsPorScraper::new(fiskeridir_arc.clone(), ers_por_sources, environment);
+        let ers_tra_scraper =
+            ErsTraScraper::new(fiskeridir_arc.clone(), ers_tra_sources, environment);
+        let vms_scraper = VmsScraper::new(fiskeridir_arc.clone(), vms_sources, environment);
+        let aqua_culture_register_scraper = AquaCultureRegisterScraper::new(
+            fiskeridir_arc.clone(),
+            aqua_culture_register_source,
+            environment,
+        );
         let mattilsynet_scraper =
             MattilsynetScraper::new(config.mattilsynet_urls, config.mattilsynet_fishery_url);
         let register_vessels_scraper =

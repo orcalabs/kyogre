@@ -1,24 +1,33 @@
 use std::sync::Arc;
 
-use crate::{DataSource, Processor, ScraperError, ScraperId};
+use crate::{
+    chunks::add_in_chunks, utils::prefetch_and_scrape, DataSource, Processor, ScraperError,
+    ScraperId,
+};
 use async_trait::async_trait;
-use error_stack::Result;
+use error_stack::{Result, ResultExt};
 use fiskeridir_rs::FileSource;
-use kyogre_core::{FileHash, HashDiff};
-use tracing::{event, Level};
+use kyogre_core::FileId;
+use orca_core::Environment;
 
 use super::FiskeridirSource;
 
 pub struct VmsScraper {
     sources: Vec<FileSource>,
     fiskeridir_source: Arc<FiskeridirSource>,
+    environment: Environment,
 }
 
 impl VmsScraper {
-    pub fn new(fiskeridir_source: Arc<FiskeridirSource>, sources: Vec<FileSource>) -> VmsScraper {
+    pub fn new(
+        fiskeridir_source: Arc<FiskeridirSource>,
+        sources: Vec<FileSource>,
+        environment: Environment,
+    ) -> VmsScraper {
         VmsScraper {
             sources,
             fiskeridir_source,
+            environment,
         }
     }
 }
@@ -29,36 +38,19 @@ impl DataSource for VmsScraper {
         ScraperId::Vms
     }
     async fn scrape(&self, processor: &(dyn Processor)) -> Result<(), ScraperError> {
-        let closure = |ers_dca| processor.add_vms(ers_dca);
-
-        for source in &self.sources {
-            match self
-                .fiskeridir_source
-                .scrape_year_if_changed(FileHash::Vms, source, closure, 10000, Some(2023))
-                .await
-            {
-                Err(e) => event!(
-                    Level::ERROR,
-                    "failed to scrape vms for year: {}, err: {:?}",
-                    source.year(),
-                    e,
-                ),
-                Ok(HashDiff::Skipped) => {
-                    event!(Level::INFO, "skipping vms year: {}", source.year())
-                }
-                Ok(HashDiff::Changed) => event!(
-                    Level::INFO,
-                    "successfully scraped vms year: {}",
-                    source.year()
-                ),
-                Ok(HashDiff::Equal) => {
-                    event!(Level::INFO, "no changes for vms year: {}", source.year())
-                }
-            }
-            if let Err(e) = self.fiskeridir_source.fiskeridir_file.clean_download_dir() {
-                event!(Level::ERROR, "failed to clean download dir: {}", e);
-            }
-        }
-        Ok(())
+        prefetch_and_scrape(
+            self.environment,
+            self.fiskeridir_source.clone(),
+            self.sources.clone(),
+            FileId::Vms,
+            Some(2023),
+            |_, file| async move {
+                let data = file.into_deserialize().change_context(ScraperError)?;
+                add_in_chunks(|vms| processor.add_vms(vms), Box::new(data), 10000)
+                    .await
+                    .change_context(ScraperError)
+            },
+        )
+        .await
     }
 }
