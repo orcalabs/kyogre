@@ -1,4 +1,4 @@
-use std::{cmp::min, collections::HashMap};
+use std::{cmp::min, collections::HashMap, sync::Arc};
 
 use crate::*;
 use async_trait::async_trait;
@@ -6,6 +6,7 @@ use chrono::{DateTime, Utc};
 use error_stack::{Result, ResultExt};
 use machine::Schedule;
 use once_cell::sync::Lazy;
+use tokio::sync::{mpsc::channel, Mutex};
 use tracing::{event, Level};
 
 static TRIP_COMPUTATION_STEPS: Lazy<Vec<Box<dyn TripComputationStep>>> = Lazy::new(|| {
@@ -68,8 +69,10 @@ impl std::ops::Add<TripProcessingOutcome> for TripsReport {
 impl machine::State for TripsState {
     type SharedState = SharedState;
 
-    async fn run(&self, shared_state: &Self::SharedState) {
-        match run_state(shared_state).await {
+    async fn run(&self, shared_state: Self::SharedState) -> Self::SharedState {
+        let shared_state = Arc::new(shared_state);
+
+        match run_state(shared_state.clone()).await {
             Err(e) => event!(Level::ERROR, "failed to run trips pipeline: {:?}", e),
             Ok(r) => {
                 event!(
@@ -83,6 +86,17 @@ impl machine::State for TripsState {
                     r.num_failed,
                     r.num_reset
                 );
+            }
+        }
+
+        match Arc::into_inner(shared_state) {
+            Some(shared_state) => shared_state,
+            None => {
+                event!(
+                    Level::ERROR,
+                    "failed to run trips pipeline: shared_state returned had multiple references"
+                );
+                panic!()
             }
         }
     }
@@ -231,9 +245,18 @@ impl TripComputationStep for TripPrecisionStep {
     }
 }
 
-async fn run_state(shared_state: &SharedState) -> Result<TripsReport, TripPipelineError> {
-    let mut trips_report = TripsReport::default();
+enum MasterTask {
+    New(Vessel, TripProcessingOutcome, Option<TripSet>),
+    Unprocessed(Vessel, Vec<TripUpdate>),
+}
 
+enum WorkerTask {
+    New(Vessel),
+    Unprocessed(Vessel),
+    Done,
+}
+
+async fn run_state(shared_state: Arc<SharedState>) -> Result<TripsReport, TripPipelineError> {
     shared_state
         .trip_pipeline_inbound
         .update_preferred_trip_assemblers()
@@ -245,6 +268,10 @@ async fn run_state(shared_state: &SharedState) -> Result<TripsReport, TripPipeli
         .all_vessels()
         .await
         .change_context(TripPipelineError::DataPreparation)?;
+
+    if vessels.is_empty() {
+        return Ok(Default::default());
+    }
 
     let ports: HashMap<String, Port> = shared_state
         .trip_assembler_outbound_port
@@ -269,59 +296,161 @@ async fn run_state(shared_state: &SharedState) -> Result<TripsReport, TripPipeli
             .or_insert(vec![d]);
     }
 
-    let num_vessels = vessels.len();
-    for (i, v) in vessels.into_iter().enumerate() {
-        if i % 1000 == 0 && i != 0 {
-            event!(Level::INFO, "processed {}/{} vessels", i, num_vessels);
-        }
+    let ports = Arc::new(ports);
+    let dock_points = Arc::new(dock_points_map);
 
-        match process_vessel(shared_state, &v, &ports, &dock_points_map).await {
-            Ok((report, trips)) => {
+    let num_vessels = vessels.len();
+    let num_workers = min(num_vessels, shared_state.num_workers as usize);
+
+    let (master_tx, mut master_rx) = channel(10);
+    let (worker_tx, worker_rx) = channel(num_vessels);
+    let worker_rx = Arc::new(Mutex::new(worker_rx));
+
+    let mut workers = Vec::with_capacity(num_workers);
+
+    for _ in 0..num_workers {
+        let master_tx = master_tx.clone();
+        let worker_rx = worker_rx.clone();
+        let shared_state = shared_state.clone();
+        let ports = ports.clone();
+        let dock_points = dock_points.clone();
+
+        workers.push(tokio::spawn(async move {
+            while let Some(task) = { worker_rx.lock().await.recv().await } {
+                match task {
+                    WorkerTask::New(vessel) => {
+                        match process_vessel(&shared_state, &vessel, &ports, &dock_points).await {
+                            Ok((report, trips)) => {
+                                if let Err(e) =
+                                    master_tx.send(MasterTask::New(vessel, report, trips)).await
+                                {
+                                    event!(
+                                        Level::ERROR,
+                                        "failed to send message to channel, err: {:?}",
+                                        e
+                                    );
+                                }
+                            }
+                            Err(e) => event!(
+                                Level::ERROR,
+                                "failed to run trips pipeline for vessel: {}, err: {:?}",
+                                vessel.fiskeridir.id.0,
+                                e
+                            ),
+                        }
+                    }
+                    WorkerTask::Unprocessed(vessel) => {
+                        match process_unprocessed_trips(
+                            &shared_state,
+                            &vessel,
+                            &ports,
+                            &dock_points,
+                        )
+                        .await
+                        {
+                            Ok(updates) => {
+                                if let Err(e) = master_tx
+                                    .send(MasterTask::Unprocessed(vessel, updates))
+                                    .await
+                                {
+                                    event!(
+                                        Level::ERROR,
+                                        "failed to send message to channel, err: {:?}",
+                                        e
+                                    );
+                                }
+                            }
+                            Err(e) => event!(
+                                Level::ERROR,
+                                "failed to process unprocessed trips for vessel: {}, err: {:?}",
+                                vessel.fiskeridir.id.0,
+                                e
+                            ),
+                        }
+                    }
+                    WorkerTask::Done => return,
+                }
+            }
+        }));
+    }
+
+    for v in vessels {
+        worker_tx
+            .try_send(WorkerTask::New(v))
+            .change_context(TripPipelineError::Task)?;
+    }
+
+    let mut i = 0;
+    let mut trips_report = TripsReport::default();
+
+    while let Some(temp) = master_rx.recv().await {
+        match temp {
+            MasterTask::New(vessel, report, trips) => {
                 trips_report = trips_report + report;
+
                 if let Some(trips) = trips {
                     if let Err(e) = shared_state.trip_pipeline_inbound.add_trip_set(trips).await {
                         event!(
                             Level::ERROR,
                             "failed to store trips for vessel: {}, err: {:?}",
-                            v.fiskeridir.id.0,
+                            vessel.fiskeridir.id.0,
                             e
                         );
                     }
                 }
 
-                if let Err(e) =
-                    process_unprocessed_trips(shared_state, &v, &ports, &dock_points_map).await
-                {
+                if let Err(e) = worker_tx.try_send(WorkerTask::Unprocessed(vessel)) {
                     event!(
                         Level::ERROR,
-                        "failed to process unprocessed trips  for vessel: {}, err: {:?}",
-                        v.fiskeridir.id.0,
+                        "failed to send message to channel, err: {:?}",
                         e
                     );
+                }
+            }
+            MasterTask::Unprocessed(vessel, updates) => {
+                for update in updates {
+                    let trip_id = update.trip_id;
+                    if let Err(e) = shared_state.trip_pipeline_inbound.update_trip(update).await {
+                        event!(
+                            Level::ERROR,
+                            "failed to update trip_id: {}, err: {:?}",
+                            trip_id.0,
+                            e
+                        );
+                    }
                 }
 
                 if let Err(e) = shared_state
                     .trip_pipeline_inbound
-                    .refresh_detailed_trips(v.fiskeridir.id)
+                    .refresh_detailed_trips(vessel.fiskeridir.id)
                     .await
                 {
                     event!(
                         Level::ERROR,
                         "failed to refresh detailed trips for vessel: {}, err: {:?}",
-                        v.fiskeridir.id.0,
+                        vessel.fiskeridir.id.0,
                         e
                     );
                 }
-            }
-            Err(e) => {
-                event!(
-                    Level::ERROR,
-                    "failed to run trips pipeline for vessel: {}, err: {:?}",
-                    v.fiskeridir.id.0,
-                    e
-                );
+
+                i += 1;
+                if i % 1_000 == 0 {
+                    event!(Level::INFO, "processed {}/{} vessels", i, num_vessels);
+                }
+                if i == num_vessels {
+                    for _ in 0..num_workers {
+                        worker_tx
+                            .try_send(WorkerTask::Done)
+                            .change_context(TripPipelineError::Task)?;
+                    }
+                    break;
+                }
             }
         }
+    }
+
+    for w in workers {
+        w.await.change_context(TripPipelineError::Thread)?;
     }
 
     Ok(trips_report)
@@ -567,7 +696,7 @@ async fn process_unprocessed_trips(
     vessel: &Vessel,
     ports: &HashMap<String, Port>,
     dock_points: &HashMap<String, Vec<PortDockPoint>>,
-) -> Result<(), TripPipelineError> {
+) -> Result<Vec<TripUpdate>, TripPipelineError> {
     let mut trips = HashMap::new();
 
     for (i, step) in TRIP_COMPUTATION_STEPS.iter().enumerate() {
@@ -578,6 +707,8 @@ async fn process_unprocessed_trips(
                 .or_insert((trip, i));
         }
     }
+
+    let mut updates = Vec::with_capacity(trips.len());
 
     for (t, idx) in trips.into_values() {
         let mut unit = TripProcessingUnit {
@@ -622,26 +753,13 @@ async fn process_unprocessed_trips(
             unit = step.run(shared_state, vessel, unit).await?;
         }
 
-        let trip_update = TripUpdate {
+        updates.push(TripUpdate {
             trip_id: t.trip_id,
             precision: unit.precision_outcome,
             distance: unit.distance_output,
             position_layers: unit.trip_position_output,
-        };
-
-        if let Err(e) = shared_state
-            .trip_pipeline_inbound
-            .update_trip(trip_update)
-            .await
-        {
-            event!(
-                Level::ERROR,
-                "failed to update trip_id: {}, err: {:?}",
-                t.trip_id.0,
-                e
-            );
-        }
+        });
     }
 
-    Ok(())
+    Ok(updates)
 }

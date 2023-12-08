@@ -10,6 +10,7 @@ use vessel_benchmark::*;
 #[derive(Debug, Deserialize)]
 pub struct Settings {
     pub log_level: LogLevel,
+    pub num_workers: u32,
     pub telemetry: Option<TelemetrySettings>,
     pub postgres: PsqlSettings,
     pub meilisearch: Option<meilisearch::Settings>,

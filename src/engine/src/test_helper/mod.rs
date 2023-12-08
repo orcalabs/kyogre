@@ -233,6 +233,7 @@ pub async fn engine(adapter: PostgresAdapter, db_settings: &PsqlSettings) -> Fis
     ];
 
     let shared_state = SharedState::new(
+        2,
         db.clone(),
         db.clone(),
         db.clone(),

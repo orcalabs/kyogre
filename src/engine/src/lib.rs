@@ -83,6 +83,7 @@ pub enum Fishery {
 
 // TODO: change do Box<dyn Database> after (https://github.com/rust-lang/rust/issues/65991) resolves.
 pub struct SharedState {
+    pub num_workers: u32,
     pub ml_models_inbound: Box<dyn MLModelsInbound>,
     pub ml_models_outbound: Box<dyn MLModelsOutbound>,
     pub trip_assembler_outbound_port: Box<dyn TripAssemblerOutboundPort>,
@@ -141,6 +142,7 @@ impl SharedState {
     }
     #[allow(clippy::too_many_arguments)]
     pub fn new(
+        num_workers: u32,
         ml_models_inbound: Box<dyn MLModelsInbound>,
         ml_models_outbound: Box<dyn MLModelsOutbound>,
         trip_assembler_outbound_port: Box<dyn TripAssemblerOutboundPort>,
@@ -164,6 +166,7 @@ impl SharedState {
         trip_position_layers: Vec<Box<dyn TripPositionLayer>>,
     ) -> SharedState {
         SharedState {
+            num_workers,
             scraper,
             trip_assemblers,
             benchmarks,
