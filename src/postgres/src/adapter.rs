@@ -272,6 +272,15 @@ impl TestStorage for PostgresAdapter {}
 
 #[async_trait]
 impl TestHelperOutbound for PostgresAdapter {
+    async fn trip_assembler_log(&self) -> Vec<TripAssemblerLogEntry> {
+        self.trip_assembler_log_impl()
+            .await
+            .unwrap()
+            .into_iter()
+            .map(TripAssemblerLogEntry::try_from)
+            .collect::<Result<Vec<TripAssemblerLogEntry>, PostgresError>>()
+            .unwrap()
+    }
     async fn active_vessel_conflicts(&self) -> Vec<ActiveVesselConflict> {
         self.active_vessel_conflicts_impl()
             .await

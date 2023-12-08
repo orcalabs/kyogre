@@ -46,7 +46,11 @@ pub struct TripAssembly {
     pub trips: Vec<NewTrip>,
     pub conflict_strategy: TripsConflictStrategy,
     pub new_trip_calculation_time: DateTime<Utc>,
+    pub prior_trip_calculation_time: Option<DateTime<Utc>>,
     pub trip_assembler_id: TripAssemblerId,
+    pub conflict: Option<TripAssemblerConflict>,
+    pub new_trip_events: Vec<MinimalVesselEvent>,
+    pub prior_trip_events: Vec<MinimalVesselEvent>,
 }
 
 impl std::ops::Add<TripProcessingOutcome> for TripsReport {
@@ -477,6 +481,10 @@ async fn process_vessel(
             new_trip_calculation_time: trips.new_trip_calculation_time,
             trip_assembler_id: assembler_impl.assembler_id(),
             values: vec![],
+            conflict: trips.conflict,
+            new_trip_events: trips.new_trip_events,
+            prior_trip_events: trips.prior_trip_events,
+            prior_trip_calculation_time: trips.prior_trip_calculation_time,
         };
         for t in trips.trips {
             let mut unit = TripProcessingUnit {
@@ -536,6 +544,9 @@ async fn run_trip_assembler(
         .await
         .change_context(TripPipelineError::NewTripProcessing)?;
 
+    let conflict = timer.as_ref().and_then(|v| v.conflict.clone());
+    let prior_trip_calculation_time = timer.as_ref().map(|t| t.timestamp);
+
     let state = if let Some(timer) = timer {
         match (timer.conflict, timer.queued_reset) {
             (_, true) => AssemblerState::QueuedReset,
@@ -546,13 +557,15 @@ async fn run_trip_assembler(
         AssemblerState::NoPriorState
     };
 
-    let vessel_events = match state {
-        AssemblerState::Conflict(t) => {
+    let state_discriminant = AssemblerStateDiscriminants::from(&state);
+
+    let vessel_events = match &state {
+        AssemblerState::Conflict(c) => {
             new_vessel_events(
                 vessel.fiskeridir.id,
                 adapter,
                 relevant_event_types,
-                &t,
+                &c.timestamp,
                 Bound::Exclusive,
             )
             .await
@@ -562,7 +575,7 @@ async fn run_trip_assembler(
                 vessel.fiskeridir.id,
                 adapter,
                 relevant_event_types,
-                &t,
+                t,
                 Bound::Inclusive,
             )
             .await
@@ -571,6 +584,17 @@ async fn run_trip_assembler(
             all_vessel_events(vessel.fiskeridir.id, adapter, relevant_event_types).await
         }
     }?;
+
+    let new_trip_events = vessel_events
+        .new_vessel_events
+        .iter()
+        .map(MinimalVesselEvent::from)
+        .collect();
+    let prior_trip_events = vessel_events
+        .prior_trip_events
+        .iter()
+        .map(MinimalVesselEvent::from)
+        .collect();
 
     let trips = assembler
         .assemble(
@@ -581,13 +605,13 @@ async fn run_trip_assembler(
         .change_context(TripPipelineError::NewTripProcessing)?;
 
     if let Some(trips) = trips {
-        let conflict_strategy = match (state, trips.conflict_strategy) {
-            (AssemblerState::NoPriorState, Some(r)) | (AssemblerState::Normal(_), Some(r)) => r,
-            (AssemblerState::NoPriorState, None) | (AssemblerState::Normal(_), None) => {
-                TripsConflictStrategy::Error
-            }
-            (AssemblerState::Conflict(_), _) => TripsConflictStrategy::Replace,
-            (AssemblerState::QueuedReset, _) => TripsConflictStrategy::ReplaceAll,
+        let conflict_strategy = match (state_discriminant, trips.conflict_strategy) {
+            (AssemblerStateDiscriminants::NoPriorState, Some(r))
+            | (AssemblerStateDiscriminants::Normal, Some(r)) => r,
+            (AssemblerStateDiscriminants::NoPriorState, None)
+            | (AssemblerStateDiscriminants::Normal, None) => TripsConflictStrategy::Error,
+            (AssemblerStateDiscriminants::Conflict, _) => TripsConflictStrategy::Replace,
+            (AssemblerStateDiscriminants::QueuedReset, _) => TripsConflictStrategy::ReplaceAll,
         };
 
         Ok((
@@ -600,6 +624,10 @@ async fn run_trip_assembler(
                 conflict_strategy,
                 new_trip_calculation_time: trips.calculation_timer,
                 trip_assembler_id: assembler.assembler_id(),
+                prior_trip_calculation_time,
+                conflict,
+                new_trip_events,
+                prior_trip_events,
             }),
         ))
     } else {

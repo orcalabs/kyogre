@@ -6,7 +6,7 @@ use std::{
 use crate::{
     error::PostgresError,
     ers_por_set::ErsPorSet,
-    models::{Arrival, NewErsPor, NewErsPorCatch, TripAssemblerConflict},
+    models::{Arrival, NewErsPor, NewErsPorCatch, NewTripAssemblerConflict},
     PostgresAdapter,
 };
 use chrono::{DateTime, Utc};
@@ -58,7 +58,7 @@ impl PostgresAdapter {
             .change_context(PostgresError::Query)?;
 
         let len = inserted.len();
-        let mut conflicts = HashMap::<i64, TripAssemblerConflict>::with_capacity(len);
+        let mut conflicts = HashMap::<i64, NewTripAssemblerConflict>::with_capacity(len);
         let mut event_ids = Vec::with_capacity(len);
 
         for i in inserted {
@@ -66,9 +66,12 @@ impl PostgresAdapter {
                 conflicts
                     .entry(id)
                     .and_modify(|v| v.timestamp = min(v.timestamp, i.arrival_timestamp))
-                    .or_insert_with(|| TripAssemblerConflict {
-                        fiskeridir_vessel_id: id,
+                    .or_insert_with(|| NewTripAssemblerConflict {
+                        fiskeridir_vessel_id: FiskeridirVesselId(id),
                         timestamp: i.arrival_timestamp,
+                        vessel_event_id: Some(event_id),
+                        event_type: VesselEventType::ErsPor,
+                        vessel_event_timestamp: i.arrival_timestamp,
                     });
                 event_ids.push(event_id);
             }

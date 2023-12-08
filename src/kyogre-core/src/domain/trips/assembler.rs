@@ -1,15 +1,16 @@
 use crate::{
-    NewTrip, PrecisionOutcome, RelevantEventType, TripAssemblerError, TripAssemblerId,
-    TripPrecisionError, TripPrecisionOutboundPort, TripProcessingUnit, TripsConflictStrategy,
-    Vessel, VesselEventDetailed,
+    NewTrip, PrecisionOutcome, RelevantEventType, TripAssemblerConflict, TripAssemblerError,
+    TripAssemblerId, TripPrecisionError, TripPrecisionOutboundPort, TripProcessingUnit,
+    TripsConflictStrategy, Vessel, VesselEventDetailed,
 };
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use error_stack::Result;
+use strum::EnumDiscriminants;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, EnumDiscriminants)]
 pub enum AssemblerState {
-    Conflict(DateTime<Utc>),
+    Conflict(TripAssemblerConflict),
     NoPriorState,
     Normal(DateTime<Utc>),
     QueuedReset,

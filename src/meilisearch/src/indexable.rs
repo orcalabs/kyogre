@@ -222,16 +222,15 @@ pub trait Indexable {
 
         match &task {
             // Should never happen as we wait for completion
-            Task::Enqueued { content: _ } | Task::Processing { content: _ } => {
-                Err(report!(MeilisearchError::Delete)
-                    .attach_printable(format!("failed to delete index: {task:?}")))
+            Task::Enqueued { .. } | Task::Processing { .. } => {
+                unreachable!();
             }
             Task::Failed { content } => match content.error.error_code {
                 ErrorCode::IndexNotFound => Ok(()),
                 _ => Err(report!(MeilisearchError::Delete)
                     .attach_printable(format!("failed to delete index: {task:?}"))),
             },
-            Task::Succeeded { content: _ } => Ok(()),
+            Task::Succeeded { .. } => Ok(()),
         }
     }
 }

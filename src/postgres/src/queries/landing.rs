@@ -14,7 +14,7 @@ use unnest_insert::{UnnestInsert, UnnestInsertReturning};
 
 use crate::landing_set::PreparedLandingSet;
 use crate::models::NewLandingEntry;
-use crate::models::TripAssemblerConflict;
+use crate::models::NewTripAssemblerConflict;
 use crate::{
     error::PostgresError,
     landing_set::LandingSet,
@@ -260,7 +260,7 @@ WHERE
         let mut existing_landing_ids = HashSet::new();
         let mut inserted_landing_ids = HashSet::new();
         let mut vessel_event_ids = Vec::new();
-        let mut trip_assembler_conflicts = HashMap::<i64, TripAssemblerConflict>::new();
+        let mut trip_assembler_conflicts = HashMap::<i64, NewTripAssemblerConflict>::new();
 
         let mut landing_set = LandingSet::with_capacity(CHUNK_SIZE, data_year);
         for (i, item) in landings.enumerate() {
@@ -342,7 +342,7 @@ WHERE
         set: PreparedLandingSet,
         inserted_landing_ids: &mut HashSet<String>,
         vessel_event_ids: &mut Vec<i64>,
-        trip_assembler_conflicts: &mut HashMap<i64, TripAssemblerConflict>,
+        trip_assembler_conflicts: &mut HashMap<i64, NewTripAssemblerConflict>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
     ) -> Result<(), PostgresError> {
         self.add_delivery_point_ids(set.delivery_points, tx).await?;
@@ -379,7 +379,7 @@ WHERE
         mut landings: Vec<NewLanding>,
         inserted_landing_ids: &mut HashSet<String>,
         vessel_event_ids: &mut Vec<i64>,
-        trip_assembler_conflicts: &mut HashMap<i64, TripAssemblerConflict>,
+        trip_assembler_conflicts: &mut HashMap<i64, NewTripAssemblerConflict>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
     ) -> Result<(), PostgresError> {
         landings.retain(|l| !inserted_landing_ids.contains(&l.landing_id));
@@ -419,12 +419,15 @@ RETURNING
                 trip_assembler_conflicts
                     .entry(id)
                     .and_modify(|v| v.timestamp = min(v.timestamp, i.landing_timestamp))
-                    .or_insert_with(|| TripAssemblerConflict {
-                        fiskeridir_vessel_id: id,
+                    .or_insert_with(|| NewTripAssemblerConflict {
+                        fiskeridir_vessel_id: FiskeridirVesselId(id),
                         timestamp: Utc.from_utc_datetime(&NaiveDateTime::new(
                             i.landing_timestamp.date_naive(),
                             NaiveTime::from_hms_opt(0, 0, 0).unwrap(),
                         )),
+                        vessel_event_id: Some(event_id),
+                        event_type: VesselEventType::Landing,
+                        vessel_event_timestamp: i.landing_timestamp,
                     });
                 vessel_event_ids.push(event_id);
             }
@@ -436,12 +439,15 @@ RETURNING
                 trip_assembler_conflicts
                     .entry(id)
                     .and_modify(|v| v.timestamp = min(v.timestamp, d.landing_timestamp))
-                    .or_insert_with(|| TripAssemblerConflict {
-                        fiskeridir_vessel_id: id,
+                    .or_insert_with(|| NewTripAssemblerConflict {
+                        fiskeridir_vessel_id: FiskeridirVesselId(id),
                         timestamp: Utc.from_utc_datetime(&NaiveDateTime::new(
                             d.landing_timestamp.date_naive(),
                             NaiveTime::from_hms_opt(0, 0, 0).unwrap(),
                         )),
+                        vessel_event_id: None,
+                        event_type: VesselEventType::Landing,
+                        vessel_event_timestamp: d.landing_timestamp,
                     });
             }
         }
@@ -487,7 +493,7 @@ WHERE
     pub(crate) async fn delete_removed_landings<'a>(
         &'a self,
         existing_landing_ids: &[String],
-        trip_assembler_conflicts: &mut HashMap<i64, TripAssemblerConflict>,
+        trip_assembler_conflicts: &mut HashMap<i64, NewTripAssemblerConflict>,
         data_year: u32,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
     ) -> Result<(), PostgresError> {
@@ -515,12 +521,15 @@ RETURNING
                 trip_assembler_conflicts
                     .entry(id)
                     .and_modify(|v| v.timestamp = min(v.timestamp, d.landing_timestamp))
-                    .or_insert_with(|| TripAssemblerConflict {
-                        fiskeridir_vessel_id: id,
+                    .or_insert_with(|| NewTripAssemblerConflict {
+                        fiskeridir_vessel_id: FiskeridirVesselId(id),
                         timestamp: Utc.from_utc_datetime(&NaiveDateTime::new(
                             d.landing_timestamp.date_naive(),
                             NaiveTime::from_hms_opt(0, 0, 0).unwrap(),
                         )),
+                        vessel_event_id: None,
+                        event_type: VesselEventType::Landing,
+                        vessel_event_timestamp: d.landing_timestamp,
                     });
             }
         }
