@@ -1,8 +1,9 @@
 use crate::{
     error::PostgresError,
     models::{
-        CurrentTrip, NewTripReturning, Trip, TripAisVmsPosition, TripAssemblerConflict,
-        TripCalculationTimer, TripDetailed, TripPrunedAisVmsPosition,
+        CurrentTrip, NewTripAssemblerConflict, NewTripAssemblerLogEntry, NewTripReturning, Trip,
+        TripAisVmsPosition, TripAssemblerLogEntry, TripCalculationTimer, TripDetailed,
+        TripPrunedAisVmsPosition,
     },
     PostgresAdapter,
 };
@@ -27,6 +28,31 @@ use unnest_insert::{UnnestInsert, UnnestInsertReturning};
 use super::opt_float_to_decimal;
 
 impl PostgresAdapter {
+    pub(crate) async fn trip_assembler_log_impl(
+        &self,
+    ) -> Result<Vec<TripAssemblerLogEntry>, PostgresError> {
+        sqlx::query_as!(
+            TripAssemblerLogEntry,
+            r#"
+SELECT
+    trip_assembler_log_id,
+    fiskeridir_vessel_id,
+    calculation_timer_prior,
+    calculation_timer_post,
+    "conflict",
+    conflict_vessel_event_timestamp,
+    conflict_vessel_event_id,
+    conflict_vessel_event_type_id AS "conflict_vessel_event_type_id: VesselEventType",
+    prior_trip_vessel_events::TEXT as "prior_trip_vessel_events!",
+    new_vessel_events::TEXT as "new_vessel_events!"
+FROM
+    trip_assembler_logs
+            "#
+        )
+        .fetch_all(&self.pool)
+        .await
+        .change_context(PostgresError::Query)
+    }
     pub(crate) async fn add_trip_position<'a>(
         &self,
         trip_id: TripId,
@@ -1231,7 +1257,10 @@ SELECT
     fiskeridir_vessel_id,
     timer AS "timestamp",
     queued_reset AS "queued_reset!",
-    "conflict"
+    "conflict",
+    conflict_vessel_event_id,
+    conflict_vessel_event_type_id AS "conflict_event_type: VesselEventType",
+    conflict_vessel_event_timestamp
 FROM
     trip_calculation_timers
 WHERE
@@ -1244,6 +1273,50 @@ WHERE
         .fetch_optional(&self.pool)
         .await
         .change_context(PostgresError::Query)
+    }
+
+    pub(crate) async fn add_new_trip_assembler_log_entry<'a>(
+        &'a self,
+        batch: NewTripAssemblerLogEntry,
+        tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
+    ) -> Result<(), PostgresError> {
+        let prior_trip_vessel_events = serde_json::to_value(&batch.prior_trip_vessel_events)
+            .change_context(PostgresError::DataConversion)?;
+        let new_vessel_events = serde_json::to_value(&batch.new_vessel_events)
+            .change_context(PostgresError::DataConversion)?;
+
+        sqlx::query!(
+            r#"
+INSERT INTO
+    trip_assembler_logs (
+        fiskeridir_vessel_id,
+        calculation_timer_prior,
+        calculation_timer_post,
+        "conflict",
+        conflict_vessel_event_timestamp,
+        conflict_vessel_event_id,
+        conflict_vessel_event_type_id,
+        prior_trip_vessel_events,
+        new_vessel_events
+    )
+VALUES
+    ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            "#,
+            batch.fiskeridir_vessel_id,
+            batch.calculation_timer_prior_to_batch,
+            batch.calculation_timer_post_batch,
+            batch.conflict,
+            batch.conflict_vessel_event_timestamp,
+            batch.conflict_vessel_event_id,
+            batch.conflict_vessel_event_type_id.map(|v| v as i32),
+            prior_trip_vessel_events,
+            new_vessel_events,
+        )
+        .execute(&mut **tx)
+        .await
+        .change_context(PostgresError::Query)?;
+
+        Ok(())
     }
 
     pub(crate) async fn add_trip_set_impl(&self, value: TripSet) -> Result<(), PostgresError> {
@@ -1270,8 +1343,25 @@ WHERE
         let earliest_trip_start = earliest_trip_period.start();
         let earliest_trip_period = PgRange::from(&earliest_trip_period);
 
+        let batch = NewTripAssemblerLogEntry {
+            fiskeridir_vessel_id: value.fiskeridir_vessel_id.0,
+            calculation_timer_prior_to_batch: value.prior_trip_calculation_time,
+            calculation_timer_post_batch: value.new_trip_calculation_time,
+            conflict: value.conflict.as_ref().map(|v| v.timestamp),
+            conflict_vessel_event_timestamp: value
+                .conflict
+                .as_ref()
+                .map(|v| v.vessel_event_timestamp),
+            conflict_vessel_event_id: value.conflict.as_ref().and_then(|v| v.vessel_event_id),
+            conflict_vessel_event_type_id: value.conflict.as_ref().map(|v| v.event_type),
+            prior_trip_vessel_events: value.prior_trip_events,
+            new_vessel_events: value.new_trip_events,
+        };
+
         let mut tx = self.begin().await?;
 
+        self.add_new_trip_assembler_log_entry(batch, &mut tx)
+            .await?;
         // We assume that trip assemblers process all events and conflicts on each run and can
         // therefore set conflict to NULL.
         // Additionally, we assume that no data that can produce conflicts are added concurrently
@@ -1287,7 +1377,10 @@ UPDATE
 SET
     timer = excluded.timer,
     queued_reset = FALSE,
-    "conflict" = NULL
+    "conflict" = NULL,
+    conflict_vessel_event_type_id = NULL,
+    conflict_vessel_event_id = NULL,
+    conflict_vessel_event_timestamp = NULL
             "#,
             value.fiskeridir_vessel_id.0,
             value.trip_assembler_id as i32,
@@ -1870,41 +1963,77 @@ WHERE
 
     pub(crate) async fn add_trip_assembler_conflicts<'a>(
         &'a self,
-        conflicts: Vec<TripAssemblerConflict>,
-        event_type: TripAssemblerId,
+        conflicts: Vec<NewTripAssemblerConflict>,
+        assembler_id: TripAssemblerId,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
     ) -> Result<(), PostgresError> {
         let len = conflicts.len();
         let mut vessel_id = Vec::with_capacity(len);
         let mut timestamp = Vec::with_capacity(len);
+        let mut vessel_event_id = Vec::with_capacity(len);
+        let mut event_type = Vec::with_capacity(len);
+        let mut vessel_event_timestamp = Vec::with_capacity(len);
 
         for c in conflicts {
-            vessel_id.push(c.fiskeridir_vessel_id);
+            vessel_id.push(c.fiskeridir_vessel_id.0);
             timestamp.push(c.timestamp);
+            vessel_event_id.push(c.vessel_event_id);
+            event_type.push(c.event_type as i32);
+            vessel_event_timestamp.push(c.vessel_event_timestamp);
         }
 
         sqlx::query!(
             r#"
 UPDATE trip_calculation_timers
 SET
-    "conflict" = q.timestamp
+    "conflict" = q.timestamp,
+    conflict_vessel_event_id = q.vessel_event_id,
+    conflict_vessel_event_type_id = q.vessel_event_type,
+    conflict_vessel_event_timestamp = q.vessel_event_timestamp
 FROM
     (
         SELECT
             t.fiskeridir_vessel_id,
-            u.timestamp
+            u.timestamp,
+            u.vessel_event_id,
+            u.vessel_event_type,
+            u.vessel_event_timestamp
         FROM
-            UNNEST($1::BIGINT[], $2::TIMESTAMPTZ[]) u (fiskeridir_vessel_id, "timestamp")
+            UNNEST(
+                $1::BIGINT[],
+                $2::TIMESTAMPTZ[],
+                $3::BIGINT[],
+                $4::INT[],
+                $5::TIMESTAMPTZ[]
+            ) u (
+                fiskeridir_vessel_id,
+                "timestamp",
+                vessel_event_id,
+                vessel_event_type,
+                vessel_event_timestamp
+            )
             INNER JOIN trip_calculation_timers AS t ON t.fiskeridir_vessel_id = u.fiskeridir_vessel_id
-            AND t.timer >= u.timestamp
-            AND t.trip_assembler_id = $3::INT
+            AND (
+                (
+                    t."conflict" IS NOT NULL
+                    AND t."conflict" > u.timestamp
+                )
+                OR (
+                    t."conflict" IS NULL
+                    AND t.timer >= u.timestamp
+                )
+            )
+            AND t.trip_assembler_id = $6::INT
     ) q
 WHERE
     q.fiskeridir_vessel_id = trip_calculation_timers.fiskeridir_vessel_id
             "#,
             &vessel_id,
             &timestamp,
-            event_type as i32
+            &vessel_event_id as _,
+            &event_type,
+            &vessel_event_timestamp,
+            assembler_id as i32
         )
         .execute(&mut **tx)
         .await

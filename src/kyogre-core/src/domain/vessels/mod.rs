@@ -107,6 +107,12 @@ pub enum VesselEventType {
     Haul = 6,
 }
 
+impl From<VesselEventType> for i32 {
+    fn from(value: VesselEventType) -> Self {
+        value as i32
+    }
+}
+
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum RelevantEventType {
     Landing,

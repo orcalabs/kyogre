@@ -1,0 +1,19 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nUPDATE trip_calculation_timers\nSET\n    \"conflict\" = q.timestamp,\n    conflict_vessel_event_id = q.vessel_event_id,\n    conflict_vessel_event_type_id = q.vessel_event_type,\n    conflict_vessel_event_timestamp = q.vessel_event_timestamp\nFROM\n    (\n        SELECT\n            t.fiskeridir_vessel_id,\n            u.timestamp,\n            u.vessel_event_id,\n            u.vessel_event_type,\n            u.vessel_event_timestamp\n        FROM\n            UNNEST(\n                $1::BIGINT[],\n                $2::TIMESTAMPTZ[],\n                $3::BIGINT[],\n                $4::INT[],\n                $5::TIMESTAMPTZ[]\n            ) u (\n                fiskeridir_vessel_id,\n                \"timestamp\",\n                vessel_event_id,\n                vessel_event_type,\n                vessel_event_timestamp\n            )\n            INNER JOIN trip_calculation_timers AS t ON t.fiskeridir_vessel_id = u.fiskeridir_vessel_id\n            AND (\n                (\n                    t.\"conflict\" IS NOT NULL\n                    AND t.\"conflict\" > u.timestamp\n                )\n                OR (\n                    t.\"conflict\" IS NULL\n                    AND t.timer >= u.timestamp\n                )\n            )\n            AND t.trip_assembler_id = $6::INT\n    ) q\nWHERE\n    q.fiskeridir_vessel_id = trip_calculation_timers.fiskeridir_vessel_id\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8Array",
+        "TimestamptzArray",
+        "Int8Array",
+        "Int4Array",
+        "TimestamptzArray",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "5daa04a442f2cf8be449ad0af8845cbc4caedb8aaf268f4c41f131500b202164"
+}

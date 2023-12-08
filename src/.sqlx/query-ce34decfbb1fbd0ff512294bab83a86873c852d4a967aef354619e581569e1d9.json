@@ -1,0 +1,74 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    trip_assembler_log_id,\n    fiskeridir_vessel_id,\n    calculation_timer_prior,\n    calculation_timer_post,\n    \"conflict\",\n    conflict_vessel_event_timestamp,\n    conflict_vessel_event_id,\n    conflict_vessel_event_type_id AS \"conflict_vessel_event_type_id: VesselEventType\",\n    prior_trip_vessel_events::TEXT as \"prior_trip_vessel_events!\",\n    new_vessel_events::TEXT as \"new_vessel_events!\"\nFROM\n    trip_assembler_logs\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "trip_assembler_log_id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "fiskeridir_vessel_id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 2,
+        "name": "calculation_timer_prior",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 3,
+        "name": "calculation_timer_post",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 4,
+        "name": "conflict",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 5,
+        "name": "conflict_vessel_event_timestamp",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 6,
+        "name": "conflict_vessel_event_id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 7,
+        "name": "conflict_vessel_event_type_id: VesselEventType",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 8,
+        "name": "prior_trip_vessel_events!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 9,
+        "name": "new_vessel_events!",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      false,
+      true,
+      true,
+      true,
+      true,
+      null,
+      null
+    ]
+  },
+  "hash": "ce34decfbb1fbd0ff512294bab83a86873c852d4a967aef354619e581569e1d9"
+}

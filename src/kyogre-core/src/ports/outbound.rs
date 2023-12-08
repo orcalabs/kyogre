@@ -313,4 +313,5 @@ pub trait TestHelperOutbound: Send + Sync {
     async fn port(&self, port_id: &str) -> Option<Port>;
     async fn delivery_point(&self, id: &DeliveryPointId) -> Option<DeliveryPoint>;
     async fn dock_points_of_port(&self, port_id: &str) -> Vec<PortDockPoint>;
+    async fn trip_assembler_log(&self) -> Vec<TripAssemblerLogEntry>;
 }

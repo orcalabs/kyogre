@@ -4,6 +4,135 @@ use engine::*;
 use kyogre_core::*;
 
 #[tokio::test]
+async fn test_logs_conflicts() {
+    test(|helper, builder| async move {
+        let departure = Utc.timestamp_opt(10, 0).unwrap();
+        let arrival = Utc.timestamp_opt(20, 0).unwrap();
+        let departure2 = Utc.timestamp_opt(30, 0).unwrap();
+        let arrival2 = Utc.timestamp_opt(40, 0).unwrap();
+
+        builder
+            .vessels(1)
+            .dep(1)
+            .modify(|v| v.dep.set_departure_timestamp(departure2))
+            .por(1)
+            .modify(|v| v.por.set_arrival_timestamp(arrival2))
+            .new_cycle()
+            .dep(1)
+            .modify(|v| v.dep.set_departure_timestamp(departure))
+            .por(1)
+            .modify(|v| v.por.set_arrival_timestamp(arrival))
+            .build()
+            .await;
+
+        let mut log = helper.adapter().trip_assembler_log().await;
+        assert_eq!(log.len(), 2);
+        let log = log.pop().unwrap();
+        assert!(log.is_conflict());
+        assert_eq!(log.conflict.unwrap().timestamp(), departure.timestamp());
+        assert_eq!(
+            log.conflict_vessel_event_timestamp.unwrap().timestamp(),
+            departure.timestamp()
+        );
+        assert_eq!(
+            log.conflict_vessel_event_type_id.unwrap(),
+            VesselEventType::ErsDep,
+        );
+        assert_eq!(log.conflict_vessel_event_id.unwrap(), 3);
+    })
+    .await
+}
+#[tokio::test]
+async fn test_logs_actions() {
+    test(|helper, builder| async move {
+        let state = builder
+            .vessels(1)
+            .dep(1)
+            .por(1)
+            .new_cycle()
+            .dep(1)
+            .por(1)
+            .build()
+            .await;
+
+        let mut log = helper.adapter().trip_assembler_log().await;
+        assert_eq!(log.len(), 2);
+        let log2 = log.pop().unwrap();
+        let log1 = log.pop().unwrap();
+
+        assert!(log1.calculation_timer_prior.is_none());
+        assert!(!log1.is_conflict());
+        assert!(log1.prior_trip_vessel_events.is_empty());
+        assert_eq!(log1.new_vessel_events.len(), 2);
+
+        assert_eq!(log1.new_vessel_events[0].vessel_event_id, 1);
+        assert_eq!(
+            log1.new_vessel_events[0].event_type,
+            VesselEventType::ErsDep
+        );
+        assert_eq!(
+            log1.new_vessel_events[0].timestamp.timestamp(),
+            state.dep[0].timestamp.timestamp()
+        );
+        assert_eq!(log1.new_vessel_events[1].vessel_event_id, 2);
+        assert_eq!(
+            log1.new_vessel_events[1].event_type,
+            VesselEventType::ErsPor
+        );
+        assert_eq!(
+            log1.new_vessel_events[1].timestamp.timestamp(),
+            state.por[0].timestamp.timestamp()
+        );
+
+        assert!(log2.calculation_timer_prior.is_some());
+        assert!(!log2.is_conflict());
+        assert_eq!(log2.prior_trip_vessel_events.len(), 2);
+
+        assert_eq!(log2.prior_trip_vessel_events[0].vessel_event_id, 1);
+        assert_eq!(
+            log2.prior_trip_vessel_events[0].event_type,
+            VesselEventType::ErsDep
+        );
+        assert_eq!(
+            log2.prior_trip_vessel_events[0].timestamp.timestamp(),
+            state.dep[0].timestamp.timestamp()
+        );
+
+        assert_eq!(log2.prior_trip_vessel_events[1].vessel_event_id, 2);
+        assert_eq!(
+            log2.prior_trip_vessel_events[1].event_type,
+            VesselEventType::ErsPor
+        );
+        assert_eq!(
+            log2.prior_trip_vessel_events[1].timestamp.timestamp(),
+            state.por[0].timestamp.timestamp()
+        );
+
+        assert_eq!(log2.new_vessel_events.len(), 2);
+        assert_eq!(log2.new_vessel_events[0].vessel_event_id, 3);
+        assert_eq!(
+            log2.new_vessel_events[0].event_type,
+            VesselEventType::ErsDep
+        );
+        assert_eq!(
+            log2.new_vessel_events[0].timestamp.timestamp(),
+            state.dep[1].timestamp.timestamp()
+        );
+
+        assert_eq!(log2.new_vessel_events[1].vessel_event_id, 4);
+        assert_eq!(
+            log2.new_vessel_events[1].event_type,
+            VesselEventType::ErsPor
+        );
+        assert_eq!(
+            log2.new_vessel_events[1].timestamp.timestamp(),
+            state.por[1].timestamp.timestamp()
+        );
+    })
+    .await;
+}
+
+#[tokio::test]
 async fn test_produces_new_trips_without_replacing_existing_ones() {
     test(|_helper, builder| async move {
         let state = builder

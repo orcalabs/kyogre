@@ -31,6 +31,36 @@ pub struct Trip {
     pub end_port_code: Option<String>,
 }
 
+#[derive(Debug, Clone)]
+pub struct TripAssemblerLogEntry {
+    pub trip_assembler_log_id: u64,
+    pub vessel_id: FiskeridirVesselId,
+    pub calculation_timer_prior: Option<DateTime<Utc>>,
+    pub calculation_timer_post: DateTime<Utc>,
+    pub conflict: Option<DateTime<Utc>>,
+    pub conflict_vessel_event_timestamp: Option<DateTime<Utc>>,
+    pub conflict_vessel_event_id: Option<u64>,
+    pub conflict_vessel_event_type_id: Option<VesselEventType>,
+    pub prior_trip_vessel_events: Vec<MinimalVesselEvent>,
+    pub new_vessel_events: Vec<MinimalVesselEvent>,
+}
+
+impl TripAssemblerLogEntry {
+    pub fn is_conflict(&self) -> bool {
+        self.conflict.is_some()
+            && self.conflict_vessel_event_timestamp.is_some()
+            && self.conflict_vessel_event_type_id.is_some()
+            && self.conflict_vessel_event_id.is_some()
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MinimalVesselEvent {
+    pub vessel_event_id: u64,
+    pub timestamp: DateTime<Utc>,
+    pub event_type: VesselEventType,
+}
+
 #[derive(Debug)]
 pub struct TripSet {
     pub fiskeridir_vessel_id: FiskeridirVesselId,
@@ -38,6 +68,10 @@ pub struct TripSet {
     pub new_trip_calculation_time: DateTime<Utc>,
     pub trip_assembler_id: TripAssemblerId,
     pub values: Vec<TripProcessingUnit>,
+    pub conflict: Option<TripAssemblerConflict>,
+    pub new_trip_events: Vec<MinimalVesselEvent>,
+    pub prior_trip_events: Vec<MinimalVesselEvent>,
+    pub prior_trip_calculation_time: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug)]
@@ -216,10 +250,14 @@ impl From<TripAssemblerId> for i32 {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct TripAssemblerConflict {
-    pub fiskeridir_vessel_id: FiskeridirVesselId,
-    pub timestamp: DateTime<Utc>,
+impl From<&VesselEventDetailed> for MinimalVesselEvent {
+    fn from(value: &VesselEventDetailed) -> Self {
+        MinimalVesselEvent {
+            vessel_event_id: value.event_id,
+            timestamp: value.timestamp,
+            event_type: value.event_type,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -377,7 +415,15 @@ pub struct TripCalculationTimer {
     pub timestamp: DateTime<Utc>,
     pub fiskeridir_vessel_id: FiskeridirVesselId,
     pub queued_reset: bool,
-    pub conflict: Option<DateTime<Utc>>,
+    pub conflict: Option<TripAssemblerConflict>,
+}
+
+#[derive(Debug, Clone)]
+pub struct TripAssemblerConflict {
+    pub timestamp: DateTime<Utc>,
+    pub vessel_event_timestamp: DateTime<Utc>,
+    pub vessel_event_id: Option<i64>,
+    pub event_type: VesselEventType,
 }
 
 impl Trip {
