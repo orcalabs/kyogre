@@ -8,7 +8,7 @@ use async_trait::async_trait;
 use error_stack::{report, Result, ResultExt};
 use futures::{future::BoxFuture, FutureExt};
 use kyogre_core::{running_in_test, MeilisearchSource};
-use meilisearch_sdk::{Index, PaginationSetting, Selectors, TaskInfo};
+use meilisearch_sdk::{ErrorCode, Index, PaginationSetting, Selectors, Task, TaskInfo};
 use serde::{de::DeserializeOwned, Serialize};
 use strum::IntoEnumIterator;
 use tracing::{event, Level};
@@ -220,11 +220,18 @@ pub trait Indexable {
             .await
             .change_context(MeilisearchError::Delete)?;
 
-        if task.is_success() {
-            Ok(())
-        } else {
-            Err(report!(MeilisearchError::Delete)
-                .attach_printable(format!("failed to delete index: {task:?}")))
+        match &task {
+            // Should never happen as we wait for completion
+            Task::Enqueued { content: _ } | Task::Processing { content: _ } => {
+                Err(report!(MeilisearchError::Delete)
+                    .attach_printable(format!("failed to delete index: {task:?}")))
+            }
+            Task::Failed { content } => match content.error.error_code {
+                ErrorCode::IndexNotFound => Ok(()),
+                _ => Err(report!(MeilisearchError::Delete)
+                    .attach_printable(format!("failed to delete index: {task:?}"))),
+            },
+            Task::Succeeded { content: _ } => Ok(()),
         }
     }
 }
