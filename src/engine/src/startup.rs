@@ -65,7 +65,6 @@ impl App {
             .unwrap();
 
         let benchmarks = settings.benchmarks();
-        let haul_distributors = settings.haul_distributors();
         let trip_distancer = settings.trip_distancer();
         let ml_models = settings.ml_models();
         let trip_position_layers = settings.trip_position_layers();
@@ -91,7 +90,6 @@ impl App {
             Some(Box::new(scraper)),
             trip_assemblers,
             benchmarks,
-            haul_distributors,
             trip_distancer,
             ml_models,
             trip_position_layers,

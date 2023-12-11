@@ -7,7 +7,6 @@ use serde::Deserialize;
 use strum::EnumDiscriminants;
 
 mod error;
-mod haul_distributor;
 mod ml_models;
 mod trip_assembler;
 mod trip_distancer;
@@ -18,7 +17,6 @@ pub mod startup;
 pub mod states;
 pub mod test_helper;
 
-pub use haul_distributor::*;
 pub use ml_models::*;
 pub use settings::*;
 pub use startup::*;
@@ -101,7 +99,6 @@ pub struct SharedState {
     pub scraper: Option<Box<dyn Scraper>>,
     pub trip_assemblers: Vec<Box<dyn TripAssembler>>,
     pub benchmarks: Vec<Box<dyn VesselBenchmark>>,
-    pub haul_distributors: Vec<Box<dyn HaulDistributor>>,
     pub trip_distancer: Box<dyn TripDistancer>,
     pub ml_models: Vec<Box<dyn MLModel>>,
     pub trip_position_layers: Vec<Box<dyn TripPositionLayer>>,
@@ -160,7 +157,6 @@ impl SharedState {
         scraper: Option<Box<dyn Scraper>>,
         trip_assemblers: Vec<Box<dyn TripAssembler>>,
         benchmarks: Vec<Box<dyn VesselBenchmark>>,
-        haul_distributors: Vec<Box<dyn HaulDistributor>>,
         trip_distancer: Box<dyn TripDistancer>,
         ml_models: Vec<Box<dyn MLModel>>,
         trip_position_layers: Vec<Box<dyn TripPositionLayer>>,
@@ -170,7 +166,6 @@ impl SharedState {
             scraper,
             trip_assemblers,
             benchmarks,
-            haul_distributors,
             trip_distancer,
             trip_assembler_outbound_port,
             trips_precision_outbound_port,

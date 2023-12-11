@@ -164,7 +164,7 @@ WHERE
         OR h.period && ANY ($1)
     )
     AND (
-        $2::TEXT[] IS NULL
+        $2::TEXT [] IS NULL
         OR h.catch_locations && $2
     )
     AND (
@@ -343,10 +343,14 @@ FROM
     hauls h
     LEFT JOIN hauls_matrix m ON h.haul_id = m.haul_id
 WHERE
-    m.haul_distributor_id IS NULL
+    (
+        m.haul_distribution_status IS NULL
+        OR m.haul_distribution_status = $1
+    )
     AND h.total_living_weight > 0
-    AND h.fiskeridir_vessel_id = $1
+    AND h.fiskeridir_vessel_id = $2
             "#,
+            ProcessingStatus::Unprocessed as i32,
             vessel_id.0,
         )
         .fetch_all(&self.pool)
@@ -477,13 +481,13 @@ WHERE
         let mut haul_id = Vec::with_capacity(len);
         let mut catch_location = Vec::with_capacity(len);
         let mut factor = Vec::with_capacity(len);
-        let mut distributor_id = Vec::with_capacity(len);
+        let mut status = Vec::with_capacity(len);
 
         for v in values {
             haul_id.push(v.haul_id.0);
             catch_location.push(v.catch_location.into_inner());
             factor.push(float_to_decimal(v.factor).change_context(PostgresError::DataConversion)?);
-            distributor_id.push(v.distributor_id as i32);
+            status.push(v.status as i32);
         }
 
         let mut tx = self.begin().await?;
@@ -508,7 +512,7 @@ FROM
             u.haul_id,
             ARRAY_AGG(DISTINCT u.catch_location) AS catch_locations
         FROM
-            UNNEST($1::BIGINT[], $2::TEXT[]) u (haul_id, catch_location)
+            UNNEST($1::BIGINT[], $2::TEXT []) u (haul_id, catch_location)
         GROUP BY
             u.haul_id
     ) q
@@ -547,7 +551,7 @@ INSERT INTO
         gear_group_id,
         species_group_id,
         living_weight,
-        haul_distributor_id
+        haul_distribution_status
     )
 SELECT
     h.haul_id,
@@ -559,18 +563,18 @@ SELECT
     MIN(b.gear_group_id),
     b.species_group_id,
     COALESCE(SUM(b.living_weight) * MIN(u.factor), 0),
-    MIN(u.haul_distributor_id)
+    MIN(u.haul_distribution_status)
 FROM
     UNNEST(
         $1::BIGINT[],
-        $2::TEXT[],
+        $2::TEXT [],
         $3::DECIMAL[],
         $4::INT[]
     ) u (
         haul_id,
         catch_location,
         factor,
-        haul_distributor_id
+        haul_distribution_status
     )
     INNER JOIN hauls h ON h.haul_id = u.haul_id
     INNER JOIN ers_dca_bodies b ON h.message_id = b.message_id
@@ -592,7 +596,7 @@ GROUP BY
             haul_id.as_slice(),
             catch_location.as_slice(),
             factor.as_slice(),
-            distributor_id.as_slice(),
+            status.as_slice(),
         )
         .execute(&mut *tx)
         .await
