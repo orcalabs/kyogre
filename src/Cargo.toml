@@ -13,13 +13,11 @@ members = [
     "vessel-benchmark",
     "duckdb-rs",
     "meilisearch",
+    "fiskeridir-rs",
 ]
 
 [workspace.dependencies]
-fiskeridir-rs = { version = "0.22.0", registry = "orcalabs-orcastrator", features = [
-    "utoipa",
-    "sqlx",
-] }
+fiskeridir-rs = { path = "./fiskeridir-rs/", features = ["utoipa", "sqlx"] }
 machine = { version = "0.3.0", registry = "orcalabs-orcastrator" }
 error-stack = "0.4.1"
 orca-core = { version = "0.22.1", registry = "orcalabs-orcastrator" }
