@@ -366,6 +366,28 @@ impl TestHelperOutbound for PostgresAdapter {
 }
 
 #[async_trait]
+impl CatchLocationWeatherInbound for PostgresAdapter {
+    async fn dirty_dates(&self) -> Result<Vec<NaiveDate>, QueryError> {
+        self.dirty_dates_impl().await.change_context(QueryError)
+    }
+    async fn catch_locations_with_weather(&self) -> Result<Vec<CatchLocationId>, QueryError> {
+        self.catch_locations_with_weather_impl()
+            .await
+            .change_context(QueryError)
+    }
+
+    async fn update_catch_locations_weather(
+        &self,
+        catch_locations: &[CatchLocationId],
+        date: NaiveDate,
+    ) -> Result<(), UpdateError> {
+        self.update_catch_locations_weather_impl(catch_locations, date)
+            .await
+            .change_context(UpdateError)
+    }
+}
+
+#[async_trait]
 impl TestHelperInbound for PostgresAdapter {
     async fn manual_vessel_conflict_override(&self, overrides: Vec<NewVesselConflict>) {
         self.manual_conflict_override_impl(overrides).await.unwrap();
@@ -1100,6 +1122,28 @@ impl VerificationOutbound for PostgresAdapter {
 
 #[async_trait]
 impl MLModelsOutbound for PostgresAdapter {
+    async fn catch_locations_weather_dates(
+        &self,
+        dates: Vec<NaiveDate>,
+    ) -> Result<Vec<CatchLocationWeather>, QueryError> {
+        convert_vec(
+            self.catch_locations_weather_dates_impl(dates)
+                .await
+                .change_context(QueryError)?,
+        )
+    }
+
+    async fn catch_locations_weather(
+        &self,
+        keys: Vec<(CatchLocationId, NaiveDate)>,
+    ) -> Result<Vec<CatchLocationWeather>, QueryError> {
+        convert_vec(
+            self.catch_locations_weather_impl(keys)
+                .await
+                .change_context(QueryError)?,
+        )
+    }
+
     async fn save_model(&self, model_id: ModelId, model: &[u8]) -> Result<(), InsertError> {
         self.save_model_impl(model_id, model)
             .await
@@ -1115,17 +1159,7 @@ impl MLModelsOutbound for PostgresAdapter {
                 .change_context(QueryError)?,
         )
     }
-    async fn catch_location_weather(
-        &self,
-        date: NaiveDate,
-        catch_location_id: &CatchLocationId,
-    ) -> Result<Option<CatchLocationWeather>, QueryError> {
-        Ok(self
-            .catch_location_weather_impl(date, catch_location_id)
-            .await
-            .change_context(QueryError)?
-            .map(CatchLocationWeather::from))
-    }
+
     async fn model(&self, model_id: ModelId) -> Result<Vec<u8>, QueryError> {
         self.model_impl(model_id).await.change_context(QueryError)
     }
@@ -1180,17 +1214,28 @@ impl MLModelsOutbound for PostgresAdapter {
 
 #[async_trait]
 impl MLModelsInbound for PostgresAdapter {
-    async fn catch_location_weather(
+    async fn catch_locations_weather_dates(
         &self,
-        date: NaiveDate,
-        catch_location_id: &CatchLocationId,
-    ) -> Result<Option<CatchLocationWeather>, QueryError> {
-        Ok(self
-            .catch_location_weather_impl(date, catch_location_id)
-            .await
-            .change_context(QueryError)?
-            .map(CatchLocationWeather::from))
+        dates: Vec<NaiveDate>,
+    ) -> Result<Vec<CatchLocationWeather>, QueryError> {
+        convert_vec(
+            self.catch_locations_weather_dates_impl(dates)
+                .await
+                .change_context(QueryError)?,
+        )
     }
+
+    async fn catch_locations_weather(
+        &self,
+        keys: Vec<(CatchLocationId, NaiveDate)>,
+    ) -> Result<Vec<CatchLocationWeather>, QueryError> {
+        convert_vec(
+            self.catch_locations_weather_impl(keys)
+                .await
+                .change_context(QueryError)?,
+        )
+    }
+
     async fn species_caught_with_traal(&self) -> Result<Vec<SpeciesGroup>, QueryError> {
         self.species_caught_with_traal_impl()
             .await

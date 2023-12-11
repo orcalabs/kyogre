@@ -312,15 +312,26 @@ where
                     });
                 }
 
-                for v in weather_queries {
-                    let cl_weather = adapter
-                        .catch_location_weather(v.date, &v.catch_location_id)
-                        .await
-                        .change_context(MLModelError::DataPreparation)?;
-                    if let Some(cl_weather) = cl_weather {
-                        weather.insert(v, cl_weather);
-                    }
-                }
+                let weather_queries = weather_queries
+                    .into_iter()
+                    .map(|w| (w.catch_location_id, w.date))
+                    .collect();
+
+                adapter
+                    .catch_locations_weather(weather_queries)
+                    .await
+                    .change_context(MLModelError::DataPreparation)?
+                    .into_iter()
+                    .for_each(|w| {
+                        weather.insert(
+                            CatchLocationWeatherKey {
+                                catch_location_id: w.id.clone(),
+                                date: w.date,
+                            },
+                            w,
+                        );
+                    });
+
                 Ok(Some(weather))
             }
         };

@@ -1,5 +1,5 @@
 use bigdecimal::BigDecimal;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, NaiveDate, Utc};
 use error_stack::{bail, report, Report, ResultExt};
 use geo_types::geometry::Geometry;
 use geozero::wkb;
@@ -10,6 +10,12 @@ use crate::{
     error::PostgresError,
     queries::{decimal_to_float, float_to_decimal, opt_decimal_to_float, opt_float_to_decimal},
 };
+
+#[derive(UnnestInsert)]
+#[unnest_insert(table_name = "catch_location_daily_weather_dirty", conflict = "date")]
+pub struct NewCLWeatherDailyDirty {
+    pub date: NaiveDate,
+}
 
 #[derive(UnnestInsert)]
 #[unnest_insert(table_name = "weather", conflict = "timestamp,weather_location_id")]

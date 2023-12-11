@@ -86,6 +86,7 @@ impl App {
             postgres.clone(),
             postgres.clone(),
             postgres.clone(),
+            postgres.clone(),
             postgres,
             Some(Box::new(scraper)),
             trip_assemblers,
@@ -167,6 +168,15 @@ impl App {
                         Box::new(self.transition_log),
                     );
                     let engine = FisheryEngine::MLModels(step);
+                    engine.run_single().await;
+                }
+                FisheryDiscriminants::CatchLocationWeather => {
+                    let step = crate::Step::initial(
+                        crate::CatchLocationWeatherState,
+                        self.shared_state,
+                        Box::new(self.transition_log),
+                    );
+                    let engine = FisheryEngine::CatchLocationWeather(step);
                     engine.run_single().await;
                 }
             };
