@@ -22,6 +22,11 @@ CREATE TABLE
         )
     );
 
+UPDATE trip_calculation_timers
+SET
+    queued_reset = TRUE,
+    "conflict" = NULL;
+
 ALTER TABLE trip_calculation_timers
 ADD COLUMN conflict_vessel_event_id BIGINT REFERENCES vessel_events (vessel_event_id) ON DELETE SET NULL,
 ADD COLUMN conflict_vessel_event_type_id INT REFERENCES vessel_event_types (vessel_event_type_id),
@@ -38,7 +43,3 @@ ADD CONSTRAINT conflict_nullability CHECK (
         AND conflict_vessel_event_timestamp IS NOT NULL
     )
 );
-
-UPDATE trip_calculation_timers
-SET
-    queued_reset = TRUE;
