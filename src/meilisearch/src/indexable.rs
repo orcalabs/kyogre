@@ -111,9 +111,11 @@ pub trait Indexable {
 
         let mut tasks = Vec::new();
 
-        if !to_delete.is_empty() {
+        // Deleting too many items causes the payload to be too large,
+        // so split into multiple requests
+        for ids in to_delete.chunks(100_000) {
             let task = index
-                .delete_documents(&to_delete)
+                .delete_documents(ids)
                 .await
                 .change_context(MeilisearchError::Delete)?;
             tasks.push(task);
