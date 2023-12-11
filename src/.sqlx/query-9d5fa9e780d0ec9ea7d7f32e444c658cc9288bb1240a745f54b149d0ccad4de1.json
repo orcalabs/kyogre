@@ -1,0 +1,20 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    date\nFROM\n    catch_location_daily_weather_dirty\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "date",
+        "type_info": "Date"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "9d5fa9e780d0ec9ea7d7f32e444c658cc9288bb1240a745f54b149d0ccad4de1"
+}

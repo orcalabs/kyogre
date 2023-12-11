@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use chrono::{DateTime, NaiveDate, TimeZone, Utc};
 use error_stack::{report, Report, Result, ResultExt};
 use futures::{Stream, TryStreamExt};
@@ -6,40 +8,142 @@ use unnest_insert::UnnestInsert;
 
 use crate::{
     error::PostgresError,
-    models::{CatchLocationWeather, HaulWeather, NewWeather, Weather, WeatherLocation},
+    models::{
+        CatchLocationWeather, HaulWeather, NewCLWeatherDailyDirty, NewWeather, Weather,
+        WeatherLocation,
+    },
     PostgresAdapter,
 };
 
 use super::opt_float_to_decimal;
 
 impl PostgresAdapter {
-    pub(crate) async fn catch_location_weather_impl(
+    pub(crate) async fn catch_locations_with_weather_impl(
         &self,
-        date: NaiveDate,
-        catch_location_id: &CatchLocationId,
-    ) -> Result<Option<CatchLocationWeather>, PostgresError> {
-        let start = Utc.from_utc_datetime(&date.and_hms_opt(0, 0, 0).unwrap());
-        let end = Utc.from_utc_datetime(&date.and_hms_opt(23, 59, 59).unwrap());
+    ) -> Result<Vec<CatchLocationId>, PostgresError> {
+        sqlx::query!(
+            r#"
+SELECT
+    catch_location_id
+FROM
+    catch_locations
+WHERE
+    CARDINALITY(weather_location_ids) > 0
+            "#
+        )
+        .fetch_all(&self.pool)
+        .await
+        .change_context(PostgresError::Query)?
+        .into_iter()
+        .map(|v| CatchLocationId::try_from(v.catch_location_id))
+        .collect::<Result<Vec<CatchLocationId>, _>>()
+        .change_context(PostgresError::DataConversion)
+    }
+    pub(crate) async fn catch_locations_weather_dates_impl(
+        &self,
+        dates: Vec<NaiveDate>,
+    ) -> Result<Vec<CatchLocationWeather>, PostgresError> {
+        sqlx::query_as!(
+            CatchLocationWeather,
+            r#"
+SELECT
+    catch_location_id,
+    date,
+    wind_speed_10m,
+    wind_direction_10m,
+    air_temperature_2m,
+    relative_humidity_2m,
+    air_pressure_at_sea_level,
+    precipitation_amount,
+    cloud_area_fraction
+FROM
+    catch_location_daily_weather c
+WHERE
+    date = ANY ($1)
+            "#,
+            &dates
+        )
+        .fetch_all(&self.pool)
+        .await
+        .change_context(PostgresError::Query)
+    }
+    pub(crate) async fn catch_locations_weather_impl(
+        &self,
+        keys: Vec<(CatchLocationId, NaiveDate)>,
+    ) -> Result<Vec<CatchLocationWeather>, PostgresError> {
+        let catch_location_daily_weather_ids: Vec<String> = keys
+            .into_iter()
+            .map(|v| format!("{}-{}", v.0.as_ref(), v.1))
+            .collect();
 
         sqlx::query_as!(
             CatchLocationWeather,
             r#"
 SELECT
-    c.catch_area_id,
-    c.catch_main_area_id,
-    AVG(wind_speed_10m)::DOUBLE PRECISION AS "wind_speed_10m!",
-    AVG(wind_direction_10m)::DOUBLE PRECISION AS "wind_direction_10m!",
-    AVG(air_temperature_2m)::DOUBLE PRECISION AS "air_temperature_2m!",
-    AVG(relative_humidity_2m)::DOUBLE PRECISION AS "relative_humidity_2m!",
-    AVG(air_pressure_at_sea_level)::DOUBLE PRECISION AS "air_pressure_at_sea_level!",
-    AVG(precipitation_amount)::DOUBLE PRECISION AS "precipitation_amount!",
-    AVG(cloud_area_fraction)::DOUBLE PRECISION AS "cloud_area_fraction!"
+    catch_location_id,
+    date,
+    wind_speed_10m,
+    wind_direction_10m,
+    air_temperature_2m,
+    relative_humidity_2m,
+    air_pressure_at_sea_level,
+    precipitation_amount,
+    cloud_area_fraction
+FROM
+    catch_location_daily_weather c
+WHERE
+    catch_location_daily_weather_id = ANY ($1)
+            "#,
+            &catch_location_daily_weather_ids
+        )
+        .fetch_all(&self.pool)
+        .await
+        .change_context(PostgresError::Query)
+    }
+    pub(crate) async fn update_catch_locations_weather_impl(
+        &self,
+        catch_location_ids: &[CatchLocationId],
+        date: NaiveDate,
+    ) -> Result<(), PostgresError> {
+        let start = Utc.from_utc_datetime(&date.and_hms_opt(0, 0, 0).unwrap());
+        let end = Utc.from_utc_datetime(&date.and_hms_opt(23, 59, 59).unwrap());
+
+        let mut tx = self.begin().await?;
+
+        for c in catch_location_ids {
+            sqlx::query_as!(
+                CatchLocationWeather,
+                r#"
+INSERT INTO
+    catch_location_daily_weather (
+        catch_location_id,
+        date,
+        altitude,
+        wind_speed_10m,
+        wind_direction_10m,
+        air_temperature_2m,
+        relative_humidity_2m,
+        air_pressure_at_sea_level,
+        precipitation_amount,
+        cloud_area_fraction
+    )
+SELECT
+    c.catch_location_id,
+    $1,
+    AVG(altitude)::DOUBLE PRECISION AS "altitude!",
+    AVG(wind_speed_10m)::DOUBLE PRECISION,
+    AVG(wind_direction_10m)::DOUBLE PRECISION,
+    AVG(air_temperature_2m)::DOUBLE PRECISION,
+    AVG(relative_humidity_2m)::DOUBLE PRECISION,
+    AVG(air_pressure_at_sea_level)::DOUBLE PRECISION,
+    AVG(precipitation_amount)::DOUBLE PRECISION,
+    AVG(cloud_area_fraction)::DOUBLE PRECISION
 FROM
     catch_locations c
     INNER JOIN weather w ON w.weather_location_id = ANY (c.weather_location_ids)
 WHERE
-    catch_location_id = $1
-    AND "timestamp" BETWEEN $2 AND $3
+    c.catch_location_id = $2
+    AND "timestamp" BETWEEN $3 AND $4
     AND wind_speed_10m IS NOT NULL
     AND wind_direction_10m IS NOT NULL
     AND air_temperature_2m IS NOT NULL
@@ -49,14 +153,57 @@ WHERE
     AND cloud_area_fraction IS NOT NULL
 GROUP BY
     c.catch_location_id
+ON CONFLICT (catch_location_daily_weather_id) DO
+UPDATE
+SET
+    altitude = excluded.altitude,
+    wind_speed_10m = excluded.wind_speed_10m,
+    wind_direction_10m = excluded.wind_direction_10m,
+    air_temperature_2m = excluded.air_temperature_2m,
+    relative_humidity_2m = excluded.relative_humidity_2m,
+    air_pressure_at_sea_level = excluded.air_pressure_at_sea_level,
+    precipitation_amount = excluded.precipitation_amount,
+    cloud_area_fraction = excluded.cloud_area_fraction
             "#,
-            catch_location_id.as_ref(),
-            start,
-            end,
+                date,
+                c.as_ref(),
+                start,
+                end,
+            )
+            .execute(&mut *tx)
+            .await
+            .change_context(PostgresError::Query)?;
+        }
+
+        sqlx::query!(
+            r#"
+DELETE FROM catch_location_daily_weather_dirty
+WHERE
+    date = $1
+            "#,
+            date
         )
-        .fetch_optional(&self.pool)
+        .execute(&mut *tx)
         .await
-        .change_context(PostgresError::Query)
+        .change_context(PostgresError::Query)?;
+
+        tx.commit().await.change_context(PostgresError::Transaction)
+    }
+    pub(crate) async fn dirty_dates_impl(&self) -> Result<Vec<NaiveDate>, PostgresError> {
+        Ok(sqlx::query!(
+            r#"
+SELECT
+    date
+FROM
+    catch_location_daily_weather_dirty
+            "#
+        )
+        .fetch_all(&self.pool)
+        .await
+        .change_context(PostgresError::Query)?
+        .into_iter()
+        .map(|v| v.date)
+        .collect())
     }
 
     pub(crate) fn weather_impl(
@@ -329,10 +476,25 @@ WHERE
             .map(NewWeather::try_from)
             .collect::<Result<Vec<_>, _>>()?;
 
-        NewWeather::unnest_insert(values, &self.pool)
+        let average_reset: Vec<NewCLWeatherDailyDirty> = values
+            .iter()
+            .map(|v| v.timestamp.date_naive())
+            .collect::<HashSet<NaiveDate>>()
+            .into_iter()
+            .map(|v| NewCLWeatherDailyDirty { date: v })
+            .collect();
+
+        let mut tx = self.begin().await?;
+
+        NewCLWeatherDailyDirty::unnest_insert(average_reset, &mut *tx)
             .await
-            .change_context(PostgresError::Query)
-            .map(|_| ())
+            .change_context(PostgresError::Query)?;
+
+        NewWeather::unnest_insert(values, &mut *tx)
+            .await
+            .change_context(PostgresError::Query)?;
+
+        tx.commit().await.change_context(PostgresError::Transaction)
     }
 
     pub(crate) async fn latest_weather_timestamp_impl(

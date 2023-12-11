@@ -1,4 +1,4 @@
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, NaiveDate, Utc};
 use geo::geometry::Polygon;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
@@ -15,6 +15,7 @@ pub enum WeatherData {
 pub struct CatchLocationWeather {
     #[serde(skip_serializing)]
     pub id: CatchLocationId,
+    pub date: NaiveDate,
     pub wind_speed_10m: f64,
     pub wind_direction_10m: f64,
     pub air_temperature_2m: f64,

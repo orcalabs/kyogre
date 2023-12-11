@@ -169,26 +169,24 @@ where
             WeatherData::Optional => Ok(None),
             WeatherData::Require => {
                 let mut weather: HashMap<NaiveDate, Vec<CatchLocationWeather>> = HashMap::new();
-                let weather_keys = training_data
+                let weather_dates = training_data
                     .iter()
                     .map(|v| v.date)
-                    .collect::<HashSet<NaiveDate>>();
+                    .collect::<HashSet<NaiveDate>>()
+                    .into_iter()
+                    .collect::<Vec<NaiveDate>>();
 
-                for v in &weather_keys {
-                    for c in &catch_locations {
-                        let cl_weather = adapter
-                            .catch_location_weather(*v, &c.id)
-                            .await
-                            .change_context(MLModelError::DataPreparation)?;
-
-                        if let Some(w) = cl_weather {
-                            weather
-                                .entry(*v)
-                                .and_modify(|v| v.push(w.clone()))
-                                .or_insert(vec![w]);
-                        }
-                    }
-                }
+                adapter
+                    .catch_locations_weather_dates(weather_dates)
+                    .await
+                    .change_context(MLModelError::DataPreparation)?
+                    .into_iter()
+                    .for_each(|w| {
+                        weather
+                            .entry(w.date)
+                            .and_modify(|v| v.push(w.clone()))
+                            .or_insert(vec![w]);
+                    });
 
                 Ok(Some(weather))
             }
@@ -314,20 +312,19 @@ where
                 WeatherData::Require => {
                     let mut weather_map: HashMap<NaiveDate, Vec<CatchLocationWeather>> =
                         HashMap::new();
-                    for v in &weather_keys {
-                        for c in &catch_locations {
-                            let cl_weather = adapter
-                                .catch_location_weather(*v, &c.id)
-                                .await
-                                .change_context(MLModelError::DataPreparation)?;
-                            if let Some(w) = cl_weather {
-                                weather_map
-                                    .entry(*v)
-                                    .and_modify(|v| v.push(w.clone()))
-                                    .or_insert(vec![w]);
-                            }
-                        }
+
+                    let cls_weather = adapter
+                        .catch_locations_weather_dates(weather_keys.into_iter().collect())
+                        .await
+                        .change_context(MLModelError::DataPreparation)?;
+
+                    for w in cls_weather {
+                        weather_map
+                            .entry(w.date)
+                            .and_modify(|v| v.push(w.clone()))
+                            .or_insert(vec![w]);
                     }
+
                     Ok(Some(weather_map))
                 }
             };

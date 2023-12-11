@@ -29,11 +29,14 @@ pub trait MLModelsInbound: Send + Sync {
         year: u32,
     ) -> Result<Vec<FishingWeightPrediction>, QueryError>;
     async fn species_caught_with_traal(&self) -> Result<Vec<SpeciesGroup>, QueryError>;
-    async fn catch_location_weather(
+    async fn catch_locations_weather_dates(
         &self,
-        date: NaiveDate,
-        catch_location_id: &CatchLocationId,
-    ) -> Result<Option<CatchLocationWeather>, QueryError>;
+        dates: Vec<NaiveDate>,
+    ) -> Result<Vec<CatchLocationWeather>, QueryError>;
+    async fn catch_locations_weather(
+        &self,
+        keys: Vec<(CatchLocationId, NaiveDate)>,
+    ) -> Result<Vec<CatchLocationWeather>, QueryError>;
 }
 
 #[async_trait]
@@ -161,4 +164,15 @@ pub trait TestHelperInbound: Send + Sync {
 #[async_trait]
 pub trait HaulWeatherInbound: Send + Sync {
     async fn add_haul_weather(&self, values: Vec<HaulWeatherOutput>) -> Result<(), UpdateError>;
+}
+
+#[async_trait]
+pub trait CatchLocationWeatherInbound: Send + Sync {
+    async fn catch_locations_with_weather(&self) -> Result<Vec<CatchLocationId>, QueryError>;
+    async fn dirty_dates(&self) -> Result<Vec<NaiveDate>, QueryError>;
+    async fn update_catch_locations_weather(
+        &self,
+        catch_locations: &[CatchLocationId],
+        date: NaiveDate,
+    ) -> Result<(), UpdateError>;
 }

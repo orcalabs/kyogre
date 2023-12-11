@@ -290,15 +290,18 @@ pub trait MLModelsOutbound: Send + Sync {
         haul: Vec<TrainingHaul>,
     ) -> Result<(), InsertError>;
     async fn model(&self, model_id: ModelId) -> Result<Vec<u8>, QueryError>;
-    async fn catch_location_weather(
+    async fn catch_locations_weather_dates(
         &self,
-        date: NaiveDate,
-        catch_location_id: &CatchLocationId,
-    ) -> Result<Option<CatchLocationWeather>, QueryError>;
+        dates: Vec<NaiveDate>,
+    ) -> Result<Vec<CatchLocationWeather>, QueryError>;
     async fn catch_locations(
         &self,
         overlap: WeatherLocationOverlap,
     ) -> Result<Vec<CatchLocation>, QueryError>;
+    async fn catch_locations_weather(
+        &self,
+        keys: Vec<(CatchLocationId, NaiveDate)>,
+    ) -> Result<Vec<CatchLocationWeather>, QueryError>;
 }
 
 #[async_trait]
