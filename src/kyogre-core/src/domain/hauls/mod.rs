@@ -5,13 +5,8 @@ use fiskeridir_rs::{
     Gear, GearGroup, SpeciesGroup, SpeciesMainGroup, VesselLengthGroup, WhaleGender,
 };
 use serde::{Deserialize, Serialize};
-use serde_repr::Deserialize_repr;
 
-use crate::{CatchLocationId, HaulOceanClimate, HaulWeather};
-
-mod distributor;
-
-pub use distributor::*;
+use crate::{CatchLocationId, HaulOceanClimate, HaulWeather, ProcessingStatus};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize)]
 pub struct HaulId(pub i64);
@@ -83,25 +78,11 @@ pub struct HaulsMatrix {
     pub species_group: Vec<u64>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Deserialize_repr)]
-#[repr(i32)]
-pub enum HaulDistributorId {
-    AisVms = 1,
-}
-
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum HaulWeatherStatus {
     Unprocessed = 1,
     Attempted = 2,
     Successful = 3,
-}
-
-impl std::fmt::Display for HaulDistributorId {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            HaulDistributorId::AisVms => f.write_str("AisVms"),
-        }
-    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -116,7 +97,7 @@ pub struct HaulDistributionOutput {
     pub haul_id: HaulId,
     pub catch_location: CatchLocationId,
     pub factor: f64,
-    pub distributor_id: HaulDistributorId,
+    pub status: ProcessingStatus,
 }
 
 impl From<i64> for HaulId {

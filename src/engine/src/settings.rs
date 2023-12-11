@@ -85,9 +85,6 @@ impl Settings {
 
         vec
     }
-    pub fn haul_distributors(&self) -> Vec<Box<dyn HaulDistributor>> {
-        vec![Box::<AisVms>::default()]
-    }
     pub fn trip_distancer(&self) -> Box<dyn TripDistancer> {
         Box::<AisVms>::default()
     }

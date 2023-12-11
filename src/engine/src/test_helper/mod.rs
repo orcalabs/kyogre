@@ -15,8 +15,8 @@ use fiskeridir_rs::CallSign;
 use fiskeridir_rs::{DeliveryPointId, LandingMonth};
 use futures::TryStreamExt;
 use kyogre_core::{
-    CatchLocationId, HaulDistributor, MLModel, NewVesselConflict, NewWeather, TestStorage,
-    TrainingMode, TripAssembler, TripDistancer, TripPositionLayer, VesselBenchmark,
+    CatchLocationId, MLModel, NewVesselConflict, NewWeather, TestStorage, TrainingMode,
+    TripAssembler, TripDistancer, TripPositionLayer, VesselBenchmark,
 };
 use machine::StateMachine;
 use orca_core::PsqlSettings;
@@ -225,7 +225,6 @@ pub async fn engine(adapter: PostgresAdapter, db_settings: &PsqlSettings) -> Fis
         Box::<ErsTripAssembler>::default() as Box<dyn TripAssembler>,
     ];
     let benchmarks = vec![Box::<WeightPerHour>::default() as Box<dyn VesselBenchmark>];
-    let haul_distributors = vec![Box::<AisVms>::default() as Box<dyn HaulDistributor>];
     let trip_distancer = Box::<AisVms>::default() as Box<dyn TripDistancer>;
     let trip_layers = vec![
         Box::<UnrealisticSpeed>::default() as Box<dyn TripPositionLayer>,
@@ -251,7 +250,6 @@ pub async fn engine(adapter: PostgresAdapter, db_settings: &PsqlSettings) -> Fis
         None,
         trip_assemblers,
         benchmarks,
-        haul_distributors,
         trip_distancer,
         vec![],
         trip_layers,
