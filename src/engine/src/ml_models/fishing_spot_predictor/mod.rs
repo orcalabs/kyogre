@@ -194,7 +194,7 @@ where
 
     let training_data = training_data_convert(training_data, &(weather?), catch_locations.len());
     if training_data.is_empty() {
-        return Ok(TrainingOutcome::Finished);
+        return Ok(TrainingOutcome::Progress(hauls));
     }
 
     let training_data =
