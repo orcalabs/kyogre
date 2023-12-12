@@ -561,7 +561,6 @@ impl TryFrom<TripAssemblerLogEntry> for kyogre_core::TripAssemblerLogEntry {
     type Error = Report<PostgresError>;
 
     fn try_from(value: TripAssemblerLogEntry) -> Result<Self, Self::Error> {
-        dbg!(&value.prior_trip_vessel_events);
         Ok(Self {
             trip_assembler_log_id: value.trip_assembler_log_id as u64,
             vessel_id: FiskeridirVesselId(value.fiskeridir_vessel_id),

@@ -1,6 +1,7 @@
 use crate::*;
 use async_trait::async_trait;
 use error_stack::{Context, Result, ResultExt};
+use fiskeridir_rs::SpeciesGroup;
 use machine::Schedule;
 use std::fmt::Display;
 use tracing::{event, instrument, Level};
@@ -34,19 +35,23 @@ impl machine::State for MLModelsState {
 
     async fn run(&self, shared_state: Self::SharedState) -> Self::SharedState {
         for m in &shared_state.ml_models {
-            if let Err(e) = run_ml_model(
-                shared_state.ml_models_inbound.as_ref(),
-                shared_state.ml_models_outbound.as_ref(),
-                m.as_ref(),
-            )
-            .await
-            {
-                event!(
-                    Level::ERROR,
-                    "failed to run ML model id: {:?}, err: {:?}",
-                    m.id(),
-                    e
-                );
+            for s in ML_SPECIES_GROUPS {
+                if let Err(e) = run_ml_model(
+                    shared_state.ml_models_inbound.as_ref(),
+                    shared_state.ml_models_outbound.as_ref(),
+                    m.as_ref(),
+                    *s,
+                )
+                .await
+                {
+                    event!(
+                        Level::ERROR,
+                        "failed to run ML model id: {:?}, species: {:?}, err: {:?}",
+                        m.id(),
+                        s,
+                        e
+                    );
+                }
             }
         }
 
@@ -62,19 +67,22 @@ async fn run_ml_model(
     inbound: &dyn MLModelsInbound,
     outbound: &dyn MLModelsOutbound,
     model: &dyn MLModel,
+    species: SpeciesGroup,
 ) -> Result<(), MLError> {
     let current_model = outbound
-        .model(model.id())
+        .model(model.id(), species)
         .await
         .change_context(MLError::ModelSaveLoad)?;
 
     let output = model
-        .train(current_model, outbound)
+        .train(current_model, species, outbound)
         .await
         .change_context(MLError::Training)?;
 
     model
-        .predict(&output.model, inbound)
+        .predict(&output.model, species, inbound)
         .await
-        .change_context(MLError::Prediction)
+        .change_context(MLError::Prediction)?;
+
+    Ok(())
 }

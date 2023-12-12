@@ -99,7 +99,6 @@ pub struct TrainingOutput {
 #[derive(Debug, Hash, Eq, PartialEq)]
 pub struct TrainingHaul {
     pub haul_id: HaulId,
-    pub species: SpeciesGroup,
     pub catch_location_id: CatchLocationId,
 }
 
@@ -137,11 +136,13 @@ pub trait MLModel: Send + Sync {
     async fn train(
         &self,
         model: Vec<u8>,
+        species: SpeciesGroup,
         adapter: &dyn MLModelsOutbound,
     ) -> Result<TrainingOutput, MLModelError>;
     async fn predict(
         &self,
         model: &[u8],
+        species: SpeciesGroup,
         adapter: &dyn MLModelsInbound,
     ) -> Result<(), MLModelError>;
 }

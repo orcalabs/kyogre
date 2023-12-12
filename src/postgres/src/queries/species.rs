@@ -1,37 +1,9 @@
 use crate::{error::PostgresError, models::*, PostgresAdapter};
 use error_stack::{report, Result, ResultExt};
-use fiskeridir_rs::{GearGroup, SpeciesGroup};
 use futures::{Stream, TryStreamExt};
 use unnest_insert::UnnestInsert;
 
 impl PostgresAdapter {
-    pub(crate) async fn species_caught_with_traal_impl(
-        &self,
-    ) -> Result<Vec<SpeciesGroup>, PostgresError> {
-        Ok(sqlx::query!(
-            r#"
-SELECT DISTINCT
-    (UNNEST(species_group_ids)) AS "species!: SpeciesGroup"
-FROM
-    hauls
-WHERE
-    gear_group_id = $1
-            "#,
-            GearGroup::Trawl as i32,
-        )
-        .fetch_all(&self.pool)
-        .await
-        .change_context(PostgresError::Query)?
-        .into_iter()
-        .filter_map(|v| {
-            if matches!(v.species, SpeciesGroup::Unknown) {
-                None
-            } else {
-                Some(v.species)
-            }
-        })
-        .collect())
-    }
     pub(crate) async fn add_species_fiskeridir<'a>(
         &'a self,
         species: Vec<SpeciesFiskeridir>,

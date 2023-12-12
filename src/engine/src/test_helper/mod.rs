@@ -164,7 +164,6 @@ pub fn default_fishing_spot_weather_predictor() -> Box<dyn MLModel> {
         predict_batch_size: 53,
         catch_locations: vec![CatchLocationId::new(10, 4), CatchLocationId::new(10, 5)],
         range: PredictionRange::DaysFromStartOfYear(FISHING_SPOT_PREDICTOR_NUM_DAYS),
-        single_species_mode: None,
         training_mode: TrainingMode::Single,
     }))
 }
@@ -179,7 +178,6 @@ pub fn default_fishing_spot_predictor() -> Box<dyn MLModel> {
         predict_batch_size: 53,
         range: PredictionRange::DaysFromStartOfYear(FISHING_SPOT_PREDICTOR_NUM_DAYS),
         catch_locations: vec![CatchLocationId::new(10, 4), CatchLocationId::new(10, 5)],
-        single_species_mode: None,
     }))
 }
 
@@ -191,7 +189,6 @@ pub fn default_fishing_weight_predictor() -> Box<dyn MLModel> {
         predict_batch_size: 100,
         range: PredictionRange::DaysFromStartOfYear(FISHING_WEIGHT_PREDICTOR_NUM_DAYS),
         catch_locations: vec![CatchLocationId::new(10, 4), CatchLocationId::new(10, 5)],
-        single_species_mode: None,
         training_mode: TrainingMode::Single,
         test_fraction: None,
         bycatch_percentage: None,
@@ -210,7 +207,6 @@ pub fn default_fishing_weight_weather_predictor() -> Box<dyn MLModel> {
             predict_batch_size: 100,
             range: PredictionRange::DaysFromStartOfYear(FISHING_WEIGHT_PREDICTOR_NUM_DAYS),
             catch_locations: vec![CatchLocationId::new(10, 4), CatchLocationId::new(10, 5)],
-            single_species_mode: None,
             bycatch_percentage: None,
             majority_species_group: false,
         },

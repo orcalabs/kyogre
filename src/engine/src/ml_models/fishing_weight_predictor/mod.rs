@@ -40,7 +40,6 @@ pub struct WeightPredictorSettings {
     pub predict_batch_size: u32,
     pub range: PredictionRange,
     pub catch_locations: Vec<CatchLocationId>,
-    pub single_species_mode: Option<SpeciesGroup>,
     pub training_mode: TrainingMode,
     pub test_fraction: Option<f64>,
     pub bycatch_percentage: Option<f64>,
@@ -61,6 +60,7 @@ struct PredictionInputKey {
 
 async fn weight_train_impl<T, S>(
     model_id: ModelId,
+    species: SpeciesGroup,
     settings: &WeightPredictorSettings,
     model: Vec<u8>,
     adapter: &dyn MLModelsOutbound,
@@ -80,6 +80,7 @@ where
         TrainingMode::Single | TrainingMode::Batches(_) => loop {
             match training_run(
                 model_id,
+                species,
                 settings,
                 &mut training_output,
                 adapter,
@@ -91,11 +92,11 @@ where
                 TrainingOutcome::Finished => break,
                 TrainingOutcome::Progress(hauls) => {
                     adapter
-                        .commit_hauls_training(model_id, hauls.into_iter().collect())
+                        .commit_hauls_training(model_id, species, hauls.into_iter().collect())
                         .await
                         .change_context(MLModelError::StoreOutput)?;
                     adapter
-                        .save_model(model_id, &training_output.model)
+                        .save_model(model_id, &training_output.model, species)
                         .await
                         .change_context(MLModelError::StoreOutput)?;
                 }
@@ -104,6 +105,7 @@ where
         TrainingMode::Local => {
             training_run(
                 model_id,
+                species,
                 settings,
                 &mut training_output,
                 adapter,
@@ -119,6 +121,7 @@ where
 
 async fn training_run<T, S>(
     model_id: ModelId,
+    species: SpeciesGroup,
     settings: &WeightPredictorSettings,
     output: &mut TrainingOutput,
     adapter: &dyn MLModelsOutbound,
@@ -133,9 +136,9 @@ where
     let training_data: Vec<WeightPredictorTrainingData> = adapter
         .fishing_weight_predictor_training_data(
             model_id,
+            species,
             weather,
             settings.training_mode.batch_size(),
-            settings.single_species_mode,
             settings.bycatch_percentage,
             settings.majority_species_group,
         )
@@ -145,7 +148,6 @@ where
         .filter_map(|v| {
             hauls.insert(TrainingHaul {
                 haul_id: HaulId(v.haul_id),
-                species: v.species,
                 catch_location_id: v.catch_location.clone(),
             });
             if settings.running_in_test || distance_to_shore(v.latitude, v.longitude) > 2000.0 {
@@ -201,6 +203,7 @@ where
 
 async fn weight_predict_impl<T, S>(
     model_id: ModelId,
+    species: SpeciesGroup,
     settings: &WeightPredictorSettings,
     model: &[u8],
     adapter: &dyn MLModelsInbound,
@@ -251,32 +254,20 @@ where
                 .collect::<Vec<&CatchLocation>>()
         };
 
-        let species = adapter
-            .species_caught_with_traal()
-            .await
-            .change_context(MLModelError::DataPreparation)?;
-
         for t in chunk {
             for c in &active_catch_locations {
-                for s in &species {
-                    if let Some(single) = settings.single_species_mode {
-                        if *s != single {
-                            continue;
-                        }
-                    }
-                    predictions.insert(PredictionInputKey {
-                        species_group_id: *s,
-                        catch_location_id: c.id.clone(),
-                        latitude: c.latitude,
-                        longitude: c.longitude,
-                        date: *t,
-                    });
-                }
+                predictions.insert(PredictionInputKey {
+                    species_group_id: species,
+                    catch_location_id: c.id.clone(),
+                    latitude: c.latitude,
+                    longitude: c.longitude,
+                    date: *t,
+                });
             }
         }
 
         let existing_predictions = adapter
-            .existing_fishing_weight_predictions(model_id, current_year)
+            .existing_fishing_weight_predictions(model_id, species, current_year)
             .await
             .change_context(MLModelError::StoreOutput)?;
 

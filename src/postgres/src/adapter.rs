@@ -1144,8 +1144,13 @@ impl MLModelsOutbound for PostgresAdapter {
         )
     }
 
-    async fn save_model(&self, model_id: ModelId, model: &[u8]) -> Result<(), InsertError> {
-        self.save_model_impl(model_id, model)
+    async fn save_model(
+        &self,
+        model_id: ModelId,
+        model: &[u8],
+        species: SpeciesGroup,
+    ) -> Result<(), InsertError> {
+        self.save_model_impl(model_id, model, species)
             .await
             .change_context(InsertError)
     }
@@ -1160,24 +1165,26 @@ impl MLModelsOutbound for PostgresAdapter {
         )
     }
 
-    async fn model(&self, model_id: ModelId) -> Result<Vec<u8>, QueryError> {
-        self.model_impl(model_id).await.change_context(QueryError)
+    async fn model(&self, model_id: ModelId, species: SpeciesGroup) -> Result<Vec<u8>, QueryError> {
+        self.model_impl(model_id, species)
+            .await
+            .change_context(QueryError)
     }
     async fn fishing_weight_predictor_training_data(
         &self,
         model_id: ModelId,
+        species: SpeciesGroup,
         weather_data: WeatherData,
         limit: Option<u32>,
-        single_species_mode: Option<SpeciesGroup>,
         bycatch_percentage: Option<f64>,
         majority_species_group: bool,
     ) -> Result<Vec<WeightPredictorTrainingData>, QueryError> {
         Ok(self
             .fishing_weight_predictor_training_data_impl(
                 model_id,
+                species,
                 weather_data,
                 limit,
-                single_species_mode,
                 bycatch_percentage,
                 majority_species_group,
             )
@@ -1191,11 +1198,11 @@ impl MLModelsOutbound for PostgresAdapter {
     async fn fishing_spot_predictor_training_data(
         &self,
         model_id: ModelId,
+        species: SpeciesGroup,
         limit: Option<u32>,
-        single_species_mode: Option<SpeciesGroup>,
     ) -> Result<Vec<FishingSpotTrainingData>, QueryError> {
         convert_vec(
-            self.fishing_spot_predictor_training_data_impl(model_id, limit, single_species_mode)
+            self.fishing_spot_predictor_training_data_impl(model_id, species, limit)
                 .await
                 .change_context(QueryError)?,
         )
@@ -1204,9 +1211,10 @@ impl MLModelsOutbound for PostgresAdapter {
     async fn commit_hauls_training(
         &self,
         model_id: ModelId,
+        species: SpeciesGroup,
         hauls: Vec<TrainingHaul>,
     ) -> Result<(), InsertError> {
-        self.commit_hauls_training_impl(model_id, hauls)
+        self.commit_hauls_training_impl(model_id, species, hauls)
             .await
             .change_context(InsertError)
     }
@@ -1236,18 +1244,14 @@ impl MLModelsInbound for PostgresAdapter {
         )
     }
 
-    async fn species_caught_with_traal(&self) -> Result<Vec<SpeciesGroup>, QueryError> {
-        self.species_caught_with_traal_impl()
-            .await
-            .change_context(QueryError)
-    }
     async fn existing_fishing_weight_predictions(
         &self,
         model_id: ModelId,
+        species: SpeciesGroup,
         year: u32,
     ) -> Result<Vec<FishingWeightPrediction>, QueryError> {
         convert_vec(
-            self.existing_fishing_weight_predictions_impl(model_id, year)
+            self.existing_fishing_weight_predictions_impl(model_id, species, year)
                 .await
                 .change_context(QueryError)?,
         )
@@ -1255,9 +1259,10 @@ impl MLModelsInbound for PostgresAdapter {
     async fn existing_fishing_spot_predictions(
         &self,
         model_id: ModelId,
+        species: SpeciesGroup,
         year: u32,
     ) -> Result<Vec<FishingSpotPrediction>, QueryError> {
-        self.existing_fishing_spot_predictions_impl(model_id, year)
+        self.existing_fishing_spot_predictions_impl(model_id, species, year)
             .await
             .change_context(QueryError)
     }
