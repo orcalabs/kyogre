@@ -21,14 +21,15 @@ pub trait MLModelsInbound: Send + Sync {
     async fn existing_fishing_spot_predictions(
         &self,
         model_id: ModelId,
+        species: SpeciesGroup,
         year: u32,
     ) -> Result<Vec<FishingSpotPrediction>, QueryError>;
     async fn existing_fishing_weight_predictions(
         &self,
         model_id: ModelId,
+        species: SpeciesGroup,
         year: u32,
     ) -> Result<Vec<FishingWeightPrediction>, QueryError>;
-    async fn species_caught_with_traal(&self) -> Result<Vec<SpeciesGroup>, QueryError>;
     async fn catch_locations_weather_dates(
         &self,
         dates: Vec<NaiveDate>,

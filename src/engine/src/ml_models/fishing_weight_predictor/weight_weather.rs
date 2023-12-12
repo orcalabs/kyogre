@@ -45,10 +45,12 @@ impl MLModel for FishingWeightWeatherPredictor {
     async fn train(
         &self,
         model: Vec<u8>,
+        species: SpeciesGroup,
         adapter: &dyn MLModelsOutbound,
     ) -> Result<TrainingOutput, MLModelError> {
         weight_train_impl(
             self.id(),
+            species,
             &self.settings,
             model,
             adapter,
@@ -103,10 +105,12 @@ impl MLModel for FishingWeightWeatherPredictor {
     async fn predict(
         &self,
         model: &[u8],
+        species: SpeciesGroup,
         adapter: &dyn MLModelsInbound,
     ) -> Result<(), MLModelError> {
         weight_predict_impl(
             self.id(),
+            species,
             &self.settings,
             model,
             adapter,

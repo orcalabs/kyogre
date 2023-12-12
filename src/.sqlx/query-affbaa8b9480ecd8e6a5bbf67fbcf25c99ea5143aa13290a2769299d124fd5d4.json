@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT\n    model\nFROM\n    ml_models\nWHERE\n    ml_model_id = $1\n            ",
+  "query": "\nSELECT\n    model\nFROM\n    ml_models\nWHERE\n    ml_model_id = $1\n    AND species_group_id = $2\n            ",
   "describe": {
     "columns": [
       {
@@ -11,6 +11,7 @@
     ],
     "parameters": {
       "Left": [
+        "Int4",
         "Int4"
       ]
     },
@@ -18,5 +19,5 @@
       true
     ]
   },
-  "hash": "a1fee1c8d68c8af6884c113477fdf8151026f0563f51ce5cfb0bbd68efe7be6c"
+  "hash": "affbaa8b9480ecd8e6a5bbf67fbcf25c99ea5143aa13290a2769299d124fd5d4"
 }

@@ -41,10 +41,12 @@ impl MLModel for FishingSpotPredictor {
     async fn train(
         &self,
         model: Vec<u8>,
+        species: SpeciesGroup,
         adapter: &dyn MLModelsOutbound,
     ) -> Result<TrainingOutput, MLModelError> {
         spot_train_impl(
             self.id(),
+            species,
             &self.settings,
             model,
             adapter,
@@ -68,10 +70,12 @@ impl MLModel for FishingSpotPredictor {
     async fn predict(
         &self,
         model: &[u8],
+        species: SpeciesGroup,
         adapter: &dyn MLModelsInbound,
     ) -> Result<(), MLModelError> {
         spot_predict_impl(
             self.id(),
+            species,
             &self.settings,
             model,
             adapter,

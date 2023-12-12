@@ -33,7 +33,6 @@ pub struct SpotPredictorSettings {
     pub predict_batch_size: u32,
     pub range: PredictionRange,
     pub catch_locations: Vec<CatchLocationId>,
-    pub single_species_mode: Option<SpeciesGroup>,
     pub training_mode: TrainingMode,
     pub test_fraction: Option<f64>,
 }
@@ -46,6 +45,7 @@ struct PredictionInputKey {
 
 async fn spot_train_impl<T, S>(
     model_id: ModelId,
+    species: SpeciesGroup,
     settings: &SpotPredictorSettings,
     model: Vec<u8>,
     adapter: &dyn MLModelsOutbound,
@@ -69,6 +69,7 @@ where
         TrainingMode::Single | TrainingMode::Batches(_) => loop {
             match training_run(
                 model_id,
+                species,
                 settings,
                 &mut training_output,
                 adapter,
@@ -80,11 +81,11 @@ where
                 TrainingOutcome::Finished => break,
                 TrainingOutcome::Progress(hauls) => {
                     adapter
-                        .commit_hauls_training(model_id, hauls.into_iter().collect())
+                        .commit_hauls_training(model_id, species, hauls.into_iter().collect())
                         .await
                         .change_context(MLModelError::StoreOutput)?;
                     adapter
-                        .save_model(model_id, &training_output.model)
+                        .save_model(model_id, &training_output.model, species)
                         .await
                         .change_context(MLModelError::StoreOutput)?;
                 }
@@ -93,6 +94,7 @@ where
         TrainingMode::Local => {
             training_run(
                 model_id,
+                species,
                 settings,
                 &mut training_output,
                 adapter,
@@ -108,6 +110,7 @@ where
 
 async fn training_run<T, S>(
     model_id: ModelId,
+    species: SpeciesGroup,
     settings: &SpotPredictorSettings,
     output: &mut TrainingOutput,
     adapter: &dyn MLModelsOutbound,
@@ -126,8 +129,8 @@ where
     let training_data: Vec<FishingSpotTrainingData> = adapter
         .fishing_spot_predictor_training_data(
             model_id,
+            species,
             settings.training_mode.batch_size(),
-            settings.single_species_mode,
         )
         .await
         .change_context(MLModelError::DataPreparation)?
@@ -135,7 +138,6 @@ where
         .filter_map(|v| {
             hauls.insert(TrainingHaul {
                 haul_id: HaulId(v.haul_id),
-                species: v.species,
                 catch_location_id: v.catch_location_id.clone(),
             });
             if settings.running_in_test || distance_to_shore(v.latitude, v.longitude) > 2000.0 {
@@ -232,6 +234,7 @@ where
 
 async fn spot_predict_impl<T, S>(
     model_id: ModelId,
+    species: SpeciesGroup,
     settings: &SpotPredictorSettings,
     model: &[u8],
     adapter: &dyn MLModelsInbound,
@@ -259,27 +262,15 @@ where
     for chunk in targets.chunks(settings.predict_batch_size as usize) {
         let mut predictions = HashSet::new();
 
-        let species = adapter
-            .species_caught_with_traal()
-            .await
-            .change_context(MLModelError::DataPreparation)?;
-
         for c in chunk {
-            for s in &species {
-                if let Some(single) = settings.single_species_mode {
-                    if *s != single {
-                        continue;
-                    }
-                }
-                predictions.insert(PredictionInputKey {
-                    species_group_id: *s,
-                    date: *c,
-                });
-            }
+            predictions.insert(PredictionInputKey {
+                species_group_id: species,
+                date: *c,
+            });
         }
 
         let existing_predictions = adapter
-            .existing_fishing_spot_predictions(model_id, current_year)
+            .existing_fishing_spot_predictions(model_id, species, current_year)
             .await
             .change_context(MLModelError::DataPreparation)?;
 

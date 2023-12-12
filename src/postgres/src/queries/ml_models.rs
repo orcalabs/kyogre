@@ -15,6 +15,7 @@ impl PostgresAdapter {
     pub(crate) async fn commit_hauls_training_impl(
         &self,
         model_id: ModelId,
+        species: SpeciesGroup,
         hauls: Vec<TrainingHaul>,
     ) -> Result<(), PostgresError> {
         let insert: Vec<MLTrainingLog> = hauls
@@ -22,7 +23,7 @@ impl PostgresAdapter {
             .map(|v| MLTrainingLog {
                 ml_model_id: model_id,
                 haul_id: v.haul_id.0,
-                species_group_id: v.species,
+                species_group_id: species,
                 catch_location_id: v.catch_location_id.into_inner(),
             })
             .collect();
@@ -37,6 +38,7 @@ impl PostgresAdapter {
         &self,
         model_id: ModelId,
         model: &[u8],
+        species: SpeciesGroup,
     ) -> Result<(), PostgresError> {
         sqlx::query!(
             r#"
@@ -45,16 +47,22 @@ SET
     model = $1
 WHERE
     ml_model_id = $2
+    AND species_group_id = $3
             "#,
             model,
-            model_id as i32
+            model_id as i32,
+            species as i32
         )
         .execute(&self.pool)
         .await
         .change_context(PostgresError::Query)
         .map(|_| ())
     }
-    pub(crate) async fn model_impl(&self, model_id: ModelId) -> Result<Vec<u8>, PostgresError> {
+    pub(crate) async fn model_impl(
+        &self,
+        model_id: ModelId,
+        species: SpeciesGroup,
+    ) -> Result<Vec<u8>, PostgresError> {
         sqlx::query!(
             r#"
 SELECT
@@ -63,8 +71,10 @@ FROM
     ml_models
 WHERE
     ml_model_id = $1
+    AND species_group_id = $2
             "#,
-            model_id as i32
+            model_id as i32,
+            species as i32
         )
         .fetch_one(&self.pool)
         .await
@@ -74,6 +84,7 @@ WHERE
     pub(crate) async fn existing_fishing_weight_predictions_impl(
         &self,
         model_id: ModelId,
+        species: SpeciesGroup,
         year: u32,
     ) -> Result<Vec<FishingWeightPrediction>, PostgresError> {
         sqlx::query_as!(
@@ -89,9 +100,11 @@ FROM
 WHERE
     DATE_PART('year', "date") = $1
     AND ml_model_id = $2
+    AND species_group_id = $3
             "#,
             year as i32,
-            model_id as i32
+            model_id as i32,
+            species as i32,
         )
         .fetch_all(&self.pool)
         .await
@@ -101,6 +114,7 @@ WHERE
     pub(crate) async fn existing_fishing_spot_predictions_impl(
         &self,
         model_id: ModelId,
+        species: SpeciesGroup,
         year: u32,
     ) -> Result<Vec<FishingSpotPrediction>, PostgresError> {
         sqlx::query_as!(
@@ -116,9 +130,11 @@ FROM
 WHERE
     DATE_PART('year', "date") = $1
     AND ml_model_id = $2
+    AND species_group_id = $3
             "#,
             year as i32,
-            model_id as i32
+            model_id as i32,
+            species as i32
         )
         .fetch_all(&self.pool)
         .await
@@ -157,9 +173,9 @@ WHERE
     pub(crate) async fn fishing_weight_predictor_training_data_impl(
         &self,
         model_id: ModelId,
+        species: SpeciesGroup,
         weather_data: WeatherData,
         limit: Option<u32>,
-        single_species_mode: Option<SpeciesGroup>,
         bycatch_percentage: Option<f64>,
         majority_species_group: bool,
     ) -> Result<Vec<WeightPredictorTrainingData>, PostgresError> {
@@ -199,10 +215,7 @@ WHERE
     (h.stop_timestamp - h.start_timestamp) < INTERVAL '2 day'
     AND hm.gear_group_id = $2
     AND m.haul_id IS NULL
-    AND (
-        $3::INT IS NULL
-        OR hm.species_group_id = $3
-    )
+    AND hm.species_group_id = $3
     AND (
         (
             h.air_temperature_2m IS NOT NULL
@@ -229,7 +242,7 @@ LIMIT
             "#,
             model_id as i32,
             GearGroup::Trawl as i32,
-            single_species_mode.map(|v| v as i32),
+            species as i32,
             require_weather,
             bycatch_percentage,
             majority_species_group,
@@ -243,8 +256,8 @@ LIMIT
     pub(crate) async fn fishing_spot_predictor_training_data_impl(
         &self,
         model_id: ModelId,
+        species: SpeciesGroup,
         limit: Option<u32>,
-        single_species_mode: Option<SpeciesGroup>,
     ) -> Result<Vec<FishingSpotTrainingData>, PostgresError> {
         sqlx::query_as!(
             FishingSpotTrainingData,
@@ -277,10 +290,7 @@ WITH
             (h.stop_timestamp - h.start_timestamp) < INTERVAL '2 day'
             AND h.gear_group_id = $2
             AND m.haul_id IS NULL
-            AND (
-                $3::INT IS NULL
-                OR hm.species_group_id = $3
-            )
+            AND hm.species_group_id = $3
         ORDER BY
             hm.species_group_id,
             h.start_timestamp::DATE,
@@ -306,10 +316,7 @@ WHERE
     (h.stop_timestamp - h.start_timestamp) < INTERVAL '2 day'
     AND hm.gear_group_id = $2
     AND m.haul_id IS NULL
-    AND (
-        $3::INT IS NULL
-        OR hm.species_group_id = $3
-    )
+    AND hm.species_group_id = $3
 ORDER BY
     h.start_timestamp
 LIMIT
@@ -317,7 +324,7 @@ LIMIT
             "#,
             model_id as i32,
             GearGroup::Trawl as i32,
-            single_species_mode.map(|v| v as i32),
+            species as i32,
             limit.map(|v| v as i64)
         )
         .fetch_all(&self.pool)

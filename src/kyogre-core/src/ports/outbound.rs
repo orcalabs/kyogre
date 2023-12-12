@@ -268,28 +268,34 @@ pub trait TripPipelineOutbound: Send + Sync {
 
 #[async_trait]
 pub trait MLModelsOutbound: Send + Sync {
-    async fn save_model(&self, model_id: ModelId, model: &[u8]) -> Result<(), InsertError>;
+    async fn save_model(
+        &self,
+        model_id: ModelId,
+        model: &[u8],
+        species: SpeciesGroup,
+    ) -> Result<(), InsertError>;
     async fn fishing_spot_predictor_training_data(
         &self,
         model_id: ModelId,
+        species: SpeciesGroup,
         limit: Option<u32>,
-        single_species_mode: Option<SpeciesGroup>,
     ) -> Result<Vec<FishingSpotTrainingData>, QueryError>;
     async fn fishing_weight_predictor_training_data(
         &self,
         model_id: ModelId,
+        species: SpeciesGroup,
         weather: WeatherData,
         limit: Option<u32>,
-        single_species_mode: Option<SpeciesGroup>,
         bycatch_percentage: Option<f64>,
         majority_species_group: bool,
     ) -> Result<Vec<WeightPredictorTrainingData>, QueryError>;
     async fn commit_hauls_training(
         &self,
         model_id: ModelId,
+        species: SpeciesGroup,
         haul: Vec<TrainingHaul>,
     ) -> Result<(), InsertError>;
-    async fn model(&self, model_id: ModelId) -> Result<Vec<u8>, QueryError>;
+    async fn model(&self, model_id: ModelId, species: SpeciesGroup) -> Result<Vec<u8>, QueryError>;
     async fn catch_locations_weather_dates(
         &self,
         dates: Vec<NaiveDate>,
