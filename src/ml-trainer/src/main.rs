@@ -1,7 +1,7 @@
 use clap::{Args, Parser, Subcommand};
 use engine::{
-    FishingSpotPredictor, FishingWeightPredictor, FishingWeightWeatherPredictor,
-    SpotPredictorSettings, WeightPredictorSettings,
+    FishingSpotPredictor, FishingSpotWeatherPredictor, FishingWeightPredictor,
+    FishingWeightWeatherPredictor, SpotPredictorSettings, WeightPredictorSettings,
 };
 use fiskeridir_rs::SpeciesGroup;
 use kyogre_core::{MLModel, MLModelsOutbound, PredictionRange, TrainingMode};
@@ -281,7 +281,17 @@ async fn run_experiment(
                                 species: Some(s),
                             });
                         }
-                        kyogre_core::ModelId::SpotWeather => unimplemented!(),
+                        kyogre_core::ModelId::SpotWeather => {
+                            let mut settings = spot_settings.clone();
+                            settings.single_species_mode = Some(s);
+                            let model = Box::new(FishingSpotWeatherPredictor::new(settings));
+                            experiments.push(Experiment {
+                                majority_species_group: base_args.majority_species_group,
+                                bycatch: base_args.bycatch,
+                                model,
+                                species: Some(s),
+                            });
+                        }
                     }
                 }
             }
@@ -379,7 +389,10 @@ async fn run_models_on_species(
                 let model = Box::new(FishingWeightWeatherPredictor::new(weight_settings.clone()));
                 models.push(model as Box<dyn MLModel>);
             }
-            kyogre_core::ModelId::SpotWeather => unimplemented!(),
+            kyogre_core::ModelId::SpotWeather => {
+                let model = Box::new(FishingSpotWeatherPredictor::new(spot_settings.clone()));
+                models.push(model as Box<dyn MLModel>);
+            }
         }
     }
 
