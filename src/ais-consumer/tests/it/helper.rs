@@ -49,7 +49,7 @@ where
 
     let mut docker_test = DockerTest::new().with_default_source(Source::DockerHub);
 
-    let db_composition = postgres_composition(
+    let mut db_composition = postgres_composition(
         DATABASE_PASSWORD,
         "postgres",
         "ghcr.io/orcalabs/kyogre/test-postgres",
@@ -57,6 +57,7 @@ where
     )
     .set_log_options(None);
 
+    db_composition.modify_port_map(5432, 5400);
     docker_test.provide_container(db_composition);
 
     let db_name = random::<u32>().to_string();
