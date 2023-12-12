@@ -60,7 +60,7 @@ pub struct LandingsQuery {
     pub catch_locations: Option<Vec<CatchLocationId>>,
     pub gear_group_ids: Option<Vec<GearGroup>>,
     pub species_group_ids: Option<Vec<SpeciesGroup>>,
-    pub vessel_length_ranges: Option<Vec<Range<f64>>>,
+    pub vessel_length_groups: Option<Vec<VesselLengthGroup>>,
     pub vessel_ids: Option<Vec<FiskeridirVesselId>>,
     pub sorting: Option<LandingsSorting>,
     pub ordering: Option<Ordering>,

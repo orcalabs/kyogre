@@ -1,4 +1,4 @@
-use super::{bound_float_to_decimal, float_to_decimal, opt_float_to_decimal};
+use super::{float_to_decimal, opt_float_to_decimal};
 use crate::{error::PostgresError, models::Haul, models::HaulMessage, PostgresAdapter};
 use bigdecimal::BigDecimal;
 use chrono::{DateTime, Utc};
@@ -176,8 +176,8 @@ WHERE
         OR h.species_group_ids && $4
     )
     AND (
-        $5::numrange[] IS NULL
-        OR h.vessel_length <@ ANY ($5)
+        $5::INT[] IS NULL
+        OR h.vessel_length_group = ANY ($5)
     )
     AND (
         $6::BIGINT[] IS NULL
@@ -229,7 +229,7 @@ ORDER BY
             args.catch_locations as _,
             args.gear_group_ids as _,
             args.species_group_ids as _,
-            args.vessel_length_ranges as _,
+            args.vessel_length_groups as _,
             args.fiskeridir_vessel_ids as _,
             args.min_wind_speed,
             args.max_wind_speed,
@@ -982,7 +982,7 @@ pub struct HaulsArgs {
     pub catch_locations: Option<Vec<String>>,
     pub gear_group_ids: Option<Vec<i32>>,
     pub species_group_ids: Option<Vec<i32>>,
-    pub vessel_length_ranges: Option<Vec<PgRange<BigDecimal>>>,
+    pub vessel_length_groups: Option<Vec<i32>>,
     pub fiskeridir_vessel_ids: Option<Vec<i64>>,
     pub min_wind_speed: Option<BigDecimal>,
     pub max_wind_speed: Option<BigDecimal>,
@@ -1015,21 +1015,9 @@ impl TryFrom<HaulsQuery> for HaulsArgs {
             species_group_ids: v
                 .species_group_ids
                 .map(|gs| gs.into_iter().map(|g| g as i32).collect()),
-            vessel_length_ranges: v
-                .vessel_length_ranges
-                .map(|ranges| {
-                    ranges
-                        .into_iter()
-                        .map(|r| {
-                            Ok(PgRange {
-                                start: bound_float_to_decimal(r.start)?,
-                                end: bound_float_to_decimal(r.end)?,
-                            })
-                        })
-                        .collect::<Result<Vec<_>, _>>()
-                })
-                .transpose()
-                .change_context(PostgresError::DataConversion)?,
+            vessel_length_groups: v
+                .vessel_length_groups
+                .map(|groups| groups.into_iter().map(|g| g as i32).collect()),
             fiskeridir_vessel_ids: v
                 .vessel_ids
                 .map(|ids| ids.into_iter().map(|i| i.0).collect()),

@@ -11,7 +11,7 @@ use fiskeridir_rs::{DeliveryPointId, Gear, GearGroup, SpeciesGroup, VesselLength
 use futures::TryStreamExt;
 use kyogre_core::{
     ActiveLandingFilter, CatchLocationId, FiskeridirVesselId, LandingMatrixQuery, LandingsQuery,
-    LandingsSorting, Ordering, Range,
+    LandingsSorting, Ordering,
 };
 use serde::{Deserialize, Serialize};
 use serde_qs::actix::QsQuery as Query;
@@ -33,8 +33,9 @@ pub struct LandingsParams {
     #[param(rename = "speciesGroupIds[]", value_type = Option<Vec<String>>)]
     #[serde_as(as = "Option<Vec<DisplayFromStr>>")]
     pub species_group_ids: Option<Vec<SpeciesGroup>>,
-    #[param(rename = "vesselLengthRanges[]", value_type = Option<Vec<String>>)]
-    pub vessel_length_ranges: Option<Vec<Range<f64>>>,
+    #[param(rename = "vesselLengthGroups[]", value_type = Option<Vec<String>>)]
+    #[serde_as(as = "Option<Vec<DisplayFromStr>>")]
+    pub vessel_length_groups: Option<Vec<VesselLengthGroup>>,
     #[param(rename = "fiskeridirVesselIds[]", value_type = Option<Vec<i64>>)]
     pub fiskeridir_vessel_ids: Option<Vec<FiskeridirVesselId>>,
     pub sorting: Option<LandingsSorting>,
@@ -281,7 +282,7 @@ impl From<LandingsParams> for LandingsQuery {
             catch_locations: v.catch_locations,
             gear_group_ids: v.gear_group_ids,
             species_group_ids: v.species_group_ids,
-            vessel_length_ranges: v.vessel_length_ranges,
+            vessel_length_groups: v.vessel_length_groups,
             vessel_ids: v.fiskeridir_vessel_ids,
             sorting: Some(v.sorting.unwrap_or_default()),
             ordering: Some(v.ordering.unwrap_or_default()),

@@ -1,4 +1,4 @@
-use bigdecimal::{BigDecimal, ToPrimitive};
+use bigdecimal::ToPrimitive;
 use chrono::{DateTime, TimeZone, Utc};
 use chrono::{NaiveDateTime, NaiveTime};
 use futures::Stream;
@@ -23,8 +23,6 @@ use crate::{
 };
 use error_stack::{report, Report, Result, ResultExt};
 use fiskeridir_rs::{Gear, GearGroup, LandingId, VesselLengthGroup};
-
-use super::bound_float_to_decimal;
 
 static CHUNK_SIZE: usize = 100_000;
 
@@ -91,8 +89,8 @@ WHERE
         OR l.gear_group_id = ANY ($4)
     )
     AND (
-        $5::numrange[] IS NULL
-        OR l.vessel_length <@ ANY ($5::numrange[])
+        $5::INT[] IS NULL
+        OR l.vessel_length_group_id = ANY ($5)
     )
     AND (
         $6::BIGINT[] IS NULL
@@ -127,7 +125,7 @@ ORDER BY
             args.catch_area_ids as _,
             args.catch_main_area_ids as _,
             args.gear_group_ids as _,
-            args.vessel_length_ranges as _,
+            args.vessel_length_groups as _,
             args.fiskeridir_vessel_ids as _,
             args.species_group_ids as _,
             args.ordering,
@@ -395,7 +393,7 @@ WHERE
 
         let deleted = sqlx::query!(
             r#"
-DELETE FROM landings l USING UNNEST($1::TEXT[], $2::INT[]) u (landing_id, "version")
+DELETE FROM landings l USING UNNEST($1::TEXT [], $2::INT[]) u (landing_id, "version")
 WHERE
     l.landing_id = u.landing_id
     AND l.version < u.version
@@ -501,7 +499,7 @@ WHERE
             r#"
 DELETE FROM landings
 WHERE
-    (NOT landing_id = ANY ($1::TEXT[]))
+    (NOT landing_id = ANY ($1::TEXT []))
     AND data_year = $2::INT
 RETURNING
     fiskeridir_vessel_id,
@@ -603,7 +601,7 @@ SELECT
     e.species_group_id,
     COALESCE(SUM(e.living_weight), 0)
 FROM
-    UNNEST($1::TEXT[]) u (landing_id)
+    UNNEST($1::TEXT []) u (landing_id)
     INNER JOIN landings l ON l.landing_id = u.landing_id
     INNER JOIN landing_entries e ON l.landing_id = e.landing_id
     INNER JOIN catch_locations c ON l.catch_main_area_id = c.catch_main_area_id
@@ -711,7 +709,7 @@ pub struct LandingsArgs {
     pub catch_main_area_ids: Option<Vec<i32>>,
     pub gear_group_ids: Option<Vec<i32>>,
     pub species_group_ids: Option<Vec<i32>>,
-    pub vessel_length_ranges: Option<Vec<PgRange<BigDecimal>>>,
+    pub vessel_length_groups: Option<Vec<i32>>,
     pub fiskeridir_vessel_ids: Option<Vec<i64>>,
     pub sorting: Option<i32>,
     pub ordering: Option<i32>,
@@ -753,21 +751,9 @@ impl TryFrom<LandingsQuery> for LandingsArgs {
             species_group_ids: v
                 .species_group_ids
                 .map(|gs| gs.into_iter().map(|g| g as i32).collect()),
-            vessel_length_ranges: v
-                .vessel_length_ranges
-                .map(|ranges| {
-                    ranges
-                        .into_iter()
-                        .map(|r| {
-                            Ok(PgRange {
-                                start: bound_float_to_decimal(r.start)?,
-                                end: bound_float_to_decimal(r.end)?,
-                            })
-                        })
-                        .collect::<Result<Vec<_>, _>>()
-                })
-                .transpose()
-                .change_context(PostgresError::DataConversion)?,
+            vessel_length_groups: v
+                .vessel_length_groups
+                .map(|groups| groups.into_iter().map(|g| g as i32).collect()),
             fiskeridir_vessel_ids: v
                 .vessel_ids
                 .map(|ids| ids.into_iter().map(|i| i.0).collect()),

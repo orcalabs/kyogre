@@ -15,7 +15,7 @@ impl From<HaulsQuery> for Query<HaulFilter, Option<HaulSort>, ()> {
             catch_locations,
             gear_group_ids,
             species_group_ids,
-            vessel_length_ranges,
+            vessel_length_groups,
             vessel_ids,
             min_wind_speed,
             max_wind_speed,
@@ -40,8 +40,8 @@ impl From<HaulsQuery> for Query<HaulFilter, Option<HaulSort>, ()> {
         if let Some(ids) = species_group_ids {
             filters.insert(HaulFilter::SpeciesGroupIds(ids));
         }
-        if let Some(lengths) = vessel_length_ranges {
-            filters.insert(HaulFilter::VesselLength(lengths));
+        if let Some(groups) = vessel_length_groups {
+            filters.insert(HaulFilter::VesselLengthGroup(groups));
         }
         if let Some(ids) = vessel_ids {
             filters.insert(HaulFilter::FiskeridirVesselId(ids));
