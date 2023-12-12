@@ -179,9 +179,9 @@ pub async fn all_fishing_weight_predictions<T: Database + 'static>(
     }
 }
 
+#[serde_as]
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
-#[serde_as]
 pub struct FishingSpotPrediction {
     pub latitude: f64,
     pub longitude: f64,
@@ -190,9 +190,9 @@ pub struct FishingSpotPrediction {
     pub date: NaiveDate,
 }
 
+#[serde_as]
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
-#[serde_as]
 pub struct FishingWeightPrediction {
     #[schema(value_type = String)]
     pub catch_location_id: CatchLocationId,
