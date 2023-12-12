@@ -1,5 +1,9 @@
+use std::str::FromStr;
+
 use error_stack::{bail, report, Result, ResultExt};
-use jsonwebtoken::{decode, decode_header, jwk::JwkSet, DecodingKey, TokenData, Validation};
+use jsonwebtoken::{
+    decode, decode_header, jwk::JwkSet, Algorithm, DecodingKey, TokenData, Validation,
+};
 use serde::de::DeserializeOwned;
 
 #[derive(Debug, Clone)]
@@ -35,9 +39,14 @@ impl Auth0State {
 
         let key = DecodingKey::from_jwk(jwk).change_context(Auth0Error::DecodeKeyFromJwk)?;
         let validation = Validation::new(
-            jwk.common
-                .algorithm
-                .ok_or_else(|| report!(Auth0Error::MissingAlgorithmInJwk))?,
+            Algorithm::from_str(
+                jwk.common
+                    .key_algorithm
+                    .ok_or_else(|| report!(Auth0Error::MissingAlgorithmInJwk))?
+                    .to_string()
+                    .as_str(),
+            )
+            .change_context(Auth0Error::InvalidAlgorithmInJwk)?,
         );
 
         decode(token, &key, &validation).change_context(Auth0Error::DecodeToken)
@@ -53,6 +62,7 @@ pub enum Auth0Error {
     MissingKidInHeader,
     MissingKidInJwkSet,
     MissingAlgorithmInJwk,
+    InvalidAlgorithmInJwk,
 }
 
 impl std::error::Error for Auth0Error {}
@@ -69,6 +79,7 @@ impl std::fmt::Display for Auth0Error {
             Auth0Error::MissingKidInHeader => f.write_str("kid missing in header"),
             Auth0Error::MissingKidInJwkSet => f.write_str("kid missing in JWK Set"),
             Auth0Error::MissingAlgorithmInJwk => f.write_str("algorithm missing in JWK"),
+            Auth0Error::InvalidAlgorithmInJwk => f.write_str("invalid algorithm in JWK"),
         }
     }
 }
