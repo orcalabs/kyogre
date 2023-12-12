@@ -1,9 +1,37 @@
 use super::helper::test;
 use actix_web::http::StatusCode;
 use engine::*;
+use fiskeridir_rs::SpeciesGroup;
+use kyogre_core::ML_SPECIES_GROUPS;
 use strum::IntoEnumIterator;
 use web_api::routes::v1::species::*;
 
+#[tokio::test]
+async fn test_species_groups_filters_by_has_ml_models() {
+    test(|helper, _builder| async move {
+        let response = helper
+            .app
+            .get_species_groups(SpeciesGroupParams {
+                has_ml_models: Some(true),
+            })
+            .await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let mut body: Vec<SpeciesGroup> = response
+            .json::<Vec<SpeciesGroupDetailed>>()
+            .await
+            .unwrap()
+            .into_iter()
+            .map(|v| v.id)
+            .collect();
+
+        let mut expected = ML_SPECIES_GROUPS.to_vec();
+        body.sort();
+        expected.sort();
+        assert_eq!(body, expected);
+    })
+    .await;
+}
 #[tokio::test]
 async fn test_species_returns_all_species() {
     test(|helper, builder| async move {
@@ -56,7 +84,10 @@ async fn test_species_groups_returns_all_species_groups() {
             })
             .collect();
 
-        let response = helper.app.get_species_groups().await;
+        let response = helper
+            .app
+            .get_species_groups(SpeciesGroupParams::default())
+            .await;
 
         assert_eq!(response.status(), StatusCode::OK);
         let mut body: Vec<SpeciesGroupDetailed> = response.json().await.unwrap();

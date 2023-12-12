@@ -2,11 +2,19 @@ use crate::{error::ApiError, response::Response, to_streaming_response, Database
 use actix_web::{web, HttpResponse};
 use fiskeridir_rs::{SpeciesGroup, SpeciesMainGroup};
 use futures::TryStreamExt;
+use kyogre_core::ML_SPECIES_GROUPS;
 use serde::{Deserialize, Serialize};
+use serde_qs::actix::QsQuery as Query;
 use serde_with::{serde_as, DisplayFromStr};
 use strum::IntoEnumIterator;
 use tracing::{event, Level};
-use utoipa::ToSchema;
+use utoipa::{IntoParams, ToSchema};
+
+#[derive(Default, Debug, Clone, Deserialize, Serialize, IntoParams)]
+#[serde(rename_all = "camelCase")]
+pub struct SpeciesGroupParams {
+    pub has_ml_models: Option<bool>,
+}
 
 #[utoipa::path(
     get,
@@ -29,19 +37,30 @@ pub async fn species<T: Database + 'static>(db: web::Data<T>) -> Result<HttpResp
 #[utoipa::path(
     get,
     path = "/species_groups",
+    params(SpeciesGroupParams),
     responses(
         (status = 200, description = "all species groups", body = [SpeciesGroupDetailed]),
         (status = 500, description = "an internal error occured", body = ErrorResponse),
     )
 )]
 #[tracing::instrument]
-pub async fn species_groups<T: Database + 'static + 'static>() -> Response<Vec<SpeciesGroupDetailed>>
-{
-    Response::new(
-        fiskeridir_rs::SpeciesGroup::iter()
-            .map(SpeciesGroupDetailed::from)
-            .collect(),
-    )
+pub async fn species_groups<T: Database + 'static + 'static>(
+    params: Query<SpeciesGroupParams>,
+) -> Response<Vec<SpeciesGroupDetailed>> {
+    if params.into_inner().has_ml_models.unwrap_or(false) {
+        Response::new(
+            ML_SPECIES_GROUPS
+                .iter()
+                .map(|v| SpeciesGroupDetailed::from(*v))
+                .collect(),
+        )
+    } else {
+        Response::new(
+            fiskeridir_rs::SpeciesGroup::iter()
+                .map(SpeciesGroupDetailed::from)
+                .collect(),
+        )
+    }
 }
 
 #[utoipa::path(
