@@ -1,6 +1,6 @@
 use chrono::{DateTime, Utc};
 use error_stack::Result;
-use fiskeridir_rs::{GearGroup, SpeciesGroup};
+use fiskeridir_rs::{GearGroup, SpeciesGroup, VesselLengthGroup};
 use kyogre_core::{CatchLocationId, FiskeridirVesselId, HaulsSorting, MinMaxBoth, Range};
 use strum_macros::{EnumDiscriminants, EnumIter};
 
@@ -34,7 +34,7 @@ pub enum HaulFilter {
     GearGroupId(Vec<GearGroup>),
     SpeciesGroupIds(Vec<SpeciesGroup>),
     CatchLocations(Vec<CatchLocationId>),
-    VesselLength(Vec<Range<f64>>),
+    VesselLengthGroup(Vec<VesselLengthGroup>),
     FiskeridirVesselId(Vec<FiskeridirVesselId>),
 }
 
@@ -93,10 +93,10 @@ impl Filter for HaulFilter {
                 HaulFilterDiscriminants::SpeciesGroupIds,
                 join_comma_fn(ids, |s| s as i32)
             ),
-            HaulFilter::VesselLength(lengths) => create_ranges_filter(
-                lengths,
-                HaulFilterDiscriminants::VesselLength,
-                HaulFilterDiscriminants::VesselLength,
+            HaulFilter::VesselLengthGroup(groups) => format!(
+                "{} IN [{}]",
+                HaulFilterDiscriminants::VesselLengthGroup,
+                join_comma_fn(groups, |v| v as i32)
             ),
             HaulFilter::FiskeridirVesselId(ids) => format!(
                 "{} IN [{}]",

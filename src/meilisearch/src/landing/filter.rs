@@ -1,6 +1,6 @@
 use chrono::{DateTime, Utc};
 use error_stack::Result;
-use fiskeridir_rs::{GearGroup, SpeciesGroup};
+use fiskeridir_rs::{GearGroup, SpeciesGroup, VesselLengthGroup};
 use kyogre_core::{CatchLocationId, FiskeridirVesselId, LandingsSorting, Range};
 use strum_macros::{EnumDiscriminants, EnumIter};
 
@@ -21,7 +21,7 @@ pub enum LandingFilter {
     GearGroupId(Vec<GearGroup>),
     SpeciesGroupIds(Vec<SpeciesGroup>),
     CatchLocation(Vec<CatchLocationId>),
-    VesselLength(Vec<Range<f64>>),
+    VesselLengthGroup(Vec<VesselLengthGroup>),
     FiskeridirVesselId(Vec<FiskeridirVesselId>),
 }
 
@@ -53,10 +53,10 @@ impl Filter for LandingFilter {
                 LandingFilterDiscriminants::SpeciesGroupIds,
                 join_comma_fn(ids, |s| s as i32)
             ),
-            LandingFilter::VesselLength(lengths) => create_ranges_filter(
-                lengths,
-                LandingFilterDiscriminants::VesselLength,
-                LandingFilterDiscriminants::VesselLength,
+            LandingFilter::VesselLengthGroup(groups) => format!(
+                "{} IN [{}]",
+                LandingFilterDiscriminants::VesselLengthGroup,
+                join_comma_fn(groups, |v| v as i32)
             ),
             LandingFilter::FiskeridirVesselId(ids) => format!(
                 "{} IN [{}]",

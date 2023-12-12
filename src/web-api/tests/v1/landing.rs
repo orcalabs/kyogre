@@ -2,7 +2,7 @@ use super::helper::{test, test_with_cache};
 use actix_web::http::StatusCode;
 use chrono::{DateTime, Utc};
 use engine::*;
-use fiskeridir_rs::{GearGroup, SpeciesGroup};
+use fiskeridir_rs::{GearGroup, SpeciesGroup, VesselLengthGroup};
 use kyogre_core::{FiskeridirVesselId, LandingsSorting, Ordering};
 use web_api::routes::v1::landing::{Landing, LandingsParams};
 
@@ -175,13 +175,13 @@ async fn test_landings_returns_landings_with_species_group_ids() {
 }
 
 #[tokio::test]
-async fn test_landings_returns_landings_with_vessel_length_ranges() {
+async fn test_landings_returns_landings_with_vessel_length_groups() {
     test_with_cache(|helper, builder| async move {
         let state = builder
             .landings(4)
             .modify_idx(|i, v| match i {
-                0 => v.landing.vessel.length = Some(9.),
-                1 => v.landing.vessel.length = Some(12.),
+                0 => v.landing.vessel.length_group_code = VesselLengthGroup::UnderEleven,
+                1 => v.landing.vessel.length_group_code = VesselLengthGroup::ElevenToFifteen,
                 _ => (),
             })
             .build()
@@ -190,7 +190,10 @@ async fn test_landings_returns_landings_with_vessel_length_ranges() {
         helper.refresh_cache().await;
 
         let params = LandingsParams {
-            vessel_length_ranges: Some(vec!["(,10)".parse().unwrap(), "[10,15)".parse().unwrap()]),
+            vessel_length_groups: Some(vec![
+                VesselLengthGroup::UnderEleven,
+                VesselLengthGroup::ElevenToFifteen,
+            ]),
             ordering: Some(Ordering::Asc),
             ..Default::default()
         };

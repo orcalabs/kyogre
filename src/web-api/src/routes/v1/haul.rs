@@ -11,7 +11,7 @@ use fiskeridir_rs::{Gear, GearGroup, SpeciesGroup, VesselLengthGroup, WhaleGende
 use futures::TryStreamExt;
 use kyogre_core::{
     ActiveHaulsFilter, CatchLocationId, FiskeridirVesselId, HaulId, HaulsMatrixQuery, HaulsQuery,
-    HaulsSorting, Ordering, Range,
+    HaulsSorting, Ordering,
 };
 use serde::{Deserialize, Serialize};
 use serde_qs::actix::QsQuery as Query;
@@ -33,8 +33,9 @@ pub struct HaulsParams {
     #[param(rename = "speciesGroupIds[]", value_type = Option<Vec<String>>)]
     #[serde_as(as = "Option<Vec<DisplayFromStr>>")]
     pub species_group_ids: Option<Vec<SpeciesGroup>>,
-    #[param(rename = "vesselLengthRanges[]", value_type = Option<Vec<String>>)]
-    pub vessel_length_ranges: Option<Vec<Range<f64>>>,
+    #[param(rename = "vesselLengthGroups[]", value_type = Option<Vec<String>>)]
+    #[serde_as(as = "Option<Vec<DisplayFromStr>>")]
+    pub vessel_length_groups: Option<Vec<VesselLengthGroup>>,
     #[param(rename = "fiskeridirVesselIds[]", value_type = Option<Vec<i64>>)]
     pub fiskeridir_vessel_ids: Option<Vec<FiskeridirVesselId>>,
     pub min_wind_speed: Option<f64>,
@@ -397,7 +398,7 @@ impl From<HaulsParams> for HaulsQuery {
             catch_locations: v.catch_locations,
             gear_group_ids: v.gear_group_ids,
             species_group_ids: v.species_group_ids,
-            vessel_length_ranges: v.vessel_length_ranges,
+            vessel_length_groups: v.vessel_length_groups,
             vessel_ids: v.fiskeridir_vessel_ids,
             min_wind_speed: v.min_wind_speed,
             max_wind_speed: v.max_wind_speed,

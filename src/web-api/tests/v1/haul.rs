@@ -2,7 +2,7 @@ use super::helper::test_with_cache;
 use actix_web::http::StatusCode;
 use chrono::{DateTime, Utc};
 use engine::*;
-use fiskeridir_rs::{ErsDca, GearGroup, SpeciesGroup};
+use fiskeridir_rs::{ErsDca, GearGroup, SpeciesGroup, VesselLengthGroup};
 use kyogre_core::{FiskeridirVesselId, HaulsSorting, Ordering};
 use web_api::routes::v1::haul::{Haul, HaulsParams};
 
@@ -179,7 +179,7 @@ async fn test_hauls_returns_hauls_with_species_group_ids() {
 }
 
 #[tokio::test]
-async fn test_hauls_returns_hauls_with_vessel_length_ranges() {
+async fn test_hauls_returns_hauls_with_vessel_length_groups() {
     test_with_cache(|helper, builder| async move {
         let state = builder
             .hauls(4)
@@ -198,7 +198,10 @@ async fn test_hauls_returns_hauls_with_vessel_length_ranges() {
         helper.refresh_cache().await;
 
         let params = HaulsParams {
-            vessel_length_ranges: Some(vec!["(,10)".parse().unwrap(), "[10,15)".parse().unwrap()]),
+            vessel_length_groups: Some(vec![
+                VesselLengthGroup::UnderEleven,
+                VesselLengthGroup::ElevenToFifteen,
+            ]),
             ..Default::default()
         };
 

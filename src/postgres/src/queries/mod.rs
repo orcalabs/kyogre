@@ -1,5 +1,3 @@
-use std::ops::Bound;
-
 use crate::error::{BigDecimalError, FromBigDecimalError};
 use bigdecimal::{BigDecimal, FromPrimitive};
 use chrono::{DateTime, NaiveDate, NaiveTime, Utc};
@@ -59,16 +57,6 @@ pub(crate) fn opt_decimal_to_float(
     value
         .map(|v| bigdecimal::ToPrimitive::to_f64(&v).ok_or_else(|| report!(FromBigDecimalError(v))))
         .transpose()
-}
-
-pub(crate) fn bound_float_to_decimal(
-    value: Bound<f64>,
-) -> Result<Bound<BigDecimal>, BigDecimalError> {
-    Ok(match value {
-        Bound::Unbounded => Bound::Unbounded,
-        Bound::Excluded(v) => Bound::Excluded(float_to_decimal(v)?),
-        Bound::Included(v) => Bound::Included(float_to_decimal(v)?),
-    })
 }
 
 pub(crate) fn timestamp_from_date_and_time(date: NaiveDate, time: NaiveTime) -> DateTime<Utc> {

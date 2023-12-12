@@ -15,7 +15,7 @@ impl From<LandingsQuery> for Query<LandingFilter, Option<LandingSort>, ()> {
             catch_locations,
             gear_group_ids,
             species_group_ids,
-            vessel_length_ranges,
+            vessel_length_groups,
             vessel_ids,
         } = value;
 
@@ -30,8 +30,8 @@ impl From<LandingsQuery> for Query<LandingFilter, Option<LandingSort>, ()> {
         if let Some(ids) = species_group_ids {
             filters.insert(LandingFilter::SpeciesGroupIds(ids));
         }
-        if let Some(lengths) = vessel_length_ranges {
-            filters.insert(LandingFilter::VesselLength(lengths));
+        if let Some(groups) = vessel_length_groups {
+            filters.insert(LandingFilter::VesselLengthGroup(groups));
         }
         if let Some(ids) = vessel_ids {
             filters.insert(LandingFilter::FiskeridirVesselId(ids));
