@@ -19,7 +19,7 @@ num-traits = "0.2.17"
 chrono = { version = "0.4.31", features = ["serde"] }
 error-stack = { workspace = true }
 bigdecimal = "0.3.1"
-tokio = { version = "1.34.0", features = ["macros", "sync", "time"] }
+tokio = { version = "1.35.0", features = ["macros", "sync", "time"] }
 sqlx = { workspace = true }
 tracing = "0.1.40"
 async-trait = "0.1.74"
@@ -39,4 +39,4 @@ uuid = { version = "1.6.1", features = ["serde"] }
 rand = "0.8.5"
 dockertest = { workspace = true }
 orca-core = { workspace = true, features = ["dockertest"] }
-tokio = { version = "1.34.0", features = ["rt-multi-thread", "macros"] }
+tokio = { version = "1.35.0", features = ["rt-multi-thread", "macros"] }

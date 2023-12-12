@@ -1,7 +1,7 @@
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
 use jsonwebtoken::{
     decode, encode,
-    jwk::{AlgorithmParameters, CommonParameters, Jwk, JwkSet, RSAKeyParameters},
+    jwk::{AlgorithmParameters, CommonParameters, Jwk, JwkSet, KeyAlgorithm, RSAKeyParameters},
     Algorithm, DecodingKey, EncodingKey, Header, Validation,
 };
 use rsa::{
@@ -34,7 +34,7 @@ impl BarentswatchHelper {
         let jwk = Jwk {
             common: CommonParameters {
                 key_id: Some("TEST_KEY_ID".into()),
-                algorithm: Some(Algorithm::RS256),
+                key_algorithm: Some(KeyAlgorithm::RS256),
                 ..Default::default()
             },
             algorithm: AlgorithmParameters::RSA(RSAKeyParameters {

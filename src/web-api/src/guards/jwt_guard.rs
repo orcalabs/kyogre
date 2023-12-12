@@ -1,11 +1,11 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, str::FromStr};
 
 use actix_web::guard::Guard;
 use error_stack::{report, Result, ResultExt};
 use jsonwebtoken::{
     decode, decode_header,
     jwk::{Jwk, JwkSet},
-    DecodingKey, TokenData, Validation,
+    Algorithm, DecodingKey, TokenData, Validation,
 };
 use serde::de::DeserializeOwned;
 use tracing::{event, Level};
@@ -40,9 +40,14 @@ impl JwtGuard {
                     DecodingKey::from_jwk(jwk).change_context(JwtDecodeError::DecodeKeyFromJwk)?;
 
                 let validation = Validation::new(
-                    jwk.common
-                        .algorithm
-                        .ok_or_else(|| report!(JwtDecodeError::MissingAlgorithmInJwk))?,
+                    Algorithm::from_str(
+                        jwk.common
+                            .key_algorithm
+                            .ok_or_else(|| report!(JwtDecodeError::MissingAlgorithmInJwk))?
+                            .to_string()
+                            .as_str(),
+                    )
+                    .change_context(JwtDecodeError::InvalidAlgorithmInJwk)?,
                 );
 
                 decode::<T>(token, &key, &validation).change_context(JwtDecodeError::DecodeToken)
@@ -77,6 +82,7 @@ pub enum JwtDecodeError {
     DecodeKeyFromJwk,
     MissingKidInHeaders,
     MissingAlgorithmInJwk,
+    InvalidAlgorithmInJwk,
     MissingKidInJwk,
 }
 
@@ -92,6 +98,7 @@ impl std::fmt::Display for JwtDecodeError {
             }
             JwtDecodeError::MissingKidInHeaders => f.write_str("kid missing in headers"),
             JwtDecodeError::MissingAlgorithmInJwk => f.write_str("algorithm missing in jwk"),
+            JwtDecodeError::InvalidAlgorithmInJwk => f.write_str("invalid algorithm in jwk"),
             JwtDecodeError::MissingKidInJwk => f.write_str("kid missing in jwk"),
         }
     }
