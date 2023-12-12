@@ -11,6 +11,7 @@ use web_api::routes::v1::{
     fishing_prediction::{FishingSpotPredictionParams, FishingWeightPredictionParams},
     haul::{HaulsMatrixParams, HaulsParams},
     landing::{LandingMatrixParams, LandingsParams},
+    species::SpeciesGroupParams,
     trip::TripsParameters,
     user::User,
     vms::VmsParameters,
@@ -98,12 +99,11 @@ impl ApiClient {
 
         self.get("ais_vms_positions", Some(params), headers).await
     }
-
     pub async fn get_species(&self) -> Response {
         self.get("species", None::<()>, None).await
     }
-    pub async fn get_species_groups(&self) -> Response {
-        self.get("species_groups", None::<()>, None).await
+    pub async fn get_species_groups(&self, params: SpeciesGroupParams) -> Response {
+        self.get("species_groups", Some(params), None).await
     }
     pub async fn get_species_main_groups(&self) -> Response {
         self.get("species_main_groups", None::<()>, None).await

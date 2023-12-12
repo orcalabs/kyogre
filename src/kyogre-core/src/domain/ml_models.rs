@@ -8,6 +8,13 @@ use serde_repr::{Deserialize_repr, Serialize_repr};
 use std::{collections::HashSet, fmt::Display};
 use strum::{AsRefStr, EnumIter, EnumString};
 
+pub static ML_SPECIES_GROUPS: &[SpeciesGroup] = &[
+    SpeciesGroup::AtlanticCod,
+    SpeciesGroup::Saithe,
+    SpeciesGroup::Haddock,
+    SpeciesGroup::NorthernPrawn,
+];
+
 #[derive(Debug)]
 pub enum MLModelError {
     StoreOutput,
