@@ -45,11 +45,7 @@ impl PostgresAdapter {
                 .change_context(PostgresError::InconsistentState);
 
             // Dont want to spam test logs with this error message
-            if let Some(env) = self.environment {
-                if !matches!(env, Environment::Test) {
-                    event!(Level::ERROR, "found vessel conflicts: {:?}", report);
-                }
-            } else {
+            if self.environment != Environment::Test {
                 event!(Level::ERROR, "found vessel conflicts: {:?}", report);
             }
         }

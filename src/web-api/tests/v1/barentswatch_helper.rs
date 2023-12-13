@@ -25,8 +25,8 @@ pub struct BarentswatchHelper {
 impl BarentswatchHelper {
     pub async fn new() -> Self {
         let (private_key, public_key) = {
-            let mut rng = rand::thread_rng();
-            let private_key = RsaPrivateKey::new(&mut rng, 2048).unwrap();
+            let s = include_str!("../test_private_key.json");
+            let private_key = serde_json::from_str(s).unwrap();
             let public_key = RsaPublicKey::from(&private_key);
             (private_key, public_key)
         };
@@ -59,10 +59,7 @@ impl BarentswatchHelper {
         Mock::given(method("GET"))
             .and(path("/profiles"))
             .respond_with(move |req: &wiremock::Request| {
-                let auth = &req
-                    .headers
-                    .get(&"Authorization".try_into().unwrap())
-                    .unwrap()[0];
+                let auth = &req.headers.get(&"Authorization".into()).unwrap()[0];
 
                 let mut parts = auth.as_str().split(' ');
                 parts.next();

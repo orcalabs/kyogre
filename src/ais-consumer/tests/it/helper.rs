@@ -18,8 +18,6 @@ use tracing_subscriber::FmtSubscriber;
 
 static TRACING: Once = Once::new();
 
-static DATABASE_PASSWORD: &str = "test123";
-
 pub struct TestHelper {
     pub ais_source: AisSource,
     pub db: TestDb,
@@ -50,7 +48,6 @@ where
     let mut docker_test = DockerTest::new().with_default_source(Source::DockerHub);
 
     let mut db_composition = postgres_composition(
-        DATABASE_PASSWORD,
         "postgres",
         "ghcr.io/orcalabs/kyogre/test-postgres",
         "latest",
@@ -73,7 +70,7 @@ where
                 port: 5432,
                 db_name: Some("template1".to_string()),
                 username: "postgres".to_string(),
-                password: DATABASE_PASSWORD.to_string(),
+                password: None,
                 max_connections: 1,
                 root_cert: None,
                 log_statements: PsqlLogStatements::Disable,
@@ -90,7 +87,7 @@ where
                 port: 5432,
                 db_name: Some(db_name.to_string()),
                 username: "postgres".to_string(),
-                password: DATABASE_PASSWORD.to_string(),
+                password: None,
                 max_connections: 1,
                 root_cert: None,
                 log_statements: PsqlLogStatements::Disable,

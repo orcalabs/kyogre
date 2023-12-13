@@ -63,7 +63,7 @@ ORDER BY
             PositionType::Ais as i32,
             PositionType::Vms as i32,
         )
-        .fetch_all(&self.ais_pool)
+        .fetch_all(self.ais_pool())
         .await
         .change_context(PostgresError::Query)
     }
@@ -161,7 +161,7 @@ ORDER BY
             PositionType::Ais as i32,
             PositionType::Vms as i32,
         )
-        .fetch(&self.ais_pool)
+        .fetch(self.ais_pool())
         .map_err(|e| report!(e).change_context(PostgresError::Query))
     }
 

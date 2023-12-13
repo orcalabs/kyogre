@@ -29,11 +29,12 @@ services:
 
   test-db:
     image: ghcr.io/orcalabs/kyogre/test-postgres
+    container_name: postgres
     build:
       context: .
       dockerfile: dockerfiles/test-db/Dockerfile
     environment:
-      - POSTGRES_PASSWORD=test123
+      - POSTGRES_HOST_AUTH_METHOD=trust
     ports:
       - 5434:5432
 

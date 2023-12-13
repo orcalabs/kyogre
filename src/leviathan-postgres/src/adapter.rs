@@ -24,10 +24,13 @@ impl LeviathanPostgresAdapter {
 
         let mut opts = PgConnectOptions::new()
             .username(&settings.username)
-            .password(&settings.password)
             .host(&settings.ip)
             .port(settings.port as u16)
             .options([("plan_cache_mode", "force_custom_plan")]);
+
+        if let Some(password) = &settings.password {
+            opts = opts.password(password);
+        }
 
         if let Some(db_name) = &settings.db_name {
             opts = opts.database(db_name);

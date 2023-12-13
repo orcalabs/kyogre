@@ -14,8 +14,6 @@ duckdb-rs = { path = "../duckdb-rs" }
 meilisearch = { path = "../meilisearch" }
 
 orca-core = { workspace = true, features = ["actix-telemetry", "telemetry"] }
-orca-statemachine = { version = "0.40.0", registry = "orcalabs-orcastrator", features = [
-] }
 
 config = { version = "0.13.4", features = ["yaml"] }
 actix-web = "4.4.0"

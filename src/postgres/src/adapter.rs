@@ -20,9 +20,9 @@ use tracing::{event, instrument, Level};
 #[derive(Debug, Clone)]
 pub struct PostgresAdapter {
     pub(crate) pool: PgPool,
-    pub(crate) ais_pool: PgPool,
+    ais_pool: Option<PgPool>,
     pub(crate) ignored_conflict_call_signs: Vec<String>,
-    pub(crate) environment: Option<Environment>,
+    pub(crate) environment: Environment,
 }
 
 enum AisProcessingAction {
@@ -36,9 +36,10 @@ enum AisProcessingAction {
 
 impl PostgresAdapter {
     pub async fn new(settings: &PsqlSettings) -> Result<PostgresAdapter, PostgresError> {
-        let environment: Option<Environment> = std::env::var("APP_ENVIRONMENT")
+        let environment: Environment = std::env::var("APP_ENVIRONMENT")
             .ok()
-            .and_then(|v| v.try_into().ok());
+            .and_then(|v| v.try_into().ok())
+            .unwrap_or(Environment::Local);
 
         let mut connections_per_pool = (settings.max_connections / 2) as u32;
         if connections_per_pool == 0 {
@@ -47,9 +48,12 @@ impl PostgresAdapter {
 
         let mut opts = PgConnectOptions::new()
             .username(&settings.username)
-            .password(&settings.password)
             .host(&settings.ip)
             .port(settings.port as u16);
+
+        if let Some(password) = &settings.password {
+            opts = opts.password(password);
+        }
 
         if let Some(db_name) = &settings.db_name {
             opts = opts.database(db_name);
@@ -68,21 +72,36 @@ impl PostgresAdapter {
             }
         }
 
-        let ais_opts = opts
-            .clone()
-            .options([("plan_cache_mode", "force_custom_plan")]);
+        if environment == Environment::Test {
+            opts = opts.ssl_mode(PgSslMode::Disable);
+        }
+
+        let ais_pool = match environment {
+            Environment::Production
+            | Environment::Staging
+            | Environment::Development
+            | Environment::Local => {
+                let ais_opts = opts
+                    .clone()
+                    .options([("plan_cache_mode", "force_custom_plan")]);
+
+                let ais_pool = PgPoolOptions::new()
+                    .min_connections(1)
+                    .max_connections(connections_per_pool)
+                    .acquire_timeout(std::time::Duration::from_secs(60))
+                    .connect_with(ais_opts)
+                    .await
+                    .change_context(PostgresError::Connection)?;
+
+                Some(ais_pool)
+            }
+            Environment::Test => None,
+        };
 
         let pool = PgPoolOptions::new()
             .max_connections(connections_per_pool)
             .acquire_timeout(std::time::Duration::from_secs(60))
             .connect_with(opts)
-            .await
-            .change_context(PostgresError::Connection)?;
-
-        let ais_pool = PgPoolOptions::new()
-            .max_connections(connections_per_pool)
-            .acquire_timeout(std::time::Duration::from_secs(60))
-            .connect_with(ais_opts)
             .await
             .change_context(PostgresError::Connection)?;
 
@@ -97,6 +116,16 @@ impl PostgresAdapter {
             ignored_conflict_call_signs,
             environment,
         })
+    }
+
+    pub(crate) fn ais_pool(&self) -> &PgPool {
+        match self.environment {
+            Environment::Production
+            | Environment::Staging
+            | Environment::Development
+            | Environment::Local => self.ais_pool.as_ref().unwrap(),
+            Environment::Test => &self.pool,
+        }
     }
 
     pub async fn reset_models(&self, models: &[ModelId]) -> Result<(), PostgresError> {
