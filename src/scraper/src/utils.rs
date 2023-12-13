@@ -134,7 +134,7 @@ where
                     ),
                     Err(e) => event!(
                         Level::ERROR,
-                        "failed to store hash for {} year {}, err: {}",
+                        "failed to store hash for {} year {}, err: {:?}",
                         file_id,
                         year,
                         e
@@ -150,7 +150,7 @@ where
             },
             MasterTask::Error { year, error } => event!(
                 Level::ERROR,
-                "failed to process source for {} year {}, err: {}",
+                "failed to process source for {} year {}, err: {:?}",
                 file_id,
                 year,
                 error
@@ -169,7 +169,7 @@ where
 
         if !prefetch {
             if let Err(e) = fiskeridir_source.fiskeridir_file.clean_download_dir() {
-                event!(Level::ERROR, "failed to clean download dir: {}", e);
+                event!(Level::ERROR, "failed to clean download dir: {:?}", e);
             }
             if let Some(source) = sources.next() {
                 worker_tx.try_send(source).unwrap();
