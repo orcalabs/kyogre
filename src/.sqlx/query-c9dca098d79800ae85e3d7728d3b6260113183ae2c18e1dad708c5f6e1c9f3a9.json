@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT\n  s.transition_date AS date,\n  s.source AS \"from\",\n  s.destination AS \"to\"\nFROM\n  engine_transitions AS s\nORDER BY\n  s.transition_date DESC\nLIMIT\n  1\n            ",
+  "query": "\nSELECT\n    s.transition_date AS date,\n    s.source AS \"from\",\n    s.destination AS \"to\"\nFROM\n    engine_transitions AS s\nORDER BY\n    s.transition_date DESC\nLIMIT\n    1\n            ",
   "describe": {
     "columns": [
       {
@@ -28,5 +28,5 @@
       false
     ]
   },
-  "hash": "e37220be29d2b10cf3a0bd7d9f9a1a91494aaee252421b3fcfef6dde8a86ef79"
+  "hash": "c9dca098d79800ae85e3d7728d3b6260113183ae2c18e1dad708c5f6e1c9f3a9"
 }

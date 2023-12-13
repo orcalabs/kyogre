@@ -182,7 +182,7 @@ ORDER BY
             range.map(|r| r.start()),
             range.map(|r| r.end()),
         )
-        .fetch_all(&self.db.ais_pool)
+        .fetch_all(self.db.ais_pool())
         .await
         .unwrap()
         .into_iter()

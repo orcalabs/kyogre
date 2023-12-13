@@ -80,7 +80,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e01ed3140b2f8d422c68afa1ed2e85d996ea619c988ac834d255db32138655cb"
 dependencies = [
  "quote 1.0.33",
- "syn 2.0.40",
+ "syn 2.0.41",
 ]
 
 [[package]]
@@ -193,7 +193,7 @@ dependencies = [
  "actix-router",
  "proc-macro2",
  "quote 1.0.33",
- "syn 2.0.40",
+ "syn 2.0.41",
 ]
 
 [[package]]
@@ -264,14 +264,14 @@ dependencies = [
  "chrono",
  "config",
  "dockertest",
- "error-stack 0.4.1",
+ "error-stack",
  "fiskeridir-rs",
  "futures",
  "humantime-serde",
  "hyper",
  "hyper-alpn",
  "kyogre-core",
- "orca-core 0.22.2",
+ "orca-core",
  "postgres",
  "rand 0.8.5",
  "serde",
@@ -289,12 +289,12 @@ version = "0.1.0"
 dependencies = [
  "chrono",
  "config",
- "error-stack 0.4.1",
+ "error-stack",
  "humantime-serde",
  "indicatif",
  "kyogre-core",
  "leviathan-postgres",
- "orca-core 0.22.2",
+ "orca-core",
  "postgres",
  "serde",
  "tokio",
@@ -572,7 +572,7 @@ checksum = "16e62a023e7c117e27523144c5d2459f4397fcc3cab0085af8e2224f643a0193"
 dependencies = [
  "proc-macro2",
  "quote 1.0.33",
- "syn 2.0.40",
+ "syn 2.0.41",
 ]
 
 [[package]]
@@ -583,7 +583,7 @@ checksum = "a66537f1bb974b254c98ed142ff995236e81b9d0fe4db0575f46612cb15eb0f9"
 dependencies = [
  "proc-macro2",
  "quote 1.0.33",
- "syn 2.0.40",
+ "syn 2.0.41",
 ]
 
 [[package]]
@@ -612,17 +612,6 @@ checksum = "edcdbedc2236483ab103a53415653d6b4442ea6141baf1ffa85df29635e88436"
 dependencies = [
  "nix",
  "rand 0.8.5",
-]
-
-[[package]]
-name = "atty"
-version = "0.2.14"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d9b39be18770d11421cdb1b9947a45dd3f37e93092cbf377614828a319d5fee8"
-dependencies = [
- "hermit-abi 0.1.19",
- "libc",
- "winapi",
 ]
 
 [[package]]
@@ -817,7 +806,7 @@ dependencies = [
  "proc-macro-crate",
  "proc-macro2",
  "quote 1.0.33",
- "syn 2.0.40",
+ "syn 2.0.41",
  "syn_derive",
 ]
 
@@ -1170,9 +1159,9 @@ dependencies = [
 
 [[package]]
 name = "crossbeam-queue"
-version = "0.3.8"
+version = "0.3.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d1cfb3ea8a53f37c40dea2c7bedcbd88bdfae54f5e2175d6ecaff1c988353add"
+checksum = "b9bcf5bdbfdd6030fb4a1c497b5d5fc5921aa2f60d359a17e249c0e6df3de153"
 dependencies = [
  "cfg-if",
  "crossbeam-utils",
@@ -1180,9 +1169,9 @@ dependencies = [
 
 [[package]]
 name = "crossbeam-utils"
-version = "0.8.16"
+version = "0.8.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5a22b2d63d4d1dc0b7f1b6b2747dd0088008a9be28b6ddf0b1e7d335e3037294"
+checksum = "c06d96137f14f244c37f989d9fff8f95e6c18b918e71f36638f8c49112e4c78f"
 dependencies = [
  "cfg-if",
 ]
@@ -1227,7 +1216,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "13b588ba4ac1a99f7f2964d24b3d896ddc6bf847ee3855dbd4366f058cfcd331"
 dependencies = [
  "quote 1.0.33",
- "syn 2.0.40",
+ "syn 2.0.41",
 ]
 
 [[package]]
@@ -1303,7 +1292,7 @@ dependencies = [
  "proc-macro2",
  "quote 1.0.33",
  "strsim",
- "syn 2.0.40",
+ "syn 2.0.41",
 ]
 
 [[package]]
@@ -1314,7 +1303,7 @@ checksum = "836a9bbc7ad63342d6d6e7b815ccab164bc77a2d95d84bc3117a8c0d5c98e2d5"
 dependencies = [
  "darling_core",
  "quote 1.0.33",
- "syn 2.0.40",
+ "syn 2.0.41",
 ]
 
 [[package]]
@@ -1335,7 +1324,7 @@ name = "database-migrator"
 version = "0.1.0"
 dependencies = [
  "config",
- "orca-core 0.22.2",
+ "orca-core",
  "postgres",
  "serde",
  "tokio",
@@ -1515,7 +1504,7 @@ dependencies = [
  "config",
  "dockertest",
  "duckdb",
- "error-stack 0.4.1",
+ "error-stack",
  "fiskeridir-rs",
  "futures",
  "futures-core",
@@ -1523,8 +1512,7 @@ dependencies = [
  "humantime-serde",
  "kyogre-core",
  "num-traits",
- "orca-core 0.22.2",
- "orca-statemachine",
+ "orca-core",
  "postgres",
  "prost 0.12.3",
  "r2d2",
@@ -1594,7 +1582,7 @@ dependencies = [
  "config",
  "derivative",
  "dockertest",
- "error-stack 0.4.1",
+ "error-stack",
  "fiskeridir-rs",
  "futures",
  "geo",
@@ -1606,7 +1594,7 @@ dependencies = [
  "meilisearch",
  "num-traits",
  "once_cell",
- "orca-core 0.22.2",
+ "orca-core",
  "postgres",
  "pyo3",
  "rand 0.8.5",
@@ -1651,17 +1639,6 @@ checksum = "a258e46cdc063eb8519c00b9fc845fc47bcfca4130e2f08e88665ceda8474245"
 dependencies = [
  "libc",
  "windows-sys 0.52.0",
-]
-
-[[package]]
-name = "error-stack"
-version = "0.2.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "859d224e04b2d93d974c08e375dac9b8d1a513846e44c6666450a57b1ed963f9"
-dependencies = [
- "anyhow",
- "owo-colors",
- "rustc_version",
 ]
 
 [[package]]
@@ -1746,7 +1723,7 @@ dependencies = [
  "csv",
  "enum_index",
  "enum_index_derive",
- "error-stack 0.4.1",
+ "error-stack",
  "futures-util",
  "jurisdiction",
  "num-derive",
@@ -1932,7 +1909,7 @@ checksum = "53b153fd91e4b0147f4aced87be237c98248656bb01050b96bf3ee89220a8ddb"
 dependencies = [
  "proc-macro2",
  "quote 1.0.33",
- "syn 2.0.40",
+ "syn 2.0.41",
 ]
 
 [[package]]
@@ -2192,15 +2169,6 @@ dependencies = [
 
 [[package]]
 name = "hermit-abi"
-version = "0.1.19"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "62b467343b94ba476dcb2500d242dadbb39557df889310ac77c5d99100aaac33"
-dependencies = [
- "libc",
-]
-
-[[package]]
-name = "hermit-abi"
 version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d77f7ec81a6d05a3abb01ab6eb7590f6083d08449fe5a1c8b1e620283546ccb7"
@@ -2213,9 +2181,9 @@ checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
 
 [[package]]
 name = "hkdf"
-version = "0.12.3"
+version = "0.12.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "791a029f6b9fc27657f6f188ec6e5e43f6911f6f878e0dc5501396e09809d437"
+checksum = "7b5f8eb2ad728638ea2c7d47a21db23b7b58a72ed6a38256b8a1849f15fbbdf7"
 dependencies = [
  "hmac",
 ]
@@ -2526,12 +2494,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8f518f335dce6725a761382244631d86cf0ccb2863413590b31338feb467f9c3"
 
 [[package]]
-name = "is_ci"
-version = "1.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "616cde7c720bb2bb5824a224687d8f77bfd38922027f01d825cd7453be5099fb"
-
-[[package]]
 name = "isahc"
 version = "1.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2696,7 +2658,7 @@ dependencies = [
  "chrono-tz",
  "enum_index",
  "enum_index_derive",
- "error-stack 0.4.1",
+ "error-stack",
  "fiskeridir-rs",
  "flate2",
  "futures",
@@ -2704,7 +2666,7 @@ dependencies = [
  "num-derive",
  "num-traits",
  "oauth2",
- "orca-core 0.22.2",
+ "orca-core",
  "rand 0.8.5",
  "remain",
  "serde",
@@ -2742,9 +2704,9 @@ dependencies = [
  "async-trait",
  "bigdecimal",
  "chrono",
- "error-stack 0.4.1",
+ "error-stack",
  "kyogre-core",
- "orca-core 0.22.2",
+ "orca-core",
  "sqlx",
 ]
 
@@ -2937,14 +2899,14 @@ checksum = "c41e0c4fef86961ac6d6f8a82609f55f31b05e4fce149ac5710e439df7619ba4"
 
 [[package]]
 name = "machine"
-version = "0.3.0"
+version = "0.4.0"
 source = "registry+https://dl.cloudsmith.io/basic/orcalabs/orcastrator/cargo/index.git"
-checksum = "87a98b8789216eb2cc4f759c7141aeaffcb950afe6c394ba66addabd340ce96e"
+checksum = "67aa74e6bff93b89721f7299560035f82484d4a125da8bfee1bd04e6235710ae"
 dependencies = [
  "async-trait",
  "chrono",
  "machine_derive",
- "orca-core 0.22.2",
+ "orca-core",
  "sqlx",
  "tokio",
  "tracing",
@@ -2958,7 +2920,7 @@ checksum = "6553c4a431a37d1705069536fcdc1eaa4ba43d96c93bdc9d6d863a731066e416"
 dependencies = [
  "proc-macro2",
  "quote 1.0.33",
- "syn 2.0.40",
+ "syn 2.0.41",
 ]
 
 [[package]]
@@ -3012,7 +2974,7 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "chrono",
- "error-stack 0.4.1",
+ "error-stack",
  "fiskeridir-rs",
  "futures",
  "humantime-serde",
@@ -3250,7 +3212,7 @@ checksum = "cfb77679af88f8b125209d354a202862602672222e7f2313fdd6dc349bad4712"
 dependencies = [
  "proc-macro2",
  "quote 1.0.33",
- "syn 2.0.40",
+ "syn 2.0.41",
 ]
 
 [[package]]
@@ -3302,7 +3264,7 @@ version = "1.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4161fcb6d602d4d2081af7c3a45852d875a03dd337a6bfdd6e06407b61342a43"
 dependencies = [
- "hermit-abi 0.3.3",
+ "hermit-abi",
  "libc",
 ]
 
@@ -3370,7 +3332,7 @@ checksum = "a948666b637a0f465e8564c73e89d4dde00d72d4d473cc972f390fc3dcee7d9c"
 dependencies = [
  "proc-macro2",
  "quote 1.0.33",
- "syn 2.0.40",
+ "syn 2.0.41",
 ]
 
 [[package]]
@@ -3514,19 +3476,9 @@ checksum = "04744f49eae99ab78e0d5c0b603ab218f515ea8cfe5a456d7629ad883a3b6e7d"
 
 [[package]]
 name = "orca-core"
-version = "0.21.1"
+version = "0.23.0"
 source = "registry+https://dl.cloudsmith.io/basic/orcalabs/orcastrator/cargo/index.git"
-checksum = "8e49e85c5197ea297df53ba14c3c124ba5359c87e699f2b4f10ab360f94b28a8"
-dependencies = [
- "serde",
- "tracing",
-]
-
-[[package]]
-name = "orca-core"
-version = "0.22.2"
-source = "registry+https://dl.cloudsmith.io/basic/orcalabs/orcastrator/cargo/index.git"
-checksum = "07ee88ce31be9763484797c011f5b6ec900e13f2e7355a6b0b953fbc16ab7986"
+checksum = "0d91de339adcc80fc21f3b2e7bf7b6794f643aae439316b6dc3d6bfc07acfa43"
 dependencies = [
  "actix-web",
  "dockertest",
@@ -3544,22 +3496,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "orca-statemachine"
-version = "0.40.0"
-source = "registry+https://dl.cloudsmith.io/basic/orcalabs/orcastrator/cargo/index.git"
-checksum = "2ecb7ea2a113215387e8ee4e46aff047da65454cf832cb52bfec11d9e838b73f"
-dependencies = [
- "async-trait",
- "chrono",
- "error-stack 0.2.4",
- "humantime-serde",
- "orca-core 0.21.1",
- "serde",
- "tokio",
- "tracing",
-]
-
-[[package]]
 name = "ordered-multimap"
 version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3574,15 +3510,6 @@ name = "overload"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b15813163c1d831bf4a13c3610c05c0d03b39feb07f7e09fa234dac9b15aaf39"
-
-[[package]]
-name = "owo-colors"
-version = "3.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c1b04fb49957986fdce4d6ee7a65027d55d4b6d2265e5848bbb507b58ccfdb6f"
-dependencies = [
- "supports-color",
-]
 
 [[package]]
 name = "parking"
@@ -3713,7 +3640,7 @@ dependencies = [
  "pest_meta",
  "proc-macro2",
  "quote 1.0.33",
- "syn 2.0.40",
+ "syn 2.0.41",
 ]
 
 [[package]]
@@ -3884,7 +3811,7 @@ checksum = "4359fd9c9171ec6e8c62926d6faaf553a8dc3f64e1507e76da7911b4f6a04405"
 dependencies = [
  "proc-macro2",
  "quote 1.0.33",
- "syn 2.0.40",
+ "syn 2.0.41",
 ]
 
 [[package]]
@@ -3958,7 +3885,7 @@ dependencies = [
  "dockertest",
  "enum_index",
  "enum_index_derive",
- "error-stack 0.4.1",
+ "error-stack",
  "fiskeridir-rs",
  "futures",
  "geo-types",
@@ -3966,7 +3893,7 @@ dependencies = [
  "jurisdiction",
  "kyogre-core",
  "num-traits",
- "orca-core 0.22.2",
+ "orca-core",
  "rand 0.8.5",
  "serde",
  "serde_json",
@@ -4014,7 +3941,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ae005bd773ab59b4725093fd7df83fd7892f7d8eafb48dbd7de6e024e4215f9d"
 dependencies = [
  "proc-macro2",
- "syn 2.0.40",
+ "syn 2.0.41",
 ]
 
 [[package]]
@@ -4140,7 +4067,7 @@ dependencies = [
  "prost 0.12.3",
  "prost-types 0.12.3",
  "regex",
- "syn 2.0.40",
+ "syn 2.0.41",
  "tempfile",
  "which",
 ]
@@ -4168,7 +4095,7 @@ dependencies = [
  "itertools 0.11.0",
  "proc-macro2",
  "quote 1.0.33",
- "syn 2.0.40",
+ "syn 2.0.41",
 ]
 
 [[package]]
@@ -4262,7 +4189,7 @@ dependencies = [
  "proc-macro2",
  "pyo3-macros-backend",
  "quote 1.0.33",
- "syn 2.0.40",
+ "syn 2.0.41",
 ]
 
 [[package]]
@@ -4274,7 +4201,7 @@ dependencies = [
  "heck",
  "proc-macro2",
  "quote 1.0.33",
- "syn 2.0.40",
+ "syn 2.0.41",
 ]
 
 [[package]]
@@ -4462,7 +4389,7 @@ checksum = "bce3a7139d2ee67d07538ee5dba997364fbc243e7e7143e96eb830c74bfaa082"
 dependencies = [
  "proc-macro2",
  "quote 1.0.33",
- "syn 2.0.40",
+ "syn 2.0.41",
 ]
 
 [[package]]
@@ -4653,7 +4580,7 @@ dependencies = [
  "quote 1.0.33",
  "rust-embed-utils",
  "shellexpand",
- "syn 2.0.40",
+ "syn 2.0.41",
  "walkdir",
 ]
 
@@ -4817,11 +4744,11 @@ dependencies = [
  "async-trait",
  "chrono",
  "csv",
- "error-stack 0.4.1",
+ "error-stack",
  "fiskeridir-rs",
  "geozero",
  "kyogre-core",
- "orca-core 0.22.2",
+ "orca-core",
  "pyo3",
  "reqwest",
  "serde",
@@ -4957,7 +4884,7 @@ checksum = "43576ca501357b9b071ac53cdc7da8ef0cbd9493d8df094cd821777ea6e894d3"
 dependencies = [
  "proc-macro2",
  "quote 1.0.33",
- "syn 2.0.40",
+ "syn 2.0.41",
 ]
 
 [[package]]
@@ -5022,7 +4949,7 @@ checksum = "3081f5ffbb02284dda55132aa26daecedd7372a42417bbbab6f14ab7d6bb9145"
 dependencies = [
  "proc-macro2",
  "quote 1.0.33",
- "syn 2.0.40",
+ "syn 2.0.41",
 ]
 
 [[package]]
@@ -5063,7 +4990,7 @@ dependencies = [
  "darling",
  "proc-macro2",
  "quote 1.0.33",
- "syn 2.0.40",
+ "syn 2.0.41",
 ]
 
 [[package]]
@@ -5549,7 +5476,7 @@ dependencies = [
  "proc-macro2",
  "quote 1.0.33",
  "rustversion",
- "syn 2.0.40",
+ "syn 2.0.41",
 ]
 
 [[package]]
@@ -5557,16 +5484,6 @@ name = "subtle"
 version = "2.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "81cdd64d312baedb58e21336b31bc043b77e01cc99033ce76ef539f78e965ebc"
-
-[[package]]
-name = "supports-color"
-version = "1.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8ba6faf2ca7ee42fdd458f4347ae0a9bd6bcc445ad7cb57ad82b383f18870d6f"
-dependencies = [
- "atty",
- "is_ci",
-]
 
 [[package]]
 name = "syn"
@@ -5592,9 +5509,9 @@ dependencies = [
 
 [[package]]
 name = "syn"
-version = "2.0.40"
+version = "2.0.41"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "13fa70a4ee923979ffb522cacce59d34421ebdea5625e1073c4326ef9d2dd42e"
+checksum = "44c8b28c477cc3bf0e7966561e3460130e1255f7a1cf71931075f1c5e7a7e269"
 dependencies = [
  "proc-macro2",
  "quote 1.0.33",
@@ -5610,7 +5527,7 @@ dependencies = [
  "proc-macro-error",
  "proc-macro2",
  "quote 1.0.33",
- "syn 2.0.40",
+ "syn 2.0.41",
 ]
 
 [[package]]
@@ -5728,7 +5645,7 @@ checksum = "266b2e40bc00e5a6c09c3584011e08b06f123c00362c92b975ba9843aaaa14b8"
 dependencies = [
  "proc-macro2",
  "quote 1.0.33",
- "syn 2.0.40",
+ "syn 2.0.41",
 ]
 
 [[package]]
@@ -5831,7 +5748,7 @@ checksum = "5b8a1e28f2deaa14e508979454cb3a223b10b938b45af148bc0986de36f1923b"
 dependencies = [
  "proc-macro2",
  "quote 1.0.33",
- "syn 2.0.40",
+ "syn 2.0.41",
 ]
 
 [[package]]
@@ -6000,7 +5917,7 @@ dependencies = [
  "proc-macro2",
  "prost-build 0.12.3",
  "quote 1.0.33",
- "syn 2.0.40",
+ "syn 2.0.41",
 ]
 
 [[package]]
@@ -6067,7 +5984,7 @@ checksum = "34704c8d6ebcbc939824180af020566b01a7c01f80641264eba0999f6c2b6be7"
 dependencies = [
  "proc-macro2",
  "quote 1.0.33",
- "syn 2.0.40",
+ "syn 2.0.41",
 ]
 
 [[package]]
@@ -6241,7 +6158,7 @@ checksum = "7f1ebbfca482b3389c4e323c915a97a37226038d48347c390c5d210e504f0a73"
 dependencies = [
  "proc-macro2",
  "quote 1.0.33",
- "syn 2.0.40",
+ "syn 2.0.41",
 ]
 
 [[package]]
@@ -6302,7 +6219,7 @@ dependencies = [
  "proc-macro2",
  "quote 1.0.33",
  "regex",
- "syn 2.0.40",
+ "syn 2.0.41",
  "uuid",
 ]
 
@@ -6355,7 +6272,7 @@ name = "vessel-benchmark"
 version = "0.1.0"
 dependencies = [
  "async-trait",
- "error-stack 0.4.1",
+ "error-stack",
  "kyogre-core",
  "tracing",
 ]
@@ -6427,7 +6344,7 @@ dependencies = [
  "once_cell",
  "proc-macro2",
  "quote 1.0.33",
- "syn 2.0.40",
+ "syn 2.0.41",
  "wasm-bindgen-shared",
 ]
 
@@ -6461,7 +6378,7 @@ checksum = "f0eb82fcb7930ae6219a7ecfd55b217f5f0893484b7a13022ebb2b2bf20b5283"
 dependencies = [
  "proc-macro2",
  "quote 1.0.33",
- "syn 2.0.40",
+ "syn 2.0.41",
  "wasm-bindgen-backend",
  "wasm-bindgen-shared",
 ]
@@ -6501,7 +6418,7 @@ dependencies = [
  "engine",
  "enum_index",
  "enum_index_derive",
- "error-stack 0.4.1",
+ "error-stack",
  "fiskeridir-rs",
  "futures",
  "jsonwebtoken 9.2.0",
@@ -6510,8 +6427,7 @@ dependencies = [
  "meilisearch",
  "num-traits",
  "once_cell",
- "orca-core 0.22.2",
- "orca-statemachine",
+ "orca-core",
  "postgres",
  "rand 0.8.5",
  "reqwest",
@@ -6933,7 +6849,7 @@ checksum = "be912bf68235a88fbefd1b73415cb218405958d1655b2ece9035a19920bdf6ba"
 dependencies = [
  "proc-macro2",
  "quote 1.0.33",
- "syn 2.0.40",
+ "syn 2.0.41",
 ]
 
 [[package]]

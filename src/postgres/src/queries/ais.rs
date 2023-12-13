@@ -39,7 +39,7 @@ ORDER BY
     TIMESTAMP ASC
             "#,
         )
-        .fetch_all(&self.ais_pool)
+        .fetch_all(self.ais_pool())
         .await
         .change_context(PostgresError::Query)
     }
@@ -99,7 +99,7 @@ ORDER BY
             permission as i32,
             PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY as i32,
         )
-        .fetch(&self.ais_pool)
+        .fetch(self.ais_pool())
         .map_err(|e| report!(e).change_context(PostgresError::Query))
     }
 
@@ -229,7 +229,7 @@ FROM
         $5::DECIMAL[],
         $6::INT[],
         $7::DECIMAL[],
-        $8::timestamptz[],
+        $8::TIMESTAMPTZ[],
         $9::INT[],
         $10::DECIMAL[],
         $11::VARCHAR[],
@@ -570,7 +570,7 @@ FROM
         $5::DECIMAL[],
         $6::INT[],
         $7::DECIMAL[],
-        $8::timestamptz[],
+        $8::TIMESTAMPTZ[],
         $9::DECIMAL[],
         $10::INT[]
     )

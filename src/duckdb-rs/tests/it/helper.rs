@@ -17,7 +17,6 @@ use std::sync::Once;
 use tracing_subscriber::FmtSubscriber;
 
 static TRACING: Once = Once::new();
-static DATABASE_PASSWORD: &str = "test123";
 
 pub struct TestHelper {
     pub db: TestDb,
@@ -46,7 +45,6 @@ where
     });
 
     let composition = postgres_composition(
-        DATABASE_PASSWORD,
         "postgres",
         "ghcr.io/orcalabs/kyogre/test-postgres",
         "latest",
@@ -64,7 +62,7 @@ where
                 ip: db_handle.ip().to_string(),
                 port: 5432,
                 db_name: Some("template1".to_string()),
-                password: DATABASE_PASSWORD.to_string(),
+                password: None,
                 username: "postgres".to_string(),
                 max_connections: 1,
                 root_cert: None,
