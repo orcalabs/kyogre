@@ -14,8 +14,7 @@ pub struct Settings {
     pub meilisearch: Option<meilisearch::Settings>,
     pub environment: Environment,
     pub honeycomb: Option<HoneycombApiKey>,
-    pub bw_jwks_url: Option<String>,
-    pub bw_profiles_url: Option<String>,
+    pub bw_settings: Option<BwSettings>,
     pub duck_db_api: Option<Duckdb>,
     pub auth0: Option<Auth0Settings>,
 }
@@ -24,6 +23,13 @@ pub struct Settings {
 pub struct Duckdb {
     pub ip: String,
     pub port: u16,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct BwSettings {
+    pub jwks_url: String,
+    pub audience: String,
+    pub profiles_url: String,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -63,8 +69,8 @@ impl Settings {
             .build()?
             .try_deserialize()?;
 
-        if let Some(ref url) = settings.bw_profiles_url {
-            BW_PROFILES_URL.set(url.clone()).unwrap();
+        if let Some(ref bw) = settings.bw_settings {
+            BW_PROFILES_URL.set(bw.profiles_url.clone()).unwrap();
         }
 
         Ok(settings)
