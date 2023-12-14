@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT\n    trip_id AS \"trip_id!\",\n    fiskeridir_vessel_id AS \"fiskeridir_vessel_id!\",\n    fiskeridir_length_group_id AS \"fiskeridir_length_group_id!: VesselLengthGroup\",\n    period AS \"period!\",\n    period_precision,\n    landing_coverage AS \"landing_coverage!\",\n    COALESCE(num_landings::BIGINT, 0) AS \"num_deliveries!\",\n    COALESCE(landing_total_living_weight, 0.0) AS \"total_living_weight!\",\n    COALESCE(landing_total_gross_weight, 0.0) AS \"total_gross_weight!\",\n    COALESCE(landing_total_product_weight, 0.0) AS \"total_product_weight!\",\n    COALESCE(delivery_point_ids, '{}') AS \"delivery_points!\",\n    COALESCE(landing_gear_ids, '{}') AS \"gear_ids!: Vec<Gear>\",\n    COALESCE(landing_gear_group_ids, '{}') AS \"gear_group_ids!: Vec<GearGroup>\",\n    COALESCE(landing_species_group_ids, '{}') AS \"species_group_ids!: Vec<SpeciesGroup>\",\n    most_recent_landing AS latest_landing_timestamp,\n    COALESCE(landings::TEXT, '[]') AS \"catches!\",\n    start_port_id,\n    end_port_id,\n    trip_assembler_id AS \"trip_assembler_id!: TripAssemblerId\",\n    COALESCE(vessel_events, '[]')::TEXT AS \"vessel_events!\",\n    COALESCE(hauls, '[]')::TEXT AS \"hauls!\",\n    COALESCE(landing_ids, '{}') AS \"landing_ids!\",\n    CASE\n        WHEN $1 THEN COALESCE(fishing_facilities, '[]')::TEXT\n        ELSE '[]'\n    END AS \"fishing_facilities!\",\n    distance,\n    cache_version\nFROM\n    trips_detailed\nWHERE\n    landing_ids && (\n        SELECT\n            ARRAY_AGG(landing_id)\n        FROM\n            landings l\n        WHERE\n            landing_id LIKE $2\n    )\n            ",
+  "query": "\nSELECT\n    trip_id AS \"trip_id!\",\n    fiskeridir_vessel_id AS \"fiskeridir_vessel_id!\",\n    fiskeridir_length_group_id AS \"fiskeridir_length_group_id!: VesselLengthGroup\",\n    period AS \"period!\",\n    period_precision,\n    landing_coverage AS \"landing_coverage!\",\n    COALESCE(num_landings::BIGINT, 0) AS \"num_deliveries!\",\n    COALESCE(landing_total_living_weight, 0.0) AS \"total_living_weight!\",\n    COALESCE(landing_total_gross_weight, 0.0) AS \"total_gross_weight!\",\n    COALESCE(landing_total_product_weight, 0.0) AS \"total_product_weight!\",\n    COALESCE(delivery_point_ids, '{}') AS \"delivery_points!\",\n    COALESCE(landing_gear_ids, '{}') AS \"gear_ids!: Vec<Gear>\",\n    COALESCE(landing_gear_group_ids, '{}') AS \"gear_group_ids!: Vec<GearGroup>\",\n    COALESCE(landing_species_group_ids, '{}') AS \"species_group_ids!: Vec<SpeciesGroup>\",\n    most_recent_landing AS latest_landing_timestamp,\n    COALESCE(landings::TEXT, '[]') AS \"catches!\",\n    start_port_id,\n    end_port_id,\n    trip_assembler_id AS \"trip_assembler_id!: TripAssemblerId\",\n    COALESCE(vessel_events, '[]')::TEXT AS \"vessel_events!\",\n    COALESCE(hauls, '[]')::TEXT AS \"hauls!\",\n    COALESCE(landing_ids, '{}') AS \"landing_ids!\",\n    CASE\n        WHEN $1 THEN COALESCE(fishing_facilities, '[]')::TEXT\n        ELSE '[]'\n    END AS \"fishing_facilities!\",\n    distance,\n    cache_version,\n    target_species_fiskeridir_id,\n    target_species_fao_id\nFROM\n    trips_detailed\nWHERE\n    landing_ids && (\n        SELECT\n            ARRAY_AGG(landing_id)\n        FROM\n            landings l\n        WHERE\n            landing_id LIKE $2\n    )\n            ",
   "describe": {
     "columns": [
       {
@@ -127,6 +127,16 @@
         "ordinal": 24,
         "name": "cache_version",
         "type_info": "Int8"
+      },
+      {
+        "ordinal": 25,
+        "name": "target_species_fiskeridir_id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 26,
+        "name": "target_species_fao_id",
+        "type_info": "Varchar"
       }
     ],
     "parameters": {
@@ -160,8 +170,10 @@
       null,
       null,
       true,
-      false
+      false,
+      true,
+      true
     ]
   },
-  "hash": "f90e859d4d83d1814699dfec25bddeb8c9909f90373bd28d65a97e7cee9deb99"
+  "hash": "31d12f8554a4b5cb2a1de2c948d10859d506d0e03e4aca2ca274e8eaf90a60ab"
 }

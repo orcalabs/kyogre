@@ -340,7 +340,9 @@ SELECT
     distance,
     trip_assembler_id AS "trip_assembler_id!: TripAssemblerId",
     start_port_id,
-    end_port_id
+    end_port_id,
+    target_species_fiskeridir_id,
+    target_species_fao_id
 FROM
     trips
 WHERE
@@ -388,7 +390,9 @@ SELECT
     COALESCE(t.fishing_facilities, '[]')::TEXT AS "fishing_facilities!",
     COALESCE(t.landing_ids, '{}') AS "landing_ids!",
     t.distance,
-    t.cache_version
+    t.cache_version,
+    t.target_species_fiskeridir_id,
+    t.target_species_fao_id
 FROM
     trips_detailed t
 WHERE

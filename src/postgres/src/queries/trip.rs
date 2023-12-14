@@ -779,7 +779,9 @@ SELECT
         ELSE '[]'
     END AS "fishing_facilities!",
     t.distance,
-    t.cache_version
+    t.cache_version,
+    t.target_species_fiskeridir_id,
+    t.target_species_fao_id
 FROM
     trips_detailed AS t
 WHERE
@@ -891,7 +893,9 @@ SELECT
     COALESCE(t.landing_ids, '{}') AS "landing_ids!",
     COALESCE(t.fishing_facilities, '[]')::TEXT AS "fishing_facilities!",
     t.distance,
-    t.cache_version
+    t.cache_version,
+    t.target_species_fiskeridir_id,
+    t.target_species_fao_id
 FROM
     trips_detailed AS t
 WHERE
@@ -960,7 +964,9 @@ SELECT
         ELSE '[]'
     END AS "fishing_facilities!",
     t.distance,
-    t.cache_version
+    t.cache_version,
+    target_species_fiskeridir_id,
+    target_species_fao_id
 FROM
     trips_detailed t
 WHERE
@@ -1010,7 +1016,9 @@ SELECT
         ELSE '[]'
     END AS "fishing_facilities!",
     t.distance,
-    t.cache_version
+    t.cache_version,
+    t.target_species_fiskeridir_id,
+    t.target_species_fao_id
 FROM
     trips_detailed t
 WHERE
@@ -1060,7 +1068,9 @@ SELECT
         ELSE '[]'
     END AS "fishing_facilities!",
     distance,
-    cache_version
+    cache_version,
+    target_species_fiskeridir_id,
+    target_species_fao_id
 FROM
     trips_detailed
 WHERE
@@ -1693,7 +1703,9 @@ SELECT
     distance,
     trip_assembler_id AS "trip_assembler_id!: TripAssemblerId",
     start_port_id,
-    end_port_id
+    end_port_id,
+    target_species_fiskeridir_id,
+    target_species_fao_id
 FROM
     trips
 WHERE
@@ -1728,7 +1740,9 @@ SELECT
     distance,
     trip_assembler_id AS "trip_assembler_id!: TripAssemblerId",
     start_port_id,
-    end_port_id
+    end_port_id,
+    target_species_fiskeridir_id,
+    target_species_fao_id
 FROM
     trips
 WHERE
@@ -1762,7 +1776,9 @@ SELECT
     distance,
     trip_assembler_id AS "trip_assembler_id!: TripAssemblerId",
     start_port_id,
-    end_port_id
+    end_port_id,
+    target_species_fiskeridir_id,
+    target_species_fao_id
 FROM
     trips
 WHERE
@@ -1792,7 +1808,9 @@ SELECT
     distance,
     trip_assembler_id AS "trip_assembler_id!: TripAssemblerId",
     start_port_id,
-    end_port_id
+    end_port_id,
+    target_species_fiskeridir_id,
+    target_species_fao_id
 FROM
     trips
 WHERE
@@ -1822,7 +1840,9 @@ SELECT
     distance,
     trip_assembler_id AS "trip_assembler_id!: TripAssemblerId",
     start_port_id,
-    end_port_id
+    end_port_id,
+    target_species_fiskeridir_id,
+    target_species_fao_id
 FROM
     trips
 WHERE
