@@ -45,6 +45,8 @@ pub struct Trip {
     pub distance: Option<f64>,
     pub cache_version: i64,
     pub total_living_weight: f64,
+    pub target_species_fiskeridir_id: Option<u32>,
+    pub target_species_fao: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -158,6 +160,8 @@ impl Trip {
             landing_ids: self.landing_ids,
             distance: self.distance,
             cache_version: self.cache_version,
+            target_species_fiskeridir_id: self.target_species_fiskeridir_id,
+            target_species_fao_id: self.target_species_fao,
         })
     }
 }
@@ -194,6 +198,8 @@ impl TryFrom<TripDetailed> for Trip {
             landing_ids: v.landing_ids,
             distance: v.distance,
             cache_version: v.cache_version,
+            target_species_fiskeridir_id: v.target_species_fiskeridir_id,
+            target_species_fao: v.target_species_fao_id,
         })
     }
 }

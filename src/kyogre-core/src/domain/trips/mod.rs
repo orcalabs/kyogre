@@ -29,6 +29,8 @@ pub struct Trip {
     pub assembler_id: TripAssemblerId,
     pub start_port_code: Option<String>,
     pub end_port_code: Option<String>,
+    pub target_species_fiskeridir_id: Option<u32>,
+    pub target_species_fao_id: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -146,6 +148,8 @@ pub struct TripDetailed {
     pub landing_ids: Vec<LandingId>,
     pub distance: Option<f64>,
     pub cache_version: i64,
+    pub target_species_fiskeridir_id: Option<u32>,
+    pub target_species_fao_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -446,6 +450,8 @@ impl From<TripDetailed> for Trip {
             precision_period: value.period_precision,
             start_port_code: value.start_port_id,
             end_port_code: value.end_port_id,
+            target_species_fiskeridir_id: value.target_species_fiskeridir_id,
+            target_species_fao_id: value.target_species_fao_id,
         }
     }
 }

@@ -26,6 +26,8 @@ pub struct Trip {
     pub trip_assembler_id: TripAssemblerId,
     pub start_port_id: Option<String>,
     pub end_port_id: Option<String>,
+    pub target_species_fiskeridir_id: Option<i32>,
+    pub target_species_fao_id: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -248,6 +250,8 @@ pub struct TripDetailed {
     pub trip_assembler_id: TripAssemblerId,
     pub distance: Option<BigDecimal>,
     pub cache_version: i64,
+    pub target_species_fiskeridir_id: Option<i32>,
+    pub target_species_fao_id: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -344,6 +348,8 @@ impl TryFrom<Trip> for kyogre_core::Trip {
             precision_period,
             start_port_code: value.start_port_id,
             end_port_code: value.end_port_id,
+            target_species_fiskeridir_id: value.target_species_fiskeridir_id.map(|v| v as u32),
+            target_species_fao_id: value.target_species_fao_id,
         })
     }
 }
@@ -476,6 +482,8 @@ impl TryFrom<TripDetailed> for kyogre_core::TripDetailed {
                 .map(|v| decimal_to_float(v).change_context(PostgresError::DataConversion))
                 .transpose()?,
             cache_version: value.cache_version,
+            target_species_fiskeridir_id: value.target_species_fiskeridir_id.map(|v| v as u32),
+            target_species_fao_id: value.target_species_fao_id,
         })
     }
 }

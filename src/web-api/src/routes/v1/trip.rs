@@ -350,6 +350,8 @@ pub struct Trip {
     pub trip_assembler_id: TripAssemblerId,
     #[schema(value_type = Vec<String>)]
     pub landing_ids: Vec<LandingId>,
+    pub target_species_fiskeridir_id: Option<u32>,
+    pub target_species_fao_id: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
@@ -473,6 +475,8 @@ impl From<kyogre_core::TripDetailed> for Trip {
             trip_assembler_id: value.assembler_id,
             landing_coverage_start: value.landing_coverage.start(),
             landing_coverage_end: value.landing_coverage.end(),
+            target_species_fiskeridir_id: value.target_species_fiskeridir_id,
+            target_species_fao_id: value.target_species_fao_id,
         }
     }
 }

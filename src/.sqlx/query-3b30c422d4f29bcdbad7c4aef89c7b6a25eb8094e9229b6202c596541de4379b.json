@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT\n    trip_id,\n    period,\n    period_precision,\n    landing_coverage,\n    distance,\n    trip_assembler_id AS \"trip_assembler_id!: TripAssemblerId\",\n    start_port_id,\n    end_port_id\nFROM\n    trips\nWHERE\n    fiskeridir_vessel_id = $1\n    AND distancer_id IS NULL\n            ",
+  "query": "\nSELECT\n    trip_id,\n    period,\n    period_precision,\n    landing_coverage,\n    distance,\n    trip_assembler_id AS \"trip_assembler_id!: TripAssemblerId\",\n    start_port_id,\n    end_port_id,\n    target_species_fiskeridir_id,\n    target_species_fao_id\nFROM\n    trips\nWHERE\n    fiskeridir_vessel_id = $1\n    AND UPPER(period) < $2\nORDER BY\n    period DESC\nLIMIT\n    1\n            ",
   "describe": {
     "columns": [
       {
@@ -42,11 +42,22 @@
         "ordinal": 7,
         "name": "end_port_id",
         "type_info": "Varchar"
+      },
+      {
+        "ordinal": 8,
+        "name": "target_species_fiskeridir_id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 9,
+        "name": "target_species_fao_id",
+        "type_info": "Varchar"
       }
     ],
     "parameters": {
       "Left": [
-        "Int8"
+        "Int8",
+        "Timestamptz"
       ]
     },
     "nullable": [
@@ -57,8 +68,10 @@
       true,
       false,
       true,
+      true,
+      true,
       true
     ]
   },
-  "hash": "ad86c609c176cbd68f2017f1a236818b4bf8a25d129ee5a33cb94a9e11935c82"
+  "hash": "3b30c422d4f29bcdbad7c4aef89c7b6a25eb8094e9229b6202c596541de4379b"
 }
