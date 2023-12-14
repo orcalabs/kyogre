@@ -20,6 +20,7 @@ use wiremock::{
 pub struct BarentswatchHelper {
     mock_server: MockServer,
     private_key: RsaPrivateKey,
+    pub audience: String,
 }
 
 impl BarentswatchHelper {
@@ -45,6 +46,7 @@ impl BarentswatchHelper {
         };
 
         let decoding_key = DecodingKey::from_jwk(&jwk).unwrap();
+        let audience = "test".to_string();
 
         let jwks = JwkSet { keys: vec![jwk] };
 
@@ -58,26 +60,30 @@ impl BarentswatchHelper {
 
         Mock::given(method("GET"))
             .and(path("/profiles"))
-            .respond_with(move |req: &wiremock::Request| {
-                let auth = &req.headers.get(&"Authorization".into()).unwrap()[0];
+            .respond_with({
+                let audience = audience.clone();
+                move |req: &wiremock::Request| {
+                    let auth = &req.headers.get(&"Authorization".into()).unwrap()[0];
 
-                let mut parts = auth.as_str().split(' ');
-                parts.next();
-                let token = parts.next().unwrap();
+                    let mut parts = auth.as_str().split(' ');
+                    parts.next();
+                    let token = parts.next().unwrap();
 
-                let decoded =
-                    decode::<Claims>(token, &decoding_key, &Validation::new(Algorithm::RS256))
-                        .unwrap();
+                    let mut validation = Validation::new(Algorithm::RS256);
+                    validation.set_audience(&[&audience]);
 
-                let profile = BwProfile {
-                    user: BwUser {
-                        id: decoded.claims.id,
-                    },
-                    policies: decoded.claims.policies,
-                    roles: decoded.claims.roles,
-                };
+                    let decoded = decode::<Claims>(token, &decoding_key, &validation).unwrap();
 
-                ResponseTemplate::new(200).set_body_json(profile)
+                    let profile = BwProfile {
+                        user: BwUser {
+                            id: decoded.claims.id,
+                        },
+                        policies: decoded.claims.policies,
+                        roles: decoded.claims.roles,
+                    };
+
+                    ResponseTemplate::new(200).set_body_json(profile)
+                }
             })
             .mount(&mock_server)
             .await;
@@ -85,6 +91,7 @@ impl BarentswatchHelper {
         Self {
             mock_server,
             private_key,
+            audience,
         }
     }
 
@@ -103,6 +110,7 @@ impl BarentswatchHelper {
         let claims = Claims {
             id: Uuid::new_v4(),
             exp: i64::MAX,
+            aud: self.audience.clone(),
             policies: BwPolicy::iter().collect(),
             roles: BwRole::iter().collect(),
         };
@@ -113,6 +121,7 @@ impl BarentswatchHelper {
         let claims = Claims {
             id: Uuid::new_v4(),
             exp: i64::MAX,
+            aud: self.audience.clone(),
             policies: vec![BwPolicy::BwAisFiskinfo],
             roles: vec![
                 BwRole::BwDownloadFishingfacility,
@@ -135,6 +144,7 @@ impl BarentswatchHelper {
         let claims = Claims {
             id: Uuid::new_v4(),
             exp: i64::MAX,
+            aud: self.audience.clone(),
             policies,
             roles,
         };
@@ -145,6 +155,7 @@ impl BarentswatchHelper {
         let claims = Claims {
             id: Uuid::new_v4(),
             exp: i64::MAX,
+            aud: self.audience.clone(),
             policies,
             roles: vec![],
         };
@@ -160,6 +171,7 @@ impl BarentswatchHelper {
 pub struct Claims {
     id: Uuid,
     exp: i64,
+    aud: String,
     policies: Vec<BwPolicy>,
     roles: Vec<BwRole>,
 }

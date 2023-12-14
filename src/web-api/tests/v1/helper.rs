@@ -19,7 +19,7 @@ use tokio::sync::OnceCell;
 use tracing_subscriber::FmtSubscriber;
 use web_api::{
     routes::v1::{haul, landing},
-    settings::{ApiSettings, Duckdb, Settings, BW_PROFILES_URL},
+    settings::{ApiSettings, BwSettings, Duckdb, Settings, BW_PROFILES_URL},
     startup::App,
 };
 
@@ -260,6 +260,8 @@ where
                 (None, None)
             };
 
+            let bw_profiles_url = format!("{bw_address}/profiles");
+
             let api_settings = Settings {
                 log_level: LogLevel::Debug,
                 telemetry: None,
@@ -272,13 +274,16 @@ where
                 meilisearch: m_settings,
                 environment: Environment::Test,
                 honeycomb: None,
-                bw_jwks_url: Some(format!("{bw_address}/jwks")),
-                bw_profiles_url: Some(format!("{bw_address}/profiles")),
+                bw_settings: Some(BwSettings {
+                    jwks_url: format!("{bw_address}/jwks"),
+                    audience: bw_helper.audience.clone(),
+                    profiles_url: bw_profiles_url.clone(),
+                }),
                 duck_db_api,
                 auth0: None,
             };
 
-            let _ = BW_PROFILES_URL.set(api_settings.bw_profiles_url.clone().unwrap());
+            let _ = BW_PROFILES_URL.set(bw_profiles_url);
 
             let app = TestHelper::spawn_app(
                 adapter.clone(),

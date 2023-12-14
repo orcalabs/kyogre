@@ -10,21 +10,30 @@ use jsonwebtoken::{
 use serde::de::DeserializeOwned;
 use tracing::{event, Level};
 
+use crate::settings::BwSettings;
+
 #[derive(Debug, Clone)]
-pub struct JwtGuard {
+pub struct BwtGuard {
     jwks: HashMap<String, Jwk>,
+    audience: String,
 }
 
-impl JwtGuard {
-    pub async fn new(jwks_url: String) -> Self {
-        let jwks: JwkSet = reqwest::get(jwks_url).await.unwrap().json().await.unwrap();
+impl BwtGuard {
+    pub async fn new(settings: &BwSettings) -> Self {
+        let jwks: JwkSet = reqwest::get(&settings.jwks_url)
+            .await
+            .unwrap()
+            .json()
+            .await
+            .unwrap();
 
-        JwtGuard {
+        BwtGuard {
             jwks: jwks
                 .keys
                 .into_iter()
                 .filter_map(|k| k.common.key_id.clone().map(|kid| (kid, k)))
                 .collect(),
+            audience: settings.audience.clone(),
         }
     }
 
@@ -39,7 +48,7 @@ impl JwtGuard {
                 let key =
                     DecodingKey::from_jwk(jwk).change_context(JwtDecodeError::DecodeKeyFromJwk)?;
 
-                let validation = Validation::new(
+                let mut validation = Validation::new(
                     Algorithm::from_str(
                         jwk.common
                             .key_algorithm
@@ -49,6 +58,7 @@ impl JwtGuard {
                     )
                     .change_context(JwtDecodeError::InvalidAlgorithmInJwk)?,
                 );
+                validation.set_audience(&[&self.audience]);
 
                 decode::<T>(token, &key, &validation).change_context(JwtDecodeError::DecodeToken)
             }
@@ -57,7 +67,7 @@ impl JwtGuard {
     }
 }
 
-impl Guard for JwtGuard {
+impl Guard for BwtGuard {
     fn check(&self, ctx: &actix_web::guard::GuardContext<'_>) -> bool {
         match ctx.head().headers.get("bw-token") {
             Some(token) => match token.to_str() {

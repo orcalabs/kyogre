@@ -1,3 +1,3 @@
-mod jwt_guard;
+mod bw_guard;
 
-pub use jwt_guard::*;
+pub use bw_guard::*;

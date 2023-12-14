@@ -13,7 +13,7 @@ use utoipa::{openapi::security::SecurityScheme, OpenApi};
 use utoipa_swagger_ui::SwaggerUi;
 
 use crate::{
-    auth0::Auth0State, guards::JwtGuard, routes, settings::Settings, ApiDoc, Cache, Database,
+    auth0::Auth0State, guards::BwtGuard, routes, settings::Settings, ApiDoc, Cache, Database,
     Meilisearch,
 };
 
@@ -76,14 +76,14 @@ where
     let environment = settings.environment;
     let not_prod = environment != Environment::Production;
 
-    let bw_jwt_guard = if let Some(ref url) = settings.bw_jwks_url {
-        Some(JwtGuard::new(url.clone()).await)
+    let bw_jwt_guard = if let Some(ref settings) = settings.bw_settings {
+        Some(BwtGuard::new(settings).await)
     } else {
         None
     };
 
     let auth0_settings = settings.auth0.clone();
-    let auth0_state = Auth0State::new(auth0_settings.as_ref().map(|s| s.jwk_url.clone())).await;
+    let auth0_state = Auth0State::new(auth0_settings.as_ref()).await;
 
     let mut server = HttpServer::new(move || {
         let mut scope = web::scope("/v1.0")

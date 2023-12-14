@@ -6,26 +6,36 @@ use jsonwebtoken::{
 };
 use serde::de::DeserializeOwned;
 
+use crate::settings::Auth0Settings;
+
 #[derive(Debug, Clone)]
 pub enum Auth0State {
     Disabled,
-    Enabled { jwk_set: JwkSet },
+    Enabled { jwk_set: JwkSet, audience: String },
 }
 
 impl Auth0State {
-    pub async fn new(jwk_url: Option<String>) -> Self {
-        if let Some(ref url) = jwk_url {
-            let jwk_set: JwkSet = reqwest::get(url).await.unwrap().json().await.unwrap();
-            Self::Enabled { jwk_set }
+    pub async fn new(settings: Option<&Auth0Settings>) -> Self {
+        if let Some(settings) = settings {
+            let jwk_set: JwkSet = reqwest::get(&settings.jwk_url)
+                .await
+                .unwrap()
+                .json()
+                .await
+                .unwrap();
+
+            Self::Enabled {
+                jwk_set,
+                audience: settings.audience.clone(),
+            }
         } else {
             Self::Disabled
         }
     }
 
     pub fn decode<T: DeserializeOwned>(&self, token: &str) -> Result<TokenData<T>, Auth0Error> {
-        let jwk_set = match self {
-            Self::Enabled { jwk_set, .. } => jwk_set,
-            Self::Disabled => bail!(Auth0Error::DecodeDisabled),
+        let Self::Enabled { jwk_set, audience } = self else {
+            bail!(Auth0Error::DecodeDisabled)
         };
 
         let header = decode_header(token).change_context(Auth0Error::DecodeHeader)?;
@@ -38,7 +48,7 @@ impl Auth0State {
             .ok_or_else(|| report!(Auth0Error::MissingKidInJwkSet))?;
 
         let key = DecodingKey::from_jwk(jwk).change_context(Auth0Error::DecodeKeyFromJwk)?;
-        let validation = Validation::new(
+        let mut validation = Validation::new(
             Algorithm::from_str(
                 jwk.common
                     .key_algorithm
@@ -48,6 +58,7 @@ impl Auth0State {
             )
             .change_context(Auth0Error::InvalidAlgorithmInJwk)?,
         );
+        validation.set_audience(&[&audience]);
 
         decode(token, &key, &validation).change_context(Auth0Error::DecodeToken)
     }
