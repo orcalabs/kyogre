@@ -504,8 +504,7 @@ SET
             )
         FROM
             UNNEST(q.catch_locations || h.catch_location_start) e
-    ),
-    cache_version = cache_version + 1
+    )
 FROM
     (
         SELECT

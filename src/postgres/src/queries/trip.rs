@@ -43,8 +43,8 @@ SELECT
     conflict_vessel_event_timestamp,
     conflict_vessel_event_id,
     conflict_vessel_event_type_id AS "conflict_vessel_event_type_id: VesselEventType",
-    prior_trip_vessel_events::TEXT as "prior_trip_vessel_events!",
-    new_vessel_events::TEXT as "new_vessel_events!"
+    prior_trip_vessel_events::TEXT AS "prior_trip_vessel_events!",
+    new_vessel_events::TEXT AS "new_vessel_events!"
 FROM
     trip_assembler_logs
             "#
@@ -620,8 +620,7 @@ SET
 UPDATE trips_detailed
 SET
     landings = q.landings,
-    landing_species_group_ids = q.landing_species_group_ids,
-    cache_version = cache_version + 1
+    landing_species_group_ids = q.landing_species_group_ids
 FROM
     (
         SELECT
@@ -633,7 +632,7 @@ FROM
                 ),
                 '[]'
             ) AS landings,
-            ARRAY (
+            ARRAY(
                 SELECT DISTINCT
                     UNNEST(ARRAY_AGG(qi.species_group_ids))
             ) AS landing_species_group_ids
