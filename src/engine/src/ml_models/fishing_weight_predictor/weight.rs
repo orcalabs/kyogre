@@ -5,6 +5,7 @@ use error_stack::Result;
 use fiskeridir_rs::SpeciesGroup;
 use kyogre_core::{
     MLModel, MLModelError, MLModelsInbound, MLModelsOutbound, ModelId, TrainingOutput, WeatherData,
+    EARLIEST_ERS_DATE,
 };
 use serde::Serialize;
 use tracing::instrument;
@@ -22,6 +23,7 @@ struct ModelData {
     pub species_group_id: SpeciesGroup,
     pub year: u32,
     pub day: u32,
+    pub num_day: u64,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub weight: Option<f64>,
 }
@@ -56,6 +58,7 @@ impl MLModel for FishingWeightPredictor {
                         weight: Some(v.weight),
                         day: v.date.ordinal(),
                         year: v.date.year_ce().1,
+                        num_day: (v.date - EARLIEST_ERS_DATE).num_days() as u64,
                     })
                     .collect();
 
@@ -89,6 +92,7 @@ impl MLModel for FishingWeightPredictor {
                         day: v.date.ordinal(),
                         year: v.date.year_ce().1,
                         weight: None,
+                        num_day: (v.date - EARLIEST_ERS_DATE).num_days() as u64,
                     })
                     .collect();
 

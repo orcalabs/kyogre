@@ -7,7 +7,7 @@ use fiskeridir_rs::SpeciesGroup;
 use itertools::Itertools;
 use kyogre_core::{
     CatchLocationWeather, MLModel, MLModelError, MLModelsInbound, MLModelsOutbound, ModelId,
-    TrainingOutput, WeatherData,
+    TrainingOutput, WeatherData, EARLIEST_ERS_DATE,
 };
 use serde::{Serialize, Serializer};
 use std::collections::HashMap;
@@ -25,6 +25,7 @@ struct PythonTrainingData {
     pub species_group_id: i32,
     pub day: u32,
     pub year: u32,
+    pub num_day: u64,
     pub weather: HashMap<CatchLocationId, CatchLocationWeather>,
 }
 
@@ -34,6 +35,7 @@ struct PythonPredictionInput {
     pub weather: HashMap<CatchLocationId, CatchLocationWeather>,
     pub year: u32,
     pub day: u32,
+    pub num_day: u64,
 }
 
 impl FishingSpotWeatherPredictor {
@@ -55,6 +57,7 @@ impl Serialize for PythonTrainingData {
         map.serialize_entry("species_group_id", &self.species_group_id)?;
         map.serialize_entry("day", &self.day)?;
         map.serialize_entry("year", &self.year)?;
+        map.serialize_entry("num_day", &self.num_day)?;
 
         for (k, v) in self.weather.iter().sorted_by_key(|(k, _v)| (*k).clone()) {
             map.serialize_entry(&format!("{}_wind_speed_10m", k.as_ref()), &v.wind_speed_10m)?;
@@ -95,6 +98,7 @@ impl Serialize for PythonPredictionInput {
         map.serialize_entry("species_group_id", &self.species_group_id)?;
         map.serialize_entry("day", &self.day)?;
         map.serialize_entry("year", &self.year)?;
+        map.serialize_entry("num_day", &self.num_day)?;
 
         for (k, v) in self.weather.iter().sorted_by_key(|(k, _v)| (*k).clone()) {
             map.serialize_entry(&format!("{}_wind_speed_10m", k.as_ref()), &v.wind_speed_10m)?;
@@ -164,6 +168,7 @@ impl MLModel for FishingSpotWeatherPredictor {
                                     year: v.date.year_ce().1,
                                     longitude: v.longitude,
                                     latitude: v.latitude,
+                                    num_day: (v.date - EARLIEST_ERS_DATE).num_days() as u64,
                                 })
                             } else {
                                 None
@@ -210,6 +215,7 @@ impl MLModel for FishingSpotWeatherPredictor {
                                         .collect(),
                                     day: v.date.ordinal(),
                                     year: v.date.year_ce().1,
+                                    num_day: (v.date - EARLIEST_ERS_DATE).num_days() as u64,
                                 })
                             } else {
                                 None
