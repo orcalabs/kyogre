@@ -13,6 +13,8 @@ use strum::{AsRefStr, EnumIter, EnumString};
 #[allow(warnings)]
 pub const EARLIEST_ERS_DATE: NaiveDate = NaiveDate::from_yo(2012, 1);
 
+pub const SPOT_PREDICTOR_SAMPLE_WEIGHT_LIMIT: u64 = 10000;
+
 pub static ML_SPECIES_GROUPS: &[SpeciesGroup] = &[
     SpeciesGroup::AtlanticCod,
     SpeciesGroup::Saithe,
@@ -205,7 +207,7 @@ impl PredictionRange {
                 let mut targets = Vec::with_capacity(current_day as usize);
 
                 let mut current = NaiveDate::from_ymd_opt(current_year as i32, 1, 1).unwrap();
-                let end = now.date_naive();
+                let end = NaiveDate::from_ymd_opt(current_year as i32, 12, 31).unwrap();
 
                 while current <= end {
                     targets.push(current);
