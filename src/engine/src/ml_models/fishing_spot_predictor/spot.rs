@@ -6,6 +6,7 @@ use error_stack::Result;
 use fiskeridir_rs::SpeciesGroup;
 use kyogre_core::{
     MLModel, MLModelError, MLModelsInbound, MLModelsOutbound, ModelId, TrainingOutput, WeatherData,
+    EARLIEST_ERS_DATE,
 };
 use serde::Serialize;
 use tracing::instrument;
@@ -23,6 +24,7 @@ struct PythonTrainingData {
     pub species_group_id: SpeciesGroup,
     pub day: u32,
     pub year: u32,
+    pub num_day: u64,
 }
 
 impl FishingSpotPredictor {
@@ -59,6 +61,7 @@ impl MLModel for FishingSpotPredictor {
                         species_group_id: v.species,
                         day: v.date.ordinal(),
                         year: v.date.year_ce().1,
+                        num_day: (v.date - EARLIEST_ERS_DATE).num_days() as u64,
                     })
                     .collect::<Vec<PythonTrainingData>>()
             },
@@ -88,6 +91,7 @@ impl MLModel for FishingSpotPredictor {
                         longitude: None,
                         day: v.date.ordinal(),
                         year: v.date.year_ce().1,
+                        num_day: (v.date - EARLIEST_ERS_DATE).num_days() as u64,
                     })
                     .collect()
             },

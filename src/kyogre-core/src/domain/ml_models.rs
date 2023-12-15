@@ -8,11 +8,17 @@ use serde_repr::{Deserialize_repr, Serialize_repr};
 use std::{collections::HashSet, fmt::Display};
 use strum::{AsRefStr, EnumIter, EnumString};
 
+// We want this as const, using the opt version with an unwrap is not allowed in stable rust
+// per now.
+#[allow(warnings)]
+pub const EARLIEST_ERS_DATE: NaiveDate = NaiveDate::from_yo(2012, 1);
+
 pub static ML_SPECIES_GROUPS: &[SpeciesGroup] = &[
     SpeciesGroup::AtlanticCod,
     SpeciesGroup::Saithe,
     SpeciesGroup::Haddock,
     SpeciesGroup::NorthernPrawn,
+    SpeciesGroup::GoldenRedfish,
 ];
 
 #[derive(Debug)]

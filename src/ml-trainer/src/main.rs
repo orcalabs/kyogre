@@ -148,7 +148,7 @@ async fn main() {
         port: 5432,
         db_name: None,
         username: "postgres".to_string(),
-        password: "test123".to_string(),
+        password: Some("test123".to_string()),
         max_connections: 1,
         root_cert: None,
         log_statements: PsqlLogStatements::Disable,
