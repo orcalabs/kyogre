@@ -8,6 +8,7 @@ use error_stack::{report, Result, ResultExt};
 use fiskeridir_rs::{GearGroup, SpeciesGroup};
 use futures::Stream;
 use futures::TryStreamExt;
+use kyogre_core::SPOT_PREDICTOR_SAMPLE_WEIGHT_LIMIT;
 use kyogre_core::{FishingSpotPrediction, ModelId, TrainingHaul, WeatherData};
 use unnest_insert::UnnestInsert;
 
@@ -215,6 +216,7 @@ WHERE
     (h.stop_timestamp - h.start_timestamp) < INTERVAL '2 day'
     AND hm.gear_group_id = $2
     AND m.haul_id IS NULL
+    AND cl.hauls_polygon_overlap = TRUE
     AND hm.species_group_id = $3
     AND (
         (
@@ -290,6 +292,7 @@ WITH
             (h.stop_timestamp - h.start_timestamp) < INTERVAL '2 day'
             AND h.gear_group_id = $2
             AND m.haul_id IS NULL
+            AND cl.hauls_polygon_overlap = TRUE
             AND hm.species_group_id = $3
         ORDER BY
             hm.species_group_id,
@@ -306,12 +309,15 @@ SELECT
 FROM
     hauls_matrix hm
     INNER JOIN hauls h ON hm.haul_id = h.haul_id
+    INNER JOIN catch_locations cl ON cl.catch_location_id = hm.catch_location
     INNER JOIN sums ON sums.species_group_id = hm.species_group_id
     AND sums."date" = h.start_timestamp::DATE
+    AND sums.weight > $4
     LEFT JOIN ml_hauls_training_log m ON m.ml_model_id = $1
     AND hm.haul_id = m.haul_id
     AND hm.species_group_id = m.species_group_id
     AND hm.catch_location = m.catch_location_id
+    AND cl.hauls_polygon_overlap = TRUE
 WHERE
     (h.stop_timestamp - h.start_timestamp) < INTERVAL '2 day'
     AND hm.gear_group_id = $2
@@ -320,11 +326,12 @@ WHERE
 ORDER BY
     h.start_timestamp
 LIMIT
-    $4
+    $5
             "#,
             model_id as i32,
             GearGroup::Trawl as i32,
             species as i32,
+            SPOT_PREDICTOR_SAMPLE_WEIGHT_LIMIT as i32,
             limit.map(|v| v as i64)
         )
         .fetch_all(&self.pool)
