@@ -1,13 +1,13 @@
 use crate::{
-    AisConsumeLoop, AisPosition, AisVms, Arrival, Cluster, DataMessage, DeliveryPoint,
-    DeliveryPointType, Departure, ErsTripAssembler, FisheryEngine, FishingFacilities,
-    FishingFacilitiesQuery, FishingFacility, FishingSpotPredictor, FishingSpotWeatherPredictor,
-    FishingWeightPredictor, FishingWeightWeatherPredictor, FiskeridirVesselId, Haul, HaulsQuery,
-    Landing, LandingTripAssembler, LandingsQuery, LandingsSorting, ManualDeliveryPoint,
-    MattilsynetDeliveryPoint, Mmsi, NewAisPosition, NewAisStatic, OceanClimate, Ordering,
-    Pagination, PrecisionId, PredictionRange, ScrapeState, SharedState, SpotPredictorSettings,
-    Step, TripDetailed, Trips, TripsQuery, UnrealisticSpeed, Vessel, VmsPosition, Weather,
-    WeightPredictorSettings,
+    AisConsumeLoop, AisPosition, AisVms, AisVmsConflict, Arrival, Cluster, DataMessage,
+    DeliveryPoint, DeliveryPointType, Departure, ErsTripAssembler, FisheryEngine,
+    FishingFacilities, FishingFacilitiesQuery, FishingFacility, FishingSpotPredictor,
+    FishingSpotWeatherPredictor, FishingWeightPredictor, FishingWeightWeatherPredictor,
+    FiskeridirVesselId, Haul, HaulsQuery, Landing, LandingTripAssembler, LandingsQuery,
+    LandingsSorting, ManualDeliveryPoint, MattilsynetDeliveryPoint, Mmsi, NewAisPosition,
+    NewAisStatic, OceanClimate, Ordering, Pagination, PrecisionId, PredictionRange, ScrapeState,
+    SharedState, SpotPredictorSettings, Step, TripDetailed, Trips, TripsQuery, UnrealisticSpeed,
+    Vessel, VmsPosition, Weather, WeightPredictorSettings,
 };
 
 use chrono::{DateTime, Duration, TimeZone, Utc};
@@ -223,6 +223,7 @@ pub async fn engine(adapter: PostgresAdapter, db_settings: &PsqlSettings) -> Fis
     let benchmarks = vec![Box::<WeightPerHour>::default() as Box<dyn VesselBenchmark>];
     let trip_distancer = Box::<AisVms>::default() as Box<dyn TripDistancer>;
     let trip_layers = vec![
+        Box::<AisVmsConflict>::default() as Box<dyn TripPositionLayer>,
         Box::<UnrealisticSpeed>::default() as Box<dyn TripPositionLayer>,
         Box::<Cluster>::default() as Box<dyn TripPositionLayer>,
     ];

@@ -1,5 +1,6 @@
 use crate::{
-    AisVms, Cluster, ErsTripAssembler, FisheryDiscriminants, LandingTripAssembler, UnrealisticSpeed,
+    AisVms, AisVmsConflict, Cluster, ErsTripAssembler, FisheryDiscriminants, LandingTripAssembler,
+    UnrealisticSpeed,
 };
 use config::{Config, ConfigError, File};
 use kyogre_core::*;
@@ -91,6 +92,7 @@ impl Settings {
 
     pub fn trip_position_layers(&self) -> Vec<Box<dyn TripPositionLayer>> {
         vec![
+            Box::<AisVmsConflict>::default(),
             Box::<UnrealisticSpeed>::default(),
             Box::<Cluster>::default(),
         ]
