@@ -14,12 +14,22 @@ pub trait TripPositionLayer: Send + Sync {
 #[cfg_attr(feature = "sqlx", derive(sqlx::Type))]
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 #[derive(
-    Debug, Copy, Clone, Deserialize_repr, Serialize_repr, strum::Display, AsRefStr, EnumString,
+    Debug,
+    Copy,
+    Clone,
+    PartialEq,
+    Eq,
+    Deserialize_repr,
+    Serialize_repr,
+    strum::Display,
+    AsRefStr,
+    EnumString,
 )]
 #[repr(i32)]
 pub enum TripPositionLayerId {
     UnrealisticSpeed = 1,
     Cluster = 2,
+    AisVmsConflict = 3,
 }
 
 #[derive(Debug, Clone)]

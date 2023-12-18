@@ -859,3 +859,51 @@ async fn test_ais_vms_by_trip_does_not_return_positions_with_unrealistic_movemen
     })
     .await;
 }
+
+#[tokio::test]
+async fn test_ais_vms_by_trip_does_not_return_vms_right_next_to_ais() {
+    test(|helper, builder| async move {
+        let start = Utc.timestamp_opt(1000, 0).unwrap();
+
+        let state = builder
+            .vessels(1)
+            .trips(1)
+            .modify(|v| {
+                v.trip_specification.set_start(start);
+                v.trip_specification.set_end(start + Duration::seconds(100));
+            })
+            .ais_vms_positions(3)
+            .modify_idx(|i, v| match i {
+                0 => v.position.set_timestamp(start),
+                1 => v.position.set_timestamp(start + Duration::seconds(30)),
+                2 => v.position.set_timestamp(start + Duration::seconds(60)),
+                _ => unreachable!(),
+            })
+            .build()
+            .await;
+
+        let response = helper
+            .app
+            .get_ais_vms_positions(
+                AisVmsParameters {
+                    mmsi: None,
+                    call_sign: None,
+                    start: None,
+                    end: None,
+                    trip_id: Some(state.trips[0].trip_id),
+                },
+                None,
+            )
+            .await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let body: Vec<AisVmsPosition> = response.json().await.unwrap();
+
+        assert_eq!(body.len(), 2);
+        assert_eq!(body[0], state.ais_vms_positions[0]);
+        assert_eq!(body[1], state.ais_vms_positions[2]);
+        assert_eq!(body[0].pruned_by, Some(TripPositionLayerId::AisVmsConflict));
+        assert_eq!(body[1].pruned_by, Some(TripPositionLayerId::AisVmsConflict));
+    })
+    .await;
+}
