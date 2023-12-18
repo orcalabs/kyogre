@@ -1,3 +1,4 @@
+use crate::error::PostgresErrorWrapper;
 use crate::models::LandingMatrixArgs;
 use crate::queries::haul::HaulsMatrixArgs;
 use crate::{
@@ -5,7 +6,7 @@ use crate::{
 };
 use async_trait::async_trait;
 use chrono::{DateTime, Duration, NaiveDate, Utc};
-use error_stack::{Report, Result, ResultExt};
+use error_stack::{Result, ResultExt};
 use fiskeridir_rs::{CallSign, DeliveryPointId, LandingId, SpeciesGroup};
 use futures::{Stream, StreamExt, TryStreamExt};
 use kyogre_core::*;
@@ -14,7 +15,7 @@ use sqlx::{
     postgres::{PgConnectOptions, PgPoolOptions, PgSslMode},
     ConnectOptions, PgPool,
 };
-use std::pin::Pin;
+use std::{pin::Pin, result::Result as StdResult};
 use tracing::{event, instrument, Level};
 
 #[derive(Debug, Clone)]
@@ -129,51 +130,50 @@ impl PostgresAdapter {
     }
 
     pub async fn reset_models(&self, models: &[ModelId]) -> Result<(), PostgresError> {
-        let mut tx = self.begin().await?;
+        async fn inner(pool: &PgPool, models: &[ModelId]) -> StdResult<(), PostgresErrorWrapper> {
+            let mut tx = pool.begin().await?;
 
-        let models: Vec<i32> = models.iter().map(|v| *v as i32).collect();
+            let models: Vec<i32> = models.iter().map(|v| *v as i32).collect();
 
-        sqlx::query!(
-            r#"
+            sqlx::query!(
+                r#"
 DELETE FROM ml_hauls_training_log
 WHERE
     ml_model_id = ANY ($1)
             "#,
-            &models
-        )
-        .execute(&mut *tx)
-        .await
-        .change_context(PostgresError::Query)?;
+                &models
+            )
+            .execute(&mut *tx)
+            .await?;
 
-        sqlx::query!(
-            r#"
+            sqlx::query!(
+                r#"
 DELETE FROM fishing_spot_predictions
 WHERE
     ml_model_id = ANY ($1)
             "#,
-            &models
-        )
-        .execute(&mut *tx)
-        .await
-        .change_context(PostgresError::Query)?;
+                &models
+            )
+            .execute(&mut *tx)
+            .await?;
 
-        sqlx::query!(
-            r#"
+            sqlx::query!(
+                r#"
 DELETE FROM fishing_weight_predictions
 WHERE
     ml_model_id = ANY ($1)
             "#,
-            &models
-        )
-        .execute(&mut *tx)
-        .await
-        .change_context(PostgresError::Query)?;
+                &models
+            )
+            .execute(&mut *tx)
+            .await?;
 
-        tx.commit()
-            .await
-            .change_context(PostgresError::Transaction)?;
+            tx.commit().await?;
 
-        Ok(())
+            Ok(())
+        }
+
+        inner(&self.pool, models).await.map_err(|e| e.into_inner())
     }
 
     pub async fn do_migrations(&self) {
@@ -234,7 +234,7 @@ WHERE
     #[instrument(skip_all, name = "postgres_insert_ais_data")]
     async fn process_message(
         &self,
-        incoming: std::result::Result<DataMessage, tokio::sync::broadcast::error::RecvError>,
+        incoming: StdResult<DataMessage, tokio::sync::broadcast::error::RecvError>,
     ) -> AisProcessingAction {
         match incoming {
             Ok(message) => {
@@ -286,15 +286,6 @@ WHERE
             },
         }
     }
-
-    pub(crate) async fn begin(
-        &self,
-    ) -> Result<sqlx::Transaction<'_, sqlx::Postgres>, PostgresError> {
-        self.pool
-            .begin()
-            .await
-            .change_context(PostgresError::Transaction)
-    }
 }
 
 impl TestStorage for PostgresAdapter {}
@@ -307,7 +298,7 @@ impl TestHelperOutbound for PostgresAdapter {
             .unwrap()
             .into_iter()
             .map(TripAssemblerLogEntry::try_from)
-            .collect::<Result<Vec<TripAssemblerLogEntry>, PostgresError>>()
+            .collect::<StdResult<_, _>>()
             .unwrap()
     }
     async fn active_vessel_conflicts(&self) -> Vec<ActiveVesselConflict> {
@@ -316,7 +307,7 @@ impl TestHelperOutbound for PostgresAdapter {
             .unwrap()
             .into_iter()
             .map(ActiveVesselConflict::try_from)
-            .collect::<Result<Vec<ActiveVesselConflict>, PostgresError>>()
+            .collect::<StdResult<_, _>>()
             .unwrap()
     }
     async fn all_dep(&self) -> Vec<Departure> {
@@ -346,7 +337,7 @@ impl TestHelperOutbound for PostgresAdapter {
             .unwrap()
             .into_iter()
             .map(AisPosition::try_from)
-            .collect::<Result<Vec<AisPosition>, PostgresError>>()
+            .collect::<StdResult<_, _>>()
             .unwrap()
     }
     async fn all_vms(&self) -> Vec<VmsPosition> {
@@ -355,7 +346,7 @@ impl TestHelperOutbound for PostgresAdapter {
             .unwrap()
             .into_iter()
             .map(VmsPosition::try_from)
-            .collect::<Result<Vec<VmsPosition>, PostgresError>>()
+            .collect::<StdResult<_, _>>()
             .unwrap()
     }
     async fn all_ais_vms(&self) -> Vec<AisVmsPosition> {
@@ -364,7 +355,7 @@ impl TestHelperOutbound for PostgresAdapter {
             .unwrap()
             .into_iter()
             .map(AisVmsPosition::try_from)
-            .collect::<Result<Vec<AisVmsPosition>, PostgresError>>()
+            .collect::<StdResult<_, _>>()
             .unwrap()
     }
     async fn port(&self, port_id: &str) -> Option<Port> {
@@ -389,7 +380,7 @@ impl TestHelperOutbound for PostgresAdapter {
             .unwrap()
             .into_iter()
             .map(PortDockPoint::try_from)
-            .collect::<Result<Vec<PortDockPoint>, _>>()
+            .collect::<StdResult<_, _>>()
             .unwrap()
     }
 }
@@ -397,12 +388,10 @@ impl TestHelperOutbound for PostgresAdapter {
 #[async_trait]
 impl CatchLocationWeatherInbound for PostgresAdapter {
     async fn dirty_dates(&self) -> Result<Vec<NaiveDate>, QueryError> {
-        self.dirty_dates_impl().await.change_context(QueryError)
+        Ok(self.dirty_dates_impl().await?)
     }
     async fn catch_locations_with_weather(&self) -> Result<Vec<CatchLocationId>, QueryError> {
-        self.catch_locations_with_weather_impl()
-            .await
-            .change_context(QueryError)
+        Ok(self.catch_locations_with_weather_impl().await?)
     }
 
     async fn update_catch_locations_weather(
@@ -410,9 +399,9 @@ impl CatchLocationWeatherInbound for PostgresAdapter {
         catch_locations: &[CatchLocationId],
         date: NaiveDate,
     ) -> Result<(), UpdateError> {
-        self.update_catch_locations_weather_impl(catch_locations, date)
-            .await
-            .change_context(UpdateError)
+        Ok(self
+            .update_catch_locations_weather_impl(catch_locations, date)
+            .await?)
     }
 }
 
@@ -445,9 +434,7 @@ impl TestHelperInbound for PostgresAdapter {
         old: DeliveryPointId,
         new: DeliveryPointId,
     ) -> Result<(), InsertError> {
-        self.add_deprecated_delivery_point_impl(old, new)
-            .await
-            .change_context(InsertError)
+        Ok(self.add_deprecated_delivery_point_impl(old, new).await?)
     }
 }
 
@@ -465,7 +452,8 @@ impl AisConsumeLoop for PostgresAdapter {
 #[async_trait]
 impl AisMigratorDestination for PostgresAdapter {
     async fn add_mmsis(&self, mmsis: Vec<Mmsi>) -> Result<(), InsertError> {
-        self.add_mmsis_impl(mmsis).await.change_context(InsertError)
+        self.add_mmsis_impl(mmsis).await?;
+        Ok(())
     }
     async fn migrate_ais_data(
         &self,
@@ -474,16 +462,16 @@ impl AisMigratorDestination for PostgresAdapter {
         progress: DateTime<Utc>,
     ) -> Result<(), InsertError> {
         self.add_ais_migration_data(mmsi, positions, progress)
-            .await
-            .change_context(InsertError)
+            .await?;
+        Ok(())
     }
     async fn vessel_migration_progress(
         &self,
         migration_end_threshold: &DateTime<Utc>,
     ) -> Result<Vec<AisVesselMigrate>, QueryError> {
-        self.ais_vessel_migration_progress(migration_end_threshold)
-            .await
-            .change_context(QueryError)
+        Ok(self
+            .ais_vessel_migration_progress(migration_end_threshold)
+            .await?)
     }
 }
 
@@ -510,7 +498,7 @@ impl WebApiOutboundPort for PostgresAdapter {
         model_id: ModelId,
     ) -> PinBoxStream<'_, FishingSpotPrediction, QueryError> {
         self.all_fishing_spot_predictions_impl(model_id)
-            .map_err(|e| e.change_context(QueryError))
+            .map_err(From::from)
             .boxed()
     }
     async fn fishing_spot_prediction(
@@ -519,9 +507,9 @@ impl WebApiOutboundPort for PostgresAdapter {
         species: SpeciesGroup,
         date: NaiveDate,
     ) -> Result<Option<FishingSpotPrediction>, QueryError> {
-        self.fishing_spot_prediction_impl(model_id, species, date)
-            .await
-            .change_context(QueryError)
+        Ok(self
+            .fishing_spot_prediction_impl(model_id, species, date)
+            .await?)
     }
     fn ais_positions(
         &self,
@@ -577,7 +565,7 @@ impl WebApiOutboundPort for PostgresAdapter {
     }
 
     fn hauls(&self, query: HaulsQuery) -> Result<PinBoxStream<'_, Haul, QueryError>, QueryError> {
-        let stream = self.hauls_impl(query).change_context(QueryError)?;
+        let stream = self.hauls_impl(query)?;
         Ok(convert_stream(stream).boxed())
     }
 
@@ -588,8 +576,7 @@ impl WebApiOutboundPort for PostgresAdapter {
     ) -> Result<Option<TripDetailed>, QueryError> {
         convert_optional(
             self.detailed_trip_of_haul_impl(haul_id, read_fishing_facility)
-                .await
-                .change_context(QueryError)?,
+                .await?,
         )
     }
 
@@ -600,8 +587,7 @@ impl WebApiOutboundPort for PostgresAdapter {
     ) -> Result<Option<TripDetailed>, QueryError> {
         convert_optional(
             self.detailed_trip_of_landing_impl(landing_id, read_fishing_facility)
-                .await
-                .change_context(QueryError)?,
+                .await?,
         )
     }
     async fn detailed_trip_of_partial_landing(
@@ -611,8 +597,7 @@ impl WebApiOutboundPort for PostgresAdapter {
     ) -> Result<Option<TripDetailed>, QueryError> {
         convert_optional(
             self.detailed_trip_of_partial_landing_impl(landing_id, read_fishing_facility)
-                .await
-                .change_context(QueryError)?,
+                .await?,
         )
     }
 
@@ -621,9 +606,7 @@ impl WebApiOutboundPort for PostgresAdapter {
         query: TripsQuery,
         read_fishing_facility: bool,
     ) -> Result<PinBoxStream<'_, TripDetailed, QueryError>, QueryError> {
-        let stream = self
-            .detailed_trips_impl(query, read_fishing_facility)
-            .change_context(QueryError)?;
+        let stream = self.detailed_trips_impl(query, read_fishing_facility)?;
         Ok(convert_stream(stream).boxed())
     }
 
@@ -634,8 +617,7 @@ impl WebApiOutboundPort for PostgresAdapter {
     ) -> Result<Option<CurrentTrip>, QueryError> {
         convert_optional(
             self.current_trip_impl(vessel_id, read_fishing_facility)
-                .await
-                .change_context(QueryError)?,
+                .await?,
         )
     }
 
@@ -643,7 +625,7 @@ impl WebApiOutboundPort for PostgresAdapter {
         &self,
         query: LandingsQuery,
     ) -> Result<PinBoxStream<'_, Landing, QueryError>, QueryError> {
-        let stream = self.landings_impl(query).change_context(QueryError)?;
+        let stream = self.landings_impl(query)?;
         Ok(convert_stream(stream).boxed())
     }
 
@@ -652,7 +634,7 @@ impl WebApiOutboundPort for PostgresAdapter {
         query: &LandingMatrixQuery,
     ) -> Result<LandingMatrix, QueryError> {
         let active_filter = query.active_filter;
-        let args = LandingMatrixArgs::try_from(query.clone()).change_context(QueryError)?;
+        let args = LandingMatrixArgs::try_from(query.clone())?;
 
         let j1 = tokio::spawn(PostgresAdapter::landing_matrix_impl(
             self.pool.clone(),
@@ -682,24 +664,16 @@ impl WebApiOutboundPort for PostgresAdapter {
         let (dates, length_group, gear_group, species_group) = tokio::join!(j1, j2, j3, j4);
 
         Ok(LandingMatrix {
-            dates: dates
-                .change_context(QueryError)?
-                .change_context(QueryError)?,
-            length_group: length_group
-                .change_context(QueryError)?
-                .change_context(QueryError)?,
-            gear_group: gear_group
-                .change_context(QueryError)?
-                .change_context(QueryError)?,
-            species_group: species_group
-                .change_context(QueryError)?
-                .change_context(QueryError)?,
+            dates: dates.change_context(QueryError)??,
+            length_group: length_group.change_context(QueryError)??,
+            gear_group: gear_group.change_context(QueryError)??,
+            species_group: species_group.change_context(QueryError)??,
         })
     }
 
     async fn hauls_matrix(&self, query: &HaulsMatrixQuery) -> Result<HaulsMatrix, QueryError> {
         let active_filter = query.active_filter;
-        let args = HaulsMatrixArgs::try_from(query.clone()).change_context(QueryError)?;
+        let args = HaulsMatrixArgs::try_from(query.clone())?;
 
         let j1 = tokio::spawn(PostgresAdapter::hauls_matrix_impl(
             self.pool.clone(),
@@ -729,18 +703,10 @@ impl WebApiOutboundPort for PostgresAdapter {
         let (dates, length_group, gear_group, species_group) = tokio::join!(j1, j2, j3, j4);
 
         Ok(HaulsMatrix {
-            dates: dates
-                .change_context(QueryError)?
-                .change_context(QueryError)?,
-            length_group: length_group
-                .change_context(QueryError)?
-                .change_context(QueryError)?,
-            gear_group: gear_group
-                .change_context(QueryError)?
-                .change_context(QueryError)?,
-            species_group: species_group
-                .change_context(QueryError)?
-                .change_context(QueryError)?,
+            dates: dates.change_context(QueryError)??,
+            length_group: length_group.change_context(QueryError)??,
+            gear_group: gear_group.change_context(QueryError)??,
+            species_group: species_group.change_context(QueryError)??,
         })
     }
 
@@ -752,11 +718,7 @@ impl WebApiOutboundPort for PostgresAdapter {
     }
 
     async fn get_user(&self, user_id: BarentswatchUserId) -> Result<Option<User>, QueryError> {
-        convert_optional(
-            self.get_user_impl(user_id)
-                .await
-                .change_context(QueryError)?,
-        )
+        convert_optional(self.get_user_impl(user_id).await?)
     }
 
     fn delivery_points(&self) -> PinBoxStream<'_, DeliveryPoint, QueryError> {
@@ -767,7 +729,7 @@ impl WebApiOutboundPort for PostgresAdapter {
         &self,
         query: WeatherQuery,
     ) -> Result<PinBoxStream<'_, Weather, QueryError>, QueryError> {
-        let stream = self.weather_impl(query).change_context(QueryError)?;
+        let stream = self.weather_impl(query)?;
         Ok(convert_stream(stream).boxed())
     }
 
@@ -779,9 +741,8 @@ impl WebApiOutboundPort for PostgresAdapter {
 #[async_trait]
 impl WebApiInboundPort for PostgresAdapter {
     async fn update_user(&self, user: User) -> Result<(), UpdateError> {
-        self.update_user_impl(user)
-            .await
-            .change_context(UpdateError)
+        self.update_user_impl(user).await?;
+        Ok(())
     }
 }
 
@@ -791,17 +752,15 @@ impl ScraperInboundPort for PostgresAdapter {
         &self,
         facilities: Vec<FishingFacility>,
     ) -> Result<(), InsertError> {
-        self.add_fishing_facilities_impl(facilities)
-            .await
-            .change_context(InsertError)
+        self.add_fishing_facilities_impl(facilities).await?;
+        Ok(())
     }
     async fn add_register_vessels(
         &self,
         vessels: Vec<fiskeridir_rs::RegisterVessel>,
     ) -> Result<(), InsertError> {
-        self.add_register_vessels_full(vessels)
-            .await
-            .change_context(InsertError)
+        self.add_register_vessels_full(vessels).await?;
+        Ok(())
     }
     async fn add_landings(
         &self,
@@ -810,9 +769,8 @@ impl ScraperInboundPort for PostgresAdapter {
         >,
         data_year: u32,
     ) -> Result<(), InsertError> {
-        self.add_landings_impl(landings, data_year)
-            .await
-            .change_context(InsertError)
+        self.add_landings_impl(landings, data_year).await?;
+        Ok(())
     }
     async fn add_ers_dca(
         &self,
@@ -820,53 +778,49 @@ impl ScraperInboundPort for PostgresAdapter {
             dyn Iterator<Item = Result<fiskeridir_rs::ErsDca, fiskeridir_rs::Error>> + Send + Sync,
         >,
     ) -> Result<(), InsertError> {
-        self.add_ers_dca_impl(ers_dca)
-            .await
-            .change_context(InsertError)
+        self.add_ers_dca_impl(ers_dca).await?;
+        Ok(())
     }
     async fn add_ers_dep(&self, ers_dep: Vec<fiskeridir_rs::ErsDep>) -> Result<(), InsertError> {
-        let set = ErsDepSet::new(ers_dep).change_context(InsertError)?;
-        self.add_ers_dep_set(set).await.change_context(InsertError)
+        let set = ErsDepSet::new(ers_dep)?;
+        Ok(self.add_ers_dep_set(set).await?)
     }
     async fn add_ers_por(&self, ers_por: Vec<fiskeridir_rs::ErsPor>) -> Result<(), InsertError> {
-        let set = ErsPorSet::new(ers_por).change_context(InsertError)?;
-        self.add_ers_por_set(set).await.change_context(InsertError)
+        let set = ErsPorSet::new(ers_por)?;
+        Ok(self.add_ers_por_set(set).await?)
     }
     async fn add_ers_tra(&self, ers_tra: Vec<fiskeridir_rs::ErsTra>) -> Result<(), InsertError> {
-        let set = ErsTraSet::new(ers_tra).change_context(InsertError)?;
-        self.add_ers_tra_set(set).await.change_context(InsertError)
+        let set = ErsTraSet::new(ers_tra)?;
+        Ok(self.add_ers_tra_set(set).await?)
     }
     async fn add_vms(&self, vms: Vec<fiskeridir_rs::Vms>) -> Result<(), InsertError> {
-        self.add_vms_impl(vms).await.change_context(InsertError)
+        Ok(self.add_vms_impl(vms).await?)
     }
     async fn add_aqua_culture_register(
         &self,
         entries: Vec<fiskeridir_rs::AquaCultureEntry>,
     ) -> Result<(), InsertError> {
-        self.add_aqua_culture_register_impl(entries)
-            .await
-            .change_context(InsertError)
+        self.add_aqua_culture_register_impl(entries).await?;
+        Ok(())
     }
     async fn add_mattilsynet_delivery_points(
         &self,
         delivery_points: Vec<MattilsynetDeliveryPoint>,
     ) -> Result<(), InsertError> {
         self.add_mattilsynet_delivery_points_impl(delivery_points)
-            .await
-            .change_context(InsertError)
+            .await?;
+        Ok(())
     }
     async fn add_weather(&self, weather: Vec<NewWeather>) -> Result<(), InsertError> {
-        self.add_weather_impl(weather)
-            .await
-            .change_context(InsertError)
+        self.add_weather_impl(weather).await?;
+        Ok(())
     }
     async fn add_ocean_climate(
         &self,
         ocean_climate: Vec<NewOceanClimate>,
     ) -> Result<(), InsertError> {
-        self.add_ocean_climate_impl(ocean_climate)
-            .await
-            .change_context(InsertError)
+        self.add_ocean_climate_impl(ocean_climate).await?;
+        Ok(())
     }
 }
 
@@ -876,44 +830,38 @@ impl ScraperOutboundPort for PostgresAdapter {
         &self,
         source: Option<FishingFacilityApiSource>,
     ) -> Result<Option<DateTime<Utc>>, QueryError> {
-        self.latest_fishing_facility_update_impl(source)
-            .await
-            .change_context(QueryError)
+        Ok(self.latest_fishing_facility_update_impl(source).await?)
     }
     async fn latest_weather_timestamp(&self) -> Result<Option<DateTime<Utc>>, QueryError> {
-        self.latest_weather_timestamp_impl()
-            .await
-            .change_context(QueryError)
+        Ok(self.latest_weather_timestamp_impl().await?)
     }
     async fn latest_ocean_climate_timestamp(&self) -> Result<Option<DateTime<Utc>>, QueryError> {
-        self.latest_ocean_climate_timestamp_impl()
-            .await
-            .change_context(QueryError)
+        Ok(self.latest_ocean_climate_timestamp_impl().await?)
     }
 }
 
 #[async_trait]
 impl ScraperFileHashInboundPort for PostgresAdapter {
     async fn add(&self, id: &FileHashId, hash: String) -> Result<(), InsertError> {
-        self.add_hash(id, hash).await.change_context(InsertError)
+        Ok(self.add_hash(id, hash).await?)
     }
 }
 
 #[async_trait]
 impl ScraperFileHashOutboundPort for PostgresAdapter {
     async fn get_hash(&self, id: &FileHashId) -> Result<Option<String>, QueryError> {
-        self.get_hash_impl(id).await.change_context(QueryError)
+        Ok(self.get_hash_impl(id).await?)
     }
 }
 
 #[async_trait]
 impl TripAssemblerOutboundPort for PostgresAdapter {
     async fn ports(&self) -> Result<Vec<Port>, QueryError> {
-        convert_vec(self.ports_impl().await.change_context(QueryError)?)
+        convert_vec(self.ports_impl().await?)
     }
 
     async fn dock_points(&self) -> Result<Vec<PortDockPoint>, QueryError> {
-        convert_vec(self.dock_points_impl().await.change_context(QueryError)?)
+        convert_vec(self.dock_points_impl().await?)
     }
 
     async fn all_vessels(&self) -> Result<Vec<Vessel>, QueryError> {
@@ -928,8 +876,7 @@ impl TripAssemblerOutboundPort for PostgresAdapter {
     ) -> Result<Option<TripCalculationTimer>, QueryError> {
         Ok(self
             .trip_calculation_timer_impl(vessel_id, trip_assembler_id)
-            .await
-            .change_context(QueryError)?
+            .await?
             .map(TripCalculationTimer::from))
     }
     async fn trip_prior_to_timestamp(
@@ -939,14 +886,14 @@ impl TripAssemblerOutboundPort for PostgresAdapter {
         bound: Bound,
     ) -> Result<Option<Trip>, QueryError> {
         convert_optional(match bound {
-            Bound::Inclusive => self
-                .trip_prior_to_timestamp_inclusive(vessel_id, timestamp)
-                .await
-                .change_context(QueryError)?,
-            Bound::Exclusive => self
-                .trip_prior_to_timestamp_exclusive(vessel_id, timestamp)
-                .await
-                .change_context(QueryError)?,
+            Bound::Inclusive => {
+                self.trip_prior_to_timestamp_inclusive(vessel_id, timestamp)
+                    .await?
+            }
+            Bound::Exclusive => {
+                self.trip_prior_to_timestamp_exclusive(vessel_id, timestamp)
+                    .await?
+            }
         })
     }
     async fn relevant_events(
@@ -956,14 +903,8 @@ impl TripAssemblerOutboundPort for PostgresAdapter {
         event_types: RelevantEventType,
     ) -> Result<Vec<VesselEventDetailed>, QueryError> {
         convert_vec(match event_types {
-            RelevantEventType::Landing => self
-                .landing_events(vessel_id, period)
-                .await
-                .change_context(QueryError),
-            RelevantEventType::ErsPorAndDep => self
-                .ers_por_and_dep_events(vessel_id, period)
-                .await
-                .change_context(QueryError),
+            RelevantEventType::Landing => self.landing_events(vessel_id, period).await,
+            RelevantEventType::ErsPorAndDep => self.ers_por_and_dep_events(vessel_id, period).await,
         }?)
     }
 }
@@ -987,8 +928,7 @@ impl TripPrecisionOutboundPort for PostgresAdapter {
     ) -> Result<Vec<DeliveryPoint>, QueryError> {
         convert_vec(
             self.delivery_points_associated_with_trip_impl(vessel_id, trip_landing_coverage)
-                .await
-                .change_context(QueryError)?,
+                .await?,
         )
     }
 }
@@ -1001,35 +941,27 @@ impl VesselBenchmarkOutbound for PostgresAdapter {
             .await
     }
     async fn sum_trip_time(&self, id: FiskeridirVesselId) -> Result<Option<Duration>, QueryError> {
-        self.sum_trip_time_impl(id).await.change_context(QueryError)
+        Ok(self.sum_trip_time_impl(id).await?)
     }
     async fn sum_landing_weight(&self, id: FiskeridirVesselId) -> Result<Option<f64>, QueryError> {
-        self.sum_landing_weight_impl(id)
-            .await
-            .change_context(QueryError)
+        Ok(self.sum_landing_weight_impl(id).await?)
     }
 }
 
 #[async_trait]
 impl VesselBenchmarkInbound for PostgresAdapter {
     async fn add_output(&self, values: Vec<VesselBenchmarkOutput>) -> Result<(), InsertError> {
-        self.add_benchmark_outputs(values)
-            .await
-            .change_context(InsertError)
+        Ok(self.add_benchmark_outputs(values).await?)
     }
 }
 
 #[async_trait]
 impl HaulDistributorInbound for PostgresAdapter {
     async fn add_output(&self, values: Vec<HaulDistributionOutput>) -> Result<(), UpdateError> {
-        self.add_haul_distribution_output(values)
-            .await
-            .change_context(UpdateError)
+        Ok(self.add_haul_distribution_output(values).await?)
     }
     async fn update_bycatch_status(&self) -> Result<(), UpdateError> {
-        self.update_bycatch_status_impl()
-            .await
-            .change_context(UpdateError)
+        Ok(self.update_bycatch_status_impl().await?)
     }
 }
 
@@ -1044,8 +976,7 @@ impl HaulDistributorOutbound for PostgresAdapter {
     async fn catch_locations(&self) -> Result<Vec<CatchLocation>, QueryError> {
         convert_vec(
             self.catch_locations_impl(WeatherLocationOverlap::All)
-                .await
-                .change_context(QueryError)?,
+                .await?,
         )
     }
 
@@ -1053,11 +984,7 @@ impl HaulDistributorOutbound for PostgresAdapter {
         &self,
         vessel_id: FiskeridirVesselId,
     ) -> Result<Vec<HaulMessage>, QueryError> {
-        convert_vec(
-            self.haul_messages_of_vessel_impl(vessel_id)
-                .await
-                .change_context(QueryError)?,
-        )
+        convert_vec(self.haul_messages_of_vessel_impl(vessel_id).await?)
     }
 
     async fn ais_vms_positions(
@@ -1078,74 +1005,58 @@ impl TripPipelineOutbound for PostgresAdapter {
         &self,
         vessel_id: FiskeridirVesselId,
     ) -> Result<Vec<Trip>, QueryError> {
-        convert_vec(
-            self.trips_without_trip_layers_impl(vessel_id)
-                .await
-                .change_context(QueryError)?,
-        )
+        convert_vec(self.trips_without_trip_layers_impl(vessel_id).await?)
     }
     async fn trips_without_distance(
         &self,
         vessel_id: FiskeridirVesselId,
     ) -> Result<Vec<Trip>, QueryError> {
-        convert_vec(
-            self.trips_without_distance_impl(vessel_id)
-                .await
-                .change_context(QueryError)?,
-        )
+        convert_vec(self.trips_without_distance_impl(vessel_id).await?)
     }
     async fn trips_without_precision(
         &self,
         vessel_id: FiskeridirVesselId,
     ) -> Result<Vec<Trip>, QueryError> {
-        convert_vec(
-            self.trips_without_precision_impl(vessel_id)
-                .await
-                .change_context(QueryError)?,
-        )
+        convert_vec(self.trips_without_precision_impl(vessel_id).await?)
     }
 }
 
 #[async_trait]
 impl TripPipelineInbound for PostgresAdapter {
     async fn update_preferred_trip_assemblers(&self) -> Result<(), UpdateError> {
-        self.update_preferred_trip_assemblers_impl()
-            .await
-            .change_context(UpdateError)
+        self.update_preferred_trip_assemblers_impl().await?;
+        Ok(())
     }
     async fn update_trip(&self, update: TripUpdate) -> Result<(), UpdateError> {
-        self.update_trip_impl(update)
-            .await
-            .change_context(UpdateError)
+        self.update_trip_impl(update).await?;
+        Ok(())
     }
     async fn add_trip_set(&self, value: TripSet) -> Result<(), InsertError> {
-        self.add_trip_set_impl(value)
-            .await
-            .change_context(InsertError)
+        self.add_trip_set_impl(value).await?;
+        Ok(())
     }
     async fn refresh_detailed_trips(
         &self,
         vessel_id: FiskeridirVesselId,
     ) -> Result<(), UpdateError> {
-        self.refresh_detailed_trips_impl(vessel_id)
-            .await
-            .change_context(UpdateError)
+        self.refresh_detailed_trips_impl(vessel_id).await?;
+        Ok(())
     }
 }
 
 #[async_trait]
 impl MatrixCacheVersion for PostgresAdapter {
     async fn increment(&self) -> Result<(), UpdateError> {
-        self.increment_duckdb_version()
-            .await
-            .change_context(UpdateError)
+        self.increment_duckdb_version().await?;
+        Ok(())
     }
 }
 
 #[async_trait]
 impl VerificationOutbound for PostgresAdapter {
     async fn verify_database(&self) -> Result<(), QueryError> {
-        self.verify_database_impl().await.change_context(QueryError)
+        self.verify_database_impl().await?;
+        Ok(())
     }
 }
 
@@ -1155,22 +1066,14 @@ impl MLModelsOutbound for PostgresAdapter {
         &self,
         dates: Vec<NaiveDate>,
     ) -> Result<Vec<CatchLocationWeather>, QueryError> {
-        convert_vec(
-            self.catch_locations_weather_dates_impl(dates)
-                .await
-                .change_context(QueryError)?,
-        )
+        convert_vec(self.catch_locations_weather_dates_impl(dates).await?)
     }
 
     async fn catch_locations_weather(
         &self,
         keys: Vec<(CatchLocationId, NaiveDate)>,
     ) -> Result<Vec<CatchLocationWeather>, QueryError> {
-        convert_vec(
-            self.catch_locations_weather_impl(keys)
-                .await
-                .change_context(QueryError)?,
-        )
+        convert_vec(self.catch_locations_weather_impl(keys).await?)
     }
 
     async fn save_model(
@@ -1179,25 +1082,18 @@ impl MLModelsOutbound for PostgresAdapter {
         model: &[u8],
         species: SpeciesGroup,
     ) -> Result<(), InsertError> {
-        self.save_model_impl(model_id, model, species)
-            .await
-            .change_context(InsertError)
+        self.save_model_impl(model_id, model, species).await?;
+        Ok(())
     }
     async fn catch_locations(
         &self,
         overlap: WeatherLocationOverlap,
     ) -> Result<Vec<CatchLocation>, QueryError> {
-        convert_vec(
-            self.catch_locations_impl(overlap)
-                .await
-                .change_context(QueryError)?,
-        )
+        convert_vec(self.catch_locations_impl(overlap).await?)
     }
 
     async fn model(&self, model_id: ModelId, species: SpeciesGroup) -> Result<Vec<u8>, QueryError> {
-        self.model_impl(model_id, species)
-            .await
-            .change_context(QueryError)
+        Ok(self.model_impl(model_id, species).await?)
     }
     async fn fishing_weight_predictor_training_data(
         &self,
@@ -1217,8 +1113,7 @@ impl MLModelsOutbound for PostgresAdapter {
                 bycatch_percentage,
                 majority_species_group,
             )
-            .await
-            .change_context(QueryError)?
+            .await?
             .into_iter()
             .map(WeightPredictorTrainingData::from)
             .collect())
@@ -1232,8 +1127,7 @@ impl MLModelsOutbound for PostgresAdapter {
     ) -> Result<Vec<FishingSpotTrainingData>, QueryError> {
         convert_vec(
             self.fishing_spot_predictor_training_data_impl(model_id, species, limit)
-                .await
-                .change_context(QueryError)?,
+                .await?,
         )
     }
 
@@ -1244,8 +1138,8 @@ impl MLModelsOutbound for PostgresAdapter {
         hauls: Vec<TrainingHaul>,
     ) -> Result<(), InsertError> {
         self.commit_hauls_training_impl(model_id, species, hauls)
-            .await
-            .change_context(InsertError)
+            .await?;
+        Ok(())
     }
 }
 
@@ -1255,22 +1149,14 @@ impl MLModelsInbound for PostgresAdapter {
         &self,
         dates: Vec<NaiveDate>,
     ) -> Result<Vec<CatchLocationWeather>, QueryError> {
-        convert_vec(
-            self.catch_locations_weather_dates_impl(dates)
-                .await
-                .change_context(QueryError)?,
-        )
+        convert_vec(self.catch_locations_weather_dates_impl(dates).await?)
     }
 
     async fn catch_locations_weather(
         &self,
         keys: Vec<(CatchLocationId, NaiveDate)>,
     ) -> Result<Vec<CatchLocationWeather>, QueryError> {
-        convert_vec(
-            self.catch_locations_weather_impl(keys)
-                .await
-                .change_context(QueryError)?,
-        )
+        convert_vec(self.catch_locations_weather_impl(keys).await?)
     }
 
     async fn existing_fishing_weight_predictions(
@@ -1281,8 +1167,7 @@ impl MLModelsInbound for PostgresAdapter {
     ) -> Result<Vec<FishingWeightPrediction>, QueryError> {
         convert_vec(
             self.existing_fishing_weight_predictions_impl(model_id, species, year)
-                .await
-                .change_context(QueryError)?,
+                .await?,
         )
     }
     async fn existing_fishing_spot_predictions(
@@ -1291,44 +1176,37 @@ impl MLModelsInbound for PostgresAdapter {
         species: SpeciesGroup,
         year: u32,
     ) -> Result<Vec<FishingSpotPrediction>, QueryError> {
-        self.existing_fishing_spot_predictions_impl(model_id, species, year)
-            .await
-            .change_context(QueryError)
+        Ok(self
+            .existing_fishing_spot_predictions_impl(model_id, species, year)
+            .await?)
     }
     async fn catch_locations(
         &self,
         overlap: WeatherLocationOverlap,
     ) -> Result<Vec<CatchLocation>, QueryError> {
-        convert_vec(
-            self.catch_locations_impl(overlap)
-                .await
-                .change_context(QueryError)?,
-        )
+        convert_vec(self.catch_locations_impl(overlap).await?)
     }
     async fn add_fishing_spot_predictions(
         &self,
         predictions: Vec<NewFishingSpotPrediction>,
     ) -> Result<(), InsertError> {
-        self.add_fishing_spot_predictions_impl(predictions)
-            .await
-            .change_context(InsertError)
+        self.add_fishing_spot_predictions_impl(predictions).await?;
+        Ok(())
     }
     async fn add_fishing_weight_predictions(
         &self,
         predictions: Vec<NewFishingWeightPrediction>,
     ) -> Result<(), InsertError> {
-        self.add_weight_predictions_impl(predictions)
-            .await
-            .change_context(InsertError)
+        self.add_weight_predictions_impl(predictions).await?;
+        Ok(())
     }
 }
 
 #[async_trait]
 impl HaulWeatherInbound for PostgresAdapter {
     async fn add_haul_weather(&self, values: Vec<HaulWeatherOutput>) -> Result<(), UpdateError> {
-        self.add_haul_weather_impl(values)
-            .await
-            .change_context(UpdateError)
+        self.add_haul_weather_impl(values).await?;
+        Ok(())
     }
 }
 
@@ -1345,8 +1223,7 @@ impl HaulWeatherOutbound for PostgresAdapter {
     ) -> Result<Vec<HaulMessage>, QueryError> {
         convert_vec(
             self.haul_messages_of_vessel_without_weather_impl(vessel_id)
-                .await
-                .change_context(QueryError)?,
+                .await?,
         )
     }
     async fn ais_vms_positions(
@@ -1365,94 +1242,60 @@ impl HaulWeatherOutbound for PostgresAdapter {
             .await
     }
     async fn haul_weather(&self, query: WeatherQuery) -> Result<Option<HaulWeather>, QueryError> {
-        convert_optional(
-            self.haul_weather_impl(query)
-                .await
-                .change_context(QueryError)?,
-        )
+        convert_optional(self.haul_weather_impl(query).await?)
     }
     async fn haul_ocean_climate(
         &self,
         query: OceanClimateQuery,
     ) -> Result<Option<HaulOceanClimate>, QueryError> {
-        convert_optional(
-            self.haul_ocean_climate_impl(query)
-                .await
-                .change_context(QueryError)?,
-        )
+        convert_optional(self.haul_ocean_climate_impl(query).await?)
     }
 }
 
 #[async_trait]
 impl MeilisearchSource for PostgresAdapter {
     async fn trips_by_ids(&self, trip_ids: &[TripId]) -> Result<Vec<TripDetailed>, QueryError> {
-        convert_vec(
-            self.detailed_trips_by_ids_impl(trip_ids)
-                .await
-                .change_context(QueryError)?,
-        )
+        convert_vec(self.detailed_trips_by_ids_impl(trip_ids).await?)
     }
     async fn hauls_by_ids(&self, haul_ids: &[HaulId]) -> Result<Vec<Haul>, QueryError> {
-        convert_vec(
-            self.hauls_by_ids_impl(haul_ids)
-                .await
-                .change_context(QueryError)?,
-        )
+        convert_vec(self.hauls_by_ids_impl(haul_ids).await?)
     }
     async fn landings_by_ids(&self, landing_ids: &[LandingId]) -> Result<Vec<Landing>, QueryError> {
-        convert_vec(
-            self.landings_by_ids_impl(landing_ids)
-                .await
-                .change_context(QueryError)?,
-        )
+        convert_vec(self.landings_by_ids_impl(landing_ids).await?)
     }
     async fn all_trip_versions(&self) -> Result<Vec<(TripId, i64)>, QueryError> {
-        self.all_trip_cache_versions_impl()
-            .await
-            .change_context(QueryError)
+        Ok(self.all_trip_cache_versions_impl().await?)
     }
     async fn all_haul_versions(&self) -> Result<Vec<(HaulId, i64)>, QueryError> {
-        self.all_haul_cache_versions_impl()
-            .await
-            .change_context(QueryError)
+        Ok(self.all_haul_cache_versions_impl().await?)
     }
     async fn all_landing_versions(&self) -> Result<Vec<(LandingId, i64)>, QueryError> {
-        self.all_landing_versions_impl()
-            .await
-            .change_context(QueryError)
+        Ok(self.all_landing_versions_impl().await?)
     }
 }
 
 pub(crate) fn convert_stream<I, A, B>(input: I) -> impl Stream<Item = Result<B, QueryError>>
 where
-    I: Stream<Item = Result<A, PostgresError>>,
+    I: Stream<Item = StdResult<A, PostgresErrorWrapper>>,
     B: TryFrom<A>,
-    B: std::convert::TryFrom<A, Error = Report<PostgresError>>,
+    B: std::convert::TryFrom<A, Error = PostgresErrorWrapper>,
 {
-    input.map(|i| {
-        match i {
-            Ok(i) => B::try_from(i),
-            Err(e) => Err(e),
-        }
-        .change_context(QueryError)
-    })
+    input.map(|i| Ok(i.map(B::try_from)??))
 }
 
 pub(crate) fn convert_optional<A, B>(val: Option<A>) -> Result<Option<B>, QueryError>
 where
-    B: std::convert::TryFrom<A, Error = Report<PostgresError>>,
+    B: std::convert::TryFrom<A, Error = PostgresErrorWrapper>,
 {
-    val.map(|a| B::try_from(a))
-        .transpose()
-        .change_context(QueryError)
+    Ok(val.map(B::try_from).transpose()?)
 }
 
 pub(crate) fn convert_vec<A, B>(val: Vec<A>) -> Result<Vec<B>, QueryError>
 where
-    B: std::convert::TryFrom<A, Error = Report<PostgresError>>,
+    B: std::convert::TryFrom<A, Error = PostgresErrorWrapper>,
 {
-    val.into_iter()
+    Ok(val
+        .into_iter()
         .map(B::try_from)
-        .collect::<std::result::Result<Vec<_>, <B as std::convert::TryFrom<A>>::Error>>()
-        .change_context(QueryError)
+        .collect::<StdResult<Vec<_>, <B as std::convert::TryFrom<A>>::Error>>()?)
 }

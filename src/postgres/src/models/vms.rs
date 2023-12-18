@@ -1,10 +1,10 @@
 use crate::{
-    error::PostgresError,
+    error::{PostgresError, PostgresErrorWrapper},
     queries::{decimal_to_float, float_to_decimal, opt_decimal_to_float, opt_float_to_decimal},
 };
 use bigdecimal::BigDecimal;
 use chrono::{DateTime, Utc};
-use error_stack::{report, Report, ResultExt};
+use error_stack::report;
 use fiskeridir_rs::CallSign;
 use kyogre_core::distance_to_shore;
 use serde::Deserialize;
@@ -53,7 +53,7 @@ pub struct VmsPosition {
 }
 
 impl TryFrom<fiskeridir_rs::Vms> for NewVmsPosition {
-    type Error = Report<PostgresError>;
+    type Error = PostgresErrorWrapper;
 
     fn try_from(v: fiskeridir_rs::Vms) -> Result<Self, Self::Error> {
         let latitude = v
@@ -67,16 +67,15 @@ impl TryFrom<fiskeridir_rs::Vms> for NewVmsPosition {
             call_sign: v.call_sign.into_inner(),
             course: v.course.map(|c| c as i32),
             gross_tonnage: v.gross_tonnage.map(|c| c as i32),
-            latitude: float_to_decimal(latitude).change_context(PostgresError::DataConversion)?,
-            longitude: float_to_decimal(longitude).change_context(PostgresError::DataConversion)?,
+            latitude: float_to_decimal(latitude)?,
+            longitude: float_to_decimal(longitude)?,
             message_id: v.message_id as i32,
             message_type: v.message_type,
             message_type_code: v.message_type_code,
             registration_id: v.registration_id,
-            speed: opt_float_to_decimal(v.speed).change_context(PostgresError::DataConversion)?,
+            speed: opt_float_to_decimal(v.speed)?,
             timestamp: v.timestamp,
-            vessel_length: float_to_decimal(v.vessel_length)
-                .change_context(PostgresError::DataConversion)?,
+            vessel_length: float_to_decimal(v.vessel_length)?,
             vessel_name: v.vessel_name,
             vessel_type: v.vessel_type,
             distance_to_shore: distance_to_shore(latitude, longitude),
@@ -85,23 +84,18 @@ impl TryFrom<fiskeridir_rs::Vms> for NewVmsPosition {
 }
 
 impl TryFrom<VmsPosition> for kyogre_core::VmsPosition {
-    type Error = Report<PostgresError>;
+    type Error = PostgresErrorWrapper;
 
     fn try_from(value: VmsPosition) -> Result<Self, Self::Error> {
         Ok(kyogre_core::VmsPosition {
-            latitude: decimal_to_float(value.latitude)
-                .change_context(PostgresError::DataConversion)?,
-            longitude: decimal_to_float(value.longitude)
-                .change_context(PostgresError::DataConversion)?,
+            latitude: decimal_to_float(value.latitude)?,
+            longitude: decimal_to_float(value.longitude)?,
             course: value.course.map(|c| c as u32),
-            speed: opt_decimal_to_float(value.speed)
-                .change_context(PostgresError::DataConversion)?,
-            call_sign: CallSign::try_from(value.call_sign)
-                .change_context(PostgresError::DataConversion)?,
+            speed: opt_decimal_to_float(value.speed)?,
+            call_sign: CallSign::try_from(value.call_sign)?,
             registration_id: value.registration_id,
             timestamp: value.timestamp,
-            vessel_length: decimal_to_float(value.vessel_length)
-                .change_context(PostgresError::DataConversion)?,
+            vessel_length: decimal_to_float(value.vessel_length)?,
             vessel_name: value.vessel_name,
             vessel_type: value.vessel_type,
             distance_to_shore: value.distance_to_shore,

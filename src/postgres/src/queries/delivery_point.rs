@@ -1,14 +1,13 @@
 use std::collections::{hash_map::Entry, HashMap};
 
 use crate::{
-    error::PostgresError,
+    error::PostgresErrorWrapper,
     models::{
         AquaCultureEntry, AquaCultureSpecies, AquaCultureTill, DeliveryPoint, ManualDeliveryPoint,
         MattilsynetDeliveryPoint, NewDeliveryPointId, SpeciesFiskeridir,
     },
     PostgresAdapter,
 };
-use error_stack::{report, Result, ResultExt};
 use fiskeridir_rs::DeliveryPointId;
 use futures::{Stream, TryStreamExt};
 use kyogre_core::{DateRange, FiskeridirVesselId};
@@ -19,10 +18,10 @@ impl PostgresAdapter {
     pub(crate) async fn delivery_point_impl(
         &self,
         id: &DeliveryPointId,
-    ) -> Result<Option<DeliveryPoint>, PostgresError> {
+    ) -> Result<Option<DeliveryPoint>, PostgresErrorWrapper> {
         // Coalesce on delivery_point_id is needed due to a bug in sqlx prepare
         // which flips the nullability on each run
-        sqlx::query_as!(
+        let dp = sqlx::query_as!(
             DeliveryPoint,
             r#"
 SELECT
@@ -42,14 +41,16 @@ WHERE
             id.as_ref()
         )
         .fetch_optional(&self.pool)
-        .await
-        .change_context(PostgresError::Query)
+        .await?;
+
+        Ok(dp)
     }
+
     pub(crate) async fn add_deprecated_delivery_point_impl(
         &self,
         old: DeliveryPointId,
         new: DeliveryPointId,
-    ) -> Result<(), PostgresError> {
+    ) -> Result<(), PostgresErrorWrapper> {
         sqlx::query!(
             r#"
 INSERT INTO
@@ -61,15 +62,14 @@ VALUES
             new.into_inner(),
         )
         .execute(&self.pool)
-        .await
-        .change_context(PostgresError::Query)
-        .map(|_| ())?;
+        .await?;
 
         Ok(())
     }
+
     pub(crate) async fn delivery_points_log_impl(
         &self,
-    ) -> Result<Vec<serde_json::Value>, PostgresError> {
+    ) -> Result<Vec<serde_json::Value>, PostgresErrorWrapper> {
         Ok(sqlx::query!(
             r#"
 SELECT
@@ -79,8 +79,7 @@ FROM
             "#,
         )
         .fetch_all(&self.pool)
-        .await
-        .change_context(PostgresError::Query)?
+        .await?
         .into_iter()
         .map(|r| r.json)
         .collect())
@@ -89,8 +88,8 @@ FROM
     pub(crate) async fn add_manual_delivery_points_impl(
         &self,
         values: Vec<ManualDeliveryPoint>,
-    ) -> Result<(), PostgresError> {
-        let mut tx = self.begin().await?;
+    ) -> Result<(), PostgresErrorWrapper> {
+        let mut tx = self.pool.begin().await?;
 
         let ids = values
             .iter()
@@ -100,20 +99,16 @@ FROM
             .collect();
         self.add_delivery_point_ids(ids, &mut tx).await?;
 
-        ManualDeliveryPoint::unnest_insert(values, &mut *tx)
-            .await
-            .change_context(PostgresError::Query)?;
+        ManualDeliveryPoint::unnest_insert(values, &mut *tx).await?;
 
-        tx.commit()
-            .await
-            .change_context(PostgresError::Transaction)?;
+        tx.commit().await?;
 
         Ok(())
     }
 
     pub(crate) fn delivery_points_impl(
         &self,
-    ) -> impl Stream<Item = Result<DeliveryPoint, PostgresError>> + '_ {
+    ) -> impl Stream<Item = Result<DeliveryPoint, PostgresErrorWrapper>> + '_ {
         // Coalesce on delivery_point_id is needed due to a bug in sqlx prepare
         // which flips the nullability on each run
         sqlx::query_as!(
@@ -133,24 +128,22 @@ FROM
             "#
         )
         .fetch(&self.pool)
-        .map_err(|e| report!(e).change_context(PostgresError::Query))
+        .map_err(From::from)
     }
 
     pub(crate) async fn add_delivery_point_ids<'a>(
         &'a self,
         delivery_point_ids: Vec<NewDeliveryPointId>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<(), PostgresError> {
-        NewDeliveryPointId::unnest_insert(delivery_point_ids, &mut **tx)
-            .await
-            .change_context(PostgresError::Query)
-            .map(|_| ())
+    ) -> Result<(), PostgresErrorWrapper> {
+        NewDeliveryPointId::unnest_insert(delivery_point_ids, &mut **tx).await?;
+        Ok(())
     }
 
     pub(crate) async fn add_aqua_culture_register_impl(
         &self,
         f_entries: Vec<fiskeridir_rs::AquaCultureEntry>,
-    ) -> Result<(), PostgresError> {
+    ) -> Result<(), PostgresErrorWrapper> {
         let len = f_entries.len();
         let mut entries = HashMap::with_capacity(len);
         let mut species = HashMap::with_capacity(len);
@@ -184,48 +177,44 @@ FROM
         let tills = tills.into_values().collect();
         let aqua_species = aqua_species.into_values().collect();
 
-        let mut tx = self.begin().await?;
+        let mut tx = self.pool.begin().await?;
 
         self.add_delivery_point_ids(ids, &mut tx).await?;
         self.add_species_fiskeridir(species, &mut tx).await?;
 
-        AquaCultureEntry::unnest_insert(values, &mut *tx)
-            .await
-            .change_context(PostgresError::Query)?;
+        AquaCultureEntry::unnest_insert(values, &mut *tx).await?;
 
         self.add_aqua_culture_register_tills(tills, &mut tx).await?;
         self.add_aqua_culture_register_species(aqua_species, &mut tx)
             .await?;
 
-        tx.commit().await.change_context(PostgresError::Query)
+        tx.commit().await?;
+
+        Ok(())
     }
 
     pub(crate) async fn add_aqua_culture_register_tills<'a>(
         &'a self,
         tills: Vec<AquaCultureTill>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<(), PostgresError> {
-        AquaCultureTill::unnest_insert(tills, &mut **tx)
-            .await
-            .change_context(PostgresError::Query)
-            .map(|_| ())
+    ) -> Result<(), PostgresErrorWrapper> {
+        AquaCultureTill::unnest_insert(tills, &mut **tx).await?;
+        Ok(())
     }
 
     pub(crate) async fn add_aqua_culture_register_species<'a>(
         &'a self,
         species: Vec<AquaCultureSpecies>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<(), PostgresError> {
-        AquaCultureSpecies::unnest_insert(species, &mut **tx)
-            .await
-            .change_context(PostgresError::Query)
-            .map(|_| ())
+    ) -> Result<(), PostgresErrorWrapper> {
+        AquaCultureSpecies::unnest_insert(species, &mut **tx).await?;
+        Ok(())
     }
 
     pub(crate) async fn add_mattilsynet_delivery_points_impl(
         &self,
         delivery_points: Vec<kyogre_core::MattilsynetDeliveryPoint>,
-    ) -> Result<(), PostgresError> {
+    ) -> Result<(), PostgresErrorWrapper> {
         let len = delivery_points.len();
         let mut items = Vec::with_capacity(len);
         let mut ids = Vec::with_capacity(len);
@@ -235,25 +224,25 @@ FROM
             items.push(d.into());
         }
 
-        let mut tx = self.begin().await?;
+        let mut tx = self.pool.begin().await?;
 
         self.add_delivery_point_ids(ids, &mut tx).await?;
 
-        MattilsynetDeliveryPoint::unnest_insert(items, &mut *tx)
-            .await
-            .change_context(PostgresError::Query)?;
+        MattilsynetDeliveryPoint::unnest_insert(items, &mut *tx).await?;
 
-        tx.commit().await.change_context(PostgresError::Query)
+        tx.commit().await?;
+
+        Ok(())
     }
 
     pub(crate) async fn delivery_points_associated_with_trip_impl(
         &self,
         vessel_id: FiskeridirVesselId,
         trip_landing_coverage: &DateRange,
-    ) -> Result<Vec<DeliveryPoint>, PostgresError> {
+    ) -> Result<Vec<DeliveryPoint>, PostgresErrorWrapper> {
         let pg_range = PgRange::from(trip_landing_coverage);
 
-        sqlx::query_as!(
+        let dps = sqlx::query_as!(
             DeliveryPoint,
             r#"
 SELECT
@@ -276,7 +265,8 @@ WHERE
             pg_range
         )
         .fetch_all(&self.pool)
-        .await
-        .change_context(PostgresError::Query)
+        .await?;
+
+        Ok(dps)
     }
 }

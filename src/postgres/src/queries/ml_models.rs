@@ -1,10 +1,10 @@
+use crate::error::PostgresErrorWrapper;
 use crate::models::{
     FishingSpotTrainingData, FishingWeightPrediction, MLTrainingLog, NewFishingSpotPrediction,
     NewFishingWeightPrediction, WeightPredictorTrainingData,
 };
-use crate::{error::PostgresError, PostgresAdapter};
+use crate::PostgresAdapter;
 use chrono::NaiveDate;
-use error_stack::{report, Result, ResultExt};
 use fiskeridir_rs::{GearGroup, SpeciesGroup};
 use futures::Stream;
 use futures::TryStreamExt;
@@ -18,7 +18,7 @@ impl PostgresAdapter {
         model_id: ModelId,
         species: SpeciesGroup,
         hauls: Vec<TrainingHaul>,
-    ) -> Result<(), PostgresError> {
+    ) -> Result<(), PostgresErrorWrapper> {
         let insert: Vec<MLTrainingLog> = hauls
             .into_iter()
             .map(|v| MLTrainingLog {
@@ -29,10 +29,9 @@ impl PostgresAdapter {
             })
             .collect();
 
-        MLTrainingLog::unnest_insert(insert, &self.pool)
-            .await
-            .change_context(PostgresError::Query)
-            .map(|_| ())
+        MLTrainingLog::unnest_insert(insert, &self.pool).await?;
+
+        Ok(())
     }
 
     pub(crate) async fn save_model_impl(
@@ -40,7 +39,7 @@ impl PostgresAdapter {
         model_id: ModelId,
         model: &[u8],
         species: SpeciesGroup,
-    ) -> Result<(), PostgresError> {
+    ) -> Result<(), PostgresErrorWrapper> {
         sqlx::query!(
             r#"
 UPDATE ml_models
@@ -55,16 +54,17 @@ WHERE
             species as i32
         )
         .execute(&self.pool)
-        .await
-        .change_context(PostgresError::Query)
-        .map(|_| ())
+        .await?;
+
+        Ok(())
     }
+
     pub(crate) async fn model_impl(
         &self,
         model_id: ModelId,
         species: SpeciesGroup,
-    ) -> Result<Vec<u8>, PostgresError> {
-        sqlx::query!(
+    ) -> Result<Vec<u8>, PostgresErrorWrapper> {
+        let row = sqlx::query!(
             r#"
 SELECT
     model
@@ -78,17 +78,18 @@ WHERE
             species as i32
         )
         .fetch_one(&self.pool)
-        .await
-        .change_context(PostgresError::Query)
-        .map(|v| v.model.unwrap_or_default())
+        .await?;
+
+        Ok(row.model.unwrap_or_default())
     }
+
     pub(crate) async fn existing_fishing_weight_predictions_impl(
         &self,
         model_id: ModelId,
         species: SpeciesGroup,
         year: u32,
-    ) -> Result<Vec<FishingWeightPrediction>, PostgresError> {
-        sqlx::query_as!(
+    ) -> Result<Vec<FishingWeightPrediction>, PostgresErrorWrapper> {
+        let predictions = sqlx::query_as!(
             FishingWeightPrediction,
             r#"
 SELECT
@@ -108,8 +109,9 @@ WHERE
             species as i32,
         )
         .fetch_all(&self.pool)
-        .await
-        .change_context(PostgresError::Query)
+        .await?;
+
+        Ok(predictions)
     }
 
     pub(crate) async fn existing_fishing_spot_predictions_impl(
@@ -117,8 +119,8 @@ WHERE
         model_id: ModelId,
         species: SpeciesGroup,
         year: u32,
-    ) -> Result<Vec<FishingSpotPrediction>, PostgresError> {
-        sqlx::query_as!(
+    ) -> Result<Vec<FishingSpotPrediction>, PostgresErrorWrapper> {
+        let predictions = sqlx::query_as!(
             FishingSpotPrediction,
             r#"
 SELECT
@@ -138,37 +140,37 @@ WHERE
             species as i32
         )
         .fetch_all(&self.pool)
-        .await
-        .change_context(PostgresError::Query)
+        .await?;
+
+        Ok(predictions)
     }
+
     pub(crate) async fn add_fishing_spot_predictions_impl(
         &self,
         predictions: Vec<kyogre_core::NewFishingSpotPrediction>,
-    ) -> Result<(), PostgresError> {
+    ) -> Result<(), PostgresErrorWrapper> {
         let predictions: Vec<NewFishingSpotPrediction> = predictions
             .into_iter()
             .map(NewFishingSpotPrediction::from)
             .collect();
 
-        NewFishingSpotPrediction::unnest_insert(predictions, &self.pool)
-            .await
-            .change_context(PostgresError::Query)
-            .map(|_| ())
+        NewFishingSpotPrediction::unnest_insert(predictions, &self.pool).await?;
+
+        Ok(())
     }
 
     pub(crate) async fn add_weight_predictions_impl(
         &self,
         predictions: Vec<kyogre_core::NewFishingWeightPrediction>,
-    ) -> Result<(), PostgresError> {
+    ) -> Result<(), PostgresErrorWrapper> {
         let predictions: Vec<NewFishingWeightPrediction> = predictions
             .into_iter()
             .map(NewFishingWeightPrediction::from)
             .collect();
 
-        NewFishingWeightPrediction::unnest_insert(predictions, &self.pool)
-            .await
-            .change_context(PostgresError::Query)
-            .map(|_| ())
+        NewFishingWeightPrediction::unnest_insert(predictions, &self.pool).await?;
+
+        Ok(())
     }
 
     pub(crate) async fn fishing_weight_predictor_training_data_impl(
@@ -179,13 +181,13 @@ WHERE
         limit: Option<u32>,
         bycatch_percentage: Option<f64>,
         majority_species_group: bool,
-    ) -> Result<Vec<WeightPredictorTrainingData>, PostgresError> {
+    ) -> Result<Vec<WeightPredictorTrainingData>, PostgresErrorWrapper> {
         let require_weather = match weather_data {
             WeatherData::Require => false,
             WeatherData::Optional => true,
         };
 
-        sqlx::query_as!(
+        let data = sqlx::query_as!(
             WeightPredictorTrainingData,
             r#"
 SELECT
@@ -251,8 +253,9 @@ LIMIT
             limit.map(|v| v as i64)
         )
         .fetch_all(&self.pool)
-        .await
-        .change_context(PostgresError::Query)
+        .await?;
+
+        Ok(data)
     }
 
     pub(crate) async fn fishing_spot_predictor_training_data_impl(
@@ -260,8 +263,8 @@ LIMIT
         model_id: ModelId,
         species: SpeciesGroup,
         limit: Option<u32>,
-    ) -> Result<Vec<FishingSpotTrainingData>, PostgresError> {
-        sqlx::query_as!(
+    ) -> Result<Vec<FishingSpotTrainingData>, PostgresErrorWrapper> {
+        let data = sqlx::query_as!(
             FishingSpotTrainingData,
             r#"
 WITH
@@ -335,8 +338,9 @@ LIMIT
             limit.map(|v| v as i64)
         )
         .fetch_all(&self.pool)
-        .await
-        .change_context(PostgresError::Query)
+        .await?;
+
+        Ok(data)
     }
 
     pub(crate) fn fishing_weight_predictions_impl(
@@ -345,7 +349,7 @@ LIMIT
         species: SpeciesGroup,
         date: NaiveDate,
         limit: u32,
-    ) -> impl Stream<Item = Result<FishingWeightPrediction, PostgresError>> + '_ {
+    ) -> impl Stream<Item = Result<FishingWeightPrediction, PostgresErrorWrapper>> + '_ {
         sqlx::query_as!(
             FishingWeightPrediction,
             r#"
@@ -371,7 +375,7 @@ LIMIT
             limit as i32
         )
         .fetch(&self.pool)
-        .map_err(|e| report!(e).change_context(PostgresError::Query))
+        .map_err(From::from)
     }
 
     pub(crate) async fn fishing_spot_prediction_impl(
@@ -379,8 +383,8 @@ LIMIT
         model_id: ModelId,
         species: SpeciesGroup,
         date: NaiveDate,
-    ) -> Result<Option<FishingSpotPrediction>, PostgresError> {
-        sqlx::query_as!(
+    ) -> Result<Option<FishingSpotPrediction>, PostgresErrorWrapper> {
+        let prediction = sqlx::query_as!(
             FishingSpotPrediction,
             r#"
 SELECT
@@ -400,14 +404,15 @@ WHERE
             model_id as i32
         )
         .fetch_optional(&self.pool)
-        .await
-        .change_context(PostgresError::Query)
+        .await?;
+
+        Ok(prediction)
     }
 
     pub(crate) fn all_fishing_weight_predictions_impl(
         &self,
         model_id: ModelId,
-    ) -> impl Stream<Item = Result<FishingWeightPrediction, PostgresError>> + '_ {
+    ) -> impl Stream<Item = Result<FishingWeightPrediction, PostgresErrorWrapper>> + '_ {
         sqlx::query_as!(
             FishingWeightPrediction,
             r#"
@@ -424,13 +429,13 @@ WHERE
             model_id as i32
         )
         .fetch(&self.pool)
-        .map_err(|e| report!(e).change_context(PostgresError::Query))
+        .map_err(From::from)
     }
 
     pub(crate) fn all_fishing_spot_predictions_impl(
         &self,
         model_id: ModelId,
-    ) -> impl Stream<Item = Result<FishingSpotPrediction, PostgresError>> + '_ {
+    ) -> impl Stream<Item = Result<FishingSpotPrediction, PostgresErrorWrapper>> + '_ {
         sqlx::query_as!(
             FishingSpotPrediction,
             r#"
@@ -447,6 +452,6 @@ WHERE
             model_id as i32
         )
         .fetch(&self.pool)
-        .map_err(|e| report!(e).change_context(PostgresError::Query))
+        .map_err(From::from)
     }
 }

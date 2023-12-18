@@ -1,4 +1,3 @@
-use error_stack::ResultExt;
 use fiskeridir_rs::CallSign;
 use futures::{Stream, TryStreamExt};
 use kyogre_core::{
@@ -7,12 +6,13 @@ use kyogre_core::{
     PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY,
 };
 
-use crate::{error::PostgresError, models::AisVmsPosition, PostgresAdapter};
-use error_stack::{report, Result};
+use crate::{error::PostgresErrorWrapper, models::AisVmsPosition, PostgresAdapter};
 
 impl PostgresAdapter {
-    pub(crate) async fn all_ais_vms_impl(&self) -> Result<Vec<AisVmsPosition>, PostgresError> {
-        sqlx::query_as!(
+    pub(crate) async fn all_ais_vms_impl(
+        &self,
+    ) -> Result<Vec<AisVmsPosition>, PostgresErrorWrapper> {
+        let ais = sqlx::query_as!(
             AisVmsPosition,
             r#"
 SELECT
@@ -64,16 +64,18 @@ ORDER BY
             PositionType::Vms as i32,
         )
         .fetch_all(self.ais_pool())
-        .await
-        .change_context(PostgresError::Query)
+        .await?;
+
+        Ok(ais)
     }
+
     pub(crate) fn ais_vms_positions_impl(
         &self,
         mmsi: Option<Mmsi>,
         call_sign: Option<&CallSign>,
         range: &DateRange,
         permission: AisPermission,
-    ) -> impl Stream<Item = Result<AisVmsPosition, PostgresError>> + '_ {
+    ) -> impl Stream<Item = Result<AisVmsPosition, PostgresErrorWrapper>> + '_ {
         sqlx::query_as!(
             AisVmsPosition,
             r#"
@@ -162,14 +164,14 @@ ORDER BY
             PositionType::Vms as i32,
         )
         .fetch(self.ais_pool())
-        .map_err(|e| report!(e).change_context(PostgresError::Query))
+        .map_err(From::from)
     }
 
     pub(crate) fn trip_positions_impl(
         &self,
         trip_id: TripId,
         permission: AisPermission,
-    ) -> impl Stream<Item = Result<AisVmsPosition, PostgresError>> + '_ {
+    ) -> impl Stream<Item = Result<AisVmsPosition, PostgresErrorWrapper>> + '_ {
         sqlx::query_as!(
             AisVmsPosition,
             r#"
@@ -225,6 +227,6 @@ ORDER BY
             PositionType::Vms as i32
         )
         .fetch(&self.pool)
-        .map_err(|e| report!(e).change_context(PostgresError::Query))
+        .map_err(From::from)
     }
 }

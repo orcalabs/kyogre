@@ -1,10 +1,10 @@
 use chrono::NaiveDate;
-use error_stack::{report, Report, ResultExt};
+use error_stack::report;
 use geo_types::geometry::Geometry;
 use geozero::wkb;
 use kyogre_core::CatchLocationId;
 
-use crate::error::PostgresError;
+use crate::error::{PostgresError, PostgresErrorWrapper};
 
 pub struct CatchLocation {
     pub catch_location_id: String,
@@ -28,7 +28,7 @@ pub struct CatchLocationWeather {
 }
 
 impl TryFrom<CatchLocation> for kyogre_core::CatchLocation {
-    type Error = Report<PostgresError>;
+    type Error = PostgresErrorWrapper;
 
     fn try_from(v: CatchLocation) -> Result<Self, Self::Error> {
         let geometry = v
@@ -38,12 +38,11 @@ impl TryFrom<CatchLocation> for kyogre_core::CatchLocation {
 
         let polygon = match geometry {
             Geometry::Polygon(p) => p,
-            _ => return Err(report!(PostgresError::DataConversion)),
+            _ => return Err(report!(PostgresError::DataConversion).into()),
         };
 
         Ok(Self {
-            id: CatchLocationId::try_from(v.catch_location_id)
-                .change_context(PostgresError::DataConversion)?,
+            id: CatchLocationId::try_from(v.catch_location_id)?,
             polygon,
             latitude: v.latitude,
             longitude: v.longitude,
@@ -53,7 +52,7 @@ impl TryFrom<CatchLocation> for kyogre_core::CatchLocation {
 }
 
 impl TryFrom<CatchLocationWeather> for kyogre_core::CatchLocationWeather {
-    type Error = Report<PostgresError>;
+    type Error = PostgresErrorWrapper;
 
     fn try_from(value: CatchLocationWeather) -> Result<Self, Self::Error> {
         Ok(Self {
@@ -64,8 +63,7 @@ impl TryFrom<CatchLocationWeather> for kyogre_core::CatchLocationWeather {
             air_pressure_at_sea_level: value.air_pressure_at_sea_level,
             precipitation_amount: value.precipitation_amount,
             cloud_area_fraction: value.cloud_area_fraction,
-            id: CatchLocationId::try_from(value.catch_location_id)
-                .change_context(PostgresError::DataConversion)?,
+            id: CatchLocationId::try_from(value.catch_location_id)?,
             date: value.date,
         })
     }

@@ -1,5 +1,9 @@
 use bigdecimal::BigDecimal;
-use error_stack::Context;
+use error_stack::{report, Context, Report};
+use kyogre_core::{
+    CatchLocationIdError, DateRangeError, DeleteError, HaulMatrixIndexError, InsertError,
+    LandingMatrixIndexError, QueryError, UpdateError,
+};
 
 use crate::models::ActiveVesselConflict;
 
@@ -117,5 +121,122 @@ impl std::fmt::Display for VerifyDatabaseError {
                 f.write_fmt(format_args!("landings without trip: {}", v))
             }
         }
+    }
+}
+
+#[derive(Debug)]
+pub struct PostgresErrorWrapper(Report<PostgresError>);
+
+impl PostgresErrorWrapper {
+    pub fn into_inner(self) -> Report<PostgresError> {
+        self.0
+    }
+}
+
+impl From<Report<PostgresError>> for PostgresErrorWrapper {
+    #[track_caller]
+    fn from(value: Report<PostgresError>) -> Self {
+        Self(value)
+    }
+}
+
+impl From<Report<HaulMatrixIndexError>> for PostgresErrorWrapper {
+    #[track_caller]
+    fn from(value: Report<HaulMatrixIndexError>) -> Self {
+        Self(value.change_context(PostgresError::DataConversion))
+    }
+}
+
+impl From<Report<LandingMatrixIndexError>> for PostgresErrorWrapper {
+    #[track_caller]
+    fn from(value: Report<LandingMatrixIndexError>) -> Self {
+        Self(value.change_context(PostgresError::DataConversion))
+    }
+}
+
+impl From<Report<CatchLocationIdError>> for PostgresErrorWrapper {
+    #[track_caller]
+    fn from(value: Report<CatchLocationIdError>) -> Self {
+        Self(value.change_context(PostgresError::DataConversion))
+    }
+}
+
+impl From<Report<fiskeridir_rs::Error>> for PostgresErrorWrapper {
+    #[track_caller]
+    fn from(value: Report<fiskeridir_rs::Error>) -> Self {
+        Self(value.change_context(PostgresError::DataConversion))
+    }
+}
+
+impl From<sqlx::Error> for PostgresErrorWrapper {
+    #[track_caller]
+    fn from(value: sqlx::Error) -> Self {
+        Self(report!(PostgresError::Query).attach_printable(format!("{value:?}")))
+    }
+}
+
+impl From<BigDecimalError> for PostgresErrorWrapper {
+    #[track_caller]
+    fn from(value: BigDecimalError) -> Self {
+        Self(report!(value).change_context(PostgresError::DataConversion))
+    }
+}
+
+impl From<FromBigDecimalError> for PostgresErrorWrapper {
+    #[track_caller]
+    fn from(value: FromBigDecimalError) -> Self {
+        Self(report!(value).change_context(PostgresError::DataConversion))
+    }
+}
+
+impl From<VerifyDatabaseError> for PostgresErrorWrapper {
+    #[track_caller]
+    fn from(value: VerifyDatabaseError) -> Self {
+        Self(report!(value).change_context(PostgresError::InconsistentState))
+    }
+}
+
+impl From<PortCoordinateError> for PostgresErrorWrapper {
+    #[track_caller]
+    fn from(value: PortCoordinateError) -> Self {
+        Self(report!(value).change_context(PostgresError::DataConversion))
+    }
+}
+
+impl From<serde_json::Error> for PostgresErrorWrapper {
+    #[track_caller]
+    fn from(value: serde_json::Error) -> Self {
+        Self(report!(value).change_context(PostgresError::DataConversion))
+    }
+}
+
+impl From<DateRangeError> for PostgresErrorWrapper {
+    #[track_caller]
+    fn from(value: DateRangeError) -> Self {
+        Self(report!(value).change_context(PostgresError::DataConversion))
+    }
+}
+
+impl From<PostgresErrorWrapper> for Report<QueryError> {
+    fn from(value: PostgresErrorWrapper) -> Self {
+        value.0.change_context(QueryError)
+    }
+}
+
+impl From<PostgresErrorWrapper> for Report<InsertError> {
+    fn from(value: PostgresErrorWrapper) -> Self {
+        value.0.change_context(InsertError)
+    }
+}
+
+impl From<PostgresErrorWrapper> for Report<UpdateError> {
+    fn from(value: PostgresErrorWrapper) -> Self {
+        value.0.change_context(UpdateError)
+    }
+}
+
+impl From<PostgresErrorWrapper> for Report<DeleteError> {
+    fn from(value: PostgresErrorWrapper) -> Self {
+        value.0.change_context(DeleteError)
     }
 }

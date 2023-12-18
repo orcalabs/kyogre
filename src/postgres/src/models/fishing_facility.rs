@@ -1,5 +1,5 @@
 use chrono::{DateTime, Utc};
-use error_stack::{report, Report, ResultExt};
+use error_stack::report;
 use fiskeridir_rs::CallSign;
 use geo_types::geometry::Geometry;
 use geozero::wkb;
@@ -9,7 +9,7 @@ use sqlx::{postgres::PgTypeInfo, Postgres};
 use uuid::Uuid;
 use wkt::ToWkt;
 
-use crate::error::PostgresError;
+use crate::error::{PostgresError, PostgresErrorWrapper};
 
 #[derive(Debug, Deserialize)]
 pub struct FishingFacility {
@@ -43,7 +43,7 @@ pub struct FishingFacility {
 pub struct GeometryWkt(pub wkt::Geometry<f64>);
 
 impl TryFrom<FishingFacility> for kyogre_core::FishingFacility {
-    type Error = Report<PostgresError>;
+    type Error = PostgresErrorWrapper;
 
     fn try_from(v: FishingFacility) -> Result<Self, Self::Error> {
         Ok(Self {
@@ -51,11 +51,7 @@ impl TryFrom<FishingFacility> for kyogre_core::FishingFacility {
             barentswatch_vessel_id: v.barentswatch_vessel_id,
             fiskeridir_vessel_id: v.fiskeridir_vessel_id.map(FiskeridirVesselId),
             vessel_name: v.vessel_name,
-            call_sign: v
-                .call_sign
-                .map(CallSign::try_from)
-                .transpose()
-                .change_context(PostgresError::DataConversion)?,
+            call_sign: v.call_sign.map(CallSign::try_from).transpose()?,
             mmsi: v.mmsi.map(Mmsi),
             imo: v.imo,
             reg_num: v.reg_num,

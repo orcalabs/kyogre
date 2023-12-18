@@ -1,9 +1,8 @@
 use crate::{
-    error::PostgresError,
+    error::PostgresErrorWrapper,
     queries::{float_to_decimal, opt_float_to_decimal},
 };
 use bigdecimal::BigDecimal;
-use error_stack::{Report, ResultExt};
 use unnest_insert::UnnestInsert;
 
 #[derive(UnnestInsert)]
@@ -68,32 +67,23 @@ pub struct NewLandingEntry {
 }
 
 impl TryFrom<&fiskeridir_rs::Landing> for NewLandingEntry {
-    type Error = Report<PostgresError>;
+    type Error = PostgresErrorWrapper;
 
     fn try_from(landing: &fiskeridir_rs::Landing) -> Result<Self, Self::Error> {
         Ok(NewLandingEntry {
             landing_id: landing.id.clone().into_inner(),
             size_grouping_code: landing.product.size_grouping_code.clone(),
-            withdrawn_catch_value: opt_float_to_decimal(landing.finances.withdrawn_catch_value)
-                .change_context(PostgresError::DataConversion)?,
-            catch_value: opt_float_to_decimal(landing.finances.catch_value)
-                .change_context(PostgresError::DataConversion)?,
-            sales_team_fee: opt_float_to_decimal(landing.finances.sales_team_fee)
-                .change_context(PostgresError::DataConversion)?,
-            post_payment: opt_float_to_decimal(landing.finances.post_payment)
-                .change_context(PostgresError::DataConversion)?,
+            withdrawn_catch_value: opt_float_to_decimal(landing.finances.withdrawn_catch_value)?,
+            catch_value: opt_float_to_decimal(landing.finances.catch_value)?,
+            sales_team_fee: opt_float_to_decimal(landing.finances.sales_team_fee)?,
+            post_payment: opt_float_to_decimal(landing.finances.post_payment)?,
             support_fee_for_fisher: opt_float_to_decimal(
                 landing.finances.support_amount_for_fisher,
-            )
-            .change_context(PostgresError::DataConversion)?,
-            price_for_buyer: opt_float_to_decimal(landing.finances.price_for_buyer)
-                .change_context(PostgresError::DataConversion)?,
-            price_for_fisher: opt_float_to_decimal(landing.finances.price_for_fisher)
-                .change_context(PostgresError::DataConversion)?,
-            unit_price_for_buyer: opt_float_to_decimal(landing.finances.unit_price_for_buyer)
-                .change_context(PostgresError::DataConversion)?,
-            unit_price_for_fisher: opt_float_to_decimal(landing.finances.unit_price_for_fisher)
-                .change_context(PostgresError::DataConversion)?,
+            )?,
+            price_for_buyer: opt_float_to_decimal(landing.finances.price_for_buyer)?,
+            price_for_fisher: opt_float_to_decimal(landing.finances.price_for_fisher)?,
+            unit_price_for_buyer: opt_float_to_decimal(landing.finances.unit_price_for_buyer)?,
+            unit_price_for_fisher: opt_float_to_decimal(landing.finances.unit_price_for_fisher)?,
             landing_method_id: landing.product.landing_method.map(|v| v as i32),
             conservation_method_id: landing.product.conservation_method as i32,
             product_condition_id: landing.product.condition as i32,
@@ -101,20 +91,15 @@ impl TryFrom<&fiskeridir_rs::Landing> for NewLandingEntry {
             product_purpose_group_id: landing.product.purpose.group_code.map(|v| v as i32),
             line_number: landing.line_number,
             num_fish: landing.product.num_fish.map(|v| v as i32),
-            product_weight: float_to_decimal(landing.product.product_weight)
-                .change_context(PostgresError::DataConversion)?,
+            product_weight: float_to_decimal(landing.product.product_weight)?,
             product_weight_over_quota: opt_float_to_decimal(
                 landing.product.product_weight_over_quota,
-            )
-            .change_context(PostgresError::DataConversion)?,
-            gross_weight: opt_float_to_decimal(landing.product.gross_weight)
-                .change_context(PostgresError::DataConversion)?,
-            living_weight: opt_float_to_decimal(landing.product.living_weight)
-                .change_context(PostgresError::DataConversion)?,
+            )?,
+            gross_weight: opt_float_to_decimal(landing.product.gross_weight)?,
+            living_weight: opt_float_to_decimal(landing.product.living_weight)?,
             living_weight_over_quota: opt_float_to_decimal(
                 landing.product.living_weight_over_quota,
-            )
-            .change_context(PostgresError::DataConversion)?,
+            )?,
             species_id: landing.product.species.code as i32,
             species_fao_id: landing.product.species.fao_code.clone(),
             species_group_id: landing.product.species.group_code as i32,

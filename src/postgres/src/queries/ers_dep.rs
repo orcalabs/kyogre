@@ -4,21 +4,20 @@ use std::{
 };
 
 use crate::{
-    error::PostgresError,
+    error::PostgresErrorWrapper,
     ers_dep_set::ErsDepSet,
     models::{Departure, NewErsDep, NewErsDepCatch, NewTripAssemblerConflict},
     PostgresAdapter,
 };
-use error_stack::{Result, ResultExt};
 use futures::TryStreamExt;
 use kyogre_core::{FiskeridirVesselId, TripAssemblerId, VesselEventType};
 use unnest_insert::{UnnestInsert, UnnestInsertReturning};
 
 impl PostgresAdapter {
-    pub(crate) async fn add_ers_dep_set(&self, set: ErsDepSet) -> Result<(), PostgresError> {
+    pub(crate) async fn add_ers_dep_set(&self, set: ErsDepSet) -> Result<(), PostgresErrorWrapper> {
         let prepared_set = set.prepare();
 
-        let mut tx = self.begin().await?;
+        let mut tx = self.pool.begin().await?;
 
         self.add_ers_message_types(prepared_set.ers_message_types, &mut tx)
             .await?;
@@ -36,9 +35,7 @@ impl PostgresAdapter {
         self.add_ers_dep_catches(prepared_set.catches, &mut tx)
             .await?;
 
-        tx.commit()
-            .await
-            .change_context(PostgresError::Transaction)?;
+        tx.commit().await?;
 
         Ok(())
     }
@@ -47,13 +44,11 @@ impl PostgresAdapter {
         &'a self,
         mut ers_dep: Vec<NewErsDep>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<(), PostgresError> {
+    ) -> Result<(), PostgresErrorWrapper> {
         let to_insert = self.ers_dep_to_insert(&ers_dep, tx).await?;
         ers_dep.retain(|e| to_insert.contains(&e.message_id));
 
-        let inserted = NewErsDep::unnest_insert_returning(ers_dep, &mut **tx)
-            .await
-            .change_context(PostgresError::Query)?;
+        let inserted = NewErsDep::unnest_insert_returning(ers_dep, &mut **tx).await?;
 
         let len = inserted.len();
         let mut conflicts = HashMap::<i64, NewTripAssemblerConflict>::with_capacity(len);
@@ -91,10 +86,10 @@ impl PostgresAdapter {
         &'a self,
         ers_dep: &[NewErsDep],
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<HashSet<i64>, PostgresError> {
+    ) -> Result<HashSet<i64>, PostgresErrorWrapper> {
         let message_ids = ers_dep.iter().map(|e| e.message_id).collect::<Vec<_>>();
 
-        sqlx::query!(
+        let ids = sqlx::query!(
             r#"
 SELECT
     u.message_id AS "message_id!"
@@ -109,23 +104,24 @@ WHERE
         .fetch(&mut **tx)
         .map_ok(|r| r.message_id)
         .try_collect::<HashSet<_>>()
-        .await
-        .change_context(PostgresError::Query)
+        .await?;
+
+        Ok(ids)
     }
 
     pub(crate) async fn add_ers_dep_catches<'a>(
         &self,
         catches: Vec<NewErsDepCatch>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<(), PostgresError> {
-        NewErsDepCatch::unnest_insert(catches, &mut **tx)
-            .await
-            .change_context(PostgresError::Query)
-            .map(|_| ())
+    ) -> Result<(), PostgresErrorWrapper> {
+        NewErsDepCatch::unnest_insert(catches, &mut **tx).await?;
+        Ok(())
     }
 
-    pub(crate) async fn all_ers_departures_impl(&self) -> Result<Vec<Departure>, PostgresError> {
-        sqlx::query_as!(
+    pub(crate) async fn all_ers_departures_impl(
+        &self,
+    ) -> Result<Vec<Departure>, PostgresErrorWrapper> {
+        let dep = sqlx::query_as!(
             Departure,
             r#"
 SELECT
@@ -137,7 +133,8 @@ FROM
             "#,
         )
         .fetch_all(&self.pool)
-        .await
-        .change_context(PostgresError::Query)
+        .await?;
+
+        Ok(dep)
     }
 }

@@ -1,12 +1,11 @@
 use crate::{
-    error::PostgresError,
+    error::PostgresErrorWrapper,
     queries::{
         enum_to_i32, float_to_decimal, opt_decimal_to_float, opt_enum_to_i32, opt_float_to_decimal,
     },
 };
 use bigdecimal::BigDecimal;
 use chrono::{DateTime, Utc};
-use error_stack::{Report, ResultExt};
 use fiskeridir_rs::{CallSign, GearGroup, SpeciesGroup, VesselLengthGroup, VesselType};
 use kyogre_core::{FiskeridirVesselId, Mmsi, TripAssemblerId, VesselBenchmarkId, VesselSource};
 use serde::Deserialize;
@@ -122,7 +121,7 @@ pub struct VesselBenchmarkOutput {
 }
 
 impl TryFrom<fiskeridir_rs::Vessel> for NewFiskeridirVessel {
-    type Error = Report<PostgresError>;
+    type Error = PostgresErrorWrapper;
 
     fn try_from(v: fiskeridir_rs::Vessel) -> Result<Self, Self::Error> {
         Ok(Self {
@@ -130,7 +129,7 @@ impl TryFrom<fiskeridir_rs::Vessel> for NewFiskeridirVessel {
             call_sign: v.call_sign.map(|c| c.into_inner()),
             registration_id: v.registration_id,
             name: v.name,
-            length: opt_float_to_decimal(v.length).change_context(PostgresError::DataConversion)?,
+            length: opt_float_to_decimal(v.length)?,
             building_year: v.building_year.map(|x| x as i32),
             engine_power: v.engine_power.map(|x| x as i32),
             engine_building_year: v.engine_building_year.map(|x| x as i32),
@@ -147,7 +146,7 @@ impl TryFrom<fiskeridir_rs::Vessel> for NewFiskeridirVessel {
 }
 
 impl TryFrom<fiskeridir_rs::RegisterVessel> for NewRegisterVessel {
-    type Error = Report<PostgresError>;
+    type Error = PostgresErrorWrapper;
 
     fn try_from(v: fiskeridir_rs::RegisterVessel) -> Result<Self, Self::Error> {
         Ok(Self {
@@ -156,43 +155,36 @@ impl TryFrom<fiskeridir_rs::RegisterVessel> for NewRegisterVessel {
             call_sign: v.radio_call_sign.map(|c| c.into_inner()),
             name: v.name,
             registration_id: v.registration_mark,
-            length: float_to_decimal(v.length).change_context(PostgresError::DataConversion)?,
-            width: opt_float_to_decimal(v.width).change_context(PostgresError::DataConversion)?,
+            length: float_to_decimal(v.length)?,
+            width: opt_float_to_decimal(v.width)?,
             engine_power: v.engine_power,
             imo_number: v.imo_number,
-            owners: serde_json::to_value(&v.owners)
-                .change_context(PostgresError::DataConversion)
-                .attach_printable_lazy(|| {
-                    format!("could not serialize vessel owners: {:?}", v.owners)
-                })?,
+            owners: serde_json::to_value(&v.owners)?,
             fiskeridir_vessel_source_id: VesselSource::FiskeridirVesselRegister,
         })
     }
 }
 
 impl TryFrom<kyogre_core::VesselBenchmarkOutput> for VesselBenchmarkOutput {
-    type Error = Report<PostgresError>;
+    type Error = PostgresErrorWrapper;
 
     fn try_from(v: kyogre_core::VesselBenchmarkOutput) -> Result<Self, Self::Error> {
         Ok(Self {
             fiskeridir_vessel_id: v.vessel_id.0,
             vessel_benchmark_id: v.benchmark_id,
-            output: float_to_decimal(v.value).change_context(PostgresError::DataConversion)?,
+            output: float_to_decimal(v.value)?,
         })
     }
 }
 
 impl TryFrom<AisVessel> for kyogre_core::AisVessel {
-    type Error = Report<PostgresError>;
+    type Error = PostgresErrorWrapper;
 
     fn try_from(value: AisVessel) -> Result<Self, Self::Error> {
         Ok(kyogre_core::AisVessel {
             mmsi: Mmsi(value.mmsi),
             imo_number: value.imo_number,
-            call_sign: value
-                .call_sign
-                .map(|c| CallSign::try_from(c).change_context(PostgresError::DataConversion))
-                .transpose()?,
+            call_sign: value.call_sign.map(CallSign::try_from).transpose()?,
             name: value.name,
             ship_length: value.ship_length,
             ship_width: value.ship_width,
@@ -245,20 +237,15 @@ pub struct Benchmark {
 }
 
 impl TryFrom<FiskeridirAisVesselCombination> for kyogre_core::Vessel {
-    type Error = Report<PostgresError>;
+    type Error = PostgresErrorWrapper;
 
     fn try_from(value: FiskeridirAisVesselCombination) -> Result<Self, Self::Error> {
-        let ais_vessel: Result<Option<kyogre_core::AisVessel>, Report<PostgresError>> =
+        let ais_vessel: Result<Option<kyogre_core::AisVessel>, PostgresErrorWrapper> =
             if let Some(mmsi) = value.ais_mmsi {
                 Ok(Some(kyogre_core::AisVessel {
                     mmsi: Mmsi(mmsi),
                     imo_number: value.ais_imo_number,
-                    call_sign: value
-                        .ais_call_sign
-                        .map(|c| {
-                            CallSign::try_from(c).change_context(PostgresError::DataConversion)
-                        })
-                        .transpose()?,
+                    call_sign: value.ais_call_sign.map(CallSign::try_from).transpose()?,
                     name: value.ais_name,
                     ship_length: value.ais_ship_length,
                     ship_width: value.ais_ship_width,
@@ -269,8 +256,7 @@ impl TryFrom<FiskeridirAisVesselCombination> for kyogre_core::Vessel {
                 Ok(None)
             };
 
-        let benchmarks: Vec<Benchmark> = serde_json::from_str(&value.benchmarks)
-            .change_context(PostgresError::DataConversion)?;
+        let benchmarks: Vec<Benchmark> = serde_json::from_str(&value.benchmarks)?;
 
         let fiskeridir_vessel = kyogre_core::FiskeridirVessel {
             id: FiskeridirVesselId(value.fiskeridir_vessel_id),
@@ -285,18 +271,15 @@ impl TryFrom<FiskeridirAisVesselCombination> for kyogre_core::Vessel {
             call_sign: value
                 .fiskeridir_call_sign
                 .map(CallSign::try_from)
-                .transpose()
-                .change_context(PostgresError::DataConversion)?,
+                .transpose()?,
             name: value.fiskeridir_name,
             registration_id: value.fiskeridir_registration_id,
-            length: opt_decimal_to_float(value.fiskeridir_length)
-                .change_context(PostgresError::DataConversion)?,
-            width: opt_decimal_to_float(value.fiskeridir_width)
-                .change_context(PostgresError::DataConversion)?,
+            length: opt_decimal_to_float(value.fiskeridir_length)?,
+            width: opt_decimal_to_float(value.fiskeridir_width)?,
             owner: value.fiskeridir_owner,
             owners: value
                 .fiskeridir_owners
-                .map(|o| serde_json::from_str(&o).change_context(PostgresError::DataConversion))
+                .map(|o| serde_json::from_str(&o))
                 .transpose()?,
             engine_building_year: value.fiskeridir_engine_building_year.map(|v| v as u32),
             engine_power: value.fiskeridir_engine_power.map(|v| v as u32),
@@ -319,7 +302,7 @@ impl TryFrom<FiskeridirAisVesselCombination> for kyogre_core::Vessel {
 }
 
 impl TryFrom<ActiveVesselConflict> for kyogre_core::ActiveVesselConflict {
-    type Error = Report<PostgresError>;
+    type Error = PostgresErrorWrapper;
 
     fn try_from(value: ActiveVesselConflict) -> Result<Self, Self::Error> {
         Ok(kyogre_core::ActiveVesselConflict {
@@ -329,8 +312,7 @@ impl TryFrom<ActiveVesselConflict> for kyogre_core::ActiveVesselConflict {
                 .map(|v| v.map(FiskeridirVesselId))
                 .collect(),
             mmsis: value.mmsis.into_iter().map(|v| v.map(Mmsi)).collect(),
-            call_sign: std::convert::TryInto::<CallSign>::try_into(value.call_sign)
-                .change_context(PostgresError::DataConversion)?,
+            call_sign: std::convert::TryInto::<CallSign>::try_into(value.call_sign)?,
             sources: value.fiskeridir_vessel_source_ids,
         })
     }

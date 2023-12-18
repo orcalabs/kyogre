@@ -1,15 +1,16 @@
 use crate::{
-    error::PostgresError,
+    error::PostgresErrorWrapper,
     models::{Arrival, NewPort, Port, PortDockPoint, TripDockPoints, TripPorts},
     PostgresAdapter,
 };
-use error_stack::{Result, ResultExt};
 use kyogre_core::TripId;
 use unnest_insert::UnnestInsert;
 
 impl PostgresAdapter {
-    pub(crate) async fn dock_points_impl(&self) -> Result<Vec<PortDockPoint>, PostgresError> {
-        sqlx::query_as!(
+    pub(crate) async fn dock_points_impl(
+        &self,
+    ) -> Result<Vec<PortDockPoint>, PostgresErrorWrapper> {
+        let docks = sqlx::query_as!(
             PortDockPoint,
             r#"
 SELECT
@@ -23,14 +24,16 @@ FROM
             "#,
         )
         .fetch_all(&self.pool)
-        .await
-        .change_context(PostgresError::Query)
+        .await?;
+
+        Ok(docks)
     }
+
     pub(crate) async fn dock_points_of_port_impl(
         &self,
         port_id: &str,
-    ) -> Result<Vec<PortDockPoint>, PostgresError> {
-        sqlx::query_as!(
+    ) -> Result<Vec<PortDockPoint>, PostgresErrorWrapper> {
+        let docks = sqlx::query_as!(
             PortDockPoint,
             r#"
 SELECT
@@ -47,11 +50,13 @@ WHERE
             port_id
         )
         .fetch_all(&self.pool)
-        .await
-        .change_context(PostgresError::Query)
+        .await?;
+
+        Ok(docks)
     }
-    pub(crate) async fn all_ers_arrivals_impl(&self) -> Result<Vec<Arrival>, PostgresError> {
-        sqlx::query_as!(
+
+    pub(crate) async fn all_ers_arrivals_impl(&self) -> Result<Vec<Arrival>, PostgresErrorWrapper> {
+        let arrivals = sqlx::query_as!(
             Arrival,
             r#"
 SELECT
@@ -63,22 +68,22 @@ FROM
             "#,
         )
         .fetch_all(&self.pool)
-        .await
-        .change_context(PostgresError::Query)
+        .await?;
+
+        Ok(arrivals)
     }
+
     pub(crate) async fn add_ports<'a>(
         &'a self,
         ports: Vec<NewPort>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<(), PostgresError> {
-        NewPort::unnest_insert(ports, &mut **tx)
-            .await
-            .change_context(PostgresError::Query)
-            .map(|_| ())
+    ) -> Result<(), PostgresErrorWrapper> {
+        NewPort::unnest_insert(ports, &mut **tx).await?;
+        Ok(())
     }
 
-    pub(crate) async fn ports_impl(&self) -> Result<Vec<Port>, PostgresError> {
-        sqlx::query_as!(
+    pub(crate) async fn ports_impl(&self) -> Result<Vec<Port>, PostgresErrorWrapper> {
+        let ports = sqlx::query_as!(
             Port,
             r#"
 SELECT
@@ -91,12 +96,16 @@ FROM
             "#,
         )
         .fetch_all(&self.pool)
-        .await
-        .change_context(PostgresError::Query)
+        .await?;
+
+        Ok(ports)
     }
 
-    pub(crate) async fn port_impl(&self, port_id: &str) -> Result<Option<Port>, PostgresError> {
-        sqlx::query_as!(
+    pub(crate) async fn port_impl(
+        &self,
+        port_id: &str,
+    ) -> Result<Option<Port>, PostgresErrorWrapper> {
+        let port = sqlx::query_as!(
             Port,
             r#"
 SELECT
@@ -112,11 +121,16 @@ WHERE
             port_id,
         )
         .fetch_optional(&self.pool)
-        .await
-        .change_context(PostgresError::Query)
+        .await?;
+
+        Ok(port)
     }
-    pub async fn ports_of_trip_impl(&self, trip_id: TripId) -> Result<TripPorts, PostgresError> {
-        sqlx::query_as!(
+
+    pub async fn ports_of_trip_impl(
+        &self,
+        trip_id: TripId,
+    ) -> Result<TripPorts, PostgresErrorWrapper> {
+        let ports = sqlx::query_as!(
             TripPorts,
             r#"
 SELECT
@@ -153,15 +167,16 @@ WHERE
             trip_id.0,
         )
         .fetch_one(&self.pool)
-        .await
-        .change_context(PostgresError::Query)
+        .await?;
+
+        Ok(ports)
     }
 
     pub async fn dock_points_of_trip_impl(
         &self,
         trip_id: TripId,
-    ) -> Result<TripDockPoints, PostgresError> {
-        sqlx::query_as!(
+    ) -> Result<TripDockPoints, PostgresErrorWrapper> {
+        let docks = sqlx::query_as!(
             TripDockPoints,
             r#"
 WITH
@@ -221,7 +236,8 @@ FROM
             trip_id.0,
         )
         .fetch_one(&self.pool)
-        .await
-        .change_context(PostgresError::Query)
+        .await?;
+
+        Ok(docks)
     }
 }

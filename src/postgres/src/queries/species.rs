@@ -1,5 +1,4 @@
-use crate::{error::PostgresError, models::*, PostgresAdapter};
-use error_stack::{report, Result, ResultExt};
+use crate::{error::PostgresErrorWrapper, models::*, PostgresAdapter};
 use futures::{Stream, TryStreamExt};
 use unnest_insert::UnnestInsert;
 
@@ -8,38 +7,32 @@ impl PostgresAdapter {
         &'a self,
         species: Vec<SpeciesFiskeridir>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<(), PostgresError> {
-        SpeciesFiskeridir::unnest_insert(species, &mut **tx)
-            .await
-            .change_context(PostgresError::Query)
-            .map(|_| ())
+    ) -> Result<(), PostgresErrorWrapper> {
+        SpeciesFiskeridir::unnest_insert(species, &mut **tx).await?;
+        Ok(())
     }
 
     pub(crate) async fn add_species<'a>(
         &'a self,
         species: Vec<Species>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<(), PostgresError> {
-        Species::unnest_insert(species, &mut **tx)
-            .await
-            .change_context(PostgresError::Query)
-            .map(|_| ())
+    ) -> Result<(), PostgresErrorWrapper> {
+        Species::unnest_insert(species, &mut **tx).await?;
+        Ok(())
     }
 
     pub(crate) async fn add_species_fao<'a>(
         &'a self,
         species: Vec<SpeciesFao>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<(), PostgresError> {
-        SpeciesFao::unnest_insert(species, &mut **tx)
-            .await
-            .change_context(PostgresError::Query)
-            .map(|_| ())
+    ) -> Result<(), PostgresErrorWrapper> {
+        SpeciesFao::unnest_insert(species, &mut **tx).await?;
+        Ok(())
     }
 
     pub(crate) fn species_fiskeridir_impl(
         &self,
-    ) -> impl Stream<Item = Result<SpeciesFiskeridir, PostgresError>> + '_ {
+    ) -> impl Stream<Item = Result<SpeciesFiskeridir, PostgresErrorWrapper>> + '_ {
         sqlx::query_as!(
             SpeciesFiskeridir,
             r#"
@@ -53,10 +46,12 @@ ORDER BY
             "#,
         )
         .fetch(&self.pool)
-        .map_err(|e| report!(e).change_context(PostgresError::Query))
+        .map_err(From::from)
     }
 
-    pub(crate) fn species_impl(&self) -> impl Stream<Item = Result<Species, PostgresError>> + '_ {
+    pub(crate) fn species_impl(
+        &self,
+    ) -> impl Stream<Item = Result<Species, PostgresErrorWrapper>> + '_ {
         sqlx::query_as!(
             Species,
             r#"
@@ -68,12 +63,12 @@ FROM
             "#,
         )
         .fetch(&self.pool)
-        .map_err(|e| report!(e).change_context(PostgresError::Query))
+        .map_err(From::from)
     }
 
     pub(crate) fn species_fao_impl(
         &self,
-    ) -> impl Stream<Item = Result<SpeciesFao, PostgresError>> + '_ {
+    ) -> impl Stream<Item = Result<SpeciesFao, PostgresErrorWrapper>> + '_ {
         sqlx::query_as!(
             SpeciesFao,
             r#"
@@ -85,6 +80,6 @@ FROM
             "#,
         )
         .fetch(&self.pool)
-        .map_err(|e| report!(e).change_context(PostgresError::Query))
+        .map_err(From::from)
     }
 }

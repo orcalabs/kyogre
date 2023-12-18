@@ -1,9 +1,8 @@
 use crate::{
-    error::PostgresError,
+    error::PostgresErrorWrapper,
     models::{NewCounty, NewMunicipality},
     PostgresAdapter,
 };
-use error_stack::{Result, ResultExt};
 use unnest_insert::UnnestInsert;
 
 impl PostgresAdapter {
@@ -11,21 +10,17 @@ impl PostgresAdapter {
         &'a self,
         municipalities: Vec<NewMunicipality>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<(), PostgresError> {
-        NewMunicipality::unnest_insert(municipalities, &mut **tx)
-            .await
-            .change_context(PostgresError::Query)
-            .map(|_| ())
+    ) -> Result<(), PostgresErrorWrapper> {
+        NewMunicipality::unnest_insert(municipalities, &mut **tx).await?;
+        Ok(())
     }
 
     pub(crate) async fn add_counties<'a>(
         &'a self,
         municipalities: Vec<NewCounty>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<(), PostgresError> {
-        NewCounty::unnest_insert(municipalities, &mut **tx)
-            .await
-            .change_context(PostgresError::Query)
-            .map(|_| ())
+    ) -> Result<(), PostgresErrorWrapper> {
+        NewCounty::unnest_insert(municipalities, &mut **tx).await?;
+        Ok(())
     }
 }

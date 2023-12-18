@@ -2,21 +2,20 @@ use num_traits::FromPrimitive;
 use std::collections::{HashMap, HashSet};
 
 use crate::{
-    error::PostgresError,
+    error::PostgresErrorWrapper,
     models::{NewVmsPosition, VmsPosition},
     PostgresAdapter,
 };
 use bigdecimal::BigDecimal;
 use chrono::{DateTime, Utc};
-use error_stack::{report, Result, ResultExt};
 use fiskeridir_rs::CallSign;
 use futures::{Stream, TryStreamExt};
 use kyogre_core::DateRange;
 use unnest_insert::UnnestInsert;
 
 impl PostgresAdapter {
-    pub(crate) async fn all_vms_impl(&self) -> Result<Vec<VmsPosition>, PostgresError> {
-        sqlx::query_as!(
+    pub(crate) async fn all_vms_impl(&self) -> Result<Vec<VmsPosition>, PostgresErrorWrapper> {
+        let vms = sqlx::query_as!(
             VmsPosition,
             r#"
 SELECT
@@ -38,14 +37,16 @@ ORDER BY
             "#,
         )
         .fetch_all(&self.pool)
-        .await
-        .change_context(PostgresError::Query)
+        .await?;
+
+        Ok(vms)
     }
+
     pub(crate) fn vms_positions_impl(
         &self,
         call_sign: &CallSign,
         range: &DateRange,
-    ) -> impl Stream<Item = Result<VmsPosition, PostgresError>> + '_ {
+    ) -> impl Stream<Item = Result<VmsPosition, PostgresErrorWrapper>> + '_ {
         sqlx::query_as!(
             VmsPosition,
             r#"
@@ -74,13 +75,13 @@ ORDER BY
             range.end(),
         )
         .fetch(&self.pool)
-        .map_err(|e| report!(e).change_context(PostgresError::Query))
+        .map_err(From::from)
     }
 
     pub(crate) async fn add_vms_impl(
         &self,
         vms: Vec<fiskeridir_rs::Vms>,
-    ) -> Result<(), PostgresError> {
+    ) -> Result<(), PostgresErrorWrapper> {
         let mut call_signs_unique = HashSet::new();
         let mut vms_unique: HashMap<(String, DateTime<Utc>), NewVmsPosition> = HashMap::new();
 
@@ -125,7 +126,7 @@ ORDER BY
 
         let call_signs_unique = call_signs_unique.into_iter().collect::<Vec<_>>();
 
-        let mut tx = self.begin().await?;
+        let mut tx = self.pool.begin().await?;
 
         sqlx::query!(
             r#"
@@ -135,17 +136,12 @@ SELECT
             call_signs_unique.as_slice(),
         )
         .execute(&mut *tx)
-        .await
-        .change_context(PostgresError::Query)?;
+        .await?;
 
         let vms: Vec<NewVmsPosition> = vms_unique.into_values().collect();
-        NewVmsPosition::unnest_insert(vms, &mut *tx)
-            .await
-            .change_context(PostgresError::Query)?;
+        NewVmsPosition::unnest_insert(vms, &mut *tx).await?;
 
-        tx.commit()
-            .await
-            .change_context(PostgresError::Transaction)?;
+        tx.commit().await?;
 
         Ok(())
     }

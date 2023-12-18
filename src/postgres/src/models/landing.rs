@@ -1,10 +1,9 @@
 use crate::{
-    error::PostgresError,
+    error::PostgresErrorWrapper,
     queries::{decimal_to_float, opt_decimal_to_float, opt_float_to_decimal},
 };
 use bigdecimal::BigDecimal;
 use chrono::{DateTime, NaiveDate, NaiveTime, Utc};
-use error_stack::{Report, ResultExt};
 use fiskeridir_rs::{DeliveryPointId, Gear, GearGroup, LandingId, VesselLengthGroup};
 use kyogre_core::{CatchLocationId, FiskeridirVesselId, LandingMatrixQuery};
 use unnest_insert::UnnestInsert;
@@ -120,7 +119,7 @@ impl NewLanding {
     pub fn from_fiskeridir_landing(
         landing: fiskeridir_rs::Landing,
         data_year: u32,
-    ) -> Result<Self, Report<PostgresError>> {
+    ) -> Result<Self, PostgresErrorWrapper> {
         Ok(Self {
             landing_id: landing.id.into_inner(),
             document_id: landing.document_info.id,
@@ -136,8 +135,7 @@ impl NewLanding {
             vessel_gross_tonnage_1969: landing.vessel.gross_tonnage_1969.map(|v| v as i32),
             vessel_gross_tonnage_other: landing.vessel.gross_tonnage_other.map(|v| v as i32),
             vessel_name: landing.vessel.name,
-            vessel_length: opt_float_to_decimal(landing.vessel.length)
-                .change_context(PostgresError::DataConversion)?,
+            vessel_length: opt_float_to_decimal(landing.vessel.length)?,
             vessel_engine_building_year: landing.vessel.engine_building_year.map(|v| v as i32),
             vessel_engine_power: landing.vessel.engine_power.map(|v| v as i32),
             vessel_building_year: landing.vessel.building_year.map(|v| v as i32),
@@ -147,8 +145,7 @@ impl NewLanding {
             gear_main_group_id: landing.gear.main_group as i32,
             document_type_id: landing.document_info.type_number as i32,
             sales_team_id: landing.sales_team as i32,
-            sales_team_tax: opt_float_to_decimal(landing.finances.sales_team_fee)
-                .change_context(PostgresError::DataConversion)?,
+            sales_team_tax: opt_float_to_decimal(landing.finances.sales_team_fee)?,
             delivery_point_id: landing.delivery_point.id.map(|v| v.into_inner()),
             document_sale_date: landing.document_info.signing_date,
             document_version_date: landing.document_info.version_timestamp,
@@ -212,12 +209,11 @@ impl NewLanding {
 }
 
 impl TryFrom<Landing> for kyogre_core::Landing {
-    type Error = Report<PostgresError>;
+    type Error = PostgresErrorWrapper;
 
     fn try_from(v: Landing) -> Result<Self, Self::Error> {
         Ok(Self {
-            landing_id: LandingId::try_from(v.landing_id)
-                .change_context(PostgresError::DataConversion)?,
+            landing_id: LandingId::try_from(v.landing_id)?,
             landing_timestamp: v.landing_timestamp,
             catch_location: CatchLocationId::new_opt(v.catch_main_area_id, v.catch_area_id),
             gear_id: v.gear_id,
@@ -225,22 +221,16 @@ impl TryFrom<Landing> for kyogre_core::Landing {
             delivery_point_id: v
                 .delivery_point_id
                 .map(DeliveryPointId::try_from)
-                .transpose()
-                .change_context(PostgresError::DataConversion)?,
+                .transpose()?,
             fiskeridir_vessel_id: v.fiskeridir_vessel_id.map(FiskeridirVesselId),
             vessel_call_sign: v.vessel_call_sign,
             vessel_name: v.vessel_name,
-            vessel_length: opt_decimal_to_float(v.vessel_length)
-                .change_context(PostgresError::DataConversion)?,
+            vessel_length: opt_decimal_to_float(v.vessel_length)?,
             vessel_length_group: v.vessel_length_group,
-            total_gross_weight: decimal_to_float(v.total_gross_weight)
-                .change_context(PostgresError::DataConversion)?,
-            total_living_weight: decimal_to_float(v.total_living_weight)
-                .change_context(PostgresError::DataConversion)?,
-            total_product_weight: decimal_to_float(v.total_product_weight)
-                .change_context(PostgresError::DataConversion)?,
-            catches: serde_json::from_str(&v.catches)
-                .change_context(PostgresError::DataConversion)?,
+            total_gross_weight: decimal_to_float(v.total_gross_weight)?,
+            total_living_weight: decimal_to_float(v.total_living_weight)?,
+            total_product_weight: decimal_to_float(v.total_product_weight)?,
+            catches: serde_json::from_str(&v.catches)?,
             version: v.version,
         })
     }
@@ -274,7 +264,7 @@ impl From<LandingMatrixQueryOutput> for kyogre_core::LandingMatrixQueryOutput {
 }
 
 impl TryFrom<LandingMatrixQuery> for LandingMatrixArgs {
-    type Error = Report<PostgresError>;
+    type Error = PostgresErrorWrapper;
 
     fn try_from(v: LandingMatrixQuery) -> std::result::Result<Self, Self::Error> {
         Ok(LandingMatrixArgs {

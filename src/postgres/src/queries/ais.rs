@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 
-use bigdecimal::{BigDecimal, FromPrimitive};
 use chrono::{DateTime, Utc};
 use futures::{Stream, TryStreamExt};
 use kyogre_core::{
@@ -11,15 +10,16 @@ use kyogre_core::{
 use unnest_insert::UnnestInsert;
 
 use crate::{
-    error::{BigDecimalError, PostgresError},
+    error::PostgresErrorWrapper,
     models::{AisClass, AisPosition, NewAisVessel, NewAisVesselHistoric},
     PostgresAdapter,
 };
-use error_stack::{report, Result, ResultExt};
+
+use super::{float_to_decimal, opt_float_to_decimal};
 
 impl PostgresAdapter {
-    pub(crate) async fn all_ais_impl(&self) -> Result<Vec<AisPosition>, PostgresError> {
-        sqlx::query_as!(
+    pub(crate) async fn all_ais_impl(&self) -> Result<Vec<AisPosition>, PostgresErrorWrapper> {
+        let ais = sqlx::query_as!(
             AisPosition,
             r#"
 SELECT
@@ -40,15 +40,17 @@ ORDER BY
             "#,
         )
         .fetch_all(self.ais_pool())
-        .await
-        .change_context(PostgresError::Query)
+        .await?;
+
+        Ok(ais)
     }
+
     pub(crate) fn ais_positions_impl(
         &self,
         mmsi: Mmsi,
         range: &DateRange,
         permission: AisPermission,
-    ) -> impl Stream<Item = Result<AisPosition, PostgresError>> + '_ {
+    ) -> impl Stream<Item = Result<AisPosition, PostgresErrorWrapper>> + '_ {
         sqlx::query_as!(
             AisPosition,
             r#"
@@ -100,13 +102,13 @@ ORDER BY
             PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY as i32,
         )
         .fetch(self.ais_pool())
-        .map_err(|e| report!(e).change_context(PostgresError::Query))
+        .map_err(From::from)
     }
 
     pub(crate) async fn add_ais_positions(
         &self,
         positions: &[NewAisPosition],
-    ) -> Result<(), PostgresError> {
+    ) -> Result<(), PostgresErrorWrapper> {
         let mut mmsis = Vec::with_capacity(positions.len());
         let mut latitude = Vec::with_capacity(positions.len());
         let mut longitude = Vec::with_capacity(positions.len());
@@ -133,58 +135,21 @@ ORDER BY
             }
 
             mmsis.push(p.mmsi.0);
-            latitude.push(
-                BigDecimal::from_f64(p.latitude)
-                    .ok_or(BigDecimalError(p.latitude))
-                    .change_context(PostgresError::DataConversion)?,
-            );
-            longitude.push(
-                BigDecimal::from_f64(p.longitude)
-                    .ok_or(BigDecimalError(p.longitude))
-                    .change_context(PostgresError::DataConversion)?,
-            );
-            course_over_ground.push(
-                p.course_over_ground
-                    .map(|v| {
-                        BigDecimal::from_f64(v)
-                            .ok_or(BigDecimalError(v))
-                            .change_context(PostgresError::DataConversion)
-                    })
-                    .transpose()?,
-            );
-            rate_of_turn.push(
-                p.rate_of_turn
-                    .map(|v| {
-                        BigDecimal::from_f64(v)
-                            .ok_or(BigDecimalError(v))
-                            .change_context(PostgresError::DataConversion)
-                    })
-                    .transpose()?,
-            );
-
+            latitude.push(float_to_decimal(p.latitude)?);
+            longitude.push(float_to_decimal(p.longitude)?);
+            course_over_ground.push(opt_float_to_decimal(p.course_over_ground)?);
+            rate_of_turn.push(opt_float_to_decimal(p.rate_of_turn)?);
             true_heading.push(p.true_heading);
-            speed_over_ground.push(
-                p.speed_over_ground
-                    .map(|v| {
-                        BigDecimal::from_f64(v)
-                            .ok_or(BigDecimalError(v))
-                            .change_context(PostgresError::DataConversion)
-                    })
-                    .transpose()?,
-            );
+            speed_over_ground.push(opt_float_to_decimal(p.speed_over_ground)?);
             altitude.push(p.altitude);
-            distance_to_shore.push(
-                BigDecimal::from_f64(p.distance_to_shore)
-                    .ok_or(BigDecimalError(p.distance_to_shore))
-                    .change_context(PostgresError::DataConversion)?,
-            );
+            distance_to_shore.push(float_to_decimal(p.distance_to_shore)?);
             navigation_status_id.push(p.navigational_status as i32);
             timestamp.push(p.msgtime);
             ais_class.push(p.ais_class.map(|a| AisClass::from(a).to_string()));
             ais_message_type.push(p.message_type_id);
         }
 
-        let mut tx = self.begin().await?;
+        let mut tx = self.pool.begin().await?;
 
         sqlx::query!(
             r#"
@@ -197,8 +162,7 @@ ON CONFLICT (mmsi) DO NOTHING
             &mmsis
         )
         .execute(&mut *tx)
-        .await
-        .change_context(PostgresError::Query)?;
+        .await?;
 
         sqlx::query!(
             r#"
@@ -253,48 +217,15 @@ ON CONFLICT (mmsi, TIMESTAMP) DO NOTHING
             &navigation_status_id,
         )
         .execute(&mut *tx)
-        .await
-        .change_context(PostgresError::Query)?;
+        .await?;
 
         for (_, p) in latest_position_per_vessel {
-            let latitude = BigDecimal::from_f64(p.latitude)
-                .ok_or(BigDecimalError(p.latitude))
-                .change_context(PostgresError::DataConversion)?;
-
-            let longitude = BigDecimal::from_f64(p.longitude)
-                .ok_or(BigDecimalError(p.longitude))
-                .change_context(PostgresError::DataConversion)?;
-
-            let course_over_ground = p
-                .course_over_ground
-                .map(|v| {
-                    BigDecimal::from_f64(v)
-                        .ok_or(BigDecimalError(v))
-                        .change_context(PostgresError::DataConversion)
-                })
-                .transpose()?;
-
-            let rate_of_turn = p
-                .rate_of_turn
-                .map(|v| {
-                    BigDecimal::from_f64(v)
-                        .ok_or(BigDecimalError(v))
-                        .change_context(PostgresError::DataConversion)
-                })
-                .transpose()?;
-
-            let speed_over_ground = p
-                .speed_over_ground
-                .map(|v| {
-                    BigDecimal::from_f64(v)
-                        .ok_or(BigDecimalError(v))
-                        .change_context(PostgresError::DataConversion)
-                })
-                .transpose()?;
-
-            let distance_to_shore = BigDecimal::from_f64(p.distance_to_shore)
-                .ok_or(BigDecimalError(p.distance_to_shore))
-                .change_context(PostgresError::DataConversion)?;
+            let latitude = float_to_decimal(p.latitude)?;
+            let longitude = float_to_decimal(p.longitude)?;
+            let course_over_ground = opt_float_to_decimal(p.course_over_ground)?;
+            let rate_of_turn = opt_float_to_decimal(p.rate_of_turn)?;
+            let speed_over_ground = opt_float_to_decimal(p.speed_over_ground)?;
+            let distance_to_shore = float_to_decimal(p.distance_to_shore)?;
 
             let ais_class = p.ais_class.map(|a| AisClass::from(a).to_string());
 
@@ -363,13 +294,10 @@ SET
                 p.navigational_status as i32,
             )
             .execute(&mut *tx)
-            .await
-            .change_context(PostgresError::Query)?;
+            .await?;
         }
 
-        tx.commit()
-            .await
-            .change_context(PostgresError::Transaction)?;
+        tx.commit().await?;
 
         Ok(())
     }
@@ -377,7 +305,7 @@ SET
     pub(crate) async fn ais_vessel_migration_progress(
         &self,
         migration_end_threshold: &DateTime<Utc>,
-    ) -> Result<Vec<AisVesselMigrate>, PostgresError> {
+    ) -> Result<Vec<AisVesselMigrate>, PostgresErrorWrapper> {
         Ok(sqlx::query_as!(
             crate::models::AisVesselMigrationProgress,
             r#"
@@ -392,8 +320,7 @@ WHERE
             migration_end_threshold
         )
         .fetch_all(&self.pool)
-        .await
-        .change_context(PostgresError::Query)?
+        .await?
         .into_iter()
         .map(|v| AisVesselMigrate {
             mmsi: Mmsi(v.mmsi),
@@ -405,13 +332,13 @@ WHERE
     pub(crate) async fn add_ais_vessels(
         &self,
         static_messages: &[NewAisStatic],
-    ) -> Result<(), PostgresError> {
+    ) -> Result<(), PostgresErrorWrapper> {
         let mut unique_static: HashMap<Mmsi, NewAisStatic> = HashMap::new();
         for v in static_messages {
             unique_static.entry(v.mmsi).or_insert(v.clone());
         }
 
-        let mut tx = self.begin().await?;
+        let mut tx = self.pool.begin().await?;
 
         let vessels = unique_static
             .into_values()
@@ -424,21 +351,18 @@ WHERE
             .map(NewAisVesselHistoric::from)
             .collect();
 
-        NewAisVessel::unnest_insert(vessels, &mut *tx)
-            .await
-            .change_context(PostgresError::Query)?;
+        NewAisVessel::unnest_insert(vessels, &mut *tx).await?;
 
-        NewAisVesselHistoric::unnest_insert(vessels_historic, &mut *tx)
-            .await
-            .change_context(PostgresError::Query)?;
+        NewAisVesselHistoric::unnest_insert(vessels_historic, &mut *tx).await?;
 
-        tx.commit()
-            .await
-            .change_context(PostgresError::Transaction)?;
+        tx.commit().await?;
 
         Ok(())
     }
-    pub(crate) async fn add_mmsis_impl(&self, mmsis: Vec<Mmsi>) -> Result<(), PostgresError> {
+    pub(crate) async fn add_mmsis_impl(
+        &self,
+        mmsis: Vec<Mmsi>,
+    ) -> Result<(), PostgresErrorWrapper> {
         sqlx::query!(
             r#"
 INSERT INTO
@@ -452,9 +376,9 @@ ON CONFLICT (mmsi) DO NOTHING
             &mmsis.into_iter().map(|v| v.0).collect::<Vec<i32>>()
         )
         .execute(&self.pool)
-        .await
-        .map(|_| ())
-        .change_context(PostgresError::Query)
+        .await?;
+
+        Ok(())
     }
 
     pub(crate) async fn add_ais_migration_data(
@@ -462,7 +386,7 @@ ON CONFLICT (mmsi) DO NOTHING
         mmsi: Mmsi,
         positions: Vec<kyogre_core::AisPosition>,
         progress: DateTime<Utc>,
-    ) -> Result<(), PostgresError> {
+    ) -> Result<(), PostgresErrorWrapper> {
         let mut mmsis = Vec::with_capacity(positions.len());
         let mut latitude = Vec::with_capacity(positions.len());
         let mut longitude = Vec::with_capacity(positions.len());
@@ -476,55 +400,18 @@ ON CONFLICT (mmsi) DO NOTHING
 
         for p in positions {
             mmsis.push(p.mmsi.0);
-            latitude.push(
-                BigDecimal::from_f64(p.latitude)
-                    .ok_or(BigDecimalError(p.latitude))
-                    .change_context(PostgresError::DataConversion)?,
-            );
-            longitude.push(
-                BigDecimal::from_f64(p.longitude)
-                    .ok_or(BigDecimalError(p.longitude))
-                    .change_context(PostgresError::DataConversion)?,
-            );
-            course_over_ground.push(
-                p.course_over_ground
-                    .map(|v| {
-                        BigDecimal::from_f64(v)
-                            .ok_or(BigDecimalError(v))
-                            .change_context(PostgresError::DataConversion)
-                    })
-                    .transpose()?,
-            );
-            rate_of_turn.push(
-                p.rate_of_turn
-                    .map(|v| {
-                        BigDecimal::from_f64(v)
-                            .ok_or(BigDecimalError(v))
-                            .change_context(PostgresError::DataConversion)
-                    })
-                    .transpose()?,
-            );
-
+            latitude.push(float_to_decimal(p.latitude)?);
+            longitude.push(float_to_decimal(p.longitude)?);
+            course_over_ground.push(opt_float_to_decimal(p.course_over_ground)?);
+            rate_of_turn.push(opt_float_to_decimal(p.rate_of_turn)?);
             true_heading.push(p.true_heading);
-            speed_over_ground.push(
-                p.speed_over_ground
-                    .map(|v| {
-                        BigDecimal::from_f64(v)
-                            .ok_or(BigDecimalError(v))
-                            .change_context(PostgresError::DataConversion)
-                    })
-                    .transpose()?,
-            );
-            distance_to_shore.push(
-                BigDecimal::from_f64(p.distance_to_shore)
-                    .ok_or(BigDecimalError(p.distance_to_shore))
-                    .change_context(PostgresError::DataConversion)?,
-            );
+            speed_over_ground.push(opt_float_to_decimal(p.speed_over_ground)?);
+            distance_to_shore.push(float_to_decimal(p.distance_to_shore)?);
             navigation_status_id.push(p.navigational_status.map(|v| v as i32));
             timestamp.push(p.msgtime);
         }
 
-        let mut tx = self.begin().await?;
+        let mut tx = self.pool.begin().await?;
 
         sqlx::query!(
             r#"
@@ -541,8 +428,7 @@ SET
             &progress
         )
         .execute(&mut *tx)
-        .await
-        .change_context(PostgresError::Query)?;
+        .await?;
 
         sqlx::query!(
             r#"
@@ -588,12 +474,9 @@ ON CONFLICT (mmsi, TIMESTAMP) DO NOTHING
             &navigation_status_id as _,
         )
         .execute(&mut *tx)
-        .await
-        .change_context(PostgresError::Query)?;
+        .await?;
 
-        tx.commit()
-            .await
-            .change_context(PostgresError::Transaction)?;
+        tx.commit().await?;
 
         Ok(())
     }

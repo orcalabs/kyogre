@@ -1,5 +1,4 @@
-use crate::{error::PostgresError, models::VesselEventDetailed, PostgresAdapter};
-use error_stack::{Result, ResultExt};
+use crate::{error::PostgresErrorWrapper, models::VesselEventDetailed, PostgresAdapter};
 use kyogre_core::{FiskeridirVesselId, QueryRange, VesselEventType};
 use sqlx::postgres::types::PgRange;
 
@@ -8,8 +7,8 @@ impl PostgresAdapter {
         &self,
         vessel_id: FiskeridirVesselId,
         period: &QueryRange,
-    ) -> Result<Vec<VesselEventDetailed>, PostgresError> {
-        sqlx::query_as!(
+    ) -> Result<Vec<VesselEventDetailed>, PostgresErrorWrapper> {
+        let events = sqlx::query_as!(
             VesselEventDetailed,
             r#"
 SELECT
@@ -36,15 +35,17 @@ ORDER BY
             PgRange::from(period),
         )
         .fetch_all(&self.pool)
-        .await
-        .change_context(PostgresError::Query)
+        .await?;
+
+        Ok(events)
     }
+
     pub(crate) async fn ers_por_and_dep_events(
         &self,
         vessel_id: FiskeridirVesselId,
         period: &QueryRange,
-    ) -> Result<Vec<VesselEventDetailed>, PostgresError> {
-        sqlx::query_as!(
+    ) -> Result<Vec<VesselEventDetailed>, PostgresErrorWrapper> {
+        let events = sqlx::query_as!(
             VesselEventDetailed,
             r#"
 SELECT
@@ -104,12 +105,13 @@ ORDER BY
             PgRange::from(period),
         )
         .fetch_all(&self.pool)
-        .await
-        .change_context(PostgresError::Query)
+        .await?;
+
+        Ok(events)
     }
 
-    pub(crate) async fn dangling_vessel_events(&self) -> Result<i64, PostgresError> {
-        sqlx::query!(
+    pub(crate) async fn dangling_vessel_events(&self) -> Result<i64, PostgresErrorWrapper> {
+        let row = sqlx::query!(
             r#"
 SELECT
     COUNT(*) AS "count!"
@@ -131,8 +133,8 @@ WHERE
             "#
         )
         .fetch_one(&self.pool)
-        .await
-        .change_context(PostgresError::Query)
-        .map(|r| r.count)
+        .await?;
+
+        Ok(row.count)
     }
 }

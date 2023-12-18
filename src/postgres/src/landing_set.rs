@@ -1,5 +1,4 @@
-use crate::{error::PostgresError, models::*};
-use error_stack::Result;
+use crate::{error::PostgresErrorWrapper, models::*};
 use fiskeridir_rs::LandingId;
 use std::collections::{HashMap, HashSet};
 
@@ -92,7 +91,7 @@ impl LandingSet {
     pub(crate) fn add_landing(
         &mut self,
         landing: fiskeridir_rs::Landing,
-    ) -> Result<(), PostgresError> {
+    ) -> Result<(), PostgresErrorWrapper> {
         self.add_vessel(&landing);
         self.add_species(&landing);
         self.add_species_fao(&landing);
@@ -153,7 +152,10 @@ impl LandingSet {
         }
     }
 
-    fn add_catch_area(&mut self, landing: &fiskeridir_rs::Landing) -> Result<(), PostgresError> {
+    fn add_catch_area(
+        &mut self,
+        landing: &fiskeridir_rs::Landing,
+    ) -> Result<(), PostgresErrorWrapper> {
         if let Some(catch_area) = NewCatchArea::from_landing(landing)? {
             self.catch_areas
                 .entry(catch_area.id as u32)
@@ -171,7 +173,7 @@ impl LandingSet {
     fn add_main_catch_area(
         &mut self,
         landing: &fiskeridir_rs::Landing,
-    ) -> Result<(), PostgresError> {
+    ) -> Result<(), PostgresErrorWrapper> {
         if let Some(catch_area) = NewCatchMainArea::from_landing(landing)? {
             self.catch_main_areas
                 .entry(catch_area.id as u32)
@@ -180,7 +182,10 @@ impl LandingSet {
         Ok(())
     }
 
-    fn add_landing_impl(&mut self, landing: &fiskeridir_rs::Landing) -> Result<(), PostgresError> {
+    fn add_landing_impl(
+        &mut self,
+        landing: &fiskeridir_rs::Landing,
+    ) -> Result<(), PostgresErrorWrapper> {
         if self.landings.contains_key(&landing.id) {
             Ok(())
         } else {
@@ -190,7 +195,10 @@ impl LandingSet {
         }
     }
 
-    fn add_landing_entry(&mut self, landing: &fiskeridir_rs::Landing) -> Result<(), PostgresError> {
+    fn add_landing_entry(
+        &mut self,
+        landing: &fiskeridir_rs::Landing,
+    ) -> Result<(), PostgresErrorWrapper> {
         self.landing_entries
             .push(NewLandingEntry::try_from(landing)?);
         Ok(())

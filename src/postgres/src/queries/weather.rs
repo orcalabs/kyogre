@@ -1,13 +1,12 @@
 use std::collections::HashSet;
 
 use chrono::{DateTime, NaiveDate, TimeZone, Utc};
-use error_stack::{report, Report, Result, ResultExt};
 use futures::{Stream, TryStreamExt};
 use kyogre_core::{CatchLocationId, HaulWeatherOutput, WeatherQuery};
 use unnest_insert::UnnestInsert;
 
 use crate::{
-    error::PostgresError,
+    error::PostgresErrorWrapper,
     models::{
         CatchLocationWeather, HaulWeather, NewCLWeatherDailyDirty, NewWeather, Weather,
         WeatherLocation,
@@ -20,8 +19,8 @@ use super::opt_float_to_decimal;
 impl PostgresAdapter {
     pub(crate) async fn catch_locations_with_weather_impl(
         &self,
-    ) -> Result<Vec<CatchLocationId>, PostgresError> {
-        sqlx::query!(
+    ) -> Result<Vec<CatchLocationId>, PostgresErrorWrapper> {
+        let locs = sqlx::query!(
             r#"
 SELECT
     catch_location_id
@@ -32,18 +31,19 @@ WHERE
             "#
         )
         .fetch_all(&self.pool)
-        .await
-        .change_context(PostgresError::Query)?
+        .await?
         .into_iter()
         .map(|v| CatchLocationId::try_from(v.catch_location_id))
-        .collect::<Result<Vec<CatchLocationId>, _>>()
-        .change_context(PostgresError::DataConversion)
+        .collect::<Result<Vec<CatchLocationId>, _>>()?;
+
+        Ok(locs)
     }
+
     pub(crate) async fn catch_locations_weather_dates_impl(
         &self,
         dates: Vec<NaiveDate>,
-    ) -> Result<Vec<CatchLocationWeather>, PostgresError> {
-        sqlx::query_as!(
+    ) -> Result<Vec<CatchLocationWeather>, PostgresErrorWrapper> {
+        let weather = sqlx::query_as!(
             CatchLocationWeather,
             r#"
 SELECT
@@ -64,19 +64,21 @@ WHERE
             &dates
         )
         .fetch_all(&self.pool)
-        .await
-        .change_context(PostgresError::Query)
+        .await?;
+
+        Ok(weather)
     }
+
     pub(crate) async fn catch_locations_weather_impl(
         &self,
         keys: Vec<(CatchLocationId, NaiveDate)>,
-    ) -> Result<Vec<CatchLocationWeather>, PostgresError> {
+    ) -> Result<Vec<CatchLocationWeather>, PostgresErrorWrapper> {
         let catch_location_daily_weather_ids: Vec<String> = keys
             .into_iter()
             .map(|v| format!("{}-{}", v.0.as_ref(), v.1))
             .collect();
 
-        sqlx::query_as!(
+        let weather = sqlx::query_as!(
             CatchLocationWeather,
             r#"
 SELECT
@@ -97,18 +99,20 @@ WHERE
             &catch_location_daily_weather_ids
         )
         .fetch_all(&self.pool)
-        .await
-        .change_context(PostgresError::Query)
+        .await?;
+
+        Ok(weather)
     }
+
     pub(crate) async fn update_catch_locations_weather_impl(
         &self,
         catch_location_ids: &[CatchLocationId],
         date: NaiveDate,
-    ) -> Result<(), PostgresError> {
+    ) -> Result<(), PostgresErrorWrapper> {
         let start = Utc.from_utc_datetime(&date.and_hms_opt(0, 0, 0).unwrap());
         let end = Utc.from_utc_datetime(&date.and_hms_opt(23, 59, 59).unwrap());
 
-        let mut tx = self.begin().await?;
+        let mut tx = self.pool.begin().await?;
 
         for c in catch_location_ids {
             sqlx::query_as!(
@@ -171,8 +175,7 @@ SET
                 end,
             )
             .execute(&mut *tx)
-            .await
-            .change_context(PostgresError::Query)?;
+            .await?;
         }
 
         sqlx::query!(
@@ -184,12 +187,14 @@ WHERE
             date
         )
         .execute(&mut *tx)
-        .await
-        .change_context(PostgresError::Query)?;
+        .await?;
 
-        tx.commit().await.change_context(PostgresError::Transaction)
+        tx.commit().await?;
+
+        Ok(())
     }
-    pub(crate) async fn dirty_dates_impl(&self) -> Result<Vec<NaiveDate>, PostgresError> {
+
+    pub(crate) async fn dirty_dates_impl(&self) -> Result<Vec<NaiveDate>, PostgresErrorWrapper> {
         Ok(sqlx::query!(
             r#"
 SELECT
@@ -199,8 +204,7 @@ FROM
             "#
         )
         .fetch_all(&self.pool)
-        .await
-        .change_context(PostgresError::Query)?
+        .await?
         .into_iter()
         .map(|v| v.date)
         .collect())
@@ -209,7 +213,8 @@ FROM
     pub(crate) fn weather_impl(
         &self,
         query: WeatherQuery,
-    ) -> Result<impl Stream<Item = Result<Weather, PostgresError>> + '_, PostgresError> {
+    ) -> Result<impl Stream<Item = Result<Weather, PostgresErrorWrapper>> + '_, PostgresErrorWrapper>
+    {
         let args = WeatherArgs::try_from(query)?;
 
         let stream = sqlx::query_as!(
@@ -253,7 +258,7 @@ GROUP BY
             args.weather_location_ids.as_deref(),
         )
         .fetch(&self.pool)
-        .map_err(|e| report!(e).change_context(PostgresError::Query));
+        .map_err(From::from);
 
         Ok(stream)
     }
@@ -261,10 +266,10 @@ GROUP BY
     pub(crate) async fn haul_weather_impl(
         &self,
         query: WeatherQuery,
-    ) -> Result<Option<HaulWeather>, PostgresError> {
+    ) -> Result<Option<HaulWeather>, PostgresErrorWrapper> {
         let args = WeatherArgs::try_from(query)?;
 
-        sqlx::query_as!(
+        let weather = sqlx::query_as!(
             HaulWeather,
             r#"
 SELECT
@@ -289,14 +294,15 @@ WHERE
             args.weather_location_ids.as_deref(),
         )
         .fetch_optional(&self.pool)
-        .await
-        .change_context(PostgresError::Query)
+        .await?;
+
+        Ok(weather)
     }
 
     pub(crate) async fn add_haul_weather_impl(
         &self,
         values: Vec<HaulWeatherOutput>,
-    ) -> Result<(), PostgresError> {
+    ) -> Result<(), PostgresErrorWrapper> {
         let len = values.len();
         let mut haul_id = Vec::with_capacity(len);
         let mut wind_speed_10m = Vec::with_capacity(len);
@@ -317,34 +323,13 @@ WHERE
         for v in values {
             haul_id.push(v.haul_id.0);
             if let Some(w) = v.weather {
-                wind_speed_10m.push(
-                    opt_float_to_decimal(w.wind_speed_10m)
-                        .change_context(PostgresError::DataConversion)?,
-                );
-                wind_direction_10m.push(
-                    opt_float_to_decimal(w.wind_direction_10m)
-                        .change_context(PostgresError::DataConversion)?,
-                );
-                air_temperature_2m.push(
-                    opt_float_to_decimal(w.air_temperature_2m)
-                        .change_context(PostgresError::DataConversion)?,
-                );
-                relative_humidity_2m.push(
-                    opt_float_to_decimal(w.relative_humidity_2m)
-                        .change_context(PostgresError::DataConversion)?,
-                );
-                air_pressure_at_sea_level.push(
-                    opt_float_to_decimal(w.air_pressure_at_sea_level)
-                        .change_context(PostgresError::DataConversion)?,
-                );
-                precipitation_amount.push(
-                    opt_float_to_decimal(w.precipitation_amount)
-                        .change_context(PostgresError::DataConversion)?,
-                );
-                cloud_area_fraction.push(
-                    opt_float_to_decimal(w.cloud_area_fraction)
-                        .change_context(PostgresError::DataConversion)?,
-                );
+                wind_speed_10m.push(opt_float_to_decimal(w.wind_speed_10m)?);
+                wind_direction_10m.push(opt_float_to_decimal(w.wind_direction_10m)?);
+                air_temperature_2m.push(opt_float_to_decimal(w.air_temperature_2m)?);
+                relative_humidity_2m.push(opt_float_to_decimal(w.relative_humidity_2m)?);
+                air_pressure_at_sea_level.push(opt_float_to_decimal(w.air_pressure_at_sea_level)?);
+                precipitation_amount.push(opt_float_to_decimal(w.precipitation_amount)?);
+                cloud_area_fraction.push(opt_float_to_decimal(w.cloud_area_fraction)?);
             } else {
                 wind_speed_10m.push(None);
                 wind_direction_10m.push(None);
@@ -355,30 +340,12 @@ WHERE
                 cloud_area_fraction.push(None);
             }
             if let Some(o) = v.ocean_climate {
-                water_speed.push(
-                    opt_float_to_decimal(o.water_speed)
-                        .change_context(PostgresError::DataConversion)?,
-                );
-                water_direction.push(
-                    opt_float_to_decimal(o.water_direction)
-                        .change_context(PostgresError::DataConversion)?,
-                );
-                salinity.push(
-                    opt_float_to_decimal(o.salinity)
-                        .change_context(PostgresError::DataConversion)?,
-                );
-                water_temperature.push(
-                    opt_float_to_decimal(o.water_temperature)
-                        .change_context(PostgresError::DataConversion)?,
-                );
-                ocean_climate_depth.push(
-                    opt_float_to_decimal(o.ocean_climate_depth)
-                        .change_context(PostgresError::DataConversion)?,
-                );
-                sea_floor_depth.push(
-                    opt_float_to_decimal(o.sea_floor_depth)
-                        .change_context(PostgresError::DataConversion)?,
-                );
+                water_speed.push(opt_float_to_decimal(o.water_speed)?);
+                water_direction.push(opt_float_to_decimal(o.water_direction)?);
+                salinity.push(opt_float_to_decimal(o.salinity)?);
+                water_temperature.push(opt_float_to_decimal(o.water_temperature)?);
+                ocean_climate_depth.push(opt_float_to_decimal(o.ocean_climate_depth)?);
+                sea_floor_depth.push(opt_float_to_decimal(o.sea_floor_depth)?);
             } else {
                 water_speed.push(None);
                 water_direction.push(None);
@@ -462,15 +429,15 @@ WHERE
             &haul_weather_status_id,
         )
         .fetch_optional(&self.pool)
-        .await
-        .change_context(PostgresError::Query)
-        .map(|_| ())
+        .await?;
+
+        Ok(())
     }
 
     pub(crate) async fn add_weather_impl(
         &self,
         weather: Vec<kyogre_core::NewWeather>,
-    ) -> Result<(), PostgresError> {
+    ) -> Result<(), PostgresErrorWrapper> {
         let values = weather
             .into_iter()
             .map(NewWeather::try_from)
@@ -484,23 +451,21 @@ WHERE
             .map(|v| NewCLWeatherDailyDirty { date: v })
             .collect();
 
-        let mut tx = self.begin().await?;
+        let mut tx = self.pool.begin().await?;
 
-        NewCLWeatherDailyDirty::unnest_insert(average_reset, &mut *tx)
-            .await
-            .change_context(PostgresError::Query)?;
+        NewCLWeatherDailyDirty::unnest_insert(average_reset, &mut *tx).await?;
 
-        NewWeather::unnest_insert(values, &mut *tx)
-            .await
-            .change_context(PostgresError::Query)?;
+        NewWeather::unnest_insert(values, &mut *tx).await?;
 
-        tx.commit().await.change_context(PostgresError::Transaction)
+        tx.commit().await?;
+
+        Ok(())
     }
 
     pub(crate) async fn latest_weather_timestamp_impl(
         &self,
-    ) -> Result<Option<DateTime<Utc>>, PostgresError> {
-        sqlx::query!(
+    ) -> Result<Option<DateTime<Utc>>, PostgresErrorWrapper> {
+        let row = sqlx::query!(
             r#"
 SELECT
     MAX("timestamp") AS ts
@@ -509,14 +474,14 @@ FROM
             "#
         )
         .fetch_one(&self.pool)
-        .await
-        .change_context(PostgresError::Query)
-        .map(|r| r.ts)
+        .await?;
+
+        Ok(row.ts)
     }
 
     pub(crate) fn weather_locations_impl(
         &self,
-    ) -> impl Stream<Item = Result<WeatherLocation, PostgresError>> + '_ {
+    ) -> impl Stream<Item = Result<WeatherLocation, PostgresErrorWrapper>> + '_ {
         sqlx::query_as!(
             WeatherLocation,
             r#"
@@ -528,7 +493,7 @@ FROM
             "#,
         )
         .fetch(&self.pool)
-        .map_err(|e| report!(e).change_context(PostgresError::Query))
+        .map_err(From::from)
     }
 }
 
@@ -539,7 +504,7 @@ struct WeatherArgs {
 }
 
 impl TryFrom<WeatherQuery> for WeatherArgs {
-    type Error = Report<PostgresError>;
+    type Error = PostgresErrorWrapper;
 
     fn try_from(v: WeatherQuery) -> std::result::Result<Self, Self::Error> {
         Ok(Self {

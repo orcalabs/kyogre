@@ -113,7 +113,7 @@ pub trait Indexable {
 
         // Deleting too many items causes the payload to be too large,
         // so split into multiple requests
-        for ids in to_delete.chunks(100_000) {
+        for ids in to_delete.chunks(50_000) {
             let task = index
                 .delete_documents(ids)
                 .await

@@ -1,0 +1,48 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO\n    fishing_facilities AS f (\n        tool_id,\n        barentswatch_vessel_id,\n        fiskeridir_vessel_id,\n        vessel_name,\n        call_sign,\n        mmsi,\n        imo,\n        reg_num,\n        sbr_reg_num,\n        contact_phone,\n        contact_email,\n        tool_type,\n        tool_type_name,\n        tool_color,\n        tool_count,\n        setup_timestamp,\n        setup_processed_timestamp,\n        removed_timestamp,\n        removed_processed_timestamp,\n        last_changed,\n        source,\n        \"comment\",\n        geometry_wkt,\n        api_source\n    )\nSELECT\n    u.tool_id,\n    u.barentswatch_vessel_id,\n    v.fiskeridir_vessel_id,\n    u.vessel_name,\n    u.call_sign,\n    u.mmsi,\n    u.imo,\n    u.reg_num,\n    u.sbr_reg_num,\n    u.contact_phone,\n    u.contact_email,\n    u.tool_type,\n    u.tool_type_name,\n    u.tool_color,\n    u.tool_count,\n    u.setup_timestamp,\n    u.setup_processed_timestamp,\n    u.removed_timestamp,\n    u.removed_processed_timestamp,\n    u.last_changed,\n    u.source,\n    u.comment,\n    u.geometry_wkt,\n    u.api_source\nFROM\n    UNNEST(\n        $1::UUID [],\n        $2::UUID [],\n        $3::TEXT [],\n        $4::TEXT [],\n        $5::INT[],\n        $6::BIGINT[],\n        $7::TEXT [],\n        $8::TEXT [],\n        $9::TEXT [],\n        $10::TEXT [],\n        $11::INT[],\n        $12::TEXT [],\n        $13::TEXT [],\n        $14::INT[],\n        $15::TIMESTAMPTZ[],\n        $16::TIMESTAMPTZ[],\n        $17::TIMESTAMPTZ[],\n        $18::TIMESTAMPTZ[],\n        $19::TIMESTAMPTZ[],\n        $20::TEXT [],\n        $21::TEXT [],\n        $22::GEOMETRY[],\n        $23::INT[]\n    ) u (\n        tool_id,\n        barentswatch_vessel_id,\n        vessel_name,\n        call_sign,\n        mmsi,\n        imo,\n        reg_num,\n        sbr_reg_num,\n        contact_phone,\n        contact_email,\n        tool_type,\n        tool_type_name,\n        tool_color,\n        tool_count,\n        setup_timestamp,\n        setup_processed_timestamp,\n        removed_timestamp,\n        removed_processed_timestamp,\n        last_changed,\n        source,\n        \"comment\",\n        geometry_wkt,\n        api_source\n    )\n    LEFT JOIN (\n        SELECT\n            call_sign,\n            MIN(fiskeridir_vessel_id) AS fiskeridir_vessel_id\n        FROM\n            fiskeridir_vessels\n        GROUP BY\n            call_sign\n        HAVING\n            COUNT(fiskeridir_vessel_id) = 1\n    ) v ON v.call_sign = u.call_sign\nON CONFLICT (tool_id) DO\nUPDATE\nSET\n    barentswatch_vessel_id = COALESCE(\n        EXCLUDED.barentswatch_vessel_id,\n        f.barentswatch_vessel_id\n    ),\n    fiskeridir_vessel_id = COALESCE(\n        EXCLUDED.fiskeridir_vessel_id,\n        f.fiskeridir_vessel_id\n    ),\n    vessel_name = COALESCE(EXCLUDED.vessel_name, f.vessel_name),\n    call_sign = COALESCE(EXCLUDED.call_sign, f.call_sign),\n    mmsi = COALESCE(EXCLUDED.mmsi, f.mmsi),\n    imo = COALESCE(EXCLUDED.imo, f.imo),\n    reg_num = COALESCE(EXCLUDED.reg_num, f.reg_num),\n    sbr_reg_num = COALESCE(EXCLUDED.sbr_reg_num, f.sbr_reg_num),\n    contact_phone = COALESCE(EXCLUDED.contact_phone, f.contact_phone),\n    contact_email = COALESCE(EXCLUDED.contact_email, f.contact_email),\n    tool_type = EXCLUDED.tool_type,\n    tool_type_name = COALESCE(EXCLUDED.tool_type_name, f.tool_type_name),\n    tool_color = COALESCE(EXCLUDED.tool_color, f.tool_color),\n    tool_count = COALESCE(EXCLUDED.tool_count, f.tool_count),\n    setup_timestamp = EXCLUDED.setup_timestamp,\n    setup_processed_timestamp = COALESCE(\n        EXCLUDED.setup_processed_timestamp,\n        f.setup_processed_timestamp\n    ),\n    removed_timestamp = COALESCE(EXCLUDED.removed_timestamp, f.removed_timestamp),\n    removed_processed_timestamp = COALESCE(\n        EXCLUDED.removed_processed_timestamp,\n        f.removed_processed_timestamp\n    ),\n    last_changed = EXCLUDED.last_changed,\n    source = COALESCE(EXCLUDED.source, f.source),\n    \"comment\" = COALESCE(EXCLUDED.comment, f.comment),\n    geometry_wkt = EXCLUDED.geometry_wkt,\n    api_source = EXCLUDED.api_source\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "UuidArray",
+        "UuidArray",
+        "TextArray",
+        "TextArray",
+        "Int4Array",
+        "Int8Array",
+        "TextArray",
+        "TextArray",
+        "TextArray",
+        "TextArray",
+        "Int4Array",
+        "TextArray",
+        "TextArray",
+        "Int4Array",
+        "TimestamptzArray",
+        "TimestamptzArray",
+        "TimestamptzArray",
+        "TimestamptzArray",
+        "TimestamptzArray",
+        "TextArray",
+        "TextArray",
+        {
+          "Custom": {
+            "name": "_geometry",
+            "kind": {
+              "Array": {
+                "Custom": {
+                  "name": "geometry",
+                  "kind": "Simple"
+                }
+              }
+            }
+          }
+        },
+        "Int4Array"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "c9ec64773b4823554b222d0f6eca1587f3cc28e2e6987c3ed3bb29724141bb1a"
+}

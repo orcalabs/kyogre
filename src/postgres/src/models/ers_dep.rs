@@ -1,12 +1,11 @@
 use bigdecimal::BigDecimal;
 use chrono::{DateTime, NaiveDate, Utc};
-use error_stack::{Report, ResultExt};
 use fiskeridir_rs::FiskdirVesselNationalityGroup;
 use kyogre_core::FiskeridirVesselId;
 use unnest_insert::UnnestInsert;
 
 use crate::{
-    error::PostgresError,
+    error::PostgresErrorWrapper,
     queries::{enum_to_i32, float_to_decimal, opt_float_to_decimal, timestamp_from_date_and_time},
 };
 
@@ -86,7 +85,7 @@ pub struct Departure {
 }
 
 impl TryFrom<fiskeridir_rs::ErsDep> for NewErsDep {
-    type Error = Report<PostgresError>;
+    type Error = PostgresErrorWrapper;
 
     fn try_from(v: fiskeridir_rs::ErsDep) -> Result<Self, Self::Error> {
         Ok(Self {
@@ -103,11 +102,9 @@ impl TryFrom<fiskeridir_rs::ErsDep> for NewErsDep {
             ers_activity_id: v.activity_code,
             departure_timestamp: timestamp_from_date_and_time(v.departure_date, v.departure_time),
             fishing_timestamp: timestamp_from_date_and_time(v.fishing_date, v.fishing_time),
-            start_latitude: float_to_decimal(v.start_latitude)
-                .change_context(PostgresError::DataConversion)?,
+            start_latitude: float_to_decimal(v.start_latitude)?,
             start_latitude_sggdd: v.start_latitude_sggdd.into_inner(),
-            start_longitude: float_to_decimal(v.start_longitude)
-                .change_context(PostgresError::DataConversion)?,
+            start_longitude: float_to_decimal(v.start_longitude)?,
             start_longitude_sggdd: v.start_longitude_sggdd.into_inner(),
             target_species_fao_id: v.target_species_fao_code.into_inner(),
             target_species_fiskeridir_id: v.target_species_fdir_code.map(|v| v as i32),
@@ -122,11 +119,9 @@ impl TryFrom<fiskeridir_rs::ErsDep> for NewErsDep {
             vessel_gross_tonnage_other: v.vessel_info.gross_tonnage_other.map(|v| v as i32),
             vessel_county: v.vessel_info.vessel_county,
             vessel_county_code: v.vessel_info.vessel_county_code.map(|v| v as i32),
-            vessel_greatest_length: opt_float_to_decimal(v.vessel_info.vessel_greatest_length)
-                .change_context(PostgresError::DataConversion)?,
+            vessel_greatest_length: opt_float_to_decimal(v.vessel_info.vessel_greatest_length)?,
             vessel_identification: v.vessel_info.vessel_identification.into_inner(),
-            vessel_length: float_to_decimal(v.vessel_info.vessel_length)
-                .change_context(PostgresError::DataConversion)?,
+            vessel_length: float_to_decimal(v.vessel_info.vessel_length)?,
             vessel_length_group: v.vessel_info.vessel_length_group,
             vessel_length_group_code: v.vessel_info.vessel_length_group_code.map(|v| v as i32),
             vessel_material_code: v.vessel_info.vessel_material_code,
@@ -140,8 +135,7 @@ impl TryFrom<fiskeridir_rs::ErsDep> for NewErsDep {
             vessel_registration_id: v.vessel_info.vessel_registration_id,
             vessel_registration_id_ers: v.vessel_info.vessel_registration_id_ers,
             vessel_valid_until: v.vessel_info.vessel_valid_until,
-            vessel_width: opt_float_to_decimal(v.vessel_info.vessel_width)
-                .change_context(PostgresError::DataConversion)?,
+            vessel_width: opt_float_to_decimal(v.vessel_info.vessel_width)?,
             vessel_event_id: None,
         })
     }

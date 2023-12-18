@@ -1,19 +1,18 @@
-use error_stack::{Result, ResultExt};
 use kyogre_core::WeatherLocationOverlap;
 
-use crate::{error::PostgresError, models::CatchLocation, PostgresAdapter};
+use crate::{error::PostgresErrorWrapper, models::CatchLocation, PostgresAdapter};
 
 impl PostgresAdapter {
     pub(crate) async fn catch_locations_impl(
         &self,
         overlap: WeatherLocationOverlap,
-    ) -> Result<Vec<CatchLocation>, PostgresError> {
+    ) -> Result<Vec<CatchLocation>, PostgresErrorWrapper> {
         let overlap = match overlap {
             WeatherLocationOverlap::OnlyOverlaps => false,
             WeatherLocationOverlap::All => true,
         };
 
-        sqlx::query_as!(
+        let locs = sqlx::query_as!(
             CatchLocation,
             r#"
 SELECT
@@ -25,12 +24,14 @@ SELECT
 FROM
     catch_locations
 WHERE
-    CARDINALITY(weather_location_ids) > 0 OR $1
+    CARDINALITY(weather_location_ids) > 0
+    OR $1
             "#,
             overlap
         )
         .fetch_all(&self.pool)
-        .await
-        .change_context(PostgresError::Query)
+        .await?;
+
+        Ok(locs)
     }
 }

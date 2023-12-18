@@ -1,11 +1,10 @@
 use bigdecimal::BigDecimal;
 use chrono::{DateTime, Utc};
-use error_stack::{Report, ResultExt};
 use kyogre_core::WeatherLocationId;
 use unnest_insert::UnnestInsert;
 
 use crate::{
-    error::PostgresError,
+    error::PostgresErrorWrapper,
     queries::{decimal_to_float, float_to_decimal, opt_decimal_to_float, opt_float_to_decimal},
 };
 
@@ -57,83 +56,59 @@ pub struct HaulOceanClimate {
 }
 
 impl TryFrom<kyogre_core::NewOceanClimate> for NewOceanClimate {
-    type Error = Report<PostgresError>;
+    type Error = PostgresErrorWrapper;
 
     fn try_from(v: kyogre_core::NewOceanClimate) -> Result<Self, Self::Error> {
         Ok(Self {
             timestamp: v.timestamp,
             depth: v.depth,
-            latitude: float_to_decimal(v.latitude).change_context(PostgresError::DataConversion)?,
-            longitude: float_to_decimal(v.longitude)
-                .change_context(PostgresError::DataConversion)?,
-            water_speed: opt_float_to_decimal(v.water_speed)
-                .change_context(PostgresError::DataConversion)?,
-            water_direction: opt_float_to_decimal(v.water_direction)
-                .change_context(PostgresError::DataConversion)?,
-            upward_sea_velocity: opt_float_to_decimal(v.upward_sea_velocity)
-                .change_context(PostgresError::DataConversion)?,
-            wind_speed: opt_float_to_decimal(v.wind_speed)
-                .change_context(PostgresError::DataConversion)?,
-            wind_direction: opt_float_to_decimal(v.wind_direction)
-                .change_context(PostgresError::DataConversion)?,
-            salinity: opt_float_to_decimal(v.salinity)
-                .change_context(PostgresError::DataConversion)?,
-            temperature: opt_float_to_decimal(v.temperature)
-                .change_context(PostgresError::DataConversion)?,
-            sea_floor_depth: float_to_decimal(v.sea_floor_depth)
-                .change_context(PostgresError::DataConversion)?,
+            latitude: float_to_decimal(v.latitude)?,
+            longitude: float_to_decimal(v.longitude)?,
+            water_speed: opt_float_to_decimal(v.water_speed)?,
+            water_direction: opt_float_to_decimal(v.water_direction)?,
+            upward_sea_velocity: opt_float_to_decimal(v.upward_sea_velocity)?,
+            wind_speed: opt_float_to_decimal(v.wind_speed)?,
+            wind_direction: opt_float_to_decimal(v.wind_direction)?,
+            salinity: opt_float_to_decimal(v.salinity)?,
+            temperature: opt_float_to_decimal(v.temperature)?,
+            sea_floor_depth: float_to_decimal(v.sea_floor_depth)?,
         })
     }
 }
 
 impl TryFrom<OceanClimate> for kyogre_core::OceanClimate {
-    type Error = Report<PostgresError>;
+    type Error = PostgresErrorWrapper;
 
     fn try_from(v: OceanClimate) -> Result<Self, Self::Error> {
         Ok(Self {
             timestamp: v.timestamp,
-            depth: decimal_to_float(v.depth).change_context(PostgresError::DataConversion)?,
-            latitude: decimal_to_float(v.latitude).change_context(PostgresError::DataConversion)?,
-            longitude: decimal_to_float(v.longitude)
-                .change_context(PostgresError::DataConversion)?,
-            water_speed: opt_decimal_to_float(v.water_speed)
-                .change_context(PostgresError::DataConversion)?,
-            water_direction: opt_decimal_to_float(v.water_direction)
-                .change_context(PostgresError::DataConversion)?,
-            upward_sea_velocity: opt_decimal_to_float(v.upward_sea_velocity)
-                .change_context(PostgresError::DataConversion)?,
-            wind_speed: opt_decimal_to_float(v.wind_speed)
-                .change_context(PostgresError::DataConversion)?,
-            wind_direction: opt_decimal_to_float(v.wind_direction)
-                .change_context(PostgresError::DataConversion)?,
-            salinity: opt_decimal_to_float(v.salinity)
-                .change_context(PostgresError::DataConversion)?,
-            temperature: opt_decimal_to_float(v.temperature)
-                .change_context(PostgresError::DataConversion)?,
-            sea_floor_depth: decimal_to_float(v.sea_floor_depth)
-                .change_context(PostgresError::DataConversion)?,
+            depth: decimal_to_float(v.depth)?,
+            latitude: decimal_to_float(v.latitude)?,
+            longitude: decimal_to_float(v.longitude)?,
+            water_speed: opt_decimal_to_float(v.water_speed)?,
+            water_direction: opt_decimal_to_float(v.water_direction)?,
+            upward_sea_velocity: opt_decimal_to_float(v.upward_sea_velocity)?,
+            wind_speed: opt_decimal_to_float(v.wind_speed)?,
+            wind_direction: opt_decimal_to_float(v.wind_direction)?,
+            salinity: opt_decimal_to_float(v.salinity)?,
+            temperature: opt_decimal_to_float(v.temperature)?,
+            sea_floor_depth: decimal_to_float(v.sea_floor_depth)?,
             weather_location_id: WeatherLocationId(v.weather_location_id),
         })
     }
 }
 
 impl TryFrom<HaulOceanClimate> for kyogre_core::HaulOceanClimate {
-    type Error = Report<PostgresError>;
+    type Error = PostgresErrorWrapper;
 
     fn try_from(v: HaulOceanClimate) -> Result<Self, Self::Error> {
         Ok(Self {
-            water_speed: opt_decimal_to_float(v.water_speed)
-                .change_context(PostgresError::DataConversion)?,
-            water_direction: opt_decimal_to_float(v.water_direction)
-                .change_context(PostgresError::DataConversion)?,
-            salinity: opt_decimal_to_float(v.salinity)
-                .change_context(PostgresError::DataConversion)?,
-            water_temperature: opt_decimal_to_float(v.water_temperature)
-                .change_context(PostgresError::DataConversion)?,
-            ocean_climate_depth: opt_decimal_to_float(v.ocean_climate_depth)
-                .change_context(PostgresError::DataConversion)?,
-            sea_floor_depth: opt_decimal_to_float(v.sea_floor_depth)
-                .change_context(PostgresError::DataConversion)?,
+            water_speed: opt_decimal_to_float(v.water_speed)?,
+            water_direction: opt_decimal_to_float(v.water_direction)?,
+            salinity: opt_decimal_to_float(v.salinity)?,
+            water_temperature: opt_decimal_to_float(v.water_temperature)?,
+            ocean_climate_depth: opt_decimal_to_float(v.ocean_climate_depth)?,
+            sea_floor_depth: opt_decimal_to_float(v.sea_floor_depth)?,
         })
     }
 }

@@ -1,5 +1,8 @@
-use crate::{error::PostgresError, models::*};
-use error_stack::{report, Result, ResultExt};
+use crate::{
+    error::{PostgresError, PostgresErrorWrapper},
+    models::*,
+};
+use error_stack::{report, ResultExt};
 use std::collections::{hash_map::Entry, HashMap};
 
 #[derive(Default, Debug, Clone)]
@@ -81,7 +84,7 @@ impl ErsDcaSet {
 
     pub(crate) fn new<T: Iterator<Item = fiskeridir_rs::ErsDca>>(
         ers_dca: T,
-    ) -> Result<ErsDcaSet, PostgresError> {
+    ) -> Result<ErsDcaSet, PostgresErrorWrapper> {
         let mut set = ErsDcaSet::default();
 
         for e in ers_dca {
@@ -125,7 +128,7 @@ impl ErsDcaSet {
         }
     }
 
-    fn add_county(&mut self, ers_dca: &fiskeridir_rs::ErsDca) -> Result<(), PostgresError> {
+    fn add_county(&mut self, ers_dca: &fiskeridir_rs::ErsDca) -> Result<(), PostgresErrorWrapper> {
         if let Some(code) = ers_dca.vessel_info.vessel_county_code {
             let county = ers_dca.vessel_info.vessel_county.clone().ok_or_else(|| {
                 report!(PostgresError::DataConversion)
@@ -154,7 +157,7 @@ impl ErsDcaSet {
     fn add_herring_population(
         &mut self,
         ers_dca: &fiskeridir_rs::ErsDca,
-    ) -> Result<(), PostgresError> {
+    ) -> Result<(), PostgresErrorWrapper> {
         if let Some(ref code) = ers_dca.herring_population_code {
             if !self.herring_populations.contains_key(code) {
                 let herring_population = ers_dca.herring_population.clone().ok_or_else(|| {
@@ -189,7 +192,7 @@ impl ErsDcaSet {
         }
     }
 
-    fn add_vessel(&mut self, ers_dca: &fiskeridir_rs::ErsDca) -> Result<(), PostgresError> {
+    fn add_vessel(&mut self, ers_dca: &fiskeridir_rs::ErsDca) -> Result<(), PostgresErrorWrapper> {
         if let Some(vessel_id) = ers_dca.vessel_info.vessel_id {
             if let Entry::Vacant(e) = self.vessels.entry(vessel_id as i64) {
                 let vessel = fiskeridir_rs::Vessel::try_from(ers_dca.vessel_info.clone())
@@ -200,7 +203,7 @@ impl ErsDcaSet {
         Ok(())
     }
 
-    fn add_port(&mut self, ers_dca: &fiskeridir_rs::ErsDca) -> Result<(), PostgresError> {
+    fn add_port(&mut self, ers_dca: &fiskeridir_rs::ErsDca) -> Result<(), PostgresErrorWrapper> {
         if let Some(ref code) = ers_dca.port.code {
             if !self.ports.contains_key(code) {
                 let port = NewPort::new(code.clone(), ers_dca.port.name.clone())?;
@@ -303,12 +306,15 @@ impl ErsDcaSet {
         self.add_catch_area_impl(ers_dca.location_end_code);
     }
 
-    fn add_ers_dca_body(&mut self, ers_dca: &fiskeridir_rs::ErsDca) -> Result<(), PostgresError> {
+    fn add_ers_dca_body(
+        &mut self,
+        ers_dca: &fiskeridir_rs::ErsDca,
+    ) -> Result<(), PostgresErrorWrapper> {
         self.ers_dca_bodies.push(ers_dca.try_into()?);
         Ok(())
     }
 
-    fn add_ers_dca(&mut self, ers_dca: &fiskeridir_rs::ErsDca) -> Result<(), PostgresError> {
+    fn add_ers_dca(&mut self, ers_dca: &fiskeridir_rs::ErsDca) -> Result<(), PostgresErrorWrapper> {
         let new = NewErsDca::try_from(ers_dca.clone())?;
         match self.ers_dca.entry(new.message_id) {
             Entry::Occupied(mut e) => {
