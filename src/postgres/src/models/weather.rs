@@ -77,14 +77,16 @@ impl TryFrom<kyogre_core::NewWeather> for NewWeather {
             latitude: float_to_decimal(v.latitude)?,
             longitude: float_to_decimal(v.longitude)?,
             altitude: float_to_decimal(v.altitude)?,
-            wind_speed_10m: opt_float_to_decimal(v.wind_speed_10m)?,
+            wind_speed_10m: opt_float_to_decimal(v.wind_speed_10m.into_inner())?,
             wind_direction_10m: opt_float_to_decimal(v.wind_direction_10m)?,
-            air_temperature_2m: opt_float_to_decimal(v.air_temperature_2m)?,
-            relative_humidity_2m: opt_float_to_decimal(v.relative_humidity_2m)?,
-            air_pressure_at_sea_level: opt_float_to_decimal(v.air_pressure_at_sea_level)?,
-            precipitation_amount: opt_float_to_decimal(v.precipitation_amount)?,
+            air_temperature_2m: opt_float_to_decimal(v.air_temperature_2m.into_inner())?,
+            relative_humidity_2m: opt_float_to_decimal(v.relative_humidity_2m.into_inner())?,
+            air_pressure_at_sea_level: opt_float_to_decimal(
+                v.air_pressure_at_sea_level.into_inner(),
+            )?,
+            precipitation_amount: opt_float_to_decimal(v.precipitation_amount.into_inner())?,
             land_area_fraction: float_to_decimal(v.land_area_fraction)?,
-            cloud_area_fraction: opt_float_to_decimal(v.cloud_area_fraction)?,
+            cloud_area_fraction: opt_float_to_decimal(v.cloud_area_fraction.into_inner())?,
         })
     }
 }
