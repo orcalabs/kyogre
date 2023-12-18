@@ -1,12 +1,12 @@
 use bigdecimal::BigDecimal;
-use error_stack::{report, Report, Result, ResultExt};
+use error_stack::report;
 use jurisdiction::Jurisdiction;
 use serde::Deserialize;
 use std::str::FromStr;
 use unnest_insert::UnnestInsert;
 
 use crate::{
-    error::{PortCoordinateError, PostgresError},
+    error::{PortCoordinateError, PostgresError, PostgresErrorWrapper},
     queries::decimal_to_float,
 };
 
@@ -57,7 +57,7 @@ pub struct TripDockPoints {
 }
 
 impl NewPort {
-    pub fn new(id: String, name: Option<String>) -> Result<Self, PostgresError> {
+    pub fn new(id: String, name: Option<String>) -> Result<Self, PostgresErrorWrapper> {
         let jurisdiction = Jurisdiction::from_str(&id[0..2])
             .map_err(|e| report!(PostgresError::DataConversion).attach_printable(format!("{e}")))?;
 
@@ -70,18 +70,18 @@ impl NewPort {
 }
 
 impl TryFrom<TripDockPoints> for kyogre_core::TripDockPoints {
-    type Error = Report<PostgresError>;
+    type Error = PostgresErrorWrapper;
 
     fn try_from(value: TripDockPoints) -> std::result::Result<Self, Self::Error> {
         let start: Vec<kyogre_core::PortDockPoint> = value
             .start
-            .map(|v| serde_json::from_str(&v).change_context(PostgresError::DataConversion))
+            .map(|v| serde_json::from_str(&v))
             .transpose()?
             .unwrap_or_default();
 
         let end: Vec<kyogre_core::PortDockPoint> = value
             .end
-            .map(|v| serde_json::from_str(&v).change_context(PostgresError::DataConversion))
+            .map(|v| serde_json::from_str(&v))
             .transpose()?
             .unwrap_or_default();
 
@@ -90,36 +90,33 @@ impl TryFrom<TripDockPoints> for kyogre_core::TripDockPoints {
 }
 
 impl TryFrom<PortDockPoint> for kyogre_core::PortDockPoint {
-    type Error = Report<PostgresError>;
+    type Error = PostgresErrorWrapper;
 
     fn try_from(value: PortDockPoint) -> std::result::Result<Self, Self::Error> {
         Ok(kyogre_core::PortDockPoint {
             port_dock_point_id: value.port_dock_point_id,
             port_id: value.port_id,
             name: value.name,
-            latitude: decimal_to_float(value.latitude)
-                .change_context(PostgresError::DataConversion)?,
-            longitude: decimal_to_float(value.longitude)
-                .change_context(PostgresError::DataConversion)?,
+            latitude: decimal_to_float(value.latitude)?,
+            longitude: decimal_to_float(value.longitude)?,
         })
     }
 }
 
 impl TryFrom<Port> for kyogre_core::Port {
-    type Error = Report<PostgresError>;
+    type Error = PostgresErrorWrapper;
 
     fn try_from(value: Port) -> std::result::Result<Self, Self::Error> {
         let coordinates = match (value.latitude, value.longitude) {
-            (None, None) => Ok(None),
-            (Some(lat), Some(lon)) => Ok(Some(kyogre_core::Coordinates {
-                latitude: decimal_to_float(lat).change_context(PostgresError::DataConversion)?,
-                longitude: decimal_to_float(lon).change_context(PostgresError::DataConversion)?,
-            })),
+            (None, None) => None,
+            (Some(lat), Some(lon)) => Some(kyogre_core::Coordinates {
+                latitude: decimal_to_float(lat)?,
+                longitude: decimal_to_float(lon)?,
+            }),
             (None, Some(_)) | (Some(_), None) => {
-                Err(report!(PortCoordinateError(value.id.clone()))
-                    .change_context(PostgresError::DataConversion))
+                return Err(PortCoordinateError(value.id.clone()).into())
             }
-        }?;
+        };
 
         Ok(kyogre_core::Port {
             id: value.id,
@@ -129,54 +126,46 @@ impl TryFrom<Port> for kyogre_core::Port {
 }
 
 impl TryFrom<TripPorts> for kyogre_core::TripPorts {
-    type Error = Report<PostgresError>;
+    type Error = PostgresErrorWrapper;
 
     fn try_from(value: TripPorts) -> std::result::Result<Self, Self::Error> {
-        let start =
-            if let Some(id) = value.start_port_id {
-                match (value.start_port_latitude, value.start_port_longitude) {
-                    (None, None) => Ok(Some(kyogre_core::Port {
-                        id,
-                        coordinates: None,
-                    })),
-                    (Some(lat), Some(lon)) => Ok(Some(kyogre_core::Port {
-                        id,
-                        coordinates: Some(kyogre_core::Coordinates {
-                            latitude: decimal_to_float(lat)
-                                .change_context(PostgresError::DataConversion)?,
-                            longitude: decimal_to_float(lon)
-                                .change_context(PostgresError::DataConversion)?,
-                        }),
-                    })),
-                    (None, Some(_)) | (Some(_), None) => Err(report!(PortCoordinateError(id))
-                        .change_context(PostgresError::DataConversion)),
-                }
-            } else {
-                Ok(None)
-            }?;
+        let start = if let Some(id) = value.start_port_id {
+            match (value.start_port_latitude, value.start_port_longitude) {
+                (None, None) => Some(kyogre_core::Port {
+                    id,
+                    coordinates: None,
+                }),
+                (Some(lat), Some(lon)) => Some(kyogre_core::Port {
+                    id,
+                    coordinates: Some(kyogre_core::Coordinates {
+                        latitude: decimal_to_float(lat)?,
+                        longitude: decimal_to_float(lon)?,
+                    }),
+                }),
+                (None, Some(_)) | (Some(_), None) => return Err(PortCoordinateError(id).into()),
+            }
+        } else {
+            None
+        };
 
-        let end =
-            if let Some(id) = value.end_port_id {
-                match (value.end_port_latitude, value.end_port_longitude) {
-                    (None, None) => Ok(Some(kyogre_core::Port {
-                        id,
-                        coordinates: None,
-                    })),
-                    (Some(lat), Some(lon)) => Ok(Some(kyogre_core::Port {
-                        id,
-                        coordinates: Some(kyogre_core::Coordinates {
-                            latitude: decimal_to_float(lat)
-                                .change_context(PostgresError::DataConversion)?,
-                            longitude: decimal_to_float(lon)
-                                .change_context(PostgresError::DataConversion)?,
-                        }),
-                    })),
-                    (None, Some(_)) | (Some(_), None) => Err(report!(PortCoordinateError(id))
-                        .change_context(PostgresError::DataConversion)),
-                }
-            } else {
-                Ok(None)
-            }?;
+        let end = if let Some(id) = value.end_port_id {
+            match (value.end_port_latitude, value.end_port_longitude) {
+                (None, None) => Some(kyogre_core::Port {
+                    id,
+                    coordinates: None,
+                }),
+                (Some(lat), Some(lon)) => Some(kyogre_core::Port {
+                    id,
+                    coordinates: Some(kyogre_core::Coordinates {
+                        latitude: decimal_to_float(lat)?,
+                        longitude: decimal_to_float(lon)?,
+                    }),
+                }),
+                (None, Some(_)) | (Some(_), None) => return Err(PortCoordinateError(id).into()),
+            }
+        } else {
+            None
+        };
 
         Ok(kyogre_core::TripPorts { start, end })
     }

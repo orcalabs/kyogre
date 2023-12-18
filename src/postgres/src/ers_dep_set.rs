@@ -1,5 +1,8 @@
-use crate::{error::PostgresError, models::*};
-use error_stack::{report, Result, ResultExt};
+use crate::{
+    error::{PostgresError, PostgresErrorWrapper},
+    models::*,
+};
+use error_stack::{report, ResultExt};
 use std::collections::HashMap;
 
 #[derive(Default)]
@@ -53,7 +56,7 @@ impl ErsDepSet {
 
     pub(crate) fn new<T: IntoIterator<Item = fiskeridir_rs::ErsDep>>(
         ers_dep: T,
-    ) -> Result<ErsDepSet, PostgresError> {
+    ) -> Result<ErsDepSet, PostgresErrorWrapper> {
         let mut set = ErsDepSet::default();
 
         for e in ers_dep.into_iter() {
@@ -79,7 +82,7 @@ impl ErsDepSet {
         }
     }
 
-    fn add_county(&mut self, ers_dep: &fiskeridir_rs::ErsDep) -> Result<(), PostgresError> {
+    fn add_county(&mut self, ers_dep: &fiskeridir_rs::ErsDep) -> Result<(), PostgresErrorWrapper> {
         if let Some(code) = ers_dep.vessel_info.vessel_county_code {
             let county = ers_dep.vessel_info.vessel_county.clone().ok_or_else(|| {
                 report!(PostgresError::DataConversion)
@@ -105,7 +108,7 @@ impl ErsDepSet {
         }
     }
 
-    fn add_vessel(&mut self, ers_dep: &fiskeridir_rs::ErsDep) -> Result<(), PostgresError> {
+    fn add_vessel(&mut self, ers_dep: &fiskeridir_rs::ErsDep) -> Result<(), PostgresErrorWrapper> {
         if let Some(vessel_id) = ers_dep.vessel_info.vessel_id {
             if !self.vessels.contains_key(&(vessel_id as i64)) {
                 let vessel = fiskeridir_rs::Vessel::try_from(ers_dep.vessel_info.clone())
@@ -116,7 +119,7 @@ impl ErsDepSet {
         Ok(())
     }
 
-    fn add_port(&mut self, ers_dep: &fiskeridir_rs::ErsDep) -> Result<(), PostgresError> {
+    fn add_port(&mut self, ers_dep: &fiskeridir_rs::ErsDep) -> Result<(), PostgresErrorWrapper> {
         if let Some(ref code) = ers_dep.port.code {
             if !self.ports.contains_key(code) {
                 let port = NewPort::new(code.clone(), ers_dep.port.name.clone())?;
@@ -126,7 +129,7 @@ impl ErsDepSet {
         Ok(())
     }
 
-    fn add_catch(&mut self, ers_dep: &fiskeridir_rs::ErsDep) -> Result<(), PostgresError> {
+    fn add_catch(&mut self, ers_dep: &fiskeridir_rs::ErsDep) -> Result<(), PostgresErrorWrapper> {
         if let Some(catch) = NewErsDepCatch::from_ers_dep(ers_dep) {
             let species_fao_code =
                 ers_dep
@@ -174,7 +177,7 @@ impl ErsDepSet {
         self.add_species_fiskeridir_impl(ers_dep.target_species_fdir_code, None);
     }
 
-    fn add_ers_dep(&mut self, ers_dep: &fiskeridir_rs::ErsDep) -> Result<(), PostgresError> {
+    fn add_ers_dep(&mut self, ers_dep: &fiskeridir_rs::ErsDep) -> Result<(), PostgresErrorWrapper> {
         if !self
             .ers_dep
             .contains_key(&(ers_dep.message_info.message_id as i64))

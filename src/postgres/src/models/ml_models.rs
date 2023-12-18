@@ -1,10 +1,9 @@
 use chrono::NaiveDate;
-use error_stack::{Report, ResultExt};
 use fiskeridir_rs::SpeciesGroup;
 use kyogre_core::{CatchLocationId, ModelId};
 use unnest_insert::UnnestInsert;
 
-use crate::error::PostgresError;
+use crate::error::PostgresErrorWrapper;
 use crate::queries::enum_to_i32;
 
 #[derive(Debug, Clone, UnnestInsert)]
@@ -77,11 +76,10 @@ pub struct MLTrainingLog {
 }
 
 impl TryFrom<FishingWeightPrediction> for kyogre_core::FishingWeightPrediction {
-    type Error = Report<PostgresError>;
+    type Error = PostgresErrorWrapper;
 
     fn try_from(value: FishingWeightPrediction) -> std::result::Result<Self, Self::Error> {
-        let catch_location_id = CatchLocationId::try_from(value.catch_location_id.as_str())
-            .change_context(PostgresError::DataConversion)?;
+        let catch_location_id = CatchLocationId::try_from(value.catch_location_id.as_str())?;
 
         Ok(Self {
             catch_location_id,

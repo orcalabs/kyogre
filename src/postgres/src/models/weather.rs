@@ -1,13 +1,13 @@
 use bigdecimal::BigDecimal;
 use chrono::{DateTime, NaiveDate, Utc};
-use error_stack::{bail, report, Report, ResultExt};
+use error_stack::report;
 use geo_types::geometry::Geometry;
 use geozero::wkb;
 use kyogre_core::WeatherLocationId;
 use unnest_insert::UnnestInsert;
 
 use crate::{
-    error::PostgresError,
+    error::{PostgresError, PostgresErrorWrapper},
     queries::{decimal_to_float, float_to_decimal, opt_decimal_to_float, opt_float_to_decimal},
 };
 
@@ -69,68 +69,50 @@ pub struct HaulWeather {
 }
 
 impl TryFrom<kyogre_core::NewWeather> for NewWeather {
-    type Error = Report<PostgresError>;
+    type Error = PostgresErrorWrapper;
 
     fn try_from(v: kyogre_core::NewWeather) -> Result<Self, Self::Error> {
         Ok(Self {
             timestamp: v.timestamp,
-            latitude: float_to_decimal(v.latitude).change_context(PostgresError::DataConversion)?,
-            longitude: float_to_decimal(v.longitude)
-                .change_context(PostgresError::DataConversion)?,
-            altitude: float_to_decimal(v.altitude).change_context(PostgresError::DataConversion)?,
-            wind_speed_10m: opt_float_to_decimal(v.wind_speed_10m)
-                .change_context(PostgresError::DataConversion)?,
-            wind_direction_10m: opt_float_to_decimal(v.wind_direction_10m)
-                .change_context(PostgresError::DataConversion)?,
-            air_temperature_2m: opt_float_to_decimal(v.air_temperature_2m)
-                .change_context(PostgresError::DataConversion)?,
-            relative_humidity_2m: opt_float_to_decimal(v.relative_humidity_2m)
-                .change_context(PostgresError::DataConversion)?,
-            air_pressure_at_sea_level: opt_float_to_decimal(v.air_pressure_at_sea_level)
-                .change_context(PostgresError::DataConversion)?,
-            precipitation_amount: opt_float_to_decimal(v.precipitation_amount)
-                .change_context(PostgresError::DataConversion)?,
-            land_area_fraction: float_to_decimal(v.land_area_fraction)
-                .change_context(PostgresError::DataConversion)?,
-            cloud_area_fraction: opt_float_to_decimal(v.cloud_area_fraction)
-                .change_context(PostgresError::DataConversion)?,
+            latitude: float_to_decimal(v.latitude)?,
+            longitude: float_to_decimal(v.longitude)?,
+            altitude: float_to_decimal(v.altitude)?,
+            wind_speed_10m: opt_float_to_decimal(v.wind_speed_10m)?,
+            wind_direction_10m: opt_float_to_decimal(v.wind_direction_10m)?,
+            air_temperature_2m: opt_float_to_decimal(v.air_temperature_2m)?,
+            relative_humidity_2m: opt_float_to_decimal(v.relative_humidity_2m)?,
+            air_pressure_at_sea_level: opt_float_to_decimal(v.air_pressure_at_sea_level)?,
+            precipitation_amount: opt_float_to_decimal(v.precipitation_amount)?,
+            land_area_fraction: float_to_decimal(v.land_area_fraction)?,
+            cloud_area_fraction: opt_float_to_decimal(v.cloud_area_fraction)?,
         })
     }
 }
 
 impl TryFrom<Weather> for kyogre_core::Weather {
-    type Error = Report<PostgresError>;
+    type Error = PostgresErrorWrapper;
 
     fn try_from(v: Weather) -> Result<Self, Self::Error> {
         Ok(Self {
             timestamp: v.timestamp,
-            latitude: decimal_to_float(v.latitude).change_context(PostgresError::DataConversion)?,
-            longitude: decimal_to_float(v.longitude)
-                .change_context(PostgresError::DataConversion)?,
-            altitude: decimal_to_float(v.altitude).change_context(PostgresError::DataConversion)?,
-            wind_speed_10m: opt_decimal_to_float(v.wind_speed_10m)
-                .change_context(PostgresError::DataConversion)?,
-            wind_direction_10m: opt_decimal_to_float(v.wind_direction_10m)
-                .change_context(PostgresError::DataConversion)?,
-            air_temperature_2m: opt_decimal_to_float(v.air_temperature_2m)
-                .change_context(PostgresError::DataConversion)?,
-            relative_humidity_2m: opt_decimal_to_float(v.relative_humidity_2m)
-                .change_context(PostgresError::DataConversion)?,
-            air_pressure_at_sea_level: opt_decimal_to_float(v.air_pressure_at_sea_level)
-                .change_context(PostgresError::DataConversion)?,
-            precipitation_amount: opt_decimal_to_float(v.precipitation_amount)
-                .change_context(PostgresError::DataConversion)?,
-            land_area_fraction: decimal_to_float(v.land_area_fraction)
-                .change_context(PostgresError::DataConversion)?,
-            cloud_area_fraction: opt_decimal_to_float(v.cloud_area_fraction)
-                .change_context(PostgresError::DataConversion)?,
+            latitude: decimal_to_float(v.latitude)?,
+            longitude: decimal_to_float(v.longitude)?,
+            altitude: decimal_to_float(v.altitude)?,
+            wind_speed_10m: opt_decimal_to_float(v.wind_speed_10m)?,
+            wind_direction_10m: opt_decimal_to_float(v.wind_direction_10m)?,
+            air_temperature_2m: opt_decimal_to_float(v.air_temperature_2m)?,
+            relative_humidity_2m: opt_decimal_to_float(v.relative_humidity_2m)?,
+            air_pressure_at_sea_level: opt_decimal_to_float(v.air_pressure_at_sea_level)?,
+            precipitation_amount: opt_decimal_to_float(v.precipitation_amount)?,
+            land_area_fraction: decimal_to_float(v.land_area_fraction)?,
+            cloud_area_fraction: opt_decimal_to_float(v.cloud_area_fraction)?,
             weather_location_id: WeatherLocationId(v.weather_location_id),
         })
     }
 }
 
 impl TryFrom<WeatherLocation> for kyogre_core::WeatherLocation {
-    type Error = Report<PostgresError>;
+    type Error = PostgresErrorWrapper;
 
     fn try_from(v: WeatherLocation) -> Result<Self, Self::Error> {
         let geometry = v
@@ -140,7 +122,7 @@ impl TryFrom<WeatherLocation> for kyogre_core::WeatherLocation {
 
         let polygon = match geometry {
             Geometry::Polygon(p) => p,
-            _ => bail!(PostgresError::DataConversion),
+            _ => return Err(report!(PostgresError::DataConversion).into()),
         };
 
         Ok(Self {
@@ -150,24 +132,17 @@ impl TryFrom<WeatherLocation> for kyogre_core::WeatherLocation {
     }
 }
 impl TryFrom<HaulWeather> for kyogre_core::HaulWeather {
-    type Error = Report<PostgresError>;
+    type Error = PostgresErrorWrapper;
 
     fn try_from(v: HaulWeather) -> Result<Self, Self::Error> {
         Ok(Self {
-            wind_speed_10m: opt_decimal_to_float(v.wind_speed_10m)
-                .change_context(PostgresError::DataConversion)?,
-            wind_direction_10m: opt_decimal_to_float(v.wind_direction_10m)
-                .change_context(PostgresError::DataConversion)?,
-            air_temperature_2m: opt_decimal_to_float(v.air_temperature_2m)
-                .change_context(PostgresError::DataConversion)?,
-            relative_humidity_2m: opt_decimal_to_float(v.relative_humidity_2m)
-                .change_context(PostgresError::DataConversion)?,
-            air_pressure_at_sea_level: opt_decimal_to_float(v.air_pressure_at_sea_level)
-                .change_context(PostgresError::DataConversion)?,
-            precipitation_amount: opt_decimal_to_float(v.precipitation_amount)
-                .change_context(PostgresError::DataConversion)?,
-            cloud_area_fraction: opt_decimal_to_float(v.cloud_area_fraction)
-                .change_context(PostgresError::DataConversion)?,
+            wind_speed_10m: opt_decimal_to_float(v.wind_speed_10m)?,
+            wind_direction_10m: opt_decimal_to_float(v.wind_direction_10m)?,
+            air_temperature_2m: opt_decimal_to_float(v.air_temperature_2m)?,
+            relative_humidity_2m: opt_decimal_to_float(v.relative_humidity_2m)?,
+            air_pressure_at_sea_level: opt_decimal_to_float(v.air_pressure_at_sea_level)?,
+            precipitation_amount: opt_decimal_to_float(v.precipitation_amount)?,
+            cloud_area_fraction: opt_decimal_to_float(v.cloud_area_fraction)?,
         })
     }
 }

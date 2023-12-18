@@ -1,5 +1,4 @@
-use crate::{error::PostgresError, PostgresAdapter};
-use error_stack::{Result, ResultExt};
+use crate::{error::PostgresErrorWrapper, PostgresAdapter};
 use kyogre_core::FileHashId;
 
 impl PostgresAdapter {
@@ -7,9 +6,7 @@ impl PostgresAdapter {
         &self,
         id: &FileHashId,
         hash: String,
-    ) -> Result<(), PostgresError> {
-        let mut tx = self.begin().await?;
-
+    ) -> Result<(), PostgresErrorWrapper> {
         sqlx::query!(
             r#"
 INSERT INTO
@@ -24,13 +21,8 @@ SET
             hash,
             id.as_ref(),
         )
-        .execute(&mut *tx)
-        .await
-        .change_context(PostgresError::Query)?;
-
-        tx.commit()
-            .await
-            .change_context(PostgresError::Transaction)?;
+        .execute(&self.pool)
+        .await?;
 
         Ok(())
     }
@@ -38,7 +30,7 @@ SET
     pub(crate) async fn get_hash_impl(
         &self,
         id: &FileHashId,
-    ) -> Result<Option<String>, PostgresError> {
+    ) -> Result<Option<String>, PostgresErrorWrapper> {
         Ok(sqlx::query!(
             r#"
 SELECT
@@ -51,8 +43,7 @@ WHERE
             id.as_ref(),
         )
         .fetch_optional(&self.pool)
-        .await
-        .change_context(PostgresError::Query)?
+        .await?
         .map(|r| r.hash))
     }
 }

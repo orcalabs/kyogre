@@ -1,6 +1,6 @@
+use crate::error::PostgresErrorWrapper;
 use crate::models::LandingMatrixQueryOutput;
-use crate::{error::PostgresError, models::LandingMatrixArgs, PostgresAdapter};
-use error_stack::{Result, ResultExt};
+use crate::{models::LandingMatrixArgs, PostgresAdapter};
 use kyogre_core::{
     calculate_landing_sum_area_table, ActiveLandingFilter, LandingMatrixXFeature,
     LandingMatrixYFeature,
@@ -13,7 +13,7 @@ impl PostgresAdapter {
         args: LandingMatrixArgs,
         active_filter: ActiveLandingFilter,
         x_feature: LandingMatrixXFeature,
-    ) -> Result<Vec<u64>, PostgresError> {
+    ) -> Result<Vec<u64>, PostgresErrorWrapper> {
         let y_feature = if x_feature == active_filter {
             LandingMatrixYFeature::CatchLocation
         } else {
@@ -88,15 +88,15 @@ GROUP BY
             args.fiskeridir_vessel_ids as _,
         )
         .fetch_all(&pool)
-        .await
-        .change_context(PostgresError::Query)?;
+        .await?;
 
         let converted: Vec<kyogre_core::LandingMatrixQueryOutput> = data
             .into_iter()
             .map(kyogre_core::LandingMatrixQueryOutput::from)
             .collect();
 
-        calculate_landing_sum_area_table(x_feature, y_feature, converted)
-            .change_context(PostgresError::DataConversion)
+        let table = calculate_landing_sum_area_table(x_feature, y_feature, converted)?;
+
+        Ok(table)
     }
 }

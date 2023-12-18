@@ -1,12 +1,14 @@
 use std::fmt;
 
-use bigdecimal::{BigDecimal, ToPrimitive};
+use bigdecimal::BigDecimal;
 use chrono::{DateTime, Utc};
-use error_stack::{Report, ResultExt};
 use kyogre_core::{Mmsi, NavigationStatus};
 use unnest_insert::UnnestInsert;
 
-use crate::error::{FromBigDecimalError, PostgresError};
+use crate::{
+    error::PostgresErrorWrapper,
+    queries::{decimal_to_float, opt_decimal_to_float},
+};
 
 #[derive(Debug, Clone, UnnestInsert)]
 #[unnest_insert(table_name = "ais_vessels", conflict = "mmsi")]
@@ -149,53 +151,20 @@ impl From<kyogre_core::AisClass> for AisClass {
 }
 
 impl TryFrom<AisPosition> for kyogre_core::AisPosition {
-    type Error = Report<PostgresError>;
+    type Error = PostgresErrorWrapper;
 
     fn try_from(value: AisPosition) -> Result<Self, Self::Error> {
         Ok(kyogre_core::AisPosition {
-            latitude: value
-                .latitude
-                .to_f64()
-                .ok_or(FromBigDecimalError(value.latitude))
-                .change_context(PostgresError::DataConversion)?,
-            longitude: value
-                .longitude
-                .to_f64()
-                .ok_or(FromBigDecimalError(value.longitude))
-                .change_context(PostgresError::DataConversion)?,
+            latitude: decimal_to_float(value.latitude)?,
+            longitude: decimal_to_float(value.longitude)?,
             mmsi: Mmsi(value.mmsi),
             msgtime: value.msgtime,
-            course_over_ground: value
-                .course_over_ground
-                .map(|v| {
-                    v.to_f64()
-                        .ok_or(FromBigDecimalError(v))
-                        .change_context(PostgresError::DataConversion)
-                })
-                .transpose()?,
+            course_over_ground: opt_decimal_to_float(value.course_over_ground)?,
             navigational_status: value.navigational_status,
-            rate_of_turn: value
-                .rate_of_turn
-                .map(|v| {
-                    v.to_f64()
-                        .ok_or(FromBigDecimalError(v))
-                        .change_context(PostgresError::DataConversion)
-                })
-                .transpose()?,
-            speed_over_ground: value
-                .speed_over_ground
-                .map(|v| {
-                    v.to_f64()
-                        .ok_or(FromBigDecimalError(v))
-                        .change_context(PostgresError::DataConversion)
-                })
-                .transpose()?,
+            rate_of_turn: opt_decimal_to_float(value.rate_of_turn)?,
+            speed_over_ground: opt_decimal_to_float(value.speed_over_ground)?,
             true_heading: value.true_heading,
-            distance_to_shore: value
-                .distance_to_shore
-                .to_f64()
-                .ok_or(FromBigDecimalError(value.distance_to_shore))
-                .change_context(PostgresError::DataConversion)?,
+            distance_to_shore: decimal_to_float(value.distance_to_shore)?,
         })
     }
 }

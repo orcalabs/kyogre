@@ -1,15 +1,11 @@
-use crate::queries::enum_to_i32;
+use crate::{error::PostgresErrorWrapper, queries::enum_to_i32};
 use bigdecimal::BigDecimal;
 use chrono::NaiveDate;
-use error_stack::{Report, ResultExt};
 use fiskeridir_rs::DeliveryPointId;
 use kyogre_core::DeliveryPointType;
 use unnest_insert::UnnestInsert;
 
-use crate::{
-    error::PostgresError,
-    queries::{float_to_decimal, opt_decimal_to_float},
-};
+use crate::queries::{float_to_decimal, opt_decimal_to_float};
 
 #[derive(Debug, Clone)]
 pub struct DeliveryPoint {
@@ -111,18 +107,15 @@ pub struct MattilsynetDeliveryPoint {
 }
 
 impl TryFrom<DeliveryPoint> for kyogre_core::DeliveryPoint {
-    type Error = Report<PostgresError>;
+    type Error = PostgresErrorWrapper;
 
     fn try_from(v: DeliveryPoint) -> Result<Self, Self::Error> {
         Ok(Self {
-            id: DeliveryPointId::try_from(v.delivery_point_id)
-                .change_context(PostgresError::DataConversion)?,
+            id: DeliveryPointId::try_from(v.delivery_point_id)?,
             name: v.name,
             address: v.address,
-            latitude: opt_decimal_to_float(v.latitude)
-                .change_context(PostgresError::DataConversion)?,
-            longitude: opt_decimal_to_float(v.longitude)
-                .change_context(PostgresError::DataConversion)?,
+            latitude: opt_decimal_to_float(v.latitude)?,
+            longitude: opt_decimal_to_float(v.longitude)?,
         })
     }
 }
@@ -136,7 +129,7 @@ impl From<fiskeridir_rs::DeliveryPointId> for NewDeliveryPointId {
 }
 
 impl TryFrom<&fiskeridir_rs::AquaCultureEntry> for AquaCultureSpecies {
-    type Error = Report<PostgresError>;
+    type Error = PostgresErrorWrapper;
 
     fn try_from(v: &fiskeridir_rs::AquaCultureEntry) -> Result<Self, Self::Error> {
         Ok(Self {
@@ -144,13 +137,13 @@ impl TryFrom<&fiskeridir_rs::AquaCultureEntry> for AquaCultureSpecies {
             till_nr: v.till_nr.clone(),
             till_unit: v.till_unit.clone(),
             species_fiskeridir_id: v.species_code as i32,
-            till_kap: float_to_decimal(v.till_kap).change_context(PostgresError::DataConversion)?,
+            till_kap: float_to_decimal(v.till_kap)?,
         })
     }
 }
 
 impl TryFrom<&fiskeridir_rs::AquaCultureEntry> for AquaCultureTill {
-    type Error = Report<PostgresError>;
+    type Error = PostgresErrorWrapper;
 
     fn try_from(v: &fiskeridir_rs::AquaCultureEntry) -> Result<Self, Self::Error> {
         Ok(Self {
@@ -163,7 +156,7 @@ impl TryFrom<&fiskeridir_rs::AquaCultureEntry> for AquaCultureTill {
 }
 
 impl TryFrom<fiskeridir_rs::AquaCultureEntry> for AquaCultureEntry {
-    type Error = Report<PostgresError>;
+    type Error = PostgresErrorWrapper;
 
     fn try_from(v: fiskeridir_rs::AquaCultureEntry) -> Result<Self, Self::Error> {
         Ok(Self {
@@ -182,13 +175,11 @@ impl TryFrom<fiskeridir_rs::AquaCultureEntry> for AquaCultureEntry {
             locality_municipality: v.locality_municipality,
             locality_location: v.locality_location,
             water_environment: v.water_environment,
-            locality_kap: float_to_decimal(v.locality_kap)
-                .change_context(PostgresError::DataConversion)?,
+            locality_kap: float_to_decimal(v.locality_kap)?,
             locality_unit: v.locality_unit,
             expiration_date: v.expiration_date,
-            latitude: float_to_decimal(v.latitude).change_context(PostgresError::DataConversion)?,
-            longitude: float_to_decimal(v.longitude)
-                .change_context(PostgresError::DataConversion)?,
+            latitude: float_to_decimal(v.latitude)?,
+            longitude: float_to_decimal(v.longitude)?,
             prod_omr: v.prod_omr,
         })
     }

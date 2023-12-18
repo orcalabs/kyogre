@@ -1,8 +1,7 @@
 use bigdecimal::BigDecimal;
-use error_stack::{Report, ResultExt};
 use unnest_insert::UnnestInsert;
 
-use crate::{error::PostgresError, queries::opt_float_to_decimal};
+use crate::{error::PostgresErrorWrapper, queries::opt_float_to_decimal};
 
 #[derive(Debug, Clone, PartialEq, UnnestInsert)]
 #[unnest_insert(
@@ -70,17 +69,15 @@ impl NewAreaGrouping {
 impl NewCatchArea {
     pub fn from_landing(
         landing: &fiskeridir_rs::Landing,
-    ) -> Result<Option<NewCatchArea>, Report<PostgresError>> {
+    ) -> Result<Option<NewCatchArea>, PostgresErrorWrapper> {
         landing
             .catch_location
             .location_code
             .map(|id| {
                 Ok(NewCatchArea {
                     id: id as i32,
-                    latitude: opt_float_to_decimal(landing.catch_location.location_latitude)
-                        .change_context(PostgresError::DataConversion)?,
-                    longitude: opt_float_to_decimal(landing.catch_location.location_longitude)
-                        .change_context(PostgresError::DataConversion)?,
+                    latitude: opt_float_to_decimal(landing.catch_location.location_latitude)?,
+                    longitude: opt_float_to_decimal(landing.catch_location.location_longitude)?,
                 })
             })
             .transpose()
@@ -89,7 +86,7 @@ impl NewCatchArea {
 impl NewCatchMainArea {
     pub fn from_landing(
         landing: &fiskeridir_rs::Landing,
-    ) -> Result<Option<Self>, Report<PostgresError>> {
+    ) -> Result<Option<Self>, PostgresErrorWrapper> {
         landing
             .catch_location
             .main_area_code
@@ -97,10 +94,8 @@ impl NewCatchMainArea {
                 Ok(Self {
                     id: id as i32,
                     name: landing.catch_location.main_area.clone(),
-                    latitude: opt_float_to_decimal(landing.catch_location.main_area_latitude)
-                        .change_context(PostgresError::DataConversion)?,
-                    longitude: opt_float_to_decimal(landing.catch_location.main_area_longitude)
-                        .change_context(PostgresError::DataConversion)?,
+                    latitude: opt_float_to_decimal(landing.catch_location.main_area_latitude)?,
+                    longitude: opt_float_to_decimal(landing.catch_location.main_area_longitude)?,
                 })
             })
             .transpose()

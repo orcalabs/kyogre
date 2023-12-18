@@ -1,8 +1,7 @@
-use crate::{error::PostgresError, PostgresAdapter};
-use error_stack::{Result, ResultExt};
+use crate::{error::PostgresErrorWrapper, PostgresAdapter};
 
 impl PostgresAdapter {
-    pub(crate) async fn increment_duckdb_version(&self) -> Result<(), PostgresError> {
+    pub(crate) async fn increment_duckdb_version(&self) -> Result<(), PostgresErrorWrapper> {
         sqlx::query!(
             r#"
 UPDATE duckdb_data_version
@@ -11,8 +10,8 @@ SET
             "#,
         )
         .execute(&self.pool)
-        .await
-        .change_context(PostgresError::Query)
-        .map(|_| ())
+        .await?;
+
+        Ok(())
     }
 }

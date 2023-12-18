@@ -1,9 +1,9 @@
 use super::{FishingFacility, HaulCatch, WhaleCatch};
-use crate::queries::{enum_to_i32, float_to_decimal, opt_enum_to_i32};
-use crate::{error::PostgresError, queries::decimal_to_float};
+use crate::error::PostgresErrorWrapper;
+use crate::queries::decimal_to_float;
+use crate::queries::{enum_to_i32, opt_decimal_to_float, opt_enum_to_i32, opt_float_to_decimal};
 use bigdecimal::BigDecimal;
 use chrono::{DateTime, Utc};
-use error_stack::{Report, ResultExt};
 use fiskeridir_rs::{
     DeliveryPointId, Gear, GearGroup, LandingId, Quality, SpeciesGroup, VesselLengthGroup,
 };
@@ -120,7 +120,7 @@ pub struct TripPrunedAisVmsPosition {
 }
 
 impl TryFrom<&TripProcessingUnit> for NewTrip {
-    type Error = Report<PostgresError>;
+    type Error = PostgresErrorWrapper;
 
     fn try_from(value: &TripProcessingUnit) -> Result<Self, Self::Error> {
         let (
@@ -164,18 +164,7 @@ impl TryFrom<&TripProcessingUnit> for NewTrip {
         };
 
         let (distance, distancer_id) = match value.distance_output {
-            Some(v) => (
-                match v
-                    .distance
-                    .map(float_to_decimal)
-                    .transpose()
-                    .change_context(PostgresError::DataConversion)
-                {
-                    Ok(v) => v,
-                    Err(e) => return Err(e),
-                },
-                Some(v.distancer_id),
-            ),
+            Some(v) => (opt_float_to_decimal(v.distance)?, Some(v.distancer_id)),
             None => (None, None),
         };
 
@@ -318,26 +307,19 @@ pub struct InsertedTrip {
 }
 
 impl TryFrom<Trip> for kyogre_core::Trip {
-    type Error = Report<PostgresError>;
+    type Error = PostgresErrorWrapper;
 
     fn try_from(value: Trip) -> Result<Self, Self::Error> {
-        let period =
-            DateRange::try_from(value.period).change_context(PostgresError::DataConversion)?;
+        let period = DateRange::try_from(value.period)?;
 
-        let landing_coverage = DateRange::try_from(value.landing_coverage)
-            .change_context(PostgresError::DataConversion)?;
+        let landing_coverage = DateRange::try_from(value.landing_coverage)?;
 
         let precision_period = value
             .period_precision
             .map(DateRange::try_from)
-            .transpose()
-            .change_context(PostgresError::DataConversion)?;
+            .transpose()?;
 
-        let distance = value
-            .distance
-            .map(decimal_to_float)
-            .transpose()
-            .change_context(PostgresError::DataConversion)?;
+        let distance = value.distance.map(decimal_to_float).transpose()?;
 
         Ok(kyogre_core::Trip {
             trip_id: TripId(value.trip_id),
@@ -355,22 +337,22 @@ impl TryFrom<Trip> for kyogre_core::Trip {
 }
 
 impl TryFrom<CurrentTrip> for kyogre_core::CurrentTrip {
-    type Error = Report<PostgresError>;
+    type Error = PostgresErrorWrapper;
 
     fn try_from(v: CurrentTrip) -> Result<Self, Self::Error> {
         Ok(Self {
             departure: v.departure_timestamp,
             target_species_fiskeridir_id: v.target_species_fiskeridir_id,
-            hauls: serde_json::from_str::<Vec<TripHaul>>(&v.hauls)
-                .change_context(PostgresError::DataConversion)?
+            hauls: serde_json::from_str::<Vec<TripHaul>>(&v.hauls)?
                 .into_iter()
                 .map(kyogre_core::TripHaul::try_from)
                 .collect::<Result<_, _>>()?,
-            fishing_facilities: serde_json::from_str::<Vec<FishingFacility>>(&v.fishing_facilities)
-                .change_context(PostgresError::DataConversion)?
-                .into_iter()
-                .map(kyogre_core::FishingFacility::try_from)
-                .collect::<Result<_, _>>()?,
+            fishing_facilities: serde_json::from_str::<Vec<FishingFacility>>(
+                &v.fishing_facilities,
+            )?
+            .into_iter()
+            .map(kyogre_core::FishingFacility::try_from)
+            .collect::<Result<_, _>>()?,
         })
     }
 }
@@ -401,22 +383,18 @@ impl From<TripCalculationTimer> for kyogre_core::TripCalculationTimer {
     }
 }
 impl TryFrom<TripDetailed> for kyogre_core::TripDetailed {
-    type Error = Report<PostgresError>;
+    type Error = PostgresErrorWrapper;
 
     fn try_from(value: TripDetailed) -> Result<Self, Self::Error> {
-        let period =
-            DateRange::try_from(value.period).change_context(PostgresError::DataConversion)?;
+        let period = DateRange::try_from(value.period)?;
         let period_precision = value
             .period_precision
             .map(DateRange::try_from)
-            .transpose()
-            .change_context(PostgresError::DataConversion)?;
+            .transpose()?;
 
-        let landing_coverage = DateRange::try_from(value.landing_coverage)
-            .change_context(PostgresError::DataConversion)?;
+        let landing_coverage = DateRange::try_from(value.landing_coverage)?;
 
-        let mut vessel_events = serde_json::from_str::<Vec<VesselEvent>>(&value.vessel_events)
-            .change_context(PostgresError::DataConversion)?
+        let mut vessel_events = serde_json::from_str::<Vec<VesselEvent>>(&value.vessel_events)?
             .into_iter()
             .map(kyogre_core::VesselEvent::from)
             .collect::<Vec<kyogre_core::VesselEvent>>();
@@ -425,8 +403,7 @@ impl TryFrom<TripDetailed> for kyogre_core::TripDetailed {
             .landing_ids
             .into_iter()
             .map(LandingId::try_from)
-            .collect::<error_stack::Result<Vec<LandingId>, _>>()
-            .change_context(PostgresError::DataConversion)?;
+            .collect::<error_stack::Result<Vec<LandingId>, _>>()?;
 
         vessel_events.sort_by_key(|v| v.report_timestamp);
 
@@ -445,42 +422,33 @@ impl TryFrom<TripDetailed> for kyogre_core::TripDetailed {
             delivery_point_ids: value
                 .delivery_points
                 .into_iter()
-                .map(|v| DeliveryPointId::try_from(v).change_context(PostgresError::DataConversion))
+                .map(DeliveryPointId::try_from)
                 .collect::<Result<_, _>>()?,
-            hauls: serde_json::from_str::<Vec<TripHaul>>(&value.hauls)
-                .change_context(PostgresError::DataConversion)?
+            hauls: serde_json::from_str::<Vec<TripHaul>>(&value.hauls)?
                 .into_iter()
                 .map(kyogre_core::TripHaul::try_from)
                 .collect::<Result<_, _>>()?,
             fishing_facilities: serde_json::from_str::<Vec<FishingFacility>>(
                 &value.fishing_facilities,
-            )
-            .change_context(PostgresError::DataConversion)?
+            )?
             .into_iter()
             .map(kyogre_core::FishingFacility::try_from)
             .collect::<Result<_, _>>()?,
             delivery: kyogre_core::Delivery {
-                delivered: serde_json::from_str::<Vec<Catch>>(&value.catches)
-                    .change_context(PostgresError::DataConversion)?
+                delivered: serde_json::from_str::<Vec<Catch>>(&value.catches)?
                     .into_iter()
                     .map(kyogre_core::Catch::from)
                     .collect::<Vec<kyogre_core::Catch>>(),
-                total_living_weight: decimal_to_float(value.total_living_weight)
-                    .change_context(PostgresError::DataConversion)?,
-                total_gross_weight: decimal_to_float(value.total_gross_weight)
-                    .change_context(PostgresError::DataConversion)?,
-                total_product_weight: decimal_to_float(value.total_product_weight)
-                    .change_context(PostgresError::DataConversion)?,
+                total_living_weight: decimal_to_float(value.total_living_weight)?,
+                total_gross_weight: decimal_to_float(value.total_gross_weight)?,
+                total_product_weight: decimal_to_float(value.total_product_weight)?,
             },
             start_port_id: value.start_port_id,
             end_port_id: value.end_port_id,
             assembler_id: value.trip_assembler_id,
             vessel_events,
             landing_ids,
-            distance: value
-                .distance
-                .map(|v| decimal_to_float(v).change_context(PostgresError::DataConversion))
-                .transpose()?,
+            distance: opt_decimal_to_float(value.distance)?,
             cache_version: value.cache_version,
             target_species_fiskeridir_id: value.target_species_fiskeridir_id.map(|v| v as u32),
             target_species_fao_id: value.target_species_fao_id,
@@ -529,7 +497,7 @@ impl From<Catch> for kyogre_core::Catch {
 }
 
 impl TryFrom<TripHaul> for kyogre_core::TripHaul {
-    type Error = Report<PostgresError>;
+    type Error = PostgresErrorWrapper;
 
     fn try_from(v: TripHaul) -> Result<Self, Self::Error> {
         Ok(Self {
@@ -537,15 +505,11 @@ impl TryFrom<TripHaul> for kyogre_core::TripHaul {
             ers_activity_id: v.ers_activity_id,
             duration: v.duration,
             haul_distance: v.haul_distance,
-            start_latitude: decimal_to_float(v.start_latitude)
-                .change_context(PostgresError::DataConversion)?,
-            start_longitude: decimal_to_float(v.start_longitude)
-                .change_context(PostgresError::DataConversion)?,
+            start_latitude: decimal_to_float(v.start_latitude)?,
+            start_longitude: decimal_to_float(v.start_longitude)?,
             start_timestamp: v.start_timestamp,
-            stop_latitude: decimal_to_float(v.stop_latitude)
-                .change_context(PostgresError::DataConversion)?,
-            stop_longitude: decimal_to_float(v.stop_longitude)
-                .change_context(PostgresError::DataConversion)?,
+            stop_latitude: decimal_to_float(v.stop_latitude)?,
+            stop_longitude: decimal_to_float(v.stop_longitude)?,
             stop_timestamp: v.stop_timestamp,
             total_living_weight: v.total_living_weight,
             gear_id: v.gear_id,
@@ -566,7 +530,7 @@ impl TryFrom<TripHaul> for kyogre_core::TripHaul {
 }
 
 impl TryFrom<TripAssemblerLogEntry> for kyogre_core::TripAssemblerLogEntry {
-    type Error = Report<PostgresError>;
+    type Error = PostgresErrorWrapper;
 
     fn try_from(value: TripAssemblerLogEntry) -> Result<Self, Self::Error> {
         Ok(Self {
@@ -578,10 +542,8 @@ impl TryFrom<TripAssemblerLogEntry> for kyogre_core::TripAssemblerLogEntry {
             conflict_vessel_event_timestamp: value.conflict_vessel_event_timestamp,
             conflict_vessel_event_id: value.conflict_vessel_event_id.map(|v| v as u64),
             conflict_vessel_event_type_id: value.conflict_vessel_event_type_id,
-            prior_trip_vessel_events: serde_json::from_str(&value.prior_trip_vessel_events)
-                .change_context(PostgresError::DataConversion)?,
-            new_vessel_events: serde_json::from_str(&value.new_vessel_events)
-                .change_context(PostgresError::DataConversion)?,
+            prior_trip_vessel_events: serde_json::from_str(&value.prior_trip_vessel_events)?,
+            new_vessel_events: serde_json::from_str(&value.new_vessel_events)?,
         })
     }
 }

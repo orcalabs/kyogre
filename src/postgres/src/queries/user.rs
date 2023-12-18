@@ -1,15 +1,12 @@
-use crate::{models::User, PostgresAdapter};
-use error_stack::{Result, ResultExt};
+use crate::{error::PostgresErrorWrapper, models::User, PostgresAdapter};
 use kyogre_core::{BarentswatchUserId, FiskeridirVesselId};
-
-use crate::error::PostgresError;
 
 impl PostgresAdapter {
     pub(crate) async fn get_user_impl(
         &self,
         user_id: BarentswatchUserId,
-    ) -> Result<Option<User>, PostgresError> {
-        sqlx::query_as!(
+    ) -> Result<Option<User>, PostgresErrorWrapper> {
+        let user = sqlx::query_as!(
             User,
             r#"
 SELECT
@@ -25,20 +22,23 @@ GROUP BY
             user_id.0,
         )
         .fetch_optional(&self.pool)
-        .await
-        .change_context(PostgresError::Query)
+        .await?;
+
+        Ok(user)
     }
 
     pub(crate) async fn update_user_impl(
         &self,
         user: kyogre_core::User,
-    ) -> Result<(), PostgresError> {
-        let mut tx = self.begin().await?;
+    ) -> Result<(), PostgresErrorWrapper> {
+        let mut tx = self.pool.begin().await?;
 
         self.update_user_follows(user.barentswatch_user_id, user.following, &mut tx)
             .await?;
 
-        tx.commit().await.change_context(PostgresError::Transaction)
+        tx.commit().await?;
+
+        Ok(())
     }
 
     pub(crate) async fn update_user_follows<'a>(
@@ -46,7 +46,7 @@ GROUP BY
         user_id: BarentswatchUserId,
         vessel_ids: Vec<FiskeridirVesselId>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<(), PostgresError> {
+    ) -> Result<(), PostgresErrorWrapper> {
         let vessel_ids = vessel_ids.into_iter().map(|id| id.0).collect::<Vec<_>>();
 
         sqlx::query!(
@@ -58,8 +58,7 @@ WHERE
             user_id.0,
         )
         .execute(&mut **tx)
-        .await
-        .change_context(PostgresError::Query)?;
+        .await?;
 
         sqlx::query!(
             r#"
@@ -75,8 +74,8 @@ FROM
             vessel_ids.as_slice(),
         )
         .execute(&mut **tx)
-        .await
-        .change_context(PostgresError::Query)
-        .map(|_| ())
+        .await?;
+
+        Ok(())
     }
 }

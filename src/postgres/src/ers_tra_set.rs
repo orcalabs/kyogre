@@ -1,5 +1,8 @@
-use crate::{error::PostgresError, models::*};
-use error_stack::{report, Result, ResultExt};
+use crate::{
+    error::{PostgresError, PostgresErrorWrapper},
+    models::*,
+};
+use error_stack::{report, ResultExt};
 use std::collections::HashMap;
 
 #[derive(Default)]
@@ -49,7 +52,7 @@ impl ErsTraSet {
 
     pub(crate) fn new<T: IntoIterator<Item = fiskeridir_rs::ErsTra>>(
         ers_tra: T,
-    ) -> Result<ErsTraSet, PostgresError> {
+    ) -> Result<ErsTraSet, PostgresErrorWrapper> {
         let mut set = ErsTraSet::default();
 
         for e in ers_tra.into_iter() {
@@ -72,7 +75,7 @@ impl ErsTraSet {
         }
     }
 
-    fn add_county(&mut self, ers_tra: &fiskeridir_rs::ErsTra) -> Result<(), PostgresError> {
+    fn add_county(&mut self, ers_tra: &fiskeridir_rs::ErsTra) -> Result<(), PostgresErrorWrapper> {
         if let Some(code) = ers_tra.vessel_info.vessel_county_code {
             let county = ers_tra.vessel_info.vessel_county.clone().ok_or_else(|| {
                 report!(PostgresError::DataConversion)
@@ -98,7 +101,7 @@ impl ErsTraSet {
         }
     }
 
-    fn add_vessel(&mut self, ers_tra: &fiskeridir_rs::ErsTra) -> Result<(), PostgresError> {
+    fn add_vessel(&mut self, ers_tra: &fiskeridir_rs::ErsTra) -> Result<(), PostgresErrorWrapper> {
         if let Some(vessel_id) = ers_tra.vessel_info.vessel_id {
             if !self.vessels.contains_key(&(vessel_id as i64)) {
                 let vessel = fiskeridir_rs::Vessel::try_from(ers_tra.vessel_info.clone())
@@ -109,7 +112,7 @@ impl ErsTraSet {
         Ok(())
     }
 
-    fn add_catch(&mut self, ers_tra: &fiskeridir_rs::ErsTra) -> Result<(), PostgresError> {
+    fn add_catch(&mut self, ers_tra: &fiskeridir_rs::ErsTra) -> Result<(), PostgresErrorWrapper> {
         if let Some(catch) = NewErsTraCatch::from_ers_tra(ers_tra) {
             let species_fao_code =
                 ers_tra
@@ -146,7 +149,7 @@ impl ErsTraSet {
         }
     }
 
-    fn add_ers_tra(&mut self, ers_tra: &fiskeridir_rs::ErsTra) -> Result<(), PostgresError> {
+    fn add_ers_tra(&mut self, ers_tra: &fiskeridir_rs::ErsTra) -> Result<(), PostgresErrorWrapper> {
         if !self
             .ers_tra
             .contains_key(&(ers_tra.message_info.message_id as i64))

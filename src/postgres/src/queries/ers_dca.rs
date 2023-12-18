@@ -1,12 +1,11 @@
 use std::collections::HashSet;
 
 use crate::{
-    error::PostgresError,
+    error::PostgresErrorWrapper,
     ers_dca_set::ErsDcaSet,
     models::{NewErsDca, NewErsDcaBody, NewHerringPopulation},
     PostgresAdapter,
 };
-use error_stack::{Result, ResultExt};
 use futures::TryStreamExt;
 use kyogre_core::VesselEventType;
 use tracing::{event, Level};
@@ -18,10 +17,12 @@ impl PostgresAdapter {
     pub(crate) async fn add_ers_dca_impl(
         &self,
         ers_dca: Box<
-            dyn Iterator<Item = Result<fiskeridir_rs::ErsDca, fiskeridir_rs::Error>> + Send + Sync,
+            dyn Iterator<Item = error_stack::Result<fiskeridir_rs::ErsDca, fiskeridir_rs::Error>>
+                + Send
+                + Sync,
         >,
-    ) -> Result<(), PostgresError> {
-        let mut tx = self.begin().await?;
+    ) -> Result<(), PostgresErrorWrapper> {
+        let mut tx = self.pool.begin().await?;
 
         let mut inserted_message_ids = HashSet::new();
         let mut vessel_event_ids = Vec::new();
@@ -66,7 +67,9 @@ impl PostgresAdapter {
         self.add_hauls(&message_ids, &mut tx).await?;
         self.add_hauls_matrix(&message_ids, &mut tx).await?;
 
-        tx.commit().await.change_context(PostgresError::Transaction)
+        tx.commit().await?;
+
+        Ok(())
     }
 
     pub(crate) async fn add_ers_dca_set<'a>(
@@ -75,7 +78,7 @@ impl PostgresAdapter {
         inserted_message_ids: &mut HashSet<i64>,
         vessel_event_ids: &mut Vec<i64>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<(), PostgresError> {
+    ) -> Result<(), PostgresErrorWrapper> {
         let prepared_set = set.prepare();
 
         self.add_ers_message_types(prepared_set.ers_message_types, tx)
@@ -125,7 +128,7 @@ impl PostgresAdapter {
         inserted_message_ids: &mut HashSet<i64>,
         vessel_event_ids: &mut Vec<i64>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<(), PostgresError> {
+    ) -> Result<(), PostgresErrorWrapper> {
         let len = ers_dca.len();
         let mut message_id = Vec::with_capacity(len);
         let mut message_version = Vec::with_capacity(len);
@@ -146,15 +149,12 @@ WHERE
             &message_version,
         )
         .execute(&mut **tx)
-        .await
-        .change_context(PostgresError::Query)?;
+        .await?;
 
         let to_insert = self.ers_dca_to_insert(&message_id, tx).await?;
         ers_dca.retain(|e| to_insert.contains(&e.message_id));
 
-        let inserted = NewErsDca::unnest_insert_returning(ers_dca, &mut **tx)
-            .await
-            .change_context(PostgresError::Query)?;
+        let inserted = NewErsDca::unnest_insert_returning(ers_dca, &mut **tx).await?;
 
         for i in inserted {
             inserted_message_ids.insert(i.message_id);
@@ -170,8 +170,8 @@ WHERE
         &'a self,
         message_ids: &[i64],
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<HashSet<i64>, PostgresError> {
-        sqlx::query!(
+    ) -> Result<HashSet<i64>, PostgresErrorWrapper> {
+        let ids = sqlx::query!(
             r#"
 SELECT
     u.message_id AS "message_id!"
@@ -186,29 +186,26 @@ WHERE
         .fetch(&mut **tx)
         .map_ok(|r| r.message_id)
         .try_collect::<HashSet<_>>()
-        .await
-        .change_context(PostgresError::Query)
+        .await?;
+
+        Ok(ids)
     }
 
     async fn add_ers_dca_bodies<'a>(
         &'a self,
         ers_dca_bodies: Vec<NewErsDcaBody>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<(), PostgresError> {
-        NewErsDcaBody::unnest_insert(ers_dca_bodies, &mut **tx)
-            .await
-            .change_context(PostgresError::Query)
-            .map(|_| ())
+    ) -> Result<(), PostgresErrorWrapper> {
+        NewErsDcaBody::unnest_insert(ers_dca_bodies, &mut **tx).await?;
+        Ok(())
     }
 
     pub(crate) async fn add_herring_populations<'a>(
         &self,
         herring_populations: Vec<NewHerringPopulation>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<(), PostgresError> {
-        NewHerringPopulation::unnest_insert(herring_populations, &mut **tx)
-            .await
-            .change_context(PostgresError::Query)
-            .map(|_| ())
+    ) -> Result<(), PostgresErrorWrapper> {
+        NewHerringPopulation::unnest_insert(herring_populations, &mut **tx).await?;
+        Ok(())
     }
 }

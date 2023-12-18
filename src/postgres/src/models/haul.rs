@@ -1,13 +1,12 @@
 use bigdecimal::BigDecimal;
 use chrono::{DateTime, NaiveDate, Utc};
-use error_stack::{Report, ResultExt};
 use fiskeridir_rs::{
     Gear, GearGroup, SpeciesGroup, SpeciesMainGroup, VesselLengthGroup, WhaleGender,
 };
 use kyogre_core::{CatchLocationId, HaulId};
 use serde::Deserialize;
 
-use crate::{error::PostgresError, queries::decimal_to_float};
+use crate::{error::PostgresErrorWrapper, queries::decimal_to_float};
 
 use super::{HaulOceanClimate, HaulWeather};
 
@@ -96,7 +95,7 @@ pub struct HaulMessage {
 }
 
 impl TryFrom<Haul> for kyogre_core::Haul {
-    type Error = Report<PostgresError>;
+    type Error = PostgresErrorWrapper;
 
     fn try_from(v: Haul) -> Result<Self, Self::Error> {
         Ok(Self {
@@ -107,25 +106,19 @@ impl TryFrom<Haul> for kyogre_core::Haul {
             catch_location_start: v
                 .catch_location_start
                 .map(CatchLocationId::try_from)
-                .transpose()
-                .change_context(PostgresError::DataConversion)?,
+                .transpose()?,
             catch_locations: v
                 .catch_locations
                 .map(|c| c.into_iter().map(CatchLocationId::try_from).collect())
-                .transpose()
-                .change_context(PostgresError::DataConversion)?,
+                .transpose()?,
             ocean_depth_end: v.ocean_depth_end,
             ocean_depth_start: v.ocean_depth_start,
             quota_type_id: v.quota_type_id,
-            start_latitude: decimal_to_float(v.start_latitude)
-                .change_context(PostgresError::DataConversion)?,
-            start_longitude: decimal_to_float(v.start_longitude)
-                .change_context(PostgresError::DataConversion)?,
+            start_latitude: decimal_to_float(v.start_latitude)?,
+            start_longitude: decimal_to_float(v.start_longitude)?,
             start_timestamp: v.start_timestamp,
-            stop_latitude: decimal_to_float(v.stop_latitude)
-                .change_context(PostgresError::DataConversion)?,
-            stop_longitude: decimal_to_float(v.stop_longitude)
-                .change_context(PostgresError::DataConversion)?,
+            stop_latitude: decimal_to_float(v.stop_latitude)?,
+            stop_longitude: decimal_to_float(v.stop_longitude)?,
             stop_timestamp: v.stop_timestamp,
             total_living_weight: v.total_living_weight,
             gear_id: v.gear_id,
@@ -133,8 +126,7 @@ impl TryFrom<Haul> for kyogre_core::Haul {
             fiskeridir_vessel_id: v.fiskeridir_vessel_id,
             vessel_call_sign: v.vessel_call_sign,
             vessel_call_sign_ers: v.vessel_call_sign_ers,
-            vessel_length: decimal_to_float(v.vessel_length)
-                .change_context(PostgresError::DataConversion)?,
+            vessel_length: decimal_to_float(v.vessel_length)?,
             vessel_length_group: v.vessel_length_group,
             vessel_name: v.vessel_name,
             vessel_name_ers: v.vessel_name_ers,
@@ -157,13 +149,11 @@ impl TryFrom<Haul> for kyogre_core::Haul {
                 sea_floor_depth: v.sea_floor_depth,
             }
             .try_into()?,
-            catches: serde_json::from_str::<Vec<HaulCatch>>(&v.catches)
-                .change_context(PostgresError::DataConversion)?
+            catches: serde_json::from_str::<Vec<HaulCatch>>(&v.catches)?
                 .into_iter()
                 .map(kyogre_core::HaulCatch::try_from)
                 .collect::<Result<_, _>>()?,
-            whale_catches: serde_json::from_str::<Vec<WhaleCatch>>(&v.whale_catches)
-                .change_context(PostgresError::DataConversion)?
+            whale_catches: serde_json::from_str::<Vec<WhaleCatch>>(&v.whale_catches)?
                 .into_iter()
                 .map(kyogre_core::WhaleCatch::try_from)
                 .collect::<Result<_, _>>()?,
@@ -173,7 +163,7 @@ impl TryFrom<Haul> for kyogre_core::Haul {
 }
 
 impl TryFrom<HaulCatch> for kyogre_core::HaulCatch {
-    type Error = Report<PostgresError>;
+    type Error = PostgresErrorWrapper;
 
     fn try_from(v: HaulCatch) -> Result<Self, Self::Error> {
         Ok(Self {
@@ -187,7 +177,7 @@ impl TryFrom<HaulCatch> for kyogre_core::HaulCatch {
 }
 
 impl TryFrom<WhaleCatch> for kyogre_core::WhaleCatch {
-    type Error = Report<PostgresError>;
+    type Error = PostgresErrorWrapper;
 
     fn try_from(v: WhaleCatch) -> Result<Self, Self::Error> {
         Ok(Self {
@@ -205,7 +195,7 @@ impl TryFrom<WhaleCatch> for kyogre_core::WhaleCatch {
 }
 
 impl TryFrom<HaulMessage> for kyogre_core::HaulMessage {
-    type Error = Report<PostgresError>;
+    type Error = PostgresErrorWrapper;
 
     fn try_from(v: HaulMessage) -> Result<Self, Self::Error> {
         Ok(Self {
@@ -217,17 +207,15 @@ impl TryFrom<HaulMessage> for kyogre_core::HaulMessage {
 }
 
 impl TryFrom<FishingSpotTrainingData> for kyogre_core::FishingSpotTrainingData {
-    type Error = Report<PostgresError>;
+    type Error = PostgresErrorWrapper;
 
     fn try_from(v: FishingSpotTrainingData) -> Result<Self, Self::Error> {
         Ok(Self {
             haul_id: v.haul_id,
-            latitude: decimal_to_float(v.latitude).change_context(PostgresError::DataConversion)?,
-            longitude: decimal_to_float(v.longitude)
-                .change_context(PostgresError::DataConversion)?,
+            latitude: decimal_to_float(v.latitude)?,
+            longitude: decimal_to_float(v.longitude)?,
             species: v.species,
-            catch_location_id: CatchLocationId::try_from(v.catch_location)
-                .change_context(PostgresError::DataConversion)?,
+            catch_location_id: CatchLocationId::try_from(v.catch_location)?,
             date: v.date,
         })
     }

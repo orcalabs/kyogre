@@ -1,11 +1,10 @@
 use chrono::{DateTime, Utc};
-use error_stack::{report, Report, Result, ResultExt};
 use futures::{Stream, TryStreamExt};
 use kyogre_core::OceanClimateQuery;
 use unnest_insert::UnnestInsert;
 
 use crate::{
-    error::PostgresError,
+    error::PostgresErrorWrapper,
     models::{HaulOceanClimate, NewOceanClimate, OceanClimate},
     PostgresAdapter,
 };
@@ -14,7 +13,10 @@ impl PostgresAdapter {
     pub(crate) fn _ocean_climate_impl(
         &self,
         query: OceanClimateQuery,
-    ) -> Result<impl Stream<Item = Result<OceanClimate, PostgresError>> + '_, PostgresError> {
+    ) -> Result<
+        impl Stream<Item = Result<OceanClimate, PostgresErrorWrapper>> + '_,
+        PostgresErrorWrapper,
+    > {
         let args = OceanClimateArgs::try_from(query)?;
 
         let stream = sqlx::query_as!(
@@ -63,7 +65,7 @@ GROUP BY
             args.weather_location_ids.as_deref(),
         )
         .fetch(&self.pool)
-        .map_err(|e| report!(e).change_context(PostgresError::Query));
+        .map_err(From::from);
 
         Ok(stream)
     }
@@ -71,10 +73,10 @@ GROUP BY
     pub(crate) async fn haul_ocean_climate_impl(
         &self,
         query: OceanClimateQuery,
-    ) -> Result<Option<HaulOceanClimate>, PostgresError> {
+    ) -> Result<Option<HaulOceanClimate>, PostgresErrorWrapper> {
         let args = OceanClimateArgs::try_from(query)?;
 
-        sqlx::query_as!(
+        let climate = sqlx::query_as!(
             HaulOceanClimate,
             r#"
 SELECT
@@ -103,29 +105,29 @@ WHERE
             args.weather_location_ids.as_deref(),
         )
         .fetch_optional(&self.pool)
-        .await
-        .change_context(PostgresError::Query)
+        .await?;
+
+        Ok(climate)
     }
 
     pub(crate) async fn add_ocean_climate_impl(
         &self,
         ocean_climate: Vec<kyogre_core::NewOceanClimate>,
-    ) -> Result<(), PostgresError> {
+    ) -> Result<(), PostgresErrorWrapper> {
         let values = ocean_climate
             .into_iter()
             .map(NewOceanClimate::try_from)
             .collect::<Result<Vec<_>, _>>()?;
 
-        NewOceanClimate::unnest_insert(values, &self.pool)
-            .await
-            .change_context(PostgresError::Query)
-            .map(|_| ())
+        NewOceanClimate::unnest_insert(values, &self.pool).await?;
+
+        Ok(())
     }
 
     pub(crate) async fn latest_ocean_climate_timestamp_impl(
         &self,
-    ) -> Result<Option<DateTime<Utc>>, PostgresError> {
-        sqlx::query!(
+    ) -> Result<Option<DateTime<Utc>>, PostgresErrorWrapper> {
+        let row = sqlx::query!(
             r#"
 SELECT
     MAX("timestamp") AS ts
@@ -134,9 +136,9 @@ FROM
             "#
         )
         .fetch_one(&self.pool)
-        .await
-        .change_context(PostgresError::Query)
-        .map(|r| r.ts)
+        .await?;
+
+        Ok(row.ts)
     }
 }
 
@@ -148,9 +150,9 @@ struct OceanClimateArgs {
 }
 
 impl TryFrom<OceanClimateQuery> for OceanClimateArgs {
-    type Error = Report<PostgresError>;
+    type Error = PostgresErrorWrapper;
 
-    fn try_from(v: OceanClimateQuery) -> std::result::Result<Self, Self::Error> {
+    fn try_from(v: OceanClimateQuery) -> Result<Self, Self::Error> {
         Ok(Self {
             start_date: v.start_date,
             end_date: v.end_date,

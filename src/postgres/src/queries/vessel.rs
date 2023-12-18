@@ -1,14 +1,13 @@
 use std::collections::HashMap;
 
 use crate::{
-    error::PostgresError,
+    error::PostgresErrorWrapper,
     models::{
         ActiveVesselConflict, FiskeridirAisVesselCombination, NewFiskeridirVessel, NewMunicipality,
         NewRegisterVessel, VesselConflictInsert,
     },
     PostgresAdapter,
 };
-use error_stack::{report, Result, ResultExt};
 use fiskeridir_rs::{GearGroup, SpeciesGroup, VesselLengthGroup};
 use futures::{Stream, TryStreamExt};
 use kyogre_core::{FiskeridirVesselId, TripAssemblerId, VesselSource};
@@ -17,8 +16,8 @@ use unnest_insert::UnnestInsert;
 impl PostgresAdapter {
     pub(crate) async fn active_vessel_conflicts_impl(
         &self,
-    ) -> Result<Vec<ActiveVesselConflict>, PostgresError> {
-        sqlx::query_as!(
+    ) -> Result<Vec<ActiveVesselConflict>, PostgresErrorWrapper> {
+        let conflicts = sqlx::query_as!(
             ActiveVesselConflict,
             r#"
 SELECT
@@ -33,17 +32,19 @@ FROM
             "#
         )
         .fetch_all(&self.pool)
-        .await
-        .change_context(PostgresError::Query)
+        .await?;
+
+        Ok(conflicts)
     }
+
     pub(crate) async fn manual_conflict_override_impl(
         &self,
         overrides: Vec<kyogre_core::NewVesselConflict>,
-    ) -> Result<(), PostgresError> {
+    ) -> Result<(), PostgresErrorWrapper> {
         let mut mmsi = Vec::with_capacity(overrides.len());
         let mut fiskeridir_vessel_id = Vec::with_capacity(overrides.len());
 
-        let mut tx = self.begin().await?;
+        let mut tx = self.pool.begin().await?;
 
         overrides.iter().for_each(|v| {
             if let Some(val) = v.mmsi {
@@ -64,8 +65,7 @@ ON CONFLICT DO NOTHING
             &mmsi
         )
         .fetch_all(&mut *tx)
-        .await
-        .change_context(PostgresError::Query)?;
+        .await?;
 
         sqlx::query!(
             r#"
@@ -80,21 +80,16 @@ ON CONFLICT DO NOTHING
             &fiskeridir_vessel_id
         )
         .fetch_all(&mut *tx)
-        .await
-        .change_context(PostgresError::Query)?;
+        .await?;
 
         let overrides: Vec<VesselConflictInsert> = overrides
             .into_iter()
             .map(VesselConflictInsert::from)
             .collect();
 
-        VesselConflictInsert::unnest_insert(overrides, &mut *tx)
-            .await
-            .change_context(PostgresError::Query)?;
+        VesselConflictInsert::unnest_insert(overrides, &mut *tx).await?;
 
-        tx.commit()
-            .await
-            .change_context(PostgresError::Transaction)?;
+        tx.commit().await?;
 
         Ok(())
     }
@@ -102,7 +97,7 @@ ON CONFLICT DO NOTHING
     pub(crate) async fn refresh_vessel_mappings<'a>(
         &self,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<(), PostgresError> {
+    ) -> Result<(), PostgresErrorWrapper> {
         sqlx::query!(
             r#"
 DELETE FROM fiskeridir_ais_vessel_mapping_whitelist
@@ -111,8 +106,7 @@ WHERE
             "#,
         )
         .execute(&mut **tx)
-        .await
-        .change_context(PostgresError::Query)?;
+        .await?;
 
         sqlx::query!(
             r#"
@@ -120,8 +114,7 @@ DELETE FROM fiskeridir_ais_vessel_active_conflicts
             "#,
         )
         .execute(&mut **tx)
-        .await
-        .change_context(PostgresError::Query)?;
+        .await?;
 
         sqlx::query!(
             r#"
@@ -146,8 +139,7 @@ ON CONFLICT DO NOTHING;
             &self.ignored_conflict_call_signs
         )
         .execute(&mut **tx)
-        .await
-        .change_context(PostgresError::Query)?;
+        .await?;
 
         sqlx::query!(
             r#"
@@ -165,8 +157,7 @@ ON CONFLICT DO NOTHING
             &self.ignored_conflict_call_signs
         )
         .execute(&mut **tx)
-        .await
-        .change_context(PostgresError::Query)?;
+        .await?;
 
         let conflicts = sqlx::query_as!(
             ActiveVesselConflict,
@@ -201,7 +192,7 @@ HAVING
         )
         .fetch_all(&mut **tx)
         .await
-        .change_context(PostgresError::Query)?;
+        ?;
 
         for c in &conflicts {
             sqlx::query!(
@@ -229,8 +220,7 @@ VALUES
                     .collect::<Vec<_>>() as _,
             )
             .execute(&mut **tx)
-            .await
-            .change_context(PostgresError::Query)?;
+            .await?;
         }
 
         Ok(())
@@ -239,7 +229,7 @@ VALUES
         &'a self,
         vessels: Vec<fiskeridir_rs::Vessel>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<(), PostgresError> {
+    ) -> Result<(), PostgresErrorWrapper> {
         let vessels = vessels
             .into_iter()
             .map(NewFiskeridirVessel::try_from)
@@ -254,16 +244,15 @@ VALUES
             })
             .collect::<Result<Vec<_>, _>>()?;
 
-        NewFiskeridirVessel::unnest_insert(vessels, &mut **tx)
-            .await
-            .change_context(PostgresError::Query)
-            .map(|_| ())
+        NewFiskeridirVessel::unnest_insert(vessels, &mut **tx).await?;
+
+        Ok(())
     }
 
     pub(crate) async fn set_landing_vessels_call_signs<'a>(
         &self,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<(), PostgresError> {
+    ) -> Result<(), PostgresErrorWrapper> {
         sqlx::query!(
             r#"
 UPDATE fiskeridir_vessels
@@ -310,15 +299,15 @@ WHERE
             &self.ignored_conflict_call_signs
         )
         .execute(&mut **tx)
-        .await
-        .change_context(PostgresError::Query)
-        .map(|_| ())
+        .await?;
+
+        Ok(())
     }
 
     pub(crate) async fn add_register_vessels_full(
         &self,
         vessels: Vec<fiskeridir_rs::RegisterVessel>,
-    ) -> Result<(), PostgresError> {
+    ) -> Result<(), PostgresErrorWrapper> {
         let municipalitis: HashMap<i32, NewMunicipality> = vessels
             .iter()
             .map(|v| {
@@ -332,7 +321,7 @@ WHERE
             })
             .collect();
 
-        let mut tx = self.begin().await?;
+        let mut tx = self.pool.begin().await?;
 
         self.add_municipalities(municipalitis.into_values().collect(), &mut tx)
             .await?;
@@ -341,9 +330,7 @@ WHERE
         self.set_landing_vessels_call_signs(&mut tx).await?;
         self.refresh_vessel_mappings(&mut tx).await?;
 
-        tx.commit()
-            .await
-            .change_context(PostgresError::Transaction)?;
+        tx.commit().await?;
 
         Ok(())
     }
@@ -352,21 +339,20 @@ WHERE
         &'a self,
         vessels: Vec<fiskeridir_rs::RegisterVessel>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<(), PostgresError> {
+    ) -> Result<(), PostgresErrorWrapper> {
         let vessels = vessels
             .into_iter()
             .map(NewRegisterVessel::try_from)
             .collect::<Result<Vec<_>, _>>()?;
 
-        NewRegisterVessel::unnest_insert(vessels, &mut **tx)
-            .await
-            .change_context(PostgresError::Query)
-            .map(|_| ())
+        NewRegisterVessel::unnest_insert(vessels, &mut **tx).await?;
+
+        Ok(())
     }
 
     pub(crate) fn fiskeridir_ais_vessel_combinations(
         &self,
-    ) -> impl Stream<Item = Result<FiskeridirAisVesselCombination, PostgresError>> + '_ {
+    ) -> impl Stream<Item = Result<FiskeridirAisVesselCombination, PostgresErrorWrapper>> + '_ {
         sqlx::query_as!(
             FiskeridirAisVesselCombination,
             r#"
@@ -428,13 +414,13 @@ GROUP BY
             "#
         )
         .fetch(&self.pool)
-        .map_err(|e| report!(e).change_context(PostgresError::Query))
+        .map_err(From::from)
     }
 
     pub(crate) async fn single_fiskeridir_ais_vessel_combination(
         &self,
         vessel_id: FiskeridirVesselId,
-    ) -> Result<Option<FiskeridirAisVesselCombination>, PostgresError> {
+    ) -> Result<Option<FiskeridirAisVesselCombination>, PostgresErrorWrapper> {
         sqlx::query_as!(
             FiskeridirAisVesselCombination,
             r#"
@@ -500,13 +486,13 @@ GROUP BY
         )
         .fetch_optional(&self.pool)
         .await
-        .map_err(|e| report!(e).change_context(PostgresError::Query))
+        .map_err(From::from)
     }
 
     pub(crate) async fn add_vessel_gear_and_species_groups<'a>(
         &'a self,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<(), PostgresError> {
+    ) -> Result<(), PostgresErrorWrapper> {
         sqlx::query!(
             r#"
 UPDATE fiskeridir_vessels v
@@ -532,13 +518,15 @@ WHERE
             "#,
         )
         .execute(&mut **tx)
-        .await
-        .change_context(PostgresError::Query)
-        .map(|_| ())
+        .await?;
+
+        Ok(())
     }
 
-    pub(crate) async fn update_preferred_trip_assemblers_impl(&self) -> Result<(), PostgresError> {
-        let mut tx = self.begin().await?;
+    pub(crate) async fn update_preferred_trip_assemblers_impl(
+        &self,
+    ) -> Result<(), PostgresErrorWrapper> {
+        let mut tx = self.pool.begin().await?;
 
         let vessel_ids = sqlx::query!(
             r#"
@@ -566,8 +554,7 @@ RETURNING
             TripAssemblerId::Landings as i32,
         )
         .fetch_all(&mut *tx)
-        .await
-        .change_context(PostgresError::Query)?
+        .await?
         .into_iter()
         .map(|r| r.fiskeridir_vessel_id)
         .collect::<Vec<_>>();
@@ -593,10 +580,9 @@ WHERE
             &vessel_ids,
         )
         .execute(&mut *tx)
-        .await
-        .change_context(PostgresError::Query)?;
+        .await?;
 
-        tx.commit().await.change_context(PostgresError::Query)?;
+        tx.commit().await?;
 
         Ok(())
     }

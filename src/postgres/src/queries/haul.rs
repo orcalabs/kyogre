@@ -1,8 +1,7 @@
 use super::{float_to_decimal, opt_float_to_decimal};
-use crate::{error::PostgresError, models::Haul, models::HaulMessage, PostgresAdapter};
+use crate::{error::PostgresErrorWrapper, models::Haul, models::HaulMessage, PostgresAdapter};
 use bigdecimal::BigDecimal;
 use chrono::{DateTime, Utc};
-use error_stack::{report, Report, Result, ResultExt};
 use fiskeridir_rs::{Gear, GearGroup, VesselLengthGroup};
 use futures::{Stream, TryStreamExt};
 use kyogre_core::*;
@@ -14,7 +13,7 @@ impl PostgresAdapter {
         args: HaulsMatrixArgs,
         active_filter: ActiveHaulsFilter,
         x_feature: HaulMatrixXFeature,
-    ) -> Result<Vec<u64>, PostgresError> {
+    ) -> Result<Vec<u64>, PostgresErrorWrapper> {
         let y_feature = if x_feature == active_filter {
             HaulMatrixYFeature::CatchLocation
         } else {
@@ -99,16 +98,18 @@ GROUP BY
             args.majority_species_group,
         )
         .fetch_all(&pool)
-        .await
-        .change_context(PostgresError::Query)?;
+        .await?;
 
-        calculate_haul_sum_area_table(x_feature, y_feature, data)
-            .change_context(PostgresError::DataConversion)
+        let table = calculate_haul_sum_area_table(x_feature, y_feature, data)?;
+
+        Ok(table)
     }
+
     pub(crate) fn hauls_impl(
         &self,
         query: HaulsQuery,
-    ) -> Result<impl Stream<Item = Result<Haul, PostgresError>> + '_, PostgresError> {
+    ) -> Result<impl Stream<Item = Result<Haul, PostgresErrorWrapper>> + '_, PostgresErrorWrapper>
+    {
         let args = HaulsArgs::try_from(query)?;
 
         let stream = sqlx::query_as!(
@@ -239,7 +240,7 @@ ORDER BY
             args.sorting,
         )
         .fetch(&self.pool)
-        .map_err(|e| report!(e).change_context(PostgresError::Query));
+        .map_err(From::from);
 
         Ok(stream)
     }
@@ -247,10 +248,10 @@ ORDER BY
     pub(crate) async fn hauls_by_ids_impl(
         &self,
         haul_ids: &[HaulId],
-    ) -> Result<Vec<Haul>, PostgresError> {
+    ) -> Result<Vec<Haul>, PostgresErrorWrapper> {
         let ids = haul_ids.iter().map(|i| i.0).collect::<Vec<_>>();
 
-        sqlx::query_as!(
+        let hauls = sqlx::query_as!(
             Haul,
             r#"
 SELECT
@@ -303,13 +304,14 @@ WHERE
             &ids,
         )
         .fetch_all(&self.pool)
-        .await
-        .change_context(PostgresError::Query)
+        .await?;
+
+        Ok(hauls)
     }
 
     pub(crate) async fn all_haul_cache_versions_impl(
         &self,
-    ) -> Result<Vec<(HaulId, i64)>, PostgresError> {
+    ) -> Result<Vec<(HaulId, i64)>, PostgresErrorWrapper> {
         Ok(sqlx::query!(
             r#"
 SELECT
@@ -320,8 +322,7 @@ FROM
             "#,
         )
         .fetch_all(&self.pool)
-        .await
-        .change_context(PostgresError::Query)?
+        .await?
         .into_iter()
         .map(|r| (HaulId(r.haul_id), r.cache_version))
         .collect())
@@ -330,8 +331,8 @@ FROM
     pub(crate) async fn haul_messages_of_vessel_impl(
         &self,
         vessel_id: FiskeridirVesselId,
-    ) -> Result<Vec<HaulMessage>, PostgresError> {
-        sqlx::query_as!(
+    ) -> Result<Vec<HaulMessage>, PostgresErrorWrapper> {
+        let messages = sqlx::query_as!(
             HaulMessage,
             r#"
 SELECT DISTINCT
@@ -354,15 +355,16 @@ WHERE
             vessel_id.0,
         )
         .fetch_all(&self.pool)
-        .await
-        .change_context(PostgresError::Query)
+        .await?;
+
+        Ok(messages)
     }
 
     pub(crate) async fn haul_messages_of_vessel_without_weather_impl(
         &self,
         vessel_id: FiskeridirVesselId,
-    ) -> Result<Vec<HaulMessage>, PostgresError> {
-        sqlx::query_as!(
+    ) -> Result<Vec<HaulMessage>, PostgresErrorWrapper> {
+        let messages = sqlx::query_as!(
             HaulMessage,
             r#"
 SELECT
@@ -380,12 +382,13 @@ WHERE
             HaulWeatherStatus::Unprocessed as i32,
         )
         .fetch_all(&self.pool)
-        .await
-        .change_context(PostgresError::Query)
+        .await?;
+
+        Ok(messages)
     }
 
-    pub(crate) async fn update_bycatch_status_impl(&self) -> Result<(), PostgresError> {
-        let mut tx = self.begin().await?;
+    pub(crate) async fn update_bycatch_status_impl(&self) -> Result<(), PostgresErrorWrapper> {
+        let mut tx = self.pool.begin().await?;
 
         sqlx::query!(
             r#"
@@ -397,8 +400,7 @@ WHERE
            "#
         )
         .execute(&mut *tx)
-        .await
-        .change_context(PostgresError::Query)?;
+        .await?;
 
         sqlx::query!(
             r#"
@@ -429,8 +431,7 @@ WHERE
             "#,
         )
         .execute(&mut *tx)
-        .await
-        .change_context(PostgresError::Query)?;
+        .await?;
 
         sqlx::query!(
             r#"
@@ -462,12 +463,9 @@ WHERE
             "#,
         )
         .execute(&mut *tx)
-        .await
-        .change_context(PostgresError::Query)?;
+        .await?;
 
-        tx.commit()
-            .await
-            .change_context(PostgresError::Transaction)?;
+        tx.commit().await?;
 
         Ok(())
     }
@@ -475,7 +473,7 @@ WHERE
     pub(crate) async fn add_haul_distribution_output(
         &self,
         values: Vec<HaulDistributionOutput>,
-    ) -> Result<(), PostgresError> {
+    ) -> Result<(), PostgresErrorWrapper> {
         let len = values.len();
 
         let mut haul_id = Vec::with_capacity(len);
@@ -486,11 +484,11 @@ WHERE
         for v in values {
             haul_id.push(v.haul_id.0);
             catch_location.push(v.catch_location.into_inner());
-            factor.push(float_to_decimal(v.factor).change_context(PostgresError::DataConversion)?);
+            factor.push(float_to_decimal(v.factor)?);
             status.push(v.status as i32);
         }
 
-        let mut tx = self.begin().await?;
+        let mut tx = self.pool.begin().await?;
 
         sqlx::query!(
             r#"
@@ -522,8 +520,7 @@ WHERE
             catch_location.as_slice(),
         )
         .execute(&mut *tx)
-        .await
-        .change_context(PostgresError::Query)?;
+        .await?;
 
         sqlx::query!(
             r#"
@@ -534,8 +531,7 @@ WHERE
             haul_id.as_slice(),
         )
         .execute(&mut *tx)
-        .await
-        .change_context(PostgresError::Query)?;
+        .await?;
 
         sqlx::query!(
             r#"
@@ -598,17 +594,16 @@ GROUP BY
             status.as_slice(),
         )
         .execute(&mut *tx)
-        .await
-        .change_context(PostgresError::Query)?;
+        .await?;
 
-        tx.commit()
-            .await
-            .change_context(PostgresError::Transaction)?;
+        tx.commit().await?;
 
         Ok(())
     }
 
-    pub(crate) async fn hauls_with_incorrect_catches(&self) -> Result<Vec<i64>, PostgresError> {
+    pub(crate) async fn hauls_with_incorrect_catches(
+        &self,
+    ) -> Result<Vec<i64>, PostgresErrorWrapper> {
         Ok(sqlx::query!(
             r#"
 SELECT
@@ -669,15 +664,16 @@ WHERE
             "#
         )
         .fetch_all(&self.pool)
-        .await
-        .change_context(PostgresError::Query)?
+        .await?
         .into_iter()
         .map(|r| r.message_id)
         .collect())
     }
 
-    pub(crate) async fn hauls_matrix_vs_ers_dca_living_weight(&self) -> Result<i64, PostgresError> {
-        sqlx::query!(
+    pub(crate) async fn hauls_matrix_vs_ers_dca_living_weight(
+        &self,
+    ) -> Result<i64, PostgresErrorWrapper> {
+        let row = sqlx::query!(
             r#"
 SELECT
     COALESCE(
@@ -715,16 +711,16 @@ SELECT
             "#
         )
         .fetch_one(&self.pool)
-        .await
-        .change_context(PostgresError::Query)
-        .map(|r| r.sum)
+        .await?;
+
+        Ok(row.sum)
     }
 
     pub(crate) async fn add_hauls<'a>(
         &'a self,
         message_ids: &[i64],
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<(), PostgresError> {
+    ) -> Result<(), PostgresErrorWrapper> {
         let event_ids = sqlx::query!(
             r#"
 INSERT INTO
@@ -907,8 +903,7 @@ RETURNING
             message_ids,
         )
         .fetch_all(&mut **tx)
-        .await
-        .change_context(PostgresError::Query)?
+        .await?
         .into_iter()
         .filter_map(|r| r.vessel_event_id)
         .collect();
@@ -921,7 +916,7 @@ RETURNING
         &'a self,
         message_ids: &[i64],
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<(), PostgresError> {
+    ) -> Result<(), PostgresErrorWrapper> {
         sqlx::query!(
             r#"
 INSERT INTO
@@ -970,9 +965,9 @@ GROUP BY
             message_ids,
         )
         .execute(&mut **tx)
-        .await
-        .change_context(PostgresError::Query)
-        .map(|_| ())
+        .await?;
+
+        Ok(())
     }
 }
 
@@ -992,7 +987,7 @@ pub struct HaulsArgs {
 }
 
 impl TryFrom<HaulsQuery> for HaulsArgs {
-    type Error = Report<PostgresError>;
+    type Error = PostgresErrorWrapper;
 
     fn try_from(v: HaulsQuery) -> std::result::Result<Self, Self::Error> {
         Ok(HaulsArgs {
@@ -1020,14 +1015,10 @@ impl TryFrom<HaulsQuery> for HaulsArgs {
             fiskeridir_vessel_ids: v
                 .vessel_ids
                 .map(|ids| ids.into_iter().map(|i| i.0).collect()),
-            min_wind_speed: opt_float_to_decimal(v.min_wind_speed)
-                .change_context(PostgresError::DataConversion)?,
-            max_wind_speed: opt_float_to_decimal(v.max_wind_speed)
-                .change_context(PostgresError::DataConversion)?,
-            min_air_temperature: opt_float_to_decimal(v.min_air_temperature)
-                .change_context(PostgresError::DataConversion)?,
-            max_air_temperature: opt_float_to_decimal(v.max_air_temperature)
-                .change_context(PostgresError::DataConversion)?,
+            min_wind_speed: opt_float_to_decimal(v.min_wind_speed)?,
+            max_wind_speed: opt_float_to_decimal(v.max_wind_speed)?,
+            min_air_temperature: opt_float_to_decimal(v.min_air_temperature)?,
+            max_air_temperature: opt_float_to_decimal(v.max_air_temperature)?,
             sorting: v.sorting.map(|s| s as i32),
             ordering: v.ordering.map(|o| o as i32),
         })
@@ -1047,7 +1038,7 @@ pub struct HaulsMatrixArgs {
 }
 
 impl TryFrom<HaulsMatrixQuery> for HaulsMatrixArgs {
-    type Error = Report<PostgresError>;
+    type Error = PostgresErrorWrapper;
 
     fn try_from(v: HaulsMatrixQuery) -> std::result::Result<Self, Self::Error> {
         Ok(HaulsMatrixArgs {

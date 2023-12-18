@@ -1,5 +1,5 @@
 use chrono::{DateTime, Utc};
-use error_stack::{report, Result, ResultExt};
+use error_stack::{report, ResultExt};
 use futures::{Stream, TryStreamExt};
 use geo_types::geometry::Geometry;
 use geozero::wkb;
@@ -9,13 +9,17 @@ use kyogre_core::{
 };
 use sqlx::postgres::types::PgRange;
 
-use crate::{error::PostgresError, models::FishingFacility, PostgresAdapter};
+use crate::{
+    error::{PostgresError, PostgresErrorWrapper},
+    models::FishingFacility,
+    PostgresAdapter,
+};
 
 impl PostgresAdapter {
     pub(crate) async fn add_fishing_facilities_impl(
         &self,
         facilities: Vec<kyogre_core::FishingFacility>,
-    ) -> Result<(), PostgresError> {
+    ) -> Result<(), PostgresErrorWrapper> {
         let len = facilities.len();
 
         let mut tool_id = Vec::with_capacity(len);
@@ -132,27 +136,27 @@ SELECT
     u.api_source
 FROM
     UNNEST(
-        $1::UUID[],
-        $2::UUID[],
-        $3::TEXT[],
-        $4::TEXT[],
+        $1::UUID [],
+        $2::UUID [],
+        $3::TEXT [],
+        $4::TEXT [],
         $5::INT[],
         $6::BIGINT[],
-        $7::TEXT[],
-        $8::TEXT[],
-        $9::TEXT[],
-        $10::TEXT[],
+        $7::TEXT [],
+        $8::TEXT [],
+        $9::TEXT [],
+        $10::TEXT [],
         $11::INT[],
-        $12::TEXT[],
-        $13::TEXT[],
+        $12::TEXT [],
+        $13::TEXT [],
         $14::INT[],
         $15::TIMESTAMPTZ[],
         $16::TIMESTAMPTZ[],
         $17::TIMESTAMPTZ[],
         $18::TIMESTAMPTZ[],
         $19::TIMESTAMPTZ[],
-        $20::TEXT[],
-        $21::TEXT[],
+        $20::TEXT [],
+        $21::TEXT [],
         $22::GEOMETRY[],
         $23::INT[]
     ) u (
@@ -255,15 +259,15 @@ SET
             api_source.as_slice(),
         )
         .execute(&self.pool)
-        .await
-        .change_context(PostgresError::Query)
-        .map(|_| ())
+        .await?;
+
+        Ok(())
     }
 
     pub(crate) fn fishing_facilities_impl(
         &self,
         query: FishingFacilitiesQuery,
-    ) -> impl Stream<Item = Result<FishingFacility, PostgresError>> + '_ {
+    ) -> impl Stream<Item = Result<FishingFacility, PostgresErrorWrapper>> + '_ {
         let args: FishingFacilitiesArgs = query.into();
 
         sqlx::query_as!(
@@ -356,13 +360,13 @@ LIMIT
             args.limit as i64,
         )
         .fetch(&self.pool)
-        .map_err(|e| report!(e).change_context(PostgresError::Query))
+        .map_err(From::from)
     }
 
     pub(crate) async fn latest_fishing_facility_update_impl(
         &self,
         source: Option<FishingFacilityApiSource>,
-    ) -> Result<Option<DateTime<Utc>>, PostgresError> {
+    ) -> Result<Option<DateTime<Utc>>, PostgresErrorWrapper> {
         Ok(sqlx::query!(
             r#"
 SELECT

@@ -1,10 +1,9 @@
 use bigdecimal::BigDecimal;
 use chrono::{DateTime, Utc};
-use error_stack::{Report, ResultExt};
 use kyogre_core::{NavigationStatus, PositionType, TripPositionLayerId};
 
 use crate::{
-    error::PostgresError,
+    error::PostgresErrorWrapper,
     queries::{decimal_to_float, opt_decimal_to_float},
 };
 
@@ -24,23 +23,19 @@ pub struct AisVmsPosition {
 }
 
 impl TryFrom<AisVmsPosition> for kyogre_core::AisVmsPosition {
-    type Error = Report<PostgresError>;
+    type Error = PostgresErrorWrapper;
 
     fn try_from(v: AisVmsPosition) -> Result<Self, Self::Error> {
         Ok(Self {
-            latitude: decimal_to_float(v.latitude).change_context(PostgresError::DataConversion)?,
-            longitude: decimal_to_float(v.longitude)
-                .change_context(PostgresError::DataConversion)?,
+            latitude: decimal_to_float(v.latitude)?,
+            longitude: decimal_to_float(v.longitude)?,
             timestamp: v.timestamp,
-            course_over_ground: opt_decimal_to_float(v.course_over_ground)
-                .change_context(PostgresError::DataConversion)?,
-            speed: opt_decimal_to_float(v.speed).change_context(PostgresError::DataConversion)?,
+            course_over_ground: opt_decimal_to_float(v.course_over_ground)?,
+            speed: opt_decimal_to_float(v.speed)?,
             navigational_status: v.navigational_status,
-            rate_of_turn: opt_decimal_to_float(v.rate_of_turn)
-                .change_context(PostgresError::DataConversion)?,
+            rate_of_turn: opt_decimal_to_float(v.rate_of_turn)?,
             true_heading: v.true_heading,
-            distance_to_shore: decimal_to_float(v.distance_to_shore)
-                .change_context(PostgresError::DataConversion)?,
+            distance_to_shore: decimal_to_float(v.distance_to_shore)?,
             position_type: v.position_type_id,
             pruned_by: v.pruned_by,
         })

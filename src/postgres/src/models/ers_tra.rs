@@ -1,11 +1,11 @@
 use bigdecimal::BigDecimal;
 use chrono::{DateTime, NaiveDate, Utc};
-use error_stack::{report, Report, ResultExt};
+use error_stack::{report, Report};
 use fiskeridir_rs::FiskdirVesselNationalityGroup;
 use unnest_insert::UnnestInsert;
 
 use crate::{
-    error::PostgresError,
+    error::{PostgresError, PostgresErrorWrapper},
     queries::{enum_to_i32, float_to_decimal, opt_float_to_decimal, timestamp_from_date_and_time},
 };
 
@@ -71,7 +71,7 @@ pub struct NewErsTraCatch {
 }
 
 impl TryFrom<fiskeridir_rs::ErsTra> for NewErsTra {
-    type Error = Report<PostgresError>;
+    type Error = PostgresErrorWrapper;
 
     fn try_from(v: fiskeridir_rs::ErsTra) -> Result<Self, Self::Error> {
         Ok(Self {
@@ -108,11 +108,9 @@ impl TryFrom<fiskeridir_rs::ErsTra> for NewErsTra {
             vessel_gross_tonnage_other: v.vessel_info.gross_tonnage_other.map(|v| v as i32),
             vessel_county: v.vessel_info.vessel_county,
             vessel_county_code: v.vessel_info.vessel_county_code.map(|v| v as i32),
-            vessel_greatest_length: opt_float_to_decimal(v.vessel_info.vessel_greatest_length)
-                .change_context(PostgresError::DataConversion)?,
+            vessel_greatest_length: opt_float_to_decimal(v.vessel_info.vessel_greatest_length)?,
             vessel_identification: v.vessel_info.vessel_identification.into_inner(),
-            vessel_length: float_to_decimal(v.vessel_info.vessel_length)
-                .change_context(PostgresError::DataConversion)?,
+            vessel_length: float_to_decimal(v.vessel_info.vessel_length)?,
             vessel_length_group: v.vessel_info.vessel_length_group,
             vessel_length_group_code: v.vessel_info.vessel_length_group_code.map(|v| v as i32),
             vessel_material_code: v.vessel_info.vessel_material_code,
@@ -127,8 +125,7 @@ impl TryFrom<fiskeridir_rs::ErsTra> for NewErsTra {
             vessel_registration_id_ers: v.vessel_info.vessel_registration_id_ers,
             vessel_valid_until: v.vessel_info.vessel_valid_until,
             vessel_valid_from: v.vessel_info.vessel_valid_from,
-            vessel_width: opt_float_to_decimal(v.vessel_info.vessel_width)
-                .change_context(PostgresError::DataConversion)?,
+            vessel_width: opt_float_to_decimal(v.vessel_info.vessel_width)?,
             vessel_event_id: None,
         })
     }
