@@ -3,7 +3,7 @@ use actix_web::http::StatusCode;
 use chrono::{DateTime, Utc};
 use engine::*;
 use fiskeridir_rs::{ErsDca, GearGroup, SpeciesGroup, VesselLengthGroup};
-use kyogre_core::{FiskeridirVesselId, HaulsSorting, Ordering};
+use kyogre_core::{AirTemperature, FiskeridirVesselId, HaulsSorting, Ordering, WindSpeed};
 use web_api::routes::v1::haul::{Haul, HaulsParams};
 
 #[tokio::test]
@@ -253,9 +253,7 @@ async fn test_hauls_filters_by_wind_speed() {
             .vessels(1)
             .hauls(5)
             .weather(5)
-            .modify_idx(|i, w| {
-                w.weather.wind_speed_10m = Some(i as f64);
-            })
+            .modify_idx(|i, w| w.weather.wind_speed_10m = WindSpeed::new(i as f64))
             .build()
             .await;
 
@@ -286,7 +284,7 @@ async fn test_hauls_filters_by_air_temperature() {
             .hauls(5)
             .weather(5)
             .modify_idx(|i, w| {
-                w.weather.air_temperature_2m = Some(i as f64);
+                w.weather.air_temperature_2m = AirTemperature::new(i as f64);
             })
             .build()
             .await;

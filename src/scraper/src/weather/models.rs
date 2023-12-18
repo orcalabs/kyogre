@@ -39,14 +39,14 @@ impl Weather {
             latitude: v.latitude,
             longitude: v.longitude,
             altitude: v.altitude,
-            wind_speed_10m,
+            wind_speed_10m: wind_speed_10m.into(),
             wind_direction_10m,
-            air_temperature_2m: v.air_temperature_2m,
-            relative_humidity_2m: v.relative_humidity_2m,
-            air_pressure_at_sea_level: v.air_pressure_at_sea_level,
-            precipitation_amount: v.precipitation_amount,
             land_area_fraction: v.land_area_fraction,
-            cloud_area_fraction: v.cloud_area_fraction,
+            air_pressure_at_sea_level: v.air_pressure_at_sea_level.into(),
+            air_temperature_2m: v.air_temperature_2m.into(),
+            cloud_area_fraction: v.cloud_area_fraction.into(),
+            precipitation_amount: v.precipitation_amount.into(),
+            relative_humidity_2m: v.relative_humidity_2m.into(),
         }
     }
 }

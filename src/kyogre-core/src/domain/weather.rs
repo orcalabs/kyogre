@@ -1,14 +1,121 @@
 use chrono::{DateTime, NaiveDate, Utc};
 use geo::geometry::Polygon;
-use rand::Rng;
 use serde::{Deserialize, Serialize};
 
 use crate::{CatchLocationId, HaulId, HaulOceanClimate, HaulWeatherStatus};
+
+static MAX_WIND_SPEED_10M: f64 = 1000.0;
+static MIN_WIND_SPEED_10M: f64 = 0.0;
+
+static MAX_AIR_TEMPERATURE_2M: f64 = 1000.0;
+static MIN_AIR_TEMPERATURE_2M: f64 = -1000.0;
+
+static MAX_RELATIVE_HUMIDITY_2M: f64 = 1.0;
+static MIN_RELATIVE_HUMIDITY_2M: f64 = 0.0;
+
+static MAX_AIR_PRESSURE_AT_SEA_LEVEL: f64 = 300000.0;
+static MIN_AIR_PRESSURE_AT_SEA_LEVEL: f64 = 10000.0;
+
+static MAX_PRECIPITATION_AMOUNT: f64 = 1000.0;
+static MIN_PRECIPITATION_AMOUNT: f64 = -1000.0;
+
+static MAX_CLOUD_AREA_FRACTION: f64 = 1.0;
+static MIN_CLOUD_AREA_FRACTION: f64 = 0.0;
 
 #[derive(Copy, Clone, Debug)]
 pub enum WeatherData {
     Require,
     Optional,
+}
+
+#[derive(Default, Clone, Debug, Copy)]
+pub struct WindSpeed(Option<f64>);
+impl WindSpeed {
+    pub fn into_inner(self) -> Option<f64> {
+        self.0
+    }
+    pub fn new(val: f64) -> WindSpeed {
+        if val < MAX_WIND_SPEED_10M || val > MIN_WIND_SPEED_10M {
+            WindSpeed(Some(val))
+        } else {
+            WindSpeed(None)
+        }
+    }
+}
+
+#[derive(Default, Clone, Debug, Copy)]
+pub struct AirTemperature(Option<f64>);
+impl AirTemperature {
+    pub fn into_inner(self) -> Option<f64> {
+        self.0
+    }
+    pub fn new(val: f64) -> AirTemperature {
+        if val < MAX_AIR_TEMPERATURE_2M || val > MIN_AIR_TEMPERATURE_2M {
+            AirTemperature(Some(val))
+        } else {
+            AirTemperature(None)
+        }
+    }
+}
+
+#[derive(Default, Clone, Debug, Copy)]
+pub struct RelativeHumidity(Option<f64>);
+impl RelativeHumidity {
+    pub fn into_inner(self) -> Option<f64> {
+        self.0
+    }
+    pub fn new(val: f64) -> RelativeHumidity {
+        if val < MAX_RELATIVE_HUMIDITY_2M || val > MIN_RELATIVE_HUMIDITY_2M {
+            RelativeHumidity(Some(val))
+        } else {
+            RelativeHumidity(None)
+        }
+    }
+}
+
+#[derive(Default, Clone, Debug, Copy)]
+pub struct AirPressureAtSeaLevel(Option<f64>);
+impl AirPressureAtSeaLevel {
+    pub fn into_inner(self) -> Option<f64> {
+        self.0
+    }
+    pub fn new(val: f64) -> AirPressureAtSeaLevel {
+        if val < MAX_AIR_PRESSURE_AT_SEA_LEVEL || val > MIN_AIR_PRESSURE_AT_SEA_LEVEL {
+            AirPressureAtSeaLevel(Some(val))
+        } else {
+            AirPressureAtSeaLevel(None)
+        }
+    }
+}
+
+#[derive(Default, Clone, Debug, Copy)]
+pub struct PrecipitationAmount(Option<f64>);
+impl PrecipitationAmount {
+    pub fn into_inner(self) -> Option<f64> {
+        self.0
+    }
+    pub fn new(val: f64) -> PrecipitationAmount {
+        if val < MAX_PRECIPITATION_AMOUNT || val > MIN_PRECIPITATION_AMOUNT {
+            PrecipitationAmount(Some(val))
+        } else {
+            PrecipitationAmount(None)
+        }
+    }
+}
+
+#[derive(Default, Clone, Debug, Copy)]
+pub struct CloudAreaFraction(Option<f64>);
+impl CloudAreaFraction {
+    pub fn into_inner(self) -> Option<f64> {
+        self.0
+    }
+    pub fn new(val: f64) -> CloudAreaFraction {
+        if val < MAX_CLOUD_AREA_FRACTION || val > MIN_CLOUD_AREA_FRACTION {
+            CloudAreaFraction(Some(val))
+        } else {
+            CloudAreaFraction(None)
+        }
+    }
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -31,14 +138,14 @@ pub struct NewWeather {
     pub latitude: f64,
     pub longitude: f64,
     pub altitude: f64,
-    pub wind_speed_10m: Option<f64>,
+    pub wind_speed_10m: WindSpeed,
     pub wind_direction_10m: Option<f64>,
-    pub air_temperature_2m: Option<f64>,
-    pub relative_humidity_2m: Option<f64>,
-    pub air_pressure_at_sea_level: Option<f64>,
-    pub precipitation_amount: Option<f64>,
+    pub air_temperature_2m: AirTemperature,
+    pub relative_humidity_2m: RelativeHumidity,
+    pub air_pressure_at_sea_level: AirPressureAtSeaLevel,
+    pub precipitation_amount: PrecipitationAmount,
     pub land_area_fraction: f64,
-    pub cloud_area_fraction: Option<f64>,
+    pub cloud_area_fraction: CloudAreaFraction,
 }
 
 #[derive(Debug, Clone)]
@@ -112,23 +219,20 @@ pub static WEATHER_LOCATION_LATS_LONS: [(f64, f64, i64); 21] = [
 
 impl NewWeather {
     pub fn test_default(timestamp: DateTime<Utc>) -> Self {
-        let mut rng = rand::thread_rng();
         let (latitude, longitude, _) = WEATHER_LOCATION_LATS_LONS[0];
-        let num = rng.gen::<u8>() as f64;
-
         Self {
             timestamp,
             latitude,
             longitude,
-            altitude: num,
-            wind_speed_10m: Some(num),
-            wind_direction_10m: Some(num),
-            air_temperature_2m: Some(num),
-            relative_humidity_2m: Some(num),
-            air_pressure_at_sea_level: Some(num),
-            precipitation_amount: Some(num),
+            altitude: 0.0,
+            wind_speed_10m: WindSpeed::new(20.0),
+            wind_direction_10m: Some(150.0),
+            air_temperature_2m: AirTemperature::new(10.0),
+            relative_humidity_2m: RelativeHumidity::new(0.2),
+            air_pressure_at_sea_level: AirPressureAtSeaLevel::new(20000.0),
+            precipitation_amount: PrecipitationAmount::new(10.0),
             land_area_fraction: 0.,
-            cloud_area_fraction: Some(0.),
+            cloud_area_fraction: CloudAreaFraction::new(0.2),
         }
     }
 }
@@ -140,14 +244,14 @@ impl From<&NewWeather> for Weather {
             latitude: v.latitude,
             longitude: v.longitude,
             altitude: v.altitude,
-            wind_speed_10m: v.wind_speed_10m,
+            wind_speed_10m: v.wind_speed_10m.into_inner(),
             wind_direction_10m: v.wind_direction_10m,
-            air_temperature_2m: v.air_temperature_2m,
-            relative_humidity_2m: v.relative_humidity_2m,
-            air_pressure_at_sea_level: v.air_pressure_at_sea_level,
-            precipitation_amount: v.precipitation_amount,
+            air_temperature_2m: v.air_temperature_2m.into_inner(),
+            relative_humidity_2m: v.relative_humidity_2m.into_inner(),
+            air_pressure_at_sea_level: v.air_pressure_at_sea_level.into_inner(),
+            precipitation_amount: v.precipitation_amount.into_inner(),
             land_area_fraction: v.land_area_fraction,
-            cloud_area_fraction: v.cloud_area_fraction,
+            cloud_area_fraction: v.cloud_area_fraction.into_inner(),
             weather_location_id: WeatherLocationId::from_lat_lon(v.latitude, v.longitude),
         }
     }
@@ -172,5 +276,41 @@ impl Eq for WeatherLocation {}
 impl std::hash::Hash for WeatherLocation {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.id.hash(state);
+    }
+}
+
+impl From<Option<f64>> for WindSpeed {
+    fn from(value: Option<f64>) -> Self {
+        value.map(WindSpeed::new).unwrap_or_default()
+    }
+}
+
+impl From<Option<f64>> for AirTemperature {
+    fn from(value: Option<f64>) -> Self {
+        value.map(AirTemperature::new).unwrap_or_default()
+    }
+}
+
+impl From<Option<f64>> for RelativeHumidity {
+    fn from(value: Option<f64>) -> Self {
+        value.map(RelativeHumidity::new).unwrap_or_default()
+    }
+}
+
+impl From<Option<f64>> for AirPressureAtSeaLevel {
+    fn from(value: Option<f64>) -> Self {
+        value.map(AirPressureAtSeaLevel::new).unwrap_or_default()
+    }
+}
+
+impl From<Option<f64>> for CloudAreaFraction {
+    fn from(value: Option<f64>) -> Self {
+        value.map(CloudAreaFraction::new).unwrap_or_default()
+    }
+}
+
+impl From<Option<f64>> for PrecipitationAmount {
+    fn from(value: Option<f64>) -> Self {
+        value.map(PrecipitationAmount::new).unwrap_or_default()
     }
 }
