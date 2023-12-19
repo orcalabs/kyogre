@@ -67,6 +67,8 @@ impl RelativeHumidity {
     pub fn new(val: f64) -> RelativeHumidity {
         if val < MAX_RELATIVE_HUMIDITY_2M && val > MIN_RELATIVE_HUMIDITY_2M {
             RelativeHumidity(Some(val))
+        } else if val > MAX_RELATIVE_HUMIDITY_2M {
+            RelativeHumidity(Some(MAX_RELATIVE_HUMIDITY_2M))
         } else {
             RelativeHumidity(None)
         }
@@ -97,8 +99,6 @@ impl PrecipitationAmount {
     pub fn new(val: f64) -> PrecipitationAmount {
         if val < MAX_PRECIPITATION_AMOUNT && val > MIN_PRECIPITATION_AMOUNT {
             PrecipitationAmount(Some(val))
-        } else if val > MAX_PRECIPITATION_AMOUNT {
-            PrecipitationAmount(Some(MAX_PRECIPITATION_AMOUNT))
         } else {
             PrecipitationAmount(None)
         }
