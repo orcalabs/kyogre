@@ -35,7 +35,7 @@ impl WindSpeed {
         self.0
     }
     pub fn new(val: f64) -> WindSpeed {
-        if val < MAX_WIND_SPEED_10M || val > MIN_WIND_SPEED_10M {
+        if val < MAX_WIND_SPEED_10M && val > MIN_WIND_SPEED_10M {
             WindSpeed(Some(val))
         } else {
             WindSpeed(None)
@@ -50,7 +50,7 @@ impl AirTemperature {
         self.0
     }
     pub fn new(val: f64) -> AirTemperature {
-        if val < MAX_AIR_TEMPERATURE_2M || val > MIN_AIR_TEMPERATURE_2M {
+        if val < MAX_AIR_TEMPERATURE_2M && val > MIN_AIR_TEMPERATURE_2M {
             AirTemperature(Some(val))
         } else {
             AirTemperature(None)
@@ -65,7 +65,7 @@ impl RelativeHumidity {
         self.0
     }
     pub fn new(val: f64) -> RelativeHumidity {
-        if val < MAX_RELATIVE_HUMIDITY_2M || val > MIN_RELATIVE_HUMIDITY_2M {
+        if val < MAX_RELATIVE_HUMIDITY_2M && val > MIN_RELATIVE_HUMIDITY_2M {
             RelativeHumidity(Some(val))
         } else {
             RelativeHumidity(None)
@@ -80,7 +80,7 @@ impl AirPressureAtSeaLevel {
         self.0
     }
     pub fn new(val: f64) -> AirPressureAtSeaLevel {
-        if val < MAX_AIR_PRESSURE_AT_SEA_LEVEL || val > MIN_AIR_PRESSURE_AT_SEA_LEVEL {
+        if val < MAX_AIR_PRESSURE_AT_SEA_LEVEL && val > MIN_AIR_PRESSURE_AT_SEA_LEVEL {
             AirPressureAtSeaLevel(Some(val))
         } else {
             AirPressureAtSeaLevel(None)
@@ -95,8 +95,10 @@ impl PrecipitationAmount {
         self.0
     }
     pub fn new(val: f64) -> PrecipitationAmount {
-        if val < MAX_PRECIPITATION_AMOUNT || val > MIN_PRECIPITATION_AMOUNT {
+        if val < MAX_PRECIPITATION_AMOUNT && val > MIN_PRECIPITATION_AMOUNT {
             PrecipitationAmount(Some(val))
+        } else if val > MAX_PRECIPITATION_AMOUNT {
+            PrecipitationAmount(Some(MAX_PRECIPITATION_AMOUNT))
         } else {
             PrecipitationAmount(None)
         }
@@ -110,8 +112,10 @@ impl CloudAreaFraction {
         self.0
     }
     pub fn new(val: f64) -> CloudAreaFraction {
-        if val < MAX_CLOUD_AREA_FRACTION || val > MIN_CLOUD_AREA_FRACTION {
+        if val < MAX_CLOUD_AREA_FRACTION && val > MIN_CLOUD_AREA_FRACTION {
             CloudAreaFraction(Some(val))
+        } else if val > MAX_CLOUD_AREA_FRACTION {
+            CloudAreaFraction(Some(MAX_CLOUD_AREA_FRACTION))
         } else {
             CloudAreaFraction(None)
         }
