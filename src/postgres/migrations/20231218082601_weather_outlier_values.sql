@@ -28,17 +28,27 @@ WHERE
 
 UPDATE weather
 SET
+    relative_humidity_2m = 1
+WHERE
+    weather.relative_humidity_2m > 1;
+
+UPDATE weather
+SET
     relative_humidity_2m = NULL
 WHERE
-    weather.relative_humidity_2m > 1
-    OR weather.relative_humidity_2m < 0;
+    weather.relative_humidity_2m < 0;
+
+UPDATE weather
+SET
+    cloud_area_fraction = 1
+WHERE
+    weather.cloud_area_fraction > 1;
 
 UPDATE weather
 SET
     cloud_area_fraction = NULL
 WHERE
-    weather.cloud_area_fraction > 1
-    OR weather.cloud_area_fraction < 0;
+    weather.cloud_area_fraction < 0;
 
 ALTER TABLE weather
 ADD CONSTRAINT sane_wind_speed_10m CHECK (
