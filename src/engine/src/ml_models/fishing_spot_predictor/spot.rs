@@ -1,5 +1,5 @@
 use super::{spot_predict_impl, spot_train_impl};
-use crate::SpotPredictorSettings;
+use crate::{ml_models::lunar_value, SpotPredictorSettings};
 use async_trait::async_trait;
 use chrono::Datelike;
 use error_stack::Result;
@@ -25,6 +25,7 @@ struct PythonTrainingData {
     pub day: u32,
     pub year: u32,
     pub num_day: u64,
+    pub lunar_day_value: f64,
 }
 
 impl FishingSpotPredictor {
@@ -62,6 +63,7 @@ impl MLModel for FishingSpotPredictor {
                         day: v.date.ordinal(),
                         year: v.date.year_ce().1,
                         num_day: (v.date - EARLIEST_ERS_DATE).num_days() as u64,
+                        lunar_day_value: lunar_value(v.date),
                     })
                     .collect::<Vec<PythonTrainingData>>()
             },
@@ -92,6 +94,7 @@ impl MLModel for FishingSpotPredictor {
                         day: v.date.ordinal(),
                         year: v.date.year_ce().1,
                         num_day: (v.date - EARLIEST_ERS_DATE).num_days() as u64,
+                        lunar_day_value: lunar_value(v.date),
                     })
                     .collect()
             },
