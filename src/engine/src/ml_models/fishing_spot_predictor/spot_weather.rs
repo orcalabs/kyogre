@@ -1,4 +1,4 @@
-use crate::{CatchLocationId, SpotPredictorSettings};
+use crate::{ml_models::lunar_value, CatchLocationId, SpotPredictorSettings};
 
 use async_trait::async_trait;
 use chrono::Datelike;
@@ -26,6 +26,7 @@ struct PythonTrainingData {
     pub day: u32,
     pub year: u32,
     pub num_day: u64,
+    pub lunar_day_value: f64,
     pub weather: HashMap<CatchLocationId, CatchLocationWeather>,
 }
 
@@ -36,6 +37,7 @@ struct PythonPredictionInput {
     pub year: u32,
     pub day: u32,
     pub num_day: u64,
+    pub lunar_day_value: f64,
 }
 
 impl FishingSpotWeatherPredictor {
@@ -58,6 +60,7 @@ impl Serialize for PythonTrainingData {
         map.serialize_entry("day", &self.day)?;
         map.serialize_entry("year", &self.year)?;
         map.serialize_entry("num_day", &self.num_day)?;
+        map.serialize_entry("lunar_day_value", &self.lunar_day_value)?;
 
         for (k, v) in self.weather.iter().sorted_by_key(|(k, _v)| (*k).clone()) {
             map.serialize_entry(&format!("{}_wind_speed_10m", k.as_ref()), &v.wind_speed_10m)?;
@@ -99,6 +102,7 @@ impl Serialize for PythonPredictionInput {
         map.serialize_entry("day", &self.day)?;
         map.serialize_entry("year", &self.year)?;
         map.serialize_entry("num_day", &self.num_day)?;
+        map.serialize_entry("lunar_day_value", &self.lunar_day_value)?;
 
         for (k, v) in self.weather.iter().sorted_by_key(|(k, _v)| (*k).clone()) {
             map.serialize_entry(&format!("{}_wind_speed_10m", k.as_ref()), &v.wind_speed_10m)?;
@@ -169,6 +173,7 @@ impl MLModel for FishingSpotWeatherPredictor {
                                     longitude: v.longitude,
                                     latitude: v.latitude,
                                     num_day: (v.date - EARLIEST_ERS_DATE).num_days() as u64,
+                                    lunar_day_value: lunar_value(v.date),
                                 })
                             } else {
                                 None
@@ -216,6 +221,7 @@ impl MLModel for FishingSpotWeatherPredictor {
                                     day: v.date.ordinal(),
                                     year: v.date.year_ce().1,
                                     num_day: (v.date - EARLIEST_ERS_DATE).num_days() as u64,
+                                    lunar_day_value: lunar_value(v.date),
                                 })
                             } else {
                                 None

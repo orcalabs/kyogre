@@ -1,4 +1,4 @@
-use crate::WeightPredictorSettings;
+use crate::{ml_models::lunar_value, WeightPredictorSettings};
 use async_trait::async_trait;
 use chrono::Datelike;
 use error_stack::Result;
@@ -24,6 +24,7 @@ struct ModelData {
     pub year: u32,
     pub day: u32,
     pub num_day: u64,
+    pub lunar_day_value: f64,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub weight: Option<f64>,
 }
@@ -59,6 +60,7 @@ impl MLModel for FishingWeightPredictor {
                         day: v.date.ordinal(),
                         year: v.date.year_ce().1,
                         num_day: (v.date - EARLIEST_ERS_DATE).num_days() as u64,
+                        lunar_day_value: lunar_value(v.date),
                     })
                     .collect();
 
@@ -93,6 +95,7 @@ impl MLModel for FishingWeightPredictor {
                         year: v.date.year_ce().1,
                         weight: None,
                         num_day: (v.date - EARLIEST_ERS_DATE).num_days() as u64,
+                        lunar_day_value: lunar_value(v.date),
                     })
                     .collect();
 

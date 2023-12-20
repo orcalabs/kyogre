@@ -9,7 +9,10 @@ use kyogre_core::{
 use serde::Serialize;
 use tracing::instrument;
 
-use crate::{ml_models::CatchLocationWeatherKey, WeightPredictorSettings};
+use crate::{
+    ml_models::{lunar_value, CatchLocationWeatherKey},
+    WeightPredictorSettings,
+};
 
 use super::{weight_predict_impl, weight_train_impl};
 
@@ -24,6 +27,7 @@ struct ModelData {
     pub species_group_id: SpeciesGroup,
     pub year: u32,
     pub day: u32,
+    pub lunar_day_value: f64,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub weight: Option<f64>,
     pub wind_speed_10m: f64,
@@ -90,6 +94,7 @@ impl MLModel for FishingWeightWeatherPredictor {
                                 air_pressure_at_sea_level,
                                 precipitation_amount,
                                 cloud_area_fraction,
+                                lunar_day_value: lunar_value(v.date),
                             }),
                             _ => None,
                         }
@@ -139,6 +144,7 @@ impl MLModel for FishingWeightWeatherPredictor {
                             day: value.date.ordinal(),
                             year: value.date.year_ce().1,
                             weight: None,
+                            lunar_day_value: lunar_value(value.date),
                         })
                     })
                     .collect();
