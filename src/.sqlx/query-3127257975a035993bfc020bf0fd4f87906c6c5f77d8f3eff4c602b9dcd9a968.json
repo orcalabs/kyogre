@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nDELETE FROM daily_weather_dirty\nWHERE\n    date = $1\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Date"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "3127257975a035993bfc020bf0fd4f87906c6c5f77d8f3eff4c602b9dcd9a968"
+}

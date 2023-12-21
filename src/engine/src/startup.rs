@@ -170,13 +170,13 @@ impl App {
                     let engine = FisheryEngine::MLModels(step);
                     engine.run_single().await;
                 }
-                FisheryDiscriminants::CatchLocationWeather => {
+                FisheryDiscriminants::DailyWeather => {
                     let step = crate::Step::initial(
-                        crate::CatchLocationWeatherState,
+                        crate::DailyWeatherState,
                         self.shared_state,
                         Box::new(self.transition_log),
                     );
-                    let engine = FisheryEngine::CatchLocationWeather(step);
+                    let engine = FisheryEngine::DailyWeather(step);
                     engine.run_single().await;
                 }
             };

@@ -386,7 +386,7 @@ impl TestHelperOutbound for PostgresAdapter {
 }
 
 #[async_trait]
-impl CatchLocationWeatherInbound for PostgresAdapter {
+impl DailyWeatherInbound for PostgresAdapter {
     async fn dirty_dates(&self) -> Result<Vec<NaiveDate>, QueryError> {
         Ok(self.dirty_dates_impl().await?)
     }
@@ -394,13 +394,13 @@ impl CatchLocationWeatherInbound for PostgresAdapter {
         Ok(self.catch_locations_with_weather_impl().await?)
     }
 
-    async fn update_catch_locations_weather(
+    async fn update_daily_weather(
         &self,
         catch_locations: &[CatchLocationId],
         date: NaiveDate,
     ) -> Result<(), UpdateError> {
         Ok(self
-            .update_catch_locations_weather_impl(catch_locations, date)
+            .update_daily_weather_impl(catch_locations, date)
             .await?)
     }
 }

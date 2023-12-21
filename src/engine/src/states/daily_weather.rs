@@ -3,10 +3,10 @@ use async_trait::async_trait;
 use machine::Schedule;
 use tracing::{event, Level};
 
-pub struct CatchLocationWeatherState;
+pub struct DailyWeatherState;
 
 #[async_trait]
-impl machine::State for CatchLocationWeatherState {
+impl machine::State for DailyWeatherState {
     type SharedState = SharedState;
 
     async fn run(&self, shared_state: Self::SharedState) -> Self::SharedState {
@@ -34,7 +34,7 @@ impl machine::State for CatchLocationWeatherState {
                     for (i, d) in dates.into_iter().enumerate() {
                         if let Err(e) = shared_state
                             .catch_location_weather
-                            .update_catch_locations_weather(&cls, d)
+                            .update_daily_weather(&cls, d)
                             .await
                         {
                             event!(
