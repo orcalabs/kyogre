@@ -70,7 +70,7 @@ pub struct AisVms {}
 #[machine(shared_state = SharedState, order_chain)]
 pub enum Fishery {
     Scrape(ScrapeState),
-    CatchLocationWeather(CatchLocationWeatherState),
+    DailyWeather(DailyWeatherState),
     Trips(TripsState),
     Benchmark(BenchmarkState),
     HaulDistribution(HaulDistributionState),
@@ -102,7 +102,7 @@ pub struct SharedState {
     pub trip_distancer: Box<dyn TripDistancer>,
     pub ml_models: Vec<Box<dyn MLModel>>,
     pub trip_position_layers: Vec<Box<dyn TripPositionLayer>>,
-    pub catch_location_weather: Box<dyn CatchLocationWeatherInbound>,
+    pub catch_location_weather: Box<dyn DailyWeatherInbound>,
 }
 
 impl FisheryEngine {
@@ -117,7 +117,7 @@ impl FisheryEngine {
             FisheryEngine::HaulWeather(s) => &mut s.shared_state,
             FisheryEngine::VerifyDatabase(s) => &mut s.shared_state,
             FisheryEngine::MLModels(s) => &mut s.shared_state,
-            FisheryEngine::CatchLocationWeather(s) => &mut s.shared_state,
+            FisheryEngine::DailyWeather(s) => &mut s.shared_state,
         };
 
         shared.ml_models = models;
@@ -156,7 +156,7 @@ impl SharedState {
         haul_distributor_outbound: Box<dyn HaulDistributorOutbound>,
         haul_weather_inbound: Box<dyn HaulWeatherInbound>,
         haul_weather_outbound: Box<dyn HaulWeatherOutbound>,
-        catch_location_weather: Box<dyn CatchLocationWeatherInbound>,
+        catch_location_weather: Box<dyn DailyWeatherInbound>,
         scraper: Option<Box<dyn Scraper>>,
         trip_assemblers: Vec<Box<dyn TripAssembler>>,
         benchmarks: Vec<Box<dyn VesselBenchmark>>,

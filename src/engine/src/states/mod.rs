@@ -1,5 +1,5 @@
 mod benchmark;
-mod catch_location_weather;
+mod daily_weather;
 mod haul_distribution;
 mod haul_weather;
 mod ml_models;
@@ -8,7 +8,7 @@ mod trips;
 mod verify_database;
 
 pub use benchmark::*;
-pub use catch_location_weather::*;
+pub use daily_weather::*;
 pub use haul_distribution::*;
 pub use haul_weather::*;
 pub use ml_models::*;

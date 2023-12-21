@@ -8,7 +8,7 @@ use unnest_insert::UnnestInsert;
 use crate::{
     error::PostgresErrorWrapper,
     models::{
-        CatchLocationWeather, HaulWeather, NewCLWeatherDailyDirty, NewWeather, Weather,
+        CatchLocationWeather, HaulWeather, NewWeather, NewWeatherDailyDirty, Weather,
         WeatherLocation,
     },
     PostgresAdapter,
@@ -69,6 +69,25 @@ WHERE
         Ok(weather)
     }
 
+    pub(crate) async fn weather_location_ids<'a>(
+        &self,
+        tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
+    ) -> Result<Vec<i32>, PostgresErrorWrapper> {
+        Ok(sqlx::query!(
+            r#"
+SELECT
+    weather_location_id
+FROM
+    weather_locations
+            "#,
+        )
+        .fetch_all(&mut **tx)
+        .await?
+        .into_iter()
+        .map(|v| v.weather_location_id)
+        .collect())
+    }
+
     pub(crate) async fn catch_locations_weather_impl(
         &self,
         keys: Vec<(CatchLocationId, NaiveDate)>,
@@ -104,15 +123,14 @@ WHERE
         Ok(weather)
     }
 
-    pub(crate) async fn update_catch_locations_weather_impl(
+    pub(crate) async fn update_catch_locations_daily_weather<'a>(
         &self,
         catch_location_ids: &[CatchLocationId],
         date: NaiveDate,
+        tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
     ) -> Result<(), PostgresErrorWrapper> {
         let start = Utc.from_utc_datetime(&date.and_hms_opt(0, 0, 0).unwrap());
         let end = Utc.from_utc_datetime(&date.and_hms_opt(23, 59, 59).unwrap());
-
-        let mut tx = self.pool.begin().await?;
 
         for c in catch_location_ids {
             sqlx::query_as!(
@@ -174,13 +192,103 @@ SET
                 start,
                 end,
             )
-            .execute(&mut *tx)
+            .execute(&mut **tx)
             .await?;
         }
 
+        Ok(())
+    }
+
+    pub(crate) async fn update_weather_locations_daily_weather<'a>(
+        &self,
+        date: NaiveDate,
+        tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
+    ) -> Result<(), PostgresErrorWrapper> {
+        let start = Utc.from_utc_datetime(&date.and_hms_opt(0, 0, 0).unwrap());
+        let end = Utc.from_utc_datetime(&date.and_hms_opt(23, 59, 59).unwrap());
+
+        let weather_location_ids = self.weather_location_ids(tx).await?;
+
+        for w in weather_location_ids {
+            sqlx::query!(
+                r#"
+INSERT INTO
+    weather_location_daily_weather (
+        weather_location_id,
+        date,
+        altitude,
+        wind_speed_10m,
+        wind_direction_10m,
+        air_temperature_2m,
+        relative_humidity_2m,
+        air_pressure_at_sea_level,
+        precipitation_amount,
+        cloud_area_fraction
+    )
+SELECT
+    w.weather_location_id,
+    $1,
+    AVG(altitude)::DOUBLE PRECISION AS "altitude!",
+    AVG(wind_speed_10m)::DOUBLE PRECISION,
+    AVG(wind_direction_10m)::DOUBLE PRECISION,
+    AVG(air_temperature_2m)::DOUBLE PRECISION,
+    AVG(relative_humidity_2m)::DOUBLE PRECISION,
+    AVG(air_pressure_at_sea_level)::DOUBLE PRECISION,
+    AVG(precipitation_amount)::DOUBLE PRECISION,
+    AVG(cloud_area_fraction)::DOUBLE PRECISION
+FROM
+    weather w
+WHERE
+    w.weather_location_id = $2
+    AND "timestamp" BETWEEN $3 AND $4
+    AND wind_speed_10m IS NOT NULL
+    AND wind_direction_10m IS NOT NULL
+    AND air_temperature_2m IS NOT NULL
+    AND relative_humidity_2m IS NOT NULL
+    AND air_pressure_at_sea_level IS NOT NULL
+    AND precipitation_amount IS NOT NULL
+    AND cloud_area_fraction IS NOT NULL
+GROUP BY
+    w.weather_location_id
+ON CONFLICT (weather_location_daily_weather_id) DO
+UPDATE
+SET
+    altitude = excluded.altitude,
+    wind_speed_10m = excluded.wind_speed_10m,
+    wind_direction_10m = excluded.wind_direction_10m,
+    air_temperature_2m = excluded.air_temperature_2m,
+    relative_humidity_2m = excluded.relative_humidity_2m,
+    air_pressure_at_sea_level = excluded.air_pressure_at_sea_level,
+    precipitation_amount = excluded.precipitation_amount,
+    cloud_area_fraction = excluded.cloud_area_fraction
+            "#,
+                date,
+                w,
+                start,
+                end,
+            )
+            .execute(&mut **tx)
+            .await?;
+        }
+
+        Ok(())
+    }
+
+    pub(crate) async fn update_daily_weather_impl(
+        &self,
+        catch_location_ids: &[CatchLocationId],
+        date: NaiveDate,
+    ) -> Result<(), PostgresErrorWrapper> {
+        let mut tx = self.pool.begin().await?;
+
+        self.update_catch_locations_daily_weather(catch_location_ids, date, &mut tx)
+            .await?;
+        self.update_weather_locations_daily_weather(date, &mut tx)
+            .await?;
+
         sqlx::query!(
             r#"
-DELETE FROM catch_location_daily_weather_dirty
+DELETE FROM daily_weather_dirty
 WHERE
     date = $1
             "#,
@@ -200,7 +308,7 @@ WHERE
 SELECT
     date
 FROM
-    catch_location_daily_weather_dirty
+    daily_weather_dirty
             "#
         )
         .fetch_all(&self.pool)
@@ -443,17 +551,17 @@ WHERE
             .map(NewWeather::try_from)
             .collect::<Result<Vec<_>, _>>()?;
 
-        let average_reset: Vec<NewCLWeatherDailyDirty> = values
+        let average_reset: Vec<NewWeatherDailyDirty> = values
             .iter()
             .map(|v| v.timestamp.date_naive())
             .collect::<HashSet<NaiveDate>>()
             .into_iter()
-            .map(|v| NewCLWeatherDailyDirty { date: v })
+            .map(|v| NewWeatherDailyDirty { date: v })
             .collect();
 
         let mut tx = self.pool.begin().await?;
 
-        NewCLWeatherDailyDirty::unnest_insert(average_reset, &mut *tx).await?;
+        NewWeatherDailyDirty::unnest_insert(average_reset, &mut *tx).await?;
 
         NewWeather::unnest_insert(values, &mut *tx).await?;
 

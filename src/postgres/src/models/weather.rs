@@ -12,8 +12,8 @@ use crate::{
 };
 
 #[derive(UnnestInsert)]
-#[unnest_insert(table_name = "catch_location_daily_weather_dirty", conflict = "date")]
-pub struct NewCLWeatherDailyDirty {
+#[unnest_insert(table_name = "daily_weather_dirty", conflict = "date")]
+pub struct NewWeatherDailyDirty {
     pub date: NaiveDate,
 }
 

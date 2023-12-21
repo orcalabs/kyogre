@@ -50,7 +50,7 @@ FROM
 WHERE
     q.catch_location_id = catch_locations.catch_location_id;
 
-DELETE FROM catch_location_daily_weather_dirty;
+DELETE FROM daily_weather_dirty;
 
 DELETE FROM port_dock_points
 WHERE
