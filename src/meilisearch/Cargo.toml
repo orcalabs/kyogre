@@ -12,13 +12,13 @@ error-stack = { workspace = true }
 fiskeridir-rs = { workspace = true }
 
 meilisearch-sdk = "0.24.3"
-async-trait = "0.1.74"
-tokio = "1.35.0"
+async-trait = "0.1.75"
+tokio = "1.35.1"
 serde = { version = "1.0.193", features = ["derive"] }
 serde_json = "1.0.108"
 humantime-serde = "1.1.1"
 chrono = { version = "0.4.31", features = ["serde"] }
 tracing = "0.1.40"
-futures = "0.3.29"
+futures = "0.3.30"
 strum = "0.25.0"
 strum_macros = "0.25.3"
