@@ -10,15 +10,15 @@ utoipa = ["dep:utoipa"]
 sqlx = ["dep:sqlx"]
 
 [dependencies]
-async-trait = "0.1.75"
+async-trait = "0.1.76"
 serde = { version = "1.0.193", features = ["derive"] }
 chrono = { version = "0.4.31", features = ["serde"] }
-chrono-tz = "0.8.4"
+chrono-tz = "0.8.5"
 fiskeridir-rs = { workspace = true }
 tokio = { version = "1.35.1", features = ["sync"] }
 orca-core = { workspace = true }
 
-serde_json = "1.0.108"
+serde_json = "1.0.109"
 serde_repr = "0.1.17"
 strum = { version = "0.25.0", features = ["derive"] }
 num-traits = "0.2.17"

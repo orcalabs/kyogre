@@ -68,7 +68,7 @@ impl MatrixCacheOutbound for Client {
         &self,
         query: LandingMatrixQuery,
     ) -> error_stack::Result<Option<kyogre_core::LandingMatrix>, QueryError> {
-        let parameters = LandingFeatures::try_from(query).change_context(QueryError)?;
+        let parameters = LandingFeatures::from(query);
 
         // Cloning a channel is cheap see
         // https://docs.rs/tonic/latest/tonic/transport/struct.Channel.html for more
@@ -96,7 +96,7 @@ impl MatrixCacheOutbound for Client {
         &self,
         query: HaulsMatrixQuery,
     ) -> error_stack::Result<Option<kyogre_core::HaulsMatrix>, QueryError> {
-        let parameters = HaulFeatures::try_from(query).change_context(QueryError)?;
+        let parameters = HaulFeatures::from(query);
 
         // Cloning a channel is cheap see
         // https://docs.rs/tonic/latest/tonic/transport/struct.Channel.html for more
