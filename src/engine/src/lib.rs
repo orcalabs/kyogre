@@ -23,7 +23,6 @@ pub use startup::*;
 pub use states::*;
 pub use test_helper::*;
 pub use trip_assembler::*;
-pub use trip_distancer::*;
 pub use trip_layers::*;
 
 #[derive(Default)]
