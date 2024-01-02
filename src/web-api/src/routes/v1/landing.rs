@@ -82,17 +82,16 @@ pub async fn landings<T: Database + 'static, M: Meilisearch + 'static>(
     let query: LandingsQuery = params.into_inner().into();
 
     if let Some(meilisearch) = meilisearch.as_ref() {
-        match meilisearch.landings(query.clone()).await {
-            Ok(landings) => {
-                let landings = landings.into_iter().map(Landing::from).collect::<Vec<_>>();
-                return Ok(Response::new(landings).into());
-            }
-            Err(e) => event!(
-                Level::ERROR,
-                "failed to retrieve landings from meilisearch: {:?}",
-                e
-            ),
-        }
+        return Ok(Response::new(
+            meilisearch
+                .landings(query.clone())
+                .await
+                .map_err(|_| ApiError::InternalServerError)?
+                .into_iter()
+                .map(Landing::from)
+                .collect::<Vec<_>>(),
+        )
+        .into());
     }
 
     to_streaming_response! {
@@ -138,33 +137,20 @@ pub async fn landing_matrix<T: Database + 'static, S: Cache>(
 ) -> Result<Response<LandingMatrix>, ApiError> {
     let query = matrix_params_to_query(params.into_inner(), path.active_filter);
 
-    let matrix = if let Some(cache) = cache.as_ref() {
-        match cache.landing_matrix(query.clone()).await {
-            Ok(matrix) => match matrix {
-                Some(matrix) => Ok(matrix),
-                None => db.landing_matrix(&query).await.map_err(|e| {
-                    event!(Level::ERROR, "failed to retrieve landing matrix: {:?}", e);
-                    ApiError::InternalServerError
-                }),
-            },
-            Err(e) => {
-                event!(
-                    Level::ERROR,
-                    "failed to retrieve landing matrix from cache: {:?}",
-                    e
-                );
-                db.landing_matrix(&query).await.map_err(|e| {
-                    event!(Level::ERROR, "failed to retrieve landing matrix: {:?}", e);
-                    ApiError::InternalServerError
-                })
-            }
+    if let Some(cache) = cache.as_ref() {
+        if let Some(matrix) = cache
+            .landing_matrix(query.clone())
+            .await
+            .map_err(|_| ApiError::InternalServerError)?
+        {
+            return Ok(Response::new(LandingMatrix::from(matrix)));
         }
-    } else {
-        db.landing_matrix(&query).await.map_err(|e| {
-            event!(Level::ERROR, "failed to retrieve landing matrix: {:?}", e);
-            ApiError::InternalServerError
-        })
-    }?;
+    }
+
+    let matrix = db.landing_matrix(&query).await.map_err(|e| {
+        event!(Level::ERROR, "failed to retrieve landing matrix: {:?}", e);
+        ApiError::InternalServerError
+    })?;
 
     Ok(Response::new(LandingMatrix::from(matrix)))
 }

@@ -29,6 +29,12 @@ pub struct CatchLocation {
     pub weather_location_ids: Vec<i64>,
 }
 
+impl std::fmt::Display for CatchLocationId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.val)
+    }
+}
+
 impl CatchLocationId {
     pub fn new(main_area: i32, catch_area: i32) -> Self {
         Self {
@@ -115,12 +121,6 @@ impl TryFrom<String> for CatchLocationId {
 
     fn try_from(v: String) -> Result<Self, Self::Error> {
         CatchLocationId::try_from(v.as_ref())
-    }
-}
-
-impl ToString for CatchLocationId {
-    fn to_string(&self) -> String {
-        self.val.clone()
     }
 }
 

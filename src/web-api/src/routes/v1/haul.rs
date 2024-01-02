@@ -88,17 +88,16 @@ pub async fn hauls<T: Database + 'static, M: Meilisearch + 'static>(
     let query: HaulsQuery = params.into_inner().into();
 
     if let Some(meilisearch) = meilisearch.as_ref() {
-        match meilisearch.hauls(query.clone()).await {
-            Ok(hauls) => {
-                let hauls = hauls.into_iter().map(Haul::from).collect::<Vec<_>>();
-                return Ok(Response::new(hauls).into());
-            }
-            Err(e) => event!(
-                Level::ERROR,
-                "failed to retrieve hauls from meilisearch: {:?}",
-                e
-            ),
-        }
+        return Ok(Response::new(
+            meilisearch
+                .hauls(query.clone())
+                .await
+                .map_err(|_| ApiError::InternalServerError)?
+                .into_iter()
+                .map(Haul::from)
+                .collect::<Vec<_>>(),
+        )
+        .into());
     }
 
     to_streaming_response! {
@@ -144,33 +143,20 @@ pub async fn hauls_matrix<T: Database + 'static, S: Cache>(
 ) -> Result<Response<HaulsMatrix>, ApiError> {
     let query = matrix_params_to_query(params.into_inner(), path.active_filter);
 
-    let matrix = if let Some(cache) = cache.as_ref() {
-        match cache.hauls_matrix(query.clone()).await {
-            Ok(matrix) => match matrix {
-                Some(matrix) => Ok(matrix),
-                None => db.hauls_matrix(&query).await.map_err(|e| {
-                    event!(Level::ERROR, "failed to retrieve hauls matrix: {:?}", e);
-                    ApiError::InternalServerError
-                }),
-            },
-            Err(e) => {
-                event!(
-                    Level::ERROR,
-                    "failed to retrieve hauls matrix from cache: {:?}",
-                    e
-                );
-                db.hauls_matrix(&query).await.map_err(|e| {
-                    event!(Level::ERROR, "failed to retrieve hauls matrix: {:?}", e);
-                    ApiError::InternalServerError
-                })
-            }
+    if let Some(cache) = cache.as_ref() {
+        if let Some(matrix) = cache
+            .hauls_matrix(query.clone())
+            .await
+            .map_err(|_| ApiError::InternalServerError)?
+        {
+            return Ok(Response::new(HaulsMatrix::from(matrix)));
         }
-    } else {
-        db.hauls_matrix(&query).await.map_err(|e| {
-            event!(Level::ERROR, "failed to retrieve hauls matrix: {:?}", e);
-            ApiError::InternalServerError
-        })
-    }?;
+    }
+
+    let matrix = db.hauls_matrix(&query).await.map_err(|e| {
+        event!(Level::ERROR, "failed to retrieve hauls matrix: {:?}", e);
+        ApiError::InternalServerError
+    })?;
 
     Ok(Response::new(HaulsMatrix::from(matrix)))
 }

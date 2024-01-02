@@ -1,7 +1,6 @@
 #![deny(warnings)]
 #![deny(rust_2018_idioms)]
 
-use duckdb_rs::Client;
 use fiskeridir_rs::{
     Gear, GearGroup, MainGearGroup, Quality, RegisterVesselEntityType, RegisterVesselOwner,
     SpeciesGroup, SpeciesMainGroup, VesselLengthGroup, WhaleGender,
@@ -12,12 +11,12 @@ use kyogre_core::{
     Ordering, TripAssemblerId, TripPositionLayerId, TripSorting, VesselEventType,
     WebApiInboundPort, WebApiOutboundPort,
 };
-use meilisearch::MeilisearchAdapter;
 use postgres::PostgresAdapter;
 use routes::v1::{self};
 use utoipa::OpenApi;
 
 pub mod auth0;
+pub mod cache;
 pub mod error;
 pub mod extractors;
 pub mod guards;
@@ -30,11 +29,7 @@ pub trait Database: WebApiOutboundPort + WebApiInboundPort {}
 pub trait Cache: MatrixCacheOutbound {}
 pub trait Meilisearch: MeilisearchOutbound {}
 
-impl Cache for Client {}
-
 impl Database for PostgresAdapter {}
-
-impl Meilisearch for MeilisearchAdapter<PostgresAdapter> {}
 
 #[derive(OpenApi)]
 #[openapi(

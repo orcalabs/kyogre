@@ -7,7 +7,10 @@ use std::path::PathBuf;
 use tokio::sync::mpsc::{self, Sender};
 use tracing::{event, Level};
 
-use crate::refresher::{DuckdbRefresher, RefreshRequest};
+use crate::{
+    filter::{HaulFilters, LandingFilters},
+    refresher::{DuckdbRefresher, RefreshRequest},
+};
 
 #[derive(Clone)]
 pub struct DuckdbAdapter {
@@ -212,8 +215,8 @@ FROM
             y_feature.column_name()
         );
 
-        push_landing_where_statements(&mut sql, params, x_feature);
-
+        let filter = LandingFilters::new(params, x_feature, y_feature);
+        sql.push_str(&filter.query_string());
         sql.push_str("group by 1,2");
 
         let mut stmt = conn.prepare(&sql).change_context(DuckdbError::Query)?;
@@ -256,8 +259,8 @@ FROM
             y_feature.column_name()
         );
 
-        push_haul_where_statements(&mut sql, params, x_feature);
-
+        let filter = HaulFilters::new(params, x_feature, y_feature);
+        sql.push_str(&filter.query_string());
         sql.push_str("group by 1,2");
 
         let mut stmt = conn.prepare(&sql).change_context(DuckdbError::Query)?;
@@ -305,249 +308,6 @@ fn get_haul_matrix_output(
     }
 
     Ok(data)
-}
-
-fn push_landing_where_statements(
-    query: &mut String,
-    params: &LandingMatrixQuery,
-    x_feature: LandingMatrixXFeature,
-) {
-    let y_feature = if x_feature == params.active_filter {
-        LandingMatrixYFeature::CatchLocation
-    } else {
-        LandingMatrixYFeature::from(params.active_filter)
-    };
-
-    let mut first = true;
-    if let Some(months) = &params.months {
-        if y_feature != LandingMatrixYFeature::Date && x_feature != LandingMatrixXFeature::Date {
-            if first {
-                first = false;
-                query.push_str("where ");
-            } else {
-                query.push_str("and ");
-            }
-            query.push_str(&format!("matrix_month_bucket = ANY ({:?}) ", months));
-        }
-    }
-    if let Some(catch_locations) = &params.catch_locations {
-        if y_feature != LandingMatrixYFeature::CatchLocation {
-            if first {
-                first = false;
-                query.push_str("where ");
-            } else {
-                query.push_str("and ");
-            }
-            let mut filter = String::new();
-            for c in catch_locations {
-                filter.push_str(&format!("'{}',", c.as_ref()));
-            }
-            filter.pop();
-            query.push_str(&format!("catch_location_id = ANY ([{filter}]) ",));
-        }
-    }
-    if let Some(gear_group_ids) = &params.gear_group_ids {
-        if y_feature != LandingMatrixYFeature::GearGroup
-            && x_feature != LandingMatrixXFeature::GearGroup
-        {
-            if first {
-                first = false;
-                query.push_str("where ");
-            } else {
-                query.push_str("and ");
-            }
-            query.push_str(&format!(
-                "gear_group_id = ANY ({:?}) ",
-                gear_group_ids
-                    .iter()
-                    .map(|v| *v as i32)
-                    .collect::<Vec<i32>>()
-            ));
-        }
-    }
-    if let Some(species_group_ids) = &params.species_group_ids {
-        if y_feature != LandingMatrixYFeature::SpeciesGroup
-            && x_feature != LandingMatrixXFeature::SpeciesGroup
-        {
-            if first {
-                first = false;
-                query.push_str("where ");
-            } else {
-                query.push_str("and ");
-            }
-            query.push_str(&format!(
-                "species_group_id = ANY ({:?}) ",
-                species_group_ids
-                    .iter()
-                    .map(|v| *v as i32)
-                    .collect::<Vec<i32>>()
-            ));
-        }
-    }
-    if let Some(vessel_length_groups) = &params.vessel_length_groups {
-        if y_feature != LandingMatrixYFeature::VesselLength
-            && x_feature != LandingMatrixXFeature::VesselLength
-        {
-            if first {
-                first = false;
-                query.push_str("where ");
-            } else {
-                query.push_str("and ");
-            }
-            query.push_str(&format!(
-                "vessel_length_group = ANY ({:?}) ",
-                vessel_length_groups
-                    .iter()
-                    .map(|v| *v as i32)
-                    .collect::<Vec<i32>>()
-            ));
-        }
-    }
-    if let Some(vessel_ids) = &params.vessel_ids {
-        if first {
-            query.push_str("where ");
-        } else {
-            query.push_str("and ");
-        }
-        query.push_str(&format!(
-            "fiskeridir_vessel_id = ANY ({:?}) ",
-            vessel_ids.iter().map(|v| v.0).collect::<Vec<i64>>()
-        ));
-    }
-}
-fn push_haul_where_statements(
-    query: &mut String,
-    params: &HaulsMatrixQuery,
-    x_feature: HaulMatrixXFeature,
-) {
-    let y_feature = if x_feature == params.active_filter {
-        HaulMatrixYFeature::CatchLocation
-    } else {
-        HaulMatrixYFeature::from(params.active_filter)
-    };
-
-    let mut first = true;
-
-    if params.majority_species_group {
-        if first {
-            first = false;
-            query.push_str("where ");
-        } else {
-            query.push_str("and ");
-        }
-        query.push_str(&format!(
-            "is_majority_species_group_of_haul = {} ",
-            params.majority_species_group
-        ));
-    }
-
-    if let Some(bycatch_percentage) = &params.bycatch_percentage {
-        if first {
-            first = false;
-            query.push_str("where ");
-        } else {
-            query.push_str("and ");
-        }
-        query.push_str(&format!(
-            "species_group_weight_percentage_of_haul >= {}",
-            bycatch_percentage
-        ));
-    }
-
-    if let Some(months) = &params.months {
-        if y_feature != HaulMatrixYFeature::Date && x_feature != HaulMatrixXFeature::Date {
-            if first {
-                first = false;
-                query.push_str("where ");
-            } else {
-                query.push_str("and ");
-            }
-            query.push_str(&format!("matrix_month_bucket = ANY ({:?}) ", months));
-        }
-    }
-    if let Some(catch_locations) = &params.catch_locations {
-        if y_feature != HaulMatrixYFeature::CatchLocation {
-            if first {
-                first = false;
-                query.push_str("where ");
-            } else {
-                query.push_str("and ");
-            }
-            let mut filter = String::new();
-            for c in catch_locations {
-                filter.push_str(&format!("'{}',", c.as_ref()));
-            }
-            filter.pop();
-            query.push_str(&format!("catch_location_id = ANY ([{filter}]) ",));
-        }
-    }
-    if let Some(gear_group_ids) = &params.gear_group_ids {
-        if y_feature != HaulMatrixYFeature::GearGroup && x_feature != HaulMatrixXFeature::GearGroup
-        {
-            if first {
-                first = false;
-                query.push_str("where ");
-            } else {
-                query.push_str("and ");
-            }
-            query.push_str(&format!(
-                "gear_group_id = ANY ({:?}) ",
-                gear_group_ids
-                    .iter()
-                    .map(|v| *v as i32)
-                    .collect::<Vec<i32>>()
-            ));
-        }
-    }
-    if let Some(species_group_ids) = &params.species_group_ids {
-        if y_feature != HaulMatrixYFeature::SpeciesGroup
-            && x_feature != HaulMatrixXFeature::SpeciesGroup
-        {
-            if first {
-                first = false;
-                query.push_str("where ");
-            } else {
-                query.push_str("and ");
-            }
-            query.push_str(&format!(
-                "species_group_id = ANY ({:?}) ",
-                species_group_ids
-                    .iter()
-                    .map(|v| *v as i32)
-                    .collect::<Vec<i32>>()
-            ));
-        }
-    }
-    if let Some(vessel_length_groups) = &params.vessel_length_groups {
-        if y_feature != HaulMatrixYFeature::VesselLength
-            && x_feature != HaulMatrixXFeature::VesselLength
-        {
-            if first {
-                first = false;
-                query.push_str("where ");
-            } else {
-                query.push_str("and ");
-            }
-            query.push_str(&format!(
-                "vessel_length_group = ANY ({:?}) ",
-                vessel_length_groups
-                    .iter()
-                    .map(|v| *v as i32)
-                    .collect::<Vec<i32>>()
-            ));
-        }
-    }
-    if let Some(vessel_ids) = &params.vessel_ids {
-        if first {
-            query.push_str("where ");
-        } else {
-            query.push_str("and ");
-        }
-        query.push_str(&format!(
-            "fiskeridir_vessel_id = ANY ({:?}) ",
-            vessel_ids.iter().map(|v| v.0).collect::<Vec<i64>>()
-        ));
-    }
 }
 
 #[derive(Debug)]

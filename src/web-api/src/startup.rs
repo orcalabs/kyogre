@@ -13,8 +13,12 @@ use utoipa::{openapi::security::SecurityScheme, OpenApi};
 use utoipa_swagger_ui::SwaggerUi;
 
 use crate::{
-    auth0::Auth0State, guards::BwtGuard, routes, settings::Settings, ApiDoc, Cache, Database,
-    Meilisearch,
+    auth0::Auth0State,
+    cache::{MatrixCache, MeilesearchCache},
+    guards::BwtGuard,
+    routes,
+    settings::Settings,
+    ApiDoc, Cache, Database, Meilisearch,
 };
 
 use duckdb_rs::Client;
@@ -31,19 +35,23 @@ impl App {
 
         let postgres = PostgresAdapter::new(&settings.postgres).await.unwrap();
 
-        let duck_db = match &settings.duck_db_api {
-            None => None,
-            Some(duckdb) => {
-                let duckdb = Client::new(&duckdb.ip, duckdb.port).await.unwrap();
-
-                Some(duckdb)
+        let duck_db = match (&settings.duck_db_api, settings.cache_error_mode) {
+            (Some(duckdb), Some(error_mode)) => {
+                let adapter = Client::new(&duckdb.ip, duckdb.port).await.unwrap();
+                let wrapper = MatrixCache::new(adapter, error_mode);
+                Some(wrapper)
             }
+            _ => None,
         };
 
-        let meilisearch = settings
-            .meilisearch
-            .as_ref()
-            .map(|s| MeilisearchAdapter::new(s, postgres.clone()));
+        let meilisearch = match (&settings.meilisearch, settings.cache_error_mode) {
+            (Some(m), Some(error_mode)) => {
+                let adapter = MeilisearchAdapter::new(m, postgres.clone());
+                let wrapper = MeilesearchCache::new(adapter, error_mode);
+                Some(wrapper)
+            }
+            _ => None,
+        };
 
         let server = create_server(postgres, duck_db, meilisearch, listener, settings)
             .await
