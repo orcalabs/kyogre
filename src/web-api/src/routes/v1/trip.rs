@@ -102,19 +102,13 @@ pub async fn trip_of_haul<T: Database + 'static, M: Meilisearch + 'static>(
         .unwrap_or(false);
 
     if let Some(meilisearch) = meilisearch.as_ref() {
-        match meilisearch
-            .trip_of_haul(&path.haul_id, read_fishing_facility)
-            .await
-        {
-            Ok(trip) => {
-                return Ok(Response::new(trip.map(Trip::from)));
-            }
-            Err(e) => event!(
-                Level::ERROR,
-                "failed to retrieve trip_of_haul from meilisearch: {:?}",
-                e
-            ),
-        }
+        return Ok(Response::new(
+            meilisearch
+                .trip_of_haul(&path.haul_id, read_fishing_facility)
+                .await
+                .map_err(|_| ApiError::InternalServerError)?
+                .map(Trip::from),
+        ));
     }
 
     db.detailed_trip_of_haul(&path.haul_id, read_fishing_facility)
@@ -150,19 +144,13 @@ pub async fn trip_of_landing<T: Database + 'static, M: Meilisearch + 'static>(
         .unwrap_or(false);
 
     if let Some(meilisearch) = meilisearch.as_ref() {
-        match meilisearch
-            .trip_of_landing(&path.landing_id, read_fishing_facility)
-            .await
-        {
-            Ok(trip) => {
-                return Ok(Response::new(trip.map(Trip::from)));
-            }
-            Err(e) => event!(
-                Level::ERROR,
-                "failed to retrieve trip_of_landing from meilisearch: {:?}",
-                e
-            ),
-        }
+        return Ok(Response::new(
+            meilisearch
+                .trip_of_landing(&path.landing_id, read_fishing_facility)
+                .await
+                .map_err(|_| ApiError::InternalServerError)?
+                .map(Trip::from),
+        ));
     }
 
     db.detailed_trip_of_landing(&path.landing_id, read_fishing_facility)
@@ -256,20 +244,16 @@ pub async fn trips<T: Database + 'static, M: Meilisearch + 'static>(
     let query = TripsQuery::from(params);
 
     if let Some(meilisearch) = meilisearch.as_ref() {
-        match meilisearch
-            .trips(query.clone(), read_fishing_facility)
-            .await
-        {
-            Ok(trips) => {
-                let trips = trips.into_iter().map(Trip::from).collect::<Vec<_>>();
-                return Ok(Response::new(trips).into());
-            }
-            Err(e) => event!(
-                Level::ERROR,
-                "failed to retrieve trips from meilisearch: {:?}",
-                e
-            ),
-        }
+        return Ok(Response::new(
+            meilisearch
+                .trips(query.clone(), read_fishing_facility)
+                .await
+                .map_err(|_| ApiError::InternalServerError)?
+                .into_iter()
+                .map(Trip::from)
+                .collect::<Vec<_>>(),
+        )
+        .into());
     }
 
     to_streaming_response! {

@@ -18,6 +18,7 @@ use strum::IntoEnumIterator;
 use tokio::sync::OnceCell;
 use tracing_subscriber::FmtSubscriber;
 use web_api::{
+    cache::CacheErrorMode,
     routes::v1::{haul, landing},
     settings::{ApiSettings, BwSettings, Duckdb, Settings, BW_PROFILES_URL},
     startup::App,
@@ -282,6 +283,7 @@ where
                 }),
                 duck_db_api,
                 auth0: None,
+                cache_error_mode: Some(CacheErrorMode::Propagate),
             };
 
             let _ = BW_PROFILES_URL.set(bw_profiles_url);

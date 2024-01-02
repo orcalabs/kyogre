@@ -3,6 +3,8 @@ use once_cell::sync::OnceCell;
 use orca_core::{Environment, LogLevel, PsqlSettings, TelemetrySettings};
 use serde::Deserialize;
 
+use crate::cache::CacheErrorMode;
+
 pub static BW_PROFILES_URL: OnceCell<String> = OnceCell::new();
 
 #[derive(Debug, Deserialize)]
@@ -17,6 +19,7 @@ pub struct Settings {
     pub bw_settings: Option<BwSettings>,
     pub duck_db_api: Option<Duckdb>,
     pub auth0: Option<Auth0Settings>,
+    pub cache_error_mode: Option<CacheErrorMode>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
