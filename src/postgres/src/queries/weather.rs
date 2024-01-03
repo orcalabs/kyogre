@@ -302,6 +302,25 @@ WHERE
         Ok(())
     }
 
+    pub(crate) async fn prune_dirty_dates_impl(&self) -> Result<(), PostgresErrorWrapper> {
+        sqlx::query!(
+            r#"
+DELETE FROM daily_weather_dirty
+WHERE
+    date NOT IN (
+        SELECT DISTINCT
+            timestamp::date
+        FROM
+            weather
+    )
+             "#
+        )
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
+    }
+
     pub(crate) async fn dirty_dates_impl(&self) -> Result<Vec<NaiveDate>, PostgresErrorWrapper> {
         Ok(sqlx::query!(
             r#"

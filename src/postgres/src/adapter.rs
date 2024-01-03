@@ -390,6 +390,9 @@ impl DailyWeatherInbound for PostgresAdapter {
     async fn dirty_dates(&self) -> Result<Vec<NaiveDate>, QueryError> {
         Ok(self.dirty_dates_impl().await?)
     }
+    async fn prune_dirty_dates(&self) -> Result<(), UpdateError> {
+        Ok(self.prune_dirty_dates_impl().await?)
+    }
     async fn catch_locations_with_weather(&self) -> Result<Vec<CatchLocationId>, QueryError> {
         Ok(self.catch_locations_with_weather_impl().await?)
     }
