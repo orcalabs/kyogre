@@ -6,7 +6,7 @@ use actix_web::{
     web::{self, Path},
     HttpResponse,
 };
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Datelike, Utc};
 use fiskeridir_rs::{Gear, GearGroup, SpeciesGroup, VesselLengthGroup, WhaleGender};
 use futures::TryStreamExt;
 use kyogre_core::{
@@ -153,6 +153,17 @@ pub async fn hauls_matrix<T: Database + 'static, S: Cache>(
         }
     }
 
+    // Requests for prior month's data or newer will not exist in the database, but the query will
+    // still take over 10s to complete which we want to avoid.
+    if let Some(months) = &query.months {
+        let current_time = Utc::now();
+        let month_cutoff = (current_time.year() * 12 + current_time.month0() as i32 - 1) as u32;
+
+        if !months.iter().any(|v| *v < month_cutoff) {
+            return Ok(Response::new(HaulsMatrix::default()));
+        }
+    }
+
     let matrix = db.hauls_matrix(&query).await.map_err(|e| {
         event!(Level::ERROR, "failed to retrieve hauls matrix: {:?}", e);
         ApiError::InternalServerError
@@ -216,7 +227,7 @@ pub struct HaulCatch {
     pub species_group_id: SpeciesGroup,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq, Eq)]
+#[derive(Default, Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct HaulsMatrix {
     pub dates: Vec<u64>,

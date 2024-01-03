@@ -1,7 +1,8 @@
 use super::helper::test_with_matrix_cache;
+use crate::v1::helper::test;
 use crate::v1::helper::{assert_haul_matrix_content, sum_area};
 use actix_web::http::StatusCode;
-use chrono::{DateTime, Duration, Utc};
+use chrono::{DateTime, Datelike, Duration, TimeZone, Utc};
 use engine::*;
 use enum_index::EnumIndex;
 use fiskeridir_rs::{GearGroup, SpeciesGroup, VesselLengthGroup};
@@ -13,6 +14,94 @@ use web_api::routes::{
     utils::datetime_to_month,
     v1::haul::{HaulsMatrix, HaulsMatrixParams},
 };
+
+#[tokio::test]
+async fn test_hauls_matrix_does_not_query_database_on_prior_month_or_newer_data() {
+    test(|helper, builder| async move {
+        let filter = ActiveHaulsFilter::Date;
+        let now = Utc::now();
+
+        let (prior_year, prior_month) = if now.month() == 1 {
+            (now.year() - 1, 12)
+        } else {
+            (now.year(), now.month() - 1)
+        };
+
+        let (next_year, next_month) = if now.month() == 12 {
+            (now.year() + 1, 1)
+        } else {
+            (now.year(), now.month() + 1)
+        };
+
+        let prior_month = Utc
+            .with_ymd_and_hms(prior_year, prior_month, 1, 0, 0, 0)
+            .unwrap();
+        let next_month = Utc
+            .with_ymd_and_hms(next_year, next_month, 1, 0, 0, 0)
+            .unwrap();
+
+        builder
+            .vessels(1)
+            .hauls(3)
+            .modify_idx(|i, v| match i {
+                0 => {
+                    v.dca.set_start_timestamp(prior_month);
+                    v.dca.set_stop_timestamp(prior_month + Duration::hours(1));
+                    v.dca.start_latitude = Some(70.536);
+                    v.dca.start_longitude = Some(21.957);
+                    v.dca.catch.species.living_weight = Some(100);
+                    v.dca.catch.species.species_group_code = SpeciesGroup::AtlanticCod;
+                    v.dca.catch.species.species_fao_code = Some("test".into());
+                }
+                1 => {
+                    v.dca.set_start_timestamp(now);
+                    v.dca.set_stop_timestamp(now + Duration::hours(1));
+                    v.dca.start_latitude = Some(70.536);
+                    v.dca.start_longitude = Some(21.957);
+                    v.dca.catch.species.living_weight = Some(90);
+                    v.dca.catch.species.species_group_code = SpeciesGroup::GoldenRedfish;
+                    v.dca.catch.species.species_fao_code = Some("test2".into());
+                }
+                2 => {
+                    v.dca.set_start_timestamp(next_month);
+                    v.dca.set_stop_timestamp(next_month + Duration::hours(1));
+                    v.dca.start_latitude = Some(70.536);
+                    v.dca.start_longitude = Some(21.957);
+                    v.dca.catch.species.living_weight = Some(90);
+                    v.dca.catch.species.species_group_code = SpeciesGroup::GoldenRedfish;
+                    v.dca.catch.species.species_fao_code = Some("test2".into());
+                }
+                _ => (),
+            })
+            .build()
+            .await;
+
+        let cutoff_1 = prior_month.year() as u32 * 12 + prior_month.month0();
+        let cutoff_2 = now.year() as u32 * 12 + now.month0();
+        let cutoff_3 = next_month.year() as u32 * 12 + next_month.month0();
+        assert_eq!(cutoff_1, cutoff_2 - 1);
+        assert_eq!(cutoff_3, cutoff_2 + 1);
+
+        let response = helper
+            .app
+            .get_hauls_matrix(
+                HaulsMatrixParams {
+                    months: Some(vec![cutoff_1, cutoff_2, cutoff_3]),
+                    ..Default::default()
+                },
+                filter,
+            )
+            .await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let matrix: HaulsMatrix = response.json().await.unwrap();
+        assert!(matrix.dates.is_empty());
+        assert!(matrix.length_group.is_empty());
+        assert!(matrix.gear_group.is_empty());
+        assert!(matrix.species_group.is_empty());
+    })
+    .await;
+}
 
 #[tokio::test]
 async fn test_hauls_matrix_filters_majority_species() {
