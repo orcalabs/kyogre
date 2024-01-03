@@ -15,7 +15,7 @@ impl Default for Cluster {
     fn default() -> Self {
         Self {
             chunk_size: 10,
-            distance_limit: 100.,
+            distance_limit: 25.,
         }
     }
 }
