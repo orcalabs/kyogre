@@ -171,6 +171,7 @@ pub trait HaulWeatherInbound: Send + Sync {
 pub trait DailyWeatherInbound: Send + Sync {
     async fn catch_locations_with_weather(&self) -> Result<Vec<CatchLocationId>, QueryError>;
     async fn dirty_dates(&self) -> Result<Vec<NaiveDate>, QueryError>;
+    async fn prune_dirty_dates(&self) -> Result<(), UpdateError>;
     async fn update_daily_weather(
         &self,
         catch_locations: &[CatchLocationId],
