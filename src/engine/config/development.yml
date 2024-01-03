@@ -33,7 +33,7 @@ scraper:
     # - "https://www.mattilsynet.no/language/english/food_and_water/approved_products_and_establishments/?kategori=1002&liste=10204#godkjenninger"
   landings:
     min_year: 2000
-    max_year: 2023
+    max_year: 2024
   vms:
     - year: 2023
       url: https://register.fiskeridir.no/vms-ers/2023-VMS.csv.zip
