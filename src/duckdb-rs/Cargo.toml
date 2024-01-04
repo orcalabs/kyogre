@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 kyogre-core = { path = "../kyogre-core", features = ["utoipa"] }
 fiskeridir-rs = { workspace = true }
-duckdb = { version = "=0.8", features = ["r2d2", "bundled"] }
+duckdb = { version = "0.9.2", features = ["r2d2", "bundled"] }
 r2d2 = { version = "0.8" }
 config = { version = "0.13.4", features = ["yaml"] }
 tracing = "0.1.40"
