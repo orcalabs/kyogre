@@ -7,6 +7,7 @@ postgres:
   password: test123
   max_connections: 10
   log_statements: Enable
+  application_name: kyogre-duckdb
 duck_db:
   max_connections: 10
   cache_mode: ReturnError

@@ -11,6 +11,7 @@ postgres:
   password: test123
   max_connections: 10
   log_statements: Disable
+  application_name: kyogre-engine
 meilisearch:
   host: http://meilisearch:7700
   api_key: test123
