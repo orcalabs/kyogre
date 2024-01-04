@@ -267,6 +267,12 @@ async fn run_state(shared_state: Arc<SharedState>) -> Result<TripsReport, TripPi
         .await
         .change_context(TripPipelineError::DataPreparation)?;
 
+    shared_state
+        .trip_pipeline_inbound
+        .reset_trip_processing_conflicts()
+        .await
+        .change_context(TripPipelineError::DataPreparation)?;
+
     let vessels = shared_state
         .trip_assembler_outbound_port
         .all_vessels()

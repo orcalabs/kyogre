@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nUPDATE trips_detailed\nSET\n    landings = q.landings,\n    landing_species_group_ids = q.landing_species_group_ids\nFROM\n    (\n        SELECT\n            qi.trip_id,\n            COALESCE(\n                JSONB_AGG(qi.catches) FILTER (\n                    WHERE\n                        qi.catches IS NOT NULL\n                ),\n                '[]'\n            ) AS landings,\n            ARRAY (\n                SELECT DISTINCT\n                    UNNEST(ARRAY_AGG(qi.species_group_ids))\n            ) AS landing_species_group_ids\n        FROM\n            (\n                SELECT\n                    t.trip_id,\n                    ARRAY_AGG(DISTINCT le.species_group_id) FILTER (\n                        WHERE\n                            le.species_group_id IS NOT NULL\n                    ) AS species_group_ids,\n                    JSONB_BUILD_OBJECT(\n                        'living_weight',\n                        COALESCE(SUM(le.living_weight), 0),\n                        'gross_weight',\n                        COALESCE(SUM(le.gross_weight), 0),\n                        'product_weight',\n                        COALESCE(SUM(le.product_weight), 0),\n                        'species_fiskeridir_id',\n                        le.species_fiskeridir_id,\n                        'product_quality_id',\n                        l.product_quality_id\n                    ) AS catches\n                FROM\n                    trips t\n                    INNER JOIN vessel_events v ON t.trip_id = v.trip_id\n                    INNER JOIN landings l ON l.vessel_event_id = v.vessel_event_id\n                    INNER JOIN landing_entries le ON le.landing_id = l.landing_id\n                WHERE\n                    t.trip_id = ANY ($1::BIGINT[])\n                    AND l.product_quality_id IS NOT NULL\n                    AND le.species_fiskeridir_id IS NOT NULL\n                GROUP BY\n                    t.trip_id,\n                    l.product_quality_id,\n                    le.species_fiskeridir_id\n            ) qi\n        GROUP BY\n            qi.trip_id\n    ) q\nWHERE\n    trips_detailed.trip_id = q.trip_id\n                ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8Array"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "23c37f41496af3448a1b1fd5a3f3e9e64c6671d7f95828564bc0e4b6ee5997c5"
+}

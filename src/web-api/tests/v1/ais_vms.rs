@@ -907,3 +907,51 @@ async fn test_ais_vms_by_trip_does_not_return_vms_right_next_to_ais() {
     })
     .await;
 }
+
+#[tokio::test]
+async fn test_ais_vms_by_trip_contains_positions_added_post_trip_creation() {
+    test(|helper, builder| async move {
+        let start = Utc.with_ymd_and_hms(2020, 2, 2, 0, 0, 0).unwrap();
+        let end = start + Duration::days(3);
+        let state = builder
+            .vessels(1)
+            .trips(1)
+            .modify(|v| {
+                v.trip_specification.set_start(start);
+                v.trip_specification.set_end(end);
+            })
+            .new_cycle()
+            .vms_positions(4)
+            .modify_idx(|i, v| {
+                v.position.timestamp = start + Duration::minutes(1 + i as i64);
+                v.position.latitude = Some(68.24 + 0.001 * i as f64);
+                v.position.longitude = Some(14.58 + 0.001 * i as f64);
+            })
+            .build()
+            .await;
+
+        let response = helper
+            .app
+            .get_ais_vms_positions(
+                AisVmsParameters {
+                    mmsi: None,
+                    call_sign: None,
+                    start: None,
+                    end: None,
+                    trip_id: Some(state.trips[0].trip_id),
+                },
+                None,
+            )
+            .await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let body: Vec<AisVmsPosition> = response.json().await.unwrap();
+
+        assert_eq!(body.len(), 4);
+        assert_eq!(body[0], state.ais_vms_positions[0]);
+        assert_eq!(body[1], state.ais_vms_positions[1]);
+        assert_eq!(body[2], state.ais_vms_positions[2]);
+        assert_eq!(body[3], state.ais_vms_positions[3]);
+    })
+    .await;
+}

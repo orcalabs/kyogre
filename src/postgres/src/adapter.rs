@@ -1030,6 +1030,10 @@ impl TripPipelineOutbound for PostgresAdapter {
 
 #[async_trait]
 impl TripPipelineInbound for PostgresAdapter {
+    async fn reset_trip_processing_conflicts(&self) -> Result<(), UpdateError> {
+        self.reset_trip_processing_conflicts_impl().await?;
+        Ok(())
+    }
     async fn update_preferred_trip_assemblers(&self) -> Result<(), UpdateError> {
         self.update_preferred_trip_assemblers_impl().await?;
         Ok(())
