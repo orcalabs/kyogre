@@ -133,6 +133,15 @@ LOAD postgres;
 
         let tx = conn.transaction().change_context(DuckdbError::Connection)?;
 
+        tx.execute(
+            &format!(
+                "ATTACH '{}' AS postgres_db (TYPE postgres);",
+                self.postgres_credentials
+            ),
+            [],
+        )
+        .change_context(DuckdbError::Query)?;
+
         let table_exists: bool = tx
             .query_row(
                 "
@@ -342,11 +351,11 @@ LOAD postgres;
 SELECT
     version
 FROM
-    POSTGRES_SCAN ('{}', 'public', '{}')
+    postgres_db.{}
 WHERE
     duckdb_data_version_id = ?
             ",
-            self.postgres_credentials, POSTGRES_DUCKDB_VERSION_TABLE
+            POSTGRES_DUCKDB_VERSION_TABLE
         );
 
         let version: u64 = conn
@@ -369,11 +378,11 @@ WHERE
 SELECT
     version
 FROM
-    POSTGRES_SCAN ('{}', 'public', '{}')
+    postgres_db.{}
 WHERE
     duckdb_data_version_id = ?
             ",
-            self.postgres_credentials, POSTGRES_DUCKDB_VERSION_TABLE
+            POSTGRES_DUCKDB_VERSION_TABLE
         );
 
         let version: u64 = tx
@@ -472,8 +481,7 @@ ON CONFLICT (source) DO NOTHING;
 
     #[instrument(skip_all)]
     fn create_landings(&self, mode: CreateMode, tx: &Transaction<'_>) -> Result<(), DuckdbError> {
-        let postgres_scan_command = format!(
-            "
+        let postgres_scan_command = "
 INSERT INTO
     landing_matrix_cache (
         landing_id,
@@ -497,10 +505,8 @@ SELECT
    species_group_id,
    living_weight
 FROM
-    POSTGRES_SCAN ('{}', 'public', 'landing_matrix')
-            ",
-            self.postgres_credentials,
-        );
+    postgres_db.landing_matrix"
+            .to_string();
 
         let queries = match mode {
             CreateMode::Initial => {
@@ -517,8 +523,7 @@ FROM
 
     #[instrument(skip_all)]
     fn create_hauls(&self, mode: CreateMode, tx: &Transaction<'_>) -> Result<(), DuckdbError> {
-        let postgres_scan_command = format!(
-            "
+        let postgres_scan_command = "
 INSERT INTO
     hauls_matrix_cache (
         catch_location_matrix_index,
@@ -544,10 +549,8 @@ SELECT
     species_group_weight_percentage_of_haul,
     is_majority_species_group_of_haul
 FROM
-    POSTGRES_SCAN ('{}', 'public', 'hauls_matrix')
-            ",
-            self.postgres_credentials,
-        );
+    postgres_db.hauls_matrix"
+            .to_string();
 
         let queries = match mode {
             CreateMode::Initial => {
