@@ -2309,7 +2309,7 @@ dependencies = [
  "httpdate",
  "itoa 1.0.10",
  "pin-project-lite",
- "socket2 0.5.5",
+ "socket2 0.4.10",
  "tokio",
  "tower-service",
  "tracing",
@@ -3477,9 +3477,9 @@ checksum = "04744f49eae99ab78e0d5c0b603ab218f515ea8cfe5a456d7629ad883a3b6e7d"
 
 [[package]]
 name = "orca-core"
-version = "0.23.0"
+version = "0.23.1"
 source = "registry+https://dl.cloudsmith.io/basic/orcalabs/orcastrator/cargo/index.git"
-checksum = "0d91de339adcc80fc21f3b2e7bf7b6794f643aae439316b6dc3d6bfc07acfa43"
+checksum = "3933e9e24de669730219ad820630935f6ac57577f6205436eb2f1e1f9fda20c8"
 dependencies = [
  "actix-web",
  "dockertest",

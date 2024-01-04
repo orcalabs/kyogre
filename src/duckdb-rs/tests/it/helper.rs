@@ -67,6 +67,7 @@ where
                 max_connections: 1,
                 root_cert: None,
                 log_statements: PsqlLogStatements::Enable,
+                application_name: None,
             };
 
             let adapter = PostgresAdapter::new(&db_settings).await.unwrap();

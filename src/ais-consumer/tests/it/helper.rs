@@ -74,6 +74,7 @@ where
                 max_connections: 1,
                 root_cert: None,
                 log_statements: PsqlLogStatements::Disable,
+                application_name: None,
             };
 
             let master_db = PostgresAdapter::new(&master_db_settings).await.unwrap();
@@ -91,6 +92,7 @@ where
                 max_connections: 1,
                 root_cert: None,
                 log_statements: PsqlLogStatements::Disable,
+                application_name: None,
             };
 
             let db = PostgresAdapter::new(&settings).await.unwrap();

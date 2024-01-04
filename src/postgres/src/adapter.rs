@@ -60,6 +60,10 @@ impl PostgresAdapter {
             opts = opts.database(db_name);
         }
 
+        if let Some(app_name) = &settings.application_name {
+            opts = opts.application_name(app_name);
+        }
+
         if let Some(root_cert_path) = &settings.root_cert {
             opts = opts
                 .ssl_root_cert(root_cert_path)

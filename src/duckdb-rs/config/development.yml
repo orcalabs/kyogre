@@ -9,6 +9,7 @@ postgres:
   db_name: kyogre
   max_connections: 10
   log_statements: Disable
+  application_name: kyogre-duckdb
 duck_db:
   max_connections: 10
   cache_mode: ReturnError
