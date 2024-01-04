@@ -26,6 +26,55 @@ use unnest_insert::{UnnestInsert, UnnestInsertReturning};
 use super::opt_float_to_decimal;
 
 impl PostgresAdapter {
+    pub(crate) async fn reset_trip_processing_conflicts_impl(
+        &self,
+    ) -> Result<(), PostgresErrorWrapper> {
+        let mut tx = self.pool.begin().await?;
+
+        sqlx::query!(
+            r#"
+UPDATE trips t
+SET
+    trip_precision_status_id = 'unprocessed',
+    distancer_id = NULL,
+    position_layers_status = 1
+FROM
+    (
+        SELECT
+            trip_id
+        FROM
+            earliest_vms_insertion e
+            INNER JOIN fiskeridir_ais_vessel_mapping_whitelist f ON e.call_sign = f.call_sign
+            INNER JOIN trips tr ON tr.fiskeridir_vessel_id = f.fiskeridir_vessel_id
+            AND UPPER(tr.period) >= e.timestamp
+        UNION
+        SELECT
+            trip_id
+        FROM
+            trips
+        WHERE
+            UPPER(period) >= $1
+    ) q
+WHERE
+    q.trip_id = t.trip_id
+            "#,
+            Utc::now()
+        )
+        .execute(&mut *tx)
+        .await?;
+
+        sqlx::query!(
+            r#"
+TRUNCATE earliest_vms_insertion
+            "#
+        )
+        .execute(&mut *tx)
+        .await?;
+
+        tx.commit().await?;
+
+        Ok(())
+    }
     pub(crate) async fn trip_assembler_log_impl(
         &self,
     ) -> Result<Vec<TripAssemblerLogEntry>, PostgresErrorWrapper> {
@@ -613,7 +662,7 @@ FROM
                 ),
                 '[]'
             ) AS landings,
-            ARRAY(
+            ARRAY (
                 SELECT DISTINCT
                     UNNEST(ARRAY_AGG(qi.species_group_ids))
             ) AS landing_species_group_ids

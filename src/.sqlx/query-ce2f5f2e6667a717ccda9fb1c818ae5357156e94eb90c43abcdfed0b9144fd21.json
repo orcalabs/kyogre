@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nTRUNCATE earliest_vms_insertion\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "ce2f5f2e6667a717ccda9fb1c818ae5357156e94eb90c43abcdfed0b9144fd21"
+}

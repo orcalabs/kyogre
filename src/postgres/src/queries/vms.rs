@@ -3,7 +3,7 @@ use std::collections::{HashMap, HashSet};
 
 use crate::{
     error::PostgresErrorWrapper,
-    models::{NewVmsPosition, VmsPosition},
+    models::{EarliestVms, NewVmsPosition, VmsPosition},
     PostgresAdapter,
 };
 use bigdecimal::BigDecimal;
@@ -84,6 +84,7 @@ ORDER BY
     ) -> Result<(), PostgresErrorWrapper> {
         let mut call_signs_unique = HashSet::new();
         let mut vms_unique: HashMap<(String, DateTime<Utc>), NewVmsPosition> = HashMap::new();
+        let mut vms_earliest: HashMap<String, EarliestVms> = HashMap::new();
 
         let speed_threshold = BigDecimal::from_f64(0.001).unwrap();
         for v in vms {
@@ -92,6 +93,18 @@ ORDER BY
             }
 
             let pos = NewVmsPosition::try_from(v)?;
+            vms_earliest
+                .entry(pos.call_sign.clone())
+                .and_modify(|e| {
+                    if e.timestamp > pos.timestamp {
+                        e.timestamp = pos.timestamp;
+                    }
+                })
+                .or_insert(EarliestVms {
+                    call_sign: pos.call_sign.clone(),
+                    timestamp: pos.timestamp,
+                });
+
             call_signs_unique.insert(pos.call_sign.clone());
             vms_unique
                 .entry((pos.call_sign.clone(), pos.timestamp))
@@ -125,8 +138,10 @@ ORDER BY
         }
 
         let call_signs_unique = call_signs_unique.into_iter().collect::<Vec<_>>();
+        let earliest_positions = vms_earliest.into_values().collect::<Vec<_>>();
 
         let mut tx = self.pool.begin().await?;
+        EarliestVms::unnest_insert(earliest_positions, &mut *tx).await?;
 
         sqlx::query!(
             r#"

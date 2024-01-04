@@ -37,6 +37,18 @@ pub struct NewVmsPosition {
     pub distance_to_shore: f64,
 }
 
+#[derive(Debug, Clone, UnnestInsert)]
+#[unnest_insert(
+    table_name = "earliest_vms_insertion",
+    conflict = "call_sign",
+    where_clause = "earliest_vms_insertion.timestamp > excluded.timestamp"
+)]
+pub struct EarliestVms {
+    pub call_sign: String,
+    #[unnest_insert(update)]
+    pub timestamp: DateTime<Utc>,
+}
+
 #[derive(Deserialize, Debug, Clone)]
 pub struct VmsPosition {
     pub call_sign: String,
