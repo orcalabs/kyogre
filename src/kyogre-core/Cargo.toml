@@ -10,16 +10,16 @@ utoipa = ["dep:utoipa"]
 sqlx = ["dep:sqlx"]
 
 [dependencies]
-async-trait = "0.1.76"
-serde = { version = "1.0.193", features = ["derive"] }
+async-trait = "0.1.77"
+serde = { version = "1.0.195", features = ["derive"] }
 chrono = { version = "0.4.31", features = ["serde"] }
 chrono-tz = "0.8.5"
 fiskeridir-rs = { workspace = true }
 tokio = { version = "1.35.1", features = ["sync"] }
 orca-core = { workspace = true }
 
-serde_json = "1.0.109"
-serde_repr = "0.1.17"
+serde_json = "1.0.111"
+serde_repr = "0.1.18"
 strum = { version = "0.25.0", features = ["derive"] }
 num-traits = "0.2.17"
 num-derive = "0.4.1"
@@ -28,7 +28,7 @@ rand = "0.8.5"
 futures = "0.3.30"
 
 utoipa = { version = "4.1", optional = true }
-remain = "0.2.11"
+remain = "0.2.12"
 sqlx = { workspace = true, optional = true }
 enum_index = "0.2.0"
 enum_index_derive = "0.2.0"
