@@ -9,6 +9,7 @@ use web_api::routes::v1::{
     ais_vms::AisVmsParameters,
     fishing_facility::FishingFacilitiesParams,
     fishing_prediction::{FishingSpotPredictionParams, FishingWeightPredictionParams},
+    fuel::{DeleteFuelMeasurement, FuelMeasurementBody, FuelMeasurementsParams},
     haul::{HaulsMatrixParams, HaulsParams},
     landing::{LandingMatrixParams, LandingsParams},
     species::SpeciesGroupParams,
@@ -62,6 +63,42 @@ impl ApiClient {
 
         let client = Client::new();
         let mut request = client.put(url).json(&body);
+
+        if let Some(headers) = headers {
+            request = request.headers(headers);
+        }
+
+        request.send().await.unwrap()
+    }
+
+    async fn post<T: AsRef<str>, S: Serialize>(
+        &self,
+        path: T,
+        body: S,
+        headers: Option<HeaderMap>,
+    ) -> Response {
+        let url = format!("{}/{}", self.address, path.as_ref());
+
+        let client = Client::new();
+        let mut request = client.post(url).json(&body);
+
+        if let Some(headers) = headers {
+            request = request.headers(headers);
+        }
+
+        request.send().await.unwrap()
+    }
+
+    async fn delete<T: AsRef<str>, S: Serialize>(
+        &self,
+        path: T,
+        body: S,
+        headers: Option<HeaderMap>,
+    ) -> Response {
+        let url = format!("{}/{}", self.address, path.as_ref());
+
+        let client = Client::new();
+        let mut request = client.delete(url).json(&body);
 
         if let Some(headers) = headers {
             request = request.headers(headers);
@@ -272,5 +309,49 @@ impl ApiClient {
     }
     pub async fn get_weather(&self, params: WeatherParams) -> Response {
         self.get("weather", Some(params), None).await
+    }
+    pub async fn get_fuel_measurements(
+        &self,
+        params: FuelMeasurementsParams,
+        token: String,
+    ) -> Response {
+        let mut headers = HeaderMap::new();
+        headers.insert("bw-token", token.try_into().unwrap());
+
+        self.get("fuel_measurements", Some(params), Some(headers))
+            .await
+    }
+    pub async fn create_fuel_measurements(
+        &self,
+        body: Vec<FuelMeasurementBody>,
+        token: String,
+    ) -> Response {
+        let mut headers = HeaderMap::new();
+        headers.insert("bw-token", token.try_into().unwrap());
+
+        self.post("fuel_measurements", Some(body), Some(headers))
+            .await
+    }
+    pub async fn update_fuel_measurements(
+        &self,
+        body: Vec<FuelMeasurementBody>,
+        token: String,
+    ) -> Response {
+        let mut headers = HeaderMap::new();
+        headers.insert("bw-token", token.try_into().unwrap());
+
+        self.put("fuel_measurements", Some(body), Some(headers))
+            .await
+    }
+    pub async fn delete_fuel_measurements(
+        &self,
+        body: Vec<DeleteFuelMeasurement>,
+        token: String,
+    ) -> Response {
+        let mut headers = HeaderMap::new();
+        headers.insert("bw-token", token.try_into().unwrap());
+
+        self.delete("fuel_measurements", Some(body), Some(headers))
+            .await
     }
 }

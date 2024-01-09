@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO\n    fuel_measurements (\n    barentswatch_user_id,call_sign,timestamp,fuel\n   )\nSELECT\n    *\nFROM\n    UNNEST(\n        $1::UUID[],$2::TEXT[],$3::TIMESTAMPTZ[],$4::DOUBLE PRECISION[]\n    )\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "UuidArray",
+        "TextArray",
+        "TimestamptzArray",
+        "Float8Array"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "e6a47ac86f3cc4705de66885b3d6273229ae5f2dbcff55b099de1f23ec67affe"
+}

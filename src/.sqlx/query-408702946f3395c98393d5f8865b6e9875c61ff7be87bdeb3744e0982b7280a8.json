@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nUPDATE fuel_measurements t\nSET\n    fuel = q.fuel\nFROM (\n    SELECT\n        *\n    FROM\n        UNNEST (\n            $1::UUID[],$2::TEXT[],$3::TIMESTAMPTZ[],$4::DOUBLE PRECISION[]\n        ) u (barentswatch_user_id,call_sign,timestamp,fuel)\n) q\nWHERE\n    t.barentswatch_user_id = q.barentswatch_user_id AND t.call_sign = q.call_sign AND t.timestamp = q.timestamp\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "UuidArray",
+        "TextArray",
+        "TimestamptzArray",
+        "Float8Array"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "408702946f3395c98393d5f8865b6e9875c61ff7be87bdeb3744e0982b7280a8"
+}
