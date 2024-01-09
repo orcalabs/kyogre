@@ -43,6 +43,7 @@ pub struct BwVesselInfo {
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct BwProfile {
     pub user: BwUser,
     pub fisk_info_profile: BwVesselInfo,
