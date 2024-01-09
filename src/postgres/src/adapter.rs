@@ -753,12 +753,39 @@ impl WebApiOutboundPort for PostgresAdapter {
     fn weather_locations(&self) -> PinBoxStream<'_, WeatherLocation, QueryError> {
         convert_stream(self.weather_locations_impl()).boxed()
     }
+    fn fuel_measurements(
+        &self,
+        query: FuelMeasurementsQuery,
+    ) -> PinBoxStream<'_, FuelMeasurement, QueryError> {
+        convert_stream(self.fuel_measurements_impl(query)).boxed()
+    }
 }
 
 #[async_trait]
 impl WebApiInboundPort for PostgresAdapter {
     async fn update_user(&self, user: User) -> Result<(), UpdateError> {
         self.update_user_impl(user).await?;
+        Ok(())
+    }
+    async fn add_fuel_measurements(
+        &self,
+        measurements: Vec<FuelMeasurement>,
+    ) -> Result<(), InsertError> {
+        self.add_fuel_measurements_impl(measurements).await?;
+        Ok(())
+    }
+    async fn update_fuel_measurements(
+        &self,
+        measurements: Vec<FuelMeasurement>,
+    ) -> Result<(), UpdateError> {
+        self.update_fuel_measurements_impl(measurements).await?;
+        Ok(())
+    }
+    async fn delete_fuel_measurements(
+        &self,
+        measurements: Vec<DeleteFuelMeasurement>,
+    ) -> Result<(), DeleteError> {
+        self.delete_fuel_measurements_impl(measurements).await?;
         Ok(())
     }
 }
