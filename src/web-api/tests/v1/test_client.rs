@@ -5,7 +5,7 @@ use kyogre_core::{
 use reqwest::{header::HeaderMap, Client, Response};
 use serde::Serialize;
 use web_api::routes::v1::{
-    ais::AisTrackParameters,
+    ais::{AisAreaParameters, AisTrackParameters},
     ais_vms::AisVmsParameters,
     fishing_facility::FishingFacilitiesParams,
     fishing_prediction::{FishingSpotPredictionParams, FishingWeightPredictionParams},
@@ -68,6 +68,16 @@ impl ApiClient {
         }
 
         request.send().await.unwrap()
+    }
+
+    pub async fn get_ais_area(&self, params: AisAreaParameters, token: Option<String>) -> Response {
+        let headers = token.map(|v| {
+            let mut headers = HeaderMap::new();
+            headers.insert("bw-token", v.try_into().unwrap());
+            headers
+        });
+
+        self.get("ais_area", Some(params), headers).await
     }
 
     pub async fn get_ais_track(

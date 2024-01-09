@@ -22,6 +22,14 @@ pub type PinBoxStream<'a, T, E> = Pin<Box<dyn Stream<Item = Result<T, E>> + Send
 
 #[async_trait]
 pub trait WebApiOutboundPort {
+    fn ais_positions_area(
+        &self,
+        x1: f64,
+        x2: f64,
+        y1: f64,
+        y2: f64,
+        date_limit: DateTime<Utc>,
+    ) -> PinBoxStream<'_, AisPositionMinimal, QueryError>;
     fn ais_positions(
         &self,
         mmsi: Mmsi,

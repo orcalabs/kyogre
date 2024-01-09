@@ -71,6 +71,12 @@ pub struct AisVesselMigrationProgress {
 }
 
 #[derive(Debug, Clone)]
+pub struct AisPositionMinimal {
+    pub latitude: BigDecimal,
+    pub longitude: BigDecimal,
+}
+
+#[derive(Debug, Clone)]
 pub struct AisPosition {
     pub latitude: BigDecimal,
     pub longitude: BigDecimal,
@@ -165,6 +171,17 @@ impl TryFrom<AisPosition> for kyogre_core::AisPosition {
             speed_over_ground: opt_decimal_to_float(value.speed_over_ground)?,
             true_heading: value.true_heading,
             distance_to_shore: decimal_to_float(value.distance_to_shore)?,
+        })
+    }
+}
+
+impl TryFrom<AisPositionMinimal> for kyogre_core::AisPositionMinimal {
+    type Error = PostgresErrorWrapper;
+
+    fn try_from(value: AisPositionMinimal) -> Result<Self, Self::Error> {
+        Ok(kyogre_core::AisPositionMinimal {
+            latitude: decimal_to_float(value.latitude)?,
+            longitude: decimal_to_float(value.longitude)?,
         })
     }
 }

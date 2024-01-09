@@ -177,6 +177,7 @@ where
                 "/ais_track/{mmsi}",
                 web::get().to(routes::v1::ais::ais_track::<T>),
             )
+            .route("/ais_area", web::get().to(routes::v1::ais::ais_area::<T>))
             .route(
                 "/ais_vms_positions",
                 web::get().to(routes::v1::ais_vms::ais_vms_positions::<T>),

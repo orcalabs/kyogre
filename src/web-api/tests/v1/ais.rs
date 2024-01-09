@@ -6,7 +6,7 @@ use kyogre_core::*;
 use web_api::{
     extractors::{BwPolicy, BwRole},
     response::{AIS_DETAILS_INTERVAL, MISSING_DATA_DURATION},
-    routes::v1::ais::{AisPosition, AisTrackParameters},
+    routes::v1::ais::{AisAreaParameters, AisPosition, AisTrackParameters},
 };
 
 #[tokio::test]
@@ -463,6 +463,133 @@ async fn test_ais_track_does_not_return_positions_for_vessels_under_15m_with_cor
         let body: Vec<AisPosition> = response.json().await.unwrap();
 
         assert!(body.is_empty());
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_ais_area_filters_by_input_box() {
+    test(|helper, builder| async move {
+        let now = Utc::now();
+        let state = builder
+            .vessels(1)
+            .ais_positions(2)
+            .modify_idx(|i, v| {
+                if i == 0 {
+                    v.position.latitude = 72.3;
+                    v.position.longitude = 27.36;
+                } else {
+                    v.position.latitude = 34.0;
+                    v.position.longitude = -25.66;
+                }
+                v.position.msgtime = now - Duration::seconds(i as i64);
+            })
+            .build()
+            .await;
+
+        let response = helper
+            .app
+            .get_ais_area(
+                AisAreaParameters {
+                    y1: 74.0,
+                    y2: 70.0,
+                    x1: 18.0,
+                    x2: 36.0,
+                    date_limit: None,
+                },
+                None,
+            )
+            .await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let body: Vec<AisPositionMinimal> = response.json().await.unwrap();
+
+        assert_eq!(body.len(), 1);
+        assert_eq!(body, vec![state.ais_positions[1].clone()]);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_ais_area_filters_date_limit() {
+    test(|helper, builder| async move {
+        let limit = Utc::now() - Duration::seconds(10);
+        let state = builder
+            .vessels(1)
+            .ais_positions(2)
+            .modify_idx(|i, v| {
+                if i == 0 {
+                    v.position.msgtime = limit + Duration::seconds(1);
+                } else {
+                    v.position.msgtime = limit - Duration::seconds(1);
+                }
+                v.position.latitude = 72.3;
+                v.position.longitude = 27.36;
+            })
+            .build()
+            .await;
+
+        let response = helper
+            .app
+            .get_ais_area(
+                AisAreaParameters {
+                    y1: 74.0,
+                    y2: 70.0,
+                    x1: 18.0,
+                    x2: 36.0,
+                    date_limit: Some(limit),
+                },
+                None,
+            )
+            .await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let body: Vec<AisPositionMinimal> = response.json().await.unwrap();
+
+        assert_eq!(body.len(), 1);
+        assert_eq!(body, vec![state.ais_positions[1].clone()]);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_ais_area_adds_default_date_limit_if_not_provided() {
+    test(|helper, builder| async move {
+        let now = Utc::now();
+        let state = builder
+            .vessels(1)
+            .ais_positions(2)
+            .modify_idx(|i, v| {
+                if i == 0 {
+                    v.position.msgtime = now - Duration::seconds(1);
+                } else {
+                    v.position.msgtime = now - ais_area_window() - Duration::seconds(1);
+                }
+                v.position.latitude = 72.3;
+                v.position.longitude = 27.36;
+            })
+            .build()
+            .await;
+
+        let response = helper
+            .app
+            .get_ais_area(
+                AisAreaParameters {
+                    y1: 74.0,
+                    y2: 70.0,
+                    x1: 18.0,
+                    x2: 36.0,
+                    date_limit: None,
+                },
+                None,
+            )
+            .await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let body: Vec<AisPositionMinimal> = response.json().await.unwrap();
+
+        assert_eq!(body.len(), 1);
+        assert_eq!(body, vec![state.ais_positions[1].clone()]);
     })
     .await;
 }

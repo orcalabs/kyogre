@@ -484,6 +484,16 @@ impl AisMigratorDestination for PostgresAdapter {
 
 #[async_trait]
 impl WebApiOutboundPort for PostgresAdapter {
+    fn ais_positions_area(
+        &self,
+        x1: f64,
+        x2: f64,
+        y1: f64,
+        y2: f64,
+        date_limit: DateTime<Utc>,
+    ) -> PinBoxStream<'_, AisPositionMinimal, QueryError> {
+        convert_stream(self.ais_positions_area_impl(x1, x2, y1, y2, date_limit)).boxed()
+    }
     fn fishing_weight_predictions(
         &self,
         model_id: ModelId,
@@ -750,6 +760,13 @@ impl WebApiInboundPort for PostgresAdapter {
     async fn update_user(&self, user: User) -> Result<(), UpdateError> {
         self.update_user_impl(user).await?;
         Ok(())
+    }
+}
+
+#[async_trait]
+impl AisAreaPrunerInbound for PostgresAdapter {
+    async fn prune_ais_area(&self, limit: DateTime<Utc>) -> Result<(), DeleteError> {
+        Ok(self.prune_ais_area_impl(limit).await?)
     }
 }
 

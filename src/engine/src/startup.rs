@@ -87,6 +87,7 @@ impl App {
             postgres.clone(),
             postgres.clone(),
             postgres.clone(),
+            postgres.clone(),
             postgres,
             Some(Box::new(scraper)),
             trip_assemblers,
