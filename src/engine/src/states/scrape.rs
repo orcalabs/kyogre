@@ -1,6 +1,6 @@
 use crate::*;
 use async_trait::async_trait;
-use chrono::{Duration, NaiveTime};
+use chrono::{Duration, NaiveTime, Utc};
 use machine::Schedule;
 use orca_core::Environment;
 use tracing::{event, Level};
@@ -20,6 +20,14 @@ impl machine::State for ScrapeState {
                     "failed to increment cache data version: {:?}",
                     e
                 );
+            }
+
+            if let Err(e) = shared_state
+                .ais_pruner_inbound
+                .prune_ais_area(Utc::now() - ais_area_window())
+                .await
+            {
+                event!(Level::ERROR, "failed to prune ais area: {:?}", e);
             }
         }
 

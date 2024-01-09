@@ -35,6 +35,7 @@ impl Database for PostgresAdapter {}
 #[openapi(
     paths(
         v1::ais::ais_track,
+        v1::ais::ais_area,
         v1::species::species,
         v1::species::species_groups,
         v1::species::species_main_groups,
@@ -131,6 +132,7 @@ impl Database for PostgresAdapter {}
             v1::fishing_prediction::FishingSpotPrediction,
             v1::fishing_prediction::FishingWeightPrediction,
             kyogre_core::ModelId,
+            kyogre_core::AisPositionMinimal,
           )
     ),
     security(

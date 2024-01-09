@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use chrono::{DateTime, Utc};
 use futures::{Stream, TryStreamExt};
+use geozero::wkb;
 use kyogre_core::{
     AisPermission, AisVesselMigrate, DateRange, Mmsi, NavigationStatus, NewAisPosition,
     NewAisStatic, LEISURE_VESSEL_LENGTH_AIS_BOUNDARY, LEISURE_VESSEL_SHIP_TYPES,
@@ -11,13 +12,57 @@ use unnest_insert::UnnestInsert;
 
 use crate::{
     error::PostgresErrorWrapper,
-    models::{AisClass, AisPosition, NewAisVessel, NewAisVesselHistoric},
+    models::{AisClass, AisPosition, AisPositionMinimal, NewAisVessel, NewAisVesselHistoric},
     PostgresAdapter,
 };
 
 use super::{float_to_decimal, opt_float_to_decimal};
 
 impl PostgresAdapter {
+    pub(crate) async fn prune_ais_area_impl(
+        &self,
+        limit: DateTime<Utc>,
+    ) -> Result<(), PostgresErrorWrapper> {
+        sqlx::query!(
+            r#"
+DELETE FROM ais_area a
+WHERE
+    "timestamp" < $1
+            "#,
+            limit,
+        )
+        .execute(&self.pool)
+        .await?;
+        Ok(())
+    }
+    pub(crate) fn ais_positions_area_impl(
+        &self,
+        x1: f64,
+        x2: f64,
+        y1: f64,
+        y2: f64,
+        date_limit: DateTime<Utc>,
+    ) -> impl Stream<Item = Result<AisPositionMinimal, PostgresErrorWrapper>> + '_ {
+        let geom: geo_types::Geometry<f64> = geo_types::Rect::new((x1, y1), (x2, y2)).into();
+
+        sqlx::query_as!(
+            AisPositionMinimal,
+            r#"
+SELECT
+    latitude,
+    longitude
+FROM
+    ais_area
+WHERE
+    ST_contains ($1::geometry, ST_POINT (longitude, latitude))
+    AND "timestamp" >= $2
+            "#,
+            wkb::Encode(geom) as _,
+            date_limit,
+        )
+        .fetch(&self.pool)
+        .map_err(From::from)
+    }
     pub(crate) async fn all_ais_impl(&self) -> Result<Vec<AisPosition>, PostgresErrorWrapper> {
         let ais = sqlx::query_as!(
             AisPosition,
@@ -296,6 +341,61 @@ SET
             .execute(&mut *tx)
             .await?;
         }
+
+        sqlx::query!(
+            r#"
+INSERT INTO
+    ais_area (
+        mmsi,
+        latitude,
+        longitude,
+        course_over_ground,
+        rate_of_turn,
+        true_heading,
+        speed_over_ground,
+        "timestamp",
+        altitude,
+        distance_to_shore,
+        ais_class,
+        ais_message_type_id,
+        navigation_status_id
+    )
+SELECT
+    *
+FROM
+    UNNEST(
+        $1::INT[],
+        $2::DECIMAL[],
+        $3::DECIMAL[],
+        $4::DECIMAL[],
+        $5::DECIMAL[],
+        $6::INT[],
+        $7::DECIMAL[],
+        $8::TIMESTAMPTZ[],
+        $9::INT[],
+        $10::DECIMAL[],
+        $11::VARCHAR[],
+        $12::INT[],
+        $13::INT[]
+    )
+ON CONFLICT (mmsi, "timestamp") DO NOTHING
+            "#,
+            &mmsis,
+            &latitude,
+            &longitude,
+            &course_over_ground as _,
+            &rate_of_turn as _,
+            &true_heading as _,
+            &speed_over_ground as _,
+            &timestamp,
+            &altitude as _,
+            &distance_to_shore,
+            &ais_class as _,
+            &ais_message_type as _,
+            &navigation_status_id,
+        )
+        .execute(&mut *tx)
+        .await?;
 
         tx.commit().await?;
 

@@ -1,4 +1,4 @@
-use chrono::{DateTime, TimeZone, Utc};
+use chrono::{DateTime, Duration, TimeZone, Utc};
 use fiskeridir_rs::CallSign;
 use num_derive::FromPrimitive;
 use rand::random;
@@ -9,6 +9,10 @@ use strum::{AsRefStr, EnumString};
 pub const LEISURE_VESSEL_SHIP_TYPES: [i32; 2] = [36, 37];
 pub const LEISURE_VESSEL_LENGTH_AIS_BOUNDARY: u32 = 45;
 pub const PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY: u32 = 15;
+
+pub fn ais_area_window() -> Duration {
+    Duration::days(10)
+}
 
 // What AIS user is allowed to read, AIS data of leisure vessels under 45 are implicitly
 // denied for all permissions
@@ -67,6 +71,26 @@ pub struct NewAisStatic {
     pub dimension_d: Option<i32>,
     pub position_fixing_device_type: Option<i32>,
     pub report_class: Option<String>,
+}
+
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
+#[derive(Debug, Deserialize, Serialize)]
+pub struct AisPositionMinimal {
+    pub latitude: f64,
+    pub longitude: f64,
+}
+
+impl PartialEq<AisPosition> for AisPositionMinimal {
+    fn eq(&self, other: &AisPosition) -> bool {
+        self.latitude as i64 == other.latitude as i64
+            && self.longitude as i64 == other.longitude as i64
+    }
+}
+
+impl PartialEq<AisPositionMinimal> for AisPosition {
+    fn eq(&self, other: &AisPositionMinimal) -> bool {
+        other.eq(self)
+    }
 }
 
 #[derive(Debug, Clone)]

@@ -2,13 +2,15 @@ use crate::{
     ais_to_streaming_response,
     error::ApiError,
     extractors::{Auth0Profile, BwProfile},
-    Database,
+    to_streaming_response, Database,
 };
 use actix_web::{
     web::{self, Path},
     HttpResponse,
 };
 use chrono::{DateTime, Duration, Utc};
+use futures::TryStreamExt;
+use kyogre_core::ais_area_window;
 use kyogre_core::{AisPermission, NavigationStatus};
 use kyogre_core::{DateRange, Mmsi};
 use serde::{Deserialize, Serialize};
@@ -28,6 +30,16 @@ pub struct AisTrackParameters {
 pub struct AisTrackPath {
     #[param(value_type = i32)]
     pub mmsi: Mmsi,
+}
+
+#[derive(Debug, Deserialize, Serialize, IntoParams)]
+#[serde(rename_all = "camelCase")]
+pub struct AisAreaParameters {
+    pub x1: f64,
+    pub x2: f64,
+    pub y1: f64,
+    pub y2: f64,
+    pub date_limit: Option<DateTime<Utc>>,
 }
 
 #[utoipa::path(
@@ -85,6 +97,32 @@ pub async fn ais_track<T: Database + 'static>(
                 ApiError::InternalServerError
             })
             .map_ok(AisPosition::from)
+    }
+}
+
+#[utoipa::path(
+    get,
+    path = "/ais_area",
+    params(
+        AisAreaParameters,
+    ),
+    responses(
+        (status = 200, description = "ais positions within the given interval for the area", body = [AisPositionMinimal]),
+        (status = 500, description = "an internal error occured", body = ErrorResponse),
+        (status = 400, description = "invalid parameters were provided", body = ErrorResponse),
+    )
+)]
+#[tracing::instrument(skip(db))]
+pub async fn ais_area<T: Database + 'static>(
+    db: web::Data<T>,
+    params: Query<AisAreaParameters>,
+) -> Result<HttpResponse, ApiError> {
+    to_streaming_response! {
+        db.ais_positions_area(params.x1, params.x2, params.y1, params.y2, params.date_limit.unwrap_or_else(|| chrono::Utc::now() - ais_area_window()))
+            .map_err(|e| {
+                event!(Level::ERROR, "failed to retrieve ais positions in area: {:?}", e);
+                ApiError::InternalServerError
+            })
     }
 }
 
