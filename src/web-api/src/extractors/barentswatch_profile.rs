@@ -38,8 +38,14 @@ pub struct BwUser {
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct BwVesselInfo {
+    pub ircs: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct BwProfile {
     pub user: BwUser,
+    pub fisk_info_profile: BwVesselInfo,
     pub policies: Vec<BwPolicy>,
     pub roles: Vec<BwRole>,
 }

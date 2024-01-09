@@ -207,6 +207,30 @@ where
                     web::put()
                         .guard(guard.clone())
                         .to(routes::v1::user::update_user::<T>),
+                )
+                .route(
+                    "/fuel_measurements",
+                    web::get()
+                        .guard(guard.clone())
+                        .to(routes::v1::fuel::get_fuel_measurements::<T>),
+                )
+                .route(
+                    "/fuel_measurements",
+                    web::post()
+                        .guard(guard.clone())
+                        .to(routes::v1::fuel::create_fuel_measurements::<T>),
+                )
+                .route(
+                    "/fuel_measurements",
+                    web::put()
+                        .guard(guard.clone())
+                        .to(routes::v1::fuel::update_fuel_measurements::<T>),
+                )
+                .route(
+                    "/fuel_measurements",
+                    web::delete()
+                        .guard(guard.clone())
+                        .to(routes::v1::fuel::delete_fuel_measurements::<T>),
                 );
         }
 

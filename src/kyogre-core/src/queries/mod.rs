@@ -3,6 +3,7 @@ use std::ops::{Add, AddAssign, Sub, SubAssign};
 use serde::{Deserialize, Serialize};
 
 mod fishing_facility;
+mod fuel;
 mod haul;
 mod landing;
 mod ocean_climate;
@@ -11,6 +12,7 @@ mod trip;
 mod weather;
 
 pub use fishing_facility::*;
+pub use fuel::*;
 pub use haul::*;
 pub use landing::*;
 pub use ocean_climate::*;

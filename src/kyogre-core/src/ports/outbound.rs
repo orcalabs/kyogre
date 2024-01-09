@@ -115,6 +115,10 @@ pub trait WebApiOutboundPort {
         &self,
         model_id: ModelId,
     ) -> PinBoxStream<'_, FishingWeightPrediction, QueryError>;
+    fn fuel_measurements(
+        &self,
+        query: FuelMeasurementsQuery,
+    ) -> PinBoxStream<'_, FuelMeasurement, QueryError>;
 }
 
 #[async_trait]

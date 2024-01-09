@@ -65,7 +65,11 @@ impl Database for PostgresAdapter {}
         v1::fishing_prediction::fishing_weight_predictions,
         v1::fishing_prediction::fishing_spot_predictions,
         v1::fishing_prediction::all_fishing_spot_predictions,
-        v1::fishing_prediction::all_fishing_weight_predictions
+        v1::fishing_prediction::all_fishing_weight_predictions,
+        v1::fuel::get_fuel_measurements,
+        v1::fuel::create_fuel_measurements,
+        v1::fuel::update_fuel_measurements,
+        v1::fuel::delete_fuel_measurements,
     ),
     components(
         schemas(
@@ -131,6 +135,9 @@ impl Database for PostgresAdapter {}
             v1::weather::WeatherLocation,
             v1::fishing_prediction::FishingSpotPrediction,
             v1::fishing_prediction::FishingWeightPrediction,
+            v1::fuel::FuelMeasurement,
+            v1::fuel::FuelMeasurementBody,
+            v1::fuel::DeleteFuelMeasurement,
             kyogre_core::ModelId,
             kyogre_core::AisPositionMinimal,
           )

@@ -67,6 +67,18 @@ pub trait AisMigratorDestination {
 #[async_trait]
 pub trait WebApiInboundPort {
     async fn update_user(&self, user: User) -> Result<(), UpdateError>;
+    async fn add_fuel_measurements(
+        &self,
+        measurements: Vec<FuelMeasurement>,
+    ) -> Result<(), InsertError>;
+    async fn update_fuel_measurements(
+        &self,
+        measurements: Vec<FuelMeasurement>,
+    ) -> Result<(), UpdateError>;
+    async fn delete_fuel_measurements(
+        &self,
+        measurements: Vec<DeleteFuelMeasurement>,
+    ) -> Result<(), DeleteError>;
 }
 
 #[async_trait]
