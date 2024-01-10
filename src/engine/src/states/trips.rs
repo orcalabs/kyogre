@@ -250,8 +250,11 @@ impl TripComputationStep for TripPrecisionStep {
 }
 
 enum MasterTask {
-    New(Vessel, TripProcessingOutcome, Option<TripSet>),
-    Unprocessed(Vessel, Vec<TripUpdate>),
+    New(
+        Vessel,
+        Result<(TripProcessingOutcome, Option<TripSet>), TripPipelineError>,
+    ),
+    Unprocessed(Vessel, Result<Vec<TripUpdate>, TripPipelineError>),
 }
 
 enum WorkerTask {
@@ -329,54 +332,21 @@ async fn run_state(shared_state: Arc<SharedState>) -> Result<TripsReport, TripPi
             while let Some(task) = { worker_rx.lock().await.recv().await } {
                 match task {
                     WorkerTask::New(vessel) => {
-                        match process_vessel(&shared_state, &vessel, &ports, &dock_points).await {
-                            Ok((report, trips)) => {
-                                if let Err(e) =
-                                    master_tx.send(MasterTask::New(vessel, report, trips)).await
-                                {
-                                    event!(
-                                        Level::ERROR,
-                                        "failed to send message to channel, err: {:?}",
-                                        e
-                                    );
-                                }
-                            }
-                            Err(e) => event!(
-                                Level::ERROR,
-                                "failed to run trips pipeline for vessel: {}, err: {:?}",
-                                vessel.fiskeridir.id.0,
-                                e
-                            ),
-                        }
+                        let result =
+                            process_vessel(&shared_state, &vessel, &ports, &dock_points).await;
+                        master_tx
+                            .send(MasterTask::New(vessel, result))
+                            .await
+                            .unwrap()
                     }
                     WorkerTask::Unprocessed(vessel) => {
-                        match process_unprocessed_trips(
-                            &shared_state,
-                            &vessel,
-                            &ports,
-                            &dock_points,
-                        )
-                        .await
-                        {
-                            Ok(updates) => {
-                                if let Err(e) = master_tx
-                                    .send(MasterTask::Unprocessed(vessel, updates))
-                                    .await
-                                {
-                                    event!(
-                                        Level::ERROR,
-                                        "failed to send message to channel, err: {:?}",
-                                        e
-                                    );
-                                }
-                            }
-                            Err(e) => event!(
-                                Level::ERROR,
-                                "failed to process unprocessed trips for vessel: {}, err: {:?}",
-                                vessel.fiskeridir.id.0,
-                                e
-                            ),
-                        }
+                        let result =
+                            process_unprocessed_trips(&shared_state, &vessel, &ports, &dock_points)
+                                .await;
+                        master_tx
+                            .send(MasterTask::Unprocessed(vessel, result))
+                            .await
+                            .unwrap()
                     }
                     WorkerTask::Done => return,
                 }
@@ -385,9 +355,7 @@ async fn run_state(shared_state: Arc<SharedState>) -> Result<TripsReport, TripPi
     }
 
     for v in vessels {
-        worker_tx
-            .try_send(WorkerTask::New(v))
-            .change_context(TripPipelineError::Task)?;
+        worker_tx.try_send(WorkerTask::New(v)).unwrap();
     }
 
     let mut i = 0;
@@ -395,52 +363,70 @@ async fn run_state(shared_state: Arc<SharedState>) -> Result<TripsReport, TripPi
 
     while let Some(task) = master_rx.recv().await {
         match task {
-            MasterTask::New(vessel, report, trips) => {
-                trips_report = trips_report + report;
+            MasterTask::New(vessel, result) => {
+                match result {
+                    Ok((report, trips)) => {
+                        trips_report = trips_report + report;
 
-                if let Some(trips) = trips {
-                    if let Err(e) = shared_state.trip_pipeline_inbound.add_trip_set(trips).await {
-                        event!(
-                            Level::ERROR,
-                            "failed to store trips for vessel: {}, err: {:?}",
-                            vessel.fiskeridir.id.0,
-                            e
-                        );
+                        if let Some(trips) = trips {
+                            if let Err(e) =
+                                shared_state.trip_pipeline_inbound.add_trip_set(trips).await
+                            {
+                                event!(
+                                    Level::ERROR,
+                                    "failed to store trips for vessel: {}, err: {:?}",
+                                    vessel.fiskeridir.id.0,
+                                    e
+                                );
+                            }
+                        }
                     }
-                }
-
-                if let Err(e) = worker_tx.try_send(WorkerTask::Unprocessed(vessel)) {
-                    event!(
+                    Err(e) => event!(
                         Level::ERROR,
-                        "failed to send message to channel, err: {:?}",
-                        e
-                    );
-                }
-            }
-            MasterTask::Unprocessed(vessel, updates) => {
-                for update in updates {
-                    let trip_id = update.trip_id;
-                    if let Err(e) = shared_state.trip_pipeline_inbound.update_trip(update).await {
-                        event!(
-                            Level::ERROR,
-                            "failed to update trip_id: {}, err: {:?}",
-                            trip_id.0,
-                            e
-                        );
-                    }
-                }
-
-                if let Err(e) = shared_state
-                    .trip_pipeline_inbound
-                    .refresh_detailed_trips(vessel.fiskeridir.id)
-                    .await
-                {
-                    event!(
-                        Level::ERROR,
-                        "failed to refresh detailed trips for vessel: {}, err: {:?}",
+                        "failed to run trips pipeline for vessel: {}, err: {:?}",
                         vessel.fiskeridir.id.0,
                         e
-                    );
+                    ),
+                }
+
+                worker_tx.try_send(WorkerTask::Unprocessed(vessel)).unwrap();
+            }
+            MasterTask::Unprocessed(vessel, result) => {
+                match result {
+                    Ok(updates) => {
+                        for update in updates {
+                            let trip_id = update.trip_id;
+                            if let Err(e) =
+                                shared_state.trip_pipeline_inbound.update_trip(update).await
+                            {
+                                event!(
+                                    Level::ERROR,
+                                    "failed to update trip_id: {}, err: {:?}",
+                                    trip_id.0,
+                                    e
+                                );
+                            }
+                        }
+
+                        if let Err(e) = shared_state
+                            .trip_pipeline_inbound
+                            .refresh_detailed_trips(vessel.fiskeridir.id)
+                            .await
+                        {
+                            event!(
+                                Level::ERROR,
+                                "failed to refresh detailed trips for vessel: {}, err: {:?}",
+                                vessel.fiskeridir.id.0,
+                                e
+                            );
+                        }
+                    }
+                    Err(e) => event!(
+                        Level::ERROR,
+                        "failed to process unprocessed trips for vessel: {}, err: {:?}",
+                        vessel.fiskeridir.id.0,
+                        e
+                    ),
                 }
 
                 i += 1;
@@ -449,9 +435,7 @@ async fn run_state(shared_state: Arc<SharedState>) -> Result<TripsReport, TripPi
                 }
                 if i == num_vessels {
                     for _ in 0..num_workers {
-                        worker_tx
-                            .try_send(WorkerTask::Done)
-                            .change_context(TripPipelineError::Task)?;
+                        worker_tx.try_send(WorkerTask::Done).unwrap();
                     }
                     break;
                 }
@@ -460,7 +444,7 @@ async fn run_state(shared_state: Arc<SharedState>) -> Result<TripsReport, TripPi
     }
 
     for w in workers {
-        w.await.change_context(TripPipelineError::Thread)?;
+        w.await.unwrap();
     }
 
     Ok(trips_report)
