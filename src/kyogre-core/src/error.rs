@@ -235,7 +235,6 @@ pub enum TripPipelineError {
     TripComputationStep,
     DataPreparation,
     Task,
-    Thread,
 }
 
 impl Display for TripPipelineError {
@@ -255,9 +254,6 @@ impl Display for TripPipelineError {
             }
             TripPipelineError::Task => {
                 f.write_str("an error occured while sending/receiving a trip task")
-            }
-            TripPipelineError::Thread => {
-                f.write_str("an error occured while managing a trip worker thread")
             }
         }
     }
