@@ -1,7 +1,7 @@
 #![deny(warnings)]
 #![deny(rust_2018_idioms)]
 
-use engine::{settings::Settings, startup::App};
+use engine::{settings::Settings, startup::App, TracingMode};
 use error_stack::{fmt::ColorMode, Report};
 use orca_core::{Environment, TracingOutput};
 use tracing::{event, span, Level};
@@ -10,24 +10,29 @@ use tracing::{event, span, Level};
 async fn main() {
     let settings = Settings::new().unwrap();
 
-    let tracing = match settings.environment {
-        Environment::Test | Environment::Local | Environment::Production | Environment::Staging => {
-            TracingOutput::Local
+    match settings.tracing_mode {
+        TracingMode::Regular => {
+            let tracing = match settings.environment {
+                Environment::Test
+                | Environment::Local
+                | Environment::Production
+                | Environment::Staging => TracingOutput::Local,
+                Environment::Development => {
+                    Report::<()>::set_color_mode(ColorMode::None);
+                    TracingOutput::Honeycomb {
+                        api_key: settings.honeycomb_api_key(),
+                    }
+                }
+            };
+            orca_core::init_tracer(
+                Level::from(&settings.log_level),
+                "kyogre-engine",
+                "engine",
+                tracing,
+            );
         }
-        Environment::Development => {
-            Report::<()>::set_color_mode(ColorMode::None);
-            TracingOutput::Honeycomb {
-                api_key: settings.honeycomb_api_key(),
-            }
-        }
-    };
-
-    orca_core::init_tracer(
-        Level::from(&settings.log_level),
-        "kyogre-engine",
-        "engine",
-        tracing,
-    );
+        TracingMode::TokioConsole => console_subscriber::init(),
+    }
 
     let app = App::build(&settings).await;
 

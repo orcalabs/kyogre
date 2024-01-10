@@ -12,6 +12,7 @@ use vessel_benchmark::*;
 pub struct Settings {
     pub log_level: LogLevel,
     pub num_workers: u32,
+    pub tracing_mode: TracingMode,
     pub telemetry: Option<TelemetrySettings>,
     pub postgres: PsqlSettings,
     pub meilisearch: Option<meilisearch::Settings>,
@@ -20,6 +21,12 @@ pub struct Settings {
     pub honeycomb: Option<HoneycombApiKey>,
     pub single_state_run: Option<FisheryDiscriminants>,
     pub fishing_predictors: Option<FishingPredictorSettings>,
+}
+
+#[derive(Debug, Deserialize)]
+pub enum TracingMode {
+    Regular,
+    TokioConsole,
 }
 
 #[derive(Debug, Deserialize)]
