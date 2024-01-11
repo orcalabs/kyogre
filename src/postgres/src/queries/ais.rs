@@ -16,8 +16,6 @@ use crate::{
     PostgresAdapter,
 };
 
-use super::{float_to_decimal, opt_float_to_decimal};
-
 impl PostgresAdapter {
     pub(crate) async fn prune_ais_area_impl(
         &self,
@@ -180,14 +178,14 @@ ORDER BY
             }
 
             mmsis.push(p.mmsi.0);
-            latitude.push(float_to_decimal(p.latitude)?);
-            longitude.push(float_to_decimal(p.longitude)?);
-            course_over_ground.push(opt_float_to_decimal(p.course_over_ground)?);
-            rate_of_turn.push(opt_float_to_decimal(p.rate_of_turn)?);
+            latitude.push(p.latitude);
+            longitude.push(p.longitude);
+            course_over_ground.push(p.course_over_ground);
+            rate_of_turn.push(p.rate_of_turn);
             true_heading.push(p.true_heading);
-            speed_over_ground.push(opt_float_to_decimal(p.speed_over_ground)?);
+            speed_over_ground.push(p.speed_over_ground);
             altitude.push(p.altitude);
-            distance_to_shore.push(float_to_decimal(p.distance_to_shore)?);
+            distance_to_shore.push(p.distance_to_shore);
             navigation_status_id.push(p.navigational_status as i32);
             timestamp.push(p.msgtime);
             ais_class.push(p.ais_class.map(|a| AisClass::from(a).to_string()));
@@ -199,7 +197,7 @@ ORDER BY
         sqlx::query!(
             r#"
 INSERT INTO
-    ais_vessels_temp (mmsi)
+    ais_vessels (mmsi)
 VALUES
     (UNNEST($1::INT[]))
 ON CONFLICT (mmsi) DO NOTHING
@@ -212,7 +210,7 @@ ON CONFLICT (mmsi) DO NOTHING
         sqlx::query!(
             r#"
 INSERT INTO
-    ais_positions_temp (
+    ais_positions (
         mmsi,
         latitude,
         longitude,
@@ -232,15 +230,15 @@ SELECT
 FROM
     UNNEST(
         $1::INT[],
-        $2::DECIMAL[],
-        $3::DECIMAL[],
-        $4::DECIMAL[],
-        $5::DECIMAL[],
+        $2::DOUBLE PRECISION[],
+        $3::DOUBLE PRECISION[],
+        $4::DOUBLE PRECISION[],
+        $5::DOUBLE PRECISION[],
         $6::INT[],
-        $7::DECIMAL[],
+        $7::DOUBLE PRECISION[],
         $8::TIMESTAMPTZ[],
         $9::INT[],
-        $10::DECIMAL[],
+        $10::DOUBLE PRECISION[],
         $11::VARCHAR[],
         $12::INT[],
         $13::INT[]
@@ -265,19 +263,19 @@ ON CONFLICT (mmsi, TIMESTAMP) DO NOTHING
         .await?;
 
         for (_, p) in latest_position_per_vessel {
-            let latitude = float_to_decimal(p.latitude)?;
-            let longitude = float_to_decimal(p.longitude)?;
-            let course_over_ground = opt_float_to_decimal(p.course_over_ground)?;
-            let rate_of_turn = opt_float_to_decimal(p.rate_of_turn)?;
-            let speed_over_ground = opt_float_to_decimal(p.speed_over_ground)?;
-            let distance_to_shore = float_to_decimal(p.distance_to_shore)?;
+            let latitude = p.latitude;
+            let longitude = p.longitude;
+            let course_over_ground = p.course_over_ground;
+            let rate_of_turn = p.rate_of_turn;
+            let speed_over_ground = p.speed_over_ground;
+            let distance_to_shore = p.distance_to_shore;
 
             let ais_class = p.ais_class.map(|a| AisClass::from(a).to_string());
 
             sqlx::query!(
                 r#"
 INSERT INTO
-    current_ais_positions_temp (
+    current_ais_positions (
         mmsi,
         latitude,
         longitude,
@@ -295,15 +293,15 @@ INSERT INTO
 VALUES
     (
         $1::INT,
-        $2::DECIMAL,
-        $3::DECIMAL,
-        $4::DECIMAL,
-        $5::DECIMAL,
+        $2::DOUBLE PRECISION,
+        $3::DOUBLE PRECISION,
+        $4::DOUBLE PRECISION,
+        $5::DOUBLE PRECISION,
         $6::INT,
-        $7::DECIMAL,
+        $7::DOUBLE PRECISION,
         $8::timestamptz,
         $9::INT,
-        $10::DECIMAL,
+        $10::DOUBLE PRECISION,
         $11::VARCHAR,
         $12::INT,
         $13::INT
@@ -345,7 +343,7 @@ SET
         sqlx::query!(
             r#"
 INSERT INTO
-    ais_area_temp (
+    ais_area (
         mmsi,
         latitude,
         longitude,
@@ -365,15 +363,15 @@ SELECT
 FROM
     UNNEST(
         $1::INT[],
-        $2::DECIMAL[],
-        $3::DECIMAL[],
-        $4::DECIMAL[],
-        $5::DECIMAL[],
+        $2::DOUBLE PRECISION[],
+        $3::DOUBLE PRECISION[],
+        $4::DOUBLE PRECISION[],
+        $5::DOUBLE PRECISION[],
         $6::INT[],
-        $7::DECIMAL[],
+        $7::DOUBLE PRECISION[],
         $8::TIMESTAMPTZ[],
         $9::INT[],
-        $10::DECIMAL[],
+        $10::DOUBLE PRECISION[],
         $11::VARCHAR[],
         $12::INT[],
         $13::INT[]
@@ -500,13 +498,13 @@ ON CONFLICT (mmsi) DO NOTHING
 
         for p in positions {
             mmsis.push(p.mmsi.0);
-            latitude.push(float_to_decimal(p.latitude)?);
-            longitude.push(float_to_decimal(p.longitude)?);
-            course_over_ground.push(opt_float_to_decimal(p.course_over_ground)?);
-            rate_of_turn.push(opt_float_to_decimal(p.rate_of_turn)?);
+            latitude.push(p.latitude);
+            longitude.push(p.longitude);
+            course_over_ground.push(p.course_over_ground);
+            rate_of_turn.push(p.rate_of_turn);
             true_heading.push(p.true_heading);
-            speed_over_ground.push(opt_float_to_decimal(p.speed_over_ground)?);
-            distance_to_shore.push(float_to_decimal(p.distance_to_shore)?);
+            speed_over_ground.push(p.speed_over_ground);
+            distance_to_shore.push(p.distance_to_shore);
             navigation_status_id.push(p.navigational_status.map(|v| v as i32));
             timestamp.push(p.msgtime);
         }
@@ -550,14 +548,14 @@ SELECT
 FROM
     UNNEST(
         $1::INT[],
-        $2::DECIMAL[],
-        $3::DECIMAL[],
-        $4::DECIMAL[],
-        $5::DECIMAL[],
+        $2::DOUBLE PRECISION[],
+        $3::DOUBLE PRECISION[],
+        $4::DOUBLE PRECISION[],
+        $5::DOUBLE PRECISION[],
         $6::INT[],
-        $7::DECIMAL[],
+        $7::DOUBLE PRECISION[],
         $8::TIMESTAMPTZ[],
-        $9::DECIMAL[],
+        $9::DOUBLE PRECISION[],
         $10::INT[]
     )
 ON CONFLICT (mmsi, TIMESTAMP) DO NOTHING
