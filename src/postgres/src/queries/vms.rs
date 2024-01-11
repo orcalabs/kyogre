@@ -1,4 +1,3 @@
-use num_traits::FromPrimitive;
 use std::collections::{HashMap, HashSet};
 
 use crate::{
@@ -6,7 +5,6 @@ use crate::{
     models::{EarliestVms, NewVmsPosition, VmsPosition},
     PostgresAdapter,
 };
-use bigdecimal::BigDecimal;
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::CallSign;
 use futures::{Stream, TryStreamExt};
@@ -86,7 +84,7 @@ ORDER BY
         let mut vms_unique: HashMap<(String, DateTime<Utc>), NewVmsPosition> = HashMap::new();
         let mut vms_earliest: HashMap<String, EarliestVms> = HashMap::new();
 
-        let speed_threshold = BigDecimal::from_f64(0.001).unwrap();
+        let speed_threshold = 0.001;
         for v in vms {
             if v.latitude.is_none() || v.longitude.is_none() {
                 continue;
