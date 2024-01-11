@@ -52,7 +52,7 @@ FROM
             NULL AS navigational_status,
             NULL AS rate_of_turn,
             NULL AS true_heading,
-            distance_to_shore::DECIMAL,
+            distance_to_shore,
             $2::INT AS position_type_id
         FROM
             vms_positions v
@@ -139,7 +139,7 @@ FROM
             NULL AS navigational_status,
             NULL AS rate_of_turn,
             NULL AS true_heading,
-            distance_to_shore::DECIMAL,
+            distance_to_shore,
             $10::INT AS position_type_id
         FROM
             vms_positions v
@@ -176,15 +176,15 @@ ORDER BY
             AisVmsPosition,
             r#"
 SELECT
-    latitude::DECIMAL AS "latitude!",
-    longitude::DECIMAL AS "longitude!",
+    latitude AS "latitude!",
+    longitude AS "longitude!",
     "timestamp" AS "timestamp!",
-    course_over_ground::DECIMAL,
-    speed::DECIMAL,
+    course_over_ground,
+    speed,
     navigation_status_id AS "navigational_status: NavigationStatus",
-    rate_of_turn::DECIMAL,
+    rate_of_turn,
     true_heading,
-    distance_to_shore::DECIMAL AS "distance_to_shore!",
+    distance_to_shore AS "distance_to_shore!",
     position_type_id AS "position_type_id: PositionType",
     pruned_by AS "pruned_by: TripPositionLayerId"
 FROM

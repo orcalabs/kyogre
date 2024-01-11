@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO\n    vms_positions (\n    call_sign,course,gross_tonnage,latitude,longitude,message_id,message_type,message_type_code,registration_id,speed,timestamp,vessel_length,vessel_name,vessel_type,distance_to_shore\n   )\nSELECT\n    *\nFROM\n    UNNEST(\n        $1::TEXT[],$2::INT[],$3::INT[],$4::DOUBLE PRECISION[],$5::DOUBLE PRECISION[],$6::INT[],$7::TEXT[],$8::TEXT[],$9::TEXT[],$10::DOUBLE PRECISION[],$11::TIMESTAMPTZ[],$12::DOUBLE PRECISION[],$13::TEXT[],$14::TEXT[],$15::DOUBLE PRECISION[]\n    )\n        ON CONFLICT (call_sign, timestamp) DO UPDATE SET gross_tonnage = COALESCE(vms_positions.gross_tonnage, EXCLUDED.gross_tonnage),latitude = EXCLUDED.latitude,longitude = EXCLUDED.longitude,registration_id = COALESCE(vms_positions.registration_id, EXCLUDED.registration_id),distance_to_shore = EXCLUDED.distance_to_shore",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "TextArray",
+        "Int4Array",
+        "Int4Array",
+        "Float8Array",
+        "Float8Array",
+        "Int4Array",
+        "TextArray",
+        "TextArray",
+        "TextArray",
+        "Float8Array",
+        "TimestamptzArray",
+        "Float8Array",
+        "TextArray",
+        "TextArray",
+        "Float8Array"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "7d0b01d9944cc1b3e0e81fa850dc3f6f829007082bf2133c0d6102414cb64c6a"
+}

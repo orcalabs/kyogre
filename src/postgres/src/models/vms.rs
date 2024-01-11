@@ -1,8 +1,4 @@
-use crate::{
-    error::{PostgresError, PostgresErrorWrapper},
-    queries::{decimal_to_float, float_to_decimal, opt_decimal_to_float, opt_float_to_decimal},
-};
-use bigdecimal::BigDecimal;
+use crate::error::{PostgresError, PostgresErrorWrapper};
 use chrono::{DateTime, Utc};
 use error_stack::report;
 use fiskeridir_rs::CallSign;
@@ -19,18 +15,18 @@ pub struct NewVmsPosition {
     #[unnest_insert(update_coalesce)]
     pub gross_tonnage: Option<i32>,
     #[unnest_insert(update)]
-    pub latitude: BigDecimal,
+    pub latitude: f64,
     #[unnest_insert(update)]
-    pub longitude: BigDecimal,
+    pub longitude: f64,
     pub message_id: i32,
     pub message_type: String,
     pub message_type_code: String,
     #[unnest_insert(update_coalesce)]
     pub registration_id: Option<String>,
     #[unnest_insert(conflict = "COALESCE(NULLIF(speed, 0), excluded.speed)")]
-    pub speed: Option<BigDecimal>,
+    pub speed: Option<f64>,
     pub timestamp: DateTime<Utc>,
-    pub vessel_length: BigDecimal,
+    pub vessel_length: f64,
     pub vessel_name: String,
     pub vessel_type: String,
     #[unnest_insert(update)]
@@ -53,12 +49,12 @@ pub struct EarliestVms {
 pub struct VmsPosition {
     pub call_sign: String,
     pub course: Option<i32>,
-    pub latitude: BigDecimal,
-    pub longitude: BigDecimal,
+    pub latitude: f64,
+    pub longitude: f64,
     pub registration_id: Option<String>,
-    pub speed: Option<BigDecimal>,
+    pub speed: Option<f64>,
     pub timestamp: DateTime<Utc>,
-    pub vessel_length: BigDecimal,
+    pub vessel_length: f64,
     pub vessel_name: String,
     pub vessel_type: String,
     pub distance_to_shore: f64,
@@ -79,15 +75,15 @@ impl TryFrom<fiskeridir_rs::Vms> for NewVmsPosition {
             call_sign: v.call_sign.into_inner(),
             course: v.course.map(|c| c as i32),
             gross_tonnage: v.gross_tonnage.map(|c| c as i32),
-            latitude: float_to_decimal(latitude)?,
-            longitude: float_to_decimal(longitude)?,
+            latitude,
+            longitude,
             message_id: v.message_id as i32,
             message_type: v.message_type,
             message_type_code: v.message_type_code,
             registration_id: v.registration_id,
-            speed: opt_float_to_decimal(v.speed)?,
+            speed: v.speed,
             timestamp: v.timestamp,
-            vessel_length: float_to_decimal(v.vessel_length)?,
+            vessel_length: v.vessel_length,
             vessel_name: v.vessel_name,
             vessel_type: v.vessel_type,
             distance_to_shore: distance_to_shore(latitude, longitude),
@@ -100,14 +96,14 @@ impl TryFrom<VmsPosition> for kyogre_core::VmsPosition {
 
     fn try_from(value: VmsPosition) -> Result<Self, Self::Error> {
         Ok(kyogre_core::VmsPosition {
-            latitude: decimal_to_float(value.latitude)?,
-            longitude: decimal_to_float(value.longitude)?,
+            latitude: value.latitude,
+            longitude: value.longitude,
             course: value.course.map(|c| c as u32),
-            speed: opt_decimal_to_float(value.speed)?,
+            speed: value.speed,
             call_sign: CallSign::try_from(value.call_sign)?,
             registration_id: value.registration_id,
             timestamp: value.timestamp,
-            vessel_length: decimal_to_float(value.vessel_length)?,
+            vessel_length: value.vessel_length,
             vessel_name: value.vessel_name,
             vessel_type: value.vessel_type,
             distance_to_shore: value.distance_to_shore,

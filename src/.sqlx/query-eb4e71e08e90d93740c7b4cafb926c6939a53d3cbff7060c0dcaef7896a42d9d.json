@@ -6,12 +6,12 @@
       {
         "ordinal": 0,
         "name": "latitude",
-        "type_info": "Numeric"
+        "type_info": "Float8"
       },
       {
         "ordinal": 1,
         "name": "longitude",
-        "type_info": "Numeric"
+        "type_info": "Float8"
       },
       {
         "ordinal": 2,
@@ -26,7 +26,7 @@
       {
         "ordinal": 4,
         "name": "course_over_ground",
-        "type_info": "Numeric"
+        "type_info": "Float8"
       },
       {
         "ordinal": 5,
@@ -36,12 +36,12 @@
       {
         "ordinal": 6,
         "name": "rate_of_turn",
-        "type_info": "Numeric"
+        "type_info": "Float8"
       },
       {
         "ordinal": 7,
         "name": "speed_over_ground",
-        "type_info": "Numeric"
+        "type_info": "Float8"
       },
       {
         "ordinal": 8,
@@ -51,7 +51,7 @@
       {
         "ordinal": 9,
         "name": "distance_to_shore",
-        "type_info": "Numeric"
+        "type_info": "Float8"
       }
     ],
     "parameters": {
