@@ -424,7 +424,7 @@ impl TripBuilder {
         assert!(amount != 0);
 
         let base = &mut self.state.state;
-        let num_trips = base.vessels[self.current_index..].len();
+        let num_trips = base.trips[self.current_index..].len();
 
         let distribution = ItemDistribution::new(amount, num_trips);
 
@@ -434,12 +434,12 @@ impl TripBuilder {
             let mut positions = Vec::with_capacity(num_positions);
             let mut timestamps = Vec::with_capacity(num_positions);
 
-            for _ in 0..num_positions {
+            for j in 0..num_positions {
                 let timestamp = trip.current_data_timestamp;
                 timestamps.push(timestamp);
                 let mut position = NewAisPosition::test_default(trip.mmsi.unwrap(), timestamp);
-                position.latitude = 72.12 + 0.001 * i as f64;
-                position.longitude = 25.12 + 0.001 * i as f64;
+                position.latitude = 72.12 + 0.001 * j as f64;
+                position.longitude = 25.12 + 0.001 * j as f64;
 
                 base.global_data_timestamp_counter += base.data_timestamp_gap;
                 positions.push(AisPositionConstructor {

@@ -753,11 +753,23 @@ impl WebApiOutboundPort for PostgresAdapter {
     fn weather_locations(&self) -> PinBoxStream<'_, WeatherLocation, QueryError> {
         convert_stream(self.weather_locations_impl()).boxed()
     }
+
     fn fuel_measurements(
         &self,
         query: FuelMeasurementsQuery,
     ) -> PinBoxStream<'_, FuelMeasurement, QueryError> {
         convert_stream(self.fuel_measurements_impl(query)).boxed()
+    }
+
+    async fn vessel_benchmarks(
+        &self,
+        user_id: &BarentswatchUserId,
+        call_sign: &CallSign,
+    ) -> Result<VesselBenchmarks, QueryError> {
+        Ok(self
+            .vessel_benchmarks_impl(user_id, call_sign)
+            .await?
+            .try_into()?)
     }
 }
 
