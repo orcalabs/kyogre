@@ -1,8 +1,11 @@
-use crate::{error::ApiError, to_streaming_response, Database};
+use crate::response::Response;
+use crate::{error::ApiError, extractors::BwProfile, to_streaming_response, Database};
 use actix_web::{web, HttpResponse};
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::{CallSign, GearGroup, RegisterVesselOwner, SpeciesGroup, VesselLengthGroup};
+use futures::TryFutureExt;
 use futures::TryStreamExt;
+use kyogre_core::VesselBenchmarks;
 use kyogre_core::{FiskeridirVesselId, Mmsi};
 use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, DisplayFromStr};
@@ -25,6 +28,42 @@ pub async fn vessels<T: Database + 'static>(db: web::Data<T>) -> Result<HttpResp
             ApiError::InternalServerError
         })
     }
+}
+
+#[utoipa::path(
+    get,
+    path = "/vessels/benchmarks",
+    responses(
+        (status = 200, description = "benchmark data for the vessel associated with the current user", body = VesselBenchmarks),
+        (status = 500, description = "an internal error occured", body = ErrorResponse),
+    )
+)]
+#[tracing::instrument(skip(db))]
+pub async fn vessel_benchmarks<T: Database + 'static>(
+    db: web::Data<T>,
+    bw_profile: BwProfile,
+) -> Result<Response<VesselBenchmarks>, ApiError> {
+    let fisk_info_profile = bw_profile
+        .fisk_info_profile
+        .ok_or(ApiError::MissingBwFiskInfoProfile)?;
+    let call_sign =
+        CallSign::try_from(fisk_info_profile.ircs).map_err(|_| ApiError::InvalidCallSign)?;
+
+    Ok(Response::new(
+        db.vessel_benchmarks(
+            &kyogre_core::BarentswatchUserId(bw_profile.user.id),
+            &call_sign,
+        )
+        .map_err(|e| {
+            event!(
+                Level::ERROR,
+                "failed to retrieve vessel benchmarks: {:?}",
+                e
+            );
+            ApiError::InternalServerError
+        })
+        .await?,
+    ))
 }
 
 #[serde_as]

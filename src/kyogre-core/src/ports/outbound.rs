@@ -51,6 +51,11 @@ pub trait WebApiOutboundPort {
     fn species_fao(&self) -> PinBoxStream<'_, SpeciesFao, QueryError>;
     fn vessels(&self) -> Pin<Box<dyn Stream<Item = Result<Vessel, QueryError>> + Send + '_>>;
     fn hauls(&self, query: HaulsQuery) -> Result<PinBoxStream<'_, Haul, QueryError>, QueryError>;
+    async fn vessel_benchmarks(
+        &self,
+        user_id: &BarentswatchUserId,
+        call_sign: &CallSign,
+    ) -> Result<VesselBenchmarks, QueryError>;
     fn detailed_trips(
         &self,
         query: TripsQuery,
