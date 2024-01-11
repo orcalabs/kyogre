@@ -3,7 +3,7 @@ use actix_web::http::StatusCode;
 use chrono::{DateTime, Utc};
 use engine::*;
 use fiskeridir_rs::{ErsDca, GearGroup, SpeciesGroup, VesselLengthGroup};
-use kyogre_core::{FiskeridirVesselId, HaulsSorting, Ordering};
+use kyogre_core::{AirTemperature, FiskeridirVesselId, HaulsSorting, Ordering, WindSpeed};
 use web_api::routes::v1::haul::{Haul, HaulsParams};
 
 #[tokio::test]
@@ -246,67 +246,67 @@ async fn test_hauls_returns_hauls_with_fiskeridir_vessel_ids() {
     .await;
 }
 
-// #[tokio::test]
-// async fn test_hauls_filters_by_wind_speed() {
-//     test_with_cache(|helper, builder| async move {
-//         let state = builder
-//             .vessels(1)
-//             .hauls(5)
-//             .weather(5)
-//             .modify_idx(|i, w| w.weather.wind_speed_10m = WindSpeed::new(i as f64))
-//             .build()
-//             .await;
+#[tokio::test]
+async fn test_hauls_filters_by_wind_speed() {
+    test_with_cache(|helper, builder| async move {
+        let state = builder
+            .vessels(1)
+            .hauls(5)
+            .weather(5)
+            .modify_idx(|i, w| w.weather.wind_speed_10m = WindSpeed::new(i as f64))
+            .build()
+            .await;
 
-//         helper.refresh_cache().await;
+        helper.refresh_cache().await;
 
-//         let params = HaulsParams {
-//             min_wind_speed: Some(0.5),
-//             max_wind_speed: Some(2.5),
-//             ..Default::default()
-//         };
+        let params = HaulsParams {
+            min_wind_speed: Some(0.5),
+            max_wind_speed: Some(2.5),
+            ..Default::default()
+        };
 
-//         let response = helper.app.get_hauls(params).await;
+        let response = helper.app.get_hauls(params).await;
 
-//         assert_eq!(response.status(), StatusCode::OK);
-//         let hauls: Vec<Haul> = response.json().await.unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let hauls: Vec<Haul> = response.json().await.unwrap();
 
-//         assert_eq!(hauls.len(), 2);
-//         assert_eq!(hauls, state.hauls[1..=2]);
-//     })
-//     .await;
-// }
+        assert_eq!(hauls.len(), 2);
+        assert_eq!(hauls, state.hauls[1..=2]);
+    })
+    .await;
+}
 
-// #[tokio::test]
-// async fn test_hauls_filters_by_air_temperature() {
-//     test_with_cache(|helper, builder| async move {
-//         let state = builder
-//             .vessels(1)
-//             .hauls(5)
-//             .weather(5)
-//             .modify_idx(|i, w| {
-//                 w.weather.air_temperature_2m = AirTemperature::new(i as f64);
-//             })
-//             .build()
-//             .await;
+#[tokio::test]
+async fn test_hauls_filters_by_air_temperature() {
+    test_with_cache(|helper, builder| async move {
+        let state = builder
+            .vessels(1)
+            .hauls(5)
+            .weather(5)
+            .modify_idx(|i, w| {
+                w.weather.air_temperature_2m = AirTemperature::new(i as f64);
+            })
+            .build()
+            .await;
 
-//         helper.refresh_cache().await;
+        helper.refresh_cache().await;
 
-//         let params = HaulsParams {
-//             min_air_temperature: Some(0.5),
-//             max_air_temperature: Some(2.5),
-//             ..Default::default()
-//         };
+        let params = HaulsParams {
+            min_air_temperature: Some(0.5),
+            max_air_temperature: Some(2.5),
+            ..Default::default()
+        };
 
-//         let response = helper.app.get_hauls(params).await;
+        let response = helper.app.get_hauls(params).await;
 
-//         assert_eq!(response.status(), StatusCode::OK);
-//         let hauls: Vec<Haul> = response.json().await.unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let hauls: Vec<Haul> = response.json().await.unwrap();
 
-//         assert_eq!(hauls.len(), 2);
-//         assert_eq!(hauls, state.hauls[1..=2]);
-//     })
-//     .await;
-// }
+        assert_eq!(hauls.len(), 2);
+        assert_eq!(hauls, state.hauls[1..=2]);
+    })
+    .await;
+}
 
 #[tokio::test]
 async fn test_hauls_sorts_by_start_timestamp() {

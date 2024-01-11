@@ -128,49 +128,49 @@ async fn test_fishing_weight_predictions_filters_by_week_and_species_group() {
     .await;
 }
 
-// #[tokio::test]
-// async fn test_fishing_weight_predictions_filters_by_model() {
-//     test(|helper, builder| async move {
-//         builder
-//             .add_ml_models(vec![
-//                 default_fishing_weight_predictor(),
-//                 default_fishing_weight_weather_predictor(),
-//             ])
-//             .data_start(Utc::now().with_ordinal(1).unwrap())
-//             .weather(5)
-//             .vessels(1)
-//             .hauls(5)
-//             .modify(|v| {
-//                 v.dca.catch.species.living_weight = Some(100000);
-//                 v.dca.gear.gear_group_code = GearGroup::Trawl;
-//                 v.dca.start_longitude = Some(INSIDE_HAULS_POLYGON.0);
-//                 v.dca.start_latitude = Some(INSIDE_HAULS_POLYGON.1);
-//             })
-//             .weather(5)
-//             .build()
-//             .await;
+#[tokio::test]
+async fn test_fishing_weight_predictions_filters_by_model() {
+    test(|helper, builder| async move {
+        builder
+            .add_ml_models(vec![
+                default_fishing_weight_predictor(),
+                default_fishing_weight_weather_predictor(),
+            ])
+            .data_start(Utc::now().with_ordinal(1).unwrap())
+            .weather(5)
+            .vessels(1)
+            .hauls(5)
+            .modify(|v| {
+                v.dca.catch.species.living_weight = Some(100000);
+                v.dca.gear.gear_group_code = GearGroup::Trawl;
+                v.dca.start_longitude = Some(INSIDE_HAULS_POLYGON.0);
+                v.dca.start_latitude = Some(INSIDE_HAULS_POLYGON.1);
+            })
+            .weather(5)
+            .build()
+            .await;
 
-//         let response = helper
-//             .app
-//             .get_all_fishing_weight_predictions(ModelId::Weight)
-//             .await;
-//         assert_eq!(response.status(), StatusCode::OK);
-//         let predictions: Vec<FishingWeightPrediction> = response.json().await.unwrap();
-//         assert_eq!(
-//             predictions.len() as u32,
-//             FISHING_WEIGHT_PREDICTOR_NUM_DAYS * FISHING_WEIGHT_PREDICTOR_NUM_CL
-//         );
+        let response = helper
+            .app
+            .get_all_fishing_weight_predictions(ModelId::Weight)
+            .await;
+        assert_eq!(response.status(), StatusCode::OK);
+        let predictions: Vec<FishingWeightPrediction> = response.json().await.unwrap();
+        assert_eq!(
+            predictions.len() as u32,
+            FISHING_WEIGHT_PREDICTOR_NUM_DAYS * FISHING_WEIGHT_PREDICTOR_NUM_CL
+        );
 
-//         let response = helper
-//             .app
-//             .get_all_fishing_weight_predictions(ModelId::WeightWeather)
-//             .await;
-//         assert_eq!(response.status(), StatusCode::OK);
-//         let predictions: Vec<FishingWeightPrediction> = response.json().await.unwrap();
-//         assert_eq!(predictions.len() as u32, FISHING_WEIGHT_PREDICTOR_NUM_DAYS);
-//     })
-//     .await;
-// }
+        let response = helper
+            .app
+            .get_all_fishing_weight_predictions(ModelId::WeightWeather)
+            .await;
+        assert_eq!(response.status(), StatusCode::OK);
+        let predictions: Vec<FishingWeightPrediction> = response.json().await.unwrap();
+        assert_eq!(predictions.len() as u32, FISHING_WEIGHT_PREDICTOR_NUM_DAYS);
+    })
+    .await;
+}
 
 #[tokio::test]
 async fn test_fishing_weight_predictions_filters_by_limit_and_orders_by_weight_desc() {
