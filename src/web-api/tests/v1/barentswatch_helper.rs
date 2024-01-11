@@ -17,6 +17,8 @@ use wiremock::{
     Mock, MockServer, ResponseTemplate,
 };
 
+pub static SIGNED_IN_VESSEL_CALLSIGN: &str = "LK17";
+
 pub struct BarentswatchHelper {
     mock_server: MockServer,
     private_key: RsaPrivateKey,
@@ -79,7 +81,7 @@ impl BarentswatchHelper {
                             id: decoded.claims.id,
                         },
                         fisk_info_profile: Some(BwVesselInfo {
-                            ircs: "LK17".into(),
+                            ircs: SIGNED_IN_VESSEL_CALLSIGN.into(),
                         }),
                         policies: decoded.claims.policies,
                         roles: decoded.claims.roles,

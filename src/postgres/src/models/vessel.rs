@@ -1,10 +1,12 @@
 use crate::{
-    error::PostgresErrorWrapper,
+    error::{PostgresError, PostgresErrorWrapper},
     queries::{enum_to_i32, opt_enum_to_i32},
 };
 use chrono::{DateTime, Utc};
+use error_stack::report;
 use fiskeridir_rs::{CallSign, GearGroup, SpeciesGroup, VesselLengthGroup, VesselType};
 use kyogre_core::{FiskeridirVesselId, Mmsi, TripAssemblerId, VesselBenchmarkId, VesselSource};
+use num_traits::FromPrimitive;
 use serde::Deserialize;
 use unnest_insert::UnnestInsert;
 
@@ -25,6 +27,76 @@ pub struct VesselConflictInsert {
     pub call_sign: Option<String>,
     pub mmsi: Option<i32>,
     pub is_manual: bool,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct VesselBenchmarks {
+    pub fishing_time: Option<String>,
+    pub fishing_distance: Option<String>,
+    pub trip_time: Option<String>,
+    pub landings: Option<String>,
+    pub ers_dca: Option<String>,
+    pub cumulative_landings: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct CumulativeLandings {
+    pub month: i32,
+    pub species_fiskeridir_id: i32,
+    pub weight: f64,
+    pub cumulative_weight: f64,
+}
+
+impl TryFrom<CumulativeLandings> for kyogre_core::CumulativeLandings {
+    type Error = PostgresErrorWrapper;
+
+    fn try_from(value: CumulativeLandings) -> Result<Self, Self::Error> {
+        Ok(kyogre_core::CumulativeLandings {
+            month: chrono::Month::from_i32(value.month).ok_or_else(|| {
+                report!(PostgresError::DataConversion)
+                    .attach_printable(format!("unknown month: {}", value.month))
+            })?,
+            species_fiskeridir_id: value.species_fiskeridir_id as u32,
+            weight: value.weight,
+            cumulative_weight: value.cumulative_weight,
+        })
+    }
+}
+
+impl TryFrom<VesselBenchmarks> for kyogre_core::VesselBenchmarks {
+    type Error = PostgresErrorWrapper;
+
+    fn try_from(value: VesselBenchmarks) -> Result<Self, Self::Error> {
+        let cumulative_landings =
+            serde_json::from_str::<Vec<CumulativeLandings>>(&value.cumulative_landings)?
+                .into_iter()
+                .map(kyogre_core::CumulativeLandings::try_from)
+                .collect::<Result<Vec<kyogre_core::CumulativeLandings>, _>>()?;
+
+        Ok(kyogre_core::VesselBenchmarks {
+            fishing_time: value
+                .fishing_time
+                .map(|v| serde_json::from_str(&v))
+                .transpose()?,
+            fishing_distance: value
+                .fishing_distance
+                .map(|v| serde_json::from_str(&v))
+                .transpose()?,
+            trip_time: value
+                .trip_time
+                .map(|v| serde_json::from_str(&v))
+                .transpose()?,
+            landings: value
+                .landings
+                .map(|v| serde_json::from_str(&v))
+                .transpose()?,
+            ers_dca: value
+                .ers_dca
+                .map(|v| serde_json::from_str(&v))
+                .transpose()?,
+            cumulative_landings,
+        })
+    }
 }
 
 impl From<kyogre_core::NewVesselConflict> for VesselConflictInsert {

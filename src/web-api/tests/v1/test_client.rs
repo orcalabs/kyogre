@@ -164,6 +164,14 @@ impl ApiClient {
     pub async fn get_vessels(&self) -> Response {
         self.get("vessels", None::<()>, None).await
     }
+    pub async fn get_vessel_benchmarks(&self, token: Option<String>) -> Response {
+        let headers = token.map(|t| {
+            let mut headers = HeaderMap::new();
+            headers.insert("bw-token", t.try_into().unwrap());
+            headers
+        });
+        self.get("vessels/benchmarks", None::<()>, headers).await
+    }
     pub async fn get_delivery_points(&self) -> Response {
         self.get("delivery_points", None::<()>, None).await
     }

@@ -19,5 +19,6 @@ pub mod trip;
 pub mod trip_of_haul;
 pub mod user;
 pub mod vessel;
+pub mod vessel_benchmarks;
 pub mod vessel_event;
 pub mod vms;

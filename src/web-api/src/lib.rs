@@ -45,6 +45,7 @@ impl Database for PostgresAdapter {}
         v1::gear::gear_groups,
         v1::gear::gear_main_groups,
         v1::vessel::vessels,
+        v1::vessel::vessel_benchmarks,
         v1::haul::hauls,
         v1::haul::hauls_matrix,
         v1::trip::trip_of_haul,
@@ -140,6 +141,10 @@ impl Database for PostgresAdapter {}
             v1::fuel::DeleteFuelMeasurement,
             kyogre_core::ModelId,
             kyogre_core::AisPositionMinimal,
+            kyogre_core::VesselBenchmarks,
+            kyogre_core::Benchmark,
+            kyogre_core::BenchmarkEntry,
+            kyogre_core::CumulativeLandings,
           )
     ),
     security(

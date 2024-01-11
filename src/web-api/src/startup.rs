@@ -231,6 +231,12 @@ where
                     web::delete()
                         .guard(guard.clone())
                         .to(routes::v1::fuel::delete_fuel_measurements::<T>),
+                )
+                .route(
+                    "/vessels/benchmarks",
+                    web::get()
+                        .guard(guard.clone())
+                        .to(routes::v1::vessel::vessel_benchmarks::<T>),
                 );
         }
 
