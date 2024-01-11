@@ -212,7 +212,7 @@ ON CONFLICT (mmsi) DO NOTHING
         sqlx::query!(
             r#"
 INSERT INTO
-    ais_positions (
+    ais_positions_temp (
         mmsi,
         latitude,
         longitude,
@@ -277,7 +277,7 @@ ON CONFLICT (mmsi, TIMESTAMP) DO NOTHING
             sqlx::query!(
                 r#"
 INSERT INTO
-    current_ais_positions (
+    current_ais_positions_temp (
         mmsi,
         latitude,
         longitude,
@@ -323,7 +323,7 @@ SET
     ais_class = excluded.ais_class,
     ais_message_type_id = excluded.ais_message_type_id,
     navigation_status_id = excluded.navigation_status_id
-            "#,
+                "#,
                 p.mmsi.0,
                 latitude,
                 longitude,
@@ -345,7 +345,7 @@ SET
         sqlx::query!(
             r#"
 INSERT INTO
-    ais_area (
+    ais_area_temp (
         mmsi,
         latitude,
         longitude,
