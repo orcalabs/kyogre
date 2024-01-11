@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO\n    fiskeridir_vessels (\n    fiskeridir_vessel_id,norwegian_municipality_id,call_sign,name,registration_id,length,width,engine_power,imo_number,owners,fiskeridir_vessel_source_id\n   )\nSELECT\n    *\nFROM\n    UNNEST(\n        $1::BIGINT[],$2::INT[],$3::TEXT[],$4::TEXT[],$5::TEXT[],$6::DOUBLE PRECISION[],$7::DOUBLE PRECISION[],$8::INT[],$9::BIGINT[],$10::JSON[],$11::INT[]\n    )\n        ON CONFLICT (fiskeridir_vessel_id) DO UPDATE SET norwegian_municipality_id = EXCLUDED.norwegian_municipality_id,call_sign = EXCLUDED.call_sign,name = EXCLUDED.name,registration_id = EXCLUDED.registration_id,length = EXCLUDED.length,width = EXCLUDED.width,engine_power = EXCLUDED.engine_power,imo_number = EXCLUDED.imo_number,owners = EXCLUDED.owners,fiskeridir_vessel_source_id = EXCLUDED.fiskeridir_vessel_source_id",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8Array",
+        "Int4Array",
+        "TextArray",
+        "TextArray",
+        "TextArray",
+        "Float8Array",
+        "Float8Array",
+        "Int4Array",
+        "Int8Array",
+        "JsonArray",
+        "Int4Array"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "1cefe1433d49624525b3b5b0a7ca447e51601ba845db68312d8efbee9fe77682"
+}

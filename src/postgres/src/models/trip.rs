@@ -1,8 +1,6 @@
 use super::{FishingFacility, HaulCatch, WhaleCatch};
 use crate::error::PostgresErrorWrapper;
-use crate::queries::decimal_to_float;
-use crate::queries::{enum_to_i32, opt_decimal_to_float, opt_enum_to_i32, opt_float_to_decimal};
-use bigdecimal::BigDecimal;
+use crate::queries::{enum_to_i32, opt_enum_to_i32};
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::{
     DeliveryPointId, Gear, GearGroup, LandingId, Quality, SpeciesGroup, VesselLengthGroup,
@@ -22,7 +20,7 @@ pub struct Trip {
     pub period: PgRange<DateTime<Utc>>,
     pub period_precision: Option<PgRange<DateTime<Utc>>>,
     pub landing_coverage: PgRange<DateTime<Utc>>,
-    pub distance: Option<BigDecimal>,
+    pub distance: Option<f64>,
     pub trip_assembler_id: TripAssemblerId,
     pub start_port_id: Option<String>,
     pub end_port_id: Option<String>,
@@ -79,7 +77,7 @@ pub struct NewTrip {
     pub trip_precision_status_id: String,
     #[unnest_insert(sql_type = "tstzrange")]
     pub period_precision: Option<PgRange<DateTime<Utc>>>,
-    pub distance: Option<BigDecimal>,
+    pub distance: Option<f64>,
     #[unnest_insert(sql_type = "INT", type_conversion = "opt_enum_to_i32")]
     pub distancer_id: Option<TripDistancerId>,
     pub start_port_id: Option<String>,
@@ -164,7 +162,7 @@ impl TryFrom<&TripProcessingUnit> for NewTrip {
         };
 
         let (distance, distancer_id) = match value.distance_output {
-            Some(v) => (opt_float_to_decimal(v.distance)?, Some(v.distancer_id)),
+            Some(v) => (v.distance, Some(v.distancer_id)),
             None => (None, None),
         };
 
@@ -221,9 +219,9 @@ pub struct TripDetailed {
     pub period_precision: Option<PgRange<DateTime<Utc>>>,
     pub landing_coverage: PgRange<DateTime<Utc>>,
     pub num_deliveries: i64,
-    pub total_living_weight: BigDecimal,
-    pub total_gross_weight: BigDecimal,
-    pub total_product_weight: BigDecimal,
+    pub total_living_weight: f64,
+    pub total_gross_weight: f64,
+    pub total_product_weight: f64,
     pub delivery_points: Vec<String>,
     pub gear_ids: Vec<Gear>,
     pub gear_group_ids: Vec<GearGroup>,
@@ -237,7 +235,7 @@ pub struct TripDetailed {
     pub start_port_id: Option<String>,
     pub end_port_id: Option<String>,
     pub trip_assembler_id: TripAssemblerId,
-    pub distance: Option<BigDecimal>,
+    pub distance: Option<f64>,
     pub cache_version: i64,
     pub target_species_fiskeridir_id: Option<i32>,
     pub target_species_fao_id: Option<String>,
@@ -251,10 +249,10 @@ struct TripHaul {
     haul_distance: Option<i32>,
     start_timestamp: DateTime<Utc>,
     stop_timestamp: DateTime<Utc>,
-    start_latitude: BigDecimal,
-    start_longitude: BigDecimal,
-    stop_latitude: BigDecimal,
-    stop_longitude: BigDecimal,
+    start_latitude: f64,
+    start_longitude: f64,
+    stop_latitude: f64,
+    stop_longitude: f64,
     total_living_weight: i64,
     gear_id: Gear,
     gear_group_id: GearGroup,
@@ -319,13 +317,11 @@ impl TryFrom<Trip> for kyogre_core::Trip {
             .map(DateRange::try_from)
             .transpose()?;
 
-        let distance = value.distance.map(decimal_to_float).transpose()?;
-
         Ok(kyogre_core::Trip {
             trip_id: TripId(value.trip_id),
             period,
             landing_coverage,
-            distance,
+            distance: value.distance,
             assembler_id: value.trip_assembler_id,
             precision_period,
             start_port_code: value.start_port_id,
@@ -439,16 +435,16 @@ impl TryFrom<TripDetailed> for kyogre_core::TripDetailed {
                     .into_iter()
                     .map(kyogre_core::Catch::from)
                     .collect::<Vec<kyogre_core::Catch>>(),
-                total_living_weight: decimal_to_float(value.total_living_weight)?,
-                total_gross_weight: decimal_to_float(value.total_gross_weight)?,
-                total_product_weight: decimal_to_float(value.total_product_weight)?,
+                total_living_weight: value.total_living_weight,
+                total_gross_weight: value.total_gross_weight,
+                total_product_weight: value.total_product_weight,
             },
             start_port_id: value.start_port_id,
             end_port_id: value.end_port_id,
             assembler_id: value.trip_assembler_id,
             vessel_events,
             landing_ids,
-            distance: opt_decimal_to_float(value.distance)?,
+            distance: value.distance,
             cache_version: value.cache_version,
             target_species_fiskeridir_id: value.target_species_fiskeridir_id.map(|v| v as u32),
             target_species_fao_id: value.target_species_fao_id,
@@ -505,11 +501,11 @@ impl TryFrom<TripHaul> for kyogre_core::TripHaul {
             ers_activity_id: v.ers_activity_id,
             duration: v.duration,
             haul_distance: v.haul_distance,
-            start_latitude: decimal_to_float(v.start_latitude)?,
-            start_longitude: decimal_to_float(v.start_longitude)?,
+            start_latitude: v.start_latitude,
+            start_longitude: v.start_longitude,
             start_timestamp: v.start_timestamp,
-            stop_latitude: decimal_to_float(v.stop_latitude)?,
-            stop_longitude: decimal_to_float(v.stop_longitude)?,
+            stop_latitude: v.stop_latitude,
+            stop_longitude: v.stop_longitude,
             stop_timestamp: v.stop_timestamp,
             total_living_weight: v.total_living_weight,
             gear_id: v.gear_id,

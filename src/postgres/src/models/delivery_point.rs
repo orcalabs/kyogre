@@ -1,19 +1,16 @@
 use crate::{error::PostgresErrorWrapper, queries::enum_to_i32};
-use bigdecimal::BigDecimal;
 use chrono::NaiveDate;
 use fiskeridir_rs::DeliveryPointId;
 use kyogre_core::DeliveryPointType;
 use unnest_insert::UnnestInsert;
-
-use crate::queries::{float_to_decimal, opt_decimal_to_float};
 
 #[derive(Debug, Clone)]
 pub struct DeliveryPoint {
     pub delivery_point_id: String,
     pub name: Option<String>,
     pub address: Option<String>,
-    pub latitude: Option<BigDecimal>,
-    pub longitude: Option<BigDecimal>,
+    pub latitude: Option<f64>,
+    pub longitude: Option<f64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, UnnestInsert)]
@@ -57,11 +54,11 @@ pub struct AquaCultureEntry {
     pub locality_municipality: String,
     pub locality_location: String,
     pub water_environment: String,
-    pub locality_kap: BigDecimal,
+    pub locality_kap: f64,
     pub locality_unit: String,
     pub expiration_date: Option<NaiveDate>,
-    pub latitude: BigDecimal,
-    pub longitude: BigDecimal,
+    pub latitude: f64,
+    pub longitude: f64,
     pub prod_omr: Option<String>,
 }
 
@@ -89,7 +86,7 @@ pub struct AquaCultureSpecies {
     pub till_nr: String,
     pub till_unit: String,
     pub species_fiskeridir_id: i32,
-    pub till_kap: BigDecimal,
+    pub till_kap: f64,
 }
 
 #[derive(Debug, Clone, UnnestInsert)]
@@ -114,8 +111,8 @@ impl TryFrom<DeliveryPoint> for kyogre_core::DeliveryPoint {
             id: DeliveryPointId::try_from(v.delivery_point_id)?,
             name: v.name,
             address: v.address,
-            latitude: opt_decimal_to_float(v.latitude)?,
-            longitude: opt_decimal_to_float(v.longitude)?,
+            latitude: v.latitude,
+            longitude: v.longitude,
         })
     }
 }
@@ -137,7 +134,7 @@ impl TryFrom<&fiskeridir_rs::AquaCultureEntry> for AquaCultureSpecies {
             till_nr: v.till_nr.clone(),
             till_unit: v.till_unit.clone(),
             species_fiskeridir_id: v.species_code as i32,
-            till_kap: float_to_decimal(v.till_kap)?,
+            till_kap: v.till_kap,
         })
     }
 }
@@ -175,11 +172,11 @@ impl TryFrom<fiskeridir_rs::AquaCultureEntry> for AquaCultureEntry {
             locality_municipality: v.locality_municipality,
             locality_location: v.locality_location,
             water_environment: v.water_environment,
-            locality_kap: float_to_decimal(v.locality_kap)?,
+            locality_kap: v.locality_kap,
             locality_unit: v.locality_unit,
             expiration_date: v.expiration_date,
-            latitude: float_to_decimal(v.latitude)?,
-            longitude: float_to_decimal(v.longitude)?,
+            latitude: v.latitude,
+            longitude: v.longitude,
             prod_omr: v.prod_omr,
         })
     }

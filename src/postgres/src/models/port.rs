@@ -1,14 +1,10 @@
-use bigdecimal::BigDecimal;
 use error_stack::report;
 use jurisdiction::Jurisdiction;
 use serde::Deserialize;
 use std::str::FromStr;
 use unnest_insert::UnnestInsert;
 
-use crate::{
-    error::{PortCoordinateError, PostgresError, PostgresErrorWrapper},
-    queries::decimal_to_float,
-};
+use crate::error::{PortCoordinateError, PostgresError, PostgresErrorWrapper};
 
 #[derive(Debug, Clone, PartialEq, Eq, UnnestInsert)]
 #[unnest_insert(table_name = "ports", conflict = "port_id")]
@@ -19,35 +15,35 @@ pub struct NewPort {
     pub nationality: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Port {
     pub id: String,
     pub name: Option<String>,
-    pub latitude: Option<BigDecimal>,
-    pub longitude: Option<BigDecimal>,
+    pub latitude: Option<f64>,
+    pub longitude: Option<f64>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct PortDockPoint {
     pub port_dock_point_id: i32,
     pub port_id: String,
     pub name: String,
-    pub latitude: BigDecimal,
-    pub longitude: BigDecimal,
+    pub latitude: f64,
+    pub longitude: f64,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct TripPorts {
     pub start_port_id: Option<String>,
     pub start_port_name: Option<String>,
     pub start_port_nationality: Option<String>,
-    pub start_port_latitude: Option<BigDecimal>,
-    pub start_port_longitude: Option<BigDecimal>,
+    pub start_port_latitude: Option<f64>,
+    pub start_port_longitude: Option<f64>,
     pub end_port_id: Option<String>,
     pub end_port_name: Option<String>,
     pub end_port_nationality: Option<String>,
-    pub end_port_latitude: Option<BigDecimal>,
-    pub end_port_longitude: Option<BigDecimal>,
+    pub end_port_latitude: Option<f64>,
+    pub end_port_longitude: Option<f64>,
 }
 
 #[derive(Deserialize, Debug, Clone, PartialEq)]
@@ -97,8 +93,8 @@ impl TryFrom<PortDockPoint> for kyogre_core::PortDockPoint {
             port_dock_point_id: value.port_dock_point_id,
             port_id: value.port_id,
             name: value.name,
-            latitude: decimal_to_float(value.latitude)?,
-            longitude: decimal_to_float(value.longitude)?,
+            latitude: value.latitude,
+            longitude: value.longitude,
         })
     }
 }
@@ -110,8 +106,8 @@ impl TryFrom<Port> for kyogre_core::Port {
         let coordinates = match (value.latitude, value.longitude) {
             (None, None) => None,
             (Some(lat), Some(lon)) => Some(kyogre_core::Coordinates {
-                latitude: decimal_to_float(lat)?,
-                longitude: decimal_to_float(lon)?,
+                latitude: lat,
+                longitude: lon,
             }),
             (None, Some(_)) | (Some(_), None) => {
                 return Err(PortCoordinateError(value.id.clone()).into())
@@ -138,8 +134,8 @@ impl TryFrom<TripPorts> for kyogre_core::TripPorts {
                 (Some(lat), Some(lon)) => Some(kyogre_core::Port {
                     id,
                     coordinates: Some(kyogre_core::Coordinates {
-                        latitude: decimal_to_float(lat)?,
-                        longitude: decimal_to_float(lon)?,
+                        latitude: lat,
+                        longitude: lon,
                     }),
                 }),
                 (None, Some(_)) | (Some(_), None) => return Err(PortCoordinateError(id).into()),
@@ -157,8 +153,8 @@ impl TryFrom<TripPorts> for kyogre_core::TripPorts {
                 (Some(lat), Some(lon)) => Some(kyogre_core::Port {
                     id,
                     coordinates: Some(kyogre_core::Coordinates {
-                        latitude: decimal_to_float(lat)?,
-                        longitude: decimal_to_float(lon)?,
+                        latitude: lat,
+                        longitude: lon,
                     }),
                 }),
                 (None, Some(_)) | (Some(_), None) => return Err(PortCoordinateError(id).into()),

@@ -71,12 +71,12 @@
       {
         "ordinal": 13,
         "name": "fiskeridir_length",
-        "type_info": "Numeric"
+        "type_info": "Float8"
       },
       {
         "ordinal": 14,
         "name": "fiskeridir_width",
-        "type_info": "Numeric"
+        "type_info": "Float8"
       },
       {
         "ordinal": 15,

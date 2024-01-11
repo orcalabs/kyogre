@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nINSERT INTO\n    trips (\n    trip_assembler_id,fiskeridir_vessel_id,landing_coverage,period,start_precision_id,end_precision_id,start_precision_direction,end_precision_direction,trip_precision_status_id,period_precision,distance,distancer_id,start_port_id,end_port_id,position_layers_status\n   )\nSELECT\n    *\nFROM\n    UNNEST(\n        $1::INT[],$2::BIGINT[],$3::tstzrange[],$4::tstzrange[],$5::INT[],$6::INT[],$7::TEXT[],$8::TEXT[],$9::TEXT[],$10::tstzrange[],$11::DECIMAL[],$12::INT[],$13::TEXT[],$14::TEXT[],$15::INT[]\n    )\n         RETURNING trip_id AS \"trip_id!\",period AS \"period!\",landing_coverage AS \"landing_coverage!\",fiskeridir_vessel_id AS \"fiskeridir_vessel_id!\"",
+  "query": "\nINSERT INTO\n    trips (\n    trip_assembler_id,fiskeridir_vessel_id,landing_coverage,period,start_precision_id,end_precision_id,start_precision_direction,end_precision_direction,trip_precision_status_id,period_precision,distance,distancer_id,start_port_id,end_port_id,position_layers_status\n   )\nSELECT\n    *\nFROM\n    UNNEST(\n        $1::INT[],$2::BIGINT[],$3::tstzrange[],$4::tstzrange[],$5::INT[],$6::INT[],$7::TEXT[],$8::TEXT[],$9::TEXT[],$10::tstzrange[],$11::DOUBLE PRECISION[],$12::INT[],$13::TEXT[],$14::TEXT[],$15::INT[]\n    )\n         RETURNING trip_id AS \"trip_id!\",period AS \"period!\",landing_coverage AS \"landing_coverage!\",fiskeridir_vessel_id AS \"fiskeridir_vessel_id!\"",
   "describe": {
     "columns": [
       {
@@ -36,7 +36,7 @@
         "TextArray",
         "TextArray",
         "TstzRangeArray",
-        "NumericArray",
+        "Float8Array",
         "Int4Array",
         "TextArray",
         "TextArray",
@@ -50,5 +50,5 @@
       false
     ]
   },
-  "hash": "e05f57ef469fdd5e87a765b7a352f6b5f4ea3d598e18621582661140c40f3db9"
+  "hash": "cab439483d2407145df7cef276df7187376efa3eca9a3dd3f30e75f345e101e7"
 }

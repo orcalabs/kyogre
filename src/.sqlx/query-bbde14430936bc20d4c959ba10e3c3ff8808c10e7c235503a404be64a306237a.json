@@ -41,17 +41,17 @@
       {
         "ordinal": 7,
         "name": "total_living_weight!",
-        "type_info": "Numeric"
+        "type_info": "Float8"
       },
       {
         "ordinal": 8,
         "name": "total_gross_weight!",
-        "type_info": "Numeric"
+        "type_info": "Float8"
       },
       {
         "ordinal": 9,
         "name": "total_product_weight!",
-        "type_info": "Numeric"
+        "type_info": "Float8"
       },
       {
         "ordinal": 10,
@@ -121,7 +121,7 @@
       {
         "ordinal": 23,
         "name": "distance",
-        "type_info": "Numeric"
+        "type_info": "Float8"
       },
       {
         "ordinal": 24,

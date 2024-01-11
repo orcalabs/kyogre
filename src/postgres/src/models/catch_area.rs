@@ -1,7 +1,6 @@
-use bigdecimal::BigDecimal;
 use unnest_insert::UnnestInsert;
 
-use crate::{error::PostgresErrorWrapper, queries::opt_float_to_decimal};
+use crate::error::PostgresErrorWrapper;
 
 #[derive(Debug, Clone, PartialEq, UnnestInsert)]
 #[unnest_insert(
@@ -12,8 +11,8 @@ use crate::{error::PostgresErrorWrapper, queries::opt_float_to_decimal};
 pub struct NewCatchArea {
     #[unnest_insert(field_name = "catch_area_id")]
     pub id: i32,
-    pub longitude: Option<BigDecimal>,
-    pub latitude: Option<BigDecimal>,
+    pub longitude: Option<f64>,
+    pub latitude: Option<f64>,
 }
 
 #[derive(Debug, Clone, PartialEq, UnnestInsert)]
@@ -26,8 +25,8 @@ pub struct NewCatchMainArea {
     #[unnest_insert(field_name = "catch_main_area_id")]
     pub id: i32,
     pub name: Option<String>,
-    pub longitude: Option<BigDecimal>,
-    pub latitude: Option<BigDecimal>,
+    pub longitude: Option<f64>,
+    pub latitude: Option<f64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, UnnestInsert)]
@@ -76,8 +75,8 @@ impl NewCatchArea {
             .map(|id| {
                 Ok(NewCatchArea {
                     id: id as i32,
-                    latitude: opt_float_to_decimal(landing.catch_location.location_latitude)?,
-                    longitude: opt_float_to_decimal(landing.catch_location.location_longitude)?,
+                    latitude: landing.catch_location.location_latitude,
+                    longitude: landing.catch_location.location_longitude,
                 })
             })
             .transpose()
@@ -94,8 +93,8 @@ impl NewCatchMainArea {
                 Ok(Self {
                     id: id as i32,
                     name: landing.catch_location.main_area.clone(),
-                    latitude: opt_float_to_decimal(landing.catch_location.main_area_latitude)?,
-                    longitude: opt_float_to_decimal(landing.catch_location.main_area_longitude)?,
+                    latitude: landing.catch_location.main_area_latitude,
+                    longitude: landing.catch_location.main_area_longitude,
                 })
             })
             .transpose()

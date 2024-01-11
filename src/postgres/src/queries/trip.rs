@@ -23,8 +23,6 @@ use sqlx::postgres::types::PgRange;
 use std::collections::{HashMap, HashSet};
 use unnest_insert::{UnnestInsert, UnnestInsertReturning};
 
-use super::opt_float_to_decimal;
-
 impl PostgresAdapter {
     pub(crate) async fn reset_trip_processing_conflicts_impl(
         &self,
@@ -282,7 +280,6 @@ WHERE
         }
 
         if let Some(output) = update.distance {
-            let distance = opt_float_to_decimal(output.distance)?;
             sqlx::query!(
                 r#"
 UPDATE trips
@@ -293,7 +290,7 @@ WHERE
     trip_id = $3
             "#,
                 output.distancer_id as i32,
-                distance,
+                output.distance,
                 update.trip_id.0,
             )
             .execute(&mut *tx)
@@ -662,7 +659,7 @@ FROM
                 ),
                 '[]'
             ) AS landings,
-            ARRAY (
+            ARRAY(
                 SELECT DISTINCT
                     UNNEST(ARRAY_AGG(qi.species_group_ids))
             ) AS landing_species_group_ids
@@ -745,9 +742,6 @@ WHERE
         impl Stream<Item = Result<TripDetailed, PostgresErrorWrapper>> + '_,
         PostgresErrorWrapper,
     > {
-        let max_weight = opt_float_to_decimal(query.max_weight)?;
-        let min_weight = opt_float_to_decimal(query.min_weight)?;
-
         let order_by = match (query.ordering, query.sorting) {
             (Ordering::Asc, TripSorting::StopDate) => 1,
             (Ordering::Asc, TripSorting::Weight) => 2,
@@ -825,11 +819,11 @@ WHERE
         OR t.stop_timestamp <= $5
     )
     AND (
-        $6::DECIMAL IS NULL
+        $6::DOUBLE PRECISION IS NULL
         OR t.landing_total_living_weight >= $6
     )
     AND (
-        $7::DECIMAL IS NULL
+        $7::DOUBLE PRECISION IS NULL
         OR t.landing_total_living_weight <= $7
     )
     AND (
@@ -867,8 +861,8 @@ LIMIT
             query.delivery_points.as_deref(),
             query.start_date,
             query.end_date,
-            min_weight,
-            max_weight,
+            query.min_weight,
+            query.max_weight,
             gear_groups.as_deref(),
             species_group_ids.as_deref(),
             vessel_length_groups.as_deref(),

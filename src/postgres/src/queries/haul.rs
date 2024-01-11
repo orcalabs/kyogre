@@ -1,6 +1,4 @@
-use super::{float_to_decimal, opt_float_to_decimal};
 use crate::{error::PostgresErrorWrapper, models::Haul, models::HaulMessage, PostgresAdapter};
-use bigdecimal::BigDecimal;
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::{Gear, GearGroup, VesselLengthGroup};
 use futures::{Stream, TryStreamExt};
@@ -185,19 +183,19 @@ WHERE
         OR fiskeridir_vessel_id = ANY ($6)
     )
     AND (
-        $7::DECIMAL IS NULL
+        $7::DOUBLE PRECISION IS NULL
         OR wind_speed_10m >= $7
     )
     AND (
-        $8::DECIMAL IS NULL
+        $8::DOUBLE PRECISION IS NULL
         OR wind_speed_10m <= $8
     )
     AND (
-        $9::DECIMAL IS NULL
+        $9::DOUBLE PRECISION IS NULL
         OR air_temperature_2m >= $9
     )
     AND (
-        $10::DECIMAL IS NULL
+        $10::DOUBLE PRECISION IS NULL
         OR air_temperature_2m <= $10
     )
 ORDER BY
@@ -484,7 +482,7 @@ WHERE
         for v in values {
             haul_id.push(v.haul_id.0);
             catch_location.push(v.catch_location.into_inner());
-            factor.push(float_to_decimal(v.factor)?);
+            factor.push(v.factor);
             status.push(v.status as i32);
         }
 
@@ -563,7 +561,7 @@ FROM
     UNNEST(
         $1::BIGINT[],
         $2::TEXT [],
-        $3::DECIMAL[],
+        $3::DOUBLE PRECISION[],
         $4::INT[]
     ) u (
         haul_id,
@@ -978,10 +976,10 @@ pub struct HaulsArgs {
     pub species_group_ids: Option<Vec<i32>>,
     pub vessel_length_groups: Option<Vec<i32>>,
     pub fiskeridir_vessel_ids: Option<Vec<i64>>,
-    pub min_wind_speed: Option<BigDecimal>,
-    pub max_wind_speed: Option<BigDecimal>,
-    pub min_air_temperature: Option<BigDecimal>,
-    pub max_air_temperature: Option<BigDecimal>,
+    pub min_wind_speed: Option<f64>,
+    pub max_wind_speed: Option<f64>,
+    pub min_air_temperature: Option<f64>,
+    pub max_air_temperature: Option<f64>,
     pub sorting: Option<i32>,
     pub ordering: Option<i32>,
 }
@@ -1015,10 +1013,10 @@ impl TryFrom<HaulsQuery> for HaulsArgs {
             fiskeridir_vessel_ids: v
                 .vessel_ids
                 .map(|ids| ids.into_iter().map(|i| i.0).collect()),
-            min_wind_speed: opt_float_to_decimal(v.min_wind_speed)?,
-            max_wind_speed: opt_float_to_decimal(v.max_wind_speed)?,
-            min_air_temperature: opt_float_to_decimal(v.min_air_temperature)?,
-            max_air_temperature: opt_float_to_decimal(v.max_air_temperature)?,
+            min_wind_speed: v.min_wind_speed,
+            max_wind_speed: v.max_wind_speed,
+            min_air_temperature: v.min_air_temperature,
+            max_air_temperature: v.max_air_temperature,
             sorting: v.sorting.map(|s| s as i32),
             ordering: v.ordering.map(|o| o as i32),
         })

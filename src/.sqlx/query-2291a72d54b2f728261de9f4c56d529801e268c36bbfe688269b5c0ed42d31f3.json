@@ -26,7 +26,7 @@
       {
         "ordinal": 4,
         "name": "distance",
-        "type_info": "Numeric"
+        "type_info": "Float8"
       },
       {
         "ordinal": 5,

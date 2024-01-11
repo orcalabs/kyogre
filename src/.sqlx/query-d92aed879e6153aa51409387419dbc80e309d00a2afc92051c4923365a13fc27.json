@@ -56,7 +56,7 @@
       {
         "ordinal": 10,
         "name": "vessel_length",
-        "type_info": "Numeric"
+        "type_info": "Float8"
       },
       {
         "ordinal": 11,
@@ -66,17 +66,17 @@
       {
         "ordinal": 12,
         "name": "total_gross_weight!",
-        "type_info": "Numeric"
+        "type_info": "Float8"
       },
       {
         "ordinal": 13,
         "name": "total_living_weight!",
-        "type_info": "Numeric"
+        "type_info": "Float8"
       },
       {
         "ordinal": 14,
         "name": "total_product_weight!",
-        "type_info": "Numeric"
+        "type_info": "Float8"
       },
       {
         "ordinal": 15,
