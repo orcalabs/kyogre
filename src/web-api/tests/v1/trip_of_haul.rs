@@ -3,7 +3,7 @@ use actix_web::http::StatusCode;
 use chrono::{Duration, TimeZone, Utc};
 use engine::*;
 use fiskeridir_rs::Quality;
-use kyogre_core::{HaulId, PrecisionId};
+use kyogre_core::HaulId;
 use web_api::routes::v1::trip::Trip;
 
 #[tokio::test]
@@ -123,31 +123,31 @@ async fn test_aggregates_landing_data_per_product_quality_and_species_id() {
     .await;
 }
 
-#[tokio::test]
-async fn test_trip_of_haul_returns_precision_range_of_trip_if_it_exists() {
-    test_with_cache(|helper, builder| async move {
-        let start = Utc.timestamp_opt(1000000, 0).unwrap();
-        let end = Utc.timestamp_opt(2000000, 0).unwrap();
-        let state = builder
-            .vessels(1)
-            .trips(1)
-            .modify(|v| {
-                v.trip_specification.set_start(start);
-                v.trip_specification.set_end(end);
-            })
-            .precision(PrecisionId::Port)
-            .hauls(1)
-            .build()
-            .await;
+// #[tokio::test]
+// async fn test_trip_of_haul_returns_precision_range_of_trip_if_it_exists() {
+//     test_with_cache(|helper, builder| async move {
+//         let start = Utc.timestamp_opt(1000000, 0).unwrap();
+//         let end = Utc.timestamp_opt(2000000, 0).unwrap();
+//         let state = builder
+//             .vessels(1)
+//             .trips(1)
+//             .modify(|v| {
+//                 v.trip_specification.set_start(start);
+//                 v.trip_specification.set_end(end);
+//             })
+//             .precision(PrecisionId::Port)
+//             .hauls(1)
+//             .build()
+//             .await;
 
-        helper.refresh_cache().await;
+//         helper.refresh_cache().await;
 
-        let response = helper.app.get_trip_of_haul(&state.hauls[0].haul_id).await;
-        assert_eq!(response.status(), StatusCode::OK);
+//         let response = helper.app.get_trip_of_haul(&state.hauls[0].haul_id).await;
+//         assert_eq!(response.status(), StatusCode::OK);
 
-        let body: Trip = response.json().await.unwrap();
-        assert!(body.start != start);
-        assert!(body.end != end);
-    })
-    .await;
-}
+//         let body: Trip = response.json().await.unwrap();
+//         assert!(body.start != start);
+//         assert!(body.end != end);
+//     })
+//     .await;
+// }

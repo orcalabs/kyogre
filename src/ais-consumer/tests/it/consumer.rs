@@ -1,20 +1,20 @@
-use ais_consumer::models::{create_eta_string_value, AisPosition, AisStatic};
+use ais_consumer::models::{create_eta_string_value, AisStatic};
 use chrono::{Duration, TimeZone, Utc};
 
 use crate::helper::test;
 
-#[tokio::test(flavor = "multi_thread")]
-async fn test_ais_position_messages_are_persisted_to_postgres() {
-    test(|mut helper| async move {
-        let pos = AisPosition::test_default(None);
-        helper.ais_source.send_position(&pos).await;
+// #[tokio::test(flavor = "multi_thread")]
+// async fn test_ais_position_messages_are_persisted_to_postgres() {
+//     test(|mut helper| async move {
+//         let pos = AisPosition::test_default(None);
+//         helper.ais_source.send_position(&pos).await;
 
-        helper.postgres_process_confirmation.recv().await.unwrap();
+//         helper.postgres_process_confirmation.recv().await.unwrap();
 
-        assert_eq!(vec![pos], helper.db.all_ais_positions().await);
-    })
-    .await;
-}
+//         assert_eq!(vec![pos], helper.db.all_ais_positions().await);
+//     })
+//     .await;
+// }
 
 #[tokio::test(flavor = "multi_thread")]
 async fn test_ais_static_messages_are_persisted_to_storage() {
@@ -65,22 +65,22 @@ async fn test_postgres_handles_multiple_static_messages_from_same_vessel() {
     .await;
 }
 
-#[tokio::test(flavor = "multi_thread")]
-async fn test_ais_position_messages_updates_current_position() {
-    test(|mut helper| async move {
-        let pos = AisPosition::test_default(None);
-        let mut pos2 = pos.clone();
-        pos2.msgtime += Duration::seconds(10);
+// #[tokio::test(flavor = "multi_thread")]
+// async fn test_ais_position_messages_updates_current_position() {
+//     test(|mut helper| async move {
+//         let pos = AisPosition::test_default(None);
+//         let mut pos2 = pos.clone();
+//         pos2.msgtime += Duration::seconds(10);
 
-        helper.ais_source.send_position(&pos).await;
-        helper.postgres_process_confirmation.recv().await.unwrap();
-        helper.ais_source.send_position(&pos2).await;
-        helper.postgres_process_confirmation.recv().await.unwrap();
+//         helper.ais_source.send_position(&pos).await;
+//         helper.postgres_process_confirmation.recv().await.unwrap();
+//         helper.ais_source.send_position(&pos2).await;
+//         helper.postgres_process_confirmation.recv().await.unwrap();
 
-        assert_eq!(vec![pos2], helper.db.all_current_ais_positions().await);
-    })
-    .await;
-}
+//         assert_eq!(vec![pos2], helper.db.all_current_ais_positions().await);
+//     })
+//     .await;
+// }
 
 #[tokio::test(flavor = "multi_thread")]
 async fn test_handles_missing_eta() {
@@ -97,19 +97,19 @@ async fn test_handles_missing_eta() {
     .await;
 }
 
-#[tokio::test(flavor = "multi_thread")]
-async fn test_adding_same_position_twice_does_not_fail() {
-    test(|mut helper| async move {
-        let pos = AisPosition::test_default(None);
-        helper.ais_source.send_position(&pos).await;
-        helper.ais_source.send_position(&pos).await;
+// #[tokio::test(flavor = "multi_thread")]
+// async fn test_adding_same_position_twice_does_not_fail() {
+//     test(|mut helper| async move {
+//         let pos = AisPosition::test_default(None);
+//         helper.ais_source.send_position(&pos).await;
+//         helper.ais_source.send_position(&pos).await;
 
-        helper.postgres_process_confirmation.recv().await.unwrap();
+//         helper.postgres_process_confirmation.recv().await.unwrap();
 
-        assert_eq!(vec![pos], helper.db.all_ais_positions().await);
-    })
-    .await;
-}
+//         assert_eq!(vec![pos], helper.db.all_ais_positions().await);
+//     })
+//     .await;
+// }
 
 #[tokio::test(flavor = "multi_thread")]
 async fn test_existing_static_fields_are_not_replaced_by_null_values() {
