@@ -1,4 +1,3 @@
-use bigdecimal::BigDecimal;
 use chrono::{DateTime, NaiveDate, Utc};
 use fiskeridir_rs::{
     FiskdirVesselNationalityGroup, Gear, GearGroup, MainGearGroup, SpeciesGroup, SpeciesMainGroup,
@@ -9,8 +8,8 @@ use unnest_insert::UnnestInsert;
 use crate::{
     error::PostgresErrorWrapper,
     queries::{
-        enum_to_i32, float_to_decimal, opt_enum_to_i32, opt_float_to_decimal,
-        opt_timestamp_from_date_and_time, timestamp_from_date_and_time,
+        enum_to_i32, opt_enum_to_i32, opt_timestamp_from_date_and_time,
+        timestamp_from_date_and_time,
     },
 };
 
@@ -38,9 +37,9 @@ pub struct NewErsDca {
     pub vessel_gross_tonnage_other: Option<i32>,
     pub vessel_county: Option<String>,
     pub vessel_county_code: Option<i32>,
-    pub vessel_greatest_length: Option<BigDecimal>,
+    pub vessel_greatest_length: Option<f64>,
     pub vessel_identification: String,
-    pub vessel_length: BigDecimal,
+    pub vessel_length: f64,
     pub vessel_length_group: Option<String>,
     pub vessel_length_group_code: Option<i32>,
     pub vessel_material_code: Option<String>,
@@ -56,7 +55,7 @@ pub struct NewErsDca {
     pub vessel_registration_id_ers: Option<String>,
     pub vessel_valid_from: Option<NaiveDate>,
     pub vessel_valid_until: Option<NaiveDate>,
-    pub vessel_width: Option<BigDecimal>,
+    pub vessel_width: Option<f64>,
     pub vessel_event_id: Option<i64>,
 }
 
@@ -64,11 +63,11 @@ pub struct NewErsDca {
 #[unnest_insert(table_name = "ers_dca_bodies")]
 pub struct NewErsDcaBody {
     pub message_id: i64,
-    pub start_latitude: Option<BigDecimal>,
-    pub start_longitude: Option<BigDecimal>,
+    pub start_latitude: Option<f64>,
+    pub start_longitude: Option<f64>,
     pub start_timestamp: Option<DateTime<Utc>>,
-    pub stop_latitude: Option<BigDecimal>,
-    pub stop_longitude: Option<BigDecimal>,
+    pub stop_latitude: Option<f64>,
+    pub stop_longitude: Option<f64>,
     pub stop_timestamp: Option<DateTime<Utc>>,
     pub ocean_depth_end: Option<i32>,
     pub ocean_depth_start: Option<i32>,
@@ -146,9 +145,9 @@ impl TryFrom<fiskeridir_rs::ErsDca> for NewErsDca {
             vessel_gross_tonnage_other: v.vessel_info.gross_tonnage_other.map(|v| v as i32),
             vessel_county: v.vessel_info.vessel_county,
             vessel_county_code: v.vessel_info.vessel_county_code.map(|v| v as i32),
-            vessel_greatest_length: opt_float_to_decimal(v.vessel_info.vessel_greatest_length)?,
+            vessel_greatest_length: v.vessel_info.vessel_greatest_length,
             vessel_identification: v.vessel_info.vessel_identification.into_inner(),
-            vessel_length: float_to_decimal(v.vessel_info.vessel_length)?,
+            vessel_length: v.vessel_info.vessel_length,
             vessel_length_group: v.vessel_info.vessel_length_group,
             vessel_length_group_code: v.vessel_info.vessel_length_group_code.map(|v| v as i32),
             vessel_material_code: v.vessel_info.vessel_material_code,
@@ -163,7 +162,7 @@ impl TryFrom<fiskeridir_rs::ErsDca> for NewErsDca {
             vessel_registration_id_ers: v.vessel_info.vessel_registration_id_ers,
             vessel_valid_from: v.vessel_info.vessel_valid_from,
             vessel_valid_until: v.vessel_info.vessel_valid_until,
-            vessel_width: opt_float_to_decimal(v.vessel_info.vessel_width)?,
+            vessel_width: v.vessel_info.vessel_width,
             vessel_event_id: None,
         })
     }
@@ -175,11 +174,11 @@ impl TryFrom<&fiskeridir_rs::ErsDca> for NewErsDcaBody {
     fn try_from(v: &fiskeridir_rs::ErsDca) -> Result<Self, Self::Error> {
         Ok(Self {
             message_id: v.message_info.message_id as i64,
-            start_latitude: opt_float_to_decimal(v.start_latitude)?,
-            start_longitude: opt_float_to_decimal(v.start_longitude)?,
+            start_latitude: v.start_latitude,
+            start_longitude: v.start_longitude,
             start_timestamp: opt_timestamp_from_date_and_time(v.start_date, v.start_time),
-            stop_latitude: opt_float_to_decimal(v.stop_latitude)?,
-            stop_longitude: opt_float_to_decimal(v.stop_longitude)?,
+            stop_latitude: v.stop_latitude,
+            stop_longitude: v.stop_longitude,
             stop_timestamp: opt_timestamp_from_date_and_time(v.stop_date, v.stop_time),
             ocean_depth_end: v.ocean_depth_end,
             ocean_depth_start: v.ocean_depth_start,

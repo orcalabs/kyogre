@@ -51,12 +51,12 @@
       {
         "ordinal": 9,
         "name": "start_latitude",
-        "type_info": "Numeric"
+        "type_info": "Float8"
       },
       {
         "ordinal": 10,
         "name": "start_longitude",
-        "type_info": "Numeric"
+        "type_info": "Float8"
       },
       {
         "ordinal": 11,
@@ -71,12 +71,12 @@
       {
         "ordinal": 13,
         "name": "stop_latitude",
-        "type_info": "Numeric"
+        "type_info": "Float8"
       },
       {
         "ordinal": 14,
         "name": "stop_longitude",
-        "type_info": "Numeric"
+        "type_info": "Float8"
       },
       {
         "ordinal": 15,
@@ -111,7 +111,7 @@
       {
         "ordinal": 21,
         "name": "vessel_length",
-        "type_info": "Numeric"
+        "type_info": "Float8"
       },
       {
         "ordinal": 22,
@@ -131,67 +131,67 @@
       {
         "ordinal": 25,
         "name": "wind_speed_10m",
-        "type_info": "Numeric"
+        "type_info": "Float8"
       },
       {
         "ordinal": 26,
         "name": "wind_direction_10m",
-        "type_info": "Numeric"
+        "type_info": "Float8"
       },
       {
         "ordinal": 27,
         "name": "air_temperature_2m",
-        "type_info": "Numeric"
+        "type_info": "Float8"
       },
       {
         "ordinal": 28,
         "name": "relative_humidity_2m",
-        "type_info": "Numeric"
+        "type_info": "Float8"
       },
       {
         "ordinal": 29,
         "name": "air_pressure_at_sea_level",
-        "type_info": "Numeric"
+        "type_info": "Float8"
       },
       {
         "ordinal": 30,
         "name": "precipitation_amount",
-        "type_info": "Numeric"
+        "type_info": "Float8"
       },
       {
         "ordinal": 31,
         "name": "cloud_area_fraction",
-        "type_info": "Numeric"
+        "type_info": "Float8"
       },
       {
         "ordinal": 32,
         "name": "water_speed",
-        "type_info": "Numeric"
+        "type_info": "Float8"
       },
       {
         "ordinal": 33,
         "name": "water_direction",
-        "type_info": "Numeric"
+        "type_info": "Float8"
       },
       {
         "ordinal": 34,
         "name": "salinity",
-        "type_info": "Numeric"
+        "type_info": "Float8"
       },
       {
         "ordinal": 35,
         "name": "water_temperature",
-        "type_info": "Numeric"
+        "type_info": "Float8"
       },
       {
         "ordinal": 36,
         "name": "ocean_climate_depth",
-        "type_info": "Numeric"
+        "type_info": "Float8"
       },
       {
         "ordinal": 37,
         "name": "sea_floor_depth",
-        "type_info": "Numeric"
+        "type_info": "Float8"
       },
       {
         "ordinal": 38,

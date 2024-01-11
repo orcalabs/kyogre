@@ -1,10 +1,7 @@
 use crate::{
     error::PostgresErrorWrapper,
-    queries::{
-        enum_to_i32, float_to_decimal, opt_decimal_to_float, opt_enum_to_i32, opt_float_to_decimal,
-    },
+    queries::{enum_to_i32, opt_enum_to_i32},
 };
-use bigdecimal::BigDecimal;
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::{CallSign, GearGroup, SpeciesGroup, VesselLengthGroup, VesselType};
 use kyogre_core::{FiskeridirVesselId, Mmsi, TripAssemblerId, VesselBenchmarkId, VesselSource};
@@ -70,7 +67,7 @@ pub struct NewFiskeridirVessel {
     pub call_sign: Option<String>,
     pub registration_id: Option<String>,
     pub name: Option<String>,
-    pub length: Option<BigDecimal>,
+    pub length: Option<f64>,
     pub building_year: Option<i32>,
     pub engine_power: Option<i32>,
     pub engine_building_year: Option<i32>,
@@ -97,8 +94,8 @@ pub struct NewRegisterVessel {
     pub call_sign: Option<String>,
     pub name: String,
     pub registration_id: String,
-    pub length: BigDecimal,
-    pub width: Option<BigDecimal>,
+    pub length: f64,
+    pub width: Option<f64>,
     pub engine_power: Option<i32>,
     pub imo_number: Option<i64>,
     #[unnest_insert(sql_type = "JSON")]
@@ -117,7 +114,7 @@ pub struct VesselBenchmarkOutput {
     pub fiskeridir_vessel_id: i64,
     #[unnest_insert(sql_type = "INT", type_conversion = "enum_to_i32")]
     pub vessel_benchmark_id: VesselBenchmarkId,
-    pub output: BigDecimal,
+    pub output: f64,
 }
 
 impl TryFrom<fiskeridir_rs::Vessel> for NewFiskeridirVessel {
@@ -129,7 +126,7 @@ impl TryFrom<fiskeridir_rs::Vessel> for NewFiskeridirVessel {
             call_sign: v.call_sign.map(|c| c.into_inner()),
             registration_id: v.registration_id,
             name: v.name,
-            length: opt_float_to_decimal(v.length)?,
+            length: v.length,
             building_year: v.building_year.map(|x| x as i32),
             engine_power: v.engine_power.map(|x| x as i32),
             engine_building_year: v.engine_building_year.map(|x| x as i32),
@@ -155,8 +152,8 @@ impl TryFrom<fiskeridir_rs::RegisterVessel> for NewRegisterVessel {
             call_sign: v.radio_call_sign.map(|c| c.into_inner()),
             name: v.name,
             registration_id: v.registration_mark,
-            length: float_to_decimal(v.length)?,
-            width: opt_float_to_decimal(v.width)?,
+            length: v.length,
+            width: v.width,
             engine_power: v.engine_power,
             imo_number: v.imo_number,
             owners: serde_json::to_value(&v.owners)?,
@@ -172,7 +169,7 @@ impl TryFrom<kyogre_core::VesselBenchmarkOutput> for VesselBenchmarkOutput {
         Ok(Self {
             fiskeridir_vessel_id: v.vessel_id.0,
             vessel_benchmark_id: v.benchmark_id,
-            output: float_to_decimal(v.value)?,
+            output: v.value,
         })
     }
 }
@@ -216,8 +213,8 @@ pub struct FiskeridirAisVesselCombination {
     pub fiskeridir_call_sign: Option<String>,
     pub fiskeridir_name: Option<String>,
     pub fiskeridir_registration_id: Option<String>,
-    pub fiskeridir_length: Option<BigDecimal>,
-    pub fiskeridir_width: Option<BigDecimal>,
+    pub fiskeridir_length: Option<f64>,
+    pub fiskeridir_width: Option<f64>,
     pub fiskeridir_owner: Option<String>,
     pub fiskeridir_owners: Option<String>,
     pub fiskeridir_engine_building_year: Option<i32>,
@@ -274,8 +271,8 @@ impl TryFrom<FiskeridirAisVesselCombination> for kyogre_core::Vessel {
                 .transpose()?,
             name: value.fiskeridir_name,
             registration_id: value.fiskeridir_registration_id,
-            length: opt_decimal_to_float(value.fiskeridir_length)?,
-            width: opt_decimal_to_float(value.fiskeridir_width)?,
+            length: value.fiskeridir_length,
+            width: value.fiskeridir_width,
             owner: value.fiskeridir_owner,
             owners: value
                 .fiskeridir_owners

@@ -1,5 +1,4 @@
 use crate::{models::Haul, PostgresAdapter};
-use bigdecimal::{BigDecimal, FromPrimitive};
 use chrono::{DateTime, Datelike, Duration, Utc};
 use fiskeridir_rs::{
     CallSign, ErsDca, ErsDep, ErsPor, Gear, GearGroup, LandingId, SpeciesGroup, VesselLengthGroup,
@@ -560,8 +559,8 @@ SET
 WHERE
     port_id = $3
             "#,
-            BigDecimal::from_f64(latitude).unwrap(),
-            BigDecimal::from_f64(longitude).unwrap(),
+            latitude,
+            longitude,
             port_id,
         )
         .execute(&self.db.pool)
@@ -585,8 +584,8 @@ WHERE
     port_id = $3
     AND port_dock_point_id = $4
             "#,
-            BigDecimal::from_f64(latitude).unwrap(),
-            BigDecimal::from_f64(longitude).unwrap(),
+            latitude,
+            longitude,
             port_id,
             dock_point_id as i32,
         )

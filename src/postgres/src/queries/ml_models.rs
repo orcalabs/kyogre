@@ -272,8 +272,8 @@ WITH
         SELECT DISTINCT
             ON (hm.species_group_id, h.start_timestamp::DATE) h.start_timestamp::DATE AS "date",
             hm.species_group_id,
-            cl.longitude::DECIMAL AS longitude,
-            cl.latitude::DECIMAL AS latitude,
+            cl.longitude AS longitude,
+            cl.latitude AS latitude,
             cl.catch_location_id,
             SUM(hm.living_weight) OVER (
                 PARTITION BY

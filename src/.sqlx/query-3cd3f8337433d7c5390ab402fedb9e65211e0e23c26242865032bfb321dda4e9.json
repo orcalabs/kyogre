@@ -1,0 +1,34 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO\n    aqua_culture_register (\n    delivery_point_id,org_id,name,address,zip_code,city,approval_date,approval_limit,purpose,production_form,locality_name,locality_municipality_number,locality_municipality,locality_location,water_environment,locality_kap,locality_unit,expiration_date,latitude,longitude,prod_omr\n   )\nSELECT\n    *\nFROM\n    UNNEST(\n        $1::TEXT[],$2::INT[],$3::TEXT[],$4::TEXT[],$5::INT[],$6::TEXT[],$7::DATE[],$8::DATE[],$9::TEXT[],$10::TEXT[],$11::TEXT[],$12::INT[],$13::TEXT[],$14::TEXT[],$15::TEXT[],$16::DOUBLE PRECISION[],$17::TEXT[],$18::DATE[],$19::DOUBLE PRECISION[],$20::DOUBLE PRECISION[],$21::TEXT[]\n    )\n        ON CONFLICT (delivery_point_id) DO UPDATE SET org_id = EXCLUDED.org_id,name = EXCLUDED.name,address = EXCLUDED.address,zip_code = EXCLUDED.zip_code,city = EXCLUDED.city,approval_date = EXCLUDED.approval_date,approval_limit = EXCLUDED.approval_limit,purpose = EXCLUDED.purpose,production_form = EXCLUDED.production_form,locality_name = EXCLUDED.locality_name,locality_municipality_number = EXCLUDED.locality_municipality_number,locality_municipality = EXCLUDED.locality_municipality,locality_location = EXCLUDED.locality_location,water_environment = EXCLUDED.water_environment,locality_kap = EXCLUDED.locality_kap,locality_unit = EXCLUDED.locality_unit,expiration_date = EXCLUDED.expiration_date,latitude = EXCLUDED.latitude,longitude = EXCLUDED.longitude,prod_omr = EXCLUDED.prod_omr",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "TextArray",
+        "Int4Array",
+        "TextArray",
+        "TextArray",
+        "Int4Array",
+        "TextArray",
+        "DateArray",
+        "DateArray",
+        "TextArray",
+        "TextArray",
+        "TextArray",
+        "Int4Array",
+        "TextArray",
+        "TextArray",
+        "TextArray",
+        "Float8Array",
+        "TextArray",
+        "DateArray",
+        "Float8Array",
+        "Float8Array",
+        "TextArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "3cd3f8337433d7c5390ab402fedb9e65211e0e23c26242865032bfb321dda4e9"
+}

@@ -1,8 +1,4 @@
-use crate::{
-    error::PostgresErrorWrapper,
-    queries::{decimal_to_float, opt_decimal_to_float, opt_float_to_decimal},
-};
-use bigdecimal::BigDecimal;
+use crate::error::PostgresErrorWrapper;
 use chrono::{DateTime, NaiveDate, NaiveTime, Utc};
 use fiskeridir_rs::{DeliveryPointId, Gear, GearGroup, LandingId, VesselLengthGroup};
 use kyogre_core::{CatchLocationId, FiskeridirVesselId, LandingMatrixQuery};
@@ -38,7 +34,7 @@ pub struct NewLanding {
     pub vessel_gross_tonnage_1969: Option<i32>,
     pub vessel_gross_tonnage_other: Option<i32>,
     pub vessel_name: Option<String>,
-    pub vessel_length: Option<BigDecimal>,
+    pub vessel_length: Option<f64>,
     pub vessel_engine_building_year: Option<i32>,
     pub vessel_engine_power: Option<i32>,
     pub vessel_building_year: Option<i32>,
@@ -48,7 +44,7 @@ pub struct NewLanding {
     pub gear_main_group_id: i32,
     pub document_type_id: i32,
     pub sales_team_id: i32,
-    pub sales_team_tax: Option<BigDecimal>,
+    pub sales_team_tax: Option<f64>,
     pub delivery_point_id: Option<String>,
     pub document_sale_date: Option<NaiveDate>,
     pub document_version_date: DateTime<Utc>,
@@ -106,11 +102,11 @@ pub struct Landing {
     pub fiskeridir_vessel_id: Option<i64>,
     pub vessel_call_sign: Option<String>,
     pub vessel_name: Option<String>,
-    pub vessel_length: Option<BigDecimal>,
+    pub vessel_length: Option<f64>,
     pub vessel_length_group: VesselLengthGroup,
-    pub total_living_weight: BigDecimal,
-    pub total_product_weight: BigDecimal,
-    pub total_gross_weight: BigDecimal,
+    pub total_living_weight: f64,
+    pub total_product_weight: f64,
+    pub total_gross_weight: f64,
     pub catches: String,
     pub version: i32,
 }
@@ -135,7 +131,7 @@ impl NewLanding {
             vessel_gross_tonnage_1969: landing.vessel.gross_tonnage_1969.map(|v| v as i32),
             vessel_gross_tonnage_other: landing.vessel.gross_tonnage_other.map(|v| v as i32),
             vessel_name: landing.vessel.name,
-            vessel_length: opt_float_to_decimal(landing.vessel.length)?,
+            vessel_length: landing.vessel.length,
             vessel_engine_building_year: landing.vessel.engine_building_year.map(|v| v as i32),
             vessel_engine_power: landing.vessel.engine_power.map(|v| v as i32),
             vessel_building_year: landing.vessel.building_year.map(|v| v as i32),
@@ -145,7 +141,7 @@ impl NewLanding {
             gear_main_group_id: landing.gear.main_group as i32,
             document_type_id: landing.document_info.type_number as i32,
             sales_team_id: landing.sales_team as i32,
-            sales_team_tax: opt_float_to_decimal(landing.finances.sales_team_fee)?,
+            sales_team_tax: landing.finances.sales_team_fee,
             delivery_point_id: landing.delivery_point.id.map(|v| v.into_inner()),
             document_sale_date: landing.document_info.signing_date,
             document_version_date: landing.document_info.version_timestamp,
@@ -225,11 +221,11 @@ impl TryFrom<Landing> for kyogre_core::Landing {
             fiskeridir_vessel_id: v.fiskeridir_vessel_id.map(FiskeridirVesselId),
             vessel_call_sign: v.vessel_call_sign,
             vessel_name: v.vessel_name,
-            vessel_length: opt_decimal_to_float(v.vessel_length)?,
+            vessel_length: v.vessel_length,
             vessel_length_group: v.vessel_length_group,
-            total_gross_weight: decimal_to_float(v.total_gross_weight)?,
-            total_living_weight: decimal_to_float(v.total_living_weight)?,
-            total_product_weight: decimal_to_float(v.total_product_weight)?,
+            total_gross_weight: v.total_gross_weight,
+            total_living_weight: v.total_living_weight,
+            total_product_weight: v.total_product_weight,
             catches: serde_json::from_str(&v.catches)?,
             version: v.version,
         })

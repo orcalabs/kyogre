@@ -1,6 +1,6 @@
-use bigdecimal::{BigDecimal, FromPrimitive};
 use chrono::{DateTime, NaiveDate, NaiveDateTime, NaiveTime, TimeZone, Utc};
 use chrono_tz::Europe::Oslo;
+use num_traits::FromPrimitive;
 use once_cell::sync::Lazy;
 use regex::Regex;
 use serde::{de, Deserialize};
@@ -706,102 +706,6 @@ impl<'de> de::Visitor<'de> for DeserializeOptBoolFromStr {
     }
 
     fn visit_unit<E>(self) -> Result<Self::Value, E>
-    where
-        E: de::Error,
-    {
-        Ok(None)
-    }
-}
-
-struct Deserializef64AsDecimalVisitor;
-impl<'de> de::Visitor<'de> for Deserializef64AsDecimalVisitor {
-    type Value = BigDecimal;
-    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        formatter.write_str("a float value")
-    }
-
-    fn visit_f64<E>(self, v: f64) -> Result<Self::Value, E>
-    where
-        E: de::Error,
-    {
-        BigDecimal::from_str(&v.to_string()).map_err(serde::de::Error::custom)
-    }
-
-    fn visit_i64<E>(self, v: i64) -> Result<Self::Value, E>
-    where
-        E: de::Error,
-    {
-        BigDecimal::from_i64(v)
-            .ok_or_else(|| serde::de::Error::custom("failed to deserialize decimal from i64"))
-    }
-
-    fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
-    where
-        E: de::Error,
-    {
-        BigDecimal::from_u64(v)
-            .ok_or_else(|| serde::de::Error::custom("failed to deserialize decimal from u64"))
-    }
-
-    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
-    where
-        E: de::Error,
-    {
-        let stripped = v.replace(',', ".");
-        BigDecimal::from_str(&stripped).map_err(serde::de::Error::custom)
-    }
-}
-
-struct DeserializeOptf64AsDecimalVisitor;
-
-impl<'de> de::Visitor<'de> for DeserializeOptf64AsDecimalVisitor {
-    type Value = Option<BigDecimal>;
-    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        formatter.write_str("a float value")
-    }
-
-    fn visit_f64<E>(self, v: f64) -> Result<Self::Value, E>
-    where
-        E: de::Error,
-    {
-        BigDecimal::from_str(&v.to_string())
-            .map_err(serde::de::Error::custom)
-            .map(Some)
-    }
-
-    fn visit_i64<E>(self, v: i64) -> Result<Self::Value, E>
-    where
-        E: de::Error,
-    {
-        BigDecimal::from_i64(v)
-            .ok_or_else(|| serde::de::Error::custom("failed to deserialize decimal from i64"))
-            .map(Some)
-    }
-
-    fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
-    where
-        E: de::Error,
-    {
-        BigDecimal::from_u64(v)
-            .ok_or_else(|| serde::de::Error::custom("failed to deserialize decimal from u64"))
-            .map(Some)
-    }
-
-    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
-    where
-        E: de::Error,
-    {
-        if v.is_empty() {
-            Ok(None)
-        } else {
-            let stripped = v.replace(',', ".");
-            BigDecimal::from_str(&stripped)
-                .map_err(serde::de::Error::custom)
-                .map(Some)
-        }
-    }
-
-    fn visit_none<E>(self) -> Result<Self::Value, E>
     where
         E: de::Error,
     {

@@ -22,8 +22,6 @@ use crate::{
 };
 use fiskeridir_rs::{Gear, GearGroup, LandingId, VesselLengthGroup};
 
-use super::opt_decimal_to_float;
-
 static CHUNK_SIZE: usize = 100_000;
 
 impl PostgresAdapter {
@@ -233,7 +231,7 @@ WHERE
         .fetch_one(&self.pool)
         .await?;
 
-        Ok(opt_decimal_to_float(row.weight)?)
+        Ok(row.weight)
     }
 
     pub(crate) async fn add_landings_impl(

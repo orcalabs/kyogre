@@ -60,9 +60,9 @@
         "Timestamptz",
         "Timestamptz",
         "Int4Array",
-        "Numeric",
+        "Float8",
         "Int4",
-        "Numeric"
+        "Float8"
       ]
     },
     "nullable": [

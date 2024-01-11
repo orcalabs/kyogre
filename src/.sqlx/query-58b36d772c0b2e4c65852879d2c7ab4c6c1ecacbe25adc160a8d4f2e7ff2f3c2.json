@@ -21,12 +21,12 @@
       {
         "ordinal": 3,
         "name": "latitude",
-        "type_info": "Numeric"
+        "type_info": "Float8"
       },
       {
         "ordinal": 4,
         "name": "longitude",
-        "type_info": "Numeric"
+        "type_info": "Float8"
       }
     ],
     "parameters": {

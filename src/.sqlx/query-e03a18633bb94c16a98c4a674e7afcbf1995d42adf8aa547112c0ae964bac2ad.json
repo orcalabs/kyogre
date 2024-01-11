@@ -63,9 +63,9 @@
       "Left": [
         "Int8",
         "Int4Array",
-        "Numeric",
+        "Float8",
         "Int4",
-        "Numeric",
+        "Float8",
         "Int4"
       ]
     },
