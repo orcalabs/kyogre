@@ -46,7 +46,7 @@ pub struct BwVesselInfo {
 #[serde(rename_all = "camelCase")]
 pub struct BwProfile {
     pub user: BwUser,
-    pub fisk_info_profile: BwVesselInfo,
+    pub fisk_info_profile: Option<BwVesselInfo>,
     pub policies: Vec<BwPolicy>,
     pub roles: Vec<BwRole>,
 }
