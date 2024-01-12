@@ -7,29 +7,37 @@ use unnest_insert::UnnestInsert;
 use crate::error::PostgresErrorWrapper;
 
 #[derive(Debug, Clone, UnnestInsert)]
-#[unnest_insert(table_name = "ais_vessels", conflict = "mmsi")]
+#[unnest_insert(table_name = "ais_vessels_temp", conflict = "mmsi")]
 pub struct NewAisVessel {
     pub mmsi: i32,
-    #[unnest_insert(update = "imo_number = COALESCE(EXCLUDED.imo_number, ais_vessels.imo_number)")]
+    #[unnest_insert(
+        update = "imo_number = COALESCE(EXCLUDED.imo_number, ais_vessels_temp.imo_number)"
+    )]
     pub imo_number: Option<i32>,
-    #[unnest_insert(update = "call_sign = COALESCE(EXCLUDED.call_sign, ais_vessels.call_sign)")]
+    #[unnest_insert(
+        update = "call_sign = COALESCE(EXCLUDED.call_sign, ais_vessels_temp.call_sign)"
+    )]
     pub call_sign: Option<String>,
-    #[unnest_insert(update = "name = COALESCE(EXCLUDED.name, ais_vessels.name)")]
+    #[unnest_insert(update = "name = COALESCE(EXCLUDED.name, ais_vessels_temp.name)")]
     pub name: Option<String>,
-    #[unnest_insert(update = "ship_width = COALESCE(EXCLUDED.ship_width, ais_vessels.ship_width)")]
+    #[unnest_insert(
+        update = "ship_width = COALESCE(EXCLUDED.ship_width, ais_vessels_temp.ship_width)"
+    )]
     pub ship_width: Option<i32>,
     #[unnest_insert(
-        update = "ship_length = COALESCE(EXCLUDED.ship_length, ais_vessels.ship_length)"
+        update = "ship_length = COALESCE(EXCLUDED.ship_length, ais_vessels_temp.ship_length)"
     )]
     pub ship_length: Option<i32>,
-    #[unnest_insert(update = "ship_type = COALESCE(EXCLUDED.ship_type, ais_vessels.ship_type)")]
+    #[unnest_insert(
+        update = "ship_type = COALESCE(EXCLUDED.ship_type, ais_vessels_temp.ship_type)"
+    )]
     pub ship_type: Option<i32>,
-    #[unnest_insert(update = "eta = COALESCE(EXCLUDED.eta, ais_vessels.eta)")]
+    #[unnest_insert(update = "eta = COALESCE(EXCLUDED.eta, ais_vessels_temp.eta)")]
     pub eta: Option<DateTime<Utc>>,
-    #[unnest_insert(update = "draught = COALESCE(EXCLUDED.draught, ais_vessels.draught)")]
+    #[unnest_insert(update = "draught = COALESCE(EXCLUDED.draught, ais_vessels_temp.draught)")]
     pub draught: Option<i32>,
     #[unnest_insert(
-        update = "destination = COALESCE(EXCLUDED.destination, ais_vessels.destination)"
+        update = "destination = COALESCE(EXCLUDED.destination, ais_vessels_temp.destination)"
     )]
     pub destination: Option<String>,
 }
