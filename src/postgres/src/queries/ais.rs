@@ -199,7 +199,7 @@ ORDER BY
         sqlx::query!(
             r#"
 INSERT INTO
-    ais_vessels (mmsi)
+    ais_vessels_temp (mmsi)
 VALUES
     (UNNEST($1::INT[]))
 ON CONFLICT (mmsi) DO NOTHING
