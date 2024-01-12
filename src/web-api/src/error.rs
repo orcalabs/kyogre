@@ -10,6 +10,7 @@ pub enum ApiError {
         end: DateTime<Utc>,
     },
     InvalidCallSign,
+    MissingBwFiskInfoProfile,
     InvalidDateRange,
     InternalServerError,
     MissingMmsiOrCallSignOrTripId,
@@ -38,6 +39,9 @@ impl std::fmt::Display for ApiError {
             }
             ApiError::InternalServerError => f.write_str("an internal server error occured"),
             ApiError::InvalidCallSign => f.write_str("an invalid call sign was received"),
+            ApiError::MissingBwFiskInfoProfile => {
+                f.write_str("missing barentswatch fisk info profile")
+            }
             ApiError::MissingMmsiOrCallSignOrTripId => {
                 f.write_str("either trip_id, mmsi or call sign must be provided")
             }
@@ -62,6 +66,7 @@ impl ResponseError for ApiError {
         match self {
             ApiError::InvalidDateRange
             | ApiError::InvalidCallSign
+            | ApiError::MissingBwFiskInfoProfile
             | ApiError::InvalidLandingId
             | ApiError::StartAfterEnd { start: _, end: _ }
             | ApiError::InvalidSpeciesGroupId(_)

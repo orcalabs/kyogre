@@ -35,8 +35,11 @@ pub async fn get_fuel_measurements<T: Database + 'static>(
     params: Query<FuelMeasurementsParams>,
 ) -> Result<HttpResponse, ApiError> {
     let user_id = BarentswatchUserId(profile.user.id);
-    let call_sign = CallSign::try_from(profile.fisk_info_profile.ircs)
-        .map_err(|_| ApiError::InvalidCallSign)?;
+
+    let profile = profile
+        .fisk_info_profile
+        .ok_or(ApiError::MissingBwFiskInfoProfile)?;
+    let call_sign = CallSign::try_from(profile.ircs).map_err(|_| ApiError::InvalidCallSign)?;
 
     let query = params.into_inner().to_query(user_id, call_sign);
 
@@ -70,8 +73,11 @@ pub async fn create_fuel_measurements<T: Database + 'static>(
     body: web::Json<Vec<FuelMeasurementBody>>,
 ) -> Result<Response<()>, ApiError> {
     let user_id = BarentswatchUserId(profile.user.id);
-    let call_sign = CallSign::try_from(profile.fisk_info_profile.ircs)
-        .map_err(|_| ApiError::InvalidCallSign)?;
+
+    let profile = profile
+        .fisk_info_profile
+        .ok_or(ApiError::MissingBwFiskInfoProfile)?;
+    let call_sign = CallSign::try_from(profile.ircs).map_err(|_| ApiError::InvalidCallSign)?;
 
     let measurements = body
         .into_inner()
@@ -108,8 +114,11 @@ pub async fn update_fuel_measurements<T: Database + 'static>(
     body: web::Json<Vec<FuelMeasurementBody>>,
 ) -> Result<Response<()>, ApiError> {
     let user_id = BarentswatchUserId(profile.user.id);
-    let call_sign = CallSign::try_from(profile.fisk_info_profile.ircs)
-        .map_err(|_| ApiError::InvalidCallSign)?;
+
+    let profile = profile
+        .fisk_info_profile
+        .ok_or(ApiError::MissingBwFiskInfoProfile)?;
+    let call_sign = CallSign::try_from(profile.ircs).map_err(|_| ApiError::InvalidCallSign)?;
 
     let measurements = body
         .into_inner()
@@ -146,8 +155,11 @@ pub async fn delete_fuel_measurements<T: Database + 'static>(
     body: web::Json<Vec<DeleteFuelMeasurement>>,
 ) -> Result<Response<()>, ApiError> {
     let user_id = BarentswatchUserId(profile.user.id);
-    let call_sign = CallSign::try_from(profile.fisk_info_profile.ircs)
-        .map_err(|_| ApiError::InvalidCallSign)?;
+
+    let profile = profile
+        .fisk_info_profile
+        .ok_or(ApiError::MissingBwFiskInfoProfile)?;
+    let call_sign = CallSign::try_from(profile.ircs).map_err(|_| ApiError::InvalidCallSign)?;
 
     let measurements = body
         .into_inner()
