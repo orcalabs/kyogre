@@ -78,9 +78,9 @@ impl BarentswatchHelper {
                         user: BwUser {
                             id: decoded.claims.id,
                         },
-                        fisk_info_profile: BwVesselInfo {
+                        fisk_info_profile: Some(BwVesselInfo {
                             ircs: "LK17".into(),
-                        },
+                        }),
                         policies: decoded.claims.policies,
                         roles: decoded.claims.roles,
                     };
