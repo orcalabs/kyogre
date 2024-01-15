@@ -1,5 +1,7 @@
 postgres:
+  ip: orca-postgres-dev.postgres.database.azure.com
   port: 5432
   db_name: kyogre
   max_connections: 1
-  log_statements: "Disable"
+  log_statements: Disable
+  application_name: kyogre-database-migrator

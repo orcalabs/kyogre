@@ -21,6 +21,7 @@ jobs:
         fishery-api
         ais-consumer
         engine
+        database-migrator
       object: '{
            "duckdb" : {
               "container-app-name" : "dev-kyogre-duck-db",
@@ -41,6 +42,10 @@ jobs:
               "container-app-name" : "dev-kyogre-engine",
               "dockerfile" : "dockerfiles/engine/Dockerfile",
               "registry" : "ghcr.io/orcalabs/kyogre/engine"
+           },
+           "database-migrator" : {
+              "dockerfile" : "dockerfiles/database-migrator/Dockerfile",
+              "registry" : "ghcr.io/orcalabs/kyogre/database-migrator"
            }
         }'
       resource-group: dev
