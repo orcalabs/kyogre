@@ -27,7 +27,7 @@ error-stack = { workspace = true }
 rand = "0.8.5"
 futures = "0.3.30"
 
-utoipa = { version = "4.1", optional = true }
+utoipa = { version = "4.2", optional = true }
 remain = "0.2.12"
 sqlx = { workspace = true, optional = true }
 enum_index = "0.2.0"
