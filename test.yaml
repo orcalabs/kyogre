@@ -1,0 +1,11 @@
+properties:
+  environmentId: "/subscriptions/4622507a-02a3-40e1-a744-1d9e45db98d7/resourceGroups/dev/providers/Microsoft.App/managedEnvironments/kyogre-dev"
+  managedEnvironmentId: "/subscriptions/4622507a-02a3-40e1-a744-1d9e45db98d7/resourceGroups/dev/providers/Microsoft.App/managedEnvironments/kyogre-dev"
+  template:
+    environmentId: "/subscriptions/4622507a-02a3-40e1-a744-1d9e45db98d7/resourceGroups/dev/providers/Microsoft.App/managedEnvironments/kyogre-dev"
+    containers:
+      - image: ghcr.io/orcalabs/kyogre/fishery-api:latest
+        name: fishery-api
+    init_containers:
+      - image: ghcr.io/orcalabs/kyogre/database-migrator:latest
+        name: database-migrator
