@@ -53,6 +53,7 @@ pub struct Config {
     pub aqua_culture_register_url: Option<String>,
     pub mattilsynet_urls: Option<Vec<String>>,
     pub mattilsynet_fishery_url: Option<String>,
+    pub mattilsynet_businesses_url: Option<String>,
     pub register_vessels_url: Option<String>,
     pub fishing_facility: Option<ApiClientConfig>,
     pub fishing_facility_historic: Option<ApiClientConfig>,
@@ -176,8 +177,11 @@ impl Scraper {
             aqua_culture_register_source,
             environment,
         );
-        let mattilsynet_scraper =
-            MattilsynetScraper::new(config.mattilsynet_urls, config.mattilsynet_fishery_url);
+        let mattilsynet_scraper = MattilsynetScraper::new(
+            config.mattilsynet_urls,
+            config.mattilsynet_fishery_url,
+            config.mattilsynet_businesses_url,
+        );
         let register_vessels_scraper =
             RegisterVesselsScraper::new(fiskeridir_arc, register_vessels_source);
 

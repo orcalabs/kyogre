@@ -4802,6 +4802,7 @@ dependencies = [
  "kyogre-core",
  "orca-core",
  "pyo3",
+ "regex",
  "reqwest",
  "serde",
  "serde_json",
