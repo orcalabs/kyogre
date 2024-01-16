@@ -36,20 +36,3 @@ OR REPLACE FUNCTION add_ais_position_partition () RETURNS TRIGGER LANGUAGE PLPGS
         RETURN NEW;
    END;
 $$;
-
-DO $$
-DECLARE
-    _r RECORD;
-BEGIN
-    FOR _r IN SELECT mmsi FROM ais_vessels
-    LOOP
-        EXECUTE FORMAT(
-            $f$
-                CREATE TABLE IF NOT EXISTS %I PARTITION OF ais_positions FOR VALUES IN (%L);
-            $f$,
-            CONCAT('ais_positions_', _r.mmsi),
-            _r.mmsi
-        );
-    END LOOP;
-END;
-$$;
