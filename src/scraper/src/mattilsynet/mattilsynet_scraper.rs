@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use async_trait::async_trait;
 use error_stack::{report, Result, ResultExt};
 use fiskeridir_rs::DeliveryPointId;
+use regex::Regex;
 use reqwest::{Response, StatusCode};
 use table_extract::Table;
 use tracing::{event, Level};
@@ -19,6 +20,7 @@ pub struct MattilsynetScraper {
     http_client: reqwest::Client,
     approved_establishments_urls: Vec<String>,
     fishery_establishments_url: Option<String>,
+    businesses_url: Option<String>,
 }
 
 #[async_trait]
@@ -52,21 +54,25 @@ impl MattilsynetScraper {
     pub fn new(
         approved_establishments_urls: Option<Vec<String>>,
         fishery_establishments_url: Option<String>,
+        businesses_url: Option<String>,
     ) -> Self {
         Self {
             http_client: reqwest::Client::new(),
             approved_establishments_urls: approved_establishments_urls.unwrap_or_default(),
             fishery_establishments_url,
+            businesses_url,
         }
     }
 
     async fn do_scrape(&self, processor: &(dyn Processor)) -> Result<(), ScraperError> {
         let approved = self.approved_establishments().await?;
         let fishery = self.fishery_establishments().await?;
+        let businesses = self.businesses().await?;
 
-        let mut delivery_points = HashMap::with_capacity(approved.len() + fishery.len());
+        let mut delivery_points =
+            HashMap::with_capacity(approved.len() + fishery.len() + businesses.len());
 
-        for d in approved.into_iter().chain(fishery) {
+        for d in approved.into_iter().chain(fishery).chain(businesses) {
             delivery_points
                 .entry(d.id.clone())
                 .or_insert_with(|| d.into());
@@ -189,12 +195,86 @@ impl MattilsynetScraper {
         }
         Ok(vec)
     }
+
+    async fn businesses(&self) -> Result<Vec<DeliveryPoint>, ScraperError> {
+        let mut vec = Vec::new();
+        if let Some(url) = &self.businesses_url {
+            let text = self
+                .get(url)
+                .await?
+                .text()
+                .await
+                .change_context(ScraperError)?;
+
+            let address_code_city =
+                Regex::new(r"(?i)^([^,]+)[, ]+(\d{4})\s+([^,]+)$").change_context(ScraperError)?;
+            let code_city = Regex::new(r"(?i)^(\d{4})\s+([^,]+)$").change_context(ScraperError)?;
+            let address_code =
+                Regex::new(r"(?i)^([^,]+)[, ]+(\d{4})$").change_context(ScraperError)?;
+
+            for line in text.lines() {
+                let mut split = line.split(';');
+
+                let section = split.nth(5).ok_or_else(|| {
+                    report!(Error::MissingSectionInLine(line.into())).change_context(ScraperError)
+                })?;
+
+                if !section.contains("General activity establishment") {
+                    continue;
+                }
+
+                let id = split.next().ok_or_else(|| {
+                    report!(Error::MissingIdInLine(line.into())).change_context(ScraperError)
+                })?;
+                let name = split.next().ok_or_else(|| {
+                    report!(Error::MissingNameInLine(line.into())).change_context(ScraperError)
+                })?;
+                let address = split
+                    .next()
+                    .ok_or_else(|| {
+                        report!(Error::MissingAddressInLine(line.into()))
+                            .change_context(ScraperError)
+                    })?
+                    .trim();
+
+                let (address, postal_code, city) = if let Some((_, [addr, code, city])) =
+                    address_code_city.captures(address).map(|c| c.extract())
+                {
+                    (Some(addr), Some(code), Some(city))
+                } else if let Some((_, [code, city])) =
+                    code_city.captures(address).map(|c| c.extract())
+                {
+                    (None, Some(code), Some(city))
+                } else if let Some((_, [addr, code])) =
+                    address_code.captures(address).map(|c| c.extract())
+                {
+                    (Some(addr), Some(code), None)
+                } else {
+                    (None, None, None)
+                };
+
+                vec.push(DeliveryPoint {
+                    id: DeliveryPointId::try_from(id).change_context(ScraperError)?,
+                    name: name.trim().into(),
+                    address: address.map(|v| v.trim().into()),
+                    // unwrap is safe because regex only matches if postal_code is 4 digits
+                    postal_code: postal_code.map(|v| v.parse().unwrap()),
+                    postal_city: city.map(|v| v.trim().into()),
+                });
+            }
+        }
+        Ok(vec)
+    }
 }
 
 #[derive(Debug)]
 pub enum Error {
     Download { status: StatusCode, text: String },
     MissingTable,
+    MissingSectionInLine(String),
+    MissingIdInLine(String),
+    MissingNameInLine(String),
+    MissingAddressInLine(String),
 }
 
 impl std::error::Error for Error {}
@@ -206,6 +286,18 @@ impl std::fmt::Display for Error {
                 "error downloading data from source, status: {status}, text: {text}",
             )),
             Error::MissingTable => f.write_str("`Table::find_first` returned `None`"),
+            Error::MissingSectionInLine(l) => {
+                f.write_fmt(format_args!("could not get section from line: `{l}`"))
+            }
+            Error::MissingIdInLine(l) => {
+                f.write_fmt(format_args!("could not get id from line: `{l}`"))
+            }
+            Error::MissingNameInLine(l) => {
+                f.write_fmt(format_args!("could not get name from line: `{l}`"))
+            }
+            Error::MissingAddressInLine(l) => {
+                f.write_fmt(format_args!("could not get address from line: `{l}`"))
+            }
         }
     }
 }

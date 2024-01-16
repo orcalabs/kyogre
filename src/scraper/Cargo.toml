@@ -25,3 +25,4 @@ geozero = "0.11.0"
 table-extract = "0.2.3"
 csv = "1.3.0"
 pyo3 = { version = "0.20.2", features = ["chrono", "auto-initialize"] }
+regex = "1.10.2"
