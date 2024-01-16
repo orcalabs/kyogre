@@ -1,0 +1,22 @@
+name: Update cache
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - master
+
+
+env:
+  CARGO_TERM_COLOR: always
+
+
+jobs:
+  delete-buildjet-cache:
+    runs-on: buildjet-2vcpu-ubuntu-2204
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - uses: buildjet/cache-delete@v1
+        with:
+          cache_key: v0-rust-shared
