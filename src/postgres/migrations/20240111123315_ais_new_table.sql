@@ -50,43 +50,6 @@ BEGIN
             CONCAT('ais_positions_', _r.mmsi),
             _r.mmsi
         );
-
-        INSERT INTO
-            ais_positions (
-                mmsi,
-                latitude,
-                longitude,
-                course_over_ground,
-                rate_of_turn,
-                true_heading,
-                speed_over_ground,
-                "timestamp",
-                altitude,
-                distance_to_shore,
-                ais_class,
-                ais_message_type_id,
-                navigation_status_id
-            )
-        SELECT
-            mmsi,
-            latitude::DOUBLE PRECISION,
-            longitude::DOUBLE PRECISION,
-            course_over_ground::DOUBLE PRECISION,
-            rate_of_turn::DOUBLE PRECISION,
-            true_heading,
-            speed_over_ground::DOUBLE PRECISION,
-            "timestamp",
-            altitude,
-            distance_to_shore::DOUBLE PRECISION,
-            ais_class,
-            ais_message_type_id,
-            navigation_status_id
-        FROM
-            ais_positions_old
-        WHERE
-            mmsi = _r.mmsi
-        ORDER BY
-            "timestamp";
     END LOOP;
 END;
 $$;
