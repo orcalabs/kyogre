@@ -32,7 +32,7 @@ SELECT
             )
         )
     ) AS "timestamp!",
-    AVG("depth") AS "depth!",
+    AVG("depth"::DOUBLE PRECISION) AS "depth!",
     AVG(latitude) AS "latitude!",
     AVG(longitude) AS "longitude!",
     AVG(water_speed) AS "water_speed",
@@ -84,7 +84,7 @@ SELECT
     AVG(water_direction) AS "water_direction",
     AVG(salinity) AS "salinity",
     AVG(temperature) AS "water_temperature",
-    AVG("depth") AS "ocean_climate_depth",
+    AVG("depth"::DOUBLE PRECISION) AS "ocean_climate_depth",
     AVG(sea_floor_depth) AS "sea_floor_depth"
 FROM
     ocean_climate

@@ -14,8 +14,6 @@ use crate::{
     PostgresAdapter,
 };
 
-use super::opt_float_to_decimal;
-
 impl PostgresAdapter {
     pub(crate) async fn catch_locations_with_weather_impl(
         &self,
@@ -450,13 +448,13 @@ WHERE
         for v in values {
             haul_id.push(v.haul_id.0);
             if let Some(w) = v.weather {
-                wind_speed_10m.push(opt_float_to_decimal(w.wind_speed_10m)?);
-                wind_direction_10m.push(opt_float_to_decimal(w.wind_direction_10m)?);
-                air_temperature_2m.push(opt_float_to_decimal(w.air_temperature_2m)?);
-                relative_humidity_2m.push(opt_float_to_decimal(w.relative_humidity_2m)?);
-                air_pressure_at_sea_level.push(opt_float_to_decimal(w.air_pressure_at_sea_level)?);
-                precipitation_amount.push(opt_float_to_decimal(w.precipitation_amount)?);
-                cloud_area_fraction.push(opt_float_to_decimal(w.cloud_area_fraction)?);
+                wind_speed_10m.push(w.wind_speed_10m);
+                wind_direction_10m.push(w.wind_direction_10m);
+                air_temperature_2m.push(w.air_temperature_2m);
+                relative_humidity_2m.push(w.relative_humidity_2m);
+                air_pressure_at_sea_level.push(w.air_pressure_at_sea_level);
+                precipitation_amount.push(w.precipitation_amount);
+                cloud_area_fraction.push(w.cloud_area_fraction);
             } else {
                 wind_speed_10m.push(None);
                 wind_direction_10m.push(None);
@@ -467,12 +465,12 @@ WHERE
                 cloud_area_fraction.push(None);
             }
             if let Some(o) = v.ocean_climate {
-                water_speed.push(opt_float_to_decimal(o.water_speed)?);
-                water_direction.push(opt_float_to_decimal(o.water_direction)?);
-                salinity.push(opt_float_to_decimal(o.salinity)?);
-                water_temperature.push(opt_float_to_decimal(o.water_temperature)?);
-                ocean_climate_depth.push(opt_float_to_decimal(o.ocean_climate_depth)?);
-                sea_floor_depth.push(opt_float_to_decimal(o.sea_floor_depth)?);
+                water_speed.push(o.water_speed);
+                water_direction.push(o.water_direction);
+                salinity.push(o.salinity);
+                water_temperature.push(o.water_temperature);
+                ocean_climate_depth.push(o.ocean_climate_depth);
+                sea_floor_depth.push(o.sea_floor_depth);
             } else {
                 water_speed.push(None);
                 water_direction.push(None);
@@ -505,19 +503,19 @@ SET
 FROM
     UNNEST(
         $1::BIGINT[],
-        $2::DECIMAL[],
-        $3::DECIMAL[],
-        $4::DECIMAL[],
-        $5::DECIMAL[],
-        $6::DECIMAL[],
-        $7::DECIMAL[],
-        $8::DECIMAL[],
-        $9::DECIMAL[],
-        $10::DECIMAL[],
-        $11::DECIMAL[],
-        $12::DECIMAL[],
+        $2::DOUBLE PRECISION[],
+        $3::DOUBLE PRECISION[],
+        $4::DOUBLE PRECISION[],
+        $5::DOUBLE PRECISION[],
+        $6::DOUBLE PRECISION[],
+        $7::DOUBLE PRECISION[],
+        $8::DOUBLE PRECISION[],
+        $9::DOUBLE PRECISION[],
+        $10::DOUBLE PRECISION[],
+        $11::DOUBLE PRECISION[],
+        $12::DOUBLE PRECISION[],
         $13::INT[],
-        $14::DECIMAL[],
+        $14::DOUBLE PRECISION[],
         $15::INT[]
     ) u (
         haul_id,

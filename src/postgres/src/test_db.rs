@@ -6,7 +6,6 @@ use fiskeridir_rs::{
 };
 use futures::TryStreamExt;
 use kyogre_core::*;
-use num_traits::ToPrimitive;
 use rand::random;
 
 /// Wrapper with additional methods inteded for testing purposes.
@@ -760,8 +759,6 @@ WHERE
         .await
         .unwrap()
         .output
-        .to_f64()
-        .unwrap()
     }
 
     async fn single_vms_position(&self, message_id: u32) -> VmsPosition {
