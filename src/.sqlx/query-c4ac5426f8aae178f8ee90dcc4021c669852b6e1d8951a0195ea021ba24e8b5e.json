@@ -6,37 +6,37 @@
       {
         "ordinal": 0,
         "name": "wind_speed_10m",
-        "type_info": "Numeric"
+        "type_info": "Float8"
       },
       {
         "ordinal": 1,
         "name": "wind_direction_10m",
-        "type_info": "Numeric"
+        "type_info": "Float8"
       },
       {
         "ordinal": 2,
         "name": "air_temperature_2m",
-        "type_info": "Numeric"
+        "type_info": "Float8"
       },
       {
         "ordinal": 3,
         "name": "relative_humidity_2m",
-        "type_info": "Numeric"
+        "type_info": "Float8"
       },
       {
         "ordinal": 4,
         "name": "air_pressure_at_sea_level",
-        "type_info": "Numeric"
+        "type_info": "Float8"
       },
       {
         "ordinal": 5,
         "name": "precipitation_amount",
-        "type_info": "Numeric"
+        "type_info": "Float8"
       },
       {
         "ordinal": 6,
         "name": "cloud_area_fraction",
-        "type_info": "Numeric"
+        "type_info": "Float8"
       }
     ],
     "parameters": {

@@ -152,6 +152,7 @@ async fn main() {
         max_connections: 1,
         root_cert: None,
         log_statements: PsqlLogStatements::Disable,
+        application_name: None,
     })
     .await
     .unwrap();

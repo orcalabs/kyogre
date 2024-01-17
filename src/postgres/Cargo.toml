@@ -18,7 +18,6 @@ unnest_insert = { version = "0.4.0", registry = "orcalabs-orcastrator", features
 num-traits = "0.2.17"
 chrono = { version = "0.4.31", features = ["serde"] }
 error-stack = { workspace = true }
-bigdecimal = "0.3.1"
 tokio = { version = "1.35.1", features = ["macros", "sync", "time"] }
 sqlx = { workspace = true }
 tracing = "0.1.40"

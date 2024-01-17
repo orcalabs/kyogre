@@ -1,5 +1,3 @@
-use crate::error::{BigDecimalError, FromBigDecimalError};
-use bigdecimal::{BigDecimal, FromPrimitive};
 use chrono::{DateTime, NaiveDate, NaiveTime, Utc};
 
 pub mod ais;
@@ -34,30 +32,6 @@ pub mod vessel_benchmarks;
 pub mod vessel_events;
 pub mod vms;
 pub mod weather;
-
-pub(crate) fn float_to_decimal(value: f64) -> Result<BigDecimal, BigDecimalError> {
-    BigDecimal::from_f64(value).ok_or(BigDecimalError(value))
-}
-
-pub(crate) fn opt_float_to_decimal(
-    value: Option<f64>,
-) -> std::result::Result<Option<BigDecimal>, BigDecimalError> {
-    value
-        .map(|v| BigDecimal::from_f64(v).ok_or(BigDecimalError(v)))
-        .transpose()
-}
-
-pub(crate) fn decimal_to_float(value: BigDecimal) -> Result<f64, FromBigDecimalError> {
-    bigdecimal::ToPrimitive::to_f64(&value).ok_or(FromBigDecimalError(value))
-}
-
-pub(crate) fn opt_decimal_to_float(
-    value: Option<BigDecimal>,
-) -> Result<Option<f64>, FromBigDecimalError> {
-    value
-        .map(|v| bigdecimal::ToPrimitive::to_f64(&v).ok_or(FromBigDecimalError(v)))
-        .transpose()
-}
 
 pub(crate) fn timestamp_from_date_and_time(date: NaiveDate, time: NaiveTime) -> DateTime<Utc> {
     DateTime::from_naive_utc_and_offset(date.and_time(time), Utc)
