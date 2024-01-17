@@ -1,4 +1,3 @@
-use bigdecimal::BigDecimal;
 use chrono::{DateTime, NaiveDate, Utc};
 use error_stack::report;
 use geo_types::geometry::Geometry;
@@ -6,10 +5,7 @@ use geozero::wkb;
 use kyogre_core::WeatherLocationId;
 use unnest_insert::UnnestInsert;
 
-use crate::{
-    error::{PostgresError, PostgresErrorWrapper},
-    queries::{decimal_to_float, float_to_decimal, opt_decimal_to_float, opt_float_to_decimal},
-};
+use crate::error::{PostgresError, PostgresErrorWrapper};
 
 #[derive(UnnestInsert)]
 #[unnest_insert(table_name = "daily_weather_dirty", conflict = "date")]
@@ -21,33 +17,33 @@ pub struct NewWeatherDailyDirty {
 #[unnest_insert(table_name = "weather", conflict = "timestamp,weather_location_id")]
 pub struct NewWeather {
     pub timestamp: DateTime<Utc>,
-    pub latitude: BigDecimal,
-    pub longitude: BigDecimal,
-    pub altitude: BigDecimal,
-    pub wind_speed_10m: Option<BigDecimal>,
-    pub wind_direction_10m: Option<BigDecimal>,
-    pub air_temperature_2m: Option<BigDecimal>,
-    pub relative_humidity_2m: Option<BigDecimal>,
-    pub air_pressure_at_sea_level: Option<BigDecimal>,
-    pub precipitation_amount: Option<BigDecimal>,
-    pub land_area_fraction: BigDecimal,
-    pub cloud_area_fraction: Option<BigDecimal>,
+    pub latitude: f64,
+    pub longitude: f64,
+    pub altitude: f64,
+    pub wind_speed_10m: Option<f64>,
+    pub wind_direction_10m: Option<f64>,
+    pub air_temperature_2m: Option<f64>,
+    pub relative_humidity_2m: Option<f64>,
+    pub air_pressure_at_sea_level: Option<f64>,
+    pub precipitation_amount: Option<f64>,
+    pub land_area_fraction: f64,
+    pub cloud_area_fraction: Option<f64>,
 }
 
 #[derive(Debug)]
 pub struct Weather {
     pub timestamp: DateTime<Utc>,
-    pub latitude: BigDecimal,
-    pub longitude: BigDecimal,
-    pub altitude: BigDecimal,
-    pub wind_speed_10m: Option<BigDecimal>,
-    pub wind_direction_10m: Option<BigDecimal>,
-    pub air_temperature_2m: Option<BigDecimal>,
-    pub relative_humidity_2m: Option<BigDecimal>,
-    pub air_pressure_at_sea_level: Option<BigDecimal>,
-    pub precipitation_amount: Option<BigDecimal>,
-    pub land_area_fraction: BigDecimal,
-    pub cloud_area_fraction: Option<BigDecimal>,
+    pub latitude: f64,
+    pub longitude: f64,
+    pub altitude: f64,
+    pub wind_speed_10m: Option<f64>,
+    pub wind_direction_10m: Option<f64>,
+    pub air_temperature_2m: Option<f64>,
+    pub relative_humidity_2m: Option<f64>,
+    pub air_pressure_at_sea_level: Option<f64>,
+    pub precipitation_amount: Option<f64>,
+    pub land_area_fraction: f64,
+    pub cloud_area_fraction: Option<f64>,
     pub weather_location_id: i32,
 }
 
@@ -59,13 +55,13 @@ pub struct WeatherLocation {
 
 #[derive(Debug)]
 pub struct HaulWeather {
-    pub wind_speed_10m: Option<BigDecimal>,
-    pub wind_direction_10m: Option<BigDecimal>,
-    pub air_temperature_2m: Option<BigDecimal>,
-    pub relative_humidity_2m: Option<BigDecimal>,
-    pub air_pressure_at_sea_level: Option<BigDecimal>,
-    pub precipitation_amount: Option<BigDecimal>,
-    pub cloud_area_fraction: Option<BigDecimal>,
+    pub wind_speed_10m: Option<f64>,
+    pub wind_direction_10m: Option<f64>,
+    pub air_temperature_2m: Option<f64>,
+    pub relative_humidity_2m: Option<f64>,
+    pub air_pressure_at_sea_level: Option<f64>,
+    pub precipitation_amount: Option<f64>,
+    pub cloud_area_fraction: Option<f64>,
 }
 
 impl TryFrom<kyogre_core::NewWeather> for NewWeather {
@@ -74,19 +70,17 @@ impl TryFrom<kyogre_core::NewWeather> for NewWeather {
     fn try_from(v: kyogre_core::NewWeather) -> Result<Self, Self::Error> {
         Ok(Self {
             timestamp: v.timestamp,
-            latitude: float_to_decimal(v.latitude)?,
-            longitude: float_to_decimal(v.longitude)?,
-            altitude: float_to_decimal(v.altitude)?,
-            wind_speed_10m: opt_float_to_decimal(v.wind_speed_10m.into_inner())?,
-            wind_direction_10m: opt_float_to_decimal(v.wind_direction_10m)?,
-            air_temperature_2m: opt_float_to_decimal(v.air_temperature_2m.into_inner())?,
-            relative_humidity_2m: opt_float_to_decimal(v.relative_humidity_2m.into_inner())?,
-            air_pressure_at_sea_level: opt_float_to_decimal(
-                v.air_pressure_at_sea_level.into_inner(),
-            )?,
-            precipitation_amount: opt_float_to_decimal(v.precipitation_amount.into_inner())?,
-            land_area_fraction: float_to_decimal(v.land_area_fraction)?,
-            cloud_area_fraction: opt_float_to_decimal(v.cloud_area_fraction.into_inner())?,
+            latitude: v.latitude,
+            longitude: v.longitude,
+            altitude: v.altitude,
+            wind_speed_10m: v.wind_speed_10m.into_inner(),
+            wind_direction_10m: v.wind_direction_10m,
+            air_temperature_2m: v.air_temperature_2m.into_inner(),
+            relative_humidity_2m: v.relative_humidity_2m.into_inner(),
+            air_pressure_at_sea_level: v.air_pressure_at_sea_level.into_inner(),
+            precipitation_amount: v.precipitation_amount.into_inner(),
+            land_area_fraction: v.land_area_fraction,
+            cloud_area_fraction: v.cloud_area_fraction.into_inner(),
         })
     }
 }
@@ -97,17 +91,17 @@ impl TryFrom<Weather> for kyogre_core::Weather {
     fn try_from(v: Weather) -> Result<Self, Self::Error> {
         Ok(Self {
             timestamp: v.timestamp,
-            latitude: decimal_to_float(v.latitude)?,
-            longitude: decimal_to_float(v.longitude)?,
-            altitude: decimal_to_float(v.altitude)?,
-            wind_speed_10m: opt_decimal_to_float(v.wind_speed_10m)?,
-            wind_direction_10m: opt_decimal_to_float(v.wind_direction_10m)?,
-            air_temperature_2m: opt_decimal_to_float(v.air_temperature_2m)?,
-            relative_humidity_2m: opt_decimal_to_float(v.relative_humidity_2m)?,
-            air_pressure_at_sea_level: opt_decimal_to_float(v.air_pressure_at_sea_level)?,
-            precipitation_amount: opt_decimal_to_float(v.precipitation_amount)?,
-            land_area_fraction: decimal_to_float(v.land_area_fraction)?,
-            cloud_area_fraction: opt_decimal_to_float(v.cloud_area_fraction)?,
+            latitude: v.latitude,
+            longitude: v.longitude,
+            altitude: v.altitude,
+            wind_speed_10m: v.wind_speed_10m,
+            wind_direction_10m: v.wind_direction_10m,
+            air_temperature_2m: v.air_temperature_2m,
+            relative_humidity_2m: v.relative_humidity_2m,
+            air_pressure_at_sea_level: v.air_pressure_at_sea_level,
+            precipitation_amount: v.precipitation_amount,
+            land_area_fraction: v.land_area_fraction,
+            cloud_area_fraction: v.cloud_area_fraction,
             weather_location_id: WeatherLocationId(v.weather_location_id),
         })
     }
@@ -138,13 +132,13 @@ impl TryFrom<HaulWeather> for kyogre_core::HaulWeather {
 
     fn try_from(v: HaulWeather) -> Result<Self, Self::Error> {
         Ok(Self {
-            wind_speed_10m: opt_decimal_to_float(v.wind_speed_10m)?,
-            wind_direction_10m: opt_decimal_to_float(v.wind_direction_10m)?,
-            air_temperature_2m: opt_decimal_to_float(v.air_temperature_2m)?,
-            relative_humidity_2m: opt_decimal_to_float(v.relative_humidity_2m)?,
-            air_pressure_at_sea_level: opt_decimal_to_float(v.air_pressure_at_sea_level)?,
-            precipitation_amount: opt_decimal_to_float(v.precipitation_amount)?,
-            cloud_area_fraction: opt_decimal_to_float(v.cloud_area_fraction)?,
+            wind_speed_10m: v.wind_speed_10m,
+            wind_direction_10m: v.wind_direction_10m,
+            air_temperature_2m: v.air_temperature_2m,
+            relative_humidity_2m: v.relative_humidity_2m,
+            air_pressure_at_sea_level: v.air_pressure_at_sea_level,
+            precipitation_amount: v.precipitation_amount,
+            cloud_area_fraction: v.cloud_area_fraction,
         })
     }
 }

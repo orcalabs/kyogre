@@ -1,16 +1,16 @@
 log_level: Info
-chunk_size: "7d"
-source_start_threshold: "2021-02-01 00:00:00Z"
-destination_end_threshold: "2021-07-01 00:00:00Z"
+chunk_size: "30d"
+source_start_threshold: "2021-01-01T00:00:00Z"
+destination_end_threshold: "2024-01-19T00:00:00Z"
 source:
-  max_connections: 1
+  max_connections: 32
   log_statements: "Disable"
 destination:
   ip: postgres
   db_name: postgres
   password: test123
   username: postgres
+  application_name: kyogre-ais-data-migrator
   port: 5432
-  max_connections: 1
+  max_connections: 32
   log_statements: "Disable"
-

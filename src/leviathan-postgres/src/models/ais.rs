@@ -1,8 +1,9 @@
 use crate::error::{FromBigDecimalError, PostgresError};
-use bigdecimal::{BigDecimal, FromPrimitive, ToPrimitive};
 use chrono::{DateTime, Utc};
 use error_stack::{report, Report};
 use kyogre_core::Mmsi;
+use num_traits::{FromPrimitive, ToPrimitive};
+use sqlx::types::BigDecimal;
 
 #[derive(Debug, Clone, PartialEq, Eq, sqlx::FromRow)]
 pub struct AisPosition {

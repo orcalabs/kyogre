@@ -1,5 +1,5 @@
-use bigdecimal::BigDecimal;
 use error_stack::Context;
+use sqlx::types::BigDecimal;
 
 #[derive(Debug)]
 pub enum PostgresError {

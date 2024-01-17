@@ -1,4 +1,3 @@
-use bigdecimal::BigDecimal;
 use error_stack::{report, Context, Report};
 use kyogre_core::{
     CatchLocationIdError, DateRangeError, DeleteError, HaulMatrixIndexError, InsertError,
@@ -42,34 +41,6 @@ impl std::error::Error for UnboundedRangeError {}
 impl std::fmt::Display for UnboundedRangeError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str("encountered and unexpected unbounded range")
-    }
-}
-
-#[derive(Debug)]
-pub struct BigDecimalError(pub f64);
-
-impl std::error::Error for BigDecimalError {}
-
-impl std::fmt::Display for BigDecimalError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!(
-            "failed to convert float value to big decimal, value: {}",
-            self.0
-        ))
-    }
-}
-
-#[derive(Debug)]
-pub struct FromBigDecimalError(pub BigDecimal);
-
-impl std::error::Error for FromBigDecimalError {}
-
-impl std::fmt::Display for FromBigDecimalError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!(
-            "failed to convert bigdecimal value to float, value: {}",
-            self.0
-        ))
     }
 }
 
@@ -172,20 +143,6 @@ impl From<sqlx::Error> for PostgresErrorWrapper {
     #[track_caller]
     fn from(value: sqlx::Error) -> Self {
         Self(report!(PostgresError::Query).attach_printable(format!("{value:?}")))
-    }
-}
-
-impl From<BigDecimalError> for PostgresErrorWrapper {
-    #[track_caller]
-    fn from(value: BigDecimalError) -> Self {
-        Self(report!(value).change_context(PostgresError::DataConversion))
-    }
-}
-
-impl From<FromBigDecimalError> for PostgresErrorWrapper {
-    #[track_caller]
-    fn from(value: FromBigDecimalError) -> Self {
-        Self(report!(value).change_context(PostgresError::DataConversion))
     }
 }
 

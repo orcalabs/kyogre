@@ -1,5 +1,8 @@
 *
 !src
+src/leviathan-postgres
+src/ais-data-migrator
+src/ml-trainer
 !.cargo
 **/target
 !scripts/python/weather/main.py
