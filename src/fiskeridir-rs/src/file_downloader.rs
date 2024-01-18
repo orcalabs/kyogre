@@ -100,7 +100,7 @@ impl FileSource {
         match *self {
             Landings { year, .. } => format!("fangstdata_{year}.csv"),
             Vms { year, .. } => match year {
-                2022 | 2023 => format!("{year}-VMS.csv"),
+                y if y >= 2022 => format!("{y}-VMS.csv"),
                 y => format!("VMS_{y}.csv"),
             },
             ErsDca { year, .. } => match year {
