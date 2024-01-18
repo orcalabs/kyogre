@@ -37,10 +37,10 @@ scraper:
     min_year: 2000
     max_year: 2024
   vms:
+    - year: 2024
+      url: https://register.fiskeridir.no/vms-ers/2024-VMS.csv.zip
     - year: 2023
-      url: https://register.fiskeridir.no/vms-ers/2023-VMS.csv.zip
-    - year: 2022
-      url: https://www.fiskeridir.no/Tall-og-analyse/AApne-data/posisjonsrapportering-vms/_/attachment/download/7b89b19c-efc9-4db6-bfbd-134ef8c26cec:0f4a21b066526c03fe824ddf25a7370f96272f0c/VMS-2022.zip
+      url: https://www.fiskeridir.no/Tall-og-analyse/AApne-data/posisjonsrapportering-vms/_/attachment/download/458958c9-b0a3-4bb6-9457-72a898f681b6:a087911b8c6b76b4cf69eab64a33f0e8250abd4a/2023-VMS.zip
     - year: 2021
       url: https://www.fiskeridir.no/Tall-og-analyse/AApne-data/posisjonsrapportering-vms/_/attachment/download/d8736f20-309c-4b29-9786-a8d8271418c4:300bd8f940c7856c2fbeb4b2053d4fcd989f43e2/posisjonsrapportering-vms-2021-pos.zip
     - year: 2020
