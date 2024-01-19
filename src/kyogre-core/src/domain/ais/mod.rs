@@ -75,22 +75,10 @@ pub struct NewAisStatic {
 
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 #[derive(Debug, Deserialize, Serialize)]
-pub struct AisPositionMinimal {
+pub struct AisAreaCount {
     pub latitude: f64,
     pub longitude: f64,
-}
-
-impl PartialEq<AisPosition> for AisPositionMinimal {
-    fn eq(&self, other: &AisPosition) -> bool {
-        self.latitude as i64 == other.latitude as i64
-            && self.longitude as i64 == other.longitude as i64
-    }
-}
-
-impl PartialEq<AisPositionMinimal> for AisPosition {
-    fn eq(&self, other: &AisPositionMinimal) -> bool {
-        other.eq(self)
-    }
+    pub count: i32,
 }
 
 #[derive(Debug, Clone)]

@@ -1,0 +1,40 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    latitude::DOUBLE PRECISION AS \"latitude!\",\n    longitude::DOUBLE PRECISION AS \"longitude!\",\n    SUM(\"count\")::INT AS \"count!\"\nFROM\n    ais_area\nWHERE\n    ST_CONTAINS ($1::geometry, ST_POINT (longitude, latitude))\n    AND date >= $2::DATE\nGROUP BY\n    latitude,\n    longitude\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "latitude!",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 1,
+        "name": "longitude!",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 2,
+        "name": "count!",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        {
+          "Custom": {
+            "name": "geometry",
+            "kind": "Simple"
+          }
+        },
+        "Date"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "50cb4a1b595f2a330ac12872bdb8d9437a437ec3e54048b3d804ec799dd0a359"
+}
