@@ -67,9 +67,10 @@ pub struct AisVesselMigrationProgress {
 }
 
 #[derive(Debug, Clone)]
-pub struct AisPositionMinimal {
+pub struct AisAreaCount {
     pub latitude: f64,
     pub longitude: f64,
+    pub count: i32,
 }
 
 #[derive(Debug, Clone)]
@@ -171,13 +172,14 @@ impl TryFrom<AisPosition> for kyogre_core::AisPosition {
     }
 }
 
-impl TryFrom<AisPositionMinimal> for kyogre_core::AisPositionMinimal {
+impl TryFrom<AisAreaCount> for kyogre_core::AisAreaCount {
     type Error = PostgresErrorWrapper;
 
-    fn try_from(value: AisPositionMinimal) -> Result<Self, Self::Error> {
-        Ok(kyogre_core::AisPositionMinimal {
+    fn try_from(value: AisAreaCount) -> Result<Self, Self::Error> {
+        Ok(kyogre_core::AisAreaCount {
             latitude: value.latitude,
             longitude: value.longitude,
+            count: value.count,
         })
     }
 }

@@ -140,7 +140,7 @@ impl Database for PostgresAdapter {}
             v1::fuel::FuelMeasurementBody,
             v1::fuel::DeleteFuelMeasurement,
             kyogre_core::ModelId,
-            kyogre_core::AisPositionMinimal,
+            kyogre_core::AisAreaCount,
             kyogre_core::VesselBenchmarks,
             kyogre_core::Benchmark,
             kyogre_core::BenchmarkEntry,

@@ -8,7 +8,7 @@ use actix_web::{
     web::{self, Path},
     HttpResponse,
 };
-use chrono::{DateTime, Duration, Utc};
+use chrono::{DateTime, Duration, NaiveDate, Utc};
 use futures::TryStreamExt;
 use kyogre_core::ais_area_window;
 use kyogre_core::{AisPermission, NavigationStatus};
@@ -39,7 +39,7 @@ pub struct AisAreaParameters {
     pub x2: f64,
     pub y1: f64,
     pub y2: f64,
-    pub date_limit: Option<DateTime<Utc>>,
+    pub date_limit: Option<NaiveDate>,
 }
 
 #[utoipa::path(
@@ -107,7 +107,7 @@ pub async fn ais_track<T: Database + 'static>(
         AisAreaParameters,
     ),
     responses(
-        (status = 200, description = "ais positions within the given interval for the area", body = [AisPositionMinimal]),
+        (status = 200, description = "ais data within the given interval and area", body = [AisAreaCount]),
         (status = 500, description = "an internal error occured", body = ErrorResponse),
         (status = 400, description = "invalid parameters were provided", body = ErrorResponse),
     )
@@ -118,11 +118,19 @@ pub async fn ais_area<T: Database + 'static>(
     params: Query<AisAreaParameters>,
 ) -> Result<HttpResponse, ApiError> {
     to_streaming_response! {
-        db.ais_positions_area(params.x1, params.x2, params.y1, params.y2, params.date_limit.unwrap_or_else(|| chrono::Utc::now() - ais_area_window()))
-            .map_err(|e| {
-                event!(Level::ERROR, "failed to retrieve ais positions in area: {:?}", e);
-                ApiError::InternalServerError
-            })
+        db.ais_positions_area(
+            params.x1,
+            params.x2,
+            params.y1,
+            params.y2,
+            params
+                .date_limit
+                .unwrap_or_else(|| (chrono::Utc::now() - ais_area_window()).date_naive()),
+        )
+        .map_err(|e| {
+            event!(Level::ERROR, "failed to retrieve ais area: {:?}", e);
+            ApiError::InternalServerError
+        })
     }
 }
 
