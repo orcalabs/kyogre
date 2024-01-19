@@ -490,8 +490,8 @@ impl WebApiOutboundPort for PostgresAdapter {
         x2: f64,
         y1: f64,
         y2: f64,
-        date_limit: DateTime<Utc>,
-    ) -> PinBoxStream<'_, AisPositionMinimal, QueryError> {
+        date_limit: NaiveDate,
+    ) -> PinBoxStream<'_, AisAreaCount, QueryError> {
         convert_stream(self.ais_positions_area_impl(x1, x2, y1, y2, date_limit)).boxed()
     }
     fn fishing_weight_predictions(
@@ -804,7 +804,7 @@ impl WebApiInboundPort for PostgresAdapter {
 
 #[async_trait]
 impl AisAreaPrunerInbound for PostgresAdapter {
-    async fn prune_ais_area(&self, limit: DateTime<Utc>) -> Result<(), DeleteError> {
+    async fn prune_ais_area(&self, limit: NaiveDate) -> Result<(), DeleteError> {
         Ok(self.prune_ais_area_impl(limit).await?)
     }
 }

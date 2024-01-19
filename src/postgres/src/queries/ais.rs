@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, NaiveDate, Utc};
 use futures::{Stream, TryStreamExt};
 use geozero::wkb;
 use kyogre_core::{
@@ -12,20 +12,20 @@ use unnest_insert::UnnestInsert;
 
 use crate::{
     error::PostgresErrorWrapper,
-    models::{AisClass, AisPosition, AisPositionMinimal, NewAisVessel, NewAisVesselHistoric},
+    models::{AisAreaCount, AisClass, AisPosition, NewAisVessel, NewAisVesselHistoric},
     PostgresAdapter,
 };
 
 impl PostgresAdapter {
     pub(crate) async fn prune_ais_area_impl(
         &self,
-        limit: DateTime<Utc>,
+        limit: NaiveDate,
     ) -> Result<(), PostgresErrorWrapper> {
         sqlx::query!(
             r#"
-DELETE FROM ais_area a
+DELETE FROM ais_area
 WHERE
-    "timestamp" < $1
+    date < $1::DATE
             "#,
             limit,
         )
@@ -33,27 +33,32 @@ WHERE
         .await?;
         Ok(())
     }
+
     pub(crate) fn ais_positions_area_impl(
         &self,
         x1: f64,
         x2: f64,
         y1: f64,
         y2: f64,
-        date_limit: DateTime<Utc>,
-    ) -> impl Stream<Item = Result<AisPositionMinimal, PostgresErrorWrapper>> + '_ {
+        date_limit: NaiveDate,
+    ) -> impl Stream<Item = Result<AisAreaCount, PostgresErrorWrapper>> + '_ {
         let geom: geo_types::Geometry<f64> = geo_types::Rect::new((x1, y1), (x2, y2)).into();
 
         sqlx::query_as!(
-            AisPositionMinimal,
+            AisAreaCount,
             r#"
 SELECT
-    latitude,
-    longitude
+    latitude::DOUBLE PRECISION AS "latitude!",
+    longitude::DOUBLE PRECISION AS "longitude!",
+    SUM("count")::INT AS "count!"
 FROM
     ais_area
 WHERE
-    ST_contains ($1::geometry, ST_POINT (longitude, latitude))
-    AND "timestamp" >= $2
+    ST_CONTAINS ($1::geometry, ST_POINT (longitude, latitude))
+    AND date >= $2::DATE
+GROUP BY
+    latitude,
+    longitude
             "#,
             wkb::Encode(geom) as _,
             date_limit,
@@ -61,6 +66,7 @@ WHERE
         .fetch(&self.pool)
         .map_err(From::from)
     }
+
     pub(crate) async fn all_ais_impl(&self) -> Result<Vec<AisPosition>, PostgresErrorWrapper> {
         let ais = sqlx::query_as!(
             AisPosition,
@@ -207,7 +213,7 @@ ON CONFLICT (mmsi) DO NOTHING
         .execute(&mut *tx)
         .await?;
 
-        sqlx::query!(
+        let inserted = sqlx::query!(
             r#"
 INSERT INTO
     ais_positions (
@@ -244,6 +250,10 @@ FROM
         $13::INT[]
     )
 ON CONFLICT (mmsi, TIMESTAMP) DO NOTHING
+RETURNING
+    latitude,
+    longitude,
+    "timestamp"
             "#,
             &mmsis,
             &latitude,
@@ -259,7 +269,7 @@ ON CONFLICT (mmsi, TIMESTAMP) DO NOTHING
             &ais_message_type as _,
             &navigation_status_id,
         )
-        .execute(&mut *tx)
+        .fetch_all(&mut *tx)
         .await?;
 
         for (_, p) in latest_position_per_vessel {
@@ -340,57 +350,44 @@ SET
             .await?;
         }
 
+        let len = inserted.len();
+        let mut lat = Vec::with_capacity(len);
+        let mut lon = Vec::with_capacity(len);
+        let mut date = Vec::with_capacity(len);
+
+        for i in inserted {
+            lat.push(i.latitude);
+            lon.push(i.longitude);
+            date.push(i.timestamp.date_naive());
+        }
+
         sqlx::query!(
             r#"
 INSERT INTO
-    ais_area (
-        mmsi,
-        latitude,
-        longitude,
-        course_over_ground,
-        rate_of_turn,
-        true_heading,
-        speed_over_ground,
-        "timestamp",
-        altitude,
-        distance_to_shore,
-        ais_class,
-        ais_message_type_id,
-        navigation_status_id
-    )
+    ais_area AS a (latitude, longitude, date, "count")
 SELECT
-    *
+    u.latitude::DECIMAL(10, 2),
+    u.longitude::DECIMAL(10, 2),
+    u.date,
+    COUNT(*)
 FROM
     UNNEST(
-        $1::INT[],
+        $1::DOUBLE PRECISION[],
         $2::DOUBLE PRECISION[],
-        $3::DOUBLE PRECISION[],
-        $4::DOUBLE PRECISION[],
-        $5::DOUBLE PRECISION[],
-        $6::INT[],
-        $7::DOUBLE PRECISION[],
-        $8::TIMESTAMPTZ[],
-        $9::INT[],
-        $10::DOUBLE PRECISION[],
-        $11::VARCHAR[],
-        $12::INT[],
-        $13::INT[]
-    )
-ON CONFLICT (mmsi, "timestamp") DO NOTHING
+        $3::DATE[]
+    ) u (latitude, longitude, date)
+GROUP BY
+    u.latitude::DECIMAL(10, 2),
+    u.longitude::DECIMAL(10, 2),
+    u.date
+ON CONFLICT (latitude, longitude, date) DO
+UPDATE
+SET
+    "count" = a.count + EXCLUDED.count
             "#,
-            &mmsis,
-            &latitude,
-            &longitude,
-            &course_over_ground as _,
-            &rate_of_turn as _,
-            &true_heading as _,
-            &speed_over_ground as _,
-            &timestamp,
-            &altitude as _,
-            &distance_to_shore,
-            &ais_class as _,
-            &ais_message_type as _,
-            &navigation_status_id,
+            &lat,
+            &lon,
+            &date,
         )
         .execute(&mut *tx)
         .await?;

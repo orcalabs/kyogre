@@ -28,8 +28,8 @@ pub trait WebApiOutboundPort {
         x2: f64,
         y1: f64,
         y2: f64,
-        date_limit: DateTime<Utc>,
-    ) -> PinBoxStream<'_, AisPositionMinimal, QueryError>;
+        date_limit: NaiveDate,
+    ) -> PinBoxStream<'_, AisAreaCount, QueryError>;
     fn ais_positions(
         &self,
         mmsi: Mmsi,
