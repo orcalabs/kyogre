@@ -13,16 +13,16 @@ orca-core = { workspace = true }
 tokio = "1.35.1"
 serde = { version = "1.0.195", features = ["derive"] }
 serde_json = "1.0.111"
-serde_with = "3.4.0"
+serde_with = "3.5.0"
 tracing = "0.1.40"
 async-trait = "0.1.77"
 error-stack = { workspace = true }
 chrono = { version = "0.4.31", features = ["serde"] }
 wkt = { version = "0.10.3", features = ["serde"] }
-uuid = { version = "1.6.1", features = ["serde"] }
+uuid = { version = "1.7.0", features = ["serde"] }
 reqwest = { version = "0.11.23", features = ["gzip"] }
 geozero = "0.11.0"
 table-extract = "0.2.3"
 csv = "1.3.0"
 pyo3 = { version = "0.20.2", features = ["chrono", "auto-initialize"] }
-regex = "1.10.2"
+regex = "1.10.3"

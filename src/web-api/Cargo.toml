@@ -35,7 +35,7 @@ async-stream = "0.3.5"
 num-traits = "0.2.17"
 enum_index = "0.2.0"
 enum_index_derive = "0.2.0"
-uuid = { version = "1.6.1", features = ["serde"] }
+uuid = { version = "1.7.0", features = ["serde"] }
 wkt = "0.10.3"
 jsonwebtoken = "9.2.0"
 reqwest = { version = "0.11.23", default-features = false, features = [
@@ -43,7 +43,7 @@ reqwest = { version = "0.11.23", default-features = false, features = [
     "rustls-tls",
 ] }
 serde_qs = { version = "0.12.0", features = ["actix4"] }
-serde_with = "3.4.0"
+serde_with = "3.5.0"
 
 [dev-dependencies]
 engine = { path = "../engine" }
