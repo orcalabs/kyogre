@@ -104,19 +104,19 @@ impl FileSource {
                 y => format!("VMS_{y}.csv"),
             },
             ErsDca { year, .. } => match year {
-                2023 => "2023-ERS-DCA.csv".to_string(),
+                2024 => "2024-ERS-DCA.csv".to_string(),
                 y => format!("elektronisk-rapportering-ers-{y}-fangstmelding-dca.csv"),
             },
             ErsPor { year, .. } => match year {
-                2023 => "2023-ERS-POR.csv".to_string(),
+                2024 => "2024-ERS-POR.csv".to_string(),
                 y => format!("elektronisk-rapportering-ers-{y}-ankomstmelding-por.csv"),
             },
             ErsDep { year, .. } => match year {
-                2023 => "2023-ERS-DEP.csv".to_string(),
+                2024 => "2024-ERS-DEP.csv".to_string(),
                 y => format!("elektronisk-rapportering-ers-{y}-avgangsmelding-dep.csv"),
             },
             ErsTra { year, .. } => match year {
-                2023 => "2023-ERS-TRA.csv".to_string(),
+                2024 => "2024-ERS-TRA.csv".to_string(),
                 y => format!("elektronisk-rapportering-ers-{y}-overforingsmelding-tra.csv"),
             },
             AquaCultureRegister { .. } => "AquaCultureRegister.csv".into(),
