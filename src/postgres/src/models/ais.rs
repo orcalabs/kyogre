@@ -71,6 +71,7 @@ pub struct AisAreaCount {
     pub latitude: f64,
     pub longitude: f64,
     pub count: i32,
+    pub mmsis: Vec<i32>,
 }
 
 #[derive(Debug, Clone)]
@@ -180,6 +181,7 @@ impl TryFrom<AisAreaCount> for kyogre_core::AisAreaCount {
             latitude: value.latitude,
             longitude: value.longitude,
             count: value.count,
+            mmsis: value.mmsis.into_iter().map(Mmsi).collect(),
         })
     }
 }

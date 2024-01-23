@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use chrono::{DateTime, Duration, TimeZone, Utc};
 use fiskeridir_rs::CallSign;
 use num_derive::FromPrimitive;
@@ -79,6 +81,7 @@ pub struct AisAreaCount {
     pub latitude: f64,
     pub longitude: f64,
     pub count: i32,
+    pub mmsis: HashSet<Mmsi>,
 }
 
 #[derive(Debug, Clone)]

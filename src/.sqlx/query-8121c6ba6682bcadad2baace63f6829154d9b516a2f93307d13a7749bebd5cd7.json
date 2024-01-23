@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO\n    ais_area AS a (latitude, longitude, date, \"count\", mmsis)\nSELECT\n    u.latitude::DECIMAL(10, 2),\n    u.longitude::DECIMAL(10, 2),\n    u.date,\n    COUNT(*),\n    ARRAY_AGG(DISTINCT u.mmsi)\nFROM\n    UNNEST(\n        $1::DOUBLE PRECISION[],\n        $2::DOUBLE PRECISION[],\n        $3::DATE[],\n        $4::INT[]\n    ) u (latitude, longitude, date, mmsi)\nGROUP BY\n    u.latitude::DECIMAL(10, 2),\n    u.longitude::DECIMAL(10, 2),\n    u.date\nON CONFLICT (latitude, longitude, date) DO\nUPDATE\nSET\n    \"count\" = a.count + EXCLUDED.count,\n    mmsis = a.mmsis | EXCLUDED.mmsis\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Float8Array",
+        "Float8Array",
+        "DateArray",
+        "Int4Array"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "8121c6ba6682bcadad2baace63f6829154d9b516a2f93307d13a7749bebd5cd7"
+}
