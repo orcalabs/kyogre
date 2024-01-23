@@ -1,17 +1,20 @@
 use super::{FishingFacility, HaulCatch, WhaleCatch};
-use crate::error::PostgresErrorWrapper;
+use crate::error::{PostgresError, PostgresErrorWrapper};
 use crate::queries::{enum_to_i32, opt_enum_to_i32};
 use chrono::{DateTime, Utc};
+use error_stack::report;
 use fiskeridir_rs::{
     DeliveryPointId, Gear, GearGroup, LandingId, Quality, SpeciesGroup, VesselLengthGroup,
 };
 use kyogre_core::{
     DateRange, FiskeridirVesselId, HaulId, MinimalVesselEvent, PositionType, PrecisionId,
     PrecisionOutcome, PrecisionStatus, ProcessingStatus, TripAssemblerConflict, TripAssemblerId,
-    TripDistancerId, TripId, TripPositionLayerId, TripProcessingUnit, VesselEventType,
+    TripDistancerId, TripId, TripPositionLayerId, TripProcessingUnit, TripsConflictStrategy,
+    VesselEventType,
 };
 use serde::Deserialize;
 use sqlx::postgres::types::PgRange;
+use std::str::FromStr;
 use unnest_insert::UnnestInsert;
 
 #[derive(Debug, Clone)]
@@ -38,6 +41,7 @@ pub struct TripAssemblerLogEntry {
     pub conflict_vessel_event_timestamp: Option<DateTime<Utc>>,
     pub conflict_vessel_event_id: Option<i64>,
     pub conflict_vessel_event_type_id: Option<VesselEventType>,
+    pub conflict_strategy: String,
     pub prior_trip_vessel_events: String,
     pub new_vessel_events: String,
 }
@@ -52,6 +56,7 @@ pub struct NewTripAssemblerLogEntry {
     pub conflict_vessel_event_id: Option<i64>,
     pub conflict_vessel_event_type_id: Option<VesselEventType>,
     pub prior_trip_vessel_events: Vec<MinimalVesselEvent>,
+    pub conflict_strategy: TripsConflictStrategy,
     pub new_vessel_events: Vec<MinimalVesselEvent>,
 }
 
@@ -540,6 +545,9 @@ impl TryFrom<TripAssemblerLogEntry> for kyogre_core::TripAssemblerLogEntry {
             conflict_vessel_event_type_id: value.conflict_vessel_event_type_id,
             prior_trip_vessel_events: serde_json::from_str(&value.prior_trip_vessel_events)?,
             new_vessel_events: serde_json::from_str(&value.new_vessel_events)?,
+            conflict_strategy: TripsConflictStrategy::from_str(&value.conflict_strategy).map_err(
+                |e| report!(PostgresError::DataConversion).attach_printable(e.to_string()),
+            )?,
         })
     }
 }
