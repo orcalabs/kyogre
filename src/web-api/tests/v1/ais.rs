@@ -6,7 +6,7 @@ use kyogre_core::*;
 use web_api::{
     extractors::{BwPolicy, BwRole},
     response::{AIS_DETAILS_INTERVAL, MISSING_DATA_DURATION},
-    routes::v1::ais::{AisAreaParameters, AisPosition, AisTrackParameters},
+    routes::v1::ais::{AisArea, AisAreaParameters, AisPosition, AisTrackParameters},
 };
 
 #[tokio::test]
@@ -502,18 +502,23 @@ async fn test_ais_area_filters_by_input_box() {
             .await;
 
         assert_eq!(response.status(), StatusCode::OK);
-        let body: Vec<AisAreaCount> = response.json().await.unwrap();
+        let body: AisArea = response.json().await.unwrap();
 
-        assert_eq!(body.len(), 1);
+        assert_eq!(body.mmsis.len(), 1);
+        assert_eq!(body.counts.len(), 1);
         assert_eq!(
-            body[0].latitude as i64,
+            body.mmsis.into_iter().next().unwrap(),
+            state.vessels[0].mmsi().unwrap()
+        );
+        assert_eq!(
+            body.counts[0].lat as i64,
             state.ais_positions[1].latitude as i64
         );
         assert_eq!(
-            body[0].longitude as i64,
+            body.counts[0].lon as i64,
             state.ais_positions[1].longitude as i64
         );
-        assert_eq!(body[0].count, 1);
+        assert_eq!(body.counts[0].count, 1);
     })
     .await;
 }
@@ -552,18 +557,23 @@ async fn test_ais_area_filters_date_limit() {
             .await;
 
         assert_eq!(response.status(), StatusCode::OK);
-        let body: Vec<AisAreaCount> = response.json().await.unwrap();
+        let body: AisArea = response.json().await.unwrap();
 
-        assert_eq!(body.len(), 1);
+        assert_eq!(body.mmsis.len(), 1);
+        assert_eq!(body.counts.len(), 1);
         assert_eq!(
-            body[0].latitude as i64,
+            body.mmsis.into_iter().next().unwrap(),
+            state.vessels[0].mmsi().unwrap()
+        );
+        assert_eq!(
+            body.counts[0].lat as i64,
             state.ais_positions[1].latitude as i64
         );
         assert_eq!(
-            body[0].longitude as i64,
+            body.counts[0].lon as i64,
             state.ais_positions[1].longitude as i64
         );
-        assert_eq!(body[0].count, 1);
+        assert_eq!(body.counts[0].count, 1);
     })
     .await;
 }
@@ -602,18 +612,23 @@ async fn test_ais_area_adds_default_date_limit_if_not_provided() {
             .await;
 
         assert_eq!(response.status(), StatusCode::OK);
-        let body: Vec<AisAreaCount> = response.json().await.unwrap();
+        let body: AisArea = response.json().await.unwrap();
 
-        assert_eq!(body.len(), 1);
+        assert_eq!(body.mmsis.len(), 1);
+        assert_eq!(body.counts.len(), 1);
         assert_eq!(
-            body[0].latitude as i64,
+            body.mmsis.into_iter().next().unwrap(),
+            state.vessels[0].mmsi().unwrap()
+        );
+        assert_eq!(
+            body.counts[0].lat as i64,
             state.ais_positions[1].latitude as i64
         );
         assert_eq!(
-            body[0].longitude as i64,
+            body.counts[0].lon as i64,
             state.ais_positions[1].longitude as i64
         );
-        assert_eq!(body[0].count, 1);
+        assert_eq!(body.counts[0].count, 1);
     })
     .await;
 }
@@ -655,18 +670,77 @@ async fn test_ais_area_does_not_add_same_position_twice() {
             .await;
 
         assert_eq!(response.status(), StatusCode::OK);
-        let body: Vec<AisAreaCount> = response.json().await.unwrap();
+        let body: AisArea = response.json().await.unwrap();
 
-        assert_eq!(body.len(), 1);
+        assert_eq!(body.mmsis.len(), 1);
+        assert_eq!(body.counts.len(), 1);
         assert_eq!(
-            body[0].latitude as i64,
+            body.mmsis.into_iter().next().unwrap(),
+            state.vessels[0].mmsi().unwrap()
+        );
+        assert_eq!(
+            body.counts[0].lat as i64,
             state.ais_positions[0].latitude as i64
         );
         assert_eq!(
-            body[0].longitude as i64,
+            body.counts[0].lon as i64,
             state.ais_positions[0].longitude as i64
         );
-        assert_eq!(body[0].count, 1);
+        assert_eq!(body.counts[0].count, 1);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_ais_area_returns_all_mmsis() {
+    test(|helper, builder| async move {
+        let now = Utc::now();
+        let state = builder
+            .vessels(5)
+            .ais_positions(5)
+            .modify(|v| {
+                v.position.msgtime = now;
+                v.position.latitude = 72.3;
+                v.position.longitude = 27.36;
+            })
+            .build()
+            .await;
+
+        let response = helper
+            .app
+            .get_ais_area(
+                AisAreaParameters {
+                    y1: 74.0,
+                    y2: 70.0,
+                    x1: 18.0,
+                    x2: 36.0,
+                    date_limit: None,
+                },
+                None,
+            )
+            .await;
+
+        let mut state_mmsis: Vec<_> = state.vessels.iter().map(|v| v.mmsi().unwrap()).collect();
+        state_mmsis.sort();
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let body: AisArea = response.json().await.unwrap();
+
+        let mut mmsis: Vec<_> = body.mmsis.into_iter().collect();
+        mmsis.sort();
+
+        assert_eq!(mmsis.len(), 5);
+        assert_eq!(body.counts.len(), 1);
+        assert_eq!(mmsis, state_mmsis);
+        assert_eq!(
+            body.counts[0].lat as i64,
+            state.ais_positions[0].latitude as i64
+        );
+        assert_eq!(
+            body.counts[0].lon as i64,
+            state.ais_positions[0].longitude as i64
+        );
+        assert_eq!(body.counts[0].count, 5);
     })
     .await;
 }
