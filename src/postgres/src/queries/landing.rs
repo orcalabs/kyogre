@@ -252,6 +252,8 @@ WHERE
         let mut vessel_event_ids = Vec::new();
         let mut trip_assembler_conflicts = HashMap::<i64, NewTripAssemblerConflict>::new();
 
+        let mut num_landings = 0;
+
         let mut landing_set = LandingSet::with_capacity(CHUNK_SIZE, data_year);
         for (i, item) in landings.enumerate() {
             match item {
@@ -259,6 +261,7 @@ WHERE
                     event!(Level::ERROR, "failed to read data: {:?}", e);
                 }
                 Ok(item) => {
+                    num_landings += 1;
                     existing_landing_ids.insert(item.id.clone().into_inner());
 
                     if existing_landings
@@ -300,13 +303,15 @@ WHERE
         let existing_landing_ids = existing_landing_ids.into_iter().collect::<Vec<_>>();
         let inserted_landing_ids = inserted_landing_ids.into_iter().collect::<Vec<_>>();
 
-        self.delete_removed_landings(
-            &existing_landing_ids,
-            &mut trip_assembler_conflicts,
-            data_year,
-            &mut tx,
-        )
-        .await?;
+        if num_landings > 0 {
+            self.delete_removed_landings(
+                &existing_landing_ids,
+                &mut trip_assembler_conflicts,
+                data_year,
+                &mut tx,
+            )
+            .await?;
+        }
 
         self.add_landing_matrix(&inserted_landing_ids, &mut tx)
             .await?;
