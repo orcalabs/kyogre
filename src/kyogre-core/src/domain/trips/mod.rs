@@ -14,7 +14,7 @@ mod layer;
 pub use assembler::*;
 pub use distancer::*;
 pub use layer::*;
-use strum::{AsRefStr, EnumString};
+use strum::{AsRefStr, Display, EnumString};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize)]
 pub struct TripId(pub i64);
@@ -43,6 +43,7 @@ pub struct TripAssemblerLogEntry {
     pub conflict_vessel_event_timestamp: Option<DateTime<Utc>>,
     pub conflict_vessel_event_id: Option<u64>,
     pub conflict_vessel_event_type_id: Option<VesselEventType>,
+    pub conflict_strategy: TripsConflictStrategy,
     pub prior_trip_vessel_events: Vec<MinimalVesselEvent>,
     pub new_vessel_events: Vec<MinimalVesselEvent>,
 }
@@ -190,7 +191,7 @@ pub struct Catch {
     pub product_quality_name: String,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, EnumString, Display)]
 pub enum TripsConflictStrategy {
     #[default]
     Error,

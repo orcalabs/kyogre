@@ -89,7 +89,8 @@ SELECT
     conflict_vessel_event_id,
     conflict_vessel_event_type_id AS "conflict_vessel_event_type_id: VesselEventType",
     prior_trip_vessel_events::TEXT AS "prior_trip_vessel_events!",
-    new_vessel_events::TEXT AS "new_vessel_events!"
+    new_vessel_events::TEXT AS "new_vessel_events!",
+    conflict_strategy
 FROM
     trip_assembler_logs
             "#
@@ -1325,10 +1326,11 @@ INSERT INTO
         conflict_vessel_event_id,
         conflict_vessel_event_type_id,
         prior_trip_vessel_events,
-        new_vessel_events
+        new_vessel_events,
+        conflict_strategy
     )
 VALUES
-    ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+    ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
             "#,
             batch.fiskeridir_vessel_id,
             batch.calculation_timer_prior_to_batch,
@@ -1339,6 +1341,7 @@ VALUES
             batch.conflict_vessel_event_type_id.map(|v| v as i32),
             prior_trip_vessel_events,
             new_vessel_events,
+            batch.conflict_strategy.to_string(),
         )
         .execute(&mut **tx)
         .await?;
@@ -1386,6 +1389,7 @@ VALUES
             conflict_vessel_event_type_id: value.conflict.as_ref().map(|v| v.event_type),
             prior_trip_vessel_events: value.prior_trip_events,
             new_vessel_events: value.new_trip_events,
+            conflict_strategy: value.conflict_strategy,
         };
 
         let mut tx = self.pool.begin().await?;
