@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO\n    trip_assembler_logs (\n        fiskeridir_vessel_id,\n        calculation_timer_prior,\n        calculation_timer_post,\n        \"conflict\",\n        conflict_vessel_event_timestamp,\n        conflict_vessel_event_id,\n        conflict_vessel_event_type_id,\n        prior_trip_vessel_events,\n        new_vessel_events,\n        conflict_strategy\n    )\nVALUES\n    ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Timestamptz",
+        "Timestamptz",
+        "Timestamptz",
+        "Timestamptz",
+        "Int8",
+        "Int4",
+        "Jsonb",
+        "Jsonb",
+        "Varchar"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "6120ea77e1c126a225a3e9d45d5ecd0daa250f9638c02b5a0dd0ccdee486294a"
+}
