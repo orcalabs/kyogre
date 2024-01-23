@@ -17,6 +17,55 @@ use crate::{
 };
 
 impl PostgresAdapter {
+    pub(crate) fn ais_current_positions(
+        &self,
+        limit: Option<DateTime<Utc>>,
+        permission: AisPermission,
+    ) -> impl Stream<Item = Result<AisPosition, PostgresErrorWrapper>> + '_ {
+        sqlx::query_as!(
+            AisPosition,
+            r#"
+SELECT
+    latitude,
+    longitude,
+    c.mmsi,
+    TIMESTAMP AS msgtime,
+    course_over_ground,
+    navigation_status_id AS "navigational_status: NavigationStatus",
+    rate_of_turn,
+    speed_over_ground,
+    true_heading,
+    distance_to_shore
+FROM
+    current_ais_positions c
+    INNER JOIN ais_vessels a ON c.mmsi = a.mmsi
+    LEFT JOIN fiskeridir_vessels f ON a.call_sign = f.call_sign
+WHERE
+    (
+        $1::timestamptz IS NULL
+        OR TIMESTAMP > $1
+    )
+    AND (
+        a.ship_type IS NOT NULL
+        AND NOT (a.ship_type = ANY ($2::INT[]))
+        OR COALESCE(f.length, a.ship_length) > $3
+    )
+    AND (
+        CASE
+            WHEN $4 = 0 THEN TRUE
+            WHEN $4 = 1 THEN COALESCE(f.length, a.ship_length) >= $5
+        END
+    )
+            "#,
+            limit,
+            LEISURE_VESSEL_SHIP_TYPES.as_slice(),
+            LEISURE_VESSEL_LENGTH_AIS_BOUNDARY as i32,
+            permission as i32,
+            PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY as i32,
+        )
+        .fetch(&self.pool)
+        .map_err(From::from)
+    }
     pub(crate) async fn prune_ais_area_impl(
         &self,
         limit: NaiveDate,

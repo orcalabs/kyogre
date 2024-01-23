@@ -34,12 +34,59 @@ pub struct AisTrackPath {
 
 #[derive(Debug, Deserialize, Serialize, IntoParams)]
 #[serde(rename_all = "camelCase")]
+pub struct AisCurrentPositionParameters {
+    pub position_timestamp_limit: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Deserialize, Serialize, IntoParams)]
+#[serde(rename_all = "camelCase")]
 pub struct AisAreaParameters {
     pub x1: f64,
     pub x2: f64,
     pub y1: f64,
     pub y2: f64,
     pub date_limit: Option<NaiveDate>,
+}
+
+#[utoipa::path(
+    get,
+    path = "/ais_current_positions",
+    params(
+        AisCurrentPositionParameters,
+    ),
+    security(
+        (),
+        ("auth0" = ["read:ais:under_15m"]),
+    ),
+    responses(
+        (status = 200, description = "all current ais positions", body = [AisPosition]),
+        (status = 500, description = "an internal error occured", body = ErrorResponse),
+        (status = 400, description = "invalid parameters were provided", body = ErrorResponse),
+    )
+)]
+#[tracing::instrument(skip(db))]
+pub async fn ais_current_positions<T: Database + 'static>(
+    db: web::Data<T>,
+    params: Query<AisCurrentPositionParameters>,
+    bw_profile: Option<BwProfile>,
+    auth: Option<Auth0Profile>,
+) -> Result<HttpResponse, ApiError> {
+    let bw_policy = bw_profile.map(AisPermission::from).unwrap_or_default();
+    let auth0_policy = auth.map(AisPermission::from).unwrap_or_default();
+    let policy = if bw_policy == AisPermission::All || auth0_policy == AisPermission::All {
+        AisPermission::All
+    } else {
+        AisPermission::Above15m
+    };
+
+    to_streaming_response! {
+        db.ais_current_positions(params.position_timestamp_limit, policy)
+            .map_err(|e| {
+                event!(Level::ERROR, "failed to retrieve current ais positions: {:?}", e);
+                ApiError::InternalServerError
+            })
+            .map_ok(AisPosition::from)
+    }
 }
 
 #[utoipa::path(

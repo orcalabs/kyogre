@@ -34,6 +34,7 @@ impl Database for PostgresAdapter {}
 #[derive(OpenApi)]
 #[openapi(
     paths(
+        v1::ais::ais_current_positions,
         v1::ais::ais_track,
         v1::ais::ais_area,
         v1::species::species,
