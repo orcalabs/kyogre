@@ -484,6 +484,13 @@ impl AisMigratorDestination for PostgresAdapter {
 
 #[async_trait]
 impl WebApiOutboundPort for PostgresAdapter {
+    fn ais_current_positions(
+        &self,
+        limit: Option<DateTime<Utc>>,
+        user_policy: AisPermission,
+    ) -> PinBoxStream<'_, AisPosition, QueryError> {
+        convert_stream(self.ais_current_positions(limit, user_policy)).boxed()
+    }
     fn ais_positions_area(
         &self,
         x1: f64,
