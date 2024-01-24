@@ -27,14 +27,14 @@ pub trait WebApiOutboundPort {
         limit: Option<DateTime<Utc>>,
         user_policy: AisPermission,
     ) -> PinBoxStream<'_, AisPosition, QueryError>;
-    fn ais_positions_area(
+    fn ais_vms_area_positions(
         &self,
         x1: f64,
         x2: f64,
         y1: f64,
         y2: f64,
         date_limit: NaiveDate,
-    ) -> PinBoxStream<'_, AisAreaCount, QueryError>;
+    ) -> PinBoxStream<'_, AisVmsAreaCount, QueryError>;
     fn ais_positions(
         &self,
         mmsi: Mmsi,

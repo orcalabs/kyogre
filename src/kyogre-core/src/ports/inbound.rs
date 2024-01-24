@@ -193,6 +193,6 @@ pub trait DailyWeatherInbound: Send + Sync {
 }
 
 #[async_trait]
-pub trait AisAreaPrunerInbound: Send + Sync {
-    async fn prune_ais_area(&self, limit: NaiveDate) -> Result<(), DeleteError>;
+pub trait AisVmsAreaPrunerInbound: Send + Sync {
+    async fn prune_ais_vms_area(&self, limit: NaiveDate) -> Result<(), DeleteError>;
 }

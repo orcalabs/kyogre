@@ -103,7 +103,7 @@ pub struct SharedState {
     pub ml_models: Vec<Box<dyn MLModel>>,
     pub trip_position_layers: Vec<Box<dyn TripPositionLayer>>,
     pub catch_location_weather: Box<dyn DailyWeatherInbound>,
-    pub ais_pruner_inbound: Box<dyn AisAreaPrunerInbound>,
+    pub ais_pruner_inbound: Box<dyn AisVmsAreaPrunerInbound>,
 }
 
 impl FisheryEngine {
@@ -158,7 +158,7 @@ impl SharedState {
         haul_weather_inbound: Box<dyn HaulWeatherInbound>,
         haul_weather_outbound: Box<dyn HaulWeatherOutbound>,
         catch_location_weather: Box<dyn DailyWeatherInbound>,
-        ais_pruner_inbound: Box<dyn AisAreaPrunerInbound>,
+        ais_pruner_inbound: Box<dyn AisVmsAreaPrunerInbound>,
         scraper: Option<Box<dyn Scraper>>,
         trip_assemblers: Vec<Box<dyn TripAssembler>>,
         benchmarks: Vec<Box<dyn VesselBenchmark>>,

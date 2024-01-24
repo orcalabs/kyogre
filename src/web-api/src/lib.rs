@@ -36,7 +36,7 @@ impl Database for PostgresAdapter {}
     paths(
         v1::ais::ais_current_positions,
         v1::ais::ais_track,
-        v1::ais::ais_area,
+        v1::ais_vms::ais_vms_area,
         v1::species::species,
         v1::species::species_groups,
         v1::species::species_main_groups,
@@ -101,8 +101,8 @@ impl Database for PostgresAdapter {}
             error::ApiError,
             v1::ais::AisPosition,
             v1::ais::AisPositionDetails,
-            v1::ais::AisArea,
-            v1::ais::AisAreaCount,
+            v1::ais_vms::AisVmsArea,
+            v1::ais_vms::AisVmsAreaCount,
             v1::species::SpeciesGroupDetailed,
             v1::species::SpeciesFiskeridir,
             v1::species::Species,
@@ -146,7 +146,7 @@ impl Database for PostgresAdapter {}
             kyogre_core::VesselBenchmarks,
             kyogre_core::Benchmark,
             kyogre_core::BenchmarkEntry,
-            kyogre_core::CumulativeLandings,
+            kyogre_core::CumulativeLandings
           )
     ),
     security(

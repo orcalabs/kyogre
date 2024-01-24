@@ -67,11 +67,12 @@ pub struct AisVesselMigrationProgress {
 }
 
 #[derive(Debug, Clone)]
-pub struct AisAreaCount {
+pub struct AisVmsAreaPositionsReturning {
     pub latitude: f64,
     pub longitude: f64,
-    pub count: i32,
-    pub mmsis: Vec<i32>,
+    pub timestamp: DateTime<Utc>,
+    pub mmsi: Option<i32>,
+    pub call_sign: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -169,19 +170,6 @@ impl TryFrom<AisPosition> for kyogre_core::AisPosition {
             speed_over_ground: value.speed_over_ground,
             true_heading: value.true_heading,
             distance_to_shore: value.distance_to_shore,
-        })
-    }
-}
-
-impl TryFrom<AisAreaCount> for kyogre_core::AisAreaCount {
-    type Error = PostgresErrorWrapper;
-
-    fn try_from(value: AisAreaCount) -> Result<Self, Self::Error> {
-        Ok(kyogre_core::AisAreaCount {
-            latitude: value.latitude,
-            longitude: value.longitude,
-            count: value.count,
-            mmsis: value.mmsis.into_iter().map(Mmsi).collect(),
         })
     }
 }
