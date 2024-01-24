@@ -378,6 +378,9 @@ where
     fn ais_vms_positions(self, amount: usize) -> AisVmsPositionBuilder {
         self.up().ais_vms_positions(amount)
     }
+    fn vms_positions(self, amount: usize) -> VmsPositionBuilder {
+        self.up().vms_positions(amount)
+    }
 }
 
 macro_rules! impl_vessel_level {

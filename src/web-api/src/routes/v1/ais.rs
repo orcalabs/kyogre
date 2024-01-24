@@ -1,17 +1,14 @@
-use std::collections::HashSet;
-
 use crate::{
     ais_to_streaming_response,
     error::ApiError,
     extractors::{Auth0Profile, BwProfile},
-    response::Response,
     to_streaming_response, Database,
 };
 use actix_web::{
     web::{self, Path},
     HttpResponse,
 };
-use chrono::{DateTime, Duration, NaiveDate, Utc};
+use chrono::{DateTime, Duration, Utc};
 use futures::TryStreamExt;
 use kyogre_core::{AisPermission, NavigationStatus};
 use kyogre_core::{DateRange, Mmsi};
@@ -38,16 +35,6 @@ pub struct AisTrackPath {
 #[serde(rename_all = "camelCase")]
 pub struct AisCurrentPositionParameters {
     pub position_timestamp_limit: Option<DateTime<Utc>>,
-}
-
-#[derive(Debug, Deserialize, Serialize, IntoParams)]
-#[serde(rename_all = "camelCase")]
-pub struct AisAreaParameters {
-    pub x1: f64,
-    pub x2: f64,
-    pub y1: f64,
-    pub y2: f64,
-    pub date_limit: Option<NaiveDate>,
 }
 
 #[utoipa::path(
@@ -149,46 +136,6 @@ pub async fn ais_track<T: Database + 'static>(
     }
 }
 
-#[utoipa::path(
-    get,
-    path = "/ais_area",
-    params(
-        AisAreaParameters,
-    ),
-    responses(
-        (status = 200, description = "ais data within the given interval and area", body = AisArea),
-        (status = 500, description = "an internal error occured", body = ErrorResponse),
-        (status = 400, description = "invalid parameters were provided", body = ErrorResponse),
-    )
-)]
-#[tracing::instrument(skip(_db))]
-pub async fn ais_area<T: Database + 'static>(
-    _db: web::Data<T>,
-    params: Query<AisAreaParameters>,
-) -> Result<Response<AisArea>, ApiError> {
-    // let area: Vec<kyogre_core::AisAreaCount> = db
-    //     .ais_positions_area(
-    //         params.x1,
-    //         params.x2,
-    //         params.y1,
-    //         params.y2,
-    //         params
-    //             .date_limit
-    //             .unwrap_or_else(|| (chrono::Utc::now() - ais_area_window()).date_naive()),
-    //     )
-    //     .try_collect()
-    //     .await
-    //     .map_err(|e| {
-    //         event!(Level::ERROR, "failed to retrieve ais area: {:?}", e);
-    //         ApiError::InternalServerError
-    //     })?;
-
-    Ok(Response::new(AisArea {
-        mmsis: HashSet::new(),
-        counts: vec![],
-    }))
-}
-
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct AisPosition {
@@ -212,22 +159,6 @@ pub struct AisPositionDetails {
     pub missing_data: bool,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize, ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct AisArea {
-    #[schema(value_type = Vec<i32>)]
-    pub mmsis: HashSet<Mmsi>,
-    pub counts: Vec<AisAreaCount>,
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize, ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct AisAreaCount {
-    pub lat: f64,
-    pub lon: f64,
-    pub count: i32,
-}
-
 impl From<kyogre_core::AisPosition> for AisPosition {
     fn from(value: kyogre_core::AisPosition) -> Self {
         AisPosition {
@@ -244,24 +175,6 @@ impl From<kyogre_core::AisPosition> for AisPosition {
                 missing_data: false,
             }),
         }
-    }
-}
-
-impl From<Vec<kyogre_core::AisAreaCount>> for AisArea {
-    fn from(values: Vec<kyogre_core::AisAreaCount>) -> Self {
-        let mut mmsis = HashSet::new();
-        let mut counts = Vec::with_capacity(values.len());
-
-        for v in values {
-            mmsis.extend(v.mmsis);
-            counts.push(AisAreaCount {
-                lat: v.latitude,
-                lon: v.longitude,
-                count: v.count,
-            });
-        }
-
-        Self { mmsis, counts }
     }
 }
 

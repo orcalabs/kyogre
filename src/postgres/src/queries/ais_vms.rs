@@ -1,14 +1,179 @@
+use chrono::NaiveDate;
 use fiskeridir_rs::CallSign;
 use futures::{Stream, TryStreamExt};
+use geozero::wkb;
 use kyogre_core::{
-    AisPermission, DateRange, Mmsi, NavigationStatus, PositionType, TripId, TripPositionLayerId,
-    LEISURE_VESSEL_LENGTH_AIS_BOUNDARY, LEISURE_VESSEL_SHIP_TYPES,
+    AisPermission, AisVmsAreaCount, DateRange, Mmsi, NavigationStatus, PositionType, TripId,
+    TripPositionLayerId, LEISURE_VESSEL_LENGTH_AIS_BOUNDARY, LEISURE_VESSEL_SHIP_TYPES,
     PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY,
 };
 
-use crate::{error::PostgresErrorWrapper, models::AisVmsPosition, PostgresAdapter};
+use crate::{
+    error::PostgresErrorWrapper,
+    models::{AisVmsAreaPositionsReturning, AisVmsPosition},
+    PostgresAdapter,
+};
 
 impl PostgresAdapter {
+    pub(crate) fn ais_vms_area_positions_impl(
+        &self,
+        x1: f64,
+        x2: f64,
+        y1: f64,
+        y2: f64,
+        date_limit: NaiveDate,
+    ) -> impl Stream<Item = Result<AisVmsAreaCount, PostgresErrorWrapper>> + '_ {
+        let geom: geo_types::Geometry<f64> = geo_types::Rect::new((x1, y1), (x2, y2)).into();
+
+        sqlx::query_as!(
+            AisVmsAreaCount,
+            r#"
+SELECT
+    latitude::DOUBLE PRECISION AS "lat!",
+    longitude::DOUBLE PRECISION AS "lon!",
+    SUM("count")::INT AS "count!",
+    SUM(
+        COALESCE(ARRAY_LENGTH(mmsis, 1), 0) + COALESCE(ARRAY_LENGTH(call_signs, 1), 0)
+    )::INT AS "num_vessels!"
+FROM
+    ais_vms_area_aggregated
+WHERE
+    ST_CONTAINS ($1::geometry, ST_POINT (longitude, latitude))
+    AND date >= $2::DATE
+GROUP BY
+    latitude,
+    longitude
+            "#,
+            wkb::Encode(geom) as _,
+            date_limit,
+        )
+        .fetch(&self.pool)
+        .map_err(From::from)
+    }
+    pub(crate) async fn prune_ais_vms_area_impl(
+        &self,
+        limit: NaiveDate,
+    ) -> Result<(), PostgresErrorWrapper> {
+        let mut tx = self.pool.begin().await?;
+
+        sqlx::query!(
+            r#"
+DELETE FROM ais_vms_area_aggregated
+WHERE
+    date < $1::DATE
+            "#,
+            limit,
+        )
+        .execute(&mut *tx)
+        .await?;
+
+        sqlx::query!(
+            r#"
+DELETE FROM ais_vms_area_positions
+WHERE
+    "timestamp" < $1::DATE
+            "#,
+            limit,
+        )
+        .execute(&mut *tx)
+        .await?;
+
+        tx.commit().await?;
+        Ok(())
+    }
+    pub(crate) async fn add_ais_vms_aggregated<'a>(
+        &self,
+        values: Vec<AisVmsAreaPositionsReturning>,
+        tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
+    ) -> Result<(), PostgresErrorWrapper> {
+        let len = values.len();
+        let mut lat = Vec::with_capacity(len);
+        let mut lon = Vec::with_capacity(len);
+        let mut date = Vec::with_capacity(len);
+        let mut call_sign = Vec::with_capacity(len);
+        let mut mmsi = Vec::with_capacity(len);
+
+        for v in values {
+            lat.push(v.latitude);
+            lon.push(v.longitude);
+            date.push(v.timestamp.date_naive());
+            // We want our mmsi array to only contain mmsis
+            // for vessels where we do not have a call sign
+            if v.call_sign.is_none() {
+                mmsi.push(v.mmsi);
+            } else {
+                mmsi.push(None);
+            }
+            call_sign.push(v.call_sign);
+        }
+
+        sqlx::query!(
+            r#"
+INSERT INTO
+    ais_vms_area_aggregated AS a (
+        latitude,
+        longitude,
+        date,
+        "count",
+        mmsis,
+        call_signs
+    )
+SELECT
+    u.latitude::DECIMAL(10, 2),
+    u.longitude::DECIMAL(10, 2),
+    u.date,
+    COUNT(*),
+    COALESCE(
+        ARRAY_AGG(DISTINCT u.mmsi) FILTER (
+            WHERE
+                u.mmsi IS NOT NULL
+        ),
+        '{}'
+    ),
+    COALESCE(
+        ARRAY_AGG(DISTINCT u.call_sign) FILTER (
+            WHERE
+                u.call_sign IS NOT NULL
+        ),
+        '{}'
+    )
+FROM
+    UNNEST(
+        $1::DOUBLE PRECISION[],
+        $2::DOUBLE PRECISION[],
+        $3::DATE[],
+        $4::INT[],
+        $5::VARCHAR[]
+    ) u (latitude, longitude, date, mmsi, call_sign)
+GROUP BY
+    u.latitude::DECIMAL(10, 2),
+    u.longitude::DECIMAL(10, 2),
+    u.date
+ON CONFLICT (latitude, longitude, date) DO
+UPDATE
+SET
+    "count" = a.count + EXCLUDED.count,
+    mmsis = a.mmsis | EXCLUDED.mmsis,
+    call_signs = ARRAY (
+        SELECT
+            UNNEST(a.call_signs)
+        UNION
+        SELECT
+            UNNEST(EXCLUDED.call_signs)
+    )
+            "#,
+            &lat,
+            &lon,
+            &date,
+            mmsi as _,
+            call_sign as _,
+        )
+        .execute(&mut **tx)
+        .await?;
+
+        Ok(())
+    }
+
     pub(crate) async fn all_ais_vms_impl(
         &self,
     ) -> Result<Vec<AisVmsPosition>, PostgresErrorWrapper> {
