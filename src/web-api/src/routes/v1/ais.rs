@@ -13,7 +13,6 @@ use actix_web::{
 };
 use chrono::{DateTime, Duration, NaiveDate, Utc};
 use futures::TryStreamExt;
-use kyogre_core::ais_area_window;
 use kyogre_core::{AisPermission, NavigationStatus};
 use kyogre_core::{DateRange, Mmsi};
 use serde::{Deserialize, Serialize};
@@ -162,29 +161,32 @@ pub async fn ais_track<T: Database + 'static>(
         (status = 400, description = "invalid parameters were provided", body = ErrorResponse),
     )
 )]
-#[tracing::instrument(skip(db))]
+#[tracing::instrument(skip(_db))]
 pub async fn ais_area<T: Database + 'static>(
-    db: web::Data<T>,
+    _db: web::Data<T>,
     params: Query<AisAreaParameters>,
 ) -> Result<Response<AisArea>, ApiError> {
-    let area: Vec<kyogre_core::AisAreaCount> = db
-        .ais_positions_area(
-            params.x1,
-            params.x2,
-            params.y1,
-            params.y2,
-            params
-                .date_limit
-                .unwrap_or_else(|| (chrono::Utc::now() - ais_area_window()).date_naive()),
-        )
-        .try_collect()
-        .await
-        .map_err(|e| {
-            event!(Level::ERROR, "failed to retrieve ais area: {:?}", e);
-            ApiError::InternalServerError
-        })?;
+    // let area: Vec<kyogre_core::AisAreaCount> = db
+    //     .ais_positions_area(
+    //         params.x1,
+    //         params.x2,
+    //         params.y1,
+    //         params.y2,
+    //         params
+    //             .date_limit
+    //             .unwrap_or_else(|| (chrono::Utc::now() - ais_area_window()).date_naive()),
+    //     )
+    //     .try_collect()
+    //     .await
+    //     .map_err(|e| {
+    //         event!(Level::ERROR, "failed to retrieve ais area: {:?}", e);
+    //         ApiError::InternalServerError
+    //     })?;
 
-    Ok(Response::new(area.into()))
+    Ok(Response::new(AisArea {
+        mmsis: HashSet::new(),
+        counts: vec![],
+    }))
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema)]

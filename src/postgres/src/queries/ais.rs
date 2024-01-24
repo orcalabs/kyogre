@@ -263,7 +263,7 @@ ON CONFLICT (mmsi) DO NOTHING
         .execute(&mut *tx)
         .await?;
 
-        let inserted = sqlx::query!(
+        let _inserted = sqlx::query!(
             r#"
 INSERT INTO
     ais_positions (
@@ -400,54 +400,6 @@ SET
             .execute(&mut *tx)
             .await?;
         }
-
-        let len = inserted.len();
-        let mut lat = Vec::with_capacity(len);
-        let mut lon = Vec::with_capacity(len);
-        let mut date = Vec::with_capacity(len);
-        let mut mmsis = Vec::with_capacity(len);
-
-        for i in inserted {
-            lat.push(i.latitude);
-            lon.push(i.longitude);
-            date.push(i.timestamp.date_naive());
-            mmsis.push(i.mmsi);
-        }
-
-        sqlx::query!(
-            r#"
-INSERT INTO
-    ais_area AS a (latitude, longitude, date, "count", mmsis)
-SELECT
-    u.latitude::DECIMAL(10, 2),
-    u.longitude::DECIMAL(10, 2),
-    u.date,
-    COUNT(*),
-    ARRAY_AGG(DISTINCT u.mmsi)
-FROM
-    UNNEST(
-        $1::DOUBLE PRECISION[],
-        $2::DOUBLE PRECISION[],
-        $3::DATE[],
-        $4::INT[]
-    ) u (latitude, longitude, date, mmsi)
-GROUP BY
-    u.latitude::DECIMAL(10, 2),
-    u.longitude::DECIMAL(10, 2),
-    u.date
-ON CONFLICT (latitude, longitude, date) DO
-UPDATE
-SET
-    "count" = a.count + EXCLUDED.count,
-    mmsis = a.mmsis | EXCLUDED.mmsis
-            "#,
-            &lat,
-            &lon,
-            &date,
-            &mmsis,
-        )
-        .execute(&mut *tx)
-        .await?;
 
         tx.commit().await?;
 
