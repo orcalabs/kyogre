@@ -24,7 +24,11 @@ impl machine::State for ScrapeState {
 
             let limit = (Utc::now() - ais_area_window()).date_naive();
 
-            if let Err(e) = shared_state.ais_pruner_inbound.prune_ais_area(limit).await {
+            if let Err(e) = shared_state
+                .ais_pruner_inbound
+                .prune_ais_vms_area(limit)
+                .await
+            {
                 event!(Level::ERROR, "failed to prune ais area: {:?}", e);
             }
         }

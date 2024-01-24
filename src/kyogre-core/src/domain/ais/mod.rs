@@ -1,5 +1,3 @@
-use std::collections::HashSet;
-
 use chrono::{DateTime, Duration, TimeZone, Utc};
 use fiskeridir_rs::CallSign;
 use num_derive::FromPrimitive;
@@ -14,6 +12,10 @@ pub const PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY: u32 = 15;
 
 pub fn ais_area_window() -> Duration {
     Duration::days(10)
+}
+
+pub fn ais_vms_area_position_interval() -> Duration {
+    Duration::seconds(20)
 }
 
 // What AIS user is allowed to read, AIS data of leisure vessels under 45 are implicitly
@@ -75,13 +77,13 @@ pub struct NewAisStatic {
     pub report_class: Option<String>,
 }
 
-#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
-#[derive(Debug, Deserialize, Serialize)]
-pub struct AisAreaCount {
-    pub latitude: f64,
-    pub longitude: f64,
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AisVmsAreaCount {
+    pub lat: f64,
+    pub lon: f64,
     pub count: i32,
-    pub mmsis: HashSet<Mmsi>,
+    pub num_vessels: i32,
 }
 
 #[derive(Debug, Clone)]

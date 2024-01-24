@@ -2,12 +2,15 @@ use crate::{
     ais_to_streaming_response,
     error::ApiError,
     extractors::{Auth0Profile, BwProfile},
+    response::Response,
     Database,
 };
 use actix_web::{web, HttpResponse};
 use async_stream::try_stream;
-use chrono::{DateTime, Duration, Utc};
+use chrono::{DateTime, Duration, NaiveDate, Utc};
 use fiskeridir_rs::CallSign;
+use futures::TryStreamExt;
+use kyogre_core::ais_area_window;
 use kyogre_core::{
     AisPermission, AisPosition, AisVmsParams, DateRange, Mmsi, NavigationStatus, TripId,
     TripPositionLayerId, VmsPosition,
@@ -30,6 +33,16 @@ pub struct AisVmsParameters {
     pub trip_id: Option<TripId>,
     pub start: Option<DateTime<Utc>>,
     pub end: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Deserialize, Serialize, IntoParams)]
+#[serde(rename_all = "camelCase")]
+pub struct AisVmsAreaParameters {
+    pub x1: f64,
+    pub x2: f64,
+    pub y1: f64,
+    pub y2: f64,
+    pub date_limit: Option<NaiveDate>,
 }
 
 #[utoipa::path(
@@ -105,6 +118,58 @@ pub async fn ais_vms_positions<T: Database + 'static>(
     }
 }
 
+#[utoipa::path(
+    get,
+    path = "/ais_vms_area",
+    params(
+        AisVmsAreaParameters,
+    ),
+    responses(
+        (status = 200, description = "ais and vms data within the given interval and area", body = AisVmsArea),
+        (status = 500, description = "an internal error occured", body = ErrorResponse),
+        (status = 400, description = "invalid parameters were provided", body = ErrorResponse),
+    )
+)]
+#[tracing::instrument(skip(db))]
+pub async fn ais_vms_area<T: Database + 'static>(
+    db: web::Data<T>,
+    params: Query<AisVmsAreaParameters>,
+) -> Result<Response<AisVmsArea>, ApiError> {
+    let area: Vec<kyogre_core::AisVmsAreaCount> = db
+        .ais_vms_area_positions(
+            params.x1,
+            params.x2,
+            params.y1,
+            params.y2,
+            params
+                .date_limit
+                .unwrap_or_else(|| (chrono::Utc::now() - ais_area_window()).date_naive()),
+        )
+        .try_collect()
+        .await
+        .map_err(|e| {
+            event!(Level::ERROR, "failed to retrieve ais vms area: {:?}", e);
+            ApiError::InternalServerError
+        })?;
+
+    Ok(Response::new(area.into()))
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct AisVmsArea {
+    pub num_vessels: u32,
+    pub counts: Vec<AisVmsAreaCount>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct AisVmsAreaCount {
+    pub lat: f64,
+    pub lon: f64,
+    pub count: u32,
+}
+
 #[serde_as]
 #[skip_serializing_none]
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema)]
@@ -149,6 +214,25 @@ impl From<kyogre_core::AisVmsPosition> for AisVmsPosition {
                 distance_to_shore: v.distance_to_shore,
                 missing_data: false,
             }),
+        }
+    }
+}
+
+impl From<Vec<kyogre_core::AisVmsAreaCount>> for AisVmsArea {
+    fn from(counts: Vec<kyogre_core::AisVmsAreaCount>) -> Self {
+        Self {
+            num_vessels: counts.iter().map(|v| v.num_vessels as u32).sum(),
+            counts: counts.into_iter().map(AisVmsAreaCount::from).collect(),
+        }
+    }
+}
+
+impl From<kyogre_core::AisVmsAreaCount> for AisVmsAreaCount {
+    fn from(value: kyogre_core::AisVmsAreaCount) -> Self {
+        Self {
+            lat: value.lat,
+            lon: value.lon,
+            count: value.count as u32,
         }
     }
 }

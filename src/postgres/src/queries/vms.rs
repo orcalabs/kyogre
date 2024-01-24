@@ -1,3 +1,4 @@
+use crate::models::AisVmsAreaPositionsReturning;
 use std::collections::{HashMap, HashSet};
 
 use crate::{
@@ -8,7 +9,7 @@ use crate::{
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::CallSign;
 use futures::{Stream, TryStreamExt};
-use kyogre_core::DateRange;
+use kyogre_core::{DateRange, PositionType};
 use unnest_insert::UnnestInsert;
 
 impl PostgresAdapter {
@@ -152,6 +153,74 @@ SELECT
         .await?;
 
         let vms: Vec<NewVmsPosition> = vms_unique.into_values().collect();
+
+        let len = vms.len();
+        let mut lat = Vec::with_capacity(len);
+        let mut lon = Vec::with_capacity(len);
+        let mut timestamp = Vec::with_capacity(len);
+        let mut position_type_id = Vec::with_capacity(len);
+        let mut call_sign = Vec::with_capacity(len);
+        for v in &vms {
+            lat.push(v.latitude);
+            lon.push(v.longitude);
+            timestamp.push(v.timestamp);
+            position_type_id.push(PositionType::Vms as i32);
+            call_sign.push(v.call_sign.clone());
+        }
+
+        let area_positions_inserted = sqlx::query_as!(
+            AisVmsAreaPositionsReturning,
+            r#"
+INSERT INTO
+    ais_vms_area_positions AS a (
+        latitude,
+        longitude,
+        call_sign,
+        "timestamp",
+        position_type_id,
+        mmsi
+    )
+SELECT
+    u.latitude,
+    u.longitude,
+    u.call_sign,
+    u."timestamp",
+    u.position_type_id,
+    NULL
+FROM
+    UNNEST(
+        $1::DOUBLE PRECISION[],
+        $2::DOUBLE PRECISION[],
+        $3::timestamptz[],
+        $4::INT[],
+        $5::VARCHAR[]
+    ) u (
+        latitude,
+        longitude,
+        "timestamp",
+        position_type_id,
+        call_sign
+    )
+ON CONFLICT DO NOTHING
+RETURNING
+    a.latitude,
+    a.longitude,
+    a."timestamp",
+    a.call_sign,
+    a.mmsi
+            "#,
+            &lat,
+            &lon,
+            &timestamp,
+            &position_type_id,
+            &call_sign
+        )
+        .fetch_all(&mut *tx)
+        .await?;
+
+        self.add_ais_vms_aggregated(area_positions_inserted, &mut tx)
+            .await?;
+
         NewVmsPosition::unnest_insert(vms, &mut *tx).await?;
 
         tx.commit().await?;
