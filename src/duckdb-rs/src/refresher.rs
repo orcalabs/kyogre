@@ -201,6 +201,7 @@ SELECT
         }
     }
 
+    #[instrument(skip_all)]
     async fn do_periodic_refresh(&self, response_channel: Option<Sender<RefreshResponse>>) {
         let res = match self.refresh_status() {
             Err(e) => {
