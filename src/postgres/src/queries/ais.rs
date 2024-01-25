@@ -1,8 +1,8 @@
+use geozero::wkb;
 use std::collections::HashMap;
 
 use chrono::{DateTime, NaiveDate, Utc};
 use futures::{Stream, TryStreamExt};
-use geozero::wkb;
 use kyogre_core::{
     AisPermission, AisVesselMigrate, DateRange, Mmsi, NavigationStatus, NewAisPosition,
     NewAisStatic, LEISURE_VESSEL_LENGTH_AIS_BOUNDARY, LEISURE_VESSEL_SHIP_TYPES,
@@ -72,7 +72,7 @@ WHERE
     ) -> Result<(), PostgresErrorWrapper> {
         sqlx::query!(
             r#"
-DELETE FROM ais_area
+DELETE FROM ais_vms_area_aggregated
 WHERE
     date < $1::DATE
             "#,
@@ -92,7 +92,6 @@ WHERE
         date_limit: NaiveDate,
     ) -> impl Stream<Item = Result<AisAreaCount, PostgresErrorWrapper>> + '_ {
         let geom: geo_types::Geometry<f64> = geo_types::Rect::new((x1, y1), (x2, y2)).into();
-
         sqlx::query_as!(
             AisAreaCount,
             r#"
@@ -102,7 +101,7 @@ SELECT
     SUM("count")::INT AS "count!",
     INTARRAY_UNION_AGG (mmsis) AS "mmsis!"
 FROM
-    ais_area
+    ais_vms_area_aggregated
 WHERE
     ST_CONTAINS ($1::geometry, ST_POINT (longitude, latitude))
     AND date >= $2::DATE
