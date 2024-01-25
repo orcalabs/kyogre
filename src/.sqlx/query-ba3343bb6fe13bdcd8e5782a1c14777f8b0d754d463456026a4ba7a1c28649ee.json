@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT\n    latitude::DOUBLE PRECISION AS \"latitude!\",\n    longitude::DOUBLE PRECISION AS \"longitude!\",\n    SUM(\"count\")::INT AS \"count!\",\n    INTARRAY_UNION_AGG (mmsis) AS \"mmsis!\"\nFROM\n    ais_area\nWHERE\n    ST_CONTAINS ($1::geometry, ST_POINT (longitude, latitude))\n    AND date >= $2::DATE\nGROUP BY\n    latitude,\n    longitude\n            ",
+  "query": "\nSELECT\n    latitude::DOUBLE PRECISION AS \"latitude!\",\n    longitude::DOUBLE PRECISION AS \"longitude!\",\n    SUM(\"count\")::INT AS \"count!\",\n    INTARRAY_UNION_AGG (mmsis) AS \"mmsis!\"\nFROM\n    ais_vms_area_aggregated\nWHERE\n    ST_CONTAINS ($1::geometry, ST_POINT (longitude, latitude))\n    AND date >= $2::DATE\nGROUP BY\n    latitude,\n    longitude\n            ",
   "describe": {
     "columns": [
       {
@@ -42,5 +42,5 @@
       null
     ]
   },
-  "hash": "d414a3f0e97d4c9b884c90edf9158968addca76c784abd06e6d29b8df314821c"
+  "hash": "ba3343bb6fe13bdcd8e5782a1c14777f8b0d754d463456026a4ba7a1c28649ee"
 }
