@@ -7,8 +7,8 @@ use engine::*;
 use enum_index::EnumIndex;
 use fiskeridir_rs::{GearGroup, SpeciesGroup, VesselLengthGroup};
 use kyogre_core::{
-    haul_date_feature_matrix_index, ActiveHaulsFilter, CatchLocationId, HaulMatrixes,
-    NUM_CATCH_LOCATIONS,
+    haul_date_feature_matrix_index, ActiveHaulsFilter, CatchLocationId, HaulMatrixXFeature,
+    HaulMatrixYFeature, HaulMatrixes, NUM_CATCH_LOCATIONS,
 };
 use web_api::routes::{
     utils::datetime_to_month,
@@ -95,10 +95,10 @@ async fn test_hauls_matrix_does_not_query_database_on_prior_month_or_newer_data(
 
         assert_eq!(response.status(), StatusCode::OK);
         let matrix: HaulsMatrix = response.json().await.unwrap();
-        assert!(matrix.dates.is_empty());
-        assert!(matrix.length_group.is_empty());
-        assert!(matrix.gear_group.is_empty());
-        assert!(matrix.species_group.is_empty());
+        assert!(!matrix.dates.iter().any(|v| *v != 0));
+        assert!(!matrix.length_group.iter().any(|v| *v != 0));
+        assert!(!matrix.gear_group.iter().any(|v| *v != 0));
+        assert!(!matrix.species_group.iter().any(|v| *v != 0));
     })
     .await;
 }
@@ -822,6 +822,47 @@ async fn test_hauls_matrix_have_correct_totals_after_dca_message_is_replaced_by_
         assert_eq!(response.status(), StatusCode::OK);
         let matrix: HaulsMatrix = response.json().await.unwrap();
         assert_haul_matrix_content(&matrix, filter, 20, vec![]);
+    })
+    .await
+}
+
+#[tokio::test]
+async fn test_hauls_matrix_returns_correct_array_dimensions_with_no_data_for_current_month() {
+    test(|helper, _builder| async move {
+        let filter = ActiveHaulsFilter::SpeciesGroup;
+        let now = Utc::now();
+        let current_month = now.year() as u32 * 12 + now.month0();
+
+        let response = helper
+            .app
+            .get_hauls_matrix(
+                HaulsMatrixParams {
+                    months: Some(vec![current_month]),
+                    ..Default::default()
+                },
+                filter,
+            )
+            .await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let matrix: HaulsMatrix = response.json().await.unwrap();
+        let x_feature: HaulMatrixXFeature = filter.into();
+        assert_eq!(
+            matrix.dates.len(),
+            HaulMatrixYFeature::Date.size() * x_feature.size()
+        );
+        assert_eq!(
+            matrix.length_group.len(),
+            HaulMatrixYFeature::VesselLength.size() * x_feature.size()
+        );
+        assert_eq!(
+            matrix.gear_group.len(),
+            HaulMatrixYFeature::GearGroup.size() * x_feature.size()
+        );
+        assert_eq!(
+            matrix.species_group.len(),
+            HaulMatrixYFeature::SpeciesGroup.size() * HaulMatrixYFeature::CatchLocation.size()
+        );
     })
     .await
 }
