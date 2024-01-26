@@ -20,10 +20,7 @@ impl DataSource for WeatherScraper {
         ScraperId::Weather
     }
 
-    #[allow(warnings)]
     async fn scrape(&self, processor: &(dyn Processor)) -> Result<(), ScraperError> {
-        return Ok(());
-
         let latest = processor
             .latest_weather_timestamp()
             .await
