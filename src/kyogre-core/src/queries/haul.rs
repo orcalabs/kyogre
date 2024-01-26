@@ -213,7 +213,7 @@ impl HaulMatrixYFeature {
         .map_err(Report::from)
     }
 
-    fn size(&self) -> usize {
+    pub fn size(&self) -> usize {
         match self {
             HaulMatrixYFeature::Date => haul_date_feature_matrix_size(),
             HaulMatrixYFeature::GearGroup => GearGroup::COUNT,
@@ -247,7 +247,7 @@ impl HaulMatrixXFeature {
         }
         .map_err(Report::from)
     }
-    fn size(&self) -> usize {
+    pub fn size(&self) -> usize {
         match self {
             HaulMatrixXFeature::Date => haul_date_feature_matrix_size(),
             HaulMatrixXFeature::GearGroup => GearGroup::COUNT,

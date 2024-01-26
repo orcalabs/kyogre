@@ -10,8 +10,8 @@ use chrono::{DateTime, Datelike, Utc};
 use fiskeridir_rs::{Gear, GearGroup, SpeciesGroup, VesselLengthGroup, WhaleGender};
 use futures::TryStreamExt;
 use kyogre_core::{
-    ActiveHaulsFilter, CatchLocationId, FiskeridirVesselId, HaulId, HaulsMatrixQuery, HaulsQuery,
-    HaulsSorting, Ordering,
+    ActiveHaulsFilter, CatchLocationId, FiskeridirVesselId, HaulId, HaulMatrixXFeature,
+    HaulMatrixYFeature, HaulsMatrixQuery, HaulsQuery, HaulsSorting, Ordering,
 };
 use serde::{Deserialize, Serialize};
 use serde_qs::actix::QsQuery as Query;
@@ -160,7 +160,7 @@ pub async fn hauls_matrix<T: Database + 'static, S: Cache>(
         let month_cutoff = (current_time.year() * 12 + current_time.month0() as i32 - 1) as u32;
 
         if !months.iter().any(|v| *v < month_cutoff) {
-            return Ok(Response::new(HaulsMatrix::default()));
+            return Ok(Response::new(HaulsMatrix::empty(path.active_filter)));
         }
     }
 
@@ -227,7 +227,7 @@ pub struct HaulCatch {
     pub species_group_id: SpeciesGroup,
 }
 
-#[derive(Default, Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq, Eq)]
+#[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct HaulsMatrix {
     pub dates: Vec<u64>,
@@ -273,6 +273,42 @@ pub struct HaulOceanClimate {
     pub water_temperature: Option<f64>,
     pub ocean_climate_depth: Option<f64>,
     pub sea_floor_depth: Option<f64>,
+}
+
+impl HaulsMatrix {
+    fn empty(active_filter: ActiveHaulsFilter) -> HaulsMatrix {
+        let x_feature: HaulMatrixXFeature = active_filter.into();
+        let dates_size = if x_feature == HaulMatrixXFeature::Date {
+            HaulMatrixYFeature::Date.size() * HaulMatrixYFeature::CatchLocation.size()
+        } else {
+            HaulMatrixYFeature::Date.size() * x_feature.size()
+        };
+
+        let length_group_size = if x_feature == HaulMatrixXFeature::VesselLength {
+            HaulMatrixYFeature::VesselLength.size() * HaulMatrixYFeature::CatchLocation.size()
+        } else {
+            HaulMatrixYFeature::VesselLength.size() * x_feature.size()
+        };
+
+        let gear_group_size = if x_feature == HaulMatrixXFeature::GearGroup {
+            HaulMatrixYFeature::GearGroup.size() * HaulMatrixYFeature::CatchLocation.size()
+        } else {
+            HaulMatrixYFeature::GearGroup.size() * x_feature.size()
+        };
+
+        let species_group_size = if x_feature == HaulMatrixXFeature::SpeciesGroup {
+            HaulMatrixYFeature::SpeciesGroup.size() * HaulMatrixYFeature::CatchLocation.size()
+        } else {
+            HaulMatrixYFeature::SpeciesGroup.size() * x_feature.size()
+        };
+
+        HaulsMatrix {
+            dates: vec![0; dates_size],
+            length_group: vec![0; length_group_size],
+            gear_group: vec![0; gear_group_size],
+            species_group: vec![0; species_group_size],
+        }
+    }
 }
 
 impl From<kyogre_core::HaulsMatrix> for HaulsMatrix {

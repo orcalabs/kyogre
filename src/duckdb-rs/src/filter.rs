@@ -98,7 +98,7 @@ impl FilterValue for u32 {
 
 impl FilterValue for CatchLocationId {
     fn filter_fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        self.fmt(f)
+        f.write_fmt(format_args!("'{}'", self))
     }
 }
 
@@ -252,7 +252,7 @@ fn write_array_filter<T: FilterValue>(
             f.write_str(", ")?;
         }
     }
-    f.write_str("])")
+    f.write_str("]) ")
 }
 
 fn query_string<T: Display>(values: Vec<T>) -> String {
