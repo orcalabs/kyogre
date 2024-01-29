@@ -9,6 +9,6 @@ edition = "2021"
 postgres = { path = "../postgres" }
 
 orca-core = { workspace = true }
-serde = { version = "1.0.195", features = ["derive"] }
+serde = { version = "1.0.196", features = ["derive"] }
 config = "0.13.4"
 tokio = { version = "1.35.1", features = ["macros"] }
