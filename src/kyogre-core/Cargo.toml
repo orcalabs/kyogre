@@ -11,14 +11,14 @@ sqlx = ["dep:sqlx"]
 
 [dependencies]
 async-trait = "0.1.77"
-serde = { version = "1.0.195", features = ["derive"] }
-chrono = { version = "0.4.31", features = ["serde"] }
+serde = { version = "1.0.196", features = ["derive"] }
+chrono = { version = "0.4.33", features = ["serde"] }
 chrono-tz = "0.8.5"
 fiskeridir-rs = { workspace = true }
 tokio = { version = "1.35.1", features = ["sync"] }
 orca-core = { workspace = true }
 
-serde_json = "1.0.111"
+serde_json = "1.0.113"
 serde_repr = "0.1.18"
 strum = { version = "0.25.0", features = ["derive"] }
 num-traits = "0.2.17"
