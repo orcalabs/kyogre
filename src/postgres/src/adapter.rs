@@ -26,6 +26,11 @@ pub struct PostgresAdapter {
     pub(crate) environment: Environment,
 }
 
+enum ConsumeLoopOutcome {
+    Exit,
+    Continue,
+}
+
 enum AisProcessingAction {
     Exit,
     Continue,
@@ -189,30 +194,61 @@ WHERE
             .unwrap();
     }
 
+    #[instrument(skip_all)]
+    pub async fn consume_loop_iteration(
+        &self,
+        receiver: &mut tokio::sync::broadcast::Receiver<DataMessage>,
+        process_confirmation: Option<&tokio::sync::mpsc::Sender<()>>,
+    ) -> ConsumeLoopOutcome {
+        let message = receiver.recv().await;
+        let result = self.process_message(message).await;
+        // Only enabled in tests
+        if let Some(s) = process_confirmation {
+            s.send(()).await.unwrap();
+        }
+        match result {
+            AisProcessingAction::Exit => ConsumeLoopOutcome::Exit,
+            AisProcessingAction::Continue => ConsumeLoopOutcome::Continue,
+            AisProcessingAction::Retry {
+                positions,
+                static_messages,
+            } => {
+                let mut err = Ok(());
+                for _ in 0..2 {
+                    err = self
+                        .insertion_retry(&mut positions.as_deref(), &mut static_messages.as_deref())
+                        .await;
+
+                    if err.is_ok() {
+                        break;
+                    }
+                }
+                if let Err(e) = err {
+                    event!(
+                        Level::ERROR,
+                        "failed insertion retry for ais data, contained positions: {},
+                            contained static_messages: {}, err: {e:?}",
+                        positions.is_some(),
+                        static_messages.is_some()
+                    );
+                }
+                ConsumeLoopOutcome::Continue
+            }
+        }
+    }
+
     pub async fn consume_loop(
         &self,
         mut receiver: tokio::sync::broadcast::Receiver<DataMessage>,
         process_confirmation: Option<tokio::sync::mpsc::Sender<()>>,
     ) {
         loop {
-            let message = receiver.recv().await;
-            let result = self.process_message(message).await;
-            // Only enabled in tests
-            if let Some(ref s) = process_confirmation {
-                s.send(()).await.unwrap();
-            }
-            match result {
-                AisProcessingAction::Exit => break,
-                AisProcessingAction::Continue => (),
-                AisProcessingAction::Retry {
-                    positions,
-                    static_messages,
-                } => {
-                    for _ in 0..2 {
-                        self.insertion_retry(positions.as_deref(), static_messages.as_deref())
-                            .await;
-                    }
-                }
+            match self
+                .consume_loop_iteration(&mut receiver, process_confirmation.as_ref())
+                .await
+            {
+                ConsumeLoopOutcome::Exit => break,
+                ConsumeLoopOutcome::Continue => continue,
             }
         }
     }
@@ -220,20 +256,30 @@ WHERE
     #[instrument(skip_all, name = "postgres_insertion_retry")]
     async fn insertion_retry(
         &self,
-        positions: Option<&[NewAisPosition]>,
-        static_messages: Option<&[NewAisStatic]>,
-    ) {
-        if let Some(positions) = positions {
-            if let Err(e) = self.add_ais_positions(positions).await {
-                event!(Level::ERROR, "failed to add ais positions: {:?}", e);
+        positions: &mut Option<&[NewAisPosition]>,
+        static_messages: &mut Option<&[NewAisStatic]>,
+    ) -> Result<(), InsertError> {
+        let res = if let Some(pos) = positions {
+            let res = self.add_ais_positions(pos).await;
+            if res.is_ok() {
+                *positions = None;
             }
-        }
+            res
+        } else {
+            Ok(())
+        };
 
-        if let Some(static_messages) = static_messages {
-            if let Err(e) = self.add_ais_vessels(static_messages).await {
-                event!(Level::ERROR, "failed to add ais static: {:?}", e);
+        let res2 = if let Some(new_statics) = static_messages {
+            let res = self.add_ais_vessels(new_statics).await;
+            if res.is_ok() {
+                *static_messages = None;
             }
-        }
+            res
+        } else {
+            Ok(())
+        };
+
+        Ok(res.and(res2)?)
     }
 
     #[instrument(skip_all, name = "postgres_insert_ais_data")]
@@ -248,28 +294,18 @@ WHERE
                     self.add_ais_vessels(&message.static_messages).await,
                 ) {
                     (Ok(_), Ok(_)) => AisProcessingAction::Continue,
-                    (Ok(_), Err(e)) => {
-                        event!(Level::ERROR, "failed to add ais static: {:?}", e);
-                        AisProcessingAction::Retry {
-                            positions: None,
-                            static_messages: Some(message.static_messages),
-                        }
-                    }
-                    (Err(e), Ok(_)) => {
-                        event!(Level::ERROR, "failed to add ais positions: {:?}", e);
-                        AisProcessingAction::Retry {
-                            positions: Some(message.positions),
-                            static_messages: None,
-                        }
-                    }
-                    (Err(e), Err(e2)) => {
-                        event!(Level::ERROR, "failed to add ais positions: {:?}", e);
-                        event!(Level::ERROR, "failed to add ais static: {:?}", e2);
-                        AisProcessingAction::Retry {
-                            positions: Some(message.positions),
-                            static_messages: Some(message.static_messages),
-                        }
-                    }
+                    (Ok(_), Err(_)) => AisProcessingAction::Retry {
+                        positions: None,
+                        static_messages: Some(message.static_messages),
+                    },
+                    (Err(_), Ok(_)) => AisProcessingAction::Retry {
+                        positions: Some(message.positions),
+                        static_messages: None,
+                    },
+                    (Err(_), Err(_)) => AisProcessingAction::Retry {
+                        positions: Some(message.positions),
+                        static_messages: Some(message.static_messages),
+                    },
                 }
             }
             Err(e) => match e {
