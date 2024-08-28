@@ -23,11 +23,11 @@ error-stack = { workspace = true }
 serde_json = "1.0.127"
 humantime-serde = "1.1.1"
 rand = "0.8.5"
-reqwest = { version = "0.12.7", features = [
+reqwest = { workspace = true, features = [
     "http2",
     "native-tls-alpn",
     "stream",
-], default-features = false }
+] }
 
 [dev-dependencies]
 tracing-subscriber = "0.3.18"
@@ -35,3 +35,4 @@ orca-core = { workspace = true, features = ["dockertest"] }
 dockertest = { workspace = true }
 rand = "0.8.5"
 tokio-stream = "0.1.15"
+reqwest = { workspace = true, features = ["http2", "stream"] }
