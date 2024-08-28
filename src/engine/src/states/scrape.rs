@@ -37,12 +37,12 @@ impl machine::State for ScrapeState {
     }
     fn schedule(&self) -> Schedule {
         let environment: Environment = std::env::var("APP_ENVIRONMENT")
-            .unwrap()
+            .unwrap_or("test".into())
             .try_into()
-            .expect("failed to parse APP_ENVIRONMENT");
+            .unwrap();
 
         match environment {
-            Environment::Production | Environment::Staging | Environment::Development => {
+            Environment::Production | Environment::OnPremise | Environment::Development => {
                 Schedule::Daily(NaiveTime::from_hms_opt(7, 0, 0).unwrap())
             }
             Environment::Local => Schedule::Periodic(Duration::hours(1)),

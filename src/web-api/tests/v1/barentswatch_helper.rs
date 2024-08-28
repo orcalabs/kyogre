@@ -65,9 +65,9 @@ impl BarentswatchHelper {
             .respond_with({
                 let audience = audience.clone();
                 move |req: &wiremock::Request| {
-                    let auth = &req.headers.get(&"Authorization".into()).unwrap()[0];
+                    let auth = &req.headers.get("Authorization").unwrap();
 
-                    let mut parts = auth.as_str().split(' ');
+                    let mut parts = auth.to_str().unwrap().split(' ');
                     parts.next();
                     let token = parts.next().unwrap();
 

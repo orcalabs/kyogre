@@ -1,9 +1,9 @@
 use super::helper::test_with_cache;
-use actix_web::http::StatusCode;
 use chrono::{DateTime, Utc};
 use engine::*;
 use fiskeridir_rs::{ErsDca, GearGroup, SpeciesGroup, VesselLengthGroup};
 use kyogre_core::{AirTemperature, FiskeridirVesselId, HaulsSorting, Ordering, WindSpeed};
+use reqwest::StatusCode;
 use web_api::routes::v1::haul::{Haul, HaulsParams};
 
 #[tokio::test]

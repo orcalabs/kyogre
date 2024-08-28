@@ -102,7 +102,7 @@ pub struct FishingFacility {
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(transparent)]
-pub struct GeometryWkt(pub wkt::Geometry<f64>);
+pub struct GeometryWkt(pub wkt::Wkt<f64>);
 
 impl FishingFacility {
     pub fn test_default() -> Self {
@@ -129,7 +129,7 @@ impl FishingFacility {
             last_changed: Utc::now(),
             source: Some("SKYS".into()),
             comment: Some("This is a comment".into()),
-            geometry_wkt: GeometryWkt(Wkt::from_str("POINT(5.7348 62.320717)").unwrap().item),
+            geometry_wkt: GeometryWkt(Wkt::from_str("POINT(5.7348 62.320717)").unwrap()),
             api_source: FishingFacilityApiSource::Updates,
         }
     }
@@ -184,7 +184,7 @@ impl<'de> Deserialize<'de> for FishingFacilityToolType {
 }
 
 impl Deref for GeometryWkt {
-    type Target = wkt::Geometry<f64>;
+    type Target = wkt::Wkt<f64>;
 
     fn deref(&self) -> &Self::Target {
         &self.0

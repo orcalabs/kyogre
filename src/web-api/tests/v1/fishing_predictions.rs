@@ -1,11 +1,11 @@
 use crate::v1::helper::INSIDE_HAULS_POLYGON;
 
 use super::helper::test;
-use actix_web::http::StatusCode;
 use chrono::{Datelike, Utc};
 use engine::*;
 use fiskeridir_rs::{GearGroup, SpeciesGroup};
 use kyogre_core::*;
+use reqwest::StatusCode;
 use web_api::routes::v1::fishing_prediction::{
     FishingSpotPrediction, FishingSpotPredictionParams, FishingWeightPrediction,
     FishingWeightPredictionParams,

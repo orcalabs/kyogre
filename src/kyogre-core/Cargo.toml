@@ -10,32 +10,32 @@ utoipa = ["dep:utoipa"]
 sqlx = ["dep:sqlx"]
 
 [dependencies]
-async-trait = "0.1.77"
-serde = { version = "1.0.196", features = ["derive"] }
-chrono = { version = "0.4.33", features = ["serde"] }
-chrono-tz = "0.8.5"
+async-trait = "0.1.81"
+serde = { version = "1.0.209", features = ["derive"] }
+chrono = { version = "0.4.38", features = ["serde"] }
+chrono-tz = "0.9.0"
 fiskeridir-rs = { workspace = true }
-tokio = { version = "1.35.1", features = ["sync"] }
+tokio = { version = "1.39.3", features = ["sync"] }
 orca-core = { workspace = true }
 
-serde_json = "1.0.113"
-serde_repr = "0.1.18"
-strum = { version = "0.25.0", features = ["derive"] }
-num-traits = "0.2.17"
-num-derive = "0.4.1"
+serde_json = "1.0.127"
+serde_repr = "0.1.19"
+strum = { version = "0.26.3", features = ["derive"] }
+num-traits = "0.2.19"
+num-derive = "0.4.2"
 error-stack = { workspace = true }
 rand = "0.8.5"
 futures = "0.3.30"
 
 utoipa = { version = "4.2", optional = true }
-remain = "0.2.12"
+remain = "0.2.14"
 sqlx = { workspace = true, optional = true }
 enum_index = "0.2.0"
 enum_index_derive = "0.2.0"
-wkt = { version = "0.10.3", features = ["serde"] }
-uuid = { version = "1.7.0", features = ["serde", "v4"] }
+wkt = { version = "0.11.0", features = ["serde"] }
+uuid = { version = "1.10.0", features = ["serde", "v4"] }
 oauth2 = "4.4.2"
-geo = "0.27.0"
+geo = "0.28.0"
 tracing = "0.1.40"
-flate2 = "1.0.28"
+flate2 = "1.0.33"
 vpsearch = "2.0.1"

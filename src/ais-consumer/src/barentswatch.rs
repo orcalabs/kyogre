@@ -2,15 +2,15 @@ use crate::error::BarentswatchClientError;
 use error_stack::{bail, Result, ResultExt};
 
 use futures::{StreamExt, TryStreamExt};
-use hyper::{Body, Client, Request, StatusCode, Uri};
-use hyper_alpn::AlpnConnector;
 use kyogre_core::BearerToken;
+use reqwest::{Client, Url};
 use serde::Serialize;
 use tokio::io::AsyncRead;
 
 pub struct BarentswatchAisClient {
     bearer_token: BearerToken,
-    api_address: Uri,
+    api_address: Url,
+    client: Client,
 }
 
 #[derive(Serialize)]
@@ -29,10 +29,11 @@ struct AisFilterArgs {
 }
 
 impl BarentswatchAisClient {
-    pub fn new(bearer_token: BearerToken, api_address: Uri) -> BarentswatchAisClient {
+    pub fn new(bearer_token: BearerToken, api_address: Url) -> BarentswatchAisClient {
         BarentswatchAisClient {
             bearer_token,
             api_address,
+            client: Client::new(),
         }
     }
 
@@ -47,45 +48,40 @@ impl BarentswatchAisClient {
             include_binary_broadcast: false,
         };
 
-        let body = serde_json::to_string(&args)
-            .change_context(BarentswatchClientError::RequestCreation)?;
-
-        let request = Request::post(&self.api_address)
+        let response = self
+            .client
+            .post(self.api_address.clone())
+            .json(&args)
             .header(
                 "Authorization",
                 format!("bearer {}", self.bearer_token.as_ref()),
             )
             .header("Content-type", "application/json")
-            .body(Body::from(body))
-            .change_context(BarentswatchClientError::RequestCreation)?;
-
-        let alpn = AlpnConnector::new();
-        let client = Client::builder().http2_only(true).build(alpn);
-
-        let response = client
-            .request(request)
+            .send()
             .await
             .change_context(BarentswatchClientError::SendingRequest)?;
 
         let status = response.status();
-        if status != StatusCode::OK {
-            let body = hyper::body::to_bytes(response.into_body())
-                .await
-                .change_context(BarentswatchClientError::Body)?;
+        if !status.is_success() {
             bail!(BarentswatchClientError::Server {
                 response_code: status.as_u16(),
-                body: std::str::from_utf8(&body).unwrap().to_string(),
+                body: response
+                    .text()
+                    .await
+                    .change_context(BarentswatchClientError::SendingRequest)?,
             });
         }
 
-        let stream = response
-            .into_body()
+        let stream = response.bytes_stream();
+
+        let stream = stream
             .map(|result| {
                 result.map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))
             })
             .into_async_read();
 
         let compat = tokio_util::compat::FuturesAsyncReadCompatExt::compat(stream);
+
         Ok(compat)
     }
 }

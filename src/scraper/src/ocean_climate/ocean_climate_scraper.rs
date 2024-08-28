@@ -3,7 +3,7 @@ use chrono::{DateTime, Duration, Utc};
 use csv::Reader;
 use error_stack::{Result, ResultExt};
 use pyo3::{
-    types::{timezone_utc, PyDateTime, PyModule},
+    types::{timezone_utc_bound, PyAnyMethods, PyDateTime, PyModule},
     Python,
 };
 use tracing::{event, Level};
@@ -93,12 +93,15 @@ fn download_ocean_climate_data(latest: DateTime<Utc>) -> Result<Vec<String>, Pyt
     let py_code = include_str!("../../../../scripts/python/ocean_climate/main.py");
 
     Python::with_gil(|py| {
-        let py_datetime =
-            PyDateTime::from_timestamp(py, latest.timestamp() as f64, Some(timezone_utc(py)))
-                .change_context(PythonError::DateTime(latest))?;
+        let py_datetime = PyDateTime::from_timestamp_bound(
+            py,
+            latest.timestamp() as f64,
+            Some(&timezone_utc_bound(py)),
+        )
+        .change_context(PythonError::DateTime(latest))?;
 
         let py_module =
-            PyModule::from_code(py, py_code, "", "").change_context(PythonError::PyModule)?;
+            PyModule::from_code_bound(py, py_code, "", "").change_context(PythonError::PyModule)?;
 
         let py_main = py_module
             .getattr("main")

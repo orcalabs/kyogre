@@ -46,7 +46,7 @@ where
     let prefetch = match environment {
         Environment::Local => true,
         Environment::Production
-        | Environment::Staging
+        | Environment::OnPremise
         | Environment::Development
         | Environment::Test => false,
     };

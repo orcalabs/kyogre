@@ -1,8 +1,6 @@
 #![deny(warnings)]
 #![deny(rust_2018_idioms)]
 
-use std::time::Duration;
-
 use async_trait::async_trait;
 use error::MeilisearchError;
 use error_stack::{Result, ResultExt};
@@ -12,7 +10,8 @@ use kyogre_core::{
     HaulId, HaulsQuery, LandingsQuery, MeilisearchOutbound, MeilisearchSource, QueryError,
     TripDetailed, TripsQuery,
 };
-use meilisearch_sdk::Client;
+use meilisearch_sdk::client::Client;
+use std::time::Duration;
 
 mod error;
 mod haul;
@@ -50,7 +49,7 @@ enum CacheIndex {
 impl<T> MeilisearchAdapter<T> {
     pub fn new(settings: &Settings, source: T) -> Self {
         Self {
-            client: Client::new(&settings.host, Some(&settings.api_key)),
+            client: Client::new(&settings.host, Some(&settings.api_key)).unwrap(),
             source,
             refresh_timeout: settings
                 .refresh_timeout

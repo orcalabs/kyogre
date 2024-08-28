@@ -1,9 +1,9 @@
 use super::helper::test;
-use actix_web::http::StatusCode;
 use chrono::{Duration, Utc};
 use engine::*;
 use fiskeridir_rs::CallSign;
 use kyogre_core::*;
+use reqwest::StatusCode;
 use web_api::routes::v1::ais_vms::{AisVmsArea, AisVmsAreaParameters};
 
 #[tokio::test]

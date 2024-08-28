@@ -20,8 +20,8 @@ impl AsRef<str> for NorthSouth62DegreesNorth {
     }
 }
 
-impl ToString for NorthSouth62DegreesNorth {
-    fn to_string(&self) -> String {
-        self.as_ref().to_string()
+impl std::fmt::Display for NorthSouth62DegreesNorth {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_ref())
     }
 }

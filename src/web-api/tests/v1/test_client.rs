@@ -22,11 +22,15 @@ use web_api::routes::v1::{
 #[derive(Debug, Clone)]
 pub struct ApiClient {
     address: String,
+    client: Client,
 }
 
 impl ApiClient {
     pub fn new(address: String) -> ApiClient {
-        ApiClient { address }
+        ApiClient {
+            address,
+            client: Client::new(),
+        }
     }
 
     async fn get<T: AsRef<str>, P: Serialize>(
@@ -43,8 +47,7 @@ impl ApiClient {
             None => format!("{}/{}", self.address, path.as_ref()),
         };
 
-        let client = Client::new();
-        let mut request = client.get(url);
+        let mut request = self.client.get(url);
 
         if let Some(headers) = headers {
             request = request.headers(headers);
@@ -79,8 +82,7 @@ impl ApiClient {
     ) -> Response {
         let url = format!("{}/{}", self.address, path.as_ref());
 
-        let client = Client::new();
-        let mut request = client.post(url).json(&body);
+        let mut request = self.client.post(url).json(&body);
 
         if let Some(headers) = headers {
             request = request.headers(headers);
@@ -97,8 +99,7 @@ impl ApiClient {
     ) -> Response {
         let url = format!("{}/{}", self.address, path.as_ref());
 
-        let client = Client::new();
-        let mut request = client.delete(url).json(&body);
+        let mut request = self.client.delete(url).json(&body);
 
         if let Some(headers) = headers {
             request = request.headers(headers);
