@@ -18,8 +18,8 @@ const HAULS_SCHEMA: &str = "CREATE TABLE
         gear_group_id INT NOT NULL,
         species_group_id INT NOT NULL,
         living_weight DOUBLE NOT NULL,
-        species_group_weight_percentage_of_haul BOOLEAN,
-        is_majority_species_group_of_haul BOOLEAN,
+        species_group_weight_percentage_of_haul DOUBLE,
+        is_majority_species_group_of_haul BOOLEAN
     )";
 const LANDING_SCHEMA: &str = "CREATE TABLE
     landing_matrix_cache (
