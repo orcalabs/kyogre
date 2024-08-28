@@ -44,11 +44,8 @@ pub struct Scraper {
 
 #[derive(Debug, Deserialize, Clone, Default)]
 pub struct Config {
-    pub landings: Option<LandingFileYears>,
-    pub ers_dca: Option<Vec<FileYear>>,
-    pub ers_por: Option<Vec<FileYear>>,
-    pub ers_dep: Option<Vec<FileYear>>,
-    pub ers_tra: Option<Vec<FileYear>>,
+    pub landings: Option<FileYears>,
+    pub ers: Option<FileYears>,
     pub vms: Option<Vec<FileYear>>,
     pub aqua_culture_register_url: Option<String>,
     pub mattilsynet_urls: Option<Vec<String>>,
@@ -67,7 +64,7 @@ pub struct FileYear {
 }
 
 #[derive(Debug, Deserialize, Clone)]
-pub struct LandingFileYears {
+pub struct FileYears {
     pub min_year: u32,
     pub max_year: u32,
 }
@@ -93,51 +90,53 @@ impl Scraper {
         fiskeridir_source: FiskeridirSource,
         barentswatch_source: BarentswatchSource,
     ) -> Scraper {
-        let landing_sources = config.landings.map(|landings| {
-            (landings.min_year..=landings.max_year)
-                .map(|year| fiskeridir_rs::FileSource::Landings { year, url: None })
-                .collect()
-        });
+        let landing_sources = config
+            .landings
+            .map(|landings| {
+                (landings.min_year..=landings.max_year)
+                    .map(|year| fiskeridir_rs::FileSource::Landings { year, url: None })
+                    .collect()
+            })
+            .unwrap_or_default();
 
         let ers_dca_sources = config
-            .ers_dca
-            .unwrap_or_default()
-            .into_iter()
-            .map(|file_year| fiskeridir_rs::FileSource::ErsDca {
-                year: file_year.year,
-                url: file_year.url,
+            .ers
+            .clone()
+            .map(|ers| {
+                (ers.min_year..=ers.max_year)
+                    .map(|year| fiskeridir_rs::FileSource::ErsDca { year, url: None })
+                    .collect()
             })
-            .collect();
+            .unwrap_or_default();
 
         let ers_dep_sources = config
-            .ers_dep
-            .unwrap_or_default()
-            .into_iter()
-            .map(|file_year| fiskeridir_rs::FileSource::ErsDep {
-                year: file_year.year,
-                url: file_year.url,
+            .ers
+            .clone()
+            .map(|ers| {
+                (ers.min_year..=ers.max_year)
+                    .map(|year| fiskeridir_rs::FileSource::ErsDep { year, url: None })
+                    .collect()
             })
-            .collect();
+            .unwrap_or_default();
 
         let ers_por_sources = config
-            .ers_por
-            .unwrap_or_default()
-            .into_iter()
-            .map(|file_year| fiskeridir_rs::FileSource::ErsPor {
-                year: file_year.year,
-                url: file_year.url,
+            .ers
+            .clone()
+            .map(|ers| {
+                (ers.min_year..=ers.max_year)
+                    .map(|year| fiskeridir_rs::FileSource::ErsPor { year, url: None })
+                    .collect()
             })
-            .collect();
+            .unwrap_or_default();
 
         let ers_tra_sources = config
-            .ers_tra
-            .unwrap_or_default()
-            .into_iter()
-            .map(|file_year| fiskeridir_rs::FileSource::ErsTra {
-                year: file_year.year,
-                url: file_year.url,
+            .ers
+            .map(|ers| {
+                (ers.min_year..=ers.max_year)
+                    .map(|year| fiskeridir_rs::FileSource::ErsTra { year, url: None })
+                    .collect()
             })
-            .collect();
+            .unwrap_or_default();
 
         let vms_sources = config
             .vms
@@ -158,11 +157,8 @@ impl Scraper {
             .map(|url| fiskeridir_rs::ApiSource::RegisterVessels { url });
 
         let fiskeridir_arc = Arc::new(fiskeridir_source);
-        let landings_scraper = LandingScraper::new(
-            fiskeridir_arc.clone(),
-            landing_sources.unwrap_or_default(),
-            environment,
-        );
+        let landings_scraper =
+            LandingScraper::new(fiskeridir_arc.clone(), landing_sources, environment);
         let ers_dca_scraper =
             ErsDcaScraper::new(fiskeridir_arc.clone(), ers_dca_sources, environment);
         let ers_dep_scraper =

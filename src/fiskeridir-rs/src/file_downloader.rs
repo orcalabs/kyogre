@@ -67,10 +67,10 @@ impl DataFile {
 pub enum FileSource {
     Landings { year: u32, url: Option<String> },
     Vms { year: u32, url: String },
-    ErsDca { year: u32, url: String },
-    ErsPor { year: u32, url: String },
-    ErsDep { year: u32, url: String },
-    ErsTra { year: u32, url: String },
+    ErsDca { year: u32, url: Option<String> },
+    ErsPor { year: u32, url: Option<String> },
+    ErsDep { year: u32, url: Option<String> },
+    ErsTra { year: u32, url: Option<String> },
     AquaCultureRegister { url: String },
 }
 
@@ -131,11 +131,14 @@ impl FileSource {
                 Some(url) => url.clone(),
                 None => format!("https://register.fiskeridir.no/uttrekk/fangstdata_{year}.csv.zip"),
             },
+            ErsDca { year, url } |
+            ErsPor {year, url} |
+            ErsDep {year, url} |
+            ErsTra {year, url} => match url {
+                Some(url) => url.clone(),
+                None => format!("https://register.fiskeridir.no/vms-ers/ERS/elektronisk-rapportering-ers-{year}.zip"),
+            },
             Vms { url, .. } => url.clone(),
-            ErsDca { url, .. } => url.clone(),
-            ErsPor { url, .. } => url.clone(),
-            ErsDep { url, .. } => url.clone(),
-            ErsTra { url, .. } => url.clone(),
             AquaCultureRegister { url } => url.clone(),
         }
     }
