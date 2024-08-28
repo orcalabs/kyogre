@@ -16,33 +16,25 @@ jobs:
     uses: orcalabs/github-actions/.github/workflows/container-apps-deploy.yml@master
     secrets: inherit
     with:
-      keys: |
-        duckdb
-        fishery-api
-        ais-consumer
-        engine
       object: '{
            "duckdb" : {
               "container-app-name" : "dev-kyogre-duck-db",
               "dockerfile" : "dockerfiles/duckdb/Dockerfile",
-              "registry" : "ghcr.io/orcalabs/kyogre/duckdb"
            },
            "fishery-api" : {
               "container-app-name" : "dev-kyogre-fishery-api",
               "dockerfile" : "dockerfiles/fishery-api/Dockerfile",
-              "registry" : "ghcr.io/orcalabs/kyogre/fishery-api"
            },
            "ais-consumer" : {
               "container-app-name" : "dev-kyogre-ais-consumer",
               "dockerfile" : "dockerfiles/ais-consumer/Dockerfile",
-              "registry" : "ghcr.io/orcalabs/kyogre/ais-consumer"
            },
            "engine" : {
               "container-app-name" : "dev-kyogre-engine",
               "dockerfile" : "dockerfiles/engine/Dockerfile",
-              "registry" : "ghcr.io/orcalabs/kyogre/engine"
            }
         }'
-      resource-group: dev
+      registry: ghcr.io/orcalabs/kyogre
+      container-app-resource-group: dev
       container-app-env-name: dev-kyogre
 
