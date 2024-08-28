@@ -20,7 +20,7 @@ fiskeridir-rs = { workspace = true }
 derivative = "2.2.0"
 config = { version = "0.14.0", features = ["yaml"] }
 chrono = { version = "0.4.38", features = ["serde"] }
-tokio = { version = "1.39.3", features = ["tracing"] }
+tokio = { version = "1.39.3", features = ["tracing", "rt-multi-thread"] }
 tracing = "0.1.40"
 serde = { version = "1.0.209", features = ["derive"] }
 async-trait = "0.1.81"

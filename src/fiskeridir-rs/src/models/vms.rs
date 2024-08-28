@@ -23,12 +23,12 @@ pub struct Vms {
     #[serde(rename = "Lengdegrad")]
     #[serde(deserialize_with = "opt_float_from_str")]
     pub longitude: Option<f64>,
-    #[serde(rename = "Melding ID")]
+    #[serde(rename = "Melding ID", alias = "MeldingID")]
     #[serde(deserialize_with = "u32_from_str")]
     pub message_id: u32,
     #[serde(rename = "Meldingstype")]
     pub message_type: String,
-    #[serde(rename = "Meldingstype (kode)")]
+    #[serde(rename = "Meldingstype (kode)", alias = "Meldingstype(kode)")]
     pub message_type_code: String,
     #[serde_as(as = "NoneAsEmptyString")]
     #[serde(rename = "Registreringsmerke")]
@@ -37,9 +37,9 @@ pub struct Vms {
     #[serde(deserialize_with = "opt_float_from_str")]
     pub speed: Option<f64>,
     #[serde(deserialize_with = "date_time_utc_from_non_iso_utc_str")]
-    #[serde(rename = "Tidspunkt (UTC)")]
+    #[serde(rename = "Tidspunkt (UTC)", alias = "Tidspunkt(UTC)")]
     pub timestamp: DateTime<Utc>,
-    #[serde(rename = "Største lengde")]
+    #[serde(rename = "Største lengde", alias = "Størstelengde")]
     #[serde(deserialize_with = "float_from_str")]
     pub vessel_length: f64,
     #[serde(rename = "Fartøynavn")]
