@@ -2,7 +2,7 @@ use flate2::read::GzDecoder;
 use geo::{point, prelude::*};
 use orca_core::Environment;
 use serde::Deserialize;
-use std::{fs, io::prelude::*, sync::OnceLock};
+use std::{io::prelude::*, sync::OnceLock};
 
 static SHORELINE: OnceLock<vpsearch::Tree<Coordinate>> = OnceLock::new();
 
@@ -39,16 +39,16 @@ fn haversine_distance(point1: &Coordinate, point2: &Coordinate) -> f64 {
     p1.haversine_distance(&p2)
 }
 
-fn decompress_file(path: &str) -> String {
-    let file = fs::File::open(path).unwrap();
-    let mut d = GzDecoder::new(file);
+fn decompress_shoreline() -> String {
+    let bytes = include_bytes!("../shoreline.json.gz");
+    let mut d = GzDecoder::new(&bytes[..]);
     let mut s = String::new();
     d.read_to_string(&mut s).unwrap();
     s
 }
 
 fn create_vp_tree() -> vpsearch::Tree<Coordinate> {
-    let data = decompress_file("shoreline.json.gz");
+    let data = decompress_shoreline();
     let data: Coordinates = serde_json::from_str(&data).unwrap();
     vpsearch::Tree::new(&data.coordinates)
 }

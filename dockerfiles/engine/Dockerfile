@@ -54,6 +54,5 @@ RUN pip install \
 COPY --from=builder /app/src/target/release/engine .
 
 COPY src/engine/config config
-COPY src/kyogre-core/shoreline.json.gz .
 
 ENTRYPOINT ["./engine"]

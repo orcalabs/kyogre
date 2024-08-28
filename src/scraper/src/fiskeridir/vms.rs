@@ -7,7 +7,6 @@ use crate::{
 use async_trait::async_trait;
 use error_stack::{Result, ResultExt};
 use fiskeridir_rs::FileSource;
-use kyogre_core::FileId;
 use orca_core::Environment;
 
 use super::FiskeridirSource;
@@ -42,10 +41,9 @@ impl DataSource for VmsScraper {
             self.environment,
             self.fiskeridir_source.clone(),
             self.sources.clone(),
-            FileId::Vms,
             Some(2023),
-            |_, file| async move {
-                let data = file.into_deserialize().change_context(ScraperError)?;
+            |dir, file| async move {
+                let data = dir.into_deserialize(&file).change_context(ScraperError)?;
                 add_in_chunks(|vms| processor.add_vms(vms), Box::new(data), 10000)
                     .await
                     .change_context(ScraperError)

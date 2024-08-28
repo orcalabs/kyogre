@@ -7,7 +7,7 @@ use crate::{
 use async_trait::async_trait;
 use chrono::{DateTime, Duration, NaiveDate, Utc};
 use error_stack::{Result, ResultExt};
-use fiskeridir_rs::{CallSign, DeliveryPointId, LandingId, SpeciesGroup};
+use fiskeridir_rs::{CallSign, DataFileId, DeliveryPointId, LandingId, SpeciesGroup};
 use futures::{Stream, StreamExt, TryStreamExt};
 use kyogre_core::*;
 use orca_core::{Environment, PsqlLogStatements, PsqlSettings};
@@ -951,15 +951,18 @@ impl ScraperOutboundPort for PostgresAdapter {
 
 #[async_trait]
 impl ScraperFileHashInboundPort for PostgresAdapter {
-    async fn add(&self, id: &FileHashId, hash: String) -> Result<(), InsertError> {
+    async fn add(&self, id: &DataFileId, hash: String) -> Result<(), InsertError> {
         Ok(self.add_hash(id, hash).await?)
     }
 }
 
 #[async_trait]
 impl ScraperFileHashOutboundPort for PostgresAdapter {
-    async fn get_hash(&self, id: &FileHashId) -> Result<Option<String>, QueryError> {
-        Ok(self.get_hash_impl(id).await?)
+    async fn get_hashes(
+        &self,
+        ids: &[DataFileId],
+    ) -> Result<Vec<(DataFileId, String)>, QueryError> {
+        Ok(self.get_hashes_impl(ids).await?)
     }
 }
 

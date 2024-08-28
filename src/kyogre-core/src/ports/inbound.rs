@@ -2,7 +2,7 @@ use crate::*;
 use async_trait::async_trait;
 use chrono::{DateTime, NaiveDate, Utc};
 use error_stack::Result;
-use fiskeridir_rs::{DeliveryPointId, SpeciesGroup};
+use fiskeridir_rs::{DataFileId, DeliveryPointId, SpeciesGroup};
 
 #[async_trait]
 pub trait MLModelsInbound: Send + Sync {
@@ -135,7 +135,7 @@ pub trait ScraperOutboundPort {
 
 #[async_trait]
 pub trait ScraperFileHashInboundPort {
-    async fn add(&self, id: &FileHashId, hash: String) -> Result<(), InsertError>;
+    async fn add(&self, id: &DataFileId, hash: String) -> Result<(), InsertError>;
 }
 
 #[async_trait]

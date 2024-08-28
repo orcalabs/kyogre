@@ -4,7 +4,6 @@ use crate::{utils::prefetch_and_scrape, DataSource, Processor, ScraperError, Scr
 use async_trait::async_trait;
 use error_stack::{Result, ResultExt};
 use fiskeridir_rs::{FileSource, Landing, LandingRaw};
-use kyogre_core::FileId;
 use orca_core::Environment;
 
 use super::FiskeridirSource;
@@ -40,11 +39,11 @@ impl DataSource for LandingScraper {
             self.environment,
             self.fiskeridir_source.clone(),
             self.sources.clone(),
-            FileId::Landings,
             Some(2020),
-            |year, file| async move {
-                let data = file
-                    .into_deserialize::<LandingRaw>()
+            |dir, file| async move {
+                let year = file.year();
+                let data = dir
+                    .into_deserialize::<LandingRaw>(&file)
                     .change_context(ScraperError)?
                     .map(move |v| match v {
                         Ok(v) => Landing::try_from_raw(v, year),

@@ -4,10 +4,10 @@ use csv::DeserializeRecordsIntoIter;
 use error_stack::{report, Result, ResultExt};
 use futures_util::StreamExt;
 use serde::de::DeserializeOwned;
-use std::{io::Write, path::PathBuf};
+use std::{fmt::Display, io::Write, path::PathBuf};
 
 #[derive(Debug, Clone)]
-pub struct FileDownloader {
+pub struct DataDownloader {
     // Path to directory where file will be downloaded
     directory_path: PathBuf,
     // HTTP client instance
@@ -15,8 +15,8 @@ pub struct FileDownloader {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct DataFile {
-    file_path: PathBuf,
+pub struct DataDir {
+    dir_path: PathBuf,
 }
 
 pub struct FiskeridirRecordIter<R, D> {
@@ -40,11 +40,12 @@ impl<R: std::io::Read, D: DeserializeOwned> Iterator for FiskeridirRecordIter<R,
     }
 }
 
-impl DataFile {
+impl DataDir {
     pub fn into_deserialize<T: DeserializeOwned + 'static>(
         self,
+        file: &DataFile,
     ) -> Result<FiskeridirRecordIter<std::fs::File, T>, Error> {
-        let file = std::fs::File::open(self.file_path).change_context(Error::Deserialize)?;
+        let file = std::fs::File::open(self.file_name(file)).change_context(Error::Deserialize)?;
 
         let csv_reader = csv::ReaderBuilder::new()
             .delimiter(b';')
@@ -57,8 +58,12 @@ impl DataFile {
         })
     }
 
-    pub fn hash(&self) -> Result<String, Error> {
-        hash_file(&self.file_path).change_context(Error::Hash)
+    pub fn hash(&self, file: &DataFile) -> Result<String, Error> {
+        hash_file(&self.file_name(file)).change_context(Error::Hash)
+    }
+
+    fn file_name(&self, file: &DataFile) -> PathBuf {
+        self.dir_path.join(file.name())
     }
 }
 
@@ -67,12 +72,25 @@ impl DataFile {
 pub enum FileSource {
     Landings { year: u32, url: Option<String> },
     Vms { year: u32, url: String },
-    ErsDca { year: u32, url: Option<String> },
-    ErsPor { year: u32, url: Option<String> },
-    ErsDep { year: u32, url: Option<String> },
-    ErsTra { year: u32, url: Option<String> },
+    Ers { year: u32, url: Option<String> },
     AquaCultureRegister { url: String },
 }
+
+// Different files within Fiskeridir data sources
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DataFile {
+    Landings { year: u32 },
+    Vms { year: u32 },
+    ErsDca { year: u32 },
+    ErsPor { year: u32 },
+    ErsDep { year: u32 },
+    ErsTra { year: u32 },
+    AquaCultureRegister,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "sqlx", derive(sqlx::Type), sqlx(transparent))]
+pub struct DataFileId(String);
 
 impl FileSource {
     fn archive_name(&self) -> String {
@@ -85,41 +103,8 @@ impl FileSource {
         match *self {
             Landings { year, .. } => format!("{year}-Landings"),
             Vms { year, .. } => format!("{year}-Vms"),
-            ErsDca { year, .. } => format!("{year}-ErsDca"),
-            ErsPor { year, .. } => format!("{year}-ErsPor"),
-            ErsDep { year, .. } => format!("{year}-ErsDep"),
-            ErsTra { year, .. } => format!("{year}-ErsTra"),
+            Ers { year, .. } => format!("{year}-Ers"),
             AquaCultureRegister { .. } => "AquaCultureRegister".into(),
-        }
-    }
-
-    // Returns name of the file within the zip archive.
-    fn file_name(&self) -> String {
-        use FileSource::*;
-
-        match *self {
-            Landings { year, .. } => format!("fangstdata_{year}.csv"),
-            Vms { year, .. } => match year {
-                y if y >= 2022 => format!("{y}-VMS.csv"),
-                y => format!("VMS_{y}.csv"),
-            },
-            ErsDca { year, .. } => match year {
-                2024 => "2024-ERS-DCA.csv".to_string(),
-                y => format!("elektronisk-rapportering-ers-{y}-fangstmelding-dca.csv"),
-            },
-            ErsPor { year, .. } => match year {
-                2024 => "2024-ERS-POR.csv".to_string(),
-                y => format!("elektronisk-rapportering-ers-{y}-ankomstmelding-por.csv"),
-            },
-            ErsDep { year, .. } => match year {
-                2024 => "2024-ERS-DEP.csv".to_string(),
-                y => format!("elektronisk-rapportering-ers-{y}-avgangsmelding-dep.csv"),
-            },
-            ErsTra { year, .. } => match year {
-                2024 => "2024-ERS-TRA.csv".to_string(),
-                y => format!("elektronisk-rapportering-ers-{y}-overforingsmelding-tra.csv"),
-            },
-            AquaCultureRegister { .. } => "AquaCultureRegister.csv".into(),
         }
     }
 
@@ -131,10 +116,7 @@ impl FileSource {
                 Some(url) => url.clone(),
                 None => format!("https://register.fiskeridir.no/uttrekk/fangstdata_{year}.csv.zip"),
             },
-            ErsDca { year, url } |
-            ErsPor {year, url} |
-            ErsDep {year, url} |
-            ErsTra {year, url} => match url {
+            Ers {year, url} => match url {
                 Some(url) => url.clone(),
                 None => format!("https://register.fiskeridir.no/vms-ers/ERS/elektronisk-rapportering-ers-{year}.zip"),
             },
@@ -147,25 +129,125 @@ impl FileSource {
         use FileSource::*;
 
         match *self {
-            Landings { year, .. } => year,
-            Vms { year, .. } => year,
-            ErsDca { year, .. } => year,
-            ErsPor { year, .. } => year,
-            ErsDep { year, .. } => year,
-            ErsTra { year, .. } => year,
+            Landings { year, .. } | Vms { year, .. } | Ers { year, .. } => year,
+            AquaCultureRegister { .. } => 0,
+        }
+    }
+
+    pub fn files(&self) -> Vec<DataFile> {
+        use FileSource::*;
+
+        match *self {
+            Landings { year, .. } => vec![DataFile::Landings { year }],
+            Vms { year, .. } => vec![DataFile::Vms { year }],
+            Ers { year, .. } => vec![
+                DataFile::ErsDca { year },
+                DataFile::ErsDep { year },
+                DataFile::ErsPor { year },
+                DataFile::ErsTra { year },
+            ],
+            AquaCultureRegister { .. } => vec![DataFile::AquaCultureRegister],
+        }
+    }
+}
+
+impl DataFile {
+    pub fn id(&self) -> DataFileId {
+        use DataFile::*;
+
+        match self {
+            Landings { year } => DataFileId(format!("landings_{year}")),
+            ErsDca { year } => DataFileId(format!("ers_dca_{year}")),
+            ErsDep { year } => DataFileId(format!("ers_dep_{year}")),
+            ErsPor { year } => DataFileId(format!("ers_por_{year}")),
+            ErsTra { year } => DataFileId(format!("ers_tra_{year}")),
+            Vms { year } => DataFileId(format!("vms_{year}")),
+            AquaCultureRegister => DataFileId("aqua_culture_register".into()),
+        }
+    }
+
+    // Returns name of the file within the zip archive.
+    fn name(&self) -> String {
+        use DataFile::*;
+
+        match *self {
+            Landings { year } => format!("fangstdata_{year}.csv"),
+            Vms { year } => match year {
+                y if y >= 2022 => format!("{y}-VMS.csv"),
+                y => format!("VMS_{y}.csv"),
+            },
+            ErsDca { year } => format!("elektronisk-rapportering-ers-{year}-fangstmelding-dca.csv"),
+            ErsPor { year } => {
+                format!("elektronisk-rapportering-ers-{year}-ankomstmelding-por.csv")
+            }
+            ErsDep { year } => {
+                format!("elektronisk-rapportering-ers-{year}-avgangsmelding-dep.csv")
+            }
+            ErsTra { year } => {
+                format!("elektronisk-rapportering-ers-{year}-overforingsmelding-tra.csv")
+            }
+            AquaCultureRegister => "AquaCultureRegister.csv".into(),
+        }
+    }
+
+    pub fn year(&self) -> u32 {
+        use DataFile::*;
+
+        match *self {
+            Landings { year, .. }
+            | Vms { year, .. }
+            | ErsDca { year, .. }
+            | ErsDep { year, .. }
+            | ErsPor { year, .. }
+            | ErsTra { year, .. } => year,
             AquaCultureRegister { .. } => 0,
         }
     }
 }
 
-impl FileDownloader {
-    pub fn new(directory_path: PathBuf) -> Result<FileDownloader, Error> {
+impl Display for FileSource {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        use FileSource::*;
+
+        match self {
+            Landings { .. } => write!(f, "landings"),
+            Ers { .. } => write!(f, "ers"),
+            Vms { .. } => write!(f, "vms"),
+            AquaCultureRegister { .. } => write!(f, "aqua_culture_register"),
+        }
+    }
+}
+
+impl Display for DataFile {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        use DataFile::*;
+
+        match self {
+            Landings { .. } => write!(f, "landings"),
+            ErsDca { .. } => write!(f, "ers_dca"),
+            ErsDep { .. } => write!(f, "ers_dep"),
+            ErsPor { .. } => write!(f, "ers_por"),
+            ErsTra { .. } => write!(f, "ers_tra"),
+            Vms { .. } => write!(f, "vms"),
+            AquaCultureRegister => write!(f, "aqua_culture_register"),
+        }
+    }
+}
+
+impl AsRef<str> for DataFileId {
+    fn as_ref(&self) -> &str {
+        &self.0
+    }
+}
+
+impl DataDownloader {
+    pub fn new(directory_path: PathBuf) -> Result<DataDownloader, Error> {
         let client = reqwest::ClientBuilder::new()
             .timeout(std::time::Duration::new(600, 0))
             .build()
             .change_context(Error::Download)?;
 
-        Ok(FileDownloader {
+        Ok(DataDownloader {
             directory_path,
             http_client: client,
         })
@@ -176,7 +258,7 @@ impl FileDownloader {
         std::fs::create_dir(&self.directory_path)?;
         Ok(())
     }
-    pub async fn download(&self, source: &FileSource) -> Result<DataFile, Error> {
+    pub async fn download(&self, source: &FileSource) -> Result<DataDir, Error> {
         let url = reqwest::Url::parse(&source.url()).change_context(Error::Download)?;
 
         let response = self
@@ -192,12 +274,7 @@ impl FileDownloader {
         }
 
         let file_path = match source {
-            FileSource::Landings { .. }
-            | FileSource::Vms { .. }
-            | FileSource::ErsDca { .. }
-            | FileSource::ErsPor { .. }
-            | FileSource::ErsDep { .. }
-            | FileSource::ErsTra { .. } => {
+            FileSource::Landings { .. } | FileSource::Vms { .. } | FileSource::Ers { .. } => {
                 let mut zipfile_path = PathBuf::from(&self.directory_path);
                 zipfile_path.push(source.archive_name());
 
@@ -218,17 +295,19 @@ impl FileDownloader {
 
                 let extract_path =
                     PathBuf::from(&self.directory_path.join(source.extract_dir_name()));
+
                 archive
                     .extract(&extract_path)
                     .change_context(Error::Download)?;
 
-                extract_path.join(source.file_name())
+                extract_path
             }
             FileSource::AquaCultureRegister { .. } => {
-                let mut path = PathBuf::from(&self.directory_path);
-                path.push(source.file_name());
+                let path = &self
+                    .directory_path
+                    .join(DataFile::AquaCultureRegister.name());
 
-                let mut file = std::fs::File::create(&path).change_context(Error::Download)?;
+                let mut file = std::fs::File::create(path).change_context(Error::Download)?;
 
                 let text = response.text().await.change_context(Error::Download)?;
 
@@ -239,10 +318,12 @@ impl FileDownloader {
                         .change_context(Error::Download)?;
                 }
 
-                path
+                self.directory_path.clone()
             }
         };
 
-        Ok(DataFile { file_path })
+        Ok(DataDir {
+            dir_path: file_path,
+        })
     }
 }

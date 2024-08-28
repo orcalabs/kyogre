@@ -42,7 +42,7 @@ impl App {
         std::fs::create_dir_all(&settings.scraper.file_download_dir)
             .expect("failed to create download dir");
         let file_downloader =
-            fiskeridir_rs::FileDownloader::new(settings.scraper.file_download_dir.clone()).unwrap();
+            fiskeridir_rs::DataDownloader::new(settings.scraper.file_download_dir.clone()).unwrap();
         let api_downloader = fiskeridir_rs::ApiDownloader::new().unwrap();
 
         let fiskeridir_source =
