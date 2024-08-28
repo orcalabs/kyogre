@@ -1,7 +1,7 @@
 use crate::helper::TestHelper;
 use fiskeridir_rs::{
-    ApiDownloader, ApiSource, AquaCultureEntry, Error, ErsDca, ErsDep, ErsPor, ErsTra,
-    FileDownloader, FileSource, Landing, LandingRaw, RegisterVessel, Vms,
+    ApiDownloader, ApiSource, AquaCultureEntry, DataDownloader, DataFile, Error, ErsDca, ErsDep,
+    ErsPor, ErsTra, FileSource, Landing, LandingRaw, RegisterVessel, Vms,
 };
 
 static ERS_YEAR: u32 = 2020;
@@ -12,15 +12,19 @@ async fn download_and_read_ers_dca() {
     let path = test_helper.temp_dir.path();
     let mock_server_uri = test_helper.mock_server.uri();
 
-    let downloader = FileDownloader::new(path.to_path_buf()).unwrap();
-    let source = FileSource::ErsDca {
+    let downloader = DataDownloader::new(path.to_path_buf()).unwrap();
+    let source = FileSource::Ers {
         year: ERS_YEAR,
-        url: format!("{mock_server_uri}/ers"),
+        url: Some(format!("{mock_server_uri}/ers")),
     };
 
     let datafile = downloader.download(&source).await.unwrap();
 
-    let iter = datafile.into_deserialize::<ErsDca>().unwrap();
+    let iter = datafile
+        .into_deserialize::<ErsDca>(&DataFile::ErsDca {
+            year: source.year(),
+        })
+        .unwrap();
 
     let mut result = Vec::new();
 
@@ -37,15 +41,19 @@ async fn download_and_read_ers_dep() {
     let path = test_helper.temp_dir.path();
     let mock_server_uri = test_helper.mock_server.uri();
 
-    let downloader = FileDownloader::new(path.to_path_buf()).unwrap();
-    let source = FileSource::ErsDep {
+    let downloader = DataDownloader::new(path.to_path_buf()).unwrap();
+    let source = FileSource::Ers {
         year: ERS_YEAR,
-        url: format!("{mock_server_uri}/ers"),
+        url: Some(format!("{mock_server_uri}/ers")),
     };
 
     let datafile = downloader.download(&source).await.unwrap();
 
-    let iter = datafile.into_deserialize::<ErsDep>().unwrap();
+    let iter = datafile
+        .into_deserialize::<ErsDep>(&DataFile::ErsDep {
+            year: source.year(),
+        })
+        .unwrap();
 
     let mut result = Vec::new();
 
@@ -62,15 +70,19 @@ async fn download_and_read_ers_por() {
     let path = test_helper.temp_dir.path();
     let mock_server_uri = test_helper.mock_server.uri();
 
-    let downloader = FileDownloader::new(path.to_path_buf()).unwrap();
-    let source = FileSource::ErsPor {
+    let downloader = DataDownloader::new(path.to_path_buf()).unwrap();
+    let source = FileSource::Ers {
         year: ERS_YEAR,
-        url: format!("{mock_server_uri}/ers"),
+        url: Some(format!("{mock_server_uri}/ers")),
     };
 
     let datafile = downloader.download(&source).await.unwrap();
 
-    let iter = datafile.into_deserialize::<ErsPor>().unwrap();
+    let iter = datafile
+        .into_deserialize::<ErsPor>(&DataFile::ErsPor {
+            year: source.year(),
+        })
+        .unwrap();
 
     let mut result = Vec::new();
 
@@ -87,15 +99,19 @@ async fn download_and_read_ers_tra() {
     let path = test_helper.temp_dir.path();
     let mock_server_uri = test_helper.mock_server.uri();
 
-    let downloader = FileDownloader::new(path.to_path_buf()).unwrap();
-    let source = FileSource::ErsTra {
+    let downloader = DataDownloader::new(path.to_path_buf()).unwrap();
+    let source = FileSource::Ers {
         year: ERS_YEAR,
-        url: format!("{mock_server_uri}/ers"),
+        url: Some(format!("{mock_server_uri}/ers")),
     };
 
     let datafile = downloader.download(&source).await.unwrap();
 
-    let iter = datafile.into_deserialize::<ErsTra>().unwrap();
+    let iter = datafile
+        .into_deserialize::<ErsTra>(&DataFile::ErsTra {
+            year: source.year(),
+        })
+        .unwrap();
 
     let mut result = Vec::new();
 
@@ -112,7 +128,7 @@ async fn download_and_read_vms() {
     let path = test_helper.temp_dir.path();
     let mock_server_uri = test_helper.mock_server.uri();
 
-    let downloader = FileDownloader::new(path.to_path_buf()).unwrap();
+    let downloader = DataDownloader::new(path.to_path_buf()).unwrap();
     let source = FileSource::Vms {
         year: 2023,
         url: format!("{mock_server_uri}/vms"),
@@ -120,7 +136,9 @@ async fn download_and_read_vms() {
 
     let datafile = downloader.download(&source).await.unwrap();
 
-    let iter = datafile.into_deserialize::<Vms>().unwrap();
+    let iter = datafile
+        .into_deserialize::<Vms>(&source.files()[0])
+        .unwrap();
 
     let mut result = Vec::new();
 
@@ -139,7 +157,7 @@ async fn download_and_read_landings() {
     let path = test_helper.temp_dir.path();
     let mock_server_uri = test_helper.mock_server.uri();
 
-    let downloader = FileDownloader::new(path.to_path_buf()).unwrap();
+    let downloader = DataDownloader::new(path.to_path_buf()).unwrap();
     let source = FileSource::Landings {
         year: 2021,
         url: Some(format!("{mock_server_uri}/landings")),
@@ -147,7 +165,9 @@ async fn download_and_read_landings() {
 
     let datafile = downloader.download(&source).await.unwrap();
 
-    let iter = datafile.into_deserialize::<LandingRaw>().unwrap();
+    let iter = datafile
+        .into_deserialize::<LandingRaw>(&source.files()[0])
+        .unwrap();
 
     let mut result = Vec::new();
 
@@ -197,7 +217,7 @@ async fn download_and_read_aqua_culture_register() {
     let path = test_helper.temp_dir.path();
     let mock_server_uri = test_helper.mock_server.uri();
 
-    let downloader = FileDownloader::new(path.into()).unwrap();
+    let downloader = DataDownloader::new(path.into()).unwrap();
     let source = FileSource::AquaCultureRegister {
         url: format!("{mock_server_uri}/aqua_culture_register"),
     };
@@ -205,7 +225,7 @@ async fn download_and_read_aqua_culture_register() {
     let datafile = downloader.download(&source).await.unwrap();
 
     let result: Vec<AquaCultureEntry> = datafile
-        .into_deserialize()
+        .into_deserialize(&source.files()[0])
         .unwrap()
         .map(|d| d.unwrap())
         .collect();

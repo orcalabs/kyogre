@@ -4,7 +4,7 @@ use crate::*;
 use async_trait::async_trait;
 use chrono::{DateTime, Duration, NaiveDate, Utc};
 use error_stack::Result;
-use fiskeridir_rs::{CallSign, DeliveryPointId, LandingId, SpeciesGroup};
+use fiskeridir_rs::{CallSign, DataFileId, DeliveryPointId, LandingId, SpeciesGroup};
 use futures::Stream;
 
 #[async_trait]
@@ -269,7 +269,8 @@ pub trait HaulWeatherOutbound: Send + Sync {
 
 #[async_trait]
 pub trait ScraperFileHashOutboundPort {
-    async fn get_hash(&self, id: &FileHashId) -> Result<Option<String>, QueryError>;
+    async fn get_hashes(&self, ids: &[DataFileId])
+        -> Result<Vec<(DataFileId, String)>, QueryError>;
 }
 
 #[async_trait]

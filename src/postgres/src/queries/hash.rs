@@ -1,10 +1,10 @@
 use crate::{error::PostgresErrorWrapper, PostgresAdapter};
-use kyogre_core::FileHashId;
+use fiskeridir_rs::DataFileId;
 
 impl PostgresAdapter {
     pub(crate) async fn add_hash(
         &self,
-        id: &FileHashId,
+        id: &DataFileId,
         hash: String,
     ) -> Result<(), PostgresErrorWrapper> {
         sqlx::query!(
@@ -27,23 +27,26 @@ SET
         Ok(())
     }
 
-    pub(crate) async fn get_hash_impl(
+    pub(crate) async fn get_hashes_impl(
         &self,
-        id: &FileHashId,
-    ) -> Result<Option<String>, PostgresErrorWrapper> {
+        ids: &[DataFileId],
+    ) -> Result<Vec<(DataFileId, String)>, PostgresErrorWrapper> {
         Ok(sqlx::query!(
             r#"
 SELECT
+    file_hash_id AS "id!: DataFileId",
     hash
 FROM
     file_hashes
 WHERE
-    file_hash_id = $1
+    file_hash_id = ANY ($1)
             "#,
-            id.as_ref(),
+            ids as &[DataFileId],
         )
-        .fetch_optional(&self.pool)
+        .fetch_all(&self.pool)
         .await?
-        .map(|r| r.hash))
+        .into_iter()
+        .map(|r| (r.id, r.hash))
+        .collect())
     }
 }

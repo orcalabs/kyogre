@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    file_hash_id AS \"id!: DataFileId\",\n    hash\nFROM\n    file_hashes\nWHERE\n    file_hash_id = ANY ($1)\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id!: DataFileId",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 1,
+        "name": "hash",
+        "type_info": "Varchar"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "TextArray"
+      ]
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "7b586b83862a773e6df0dfc16e99feaaf7bf1f6cdfc9441d1e0a50a6dce8844d"
+}
