@@ -28,7 +28,7 @@
         "TextArray",
         {
           "Custom": {
-            "name": "_geometry",
+            "name": "geometry[]",
             "kind": {
               "Array": {
                 "Custom": {
