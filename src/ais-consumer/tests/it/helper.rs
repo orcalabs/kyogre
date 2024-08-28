@@ -61,8 +61,6 @@ where
 
     docker_test
         .run_async(|ops| async move {
-            // Necessary evil to avoid unzipping shore map for each test
-            std::env::set_var("APP_ENVIRONMENT", "TEST");
             let db_handle = ops.handle("postgres");
 
             let master_db_settings = PsqlSettings {

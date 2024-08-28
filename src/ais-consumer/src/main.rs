@@ -8,9 +8,10 @@ async fn main() {
     let settings = Settings::new().unwrap();
 
     let tracing = match settings.environment {
-        Environment::Test | Environment::Local | Environment::Production | Environment::Staging => {
-            TracingOutput::Local
-        }
+        Environment::Test
+        | Environment::Local
+        | Environment::Production
+        | Environment::OnPremise => TracingOutput::Local,
         Environment::Development => {
             Report::<()>::set_color_mode(ColorMode::None);
             TracingOutput::Honeycomb {

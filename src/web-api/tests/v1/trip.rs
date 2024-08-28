@@ -1,9 +1,9 @@
 use super::helper::{test, test_with_cache};
-use actix_web::http::StatusCode;
 use chrono::{DateTime, Duration, TimeZone, Utc};
 use engine::*;
 use fiskeridir_rs::{DeliveryPointId, GearGroup, LandingId, SpeciesGroup, VesselLengthGroup};
 use kyogre_core::{Ordering, TripSorting, VesselEventType};
+use reqwest::StatusCode;
 use uuid::Uuid;
 use web_api::routes::v1::trip::{Trip, TripsParameters};
 

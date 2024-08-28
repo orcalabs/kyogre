@@ -254,7 +254,7 @@ impl kyogre_core::Scraper for Scraper {
                 }
             }
             Environment::Production
-            | Environment::Staging
+            | Environment::OnPremise
             | Environment::Development
             | Environment::Test => {
                 for ss in &self.scrapers {

@@ -11,31 +11,36 @@ kyogre-core = { path = "../kyogre-core", features = ["sqlx"] }
 orca-core = { workspace = true, features = ["telemetry"] }
 fiskeridir-rs = { workspace = true }
 jurisdiction = "0.1.1"
-unnest_insert = { version = "0.4.0", registry = "orcalabs-orcastrator", features = [
+unnest_insert = { version = "0.6.0", registry = "orcalabs-orcastrator", features = [
     "derive",
 ] }
 
-num-traits = "0.2.17"
-chrono = { version = "0.4.33", features = ["serde"] }
+num-traits = "0.2.19"
+chrono = { version = "0.4.38", features = ["serde"] }
 error-stack = { workspace = true }
-tokio = { version = "1.35.1", features = ["macros", "sync", "time"] }
+tokio = { version = "1.39.3", features = ["macros", "sync", "time"] }
 sqlx = { workspace = true }
 tracing = "0.1.40"
-async-trait = "0.1.77"
-serde_json = "1.0.113"
-serde = { version = "1.0.196", features = ["derive"] }
+async-trait = "0.1.81"
+serde_json = "1.0.127"
+serde = { version = "1.0.209", features = ["derive"] }
 futures = "0.3.30"
 rand = "0.8.5"
-strum = "0.25.0"
+strum = "0.26.3"
 enum_index = "0.2.0"
 enum_index_derive = "0.2.0"
-geozero = { version = "0.11.0", features = ["with-postgis-sqlx"] }
-geo-types = "0.7.12"
-wkt = { version = "0.10.3", features = ["serde"] }
-uuid = { version = "1.7.0", features = ["serde"] }
+# Latest release of geozero depends on sqlx 0.7
+geozero = { git = "https://github.com/georust/geozero", features = [
+    "with-postgis-sqlx",
+], branch = "main" }
+
+geo = "0.28.0"
+geo-types = "0.7.13"
+wkt = { version = "0.11.0", features = ["serde"] }
+uuid = { version = "1.10.0", features = ["serde"] }
 
 [dev-dependencies]
 rand = "0.8.5"
 dockertest = { workspace = true }
 orca-core = { workspace = true, features = ["dockertest"] }
-tokio = { version = "1.35.1", features = ["rt-multi-thread", "macros"] }
+tokio = { version = "1.39.3", features = ["rt-multi-thread", "macros"] }

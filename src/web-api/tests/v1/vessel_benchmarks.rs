@@ -1,9 +1,9 @@
 use super::{barentswatch_helper::SIGNED_IN_VESSEL_CALLSIGN, helper::test};
-use actix_web::http::StatusCode;
 use chrono::{Datelike, TimeZone, Utc};
 use engine::*;
 use fiskeridir_rs::CallSign;
 use kyogre_core::VesselBenchmarks;
+use reqwest::StatusCode;
 use web_api::routes::v1::user::User;
 
 #[tokio::test]

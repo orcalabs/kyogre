@@ -224,7 +224,7 @@ ORDER BY
         AND $12 = 3 THEN total_living_weight
     END DESC
             "#,
-            args.ranges,
+            args.ranges.as_deref(),
             args.catch_locations as _,
             args.gear_group_ids as _,
             args.species_group_ids as _,

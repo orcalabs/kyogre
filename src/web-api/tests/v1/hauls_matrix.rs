@@ -1,7 +1,6 @@
 use super::helper::test_with_matrix_cache;
 use crate::v1::helper::test;
 use crate::v1::helper::{assert_haul_matrix_content, sum_area};
-use actix_web::http::StatusCode;
 use chrono::{DateTime, Datelike, Duration, TimeZone, Utc};
 use engine::*;
 use enum_index::EnumIndex;
@@ -10,6 +9,7 @@ use kyogre_core::{
     haul_date_feature_matrix_index, ActiveHaulsFilter, CatchLocationId, HaulMatrixXFeature,
     HaulMatrixYFeature, HaulMatrixes, NUM_CATCH_LOCATIONS,
 };
+use reqwest::StatusCode;
 use web_api::routes::{
     utils::datetime_to_month,
     v1::haul::{HaulsMatrix, HaulsMatrixParams},

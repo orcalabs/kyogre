@@ -69,7 +69,6 @@ where
     postgres.modify_port_map(5432, 5400);
 
     docker_test.provide_container(postgres);
-    std::env::set_var("APP_ENVIRONMENT", "TEST");
 
     docker_test
         .run_async(|ops| async move {

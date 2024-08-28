@@ -60,7 +60,7 @@ impl Settings {
         let environment: Environment = std::env::var("APP_ENVIRONMENT")
             .unwrap()
             .try_into()
-            .expect("failed to parse APP_ENVIRONMENT");
+            .unwrap_or(Environment::Test);
 
         let settings: Settings = Config::builder()
             .add_source(

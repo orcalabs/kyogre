@@ -40,7 +40,7 @@ impl PostgresAdapter {
         let environment: Environment = std::env::var("APP_ENVIRONMENT")
             .ok()
             .and_then(|v| v.try_into().ok())
-            .unwrap_or(Environment::Local);
+            .unwrap_or(Environment::Test);
 
         let mut connections_per_pool = (settings.max_connections / 2) as u32;
         if connections_per_pool == 0 {
@@ -82,10 +82,7 @@ impl PostgresAdapter {
         }
 
         let ais_pool = match environment {
-            Environment::Production
-            | Environment::Staging
-            | Environment::Development
-            | Environment::Local => {
+            Environment::Development | Environment::Production | Environment::Local => {
                 let ais_opts = opts
                     .clone()
                     .options([("plan_cache_mode", "force_custom_plan")]);
@@ -100,7 +97,7 @@ impl PostgresAdapter {
 
                 Some(ais_pool)
             }
-            Environment::Test => None,
+            Environment::OnPremise | Environment::Test => None,
         };
 
         let pool = PgPoolOptions::new()
@@ -123,11 +120,15 @@ impl PostgresAdapter {
         })
     }
 
+    pub async fn close(self) {
+        self.pool.close().await
+    }
+
     pub(crate) fn ais_pool(&self) -> &PgPool {
         match self.environment {
             Environment::Production
-            | Environment::Staging
             | Environment::Development
+            | Environment::OnPremise
             | Environment::Local => self.ais_pool.as_ref().unwrap(),
             Environment::Test => &self.pool,
         }

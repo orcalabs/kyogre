@@ -1,7 +1,7 @@
 use super::helper::test;
-use actix_web::http::StatusCode;
 use engine::*;
 use kyogre_core::{FishingFacilitiesSorting, FishingFacilityToolType, Mmsi, Ordering};
+use reqwest::StatusCode;
 use web_api::routes::v1::fishing_facility::{FishingFacilitiesParams, FishingFacility};
 
 #[tokio::test]

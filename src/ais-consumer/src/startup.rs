@@ -1,13 +1,14 @@
+use std::str::FromStr;
+
 use crate::{
     barentswatch::BarentswatchAisClient, consumer::Consumer, error::ConsumerError,
     settings::Settings,
 };
 use error_stack::Result;
-use hyper::Uri;
 use kyogre_core::{BearerToken, DataMessage};
 use orca_core::Environment;
 use postgres::PostgresAdapter;
-use std::str::FromStr;
+use reqwest::Url;
 use tokio::{
     io::AsyncRead,
     sync::broadcast::{self, Receiver, Sender},
@@ -32,8 +33,10 @@ impl App {
             let bearer_token = BearerToken::acquire(&settings.oauth.unwrap())
                 .await
                 .unwrap();
-            let uri = Uri::from_str(&settings.api_address.unwrap()).unwrap();
-            Some(BarentswatchAisClient::new(bearer_token, uri))
+            Some(BarentswatchAisClient::new(
+                bearer_token,
+                Url::from_str(&settings.api_address.unwrap()).unwrap(),
+            ))
         };
 
         if settings.environment == Environment::Local {

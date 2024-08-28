@@ -1,15 +1,13 @@
+use crate::error::{PostgresError, PostgresErrorWrapper};
 use chrono::{DateTime, Utc};
 use error_stack::report;
 use fiskeridir_rs::CallSign;
-use geo_types::geometry::Geometry;
 use geozero::wkb;
 use kyogre_core::{FishingFacilityApiSource, FishingFacilityToolType, FiskeridirVesselId, Mmsi};
 use serde::Deserialize;
-use sqlx::{postgres::PgTypeInfo, Postgres};
+use sqlx::{postgres::PgTypeInfo, Database, Postgres};
 use uuid::Uuid;
 use wkt::ToWkt;
-
-use crate::error::{PostgresError, PostgresErrorWrapper};
 
 #[derive(Debug, Deserialize)]
 pub struct FishingFacility {
@@ -40,7 +38,7 @@ pub struct FishingFacility {
 }
 
 #[derive(Debug)]
-pub struct GeometryWkt(pub wkt::Geometry<f64>);
+pub struct GeometryWkt(pub wkt::Wkt<f64>);
 
 impl TryFrom<FishingFacility> for kyogre_core::FishingFacility {
     type Error = PostgresErrorWrapper;
@@ -92,7 +90,7 @@ impl<'de> Deserialize<'de> for GeometryWkt {
     where
         D: serde::Deserializer<'de>,
     {
-        wkt::Geometry::<f64>::deserialize(deserializer).map(Self)
+        wkt::Wkt::<f64>::deserialize(deserializer).map(Self)
     }
 }
 
@@ -104,18 +102,14 @@ impl sqlx::Type<Postgres> for GeometryWkt {
 
 impl<'r> sqlx::Decode<'r, Postgres> for GeometryWkt {
     fn decode(
-        value: <Postgres as sqlx::database::HasValueRef<'r>>::ValueRef,
+        value: <Postgres as Database>::ValueRef<'r>,
     ) -> Result<Self, sqlx::error::BoxDynError> {
-        let decode = <wkb::Decode<Geometry<f64>> as sqlx::Decode<Postgres>>::decode(value)?;
-        let wkt = decode
-            .geometry
-            .ok_or_else(|| {
-                report!(PostgresError::DataConversion)
-                    .attach_printable("expected wkb::Decode<_>.geometry to be `Some`")
-            })?
-            .to_wkt()
-            .item;
+        let decode = <wkb::Decode<geo::Geometry<f64>> as sqlx::Decode<Postgres>>::decode(value)?;
+        let wkt = decode.geometry.ok_or_else(|| {
+            report!(PostgresError::DataConversion)
+                .attach_printable("expected wkb::Decode<_>.geometry to be `Some`")
+        })?;
 
-        Ok(Self(wkt))
+        Ok(Self(wkt.to_wkt()))
     }
 }
