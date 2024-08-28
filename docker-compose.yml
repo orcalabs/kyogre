@@ -42,7 +42,7 @@ services:
       context: .
       dockerfile: dockerfiles/ais-consumer/Dockerfile
       secrets:
-        - source: git-credentials
+        - source: cloudsmith-api-key
     environment:
       - RUST_BACKTRACE=1
       - APP_ENVIRONMENT=local
@@ -53,7 +53,7 @@ services:
       context: .
       dockerfile: dockerfiles/engine/Dockerfile
       secrets:
-        - source: git-credentials
+        - source: cloudsmith-api-key
     environment:
       - RUST_BACKTRACE=1
       - APP_ENVIRONMENT=local
@@ -71,7 +71,7 @@ services:
       context: .
       dockerfile: dockerfiles/duckdb/Dockerfile
       secrets:
-        - source: git-credentials
+        - source: cloudsmith-api-key
     environment:
       - RUST_BACKTRACE=1
       - APP_ENVIRONMENT=local
@@ -89,7 +89,7 @@ services:
       context: .
       dockerfile: dockerfiles/database-migrator/Dockerfile
       secrets:
-        - source: git-credentials
+        - source: cloudsmith-api-key
     environment:
       - RUST_BACKTRACE=1
       - APP_ENVIRONMENT=local
@@ -100,7 +100,7 @@ services:
       context: .
       dockerfile: dockerfiles/ais-data-migrator/Dockerfile
       secrets:
-        - source: git-credentials
+        - source: cloudsmith-api-key
     environment:
       - RUST_BACKTRACE=1
       - APP_ENVIRONMENT=local
@@ -111,7 +111,7 @@ services:
       context: .
       dockerfile: dockerfiles/fishery-api/Dockerfile
       secrets:
-        - source: git-credentials
+        - source: cloudsmith-api-key
     environment:
       - RUST_BACKTRACE=1
       - APP_ENVIRONMENT=local
@@ -119,5 +119,5 @@ services:
       - 8080:8080
 
 secrets:
-  git-credentials:
-    file: ~/.git-credentials
+  cloudsmith-api-key:
+    environment: CLOUDSMITH_API_KEY
