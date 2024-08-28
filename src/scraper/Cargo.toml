@@ -20,9 +20,13 @@ error-stack = { workspace = true }
 chrono = { version = "0.4.38", features = ["serde"] }
 wkt = { version = "0.11.0", features = ["serde"] }
 uuid = { version = "1.10.0", features = ["serde"] }
-reqwest = { version = "0.12.7", features = ["gzip"] }
+reqwest = { workspace = true, features = ["gzip", "rustls-tls"] }
 geozero = "0.13.0"
 table-extract = "0.2.3"
 csv = "1.3.0"
 pyo3 = { version = "0.22.2", features = ["chrono", "auto-initialize"] }
 regex = "1.10.6"
+
+
+[dev-dependencies]
+reqwest = { workspace = true, features = ["gzip"] }
