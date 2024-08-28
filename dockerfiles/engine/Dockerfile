@@ -24,15 +24,16 @@ RUN apt update -y && \
     python3.9-dev && \
     git config --global credential.helper store
 
-RUN --mount=type=secret,id=git-credentials,target=/root/.git-credentials,required=true \
+RUN --mount=type=secret,id=cloudsmith-api-key,required=true \
+    export CARGO_REGISTRIES_ORCALABS_ORCASTRATOR_TOKEN=$(cat /run/secrets/cloudsmith-api-key) && \
+    export CARGO_REGISTRIES_ORCALABS_ORCASTRATOR_CREDENTIAL_PROVIDER=cargo:token && \
     cd src && \
     cargo chef cook --release --recipe-path recipe.json
 
 COPY src src
 COPY scripts scripts
 
-RUN --mount=type=secret,id=git-credentials,target=~/.git-credentials,required=true \
-    cd src && \
+RUN cd src && \
     cargo build --release --bin engine
 
 FROM debian:bullseye-slim

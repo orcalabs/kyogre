@@ -2924,7 +2924,7 @@ checksum = "c41e0c4fef86961ac6d6f8a82609f55f31b05e4fce149ac5710e439df7619ba4"
 [[package]]
 name = "machine"
 version = "0.9.0"
-source = "registry+https://dl.cloudsmith.io/basic/orcalabs/orcastrator/cargo/index.git"
+source = "sparse+https://cargo.cloudsmith.io/orcalabs/orcastrator/"
 checksum = "6a36e19a7c398e1f7cd2693f3040b5d38b148ef8021e7ffcce224ecf7d3ad0a1"
 dependencies = [
  "async-trait",
@@ -2938,9 +2938,9 @@ dependencies = [
 
 [[package]]
 name = "machine_derive"
-version = "0.2.0"
-source = "registry+https://dl.cloudsmith.io/basic/orcalabs/orcastrator/cargo/index.git"
-checksum = "6553c4a431a37d1705069536fcdc1eaa4ba43d96c93bdc9d6d863a731066e416"
+version = "0.2.1"
+source = "sparse+https://cargo.cloudsmith.io/orcalabs/orcastrator/"
+checksum = "6835665e2fea5bbb38142a7243571b72700c70a03c308550d4bf203aa8970957"
 dependencies = [
  "proc-macro2",
  "quote 1.0.37",
@@ -3505,7 +3505,7 @@ dependencies = [
 [[package]]
 name = "orca-core"
 version = "0.27.0"
-source = "registry+https://dl.cloudsmith.io/basic/orcalabs/orcastrator/cargo/index.git"
+source = "sparse+https://cargo.cloudsmith.io/orcalabs/orcastrator/"
 checksum = "bbb48a82de7169e9bda3ab2af890a66a57583d6cc6969980c95888fcf68bd0b2"
 dependencies = [
  "actix-web",
@@ -6252,7 +6252,7 @@ checksum = "c7de7d73e1754487cb58364ee906a499937a0dfabd86bcb980fa99ec8c8fa2ce"
 [[package]]
 name = "unnest_insert"
 version = "0.6.0"
-source = "registry+https://dl.cloudsmith.io/basic/orcalabs/orcastrator/cargo/index.git"
+source = "sparse+https://cargo.cloudsmith.io/orcalabs/orcastrator/"
 checksum = "81f27dd85888b51cc3e6c5c2ff335993d9a5179ce93ede69ceed3e770b3e5e7c"
 dependencies = [
  "async-trait",
@@ -6263,7 +6263,7 @@ dependencies = [
 [[package]]
 name = "unnest_insert_derive"
 version = "0.5.1"
-source = "registry+https://dl.cloudsmith.io/basic/orcalabs/orcastrator/cargo/index.git"
+source = "sparse+https://cargo.cloudsmith.io/orcalabs/orcastrator/"
 checksum = "44a009e935b48462c9e0d879c514a1bcf03e5e2c070ad0b4bfe0fab897ac893b"
 dependencies = [
  "proc-macro2",
