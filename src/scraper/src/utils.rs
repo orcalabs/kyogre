@@ -2,28 +2,30 @@ use std::{future::Future, sync::Arc};
 
 use crate::{FiskeridirSource, ScraperError};
 use error_stack::{Report, Result, ResultExt};
-use fiskeridir_rs::{DataFile, FileSource};
-use kyogre_core::{FileHashId, FileId};
+use fiskeridir_rs::{DataDir, DataFile, FileSource};
 use orca_core::Environment;
 use tokio::sync::mpsc::channel;
-use tracing::{event, Level};
+use tracing::{error, info};
 
 enum MasterTask {
-    Process {
-        year: u32,
-        hash_id: FileHashId,
-        file_hash: String,
-        file: DataFile,
-    },
-    NoChanges {
-        year: u32,
-    },
+    Process(Vec<ProcessTask>),
     Skip {
-        year: u32,
+        source: FileSource,
     },
     Error {
-        year: u32,
+        source: FileSource,
         error: Report<ScraperError>,
+    },
+}
+
+enum ProcessTask {
+    Process {
+        dir: DataDir,
+        file: DataFile,
+        file_hash: String,
+    },
+    NoChanges {
+        file: DataFile,
     },
 }
 
@@ -31,12 +33,11 @@ pub async fn prefetch_and_scrape<F, Fut>(
     environment: Environment,
     fiskeridir_source: Arc<FiskeridirSource>,
     sources: Vec<FileSource>,
-    file_id: FileId,
     skip_boundry: Option<u32>,
     closure: F,
 ) -> Result<(), ScraperError>
 where
-    F: Fn(u32, DataFile) -> Fut,
+    F: Fn(DataDir, DataFile) -> Fut,
     Fut: Future<Output = Result<(), ScraperError>>,
 {
     if sources.is_empty() {
@@ -61,43 +62,54 @@ where
                 let year = source.year();
 
                 let f = {
+                    let source = source.clone();
                     let fiskeridir_source = fiskeridir_source.clone();
                     || async move {
-                        let hash_id = FileHashId::new(file_id, year);
+                        let files = source.files();
+                        let hash_ids = files.iter().map(|v| v.id()).collect::<Vec<_>>();
 
-                        let hash = fiskeridir_source
+                        let hashes = fiskeridir_source
                             .hash_store
-                            .get_hash(&hash_id)
+                            .get_hashes(&hash_ids)
                             .await
                             .change_context(ScraperError)?;
 
-                        if Some(year) < skip_boundry && hash.is_some() {
-                            return Ok(MasterTask::Skip { year });
+                        if Some(year) < skip_boundry && hashes.len() == hash_ids.len() {
+                            return Ok(MasterTask::Skip { source });
                         }
 
-                        let file = fiskeridir_source.download(&source).await?;
-                        let file_hash = file.hash().change_context(ScraperError)?;
+                        let dir = fiskeridir_source.download(&source).await?;
 
-                        let task = if hash.as_ref() == Some(&file_hash) {
-                            MasterTask::NoChanges { year }
-                        } else {
-                            MasterTask::Process {
-                                year,
-                                hash_id,
-                                file_hash,
-                                file,
-                            }
-                        };
+                        let mut tasks = Vec::with_capacity(files.len());
 
-                        Ok(task)
+                        for file in files {
+                            let file_id = file.id();
+
+                            let file_hash = dir.hash(&file).change_context(ScraperError)?;
+                            let stored_hash = hashes
+                                .iter()
+                                .find(|(id, _)| *id == file_id)
+                                .map(|(_, hash)| hash);
+
+                            let task = if stored_hash == Some(&file_hash) {
+                                ProcessTask::NoChanges { file }
+                            } else {
+                                ProcessTask::Process {
+                                    dir: dir.clone(),
+                                    file,
+                                    file_hash,
+                                }
+                            };
+                            tasks.push(task);
+                        }
+
+                        Ok(MasterTask::Process(tasks))
                     }
                 };
 
-                let task = match f().await {
-                    Ok(task) => task,
-                    Err(error) => MasterTask::Error { year, error },
-                };
-
+                let task = f()
+                    .await
+                    .unwrap_or_else(|error| MasterTask::Error { source, error });
                 master_tx.send(task).await.unwrap()
             }
         }
@@ -119,47 +131,47 @@ where
         };
 
         match task {
-            MasterTask::Process {
-                year,
-                hash_id,
-                file_hash,
-                file,
-            } => match closure(year, file).await {
-                Ok(()) => match fiskeridir_source.hash_store.add(&hash_id, file_hash).await {
-                    Ok(()) => event!(
-                        Level::INFO,
-                        "successfully scraped {} year: {}",
-                        file_id,
-                        year
-                    ),
-                    Err(e) => event!(
-                        Level::ERROR,
-                        "failed to store hash for {} year {}, err: {:?}",
-                        file_id,
-                        year,
-                        e
-                    ),
-                },
-                Err(e) => event!(
-                    Level::ERROR,
-                    "failed to process file for {} year {}, err: {:?}",
-                    file_id,
-                    year,
-                    e
-                ),
-            },
-            MasterTask::Error { year, error } => event!(
-                Level::ERROR,
-                "failed to process source for {} year {}, err: {:?}",
-                file_id,
-                year,
-                error
-            ),
-            MasterTask::NoChanges { year } => {
-                event!(Level::INFO, "no changes for {} year: {}", file_id, year)
+            MasterTask::Process(tasks) => {
+                for task in tasks {
+                    match task {
+                        ProcessTask::Process {
+                            dir,
+                            file,
+                            file_hash,
+                        } => {
+                            let year = file.year();
+                            match closure(dir, file).await {
+                                Ok(()) => match fiskeridir_source
+                                    .hash_store
+                                    .add(&file.id(), file_hash)
+                                    .await
+                                {
+                                    Ok(()) => info!("successfully scraped {file} year: {year}"),
+                                    Err(e) => {
+                                        error!("failed to store hash for {file} year {year}, err: {e:?}")
+                                    }
+                                },
+                                Err(e) => {
+                                    error!(
+                                        "failed to process file for {file} year {year}, err: {e:?}"
+                                    )
+                                }
+                            }
+                        }
+                        ProcessTask::NoChanges { file } => {
+                            info!("no changes for {file} year: {}", file.year())
+                        }
+                    }
+                }
             }
-            MasterTask::Skip { year } => {
-                event!(Level::INFO, "skipping {} year: {}", file_id, year)
+            MasterTask::Skip { source } => {
+                info!("skipping {source} year: {}", source.year())
+            }
+            MasterTask::Error { source, error } => {
+                error!(
+                    "failed to process source for {source} year {}, err: {error:?}",
+                    source.year()
+                )
             }
         }
 
@@ -169,7 +181,7 @@ where
 
         if !prefetch {
             if let Err(e) = fiskeridir_source.fiskeridir_file.clean_download_dir() {
-                event!(Level::ERROR, "failed to clean download dir: {:?}", e);
+                error!("failed to clean download dir: {e:?}");
             }
             if let Some(source) = sources.next() {
                 worker_tx.try_send(source).unwrap();

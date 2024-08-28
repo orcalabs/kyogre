@@ -5,8 +5,7 @@ use async_trait::async_trait;
 use barentswatch::{FishingFacilityHistoricScraper, FishingFacilityScraper};
 use error_stack::Result;
 use fiskeridir::{
-    AquaCultureRegisterScraper, ErsDcaScraper, ErsDepScraper, ErsPorScraper, ErsTraScraper,
-    LandingScraper, RegisterVesselsScraper, VmsScraper,
+    AquaCultureRegisterScraper, ErsScraper, LandingScraper, RegisterVesselsScraper, VmsScraper,
 };
 use kyogre_core::{OauthConfig, ScraperInboundPort, ScraperOutboundPort};
 use mattilsynet::MattilsynetScraper;
@@ -15,7 +14,7 @@ use orca_core::Environment;
 use serde::Deserialize;
 use std::sync::Arc;
 use std::{fmt::Debug, path::PathBuf};
-use tracing::{event, instrument, Level};
+use tracing::{error, instrument};
 use weather::WeatherScraper;
 
 mod barentswatch;
@@ -99,41 +98,11 @@ impl Scraper {
             })
             .unwrap_or_default();
 
-        let ers_dca_sources = config
-            .ers
-            .clone()
-            .map(|ers| {
-                (ers.min_year..=ers.max_year)
-                    .map(|year| fiskeridir_rs::FileSource::ErsDca { year, url: None })
-                    .collect()
-            })
-            .unwrap_or_default();
-
-        let ers_dep_sources = config
-            .ers
-            .clone()
-            .map(|ers| {
-                (ers.min_year..=ers.max_year)
-                    .map(|year| fiskeridir_rs::FileSource::ErsDep { year, url: None })
-                    .collect()
-            })
-            .unwrap_or_default();
-
-        let ers_por_sources = config
-            .ers
-            .clone()
-            .map(|ers| {
-                (ers.min_year..=ers.max_year)
-                    .map(|year| fiskeridir_rs::FileSource::ErsPor { year, url: None })
-                    .collect()
-            })
-            .unwrap_or_default();
-
-        let ers_tra_sources = config
+        let ers_sources = config
             .ers
             .map(|ers| {
                 (ers.min_year..=ers.max_year)
-                    .map(|year| fiskeridir_rs::FileSource::ErsTra { year, url: None })
+                    .map(|year| fiskeridir_rs::FileSource::Ers { year, url: None })
                     .collect()
             })
             .unwrap_or_default();
@@ -159,14 +128,7 @@ impl Scraper {
         let fiskeridir_arc = Arc::new(fiskeridir_source);
         let landings_scraper =
             LandingScraper::new(fiskeridir_arc.clone(), landing_sources, environment);
-        let ers_dca_scraper =
-            ErsDcaScraper::new(fiskeridir_arc.clone(), ers_dca_sources, environment);
-        let ers_dep_scraper =
-            ErsDepScraper::new(fiskeridir_arc.clone(), ers_dep_sources, environment);
-        let ers_por_scraper =
-            ErsPorScraper::new(fiskeridir_arc.clone(), ers_por_sources, environment);
-        let ers_tra_scraper =
-            ErsTraScraper::new(fiskeridir_arc.clone(), ers_tra_sources, environment);
+        let ers_scraper = ErsScraper::new(fiskeridir_arc.clone(), ers_sources, environment);
         let vms_scraper = VmsScraper::new(fiskeridir_arc.clone(), vms_sources, environment);
         let aqua_culture_register_scraper = AquaCultureRegisterScraper::new(
             fiskeridir_arc.clone(),
@@ -197,10 +159,7 @@ impl Scraper {
             scrapers: vec![
                 vec![
                     Arc::new(landings_scraper),
-                    Arc::new(ers_dca_scraper),
-                    Arc::new(ers_por_scraper),
-                    Arc::new(ers_dep_scraper),
-                    Arc::new(ers_tra_scraper),
+                    Arc::new(ers_scraper),
                     Arc::new(register_vessels_scraper),
                     Arc::new(fishing_facility_scraper),
                     Arc::new(fishing_facility_historic_scraper),
@@ -220,7 +179,7 @@ impl Scraper {
 async fn run_scraper(s: &(dyn DataSource), processor: &(dyn Processor)) {
     tracing::Span::current().record("app.scraper", s.id().to_string());
     if let Err(e) = s.scrape(processor).await {
-        event!(Level::ERROR, "failed to run scraper: {:?}", e);
+        error!("failed to run scraper: {e:?}");
     }
 }
 
@@ -245,7 +204,7 @@ impl kyogre_core::Scraper for Scraper {
 
                 for h in handles {
                     if let Err(e) = h.await {
-                        event!(Level::ERROR, "failed to run scraper: {:?}", e);
+                        error!("failed to run scraper: {e:?}");
                     }
                 }
             }
@@ -265,10 +224,7 @@ impl kyogre_core::Scraper for Scraper {
 
 pub enum ScraperId {
     Landings,
-    ErsPor,
-    ErsDep,
-    ErsDca,
-    ErsTra,
+    Ers,
     RegisterVessels,
     Vms,
     FishingFacility,
@@ -283,10 +239,7 @@ impl std::fmt::Display for ScraperId {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             ScraperId::Landings => write!(f, "landings_scraper"),
-            ScraperId::ErsPor => write!(f, "ers_por_scraper"),
-            ScraperId::ErsDep => write!(f, "ers_dep_scraper"),
-            ScraperId::ErsDca => write!(f, "ers_dca_scraper"),
-            ScraperId::ErsTra => write!(f, "ers_tra_scraper"),
+            ScraperId::Ers => write!(f, "ers_scraper"),
             ScraperId::RegisterVessels => write!(f, "register_vessels_scraper"),
             ScraperId::Vms => write!(f, "vms_scraper"),
             ScraperId::FishingFacility => write!(f, "fishing_facility_scraper"),

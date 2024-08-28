@@ -40,6 +40,5 @@ FROM gcr.io/distroless/cc
 COPY --from=builder /app/src/target/release/ais-consumer .
 
 COPY src/ais-consumer/config config
-COPY src/kyogre-core/shoreline.json.gz .
 
 ENTRYPOINT ["./ais-consumer"]
