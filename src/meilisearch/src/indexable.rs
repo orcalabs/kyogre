@@ -8,7 +8,10 @@ use async_trait::async_trait;
 use error_stack::{report, Result, ResultExt};
 use futures::{future::BoxFuture, FutureExt};
 use kyogre_core::{running_in_test, MeilisearchSource};
-use meilisearch_sdk::{ErrorCode, Index, PaginationSetting, Selectors, Task, TaskInfo};
+use meilisearch_sdk::{
+    errors::ErrorCode, indexes::Index, search::Selectors, settings::PaginationSetting,
+    task_info::TaskInfo, tasks::Task,
+};
 use serde::{de::DeserializeOwned, Serialize};
 use strum::IntoEnumIterator;
 use tracing::{event, Level};
@@ -31,7 +34,7 @@ pub trait Id {
 pub trait Indexable {
     type Id: Clone + Eq + Ord + Debug + Display + Serialize + Send + Sync;
     type Item: Id + Serialize + Debug + Send + Sync;
-    type IdVersion: IdVersion<Id = Self::Id> + DeserializeOwned + 'static;
+    type IdVersion: IdVersion<Id = Self::Id> + DeserializeOwned + 'static + Send + Sync;
     type FilterableAttributes: IntoEnumIterator + Display;
     type SortableAttributes: IntoEnumIterator + Display;
 
@@ -57,7 +60,7 @@ pub trait Indexable {
     async fn create_index<T: Sync>(
         adapter: &MeilisearchAdapter<T>,
     ) -> Result<(), MeilisearchError> {
-        let settings = meilisearch_sdk::Settings::new()
+        let settings = meilisearch_sdk::settings::Settings::new()
             .with_searchable_attributes(Vec::<String>::new())
             .with_ranking_rules(["sort"])
             .with_filterable_attributes(Self::FilterableAttributes::iter().map(|d| format!("{d}")))
@@ -176,7 +179,7 @@ pub trait Indexable {
         tasks: &'a mut Vec<TaskInfo>,
         items: &'a [Self::Item],
     ) -> BoxFuture<'a, ()> {
-        use meilisearch_sdk::{Error, ErrorCode, MeilisearchError};
+        use meilisearch_sdk::errors::{Error, ErrorCode, MeilisearchError};
 
         async move {
             match index.add_documents(items, Some(Self::primary_key())).await {

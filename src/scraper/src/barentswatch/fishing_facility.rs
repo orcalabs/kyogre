@@ -132,8 +132,7 @@ impl TryFrom<FishingFacility> for kyogre_core::FishingFacility {
         let geometry_wkt = GeoJson(&geometry_string)
             .to_geo()
             .change_context(ConversionError)?
-            .to_wkt()
-            .item;
+            .to_wkt();
 
         Ok(Self {
             tool_id: v.tool_id,

@@ -1,6 +1,6 @@
 use super::helper::test_with_cache;
-use actix_web::http::StatusCode;
 use engine::*;
+use reqwest::StatusCode;
 use web_api::routes::v1::haul::Haul;
 
 #[tokio::test]

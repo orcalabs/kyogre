@@ -178,8 +178,6 @@ where
         docker_test.provide_container(meilisearch);
     }
 
-    std::env::set_var("APP_ENVIRONMENT", "TEST");
-
     docker_test
         .run_async(|ops| async move {
             let db_handle = ops.handle("postgres");
@@ -312,6 +310,8 @@ where
                     meilisearch.unwrap().cleanup().await.unwrap();
                 }
             }
+            test_db.db.close().await;
+            adapter.close().await;
         })
         .await;
 }

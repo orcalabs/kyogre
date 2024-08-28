@@ -1,8 +1,8 @@
 use super::helper::test;
-use actix_web::http::StatusCode;
 use chrono::{Duration, TimeZone, Utc};
 use engine::*;
 use kyogre_core::*;
+use reqwest::StatusCode;
 use web_api::{
     extractors::{BwPolicy, BwRole},
     response::{AIS_DETAILS_INTERVAL, MISSING_DATA_DURATION},

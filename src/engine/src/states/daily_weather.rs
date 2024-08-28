@@ -12,9 +12,9 @@ impl machine::State for DailyWeatherState {
 
     async fn run(&self, shared_state: Self::SharedState) -> Self::SharedState {
         let environment: Environment = std::env::var("APP_ENVIRONMENT")
-            .unwrap()
+            .unwrap_or("test".into())
             .try_into()
-            .expect("failed to parse APP_ENVIRONMENT");
+            .unwrap();
 
         // On a fresh Local deployment it takes too long to perform the initial DailyWeather,
         // so prune the dirty table to only dates with weather.

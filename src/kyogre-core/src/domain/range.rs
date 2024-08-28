@@ -122,9 +122,9 @@ impl<T: FromStr> TryFrom<String> for Range<T> {
     }
 }
 
-impl<T: Display> ToString for Range<T> {
-    fn to_string(&self) -> String {
-        format!(
+impl<T: Display> std::fmt::Display for Range<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!(
             "{},{}",
             match &self.start {
                 Bound::Unbounded => "(".into(),
@@ -136,7 +136,7 @@ impl<T: Display> ToString for Range<T> {
                 Bound::Excluded(v) => format!("{v})"),
                 Bound::Included(v) => format!("{v}]"),
             },
-        )
+        ))
     }
 }
 

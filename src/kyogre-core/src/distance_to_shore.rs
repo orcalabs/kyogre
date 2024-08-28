@@ -62,13 +62,10 @@ impl vpsearch::MetricSpace for Coordinate {
 }
 
 pub fn running_in_test() -> bool {
-    if let Ok(e) = std::env::var("APP_ENVIRONMENT") {
-        if let Ok(env) = Environment::try_from(e) {
-            env == Environment::Test
-        } else {
-            false
-        }
-    } else {
-        false
-    }
+    let environment: Environment = std::env::var("APP_ENVIRONMENT")
+        .unwrap_or("Test".into())
+        .try_into()
+        .unwrap();
+
+    environment == Environment::Test
 }

@@ -1,8 +1,8 @@
 use super::helper::test;
-use actix_web::http::StatusCode;
 use engine::*;
 use fiskeridir_rs::SpeciesGroup;
 use kyogre_core::ML_SPECIES_GROUPS;
+use reqwest::StatusCode;
 use strum::IntoEnumIterator;
 use web_api::routes::v1::species::*;
 

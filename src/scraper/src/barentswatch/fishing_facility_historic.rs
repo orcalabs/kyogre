@@ -101,7 +101,7 @@ struct FishingFacilityHistoric {
     last_changed_date_time: DateTime<Utc>,
     comment: Option<String>,
     #[serde(rename = "geometryWKT")]
-    geometry_wkt: wkt::Geometry<f64>,
+    geometry_wkt: wkt::Wkt<f64>,
 }
 
 impl TryFrom<FishingFacilityHistoric> for kyogre_core::FishingFacility {

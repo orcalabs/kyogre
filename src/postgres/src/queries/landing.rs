@@ -120,7 +120,7 @@ ORDER BY
         AND $9 = 2 THEN SUM(le.living_weight)
     END DESC
             "#,
-            args.ranges,
+            args.ranges.as_deref(),
             args.catch_area_ids as _,
             args.catch_main_area_ids as _,
             args.gear_group_ids as _,

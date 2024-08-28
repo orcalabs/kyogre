@@ -11,8 +11,11 @@ async fn main() {
     let settings = Settings::new().unwrap();
 
     let tracing = match settings.environment {
-        Environment::Test | Environment::Local | Environment::Production => TracingOutput::Local,
-        Environment::Development | Environment::Staging => {
+        Environment::OnPremise
+        | Environment::Test
+        | Environment::Local
+        | Environment::Production => TracingOutput::Local,
+        Environment::Development => {
             Report::<()>::set_color_mode(ColorMode::None);
             TracingOutput::Honeycomb {
                 api_key: settings.honeycomb_api_key(),

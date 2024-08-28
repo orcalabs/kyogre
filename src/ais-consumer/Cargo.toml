@@ -11,25 +11,27 @@ fiskeridir-rs = { workspace = true }
 
 kyogre-core = { path = "../kyogre-core" }
 postgres = { path = "../postgres" }
-async-trait = "0.1.77"
-serde = "1.0.196"
-config = "0.13.4"
-tokio = { version = "1.35.1", features = ["macros", "sync", "time"] }
-tokio-util = { version = "0.7.10", features = ["codec", "compat"] }
+async-trait = "0.1.81"
+serde = "1.0.209"
+config = "0.14.0"
+tokio = { version = "1.39.3", features = ["macros", "sync", "time"] }
+tokio-util = { version = "0.7.11", features = ["codec", "compat"] }
 futures = "0.3.30"
 tracing = "0.1.40"
-chrono = { version = "0.4.33", features = ["serde"] }
+chrono = { version = "0.4.38", features = ["serde"] }
 error-stack = { workspace = true }
-serde_json = "1.0.113"
+serde_json = "1.0.127"
 humantime-serde = "1.1.1"
 rand = "0.8.5"
-
-hyper = { version = "0.14.28", features = ["http2"] }
-hyper-alpn = "=0.3.0"
+reqwest = { version = "0.12.7", features = [
+    "http2",
+    "native-tls-alpn",
+    "stream",
+], default-features = false }
 
 [dev-dependencies]
 tracing-subscriber = "0.3.18"
 orca-core = { workspace = true, features = ["dockertest"] }
 dockertest = { workspace = true }
 rand = "0.8.5"
-tokio-stream = "0.1.14"
+tokio-stream = "0.1.15"

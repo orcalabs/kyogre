@@ -1,6 +1,5 @@
 use super::helper::test_with_matrix_cache;
 use crate::v1::helper::*;
-use actix_web::http::StatusCode;
 use chrono::{DateTime, Utc};
 use engine::*;
 use enum_index::EnumIndex;
@@ -9,6 +8,7 @@ use kyogre_core::{
     landing_date_feature_matrix_index, ActiveLandingFilter, CatchLocationId, HaulMatrixes,
     LandingMatrixes, NUM_CATCH_LOCATIONS,
 };
+use reqwest::StatusCode;
 use web_api::routes::{
     utils::datetime_to_month,
     v1::landing::{LandingMatrix, LandingMatrixParams},

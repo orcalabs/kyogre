@@ -1,6 +1,6 @@
 use super::helper::test;
-use actix_web::http::StatusCode;
 use engine::*;
+use reqwest::StatusCode;
 use web_api::routes::v1::trip::CurrentTrip;
 
 #[tokio::test]

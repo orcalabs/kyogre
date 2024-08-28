@@ -1,8 +1,8 @@
 use super::helper::test;
-use actix_web::http::StatusCode;
 use chrono::{Duration, TimeZone, Utc};
 use engine::*;
 use kyogre_core::*;
+use reqwest::StatusCode;
 use web_api::{
     extractors::{BwPolicy, BwRole},
     routes::v1::ais::{AisCurrentPositionParameters, AisPosition},

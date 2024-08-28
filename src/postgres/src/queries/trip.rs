@@ -1435,7 +1435,7 @@ WHERE
     AND fiskeridir_vessel_id = $2
     AND trip_assembler_id = $3
             "#,
-                    periods,
+                    &periods,
                     value.fiskeridir_vessel_id.0,
                     value.trip_assembler_id as i32,
                 )
