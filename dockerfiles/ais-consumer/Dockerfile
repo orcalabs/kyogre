@@ -17,12 +17,11 @@ COPY --from=planner /app/src/recipe.json src/recipe.json
 RUN apt update -y && \
     apt install -y \
     git \
-    libssl1.1 \
     libssl-dev \
     protobuf-compiler \
     pkg-config \
-    python3.9 \
-    python3.9-dev && \
+    python3 \
+    python3-dev && \
     git config --global credential.helper store
 
 RUN --mount=type=secret,id=cloudsmith-api-key,required=true \
