@@ -1,15 +1,15 @@
+use crate::error::error::{InvalidCallSignSnafu, MissingBwFiskInfoProfileSnafu};
 use crate::response::Response;
-use crate::{error::ApiError, extractors::BwProfile, to_streaming_response, Database};
+use crate::{error::Result, extractors::BwProfile, to_streaming_response, Database};
 use actix_web::{web, HttpResponse};
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::{CallSign, GearGroup, RegisterVesselOwner, SpeciesGroup, VesselLengthGroup};
-use futures::TryFutureExt;
 use futures::TryStreamExt;
 use kyogre_core::VesselBenchmarks;
 use kyogre_core::{FiskeridirVesselId, Mmsi};
 use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, DisplayFromStr};
-use tracing::error;
+use snafu::ResultExt;
 use utoipa::ToSchema;
 
 #[utoipa::path(
@@ -21,12 +21,9 @@ use utoipa::ToSchema;
     )
 )]
 #[tracing::instrument(skip(db))]
-pub async fn vessels<T: Database + 'static>(db: web::Data<T>) -> Result<HttpResponse, ApiError> {
+pub async fn vessels<T: Database + 'static>(db: web::Data<T>) -> Result<HttpResponse> {
     to_streaming_response! {
-        db.vessels().map_ok(Vessel::from).map_err(|e| {
-            error!("failed to retrieve vessels: {e:?}");
-            ApiError::InternalServerError
-        })
+        db.vessels().map_ok(Vessel::from)
     }
 }
 
@@ -42,22 +39,20 @@ pub async fn vessels<T: Database + 'static>(db: web::Data<T>) -> Result<HttpResp
 pub async fn vessel_benchmarks<T: Database + 'static>(
     db: web::Data<T>,
     bw_profile: BwProfile,
-) -> Result<Response<VesselBenchmarks>, ApiError> {
+) -> Result<Response<VesselBenchmarks>> {
     let fisk_info_profile = bw_profile
         .fisk_info_profile
-        .ok_or(ApiError::MissingBwFiskInfoProfile)?;
+        .ok_or_else(|| MissingBwFiskInfoProfileSnafu.build())?;
     let call_sign =
-        CallSign::try_from(fisk_info_profile.ircs).map_err(|_| ApiError::InvalidCallSign)?;
+        CallSign::try_from(fisk_info_profile.ircs.as_str()).context(InvalidCallSignSnafu {
+            call_sign: fisk_info_profile.ircs,
+        })?;
 
     Ok(Response::new(
         db.vessel_benchmarks(
             &kyogre_core::BarentswatchUserId(bw_profile.user.id),
             &call_sign,
         )
-        .map_err(|e| {
-            error!("failed to retrieve vessel benchmarks: {e:?}");
-            ApiError::InternalServerError
-        })
         .await?,
     ))
 }

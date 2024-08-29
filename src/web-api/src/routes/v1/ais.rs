@@ -1,6 +1,9 @@
 use crate::{
     ais_to_streaming_response,
-    error::ApiError,
+    error::{
+        error::{InvalidDateRangeSnafu, MissingDateRangeSnafu},
+        Result,
+    },
     extractors::{Auth0Profile, BwProfile},
     to_streaming_response, Database,
 };
@@ -15,7 +18,7 @@ use kyogre_core::{DateRange, Mmsi};
 use serde::{Deserialize, Serialize};
 use serde_qs::actix::QsQuery as Query;
 use serde_with::{serde_as, DisplayFromStr};
-use tracing::{error, warn};
+use snafu::ResultExt;
 use utoipa::{IntoParams, ToSchema};
 
 #[derive(Debug, Deserialize, Serialize, IntoParams)]
@@ -59,7 +62,7 @@ pub async fn ais_current_positions<T: Database + 'static>(
     params: Query<AisCurrentPositionParameters>,
     bw_profile: Option<BwProfile>,
     auth: Option<Auth0Profile>,
-) -> Result<HttpResponse, ApiError> {
+) -> Result<HttpResponse> {
     let bw_policy = bw_profile.map(AisPermission::from).unwrap_or_default();
     let auth0_policy = auth.map(AisPermission::from).unwrap_or_default();
     let policy = if bw_policy == AisPermission::All || auth0_policy == AisPermission::All {
@@ -69,12 +72,7 @@ pub async fn ais_current_positions<T: Database + 'static>(
     };
 
     to_streaming_response! {
-        db.ais_current_positions(params.position_timestamp_limit, policy)
-            .map_err(|e| {
-                error!("failed to retrieve current ais positions: {e:?}");
-                ApiError::InternalServerError
-            })
-            .map_ok(AisPosition::from)
+        db.ais_current_positions(params.position_timestamp_limit, policy).map_ok(AisPosition::from)
     }
 }
 
@@ -102,7 +100,7 @@ pub async fn ais_track<T: Database + 'static>(
     path: Path<AisTrackPath>,
     bw_profile: Option<BwProfile>,
     auth: Option<Auth0Profile>,
-) -> Result<HttpResponse, ApiError> {
+) -> Result<HttpResponse> {
     let (start, end) = match (params.start, params.end) {
         (None, None) => {
             let end = chrono::Utc::now();
@@ -110,7 +108,11 @@ pub async fn ais_track<T: Database + 'static>(
             Ok((start, end))
         }
         (Some(start), Some(end)) => Ok((start, end)),
-        _ => Err(ApiError::InvalidDateRange),
+        _ => MissingDateRangeSnafu {
+            start: params.start.is_some(),
+            end: params.end.is_some(),
+        }
+        .fail(),
     }?;
 
     let bw_policy = bw_profile.map(AisPermission::from).unwrap_or_default();
@@ -121,18 +123,10 @@ pub async fn ais_track<T: Database + 'static>(
         AisPermission::Above15m
     };
 
-    let range = DateRange::new(start, end).map_err(|e| {
-        warn!("{e:?}");
-        ApiError::InvalidDateRange
-    })?;
+    let range = DateRange::new(start, end).context(InvalidDateRangeSnafu { start, end })?;
 
     ais_to_streaming_response! {
-        db.ais_positions(path.mmsi, &range, policy)
-            .map_err(|e| {
-                error!("failed to retrieve ais positions: {e:?}");
-                ApiError::InternalServerError
-            })
-            .map_ok(AisPosition::from)
+        db.ais_positions(path.mmsi, &range, policy).map_ok(AisPosition::from)
     }
 }
 

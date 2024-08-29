@@ -1,6 +1,5 @@
-use crate::error::{PostgresError, PostgresErrorWrapper};
+use crate::error::{Error, MissingValueSnafu};
 use chrono::{DateTime, Utc};
-use error_stack::report;
 use fiskeridir_rs::CallSign;
 use kyogre_core::distance_to_shore;
 use serde::Deserialize;
@@ -61,15 +60,11 @@ pub struct VmsPosition {
 }
 
 impl TryFrom<fiskeridir_rs::Vms> for NewVmsPosition {
-    type Error = PostgresErrorWrapper;
+    type Error = Error;
 
     fn try_from(v: fiskeridir_rs::Vms) -> Result<Self, Self::Error> {
-        let latitude = v
-            .latitude
-            .ok_or_else(|| report!(PostgresError::DataConversion))?;
-        let longitude = v
-            .longitude
-            .ok_or_else(|| report!(PostgresError::DataConversion))?;
+        let latitude = v.latitude.ok_or_else(|| MissingValueSnafu.build())?;
+        let longitude = v.longitude.ok_or_else(|| MissingValueSnafu.build())?;
 
         Ok(Self {
             call_sign: v.call_sign.into_inner(),
@@ -92,7 +87,7 @@ impl TryFrom<fiskeridir_rs::Vms> for NewVmsPosition {
 }
 
 impl TryFrom<VmsPosition> for kyogre_core::VmsPosition {
-    type Error = PostgresErrorWrapper;
+    type Error = Error;
 
     fn try_from(value: VmsPosition) -> Result<Self, Self::Error> {
         Ok(kyogre_core::VmsPosition {

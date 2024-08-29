@@ -1,19 +1,15 @@
-use std::{cmp, sync::Arc};
-
+use super::{BarentswatchSource, FishingFacilityToolType};
+use crate::{ApiClientConfig, DataSource, Error, Processor, Result, ScraperId};
 use async_trait::async_trait;
 use chrono::{DateTime, Duration, Utc};
-use error_stack::{Report, Result, ResultExt};
 use fiskeridir_rs::CallSign;
 use geozero::{geojson::GeoJson, ToGeo};
-use kyogre_core::{BearerToken, ConversionError, FishingFacilityApiSource, GeometryWkt, Mmsi};
+use kyogre_core::{BearerToken, FishingFacilityApiSource, GeometryWkt, Mmsi};
 use serde::{Deserialize, Serialize};
+use std::{cmp, sync::Arc};
 use tracing::info;
 use uuid::Uuid;
 use wkt::ToWkt;
-
-use crate::{ApiClientConfig, DataSource, Processor, ScraperError, ScraperId};
-
-use super::{BarentswatchSource, FishingFacilityToolType};
 
 pub struct FishingFacilityScraper {
     config: Option<ApiClientConfig>,
@@ -38,21 +34,18 @@ impl DataSource for FishingFacilityScraper {
         ScraperId::FishingFacility
     }
 
-    async fn scrape(&self, processor: &(dyn Processor)) -> Result<(), ScraperError> {
+    async fn scrape(&self, processor: &(dyn Processor)) -> Result<()> {
         if let Some(config) = &self.config {
             let latest_timestamp = processor
                 .latest_fishing_facility_update(Some(FishingFacilityApiSource::Updates))
-                .await
-                .change_context(ScraperError)?;
+                .await?;
 
             let query = FishingFacilityQuery {
                 since: latest_timestamp.map(|t| cmp::max(t, Utc::now() - Duration::hours(1))),
             };
 
             let token = if let Some(ref oauth) = config.oauth {
-                let token = BearerToken::acquire(oauth)
-                    .await
-                    .change_context(ScraperError)?;
+                let token = BearerToken::acquire(oauth).await?;
                 Some(token)
             } else {
                 None
@@ -62,20 +55,15 @@ impl DataSource for FishingFacilityScraper {
                 .barentswatch_source
                 .client
                 .download::<FishingFacilityResponse, _>(&config.url, Some(&query), token)
-                .await
-                .change_context(ScraperError)?;
+                .await?;
 
             let facilities = response
                 .fishing_facilities
                 .into_iter()
                 .map(kyogre_core::FishingFacility::try_from)
-                .collect::<Result<_, _>>()
-                .change_context(ScraperError)?;
+                .collect::<std::result::Result<_, _>>()?;
 
-            processor
-                .add_fishing_facilities(facilities)
-                .await
-                .change_context(ScraperError)?;
+            processor.add_fishing_facilities(facilities).await?;
 
             info!("successfully scraped fishing_facility");
         }
@@ -125,25 +113,18 @@ struct FishingFacility {
 }
 
 impl TryFrom<FishingFacility> for kyogre_core::FishingFacility {
-    type Error = Report<ConversionError>;
+    type Error = Error;
 
     fn try_from(v: FishingFacility) -> std::result::Result<Self, Self::Error> {
         let geometry_string = v.geometry.to_string();
-        let geometry_wkt = GeoJson(&geometry_string)
-            .to_geo()
-            .change_context(ConversionError)?
-            .to_wkt();
+        let geometry_wkt = GeoJson(&geometry_string).to_geo()?.to_wkt();
 
         Ok(Self {
             tool_id: v.tool_id,
             barentswatch_vessel_id: v.vessel_id,
             fiskeridir_vessel_id: None,
             vessel_name: v.vessel_name,
-            call_sign: v
-                .ircs
-                .map(CallSign::try_from)
-                .transpose()
-                .change_context(ConversionError)?,
+            call_sign: v.ircs.map(CallSign::try_from).transpose()?,
             mmsi: v.mmsi.map(Mmsi),
             imo: v.imo,
             reg_num: v.reg_num,

@@ -1,21 +1,18 @@
+use super::filter::{HaulFilterDiscriminants, HaulSort};
+use crate::{
+    error::{Error, Result},
+    indexable::{Id, IdVersion, Indexable},
+    utils::to_nanos,
+    CacheIndex,
+};
 use async_trait::async_trait;
 use chrono::{TimeZone, Utc};
-use error_stack::{Report, Result, ResultExt};
 use fiskeridir_rs::{Gear, GearGroup, SpeciesGroup, VesselLengthGroup};
 use kyogre_core::{
     CatchLocationId, HaulCatch, HaulId, HaulOceanClimate, HaulWeather, MeilisearchSource,
     WhaleCatch,
 };
 use serde::{Deserialize, Serialize};
-
-use crate::{
-    error::MeilisearchError,
-    indexable::{Id, IdVersion, Indexable},
-    utils::to_nanos,
-    CacheIndex,
-};
-
-use super::filter::{HaulFilterDiscriminants, HaulSort};
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Haul {
@@ -96,30 +93,24 @@ impl Indexable for Haul {
     fn chunk_size() -> usize {
         50_000
     }
-    async fn source_versions<T: MeilisearchSource>(
-        source: &T,
-    ) -> Result<Vec<(Self::Id, i64)>, MeilisearchError> {
-        source
-            .all_haul_versions()
-            .await
-            .change_context(MeilisearchError::Source)
+    async fn source_versions<T: MeilisearchSource>(source: &T) -> Result<Vec<(Self::Id, i64)>> {
+        Ok(source.all_haul_versions().await?)
     }
     async fn items_by_ids<T: MeilisearchSource>(
         source: &T,
         ids: &[Self::Id],
-    ) -> Result<Vec<Self::Item>, MeilisearchError> {
-        source
+    ) -> Result<Vec<Self::Item>> {
+        Ok(source
             .hauls_by_ids(ids)
-            .await
-            .change_context(MeilisearchError::Source)?
+            .await?
             .into_iter()
             .map(Haul::try_from)
-            .collect::<Result<Vec<_>, _>>()
+            .collect::<Result<Vec<_>>>()?)
     }
 }
 
 impl TryFrom<kyogre_core::Haul> for Haul {
-    type Error = Report<MeilisearchError>;
+    type Error = Error;
 
     fn try_from(v: kyogre_core::Haul) -> std::result::Result<Self, Self::Error> {
         Ok(Self {

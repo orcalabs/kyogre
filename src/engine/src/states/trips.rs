@@ -1,9 +1,9 @@
 use std::{cmp::min, collections::HashMap, sync::Arc};
 
+use crate::error::Result;
 use crate::*;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use error_stack::{Result, ResultExt};
 use machine::Schedule;
 use once_cell::sync::Lazy;
 use tokio::{
@@ -118,12 +118,8 @@ trait TripComputationStep: Send + Sync {
         shared: &SharedState,
         vessel: &Vessel,
         unit: TripProcessingUnit,
-    ) -> Result<TripProcessingUnit, TripPipelineError>;
-    async fn fetch_missing(
-        &self,
-        shared: &SharedState,
-        vessel: &Vessel,
-    ) -> Result<Vec<Trip>, TripPipelineError>;
+    ) -> Result<TripProcessingUnit>;
+    async fn fetch_missing(&self, shared: &SharedState, vessel: &Vessel) -> Result<Vec<Trip>>;
 }
 
 #[async_trait]
@@ -133,23 +129,15 @@ impl TripComputationStep for AisVms {
         _shared: &SharedState,
         _vessel: &Vessel,
         mut unit: TripProcessingUnit,
-    ) -> Result<TripProcessingUnit, TripPipelineError> {
-        unit.distance_output = Some(
-            self.calculate_trip_distance(&unit)
-                .change_context(TripPipelineError::TripComputationStep)?,
-        );
+    ) -> Result<TripProcessingUnit> {
+        unit.distance_output = Some(self.calculate_trip_distance(&unit)?);
         Ok(unit)
     }
-    async fn fetch_missing(
-        &self,
-        shared: &SharedState,
-        vessel: &Vessel,
-    ) -> Result<Vec<Trip>, TripPipelineError> {
-        shared
+    async fn fetch_missing(&self, shared: &SharedState, vessel: &Vessel) -> Result<Vec<Trip>> {
+        Ok(shared
             .trip_pipeline_outbound
             .trips_without_distance(vessel.fiskeridir.id)
-            .await
-            .change_context(TripPipelineError::TripComputationStep)
+            .await?)
     }
 }
 
@@ -163,14 +151,12 @@ impl TripComputationStep for TripPositionLayers {
         shared: &SharedState,
         _vessel: &Vessel,
         mut unit: TripProcessingUnit,
-    ) -> Result<TripProcessingUnit, TripPipelineError> {
+    ) -> Result<TripProcessingUnit> {
         let mut trip_positions = unit.positions;
         let mut pruned_positions = Vec::new();
 
         for l in &shared.trip_position_layers {
-            let (positions, pruned) = l
-                .prune_positions(trip_positions)
-                .change_context(TripPipelineError::TripComputationStep)?;
+            let (positions, pruned) = l.prune_positions(trip_positions)?;
             trip_positions = positions;
             pruned_positions.extend(pruned);
         }
@@ -183,16 +169,11 @@ impl TripComputationStep for TripPositionLayers {
 
         Ok(unit)
     }
-    async fn fetch_missing(
-        &self,
-        shared: &SharedState,
-        vessel: &Vessel,
-    ) -> Result<Vec<Trip>, TripPipelineError> {
-        shared
+    async fn fetch_missing(&self, shared: &SharedState, vessel: &Vessel) -> Result<Vec<Trip>> {
+        Ok(shared
             .trip_pipeline_outbound
             .trips_without_position_layers(vessel.fiskeridir.id)
-            .await
-            .change_context(TripPipelineError::TripComputationStep)
+            .await?)
     }
 }
 
@@ -209,7 +190,7 @@ impl TripComputationStep for TripPrecisionStep {
         shared: &SharedState,
         vessel: &Vessel,
         mut unit: TripProcessingUnit,
-    ) -> Result<TripProcessingUnit, TripPipelineError> {
+    ) -> Result<TripProcessingUnit> {
         if vessel.mmsi().is_none() && vessel.fiskeridir.call_sign.is_none() {
             return Ok(unit);
         }
@@ -219,8 +200,7 @@ impl TripComputationStep for TripPrecisionStep {
             TripAssemblerId::Landings => self.landing.calculate_precision(vessel, adapter, &unit),
             TripAssemblerId::Ers => self.ers.calculate_precision(vessel, adapter, &unit),
         }
-        .await
-        .change_context(TripPipelineError::TripComputationStep)?;
+        .await?;
 
         unit.precision_outcome = Some(precision);
 
@@ -232,31 +212,22 @@ impl TripComputationStep for TripPrecisionStep {
                     vessel.fiskeridir.call_sign.as_ref(),
                     &period_precison,
                 )
-                .await
-                .change_context(TripPipelineError::TripComputationStep)?;
+                .await?;
         }
 
         Ok(unit)
     }
-    async fn fetch_missing(
-        &self,
-        shared: &SharedState,
-        vessel: &Vessel,
-    ) -> Result<Vec<Trip>, TripPipelineError> {
-        shared
+    async fn fetch_missing(&self, shared: &SharedState, vessel: &Vessel) -> Result<Vec<Trip>> {
+        Ok(shared
             .trip_pipeline_outbound
             .trips_without_precision(vessel.fiskeridir.id)
-            .await
-            .change_context(TripPipelineError::TripComputationStep)
+            .await?)
     }
 }
 
 enum MasterTask {
-    New(
-        Vessel,
-        Result<(TripProcessingOutcome, Option<TripSet>), TripPipelineError>,
-    ),
-    Unprocessed(Vessel, Result<Vec<TripUpdate>, TripPipelineError>),
+    New(Vessel, Result<(TripProcessingOutcome, Option<TripSet>)>),
+    Unprocessed(Vessel, Result<Vec<TripUpdate>>),
 }
 
 enum WorkerTask {
@@ -264,24 +235,21 @@ enum WorkerTask {
     Unprocessed(Vessel),
 }
 
-async fn run_state(shared_state: Arc<SharedState>) -> Result<TripsReport, TripPipelineError> {
+async fn run_state(shared_state: Arc<SharedState>) -> Result<TripsReport> {
     shared_state
         .trip_pipeline_inbound
         .update_preferred_trip_assemblers()
-        .await
-        .change_context(TripPipelineError::DataPreparation)?;
+        .await?;
 
     shared_state
         .trip_pipeline_inbound
         .reset_trip_processing_conflicts()
-        .await
-        .change_context(TripPipelineError::DataPreparation)?;
+        .await?;
 
     let vessels = shared_state
         .trip_assembler_outbound_port
         .all_vessels()
-        .await
-        .change_context(TripPipelineError::DataPreparation)?;
+        .await?;
 
     if vessels.is_empty() {
         return Ok(Default::default());
@@ -290,8 +258,7 @@ async fn run_state(shared_state: Arc<SharedState>) -> Result<TripsReport, TripPi
     let ports: HashMap<String, Port> = shared_state
         .trip_assembler_outbound_port
         .ports()
-        .await
-        .change_context(TripPipelineError::DataPreparation)?
+        .await?
         .into_iter()
         .map(|v| (v.id.clone(), v))
         .collect::<HashMap<String, Port>>();
@@ -300,8 +267,7 @@ async fn run_state(shared_state: Arc<SharedState>) -> Result<TripsReport, TripPi
     let dock_points = shared_state
         .trip_assembler_outbound_port
         .dock_points()
-        .await
-        .change_context(TripPipelineError::DataPreparation)?;
+        .await?;
 
     for d in dock_points {
         dock_points_map
@@ -459,7 +425,7 @@ async fn process_vessel(
     vessel: &Vessel,
     ports: &HashMap<String, Port>,
     dock_points: &HashMap<String, Vec<PortDockPoint>>,
-) -> Result<(TripProcessingOutcome, Option<TripSet>), TripPipelineError> {
+) -> Result<(TripProcessingOutcome, Option<TripSet>)> {
     let assembler_impl = shared.assembler_id_to_impl(vessel.preferred_trip_assembler);
     let (outcome, trips) = run_trip_assembler(
         vessel,
@@ -506,8 +472,7 @@ async fn process_vessel(
                         vessel.fiskeridir.call_sign.as_ref(),
                         &t.period,
                     )
-                    .await
-                    .change_context(TripPipelineError::NewTripProcessing)?,
+                    .await?,
                 vessel_id: vessel.fiskeridir.id,
                 trip_assembler_id: output.trip_assembler_id,
                 trip_position_output: None,
@@ -531,12 +496,11 @@ async fn run_trip_assembler(
     vessel: &Vessel,
     adapter: &dyn TripAssemblerOutboundPort,
     assembler: &dyn TripAssembler,
-) -> Result<(TripProcessingOutcome, Option<TripAssembly>), TripPipelineError> {
+) -> Result<(TripProcessingOutcome, Option<TripAssembly>)> {
     let relevant_event_types = assembler.relevant_event_types();
     let timer = adapter
         .trip_calculation_timer(vessel.fiskeridir.id, assembler.assembler_id())
-        .await
-        .change_context(TripPipelineError::NewTripProcessing)?;
+        .await?;
 
     let conflict = timer.as_ref().and_then(|v| v.conflict.clone());
     let prior_trip_calculation_time = timer.as_ref().map(|t| t.timestamp);
@@ -595,8 +559,7 @@ async fn run_trip_assembler(
             vessel_events.prior_trip_events,
             vessel_events.new_vessel_events,
         )
-        .await
-        .change_context(TripPipelineError::NewTripProcessing)?;
+        .await?;
 
     if let Some(trips) = trips {
         let conflict_strategy = match (state_discriminant, trips.conflict_strategy) {
@@ -641,13 +604,12 @@ async fn new_vessel_events(
     relevant_event_types: RelevantEventType,
     search_timestamp: &DateTime<Utc>,
     bound: Bound,
-) -> Result<VesselEvents, TripPipelineError> {
+) -> Result<VesselEvents> {
     let prior_trip = adapter
         .trip_prior_to_timestamp(vessel_id, search_timestamp, bound)
-        .await
-        .change_context(TripPipelineError::NewTripProcessing)?;
+        .await?;
 
-    let res: Result<(Vec<VesselEventDetailed>, QueryRange), TripPipelineError> = match prior_trip {
+    let res: Result<(Vec<VesselEventDetailed>, QueryRange)> = match prior_trip {
         Some(prior_trip) => {
             let range = QueryRange::new(
                 match prior_trip.period.end_bound() {
@@ -656,8 +618,7 @@ async fn new_vessel_events(
                     crate::Bound::Exclusive => std::ops::Bound::Included(prior_trip.end()),
                 },
                 std::ops::Bound::Unbounded,
-            )
-            .change_context(TripPipelineError::NewTripProcessing)?;
+            )?;
 
             let events = adapter
                 .relevant_events(
@@ -665,8 +626,7 @@ async fn new_vessel_events(
                     &QueryRange::from(prior_trip.period),
                     relevant_event_types,
                 )
-                .await
-                .change_context(TripPipelineError::NewTripProcessing)?;
+                .await?;
 
             Ok((events, range))
         }
@@ -674,8 +634,7 @@ async fn new_vessel_events(
             let range = QueryRange::new(
                 std::ops::Bound::Included(*search_timestamp),
                 std::ops::Bound::Unbounded,
-            )
-            .change_context(TripPipelineError::NewTripProcessing)?;
+            )?;
 
             Ok((vec![], range))
         }
@@ -685,8 +644,7 @@ async fn new_vessel_events(
 
     let new_vessel_events = adapter
         .relevant_events(vessel_id, &new_events_search_range, relevant_event_types)
-        .await
-        .change_context(TripPipelineError::NewTripProcessing)?;
+        .await?;
 
     Ok(VesselEvents {
         prior_trip_events,
@@ -698,14 +656,12 @@ async fn all_vessel_events(
     vessel_id: FiskeridirVesselId,
     adapter: &dyn TripAssemblerOutboundPort,
     relevant_event_types: RelevantEventType,
-) -> Result<VesselEvents, TripPipelineError> {
-    let range = QueryRange::new(std::ops::Bound::Unbounded, std::ops::Bound::Unbounded)
-        .change_context(TripPipelineError::NewTripProcessing)?;
+) -> Result<VesselEvents> {
+    let range = QueryRange::new(std::ops::Bound::Unbounded, std::ops::Bound::Unbounded)?;
 
     let new_vessel_events = adapter
         .relevant_events(vessel_id, &range, relevant_event_types)
-        .await
-        .change_context(TripPipelineError::NewTripProcessing)?;
+        .await?;
 
     Ok(VesselEvents {
         prior_trip_events: vec![],
@@ -718,7 +674,7 @@ async fn process_unprocessed_trips(
     vessel: &Vessel,
     ports: &HashMap<String, Port>,
     dock_points: &HashMap<String, Vec<PortDockPoint>>,
-) -> Result<Vec<TripUpdate>, TripPipelineError> {
+) -> Result<Vec<TripUpdate>> {
     let mut trips = HashMap::new();
 
     for (i, step) in TRIP_COMPUTATION_STEPS.iter().enumerate() {
@@ -758,8 +714,7 @@ async fn process_unprocessed_trips(
                     vessel.fiskeridir.call_sign.as_ref(),
                     &t.period,
                 )
-                .await
-                .change_context(TripPipelineError::ExistingTripProcessing)?,
+                .await?,
             vessel_id: vessel.fiskeridir.id,
             trip_assembler_id: vessel.preferred_trip_assembler,
             trip: NewTrip {

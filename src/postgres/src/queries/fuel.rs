@@ -1,5 +1,5 @@
 use crate::{
-    error::PostgresErrorWrapper,
+    error::Result,
     models::{DeleteFuelMeasurement, FuelMeasurement},
     PostgresAdapter,
 };
@@ -11,7 +11,7 @@ impl PostgresAdapter {
     pub(crate) fn fuel_measurements_impl(
         &self,
         query: FuelMeasurementsQuery,
-    ) -> impl Stream<Item = Result<FuelMeasurement, PostgresErrorWrapper>> + '_ {
+    ) -> impl Stream<Item = Result<FuelMeasurement>> + '_ {
         sqlx::query_as!(
             FuelMeasurement,
             r#"
@@ -48,7 +48,7 @@ ORDER BY
     pub(crate) async fn add_fuel_measurements_impl(
         &self,
         measurements: Vec<kyogre_core::FuelMeasurement>,
-    ) -> Result<(), PostgresErrorWrapper> {
+    ) -> Result<()> {
         let values = measurements.into_iter().map(From::from).collect();
         FuelMeasurement::unnest_insert(values, &self.pool).await?;
         Ok(())
@@ -57,7 +57,7 @@ ORDER BY
     pub(crate) async fn update_fuel_measurements_impl(
         &self,
         measurements: Vec<kyogre_core::FuelMeasurement>,
-    ) -> Result<(), PostgresErrorWrapper> {
+    ) -> Result<()> {
         let values = measurements.into_iter().map(From::from).collect();
         FuelMeasurement::unnest_update(values, &self.pool).await?;
         Ok(())
@@ -66,7 +66,7 @@ ORDER BY
     pub(crate) async fn delete_fuel_measurements_impl(
         &self,
         measurements: Vec<kyogre_core::DeleteFuelMeasurement>,
-    ) -> Result<(), PostgresErrorWrapper> {
+    ) -> Result<()> {
         let values = measurements.into_iter().map(From::from).collect();
         DeleteFuelMeasurement::unnest_delete(values, &self.pool).await?;
         Ok(())

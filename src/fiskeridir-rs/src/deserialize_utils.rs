@@ -303,12 +303,6 @@ fn parse_date_time_utc_from_local_date_time_str(
     Ok(oslo_timestamp.map(|tz| tz.with_timezone(&Utc)))
 }
 
-#[derive(thiserror::Error, Debug)]
-enum TimezoneConversionError {
-    #[error(transparent)]
-    Parse(#[from] chrono::ParseError),
-}
-
 fn parse_date_from_str(s: &str) -> Result<NaiveDate, chrono::ParseError> {
     let s = s.replace('-', ".");
     match chrono::NaiveDate::parse_from_str(&s, "%d.%m.%Y") {

@@ -1,16 +1,15 @@
-use std::collections::HashMap;
-
+use super::models::DeliveryPoint;
+use crate::{
+    error::error::{FailedRequestSnafu, MissingValueSnafu},
+    DataSource, Processor, Result, ScraperId,
+};
 use async_trait::async_trait;
-use error_stack::{report, Result, ResultExt};
 use fiskeridir_rs::DeliveryPointId;
 use regex::Regex;
 use reqwest::{Response, StatusCode};
+use std::collections::HashMap;
 use table_extract::Table;
 use tracing::{error, info};
-
-use crate::{DataSource, Processor, ScraperError, ScraperId};
-
-use super::models::DeliveryPoint;
 
 /// Statically know location for a file served by Mattilsynet.
 pub static MATTILSYNET_FILE_URL_PATH: &str =
@@ -29,7 +28,7 @@ impl DataSource for MattilsynetScraper {
         ScraperId::Mattilsynet
     }
 
-    async fn scrape(&self, processor: &(dyn Processor)) -> Result<(), ScraperError> {
+    async fn scrape(&self, processor: &(dyn Processor)) -> Result<()> {
         match self.do_scrape(processor).await {
             Ok(()) => {
                 info!("successfully scraped mattilsynet delivery points");
@@ -57,7 +56,7 @@ impl MattilsynetScraper {
         }
     }
 
-    async fn do_scrape(&self, processor: &(dyn Processor)) -> Result<(), ScraperError> {
+    async fn do_scrape(&self, processor: &(dyn Processor)) -> Result<()> {
         let approved = self.approved_establishments().await?;
         let fishery = self.fishery_establishments().await?;
         let businesses = self.businesses().await?;
@@ -71,41 +70,35 @@ impl MattilsynetScraper {
                 .or_insert_with(|| d.into());
         }
 
-        processor
+        Ok(processor
             .add_mattilsynet_delivery_points(delivery_points.into_values().collect())
-            .await
-            .change_context(ScraperError)
+            .await?)
     }
 
-    async fn get(&self, url: &str) -> Result<Response, ScraperError> {
-        let response = self
-            .http_client
-            .get(url)
-            .send()
-            .await
-            .change_context(ScraperError)?;
+    async fn get(&self, url: &str) -> Result<Response> {
+        let response = self.http_client.get(url).send().await?;
 
         let status = response.status();
 
         match status {
             StatusCode::OK => Ok(response),
-            _ => Err(report!(Error::Download {
+            _ => FailedRequestSnafu {
+                url,
                 status,
-                text: response.text().await.change_context(ScraperError)?
-            })
-            .change_context(ScraperError)),
+                body: response.text().await?,
+            }
+            .fail(),
         }
     }
 
-    async fn approved_establishments(&self) -> Result<Vec<DeliveryPoint>, ScraperError> {
+    async fn approved_establishments(&self) -> Result<Vec<DeliveryPoint>> {
         let mut vec = Vec::new();
         for url in &self.approved_establishments_urls {
             let response = self.get(url).await?;
 
-            let text = response.text().await.change_context(ScraperError)?;
+            let text = response.text().await?;
 
-            let table = Table::find_first(&text)
-                .ok_or_else(|| report!(Error::MissingTable).change_context(ScraperError))?;
+            let table = Table::find_first(&text).ok_or_else(|| MissingValueSnafu.build())?;
 
             for row in table.into_iter() {
                 // The id and name are always the two first cell values. We use this assumption instead
@@ -117,7 +110,7 @@ impl MattilsynetScraper {
 
                 if let (Some(id), Some(name)) = (id, name) {
                     vec.push(DeliveryPoint {
-                        id: DeliveryPointId::try_from(id.clone()).change_context(ScraperError)?,
+                        id: DeliveryPointId::try_from(id.clone())?,
                         name: name.to_string(),
                         address: None,
                         postal_code: None,
@@ -129,7 +122,7 @@ impl MattilsynetScraper {
         Ok(vec)
     }
 
-    async fn fishery_establishments(&self) -> Result<Vec<DeliveryPoint>, ScraperError> {
+    async fn fishery_establishments(&self) -> Result<Vec<DeliveryPoint>> {
         let mut vec = Vec::new();
         if let Some(url) = &self.fishery_establishments_url {
             let mut response = self.get(url).await?;
@@ -140,7 +133,7 @@ impl MattilsynetScraper {
                     .await?;
             }
 
-            let text = response.text().await.change_context(ScraperError)?;
+            let text = response.text().await?;
 
             for l in text.lines().skip(10) {
                 if l.starts_with(";;;") || l.starts_with(";Approval") || l.starts_with("Approval") {
@@ -160,14 +153,7 @@ impl MattilsynetScraper {
                 let postal_code: Option<u32> = if post_code_stripped.is_empty() {
                     None
                 } else {
-                    Some(
-                        post_code_stripped
-                            .parse::<u32>()
-                            .change_context(ScraperError)
-                            .attach_printable_lazy(|| {
-                                format!("could not parse '{post_code_stripped}' as u32")
-                            })?,
-                    )
+                    Some(post_code_stripped.parse::<u32>()?)
                 };
 
                 let address = if split[addr_idx].is_empty() {
@@ -177,8 +163,7 @@ impl MattilsynetScraper {
                 };
 
                 vec.push(DeliveryPoint {
-                    id: DeliveryPointId::try_from(split[id_idx].to_string())
-                        .change_context(ScraperError)?,
+                    id: DeliveryPointId::try_from(split[id_idx].to_string())?,
                     name: split[name_idx].to_string(),
                     address,
                     postal_code,
@@ -189,45 +174,29 @@ impl MattilsynetScraper {
         Ok(vec)
     }
 
-    async fn businesses(&self) -> Result<Vec<DeliveryPoint>, ScraperError> {
+    async fn businesses(&self) -> Result<Vec<DeliveryPoint>> {
         let mut vec = Vec::new();
         if let Some(url) = &self.businesses_url {
-            let text = self
-                .get(url)
-                .await?
-                .text()
-                .await
-                .change_context(ScraperError)?;
+            let text = self.get(url).await?.text().await?;
 
-            let address_code_city =
-                Regex::new(r"(?i)^([^,]+)[, ]+(\d{4})\s+([^,]+)$").change_context(ScraperError)?;
-            let code_city = Regex::new(r"(?i)^(\d{4})\s+([^,]+)$").change_context(ScraperError)?;
-            let address_code =
-                Regex::new(r"(?i)^([^,]+)[, ]+(\d{4})$").change_context(ScraperError)?;
+            let address_code_city = Regex::new(r"(?i)^([^,]+)[, ]+(\d{4})\s+([^,]+)$")?;
+            let code_city = Regex::new(r"(?i)^(\d{4})\s+([^,]+)$")?;
+            let address_code = Regex::new(r"(?i)^([^,]+)[, ]+(\d{4})$")?;
 
             for line in text.lines() {
                 let mut split = line.split(';');
 
-                let section = split.nth(5).ok_or_else(|| {
-                    report!(Error::MissingSectionInLine(line.into())).change_context(ScraperError)
-                })?;
+                let section = split.nth(5).ok_or_else(|| MissingValueSnafu.build())?;
 
                 if !section.contains("General activity establishment") {
                     continue;
                 }
 
-                let id = split.next().ok_or_else(|| {
-                    report!(Error::MissingIdInLine(line.into())).change_context(ScraperError)
-                })?;
-                let name = split.next().ok_or_else(|| {
-                    report!(Error::MissingNameInLine(line.into())).change_context(ScraperError)
-                })?;
+                let id = split.next().ok_or_else(|| MissingValueSnafu.build())?;
+                let name = split.next().ok_or_else(|| MissingValueSnafu.build())?;
                 let address = split
                     .next()
-                    .ok_or_else(|| {
-                        report!(Error::MissingAddressInLine(line.into()))
-                            .change_context(ScraperError)
-                    })?
+                    .ok_or_else(|| MissingValueSnafu.build())?
                     .trim();
 
                 let (address, postal_code, city) = if let Some((_, [addr, code, city])) =
@@ -247,7 +216,7 @@ impl MattilsynetScraper {
                 };
 
                 vec.push(DeliveryPoint {
-                    id: DeliveryPointId::try_from(id).change_context(ScraperError)?,
+                    id: DeliveryPointId::try_from(id)?,
                     name: name.trim().into(),
                     address: address.map(|v| v.trim().into()),
                     // unwrap is safe because regex only matches if postal_code is 4 digits
@@ -257,40 +226,5 @@ impl MattilsynetScraper {
             }
         }
         Ok(vec)
-    }
-}
-
-#[derive(Debug)]
-pub enum Error {
-    Download { status: StatusCode, text: String },
-    MissingTable,
-    MissingSectionInLine(String),
-    MissingIdInLine(String),
-    MissingNameInLine(String),
-    MissingAddressInLine(String),
-}
-
-impl std::error::Error for Error {}
-
-impl std::fmt::Display for Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Error::Download { status, text } => f.write_str(&format!(
-                "error downloading data from source, status: {status}, text: {text}",
-            )),
-            Error::MissingTable => f.write_str("`Table::find_first` returned `None`"),
-            Error::MissingSectionInLine(l) => {
-                f.write_fmt(format_args!("could not get section from line: `{l}`"))
-            }
-            Error::MissingIdInLine(l) => {
-                f.write_fmt(format_args!("could not get id from line: `{l}`"))
-            }
-            Error::MissingNameInLine(l) => {
-                f.write_fmt(format_args!("could not get name from line: `{l}`"))
-            }
-            Error::MissingAddressInLine(l) => {
-                f.write_fmt(format_args!("could not get address from line: `{l}`"))
-            }
-        }
     }
 }

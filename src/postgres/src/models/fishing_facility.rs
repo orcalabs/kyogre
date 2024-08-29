@@ -1,6 +1,5 @@
-use crate::error::{PostgresError, PostgresErrorWrapper};
+use crate::error::{Error, MissingValueSnafu};
 use chrono::{DateTime, Utc};
-use error_stack::report;
 use fiskeridir_rs::CallSign;
 use geozero::wkb;
 use kyogre_core::{FishingFacilityApiSource, FishingFacilityToolType, FiskeridirVesselId, Mmsi};
@@ -41,7 +40,7 @@ pub struct FishingFacility {
 pub struct GeometryWkt(pub wkt::Wkt<f64>);
 
 impl TryFrom<FishingFacility> for kyogre_core::FishingFacility {
-    type Error = PostgresErrorWrapper;
+    type Error = Error;
 
     fn try_from(v: FishingFacility) -> Result<Self, Self::Error> {
         Ok(Self {
@@ -105,10 +104,7 @@ impl<'r> sqlx::Decode<'r, Postgres> for GeometryWkt {
         value: <Postgres as Database>::ValueRef<'r>,
     ) -> Result<Self, sqlx::error::BoxDynError> {
         let decode = <wkb::Decode<geo::Geometry<f64>> as sqlx::Decode<Postgres>>::decode(value)?;
-        let wkt = decode.geometry.ok_or_else(|| {
-            report!(PostgresError::DataConversion)
-                .attach_printable("expected wkb::Decode<_>.geometry to be `Some`")
-        })?;
+        let wkt = decode.geometry.ok_or_else(|| MissingValueSnafu.build())?;
 
         Ok(Self(wkt.to_wkt()))
     }

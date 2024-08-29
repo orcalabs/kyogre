@@ -1,8 +1,8 @@
 use std::{cmp::min, collections::HashMap, sync::Arc};
 
+use crate::error::Result;
 use crate::*;
 use async_trait::async_trait;
-use error_stack::{Result, ResultExt};
 use geo::{coord, Contains};
 use machine::Schedule;
 use tokio::sync::{mpsc::channel, Mutex};
@@ -44,12 +44,11 @@ impl machine::State for HaulDistributionState {
     }
 }
 
-async fn distribute_hauls(shared_state: Arc<SharedState>) -> Result<(), HaulDistributorError> {
+async fn distribute_hauls(shared_state: Arc<SharedState>) -> Result<()> {
     let vessels = shared_state
         .haul_distributor_outbound
         .vessels()
-        .await
-        .change_context(HaulDistributorError)?
+        .await?
         .into_iter()
         .map(|v| (v.fiskeridir.id, v))
         .collect::<HashMap<FiskeridirVesselId, Vessel>>();
@@ -61,15 +60,14 @@ async fn distribute_hauls(shared_state: Arc<SharedState>) -> Result<(), HaulDist
     let catch_locations = shared_state
         .haul_distributor_outbound
         .catch_locations()
-        .await
-        .change_context(HaulDistributorError)?;
+        .await?;
 
     let catch_locations = Arc::new(catch_locations);
 
     let num_vessels = vessels.len();
     let num_workers = min(shared_state.num_workers as usize, num_vessels);
 
-    let (master_tx, mut master_rx) = channel::<Result<_, _>>(10);
+    let (master_tx, mut master_rx) = channel::<Result<_>>(10);
     let (worker_tx, worker_rx) = channel::<Vessel>(num_vessels);
     let worker_rx = Arc::new(Mutex::new(worker_rx));
 
@@ -131,7 +129,7 @@ async fn distribute(
     vessel: &Vessel,
     catch_locations: &[CatchLocation],
     outbound: &dyn HaulDistributorOutbound,
-) -> Result<Option<Vec<HaulDistributionOutput>>, HaulDistributorError> {
+) -> Result<Option<Vec<HaulDistributionOutput>>> {
     let mmsi = vessel.ais.as_ref().map(|a| a.mmsi);
     let call_sign = vessel.fiskeridir.call_sign.as_ref();
 
@@ -141,19 +139,14 @@ async fn distribute(
 
     let hauls = outbound
         .haul_messages_of_vessel(vessel.fiskeridir.id)
-        .await
-        .change_context(HaulDistributorError)?;
+        .await?;
 
     let mut output = Vec::new();
 
     for h in hauls {
-        let range = DateRange::new(h.start_timestamp, h.stop_timestamp)
-            .change_context(HaulDistributorError)?;
+        let range = DateRange::new(h.start_timestamp, h.stop_timestamp)?;
 
-        let positions = outbound
-            .ais_vms_positions(mmsi, call_sign, &range)
-            .await
-            .change_context(HaulDistributorError)?;
+        let positions = outbound.ais_vms_positions(mmsi, call_sign, &range).await?;
 
         if positions.is_empty() {
             continue;

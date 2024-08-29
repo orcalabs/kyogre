@@ -1,8 +1,7 @@
 use crate::{
-    error::{PostgresError, PostgresErrorWrapper},
+    error::{MissingValueSnafu, Result},
     models::*,
 };
-use error_stack::{report, ResultExt};
 use std::collections::HashMap;
 
 #[derive(Default)]
@@ -52,7 +51,7 @@ impl ErsTraSet {
 
     pub(crate) fn new<T: IntoIterator<Item = fiskeridir_rs::ErsTra>>(
         ers_tra: T,
-    ) -> Result<ErsTraSet, PostgresErrorWrapper> {
+    ) -> Result<ErsTraSet> {
         let mut set = ErsTraSet::default();
 
         for e in ers_tra.into_iter() {
@@ -75,12 +74,13 @@ impl ErsTraSet {
         }
     }
 
-    fn add_county(&mut self, ers_tra: &fiskeridir_rs::ErsTra) -> Result<(), PostgresErrorWrapper> {
+    fn add_county(&mut self, ers_tra: &fiskeridir_rs::ErsTra) -> Result<()> {
         if let Some(code) = ers_tra.vessel_info.vessel_county_code {
-            let county = ers_tra.vessel_info.vessel_county.clone().ok_or_else(|| {
-                report!(PostgresError::DataConversion)
-                    .attach_printable("expected vessel_county to be Some")
-            })?;
+            let county = ers_tra
+                .vessel_info
+                .vessel_county
+                .clone()
+                .ok_or_else(|| MissingValueSnafu.build())?;
             self.counties
                 .entry(code as i32)
                 .or_insert_with(|| NewCounty::new(code as i32, county));
@@ -101,29 +101,24 @@ impl ErsTraSet {
         }
     }
 
-    fn add_vessel(&mut self, ers_tra: &fiskeridir_rs::ErsTra) -> Result<(), PostgresErrorWrapper> {
+    fn add_vessel(&mut self, ers_tra: &fiskeridir_rs::ErsTra) -> Result<()> {
         if let Some(vessel_id) = ers_tra.vessel_info.vessel_id {
             if !self.vessels.contains_key(&(vessel_id as i64)) {
-                let vessel = fiskeridir_rs::Vessel::try_from(ers_tra.vessel_info.clone())
-                    .change_context(PostgresError::DataConversion)?;
+                let vessel = fiskeridir_rs::Vessel::try_from(ers_tra.vessel_info.clone())?;
                 self.vessels.entry(vessel_id as i64).or_insert(vessel);
             }
         }
         Ok(())
     }
 
-    fn add_catch(&mut self, ers_tra: &fiskeridir_rs::ErsTra) -> Result<(), PostgresErrorWrapper> {
+    fn add_catch(&mut self, ers_tra: &fiskeridir_rs::ErsTra) -> Result<()> {
         if let Some(catch) = NewErsTraCatch::from_ers_tra(ers_tra) {
-            let species_fao_code =
-                ers_tra
-                    .catch
-                    .species
-                    .species_fao_code
-                    .clone()
-                    .ok_or_else(|| {
-                        report!(PostgresError::DataConversion)
-                            .attach_printable("expected species_fao_code to be Some")
-                    })?;
+            let species_fao_code = ers_tra
+                .catch
+                .species
+                .species_fao_code
+                .clone()
+                .ok_or_else(|| MissingValueSnafu.build())?;
             self.add_species_fao(&species_fao_code, &ers_tra.catch.species.species_fao);
             self.add_species_fiskeridir(
                 ers_tra.catch.species.species_fdir_code,
@@ -149,7 +144,7 @@ impl ErsTraSet {
         }
     }
 
-    fn add_ers_tra(&mut self, ers_tra: &fiskeridir_rs::ErsTra) -> Result<(), PostgresErrorWrapper> {
+    fn add_ers_tra(&mut self, ers_tra: &fiskeridir_rs::ErsTra) -> Result<()> {
         if !self
             .ers_tra
             .contains_key(&(ers_tra.message_info.message_id as i64))

@@ -1,10 +1,10 @@
 use super::{FishingFacility, HaulCatch, WhaleCatch};
-use crate::error::{PostgresError, PostgresErrorWrapper};
+use crate::error::{Error, Result};
 use crate::queries::{enum_to_i32, opt_enum_to_i32};
 use chrono::{DateTime, Utc};
-use error_stack::report;
 use fiskeridir_rs::{
-    DeliveryPointId, Gear, GearGroup, LandingId, Quality, SpeciesGroup, VesselLengthGroup,
+    DeliveryPointId, Gear, GearGroup, LandingId, LandingIdError, Quality, SpeciesGroup,
+    VesselLengthGroup,
 };
 use kyogre_core::{
     DateRange, FiskeridirVesselId, HaulId, MinimalVesselEvent, PositionType, PrecisionId,
@@ -123,9 +123,9 @@ pub struct TripPrunedAisVmsPosition {
 }
 
 impl TryFrom<&TripProcessingUnit> for NewTrip {
-    type Error = PostgresErrorWrapper;
+    type Error = Error;
 
-    fn try_from(value: &TripProcessingUnit) -> Result<Self, Self::Error> {
+    fn try_from(value: &TripProcessingUnit) -> std::result::Result<Self, Self::Error> {
         let (
             start_precision_id,
             start_precision_direction,
@@ -302,9 +302,9 @@ pub struct NewTripAssemblerConflict {
 }
 
 impl TryFrom<Trip> for kyogre_core::Trip {
-    type Error = PostgresErrorWrapper;
+    type Error = Error;
 
-    fn try_from(value: Trip) -> Result<Self, Self::Error> {
+    fn try_from(value: Trip) -> std::result::Result<Self, Self::Error> {
         let period = DateRange::try_from(value.period)?;
 
         let landing_coverage = DateRange::try_from(value.landing_coverage)?;
@@ -330,22 +330,22 @@ impl TryFrom<Trip> for kyogre_core::Trip {
 }
 
 impl TryFrom<CurrentTrip> for kyogre_core::CurrentTrip {
-    type Error = PostgresErrorWrapper;
+    type Error = Error;
 
-    fn try_from(v: CurrentTrip) -> Result<Self, Self::Error> {
+    fn try_from(v: CurrentTrip) -> std::result::Result<Self, Self::Error> {
         Ok(Self {
             departure: v.departure_timestamp,
             target_species_fiskeridir_id: v.target_species_fiskeridir_id,
             hauls: serde_json::from_str::<Vec<TripHaul>>(&v.hauls)?
                 .into_iter()
                 .map(kyogre_core::TripHaul::try_from)
-                .collect::<Result<_, _>>()?,
+                .collect::<Result<_>>()?,
             fishing_facilities: serde_json::from_str::<Vec<FishingFacility>>(
                 &v.fishing_facilities,
             )?
             .into_iter()
             .map(kyogre_core::FishingFacility::try_from)
-            .collect::<Result<_, _>>()?,
+            .collect::<Result<_>>()?,
         })
     }
 }
@@ -376,9 +376,9 @@ impl From<TripCalculationTimer> for kyogre_core::TripCalculationTimer {
     }
 }
 impl TryFrom<TripDetailed> for kyogre_core::TripDetailed {
-    type Error = PostgresErrorWrapper;
+    type Error = Error;
 
-    fn try_from(value: TripDetailed) -> Result<Self, Self::Error> {
+    fn try_from(value: TripDetailed) -> std::result::Result<Self, Self::Error> {
         let period = DateRange::try_from(value.period)?;
         let period_precision = value
             .period_precision
@@ -396,7 +396,7 @@ impl TryFrom<TripDetailed> for kyogre_core::TripDetailed {
             .landing_ids
             .into_iter()
             .map(LandingId::try_from)
-            .collect::<error_stack::Result<Vec<LandingId>, _>>()?;
+            .collect::<std::result::Result<Vec<LandingId>, LandingIdError>>()?;
 
         vessel_events.sort_by_key(|v| v.report_timestamp);
 
@@ -416,17 +416,17 @@ impl TryFrom<TripDetailed> for kyogre_core::TripDetailed {
                 .delivery_points
                 .into_iter()
                 .map(DeliveryPointId::try_from)
-                .collect::<Result<_, _>>()?,
+                .collect::<std::result::Result<_, _>>()?,
             hauls: serde_json::from_str::<Vec<TripHaul>>(&value.hauls)?
                 .into_iter()
                 .map(kyogre_core::TripHaul::try_from)
-                .collect::<Result<_, _>>()?,
+                .collect::<std::result::Result<_, _>>()?,
             fishing_facilities: serde_json::from_str::<Vec<FishingFacility>>(
                 &value.fishing_facilities,
             )?
             .into_iter()
             .map(kyogre_core::FishingFacility::try_from)
-            .collect::<Result<_, _>>()?,
+            .collect::<std::result::Result<_, _>>()?,
             delivery: kyogre_core::Delivery {
                 delivered: serde_json::from_str::<Vec<Catch>>(&value.catches)?
                     .into_iter()
@@ -490,9 +490,9 @@ impl From<Catch> for kyogre_core::Catch {
 }
 
 impl TryFrom<TripHaul> for kyogre_core::TripHaul {
-    type Error = PostgresErrorWrapper;
+    type Error = Error;
 
-    fn try_from(v: TripHaul) -> Result<Self, Self::Error> {
+    fn try_from(v: TripHaul) -> std::result::Result<Self, Self::Error> {
         Ok(Self {
             haul_id: HaulId(v.haul_id),
             ers_activity_id: v.ers_activity_id,
@@ -512,20 +512,20 @@ impl TryFrom<TripHaul> for kyogre_core::TripHaul {
                 .catches
                 .into_iter()
                 .map(kyogre_core::HaulCatch::try_from)
-                .collect::<Result<_, _>>()?,
+                .collect::<Result<_>>()?,
             whale_catches: v
                 .whale_catches
                 .into_iter()
                 .map(kyogre_core::WhaleCatch::try_from)
-                .collect::<Result<_, _>>()?,
+                .collect::<Result<_>>()?,
         })
     }
 }
 
 impl TryFrom<TripAssemblerLogEntry> for kyogre_core::TripAssemblerLogEntry {
-    type Error = PostgresErrorWrapper;
+    type Error = Error;
 
-    fn try_from(value: TripAssemblerLogEntry) -> Result<Self, Self::Error> {
+    fn try_from(value: TripAssemblerLogEntry) -> std::result::Result<Self, Self::Error> {
         Ok(Self {
             trip_assembler_log_id: value.trip_assembler_log_id as u64,
             vessel_id: FiskeridirVesselId(value.fiskeridir_vessel_id),
@@ -537,9 +537,7 @@ impl TryFrom<TripAssemblerLogEntry> for kyogre_core::TripAssemblerLogEntry {
             conflict_vessel_event_type_id: value.conflict_vessel_event_type_id,
             prior_trip_vessel_events: serde_json::from_str(&value.prior_trip_vessel_events)?,
             new_vessel_events: serde_json::from_str(&value.new_vessel_events)?,
-            conflict_strategy: TripsConflictStrategy::from_str(&value.conflict_strategy).map_err(
-                |e| report!(PostgresError::DataConversion).attach_printable(e.to_string()),
-            )?,
+            conflict_strategy: TripsConflictStrategy::from_str(&value.conflict_strategy)?,
         })
     }
 }

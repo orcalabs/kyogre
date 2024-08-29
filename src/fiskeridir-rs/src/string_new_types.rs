@@ -1,11 +1,9 @@
-use error_stack::{bail, Report};
+use crate::error::{parse_string_error::EmptySnafu, ParseStringError};
 use jurisdiction::Jurisdiction;
 use serde::{
     de::{self, Visitor},
     Deserialize, Serialize,
 };
-
-use crate::Error;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Ord, PartialOrd)]
 pub struct NonEmptyString(String);
@@ -26,16 +24,16 @@ impl AsRef<str> for NonEmptyString {
 }
 
 impl TryFrom<&str> for NonEmptyString {
-    type Error = Report<Error>;
+    type Error = ParseStringError;
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         NonEmptyString::try_from(value.to_owned())
     }
 }
 impl TryFrom<String> for NonEmptyString {
-    type Error = Report<Error>;
+    type Error = ParseStringError;
     fn try_from(value: String) -> Result<Self, Self::Error> {
         if value.is_empty() {
-            bail!(Error::Conversion);
+            EmptySnafu.fail()
         } else {
             Ok(NonEmptyString(value))
         }
@@ -95,18 +93,18 @@ impl<'de> Visitor<'de> for NonEmptyStringVisitor {
 }
 
 impl TryFrom<&str> for PrunedString {
-    type Error = Report<Error>;
+    type Error = ParseStringError;
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         let pruned_value = value.replace(['_', '-', ' '], "");
         if pruned_value.is_empty() {
-            bail!(Error::Conversion);
+            EmptySnafu.fail()
         } else {
             Ok(PrunedString(pruned_value))
         }
     }
 }
 impl TryFrom<String> for PrunedString {
-    type Error = Report<Error>;
+    type Error = ParseStringError;
     fn try_from(value: String) -> Result<Self, Self::Error> {
         PrunedString::try_from(value.as_str())
     }

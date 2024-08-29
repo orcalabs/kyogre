@@ -1,8 +1,13 @@
-use error_stack::{report, Report, ResultExt};
 use geo::geometry::Polygon;
 use serde::{
     de::{self, Visitor},
     Deserialize, Serialize,
+};
+use snafu::ResultExt;
+
+use crate::{
+    catch_location_id_error::{LengthSnafu, ParseSnafu},
+    CatchLocationIdError,
 };
 
 pub enum WeatherLocationOverlap {
@@ -64,47 +69,22 @@ impl CatchLocationId {
     }
 }
 
-#[derive(Debug)]
-pub enum CatchLocationIdError {
-    InvalidLength,
-    InvalidMainArea,
-    InvalidCatchArea,
-}
-
-impl std::error::Error for CatchLocationIdError {}
-
-impl std::fmt::Display for CatchLocationIdError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            CatchLocationIdError::InvalidLength => {
-                f.write_str("catch location id did not contain a valid length")
-            }
-            CatchLocationIdError::InvalidMainArea => {
-                f.write_str("catch location id did not contain a valid main area")
-            }
-            CatchLocationIdError::InvalidCatchArea => {
-                f.write_str("catch location id did not contain a valid catch area")
-            }
-        }
-    }
-}
-
 impl TryFrom<&str> for CatchLocationId {
-    type Error = Report<CatchLocationIdError>;
+    type Error = CatchLocationIdError;
 
     fn try_from(v: &str) -> Result<Self, Self::Error> {
         let split: Vec<&str> = v.split('-').collect();
         if split.len() != 2 {
-            return Err(report!(CatchLocationIdError::InvalidLength));
+            return LengthSnafu { id: v.to_string() }.fail();
         }
 
         let main_area = split[0]
             .parse::<i32>()
-            .change_context(CatchLocationIdError::InvalidMainArea)?;
+            .with_context(|_| ParseSnafu { id: v.to_string() })?;
 
         let catch_area = split[1]
             .parse::<i32>()
-            .change_context(CatchLocationIdError::InvalidCatchArea)?;
+            .with_context(|_| ParseSnafu { id: v.to_string() })?;
 
         Ok(Self::new(main_area, catch_area))
     }
@@ -117,7 +97,7 @@ impl AsRef<str> for CatchLocationId {
 }
 
 impl TryFrom<String> for CatchLocationId {
-    type Error = Report<CatchLocationIdError>;
+    type Error = CatchLocationIdError;
 
     fn try_from(v: String) -> Result<Self, Self::Error> {
         CatchLocationId::try_from(v.as_ref())

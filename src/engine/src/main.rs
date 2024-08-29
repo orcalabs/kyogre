@@ -2,7 +2,6 @@
 #![deny(rust_2018_idioms)]
 
 use engine::{settings::Settings, startup::App, TracingMode};
-use error_stack::{fmt::ColorMode, Report};
 use orca_core::{Environment, TracingOutput};
 use tracing::Level;
 
@@ -17,12 +16,9 @@ async fn main() {
                 | Environment::Local
                 | Environment::Production
                 | Environment::OnPremise => TracingOutput::Local,
-                Environment::Development => {
-                    Report::<()>::set_color_mode(ColorMode::None);
-                    TracingOutput::Honeycomb {
-                        api_key: settings.honeycomb_api_key(),
-                    }
-                }
+                Environment::Development => TracingOutput::Honeycomb {
+                    api_key: settings.honeycomb_api_key(),
+                },
             };
             orca_core::init_tracer(
                 Level::from(&settings.log_level),

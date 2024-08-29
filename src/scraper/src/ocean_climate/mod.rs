@@ -1,10 +1,15 @@
 use chrono::{DateTime, NaiveDate, Utc};
-use error_stack::{report, Result, ResultExt};
 
 mod models;
 mod ocean_climate_scraper;
 
 pub use ocean_climate_scraper::OceanClimateScraper;
+use snafu::ResultExt;
+
+use crate::error::{
+    timestamp_error::{InvalidFilenameSnafu, InvalidHourSnafu, InvalidYMDSnafu},
+    TimestampError,
+};
 
 pub(crate) fn angle_between_vectors(v1: (f64, f64), v2: (f64, f64)) -> f64 {
     let sin = v1.0 * v2.1 - v2.0 * v1.1;
@@ -30,52 +35,36 @@ pub(crate) fn timestamp_and_depth_from_filename(
 
     let year = date_part[0..4]
         .parse::<i32>()
-        .change_context_lazy(|| TimestampError::InvalidFilename(name.to_string()))?;
+        .with_context(|_| InvalidFilenameSnafu {
+            file_name: name.to_owned(),
+        })?;
     let month = date_part[4..6]
         .parse::<u32>()
-        .change_context_lazy(|| TimestampError::InvalidFilename(name.to_string()))?;
+        .with_context(|_| InvalidFilenameSnafu {
+            file_name: name.to_owned(),
+        })?;
+
     let day = date_part[6..8]
         .parse::<u32>()
-        .change_context_lazy(|| TimestampError::InvalidFilename(name.to_string()))?;
+        .with_context(|_| InvalidFilenameSnafu {
+            file_name: name.to_owned(),
+        })?;
+
     let hour = date_part[8..10]
         .parse::<u32>()
-        .change_context_lazy(|| TimestampError::InvalidFilename(name.to_string()))?;
+        .with_context(|_| InvalidFilenameSnafu {
+            file_name: name.to_owned(),
+        })?;
 
     let ts = NaiveDate::from_ymd_opt(year, month, day)
-        .ok_or_else(|| report!(TimestampError::InvalidYMD((year, month, day))))?
+        .ok_or_else(|| InvalidYMDSnafu { year, month, day }.build())?
         .and_hms_opt(hour, 0, 0)
-        .ok_or_else(|| report!(TimestampError::InvalidHour(hour)))?
+        .ok_or_else(|| InvalidHourSnafu { hour }.build())?
         .and_utc();
 
-    let depth = depth_part
-        .parse::<i32>()
-        .change_context_lazy(|| TimestampError::InvalidFilename(name.to_string()))?;
+    let depth = depth_part.parse::<i32>().context(InvalidFilenameSnafu {
+        file_name: name.to_owned(),
+    })?;
 
     Ok((ts, depth))
-}
-
-#[derive(Debug)]
-pub(crate) enum TimestampError {
-    InvalidFilename(String),
-    InvalidYMD((i32, u32, u32)),
-    InvalidHour(u32),
-}
-
-impl std::error::Error for TimestampError {}
-
-impl std::fmt::Display for TimestampError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::InvalidFilename(filename) => {
-                f.write_fmt(format_args!("found an invalid filename: '{filename:?}'"))
-            }
-            Self::InvalidYMD((y, m, d)) => f.write_fmt(format_args!(
-                "filename contained invalid y/m/d; y: {}, m: {}, d: {}",
-                y, m, d
-            )),
-            Self::InvalidHour(hour) => {
-                f.write_fmt(format_args!("filename contained invalid hour: {hour}"))
-            }
-        }
-    }
 }

@@ -1,8 +1,7 @@
-use crate::{utils::hash_file, Error};
-
+use crate::{error::error::FailedRequestSnafu, utils::hash_file, Result};
 use csv::DeserializeRecordsIntoIter;
-use error_stack::{report, Result, ResultExt};
 use futures_util::StreamExt;
+use reqwest::StatusCode;
 use serde::de::DeserializeOwned;
 use std::{fmt::Display, io::Write, path::PathBuf};
 
@@ -24,19 +23,9 @@ pub struct FiskeridirRecordIter<R, D> {
 }
 
 impl<R: std::io::Read, D: DeserializeOwned> Iterator for FiskeridirRecordIter<R, D> {
-    type Item = Result<D, Error>;
-    fn next(&mut self) -> Option<Result<D, Error>> {
-        self.inner.next().map(|r| {
-            r.map_err(|e| match e.kind() {
-                csv::ErrorKind::Deserialize { pos: _, err } => match err.kind() {
-                    csv::DeserializeErrorKind::UnexpectedEndOfRow => {
-                        report!(e).change_context(Error::IncompleteData)
-                    }
-                    _ => report!(e).change_context(Error::Deserialize),
-                },
-                _ => report!(e).change_context(Error::Deserialize),
-            })
-        })
+    type Item = Result<D>;
+    fn next(&mut self) -> Option<Result<D>> {
+        self.inner.next().map(|r| r.map_err(|e| e.into()))
     }
 }
 
@@ -44,8 +33,8 @@ impl DataDir {
     pub fn into_deserialize<T: DeserializeOwned + 'static>(
         self,
         file: &DataFile,
-    ) -> Result<FiskeridirRecordIter<std::fs::File, T>, Error> {
-        let file = std::fs::File::open(self.file_name(file)).change_context(Error::Deserialize)?;
+    ) -> Result<FiskeridirRecordIter<std::fs::File, T>> {
+        let file = std::fs::File::open(self.file_name(file))?;
 
         let csv_reader = csv::ReaderBuilder::new()
             .delimiter(b';')
@@ -58,8 +47,8 @@ impl DataDir {
         })
     }
 
-    pub fn hash(&self, file: &DataFile) -> Result<String, Error> {
-        hash_file(&self.file_name(file)).change_context(Error::Hash)
+    pub fn hash(&self, file: &DataFile) -> Result<String> {
+        hash_file(&self.file_name(file))
     }
 
     fn file_name(&self, file: &DataFile) -> PathBuf {
@@ -241,11 +230,10 @@ impl AsRef<str> for DataFileId {
 }
 
 impl DataDownloader {
-    pub fn new(directory_path: PathBuf) -> Result<DataDownloader, Error> {
+    pub fn new(directory_path: PathBuf) -> Result<DataDownloader> {
         let client = reqwest::ClientBuilder::new()
             .timeout(std::time::Duration::new(600, 0))
-            .build()
-            .change_context(Error::Download)?;
+            .build()?;
 
         Ok(DataDownloader {
             directory_path,
@@ -253,24 +241,18 @@ impl DataDownloader {
         })
     }
 
-    pub fn clean_download_dir(&self) -> Result<(), std::io::Error> {
+    pub fn clean_download_dir(&self) -> Result<()> {
         std::fs::remove_dir_all(&self.directory_path)?;
         std::fs::create_dir(&self.directory_path)?;
         Ok(())
     }
-    pub async fn download(&self, source: &FileSource) -> Result<DataDir, Error> {
-        let url = reqwest::Url::parse(&source.url()).change_context(Error::Download)?;
-
-        let response = self
-            .http_client
-            .get(url)
-            .send()
-            .await
-            .change_context(Error::Download)?;
-
-        if response.status() != reqwest::StatusCode::OK {
-            return Err(report!(Error::Download)
-                .attach_printable(format!("received response status {}", response.status())));
+    pub async fn download(&self, source: &FileSource) -> Result<DataDir> {
+        let url = source.url();
+        let response = self.http_client.get(&url).send().await?;
+        let status = response.status();
+        if status != StatusCode::OK {
+            let body = response.text().await?;
+            return FailedRequestSnafu { url, status, body }.fail();
         }
 
         let file_path = match source {
@@ -278,27 +260,23 @@ impl DataDownloader {
                 let mut zipfile_path = PathBuf::from(&self.directory_path);
                 zipfile_path.push(source.archive_name());
 
-                let mut file =
-                    std::fs::File::create(&zipfile_path).change_context(Error::Download)?;
+                let mut file = std::fs::File::create(&zipfile_path)?;
 
                 let mut stream = response.bytes_stream();
 
                 while let Some(item) = stream.next().await {
-                    file.write_all(&item.change_context(Error::Download)?)
-                        .change_context(Error::Download)?;
+                    file.write_all(&item?)?
                 }
 
                 // Unpack zip file
-                let file = std::fs::File::open(&zipfile_path).change_context(Error::Download)?;
+                let file = std::fs::File::open(&zipfile_path)?;
 
-                let mut archive = zip::ZipArchive::new(file).change_context(Error::Download)?;
+                let mut archive = zip::ZipArchive::new(file)?;
 
                 let extract_path =
                     PathBuf::from(&self.directory_path.join(source.extract_dir_name()));
 
-                archive
-                    .extract(&extract_path)
-                    .change_context(Error::Download)?;
+                archive.extract(&extract_path)?;
 
                 extract_path
             }
@@ -307,15 +285,14 @@ impl DataDownloader {
                     .directory_path
                     .join(DataFile::AquaCultureRegister.name());
 
-                let mut file = std::fs::File::create(path).change_context(Error::Download)?;
+                let mut file = std::fs::File::create(path)?;
 
-                let text = response.text().await.change_context(Error::Download)?;
+                let text = response.text().await?;
 
                 // This file contains an extra line at the beginning that we need to skip:
                 // 'AKVAKULTURTILLATELSER PR. 09-08-2023 ;;;;;;;;;;;;;;;;;;;;;;;;;;'
                 if let Some((_, text)) = text.split_once('\n') {
-                    file.write_all(text.as_bytes())
-                        .change_context(Error::Download)?;
+                    file.write_all(text.as_bytes())?;
                 }
 
                 self.directory_path.clone()

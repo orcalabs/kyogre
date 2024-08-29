@@ -2,15 +2,14 @@ use super::{
     gear::{Gear, GearGroup, MainGearGroup},
     product::{Condition, ConservationMethod, LandingMethod, Product, Purpose, Quality, Species},
 };
+use crate::DeliveryPointId;
 use crate::{
-    deserialize_utils::*, string_new_types::NonEmptyString,
+    deserialize_utils::*, error::error::JurisdictionSnafu, string_new_types::NonEmptyString,
     utils::convert_naive_date_and_naive_time_to_utc, CallSign, CatchLocation, GearDetails,
-    LandingId, NorthSouth62DegreesNorth, SpeciesGroup, SpeciesMainGroup, TwelveMileBorder, Vessel,
-    VesselLengthGroup, VesselType,
+    LandingId, NorthSouth62DegreesNorth, Result, SpeciesGroup, SpeciesMainGroup, TwelveMileBorder,
+    Vessel, VesselLengthGroup, VesselType,
 };
-use crate::{DeliveryPointId, Error};
 use chrono::{DateTime, Datelike, NaiveDate, NaiveTime, TimeZone, Utc};
-use error_stack::{report, Report};
 use jurisdiction::Jurisdiction;
 use num_derive::FromPrimitive;
 use serde::Deserialize;
@@ -394,7 +393,7 @@ pub struct Landing {
 }
 
 impl Landing {
-    pub fn try_from_raw(l: LandingRaw, data_year: u32) -> std::result::Result<Self, Report<Error>> {
+    pub fn try_from_raw(l: LandingRaw, data_year: u32) -> Result<Self> {
         let sales_team = l.sales_team_orginization_code;
         let document_type = l.document_type_code;
 
@@ -415,10 +414,12 @@ impl Landing {
                 .as_ref()
                 .map(|v| {
                     Jurisdiction::from_str(v.as_ref()).map_err(|e| {
-                        report!(Error::Conversion).attach_printable(format!(
-                            "err: {e:?}, code: {:?}, name {:?}",
-                            l.receiver_nationality_code, l.receiver_nationality
-                        ))
+                        JurisdictionSnafu {
+                            error_stringified: e.to_string(),
+                            nation_code: l.receiver_nationality_code.clone(),
+                            nation: l.receiver_nationality,
+                        }
+                        .build()
                     })
                 })
                 .transpose()?,
@@ -438,10 +439,12 @@ impl Landing {
             county: l.vessel_county.map(|v| v.into_inner()),
             nationality_code: Jurisdiction::from_str(l.vessel_nationality_code.as_ref()).map_err(
                 |e| {
-                    report!(Error::Conversion).attach_printable(format!(
-                        "err: {e:?}, code: {:?}, name {:?}",
-                        l.vessel_nationality_code, l.vessel_nationality
-                    ))
+                    JurisdictionSnafu {
+                        error_stringified: e.to_string(),
+                        nation_code: l.vessel_nationality_code,
+                        nation: l.vessel_nationality,
+                    }
+                    .build()
                 },
             )?,
             nation_group: Some(l.vessel_nationality_group.into_inner()),
@@ -551,10 +554,12 @@ impl Landing {
                 .as_ref()
                 .map(|v| {
                     Jurisdiction::from_str(v.as_ref()).map_err(|e| {
-                        report!(Error::Conversion).attach_printable(format!(
-                            "code: {:?}, name: {:?}, error: {e:?}",
-                            l.landing_nation_code, l.landing_nation
-                        ))
+                        JurisdictionSnafu {
+                            error_stringified: e.to_string(),
+                            nation_code: l.landing_nation_code.clone(),
+                            nation: l.landing_nation,
+                        }
+                        .build()
                     })
                 })
                 .transpose()?,
@@ -562,9 +567,16 @@ impl Landing {
             fisher_id: l.fisher_id,
             fisher_nationality_code: l
                 .fisher_nationality_code
+                .as_ref()
                 .map(|v| {
-                    Jurisdiction::from_str(v.as_ref())
-                        .map_err(|e| report!(Error::Conversion).attach_printable(e.to_string()))
+                    Jurisdiction::from_str(v.as_ref()).map_err(|e| {
+                        JurisdictionSnafu {
+                            error_stringified: e.to_string(),
+                            nation_code: l.fisher_nationality_code.clone(),
+                            nation: l.fisher_nationality,
+                        }
+                        .build()
+                    })
                 })
                 .transpose()?,
 

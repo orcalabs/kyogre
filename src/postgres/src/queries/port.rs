@@ -1,5 +1,5 @@
 use crate::{
-    error::PostgresErrorWrapper,
+    error::Result,
     models::{Arrival, NewPort, Port, PortDockPoint, TripDockPoints, TripPorts},
     PostgresAdapter,
 };
@@ -7,9 +7,7 @@ use kyogre_core::TripId;
 use unnest_insert::UnnestInsert;
 
 impl PostgresAdapter {
-    pub(crate) async fn dock_points_impl(
-        &self,
-    ) -> Result<Vec<PortDockPoint>, PostgresErrorWrapper> {
+    pub(crate) async fn dock_points_impl(&self) -> Result<Vec<PortDockPoint>> {
         let docks = sqlx::query_as!(
             PortDockPoint,
             r#"
@@ -32,7 +30,7 @@ FROM
     pub(crate) async fn dock_points_of_port_impl(
         &self,
         port_id: &str,
-    ) -> Result<Vec<PortDockPoint>, PostgresErrorWrapper> {
+    ) -> Result<Vec<PortDockPoint>> {
         let docks = sqlx::query_as!(
             PortDockPoint,
             r#"
@@ -55,7 +53,7 @@ WHERE
         Ok(docks)
     }
 
-    pub(crate) async fn all_ers_arrivals_impl(&self) -> Result<Vec<Arrival>, PostgresErrorWrapper> {
+    pub(crate) async fn all_ers_arrivals_impl(&self) -> Result<Vec<Arrival>> {
         let arrivals = sqlx::query_as!(
             Arrival,
             r#"
@@ -77,12 +75,12 @@ FROM
         &'a self,
         ports: Vec<NewPort>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<(), PostgresErrorWrapper> {
+    ) -> Result<()> {
         NewPort::unnest_insert(ports, &mut **tx).await?;
         Ok(())
     }
 
-    pub(crate) async fn ports_impl(&self) -> Result<Vec<Port>, PostgresErrorWrapper> {
+    pub(crate) async fn ports_impl(&self) -> Result<Vec<Port>> {
         let ports = sqlx::query_as!(
             Port,
             r#"
@@ -101,10 +99,7 @@ FROM
         Ok(ports)
     }
 
-    pub(crate) async fn port_impl(
-        &self,
-        port_id: &str,
-    ) -> Result<Option<Port>, PostgresErrorWrapper> {
+    pub(crate) async fn port_impl(&self, port_id: &str) -> Result<Option<Port>> {
         let port = sqlx::query_as!(
             Port,
             r#"
@@ -126,10 +121,7 @@ WHERE
         Ok(port)
     }
 
-    pub async fn ports_of_trip_impl(
-        &self,
-        trip_id: TripId,
-    ) -> Result<TripPorts, PostgresErrorWrapper> {
+    pub async fn ports_of_trip_impl(&self, trip_id: TripId) -> Result<TripPorts> {
         let ports = sqlx::query_as!(
             TripPorts,
             r#"
@@ -172,10 +164,7 @@ WHERE
         Ok(ports)
     }
 
-    pub async fn dock_points_of_trip_impl(
-        &self,
-        trip_id: TripId,
-    ) -> Result<TripDockPoints, PostgresErrorWrapper> {
+    pub async fn dock_points_of_trip_impl(&self, trip_id: TripId) -> Result<TripDockPoints> {
         let docks = sqlx::query_as!(
             TripDockPoints,
             r#"

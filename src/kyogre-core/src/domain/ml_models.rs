@@ -1,11 +1,10 @@
-use crate::{CatchLocationId, HaulId, MLModelsInbound, MLModelsOutbound};
+use crate::{CatchLocationId, CoreResult, HaulId, MLModelsInbound, MLModelsOutbound};
 use async_trait::async_trait;
 use chrono::{Datelike, Duration, NaiveDate, Utc};
-use error_stack::{Context, Result};
 use fiskeridir_rs::SpeciesGroup;
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
-use std::{collections::HashSet, fmt::Display};
+use std::collections::HashSet;
 use strum::{AsRefStr, EnumIter, EnumString};
 
 // We want this as const, using the opt version with an unwrap is not allowed in stable rust
@@ -22,25 +21,6 @@ pub static ML_SPECIES_GROUPS: &[SpeciesGroup] = &[
     SpeciesGroup::NorthernPrawn,
     SpeciesGroup::GoldenRedfish,
 ];
-
-#[derive(Debug)]
-pub enum MLModelError {
-    StoreOutput,
-    Python,
-    DataPreparation,
-}
-
-impl Display for MLModelError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            MLModelError::DataPreparation => f.write_str("failed to prepare training data"),
-            MLModelError::StoreOutput => f.write_str("failed to store output predictions"),
-            MLModelError::Python => f.write_str("a python related error occurred"),
-        }
-    }
-}
-
-impl Context for MLModelError {}
 
 #[repr(i32)]
 #[derive(
@@ -146,13 +126,13 @@ pub trait MLModel: Send + Sync {
         model: Vec<u8>,
         species: SpeciesGroup,
         adapter: &dyn MLModelsOutbound,
-    ) -> Result<TrainingOutput, MLModelError>;
+    ) -> CoreResult<TrainingOutput>;
     async fn predict(
         &self,
         model: &[u8],
         species: SpeciesGroup,
         adapter: &dyn MLModelsInbound,
-    ) -> Result<(), MLModelError>;
+    ) -> CoreResult<()>;
 }
 
 #[derive(Debug, Clone)]

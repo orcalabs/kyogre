@@ -1,4 +1,4 @@
-use crate::{error::PostgresErrorWrapper, models::VesselEventDetailed, PostgresAdapter};
+use crate::{error::Result, models::VesselEventDetailed, PostgresAdapter};
 use kyogre_core::{FiskeridirVesselId, QueryRange, VesselEventType};
 use sqlx::postgres::types::PgRange;
 
@@ -7,7 +7,7 @@ impl PostgresAdapter {
         &self,
         vessel_id: FiskeridirVesselId,
         period: &QueryRange,
-    ) -> Result<Vec<VesselEventDetailed>, PostgresErrorWrapper> {
+    ) -> Result<Vec<VesselEventDetailed>> {
         let events = sqlx::query_as!(
             VesselEventDetailed,
             r#"
@@ -44,7 +44,7 @@ ORDER BY
         &self,
         vessel_id: FiskeridirVesselId,
         period: &QueryRange,
-    ) -> Result<Vec<VesselEventDetailed>, PostgresErrorWrapper> {
+    ) -> Result<Vec<VesselEventDetailed>> {
         let events = sqlx::query_as!(
             VesselEventDetailed,
             r#"
@@ -110,7 +110,7 @@ ORDER BY
         Ok(events)
     }
 
-    pub(crate) async fn dangling_vessel_events(&self) -> Result<i64, PostgresErrorWrapper> {
+    pub(crate) async fn dangling_vessel_events(&self) -> Result<i64> {
         let row = sqlx::query!(
             r#"
 SELECT

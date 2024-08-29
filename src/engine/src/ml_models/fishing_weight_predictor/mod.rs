@@ -1,9 +1,9 @@
+use crate::error::Result;
 use chrono::{Datelike, NaiveDate, Utc};
 use derivative::Derivative;
-use error_stack::{Result, ResultExt};
 use fiskeridir_rs::SpeciesGroup;
 use kyogre_core::{
-    distance_to_shore, CatchLocation, CatchLocationId, CatchLocationWeather, HaulId, MLModelError,
+    distance_to_shore, CatchLocation, CatchLocationId, CatchLocationWeather, HaulId,
     MLModelsInbound, MLModelsOutbound, ModelId, NewFishingWeightPrediction, PredictionRange,
     TrainingHaul, TrainingMode, TrainingOutput, WeatherData, WeatherLocationOverlap,
     WeightPredictorTrainingData,
@@ -66,7 +66,7 @@ async fn weight_train_impl<T, S>(
     adapter: &dyn MLModelsOutbound,
     weather: WeatherData,
     training_data_convert: T,
-) -> Result<TrainingOutput, MLModelError>
+) -> Result<TrainingOutput>
 where
     S: Serialize,
     T: Fn(Vec<WeightPredictorTrainingData>) -> Vec<S>,
@@ -93,12 +93,10 @@ where
                 TrainingOutcome::Progress(hauls) => {
                     adapter
                         .commit_hauls_training(model_id, species, hauls.into_iter().collect())
-                        .await
-                        .change_context(MLModelError::StoreOutput)?;
+                        .await?;
                     adapter
                         .save_model(model_id, &training_output.model, species)
-                        .await
-                        .change_context(MLModelError::StoreOutput)?;
+                        .await?;
                 }
             }
         },
@@ -127,7 +125,7 @@ async fn training_run<T, S>(
     adapter: &dyn MLModelsOutbound,
     weather: WeatherData,
     training_data_convert: &T,
-) -> Result<TrainingOutcome, MLModelError>
+) -> Result<TrainingOutcome>
 where
     S: Serialize,
     T: Fn(Vec<WeightPredictorTrainingData>) -> Vec<S>,
@@ -142,8 +140,7 @@ where
             settings.bycatch_percentage,
             settings.majority_species_group,
         )
-        .await
-        .change_context(MLModelError::DataPreparation)?
+        .await?
         .into_iter()
         .filter_map(|v| {
             hauls.insert(TrainingHaul {
@@ -167,8 +164,7 @@ where
         return Ok(TrainingOutcome::Progress(hauls));
     }
 
-    let training_data =
-        serde_json::to_string(&training_data).change_context(MLModelError::DataPreparation)?;
+    let training_data = serde_json::to_string(&training_data)?;
 
     let out: (Vec<u8>, Option<f64>) = Python::with_gil(|py| {
         let py_module =
@@ -190,8 +186,7 @@ where
                 settings.test_fraction,
             ))?
             .extract::<(Vec<u8>, Option<f64>)>()
-    })
-    .change_context(MLModelError::Python)?;
+    })?;
 
     info!("trained on {} new hauls", hauls.len());
 
@@ -209,7 +204,7 @@ async fn weight_predict_impl<T, S>(
     adapter: &dyn MLModelsInbound,
     weather: WeatherData,
     prediction_keys_convert: T,
-) -> Result<(), MLModelError>
+) -> Result<()>
 where
     S: Serialize,
     T: Fn(
@@ -237,8 +232,7 @@ where
 
         let all_catch_locations: HashMap<String, CatchLocation> = adapter
             .catch_locations(overlap)
-            .await
-            .change_context(MLModelError::DataPreparation)?
+            .await?
             .into_iter()
             .map(|v| (v.id.clone().into_inner(), v))
             .collect();
@@ -268,8 +262,7 @@ where
 
         let existing_predictions = adapter
             .existing_fishing_weight_predictions(model_id, species, current_year)
-            .await
-            .change_context(MLModelError::StoreOutput)?;
+            .await?;
 
         for v in existing_predictions {
             if v.date < current_date {
@@ -286,46 +279,43 @@ where
             }
         }
 
-        let weather: Result<
-            Option<HashMap<CatchLocationWeatherKey, CatchLocationWeather>>,
-            MLModelError,
-        > = match weather {
-            WeatherData::Optional => Ok(None),
-            WeatherData::Require => {
-                let mut weather: HashMap<CatchLocationWeatherKey, CatchLocationWeather> =
-                    HashMap::new();
-                let mut weather_queries: HashSet<CatchLocationWeatherKey> = HashSet::new();
+        let weather: Result<Option<HashMap<CatchLocationWeatherKey, CatchLocationWeather>>> =
+            match weather {
+                WeatherData::Optional => Ok(None),
+                WeatherData::Require => {
+                    let mut weather: HashMap<CatchLocationWeatherKey, CatchLocationWeather> =
+                        HashMap::new();
+                    let mut weather_queries: HashSet<CatchLocationWeatherKey> = HashSet::new();
 
-                for p in &predictions {
-                    weather_queries.insert(CatchLocationWeatherKey {
-                        catch_location_id: p.catch_location_id.clone(),
-                        date: p.date,
-                    });
+                    for p in &predictions {
+                        weather_queries.insert(CatchLocationWeatherKey {
+                            catch_location_id: p.catch_location_id.clone(),
+                            date: p.date,
+                        });
+                    }
+
+                    let weather_queries = weather_queries
+                        .into_iter()
+                        .map(|w| (w.catch_location_id, w.date))
+                        .collect();
+
+                    adapter
+                        .catch_locations_weather(weather_queries)
+                        .await?
+                        .into_iter()
+                        .for_each(|w| {
+                            weather.insert(
+                                CatchLocationWeatherKey {
+                                    catch_location_id: w.id.clone(),
+                                    date: w.date,
+                                },
+                                w,
+                            );
+                        });
+
+                    Ok(Some(weather))
                 }
-
-                let weather_queries = weather_queries
-                    .into_iter()
-                    .map(|w| (w.catch_location_id, w.date))
-                    .collect();
-
-                adapter
-                    .catch_locations_weather(weather_queries)
-                    .await
-                    .change_context(MLModelError::DataPreparation)?
-                    .into_iter()
-                    .for_each(|w| {
-                        weather.insert(
-                            CatchLocationWeatherKey {
-                                catch_location_id: w.id.clone(),
-                                date: w.date,
-                            },
-                            w,
-                        );
-                    });
-
-                Ok(Some(weather))
-            }
-        };
+            };
 
         let data: Vec<PredictionInputKey> = predictions.into_iter().collect();
 
@@ -334,8 +324,7 @@ where
             return Ok(());
         }
 
-        let prediction_input = serde_json::to_string(&prediction_input)
-            .change_context(MLModelError::DataPreparation)?;
+        let prediction_input = serde_json::to_string(&prediction_input)?;
 
         let predictions = Python::with_gil(|py| {
             let py_module =
@@ -345,8 +334,7 @@ where
             py_main
                 .call1((model, prediction_input))?
                 .extract::<Vec<f64>>()
-        })
-        .change_context(MLModelError::Python)?
+        })?
         .into_iter()
         .enumerate()
         .map(|(i, v)| NewFishingWeightPrediction {
@@ -359,10 +347,7 @@ where
         .collect::<Vec<NewFishingWeightPrediction>>();
 
         info!("added {} new predictions", predictions.len());
-        adapter
-            .add_fishing_weight_predictions(predictions)
-            .await
-            .change_context(MLModelError::StoreOutput)?;
+        adapter.add_fishing_weight_predictions(predictions).await?;
     }
 
     Ok(())

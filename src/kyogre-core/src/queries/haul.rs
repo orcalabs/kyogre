@@ -2,8 +2,8 @@ use crate::*;
 use chrono::{DateTime, Datelike, Months, Utc};
 use enum_index::EnumIndex;
 use enum_index_derive::EnumIndex;
-use error_stack::{Report, Result};
 use fiskeridir_rs::{GearGroup, SpeciesGroup, VesselLengthGroup};
+use matrix_index_error::ValueSnafu;
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 use serde::{Deserialize, Serialize};
@@ -189,28 +189,27 @@ impl HaulMatrixYFeature {
             HaulMatrixYFeature::CatchLocation => "catch_location_matrix_index",
         }
     }
-    fn convert_from_val(&self, val: i32) -> Result<usize, HaulMatrixIndexError> {
+    fn convert_from_val(&self, val: i32) -> Result<usize, MatrixIndexError> {
         match self {
             HaulMatrixYFeature::Date => {
                 let converted = val as usize;
                 if converted >= ERS_OLDEST_DATA_MONTHS {
                     Ok(converted - ERS_OLDEST_DATA_MONTHS)
                 } else {
-                    Err(HaulMatrixIndexError::Date(val))
+                    ValueSnafu { val }.fail()
                 }
             }
             HaulMatrixYFeature::GearGroup => GearGroup::from_i32(val)
-                .ok_or(HaulMatrixIndexError::GearGroup(val))
+                .ok_or_else(|| ValueSnafu { val }.build())
                 .map(|v| v.enum_index()),
             HaulMatrixYFeature::SpeciesGroup => SpeciesGroup::from_i32(val)
-                .ok_or(HaulMatrixIndexError::SpeciesGroup(val))
+                .ok_or_else(|| ValueSnafu { val }.build())
                 .map(|v| v.enum_index()),
             HaulMatrixYFeature::VesselLength => VesselLengthGroup::from_i32(val)
-                .ok_or(HaulMatrixIndexError::VesselLength(val))
+                .ok_or_else(|| ValueSnafu { val }.build())
                 .map(|v| v.enum_index()),
             HaulMatrixYFeature::CatchLocation => Ok(val as usize),
         }
-        .map_err(Report::from)
     }
 
     pub fn size(&self) -> usize {
@@ -225,27 +224,26 @@ impl HaulMatrixYFeature {
 }
 
 impl HaulMatrixXFeature {
-    fn convert_from_val(&self, val: i32) -> Result<usize, HaulMatrixIndexError> {
+    fn convert_from_val(&self, val: i32) -> Result<usize, MatrixIndexError> {
         match self {
             HaulMatrixXFeature::Date => {
                 let converted = val as usize;
                 if converted >= ERS_OLDEST_DATA_MONTHS {
                     Ok(converted - ERS_OLDEST_DATA_MONTHS)
                 } else {
-                    Err(HaulMatrixIndexError::Date(val))
+                    ValueSnafu { val }.fail()
                 }
             }
             HaulMatrixXFeature::GearGroup => GearGroup::from_i32(val)
-                .ok_or(HaulMatrixIndexError::GearGroup(val))
+                .ok_or_else(|| ValueSnafu { val }.build())
                 .map(|v| v.enum_index()),
             HaulMatrixXFeature::SpeciesGroup => SpeciesGroup::from_i32(val)
-                .ok_or(HaulMatrixIndexError::SpeciesGroup(val))
+                .ok_or_else(|| ValueSnafu { val }.build())
                 .map(|v| v.enum_index()),
             HaulMatrixXFeature::VesselLength => VesselLengthGroup::from_i32(val)
-                .ok_or(HaulMatrixIndexError::VesselLength(val))
+                .ok_or_else(|| ValueSnafu { val }.build())
                 .map(|v| v.enum_index()),
         }
-        .map_err(Report::from)
     }
     pub fn size(&self) -> usize {
         match self {
@@ -269,7 +267,7 @@ pub fn calculate_haul_sum_area_table(
     x_feature: HaulMatrixXFeature,
     y_feature: HaulMatrixYFeature,
     data: Vec<HaulMatrixQueryOutput>,
-) -> Result<Vec<u64>, HaulMatrixIndexError> {
+) -> Result<Vec<u64>, MatrixIndexError> {
     let height = y_feature.size();
     let width = x_feature.size();
 

@@ -2,7 +2,6 @@
 #![deny(rust_2018_idioms)]
 
 use duckdb_rs::{settings::Settings, startup::App};
-use error_stack::{fmt::ColorMode, Report};
 use orca_core::{Environment, TracingOutput};
 use tracing::Level;
 
@@ -15,12 +14,9 @@ async fn main() {
         | Environment::Test
         | Environment::Local
         | Environment::Production => TracingOutput::Local,
-        Environment::Development => {
-            Report::<()>::set_color_mode(ColorMode::None);
-            TracingOutput::Honeycomb {
-                api_key: settings.honeycomb_api_key(),
-            }
-        }
+        Environment::Development => TracingOutput::Honeycomb {
+            api_key: settings.honeycomb_api_key(),
+        },
     };
 
     orca_core::init_tracer(

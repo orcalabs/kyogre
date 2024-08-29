@@ -1,4 +1,4 @@
-use crate::{error::PostgresErrorWrapper, models::*, PostgresAdapter};
+use crate::{error::Result, models::*, PostgresAdapter};
 use futures::{Stream, TryStreamExt};
 use unnest_insert::UnnestInsert;
 
@@ -7,7 +7,7 @@ impl PostgresAdapter {
         &'a self,
         species: Vec<SpeciesFiskeridir>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<(), PostgresErrorWrapper> {
+    ) -> Result<()> {
         SpeciesFiskeridir::unnest_insert(species, &mut **tx).await?;
         Ok(())
     }
@@ -16,7 +16,7 @@ impl PostgresAdapter {
         &'a self,
         species: Vec<Species>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<(), PostgresErrorWrapper> {
+    ) -> Result<()> {
         Species::unnest_insert(species, &mut **tx).await?;
         Ok(())
     }
@@ -25,14 +25,14 @@ impl PostgresAdapter {
         &'a self,
         species: Vec<SpeciesFao>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<(), PostgresErrorWrapper> {
+    ) -> Result<()> {
         SpeciesFao::unnest_insert(species, &mut **tx).await?;
         Ok(())
     }
 
     pub(crate) fn species_fiskeridir_impl(
         &self,
-    ) -> impl Stream<Item = Result<SpeciesFiskeridir, PostgresErrorWrapper>> + '_ {
+    ) -> impl Stream<Item = Result<SpeciesFiskeridir>> + '_ {
         sqlx::query_as!(
             SpeciesFiskeridir,
             r#"
@@ -49,9 +49,7 @@ ORDER BY
         .map_err(From::from)
     }
 
-    pub(crate) fn species_impl(
-        &self,
-    ) -> impl Stream<Item = Result<Species, PostgresErrorWrapper>> + '_ {
+    pub(crate) fn species_impl(&self) -> impl Stream<Item = Result<Species>> + '_ {
         sqlx::query_as!(
             Species,
             r#"
@@ -66,9 +64,7 @@ FROM
         .map_err(From::from)
     }
 
-    pub(crate) fn species_fao_impl(
-        &self,
-    ) -> impl Stream<Item = Result<SpeciesFao, PostgresErrorWrapper>> + '_ {
+    pub(crate) fn species_fao_impl(&self) -> impl Stream<Item = Result<SpeciesFao>> + '_ {
         sqlx::query_as!(
             SpeciesFao,
             r#"

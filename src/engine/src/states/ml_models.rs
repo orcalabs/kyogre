@@ -1,33 +1,11 @@
+use crate::error::Result;
 use crate::*;
 use async_trait::async_trait;
-use error_stack::{Context, Result, ResultExt};
 use fiskeridir_rs::SpeciesGroup;
 use machine::Schedule;
-use std::fmt::Display;
 use tracing::{error, instrument};
 
 pub struct MLModelsState;
-
-#[derive(Debug)]
-pub enum MLError {
-    Training,
-    Prediction,
-    ModelSaveLoad,
-}
-
-impl Context for MLError {}
-
-impl Display for MLError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            MLError::Training => f.write_str("an error ocurred while training a model"),
-            MLError::Prediction => {
-                f.write_str("an error ocurred when trying to predict using a model")
-            }
-            MLError::ModelSaveLoad => f.write_str("an error ocurred while loading/saving a model"),
-        }
-    }
-}
 
 #[async_trait]
 impl machine::State for MLModelsState {
@@ -65,21 +43,12 @@ async fn run_ml_model(
     outbound: &dyn MLModelsOutbound,
     model: &dyn MLModel,
     species: SpeciesGroup,
-) -> Result<(), MLError> {
-    let current_model = outbound
-        .model(model.id(), species)
-        .await
-        .change_context(MLError::ModelSaveLoad)?;
+) -> Result<()> {
+    let current_model = outbound.model(model.id(), species).await?;
 
-    let output = model
-        .train(current_model, species, outbound)
-        .await
-        .change_context(MLError::Training)?;
+    let output = model.train(current_model, species, outbound).await?;
 
-    model
-        .predict(&output.model, species, inbound)
-        .await
-        .change_context(MLError::Prediction)?;
+    model.predict(&output.model, species, inbound).await?;
 
     Ok(())
 }

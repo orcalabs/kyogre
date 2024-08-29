@@ -2,7 +2,7 @@ use chrono::{DateTime, Utc};
 use kyogre_core::WeatherLocationId;
 use unnest_insert::UnnestInsert;
 
-use crate::error::PostgresErrorWrapper;
+use crate::error::Error;
 
 #[derive(UnnestInsert)]
 #[unnest_insert(
@@ -52,7 +52,7 @@ pub struct HaulOceanClimate {
 }
 
 impl TryFrom<kyogre_core::NewOceanClimate> for NewOceanClimate {
-    type Error = PostgresErrorWrapper;
+    type Error = Error;
 
     fn try_from(v: kyogre_core::NewOceanClimate) -> Result<Self, Self::Error> {
         Ok(Self {
@@ -73,7 +73,7 @@ impl TryFrom<kyogre_core::NewOceanClimate> for NewOceanClimate {
 }
 
 impl TryFrom<OceanClimate> for kyogre_core::OceanClimate {
-    type Error = PostgresErrorWrapper;
+    type Error = Error;
 
     fn try_from(v: OceanClimate) -> Result<Self, Self::Error> {
         Ok(Self {
@@ -95,7 +95,7 @@ impl TryFrom<OceanClimate> for kyogre_core::OceanClimate {
 }
 
 impl TryFrom<HaulOceanClimate> for kyogre_core::HaulOceanClimate {
-    type Error = PostgresErrorWrapper;
+    type Error = Error;
 
     fn try_from(v: HaulOceanClimate) -> Result<Self, Self::Error> {
         Ok(Self {

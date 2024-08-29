@@ -1,11 +1,10 @@
 use chrono::{DateTime, NaiveDate, Utc};
-use error_stack::report;
 use geo_types::geometry::Geometry;
 use geozero::wkb;
 use kyogre_core::WeatherLocationId;
 use unnest_insert::UnnestInsert;
 
-use crate::error::{PostgresError, PostgresErrorWrapper};
+use crate::error::{Error, MissingValueSnafu};
 
 #[derive(UnnestInsert)]
 #[unnest_insert(table_name = "daily_weather_dirty", conflict = "date")]
@@ -65,7 +64,7 @@ pub struct HaulWeather {
 }
 
 impl TryFrom<kyogre_core::NewWeather> for NewWeather {
-    type Error = PostgresErrorWrapper;
+    type Error = Error;
 
     fn try_from(v: kyogre_core::NewWeather) -> Result<Self, Self::Error> {
         Ok(Self {
@@ -86,7 +85,7 @@ impl TryFrom<kyogre_core::NewWeather> for NewWeather {
 }
 
 impl TryFrom<Weather> for kyogre_core::Weather {
-    type Error = PostgresErrorWrapper;
+    type Error = Error;
 
     fn try_from(v: Weather) -> Result<Self, Self::Error> {
         Ok(Self {
@@ -108,17 +107,17 @@ impl TryFrom<Weather> for kyogre_core::Weather {
 }
 
 impl TryFrom<WeatherLocation> for kyogre_core::WeatherLocation {
-    type Error = PostgresErrorWrapper;
+    type Error = Error;
 
     fn try_from(v: WeatherLocation) -> Result<Self, Self::Error> {
         let geometry = v
             .polygon
             .geometry
-            .ok_or_else(|| report!(PostgresError::DataConversion))?;
+            .ok_or_else(|| MissingValueSnafu.build())?;
 
         let polygon = match geometry {
             Geometry::Polygon(p) => p,
-            _ => return Err(report!(PostgresError::DataConversion).into()),
+            _ => return MissingValueSnafu.fail(),
         };
 
         Ok(Self {
@@ -128,7 +127,7 @@ impl TryFrom<WeatherLocation> for kyogre_core::WeatherLocation {
     }
 }
 impl TryFrom<HaulWeather> for kyogre_core::HaulWeather {
-    type Error = PostgresErrorWrapper;
+    type Error = Error;
 
     fn try_from(v: HaulWeather) -> Result<Self, Self::Error> {
         Ok(Self {

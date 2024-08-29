@@ -1,6 +1,5 @@
 use async_trait::async_trait;
 use chrono::{DateTime, TimeZone, Utc};
-use error_stack::{report, Report, Result, ResultExt};
 use fiskeridir_rs::{DeliveryPointId, Gear, GearGroup, LandingId, SpeciesGroup, VesselLengthGroup};
 use kyogre_core::{
     DateRange, Delivery, FishingFacility, FiskeridirVesselId, HaulId, MeilisearchSource,
@@ -10,7 +9,7 @@ use serde::{Deserialize, Serialize};
 
 use super::filter::{TripFilterDiscriminants, TripSort};
 use crate::{
-    error::MeilisearchError,
+    error::{Error, Result},
     indexable::{Id, IdVersion, Indexable},
     utils::to_nanos,
     CacheIndex,
@@ -91,55 +90,43 @@ impl Indexable for Trip {
     fn chunk_size() -> usize {
         20_000
     }
-    async fn source_versions<T: MeilisearchSource>(
-        source: &T,
-    ) -> Result<Vec<(Self::Id, i64)>, MeilisearchError> {
-        source
-            .all_trip_versions()
-            .await
-            .change_context(MeilisearchError::Source)
+    async fn source_versions<T: MeilisearchSource>(source: &T) -> Result<Vec<(Self::Id, i64)>> {
+        Ok(source.all_trip_versions().await?)
     }
     async fn items_by_ids<T: MeilisearchSource>(
         source: &T,
         ids: &[Self::Id],
-    ) -> Result<Vec<Self::Item>, MeilisearchError> {
-        source
+    ) -> Result<Vec<Self::Item>> {
+        Ok(source
             .trips_by_ids(ids)
-            .await
-            .change_context(MeilisearchError::Source)?
+            .await?
             .into_iter()
             .map(Trip::try_from)
-            .collect::<Result<Vec<_>, _>>()
+            .collect::<Result<Vec<_>>>()?)
     }
 }
 
 impl Trip {
-    pub fn try_to_trip_detailed(
-        self,
-        read_fishing_facility: bool,
-    ) -> Result<TripDetailed, MeilisearchError> {
+    pub fn try_to_trip_detailed(self, read_fishing_facility: bool) -> Result<TripDetailed> {
         let start = Utc.timestamp_nanos(self.start);
         let end = Utc.timestamp_nanos(self.end);
 
         let period_precision = match (self.period_precision_start, self.period_precision_end) {
-            (Some(start), Some(end)) => {
-                Some(DateRange::new(start, end).change_context(MeilisearchError::DataConversion)?)
-            }
+            (Some(start), Some(end)) => Some(DateRange::new(start, end)?),
             (None, None) => None,
-            _ => return Err(report!(MeilisearchError::DataConversion)),
+            _ => unreachable!(),
         };
 
         Ok(TripDetailed {
             trip_id: self.trip_id,
             fiskeridir_vessel_id: self.fiskeridir_vessel_id,
             fiskeridir_length_group_id: self.fiskeridir_length_group_id,
-            period: DateRange::new(start, end).change_context(MeilisearchError::DataConversion)?,
+            period: DateRange::new(start, end)?,
             period_precision,
             landing_coverage: DateRange::new(
                 self.landing_coverage_start,
                 self.landing_coverage_end,
-            )
-            .change_context(MeilisearchError::DataConversion)?,
+            )?,
             num_deliveries: self.num_deliveries,
             most_recent_delivery_date: self.most_recent_delivery_date,
             gear_ids: self.gear_ids,
@@ -167,7 +154,7 @@ impl Trip {
 }
 
 impl TryFrom<TripDetailed> for Trip {
-    type Error = Report<MeilisearchError>;
+    type Error = Error;
 
     fn try_from(v: TripDetailed) -> std::result::Result<Self, Self::Error> {
         Ok(Self {

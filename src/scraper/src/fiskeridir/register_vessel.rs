@@ -1,11 +1,8 @@
-use std::sync::Arc;
-
+use crate::{DataSource, FiskeridirSource, Processor, Result, ScraperId};
 use async_trait::async_trait;
-use error_stack::{Result, ResultExt};
 use fiskeridir_rs::{ApiSource, RegisterVessel, RegisterVesselQuery};
+use std::sync::Arc;
 use tracing::{error, info};
-
-use crate::{DataSource, FiskeridirSource, Processor, ScraperError, ScraperId};
 
 pub struct RegisterVesselsScraper {
     source: Option<ApiSource>,
@@ -27,7 +24,7 @@ impl DataSource for RegisterVesselsScraper {
         ScraperId::RegisterVessels
     }
 
-    async fn scrape(&self, processor: &(dyn Processor)) -> Result<(), ScraperError> {
+    async fn scrape(&self, processor: &(dyn Processor)) -> Result<()> {
         if let Some(source) = &self.source {
             let mut register_vessels = Vec::new();
             for i in 1.. {
@@ -42,7 +39,6 @@ impl DataSource for RegisterVesselsScraper {
                     .fiskeridir_api
                     .download(source, Some(&query))
                     .await
-                    .change_context(ScraperError)
                     .map_err(|e| {
                         error!(
                             "failed to scrape register_vessels for query: {query:?}, err: {e:?}"
@@ -60,10 +56,7 @@ impl DataSource for RegisterVesselsScraper {
                 }
             }
 
-            processor
-                .add_register_vessels(register_vessels)
-                .await
-                .change_context(ScraperError)?;
+            processor.add_register_vessels(register_vessels).await?;
 
             info!("successfully scraped register_vessels");
         }

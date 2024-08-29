@@ -1,16 +1,14 @@
 use crate::trip_assembler::precision::TripPrecisionCalculator;
 use crate::{
-    DeliveryPointPrecision, DistanceToShorePrecision, FirstMovedPoint, PrecisionConfig,
-    StartSearchPoint,
+    error::Result, DeliveryPointPrecision, DistanceToShorePrecision, FirstMovedPoint,
+    PrecisionConfig, StartSearchPoint,
 };
 use async_trait::async_trait;
 use chrono::Duration;
-use error_stack::Result;
-use error_stack::ResultExt;
 use kyogre_core::{
-    PrecisionDirection, PrecisionOutcome, RelevantEventType, TripAssembler, TripAssemblerError,
-    TripAssemblerId, TripAssemblerState, TripPrecisionError, TripPrecisionOutboundPort,
-    TripProcessingUnit, Vessel, VesselEventDetailed,
+    CoreResult, PrecisionDirection, PrecisionOutcome, RelevantEventType, TripAssembler,
+    TripAssemblerId, TripAssemblerState, TripPrecisionOutboundPort, TripProcessingUnit, Vessel,
+    VesselEventDetailed,
 };
 
 use self::statemachine::{LandingEvent, LandingStatemachine};
@@ -73,60 +71,68 @@ impl TripAssembler for LandingTripAssembler {
         vessel: &Vessel,
         adapter: &dyn TripPrecisionOutboundPort,
         trip: &TripProcessingUnit,
-    ) -> Result<PrecisionOutcome, TripPrecisionError> {
-        self.precision_calculator
+    ) -> CoreResult<PrecisionOutcome> {
+        Ok(self
+            .precision_calculator
             .calculate_precision(vessel, adapter, trip)
-            .await
+            .await?)
     }
 
     async fn assemble(
         &self,
         prior_trip_events: Vec<VesselEventDetailed>,
         vessel_events: Vec<VesselEventDetailed>,
-    ) -> Result<Option<TripAssemblerState>, TripAssemblerError> {
-        let vessel_events: Vec<LandingEvent> = vessel_events
-            .into_iter()
-            .filter_map(LandingEvent::from_vessel_event_detailed)
-            .collect();
+    ) -> CoreResult<Option<TripAssemblerState>> {
+        Ok(assemble_impl(prior_trip_events, vessel_events).await?)
+    }
+}
 
-        let prior_trip_events: Vec<LandingEvent> = prior_trip_events
-            .into_iter()
-            .filter_map(LandingEvent::from_vessel_event_detailed)
-            .collect();
+async fn assemble_impl(
+    prior_trip_events: Vec<VesselEventDetailed>,
+    vessel_events: Vec<VesselEventDetailed>,
+) -> Result<Option<TripAssemblerState>> {
+    let vessel_events: Vec<LandingEvent> = vessel_events
+        .into_iter()
+        .filter_map(LandingEvent::from_vessel_event_detailed)
+        .collect();
 
-        if vessel_events.is_empty() {
-            return Ok(None);
+    let prior_trip_events: Vec<LandingEvent> = prior_trip_events
+        .into_iter()
+        .filter_map(LandingEvent::from_vessel_event_detailed)
+        .collect();
+
+    if vessel_events.is_empty() {
+        return Ok(None);
+    }
+
+    let start_landing = if prior_trip_events.is_empty() {
+        // As we do not have any reasonable estimate of the first trip of a vessel
+        // we set it to start a day prior to the first landing.
+        LandingEvent {
+            timestamp: vessel_events.first().unwrap().timestamp() - Duration::days(1),
         }
-
-        let start_landing = if prior_trip_events.is_empty() {
-            // As we do not have any reasonable estimate of the first trip of a vessel
-            // we set it to start a day prior to the first landing.
-            LandingEvent {
-                timestamp: vessel_events.first().unwrap().timestamp() - Duration::days(1),
-            }
-        } else {
-            // Need to connect the prior trip to the new one
-            LandingEvent {
-                timestamp: prior_trip_events.last().unwrap().timestamp(),
-            }
-        };
-
-        let mut state = LandingStatemachine::new(start_landing);
-
-        for e in vessel_events {
-            state.advance(e).change_context(TripAssemblerError)?;
+    } else {
+        // Need to connect the prior trip to the new one
+        LandingEvent {
+            timestamp: prior_trip_events.last().unwrap().timestamp(),
         }
+    };
 
-        let new_trips = state.finalize();
+    let mut state = LandingStatemachine::new(start_landing);
 
-        if new_trips.is_empty() {
-            Ok(None)
-        } else {
-            Ok(Some(TripAssemblerState {
-                calculation_timer: new_trips.last().unwrap().period.end(),
-                new_trips,
-                conflict_strategy: None,
-            }))
-        }
+    for e in vessel_events {
+        state.advance(e)?;
+    }
+
+    let new_trips = state.finalize();
+
+    if new_trips.is_empty() {
+        Ok(None)
+    } else {
+        Ok(Some(TripAssemblerState {
+            calculation_timer: new_trips.last().unwrap().period.end(),
+            new_trips,
+            conflict_strategy: None,
+        }))
     }
 }

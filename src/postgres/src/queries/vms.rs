@@ -2,7 +2,7 @@ use crate::models::AisVmsAreaPositionsReturning;
 use std::collections::{HashMap, HashSet};
 
 use crate::{
-    error::PostgresErrorWrapper,
+    error::Result,
     models::{EarliestVms, NewVmsPosition, VmsPosition},
     PostgresAdapter,
 };
@@ -13,7 +13,7 @@ use kyogre_core::{DateRange, PositionType};
 use unnest_insert::UnnestInsert;
 
 impl PostgresAdapter {
-    pub(crate) async fn all_vms_impl(&self) -> Result<Vec<VmsPosition>, PostgresErrorWrapper> {
+    pub(crate) async fn all_vms_impl(&self) -> Result<Vec<VmsPosition>> {
         let vms = sqlx::query_as!(
             VmsPosition,
             r#"
@@ -45,7 +45,7 @@ ORDER BY
         &self,
         call_sign: &CallSign,
         range: &DateRange,
-    ) -> impl Stream<Item = Result<VmsPosition, PostgresErrorWrapper>> + '_ {
+    ) -> impl Stream<Item = Result<VmsPosition>> + '_ {
         sqlx::query_as!(
             VmsPosition,
             r#"
@@ -77,10 +77,7 @@ ORDER BY
         .map_err(From::from)
     }
 
-    pub(crate) async fn add_vms_impl(
-        &self,
-        vms: Vec<fiskeridir_rs::Vms>,
-    ) -> Result<(), PostgresErrorWrapper> {
+    pub(crate) async fn add_vms_impl(&self, vms: Vec<fiskeridir_rs::Vms>) -> Result<()> {
         let mut call_signs_unique = HashSet::new();
         let mut vms_unique: HashMap<(String, DateTime<Utc>), NewVmsPosition> = HashMap::new();
         let mut vms_earliest: HashMap<String, EarliestVms> = HashMap::new();

@@ -1,10 +1,11 @@
-use crate::*;
-
+use crate::{
+    matrix_index_error::ValueSnafu, CatchLocationId, FiskeridirVesselId, MatrixIndexError,
+    Ordering, Range, LANDING_OLDEST_DATA_MONTHS, NUM_CATCH_LOCATIONS,
+};
 use chrono::{DateTime, Datelike, Months, Utc};
 use enum_index::EnumIndex;
 use enum_index_derive::EnumIndex;
-use error_stack::{Report, Result};
-use fiskeridir_rs::*;
+use fiskeridir_rs::{GearGroup, SpeciesGroup, VesselLengthGroup};
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 use serde::{Deserialize, Serialize};
@@ -118,27 +119,26 @@ impl LandingMatrixXFeature {
             LandingMatrixXFeature::VesselLength => "vessel_length_group",
         }
     }
-    fn convert_from_val(&self, val: i32) -> Result<usize, LandingMatrixIndexError> {
+    fn convert_from_val(&self, val: i32) -> Result<usize, MatrixIndexError> {
         match self {
             LandingMatrixXFeature::Date => {
                 let converted = val as usize;
                 if converted >= LANDING_OLDEST_DATA_MONTHS {
                     Ok(converted - LANDING_OLDEST_DATA_MONTHS)
                 } else {
-                    Err(LandingMatrixIndexError::Date(val))
+                    ValueSnafu { val }.fail()
                 }
             }
             LandingMatrixXFeature::GearGroup => GearGroup::from_i32(val)
-                .ok_or(LandingMatrixIndexError::GearGroup(val))
+                .ok_or_else(|| ValueSnafu { val }.build())
                 .map(|v| v.enum_index()),
             LandingMatrixXFeature::SpeciesGroup => SpeciesGroup::from_i32(val)
-                .ok_or(LandingMatrixIndexError::SpeciesGroup(val))
+                .ok_or_else(|| ValueSnafu { val }.build())
                 .map(|v| v.enum_index()),
             LandingMatrixXFeature::VesselLength => VesselLengthGroup::from_i32(val)
-                .ok_or(LandingMatrixIndexError::VesselLength(val))
+                .ok_or_else(|| ValueSnafu { val }.build())
                 .map(|v| v.enum_index()),
         }
-        .map_err(Report::from)
     }
     fn size(&self) -> usize {
         match self {
@@ -160,28 +160,27 @@ impl LandingMatrixYFeature {
             LandingMatrixYFeature::CatchLocation => "catch_location_matrix_index",
         }
     }
-    fn convert_from_val(&self, val: i32) -> Result<usize, LandingMatrixIndexError> {
+    fn convert_from_val(&self, val: i32) -> Result<usize, MatrixIndexError> {
         match self {
             LandingMatrixYFeature::Date => {
                 let converted = val as usize;
                 if converted >= LANDING_OLDEST_DATA_MONTHS {
                     Ok(converted - LANDING_OLDEST_DATA_MONTHS)
                 } else {
-                    Err(LandingMatrixIndexError::Date(val))
+                    ValueSnafu { val }.fail()
                 }
             }
             LandingMatrixYFeature::GearGroup => GearGroup::from_i32(val)
-                .ok_or(LandingMatrixIndexError::GearGroup(val))
+                .ok_or_else(|| ValueSnafu { val }.build())
                 .map(|v| v.enum_index()),
             LandingMatrixYFeature::SpeciesGroup => SpeciesGroup::from_i32(val)
-                .ok_or(LandingMatrixIndexError::SpeciesGroup(val))
+                .ok_or_else(|| ValueSnafu { val }.build())
                 .map(|v| v.enum_index()),
             LandingMatrixYFeature::VesselLength => VesselLengthGroup::from_i32(val)
-                .ok_or(LandingMatrixIndexError::VesselLength(val))
+                .ok_or_else(|| ValueSnafu { val }.build())
                 .map(|v| v.enum_index()),
             LandingMatrixYFeature::CatchLocation => Ok(val as usize),
         }
-        .map_err(Report::from)
     }
 
     fn size(&self) -> usize {
@@ -270,7 +269,7 @@ pub fn calculate_landing_sum_area_table(
     x_feature: LandingMatrixXFeature,
     y_feature: LandingMatrixYFeature,
     data: Vec<LandingMatrixQueryOutput>,
-) -> Result<Vec<u64>, LandingMatrixIndexError> {
+) -> Result<Vec<u64>, MatrixIndexError> {
     let height = y_feature.size();
     let width = x_feature.size();
 

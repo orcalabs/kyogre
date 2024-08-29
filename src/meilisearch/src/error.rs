@@ -1,28 +1,53 @@
-use error_stack::Context;
+use chrono::DateTime;
+use chrono::Utc;
+use kyogre_core::DateRangeError;
+use kyogre_core::Error as CoreError;
+use meilisearch_sdk::tasks::Task;
+use snafu::{Location, Snafu};
+use stack_error::{OpaqueError, StackError};
 
-#[derive(Debug, Clone)]
-pub enum MeilisearchError {
-    Insert,
-    Delete,
-    Query,
-    Index,
-    Source,
-    DataConversion,
+pub type Result<T> = std::result::Result<T, Error>;
+
+#[derive(Snafu, StackError)]
+#[snafu(module, visibility(pub))]
+#[stack_error(to = [CoreError::Unexpected])]
+pub enum Error {
+    #[snafu(display("Meilisearch error"))]
+    Meilisearch {
+        #[snafu(implicit)]
+        location: Location,
+        #[snafu(source)]
+        error: meilisearch_sdk::errors::Error,
+    },
+    #[snafu(display("Task failed '{task:?}'"))]
+    Task {
+        #[snafu(implicit)]
+        location: Location,
+        task: Box<Task>,
+    },
+    #[snafu(display("Database operation failed"))]
+    Database {
+        #[snafu(implicit)]
+        location: Location,
+        source: kyogre_core::Error,
+    },
+    #[snafu(display("Failed data conversion"))]
+    #[stack_error(opaque_stack = [DateRangeError, TimeStampError])]
+    Conversion {
+        #[snafu(implicit)]
+        location: Location,
+        opaque: OpaqueError,
+    },
 }
 
-impl Context for MeilisearchError {}
-
-impl std::fmt::Display for MeilisearchError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            MeilisearchError::Insert => f.write_str("an error occured while inserting documents"),
-            MeilisearchError::Delete => f.write_str("an error occured while deleting documents"),
-            MeilisearchError::Query => f.write_str("an error occured while querying documents"),
-            MeilisearchError::Index => f.write_str("an error occured while managing an index"),
-            MeilisearchError::Source => {
-                f.write_str("an error occured while fetching data from source")
-            }
-            MeilisearchError::DataConversion => f.write_str("failed to convert data"),
-        }
-    }
+#[derive(Snafu, StackError)]
+#[snafu(module, visibility(pub))]
+#[stack_error(to = [CoreError::Unexpected])]
+pub enum TimeStampError {
+    #[snafu(display("Could not convert timpestamp to nanos '{ts}'"))]
+    Conversion {
+        #[snafu(implicit)]
+        location: Location,
+        ts: DateTime<Utc>,
+    },
 }

@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use crate::{
-    error::PostgresErrorWrapper,
+    error::Result,
     ers_dca_set::ErsDcaSet,
     models::{NewErsDca, NewErsDcaBody, NewHerringPopulation},
     PostgresAdapter,
@@ -17,11 +17,11 @@ impl PostgresAdapter {
     pub(crate) async fn add_ers_dca_impl(
         &self,
         ers_dca: Box<
-            dyn Iterator<Item = error_stack::Result<fiskeridir_rs::ErsDca, fiskeridir_rs::Error>>
+            dyn Iterator<Item = std::result::Result<fiskeridir_rs::ErsDca, fiskeridir_rs::Error>>
                 + Send
                 + Sync,
         >,
-    ) -> Result<(), PostgresErrorWrapper> {
+    ) -> Result<()> {
         let mut tx = self.pool.begin().await?;
 
         let mut inserted_message_ids = HashSet::new();
@@ -78,7 +78,7 @@ impl PostgresAdapter {
         inserted_message_ids: &mut HashSet<i64>,
         vessel_event_ids: &mut Vec<i64>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<(), PostgresErrorWrapper> {
+    ) -> Result<()> {
         let prepared_set = set.prepare();
 
         self.add_ers_message_types(prepared_set.ers_message_types, tx)
@@ -128,7 +128,7 @@ impl PostgresAdapter {
         inserted_message_ids: &mut HashSet<i64>,
         vessel_event_ids: &mut Vec<i64>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<(), PostgresErrorWrapper> {
+    ) -> Result<()> {
         let len = ers_dca.len();
         let mut message_id = Vec::with_capacity(len);
         let mut message_version = Vec::with_capacity(len);
@@ -170,7 +170,7 @@ WHERE
         &'a self,
         message_ids: &[i64],
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<HashSet<i64>, PostgresErrorWrapper> {
+    ) -> Result<HashSet<i64>> {
         let ids = sqlx::query!(
             r#"
 SELECT
@@ -195,7 +195,7 @@ WHERE
         &'a self,
         ers_dca_bodies: Vec<NewErsDcaBody>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<(), PostgresErrorWrapper> {
+    ) -> Result<()> {
         NewErsDcaBody::unnest_insert(ers_dca_bodies, &mut **tx).await?;
         Ok(())
     }
@@ -204,7 +204,7 @@ WHERE
         &self,
         herring_populations: Vec<NewHerringPopulation>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<(), PostgresErrorWrapper> {
+    ) -> Result<()> {
         NewHerringPopulation::unnest_insert(herring_populations, &mut **tx).await?;
         Ok(())
     }

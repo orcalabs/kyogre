@@ -1,4 +1,9 @@
-use crate::{error::PostgresErrorWrapper, models::Haul, models::HaulMessage, PostgresAdapter};
+use crate::{
+    error::{Error, Result},
+    models::Haul,
+    models::HaulMessage,
+    PostgresAdapter,
+};
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::{Gear, GearGroup, VesselLengthGroup};
 use futures::{Stream, TryStreamExt};
@@ -11,7 +16,7 @@ impl PostgresAdapter {
         args: HaulsMatrixArgs,
         active_filter: ActiveHaulsFilter,
         x_feature: HaulMatrixXFeature,
-    ) -> Result<Vec<u64>, PostgresErrorWrapper> {
+    ) -> Result<Vec<u64>> {
         let y_feature = if x_feature == active_filter {
             HaulMatrixYFeature::CatchLocation
         } else {
@@ -106,8 +111,7 @@ GROUP BY
     pub(crate) fn hauls_impl(
         &self,
         query: HaulsQuery,
-    ) -> Result<impl Stream<Item = Result<Haul, PostgresErrorWrapper>> + '_, PostgresErrorWrapper>
-    {
+    ) -> Result<impl Stream<Item = Result<Haul>> + '_> {
         let args = HaulsArgs::try_from(query)?;
 
         let stream = sqlx::query_as!(
@@ -243,10 +247,7 @@ ORDER BY
         Ok(stream)
     }
 
-    pub(crate) async fn hauls_by_ids_impl(
-        &self,
-        haul_ids: &[HaulId],
-    ) -> Result<Vec<Haul>, PostgresErrorWrapper> {
+    pub(crate) async fn hauls_by_ids_impl(&self, haul_ids: &[HaulId]) -> Result<Vec<Haul>> {
         let ids = haul_ids.iter().map(|i| i.0).collect::<Vec<_>>();
 
         let hauls = sqlx::query_as!(
@@ -307,9 +308,7 @@ WHERE
         Ok(hauls)
     }
 
-    pub(crate) async fn all_haul_cache_versions_impl(
-        &self,
-    ) -> Result<Vec<(HaulId, i64)>, PostgresErrorWrapper> {
+    pub(crate) async fn all_haul_cache_versions_impl(&self) -> Result<Vec<(HaulId, i64)>> {
         Ok(sqlx::query!(
             r#"
 SELECT
@@ -329,7 +328,7 @@ FROM
     pub(crate) async fn haul_messages_of_vessel_impl(
         &self,
         vessel_id: FiskeridirVesselId,
-    ) -> Result<Vec<HaulMessage>, PostgresErrorWrapper> {
+    ) -> Result<Vec<HaulMessage>> {
         let messages = sqlx::query_as!(
             HaulMessage,
             r#"
@@ -361,7 +360,7 @@ WHERE
     pub(crate) async fn haul_messages_of_vessel_without_weather_impl(
         &self,
         vessel_id: FiskeridirVesselId,
-    ) -> Result<Vec<HaulMessage>, PostgresErrorWrapper> {
+    ) -> Result<Vec<HaulMessage>> {
         let messages = sqlx::query_as!(
             HaulMessage,
             r#"
@@ -385,7 +384,7 @@ WHERE
         Ok(messages)
     }
 
-    pub(crate) async fn update_bycatch_status_impl(&self) -> Result<(), PostgresErrorWrapper> {
+    pub(crate) async fn update_bycatch_status_impl(&self) -> Result<()> {
         let mut tx = self.pool.begin().await?;
 
         sqlx::query!(
@@ -471,7 +470,7 @@ WHERE
     pub(crate) async fn add_haul_distribution_output(
         &self,
         values: Vec<HaulDistributionOutput>,
-    ) -> Result<(), PostgresErrorWrapper> {
+    ) -> Result<()> {
         let len = values.len();
 
         let mut haul_id = Vec::with_capacity(len);
@@ -599,9 +598,7 @@ GROUP BY
         Ok(())
     }
 
-    pub(crate) async fn hauls_with_incorrect_catches(
-        &self,
-    ) -> Result<Vec<i64>, PostgresErrorWrapper> {
+    pub(crate) async fn hauls_with_incorrect_catches(&self) -> Result<Vec<i64>> {
         Ok(sqlx::query!(
             r#"
 SELECT
@@ -668,9 +665,7 @@ WHERE
         .collect())
     }
 
-    pub(crate) async fn hauls_matrix_vs_ers_dca_living_weight(
-        &self,
-    ) -> Result<i64, PostgresErrorWrapper> {
+    pub(crate) async fn hauls_matrix_vs_ers_dca_living_weight(&self) -> Result<i64> {
         let row = sqlx::query!(
             r#"
 SELECT
@@ -718,7 +713,7 @@ SELECT
         &'a self,
         message_ids: &[i64],
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<(), PostgresErrorWrapper> {
+    ) -> Result<()> {
         let event_ids = sqlx::query!(
             r#"
 INSERT INTO
@@ -914,7 +909,7 @@ RETURNING
         &'a self,
         message_ids: &[i64],
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<(), PostgresErrorWrapper> {
+    ) -> Result<()> {
         sqlx::query!(
             r#"
 INSERT INTO
@@ -985,7 +980,7 @@ pub struct HaulsArgs {
 }
 
 impl TryFrom<HaulsQuery> for HaulsArgs {
-    type Error = PostgresErrorWrapper;
+    type Error = Error;
 
     fn try_from(v: HaulsQuery) -> std::result::Result<Self, Self::Error> {
         Ok(HaulsArgs {
@@ -1036,7 +1031,7 @@ pub struct HaulsMatrixArgs {
 }
 
 impl TryFrom<HaulsMatrixQuery> for HaulsMatrixArgs {
-    type Error = PostgresErrorWrapper;
+    type Error = Error;
 
     fn try_from(v: HaulsMatrixQuery) -> std::result::Result<Self, Self::Error> {
         Ok(HaulsMatrixArgs {

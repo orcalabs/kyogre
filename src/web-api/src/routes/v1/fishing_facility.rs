@@ -9,12 +9,11 @@ use kyogre_core::{
 use serde::{Deserialize, Serialize};
 use serde_qs::actix::QsQuery as Query;
 use serde_with::{serde_as, DisplayFromStr};
-use tracing::error;
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
 use crate::{
-    error::ApiError,
+    error::{error::InsufficientPermissionsSnafu, Result},
     extractors::{BwPolicy, BwProfile},
     to_streaming_response, Database,
 };
@@ -55,23 +54,18 @@ pub async fn fishing_facilities<T: Database + 'static>(
     db: web::Data<T>,
     profile: BwProfile,
     params: Query<FishingFacilitiesParams>,
-) -> Result<HttpResponse, ApiError> {
+) -> Result<HttpResponse> {
     if !profile
         .policies
         .contains(&BwPolicy::BwReadExtendedFishingFacility)
     {
-        return Err(ApiError::Forbidden);
+        return InsufficientPermissionsSnafu.fail();
     }
 
     let query = params.into_inner().into();
 
     to_streaming_response! {
-        db.fishing_facilities(query)
-            .map_ok(FishingFacility::from)
-            .map_err(|e| {
-                error!("failed to retrieve fishing_facilities: {e:?}");
-                ApiError::InternalServerError
-            })
+        db.fishing_facilities(query).map_ok(FishingFacility::from)
     }
 }
 

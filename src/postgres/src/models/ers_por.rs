@@ -1,12 +1,11 @@
+use crate::{
+    error::Error,
+    queries::{enum_to_i32, timestamp_from_date_and_time},
+};
 use chrono::{DateTime, NaiveDate, Utc};
 use fiskeridir_rs::FiskdirVesselNationalityGroup;
 use kyogre_core::FiskeridirVesselId;
 use unnest_insert::UnnestInsert;
-
-use crate::{
-    error::PostgresErrorWrapper,
-    queries::{enum_to_i32, timestamp_from_date_and_time},
-};
 
 #[derive(UnnestInsert)]
 #[unnest_insert(
@@ -77,7 +76,7 @@ pub struct Arrival {
 }
 
 impl TryFrom<fiskeridir_rs::ErsPor> for NewErsPor {
-    type Error = PostgresErrorWrapper;
+    type Error = Error;
 
     fn try_from(v: fiskeridir_rs::ErsPor) -> Result<Self, Self::Error> {
         Ok(Self {

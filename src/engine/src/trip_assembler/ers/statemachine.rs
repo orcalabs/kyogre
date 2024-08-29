@@ -1,8 +1,8 @@
 use super::{ErsEvent, ErsEventType};
+use crate::error::Result;
 use crate::ers_last_trip_landing_coverage_end;
 use chrono::{DateTime, Utc};
-use error_stack::Result;
-use kyogre_core::{Bound, DateRange, DateRangeError, NewTrip};
+use kyogre_core::{Bound, DateRange, NewTrip};
 
 #[derive(Debug)]
 pub struct ErsStatemachine {
@@ -20,7 +20,7 @@ impl ErsStatemachine {
         }
     }
 
-    fn add_trip(&mut self, arrival: Arrival) -> Result<(), DateRangeError> {
+    fn add_trip(&mut self, arrival: Arrival) -> Result<()> {
         let mut period = DateRange::new(
             self.current_departure.estimated_timestamp,
             arrival.estimated_timestamp,
@@ -58,7 +58,7 @@ impl ErsStatemachine {
         Ok(())
     }
 
-    pub fn advance(&mut self, event: ErsEvent) -> Result<(), DateRangeError> {
+    pub fn advance(&mut self, event: ErsEvent) -> Result<()> {
         match event.event_type {
             ErsEventType::Arrival => {
                 self.current_arrival = Some(Arrival {
@@ -78,7 +78,7 @@ impl ErsStatemachine {
         }
     }
 
-    pub fn finalize(mut self) -> Result<Vec<NewTrip>, DateRangeError> {
+    pub fn finalize(mut self) -> Result<Vec<NewTrip>> {
         match self.current_arrival.take() {
             Some(arrival) => {
                 self.add_trip(arrival)?;

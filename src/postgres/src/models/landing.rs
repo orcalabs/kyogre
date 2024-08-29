@@ -1,4 +1,4 @@
-use crate::error::PostgresErrorWrapper;
+use crate::error::{Error, Result};
 use chrono::{DateTime, NaiveDate, NaiveTime, Utc};
 use fiskeridir_rs::{DeliveryPointId, Gear, GearGroup, LandingId, VesselLengthGroup};
 use kyogre_core::{CatchLocationId, FiskeridirVesselId, LandingMatrixQuery};
@@ -115,7 +115,7 @@ impl NewLanding {
     pub fn from_fiskeridir_landing(
         landing: fiskeridir_rs::Landing,
         data_year: u32,
-    ) -> Result<Self, PostgresErrorWrapper> {
+    ) -> Result<Self> {
         Ok(Self {
             landing_id: landing.id.into_inner(),
             document_id: landing.document_info.id,
@@ -205,9 +205,9 @@ impl NewLanding {
 }
 
 impl TryFrom<Landing> for kyogre_core::Landing {
-    type Error = PostgresErrorWrapper;
+    type Error = Error;
 
-    fn try_from(v: Landing) -> Result<Self, Self::Error> {
+    fn try_from(v: Landing) -> std::result::Result<Self, Self::Error> {
         Ok(Self {
             landing_id: LandingId::try_from(v.landing_id)?,
             landing_timestamp: v.landing_timestamp,
@@ -260,7 +260,7 @@ impl From<LandingMatrixQueryOutput> for kyogre_core::LandingMatrixQueryOutput {
 }
 
 impl TryFrom<LandingMatrixQuery> for LandingMatrixArgs {
-    type Error = PostgresErrorWrapper;
+    type Error = Error;
 
     fn try_from(v: LandingMatrixQuery) -> std::result::Result<Self, Self::Error> {
         Ok(LandingMatrixArgs {

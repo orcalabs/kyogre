@@ -1,7 +1,6 @@
-use crate::adapter::DuckdbError;
+use crate::error::Result;
 use duckdb::DuckdbConnectionManager;
 use duckdb::{params, Transaction};
-use error_stack::{Result, ResultExt};
 use orca_core::PsqlSettings;
 use r2d2::PooledConnection;
 use tokio::sync::mpsc::{Receiver, Sender};
@@ -36,7 +35,7 @@ const LANDING_SCHEMA: &str = "CREATE TABLE
     )";
 
 pub struct RefreshRequest(pub Sender<RefreshResponse>);
-pub struct RefreshResponse(pub Result<(), DuckdbError>);
+pub struct RefreshResponse(pub Result<()>);
 
 pub struct DuckdbRefresher {
     pool: r2d2::Pool<DuckdbConnectionManager>,
@@ -116,26 +115,26 @@ impl DuckdbRefresher {
     pub fn install_postgres_exstension(
         &self,
         conn: &PooledConnection<DuckdbConnectionManager>,
-    ) -> Result<(), DuckdbError> {
+    ) -> Result<()> {
         // This has to be run prior to starting the transaction
         // as if fails if its excuted during it.
-        conn.execute_batch(
-            r"
+        Ok(conn
+            .execute_batch(
+                r"
 INSTALL postgres;
 LOAD postgres;
             ",
-        )
-        .change_context(DuckdbError::Query)
-        .map(|_| ())
+            )
+            .map(|_| ())?)
     }
 
     #[instrument(skip_all)]
-    pub fn initial_create(&self) -> Result<(), DuckdbError> {
-        let mut conn = self.pool.get().change_context(DuckdbError::Connection)?;
+    pub fn initial_create(&self) -> Result<()> {
+        let mut conn = self.pool.get()?;
 
         self.install_postgres_exstension(&conn)?;
 
-        let tx = conn.transaction().change_context(DuckdbError::Connection)?;
+        let tx = conn.transaction()?;
 
         tx.execute(
             &format!(
@@ -143,12 +142,10 @@ LOAD postgres;
                 self.postgres_credentials
             ),
             [],
-        )
-        .change_context(DuckdbError::Query)?;
+        )?;
 
-        let table_exists: bool = tx
-            .query_row(
-                "
+        let table_exists: bool = tx.query_row(
+            "
 SELECT
     COALESCE(
         (
@@ -162,10 +159,9 @@ SELECT
         FALSE
     );
                 ",
-                params![],
-                |row| row.get(0),
-            )
-            .change_context(DuckdbError::Query)?;
+            params![],
+            |row| row.get(0),
+        )?;
 
         if !table_exists {
             self.create_hauls(CreateMode::Initial, &tx)?;
@@ -173,7 +169,7 @@ SELECT
             self.add_data_versions(&tx)?;
         }
 
-        tx.commit().change_context(DuckdbError::Connection)?;
+        tx.commit()?;
 
         Ok(())
     }
@@ -250,21 +246,19 @@ SELECT
     }
 
     #[instrument(skip(self))]
-    fn refresh_landings(&self, new_version: Option<u64>) -> Result<(), DuckdbError> {
-        let mut conn = self.pool.get().change_context(DuckdbError::Connection)?;
+    fn refresh_landings(&self, new_version: Option<u64>) -> Result<()> {
+        let mut conn = self.pool.get()?;
 
-        conn.execute("DELETE FROM landing_matrix_cache", [])
-            .change_context(DuckdbError::Query)?;
+        conn.execute("DELETE FROM landing_matrix_cache", [])?;
 
         conn.execute(
             r"
 LOAD postgres;
             ",
             [],
-        )
-        .change_context(DuckdbError::Query)?;
+        )?;
 
-        let tx = conn.transaction().change_context(DuckdbError::Connection)?;
+        let tx = conn.transaction()?;
 
         self.create_landings(CreateMode::Refresh, &tx)?;
 
@@ -272,26 +266,24 @@ LOAD postgres;
             self.set_data_source_version(DataSource::Landings, new_version, &tx)?;
         }
 
-        tx.commit().change_context(DuckdbError::Connection)?;
+        tx.commit()?;
         Ok(())
     }
 
     #[instrument(skip(self))]
-    fn refresh_hauls(&self, new_version: Option<u64>) -> Result<(), DuckdbError> {
-        let mut conn = self.pool.get().change_context(DuckdbError::Connection)?;
+    fn refresh_hauls(&self, new_version: Option<u64>) -> Result<()> {
+        let mut conn = self.pool.get()?;
 
-        conn.execute("DELETE FROM hauls_matrix_cache", [])
-            .change_context(DuckdbError::Query)?;
+        conn.execute("DELETE FROM hauls_matrix_cache", [])?;
 
         conn.execute(
             r"
 LOAD postgres;
             ",
             [],
-        )
-        .change_context(DuckdbError::Query)?;
+        )?;
 
-        let tx = conn.transaction().change_context(DuckdbError::Connection)?;
+        let tx = conn.transaction()?;
 
         self.create_hauls(CreateMode::Refresh, &tx)?;
 
@@ -299,20 +291,19 @@ LOAD postgres;
             self.set_data_source_version(DataSource::Hauls, new_version, &tx)?;
         }
 
-        tx.commit().change_context(DuckdbError::Connection)?;
+        tx.commit()?;
         Ok(())
     }
 
-    fn refresh_status(&self) -> Result<RefreshStatus, DuckdbError> {
-        let conn = self.pool.get().change_context(DuckdbError::Connection)?;
+    fn refresh_status(&self) -> Result<RefreshStatus> {
+        let conn = self.pool.get()?;
 
         conn.execute(
             r"
 LOAD postgres;
             ",
             [],
-        )
-        .change_context(DuckdbError::Query)?;
+        )?;
 
         let postgres_haul_version = self.postgres_data_source_version(&conn, DataSource::Hauls)?;
         let local_haul_version = self.data_source_version(&conn, DataSource::Hauls)?;
@@ -339,7 +330,7 @@ LOAD postgres;
         &self,
         conn: &PooledConnection<DuckdbConnectionManager>,
         source: DataSource,
-    ) -> Result<u64, DuckdbError> {
+    ) -> Result<u64> {
         let version_command = format!(
             "
 SELECT
@@ -352,13 +343,11 @@ WHERE
             POSTGRES_DUCKDB_VERSION_TABLE
         );
 
-        let version: u64 = conn
-            .query_row(
-                &version_command,
-                params![source.postgres_version_table_id()],
-                |row| row.get(0),
-            )
-            .change_context(DuckdbError::Query)?;
+        let version: u64 = conn.query_row(
+            &version_command,
+            params![source.postgres_version_table_id()],
+            |row| row.get(0),
+        )?;
         Ok(version)
     }
 
@@ -366,7 +355,7 @@ WHERE
         &self,
         tx: &Transaction<'_>,
         source: DataSource,
-    ) -> Result<u64, DuckdbError> {
+    ) -> Result<u64> {
         let version_command = format!(
             "
 SELECT
@@ -379,13 +368,11 @@ WHERE
             POSTGRES_DUCKDB_VERSION_TABLE
         );
 
-        let version: u64 = tx
-            .query_row(
-                &version_command,
-                params![source.postgres_version_table_id()],
-                |row| row.get(0),
-            )
-            .change_context(DuckdbError::Query)?;
+        let version: u64 = tx.query_row(
+            &version_command,
+            params![source.postgres_version_table_id()],
+            |row| row.get(0),
+        )?;
         Ok(version)
     }
 
@@ -393,10 +380,9 @@ WHERE
         &self,
         conn: &PooledConnection<DuckdbConnectionManager>,
         source: DataSource,
-    ) -> Result<u64, DuckdbError> {
-        let version: u64 = conn
-            .query_row(
-                r#"
+    ) -> Result<u64> {
+        let version: u64 = conn.query_row(
+            r#"
 SELECT
     "version"
 FROM
@@ -404,10 +390,9 @@ FROM
 WHERE
     source = ?
                 "#,
-                params![source.row_value_name()],
-                |row| row.get(0),
-            )
-            .change_context(DuckdbError::Query)?;
+            params![source.row_value_name()],
+            |row| row.get(0),
+        )?;
 
         Ok(version)
     }
@@ -417,7 +402,7 @@ WHERE
         source: DataSource,
         version: u64,
         tx: &Transaction<'_>,
-    ) -> Result<(), DuckdbError> {
+    ) -> Result<()> {
         tx.execute(
             r#"
 UPDATE data_versions
@@ -427,13 +412,12 @@ WHERE
     source = ?
             "#,
             params![version, source.row_value_name()],
-        )
-        .change_context(DuckdbError::Query)?;
+        )?;
 
         Ok(())
     }
 
-    fn add_data_versions(&self, tx: &Transaction<'_>) -> Result<(), DuckdbError> {
+    fn add_data_versions(&self, tx: &Transaction<'_>) -> Result<()> {
         let postgres_haul_version = self.postgres_data_source_version_tx(tx, DataSource::Hauls)?;
         let postgres_landing_version =
             self.postgres_data_source_version_tx(tx, DataSource::Landings)?;
@@ -443,8 +427,7 @@ WHERE
 CREATE TABLE
     data_versions ("version" INT NOT NULL, source VARCHAR PRIMARY KEY,);
             "#,
-        )
-        .change_context(DuckdbError::Query)?;
+        )?;
 
         tx.execute(
             r#"
@@ -455,8 +438,7 @@ VALUES
 ON CONFLICT (source) DO NOTHING;
             "#,
             [postgres_landing_version],
-        )
-        .change_context(DuckdbError::Query)?;
+        )?;
 
         tx.execute(
             r#"
@@ -467,14 +449,13 @@ VALUES
 ON CONFLICT (source) DO NOTHING;
             "#,
             [postgres_haul_version],
-        )
-        .change_context(DuckdbError::Query)?;
+        )?;
 
         Ok(())
     }
 
     #[instrument(skip_all)]
-    fn create_landings(&self, mode: CreateMode, tx: &Transaction<'_>) -> Result<(), DuckdbError> {
+    fn create_landings(&self, mode: CreateMode, tx: &Transaction<'_>) -> Result<()> {
         let postgres_scan_command = "
 INSERT INTO
     landing_matrix_cache (
@@ -511,12 +492,11 @@ FROM
             }
             CreateMode::Refresh => postgres_scan_command,
         };
-        tx.execute_batch(&queries)
-            .change_context(DuckdbError::Query)
+        Ok(tx.execute_batch(&queries)?)
     }
 
     #[instrument(skip_all)]
-    fn create_hauls(&self, mode: CreateMode, tx: &Transaction<'_>) -> Result<(), DuckdbError> {
+    fn create_hauls(&self, mode: CreateMode, tx: &Transaction<'_>) -> Result<()> {
         let postgres_scan_command = "
 INSERT INTO
     hauls_matrix_cache (
@@ -555,7 +535,6 @@ FROM
             }
             CreateMode::Refresh => postgres_scan_command,
         };
-        tx.execute_batch(&queries)
-            .change_context(DuckdbError::Query)
+        Ok(tx.execute_batch(&queries)?)
     }
 }

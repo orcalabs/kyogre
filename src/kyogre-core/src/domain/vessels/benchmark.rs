@@ -3,7 +3,6 @@ use std::collections::HashMap;
 use crate::*;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use error_stack::{Result, ResultExt};
 use serde::{Deserialize, Serialize};
 use tracing::error;
 
@@ -63,17 +62,16 @@ pub trait VesselBenchmark: Send + Sync {
         &self,
         vessel: &Vessel,
         adapter: &dyn VesselBenchmarkOutbound,
-    ) -> Result<f64, BenchmarkError>;
+    ) -> CoreResult<f64>;
     async fn produce_and_store_benchmarks(
         &self,
         input_adapter: &dyn VesselBenchmarkInbound,
         output_adapter: &dyn VesselBenchmarkOutbound,
-    ) -> Result<(), BenchmarkError> {
+    ) -> CoreResult<()> {
         let id = self.benchmark_id();
         let vessels = output_adapter
             .vessels()
-            .await
-            .change_context(BenchmarkError)?
+            .await?
             .into_iter()
             .map(|v| (v.fiskeridir.id, v))
             .collect::<HashMap<FiskeridirVesselId, Vessel>>();
@@ -94,10 +92,7 @@ pub trait VesselBenchmark: Send + Sync {
             }
         }
 
-        input_adapter
-            .add_output(outputs)
-            .await
-            .change_context(BenchmarkError)?;
+        input_adapter.add_output(outputs).await?;
 
         Ok(())
     }

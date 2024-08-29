@@ -5,7 +5,6 @@ use std::{
 };
 
 use async_trait::async_trait;
-use error_stack::{report, Result, ResultExt};
 use futures::{future::BoxFuture, FutureExt};
 use kyogre_core::{running_in_test, MeilisearchSource};
 use meilisearch_sdk::{
@@ -16,7 +15,10 @@ use serde::{de::DeserializeOwned, Serialize};
 use strum::IntoEnumIterator;
 use tracing::{error, info, warn};
 
-use crate::{error::MeilisearchError, CacheIndex, MeilisearchAdapter};
+use crate::{
+    error::{error::TaskSnafu, Result},
+    CacheIndex, MeilisearchAdapter,
+};
 
 pub trait IdVersion {
     type Id;
@@ -41,13 +43,11 @@ pub trait Indexable {
     fn cache_index() -> CacheIndex;
     fn primary_key() -> &'static str;
     fn chunk_size() -> usize;
-    async fn source_versions<T: MeilisearchSource>(
-        source: &T,
-    ) -> Result<Vec<(Self::Id, i64)>, MeilisearchError>;
+    async fn source_versions<T: MeilisearchSource>(source: &T) -> Result<Vec<(Self::Id, i64)>>;
     async fn items_by_ids<T: MeilisearchSource>(
         source: &T,
         ids: &[Self::Id],
-    ) -> Result<Vec<Self::Item>, MeilisearchError>;
+    ) -> Result<Vec<Self::Item>>;
 
     fn index<T>(adapter: &MeilisearchAdapter<T>) -> Index {
         let uid = match &adapter.index_suffix {
@@ -57,9 +57,7 @@ pub trait Indexable {
         adapter.client.index(uid)
     }
 
-    async fn create_index<T: Sync>(
-        adapter: &MeilisearchAdapter<T>,
-    ) -> Result<(), MeilisearchError> {
+    async fn create_index<T: Sync>(adapter: &MeilisearchAdapter<T>) -> Result<()> {
         let settings = meilisearch_sdk::settings::Settings::new()
             .with_searchable_attributes(Vec::<String>::new())
             .with_ranking_rules(["sort"])
@@ -71,23 +69,18 @@ pub trait Indexable {
 
         let task = Self::index(adapter)
             .set_settings(&settings)
-            .await
-            .change_context(MeilisearchError::Index)?
+            .await?
             .wait_for_completion(&adapter.client, None, Some(Duration::from_secs(60 * 10)))
-            .await
-            .change_context(MeilisearchError::Index)?;
+            .await?;
 
         if !task.is_success() {
-            return Err(report!(MeilisearchError::Index)
-                .attach_printable(format!("create index did not succeed: {task:?}")));
+            return TaskSnafu { task }.fail();
         }
 
         Ok(())
     }
 
-    async fn refresh<T: MeilisearchSource>(
-        adapter: &MeilisearchAdapter<T>,
-    ) -> Result<(), MeilisearchError> {
+    async fn refresh<T: MeilisearchSource>(adapter: &MeilisearchAdapter<T>) -> Result<()> {
         let index = Self::index(adapter);
 
         let cache_versions = Self::all_versions(&index).await?;
@@ -117,10 +110,7 @@ pub trait Indexable {
         // Deleting too many items causes the payload to be too large,
         // so split into multiple requests
         for ids in to_delete.chunks(50_000) {
-            let task = index
-                .delete_documents(ids)
-                .await
-                .change_context(MeilisearchError::Delete)?;
+            let task = index.delete_documents(ids).await?;
             tasks.push(task);
         }
 
@@ -143,8 +133,7 @@ pub trait Indexable {
                     // We insert a lot of items, so use a decently large timeout.
                     Some(Duration::from_secs(60 * 60)),
                 )
-                .await
-                .change_context(MeilisearchError::Query)?;
+                .await?;
 
             if !task.is_success() {
                 error!("insert/delete task did not succeed: {task:?}");
@@ -154,7 +143,7 @@ pub trait Indexable {
         Ok(())
     }
 
-    async fn all_versions(index: &Index) -> Result<BTreeMap<Self::Id, i64>, MeilisearchError> {
+    async fn all_versions(index: &Index) -> Result<BTreeMap<Self::Id, i64>> {
         let primary_key = Self::primary_key();
 
         let result = index
@@ -162,8 +151,7 @@ pub trait Indexable {
             .with_attributes_to_retrieve(Selectors::Some(&[primary_key, "cache_version"]))
             .with_limit(usize::MAX)
             .execute::<Self::IdVersion>()
-            .await
-            .change_context(MeilisearchError::Query)?;
+            .await?;
 
         let result = result
             .hits
@@ -214,14 +202,12 @@ pub trait Indexable {
         .boxed()
     }
 
-    async fn cleanup<T: Sync>(adapter: &MeilisearchAdapter<T>) -> Result<(), MeilisearchError> {
+    async fn cleanup<T: Sync>(adapter: &MeilisearchAdapter<T>) -> Result<()> {
         let task = Self::index(adapter)
             .delete()
-            .await
-            .change_context(MeilisearchError::Delete)?
+            .await?
             .wait_for_completion(&adapter.client, None, Some(Duration::from_secs(60)))
-            .await
-            .change_context(MeilisearchError::Delete)?;
+            .await?;
 
         match &task {
             // Should never happen as we wait for completion
@@ -230,8 +216,7 @@ pub trait Indexable {
             }
             Task::Failed { content } => match content.error.error_code {
                 ErrorCode::IndexNotFound => Ok(()),
-                _ => Err(report!(MeilisearchError::Delete)
-                    .attach_printable(format!("failed to delete index: {task:?}"))),
+                _ => TaskSnafu { task }.fail(),
             },
             Task::Succeeded { .. } => Ok(()),
         }

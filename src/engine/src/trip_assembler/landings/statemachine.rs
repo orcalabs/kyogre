@@ -1,8 +1,6 @@
+use crate::error::Result;
 use chrono::{DateTime, Utc};
-use error_stack::Result;
-use kyogre_core::{
-    Bound, DateRange, DateRangeError, NewTrip, VesselEventDetailed, VesselEventType,
-};
+use kyogre_core::{Bound, DateRange, NewTrip, VesselEventDetailed, VesselEventType};
 
 pub struct LandingStatemachine {
     current_landing: LandingEvent,
@@ -17,7 +15,7 @@ impl LandingStatemachine {
         }
     }
 
-    pub fn advance(&mut self, event: LandingEvent) -> Result<(), DateRangeError> {
+    pub fn advance(&mut self, event: LandingEvent) -> Result<()> {
         // We group landing trips per day and want them to end as late as possible to cover
         // all landings for that day.
         if event.timestamp.date_naive() == self.current_landing.timestamp.date_naive() {

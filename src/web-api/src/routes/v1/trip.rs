@@ -1,10 +1,11 @@
+use error::error::StartAfterEndSnafu;
 use fiskeridir_rs::{Gear, GearGroup, LandingId};
 use futures::TryStreamExt;
 use serde_qs::actix::QsQuery as Query;
 use serde_with::{serde_as, DisplayFromStr};
 
 use crate::{
-    error::ApiError,
+    error::Result,
     extractors::{BwPolicy, BwProfile},
     response::Response,
     *,
@@ -19,7 +20,6 @@ use kyogre_core::{
     TripsQuery, VesselEventType,
 };
 use serde::{Deserialize, Serialize};
-use tracing::{error, warn};
 use utoipa::{IntoParams, ToSchema};
 
 use super::{
@@ -87,7 +87,7 @@ pub async fn trip_of_haul<T: Database + 'static, M: Meilisearch + 'static>(
     meilisearch: web::Data<Option<M>>,
     profile: Option<BwProfile>,
     path: Path<TripOfHaulPath>,
-) -> Result<Response<Option<Trip>>, ApiError> {
+) -> Result<Response<Option<Trip>>> {
     let read_fishing_facility = profile
         .map(|p| {
             p.policies
@@ -99,19 +99,16 @@ pub async fn trip_of_haul<T: Database + 'static, M: Meilisearch + 'static>(
         return Ok(Response::new(
             meilisearch
                 .trip_of_haul(&path.haul_id, read_fishing_facility)
-                .await
-                .map_err(|_| ApiError::InternalServerError)?
+                .await?
                 .map(Trip::from),
         ));
     }
 
-    db.detailed_trip_of_haul(&path.haul_id, read_fishing_facility)
-        .await
-        .map(|t| Response::new(t.map(Trip::from)))
-        .map_err(|e| {
-            error!("failed to retrieve trip of haul: {e:?}");
-            ApiError::InternalServerError
-        })
+    let trip = db
+        .detailed_trip_of_haul(&path.haul_id, read_fishing_facility)
+        .await?;
+
+    Ok(Response::new(trip.map(Trip::from)))
 }
 
 #[utoipa::path(
@@ -129,7 +126,7 @@ pub async fn trip_of_landing<T: Database + 'static, M: Meilisearch + 'static>(
     meilisearch: web::Data<Option<M>>,
     profile: Option<BwProfile>,
     path: Path<TripOfLandingPath>,
-) -> Result<Response<Option<Trip>>, ApiError> {
+) -> Result<Response<Option<Trip>>> {
     let read_fishing_facility = profile
         .map(|p| {
             p.policies
@@ -141,19 +138,16 @@ pub async fn trip_of_landing<T: Database + 'static, M: Meilisearch + 'static>(
         return Ok(Response::new(
             meilisearch
                 .trip_of_landing(&path.landing_id, read_fishing_facility)
-                .await
-                .map_err(|_| ApiError::InternalServerError)?
+                .await?
                 .map(Trip::from),
         ));
     }
 
-    db.detailed_trip_of_landing(&path.landing_id, read_fishing_facility)
-        .await
-        .map(|t| Response::new(t.map(Trip::from)))
-        .map_err(|e| {
-            error!("failed to retrieve trip of landing: {e:?}");
-            ApiError::InternalServerError
-        })
+    let trip = db
+        .detailed_trip_of_landing(&path.landing_id, read_fishing_facility)
+        .await?;
+
+    Ok(Response::new(trip.map(Trip::from)))
 }
 
 #[utoipa::path(
@@ -171,7 +165,7 @@ pub async fn trips<T: Database + 'static, M: Meilisearch + 'static>(
     meilisearch: web::Data<Option<M>>,
     profile: Option<BwProfile>,
     params: Query<TripsParameters>,
-) -> Result<HttpResponse, ApiError> {
+) -> Result<HttpResponse> {
     let read_fishing_facility = profile
         .map(|p| {
             p.policies
@@ -183,9 +177,7 @@ pub async fn trips<T: Database + 'static, M: Meilisearch + 'static>(
     match (params.start_date, params.end_date) {
         (Some(start), Some(end)) => {
             if start > end {
-                let err = ApiError::StartAfterEnd { start, end };
-                warn!("{err:?}");
-                Err(err)
+                StartAfterEndSnafu { start, end }.fail()
             } else {
                 Ok(())
             }
@@ -199,8 +191,7 @@ pub async fn trips<T: Database + 'static, M: Meilisearch + 'static>(
         return Ok(Response::new(
             meilisearch
                 .trips(query.clone(), read_fishing_facility)
-                .await
-                .map_err(|_| ApiError::InternalServerError)?
+                .await?
                 .into_iter()
                 .map(Trip::from)
                 .collect::<Vec<_>>(),
@@ -212,16 +203,8 @@ pub async fn trips<T: Database + 'static, M: Meilisearch + 'static>(
         db.detailed_trips(
             query,
             read_fishing_facility,
-        )
-        .map_err(|e| {
-            error!("failed to retrieve trips_of_vessel: {e:?}");
-            ApiError::InternalServerError
-        })?
+        )?
         .map_ok(Trip::from)
-        .map_err(|e| {
-            error!("failed to retrieve trips_of_vessel: {e:?}");
-            ApiError::InternalServerError
-        })
     }
 }
 
@@ -239,7 +222,7 @@ pub async fn current_trip<T: Database + 'static>(
     db: web::Data<T>,
     profile: Option<BwProfile>,
     path: Path<CurrentTripPath>,
-) -> Result<Response<Option<CurrentTrip>>, ApiError> {
+) -> Result<Response<Option<CurrentTrip>>> {
     let read_fishing_facility = profile
         .map(|p| {
             p.policies
@@ -249,11 +232,7 @@ pub async fn current_trip<T: Database + 'static>(
 
     Ok(Response::new(
         db.current_trip(path.fiskeridir_vessel_id, read_fishing_facility)
-            .await
-            .map_err(|e| {
-                error!("failed to retrieve current_trip: {e:?}");
-                ApiError::InternalServerError
-            })?
+            .await?
             .map(CurrentTrip::from),
     ))
 }

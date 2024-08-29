@@ -7,8 +7,8 @@ edition = "2021"
 
 [dependencies]
 kyogre-core = { path = "../kyogre-core" }
-
-error-stack = { workspace = true }
+stack-error = { workspace = true }
+snafu = { workspace = true }
 fiskeridir-rs = { workspace = true }
 
 meilisearch-sdk = "0.27.1"

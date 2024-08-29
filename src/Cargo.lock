@@ -274,7 +274,6 @@ dependencies = [
  "chrono",
  "config",
  "dockertest",
- "error-stack",
  "fiskeridir-rs",
  "futures",
  "humantime-serde",
@@ -285,6 +284,8 @@ dependencies = [
  "reqwest 0.12.7",
  "serde",
  "serde_json",
+ "snafu",
+ "stack-error",
  "tokio",
  "tokio-stream",
  "tokio-util",
@@ -1512,11 +1513,11 @@ dependencies = [
  "config",
  "dockertest",
  "duckdb",
- "error-stack",
  "fiskeridir-rs",
  "futures",
  "futures-core",
  "futures-util",
+ "http 1.1.0",
  "humantime-serde",
  "kyogre-core",
  "num-traits",
@@ -1527,6 +1528,8 @@ dependencies = [
  "rand 0.8.5",
  "serde",
  "serde_json",
+ "snafu",
+ "stack-error",
  "tokio",
  "tokio-stream",
  "tonic 0.12.2",
@@ -1585,7 +1588,6 @@ dependencies = [
  "console-subscriber",
  "derivative",
  "dockertest",
- "error-stack",
  "fiskeridir-rs",
  "futures",
  "geo",
@@ -1604,6 +1606,8 @@ dependencies = [
  "scraper 0.1.0",
  "serde",
  "serde_json",
+ "snafu",
+ "stack-error",
  "strum 0.26.3",
  "strum_macros 0.26.4",
  "tokio",
@@ -1642,16 +1646,6 @@ checksum = "534c5cf6194dfab3db3242765c03bbe257cf92f22b38f6bc0c58d59108a820ba"
 dependencies = [
  "libc",
  "windows-sys 0.52.0",
-]
-
-[[package]]
-name = "error-stack"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fe413319145d1063f080f27556fd30b1d70b01e2ba10c2a6e40d4be982ffc5d1"
-dependencies = [
- "anyhow",
- "rustc_version",
 ]
 
 [[package]]
@@ -1715,7 +1709,6 @@ dependencies = [
  "csv",
  "enum_index",
  "enum_index_derive",
- "error-stack",
  "futures-util",
  "jurisdiction",
  "num-derive",
@@ -1728,13 +1721,15 @@ dependencies = [
  "serde_repr",
  "serde_with",
  "sha3",
+ "snafu",
  "sqlx",
+ "stack-error",
  "strum 0.26.3",
  "strum_macros 0.26.4",
  "tempfile",
- "thiserror",
  "tokio",
  "tracing",
+ "url",
  "utoipa",
  "wiremock",
  "zip 2.2.0",
@@ -2600,15 +2595,6 @@ dependencies = [
 
 [[package]]
 name = "itertools"
-version = "0.12.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ba291022dbbd398a455acf126c1e341954079855bc60dfdda641363bd6922569"
-dependencies = [
- "either",
-]
-
-[[package]]
-name = "itertools"
 version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "413ee7dfc52ee1a4949ceeb7dbc8a33f2d6c088194d9f922fb8318faf1f01186"
@@ -2706,7 +2692,6 @@ dependencies = [
  "chrono-tz",
  "enum_index",
  "enum_index_derive",
- "error-stack",
  "fiskeridir-rs",
  "flate2",
  "futures",
@@ -2720,7 +2705,9 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_repr",
+ "snafu",
  "sqlx",
+ "stack-error",
  "strum 0.26.3",
  "tokio",
  "tracing",
@@ -3003,7 +2990,6 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "chrono",
- "error-stack",
  "fiskeridir-rs",
  "futures",
  "humantime-serde",
@@ -3011,6 +2997,8 @@ dependencies = [
  "meilisearch-sdk",
  "serde",
  "serde_json",
+ "snafu",
+ "stack-error",
  "strum 0.26.3",
  "strum_macros 0.26.4",
  "tokio",
@@ -3885,7 +3873,6 @@ dependencies = [
  "dockertest",
  "enum_index",
  "enum_index_derive",
- "error-stack",
  "fiskeridir-rs",
  "futures",
  "geo",
@@ -3898,7 +3885,9 @@ dependencies = [
  "rand 0.8.5",
  "serde",
  "serde_json",
+ "snafu",
  "sqlx",
+ "stack-error",
  "strum 0.26.3",
  "tokio",
  "tracing",
@@ -4013,7 +4002,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5bb182580f71dd070f88d01ce3de9f4da5021db7115d2e1c3605a754153b77c1"
 dependencies = [
  "bytes",
- "heck 0.5.0",
+ "heck 0.4.1",
  "itertools 0.13.0",
  "log",
  "multimap",
@@ -4034,7 +4023,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "81bddcdb20abf9501610992b6759a4c888aef7d1a7247ef75e2404275ac24af1"
 dependencies = [
  "anyhow",
- "itertools 0.12.1",
+ "itertools 0.11.0",
  "proc-macro2",
  "quote 1.0.37",
  "syn 2.0.76",
@@ -4811,7 +4800,6 @@ dependencies = [
  "async-trait",
  "chrono",
  "csv",
- "error-stack",
  "fiskeridir-rs",
  "geozero 0.13.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "kyogre-core",
@@ -4822,6 +4810,8 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_with",
+ "snafu",
+ "stack-error",
  "table-extract",
  "tokio",
  "tracing",
@@ -5176,6 +5166,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "snafu"
+version = "0.8.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2b835cb902660db3415a672d862905e791e54d306c6e8189168c7f3d9ae1c79d"
+dependencies = [
+ "snafu-derive",
+]
+
+[[package]]
+name = "snafu-derive"
+version = "0.8.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "38d1e02fca405f6280643174a50c942219f0bbf4dbf7d480f1dd864d6f211ae5"
+dependencies = [
+ "heck 0.4.1",
+ "proc-macro2",
+ "quote 1.0.37",
+ "syn 2.0.76",
+]
+
+[[package]]
 name = "socket2"
 version = "0.5.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5440,6 +5451,27 @@ name = "stable_deref_trait"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a8f112729512f8e442d81f95a8a7ddf2b7c6b8a1a6f509a95864142b30cab2d3"
+
+[[package]]
+name = "stack-error"
+version = "0.3.0"
+source = "sparse+https://cargo.cloudsmith.io/orcalabs/orcastrator/"
+checksum = "1db21c365371ba7e805834859046f945f0e8ffa5258f87d80a8102827c55542d"
+dependencies = [
+ "stack-error-derive",
+]
+
+[[package]]
+name = "stack-error-derive"
+version = "0.2.0"
+source = "sparse+https://cargo.cloudsmith.io/orcalabs/orcastrator/"
+checksum = "6d92a907a61dbd74a9a107ef90764a7d20762fcb767d144595e7e566bf4c1466"
+dependencies = [
+ "proc-macro2",
+ "quote 1.0.37",
+ "strum 0.26.3",
+ "syn 2.0.76",
+]
 
 [[package]]
 name = "static_assertions"
@@ -6350,8 +6382,9 @@ name = "vessel-benchmark"
 version = "0.1.0"
 dependencies = [
  "async-trait",
- "error-stack",
  "kyogre-core",
+ "snafu",
+ "stack-error",
  "tracing",
 ]
 
@@ -6497,7 +6530,6 @@ dependencies = [
  "engine",
  "enum_index",
  "enum_index_derive",
- "error-stack",
  "fiskeridir-rs",
  "futures",
  "jsonwebtoken",
@@ -6515,6 +6547,8 @@ dependencies = [
  "serde_json",
  "serde_qs",
  "serde_with",
+ "snafu",
+ "stack-error",
  "strum 0.26.3",
  "tokio",
  "tracing",

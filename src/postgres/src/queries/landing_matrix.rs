@@ -1,4 +1,4 @@
-use crate::error::PostgresErrorWrapper;
+use crate::error::Result;
 use crate::models::LandingMatrixQueryOutput;
 use crate::{models::LandingMatrixArgs, PostgresAdapter};
 use kyogre_core::{
@@ -13,7 +13,7 @@ impl PostgresAdapter {
         args: LandingMatrixArgs,
         active_filter: ActiveLandingFilter,
         x_feature: LandingMatrixXFeature,
-    ) -> Result<Vec<u64>, PostgresErrorWrapper> {
+    ) -> Result<Vec<u64>> {
         let y_feature = if x_feature == active_filter {
             LandingMatrixYFeature::CatchLocation
         } else {

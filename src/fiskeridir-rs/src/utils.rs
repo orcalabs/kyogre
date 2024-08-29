@@ -1,3 +1,4 @@
+use crate::Result;
 use chrono::{DateTime, NaiveDate, NaiveDateTime, NaiveTime, TimeZone, Utc};
 use chrono_tz::Europe::Oslo;
 use sha3::{Digest, Sha3_256};
@@ -7,7 +8,7 @@ use tracing::warn;
 
 const HASH_CHUNK_BUF_SIZE: usize = 1_000_000 * 100;
 
-pub fn hash_file(path: &Path) -> Result<String, std::io::Error> {
+pub fn hash_file(path: &Path) -> Result<String> {
     let mut buf = vec![0; HASH_CHUNK_BUF_SIZE];
     let mut file = std::fs::File::open(path)?;
     let mut hash = Sha3_256::new();
