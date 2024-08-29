@@ -11,6 +11,8 @@ postgres = { path = "../postgres" }
 scraper = { path = "../scraper" }
 vessel-benchmark = { path = "../vessel-benchmark" }
 meilisearch = { path = "../meilisearch" }
+stack-error = { workspace = true }
+snafu = { workspace = true }
 
 machine = { workspace = true }
 
@@ -25,7 +27,6 @@ tracing = "0.1.40"
 serde = { version = "1.0.209", features = ["derive"] }
 async-trait = "0.1.81"
 serde_json = "1"
-error-stack = { workspace = true }
 futures = "0.3.30"
 itertools = "0.13.0"
 

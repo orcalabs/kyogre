@@ -2,11 +2,10 @@ use crate::{ml_models::lunar_value, CatchLocationId, SpotPredictorSettings};
 
 use async_trait::async_trait;
 use chrono::Datelike;
-use error_stack::Result;
 use fiskeridir_rs::SpeciesGroup;
 use itertools::Itertools;
 use kyogre_core::{
-    CatchLocationWeather, MLModel, MLModelError, MLModelsInbound, MLModelsOutbound, ModelId,
+    CatchLocationWeather, CoreResult, MLModel, MLModelsInbound, MLModelsOutbound, ModelId,
     TrainingOutput, WeatherData, EARLIEST_ERS_DATE,
 };
 use serde::{Serialize, Serializer};
@@ -143,8 +142,8 @@ impl MLModel for FishingSpotWeatherPredictor {
         model: Vec<u8>,
         species: SpeciesGroup,
         adapter: &dyn MLModelsOutbound,
-    ) -> Result<TrainingOutput, MLModelError> {
-        spot_train_impl(
+    ) -> CoreResult<TrainingOutput> {
+        Ok(spot_train_impl(
             self.id(),
             species,
             &self.settings,
@@ -185,7 +184,7 @@ impl MLModel for FishingSpotWeatherPredictor {
                     .collect()
             },
         )
-        .await
+        .await?)
     }
 
     async fn predict(
@@ -193,8 +192,8 @@ impl MLModel for FishingSpotWeatherPredictor {
         model: &[u8],
         species: SpeciesGroup,
         adapter: &dyn MLModelsInbound,
-    ) -> Result<(), MLModelError> {
-        spot_predict_impl(
+    ) -> CoreResult<()> {
+        Ok(spot_predict_impl(
             self.id(),
             species,
             &self.settings,
@@ -233,6 +232,6 @@ impl MLModel for FishingSpotWeatherPredictor {
                     .collect()
             },
         )
-        .await
+        .await?)
     }
 }

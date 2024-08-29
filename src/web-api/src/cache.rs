@@ -1,11 +1,10 @@
 use crate::{Cache, Meilisearch};
 use async_trait::async_trait;
 use duckdb_rs::Client;
-use error_stack::Result;
 use fiskeridir_rs::LandingId;
 use kyogre_core::{
-    HaulId, HaulsMatrixQuery, HaulsQuery, LandingMatrixQuery, LandingsQuery, MatrixCacheOutbound,
-    MeilisearchOutbound, QueryError, TripDetailed, TripsQuery,
+    CoreResult, HaulId, HaulsMatrixQuery, HaulsQuery, LandingMatrixQuery, LandingsQuery,
+    MatrixCacheOutbound, MeilisearchOutbound, TripDetailed, TripsQuery,
 };
 use meilisearch::MeilisearchAdapter;
 use postgres::PostgresAdapter;
@@ -54,7 +53,7 @@ impl MatrixCacheOutbound for MatrixCache {
     async fn landing_matrix(
         &self,
         query: LandingMatrixQuery,
-    ) -> Result<Option<kyogre_core::LandingMatrix>, QueryError> {
+    ) -> CoreResult<Option<kyogre_core::LandingMatrix>> {
         match self.inner.landing_matrix(query).await {
             Ok(v) => Ok(v),
             Err(e) => {
@@ -69,7 +68,7 @@ impl MatrixCacheOutbound for MatrixCache {
     async fn hauls_matrix(
         &self,
         query: HaulsMatrixQuery,
-    ) -> Result<Option<kyogre_core::HaulsMatrix>, QueryError> {
+    ) -> CoreResult<Option<kyogre_core::HaulsMatrix>> {
         match self.inner.hauls_matrix(query).await {
             Ok(v) => Ok(v),
             Err(e) => {
@@ -89,7 +88,7 @@ impl MeilisearchOutbound for MeilesearchCache {
         &self,
         query: TripsQuery,
         read_fishing_facility: bool,
-    ) -> Result<Vec<TripDetailed>, QueryError> {
+    ) -> CoreResult<Vec<TripDetailed>> {
         match self.inner.trips(query, read_fishing_facility).await {
             Ok(v) => Ok(v),
             Err(e) => {
@@ -105,7 +104,7 @@ impl MeilisearchOutbound for MeilesearchCache {
         &self,
         haul_id: &HaulId,
         read_fishing_facility: bool,
-    ) -> Result<Option<TripDetailed>, QueryError> {
+    ) -> CoreResult<Option<TripDetailed>> {
         match self
             .inner
             .trip_of_haul(haul_id, read_fishing_facility)
@@ -125,7 +124,7 @@ impl MeilisearchOutbound for MeilesearchCache {
         &self,
         landing_id: &LandingId,
         read_fishing_facility: bool,
-    ) -> Result<Option<TripDetailed>, QueryError> {
+    ) -> CoreResult<Option<TripDetailed>> {
         match self
             .inner
             .trip_of_landing(landing_id, read_fishing_facility)
@@ -141,7 +140,7 @@ impl MeilisearchOutbound for MeilesearchCache {
             }
         }
     }
-    async fn hauls(&self, query: HaulsQuery) -> Result<Vec<kyogre_core::Haul>, QueryError> {
+    async fn hauls(&self, query: HaulsQuery) -> CoreResult<Vec<kyogre_core::Haul>> {
         match self.inner.hauls(query).await {
             Ok(v) => Ok(v),
             Err(e) => {
@@ -153,10 +152,7 @@ impl MeilisearchOutbound for MeilesearchCache {
             }
         }
     }
-    async fn landings(
-        &self,
-        query: LandingsQuery,
-    ) -> Result<Vec<kyogre_core::Landing>, QueryError> {
+    async fn landings(&self, query: LandingsQuery) -> CoreResult<Vec<kyogre_core::Landing>> {
         match self.inner.landings(query).await {
             Ok(v) => Ok(v),
             Err(e) => {

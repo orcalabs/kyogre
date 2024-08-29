@@ -1,17 +1,13 @@
-use std::sync::Arc;
-
+use super::{BarentswatchSource, FishingFacilityToolType};
+use crate::{ApiClientConfig, DataSource, Error, Processor, Result, ScraperId};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use error_stack::{Report, Result, ResultExt};
 use fiskeridir_rs::CallSign;
-use kyogre_core::{BearerToken, ConversionError, FishingFacilityApiSource, GeometryWkt, Mmsi};
+use kyogre_core::{BearerToken, FishingFacilityApiSource, GeometryWkt, Mmsi};
 use serde::Deserialize;
+use std::sync::Arc;
 use tracing::info;
 use uuid::Uuid;
-
-use crate::{ApiClientConfig, DataSource, Processor, ScraperError, ScraperId};
-
-use super::{BarentswatchSource, FishingFacilityToolType};
 
 pub struct FishingFacilityHistoricScraper {
     config: Option<ApiClientConfig>,
@@ -36,18 +32,15 @@ impl DataSource for FishingFacilityHistoricScraper {
         ScraperId::FishingFacilityHistoric
     }
 
-    async fn scrape(&self, processor: &(dyn Processor)) -> Result<(), ScraperError> {
+    async fn scrape(&self, processor: &(dyn Processor)) -> Result<()> {
         if let Some(config) = &self.config {
             let latest_timestamp = processor
                 .latest_fishing_facility_update(Some(FishingFacilityApiSource::Historic))
-                .await
-                .change_context(ScraperError)?
+                .await?
                 .unwrap_or_default();
 
             let token = if let Some(ref oauth) = config.oauth {
-                let token = BearerToken::acquire(oauth)
-                    .await
-                    .change_context(ScraperError)?;
+                let token = BearerToken::acquire(oauth).await?;
                 Some(token)
             } else {
                 None
@@ -59,17 +52,12 @@ impl DataSource for FishingFacilityHistoricScraper {
                 .barentswatch_source
                 .client
                 .download::<Vec<FishingFacilityHistoric>, _>(&url, None::<&()>, token)
-                .await
-                .change_context(ScraperError)?
+                .await?
                 .into_iter()
                 .map(kyogre_core::FishingFacility::try_from)
-                .collect::<Result<_, _>>()
-                .change_context(ScraperError)?;
+                .collect::<std::result::Result<_, _>>()?;
 
-            processor
-                .add_fishing_facilities(facilities)
-                .await
-                .change_context(ScraperError)?;
+            processor.add_fishing_facilities(facilities).await?;
 
             info!("successfully scraped fishing_facility_historic");
         }
@@ -102,7 +90,7 @@ struct FishingFacilityHistoric {
 }
 
 impl TryFrom<FishingFacilityHistoric> for kyogre_core::FishingFacility {
-    type Error = Report<ConversionError>;
+    type Error = Error;
 
     fn try_from(v: FishingFacilityHistoric) -> std::result::Result<Self, Self::Error> {
         Ok(Self {
@@ -110,22 +98,9 @@ impl TryFrom<FishingFacilityHistoric> for kyogre_core::FishingFacility {
             barentswatch_vessel_id: None,
             fiskeridir_vessel_id: None,
             vessel_name: v.vessel_name,
-            call_sign: v
-                .ircs
-                .map(CallSign::try_from)
-                .transpose()
-                .change_context(ConversionError)?,
-            mmsi: v
-                .mmsi
-                .map(|m| m.parse::<i32>())
-                .transpose()
-                .change_context(ConversionError)?
-                .map(Mmsi),
-            imo: v
-                .imo
-                .map(|i| i.parse::<i64>())
-                .transpose()
-                .change_context(ConversionError)?,
+            call_sign: v.ircs.map(CallSign::try_from).transpose()?,
+            mmsi: v.mmsi.map(|m| m.parse::<i32>()).transpose()?.map(Mmsi),
+            imo: v.imo.map(|i| i.parse::<i64>()).transpose()?,
             reg_num: v.reg_num,
             sbr_reg_num: v.sbr_reg_num,
             contact_phone: None,

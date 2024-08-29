@@ -1,4 +1,10 @@
-use crate::{error::ApiError, to_streaming_response, Database};
+use crate::{
+    error::{
+        error::{InvalidDateRangeSnafu, MissingDateRangeSnafu},
+        Result,
+    },
+    to_streaming_response, Database,
+};
 use actix_web::{
     web::{self, Path},
     HttpResponse,
@@ -9,7 +15,7 @@ use futures::TryStreamExt;
 use kyogre_core::DateRange;
 use serde::{Deserialize, Serialize};
 use serde_qs::actix::QsQuery as Query;
-use tracing::{error, warn};
+use snafu::ResultExt;
 use utoipa::{IntoParams, ToSchema};
 
 #[derive(Debug, Deserialize, Serialize, IntoParams)]
@@ -40,7 +46,7 @@ pub async fn vms_positions<T: Database + 'static>(
     db: web::Data<T>,
     params: Query<VmsParameters>,
     path: Path<VmsPath>,
-) -> Result<HttpResponse, ApiError> {
+) -> Result<HttpResponse> {
     let (start, end) = match (params.start, params.end) {
         (None, None) => {
             let end = chrono::Utc::now();
@@ -48,21 +54,17 @@ pub async fn vms_positions<T: Database + 'static>(
             Ok((start, end))
         }
         (Some(start), Some(end)) => Ok((start, end)),
-        _ => Err(ApiError::InvalidDateRange),
+        _ => MissingDateRangeSnafu {
+            start: params.start.is_some(),
+            end: params.end.is_some(),
+        }
+        .fail(),
     }?;
 
-    let range = DateRange::new(start, end).map_err(|e| {
-        warn!("{e:?}");
-        ApiError::InvalidDateRange
-    })?;
+    let range = DateRange::new(start, end).context(InvalidDateRangeSnafu { start, end })?;
 
     to_streaming_response! {
-        db.vms_positions(&path.call_sign, &range)
-            .map_ok(VmsPosition::from)
-            .map_err(|e| {
-                error!("failed to retrieve vms positions: {e:?}");
-                ApiError::InternalServerError
-            })
+        db.vms_positions(&path.call_sign, &range).map_ok(VmsPosition::from)
     }
 }
 

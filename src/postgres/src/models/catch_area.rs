@@ -1,6 +1,5 @@
+use crate::error::Result;
 use unnest_insert::UnnestInsert;
-
-use crate::error::PostgresErrorWrapper;
 
 #[derive(Debug, Clone, PartialEq, UnnestInsert)]
 #[unnest_insert(
@@ -66,9 +65,7 @@ impl NewAreaGrouping {
 }
 
 impl NewCatchArea {
-    pub fn from_landing(
-        landing: &fiskeridir_rs::Landing,
-    ) -> Result<Option<NewCatchArea>, PostgresErrorWrapper> {
+    pub fn from_landing(landing: &fiskeridir_rs::Landing) -> Result<Option<NewCatchArea>> {
         landing
             .catch_location
             .location_code
@@ -83,9 +80,7 @@ impl NewCatchArea {
     }
 }
 impl NewCatchMainArea {
-    pub fn from_landing(
-        landing: &fiskeridir_rs::Landing,
-    ) -> Result<Option<Self>, PostgresErrorWrapper> {
+    pub fn from_landing(landing: &fiskeridir_rs::Landing) -> Result<Option<Self>> {
         landing
             .catch_location
             .main_area_code

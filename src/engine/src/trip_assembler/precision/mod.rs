@@ -1,10 +1,10 @@
+use crate::error::Result;
 use async_trait::async_trait;
 use chrono::{DateTime, Duration, Utc};
-use error_stack::{Result, ResultExt};
 use geoutils::Location;
 use kyogre_core::{
     AisVmsPosition, DateRange, PrecisionDirection, PrecisionId, PrecisionOutcome, PrecisionUpdate,
-    TripPrecisionError, TripPrecisionOutboundPort, TripProcessingUnit, Vessel,
+    TripPrecisionOutboundPort, TripProcessingUnit, Vessel,
 };
 use num_traits::ToPrimitive;
 
@@ -45,7 +45,7 @@ pub trait TripPrecision: Send + Sync {
         adapter: &dyn TripPrecisionOutboundPort,
         trip: &TripProcessingUnit,
         vessel: &Vessel,
-    ) -> Result<Option<PrecisionStop>, TripPrecisionError>;
+    ) -> Result<Option<PrecisionStop>>;
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -114,7 +114,7 @@ impl TripPrecisionCalculator {
         vessel: &Vessel,
         adapter: &dyn TripPrecisionOutboundPort,
         trip: &TripProcessingUnit,
-    ) -> Result<PrecisionOutcome, TripPrecisionError> {
+    ) -> Result<PrecisionOutcome> {
         if trip.positions.is_empty() {
             return Ok(PrecisionOutcome::Failed);
         }
@@ -123,22 +123,14 @@ impl TripPrecisionCalculator {
         let mut start_precision = None;
 
         for f in &self.start_precisions {
-            if let Some(s) = f
-                .precision(adapter, trip, vessel)
-                .await
-                .change_context(TripPrecisionError)?
-            {
+            if let Some(s) = f.precision(adapter, trip, vessel).await? {
                 start_precision = Some(s);
                 break;
             }
         }
 
         for f in &self.end_precisions {
-            if let Some(s) = f
-                .precision(adapter, trip, vessel)
-                .await
-                .change_context(TripPrecisionError)?
-            {
+            if let Some(s) = f.precision(adapter, trip, vessel).await? {
                 end_precision = Some(s);
                 break;
             }
@@ -158,7 +150,7 @@ impl TripPrecisionCalculator {
 
         if start < end && (start != trip_start || end != trip_end) {
             Ok(PrecisionOutcome::Success {
-                new_period: DateRange::new(start, end).change_context(TripPrecisionError)?,
+                new_period: DateRange::new(start, end)?,
                 start_precision: start_precision.map(PrecisionUpdate::from),
                 end_precision: end_precision.map(PrecisionUpdate::from),
             })

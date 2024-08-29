@@ -5,11 +5,17 @@ use futures::TryStreamExt;
 use kyogre_core::{BarentswatchUserId, FuelMeasurementsQuery};
 use serde::{Deserialize, Serialize};
 use serde_qs::actix::QsQuery as Query;
-use tracing::error;
+use snafu::ResultExt;
 use utoipa::{IntoParams, ToSchema};
 
 use crate::{
-    error::ApiError, extractors::BwProfile, response::Response, to_streaming_response, Database,
+    error::{
+        error::{InvalidCallSignSnafu, MissingBwFiskInfoProfileSnafu},
+        Result,
+    },
+    extractors::BwProfile,
+    response::Response,
+    to_streaming_response, Database,
 };
 
 #[derive(Default, Debug, Clone, Deserialize, Serialize, IntoParams)]
@@ -33,23 +39,20 @@ pub async fn get_fuel_measurements<T: Database + 'static>(
     db: web::Data<T>,
     profile: BwProfile,
     params: Query<FuelMeasurementsParams>,
-) -> Result<HttpResponse, ApiError> {
+) -> Result<HttpResponse> {
     let user_id = BarentswatchUserId(profile.user.id);
 
     let profile = profile
         .fisk_info_profile
-        .ok_or(ApiError::MissingBwFiskInfoProfile)?;
-    let call_sign = CallSign::try_from(profile.ircs).map_err(|_| ApiError::InvalidCallSign)?;
+        .ok_or_else(|| MissingBwFiskInfoProfileSnafu.build())?;
+    let call_sign = CallSign::try_from(profile.ircs.as_str()).context(InvalidCallSignSnafu {
+        call_sign: profile.ircs,
+    })?;
 
     let query = params.into_inner().to_query(user_id, call_sign);
 
     to_streaming_response! {
-        db.fuel_measurements(query)
-            .map_ok(FuelMeasurement::from)
-            .map_err(|e| {
-                error!("failed to get fuel measurements: {e:?}");
-                ApiError::InternalServerError
-            })
+        db.fuel_measurements(query).map_ok(FuelMeasurement::from)
     }
 }
 
@@ -71,13 +74,15 @@ pub async fn create_fuel_measurements<T: Database + 'static>(
     db: web::Data<T>,
     profile: BwProfile,
     body: web::Json<Vec<FuelMeasurementBody>>,
-) -> Result<Response<()>, ApiError> {
+) -> Result<Response<()>> {
     let user_id = BarentswatchUserId(profile.user.id);
 
     let profile = profile
         .fisk_info_profile
-        .ok_or(ApiError::MissingBwFiskInfoProfile)?;
-    let call_sign = CallSign::try_from(profile.ircs).map_err(|_| ApiError::InvalidCallSign)?;
+        .ok_or_else(|| MissingBwFiskInfoProfileSnafu.build())?;
+    let call_sign = CallSign::try_from(profile.ircs.as_str()).context(InvalidCallSignSnafu {
+        call_sign: profile.ircs,
+    })?;
 
     let measurements = body
         .into_inner()
@@ -85,13 +90,8 @@ pub async fn create_fuel_measurements<T: Database + 'static>(
         .map(|m| m.to_domain_fuel_measurement(user_id, &call_sign))
         .collect();
 
-    db.add_fuel_measurements(measurements)
-        .await
-        .map_err(|e| {
-            error!("failed to create fuel measurements: {e:?}");
-            ApiError::InternalServerError
-        })
-        .map(|_| Response::new(()))
+    db.add_fuel_measurements(measurements).await?;
+    Ok(Response::new(()))
 }
 
 #[utoipa::path(
@@ -112,13 +112,15 @@ pub async fn update_fuel_measurements<T: Database + 'static>(
     db: web::Data<T>,
     profile: BwProfile,
     body: web::Json<Vec<FuelMeasurementBody>>,
-) -> Result<Response<()>, ApiError> {
+) -> Result<Response<()>> {
     let user_id = BarentswatchUserId(profile.user.id);
 
     let profile = profile
         .fisk_info_profile
-        .ok_or(ApiError::MissingBwFiskInfoProfile)?;
-    let call_sign = CallSign::try_from(profile.ircs).map_err(|_| ApiError::InvalidCallSign)?;
+        .ok_or_else(|| MissingBwFiskInfoProfileSnafu.build())?;
+    let call_sign = CallSign::try_from(profile.ircs.as_str()).context(InvalidCallSignSnafu {
+        call_sign: profile.ircs,
+    })?;
 
     let measurements = body
         .into_inner()
@@ -126,13 +128,8 @@ pub async fn update_fuel_measurements<T: Database + 'static>(
         .map(|m| m.to_domain_fuel_measurement(user_id, &call_sign))
         .collect();
 
-    db.update_fuel_measurements(measurements)
-        .await
-        .map_err(|e| {
-            error!("failed to update fuel measurements: {e:?}");
-            ApiError::InternalServerError
-        })
-        .map(|_| Response::new(()))
+    db.update_fuel_measurements(measurements).await?;
+    Ok(Response::new(()))
 }
 
 #[utoipa::path(
@@ -153,13 +150,15 @@ pub async fn delete_fuel_measurements<T: Database + 'static>(
     db: web::Data<T>,
     profile: BwProfile,
     body: web::Json<Vec<DeleteFuelMeasurement>>,
-) -> Result<Response<()>, ApiError> {
+) -> Result<Response<()>> {
     let user_id = BarentswatchUserId(profile.user.id);
 
     let profile = profile
         .fisk_info_profile
-        .ok_or(ApiError::MissingBwFiskInfoProfile)?;
-    let call_sign = CallSign::try_from(profile.ircs).map_err(|_| ApiError::InvalidCallSign)?;
+        .ok_or_else(|| MissingBwFiskInfoProfileSnafu.build())?;
+    let call_sign = CallSign::try_from(profile.ircs.as_str()).context(InvalidCallSignSnafu {
+        call_sign: profile.ircs,
+    })?;
 
     let measurements = body
         .into_inner()
@@ -167,13 +166,8 @@ pub async fn delete_fuel_measurements<T: Database + 'static>(
         .map(|m| m.to_domain_delete_fuel_measurement(user_id, &call_sign))
         .collect();
 
-    db.delete_fuel_measurements(measurements)
-        .await
-        .map_err(|e| {
-            error!("failed to delete fuel measurements: {e:?}");
-            ApiError::InternalServerError
-        })
-        .map(|_| Response::new(()))
+    db.delete_fuel_measurements(measurements).await?;
+    Ok(Response::new(()))
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, ToSchema)]

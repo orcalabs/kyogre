@@ -1,18 +1,13 @@
+use chrono::{DateTime, Utc};
+use kyogre_core::Range;
 use std::{fmt::Display, ops::Bound};
 
-use chrono::{DateTime, Utc};
-use error_stack::{report, Result};
-use kyogre_core::Range;
+use crate::error::{time_stamp_error::ConversionSnafu, TimeStampError};
 
-use crate::error::MeilisearchError;
-
-pub fn to_nanos(timestamp: DateTime<Utc>) -> Result<i64, MeilisearchError> {
-    timestamp.timestamp_nanos_opt().ok_or_else(|| {
-        report!(MeilisearchError::DataConversion).attach_printable(format!(
-            "{} could not be converted to timestamp nanos",
-            timestamp
-        ))
-    })
+pub fn to_nanos(timestamp: DateTime<Utc>) -> Result<i64, TimeStampError> {
+    timestamp
+        .timestamp_nanos_opt()
+        .ok_or_else(|| ConversionSnafu { ts: timestamp }.build())
 }
 
 pub fn join_comma<T: ToString>(values: Vec<T>) -> String {

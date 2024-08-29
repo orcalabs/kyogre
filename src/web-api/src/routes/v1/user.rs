@@ -1,10 +1,9 @@
 use actix_web::web;
 use kyogre_core::{BarentswatchUserId, FiskeridirVesselId};
 use serde::{Deserialize, Serialize};
-use tracing::error;
 use utoipa::ToSchema;
 
-use crate::{error::ApiError, extractors::BwProfile, response::Response, Database};
+use crate::{error::Result, extractors::BwProfile, response::Response, Database};
 
 #[utoipa::path(
     get,
@@ -18,14 +17,10 @@ use crate::{error::ApiError, extractors::BwProfile, response::Response, Database
 pub async fn get_user<T: Database + 'static>(
     db: web::Data<T>,
     profile: BwProfile,
-) -> Result<Response<Option<User>>, ApiError> {
+) -> Result<Response<Option<User>>> {
     Ok(Response::new(
         db.get_user(BarentswatchUserId(profile.user.id))
-            .await
-            .map_err(|e| {
-                error!("failed to get user: {e:?}");
-                ApiError::InternalServerError
-            })?
+            .await?
             .map(User::from),
     ))
 }
@@ -48,18 +43,13 @@ pub async fn update_user<T: Database + 'static>(
     db: web::Data<T>,
     profile: BwProfile,
     user: web::Json<User>,
-) -> Result<Response<()>, ApiError> {
+) -> Result<Response<()>> {
     let user = user
         .into_inner()
         .to_domain_user(BarentswatchUserId(profile.user.id));
 
-    db.update_user(user)
-        .await
-        .map_err(|e| {
-            error!("failed to update user: {e:?}");
-            ApiError::InternalServerError
-        })
-        .map(|_| Response::new(()))
+    db.update_user(user).await?;
+    Ok(Response::new(()))
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, ToSchema)]

@@ -1,5 +1,5 @@
-use crate::error::BearerTokenError;
-use error_stack::{Result, ResultExt};
+use crate::oauth_error::ExchangeCredentialsSnafu;
+use crate::OauthError;
 use oauth2::AccessToken;
 use oauth2::TokenResponse;
 use oauth2::{
@@ -7,6 +7,7 @@ use oauth2::{
     TokenUrl,
 };
 use serde::Deserialize;
+use snafu::ResultExt;
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct OauthConfig {
@@ -20,12 +21,10 @@ pub struct OauthConfig {
 pub struct BearerToken(AccessToken);
 
 impl BearerToken {
-    pub async fn acquire(config: &OauthConfig) -> Result<BearerToken, BearerTokenError> {
-        let auth_url =
-            AuthUrl::new(config.auth_url.clone()).change_context(BearerTokenError::Acquisition)?;
+    pub async fn acquire(config: &OauthConfig) -> Result<BearerToken, OauthError> {
+        let auth_url = AuthUrl::new(config.auth_url.clone())?;
 
-        let token_url = TokenUrl::new(config.token_url.clone())
-            .change_context(BearerTokenError::Acquisition)?;
+        let token_url = TokenUrl::new(config.token_url.clone())?;
 
         let client = BasicClient::new(
             ClientId::new(config.client_id.clone()),
@@ -39,7 +38,8 @@ impl BearerToken {
             .add_scope(Scope::new(config.scope.clone()))
             .request_async(async_http_client)
             .await
-            .change_context(BearerTokenError::Acquisition)?;
+            .boxed()
+            .context(ExchangeCredentialsSnafu)?;
 
         Ok(BearerToken(response.access_token().clone()))
     }

@@ -1,15 +1,11 @@
-use std::sync::Arc;
-
+use super::FiskeridirSource;
 use crate::{
-    chunks::add_in_chunks, utils::prefetch_and_scrape, DataSource, Processor, ScraperError,
-    ScraperId,
+    chunks::add_in_chunks, utils::prefetch_and_scrape, DataSource, Processor, Result, ScraperId,
 };
 use async_trait::async_trait;
-use error_stack::{Result, ResultExt};
 use fiskeridir_rs::{DataFile, FileSource};
 use orca_core::Environment;
-
-use super::FiskeridirSource;
+use std::sync::Arc;
 
 pub struct ErsScraper {
     sources: Vec<FileSource>,
@@ -37,7 +33,7 @@ impl DataSource for ErsScraper {
         ScraperId::Ers
     }
 
-    async fn scrape(&self, processor: &(dyn Processor)) -> Result<(), ScraperError> {
+    async fn scrape(&self, processor: &(dyn Processor)) -> Result<()> {
         prefetch_and_scrape(
             self.environment,
             self.fiskeridir_source.clone(),
@@ -46,29 +42,20 @@ impl DataSource for ErsScraper {
             |dir, file| async move {
                 match file {
                     DataFile::ErsDca { .. } => {
-                        let data = dir.into_deserialize(&file).change_context(ScraperError)?;
-                        processor
-                            .add_ers_dca(Box::new(data))
-                            .await
-                            .change_context(ScraperError)
+                        let data = dir.into_deserialize(&file)?;
+                        Ok(processor.add_ers_dca(Box::new(data)).await?)
                     }
                     DataFile::ErsPor { .. } => {
-                        let data = dir.into_deserialize(&file).change_context(ScraperError)?;
-                        add_in_chunks(|por| processor.add_ers_por(por), Box::new(data), 10000)
-                            .await
-                            .change_context(ScraperError)
+                        let data = dir.into_deserialize(&file)?;
+                        add_in_chunks(|por| processor.add_ers_por(por), Box::new(data), 10000).await
                     }
                     DataFile::ErsDep { .. } => {
-                        let data = dir.into_deserialize(&file).change_context(ScraperError)?;
-                        add_in_chunks(|dep| processor.add_ers_dep(dep), Box::new(data), 10000)
-                            .await
-                            .change_context(ScraperError)
+                        let data = dir.into_deserialize(&file)?;
+                        add_in_chunks(|dep| processor.add_ers_dep(dep), Box::new(data), 10000).await
                     }
                     DataFile::ErsTra { .. } => {
-                        let data = dir.into_deserialize(&file).change_context(ScraperError)?;
-                        add_in_chunks(|tra| processor.add_ers_tra(tra), Box::new(data), 10000)
-                            .await
-                            .change_context(ScraperError)
+                        let data = dir.into_deserialize(&file)?;
+                        add_in_chunks(|tra| processor.add_ers_tra(tra), Box::new(data), 10000).await
                     }
                     DataFile::Landings { .. }
                     | DataFile::Vms { .. }

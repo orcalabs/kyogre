@@ -1,7 +1,7 @@
 use crate::helper::TestHelper;
 use fiskeridir_rs::{
-    ApiDownloader, ApiSource, AquaCultureEntry, DataDownloader, DataFile, Error, ErsDca, ErsDep,
-    ErsPor, ErsTra, FileSource, Landing, LandingRaw, RegisterVessel, Vms,
+    ApiDownloader, ApiSource, AquaCultureEntry, DataDownloader, DataFile, ErrorDiscriminants,
+    ErsDca, ErsDep, ErsPor, ErsTra, FileSource, Landing, LandingRaw, RegisterVessel, Vms,
 };
 
 static ERS_YEAR: u32 = 2020;
@@ -179,7 +179,7 @@ async fn download_and_read_landings() {
                 result.push(converted);
             }
             Err(e) => {
-                if matches!(e.current_context(), Error::IncompleteData) {
+                if ErrorDiscriminants::from(&e) == ErrorDiscriminants::IncompleteData {
                     incomplete_data += 1;
                 } else {
                     panic!("{:?}", e);

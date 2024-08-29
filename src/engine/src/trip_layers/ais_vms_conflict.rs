@@ -1,7 +1,6 @@
 use chrono::Duration;
-use error_stack::Result;
 use kyogre_core::{
-    AisVmsPosition, PositionType, PrunedTripPosition, TripLayerError, TripPositionLayer,
+    AisVmsPosition, CoreResult, PositionType, PrunedTripPosition, TripPositionLayer,
     TripPositionLayerId,
 };
 use serde_json::json;
@@ -26,7 +25,7 @@ impl TripPositionLayer for AisVmsConflict {
     fn prune_positions(
         &self,
         positions: Vec<AisVmsPosition>,
-    ) -> Result<(Vec<AisVmsPosition>, Vec<PrunedTripPosition>), TripLayerError> {
+    ) -> CoreResult<(Vec<AisVmsPosition>, Vec<PrunedTripPosition>)> {
         let num_positions = positions.len();
         if num_positions <= 1 {
             return Ok((positions, vec![]));

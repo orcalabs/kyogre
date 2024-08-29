@@ -1,5 +1,4 @@
-use crate::{error::PostgresError, models::NewEconomicZone, PostgresAdapter};
-use error_stack::{Result, ResultExt};
+use crate::{error::Result, models::NewEconomicZone, PostgresAdapter};
 use unnest_insert::UnnestInsert;
 
 impl PostgresAdapter {
@@ -7,10 +6,8 @@ impl PostgresAdapter {
         &self,
         economic_zones: Vec<NewEconomicZone>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<(), PostgresError> {
-        NewEconomicZone::unnest_insert(economic_zones, &mut **tx)
-            .await
-            .change_context(PostgresError::Query)
-            .map(|_| ())
+    ) -> Result<()> {
+        NewEconomicZone::unnest_insert(economic_zones, &mut **tx).await?;
+        Ok(())
     }
 }

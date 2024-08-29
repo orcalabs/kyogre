@@ -1,16 +1,14 @@
-use async_trait::async_trait;
-use chrono::{TimeZone, Utc};
-use error_stack::{Report, Result, ResultExt};
-use fiskeridir_rs::{DeliveryPointId, Gear, GearGroup, LandingId, SpeciesGroup, VesselLengthGroup};
-use kyogre_core::{CatchLocationId, FiskeridirVesselId, LandingCatch, MeilisearchSource};
-use serde::{Deserialize, Serialize};
-
 use crate::{
-    error::MeilisearchError,
+    error::{Error, Result},
     indexable::{Id, IdVersion, Indexable},
     utils::to_nanos,
     CacheIndex,
 };
+use async_trait::async_trait;
+use chrono::{TimeZone, Utc};
+use fiskeridir_rs::{DeliveryPointId, Gear, GearGroup, LandingId, SpeciesGroup, VesselLengthGroup};
+use kyogre_core::{CatchLocationId, FiskeridirVesselId, LandingCatch, MeilisearchSource};
+use serde::{Deserialize, Serialize};
 
 use super::filter::{LandingFilterDiscriminants, LandingSort};
 
@@ -77,30 +75,24 @@ impl Indexable for Landing {
     fn chunk_size() -> usize {
         50_000
     }
-    async fn source_versions<T: MeilisearchSource>(
-        source: &T,
-    ) -> Result<Vec<(Self::Id, i64)>, MeilisearchError> {
-        source
-            .all_landing_versions()
-            .await
-            .change_context(MeilisearchError::Source)
+    async fn source_versions<T: MeilisearchSource>(source: &T) -> Result<Vec<(Self::Id, i64)>> {
+        Ok(source.all_landing_versions().await?)
     }
     async fn items_by_ids<T: MeilisearchSource>(
         source: &T,
         ids: &[Self::Id],
-    ) -> Result<Vec<Self::Item>, MeilisearchError> {
-        source
+    ) -> Result<Vec<Self::Item>> {
+        Ok(source
             .landings_by_ids(ids)
-            .await
-            .change_context(MeilisearchError::Source)?
+            .await?
             .into_iter()
             .map(Landing::try_from)
-            .collect::<Result<Vec<_>, _>>()
+            .collect::<Result<Vec<_>>>()?)
     }
 }
 
 impl TryFrom<kyogre_core::Landing> for Landing {
-    type Error = Report<MeilisearchError>;
+    type Error = Error;
 
     fn try_from(v: kyogre_core::Landing) -> std::result::Result<Self, Self::Error> {
         Ok(Self {

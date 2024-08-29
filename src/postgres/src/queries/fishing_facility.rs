@@ -1,5 +1,4 @@
 use chrono::{DateTime, Utc};
-use error_stack::{report, ResultExt};
 use futures::{Stream, TryStreamExt};
 use geo_types::geometry::Geometry;
 use geozero::wkb;
@@ -10,7 +9,7 @@ use kyogre_core::{
 use sqlx::postgres::types::PgRange;
 
 use crate::{
-    error::{PostgresError, PostgresErrorWrapper},
+    error::{ConvertSnafu, Result},
     models::FishingFacility,
     PostgresAdapter,
 };
@@ -19,7 +18,7 @@ impl PostgresAdapter {
     pub(crate) async fn add_fishing_facilities_impl(
         &self,
         facilities: Vec<kyogre_core::FishingFacility>,
-    ) -> Result<(), PostgresErrorWrapper> {
+    ) -> Result<()> {
         let len = facilities.len();
 
         let mut tool_id = Vec::with_capacity(len);
@@ -71,14 +70,14 @@ impl PostgresAdapter {
 
             let geometry = f
                 .geometry_wkt
-                .map(|v| {
-                    Geometry::<f64>::try_from(v.0).map(wkb::Encode).map_err(
-                        |e: wkt::geo_types_from_wkt::Error| {
-                            report!(PostgresError::DataConversion).attach_printable(e.to_string())
-                        },
-                    )
-                })
-                .transpose()?;
+                .map(|v| Geometry::<f64>::try_from(v.0).map(wkb::Encode))
+                .transpose()
+                .map_err(|e| {
+                    ConvertSnafu {
+                        stringified_error: e.to_string(),
+                    }
+                    .build()
+                })?;
             geometry_wkt.push(geometry);
             api_source.push(f.api_source as i32);
         }
@@ -270,7 +269,7 @@ SET
     pub(crate) fn fishing_facilities_impl(
         &self,
         query: FishingFacilitiesQuery,
-    ) -> impl Stream<Item = Result<FishingFacility, PostgresErrorWrapper>> + '_ {
+    ) -> impl Stream<Item = Result<FishingFacility>> + '_ {
         let args: FishingFacilitiesArgs = query.into();
 
         sqlx::query_as!(
@@ -369,7 +368,7 @@ LIMIT
     pub(crate) async fn latest_fishing_facility_update_impl(
         &self,
         source: Option<FishingFacilityApiSource>,
-    ) -> Result<Option<DateTime<Utc>>, PostgresErrorWrapper> {
+    ) -> Result<Option<DateTime<Utc>>> {
         Ok(sqlx::query!(
             r#"
 SELECT
@@ -389,8 +388,7 @@ LIMIT
             source.map(|s| s as i32),
         )
         .fetch_optional(&self.pool)
-        .await
-        .change_context(PostgresError::Query)?
+        .await?
         .map(|r| r.last_changed))
     }
 }

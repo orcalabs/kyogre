@@ -1,12 +1,12 @@
 use kyogre_core::WeatherLocationOverlap;
 
-use crate::{error::PostgresErrorWrapper, models::CatchLocation, PostgresAdapter};
+use crate::{error::Result, models::CatchLocation, PostgresAdapter};
 
 impl PostgresAdapter {
     pub(crate) async fn catch_locations_impl(
         &self,
         overlap: WeatherLocationOverlap,
-    ) -> Result<Vec<CatchLocation>, PostgresErrorWrapper> {
+    ) -> Result<Vec<CatchLocation>> {
         let overlap = match overlap {
             WeatherLocationOverlap::OnlyOverlaps => false,
             WeatherLocationOverlap::All => true,

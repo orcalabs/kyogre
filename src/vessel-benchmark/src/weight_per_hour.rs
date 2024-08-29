@@ -1,6 +1,7 @@
 use async_trait::async_trait;
-use error_stack::{Result, ResultExt};
-use kyogre_core::*;
+use kyogre_core::{
+    CoreResult, Vessel, VesselBenchmark, VesselBenchmarkId, VesselBenchmarkOutbound,
+};
 
 #[derive(Default)]
 pub struct WeightPerHour {}
@@ -14,15 +15,9 @@ impl VesselBenchmark for WeightPerHour {
         &self,
         vessel: &Vessel,
         adapter: &dyn VesselBenchmarkOutbound,
-    ) -> Result<f64, BenchmarkError> {
-        let trip_total = adapter
-            .sum_trip_time(vessel.fiskeridir.id)
-            .await
-            .change_context(BenchmarkError)?;
-        let landing_total = adapter
-            .sum_landing_weight(vessel.fiskeridir.id)
-            .await
-            .change_context(BenchmarkError)?;
+    ) -> CoreResult<f64> {
+        let trip_total = adapter.sum_trip_time(vessel.fiskeridir.id).await?;
+        let landing_total = adapter.sum_landing_weight(vessel.fiskeridir.id).await?;
 
         Ok(match (trip_total, landing_total) {
             (Some(trip_total), Some(landing_total)) => {

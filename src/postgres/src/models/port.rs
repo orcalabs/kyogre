@@ -1,10 +1,9 @@
-use error_stack::report;
 use jurisdiction::Jurisdiction;
 use serde::Deserialize;
 use std::str::FromStr;
 use unnest_insert::UnnestInsert;
 
-use crate::error::{PortCoordinateError, PostgresError, PostgresErrorWrapper};
+use crate::error::{Error, JurisdictionSnafu, MissingValueSnafu, Result};
 
 #[derive(Debug, Clone, PartialEq, Eq, UnnestInsert)]
 #[unnest_insert(table_name = "ports", conflict = "port_id")]
@@ -53,9 +52,14 @@ pub struct TripDockPoints {
 }
 
 impl NewPort {
-    pub fn new(id: String, name: Option<String>) -> Result<Self, PostgresErrorWrapper> {
-        let jurisdiction = Jurisdiction::from_str(&id[0..2])
-            .map_err(|e| report!(PostgresError::DataConversion).attach_printable(format!("{e}")))?;
+    pub fn new(id: String, name: Option<String>) -> Result<Self> {
+        let jurisdiction = Jurisdiction::from_str(&id[0..2]).map_err(|e| {
+            JurisdictionSnafu {
+                error_stringified: e.to_string(),
+                data: id.clone(),
+            }
+            .build()
+        })?;
 
         Ok(Self {
             id,
@@ -66,7 +70,7 @@ impl NewPort {
 }
 
 impl TryFrom<TripDockPoints> for kyogre_core::TripDockPoints {
-    type Error = PostgresErrorWrapper;
+    type Error = Error;
 
     fn try_from(value: TripDockPoints) -> std::result::Result<Self, Self::Error> {
         let start: Vec<kyogre_core::PortDockPoint> = value
@@ -86,7 +90,7 @@ impl TryFrom<TripDockPoints> for kyogre_core::TripDockPoints {
 }
 
 impl TryFrom<PortDockPoint> for kyogre_core::PortDockPoint {
-    type Error = PostgresErrorWrapper;
+    type Error = Error;
 
     fn try_from(value: PortDockPoint) -> std::result::Result<Self, Self::Error> {
         Ok(kyogre_core::PortDockPoint {
@@ -100,7 +104,7 @@ impl TryFrom<PortDockPoint> for kyogre_core::PortDockPoint {
 }
 
 impl TryFrom<Port> for kyogre_core::Port {
-    type Error = PostgresErrorWrapper;
+    type Error = Error;
 
     fn try_from(value: Port) -> std::result::Result<Self, Self::Error> {
         let coordinates = match (value.latitude, value.longitude) {
@@ -109,9 +113,7 @@ impl TryFrom<Port> for kyogre_core::Port {
                 latitude: lat,
                 longitude: lon,
             }),
-            (None, Some(_)) | (Some(_), None) => {
-                return Err(PortCoordinateError(value.id.clone()).into())
-            }
+            (None, Some(_)) | (Some(_), None) => return MissingValueSnafu.fail(),
         };
 
         Ok(kyogre_core::Port {
@@ -122,7 +124,7 @@ impl TryFrom<Port> for kyogre_core::Port {
 }
 
 impl TryFrom<TripPorts> for kyogre_core::TripPorts {
-    type Error = PostgresErrorWrapper;
+    type Error = Error;
 
     fn try_from(value: TripPorts) -> std::result::Result<Self, Self::Error> {
         let start = if let Some(id) = value.start_port_id {
@@ -138,7 +140,7 @@ impl TryFrom<TripPorts> for kyogre_core::TripPorts {
                         longitude: lon,
                     }),
                 }),
-                (None, Some(_)) | (Some(_), None) => return Err(PortCoordinateError(id).into()),
+                (None, Some(_)) | (Some(_), None) => return MissingValueSnafu.fail(),
             }
         } else {
             None
@@ -157,7 +159,7 @@ impl TryFrom<TripPorts> for kyogre_core::TripPorts {
                         longitude: lon,
                     }),
                 }),
-                (None, Some(_)) | (Some(_), None) => return Err(PortCoordinateError(id).into()),
+                (None, Some(_)) | (Some(_), None) => return MissingValueSnafu.fail(),
             }
         } else {
             None

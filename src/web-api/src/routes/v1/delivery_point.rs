@@ -1,9 +1,8 @@
-use crate::{error::ApiError, to_streaming_response, Database};
+use crate::{error::Result, to_streaming_response, Database};
 use actix_web::{web, HttpResponse};
 use fiskeridir_rs::DeliveryPointId;
 use futures::TryStreamExt;
 use serde::{Deserialize, Serialize};
-use tracing::error;
 use utoipa::ToSchema;
 
 #[utoipa::path(
@@ -15,16 +14,9 @@ use utoipa::ToSchema;
     )
 )]
 #[tracing::instrument(skip(db))]
-pub async fn delivery_points<T: Database + 'static>(
-    db: web::Data<T>,
-) -> Result<HttpResponse, ApiError> {
+pub async fn delivery_points<T: Database + 'static>(db: web::Data<T>) -> Result<HttpResponse> {
     to_streaming_response! {
-        db.delivery_points()
-            .map_ok(DeliveryPoint::from)
-            .map_err(|e| {
-                error!("failed to retrieve delivery points: {e:?}");
-                ApiError::InternalServerError
-            })
+        db.delivery_points().map_ok(DeliveryPoint::from)
     }
 }
 

@@ -1,7 +1,6 @@
 use std::{future::Future, sync::Arc};
 
-use crate::{FiskeridirSource, ScraperError};
-use error_stack::{Report, Result, ResultExt};
+use crate::{Error, FiskeridirSource, Result};
 use fiskeridir_rs::{DataDir, DataFile, FileSource};
 use orca_core::Environment;
 use tokio::sync::mpsc::channel;
@@ -9,13 +8,8 @@ use tracing::{error, info};
 
 enum MasterTask {
     Process(Vec<ProcessTask>),
-    Skip {
-        source: FileSource,
-    },
-    Error {
-        source: FileSource,
-        error: Report<ScraperError>,
-    },
+    Skip { source: FileSource },
+    Error { source: FileSource, error: Error },
 }
 
 enum ProcessTask {
@@ -35,10 +29,10 @@ pub async fn prefetch_and_scrape<F, Fut>(
     sources: Vec<FileSource>,
     skip_boundry: Option<u32>,
     closure: F,
-) -> Result<(), ScraperError>
+) -> Result<()>
 where
     F: Fn(DataDir, DataFile) -> Fut,
-    Fut: Future<Output = Result<(), ScraperError>>,
+    Fut: Future<Output = Result<()>>,
 {
     if sources.is_empty() {
         return Ok(());
@@ -68,11 +62,7 @@ where
                         let files = source.files();
                         let hash_ids = files.iter().map(|v| v.id()).collect::<Vec<_>>();
 
-                        let hashes = fiskeridir_source
-                            .hash_store
-                            .get_hashes(&hash_ids)
-                            .await
-                            .change_context(ScraperError)?;
+                        let hashes = fiskeridir_source.hash_store.get_hashes(&hash_ids).await?;
 
                         if Some(year) < skip_boundry && hashes.len() == hash_ids.len() {
                             return Ok(MasterTask::Skip { source });
@@ -85,7 +75,7 @@ where
                         for file in files {
                             let file_id = file.id();
 
-                            let file_hash = dir.hash(&file).change_context(ScraperError)?;
+                            let file_hash = dir.hash(&file)?;
                             let stored_hash = hashes
                                 .iter()
                                 .find(|(id, _)| *id == file_id)
@@ -193,7 +183,7 @@ where
 
     drop(worker_tx);
 
-    handle.await.change_context(ScraperError)?;
+    handle.await?;
 
     Ok(())
 }

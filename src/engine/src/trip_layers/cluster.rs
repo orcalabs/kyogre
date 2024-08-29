@@ -1,7 +1,7 @@
-use error_stack::{report, Result};
+use crate::error::{error::DistanceEstimationSnafu, Result};
 use geoutils::Location;
 use kyogre_core::{
-    AisVmsPosition, PrunedTripPosition, TripLayerError, TripPositionLayer, TripPositionLayerId,
+    AisVmsPosition, CoreResult, PrunedTripPosition, TripPositionLayer, TripPositionLayerId,
 };
 use serde_json::json;
 use tracing::warn;
@@ -28,7 +28,7 @@ impl TripPositionLayer for Cluster {
     fn prune_positions(
         &self,
         mut positions: Vec<AisVmsPosition>,
-    ) -> Result<(Vec<AisVmsPosition>, Vec<PrunedTripPosition>), TripLayerError> {
+    ) -> CoreResult<(Vec<AisVmsPosition>, Vec<PrunedTripPosition>)> {
         let num_positions = positions.len();
         if num_positions <= 1 {
             return Ok((positions, vec![]));
@@ -78,7 +78,7 @@ impl TripPositionLayer for Cluster {
     }
 }
 
-fn avg_distance_from_center(positions: &[AisVmsPosition]) -> Result<f64, TripLayerError> {
+fn avg_distance_from_center(positions: &[AisVmsPosition]) -> Result<f64> {
     let locations: Vec<Location> = positions
         .iter()
         .map(|c| Location::new(c.latitude, c.longitude))
@@ -90,9 +90,14 @@ fn avg_distance_from_center(positions: &[AisVmsPosition]) -> Result<f64, TripLay
     let mut sum = 0.;
 
     for loc in locations {
-        let distance = loc
-            .distance_to(&center)
-            .map_err(|e| report!(TripLayerError).attach_printable(e))?;
+        let distance = loc.distance_to(&center).map_err(|e| {
+            DistanceEstimationSnafu {
+                from: loc,
+                to: center,
+                error_stringified: e.clone(),
+            }
+            .build()
+        })?;
 
         sum += distance.meters();
     }

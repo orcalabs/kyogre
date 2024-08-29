@@ -6,7 +6,7 @@ use kyogre_core::{CatchLocationId, HaulWeatherOutput, WeatherQuery};
 use unnest_insert::UnnestInsert;
 
 use crate::{
-    error::PostgresErrorWrapper,
+    error::{Error, Result},
     models::{
         CatchLocationWeather, HaulWeather, NewWeather, NewWeatherDailyDirty, Weather,
         WeatherLocation,
@@ -15,9 +15,7 @@ use crate::{
 };
 
 impl PostgresAdapter {
-    pub(crate) async fn catch_locations_with_weather_impl(
-        &self,
-    ) -> Result<Vec<CatchLocationId>, PostgresErrorWrapper> {
+    pub(crate) async fn catch_locations_with_weather_impl(&self) -> Result<Vec<CatchLocationId>> {
         let locs = sqlx::query!(
             r#"
 SELECT
@@ -32,7 +30,7 @@ WHERE
         .await?
         .into_iter()
         .map(|v| CatchLocationId::try_from(v.catch_location_id))
-        .collect::<Result<Vec<CatchLocationId>, _>>()?;
+        .collect::<std::result::Result<Vec<_>, _>>()?;
 
         Ok(locs)
     }
@@ -40,7 +38,7 @@ WHERE
     pub(crate) async fn catch_locations_weather_dates_impl(
         &self,
         dates: Vec<NaiveDate>,
-    ) -> Result<Vec<CatchLocationWeather>, PostgresErrorWrapper> {
+    ) -> Result<Vec<CatchLocationWeather>> {
         let weather = sqlx::query_as!(
             CatchLocationWeather,
             r#"
@@ -70,7 +68,7 @@ WHERE
     pub(crate) async fn weather_location_ids<'a>(
         &self,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<Vec<i32>, PostgresErrorWrapper> {
+    ) -> Result<Vec<i32>> {
         Ok(sqlx::query!(
             r#"
 SELECT
@@ -89,7 +87,7 @@ FROM
     pub(crate) async fn catch_locations_weather_impl(
         &self,
         keys: Vec<(CatchLocationId, NaiveDate)>,
-    ) -> Result<Vec<CatchLocationWeather>, PostgresErrorWrapper> {
+    ) -> Result<Vec<CatchLocationWeather>> {
         let catch_location_daily_weather_ids: Vec<String> = keys
             .into_iter()
             .map(|v| format!("{}-{}", v.0.as_ref(), v.1))
@@ -126,7 +124,7 @@ WHERE
         catch_location_ids: &[CatchLocationId],
         date: NaiveDate,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<(), PostgresErrorWrapper> {
+    ) -> Result<()> {
         let start = Utc.from_utc_datetime(&date.and_hms_opt(0, 0, 0).unwrap());
         let end = Utc.from_utc_datetime(&date.and_hms_opt(23, 59, 59).unwrap());
 
@@ -201,7 +199,7 @@ SET
         &self,
         date: NaiveDate,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<(), PostgresErrorWrapper> {
+    ) -> Result<()> {
         let start = Utc.from_utc_datetime(&date.and_hms_opt(0, 0, 0).unwrap());
         let end = Utc.from_utc_datetime(&date.and_hms_opt(23, 59, 59).unwrap());
 
@@ -276,7 +274,7 @@ SET
         &self,
         catch_location_ids: &[CatchLocationId],
         date: NaiveDate,
-    ) -> Result<(), PostgresErrorWrapper> {
+    ) -> Result<()> {
         let mut tx = self.pool.begin().await?;
 
         self.update_catch_locations_daily_weather(catch_location_ids, date, &mut tx)
@@ -300,7 +298,7 @@ WHERE
         Ok(())
     }
 
-    pub(crate) async fn prune_dirty_dates_impl(&self) -> Result<(), PostgresErrorWrapper> {
+    pub(crate) async fn prune_dirty_dates_impl(&self) -> Result<()> {
         sqlx::query!(
             r#"
 DELETE FROM daily_weather_dirty
@@ -319,7 +317,7 @@ WHERE
         Ok(())
     }
 
-    pub(crate) async fn dirty_dates_impl(&self) -> Result<Vec<NaiveDate>, PostgresErrorWrapper> {
+    pub(crate) async fn dirty_dates_impl(&self) -> Result<Vec<NaiveDate>> {
         Ok(sqlx::query!(
             r#"
 SELECT
@@ -338,8 +336,7 @@ FROM
     pub(crate) fn weather_impl(
         &self,
         query: WeatherQuery,
-    ) -> Result<impl Stream<Item = Result<Weather, PostgresErrorWrapper>> + '_, PostgresErrorWrapper>
-    {
+    ) -> Result<impl Stream<Item = Result<Weather>> + '_> {
         let args = WeatherArgs::try_from(query)?;
 
         let stream = sqlx::query_as!(
@@ -391,7 +388,7 @@ GROUP BY
     pub(crate) async fn haul_weather_impl(
         &self,
         query: WeatherQuery,
-    ) -> Result<Option<HaulWeather>, PostgresErrorWrapper> {
+    ) -> Result<Option<HaulWeather>> {
         let args = WeatherArgs::try_from(query)?;
 
         let weather = sqlx::query_as!(
@@ -424,10 +421,7 @@ WHERE
         Ok(weather)
     }
 
-    pub(crate) async fn add_haul_weather_impl(
-        &self,
-        values: Vec<HaulWeatherOutput>,
-    ) -> Result<(), PostgresErrorWrapper> {
+    pub(crate) async fn add_haul_weather_impl(&self, values: Vec<HaulWeatherOutput>) -> Result<()> {
         let len = values.len();
         let mut haul_id = Vec::with_capacity(len);
         let mut wind_speed_10m = Vec::with_capacity(len);
@@ -562,11 +556,11 @@ WHERE
     pub(crate) async fn add_weather_impl(
         &self,
         weather: Vec<kyogre_core::NewWeather>,
-    ) -> Result<(), PostgresErrorWrapper> {
+    ) -> Result<()> {
         let values = weather
             .into_iter()
             .map(NewWeather::try_from)
-            .collect::<Result<Vec<_>, _>>()?;
+            .collect::<Result<Vec<_>>>()?;
 
         let average_reset: Vec<NewWeatherDailyDirty> = values
             .iter()
@@ -587,9 +581,7 @@ WHERE
         Ok(())
     }
 
-    pub(crate) async fn latest_weather_timestamp_impl(
-        &self,
-    ) -> Result<Option<DateTime<Utc>>, PostgresErrorWrapper> {
+    pub(crate) async fn latest_weather_timestamp_impl(&self) -> Result<Option<DateTime<Utc>>> {
         let row = sqlx::query!(
             r#"
 SELECT
@@ -606,7 +598,7 @@ FROM
 
     pub(crate) fn weather_locations_impl(
         &self,
-    ) -> impl Stream<Item = Result<WeatherLocation, PostgresErrorWrapper>> + '_ {
+    ) -> impl Stream<Item = Result<WeatherLocation>> + '_ {
         sqlx::query_as!(
             WeatherLocation,
             r#"
@@ -629,7 +621,7 @@ struct WeatherArgs {
 }
 
 impl TryFrom<WeatherQuery> for WeatherArgs {
-    type Error = PostgresErrorWrapper;
+    type Error = Error;
 
     fn try_from(v: WeatherQuery) -> std::result::Result<Self, Self::Error> {
         Ok(Self {

@@ -1,5 +1,7 @@
-use error_stack::{bail, Report, Result, ResultExt};
-
+use crate::error::{
+    ais_message_error::{InvalidEtaSnafu, ParseEtaSnafu},
+    AisMessageError,
+};
 use chrono::{DateTime, Datelike, NaiveDate, NaiveDateTime, NaiveTime, TimeZone, Timelike, Utc};
 use fiskeridir_rs::CallSign;
 use kyogre_core::{
@@ -7,9 +9,8 @@ use kyogre_core::{
 };
 use rand::{random, Rng};
 use serde::{Deserialize, Serialize};
+use snafu::ResultExt;
 use tracing::warn;
-
-use crate::error::AisMessageError;
 
 /// Vessel related data that is emitted every 6th minute from vessels.
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -100,9 +101,9 @@ pub enum AisMessage {
 }
 
 impl TryFrom<AisStatic> for NewAisStatic {
-    type Error = Report<AisMessageError>;
+    type Error = AisMessageError;
 
-    fn try_from(a: AisStatic) -> std::result::Result<Self, Self::Error> {
+    fn try_from(a: AisStatic) -> Result<Self, Self::Error> {
         let eta = a.eta.map(|eta| parse_eta_value(&eta)).transpose();
         let eta: Result<Option<Option<DateTime<Utc>>>, AisMessageError> = match eta {
             Ok(v) => Ok(v),
@@ -112,7 +113,7 @@ impl TryFrom<AisStatic> for NewAisStatic {
             }
         };
 
-        let call_sign: Result<Option<Option<CallSign>>, Report<fiskeridir_rs::Error>> = a
+        let call_sign: Result<Option<Option<CallSign>>, fiskeridir_rs::Error> = a
             .call_sign
             .map(|v| match CallSign::try_from(v) {
                 Ok(v) => Ok(Some(v)),
@@ -315,21 +316,24 @@ fn parse_eta_value(val: &str) -> Result<Option<DateTime<Utc>>, AisMessageError> 
     if val.is_empty() {
         Ok(None)
     } else if val.len() != 8 {
-        bail!(AisMessageError::InvalidEta(val.to_string()))
+        InvalidEtaSnafu {
+            eta: val.to_string(),
+        }
+        .fail()
     } else {
-        let month = &val[0..=1]
-            .parse::<u32>()
-            .change_context(AisMessageError::InvalidEta(val.to_string()))?;
-        let day = &val[2..=3]
-            .parse::<u32>()
-            .change_context(AisMessageError::InvalidEta(val.to_string()))?;
+        let month = &val[0..=1].parse::<u32>().with_context(|_| ParseEtaSnafu {
+            eta: val.to_string(),
+        })?;
+        let day = &val[2..=3].parse::<u32>().with_context(|_| ParseEtaSnafu {
+            eta: val.to_string(),
+        })?;
 
-        let hour = &val[4..=5]
-            .parse::<u32>()
-            .change_context(AisMessageError::InvalidEta(val.to_string()))?;
-        let minute = &val[6..=7]
-            .parse::<u32>()
-            .change_context(AisMessageError::InvalidEta(val.to_string()))?;
+        let hour = &val[4..=5].parse::<u32>().with_context(|_| ParseEtaSnafu {
+            eta: val.to_string(),
+        })?;
+        let minute = &val[6..=7].parse::<u32>().with_context(|_| ParseEtaSnafu {
+            eta: val.to_string(),
+        })?;
         let year = chrono::Utc::now().year();
 
         // See https://gpsd.gitlab.io/gpsd/AIVDM.html#_type_5_static_and_voyage_related_data
@@ -338,10 +342,18 @@ fn parse_eta_value(val: &str) -> Result<Option<DateTime<Utc>>, AisMessageError> 
             return Ok(None);
         }
 
-        let time = NaiveTime::from_hms_opt(*hour, *minute, 0)
-            .ok_or_else(|| AisMessageError::InvalidEta(val.to_string()))?;
-        let date = NaiveDate::from_ymd_opt(year, *month, *day)
-            .ok_or_else(|| AisMessageError::InvalidEta(val.to_string()))?;
+        let time = NaiveTime::from_hms_opt(*hour, *minute, 0).ok_or_else(|| {
+            InvalidEtaSnafu {
+                eta: val.to_string(),
+            }
+            .build()
+        })?;
+        let date = NaiveDate::from_ymd_opt(year, *month, *day).ok_or_else(|| {
+            InvalidEtaSnafu {
+                eta: val.to_string(),
+            }
+            .build()
+        })?;
         let dt = NaiveDateTime::new(date, time);
 
         Ok(Some(Utc.from_utc_datetime(&dt)))

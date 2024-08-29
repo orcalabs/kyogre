@@ -1,7 +1,7 @@
 use kyogre_core::{BarentswatchUserId, FiskeridirVesselId};
 use uuid::Uuid;
 
-use crate::error::PostgresErrorWrapper;
+use crate::error::Error;
 
 #[derive(Debug, Clone)]
 pub struct User {
@@ -10,7 +10,7 @@ pub struct User {
 }
 
 impl TryFrom<User> for kyogre_core::User {
-    type Error = PostgresErrorWrapper;
+    type Error = Error;
 
     fn try_from(v: User) -> Result<Self, Self::Error> {
         Ok(Self {

@@ -1,7 +1,6 @@
 use std::{collections::HashMap, str::FromStr};
 
 use actix_web::guard::Guard;
-use error_stack::{report, Result, ResultExt};
 use jsonwebtoken::{
     decode, decode_header,
     jwk::{Jwk, JwkSet},
@@ -10,7 +9,10 @@ use jsonwebtoken::{
 use serde::de::DeserializeOwned;
 use tracing::warn;
 
-use crate::settings::BwSettings;
+use crate::{
+    error::{jwt_decode_error::MissingValueSnafu, JWTDecodeError},
+    settings::BwSettings,
+};
 
 #[derive(Debug, Clone)]
 pub struct BwtGuard {
@@ -37,33 +39,27 @@ impl BwtGuard {
         }
     }
 
-    pub fn decode<T: DeserializeOwned>(&self, token: &str) -> Result<TokenData<T>, JwtDecodeError> {
-        let kid = decode_header(token)
-            .change_context(JwtDecodeError::DecodeHeader)?
+    pub fn decode<T: DeserializeOwned>(&self, token: &str) -> Result<TokenData<T>, JWTDecodeError> {
+        let kid = decode_header(token)?
             .kid
-            .ok_or_else(|| report!(JwtDecodeError::MissingKidInHeaders))?;
+            .ok_or_else(|| MissingValueSnafu.build())?;
 
-        match self.jwks.get(&kid) {
-            Some(jwk) => {
-                let key =
-                    DecodingKey::from_jwk(jwk).change_context(JwtDecodeError::DecodeKeyFromJwk)?;
+        let jwk = self
+            .jwks
+            .get(&kid)
+            .ok_or_else(|| MissingValueSnafu.build())?;
+        let key = DecodingKey::from_jwk(jwk)?;
 
-                let mut validation = Validation::new(
-                    Algorithm::from_str(
-                        jwk.common
-                            .key_algorithm
-                            .ok_or_else(|| report!(JwtDecodeError::MissingAlgorithmInJwk))?
-                            .to_string()
-                            .as_str(),
-                    )
-                    .change_context(JwtDecodeError::InvalidAlgorithmInJwk)?,
-                );
-                validation.set_audience(&[&self.audience]);
+        let mut validation = Validation::new(Algorithm::from_str(
+            jwk.common
+                .key_algorithm
+                .ok_or_else(|| MissingValueSnafu.build())?
+                .to_string()
+                .as_str(),
+        )?);
+        validation.set_audience(&[&self.audience]);
 
-                decode::<T>(token, &key, &validation).change_context(JwtDecodeError::DecodeToken)
-            }
-            None => Err(report!(JwtDecodeError::MissingKidInJwk)),
-        }
+        Ok(decode::<T>(token, &key, &validation)?)
     }
 }
 
@@ -81,35 +77,6 @@ impl Guard for BwtGuard {
                 Err(_) => false,
             },
             None => false,
-        }
-    }
-}
-
-#[derive(Debug)]
-pub enum JwtDecodeError {
-    DecodeHeader,
-    DecodeToken,
-    DecodeKeyFromJwk,
-    MissingKidInHeaders,
-    MissingAlgorithmInJwk,
-    InvalidAlgorithmInJwk,
-    MissingKidInJwk,
-}
-
-impl std::error::Error for JwtDecodeError {}
-
-impl std::fmt::Display for JwtDecodeError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            JwtDecodeError::DecodeHeader => f.write_str("failed to decode token header"),
-            JwtDecodeError::DecodeToken => f.write_str("failed to decode token"),
-            JwtDecodeError::DecodeKeyFromJwk => {
-                f.write_str("failed to convert jwk to decoding key")
-            }
-            JwtDecodeError::MissingKidInHeaders => f.write_str("kid missing in headers"),
-            JwtDecodeError::MissingAlgorithmInJwk => f.write_str("algorithm missing in jwk"),
-            JwtDecodeError::InvalidAlgorithmInJwk => f.write_str("invalid algorithm in jwk"),
-            JwtDecodeError::MissingKidInJwk => f.write_str("kid missing in jwk"),
         }
     }
 }

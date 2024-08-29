@@ -1,13 +1,11 @@
-use error_stack::{Result, ResultExt};
-use fiskeridir_rs::LandingId;
-use kyogre_core::{HaulId, Pagination, TripDetailed, Trips, TripsQuery};
-
 use crate::{
-    error::MeilisearchError,
+    error::Result,
     indexable::Indexable,
     query::{Filter, Query},
     MeilisearchAdapter,
 };
+use fiskeridir_rs::LandingId;
+use kyogre_core::{HaulId, Pagination, TripDetailed, Trips, TripsQuery};
 
 mod filter;
 mod model;
@@ -20,7 +18,7 @@ impl<T> MeilisearchAdapter<T> {
         &self,
         query: TripsQuery,
         read_fishing_facility: bool,
-    ) -> Result<Vec<TripDetailed>, MeilisearchError> {
+    ) -> Result<Vec<TripDetailed>> {
         let query = Query::<TripFilter, TripSort, Pagination<Trips>>::from(query);
 
         let pagination = query.pagination;
@@ -38,15 +36,13 @@ impl<T> MeilisearchAdapter<T> {
             .with_limit(pagination.limit() as usize)
             .with_offset(pagination.offset() as usize)
             .execute::<Trip>()
-            .await
-            .change_context(MeilisearchError::Query)?;
+            .await?;
 
         let trips = result
             .hits
             .into_iter()
             .map(|h| h.result.try_to_trip_detailed(read_fishing_facility))
-            .collect::<Result<_, _>>()
-            .change_context(MeilisearchError::Query)?;
+            .collect::<Result<_>>()?;
 
         Ok(trips)
     }
@@ -55,7 +51,7 @@ impl<T> MeilisearchAdapter<T> {
         &self,
         haul_id: &HaulId,
         read_fishing_facility: bool,
-    ) -> Result<Option<TripDetailed>, MeilisearchError> {
+    ) -> Result<Option<TripDetailed>> {
         let filter = TripFilter::from(haul_id).filter_str()?;
 
         let result = Trip::index(self)
@@ -63,8 +59,7 @@ impl<T> MeilisearchAdapter<T> {
             .with_filter(&filter)
             .with_limit(1)
             .execute::<Trip>()
-            .await
-            .change_context(MeilisearchError::Query)?;
+            .await?;
 
         let trip = result
             .hits
@@ -80,7 +75,7 @@ impl<T> MeilisearchAdapter<T> {
         &self,
         landing_id: &LandingId,
         read_fishing_facility: bool,
-    ) -> Result<Option<TripDetailed>, MeilisearchError> {
+    ) -> Result<Option<TripDetailed>> {
         let filter = TripFilter::from(landing_id).filter_str()?;
 
         let result = Trip::index(self)
@@ -88,8 +83,7 @@ impl<T> MeilisearchAdapter<T> {
             .with_filter(&filter)
             .with_limit(1)
             .execute::<Trip>()
-            .await
-            .change_context(MeilisearchError::Query)?;
+            .await?;
 
         let trip = result
             .hits

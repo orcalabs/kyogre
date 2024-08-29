@@ -1,14 +1,12 @@
-use chrono::{DateTime, Utc};
-use error_stack::Result;
-use fiskeridir_rs::{GearGroup, SpeciesGroup, VesselLengthGroup};
-use kyogre_core::{CatchLocationId, FiskeridirVesselId, HaulsSorting, MinMaxBoth, Range};
-use strum_macros::{EnumDiscriminants, EnumIter};
-
 use crate::{
-    error::MeilisearchError,
+    error::Result,
     query::Filter,
     utils::{create_ranges_filter, join_comma, join_comma_fn, to_nanos},
 };
+use chrono::{DateTime, Utc};
+use fiskeridir_rs::{GearGroup, SpeciesGroup, VesselLengthGroup};
+use kyogre_core::{CatchLocationId, FiskeridirVesselId, HaulsSorting, MinMaxBoth, Range};
+use strum_macros::{EnumDiscriminants, EnumIter};
 
 mod never {
     #[derive(Debug, Clone)]
@@ -47,13 +45,13 @@ pub enum HaulSort {
 }
 
 impl Filter for HaulFilter {
-    fn filter_str(self) -> Result<String, MeilisearchError> {
+    fn filter_str(self) -> Result<String> {
         Ok(match self {
             HaulFilter::StartTimestamp(ranges) => create_ranges_filter(
                 ranges
                     .into_iter()
                     .map(|r| r.try_map(to_nanos))
-                    .collect::<Result<Vec<_>, _>>()?,
+                    .collect::<std::result::Result<Vec<_>, _>>()?,
                 HaulFilterDiscriminants::StopTimestamp,
                 HaulFilterDiscriminants::StartTimestamp,
             ),

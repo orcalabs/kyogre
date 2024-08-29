@@ -1,4 +1,4 @@
-use crate::{error::ApiError, response::Response};
+use crate::{error::Result, response::Response};
 use crate::{to_streaming_response, Database};
 use actix_web::HttpResponse;
 use actix_web::{web, web::Path};
@@ -10,7 +10,6 @@ use kyogre_core::{CatchLocationId, ModelId};
 use serde::{Deserialize, Serialize};
 use serde_qs::actix::QsQuery as Query;
 use serde_with::{serde_as, DisplayFromStr};
-use tracing::error;
 use utoipa::{IntoParams, ToSchema};
 
 pub const MAX_FISHING_WEIGHT_PREDICTIONS: u32 = 20;
@@ -62,19 +61,14 @@ pub async fn fishing_spot_predictions<T: Database + 'static>(
     db: web::Data<T>,
     params: Query<FishingSpotPredictionParams>,
     path_params: Path<FishingPredictionsPath>,
-) -> Result<Response<Option<FishingSpotPrediction>>, ApiError> {
+) -> Result<Response<Option<FishingSpotPrediction>>> {
     let date = params.date.unwrap_or_else(|| Utc::now().date_naive());
 
-    match db
+    let predictions = db
         .fishing_spot_prediction(path_params.model_id, path_params.species_group_id, date)
-        .await
-    {
-        Ok(v) => Ok(Response::new(v.map(FishingSpotPrediction::from))),
-        Err(e) => {
-            error!("failed to retrieve fishing spot predictions: {e:?}");
-            Err(ApiError::InternalServerError)
-        }
-    }
+        .await?;
+
+    Ok(Response::new(predictions.map(FishingSpotPrediction::from)))
 }
 
 #[utoipa::path(
@@ -90,15 +84,11 @@ pub async fn fishing_spot_predictions<T: Database + 'static>(
 pub async fn all_fishing_spot_predictions<T: Database + 'static>(
     db: web::Data<T>,
     path: Path<AllFishingPredictionsPath>,
-) -> Result<HttpResponse, ApiError> {
+) -> Result<HttpResponse> {
     to_streaming_response! {
         db
          .all_fishing_spot_predictions(path.model_id)
          .map_ok(FishingSpotPrediction::from)
-         .map_err(|e| {
-            error!("failed to retrieve fishing spot predictions: {e:?}");
-            ApiError::InternalServerError
-         })
     }
 }
 
@@ -119,7 +109,7 @@ pub async fn fishing_weight_predictions<T: Database + 'static>(
     db: web::Data<T>,
     params: web::Query<FishingWeightPredictionParams>,
     path_params: Path<FishingPredictionsPath>,
-) -> Result<HttpResponse, ApiError> {
+) -> Result<HttpResponse> {
     let date = params.date.unwrap_or_else(|| Utc::now().date_naive());
     let mut limit = params.limit.unwrap_or(DEFAULT_FISHING_WEIGHT_PREDICTIONS);
 
@@ -131,10 +121,6 @@ pub async fn fishing_weight_predictions<T: Database + 'static>(
         db
          .fishing_weight_predictions(path_params.model_id, path_params.species_group_id, date, limit)
          .map_ok(FishingWeightPrediction::from)
-         .map_err(|e| {
-            error!("failed to retrieve fishing weight predictions: {e:?}");
-            ApiError::InternalServerError
-         })
     }
 }
 
@@ -151,15 +137,11 @@ pub async fn fishing_weight_predictions<T: Database + 'static>(
 pub async fn all_fishing_weight_predictions<T: Database + 'static>(
     db: web::Data<T>,
     path: Path<AllFishingPredictionsPath>,
-) -> Result<HttpResponse, ApiError> {
+) -> Result<HttpResponse> {
     to_streaming_response! {
         db
          .all_fishing_weight_predictions(path.model_id)
          .map_ok(FishingWeightPrediction::from)
-         .map_err(|e| {
-            error!("failed to retrieve all fishing weight predictions: {e:?}");
-            ApiError::InternalServerError
-         })
     }
 }
 

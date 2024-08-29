@@ -1,10 +1,8 @@
+use crate::error::{Error, MissingValueSnafu};
 use chrono::NaiveDate;
-use error_stack::report;
 use geo_types::geometry::Geometry;
 use geozero::wkb;
 use kyogre_core::CatchLocationId;
-
-use crate::error::{PostgresError, PostgresErrorWrapper};
 
 pub struct CatchLocation {
     pub catch_location_id: String,
@@ -28,17 +26,17 @@ pub struct CatchLocationWeather {
 }
 
 impl TryFrom<CatchLocation> for kyogre_core::CatchLocation {
-    type Error = PostgresErrorWrapper;
+    type Error = Error;
 
     fn try_from(v: CatchLocation) -> Result<Self, Self::Error> {
         let geometry = v
             .polygon
             .geometry
-            .ok_or_else(|| report!(PostgresError::DataConversion))?;
+            .ok_or_else(|| MissingValueSnafu {}.build())?;
 
         let polygon = match geometry {
             Geometry::Polygon(p) => p,
-            _ => return Err(report!(PostgresError::DataConversion).into()),
+            _ => return MissingValueSnafu {}.fail(),
         };
 
         Ok(Self {
@@ -52,7 +50,7 @@ impl TryFrom<CatchLocation> for kyogre_core::CatchLocation {
 }
 
 impl TryFrom<CatchLocationWeather> for kyogre_core::CatchLocationWeather {
-    type Error = PostgresErrorWrapper;
+    type Error = Error;
 
     fn try_from(value: CatchLocationWeather) -> Result<Self, Self::Error> {
         Ok(Self {

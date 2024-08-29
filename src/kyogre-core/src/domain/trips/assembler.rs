@@ -1,11 +1,10 @@
 use crate::{
-    NewTrip, PrecisionOutcome, RelevantEventType, TripAssemblerConflict, TripAssemblerError,
-    TripAssemblerId, TripPrecisionError, TripPrecisionOutboundPort, TripProcessingUnit,
-    TripsConflictStrategy, Vessel, VesselEventDetailed,
+    CoreResult, NewTrip, PrecisionOutcome, RelevantEventType, TripAssemblerConflict,
+    TripAssemblerId, TripPrecisionOutboundPort, TripProcessingUnit, TripsConflictStrategy, Vessel,
+    VesselEventDetailed,
 };
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use error_stack::Result;
 use strum::EnumDiscriminants;
 
 #[derive(Debug, Clone, EnumDiscriminants)]
@@ -31,11 +30,11 @@ pub trait TripAssembler: Send + Sync {
         &self,
         prior_trip_events: Vec<VesselEventDetailed>,
         vessel_events: Vec<VesselEventDetailed>,
-    ) -> Result<Option<TripAssemblerState>, TripAssemblerError>;
+    ) -> CoreResult<Option<TripAssemblerState>>;
     async fn calculate_precision(
         &self,
         vessel: &Vessel,
         adapter: &dyn TripPrecisionOutboundPort,
         trip: &TripProcessingUnit,
-    ) -> Result<PrecisionOutcome, TripPrecisionError>;
+    ) -> CoreResult<PrecisionOutcome>;
 }

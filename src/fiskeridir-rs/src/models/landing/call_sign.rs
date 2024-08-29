@@ -1,8 +1,7 @@
 use crate::{
+    error::ParseStringError,
     string_new_types::{PrunedString, PrunedStringVisitor},
-    Error,
 };
-use error_stack::Report;
 use serde::{Deserialize, Serialize};
 
 /// NewType wrapper for call signs, enforces that call signs cannot contain
@@ -28,14 +27,14 @@ impl AsRef<str> for CallSign {
 }
 
 impl TryFrom<&str> for CallSign {
-    type Error = Report<Error>;
+    type Error = ParseStringError;
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         PrunedString::try_from(value).map(CallSign)
     }
 }
 
 impl TryFrom<String> for CallSign {
-    type Error = Report<Error>;
+    type Error = ParseStringError;
     fn try_from(value: String) -> Result<Self, Self::Error> {
         PrunedString::try_from(value).map(CallSign)
     }

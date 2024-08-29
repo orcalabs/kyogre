@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::{
-    error::PostgresErrorWrapper,
+    error::Result,
     models::{
         ActiveVesselConflict, FiskeridirAisVesselCombination, NewFiskeridirVessel, NewMunicipality,
         NewRegisterVessel, VesselConflictInsert,
@@ -14,9 +14,7 @@ use kyogre_core::{FiskeridirVesselId, TripAssemblerId, VesselSource};
 use unnest_insert::UnnestInsert;
 
 impl PostgresAdapter {
-    pub(crate) async fn active_vessel_conflicts_impl(
-        &self,
-    ) -> Result<Vec<ActiveVesselConflict>, PostgresErrorWrapper> {
+    pub(crate) async fn active_vessel_conflicts_impl(&self) -> Result<Vec<ActiveVesselConflict>> {
         let conflicts = sqlx::query_as!(
             ActiveVesselConflict,
             r#"
@@ -40,7 +38,7 @@ FROM
     pub(crate) async fn manual_conflict_override_impl(
         &self,
         overrides: Vec<kyogre_core::NewVesselConflict>,
-    ) -> Result<(), PostgresErrorWrapper> {
+    ) -> Result<()> {
         let mut mmsi = Vec::with_capacity(overrides.len());
         let mut fiskeridir_vessel_id = Vec::with_capacity(overrides.len());
 
@@ -97,7 +95,7 @@ ON CONFLICT DO NOTHING
     pub(crate) async fn refresh_vessel_mappings<'a>(
         &self,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<(), PostgresErrorWrapper> {
+    ) -> Result<()> {
         sqlx::query!(
             r#"
 DELETE FROM fiskeridir_ais_vessel_mapping_whitelist
@@ -229,7 +227,7 @@ VALUES
         &'a self,
         vessels: Vec<fiskeridir_rs::Vessel>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<(), PostgresErrorWrapper> {
+    ) -> Result<()> {
         let vessels = vessels
             .into_iter()
             .map(NewFiskeridirVessel::try_from)
@@ -242,7 +240,7 @@ VALUES
                     })
                 )
             })
-            .collect::<Result<Vec<_>, _>>()?;
+            .collect::<Result<Vec<_>>>()?;
 
         NewFiskeridirVessel::unnest_insert(vessels, &mut **tx).await?;
 
@@ -252,7 +250,7 @@ VALUES
     pub(crate) async fn set_landing_vessels_call_signs<'a>(
         &self,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<(), PostgresErrorWrapper> {
+    ) -> Result<()> {
         sqlx::query!(
             r#"
 UPDATE fiskeridir_vessels
@@ -307,7 +305,7 @@ WHERE
     pub(crate) async fn add_register_vessels_full(
         &self,
         vessels: Vec<fiskeridir_rs::RegisterVessel>,
-    ) -> Result<(), PostgresErrorWrapper> {
+    ) -> Result<()> {
         let municipalitis: HashMap<i32, NewMunicipality> = vessels
             .iter()
             .map(|v| {
@@ -339,11 +337,11 @@ WHERE
         &'a self,
         vessels: Vec<fiskeridir_rs::RegisterVessel>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<(), PostgresErrorWrapper> {
+    ) -> Result<()> {
         let vessels = vessels
             .into_iter()
             .map(NewRegisterVessel::try_from)
-            .collect::<Result<Vec<_>, _>>()?;
+            .collect::<Result<Vec<_>>>()?;
 
         NewRegisterVessel::unnest_insert(vessels, &mut **tx).await?;
 
@@ -352,7 +350,7 @@ WHERE
 
     pub(crate) fn fiskeridir_ais_vessel_combinations(
         &self,
-    ) -> impl Stream<Item = Result<FiskeridirAisVesselCombination, PostgresErrorWrapper>> + '_ {
+    ) -> impl Stream<Item = Result<FiskeridirAisVesselCombination>> + '_ {
         sqlx::query_as!(
             FiskeridirAisVesselCombination,
             r#"
@@ -420,7 +418,7 @@ GROUP BY
     pub(crate) async fn single_fiskeridir_ais_vessel_combination(
         &self,
         vessel_id: FiskeridirVesselId,
-    ) -> Result<Option<FiskeridirAisVesselCombination>, PostgresErrorWrapper> {
+    ) -> Result<Option<FiskeridirAisVesselCombination>> {
         sqlx::query_as!(
             FiskeridirAisVesselCombination,
             r#"
@@ -492,7 +490,7 @@ GROUP BY
     pub(crate) async fn add_vessel_gear_and_species_groups<'a>(
         &'a self,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<(), PostgresErrorWrapper> {
+    ) -> Result<()> {
         sqlx::query!(
             r#"
 UPDATE fiskeridir_vessels v
@@ -523,9 +521,7 @@ WHERE
         Ok(())
     }
 
-    pub(crate) async fn update_preferred_trip_assemblers_impl(
-        &self,
-    ) -> Result<(), PostgresErrorWrapper> {
+    pub(crate) async fn update_preferred_trip_assemblers_impl(&self) -> Result<()> {
         let mut tx = self.pool.begin().await?;
 
         let vessel_ids = sqlx::query!(

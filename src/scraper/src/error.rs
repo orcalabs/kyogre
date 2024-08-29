@@ -1,23 +1,125 @@
-use error_stack::Context;
+use std::num::ParseIntError;
 
-#[derive(Debug)]
-pub struct ScraperError;
+use fiskeridir_rs::ParseStringError;
+use geozero::error::GeozeroError;
+use reqwest::StatusCode;
+use snafu::{Location, Snafu};
+use stack_error::{OpaqueError, StackError};
 
-impl Context for ScraperError {}
+pub type Result<T> = std::result::Result<T, Error>;
 
-impl std::fmt::Display for ScraperError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str("an error occurred while scraping a data source")
-    }
+#[derive(Snafu, StackError)]
+#[snafu(module, visibility(pub))]
+pub enum Error {
+    #[snafu(display("Failed a database operation"))]
+    Database {
+        #[snafu(implicit)]
+        location: Location,
+        source: kyogre_core::Error,
+    },
+    #[snafu(display("Fiskeridir erorr"))]
+    Fiskeridir {
+        #[snafu(implicit)]
+        location: Location,
+        source: fiskeridir_rs::Error,
+    },
+    #[snafu(display("Task join error"))]
+    TaskJoin {
+        #[snafu(implicit)]
+        location: Location,
+        #[snafu(source)]
+        error: tokio::task::JoinError,
+    },
+    #[snafu(display("Csv error"))]
+    Csv {
+        #[snafu(implicit)]
+        location: Location,
+        #[snafu(source)]
+        error: csv::Error,
+    },
+    #[snafu(display("Python error"))]
+    Python {
+        #[snafu(implicit)]
+        location: Location,
+        #[snafu(source)]
+        error: pyo3::PyErr,
+    },
+    #[snafu(display("Oauth error"))]
+    Oauth {
+        #[snafu(implicit)]
+        location: Location,
+        source: kyogre_core::OauthError,
+    },
+    #[snafu(display("HTTP error"))]
+    Http {
+        #[snafu(implicit)]
+        location: Location,
+        #[snafu(source)]
+        error: reqwest::Error,
+    },
+    #[snafu(display("HTTP Request failed, status: '{status}', url: '{url}', body: '{body}'"))]
+    FailedRequest {
+        #[snafu(implicit)]
+        location: Location,
+        url: String,
+        status: StatusCode,
+        body: String,
+    },
+    #[snafu(display("Value unexpectedly missing"))]
+    MissingValue {
+        #[snafu(implicit)]
+        location: Location,
+    },
+    #[snafu(display("Regex error"))]
+    Regex {
+        #[snafu(implicit)]
+        location: Location,
+        #[snafu(source)]
+        error: regex::Error,
+    },
+    #[snafu(display("Data conversion error"))]
+    #[stack_error(
+        opaque_stack = [
+            ParseStringError,
+            TimestampError,
+        ],
+        opaque_std = [ParseIntError, GeozeroError])]
+    Conversion {
+        #[snafu(implicit)]
+        location: Location,
+        opaque: OpaqueError,
+    },
 }
 
-#[derive(Debug)]
-pub struct DownloadError;
-
-impl Context for DownloadError {}
-
-impl std::fmt::Display for DownloadError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str("an error occurred while downloading data")
-    }
+#[derive(Snafu, StackError)]
+#[snafu(module, visibility(pub))]
+pub enum TimestampError {
+    #[snafu(display("Malformed filename: '{file_name}'"))]
+    Malformed {
+        #[snafu(implicit)]
+        location: Location,
+        file_name: String,
+    },
+    #[snafu(display("Found an invalid filename: '{file_name}'"))]
+    InvalidFilename {
+        #[snafu(implicit)]
+        location: Location,
+        file_name: String,
+        #[snafu(source)]
+        error: ParseIntError,
+    },
+    #[snafu(display("Filename contained invalid y/m/d; y: {year}, m: {month}, d: {day}"))]
+    InvalidYMD {
+        #[snafu(implicit)]
+        location: Location,
+        year: i32,
+        month: u32,
+        day: u32,
+    },
+    #[snafu(display("Filename contained invalid hour: {hour}"))]
+    InvalidHour {
+        #[snafu(implicit)]
+        location: Location,
+        hour: u32,
+    },
 }

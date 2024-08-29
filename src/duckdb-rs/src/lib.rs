@@ -3,6 +3,7 @@
 
 pub mod adapter;
 pub mod api;
+pub mod error;
 pub mod filter;
 pub mod refresher;
 pub mod settings;

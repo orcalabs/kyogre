@@ -2,9 +2,9 @@ use super::{
     PointClusterPreference, PrecisionConfig, PrecisionDirection, PrecisionId, PrecisionStop,
     StartSearchPoint, TripPrecision,
 };
+use crate::error::Result;
 use async_trait::async_trait;
-use error_stack::{Result, ResultExt};
-use kyogre_core::{AisVmsPosition, DateRange, TripPrecisionError, TripProcessingUnit};
+use kyogre_core::{AisVmsPosition, DateRange, TripProcessingUnit};
 use kyogre_core::{TripPrecisionOutboundPort, Vessel};
 
 /// Precision strategy where we try to find a position that is close to shore.
@@ -22,7 +22,7 @@ impl TripPrecision for DistanceToShorePrecision {
         adapter: &dyn TripPrecisionOutboundPort,
         trip: &TripProcessingUnit,
         vessel: &Vessel,
-    ) -> Result<Option<PrecisionStop>, TripPrecisionError> {
+    ) -> Result<Option<PrecisionStop>> {
         self.do_precision(adapter, vessel, trip).await
     }
 }
@@ -45,7 +45,7 @@ impl DistanceToShorePrecision {
         adapter: &dyn TripPrecisionOutboundPort,
         vessel: &Vessel,
         trip: &TripProcessingUnit,
-    ) -> Result<Option<PrecisionStop>, TripPrecisionError> {
+    ) -> Result<Option<PrecisionStop>> {
         Ok(match self.start_search_point {
             StartSearchPoint::End => match self.direction {
                 PrecisionDirection::Shrinking => self.do_precision_impl(
@@ -67,8 +67,7 @@ impl DistanceToShorePrecision {
                             vessel.fiskeridir.call_sign.as_ref(),
                             &range,
                         )
-                        .await
-                        .change_context(TripPrecisionError)?;
+                        .await?;
                     self.do_precision_impl(
                         positions.chunks(self.config.position_chunk_size),
                         PointClusterPreference::First,
@@ -90,8 +89,7 @@ impl DistanceToShorePrecision {
                             vessel.fiskeridir.call_sign.as_ref(),
                             &range,
                         )
-                        .await
-                        .change_context(TripPrecisionError)?;
+                        .await?;
                     self.do_precision_impl(
                         positions.rchunks(self.config.position_chunk_size),
                         PointClusterPreference::Last,

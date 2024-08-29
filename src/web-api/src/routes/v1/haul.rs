@@ -1,5 +1,5 @@
 use crate::{
-    error::ApiError, response::Response, routes::utils::*, to_streaming_response, Cache, Database,
+    error::Result, response::Response, routes::utils::*, to_streaming_response, Cache, Database,
     Meilisearch,
 };
 use actix_web::{
@@ -16,7 +16,6 @@ use kyogre_core::{
 use serde::{Deserialize, Serialize};
 use serde_qs::actix::QsQuery as Query;
 use serde_with::{serde_as, DisplayFromStr};
-use tracing::error;
 use utoipa::{IntoParams, ToSchema};
 
 #[serde_as]
@@ -84,15 +83,14 @@ pub async fn hauls<T: Database + 'static, M: Meilisearch + 'static>(
     db: web::Data<T>,
     meilisearch: web::Data<Option<M>>,
     params: Query<HaulsParams>,
-) -> Result<HttpResponse, ApiError> {
+) -> Result<HttpResponse> {
     let query: HaulsQuery = params.into_inner().into();
 
     if let Some(meilisearch) = meilisearch.as_ref() {
         return Ok(Response::new(
             meilisearch
                 .hauls(query.clone())
-                .await
-                .map_err(|_| ApiError::InternalServerError)?
+                .await?
                 .into_iter()
                 .map(Haul::from)
                 .collect::<Vec<_>>(),
@@ -101,16 +99,7 @@ pub async fn hauls<T: Database + 'static, M: Meilisearch + 'static>(
     }
 
     to_streaming_response! {
-        db.hauls(query)
-            .map_err(|e| {
-                error!("failed to retrieve hauls: {e:?}");
-                ApiError::InternalServerError
-            })?
-            .map_ok(Haul::from)
-            .map_err(|e| {
-                error!("failed to retrieve hauls: {e:?}");
-                ApiError::InternalServerError
-            })
+        db.hauls(query)?.map_ok(Haul::from)
     }
 }
 
@@ -140,15 +129,11 @@ pub async fn hauls_matrix<T: Database + 'static, S: Cache>(
     cache: web::Data<Option<S>>,
     params: Query<HaulsMatrixParams>,
     path: Path<HaulsMatrixPath>,
-) -> Result<Response<HaulsMatrix>, ApiError> {
+) -> Result<Response<HaulsMatrix>> {
     let query = matrix_params_to_query(params.into_inner(), path.active_filter);
 
     if let Some(cache) = cache.as_ref() {
-        if let Some(matrix) = cache
-            .hauls_matrix(query.clone())
-            .await
-            .map_err(|_| ApiError::InternalServerError)?
-        {
+        if let Some(matrix) = cache.hauls_matrix(query.clone()).await? {
             return Ok(Response::new(HaulsMatrix::from(matrix)));
         }
     }
@@ -164,10 +149,7 @@ pub async fn hauls_matrix<T: Database + 'static, S: Cache>(
         }
     }
 
-    let matrix = db.hauls_matrix(&query).await.map_err(|e| {
-        error!("failed to retrieve hauls matrix: {e:?}");
-        ApiError::InternalServerError
-    })?;
+    let matrix = db.hauls_matrix(&query).await?;
 
     Ok(Response::new(HaulsMatrix::from(matrix)))
 }

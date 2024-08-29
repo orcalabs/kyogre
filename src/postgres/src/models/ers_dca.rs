@@ -6,7 +6,7 @@ use fiskeridir_rs::{
 use unnest_insert::UnnestInsert;
 
 use crate::{
-    error::PostgresErrorWrapper,
+    error::Error,
     queries::{
         enum_to_i32, opt_enum_to_i32, opt_timestamp_from_date_and_time,
         timestamp_from_date_and_time,
@@ -117,7 +117,7 @@ pub struct NewErsDcaBody {
 }
 
 impl TryFrom<fiskeridir_rs::ErsDca> for NewErsDca {
-    type Error = PostgresErrorWrapper;
+    type Error = Error;
 
     fn try_from(v: fiskeridir_rs::ErsDca) -> Result<Self, Self::Error> {
         Ok(Self {
@@ -169,7 +169,7 @@ impl TryFrom<fiskeridir_rs::ErsDca> for NewErsDca {
 }
 
 impl TryFrom<&fiskeridir_rs::ErsDca> for NewErsDcaBody {
-    type Error = PostgresErrorWrapper;
+    type Error = Error;
 
     fn try_from(v: &fiskeridir_rs::ErsDca) -> Result<Self, Self::Error> {
         Ok(Self {

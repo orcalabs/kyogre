@@ -1,7 +1,7 @@
 use fiskeridir_rs::SpeciesGroup;
 use unnest_insert::UnnestInsert;
 
-use crate::error::PostgresErrorWrapper;
+use crate::error::Error;
 
 pub struct SpeciesGroupWeek {
     pub species: SpeciesGroup,
@@ -84,7 +84,7 @@ impl SpeciesFao {
 }
 
 impl TryFrom<Species> for kyogre_core::Species {
-    type Error = PostgresErrorWrapper;
+    type Error = Error;
 
     fn try_from(value: Species) -> Result<Self, Self::Error> {
         Ok(kyogre_core::Species {
@@ -95,7 +95,7 @@ impl TryFrom<Species> for kyogre_core::Species {
 }
 
 impl TryFrom<SpeciesFao> for kyogre_core::SpeciesFao {
-    type Error = PostgresErrorWrapper;
+    type Error = Error;
 
     fn try_from(value: SpeciesFao) -> Result<Self, Self::Error> {
         Ok(kyogre_core::SpeciesFao {
@@ -106,7 +106,7 @@ impl TryFrom<SpeciesFao> for kyogre_core::SpeciesFao {
 }
 
 impl TryFrom<SpeciesFiskeridir> for kyogre_core::SpeciesFiskeridir {
-    type Error = PostgresErrorWrapper;
+    type Error = Error;
 
     fn try_from(value: SpeciesFiskeridir) -> Result<Self, Self::Error> {
         Ok(kyogre_core::SpeciesFiskeridir {

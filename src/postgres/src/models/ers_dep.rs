@@ -4,7 +4,7 @@ use kyogre_core::FiskeridirVesselId;
 use unnest_insert::UnnestInsert;
 
 use crate::{
-    error::PostgresErrorWrapper,
+    error::Error,
     queries::{enum_to_i32, timestamp_from_date_and_time},
 };
 
@@ -84,7 +84,7 @@ pub struct Departure {
 }
 
 impl TryFrom<fiskeridir_rs::ErsDep> for NewErsDep {
-    type Error = PostgresErrorWrapper;
+    type Error = Error;
 
     fn try_from(v: fiskeridir_rs::ErsDep) -> Result<Self, Self::Error> {
         Ok(Self {

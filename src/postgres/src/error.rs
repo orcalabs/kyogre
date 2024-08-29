@@ -1,199 +1,200 @@
-use error_stack::{report, Context, Report};
-use kyogre_core::{
-    CatchLocationIdError, DateRangeError, DeleteError, HaulMatrixIndexError, InsertError,
-    LandingMatrixIndexError, QueryError, UpdateError,
-};
+use fiskeridir_rs::{LandingIdError, ParseStringError};
+use kyogre_core::{CatchLocationIdError, ChronoError, DateRangeError, MatrixIndexError};
+use snafu::{Location, Snafu};
+use sqlx::migrate::MigrateError;
+use stack_error::{OpaqueError, StackError};
 
 use crate::models::ActiveVesselConflict;
 
-#[derive(Debug)]
-pub enum PostgresError {
-    Connection,
-    Transaction,
-    Query,
-    DataConversion,
-    InconsistentState,
+pub(crate) type Result<T> = std::result::Result<T, Error>;
+
+#[derive(Snafu, StackError)]
+#[snafu(visibility(pub(crate)))]
+pub enum Error {
+    #[snafu(display("Json error"))]
+    Json {
+        #[snafu(implicit)]
+        location: Location,
+        #[snafu(source)]
+        error: serde_json::Error,
+    },
+    #[snafu(display("Sqlx error"))]
+    #[stack_error(skip_from_impls)]
+    Sqlx {
+        #[snafu(implicit)]
+        location: Location,
+        #[snafu(source)]
+        error: sqlx::Error,
+    },
+    #[snafu(display("Migrate error"))]
+    Migrate {
+        #[snafu(implicit)]
+        location: Location,
+        #[snafu(source)]
+        error: MigrateError,
+    },
+    #[snafu(display("An operation timed out"))]
+    #[stack_error(skip_from_impls)]
+    Timeout {
+        #[snafu(implicit)]
+        location: Location,
+        #[snafu(source)]
+        error: sqlx::Error,
+    },
+    #[snafu(display("Value unexpectedly missing"))]
+    MissingValue {
+        #[snafu(implicit)]
+        location: Location,
+    },
+    #[snafu(display("could not map inserted trip to back to its corresponding trip positions"))]
+    TripPositionMatch {
+        #[snafu(implicit)]
+        location: Location,
+    },
+    #[snafu(display("Found errors when verifying database"))]
+    VerifyDatabase {
+        #[snafu(implicit)]
+        location: Location,
+        source: VerifyDatabaseError,
+    },
+    // Jurisdiction uses `anyhow::Error` as its error type and as that type does not implement
+    // `std::error::Error` trait we cant use our regular stack error scheme, instead we stringify the output error.
+    #[snafu(display("Jurisdiction error: '{error_stringified}', data: '{data}'"))]
+    Jurisdiction {
+        #[snafu(implicit)]
+        location: Location,
+        error_stringified: String,
+        data: String,
+    },
+    #[snafu(display("Data conversion error"))]
+    #[stack_error(
+        opaque_stack = [
+            ParseStringError,
+            CatchLocationIdError,
+            DateRangeError,
+            LandingIdError,
+            ChronoError,
+            fiskeridir_rs::Error,
+            WktConversionError,
+            MatrixIndexError
+        ],
+        opaque_std = [strum::ParseError])]
+    Conversion {
+        #[snafu(implicit)]
+        location: Location,
+        opaque: OpaqueError,
+    },
 }
 
-impl Context for PostgresError {}
-
-impl std::fmt::Display for PostgresError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            PostgresError::Connection => f.write_str("failed to acquire a database connection"),
-            PostgresError::Transaction => f.write_str("failed to start/commit transaction"),
-            PostgresError::Query => f.write_str("a query related error occured"),
-            PostgresError::DataConversion => {
-                f.write_str("failed to convert data to postgres specific data type")
-            }
-            PostgresError::InconsistentState => {
-                f.write_str("database found to be in an inconsistent state")
-            }
-        }
-    }
+// The 'wkt::conversion::Error' contains a 'Box<dyn Error>', note the lack of
+// Send/Sync/'static bounds. We need those bounds to use the error directly in our stack-error
+// scheme. This type serves as an intermediate error type.
+#[derive(Snafu, StackError)]
+#[snafu(visibility(pub(crate)))]
+pub enum WktConversionError {
+    #[snafu(display("Failed WKT conversion, error: '{stringified_error}'"))]
+    Convert {
+        #[snafu(implicit)]
+        location: Location,
+        stringified_error: String,
+    },
 }
 
-#[derive(Debug)]
-pub struct UnboundedRangeError;
-
-impl std::error::Error for UnboundedRangeError {}
-
-impl std::fmt::Display for UnboundedRangeError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str("encountered and unexpected unbounded range")
-    }
-}
-
-#[derive(Debug)]
-pub struct PortCoordinateError(pub String);
-
-impl std::error::Error for PortCoordinateError {}
-
-impl std::fmt::Display for PortCoordinateError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!(
-            "the port_id {} has one of latitude and longitude set, but not both",
-            self.0
-        ))
-    }
-}
-
-#[derive(Debug)]
+#[derive(Snafu, StackError)]
+#[snafu(visibility(pub(crate)))]
 pub enum VerifyDatabaseError {
-    DanglingVesselEvents(i64),
-    IncorrectHaulCatches(Vec<i64>),
-    IncorrectHaulsMatrixLivingWeight(i64),
-    IncorrectLandingMatrixLivingWeight(i64),
-    ConflictingVesselMappings(Vec<ActiveVesselConflict>),
-    LandingsWithoutTrip(i64),
+    #[snafu(display("Found '{num}' dangling vessel events"))]
+    DanglingVesselEvents {
+        #[snafu(implicit)]
+        location: Location,
+        num: i64,
+    },
+    #[snafu(display("Found hauls with incorrect catch data: '{message_ids:?}'"))]
+    IncorrectHaulCatches {
+        #[snafu(implicit)]
+        location: Location,
+        message_ids: Vec<i64>,
+    },
+    #[snafu(display("Hauls matrix and ers dca living weight differ by '{weight_diff}'"))]
+    IncorrectHaulsMatrixLivingWeight {
+        #[snafu(implicit)]
+        location: Location,
+        weight_diff: i64,
+    },
+    #[snafu(display("Landing matrix and landings living weight differ by '{weight_diff}'"))]
+    IncorrectLandingMatrixLivingWeight {
+        #[snafu(implicit)]
+        location: Location,
+        weight_diff: i64,
+    },
+    #[snafu(display("Vessel conflicts: '{conflicts:#?}'"))]
+    ConflictingVesselMappings {
+        #[snafu(implicit)]
+        location: Location,
+        conflicts: Vec<ActiveVesselConflict>,
+    },
+    #[snafu(display("Landings without trip: '{num}'"))]
+    LandingsWithoutTrip {
+        #[snafu(implicit)]
+        location: Location,
+        num: i64,
+    },
 }
 
-impl std::error::Error for VerifyDatabaseError {}
-
-impl std::fmt::Display for VerifyDatabaseError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            VerifyDatabaseError::DanglingVesselEvents(v) => {
-                f.write_fmt(format_args!("found {v} dangling vessel events"))
-            }
-            VerifyDatabaseError::IncorrectHaulCatches(v) => {
-                f.write_fmt(format_args!("found hauls with incorrect catch data: {v:?}"))
-            }
-            VerifyDatabaseError::IncorrectHaulsMatrixLivingWeight(v) => f.write_fmt(format_args!(
-                "hauls matrix and ers dca living weight differ by {v}"
-            )),
-            VerifyDatabaseError::IncorrectLandingMatrixLivingWeight(v) => f.write_fmt(
-                format_args!("landing matrix and landings living weight differ by {v}"),
-            ),
-            VerifyDatabaseError::ConflictingVesselMappings(v) => {
-                f.write_fmt(format_args!("vessel conflicts: {:#?}", v))
-            }
-            VerifyDatabaseError::LandingsWithoutTrip(v) => {
-                f.write_fmt(format_args!("landings without trip: {}", v))
-            }
-        }
-    }
-}
-
-#[derive(Debug)]
-pub struct PostgresErrorWrapper(Report<PostgresError>);
-
-impl PostgresErrorWrapper {
-    pub fn into_inner(self) -> Report<PostgresError> {
-        self.0
-    }
-}
-
-impl From<Report<PostgresError>> for PostgresErrorWrapper {
-    #[track_caller]
-    fn from(value: Report<PostgresError>) -> Self {
-        Self(value)
-    }
-}
-
-impl From<Report<HaulMatrixIndexError>> for PostgresErrorWrapper {
-    #[track_caller]
-    fn from(value: Report<HaulMatrixIndexError>) -> Self {
-        Self(value.change_context(PostgresError::DataConversion))
-    }
-}
-
-impl From<Report<LandingMatrixIndexError>> for PostgresErrorWrapper {
-    #[track_caller]
-    fn from(value: Report<LandingMatrixIndexError>) -> Self {
-        Self(value.change_context(PostgresError::DataConversion))
-    }
-}
-
-impl From<Report<CatchLocationIdError>> for PostgresErrorWrapper {
-    #[track_caller]
-    fn from(value: Report<CatchLocationIdError>) -> Self {
-        Self(value.change_context(PostgresError::DataConversion))
-    }
-}
-
-impl From<Report<fiskeridir_rs::Error>> for PostgresErrorWrapper {
-    #[track_caller]
-    fn from(value: Report<fiskeridir_rs::Error>) -> Self {
-        Self(value.change_context(PostgresError::DataConversion))
-    }
-}
-
-impl From<sqlx::Error> for PostgresErrorWrapper {
+impl From<sqlx::Error> for Error {
     #[track_caller]
     fn from(value: sqlx::Error) -> Self {
-        Self(report!(PostgresError::Query).attach_printable(format!("{value:?}")))
+        let location = std::panic::Location::caller();
+        let location = Location::new(location.file(), location.line(), location.column());
+        match value {
+            sqlx::Error::Database(ref e) => {
+                // Postgres error codes documentation:
+                // https://www.postgresql.org/docs/current/errcodes-appendix.html
+                match e.code().map(|v| v.to_string()).as_deref() {
+                    // Deadlock
+                    Some("40P01") => Error::Timeout {
+                        location,
+                        error: value,
+                    },
+                    _ => Error::Sqlx {
+                        location,
+                        error: value,
+                    },
+                }
+            }
+            sqlx::Error::PoolTimedOut => Error::Timeout {
+                location,
+                error: value,
+            },
+            _ => Error::Sqlx {
+                location,
+                error: value,
+            },
+        }
     }
 }
 
-impl From<VerifyDatabaseError> for PostgresErrorWrapper {
+impl From<Error> for kyogre_core::Error {
     #[track_caller]
-    fn from(value: VerifyDatabaseError) -> Self {
-        Self(report!(value).change_context(PostgresError::InconsistentState))
-    }
-}
-
-impl From<PortCoordinateError> for PostgresErrorWrapper {
-    #[track_caller]
-    fn from(value: PortCoordinateError) -> Self {
-        Self(report!(value).change_context(PostgresError::DataConversion))
-    }
-}
-
-impl From<serde_json::Error> for PostgresErrorWrapper {
-    #[track_caller]
-    fn from(value: serde_json::Error) -> Self {
-        Self(report!(value).change_context(PostgresError::DataConversion))
-    }
-}
-
-impl From<DateRangeError> for PostgresErrorWrapper {
-    #[track_caller]
-    fn from(value: DateRangeError) -> Self {
-        Self(report!(value).change_context(PostgresError::DataConversion))
-    }
-}
-
-impl From<PostgresErrorWrapper> for Report<QueryError> {
-    fn from(value: PostgresErrorWrapper) -> Self {
-        value.0.change_context(QueryError)
-    }
-}
-
-impl From<PostgresErrorWrapper> for Report<InsertError> {
-    fn from(value: PostgresErrorWrapper) -> Self {
-        value.0.change_context(InsertError)
-    }
-}
-
-impl From<PostgresErrorWrapper> for Report<UpdateError> {
-    fn from(value: PostgresErrorWrapper) -> Self {
-        value.0.change_context(UpdateError)
-    }
-}
-
-impl From<PostgresErrorWrapper> for Report<DeleteError> {
-    fn from(value: PostgresErrorWrapper) -> Self {
-        value.0.change_context(DeleteError)
+    fn from(value: Error) -> Self {
+        let location = std::panic::Location::caller();
+        let location = Location::new(location.file(), location.line(), location.column());
+        match value {
+            Error::Timeout { .. } => kyogre_core::Error::Timeout {
+                location,
+                opaque: OpaqueError::Stack(Box::new(value)),
+            },
+            Error::Conversion { .. }
+            | Error::MissingValue { .. }
+            | Error::Json { .. }
+            | Error::TripPositionMatch { .. }
+            | Error::Sqlx { .. }
+            | Error::VerifyDatabase { .. }
+            | Error::Jurisdiction { .. }
+            | Error::Migrate { .. } => kyogre_core::Error::Unexpected {
+                location,
+                opaque: OpaqueError::Stack(Box::new(value)),
+            },
+        }
     }
 }

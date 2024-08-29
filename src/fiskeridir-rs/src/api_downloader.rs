@@ -1,12 +1,9 @@
-use std::time::Duration;
-
-use error_stack::ResultExt;
-use error_stack::{report, Result};
+use crate::error::error::FailedRequestSnafu;
+use crate::Result;
 use reqwest::{ClientBuilder, StatusCode};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
-
-use crate::Error;
+use std::time::Duration;
 
 #[derive(Debug, Clone)]
 pub struct ApiDownloader {
@@ -31,11 +28,8 @@ impl ApiSource {
 }
 
 impl ApiDownloader {
-    pub fn new() -> Result<Self, Error> {
-        let http_client = ClientBuilder::new()
-            .timeout(Duration::new(60, 0))
-            .build()
-            .change_context(Error::Download)?;
+    pub fn new() -> Result<Self> {
+        let http_client = ClientBuilder::new().timeout(Duration::new(60, 0)).build()?;
 
         Ok(Self { http_client })
     }
@@ -44,20 +38,21 @@ impl ApiDownloader {
         &self,
         source: &ApiSource,
         query: Option<&Q>,
-    ) -> Result<T, Error> {
-        let mut request = self.http_client.get(source.url());
+    ) -> Result<T> {
+        let url = source.url();
+        let mut request = self.http_client.get(&url);
 
         if let Some(query) = query {
             request = request.query(&query);
         }
 
-        let response = request.send().await.change_context(Error::Download)?;
-
-        if response.status() != StatusCode::OK {
-            return Err(report!(Error::Download)
-                .attach_printable(format!("received response status {}", response.status())));
+        let response = request.send().await?;
+        let status = response.status();
+        if status != StatusCode::OK {
+            let body = response.text().await?;
+            return FailedRequestSnafu { url, status, body }.fail();
         }
 
-        response.json().await.change_context(Error::Deserialize)
+        Ok(response.json().await?)
     }
 }

@@ -1,7 +1,6 @@
+use crate::error::Error;
 use chrono::{DateTime, Utc};
 use kyogre_core::{NavigationStatus, PositionType, TripPositionLayerId};
-
-use crate::error::PostgresErrorWrapper;
 
 #[derive(Debug, Clone)]
 pub struct AisVmsPosition {
@@ -19,7 +18,7 @@ pub struct AisVmsPosition {
 }
 
 impl TryFrom<AisVmsPosition> for kyogre_core::AisVmsPosition {
-    type Error = PostgresErrorWrapper;
+    type Error = Error;
 
     fn try_from(v: AisVmsPosition) -> Result<Self, Self::Error> {
         Ok(Self {

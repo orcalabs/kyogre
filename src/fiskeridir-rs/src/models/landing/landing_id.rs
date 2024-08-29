@@ -1,12 +1,11 @@
-use std::fmt;
-
-use crate::Error;
+use crate::error::landing_id_error::{InvalidSnafu, LengthSnafu, ParseSnafu};
+use crate::error::LandingIdError;
 use crate::{DocumentType, SalesTeam};
+use core::fmt;
 use num_traits::FromPrimitive;
-
-use error_stack::{report, Report, ResultExt};
 use serde::de::{self, Visitor};
 use serde::{Deserialize, Serialize};
+use snafu::ResultExt;
 
 /// NewType wrapping the creation of unique landing ids.
 #[derive(PartialOrd, Ord, PartialEq, Eq, Clone, Debug, Hash, Serialize)]
@@ -66,22 +65,36 @@ impl<'de> Deserialize<'de> for LandingId {
 }
 
 impl TryFrom<&str> for LandingId {
-    type Error = Report<Error>;
+    type Error = LandingIdError;
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         let split: Vec<&str> = value.split('-').collect();
         if split.len() != 4 {
-            return Err(report!(Error::Conversion));
+            return LengthSnafu {
+                value: value.to_string(),
+            }
+            .fail();
         }
 
-        let document_id: i64 = split[0].parse::<i64>().change_context(Error::Conversion)?;
+        let document_id: i64 = split[0].parse::<i64>().context(ParseSnafu { value })?;
         let sale_team_id: SalesTeam =
-            SalesTeam::from_i32(split[1].parse::<i32>().change_context(Error::Conversion)?)
-                .ok_or_else(|| report!(Error::Conversion))?;
+            SalesTeam::from_i32(split[1].parse::<i32>().context(ParseSnafu { value })?)
+                .ok_or_else(|| {
+                    InvalidSnafu {
+                        value: split[1].to_string(),
+                    }
+                    .build()
+                })?;
+
         let document_type: DocumentType =
-            DocumentType::from_i32(split[2].parse::<i32>().change_context(Error::Conversion)?)
-                .ok_or_else(|| report!(Error::Conversion))?;
-        let year: u32 = split[3].parse::<u32>().change_context(Error::Conversion)?;
+            DocumentType::from_i32(split[2].parse::<i32>().context(ParseSnafu { value })?)
+                .ok_or_else(|| {
+                    InvalidSnafu {
+                        value: split[2].to_string(),
+                    }
+                    .build()
+                })?;
+        let year: u32 = split[3].parse::<u32>().context(ParseSnafu { value })?;
 
         Ok(LandingId(format!(
             "{}-{}-{}-{}",
@@ -91,7 +104,7 @@ impl TryFrom<&str> for LandingId {
 }
 
 impl TryFrom<String> for LandingId {
-    type Error = Report<Error>;
+    type Error = LandingIdError;
 
     fn try_from(value: String) -> Result<Self, Self::Error> {
         LandingId::try_from(value.as_str())

@@ -1,11 +1,8 @@
-use crate::{error::PostgresErrorWrapper, models::User, PostgresAdapter};
+use crate::{error::Result, models::User, PostgresAdapter};
 use kyogre_core::{BarentswatchUserId, FiskeridirVesselId};
 
 impl PostgresAdapter {
-    pub(crate) async fn get_user_impl(
-        &self,
-        user_id: BarentswatchUserId,
-    ) -> Result<Option<User>, PostgresErrorWrapper> {
+    pub(crate) async fn get_user_impl(&self, user_id: BarentswatchUserId) -> Result<Option<User>> {
         let user = sqlx::query_as!(
             User,
             r#"
@@ -27,10 +24,7 @@ GROUP BY
         Ok(user)
     }
 
-    pub(crate) async fn update_user_impl(
-        &self,
-        user: kyogre_core::User,
-    ) -> Result<(), PostgresErrorWrapper> {
+    pub(crate) async fn update_user_impl(&self, user: kyogre_core::User) -> Result<()> {
         let mut tx = self.pool.begin().await?;
 
         self.update_user_follows(user.barentswatch_user_id, user.following, &mut tx)
@@ -46,7 +40,7 @@ GROUP BY
         user_id: BarentswatchUserId,
         vessel_ids: Vec<FiskeridirVesselId>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<(), PostgresErrorWrapper> {
+    ) -> Result<()> {
         let vessel_ids = vessel_ids.into_iter().map(|id| id.0).collect::<Vec<_>>();
 
         sqlx::query!(

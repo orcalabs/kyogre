@@ -1,12 +1,8 @@
-use crate::{error::PostgresErrorWrapper, PostgresAdapter};
+use crate::{error::Result, PostgresAdapter};
 use fiskeridir_rs::DataFileId;
 
 impl PostgresAdapter {
-    pub(crate) async fn add_hash(
-        &self,
-        id: &DataFileId,
-        hash: String,
-    ) -> Result<(), PostgresErrorWrapper> {
+    pub(crate) async fn add_hash(&self, id: &DataFileId, hash: String) -> Result<()> {
         sqlx::query!(
             r#"
 INSERT INTO
@@ -30,7 +26,7 @@ SET
     pub(crate) async fn get_hashes_impl(
         &self,
         ids: &[DataFileId],
-    ) -> Result<Vec<(DataFileId, String)>, PostgresErrorWrapper> {
+    ) -> Result<Vec<(DataFileId, String)>> {
         Ok(sqlx::query!(
             r#"
 SELECT

@@ -1,4 +1,4 @@
-use crate::error::PostgresErrorWrapper;
+use crate::error::Error;
 use unnest_insert::UnnestInsert;
 
 #[derive(UnnestInsert)]
@@ -63,7 +63,7 @@ pub struct NewLandingEntry {
 }
 
 impl TryFrom<&fiskeridir_rs::Landing> for NewLandingEntry {
-    type Error = PostgresErrorWrapper;
+    type Error = Error;
 
     fn try_from(landing: &fiskeridir_rs::Landing) -> Result<Self, Self::Error> {
         Ok(NewLandingEntry {

@@ -1,11 +1,13 @@
 use crate::{
-    error::{PostgresError, PostgresErrorWrapper},
+    error::Error,
     queries::{enum_to_i32, opt_enum_to_i32},
 };
 use chrono::{DateTime, Utc};
-use error_stack::report;
 use fiskeridir_rs::{CallSign, GearGroup, SpeciesGroup, VesselLengthGroup, VesselType};
-use kyogre_core::{FiskeridirVesselId, Mmsi, TripAssemblerId, VesselBenchmarkId, VesselSource};
+use kyogre_core::{
+    chrono_error::UnknownMonthSnafu, FiskeridirVesselId, Mmsi, TripAssemblerId, VesselBenchmarkId,
+    VesselSource,
+};
 use num_traits::FromPrimitive;
 use serde::Deserialize;
 use unnest_insert::UnnestInsert;
@@ -48,14 +50,12 @@ pub struct CumulativeLandings {
 }
 
 impl TryFrom<CumulativeLandings> for kyogre_core::CumulativeLandings {
-    type Error = PostgresErrorWrapper;
+    type Error = Error;
 
     fn try_from(value: CumulativeLandings) -> Result<Self, Self::Error> {
         Ok(kyogre_core::CumulativeLandings {
-            month: chrono::Month::from_i32(value.month).ok_or_else(|| {
-                report!(PostgresError::DataConversion)
-                    .attach_printable(format!("unknown month: {}", value.month))
-            })?,
+            month: chrono::Month::from_i32(value.month)
+                .ok_or_else(|| UnknownMonthSnafu { month: value.month }.build())?,
             species_fiskeridir_id: value.species_fiskeridir_id as u32,
             weight: value.weight,
             cumulative_weight: value.cumulative_weight,
@@ -64,7 +64,7 @@ impl TryFrom<CumulativeLandings> for kyogre_core::CumulativeLandings {
 }
 
 impl TryFrom<VesselBenchmarks> for kyogre_core::VesselBenchmarks {
-    type Error = PostgresErrorWrapper;
+    type Error = Error;
 
     fn try_from(value: VesselBenchmarks) -> Result<Self, Self::Error> {
         let cumulative_landings =
@@ -190,7 +190,7 @@ pub struct VesselBenchmarkOutput {
 }
 
 impl TryFrom<fiskeridir_rs::Vessel> for NewFiskeridirVessel {
-    type Error = PostgresErrorWrapper;
+    type Error = Error;
 
     fn try_from(v: fiskeridir_rs::Vessel) -> Result<Self, Self::Error> {
         Ok(Self {
@@ -215,7 +215,7 @@ impl TryFrom<fiskeridir_rs::Vessel> for NewFiskeridirVessel {
 }
 
 impl TryFrom<fiskeridir_rs::RegisterVessel> for NewRegisterVessel {
-    type Error = PostgresErrorWrapper;
+    type Error = Error;
 
     fn try_from(v: fiskeridir_rs::RegisterVessel) -> Result<Self, Self::Error> {
         Ok(Self {
@@ -235,7 +235,7 @@ impl TryFrom<fiskeridir_rs::RegisterVessel> for NewRegisterVessel {
 }
 
 impl TryFrom<kyogre_core::VesselBenchmarkOutput> for VesselBenchmarkOutput {
-    type Error = PostgresErrorWrapper;
+    type Error = Error;
 
     fn try_from(v: kyogre_core::VesselBenchmarkOutput) -> Result<Self, Self::Error> {
         Ok(Self {
@@ -247,7 +247,7 @@ impl TryFrom<kyogre_core::VesselBenchmarkOutput> for VesselBenchmarkOutput {
 }
 
 impl TryFrom<AisVessel> for kyogre_core::AisVessel {
-    type Error = PostgresErrorWrapper;
+    type Error = Error;
 
     fn try_from(value: AisVessel) -> Result<Self, Self::Error> {
         Ok(kyogre_core::AisVessel {
@@ -306,10 +306,10 @@ pub struct Benchmark {
 }
 
 impl TryFrom<FiskeridirAisVesselCombination> for kyogre_core::Vessel {
-    type Error = PostgresErrorWrapper;
+    type Error = Error;
 
     fn try_from(value: FiskeridirAisVesselCombination) -> Result<Self, Self::Error> {
-        let ais_vessel: Result<Option<kyogre_core::AisVessel>, PostgresErrorWrapper> =
+        let ais_vessel: Result<Option<kyogre_core::AisVessel>, Error> =
             if let Some(mmsi) = value.ais_mmsi {
                 Ok(Some(kyogre_core::AisVessel {
                     mmsi: Mmsi(mmsi),
@@ -371,7 +371,7 @@ impl TryFrom<FiskeridirAisVesselCombination> for kyogre_core::Vessel {
 }
 
 impl TryFrom<ActiveVesselConflict> for kyogre_core::ActiveVesselConflict {
-    type Error = PostgresErrorWrapper;
+    type Error = Error;
 
     fn try_from(value: ActiveVesselConflict) -> Result<Self, Self::Error> {
         Ok(kyogre_core::ActiveVesselConflict {

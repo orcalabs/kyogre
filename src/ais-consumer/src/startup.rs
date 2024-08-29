@@ -1,10 +1,8 @@
 use std::str::FromStr;
 
 use crate::{
-    barentswatch::BarentswatchAisClient, consumer::Consumer, error::ConsumerError,
-    settings::Settings,
+    barentswatch::BarentswatchAisClient, consumer::Consumer, error::Result, settings::Settings,
 };
-use error_stack::Result;
 use kyogre_core::{BearerToken, DataMessage};
 use orca_core::Environment;
 use postgres::PostgresAdapter;
@@ -75,7 +73,7 @@ impl App {
         self,
         source: impl AsyncRead + Unpin,
         postgres_process_confirmation: tokio::sync::mpsc::Sender<()>,
-    ) -> Result<(), ConsumerError> {
+    ) -> Result<()> {
         let receiver = self.subscribe();
         tokio::spawn(async move {
             self.postgres

@@ -1,6 +1,9 @@
 use crate::{
     ais_to_streaming_response,
-    error::ApiError,
+    error::{
+        error::{InvalidDateRangeSnafu, MissingDateRangeSnafu, MissingMmsiOrCallSignOrTripIdSnafu},
+        Result,
+    },
     extractors::{Auth0Profile, BwProfile},
     response::Response,
     Database,
@@ -18,8 +21,8 @@ use kyogre_core::{
 use serde::{Deserialize, Serialize};
 use serde_qs::actix::QsQuery as Query;
 use serde_with::{serde_as, skip_serializing_none, DisplayFromStr};
+use snafu::ResultExt;
 use std::string::ToString;
-use tracing::{error, warn};
 use utoipa::{IntoParams, ToSchema};
 
 #[derive(Debug, Deserialize, Serialize, IntoParams)]
@@ -65,13 +68,13 @@ pub async fn ais_vms_positions<T: Database + 'static>(
     params: Query<AisVmsParameters>,
     bw_profile: Option<BwProfile>,
     auth: Option<Auth0Profile>,
-) -> Result<HttpResponse, ApiError> {
+) -> Result<HttpResponse> {
     let params = params.into_inner();
     if params.mmsi.is_none() && params.call_sign.is_none() && params.trip_id.is_none() {
-        return Err(ApiError::MissingMmsiOrCallSignOrTripId);
+        return MissingMmsiOrCallSignOrTripIdSnafu.fail();
     }
 
-    let params = if let Some(trip_id) = params.trip_id {
+    let params: Result<AisVmsParams> = if let Some(trip_id) = params.trip_id {
         Ok(AisVmsParams::Trip(trip_id))
     } else {
         let (start, end) = match (params.start, params.end) {
@@ -81,20 +84,22 @@ pub async fn ais_vms_positions<T: Database + 'static>(
                 Ok((start, end))
             }
             (Some(start), Some(end)) => Ok((start, end)),
-            _ => Err(ApiError::InvalidDateRange),
+            _ => MissingDateRangeSnafu {
+                start: params.start.is_some(),
+                end: params.end.is_some(),
+            }
+            .fail(),
         }?;
 
-        let range = DateRange::new(start, end).map_err(|e| {
-            warn!("{e:?}");
-            ApiError::InvalidDateRange
-        })?;
+        let range = DateRange::new(start, end).context(InvalidDateRangeSnafu { start, end })?;
 
         Ok(AisVmsParams::Range {
             mmsi: params.mmsi,
             call_sign: params.call_sign,
             range,
         })
-    }?;
+    };
+    let params = params?;
 
     let bw_policy = bw_profile.map(AisPermission::from).unwrap_or_default();
     let auth0_policy = auth.map(AisPermission::from).unwrap_or_default();
@@ -105,12 +110,7 @@ pub async fn ais_vms_positions<T: Database + 'static>(
     };
 
     ais_to_streaming_response! {
-        db.ais_vms_positions(params, policy)
-            .map_err(|e| {
-                error!("failed to retrieve ais/vms positions: {e:?}");
-                ApiError::InternalServerError
-            })
-            .map_ok(AisVmsPosition::from)
+        db.ais_vms_positions(params, policy).map_ok(AisVmsPosition::from)
     }
 }
 
@@ -130,7 +130,7 @@ pub async fn ais_vms_positions<T: Database + 'static>(
 pub async fn ais_vms_area<T: Database + 'static>(
     db: web::Data<T>,
     params: Query<AisVmsAreaParameters>,
-) -> Result<Response<AisVmsArea>, ApiError> {
+) -> Result<Response<AisVmsArea>> {
     let area: Vec<kyogre_core::AisVmsAreaCount> = db
         .ais_vms_area_positions(
             params.x1,
@@ -142,11 +142,7 @@ pub async fn ais_vms_area<T: Database + 'static>(
                 .unwrap_or_else(|| (chrono::Utc::now() - ais_area_window()).date_naive()),
         )
         .try_collect()
-        .await
-        .map_err(|e| {
-            error!("failed to retrieve ais vms area: {e:?}");
-            ApiError::InternalServerError
-        })?;
+        .await?;
 
     Ok(Response::new(area.into()))
 }

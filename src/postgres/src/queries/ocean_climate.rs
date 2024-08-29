@@ -4,7 +4,7 @@ use kyogre_core::OceanClimateQuery;
 use unnest_insert::UnnestInsert;
 
 use crate::{
-    error::PostgresErrorWrapper,
+    error::{Error, Result},
     models::{HaulOceanClimate, NewOceanClimate, OceanClimate},
     PostgresAdapter,
 };
@@ -13,10 +13,7 @@ impl PostgresAdapter {
     pub(crate) fn _ocean_climate_impl(
         &self,
         query: OceanClimateQuery,
-    ) -> Result<
-        impl Stream<Item = Result<OceanClimate, PostgresErrorWrapper>> + '_,
-        PostgresErrorWrapper,
-    > {
+    ) -> Result<impl Stream<Item = Result<OceanClimate>> + '_> {
         let args = OceanClimateArgs::try_from(query)?;
 
         let stream = sqlx::query_as!(
@@ -73,7 +70,7 @@ GROUP BY
     pub(crate) async fn haul_ocean_climate_impl(
         &self,
         query: OceanClimateQuery,
-    ) -> Result<Option<HaulOceanClimate>, PostgresErrorWrapper> {
+    ) -> Result<Option<HaulOceanClimate>> {
         let args = OceanClimateArgs::try_from(query)?;
 
         let climate = sqlx::query_as!(
@@ -113,11 +110,11 @@ WHERE
     pub(crate) async fn add_ocean_climate_impl(
         &self,
         ocean_climate: Vec<kyogre_core::NewOceanClimate>,
-    ) -> Result<(), PostgresErrorWrapper> {
+    ) -> Result<()> {
         let values = ocean_climate
             .into_iter()
             .map(NewOceanClimate::try_from)
-            .collect::<Result<Vec<_>, _>>()?;
+            .collect::<Result<Vec<_>>>()?;
 
         NewOceanClimate::unnest_insert(values, &self.pool).await?;
 
@@ -126,7 +123,7 @@ WHERE
 
     pub(crate) async fn latest_ocean_climate_timestamp_impl(
         &self,
-    ) -> Result<Option<DateTime<Utc>>, PostgresErrorWrapper> {
+    ) -> Result<Option<DateTime<Utc>>> {
         let row = sqlx::query!(
             r#"
 SELECT
@@ -150,9 +147,9 @@ struct OceanClimateArgs {
 }
 
 impl TryFrom<OceanClimateQuery> for OceanClimateArgs {
-    type Error = PostgresErrorWrapper;
+    type Error = Error;
 
-    fn try_from(v: OceanClimateQuery) -> Result<Self, Self::Error> {
+    fn try_from(v: OceanClimateQuery) -> std::result::Result<Self, Self::Error> {
         Ok(Self {
             start_date: v.start_date,
             end_date: v.end_date,

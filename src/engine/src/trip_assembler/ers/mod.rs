@@ -1,17 +1,16 @@
-use crate::DistanceToShorePrecision;
+use crate::{error::error::TripStartedOnArrivalSnafu, DistanceToShorePrecision};
 
 use super::{
     ers::statemachine::ErsStatemachine, precision::TripPrecisionCalculator, DeliveryPointPrecision,
     DockPointPrecision, PortPrecision, PrecisionConfig, StartSearchPoint,
 };
+use crate::error::Result;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use error_stack::{Result, ResultExt};
 use kyogre_core::{
-    FiskeridirVesselId, PrecisionDirection, PrecisionOutcome, RelevantEventType, TripAssembler,
-    TripAssemblerError, TripAssemblerId, TripAssemblerState, TripPrecisionError,
-    TripPrecisionOutboundPort, TripProcessingUnit, TripsConflictStrategy, Vessel, VesselEventData,
-    VesselEventDetailed,
+    CoreResult, FiskeridirVesselId, PrecisionDirection, PrecisionOutcome, RelevantEventType,
+    TripAssembler, TripAssemblerId, TripAssemblerState, TripPrecisionOutboundPort,
+    TripProcessingUnit, TripsConflictStrategy, Vessel, VesselEventData, VesselEventDetailed,
 };
 
 use self::statemachine::Departure;
@@ -133,108 +132,104 @@ impl TripAssembler for ErsTripAssembler {
         vessel: &Vessel,
         adapter: &dyn TripPrecisionOutboundPort,
         trip: &TripProcessingUnit,
-    ) -> Result<PrecisionOutcome, TripPrecisionError> {
-        self.precision_calculator
+    ) -> CoreResult<PrecisionOutcome> {
+        Ok(self
+            .precision_calculator
             .calculate_precision(vessel, adapter, trip)
-            .await
+            .await?)
     }
 
     async fn assemble(
         &self,
         prior_trip_events: Vec<VesselEventDetailed>,
         vessel_events: Vec<VesselEventDetailed>,
-    ) -> Result<Option<TripAssemblerState>, TripAssemblerError> {
-        let mut conflict_strategy = None;
-        let mut vessel_events: Vec<ErsEvent> = vessel_events
-            .into_iter()
-            .filter_map(ErsEvent::from_detailed_vessel_event)
-            .collect();
-
-        let mut prior_trip_events: Vec<ErsEvent> = prior_trip_events
-            .into_iter()
-            .filter_map(ErsEvent::from_detailed_vessel_event)
-            .collect();
-
-        if vessel_events.is_empty() {
-            return Ok(None);
-        }
-
-        // We need to handle the case where the first ever message from a vessel is an arrival
-        let (events_to_process, mut state) = if prior_trip_events.is_empty() {
-            let mut departure_index = None;
-            for (i, e) in vessel_events.iter().enumerate() {
-                match e.event_type {
-                    ErsEventType::Arrival => {
-                        continue;
-                    }
-                    ErsEventType::Departure => {
-                        departure_index = Some(i);
-                        break;
-                    }
-                }
-            }
-
-            if let Some(idx) = departure_index {
-                let state = ErsStatemachine::new(
-                    Departure::from_ers_event(vessel_events[idx].clone()).unwrap(),
-                );
-                Ok((vessel_events[idx..].to_vec(), state))
-            } else {
-                return Ok(None);
-            }
-        } else {
-            let current_event = vessel_events.remove(0);
-            match current_event.event_type {
-                ErsEventType::Arrival => {
-                    prior_trip_events.push(current_event);
-                    prior_trip_events.append(&mut vessel_events);
-                    conflict_strategy = Some(TripsConflictStrategy::Replace);
-
-                    let current_event = prior_trip_events.remove(0);
-                    match current_event.event_type {
-                        ErsEventType::Arrival => Err(TripStartedOnArrivalError(current_event)),
-                        ErsEventType::Departure => Ok((
-                            prior_trip_events,
-                            ErsStatemachine::new(Departure::from_ers_event(current_event).unwrap()),
-                        )),
-                    }
-                }
-                ErsEventType::Departure => Ok((
-                    vessel_events,
-                    ErsStatemachine::new(Departure::from_ers_event(current_event).unwrap()),
-                )),
-            }
-        }
-        .change_context(TripAssemblerError)?;
-
-        for e in events_to_process {
-            state.advance(e).change_context(TripAssemblerError)?;
-        }
-
-        let new_trips = state.finalize().change_context(TripAssemblerError)?;
-
-        if new_trips.is_empty() {
-            Ok(None)
-        } else {
-            Ok(Some(TripAssemblerState {
-                calculation_timer: new_trips.last().unwrap().period.end(),
-                new_trips,
-                conflict_strategy,
-            }))
-        }
+    ) -> CoreResult<Option<TripAssemblerState>> {
+        Ok(assemble_impl(prior_trip_events, vessel_events).await?)
     }
 }
 
-#[derive(Debug)]
-struct TripStartedOnArrivalError(ErsEvent);
+async fn assemble_impl(
+    prior_trip_events: Vec<VesselEventDetailed>,
+    vessel_events: Vec<VesselEventDetailed>,
+) -> Result<Option<TripAssemblerState>> {
+    let mut conflict_strategy = None;
+    let mut vessel_events: Vec<ErsEvent> = vessel_events
+        .into_iter()
+        .filter_map(ErsEvent::from_detailed_vessel_event)
+        .collect();
 
-impl std::error::Error for TripStartedOnArrivalError {}
+    let mut prior_trip_events: Vec<ErsEvent> = prior_trip_events
+        .into_iter()
+        .filter_map(ErsEvent::from_detailed_vessel_event)
+        .collect();
 
-impl std::fmt::Display for TripStartedOnArrivalError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!(
-            "an ers based trip started on an arrival: {:?}",
-            self.0
-        ))
+    if vessel_events.is_empty() {
+        return Ok(None);
+    }
+
+    // We need to handle the case where the first ever message from a vessel is an arrival
+    let (events_to_process, mut state) = if prior_trip_events.is_empty() {
+        let mut departure_index = None;
+        for (i, e) in vessel_events.iter().enumerate() {
+            match e.event_type {
+                ErsEventType::Arrival => {
+                    continue;
+                }
+                ErsEventType::Departure => {
+                    departure_index = Some(i);
+                    break;
+                }
+            }
+        }
+
+        if let Some(idx) = departure_index {
+            let state = ErsStatemachine::new(
+                Departure::from_ers_event(vessel_events[idx].clone()).unwrap(),
+            );
+            Ok((vessel_events[idx..].to_vec(), state))
+        } else {
+            return Ok(None);
+        }
+    } else {
+        let current_event = vessel_events.remove(0);
+        match current_event.event_type {
+            ErsEventType::Arrival => {
+                prior_trip_events.push(current_event);
+                prior_trip_events.append(&mut vessel_events);
+                conflict_strategy = Some(TripsConflictStrategy::Replace);
+
+                let current_event = prior_trip_events.remove(0);
+                match current_event.event_type {
+                    ErsEventType::Arrival => TripStartedOnArrivalSnafu {
+                        event: current_event,
+                    }
+                    .fail(),
+                    ErsEventType::Departure => Ok((
+                        prior_trip_events,
+                        ErsStatemachine::new(Departure::from_ers_event(current_event).unwrap()),
+                    )),
+                }
+            }
+            ErsEventType::Departure => Ok((
+                vessel_events,
+                ErsStatemachine::new(Departure::from_ers_event(current_event).unwrap()),
+            )),
+        }
+    }?;
+
+    for e in events_to_process {
+        state.advance(e)?;
+    }
+
+    let new_trips = state.finalize()?;
+
+    if new_trips.is_empty() {
+        Ok(None)
+    } else {
+        Ok(Some(TripAssemblerState {
+            calculation_timer: new_trips.last().unwrap().period.end(),
+            new_trips,
+            conflict_strategy,
+        }))
     }
 }

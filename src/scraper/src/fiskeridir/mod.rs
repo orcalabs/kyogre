@@ -1,5 +1,4 @@
-use crate::ScraperError;
-use error_stack::{Result, ResultExt};
+use crate::Result;
 use fiskeridir_rs::{ApiDownloader, DataDir, DataDownloader, FileSource};
 use kyogre_core::{ScraperFileHashInboundPort, ScraperFileHashOutboundPort};
 
@@ -44,10 +43,7 @@ impl FiskeridirSource {
         }
     }
 
-    pub async fn download(&self, source: &FileSource) -> Result<DataDir, ScraperError> {
-        self.fiskeridir_file
-            .download(source)
-            .await
-            .change_context(ScraperError)
+    pub async fn download(&self, source: &FileSource) -> Result<DataDir> {
+        Ok(self.fiskeridir_file.download(source).await?)
     }
 }

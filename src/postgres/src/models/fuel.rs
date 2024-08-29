@@ -3,7 +3,7 @@ use kyogre_core::BarentswatchUserId;
 use unnest_insert::{UnnestDelete, UnnestInsert, UnnestUpdate};
 use uuid::Uuid;
 
-use crate::error::PostgresErrorWrapper;
+use crate::error::Error;
 
 #[derive(Debug, Clone, UnnestInsert, UnnestUpdate)]
 #[unnest_insert(table_name = "fuel_measurements")]
@@ -27,7 +27,7 @@ pub struct DeleteFuelMeasurement {
 }
 
 impl TryFrom<FuelMeasurement> for kyogre_core::FuelMeasurement {
-    type Error = PostgresErrorWrapper;
+    type Error = Error;
 
     fn try_from(v: FuelMeasurement) -> Result<Self, Self::Error> {
         Ok(Self {

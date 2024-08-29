@@ -9,7 +9,7 @@ use kyogre_core::{
 };
 
 use crate::{
-    error::PostgresErrorWrapper,
+    error::Result,
     models::{AisVmsAreaPositionsReturning, AisVmsPosition},
     PostgresAdapter,
 };
@@ -22,7 +22,7 @@ impl PostgresAdapter {
         y1: f64,
         y2: f64,
         date_limit: NaiveDate,
-    ) -> impl Stream<Item = Result<AisVmsAreaCount, PostgresErrorWrapper>> + '_ {
+    ) -> impl Stream<Item = Result<AisVmsAreaCount>> + '_ {
         let geom: geo_types::Geometry<f64> = geo_types::Rect::new((x1, y1), (x2, y2)).into();
 
         sqlx::query_as!(
@@ -50,10 +50,7 @@ GROUP BY
         .fetch(&self.pool)
         .map_err(From::from)
     }
-    pub(crate) async fn prune_ais_vms_area_impl(
-        &self,
-        limit: NaiveDate,
-    ) -> Result<(), PostgresErrorWrapper> {
+    pub(crate) async fn prune_ais_vms_area_impl(&self, limit: NaiveDate) -> Result<()> {
         let mut tx = self.pool.begin().await?;
 
         sqlx::query!(
@@ -85,7 +82,7 @@ WHERE
         &self,
         values: Vec<AisVmsAreaPositionsReturning>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<(), PostgresErrorWrapper> {
+    ) -> Result<()> {
         let len = values.len();
         let mut lat = Vec::with_capacity(len);
         let mut lon = Vec::with_capacity(len);
@@ -174,9 +171,7 @@ SET
         Ok(())
     }
 
-    pub(crate) async fn all_ais_vms_impl(
-        &self,
-    ) -> Result<Vec<AisVmsPosition>, PostgresErrorWrapper> {
+    pub(crate) async fn all_ais_vms_impl(&self) -> Result<Vec<AisVmsPosition>> {
         let ais = sqlx::query_as!(
             AisVmsPosition,
             r#"
@@ -240,7 +235,7 @@ ORDER BY
         call_sign: Option<&CallSign>,
         range: &DateRange,
         permission: AisPermission,
-    ) -> impl Stream<Item = Result<AisVmsPosition, PostgresErrorWrapper>> + '_ {
+    ) -> impl Stream<Item = Result<AisVmsPosition>> + '_ {
         sqlx::query_as!(
             AisVmsPosition,
             r#"
@@ -336,7 +331,7 @@ ORDER BY
         &self,
         trip_id: TripId,
         permission: AisPermission,
-    ) -> impl Stream<Item = Result<AisVmsPosition, PostgresErrorWrapper>> + '_ {
+    ) -> impl Stream<Item = Result<AisVmsPosition>> + '_ {
         sqlx::query_as!(
             AisVmsPosition,
             r#"
