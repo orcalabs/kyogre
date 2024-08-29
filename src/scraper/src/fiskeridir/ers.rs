@@ -45,10 +45,7 @@ impl DataSource for ErsScraper {
             Some(2020),
             |dir, file| async move {
                 match file {
-                    DataFile::ErsDca { year } => {
-                        if year == 2024 {
-                            return Ok(());
-                        }
+                    DataFile::ErsDca { .. } => {
                         let data = dir.into_deserialize(&file).change_context(ScraperError)?;
                         processor
                             .add_ers_dca(Box::new(data))
