@@ -39,7 +39,7 @@ scraper:
     max_year: 2024
   ers:
     min_year: 2011
-    max_year: 2024
+    max_year: 2023
   vms:
     - year: 2024
       url: https://register.fiskeridir.no/vms-ers/2024-VMS.csv.zip
