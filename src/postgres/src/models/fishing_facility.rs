@@ -33,7 +33,7 @@ pub struct FishingFacility {
     pub last_changed: DateTime<Utc>,
     pub source: Option<String>,
     pub comment: Option<String>,
-    pub geometry_wkt: GeometryWkt,
+    pub geometry_wkt: Option<GeometryWkt>,
     pub api_source: FishingFacilityApiSource,
 }
 
@@ -67,7 +67,7 @@ impl TryFrom<FishingFacility> for kyogre_core::FishingFacility {
             last_changed: v.last_changed,
             source: v.source,
             comment: v.comment,
-            geometry_wkt: v.geometry_wkt.into(),
+            geometry_wkt: v.geometry_wkt.map(From::from),
             api_source: v.api_source,
         })
     }
