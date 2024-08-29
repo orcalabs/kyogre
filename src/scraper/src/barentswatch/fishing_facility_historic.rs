@@ -6,7 +6,7 @@ use error_stack::{Report, Result, ResultExt};
 use fiskeridir_rs::CallSign;
 use kyogre_core::{BearerToken, ConversionError, FishingFacilityApiSource, GeometryWkt, Mmsi};
 use serde::Deserialize;
-use tracing::{event, Level};
+use tracing::info;
 use uuid::Uuid;
 
 use crate::{ApiClientConfig, DataSource, Processor, ScraperError, ScraperId};
@@ -71,10 +71,7 @@ impl DataSource for FishingFacilityHistoricScraper {
                 .await
                 .change_context(ScraperError)?;
 
-            event!(
-                Level::INFO,
-                "successfully scraped fishing_facility_historic"
-            );
+            info!("successfully scraped fishing_facility_historic");
         }
         Ok(())
     }
@@ -101,7 +98,7 @@ struct FishingFacilityHistoric {
     last_changed_date_time: DateTime<Utc>,
     comment: Option<String>,
     #[serde(rename = "geometryWKT")]
-    geometry_wkt: wkt::Wkt<f64>,
+    geometry_wkt: Option<wkt::Wkt<f64>>,
 }
 
 impl TryFrom<FishingFacilityHistoric> for kyogre_core::FishingFacility {
@@ -144,7 +141,7 @@ impl TryFrom<FishingFacilityHistoric> for kyogre_core::FishingFacility {
             last_changed: v.last_changed_date_time,
             source: v.source,
             comment: v.comment,
-            geometry_wkt: GeometryWkt(v.geometry_wkt),
+            geometry_wkt: v.geometry_wkt.map(GeometryWkt),
             api_source: FishingFacilityApiSource::Historic,
         })
     }

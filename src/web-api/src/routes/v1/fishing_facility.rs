@@ -114,7 +114,7 @@ pub struct FishingFacility {
     pub last_changed: DateTime<Utc>,
     pub source: Option<String>,
     pub comment: Option<String>,
-    pub geometry_wkt: String,
+    pub geometry_wkt: Option<String>,
 }
 
 impl From<kyogre_core::FishingFacility> for FishingFacility {
@@ -142,7 +142,7 @@ impl From<kyogre_core::FishingFacility> for FishingFacility {
             last_changed: v.last_changed,
             source: v.source,
             comment: v.comment,
-            geometry_wkt: v.geometry_wkt.to_string(),
+            geometry_wkt: v.geometry_wkt.map(|v| v.to_string()),
         }
     }
 }
@@ -179,7 +179,7 @@ impl PartialEq<kyogre_core::FishingFacility> for FishingFacility {
             && self.last_changed.timestamp_millis() == other.last_changed.timestamp_millis()
             && self.source == other.source
             && self.comment == other.comment
-            && self.geometry_wkt == other.geometry_wkt.to_string()
+            && self.geometry_wkt == other.geometry_wkt.as_ref().map(|v| v.to_string())
     }
 }
 

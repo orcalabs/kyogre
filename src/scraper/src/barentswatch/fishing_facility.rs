@@ -161,7 +161,7 @@ impl TryFrom<FishingFacility> for kyogre_core::FishingFacility {
             last_changed: v.last_changed_date_time,
             source: v.source,
             comment: v.comment,
-            geometry_wkt: GeometryWkt(geometry_wkt),
+            geometry_wkt: Some(GeometryWkt(geometry_wkt)),
             api_source: FishingFacilityApiSource::Updates,
         })
     }
