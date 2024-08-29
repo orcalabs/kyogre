@@ -95,7 +95,7 @@ pub struct FishingFacility {
     /// Where this was reported first
     pub source: Option<String>,
     pub comment: Option<String>,
-    pub geometry_wkt: GeometryWkt,
+    pub geometry_wkt: Option<GeometryWkt>,
     /// Which API this fishing facility was last updated from
     pub api_source: FishingFacilityApiSource,
 }
@@ -129,7 +129,9 @@ impl FishingFacility {
             last_changed: Utc::now(),
             source: Some("SKYS".into()),
             comment: Some("This is a comment".into()),
-            geometry_wkt: GeometryWkt(Wkt::from_str("POINT(5.7348 62.320717)").unwrap()),
+            geometry_wkt: Some(GeometryWkt(
+                Wkt::from_str("POINT(5.7348 62.320717)").unwrap(),
+            )),
             api_source: FishingFacilityApiSource::Updates,
         }
     }

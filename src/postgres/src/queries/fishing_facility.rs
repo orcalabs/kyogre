@@ -69,14 +69,17 @@ impl PostgresAdapter {
             source.push(f.source);
             comment.push(f.comment);
 
-            let geometry: Geometry<f64> =
-                f.geometry_wkt
-                    .0
-                    .try_into()
-                    .map_err(|e: wkt::geo_types_from_wkt::Error| {
-                        report!(PostgresError::DataConversion).attach_printable(e.to_string())
-                    })?;
-            geometry_wkt.push(wkb::Encode(geometry));
+            let geometry = f
+                .geometry_wkt
+                .map(|v| {
+                    Geometry::<f64>::try_from(v.0).map(wkb::Encode).map_err(
+                        |e: wkt::geo_types_from_wkt::Error| {
+                            report!(PostgresError::DataConversion).attach_printable(e.to_string())
+                        },
+                    )
+                })
+                .transpose()?;
+            geometry_wkt.push(geometry);
             api_source.push(f.api_source as i32);
         }
 
@@ -138,25 +141,25 @@ FROM
     UNNEST(
         $1::UUID [],
         $2::UUID [],
-        $3::TEXT [],
-        $4::TEXT [],
+        $3::TEXT[],
+        $4::TEXT[],
         $5::INT[],
         $6::BIGINT[],
-        $7::TEXT [],
-        $8::TEXT [],
-        $9::TEXT [],
-        $10::TEXT [],
+        $7::TEXT[],
+        $8::TEXT[],
+        $9::TEXT[],
+        $10::TEXT[],
         $11::INT[],
-        $12::TEXT [],
-        $13::TEXT [],
+        $12::TEXT[],
+        $13::TEXT[],
         $14::INT[],
         $15::TIMESTAMPTZ[],
         $16::TIMESTAMPTZ[],
         $17::TIMESTAMPTZ[],
         $18::TIMESTAMPTZ[],
         $19::TIMESTAMPTZ[],
-        $20::TEXT [],
-        $21::TEXT [],
+        $20::TEXT[],
+        $21::TEXT[],
         $22::GEOMETRY[],
         $23::INT[]
     ) u (
