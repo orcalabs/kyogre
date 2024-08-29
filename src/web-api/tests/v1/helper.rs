@@ -108,8 +108,10 @@ where
         + 'static,
     Fut: Future<Output = ()> + Send + 'static,
 {
-    test_impl(test.clone(), CacheMode::NoCache).await;
-    test_impl(test, CacheMode::MatrixCache).await;
+    #[cfg(feature = "all-tests")]
+    test_impl(test.clone(), CacheMode::MatrixCache).await;
+
+    test_impl(test, CacheMode::NoCache).await;
 }
 
 pub async fn test_with_cache<T, Fut>(test: T)
@@ -122,8 +124,10 @@ where
         + 'static,
     Fut: Future<Output = ()> + Send + 'static,
 {
-    test_impl(test.clone(), CacheMode::NoCache).await;
-    test_impl(test, CacheMode::Meilisearch).await;
+    #[cfg(feature = "all-tests")]
+    test_impl(test.clone(), CacheMode::Meilisearch).await;
+
+    test_impl(test, CacheMode::NoCache).await;
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
