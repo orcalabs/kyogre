@@ -16,12 +16,11 @@ COPY --from=planner /app/src/recipe.json src/recipe.json
 RUN apt update -y && \
     apt install -y \
     git \
-    libssl1.1 \
     libssl-dev \
     protobuf-compiler \
     pkg-config \
-    python3.9 \
-    python3.9-dev && \
+    python3 \
+    python3-dev && \
     git config --global credential.helper store
 
 RUN --mount=type=secret,id=cloudsmith-api-key,required=true \
@@ -36,17 +35,17 @@ COPY scripts scripts
 RUN cd src && \
     cargo build --release --bin engine
 
-FROM debian:bullseye-slim
+FROM debian:bookworm-slim
 
 RUN apt update -y && \
     apt install -y \
-    python3.9 \
+    python3 \
     python3-pip
 
 COPY scripts/python/weather/requirements.txt weather_requirements.txt
 COPY scripts/python/ocean_climate/requirements.txt ocean_requirements.txt
 COPY scripts/python/fishing_predictor/requirements.txt fishing_predictor.txt
-RUN pip install \
+RUN pip install --break-system-packages \
     -r fishing_predictor.txt \
     -r weather_requirements.txt \
     -r ocean_requirements.txt
