@@ -6,6 +6,9 @@ authors = ["<contact@orcalabs.no>"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[features]
+all-tests = []
+
 [dependencies]
 kyogre-core = { path = "../kyogre-core", features = ["utoipa"] }
 postgres = { path = "../postgres" }
