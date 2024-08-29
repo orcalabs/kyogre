@@ -1,20 +1,16 @@
 use crate::AisVms;
-use error_stack::Result;
 use geoutils::Location;
-use kyogre_core::{TripDistanceOutput, TripDistancerId, TripProcessingUnit};
+use kyogre_core::{CoreResult, TripDistanceOutput, TripDistancerId, TripProcessingUnit};
 use tracing::error;
 
-use kyogre_core::{TripDistancer, TripDistancerError};
+use kyogre_core::TripDistancer;
 
 impl TripDistancer for AisVms {
     fn trip_distancer_id(&self) -> TripDistancerId {
         TripDistancerId::AisVms
     }
 
-    fn calculate_trip_distance(
-        &self,
-        trip: &TripProcessingUnit,
-    ) -> Result<TripDistanceOutput, TripDistancerError> {
+    fn calculate_trip_distance(&self, trip: &TripProcessingUnit) -> CoreResult<TripDistanceOutput> {
         if trip.positions.is_empty() {
             return Ok(TripDistanceOutput {
                 distance: None,

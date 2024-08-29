@@ -10,7 +10,7 @@ use std::collections::HashMap;
 use unnest_insert::UnnestInsert;
 
 use crate::{
-    error::PostgresErrorWrapper,
+    error::Result,
     models::{AisClass, AisPosition, NewAisVessel, NewAisVesselHistoric},
     PostgresAdapter,
 };
@@ -20,7 +20,7 @@ impl PostgresAdapter {
         &self,
         limit: Option<DateTime<Utc>>,
         permission: AisPermission,
-    ) -> impl Stream<Item = Result<AisPosition, PostgresErrorWrapper>> + '_ {
+    ) -> impl Stream<Item = Result<AisPosition>> + '_ {
         sqlx::query_as!(
             AisPosition,
             r#"
@@ -66,7 +66,7 @@ WHERE
         .map_err(From::from)
     }
 
-    pub(crate) async fn all_ais_impl(&self) -> Result<Vec<AisPosition>, PostgresErrorWrapper> {
+    pub(crate) async fn all_ais_impl(&self) -> Result<Vec<AisPosition>> {
         let ais = sqlx::query_as!(
             AisPosition,
             r#"
@@ -98,7 +98,7 @@ ORDER BY
         mmsi: Mmsi,
         range: &DateRange,
         permission: AisPermission,
-    ) -> impl Stream<Item = Result<AisPosition, PostgresErrorWrapper>> + '_ {
+    ) -> impl Stream<Item = Result<AisPosition>> + '_ {
         sqlx::query_as!(
             AisPosition,
             r#"
@@ -158,7 +158,7 @@ ORDER BY
         mmsi: Mmsi,
         start: DateTime<Utc>,
         end: DateTime<Utc>,
-    ) -> Result<Vec<AisPosition>, PostgresErrorWrapper> {
+    ) -> Result<Vec<AisPosition>> {
         sqlx::query_as!(
             AisPosition,
             r#"
@@ -190,7 +190,7 @@ ORDER BY
         .map_err(From::from)
     }
 
-    pub(crate) async fn existing_mmsis_impl(&self) -> Result<Vec<Mmsi>, PostgresErrorWrapper> {
+    pub(crate) async fn existing_mmsis_impl(&self) -> Result<Vec<Mmsi>> {
         let mmsis = sqlx::query!(
             r#"
 SELECT
@@ -208,10 +208,7 @@ FROM
         Ok(mmsis)
     }
 
-    pub(crate) async fn add_ais_positions(
-        &self,
-        positions: &[NewAisPosition],
-    ) -> Result<(), PostgresErrorWrapper> {
+    pub(crate) async fn add_ais_positions(&self, positions: &[NewAisPosition]) -> Result<()> {
         let mut mmsis = Vec::with_capacity(positions.len());
         let mut latitude = Vec::with_capacity(positions.len());
         let mut longitude = Vec::with_capacity(positions.len());
@@ -502,7 +499,7 @@ RETURNING
     pub(crate) async fn ais_vessel_migration_progress(
         &self,
         migration_end_threshold: &DateTime<Utc>,
-    ) -> Result<Vec<AisVesselMigrate>, PostgresErrorWrapper> {
+    ) -> Result<Vec<AisVesselMigrate>> {
         Ok(sqlx::query_as!(
             AisVesselMigrate,
             r#"
@@ -520,10 +517,7 @@ WHERE
         .await?)
     }
 
-    pub(crate) async fn add_ais_vessels(
-        &self,
-        static_messages: &[NewAisStatic],
-    ) -> Result<(), PostgresErrorWrapper> {
+    pub(crate) async fn add_ais_vessels(&self, static_messages: &[NewAisStatic]) -> Result<()> {
         let mut unique_static: HashMap<Mmsi, NewAisStatic> = HashMap::new();
         for v in static_messages {
             unique_static.entry(v.mmsi).or_insert(v.clone());
@@ -550,7 +544,7 @@ WHERE
 
         Ok(())
     }
-    pub(crate) async fn add_mmsis_impl(&self, mmsis: &[Mmsi]) -> Result<(), PostgresErrorWrapper> {
+    pub(crate) async fn add_mmsis_impl(&self, mmsis: &[Mmsi]) -> Result<()> {
         sqlx::query!(
             r#"
 INSERT INTO
@@ -574,7 +568,7 @@ ON CONFLICT (mmsi) DO NOTHING
         mmsi: Mmsi,
         positions: Vec<kyogre_core::AisPosition>,
         progress: DateTime<Utc>,
-    ) -> Result<(), PostgresErrorWrapper> {
+    ) -> Result<()> {
         let mut mmsis = Vec::with_capacity(positions.len());
         let mut latitude = Vec::with_capacity(positions.len());
         let mut longitude = Vec::with_capacity(positions.len());

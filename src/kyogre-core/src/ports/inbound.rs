@@ -1,7 +1,6 @@
 use crate::*;
 use async_trait::async_trait;
 use chrono::{DateTime, NaiveDate, Utc};
-use error_stack::Result;
 use fiskeridir_rs::{DataFileId, DeliveryPointId, SpeciesGroup};
 
 #[async_trait]
@@ -9,35 +8,35 @@ pub trait MLModelsInbound: Send + Sync {
     async fn add_fishing_spot_predictions(
         &self,
         predictions: Vec<NewFishingSpotPrediction>,
-    ) -> Result<(), InsertError>;
+    ) -> CoreResult<()>;
     async fn add_fishing_weight_predictions(
         &self,
         predictions: Vec<NewFishingWeightPrediction>,
-    ) -> Result<(), InsertError>;
+    ) -> CoreResult<()>;
     async fn catch_locations(
         &self,
         overlap: WeatherLocationOverlap,
-    ) -> Result<Vec<CatchLocation>, QueryError>;
+    ) -> CoreResult<Vec<CatchLocation>>;
     async fn existing_fishing_spot_predictions(
         &self,
         model_id: ModelId,
         species: SpeciesGroup,
         year: u32,
-    ) -> Result<Vec<FishingSpotPrediction>, QueryError>;
+    ) -> CoreResult<Vec<FishingSpotPrediction>>;
     async fn existing_fishing_weight_predictions(
         &self,
         model_id: ModelId,
         species: SpeciesGroup,
         year: u32,
-    ) -> Result<Vec<FishingWeightPrediction>, QueryError>;
+    ) -> CoreResult<Vec<FishingWeightPrediction>>;
     async fn catch_locations_weather_dates(
         &self,
         dates: Vec<NaiveDate>,
-    ) -> Result<Vec<CatchLocationWeather>, QueryError>;
+    ) -> CoreResult<Vec<CatchLocationWeather>>;
     async fn catch_locations_weather(
         &self,
         keys: Vec<(CatchLocationId, NaiveDate)>,
-    ) -> Result<Vec<CatchLocationWeather>, QueryError>;
+    ) -> CoreResult<Vec<CatchLocationWeather>>;
 }
 
 #[async_trait]
@@ -56,71 +55,63 @@ pub trait AisMigratorDestination {
         mmsi: Mmsi,
         positions: Vec<AisPosition>,
         progress: DateTime<Utc>,
-    ) -> Result<(), InsertError>;
-    async fn add_mmsis(&self, mmsi: &[Mmsi]) -> Result<(), InsertError>;
+    ) -> CoreResult<()>;
+    async fn add_mmsis(&self, mmsi: &[Mmsi]) -> CoreResult<()>;
     async fn vessel_migration_progress(
         &self,
         migration_end_threshold: &DateTime<Utc>,
-    ) -> Result<Vec<AisVesselMigrate>, QueryError>;
+    ) -> CoreResult<Vec<AisVesselMigrate>>;
 }
 
 #[async_trait]
 pub trait WebApiInboundPort {
-    async fn update_user(&self, user: User) -> Result<(), UpdateError>;
-    async fn add_fuel_measurements(
-        &self,
-        measurements: Vec<FuelMeasurement>,
-    ) -> Result<(), InsertError>;
-    async fn update_fuel_measurements(
-        &self,
-        measurements: Vec<FuelMeasurement>,
-    ) -> Result<(), UpdateError>;
+    async fn update_user(&self, user: User) -> CoreResult<()>;
+    async fn add_fuel_measurements(&self, measurements: Vec<FuelMeasurement>) -> CoreResult<()>;
+    async fn update_fuel_measurements(&self, measurements: Vec<FuelMeasurement>) -> CoreResult<()>;
     async fn delete_fuel_measurements(
         &self,
         measurements: Vec<DeleteFuelMeasurement>,
-    ) -> Result<(), DeleteError>;
+    ) -> CoreResult<()>;
 }
 
 #[async_trait]
 pub trait ScraperInboundPort {
-    async fn add_fishing_facilities(
-        &self,
-        facilities: Vec<FishingFacility>,
-    ) -> Result<(), InsertError>;
+    async fn add_fishing_facilities(&self, facilities: Vec<FishingFacility>) -> CoreResult<()>;
     async fn add_register_vessels(
         &self,
         vessels: Vec<fiskeridir_rs::RegisterVessel>,
-    ) -> Result<(), InsertError>;
+    ) -> CoreResult<()>;
     async fn add_landings(
         &self,
         landings: Box<
-            dyn Iterator<Item = Result<fiskeridir_rs::Landing, fiskeridir_rs::Error>> + Send + Sync,
+            dyn Iterator<Item = std::result::Result<fiskeridir_rs::Landing, fiskeridir_rs::Error>>
+                + Send
+                + Sync,
         >,
         data_year: u32,
-    ) -> Result<(), InsertError>;
+    ) -> CoreResult<()>;
     async fn add_ers_dca(
         &self,
         ers_dca: Box<
-            dyn Iterator<Item = Result<fiskeridir_rs::ErsDca, fiskeridir_rs::Error>> + Send + Sync,
+            dyn Iterator<Item = std::result::Result<fiskeridir_rs::ErsDca, fiskeridir_rs::Error>>
+                + Send
+                + Sync,
         >,
-    ) -> Result<(), InsertError>;
-    async fn add_ers_dep(&self, ers_dep: Vec<fiskeridir_rs::ErsDep>) -> Result<(), InsertError>;
-    async fn add_ers_por(&self, ers_por: Vec<fiskeridir_rs::ErsPor>) -> Result<(), InsertError>;
-    async fn add_ers_tra(&self, ers_tra: Vec<fiskeridir_rs::ErsTra>) -> Result<(), InsertError>;
-    async fn add_vms(&self, vms: Vec<fiskeridir_rs::Vms>) -> Result<(), InsertError>;
+    ) -> CoreResult<()>;
+    async fn add_ers_dep(&self, ers_dep: Vec<fiskeridir_rs::ErsDep>) -> CoreResult<()>;
+    async fn add_ers_por(&self, ers_por: Vec<fiskeridir_rs::ErsPor>) -> CoreResult<()>;
+    async fn add_ers_tra(&self, ers_tra: Vec<fiskeridir_rs::ErsTra>) -> CoreResult<()>;
+    async fn add_vms(&self, vms: Vec<fiskeridir_rs::Vms>) -> CoreResult<()>;
     async fn add_aqua_culture_register(
         &self,
         entries: Vec<fiskeridir_rs::AquaCultureEntry>,
-    ) -> Result<(), InsertError>;
+    ) -> CoreResult<()>;
     async fn add_mattilsynet_delivery_points(
         &self,
         delivery_points: Vec<MattilsynetDeliveryPoint>,
-    ) -> Result<(), InsertError>;
-    async fn add_weather(&self, weather: Vec<NewWeather>) -> Result<(), InsertError>;
-    async fn add_ocean_climate(
-        &self,
-        ocean_climate: Vec<NewOceanClimate>,
-    ) -> Result<(), InsertError>;
+    ) -> CoreResult<()>;
+    async fn add_weather(&self, weather: Vec<NewWeather>) -> CoreResult<()>;
+    async fn add_ocean_climate(&self, ocean_climate: Vec<NewOceanClimate>) -> CoreResult<()>;
 }
 
 #[async_trait]
@@ -128,37 +119,34 @@ pub trait ScraperOutboundPort {
     async fn latest_fishing_facility_update(
         &self,
         source: Option<FishingFacilityApiSource>,
-    ) -> Result<Option<DateTime<Utc>>, QueryError>;
-    async fn latest_weather_timestamp(&self) -> Result<Option<DateTime<Utc>>, QueryError>;
-    async fn latest_ocean_climate_timestamp(&self) -> Result<Option<DateTime<Utc>>, QueryError>;
+    ) -> CoreResult<Option<DateTime<Utc>>>;
+    async fn latest_weather_timestamp(&self) -> CoreResult<Option<DateTime<Utc>>>;
+    async fn latest_ocean_climate_timestamp(&self) -> CoreResult<Option<DateTime<Utc>>>;
 }
 
 #[async_trait]
 pub trait ScraperFileHashInboundPort {
-    async fn add(&self, id: &DataFileId, hash: String) -> Result<(), InsertError>;
+    async fn add(&self, id: &DataFileId, hash: String) -> CoreResult<()>;
 }
 
 #[async_trait]
 pub trait VesselBenchmarkInbound: Send + Sync {
-    async fn add_output(&self, values: Vec<VesselBenchmarkOutput>) -> Result<(), InsertError>;
+    async fn add_output(&self, values: Vec<VesselBenchmarkOutput>) -> CoreResult<()>;
 }
 
 #[async_trait]
 pub trait HaulDistributorInbound: Send + Sync {
-    async fn add_output(&self, values: Vec<HaulDistributionOutput>) -> Result<(), UpdateError>;
-    async fn update_bycatch_status(&self) -> Result<(), UpdateError>;
+    async fn add_output(&self, values: Vec<HaulDistributionOutput>) -> CoreResult<()>;
+    async fn update_bycatch_status(&self) -> CoreResult<()>;
 }
 
 #[async_trait]
 pub trait TripPipelineInbound: Send + Sync {
-    async fn reset_trip_processing_conflicts(&self) -> Result<(), UpdateError>;
-    async fn update_preferred_trip_assemblers(&self) -> Result<(), UpdateError>;
-    async fn update_trip(&self, update: TripUpdate) -> Result<(), UpdateError>;
-    async fn add_trip_set(&self, value: TripSet) -> Result<(), InsertError>;
-    async fn refresh_detailed_trips(
-        &self,
-        vessel_id: FiskeridirVesselId,
-    ) -> Result<(), UpdateError>;
+    async fn reset_trip_processing_conflicts(&self) -> CoreResult<()>;
+    async fn update_preferred_trip_assemblers(&self) -> CoreResult<()>;
+    async fn update_trip(&self, update: TripUpdate) -> CoreResult<()>;
+    async fn add_trip_set(&self, value: TripSet) -> CoreResult<()>;
+    async fn refresh_detailed_trips(&self, vessel_id: FiskeridirVesselId) -> CoreResult<()>;
 }
 
 #[async_trait]
@@ -172,27 +160,27 @@ pub trait TestHelperInbound: Send + Sync {
         &self,
         old: DeliveryPointId,
         new: DeliveryPointId,
-    ) -> Result<(), InsertError>;
+    ) -> CoreResult<()>;
 }
 
 #[async_trait]
 pub trait HaulWeatherInbound: Send + Sync {
-    async fn add_haul_weather(&self, values: Vec<HaulWeatherOutput>) -> Result<(), UpdateError>;
+    async fn add_haul_weather(&self, values: Vec<HaulWeatherOutput>) -> CoreResult<()>;
 }
 
 #[async_trait]
 pub trait DailyWeatherInbound: Send + Sync {
-    async fn catch_locations_with_weather(&self) -> Result<Vec<CatchLocationId>, QueryError>;
-    async fn dirty_dates(&self) -> Result<Vec<NaiveDate>, QueryError>;
-    async fn prune_dirty_dates(&self) -> Result<(), UpdateError>;
+    async fn catch_locations_with_weather(&self) -> CoreResult<Vec<CatchLocationId>>;
+    async fn dirty_dates(&self) -> CoreResult<Vec<NaiveDate>>;
+    async fn prune_dirty_dates(&self) -> CoreResult<()>;
     async fn update_daily_weather(
         &self,
         catch_locations: &[CatchLocationId],
         date: NaiveDate,
-    ) -> Result<(), UpdateError>;
+    ) -> CoreResult<()>;
 }
 
 #[async_trait]
 pub trait AisVmsAreaPrunerInbound: Send + Sync {
-    async fn prune_ais_vms_area(&self, limit: NaiveDate) -> Result<(), DeleteError>;
+    async fn prune_ais_vms_area(&self, limit: NaiveDate) -> CoreResult<()>;
 }

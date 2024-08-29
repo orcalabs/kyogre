@@ -5,7 +5,7 @@ use fiskeridir_rs::{
 use kyogre_core::{CatchLocationId, HaulId, HaulOceanClimate, HaulWeather};
 use serde::Deserialize;
 
-use crate::error::PostgresErrorWrapper;
+use crate::error::{Error, Result};
 
 #[derive(Debug)]
 pub struct FishingSpotTrainingData {
@@ -92,9 +92,9 @@ pub struct HaulMessage {
 }
 
 impl TryFrom<Haul> for kyogre_core::Haul {
-    type Error = PostgresErrorWrapper;
+    type Error = Error;
 
-    fn try_from(v: Haul) -> Result<Self, Self::Error> {
+    fn try_from(v: Haul) -> std::result::Result<Self, Self::Error> {
         Ok(Self {
             haul_id: HaulId(v.haul_id),
             ers_activity_id: v.ers_activity_id,
@@ -147,20 +147,20 @@ impl TryFrom<Haul> for kyogre_core::Haul {
             catches: serde_json::from_str::<Vec<HaulCatch>>(&v.catches)?
                 .into_iter()
                 .map(kyogre_core::HaulCatch::try_from)
-                .collect::<Result<_, _>>()?,
+                .collect::<Result<_>>()?,
             whale_catches: serde_json::from_str::<Vec<WhaleCatch>>(&v.whale_catches)?
                 .into_iter()
                 .map(kyogre_core::WhaleCatch::try_from)
-                .collect::<Result<_, _>>()?,
+                .collect::<Result<_>>()?,
             cache_version: v.cache_version,
         })
     }
 }
 
 impl TryFrom<HaulCatch> for kyogre_core::HaulCatch {
-    type Error = PostgresErrorWrapper;
+    type Error = Error;
 
-    fn try_from(v: HaulCatch) -> Result<Self, Self::Error> {
+    fn try_from(v: HaulCatch) -> std::result::Result<Self, Self::Error> {
         Ok(Self {
             living_weight: v.living_weight,
             species_fao_id: v.species_fao_id,
@@ -172,9 +172,9 @@ impl TryFrom<HaulCatch> for kyogre_core::HaulCatch {
 }
 
 impl TryFrom<WhaleCatch> for kyogre_core::WhaleCatch {
-    type Error = PostgresErrorWrapper;
+    type Error = Error;
 
-    fn try_from(v: WhaleCatch) -> Result<Self, Self::Error> {
+    fn try_from(v: WhaleCatch) -> std::result::Result<Self, Self::Error> {
         Ok(Self {
             blubber_measure_a: v.blubber_measure_a,
             blubber_measure_b: v.blubber_measure_b,
@@ -190,9 +190,9 @@ impl TryFrom<WhaleCatch> for kyogre_core::WhaleCatch {
 }
 
 impl TryFrom<HaulMessage> for kyogre_core::HaulMessage {
-    type Error = PostgresErrorWrapper;
+    type Error = Error;
 
-    fn try_from(v: HaulMessage) -> Result<Self, Self::Error> {
+    fn try_from(v: HaulMessage) -> std::result::Result<Self, Self::Error> {
         Ok(Self {
             haul_id: HaulId(v.haul_id),
             start_timestamp: v.start_timestamp,
@@ -202,9 +202,9 @@ impl TryFrom<HaulMessage> for kyogre_core::HaulMessage {
 }
 
 impl TryFrom<FishingSpotTrainingData> for kyogre_core::FishingSpotTrainingData {
-    type Error = PostgresErrorWrapper;
+    type Error = Error;
 
-    fn try_from(v: FishingSpotTrainingData) -> Result<Self, Self::Error> {
+    fn try_from(v: FishingSpotTrainingData) -> std::result::Result<Self, Self::Error> {
         Ok(Self {
             haul_id: v.haul_id,
             latitude: v.latitude,

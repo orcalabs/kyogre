@@ -1,4 +1,4 @@
-use crate::DateRangeError;
+use crate::{date_range_error::OrderingSnafu, DateRangeError};
 use chrono::{DateTime, Utc};
 
 #[derive(Debug, Clone)]
@@ -57,12 +57,12 @@ impl QueryRange {
         end: std::ops::Bound<DateTime<Utc>>,
     ) -> Result<QueryRange, DateRangeError> {
         match (start, end) {
-            (std::ops::Bound::Included(s), std::ops::Bound::Included(e))
-            | (std::ops::Bound::Included(s), std::ops::Bound::Excluded(e))
-            | (std::ops::Bound::Excluded(s), std::ops::Bound::Included(e))
-            | (std::ops::Bound::Excluded(s), std::ops::Bound::Excluded(e)) => {
-                if e < s {
-                    Err(DateRangeError::Ordering(s, e))
+            (std::ops::Bound::Included(start), std::ops::Bound::Included(end))
+            | (std::ops::Bound::Included(start), std::ops::Bound::Excluded(end))
+            | (std::ops::Bound::Excluded(start), std::ops::Bound::Included(end))
+            | (std::ops::Bound::Excluded(start), std::ops::Bound::Excluded(end)) => {
+                if end < start {
+                    OrderingSnafu { start, end }.fail()
                 } else {
                     Ok(())
                 }
@@ -100,7 +100,7 @@ impl DateRange {
     // Defaults to both start and end being inclusive
     pub fn new(start: DateTime<Utc>, end: DateTime<Utc>) -> Result<DateRange, DateRangeError> {
         if start > end {
-            Err(DateRangeError::Ordering(start, end))
+            OrderingSnafu { start, end }.fail()
         } else {
             Ok(DateRange {
                 start,
@@ -160,54 +160,54 @@ impl PartialEq for DateRange {
 impl Eq for DateRange {}
 
 #[cfg(feature = "sqlx")]
-use sqlx::postgres::types::PgRange;
-#[cfg(feature = "sqlx")]
-impl From<&DateRange> for PgRange<DateTime<Utc>> {
-    fn from(value: &DateRange) -> Self {
-        let start = match value.start_bound {
-            Bound::Inclusive => std::ops::Bound::Included(value.start),
-            Bound::Exclusive => std::ops::Bound::Excluded(value.start),
-        };
-        let end = match value.end_bound {
-            Bound::Inclusive => std::ops::Bound::Included(value.end),
-            Bound::Exclusive => std::ops::Bound::Excluded(value.end),
-        };
-        PgRange { start, end }
+mod _sqlx {
+    use super::*;
+    use crate::{date_range_error::UnboundedSnafu, DateRangeError};
+    use sqlx::postgres::types::PgRange;
+    impl From<&DateRange> for PgRange<DateTime<Utc>> {
+        fn from(value: &DateRange) -> Self {
+            let start = match value.start_bound {
+                Bound::Inclusive => std::ops::Bound::Included(value.start),
+                Bound::Exclusive => std::ops::Bound::Excluded(value.start),
+            };
+            let end = match value.end_bound {
+                Bound::Inclusive => std::ops::Bound::Included(value.end),
+                Bound::Exclusive => std::ops::Bound::Excluded(value.end),
+            };
+            PgRange { start, end }
+        }
     }
-}
 
-#[cfg(feature = "sqlx")]
-impl TryFrom<PgRange<DateTime<Utc>>> for DateRange {
-    type Error = DateRangeError;
-    fn try_from(value: PgRange<DateTime<Utc>>) -> Result<Self, Self::Error> {
-        DateRange::try_from(&value)
+    impl TryFrom<PgRange<DateTime<Utc>>> for DateRange {
+        type Error = DateRangeError;
+        fn try_from(value: PgRange<DateTime<Utc>>) -> Result<Self, Self::Error> {
+            DateRange::try_from(&value)
+        }
     }
-}
 
-#[cfg(feature = "sqlx")]
-impl TryFrom<&PgRange<DateTime<Utc>>> for DateRange {
-    type Error = DateRangeError;
-    fn try_from(value: &PgRange<DateTime<Utc>>) -> Result<Self, Self::Error> {
-        let start = match value.start {
-            std::ops::Bound::Included(t) | std::ops::Bound::Excluded(t) => Ok(t),
-            std::ops::Bound::Unbounded => Err(DateRangeError::Unbounded),
-        }?;
+    impl TryFrom<&PgRange<DateTime<Utc>>> for DateRange {
+        type Error = DateRangeError;
+        fn try_from(value: &PgRange<DateTime<Utc>>) -> Result<Self, Self::Error> {
+            let start = match value.start {
+                std::ops::Bound::Included(t) | std::ops::Bound::Excluded(t) => Ok(t),
+                std::ops::Bound::Unbounded => UnboundedSnafu.fail(),
+            }?;
 
-        let end = match value.end {
-            std::ops::Bound::Included(t) | std::ops::Bound::Excluded(t) => Ok(t),
-            std::ops::Bound::Unbounded => Err(DateRangeError::Unbounded),
-        }?;
+            let end = match value.end {
+                std::ops::Bound::Included(t) | std::ops::Bound::Excluded(t) => Ok(t),
+                std::ops::Bound::Unbounded => UnboundedSnafu.fail(),
+            }?;
 
-        DateRange::new(start, end)
+            DateRange::new(start, end)
+        }
     }
-}
 
-#[cfg(feature = "sqlx")]
-impl From<&QueryRange> for PgRange<DateTime<Utc>> {
-    fn from(value: &QueryRange) -> Self {
-        PgRange {
-            start: value.start,
-            end: value.end,
+    impl From<&QueryRange> for PgRange<DateTime<Utc>> {
+        fn from(value: &QueryRange) -> Self {
+            PgRange {
+                start: value.start,
+                end: value.end,
+            }
         }
     }
 }

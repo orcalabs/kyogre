@@ -11,7 +11,7 @@ use std::collections::{HashMap, HashSet};
 use tracing::{error, info};
 use unnest_insert::{UnnestInsert, UnnestInsertReturning};
 
-use crate::error::PostgresErrorWrapper;
+use crate::error::{Error, Result};
 use crate::landing_set::PreparedLandingSet;
 use crate::models::NewLandingEntry;
 use crate::models::NewTripAssemblerConflict;
@@ -28,8 +28,7 @@ impl PostgresAdapter {
     pub(crate) fn landings_impl(
         &self,
         query: LandingsQuery,
-    ) -> Result<impl Stream<Item = Result<Landing, PostgresErrorWrapper>> + '_, PostgresErrorWrapper>
-    {
+    ) -> Result<impl Stream<Item = Result<Landing>> + '_> {
         let args = LandingsArgs::try_from(query)?;
 
         let stream = sqlx::query_as!(
@@ -139,7 +138,7 @@ ORDER BY
     pub(crate) async fn landings_by_ids_impl(
         &self,
         landing_ids: &[LandingId],
-    ) -> Result<Vec<Landing>, PostgresErrorWrapper> {
+    ) -> Result<Vec<Landing>> {
         let ids = landing_ids.iter().map(|i| i.as_ref()).collect::<Vec<_>>();
 
         let landings = sqlx::query_as!(
@@ -193,9 +192,7 @@ GROUP BY
         Ok(landings)
     }
 
-    pub(crate) async fn all_landing_versions_impl(
-        &self,
-    ) -> Result<Vec<(LandingId, i64)>, PostgresErrorWrapper> {
+    pub(crate) async fn all_landing_versions_impl(&self) -> Result<Vec<(LandingId, i64)>> {
         sqlx::query!(
             r#"
 SELECT
@@ -209,13 +206,13 @@ FROM
         .await?
         .into_iter()
         .map(|r| Ok((LandingId::try_from(r.landing_id)?, r.version as i64)))
-        .collect::<Result<_, _>>()
+        .collect::<std::result::Result<_, _>>()
     }
 
     pub(crate) async fn sum_landing_weight_impl(
         &self,
         id: FiskeridirVesselId,
-    ) -> Result<Option<f64>, PostgresErrorWrapper> {
+    ) -> Result<Option<f64>> {
         let row = sqlx::query!(
             r#"
 SELECT
@@ -237,12 +234,12 @@ WHERE
     pub(crate) async fn add_landings_impl(
         &self,
         landings: Box<
-            dyn Iterator<Item = error_stack::Result<fiskeridir_rs::Landing, fiskeridir_rs::Error>>
+            dyn Iterator<Item = std::result::Result<fiskeridir_rs::Landing, fiskeridir_rs::Error>>
                 + Send
                 + Sync,
         >,
         data_year: u32,
-    ) -> Result<(), PostgresErrorWrapper> {
+    ) -> Result<()> {
         let mut tx = self.pool.begin().await?;
 
         let existing_landings = self.existing_landings(data_year, &mut tx).await?;
@@ -341,7 +338,7 @@ WHERE
         vessel_event_ids: &mut Vec<i64>,
         trip_assembler_conflicts: &mut HashMap<i64, NewTripAssemblerConflict>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<(), PostgresErrorWrapper> {
+    ) -> Result<()> {
         self.add_delivery_point_ids(set.delivery_points, tx).await?;
 
         self.add_municipalities(set.municipalities, tx).await?;
@@ -378,7 +375,7 @@ WHERE
         vessel_event_ids: &mut Vec<i64>,
         trip_assembler_conflicts: &mut HashMap<i64, NewTripAssemblerConflict>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<(), PostgresErrorWrapper> {
+    ) -> Result<()> {
         landings.retain(|l| !inserted_landing_ids.contains(&l.landing_id));
 
         let len = landings.len();
@@ -453,7 +450,7 @@ RETURNING
         &'a self,
         data_year: u32,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<HashMap<String, i32>, PostgresErrorWrapper> {
+    ) -> Result<HashMap<String, i32>> {
         let landings = sqlx::query!(
             r#"
 SELECT
@@ -478,7 +475,7 @@ WHERE
         &'a self,
         entries: Vec<NewLandingEntry>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<(), PostgresErrorWrapper> {
+    ) -> Result<()> {
         NewLandingEntry::unnest_insert(entries, &mut **tx).await?;
         Ok(())
     }
@@ -489,7 +486,7 @@ WHERE
         trip_assembler_conflicts: &mut HashMap<i64, NewTripAssemblerConflict>,
         data_year: u32,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<(), PostgresErrorWrapper> {
+    ) -> Result<()> {
         let deleted = sqlx::query!(
             r#"
 DELETE FROM landings
@@ -529,9 +526,7 @@ RETURNING
         Ok(())
     }
 
-    pub(crate) async fn landing_matrix_vs_landings_living_weight(
-        &self,
-    ) -> Result<i64, PostgresErrorWrapper> {
+    pub(crate) async fn landing_matrix_vs_landings_living_weight(&self) -> Result<i64> {
         let row = sqlx::query!(
             r#"
 SELECT
@@ -569,7 +564,7 @@ SELECT
         &'a self,
         landing_ids: &[String],
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<(), PostgresErrorWrapper> {
+    ) -> Result<()> {
         sqlx::query!(
             r#"
 INSERT INTO
@@ -616,7 +611,7 @@ SET
         Ok(())
     }
 
-    pub(crate) async fn landings_without_trip(&self) -> Result<i64, PostgresErrorWrapper> {
+    pub(crate) async fn landings_without_trip(&self) -> Result<i64> {
         let c = sqlx::query!(
             r#"
 SELECT
@@ -708,7 +703,7 @@ pub struct LandingsArgs {
 }
 
 impl TryFrom<LandingsQuery> for LandingsArgs {
-    type Error = PostgresErrorWrapper;
+    type Error = Error;
 
     fn try_from(v: LandingsQuery) -> std::result::Result<Self, Self::Error> {
         let (catch_area_ids, catch_main_area_ids) = if let Some(cls) = v.catch_locations {

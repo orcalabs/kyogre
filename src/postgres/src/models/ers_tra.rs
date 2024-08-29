@@ -1,12 +1,10 @@
-use chrono::{DateTime, NaiveDate, Utc};
-use error_stack::{report, Report};
-use fiskeridir_rs::FiskdirVesselNationalityGroup;
-use unnest_insert::UnnestInsert;
-
 use crate::{
-    error::{PostgresError, PostgresErrorWrapper},
+    error::{Error, MissingValueSnafu},
     queries::{enum_to_i32, timestamp_from_date_and_time},
 };
+use chrono::{DateTime, NaiveDate, Utc};
+use fiskeridir_rs::FiskdirVesselNationalityGroup;
+use unnest_insert::UnnestInsert;
 
 #[derive(UnnestInsert)]
 #[unnest_insert(
@@ -70,7 +68,7 @@ pub struct NewErsTraCatch {
 }
 
 impl TryFrom<fiskeridir_rs::ErsTra> for NewErsTra {
-    type Error = PostgresErrorWrapper;
+    type Error = Error;
 
     fn try_from(v: fiskeridir_rs::ErsTra) -> Result<Self, Self::Error> {
         Ok(Self {
@@ -86,14 +84,11 @@ impl TryFrom<fiskeridir_rs::ErsTra> for NewErsTra {
             sequence_number: v.message_info.sequence_number.map(|v| v as i32),
             reloading_timestamp: v
                 .reloading_date
-                .map::<Result<_, Report<PostgresError>>, _>(|reloading_date| {
+                .map::<Result<_, Error>, _>(|reloading_date| {
                     Ok(timestamp_from_date_and_time(
                         reloading_date,
-                        v.reloading_time.ok_or_else(|| {
-                            report!(PostgresError::DataConversion).attach_printable(
-                                "expected reloading_time to be `Some` due to reloading_date",
-                            )
-                        })?,
+                        v.reloading_time
+                            .ok_or_else(|| MissingValueSnafu {}.build())?,
                     ))
                 })
                 .transpose()?,

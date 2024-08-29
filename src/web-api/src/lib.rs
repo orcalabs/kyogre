@@ -97,7 +97,7 @@ impl Database for PostgresAdapter {}
             WhaleGender,
             VesselLengthGroup,
             error::ErrorResponse,
-            error::ApiError,
+            error::ErrorDiscriminants,
             v1::ais::AisPosition,
             v1::ais::AisPositionDetails,
             v1::ais_vms::AisVmsArea,

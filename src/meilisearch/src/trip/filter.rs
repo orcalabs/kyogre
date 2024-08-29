@@ -1,14 +1,12 @@
-use chrono::{DateTime, Utc};
-use error_stack::Result;
-use fiskeridir_rs::{GearGroup, LandingId, SpeciesGroup, VesselLengthGroup};
-use kyogre_core::{FiskeridirVesselId, HaulId, MinMaxBoth, TripSorting};
-use strum_macros::{EnumDiscriminants, EnumIter};
-
 use crate::{
-    error::MeilisearchError,
+    error::Result,
     query::Filter,
     utils::{join_comma, join_comma_fn, to_nanos},
 };
+use chrono::{DateTime, Utc};
+use fiskeridir_rs::{GearGroup, LandingId, SpeciesGroup, VesselLengthGroup};
+use kyogre_core::{FiskeridirVesselId, HaulId, MinMaxBoth, TripSorting};
+use strum_macros::{EnumDiscriminants, EnumIter};
 
 #[derive(Debug, Clone, EnumDiscriminants, strum_macros::Display)]
 #[strum_discriminants(
@@ -37,7 +35,7 @@ pub enum TripSort {
 }
 
 impl Filter for TripFilter {
-    fn filter_str(self) -> Result<String, MeilisearchError> {
+    fn filter_str(self) -> Result<String> {
         Ok(match self {
             TripFilter::DeliveryPointIds(ids) => format!(
                 "{} IN [{}]",

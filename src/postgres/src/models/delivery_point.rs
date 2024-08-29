@@ -1,4 +1,4 @@
-use crate::{error::PostgresErrorWrapper, queries::enum_to_i32};
+use crate::{error::Error, queries::enum_to_i32};
 use chrono::NaiveDate;
 use fiskeridir_rs::DeliveryPointId;
 use kyogre_core::DeliveryPointType;
@@ -104,7 +104,7 @@ pub struct MattilsynetDeliveryPoint {
 }
 
 impl TryFrom<DeliveryPoint> for kyogre_core::DeliveryPoint {
-    type Error = PostgresErrorWrapper;
+    type Error = Error;
 
     fn try_from(v: DeliveryPoint) -> Result<Self, Self::Error> {
         Ok(Self {
@@ -126,7 +126,7 @@ impl From<fiskeridir_rs::DeliveryPointId> for NewDeliveryPointId {
 }
 
 impl TryFrom<&fiskeridir_rs::AquaCultureEntry> for AquaCultureSpecies {
-    type Error = PostgresErrorWrapper;
+    type Error = Error;
 
     fn try_from(v: &fiskeridir_rs::AquaCultureEntry) -> Result<Self, Self::Error> {
         Ok(Self {
@@ -140,7 +140,7 @@ impl TryFrom<&fiskeridir_rs::AquaCultureEntry> for AquaCultureSpecies {
 }
 
 impl TryFrom<&fiskeridir_rs::AquaCultureEntry> for AquaCultureTill {
-    type Error = PostgresErrorWrapper;
+    type Error = Error;
 
     fn try_from(v: &fiskeridir_rs::AquaCultureEntry) -> Result<Self, Self::Error> {
         Ok(Self {
@@ -153,7 +153,7 @@ impl TryFrom<&fiskeridir_rs::AquaCultureEntry> for AquaCultureTill {
 }
 
 impl TryFrom<fiskeridir_rs::AquaCultureEntry> for AquaCultureEntry {
-    type Error = PostgresErrorWrapper;
+    type Error = Error;
 
     fn try_from(v: fiskeridir_rs::AquaCultureEntry) -> Result<Self, Self::Error> {
         Ok(Self {

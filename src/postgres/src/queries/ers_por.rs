@@ -4,7 +4,7 @@ use std::{
 };
 
 use crate::{
-    error::PostgresErrorWrapper,
+    error::Result,
     ers_por_set::ErsPorSet,
     models::{Arrival, NewErsPor, NewErsPorCatch, NewTripAssemblerConflict},
     PostgresAdapter,
@@ -15,7 +15,7 @@ use kyogre_core::{ArrivalFilter, FiskeridirVesselId, TripAssemblerId, VesselEven
 use unnest_insert::{UnnestInsert, UnnestInsertReturning};
 
 impl PostgresAdapter {
-    pub(crate) async fn add_ers_por_set(&self, set: ErsPorSet) -> Result<(), PostgresErrorWrapper> {
+    pub(crate) async fn add_ers_por_set(&self, set: ErsPorSet) -> Result<()> {
         let prepared_set = set.prepare();
 
         let mut tx = self.pool.begin().await?;
@@ -46,7 +46,7 @@ impl PostgresAdapter {
         &'a self,
         mut ers_por: Vec<NewErsPor>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<(), PostgresErrorWrapper> {
+    ) -> Result<()> {
         let to_insert = self.ers_por_to_insert(&ers_por, tx).await?;
         ers_por.retain(|e| to_insert.contains(&e.message_id));
 
@@ -88,7 +88,7 @@ impl PostgresAdapter {
         &'a self,
         ers_por: &[NewErsPor],
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<HashSet<i64>, PostgresErrorWrapper> {
+    ) -> Result<HashSet<i64>> {
         let message_ids = ers_por.iter().map(|e| e.message_id).collect::<Vec<_>>();
 
         let ids = sqlx::query!(
@@ -115,7 +115,7 @@ WHERE
         &self,
         catches: Vec<NewErsPorCatch>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<(), PostgresErrorWrapper> {
+    ) -> Result<()> {
         NewErsPorCatch::unnest_insert(catches, &mut **tx).await?;
         Ok(())
     }
@@ -125,7 +125,7 @@ WHERE
         vessel_id: FiskeridirVesselId,
         start: &DateTime<Utc>,
         filter: ArrivalFilter,
-    ) -> Result<Vec<Arrival>, PostgresErrorWrapper> {
+    ) -> Result<Vec<Arrival>> {
         let landing_facility = match filter {
             ArrivalFilter::WithLandingFacility => Some(true),
             ArrivalFilter::All => None,

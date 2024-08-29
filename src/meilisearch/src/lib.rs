@@ -2,12 +2,11 @@
 #![deny(rust_2018_idioms)]
 
 use async_trait::async_trait;
-use error::MeilisearchError;
-use error_stack::{Result, ResultExt};
+use error::Result;
 use fiskeridir_rs::LandingId;
 use indexable::Indexable;
 use kyogre_core::{
-    HaulId, HaulsQuery, LandingsQuery, MeilisearchOutbound, MeilisearchSource, QueryError,
+    CoreResult, HaulId, HaulsQuery, LandingsQuery, MeilisearchOutbound, MeilisearchSource,
     TripDetailed, TripsQuery,
 };
 use meilisearch_sdk::client::Client;
@@ -60,7 +59,7 @@ impl<T> MeilisearchAdapter<T> {
 }
 
 impl<T: Sync> MeilisearchAdapter<T> {
-    pub async fn create_indexes(&self) -> Result<(), MeilisearchError> {
+    pub async fn create_indexes(&self) -> Result<()> {
         for c in CacheIndex::iter() {
             match c {
                 CacheIndex::Trips => Trip::create_index(self).await,
@@ -72,7 +71,7 @@ impl<T: Sync> MeilisearchAdapter<T> {
         Ok(())
     }
 
-    pub async fn cleanup(&self) -> Result<(), MeilisearchError> {
+    pub async fn cleanup(&self) -> Result<()> {
         for c in CacheIndex::iter() {
             match c {
                 CacheIndex::Trips => Trip::cleanup(self).await,
@@ -87,7 +86,7 @@ impl<T: Sync> MeilisearchAdapter<T> {
 
 impl<T: MeilisearchSource> MeilisearchAdapter<T> {
     #[instrument(name = "refresh_meilisearch", skip(self))]
-    pub async fn refresh(&self) -> Result<(), MeilisearchError> {
+    pub async fn refresh(&self) -> Result<()> {
         for c in CacheIndex::iter() {
             match c {
                 CacheIndex::Trips => Trip::refresh(self).await,
@@ -116,36 +115,31 @@ impl<T: Send + Sync> MeilisearchOutbound for MeilisearchAdapter<T> {
         &self,
         query: TripsQuery,
         read_fishing_facility: bool,
-    ) -> Result<Vec<TripDetailed>, QueryError> {
-        self.trips_impl(query, read_fishing_facility)
-            .await
-            .change_context(QueryError)
+    ) -> CoreResult<Vec<TripDetailed>> {
+        Ok(self.trips_impl(query, read_fishing_facility).await?)
     }
     async fn trip_of_haul(
         &self,
         haul_id: &HaulId,
         read_fishing_facility: bool,
-    ) -> Result<Option<TripDetailed>, QueryError> {
-        self.trip_of_haul_impl(haul_id, read_fishing_facility)
-            .await
-            .change_context(QueryError)
+    ) -> CoreResult<Option<TripDetailed>> {
+        Ok(self
+            .trip_of_haul_impl(haul_id, read_fishing_facility)
+            .await?)
     }
     async fn trip_of_landing(
         &self,
         landing_id: &LandingId,
         read_fishing_facility: bool,
-    ) -> Result<Option<TripDetailed>, QueryError> {
-        self.trip_of_landing_impl(landing_id, read_fishing_facility)
-            .await
-            .change_context(QueryError)
+    ) -> CoreResult<Option<TripDetailed>> {
+        Ok(self
+            .trip_of_landing_impl(landing_id, read_fishing_facility)
+            .await?)
     }
-    async fn hauls(&self, query: HaulsQuery) -> Result<Vec<kyogre_core::Haul>, QueryError> {
-        self.hauls_impl(query).await.change_context(QueryError)
+    async fn hauls(&self, query: HaulsQuery) -> CoreResult<Vec<kyogre_core::Haul>> {
+        Ok(self.hauls_impl(query).await?)
     }
-    async fn landings(
-        &self,
-        query: LandingsQuery,
-    ) -> Result<Vec<kyogre_core::Landing>, QueryError> {
-        self.landings_impl(query).await.change_context(QueryError)
+    async fn landings(&self, query: LandingsQuery) -> CoreResult<Vec<kyogre_core::Landing>> {
+        Ok(self.landings_impl(query).await?)
     }
 }

@@ -1,7 +1,5 @@
-use error_stack::{Result, ResultExt};
+use crate::{error::Result, indexable::Indexable, query::Query, MeilisearchAdapter};
 use kyogre_core::LandingsQuery;
-
-use crate::{error::MeilisearchError, indexable::Indexable, query::Query, MeilisearchAdapter};
 
 mod filter;
 mod model;
@@ -13,7 +11,7 @@ impl<T> MeilisearchAdapter<T> {
     pub(crate) async fn landings_impl(
         &self,
         query: LandingsQuery,
-    ) -> Result<Vec<kyogre_core::Landing>, MeilisearchError> {
+    ) -> Result<Vec<kyogre_core::Landing>> {
         let query = Query::<LandingFilter, Option<LandingSort>, _>::from(query);
 
         let sort_string = query.sort_str_opt();
@@ -31,8 +29,7 @@ impl<T> MeilisearchAdapter<T> {
             .with_limit(usize::MAX)
             .with_sort(&sort)
             .execute::<Landing>()
-            .await
-            .change_context(MeilisearchError::Query)?;
+            .await?;
 
         let landings = result
             .hits

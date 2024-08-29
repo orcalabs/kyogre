@@ -1,5 +1,5 @@
 use crate::{
-    error::PostgresErrorWrapper,
+    error::Result,
     models::{VesselBenchmarkOutput, VesselBenchmarks},
     PostgresAdapter,
 };
@@ -12,11 +12,11 @@ impl PostgresAdapter {
     pub(crate) async fn add_benchmark_outputs(
         &self,
         values: Vec<kyogre_core::VesselBenchmarkOutput>,
-    ) -> Result<(), PostgresErrorWrapper> {
+    ) -> Result<()> {
         let values = values
             .into_iter()
             .map(VesselBenchmarkOutput::try_from)
-            .collect::<Result<_, _>>()?;
+            .collect::<Result<_>>()?;
 
         VesselBenchmarkOutput::unnest_insert(values, &self.pool).await?;
 
@@ -27,7 +27,7 @@ impl PostgresAdapter {
         &self,
         user_id: &BarentswatchUserId,
         call_sign: &CallSign,
-    ) -> Result<VesselBenchmarks, PostgresErrorWrapper> {
+    ) -> Result<VesselBenchmarks> {
         let year = Utc::now().year();
 
         Ok(sqlx::query_as!(

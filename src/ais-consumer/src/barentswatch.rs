@@ -1,6 +1,4 @@
-use crate::error::BarentswatchClientError;
-use error_stack::{bail, Result, ResultExt};
-
+use crate::error::{error::FailedRequestSnafu, Result};
 use futures::{StreamExt, TryStreamExt};
 use kyogre_core::BearerToken;
 use reqwest::{Client, Url};
@@ -38,7 +36,7 @@ impl BarentswatchAisClient {
     }
 
     /// Returns the ais source as stream which will continuously receive data from the source.
-    pub async fn streamer(&self) -> Result<impl AsyncRead, BarentswatchClientError> {
+    pub async fn streamer(&self) -> Result<impl AsyncRead> {
         let args = AisFilterArgs {
             downsample: true,
             include_position: true,
@@ -58,18 +56,16 @@ impl BarentswatchAisClient {
             )
             .header("Content-type", "application/json")
             .send()
-            .await
-            .change_context(BarentswatchClientError::SendingRequest)?;
+            .await?;
 
         let status = response.status();
         if !status.is_success() {
-            bail!(BarentswatchClientError::Server {
-                response_code: status.as_u16(),
-                body: response
-                    .text()
-                    .await
-                    .change_context(BarentswatchClientError::SendingRequest)?,
-            });
+            return FailedRequestSnafu {
+                url: self.api_address.clone(),
+                status,
+                body: response.text().await?,
+            }
+            .fail();
         }
 
         let stream = response.bytes_stream();

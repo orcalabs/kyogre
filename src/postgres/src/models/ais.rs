@@ -1,10 +1,8 @@
-use std::fmt;
-
+use crate::error::Error;
 use chrono::{DateTime, Utc};
 use kyogre_core::{Mmsi, NavigationStatus};
+use std::fmt;
 use unnest_insert::UnnestInsert;
-
-use crate::error::PostgresErrorWrapper;
 
 #[derive(Debug, Clone, UnnestInsert)]
 #[unnest_insert(table_name = "ais_vessels", conflict = "mmsi")]
@@ -150,7 +148,7 @@ impl From<kyogre_core::AisClass> for AisClass {
 }
 
 impl TryFrom<AisPosition> for kyogre_core::AisPosition {
-    type Error = PostgresErrorWrapper;
+    type Error = Error;
 
     fn try_from(value: AisPosition) -> Result<Self, Self::Error> {
         Ok(kyogre_core::AisPosition {

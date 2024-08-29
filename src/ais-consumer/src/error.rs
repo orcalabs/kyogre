@@ -1,80 +1,72 @@
-use error_stack::Context;
+use kyogre_core::DataMessage;
+use reqwest::StatusCode;
+use snafu::{Location, Snafu};
+use stack_error::StackError;
+use std::num::ParseIntError;
+use tokio::sync::broadcast::error::SendError;
 
-#[derive(Debug)]
-pub enum ConsumerError {
-    StreamClosed,
-    InternalChannelClosed,
+pub type Result<T> = std::result::Result<T, Error>;
+
+#[derive(Snafu, StackError)]
+#[snafu(module, visibility(pub))]
+pub enum Error {
+    #[snafu(display("Json error"))]
+    Json {
+        #[snafu(implicit)]
+        location: Location,
+        #[snafu(source)]
+        error: serde_json::Error,
+    },
+    #[snafu(display("Http error"))]
+    Http {
+        #[snafu(implicit)]
+        location: Location,
+        #[snafu(source)]
+        error: reqwest::Error,
+    },
+    #[snafu(display("HTTP Request failed, status: '{status}', url: '{url}', body: '{body}'"))]
+    FailedRequest {
+        #[snafu(implicit)]
+        location: Location,
+        url: String,
+        status: StatusCode,
+        body: String,
+    },
+    #[snafu(display("Consumer stream closed unexpectedly"))]
+    StreamClosed {
+        #[snafu(implicit)]
+        location: Location,
+    },
+    #[snafu(display("Internal ais channel closed"))]
+    InternalChannelClosed {
+        #[snafu(implicit)]
+        location: Location,
+        #[snafu(source)]
+        error: SendError<DataMessage>,
+    },
 }
 
-impl Context for ConsumerError {}
-
-impl std::fmt::Display for ConsumerError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            ConsumerError::StreamClosed => f.write_str("ais stream closed unexpectedly"),
-            ConsumerError::InternalChannelClosed => {
-                f.write_str("internal broadcast channel closed unexpectedly")
-            }
-        }
-    }
-}
-
-#[derive(Debug)]
-pub struct AisMessageProcessingError;
-
-impl Context for AisMessageProcessingError {}
-
-impl std::fmt::Display for AisMessageProcessingError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str("error occured during ais message processing")
-    }
-}
-
-#[derive(Debug)]
+#[derive(Snafu, StackError)]
+#[snafu(module, visibility(pub))]
 pub enum AisMessageError {
-    InvalidMessageType(u32),
-    InvalidEta(String),
-}
-
-impl std::error::Error for AisMessageError {}
-
-impl std::fmt::Display for AisMessageError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            AisMessageError::InvalidMessageType(message_type) => f.write_fmt(format_args!(
-                "encountered an unsupported message type: {message_type}"
-            )),
-            AisMessageError::InvalidEta(val) => f.write_fmt(format_args!(
-                "encountered an invalid estimated-time-of-arrival value: {val}"
-            )),
-        }
-    }
-}
-
-#[derive(Debug)]
-pub enum BarentswatchClientError {
-    RequestCreation,
-    SendingRequest,
-    Body,
-    Server { response_code: u16, body: String },
-}
-
-impl Context for BarentswatchClientError {}
-
-impl std::fmt::Display for BarentswatchClientError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            BarentswatchClientError::RequestCreation => f.write_str("failed to construct request"),
-            BarentswatchClientError::Body => f.write_str("failed to read the request body"),
-            BarentswatchClientError::SendingRequest => {
-                f.write_str("failed to send request to server")
-            }
-            BarentswatchClientError::Server {
-                response_code,
-                body,
-            } => f.write_fmt(format_args!(
-                "non-ok response received from server, status_code: {response_code}, body: {body}"
-            )),
-        }
-    }
+    #[snafu(display("Encountered an unsupported message type '{message_type}'"))]
+    InvalidMessageType {
+        #[snafu(implicit)]
+        location: Location,
+        message_type: u32,
+    },
+    #[snafu(display("Encountered an unexpected estimated-time-of-arrival value length '{eta}'"))]
+    InvalidEta {
+        #[snafu(implicit)]
+        location: Location,
+        eta: String,
+    },
+    #[snafu(display("Failed to parse part of estimated-time-of-arrival value '{eta}'"))]
+    ParseEta {
+        #[snafu(implicit)]
+        location: Location,
+        eta: String,
+        #[snafu(source)]
+        error: ParseIntError,
+    },
 }

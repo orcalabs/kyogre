@@ -2,11 +2,10 @@ use super::{
     find_close_point, PointClusterPreference, PrecisionConfig, PrecisionDirection, PrecisionId,
     PrecisionStop, TripPrecision,
 };
-use error_stack::{Result, ResultExt};
+use crate::error::Result;
 use geoutils::Location;
 use kyogre_core::{
-    AisVmsPosition, DateRange, TripPrecisionError, TripPrecisionOutboundPort, TripProcessingUnit,
-    Vessel,
+    AisVmsPosition, DateRange, TripPrecisionOutboundPort, TripProcessingUnit, Vessel,
 };
 use num_traits::ToPrimitive;
 
@@ -29,11 +28,10 @@ impl TripPrecision for DeliveryPointPrecision {
         adapter: &dyn TripPrecisionOutboundPort,
         trip: &TripProcessingUnit,
         vessel: &Vessel,
-    ) -> Result<Option<PrecisionStop>, TripPrecisionError> {
+    ) -> Result<Option<PrecisionStop>> {
         let delivery_points = adapter
             .delivery_points_associated_with_trip(vessel.fiskeridir.id, &trip.trip.landing_coverage)
-            .await
-            .change_context(TripPrecisionError)?;
+            .await?;
 
         match delivery_points.len() {
             1 => {
@@ -63,7 +61,7 @@ impl DeliveryPointPrecision {
         target: &Location,
         vessel: &Vessel,
         trip: &TripProcessingUnit,
-    ) -> Result<Option<PrecisionStop>, TripPrecisionError> {
+    ) -> Result<Option<PrecisionStop>> {
         Ok(match self.direction {
             PrecisionDirection::Shrinking => self.do_precision_impl(
                 target,
@@ -82,8 +80,7 @@ impl DeliveryPointPrecision {
                 .unwrap();
                 let positions = adapter
                     .ais_vms_positions(vessel.mmsi(), vessel.fiskeridir.call_sign.as_ref(), &range)
-                    .await
-                    .change_context(TripPrecisionError)?;
+                    .await?;
                 self.do_precision_impl(
                     target,
                     positions.chunks(self.config.position_chunk_size),

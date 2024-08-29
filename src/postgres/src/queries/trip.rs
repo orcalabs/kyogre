@@ -1,5 +1,5 @@
 use crate::{
-    error::{PostgresError, PostgresErrorWrapper},
+    error::{Result, TripPositionMatchSnafu},
     models::{
         CurrentTrip, NewTripAssemblerConflict, NewTripAssemblerLogEntry, NewTripReturning, Trip,
         TripAisVmsPosition, TripAssemblerLogEntry, TripCalculationTimer, TripDetailed,
@@ -8,7 +8,6 @@ use crate::{
     PostgresAdapter,
 };
 use chrono::{DateTime, Duration, Utc};
-use error_stack::{report, ResultExt};
 use fiskeridir_rs::{Gear, GearGroup, LandingId, SpeciesGroup, VesselLengthGroup};
 use futures::Stream;
 use futures::TryStreamExt;
@@ -24,9 +23,7 @@ use std::collections::{HashMap, HashSet};
 use unnest_insert::{UnnestInsert, UnnestInsertReturning};
 
 impl PostgresAdapter {
-    pub(crate) async fn reset_trip_processing_conflicts_impl(
-        &self,
-    ) -> Result<(), PostgresErrorWrapper> {
+    pub(crate) async fn reset_trip_processing_conflicts_impl(&self) -> Result<()> {
         let mut tx = self.pool.begin().await?;
 
         sqlx::query!(
@@ -73,9 +70,7 @@ TRUNCATE earliest_vms_insertion
 
         Ok(())
     }
-    pub(crate) async fn trip_assembler_log_impl(
-        &self,
-    ) -> Result<Vec<TripAssemblerLogEntry>, PostgresErrorWrapper> {
+    pub(crate) async fn trip_assembler_log_impl(&self) -> Result<Vec<TripAssemblerLogEntry>> {
         Ok(sqlx::query_as!(
             TripAssemblerLogEntry,
             r#"
@@ -104,7 +99,7 @@ FROM
         trip_id: TripId,
         output: TripPositionLayerOutput,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<(), PostgresErrorWrapper> {
+    ) -> Result<()> {
         let mut trip_positions = Vec::with_capacity(output.trip_positions.len());
         let mut pruned_positions = Vec::with_capacity(output.pruned_positions.len());
 
@@ -181,7 +176,7 @@ WHERE
         &self,
         outputs: Vec<(TripId, TripPositionLayerOutput)>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<(), PostgresErrorWrapper> {
+    ) -> Result<()> {
         let mut trip_positions = Vec::with_capacity(outputs.len());
         let mut pruned_positions = Vec::with_capacity(outputs.len());
 
@@ -228,7 +223,7 @@ WHERE
     pub(crate) async fn clear_trip_precision_impl(
         &self,
         vessel_id: FiskeridirVesselId,
-    ) -> Result<(), PostgresErrorWrapper> {
+    ) -> Result<()> {
         sqlx::query!(
             r#"
 UPDATE trips
@@ -252,7 +247,7 @@ WHERE
     pub(crate) async fn clear_trip_distancing_impl(
         &self,
         vessel_id: FiskeridirVesselId,
-    ) -> Result<(), PostgresErrorWrapper> {
+    ) -> Result<()> {
         sqlx::query!(
             r#"
 UPDATE trips
@@ -269,10 +264,7 @@ WHERE
         Ok(())
     }
 
-    pub(crate) async fn update_trip_impl(
-        &self,
-        update: TripUpdate,
-    ) -> Result<(), PostgresErrorWrapper> {
+    pub(crate) async fn update_trip_impl(&self, update: TripUpdate) -> Result<()> {
         let mut tx = self.pool.begin().await?;
 
         if let Some(output) = update.position_layers {
@@ -367,7 +359,7 @@ WHERE
         Ok(())
     }
 
-    pub(crate) async fn queue_trip_reset_impl(&self) -> Result<(), PostgresErrorWrapper> {
+    pub(crate) async fn queue_trip_reset_impl(&self) -> Result<()> {
         sqlx::query!(
             r#"
 UPDATE trip_calculation_timers
@@ -385,7 +377,7 @@ SET
         &self,
         vessel_id: FiskeridirVesselId,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<Option<DateTime<Utc>>, PostgresErrorWrapper> {
+    ) -> Result<Option<DateTime<Utc>>> {
         Ok(sqlx::query!(
             r#"
 SELECT
@@ -406,7 +398,7 @@ WHERE
         &self,
         vessel_id: FiskeridirVesselId,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<(), PostgresErrorWrapper> {
+    ) -> Result<()> {
         sqlx::query!(
             r#"
 UPDATE trips_refresh_boundary
@@ -427,7 +419,7 @@ WHERE
         &self,
         trip_ids: HashSet<i64>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<(), PostgresErrorWrapper> {
+    ) -> Result<()> {
         let trip_ids: Vec<i64> = trip_ids.into_iter().collect();
 
         if trip_ids.is_empty() {
@@ -715,7 +707,7 @@ WHERE
     pub(crate) async fn sum_trip_time_impl(
         &self,
         id: FiskeridirVesselId,
-    ) -> Result<Option<Duration>, PostgresErrorWrapper> {
+    ) -> Result<Option<Duration>> {
         let duration = sqlx::query!(
             r#"
 SELECT
@@ -739,10 +731,7 @@ WHERE
         &self,
         query: TripsQuery,
         read_fishing_facility: bool,
-    ) -> Result<
-        impl Stream<Item = Result<TripDetailed, PostgresErrorWrapper>> + '_,
-        PostgresErrorWrapper,
-    > {
+    ) -> Result<impl Stream<Item = Result<TripDetailed>> + '_> {
         let order_by = match (query.ordering, query.sorting) {
             (Ordering::Asc, TripSorting::StopDate) => 1,
             (Ordering::Asc, TripSorting::Weight) => 2,
@@ -880,7 +869,7 @@ LIMIT
     pub(crate) async fn detailed_trips_by_ids_impl(
         &self,
         trip_ids: &[TripId],
-    ) -> Result<Vec<TripDetailed>, PostgresErrorWrapper> {
+    ) -> Result<Vec<TripDetailed>> {
         let ids = trip_ids.iter().map(|t| t.0).collect::<Vec<_>>();
 
         let trips = sqlx::query_as!(
@@ -927,9 +916,7 @@ WHERE
         Ok(trips)
     }
 
-    pub(crate) async fn all_trip_cache_versions_impl(
-        &self,
-    ) -> Result<Vec<(TripId, i64)>, PostgresErrorWrapper> {
+    pub(crate) async fn all_trip_cache_versions_impl(&self) -> Result<Vec<(TripId, i64)>> {
         Ok(sqlx::query!(
             r#"
 SELECT
@@ -950,7 +937,7 @@ FROM
         &self,
         haul_id: &HaulId,
         read_fishing_facility: bool,
-    ) -> Result<Option<TripDetailed>, PostgresErrorWrapper> {
+    ) -> Result<Option<TripDetailed>> {
         let trips = sqlx::query_as!(
             TripDetailed,
             r#"
@@ -1003,7 +990,7 @@ WHERE
         &self,
         landing_id: &LandingId,
         read_fishing_facility: bool,
-    ) -> Result<Option<TripDetailed>, PostgresErrorWrapper> {
+    ) -> Result<Option<TripDetailed>> {
         let trips = sqlx::query_as!(
             TripDetailed,
             r#"
@@ -1056,7 +1043,7 @@ WHERE
         &self,
         vessel_id: FiskeridirVesselId,
         read_fishing_facility: bool,
-    ) -> Result<Option<CurrentTrip>, PostgresErrorWrapper> {
+    ) -> Result<Option<CurrentTrip>> {
         let trip = sqlx::query_as!(
             CurrentTrip,
             r#"
@@ -1214,7 +1201,7 @@ LIMIT
         &self,
         vessel_id: FiskeridirVesselId,
         trip_assembler_id: TripAssemblerId,
-    ) -> Result<Option<TripCalculationTimer>, PostgresErrorWrapper> {
+    ) -> Result<Option<TripCalculationTimer>> {
         let timer = sqlx::query_as!(
             TripCalculationTimer,
             r#"
@@ -1245,7 +1232,7 @@ WHERE
         &'a self,
         batch: NewTripAssemblerLogEntry,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<(), PostgresErrorWrapper> {
+    ) -> Result<()> {
         let prior_trip_vessel_events = serde_json::to_value(&batch.prior_trip_vessel_events)?;
         let new_vessel_events = serde_json::to_value(&batch.new_vessel_events)?;
 
@@ -1284,10 +1271,7 @@ VALUES
         Ok(())
     }
 
-    pub(crate) async fn add_trip_set_impl(
-        &self,
-        value: TripSet,
-    ) -> Result<(), PostgresErrorWrapper> {
+    pub(crate) async fn add_trip_set_impl(&self, value: TripSet) -> Result<()> {
         let earliest_trip_period = value
             .values
             .iter()
@@ -1394,7 +1378,7 @@ WHERE
             TripsConflictStrategy::Error => Ok(()),
         }?;
 
-        let start_of_prior_trip: Result<Option<Option<DateTime<Utc>>>, PostgresErrorWrapper> =
+        let start_of_prior_trip: Result<Option<Option<DateTime<Utc>>>> =
             match value.trip_assembler_id {
                 TripAssemblerId::Landings => Ok(None),
                 TripAssemblerId::Ers => Ok(sqlx::query!(
@@ -1446,11 +1430,9 @@ RETURNING
         // as trips cannot overlap we are guranteed that the start of trips are unique
         let mut trip_positions_with_trip_id = Vec::with_capacity(trip_positions.len());
         for (positions, period_start) in trip_positions {
-            let trip_id = trip_positions_insert_mapping.remove(&period_start).ok_or(
-                report!(PostgresError::DataConversion).attach_printable(
-                    "could not map inserted trip to back to its corresponding trip positions",
-                ),
-            )?;
+            let trip_id = trip_positions_insert_mapping
+                .remove(&period_start)
+                .ok_or_else(|| TripPositionMatchSnafu.build())?;
 
             trip_positions_with_trip_id.push((trip_id, positions));
         }
@@ -1502,9 +1484,7 @@ WHERE
         self.reset_trips_refresh_boundary(value.fiskeridir_vessel_id, &mut tx)
             .await?;
 
-        tx.commit()
-            .await
-            .change_context(PostgresError::Transaction)?;
+        tx.commit().await?;
 
         Ok(())
     }
@@ -1512,7 +1492,7 @@ WHERE
     pub(crate) async fn refresh_detailed_trips_impl(
         &self,
         vessel_id: FiskeridirVesselId,
-    ) -> Result<(), PostgresErrorWrapper> {
+    ) -> Result<()> {
         let mut tx = self.pool.begin().await?;
 
         let boundary = self.trips_refresh_boundary(vessel_id, &mut tx).await?;
@@ -1542,9 +1522,7 @@ WHERE
                 .await?;
         }
 
-        tx.commit()
-            .await
-            .change_context(PostgresError::Transaction)?;
+        tx.commit().await?;
 
         Ok(())
     }
@@ -1554,7 +1532,7 @@ WHERE
         trips: Vec<NewTripReturning>,
         trip_assembler_id: TripAssemblerId,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<(), PostgresErrorWrapper> {
+    ) -> Result<()> {
         let len = trips.len();
         let mut trip_id = Vec::with_capacity(len);
         let mut period = Vec::with_capacity(len);
@@ -1642,7 +1620,7 @@ WHERE
         &self,
         vessel_id: FiskeridirVesselId,
         time: &DateTime<Utc>,
-    ) -> Result<Option<Trip>, PostgresErrorWrapper> {
+    ) -> Result<Option<Trip>> {
         let trip = sqlx::query_as!(
             Trip,
             r#"
@@ -1680,7 +1658,7 @@ LIMIT
         &self,
         vessel_id: FiskeridirVesselId,
         time: &DateTime<Utc>,
-    ) -> Result<Option<Trip>, PostgresErrorWrapper> {
+    ) -> Result<Option<Trip>> {
         let trip = sqlx::query_as!(
             Trip,
             r#"
@@ -1717,7 +1695,7 @@ LIMIT
     pub(crate) async fn trips_without_precision_impl(
         &self,
         vessel_id: FiskeridirVesselId,
-    ) -> Result<Vec<Trip>, PostgresErrorWrapper> {
+    ) -> Result<Vec<Trip>> {
         let trips = sqlx::query_as!(
             Trip,
             r#"
@@ -1750,7 +1728,7 @@ WHERE
     pub(crate) async fn trips_without_trip_layers_impl(
         &self,
         vessel_id: FiskeridirVesselId,
-    ) -> Result<Vec<Trip>, PostgresErrorWrapper> {
+    ) -> Result<Vec<Trip>> {
         let trips = sqlx::query_as!(
             Trip,
             r#"
@@ -1783,7 +1761,7 @@ WHERE
     pub(crate) async fn trips_without_distance_impl(
         &self,
         vessel_id: FiskeridirVesselId,
-    ) -> Result<Vec<Trip>, PostgresErrorWrapper> {
+    ) -> Result<Vec<Trip>> {
         let trips = sqlx::query_as!(
             Trip,
             r#"
@@ -1817,7 +1795,7 @@ WHERE
         event_ids: Vec<i64>,
         event_type: VesselEventType,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<(), PostgresErrorWrapper> {
+    ) -> Result<()> {
         match event_type {
             VesselEventType::Landing => self.connect_trip_to_landing_events(event_ids, tx).await,
             VesselEventType::ErsDep => self.connect_trip_to_ers_dep_events(event_ids, tx).await,
@@ -1833,7 +1811,7 @@ WHERE
         &'a self,
         event_ids: Vec<i64>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<(), PostgresErrorWrapper> {
+    ) -> Result<()> {
         sqlx::query!(
             r#"
 UPDATE vessel_events v
@@ -1860,7 +1838,7 @@ WHERE
         &'a self,
         event_ids: Vec<i64>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<(), PostgresErrorWrapper> {
+    ) -> Result<()> {
         sqlx::query!(
             r#"
 UPDATE vessel_events v
@@ -1887,7 +1865,7 @@ WHERE
         &'a self,
         event_ids: Vec<i64>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<(), PostgresErrorWrapper> {
+    ) -> Result<()> {
         sqlx::query!(
             r#"
 UPDATE vessel_events v
@@ -1914,7 +1892,7 @@ WHERE
         &'a self,
         event_ids: Vec<i64>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<(), PostgresErrorWrapper> {
+    ) -> Result<()> {
         sqlx::query!(
             r#"
 UPDATE vessel_events v
@@ -1942,7 +1920,7 @@ WHERE
         conflicts: Vec<NewTripAssemblerConflict>,
         assembler_id: TripAssemblerId,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<(), PostgresErrorWrapper> {
+    ) -> Result<()> {
         let len = conflicts.len();
         let mut vessel_id = Vec::with_capacity(len);
         let mut timestamp = Vec::with_capacity(len);

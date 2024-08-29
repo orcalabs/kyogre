@@ -1,9 +1,8 @@
 use crate::{
-    error::PostgresError,
+    error::Result,
     models::{NewGearFao, NewGearProblem},
     PostgresAdapter,
 };
-use error_stack::{Result, ResultExt};
 use unnest_insert::UnnestInsert;
 
 impl PostgresAdapter {
@@ -11,21 +10,17 @@ impl PostgresAdapter {
         &self,
         gear: Vec<NewGearFao>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<(), PostgresError> {
-        NewGearFao::unnest_insert(gear, &mut **tx)
-            .await
-            .change_context(PostgresError::Query)
-            .map(|_| ())
+    ) -> Result<()> {
+        NewGearFao::unnest_insert(gear, &mut **tx).await?;
+        Ok(())
     }
 
     pub(crate) async fn add_gear_problems<'a>(
         &self,
         gear: Vec<NewGearProblem>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<(), PostgresError> {
-        NewGearProblem::unnest_insert(gear, &mut **tx)
-            .await
-            .change_context(PostgresError::Query)
-            .map(|_| ())
+    ) -> Result<()> {
+        NewGearProblem::unnest_insert(gear, &mut **tx).await?;
+        Ok(())
     }
 }

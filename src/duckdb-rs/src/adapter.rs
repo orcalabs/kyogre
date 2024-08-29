@@ -1,16 +1,20 @@
+use crate::{
+    api::matrix_cache::LandingMatrix,
+    error::{error::RefreshCommunictionSnafu, Error, Result},
+    filter::{HaulFilters, LandingFilters},
+    refresher::{DuckdbRefresher, RefreshRequest},
+};
 use duckdb::DuckdbConnectionManager;
-use error_stack::{report, Context, Result, ResultExt};
-use kyogre_core::*;
+use kyogre_core::{
+    calculate_haul_sum_area_table, calculate_landing_sum_area_table, HaulMatrixQueryOutput,
+    HaulMatrixXFeature, HaulMatrixYFeature, HaulsMatrix, HaulsMatrixQuery, LandingMatrixQuery,
+    LandingMatrixQueryOutput, LandingMatrixXFeature, LandingMatrixYFeature,
+};
 use orca_core::PsqlSettings;
 use serde::Deserialize;
 use std::path::PathBuf;
 use tokio::sync::mpsc::{self, Sender};
 use tracing::{error, info};
-
-use crate::{
-    filter::{HaulFilters, LandingFilters},
-    refresher::{DuckdbRefresher, RefreshRequest},
-};
 
 #[derive(Clone)]
 pub struct DuckdbAdapter {
@@ -46,17 +50,16 @@ impl DuckdbAdapter {
     pub fn new(
         settings: &DuckdbSettings,
         postgres_settings: PsqlSettings,
-    ) -> Result<DuckdbAdapter, DuckdbError> {
+    ) -> Result<DuckdbAdapter> {
         let manager = match &settings.storage {
-            CacheStorage::Memory => {
-                DuckdbConnectionManager::memory().change_context(DuckdbError::Connection)
-            }
+            CacheStorage::Memory => DuckdbConnectionManager::memory(),
             CacheStorage::Disk(path) => match DuckdbConnectionManager::file(path) {
                 Err(e) => {
-                    error!("failed to open duckdb: {e}");
+                    let err: Error = e.into();
+                    error!("failed to open duckdb: {err:?}");
                     info!("trying to delete db file and re-open...");
-                    std::fs::remove_file(path).change_context(DuckdbError::Connection)?;
-                    DuckdbConnectionManager::file(path).change_context(DuckdbError::Connection)
+                    std::fs::remove_file(path)?;
+                    DuckdbConnectionManager::file(path)
                 }
                 Ok(v) => Ok(v),
             },
@@ -64,8 +67,7 @@ impl DuckdbAdapter {
 
         let pool = r2d2::Pool::builder()
             .max_size(settings.max_connections)
-            .build(manager)
-            .change_context(DuckdbError::Connection)?;
+            .build(manager)?;
 
         let (sender, recv) = mpsc::channel(1);
 
@@ -88,22 +90,17 @@ impl DuckdbAdapter {
         Ok(adapter)
     }
 
-    pub async fn refresh(&self) -> Result<(), DuckdbError> {
+    pub async fn refresh(&self) -> Result<()> {
         let (sender, mut recv) = mpsc::channel(1);
-        match self.refresh_queue.send(RefreshRequest(sender)).await {
-            Err(e) => Err(report!(DuckdbError::RefreshCommunication).attach_printable(e)),
-            Ok(_) => match recv.recv().await {
-                Some(v) => v.0,
-                None => Err(report!(DuckdbError::RefreshCommunication)),
-            },
+        self.refresh_queue.send(RefreshRequest(sender)).await?;
+        match recv.recv().await {
+            Some(v) => v.0,
+            None => RefreshCommunictionSnafu {}.fail(),
         }
     }
 
-    pub fn hauls_matrix(
-        &self,
-        query: &HaulsMatrixQuery,
-    ) -> Result<Option<HaulsMatrix>, QueryError> {
-        let res = self.hauls_matrix_impl(query).change_context(QueryError);
+    pub fn hauls_matrix(&self, query: &HaulsMatrixQuery) -> Result<Option<HaulsMatrix>> {
+        let res = self.hauls_matrix_impl(query);
         match self.cache_mode {
             CacheMode::MissOnError => match res {
                 Ok(v) => Ok(v),
@@ -116,11 +113,8 @@ impl DuckdbAdapter {
         }
     }
 
-    pub fn landing_matrix(
-        &self,
-        query: &LandingMatrixQuery,
-    ) -> Result<Option<LandingMatrix>, QueryError> {
-        let res = self.landing_matrix_impl(query).change_context(QueryError);
+    pub fn landing_matrix(&self, query: &LandingMatrixQuery) -> Result<Option<LandingMatrix>> {
+        let res = self.landing_matrix_impl(query);
         match self.cache_mode {
             CacheMode::MissOnError => match res {
                 Ok(v) => Ok(v),
@@ -133,11 +127,8 @@ impl DuckdbAdapter {
         }
     }
 
-    fn landing_matrix_impl(
-        &self,
-        params: &LandingMatrixQuery,
-    ) -> Result<Option<LandingMatrix>, DuckdbError> {
-        let conn = self.pool.get().change_context(DuckdbError::Connection)?;
+    fn landing_matrix_impl(&self, params: &LandingMatrixQuery) -> Result<Option<LandingMatrix>> {
+        let conn = self.pool.get()?;
         let dates = self.get_landing_matrix(&conn, LandingMatrixXFeature::Date, params)?;
         let length_group =
             self.get_landing_matrix(&conn, LandingMatrixXFeature::VesselLength, params)?;
@@ -159,11 +150,8 @@ impl DuckdbAdapter {
         }
     }
 
-    fn hauls_matrix_impl(
-        &self,
-        params: &HaulsMatrixQuery,
-    ) -> Result<Option<HaulsMatrix>, DuckdbError> {
-        let conn = self.pool.get().change_context(DuckdbError::Connection)?;
+    fn hauls_matrix_impl(&self, params: &HaulsMatrixQuery) -> Result<Option<HaulsMatrix>> {
+        let conn = self.pool.get()?;
         let dates = self.get_haul_matrix(&conn, HaulMatrixXFeature::Date, params)?;
         let length_group = self.get_haul_matrix(&conn, HaulMatrixXFeature::VesselLength, params)?;
         let gear_group = self.get_haul_matrix(&conn, HaulMatrixXFeature::GearGroup, params)?;
@@ -188,7 +176,7 @@ impl DuckdbAdapter {
         conn: &r2d2::PooledConnection<DuckdbConnectionManager>,
         x_feature: LandingMatrixXFeature,
         params: &LandingMatrixQuery,
-    ) -> Result<Option<Vec<u64>>, DuckdbError> {
+    ) -> Result<Option<Vec<u64>>> {
         let y_feature = if x_feature == params.active_filter {
             LandingMatrixYFeature::CatchLocation
         } else {
@@ -211,19 +199,18 @@ FROM
         sql.push_str(&filter.query_string());
         sql.push_str("group by 1,2");
 
-        let mut stmt = conn.prepare(&sql).change_context(DuckdbError::Query)?;
+        let mut stmt = conn.prepare(&sql)?;
 
-        let rows = stmt.query([]).change_context(DuckdbError::Query)?;
+        let rows = stmt.query([])?;
 
-        let data = get_landing_matrix_output(rows).change_context(DuckdbError::Conversion)?;
+        let data = get_landing_matrix_output(rows)?;
 
         if data.is_empty() {
             Ok(None)
         } else {
-            Ok(Some(
-                calculate_landing_sum_area_table(x_feature, y_feature, data)
-                    .change_context(DuckdbError::Conversion)?,
-            ))
+            Ok(Some(calculate_landing_sum_area_table(
+                x_feature, y_feature, data,
+            )?))
         }
     }
 
@@ -232,7 +219,7 @@ FROM
         conn: &r2d2::PooledConnection<DuckdbConnectionManager>,
         x_feature: HaulMatrixXFeature,
         params: &HaulsMatrixQuery,
-    ) -> Result<Option<Vec<u64>>, DuckdbError> {
+    ) -> Result<Option<Vec<u64>>> {
         let y_feature = if x_feature == params.active_filter {
             HaulMatrixYFeature::CatchLocation
         } else {
@@ -255,26 +242,23 @@ FROM
         sql.push_str(&filter.query_string());
         sql.push_str("group by 1,2");
 
-        let mut stmt = conn.prepare(&sql).change_context(DuckdbError::Query)?;
+        let mut stmt = conn.prepare(&sql)?;
 
-        let rows = stmt.query([]).change_context(DuckdbError::Query)?;
+        let rows = stmt.query([])?;
 
-        let data = get_haul_matrix_output(rows).change_context(DuckdbError::Conversion)?;
+        let data = get_haul_matrix_output(rows)?;
 
         if data.is_empty() {
             Ok(None)
         } else {
-            Ok(Some(
-                calculate_haul_sum_area_table(x_feature, y_feature, data)
-                    .change_context(DuckdbError::Conversion)?,
-            ))
+            Ok(Some(calculate_haul_sum_area_table(
+                x_feature, y_feature, data,
+            )?))
         }
     }
 }
 
-fn get_landing_matrix_output(
-    mut rows: duckdb::Rows<'_>,
-) -> std::result::Result<Vec<LandingMatrixQueryOutput>, duckdb::Error> {
+fn get_landing_matrix_output(mut rows: duckdb::Rows<'_>) -> Result<Vec<LandingMatrixQueryOutput>> {
     let mut data = Vec::new();
     while let Some(row) = rows.next()? {
         data.push(LandingMatrixQueryOutput {
@@ -287,9 +271,7 @@ fn get_landing_matrix_output(
     Ok(data)
 }
 
-fn get_haul_matrix_output(
-    mut rows: duckdb::Rows<'_>,
-) -> std::result::Result<Vec<HaulMatrixQueryOutput>, duckdb::Error> {
+fn get_haul_matrix_output(mut rows: duckdb::Rows<'_>) -> Result<Vec<HaulMatrixQueryOutput>> {
     let mut data = Vec::new();
     while let Some(row) = rows.next()? {
         data.push(HaulMatrixQueryOutput {
@@ -301,26 +283,3 @@ fn get_haul_matrix_output(
 
     Ok(data)
 }
-
-#[derive(Debug)]
-pub enum DuckdbError {
-    Connection,
-    Query,
-    Conversion,
-    RefreshCommunication,
-}
-
-impl std::fmt::Display for DuckdbError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            DuckdbError::Connection => f.write_str("failed to establish connection with duckdb"),
-            DuckdbError::Query => f.write_str("failed to perfom a query"),
-            DuckdbError::Conversion => f.write_str("failed to convert output of query"),
-            DuckdbError::RefreshCommunication => {
-                f.write_str("failed to communicate with the refresh task")
-            }
-        }
-    }
-}
-
-impl Context for DuckdbError {}

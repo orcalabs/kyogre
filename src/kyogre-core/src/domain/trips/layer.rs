@@ -1,5 +1,4 @@
 use crate::*;
-use error_stack::Result;
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use strum::{AsRefStr, EnumString};
 
@@ -8,7 +7,7 @@ pub trait TripPositionLayer: Send + Sync {
     fn prune_positions(
         &self,
         positions: Vec<AisVmsPosition>,
-    ) -> Result<(Vec<AisVmsPosition>, Vec<PrunedTripPosition>), TripLayerError>;
+    ) -> CoreResult<(Vec<AisVmsPosition>, Vec<PrunedTripPosition>)>;
 }
 
 #[cfg_attr(feature = "sqlx", derive(sqlx::Type))]

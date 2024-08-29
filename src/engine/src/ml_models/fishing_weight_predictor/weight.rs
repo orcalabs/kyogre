@@ -1,10 +1,9 @@
 use crate::{ml_models::lunar_value, WeightPredictorSettings};
 use async_trait::async_trait;
 use chrono::Datelike;
-use error_stack::Result;
 use fiskeridir_rs::SpeciesGroup;
 use kyogre_core::{
-    MLModel, MLModelError, MLModelsInbound, MLModelsOutbound, ModelId, TrainingOutput, WeatherData,
+    CoreResult, MLModel, MLModelsInbound, MLModelsOutbound, ModelId, TrainingOutput, WeatherData,
     EARLIEST_ERS_DATE,
 };
 use serde::Serialize;
@@ -41,8 +40,8 @@ impl MLModel for FishingWeightPredictor {
         model: Vec<u8>,
         species: SpeciesGroup,
         adapter: &dyn MLModelsOutbound,
-    ) -> Result<TrainingOutput, MLModelError> {
-        weight_train_impl(
+    ) -> CoreResult<TrainingOutput> {
+        Ok(weight_train_impl(
             self.id(),
             species,
             &self.settings,
@@ -67,7 +66,7 @@ impl MLModel for FishingWeightPredictor {
                 data
             },
         )
-        .await
+        .await?)
     }
 
     #[instrument(skip_all)]
@@ -76,8 +75,8 @@ impl MLModel for FishingWeightPredictor {
         model: &[u8],
         species: SpeciesGroup,
         adapter: &dyn MLModelsInbound,
-    ) -> Result<(), MLModelError> {
-        weight_predict_impl(
+    ) -> CoreResult<()> {
+        Ok(weight_predict_impl(
             self.id(),
             species,
             &self.settings,
@@ -102,7 +101,7 @@ impl MLModel for FishingWeightPredictor {
                 data
             },
         )
-        .await
+        .await?)
     }
 }
 

@@ -1,10 +1,9 @@
 use crate::{
-    error::{AisMessageProcessingError, ConsumerError},
+    error::{error::StreamClosedSnafu, Result},
     models::{
         AisMessage, AisMessageType, AisPosition, AisStatic, MessageType, NewAisPositionWrapper,
     },
 };
-use error_stack::{bail, Result, ResultExt};
 use futures::StreamExt;
 use kyogre_core::{DataMessage, NewAisStatic};
 use tokio::io::AsyncRead;
@@ -24,7 +23,7 @@ impl Consumer {
         self,
         source: impl AsyncRead + Unpin,
         sender: Sender<DataMessage>,
-    ) -> Result<(), ConsumerError> {
+    ) -> Result<()> {
         let codec = LinesCodec::new_with_max_length(1000);
         let mut framed_read = FramedRead::new(source, codec);
 
@@ -39,7 +38,7 @@ impl Consumer {
                 message = framed_read.next() => {
                     match message {
                         Some(message) => buffer.push(message),
-                        None => bail!(ConsumerError::StreamClosed),
+                        None => return StreamClosedSnafu{}.fail(),
                     }
                 }
                 _ = interval.tick() => {
@@ -53,7 +52,7 @@ impl Consumer {
 }
 
 #[instrument(skip(messages, sender), fields(app.num_messages))]
-async fn process_messages<T>(messages: T, sender: &Sender<DataMessage>) -> Result<(), ConsumerError>
+async fn process_messages<T>(messages: T, sender: &Sender<DataMessage>) -> Result<()>
 where
     T: IntoIterator<Item = std::result::Result<String, LinesCodecError>>,
 {
@@ -81,29 +80,23 @@ where
     }
 
     // Can only fail if the channel is closed.
-    sender
-        .send(data_message)
-        .change_context(ConsumerError::InternalChannelClosed)?;
+    sender.send(data_message)?;
 
     tracing::Span::current().record("app.num_messages", num_messages);
 
     Ok(())
 }
 
-fn parse_message(message: String) -> Result<AisMessage, AisMessageProcessingError> {
-    let message_type: MessageType =
-        serde_json::from_str(&message).change_context(AisMessageProcessingError)?;
+fn parse_message(message: String) -> Result<AisMessage> {
+    let message_type: MessageType = serde_json::from_str(&message)?;
 
     match message_type.message_type {
         AisMessageType::Position => {
-            let val: AisPosition =
-                serde_json::from_str(&message).change_context(AisMessageProcessingError)?;
-
+            let val: AisPosition = serde_json::from_str(&message)?;
             Ok(AisMessage::Position(val))
         }
         AisMessageType::Static => {
-            let val: AisStatic =
-                serde_json::from_str(&message).change_context(AisMessageProcessingError)?;
+            let val: AisStatic = serde_json::from_str(&message)?;
             Ok(AisMessage::Static(val))
         }
     }

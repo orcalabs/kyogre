@@ -1,7 +1,7 @@
-use error_stack::{report, Result};
+use crate::error::{error::DistanceEstimationSnafu, Result};
 use geoutils::Location;
 use kyogre_core::{
-    AisVmsPosition, PrunedTripPosition, TripLayerError, TripPositionLayer, TripPositionLayerId,
+    AisVmsPosition, CoreResult, PrunedTripPosition, TripPositionLayer, TripPositionLayerId,
 };
 use serde_json::json;
 
@@ -21,7 +21,7 @@ impl TripPositionLayer for UnrealisticSpeed {
     fn prune_positions(
         &self,
         positions: Vec<AisVmsPosition>,
-    ) -> Result<(Vec<AisVmsPosition>, Vec<PrunedTripPosition>), TripLayerError> {
+    ) -> CoreResult<(Vec<AisVmsPosition>, Vec<PrunedTripPosition>)> {
         let num_positions = positions.len();
         if num_positions <= 1 {
             return Ok((positions, vec![]));
@@ -66,16 +66,18 @@ impl TripPositionLayer for UnrealisticSpeed {
     }
 }
 
-fn estimated_speed_between_points(
-    first: &AisVmsPosition,
-    second: &AisVmsPosition,
-) -> Result<u32, TripLayerError> {
+fn estimated_speed_between_points(first: &AisVmsPosition, second: &AisVmsPosition) -> Result<u32> {
     let first_loc = Location::new(first.latitude, first.longitude);
     let second_loc = Location::new(second.latitude, second.longitude);
 
-    let distance = first_loc
-        .distance_to(&second_loc)
-        .map_err(|e| report!(TripLayerError).attach_printable(e))?;
+    let distance = first_loc.distance_to(&second_loc).map_err(|e| {
+        DistanceEstimationSnafu {
+            from: first_loc,
+            to: second_loc,
+            error_stringified: e.clone(),
+        }
+        .build()
+    })?;
 
     let time_diff = second.timestamp - first.timestamp;
     let estimated_speed = (distance.meters() * METER_TO_NAUTICAL_MILES)

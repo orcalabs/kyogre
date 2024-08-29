@@ -2,12 +2,12 @@ use std::cmp::min;
 use std::collections::HashSet;
 use std::sync::Arc;
 
+use crate::SharedState;
 use crate::{
-    DateRange, HaulWeatherOutput, HaulWeatherStatus, OceanClimateQuery, Vessel, WeatherQuery,
+    error::Result, DateRange, HaulWeatherOutput, HaulWeatherStatus, OceanClimateQuery, Vessel,
+    WeatherQuery,
 };
-use crate::{HaulWeatherError, SharedState};
 use async_trait::async_trait;
-use error_stack::{Result, ResultExt};
 use geo::{coord, Contains};
 use kyogre_core::{HaulWeatherOutbound, WeatherLocation};
 use machine::Schedule;
@@ -42,12 +42,8 @@ impl machine::State for HaulWeatherState {
 }
 
 #[instrument(name = "run_haul_weather", skip_all)]
-async fn process_haul_weather(shared_state: Arc<SharedState>) -> Result<(), HaulWeatherError> {
-    let vessels = shared_state
-        .haul_weather_outbound
-        .all_vessels()
-        .await
-        .change_context(HaulWeatherError)?;
+async fn process_haul_weather(shared_state: Arc<SharedState>) -> Result<()> {
+    let vessels = shared_state.haul_weather_outbound.all_vessels().await?;
 
     if vessels.is_empty() {
         return Ok(());
@@ -56,15 +52,14 @@ async fn process_haul_weather(shared_state: Arc<SharedState>) -> Result<(), Haul
     let weather_locations = shared_state
         .haul_weather_outbound
         .weather_locations()
-        .await
-        .change_context(HaulWeatherError)?;
+        .await?;
 
     let weather_locations = Arc::new(weather_locations);
 
     let num_vessels = vessels.len();
     let num_workers = min(shared_state.num_workers as usize, num_vessels);
 
-    let (master_tx, mut master_rx) = channel::<Result<_, _>>(10);
+    let (master_tx, mut master_rx) = channel::<Result<_>>(10);
     let (worker_tx, worker_rx) = channel::<Vessel>(num_vessels);
     let worker_rx = Arc::new(Mutex::new(worker_rx));
 
@@ -126,7 +121,7 @@ async fn process(
     vessel: &Vessel,
     weather_locations: &[WeatherLocation],
     outbound: &dyn HaulWeatherOutbound,
-) -> Result<Option<Vec<HaulWeatherOutput>>, HaulWeatherError> {
+) -> Result<Option<Vec<HaulWeatherOutput>>> {
     let mmsi = vessel.ais.as_ref().map(|a| a.mmsi);
     let call_sign = vessel.fiskeridir.call_sign.as_ref();
 
@@ -136,19 +131,14 @@ async fn process(
 
     let hauls = outbound
         .haul_messages_of_vessel_without_weather(vessel.fiskeridir.id)
-        .await
-        .change_context(HaulWeatherError)?;
+        .await?;
 
     let mut outputs = Vec::with_capacity(hauls.len());
 
     for h in hauls {
-        let range =
-            DateRange::new(h.start_timestamp, h.stop_timestamp).change_context(HaulWeatherError)?;
+        let range = DateRange::new(h.start_timestamp, h.stop_timestamp)?;
 
-        let positions = outbound
-            .ais_vms_positions(mmsi, call_sign, &range)
-            .await
-            .change_context(HaulWeatherError)?;
+        let positions = outbound.ais_vms_positions(mmsi, call_sign, &range).await?;
 
         if positions.is_empty() {
             outputs.push(HaulWeatherOutput {
@@ -189,8 +179,7 @@ async fn process(
                 end_date: h.stop_timestamp,
                 weather_location_ids: Some(locations.clone()),
             })
-            .await
-            .change_context(HaulWeatherError)?;
+            .await?;
 
         let ocean_climate = outbound
             .haul_ocean_climate(OceanClimateQuery {
@@ -199,8 +188,7 @@ async fn process(
                 depths: Some(vec![0]),
                 weather_location_ids: Some(locations),
             })
-            .await
-            .change_context(HaulWeatherError)?;
+            .await?;
 
         outputs.push(HaulWeatherOutput {
             haul_id: h.haul_id,

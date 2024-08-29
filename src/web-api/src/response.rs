@@ -1,11 +1,9 @@
+use crate::error::Result;
 use actix_web::{body::BoxBody, web::Bytes, HttpRequest, HttpResponse, Responder};
 use chrono::Duration;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
-use tracing::error;
 use utoipa::ToSchema;
-
-use crate::error::ApiError;
 
 pub static AIS_DETAILS_INTERVAL: Lazy<Duration> = Lazy::new(|| Duration::minutes(30));
 pub static MISSING_DATA_DURATION: Lazy<Duration> = Lazy::new(|| Duration::minutes(70));
@@ -41,13 +39,8 @@ where
     }
 }
 
-pub fn to_bytes<T: Serialize>(value: &T) -> Result<Bytes, ApiError> {
-    let json = serde_json::to_vec(value).map_err(|e| {
-        error!("failed to serialize value: {e:?}");
-        ApiError::InternalServerError
-    })?;
-
-    Ok(Bytes::from(json))
+pub fn to_bytes<T: Serialize>(value: &T) -> Result<Bytes> {
+    Ok(Bytes::from(serde_json::to_vec(value)?))
 }
 
 #[macro_export]
@@ -57,10 +50,10 @@ macro_rules! to_streaming_response {
         use async_stream::{__private::AsyncStream, try_stream};
         use futures::StreamExt;
 
-        use $crate::error::ApiError;
+        use $crate::error::Result;
         use $crate::response::to_bytes;
 
-        let stream: AsyncStream<Result<Bytes, ApiError>, _> = try_stream! {
+        let stream: AsyncStream<Result<Bytes>, _> = try_stream! {
             let mut stream = $stream;
 
             yield Bytes::from_static(b"[");
@@ -90,10 +83,10 @@ macro_rules! ais_to_streaming_response {
         use async_stream::{__private::AsyncStream, try_stream};
         use futures::{StreamExt, TryStreamExt};
 
-        use $crate::error::ApiError;
+        use $crate::error::Result;
         use $crate::response::{to_bytes, AIS_DETAILS_INTERVAL, MISSING_DATA_DURATION};
 
-        let stream: AsyncStream<Result<Bytes, ApiError>, _> = try_stream! {
+        let stream: AsyncStream<Result<Bytes>, _> = try_stream! {
             let mut stream = $stream.enumerate();
 
             yield web::Bytes::from_static(b"[");

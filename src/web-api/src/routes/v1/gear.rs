@@ -1,4 +1,4 @@
-use crate::{error::ApiError, response::Response};
+use crate::{error::Result, response::Response};
 use fiskeridir_rs::{Gear, GearGroup, MainGearGroup};
 use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, DisplayFromStr};
@@ -14,7 +14,7 @@ use utoipa::ToSchema;
     )
 )]
 #[tracing::instrument]
-pub async fn gear() -> Result<Response<Vec<GearDetailed>>, ApiError> {
+pub async fn gear() -> Result<Response<Vec<GearDetailed>>> {
     let gear: Vec<GearDetailed> = Gear::iter().map(GearDetailed::from).collect();
     Ok(Response::new(gear))
 }
@@ -28,7 +28,7 @@ pub async fn gear() -> Result<Response<Vec<GearDetailed>>, ApiError> {
     )
 )]
 #[tracing::instrument]
-pub async fn gear_groups() -> Result<Response<Vec<GearGroupDetailed>>, ApiError> {
+pub async fn gear_groups() -> Result<Response<Vec<GearGroupDetailed>>> {
     let gear: Vec<GearGroupDetailed> = GearGroup::iter().map(GearGroupDetailed::from).collect();
     Ok(Response::new(gear))
 }
@@ -42,7 +42,7 @@ pub async fn gear_groups() -> Result<Response<Vec<GearGroupDetailed>>, ApiError>
     )
 )]
 #[tracing::instrument]
-pub async fn gear_main_groups() -> Result<Response<Vec<GearMainGroupDetailed>>, ApiError> {
+pub async fn gear_main_groups() -> Result<Response<Vec<GearMainGroupDetailed>>> {
     let gear: Vec<GearMainGroupDetailed> = MainGearGroup::iter()
         .map(GearMainGroupDetailed::from)
         .collect();

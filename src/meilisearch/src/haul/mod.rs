@@ -1,7 +1,5 @@
-use error_stack::{Result, ResultExt};
+use crate::{error::Result, indexable::Indexable, query::Query, MeilisearchAdapter};
 use kyogre_core::HaulsQuery;
-
-use crate::{error::MeilisearchError, indexable::Indexable, query::Query, MeilisearchAdapter};
 
 mod filter;
 mod model;
@@ -10,10 +8,7 @@ pub use filter::*;
 pub use model::*;
 
 impl<T> MeilisearchAdapter<T> {
-    pub(crate) async fn hauls_impl(
-        &self,
-        query: HaulsQuery,
-    ) -> Result<Vec<kyogre_core::Haul>, MeilisearchError> {
+    pub(crate) async fn hauls_impl(&self, query: HaulsQuery) -> Result<Vec<kyogre_core::Haul>> {
         let query = Query::<HaulFilter, Option<HaulSort>, _>::from(query);
 
         let sort_string = query.sort_str_opt();
@@ -31,8 +26,7 @@ impl<T> MeilisearchAdapter<T> {
             .with_limit(usize::MAX)
             .with_sort(&sort)
             .execute::<Haul>()
-            .await
-            .change_context(MeilisearchError::Query)?;
+            .await?;
 
         let hauls = result
             .hits

@@ -1,11 +1,9 @@
-use std::str::FromStr;
-
-use crate::{models::ers_common::ErsVesselInfo, CallSign, Error};
+use crate::{error::error::JurisdictionSnafu, models::ers_common::ErsVesselInfo, CallSign, Error};
 use enum_index_derive::{EnumIndex, IndexEnum};
-use error_stack::{report, Report};
 use jurisdiction::Jurisdiction;
 use num_derive::FromPrimitive;
 use serde_repr::{Deserialize_repr, Serialize_repr};
+use std::str::FromStr;
 use strum_macros::{AsRefStr, EnumCount, EnumIter, EnumString};
 
 #[derive(Debug, Clone, PartialEq)]
@@ -156,7 +154,7 @@ impl From<VesselLengthGroup> for i32 {
 }
 
 impl TryFrom<ErsVesselInfo> for Vessel {
-    type Error = Report<Error>;
+    type Error = Error;
 
     fn try_from(v: ErsVesselInfo) -> Result<Self, Self::Error> {
         Ok(Self {
@@ -171,8 +169,16 @@ impl TryFrom<ErsVesselInfo> for Vessel {
             municipality_name: v.vessel_municipality,
             county_code: v.vessel_county_code,
             county: v.vessel_county,
-            nationality_code: Jurisdiction::from_str(&v.vessel_nationality_code.into_inner())
-                .map_err(|e| report!(Error::Conversion).attach_printable(e.to_string()))?,
+            nationality_code: Jurisdiction::from_str(v.vessel_nationality_code.as_ref()).map_err(
+                |e| {
+                    JurisdictionSnafu {
+                        error_stringified: e.to_string(),
+                        nation_code: v.vessel_nationality_code,
+                        nation: None,
+                    }
+                    .build()
+                },
+            )?,
             nation_group: None,
             length: Some(v.vessel_length),
             length_group_code: v

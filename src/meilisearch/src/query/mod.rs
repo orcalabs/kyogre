@@ -1,9 +1,6 @@
-use std::{collections::BTreeSet, fmt::Display};
-
-use error_stack::Result;
+use crate::error::Result;
 use kyogre_core::Ordering;
-
-use crate::error::MeilisearchError;
+use std::{collections::BTreeSet, fmt::Display};
 
 mod haul;
 mod landing;
@@ -20,11 +17,11 @@ impl<F, S, P> Query<F, S, P>
 where
     F: Filter,
 {
-    pub fn filter_strs(self) -> Result<Vec<String>, MeilisearchError> {
+    pub fn filter_strs(self) -> Result<Vec<String>> {
         self.filters
             .into_iter()
             .map(|f| f.filter_str())
-            .collect::<Result<_, _>>()
+            .collect::<Result<_>>()
     }
 }
 
@@ -47,7 +44,7 @@ where
 }
 
 pub trait Filter {
-    fn filter_str(self) -> Result<String, MeilisearchError>;
+    fn filter_str(self) -> Result<String>;
 }
 
 fn sort_str<S: Display>(sorting: S, ordering: Ordering) -> String {

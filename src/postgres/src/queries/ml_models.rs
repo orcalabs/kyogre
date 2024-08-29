@@ -1,4 +1,4 @@
-use crate::error::PostgresErrorWrapper;
+use crate::error::Result;
 use crate::models::{
     FishingSpotTrainingData, FishingWeightPrediction, MLTrainingLog, NewFishingSpotPrediction,
     NewFishingWeightPrediction, WeightPredictorTrainingData,
@@ -18,7 +18,7 @@ impl PostgresAdapter {
         model_id: ModelId,
         species: SpeciesGroup,
         hauls: Vec<TrainingHaul>,
-    ) -> Result<(), PostgresErrorWrapper> {
+    ) -> Result<()> {
         let insert: Vec<MLTrainingLog> = hauls
             .into_iter()
             .map(|v| MLTrainingLog {
@@ -39,7 +39,7 @@ impl PostgresAdapter {
         model_id: ModelId,
         model: &[u8],
         species: SpeciesGroup,
-    ) -> Result<(), PostgresErrorWrapper> {
+    ) -> Result<()> {
         sqlx::query!(
             r#"
 UPDATE ml_models
@@ -63,7 +63,7 @@ WHERE
         &self,
         model_id: ModelId,
         species: SpeciesGroup,
-    ) -> Result<Vec<u8>, PostgresErrorWrapper> {
+    ) -> Result<Vec<u8>> {
         let row = sqlx::query!(
             r#"
 SELECT
@@ -88,7 +88,7 @@ WHERE
         model_id: ModelId,
         species: SpeciesGroup,
         year: u32,
-    ) -> Result<Vec<FishingWeightPrediction>, PostgresErrorWrapper> {
+    ) -> Result<Vec<FishingWeightPrediction>> {
         let predictions = sqlx::query_as!(
             FishingWeightPrediction,
             r#"
@@ -119,7 +119,7 @@ WHERE
         model_id: ModelId,
         species: SpeciesGroup,
         year: u32,
-    ) -> Result<Vec<FishingSpotPrediction>, PostgresErrorWrapper> {
+    ) -> Result<Vec<FishingSpotPrediction>> {
         let predictions = sqlx::query_as!(
             FishingSpotPrediction,
             r#"
@@ -148,7 +148,7 @@ WHERE
     pub(crate) async fn add_fishing_spot_predictions_impl(
         &self,
         predictions: Vec<kyogre_core::NewFishingSpotPrediction>,
-    ) -> Result<(), PostgresErrorWrapper> {
+    ) -> Result<()> {
         let predictions: Vec<NewFishingSpotPrediction> = predictions
             .into_iter()
             .map(NewFishingSpotPrediction::from)
@@ -162,7 +162,7 @@ WHERE
     pub(crate) async fn add_weight_predictions_impl(
         &self,
         predictions: Vec<kyogre_core::NewFishingWeightPrediction>,
-    ) -> Result<(), PostgresErrorWrapper> {
+    ) -> Result<()> {
         let predictions: Vec<NewFishingWeightPrediction> = predictions
             .into_iter()
             .map(NewFishingWeightPrediction::from)
@@ -181,7 +181,7 @@ WHERE
         limit: Option<u32>,
         bycatch_percentage: Option<f64>,
         majority_species_group: bool,
-    ) -> Result<Vec<WeightPredictorTrainingData>, PostgresErrorWrapper> {
+    ) -> Result<Vec<WeightPredictorTrainingData>> {
         let require_weather = match weather_data {
             WeatherData::Require => false,
             WeatherData::Optional => true,
@@ -263,7 +263,7 @@ LIMIT
         model_id: ModelId,
         species: SpeciesGroup,
         limit: Option<u32>,
-    ) -> Result<Vec<FishingSpotTrainingData>, PostgresErrorWrapper> {
+    ) -> Result<Vec<FishingSpotTrainingData>> {
         let data = sqlx::query_as!(
             FishingSpotTrainingData,
             r#"
@@ -349,7 +349,7 @@ LIMIT
         species: SpeciesGroup,
         date: NaiveDate,
         limit: u32,
-    ) -> impl Stream<Item = Result<FishingWeightPrediction, PostgresErrorWrapper>> + '_ {
+    ) -> impl Stream<Item = Result<FishingWeightPrediction>> + '_ {
         sqlx::query_as!(
             FishingWeightPrediction,
             r#"
@@ -383,7 +383,7 @@ LIMIT
         model_id: ModelId,
         species: SpeciesGroup,
         date: NaiveDate,
-    ) -> Result<Option<FishingSpotPrediction>, PostgresErrorWrapper> {
+    ) -> Result<Option<FishingSpotPrediction>> {
         let prediction = sqlx::query_as!(
             FishingSpotPrediction,
             r#"
@@ -412,7 +412,7 @@ WHERE
     pub(crate) fn all_fishing_weight_predictions_impl(
         &self,
         model_id: ModelId,
-    ) -> impl Stream<Item = Result<FishingWeightPrediction, PostgresErrorWrapper>> + '_ {
+    ) -> impl Stream<Item = Result<FishingWeightPrediction>> + '_ {
         sqlx::query_as!(
             FishingWeightPrediction,
             r#"
@@ -435,7 +435,7 @@ WHERE
     pub(crate) fn all_fishing_spot_predictions_impl(
         &self,
         model_id: ModelId,
-    ) -> impl Stream<Item = Result<FishingSpotPrediction, PostgresErrorWrapper>> + '_ {
+    ) -> impl Stream<Item = Result<FishingSpotPrediction>> + '_ {
         sqlx::query_as!(
             FishingSpotPrediction,
             r#"

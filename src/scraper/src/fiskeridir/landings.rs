@@ -1,12 +1,9 @@
-use std::sync::Arc;
-
-use crate::{utils::prefetch_and_scrape, DataSource, Processor, ScraperError, ScraperId};
+use super::FiskeridirSource;
+use crate::{utils::prefetch_and_scrape, DataSource, Processor, Result, ScraperId};
 use async_trait::async_trait;
-use error_stack::{Result, ResultExt};
 use fiskeridir_rs::{FileSource, Landing, LandingRaw};
 use orca_core::Environment;
-
-use super::FiskeridirSource;
+use std::sync::Arc;
 
 pub struct LandingScraper {
     sources: Vec<FileSource>,
@@ -34,7 +31,7 @@ impl DataSource for LandingScraper {
         ScraperId::Landings
     }
 
-    async fn scrape(&self, processor: &(dyn Processor)) -> Result<(), ScraperError> {
+    async fn scrape(&self, processor: &(dyn Processor)) -> Result<()> {
         prefetch_and_scrape(
             self.environment,
             self.fiskeridir_source.clone(),
@@ -43,17 +40,13 @@ impl DataSource for LandingScraper {
             |dir, file| async move {
                 let year = file.year();
                 let data = dir
-                    .into_deserialize::<LandingRaw>(&file)
-                    .change_context(ScraperError)?
+                    .into_deserialize::<LandingRaw>(&file)?
                     .map(move |v| match v {
                         Ok(v) => Landing::try_from_raw(v, year),
                         Err(e) => Err(e),
                     });
 
-                processor
-                    .add_landings(Box::new(data), year)
-                    .await
-                    .change_context(ScraperError)
+                Ok(processor.add_landings(Box::new(data), year).await?)
             },
         )
         .await

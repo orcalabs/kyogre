@@ -3,7 +3,6 @@
 
 use async_trait::async_trait;
 use barentswatch::{FishingFacilityHistoricScraper, FishingFacilityScraper};
-use error_stack::Result;
 use fiskeridir::{
     AquaCultureRegisterScraper, ErsScraper, LandingScraper, RegisterVesselsScraper, VmsScraper,
 };
@@ -28,7 +27,7 @@ mod weather;
 mod wrapped_http_client;
 
 pub use barentswatch::BarentswatchSource;
-pub use error::*;
+pub use error::{Error, Result};
 pub use fiskeridir::FiskeridirSource;
 pub use wrapped_http_client::*;
 
@@ -78,7 +77,7 @@ pub struct ApiClientConfig {
 #[async_trait]
 pub trait DataSource: Send + Sync {
     fn id(&self) -> ScraperId;
-    async fn scrape(&self, processor: &(dyn Processor)) -> Result<(), ScraperError>;
+    async fn scrape(&self, processor: &(dyn Processor)) -> Result<()>;
 }
 
 impl Scraper {

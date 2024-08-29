@@ -3,7 +3,6 @@ use std::pin::Pin;
 use crate::*;
 use async_trait::async_trait;
 use chrono::{DateTime, Duration, NaiveDate, Utc};
-use error_stack::Result;
 use fiskeridir_rs::{CallSign, DataFileId, DeliveryPointId, LandingId, SpeciesGroup};
 use futures::Stream;
 
@@ -14,11 +13,11 @@ pub trait AisMigratorSource {
         mmsi: Mmsi,
         start: DateTime<Utc>,
         end: DateTime<Utc>,
-    ) -> Result<Vec<AisPosition>, QueryError>;
-    async fn existing_mmsis(&self) -> Result<Vec<Mmsi>, QueryError>;
+    ) -> CoreResult<Vec<AisPosition>>;
+    async fn existing_mmsis(&self) -> CoreResult<Vec<Mmsi>>;
 }
 
-pub type PinBoxStream<'a, T, E> = Pin<Box<dyn Stream<Item = Result<T, E>> + Send + 'a>>;
+pub type PinBoxStream<'a, T> = Pin<Box<dyn Stream<Item = CoreResult<T>> + Send + 'a>>;
 
 #[async_trait]
 pub trait WebApiOutboundPort {
@@ -26,7 +25,7 @@ pub trait WebApiOutboundPort {
         &self,
         limit: Option<DateTime<Utc>>,
         user_policy: AisPermission,
-    ) -> PinBoxStream<'_, AisPosition, QueryError>;
+    ) -> PinBoxStream<'_, AisPosition>;
     fn ais_vms_area_positions(
         &self,
         x1: f64,
@@ -34,120 +33,110 @@ pub trait WebApiOutboundPort {
         y1: f64,
         y2: f64,
         date_limit: NaiveDate,
-    ) -> PinBoxStream<'_, AisVmsAreaCount, QueryError>;
+    ) -> PinBoxStream<'_, AisVmsAreaCount>;
     fn ais_positions(
         &self,
         mmsi: Mmsi,
         range: &DateRange,
         user_policy: AisPermission,
-    ) -> PinBoxStream<'_, AisPosition, QueryError>;
+    ) -> PinBoxStream<'_, AisPosition>;
     fn vms_positions(
         &self,
         call_sign: &CallSign,
         range: &DateRange,
-    ) -> PinBoxStream<'_, VmsPosition, QueryError>;
+    ) -> PinBoxStream<'_, VmsPosition>;
     fn ais_vms_positions(
         &self,
         params: AisVmsParams,
         user_policy: AisPermission,
-    ) -> PinBoxStream<'_, AisVmsPosition, QueryError>;
-    fn species(&self) -> PinBoxStream<'_, Species, QueryError>;
-    fn species_fiskeridir(&self) -> PinBoxStream<'_, SpeciesFiskeridir, QueryError>;
-    fn species_fao(&self) -> PinBoxStream<'_, SpeciesFao, QueryError>;
-    fn vessels(&self) -> Pin<Box<dyn Stream<Item = Result<Vessel, QueryError>> + Send + '_>>;
-    fn hauls(&self, query: HaulsQuery) -> Result<PinBoxStream<'_, Haul, QueryError>, QueryError>;
+    ) -> PinBoxStream<'_, AisVmsPosition>;
+    fn species(&self) -> PinBoxStream<'_, Species>;
+    fn species_fiskeridir(&self) -> PinBoxStream<'_, SpeciesFiskeridir>;
+    fn species_fao(&self) -> PinBoxStream<'_, SpeciesFao>;
+    fn vessels(&self) -> Pin<Box<dyn Stream<Item = CoreResult<Vessel>> + Send + '_>>;
+    fn hauls(&self, query: HaulsQuery) -> CoreResult<PinBoxStream<'_, Haul>>;
     async fn vessel_benchmarks(
         &self,
         user_id: &BarentswatchUserId,
         call_sign: &CallSign,
-    ) -> Result<VesselBenchmarks, QueryError>;
+    ) -> CoreResult<VesselBenchmarks>;
     fn detailed_trips(
         &self,
         query: TripsQuery,
         read_fishing_facility: bool,
-    ) -> Result<PinBoxStream<'_, TripDetailed, QueryError>, QueryError>;
+    ) -> CoreResult<PinBoxStream<'_, TripDetailed>>;
     async fn detailed_trip_of_haul(
         &self,
         haul_id: &HaulId,
         read_fishing_facility: bool,
-    ) -> Result<Option<TripDetailed>, QueryError>;
+    ) -> CoreResult<Option<TripDetailed>>;
     async fn detailed_trip_of_landing(
         &self,
         landing_id: &LandingId,
         read_fishing_facility: bool,
-    ) -> Result<Option<TripDetailed>, QueryError>;
+    ) -> CoreResult<Option<TripDetailed>>;
     async fn current_trip(
         &self,
         vessel_id: FiskeridirVesselId,
         read_fishing_facility: bool,
-    ) -> Result<Option<CurrentTrip>, QueryError>;
-    async fn hauls_matrix(&self, query: &HaulsMatrixQuery) -> Result<HaulsMatrix, QueryError>;
-    fn landings(
-        &self,
-        query: LandingsQuery,
-    ) -> Result<PinBoxStream<'_, Landing, QueryError>, QueryError>;
-    async fn landing_matrix(&self, query: &LandingMatrixQuery)
-        -> Result<LandingMatrix, QueryError>;
+    ) -> CoreResult<Option<CurrentTrip>>;
+    async fn hauls_matrix(&self, query: &HaulsMatrixQuery) -> CoreResult<HaulsMatrix>;
+    fn landings(&self, query: LandingsQuery) -> CoreResult<PinBoxStream<'_, Landing>>;
+    async fn landing_matrix(&self, query: &LandingMatrixQuery) -> CoreResult<LandingMatrix>;
     fn fishing_facilities(
         &self,
         query: FishingFacilitiesQuery,
-    ) -> PinBoxStream<'_, FishingFacility, QueryError>;
-    async fn get_user(&self, user_id: BarentswatchUserId) -> Result<Option<User>, QueryError>;
-    fn delivery_points(&self) -> PinBoxStream<'_, DeliveryPoint, QueryError>;
-    fn weather(
-        &self,
-        query: WeatherQuery,
-    ) -> Result<PinBoxStream<'_, Weather, QueryError>, QueryError>;
-    fn weather_locations(&self) -> PinBoxStream<'_, WeatherLocation, QueryError>;
+    ) -> PinBoxStream<'_, FishingFacility>;
+    async fn get_user(&self, user_id: BarentswatchUserId) -> CoreResult<Option<User>>;
+    fn delivery_points(&self) -> PinBoxStream<'_, DeliveryPoint>;
+    fn weather(&self, query: WeatherQuery) -> CoreResult<PinBoxStream<'_, Weather>>;
+    fn weather_locations(&self) -> PinBoxStream<'_, WeatherLocation>;
     async fn fishing_spot_prediction(
         &self,
         model_id: ModelId,
         species: SpeciesGroup,
         date: NaiveDate,
-    ) -> Result<Option<FishingSpotPrediction>, QueryError>;
+    ) -> CoreResult<Option<FishingSpotPrediction>>;
     fn fishing_weight_predictions(
         &self,
         model_id: ModelId,
         species: SpeciesGroup,
         date: NaiveDate,
         limit: u32,
-    ) -> PinBoxStream<'_, FishingWeightPrediction, QueryError>;
+    ) -> PinBoxStream<'_, FishingWeightPrediction>;
     fn all_fishing_spot_predictions(
         &self,
         model_id: ModelId,
-    ) -> PinBoxStream<'_, FishingSpotPrediction, QueryError>;
+    ) -> PinBoxStream<'_, FishingSpotPrediction>;
     fn all_fishing_weight_predictions(
         &self,
         model_id: ModelId,
-    ) -> PinBoxStream<'_, FishingWeightPrediction, QueryError>;
-    fn fuel_measurements(
-        &self,
-        query: FuelMeasurementsQuery,
-    ) -> PinBoxStream<'_, FuelMeasurement, QueryError>;
+    ) -> PinBoxStream<'_, FishingWeightPrediction>;
+    fn fuel_measurements(&self, query: FuelMeasurementsQuery) -> PinBoxStream<'_, FuelMeasurement>;
 }
 
 #[async_trait]
 pub trait TripAssemblerOutboundPort: Send + Sync {
-    async fn all_vessels(&self) -> Result<Vec<Vessel>, QueryError>;
+    async fn all_vessels(&self) -> CoreResult<Vec<Vessel>>;
     async fn trip_calculation_timer(
         &self,
         vessel_id: FiskeridirVesselId,
         trip_assembler_id: TripAssemblerId,
-    ) -> Result<Option<TripCalculationTimer>, QueryError>;
+    ) -> CoreResult<Option<TripCalculationTimer>>;
     async fn trip_prior_to_timestamp(
         &self,
         vessel_id: FiskeridirVesselId,
         timestamp: &DateTime<Utc>,
         bound: Bound,
-    ) -> Result<Option<Trip>, QueryError>;
+    ) -> CoreResult<Option<Trip>>;
     async fn relevant_events(
         &self,
         vessel_id: FiskeridirVesselId,
         period: &QueryRange,
         event_types: RelevantEventType,
-    ) -> Result<Vec<VesselEventDetailed>, QueryError>;
-    async fn ports(&self) -> Result<Vec<Port>, QueryError>;
-    async fn dock_points(&self) -> Result<Vec<PortDockPoint>, QueryError>;
+    ) -> CoreResult<Vec<VesselEventDetailed>>;
+    async fn ports(&self) -> CoreResult<Vec<Port>>;
+    async fn dock_points(&self) -> CoreResult<Vec<PortDockPoint>>;
 }
 
 #[async_trait]
@@ -157,31 +146,25 @@ pub trait TripPrecisionOutboundPort: Send + Sync {
         mmsi: Option<Mmsi>,
         call_sign: Option<&CallSign>,
         range: &DateRange,
-    ) -> Result<Vec<AisVmsPosition>, QueryError>;
+    ) -> CoreResult<Vec<AisVmsPosition>>;
     async fn delivery_points_associated_with_trip(
         &self,
         vessel_id: FiskeridirVesselId,
         trip_landing_coverage: &DateRange,
-    ) -> Result<Vec<DeliveryPoint>, QueryError>;
+    ) -> CoreResult<Vec<DeliveryPoint>>;
 }
 
 #[async_trait]
 pub trait VesselBenchmarkOutbound: Send + Sync {
-    async fn vessels(&self) -> Result<Vec<Vessel>, QueryError>;
-    async fn sum_trip_time(&self, id: FiskeridirVesselId) -> Result<Option<Duration>, QueryError>;
-    async fn sum_landing_weight(&self, id: FiskeridirVesselId) -> Result<Option<f64>, QueryError>;
+    async fn vessels(&self) -> CoreResult<Vec<Vessel>>;
+    async fn sum_trip_time(&self, id: FiskeridirVesselId) -> CoreResult<Option<Duration>>;
+    async fn sum_landing_weight(&self, id: FiskeridirVesselId) -> CoreResult<Option<f64>>;
 }
 
 #[async_trait]
 pub trait MatrixCacheOutbound: Send + Sync {
-    async fn hauls_matrix(
-        &self,
-        query: HaulsMatrixQuery,
-    ) -> Result<Option<HaulsMatrix>, QueryError>;
-    async fn landing_matrix(
-        &self,
-        query: LandingMatrixQuery,
-    ) -> Result<Option<LandingMatrix>, QueryError>;
+    async fn hauls_matrix(&self, query: HaulsMatrixQuery) -> CoreResult<Option<HaulsMatrix>>;
+    async fn landing_matrix(&self, query: LandingMatrixQuery) -> CoreResult<Option<LandingMatrix>>;
 }
 
 #[async_trait]
@@ -190,82 +173,81 @@ pub trait MeilisearchOutbound: Send + Sync {
         &self,
         query: TripsQuery,
         read_fishing_facility: bool,
-    ) -> Result<Vec<TripDetailed>, QueryError>;
+    ) -> CoreResult<Vec<TripDetailed>>;
     async fn trip_of_haul(
         &self,
         haul_id: &HaulId,
         read_fishing_facility: bool,
-    ) -> Result<Option<TripDetailed>, QueryError>;
+    ) -> CoreResult<Option<TripDetailed>>;
     async fn trip_of_landing(
         &self,
         landing_id: &LandingId,
         read_fishing_facility: bool,
-    ) -> Result<Option<TripDetailed>, QueryError>;
-    async fn hauls(&self, query: HaulsQuery) -> Result<Vec<Haul>, QueryError>;
-    async fn landings(&self, query: LandingsQuery) -> Result<Vec<Landing>, QueryError>;
+    ) -> CoreResult<Option<TripDetailed>>;
+    async fn hauls(&self, query: HaulsQuery) -> CoreResult<Vec<Haul>>;
+    async fn landings(&self, query: LandingsQuery) -> CoreResult<Vec<Landing>>;
 }
 
 #[async_trait]
 pub trait MeilisearchSource: Send + Sync + Clone {
-    async fn trips_by_ids(&self, trip_ids: &[TripId]) -> Result<Vec<TripDetailed>, QueryError>;
-    async fn hauls_by_ids(&self, haul_ids: &[HaulId]) -> Result<Vec<Haul>, QueryError>;
-    async fn landings_by_ids(&self, haul_ids: &[LandingId]) -> Result<Vec<Landing>, QueryError>;
-    async fn all_trip_versions(&self) -> Result<Vec<(TripId, i64)>, QueryError>;
-    async fn all_haul_versions(&self) -> Result<Vec<(HaulId, i64)>, QueryError>;
-    async fn all_landing_versions(&self) -> Result<Vec<(LandingId, i64)>, QueryError>;
+    async fn trips_by_ids(&self, trip_ids: &[TripId]) -> CoreResult<Vec<TripDetailed>>;
+    async fn hauls_by_ids(&self, haul_ids: &[HaulId]) -> CoreResult<Vec<Haul>>;
+    async fn landings_by_ids(&self, haul_ids: &[LandingId]) -> CoreResult<Vec<Landing>>;
+    async fn all_trip_versions(&self) -> CoreResult<Vec<(TripId, i64)>>;
+    async fn all_haul_versions(&self) -> CoreResult<Vec<(HaulId, i64)>>;
+    async fn all_landing_versions(&self) -> CoreResult<Vec<(LandingId, i64)>>;
 }
 
 #[async_trait]
 pub trait HaulDistributorOutbound: Send + Sync {
-    async fn vessels(&self) -> Result<Vec<Vessel>, QueryError>;
-    async fn catch_locations(&self) -> Result<Vec<CatchLocation>, QueryError>;
+    async fn vessels(&self) -> CoreResult<Vec<Vessel>>;
+    async fn catch_locations(&self) -> CoreResult<Vec<CatchLocation>>;
     async fn haul_messages_of_vessel(
         &self,
         vessel_id: FiskeridirVesselId,
-    ) -> Result<Vec<HaulMessage>, QueryError>;
+    ) -> CoreResult<Vec<HaulMessage>>;
     async fn ais_vms_positions(
         &self,
         mmsi: Option<Mmsi>,
         call_sign: Option<&CallSign>,
         range: &DateRange,
-    ) -> Result<Vec<AisVmsPosition>, QueryError>;
+    ) -> CoreResult<Vec<AisVmsPosition>>;
 }
 
 #[async_trait]
 pub trait MatrixCacheVersion: Send + Sync {
-    async fn increment(&self) -> Result<(), UpdateError>;
+    async fn increment(&self) -> CoreResult<()>;
 }
 
 #[async_trait]
 pub trait VerificationOutbound: Send + Sync {
-    async fn verify_database(&self) -> Result<(), QueryError>;
+    async fn verify_database(&self) -> CoreResult<()>;
 }
 
 #[async_trait]
 pub trait HaulWeatherOutbound: Send + Sync {
-    async fn all_vessels(&self) -> Result<Vec<Vessel>, QueryError>;
+    async fn all_vessels(&self) -> CoreResult<Vec<Vessel>>;
     async fn haul_messages_of_vessel_without_weather(
         &self,
         vessel_id: FiskeridirVesselId,
-    ) -> Result<Vec<HaulMessage>, QueryError>;
+    ) -> CoreResult<Vec<HaulMessage>>;
     async fn ais_vms_positions(
         &self,
         mmsi: Option<Mmsi>,
         call_sign: Option<&CallSign>,
         range: &DateRange,
-    ) -> Result<Vec<AisVmsPosition>, QueryError>;
-    async fn weather_locations(&self) -> Result<Vec<WeatherLocation>, QueryError>;
-    async fn haul_weather(&self, query: WeatherQuery) -> Result<Option<HaulWeather>, QueryError>;
+    ) -> CoreResult<Vec<AisVmsPosition>>;
+    async fn weather_locations(&self) -> CoreResult<Vec<WeatherLocation>>;
+    async fn haul_weather(&self, query: WeatherQuery) -> CoreResult<Option<HaulWeather>>;
     async fn haul_ocean_climate(
         &self,
         query: OceanClimateQuery,
-    ) -> Result<Option<HaulOceanClimate>, QueryError>;
+    ) -> CoreResult<Option<HaulOceanClimate>>;
 }
 
 #[async_trait]
 pub trait ScraperFileHashOutboundPort {
-    async fn get_hashes(&self, ids: &[DataFileId])
-        -> Result<Vec<(DataFileId, String)>, QueryError>;
+    async fn get_hashes(&self, ids: &[DataFileId]) -> CoreResult<Vec<(DataFileId, String)>>;
 }
 
 #[async_trait]
@@ -273,15 +255,10 @@ pub trait TripPipelineOutbound: Send + Sync {
     async fn trips_without_position_layers(
         &self,
         vessel_id: FiskeridirVesselId,
-    ) -> Result<Vec<Trip>, QueryError>;
-    async fn trips_without_distance(
-        &self,
-        vessel_id: FiskeridirVesselId,
-    ) -> Result<Vec<Trip>, QueryError>;
-    async fn trips_without_precision(
-        &self,
-        vessel_id: FiskeridirVesselId,
-    ) -> Result<Vec<Trip>, QueryError>;
+    ) -> CoreResult<Vec<Trip>>;
+    async fn trips_without_distance(&self, vessel_id: FiskeridirVesselId) -> CoreResult<Vec<Trip>>;
+    async fn trips_without_precision(&self, vessel_id: FiskeridirVesselId)
+        -> CoreResult<Vec<Trip>>;
 }
 
 #[async_trait]
@@ -291,13 +268,13 @@ pub trait MLModelsOutbound: Send + Sync {
         model_id: ModelId,
         model: &[u8],
         species: SpeciesGroup,
-    ) -> Result<(), InsertError>;
+    ) -> CoreResult<()>;
     async fn fishing_spot_predictor_training_data(
         &self,
         model_id: ModelId,
         species: SpeciesGroup,
         limit: Option<u32>,
-    ) -> Result<Vec<FishingSpotTrainingData>, QueryError>;
+    ) -> CoreResult<Vec<FishingSpotTrainingData>>;
     async fn fishing_weight_predictor_training_data(
         &self,
         model_id: ModelId,
@@ -306,26 +283,26 @@ pub trait MLModelsOutbound: Send + Sync {
         limit: Option<u32>,
         bycatch_percentage: Option<f64>,
         majority_species_group: bool,
-    ) -> Result<Vec<WeightPredictorTrainingData>, QueryError>;
+    ) -> CoreResult<Vec<WeightPredictorTrainingData>>;
     async fn commit_hauls_training(
         &self,
         model_id: ModelId,
         species: SpeciesGroup,
         haul: Vec<TrainingHaul>,
-    ) -> Result<(), InsertError>;
-    async fn model(&self, model_id: ModelId, species: SpeciesGroup) -> Result<Vec<u8>, QueryError>;
+    ) -> CoreResult<()>;
+    async fn model(&self, model_id: ModelId, species: SpeciesGroup) -> CoreResult<Vec<u8>>;
     async fn catch_locations_weather_dates(
         &self,
         dates: Vec<NaiveDate>,
-    ) -> Result<Vec<CatchLocationWeather>, QueryError>;
+    ) -> CoreResult<Vec<CatchLocationWeather>>;
     async fn catch_locations(
         &self,
         overlap: WeatherLocationOverlap,
-    ) -> Result<Vec<CatchLocation>, QueryError>;
+    ) -> CoreResult<Vec<CatchLocation>>;
     async fn catch_locations_weather(
         &self,
         keys: Vec<(CatchLocationId, NaiveDate)>,
-    ) -> Result<Vec<CatchLocationWeather>, QueryError>;
+    ) -> CoreResult<Vec<CatchLocationWeather>>;
 }
 
 #[async_trait]

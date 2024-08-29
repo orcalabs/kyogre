@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use crate::{
-    error::PostgresErrorWrapper,
+    error::Result,
     ers_tra_set::ErsTraSet,
     models::{NewErsTra, NewErsTraCatch},
     PostgresAdapter,
@@ -11,7 +11,7 @@ use kyogre_core::VesselEventType;
 use unnest_insert::{UnnestInsert, UnnestInsertReturning};
 
 impl PostgresAdapter {
-    pub(crate) async fn add_ers_tra_set(&self, set: ErsTraSet) -> Result<(), PostgresErrorWrapper> {
+    pub(crate) async fn add_ers_tra_set(&self, set: ErsTraSet) -> Result<()> {
         let prepared_set = set.prepare();
 
         let mut tx = self.pool.begin().await?;
@@ -42,7 +42,7 @@ impl PostgresAdapter {
         &'a self,
         mut ers_tra: Vec<NewErsTra>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<(), PostgresErrorWrapper> {
+    ) -> Result<()> {
         let to_insert = self.ers_tra_to_insert(&ers_tra, tx).await?;
         ers_tra.retain(|e| to_insert.contains(&e.message_id));
 
@@ -62,7 +62,7 @@ impl PostgresAdapter {
         &'a self,
         ers_tra: &[NewErsTra],
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<HashSet<i64>, PostgresErrorWrapper> {
+    ) -> Result<HashSet<i64>> {
         let message_ids = ers_tra.iter().map(|e| e.message_id).collect::<Vec<_>>();
 
         let ids = sqlx::query!(
@@ -89,7 +89,7 @@ WHERE
         &self,
         catches: Vec<NewErsTraCatch>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<(), PostgresErrorWrapper> {
+    ) -> Result<()> {
         NewErsTraCatch::unnest_insert(catches, &mut **tx).await?;
         Ok(())
     }

@@ -14,10 +14,11 @@ jurisdiction = "0.1.1"
 unnest_insert = { version = "0.6.0", registry = "orcalabs-orcastrator", features = [
     "derive",
 ] }
+stack-error = { workspace = true }
+snafu = { workspace = true }
 
 num-traits = "0.2.19"
 chrono = { version = "0.4.38", features = ["serde"] }
-error-stack = { workspace = true }
 tokio = { version = "1.39.3", features = ["macros", "sync", "time"] }
 sqlx = { workspace = true }
 tracing = "0.1.40"

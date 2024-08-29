@@ -5,11 +5,18 @@ use futures::Future;
 use kyogre_core::AisPermission;
 use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
+use snafu::ResultExt;
 use strum::EnumIter;
-use tracing::warn;
 use uuid::Uuid;
 
-use crate::{error::ApiError, settings::BW_PROFILES_URL};
+use crate::{
+    error::{
+        bw_error::ProfileSnafu,
+        error::{InvalidJWTSnafu, MissingJWTSnafu, ParseJWTSnafu},
+        Error,
+    },
+    settings::BW_PROFILES_URL,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, EnumIter)]
 pub enum BwPolicy {
@@ -77,7 +84,7 @@ impl From<BwProfile> for AisPermission {
 }
 
 impl FromRequest for BwProfile {
-    type Error = ApiError;
+    type Error = Error;
 
     type Future = Pin<Box<dyn Future<Output = Result<Self, Self::Error>>>>;
 
@@ -92,39 +99,36 @@ impl FromRequest for BwProfile {
 
         Box::pin(async move {
             let token = token
-                .ok_or(ApiError::MissingBwToken)?
-                .map_err(|_| ApiError::InvalidBwToken)?;
+                .ok_or_else(|| MissingJWTSnafu.build())?
+                .context(ParseJWTSnafu)?;
 
-            let url = BW_PROFILES_URL.get().ok_or(ApiError::InternalServerError)?;
+            // This should always be set on application startup
+            let url = BW_PROFILES_URL.get().unwrap();
             let client = reqwest::Client::new();
 
             let response = client
                 .get(url)
                 .header("Authorization", format!("Bearer {token}"))
                 .send()
-                .await
-                .map_err(|e| {
-                    warn!("request to barentswatch failed: {e:?}");
-                    ApiError::InternalServerError
-                })?;
-            match response.status() {
+                .await?;
+            let status = response.status();
+            match status {
                 StatusCode::OK => {}
-                StatusCode::UNAUTHORIZED => return Err(ApiError::InvalidBwToken),
+                StatusCode::UNAUTHORIZED => return InvalidJWTSnafu.fail(),
                 _ => {
-                    warn!("unexpected response from barentswatch: {response:?}");
-                    return Err(ApiError::InternalServerError);
+                    return Err(ProfileSnafu {
+                        url,
+                        status,
+                        body: response.text().await?,
+                    }
+                    .build()
+                    .into());
                 }
             }
 
-            let text = response.text().await.map_err(|e| {
-                warn!("failed to parse barentswatch response text, err: {e:?}");
-                ApiError::InternalServerError
-            })?;
+            let text = response.text().await?;
 
-            serde_json::from_str(&text).map_err(|e| {
-                warn!("failed to deserialize BwProfile from {text}, err: {e:?}");
-                ApiError::InternalServerError
-            })
+            Ok(serde_json::from_str(&text)?)
         })
     }
 }

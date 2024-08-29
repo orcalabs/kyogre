@@ -1,9 +1,7 @@
-use error_stack::{report, Result, ResultExt};
+use crate::{error::error::FailedRequestSnafu, Result};
 use kyogre_core::BearerToken;
 use reqwest::StatusCode;
 use serde::{de::DeserializeOwned, Serialize};
-
-use crate::DownloadError;
 
 pub struct WrappedHttpClient(reqwest::Client);
 
@@ -22,7 +20,7 @@ impl WrappedHttpClient {
         url: &str,
         query: Option<&Q>,
         token: Option<BearerToken>,
-    ) -> Result<T, DownloadError> {
+    ) -> Result<T> {
         let mut request = self.0.get(url);
 
         if let Some(token) = token {
@@ -33,13 +31,18 @@ impl WrappedHttpClient {
             request = request.query(&query);
         }
 
-        let response = request.send().await.change_context(DownloadError)?;
+        let response = request.send().await?;
+        let status = response.status();
 
-        if response.status() != StatusCode::OK {
-            return Err(report!(DownloadError)
-                .attach_printable(format!("received response status {}", response.status())));
+        if status != StatusCode::OK {
+            return FailedRequestSnafu {
+                url,
+                status,
+                body: response.text().await?,
+            }
+            .fail();
         }
 
-        response.json().await.change_context(DownloadError)
+        Ok(response.json().await?)
     }
 }

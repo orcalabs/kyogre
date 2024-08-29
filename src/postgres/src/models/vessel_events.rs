@@ -1,8 +1,7 @@
 use chrono::{DateTime, Utc};
-use error_stack::report;
 use kyogre_core::{FiskeridirVesselId, VesselEventData, VesselEventType};
 
-use crate::error::{PostgresError, PostgresErrorWrapper};
+use crate::error::{Error, MissingValueSnafu};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct VesselEvent {
@@ -39,11 +38,10 @@ pub struct VesselEventDetailed {
 }
 
 impl TryFrom<VesselEventDetailed> for kyogre_core::VesselEventDetailed {
-    type Error = PostgresErrorWrapper;
+    type Error = Error;
 
     fn try_from(v: VesselEventDetailed) -> Result<kyogre_core::VesselEventDetailed, Self::Error> {
-        let event_data: Result<VesselEventData, PostgresErrorWrapper> = match v.vessel_event_type_id
-        {
+        let event_data: Result<VesselEventData, Error> = match v.vessel_event_type_id {
             VesselEventType::Landing => Ok(VesselEventData::Landing),
             VesselEventType::ErsDca => Ok(VesselEventData::ErsDca),
             VesselEventType::ErsTra => Ok(VesselEventData::ErsTra),
@@ -56,7 +54,7 @@ impl TryFrom<VesselEventDetailed> for kyogre_core::VesselEventDetailed {
                 },
                 estimated_timestamp: v
                     .estimated_timestamp
-                    .ok_or_else(|| report!(PostgresError::DataConversion))?,
+                    .ok_or_else(|| MissingValueSnafu.build())?,
             }),
             VesselEventType::ErsDep => Ok(VesselEventData::ErsDep {
                 port_id: if v.departure_port_id.is_some() {
@@ -66,7 +64,7 @@ impl TryFrom<VesselEventDetailed> for kyogre_core::VesselEventDetailed {
                 },
                 estimated_timestamp: v
                     .estimated_timestamp
-                    .ok_or_else(|| report!(PostgresError::DataConversion))?,
+                    .ok_or_else(|| MissingValueSnafu.build())?,
             }),
         };
 

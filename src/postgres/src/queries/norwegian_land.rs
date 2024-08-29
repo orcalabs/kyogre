@@ -1,5 +1,5 @@
 use crate::{
-    error::PostgresErrorWrapper,
+    error::Result,
     models::{NewCounty, NewMunicipality},
     PostgresAdapter,
 };
@@ -10,7 +10,7 @@ impl PostgresAdapter {
         &'a self,
         municipalities: Vec<NewMunicipality>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<(), PostgresErrorWrapper> {
+    ) -> Result<()> {
         NewMunicipality::unnest_insert(municipalities, &mut **tx).await?;
         Ok(())
     }
@@ -19,7 +19,7 @@ impl PostgresAdapter {
         &'a self,
         municipalities: Vec<NewCounty>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<(), PostgresErrorWrapper> {
+    ) -> Result<()> {
         NewCounty::unnest_insert(municipalities, &mut **tx).await?;
         Ok(())
     }

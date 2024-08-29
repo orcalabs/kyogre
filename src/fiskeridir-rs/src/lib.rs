@@ -12,6 +12,6 @@ mod string_new_types;
 mod utils;
 
 pub use api_downloader::*;
-pub use error::Error;
+pub use error::{Error, ErrorDiscriminants, LandingIdError, ParseStringError, Result};
 pub use file_downloader::*;
 pub use models::*;

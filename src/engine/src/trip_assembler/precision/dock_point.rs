@@ -2,10 +2,10 @@ use super::{
     find_close_point, PointClusterPreference, PrecisionConfig, PrecisionDirection, PrecisionId,
     PrecisionStop, StartSearchPoint, TripPrecision,
 };
+use crate::error::Result;
 use async_trait::async_trait;
-use error_stack::{Result, ResultExt};
 use geoutils::Location;
-use kyogre_core::{AisVmsPosition, DateRange, TripPrecisionError, TripProcessingUnit};
+use kyogre_core::{AisVmsPosition, DateRange, TripProcessingUnit};
 use kyogre_core::{TripPrecisionOutboundPort, Vessel};
 
 /// Precision strategy where we try to find a collection of positions close to the dock points
@@ -24,7 +24,7 @@ impl TripPrecision for DockPointPrecision {
         adapter: &dyn TripPrecisionOutboundPort,
         trip: &TripProcessingUnit,
         vessel: &Vessel,
-    ) -> Result<Option<PrecisionStop>, TripPrecisionError> {
+    ) -> Result<Option<PrecisionStop>> {
         let dock_points = match self.start_search_point {
             StartSearchPoint::Start => &trip.start_dock_points,
             StartSearchPoint::End => &trip.end_dock_points,
@@ -60,7 +60,7 @@ impl DockPointPrecision {
         target: &Location,
         vessel: &Vessel,
         trip: &TripProcessingUnit,
-    ) -> Result<Option<PrecisionStop>, TripPrecisionError> {
+    ) -> Result<Option<PrecisionStop>> {
         Ok(match self.start_search_point {
             StartSearchPoint::End => match self.direction {
                 PrecisionDirection::Shrinking => self.do_precision_impl(
@@ -83,8 +83,7 @@ impl DockPointPrecision {
                             vessel.fiskeridir.call_sign.as_ref(),
                             &range,
                         )
-                        .await
-                        .change_context(TripPrecisionError)?;
+                        .await?;
                     self.do_precision_impl(
                         target,
                         positions.chunks(self.config.position_chunk_size),
@@ -108,8 +107,7 @@ impl DockPointPrecision {
                             vessel.fiskeridir.call_sign.as_ref(),
                             &range,
                         )
-                        .await
-                        .change_context(TripPrecisionError)?;
+                        .await?;
                     self.do_precision_impl(
                         target,
                         positions.rchunks(self.config.position_chunk_size),
