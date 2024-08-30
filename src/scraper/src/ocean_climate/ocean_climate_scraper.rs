@@ -6,7 +6,7 @@ use pyo3::{
     types::{timezone_utc_bound, PyAnyMethods, PyDateTime, PyModule},
     Python,
 };
-use tracing::{event, Level};
+use tracing::{error, info};
 
 use crate::{DataSource, Processor, ScraperError, ScraperId};
 
@@ -53,19 +53,12 @@ impl DataSource for OceanClimateScraper {
                 .await
                 .change_context(ScraperError)
             {
-                Ok(()) => event!(
-                    Level::INFO,
-                    "successfully scraped ocean_climate timestamp / depth: {} / {}",
-                    timestamp,
-                    depth,
+                Ok(()) => info!(
+                    "successfully scraped ocean_climate timestamp / depth: {timestamp} / {depth}"
                 ),
                 Err(e) => {
-                    event!(
-                        Level::ERROR,
-                        "failed to scrape ocean_climate timestamp / depth: {} / {}, error: {}",
-                        timestamp,
-                        depth,
-                        e,
+                    error!(
+                        "failed to scrape ocean_climate timestamp / depth: {timestamp} / {depth}, error: {e:?}"
                     );
                     // Since we srape ocean_climate data from the latest value in the database, we don't
                     // want to continue here and potentially get holes in the dataset that would
@@ -74,8 +67,8 @@ impl DataSource for OceanClimateScraper {
                 }
             }
 
-            if let Err(e) = std::fs::remove_file(file) {
-                event!(Level::ERROR, "failed to delete ocean_climate file: {}", e);
+            if let Err(e) = tokio::fs::remove_file(file).await {
+                error!("failed to delete ocean_climate file: {e:?}");
             }
         }
 

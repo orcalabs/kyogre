@@ -5,7 +5,7 @@ use futures::TryStreamExt;
 use kyogre_core::{BarentswatchUserId, FuelMeasurementsQuery};
 use serde::{Deserialize, Serialize};
 use serde_qs::actix::QsQuery as Query;
-use tracing::{event, Level};
+use tracing::error;
 use utoipa::{IntoParams, ToSchema};
 
 use crate::{
@@ -47,7 +47,7 @@ pub async fn get_fuel_measurements<T: Database + 'static>(
         db.fuel_measurements(query)
             .map_ok(FuelMeasurement::from)
             .map_err(|e| {
-                event!(Level::ERROR, "failed to get fuel measurements: {:?}", e);
+                error!("failed to get fuel measurements: {e:?}");
                 ApiError::InternalServerError
             })
     }
@@ -88,7 +88,7 @@ pub async fn create_fuel_measurements<T: Database + 'static>(
     db.add_fuel_measurements(measurements)
         .await
         .map_err(|e| {
-            event!(Level::ERROR, "failed to create fuel measurements: {:?}", e);
+            error!("failed to create fuel measurements: {e:?}");
             ApiError::InternalServerError
         })
         .map(|_| Response::new(()))
@@ -129,7 +129,7 @@ pub async fn update_fuel_measurements<T: Database + 'static>(
     db.update_fuel_measurements(measurements)
         .await
         .map_err(|e| {
-            event!(Level::ERROR, "failed to update fuel measurements: {:?}", e);
+            error!("failed to update fuel measurements: {e:?}");
             ApiError::InternalServerError
         })
         .map(|_| Response::new(()))
@@ -170,7 +170,7 @@ pub async fn delete_fuel_measurements<T: Database + 'static>(
     db.delete_fuel_measurements(measurements)
         .await
         .map_err(|e| {
-            event!(Level::ERROR, "failed to delete fuel measurements: {:?}", e);
+            error!("failed to delete fuel measurements: {e:?}");
             ApiError::InternalServerError
         })
         .map(|_| Response::new(()))

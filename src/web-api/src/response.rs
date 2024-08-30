@@ -2,7 +2,7 @@ use actix_web::{body::BoxBody, web::Bytes, HttpRequest, HttpResponse, Responder}
 use chrono::Duration;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
-use tracing::{event, Level};
+use tracing::error;
 use utoipa::ToSchema;
 
 use crate::error::ApiError;
@@ -43,7 +43,7 @@ where
 
 pub fn to_bytes<T: Serialize>(value: &T) -> Result<Bytes, ApiError> {
     let json = serde_json::to_vec(value).map_err(|e| {
-        event!(Level::ERROR, "failed to serialize value: {:?}", e);
+        error!("failed to serialize value: {e:?}");
         ApiError::InternalServerError
     })?;
 

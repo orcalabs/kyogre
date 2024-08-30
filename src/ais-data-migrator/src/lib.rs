@@ -69,10 +69,9 @@ where
             })
             .collect();
 
-        event!(
-            Level::INFO,
+        info!(
             "found {} mmsis at source, starting_migration...,",
-            mmsis.len(),
+            mmsis.len()
         );
 
         let (sender, receiver) = std::sync::mpsc::channel();
@@ -95,7 +94,7 @@ where
                 let len = cloned.len();
                 self_clone.migrate_vessels(cloned, bar).await;
                 if let Err(e) = sender.send(len) {
-                    event!(Level::ERROR, "failed to send migrate ok messsage: {:?}", e);
+                    error!("failed to send migrate ok messsage: {e:?}");
                 }
             });
         }
@@ -105,15 +104,11 @@ where
         while received < num_receiver {
             match receiver.recv() {
                 Err(e) => {
-                    event!(
-                        Level::ERROR,
-                        "failed to receive migrate ok messsages: {:?}",
-                        e
-                    );
+                    error!("failed to receive migrate ok messsages: {e:?}");
                 }
                 Ok(v) => {
                     migrated += v;
-                    event!(Level::INFO, "migrated {} vessels", migrated);
+                    info!("migrated {migrated} vessels");
                 }
             }
             received += 1;
@@ -134,7 +129,7 @@ where
                     Ok(_) => break,
                     Err(e) => {
                         tries += 1;
-                        event!(Level::ERROR, "{:?}, try_number: {}", e, tries);
+                        error!("{e:?}, try_number: {tries}");
                     }
                 }
             }

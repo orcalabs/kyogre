@@ -4,7 +4,7 @@ use error_stack::{Context, Result, ResultExt};
 use fiskeridir_rs::SpeciesGroup;
 use machine::Schedule;
 use std::fmt::Display;
-use tracing::{event, instrument, Level};
+use tracing::{error, instrument};
 
 pub struct MLModelsState;
 
@@ -44,12 +44,9 @@ impl machine::State for MLModelsState {
                 )
                 .await
                 {
-                    event!(
-                        Level::ERROR,
-                        "failed to run ML model id: {:?}, species: {:?}, err: {:?}",
+                    error!(
+                        "failed to run ML model id: {:?}, species: {s:?}, err: {e:?}",
                         m.id(),
-                        s,
-                        e
                     );
                 }
             }

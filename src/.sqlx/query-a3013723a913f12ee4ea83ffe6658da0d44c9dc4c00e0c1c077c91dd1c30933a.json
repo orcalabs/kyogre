@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO\n    landing_matrix (\n        landing_id,\n        catch_location_id,\n        catch_location_matrix_index,\n        matrix_month_bucket,\n        vessel_length_group,\n        fiskeridir_vessel_id,\n        gear_group_id,\n        species_group_id,\n        living_weight\n    )\nSELECT\n    l.landing_id,\n    MIN(c.catch_location_id),\n    MIN(c.matrix_index),\n    l.landing_matrix_month_bucket,\n    l.vessel_length_group_id,\n    l.fiskeridir_vessel_id,\n    l.gear_group_id,\n    e.species_group_id,\n    COALESCE(SUM(e.living_weight), 0)\nFROM\n    UNNEST($1::TEXT[]) u (landing_id)\n    INNER JOIN landings l ON l.landing_id = u.landing_id\n    INNER JOIN landing_entries e ON l.landing_id = e.landing_id\n    INNER JOIN catch_locations c ON l.catch_main_area_id = c.catch_main_area_id\n    AND l.catch_area_id = c.catch_area_id\nGROUP BY\n    l.landing_id,\n    e.species_group_id\nON CONFLICT (landing_id, species_group_id) DO\nUPDATE\nSET\n    living_weight = EXCLUDED.living_weight\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "TextArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "a3013723a913f12ee4ea83ffe6658da0d44c9dc4c00e0c1c077c91dd1c30933a"
+}

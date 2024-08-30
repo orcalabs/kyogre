@@ -1,7 +1,7 @@
 use crate::SharedState;
 use async_trait::async_trait;
 use machine::Schedule;
-use tracing::{event, Level};
+use tracing::error;
 
 pub struct VerifyDatabaseState;
 
@@ -11,7 +11,7 @@ impl machine::State for VerifyDatabaseState {
 
     async fn run(&self, shared_state: Self::SharedState) -> Self::SharedState {
         if let Err(e) = shared_state.verifier.verify_database().await {
-            event!(Level::ERROR, "verify database failed with error: {:?}", e);
+            error!("verify database failed with error: {e:?}");
         }
 
         shared_state

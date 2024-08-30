@@ -16,7 +16,7 @@ use sqlx::{
     ConnectOptions, PgPool,
 };
 use std::{pin::Pin, result::Result as StdResult};
-use tracing::{event, instrument, Level};
+use tracing::{error, instrument, warn};
 
 #[derive(Debug, Clone)]
 pub struct PostgresAdapter {
@@ -224,8 +224,7 @@ WHERE
                     }
                 }
                 if let Err(e) = err {
-                    event!(
-                        Level::ERROR,
+                    error!(
                         "failed insertion retry for ais data, contained positions: {},
                             contained static_messages: {}, err: {e:?}",
                         positions.is_some(),
@@ -310,18 +309,11 @@ WHERE
             }
             Err(e) => match e {
                 tokio::sync::broadcast::error::RecvError::Closed => {
-                    event!(
-                        Level::WARN,
-                        "sender half of ais broadcast channel closed unexpectedly, exiting"
-                    );
+                    warn!("sender half of ais broadcast channel closed unexpectedly, exiting");
                     AisProcessingAction::Exit
                 }
                 tokio::sync::broadcast::error::RecvError::Lagged(num_lagged) => {
-                    event!(
-                        Level::WARN,
-                        "postgres consumer lagged {} ais messages",
-                        num_lagged
-                    );
+                    warn!("postgres consumer lagged {num_lagged} ais messages");
                     AisProcessingAction::Continue
                 }
             },

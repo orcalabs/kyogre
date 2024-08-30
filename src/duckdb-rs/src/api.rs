@@ -18,7 +18,7 @@ use matrix_cache::*;
 use num_traits::FromPrimitive;
 use tonic::codegen::CompressionEncoding;
 use tonic::{Request, Response, Status};
-use tracing::{event, instrument, Level};
+use tracing::{error, instrument};
 
 #[derive(Clone)]
 pub struct MatrixCacheService {
@@ -129,13 +129,13 @@ impl MatrixCache for MatrixCacheService {
         request: Request<LandingFeatures>,
     ) -> Result<Response<LandingMatrix>, Status> {
         let parameters = LandingQueryWrapper::try_from(request.into_inner()).map_err(|e| {
-            event!(Level::ERROR, "{:?}", e);
-            Status::invalid_argument(format!("{:?}", e))
+            error!("{e:?}");
+            Status::invalid_argument(format!("{e:?}"))
         })?;
 
         let matrix = self.adapter.landing_matrix(&parameters.0).map_err(|e| {
-            event!(Level::ERROR, "failed to retrive landing matrix: {:?}", e);
-            Status::internal(format!("{:?}", e))
+            error!("failed to retrive landing matrix: {e:?}");
+            Status::internal(format!("{e:?}"))
         })?;
 
         Ok(Response::new(LandingMatrix::from(
@@ -148,13 +148,13 @@ impl MatrixCache for MatrixCacheService {
         request: Request<HaulFeatures>,
     ) -> Result<Response<HaulMatrix>, Status> {
         let parameters = HaulQueryWrapper::try_from(request.into_inner()).map_err(|e| {
-            event!(Level::ERROR, "{:?}", e);
-            Status::invalid_argument(format!("{:?}", e))
+            error!("{e:?}");
+            Status::invalid_argument(format!("{e:?}"))
         })?;
 
         let matrix = self.adapter.hauls_matrix(&parameters.0).map_err(|e| {
-            event!(Level::ERROR, "failed to retrive haul matrix: {:?}", e);
-            Status::internal(format!("{:?}", e))
+            error!("failed to retrive haul matrix: {e:?}");
+            Status::internal(format!("{e:?}"))
         })?;
 
         Ok(Response::new(HaulMatrix::from(matrix.unwrap_or_default())))
@@ -165,8 +165,8 @@ impl MatrixCache for MatrixCacheService {
         _request: Request<EmptyMessage>,
     ) -> Result<Response<EmptyMessage>, Status> {
         self.adapter.refresh().await.map_err(|e| {
-            event!(Level::ERROR, "failed to refresh matrix cache: {:?}", e);
-            Status::internal(format!("{:?}", e))
+            error!("failed to refresh matrix cache: {e:?}");
+            Status::internal(format!("{e:?}"))
         })?;
 
         Ok(Response::new(EmptyMessage {}))

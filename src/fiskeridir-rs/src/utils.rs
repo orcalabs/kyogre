@@ -3,7 +3,7 @@ use chrono_tz::Europe::Oslo;
 use sha3::{Digest, Sha3_256};
 use std::io::Read;
 use std::path::Path;
-use tracing::{event, Level};
+use tracing::warn;
 
 const HASH_CHUNK_BUF_SIZE: usize = 1_000_000 * 100;
 
@@ -36,7 +36,7 @@ pub fn convert_naive_date_and_naive_time_to_utc(date: NaiveDate, time: NaiveTime
     let date_time = NaiveDateTime::new(date, time);
     match Oslo.from_local_datetime(&date_time) {
         chrono::LocalResult::None =>  {
-            event!(Level::WARN, "could not convert oslo time: {:?}", date_time);
+            warn!("could not convert oslo time: {date_time:?}");
             Utc.from_utc_datetime(&date_time)
         }
         chrono::LocalResult::Single(d) |

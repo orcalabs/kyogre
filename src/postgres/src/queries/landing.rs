@@ -8,7 +8,7 @@ use kyogre_core::{FiskeridirVesselId, LandingsQuery};
 use sqlx::postgres::types::PgRange;
 use std::cmp::min;
 use std::collections::{HashMap, HashSet};
-use tracing::{event, Level};
+use tracing::{error, info};
 use unnest_insert::{UnnestInsert, UnnestInsertReturning};
 
 use crate::error::PostgresErrorWrapper;
@@ -258,7 +258,7 @@ WHERE
         for (i, item) in landings.enumerate() {
             match item {
                 Err(e) => {
-                    event!(Level::ERROR, "failed to read data: {:?}", e);
+                    error!("failed to read data: {e:?}");
                 }
                 Ok(item) => {
                     num_landings += 1;
@@ -392,7 +392,7 @@ WHERE
 
         let deleted = sqlx::query!(
             r#"
-DELETE FROM landings l USING UNNEST($1::TEXT [], $2::INT[]) u (landing_id, "version")
+DELETE FROM landings l USING UNNEST($1::TEXT[], $2::INT[]) u (landing_id, "version")
 WHERE
     l.landing_id = u.landing_id
     AND l.version < u.version
@@ -494,7 +494,7 @@ WHERE
             r#"
 DELETE FROM landings
 WHERE
-    (NOT landing_id = ANY ($1::TEXT []))
+    (NOT landing_id = ANY ($1::TEXT[]))
     AND data_year = $2::INT
 RETURNING
     fiskeridir_vessel_id,
@@ -506,7 +506,7 @@ RETURNING
         .fetch_all(&mut **tx)
         .await?;
 
-        event!(Level::INFO, "landings_deleted: {}", deleted.len());
+        info!("landings_deleted: {}", deleted.len());
 
         for d in deleted {
             if let Some(id) = d.fiskeridir_vessel_id {
@@ -595,7 +595,7 @@ SELECT
     e.species_group_id,
     COALESCE(SUM(e.living_weight), 0)
 FROM
-    UNNEST($1::TEXT []) u (landing_id)
+    UNNEST($1::TEXT[]) u (landing_id)
     INNER JOIN landings l ON l.landing_id = u.landing_id
     INNER JOIN landing_entries e ON l.landing_id = e.landing_id
     INNER JOIN catch_locations c ON l.catch_main_area_id = c.catch_main_area_id

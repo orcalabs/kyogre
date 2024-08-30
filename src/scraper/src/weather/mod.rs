@@ -63,14 +63,13 @@ impl std::fmt::Display for TimestampError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::InvalidFilename(filename) => {
-                f.write_fmt(format_args!("found an invalid filename: '{:?}'", filename))
+                f.write_fmt(format_args!("found an invalid filename: '{filename:?}'"))
             }
             Self::InvalidYMD((y, m, d)) => f.write_fmt(format_args!(
-                "filename contained invalid y/m/d; y: {}, m: {}, d: {}",
-                y, m, d
+                "filename contained invalid y/m/d; y: {y}, m: {m}, d: {d}"
             )),
             Self::InvalidHour(hour) => {
-                f.write_fmt(format_args!("filename contained invalid hour: {}", hour))
+                f.write_fmt(format_args!("filename contained invalid hour: {hour}"))
             }
         }
     }

@@ -1,5 +1,5 @@
 use orca_core::Environment;
-use tracing::{event, Level};
+use tracing::error;
 
 use crate::{
     error::{PostgresErrorWrapper, VerifyDatabaseError},
@@ -37,7 +37,7 @@ impl PostgresAdapter {
 
             // Dont want to spam test logs with this error message
             if self.environment != Environment::Test {
-                event!(Level::ERROR, "found vessel conflicts: {:?}", error);
+                error!("found vessel conflicts: {error:?}");
             }
         }
 

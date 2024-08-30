@@ -10,7 +10,7 @@ use kyogre_core::{
 use meilisearch::MeilisearchAdapter;
 use postgres::PostgresAdapter;
 use serde::Deserialize;
-use tracing::{event, Level};
+use tracing::error;
 
 // Used to trigger api errors when testing cache implementations
 #[derive(Copy, Clone, Debug, Deserialize)]
@@ -58,7 +58,7 @@ impl MatrixCacheOutbound for MatrixCache {
         match self.inner.landing_matrix(query).await {
             Ok(v) => Ok(v),
             Err(e) => {
-                event!(Level::ERROR, "failed to retrieve landings matrix: {:?}", e);
+                error!("failed to retrieve landings matrix: {e:?}");
                 match self.error_mode {
                     CacheErrorMode::Propagate => Err(e),
                     CacheErrorMode::Log => Ok(None),
@@ -73,7 +73,7 @@ impl MatrixCacheOutbound for MatrixCache {
         match self.inner.hauls_matrix(query).await {
             Ok(v) => Ok(v),
             Err(e) => {
-                event!(Level::ERROR, "failed to retrieve hauls matrix: {:?}", e);
+                error!("failed to retrieve hauls matrix: {e:?}");
                 match self.error_mode {
                     CacheErrorMode::Propagate => Err(e),
                     CacheErrorMode::Log => Ok(None),
@@ -93,11 +93,7 @@ impl MeilisearchOutbound for MeilesearchCache {
         match self.inner.trips(query, read_fishing_facility).await {
             Ok(v) => Ok(v),
             Err(e) => {
-                event!(
-                    Level::ERROR,
-                    "failed to retrieve hauls from meilisearch: {:?}",
-                    e
-                );
+                error!("failed to retrieve hauls from meilisearch: {e:?}");
                 match self.error_mode {
                     CacheErrorMode::Propagate => Err(e),
                     CacheErrorMode::Log => Ok(vec![]),
@@ -117,11 +113,7 @@ impl MeilisearchOutbound for MeilesearchCache {
         {
             Ok(v) => Ok(v),
             Err(e) => {
-                event!(
-                    Level::ERROR,
-                    "failed to retrieve trip_of_haul from meilisearch: {:?}",
-                    e
-                );
+                error!("failed to retrieve trip_of_haul from meilisearch: {e:?}");
                 match self.error_mode {
                     CacheErrorMode::Propagate => Err(e),
                     CacheErrorMode::Log => Ok(None),
@@ -141,11 +133,7 @@ impl MeilisearchOutbound for MeilesearchCache {
         {
             Ok(v) => Ok(v),
             Err(e) => {
-                event!(
-                    Level::ERROR,
-                    "failed to retrieve trip_of_landing from meilisearch: {:?}",
-                    e
-                );
+                error!("failed to retrieve trip_of_landing from meilisearch: {e:?}");
                 match self.error_mode {
                     CacheErrorMode::Propagate => Err(e),
                     CacheErrorMode::Log => Ok(None),
@@ -157,11 +145,7 @@ impl MeilisearchOutbound for MeilesearchCache {
         match self.inner.hauls(query).await {
             Ok(v) => Ok(v),
             Err(e) => {
-                event!(
-                    Level::ERROR,
-                    "failed to retrieve hauls from meilisearch: {:?}",
-                    e
-                );
+                error!("failed to retrieve hauls from meilisearch: {e:?}");
                 match self.error_mode {
                     CacheErrorMode::Propagate => Err(e),
                     CacheErrorMode::Log => Ok(vec![]),
@@ -176,11 +160,7 @@ impl MeilisearchOutbound for MeilesearchCache {
         match self.inner.landings(query).await {
             Ok(v) => Ok(v),
             Err(e) => {
-                event!(
-                    Level::ERROR,
-                    "failed to retrieve landings from meilisearch: {:?}",
-                    e
-                );
+                error!("failed to retrieve landings from meilisearch: {e:?}");
                 match self.error_mode {
                     CacheErrorMode::Propagate => Err(e),
                     CacheErrorMode::Log => Ok(vec![]),

@@ -9,7 +9,7 @@ use kyogre_core::{
 use serde::{Deserialize, Serialize};
 use serde_qs::actix::QsQuery as Query;
 use serde_with::{serde_as, DisplayFromStr};
-use tracing::{event, Level};
+use tracing::error;
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
@@ -69,11 +69,7 @@ pub async fn fishing_facilities<T: Database + 'static>(
         db.fishing_facilities(query)
             .map_ok(FishingFacility::from)
             .map_err(|e| {
-                event!(
-                    Level::ERROR,
-                    "failed to retrieve fishing_facilities: {:?}",
-                    e
-                );
+                error!("failed to retrieve fishing_facilities: {e:?}");
                 ApiError::InternalServerError
             })
     }

@@ -19,7 +19,7 @@ use serde::{Deserialize, Serialize};
 use serde_qs::actix::QsQuery as Query;
 use serde_with::{serde_as, skip_serializing_none, DisplayFromStr};
 use std::string::ToString;
-use tracing::{event, Level};
+use tracing::{error, warn};
 use utoipa::{IntoParams, ToSchema};
 
 #[derive(Debug, Deserialize, Serialize, IntoParams)]
@@ -85,7 +85,7 @@ pub async fn ais_vms_positions<T: Database + 'static>(
         }?;
 
         let range = DateRange::new(start, end).map_err(|e| {
-            event!(Level::WARN, "{:?}", e);
+            warn!("{e:?}");
             ApiError::InvalidDateRange
         })?;
 
@@ -107,11 +107,7 @@ pub async fn ais_vms_positions<T: Database + 'static>(
     ais_to_streaming_response! {
         db.ais_vms_positions(params, policy)
             .map_err(|e| {
-                event!(
-                    Level::ERROR,
-                    "failed to retrieve ais/vms positions: {:?}",
-                    e
-                );
+                error!("failed to retrieve ais/vms positions: {e:?}");
                 ApiError::InternalServerError
             })
             .map_ok(AisVmsPosition::from)
@@ -148,7 +144,7 @@ pub async fn ais_vms_area<T: Database + 'static>(
         .try_collect()
         .await
         .map_err(|e| {
-            event!(Level::ERROR, "failed to retrieve ais vms area: {:?}", e);
+            error!("failed to retrieve ais vms area: {e:?}");
             ApiError::InternalServerError
         })?;
 

@@ -14,7 +14,7 @@ use meilisearch_sdk::{
 };
 use serde::{de::DeserializeOwned, Serialize};
 use strum::IntoEnumIterator;
-use tracing::{event, Level};
+use tracing::{error, info, warn};
 
 use crate::{error::MeilisearchError, CacheIndex, MeilisearchAdapter};
 
@@ -109,8 +109,8 @@ pub trait Indexable {
             .map(|(id, _)| id)
             .collect::<Vec<_>>();
 
-        event!(Level::INFO, "{} to delete: {}", index.uid, to_delete.len());
-        event!(Level::INFO, "{} to insert: {}", index.uid, to_insert.len());
+        info!("{} to delete: {}", index.uid, to_delete.len());
+        info!("{} to insert: {}", index.uid, to_insert.len());
 
         let mut tasks = Vec::new();
 
@@ -147,7 +147,7 @@ pub trait Indexable {
                 .change_context(MeilisearchError::Query)?;
 
             if !task.is_success() {
-                event!(Level::ERROR, "insert/delete task did not succeed: {task:?}");
+                error!("insert/delete task did not succeed: {task:?}");
             }
         }
 
@@ -190,15 +190,13 @@ pub trait Indexable {
                         ..
                     }) => {
                         if items.len() == 1 {
-                            event!(
-                                Level::ERROR,
+                            error!(
                                 "item with {} {} is too large to insert into meilisearch",
                                 Self::primary_key(),
                                 items[0].id(),
                             );
                         } else {
-                            event!(
-                                Level::WARN,
+                            warn!(
                                 "insert payload too large with {} {}",
                                 items.len(),
                                 index.uid,
@@ -209,7 +207,7 @@ pub trait Indexable {
                             Self::add_items(index, tasks, right).await;
                         }
                     }
-                    _ => event!(Level::ERROR, "failed to insert items, error: {e:?}"),
+                    _ => error!("failed to insert items, error: {e:?}"),
                 },
             }
         }

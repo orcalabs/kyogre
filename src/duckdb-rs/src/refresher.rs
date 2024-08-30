@@ -5,7 +5,7 @@ use error_stack::{Result, ResultExt};
 use orca_core::PsqlSettings;
 use r2d2::PooledConnection;
 use tokio::sync::mpsc::{Receiver, Sender};
-use tracing::{event, instrument, Level};
+use tracing::{error, info, instrument};
 
 const POSTGRES_DUCKDB_VERSION_TABLE: &str = "duckdb_data_version";
 const HAULS_SCHEMA: &str = "CREATE TABLE
@@ -191,7 +191,7 @@ SELECT
                     match request {
                         Some(v) => self.do_periodic_refresh(Some(v.0)).await,
                         None => {
-                            event!(Level::ERROR, "sender half closed, exiting refresh_loop");
+                            error!("sender half closed, exiting refresh_loop");
 
                         }
                     }
@@ -205,19 +205,15 @@ SELECT
     async fn do_periodic_refresh(&self, response_channel: Option<Sender<RefreshResponse>>) {
         let res = match self.refresh_status() {
             Err(e) => {
-                event!(
-                    Level::ERROR,
-                    "failed to check postgres for refresh status: {:?}",
-                    e
-                );
+                error!("failed to check postgres for refresh status: {e:?}");
                 Err(e)
             }
             Ok(v) => {
                 let res = if v.hauls.should_refresh {
-                    event!(Level::INFO, "hauls have been modified, starting refresh...",);
+                    info!("hauls have been modified, starting refresh...");
                     match self.refresh_hauls(Some(v.hauls.version)) {
                         Err(e) => {
-                            event!(Level::ERROR, "failed to set refresh hauls: {:?}", e);
+                            error!("failed to set refresh hauls: {e:?}");
                             Err(e)
                         }
                         Ok(v) => Ok(v),
@@ -226,13 +222,10 @@ SELECT
                     Ok(())
                 };
                 let res2 = if v.landings.should_refresh {
-                    event!(
-                        Level::INFO,
-                        "landings have been modified, starting refresh...",
-                    );
+                    info!("landings have been modified, starting refresh...");
                     match self.refresh_landings(Some(v.landings.version)) {
                         Err(e) => {
-                            event!(Level::ERROR, "failed to set refresh landings: {:?}", e);
+                            error!("failed to set refresh landings: {e:?}");
                             Err(e)
                         }
                         Ok(v) => Ok(v),
@@ -251,11 +244,7 @@ SELECT
 
         if let Some(sender) = response_channel {
             if let Err(e) = sender.send(RefreshResponse(res)).await {
-                event!(
-                    Level::ERROR,
-                    "sender half error, exiting refresh_loop: {:?}",
-                    e
-                );
+                error!("sender half error, exiting refresh_loop: {e:?}");
             }
         }
     }

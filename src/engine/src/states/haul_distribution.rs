@@ -6,7 +6,7 @@ use error_stack::{Result, ResultExt};
 use geo::{coord, Contains};
 use machine::Schedule;
 use tokio::sync::{mpsc::channel, Mutex};
-use tracing::{event, Level};
+use tracing::error;
 
 pub struct HaulDistributionState;
 
@@ -18,7 +18,7 @@ impl machine::State for HaulDistributionState {
         let shared_state = Arc::new(shared_state);
 
         if let Err(e) = distribute_hauls(shared_state.clone()).await {
-            event!(Level::ERROR, "failed to run haul distributor: {:?}", e);
+            error!("failed to run haul distributor: {e:?}");
         }
 
         if let Err(e) = shared_state
@@ -26,14 +26,13 @@ impl machine::State for HaulDistributionState {
             .update_bycatch_status()
             .await
         {
-            event!(Level::ERROR, "failed to update bycatch status: {:?}", e);
+            error!("failed to update bycatch status: {e:?}");
         }
 
         match Arc::into_inner(shared_state) {
             Some(shared_state) => shared_state,
             None => {
-                event!(
-                    Level::ERROR,
+                error!(
                     "failed to run haul distributor: shared_state returned had multiple references"
                 );
                 panic!()
@@ -114,14 +113,10 @@ async fn distribute_hauls(shared_state: Arc<SharedState>) -> Result<(), HaulDist
                     .add_output(output)
                     .await
                 {
-                    event!(
-                        Level::ERROR,
-                        "failed to store haul distributor output: {:?}",
-                        e
-                    );
+                    error!("failed to store haul distributor output: {e:?}");
                 }
             }
-            Err(e) => event!(Level::ERROR, "failed to process haul distributor: {:?}", e),
+            Err(e) => error!("failed to process haul distributor: {e:?}"),
         }
     }
 

@@ -6,7 +6,7 @@ use postgres::PostgresAdapter;
 use scraper::{BarentswatchSource, FiskeridirSource, Scraper, WrappedHttpClient};
 use std::sync::Arc;
 use tokio::select;
-use tracing::{event, Level};
+use tracing::error;
 
 pub struct App {
     pub shared_state: SharedState,
@@ -195,10 +195,10 @@ impl App {
 
                 select! {
                     _ = engine => {
-                        event!(Level::ERROR, "engine exited unexpectedly");
+                        error!("engine exited unexpectedly");
                     },
                     _ = meilisearch => {
-                        event!(Level::ERROR, "meilisearch exited unexpectedly");
+                        error!("meilisearch exited unexpectedly");
                     },
                 }
             } else {

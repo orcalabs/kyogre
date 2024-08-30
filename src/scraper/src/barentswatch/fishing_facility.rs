@@ -7,7 +7,7 @@ use fiskeridir_rs::CallSign;
 use geozero::{geojson::GeoJson, ToGeo};
 use kyogre_core::{BearerToken, ConversionError, FishingFacilityApiSource, GeometryWkt, Mmsi};
 use serde::{Deserialize, Serialize};
-use tracing::{event, Level};
+use tracing::info;
 use uuid::Uuid;
 use wkt::ToWkt;
 
@@ -77,7 +77,7 @@ impl DataSource for FishingFacilityScraper {
                 .await
                 .change_context(ScraperError)?;
 
-            event!(Level::INFO, "successfully scraped fishing_facility");
+            info!("successfully scraped fishing_facility");
         }
         Ok(())
     }

@@ -3,7 +3,7 @@
 
 use error_stack::{fmt::ColorMode, Report};
 use orca_core::{Environment, TracingOutput};
-use tracing::{event, span, Level};
+use tracing::Level;
 use web_api::{settings::Settings, startup::App};
 
 #[tokio::main]
@@ -31,11 +31,6 @@ async fn main() {
     );
 
     let app = App::build(&settings).await;
-
-    let span = span!(Level::TRACE, "fishery_api");
-    let _enter = span.enter();
-
-    event!(Level::INFO, "starting fishery_api...");
 
     app.run().await.unwrap();
 }

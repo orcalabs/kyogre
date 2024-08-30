@@ -1,7 +1,7 @@
 use crate::*;
 use async_trait::async_trait;
 use machine::Schedule;
-use tracing::{event, Level};
+use tracing::error;
 
 pub struct BenchmarkState;
 
@@ -18,12 +18,7 @@ impl machine::State for BenchmarkState {
                 )
                 .await
             {
-                event!(
-                    Level::ERROR,
-                    "failed to run benchmark {}, err: {:?}",
-                    b.benchmark_id(),
-                    e
-                );
+                error!("failed to run benchmark {}, err: {e:?}", b.benchmark_id());
             }
         }
 

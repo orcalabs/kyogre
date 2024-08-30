@@ -14,7 +14,7 @@ use pyo3::{
 };
 use serde::Serialize;
 use std::collections::{HashMap, HashSet};
-use tracing::{event, Level};
+use tracing::info;
 
 mod weight;
 mod weight_weather;
@@ -193,7 +193,7 @@ where
     })
     .change_context(MLModelError::Python)?;
 
-    event!(Level::INFO, "trained on {} new hauls", hauls.len());
+    info!("trained on {} new hauls", hauls.len());
 
     output.model = out.0;
     output.best_score = out.1;
@@ -358,7 +358,7 @@ where
         })
         .collect::<Vec<NewFishingWeightPrediction>>();
 
-        event!(Level::INFO, "added {} new predictions", predictions.len());
+        info!("added {} new predictions", predictions.len());
         adapter
             .add_fishing_weight_predictions(predictions)
             .await

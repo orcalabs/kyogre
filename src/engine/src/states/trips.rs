@@ -11,7 +11,7 @@ use tokio::{
     sync::{mpsc::channel, Mutex},
     task::JoinSet,
 };
-use tracing::{event, Level};
+use tracing::{error, info};
 
 static TRIP_COMPUTATION_STEPS: Lazy<Vec<Box<dyn TripComputationStep>>> = Lazy::new(|| {
     vec![
@@ -81,10 +81,9 @@ impl machine::State for TripsState {
         let shared_state = Arc::new(shared_state);
 
         match run_state(shared_state.clone()).await {
-            Err(e) => event!(Level::ERROR, "failed to run trips pipeline: {:?}", e),
+            Err(e) => error!("failed to run trips pipeline: {e:?}"),
             Ok(r) => {
-                event!(
-                    Level::INFO,
+                info!(
                     "num_conflicts: {}, num_vessels: {}, num_no_prior_state: {}
                        num_trips: {}, num_failed: {}, num_reset: {}",
                     r.num_conflicts,
@@ -100,8 +99,7 @@ impl machine::State for TripsState {
         match Arc::into_inner(shared_state) {
             Some(shared_state) => shared_state,
             None => {
-                event!(
-                    Level::ERROR,
+                error!(
                     "failed to run trips pipeline: shared_state returned had multiple references"
                 );
                 panic!()
@@ -382,20 +380,16 @@ async fn run_state(shared_state: Arc<SharedState>) -> Result<TripsReport, TripPi
                                     if let Err(e) =
                                         shared_state.trip_pipeline_inbound.add_trip_set(trips).await
                                     {
-                                        event!(
-                                            Level::ERROR,
-                                            "failed to store trips for vessel: {}, err: {:?}",
+                                        error!(
+                                            "failed to store trips for vessel: {}, err: {e:?}",
                                             vessel.fiskeridir.id.0,
-                                            e
                                         );
                                     }
                                 }
                             }
-                            Err(e) => event!(
-                                Level::ERROR,
-                                "failed to run trips pipeline for vessel: {}, err: {:?}",
+                            Err(e) => error!(
+                                "failed to run trips pipeline for vessel: {}, err: {e:?}",
                                 vessel.fiskeridir.id.0,
-                                e
                             ),
                         }
 
@@ -409,11 +403,9 @@ async fn run_state(shared_state: Arc<SharedState>) -> Result<TripsReport, TripPi
                                     if let Err(e) =
                                         shared_state.trip_pipeline_inbound.update_trip(update).await
                                     {
-                                        event!(
-                                            Level::ERROR,
-                                            "failed to update trip_id: {}, err: {:?}",
+                                        error!(
+                                            "failed to update trip_id: {}, err: {e:?}",
                                             trip_id.0,
-                                            e
                                         );
                                     }
                                 }
@@ -423,25 +415,22 @@ async fn run_state(shared_state: Arc<SharedState>) -> Result<TripsReport, TripPi
                                     .refresh_detailed_trips(vessel.fiskeridir.id)
                                     .await
                                 {
-                                    event!(
-                                        Level::ERROR,
-                                        "failed to refresh detailed trips for vessel: {}, err: {:?}",
+                                    error!(
+                                        "failed to refresh detailed trips for vessel: {}, err: {e:?}",
                                         vessel.fiskeridir.id.0,
-                                        e
                                     );
                                 }
                             }
-                            Err(e) => event!(
-                                Level::ERROR,
-                                "failed to process unprocessed trips for vessel: {}, err: {:?}",
+                            Err(e) => error!(
+
+                                "failed to process unprocessed trips for vessel: {}, err: {e:?}",
                                 vessel.fiskeridir.id.0,
-                                e
                             ),
                         }
 
                         completed += 1;
                         if completed % 1_000 == 0 {
-                            event!(Level::INFO, "processed {}/{} vessels", completed, num_vessels);
+                            info!("processed {completed}/{num_vessels} vessels");
                         }
                     }
                 }
@@ -455,18 +444,10 @@ async fn run_state(shared_state: Arc<SharedState>) -> Result<TripsReport, TripPi
     workers.shutdown().await;
 
     if exit {
-        event!(
-            Level::ERROR,
-            "trips processing master channel exited for an unexpected reason"
-        );
+        error!("trips processing master channel exited for an unexpected reason");
     } else {
-        event!(
-            Level::INFO,
-            "vessels completed: {}/{}, workers exited: {}/{}",
-            completed,
-            num_vessels,
-            errored,
-            num_workers
+        info!(
+            "vessels completed: {completed}/{num_vessels}, workers exited: {errored}/{num_workers}"
         );
     }
 

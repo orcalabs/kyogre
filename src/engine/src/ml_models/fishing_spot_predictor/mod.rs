@@ -15,7 +15,7 @@ use pyo3::{
 };
 use serde::Serialize;
 use std::collections::{HashMap, HashSet};
-use tracing::{event, Level};
+use tracing::info;
 
 mod spot;
 mod spot_weather;
@@ -225,7 +225,7 @@ where
     })
     .change_context(MLModelError::Python)?;
 
-    event!(Level::INFO, "trained on {} new hauls", hauls.len());
+    info!("trained on {} new hauls", hauls.len());
 
     output.model = out.0;
     output.best_score = out.1;
@@ -352,7 +352,7 @@ where
         })
         .collect::<Vec<NewFishingSpotPrediction>>();
 
-        event!(Level::INFO, "added {} new predictions", predictions.len());
+        info!("added {} new predictions", predictions.len());
 
         adapter
             .add_fishing_spot_predictions(predictions)

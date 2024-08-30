@@ -10,7 +10,7 @@ use kyogre_core::{DataMessage, NewAisStatic};
 use tokio::io::AsyncRead;
 use tokio::sync::broadcast::Sender;
 use tokio_util::codec::{FramedRead, LinesCodec, LinesCodecError};
-use tracing::{event, instrument, Level};
+use tracing::{error, instrument};
 
 pub struct Consumer {
     commit_interval: std::time::Duration,
@@ -62,12 +62,12 @@ where
     for message in messages {
         num_messages += 1;
         match message {
-            Err(e) => event!(Level::ERROR, "failed to consume ais message: {:?}", e),
+            Err(e) => error!("failed to consume ais message: {e:?}"),
             Ok(message) => match parse_message(message) {
-                Err(e) => event!(Level::ERROR, "{:?}", e),
+                Err(e) => error!("{e:?}"),
                 Ok(message) => match message {
                     AisMessage::Static(m) => match NewAisStatic::try_from(m) {
-                        Err(e) => event!(Level::ERROR, "{:?}", e),
+                        Err(e) => error!("{e:?}"),
                         Ok(d) => data_message.static_messages.push(d),
                     },
                     AisMessage::Position(m) => {
