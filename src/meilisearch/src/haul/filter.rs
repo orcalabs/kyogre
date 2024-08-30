@@ -66,7 +66,7 @@ impl Filter for HaulFilter {
                     format!("{} <= {}", HaulFilterDiscriminants::WindSpeed, max)
                 }
                 MinMaxBoth::Both { min, max } => {
-                    format!("{} {} TO {}", HaulFilterDiscriminants::WindSpeed, min, max,)
+                    format!("{} {} TO {}", HaulFilterDiscriminants::WindSpeed, min, max)
                 }
             },
             HaulFilter::AirTemperature(v) => match v {

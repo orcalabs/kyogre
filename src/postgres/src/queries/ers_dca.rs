@@ -8,7 +8,7 @@ use crate::{
 };
 use futures::TryStreamExt;
 use kyogre_core::VesselEventType;
-use tracing::{event, Level};
+use tracing::error;
 use unnest_insert::{UnnestInsert, UnnestInsertReturning};
 
 static CHUNK_SIZE: usize = 100_000;
@@ -31,7 +31,7 @@ impl PostgresAdapter {
         for (i, item) in ers_dca.enumerate() {
             match item {
                 Err(e) => {
-                    event!(Level::ERROR, "failed to read data: {:?}", e);
+                    error!("failed to read data: {e:?}");
                 }
                 Ok(item) => {
                     chunk.push(item);

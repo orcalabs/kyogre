@@ -1,7 +1,7 @@
 use actix_web::web;
 use kyogre_core::{BarentswatchUserId, FiskeridirVesselId};
 use serde::{Deserialize, Serialize};
-use tracing::{event, Level};
+use tracing::error;
 use utoipa::ToSchema;
 
 use crate::{error::ApiError, extractors::BwProfile, response::Response, Database};
@@ -23,7 +23,7 @@ pub async fn get_user<T: Database + 'static>(
         db.get_user(BarentswatchUserId(profile.user.id))
             .await
             .map_err(|e| {
-                event!(Level::ERROR, "failed to get user: {:?}", e);
+                error!("failed to get user: {e:?}");
                 ApiError::InternalServerError
             })?
             .map(User::from),
@@ -56,7 +56,7 @@ pub async fn update_user<T: Database + 'static>(
     db.update_user(user)
         .await
         .map_err(|e| {
-            event!(Level::ERROR, "failed to update user: {:?}", e);
+            error!("failed to update user: {e:?}");
             ApiError::InternalServerError
         })
         .map(|_| Response::new(()))

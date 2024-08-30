@@ -5,7 +5,7 @@ use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use error_stack::{Result, ResultExt};
 use serde::{Deserialize, Serialize};
-use tracing::{event, Level};
+use tracing::error;
 
 use crate::VesselBenchmarkId;
 
@@ -89,7 +89,7 @@ pub trait VesselBenchmark: Send + Sync {
                     });
                 }
                 Err(e) => {
-                    event!(Level::ERROR, "failed to run benchmark {}, err: {:?}", id, e);
+                    error!("failed to run benchmark {id}, err: {e:?}");
                 }
             }
         }

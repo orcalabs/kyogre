@@ -9,7 +9,7 @@ use futures::TryStreamExt;
 use kyogre_core::DateRange;
 use serde::{Deserialize, Serialize};
 use serde_qs::actix::QsQuery as Query;
-use tracing::{event, Level};
+use tracing::{error, warn};
 use utoipa::{IntoParams, ToSchema};
 
 #[derive(Debug, Deserialize, Serialize, IntoParams)]
@@ -52,7 +52,7 @@ pub async fn vms_positions<T: Database + 'static>(
     }?;
 
     let range = DateRange::new(start, end).map_err(|e| {
-        event!(Level::WARN, "{:?}", e);
+        warn!("{e:?}");
         ApiError::InvalidDateRange
     })?;
 
@@ -60,7 +60,7 @@ pub async fn vms_positions<T: Database + 'static>(
         db.vms_positions(&path.call_sign, &range)
             .map_ok(VmsPosition::from)
             .map_err(|e| {
-                event!(Level::ERROR, "failed to retrieve vms positions: {:?}", e);
+                error!("failed to retrieve vms positions: {e:?}");
                 ApiError::InternalServerError
             })
     }

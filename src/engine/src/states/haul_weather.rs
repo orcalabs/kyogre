@@ -13,7 +13,7 @@ use kyogre_core::{HaulWeatherOutbound, WeatherLocation};
 use machine::Schedule;
 use tokio::sync::mpsc::channel;
 use tokio::sync::Mutex;
-use tracing::{event, instrument, Level};
+use tracing::{error, instrument};
 
 pub struct HaulWeatherState;
 
@@ -25,16 +25,13 @@ impl machine::State for HaulWeatherState {
         let shared_state = Arc::new(shared_state);
 
         if let Err(e) = process_haul_weather(shared_state.clone()).await {
-            event!(Level::ERROR, "failed to process haul weather: {:?}", e);
+            error!("failed to process haul weather: {e:?}");
         }
 
         match Arc::into_inner(shared_state) {
             Some(shared_state) => shared_state,
             None => {
-                event!(
-                    Level::ERROR,
-                    "failed to run haul weather: shared_state returned had multiple references"
-                );
+                error!("failed to run haul weather: shared_state returned had multiple references");
                 panic!()
             }
         }
@@ -111,10 +108,10 @@ async fn process_haul_weather(shared_state: Arc<SharedState>) -> Result<(), Haul
                     .add_haul_weather(outputs)
                     .await
                 {
-                    event!(Level::ERROR, "failed to store haul weather output: {:?}", e);
+                    error!("failed to store haul weather output: {e:?}");
                 }
             }
-            Err(e) => event!(Level::ERROR, "failed to process haul weather: {:?}", e),
+            Err(e) => error!("failed to process haul weather: {e:?}"),
         }
     }
 

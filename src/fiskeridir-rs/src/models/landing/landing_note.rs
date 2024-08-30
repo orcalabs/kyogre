@@ -416,8 +416,8 @@ impl Landing {
                 .map(|v| {
                     Jurisdiction::from_str(v.as_ref()).map_err(|e| {
                         report!(Error::Conversion).attach_printable(format!(
-                            "err: {:?}, code: {:?}, name {:?}",
-                            e, l.receiver_nationality_code, l.receiver_nationality
+                            "err: {e:?}, code: {:?}, name {:?}",
+                            l.receiver_nationality_code, l.receiver_nationality
                         ))
                     })
                 })
@@ -439,8 +439,8 @@ impl Landing {
             nationality_code: Jurisdiction::from_str(l.vessel_nationality_code.as_ref()).map_err(
                 |e| {
                     report!(Error::Conversion).attach_printable(format!(
-                        "err: {:?}, code: {:?}, name {:?}",
-                        e, l.vessel_nationality_code, l.vessel_nationality
+                        "err: {e:?}, code: {:?}, name {:?}",
+                        l.vessel_nationality_code, l.vessel_nationality
                     ))
                 },
             )?,
@@ -552,8 +552,8 @@ impl Landing {
                 .map(|v| {
                     Jurisdiction::from_str(v.as_ref()).map_err(|e| {
                         report!(Error::Conversion).attach_printable(format!(
-                            "code: {:?}, name: {:?}, error: {:?}",
-                            l.landing_nation_code, l.landing_nation, e
+                            "code: {:?}, name: {:?}, error: {e:?}",
+                            l.landing_nation_code, l.landing_nation
                         ))
                     })
                 })

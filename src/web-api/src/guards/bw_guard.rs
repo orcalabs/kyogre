@@ -8,7 +8,7 @@ use jsonwebtoken::{
     Algorithm, DecodingKey, TokenData, Validation,
 };
 use serde::de::DeserializeOwned;
-use tracing::{event, Level};
+use tracing::warn;
 
 use crate::settings::BwSettings;
 
@@ -74,7 +74,7 @@ impl Guard for BwtGuard {
                 Ok(token) => self
                     .decode::<serde_json::Value>(token)
                     .map_err(|e| {
-                        event!(Level::WARN, "failed to decode token: {token}, err: {:?}", e);
+                        warn!("failed to decode token: {token}, err: {e:?}");
                         e
                     })
                     .is_ok(),

@@ -19,7 +19,7 @@ use kyogre_core::{
     TripsQuery, VesselEventType,
 };
 use serde::{Deserialize, Serialize};
-use tracing::{event, Level};
+use tracing::{error, warn};
 use utoipa::{IntoParams, ToSchema};
 
 use super::{
@@ -109,7 +109,7 @@ pub async fn trip_of_haul<T: Database + 'static, M: Meilisearch + 'static>(
         .await
         .map(|t| Response::new(t.map(Trip::from)))
         .map_err(|e| {
-            event!(Level::ERROR, "failed to retrieve trip of haul: {:?}", e);
+            error!("failed to retrieve trip of haul: {e:?}");
             ApiError::InternalServerError
         })
 }
@@ -151,7 +151,7 @@ pub async fn trip_of_landing<T: Database + 'static, M: Meilisearch + 'static>(
         .await
         .map(|t| Response::new(t.map(Trip::from)))
         .map_err(|e| {
-            event!(Level::ERROR, "failed to retrieve trip of landing: {:?}", e);
+            error!("failed to retrieve trip of landing: {e:?}");
             ApiError::InternalServerError
         })
 }
@@ -184,7 +184,7 @@ pub async fn trips<T: Database + 'static, M: Meilisearch + 'static>(
         (Some(start), Some(end)) => {
             if start > end {
                 let err = ApiError::StartAfterEnd { start, end };
-                event!(Level::WARN, "{:?}", err);
+                warn!("{err:?}");
                 Err(err)
             } else {
                 Ok(())
@@ -214,12 +214,12 @@ pub async fn trips<T: Database + 'static, M: Meilisearch + 'static>(
             read_fishing_facility,
         )
         .map_err(|e| {
-            event!(Level::ERROR, "failed to retrieve trips_of_vessel: {:?}", e);
+            error!("failed to retrieve trips_of_vessel: {e:?}");
             ApiError::InternalServerError
         })?
         .map_ok(Trip::from)
         .map_err(|e| {
-            event!(Level::ERROR, "failed to retrieve trips_of_vessel: {:?}", e);
+            error!("failed to retrieve trips_of_vessel: {e:?}");
             ApiError::InternalServerError
         })
     }
@@ -251,7 +251,7 @@ pub async fn current_trip<T: Database + 'static>(
         db.current_trip(path.fiskeridir_vessel_id, read_fishing_facility)
             .await
             .map_err(|e| {
-                event!(Level::ERROR, "failed to retrieve current_trip: {:?}", e);
+                error!("failed to retrieve current_trip: {e:?}");
                 ApiError::InternalServerError
             })?
             .map(CurrentTrip::from),

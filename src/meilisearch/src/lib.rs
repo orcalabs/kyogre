@@ -27,7 +27,7 @@ use landing::*;
 pub use settings::Settings;
 use strum::{EnumIter, IntoEnumIterator};
 use strum_macros::{AsRefStr, EnumString};
-use tracing::{event, instrument, Level};
+use tracing::{error, instrument};
 use trip::*;
 
 #[derive(Clone)]
@@ -102,10 +102,7 @@ impl<T: MeilisearchSource> MeilisearchAdapter<T> {
     pub async fn run(self) -> ! {
         loop {
             if let Err(e) = self.refresh().await {
-                event!(
-                    Level::ERROR,
-                    "meilisearch `refresh` failed with error: {e:?}"
-                );
+                error!("meilisearch `refresh` failed with error: {e:?}");
             }
 
             tokio::time::sleep(self.refresh_timeout).await;

@@ -6,7 +6,7 @@ use kyogre_core::AisPermission;
 use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 use strum::EnumIter;
-use tracing::{event, Level};
+use tracing::warn;
 use uuid::Uuid;
 
 use crate::{error::ApiError, settings::BW_PROFILES_URL};
@@ -104,37 +104,25 @@ impl FromRequest for BwProfile {
                 .send()
                 .await
                 .map_err(|e| {
-                    event!(Level::WARN, "request to barentswatch failed: {:?}", e);
+                    warn!("request to barentswatch failed: {e:?}");
                     ApiError::InternalServerError
                 })?;
             match response.status() {
                 StatusCode::OK => {}
                 StatusCode::UNAUTHORIZED => return Err(ApiError::InvalidBwToken),
                 _ => {
-                    event!(
-                        Level::WARN,
-                        "unexpected response from barentswatch: {:?}",
-                        response
-                    );
+                    warn!("unexpected response from barentswatch: {response:?}");
                     return Err(ApiError::InternalServerError);
                 }
             }
 
             let text = response.text().await.map_err(|e| {
-                event!(
-                    Level::WARN,
-                    "failed to parse barentswatch response text, err: {:?}",
-                    e
-                );
+                warn!("failed to parse barentswatch response text, err: {e:?}");
                 ApiError::InternalServerError
             })?;
 
             serde_json::from_str(&text).map_err(|e| {
-                event!(
-                    Level::WARN,
-                    "failed to deserialize BwProfile from {text}, err: {:?}",
-                    e
-                );
+                warn!("failed to deserialize BwProfile from {text}, err: {e:?}");
                 ApiError::InternalServerError
             })
         })

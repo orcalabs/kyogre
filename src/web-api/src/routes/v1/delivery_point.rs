@@ -3,7 +3,7 @@ use actix_web::{web, HttpResponse};
 use fiskeridir_rs::DeliveryPointId;
 use futures::TryStreamExt;
 use serde::{Deserialize, Serialize};
-use tracing::{event, Level};
+use tracing::error;
 use utoipa::ToSchema;
 
 #[utoipa::path(
@@ -22,7 +22,7 @@ pub async fn delivery_points<T: Database + 'static>(
         db.delivery_points()
             .map_ok(DeliveryPoint::from)
             .map_err(|e| {
-                event!(Level::ERROR, "failed to retrieve delivery points: {:?}", e);
+                error!("failed to retrieve delivery points: {e:?}");
                 ApiError::InternalServerError
             })
     }

@@ -9,7 +9,7 @@ use kyogre_core::VesselBenchmarks;
 use kyogre_core::{FiskeridirVesselId, Mmsi};
 use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, DisplayFromStr};
-use tracing::{event, Level};
+use tracing::error;
 use utoipa::ToSchema;
 
 #[utoipa::path(
@@ -24,7 +24,7 @@ use utoipa::ToSchema;
 pub async fn vessels<T: Database + 'static>(db: web::Data<T>) -> Result<HttpResponse, ApiError> {
     to_streaming_response! {
         db.vessels().map_ok(Vessel::from).map_err(|e| {
-            event!(Level::ERROR, "failed to retrieve vessels: {:?}", e);
+            error!("failed to retrieve vessels: {e:?}");
             ApiError::InternalServerError
         })
     }
@@ -55,11 +55,7 @@ pub async fn vessel_benchmarks<T: Database + 'static>(
             &call_sign,
         )
         .map_err(|e| {
-            event!(
-                Level::ERROR,
-                "failed to retrieve vessel benchmarks: {:?}",
-                e
-            );
+            error!("failed to retrieve vessel benchmarks: {e:?}");
             ApiError::InternalServerError
         })
         .await?,

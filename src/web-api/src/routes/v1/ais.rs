@@ -15,7 +15,7 @@ use kyogre_core::{DateRange, Mmsi};
 use serde::{Deserialize, Serialize};
 use serde_qs::actix::QsQuery as Query;
 use serde_with::{serde_as, DisplayFromStr};
-use tracing::{event, Level};
+use tracing::{error, warn};
 use utoipa::{IntoParams, ToSchema};
 
 #[derive(Debug, Deserialize, Serialize, IntoParams)]
@@ -71,7 +71,7 @@ pub async fn ais_current_positions<T: Database + 'static>(
     to_streaming_response! {
         db.ais_current_positions(params.position_timestamp_limit, policy)
             .map_err(|e| {
-                event!(Level::ERROR, "failed to retrieve current ais positions: {:?}", e);
+                error!("failed to retrieve current ais positions: {e:?}");
                 ApiError::InternalServerError
             })
             .map_ok(AisPosition::from)
@@ -122,14 +122,14 @@ pub async fn ais_track<T: Database + 'static>(
     };
 
     let range = DateRange::new(start, end).map_err(|e| {
-        event!(Level::WARN, "{:?}", e);
+        warn!("{e:?}");
         ApiError::InvalidDateRange
     })?;
 
     ais_to_streaming_response! {
         db.ais_positions(path.mmsi, &range, policy)
             .map_err(|e| {
-                event!(Level::ERROR, "failed to retrieve ais positions: {:?}", e);
+                error!("failed to retrieve ais positions: {e:?}");
                 ApiError::InternalServerError
             })
             .map_ok(AisPosition::from)

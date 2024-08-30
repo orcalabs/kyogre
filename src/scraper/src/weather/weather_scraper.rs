@@ -6,7 +6,7 @@ use pyo3::{
     types::{timezone_utc_bound, PyAnyMethods, PyDateTime, PyModule},
     Python,
 };
-use tracing::{event, Level};
+use tracing::{error, info};
 
 use crate::{DataSource, Processor, ScraperError, ScraperId};
 
@@ -57,18 +57,9 @@ impl DataSource for WeatherScraper {
                 .await
                 .change_context(ScraperError)
             {
-                Ok(()) => event!(
-                    Level::INFO,
-                    "successfully scraped weather timestamp: {}",
-                    timestamp,
-                ),
+                Ok(()) => info!("successfully scraped weather timestamp: {timestamp}"),
                 Err(e) => {
-                    event!(
-                        Level::ERROR,
-                        "failed to scrape weather timestamp: {}, error: {}",
-                        timestamp,
-                        e,
-                    );
+                    error!("failed to scrape weather timestamp: {timestamp}, error: {e}");
                     // Since we srape weather data from the latest value in the database, we don't
                     // want to continue here and potentially get holes in the dataset that would
                     // have to be patched manually.
@@ -76,8 +67,8 @@ impl DataSource for WeatherScraper {
                 }
             }
 
-            if let Err(e) = std::fs::remove_file(file) {
-                event!(Level::ERROR, "failed to delete weather file: {}", e);
+            if let Err(e) = tokio::fs::remove_file(file).await {
+                error!("failed to delete weather file: {e:?}");
             }
         }
 

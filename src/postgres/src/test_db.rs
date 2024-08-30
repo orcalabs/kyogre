@@ -309,7 +309,7 @@ FROM
     }
 
     pub async fn create_test_database_from_template(&self, db_name: &str) {
-        sqlx::query(&format!("CREATE DATABASE \"{db_name}\" TEMPLATE postgres;",))
+        sqlx::query(&format!("CREATE DATABASE \"{db_name}\" TEMPLATE postgres;"))
             .execute(&self.db.pool)
             .await
             .unwrap();

@@ -7,7 +7,7 @@ use kyogre_core::{
 };
 use rand::{random, Rng};
 use serde::{Deserialize, Serialize};
-use tracing::{event, Level};
+use tracing::warn;
 
 use crate::error::AisMessageError;
 
@@ -107,7 +107,7 @@ impl TryFrom<AisStatic> for NewAisStatic {
         let eta: Result<Option<Option<DateTime<Utc>>>, AisMessageError> = match eta {
             Ok(v) => Ok(v),
             Err(e) => {
-                event!(Level::WARN, "{:?}", e);
+                warn!("{e:?}");
                 Ok(None)
             }
         };
@@ -117,7 +117,7 @@ impl TryFrom<AisStatic> for NewAisStatic {
             .map(|v| match CallSign::try_from(v) {
                 Ok(v) => Ok(Some(v)),
                 Err(e) => {
-                    event!(Level::WARN, "invalid call_sign: {:?}", e);
+                    warn!("invalid call_sign: {e:?}");
                     Ok(None)
                 }
             })

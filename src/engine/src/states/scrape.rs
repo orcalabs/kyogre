@@ -3,7 +3,7 @@ use async_trait::async_trait;
 use chrono::{Duration, NaiveTime, Utc};
 use machine::Schedule;
 use orca_core::Environment;
-use tracing::{event, Level};
+use tracing::error;
 
 pub struct ScrapeState;
 
@@ -15,11 +15,7 @@ impl machine::State for ScrapeState {
         if let Some(scraper) = &shared_state.scraper {
             scraper.run().await;
             if let Err(e) = shared_state.matrix_cache.increment().await {
-                event!(
-                    Level::ERROR,
-                    "failed to increment cache data version: {:?}",
-                    e
-                );
+                error!("failed to increment cache data version: {e:?}");
             }
 
             let limit = (Utc::now() - ais_area_window()).date_naive();
@@ -29,7 +25,7 @@ impl machine::State for ScrapeState {
                 .prune_ais_vms_area(limit)
                 .await
             {
-                event!(Level::ERROR, "failed to prune ais area: {:?}", e);
+                error!("failed to prune ais area: {e:?}");
             }
         }
 

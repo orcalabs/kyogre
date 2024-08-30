@@ -13,7 +13,7 @@ use tokio::{
     io::AsyncRead,
     sync::broadcast::{self, Receiver, Sender},
 };
-use tracing::{event, Level};
+use tracing::error;
 
 pub struct App {
     consumer: Consumer,
@@ -67,7 +67,7 @@ impl App {
             )
             .await
         {
-            event!(Level::ERROR, "consumer failed: {:?}", e);
+            error!("consumer failed: {e:?}");
         }
     }
 
