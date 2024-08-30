@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use serde_qs::actix::QsQuery as Query;
 use serde_with::{serde_as, DisplayFromStr};
 use strum::IntoEnumIterator;
-use tracing::{event, Level};
+use tracing::error;
 use utoipa::{IntoParams, ToSchema};
 
 #[derive(Default, Debug, Clone, Deserialize, Serialize, IntoParams)]
@@ -28,7 +28,7 @@ pub struct SpeciesGroupParams {
 pub async fn species<T: Database + 'static>(db: web::Data<T>) -> Result<HttpResponse, ApiError> {
     to_streaming_response! {
         db.species().map_ok(Species::from).map_err(|e| {
-            event!(Level::ERROR, "failed to retrieve species: {:?}", e);
+            error!("failed to retrieve species: {e:?}");
             ApiError::InternalServerError
         })
     }
@@ -97,11 +97,7 @@ pub async fn species_fiskeridir<T: Database + 'static>(
         db.species_fiskeridir()
             .map_ok(SpeciesFiskeridir::from)
             .map_err(|e| {
-                event!(
-                    Level::ERROR,
-                    "failed to retrieve species_fiskeridir: {:?}",
-                    e
-                );
+                error!("failed to retrieve species_fiskeridir: {e:?}");
                 ApiError::InternalServerError
             })
     }
@@ -121,7 +117,7 @@ pub async fn species_fao<T: Database + 'static>(
 ) -> Result<HttpResponse, ApiError> {
     to_streaming_response! {
         db.species_fao().map_ok(SpeciesFao::from).map_err(|e| {
-            event!(Level::ERROR, "failed to retrieve species_fao: {:?}", e);
+            error!("failed to retrieve species_fao: {e:?}");
             ApiError::InternalServerError
         })
     }

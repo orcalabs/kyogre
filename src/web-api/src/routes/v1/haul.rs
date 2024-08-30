@@ -16,7 +16,7 @@ use kyogre_core::{
 use serde::{Deserialize, Serialize};
 use serde_qs::actix::QsQuery as Query;
 use serde_with::{serde_as, DisplayFromStr};
-use tracing::{event, Level};
+use tracing::error;
 use utoipa::{IntoParams, ToSchema};
 
 #[serde_as]
@@ -103,12 +103,12 @@ pub async fn hauls<T: Database + 'static, M: Meilisearch + 'static>(
     to_streaming_response! {
         db.hauls(query)
             .map_err(|e| {
-                event!(Level::ERROR, "failed to retrieve hauls: {:?}", e);
+                error!("failed to retrieve hauls: {e:?}");
                 ApiError::InternalServerError
             })?
             .map_ok(Haul::from)
             .map_err(|e| {
-                event!(Level::ERROR, "failed to retrieve hauls: {:?}", e);
+                error!("failed to retrieve hauls: {e:?}");
                 ApiError::InternalServerError
             })
     }
@@ -165,7 +165,7 @@ pub async fn hauls_matrix<T: Database + 'static, S: Cache>(
     }
 
     let matrix = db.hauls_matrix(&query).await.map_err(|e| {
-        event!(Level::ERROR, "failed to retrieve hauls matrix: {:?}", e);
+        error!("failed to retrieve hauls matrix: {e:?}");
         ApiError::InternalServerError
     })?;
 

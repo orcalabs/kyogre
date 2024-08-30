@@ -6,7 +6,7 @@ use fiskeridir_rs::DeliveryPointId;
 use regex::Regex;
 use reqwest::{Response, StatusCode};
 use table_extract::Table;
-use tracing::{event, Level};
+use tracing::{error, info};
 
 use crate::{DataSource, Processor, ScraperError, ScraperId};
 
@@ -32,18 +32,11 @@ impl DataSource for MattilsynetScraper {
     async fn scrape(&self, processor: &(dyn Processor)) -> Result<(), ScraperError> {
         match self.do_scrape(processor).await {
             Ok(()) => {
-                event!(
-                    Level::INFO,
-                    "successfully scraped mattilsynet delivery points",
-                );
+                info!("successfully scraped mattilsynet delivery points");
                 Ok(())
             }
             Err(e) => {
-                event!(
-                    Level::ERROR,
-                    "failed to scrape mattilsynet delivery points, err: {:?}",
-                    e
-                );
+                error!("failed to scrape mattilsynet delivery points, err: {e:?}");
                 Err(e)
             }
         }

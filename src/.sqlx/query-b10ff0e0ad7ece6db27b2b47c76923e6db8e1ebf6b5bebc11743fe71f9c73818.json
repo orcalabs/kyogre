@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nDELETE FROM landings\nWHERE\n    (NOT landing_id = ANY ($1::TEXT []))\n    AND data_year = $2::INT\nRETURNING\n    fiskeridir_vessel_id,\n    landing_timestamp AS \"landing_timestamp!\"\n            ",
+  "query": "\nDELETE FROM landings l USING UNNEST($1::TEXT[], $2::INT[]) u (landing_id, \"version\")\nWHERE\n    l.landing_id = u.landing_id\n    AND l.version < u.version\nRETURNING\n    l.fiskeridir_vessel_id,\n    l.landing_timestamp AS \"landing_timestamp!\"\n            ",
   "describe": {
     "columns": [
       {
@@ -17,7 +17,7 @@
     "parameters": {
       "Left": [
         "TextArray",
-        "Int4"
+        "Int4Array"
       ]
     },
     "nullable": [
@@ -25,5 +25,5 @@
       false
     ]
   },
-  "hash": "5098278c069a034bf9c1f3a518be9c5e500140356a95cc2a0f36395c7861061d"
+  "hash": "b10ff0e0ad7ece6db27b2b47c76923e6db8e1ebf6b5bebc11743fe71f9c73818"
 }

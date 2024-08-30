@@ -2,7 +2,7 @@ use crate::*;
 use async_trait::async_trait;
 use machine::Schedule;
 use orca_core::Environment;
-use tracing::{event, Level};
+use tracing::{error, info};
 
 pub struct DailyWeatherState;
 
@@ -24,7 +24,7 @@ impl machine::State for DailyWeatherState {
                 .prune_dirty_dates()
                 .await
             {
-                event!(Level::ERROR, "failed to prune dirty weather dates: {:?}", e);
+                error!("failed to prune dirty weather dates: {e:?}");
             }
         }
 
@@ -34,19 +34,11 @@ impl machine::State for DailyWeatherState {
             .await
         {
             Err(e) => {
-                event!(
-                    Level::ERROR,
-                    "failed to fetch catch location with weather: {:?}",
-                    e
-                );
+                error!("failed to fetch catch location with weather: {e:?}");
             }
             Ok(cls) => match shared_state.catch_location_weather.dirty_dates().await {
                 Err(e) => {
-                    event!(
-                        Level::ERROR,
-                        "failed to fetch missing catch location weather: {:?}",
-                        e
-                    );
+                    error!("failed to fetch missing catch location weather: {e:?}");
                 }
                 Ok(dates) => {
                     for (i, d) in dates.into_iter().enumerate() {
@@ -55,15 +47,11 @@ impl machine::State for DailyWeatherState {
                             .update_daily_weather(&cls, d)
                             .await
                         {
-                            event!(
-                                Level::ERROR,
-                                "failed to update catch location daily average weather: {:?}",
-                                e
-                            );
+                            error!("failed to update catch location daily average weather: {e:?}");
                         }
 
                         if i % 10 == 0 {
-                            event!(Level::INFO, "update weather for {i} dates");
+                            info!("update weather for {i} dates");
                         }
                     }
                 }

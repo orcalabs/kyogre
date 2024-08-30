@@ -5,7 +5,7 @@ use orca_core::PsqlSettings;
 use serde::Deserialize;
 use std::path::PathBuf;
 use tokio::sync::mpsc::{self, Sender};
-use tracing::{event, Level};
+use tracing::{error, info};
 
 use crate::{
     filter::{HaulFilters, LandingFilters},
@@ -53,8 +53,8 @@ impl DuckdbAdapter {
             }
             CacheStorage::Disk(path) => match DuckdbConnectionManager::file(path) {
                 Err(e) => {
-                    event!(Level::ERROR, "failed to open duckdb: {}", e);
-                    event!(Level::INFO, "trying to delete db file and re-open...");
+                    error!("failed to open duckdb: {e}");
+                    info!("trying to delete db file and re-open...");
                     std::fs::remove_file(path).change_context(DuckdbError::Connection)?;
                     DuckdbConnectionManager::file(path).change_context(DuckdbError::Connection)
                 }
@@ -108,11 +108,7 @@ impl DuckdbAdapter {
             CacheMode::MissOnError => match res {
                 Ok(v) => Ok(v),
                 Err(e) => {
-                    event!(
-                        Level::ERROR,
-                        "failed to get hauls matrix from cache: {:?}",
-                        e
-                    );
+                    error!("failed to get hauls matrix from cache: {e:?}");
                     Ok(None)
                 }
             },
@@ -129,11 +125,7 @@ impl DuckdbAdapter {
             CacheMode::MissOnError => match res {
                 Ok(v) => Ok(v),
                 Err(e) => {
-                    event!(
-                        Level::ERROR,
-                        "failed to get landing matrix from cache: {:?}",
-                        e
-                    );
+                    error!("failed to get landing matrix from cache: {e:?}");
                     Ok(None)
                 }
             },

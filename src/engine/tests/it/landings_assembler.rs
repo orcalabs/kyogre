@@ -191,7 +191,7 @@ async fn test_resolves_conflict_on_day_prior_to_most_recent_trip_end() {
             state.trips[0].period.start(),
             state.landings[0].landing_timestamp - Duration::days(1)
         );
-        assert_eq!(state.trips[0].period.end(), landing,);
+        assert_eq!(state.trips[0].period.end(), landing);
         assert_eq!(state.trips[0].period, state.trips[0].landing_coverage);
         assert_eq!(state.trips[1].period.start(), landing);
         assert_eq!(state.trips[1].period.end(), landing3);
@@ -256,7 +256,7 @@ async fn test_resolves_conflict_on_same_day_as_most_recent_trip_end() {
             state.trips[0].period.start(),
             state.landings[0].landing_timestamp - Duration::days(1)
         );
-        assert_eq!(state.trips[0].period.end(), landing,);
+        assert_eq!(state.trips[0].period.end(), landing);
         assert_eq!(state.trips[0].period, state.trips[0].landing_coverage);
         assert_eq!(state.trips[1].period.start(), landing);
         assert_eq!(state.trips[1].period.end(), landing3);

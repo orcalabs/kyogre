@@ -2,7 +2,7 @@ use crate::AisVms;
 use error_stack::Result;
 use geoutils::Location;
 use kyogre_core::{TripDistanceOutput, TripDistancerId, TripProcessingUnit};
-use tracing::{event, Level};
+use tracing::error;
 
 use kyogre_core::{TripDistancer, TripDistancerError};
 
@@ -39,15 +39,11 @@ impl TripDistancer for AisVms {
                     prev = location
                 }
                 Err(e) => {
-                    event!(
-                        Level::ERROR,
-                        "failed to compute distance from {:?} to {:?}, vessel: {:?}, trip_start: {}, trip_end: {}, err: {:?}",
-                        prev,
-                        location,
+                    error!(
+                        "failed to compute distance from {prev:?} to {location:?}, vessel: {:?}, trip_start: {}, trip_end: {}, err: {e:?}",
                         trip.vessel_id,
                         trip.start(),
                         trip.end(),
-                        e
                     );
                 }
             }

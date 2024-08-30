@@ -4,7 +4,7 @@
 use engine::{settings::Settings, startup::App, TracingMode};
 use error_stack::{fmt::ColorMode, Report};
 use orca_core::{Environment, TracingOutput};
-use tracing::{event, span, Level};
+use tracing::Level;
 
 #[tokio::main]
 async fn main() {
@@ -35,11 +35,6 @@ async fn main() {
     }
 
     let app = App::build(&settings).await;
-
-    let span = span!(Level::TRACE, "engine");
-    let _enter = span.enter();
-
-    event!(Level::INFO, "starting engine...");
 
     app.run().await;
 }

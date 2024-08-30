@@ -3,7 +3,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use error_stack::{Result, ResultExt};
 use fiskeridir_rs::{ApiSource, RegisterVessel, RegisterVesselQuery};
-use tracing::{event, Level};
+use tracing::{error, info};
 
 use crate::{DataSource, FiskeridirSource, Processor, ScraperError, ScraperId};
 
@@ -44,11 +44,8 @@ impl DataSource for RegisterVesselsScraper {
                     .await
                     .change_context(ScraperError)
                     .map_err(|e| {
-                        event!(
-                            Level::ERROR,
-                            "failed to scrape register_vessels for query: {:?}, err: {:?}",
-                            query,
-                            e,
+                        error!(
+                            "failed to scrape register_vessels for query: {query:?}, err: {e:?}"
                         );
                         e
                     })?;
@@ -68,7 +65,7 @@ impl DataSource for RegisterVesselsScraper {
                 .await
                 .change_context(ScraperError)?;
 
-            event!(Level::INFO, "successfully scraped register_vessels");
+            info!("successfully scraped register_vessels");
         }
         Ok(())
     }

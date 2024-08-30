@@ -16,7 +16,7 @@ use kyogre_core::{
 use serde::{Deserialize, Serialize};
 use serde_qs::actix::QsQuery as Query;
 use serde_with::{serde_as, DisplayFromStr};
-use tracing::{event, Level};
+use tracing::error;
 use utoipa::{IntoParams, ToSchema};
 
 #[serde_as]
@@ -97,12 +97,12 @@ pub async fn landings<T: Database + 'static, M: Meilisearch + 'static>(
     to_streaming_response! {
         db.landings(query)
             .map_err(|e| {
-                event!(Level::ERROR, "failed to retrieve landings: {:?}", e);
+                error!("failed to retrieve landings: {e:?}");
                 ApiError::InternalServerError
             })?
             .map_ok(Landing::from)
             .map_err(|e| {
-                event!(Level::ERROR, "failed to retrieve landings: {:?}", e);
+                error!("failed to retrieve landings: {e:?}");
                 ApiError::InternalServerError
             })
     }
@@ -148,7 +148,7 @@ pub async fn landing_matrix<T: Database + 'static, S: Cache>(
     }
 
     let matrix = db.landing_matrix(&query).await.map_err(|e| {
-        event!(Level::ERROR, "failed to retrieve landing matrix: {:?}", e);
+        error!("failed to retrieve landing matrix: {e:?}");
         ApiError::InternalServerError
     })?;
 

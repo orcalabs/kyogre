@@ -7,7 +7,7 @@ use futures::TryStreamExt;
 use kyogre_core::{WeatherLocationId, WeatherQuery};
 use serde::{Deserialize, Serialize};
 use serde_qs::actix::QsQuery as Query;
-use tracing::{event, Level};
+use tracing::error;
 use utoipa::{IntoParams, ToSchema};
 use wkt::ToWkt;
 
@@ -43,12 +43,12 @@ pub async fn weather<T: Database + 'static>(
             query
         )
         .map_err(|e| {
-            event!(Level::ERROR, "failed to retrieve weather: {:?}", e);
+            error!("failed to retrieve weather: {e:?}");
             ApiError::InternalServerError
         })?
         .map_ok(Weather::from)
         .map_err(|e| {
-            event!(Level::ERROR, "failed to retrieve weather: {:?}", e);
+            error!("failed to retrieve weather: {e:?}");
             ApiError::InternalServerError
         })
     }
@@ -71,11 +71,7 @@ pub async fn weather_locations<T: Database + 'static>(
         db.weather_locations()
             .map_ok(WeatherLocation::from)
             .map_err(|e| {
-                event!(
-                    Level::ERROR,
-                    "failed to retrieve weather_locations: {:?}",
-                    e
-                );
+                error!("failed to retrieve weather_locations: {e:?}");
                 ApiError::InternalServerError
             })
     }

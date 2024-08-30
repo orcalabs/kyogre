@@ -1,7 +1,7 @@
 use error_stack::Result;
 use kyogre_core::InsertError;
 use std::future::Future;
-use tracing::{event, Level};
+use tracing::error;
 
 pub(crate) async fn add_in_chunks<A, B, D>(
     insert_closure: A,
@@ -17,7 +17,7 @@ where
     for (i, item) in data.enumerate() {
         match item {
             Err(e) => {
-                event!(Level::ERROR, "failed to read data: {:?}", e);
+                error!("failed to read data: {e:?}");
             }
             Ok(item) => {
                 chunk.push(item);

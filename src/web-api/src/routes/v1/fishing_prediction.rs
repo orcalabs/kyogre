@@ -10,7 +10,7 @@ use kyogre_core::{CatchLocationId, ModelId};
 use serde::{Deserialize, Serialize};
 use serde_qs::actix::QsQuery as Query;
 use serde_with::{serde_as, DisplayFromStr};
-use tracing::{event, Level};
+use tracing::error;
 use utoipa::{IntoParams, ToSchema};
 
 pub const MAX_FISHING_WEIGHT_PREDICTIONS: u32 = 20;
@@ -71,11 +71,7 @@ pub async fn fishing_spot_predictions<T: Database + 'static>(
     {
         Ok(v) => Ok(Response::new(v.map(FishingSpotPrediction::from))),
         Err(e) => {
-            event!(
-                Level::ERROR,
-                "failed to retrieve fishing spot predictions: {:?}",
-                e
-            );
+            error!("failed to retrieve fishing spot predictions: {e:?}");
             Err(ApiError::InternalServerError)
         }
     }
@@ -100,11 +96,7 @@ pub async fn all_fishing_spot_predictions<T: Database + 'static>(
          .all_fishing_spot_predictions(path.model_id)
          .map_ok(FishingSpotPrediction::from)
          .map_err(|e| {
-            event!(
-                Level::ERROR,
-                "failed to retrieve fishing spot predictions: {:?}",
-                e
-            );
+            error!("failed to retrieve fishing spot predictions: {e:?}");
             ApiError::InternalServerError
          })
     }
@@ -140,11 +132,7 @@ pub async fn fishing_weight_predictions<T: Database + 'static>(
          .fishing_weight_predictions(path_params.model_id, path_params.species_group_id, date, limit)
          .map_ok(FishingWeightPrediction::from)
          .map_err(|e| {
-            event!(
-                Level::ERROR,
-                "failed to retrieve fishing weight predictions: {:?}",
-                e
-            );
+            error!("failed to retrieve fishing weight predictions: {e:?}");
             ApiError::InternalServerError
          })
     }
@@ -169,11 +157,7 @@ pub async fn all_fishing_weight_predictions<T: Database + 'static>(
          .all_fishing_weight_predictions(path.model_id)
          .map_ok(FishingWeightPrediction::from)
          .map_err(|e| {
-            event!(
-                Level::ERROR,
-                "failed to retrieve all fishing weight predictions: {:?}",
-                e
-            );
+            error!("failed to retrieve all fishing weight predictions: {e:?}");
             ApiError::InternalServerError
          })
     }
