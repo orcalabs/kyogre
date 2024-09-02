@@ -1,4 +1,3 @@
-use crate::extractors::{Auth0Permission, Auth0Profile};
 use fiskeridir_rs::{Gear, GearGroup, LandingId};
 use futures::TryStreamExt;
 use serde_qs::actix::QsQuery as Query;
@@ -65,11 +64,6 @@ pub struct TripOfHaulPath {
 pub struct TripOfLandingPath {
     #[param(value_type = String)]
     pub landing_id: LandingId,
-}
-
-#[derive(Debug, Deserialize, IntoParams)]
-pub struct TripOfPartialLandingPath {
-    pub landing_id: String,
 }
 
 #[derive(Debug, Deserialize, IntoParams)]
@@ -158,48 +152,6 @@ pub async fn trip_of_landing<T: Database + 'static, M: Meilisearch + 'static>(
         .map(|t| Response::new(t.map(Trip::from)))
         .map_err(|e| {
             event!(Level::ERROR, "failed to retrieve trip of landing: {:?}", e);
-            ApiError::InternalServerError
-        })
-}
-
-#[utoipa::path(
-    get,
-    path = "/trip_of_partial_landing/{landing_id}",
-    params(TripOfPartialLandingPath),
-    responses(
-        (status = 200, description = "trip associated with the given partial landing_id", body = Trip),
-        (status = 500, description = "an internal error occured", body = ErrorResponse),
-    )
-)]
-#[tracing::instrument(skip(db))]
-pub async fn trip_of_partial_landing<T: Database + 'static>(
-    db: web::Data<T>,
-    bw_profile: Option<BwProfile>,
-    auth: Option<Auth0Profile>,
-    path: Path<TripOfPartialLandingPath>,
-) -> Result<Response<Option<Trip>>, ApiError> {
-    let read_fishing_facility = bw_profile
-        .map(|p| {
-            p.policies
-                .contains(&BwPolicy::BwReadExtendedFishingFacility)
-        })
-        .unwrap_or(false)
-        || auth
-            .map(|a| {
-                a.permissions
-                    .contains(&Auth0Permission::ReadFishingFacility)
-            })
-            .unwrap_or(false);
-
-    db.detailed_trip_of_partial_landing(path.into_inner().landing_id, read_fishing_facility)
-        .await
-        .map(|t| Response::new(t.map(Trip::from)))
-        .map_err(|e| {
-            event!(
-                Level::ERROR,
-                "failed to retrieve trip of partial landing: {:?}",
-                e
-            );
             ApiError::InternalServerError
         })
 }

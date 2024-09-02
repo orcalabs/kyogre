@@ -131,10 +131,6 @@ where
                 "/trip_of_landing/{landing_id}",
                 web::get().to(routes::v1::trip::trip_of_landing::<T, M>),
             )
-            .route(
-                "/trip_of_partial_landing/{landing_id}",
-                web::get().to(routes::v1::trip::trip_of_partial_landing::<T>),
-            )
             .route("/trips", web::get().to(routes::v1::trip::trips::<T, M>))
             .route(
                 "/trips/current/{fiskeridir_vessel_id}",
