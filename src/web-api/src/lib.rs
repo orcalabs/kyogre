@@ -51,7 +51,6 @@ impl Database for PostgresAdapter {}
         v1::haul::hauls_matrix,
         v1::trip::trip_of_haul,
         v1::trip::trip_of_landing,
-        v1::trip::trip_of_partial_landing,
         v1::trip::trips,
         v1::trip::current_trip,
         v1::vms::vms_positions,

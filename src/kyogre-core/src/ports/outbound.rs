@@ -76,11 +76,6 @@ pub trait WebApiOutboundPort {
         landing_id: &LandingId,
         read_fishing_facility: bool,
     ) -> Result<Option<TripDetailed>, QueryError>;
-    async fn detailed_trip_of_partial_landing(
-        &self,
-        landing_id: String,
-        read_fishing_facility: bool,
-    ) -> Result<Option<TripDetailed>, QueryError>;
     async fn current_trip(
         &self,
         vessel_id: FiskeridirVesselId,
