@@ -271,7 +271,7 @@ impl ApiClient {
         .await
     }
     pub async fn get_trip_of_haul(&self, haul_id: &HaulId) -> Response {
-        self.get(format!("trip_of_haul/{}", haul_id.0), None::<()>, None)
+        self.get(format!("trip_of_haul/{haul_id}"), None::<()>, None)
             .await
     }
 

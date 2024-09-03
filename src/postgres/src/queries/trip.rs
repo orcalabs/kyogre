@@ -976,7 +976,7 @@ WHERE
     t.haul_ids && $2;
             "#,
             read_fishing_facility,
-            &[haul_id.0],
+            &[*haul_id] as &[HaulId],
         )
         .fetch_optional(&self.pool)
         .await?;

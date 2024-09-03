@@ -9,7 +9,7 @@ use fiskeridir_rs::{GearGroup, SpeciesGroup};
 use futures::Stream;
 use futures::TryStreamExt;
 use kyogre_core::SPOT_PREDICTOR_SAMPLE_WEIGHT_LIMIT;
-use kyogre_core::{FishingSpotPrediction, ModelId, TrainingHaul, WeatherData};
+use kyogre_core::{FishingSpotPrediction, HaulId, ModelId, TrainingHaul, WeatherData};
 use unnest_insert::UnnestInsert;
 
 impl PostgresAdapter {
@@ -23,7 +23,7 @@ impl PostgresAdapter {
             .into_iter()
             .map(|v| MLTrainingLog {
                 ml_model_id: model_id,
-                haul_id: v.haul_id.0,
+                haul_id: v.haul_id,
                 species_group_id: species,
                 catch_location_id: v.catch_location_id.into_inner(),
             })
@@ -198,7 +198,7 @@ SELECT
     h.start_timestamp::DATE AS "date!",
     hm.living_weight AS "weight",
     hm.species_group_id AS "species: SpeciesGroup",
-    hm.haul_id,
+    hm.haul_id AS "haul_id!: HaulId",
     h.wind_speed_10m::DOUBLE PRECISION,
     h.wind_direction_10m::DOUBLE PRECISION,
     h.air_temperature_2m::DOUBLE PRECISION,
@@ -308,7 +308,7 @@ SELECT
     hm.catch_location,
     h.start_timestamp::DATE AS "date!",
     hm.species_group_id AS "species: SpeciesGroup",
-    h.haul_id
+    h.haul_id AS "haul_id!: HaulId"
 FROM
     hauls_matrix hm
     INNER JOIN hauls h ON hm.haul_id = h.haul_id

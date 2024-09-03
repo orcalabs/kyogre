@@ -254,7 +254,7 @@ pub struct TripDetailed {
 
 #[derive(Deserialize)]
 struct TripHaul {
-    haul_id: i64,
+    haul_id: HaulId,
     ers_activity_id: String,
     duration: i32,
     haul_distance: Option<i32>,
@@ -500,7 +500,7 @@ impl TryFrom<TripHaul> for kyogre_core::TripHaul {
 
     fn try_from(v: TripHaul) -> std::result::Result<Self, Self::Error> {
         Ok(Self {
-            haul_id: HaulId(v.haul_id),
+            haul_id: v.haul_id,
             ers_activity_id: v.ers_activity_id,
             duration: v.duration,
             haul_distance: v.haul_distance,

@@ -488,8 +488,8 @@ impl TripId {
     pub fn into_inner(self) -> i64 {
         self.0
     }
-    pub fn test_new(mmsi: i64) -> Self {
-        Self(mmsi)
+    pub fn test_new(value: i64) -> Self {
+        Self(value)
     }
 }
 
