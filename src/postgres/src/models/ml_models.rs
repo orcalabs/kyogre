@@ -1,9 +1,12 @@
 use chrono::NaiveDate;
 use fiskeridir_rs::SpeciesGroup;
-use kyogre_core::{CatchLocationId, ModelId};
+use kyogre_core::{CatchLocationId, HaulId, ModelId};
 use unnest_insert::UnnestInsert;
 
-use crate::{error::Error, queries::type_to_i32};
+use crate::{
+    error::Error,
+    queries::{type_to_i32, type_to_i64},
+};
 
 #[derive(Debug, Clone, UnnestInsert)]
 #[unnest_insert(
@@ -46,7 +49,7 @@ pub struct FishingWeightPrediction {
 
 #[derive(Debug, Clone)]
 pub struct WeightPredictorTrainingData {
-    pub haul_id: i64,
+    pub haul_id: HaulId,
     pub weight: f64,
     pub latitude: f64,
     pub longitude: f64,
@@ -68,7 +71,8 @@ pub struct WeightPredictorTrainingData {
 pub struct MLTrainingLog {
     #[unnest_insert(sql_type = "INT", type_conversion = "type_to_i32")]
     pub ml_model_id: ModelId,
-    pub haul_id: i64,
+    #[unnest_insert(sql_type = "INT", type_conversion = "type_to_i64")]
+    pub haul_id: HaulId,
     #[unnest_insert(sql_type = "INT", type_conversion = "type_to_i32")]
     pub species_group_id: SpeciesGroup,
     pub catch_location_id: String,

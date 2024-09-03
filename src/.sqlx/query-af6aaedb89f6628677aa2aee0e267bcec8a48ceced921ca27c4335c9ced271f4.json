@@ -1,11 +1,11 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT\n    haul_id,\n    ers_activity_id,\n    duration,\n    haul_distance,\n    catch_location_start,\n    catch_locations,\n    ocean_depth_end,\n    ocean_depth_start,\n    quota_type_id,\n    start_latitude,\n    start_longitude,\n    start_timestamp,\n    stop_timestamp,\n    stop_latitude,\n    stop_longitude,\n    total_living_weight,\n    gear_id AS \"gear_id!: Gear\",\n    gear_group_id AS \"gear_group_id!: GearGroup\",\n    fiskeridir_vessel_id,\n    vessel_call_sign,\n    vessel_call_sign_ers,\n    vessel_length,\n    vessel_length_group AS \"vessel_length_group!: VesselLengthGroup\",\n    vessel_name,\n    vessel_name_ers,\n    wind_speed_10m,\n    wind_direction_10m,\n    air_temperature_2m,\n    relative_humidity_2m,\n    air_pressure_at_sea_level,\n    precipitation_amount,\n    cloud_area_fraction,\n    water_speed,\n    water_direction,\n    salinity,\n    water_temperature,\n    ocean_climate_depth,\n    sea_floor_depth,\n    catches::TEXT AS \"catches!\",\n    whale_catches::TEXT AS \"whale_catches!\",\n    cache_version\nFROM\n    hauls\nWHERE\n    haul_id = ANY ($1)\n            ",
+  "query": "\nSELECT\n    haul_id AS \"haul_id!: HaulId\",\n    ers_activity_id,\n    duration,\n    haul_distance,\n    catch_location_start,\n    catch_locations,\n    ocean_depth_end,\n    ocean_depth_start,\n    quota_type_id,\n    start_latitude,\n    start_longitude,\n    start_timestamp,\n    stop_timestamp,\n    stop_latitude,\n    stop_longitude,\n    total_living_weight,\n    gear_id AS \"gear_id!: Gear\",\n    gear_group_id AS \"gear_group_id!: GearGroup\",\n    fiskeridir_vessel_id,\n    vessel_call_sign,\n    vessel_call_sign_ers,\n    vessel_length,\n    vessel_length_group AS \"vessel_length_group!: VesselLengthGroup\",\n    vessel_name,\n    vessel_name_ers,\n    wind_speed_10m,\n    wind_direction_10m,\n    air_temperature_2m,\n    relative_humidity_2m,\n    air_pressure_at_sea_level,\n    precipitation_amount,\n    cloud_area_fraction,\n    water_speed,\n    water_direction,\n    salinity,\n    water_temperature,\n    ocean_climate_depth,\n    sea_floor_depth,\n    catches::TEXT AS \"catches!\",\n    whale_catches::TEXT AS \"whale_catches!\",\n    cache_version\nFROM\n    hauls\nWHERE\n    haul_id = ANY ($1)\n            ",
   "describe": {
     "columns": [
       {
         "ordinal": 0,
-        "name": "haul_id",
+        "name": "haul_id!: HaulId",
         "type_info": "Int8"
       },
       {
@@ -258,5 +258,5 @@
       false
     ]
   },
-  "hash": "7b0b98e87aa8c005877e2705dc7d6c09379d2ae4ea30cbbaec75d31893733810"
+  "hash": "af6aaedb89f6628677aa2aee0e267bcec8a48ceced921ca27c4335c9ced271f4"
 }

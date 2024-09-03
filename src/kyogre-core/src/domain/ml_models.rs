@@ -92,7 +92,7 @@ pub struct TrainingHaul {
 
 #[derive(Debug)]
 pub struct FishingSpotTrainingData {
-    pub haul_id: i64,
+    pub haul_id: HaulId,
     pub latitude: f64,
     pub longitude: f64,
     pub species: SpeciesGroup,
@@ -102,7 +102,7 @@ pub struct FishingSpotTrainingData {
 
 #[derive(Debug)]
 pub struct WeightPredictorTrainingData {
-    pub haul_id: i64,
+    pub haul_id: HaulId,
     pub weight: f64,
     pub latitude: f64,
     pub longitude: f64,

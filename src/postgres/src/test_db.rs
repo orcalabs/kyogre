@@ -40,7 +40,7 @@ impl TestDb {
             Haul,
             r#"
 SELECT
-    h.haul_id,
+    h.haul_id AS "haul_id!: HaulId",
     h.ers_activity_id,
     h.duration,
     h.haul_distance,
