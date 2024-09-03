@@ -7,7 +7,7 @@ use error_stack::{Result, ResultExt};
 use indicatif::*;
 use kyogre_core::{AisMigratorDestination, AisMigratorSource, AisVesselMigrate, Mmsi};
 use std::collections::HashMap;
-use tracing::{event, instrument, Level};
+use tracing::{error, info, instrument};
 
 pub mod error;
 pub mod settings;
@@ -15,8 +15,8 @@ pub mod startup;
 
 #[derive(Clone)]
 pub struct Migrator<T, S> {
-    source_start_threshold: DateTime<Utc>,
-    destination_end_threshold: DateTime<Utc>,
+    start_threshold: DateTime<Utc>,
+    end_threshold: DateTime<Utc>,
     chunk_size: Duration,
     source: S,
     destination: T,
@@ -28,46 +28,42 @@ where
     S: AisMigratorSource + Clone + Send + Sync + 'static,
 {
     pub fn new(
-        source_threshold: DateTime<Utc>,
-        destination_threshold: DateTime<Utc>,
+        start_threshold: DateTime<Utc>,
+        end_threshold: DateTime<Utc>,
         chunk_size: Duration,
         source: S,
         destination: T,
     ) -> Migrator<T, S> {
         Migrator {
-            source_start_threshold: source_threshold,
+            start_threshold,
             chunk_size,
             source,
             destination,
-            destination_end_threshold: destination_threshold,
+            end_threshold,
         }
     }
 
     pub async fn run(self) {
         let mmsis = self.source.existing_mmsis().await.unwrap();
         self.destination.add_mmsis(mmsis.clone()).await.unwrap();
+
         let current_progress = self
             .destination
-            .vessel_migration_progress(&self.source_start_threshold)
+            .vessel_migration_progress(&self.start_threshold)
             .await
             .unwrap();
 
-        let mut map: HashMap<Mmsi, Option<DateTime<Utc>>> = current_progress
-            .into_iter()
-            .map(|v| (v.mmsi, v.progress))
-            .collect();
+        let mut map: HashMap<Mmsi, AisVesselMigrate> =
+            current_progress.into_iter().map(|v| (v.mmsi, v)).collect();
 
         for m in &mmsis {
-            map.entry(*m).or_insert(None);
+            map.entry(*m).or_insert_with(|| AisVesselMigrate {
+                mmsi: *m,
+                progress: None,
+            });
         }
 
-        let vessels_to_migrate: Vec<AisVesselMigrate> = map
-            .into_iter()
-            .map(|(k, v)| AisVesselMigrate {
-                mmsi: k,
-                progress: v,
-            })
-            .collect();
+        let vessels_to_migrate = map.into_values().collect::<Vec<_>>();
 
         info!(
             "found {} mmsis at source, starting_migration...,",
@@ -81,7 +77,7 @@ where
                 "[{elapsed_precise}] {bar:40.cyan/blue} {pos:>7}/{len:7} {msg} [{eta_precise}]",
             )
             .unwrap()
-            .progress_chars("##-"),
+            .progress_chars("#>-"),
         );
 
         for chunk in vessels_to_migrate.chunks(1500) {
@@ -121,7 +117,7 @@ where
     async fn migrate_vessels(&self, vessels: Vec<AisVesselMigrate>, bar: ProgressBar) {
         let num_vessels = vessels.len();
         for v in vessels {
-            let start = v.progress.unwrap_or(self.source_start_threshold);
+            let start = v.progress.unwrap_or(self.start_threshold);
 
             let mut tries = 0;
             loop {
@@ -145,7 +141,7 @@ where
 
         tracing::Span::current().record("app.mmsi", mmsi.0);
 
-        while current < self.destination_end_threshold {
+        while current < self.end_threshold {
             let end = current + self.chunk_size;
 
             let positions = self
@@ -159,8 +155,8 @@ where
                 .change_context(MigratorError::Destination)?;
 
             current = end;
-            if current > self.destination_end_threshold {
-                current = self.destination_end_threshold;
+            if current > self.end_threshold {
+                current = self.end_threshold;
             }
         }
         Ok(())

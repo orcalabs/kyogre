@@ -1,11 +1,11 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT\n    mmsi,\n    progress\nFROM\n    ais_data_migration_progress\nWHERE\n    progress < $1\n            ",
+  "query": "\nSELECT\n    mmsi AS \"mmsi!: Mmsi\",\n    progress\nFROM\n    ais_data_migration_progress\nWHERE\n    progress < $1\n            ",
   "describe": {
     "columns": [
       {
         "ordinal": 0,
-        "name": "mmsi",
+        "name": "mmsi!: Mmsi",
         "type_info": "Int4"
       },
       {
@@ -24,5 +24,5 @@
       true
     ]
   },
-  "hash": "29c411b419f2f4a111fe02906a6bf3be8cf5182894eb6ee1e24eccc81de8f35e"
+  "hash": "970105e83193e4efd0e881088a96627079e0e25065fcf1777e97c23a7bef2258"
 }

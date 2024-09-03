@@ -1,17 +1,17 @@
 log_level: Info
 api_address: https://restrictedlive.ais.barentswatch.no/live/v1/ais
 oauth:
-  auth_url: "https://id.barentswatch.no/connect/authorize"
-  token_url: "https://id.barentswatch.no/connect/token"
-  scope: "ais"
+  auth_url: https://id.barentswatch.no/connect/authorize
+  token_url: https://id.barentswatch.no/connect/token
+  scope: ais
 postgres:
-  ip: postgres
+  ip: localhost
   port: 5432
   username: postgres
   password: test123
   db_name: postgres
   max_connections: 1
-  log_statements: "Disable"
+  log_statements: Disable
   application_name: kyogre-ais-consumer
 commit_interval: 10s
 broadcast_buffer_size: 100

@@ -1,0 +1,20 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    mmsi AS \"mmsi!: Mmsi\"\nFROM\n    ais_vessels\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "mmsi!: Mmsi",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "1c1d02a46a725971baf5b1231727d11dfe9df5376ff7ef5cc4f2f881e8c363bc"
+}
