@@ -2,7 +2,9 @@ use std::fmt;
 
 use crate::{AisVessel, Mmsi, TripAssemblerId};
 use chrono::{DateTime, Utc};
-use fiskeridir_rs::{CallSign, GearGroup, RegisterVesselOwner, SpeciesGroup, VesselLengthGroup};
+use fiskeridir_rs::{
+    CallSign, FiskeridirVesselId, GearGroup, RegisterVesselOwner, SpeciesGroup, VesselLengthGroup,
+};
 use num_derive::FromPrimitive;
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
@@ -138,9 +140,6 @@ pub struct VesselBenchmarkOutput {
     pub value: f64,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize)]
-pub struct FiskeridirVesselId(pub i64);
-
 #[derive(Debug, Clone)]
 pub struct FiskeridirVessel {
     pub id: FiskeridirVesselId,
@@ -216,11 +215,5 @@ impl std::fmt::Display for VesselBenchmarkId {
         match self {
             VesselBenchmarkId::WeightPerHour => f.write_str("WeightPerHour"),
         }
-    }
-}
-
-impl std::fmt::Display for FiskeridirVesselId {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_fmt(format_args!("{}", self.0))
     }
 }

@@ -2,7 +2,8 @@ use std::fmt::{self, Display};
 
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::{
-    Gear, GearGroup, SpeciesGroup, SpeciesMainGroup, VesselLengthGroup, WhaleGender,
+    FiskeridirVesselId, Gear, GearGroup, SpeciesGroup, SpeciesMainGroup, VesselLengthGroup,
+    WhaleGender,
 };
 use serde::{Deserialize, Serialize};
 
@@ -21,7 +22,7 @@ pub struct Haul {
     pub catches: Vec<HaulCatch>,
     pub duration: i32,
     pub ers_activity_id: String,
-    pub fiskeridir_vessel_id: Option<i64>,
+    pub fiskeridir_vessel_id: Option<FiskeridirVesselId>,
     pub gear_group_id: GearGroup,
     pub gear_id: Gear,
     pub haul_distance: Option<i32>,

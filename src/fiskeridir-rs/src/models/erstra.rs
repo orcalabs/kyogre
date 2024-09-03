@@ -1,5 +1,6 @@
 use super::ers_common::ErsCatch;
 use super::ers_common::{ErsMessageInfo, ErsVesselInfo};
+use super::FiskeridirVesselId;
 use crate::deserialize_utils::*;
 use chrono::{DateTime, NaiveDate, NaiveTime, Utc};
 use serde::Deserialize;
@@ -53,7 +54,7 @@ impl ErsTra {
     }
     pub fn test_default(
         message_id: u64,
-        vessel_id: Option<u64>,
+        vessel_id: Option<FiskeridirVesselId>,
         reloading_timestamp: DateTime<Utc>,
     ) -> Self {
         Self {

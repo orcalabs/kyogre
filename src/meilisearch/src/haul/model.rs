@@ -9,8 +9,8 @@ use async_trait::async_trait;
 use chrono::{TimeZone, Utc};
 use fiskeridir_rs::{Gear, GearGroup, SpeciesGroup, VesselLengthGroup};
 use kyogre_core::{
-    CatchLocationId, HaulCatch, HaulId, HaulOceanClimate, HaulWeather, MeilisearchSource,
-    WhaleCatch,
+    CatchLocationId, FiskeridirVesselId, HaulCatch, HaulId, HaulOceanClimate, HaulWeather,
+    MeilisearchSource, WhaleCatch,
 };
 use serde::{Deserialize, Serialize};
 
@@ -22,7 +22,7 @@ pub struct Haul {
     pub catch_locations: Option<Vec<CatchLocationId>>,
     pub duration: i32,
     pub ers_activity_id: String,
-    pub fiskeridir_vessel_id: Option<i64>,
+    pub fiskeridir_vessel_id: Option<FiskeridirVesselId>,
     pub gear_id: Gear,
     pub gear_group_id: GearGroup,
     pub species_group_ids: Vec<SpeciesGroup>,

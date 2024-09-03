@@ -1,8 +1,12 @@
-use crate::error::{Error, Result};
 use chrono::{DateTime, NaiveDate, NaiveTime, Utc};
 use fiskeridir_rs::{DeliveryPointId, Gear, GearGroup, LandingId, VesselLengthGroup};
 use kyogre_core::{CatchLocationId, FiskeridirVesselId, LandingMatrixQuery};
 use unnest_insert::UnnestInsert;
+
+use crate::{
+    error::{Error, Result},
+    queries::opt_type_to_i64,
+};
 
 #[derive(UnnestInsert)]
 #[unnest_insert(
@@ -15,7 +19,8 @@ pub struct NewLanding {
     // Dokumentnummer
     pub document_id: i64,
     // Fartøy ID
-    pub fiskeridir_vessel_id: Option<i64>,
+    #[unnest_insert(sql_type = "BIGINT", type_conversion = "opt_type_to_i64")]
+    pub fiskeridir_vessel_id: Option<FiskeridirVesselId>,
     // Fartøy ID
     pub fiskeridir_vessel_type_id: Option<i32>,
     // Radiokallesignal (seddel)
@@ -99,7 +104,7 @@ pub struct Landing {
     pub gear_id: Gear,
     pub gear_group_id: GearGroup,
     pub delivery_point_id: Option<String>,
-    pub fiskeridir_vessel_id: Option<i64>,
+    pub fiskeridir_vessel_id: Option<FiskeridirVesselId>,
     pub vessel_call_sign: Option<String>,
     pub vessel_name: Option<String>,
     pub vessel_length: Option<f64>,
@@ -218,7 +223,7 @@ impl TryFrom<Landing> for kyogre_core::Landing {
                 .delivery_point_id
                 .map(DeliveryPointId::try_from)
                 .transpose()?,
-            fiskeridir_vessel_id: v.fiskeridir_vessel_id.map(FiskeridirVesselId),
+            fiskeridir_vessel_id: v.fiskeridir_vessel_id,
             vessel_call_sign: v.vessel_call_sign,
             vessel_name: v.vessel_name,
             vessel_length: v.vessel_length,
@@ -246,7 +251,7 @@ pub struct LandingMatrixArgs {
     pub gear_group_ids: Option<Vec<i32>>,
     pub species_group_ids: Option<Vec<i32>>,
     pub vessel_length_groups: Option<Vec<i32>>,
-    pub fiskeridir_vessel_ids: Option<Vec<i64>>,
+    pub fiskeridir_vessel_ids: Option<Vec<FiskeridirVesselId>>,
 }
 
 impl From<LandingMatrixQueryOutput> for kyogre_core::LandingMatrixQueryOutput {
@@ -279,9 +284,7 @@ impl TryFrom<LandingMatrixQuery> for LandingMatrixArgs {
             vessel_length_groups: v
                 .vessel_length_groups
                 .map(|groups| groups.into_iter().map(|g| g as i32).collect()),
-            fiskeridir_vessel_ids: v
-                .vessel_ids
-                .map(|ids| ids.into_iter().map(|i| i.0).collect()),
+            fiskeridir_vessel_ids: v.vessel_ids,
         })
     }
 }

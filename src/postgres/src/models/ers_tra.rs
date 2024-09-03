@@ -1,10 +1,11 @@
 use chrono::{DateTime, NaiveDate, Utc};
 use fiskeridir_rs::FiskdirVesselNationalityGroup;
+use kyogre_core::FiskeridirVesselId;
 use unnest_insert::UnnestInsert;
 
 use crate::{
     error::{Error, MissingValueSnafu},
-    queries::{timestamp_from_date_and_time, type_to_i32},
+    queries::{opt_type_to_i64, timestamp_from_date_and_time, type_to_i32},
 };
 
 #[derive(UnnestInsert)]
@@ -21,7 +22,8 @@ pub struct NewErsTra {
     pub relevant_year: i32,
     pub sequence_number: Option<i32>,
     pub reloading_timestamp: Option<DateTime<Utc>>,
-    pub fiskeridir_vessel_id: Option<i64>,
+    #[unnest_insert(sql_type = "BIGINT", type_conversion = "opt_type_to_i64")]
+    pub fiskeridir_vessel_id: Option<FiskeridirVesselId>,
     pub vessel_building_year: Option<i32>,
     pub vessel_call_sign: Option<String>,
     pub vessel_call_sign_ers: String,
@@ -93,7 +95,7 @@ impl TryFrom<fiskeridir_rs::ErsTra> for NewErsTra {
                     ))
                 })
                 .transpose()?,
-            fiskeridir_vessel_id: v.vessel_info.vessel_id.map(|v| v as i64),
+            fiskeridir_vessel_id: v.vessel_info.vessel_id,
             vessel_building_year: v.vessel_info.building_year.map(|v| v as i32),
             vessel_call_sign: v.vessel_info.call_sign,
             vessel_call_sign_ers: v.vessel_info.call_sign_ers.into_inner(),

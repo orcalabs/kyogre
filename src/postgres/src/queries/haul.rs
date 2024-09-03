@@ -136,7 +136,7 @@ SELECT
     h.total_living_weight,
     h.gear_id AS "gear_id!: Gear",
     h.gear_group_id AS "gear_group_id!: GearGroup",
-    h.fiskeridir_vessel_id,
+    h.fiskeridir_vessel_id AS "fiskeridir_vessel_id!: FiskeridirVesselId",
     h.vessel_call_sign,
     h.vessel_call_sign_ers,
     h.vessel_length,
@@ -270,7 +270,7 @@ SELECT
     total_living_weight,
     gear_id AS "gear_id!: Gear",
     gear_group_id AS "gear_group_id!: GearGroup",
-    fiskeridir_vessel_id,
+    fiskeridir_vessel_id AS "fiskeridir_vessel_id!: FiskeridirVesselId",
     vessel_call_sign,
     vessel_call_sign_ers,
     vessel_length,
@@ -347,7 +347,7 @@ WHERE
     AND h.fiskeridir_vessel_id = $2
             "#,
             ProcessingStatus::Unprocessed as i32,
-            vessel_id.0,
+            vessel_id.into_inner(),
         )
         .fetch_all(&self.pool)
         .await?;
@@ -373,7 +373,7 @@ WHERE
     fiskeridir_vessel_id = $1::BIGINT
     AND haul_weather_status_id = $2::INT
             "#,
-            vessel_id.0,
+            vessel_id.into_inner(),
             HaulWeatherStatus::Unprocessed as i32,
         )
         .fetch_all(&self.pool)
@@ -968,7 +968,7 @@ pub struct HaulsArgs {
     pub gear_group_ids: Option<Vec<i32>>,
     pub species_group_ids: Option<Vec<i32>>,
     pub vessel_length_groups: Option<Vec<i32>>,
-    pub fiskeridir_vessel_ids: Option<Vec<i64>>,
+    pub fiskeridir_vessel_ids: Option<Vec<FiskeridirVesselId>>,
     pub min_wind_speed: Option<f64>,
     pub max_wind_speed: Option<f64>,
     pub min_air_temperature: Option<f64>,
@@ -1003,9 +1003,7 @@ impl TryFrom<HaulsQuery> for HaulsArgs {
             vessel_length_groups: v
                 .vessel_length_groups
                 .map(|groups| groups.into_iter().map(|g| g as i32).collect()),
-            fiskeridir_vessel_ids: v
-                .vessel_ids
-                .map(|ids| ids.into_iter().map(|i| i.0).collect()),
+            fiskeridir_vessel_ids: v.vessel_ids,
             min_wind_speed: v.min_wind_speed,
             max_wind_speed: v.max_wind_speed,
             min_air_temperature: v.min_air_temperature,
@@ -1023,7 +1021,7 @@ pub struct HaulsMatrixArgs {
     pub gear_group_ids: Option<Vec<i32>>,
     pub species_group_ids: Option<Vec<i32>>,
     pub vessel_length_groups: Option<Vec<i32>>,
-    pub fiskeridir_vessel_ids: Option<Vec<i64>>,
+    pub fiskeridir_vessel_ids: Option<Vec<FiskeridirVesselId>>,
     pub bycatch_percentage: Option<f64>,
     pub majority_species_group: bool,
 }
@@ -1048,9 +1046,7 @@ impl TryFrom<HaulsMatrixQuery> for HaulsMatrixArgs {
             vessel_length_groups: v
                 .vessel_length_groups
                 .map(|groups| groups.into_iter().map(|g| g as i32).collect()),
-            fiskeridir_vessel_ids: v
-                .vessel_ids
-                .map(|ids| ids.into_iter().map(|i| i.0).collect()),
+            fiskeridir_vessel_ids: v.vessel_ids,
             bycatch_percentage: v.bycatch_percentage,
             majority_species_group: v.majority_species_group,
         })

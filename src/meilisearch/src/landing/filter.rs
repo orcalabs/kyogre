@@ -59,7 +59,7 @@ impl Filter for LandingFilter {
             LandingFilter::FiskeridirVesselId(ids) => format!(
                 "{} IN [{}]",
                 LandingFilterDiscriminants::FiskeridirVesselId,
-                join_comma_fn(ids, |v| v.0)
+                join_comma(ids)
             ),
             LandingFilter::CatchLocation(locs) => format!(
                 "{} IN [{}]",

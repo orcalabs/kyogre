@@ -304,7 +304,7 @@ impl ApiClient {
             headers
         });
 
-        self.get(format!("trips/current/{}", id.0), None::<()>, headers)
+        self.get(format!("trips/current/{id}"), None::<()>, headers)
             .await
     }
     pub async fn get_vms_positions(&self, call_sign: &CallSign, params: VmsParameters) -> Response {

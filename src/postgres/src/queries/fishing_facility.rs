@@ -4,7 +4,7 @@ use geo_types::geometry::Geometry;
 use geozero::wkb;
 use kyogre_core::{
     FishingFacilitiesQuery, FishingFacilitiesSorting, FishingFacilityApiSource,
-    FishingFacilityToolType, Mmsi, Ordering,
+    FishingFacilityToolType, FiskeridirVesselId, Mmsi, Ordering,
 };
 use sqlx::postgres::types::PgRange;
 
@@ -278,7 +278,7 @@ SET
 SELECT
     tool_id,
     barentswatch_vessel_id,
-    fiskeridir_vessel_id,
+    fiskeridir_vessel_id AS "fiskeridir_vessel_id: FiskeridirVesselId",
     vessel_name,
     call_sign,
     mmsi AS "mmsi: Mmsi",
@@ -396,7 +396,7 @@ LIMIT
 #[derive(Debug, Clone)]
 pub struct FishingFacilitiesArgs {
     pub mmsis: Option<Vec<Mmsi>>,
-    pub fiskeridir_vessel_ids: Option<Vec<i64>>,
+    pub fiskeridir_vessel_ids: Option<Vec<FiskeridirVesselId>>,
     pub tool_types: Option<Vec<i32>>,
     pub active: Option<bool>,
     pub setup_ranges: Option<Vec<PgRange<DateTime<Utc>>>>,
@@ -411,9 +411,7 @@ impl From<FishingFacilitiesQuery> for FishingFacilitiesArgs {
     fn from(v: FishingFacilitiesQuery) -> Self {
         Self {
             mmsis: v.mmsis,
-            fiskeridir_vessel_ids: v
-                .fiskeridir_vessel_ids
-                .map(|fs| fs.into_iter().map(|f| f.0).collect()),
+            fiskeridir_vessel_ids: v.fiskeridir_vessel_ids,
             tool_types: v
                 .tool_types
                 .map(|ts| ts.into_iter().map(|t| t as i32).collect()),

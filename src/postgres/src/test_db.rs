@@ -58,7 +58,7 @@ SELECT
     h.total_living_weight,
     h.gear_id AS "gear_id!: Gear",
     h.gear_group_id AS "gear_group_id!: GearGroup",
-    h.fiskeridir_vessel_id,
+    h.fiskeridir_vessel_id AS "fiskeridir_vessel_id!: FiskeridirVesselId",
     h.vessel_call_sign,
     h.vessel_call_sign_ers,
     h.vessel_length,
@@ -87,7 +87,7 @@ WHERE
     h.fiskeridir_vessel_id = $1
     AND h.message_id = $2
             "#,
-            vessel_id.0,
+            vessel_id.into_inner(),
             message_id as i64,
         )
         .fetch_one(&self.db.pool)
@@ -312,7 +312,7 @@ FROM
 WHERE
     fiskeridir_vessel_id = $1
             "#,
-            vessel_id.0,
+            vessel_id.into_inner(),
         )
         .fetch_all(&self.db.pool)
         .await
@@ -331,7 +331,7 @@ WHERE
             r#"
 SELECT
     t.trip_id AS "trip_id!: TripId",
-    t.fiskeridir_vessel_id AS "fiskeridir_vessel_id!",
+    t.fiskeridir_vessel_id AS "fiskeridir_vessel_id!: FiskeridirVesselId",
     t.fiskeridir_length_group_id AS "fiskeridir_length_group_id!: VesselLengthGroup",
     t.period AS "period!",
     t.period_precision,
@@ -362,7 +362,7 @@ FROM
 WHERE
     t.fiskeridir_vessel_id = $1;
             "#,
-            vessel_id.0
+            vessel_id.into_inner(),
         )
         .fetch_all(&self.db.pool)
         .await
@@ -379,7 +379,7 @@ WHERE
         end: &DateTime<Utc>,
     ) -> kyogre_core::Haul {
         let message_id = random();
-        let mut dca = ErsDca::test_default(message_id, Some(vessel_id.0 as u64));
+        let mut dca = ErsDca::test_default(message_id, Some(vessel_id));
         dca.message_info.set_message_timestamp(*start);
         dca.start_date = Some(start.date_naive());
         dca.start_time = Some(start.time());
@@ -440,8 +440,7 @@ WHERE
         let landings = landings
             .into_iter()
             .map(|(landing_id, vessel_id, timestamp)| {
-                let mut landing =
-                    fiskeridir_rs::Landing::test_default(landing_id, Some(vessel_id.0));
+                let mut landing = fiskeridir_rs::Landing::test_default(landing_id, Some(vessel_id));
                 landing.landing_timestamp = timestamp;
                 landing
             })
@@ -475,8 +474,7 @@ WHERE
         vessel_id: FiskeridirVesselId,
         timestamp: DateTime<Utc>,
     ) {
-        let tra =
-            fiskeridir_rs::ErsTra::test_default(message_id, Some(vessel_id.0 as u64), timestamp);
+        let tra = fiskeridir_rs::ErsTra::test_default(message_id, Some(vessel_id), timestamp);
         self.db.add_ers_tra(vec![tra]).await.unwrap();
     }
 
@@ -486,7 +484,7 @@ WHERE
         imo: Option<i64>,
         call_sign: Option<CallSign>,
     ) -> kyogre_core::Vessel {
-        let mut vessel = fiskeridir_rs::RegisterVessel::test_default(id.0);
+        let mut vessel = fiskeridir_rs::RegisterVessel::test_default(id);
         vessel.imo_number = imo;
         vessel.radio_call_sign = call_sign;
 
@@ -508,7 +506,11 @@ WHERE
         self.add_ais_position(pos).await
     }
 
-    pub async fn generate_ers_dca(&self, message_id: u64, vessel_id: Option<u64>) -> ErsDca {
+    pub async fn generate_ers_dca(
+        &self,
+        message_id: u64,
+        vessel_id: Option<FiskeridirVesselId>,
+    ) -> ErsDca {
         let ers_dca = ErsDca::test_default(message_id, vessel_id);
         self.add_ers_dca_value(ers_dca.clone()).await;
         ers_dca
@@ -648,8 +650,7 @@ WHERE
         message_number: u32,
         port_id: &str,
     ) {
-        let mut departure =
-            ErsDep::test_default(message_id, vessel_id.0 as u64, timestamp, message_number);
+        let mut departure = ErsDep::test_default(message_id, vessel_id, timestamp, message_number);
         departure.port.code = Some(port_id.to_owned());
         self.db.add_ers_dep(vec![departure]).await.unwrap();
     }
@@ -666,7 +667,7 @@ WHERE
 ORDER BY
     landing_id
             "#,
-            vessel_id.0 as i64
+            vessel_id.into_inner(),
         )
         .fetch_all(&self.db.pool)
         .await
@@ -684,8 +685,7 @@ ORDER BY
         message_number: u32,
         port_id: &str,
     ) {
-        let mut arrival =
-            ErsPor::test_default(message_id, vessel_id.0 as u64, timestamp, message_number);
+        let mut arrival = ErsPor::test_default(message_id, vessel_id, timestamp, message_number);
         arrival.port.code = Some(port_id.to_owned());
         self.db.add_ers_por(vec![arrival]).await.unwrap();
     }
@@ -718,7 +718,7 @@ WHERE
     fiskeridir_vessel_id = $1
     AND vessel_benchmark_id = $2
             "#,
-            vessel_id.0,
+            vessel_id.into_inner(),
             benchmark as i32,
         )
         .fetch_one(&self.db.pool)

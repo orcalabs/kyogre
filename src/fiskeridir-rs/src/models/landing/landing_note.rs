@@ -1,6 +1,7 @@
 use super::{
     gear::{Gear, GearGroup, MainGearGroup},
     product::{Condition, ConservationMethod, LandingMethod, Product, Purpose, Quality, Species},
+    FiskeridirVesselId,
 };
 use crate::DeliveryPointId;
 use crate::{
@@ -312,7 +313,7 @@ pub struct LandingRaw {
     #[serde(deserialize_with = "opt_u32_from_str")]
     pub vessel_gross_tonnage_other: Option<u32>,
     #[serde(rename = "Fartøy ID")]
-    pub vessel_id: Option<i64>,
+    pub vessel_id: Option<FiskeridirVesselId>,
     #[serde(rename = "Største lengde")]
     #[serde(deserialize_with = "opt_float_from_str")]
     pub vessel_length: Option<f64>,
@@ -858,7 +859,7 @@ impl DocumentType {
 }
 
 impl Landing {
-    pub fn test_default(landing_id: i64, vessel_id: Option<i64>) -> Landing {
+    pub fn test_default(landing_id: i64, vessel_id: Option<FiskeridirVesselId>) -> Landing {
         let norway_nation_code = Jurisdiction::from_str("NOR").unwrap();
         let document_type = DocumentType::ClosingSlip;
         let sales_team = SalesTeam::NorgesRafisklag;
