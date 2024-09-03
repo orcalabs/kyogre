@@ -550,10 +550,7 @@ WHERE
 
         Ok(())
     }
-    pub(crate) async fn add_mmsis_impl(
-        &self,
-        mmsis: Vec<Mmsi>,
-    ) -> Result<(), PostgresErrorWrapper> {
+    pub(crate) async fn add_mmsis_impl(&self, mmsis: &[Mmsi]) -> Result<(), PostgresErrorWrapper> {
         sqlx::query!(
             r#"
 INSERT INTO
@@ -564,7 +561,7 @@ FROM
     UNNEST($1::INT[])
 ON CONFLICT (mmsi) DO NOTHING
             "#,
-            &mmsis.into_iter().map(|v| v.0).collect::<Vec<i32>>()
+            &mmsis as &[Mmsi],
         )
         .execute(&self.pool)
         .await?;
