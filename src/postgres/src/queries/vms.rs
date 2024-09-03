@@ -9,7 +9,7 @@ use crate::{
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::CallSign;
 use futures::{Stream, TryStreamExt};
-use kyogre_core::{DateRange, PositionType};
+use kyogre_core::{DateRange, Mmsi, PositionType};
 use unnest_insert::UnnestInsert;
 
 impl PostgresAdapter {
@@ -188,7 +188,7 @@ FROM
     UNNEST(
         $1::DOUBLE PRECISION[],
         $2::DOUBLE PRECISION[],
-        $3::timestamptz[],
+        $3::TIMESTAMPTZ[],
         $4::INT[],
         $5::VARCHAR[]
     ) u (
@@ -204,7 +204,7 @@ RETURNING
     a.longitude,
     a."timestamp",
     a.call_sign,
-    a.mmsi
+    a.mmsi AS "mmsi: Mmsi"
             "#,
             &lat,
             &lon,

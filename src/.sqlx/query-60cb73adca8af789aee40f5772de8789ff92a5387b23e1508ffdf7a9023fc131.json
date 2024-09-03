@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT\n    latitude,\n    longitude,\n    mmsi,\n    timestamp AS msgtime,\n    course_over_ground,\n    navigation_status_id AS \"navigational_status: NavigationStatus\",\n    rate_of_turn,\n    speed_over_ground,\n    true_heading,\n    distance_to_shore\nFROM\n    ais_positions\nWHERE\n    mmsi = $1\n    AND timestamp BETWEEN $2 AND $3\nORDER BY\n    timestamp ASC\n            ",
+  "query": "\nSELECT\n    latitude,\n    longitude,\n    mmsi AS \"mmsi!: Mmsi\",\n    TIMESTAMP AS msgtime,\n    course_over_ground,\n    navigation_status_id AS \"navigational_status: NavigationStatus\",\n    rate_of_turn,\n    speed_over_ground,\n    true_heading,\n    distance_to_shore\nFROM\n    ais_positions\nORDER BY\n    TIMESTAMP ASC\n            ",
   "describe": {
     "columns": [
       {
@@ -15,7 +15,7 @@
       },
       {
         "ordinal": 2,
-        "name": "mmsi",
+        "name": "mmsi!: Mmsi",
         "type_info": "Int4"
       },
       {
@@ -55,11 +55,7 @@
       }
     ],
     "parameters": {
-      "Left": [
-        "Int4",
-        "Timestamptz",
-        "Timestamptz"
-      ]
+      "Left": []
     },
     "nullable": [
       false,
@@ -74,5 +70,5 @@
       false
     ]
   },
-  "hash": "3b72770a86bdfa808c6ca0e21c0f5b7091bfcafd1d8aa4c9119787869e68eccc"
+  "hash": "60cb73adca8af789aee40f5772de8789ff92a5387b23e1508ffdf7a9023fc131"
 }

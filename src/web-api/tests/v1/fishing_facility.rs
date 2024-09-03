@@ -33,8 +33,8 @@ async fn test_fishing_facilities_returns_all_fishing_facilities() {
 #[tokio::test]
 async fn test_fishing_facilities_returns_fishing_facilities_with_mmsis() {
     test(|helper, builder| async move {
-        let mmsi1 = Mmsi(42);
-        let mmsi2 = Mmsi(43);
+        let mmsi1 = Mmsi::test_new(42);
+        let mmsi2 = Mmsi::test_new(43);
 
         let mut state = builder
             .fishing_facilities(2)

@@ -144,7 +144,7 @@ where
     async fn migrate_vessel(&self, mmsi: Mmsi, start: DateTime<Utc>) -> Result<(), MigratorError> {
         let mut current = start;
 
-        tracing::Span::current().record("app.mmsi", mmsi.0);
+        tracing::Span::current().record("app.mmsi", mmsi.into_inner());
 
         while current < self.end_threshold {
             let end = current + self.chunk_size;

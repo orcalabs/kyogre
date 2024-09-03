@@ -47,10 +47,18 @@ pub(crate) fn opt_timestamp_from_date_and_time(
     }
 }
 
-pub fn enum_to_i32<T: Into<i32>>(value: T) -> i32 {
+pub fn type_to_i32<T: Into<i32>>(value: T) -> i32 {
     value.into()
 }
 
-pub fn opt_enum_to_i32<T: Into<i32>>(value: Option<T>) -> Option<i32> {
-    value.map(enum_to_i32)
+pub fn opt_type_to_i32<T: Into<i32>>(value: Option<T>) -> Option<i32> {
+    value.map(type_to_i32)
+}
+
+pub fn type_to_i64<T: Into<i64>>(value: T) -> i64 {
+    value.into()
+}
+
+pub fn opt_type_to_i64<T: Into<i64>>(value: Option<T>) -> Option<i64> {
+    value.map(type_to_i64)
 }

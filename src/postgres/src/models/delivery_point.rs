@@ -1,8 +1,9 @@
-use crate::{error::Error, queries::enum_to_i32};
 use chrono::NaiveDate;
 use fiskeridir_rs::DeliveryPointId;
 use kyogre_core::DeliveryPointType;
 use unnest_insert::UnnestInsert;
+
+use crate::{error::Error, queries::type_to_i32};
 
 #[derive(Debug, Clone)]
 pub struct DeliveryPoint {
@@ -27,7 +28,7 @@ pub struct NewDeliveryPointId {
 )]
 pub struct ManualDeliveryPoint {
     pub delivery_point_id: String,
-    #[unnest_insert(sql_type = "INT", type_conversion = "enum_to_i32")]
+    #[unnest_insert(sql_type = "INT", type_conversion = "type_to_i32")]
     pub delivery_point_type_id: DeliveryPointType,
     pub name: String,
 }

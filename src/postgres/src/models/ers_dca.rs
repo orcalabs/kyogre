@@ -8,7 +8,7 @@ use unnest_insert::UnnestInsert;
 use crate::{
     error::Error,
     queries::{
-        enum_to_i32, opt_enum_to_i32, opt_timestamp_from_date_and_time,
+        type_to_i32, opt_type_to_i32, opt_timestamp_from_date_and_time,
         timestamp_from_date_and_time,
     },
 };
@@ -48,7 +48,7 @@ pub struct NewErsDca {
     pub vessel_name: Option<String>,
     pub vessel_name_ers: Option<String>,
     pub vessel_nationality_code: String,
-    #[unnest_insert(sql_type = "INT", type_conversion = "enum_to_i32")]
+    #[unnest_insert(sql_type = "INT", type_conversion = "type_to_i32")]
     pub fiskeridir_vessel_nationality_group_id: FiskdirVesselNationalityGroup,
     pub vessel_rebuilding_year: Option<i32>,
     pub vessel_registration_id: Option<String>,
@@ -83,12 +83,12 @@ pub struct NewErsDcaBody {
     pub catch_year: Option<i32>,
     pub economic_zone_id: Option<String>,
     pub gear_amount: Option<i32>,
-    #[unnest_insert(sql_type = "INT", type_conversion = "enum_to_i32")]
+    #[unnest_insert(sql_type = "INT", type_conversion = "type_to_i32")]
     pub gear_id: Gear,
     pub gear_fao_id: Option<String>,
-    #[unnest_insert(sql_type = "INT", type_conversion = "enum_to_i32")]
+    #[unnest_insert(sql_type = "INT", type_conversion = "type_to_i32")]
     pub gear_group_id: GearGroup,
-    #[unnest_insert(sql_type = "INT", type_conversion = "enum_to_i32")]
+    #[unnest_insert(sql_type = "INT", type_conversion = "type_to_i32")]
     pub gear_main_group_id: MainGearGroup,
     pub gear_mesh_width: Option<i32>,
     pub gear_problem_id: Option<i32>,
@@ -100,9 +100,9 @@ pub struct NewErsDcaBody {
     pub living_weight: Option<i32>,
     pub species_fao_id: Option<String>,
     pub species_fiskeridir_id: Option<i32>,
-    #[unnest_insert(sql_type = "INT", type_conversion = "enum_to_i32")]
+    #[unnest_insert(sql_type = "INT", type_conversion = "type_to_i32")]
     pub species_group_id: SpeciesGroup,
-    #[unnest_insert(sql_type = "INT", type_conversion = "enum_to_i32")]
+    #[unnest_insert(sql_type = "INT", type_conversion = "type_to_i32")]
     pub species_main_group_id: SpeciesMainGroup,
     pub whale_grenade_number: Option<String>,
     pub whale_blubber_measure_a: Option<i32>,
@@ -110,7 +110,7 @@ pub struct NewErsDcaBody {
     pub whale_blubber_measure_c: Option<i32>,
     pub whale_circumference: Option<i32>,
     pub whale_fetus_length: Option<i32>,
-    #[unnest_insert(sql_type = "INT", type_conversion = "opt_enum_to_i32")]
+    #[unnest_insert(sql_type = "INT", type_conversion = "opt_type_to_i32")]
     pub whale_gender_id: Option<WhaleGender>,
     pub whale_individual_number: Option<i32>,
     pub whale_length: Option<i32>,

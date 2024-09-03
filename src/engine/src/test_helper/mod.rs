@@ -476,7 +476,7 @@ impl TestStateBuilder {
             let timestamp = self.global_data_timestamp_counter;
             let call_sign = CallSign::try_from(format!("CS{}", self.vessel_id_counter)).unwrap();
             let mut ais_static =
-                NewAisStatic::test_default(Mmsi(self.mmsi_counter), call_sign.as_ref());
+                NewAisStatic::test_default(Mmsi::test_new(self.mmsi_counter), call_sign.as_ref());
             ais_static.msgtime = timestamp;
 
             self.ais_static.push(AisVesselConstructor {
@@ -573,7 +573,7 @@ impl TestStateBuilder {
             let mut vessel = fiskeridir_rs::RegisterVessel::test_default(vessel_id);
             let call_sign = CallSign::try_from(format!("CS{}", self.call_sign_counter)).unwrap();
             let ais_static =
-                NewAisStatic::test_default(Mmsi(self.mmsi_counter), call_sign.as_ref());
+                NewAisStatic::test_default(Mmsi::test_new(self.mmsi_counter), call_sign.as_ref());
             vessel.radio_call_sign = Some(call_sign.clone());
 
             let key = VesselKey {

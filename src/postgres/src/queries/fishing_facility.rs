@@ -4,7 +4,7 @@ use geo_types::geometry::Geometry;
 use geozero::wkb;
 use kyogre_core::{
     FishingFacilitiesQuery, FishingFacilitiesSorting, FishingFacilityApiSource,
-    FishingFacilityToolType, Ordering,
+    FishingFacilityToolType, Mmsi, Ordering,
 };
 use sqlx::postgres::types::PgRange;
 
@@ -50,7 +50,7 @@ impl PostgresAdapter {
             barentswatch_vessel_id.push(f.barentswatch_vessel_id);
             vessel_name.push(f.vessel_name);
             call_sign.push(f.call_sign.map(|c| c.into_inner()));
-            mmsi.push(f.mmsi.map(|m| m.0));
+            mmsi.push(f.mmsi);
             imo.push(f.imo);
             reg_num.push(f.reg_num);
             sbr_reg_num.push(f.sbr_reg_num);
@@ -281,7 +281,7 @@ SELECT
     fiskeridir_vessel_id,
     vessel_name,
     call_sign,
-    mmsi,
+    mmsi AS "mmsi: Mmsi",
     imo,
     reg_num,
     sbr_reg_num,
@@ -350,7 +350,7 @@ OFFSET
 LIMIT
     $10
             "#,
-            args.mmsis as _,
+            args.mmsis.as_deref() as Option<&[Mmsi]>,
             args.fiskeridir_vessel_ids as _,
             args.tool_types as _,
             args.active,
@@ -395,7 +395,7 @@ LIMIT
 
 #[derive(Debug, Clone)]
 pub struct FishingFacilitiesArgs {
-    pub mmsis: Option<Vec<i32>>,
+    pub mmsis: Option<Vec<Mmsi>>,
     pub fiskeridir_vessel_ids: Option<Vec<i64>>,
     pub tool_types: Option<Vec<i32>>,
     pub active: Option<bool>,
@@ -410,7 +410,7 @@ pub struct FishingFacilitiesArgs {
 impl From<FishingFacilitiesQuery> for FishingFacilitiesArgs {
     fn from(v: FishingFacilitiesQuery) -> Self {
         Self {
-            mmsis: v.mmsis.map(|ms| ms.into_iter().map(|m| m.0).collect()),
+            mmsis: v.mmsis,
             fiskeridir_vessel_ids: v
                 .fiskeridir_vessel_ids
                 .map(|fs| fs.into_iter().map(|f| f.0).collect()),

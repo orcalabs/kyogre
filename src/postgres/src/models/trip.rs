@@ -1,6 +1,5 @@
-use super::{FishingFacility, HaulCatch, WhaleCatch};
-use crate::error::{Error, Result};
-use crate::queries::{enum_to_i32, opt_enum_to_i32};
+use std::str::FromStr;
+
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::{
     DeliveryPointId, Gear, GearGroup, LandingId, LandingIdError, Quality, SpeciesGroup,
@@ -14,8 +13,13 @@ use kyogre_core::{
 };
 use serde::Deserialize;
 use sqlx::postgres::types::PgRange;
-use std::str::FromStr;
 use unnest_insert::UnnestInsert;
+
+use super::{FishingFacility, HaulCatch, WhaleCatch};
+use crate::{
+    error::{Error, Result},
+    queries::{opt_type_to_i32, type_to_i32},
+};
 
 #[derive(Debug, Clone)]
 pub struct Trip {
@@ -66,16 +70,16 @@ pub struct NewTripAssemblerLogEntry {
     returning = "trip_id::bigint!, period, landing_coverage, fiskeridir_vessel_id"
 )]
 pub struct NewTrip {
-    #[unnest_insert(sql_type = "INT", type_conversion = "enum_to_i32")]
+    #[unnest_insert(sql_type = "INT", type_conversion = "type_to_i32")]
     pub trip_assembler_id: TripAssemblerId,
     pub fiskeridir_vessel_id: i64,
     #[unnest_insert(sql_type = "tstzrange")]
     pub landing_coverage: PgRange<DateTime<Utc>>,
     #[unnest_insert(sql_type = "tstzrange")]
     pub period: PgRange<DateTime<Utc>>,
-    #[unnest_insert(sql_type = "INT", type_conversion = "opt_enum_to_i32")]
+    #[unnest_insert(sql_type = "INT", type_conversion = "opt_type_to_i32")]
     pub start_precision_id: Option<PrecisionId>,
-    #[unnest_insert(sql_type = "INT", type_conversion = "opt_enum_to_i32")]
+    #[unnest_insert(sql_type = "INT", type_conversion = "opt_type_to_i32")]
     pub end_precision_id: Option<PrecisionId>,
     pub start_precision_direction: Option<String>,
     pub end_precision_direction: Option<String>,
@@ -83,11 +87,11 @@ pub struct NewTrip {
     #[unnest_insert(sql_type = "tstzrange")]
     pub period_precision: Option<PgRange<DateTime<Utc>>>,
     pub distance: Option<f64>,
-    #[unnest_insert(sql_type = "INT", type_conversion = "opt_enum_to_i32")]
+    #[unnest_insert(sql_type = "INT", type_conversion = "opt_type_to_i32")]
     pub distancer_id: Option<TripDistancerId>,
     pub start_port_id: Option<String>,
     pub end_port_id: Option<String>,
-    #[unnest_insert(sql_type = "INT", type_conversion = "enum_to_i32")]
+    #[unnest_insert(sql_type = "INT", type_conversion = "type_to_i32")]
     pub position_layers_status: ProcessingStatus,
 }
 
@@ -104,9 +108,9 @@ pub struct TripAisVmsPosition {
     pub rate_of_turn: Option<f64>,
     pub true_heading: Option<i32>,
     pub distance_to_shore: f64,
-    #[unnest_insert(sql_type = "INT", type_conversion = "enum_to_i32")]
+    #[unnest_insert(sql_type = "INT", type_conversion = "type_to_i32")]
     pub position_type_id: PositionType,
-    #[unnest_insert(sql_type = "INT", type_conversion = "opt_enum_to_i32")]
+    #[unnest_insert(sql_type = "INT", type_conversion = "opt_type_to_i32")]
     pub pruned_by: Option<TripPositionLayerId>,
 }
 
@@ -118,7 +122,7 @@ pub struct TripPrunedAisVmsPosition {
     pub positions: serde_json::Value,
     #[unnest_insert(sql_type = "JSONB")]
     pub value: serde_json::Value,
-    #[unnest_insert(sql_type = "INT", type_conversion = "enum_to_i32")]
+    #[unnest_insert(sql_type = "INT", type_conversion = "type_to_i32")]
     pub trip_position_layer_id: TripPositionLayerId,
 }
 
