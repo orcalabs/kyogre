@@ -1,11 +1,11 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT\n    trip_id,\n    period,\n    period_precision,\n    landing_coverage,\n    distance,\n    trip_assembler_id AS \"trip_assembler_id!: TripAssemblerId\",\n    start_port_id,\n    end_port_id,\n    target_species_fiskeridir_id,\n    target_species_fao_id\nFROM\n    trips\nWHERE\n    fiskeridir_vessel_id = $1\n    AND trip_precision_status_id = $2\n            ",
+  "query": "\nSELECT\n    trip_id AS \"trip_id!: TripId\",\n    period,\n    period_precision,\n    landing_coverage,\n    distance,\n    trip_assembler_id AS \"trip_assembler_id!: TripAssemblerId\",\n    start_port_id,\n    end_port_id,\n    target_species_fiskeridir_id,\n    target_species_fao_id\nFROM\n    trips\nWHERE\n    fiskeridir_vessel_id = $1\n    AND position_layers_status = $2\n            ",
   "describe": {
     "columns": [
       {
         "ordinal": 0,
-        "name": "trip_id",
+        "name": "trip_id!: TripId",
         "type_info": "Int8"
       },
       {
@@ -57,7 +57,7 @@
     "parameters": {
       "Left": [
         "Int8",
-        "Text"
+        "Int4"
       ]
     },
     "nullable": [
@@ -73,5 +73,5 @@
       true
     ]
   },
-  "hash": "1a34bb594bf91fa8a0349a8ce0c1d8a68b2d82b37760765ec710cbc04ad40dd8"
+  "hash": "52bf345c4b1c6dee9e05974b750717a1d26743d8ac93dec8ba5620c39a9aabaa"
 }

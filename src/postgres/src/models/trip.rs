@@ -18,12 +18,12 @@ use unnest_insert::UnnestInsert;
 use super::{FishingFacility, HaulCatch, WhaleCatch};
 use crate::{
     error::{Error, Result},
-    queries::{opt_type_to_i32, type_to_i32},
+    queries::{opt_type_to_i32, type_to_i32, type_to_i64},
 };
 
 #[derive(Debug, Clone)]
 pub struct Trip {
-    pub trip_id: i64,
+    pub trip_id: TripId,
     pub period: PgRange<DateTime<Utc>>,
     pub period_precision: Option<PgRange<DateTime<Utc>>>,
     pub landing_coverage: PgRange<DateTime<Utc>>,
@@ -67,7 +67,7 @@ pub struct NewTripAssemblerLogEntry {
 #[derive(Debug, Clone, UnnestInsert)]
 #[unnest_insert(
     table_name = "trips",
-    returning = "trip_id::bigint!, period, landing_coverage, fiskeridir_vessel_id"
+    returning = "trip_id:TripId, period, landing_coverage, fiskeridir_vessel_id"
 )]
 pub struct NewTrip {
     #[unnest_insert(sql_type = "INT", type_conversion = "type_to_i32")]
@@ -98,7 +98,8 @@ pub struct NewTrip {
 #[derive(Debug, Clone, UnnestInsert)]
 #[unnest_insert(table_name = "trip_positions")]
 pub struct TripAisVmsPosition {
-    pub trip_id: i64,
+    #[unnest_insert(sql_type = "INT", type_conversion = "type_to_i64")]
+    pub trip_id: TripId,
     pub latitude: f64,
     pub longitude: f64,
     pub timestamp: DateTime<Utc>,
@@ -117,7 +118,8 @@ pub struct TripAisVmsPosition {
 #[derive(Debug, Clone, UnnestInsert)]
 #[unnest_insert(table_name = "trip_positions_pruned")]
 pub struct TripPrunedAisVmsPosition {
-    pub trip_id: i64,
+    #[unnest_insert(sql_type = "INT", type_conversion = "type_to_i64")]
+    pub trip_id: TripId,
     #[unnest_insert(sql_type = "JSONB")]
     pub positions: serde_json::Value,
     #[unnest_insert(sql_type = "JSONB")]
@@ -221,7 +223,7 @@ pub struct TripCalculationTimer {
 
 #[derive(Debug)]
 pub struct TripDetailed {
-    pub trip_id: i64,
+    pub trip_id: TripId,
     pub fiskeridir_vessel_id: i64,
     pub fiskeridir_length_group_id: VesselLengthGroup,
     pub period: PgRange<DateTime<Utc>>,
@@ -319,7 +321,7 @@ impl TryFrom<Trip> for kyogre_core::Trip {
             .transpose()?;
 
         Ok(kyogre_core::Trip {
-            trip_id: TripId(value.trip_id),
+            trip_id: value.trip_id,
             period,
             landing_coverage,
             distance: value.distance,
@@ -409,7 +411,7 @@ impl TryFrom<TripDetailed> for kyogre_core::TripDetailed {
             fiskeridir_vessel_id: FiskeridirVesselId(value.fiskeridir_vessel_id),
             fiskeridir_length_group_id: value.fiskeridir_length_group_id,
             landing_coverage,
-            trip_id: TripId(value.trip_id),
+            trip_id: value.trip_id,
             period,
             num_deliveries: value.num_deliveries as u32,
             most_recent_delivery_date: value.latest_landing_timestamp,
