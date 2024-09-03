@@ -6,7 +6,7 @@ use error::MigratorError;
 use error_stack::{Result, ResultExt};
 use indicatif::*;
 use kyogre_core::{AisMigratorDestination, AisMigratorSource, AisVesselMigrate, Mmsi};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use tracing::{error, info, instrument};
 
 pub mod error;
@@ -45,7 +45,9 @@ where
 
     pub async fn run(self) {
         let mmsis = self.source.existing_mmsis().await.unwrap();
-        self.destination.add_mmsis(mmsis.clone()).await.unwrap();
+        self.destination.add_mmsis(&mmsis).await.unwrap();
+
+        let mmsis = mmsis.into_iter().collect::<HashSet<_>>();
 
         let current_progress = self
             .destination
@@ -53,8 +55,11 @@ where
             .await
             .unwrap();
 
-        let mut map: HashMap<Mmsi, AisVesselMigrate> =
-            current_progress.into_iter().map(|v| (v.mmsi, v)).collect();
+        let mut map: HashMap<Mmsi, AisVesselMigrate> = current_progress
+            .into_iter()
+            .filter(|v| mmsis.contains(&v.mmsi))
+            .map(|v| (v.mmsi, v))
+            .collect();
 
         for m in &mmsis {
             map.entry(*m).or_insert_with(|| AisVesselMigrate {
@@ -66,7 +71,7 @@ where
         let vessels_to_migrate = map.into_values().collect::<Vec<_>>();
 
         info!(
-            "found {} mmsis at source, starting_migration...,",
+            "found {} mmsis at source, starting_migration...",
             mmsis.len()
         );
 
