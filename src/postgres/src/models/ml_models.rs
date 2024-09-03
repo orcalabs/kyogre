@@ -1,9 +1,9 @@
-use crate::error::Error;
-use crate::queries::enum_to_i32;
 use chrono::NaiveDate;
 use fiskeridir_rs::SpeciesGroup;
 use kyogre_core::{CatchLocationId, ModelId};
 use unnest_insert::UnnestInsert;
+
+use crate::{error::Error, queries::type_to_i32};
 
 #[derive(Debug, Clone, UnnestInsert)]
 #[unnest_insert(
@@ -17,7 +17,7 @@ pub struct NewFishingSpotPrediction {
     pub longitude: f64,
     pub species_group_id: i32,
     pub date: NaiveDate,
-    #[unnest_insert(sql_type = "INT", type_conversion = "enum_to_i32")]
+    #[unnest_insert(sql_type = "INT", type_conversion = "type_to_i32")]
     pub ml_model_id: ModelId,
 }
 
@@ -32,7 +32,7 @@ pub struct NewFishingWeightPrediction {
     pub catch_location_id: String,
     pub species_group_id: i32,
     pub date: NaiveDate,
-    #[unnest_insert(sql_type = "INT", type_conversion = "enum_to_i32")]
+    #[unnest_insert(sql_type = "INT", type_conversion = "type_to_i32")]
     pub ml_model_id: ModelId,
 }
 
@@ -66,10 +66,10 @@ pub struct WeightPredictorTrainingData {
 #[derive(Debug, Clone, UnnestInsert)]
 #[unnest_insert(table_name = "ml_hauls_training_log")]
 pub struct MLTrainingLog {
-    #[unnest_insert(sql_type = "INT", type_conversion = "enum_to_i32")]
+    #[unnest_insert(sql_type = "INT", type_conversion = "type_to_i32")]
     pub ml_model_id: ModelId,
     pub haul_id: i64,
-    #[unnest_insert(sql_type = "INT", type_conversion = "enum_to_i32")]
+    #[unnest_insert(sql_type = "INT", type_conversion = "type_to_i32")]
     pub species_group_id: SpeciesGroup,
     pub catch_location_id: String,
 }

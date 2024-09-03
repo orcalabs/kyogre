@@ -1,11 +1,11 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT\n    mmsi,\n    imo_number,\n    call_sign,\n    NAME,\n    ship_width,\n    ship_length,\n    eta,\n    destination\nFROM\n    ais_vessels\n            ",
+  "query": "\nSELECT\n    mmsi AS \"mmsi!: Mmsi\",\n    imo_number,\n    call_sign,\n    NAME,\n    ship_width,\n    ship_length,\n    eta,\n    destination\nFROM\n    ais_vessels\n            ",
   "describe": {
     "columns": [
       {
         "ordinal": 0,
-        "name": "mmsi",
+        "name": "mmsi!: Mmsi",
         "type_info": "Int4"
       },
       {
@@ -58,5 +58,5 @@
       true
     ]
   },
-  "hash": "6b63083645ee5131c65b06de6940f6f49491cf5fc32b7d57e113b29b8244e6f6"
+  "hash": "179bf39272a763380adaef053af965c651693e21e7ea640bb56f8dee9b5c01e8"
 }

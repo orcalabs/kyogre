@@ -1,3 +1,5 @@
+use std::{fmt::Display, num::ParseIntError, str::FromStr};
+
 use chrono::{DateTime, Duration, TimeZone, Utc};
 use fiskeridir_rs::CallSign;
 use num_derive::FromPrimitive;
@@ -35,7 +37,7 @@ pub struct DataMessage {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize)]
 #[cfg_attr(feature = "sqlx", derive(sqlx::Type), sqlx(transparent))]
-pub struct Mmsi(pub i32);
+pub struct Mmsi(i32);
 
 #[derive(Debug, Clone)]
 pub struct NewAisPosition {
@@ -188,6 +190,35 @@ pub enum NavigationStatus {
 pub struct AisVesselMigrate {
     pub mmsi: Mmsi,
     pub progress: Option<DateTime<Utc>>,
+}
+
+impl Mmsi {
+    pub fn into_inner(self) -> i32 {
+        self.0
+    }
+    pub fn test_new(mmsi: i32) -> Self {
+        Self(mmsi)
+    }
+}
+
+impl FromStr for Mmsi {
+    type Err = ParseIntError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        s.parse().map(Self)
+    }
+}
+
+impl From<Mmsi> for i32 {
+    fn from(value: Mmsi) -> Self {
+        value.0
+    }
+}
+
+impl Display for Mmsi {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
+    }
 }
 
 impl NewAisStatic {

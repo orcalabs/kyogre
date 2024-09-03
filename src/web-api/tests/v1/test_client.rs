@@ -149,7 +149,7 @@ impl ApiClient {
             headers
         });
 
-        self.get(format!("ais_track/{}", mmsi.0), Some(params), headers)
+        self.get(format!("ais_track/{mmsi}"), Some(params), headers)
             .await
     }
 
