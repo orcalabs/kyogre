@@ -5,7 +5,7 @@ use unnest_insert::UnnestInsert;
 
 use crate::{
     error::Error,
-    queries::{enum_to_i32, timestamp_from_date_and_time},
+    queries::{timestamp_from_date_and_time, type_to_i32},
 };
 
 #[derive(UnnestInsert)]
@@ -52,7 +52,7 @@ pub struct NewErsDep {
     pub vessel_name: Option<String>,
     pub vessel_name_ers: Option<String>,
     pub vessel_nationality_code: String,
-    #[unnest_insert(sql_type = "INT", type_conversion = "enum_to_i32")]
+    #[unnest_insert(sql_type = "INT", type_conversion = "type_to_i32")]
     pub fiskeridir_vessel_nationality_group_id: FiskdirVesselNationalityGroup,
     pub vessel_rebuilding_year: Option<i32>,
     pub vessel_registration_id: Option<String>,

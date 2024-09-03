@@ -112,7 +112,7 @@ impl FishingFacility {
             fiskeridir_vessel_id: None,
             vessel_name: Some("Sjarken".into()),
             call_sign: Some(CallSign::try_from("LK-17").unwrap()),
-            mmsi: Some(Mmsi(123456)),
+            mmsi: Some(Mmsi::test_new(123456)),
             imo: Some(12345678),
             reg_num: Some("NO-342642".into()),
             sbr_reg_num: Some("ABC 123".into()),

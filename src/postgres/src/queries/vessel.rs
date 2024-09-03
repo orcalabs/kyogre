@@ -10,7 +10,7 @@ use crate::{
 };
 use fiskeridir_rs::{GearGroup, SpeciesGroup, VesselLengthGroup};
 use futures::{Stream, TryStreamExt};
-use kyogre_core::{FiskeridirVesselId, TripAssemblerId, VesselSource};
+use kyogre_core::{FiskeridirVesselId, Mmsi, TripAssemblerId, VesselSource};
 use unnest_insert::UnnestInsert;
 
 impl PostgresAdapter {
@@ -20,7 +20,7 @@ impl PostgresAdapter {
             r#"
 SELECT
     call_sign,
-    mmsis AS "mmsis!: Vec<Option<i32>>",
+    mmsis AS "mmsis!: Vec<Option<Mmsi>>",
     fiskeridir_vessel_ids AS "fiskeridir_vessel_ids!: Vec<Option<i64>>",
     ais_vessel_names AS "ais_vessel_names!: Vec<Option<String>>",
     fiskeridir_vessel_names AS "fiskeridir_vessel_names!: Vec<Option<String>>",
@@ -46,7 +46,7 @@ FROM
 
         overrides.iter().for_each(|v| {
             if let Some(val) = v.mmsi {
-                mmsi.push(val.0);
+                mmsi.push(val);
             }
             fiskeridir_vessel_id.push(v.vessel_id.0);
         });
@@ -60,7 +60,7 @@ FROM
     UNNEST($1::INT[])
 ON CONFLICT DO NOTHING
             "#,
-            &mmsi
+            &mmsi as &[Mmsi],
         )
         .fetch_all(&mut *tx)
         .await?;
@@ -163,7 +163,7 @@ ON CONFLICT DO NOTHING
 SELECT
     ARRAY_AGG(DISTINCT f.fiskeridir_vessel_id) AS "fiskeridir_vessel_ids!: Vec<Option<i64>>",
     f.call_sign AS "call_sign!",
-    COALESCE(ARRAY_AGG(DISTINCT a.mmsi), '{}') AS "mmsis!: Vec<Option<i32>>",
+    COALESCE(ARRAY_AGG(DISTINCT a.mmsi), '{}') AS "mmsis!: Vec<Option<Mmsi>>",
     COALESCE(ARRAY_AGG(DISTINCT a.name), '{}') AS "ais_vessel_names!: Vec<Option<String>>",
     COALESCE(ARRAY_AGG(DISTINCT f.name), '{}') AS "fiskeridir_vessel_names!: Vec<Option<String>>",
     COALESCE(
@@ -378,7 +378,7 @@ SELECT
     f.rebuilding_year AS fiskeridir_rebuilding_year,
     f.gear_group_ids AS "gear_group_ids!: Vec<GearGroup>",
     f.species_group_ids AS "species_group_ids!: Vec<SpeciesGroup>",
-    a.mmsi AS "ais_mmsi?",
+    a.mmsi AS "ais_mmsi: Mmsi",
     a.imo_number AS ais_imo_number,
     a.call_sign AS ais_call_sign,
     a.name AS ais_name,
@@ -446,7 +446,7 @@ SELECT
     f.rebuilding_year AS fiskeridir_rebuilding_year,
     f.gear_group_ids AS "gear_group_ids!: Vec<GearGroup>",
     f.species_group_ids AS "species_group_ids!: Vec<SpeciesGroup>",
-    a.mmsi AS "ais_mmsi?",
+    a.mmsi AS "ais_mmsi: Mmsi",
     a.imo_number AS ais_imo_number,
     a.call_sign AS ais_call_sign,
     a.name AS ais_name,

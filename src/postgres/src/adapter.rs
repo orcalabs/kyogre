@@ -356,13 +356,7 @@ impl TestHelperOutbound for PostgresAdapter {
     }
 
     async fn all_ais(&self) -> Vec<AisPosition> {
-        self.all_ais_impl()
-            .await
-            .unwrap()
-            .into_iter()
-            .map(AisPosition::try_from)
-            .collect::<StdResult<_, _>>()
-            .unwrap()
+        self.all_ais_impl().await.unwrap()
     }
     async fn all_vms(&self) -> Vec<VmsPosition> {
         self.all_vms_impl()
@@ -484,7 +478,7 @@ impl AisMigratorSource for PostgresAdapter {
         start: DateTime<Utc>,
         end: DateTime<Utc>,
     ) -> CoreResult<Vec<AisPosition>> {
-        convert_vec(self.all_ais_positions_impl(mmsi, start, end).await?)
+        Ok(self.all_ais_positions_impl(mmsi, start, end).await?)
     }
     async fn existing_mmsis(&self) -> CoreResult<Vec<Mmsi>> {
         Ok(self.existing_mmsis_impl().await?)
@@ -524,7 +518,9 @@ impl WebApiOutboundPort for PostgresAdapter {
         limit: Option<DateTime<Utc>>,
         user_policy: AisPermission,
     ) -> PinBoxStream<'_, AisPosition> {
-        convert_stream(self.ais_current_positions(limit, user_policy)).boxed()
+        self.ais_current_positions(limit, user_policy)
+            .map_err(From::from)
+            .boxed()
     }
     fn ais_vms_area_positions(
         &self,
@@ -578,7 +574,9 @@ impl WebApiOutboundPort for PostgresAdapter {
         range: &DateRange,
         permission: AisPermission,
     ) -> PinBoxStream<'_, AisPosition> {
-        convert_stream(self.ais_positions_impl(mmsi, range, permission)).boxed()
+        self.ais_positions_impl(mmsi, range, permission)
+            .map_err(From::from)
+            .boxed()
     }
     fn vms_positions(
         &self,

@@ -393,7 +393,7 @@ async fn test_vessels_does_not_return_vessel_with_an_active_conflict() {
             ActiveVesselConflict {
                 vessel_ids: vec![Some(FiskeridirVesselId(0)), Some(FiskeridirVesselId(1))],
                 call_sign: "test".try_into().unwrap(),
-                mmsis: vec![Some(Mmsi(1)), Some(Mmsi(2))],
+                mmsis: vec![Some(Mmsi::test_new(1)), Some(Mmsi::test_new(2))],
                 sources: vec![Some(VesselSource::FiskeridirVesselRegister)],
             }
         );
@@ -467,7 +467,7 @@ async fn test_vessels_returns_both_vessels_after_conflict_have_been_resolved_but
                 v.fiskeridir.id = 1;
                 v.fiskeridir.radio_call_sign = Some("test".try_into().unwrap());
                 v.ais.call_sign = Some("test".try_into().unwrap());
-                v.ais.mmsi = Mmsi(1);
+                v.ais.mmsi = Mmsi::test_new(1);
             })
             .conflict_winner()
             .vessels(1)
@@ -475,7 +475,7 @@ async fn test_vessels_returns_both_vessels_after_conflict_have_been_resolved_but
                 v.fiskeridir.id = 2;
                 v.fiskeridir.radio_call_sign = Some("test".try_into().unwrap());
                 v.ais.call_sign = Some("test".try_into().unwrap());
-                v.ais.mmsi = Mmsi(2);
+                v.ais.mmsi = Mmsi::test_new(2);
             })
             .conflict_loser()
             .build()
@@ -490,7 +490,7 @@ async fn test_vessels_returns_both_vessels_after_conflict_have_been_resolved_but
         let winner = vessels.iter().find(|v| v.fiskeridir.id.0 == 1).unwrap();
         let loser = vessels.iter().find(|v| v.fiskeridir.id.0 == 2).unwrap();
 
-        assert_eq!(winner.mmsi().unwrap().0, 1);
+        assert_eq!(winner.mmsi().unwrap().into_inner(), 1);
         assert_eq!(winner.ais_call_sign().unwrap(), "test");
         assert!(loser.ais.is_none());
         assert!(loser.fiskeridir_call_sign().is_none());
@@ -509,7 +509,7 @@ async fn test_vessels_does_not_return_vessels_with_an_active_mmsi_conflict() {
                 v.fiskeridir.id = i as i64;
                 v.fiskeridir.radio_call_sign = Some("test".to_string().try_into().unwrap());
                 v.ais.call_sign = Some("test".to_string().try_into().unwrap());
-                v.ais.mmsi = Mmsi(1);
+                v.ais.mmsi = Mmsi::test_new(1);
             })
             .build()
             .await;
@@ -527,7 +527,7 @@ async fn test_vessels_does_not_return_vessels_with_an_active_mmsi_conflict() {
             ActiveVesselConflict {
                 vessel_ids: vec![Some(FiskeridirVesselId(0)), Some(FiskeridirVesselId(1))],
                 call_sign: "test".try_into().unwrap(),
-                mmsis: vec![Some(Mmsi(1))],
+                mmsis: vec![Some(Mmsi::test_new(1))],
                 sources: vec![Some(VesselSource::FiskeridirVesselRegister)],
             },
         );
@@ -544,7 +544,7 @@ async fn test_vessels_returns_vessels_conflicts_that_have_been_annotated_as_the_
                 v.fiskeridir.id = i as i64;
                 v.fiskeridir.radio_call_sign = Some("test".try_into().unwrap());
                 v.ais.call_sign = Some("test".try_into().unwrap());
-                v.ais.mmsi = Mmsi(1);
+                v.ais.mmsi = Mmsi::test_new(1);
             })
             .conflict_winner()
             .build()
@@ -559,9 +559,9 @@ async fn test_vessels_returns_vessels_conflicts_that_have_been_annotated_as_the_
         let vessel = vessels.iter().find(|v| v.fiskeridir.id.0 == 0).unwrap();
         let vessel2 = vessels.iter().find(|v| v.fiskeridir.id.0 == 1).unwrap();
 
-        assert_eq!(vessel.mmsi().unwrap().0, 1);
+        assert_eq!(vessel.mmsi().unwrap().into_inner(), 1);
         assert_eq!(vessel.ais_call_sign().unwrap(), "test");
-        assert_eq!(vessel2.mmsi().unwrap().0, 1);
+        assert_eq!(vessel2.mmsi().unwrap().into_inner(), 1);
         assert_eq!(vessel2.ais_call_sign().unwrap(), "test");
 
         assert!(helper.adapter().active_vessel_conflicts().await.is_empty());
@@ -575,14 +575,14 @@ async fn test_vessels_does_not_return_an_active_mmsi_conflict() {
         builder
             .ais_vessels(1)
             .modify(|v| {
-                v.vessel.mmsi = Mmsi(2);
+                v.vessel.mmsi = Mmsi::test_new(2);
                 v.vessel.call_sign = Some("test".try_into().unwrap());
             })
             .vessels(1)
             .modify(|v| {
                 v.fiskeridir.radio_call_sign = Some("test".try_into().unwrap());
                 v.ais.call_sign = Some("test".try_into().unwrap());
-                v.ais.mmsi = Mmsi(1);
+                v.ais.mmsi = Mmsi::test_new(1);
             })
             .build()
             .await;
@@ -600,7 +600,7 @@ async fn test_vessels_does_not_return_an_active_mmsi_conflict() {
             ActiveVesselConflict {
                 vessel_ids: vec![Some(FiskeridirVesselId(1))],
                 call_sign: "test".try_into().unwrap(),
-                mmsis: vec![Some(Mmsi(1)), Some(Mmsi(2))],
+                mmsis: vec![Some(Mmsi::test_new(1)), Some(Mmsi::test_new(2))],
                 sources: vec![Some(VesselSource::FiskeridirVesselRegister)],
             },
         );
@@ -614,14 +614,14 @@ async fn test_vessels_only_returns_winner_of_resolved_mmsi_conflict() {
         builder
             .ais_vessels(1)
             .modify(|v| {
-                v.vessel.mmsi = Mmsi(2);
+                v.vessel.mmsi = Mmsi::test_new(2);
                 v.vessel.call_sign = Some("test".try_into().unwrap());
             })
             .vessels(1)
             .modify(|v| {
                 v.fiskeridir.radio_call_sign = Some("test".try_into().unwrap());
                 v.ais.call_sign = Some("test".try_into().unwrap());
-                v.ais.mmsi = Mmsi(1);
+                v.ais.mmsi = Mmsi::test_new(1);
             })
             .conflict_winner()
             .build()
@@ -635,7 +635,7 @@ async fn test_vessels_only_returns_winner_of_resolved_mmsi_conflict() {
 
         let vessel = &vessels[0];
 
-        assert_eq!(vessel.mmsi().unwrap().0, 1);
+        assert_eq!(vessel.mmsi().unwrap().into_inner(), 1);
         assert_eq!(vessel.ais_call_sign().unwrap(), "test");
         assert_eq!(vessel.fiskeridir_call_sign().unwrap(), "test");
         assert!(helper.adapter().active_vessel_conflicts().await.is_empty());

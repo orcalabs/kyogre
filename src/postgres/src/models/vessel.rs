@@ -1,7 +1,3 @@
-use crate::{
-    error::Error,
-    queries::{enum_to_i32, opt_enum_to_i32},
-};
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::{CallSign, GearGroup, SpeciesGroup, VesselLengthGroup, VesselType};
 use kyogre_core::{
@@ -12,10 +8,15 @@ use num_traits::FromPrimitive;
 use serde::Deserialize;
 use unnest_insert::UnnestInsert;
 
+use crate::{
+    error::Error,
+    queries::{opt_type_to_i32, type_to_i32},
+};
+
 #[derive(Debug, Clone)]
 pub struct ActiveVesselConflict {
     pub fiskeridir_vessel_ids: Vec<Option<i64>>,
-    pub mmsis: Vec<Option<i32>>,
+    pub mmsis: Vec<Option<Mmsi>>,
     pub call_sign: String,
     pub ais_vessel_names: Vec<Option<String>>,
     pub fiskeridir_vessel_names: Vec<Option<String>>,
@@ -27,7 +28,8 @@ pub struct ActiveVesselConflict {
 pub struct VesselConflictInsert {
     pub fiskeridir_vessel_id: i64,
     pub call_sign: Option<String>,
-    pub mmsi: Option<i32>,
+    #[unnest_insert(sql_type = "INT", type_conversion = "opt_type_to_i32")]
+    pub mmsi: Option<Mmsi>,
     pub is_manual: bool,
 }
 
@@ -104,7 +106,7 @@ impl From<kyogre_core::NewVesselConflict> for VesselConflictInsert {
         VesselConflictInsert {
             fiskeridir_vessel_id: value.vessel_id.0,
             call_sign: value.call_sign.map(|v| v.into_inner()),
-            mmsi: value.mmsi.map(|v| v.0),
+            mmsi: value.mmsi,
             is_manual: true,
         }
     }
@@ -122,7 +124,7 @@ impl std::fmt::Display for ActiveVesselConflict {
 
 #[derive(Debug, Clone)]
 pub struct AisVessel {
-    pub mmsi: i32,
+    pub mmsi: Mmsi,
     pub imo_number: Option<i32>,
     pub call_sign: Option<String>,
     pub name: Option<String>,
@@ -143,7 +145,7 @@ pub struct NewFiskeridirVessel {
     pub building_year: Option<i32>,
     pub engine_power: Option<i32>,
     pub engine_building_year: Option<i32>,
-    #[unnest_insert(sql_type = "INT", type_conversion = "opt_enum_to_i32")]
+    #[unnest_insert(sql_type = "INT", type_conversion = "opt_type_to_i32")]
     pub fiskeridir_vessel_type_id: Option<VesselType>,
     pub norwegian_municipality_id: Option<i32>,
     pub norwegian_county_id: Option<i32>,
@@ -172,7 +174,7 @@ pub struct NewRegisterVessel {
     pub imo_number: Option<i64>,
     #[unnest_insert(sql_type = "JSON")]
     pub owners: serde_json::Value,
-    #[unnest_insert(sql_type = "INT", type_conversion = "enum_to_i32")]
+    #[unnest_insert(sql_type = "INT", type_conversion = "type_to_i32")]
     pub fiskeridir_vessel_source_id: VesselSource,
 }
 
@@ -184,7 +186,7 @@ pub struct NewRegisterVessel {
 )]
 pub struct VesselBenchmarkOutput {
     pub fiskeridir_vessel_id: i64,
-    #[unnest_insert(sql_type = "INT", type_conversion = "enum_to_i32")]
+    #[unnest_insert(sql_type = "INT", type_conversion = "type_to_i32")]
     pub vessel_benchmark_id: VesselBenchmarkId,
     pub output: f64,
 }
@@ -251,7 +253,7 @@ impl TryFrom<AisVessel> for kyogre_core::AisVessel {
 
     fn try_from(value: AisVessel) -> Result<Self, Self::Error> {
         Ok(kyogre_core::AisVessel {
-            mmsi: Mmsi(value.mmsi),
+            mmsi: value.mmsi,
             imo_number: value.imo_number,
             call_sign: value.call_sign.map(CallSign::try_from).transpose()?,
             name: value.name,
@@ -265,7 +267,7 @@ impl TryFrom<AisVessel> for kyogre_core::AisVessel {
 
 #[derive(Debug, Clone)]
 pub struct FiskeridirAisVesselCombination {
-    pub ais_mmsi: Option<i32>,
+    pub ais_mmsi: Option<Mmsi>,
     pub ais_imo_number: Option<i32>,
     pub ais_call_sign: Option<String>,
     pub ais_name: Option<String>,
@@ -312,7 +314,7 @@ impl TryFrom<FiskeridirAisVesselCombination> for kyogre_core::Vessel {
         let ais_vessel: Result<Option<kyogre_core::AisVessel>, Error> =
             if let Some(mmsi) = value.ais_mmsi {
                 Ok(Some(kyogre_core::AisVessel {
-                    mmsi: Mmsi(mmsi),
+                    mmsi,
                     imo_number: value.ais_imo_number,
                     call_sign: value.ais_call_sign.map(CallSign::try_from).transpose()?,
                     name: value.ais_name,
@@ -380,7 +382,7 @@ impl TryFrom<ActiveVesselConflict> for kyogre_core::ActiveVesselConflict {
                 .into_iter()
                 .map(|v| v.map(FiskeridirVesselId))
                 .collect(),
-            mmsis: value.mmsis.into_iter().map(|v| v.map(Mmsi)).collect(),
+            mmsis: value.mmsis,
             call_sign: std::convert::TryInto::<CallSign>::try_into(value.call_sign)?,
             sources: value.fiskeridir_vessel_source_ids,
         })

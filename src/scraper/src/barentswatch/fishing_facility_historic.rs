@@ -1,13 +1,16 @@
-use super::{BarentswatchSource, FishingFacilityToolType};
-use crate::{ApiClientConfig, DataSource, Error, Processor, Result, ScraperId};
+use std::sync::Arc;
+
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::CallSign;
 use kyogre_core::{BearerToken, FishingFacilityApiSource, GeometryWkt, Mmsi};
 use serde::Deserialize;
-use std::sync::Arc;
+use serde_with::{serde_as, DisplayFromStr};
 use tracing::info;
 use uuid::Uuid;
+
+use super::{BarentswatchSource, FishingFacilityToolType};
+use crate::{ApiClientConfig, DataSource, Error, Processor, Result, ScraperId};
 
 pub struct FishingFacilityHistoricScraper {
     config: Option<ApiClientConfig>,
@@ -65,6 +68,7 @@ impl DataSource for FishingFacilityHistoricScraper {
     }
 }
 
+#[serde_as]
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct FishingFacilityHistoric {
@@ -72,7 +76,8 @@ struct FishingFacilityHistoric {
     vessel_name: Option<String>,
     // International radio call sign
     ircs: Option<String>,
-    mmsi: Option<String>,
+    #[serde_as(as = "Option<DisplayFromStr>")]
+    mmsi: Option<Mmsi>,
     imo: Option<String>,
     reg_num: Option<String>,
     // Registration number in Småbåtregisteret.
@@ -99,7 +104,7 @@ impl TryFrom<FishingFacilityHistoric> for kyogre_core::FishingFacility {
             fiskeridir_vessel_id: None,
             vessel_name: v.vessel_name,
             call_sign: v.ircs.map(CallSign::try_from).transpose()?,
-            mmsi: v.mmsi.map(|m| m.parse::<i32>()).transpose()?.map(Mmsi),
+            mmsi: v.mmsi,
             imo: v.imo.map(|i| i.parse::<i64>()).transpose()?,
             reg_num: v.reg_num,
             sbr_reg_num: v.sbr_reg_num,

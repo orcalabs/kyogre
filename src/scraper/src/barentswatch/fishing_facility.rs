@@ -93,7 +93,7 @@ struct FishingFacility {
     vessel_name: Option<String>,
     // International radio call sign
     ircs: Option<String>,
-    mmsi: Option<i32>,
+    mmsi: Option<Mmsi>,
     imo: Option<i64>,
     reg_num: Option<String>,
     // Registration number in Småbåtregisteret.
@@ -125,7 +125,7 @@ impl TryFrom<FishingFacility> for kyogre_core::FishingFacility {
             fiskeridir_vessel_id: None,
             vessel_name: v.vessel_name,
             call_sign: v.ircs.map(CallSign::try_from).transpose()?,
-            mmsi: v.mmsi.map(Mmsi),
+            mmsi: v.mmsi,
             imo: v.imo,
             reg_num: v.reg_num,
             sbr_reg_num: v.sbr_reg_num,

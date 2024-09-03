@@ -1,17 +1,17 @@
-use crate::models::AisVmsAreaPositionsReturning;
+use std::collections::HashMap;
+
 use chrono::{DateTime, Utc};
 use futures::{Stream, TryStreamExt};
 use kyogre_core::{
-    AisPermission, AisVesselMigrate, DateRange, Mmsi, NavigationStatus, NewAisPosition,
-    NewAisStatic, PositionType, LEISURE_VESSEL_LENGTH_AIS_BOUNDARY, LEISURE_VESSEL_SHIP_TYPES,
-    PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY,
+    AisPermission, AisPosition, AisVesselMigrate, DateRange, Mmsi, NavigationStatus,
+    NewAisPosition, NewAisStatic, PositionType, LEISURE_VESSEL_LENGTH_AIS_BOUNDARY,
+    LEISURE_VESSEL_SHIP_TYPES, PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY,
 };
-use std::collections::HashMap;
 use unnest_insert::UnnestInsert;
 
 use crate::{
     error::Result,
-    models::{AisClass, AisPosition, NewAisVessel, NewAisVesselHistoric},
+    models::{AisClass, AisVmsAreaPositionsReturning, NewAisVessel, NewAisVesselHistoric},
     PostgresAdapter,
 };
 
@@ -27,7 +27,7 @@ impl PostgresAdapter {
 SELECT
     latitude,
     longitude,
-    c.mmsi,
+    c.mmsi AS "mmsi!: Mmsi",
     TIMESTAMP AS msgtime,
     course_over_ground,
     navigation_status_id AS "navigational_status: NavigationStatus",
@@ -73,7 +73,7 @@ WHERE
 SELECT
     latitude,
     longitude,
-    mmsi,
+    mmsi AS "mmsi!: Mmsi",
     TIMESTAMP AS msgtime,
     course_over_ground,
     navigation_status_id AS "navigational_status: NavigationStatus",
@@ -105,7 +105,7 @@ ORDER BY
 SELECT
     latitude,
     longitude,
-    mmsi,
+    mmsi AS "mmsi!: Mmsi",
     TIMESTAMP AS msgtime,
     course_over_ground,
     navigation_status_id AS "navigational_status: NavigationStatus",
@@ -141,7 +141,7 @@ WHERE
 ORDER BY
     TIMESTAMP ASC
             "#,
-            mmsi.0,
+            mmsi.into_inner(),
             range.start(),
             range.end(),
             LEISURE_VESSEL_SHIP_TYPES.as_slice(),
@@ -165,7 +165,7 @@ ORDER BY
 SELECT
     latitude,
     longitude,
-    mmsi,
+    mmsi AS "mmsi!: Mmsi",
     timestamp AS msgtime,
     course_over_ground,
     navigation_status_id AS "navigational_status: NavigationStatus",
@@ -181,7 +181,7 @@ WHERE
 ORDER BY
     timestamp ASC
             "#,
-            mmsi.0,
+            mmsi.into_inner(),
             start,
             end,
         )
@@ -234,7 +234,7 @@ FROM
                 latest_position_per_vessel.insert(p.mmsi, p.clone());
             }
 
-            mmsis.push(p.mmsi.0);
+            mmsis.push(p.mmsi);
             latitude.push(p.latitude);
             longitude.push(p.longitude);
             course_over_ground.push(p.course_over_ground);
@@ -259,7 +259,7 @@ VALUES
     (UNNEST($1::INT[]))
 ON CONFLICT (mmsi) DO NOTHING
             "#,
-            &mmsis
+            &mmsis as &[Mmsi],
         )
         .execute(&mut *tx)
         .await?;
@@ -302,12 +302,12 @@ FROM
     )
 ON CONFLICT (mmsi, TIMESTAMP) DO NOTHING
 RETURNING
-    mmsi,
+    mmsi AS "mmsi!: Mmsi",
     latitude,
     longitude,
     "timestamp"
             "#,
-            &mmsis,
+            &mmsis as &[Mmsi],
             &latitude,
             &longitude,
             &course_over_ground as _,
@@ -384,7 +384,7 @@ SET
     ais_message_type_id = excluded.ais_message_type_id,
     navigation_status_id = excluded.navigation_status_id
                 "#,
-                p.mmsi.0,
+                p.mmsi.into_inner(),
                 latitude,
                 longitude,
                 course_over_ground,
@@ -476,14 +476,14 @@ RETURNING
     a.latitude,
     a.longitude,
     a."timestamp",
-    a.mmsi,
+    a.mmsi AS "mmsi: Mmsi",
     a.call_sign
             "#,
             &lat,
             &lon,
             &timestamp,
             &position_type_id,
-            &mmsi
+            &mmsis as &[Mmsi],
         )
         .fetch_all(&mut *tx)
         .await?;
@@ -581,7 +581,7 @@ ON CONFLICT (mmsi) DO NOTHING
         let mut navigation_status_id = Vec::with_capacity(positions.len());
 
         for p in positions {
-            mmsis.push(p.mmsi.0);
+            mmsis.push(p.mmsi);
             latitude.push(p.latitude);
             longitude.push(p.longitude);
             course_over_ground.push(p.course_over_ground);
@@ -606,7 +606,7 @@ UPDATE
 SET
     progress = excluded.progress
             "#,
-            &mmsi.0,
+            mmsi.into_inner(),
             &progress
         )
         .execute(&mut *tx)
@@ -644,7 +644,7 @@ FROM
     )
 ON CONFLICT (mmsi, TIMESTAMP) DO NOTHING
             "#,
-            &mmsis,
+            &mmsis as &[Mmsi],
             &latitude,
             &longitude,
             &course_over_ground as _,

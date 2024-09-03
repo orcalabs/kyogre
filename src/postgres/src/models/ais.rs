@@ -1,13 +1,16 @@
-use crate::error::Error;
-use chrono::{DateTime, Utc};
-use kyogre_core::{Mmsi, NavigationStatus};
 use std::fmt;
+
+use chrono::{DateTime, Utc};
+use kyogre_core::Mmsi;
 use unnest_insert::UnnestInsert;
+
+use crate::queries::type_to_i32;
 
 #[derive(Debug, Clone, UnnestInsert)]
 #[unnest_insert(table_name = "ais_vessels", conflict = "mmsi")]
 pub struct NewAisVessel {
-    pub mmsi: i32,
+    #[unnest_insert(sql_type = "INT", type_conversion = "type_to_i32")]
+    pub mmsi: Mmsi,
     #[unnest_insert(update = "imo_number = COALESCE(EXCLUDED.imo_number, ais_vessels.imo_number)")]
     pub imo_number: Option<i32>,
     #[unnest_insert(update = "call_sign = COALESCE(EXCLUDED.call_sign, ais_vessels.call_sign)")]
@@ -38,7 +41,8 @@ pub struct NewAisVessel {
     conflict = "mmsi, message_timestamp"
 )]
 pub struct NewAisVesselHistoric {
-    pub mmsi: i32,
+    #[unnest_insert(sql_type = "INT", type_conversion = "type_to_i32")]
+    pub mmsi: Mmsi,
     pub imo_number: Option<i32>,
     pub message_type_id: i32,
     pub message_timestamp: DateTime<Utc>,
@@ -63,22 +67,8 @@ pub struct AisVmsAreaPositionsReturning {
     pub latitude: f64,
     pub longitude: f64,
     pub timestamp: DateTime<Utc>,
-    pub mmsi: Option<i32>,
+    pub mmsi: Option<Mmsi>,
     pub call_sign: Option<String>,
-}
-
-#[derive(Debug, Clone)]
-pub struct AisPosition {
-    pub latitude: f64,
-    pub longitude: f64,
-    pub mmsi: i32,
-    pub msgtime: DateTime<Utc>,
-    pub course_over_ground: Option<f64>,
-    pub navigational_status: Option<NavigationStatus>,
-    pub rate_of_turn: Option<f64>,
-    pub speed_over_ground: Option<f64>,
-    pub true_heading: Option<i32>,
-    pub distance_to_shore: f64,
 }
 
 #[derive(Clone, Copy)]
@@ -99,7 +89,7 @@ impl fmt::Display for AisClass {
 impl From<kyogre_core::NewAisStatic> for NewAisVesselHistoric {
     fn from(v: kyogre_core::NewAisStatic) -> Self {
         Self {
-            mmsi: v.mmsi.0,
+            mmsi: v.mmsi,
             imo_number: v.imo_number,
             call_sign: v.call_sign.map(|v| v.into_inner()),
             name: v.name,
@@ -124,7 +114,7 @@ impl From<kyogre_core::NewAisStatic> for NewAisVesselHistoric {
 impl From<kyogre_core::NewAisStatic> for NewAisVessel {
     fn from(v: kyogre_core::NewAisStatic) -> Self {
         Self {
-            mmsi: v.mmsi.0,
+            mmsi: v.mmsi,
             imo_number: v.imo_number,
             call_sign: v.call_sign.map(|v| v.into_inner()),
             name: v.name,
@@ -144,24 +134,5 @@ impl From<kyogre_core::AisClass> for AisClass {
             kyogre_core::AisClass::A => AisClass::A,
             kyogre_core::AisClass::B => AisClass::B,
         }
-    }
-}
-
-impl TryFrom<AisPosition> for kyogre_core::AisPosition {
-    type Error = Error;
-
-    fn try_from(value: AisPosition) -> Result<Self, Self::Error> {
-        Ok(kyogre_core::AisPosition {
-            latitude: value.latitude,
-            longitude: value.longitude,
-            mmsi: Mmsi(value.mmsi),
-            msgtime: value.msgtime,
-            course_over_ground: value.course_over_ground,
-            navigational_status: value.navigational_status,
-            rate_of_turn: value.rate_of_turn,
-            speed_over_ground: value.speed_over_ground,
-            true_heading: value.true_heading,
-            distance_to_shore: value.distance_to_shore,
-        })
     }
 }

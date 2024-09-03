@@ -151,7 +151,7 @@ UPDATE
 SET
     "count" = a.count + EXCLUDED.count,
     mmsis = a.mmsis | EXCLUDED.mmsis,
-    call_signs = ARRAY (
+    call_signs = ARRAY(
         SELECT
             UNNEST(a.call_signs)
         UNION
@@ -312,7 +312,7 @@ WHERE
 ORDER BY
     "timestamp" ASC
             "#,
-            mmsi.map(|m| m.0),
+            mmsi as Option<Mmsi>,
             call_sign.map(|c| c.as_ref()),
             range.start(),
             range.end(),

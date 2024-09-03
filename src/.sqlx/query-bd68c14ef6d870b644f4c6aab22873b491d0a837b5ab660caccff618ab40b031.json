@@ -1,0 +1,50 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO\n    ais_vms_area_positions AS a (\n        latitude,\n        longitude,\n        call_sign,\n        \"timestamp\",\n        position_type_id,\n        mmsi\n    )\nSELECT\n    u.latitude,\n    u.longitude,\n    av.call_sign,\n    u.\"timestamp\",\n    u.position_type_id,\n    u.mmsi\nFROM\n    UNNEST(\n        $1::DOUBLE PRECISION[],\n        $2::DOUBLE PRECISION[],\n        $3::TIMESTAMPTZ[],\n        $4::INT[],\n        $5::INT[]\n    ) u (\n        latitude,\n        longitude,\n        \"timestamp\",\n        position_type_id,\n        mmsi\n    )\n    INNER JOIN ais_vessels av ON av.mmsi = u.mmsi\n    LEFT JOIN fiskeridir_ais_vessel_mapping_whitelist f ON av.call_sign = f.call_sign\nWHERE\n    (\n        av.call_sign IS NULL\n        OR f.fiskeridir_vessel_id IS NOT NULL\n    )\nON CONFLICT DO NOTHING\nRETURNING\n    a.latitude,\n    a.longitude,\n    a.\"timestamp\",\n    a.mmsi AS \"mmsi: Mmsi\",\n    a.call_sign\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "latitude",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 1,
+        "name": "longitude",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 2,
+        "name": "timestamp",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 3,
+        "name": "mmsi: Mmsi",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 4,
+        "name": "call_sign",
+        "type_info": "Varchar"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Float8Array",
+        "Float8Array",
+        "TimestamptzArray",
+        "Int4Array",
+        "Int4Array"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      true
+    ]
+  },
+  "hash": "bd68c14ef6d870b644f4c6aab22873b491d0a837b5ab660caccff618ab40b031"
+}

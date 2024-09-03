@@ -146,12 +146,12 @@ GROUP BY
         range: Option<&DateRange>,
     ) -> Vec<AisPosition> {
         sqlx::query_as!(
-            crate::models::AisPosition,
+            AisPosition,
             r#"
 SELECT
     latitude,
     longitude,
-    mmsi,
+    mmsi AS "mmsi!: Mmsi",
     "timestamp" AS msgtime,
     course_over_ground,
     navigation_status_id AS "navigational_status: NavigationStatus",
@@ -176,25 +176,21 @@ WHERE
 ORDER BY
     "timestamp" ASC
             "#,
-            mmsi.map(|m| m.0),
+            mmsi as Option<Mmsi>,
             range.map(|r| r.start()),
             range.map(|r| r.end()),
         )
         .fetch_all(self.db.ais_pool())
         .await
         .unwrap()
-        .into_iter()
-        .map(AisPosition::try_from)
-        .collect::<Result<_, _>>()
-        .unwrap()
     }
 
     pub async fn all_current_ais_positions(&self) -> Vec<AisPosition> {
-        let positions = sqlx::query_as!(
-            crate::models::AisPosition,
+        sqlx::query_as!(
+            AisPosition,
             r#"
 SELECT
-    mmsi,
+    mmsi AS "mmsi!: Mmsi",
     latitude,
     longitude,
     course_over_ground,
@@ -210,23 +206,15 @@ FROM
         )
         .fetch_all(&self.db.pool)
         .await
-        .unwrap();
-
-        let mut converted = Vec::with_capacity(positions.len());
-
-        for p in positions {
-            let core_model = AisPosition::try_from(p).unwrap();
-            converted.push(core_model);
-        }
-
-        converted
+        .unwrap()
     }
 
     pub async fn all_historic_static_ais_messages(&self) -> Vec<AisVesselHistoric> {
-        sqlx::query!(
+        sqlx::query_as!(
+            AisVesselHistoric,
             r#"
 SELECT
-    mmsi,
+    mmsi AS "mmsi!: Mmsi",
     imo_number,
     message_type_id,
     message_timestamp,
@@ -253,28 +241,6 @@ ORDER BY
         .fetch_all(&self.db.pool)
         .await
         .unwrap()
-        .into_iter()
-        .map(|v| AisVesselHistoric {
-            mmsi: Mmsi(v.mmsi),
-            imo_number: v.imo_number,
-            message_type_id: v.message_type_id,
-            message_timestamp: v.message_timestamp,
-            call_sign: v.call_sign,
-            name: v.name,
-            ship_width: v.ship_width,
-            ship_length: v.ship_length,
-            ship_type: v.ship_type,
-            eta: v.eta,
-            draught: v.draught,
-            destination: v.destination,
-            dimension_a: v.dimension_a,
-            dimension_b: v.dimension_b,
-            dimension_c: v.dimension_c,
-            dimension_d: v.dimension_d,
-            position_fixing_device_type: v.position_fixing_device_type,
-            report_class: v.report_class,
-        })
-        .collect()
     }
 
     pub async fn all_ais_vessels(&self) -> Vec<AisVessel> {
@@ -282,7 +248,7 @@ ORDER BY
             crate::models::AisVessel,
             r#"
 SELECT
-    mmsi,
+    mmsi AS "mmsi!: Mmsi",
     imo_number,
     call_sign,
     NAME,

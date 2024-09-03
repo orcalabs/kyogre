@@ -177,7 +177,7 @@ impl AisPosition {
         AisPosition {
             message_type_id: Some(1),
             message_type: Some(AisMessageType::Position),
-            mmsi: mmsi.unwrap_or_else(|| Mmsi(random::<i32>())),
+            mmsi: mmsi.unwrap_or_else(|| Mmsi::test_new(random::<i32>())),
             msgtime: chrono::offset::Utc::now(),
             altitude: Some(5),
             course_over_ground: Some(123.32),
@@ -198,7 +198,7 @@ impl AisStatic {
         AisStatic {
             message_type_id: 5,
             message_type: Some(AisMessageType::Static),
-            mmsi: Mmsi(mmsi.abs()),
+            mmsi: Mmsi::test_new(mmsi.abs()),
             msgtime: chrono::offset::Utc::now(),
             imo_number: Some(123),
             call_sign: Some("LK45".to_string()),
