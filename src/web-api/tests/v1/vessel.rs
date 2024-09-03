@@ -320,10 +320,12 @@ async fn test_vessel_removes_species_group_when_last_landing_is_replaced_with_ne
 #[tokio::test]
 async fn test_vessels_returns_vessels_that_only_exists_in_landings_without_call_sign() {
     test(|helper, builder| async move {
+        let vessel_id = FiskeridirVesselId::test_new(1);
+
         builder
             .landings(1)
             .modify(|l| {
-                l.landing.vessel.id = Some(1);
+                l.landing.vessel.id = Some(vessel_id);
                 l.landing.vessel.call_sign = None;
             })
             .build()
@@ -336,7 +338,7 @@ async fn test_vessels_returns_vessels_that_only_exists_in_landings_without_call_
         assert_eq!(vessels.len(), 1);
 
         let vessel = &vessels[0];
-        assert_eq!(vessel.fiskeridir.id.0, 1);
+        assert_eq!(vessel.fiskeridir.id, vessel_id);
         assert!(vessel.fiskeridir.call_sign.is_none());
     })
     .await;
@@ -345,10 +347,12 @@ async fn test_vessels_returns_vessels_that_only_exists_in_landings_without_call_
 #[tokio::test]
 async fn test_vessels_returns_vessels_that_only_exists_in_landings_with_call_sign() {
     test(|helper, builder| async move {
+        let vessel_id = FiskeridirVesselId::test_new(1);
+
         builder
             .landings(1)
             .modify(|l| {
-                l.landing.vessel.id = Some(1);
+                l.landing.vessel.id = Some(vessel_id);
                 l.landing.vessel.call_sign = Some("test".try_into().unwrap());
             })
             .build()
@@ -361,7 +365,7 @@ async fn test_vessels_returns_vessels_that_only_exists_in_landings_with_call_sig
         assert_eq!(vessels.len(), 1);
 
         let vessel = &vessels[0];
-        assert_eq!(vessel.fiskeridir.id.0, 1);
+        assert_eq!(vessel.fiskeridir.id, vessel_id);
         assert!(vessel.ais.is_none());
         assert_eq!(vessel.fiskeridir_call_sign().unwrap(), "test");
     })
@@ -374,7 +378,7 @@ async fn test_vessels_does_not_return_vessel_with_an_active_conflict() {
         builder
             .vessels(2)
             .modify_idx(|i, v| {
-                v.fiskeridir.id = i as i64;
+                v.fiskeridir.id = FiskeridirVesselId::test_new(i as i64);
                 v.fiskeridir.radio_call_sign = Some("test".try_into().unwrap());
                 v.ais.call_sign = Some("test".try_into().unwrap());
             })
@@ -391,7 +395,10 @@ async fn test_vessels_does_not_return_vessel_with_an_active_conflict() {
         assert_eq!(
             conflicts[0],
             ActiveVesselConflict {
-                vessel_ids: vec![Some(FiskeridirVesselId(0)), Some(FiskeridirVesselId(1))],
+                vessel_ids: vec![
+                    Some(FiskeridirVesselId::test_new(0)),
+                    Some(FiskeridirVesselId::test_new(1))
+                ],
                 call_sign: "test".try_into().unwrap(),
                 mmsis: vec![Some(Mmsi::test_new(1)), Some(Mmsi::test_new(2))],
                 sources: vec![Some(VesselSource::FiskeridirVesselRegister)],
@@ -408,7 +415,7 @@ async fn test_vessels_returns_most_used_call_sign_of_vessel_that_only_exists_in_
         builder
             .landings(3)
             .modify_idx(|i, v| {
-                v.landing.vessel.id = Some(1);
+                v.landing.vessel.id = Some(FiskeridirVesselId::test_new(1));
                 if i == 0 {
                     v.landing.vessel.call_sign = Some("test".try_into().unwrap());
                 } else {
@@ -461,10 +468,13 @@ async fn test_vessels_does_not_return_most_used_call_sign_of_vessel_that_exists_
 async fn test_vessels_returns_both_vessels_after_conflict_have_been_resolved_but_loser_without_call_sign_and_ais(
 ) {
     test(|helper, builder| async move {
+        let vessel_id1 = FiskeridirVesselId::test_new(1);
+        let vessel_id2 = FiskeridirVesselId::test_new(2);
+
         builder
             .vessels(1)
             .modify(|v| {
-                v.fiskeridir.id = 1;
+                v.fiskeridir.id = vessel_id1;
                 v.fiskeridir.radio_call_sign = Some("test".try_into().unwrap());
                 v.ais.call_sign = Some("test".try_into().unwrap());
                 v.ais.mmsi = Mmsi::test_new(1);
@@ -472,7 +482,7 @@ async fn test_vessels_returns_both_vessels_after_conflict_have_been_resolved_but
             .conflict_winner()
             .vessels(1)
             .modify(|v| {
-                v.fiskeridir.id = 2;
+                v.fiskeridir.id = vessel_id2;
                 v.fiskeridir.radio_call_sign = Some("test".try_into().unwrap());
                 v.ais.call_sign = Some("test".try_into().unwrap());
                 v.ais.mmsi = Mmsi::test_new(2);
@@ -487,8 +497,14 @@ async fn test_vessels_returns_both_vessels_after_conflict_have_been_resolved_but
         let vessels: Vec<Vessel> = response.json().await.unwrap();
         assert_eq!(vessels.len(), 2);
 
-        let winner = vessels.iter().find(|v| v.fiskeridir.id.0 == 1).unwrap();
-        let loser = vessels.iter().find(|v| v.fiskeridir.id.0 == 2).unwrap();
+        let winner = vessels
+            .iter()
+            .find(|v| v.fiskeridir.id == vessel_id1)
+            .unwrap();
+        let loser = vessels
+            .iter()
+            .find(|v| v.fiskeridir.id == vessel_id2)
+            .unwrap();
 
         assert_eq!(winner.mmsi().unwrap().into_inner(), 1);
         assert_eq!(winner.ais_call_sign().unwrap(), "test");
@@ -506,7 +522,7 @@ async fn test_vessels_does_not_return_vessels_with_an_active_mmsi_conflict() {
         builder
             .vessels(2)
             .modify_idx(|i, v| {
-                v.fiskeridir.id = i as i64;
+                v.fiskeridir.id = FiskeridirVesselId::test_new(i as i64);
                 v.fiskeridir.radio_call_sign = Some("test".to_string().try_into().unwrap());
                 v.ais.call_sign = Some("test".to_string().try_into().unwrap());
                 v.ais.mmsi = Mmsi::test_new(1);
@@ -525,7 +541,10 @@ async fn test_vessels_does_not_return_vessels_with_an_active_mmsi_conflict() {
         assert_eq!(
             conflicts[0],
             ActiveVesselConflict {
-                vessel_ids: vec![Some(FiskeridirVesselId(0)), Some(FiskeridirVesselId(1))],
+                vessel_ids: vec![
+                    Some(FiskeridirVesselId::test_new(0)),
+                    Some(FiskeridirVesselId::test_new(1))
+                ],
                 call_sign: "test".try_into().unwrap(),
                 mmsis: vec![Some(Mmsi::test_new(1))],
                 sources: vec![Some(VesselSource::FiskeridirVesselRegister)],
@@ -541,7 +560,7 @@ async fn test_vessels_returns_vessels_conflicts_that_have_been_annotated_as_the_
         builder
             .vessels(2)
             .modify_idx(|i, v| {
-                v.fiskeridir.id = i as i64;
+                v.fiskeridir.id = FiskeridirVesselId::test_new(i as i64);
                 v.fiskeridir.radio_call_sign = Some("test".try_into().unwrap());
                 v.ais.call_sign = Some("test".try_into().unwrap());
                 v.ais.mmsi = Mmsi::test_new(1);
@@ -556,8 +575,14 @@ async fn test_vessels_returns_vessels_conflicts_that_have_been_annotated_as_the_
         let vessels: Vec<Vessel> = response.json().await.unwrap();
         assert_eq!(vessels.len(), 2);
 
-        let vessel = vessels.iter().find(|v| v.fiskeridir.id.0 == 0).unwrap();
-        let vessel2 = vessels.iter().find(|v| v.fiskeridir.id.0 == 1).unwrap();
+        let vessel = vessels
+            .iter()
+            .find(|v| v.fiskeridir.id.into_inner() == 0)
+            .unwrap();
+        let vessel2 = vessels
+            .iter()
+            .find(|v| v.fiskeridir.id.into_inner() == 1)
+            .unwrap();
 
         assert_eq!(vessel.mmsi().unwrap().into_inner(), 1);
         assert_eq!(vessel.ais_call_sign().unwrap(), "test");
@@ -598,7 +623,7 @@ async fn test_vessels_does_not_return_an_active_mmsi_conflict() {
         assert_eq!(
             conflicts[0],
             ActiveVesselConflict {
-                vessel_ids: vec![Some(FiskeridirVesselId(1))],
+                vessel_ids: vec![Some(FiskeridirVesselId::test_new(1))],
                 call_sign: "test".try_into().unwrap(),
                 mmsis: vec![Some(Mmsi::test_new(1)), Some(Mmsi::test_new(2))],
                 sources: vec![Some(VesselSource::FiskeridirVesselRegister)],

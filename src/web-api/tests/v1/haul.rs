@@ -219,8 +219,11 @@ async fn test_hauls_returns_hauls_with_vessel_length_groups() {
 #[tokio::test]
 async fn test_hauls_returns_hauls_with_fiskeridir_vessel_ids() {
     test_with_cache(|helper, builder| async move {
-        let ers1 = ErsDca::test_default(1, Some(1));
-        let ers2 = ErsDca::test_default(2, Some(2));
+        let vessel_id1 = FiskeridirVesselId::test_new(1);
+        let vessel_id2 = FiskeridirVesselId::test_new(2);
+
+        let ers1 = ErsDca::test_default(1, Some(vessel_id1));
+        let ers2 = ErsDca::test_default(2, Some(vessel_id2));
         let ers3 = ErsDca::test_default(3, None);
         let ers4 = ErsDca::test_default(4, None);
 
@@ -231,7 +234,7 @@ async fn test_hauls_returns_hauls_with_fiskeridir_vessel_ids() {
         helper.refresh_cache().await;
 
         let params = HaulsParams {
-            fiskeridir_vessel_ids: Some(vec![FiskeridirVesselId(1), FiskeridirVesselId(2)]),
+            fiskeridir_vessel_ids: Some(vec![vessel_id1, vessel_id2]),
             ..Default::default()
         };
 

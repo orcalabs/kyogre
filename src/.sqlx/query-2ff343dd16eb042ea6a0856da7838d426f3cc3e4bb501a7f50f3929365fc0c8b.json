@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    trip_id AS \"trip_id!: TripId\"\nFROM\n    trips t\nWHERE\n    t.fiskeridir_vessel_id = $1\n    AND LOWER(t.period) <= $2\n                ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "trip_id!: TripId",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "2ff343dd16eb042ea6a0856da7838d426f3cc3e4bb501a7f50f3929365fc0c8b"
+}

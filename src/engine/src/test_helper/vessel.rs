@@ -126,7 +126,7 @@ impl VesselBuilder {
                 let timestamp = base.global_data_timestamp_counter;
                 let mut dca = fiskeridir_rs::ErsDca::test_default(
                     base.ers_message_id_counter,
-                    Some(vessel.fiskeridir.id as u64),
+                    Some(vessel.fiskeridir.id),
                 );
 
                 base.ers_message_id_counter += 1;
@@ -171,7 +171,7 @@ impl VesselBuilder {
 
                 let por = fiskeridir_rs::ErsPor::test_default(
                     base.ers_message_id_counter,
-                    vessel.fiskeridir.id as u64,
+                    vessel.fiskeridir.id,
                     timestamp,
                     *message_number,
                 );
@@ -209,7 +209,7 @@ impl VesselBuilder {
 
                 let dep = fiskeridir_rs::ErsDep::test_default(
                     base.ers_message_id_counter,
-                    vessel.fiskeridir.id as u64,
+                    vessel.fiskeridir.id,
                     timestamp,
                     *message_number,
                 );
@@ -243,7 +243,7 @@ impl VesselBuilder {
                 let timestamp = base.global_data_timestamp_counter;
                 let mut tra = fiskeridir_rs::ErsTra::test_default(
                     base.ers_message_id_counter,
-                    Some(vessel.fiskeridir.id as u64),
+                    Some(vessel.fiskeridir.id),
                     timestamp,
                 );
 
@@ -356,7 +356,7 @@ impl VesselBuilder {
                         end_landing,
                     },
                     current_data_timestamp: start + Duration::seconds(1),
-                    vessel_id: FiskeridirVesselId(vessel.fiskeridir.id),
+                    vessel_id: vessel.fiskeridir.id,
                     vessel_call_sign: vessel.fiskeridir.radio_call_sign.clone(),
                     precision_id: None,
                     mmsi: Some(vessel.ais.mmsi),
@@ -395,7 +395,7 @@ impl VesselBuilder {
 
                 let dep = fiskeridir_rs::ErsDep::test_default(
                     base.ers_message_id_counter,
-                    vessel.fiskeridir.id as u64,
+                    vessel.fiskeridir.id,
                     start,
                     *message_number,
                 );
@@ -403,7 +403,7 @@ impl VesselBuilder {
                 base.ers_message_id_counter += 1;
                 let por = fiskeridir_rs::ErsPor::test_default(
                     base.ers_message_id_counter,
-                    vessel.fiskeridir.id as u64,
+                    vessel.fiskeridir.id,
                     end,
                     *message_number,
                 );
@@ -414,7 +414,7 @@ impl VesselBuilder {
                 base.trips.push(TripConstructor {
                     trip_specification: TripSpecification::Ers { dep, por },
                     current_data_timestamp: start + Duration::seconds(1),
-                    vessel_id: FiskeridirVesselId(vessel.fiskeridir.id),
+                    vessel_id: vessel.fiskeridir.id,
                     vessel_call_sign: vessel.fiskeridir.radio_call_sign.clone(),
                     precision_id: None,
                     mmsi: Some(vessel.ais.mmsi),

@@ -10,12 +10,12 @@ use unnest_insert::UnnestInsert;
 
 use crate::{
     error::Error,
-    queries::{opt_type_to_i32, type_to_i32},
+    queries::{opt_type_to_i32, opt_type_to_i64, type_to_i32, type_to_i64},
 };
 
 #[derive(Debug, Clone)]
 pub struct ActiveVesselConflict {
-    pub fiskeridir_vessel_ids: Vec<Option<i64>>,
+    pub fiskeridir_vessel_ids: Vec<Option<FiskeridirVesselId>>,
     pub mmsis: Vec<Option<Mmsi>>,
     pub call_sign: String,
     pub ais_vessel_names: Vec<Option<String>>,
@@ -26,7 +26,8 @@ pub struct ActiveVesselConflict {
 #[derive(Debug, Clone, UnnestInsert)]
 #[unnest_insert(table_name = "fiskeridir_ais_vessel_mapping_whitelist", conflict = "")]
 pub struct VesselConflictInsert {
-    pub fiskeridir_vessel_id: i64,
+    #[unnest_insert(sql_type = "BIGINT", type_conversion = "type_to_i64")]
+    pub fiskeridir_vessel_id: FiskeridirVesselId,
     pub call_sign: Option<String>,
     #[unnest_insert(sql_type = "INT", type_conversion = "opt_type_to_i32")]
     pub mmsi: Option<Mmsi>,
@@ -104,7 +105,7 @@ impl TryFrom<VesselBenchmarks> for kyogre_core::VesselBenchmarks {
 impl From<kyogre_core::NewVesselConflict> for VesselConflictInsert {
     fn from(value: kyogre_core::NewVesselConflict) -> Self {
         VesselConflictInsert {
-            fiskeridir_vessel_id: value.vessel_id.0,
+            fiskeridir_vessel_id: value.vessel_id,
             call_sign: value.call_sign.map(|v| v.into_inner()),
             mmsi: value.mmsi,
             is_manual: true,
@@ -137,7 +138,8 @@ pub struct AisVessel {
 #[derive(Debug, Clone, UnnestInsert)]
 #[unnest_insert(table_name = "fiskeridir_vessels", conflict = "fiskeridir_vessel_id")]
 pub struct NewFiskeridirVessel {
-    pub fiskeridir_vessel_id: Option<i64>,
+    #[unnest_insert(sql_type = "BIGINT", type_conversion = "opt_type_to_i64")]
+    pub fiskeridir_vessel_id: Option<FiskeridirVesselId>,
     pub call_sign: Option<String>,
     pub registration_id: Option<String>,
     pub name: Option<String>,
@@ -163,7 +165,8 @@ pub struct NewFiskeridirVessel {
     update_all
 )]
 pub struct NewRegisterVessel {
-    pub fiskeridir_vessel_id: i64,
+    #[unnest_insert(sql_type = "BIGINT", type_conversion = "type_to_i64")]
+    pub fiskeridir_vessel_id: FiskeridirVesselId,
     pub norwegian_municipality_id: i32,
     pub call_sign: Option<String>,
     pub name: String,
@@ -185,7 +188,8 @@ pub struct NewRegisterVessel {
     update_all
 )]
 pub struct VesselBenchmarkOutput {
-    pub fiskeridir_vessel_id: i64,
+    #[unnest_insert(sql_type = "BIGINT", type_conversion = "type_to_i64")]
+    pub fiskeridir_vessel_id: FiskeridirVesselId,
     #[unnest_insert(sql_type = "INT", type_conversion = "type_to_i32")]
     pub vessel_benchmark_id: VesselBenchmarkId,
     pub output: f64,
@@ -236,15 +240,13 @@ impl TryFrom<fiskeridir_rs::RegisterVessel> for NewRegisterVessel {
     }
 }
 
-impl TryFrom<kyogre_core::VesselBenchmarkOutput> for VesselBenchmarkOutput {
-    type Error = Error;
-
-    fn try_from(v: kyogre_core::VesselBenchmarkOutput) -> Result<Self, Self::Error> {
-        Ok(Self {
-            fiskeridir_vessel_id: v.vessel_id.0,
+impl From<kyogre_core::VesselBenchmarkOutput> for VesselBenchmarkOutput {
+    fn from(v: kyogre_core::VesselBenchmarkOutput) -> Self {
+        Self {
+            fiskeridir_vessel_id: v.vessel_id,
             vessel_benchmark_id: v.benchmark_id,
             output: v.value,
-        })
+        }
     }
 }
 
@@ -275,7 +277,7 @@ pub struct FiskeridirAisVesselCombination {
     pub ais_ship_width: Option<i32>,
     pub ais_eta: Option<DateTime<Utc>>,
     pub ais_destination: Option<String>,
-    pub fiskeridir_vessel_id: i64,
+    pub fiskeridir_vessel_id: FiskeridirVesselId,
     pub fiskeridir_vessel_type_id: Option<i32>,
     pub fiskeridir_length_group_id: VesselLengthGroup,
     pub fiskeridir_nation_group_id: Option<String>,
@@ -330,7 +332,7 @@ impl TryFrom<FiskeridirAisVesselCombination> for kyogre_core::Vessel {
         let benchmarks: Vec<Benchmark> = serde_json::from_str(&value.benchmarks)?;
 
         let fiskeridir_vessel = kyogre_core::FiskeridirVessel {
-            id: FiskeridirVesselId(value.fiskeridir_vessel_id),
+            id: value.fiskeridir_vessel_id,
             vessel_type_id: value.fiskeridir_vessel_type_id.map(|v| v as u32),
             length_group_id: value.fiskeridir_length_group_id,
             nation_group_id: value.fiskeridir_nation_group_id,
@@ -377,11 +379,7 @@ impl TryFrom<ActiveVesselConflict> for kyogre_core::ActiveVesselConflict {
 
     fn try_from(value: ActiveVesselConflict) -> Result<Self, Self::Error> {
         Ok(kyogre_core::ActiveVesselConflict {
-            vessel_ids: value
-                .fiskeridir_vessel_ids
-                .into_iter()
-                .map(|v| v.map(FiskeridirVesselId))
-                .collect(),
+            vessel_ids: value.fiskeridir_vessel_ids,
             mmsis: value.mmsis,
             call_sign: std::convert::TryInto::<CallSign>::try_into(value.call_sign)?,
             sources: value.fiskeridir_vessel_source_ids,

@@ -1,4 +1,5 @@
 use super::ers_common::{ErsMessageInfo, ErsSpecies, ErsVesselInfo, Port};
+use super::FiskeridirVesselId;
 use crate::deserialize_utils::*;
 use crate::string_new_types::NonEmptyString;
 use crate::Gear;
@@ -275,7 +276,7 @@ impl ErsDca {
         self.stop_date = Some(timestamp.date_naive());
         self.stop_timestamp = Some(timestamp);
     }
-    pub fn test_default(message_id: u64, vessel_id: Option<u64>) -> Self {
+    pub fn test_default(message_id: u64, vessel_id: Option<FiskeridirVesselId>) -> Self {
         let stop = Utc::now();
         let start = stop - Duration::hours(4);
         Self {

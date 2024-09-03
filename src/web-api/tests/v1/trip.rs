@@ -2,7 +2,7 @@ use super::helper::{test, test_with_cache};
 use chrono::{DateTime, Duration, TimeZone, Utc};
 use engine::*;
 use fiskeridir_rs::{DeliveryPointId, GearGroup, LandingId, SpeciesGroup, VesselLengthGroup};
-use kyogre_core::{Ordering, TripSorting, VesselEventType};
+use kyogre_core::{FiskeridirVesselId, Ordering, TripSorting, VesselEventType};
 use reqwest::StatusCode;
 use uuid::Uuid;
 use web_api::routes::v1::trip::{Trip, TripsParameters};
@@ -1038,7 +1038,7 @@ async fn test_trips_connects_to_existing_landings_outside_period_but_inside_land
         let state = builder
             .vessels(1)
             .modify(|v| {
-                v.fiskeridir.id = 1;
+                v.fiskeridir.id = FiskeridirVesselId::test_new(1);
             })
             .landings(1)
             .modify(|v| {
@@ -1048,7 +1048,7 @@ async fn test_trips_connects_to_existing_landings_outside_period_but_inside_land
             .base()
             .vessels(1)
             .modify(|v| {
-                v.fiskeridir.id = 1;
+                v.fiskeridir.id = FiskeridirVesselId::test_new(2);
             })
             .trips(1)
             .modify(|v| {

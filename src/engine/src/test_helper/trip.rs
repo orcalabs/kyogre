@@ -199,7 +199,7 @@ impl TripBuilder {
 
                 let mut tra = fiskeridir_rs::ErsTra::test_default(
                     base.ers_message_id_counter,
-                    Some(trip.vessel_id.0 as u64),
+                    Some(trip.vessel_id),
                     ts,
                 );
 
@@ -237,7 +237,7 @@ impl TripBuilder {
             for _ in 0..num_hauls {
                 let mut dca = fiskeridir_rs::ErsDca::test_default(
                     base.ers_message_id_counter,
-                    Some(trip.vessel_id.0 as u64),
+                    Some(trip.vessel_id),
                 );
 
                 base.ers_message_id_counter += 1;
@@ -283,7 +283,7 @@ impl TripBuilder {
             for _ in 0..num_landings {
                 let mut landing = fiskeridir_rs::Landing::test_default(
                     base.landing_id_counter as i64,
-                    Some(trip.vessel_id.0),
+                    Some(trip.vessel_id),
                 );
 
                 let ts = trip.current_data_timestamp;

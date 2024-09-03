@@ -99,7 +99,7 @@ impl Filter for HaulFilter {
             HaulFilter::FiskeridirVesselId(ids) => format!(
                 "{} IN [{}]",
                 HaulFilterDiscriminants::FiskeridirVesselId,
-                join_comma_fn(ids, |v| v.0)
+                join_comma(ids)
             ),
             HaulFilter::CatchLocations(locs) => format!(
                 "{} IN [{}]",

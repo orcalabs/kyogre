@@ -42,7 +42,7 @@ SELECT
     l.gear_id AS "gear_id!: Gear",
     l.gear_group_id AS "gear_group_id!: GearGroup",
     COALESCE(MIN(d.new_delivery_point_id), l.delivery_point_id) AS delivery_point_id,
-    l.fiskeridir_vessel_id,
+    l.fiskeridir_vessel_id AS "fiskeridir_vessel_id!: FiskeridirVesselId",
     l.vessel_call_sign,
     l.vessel_name,
     l.vessel_length,
@@ -152,7 +152,7 @@ SELECT
     l.gear_id AS "gear_id!: Gear",
     l.gear_group_id AS "gear_group_id!: GearGroup",
     COALESCE(MIN(d.new_delivery_point_id), l.delivery_point_id) AS delivery_point_id,
-    l.fiskeridir_vessel_id,
+    l.fiskeridir_vessel_id AS "fiskeridir_vessel_id!: FiskeridirVesselId",
     l.vessel_call_sign,
     l.vessel_name,
     l.vessel_length,
@@ -223,7 +223,7 @@ FROM
 WHERE
     fiskeridir_vessel_id = $1
             "#,
-            id.0,
+            id.into_inner(),
         )
         .fetch_one(&self.pool)
         .await?;
@@ -247,7 +247,8 @@ WHERE
         let mut existing_landing_ids = HashSet::new();
         let mut inserted_landing_ids = HashSet::new();
         let mut vessel_event_ids = Vec::new();
-        let mut trip_assembler_conflicts = HashMap::<i64, NewTripAssemblerConflict>::new();
+        let mut trip_assembler_conflicts =
+            HashMap::<FiskeridirVesselId, NewTripAssemblerConflict>::new();
 
         let mut num_landings = 0;
 
@@ -336,7 +337,7 @@ WHERE
         set: PreparedLandingSet,
         inserted_landing_ids: &mut HashSet<String>,
         vessel_event_ids: &mut Vec<i64>,
-        trip_assembler_conflicts: &mut HashMap<i64, NewTripAssemblerConflict>,
+        trip_assembler_conflicts: &mut HashMap<FiskeridirVesselId, NewTripAssemblerConflict>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
     ) -> Result<()> {
         self.add_delivery_point_ids(set.delivery_points, tx).await?;
@@ -373,7 +374,7 @@ WHERE
         mut landings: Vec<NewLanding>,
         inserted_landing_ids: &mut HashSet<String>,
         vessel_event_ids: &mut Vec<i64>,
-        trip_assembler_conflicts: &mut HashMap<i64, NewTripAssemblerConflict>,
+        trip_assembler_conflicts: &mut HashMap<FiskeridirVesselId, NewTripAssemblerConflict>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
     ) -> Result<()> {
         landings.retain(|l| !inserted_landing_ids.contains(&l.landing_id));
@@ -394,11 +395,11 @@ WHERE
     l.landing_id = u.landing_id
     AND l.version < u.version
 RETURNING
-    l.fiskeridir_vessel_id,
+    l.fiskeridir_vessel_id AS "fiskeridir_vessel_id: FiskeridirVesselId",
     l.landing_timestamp AS "landing_timestamp!"
             "#,
             &landing_id as _,
-            &version
+            &version,
         )
         .fetch_all(&mut **tx)
         .await?;
@@ -411,7 +412,7 @@ RETURNING
                     .entry(id)
                     .and_modify(|v| v.timestamp = min(v.timestamp, i.landing_timestamp))
                     .or_insert_with(|| NewTripAssemblerConflict {
-                        fiskeridir_vessel_id: FiskeridirVesselId(id),
+                        fiskeridir_vessel_id: id,
                         timestamp: Utc.from_utc_datetime(&NaiveDateTime::new(
                             i.landing_timestamp.date_naive(),
                             NaiveTime::from_hms_opt(0, 0, 0).unwrap(),
@@ -431,7 +432,7 @@ RETURNING
                     .entry(id)
                     .and_modify(|v| v.timestamp = min(v.timestamp, d.landing_timestamp))
                     .or_insert_with(|| NewTripAssemblerConflict {
-                        fiskeridir_vessel_id: FiskeridirVesselId(id),
+                        fiskeridir_vessel_id: id,
                         timestamp: Utc.from_utc_datetime(&NaiveDateTime::new(
                             d.landing_timestamp.date_naive(),
                             NaiveTime::from_hms_opt(0, 0, 0).unwrap(),
@@ -483,7 +484,7 @@ WHERE
     pub(crate) async fn delete_removed_landings<'a>(
         &'a self,
         existing_landing_ids: &[String],
-        trip_assembler_conflicts: &mut HashMap<i64, NewTripAssemblerConflict>,
+        trip_assembler_conflicts: &mut HashMap<FiskeridirVesselId, NewTripAssemblerConflict>,
         data_year: u32,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
     ) -> Result<()> {
@@ -494,7 +495,7 @@ WHERE
     (NOT landing_id = ANY ($1::TEXT[]))
     AND data_year = $2::INT
 RETURNING
-    fiskeridir_vessel_id,
+    fiskeridir_vessel_id AS "fiskeridir_vessel_id: FiskeridirVesselId",
     landing_timestamp AS "landing_timestamp!"
             "#,
             existing_landing_ids,
@@ -511,7 +512,7 @@ RETURNING
                     .entry(id)
                     .and_modify(|v| v.timestamp = min(v.timestamp, d.landing_timestamp))
                     .or_insert_with(|| NewTripAssemblerConflict {
-                        fiskeridir_vessel_id: FiskeridirVesselId(id),
+                        fiskeridir_vessel_id: id,
                         timestamp: Utc.from_utc_datetime(&NaiveDateTime::new(
                             d.landing_timestamp.date_naive(),
                             NaiveTime::from_hms_opt(0, 0, 0).unwrap(),
@@ -697,7 +698,7 @@ pub struct LandingsArgs {
     pub gear_group_ids: Option<Vec<i32>>,
     pub species_group_ids: Option<Vec<i32>>,
     pub vessel_length_groups: Option<Vec<i32>>,
-    pub fiskeridir_vessel_ids: Option<Vec<i64>>,
+    pub fiskeridir_vessel_ids: Option<Vec<FiskeridirVesselId>>,
     pub sorting: Option<i32>,
     pub ordering: Option<i32>,
 }
@@ -741,9 +742,7 @@ impl TryFrom<LandingsQuery> for LandingsArgs {
             vessel_length_groups: v
                 .vessel_length_groups
                 .map(|groups| groups.into_iter().map(|g| g as i32).collect()),
-            fiskeridir_vessel_ids: v
-                .vessel_ids
-                .map(|ids| ids.into_iter().map(|i| i.0).collect()),
+            fiskeridir_vessel_ids: v.vessel_ids,
             sorting: v.sorting.map(|s| s as i32),
             ordering: v.ordering.map(|o| o as i32),
         })

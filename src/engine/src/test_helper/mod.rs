@@ -2,12 +2,12 @@ use crate::{
     AisConsumeLoop, AisPosition, AisVms, AisVmsConflict, Arrival, Cluster, DataMessage,
     DeliveryPoint, DeliveryPointType, Departure, ErsTripAssembler, FisheryEngine,
     FishingFacilities, FishingFacilitiesQuery, FishingFacility, FishingSpotPredictor,
-    FishingSpotWeatherPredictor, FishingWeightPredictor, FishingWeightWeatherPredictor,
-    FiskeridirVesselId, Haul, HaulsQuery, Landing, LandingTripAssembler, LandingsQuery,
-    LandingsSorting, ManualDeliveryPoint, MattilsynetDeliveryPoint, Mmsi, NewAisPosition,
-    NewAisStatic, OceanClimate, Ordering, Pagination, PrecisionId, PredictionRange, ScrapeState,
-    SharedState, SpotPredictorSettings, Step, TripDetailed, Trips, TripsQuery, UnrealisticSpeed,
-    Vessel, VmsPosition, Weather, WeightPredictorSettings,
+    FishingSpotWeatherPredictor, FishingWeightPredictor, FishingWeightWeatherPredictor, Haul,
+    HaulsQuery, Landing, LandingTripAssembler, LandingsQuery, LandingsSorting, ManualDeliveryPoint,
+    MattilsynetDeliveryPoint, Mmsi, NewAisPosition, NewAisStatic, OceanClimate, Ordering,
+    Pagination, PrecisionId, PredictionRange, ScrapeState, SharedState, SpotPredictorSettings,
+    Step, TripDetailed, Trips, TripsQuery, UnrealisticSpeed, Vessel, VmsPosition, Weather,
+    WeightPredictorSettings,
 };
 
 use chrono::{DateTime, Duration, TimeZone, Utc};
@@ -15,8 +15,8 @@ use fiskeridir_rs::CallSign;
 use fiskeridir_rs::{DeliveryPointId, LandingMonth};
 use futures::TryStreamExt;
 use kyogre_core::{
-    CatchLocationId, MLModel, NewVesselConflict, NewWeather, TestStorage, TrainingMode,
-    TripAssembler, TripDistancer, TripPositionLayer, VesselBenchmark,
+    CatchLocationId, FiskeridirVesselId, MLModel, NewVesselConflict, NewWeather, TestStorage,
+    TrainingMode, TripAssembler, TripDistancer, TripPositionLayer, VesselBenchmark,
 };
 use machine::StateMachine;
 use orca_core::PsqlSettings;
@@ -568,7 +568,7 @@ impl TestStateBuilder {
     pub fn vessels(mut self, amount: usize) -> VesselBuilder {
         let num_vessels = self.vessels.len();
         for i in 0..amount {
-            let vessel_id = self.vessel_id_counter;
+            let vessel_id = FiskeridirVesselId::test_new(self.vessel_id_counter);
 
             let mut vessel = fiskeridir_rs::RegisterVessel::test_default(vessel_id);
             let call_sign = CallSign::try_from(format!("CS{}", self.call_sign_counter)).unwrap();
@@ -653,13 +653,13 @@ impl TestStateBuilder {
                 .filter_map(|v| {
                     if v.cycle == i && v.conflict_winner {
                         Some(NewVesselConflict {
-                            vessel_id: FiskeridirVesselId(v.fiskeridir.id),
+                            vessel_id: v.fiskeridir.id,
                             call_sign: Some(v.fiskeridir.radio_call_sign.clone().unwrap()),
                             mmsi: Some(v.ais.mmsi),
                         })
                     } else if v.cycle == i && v.conflict_loser {
                         Some(NewVesselConflict {
-                            vessel_id: FiskeridirVesselId(v.fiskeridir.id),
+                            vessel_id: v.fiskeridir.id,
                             call_sign: None,
                             mmsi: None,
                         })
@@ -1052,14 +1052,10 @@ impl TestStateBuilder {
 
             for v in self.vessels.iter().filter(|v| v.cycle == i) {
                 if v.clear_trip_precision {
-                    self.storage
-                        .clear_trip_precision(FiskeridirVesselId(v.fiskeridir.id))
-                        .await;
+                    self.storage.clear_trip_precision(v.fiskeridir.id).await;
                 }
                 if v.clear_trip_distancing {
-                    self.storage
-                        .clear_trip_distancing(FiskeridirVesselId(v.fiskeridir.id))
-                        .await;
+                    self.storage.clear_trip_distancing(v.fiskeridir.id).await;
                 }
             }
         }

@@ -335,20 +335,10 @@ impl TestHelperOutbound for PostgresAdapter {
             .unwrap()
     }
     async fn all_dep(&self) -> Vec<Departure> {
-        self.all_ers_departures_impl()
-            .await
-            .unwrap()
-            .into_iter()
-            .map(kyogre_core::Departure::from)
-            .collect()
+        self.all_ers_departures_impl().await.unwrap()
     }
     async fn all_por(&self) -> Vec<Arrival> {
-        self.all_ers_arrivals_impl()
-            .await
-            .unwrap()
-            .into_iter()
-            .map(kyogre_core::Arrival::from)
-            .collect()
+        self.all_ers_arrivals_impl().await.unwrap()
     }
 
     async fn delivery_points_log(&self) -> Vec<serde_json::Value> {

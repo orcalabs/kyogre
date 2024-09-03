@@ -38,7 +38,7 @@ pub struct Trip {
 #[derive(Debug, Clone)]
 pub struct TripAssemblerLogEntry {
     pub trip_assembler_log_id: i64,
-    pub fiskeridir_vessel_id: i64,
+    pub fiskeridir_vessel_id: FiskeridirVesselId,
     pub calculation_timer_prior: Option<DateTime<Utc>>,
     pub calculation_timer_post: DateTime<Utc>,
     pub conflict: Option<DateTime<Utc>>,
@@ -52,7 +52,7 @@ pub struct TripAssemblerLogEntry {
 
 #[derive(Debug, Clone)]
 pub struct NewTripAssemblerLogEntry {
-    pub fiskeridir_vessel_id: i64,
+    pub fiskeridir_vessel_id: FiskeridirVesselId,
     pub calculation_timer_prior_to_batch: Option<DateTime<Utc>>,
     pub calculation_timer_post_batch: DateTime<Utc>,
     pub conflict: Option<DateTime<Utc>>,
@@ -72,7 +72,8 @@ pub struct NewTripAssemblerLogEntry {
 pub struct NewTrip {
     #[unnest_insert(sql_type = "INT", type_conversion = "type_to_i32")]
     pub trip_assembler_id: TripAssemblerId,
-    pub fiskeridir_vessel_id: i64,
+    #[unnest_insert(sql_type = "BIGINT", type_conversion = "type_to_i64")]
+    pub fiskeridir_vessel_id: FiskeridirVesselId,
     #[unnest_insert(sql_type = "tstzrange")]
     pub landing_coverage: PgRange<DateTime<Utc>>,
     #[unnest_insert(sql_type = "tstzrange")]
@@ -187,7 +188,7 @@ impl TryFrom<&TripProcessingUnit> for NewTrip {
             period_precision,
             landing_coverage: PgRange::from(&value.trip.landing_coverage),
             trip_assembler_id: value.trip_assembler_id,
-            fiskeridir_vessel_id: value.vessel_id.0,
+            fiskeridir_vessel_id: value.vessel_id,
             start_precision_id,
             end_precision_id,
             start_precision_direction: start_precision_direction.map(|v| v.name().to_string()),
@@ -213,7 +214,7 @@ pub struct CurrentTrip {
 #[derive(Debug, Clone)]
 pub struct TripCalculationTimer {
     pub timestamp: DateTime<Utc>,
-    pub fiskeridir_vessel_id: i64,
+    pub fiskeridir_vessel_id: FiskeridirVesselId,
     pub queued_reset: bool,
     pub conflict: Option<DateTime<Utc>>,
     pub conflict_vessel_event_id: Option<i64>,
@@ -224,7 +225,7 @@ pub struct TripCalculationTimer {
 #[derive(Debug)]
 pub struct TripDetailed {
     pub trip_id: TripId,
-    pub fiskeridir_vessel_id: i64,
+    pub fiskeridir_vessel_id: FiskeridirVesselId,
     pub fiskeridir_length_group_id: VesselLengthGroup,
     pub period: PgRange<DateTime<Utc>>,
     pub period_precision: Option<PgRange<DateTime<Utc>>>,
@@ -267,7 +268,7 @@ struct TripHaul {
     total_living_weight: i64,
     gear_id: Gear,
     gear_group_id: GearGroup,
-    fiskeridir_vessel_id: Option<i64>,
+    fiskeridir_vessel_id: Option<FiskeridirVesselId>,
     catches: Vec<HaulCatch>,
     whale_catches: Vec<WhaleCatch>,
 }
@@ -292,7 +293,7 @@ struct Catch {
 #[derive(Debug, Clone, Deserialize)]
 struct VesselEvent {
     vessel_event_id: i64,
-    fiskeridir_vessel_id: i64,
+    fiskeridir_vessel_id: FiskeridirVesselId,
     report_timestamp: DateTime<Utc>,
     occurence_timestamp: Option<DateTime<Utc>>,
     vessel_event_type_id: VesselEventType,
@@ -374,7 +375,7 @@ impl From<TripCalculationTimer> for kyogre_core::TripCalculationTimer {
             _ => None,
         };
         Self {
-            fiskeridir_vessel_id: FiskeridirVesselId(v.fiskeridir_vessel_id),
+            fiskeridir_vessel_id: v.fiskeridir_vessel_id,
             timestamp: v.timestamp,
             queued_reset: v.queued_reset,
             conflict,
@@ -408,7 +409,7 @@ impl TryFrom<TripDetailed> for kyogre_core::TripDetailed {
 
         Ok(kyogre_core::TripDetailed {
             period_precision,
-            fiskeridir_vessel_id: FiskeridirVesselId(value.fiskeridir_vessel_id),
+            fiskeridir_vessel_id: value.fiskeridir_vessel_id,
             fiskeridir_length_group_id: value.fiskeridir_length_group_id,
             landing_coverage,
             trip_id: value.trip_id,
@@ -459,7 +460,7 @@ impl From<VesselEvent> for kyogre_core::VesselEvent {
     fn from(v: VesselEvent) -> Self {
         kyogre_core::VesselEvent {
             event_id: v.vessel_event_id as u64,
-            vessel_id: FiskeridirVesselId(v.fiskeridir_vessel_id),
+            vessel_id: v.fiskeridir_vessel_id,
             report_timestamp: v.report_timestamp,
             event_type: v.vessel_event_type_id,
             occurence_timestamp: v.occurence_timestamp,
@@ -534,7 +535,7 @@ impl TryFrom<TripAssemblerLogEntry> for kyogre_core::TripAssemblerLogEntry {
     fn try_from(value: TripAssemblerLogEntry) -> std::result::Result<Self, Self::Error> {
         Ok(Self {
             trip_assembler_log_id: value.trip_assembler_log_id as u64,
-            vessel_id: FiskeridirVesselId(value.fiskeridir_vessel_id),
+            vessel_id: value.fiskeridir_vessel_id,
             calculation_timer_prior: value.calculation_timer_prior,
             calculation_timer_post: value.calculation_timer_post,
             conflict: value.conflict,

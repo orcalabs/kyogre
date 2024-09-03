@@ -21,7 +21,7 @@ impl PostgresAdapter {
 SELECT
     call_sign,
     mmsis AS "mmsis!: Vec<Option<Mmsi>>",
-    fiskeridir_vessel_ids AS "fiskeridir_vessel_ids!: Vec<Option<i64>>",
+    fiskeridir_vessel_ids AS "fiskeridir_vessel_ids!: Vec<Option<FiskeridirVesselId>>",
     ais_vessel_names AS "ais_vessel_names!: Vec<Option<String>>",
     fiskeridir_vessel_names AS "fiskeridir_vessel_names!: Vec<Option<String>>",
     fiskeridir_vessel_source_ids AS "fiskeridir_vessel_source_ids!: Vec<Option<VesselSource>>"
@@ -48,7 +48,7 @@ FROM
             if let Some(val) = v.mmsi {
                 mmsi.push(val);
             }
-            fiskeridir_vessel_id.push(v.vessel_id.0);
+            fiskeridir_vessel_id.push(v.vessel_id);
         });
         sqlx::query!(
             r#"
@@ -75,7 +75,7 @@ FROM
     UNNEST($1::BIGINT[])
 ON CONFLICT DO NOTHING
             "#,
-            &fiskeridir_vessel_id
+            &fiskeridir_vessel_id as &[FiskeridirVesselId],
         )
         .fetch_all(&mut *tx)
         .await?;
@@ -161,7 +161,7 @@ ON CONFLICT DO NOTHING
             ActiveVesselConflict,
             r#"
 SELECT
-    ARRAY_AGG(DISTINCT f.fiskeridir_vessel_id) AS "fiskeridir_vessel_ids!: Vec<Option<i64>>",
+    ARRAY_AGG(DISTINCT f.fiskeridir_vessel_id) AS "fiskeridir_vessel_ids!: Vec<Option<FiskeridirVesselId>>",
     f.call_sign AS "call_sign!",
     COALESCE(ARRAY_AGG(DISTINCT a.mmsi), '{}') AS "mmsis!: Vec<Option<Mmsi>>",
     COALESCE(ARRAY_AGG(DISTINCT a.name), '{}') AS "ais_vessel_names!: Vec<Option<String>>",
@@ -356,7 +356,7 @@ WHERE
             r#"
 SELECT
     f.preferred_trip_assembler AS "preferred_trip_assembler!: TripAssemblerId",
-    f.fiskeridir_vessel_id AS "fiskeridir_vessel_id!",
+    f.fiskeridir_vessel_id AS "fiskeridir_vessel_id!: FiskeridirVesselId",
     f.fiskeridir_vessel_type_id,
     f.fiskeridir_length_group_id AS "fiskeridir_length_group_id!: VesselLengthGroup",
     f.fiskeridir_nation_group_id,
@@ -424,7 +424,7 @@ GROUP BY
             r#"
 SELECT
     f.preferred_trip_assembler AS "preferred_trip_assembler!: TripAssemblerId",
-    f.fiskeridir_vessel_id AS "fiskeridir_vessel_id!",
+    f.fiskeridir_vessel_id AS "fiskeridir_vessel_id!: FiskeridirVesselId",
     f.fiskeridir_vessel_type_id,
     f.fiskeridir_length_group_id AS "fiskeridir_length_group_id!: VesselLengthGroup",
     f.fiskeridir_nation_group_id,
@@ -480,7 +480,7 @@ GROUP BY
     f.fiskeridir_vessel_id,
     a.mmsi
             "#,
-            vessel_id.0
+            vessel_id.into_inner(),
         )
         .fetch_optional(&self.pool)
         .await
@@ -545,14 +545,14 @@ FROM
 WHERE
     f.fiskeridir_vessel_id = q.fiskeridir_vessel_id
 RETURNING
-    f.fiskeridir_vessel_id
+    f.fiskeridir_vessel_id AS "id!: FiskeridirVesselId"
             "#,
             TripAssemblerId::Landings as i32,
         )
         .fetch_all(&mut *tx)
         .await?
         .into_iter()
-        .map(|r| r.fiskeridir_vessel_id)
+        .map(|r| r.id)
         .collect::<Vec<_>>();
 
         sqlx::query!(
@@ -573,7 +573,7 @@ WHERE
     AND NOT (f.fiskeridir_vessel_id = ANY ($2::BIGINT[]))
             "#,
             TripAssemblerId::Ers as i32,
-            &vessel_ids,
+            &vessel_ids as &[FiskeridirVesselId],
         )
         .execute(&mut *tx)
         .await?;

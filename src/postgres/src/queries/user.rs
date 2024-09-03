@@ -1,5 +1,6 @@
-use crate::{error::Result, models::User, PostgresAdapter};
 use kyogre_core::{BarentswatchUserId, FiskeridirVesselId};
+
+use crate::{error::Result, models::User, PostgresAdapter};
 
 impl PostgresAdapter {
     pub(crate) async fn get_user_impl(&self, user_id: BarentswatchUserId) -> Result<Option<User>> {
@@ -8,7 +9,7 @@ impl PostgresAdapter {
             r#"
 SELECT
     barentswatch_user_id,
-    ARRAY_AGG(fiskeridir_vessel_id) AS "following!"
+    ARRAY_AGG(fiskeridir_vessel_id) AS "following!: Vec<FiskeridirVesselId>"
 FROM
     user_follows
 WHERE
@@ -41,8 +42,6 @@ GROUP BY
         vessel_ids: Vec<FiskeridirVesselId>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
     ) -> Result<()> {
-        let vessel_ids = vessel_ids.into_iter().map(|id| id.0).collect::<Vec<_>>();
-
         sqlx::query!(
             r#"
 DELETE FROM user_follows
@@ -65,7 +64,7 @@ FROM
     UNNEST($2::BIGINT[])
             "#,
             user_id.0,
-            vessel_ids.as_slice(),
+            &vessel_ids as &[FiskeridirVesselId],
         )
         .execute(&mut **tx)
         .await?;

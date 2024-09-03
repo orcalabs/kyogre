@@ -1,5 +1,6 @@
 use crate::{error::Result, models::*};
 use fiskeridir_rs::LandingId;
+use kyogre_core::FiskeridirVesselId;
 use std::collections::{HashMap, HashSet};
 
 #[derive(Default)]
@@ -9,7 +10,7 @@ pub struct LandingSet {
     species_fiskeridir: HashMap<i32, SpeciesFiskeridir>,
     landings: HashMap<LandingId, NewLanding>,
     landing_entries: Vec<NewLandingEntry>,
-    vessels: HashMap<i64, fiskeridir_rs::Vessel>,
+    vessels: HashMap<FiskeridirVesselId, fiskeridir_rs::Vessel>,
     delivery_points: HashSet<NewDeliveryPointId>,
     catch_areas: HashMap<u32, NewCatchArea>,
     catch_main_areas: HashMap<u32, NewCatchMainArea>,

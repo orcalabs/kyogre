@@ -2,7 +2,7 @@ use chrono::{DateTime, NaiveDate, Utc};
 use fiskeridir_rs::{
     Gear, GearGroup, SpeciesGroup, SpeciesMainGroup, VesselLengthGroup, WhaleGender,
 };
-use kyogre_core::{CatchLocationId, HaulId, HaulOceanClimate, HaulWeather};
+use kyogre_core::{CatchLocationId, FiskeridirVesselId, HaulId, HaulOceanClimate, HaulWeather};
 use serde::Deserialize;
 
 use crate::error::{Error, Result};
@@ -37,7 +37,7 @@ pub struct Haul {
     pub total_living_weight: i64,
     pub gear_id: Gear,
     pub gear_group_id: GearGroup,
-    pub fiskeridir_vessel_id: Option<i64>,
+    pub fiskeridir_vessel_id: Option<FiskeridirVesselId>,
     pub vessel_call_sign: Option<String>,
     pub vessel_call_sign_ers: String,
     pub vessel_length: f64,

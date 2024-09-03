@@ -1,10 +1,11 @@
+use kyogre_core::{Arrival, FiskeridirVesselId, TripId};
+use unnest_insert::UnnestInsert;
+
 use crate::{
     error::Result,
-    models::{Arrival, NewPort, Port, PortDockPoint, TripDockPoints, TripPorts},
+    models::{NewPort, Port, PortDockPoint, TripDockPoints, TripPorts},
     PostgresAdapter,
 };
-use kyogre_core::TripId;
-use unnest_insert::UnnestInsert;
 
 impl PostgresAdapter {
     pub(crate) async fn dock_points_impl(&self) -> Result<Vec<PortDockPoint>> {
@@ -58,7 +59,7 @@ WHERE
             Arrival,
             r#"
 SELECT
-    fiskeridir_vessel_id AS "fiskeridir_vessel_id!",
+    fiskeridir_vessel_id AS "fiskeridir_vessel_id!: FiskeridirVesselId",
     arrival_timestamp AS "timestamp",
     port_id
 FROM

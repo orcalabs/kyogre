@@ -348,14 +348,14 @@ async fn run_state(shared_state: Arc<SharedState>) -> Result<TripsReport> {
                                     {
                                         error!(
                                             "failed to store trips for vessel: {}, err: {e:?}",
-                                            vessel.fiskeridir.id.0,
+                                            vessel.fiskeridir.id,
                                         );
                                     }
                                 }
                             }
                             Err(e) => error!(
                                 "failed to run trips pipeline for vessel: {}, err: {e:?}",
-                                vessel.fiskeridir.id.0,
+                                vessel.fiskeridir.id,
                             ),
                         }
 
@@ -380,14 +380,14 @@ async fn run_state(shared_state: Arc<SharedState>) -> Result<TripsReport> {
                                 {
                                     error!(
                                         "failed to refresh detailed trips for vessel: {}, err: {e:?}",
-                                        vessel.fiskeridir.id.0,
+                                        vessel.fiskeridir.id,
                                     );
                                 }
                             }
                             Err(e) => error!(
 
                                 "failed to process unprocessed trips for vessel: {}, err: {e:?}",
-                                vessel.fiskeridir.id.0,
+                                vessel.fiskeridir.id,
                             ),
                         }
 

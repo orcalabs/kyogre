@@ -1,6 +1,9 @@
 use serde::{Deserialize, Serialize};
+use serde_with::{serde_as, DisplayFromStr};
 
 use crate::{deserialize_utils::*, CallSign};
+
+use super::FiskeridirVesselId;
 
 #[remain::sorted]
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
@@ -25,14 +28,15 @@ pub struct RegisterVesselOwner {
     pub postal_code: i32,
 }
 
+#[serde_as]
 #[remain::sorted]
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RegisterVessel {
     #[serde(deserialize_with = "opt_i32_from_str", default)]
     pub engine_power: Option<i32>,
-    #[serde(deserialize_with = "i64_from_str")]
-    pub id: i64,
+    #[serde_as(as = "DisplayFromStr")]
+    pub id: FiskeridirVesselId,
     #[serde(deserialize_with = "opt_i64_from_str", default)]
     pub imo_number: Option<i64>,
     pub length: f64,
@@ -84,7 +88,7 @@ pub enum RegisterVesselSorting {
 }
 
 impl RegisterVessel {
-    pub fn test_default(id: i64) -> Self {
+    pub fn test_default(id: FiskeridirVesselId) -> Self {
         Self {
             engine_power: Some(200),
             id,

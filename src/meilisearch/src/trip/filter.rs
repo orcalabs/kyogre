@@ -80,7 +80,7 @@ impl Filter for TripFilter {
             TripFilter::FiskeridirVesselId(ids) => format!(
                 "{} IN [{}]",
                 TripFilterDiscriminants::FiskeridirVesselId,
-                join_comma_fn(ids, |v| v.0)
+                join_comma(ids)
             ),
             TripFilter::HaulIds(id) => format!("{} = {}", TripFilterDiscriminants::HaulIds, id),
             TripFilter::LandingIds(id) => {

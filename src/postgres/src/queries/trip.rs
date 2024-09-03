@@ -76,7 +76,7 @@ TRUNCATE earliest_vms_insertion
             r#"
 SELECT
     trip_assembler_log_id,
-    fiskeridir_vessel_id,
+    fiskeridir_vessel_id AS "fiskeridir_vessel_id!: FiskeridirVesselId",
     calculation_timer_prior,
     calculation_timer_post,
     "conflict",
@@ -238,12 +238,13 @@ WHERE
     fiskeridir_vessel_id = $2
             "#,
             PrecisionStatus::Unprocessed.name(),
-            vessel_id.0
+            vessel_id.into_inner(),
         )
         .execute(&self.pool)
         .await?;
         Ok(())
     }
+
     pub(crate) async fn clear_trip_distancing_impl(
         &self,
         vessel_id: FiskeridirVesselId,
@@ -257,7 +258,7 @@ SET
 WHERE
     fiskeridir_vessel_id = $1
             "#,
-            vessel_id.0
+            vessel_id.into_inner(),
         )
         .execute(&self.pool)
         .await?;
@@ -387,7 +388,7 @@ FROM
 WHERE
     fiskeridir_vessel_id = $1
             "#,
-            vessel_id.0
+            vessel_id.into_inner(),
         )
         .fetch_optional(&mut **tx)
         .await?
@@ -407,7 +408,7 @@ SET
 WHERE
     fiskeridir_vessel_id = $1
             "#,
-            vessel_id.0
+            vessel_id.into_inner(),
         )
         .execute(&mut **tx)
         .await?;
@@ -717,7 +718,7 @@ FROM
 WHERE
     fiskeridir_vessel_id = $1
             "#,
-            id.0,
+            id.into_inner(),
         )
         .fetch_one(&self.pool)
         .await?;
@@ -751,16 +752,12 @@ WHERE
             .vessel_length_groups
             .map(|vec| vec.into_iter().map(|v| v as i32).collect::<Vec<i32>>());
 
-        let vessel_ids = query
-            .fiskeridir_vessel_ids
-            .map(|v| v.into_iter().map(|v| v.0).collect::<Vec<i64>>());
-
         let stream = sqlx::query_as!(
             TripDetailed,
             r#"
 SELECT
     t.trip_id AS "trip_id!: TripId",
-    t.fiskeridir_vessel_id AS "fiskeridir_vessel_id!",
+    t.fiskeridir_vessel_id AS "fiskeridir_vessel_id!: FiskeridirVesselId",
     t.fiskeridir_length_group_id AS "fiskeridir_length_group_id!: VesselLengthGroup",
     t.period AS "period!",
     t.period_precision,
@@ -847,7 +844,7 @@ LIMIT
     $13
             "#,
             read_fishing_facility,
-            vessel_ids.as_deref(),
+            query.fiskeridir_vessel_ids.as_deref() as Option<&[FiskeridirVesselId]>,
             query.delivery_points.as_deref(),
             query.start_date,
             query.end_date,
@@ -875,7 +872,7 @@ LIMIT
             r#"
 SELECT
     t.trip_id AS "trip_id!: TripId",
-    t.fiskeridir_vessel_id AS "fiskeridir_vessel_id!",
+    t.fiskeridir_vessel_id AS "fiskeridir_vessel_id!: FiskeridirVesselId",
     t.fiskeridir_length_group_id AS "fiskeridir_length_group_id!: VesselLengthGroup",
     t.period AS "period!",
     t.period_precision,
@@ -941,7 +938,7 @@ FROM
             r#"
 SELECT
     t.trip_id AS "trip_id!: TripId",
-    t.fiskeridir_vessel_id AS "fiskeridir_vessel_id!",
+    t.fiskeridir_vessel_id AS "fiskeridir_vessel_id!: FiskeridirVesselId",
     t.fiskeridir_length_group_id AS "fiskeridir_length_group_id!: VesselLengthGroup",
     t.period AS "period!",
     t.period_precision,
@@ -994,7 +991,7 @@ WHERE
             r#"
 SELECT
     t.trip_id AS "trip_id!: TripId",
-    t.fiskeridir_vessel_id AS "fiskeridir_vessel_id!",
+    t.fiskeridir_vessel_id AS "fiskeridir_vessel_id!: FiskeridirVesselId",
     t.fiskeridir_length_group_id AS "fiskeridir_length_group_id!: VesselLengthGroup",
     t.period AS "period!",
     t.period_precision,
@@ -1185,7 +1182,7 @@ ORDER BY
 LIMIT
     1
             "#,
-            vessel_id.0,
+            vessel_id.into_inner(),
             read_fishing_facility,
             TripAssemblerId::Ers as i32,
         )
@@ -1204,7 +1201,7 @@ LIMIT
             TripCalculationTimer,
             r#"
 SELECT
-    fiskeridir_vessel_id,
+    fiskeridir_vessel_id AS "fiskeridir_vessel_id!: FiskeridirVesselId",
     timer AS "timestamp",
     queued_reset AS "queued_reset!",
     "conflict",
@@ -1218,7 +1215,7 @@ WHERE
     AND fiskeridir_vessel_id = $2
             "#,
             trip_assembler_id as i32,
-            vessel_id.0
+            vessel_id.into_inner(),
         )
         .fetch_optional(&self.pool)
         .await?;
@@ -1252,7 +1249,7 @@ INSERT INTO
 VALUES
     ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
             "#,
-            batch.fiskeridir_vessel_id,
+            batch.fiskeridir_vessel_id.into_inner(),
             batch.calculation_timer_prior_to_batch,
             batch.calculation_timer_post_batch,
             batch.conflict,
@@ -1294,7 +1291,7 @@ VALUES
         let earliest_trip_period = PgRange::from(&earliest_trip_period);
 
         let batch = NewTripAssemblerLogEntry {
-            fiskeridir_vessel_id: value.fiskeridir_vessel_id.0,
+            fiskeridir_vessel_id: value.fiskeridir_vessel_id,
             calculation_timer_prior_to_batch: value.prior_trip_calculation_time,
             calculation_timer_post_batch: value.new_trip_calculation_time,
             conflict: value.conflict.as_ref().map(|v| v.timestamp),
@@ -1333,7 +1330,7 @@ SET
     conflict_vessel_event_id = NULL,
     conflict_vessel_event_timestamp = NULL
             "#,
-            value.fiskeridir_vessel_id.0,
+            value.fiskeridir_vessel_id.into_inner(),
             value.trip_assembler_id as i32,
             value.new_trip_calculation_time,
         )
@@ -1351,9 +1348,9 @@ WHERE
     period && ANY ($1)
     AND fiskeridir_vessel_id = $2
     AND trip_assembler_id = $3
-            "#,
+                    "#,
                     &periods,
-                    value.fiskeridir_vessel_id.0,
+                    value.fiskeridir_vessel_id.into_inner(),
                     value.trip_assembler_id as i32,
                 )
                 .execute(&mut *tx)
@@ -1366,8 +1363,8 @@ DELETE FROM trips
 WHERE
     fiskeridir_vessel_id = $1
     AND trip_assembler_id = $2
-            "#,
-                value.fiskeridir_vessel_id.0,
+                "#,
+                value.fiskeridir_vessel_id.into_inner(),
                 value.trip_assembler_id as i32,
             )
             .execute(&mut *tx)
@@ -1400,8 +1397,8 @@ WHERE
     )
 RETURNING
     LOWER(period) AS ts
-            "#,
-                    value.fiskeridir_vessel_id.0,
+                    "#,
+                    value.fiskeridir_vessel_id.into_inner(),
                     earliest_trip_period,
                     earliest_trip_start,
                 )
@@ -1470,8 +1467,8 @@ WHERE
     t.fiskeridir_vessel_id = $1
     AND $2 >= LOWER(t.period)
             "#,
-            value.fiskeridir_vessel_id.0,
-            boundary
+            value.fiskeridir_vessel_id.into_inner(),
+            boundary,
         )
         .fetch_all(&mut *tx)
         .await?;
@@ -1506,9 +1503,9 @@ FROM
 WHERE
     t.fiskeridir_vessel_id = $1
     AND LOWER(t.period) <= $2
-            "#,
-                vessel_id.0,
-                boundary
+                "#,
+                vessel_id.into_inner(),
+                boundary,
             )
             .fetch_all(&mut *tx)
             .await?;
@@ -1606,7 +1603,7 @@ WHERE
             &trip_id as &[TripId],
             &period,
             &landing_coverage,
-            &vessel_id,
+            &vessel_id as &[FiskeridirVesselId],
             trip_assembler_id as i32
         )
         .execute(&mut **tx)
@@ -1644,8 +1641,8 @@ ORDER BY
 LIMIT
     1
             "#,
-            vessel_id.0,
-            time
+            vessel_id.into_inner(),
+            time,
         )
         .fetch_optional(&self.pool)
         .await?;
@@ -1682,8 +1679,8 @@ ORDER BY
 LIMIT
     1
             "#,
-            vessel_id.0,
-            time
+            vessel_id.into_inner(),
+            time,
         )
         .fetch_optional(&self.pool)
         .await?;
@@ -1715,8 +1712,8 @@ WHERE
     fiskeridir_vessel_id = $1
     AND trip_precision_status_id = $2
             "#,
-            vessel_id.0,
-            PrecisionStatus::Unprocessed.name()
+            vessel_id.into_inner(),
+            PrecisionStatus::Unprocessed.name(),
         )
         .fetch_all(&self.pool)
         .await?;
@@ -1748,8 +1745,8 @@ WHERE
     fiskeridir_vessel_id = $1
     AND position_layers_status = $2
             "#,
-            vessel_id.0,
-            ProcessingStatus::Unprocessed as i32
+            vessel_id.into_inner(),
+            ProcessingStatus::Unprocessed as i32,
         )
         .fetch_all(&self.pool)
         .await?;
@@ -1781,7 +1778,7 @@ WHERE
     fiskeridir_vessel_id = $1
     AND distancer_id IS NULL
             "#,
-            vessel_id.0,
+            vessel_id.into_inner(),
         )
         .fetch_all(&self.pool)
         .await?;
@@ -1928,7 +1925,7 @@ WHERE
         let mut vessel_event_timestamp = Vec::with_capacity(len);
 
         for c in conflicts {
-            vessel_id.push(c.fiskeridir_vessel_id.0);
+            vessel_id.push(c.fiskeridir_vessel_id);
             timestamp.push(c.timestamp);
             vessel_event_id.push(c.vessel_event_id);
             event_type.push(c.event_type as i32);
@@ -1981,12 +1978,12 @@ FROM
 WHERE
     q.fiskeridir_vessel_id = trip_calculation_timers.fiskeridir_vessel_id
             "#,
-            &vessel_id,
+            &vessel_id as &[FiskeridirVesselId],
             &timestamp,
             &vessel_event_id as _,
             &event_type,
             &vessel_event_timestamp,
-            assembler_id as i32
+            assembler_id as i32,
         )
         .execute(&mut **tx)
         .await?;

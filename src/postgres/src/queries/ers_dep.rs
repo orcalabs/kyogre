@@ -6,11 +6,11 @@ use std::{
 use crate::{
     error::Result,
     ers_dep_set::ErsDepSet,
-    models::{Departure, NewErsDep, NewErsDepCatch, NewTripAssemblerConflict},
+    models::{NewErsDep, NewErsDepCatch, NewTripAssemblerConflict},
     PostgresAdapter,
 };
 use futures::TryStreamExt;
-use kyogre_core::{FiskeridirVesselId, TripAssemblerId, VesselEventType};
+use kyogre_core::{Departure, FiskeridirVesselId, TripAssemblerId, VesselEventType};
 use unnest_insert::{UnnestInsert, UnnestInsertReturning};
 
 impl PostgresAdapter {
@@ -51,7 +51,8 @@ impl PostgresAdapter {
         let inserted = NewErsDep::unnest_insert_returning(ers_dep, &mut **tx).await?;
 
         let len = inserted.len();
-        let mut conflicts = HashMap::<i64, NewTripAssemblerConflict>::with_capacity(len);
+        let mut conflicts =
+            HashMap::<FiskeridirVesselId, NewTripAssemblerConflict>::with_capacity(len);
         let mut event_ids = Vec::with_capacity(len);
 
         for i in inserted {
@@ -60,7 +61,7 @@ impl PostgresAdapter {
                     .entry(id)
                     .and_modify(|v| v.timestamp = min(v.timestamp, i.departure_timestamp))
                     .or_insert_with(|| NewTripAssemblerConflict {
-                        fiskeridir_vessel_id: FiskeridirVesselId(id),
+                        fiskeridir_vessel_id: id,
                         timestamp: i.departure_timestamp,
                         vessel_event_id: Some(event_id),
                         event_type: VesselEventType::ErsDep,
@@ -123,7 +124,7 @@ WHERE
             Departure,
             r#"
 SELECT
-    fiskeridir_vessel_id AS "fiskeridir_vessel_id!",
+    fiskeridir_vessel_id AS "fiskeridir_vessel_id!: FiskeridirVesselId",
     departure_timestamp AS "timestamp",
     port_id
 FROM

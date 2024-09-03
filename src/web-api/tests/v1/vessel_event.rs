@@ -2,7 +2,7 @@ use super::helper::{test, test_with_cache};
 use chrono::{Duration, TimeZone, Utc};
 use engine::*;
 use fiskeridir_rs::Gear;
-use kyogre_core::{ScraperInboundPort, VesselEventType};
+use kyogre_core::{FiskeridirVesselId, ScraperInboundPort, VesselEventType};
 use reqwest::StatusCode;
 use web_api::routes::v1::trip::{Trip, TripsParameters};
 
@@ -12,12 +12,16 @@ async fn test_trips_does_not_contain_duplicated_tra_events() {
         let start = Utc.timestamp_opt(100000, 0).unwrap();
         let end = start + Duration::hours(1);
 
-        let tra = fiskeridir_rs::ErsTra::test_default(1, Some(1), start + Duration::seconds(1));
+        let tra = fiskeridir_rs::ErsTra::test_default(
+            1,
+            Some(FiskeridirVesselId::test_new(1)),
+            start + Duration::seconds(1),
+        );
 
         let state = builder
             .vessels(1)
             .modify(|v| {
-                v.fiskeridir.id = 1;
+                v.fiskeridir.id = FiskeridirVesselId::test_new(1);
             })
             .trips(1)
             .modify(|v| {
@@ -53,7 +57,7 @@ async fn test_trips_does_not_contain_duplicated_dca_events() {
         let start = Utc.timestamp_opt(100000, 0).unwrap();
         let end = start + Duration::hours(1);
 
-        let mut dca = fiskeridir_rs::ErsDca::test_default(1, Some(1));
+        let mut dca = fiskeridir_rs::ErsDca::test_default(1, Some(FiskeridirVesselId::test_new(1)));
         dca.set_start_timestamp(start + Duration::seconds(1));
         dca.set_stop_timestamp(start + Duration::seconds(2));
         dca.message_info
@@ -62,7 +66,7 @@ async fn test_trips_does_not_contain_duplicated_dca_events() {
         let state = builder
             .vessels(1)
             .modify(|v| {
-                v.fiskeridir.id = 1;
+                v.fiskeridir.id = FiskeridirVesselId::test_new(1);
             })
             .trips(1)
             .modify(|v| {
@@ -151,8 +155,7 @@ async fn test_inserting_same_landing_does_not_create_dangling_vessel_event() {
             .await;
 
         let l = &state.landings[0];
-        let mut landing =
-            fiskeridir_rs::Landing::test_default(1, l.fiskeridir_vessel_id.map(|v| v.0));
+        let mut landing = fiskeridir_rs::Landing::test_default(1, l.fiskeridir_vessel_id);
         landing.id = l.landing_id.clone();
 
         // We use test builder cycle as data year
@@ -170,8 +173,7 @@ async fn test_inserting_same_landing_does_not_create_dangling_vessel_event() {
 async fn test_inserting_same_ers_dca_does_not_create_dangling_vessel_event() {
     test(|helper, builder| async move {
         let state = builder.vessels(1).build().await;
-        let mut dca =
-            fiskeridir_rs::ErsDca::test_default(1, Some(state.vessels[0].fiskeridir.id.0 as u64));
+        let mut dca = fiskeridir_rs::ErsDca::test_default(1, Some(state.vessels[0].fiskeridir.id));
 
         dca.message_version = 99;
         helper
@@ -196,12 +198,8 @@ async fn test_inserting_same_ers_dca_does_not_create_dangling_vessel_event() {
 async fn test_inserting_same_ers_dep_does_not_create_dangling_vessel_event() {
     test(|helper, builder| async move {
         let state = builder.vessels(1).build().await;
-        let dep = fiskeridir_rs::ErsDep::test_default(
-            1,
-            state.vessels[0].fiskeridir.id.0 as u64,
-            Utc::now(),
-            1,
-        );
+        let dep =
+            fiskeridir_rs::ErsDep::test_default(1, state.vessels[0].fiskeridir.id, Utc::now(), 1);
 
         helper.db.db.add_ers_dep(vec![dep.clone()]).await.unwrap();
         helper.db.db.add_ers_dep(vec![dep.clone()]).await.unwrap();
@@ -213,12 +211,8 @@ async fn test_inserting_same_ers_dep_does_not_create_dangling_vessel_event() {
 async fn test_inserting_same_ers_por_does_not_create_dangling_vessel_event() {
     test(|helper, builder| async move {
         let state = builder.vessels(1).build().await;
-        let por = fiskeridir_rs::ErsPor::test_default(
-            1,
-            state.vessels[0].fiskeridir.id.0 as u64,
-            Utc::now(),
-            1,
-        );
+        let por =
+            fiskeridir_rs::ErsPor::test_default(1, state.vessels[0].fiskeridir.id, Utc::now(), 1);
 
         helper.db.db.add_ers_por(vec![por.clone()]).await.unwrap();
         helper.db.db.add_ers_por(vec![por.clone()]).await.unwrap();
@@ -232,7 +226,7 @@ async fn test_inserting_same_ers_tra_does_not_create_dangling_vessel_event() {
         let state = builder.vessels(1).build().await;
         let tra = fiskeridir_rs::ErsTra::test_default(
             1,
-            Some(state.vessels[0].fiskeridir.id.0 as u64),
+            Some(state.vessels[0].fiskeridir.id),
             Utc::now(),
         );
 

@@ -5,7 +5,7 @@ use unnest_insert::UnnestInsert;
 
 use crate::{
     error::Error,
-    queries::{timestamp_from_date_and_time, type_to_i32},
+    queries::{opt_type_to_i64, timestamp_from_date_and_time, type_to_i32},
 };
 
 #[derive(UnnestInsert)]
@@ -31,7 +31,8 @@ pub struct NewErsDep {
     pub target_species_fao_id: String,
     pub target_species_fiskeridir_id: Option<i32>,
     pub port_id: Option<String>,
-    pub fiskeridir_vessel_id: Option<i64>,
+    #[unnest_insert(sql_type = "BIGINT", type_conversion = "opt_type_to_i64")]
+    pub fiskeridir_vessel_id: Option<FiskeridirVesselId>,
     pub vessel_building_year: Option<i32>,
     pub vessel_call_sign: Option<String>,
     pub vessel_call_sign_ers: String,
@@ -77,12 +78,6 @@ pub struct NewErsDepCatch {
     pub species_main_group_id: i32,
 }
 
-pub struct Departure {
-    pub fiskeridir_vessel_id: i64,
-    pub timestamp: DateTime<Utc>,
-    pub port_id: Option<String>,
-}
-
 impl TryFrom<fiskeridir_rs::ErsDep> for NewErsDep {
     type Error = Error;
 
@@ -108,7 +103,7 @@ impl TryFrom<fiskeridir_rs::ErsDep> for NewErsDep {
             target_species_fao_id: v.target_species_fao_code.into_inner(),
             target_species_fiskeridir_id: v.target_species_fdir_code.map(|v| v as i32),
             port_id: v.port.code,
-            fiskeridir_vessel_id: v.vessel_info.vessel_id.map(|v| v as i64),
+            fiskeridir_vessel_id: v.vessel_info.vessel_id,
             vessel_building_year: v.vessel_info.building_year.map(|v| v as i32),
             vessel_call_sign: v.vessel_info.call_sign,
             vessel_call_sign_ers: v.vessel_info.call_sign_ers.into_inner(),
@@ -161,16 +156,6 @@ impl NewErsDepCatch {
             })
         } else {
             None
-        }
-    }
-}
-
-impl From<Departure> for kyogre_core::Departure {
-    fn from(v: Departure) -> Self {
-        Self {
-            fiskeridir_vessel_id: FiskeridirVesselId(v.fiskeridir_vessel_id),
-            timestamp: v.timestamp,
-            port_id: v.port_id,
         }
     }
 }

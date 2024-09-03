@@ -1,15 +1,18 @@
+use std::collections::HashMap;
+
+use kyogre_core::FiskeridirVesselId;
+
 use crate::{
     error::{MissingValueSnafu, Result},
     models::*,
 };
-use std::collections::HashMap;
 
 #[derive(Default)]
 pub struct ErsDepSet {
     ers_message_types: HashMap<String, NewErsMessageType>,
     species_fao: HashMap<String, SpeciesFao>,
     species_fiskeridir: HashMap<i32, SpeciesFiskeridir>,
-    vessels: HashMap<i64, fiskeridir_rs::Vessel>,
+    vessels: HashMap<FiskeridirVesselId, fiskeridir_rs::Vessel>,
     ports: HashMap<String, NewPort>,
     municipalities: HashMap<i32, NewMunicipality>,
     counties: HashMap<i32, NewCounty>,
@@ -110,9 +113,9 @@ impl ErsDepSet {
 
     fn add_vessel(&mut self, ers_dep: &fiskeridir_rs::ErsDep) -> Result<()> {
         if let Some(vessel_id) = ers_dep.vessel_info.vessel_id {
-            if !self.vessels.contains_key(&(vessel_id as i64)) {
+            if !self.vessels.contains_key(&vessel_id) {
                 let vessel = fiskeridir_rs::Vessel::try_from(ers_dep.vessel_info.clone())?;
-                self.vessels.entry(vessel_id as i64).or_insert(vessel);
+                self.vessels.entry(vessel_id).or_insert(vessel);
             }
         }
         Ok(())

@@ -257,7 +257,7 @@ WHERE
     l.fiskeridir_vessel_id = $1
     AND l.landing_timestamp <@ $2::tstzrange
             "#,
-            vessel_id.0,
+            vessel_id.into_inner(),
             pg_range
         )
         .fetch_all(&self.pool)
