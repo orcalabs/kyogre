@@ -502,7 +502,7 @@ impl AisMigratorSource for PostgresAdapter {
 
 #[async_trait]
 impl AisMigratorDestination for PostgresAdapter {
-    async fn add_mmsis(&self, mmsis: Vec<Mmsi>) -> Result<(), InsertError> {
+    async fn add_mmsis(&self, mmsis: &[Mmsi]) -> Result<(), InsertError> {
         self.add_mmsis_impl(mmsis).await?;
         Ok(())
     }
