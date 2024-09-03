@@ -1,6 +1,5 @@
 *
 !src
-src/leviathan-postgres
 src/ais-data-migrator
 src/ml-trainer
 !.cargo
