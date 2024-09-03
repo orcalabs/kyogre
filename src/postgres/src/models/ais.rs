@@ -61,12 +61,6 @@ pub struct NewAisVesselHistoric {
 }
 
 #[derive(Debug, Clone)]
-pub struct AisVesselMigrationProgress {
-    pub mmsi: i32,
-    pub progress: Option<DateTime<Utc>>,
-}
-
-#[derive(Debug, Clone)]
 pub struct AisVmsAreaPositionsReturning {
     pub latitude: f64,
     pub longitude: f64,

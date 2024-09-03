@@ -10,8 +10,8 @@ pub struct Settings {
     pub destination: PsqlSettings,
     #[serde(with = "humantime_serde")]
     pub chunk_size: std::time::Duration,
-    pub source_start_threshold: DateTime<Utc>,
-    pub destination_end_threshold: DateTime<Utc>,
+    pub start_threshold: DateTime<Utc>,
+    pub end_threshold: DateTime<Utc>,
     pub environment: Environment,
     pub honeycomb: Option<HoneycombApiKey>,
 }
