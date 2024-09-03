@@ -9,7 +9,7 @@ use crate::error::{Error, Result};
 
 #[derive(Debug)]
 pub struct FishingSpotTrainingData {
-    pub haul_id: i64,
+    pub haul_id: HaulId,
     pub latitude: f64,
     pub longitude: f64,
     pub species: SpeciesGroup,
@@ -19,7 +19,7 @@ pub struct FishingSpotTrainingData {
 
 #[derive(Deserialize)]
 pub struct Haul {
-    pub haul_id: i64,
+    pub haul_id: HaulId,
     pub ers_activity_id: String,
     pub duration: i32,
     pub haul_distance: Option<i32>,
@@ -85,7 +85,7 @@ pub struct WhaleCatch {
 }
 
 pub struct HaulMessage {
-    pub haul_id: i64,
+    pub haul_id: HaulId,
     pub message_id: i64,
     pub start_timestamp: DateTime<Utc>,
     pub stop_timestamp: DateTime<Utc>,
@@ -96,7 +96,7 @@ impl TryFrom<Haul> for kyogre_core::Haul {
 
     fn try_from(v: Haul) -> std::result::Result<Self, Self::Error> {
         Ok(Self {
-            haul_id: HaulId(v.haul_id),
+            haul_id: v.haul_id,
             ers_activity_id: v.ers_activity_id,
             duration: v.duration,
             haul_distance: v.haul_distance,
@@ -194,7 +194,7 @@ impl TryFrom<HaulMessage> for kyogre_core::HaulMessage {
 
     fn try_from(v: HaulMessage) -> std::result::Result<Self, Self::Error> {
         Ok(Self {
-            haul_id: HaulId(v.haul_id),
+            haul_id: v.haul_id,
             start_timestamp: v.start_timestamp,
             stop_timestamp: v.stop_timestamp,
         })

@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO\n    ml_hauls_training_log (\n    ml_model_id,haul_id,species_group_id,catch_location_id\n   )\nSELECT\n    *\nFROM\n    UNNEST(\n        $1::INT[],$2::INT[],$3::INT[],$4::TEXT[]\n    )\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4Array",
+        "Int4Array",
+        "Int4Array",
+        "TextArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "11209c48e7914aac282db852bd1408fdcd1e1478a1d9b8c269c4f42b24b48f97"
+}

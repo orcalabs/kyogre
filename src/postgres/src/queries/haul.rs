@@ -118,7 +118,7 @@ GROUP BY
             Haul,
             r#"
 SELECT
-    h.haul_id,
+    h.haul_id AS "haul_id!: HaulId",
     h.ers_activity_id,
     h.duration,
     h.haul_distance,
@@ -167,7 +167,7 @@ WHERE
         OR h.period && ANY ($1)
     )
     AND (
-        $2::TEXT [] IS NULL
+        $2::TEXT[] IS NULL
         OR h.catch_locations && $2
     )
     AND (
@@ -248,13 +248,11 @@ ORDER BY
     }
 
     pub(crate) async fn hauls_by_ids_impl(&self, haul_ids: &[HaulId]) -> Result<Vec<Haul>> {
-        let ids = haul_ids.iter().map(|i| i.0).collect::<Vec<_>>();
-
         let hauls = sqlx::query_as!(
             Haul,
             r#"
 SELECT
-    haul_id,
+    haul_id AS "haul_id!: HaulId",
     ers_activity_id,
     duration,
     haul_distance,
@@ -300,7 +298,7 @@ FROM
 WHERE
     haul_id = ANY ($1)
             "#,
-            &ids,
+            &haul_ids as &[HaulId],
         )
         .fetch_all(&self.pool)
         .await?;
@@ -312,7 +310,7 @@ WHERE
         Ok(sqlx::query!(
             r#"
 SELECT
-    haul_id,
+    haul_id AS "haul_id!: HaulId",
     cache_version
 FROM
     hauls
@@ -321,7 +319,7 @@ FROM
         .fetch_all(&self.pool)
         .await?
         .into_iter()
-        .map(|r| (HaulId(r.haul_id), r.cache_version))
+        .map(|r| (r.haul_id, r.cache_version))
         .collect())
     }
 
@@ -333,7 +331,7 @@ FROM
             HaulMessage,
             r#"
 SELECT DISTINCT
-    h.haul_id,
+    h.haul_id AS "haul_id!: HaulId",
     h.message_id,
     h.start_timestamp,
     h.stop_timestamp
@@ -365,7 +363,7 @@ WHERE
             HaulMessage,
             r#"
 SELECT
-    haul_id,
+    haul_id AS "haul_id!: HaulId",
     message_id,
     start_timestamp,
     stop_timestamp
@@ -479,7 +477,7 @@ WHERE
         let mut status = Vec::with_capacity(len);
 
         for v in values {
-            haul_id.push(v.haul_id.0);
+            haul_id.push(v.haul_id);
             catch_location.push(v.catch_location.into_inner());
             factor.push(v.factor);
             status.push(v.status as i32);
@@ -506,14 +504,14 @@ FROM
             u.haul_id,
             ARRAY_AGG(DISTINCT u.catch_location) AS catch_locations
         FROM
-            UNNEST($1::BIGINT[], $2::TEXT []) u (haul_id, catch_location)
+            UNNEST($1::BIGINT[], $2::TEXT[]) u (haul_id, catch_location)
         GROUP BY
             u.haul_id
     ) q
 WHERE
     h.haul_id = q.haul_id
             "#,
-            haul_id.as_slice(),
+            &haul_id as &[HaulId],
             catch_location.as_slice(),
         )
         .execute(&mut *tx)
@@ -525,7 +523,7 @@ DELETE FROM hauls_matrix h USING UNNEST($1::BIGINT[]) u (haul_id)
 WHERE
     h.haul_id = u.haul_id
             "#,
-            haul_id.as_slice(),
+            &haul_id as &[HaulId],
         )
         .execute(&mut *tx)
         .await?;
@@ -559,7 +557,7 @@ SELECT
 FROM
     UNNEST(
         $1::BIGINT[],
-        $2::TEXT [],
+        $2::TEXT[],
         $3::DOUBLE PRECISION[],
         $4::INT[]
     ) u (
@@ -585,7 +583,7 @@ GROUP BY
     b.species_group_id,
     l.catch_location_id;
             "#,
-            haul_id.as_slice(),
+            &haul_id as &[HaulId],
             catch_location.as_slice(),
             factor.as_slice(),
             status.as_slice(),

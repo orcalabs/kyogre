@@ -2,7 +2,7 @@ use crate::{error::Result, PredictionRange, TrainingOutcome};
 use chrono::{Datelike, NaiveDate, Utc};
 use fiskeridir_rs::SpeciesGroup;
 use kyogre_core::{
-    distance_to_shore, CatchLocationWeather, FishingSpotTrainingData, HaulId, MLModelsInbound,
+    distance_to_shore, CatchLocationWeather, FishingSpotTrainingData, MLModelsInbound,
     MLModelsOutbound, ModelId, NewFishingSpotPrediction, TrainingHaul, TrainingOutput, WeatherData,
     WeatherLocationOverlap,
 };
@@ -134,7 +134,7 @@ where
         .into_iter()
         .filter_map(|v| {
             hauls.insert(TrainingHaul {
-                haul_id: HaulId(v.haul_id),
+                haul_id: v.haul_id,
                 catch_location_id: v.catch_location_id.clone(),
             });
             if settings.running_in_test || distance_to_shore(v.latitude, v.longitude) > 2000.0 {

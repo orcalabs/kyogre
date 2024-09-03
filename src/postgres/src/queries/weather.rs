@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use chrono::{DateTime, NaiveDate, TimeZone, Utc};
 use futures::{Stream, TryStreamExt};
-use kyogre_core::{CatchLocationId, HaulWeatherOutput, WeatherQuery};
+use kyogre_core::{CatchLocationId, HaulId, HaulWeatherOutput, WeatherQuery};
 use unnest_insert::UnnestInsert;
 
 use crate::{
@@ -440,7 +440,7 @@ WHERE
         let mut haul_weather_status_id = Vec::with_capacity(len);
 
         for v in values {
-            haul_id.push(v.haul_id.0);
+            haul_id.push(v.haul_id);
             if let Some(w) = v.weather {
                 wind_speed_10m.push(w.wind_speed_10m);
                 wind_direction_10m.push(w.wind_direction_10m);
@@ -531,7 +531,7 @@ FROM
 WHERE
     h.haul_id = u.haul_id
             "#,
-            &haul_id,
+            &haul_id as &[HaulId],
             &wind_speed_10m as _,
             &wind_direction_10m as _,
             &air_temperature_2m as _,

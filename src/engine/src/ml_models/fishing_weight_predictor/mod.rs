@@ -3,10 +3,9 @@ use chrono::{Datelike, NaiveDate, Utc};
 use derivative::Derivative;
 use fiskeridir_rs::SpeciesGroup;
 use kyogre_core::{
-    distance_to_shore, CatchLocation, CatchLocationId, CatchLocationWeather, HaulId,
-    MLModelsInbound, MLModelsOutbound, ModelId, NewFishingWeightPrediction, PredictionRange,
-    TrainingHaul, TrainingMode, TrainingOutput, WeatherData, WeatherLocationOverlap,
-    WeightPredictorTrainingData,
+    distance_to_shore, CatchLocation, CatchLocationId, CatchLocationWeather, MLModelsInbound,
+    MLModelsOutbound, ModelId, NewFishingWeightPrediction, PredictionRange, TrainingHaul,
+    TrainingMode, TrainingOutput, WeatherData, WeatherLocationOverlap, WeightPredictorTrainingData,
 };
 use pyo3::{
     types::{PyAnyMethods, PyByteArray, PyModule},
@@ -144,7 +143,7 @@ where
         .into_iter()
         .filter_map(|v| {
             hauls.insert(TrainingHaul {
-                haul_id: HaulId(v.haul_id),
+                haul_id: v.haul_id,
                 catch_location_id: v.catch_location.clone(),
             });
             if settings.running_in_test || distance_to_shore(v.latitude, v.longitude) > 2000.0 {

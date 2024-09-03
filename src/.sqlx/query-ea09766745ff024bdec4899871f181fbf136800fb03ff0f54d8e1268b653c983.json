@@ -1,11 +1,11 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT\n    haul_id,\n    message_id,\n    start_timestamp,\n    stop_timestamp\nFROM\n    hauls\nWHERE\n    fiskeridir_vessel_id = $1::BIGINT\n    AND haul_weather_status_id = $2::INT\n            ",
+  "query": "\nSELECT DISTINCT\n    h.haul_id AS \"haul_id!: HaulId\",\n    h.message_id,\n    h.start_timestamp,\n    h.stop_timestamp\nFROM\n    hauls h\n    LEFT JOIN hauls_matrix m ON h.haul_id = m.haul_id\nWHERE\n    (\n        m.haul_distribution_status IS NULL\n        OR m.haul_distribution_status = $1\n    )\n    AND h.total_living_weight > 0\n    AND h.fiskeridir_vessel_id = $2\n            ",
   "describe": {
     "columns": [
       {
         "ordinal": 0,
-        "name": "haul_id",
+        "name": "haul_id!: HaulId",
         "type_info": "Int8"
       },
       {
@@ -26,8 +26,8 @@
     ],
     "parameters": {
       "Left": [
-        "Int8",
-        "Int4"
+        "Int4",
+        "Int8"
       ]
     },
     "nullable": [
@@ -37,5 +37,5 @@
       false
     ]
   },
-  "hash": "a2f7067ab2c096545b26c854213b72bb55d90439f116e060b03b1512b7aa4207"
+  "hash": "ea09766745ff024bdec4899871f181fbf136800fb03ff0f54d8e1268b653c983"
 }
