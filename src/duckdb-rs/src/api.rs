@@ -219,7 +219,7 @@ impl From<LandingMatrixQuery> for LandingFeatures {
                 .unwrap_or_default(),
             fiskeridir_vessel_ids: value
                 .vessel_ids
-                .map(|v| v.into_iter().map(|v| v.0).collect())
+                .map(|v| v.into_iter().map(|v| v.into_inner()).collect())
                 .unwrap_or_default(),
         }
     }
@@ -302,7 +302,7 @@ impl TryFrom<LandingFeatures> for LandingQueryWrapper {
                 value
                     .fiskeridir_vessel_ids
                     .into_iter()
-                    .map(FiskeridirVesselId)
+                    .map(FiskeridirVesselId::new)
                     .collect()
             }),
             active_filter: ActiveLandingFilter::from_u32(value.active_filter).ok_or_else(|| {
@@ -345,7 +345,7 @@ impl From<HaulsMatrixQuery> for HaulFeatures {
                 .unwrap_or_default(),
             fiskeridir_vessel_ids: value
                 .vessel_ids
-                .map(|v| v.into_iter().map(|v| v.0).collect())
+                .map(|v| v.into_iter().map(|v| v.into_inner()).collect())
                 .unwrap_or_default(),
             bycatch_percentage: value.bycatch_percentage,
             majority_species_group: value.majority_species_group,
@@ -419,7 +419,7 @@ impl TryFrom<HaulFeatures> for HaulQueryWrapper {
                 value
                     .fiskeridir_vessel_ids
                     .into_iter()
-                    .map(FiskeridirVesselId)
+                    .map(FiskeridirVesselId::new)
                     .collect()
             }),
             active_filter: ActiveHaulsFilter::from_u32(value.active_filter).ok_or_else(|| {

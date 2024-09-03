@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nUPDATE fiskeridir_vessels f\nSET\n    preferred_trip_assembler = $1\nFROM\n    (\n        SELECT\n            v.fiskeridir_vessel_id\n        FROM\n            fiskeridir_vessels v\n            INNER JOIN landings l ON v.fiskeridir_vessel_id = l.fiskeridir_vessel_id\n            INNER JOIN ers_arrivals e ON v.fiskeridir_vessel_id = e.fiskeridir_vessel_id\n        GROUP BY\n            v.fiskeridir_vessel_id\n        HAVING\n            MAX(l.landing_timestamp) - MAX(e.arrival_timestamp) > INTERVAL '1 year'\n    ) q\nWHERE\n    f.fiskeridir_vessel_id = q.fiskeridir_vessel_id\nRETURNING\n    f.fiskeridir_vessel_id AS \"id!: FiskeridirVesselId\"\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id!: FiskeridirVesselId",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "5ece33a4068e7b5827185bc4f93d466109f8021a982c51835dc410ad721d7665"
+}

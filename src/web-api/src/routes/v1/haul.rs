@@ -183,7 +183,8 @@ pub struct Haul {
     pub gear_id: Gear,
     #[serde_as(as = "DisplayFromStr")]
     pub gear_group_id: GearGroup,
-    pub fiskeridir_vessel_id: Option<i64>,
+    #[schema(value_type = Option<i64>)]
+    pub fiskeridir_vessel_id: Option<FiskeridirVesselId>,
     pub vessel_call_sign: Option<String>,
     pub vessel_call_sign_ers: String,
     pub vessel_length: f64,

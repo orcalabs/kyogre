@@ -1,8 +1,11 @@
+use std::collections::{hash_map::Entry, HashMap};
+
+use kyogre_core::FiskeridirVesselId;
+
 use crate::{
     error::{MissingValueSnafu, Result},
     models::*,
 };
-use std::collections::{hash_map::Entry, HashMap};
 
 #[derive(Default, Debug, Clone)]
 pub struct ErsDcaSet {
@@ -13,7 +16,7 @@ pub struct ErsDcaSet {
     catch_areas: HashMap<i32, NewCatchArea>,
     gear_fao: HashMap<String, NewGearFao>,
     gear_problems: HashMap<i32, NewGearProblem>,
-    vessels: HashMap<i64, fiskeridir_rs::Vessel>,
+    vessels: HashMap<FiskeridirVesselId, fiskeridir_rs::Vessel>,
     ports: HashMap<String, NewPort>,
     species_fao: HashMap<String, SpeciesFao>,
     species_fiskeridir: HashMap<i32, SpeciesFiskeridir>,
@@ -189,7 +192,7 @@ impl ErsDcaSet {
 
     fn add_vessel(&mut self, ers_dca: &fiskeridir_rs::ErsDca) -> Result<()> {
         if let Some(vessel_id) = ers_dca.vessel_info.vessel_id {
-            if let Entry::Vacant(e) = self.vessels.entry(vessel_id as i64) {
+            if let Entry::Vacant(e) = self.vessels.entry(vessel_id) {
                 let vessel = fiskeridir_rs::Vessel::try_from(ers_dca.vessel_info.clone())?;
                 e.insert(vessel);
             }

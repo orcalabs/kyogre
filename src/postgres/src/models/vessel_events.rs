@@ -6,7 +6,7 @@ use crate::error::{Error, MissingValueSnafu};
 #[derive(Debug, Clone, PartialEq)]
 pub struct VesselEvent {
     pub vessel_event_id: i64,
-    pub fiskeridir_vessel_id: i32,
+    pub fiskeridir_vessel_id: FiskeridirVesselId,
     pub report_timestamp: DateTime<Utc>,
     pub occurence_timestamp: Option<DateTime<Utc>>,
     pub vessel_event_type_id: VesselEventType,
@@ -16,7 +16,7 @@ impl From<VesselEvent> for kyogre_core::VesselEvent {
     fn from(v: VesselEvent) -> kyogre_core::VesselEvent {
         kyogre_core::VesselEvent {
             event_id: v.vessel_event_id as u64,
-            vessel_id: FiskeridirVesselId(v.fiskeridir_vessel_id as i64),
+            vessel_id: v.fiskeridir_vessel_id,
             report_timestamp: v.report_timestamp,
             event_type: v.vessel_event_type_id,
             occurence_timestamp: v.occurence_timestamp,
@@ -27,7 +27,7 @@ impl From<VesselEvent> for kyogre_core::VesselEvent {
 #[derive(Debug, Clone, PartialEq)]
 pub struct VesselEventDetailed {
     pub vessel_event_id: i64,
-    pub fiskeridir_vessel_id: i32,
+    pub fiskeridir_vessel_id: FiskeridirVesselId,
     pub report_timestamp: DateTime<Utc>,
     pub occurence_timestamp: Option<DateTime<Utc>>,
     pub vessel_event_type_id: VesselEventType,
@@ -70,7 +70,7 @@ impl TryFrom<VesselEventDetailed> for kyogre_core::VesselEventDetailed {
 
         Ok(kyogre_core::VesselEventDetailed {
             event_id: v.vessel_event_id as u64,
-            vessel_id: FiskeridirVesselId(v.fiskeridir_vessel_id as i64),
+            vessel_id: v.fiskeridir_vessel_id,
             timestamp: v.report_timestamp,
             event_type: v.vessel_event_type_id,
             event_data: event_data?,

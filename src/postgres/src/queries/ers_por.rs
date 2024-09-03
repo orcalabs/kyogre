@@ -6,12 +6,12 @@ use std::{
 use crate::{
     error::Result,
     ers_por_set::ErsPorSet,
-    models::{Arrival, NewErsPor, NewErsPorCatch, NewTripAssemblerConflict},
+    models::{NewErsPor, NewErsPorCatch, NewTripAssemblerConflict},
     PostgresAdapter,
 };
 use chrono::{DateTime, Utc};
 use futures::TryStreamExt;
-use kyogre_core::{ArrivalFilter, FiskeridirVesselId, TripAssemblerId, VesselEventType};
+use kyogre_core::{Arrival, ArrivalFilter, FiskeridirVesselId, TripAssemblerId, VesselEventType};
 use unnest_insert::{UnnestInsert, UnnestInsertReturning};
 
 impl PostgresAdapter {
@@ -53,7 +53,8 @@ impl PostgresAdapter {
         let inserted = NewErsPor::unnest_insert_returning(ers_por, &mut **tx).await?;
 
         let len = inserted.len();
-        let mut conflicts = HashMap::<i64, NewTripAssemblerConflict>::with_capacity(len);
+        let mut conflicts =
+            HashMap::<FiskeridirVesselId, NewTripAssemblerConflict>::with_capacity(len);
         let mut event_ids = Vec::with_capacity(len);
 
         for i in inserted {
@@ -62,7 +63,7 @@ impl PostgresAdapter {
                     .entry(id)
                     .and_modify(|v| v.timestamp = min(v.timestamp, i.arrival_timestamp))
                     .or_insert_with(|| NewTripAssemblerConflict {
-                        fiskeridir_vessel_id: FiskeridirVesselId(id),
+                        fiskeridir_vessel_id: id,
                         timestamp: i.arrival_timestamp,
                         vessel_event_id: Some(event_id),
                         event_type: VesselEventType::ErsPor,
@@ -134,7 +135,7 @@ WHERE
             Arrival,
             r#"
 SELECT
-    fiskeridir_vessel_id AS "fiskeridir_vessel_id!",
+    fiskeridir_vessel_id AS "fiskeridir_vessel_id!: FiskeridirVesselId",
     arrival_timestamp AS "timestamp",
     port_id
 FROM
@@ -147,7 +148,7 @@ WHERE
         OR landing_facility IS NOT NULL
     )
             "#,
-            vessel_id.0,
+            vessel_id.into_inner(),
             start,
             landing_facility,
         )

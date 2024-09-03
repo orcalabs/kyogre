@@ -1,14 +1,25 @@
-use crate::{error::error::JurisdictionSnafu, models::ers_common::ErsVesselInfo, CallSign, Error};
+use std::{
+    fmt::{self, Display},
+    num::ParseIntError,
+    str::FromStr,
+};
+
 use enum_index_derive::{EnumIndex, IndexEnum};
 use jurisdiction::Jurisdiction;
 use num_derive::FromPrimitive;
+use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
-use std::str::FromStr;
 use strum_macros::{AsRefStr, EnumCount, EnumIter, EnumString};
+
+use crate::{error::error::JurisdictionSnafu, models::ers_common::ErsVesselInfo, CallSign, Error};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize)]
+#[cfg_attr(feature = "sqlx", derive(sqlx::Type), sqlx(transparent))]
+pub struct FiskeridirVesselId(i64);
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Vessel {
-    pub id: Option<i64>,
+    pub id: Option<FiskeridirVesselId>,
     pub registration_id: Option<String>,
     pub call_sign: Option<CallSign>,
     pub name: Option<String>,
@@ -158,7 +169,7 @@ impl TryFrom<ErsVesselInfo> for Vessel {
 
     fn try_from(v: ErsVesselInfo) -> Result<Self, Self::Error> {
         Ok(Self {
-            id: v.vessel_id.map(|v| v as i64),
+            id: v.vessel_id,
             registration_id: v.vessel_registration_id,
             call_sign: v.call_sign.map(CallSign::try_from).transpose()?,
             name: v.vessel_name,
@@ -195,7 +206,7 @@ impl TryFrom<ErsVesselInfo> for Vessel {
 }
 
 impl Vessel {
-    pub fn test_default(id: Option<i64>, call_sign: &str) -> Vessel {
+    pub fn test_default(id: Option<FiskeridirVesselId>, call_sign: &str) -> Vessel {
         Vessel {
             id,
             registration_id: Some("LK-29".to_owned()),
@@ -219,5 +230,39 @@ impl Vessel {
             engine_power: Some(900),
             engine_building_year: Some(2000),
         }
+    }
+}
+
+impl FiskeridirVesselId {
+    // This exists because `duckdb-rs` needs to be able to create this type from a
+    // generated protobuf schema
+    pub fn new(value: i64) -> Self {
+        Self(value)
+    }
+    pub fn into_inner(self) -> i64 {
+        self.0
+    }
+    pub fn test_new(value: i64) -> Self {
+        Self(value)
+    }
+}
+
+impl FromStr for FiskeridirVesselId {
+    type Err = ParseIntError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        s.parse().map(Self)
+    }
+}
+
+impl From<FiskeridirVesselId> for i64 {
+    fn from(value: FiskeridirVesselId) -> Self {
+        value.0
+    }
+}
+
+impl Display for FiskeridirVesselId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(f)
     }
 }

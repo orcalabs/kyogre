@@ -6,8 +6,10 @@ use num_traits::FromPrimitive;
 use serde::de::{self, Visitor};
 use serde::Deserialize;
 use serde_repr::Serialize_repr;
-use serde_with::{serde_as, NoneAsEmptyString};
+use serde_with::{serde_as, DisplayFromStr, NoneAsEmptyString};
 use strum_macros::{AsRefStr, EnumString};
+
+use super::FiskeridirVesselId;
 
 #[serde_as]
 #[remain::sorted]
@@ -144,8 +146,8 @@ pub struct ErsVesselInfo {
     #[serde(deserialize_with = "opt_float_from_str")]
     pub vessel_greatest_length: Option<f64>,
     #[serde(rename = "Fartøy ID")]
-    #[serde(deserialize_with = "opt_u64_from_str")]
-    pub vessel_id: Option<u64>,
+    #[serde_as(as = "Option<DisplayFromStr>")]
+    pub vessel_id: Option<FiskeridirVesselId>,
     #[serde(rename = "Fartøyidentifikasjon")]
     pub vessel_identification: NonEmptyString,
     #[serde(rename = "Fartøylengde")]
@@ -247,7 +249,7 @@ impl ErsMessageInfo {
 }
 
 impl ErsVesselInfo {
-    pub fn test_default(vessel_id: Option<u64>) -> Self {
+    pub fn test_default(vessel_id: Option<FiskeridirVesselId>) -> Self {
         Self {
             vessel_id,
             call_sign: Some("LK-23".into()),

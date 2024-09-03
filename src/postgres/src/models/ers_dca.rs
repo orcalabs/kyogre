@@ -3,13 +3,14 @@ use fiskeridir_rs::{
     FiskdirVesselNationalityGroup, Gear, GearGroup, MainGearGroup, SpeciesGroup, SpeciesMainGroup,
     WhaleGender,
 };
+use kyogre_core::FiskeridirVesselId;
 use unnest_insert::UnnestInsert;
 
 use crate::{
     error::Error,
     queries::{
-        type_to_i32, opt_type_to_i32, opt_timestamp_from_date_and_time,
-        timestamp_from_date_and_time,
+        opt_timestamp_from_date_and_time, opt_type_to_i32, opt_type_to_i64,
+        timestamp_from_date_and_time, type_to_i32,
     },
 };
 
@@ -27,7 +28,8 @@ pub struct NewErsDca {
     pub ers_activity_id: String,
     pub quota_type_id: i32,
     pub port_id: Option<String>,
-    pub fiskeridir_vessel_id: Option<i64>,
+    #[unnest_insert(sql_type = "BIGINT", type_conversion = "opt_type_to_i64")]
+    pub fiskeridir_vessel_id: Option<FiskeridirVesselId>,
     pub vessel_building_year: Option<i32>,
     pub vessel_call_sign: Option<String>,
     pub vessel_call_sign_ers: String,
@@ -135,7 +137,7 @@ impl TryFrom<fiskeridir_rs::ErsDca> for NewErsDca {
             ers_activity_id: v.activity_code.into_inner(),
             quota_type_id: v.quota_type_code as i32,
             port_id: v.port.code,
-            fiskeridir_vessel_id: v.vessel_info.vessel_id.map(|v| v as i64),
+            fiskeridir_vessel_id: v.vessel_info.vessel_id,
             vessel_building_year: v.vessel_info.building_year.map(|v| v as i32),
             vessel_call_sign: v.vessel_info.call_sign,
             vessel_call_sign_ers: v.vessel_info.call_sign_ers.into_inner(),

@@ -1,0 +1,59 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    fiskeridir_vessel_id AS \"fiskeridir_vessel_id!: FiskeridirVesselId\",\n    timer AS \"timestamp\",\n    queued_reset AS \"queued_reset!\",\n    \"conflict\",\n    conflict_vessel_event_id,\n    conflict_vessel_event_type_id AS \"conflict_event_type: VesselEventType\",\n    conflict_vessel_event_timestamp\nFROM\n    trip_calculation_timers\nWHERE\n    trip_assembler_id = $1\n    AND fiskeridir_vessel_id = $2\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "fiskeridir_vessel_id!: FiskeridirVesselId",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "timestamp",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 2,
+        "name": "queued_reset!",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 3,
+        "name": "conflict",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 4,
+        "name": "conflict_vessel_event_id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 5,
+        "name": "conflict_event_type: VesselEventType",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 6,
+        "name": "conflict_vessel_event_timestamp",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "a95b48016bdfa5d8596453775606519c4a5ff364824d43dc5c497a69df72be38"
+}

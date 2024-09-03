@@ -36,11 +36,14 @@ async fn test_haul_refresh_with_no_data_succeeds_and_returns_miss_on_subsequent_
 #[tokio::test]
 async fn test_haul_returns_hit_after_refreshing_with_data() {
     test(|helper| async move {
+        let vessel_id = FiskeridirVesselId::test_new(1);
+
         helper
             .db
-            .generate_fiskeridir_vessel(FiskeridirVesselId(1), None, None)
+            .generate_fiskeridir_vessel(vessel_id, None, None)
             .await;
-        let mut ers_dca = ErsDca::test_default(1, Some(1));
+
+        let mut ers_dca = ErsDca::test_default(1, Some(vessel_id));
         ers_dca.start_latitude = Some(70.536);
         ers_dca.start_longitude = Some(21.957);
         helper.db.add_ers_dca_value(ers_dca.clone()).await;

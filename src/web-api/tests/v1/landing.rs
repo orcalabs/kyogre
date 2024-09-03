@@ -288,10 +288,10 @@ async fn test_landings_sorts_by_weight() {
 #[tokio::test]
 async fn test_landing_deletion_only_deletes_removed_landings() {
     test(|helper, builder| async move {
-        let vessel_id = FiskeridirVesselId(1);
-        let landing = fiskeridir_rs::Landing::test_default(1, Some(vessel_id.0));
-        let landing2 = fiskeridir_rs::Landing::test_default(2, Some(vessel_id.0));
-        let landing3 = fiskeridir_rs::Landing::test_default(3, Some(vessel_id.0));
+        let vessel_id = FiskeridirVesselId::test_new(1);
+        let landing = fiskeridir_rs::Landing::test_default(1, Some(vessel_id));
+        let landing2 = fiskeridir_rs::Landing::test_default(2, Some(vessel_id));
+        let landing3 = fiskeridir_rs::Landing::test_default(3, Some(vessel_id));
         helper
             .db
             .add_landings(vec![landing.clone(), landing2.clone(), landing3.clone()])

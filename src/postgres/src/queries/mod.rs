@@ -58,3 +58,7 @@ pub fn opt_type_to_i32<T: Into<i32>>(value: Option<T>) -> Option<i32> {
 pub fn type_to_i64<T: Into<i64>>(value: T) -> i64 {
     value.into()
 }
+
+pub fn opt_type_to_i64<T: Into<i64>>(value: Option<T>) -> Option<i64> {
+    value.map(type_to_i64)
+}

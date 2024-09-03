@@ -41,6 +41,8 @@ pub struct Coordinates {
 
 pub static NUM_CATCH_LOCATIONS: usize = 2113;
 
+pub use fiskeridir_rs::FiskeridirVesselId;
+
 pub use ais::*;
 pub use ais_vms::*;
 pub use catch_location::*;

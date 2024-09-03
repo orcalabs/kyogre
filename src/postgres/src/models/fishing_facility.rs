@@ -12,7 +12,7 @@ use wkt::ToWkt;
 pub struct FishingFacility {
     pub tool_id: Uuid,
     pub barentswatch_vessel_id: Option<Uuid>,
-    pub fiskeridir_vessel_id: Option<i64>,
+    pub fiskeridir_vessel_id: Option<FiskeridirVesselId>,
     pub vessel_name: Option<String>,
     pub call_sign: Option<String>,
     pub mmsi: Option<Mmsi>,
@@ -46,7 +46,7 @@ impl TryFrom<FishingFacility> for kyogre_core::FishingFacility {
         Ok(Self {
             tool_id: v.tool_id,
             barentswatch_vessel_id: v.barentswatch_vessel_id,
-            fiskeridir_vessel_id: v.fiskeridir_vessel_id.map(FiskeridirVesselId),
+            fiskeridir_vessel_id: v.fiskeridir_vessel_id,
             vessel_name: v.vessel_name,
             call_sign: v.call_sign.map(CallSign::try_from).transpose()?,
             mmsi: v.mmsi,

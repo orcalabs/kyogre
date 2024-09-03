@@ -182,7 +182,7 @@ impl From<kyogre_core::FiskeridirVessel> for FiskeridirVessel {
 
 impl PartialEq<fiskeridir_rs::Vessel> for FiskeridirVessel {
     fn eq(&self, other: &fiskeridir_rs::Vessel) -> bool {
-        self.id.0 == other.id.unwrap()
+        Some(self.id) == other.id
             && self.vessel_type_id == other.type_code.map(|v| v as u32)
             && self.length_group_id == other.length_group_code
             && self.nation_group_id == other.nation_group.clone()

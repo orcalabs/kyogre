@@ -1,4 +1,7 @@
-use super::ers_common::{ErsCatch, ErsMessageInfo, ErsVesselInfo, Port};
+use super::{
+    ers_common::{ErsCatch, ErsMessageInfo, ErsVesselInfo, Port},
+    FiskeridirVesselId,
+};
 use crate::{deserialize_utils::*, string_new_types::NonEmptyString};
 use chrono::{DateTime, Datelike, Duration, NaiveDate, NaiveTime, Utc};
 use serde::Deserialize;
@@ -68,7 +71,7 @@ impl ErsDep {
     }
     pub fn test_default(
         message_id: u64,
-        fiskeridir_vessel_id: u64,
+        fiskeridir_vessel_id: FiskeridirVesselId,
         timestamp: DateTime<Utc>,
         message_number: u32,
     ) -> ErsDep {

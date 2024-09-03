@@ -13,7 +13,7 @@ impl PostgresAdapter {
             r#"
 SELECT
     v.vessel_event_id,
-    v.fiskeridir_vessel_id,
+    v.fiskeridir_vessel_id AS "fiskeridir_vessel_id!: FiskeridirVesselId",
     v.report_timestamp,
     v.occurence_timestamp,
     v.vessel_event_type_id AS "vessel_event_type_id!: VesselEventType",
@@ -24,13 +24,13 @@ SELECT
 FROM
     vessel_events v
 WHERE
-    v.fiskeridir_vessel_id = $1
+    v.fiskeridir_vessel_id = $1::BIGINT
     AND v.vessel_event_type_id = $2
     AND v.report_timestamp <@ $3::tstzrange
 ORDER BY
     v.report_timestamp
            "#,
-            &(vessel_id.0 as i32),
+            vessel_id.into_inner(),
             VesselEventType::Landing as i32,
             PgRange::from(period),
         )
@@ -50,7 +50,7 @@ ORDER BY
             r#"
 SELECT
     vessel_event_id AS "vessel_event_id!",
-    fiskeridir_vessel_id AS "fiskeridir_vessel_id!",
+    fiskeridir_vessel_id AS "fiskeridir_vessel_id!: FiskeridirVesselId",
     report_timestamp AS "report_timestamp!",
     occurence_timestamp,
     "vessel_event_type_id!: VesselEventType",
@@ -74,8 +74,8 @@ FROM
             vessel_events v
             INNER JOIN ers_departures d ON d.vessel_event_id = v.vessel_event_id
         WHERE
-            v.fiskeridir_vessel_id = $1
-            AND v.occurence_timestamp <@ $2::tstzrange
+            v.fiskeridir_vessel_id = $1::BIGINT
+            AND v.occurence_timestamp <@ $2::TSTZRANGE
             AND v.occurence_timestamp >= '1970-01-01T00:00:00Z'::TIMESTAMPTZ
         UNION
         SELECT
@@ -92,8 +92,8 @@ FROM
             vessel_events v
             INNER JOIN ers_arrivals a ON a.vessel_event_id = v.vessel_event_id
         WHERE
-            v.fiskeridir_vessel_id = $1
-            AND v.occurence_timestamp <@ $2::tstzrange
+            v.fiskeridir_vessel_id = $1::BIGINT
+            AND v.occurence_timestamp <@ $2::TSTZRANGE
             AND v.occurence_timestamp >= '1970-01-01T00:00:00Z'::TIMESTAMPTZ
     ) q
 ORDER BY
@@ -101,7 +101,7 @@ ORDER BY
     relevant_year,
     message_number
            "#,
-            &(vessel_id.0 as i32),
+            vessel_id.into_inner(),
             PgRange::from(period),
         )
         .fetch_all(&self.pool)

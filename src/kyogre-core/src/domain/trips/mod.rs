@@ -159,7 +159,7 @@ pub struct TripHaul {
     pub haul_id: HaulId,
     pub duration: i32,
     pub ers_activity_id: String,
-    pub fiskeridir_vessel_id: Option<i64>,
+    pub fiskeridir_vessel_id: Option<FiskeridirVesselId>,
     pub gear_id: Gear,
     pub gear_group_id: GearGroup,
     pub haul_distance: Option<i32>,
