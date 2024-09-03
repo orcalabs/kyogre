@@ -379,7 +379,7 @@ WHERE
 ORDER BY
     "timestamp" ASC
             "#,
-            trip_id.0,
+            trip_id.into_inner(),
             LEISURE_VESSEL_SHIP_TYPES.as_slice(),
             LEISURE_VESSEL_LENGTH_AIS_BOUNDARY as i32,
             permission as i32,

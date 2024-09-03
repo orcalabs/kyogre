@@ -105,7 +105,7 @@ FROM
 
         for p in output.trip_positions {
             trip_positions.push(TripAisVmsPosition {
-                trip_id: trip_id.0,
+                trip_id,
                 latitude: p.latitude,
                 longitude: p.longitude,
                 timestamp: p.timestamp,
@@ -121,7 +121,7 @@ FROM
         }
         for p in output.pruned_positions {
             pruned_positions.push(TripPrunedAisVmsPosition {
-                trip_id: trip_id.0,
+                trip_id,
                 positions: p.positions,
                 value: p.value,
                 trip_position_layer_id: p.trip_layer,
@@ -136,7 +136,7 @@ DELETE FROM trip_positions
 WHERE
     trip_id = $1
             "#,
-            trip_id.0,
+            trip_id.into_inner(),
         )
         .execute(&mut **tx)
         .await?;
@@ -147,7 +147,7 @@ DELETE FROM trip_positions_pruned
 WHERE
     trip_id = $1
             "#,
-            trip_id.0,
+            trip_id.into_inner(),
         )
         .execute(&mut **tx)
         .await?;
@@ -165,7 +165,7 @@ WHERE
     trip_id = $2
             "#,
             ProcessingStatus::Successful as i32,
-            trip_id.0,
+            trip_id.into_inner(),
         )
         .execute(&mut **tx)
         .await?;
@@ -186,7 +186,7 @@ WHERE
 
             for p in output.trip_positions {
                 positions.push(TripAisVmsPosition {
-                    trip_id: trip_id.0,
+                    trip_id,
                     latitude: p.latitude,
                     longitude: p.longitude,
                     timestamp: p.timestamp,
@@ -202,7 +202,7 @@ WHERE
             }
             for p in output.pruned_positions {
                 pruned.push(TripPrunedAisVmsPosition {
-                    trip_id: trip_id.0,
+                    trip_id,
                     positions: p.positions,
                     value: p.value,
                     trip_position_layer_id: p.trip_layer,
@@ -284,7 +284,7 @@ WHERE
             "#,
                 output.distancer_id as i32,
                 output.distance,
-                update.trip_id.0,
+                update.trip_id.into_inner(),
             )
             .execute(&mut *tx)
             .await?;
@@ -343,14 +343,14 @@ WHERE
                 end_precision_direction,
                 period_precision,
                 trip_precision_status_id,
-                update.trip_id.0,
+                update.trip_id.into_inner(),
             )
             .execute(&mut *tx)
             .await?;
         }
 
         let mut trip_ids = HashSet::new();
-        trip_ids.insert(update.trip_id.0);
+        trip_ids.insert(update.trip_id);
 
         self.add_trips_detailed(trip_ids, &mut tx).await?;
 
@@ -417,10 +417,10 @@ WHERE
 
     pub(crate) async fn add_trips_detailed<'a>(
         &self,
-        trip_ids: HashSet<i64>,
+        trip_ids: HashSet<TripId>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
     ) -> Result<()> {
-        let trip_ids: Vec<i64> = trip_ids.into_iter().collect();
+        let trip_ids: Vec<TripId> = trip_ids.into_iter().collect();
 
         if trip_ids.is_empty() {
             return Ok(());
@@ -629,8 +629,8 @@ SET
     fishing_facilities = excluded.fishing_facilities,
     landing_ids = excluded.landing_ids,
     hauls = excluded.hauls;
-                "#,
-            &trip_ids
+            "#,
+            &trip_ids as &[TripId],
         )
         .execute(&mut **tx)
         .await?;
@@ -695,8 +695,8 @@ FROM
     ) q
 WHERE
     trips_detailed.trip_id = q.trip_id
-                "#,
-            &trip_ids
+            "#,
+            &trip_ids as &[TripId],
         )
         .execute(&mut **tx)
         .await?;
@@ -759,7 +759,7 @@ WHERE
             TripDetailed,
             r#"
 SELECT
-    t.trip_id AS "trip_id!",
+    t.trip_id AS "trip_id!: TripId",
     t.fiskeridir_vessel_id AS "fiskeridir_vessel_id!",
     t.fiskeridir_length_group_id AS "fiskeridir_length_group_id!: VesselLengthGroup",
     t.period AS "period!",
@@ -870,13 +870,11 @@ LIMIT
         &self,
         trip_ids: &[TripId],
     ) -> Result<Vec<TripDetailed>> {
-        let ids = trip_ids.iter().map(|t| t.0).collect::<Vec<_>>();
-
         let trips = sqlx::query_as!(
             TripDetailed,
             r#"
 SELECT
-    t.trip_id AS "trip_id!",
+    t.trip_id AS "trip_id!: TripId",
     t.fiskeridir_vessel_id AS "fiskeridir_vessel_id!",
     t.fiskeridir_length_group_id AS "fiskeridir_length_group_id!: VesselLengthGroup",
     t.period AS "period!",
@@ -908,7 +906,7 @@ FROM
 WHERE
     trip_id = ANY ($1)
             "#,
-            &ids,
+            &trip_ids as &[TripId],
         )
         .fetch_all(&self.pool)
         .await?;
@@ -920,7 +918,7 @@ WHERE
         Ok(sqlx::query!(
             r#"
 SELECT
-    t.trip_id,
+    t.trip_id AS "trip_id!: TripId",
     t.cache_version
 FROM
     trips_detailed AS t
@@ -929,7 +927,7 @@ FROM
         .fetch_all(&self.pool)
         .await?
         .into_iter()
-        .map(|r| (TripId(r.trip_id), r.cache_version))
+        .map(|r| (r.trip_id, r.cache_version))
         .collect())
     }
 
@@ -942,7 +940,7 @@ FROM
             TripDetailed,
             r#"
 SELECT
-    t.trip_id AS "trip_id!",
+    t.trip_id AS "trip_id!: TripId",
     t.fiskeridir_vessel_id AS "fiskeridir_vessel_id!",
     t.fiskeridir_length_group_id AS "fiskeridir_length_group_id!: VesselLengthGroup",
     t.period AS "period!",
@@ -995,7 +993,7 @@ WHERE
             TripDetailed,
             r#"
 SELECT
-    t.trip_id AS "trip_id!",
+    t.trip_id AS "trip_id!: TripId",
     t.fiskeridir_vessel_id AS "fiskeridir_vessel_id!",
     t.fiskeridir_length_group_id AS "fiskeridir_length_group_id!: VesselLengthGroup",
     t.period AS "period!",
@@ -1423,7 +1421,7 @@ RETURNING
 
         for t in &inserted_trips {
             let range = DateRange::try_from(&t.period)?;
-            trip_positions_insert_mapping.insert(range.start().timestamp(), TripId(t.trip_id));
+            trip_positions_insert_mapping.insert(range.start().timestamp(), t.trip_id);
         }
 
         // We use the start of the trips period to map the inserted trips trip_ids to the trip positions,
@@ -1443,7 +1441,7 @@ RETURNING
         let mut trip_ids = inserted_trips
             .iter()
             .map(|v| v.trip_id)
-            .collect::<HashSet<i64>>();
+            .collect::<HashSet<_>>();
 
         self.connect_events_to_trips(inserted_trips, value.trip_assembler_id, &mut tx)
             .await?;
@@ -1465,7 +1463,7 @@ RETURNING
         let refresh_trip_ids = sqlx::query!(
             r#"
 SELECT
-    trip_id
+    trip_id AS "trip_id!: TripId"
 FROM
     trips t
 WHERE
@@ -1477,6 +1475,7 @@ WHERE
         )
         .fetch_all(&mut *tx)
         .await?;
+
         trip_ids.extend(refresh_trip_ids.into_iter().map(|v| v.trip_id));
 
         self.add_trips_detailed(trip_ids, &mut tx).await?;
@@ -1501,7 +1500,7 @@ WHERE
             let refresh_trip_ids = sqlx::query!(
                 r#"
 SELECT
-    trip_id
+    trip_id AS "trip_id!: TripId"
 FROM
     trips t
 WHERE
@@ -1604,7 +1603,7 @@ WHERE
         AND v.fiskeridir_vessel_id = u.fiskeridir_vessel_id
     )
             "#,
-            &trip_id,
+            &trip_id as &[TripId],
             &period,
             &landing_coverage,
             &vessel_id,
@@ -1625,7 +1624,7 @@ WHERE
             Trip,
             r#"
 SELECT
-    trip_id,
+    trip_id AS "trip_id!: TripId",
     period,
     period_precision,
     landing_coverage,
@@ -1663,7 +1662,7 @@ LIMIT
             Trip,
             r#"
 SELECT
-    trip_id,
+    trip_id AS "trip_id!: TripId",
     period,
     period_precision,
     landing_coverage,
@@ -1700,7 +1699,7 @@ LIMIT
             Trip,
             r#"
 SELECT
-    trip_id,
+    trip_id AS "trip_id!: TripId",
     period,
     period_precision,
     landing_coverage,
@@ -1733,7 +1732,7 @@ WHERE
             Trip,
             r#"
 SELECT
-    trip_id,
+    trip_id AS "trip_id!: TripId",
     period,
     period_precision,
     landing_coverage,
@@ -1766,7 +1765,7 @@ WHERE
             Trip,
             r#"
 SELECT
-    trip_id,
+    trip_id AS "trip_id!: TripId",
     period,
     period_precision,
     landing_coverage,

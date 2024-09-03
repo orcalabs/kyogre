@@ -423,7 +423,7 @@ async fn test_queuing_a_reset_re_creates_trips() {
             .build()
             .await;
 
-        assert_eq!(state.trips[0].trip_id.0, 2);
+        assert_eq!(state.trips[0].trip_id.into_inner(), 2);
     })
     .await;
 }
@@ -443,7 +443,7 @@ async fn test_trips_reset_is_cleared_on_next_run() {
             .await;
 
         assert_eq!(state.trips.len(), 1);
-        assert_eq!(state.trips[0].trip_id.0, 2);
+        assert_eq!(state.trips[0].trip_id.into_inner(), 2);
     })
     .await;
 }
@@ -464,8 +464,8 @@ async fn test_trips_reset_deletes_all_trips_including_non_overlaps() {
             .await;
 
         assert_eq!(state.trips.len(), 2);
-        assert_eq!(state.trips[0].trip_id.0, 2);
-        assert_eq!(state.trips[1].trip_id.0, 3);
+        assert_eq!(state.trips[0].trip_id.into_inner(), 2);
+        assert_eq!(state.trips[1].trip_id.into_inner(), 3);
     })
     .await;
 }

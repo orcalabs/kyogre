@@ -297,7 +297,7 @@ FROM
             crate::models::Trip,
             r#"
 SELECT
-    trip_id,
+    trip_id AS "trip_id!: TripId",
     period,
     period_precision,
     landing_coverage,
@@ -330,7 +330,7 @@ WHERE
             crate::models::TripDetailed,
             r#"
 SELECT
-    t.trip_id AS "trip_id!",
+    t.trip_id AS "trip_id!: TripId",
     t.fiskeridir_vessel_id AS "fiskeridir_vessel_id!",
     t.fiskeridir_length_group_id AS "fiskeridir_length_group_id!: VesselLengthGroup",
     t.period AS "period!",

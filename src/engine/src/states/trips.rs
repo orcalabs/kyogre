@@ -369,10 +369,7 @@ async fn run_state(shared_state: Arc<SharedState>) -> Result<TripsReport> {
                                     if let Err(e) =
                                         shared_state.trip_pipeline_inbound.update_trip(update).await
                                     {
-                                        error!(
-                                            "failed to update trip_id: {}, err: {e:?}",
-                                            trip_id.0,
-                                        );
+                                        error!("failed to update trip_id: {trip_id}, err: {e:?}");
                                     }
                                 }
 

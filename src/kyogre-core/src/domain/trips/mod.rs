@@ -17,7 +17,8 @@ pub use layer::*;
 use strum::{AsRefStr, Display, EnumString};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize)]
-pub struct TripId(pub i64);
+#[cfg_attr(feature = "sqlx", derive(sqlx::Type), sqlx(transparent))]
+pub struct TripId(i64);
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Trip {
@@ -483,11 +484,21 @@ pub struct TripDistanceOutput {
     pub distancer_id: TripDistancerId,
 }
 
-impl From<i64> for TripId {
-    fn from(value: i64) -> Self {
-        TripId(value)
+impl TripId {
+    pub fn into_inner(self) -> i64 {
+        self.0
+    }
+    pub fn test_new(mmsi: i64) -> Self {
+        Self(mmsi)
     }
 }
+
+impl From<TripId> for i64 {
+    fn from(value: TripId) -> Self {
+        value.0
+    }
+}
+
 impl Display for TripId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.0.fmt(f)

@@ -1,11 +1,11 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT\n    t.trip_id,\n    t.cache_version\nFROM\n    trips_detailed AS t\n            ",
+  "query": "\nSELECT\n    t.trip_id AS \"trip_id!: TripId\",\n    t.cache_version\nFROM\n    trips_detailed AS t\n            ",
   "describe": {
     "columns": [
       {
         "ordinal": 0,
-        "name": "trip_id",
+        "name": "trip_id!: TripId",
         "type_info": "Int8"
       },
       {
@@ -22,5 +22,5 @@
       false
     ]
   },
-  "hash": "5ebaa87fdc4201f86d3e88c0e33f37c6675bcafc7e4976756037ec61a1fca118"
+  "hash": "878f843e30ac723a30f811bc78ae6ab7e43e60d23b88ae16833c8b98fdbeb554"
 }

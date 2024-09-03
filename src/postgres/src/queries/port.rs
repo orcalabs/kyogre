@@ -156,7 +156,7 @@ FROM
 WHERE
     t.trip_id = $1
             "#,
-            trip_id.0,
+            trip_id.into_inner(),
         )
         .fetch_one(&self.pool)
         .await?;
@@ -222,7 +222,7 @@ FROM
     q1
     CROSS JOIN q2;
             "#,
-            trip_id.0,
+            trip_id.into_inner(),
         )
         .fetch_one(&self.pool)
         .await?;
