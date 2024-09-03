@@ -153,6 +153,61 @@ ORDER BY
         .map_err(From::from)
     }
 
+    pub(crate) async fn all_ais_positions_impl(
+        &self,
+        mmsi: Mmsi,
+        start: DateTime<Utc>,
+        end: DateTime<Utc>,
+    ) -> Result<Vec<AisPosition>, PostgresErrorWrapper> {
+        sqlx::query_as!(
+            AisPosition,
+            r#"
+SELECT
+    latitude,
+    longitude,
+    mmsi,
+    timestamp AS msgtime,
+    course_over_ground,
+    navigation_status_id AS "navigational_status: NavigationStatus",
+    rate_of_turn,
+    speed_over_ground,
+    true_heading,
+    distance_to_shore
+FROM
+    ais_positions
+WHERE
+    mmsi = $1
+    AND timestamp BETWEEN $2 AND $3
+ORDER BY
+    timestamp ASC
+            "#,
+            mmsi.0,
+            start,
+            end,
+        )
+        .fetch_all(self.ais_pool())
+        .await
+        .map_err(From::from)
+    }
+
+    pub(crate) async fn existing_mmsis_impl(&self) -> Result<Vec<Mmsi>, PostgresErrorWrapper> {
+        let mmsis = sqlx::query!(
+            r#"
+SELECT
+    mmsi AS "mmsi!: Mmsi"
+FROM
+    ais_vessels
+            "#,
+        )
+        .fetch_all(&self.pool)
+        .await?
+        .into_iter()
+        .map(|v| v.mmsi)
+        .collect();
+
+        Ok(mmsis)
+    }
+
     pub(crate) async fn add_ais_positions(
         &self,
         positions: &[NewAisPosition],
@@ -402,7 +457,7 @@ FROM
     UNNEST(
         $1::DOUBLE PRECISION[],
         $2::DOUBLE PRECISION[],
-        $3::timestamptz[],
+        $3::TIMESTAMPTZ[],
         $4::INT[],
         $5::INT[]
     ) u (
@@ -449,10 +504,10 @@ RETURNING
         migration_end_threshold: &DateTime<Utc>,
     ) -> Result<Vec<AisVesselMigrate>, PostgresErrorWrapper> {
         Ok(sqlx::query_as!(
-            crate::models::AisVesselMigrationProgress,
+            AisVesselMigrate,
             r#"
 SELECT
-    mmsi,
+    mmsi AS "mmsi!: Mmsi",
     progress
 FROM
     ais_data_migration_progress
@@ -462,13 +517,7 @@ WHERE
             migration_end_threshold
         )
         .fetch_all(&self.pool)
-        .await?
-        .into_iter()
-        .map(|v| AisVesselMigrate {
-            mmsi: Mmsi(v.mmsi),
-            progress: v.progress,
-        })
-        .collect())
+        .await?)
     }
 
     pub(crate) async fn add_ais_vessels(

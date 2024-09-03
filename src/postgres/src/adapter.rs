@@ -486,6 +486,21 @@ impl AisConsumeLoop for PostgresAdapter {
 }
 
 #[async_trait]
+impl AisMigratorSource for PostgresAdapter {
+    async fn ais_positions(
+        &self,
+        mmsi: Mmsi,
+        start: DateTime<Utc>,
+        end: DateTime<Utc>,
+    ) -> Result<Vec<AisPosition>, QueryError> {
+        convert_vec(self.all_ais_positions_impl(mmsi, start, end).await?)
+    }
+    async fn existing_mmsis(&self) -> Result<Vec<Mmsi>, QueryError> {
+        Ok(self.existing_mmsis_impl().await?)
+    }
+}
+
+#[async_trait]
 impl AisMigratorDestination for PostgresAdapter {
     async fn add_mmsis(&self, mmsis: Vec<Mmsi>) -> Result<(), InsertError> {
         self.add_mmsis_impl(mmsis).await?;

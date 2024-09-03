@@ -14,7 +14,12 @@ postgres = { path = "../postgres" }
 async-trait = "0.1.81"
 serde = "1.0.209"
 config = "0.14.0"
-tokio = { version = "1.39.3", features = ["macros", "sync", "time"] }
+tokio = { version = "1.39.3", features = [
+    "macros",
+    "sync",
+    "time",
+    "rt-multi-thread",
+] }
 tokio-util = { version = "0.7.11", features = ["codec", "compat"] }
 futures = "0.3.30"
 tracing = "0.1.40"

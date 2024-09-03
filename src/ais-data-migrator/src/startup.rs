@@ -1,21 +1,18 @@
 use crate::{settings::Settings, Migrator};
-use leviathan_postgres::LeviathanPostgresAdapter;
 use postgres::PostgresAdapter;
 
 pub struct App {
-    migrator: Migrator<PostgresAdapter, LeviathanPostgresAdapter>,
+    migrator: Migrator<PostgresAdapter, PostgresAdapter>,
 }
 
 impl App {
     pub async fn build(settings: &Settings) -> App {
-        let source_adapter = LeviathanPostgresAdapter::new(&settings.source)
-            .await
-            .unwrap();
+        let source_adapter = PostgresAdapter::new(&settings.source).await.unwrap();
         let destination_adapter = PostgresAdapter::new(&settings.destination).await.unwrap();
 
         let migrator = Migrator::new(
-            settings.source_start_threshold,
-            settings.destination_end_threshold,
+            settings.start_threshold,
+            settings.end_threshold,
             chrono::Duration::from_std(settings.chunk_size).unwrap(),
             source_adapter,
             destination_adapter,

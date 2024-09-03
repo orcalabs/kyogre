@@ -34,6 +34,7 @@ pub struct DataMessage {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize)]
+#[cfg_attr(feature = "sqlx", derive(sqlx::Type), sqlx(transparent))]
 pub struct Mmsi(pub i32);
 
 #[derive(Debug, Clone)]

@@ -1,16 +1,19 @@
 log_level: Info
-chunk_size: "30d"
-source_start_threshold: "2021-01-01T00:00:00Z"
-destination_end_threshold: "2024-01-19T00:00:00Z"
+chunk_size: 30d
+start_threshold: 2024-09-03T00:00:00Z
+end_threshold: 2024-09-04T00:00:00Z
 source:
-  max_connections: 32
-  log_statements: "Disable"
-destination:
-  ip: postgres
-  db_name: postgres
-  password: test123
-  username: postgres
-  application_name: kyogre-ais-data-migrator
+  ip: localhost
   port: 5432
+  username: postgres
+  password: test123
   max_connections: 32
-  log_statements: "Disable"
+  log_statements: Disable
+  application_name: kyogre-ais-data-migrator
+destination:
+  ip: orca-postgres-dev.postgres.database.azure.com
+  port: 5432
+  db_name: kyogre
+  max_connections: 32
+  log_statements: Disable
+  application_name: kyogre-ais-data-migrator
