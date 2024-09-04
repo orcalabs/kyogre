@@ -13,7 +13,7 @@ The following build dependencies are required:
 - protobuf
 - cargo
 
-(NVIDIA container toolkit)[https://github.com/NVIDIA/nvidia-container-toolkit]
+[NVIDIA container toolkit](https://github.com/NVIDIA/nvidia-container-toolkit)
 is also required for local deployment and testing.
 
 ## Local deployment
