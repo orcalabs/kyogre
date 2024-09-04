@@ -751,7 +751,7 @@ impl WebApiOutboundPort for PostgresAdapter {
     }
 
     async fn get_user(&self, user_id: BarentswatchUserId) -> CoreResult<Option<User>> {
-        convert_optional(self.get_user_impl(user_id).await?)
+        Ok(self.get_user_impl(user_id).await?)
     }
 
     fn delivery_points(&self) -> PinBoxStream<'_, DeliveryPoint> {

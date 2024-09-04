@@ -2,12 +2,11 @@ use std::pin::Pin;
 
 use actix_web::FromRequest;
 use futures::Future;
-use kyogre_core::AisPermission;
+use kyogre_core::{AisPermission, BarentswatchUserId};
 use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 use snafu::ResultExt;
 use strum::EnumIter;
-use uuid::Uuid;
 
 use crate::{
     error::{
@@ -41,7 +40,7 @@ pub enum BwRole {
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct BwUser {
-    pub id: Uuid,
+    pub id: BarentswatchUserId,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]

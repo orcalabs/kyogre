@@ -40,7 +40,7 @@ pub async fn get_fuel_measurements<T: Database + 'static>(
     profile: BwProfile,
     params: Query<FuelMeasurementsParams>,
 ) -> Result<HttpResponse> {
-    let user_id = BarentswatchUserId(profile.user.id);
+    let user_id = profile.user.id;
 
     let profile = profile
         .fisk_info_profile
@@ -75,7 +75,7 @@ pub async fn create_fuel_measurements<T: Database + 'static>(
     profile: BwProfile,
     body: web::Json<Vec<FuelMeasurementBody>>,
 ) -> Result<Response<()>> {
-    let user_id = BarentswatchUserId(profile.user.id);
+    let user_id = profile.user.id;
 
     let profile = profile
         .fisk_info_profile
@@ -113,7 +113,7 @@ pub async fn update_fuel_measurements<T: Database + 'static>(
     profile: BwProfile,
     body: web::Json<Vec<FuelMeasurementBody>>,
 ) -> Result<Response<()>> {
-    let user_id = BarentswatchUserId(profile.user.id);
+    let user_id = profile.user.id;
 
     let profile = profile
         .fisk_info_profile
@@ -151,7 +151,7 @@ pub async fn delete_fuel_measurements<T: Database + 'static>(
     profile: BwProfile,
     body: web::Json<Vec<DeleteFuelMeasurement>>,
 ) -> Result<Response<()>> {
-    let user_id = BarentswatchUserId(profile.user.id);
+    let user_id = profile.user.id;
 
     let profile = profile
         .fisk_info_profile

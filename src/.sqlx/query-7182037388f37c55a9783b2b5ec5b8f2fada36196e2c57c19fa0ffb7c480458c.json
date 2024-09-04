@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    barentswatch_user_id AS \"barentswatch_user_id!: BarentswatchUserId\",\n    ARRAY_AGG(fiskeridir_vessel_id) AS \"following!: Vec<FiskeridirVesselId>\"\nFROM\n    user_follows\nWHERE\n    barentswatch_user_id = $1\nGROUP BY\n    barentswatch_user_id\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "barentswatch_user_id!: BarentswatchUserId",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "following!: Vec<FiskeridirVesselId>",
+        "type_info": "Int8Array"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      null
+    ]
+  },
+  "hash": "7182037388f37c55a9783b2b5ec5b8f2fada36196e2c57c19fa0ffb7c480458c"
+}

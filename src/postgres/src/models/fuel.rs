@@ -1,7 +1,6 @@
 use chrono::{DateTime, Utc};
 use kyogre_core::BarentswatchUserId;
 use unnest_insert::{UnnestDelete, UnnestInsert, UnnestUpdate};
-use uuid::Uuid;
 
 use crate::error::Error;
 
@@ -9,8 +8,9 @@ use crate::error::Error;
 #[unnest_insert(table_name = "fuel_measurements")]
 #[unnest_update(table_name = "fuel_measurements")]
 pub struct FuelMeasurement {
-    #[unnest_update(id)]
-    pub barentswatch_user_id: Uuid,
+    #[unnest_insert(sql_type = "UUID")]
+    #[unnest_update(id, sql_type = "UUID")]
+    pub barentswatch_user_id: BarentswatchUserId,
     #[unnest_update(id)]
     pub call_sign: String,
     #[unnest_update(id)]
@@ -21,7 +21,8 @@ pub struct FuelMeasurement {
 #[derive(Debug, Clone, UnnestDelete)]
 #[unnest_delete(table_name = "fuel_measurements")]
 pub struct DeleteFuelMeasurement {
-    pub barentswatch_user_id: Uuid,
+    #[unnest_delete(sql_type = "UUID")]
+    pub barentswatch_user_id: BarentswatchUserId,
     pub call_sign: String,
     pub timestamp: DateTime<Utc>,
 }
@@ -31,7 +32,7 @@ impl TryFrom<FuelMeasurement> for kyogre_core::FuelMeasurement {
 
     fn try_from(v: FuelMeasurement) -> Result<Self, Self::Error> {
         Ok(Self {
-            barentswatch_user_id: BarentswatchUserId(v.barentswatch_user_id),
+            barentswatch_user_id: v.barentswatch_user_id,
             call_sign: v.call_sign.try_into()?,
             timestamp: v.timestamp,
             fuel: v.fuel,
@@ -42,7 +43,7 @@ impl TryFrom<FuelMeasurement> for kyogre_core::FuelMeasurement {
 impl From<kyogre_core::FuelMeasurement> for FuelMeasurement {
     fn from(v: kyogre_core::FuelMeasurement) -> Self {
         Self {
-            barentswatch_user_id: v.barentswatch_user_id.0,
+            barentswatch_user_id: v.barentswatch_user_id,
             call_sign: v.call_sign.into_inner(),
             timestamp: v.timestamp,
             fuel: v.fuel,
@@ -53,7 +54,7 @@ impl From<kyogre_core::FuelMeasurement> for FuelMeasurement {
 impl From<kyogre_core::DeleteFuelMeasurement> for DeleteFuelMeasurement {
     fn from(v: kyogre_core::DeleteFuelMeasurement) -> Self {
         Self {
-            barentswatch_user_id: v.barentswatch_user_id.0,
+            barentswatch_user_id: v.barentswatch_user_id,
             call_sign: v.call_sign.into_inner(),
             timestamp: v.timestamp,
         }
