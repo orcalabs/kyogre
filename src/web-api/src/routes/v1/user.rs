@@ -19,9 +19,7 @@ pub async fn get_user<T: Database + 'static>(
     profile: BwProfile,
 ) -> Result<Response<Option<User>>> {
     Ok(Response::new(
-        db.get_user(BarentswatchUserId(profile.user.id))
-            .await?
-            .map(User::from),
+        db.get_user(profile.user.id).await?.map(User::from),
     ))
 }
 
@@ -44,10 +42,7 @@ pub async fn update_user<T: Database + 'static>(
     profile: BwProfile,
     user: web::Json<User>,
 ) -> Result<Response<()>> {
-    let user = user
-        .into_inner()
-        .to_domain_user(BarentswatchUserId(profile.user.id));
-
+    let user = user.into_inner().to_domain_user(profile.user.id);
     db.update_user(user).await?;
     Ok(Response::new(()))
 }

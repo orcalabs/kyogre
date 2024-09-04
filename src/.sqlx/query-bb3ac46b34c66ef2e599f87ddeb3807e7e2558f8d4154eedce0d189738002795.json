@@ -1,11 +1,11 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT\n    barentswatch_user_id,\n    call_sign,\n    timestamp,\n    fuel\nFROM\n    fuel_measurements\nWHERE\n    barentswatch_user_id = $1\n    AND call_sign = $2\n    AND (\n        $3::TIMESTAMPTZ IS NULL\n        OR timestamp >= $3\n    )\n    AND (\n        $4::TIMESTAMPTZ IS NULL\n        OR timestamp <= $4\n    )\nORDER BY\n    timestamp DESC\n            ",
+  "query": "\nSELECT\n    barentswatch_user_id AS \"barentswatch_user_id!: BarentswatchUserId\",\n    call_sign,\n    timestamp,\n    fuel\nFROM\n    fuel_measurements\nWHERE\n    barentswatch_user_id = $1\n    AND call_sign = $2\n    AND (\n        $3::TIMESTAMPTZ IS NULL\n        OR timestamp >= $3\n    )\n    AND (\n        $4::TIMESTAMPTZ IS NULL\n        OR timestamp <= $4\n    )\nORDER BY\n    timestamp DESC\n            ",
   "describe": {
     "columns": [
       {
         "ordinal": 0,
-        "name": "barentswatch_user_id",
+        "name": "barentswatch_user_id!: BarentswatchUserId",
         "type_info": "Uuid"
       },
       {
@@ -39,5 +39,5 @@
       false
     ]
   },
-  "hash": "213816701986dc92b309a90913a0d2cf0d697785f71a011374bdc517df567dbe"
+  "hash": "bb3ac46b34c66ef2e599f87ddeb3807e7e2558f8d4154eedce0d189738002795"
 }
