@@ -332,6 +332,7 @@ pub struct TripHaul {
     pub gear_id: Gear,
     #[serde_as(as = "DisplayFromStr")]
     pub gear_group_id: GearGroup,
+    #[schema(value_type = Option<i64>)]
     pub fiskeridir_vessel_id: Option<FiskeridirVesselId>,
     pub catches: Vec<HaulCatch>,
     pub whale_catches: Vec<WhaleCatch>,
