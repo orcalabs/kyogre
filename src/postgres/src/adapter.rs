@@ -195,7 +195,9 @@ WHERE
         let result = self.process_message(message).await;
         // Only enabled in tests
         if let Some(s) = process_confirmation {
-            s.send(()).await.unwrap();
+            // Only error here is if the reciver is closed which will happen in failing tests.
+            // Not unwrapping here to avoid confusion on what actually went wrong in a failed test.
+            let _ = s.send(()).await;
         }
         match result {
             AisProcessingAction::Exit => ConsumeLoopOutcome::Exit,
