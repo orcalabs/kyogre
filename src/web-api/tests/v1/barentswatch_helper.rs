@@ -4,13 +4,13 @@ use jsonwebtoken::{
     jwk::{AlgorithmParameters, CommonParameters, Jwk, JwkSet, KeyAlgorithm, RSAKeyParameters},
     Algorithm, DecodingKey, EncodingKey, Header, Validation,
 };
+use kyogre_core::BarentswatchUserId;
 use rsa::{
     pkcs1::EncodeRsaPrivateKey, pkcs8::LineEnding, traits::PublicKeyParts, RsaPrivateKey,
     RsaPublicKey,
 };
 use serde::{Deserialize, Serialize};
 use strum::IntoEnumIterator;
-use uuid::Uuid;
 use web_api::extractors::{BwPolicy, BwProfile, BwRole, BwUser, BwVesselInfo};
 use wiremock::{
     matchers::{method, path},
@@ -113,7 +113,7 @@ impl BarentswatchHelper {
 
     pub fn get_bw_token(&self) -> String {
         let claims = Claims {
-            id: Uuid::new_v4(),
+            id: BarentswatchUserId::test_new(),
             exp: i64::MAX,
             aud: self.audience.clone(),
             policies: BwPolicy::iter().collect(),
@@ -124,7 +124,7 @@ impl BarentswatchHelper {
 
     pub fn get_bw_token_with_full_ais_permission(&self) -> String {
         let claims = Claims {
-            id: Uuid::new_v4(),
+            id: BarentswatchUserId::test_new(),
             exp: i64::MAX,
             aud: self.audience.clone(),
             policies: vec![BwPolicy::BwAisFiskinfo],
@@ -147,7 +147,7 @@ impl BarentswatchHelper {
         roles: Vec<BwRole>,
     ) -> String {
         let claims = Claims {
-            id: Uuid::new_v4(),
+            id: BarentswatchUserId::test_new(),
             exp: i64::MAX,
             aud: self.audience.clone(),
             policies,
@@ -158,7 +158,7 @@ impl BarentswatchHelper {
 
     pub fn get_bw_token_with_policies(&self, policies: Vec<BwPolicy>) -> String {
         let claims = Claims {
-            id: Uuid::new_v4(),
+            id: BarentswatchUserId::test_new(),
             exp: i64::MAX,
             aud: self.audience.clone(),
             policies,
@@ -174,7 +174,7 @@ impl BarentswatchHelper {
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Claims {
-    id: Uuid,
+    id: BarentswatchUserId,
     exp: i64,
     aud: String,
     policies: Vec<BwPolicy>,

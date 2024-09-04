@@ -49,11 +49,8 @@ pub async fn vessel_benchmarks<T: Database + 'static>(
         })?;
 
     Ok(Response::new(
-        db.vessel_benchmarks(
-            &kyogre_core::BarentswatchUserId(bw_profile.user.id),
-            &call_sign,
-        )
-        .await?,
+        db.vessel_benchmarks(&bw_profile.user.id, &call_sign)
+            .await?,
     ))
 }
 

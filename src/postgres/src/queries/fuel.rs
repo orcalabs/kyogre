@@ -4,7 +4,7 @@ use crate::{
     PostgresAdapter,
 };
 use futures::{Stream, TryStreamExt};
-use kyogre_core::FuelMeasurementsQuery;
+use kyogre_core::{BarentswatchUserId, FuelMeasurementsQuery};
 use unnest_insert::{UnnestDelete, UnnestInsert, UnnestUpdate};
 
 impl PostgresAdapter {
@@ -16,7 +16,7 @@ impl PostgresAdapter {
             FuelMeasurement,
             r#"
 SELECT
-    barentswatch_user_id,
+    barentswatch_user_id AS "barentswatch_user_id!: BarentswatchUserId",
     call_sign,
     timestamp,
     fuel
@@ -36,7 +36,7 @@ WHERE
 ORDER BY
     timestamp DESC
             "#,
-            query.barentswatch_user_id.0,
+            query.barentswatch_user_id.as_ref(),
             query.call_sign.into_inner(),
             query.start_date,
             query.end_date,

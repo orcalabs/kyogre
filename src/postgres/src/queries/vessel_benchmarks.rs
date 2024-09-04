@@ -372,8 +372,8 @@ FROM
     ) q
             "#,
             call_sign.as_ref(),
-            user_id.0,
-            year
+            user_id.as_ref(),
+            year,
         )
         .fetch_one(&self.pool)
         .await?)
