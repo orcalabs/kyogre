@@ -758,9 +758,8 @@ impl WebApiOutboundPort for PostgresAdapter {
         convert_stream(self.delivery_points_impl()).boxed()
     }
 
-    fn weather(&self, query: WeatherQuery) -> CoreResult<PinBoxStream<'_, Weather>> {
-        let stream = self.weather_impl(query)?;
-        Ok(convert_stream(stream).boxed())
+    fn weather(&self, query: WeatherQuery) -> PinBoxStream<'_, Weather> {
+        self.weather_impl(query).map_err(From::from).boxed()
     }
 
     fn weather_locations(&self) -> PinBoxStream<'_, WeatherLocation> {
@@ -1305,13 +1304,13 @@ impl HaulWeatherOutbound for PostgresAdapter {
             .await
     }
     async fn haul_weather(&self, query: WeatherQuery) -> CoreResult<Option<HaulWeather>> {
-        convert_optional(self.haul_weather_impl(query).await?)
+        Ok(self.haul_weather_impl(query).await?)
     }
     async fn haul_ocean_climate(
         &self,
         query: OceanClimateQuery,
     ) -> CoreResult<Option<HaulOceanClimate>> {
-        convert_optional(self.haul_ocean_climate_impl(query).await?)
+        Ok(self.haul_ocean_climate_impl(query).await?)
     }
 }
 
