@@ -42,7 +42,7 @@ SELECT
     l.gear_id AS "gear_id!: Gear",
     l.gear_group_id AS "gear_group_id!: GearGroup",
     COALESCE(MIN(d.new_delivery_point_id), l.delivery_point_id) AS delivery_point_id,
-    l.fiskeridir_vessel_id AS "fiskeridir_vessel_id!: FiskeridirVesselId",
+    l.fiskeridir_vessel_id AS "fiskeridir_vessel_id?: FiskeridirVesselId",
     l.vessel_call_sign,
     l.vessel_name,
     l.vessel_length,
@@ -152,7 +152,7 @@ SELECT
     l.gear_id AS "gear_id!: Gear",
     l.gear_group_id AS "gear_group_id!: GearGroup",
     COALESCE(MIN(d.new_delivery_point_id), l.delivery_point_id) AS delivery_point_id,
-    l.fiskeridir_vessel_id AS "fiskeridir_vessel_id!: FiskeridirVesselId",
+    l.fiskeridir_vessel_id AS "fiskeridir_vessel_id?: FiskeridirVesselId",
     l.vessel_call_sign,
     l.vessel_name,
     l.vessel_length,
@@ -395,7 +395,7 @@ WHERE
     l.landing_id = u.landing_id
     AND l.version < u.version
 RETURNING
-    l.fiskeridir_vessel_id AS "fiskeridir_vessel_id: FiskeridirVesselId",
+    l.fiskeridir_vessel_id AS "fiskeridir_vessel_id?: FiskeridirVesselId",
     l.landing_timestamp AS "landing_timestamp!"
             "#,
             &landing_id as _,
@@ -495,7 +495,7 @@ WHERE
     (NOT landing_id = ANY ($1::TEXT[]))
     AND data_year = $2::INT
 RETURNING
-    fiskeridir_vessel_id AS "fiskeridir_vessel_id: FiskeridirVesselId",
+    fiskeridir_vessel_id AS "fiskeridir_vessel_id?: FiskeridirVesselId",
     landing_timestamp AS "landing_timestamp!"
             "#,
             existing_landing_ids,
