@@ -38,10 +38,7 @@ pub async fn weather<T: Database + 'static>(
     let query = params.into_inner().into();
 
     to_streaming_response! {
-        db.weather(
-            query
-        )?
-        .map_ok(Weather::from)
+        db.weather(query).map_ok(Weather::from)
     }
 }
 
@@ -84,7 +81,8 @@ pub struct Weather {
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct WeatherLocation {
-    pub id: i32,
+    #[schema(value_type = i32)]
+    pub id: WeatherLocationId,
     pub polygon: String,
 }
 
@@ -110,7 +108,7 @@ impl From<kyogre_core::Weather> for Weather {
 impl From<kyogre_core::WeatherLocation> for WeatherLocation {
     fn from(v: kyogre_core::WeatherLocation) -> Self {
         Self {
-            id: v.id.0,
+            id: v.id,
             polygon: v.polygon.to_wkt().to_string(),
         }
     }

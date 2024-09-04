@@ -1,11 +1,11 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT\n    weather_location_id,\n    \"polygon\" AS \"polygon!: _\"\nFROM\n    weather_locations\n            ",
+  "query": "\nSELECT\n    weather_location_id AS \"weather_location_id!: WeatherLocationId\",\n    \"polygon\" AS \"polygon!: _\"\nFROM\n    weather_locations\n            ",
   "describe": {
     "columns": [
       {
         "ordinal": 0,
-        "name": "weather_location_id",
+        "name": "weather_location_id!: WeatherLocationId",
         "type_info": "Int4"
       },
       {
@@ -27,5 +27,5 @@
       false
     ]
   },
-  "hash": "d5b243a9347488a7a321cb50acc7130a4ffcea294f5bb33e37fe3f226ce21483"
+  "hash": "579c136cd42746f4addbf55582de51d296bbb0cf21a705704655385abf8b71e6"
 }

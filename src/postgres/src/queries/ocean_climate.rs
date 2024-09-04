@@ -1,22 +1,16 @@
 use chrono::{DateTime, Utc};
 use futures::{Stream, TryStreamExt};
-use kyogre_core::OceanClimateQuery;
+use kyogre_core::{HaulOceanClimate, OceanClimate, OceanClimateQuery, WeatherLocationId};
 use unnest_insert::UnnestInsert;
 
-use crate::{
-    error::{Error, Result},
-    models::{HaulOceanClimate, NewOceanClimate, OceanClimate},
-    PostgresAdapter,
-};
+use crate::{error::Result, models::NewOceanClimate, PostgresAdapter};
 
 impl PostgresAdapter {
     pub(crate) fn _ocean_climate_impl(
         &self,
         query: OceanClimateQuery,
-    ) -> Result<impl Stream<Item = Result<OceanClimate>> + '_> {
-        let args = OceanClimateArgs::try_from(query)?;
-
-        let stream = sqlx::query_as!(
+    ) -> impl Stream<Item = Result<OceanClimate>> + '_ {
+        sqlx::query_as!(
             OceanClimate,
             r#"
 SELECT
@@ -40,7 +34,7 @@ SELECT
     AVG(salinity) AS "salinity",
     AVG(temperature) AS "temperature",
     AVG(sea_floor_depth) AS "sea_floor_depth!",
-    weather_location_id
+    weather_location_id AS "weather_location_id!: WeatherLocationId"
 FROM
     ocean_climate
 WHERE
@@ -56,23 +50,19 @@ WHERE
 GROUP BY
     weather_location_id
             "#,
-            args.start_date,
-            args.end_date,
-            args.depths.as_deref(),
-            args.weather_location_ids.as_deref(),
+            query.start_date,
+            query.end_date,
+            query.depths.as_deref(),
+            query.weather_location_ids.as_deref() as Option<&[WeatherLocationId]>,
         )
         .fetch(&self.pool)
-        .map_err(From::from);
-
-        Ok(stream)
+        .map_err(From::from)
     }
 
     pub(crate) async fn haul_ocean_climate_impl(
         &self,
         query: OceanClimateQuery,
     ) -> Result<Option<HaulOceanClimate>> {
-        let args = OceanClimateArgs::try_from(query)?;
-
         let climate = sqlx::query_as!(
             HaulOceanClimate,
             r#"
@@ -96,10 +86,10 @@ WHERE
         OR weather_location_id = ANY ($4)
     )
             "#,
-            args.start_date,
-            args.end_date,
-            args.depths.as_deref(),
-            args.weather_location_ids.as_deref(),
+            query.start_date,
+            query.end_date,
+            query.depths.as_deref(),
+            query.weather_location_ids.as_deref() as Option<&[WeatherLocationId]>,
         )
         .fetch_optional(&self.pool)
         .await?;
@@ -111,13 +101,8 @@ WHERE
         &self,
         ocean_climate: Vec<kyogre_core::NewOceanClimate>,
     ) -> Result<()> {
-        let values = ocean_climate
-            .into_iter()
-            .map(NewOceanClimate::try_from)
-            .collect::<Result<Vec<_>>>()?;
-
+        let values = ocean_climate.into_iter().map(From::from).collect();
         NewOceanClimate::unnest_insert(values, &self.pool).await?;
-
         Ok(())
     }
 
@@ -136,27 +121,5 @@ FROM
         .await?;
 
         Ok(row.ts)
-    }
-}
-
-struct OceanClimateArgs {
-    pub start_date: DateTime<Utc>,
-    pub end_date: DateTime<Utc>,
-    pub depths: Option<Vec<i32>>,
-    pub weather_location_ids: Option<Vec<i32>>,
-}
-
-impl TryFrom<OceanClimateQuery> for OceanClimateArgs {
-    type Error = Error;
-
-    fn try_from(v: OceanClimateQuery) -> std::result::Result<Self, Self::Error> {
-        Ok(Self {
-            start_date: v.start_date,
-            end_date: v.end_date,
-            depths: v.depths,
-            weather_location_ids: v
-                .weather_location_ids
-                .map(|ids| ids.into_iter().map(|id| id.0).collect()),
-        })
     }
 }

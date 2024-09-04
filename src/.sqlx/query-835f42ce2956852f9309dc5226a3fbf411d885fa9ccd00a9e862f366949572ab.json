@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT\n    TO_TIMESTAMP(\n        AVG(\n            EXTRACT(\n                epoch\n                FROM\n                    \"timestamp\"\n            )\n        )\n    ) AS \"timestamp!\",\n    AVG(latitude) AS \"latitude!\",\n    AVG(longitude) AS \"longitude!\",\n    AVG(altitude) AS \"altitude!\",\n    AVG(wind_speed_10m) AS \"wind_speed_10m\",\n    AVG(wind_direction_10m) AS \"wind_direction_10m\",\n    AVG(air_temperature_2m) AS \"air_temperature_2m\",\n    AVG(relative_humidity_2m) AS \"relative_humidity_2m\",\n    AVG(air_pressure_at_sea_level) AS \"air_pressure_at_sea_level\",\n    AVG(precipitation_amount) AS \"precipitation_amount\",\n    AVG(land_area_fraction) AS \"land_area_fraction!\",\n    AVG(cloud_area_fraction) AS \"cloud_area_fraction\",\n    weather_location_id\nFROM\n    weather\nWHERE\n    \"timestamp\" BETWEEN $1::TIMESTAMPTZ AND $2::TIMESTAMPTZ\n    AND (\n        $3::INT[] IS NULL\n        OR weather_location_id = ANY ($3)\n    )\nGROUP BY\n    weather_location_id\n            ",
+  "query": "\nSELECT\n    TO_TIMESTAMP(\n        AVG(\n            EXTRACT(\n                epoch\n                FROM\n                    \"timestamp\"\n            )\n        )\n    ) AS \"timestamp!\",\n    AVG(latitude) AS \"latitude!\",\n    AVG(longitude) AS \"longitude!\",\n    AVG(altitude) AS \"altitude!\",\n    AVG(wind_speed_10m) AS \"wind_speed_10m\",\n    AVG(wind_direction_10m) AS \"wind_direction_10m\",\n    AVG(air_temperature_2m) AS \"air_temperature_2m\",\n    AVG(relative_humidity_2m) AS \"relative_humidity_2m\",\n    AVG(air_pressure_at_sea_level) AS \"air_pressure_at_sea_level\",\n    AVG(precipitation_amount) AS \"precipitation_amount\",\n    AVG(land_area_fraction) AS \"land_area_fraction!\",\n    AVG(cloud_area_fraction) AS \"cloud_area_fraction\",\n    weather_location_id AS \"weather_location_id!: WeatherLocationId\"\nFROM\n    weather\nWHERE\n    \"timestamp\" BETWEEN $1::TIMESTAMPTZ AND $2::TIMESTAMPTZ\n    AND (\n        $3::INT[] IS NULL\n        OR weather_location_id = ANY ($3)\n    )\nGROUP BY\n    weather_location_id\n            ",
   "describe": {
     "columns": [
       {
@@ -65,7 +65,7 @@
       },
       {
         "ordinal": 12,
-        "name": "weather_location_id",
+        "name": "weather_location_id!: WeatherLocationId",
         "type_info": "Int4"
       }
     ],
@@ -92,5 +92,5 @@
       false
     ]
   },
-  "hash": "dc5aeedee971b611862fca33736df600b34cf10a8480c39eac75568e0b9652d0"
+  "hash": "835f42ce2956852f9309dc5226a3fbf411d885fa9ccd00a9e862f366949572ab"
 }
