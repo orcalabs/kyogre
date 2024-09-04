@@ -204,7 +204,7 @@ RETURNING
     a.longitude,
     a."timestamp",
     a.call_sign,
-    a.mmsi AS "mmsi: Mmsi"
+    a.mmsi AS "mmsi?: Mmsi"
             "#,
             &lat,
             &lon,
