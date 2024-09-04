@@ -1048,7 +1048,7 @@ async fn test_trips_connects_to_existing_landings_outside_period_but_inside_land
             .base()
             .vessels(1)
             .modify(|v| {
-                v.fiskeridir.id = FiskeridirVesselId::test_new(2);
+                v.fiskeridir.id = FiskeridirVesselId::test_new(1);
             })
             .trips(1)
             .modify(|v| {

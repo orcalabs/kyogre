@@ -6,7 +6,7 @@ use num_traits::FromPrimitive;
 use serde::de::{self, Visitor};
 use serde::Deserialize;
 use serde_repr::Serialize_repr;
-use serde_with::{serde_as, DisplayFromStr, NoneAsEmptyString};
+use serde_with::{serde_as, NoneAsEmptyString};
 use strum_macros::{AsRefStr, EnumString};
 
 use super::FiskeridirVesselId;
@@ -146,7 +146,7 @@ pub struct ErsVesselInfo {
     #[serde(deserialize_with = "opt_float_from_str")]
     pub vessel_greatest_length: Option<f64>,
     #[serde(rename = "Fartøy ID")]
-    #[serde_as(as = "Option<DisplayFromStr>")]
+    #[serde(deserialize_with = "opt_fiskeridir_vessel_id_from_str")]
     pub vessel_id: Option<FiskeridirVesselId>,
     #[serde(rename = "Fartøyidentifikasjon")]
     pub vessel_identification: NonEmptyString,
