@@ -476,14 +476,14 @@ RETURNING
     a.latitude,
     a.longitude,
     a."timestamp",
-    a.mmsi AS "mmsi: Mmsi",
+    a.mmsi AS "mmsi?: Mmsi",
     a.call_sign
             "#,
             &lat,
             &lon,
             &timestamp,
             &position_type_id,
-            &mmsis as &[Mmsi],
+            &mmsi as &[Mmsi],
         )
         .fetch_all(&mut *tx)
         .await?;

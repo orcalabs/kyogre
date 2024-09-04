@@ -278,10 +278,10 @@ SET
 SELECT
     tool_id,
     barentswatch_vessel_id,
-    fiskeridir_vessel_id AS "fiskeridir_vessel_id: FiskeridirVesselId",
+    fiskeridir_vessel_id AS "fiskeridir_vessel_id?: FiskeridirVesselId",
     vessel_name,
     call_sign,
-    mmsi AS "mmsi: Mmsi",
+    mmsi AS "mmsi?: Mmsi",
     imo,
     reg_num,
     sbr_reg_num,

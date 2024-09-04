@@ -58,7 +58,7 @@ SELECT
     h.total_living_weight,
     h.gear_id AS "gear_id!: Gear",
     h.gear_group_id AS "gear_group_id!: GearGroup",
-    h.fiskeridir_vessel_id AS "fiskeridir_vessel_id!: FiskeridirVesselId",
+    h.fiskeridir_vessel_id AS "fiskeridir_vessel_id?: FiskeridirVesselId",
     h.vessel_call_sign,
     h.vessel_call_sign_ers,
     h.vessel_length,
@@ -176,7 +176,7 @@ WHERE
 ORDER BY
     "timestamp" ASC
             "#,
-            mmsi as Option<Mmsi>,
+            mmsi.map(|v| v.into_inner()),
             range.map(|r| r.start()),
             range.map(|r| r.end()),
         )
