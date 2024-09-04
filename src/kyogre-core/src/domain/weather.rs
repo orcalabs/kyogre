@@ -170,7 +170,8 @@ pub struct Weather {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize)]
-pub struct WeatherLocationId(pub i32);
+#[cfg_attr(feature = "sqlx", derive(sqlx::Type), sqlx(transparent))]
+pub struct WeatherLocationId(i32);
 
 #[derive(Debug, Clone)]
 pub struct WeatherLocation {
@@ -262,10 +263,19 @@ impl From<&NewWeather> for Weather {
 }
 
 impl WeatherLocationId {
+    pub fn into_inner(self) -> i32 {
+        self.0
+    }
     pub fn from_lat_lon(lat: f64, lon: f64) -> Self {
         Self(
             (((lat / 0.1).floor() as i32 + 1_000) * 100_000) + ((lon / 0.1).floor() as i32 + 1_000),
         )
+    }
+}
+
+impl From<WeatherLocationId> for i32 {
+    fn from(value: WeatherLocationId) -> Self {
+        value.0
     }
 }
 

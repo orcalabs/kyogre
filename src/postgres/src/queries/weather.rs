@@ -2,15 +2,15 @@ use std::collections::HashSet;
 
 use chrono::{DateTime, NaiveDate, TimeZone, Utc};
 use futures::{Stream, TryStreamExt};
-use kyogre_core::{CatchLocationId, HaulId, HaulWeatherOutput, WeatherQuery};
+use kyogre_core::{
+    CatchLocationId, HaulId, HaulWeather, HaulWeatherOutput, Weather, WeatherLocationId,
+    WeatherQuery,
+};
 use unnest_insert::UnnestInsert;
 
 use crate::{
-    error::{Error, Result},
-    models::{
-        CatchLocationWeather, HaulWeather, NewWeather, NewWeatherDailyDirty, Weather,
-        WeatherLocation,
-    },
+    error::Result,
+    models::{CatchLocationWeather, NewWeather, NewWeatherDailyDirty, WeatherLocation},
     PostgresAdapter,
 };
 
@@ -68,11 +68,11 @@ WHERE
     pub(crate) async fn weather_location_ids<'a>(
         &self,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<Vec<i32>> {
+    ) -> Result<Vec<WeatherLocationId>> {
         Ok(sqlx::query!(
             r#"
 SELECT
-    weather_location_id
+    weather_location_id AS "id!: WeatherLocationId"
 FROM
     weather_locations
             "#,
@@ -80,7 +80,7 @@ FROM
         .fetch_all(&mut **tx)
         .await?
         .into_iter()
-        .map(|v| v.weather_location_id)
+        .map(|v| v.id)
         .collect())
     }
 
@@ -205,7 +205,7 @@ SET
 
         let weather_location_ids = self.weather_location_ids(tx).await?;
 
-        for w in weather_location_ids {
+        for id in weather_location_ids {
             sqlx::query!(
                 r#"
 INSERT INTO
@@ -257,9 +257,9 @@ SET
     air_pressure_at_sea_level = excluded.air_pressure_at_sea_level,
     precipitation_amount = excluded.precipitation_amount,
     cloud_area_fraction = excluded.cloud_area_fraction
-            "#,
+                "#,
                 date,
-                w,
+                id.into_inner(),
                 start,
                 end,
             )
@@ -336,10 +336,8 @@ FROM
     pub(crate) fn weather_impl(
         &self,
         query: WeatherQuery,
-    ) -> Result<impl Stream<Item = Result<Weather>> + '_> {
-        let args = WeatherArgs::try_from(query)?;
-
-        let stream = sqlx::query_as!(
+    ) -> impl Stream<Item = Result<Weather>> + '_ {
+        sqlx::query_as!(
             Weather,
             r#"
 SELECT
@@ -363,7 +361,7 @@ SELECT
     AVG(precipitation_amount) AS "precipitation_amount",
     AVG(land_area_fraction) AS "land_area_fraction!",
     AVG(cloud_area_fraction) AS "cloud_area_fraction",
-    weather_location_id
+    weather_location_id AS "weather_location_id!: WeatherLocationId"
 FROM
     weather
 WHERE
@@ -375,22 +373,18 @@ WHERE
 GROUP BY
     weather_location_id
             "#,
-            args.start_date,
-            args.end_date,
-            args.weather_location_ids.as_deref(),
+            query.start_date,
+            query.end_date,
+            query.weather_location_ids.as_deref() as Option<&[WeatherLocationId]>,
         )
         .fetch(&self.pool)
-        .map_err(From::from);
-
-        Ok(stream)
+        .map_err(From::from)
     }
 
     pub(crate) async fn haul_weather_impl(
         &self,
         query: WeatherQuery,
     ) -> Result<Option<HaulWeather>> {
-        let args = WeatherArgs::try_from(query)?;
-
         let weather = sqlx::query_as!(
             HaulWeather,
             r#"
@@ -411,9 +405,9 @@ WHERE
         OR weather_location_id = ANY ($3)
     )
             "#,
-            args.start_date,
-            args.end_date,
-            args.weather_location_ids.as_deref(),
+            query.start_date,
+            query.end_date,
+            query.weather_location_ids.as_deref() as Option<&[WeatherLocationId]>,
         )
         .fetch_optional(&self.pool)
         .await?;
@@ -603,7 +597,7 @@ FROM
             WeatherLocation,
             r#"
 SELECT
-    weather_location_id,
+    weather_location_id AS "weather_location_id!: WeatherLocationId",
     "polygon" AS "polygon!: _"
 FROM
     weather_locations
@@ -611,25 +605,5 @@ FROM
         )
         .fetch(&self.pool)
         .map_err(From::from)
-    }
-}
-
-struct WeatherArgs {
-    pub start_date: DateTime<Utc>,
-    pub end_date: DateTime<Utc>,
-    pub weather_location_ids: Option<Vec<i32>>,
-}
-
-impl TryFrom<WeatherQuery> for WeatherArgs {
-    type Error = Error;
-
-    fn try_from(v: WeatherQuery) -> std::result::Result<Self, Self::Error> {
-        Ok(Self {
-            start_date: v.start_date,
-            end_date: v.end_date,
-            weather_location_ids: v
-                .weather_location_ids
-                .map(|ids| ids.into_iter().map(|id| id.0).collect()),
-        })
     }
 }
