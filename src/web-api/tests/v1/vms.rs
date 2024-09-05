@@ -3,12 +3,12 @@ use chrono::{Duration, TimeZone, Utc};
 use engine::*;
 use fiskeridir_rs::CallSign;
 use reqwest::StatusCode;
-use web_api::routes::v1::vms::{VmsParameters, VmsPosition};
+use web_api::{error::ErrorDiscriminants, routes::v1::vms::VmsParameters};
 
 #[tokio::test]
 async fn test_vms_return_no_positions_for_non_existing_call_sign() {
     test(|helper, _| async move {
-        let response = helper
+        let positions = helper
             .app
             .get_vms_positions(
                 &CallSign::try_from("TEST").unwrap(),
@@ -17,11 +17,10 @@ async fn test_vms_return_no_positions_for_non_existing_call_sign() {
                     end: Some(Utc.timestamp_opt(101, 0).unwrap()),
                 },
             )
-            .await;
+            .await
+            .unwrap();
 
-        assert_eq!(response.status(), StatusCode::OK);
-        let body: Vec<VmsPosition> = response.json().await.unwrap();
-        assert!(body.is_empty());
+        assert!(positions.is_empty());
     })
     .await;
 }
@@ -29,7 +28,7 @@ async fn test_vms_return_no_positions_for_non_existing_call_sign() {
 #[tokio::test]
 async fn test_vms_return_bad_request_when_only_start_or_end_is_provided() {
     test(|helper, _| async move {
-        let response = helper
+        let error = helper
             .app
             .get_vms_positions(
                 &CallSign::try_from("TEST").unwrap(),
@@ -38,9 +37,10 @@ async fn test_vms_return_bad_request_when_only_start_or_end_is_provided() {
                     end: Some(Utc.timestamp_opt(101, 0).unwrap()),
                 },
             )
-            .await;
+            .await
+            .unwrap_err();
 
-        let response2 = helper
+        let error2 = helper
             .app
             .get_vms_positions(
                 &CallSign::try_from("TEST").unwrap(),
@@ -49,10 +49,13 @@ async fn test_vms_return_bad_request_when_only_start_or_end_is_provided() {
                     end: None,
                 },
             )
-            .await;
+            .await
+            .unwrap_err();
 
-        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
-        assert_eq!(response2.status(), StatusCode::BAD_REQUEST);
+        assert_eq!(error.status, StatusCode::BAD_REQUEST);
+        assert_eq!(error.error, ErrorDiscriminants::MissingDateRange);
+        assert_eq!(error2.status, StatusCode::BAD_REQUEST);
+        assert_eq!(error2.error, ErrorDiscriminants::MissingDateRange);
     })
     .await;
 }
@@ -68,7 +71,7 @@ async fn test_vms_returns_the_last_24h_of_data_if_start_and_end_are_missing() {
             .build()
             .await;
 
-        let response = helper
+        let positions = helper
             .app
             .get_vms_positions(
                 &state.vessels[0].fiskeridir.call_sign.clone().unwrap(),
@@ -77,10 +80,9 @@ async fn test_vms_returns_the_last_24h_of_data_if_start_and_end_are_missing() {
                     end: None,
                 },
             )
-            .await;
-        assert_eq!(response.status(), StatusCode::OK);
-        let body: Vec<VmsPosition> = response.json().await.unwrap();
-        assert_eq!(state.vms_positions[1..], body);
+            .await
+            .unwrap();
+        assert_eq!(state.vms_positions[1..], positions);
     })
     .await;
 }
@@ -90,7 +92,7 @@ async fn test_vms_filters_by_start_and_end() {
     test(|helper, builder| async move {
         let state = builder.vessels(1).vms_positions(3).build().await;
 
-        let response = helper
+        let positions = helper
             .app
             .get_vms_positions(
                 &state.vessels[0].fiskeridir.call_sign.clone().unwrap(),
@@ -99,10 +101,9 @@ async fn test_vms_filters_by_start_and_end() {
                     end: Some(state.vms_positions[2].timestamp - Duration::seconds(1)),
                 },
             )
-            .await;
-        assert_eq!(response.status(), StatusCode::OK);
-        let body: Vec<VmsPosition> = response.json().await.unwrap();
-        assert_eq!(state.vms_positions[1..=1], body);
+            .await
+            .unwrap();
+        assert_eq!(state.vms_positions[1..=1], positions);
     })
     .await;
 }

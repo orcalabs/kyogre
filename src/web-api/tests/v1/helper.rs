@@ -24,8 +24,8 @@ use web_api::{
     startup::App,
 };
 
-static TRACING: Once = Once::new();
 static BARENTSWATCH_HELPER: OnceCell<BarentswatchHelper> = OnceCell::const_new();
+static TRACING: Once = Once::new();
 
 //               Lon  Lat
 pub const CL_00_05: (f64, f64) = (13.5, 67.125);
@@ -37,7 +37,6 @@ pub const INSIDE_HAULS_POLYGON: (f64, f64) = (22.089711, 73.858074);
 pub struct TestHelper {
     pub app: ApiClient,
     pub db: TestDb,
-    pub bw_helper: &'static BarentswatchHelper,
     duck_db: Option<duckdb_rs::Client>,
     db_settings: PsqlSettings,
     meilisearch: Option<MeilisearchAdapter<PostgresAdapter>>,
@@ -69,9 +68,8 @@ impl TestHelper {
         tokio::spawn(async { app.run().await.unwrap() });
 
         TestHelper {
-            app: ApiClient::new(address),
+            app: ApiClient::new(address, bw_helper),
             db: TestDb { db },
-            bw_helper,
             duck_db,
             db_settings,
             meilisearch,

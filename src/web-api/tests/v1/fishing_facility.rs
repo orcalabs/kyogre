@@ -2,27 +2,23 @@ use super::helper::test;
 use engine::*;
 use kyogre_core::{FishingFacilitiesSorting, FishingFacilityToolType, Mmsi, Ordering};
 use reqwest::StatusCode;
-use web_api::routes::v1::fishing_facility::{FishingFacilitiesParams, FishingFacility};
+use web_api::routes::v1::fishing_facility::FishingFacilitiesParams;
 
 #[tokio::test]
 async fn test_fishing_facilities_returns_all_fishing_facilities() {
-    test(|helper, builder| async move {
+    test(|mut helper, builder| async move {
         let state = builder.fishing_facilities(3).build().await;
 
-        let token = helper.bw_helper.get_bw_token();
-        let response = helper
-            .app
-            .get_fishing_facilities(
-                FishingFacilitiesParams {
-                    ordering: Some(Ordering::Asc),
-                    ..Default::default()
-                },
-                token,
-            )
-            .await;
+        helper.app.login_user();
 
-        assert_eq!(response.status(), StatusCode::OK);
-        let facilities: Vec<FishingFacility> = response.json().await.unwrap();
+        let facilities = helper
+            .app
+            .get_fishing_facilities(FishingFacilitiesParams {
+                ordering: Some(Ordering::Asc),
+                ..Default::default()
+            })
+            .await
+            .unwrap();
 
         assert_eq!(facilities.len(), 3);
         assert_eq!(facilities, state.fishing_facilities);
@@ -32,7 +28,7 @@ async fn test_fishing_facilities_returns_all_fishing_facilities() {
 
 #[tokio::test]
 async fn test_fishing_facilities_returns_fishing_facilities_with_mmsis() {
-    test(|helper, builder| async move {
+    test(|mut helper, builder| async move {
         let mmsi1 = Mmsi::test_new(42);
         let mmsi2 = Mmsi::test_new(43);
 
@@ -51,11 +47,8 @@ async fn test_fishing_facilities_returns_fishing_facilities_with_mmsis() {
             ..Default::default()
         };
 
-        let token = helper.bw_helper.get_bw_token();
-        let response = helper.app.get_fishing_facilities(params, token).await;
-
-        assert_eq!(response.status(), StatusCode::OK);
-        let mut facilities: Vec<FishingFacility> = response.json().await.unwrap();
+        helper.app.login_user();
+        let mut facilities = helper.app.get_fishing_facilities(params).await.unwrap();
 
         state
             .fishing_facilities
@@ -70,7 +63,7 @@ async fn test_fishing_facilities_returns_fishing_facilities_with_mmsis() {
 
 #[tokio::test]
 async fn test_fishing_facilities_returns_fishing_facilities_with_vessel_ids() {
-    test(|helper, builder| async move {
+    test(|mut helper, builder| async move {
         let state = builder.vessels(2).fishing_facilities(2).build().await;
 
         let params = FishingFacilitiesParams {
@@ -79,11 +72,8 @@ async fn test_fishing_facilities_returns_fishing_facilities_with_vessel_ids() {
             ..Default::default()
         };
 
-        let token = helper.bw_helper.get_bw_token();
-        let response = helper.app.get_fishing_facilities(params, token).await;
-
-        assert_eq!(response.status(), StatusCode::OK);
-        let facilities: Vec<FishingFacility> = response.json().await.unwrap();
+        helper.app.login_user();
+        let facilities = helper.app.get_fishing_facilities(params).await.unwrap();
 
         assert_eq!(facilities.len(), 2);
         assert_eq!(facilities, state.fishing_facilities);
@@ -93,7 +83,7 @@ async fn test_fishing_facilities_returns_fishing_facilities_with_vessel_ids() {
 
 #[tokio::test]
 async fn test_fishing_facilities_returns_fishing_facilities_with_tool_types() {
-    test(|helper, builder| async move {
+    test(|mut helper, builder| async move {
         let state = builder
             .fishing_facilities(5)
             .modify_idx(|i, v| match i {
@@ -113,11 +103,8 @@ async fn test_fishing_facilities_returns_fishing_facilities_with_tool_types() {
             ..Default::default()
         };
 
-        let token = helper.bw_helper.get_bw_token();
-        let response = helper.app.get_fishing_facilities(params, token).await;
-
-        assert_eq!(response.status(), StatusCode::OK);
-        let facilities: Vec<FishingFacility> = response.json().await.unwrap();
+        helper.app.login_user();
+        let facilities = helper.app.get_fishing_facilities(params).await.unwrap();
 
         assert_eq!(facilities.len(), 2);
         assert_eq!(facilities, state.fishing_facilities[0..2]);
@@ -127,7 +114,7 @@ async fn test_fishing_facilities_returns_fishing_facilities_with_tool_types() {
 
 #[tokio::test]
 async fn test_fishing_facilities_returns_active_fishing_facilities() {
-    test(|helper, builder| async move {
+    test(|mut helper, builder| async move {
         let state = builder
             .fishing_facilities(5)
             .modify_idx(|i, v| {
@@ -144,11 +131,8 @@ async fn test_fishing_facilities_returns_active_fishing_facilities() {
             ..Default::default()
         };
 
-        let token = helper.bw_helper.get_bw_token();
-        let response = helper.app.get_fishing_facilities(params, token).await;
-
-        assert_eq!(response.status(), StatusCode::OK);
-        let facilities: Vec<FishingFacility> = response.json().await.unwrap();
+        helper.app.login_user();
+        let facilities = helper.app.get_fishing_facilities(params).await.unwrap();
 
         assert_eq!(facilities.len(), 2);
         assert_eq!(facilities, state.fishing_facilities[0..2]);
@@ -158,7 +142,7 @@ async fn test_fishing_facilities_returns_active_fishing_facilities() {
 
 #[tokio::test]
 async fn test_fishing_facilities_returns_inactive_fishing_facilities() {
-    test(|helper, builder| async move {
+    test(|mut helper, builder| async move {
         let state = builder
             .fishing_facilities(5)
             .modify_idx(|i, v| {
@@ -175,11 +159,8 @@ async fn test_fishing_facilities_returns_inactive_fishing_facilities() {
             ..Default::default()
         };
 
-        let token = helper.bw_helper.get_bw_token();
-        let response = helper.app.get_fishing_facilities(params, token).await;
-
-        assert_eq!(response.status(), StatusCode::OK);
-        let facilities: Vec<FishingFacility> = response.json().await.unwrap();
+        helper.app.login_user();
+        let facilities = helper.app.get_fishing_facilities(params).await.unwrap();
 
         assert_eq!(facilities.len(), 2);
         assert_eq!(facilities, state.fishing_facilities[3..]);
@@ -189,7 +170,7 @@ async fn test_fishing_facilities_returns_inactive_fishing_facilities() {
 
 #[tokio::test]
 async fn test_fishing_facilities_returns_fishing_facilities_in_setup_ranges() {
-    test(|helper, builder| async move {
+    test(|mut helper, builder| async move {
         let setup = "2000-01-10T00:00:00Z".parse().unwrap();
         let setup2 = "2000-01-20T00:00:00Z".parse().unwrap();
 
@@ -216,11 +197,8 @@ async fn test_fishing_facilities_returns_fishing_facilities_in_setup_ranges() {
             ..Default::default()
         };
 
-        let token = helper.bw_helper.get_bw_token();
-        let response = helper.app.get_fishing_facilities(params, token).await;
-
-        assert_eq!(response.status(), StatusCode::OK);
-        let facilities: Vec<FishingFacility> = response.json().await.unwrap();
+        helper.app.login_user();
+        let facilities = helper.app.get_fishing_facilities(params).await.unwrap();
 
         assert_eq!(facilities.len(), 2);
         assert_eq!(facilities, state.fishing_facilities[0..2]);
@@ -230,7 +208,7 @@ async fn test_fishing_facilities_returns_fishing_facilities_in_setup_ranges() {
 
 #[tokio::test]
 async fn test_fishing_facilities_returns_fishing_facilities_in_removed_ranges() {
-    test(|helper, builder| async move {
+    test(|mut helper, builder| async move {
         let removed = "2000-01-10T00:00:00Z".parse().unwrap();
         let removed2 = "2000-01-20T00:00:00Z".parse().unwrap();
 
@@ -257,11 +235,8 @@ async fn test_fishing_facilities_returns_fishing_facilities_in_removed_ranges() 
             ..Default::default()
         };
 
-        let token = helper.bw_helper.get_bw_token();
-        let response = helper.app.get_fishing_facilities(params, token).await;
-
-        assert_eq!(response.status(), StatusCode::OK);
-        let facilities: Vec<FishingFacility> = response.json().await.unwrap();
+        helper.app.login_user();
+        let facilities = helper.app.get_fishing_facilities(params).await.unwrap();
 
         assert_eq!(facilities.len(), 2);
         assert_eq!(facilities, state.fishing_facilities[0..2]);
@@ -272,31 +247,33 @@ async fn test_fishing_facilities_returns_fishing_facilities_in_removed_ranges() 
 #[tokio::test]
 async fn test_fishing_facilities_fails_without_bw_token() {
     test(|helper, _builder| async move {
-        let response = helper
+        let error = helper
             .app
-            .get_fishing_facilities(Default::default(), "".into())
-            .await;
-        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+            .get_fishing_facilities(Default::default())
+            .await
+            .unwrap_err();
+        assert_eq!(error.status, StatusCode::NOT_FOUND);
     })
     .await;
 }
 
 #[tokio::test]
 async fn test_fishing_facilities_fails_without_bw_read_extended_fishing_facility() {
-    test(|helper, _builder| async move {
-        let token = helper.bw_helper.get_bw_token_with_policies(vec![]);
-        let response = helper
+    test(|mut helper, _builder| async move {
+        helper.app.login_user_with_policies(vec![]);
+        let error = helper
             .app
-            .get_fishing_facilities(Default::default(), token)
-            .await;
-        assert_eq!(response.status(), StatusCode::FORBIDDEN);
+            .get_fishing_facilities(Default::default())
+            .await
+            .unwrap_err();
+        assert_eq!(error.status, StatusCode::FORBIDDEN);
     })
     .await;
 }
 
 #[tokio::test]
 async fn test_fishing_facilities_filters_by_limit_and_offset() {
-    test(|helper, builder| async move {
+    test(|mut helper, builder| async move {
         let state = builder.fishing_facilities(8).build().await;
 
         let params = FishingFacilitiesParams {
@@ -306,11 +283,8 @@ async fn test_fishing_facilities_filters_by_limit_and_offset() {
             ..Default::default()
         };
 
-        let token = helper.bw_helper.get_bw_token();
-        let response = helper.app.get_fishing_facilities(params, token).await;
-
-        assert_eq!(response.status(), StatusCode::OK);
-        let facilities: Vec<FishingFacility> = response.json().await.unwrap();
+        helper.app.login_user();
+        let facilities = helper.app.get_fishing_facilities(params).await.unwrap();
 
         assert_eq!(facilities.len(), 3);
         assert_eq!(facilities, state.fishing_facilities[2..5]);
@@ -320,7 +294,7 @@ async fn test_fishing_facilities_filters_by_limit_and_offset() {
 
 #[tokio::test]
 async fn test_fishing_facilities_sorts_by_removed_timestamp() {
-    test(|helper, builder| async move {
+    test(|mut helper, builder| async move {
         let mut state = builder.fishing_facilities(3).build().await;
 
         let params = FishingFacilitiesParams {
@@ -329,11 +303,8 @@ async fn test_fishing_facilities_sorts_by_removed_timestamp() {
             ..Default::default()
         };
 
-        let token = helper.bw_helper.get_bw_token();
-        let response = helper.app.get_fishing_facilities(params, token).await;
-
-        assert_eq!(response.status(), StatusCode::OK);
-        let facilities: Vec<FishingFacility> = response.json().await.unwrap();
+        helper.app.login_user();
+        let facilities = helper.app.get_fishing_facilities(params).await.unwrap();
 
         state
             .fishing_facilities
@@ -347,7 +318,7 @@ async fn test_fishing_facilities_sorts_by_removed_timestamp() {
 
 #[tokio::test]
 async fn test_fishing_facilities_sorts_by_last_changed() {
-    test(|helper, builder| async move {
+    test(|mut helper, builder| async move {
         let mut state = builder.fishing_facilities(3).build().await;
         let params = FishingFacilitiesParams {
             ordering: Some(Ordering::Asc),
@@ -355,11 +326,8 @@ async fn test_fishing_facilities_sorts_by_last_changed() {
             ..Default::default()
         };
 
-        let token = helper.bw_helper.get_bw_token();
-        let response = helper.app.get_fishing_facilities(params, token).await;
-
-        assert_eq!(response.status(), StatusCode::OK);
-        let facilities: Vec<FishingFacility> = response.json().await.unwrap();
+        helper.app.login_user();
+        let facilities = helper.app.get_fishing_facilities(params).await.unwrap();
 
         state.fishing_facilities.sort_by_key(|f| f.last_changed);
 

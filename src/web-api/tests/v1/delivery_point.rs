@@ -2,19 +2,13 @@ use super::helper::test;
 use engine::*;
 use fiskeridir_rs::DeliveryPointId;
 use kyogre_core::*;
-use reqwest::StatusCode;
-use web_api::routes::v1::{delivery_point::DeliveryPoint, landing::Landing};
 
 #[tokio::test]
 async fn test_delivery_points_returns_aqua_culture_register() {
     test(|helper, builder| async move {
         let state = builder.aqua_cultures(3).build().await;
 
-        let response = helper.app.get_delivery_points().await;
-
-        assert_eq!(response.status(), StatusCode::OK);
-        let mut dps: Vec<DeliveryPoint> = response.json().await.unwrap();
-
+        let mut dps = helper.app.get_delivery_points().await.unwrap();
         dps.retain(|v| state.delivery_points.iter().any(|d| d.id == v.id));
         dps.sort_by_key(|d| d.id.clone());
 
@@ -29,11 +23,7 @@ async fn test_delivery_points_returns_mattilsynet_delivery_points() {
     test(|helper, builder| async move {
         let state = builder.mattilsynet(3).build().await;
 
-        let response = helper.app.get_delivery_points().await;
-
-        assert_eq!(response.status(), StatusCode::OK);
-        let mut dps: Vec<DeliveryPoint> = response.json().await.unwrap();
-
+        let mut dps = helper.app.get_delivery_points().await.unwrap();
         dps.retain(|v| state.delivery_points.iter().any(|d| d.id == v.id));
         dps.sort_by_key(|d| d.id.clone());
 
@@ -46,11 +36,7 @@ async fn test_delivery_points_returns_mattilsynet_delivery_points() {
 #[tokio::test]
 async fn test_delivery_points_returns_manual_delivery_points() {
     test(|helper, _builder| async move {
-        let response = helper.app.get_delivery_points().await;
-
-        assert_eq!(response.status(), StatusCode::OK);
-        let dps: Vec<DeliveryPoint> = response.json().await.unwrap();
-
+        let dps = helper.app.get_delivery_points().await.unwrap();
         assert_eq!(dps.len(), 331);
     })
     .await;
@@ -80,10 +66,7 @@ async fn test_delivery_points_prioritizes_manual_entries() {
             .build()
             .await;
 
-        let response = helper.app.get_delivery_points().await;
-
-        assert_eq!(response.status(), StatusCode::OK);
-        let mut dps: Vec<DeliveryPoint> = response.json().await.unwrap();
+        let mut dps = helper.app.get_delivery_points().await.unwrap();
         dps.retain(|v| v.id == id);
 
         assert_eq!(dps.len(), 1);
@@ -120,11 +103,7 @@ async fn test_delivery_points_adds_to_log_when_updated() {
             .build()
             .await;
 
-        let response = helper.app.get_delivery_points().await;
-
-        assert_eq!(response.status(), StatusCode::OK);
-
-        let mut dps: Vec<DeliveryPoint> = response.json().await.unwrap();
+        let mut dps = helper.app.get_delivery_points().await.unwrap();
         dps.retain(|v| v.id == state.delivery_points[0].id);
 
         assert_eq!(dps.len(), 1);
@@ -184,10 +163,7 @@ async fn test_delivery_points_doesnt_add_to_log_when_updated_without_change() {
             .build()
             .await;
 
-        let response = helper.app.get_delivery_points().await;
-
-        assert_eq!(response.status(), StatusCode::OK);
-        let mut dps: Vec<DeliveryPoint> = response.json().await.unwrap();
+        let mut dps = helper.app.get_delivery_points().await.unwrap();
         dps.retain(|v| v.id == state.delivery_points[0].id);
 
         assert_eq!(dps.len(), 1);
@@ -257,10 +233,7 @@ async fn test_landings_respect_delivery_point_deprecation() {
             .await
             .unwrap();
 
-        let response = helper.app.get_landings(Default::default()).await;
-
-        assert_eq!(response.status(), StatusCode::OK);
-        let landings: Vec<Landing> = response.json().await.unwrap();
+        let landings = helper.app.get_landings(Default::default()).await.unwrap();
 
         assert_eq!(landings.len(), 1);
         assert_eq!(landings[0].delivery_point_id, Some(new));

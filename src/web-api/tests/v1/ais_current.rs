@@ -2,10 +2,9 @@ use super::helper::test;
 use chrono::{Duration, TimeZone, Utc};
 use engine::*;
 use kyogre_core::*;
-use reqwest::StatusCode;
 use web_api::{
     extractors::{BwPolicy, BwRole},
-    routes::v1::ais::{AisCurrentPositionParameters, AisPosition},
+    routes::v1::ais::AisCurrentPositionParameters,
 };
 
 #[tokio::test]
@@ -25,19 +24,15 @@ async fn test_ais_current_does_not_return_positions_of_leisure_vessels_under_45_
             .build()
             .await;
 
-        let response = helper
+        let positions = helper
             .app
-            .get_ais_current(
-                AisCurrentPositionParameters {
-                    position_timestamp_limit: None,
-                },
-                None,
-            )
-            .await;
+            .get_ais_current(AisCurrentPositionParameters {
+                position_timestamp_limit: None,
+            })
+            .await
+            .unwrap();
 
-        assert_eq!(response.status(), StatusCode::OK);
-        let body: Vec<AisPosition> = response.json().await.unwrap();
-        assert!(body.is_empty());
+        assert!(positions.is_empty());
     })
     .await;
 }
@@ -56,20 +51,15 @@ async fn test_ais_current_does_not_return_positions_of_vessel_with_unknown_ship_
             .build()
             .await;
 
-        let response = helper
+        let positions = helper
             .app
-            .get_ais_current(
-                AisCurrentPositionParameters {
-                    position_timestamp_limit: None,
-                },
-                None,
-            )
-            .await;
+            .get_ais_current(AisCurrentPositionParameters {
+                position_timestamp_limit: None,
+            })
+            .await
+            .unwrap();
 
-        assert_eq!(response.status(), StatusCode::OK);
-        let body: Vec<AisPosition> = response.json().await.unwrap();
-
-        assert!(body.is_empty());
+        assert!(positions.is_empty());
     })
     .await;
 }
@@ -88,20 +78,15 @@ async fn test_ais_current_prioritizes_fiskeridir_length_over_ais_length_in_leisu
             .build()
             .await;
 
-        let response = helper
+        let positions = helper
             .app
-            .get_ais_current(
-                AisCurrentPositionParameters {
-                    position_timestamp_limit: None,
-                },
-                None,
-            )
-            .await;
+            .get_ais_current(AisCurrentPositionParameters {
+                position_timestamp_limit: None,
+            })
+            .await
+            .unwrap();
 
-        assert_eq!(response.status(), StatusCode::OK);
-        let body: Vec<AisPosition> = response.json().await.unwrap();
-
-        assert_eq!(1, body.len());
+        assert_eq!(1, positions.len());
     })
     .await;
 }
@@ -122,26 +107,22 @@ async fn test_ais_current_does_not_return_positions_for_vessels_under_15m_withou
             .build()
             .await;
 
-        let response = helper
+        let positions = helper
             .app
-            .get_ais_current(
-                AisCurrentPositionParameters {
-                    position_timestamp_limit: None,
-                },
-                None,
-            )
-            .await;
+            .get_ais_current(AisCurrentPositionParameters {
+                position_timestamp_limit: None,
+            })
+            .await
+            .unwrap();
 
-        assert_eq!(response.status(), StatusCode::OK);
-        let body: Vec<AisPosition> = response.json().await.unwrap();
-        assert!(body.is_empty());
+        assert!(positions.is_empty());
     })
     .await;
 }
 
 #[tokio::test]
 async fn test_ais_current_return_positions_for_vessels_under_15m_with_full_ais_permission() {
-    test(|helper, builder| async move {
+    test(|mut helper, builder| async move {
         let pos_timestamp = Utc.timestamp_opt(1000, 0).unwrap();
         builder
             .vessels(1)
@@ -155,20 +136,17 @@ async fn test_ais_current_return_positions_for_vessels_under_15m_with_full_ais_p
             .build()
             .await;
 
-        let response = helper
+        helper.app.login_user_with_full_ais_permissions();
+
+        let positions = helper
             .app
-            .get_ais_current(
-                AisCurrentPositionParameters {
-                    position_timestamp_limit: None,
-                },
-                Some(helper.bw_helper.get_bw_token_with_full_ais_permission()),
-            )
-            .await;
+            .get_ais_current(AisCurrentPositionParameters {
+                position_timestamp_limit: None,
+            })
+            .await
+            .unwrap();
 
-        assert_eq!(response.status(), StatusCode::OK);
-        let body: Vec<AisPosition> = response.json().await.unwrap();
-
-        assert!(!body.is_empty());
+        assert!(!positions.is_empty());
     })
     .await;
 }
@@ -176,7 +154,7 @@ async fn test_ais_current_return_positions_for_vessels_under_15m_with_full_ais_p
 #[tokio::test]
 async fn test_ais_current_does_not_return_positions_for_vessels_under_15m_with_correct_roles_but_missing_policy(
 ) {
-    test(|helper, builder| async move {
+    test(|mut helper, builder| async move {
         let pos_timestamp = Utc.timestamp_opt(1000, 0).unwrap();
         builder
             .vessels(1)
@@ -190,23 +168,20 @@ async fn test_ais_current_does_not_return_positions_for_vessels_under_15m_with_c
             .build()
             .await;
 
-        let response = helper
+        helper.app.login_user_with_policies_and_roles(
+            vec![BwPolicy::Other],
+            vec![BwRole::BwFiskinfoAdmin],
+        );
+
+        let positions = helper
             .app
-            .get_ais_current(
-                AisCurrentPositionParameters {
-                    position_timestamp_limit: None,
-                },
-                Some(helper.bw_helper.get_bw_token_with_policies_and_roles(
-                    vec![BwPolicy::Other],
-                    vec![BwRole::BwFiskinfoAdmin],
-                )),
-            )
-            .await;
+            .get_ais_current(AisCurrentPositionParameters {
+                position_timestamp_limit: None,
+            })
+            .await
+            .unwrap();
 
-        assert_eq!(response.status(), StatusCode::OK);
-        let body: Vec<AisPosition> = response.json().await.unwrap();
-
-        assert!(body.is_empty());
+        assert!(positions.is_empty());
     })
     .await;
 }
@@ -214,7 +189,7 @@ async fn test_ais_current_does_not_return_positions_for_vessels_under_15m_with_c
 #[tokio::test]
 async fn test_ais_current_does_not_return_positions_for_vessels_under_15m_with_correct_policy_but_missing_role(
 ) {
-    test(|helper, builder| async move {
+    test(|mut helper, builder| async move {
         let pos_timestamp = Utc.timestamp_opt(1000, 0).unwrap();
         builder
             .vessels(1)
@@ -228,23 +203,19 @@ async fn test_ais_current_does_not_return_positions_for_vessels_under_15m_with_c
             .build()
             .await;
 
-        let response = helper
+        helper
             .app
-            .get_ais_current(
-                AisCurrentPositionParameters {
-                    position_timestamp_limit: None,
-                },
-                Some(helper.bw_helper.get_bw_token_with_policies_and_roles(
-                    vec![BwPolicy::BwAisFiskinfo],
-                    vec![BwRole::Other],
-                )),
-            )
-            .await;
+            .login_user_with_policies_and_roles(vec![BwPolicy::BwAisFiskinfo], vec![BwRole::Other]);
 
-        assert_eq!(response.status(), StatusCode::OK);
-        let body: Vec<AisPosition> = response.json().await.unwrap();
+        let positions = helper
+            .app
+            .get_ais_current(AisCurrentPositionParameters {
+                position_timestamp_limit: None,
+            })
+            .await
+            .unwrap();
 
-        assert!(body.is_empty());
+        assert!(positions.is_empty());
     })
     .await;
 }
@@ -266,21 +237,16 @@ async fn test_ais_current_filters_by_limit() {
             .build()
             .await;
 
-        let response = helper
+        let positions = helper
             .app
-            .get_ais_current(
-                AisCurrentPositionParameters {
-                    position_timestamp_limit: Some(limit),
-                },
-                None,
-            )
-            .await;
+            .get_ais_current(AisCurrentPositionParameters {
+                position_timestamp_limit: Some(limit),
+            })
+            .await
+            .unwrap();
 
-        assert_eq!(response.status(), StatusCode::OK);
-        let body: Vec<AisPosition> = response.json().await.unwrap();
-
-        assert_eq!(body.len(), 1);
-        assert_eq!(body[0], state.ais_positions[0]);
+        assert_eq!(positions.len(), 1);
+        assert_eq!(positions[0], state.ais_positions[0]);
     })
     .await;
 }
