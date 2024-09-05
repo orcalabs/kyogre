@@ -1,18 +1,24 @@
-use error_stack::Context;
+use snafu::{Location, Snafu};
+use stack_error::StackError;
 
-#[derive(Debug)]
-pub enum MigratorError {
-    Source,
-    Destination,
-}
+pub type Result<T> = std::result::Result<T, Error>;
 
-impl Context for MigratorError {}
-
-impl std::fmt::Display for MigratorError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            MigratorError::Source => f.write_str("an error occurred at the ais source"),
-            MigratorError::Destination => f.write_str("an error occurred at the ais destination"),
-        }
-    }
+#[derive(Snafu, StackError)]
+pub enum Error {
+    #[snafu(display("Source error"))]
+    #[stack_error(skip_from_impls)]
+    Source {
+        #[snafu(implicit)]
+        location: Location,
+        #[snafu(source)]
+        error: kyogre_core::Error,
+    },
+    #[snafu(display("Destination error"))]
+    #[stack_error(skip_from_impls)]
+    Destination {
+        #[snafu(implicit)]
+        location: Location,
+        #[snafu(source)]
+        error: kyogre_core::Error,
+    },
 }
