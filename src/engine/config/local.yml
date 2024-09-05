@@ -1,4 +1,4 @@
-log_level: Debug
+log_level: Info
 num_workers: 8
 tracing_mode: Regular
 fishing_predictors:

@@ -28,11 +28,11 @@ impl Settings {
             .try_into()
             .unwrap_or(Environment::Test);
 
+        let environment = environment.as_str().to_lowercase();
+
         Config::builder()
-            .add_source(
-                File::with_name(&format!("config/{}", environment.as_str().to_lowercase()))
-                    .required(true),
-            )
+            .add_source(File::with_name(&format!("config/{}", environment)).required(true))
+            .add_source(File::with_name(&format!("config/{}.secret", environment)).required(false))
             .add_source(
                 config::Environment::with_prefix("KYOGRE_AIS_DATA_MIGRATOR").separator("__"),
             )
