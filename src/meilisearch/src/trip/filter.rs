@@ -6,11 +6,11 @@ use crate::{
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::{GearGroup, LandingId, SpeciesGroup, VesselLengthGroup};
 use kyogre_core::{FiskeridirVesselId, HaulId, MinMaxBoth, TripSorting};
-use strum_macros::{EnumDiscriminants, EnumIter};
+use strum::{EnumDiscriminants, EnumIter};
 
-#[derive(Debug, Clone, EnumDiscriminants, strum_macros::Display)]
+#[derive(Debug, Clone, EnumDiscriminants, strum::Display)]
 #[strum_discriminants(
-    derive(EnumIter, PartialOrd, Ord, strum_macros::Display),
+    derive(EnumIter, PartialOrd, Ord, strum::Display),
     strum(serialize_all = "snake_case")
 )]
 #[strum(serialize_all = "snake_case")]
@@ -27,7 +27,7 @@ pub enum TripFilter {
     LandingIds(LandingId),
 }
 
-#[derive(Debug, Clone, Copy, EnumIter, strum_macros::Display)]
+#[derive(Debug, Clone, Copy, EnumIter, strum::Display)]
 #[strum(serialize_all = "snake_case")]
 pub enum TripSort {
     End,

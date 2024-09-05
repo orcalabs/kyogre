@@ -1,12 +1,13 @@
+use std::sync::LazyLock;
+
 use crate::error::Result;
 use actix_web::{body::BoxBody, web::Bytes, HttpRequest, HttpResponse, Responder};
 use chrono::Duration;
-use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-pub static AIS_DETAILS_INTERVAL: Lazy<Duration> = Lazy::new(|| Duration::minutes(30));
-pub static MISSING_DATA_DURATION: Lazy<Duration> = Lazy::new(|| Duration::minutes(70));
+pub static AIS_DETAILS_INTERVAL: LazyLock<Duration> = LazyLock::new(|| Duration::minutes(30));
+pub static MISSING_DATA_DURATION: LazyLock<Duration> = LazyLock::new(|| Duration::minutes(70));
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct Response<T> {

@@ -1,11 +1,12 @@
+use std::sync::OnceLock;
+
 use config::{Config, ConfigError, File};
-use once_cell::sync::OnceCell;
 use orca_core::{Environment, LogLevel, PsqlSettings, TelemetrySettings};
 use serde::Deserialize;
 
 use crate::cache::CacheErrorMode;
 
-pub static BW_PROFILES_URL: OnceCell<String> = OnceCell::new();
+pub static BW_PROFILES_URL: OnceLock<String> = OnceLock::new();
 
 #[derive(Debug, Deserialize)]
 pub struct Settings {

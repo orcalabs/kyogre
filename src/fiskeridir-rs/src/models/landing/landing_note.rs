@@ -16,7 +16,7 @@ use num_derive::FromPrimitive;
 use serde::Deserialize;
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use std::str::FromStr;
-use strum_macros::{AsRefStr, EnumIter, EnumString};
+use strum::{AsRefStr, EnumIter, EnumString};
 
 /// Catch data from Fiskeridirektoratet
 #[remain::sorted]
