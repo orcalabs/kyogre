@@ -5,6 +5,7 @@ use crate::{
     },
     settings::Auth0Settings,
 };
+use http_client::HttpClient;
 use jsonwebtoken::{
     decode, decode_header, jwk::JwkSet, Algorithm, DecodingKey, TokenData, Validation,
 };
@@ -20,7 +21,9 @@ pub enum Auth0State {
 impl Auth0State {
     pub async fn new(settings: Option<&Auth0Settings>) -> Self {
         if let Some(settings) = settings {
-            let jwk_set: JwkSet = reqwest::get(&settings.jwk_url)
+            let jwk_set: JwkSet = HttpClient::new()
+                .get(&settings.jwk_url)
+                .send()
                 .await
                 .unwrap()
                 .json()

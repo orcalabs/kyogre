@@ -1,15 +1,17 @@
-use super::{BarentswatchSource, FishingFacilityToolType};
-use crate::{ApiClientConfig, DataSource, Error, Processor, Result, ScraperId};
+use std::{cmp, sync::Arc};
+
 use async_trait::async_trait;
 use chrono::{DateTime, Duration, Utc};
 use fiskeridir_rs::CallSign;
 use geozero::{geojson::GeoJson, ToGeo};
 use kyogre_core::{BearerToken, FishingFacilityApiSource, GeometryWkt, Mmsi};
 use serde::{Deserialize, Serialize};
-use std::{cmp, sync::Arc};
 use tracing::info;
 use uuid::Uuid;
 use wkt::ToWkt;
+
+use super::{BarentswatchSource, FishingFacilityToolType};
+use crate::{ApiClientConfig, DataSource, Error, Processor, Result, ScraperId};
 
 pub struct FishingFacilityScraper {
     config: Option<ApiClientConfig>,
@@ -54,7 +56,7 @@ impl DataSource for FishingFacilityScraper {
             let response = self
                 .barentswatch_source
                 .client
-                .download::<FishingFacilityResponse, _>(&config.url, Some(&query), token)
+                .download::<FishingFacilityResponse>(&config.url, Some(&query), token)
                 .await?;
 
             let facilities = response

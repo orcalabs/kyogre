@@ -1,0 +1,23 @@
+[package]
+name = "http-client"
+version = "0.1.0"
+edition = "2021"
+
+[features]
+default = ["reqwest/rustls-tls"]
+
+[dependencies]
+snafu = { workspace = true }
+stack-error = { workspace = true }
+serde = { workspace = true }
+http = { workspace = true }
+futures = { workspace = true }
+reqwest = { workspace = true, default-features = false, features = [
+    "json",
+    "gzip",
+    "stream",
+] }
+reqwest-middleware = { version = "0.3", features = ["json"] }
+reqwest-retry = "0.5"
+reqwest-tracing = "0.5"
+bytes = "1.7"

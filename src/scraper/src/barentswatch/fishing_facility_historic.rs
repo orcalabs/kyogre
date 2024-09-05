@@ -54,7 +54,7 @@ impl DataSource for FishingFacilityHistoricScraper {
             let facilities = self
                 .barentswatch_source
                 .client
-                .download::<Vec<FishingFacilityHistoric>, _>(&url, None::<&()>, token)
+                .download::<Vec<FishingFacilityHistoric>>(&url, None::<&()>, token)
                 .await?
                 .into_iter()
                 .map(kyogre_core::FishingFacility::try_from)

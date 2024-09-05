@@ -1,16 +1,15 @@
 use std::pin::Pin;
 
-use actix_web::FromRequest;
+use actix_web::{web::Data, FromRequest};
 use futures::Future;
+use http_client::{HttpClient, StatusCode};
 use kyogre_core::{AisPermission, BarentswatchUserId};
-use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 use snafu::ResultExt;
 use strum::EnumIter;
 
 use crate::{
     error::{
-        bw_error::ProfileSnafu,
         error::{InvalidJWTSnafu, MissingJWTSnafu, ParseJWTSnafu},
         Error,
     },
@@ -91,6 +90,9 @@ impl FromRequest for BwProfile {
         req: &actix_web::HttpRequest,
         _payload: &mut actix_web::dev::Payload,
     ) -> Self::Future {
+        // `HttpClient` should be provided on startup, so `unwrap` is safe
+        let client = req.app_data::<Data<HttpClient>>().unwrap().clone();
+
         let token = req
             .headers()
             .get("bw-token")
@@ -103,31 +105,20 @@ impl FromRequest for BwProfile {
 
             // This should always be set on application startup
             let url = BW_PROFILES_URL.get().unwrap();
-            let client = reqwest::Client::new();
 
             let response = client
                 .get(url)
                 .header("Authorization", format!("Bearer {token}"))
                 .send()
+                .await
+                .map_err(|e| match e.status() {
+                    Some(StatusCode::UNAUTHORIZED) => InvalidJWTSnafu.build(),
+                    _ => e.into(),
+                })?
+                .json()
                 .await?;
-            let status = response.status();
-            match status {
-                StatusCode::OK => {}
-                StatusCode::UNAUTHORIZED => return InvalidJWTSnafu.fail(),
-                _ => {
-                    return Err(ProfileSnafu {
-                        url,
-                        status,
-                        body: response.text().await?,
-                    }
-                    .build()
-                    .into());
-                }
-            }
 
-            let text = response.text().await?;
-
-            Ok(serde_json::from_str(&text)?)
+            Ok(response)
         })
     }
 }

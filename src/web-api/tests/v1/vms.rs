@@ -2,7 +2,7 @@ use crate::v1::helper::test;
 use chrono::{Duration, TimeZone, Utc};
 use engine::*;
 use fiskeridir_rs::CallSign;
-use reqwest::StatusCode;
+use http_client::StatusCode;
 use web_api::{error::ErrorDiscriminants, routes::v1::vms::VmsParameters};
 
 #[tokio::test]
