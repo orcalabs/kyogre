@@ -3,8 +3,7 @@ use chrono::{Duration, TimeZone, Utc};
 use engine::*;
 use fiskeridir_rs::Gear;
 use kyogre_core::{FiskeridirVesselId, ScraperInboundPort, VesselEventType};
-use reqwest::StatusCode;
-use web_api::routes::v1::trip::{Trip, TripsParameters};
+use web_api::routes::v1::trip::TripsParameters;
 
 #[tokio::test]
 async fn test_trips_does_not_contain_duplicated_tra_events() {
@@ -39,10 +38,11 @@ async fn test_trips_does_not_contain_duplicated_tra_events() {
 
         helper.refresh_cache().await;
 
-        let response = helper.app.get_trips(TripsParameters::default(), None).await;
-        assert_eq!(response.status(), StatusCode::OK);
-
-        let trips: Vec<Trip> = response.json().await.unwrap();
+        let trips = helper
+            .app
+            .get_trips(TripsParameters::default())
+            .await
+            .unwrap();
         assert_eq!(trips.len(), 1);
         assert_eq!(trips[0].events.len(), 3);
         assert_eq!(trips[0].events[1].event_type, VesselEventType::ErsTra);
@@ -89,10 +89,11 @@ async fn test_trips_does_not_contain_duplicated_dca_events() {
 
         helper.refresh_cache().await;
 
-        let response = helper.app.get_trips(TripsParameters::default(), None).await;
-        assert_eq!(response.status(), StatusCode::OK);
-
-        let trips: Vec<Trip> = response.json().await.unwrap();
+        let trips = helper
+            .app
+            .get_trips(TripsParameters::default())
+            .await
+            .unwrap();
         assert_eq!(trips.len(), 1);
         assert_eq!(trips[0].events.len(), 4);
         assert_eq!(trips[0].events[1].event_type, VesselEventType::ErsDca);
@@ -125,10 +126,11 @@ async fn test_vessel_events_connect_to_existing_trip() {
 
         helper.refresh_cache().await;
 
-        let response = helper.app.get_trips(TripsParameters::default(), None).await;
-        assert_eq!(response.status(), StatusCode::OK);
-
-        let trips: Vec<Trip> = response.json().await.unwrap();
+        let trips = helper
+            .app
+            .get_trips(TripsParameters::default())
+            .await
+            .unwrap();
 
         assert_eq!(trips.len(), 1);
         assert_eq!(trips[0].events.len(), 7);

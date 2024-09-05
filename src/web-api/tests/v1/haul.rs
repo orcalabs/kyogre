@@ -3,8 +3,7 @@ use chrono::{DateTime, Utc};
 use engine::*;
 use fiskeridir_rs::{ErsDca, GearGroup, SpeciesGroup, VesselLengthGroup};
 use kyogre_core::{AirTemperature, FiskeridirVesselId, HaulsSorting, Ordering, WindSpeed};
-use reqwest::StatusCode;
-use web_api::routes::v1::haul::{Haul, HaulsParams};
+use web_api::routes::v1::haul::HaulsParams;
 
 #[tokio::test]
 async fn test_hauls_returns_all_hauls() {
@@ -13,10 +12,7 @@ async fn test_hauls_returns_all_hauls() {
 
         helper.refresh_cache().await;
 
-        let response = helper.app.get_hauls(Default::default()).await;
-
-        assert_eq!(response.status(), StatusCode::OK);
-        let hauls: Vec<Haul> = response.json().await.unwrap();
+        let hauls = helper.app.get_hauls(Default::default()).await.unwrap();
 
         assert_eq!(hauls.len(), 3);
         assert_eq!(hauls, state.hauls)
@@ -53,10 +49,7 @@ async fn test_hauls_returns_hauls_in_specified_months() {
             ..Default::default()
         };
 
-        let response = helper.app.get_hauls(params).await;
-
-        assert_eq!(response.status(), StatusCode::OK);
-        let hauls: Vec<Haul> = response.json().await.unwrap();
+        let hauls = helper.app.get_hauls(params).await.unwrap();
 
         assert_eq!(hauls.len(), 2);
         assert_eq!(hauls, state.hauls[0..2])
@@ -93,11 +86,7 @@ async fn test_hauls_returns_hauls_in_catch_location() {
             ..Default::default()
         };
 
-        let response = helper.app.get_hauls(params).await;
-
-        assert_eq!(response.status(), StatusCode::OK);
-
-        let hauls: Vec<Haul> = response.json().await.unwrap();
+        let hauls = helper.app.get_hauls(params).await.unwrap();
 
         assert_eq!(hauls.len(), 2);
         assert_eq!(hauls, state.hauls[0..2]);
@@ -129,10 +118,7 @@ async fn test_hauls_returns_hauls_with_gear_group_ids() {
             ..Default::default()
         };
 
-        let response = helper.app.get_hauls(params).await;
-
-        assert_eq!(response.status(), StatusCode::OK);
-        let hauls: Vec<Haul> = response.json().await.unwrap();
+        let hauls = helper.app.get_hauls(params).await.unwrap();
 
         assert_eq!(hauls.len(), 2);
         assert_eq!(hauls, state.hauls[0..2]);
@@ -167,10 +153,7 @@ async fn test_hauls_returns_hauls_with_species_group_ids() {
             ..Default::default()
         };
 
-        let response = helper.app.get_hauls(params).await;
-
-        assert_eq!(response.status(), StatusCode::OK);
-        let hauls: Vec<Haul> = response.json().await.unwrap();
+        let hauls = helper.app.get_hauls(params).await.unwrap();
 
         assert_eq!(hauls.len(), 2);
         assert_eq!(hauls, state.hauls[0..2]);
@@ -205,10 +188,7 @@ async fn test_hauls_returns_hauls_with_vessel_length_groups() {
             ..Default::default()
         };
 
-        let response = helper.app.get_hauls(params).await;
-
-        assert_eq!(response.status(), StatusCode::OK);
-        let hauls: Vec<Haul> = response.json().await.unwrap();
+        let hauls = helper.app.get_hauls(params).await.unwrap();
 
         assert_eq!(hauls.len(), 2);
         assert_eq!(hauls, state.hauls[0..2]);
@@ -238,10 +218,7 @@ async fn test_hauls_returns_hauls_with_fiskeridir_vessel_ids() {
             ..Default::default()
         };
 
-        let response = helper.app.get_hauls(params).await;
-
-        assert_eq!(response.status(), StatusCode::OK);
-        let hauls: Vec<Haul> = response.json().await.unwrap();
+        let hauls = helper.app.get_hauls(params).await.unwrap();
 
         assert_eq!(hauls.len(), 2);
         assert_eq!(hauls, state.hauls[0..2]);
@@ -268,10 +245,7 @@ async fn test_hauls_filters_by_wind_speed() {
             ..Default::default()
         };
 
-        let response = helper.app.get_hauls(params).await;
-
-        assert_eq!(response.status(), StatusCode::OK);
-        let hauls: Vec<Haul> = response.json().await.unwrap();
+        let hauls = helper.app.get_hauls(params).await.unwrap();
 
         assert_eq!(hauls.len(), 2);
         assert_eq!(hauls, state.hauls[1..=2]);
@@ -300,10 +274,7 @@ async fn test_hauls_filters_by_air_temperature() {
             ..Default::default()
         };
 
-        let response = helper.app.get_hauls(params).await;
-
-        assert_eq!(response.status(), StatusCode::OK);
-        let hauls: Vec<Haul> = response.json().await.unwrap();
+        let hauls = helper.app.get_hauls(params).await.unwrap();
 
         assert_eq!(hauls.len(), 2);
         assert_eq!(hauls, state.hauls[1..=2]);
@@ -324,10 +295,7 @@ async fn test_hauls_sorts_by_start_timestamp() {
             ..Default::default()
         };
 
-        let response = helper.app.get_hauls(params).await;
-
-        assert_eq!(response.status(), StatusCode::OK);
-        let hauls: Vec<Haul> = response.json().await.unwrap();
+        let hauls = helper.app.get_hauls(params).await.unwrap();
 
         assert_eq!(hauls.len(), 4);
         assert_eq!(hauls, state.hauls);
@@ -347,10 +315,7 @@ async fn test_hauls_sorts_by_stop_timestamp() {
 
         helper.refresh_cache().await;
 
-        let response = helper.app.get_hauls(params).await;
-
-        assert_eq!(response.status(), StatusCode::OK);
-        let hauls: Vec<Haul> = response.json().await.unwrap();
+        let hauls = helper.app.get_hauls(params).await.unwrap();
 
         assert_eq!(hauls.len(), 4);
         assert_eq!(hauls, state.hauls);
@@ -375,10 +340,7 @@ async fn test_hauls_sorts_by_weight() {
             ..Default::default()
         };
 
-        let response = helper.app.get_hauls(params).await;
-
-        assert_eq!(response.status(), StatusCode::OK);
-        let hauls: Vec<Haul> = response.json().await.unwrap();
+        let hauls = helper.app.get_hauls(params).await.unwrap();
 
         state.hauls.sort_by_key(|v| v.total_living_weight);
 
@@ -399,10 +361,7 @@ async fn test_hauls_species_fiskeridir_defaults_to_zero() {
 
         helper.refresh_cache().await;
 
-        let response = helper.app.get_hauls(Default::default()).await;
-
-        assert_eq!(response.status(), StatusCode::OK);
-        let hauls: Vec<Haul> = response.json().await.unwrap();
+        let hauls = helper.app.get_hauls(Default::default()).await.unwrap();
 
         assert_eq!(hauls.len(), 1);
         assert_eq!(hauls, state.hauls);

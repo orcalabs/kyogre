@@ -8,11 +8,7 @@ use kyogre_core::{
     landing_date_feature_matrix_index, ActiveLandingFilter, CatchLocationId, HaulMatrixes,
     LandingMatrixes, NUM_CATCH_LOCATIONS,
 };
-use reqwest::StatusCode;
-use web_api::routes::{
-    utils::datetime_to_month,
-    v1::landing::{LandingMatrix, LandingMatrixParams},
-};
+use web_api::routes::{utils::datetime_to_month, v1::landing::LandingMatrixParams};
 
 #[tokio::test]
 async fn test_landing_matrix_returns_correct_sum_for_all_landings() {
@@ -31,13 +27,11 @@ async fn test_landing_matrix_returns_correct_sum_for_all_landings() {
 
         helper.refresh_matrix_cache().await;
 
-        let response = helper
+        let matrix = helper
             .app
             .get_landing_matrix(LandingMatrixParams::default(), filter)
-            .await;
-
-        assert_eq!(response.status(), StatusCode::OK);
-        let matrix: LandingMatrix = response.json().await.unwrap();
+            .await
+            .unwrap();
 
         assert_landing_matrix_content(&matrix, filter, 60, vec![]);
     })
@@ -71,10 +65,7 @@ async fn test_landing_matrix_filters_by_catch_locations() {
 
         helper.refresh_matrix_cache().await;
 
-        let response = helper.app.get_landing_matrix(params, filter).await;
-
-        assert_eq!(response.status(), StatusCode::OK);
-        let matrix: LandingMatrix = response.json().await.unwrap();
+        let matrix = helper.app.get_landing_matrix(params, filter).await.unwrap();
         assert_landing_matrix_content(&matrix, filter, 20, vec![(LandingMatrixes::GearGroup, 160)]);
     })
     .await;
@@ -112,10 +103,7 @@ async fn test_landing_matrix_filters_by_months() {
 
         helper.refresh_matrix_cache().await;
 
-        let response = helper.app.get_landing_matrix(params, filter).await;
-
-        assert_eq!(response.status(), StatusCode::OK);
-        let matrix: LandingMatrix = response.json().await.unwrap();
+        let matrix = helper.app.get_landing_matrix(params, filter).await.unwrap();
         assert_landing_matrix_content(&matrix, filter, 60, vec![(LandingMatrixes::Date, 160)]);
     })
     .await;
@@ -155,10 +143,7 @@ async fn test_landing_matrix_filters_by_vessel_length() {
             ..Default::default()
         };
 
-        let response = helper.app.get_landing_matrix(params, filter).await;
-
-        assert_eq!(response.status(), StatusCode::OK);
-        let matrix: LandingMatrix = response.json().await.unwrap();
+        let matrix = helper.app.get_landing_matrix(params, filter).await.unwrap();
         assert_landing_matrix_content(
             &matrix,
             filter,
@@ -205,9 +190,8 @@ async fn test_landing_matrix_filters_by_species_group() {
             ..Default::default()
         };
 
-        let response = helper.app.get_landing_matrix(params, filter).await;
+        let matrix = helper.app.get_landing_matrix(params, filter).await.unwrap();
 
-        let matrix: LandingMatrix = response.json().await.unwrap();
         assert_landing_matrix_content(
             &matrix,
             filter,
@@ -249,9 +233,7 @@ async fn test_landing_matrix_filters_by_gear_group() {
             ..Default::default()
         };
 
-        let response = helper.app.get_landing_matrix(params, filter).await;
-
-        let matrix: LandingMatrix = response.json().await.unwrap();
+        let matrix = helper.app.get_landing_matrix(params, filter).await.unwrap();
         assert_landing_matrix_content(&matrix, filter, 60, vec![(LandingMatrixes::GearGroup, 160)]);
     })
     .await;
@@ -276,9 +258,7 @@ async fn test_landing_matrix_filters_by_fiskeridir_vessel_ids() {
             ..Default::default()
         };
 
-        let response = helper.app.get_landing_matrix(params, filter).await;
-
-        let matrix: LandingMatrix = response.json().await.unwrap();
+        let matrix = helper.app.get_landing_matrix(params, filter).await.unwrap();
         assert_landing_matrix_content(&matrix, filter, 60, vec![]);
     })
     .await;
@@ -311,13 +291,11 @@ async fn test_landing_matrix_date_sum_area_table_is_correct() {
 
         helper.refresh_matrix_cache().await;
 
-        let response = helper
+        let matrix = helper
             .app
             .get_landing_matrix(LandingMatrixParams::default(), filter)
-            .await;
-
-        assert_eq!(response.status(), StatusCode::OK);
-        let matrix: LandingMatrix = response.json().await.unwrap();
+            .await
+            .unwrap();
 
         let width = LandingMatrixes::Date.size();
         let x0 = landing_date_feature_matrix_index(&month1);
@@ -358,13 +336,11 @@ async fn test_landing_matrix_gear_group_sum_area_table_is_correct() {
 
         helper.refresh_matrix_cache().await;
 
-        let response = helper
+        let matrix = helper
             .app
             .get_landing_matrix(LandingMatrixParams::default(), filter)
-            .await;
-
-        assert_eq!(response.status(), StatusCode::OK);
-        let matrix: LandingMatrix = response.json().await.unwrap();
+            .await
+            .unwrap();
 
         let width = LandingMatrixes::GearGroup.size();
         let x0 = GearGroup::Trawl.enum_index();
@@ -405,13 +381,11 @@ async fn test_landing_matrix_vessel_length_sum_area_table_is_correct() {
 
         helper.refresh_matrix_cache().await;
 
-        let response = helper
+        let matrix = helper
             .app
             .get_landing_matrix(LandingMatrixParams::default(), filter)
-            .await;
-
-        assert_eq!(response.status(), StatusCode::OK);
-        let matrix: LandingMatrix = response.json().await.unwrap();
+            .await
+            .unwrap();
 
         let width = HaulMatrixes::VesselLength.size();
         let x0 = VesselLengthGroup::UnderEleven.enum_index();
@@ -454,13 +428,11 @@ async fn test_landing_matrix_species_group_sum_area_table_is_correct() {
 
         helper.refresh_matrix_cache().await;
 
-        let response = helper
+        let matrix = helper
             .app
             .get_landing_matrix(LandingMatrixParams::default(), filter)
-            .await;
-
-        assert_eq!(response.status(), StatusCode::OK);
-        let matrix: LandingMatrix = response.json().await.unwrap();
+            .await
+            .unwrap();
 
         let width = LandingMatrixes::SpeciesGroup.size();
         let x0 = SpeciesGroup::GreenlandHalibut.enum_index();
@@ -497,13 +469,12 @@ async fn test_landing_matrix_have_correct_totals_after_landing_is_replaced_by_ne
             .await;
 
         helper.refresh_matrix_cache().await;
-        let response = helper
+        let matrix = helper
             .app
             .get_landing_matrix(LandingMatrixParams::default(), filter)
-            .await;
+            .await
+            .unwrap();
 
-        assert_eq!(response.status(), StatusCode::OK);
-        let matrix: LandingMatrix = response.json().await.unwrap();
         assert_landing_matrix_content(&matrix, filter, 40, vec![]);
     })
     .await

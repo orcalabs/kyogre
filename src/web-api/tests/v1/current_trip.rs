@@ -1,11 +1,9 @@
 use super::helper::test;
 use engine::*;
-use reqwest::StatusCode;
-use web_api::routes::v1::trip::CurrentTrip;
 
 #[tokio::test]
 async fn test_current_trip_returns_current_trip_without_prior_trip() {
-    test(|helper, builder| async move {
+    test(|mut helper, builder| async move {
         let state = builder
             .vessels(1)
             .dep(1)
@@ -14,14 +12,13 @@ async fn test_current_trip_returns_current_trip_without_prior_trip() {
             .build()
             .await;
 
-        let token = helper.bw_helper.get_bw_token();
-        let response = helper
+        helper.app.login_user();
+        let trip = helper
             .app
-            .get_current_trip(state.vessels[0].fiskeridir.id, Some(token))
-            .await;
-        assert_eq!(response.status(), StatusCode::OK);
-
-        let trip: CurrentTrip = response.json().await.unwrap();
+            .get_current_trip(state.vessels[0].fiskeridir.id)
+            .await
+            .unwrap()
+            .unwrap();
 
         assert_eq!(
             trip.departure.timestamp_millis(),
@@ -36,7 +33,7 @@ async fn test_current_trip_returns_current_trip_without_prior_trip() {
 
 #[tokio::test]
 async fn test_current_trip_returns_current_trip_with_prior_trips() {
-    test(|helper, builder| async move {
+    test(|mut helper, builder| async move {
         let state = builder
             .vessels(1)
             .trips(1)
@@ -49,14 +46,13 @@ async fn test_current_trip_returns_current_trip_with_prior_trips() {
             .build()
             .await;
 
-        let token = helper.bw_helper.get_bw_token();
-        let response = helper
+        helper.app.login_user();
+        let trip = helper
             .app
-            .get_current_trip(state.vessels[0].fiskeridir.id, Some(token))
-            .await;
-        assert_eq!(response.status(), StatusCode::OK);
-
-        let trip: CurrentTrip = response.json().await.unwrap();
+            .get_current_trip(state.vessels[0].fiskeridir.id)
+            .await
+            .unwrap()
+            .unwrap();
 
         assert_eq!(
             trip.departure.timestamp_millis(),
@@ -74,13 +70,11 @@ async fn test_current_trip_returns_null_when_no_current_trip() {
     test(|helper, builder| async move {
         let state = builder.vessels(1).trips(1).build().await;
 
-        let response = helper
+        let trip = helper
             .app
-            .get_current_trip(state.vessels[0].fiskeridir.id, None)
-            .await;
-        assert_eq!(response.status(), StatusCode::OK);
-
-        let trip: Option<CurrentTrip> = response.json().await.unwrap();
+            .get_current_trip(state.vessels[0].fiskeridir.id)
+            .await
+            .unwrap();
 
         assert!(trip.is_none());
     })
@@ -98,13 +92,12 @@ async fn test_current_trip_does_not_include_fishing_facilities_without_token() {
             .build()
             .await;
 
-        let response = helper
+        let trip = helper
             .app
-            .get_current_trip(state.vessels[0].fiskeridir.id, None)
-            .await;
-        assert_eq!(response.status(), StatusCode::OK);
-
-        let trip: CurrentTrip = response.json().await.unwrap();
+            .get_current_trip(state.vessels[0].fiskeridir.id)
+            .await
+            .unwrap()
+            .unwrap();
 
         assert_eq!(
             trip.departure.timestamp_millis(),
@@ -119,7 +112,7 @@ async fn test_current_trip_does_not_include_fishing_facilities_without_token() {
 
 #[tokio::test]
 async fn test_current_trip_does_not_include_fishing_facilities_without_permission() {
-    test(|helper, builder| async move {
+    test(|mut helper, builder| async move {
         let state = builder
             .vessels(1)
             .dep(1)
@@ -128,14 +121,14 @@ async fn test_current_trip_does_not_include_fishing_facilities_without_permissio
             .build()
             .await;
 
-        let token = helper.bw_helper.get_bw_token_with_policies(vec![]);
-        let response = helper
-            .app
-            .get_current_trip(state.vessels[0].fiskeridir.id, Some(token))
-            .await;
-        assert_eq!(response.status(), StatusCode::OK);
+        helper.app.login_user_with_policies(vec![]);
 
-        let trip: CurrentTrip = response.json().await.unwrap();
+        let trip = helper
+            .app
+            .get_current_trip(state.vessels[0].fiskeridir.id)
+            .await
+            .unwrap()
+            .unwrap();
 
         assert_eq!(
             trip.departure.timestamp_millis(),
@@ -153,13 +146,12 @@ async fn test_current_trip_returns_earliest_departure_since_previous_trip() {
     test(|helper, builder| async move {
         let state = builder.vessels(1).trips(1).up().dep(2).build().await;
 
-        let response = helper
+        let trip = helper
             .app
-            .get_current_trip(state.vessels[0].fiskeridir.id, None)
-            .await;
-        assert_eq!(response.status(), StatusCode::OK);
-
-        let trip: CurrentTrip = response.json().await.unwrap();
+            .get_current_trip(state.vessels[0].fiskeridir.id)
+            .await
+            .unwrap()
+            .unwrap();
 
         assert_eq!(
             trip.departure.timestamp_millis(),

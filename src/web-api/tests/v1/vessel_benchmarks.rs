@@ -2,22 +2,21 @@ use super::{barentswatch_helper::SIGNED_IN_VESSEL_CALLSIGN, helper::test};
 use chrono::{Datelike, TimeZone, Utc};
 use engine::*;
 use fiskeridir_rs::CallSign;
-use kyogre_core::VesselBenchmarks;
 use reqwest::StatusCode;
 use web_api::routes::v1::user::User;
 
 #[tokio::test]
 async fn test_vessel_benchmarks_without_token_returns_not_found() {
     test(|helper, _builder| async move {
-        let response = helper.app.get_vessel_benchmarks(None).await;
-        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+        let error = helper.app.get_vessel_benchmarks().await.unwrap_err();
+        assert_eq!(error.status, StatusCode::NOT_FOUND);
     })
     .await;
 }
 
 #[tokio::test]
 async fn test_vessel_benchmarks_returns_correct_cumulative_landings() {
-    test(|helper, builder| async move {
+    test(|mut helper, builder| async move {
         let now = Utc::now();
         builder
             .vessels(1)
@@ -55,37 +54,50 @@ async fn test_vessel_benchmarks_returns_correct_cumulative_landings() {
             .build()
             .await;
 
-        let response = helper
-            .app
-            .get_vessel_benchmarks(Some(helper.bw_helper.get_bw_token()))
-            .await;
+        helper.app.login_user();
 
-        assert_eq!(response.status(), StatusCode::OK);
-        let body: VesselBenchmarks = response.json().await.unwrap();
+        let benchmarks = helper.app.get_vessel_benchmarks().await.unwrap();
+        assert_eq!(benchmarks.cumulative_landings.len(), 3);
+        assert_eq!(benchmarks.cumulative_landings[0].species_fiskeridir_id, 201);
+        assert_eq!(benchmarks.cumulative_landings[1].species_fiskeridir_id, 200);
+        assert_eq!(benchmarks.cumulative_landings[2].species_fiskeridir_id, 201);
 
-        assert_eq!(body.cumulative_landings.len(), 3);
-        assert_eq!(body.cumulative_landings[0].species_fiskeridir_id, 201);
-        assert_eq!(body.cumulative_landings[1].species_fiskeridir_id, 200);
-        assert_eq!(body.cumulative_landings[2].species_fiskeridir_id, 201);
+        assert_eq!(
+            benchmarks.cumulative_landings[0].month,
+            chrono::Month::February
+        );
+        assert_eq!(
+            benchmarks.cumulative_landings[1].month,
+            chrono::Month::March
+        );
+        assert_eq!(
+            benchmarks.cumulative_landings[2].month,
+            chrono::Month::March
+        );
 
-        assert_eq!(body.cumulative_landings[0].month, chrono::Month::February);
-        assert_eq!(body.cumulative_landings[1].month, chrono::Month::March);
-        assert_eq!(body.cumulative_landings[2].month, chrono::Month::March);
+        assert_eq!(benchmarks.cumulative_landings[0].weight as i32, 200);
+        assert_eq!(benchmarks.cumulative_landings[1].weight as i32, 5000);
+        assert_eq!(benchmarks.cumulative_landings[2].weight as i32, 300);
 
-        assert_eq!(body.cumulative_landings[0].weight as i32, 200);
-        assert_eq!(body.cumulative_landings[1].weight as i32, 5000);
-        assert_eq!(body.cumulative_landings[2].weight as i32, 300);
-
-        assert_eq!(body.cumulative_landings[0].cumulative_weight as i32, 200);
-        assert_eq!(body.cumulative_landings[1].cumulative_weight as i32, 5000);
-        assert_eq!(body.cumulative_landings[2].cumulative_weight as i32, 500);
+        assert_eq!(
+            benchmarks.cumulative_landings[0].cumulative_weight as i32,
+            200
+        );
+        assert_eq!(
+            benchmarks.cumulative_landings[1].cumulative_weight as i32,
+            5000
+        );
+        assert_eq!(
+            benchmarks.cumulative_landings[2].cumulative_weight as i32,
+            500
+        );
     })
     .await;
 }
 
 #[tokio::test]
 async fn test_vessel_benchmarks_returns_correct_self_benchmarks() {
-    test(|helper, builder| async move {
+    test(|mut helper, builder| async move {
         let state = builder
             .vessels(1)
             .modify(|v| {
@@ -100,19 +112,15 @@ async fn test_vessel_benchmarks_returns_correct_self_benchmarks() {
             .build()
             .await;
 
-        let response = helper
-            .app
-            .get_vessel_benchmarks(Some(helper.bw_helper.get_bw_token()))
-            .await;
+        helper.app.login_user();
 
-        assert_eq!(response.status(), StatusCode::OK);
-        let body: VesselBenchmarks = response.json().await.unwrap();
+        let benchmarks = helper.app.get_vessel_benchmarks().await.unwrap();
 
-        let fishing_distance = body.fishing_distance.unwrap();
-        let fishing_time = body.fishing_time.unwrap();
-        let trip_time = body.trip_time.unwrap();
-        let landings = body.landings.unwrap();
-        let ers_dca = body.ers_dca.unwrap();
+        let fishing_distance = benchmarks.fishing_distance.unwrap();
+        let fishing_time = benchmarks.fishing_time.unwrap();
+        let trip_time = benchmarks.trip_time.unwrap();
+        let landings = benchmarks.landings.unwrap();
+        let ers_dca = benchmarks.ers_dca.unwrap();
 
         // All hauls in test have same duration
         let fishing_time_per_trip = (state.hauls[0].duration * 2) as f64;
@@ -178,7 +186,7 @@ async fn test_vessel_benchmarks_returns_correct_self_benchmarks() {
 
 #[tokio::test]
 async fn test_vessel_benchmarks_returns_correct_averages_for_followers() {
-    test(|helper, builder| async move {
+    test(|mut helper, builder| async move {
         let state = builder
             .vessels(3)
             .modify_idx(|i, v| {
@@ -195,31 +203,25 @@ async fn test_vessel_benchmarks_returns_correct_averages_for_followers() {
             .build()
             .await;
 
-        let token = helper.bw_helper.get_bw_token();
-        let response = helper
+        helper.app.login_user();
+        helper
             .app
-            .update_user(
-                User {
-                    following: vec![
-                        state.vessels[1].fiskeridir.id,
-                        state.vessels[2].fiskeridir.id,
-                    ],
-                },
-                token.clone(),
-            )
-            .await;
-        assert_eq!(response.status(), StatusCode::OK);
+            .update_user(User {
+                following: vec![
+                    state.vessels[1].fiskeridir.id,
+                    state.vessels[2].fiskeridir.id,
+                ],
+            })
+            .await
+            .unwrap();
 
-        let response = helper.app.get_vessel_benchmarks(Some(token)).await;
+        let benchmarks = helper.app.get_vessel_benchmarks().await.unwrap();
 
-        assert_eq!(response.status(), StatusCode::OK);
-        let body: VesselBenchmarks = response.json().await.unwrap();
-
-        let fishing_distance = body.fishing_distance.unwrap();
-        let fishing_time = body.fishing_time.unwrap();
-        let trip_time = body.trip_time.unwrap();
-        let landings = body.landings.unwrap();
-        let ers_dca = body.ers_dca.unwrap();
+        let fishing_distance = benchmarks.fishing_distance.unwrap();
+        let fishing_time = benchmarks.fishing_time.unwrap();
+        let trip_time = benchmarks.trip_time.unwrap();
+        let landings = benchmarks.landings.unwrap();
+        let ers_dca = benchmarks.ers_dca.unwrap();
 
         assert_eq!(
             fishing_time.average_followers as i32,

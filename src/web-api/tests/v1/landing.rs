@@ -3,8 +3,7 @@ use chrono::{DateTime, Utc};
 use engine::*;
 use fiskeridir_rs::{GearGroup, SpeciesGroup, VesselLengthGroup};
 use kyogre_core::{FiskeridirVesselId, LandingsSorting, Ordering};
-use reqwest::StatusCode;
-use web_api::routes::v1::landing::{Landing, LandingsParams};
+use web_api::routes::v1::landing::LandingsParams;
 
 #[tokio::test]
 async fn test_landings_returns_all_landings() {
@@ -13,16 +12,14 @@ async fn test_landings_returns_all_landings() {
 
         helper.refresh_cache().await;
 
-        let response = helper
+        let landings = helper
             .app
             .get_landings(LandingsParams {
                 ordering: Some(Ordering::Asc),
                 ..Default::default()
             })
-            .await;
-
-        assert_eq!(response.status(), StatusCode::OK);
-        let landings: Vec<Landing> = response.json().await.unwrap();
+            .await
+            .unwrap();
 
         assert_eq!(landings.len(), 3);
         assert_eq!(landings, state.landings);
@@ -54,10 +51,7 @@ async fn test_landings_returns_landings_in_specified_months() {
             ..Default::default()
         };
 
-        let response = helper.app.get_landings(params).await;
-
-        assert_eq!(response.status(), StatusCode::OK);
-        let landings: Vec<Landing> = response.json().await.unwrap();
+        let landings = helper.app.get_landings(params).await.unwrap();
 
         assert_eq!(landings.len(), 2);
         assert_eq!(landings, state.landings[..2]);
@@ -95,11 +89,7 @@ async fn test_landings_returns_landings_in_catch_location() {
             ..Default::default()
         };
 
-        let response = helper.app.get_landings(params).await;
-
-        assert_eq!(response.status(), StatusCode::OK);
-
-        let landings: Vec<Landing> = response.json().await.unwrap();
+        let landings = helper.app.get_landings(params).await.unwrap();
 
         assert_eq!(landings.len(), 2);
         assert_eq!(landings, state.landings[..2]);
@@ -128,10 +118,7 @@ async fn test_landings_returns_landings_with_gear_group_ids() {
             ..Default::default()
         };
 
-        let response = helper.app.get_landings(params).await;
-
-        assert_eq!(response.status(), StatusCode::OK);
-        let landings: Vec<Landing> = response.json().await.unwrap();
+        let landings = helper.app.get_landings(params).await.unwrap();
 
         assert_eq!(landings.len(), 2);
         assert_eq!(landings, state.landings[..2]);
@@ -163,10 +150,7 @@ async fn test_landings_returns_landings_with_species_group_ids() {
             ..Default::default()
         };
 
-        let response = helper.app.get_landings(params).await;
-
-        assert_eq!(response.status(), StatusCode::OK);
-        let landings: Vec<Landing> = response.json().await.unwrap();
+        let landings = helper.app.get_landings(params).await.unwrap();
 
         assert_eq!(landings.len(), 2);
         assert_eq!(landings, state.landings[..2]);
@@ -198,10 +182,7 @@ async fn test_landings_returns_landings_with_vessel_length_groups() {
             ..Default::default()
         };
 
-        let response = helper.app.get_landings(params).await;
-
-        assert_eq!(response.status(), StatusCode::OK);
-        let landings: Vec<Landing> = response.json().await.unwrap();
+        let landings = helper.app.get_landings(params).await.unwrap();
 
         assert_eq!(landings.len(), 2);
         assert_eq!(landings, state.landings[..2]);
@@ -221,10 +202,7 @@ async fn test_landings_returns_landings_with_fiskeridir_vessel_ids() {
             ..Default::default()
         };
 
-        let response = helper.app.get_landings(params).await;
-
-        assert_eq!(response.status(), StatusCode::OK);
-        let landings: Vec<Landing> = response.json().await.unwrap();
+        let landings = helper.app.get_landings(params).await.unwrap();
 
         assert_eq!(landings.len(), 2);
     })
@@ -244,10 +222,7 @@ async fn test_landings_sorts_by_landing_timestamp() {
             ..Default::default()
         };
 
-        let response = helper.app.get_landings(params).await;
-
-        assert_eq!(response.status(), StatusCode::OK);
-        let landings: Vec<Landing> = response.json().await.unwrap();
+        let landings = helper.app.get_landings(params).await.unwrap();
 
         assert_eq!(landings.len(), 4);
         assert_eq!(landings, state.landings);
@@ -274,10 +249,7 @@ async fn test_landings_sorts_by_weight() {
             ..Default::default()
         };
 
-        let response = helper.app.get_landings(params).await;
-
-        assert_eq!(response.status(), StatusCode::OK);
-        let landings: Vec<Landing> = response.json().await.unwrap();
+        let landings = helper.app.get_landings(params).await.unwrap();
 
         assert_eq!(landings.len(), 4);
         assert_eq!(landings, state.landings);

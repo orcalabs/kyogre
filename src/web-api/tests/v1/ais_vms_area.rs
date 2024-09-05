@@ -3,8 +3,7 @@ use chrono::{Duration, Utc};
 use engine::*;
 use fiskeridir_rs::CallSign;
 use kyogre_core::*;
-use reqwest::StatusCode;
-use web_api::routes::v1::ais_vms::{AisVmsArea, AisVmsAreaParameters};
+use web_api::routes::v1::ais_vms::AisVmsAreaParameters;
 
 #[tokio::test]
 async fn test_ais_vms_area_filters_by_input_box() {
@@ -26,34 +25,29 @@ async fn test_ais_vms_area_filters_by_input_box() {
             .build()
             .await;
 
-        let response = helper
+        let positions = helper
             .app
-            .get_ais_vms_area(
-                AisVmsAreaParameters {
-                    y1: 74.0,
-                    y2: 70.0,
-                    x1: 18.0,
-                    x2: 36.0,
-                    date_limit: None,
-                },
-                None,
-            )
-            .await;
+            .get_ais_vms_area(AisVmsAreaParameters {
+                y1: 74.0,
+                y2: 70.0,
+                x1: 18.0,
+                x2: 36.0,
+                date_limit: None,
+            })
+            .await
+            .unwrap();
 
-        assert_eq!(response.status(), StatusCode::OK);
-        let body: AisVmsArea = response.json().await.unwrap();
-
-        assert_eq!(body.counts.len(), 1);
-        assert_eq!(body.num_vessels, 1);
+        assert_eq!(positions.counts.len(), 1);
+        assert_eq!(positions.num_vessels, 1);
         assert_eq!(
-            body.counts[0].lat as i64,
+            positions.counts[0].lat as i64,
             state.ais_positions[1].latitude as i64
         );
         assert_eq!(
-            body.counts[0].lon as i64,
+            positions.counts[0].lon as i64,
             state.ais_positions[1].longitude as i64
         );
-        assert_eq!(body.counts[0].count, 1);
+        assert_eq!(positions.counts[0].count, 1);
     })
     .await;
 }
@@ -77,34 +71,29 @@ async fn test_ais_vms_area_filters_date_limit() {
             .build()
             .await;
 
-        let response = helper
+        let positions = helper
             .app
-            .get_ais_vms_area(
-                AisVmsAreaParameters {
-                    y1: 74.0,
-                    y2: 70.0,
-                    x1: 18.0,
-                    x2: 36.0,
-                    date_limit: Some(limit.date_naive()),
-                },
-                None,
-            )
-            .await;
+            .get_ais_vms_area(AisVmsAreaParameters {
+                y1: 74.0,
+                y2: 70.0,
+                x1: 18.0,
+                x2: 36.0,
+                date_limit: Some(limit.date_naive()),
+            })
+            .await
+            .unwrap();
 
-        assert_eq!(response.status(), StatusCode::OK);
-        let body: AisVmsArea = response.json().await.unwrap();
-
-        assert_eq!(body.num_vessels, 1);
-        assert_eq!(body.counts.len(), 1);
+        assert_eq!(positions.num_vessels, 1);
+        assert_eq!(positions.counts.len(), 1);
         assert_eq!(
-            body.counts[0].lat as i64,
+            positions.counts[0].lat as i64,
             state.ais_positions[1].latitude as i64
         );
         assert_eq!(
-            body.counts[0].lon as i64,
+            positions.counts[0].lon as i64,
             state.ais_positions[1].longitude as i64
         );
-        assert_eq!(body.counts[0].count, 1);
+        assert_eq!(positions.counts[0].count, 1);
     })
     .await;
 }
@@ -128,34 +117,29 @@ async fn test_ais_vms_area_adds_default_date_limit_if_not_provided() {
             .build()
             .await;
 
-        let response = helper
+        let positions = helper
             .app
-            .get_ais_vms_area(
-                AisVmsAreaParameters {
-                    y1: 74.0,
-                    y2: 70.0,
-                    x1: 18.0,
-                    x2: 36.0,
-                    date_limit: None,
-                },
-                None,
-            )
-            .await;
+            .get_ais_vms_area(AisVmsAreaParameters {
+                y1: 74.0,
+                y2: 70.0,
+                x1: 18.0,
+                x2: 36.0,
+                date_limit: None,
+            })
+            .await
+            .unwrap();
 
-        assert_eq!(response.status(), StatusCode::OK);
-        let body: AisVmsArea = response.json().await.unwrap();
-
-        assert_eq!(body.num_vessels, 1);
-        assert_eq!(body.counts.len(), 1);
+        assert_eq!(positions.num_vessels, 1);
+        assert_eq!(positions.counts.len(), 1);
         assert_eq!(
-            body.counts[0].lat as i64,
+            positions.counts[0].lat as i64,
             state.ais_positions[1].latitude as i64
         );
         assert_eq!(
-            body.counts[0].lon as i64,
+            positions.counts[0].lon as i64,
             state.ais_positions[1].longitude as i64
         );
-        assert_eq!(body.counts[0].count, 1);
+        assert_eq!(positions.counts[0].count, 1);
     })
     .await;
 }
@@ -182,34 +166,29 @@ async fn test_ais_vms_area_does_not_add_same_ais_position_twice() {
             .build()
             .await;
 
-        let response = helper
+        let positions = helper
             .app
-            .get_ais_vms_area(
-                AisVmsAreaParameters {
-                    y1: 74.0,
-                    y2: 70.0,
-                    x1: 18.0,
-                    x2: 36.0,
-                    date_limit: None,
-                },
-                None,
-            )
-            .await;
+            .get_ais_vms_area(AisVmsAreaParameters {
+                y1: 74.0,
+                y2: 70.0,
+                x1: 18.0,
+                x2: 36.0,
+                date_limit: None,
+            })
+            .await
+            .unwrap();
 
-        assert_eq!(response.status(), StatusCode::OK);
-        let body: AisVmsArea = response.json().await.unwrap();
-
-        assert_eq!(body.num_vessels, 1);
-        assert_eq!(body.counts.len(), 1);
+        assert_eq!(positions.num_vessels, 1);
+        assert_eq!(positions.counts.len(), 1);
         assert_eq!(
-            body.counts[0].lat as i64,
+            positions.counts[0].lat as i64,
             state.ais_positions[0].latitude as i64
         );
         assert_eq!(
-            body.counts[0].lon as i64,
+            positions.counts[0].lon as i64,
             state.ais_positions[0].longitude as i64
         );
-        assert_eq!(body.counts[0].count, 1);
+        assert_eq!(positions.counts[0].count, 1);
     })
     .await;
 }
@@ -236,34 +215,29 @@ async fn test_ais_vms_area_does_not_override_existing_ais_with_vms_position() {
             .build()
             .await;
 
-        let response = helper
+        let positions = helper
             .app
-            .get_ais_vms_area(
-                AisVmsAreaParameters {
-                    y1: 74.0,
-                    y2: 70.0,
-                    x1: 18.0,
-                    x2: 36.0,
-                    date_limit: None,
-                },
-                None,
-            )
-            .await;
+            .get_ais_vms_area(AisVmsAreaParameters {
+                y1: 74.0,
+                y2: 70.0,
+                x1: 18.0,
+                x2: 36.0,
+                date_limit: None,
+            })
+            .await
+            .unwrap();
 
-        assert_eq!(response.status(), StatusCode::OK);
-        let body: AisVmsArea = response.json().await.unwrap();
-
-        assert_eq!(body.num_vessels, 1);
-        assert_eq!(body.counts.len(), 1);
+        assert_eq!(positions.num_vessels, 1);
+        assert_eq!(positions.counts.len(), 1);
         assert_eq!(
-            body.counts[0].lat as i64,
+            positions.counts[0].lat as i64,
             state.ais_positions[0].latitude as i64
         );
         assert_eq!(
-            body.counts[0].lon as i64,
+            positions.counts[0].lon as i64,
             state.ais_positions[0].longitude as i64
         );
-        assert_eq!(body.counts[0].count, 1);
+        assert_eq!(positions.counts[0].count, 1);
     })
     .await;
 }
@@ -287,25 +261,20 @@ async fn test_ais_vms_area_returns_ais_positions_from_vessels_without_call_sign(
             .build()
             .await;
 
-        let response = helper
+        let positions = helper
             .app
-            .get_ais_vms_area(
-                AisVmsAreaParameters {
-                    y1: 74.0,
-                    y2: 70.0,
-                    x1: 18.0,
-                    x2: 36.0,
-                    date_limit: None,
-                },
-                None,
-            )
-            .await;
+            .get_ais_vms_area(AisVmsAreaParameters {
+                y1: 74.0,
+                y2: 70.0,
+                x1: 18.0,
+                x2: 36.0,
+                date_limit: None,
+            })
+            .await
+            .unwrap();
 
-        assert_eq!(response.status(), StatusCode::OK);
-        let body: AisVmsArea = response.json().await.unwrap();
-
-        assert_eq!(body.num_vessels, 2);
-        assert_eq!(body.counts.len(), 1);
+        assert_eq!(positions.num_vessels, 2);
+        assert_eq!(positions.counts.len(), 1);
     })
     .await;
 }
@@ -330,25 +299,20 @@ async fn test_ais_vms_area_does_not_return_positions_from_active_conflicts() {
             .build()
             .await;
 
-        let response = helper
+        let positions = helper
             .app
-            .get_ais_vms_area(
-                AisVmsAreaParameters {
-                    y1: 74.0,
-                    y2: 70.0,
-                    x1: 18.0,
-                    x2: 36.0,
-                    date_limit: None,
-                },
-                None,
-            )
-            .await;
+            .get_ais_vms_area(AisVmsAreaParameters {
+                y1: 74.0,
+                y2: 70.0,
+                x1: 18.0,
+                x2: 36.0,
+                date_limit: None,
+            })
+            .await
+            .unwrap();
 
-        assert_eq!(response.status(), StatusCode::OK);
-        let body: AisVmsArea = response.json().await.unwrap();
-
-        assert_eq!(body.num_vessels, 0);
-        assert!(body.counts.is_empty());
+        assert_eq!(positions.num_vessels, 0);
+        assert!(positions.counts.is_empty());
     })
     .await;
 }
@@ -381,34 +345,29 @@ async fn test_ais_vms_area_returns_positions_from_conflict_winners() {
             .build()
             .await;
 
-        let response = helper
+        let positions = helper
             .app
-            .get_ais_vms_area(
-                AisVmsAreaParameters {
-                    y1: 74.0,
-                    y2: 70.0,
-                    x1: 18.0,
-                    x2: 36.0,
-                    date_limit: None,
-                },
-                None,
-            )
-            .await;
+            .get_ais_vms_area(AisVmsAreaParameters {
+                y1: 74.0,
+                y2: 70.0,
+                x1: 18.0,
+                x2: 36.0,
+                date_limit: None,
+            })
+            .await
+            .unwrap();
 
-        assert_eq!(response.status(), StatusCode::OK);
-        let body: AisVmsArea = response.json().await.unwrap();
-
-        assert_eq!(body.num_vessels, 1);
-        assert_eq!(body.counts.len(), 1);
+        assert_eq!(positions.num_vessels, 1);
+        assert_eq!(positions.counts.len(), 1);
         assert_eq!(
-            body.counts[0].lat as i64,
+            positions.counts[0].lat as i64,
             state.ais_positions[0].latitude as i64
         );
         assert_eq!(
-            body.counts[0].lon as i64,
+            positions.counts[0].lon as i64,
             state.ais_positions[0].longitude as i64
         );
-        assert_eq!(body.counts[0].count, 1);
+        assert_eq!(positions.counts[0].count, 1);
     })
     .await;
 }
@@ -429,26 +388,21 @@ async fn test_ais_vms_area_returns_all_positions_that_do_not_overlap_for_single_
             .build()
             .await;
 
-        let response = helper
+        let positions = helper
             .app
-            .get_ais_vms_area(
-                AisVmsAreaParameters {
-                    y1: 74.0,
-                    y2: 70.0,
-                    x1: 18.0,
-                    x2: 36.0,
-                    date_limit: None,
-                },
-                None,
-            )
-            .await;
+            .get_ais_vms_area(AisVmsAreaParameters {
+                y1: 74.0,
+                y2: 70.0,
+                x1: 18.0,
+                x2: 36.0,
+                date_limit: None,
+            })
+            .await
+            .unwrap();
 
-        assert_eq!(response.status(), StatusCode::OK);
-        let body: AisVmsArea = response.json().await.unwrap();
-
-        assert_eq!(body.num_vessels, 1);
-        assert_eq!(body.counts.len(), 1);
-        assert_eq!(body.counts[0].count, 3);
+        assert_eq!(positions.num_vessels, 1);
+        assert_eq!(positions.counts.len(), 1);
+        assert_eq!(positions.counts[0].count, 3);
     })
     .await;
 }
@@ -481,34 +435,29 @@ async fn test_ais_vms_area_returns_single_position_for_duplicated_conflict_winne
             .build()
             .await;
 
-        let response = helper
+        let positions = helper
             .app
-            .get_ais_vms_area(
-                AisVmsAreaParameters {
-                    y1: 74.0,
-                    y2: 70.0,
-                    x1: 18.0,
-                    x2: 36.0,
-                    date_limit: None,
-                },
-                None,
-            )
-            .await;
+            .get_ais_vms_area(AisVmsAreaParameters {
+                y1: 74.0,
+                y2: 70.0,
+                x1: 18.0,
+                x2: 36.0,
+                date_limit: None,
+            })
+            .await
+            .unwrap();
 
-        assert_eq!(response.status(), StatusCode::OK);
-        let body: AisVmsArea = response.json().await.unwrap();
-
-        assert_eq!(body.num_vessels, 1);
-        assert_eq!(body.counts.len(), 1);
+        assert_eq!(positions.num_vessels, 1);
+        assert_eq!(positions.counts.len(), 1);
         assert_eq!(
-            body.counts[0].lat as i64,
+            positions.counts[0].lat as i64,
             state.ais_positions[0].latitude as i64
         );
         assert_eq!(
-            body.counts[0].lon as i64,
+            positions.counts[0].lon as i64,
             state.ais_positions[0].longitude as i64
         );
-        assert_eq!(body.counts[0].count, 1);
+        assert_eq!(positions.counts[0].count, 1);
     })
     .await;
 }
@@ -541,26 +490,21 @@ async fn test_ais_vms_area_returns_correct_num_vessels_with_ais_vessels_without_
             .build()
             .await;
 
-        let response = helper
+        let positions = helper
             .app
-            .get_ais_vms_area(
-                AisVmsAreaParameters {
-                    y1: 74.0,
-                    y2: 70.0,
-                    x1: 18.0,
-                    x2: 36.0,
-                    date_limit: None,
-                },
-                None,
-            )
-            .await;
+            .get_ais_vms_area(AisVmsAreaParameters {
+                y1: 74.0,
+                y2: 70.0,
+                x1: 18.0,
+                x2: 36.0,
+                date_limit: None,
+            })
+            .await
+            .unwrap();
 
-        assert_eq!(response.status(), StatusCode::OK);
-        let body: AisVmsArea = response.json().await.unwrap();
-
-        assert_eq!(body.num_vessels, 3);
-        assert_eq!(body.counts.len(), 1);
-        assert_eq!(body.counts[0].count, 3);
+        assert_eq!(positions.num_vessels, 3);
+        assert_eq!(positions.counts.len(), 1);
+        assert_eq!(positions.counts[0].count, 3);
     })
     .await;
 }

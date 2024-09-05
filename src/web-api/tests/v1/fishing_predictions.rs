@@ -5,10 +5,8 @@ use chrono::{Datelike, Utc};
 use engine::*;
 use fiskeridir_rs::{GearGroup, SpeciesGroup};
 use kyogre_core::*;
-use reqwest::StatusCode;
 use web_api::routes::v1::fishing_prediction::{
-    FishingSpotPrediction, FishingSpotPredictionParams, FishingWeightPrediction,
-    FishingWeightPredictionParams,
+    FishingSpotPredictionParams, FishingWeightPredictionParams,
 };
 
 #[tokio::test]
@@ -33,20 +31,18 @@ async fn test_fishing_spot_predictions_filters_by_model_id() {
             .build()
             .await;
 
-        let response = helper
+        let predictions = helper
             .app
             .get_all_fishing_spot_predictions(ModelId::Spot)
-            .await;
-        assert_eq!(response.status(), StatusCode::OK);
-        let predictions: Vec<FishingSpotPrediction> = response.json().await.unwrap();
+            .await
+            .unwrap();
         assert_eq!(predictions.len() as u32, FISHING_SPOT_PREDICTOR_NUM_DAYS);
 
-        let response = helper
+        let predictions = helper
             .app
             .get_all_fishing_spot_predictions(ModelId::SpotWeather)
-            .await;
-        assert_eq!(response.status(), StatusCode::OK);
-        let predictions: Vec<FishingSpotPrediction> = response.json().await.unwrap();
+            .await
+            .unwrap();
         // We only have weather data for the first week
         assert_eq!(predictions.len(), 1);
     })
@@ -74,7 +70,7 @@ async fn test_fishing_spot_predictions_filters_by_week_and_species_group() {
             .build()
             .await;
 
-        let response = helper
+        let prediction = helper
             .app
             .get_fishing_spot_predictions(
                 ModelId::Spot,
@@ -83,10 +79,8 @@ async fn test_fishing_spot_predictions_filters_by_week_and_species_group() {
                     date: Utc::now().date_naive().with_ordinal(1),
                 },
             )
-            .await;
-        assert_eq!(response.status(), StatusCode::OK);
-
-        let prediction: Option<FishingSpotPrediction> = response.json().await.unwrap();
+            .await
+            .unwrap();
         assert!(prediction.is_some());
     })
     .await;
@@ -109,7 +103,7 @@ async fn test_fishing_weight_predictions_filters_by_week_and_species_group() {
             .build()
             .await;
 
-        let response = helper
+        let predictions = helper
             .app
             .get_fishing_weight_predictions(
                 ModelId::Weight,
@@ -119,10 +113,8 @@ async fn test_fishing_weight_predictions_filters_by_week_and_species_group() {
                     limit: None,
                 },
             )
-            .await;
-        assert_eq!(response.status(), StatusCode::OK);
-
-        let predictions: Vec<FishingWeightPrediction> = response.json().await.unwrap();
+            .await
+            .unwrap();
         assert_eq!(predictions.len() as u32, FISHING_WEIGHT_PREDICTOR_NUM_CL);
     })
     .await;
@@ -150,23 +142,21 @@ async fn test_fishing_weight_predictions_filters_by_model() {
             .build()
             .await;
 
-        let response = helper
+        let predictions = helper
             .app
             .get_all_fishing_weight_predictions(ModelId::Weight)
-            .await;
-        assert_eq!(response.status(), StatusCode::OK);
-        let predictions: Vec<FishingWeightPrediction> = response.json().await.unwrap();
+            .await
+            .unwrap();
         assert_eq!(
             predictions.len() as u32,
             FISHING_WEIGHT_PREDICTOR_NUM_DAYS * FISHING_WEIGHT_PREDICTOR_NUM_CL
         );
 
-        let response = helper
+        let predictions = helper
             .app
             .get_all_fishing_weight_predictions(ModelId::WeightWeather)
-            .await;
-        assert_eq!(response.status(), StatusCode::OK);
-        let predictions: Vec<FishingWeightPrediction> = response.json().await.unwrap();
+            .await
+            .unwrap();
         assert_eq!(predictions.len() as u32, FISHING_WEIGHT_PREDICTOR_NUM_DAYS);
     })
     .await;
@@ -189,7 +179,7 @@ async fn test_fishing_weight_predictions_filters_by_limit_and_orders_by_weight_d
             .build()
             .await;
 
-        let response = helper
+        let predictions = helper
             .app
             .get_fishing_weight_predictions(
                 ModelId::Weight,
@@ -199,10 +189,8 @@ async fn test_fishing_weight_predictions_filters_by_limit_and_orders_by_weight_d
                     limit: Some(2),
                 },
             )
-            .await;
-        assert_eq!(response.status(), StatusCode::OK);
-
-        let predictions: Vec<FishingWeightPrediction> = response.json().await.unwrap();
+            .await
+            .unwrap();
         assert_eq!(predictions.len() as u32, 2);
         assert!(predictions[0].weight >= predictions[1].weight);
     })

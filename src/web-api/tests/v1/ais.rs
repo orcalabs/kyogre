@@ -4,9 +4,10 @@ use engine::*;
 use kyogre_core::*;
 use reqwest::StatusCode;
 use web_api::{
+    error::ErrorDiscriminants,
     extractors::{BwPolicy, BwRole},
     response::{AIS_DETAILS_INTERVAL, MISSING_DATA_DURATION},
-    routes::v1::ais::{AisPosition, AisTrackParameters},
+    routes::v1::ais::AisTrackParameters,
 };
 
 #[tokio::test]
@@ -14,7 +15,7 @@ async fn test_ais_track_filters_by_start_and_end() {
     test(|helper, builder| async move {
         let state = builder.vessels(1).ais_positions(3).build().await;
 
-        let response = helper
+        let positions = helper
             .app
             .get_ais_track(
                 state.vessels[0].mmsi().unwrap(),
@@ -22,14 +23,10 @@ async fn test_ais_track_filters_by_start_and_end() {
                     start: Some(state.ais_positions[0].msgtime + Duration::seconds(1)),
                     end: Some(state.ais_positions.last().unwrap().msgtime - Duration::seconds(1)),
                 },
-                None,
             )
-            .await;
-
-        assert_eq!(response.status(), StatusCode::OK);
-        let body: Vec<AisPosition> = response.json().await.unwrap();
-
-        assert_eq!(body, vec![state.ais_positions[1].clone()]);
+            .await
+            .unwrap();
+        assert_eq!(positions, vec![state.ais_positions[1].clone()]);
     })
     .await;
 }
@@ -41,7 +38,7 @@ async fn test_ais_track_returns_a_details_on_first_and_last_point() {
 
         let pos = &state.ais_positions[0];
         let pos2 = &state.ais_positions[1];
-        let response = helper
+        let positions = helper
             .app
             .get_ais_track(
                 state.vessels[0].mmsi().unwrap(),
@@ -49,16 +46,13 @@ async fn test_ais_track_returns_a_details_on_first_and_last_point() {
                     start: Some(pos.msgtime),
                     end: Some(pos2.msgtime),
                 },
-                None,
             )
-            .await;
+            .await
+            .unwrap();
 
-        assert_eq!(response.status(), StatusCode::OK);
-        let body: Vec<AisPosition> = response.json().await.unwrap();
-
-        assert_eq!(body.len(), 2);
-        assert_eq!(body[0].clone().det.unwrap(), *pos);
-        assert_eq!(body[1].clone().det.unwrap(), *pos2);
+        assert_eq!(positions.len(), 2);
+        assert_eq!(positions[0].clone().det.unwrap(), *pos);
+        assert_eq!(positions[1].clone().det.unwrap(), *pos2);
     })
     .await;
 }
@@ -78,7 +72,7 @@ async fn test_ais_track_returns_a_details_every_interval() {
         let det_pos2 = &state.ais_positions[4];
         let last = &state.ais_positions[6];
 
-        let response = helper
+        let positions = helper
             .app
             .get_ais_track(
                 state.vessels[0].mmsi().unwrap(),
@@ -86,16 +80,13 @@ async fn test_ais_track_returns_a_details_every_interval() {
                     start: Some(first.msgtime),
                     end: Some(last.msgtime),
                 },
-                None,
             )
-            .await;
+            .await
+            .unwrap();
 
-        assert_eq!(response.status(), StatusCode::OK);
-        let body: Vec<AisPosition> = response.json().await.unwrap();
-
-        assert_eq!(body.len(), 7);
-        assert_eq!(body[2].clone().det.unwrap(), *det_pos1);
-        assert_eq!(body[4].clone().det.unwrap(), *det_pos2);
+        assert_eq!(positions.len(), 7);
+        assert_eq!(positions[2].clone().det.unwrap(), *det_pos1);
+        assert_eq!(positions[4].clone().det.unwrap(), *det_pos2);
     })
     .await;
 }
@@ -120,7 +111,7 @@ async fn test_ais_track_returns_missing_data_if_time_between_points_exceeds_limi
 
         let pos = &state.ais_positions[0];
         let pos3 = &state.ais_positions[2];
-        let response = helper
+        let positions = helper
             .app
             .get_ais_track(
                 state.vessels[0].mmsi().unwrap(),
@@ -128,15 +119,12 @@ async fn test_ais_track_returns_missing_data_if_time_between_points_exceeds_limi
                     start: Some(pos.msgtime),
                     end: Some(pos3.msgtime),
                 },
-                None,
             )
-            .await;
+            .await
+            .unwrap();
 
-        assert_eq!(response.status(), StatusCode::OK);
-        let body: Vec<AisPosition> = response.json().await.unwrap();
-
-        assert_eq!(body.len(), 3);
-        assert!(body[1].clone().det.unwrap().missing_data);
+        assert_eq!(positions.len(), 3);
+        assert!(positions[1].clone().det.unwrap().missing_data);
     })
     .await;
 }
@@ -146,7 +134,7 @@ async fn test_ais_track_returns_bad_request_with_only_start_and_no_end_specified
     test(|helper, builder| async move {
         let state = builder.vessels(1).build().await;
 
-        let response = helper
+        let error = helper
             .app
             .get_ais_track(
                 state.vessels[0].mmsi().unwrap(),
@@ -154,11 +142,12 @@ async fn test_ais_track_returns_bad_request_with_only_start_and_no_end_specified
                     start: Some(chrono::Utc::now()),
                     end: None,
                 },
-                None,
             )
-            .await;
+            .await
+            .unwrap_err();
 
-        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        assert_eq!(error.status, StatusCode::BAD_REQUEST);
+        assert_eq!(error.error, ErrorDiscriminants::MissingDateRange);
     })
     .await;
 }
@@ -174,7 +163,7 @@ async fn test_ais_track_returns_24h_of_data_when_no_start_and_end_are_specified(
             .build()
             .await;
 
-        let response = helper
+        let positions = helper
             .app
             .get_ais_track(
                 state.vessels[0].mmsi().unwrap(),
@@ -182,14 +171,11 @@ async fn test_ais_track_returns_24h_of_data_when_no_start_and_end_are_specified(
                     start: None,
                     end: None,
                 },
-                None,
             )
-            .await;
+            .await
+            .unwrap();
 
-        assert_eq!(response.status(), StatusCode::OK);
-        let body: Vec<AisPosition> = response.json().await.unwrap();
-
-        assert_eq!(state.ais_positions[1..], body);
+        assert_eq!(state.ais_positions[1..], positions);
     })
     .await;
 }
@@ -211,7 +197,7 @@ async fn test_ais_track_does_not_return_positions_of_leisure_vessels_under_45_me
             .build()
             .await;
 
-        let response = helper
+        let positions = helper
             .app
             .get_ais_track(
                 state.vessels[0].mmsi().unwrap(),
@@ -219,14 +205,11 @@ async fn test_ais_track_does_not_return_positions_of_leisure_vessels_under_45_me
                     start: Some(pos_timestamp - Duration::seconds(1)),
                     end: Some(pos_timestamp + Duration::seconds(1)),
                 },
-                None,
             )
-            .await;
+            .await
+            .unwrap();
 
-        assert_eq!(response.status(), StatusCode::OK);
-        let body: Vec<AisPosition> = response.json().await.unwrap();
-
-        let response = helper
+        let positions2 = helper
             .app
             .get_ais_track(
                 state.vessels[1].mmsi().unwrap(),
@@ -234,15 +217,12 @@ async fn test_ais_track_does_not_return_positions_of_leisure_vessels_under_45_me
                     start: Some(pos_timestamp - Duration::seconds(1)),
                     end: Some(pos_timestamp + Duration::seconds(1)),
                 },
-                None,
             )
-            .await;
+            .await
+            .unwrap();
 
-        assert_eq!(response.status(), StatusCode::OK);
-        let body2: Vec<AisPosition> = response.json().await.unwrap();
-
-        assert!(body.is_empty());
-        assert!(body2.is_empty());
+        assert!(positions.is_empty());
+        assert!(positions2.is_empty());
     })
     .await;
 }
@@ -261,7 +241,7 @@ async fn test_ais_track_does_not_return_positions_of_vessel_with_unknown_ship_ty
             .build()
             .await;
 
-        let response = helper
+        let positions = helper
             .app
             .get_ais_track(
                 state.vessels[0].mmsi().unwrap(),
@@ -269,14 +249,11 @@ async fn test_ais_track_does_not_return_positions_of_vessel_with_unknown_ship_ty
                     start: Some(pos_timestamp - Duration::seconds(1)),
                     end: Some(pos_timestamp + Duration::seconds(1)),
                 },
-                None,
             )
-            .await;
+            .await
+            .unwrap();
 
-        assert_eq!(response.status(), StatusCode::OK);
-        let body: Vec<AisPosition> = response.json().await.unwrap();
-
-        assert!(body.is_empty());
+        assert!(positions.is_empty());
     })
     .await;
 }
@@ -295,7 +272,7 @@ async fn test_ais_track_prioritizes_fiskeridir_length_over_ais_length_in_leisure
             .build()
             .await;
 
-        let response = helper
+        let positions = helper
             .app
             .get_ais_track(
                 state.vessels[0].mmsi().unwrap(),
@@ -303,14 +280,11 @@ async fn test_ais_track_prioritizes_fiskeridir_length_over_ais_length_in_leisure
                     start: Some(state.ais_positions[0].msgtime - Duration::seconds(1)),
                     end: Some(state.ais_positions[0].msgtime + Duration::seconds(1)),
                 },
-                None,
             )
-            .await;
+            .await
+            .unwrap();
 
-        assert_eq!(response.status(), StatusCode::OK);
-        let body: Vec<AisPosition> = response.json().await.unwrap();
-
-        assert_eq!(1, body.len());
+        assert_eq!(1, positions.len());
     })
     .await;
 }
@@ -331,7 +305,7 @@ async fn test_ais_track_does_not_return_positions_for_vessels_under_15m_without_
             .build()
             .await;
 
-        let response = helper
+        let positions = helper
             .app
             .get_ais_track(
                 state.vessels[0].mmsi().unwrap(),
@@ -339,21 +313,18 @@ async fn test_ais_track_does_not_return_positions_for_vessels_under_15m_without_
                     start: Some(pos_timestamp - Duration::seconds(1)),
                     end: Some(pos_timestamp + Duration::seconds(1)),
                 },
-                None,
             )
-            .await;
+            .await
+            .unwrap();
 
-        assert_eq!(response.status(), StatusCode::OK);
-        let body: Vec<AisPosition> = response.json().await.unwrap();
-
-        assert!(body.is_empty());
+        assert!(positions.is_empty());
     })
     .await;
 }
 
 #[tokio::test]
 async fn test_ais_track_return_positions_for_vessels_under_15m_with_full_ais_permission() {
-    test(|helper, builder| async move {
+    test(|mut helper, builder| async move {
         let pos_timestamp = Utc.timestamp_opt(1000, 0).unwrap();
         let state = builder
             .vessels(1)
@@ -367,7 +338,9 @@ async fn test_ais_track_return_positions_for_vessels_under_15m_with_full_ais_per
             .build()
             .await;
 
-        let response = helper
+        helper.app.login_user_with_full_ais_permissions();
+
+        let positions = helper
             .app
             .get_ais_track(
                 state.vessels[0].mmsi().unwrap(),
@@ -375,14 +348,11 @@ async fn test_ais_track_return_positions_for_vessels_under_15m_with_full_ais_per
                     start: Some(pos_timestamp - Duration::seconds(1)),
                     end: Some(pos_timestamp + Duration::seconds(1)),
                 },
-                Some(helper.bw_helper.get_bw_token_with_full_ais_permission()),
             )
-            .await;
+            .await
+            .unwrap();
 
-        assert_eq!(response.status(), StatusCode::OK);
-        let body: Vec<AisPosition> = response.json().await.unwrap();
-
-        assert!(!body.is_empty());
+        assert!(!positions.is_empty());
     })
     .await;
 }
@@ -390,7 +360,7 @@ async fn test_ais_track_return_positions_for_vessels_under_15m_with_full_ais_per
 #[tokio::test]
 async fn test_ais_track_does_not_return_positions_for_vessels_under_15m_with_correct_roles_but_missing_policy(
 ) {
-    test(|helper, builder| async move {
+    test(|mut helper, builder| async move {
         let pos_timestamp = Utc.timestamp_opt(1000, 0).unwrap();
         let state = builder
             .vessels(1)
@@ -404,7 +374,12 @@ async fn test_ais_track_does_not_return_positions_for_vessels_under_15m_with_cor
             .build()
             .await;
 
-        let response = helper
+        helper.app.login_user_with_policies_and_roles(
+            vec![BwPolicy::Other],
+            vec![BwRole::BwFiskinfoAdmin],
+        );
+
+        let positions = helper
             .app
             .get_ais_track(
                 state.vessels[0].mmsi().unwrap(),
@@ -412,17 +387,11 @@ async fn test_ais_track_does_not_return_positions_for_vessels_under_15m_with_cor
                     start: Some(pos_timestamp - Duration::seconds(1)),
                     end: Some(pos_timestamp + Duration::seconds(1)),
                 },
-                Some(helper.bw_helper.get_bw_token_with_policies_and_roles(
-                    vec![BwPolicy::Other],
-                    vec![BwRole::BwFiskinfoAdmin],
-                )),
             )
-            .await;
+            .await
+            .unwrap();
 
-        assert_eq!(response.status(), StatusCode::OK);
-        let body: Vec<AisPosition> = response.json().await.unwrap();
-
-        assert!(body.is_empty());
+        assert!(positions.is_empty());
     })
     .await;
 }
@@ -430,7 +399,7 @@ async fn test_ais_track_does_not_return_positions_for_vessels_under_15m_with_cor
 #[tokio::test]
 async fn test_ais_track_does_not_return_positions_for_vessels_under_15m_with_correct_policy_but_missing_role(
 ) {
-    test(|helper, builder| async move {
+    test(|mut helper, builder| async move {
         let pos_timestamp = Utc.timestamp_opt(1000, 0).unwrap();
         let state = builder
             .vessels(1)
@@ -444,7 +413,11 @@ async fn test_ais_track_does_not_return_positions_for_vessels_under_15m_with_cor
             .build()
             .await;
 
-        let response = helper
+        helper
+            .app
+            .login_user_with_policies_and_roles(vec![BwPolicy::BwAisFiskinfo], vec![BwRole::Other]);
+
+        let positions = helper
             .app
             .get_ais_track(
                 state.vessels[0].mmsi().unwrap(),
@@ -452,17 +425,11 @@ async fn test_ais_track_does_not_return_positions_for_vessels_under_15m_with_cor
                     start: Some(pos_timestamp - Duration::seconds(1)),
                     end: Some(pos_timestamp + Duration::seconds(1)),
                 },
-                Some(helper.bw_helper.get_bw_token_with_policies_and_roles(
-                    vec![BwPolicy::BwAisFiskinfo],
-                    vec![BwRole::Other],
-                )),
             )
-            .await;
+            .await
+            .unwrap();
 
-        assert_eq!(response.status(), StatusCode::OK);
-        let body: Vec<AisPosition> = response.json().await.unwrap();
-
-        assert!(body.is_empty());
+        assert!(positions.is_empty());
     })
     .await;
 }

@@ -5,7 +5,7 @@ use fiskeridir_rs::{DeliveryPointId, GearGroup, LandingId, SpeciesGroup, VesselL
 use kyogre_core::{FiskeridirVesselId, Ordering, TripSorting, VesselEventType};
 use reqwest::StatusCode;
 use uuid::Uuid;
-use web_api::routes::v1::trip::{Trip, TripsParameters};
+use web_api::{error::ErrorDiscriminants, routes::v1::trip::TripsParameters};
 
 #[tokio::test]
 async fn test_trips_contains_hauls_added_after_trip_creation() {
@@ -18,18 +18,13 @@ async fn test_trips_contains_hauls_added_after_trip_creation() {
             .build()
             .await;
 
-        let response = helper
+        let trips = helper
             .app
-            .get_trips(
-                TripsParameters {
-                    ..Default::default()
-                },
-                None,
-            )
-            .await;
-        assert_eq!(response.status(), StatusCode::OK);
-
-        let trips: Vec<Trip> = response.json().await.unwrap();
+            .get_trips(TripsParameters {
+                ..Default::default()
+            })
+            .await
+            .unwrap();
         assert_eq!(trips.len(), 1);
         assert_eq!(trips[0].hauls.len(), 1);
         assert_eq!(trips[0].hauls, state.hauls);
@@ -39,7 +34,7 @@ async fn test_trips_contains_hauls_added_after_trip_creation() {
 
 #[tokio::test]
 async fn test_trips_contains_refreshed_fishing_facilities() {
-    test(|helper, builder| async move {
+    test(|mut helper, builder| async move {
         let tool_id = Uuid::new_v4();
         let state = builder
             .vessels(1)
@@ -58,18 +53,15 @@ async fn test_trips_contains_refreshed_fishing_facilities() {
             .build()
             .await;
 
-        let response = helper
-            .app
-            .get_trips(
-                TripsParameters {
-                    ..Default::default()
-                },
-                Some(helper.bw_helper.get_bw_token()),
-            )
-            .await;
-        assert_eq!(response.status(), StatusCode::OK);
+        helper.app.login_user();
 
-        let trips: Vec<Trip> = response.json().await.unwrap();
+        let trips = helper
+            .app
+            .get_trips(TripsParameters {
+                ..Default::default()
+            })
+            .await
+            .unwrap();
         assert_eq!(trips.len(), 1);
         assert_eq!(trips[0].fishing_facilities.len(), 1);
         assert_eq!(trips[0].fishing_facilities, state.fishing_facilities);
@@ -100,18 +92,13 @@ async fn test_trips_contains_refreshed_hauls() {
             .build()
             .await;
 
-        let response = helper
+        let trips = helper
             .app
-            .get_trips(
-                TripsParameters {
-                    ..Default::default()
-                },
-                None,
-            )
-            .await;
-        assert_eq!(response.status(), StatusCode::OK);
-
-        let trips: Vec<Trip> = response.json().await.unwrap();
+            .get_trips(TripsParameters {
+                ..Default::default()
+            })
+            .await
+            .unwrap();
         assert_eq!(trips.len(), 1);
         assert_eq!(trips[0].hauls.len(), 1);
         assert_eq!(trips[0].hauls, state.hauls);
@@ -125,14 +112,12 @@ async fn test_trip_of_landing_returns_none_of_no_trip_is_connected_to_given_land
     test_with_cache(|helper, _builder| async move {
         helper.refresh_cache().await;
 
-        let response = helper
+        let trip = helper
             .app
             .get_trip_of_landing(&"1-7-0-0".try_into().unwrap())
-            .await;
-        assert_eq!(response.status(), StatusCode::OK);
-
-        let body: Option<Trip> = response.json().await.unwrap();
-        assert!(body.is_none());
+            .await
+            .unwrap();
+        assert!(trip.is_none());
     })
     .await;
 }
@@ -144,14 +129,12 @@ async fn test_trip_of_landing_does_not_return_trip_outside_landing_timestamp() {
 
         helper.refresh_cache().await;
 
-        let response = helper
+        let trip = helper
             .app
             .get_trip_of_landing(&state.landings[0].landing_id)
-            .await;
-        assert_eq!(response.status(), StatusCode::OK);
-
-        let body: Option<Trip> = response.json().await.unwrap();
-        assert!(body.is_none());
+            .await
+            .unwrap();
+        assert!(trip.is_none());
     })
     .await;
 }
@@ -178,13 +161,12 @@ async fn test_trip_of_landing_does_not_return_trip_of_other_vessels() {
 
         helper.refresh_cache().await;
 
-        let response = helper
+        let trip = helper
             .app
             .get_trip_of_landing(&state.landings[0].landing_id)
-            .await;
-        assert_eq!(response.status(), StatusCode::OK);
-
-        let trip: Trip = response.json().await.unwrap();
+            .await
+            .unwrap()
+            .unwrap();
         assert_eq!(state.trips[0], trip);
     })
     .await;
@@ -203,14 +185,13 @@ async fn test_trip_of_landing_returns_all_hauls_and_landings_connected_to_trip()
 
         helper.refresh_cache().await;
 
-        let response = helper
+        let trip = helper
             .app
             .get_trip_of_landing(&state.landings[0].landing_id)
-            .await;
-        assert_eq!(response.status(), StatusCode::OK);
-
-        let body: Trip = response.json().await.unwrap();
-        assert_eq!(state.trips[0], body);
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(state.trips[0], trip);
     })
     .await;
 }
@@ -222,10 +203,11 @@ async fn test_first_ers_data_triggers_trip_assembler_switch_to_ers() {
 
         helper.refresh_cache().await;
 
-        let response = helper.app.get_trips(TripsParameters::default(), None).await;
-        assert_eq!(response.status(), StatusCode::OK);
-
-        let trips: Vec<Trip> = response.json().await.unwrap();
+        let trips = helper
+            .app
+            .get_trips(TripsParameters::default())
+            .await
+            .unwrap();
         assert_eq!(trips.len(), 1);
         assert_eq!(trips[0], state.trips[0]);
     })
@@ -246,10 +228,11 @@ async fn test_trips_contains_all_events_within_trip_period_ordered_ascendingly()
 
         helper.refresh_cache().await;
 
-        let response = helper.app.get_trips(TripsParameters::default(), None).await;
-        assert_eq!(response.status(), StatusCode::OK);
-
-        let trips: Vec<Trip> = response.json().await.unwrap();
+        let trips = helper
+            .app
+            .get_trips(TripsParameters::default())
+            .await
+            .unwrap();
         assert_eq!(trips.len(), 1);
         assert_eq!(trips[0].events.len(), 6);
         assert_eq!(trips[0].events[0].event_type, VesselEventType::ErsDep);
@@ -277,36 +260,26 @@ async fn test_trips_events_are_isolated_per_vessel() {
 
         helper.refresh_cache().await;
 
-        let response = helper
+        let trips = helper
             .app
-            .get_trips(
-                TripsParameters {
-                    fiskeridir_vessel_ids: Some(vec![state.vessels[0].fiskeridir.id]),
-                    ..Default::default()
-                },
-                None,
-            )
-            .await;
-        assert_eq!(response.status(), StatusCode::OK);
-
-        let trips: Vec<Trip> = response.json().await.unwrap();
+            .get_trips(TripsParameters {
+                fiskeridir_vessel_ids: Some(vec![state.vessels[0].fiskeridir.id]),
+                ..Default::default()
+            })
+            .await
+            .unwrap();
         assert_eq!(trips.len(), 1);
         assert_eq!(trips[0].events.len(), 6);
         assert_eq!(trips[0], state.trips[0]);
 
-        let response = helper
+        let trips = helper
             .app
-            .get_trips(
-                TripsParameters {
-                    fiskeridir_vessel_ids: Some(vec![state.vessels[1].fiskeridir.id]),
-                    ..Default::default()
-                },
-                None,
-            )
-            .await;
-        assert_eq!(response.status(), StatusCode::OK);
-
-        let trips: Vec<Trip> = response.json().await.unwrap();
+            .get_trips(TripsParameters {
+                fiskeridir_vessel_ids: Some(vec![state.vessels[1].fiskeridir.id]),
+                ..Default::default()
+            })
+            .await
+            .unwrap();
         assert_eq!(trips.len(), 1);
         assert_eq!(trips[0].events.len(), 6);
         assert_eq!(trips[0], state.trips[1]);
@@ -328,10 +301,11 @@ async fn test_trips_does_not_include_events_outside_period() {
 
         helper.refresh_cache().await;
 
-        let response = helper.app.get_trips(TripsParameters::default(), None).await;
-        assert_eq!(response.status(), StatusCode::OK);
-
-        let trips: Vec<Trip> = response.json().await.unwrap();
+        let trips = helper
+            .app
+            .get_trips(TripsParameters::default())
+            .await
+            .unwrap();
 
         assert_eq!(trips.len(), 1);
         assert_eq!(trips[0].events.len(), 2);
@@ -360,13 +334,13 @@ async fn test_trip_connects_to_tra_event_based_on_message_timestamp_if_reloading
 
         helper.refresh_cache().await;
 
-        let response = helper.app.get_trips(TripsParameters::default(), None).await;
-        assert_eq!(response.status(), StatusCode::OK);
-
-        let trips: Vec<Trip> = response.json().await.unwrap();
+        let trips = helper
+            .app
+            .get_trips(TripsParameters::default())
+            .await
+            .unwrap();
 
         assert_eq!(trips.len(), 1);
-
         assert_eq!(trips[0].events.len(), 3);
         assert_eq!(trips[0].events[0].event_type, VesselEventType::ErsDep);
         assert_eq!(trips[0].events[1].event_type, VesselEventType::ErsTra);
@@ -399,10 +373,11 @@ async fn test_trips_returns_correct_ports() {
 
         helper.refresh_cache().await;
 
-        let response = helper.app.get_trips(TripsParameters::default(), None).await;
-        assert_eq!(response.status(), StatusCode::OK);
-
-        let trips: Vec<Trip> = response.json().await.unwrap();
+        let trips = helper
+            .app
+            .get_trips(TripsParameters::default())
+            .await
+            .unwrap();
 
         assert_eq!(trips.len(), 1);
         assert_eq!(trips[0], state.trips[0]);
@@ -420,19 +395,14 @@ async fn test_trip_contains_correct_arrival_and_departure_with_adjacent_trips_wi
 
         helper.refresh_cache().await;
 
-        let response = helper
+        let trips = helper
             .app
-            .get_trips(
-                TripsParameters {
-                    ordering: Some(Ordering::Asc),
-                    ..Default::default()
-                },
-                None,
-            )
-            .await;
-        assert_eq!(response.status(), StatusCode::OK);
-
-        let trips: Vec<Trip> = response.json().await.unwrap();
+            .get_trips(TripsParameters {
+                ordering: Some(Ordering::Asc),
+                ..Default::default()
+            })
+            .await
+            .unwrap();
 
         assert_eq!(trips.len(), 3);
         assert_eq!(trips, state.trips);
@@ -462,19 +432,15 @@ async fn test_landings_trip_only_contains_landing_events() {
 
         helper.refresh_cache().await;
 
-        let response = helper
+        let trips = helper
             .app
-            .get_trips(
-                TripsParameters {
-                    ordering: Some(Ordering::Asc),
-                    ..Default::default()
-                },
-                None,
-            )
-            .await;
-        assert_eq!(response.status(), StatusCode::OK);
+            .get_trips(TripsParameters {
+                ordering: Some(Ordering::Asc),
+                ..Default::default()
+            })
+            .await
+            .unwrap();
 
-        let trips: Vec<Trip> = response.json().await.unwrap();
         assert_eq!(trips, state.trips);
         assert_eq!(trips.len(), 2);
         assert_eq!(trips[1].events.len(), 1);
@@ -485,7 +451,7 @@ async fn test_landings_trip_only_contains_landing_events() {
 
 #[tokio::test]
 async fn test_trip_contains_fishing_facilities() {
-    test_with_cache(|helper, builder| async move {
+    test_with_cache(|mut helper, builder| async move {
         let state = builder
             .vessels(1)
             .trips(1)
@@ -495,14 +461,12 @@ async fn test_trip_contains_fishing_facilities() {
 
         helper.refresh_cache().await;
 
-        let token = helper.bw_helper.get_bw_token();
-        let response = helper
+        helper.app.login_user();
+        let trips = helper
             .app
-            .get_trips(TripsParameters::default(), Some(token))
-            .await;
-        assert_eq!(response.status(), StatusCode::OK);
-
-        let trips: Vec<Trip> = response.json().await.unwrap();
+            .get_trips(TripsParameters::default())
+            .await
+            .unwrap();
 
         assert_eq!(trips.len(), 1);
         assert_eq!(trips, state.trips);
@@ -523,10 +487,11 @@ async fn test_trip_does_not_return_fishing_facilities_without_token() {
 
         helper.refresh_cache().await;
 
-        let response = helper.app.get_trips(TripsParameters::default(), None).await;
-        assert_eq!(response.status(), StatusCode::OK);
-
-        let trips: Vec<Trip> = response.json().await.unwrap();
+        let trips = helper
+            .app
+            .get_trips(TripsParameters::default())
+            .await
+            .unwrap();
 
         assert_eq!(trips.len(), 1);
         assert_eq!(trips[0].fishing_facilities.len(), 0);
@@ -536,7 +501,7 @@ async fn test_trip_does_not_return_fishing_facilities_without_token() {
 
 #[tokio::test]
 async fn test_trip_does_not_return_fishing_facilities_without_read_fishing_facility() {
-    test_with_cache(|helper, builder| async move {
+    test_with_cache(|mut helper, builder| async move {
         builder
             .vessels(1)
             .trips(1)
@@ -546,14 +511,12 @@ async fn test_trip_does_not_return_fishing_facilities_without_read_fishing_facil
 
         helper.refresh_cache().await;
 
-        let token = helper.bw_helper.get_bw_token_with_policies(vec![]);
-        let response = helper
+        helper.app.login_user_with_policies(vec![]);
+        let trips = helper
             .app
-            .get_trips(TripsParameters::default(), Some(token))
-            .await;
-        assert_eq!(response.status(), StatusCode::OK);
-
-        let trips: Vec<Trip> = response.json().await.unwrap();
+            .get_trips(TripsParameters::default())
+            .await
+            .unwrap();
 
         assert_eq!(trips.len(), 1);
         assert_eq!(trips[0].fishing_facilities.len(), 0);
@@ -568,19 +531,14 @@ async fn test_trips_filter_by_offset() {
 
         helper.refresh_cache().await;
 
-        let response = helper
+        let trips = helper
             .app
-            .get_trips(
-                TripsParameters {
-                    offset: Some(1),
-                    ..Default::default()
-                },
-                None,
-            )
-            .await;
-        assert_eq!(response.status(), StatusCode::OK);
-
-        let trips: Vec<Trip> = response.json().await.unwrap();
+            .get_trips(TripsParameters {
+                offset: Some(1),
+                ..Default::default()
+            })
+            .await
+            .unwrap();
         assert_eq!(trips.len(), 1);
         assert_eq!(trips[0], state.trips[0]);
     })
@@ -594,19 +552,14 @@ async fn test_trips_filter_by_limit() {
 
         helper.refresh_cache().await;
 
-        let response = helper
+        let trips = helper
             .app
-            .get_trips(
-                TripsParameters {
-                    limit: Some(1),
-                    ..Default::default()
-                },
-                None,
-            )
-            .await;
-        assert_eq!(response.status(), StatusCode::OK);
-
-        let trips: Vec<Trip> = response.json().await.unwrap();
+            .get_trips(TripsParameters {
+                limit: Some(1),
+                ..Default::default()
+            })
+            .await
+            .unwrap();
         assert_eq!(trips.len(), 1);
         assert_eq!(trips[0], state.trips[1]);
     })
@@ -620,19 +573,14 @@ async fn test_trips_orders_ascendingly() {
 
         helper.refresh_cache().await;
 
-        let response = helper
+        let trips = helper
             .app
-            .get_trips(
-                TripsParameters {
-                    ordering: Some(Ordering::Asc),
-                    ..Default::default()
-                },
-                None,
-            )
-            .await;
-        assert_eq!(response.status(), StatusCode::OK);
-
-        let trips: Vec<Trip> = response.json().await.unwrap();
+            .get_trips(TripsParameters {
+                ordering: Some(Ordering::Asc),
+                ..Default::default()
+            })
+            .await
+            .unwrap();
         assert_eq!(trips.len(), 2);
         assert_eq!(trips[0], state.trips[0]);
         assert_eq!(trips[1], state.trips[1]);
@@ -647,19 +595,14 @@ async fn test_trips_orders_descendingly() {
 
         helper.refresh_cache().await;
 
-        let response = helper
+        let trips = helper
             .app
-            .get_trips(
-                TripsParameters {
-                    ordering: Some(Ordering::Desc),
-                    ..Default::default()
-                },
-                None,
-            )
-            .await;
-        assert_eq!(response.status(), StatusCode::OK);
-
-        let trips: Vec<Trip> = response.json().await.unwrap();
+            .get_trips(TripsParameters {
+                ordering: Some(Ordering::Desc),
+                ..Default::default()
+            })
+            .await
+            .unwrap();
         assert_eq!(trips.len(), 2);
         assert_eq!(trips[0], state.trips[1]);
         assert_eq!(trips[1], state.trips[0]);
@@ -684,19 +627,14 @@ async fn test_trips_filter_by_delivery_point() {
 
         helper.refresh_cache().await;
 
-        let response = helper
+        let trips = helper
             .app
-            .get_trips(
-                TripsParameters {
-                    delivery_points: Some(vec![delivery_point.into_inner()]),
-                    ..Default::default()
-                },
-                None,
-            )
-            .await;
-        assert_eq!(response.status(), StatusCode::OK);
-
-        let trips: Vec<Trip> = response.json().await.unwrap();
+            .get_trips(TripsParameters {
+                delivery_points: Some(vec![delivery_point.into_inner()]),
+                ..Default::default()
+            })
+            .await
+            .unwrap();
         assert_eq!(trips.len(), 1);
         assert_eq!(trips[0], state.trips[0]);
     })
@@ -710,19 +648,14 @@ async fn test_trips_filter_by_start_date() {
 
         helper.refresh_cache().await;
 
-        let response = helper
+        let trips = helper
             .app
-            .get_trips(
-                TripsParameters {
-                    start_date: Some(state.trips[0].period.start() + Duration::seconds(1)),
-                    ..Default::default()
-                },
-                None,
-            )
-            .await;
-        assert_eq!(response.status(), StatusCode::OK);
-
-        let trips: Vec<Trip> = response.json().await.unwrap();
+            .get_trips(TripsParameters {
+                start_date: Some(state.trips[0].period.start() + Duration::seconds(1)),
+                ..Default::default()
+            })
+            .await
+            .unwrap();
         assert_eq!(trips.len(), 1);
         assert_eq!(trips[0], state.trips[1]);
     })
@@ -736,19 +669,14 @@ async fn test_trips_filter_by_end_date() {
 
         helper.refresh_cache().await;
 
-        let response = helper
+        let trips = helper
             .app
-            .get_trips(
-                TripsParameters {
-                    end_date: Some(state.trips[0].period.end() + Duration::seconds(1)),
-                    ..Default::default()
-                },
-                None,
-            )
-            .await;
-        assert_eq!(response.status(), StatusCode::OK);
-
-        let trips: Vec<Trip> = response.json().await.unwrap();
+            .get_trips(TripsParameters {
+                end_date: Some(state.trips[0].period.end() + Duration::seconds(1)),
+                ..Default::default()
+            })
+            .await
+            .unwrap();
         assert_eq!(trips.len(), 1);
         assert_eq!(trips[0], state.trips[0]);
     })
@@ -761,18 +689,17 @@ async fn test_trips_returns_bad_request_if_start_date_is_after_end_date() {
         let start = Utc.timestamp_opt(30, 0).unwrap();
         let end = Utc.timestamp_opt(25, 0).unwrap();
 
-        let response = helper
+        let error = helper
             .app
-            .get_trips(
-                TripsParameters {
-                    start_date: Some(start),
-                    end_date: Some(end),
-                    ..Default::default()
-                },
-                None,
-            )
-            .await;
-        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+            .get_trips(TripsParameters {
+                start_date: Some(start),
+                end_date: Some(end),
+                ..Default::default()
+            })
+            .await
+            .unwrap_err();
+        assert_eq!(error.status, StatusCode::BAD_REQUEST);
+        assert_eq!(error.error, ErrorDiscriminants::StartAfterEnd);
     })
     .await;
 }
@@ -784,20 +711,15 @@ async fn test_trips_sorts_by_end_date() {
 
         helper.refresh_cache().await;
 
-        let response = helper
+        let trips = helper
             .app
-            .get_trips(
-                TripsParameters {
-                    sorting: Some(TripSorting::StopDate),
-                    ordering: Some(Ordering::Asc),
-                    ..Default::default()
-                },
-                None,
-            )
-            .await;
-        assert_eq!(response.status(), StatusCode::OK);
-
-        let trips: Vec<Trip> = response.json().await.unwrap();
+            .get_trips(TripsParameters {
+                sorting: Some(TripSorting::StopDate),
+                ordering: Some(Ordering::Asc),
+                ..Default::default()
+            })
+            .await
+            .unwrap();
         assert_eq!(trips.len(), 2);
         assert_eq!(trips[0], state.trips[0]);
         assert_eq!(trips[1], state.trips[1]);
@@ -820,20 +742,15 @@ async fn test_trips_sorts_by_weight() {
 
         helper.refresh_cache().await;
 
-        let response = helper
+        let trips = helper
             .app
-            .get_trips(
-                TripsParameters {
-                    sorting: Some(TripSorting::Weight),
-                    ordering: Some(Ordering::Asc),
-                    ..Default::default()
-                },
-                None,
-            )
-            .await;
-        assert_eq!(response.status(), StatusCode::OK);
-
-        let trips: Vec<Trip> = response.json().await.unwrap();
+            .get_trips(TripsParameters {
+                sorting: Some(TripSorting::Weight),
+                ordering: Some(Ordering::Asc),
+                ..Default::default()
+            })
+            .await
+            .unwrap();
         assert_eq!(trips.len(), 2);
         assert_eq!(trips[0], state.trips[0]);
         assert_eq!(trips[1], state.trips[1]);
@@ -860,19 +777,14 @@ async fn test_trips_filter_by_gear_group_ids() {
 
         helper.refresh_cache().await;
 
-        let response = helper
+        let trips = helper
             .app
-            .get_trips(
-                TripsParameters {
-                    gear_group_ids: Some(vec![GearGroup::Seine]),
-                    ..Default::default()
-                },
-                None,
-            )
-            .await;
-        assert_eq!(response.status(), StatusCode::OK);
-
-        let trips: Vec<Trip> = response.json().await.unwrap();
+            .get_trips(TripsParameters {
+                gear_group_ids: Some(vec![GearGroup::Seine]),
+                ..Default::default()
+            })
+            .await
+            .unwrap();
         assert_eq!(trips.len(), 1);
         assert_eq!(trips[0], state.trips[0]);
     })
@@ -898,19 +810,14 @@ async fn test_trips_filter_by_species_group_ids() {
 
         helper.refresh_cache().await;
 
-        let response = helper
+        let trips = helper
             .app
-            .get_trips(
-                TripsParameters {
-                    species_group_ids: Some(vec![SpeciesGroup::GoldenRedfish]),
-                    ..Default::default()
-                },
-                None,
-            )
-            .await;
-        assert_eq!(response.status(), StatusCode::OK);
-
-        let trips: Vec<Trip> = response.json().await.unwrap();
+            .get_trips(TripsParameters {
+                species_group_ids: Some(vec![SpeciesGroup::GoldenRedfish]),
+                ..Default::default()
+            })
+            .await
+            .unwrap();
         assert_eq!(trips.len(), 1);
         assert_eq!(trips[0], state.trips[0]);
     })
@@ -935,19 +842,14 @@ async fn test_trips_filter_by_vessel_length_groups() {
 
         helper.refresh_cache().await;
 
-        let response = helper
+        let trips = helper
             .app
-            .get_trips(
-                TripsParameters {
-                    vessel_length_groups: Some(vec![VesselLengthGroup::UnderEleven]),
-                    ..Default::default()
-                },
-                None,
-            )
-            .await;
-        assert_eq!(response.status(), StatusCode::OK);
-
-        let trips: Vec<Trip> = response.json().await.unwrap();
+            .get_trips(TripsParameters {
+                vessel_length_groups: Some(vec![VesselLengthGroup::UnderEleven]),
+                ..Default::default()
+            })
+            .await
+            .unwrap();
         assert_eq!(trips.len(), 1);
         assert_eq!(trips[0], state.trips[0]);
     })
@@ -961,19 +863,14 @@ async fn test_trips_filter_by_fiskeridir_vessel_ids() {
 
         helper.refresh_cache().await;
 
-        let response = helper
+        let trips = helper
             .app
-            .get_trips(
-                TripsParameters {
-                    fiskeridir_vessel_ids: Some(vec![state.vessels[0].fiskeridir.id]),
-                    ..Default::default()
-                },
-                None,
-            )
-            .await;
-        assert_eq!(response.status(), StatusCode::OK);
-
-        let trips: Vec<Trip> = response.json().await.unwrap();
+            .get_trips(TripsParameters {
+                fiskeridir_vessel_ids: Some(vec![state.vessels[0].fiskeridir.id]),
+                ..Default::default()
+            })
+            .await
+            .unwrap();
         assert_eq!(trips.len(), 1);
         assert_eq!(trips[0], state.trips[0]);
     })
@@ -987,10 +884,11 @@ async fn test_trips_contains_hauls() {
 
         helper.refresh_cache().await;
 
-        let response = helper.app.get_trips(TripsParameters::default(), None).await;
-        assert_eq!(response.status(), StatusCode::OK);
-
-        let trips: Vec<Trip> = response.json().await.unwrap();
+        let trips = helper
+            .app
+            .get_trips(TripsParameters::default())
+            .await
+            .unwrap();
         let hauls = &trips[0].hauls;
 
         assert_eq!(trips.len(), 1);
@@ -1008,10 +906,11 @@ async fn test_trips_contains_landing_ids() {
 
         helper.refresh_cache().await;
 
-        let response = helper.app.get_trips(TripsParameters::default(), None).await;
-        assert_eq!(response.status(), StatusCode::OK);
-
-        let trips: Vec<Trip> = response.json().await.unwrap();
+        let trips = helper
+            .app
+            .get_trips(TripsParameters::default())
+            .await
+            .unwrap();
         let landing_ids = &trips[0].landing_ids;
 
         assert_eq!(trips.len(), 1);
@@ -1060,10 +959,12 @@ async fn test_trips_connects_to_existing_landings_outside_period_but_inside_land
 
         helper.refresh_cache().await;
 
-        let response = helper.app.get_trips(TripsParameters::default(), None).await;
-        assert_eq!(response.status(), StatusCode::OK);
+        let trips = helper
+            .app
+            .get_trips(TripsParameters::default())
+            .await
+            .unwrap();
 
-        let trips: Vec<Trip> = response.json().await.unwrap();
         let landing_ids = &trips[0].landing_ids;
 
         assert_eq!(trips.len(), 1);

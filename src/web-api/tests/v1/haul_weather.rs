@@ -1,7 +1,5 @@
 use super::helper::test_with_cache;
 use engine::*;
-use reqwest::StatusCode;
-use web_api::routes::v1::haul::Haul;
 
 #[tokio::test]
 async fn test_weather_gets_added_to_haul() {
@@ -10,9 +8,7 @@ async fn test_weather_gets_added_to_haul() {
 
         helper.refresh_cache().await;
 
-        let response = helper.app.get_hauls(Default::default()).await;
-        assert_eq!(response.status(), StatusCode::OK);
-        let hauls: Vec<Haul> = response.json().await.unwrap();
+        let hauls = helper.app.get_hauls(Default::default()).await.unwrap();
 
         let weather = state.weather;
         assert_eq!(hauls.len(), 5);
@@ -32,9 +28,7 @@ async fn test_weather_added_to_haul_gets_averaged() {
 
         helper.refresh_cache().await;
 
-        let response = helper.app.get_hauls(Default::default()).await;
-        assert_eq!(response.status(), StatusCode::OK);
-        let hauls: Vec<Haul> = response.json().await.unwrap();
+        let hauls = helper.app.get_hauls(Default::default()).await.unwrap();
 
         let len = state.weather.len() as f64;
         let wind_speed_10m = state
