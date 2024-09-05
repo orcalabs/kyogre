@@ -15,21 +15,6 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Snafu, StackError)]
 #[snafu(module, visibility(pub))]
-pub enum BwError {
-    #[snafu(display(
-        "Failed to lookup barentswatch profile status: '{status}', url: '{url}', body: '{body}'"
-    ))]
-    Profile {
-        #[snafu(implicit)]
-        location: Location,
-        url: String,
-        status: reqwest::StatusCode,
-        body: String,
-    },
-}
-
-#[derive(Snafu, StackError)]
-#[snafu(module, visibility(pub))]
 pub enum JWTDecodeError {
     #[snafu(display("tried to decode a token with at disabled Auth0Guard"))]
     Disabled {
@@ -123,8 +108,8 @@ pub enum Error {
     },
     #[snafu(display("An unexpected error occured"))]
     #[stack_error(
-        opaque_stack = [kyogre_core::Error, BwError],
-        opaque_std = [serde_json::Error, reqwest::Error])]
+        opaque_stack = [kyogre_core::Error],
+        opaque_std = [serde_json::Error, http_client::Error])]
     Unexpected {
         #[snafu(implicit)]
         location: Location,

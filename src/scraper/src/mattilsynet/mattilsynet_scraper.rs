@@ -1,22 +1,21 @@
-use super::models::DeliveryPoint;
-use crate::{
-    error::error::{FailedRequestSnafu, MissingValueSnafu},
-    DataSource, Processor, Result, ScraperId,
-};
+use std::collections::HashMap;
+
 use async_trait::async_trait;
 use fiskeridir_rs::DeliveryPointId;
+use http_client::{HttpClient, Response};
 use regex::Regex;
-use reqwest::{Response, StatusCode};
-use std::collections::HashMap;
 use table_extract::Table;
 use tracing::{error, info};
+
+use super::models::DeliveryPoint;
+use crate::{error::error::MissingValueSnafu, DataSource, Processor, Result, ScraperId};
 
 /// Statically know location for a file served by Mattilsynet.
 pub static MATTILSYNET_FILE_URL_PATH: &str =
     "binary/Virksomheter_som_haandterer_fiskerivarer_-_Fishery_establishments.csv";
 
 pub struct MattilsynetScraper {
-    http_client: reqwest::Client,
+    http_client: HttpClient,
     approved_establishments_urls: Vec<String>,
     fishery_establishments_url: Option<String>,
     businesses_url: Option<String>,
@@ -49,7 +48,7 @@ impl MattilsynetScraper {
         businesses_url: Option<String>,
     ) -> Self {
         Self {
-            http_client: reqwest::Client::new(),
+            http_client: Default::default(),
             approved_establishments_urls: approved_establishments_urls.unwrap_or_default(),
             fishery_establishments_url,
             businesses_url,
@@ -76,19 +75,7 @@ impl MattilsynetScraper {
     }
 
     async fn get(&self, url: &str) -> Result<Response> {
-        let response = self.http_client.get(url).send().await?;
-
-        let status = response.status();
-
-        match status {
-            StatusCode::OK => Ok(response),
-            _ => FailedRequestSnafu {
-                url,
-                status,
-                body: response.text().await?,
-            }
-            .fail(),
-        }
+        Ok(self.http_client.get(url).send().await?)
     }
 
     async fn approved_establishments(&self) -> Result<Vec<DeliveryPoint>> {

@@ -2,7 +2,6 @@ use std::num::ParseIntError;
 
 use fiskeridir_rs::ParseStringError;
 use geozero::error::GeozeroError;
-use reqwest::StatusCode;
 use snafu::{Location, Snafu};
 use stack_error::{OpaqueError, StackError};
 
@@ -50,20 +49,12 @@ pub enum Error {
         location: Location,
         source: kyogre_core::OauthError,
     },
-    #[snafu(display("HTTP error"))]
+    #[snafu(display("Http error"))]
     Http {
         #[snafu(implicit)]
         location: Location,
         #[snafu(source)]
-        error: reqwest::Error,
-    },
-    #[snafu(display("HTTP Request failed, status: '{status}', url: '{url}', body: '{body}'"))]
-    FailedRequest {
-        #[snafu(implicit)]
-        location: Location,
-        url: String,
-        status: StatusCode,
-        body: String,
+        error: http_client::Error,
     },
     #[snafu(display("Value unexpectedly missing"))]
     MissingValue {

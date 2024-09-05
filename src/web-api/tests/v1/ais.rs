@@ -1,8 +1,8 @@
 use super::helper::test;
 use chrono::{Duration, TimeZone, Utc};
 use engine::*;
+use http_client::StatusCode;
 use kyogre_core::*;
-use reqwest::StatusCode;
 use web_api::{
     error::ErrorDiscriminants,
     extractors::{BwPolicy, BwRole},

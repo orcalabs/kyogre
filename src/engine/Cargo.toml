@@ -11,6 +11,7 @@ postgres = { path = "../postgres" }
 scraper = { path = "../scraper" }
 vessel-benchmark = { path = "../vessel-benchmark" }
 meilisearch = { path = "../meilisearch" }
+http-client = { path = "../http-client" }
 
 stack-error = { workspace = true }
 snafu = { workspace = true }
@@ -38,6 +39,8 @@ humantime = "2.1.0"
 console-subscriber = "0.4.0"
 
 [dev-dependencies]
+http-client = { path = "../http-client", default-features = false }
+
 dockertest = { workspace = true }
 orca-core = { workspace = true, features = ["dockertest"] }
 tracing-subscriber = { workspace = true }

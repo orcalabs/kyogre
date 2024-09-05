@@ -1,7 +1,7 @@
-use serde::Deserialize;
 use std::sync::Arc;
 
-use crate::wrapped_http_client::WrappedHttpClient;
+use http_client::HttpClient;
+use serde::Deserialize;
 
 mod fishing_facility;
 mod fishing_facility_historic;
@@ -10,12 +10,12 @@ pub use fishing_facility::*;
 pub use fishing_facility_historic::*;
 
 pub struct BarentswatchSource {
-    pub client: Arc<WrappedHttpClient>,
+    pub client: Arc<HttpClient>,
 }
 
 impl BarentswatchSource {
-    pub fn new(client: Arc<WrappedHttpClient>) -> BarentswatchSource {
-        BarentswatchSource { client }
+    pub fn new(client: Arc<HttpClient>) -> Self {
+        Self { client }
     }
 }
 
