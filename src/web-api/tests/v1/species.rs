@@ -2,23 +2,17 @@ use super::helper::test;
 use engine::*;
 use fiskeridir_rs::SpeciesGroup;
 use kyogre_core::ML_SPECIES_GROUPS;
-use reqwest::StatusCode;
 use strum::IntoEnumIterator;
 use web_api::routes::v1::species::*;
 
 #[tokio::test]
 async fn test_species_groups_filters_by_has_ml_models() {
     test(|helper, _builder| async move {
-        let response = helper
+        let mut species: Vec<SpeciesGroup> = helper
             .app
             .get_species_groups(SpeciesGroupParams {
                 has_ml_models: Some(true),
             })
-            .await;
-
-        assert_eq!(response.status(), StatusCode::OK);
-        let mut body: Vec<SpeciesGroup> = response
-            .json::<Vec<SpeciesGroupDetailed>>()
             .await
             .unwrap()
             .into_iter()
@@ -26,9 +20,9 @@ async fn test_species_groups_filters_by_has_ml_models() {
             .collect();
 
         let mut expected = ML_SPECIES_GROUPS.to_vec();
-        body.sort();
+        species.sort();
         expected.sort();
-        assert_eq!(body, expected);
+        assert_eq!(species, expected);
     })
     .await;
 }
@@ -51,12 +45,9 @@ async fn test_species_returns_all_species() {
             .build()
             .await;
 
-        let response = helper.app.get_species().await;
+        let mut species = helper.app.get_species().await.unwrap();
 
-        assert_eq!(response.status(), StatusCode::OK);
-        let mut body: Vec<Species> = response.json().await.unwrap();
-
-        body.sort_by_key(|v| v.id);
+        species.sort_by_key(|v| v.id);
         assert_eq!(
             vec![
                 Species {
@@ -68,7 +59,7 @@ async fn test_species_returns_all_species() {
                     name: "test2".into(),
                 },
             ],
-            body
+            species
         );
     })
     .await;
@@ -84,17 +75,16 @@ async fn test_species_groups_returns_all_species_groups() {
             })
             .collect();
 
-        let response = helper
+        let mut species = helper
             .app
             .get_species_groups(SpeciesGroupParams::default())
-            .await;
+            .await
+            .unwrap();
 
-        assert_eq!(response.status(), StatusCode::OK);
-        let mut body: Vec<SpeciesGroupDetailed> = response.json().await.unwrap();
-        body.sort();
+        species.sort();
         expected.sort();
 
-        assert_eq!(expected, body);
+        assert_eq!(expected, species);
     })
     .await;
 }
@@ -109,14 +99,12 @@ async fn test_species_main_groups_returns_all_species_main_groups() {
             })
             .collect();
 
-        let response = helper.app.get_species_main_groups().await;
+        let mut species = helper.app.get_species_main_groups().await.unwrap();
 
-        assert_eq!(response.status(), StatusCode::OK);
-        let mut body: Vec<SpeciesMainGroupDetailed> = response.json().await.unwrap();
-        body.sort();
+        species.sort();
         expected.sort();
 
-        assert_eq!(expected, body);
+        assert_eq!(expected, species);
     })
     .await;
 }
@@ -152,13 +140,11 @@ async fn test_species_fao_returns_all_species_fao() {
             .build()
             .await;
 
-        let response = helper.app.get_species_fao().await;
+        let mut species = helper.app.get_species_fao().await.unwrap();
 
-        assert_eq!(response.status(), StatusCode::OK);
-        let mut body: Vec<SpeciesFao> = response.json().await.unwrap();
-        body.sort_by_key(|v| v.id.clone());
+        species.sort_by_key(|v| v.id.clone());
 
-        assert_eq!(expected, body);
+        assert_eq!(expected, species);
     })
     .await;
 }
@@ -198,12 +184,9 @@ async fn test_species_fiskeridir_returns_all_species_fiskeridir() {
             .build()
             .await;
 
-        let response = helper.app.get_species_fiskeridir().await;
+        let species = helper.app.get_species_fiskeridir().await.unwrap();
 
-        assert_eq!(response.status(), StatusCode::OK);
-        let body: Vec<SpeciesFiskeridir> = response.json().await.unwrap();
-
-        assert_eq!(expected, body);
+        assert_eq!(expected, species);
     })
     .await;
 }

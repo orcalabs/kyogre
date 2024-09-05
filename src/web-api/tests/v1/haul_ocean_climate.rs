@@ -1,7 +1,5 @@
 use super::helper::test_with_cache;
 use engine::*;
-use reqwest::StatusCode;
-use web_api::routes::v1::haul::Haul;
 
 #[tokio::test]
 async fn test_ocean_climate_gets_added_to_haul() {
@@ -10,9 +8,7 @@ async fn test_ocean_climate_gets_added_to_haul() {
 
         helper.refresh_cache().await;
 
-        let response = helper.app.get_hauls(Default::default()).await;
-        assert_eq!(response.status(), StatusCode::OK);
-        let hauls: Vec<Haul> = response.json().await.unwrap();
+        let hauls = helper.app.get_hauls(Default::default()).await.unwrap();
 
         let oc = state.ocean_climate;
         assert_eq!(hauls.len(), 5);
@@ -32,9 +28,7 @@ async fn test_ocean_climate_added_to_haul_gets_averaged() {
 
         helper.refresh_cache().await;
 
-        let response = helper.app.get_hauls(Default::default()).await;
-        assert_eq!(response.status(), StatusCode::OK);
-        let hauls: Vec<Haul> = response.json().await.unwrap();
+        let hauls = helper.app.get_hauls(Default::default()).await.unwrap();
 
         let len = state.ocean_climate.len() as f64;
         let water_speed = state

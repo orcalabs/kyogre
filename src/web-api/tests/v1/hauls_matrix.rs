@@ -9,11 +9,7 @@ use kyogre_core::{
     haul_date_feature_matrix_index, ActiveHaulsFilter, CatchLocationId, HaulMatrixXFeature,
     HaulMatrixYFeature, HaulMatrixes, NUM_CATCH_LOCATIONS,
 };
-use reqwest::StatusCode;
-use web_api::routes::{
-    utils::datetime_to_month,
-    v1::haul::{HaulsMatrix, HaulsMatrixParams},
-};
+use web_api::routes::{utils::datetime_to_month, v1::haul::HaulsMatrixParams};
 
 #[tokio::test]
 async fn test_hauls_matrix_does_not_query_database_on_prior_month_or_newer_data() {
@@ -82,7 +78,7 @@ async fn test_hauls_matrix_does_not_query_database_on_prior_month_or_newer_data(
         assert_eq!(cutoff_1, cutoff_2 - 1);
         assert_eq!(cutoff_3, cutoff_2 + 1);
 
-        let response = helper
+        let matrix = helper
             .app
             .get_hauls_matrix(
                 HaulsMatrixParams {
@@ -91,10 +87,9 @@ async fn test_hauls_matrix_does_not_query_database_on_prior_month_or_newer_data(
                 },
                 filter,
             )
-            .await;
+            .await
+            .unwrap();
 
-        assert_eq!(response.status(), StatusCode::OK);
-        let matrix: HaulsMatrix = response.json().await.unwrap();
         assert!(!matrix.dates.iter().any(|v| *v != 0));
         assert!(!matrix.length_group.iter().any(|v| *v != 0));
         assert!(!matrix.gear_group.iter().any(|v| *v != 0));
@@ -140,7 +135,7 @@ async fn test_hauls_matrix_filters_majority_species() {
 
         helper.refresh_matrix_cache().await;
 
-        let response = helper
+        let matrix = helper
             .app
             .get_hauls_matrix(
                 HaulsMatrixParams {
@@ -150,10 +145,8 @@ async fn test_hauls_matrix_filters_majority_species() {
                 },
                 filter,
             )
-            .await;
-
-        assert_eq!(response.status(), StatusCode::OK);
-        let matrix: HaulsMatrix = response.json().await.unwrap();
+            .await
+            .unwrap();
 
         assert_haul_matrix_content(&matrix, filter, 100, vec![]);
     })
@@ -197,7 +190,7 @@ async fn test_hauls_matrix_filters_bycatch() {
 
         helper.refresh_matrix_cache().await;
 
-        let response = helper
+        let matrix = helper
             .app
             .get_hauls_matrix(
                 HaulsMatrixParams {
@@ -206,10 +199,8 @@ async fn test_hauls_matrix_filters_bycatch() {
                 },
                 filter,
             )
-            .await;
-
-        assert_eq!(response.status(), StatusCode::OK);
-        let matrix: HaulsMatrix = response.json().await.unwrap();
+            .await
+            .unwrap();
 
         assert_haul_matrix_content(&matrix, filter, 100, vec![]);
     })
@@ -240,13 +231,11 @@ async fn test_hauls_matrix_returns_correct_sum_for_all_hauls() {
 
         helper.refresh_matrix_cache().await;
 
-        let response = helper
+        let matrix = helper
             .app
             .get_hauls_matrix(HaulsMatrixParams::default(), filter)
-            .await;
-
-        assert_eq!(response.status(), StatusCode::OK);
-        let matrix: HaulsMatrix = response.json().await.unwrap();
+            .await
+            .unwrap();
 
         assert_haul_matrix_content(&matrix, filter, 60, vec![]);
     })
@@ -300,10 +289,8 @@ async fn test_hauls_matrix_filters_by_months() {
 
         helper.refresh_matrix_cache().await;
 
-        let response = helper.app.get_hauls_matrix(params, filter).await;
+        let matrix = helper.app.get_hauls_matrix(params, filter).await.unwrap();
 
-        assert_eq!(response.status(), StatusCode::OK);
-        let matrix: HaulsMatrix = response.json().await.unwrap();
         assert_haul_matrix_content(&matrix, filter, 30, vec![(HaulMatrixes::Date, 330)]);
     })
     .await;
@@ -353,10 +340,7 @@ async fn test_hauls_matrix_filters_by_vessel_length() {
             ..Default::default()
         };
 
-        let response = helper.app.get_hauls_matrix(params, filter).await;
-
-        assert_eq!(response.status(), StatusCode::OK);
-        let matrix: HaulsMatrix = response.json().await.unwrap();
+        let matrix = helper.app.get_hauls_matrix(params, filter).await.unwrap();
         assert_haul_matrix_content(&matrix, filter, 30, vec![(HaulMatrixes::VesselLength, 330)]);
     })
     .await;
@@ -406,9 +390,8 @@ async fn test_hauls_matrix_filters_by_species_group() {
             ..Default::default()
         };
 
-        let response = helper.app.get_hauls_matrix(params, filter).await;
+        let matrix = helper.app.get_hauls_matrix(params, filter).await.unwrap();
 
-        let matrix: HaulsMatrix = response.json().await.unwrap();
         assert_haul_matrix_content(&matrix, filter, 30, vec![(HaulMatrixes::SpeciesGroup, 330)]);
     })
     .await;
@@ -455,9 +438,8 @@ async fn test_hauls_matrix_filters_by_gear_group() {
         };
 
         helper.refresh_matrix_cache().await;
-        let response = helper.app.get_hauls_matrix(params, filter).await;
+        let matrix = helper.app.get_hauls_matrix(params, filter).await.unwrap();
 
-        let matrix: HaulsMatrix = response.json().await.unwrap();
         assert_haul_matrix_content(&matrix, filter, 30, vec![(HaulMatrixes::GearGroup, 330)]);
     })
     .await;
@@ -507,10 +489,8 @@ async fn test_hauls_matrix_filters_by_fiskeridir_vessel_ids() {
         };
 
         helper.refresh_matrix_cache().await;
-        let response = helper.app.get_hauls_matrix(params, filter).await;
+        let matrix = helper.app.get_hauls_matrix(params, filter).await.unwrap();
 
-        assert_eq!(response.status(), StatusCode::OK);
-        let matrix: HaulsMatrix = response.json().await.unwrap();
         assert_haul_matrix_content(&matrix, filter, 30, vec![]);
     })
     .await;
@@ -545,10 +525,8 @@ async fn test_hauls_matrix_filters_by_catch_locations() {
         };
 
         helper.refresh_matrix_cache().await;
-        let response = helper.app.get_hauls_matrix(params, filter).await;
+        let matrix = helper.app.get_hauls_matrix(params, filter).await.unwrap();
 
-        assert_eq!(response.status(), StatusCode::OK);
-        let matrix: HaulsMatrix = response.json().await.unwrap();
         assert_haul_matrix_content(&matrix, filter, 10, vec![(HaulMatrixes::Date, 30)]);
     })
     .await;
@@ -595,13 +573,11 @@ async fn test_hauls_matrix_date_sum_area_table_is_correct() {
             .await;
 
         helper.refresh_matrix_cache().await;
-        let response = helper
+        let matrix = helper
             .app
             .get_hauls_matrix(HaulsMatrixParams::default(), filter)
-            .await;
-
-        assert_eq!(response.status(), StatusCode::OK);
-        let matrix: HaulsMatrix = response.json().await.unwrap();
+            .await
+            .unwrap();
 
         let width = HaulMatrixes::Date.size();
         let x0 = haul_date_feature_matrix_index(&month1);
@@ -653,13 +629,11 @@ async fn test_hauls_matrix_gear_group_sum_area_table_is_correct() {
             .await;
 
         helper.refresh_matrix_cache().await;
-        let response = helper
+        let matrix = helper
             .app
             .get_hauls_matrix(HaulsMatrixParams::default(), filter)
-            .await;
-
-        assert_eq!(response.status(), StatusCode::OK);
-        let matrix: HaulsMatrix = response.json().await.unwrap();
+            .await
+            .unwrap();
 
         let width = HaulMatrixes::GearGroup.size();
         let x0 = GearGroup::Trawl.enum_index();
@@ -709,13 +683,11 @@ async fn test_hauls_matrix_vessel_length_sum_area_table_is_correct() {
             .await;
 
         helper.refresh_matrix_cache().await;
-        let response = helper
+        let matrix = helper
             .app
             .get_hauls_matrix(HaulsMatrixParams::default(), filter)
-            .await;
-
-        assert_eq!(response.status(), StatusCode::OK);
-        let matrix: HaulsMatrix = response.json().await.unwrap();
+            .await
+            .unwrap();
 
         let width = HaulMatrixes::VesselLength.size();
         let x0 = VesselLengthGroup::UnderEleven.enum_index();
@@ -765,13 +737,11 @@ async fn test_hauls_matrix_species_group_sum_area_table_is_correct() {
             .await;
 
         helper.refresh_matrix_cache().await;
-        let response = helper
+        let matrix = helper
             .app
             .get_hauls_matrix(HaulsMatrixParams::default(), filter)
-            .await;
-
-        assert_eq!(response.status(), StatusCode::OK);
-        let matrix: HaulsMatrix = response.json().await.unwrap();
+            .await
+            .unwrap();
 
         let width = HaulMatrixes::SpeciesGroup.size();
         let x0 = SpeciesGroup::GreenlandHalibut.enum_index();
@@ -814,13 +784,12 @@ async fn test_hauls_matrix_have_correct_totals_after_dca_message_is_replaced_by_
             .await;
 
         helper.refresh_matrix_cache().await;
-        let response = helper
+        let matrix = helper
             .app
             .get_hauls_matrix(HaulsMatrixParams::default(), filter)
-            .await;
+            .await
+            .unwrap();
 
-        assert_eq!(response.status(), StatusCode::OK);
-        let matrix: HaulsMatrix = response.json().await.unwrap();
         assert_haul_matrix_content(&matrix, filter, 20, vec![]);
     })
     .await
@@ -833,7 +802,7 @@ async fn test_hauls_matrix_returns_correct_array_dimensions_with_no_data_for_cur
         let now = Utc::now();
         let current_month = now.year() as u32 * 12 + now.month0();
 
-        let response = helper
+        let matrix = helper
             .app
             .get_hauls_matrix(
                 HaulsMatrixParams {
@@ -842,10 +811,9 @@ async fn test_hauls_matrix_returns_correct_array_dimensions_with_no_data_for_cur
                 },
                 filter,
             )
-            .await;
+            .await
+            .unwrap();
 
-        assert_eq!(response.status(), StatusCode::OK);
-        let matrix: HaulsMatrix = response.json().await.unwrap();
         let x_feature: HaulMatrixXFeature = filter.into();
         assert_eq!(
             matrix.dates.len(),

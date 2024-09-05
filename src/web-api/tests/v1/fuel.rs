@@ -2,50 +2,50 @@ use crate::v1::helper::test;
 use chrono::{Duration, Utc};
 use reqwest::StatusCode;
 use web_api::routes::v1::fuel::{
-    DeleteFuelMeasurement, FuelMeasurement, FuelMeasurementBody, FuelMeasurementsParams,
+    DeleteFuelMeasurement, FuelMeasurementBody, FuelMeasurementsParams,
 };
 
 #[tokio::test]
 async fn test_cant_use_fuel_measurement_endpoints_without_bw_token() {
     test(|helper, _builder| async move {
-        let response = helper
+        let error = helper
             .app
-            .get_fuel_measurements(Default::default(), "".into())
-            .await;
-        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+            .get_fuel_measurements(Default::default())
+            .await
+            .unwrap_err();
+        assert_eq!(error.status, StatusCode::NOT_FOUND);
 
         let body = vec![FuelMeasurementBody {
             timestamp: Utc::now(),
             fuel: 10.,
         }];
 
-        let response = helper
+        let error = helper
             .app
-            .create_fuel_measurements(body.clone(), "".into())
-            .await;
-        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+            .create_fuel_measurements(body.clone())
+            .await
+            .unwrap_err();
+        assert_eq!(error.status, StatusCode::NOT_FOUND);
 
-        let response = helper.app.update_fuel_measurements(body, "".into()).await;
-        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+        let error = helper.app.update_fuel_measurements(body).await.unwrap_err();
+        assert_eq!(error.status, StatusCode::NOT_FOUND);
 
-        let response = helper
+        let error = helper
             .app
-            .delete_fuel_measurements(
-                vec![DeleteFuelMeasurement {
-                    timestamp: Utc::now(),
-                }],
-                "".into(),
-            )
-            .await;
-        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+            .delete_fuel_measurements(vec![DeleteFuelMeasurement {
+                timestamp: Utc::now(),
+            }])
+            .await
+            .unwrap_err();
+        assert_eq!(error.status, StatusCode::NOT_FOUND);
     })
     .await;
 }
 
 #[tokio::test]
 async fn test_create_and_get_fuel_measurement() {
-    test(|helper, _builder| async move {
-        let token = helper.bw_helper.get_bw_token();
+    test(|mut helper, _builder| async move {
+        helper.app.login_user();
 
         let now = Utc::now();
 
@@ -64,19 +64,13 @@ async fn test_create_and_get_fuel_measurement() {
             },
         ];
 
-        let response = helper
-            .app
-            .create_fuel_measurements(body, token.clone())
-            .await;
-        assert_eq!(response.status(), StatusCode::OK);
+        helper.app.create_fuel_measurements(body).await.unwrap();
 
-        let response = helper
+        let measurements = helper
             .app
-            .get_fuel_measurements(Default::default(), token)
-            .await;
-        assert_eq!(response.status(), StatusCode::OK);
-
-        let measurements: Vec<FuelMeasurement> = response.json().await.unwrap();
+            .get_fuel_measurements(Default::default())
+            .await
+            .unwrap();
         assert_eq!(measurements.len(), 3);
     })
     .await;
@@ -84,8 +78,8 @@ async fn test_create_and_get_fuel_measurement() {
 
 #[tokio::test]
 async fn test_get_fuel_measurement_filters_by_dates() {
-    test(|helper, _builder| async move {
-        let token = helper.bw_helper.get_bw_token();
+    test(|mut helper, _builder| async move {
+        helper.app.login_user();
 
         let now = Utc::now();
 
@@ -104,21 +98,14 @@ async fn test_get_fuel_measurement_filters_by_dates() {
             },
         ];
 
-        let response = helper
-            .app
-            .create_fuel_measurements(body, token.clone())
-            .await;
-        assert_eq!(response.status(), StatusCode::OK);
+        helper.app.create_fuel_measurements(body).await.unwrap();
 
         let params = FuelMeasurementsParams {
             start_date: Some(now - Duration::days(2)),
             end_date: Some(now - Duration::days(1)),
         };
 
-        let response = helper.app.get_fuel_measurements(params, token).await;
-        assert_eq!(response.status(), StatusCode::OK);
-
-        let measurements: Vec<FuelMeasurement> = response.json().await.unwrap();
+        let measurements = helper.app.get_fuel_measurements(params).await.unwrap();
         assert_eq!(measurements.len(), 1);
         assert_eq!(measurements[0].fuel, 2000.);
     })
@@ -127,8 +114,8 @@ async fn test_get_fuel_measurement_filters_by_dates() {
 
 #[tokio::test]
 async fn test_update_fuel_measurement() {
-    test(|helper, _builder| async move {
-        let token = helper.bw_helper.get_bw_token();
+    test(|mut helper, _builder| async move {
+        helper.app.login_user();
 
         let now = Utc::now();
 
@@ -147,29 +134,23 @@ async fn test_update_fuel_measurement() {
             },
         ];
 
-        let response = helper
+        helper
             .app
-            .create_fuel_measurements(body.clone(), token.clone())
-            .await;
-        assert_eq!(response.status(), StatusCode::OK);
+            .create_fuel_measurements(body.clone())
+            .await
+            .unwrap();
 
         for m in body.iter_mut() {
             m.fuel *= 10.;
         }
 
-        let response = helper
-            .app
-            .update_fuel_measurements(body, token.clone())
-            .await;
-        assert_eq!(response.status(), StatusCode::OK);
+        helper.app.update_fuel_measurements(body).await.unwrap();
 
-        let response = helper
+        let measurements = helper
             .app
-            .get_fuel_measurements(Default::default(), token)
-            .await;
-        assert_eq!(response.status(), StatusCode::OK);
-
-        let measurements: Vec<FuelMeasurement> = response.json().await.unwrap();
+            .get_fuel_measurements(Default::default())
+            .await
+            .unwrap();
         assert_eq!(measurements.len(), 3);
         assert_eq!(measurements[0].fuel, 10_000.);
         assert_eq!(measurements[1].fuel, 20_000.);
@@ -180,8 +161,8 @@ async fn test_update_fuel_measurement() {
 
 #[tokio::test]
 async fn test_delete_fuel_measurement() {
-    test(|helper, _builder| async move {
-        let token = helper.bw_helper.get_bw_token();
+    test(|mut helper, _builder| async move {
+        helper.app.login_user();
 
         let now = Utc::now();
 
@@ -200,19 +181,17 @@ async fn test_delete_fuel_measurement() {
             },
         ];
 
-        let response = helper
+        helper
             .app
-            .create_fuel_measurements(body.clone(), token.clone())
-            .await;
-        assert_eq!(response.status(), StatusCode::OK);
+            .create_fuel_measurements(body.clone())
+            .await
+            .unwrap();
 
-        let response = helper
+        let measurements = helper
             .app
-            .get_fuel_measurements(Default::default(), token.clone())
-            .await;
-        assert_eq!(response.status(), StatusCode::OK);
-
-        let measurements: Vec<FuelMeasurement> = response.json().await.unwrap();
+            .get_fuel_measurements(Default::default())
+            .await
+            .unwrap();
         assert_eq!(measurements.len(), 3);
 
         let delete = vec![
@@ -224,19 +203,13 @@ async fn test_delete_fuel_measurement() {
             },
         ];
 
-        let response = helper
-            .app
-            .delete_fuel_measurements(delete, token.clone())
-            .await;
-        assert_eq!(response.status(), StatusCode::OK);
+        helper.app.delete_fuel_measurements(delete).await.unwrap();
 
-        let response = helper
+        let measurements = helper
             .app
-            .get_fuel_measurements(Default::default(), token)
-            .await;
-        assert_eq!(response.status(), StatusCode::OK);
-
-        let measurements: Vec<FuelMeasurement> = response.json().await.unwrap();
+            .get_fuel_measurements(Default::default())
+            .await
+            .unwrap();
         assert_eq!(measurements.len(), 1);
         assert_eq!(measurements[0].fuel, 2000.);
     })

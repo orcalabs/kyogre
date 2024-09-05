@@ -3,22 +3,18 @@ use chrono::{Duration, TimeZone, Utc};
 use engine::*;
 use fiskeridir_rs::Quality;
 use kyogre_core::{HaulId, PrecisionId};
-use reqwest::StatusCode;
-use web_api::routes::v1::trip::Trip;
 
 #[tokio::test]
 async fn test_trip_of_haul_returns_none_of_no_trip_is_connected_to_given_haul_id() {
     test_with_cache(|helper, _builder| async move {
         helper.refresh_cache().await;
 
-        let response = helper
+        let trip = helper
             .app
             .get_trip_of_haul(&HaulId::test_new(7645323266))
-            .await;
-        assert_eq!(response.status(), StatusCode::OK);
-
-        let body: Option<Trip> = response.json().await.unwrap();
-        assert!(body.is_none());
+            .await
+            .unwrap();
+        assert!(trip.is_none());
     })
     .await;
 }
@@ -30,11 +26,12 @@ async fn test_trip_of_haul_does_not_return_trip_outside_haul_period() {
 
         helper.refresh_cache().await;
 
-        let response = helper.app.get_trip_of_haul(&state.hauls[0].haul_id).await;
-        assert_eq!(response.status(), StatusCode::OK);
-
-        let body: Option<Trip> = response.json().await.unwrap();
-        assert!(body.is_none());
+        let trip = helper
+            .app
+            .get_trip_of_haul(&state.hauls[0].haul_id)
+            .await
+            .unwrap();
+        assert!(trip.is_none());
     })
     .await;
 }
@@ -67,11 +64,12 @@ async fn test_trip_of_haul_does_not_return_trip_of_other_vessels() {
 
         helper.refresh_cache().await;
 
-        let response = helper.app.get_trip_of_haul(&state.hauls[0].haul_id).await;
-        assert_eq!(response.status(), StatusCode::OK);
-
-        let body: Option<Trip> = response.json().await.unwrap();
-        assert!(body.is_none());
+        let trip = helper
+            .app
+            .get_trip_of_haul(&state.hauls[0].haul_id)
+            .await
+            .unwrap();
+        assert!(trip.is_none());
     })
     .await;
 }
@@ -83,11 +81,13 @@ async fn test_trip_of_haul_returns_all_hauls_and_landings_connected_to_trip() {
 
         helper.refresh_cache().await;
 
-        let response = helper.app.get_trip_of_haul(&state.hauls[0].haul_id).await;
-        assert_eq!(response.status(), StatusCode::OK);
-
-        let body: Trip = response.json().await.unwrap();
-        assert_eq!(state.trips[0], body);
+        let trip = helper
+            .app
+            .get_trip_of_haul(&state.hauls[0].haul_id)
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(state.trips[0], trip);
     })
     .await;
 }
@@ -116,12 +116,14 @@ async fn test_aggregates_landing_data_per_product_quality_and_species_id() {
 
         helper.refresh_cache().await;
 
-        let response = helper.app.get_trip_of_haul(&state.hauls[0].haul_id).await;
-        assert_eq!(response.status(), StatusCode::OK);
-
-        let body: Trip = response.json().await.unwrap();
-        assert_eq!(state.trips[0], body);
-        assert_eq!(body.delivery.delivered.len(), 2);
+        let trip = helper
+            .app
+            .get_trip_of_haul(&state.hauls[0].haul_id)
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(state.trips[0], trip);
+        assert_eq!(trip.delivery.delivered.len(), 2);
     })
     .await;
 }
@@ -145,12 +147,14 @@ async fn test_trip_of_haul_returns_precision_range_of_trip_if_it_exists() {
 
         helper.refresh_cache().await;
 
-        let response = helper.app.get_trip_of_haul(&state.hauls[0].haul_id).await;
-        assert_eq!(response.status(), StatusCode::OK);
-
-        let body: Trip = response.json().await.unwrap();
-        assert!(body.start != start);
-        assert!(body.end != end);
+        let trip = helper
+            .app
+            .get_trip_of_haul(&state.hauls[0].haul_id)
+            .await
+            .unwrap()
+            .unwrap();
+        assert!(trip.start != start);
+        assert!(trip.end != end);
     })
     .await;
 }

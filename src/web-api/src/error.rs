@@ -132,7 +132,7 @@ pub enum Error {
     },
 }
 
-#[derive(Serialize, ToSchema)]
+#[derive(Serialize, Deserialize, ToSchema)]
 pub struct ErrorResponse {
     pub error: ErrorDiscriminants,
     pub description: String,
