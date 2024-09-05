@@ -780,18 +780,21 @@ dependencies = [
 
 [[package]]
 name = "bollard"
-version = "0.15.0"
+version = "0.17.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f03db470b3c0213c47e978da93200259a1eb4dae2e5512cba9955e2b540a6fc6"
+checksum = "d41711ad46fda47cd701f6908e59d1bd6b9a2b7464c0d0aeab95c6d37096ff8a"
 dependencies = [
- "base64 0.21.7",
+ "base64 0.22.1",
  "bollard-stubs",
  "bytes",
  "futures-core",
  "futures-util",
  "hex",
- "http 0.2.12",
- "hyper 0.14.30",
+ "http 1.1.0",
+ "http-body-util",
+ "hyper 1.4.1",
+ "hyper-named-pipe",
+ "hyper-util",
  "hyperlocal",
  "log",
  "pin-project-lite",
@@ -803,15 +806,16 @@ dependencies = [
  "thiserror",
  "tokio",
  "tokio-util",
+ "tower-service",
  "url",
  "winapi",
 ]
 
 [[package]]
 name = "bollard-stubs"
-version = "1.43.0-rc.2"
+version = "1.45.0-rc.26.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b58071e8fd9ec1e930efd28e3a90c1251015872a2ce49f81f36421b86466932e"
+checksum = "6d7c5415e3a6bc6d3e99eff6268e488fd4ee25e7b28c10f08fa6760bd9de16e4"
 dependencies = [
  "serde",
  "serde_repr",
@@ -1443,21 +1447,22 @@ dependencies = [
 
 [[package]]
 name = "dockertest"
-version = "0.4.0"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "88933ed892cc8f5be247da11a1cd86a5c64802ac0172982e8aeb8315cb6dacfa"
+checksum = "b8648c989dfd460932144f0ce5c55ff35cf0de758f89ea20e3b3d0d3f5e1cce6"
 dependencies = [
  "anyhow",
  "async-trait",
- "base64 0.21.7",
+ "base64 0.22.1",
  "bollard",
+ "bytes",
  "dyn-clone",
  "futures",
- "lazy_static",
  "rand 0.8.5",
  "secrecy",
  "serde",
  "serde_json",
+ "strum 0.26.3",
  "thiserror",
  "tokio",
  "tracing",
@@ -2382,6 +2387,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "hyper-named-pipe"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "73b7d8abf35697b81a825e386fc151e0d503e8cb5fcb93cc8669c376dfd6f278"
+dependencies = [
+ "hex",
+ "hyper 1.4.1",
+ "hyper-util",
+ "pin-project-lite",
+ "tokio",
+ "tower-service",
+ "winapi",
+]
+
+[[package]]
 name = "hyper-rustls"
 version = "0.24.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2476,15 +2496,17 @@ dependencies = [
 
 [[package]]
 name = "hyperlocal"
-version = "0.8.0"
+version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0fafdf7b2b2de7c9784f76e02c0935e65a8117ec3b768644379983ab333ac98c"
+checksum = "986c5ce3b994526b3cd75578e62554abd09f0899d6206de48b3e96ab34ccc8c7"
 dependencies = [
- "futures-util",
  "hex",
- "hyper 0.14.30",
- "pin-project",
+ "http-body-util",
+ "hyper 1.4.1",
+ "hyper-util",
+ "pin-project-lite",
  "tokio",
+ "tower-service",
 ]
 
 [[package]]
@@ -2915,9 +2937,9 @@ checksum = "c41e0c4fef86961ac6d6f8a82609f55f31b05e4fce149ac5710e439df7619ba4"
 
 [[package]]
 name = "machine"
-version = "0.9.0"
+version = "0.10.0"
 source = "sparse+https://cargo.cloudsmith.io/orcalabs/orcastrator/"
-checksum = "6a36e19a7c398e1f7cd2693f3040b5d38b148ef8021e7ffcce224ecf7d3ad0a1"
+checksum = "01a9c45e6d7962fba910126799c5c5c2476b841d64e43bd3d793790c157a4d5a"
 dependencies = [
  "async-trait",
  "chrono",
@@ -3484,9 +3506,9 @@ dependencies = [
 
 [[package]]
 name = "orca-core"
-version = "0.27.0"
+version = "0.28.1"
 source = "sparse+https://cargo.cloudsmith.io/orcalabs/orcastrator/"
-checksum = "bbb48a82de7169e9bda3ab2af890a66a57583d6cc6969980c95888fcf68bd0b2"
+checksum = "83b7d9ebc823586d592d568f39b3bc679615c7e8f54479d5fe25d60c4f1aab52"
 dependencies = [
  "actix-web",
  "dockertest",
