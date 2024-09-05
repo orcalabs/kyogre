@@ -2,10 +2,10 @@
 #![deny(rust_2018_idioms)]
 
 use chrono::{DateTime, Duration, Utc};
-use error::MigratorError;
-use error_stack::{Result, ResultExt};
+use error::{Error, Result};
 use indicatif::*;
 use kyogre_core::{AisMigratorDestination, AisMigratorSource, AisVesselMigrate, Mmsi};
+use snafu::location;
 use std::collections::{HashMap, HashSet};
 use tracing::{error, info, instrument};
 
@@ -141,7 +141,7 @@ where
     }
 
     #[instrument(skip(self, mmsi, start), fields(app.migrated_vessels))]
-    async fn migrate_vessel(&self, mmsi: Mmsi, start: DateTime<Utc>) -> Result<(), MigratorError> {
+    async fn migrate_vessel(&self, mmsi: Mmsi, start: DateTime<Utc>) -> Result<()> {
         let mut current = start;
 
         tracing::Span::current().record("app.mmsi", mmsi.into_inner());
@@ -153,11 +153,18 @@ where
                 .source
                 .ais_positions(mmsi, current, end)
                 .await
-                .change_context(MigratorError::Source)?;
+                .map_err(|error| Error::Source {
+                    location: location!(),
+                    error,
+                })?;
+
             self.destination
                 .migrate_ais_data(mmsi, positions, end)
                 .await
-                .change_context(MigratorError::Destination)?;
+                .map_err(|error| Error::Destination {
+                    location: location!(),
+                    error,
+                })?;
 
             current = end;
             if current > self.end_threshold {
