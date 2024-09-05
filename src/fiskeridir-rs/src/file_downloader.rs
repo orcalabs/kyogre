@@ -1,16 +1,18 @@
-use crate::{error::error::FailedRequestSnafu, utils::hash_file, Result};
+use std::{fmt::Display, io::Write, path::PathBuf, time::Duration};
+
 use csv::DeserializeRecordsIntoIter;
 use futures_util::StreamExt;
-use reqwest::StatusCode;
+use http_client::HttpClient;
 use serde::de::DeserializeOwned;
-use std::{fmt::Display, io::Write, path::PathBuf};
+
+use crate::{utils::hash_file, ApiDownloader, Result};
 
 #[derive(Debug, Clone)]
 pub struct DataDownloader {
     // Path to directory where file will be downloaded
     directory_path: PathBuf,
     // HTTP client instance
-    http_client: reqwest::Client,
+    http_client: HttpClient,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -230,15 +232,11 @@ impl AsRef<str> for DataFileId {
 }
 
 impl DataDownloader {
-    pub fn new(directory_path: PathBuf) -> Result<DataDownloader> {
-        let client = reqwest::ClientBuilder::new()
-            .timeout(std::time::Duration::new(600, 0))
-            .build()?;
-
-        Ok(DataDownloader {
+    pub fn new(directory_path: PathBuf) -> DataDownloader {
+        DataDownloader {
             directory_path,
-            http_client: client,
-        })
+            http_client: HttpClient::builder().timeout(Duration::new(600, 0)).build(),
+        }
     }
 
     pub fn clean_download_dir(&self) -> Result<()> {
@@ -249,11 +247,6 @@ impl DataDownloader {
     pub async fn download(&self, source: &FileSource) -> Result<DataDir> {
         let url = source.url();
         let response = self.http_client.get(&url).send().await?;
-        let status = response.status();
-        if status != StatusCode::OK {
-            let body = response.text().await?;
-            return FailedRequestSnafu { url, status, body }.fail();
-        }
 
         let file_path = match source {
             FileSource::Landings { .. } | FileSource::Vms { .. } | FileSource::Ers { .. } => {
@@ -302,5 +295,11 @@ impl DataDownloader {
         Ok(DataDir {
             dir_path: file_path,
         })
+    }
+}
+
+impl Default for ApiDownloader {
+    fn default() -> Self {
+        Self::new()
     }
 }

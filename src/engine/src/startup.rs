@@ -1,12 +1,15 @@
-use crate::{settings::Settings, FisheryDiscriminants, FisheryEngine, SharedState};
+use std::sync::Arc;
+
+use http_client::HttpClient;
 use machine::StateMachine;
 use meilisearch::MeilisearchAdapter;
 use orca_core::Environment;
 use postgres::PostgresAdapter;
-use scraper::{BarentswatchSource, FiskeridirSource, Scraper, WrappedHttpClient};
-use std::sync::Arc;
+use scraper::{BarentswatchSource, FiskeridirSource, Scraper};
 use tokio::select;
 use tracing::error;
+
+use crate::{settings::Settings, FisheryDiscriminants, FisheryEngine, SharedState};
 
 pub struct App {
     pub shared_state: SharedState,
@@ -42,14 +45,13 @@ impl App {
         std::fs::create_dir_all(&settings.scraper.file_download_dir)
             .expect("failed to create download dir");
         let file_downloader =
-            fiskeridir_rs::DataDownloader::new(settings.scraper.file_download_dir.clone()).unwrap();
-        let api_downloader = fiskeridir_rs::ApiDownloader::new().unwrap();
+            fiskeridir_rs::DataDownloader::new(settings.scraper.file_download_dir.clone());
+        let api_downloader = fiskeridir_rs::ApiDownloader::new();
 
         let fiskeridir_source =
             FiskeridirSource::new(Box::new(postgres.clone()), file_downloader, api_downloader);
 
-        let http_client = Arc::new(WrappedHttpClient::new().unwrap());
-
+        let http_client = Arc::new(HttpClient::new());
         let barentswatch_source = BarentswatchSource::new(http_client);
 
         let scraper = Scraper::new(

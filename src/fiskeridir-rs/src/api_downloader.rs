@@ -1,14 +1,14 @@
-use crate::error::error::FailedRequestSnafu;
-use crate::Result;
-use reqwest::{ClientBuilder, StatusCode};
-use serde::de::DeserializeOwned;
-use serde::Serialize;
 use std::time::Duration;
+
+use http_client::HttpClient;
+use serde::{de::DeserializeOwned, Serialize};
+
+use crate::Result;
 
 #[derive(Debug, Clone)]
 pub struct ApiDownloader {
     // HTTP client instance
-    http_client: reqwest::Client,
+    http_client: HttpClient,
 }
 
 // Different API sources within Fiskeridir
@@ -28,31 +28,20 @@ impl ApiSource {
 }
 
 impl ApiDownloader {
-    pub fn new() -> Result<Self> {
-        let http_client = ClientBuilder::new().timeout(Duration::new(60, 0)).build()?;
-
-        Ok(Self { http_client })
+    pub fn new() -> Self {
+        Self {
+            http_client: HttpClient::builder().timeout(Duration::new(60, 0)).build(),
+        }
     }
 
-    pub async fn download<T: DeserializeOwned, Q: Serialize>(
+    pub async fn download<T: DeserializeOwned>(
         &self,
         source: &ApiSource,
-        query: Option<&Q>,
+        query: Option<&impl Serialize>,
     ) -> Result<T> {
-        let url = source.url();
-        let mut request = self.http_client.get(&url);
-
-        if let Some(query) = query {
-            request = request.query(&query);
-        }
-
-        let response = request.send().await?;
-        let status = response.status();
-        if status != StatusCode::OK {
-            let body = response.text().await?;
-            return FailedRequestSnafu { url, status, body }.fail();
-        }
-
-        Ok(response.json().await?)
+        self.http_client
+            .download(source.url(), query, None::<String>)
+            .await
+            .map_err(From::from)
     }
 }

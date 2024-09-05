@@ -24,12 +24,10 @@ mod mattilsynet;
 mod ocean_climate;
 mod utils;
 mod weather;
-mod wrapped_http_client;
 
 pub use barentswatch::BarentswatchSource;
 pub use error::{Error, Result};
 pub use fiskeridir::FiskeridirSource;
-pub use wrapped_http_client::*;
 
 pub trait Processor: ScraperInboundPort + ScraperOutboundPort + Send + Sync {}
 impl<T> Processor for T where T: ScraperInboundPort + ScraperOutboundPort + Send + Sync {}

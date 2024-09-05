@@ -1,6 +1,7 @@
 use std::{collections::HashMap, str::FromStr};
 
 use actix_web::guard::Guard;
+use http_client::HttpClient;
 use jsonwebtoken::{
     decode, decode_header,
     jwk::{Jwk, JwkSet},
@@ -22,7 +23,9 @@ pub struct BwtGuard {
 
 impl BwtGuard {
     pub async fn new(settings: &BwSettings) -> Self {
-        let jwks: JwkSet = reqwest::get(&settings.jwks_url)
+        let jwks: JwkSet = HttpClient::new()
+            .get(&settings.jwks_url)
+            .send()
             .await
             .unwrap()
             .json()

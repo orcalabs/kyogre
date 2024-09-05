@@ -2,7 +2,7 @@ use super::{barentswatch_helper::SIGNED_IN_VESSEL_CALLSIGN, helper::test};
 use chrono::{Datelike, TimeZone, Utc};
 use engine::*;
 use fiskeridir_rs::CallSign;
-use reqwest::StatusCode;
+use http_client::StatusCode;
 use web_api::routes::v1::user::User;
 
 #[tokio::test]

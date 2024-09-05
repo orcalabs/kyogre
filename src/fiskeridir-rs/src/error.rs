@@ -1,6 +1,5 @@
-use reqwest::StatusCode;
-use snafu::{location, Location, Snafu};
-use stack_error::StackError;
+use snafu::{Location, Snafu};
+use stack_error::{OpaqueError, StackError};
 use std::num::ParseIntError;
 
 use crate::string_new_types::NonEmptyString;
@@ -24,7 +23,7 @@ pub enum LandingIdError {
         #[snafu(source)]
         error: ParseIntError,
     },
-    #[snafu(display("Encountered value that did not match enum an enum variant '{value}'"))]
+    #[snafu(display("Encountered value that did not match an enum variant '{value}'"))]
     Invalid {
         #[snafu(implicit)]
         location: Location,
@@ -46,19 +45,13 @@ pub enum ParseStringError {
 #[snafu(module, visibility(pub))]
 pub enum Error {
     #[snafu(display("Http error"))]
+    #[stack_error(opaque_std = [http_client::Error])]
     Http {
         #[snafu(implicit)]
         location: Location,
-        #[snafu(source)]
-        error: reqwest::Error,
-    },
-    #[snafu(display("HTTP Request failed, status: '{status}', url: '{url}', body: '{body}'"))]
-    FailedRequest {
-        #[snafu(implicit)]
-        location: Location,
-        url: String,
-        status: StatusCode,
-        body: String,
+        // This is not an `error: http_client::Error` because the compiler warns that the error becomes
+        // too large (100+ bytes)
+        opaque: OpaqueError,
     },
     #[snafu(display("IO error"))]
     Io {
@@ -109,22 +102,19 @@ pub enum Error {
 }
 
 impl From<csv::Error> for Error {
+    #[track_caller]
     fn from(e: csv::Error) -> Self {
+        let location = std::panic::Location::caller();
+        let location = Location::new(location.file(), location.line(), location.column());
         match e.kind() {
             csv::ErrorKind::Deserialize { pos: _, err } => match err.kind() {
                 csv::DeserializeErrorKind::UnexpectedEndOfRow => Error::IncompleteData {
                     error: err.clone(),
-                    location: location!(),
+                    location,
                 },
-                _ => Error::Csv {
-                    location: location!(),
-                    error: e,
-                },
+                _ => Error::Csv { location, error: e },
             },
-            _ => Error::Csv {
-                location: location!(),
-                error: e,
-            },
+            _ => Error::Csv { location, error: e },
         }
     }
 }

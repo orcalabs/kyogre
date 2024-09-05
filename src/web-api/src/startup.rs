@@ -4,6 +4,7 @@ use actix_web::{
     web::{self, Data},
     HttpServer,
 };
+use http_client::HttpClient;
 use meilisearch::MeilisearchAdapter;
 use orca_core::{Environment, OrcaRootSpanBuilder, TracingLogger};
 use postgres::PostgresAdapter;
@@ -248,6 +249,7 @@ where
             .app_data(Data::new(cache.clone()))
             .app_data(Data::new(auth0_state.clone()))
             .app_data(Data::new(meilisearch.clone()))
+            .app_data(Data::new(HttpClient::new()))
             .app_data(QsQueryConfig::default().qs_config(serde_qs::Config::new(5, false)))
             .wrap(Compress::default())
             .wrap(Condition::new(not_prod, actix_cors::Cors::permissive()))

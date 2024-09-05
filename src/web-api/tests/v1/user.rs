@@ -1,6 +1,6 @@
 use crate::v1::helper::test;
 use engine::*;
-use reqwest::StatusCode;
+use http_client::StatusCode;
 use web_api::routes::v1::user::User;
 
 #[tokio::test]

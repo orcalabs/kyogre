@@ -2,8 +2,8 @@ use super::helper::{test, test_with_cache};
 use chrono::{DateTime, Duration, TimeZone, Utc};
 use engine::*;
 use fiskeridir_rs::{DeliveryPointId, GearGroup, LandingId, SpeciesGroup, VesselLengthGroup};
+use http_client::StatusCode;
 use kyogre_core::{FiskeridirVesselId, Ordering, TripSorting, VesselEventType};
-use reqwest::StatusCode;
 use uuid::Uuid;
 use web_api::{error::ErrorDiscriminants, routes::v1::trip::TripsParameters};
 

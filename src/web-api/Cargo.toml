@@ -14,6 +14,7 @@ kyogre-core = { path = "../kyogre-core", features = ["utoipa"] }
 postgres = { path = "../postgres" }
 duckdb-rs = { path = "../duckdb-rs" }
 meilisearch = { path = "../meilisearch" }
+http-client = { path = "../http-client" }
 
 fiskeridir-rs = { workspace = true }
 stack-error = { workspace = true }
@@ -33,7 +34,6 @@ wkt = { workspace = true }
 serde_with = { workspace = true }
 uuid = { workspace = true }
 async-trait = { workspace = true }
-reqwest = { workspace = true, features = ["json", "rustls-tls"] }
 
 actix-web = "4.9.0"
 actix-cors = "0.7.0"
@@ -45,9 +45,9 @@ serde_qs = { version = "0.13.0", features = ["actix4"] }
 [dev-dependencies]
 engine = { path = "../engine" }
 vessel-benchmark = { path = "../vessel-benchmark" }
+http-client = { path = "../http-client", default-features = false }
 
 machine = { workspace = true }
-reqwest = { workspace = true, features = ["json"] }
 dockertest = { workspace = true }
 orca-core = { workspace = true, features = ["dockertest"] }
 tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
