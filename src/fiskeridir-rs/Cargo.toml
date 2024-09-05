@@ -12,39 +12,35 @@ sqlx = ["dep:sqlx"]
 [dependencies]
 stack-error = { workspace = true }
 snafu = { workspace = true }
-
-serde = { version = "1.0.209", features = ["derive"] }
-serde_with = "3.9.0"
-remain = "0.2.14"
-chrono = { version = "0.4.38", features = ["serde"] }
-jurisdiction = "0.1.1"
-serde_repr = "0.1.19"
-num-derive = "0.4.2"
-num-traits = "0.2.19"
-chrono-tz = "0.9.0"
-futures-util = "0.3.30"
-sha3 = "0.10.8"
-zip = "2.2.0"
-csv = "1.3.0"
-reqwest = { workspace = true, features = ["stream", "json", "rustls-tls"] }
-tracing = "0.1.40"
-strum = { version = "0.26", features = ["derive"] }
-strum_macros = "0.26"
-regex = "1.10.6"
-once_cell = "1.19.0"
-url = "2.5.2"
-
-utoipa = { version = "4.2", optional = true }
-sqlx = { version = "0.8.1", features = [
+serde = { workspace = true }
+serde_with = { workspace = true }
+serde_repr = { workspace = true }
+remain = { workspace = true }
+chrono = { workspace = true, features = ["serde"] }
+chrono-tz = { workspace = true }
+jurisdiction = { workspace = true }
+num-derive = { workspace = true }
+num-traits = { workspace = true }
+tracing = { workspace = true }
+futures-util = { workspace = true }
+csv = { workspace = true }
+regex = { workspace = true }
+strum = { workspace = true }
+utoipa = { workspace = true, optional = true }
+sqlx = { workspace = true, features = [
     "runtime-tokio-rustls",
     "postgres",
 ], optional = true }
+enum_index = { workspace = true }
+enum_index_derive = { workspace = true }
+reqwest = { workspace = true, features = ["rustls-tls", "stream", "json"] }
 
-enum_index = "0.2.0"
-enum_index_derive = "0.2.0"
+sha3 = "0.10.8"
+zip = "2.2.0"
 
 [dev-dependencies]
-tokio = { version = "1.39.3", features = ["time", "rt-multi-thread", "macros"] }
-wiremock = "0.6.1"
-tempfile = "3.12.0"
+tokio = { workspace = true, features = ["time", "rt-multi-thread", "macros"] }
 reqwest = { workspace = true, features = ["stream", "json"] }
+wiremock = { workspace = true }
+
+tempfile = "3.12.0"

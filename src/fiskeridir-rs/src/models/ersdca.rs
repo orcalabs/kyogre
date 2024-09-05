@@ -12,9 +12,7 @@ use serde_repr::Deserialize_repr;
 use serde_repr::Serialize_repr;
 use serde_with::serde_as;
 use serde_with::NoneAsEmptyString;
-use strum_macros::AsRefStr;
-use strum_macros::EnumIter;
-use strum_macros::EnumString;
+use strum::{AsRefStr, EnumIter, EnumString};
 
 #[remain::sorted]
 #[serde_as]

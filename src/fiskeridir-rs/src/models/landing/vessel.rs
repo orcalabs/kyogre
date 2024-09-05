@@ -9,7 +9,7 @@ use jurisdiction::Jurisdiction;
 use num_derive::FromPrimitive;
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
-use strum_macros::{AsRefStr, EnumCount, EnumIter, EnumString};
+use strum::{AsRefStr, EnumCount, EnumIter, EnumString};
 
 use crate::{error::error::JurisdictionSnafu, models::ers_common::ErsVesselInfo, CallSign, Error};
 

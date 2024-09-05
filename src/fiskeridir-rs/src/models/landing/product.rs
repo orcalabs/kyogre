@@ -1,6 +1,6 @@
 use num_derive::{FromPrimitive, ToPrimitive};
 use serde_repr::{Deserialize_repr, Serialize_repr};
-use strum_macros::{AsRefStr, EnumString};
+use strum::{AsRefStr, EnumString};
 
 use crate::{SpeciesGroup, SpeciesMainGroup};
 

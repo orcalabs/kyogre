@@ -1,7 +1,7 @@
 use enum_index_derive::{EnumIndex, IndexEnum};
 use num_derive::FromPrimitive;
 use serde_repr::{Deserialize_repr, Serialize_repr};
-use strum_macros::{AsRefStr, EnumCount, EnumIter, EnumString};
+use strum::{AsRefStr, EnumCount, EnumIter, EnumString};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GearDetails {

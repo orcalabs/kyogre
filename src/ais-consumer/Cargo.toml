@@ -6,39 +6,38 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+kyogre-core = { path = "../kyogre-core" }
+postgres = { path = "../postgres" }
+
 orca-core = { workspace = true, features = ["telemetry"] }
 fiskeridir-rs = { workspace = true }
 stack-error = { workspace = true }
 snafu = { workspace = true }
-
-kyogre-core = { path = "../kyogre-core" }
-postgres = { path = "../postgres" }
-async-trait = "0.1.81"
-serde = "1.0.209"
-config = "0.14.0"
-tokio = { version = "1.39.3", features = [
+serde = { workspace = true }
+serde_json = { workspace = true }
+config = { workspace = true }
+tokio = { workspace = true, features = [
     "macros",
     "sync",
     "time",
     "rt-multi-thread",
 ] }
-tokio-util = { version = "0.7.11", features = ["codec", "compat"] }
-futures = "0.3.30"
-tracing = "0.1.40"
-chrono = { version = "0.4.38", features = ["serde"] }
-serde_json = "1.0.127"
-humantime-serde = "1.1.1"
-rand = "0.8.5"
+futures = { workspace = true }
+tracing = { workspace = true }
+chrono = { workspace = true }
+humantime-serde = { workspace = true }
+rand = { workspace = true }
 reqwest = { workspace = true, features = [
     "http2",
     "native-tls-alpn",
     "stream",
 ] }
 
+tokio-util = { version = "0.7.11", features = ["codec", "compat"] }
+
 [dev-dependencies]
-tracing-subscriber = "0.3.18"
 orca-core = { workspace = true, features = ["dockertest"] }
 dockertest = { workspace = true }
-rand = "0.8.5"
-tokio-stream = "0.1.15"
 reqwest = { workspace = true, features = ["http2", "stream"] }
+tokio-stream = { workspace = true }
+tracing-subscriber = { workspace = true }

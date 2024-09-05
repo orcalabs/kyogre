@@ -7,7 +7,7 @@ use serde::de::{self, Visitor};
 use serde::Deserialize;
 use serde_repr::Serialize_repr;
 use serde_with::{serde_as, NoneAsEmptyString};
-use strum_macros::{AsRefStr, EnumString};
+use strum::{AsRefStr, EnumString};
 
 use super::FiskeridirVesselId;
 

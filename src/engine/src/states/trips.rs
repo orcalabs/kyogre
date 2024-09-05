@@ -1,11 +1,14 @@
-use std::{cmp::min, collections::HashMap, sync::Arc};
+use std::{
+    cmp::min,
+    collections::HashMap,
+    sync::{Arc, LazyLock},
+};
 
 use crate::error::Result;
 use crate::*;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use machine::Schedule;
-use once_cell::sync::Lazy;
 use tokio::{
     select,
     sync::{mpsc::channel, Mutex},
@@ -13,7 +16,7 @@ use tokio::{
 };
 use tracing::{error, info};
 
-static TRIP_COMPUTATION_STEPS: Lazy<Vec<Box<dyn TripComputationStep>>> = Lazy::new(|| {
+static TRIP_COMPUTATION_STEPS: LazyLock<Vec<Box<dyn TripComputationStep>>> = LazyLock::new(|| {
     vec![
         Box::<TripPrecisionStep>::default(),
         Box::<TripPositionLayers>::default(),

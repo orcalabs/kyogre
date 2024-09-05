@@ -75,7 +75,6 @@ pub enum Error {
         #[snafu(source)]
         error: csv::Error,
     },
-
     #[snafu(display("Received incomplete csv data"))]
     #[stack_error(skip_from_impls)]
     IncompleteData {
@@ -83,14 +82,6 @@ pub enum Error {
         location: Location,
         #[snafu(source)]
         error: csv::DeserializeError,
-    },
-
-    #[snafu(display("Url parse error"))]
-    Url {
-        #[snafu(implicit)]
-        location: Location,
-        #[snafu(source)]
-        error: url::ParseError,
     },
     #[snafu(display("Zip error"))]
     Zip {
