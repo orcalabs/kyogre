@@ -7,8 +7,5 @@ edition = "2021"
 
 [dependencies]
 kyogre-core = { path = "../kyogre-core", features = ["utoipa"] }
-stack-error = { workspace = true }
-snafu = { workspace = true }
 
-async-trait = "0.1.81"
-tracing = "0.1.40"
+async-trait = { workspace = true }

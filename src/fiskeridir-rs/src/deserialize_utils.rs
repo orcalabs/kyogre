@@ -1,10 +1,10 @@
 use chrono::{DateTime, NaiveDate, NaiveDateTime, NaiveTime, TimeZone, Utc};
 use chrono_tz::Europe::Oslo;
 use num_traits::FromPrimitive;
-use once_cell::sync::Lazy;
 use regex::Regex;
 use serde::{de, Deserialize};
 use std::str::FromStr;
+use std::sync::LazyLock;
 use std::{fmt, marker::PhantomData};
 
 use crate::{FiskeridirVesselId, Gear, GearGroup, MainGearGroup, SpeciesGroup, SpeciesMainGroup};
@@ -125,7 +125,7 @@ where
     }
 }
 
-static DATE_SEP_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new("[,:]").unwrap());
+static DATE_SEP_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new("[,:]").unwrap());
 
 pub fn date_time_utc_from_non_iso_utc_str<'de, D>(
     deserializer: D,
@@ -941,7 +941,7 @@ impl<'de> de::Visitor<'de> for DeserializeOptFiskeridirVesselIdStr {
     }
 }
 
-static NULLABLE_STR_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new("^[*]+$").unwrap());
+static NULLABLE_STR_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new("^[*]+$").unwrap());
 
 struct DeserializeOpti64NullableStr;
 impl<'de> de::Visitor<'de> for DeserializeOpti64NullableStr {

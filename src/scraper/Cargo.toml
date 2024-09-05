@@ -7,27 +7,29 @@ edition = "2021"
 
 [dependencies]
 kyogre-core = { path = "../kyogre-core" }
+
 fiskeridir-rs = { workspace = true }
 orca-core = { workspace = true }
 stack-error = { workspace = true }
 snafu = { workspace = true }
+reqwest = { workspace = true, features = [
+    "rustls-tls",
+    "stream",
+    "json",
+    "gzip",
+] }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+serde_with = { workspace = true }
+tracing = { workspace = true }
+async-trait = { workspace = true }
+chrono = { workspace = true }
+wkt = { workspace = true }
+uuid = { workspace = true }
+csv = { workspace = true }
+pyo3 = { workspace = true }
+regex = { workspace = true }
 
-tokio = "1.39.3"
-serde = { version = "1.0.209", features = ["derive"] }
-serde_json = "1.0.127"
-serde_with = "3.9.0"
-tracing = "0.1.40"
-async-trait = "0.1.81"
-chrono = { version = "0.4.38", features = ["serde"] }
-wkt = { version = "0.11.0", features = ["serde"] }
-uuid = { version = "1.10.0", features = ["serde"] }
-reqwest = { workspace = true, features = ["gzip", "rustls-tls"] }
 geozero = "0.13.0"
 table-extract = "0.2.3"
-csv = "1.3.0"
-pyo3 = { version = "0.22.2", features = ["chrono", "auto-initialize"] }
-regex = "1.10.6"
-
-
-[dev-dependencies]
-reqwest = { workspace = true, features = ["gzip"] }

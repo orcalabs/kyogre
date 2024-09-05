@@ -7,43 +7,40 @@ edition = "2021"
 
 [dependencies]
 kyogre-core = { path = "../kyogre-core", features = ["utoipa"] }
+
 fiskeridir-rs = { workspace = true }
 stack-error = { workspace = true }
 snafu = { workspace = true }
-
-http = "1.1.0"
-duckdb = { version = "1.0.0", features = ["r2d2", "bundled"] }
-r2d2 = { version = "0.8" }
-config = { version = "0.14.0", features = ["yaml"] }
-tracing = "0.1.40"
-serde = { version = "1.0.209", features = ["derive"] }
-serde_json = "1.0.127"
-chrono = { version = "0.4.38", features = ["serde"] }
+serde = { workspace = true }
+config = { workspace = true }
+tracing = { workspace = true }
+chrono = { workspace = true }
 orca-core = { workspace = true, features = ["telemetry"] }
-num-traits = "0.2.19"
-async-trait = "0.1.81"
-humantime-serde = "1.1.1"
-
-tonic = { version = "0.12.1", features = ["gzip"] }
-prost = "0.13"
-futures-core = "0.3"
-futures-util = "0.3"
-tokio = { version = "1.39.3", features = [
+num-traits = { workspace = true }
+async-trait = { workspace = true }
+humantime-serde = { workspace = true }
+tokio = { workspace = true, features = [
     "rt-multi-thread",
     "macros",
     "sync",
     "time",
 ] }
-tokio-stream = { version = "0.1.15", features = ["net"] }
+tokio-stream = { workspace = true, features = ["net"] }
+
+http = "1.1.0"
+duckdb = { version = "1.0.0", features = ["r2d2", "bundled"] }
+r2d2 = { version = "0.8" }
+tonic = { version = "0.12.1", features = ["gzip"] }
+prost = "0.13"
 
 [dev-dependencies]
-futures = "0.3.30"
-tokio-stream = { version = "0.1.15", features = ["net"] }
-tracing-subscriber = "0.3.18"
-rand = "0.8.5"
-dockertest = { workspace = true }
 postgres = { path = "../postgres" }
+
+futures = { workspace = true }
+rand = { workspace = true }
+dockertest = { workspace = true }
 orca-core = { workspace = true, features = ["dockertest"] }
+tracing-subscriber = { workspace = true }
 
 [build-dependencies]
 tonic-build = "0.12"

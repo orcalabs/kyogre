@@ -1,7 +1,7 @@
 use crate::NorthSouth62DegreesNorth;
 use num_derive::FromPrimitive;
 use serde_repr::{Deserialize_repr, Serialize_repr};
-use strum_macros::{AsRefStr, EnumIter, EnumString};
+use strum::{AsRefStr, EnumIter, EnumString};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct CatchLocation {

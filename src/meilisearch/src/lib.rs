@@ -24,8 +24,7 @@ mod utils;
 use haul::*;
 use landing::*;
 pub use settings::Settings;
-use strum::{EnumIter, IntoEnumIterator};
-use strum_macros::{AsRefStr, EnumString};
+use strum::{AsRefStr, EnumIter, EnumString, IntoEnumIterator};
 use tracing::{error, instrument};
 use trip::*;
 
