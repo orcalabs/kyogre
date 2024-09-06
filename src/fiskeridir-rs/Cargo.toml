@@ -29,6 +29,7 @@ strum = { workspace = true }
 utoipa = { workspace = true, optional = true }
 sqlx = { workspace = true, features = [
     "runtime-tokio-rustls",
+    "derive",
     "postgres",
 ], optional = true }
 enum_index = { workspace = true }
