@@ -64,7 +64,7 @@ dependencies = [
  "humantime-serde",
  "indicatif",
  "kyogre-core",
- "orca-core",
+ "orca-core 0.27.0",
  "postgres",
  "serde",
  "snafu",
@@ -116,6 +116,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7d5a26814d8dcb93b0e5a0ff3c6d80a8843bafb21b39e8e18a6f05471870e110"
 dependencies = [
  "derive_arbitrary",
+]
+
+[[package]]
+name = "async-compression"
+version = "0.4.12"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fec134f64e2bc57411226dfc4e52dec859ddfc7e711fc5e07b612584f000e4aa"
+dependencies = [
+ "flate2",
+ "futures-core",
+ "memchr",
+ "pin-project-lite",
+ "tokio",
 ]
 
 [[package]]
@@ -181,7 +194,7 @@ dependencies = [
  "http-body 0.4.6",
  "hyper 0.14.30",
  "itoa",
- "matchit",
+ "matchit 0.7.3",
  "memchr",
  "mime",
  "percent-encoding",
@@ -785,13 +798,12 @@ dependencies = [
  "enum_index",
  "enum_index_derive",
  "futures-util",
+ "http-client",
  "jurisdiction",
  "num-derive",
  "num-traits",
- "once_cell",
  "regex",
  "remain",
- "reqwest 0.12.7",
  "serde",
  "serde_repr",
  "serde_with",
@@ -800,9 +812,7 @@ dependencies = [
  "sqlx",
  "stack-error",
  "strum",
- "strum_macros",
  "tracing",
- "url",
  "utoipa",
  "zip",
 ]
@@ -899,7 +909,7 @@ checksum = "1d930c203dd0b6ff06e0201a4a2fe9149b43c684fd4420555b26d21b1a02956f"
 dependencies = [
  "futures-core",
  "lock_api",
- "parking_lot",
+ "parking_lot 0.12.3",
 ]
 
 [[package]]
@@ -1220,6 +1230,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "http-client"
+version = "0.1.0"
+dependencies = [
+ "bytes",
+ "futures",
+ "http 1.1.0",
+ "reqwest 0.12.7",
+ "reqwest-middleware",
+ "reqwest-retry",
+ "reqwest-tracing",
+ "serde",
+ "snafu",
+ "stack-error",
+]
+
+[[package]]
 name = "httparse"
 version = "1.9.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1444,6 +1470,9 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e0242819d153cba4b4b05a5a8f2a7e9bbf97b6055b2a002b395c96b5ff3c0222"
 dependencies = [
  "cfg-if",
+ "js-sys",
+ "wasm-bindgen",
+ "web-sys",
 ]
 
 [[package]]
@@ -1536,7 +1565,6 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "chrono",
- "chrono-tz",
  "enum_index",
  "enum_index_derive",
  "fiskeridir-rs",
@@ -1546,7 +1574,7 @@ dependencies = [
  "num-derive",
  "num-traits",
  "oauth2",
- "orca-core",
+ "orca-core 0.28.1",
  "rand",
  "remain",
  "serde",
@@ -1653,6 +1681,12 @@ name = "matchit"
 version = "0.7.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0e7465ac9959cc2b1404e8e2367b43684a6d13790fe23056cc8c6c5a6b7bcb94"
+
+[[package]]
+name = "matchit"
+version = "0.8.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "47e1ffaa40ddd1f3ed91f717a33c8c0ee23fff369e3aa8772b9605cc1d22f4c3"
 
 [[package]]
 name = "md-5"
@@ -1952,6 +1986,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "orca-core"
+version = "0.28.1"
+source = "sparse+https://cargo.cloudsmith.io/orcalabs/orcastrator/"
+checksum = "83b7d9ebc823586d592d568f39b3bc679615c7e8f54479d5fe25d60c4f1aab52"
+dependencies = [
+ "opentelemetry",
+ "opentelemetry-otlp",
+ "opentelemetry-semantic-conventions",
+ "opentelemetry_sdk",
+ "serde",
+ "tonic",
+ "tracing",
+ "tracing-log",
+ "tracing-opentelemetry",
+ "tracing-panic",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "ordered-float"
 version = "4.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1984,12 +2037,37 @@ checksum = "bb813b8af86854136c6922af0598d719255ecb2179515e6e7730d468f05c9cae"
 
 [[package]]
 name = "parking_lot"
+version = "0.11.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7d17b78036a60663b797adeaee46f5c9dfebb86948d1255007a1d6be0271ff99"
+dependencies = [
+ "instant",
+ "lock_api",
+ "parking_lot_core 0.8.6",
+]
+
+[[package]]
+name = "parking_lot"
 version = "0.12.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f1bf18183cf54e8d6059647fc3063646a1801cf30896933ec2311622cc4b9a27"
 dependencies = [
  "lock_api",
- "parking_lot_core",
+ "parking_lot_core 0.9.10",
+]
+
+[[package]]
+name = "parking_lot_core"
+version = "0.8.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "60a2cfe6f0ad2bfc16aefa463b497d5c7a5ecd44a23efa72aa342d90177356dc"
+dependencies = [
+ "cfg-if",
+ "instant",
+ "libc",
+ "redox_syscall 0.2.16",
+ "smallvec",
+ "winapi",
 ]
 
 [[package]]
@@ -2000,7 +2078,7 @@ checksum = "1e401f977ab385c9e4e3ab30627d6f26d00e2c73eef317493c4ec6d468726cf8"
 dependencies = [
  "cfg-if",
  "libc",
- "redox_syscall",
+ "redox_syscall 0.5.3",
  "smallvec",
  "windows-targets 0.52.6",
 ]
@@ -2205,8 +2283,6 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "chrono",
- "enum_index",
- "enum_index_derive",
  "fiskeridir-rs",
  "futures",
  "geo",
@@ -2215,7 +2291,7 @@ dependencies = [
  "jurisdiction",
  "kyogre-core",
  "num-traits",
- "orca-core",
+ "orca-core 0.28.1",
  "rand",
  "serde",
  "serde_json",
@@ -2396,6 +2472,15 @@ dependencies = [
 
 [[package]]
 name = "redox_syscall"
+version = "0.2.16"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fb5a58c1855b4b6819d59012155603f0b22ad30cad752600aadfcb695265519a"
+dependencies = [
+ "bitflags 1.3.2",
+]
+
+[[package]]
+name = "redox_syscall"
 version = "0.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2a908a6e00f1fdd0dfd9c0eb08ce85126f6d8bbda50017e74bc4a4b7d4a926a4"
@@ -2506,6 +2591,7 @@ version = "0.12.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f8f4955649ef5c38cc7f9e8aa41761d48fb9677197daea9984dc54f56aad5e63"
 dependencies = [
+ "async-compression",
  "base64 0.22.1",
  "bytes",
  "futures-core",
@@ -2542,6 +2628,70 @@ dependencies = [
  "web-sys",
  "webpki-roots 0.26.5",
  "windows-registry",
+]
+
+[[package]]
+name = "reqwest-middleware"
+version = "0.3.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "562ceb5a604d3f7c885a792d42c199fd8af239d0a51b2fa6a78aafa092452b04"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "http 1.1.0",
+ "reqwest 0.12.7",
+ "serde",
+ "thiserror",
+ "tower-service",
+]
+
+[[package]]
+name = "reqwest-retry"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "40f342894422862af74c50e1e9601cf0931accc9c6981e5eb413c46603b616b5"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "chrono",
+ "futures",
+ "getrandom",
+ "http 1.1.0",
+ "hyper 1.4.1",
+ "parking_lot 0.11.2",
+ "reqwest 0.12.7",
+ "reqwest-middleware",
+ "retry-policies",
+ "tokio",
+ "tracing",
+ "wasm-timer",
+]
+
+[[package]]
+name = "reqwest-tracing"
+version = "0.5.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bfdd9bfa64c72233d8dd99ab7883efcdefe9e16d46488ecb9228b71a2e2ceb45"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "getrandom",
+ "http 1.1.0",
+ "matchit 0.8.4",
+ "reqwest 0.12.7",
+ "reqwest-middleware",
+ "tracing",
+]
+
+[[package]]
+name = "retry-policies"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "493b4243e32d6eedd29f9a398896e35c6943a123b55eec97dcaee98310d25810"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "rand",
 ]
 
 [[package]]
@@ -4066,6 +4216,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "wasm-timer"
+version = "0.2.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "be0ecb0db480561e9a7642b5d3e4187c128914e58aa84330b9493e3eb68c5e7f"
+dependencies = [
+ "futures",
+ "js-sys",
+ "parking_lot 0.11.2",
+ "pin-utils",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "web-sys",
+]
+
+[[package]]
 name = "web-sys"
 version = "0.3.70"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4106,7 +4271,7 @@ version = "1.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "372d5b87f58ec45c384ba03563b03544dc5fadc3983e434b286913f5b4a9bb6d"
 dependencies = [
- "redox_syscall",
+ "redox_syscall 0.5.3",
  "wasite",
 ]
 
