@@ -12,3 +12,4 @@ orca-core = { workspace = true }
 serde = { workspace = true }
 config = { workspace = true }
 tokio = { workspace = true, features = ["macros"] }
+tracing = { workspace = true }
