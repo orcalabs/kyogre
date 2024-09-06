@@ -1,0 +1,34 @@
+INSERT INTO
+    ais_vessels (mmsi)
+VALUES
+    (258154000),
+    (257640000),
+    (259209000),
+    (259027080),
+    (259030750),
+    (257535800),
+    (257714500)
+ON CONFLICT DO NOTHING;
+
+INSERT INTO
+    fiskeridir_vessels (fiskeridir_vessel_id)
+VALUES
+    (2022121557),
+    (2020115659),
+    (2001016521),
+    (2024125178),
+    (2024125157),
+    (2013062553),
+    (1997002959)
+ON CONFLICT DO NOTHING;
+
+INSERT INTO
+    fiskeridir_ais_vessel_mapping_whitelist (fiskeridir_vessel_id, call_sign, mmsi, is_manual)
+VALUES
+    (2022121557, 'JXNX', 258154000, TRUE),
+    (2020115659, 'LFNX', 257640000, TRUE),
+    (2001016521, 'LLRG', 259209000, TRUE),
+    (2024125178, 'LL4613', 259027080, TRUE),
+    (2024125157, 'LH6166', 259030750, TRUE),
+    (2013062553, 'LG7888', 257535800, TRUE),
+    (1997002959, 'LCDZ', 257714500, TRUE);
