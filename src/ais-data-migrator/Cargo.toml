@@ -9,7 +9,7 @@ edition = "2021"
 kyogre-core = { path = "../kyogre-core" }
 postgres = { path = "../postgres" }
 
-orca-core = { version = "0.27.0", registry = "orcalabs-orcastrator", features = [
+orca-core = { version = "0.31.0", registry = "orcalabs-orcastrator", features = [
     "telemetry",
 ] }
 stack-error = { version = "0.3.0", registry = "orcalabs-orcastrator" }

@@ -7,7 +7,7 @@ use kyogre_core::*;
 use meilisearch::MeilisearchAdapter;
 use orca_core::{
     compositions::{meilisearch_composition, postgres_composition},
-    Environment, LogLevel, PsqlLogStatements, PsqlSettings,
+    Environment, PsqlLogStatements, PsqlSettings,
 };
 use postgres::{PostgresAdapter, TestDb};
 use rand::random;
@@ -217,11 +217,8 @@ where
 
             let (duck_db_api, duck_db_client) = if cache_mode == CacheMode::MatrixCache {
                 let duckdb_app = duckdb_rs::App::build(&duckdb_rs::Settings {
-                    log_level: LogLevel::Debug,
-                    telemetry: None,
                     postgres: db_settings.clone(),
                     environment: Environment::Test,
-                    honeycomb: None,
                     duck_db: duckdb_rs::adapter::DuckdbSettings {
                         max_connections: 1,
                         cache_mode: adapter::CacheMode::ReturnError,
@@ -266,8 +263,6 @@ where
             let bw_profiles_url = format!("{bw_address}/profiles");
 
             let api_settings = Settings {
-                log_level: LogLevel::Debug,
-                telemetry: None,
                 api: ApiSettings {
                     ip: "127.0.0.1".to_string(),
                     port: 0,
@@ -276,7 +271,6 @@ where
                 postgres: db_settings.clone(),
                 meilisearch: m_settings,
                 environment: Environment::Test,
-                honeycomb: None,
                 bw_settings: Some(BwSettings {
                     jwks_url: format!("{bw_address}/jwks"),
                     audience: bw_helper.audience.clone(),

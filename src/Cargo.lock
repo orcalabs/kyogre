@@ -2616,15 +2616,6 @@ dependencies = [
 
 [[package]]
 name = "itertools"
-version = "0.12.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ba291022dbbd398a455acf126c1e341954079855bc60dfdda641363bd6922569"
-dependencies = [
- "either",
-]
-
-[[package]]
-name = "itertools"
 version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "413ee7dfc52ee1a4949ceeb7dbc8a33f2d6c088194d9f922fb8318faf1f01186"
@@ -2933,9 +2924,9 @@ checksum = "c41e0c4fef86961ac6d6f8a82609f55f31b05e4fce149ac5710e439df7619ba4"
 
 [[package]]
 name = "machine"
-version = "0.10.0"
+version = "0.13.0"
 source = "sparse+https://cargo.cloudsmith.io/orcalabs/orcastrator/"
-checksum = "01a9c45e6d7962fba910126799c5c5c2476b841d64e43bd3d793790c157a4d5a"
+checksum = "027638d3c8c948a8d7af6e3e4a370b96e822f73d0ff10163ada4ba4ad1ba0e38"
 dependencies = [
  "async-trait",
  "chrono",
@@ -3506,11 +3497,12 @@ dependencies = [
 
 [[package]]
 name = "orca-core"
-version = "0.28.1"
+version = "0.31.0"
 source = "sparse+https://cargo.cloudsmith.io/orcalabs/orcastrator/"
-checksum = "83b7d9ebc823586d592d568f39b3bc679615c7e8f54479d5fe25d60c4f1aab52"
+checksum = "b14e68002ad80e2199a3348098567185a06f72e41d4e66a41e4505c4753d81cc"
 dependencies = [
  "actix-web",
+ "config",
  "dockertest",
  "opentelemetry",
  "opentelemetry-otlp",
@@ -3992,7 +3984,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f8650aabb6c35b860610e9cff5dc1af886c9e25073b7b1712a68972af4281302"
 dependencies = [
  "bytes",
- "heck 0.5.0",
+ "heck 0.4.1",
  "itertools 0.13.0",
  "log",
  "multimap",
@@ -4013,7 +4005,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "81bddcdb20abf9501610992b6759a4c888aef7d1a7247ef75e2404275ac24af1"
 dependencies = [
  "anyhow",
- "itertools 0.12.1",
+ "itertools 0.11.0",
  "proc-macro2",
  "quote 1.0.37",
  "syn 2.0.77",
@@ -5203,7 +5195,7 @@ version = "0.8.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "38d1e02fca405f6280643174a50c942219f0bbf4dbf7d480f1dd864d6f211ae5"
 dependencies = [
- "heck 0.5.0",
+ "heck 0.4.1",
  "proc-macro2",
  "quote 1.0.37",
  "syn 2.0.77",
