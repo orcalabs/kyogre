@@ -1,17 +1,17 @@
-use std::{cmp, sync::Arc};
+use std::{cmp, result::Result as StdResult, sync::Arc};
 
 use async_trait::async_trait;
 use chrono::{DateTime, Duration, Utc};
 use fiskeridir_rs::CallSign;
 use geozero::{geojson::GeoJson, ToGeo};
 use kyogre_core::{BearerToken, FishingFacilityApiSource, GeometryWkt, Mmsi};
-use serde::{Deserialize, Serialize};
+use serde::{de, Deserialize, Deserializer, Serialize};
 use tracing::info;
 use uuid::Uuid;
 use wkt::ToWkt;
 
 use super::{BarentswatchSource, FishingFacilityToolType};
-use crate::{ApiClientConfig, DataSource, Error, Processor, Result, ScraperId};
+use crate::{ApiClientConfig, DataSource, Processor, Result, ScraperId};
 
 pub struct FishingFacilityScraper {
     config: Option<ApiClientConfig>,
@@ -53,17 +53,15 @@ impl DataSource for FishingFacilityScraper {
                 None
             };
 
-            let response = self
+            let facilities = self
                 .barentswatch_source
                 .client
                 .download::<FishingFacilityResponse>(&config.url, Some(&query), token)
-                .await?;
-
-            let facilities = response
+                .await?
                 .fishing_facilities
                 .into_iter()
-                .map(kyogre_core::FishingFacility::try_from)
-                .collect::<std::result::Result<_, _>>()?;
+                .map(From::from)
+                .collect();
 
             processor.add_fishing_facilities(facilities).await?;
 
@@ -94,7 +92,7 @@ struct FishingFacility {
     vessel_id: Option<Uuid>,
     vessel_name: Option<String>,
     // International radio call sign
-    ircs: Option<String>,
+    ircs: Option<CallSign>,
     mmsi: Option<Mmsi>,
     imo: Option<i64>,
     reg_num: Option<String>,
@@ -111,22 +109,18 @@ struct FishingFacility {
     last_changed_date_time: DateTime<Utc>,
     source: Option<String>,
     comment: Option<String>,
-    geometry: serde_json::Value,
+    #[serde(deserialize_with = "deserialize_wkt")]
+    geometry: wkt::Wkt<f64>,
 }
 
-impl TryFrom<FishingFacility> for kyogre_core::FishingFacility {
-    type Error = Error;
-
-    fn try_from(v: FishingFacility) -> std::result::Result<Self, Self::Error> {
-        let geometry_string = v.geometry.to_string();
-        let geometry_wkt = GeoJson(&geometry_string).to_geo()?.to_wkt();
-
-        Ok(Self {
+impl From<FishingFacility> for kyogre_core::FishingFacility {
+    fn from(v: FishingFacility) -> Self {
+        Self {
             tool_id: v.tool_id,
             barentswatch_vessel_id: v.vessel_id,
             fiskeridir_vessel_id: None,
             vessel_name: v.vessel_name,
-            call_sign: v.ircs.map(CallSign::try_from).transpose()?,
+            call_sign: v.ircs,
             mmsi: v.mmsi,
             imo: v.imo,
             reg_num: v.reg_num,
@@ -144,8 +138,21 @@ impl TryFrom<FishingFacility> for kyogre_core::FishingFacility {
             last_changed: v.last_changed_date_time,
             source: v.source,
             comment: v.comment,
-            geometry_wkt: Some(GeometryWkt(geometry_wkt)),
+            geometry_wkt: Some(GeometryWkt(v.geometry)),
             api_source: FishingFacilityApiSource::Updates,
-        })
+        }
     }
+}
+
+fn deserialize_wkt<'de, D: Deserializer<'de>>(
+    deserializer: D,
+) -> StdResult<wkt::Wkt<f64>, D::Error> {
+    let value = serde_json::Value::deserialize(deserializer)?;
+
+    let geometry_wkt = GeoJson(&value.to_string())
+        .to_geo()
+        .map_err(de::Error::custom)?
+        .to_wkt();
+
+    Ok(geometry_wkt)
 }

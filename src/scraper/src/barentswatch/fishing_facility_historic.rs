@@ -10,7 +10,7 @@ use tracing::info;
 use uuid::Uuid;
 
 use super::{BarentswatchSource, FishingFacilityToolType};
-use crate::{ApiClientConfig, DataSource, Error, Processor, Result, ScraperId};
+use crate::{ApiClientConfig, DataSource, Processor, Result, ScraperId};
 
 pub struct FishingFacilityHistoricScraper {
     config: Option<ApiClientConfig>,
@@ -57,8 +57,8 @@ impl DataSource for FishingFacilityHistoricScraper {
                 .download::<Vec<FishingFacilityHistoric>>(&url, None::<&()>, token)
                 .await?
                 .into_iter()
-                .map(kyogre_core::FishingFacility::try_from)
-                .collect::<std::result::Result<_, _>>()?;
+                .map(From::from)
+                .collect();
 
             processor.add_fishing_facilities(facilities).await?;
 
@@ -75,10 +75,11 @@ struct FishingFacilityHistoric {
     tool_id: Uuid,
     vessel_name: Option<String>,
     // International radio call sign
-    ircs: Option<String>,
+    ircs: Option<CallSign>,
     #[serde_as(as = "Option<DisplayFromStr>")]
     mmsi: Option<Mmsi>,
-    imo: Option<String>,
+    #[serde_as(as = "Option<DisplayFromStr>")]
+    imo: Option<i64>,
     reg_num: Option<String>,
     // Registration number in Småbåtregisteret.
     sbr_reg_num: Option<String>,
@@ -94,18 +95,16 @@ struct FishingFacilityHistoric {
     geometry_wkt: Option<wkt::Wkt<f64>>,
 }
 
-impl TryFrom<FishingFacilityHistoric> for kyogre_core::FishingFacility {
-    type Error = Error;
-
-    fn try_from(v: FishingFacilityHistoric) -> std::result::Result<Self, Self::Error> {
-        Ok(Self {
+impl From<FishingFacilityHistoric> for kyogre_core::FishingFacility {
+    fn from(v: FishingFacilityHistoric) -> Self {
+        Self {
             tool_id: v.tool_id,
             barentswatch_vessel_id: None,
             fiskeridir_vessel_id: None,
             vessel_name: v.vessel_name,
-            call_sign: v.ircs.map(CallSign::try_from).transpose()?,
+            call_sign: v.ircs,
             mmsi: v.mmsi,
-            imo: v.imo.map(|i| i.parse::<i64>()).transpose()?,
+            imo: v.imo,
             reg_num: v.reg_num,
             sbr_reg_num: v.sbr_reg_num,
             contact_phone: None,
@@ -123,6 +122,6 @@ impl TryFrom<FishingFacilityHistoric> for kyogre_core::FishingFacility {
             comment: v.comment,
             geometry_wkt: v.geometry_wkt.map(GeometryWkt),
             api_source: FishingFacilityApiSource::Historic,
-        })
+        }
     }
 }
