@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 kyogre-core = { path = "../kyogre-core", features = ["utoipa"] }
 
-fiskeridir-rs = { workspace = true }
+fiskeridir-rs = { workspace = true, features = ["sqlx"] }
 stack-error = { workspace = true }
 snafu = { workspace = true }
 serde = { workspace = true }
