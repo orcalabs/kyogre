@@ -8,9 +8,7 @@ use ais_consumer::{
 use dockertest::{DockerTest, Source};
 use futures::{Future, TryStreamExt};
 use kyogre_core::VerificationOutbound;
-use orca_core::{
-    compositions::postgres_composition, Environment, LogLevel, PsqlLogStatements, PsqlSettings,
-};
+use orca_core::{compositions::postgres_composition, Environment, PsqlLogStatements, PsqlSettings};
 use postgres::{PostgresAdapter, TestDb};
 use rand::random;
 use tokio_stream::wrappers::ReceiverStream;
@@ -98,14 +96,12 @@ where
             let commit_interval = std::time::Duration::from_millis(5);
 
             let app_settings = Settings {
-                log_level: LogLevel::Debug,
                 environment: Environment::Test,
                 postgres: settings,
                 commit_interval,
                 broadcast_buffer_size: 10,
                 oauth: None,
                 api_address: None,
-                honeycomb: None,
             };
 
             let test_db = TestDb { db };

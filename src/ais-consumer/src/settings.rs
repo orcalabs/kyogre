@@ -1,11 +1,10 @@
-use config::{Config, File};
+use config::ConfigError;
 use kyogre_core::OauthConfig;
-use orca_core::{Environment, LogLevel, PsqlSettings};
+use orca_core::{Environment, PsqlSettings};
 use serde::Deserialize;
 
 #[derive(Deserialize, Debug)]
 pub struct Settings {
-    pub log_level: LogLevel,
     pub postgres: PsqlSettings,
     pub environment: Environment,
     #[serde(with = "humantime_serde")]
@@ -13,29 +12,10 @@ pub struct Settings {
     pub broadcast_buffer_size: usize,
     pub oauth: Option<OauthConfig>,
     pub api_address: Option<String>,
-    pub honeycomb: Option<HoneycombApiKey>,
-}
-
-#[derive(Clone, Debug, Deserialize)]
-pub struct HoneycombApiKey {
-    pub api_key: String,
 }
 
 impl Settings {
-    pub fn new() -> Result<Settings, config::ConfigError> {
-        let environment: Environment = std::env::var("APP_ENVIRONMENT")
-            .unwrap()
-            .try_into()
-            .unwrap_or(Environment::Test);
-
-        let environment = environment.as_str().to_lowercase();
-
-        Config::builder()
-            .add_source(File::with_name(&format!("config/{}", environment)).required(true))
-            .add_source(File::with_name(&format!("config/{}.secret", environment)).required(false))
-            .add_source(config::Environment::with_prefix("KYOGRE_AIS_CONSUMER").separator("__"))
-            .set_override("environment", environment.as_str())?
-            .build()?
-            .try_deserialize()
+    pub fn new(settings: orca_core::Settings) -> Result<Self, ConfigError> {
+        settings.config("KYOGRE_AIS_CONSUMER")
     }
 }

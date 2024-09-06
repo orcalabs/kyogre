@@ -2,31 +2,15 @@
 #![deny(rust_2018_idioms)]
 
 use duckdb_rs::{settings::Settings, startup::App};
-use orca_core::{Environment, TracingOutput};
-use tracing::Level;
 
 #[tokio::main]
 async fn main() {
-    let settings = Settings::new().unwrap();
+    let settings = orca_core::Settings::new().unwrap();
+    settings.init_tracer("kyogre-duckdb", "duckdb");
 
-    let tracing = match settings.environment {
-        Environment::OnPremise
-        | Environment::Test
-        | Environment::Local
-        | Environment::Production => TracingOutput::Local,
-        Environment::Development => TracingOutput::Honeycomb {
-            api_key: settings.honeycomb_api_key(),
-        },
-    };
-
-    orca_core::init_tracer(
-        Level::from(&settings.log_level),
-        "kyogre-duckdb",
-        "duckdb",
-        tracing,
-    );
+    let settings = Settings::new(settings).unwrap();
 
     let app = App::build(&settings).await;
 
-    app.run().await
+    app.run().await;
 }

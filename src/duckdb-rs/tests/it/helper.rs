@@ -7,9 +7,7 @@ use duckdb_rs::{
 };
 use futures::Future;
 use kyogre_core::VerificationOutbound;
-use orca_core::{
-    compositions::postgres_composition, Environment, LogLevel, PsqlLogStatements, PsqlSettings,
-};
+use orca_core::{compositions::postgres_composition, Environment, PsqlLogStatements, PsqlSettings};
 use postgres::{PostgresAdapter, TestDb};
 use rand::random;
 use std::panic;
@@ -77,12 +75,9 @@ where
 
             db_settings.db_name = Some(db_name.clone());
             let settings = Settings {
-                log_level: LogLevel::Debug,
-                telemetry: None,
                 port: 0,
                 postgres: db_settings.clone(),
                 environment: Environment::Test,
-                honeycomb: None,
                 duck_db: DuckdbSettings {
                     max_connections: 1,
                     cache_mode: CacheMode::ReturnError,

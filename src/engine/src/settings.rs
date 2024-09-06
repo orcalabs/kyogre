@@ -2,31 +2,21 @@ use crate::{
     AisVms, AisVmsConflict, Cluster, ErsTripAssembler, FisheryDiscriminants, LandingTripAssembler,
     UnrealisticSpeed,
 };
-use config::{Config, ConfigError, File};
+use config::ConfigError;
 use kyogre_core::*;
-use orca_core::{Environment, LogLevel, PsqlSettings, TelemetrySettings};
+use orca_core::{Environment, PsqlSettings};
 use serde::Deserialize;
 use vessel_benchmark::*;
 
 #[derive(Debug, Deserialize)]
 pub struct Settings {
-    pub log_level: LogLevel,
     pub num_workers: u32,
-    pub tracing_mode: TracingMode,
-    pub telemetry: Option<TelemetrySettings>,
     pub postgres: PsqlSettings,
     pub meilisearch: Option<meilisearch::Settings>,
     pub environment: Environment,
     pub scraper: scraper::Config,
-    pub honeycomb: Option<HoneycombApiKey>,
     pub single_state_run: Option<FisheryDiscriminants>,
     pub fishing_predictors: Option<FishingPredictorSettings>,
-}
-
-#[derive(Debug, Deserialize)]
-pub enum TracingMode {
-    Regular,
-    TokioConsole,
 }
 
 #[derive(Debug, Deserialize)]
@@ -41,35 +31,9 @@ pub struct MatrixClientSettings {
     pub port: u16,
 }
 
-#[derive(Clone, Debug, Deserialize)]
-pub struct HoneycombApiKey {
-    pub api_key: String,
-}
-
 impl Settings {
-    pub fn new() -> Result<Self, ConfigError> {
-        let environment: Environment = std::env::var("APP_ENVIRONMENT")
-            .unwrap()
-            .try_into()
-            .unwrap_or(Environment::Test);
-
-        let environment = environment.as_str().to_lowercase();
-
-        Config::builder()
-            .add_source(File::with_name(&format!("config/{}", environment)).required(true))
-            .add_source(File::with_name(&format!("config/{}.secret", environment)).required(false))
-            .add_source(config::Environment::with_prefix("KYOGRE_ENGINE").separator("__"))
-            .set_override("environment", environment.as_str())?
-            .build()?
-            .try_deserialize()
-    }
-
-    pub fn telemetry_endpoint(&self) -> Option<String> {
-        self.telemetry.as_ref().map(|t| t.endpoint())
-    }
-
-    pub fn honeycomb_api_key(&self) -> String {
-        self.honeycomb.clone().unwrap().api_key
+    pub fn new(settings: orca_core::Settings) -> Result<Self, ConfigError> {
+        settings.config("KYOGRE_ENGINE")
     }
 
     pub fn trip_assemblers(&self) -> Vec<Box<dyn TripAssembler>> {

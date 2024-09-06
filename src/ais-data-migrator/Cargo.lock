@@ -700,7 +700,7 @@ version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "79127ed59a85d7687c409e9978547cffb7dc79675355ed22da6b66fd5f6ead01"
 dependencies = [
- "itertools 0.11.0",
+ "itertools",
  "num-traits",
 ]
 
@@ -1491,15 +1491,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "itertools"
-version = "0.12.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ba291022dbbd398a455acf126c1e341954079855bc60dfdda641363bd6922569"
-dependencies = [
- "either",
-]
-
-[[package]]
 name = "itoa"
 version = "1.0.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1574,7 +1565,7 @@ dependencies = [
  "num-derive",
  "num-traits",
  "oauth2",
- "orca-core 0.28.1",
+ "orca-core 0.31.0",
  "rand",
  "remain",
  "serde",
@@ -1987,10 +1978,11 @@ dependencies = [
 
 [[package]]
 name = "orca-core"
-version = "0.28.1"
+version = "0.31.0"
 source = "sparse+https://cargo.cloudsmith.io/orcalabs/orcastrator/"
-checksum = "83b7d9ebc823586d592d568f39b3bc679615c7e8f54479d5fe25d60c4f1aab52"
+checksum = "b14e68002ad80e2199a3348098567185a06f72e41d4e66a41e4505c4753d81cc"
 dependencies = [
+ "config",
  "opentelemetry",
  "opentelemetry-otlp",
  "opentelemetry-semantic-conventions",
@@ -2291,7 +2283,7 @@ dependencies = [
  "jurisdiction",
  "kyogre-core",
  "num-traits",
- "orca-core 0.28.1",
+ "orca-core 0.31.0",
  "rand",
  "serde",
  "serde_json",
@@ -2371,7 +2363,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "81bddcdb20abf9501610992b6759a4c888aef7d1a7247ef75e2404275ac24af1"
 dependencies = [
  "anyhow",
- "itertools 0.12.1",
+ "itertools",
  "proc-macro2",
  "quote 1.0.37",
  "syn 2.0.77",
