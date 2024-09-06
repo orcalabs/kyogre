@@ -22,10 +22,7 @@ impl App {
     pub async fn build(settings: &Settings) -> App {
         let postgres = PostgresAdapter::new(&settings.postgres).await.unwrap();
 
-        if matches!(
-            settings.environment,
-            Environment::Local | Environment::Development
-        ) {
+        if settings.environment == Environment::Local {
             postgres.do_migrations().await;
         }
 
