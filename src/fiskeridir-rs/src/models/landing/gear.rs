@@ -1,7 +1,7 @@
 use enum_index_derive::{EnumIndex, IndexEnum};
 use num_derive::FromPrimitive;
 use serde_repr::{Deserialize_repr, Serialize_repr};
-use strum::{AsRefStr, EnumCount, EnumIter, EnumString};
+use strum::{AsRefStr, Display, EnumCount, EnumIter, EnumString};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GearDetails {
@@ -31,7 +31,7 @@ pub struct GearDetails {
     Deserialize_repr,
     EnumIndex,
     IndexEnum,
-    strum::Display,
+    Display,
     AsRefStr,
     EnumString,
 )]
@@ -103,7 +103,7 @@ pub enum Gear {
     EnumCount,
     EnumIndex,
     IndexEnum,
-    strum::Display,
+    Display,
     AsRefStr,
     EnumString,
 )]
@@ -141,7 +141,7 @@ pub enum GearGroup {
     EnumCount,
     EnumIndex,
     IndexEnum,
-    strum::Display,
+    Display,
     AsRefStr,
     EnumString,
 )]

@@ -14,6 +14,7 @@ pub enum RegisterVesselEntityType {
     Person,
 }
 
+#[serde_as]
 #[remain::sorted]
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -21,32 +22,34 @@ pub enum RegisterVesselEntityType {
 pub struct RegisterVesselOwner {
     pub city: Option<String>,
     pub entity_type: RegisterVesselEntityType,
-    #[serde(deserialize_with = "opt_i64_from_nullable_str")]
+    #[serde(deserialize_with = "opt_from_nullable_str")]
     pub id: Option<i64>,
     pub name: String,
-    #[serde(deserialize_with = "i32_from_str")]
+    #[serde_as(as = "DisplayFromStr")]
     pub postal_code: i32,
 }
 
 #[serde_as]
 #[remain::sorted]
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RegisterVessel {
-    #[serde(deserialize_with = "opt_i32_from_str", default)]
+    #[serde(default)]
+    #[serde_as(as = "OptPrimitiveFromStr")]
     pub engine_power: Option<i32>,
     #[serde_as(as = "DisplayFromStr")]
     pub id: FiskeridirVesselId,
-    #[serde(deserialize_with = "opt_i64_from_str", default)]
+    #[serde(default)]
+    #[serde_as(as = "OptPrimitiveFromStr")]
     pub imo_number: Option<i64>,
     pub length: f64,
-    #[serde(deserialize_with = "i32_from_str")]
+    #[serde_as(as = "DisplayFromStr")]
     pub municipality_code: i32,
     pub name: String,
     pub owners: Vec<RegisterVesselOwner>,
     pub radio_call_sign: Option<CallSign>,
     pub registration_mark: String,
-    #[serde(deserialize_with = "opt_float_from_str", default)]
+    #[serde_as(as = "OptFloatFromStr")]
     pub width: Option<f64>,
 }
 

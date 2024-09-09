@@ -15,10 +15,12 @@ use jurisdiction::Jurisdiction;
 use num_derive::FromPrimitive;
 use serde::Deserialize;
 use serde_repr::{Deserialize_repr, Serialize_repr};
+use serde_with::serde_as;
 use std::str::FromStr;
-use strum::{AsRefStr, EnumIter, EnumString};
+use strum::{AsRefStr, Display, EnumIter, EnumString};
 
 /// Catch data from Fiskeridirektoratet
+#[serde_as]
 #[remain::sorted]
 #[derive(Deserialize, Debug, Clone)]
 pub struct LandingRaw {
@@ -31,17 +33,17 @@ pub struct LandingRaw {
     #[serde(rename = "Fangstfelt (kode)")]
     pub catch_field: NonEmptyString,
     #[serde(rename = "Fangstverdi")]
-    #[serde(deserialize_with = "opt_float_from_str")]
+    #[serde_as(as = "OptFloatFromStr")]
     pub catch_value: Option<f64>,
     #[serde(rename = "Fangstår")]
     pub catch_year: u32,
     #[serde(rename = "Kyst/hav (kode)")]
-    #[serde(deserialize_with = "enum_from_primitive")]
+    #[serde_as(as = "PrimitiveFromStr")]
     pub coast_ocean_code: TwelveMileBorder,
     #[serde(rename = "Konserveringsmåte")]
     pub conservation_method: NonEmptyString,
     #[serde(rename = "Konserveringsmåte (kode)")]
-    #[serde(deserialize_with = "enum_from_primitive")]
+    #[serde_as(as = "PrimitiveFromStr")]
     pub conservation_method_code: ConservationMethod,
     #[serde(rename = "Mottaksstasjon")]
     pub delivery_point_id: Option<DeliveryPointId>,
@@ -53,7 +55,7 @@ pub struct LandingRaw {
     #[serde(rename = "Dokumenttype")]
     pub document_type: Option<NonEmptyString>,
     #[serde(rename = "Dokumenttype (kode)")]
-    #[serde(deserialize_with = "enum_from_primitive")]
+    #[serde_as(as = "PrimitiveFromStr")]
     pub document_type_code: DocumentType,
     #[serde(rename = "Dokument versjonsnummer")]
     pub document_version_number: i32,
@@ -73,7 +75,7 @@ pub struct LandingRaw {
     #[serde(rename = "Fiskerkommune")]
     pub fisher_tax_municipality: Option<NonEmptyString>,
     #[serde(rename = "Fiskerkommune (kode)")]
-    #[serde(deserialize_with = "opt_u32_from_str")]
+    #[serde_as(as = "OptPrimitiveFromStr")]
     pub fisher_tax_municipality_code: Option<u32>,
     #[serde(rename = "Fangstdagbok (nummer)")]
     pub fishing_diary_number: Option<u32>,
@@ -82,25 +84,25 @@ pub struct LandingRaw {
     #[serde(rename = "Redskap")]
     pub gear: NonEmptyString,
     #[serde(rename = "Redskap (kode)")]
-    #[serde(deserialize_with = "enum_from_primitive")]
+    #[serde_as(as = "PrimitiveFromStr")]
     pub gear_code: Gear,
     #[serde(rename = "Redskap - gruppe")]
     pub gear_group: NonEmptyString,
     #[serde(rename = "Redskap - gruppe (kode)")]
-    #[serde(deserialize_with = "enum_from_primitive")]
+    #[serde_as(as = "PrimitiveFromStr")]
     pub gear_group_code: GearGroup,
     #[serde(rename = "Redskap - hovedgruppe")]
     pub gear_main_group: NonEmptyString,
     #[serde(rename = "Redskap - hovedgruppe (kode)")]
-    #[serde(deserialize_with = "enum_from_primitive")]
+    #[serde_as(as = "PrimitiveFromStr")]
     pub gear_main_group_code: MainGearGroup,
     #[serde(rename = "Bruttovekt")]
-    #[serde(deserialize_with = "opt_float_from_str")]
+    #[serde_as(as = "OptFloatFromStr")]
     pub gross_weight: Option<f64>,
     #[serde(rename = "Landingsfylke")]
     pub landing_county: Option<NonEmptyString>,
     #[serde(rename = "Landingsfylke (kode)")]
-    #[serde(deserialize_with = "opt_u32_from_str")]
+    #[serde_as(as = "OptPrimitiveFromStr")]
     pub landing_county_code: Option<u32>,
     #[serde(rename = "Landingsdato")]
     #[serde(deserialize_with = "naive_date_from_str")]
@@ -108,17 +110,17 @@ pub struct LandingRaw {
     #[serde(rename = "Landingsmåte")]
     pub landing_method: Option<NonEmptyString>,
     #[serde(rename = "Landingsmåte (kode)")]
-    #[serde(deserialize_with = "opt_enum_from_primitive")]
+    #[serde_as(as = "OptPrimitiveFromStr")]
     pub landing_method_code: Option<LandingMethod>,
     #[serde(rename = "Landingsmåned")]
     pub landing_month: NonEmptyString,
     #[serde(rename = "Landingsmåned (kode)")]
-    #[serde(deserialize_with = "enum_from_primitive")]
+    #[serde_as(as = "PrimitiveFromStr")]
     pub landing_month_code: LandingMonth,
     #[serde(rename = "Landingskommune")]
     pub landing_municipality: Option<NonEmptyString>,
     #[serde(rename = "Landingskommune (kode)")]
-    #[serde(deserialize_with = "opt_u32_from_str")]
+    #[serde_as(as = "OptPrimitiveFromStr")]
     pub landing_municipality_code: Option<u32>,
     #[serde(rename = "Landingsnasjon")]
     pub landing_nation: Option<NonEmptyString>,
@@ -136,35 +138,35 @@ pub struct LandingRaw {
     #[serde(rename = "Linjenummer")]
     pub line_number: i32,
     #[serde(rename = "Rundvekt")]
-    #[serde(deserialize_with = "opt_float_from_str")]
+    #[serde_as(as = "OptFloatFromStr")]
     pub living_weight: Option<f64>,
     #[serde(rename = "Rundvekt over kvote")]
-    #[serde(deserialize_with = "opt_float_from_str")]
+    #[serde_as(as = "OptFloatFromStr")]
     pub living_weight_over_quota: Option<f64>,
     #[serde(rename = "Lokasjon (kode)")]
-    #[serde(deserialize_with = "opt_u32_from_str")]
+    #[serde_as(as = "OptPrimitiveFromStr")]
     pub location_code: Option<u32>,
     #[serde(rename = "Lat (lokasjon)")]
-    #[serde(deserialize_with = "opt_float_from_str")]
+    #[serde_as(as = "OptFloatFromStr")]
     pub location_latitude: Option<f64>,
     #[serde(rename = "Lon (lokasjon)")]
-    #[serde(deserialize_with = "opt_float_from_str")]
+    #[serde_as(as = "OptFloatFromStr")]
     pub location_longitude: Option<f64>,
     #[serde(rename = "Hovedområde")]
     pub main_area: Option<NonEmptyString>,
     #[serde(rename = "Hovedområde (kode)")]
-    #[serde(deserialize_with = "opt_u32_from_str")]
+    #[serde_as(as = "OptPrimitiveFromStr")]
     pub main_area_code: Option<u32>,
     #[serde(rename = "Hovedområde FAO")]
     pub main_area_fao: Option<NonEmptyString>,
     #[serde(rename = "Hovedområde FAO (kode)")]
-    #[serde(deserialize_with = "opt_u32_from_str")]
+    #[serde_as(as = "OptPrimitiveFromStr")]
     pub main_area_fao_code: Option<u32>,
     #[serde(rename = "Lat (hovedområde)")]
-    #[serde(deserialize_with = "opt_float_from_str")]
+    #[serde_as(as = "OptFloatFromStr")]
     pub main_area_latitude: Option<f64>,
     #[serde(rename = "Lon (hovedområde)")]
-    #[serde(deserialize_with = "opt_float_from_str")]
+    #[serde_as(as = "OptFloatFromStr")]
     pub main_area_longitude: Option<f64>,
     #[serde(rename = "Nord/sør for 62 grader nord")]
     pub north_or_south_of_62_degrees: NorthSouth62DegreesNorth,
@@ -179,34 +181,34 @@ pub struct LandingRaw {
     #[serde(rename = "Forrige mottakstasjon")]
     pub partial_landing_previous_delivery_point_id: Option<DeliveryPointId>,
     #[serde(rename = "Etterbetaling")]
-    #[serde(deserialize_with = "opt_float_from_str")]
+    #[serde_as(as = "OptFloatFromStr")]
     pub post_payment: Option<f64>,
     #[serde(rename = "Beløp for kjøper")]
-    #[serde(deserialize_with = "opt_float_from_str")]
+    #[serde_as(as = "OptFloatFromStr")]
     pub price_for_buyer: Option<f64>,
     #[serde(rename = "Beløp for fisker")]
-    #[serde(deserialize_with = "opt_float_from_str")]
+    #[serde_as(as = "OptFloatFromStr")]
     pub price_for_fisher: Option<f64>,
     #[serde(rename = "Produkttilstand")]
     pub product_condition: String,
     #[serde(rename = "Produkttilstand (kode)")]
-    #[serde(deserialize_with = "enum_from_primitive")]
+    #[serde_as(as = "PrimitiveFromStr")]
     pub product_condition_code: Condition,
     #[serde(rename = "Anvendelse")]
     pub product_purpose: Option<NonEmptyString>,
     #[serde(rename = "Anvendelse (kode)")]
-    #[serde(deserialize_with = "opt_u32_from_str")]
+    #[serde_as(as = "OptPrimitiveFromStr")]
     pub product_purpose_code: Option<u32>,
     #[serde(rename = "Anvendelse hovedgruppe")]
     pub product_purpose_group: Option<NonEmptyString>,
     #[serde(rename = "Anvendelse hovedgruppe (kode)")]
-    #[serde(deserialize_with = "opt_u32_from_str")]
+    #[serde_as(as = "OptPrimitiveFromStr")]
     pub product_purpose_group_code: Option<u32>,
     #[serde(rename = "Produktvekt")]
-    #[serde(deserialize_with = "float_from_str")]
+    #[serde_as(as = "FloatFromStr")]
     pub product_weight: f64,
     #[serde(rename = "Produktvekt over kvote")]
-    #[serde(deserialize_with = "opt_float_from_str")]
+    #[serde_as(as = "OptFloatFromStr")]
     pub product_weight_over_quota: Option<f64>,
     #[serde(rename = "Produksjonsanlegg")]
     pub production_facility: Option<NonEmptyString>,
@@ -217,12 +219,12 @@ pub struct LandingRaw {
     #[serde(rename = "Kvalitet")]
     pub quality: String,
     #[serde(rename = "Kvalitet (kode)")]
-    #[serde(deserialize_with = "enum_from_primitive")]
+    #[serde_as(as = "PrimitiveFromStr")]
     pub quality_code: Quality,
     #[serde(rename = "Kvotetype")]
     pub quota_type: Option<NonEmptyString>,
     #[serde(rename = "Kvotetype (kode)")]
-    #[serde(deserialize_with = "opt_enum_from_primitive")]
+    #[serde_as(as = "OptPrimitiveFromStr")]
     pub quota_type_code: Option<Quota>,
     #[serde(rename = "Kvotefartøy reg.merke")]
     pub quota_vessel_registration_id: Option<NonEmptyString>,
@@ -243,18 +245,18 @@ pub struct LandingRaw {
     #[serde(rename = "Mottakende fart.type")]
     pub receiving_vessel_type: Option<NonEmptyString>,
     #[serde(rename = "Mottakende fartøytype (kode)")]
-    #[serde(deserialize_with = "opt_enum_from_primitive")]
+    #[serde_as(as = "OptPrimitiveFromStr")]
     pub receiving_vessel_type_code: Option<VesselType>,
     #[serde(rename = "Lagsavgift")]
-    #[serde(deserialize_with = "opt_float_from_str")]
+    #[serde_as(as = "OptFloatFromStr")]
     pub sales_team_fee: Option<f64>,
     #[serde(rename = "Salgslag")]
     pub sales_team_orginization: Option<NonEmptyString>,
     #[serde(rename = "Salgslag (kode)")]
-    #[serde(deserialize_with = "enum_from_primitive")]
+    #[serde_as(as = "PrimitiveFromStr")]
     pub sales_team_orginization_code: SalesTeam,
     #[serde(rename = "Salgslag ID")]
-    #[serde(deserialize_with = "opt_u32_from_str")]
+    #[serde_as(as = "OptPrimitiveFromStr")]
     pub sales_team_orginization_id: Option<u32>,
     #[serde(rename = "Størrelsesgruppering (kode)")]
     pub size_grouping_code: NonEmptyString,
@@ -273,59 +275,59 @@ pub struct LandingRaw {
     #[serde(rename = "Art - gruppe")]
     pub species_group: NonEmptyString,
     #[serde(rename = "Art - gruppe (kode)")]
-    #[serde(deserialize_with = "enum_from_primitive")]
+    #[serde_as(as = "PrimitiveFromStr")]
     pub species_group_code: SpeciesGroup,
     #[serde(rename = "Art - hovedgruppe")]
     pub species_main_group: NonEmptyString,
     #[serde(rename = "Art - hovedgruppe (kode)")]
-    #[serde(deserialize_with = "enum_from_primitive")]
+    #[serde_as(as = "PrimitiveFromStr")]
     pub species_main_group_code: SpeciesMainGroup,
     #[serde(rename = "Støttebeløp")]
-    #[serde(deserialize_with = "opt_float_from_str")]
+    #[serde_as(as = "OptFloatFromStr")]
     pub support_amount_for_fisher: Option<f64>,
     #[serde(rename = "Enhetspris for kjøper")]
-    #[serde(deserialize_with = "opt_float_from_str")]
+    #[serde_as(as = "OptFloatFromStr")]
     pub unit_price_for_buyer: Option<f64>,
     #[serde(rename = "Enhetspris for fisker")]
-    #[serde(deserialize_with = "opt_float_from_str")]
+    #[serde_as(as = "OptFloatFromStr")]
     pub unit_price_for_fisher: Option<f64>,
     #[serde(rename = "Oppdateringstidspunkt")]
     #[serde(deserialize_with = "date_time_utc_from_str")]
     pub update_timestamp: DateTime<Utc>,
     #[serde(rename = "Byggeår")]
-    #[serde(deserialize_with = "opt_u32_from_str")]
+    #[serde_as(as = "OptPrimitiveFromStr")]
     pub vessel_building_year: Option<u32>,
     #[serde(rename = "Fartøyfylke")]
     pub vessel_county: Option<NonEmptyString>,
     #[serde(rename = "Fartøyfylke (kode)")]
-    #[serde(deserialize_with = "opt_u32_from_str")]
+    #[serde_as(as = "OptPrimitiveFromStr")]
     pub vessel_county_code: Option<u32>,
     #[serde(rename = "Motorbyggeår")]
-    #[serde(deserialize_with = "opt_u32_from_str")]
+    #[serde_as(as = "OptPrimitiveFromStr")]
     pub vessel_engine_building_year: Option<u32>,
     #[serde(rename = "Motorkraft")]
-    #[serde(deserialize_with = "opt_u32_from_str")]
+    #[serde_as(as = "OptPrimitiveFromStr")]
     pub vessel_engine_power: Option<u32>,
     #[serde(rename = "Bruttotonnasje 1969")]
-    #[serde(deserialize_with = "opt_u32_from_str")]
+    #[serde_as(as = "OptPrimitiveFromStr")]
     pub vessel_gross_tonnage_1969: Option<u32>,
     #[serde(rename = "Bruttotonnasje annen")]
-    #[serde(deserialize_with = "opt_u32_from_str")]
+    #[serde_as(as = "OptPrimitiveFromStr")]
     pub vessel_gross_tonnage_other: Option<u32>,
     #[serde(rename = "Fartøy ID")]
     pub vessel_id: Option<FiskeridirVesselId>,
     #[serde(rename = "Største lengde")]
-    #[serde(deserialize_with = "opt_float_from_str")]
+    #[serde_as(as = "OptFloatFromStr")]
     pub vessel_length: Option<f64>,
     #[serde(rename = "Lengdegruppe")]
     pub vessel_length_group: Option<NonEmptyString>,
     #[serde(rename = "Lengdegruppe (kode)")]
-    #[serde(deserialize_with = "opt_enum_from_primitive")]
+    #[serde_as(as = "OptPrimitiveFromStr")]
     pub vessel_length_group_code: Option<VesselLengthGroup>,
     #[serde(rename = "Fartøykommune")]
     pub vessel_municipality: Option<NonEmptyString>,
     #[serde(rename = "Fartøykommune (kode)")]
-    #[serde(deserialize_with = "opt_u32_from_str")]
+    #[serde_as(as = "OptPrimitiveFromStr")]
     pub vessel_municipality_code: Option<u32>,
     #[serde(rename = "Fartøynavn")]
     pub vessel_name: Option<NonEmptyString>,
@@ -336,17 +338,17 @@ pub struct LandingRaw {
     #[serde(rename = "Fartøynasjonalitet gruppe")]
     pub vessel_nationality_group: NonEmptyString,
     #[serde(rename = "Ombyggingsår")]
-    #[serde(deserialize_with = "opt_u32_from_str")]
+    #[serde_as(as = "OptPrimitiveFromStr")]
     pub vessel_rebuilding_year: Option<u32>,
     #[serde(rename = "Registreringsmerke (seddel)")]
     pub vessel_registration_id: Option<NonEmptyString>,
     #[serde(rename = "Fartøytype")]
     pub vessel_type: Option<NonEmptyString>,
     #[serde(rename = "Fartøytype (kode)")]
-    #[serde(deserialize_with = "opt_enum_from_primitive")]
+    #[serde_as(as = "OptPrimitiveFromStr")]
     pub vessel_type_code: Option<VesselType>,
     #[serde(rename = "Inndradd fangstverdi")]
-    #[serde(deserialize_with = "opt_float_from_str")]
+    #[serde_as(as = "OptFloatFromStr")]
     pub withdrawn_catch_value: Option<f64>,
 }
 
@@ -664,7 +666,7 @@ pub struct Finances {
     EnumIter,
     PartialOrd,
     Ord,
-    strum::Display,
+    Display,
     AsRefStr,
     EnumString,
 )]
@@ -699,7 +701,7 @@ pub enum LandingMonth {
     EnumIter,
     PartialOrd,
     Ord,
-    strum::Display,
+    Display,
     AsRefStr,
     EnumString,
 )]
@@ -758,7 +760,7 @@ impl SalesTeam {
     EnumIter,
     PartialOrd,
     Ord,
-    strum::Display,
+    Display,
     AsRefStr,
     EnumString,
 )]
@@ -822,7 +824,7 @@ impl Quota {
     EnumIter,
     PartialOrd,
     Ord,
-    strum::Display,
+    Display,
     AsRefStr,
     EnumString,
 )]

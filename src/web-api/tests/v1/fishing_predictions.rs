@@ -25,7 +25,7 @@ async fn test_fishing_spot_predictions_filters_by_model_id() {
                 v.dca.start_longitude = Some(INSIDE_HAULS_POLYGON.0);
                 v.dca.start_latitude = Some(INSIDE_HAULS_POLYGON.1);
                 v.dca.catch.species.living_weight = Some(100000);
-                v.dca.gear.gear_group_code = GearGroup::Trawl;
+                v.dca.gear.gear_group_code = Some(GearGroup::Trawl);
             })
             .weather(5)
             .build()
@@ -57,14 +57,14 @@ async fn test_fishing_spot_predictions_filters_by_week_and_species_group() {
             .vessels(1)
             .hauls(2)
             .modify_idx(|i, v| {
-                v.dca.gear.gear_group_code = GearGroup::Trawl;
+                v.dca.gear.gear_group_code = Some(GearGroup::Trawl);
                 v.dca.start_longitude = Some(INSIDE_HAULS_POLYGON.0);
                 v.dca.start_latitude = Some(INSIDE_HAULS_POLYGON.1);
                 v.dca.catch.species.living_weight = Some(100000);
                 if i == 0 {
-                    v.dca.catch.species.species_group_code = SpeciesGroup::Saithe;
+                    v.dca.catch.species.species_group_code = Some(SpeciesGroup::Saithe);
                 } else {
-                    v.dca.catch.species.species_group_code = SpeciesGroup::AtlanticCod;
+                    v.dca.catch.species.species_group_code = Some(SpeciesGroup::AtlanticCod);
                 }
             })
             .build()
@@ -95,10 +95,10 @@ async fn test_fishing_weight_predictions_filters_by_week_and_species_group() {
             .hauls(5)
             .modify(|v| {
                 v.dca.catch.species.living_weight = Some(100000);
-                v.dca.gear.gear_group_code = GearGroup::Trawl;
+                v.dca.gear.gear_group_code = Some(GearGroup::Trawl);
                 v.dca.start_longitude = Some(INSIDE_HAULS_POLYGON.0);
                 v.dca.start_latitude = Some(INSIDE_HAULS_POLYGON.1);
-                v.dca.catch.species.species_group_code = SpeciesGroup::Saithe;
+                v.dca.catch.species.species_group_code = Some(SpeciesGroup::Saithe);
             })
             .build()
             .await;
@@ -134,7 +134,7 @@ async fn test_fishing_weight_predictions_filters_by_model() {
             .hauls(5)
             .modify(|v| {
                 v.dca.catch.species.living_weight = Some(100000);
-                v.dca.gear.gear_group_code = GearGroup::Trawl;
+                v.dca.gear.gear_group_code = Some(GearGroup::Trawl);
                 v.dca.start_longitude = Some(INSIDE_HAULS_POLYGON.0);
                 v.dca.start_latitude = Some(INSIDE_HAULS_POLYGON.1);
             })
@@ -171,8 +171,8 @@ async fn test_fishing_weight_predictions_filters_by_limit_and_orders_by_weight_d
             .hauls(5)
             .modify(|v| {
                 v.dca.catch.species.living_weight = Some(100000);
-                v.dca.gear.gear_group_code = GearGroup::Trawl;
-                v.dca.catch.species.species_group_code = SpeciesGroup::Saithe;
+                v.dca.gear.gear_group_code = Some(GearGroup::Trawl);
+                v.dca.catch.species.species_group_code = Some(SpeciesGroup::Saithe);
                 v.dca.start_longitude = Some(INSIDE_HAULS_POLYGON.0);
                 v.dca.start_latitude = Some(INSIDE_HAULS_POLYGON.1);
             })

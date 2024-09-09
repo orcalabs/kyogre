@@ -137,8 +137,12 @@ impl NewErsPorCatch {
                 living_weight: s.living_weight.map(|v| v as i32),
                 species_fao_id: ers_por.catch.species.species_fao_code.clone(),
                 species_fiskeridir_id: ers_por.catch.species.species_fdir_code.map(|v| v as i32),
-                species_group_id: Some(ers_por.catch.species.species_group_code as i32),
-                species_main_group_id: Some(ers_por.catch.species.species_main_group_code as i32),
+                species_group_id: ers_por.catch.species.species_group_code.map(|v| v as i32),
+                species_main_group_id: ers_por
+                    .catch
+                    .species
+                    .species_main_group_code
+                    .map(|v| v as i32),
             })
         } else {
             None

@@ -1,6 +1,6 @@
 use num_derive::{FromPrimitive, ToPrimitive};
 use serde_repr::{Deserialize_repr, Serialize_repr};
-use strum::{AsRefStr, EnumString};
+use strum::{AsRefStr, Display, EnumString};
 
 use crate::{SpeciesGroup, SpeciesMainGroup};
 
@@ -240,7 +240,7 @@ impl ConservationMethod {
     PartialOrd,
     Serialize_repr,
     Deserialize_repr,
-    strum::Display,
+    Display,
     AsRefStr,
     EnumString,
 )]
