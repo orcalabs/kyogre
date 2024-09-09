@@ -12,7 +12,7 @@ use serde_repr::Deserialize_repr;
 use serde_repr::Serialize_repr;
 use serde_with::serde_as;
 use serde_with::NoneAsEmptyString;
-use strum::{AsRefStr, EnumIter, EnumString};
+use strum::{AsRefStr, Display, EnumIter, EnumString};
 
 #[remain::sorted]
 #[serde_as]
@@ -39,10 +39,10 @@ pub struct ErsDca {
     #[serde(flatten)]
     pub catch: DcaCatch,
     #[serde(rename = "Fangstår")]
-    #[serde(deserialize_with = "opt_u32_from_str")]
+    #[serde_as(as = "OptPrimitiveFromStr")]
     pub catch_year: Option<u32>,
     #[serde(rename = "Varighet")]
-    #[serde(deserialize_with = "opt_u32_from_str")]
+    #[serde_as(as = "OptPrimitiveFromStr")]
     pub duration: Option<u32>,
     #[serde(rename = "Sone")]
     #[serde_as(as = "NoneAsEmptyString")]
@@ -60,25 +60,25 @@ pub struct ErsDca {
     #[serde_as(as = "NoneAsEmptyString")]
     pub herring_population_code: Option<String>,
     #[serde(rename = "Sildebestand - FDIR (kode)")]
-    #[serde(deserialize_with = "opt_u32_from_str")]
+    #[serde_as(as = "OptPrimitiveFromStr")]
     pub herring_population_fdir_code: Option<u32>,
     #[serde(rename = "Lokasjon stopp (kode)")]
-    #[serde(deserialize_with = "opt_u32_from_str")]
+    #[serde_as(as = "OptPrimitiveFromStr")]
     pub location_end_code: Option<u32>,
     #[serde(rename = "Lokasjon start (kode)")]
-    #[serde(deserialize_with = "opt_u32_from_str")]
+    #[serde_as(as = "OptPrimitiveFromStr")]
     pub location_start_code: Option<u32>,
     #[serde(rename = "Hovedområde stopp")]
     #[serde_as(as = "NoneAsEmptyString")]
     pub main_area_end: Option<String>,
     #[serde(rename = "Hovedområde stopp (kode)")]
-    #[serde(deserialize_with = "opt_u32_from_str")]
+    #[serde_as(as = "OptPrimitiveFromStr")]
     pub main_area_end_code: Option<u32>,
     #[serde(rename = "Hovedområde start")]
     #[serde_as(as = "NoneAsEmptyString")]
     pub main_area_start: Option<String>,
     #[serde(rename = "Hovedområde start (kode)")]
-    #[serde(deserialize_with = "opt_u32_from_str")]
+    #[serde_as(as = "OptPrimitiveFromStr")]
     pub main_area_start_code: Option<u32>,
     #[serde(flatten)]
     pub message_info: ErsMessageInfo,
@@ -98,10 +98,10 @@ pub struct ErsDca {
     #[serde(deserialize_with = "opt_naive_date_from_str")]
     pub start_date: Option<NaiveDate>,
     #[serde(rename = "Startposisjon bredde")]
-    #[serde(deserialize_with = "opt_float_from_str")]
+    #[serde_as(as = "OptFloatFromStr")]
     pub start_latitude: Option<f64>,
     #[serde(rename = "Startposisjon lengde")]
-    #[serde(deserialize_with = "opt_float_from_str")]
+    #[serde_as(as = "OptFloatFromStr")]
     pub start_longitude: Option<f64>,
     #[serde(rename = "Startklokkeslett")]
     #[serde(deserialize_with = "opt_naive_time_from_str")]
@@ -113,10 +113,10 @@ pub struct ErsDca {
     #[serde(deserialize_with = "opt_naive_date_from_str")]
     pub stop_date: Option<NaiveDate>,
     #[serde(rename = "Stopposisjon bredde")]
-    #[serde(deserialize_with = "opt_float_from_str")]
+    #[serde_as(as = "OptFloatFromStr")]
     pub stop_latitude: Option<f64>,
     #[serde(rename = "Stopposisjon lengde")]
-    #[serde(deserialize_with = "opt_float_from_str")]
+    #[serde_as(as = "OptFloatFromStr")]
     pub stop_longitude: Option<f64>,
     #[serde(rename = "Stoppklokkeslett")]
     #[serde(deserialize_with = "opt_naive_time_from_str")]
@@ -136,7 +136,7 @@ pub struct ErsDca {
 #[derive(Deserialize, Debug, Clone)]
 pub struct GearDca {
     #[serde(rename = "Redskap mengde")]
-    #[serde(deserialize_with = "opt_u32_from_str")]
+    #[serde_as(as = "OptPrimitiveFromStr")]
     pub gear_amount: Option<u32>,
     #[serde(rename = "Redskap FAO")]
     #[serde_as(as = "NoneAsEmptyString")]
@@ -148,33 +148,33 @@ pub struct GearDca {
     #[serde_as(as = "NoneAsEmptyString")]
     pub gear_fdir: Option<String>,
     #[serde(rename = "Redskap FDIR (kode)")]
-    #[serde(deserialize_with = "gear_from_opt_value")]
-    pub gear_fdir_code: Gear,
+    #[serde_as(as = "OptPrimitiveFromStr")]
+    pub gear_fdir_code: Option<Gear>,
     #[serde(rename = "Redskap - gruppe")]
     #[serde_as(as = "NoneAsEmptyString")]
     pub gear_group: Option<String>,
     #[serde(rename = "Redskap - gruppe (kode)")]
-    #[serde(deserialize_with = "gear_group_from_opt_value")]
-    pub gear_group_code: GearGroup,
+    #[serde_as(as = "OptPrimitiveFromStr")]
+    pub gear_group_code: Option<GearGroup>,
     #[serde(rename = "Redskap - hovedgruppe")]
     #[serde_as(as = "NoneAsEmptyString")]
     pub gear_main_group: Option<String>,
     #[serde(rename = "Redskap - hovedgruppe (kode)")]
-    #[serde(deserialize_with = "main_gear_group_from_opt_value")]
-    pub gear_main_group_code: MainGearGroup,
+    #[serde_as(as = "OptPrimitiveFromStr")]
+    pub gear_main_group_code: Option<MainGearGroup>,
     #[serde(rename = "Redskap maskevidde")]
-    #[serde(deserialize_with = "opt_u32_from_str")]
+    #[serde_as(as = "OptPrimitiveFromStr")]
     pub gear_mesh_width: Option<u32>,
     #[serde(rename = "Redskap problem")]
     pub gear_problem: Option<String>,
     #[serde(rename = "Redskap problem (kode)")]
-    #[serde(deserialize_with = "opt_u32_from_str")]
+    #[serde_as(as = "OptPrimitiveFromStr")]
     pub gear_problem_code: Option<u32>,
     #[serde(rename = "Redskapsspesifikasjon")]
     #[serde_as(as = "NoneAsEmptyString")]
     pub gear_specification: Option<String>,
     #[serde(rename = "Redskapsspesifikasjon (kode)")]
-    #[serde(deserialize_with = "opt_u32_from_str")]
+    #[serde_as(as = "OptPrimitiveFromStr")]
     pub gear_specification_code: Option<u32>,
 }
 
@@ -189,7 +189,7 @@ pub struct DcaCatch {
     #[serde_as(as = "NoneAsEmptyString")]
     pub majority_species_fao_code: Option<String>,
     #[serde(rename = "Hovedart - FDIR (kode)")]
-    #[serde(deserialize_with = "opt_u32_from_str")]
+    #[serde_as(as = "OptPrimitiveFromStr")]
     pub majority_species_fdir_code: Option<u32>,
     #[serde(flatten)]
     pub species: ErsSpecies,
@@ -200,34 +200,34 @@ pub struct DcaCatch {
 #[derive(Deserialize, Debug, Clone)]
 pub struct WhaleCatchInfo {
     #[serde(rename = "Spekkmål A")]
-    #[serde(deserialize_with = "opt_u32_from_str")]
+    #[serde_as(as = "OptPrimitiveFromStr")]
     pub blubber_measure_a: Option<u32>,
     #[serde(rename = "Spekkmål B")]
-    #[serde(deserialize_with = "opt_u32_from_str")]
+    #[serde_as(as = "OptPrimitiveFromStr")]
     pub blubber_measure_b: Option<u32>,
     #[serde(rename = "Spekkmål C")]
-    #[serde(deserialize_with = "opt_u32_from_str")]
+    #[serde_as(as = "OptPrimitiveFromStr")]
     pub blubber_measure_c: Option<u32>,
     #[serde(rename = "Omkrets")]
-    #[serde(deserialize_with = "opt_u32_from_str")]
+    #[serde_as(as = "OptPrimitiveFromStr")]
     pub circumference: Option<u32>,
     #[serde(rename = "Fosterlengde")]
-    #[serde(deserialize_with = "opt_u32_from_str")]
+    #[serde_as(as = "OptPrimitiveFromStr")]
     pub fetus_length: Option<u32>,
     #[serde(rename = "Kjønn")]
     #[serde_as(as = "NoneAsEmptyString")]
     pub gender: Option<String>,
     #[serde(rename = "Kjønn (kode)")]
-    #[serde(deserialize_with = "opt_enum_from_primitive")]
+    #[serde_as(as = "OptPrimitiveFromStr")]
     pub gender_code: Option<WhaleGender>,
     #[serde(rename = "Granatnummer")]
     #[serde_as(as = "NoneAsEmptyString")]
     pub grenade_number: Option<String>,
     #[serde(rename = "Individnummer")]
-    #[serde(deserialize_with = "opt_u32_from_str")]
+    #[serde_as(as = "OptPrimitiveFromStr")]
     pub individual_number: Option<u32>,
     #[serde(rename = "Lengde")]
-    #[serde(deserialize_with = "opt_u32_from_str")]
+    #[serde_as(as = "OptPrimitiveFromStr")]
     pub length: Option<u32>,
 }
 
@@ -246,7 +246,7 @@ pub struct WhaleCatchInfo {
     EnumIter,
     Serialize_repr,
     Deserialize_repr,
-    strum::Display,
+    Display,
     AsRefStr,
     EnumString,
 )]
@@ -331,11 +331,11 @@ impl GearDca {
             gear_fao: Some("Traal".into()),
             gear_fao_code: Some("TR".into()),
             gear_fdir: Some("Trippel Traal".into()),
-            gear_fdir_code: Gear::TripleTrawl,
+            gear_fdir_code: Some(Gear::TripleTrawl),
             gear_group: Some("Traal".into()),
-            gear_group_code: GearGroup::Trawl,
+            gear_group_code: Some(GearGroup::Trawl),
             gear_main_group: Some("Traal".into()),
-            gear_main_group_code: MainGearGroup::Trawl,
+            gear_main_group_code: Some(MainGearGroup::Trawl),
             gear_mesh_width: Some(6),
             gear_problem: None,
             gear_problem_code: None,

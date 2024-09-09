@@ -19,7 +19,6 @@ pub struct ErsTra {
     #[serde(deserialize_with = "opt_naive_date_from_str")]
     pub reloading_date: Option<NaiveDate>,
     #[serde(rename = "Omlasting fra fartøy")]
-    #[serde(deserialize_with = "opt_string_from_str_or_int")]
     pub reloading_from_vessel: Option<String>,
     #[serde(rename = "Omlastingsklokkeslett")]
     #[serde(deserialize_with = "opt_naive_time_from_str")]
@@ -28,16 +27,15 @@ pub struct ErsTra {
     #[serde(deserialize_with = "opt_date_time_utc_from_str")]
     pub reloading_timestamp: Option<DateTime<Utc>>,
     #[serde(rename = "Omlasting til fartøy")]
-    #[serde(deserialize_with = "opt_string_from_str_or_int")]
     pub reloading_to_vessel: Option<String>,
     #[serde(rename = "Startposisjon bredde")]
-    #[serde(deserialize_with = "opt_float_from_str")]
+    #[serde_as(as = "OptFloatFromStr")]
     pub start_latitude: Option<f64>,
     #[serde(rename = "Startposisjon bredde N/SGGDD")]
     #[serde_as(as = "NoneAsEmptyString")]
     pub start_latitude_sggdd: Option<String>,
     #[serde(rename = "Startposisjon lengde")]
-    #[serde(deserialize_with = "opt_float_from_str")]
+    #[serde_as(as = "OptFloatFromStr")]
     pub start_longitude: Option<f64>,
     #[serde(rename = "Startposisjon lengde E/WGGGDD")]
     #[serde_as(as = "NoneAsEmptyString")]

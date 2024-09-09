@@ -1,7 +1,7 @@
 use enum_index_derive::{EnumIndex, IndexEnum};
 use num_derive::FromPrimitive;
 use serde_repr::{Deserialize_repr, Serialize_repr};
-use strum::{AsRefStr, EnumCount, EnumIter, EnumString};
+use strum::{AsRefStr, Display, EnumCount, EnumIter, EnumString};
 
 #[allow(missing_docs)]
 #[repr(i32)]
@@ -23,7 +23,7 @@ use strum::{AsRefStr, EnumCount, EnumIter, EnumString};
     Deserialize_repr,
     EnumIndex,
     IndexEnum,
-    strum::Display,
+    Display,
     AsRefStr,
     EnumString,
 )]
@@ -80,7 +80,7 @@ impl SpeciesMainGroup {
     Deserialize_repr,
     EnumIndex,
     IndexEnum,
-    strum::Display,
+    Display,
     AsRefStr,
     EnumString,
 )]

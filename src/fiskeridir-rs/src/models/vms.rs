@@ -3,7 +3,7 @@ use chrono::{DateTime, Utc};
 use serde_with::NoneAsEmptyString;
 
 use serde::Deserialize;
-use serde_with::serde_as;
+use serde_with::{serde_as, DisplayFromStr};
 
 #[remain::sorted]
 #[serde_as]
@@ -12,19 +12,19 @@ pub struct Vms {
     #[serde(rename = "Radiokallesignal")]
     pub call_sign: CallSign,
     #[serde(rename = "Kurs")]
-    #[serde(deserialize_with = "opt_u32_from_str")]
+    #[serde_as(as = "OptPrimitiveFromStr")]
     pub course: Option<u32>,
     #[serde(rename = "Bruttotonnasje", alias = "Bruttotonnasje 1969")]
-    #[serde(deserialize_with = "opt_u32_from_str")]
+    #[serde_as(as = "OptPrimitiveFromStr")]
     pub gross_tonnage: Option<u32>,
     #[serde(rename = "Breddegrad")]
-    #[serde(deserialize_with = "opt_float_from_str")]
+    #[serde_as(as = "OptFloatFromStr")]
     pub latitude: Option<f64>,
     #[serde(rename = "Lengdegrad")]
-    #[serde(deserialize_with = "opt_float_from_str")]
+    #[serde_as(as = "OptFloatFromStr")]
     pub longitude: Option<f64>,
     #[serde(rename = "Melding ID", alias = "MeldingID")]
-    #[serde(deserialize_with = "u32_from_str")]
+    #[serde_as(as = "DisplayFromStr")]
     pub message_id: u32,
     #[serde(rename = "Meldingstype")]
     pub message_type: String,
@@ -34,13 +34,13 @@ pub struct Vms {
     #[serde(rename = "Registreringsmerke")]
     pub registration_id: Option<String>,
     #[serde(rename = "Fart")]
-    #[serde(deserialize_with = "opt_float_from_str")]
+    #[serde_as(as = "OptFloatFromStr")]
     pub speed: Option<f64>,
     #[serde(deserialize_with = "date_time_utc_from_non_iso_utc_str")]
     #[serde(rename = "Tidspunkt (UTC)", alias = "Tidspunkt(UTC)")]
     pub timestamp: DateTime<Utc>,
     #[serde(rename = "Største lengde", alias = "Størstelengde")]
-    #[serde(deserialize_with = "float_from_str")]
+    #[serde_as(as = "FloatFromStr")]
     pub vessel_length: f64,
     #[serde(rename = "Fartøynavn")]
     pub vessel_name: String,

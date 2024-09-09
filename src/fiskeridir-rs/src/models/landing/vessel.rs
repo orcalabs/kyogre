@@ -9,11 +9,13 @@ use jurisdiction::Jurisdiction;
 use num_derive::FromPrimitive;
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
-use strum::{AsRefStr, EnumCount, EnumIter, EnumString};
+use strum::{AsRefStr, Display, EnumCount, EnumIter, EnumString};
 
 use crate::{error::error::JurisdictionSnafu, models::ers_common::ErsVesselInfo, CallSign, Error};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize, FromPrimitive,
+)]
 #[cfg_attr(feature = "sqlx", derive(sqlx::Type), sqlx(transparent))]
 pub struct FiskeridirVesselId(i64);
 
@@ -56,7 +58,7 @@ pub struct Vessel {
     EnumIter,
     Serialize_repr,
     Deserialize_repr,
-    strum::Display,
+    Display,
     AsRefStr,
     EnumString,
 )]
@@ -132,7 +134,7 @@ impl From<VesselType> for i32 {
     Deserialize_repr,
     EnumIndex,
     IndexEnum,
-    strum::Display,
+    Display,
     AsRefStr,
     EnumString,
 )]

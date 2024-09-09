@@ -42,12 +42,12 @@ pub struct ErsDep {
     #[serde(flatten)]
     pub port: Port,
     #[serde(rename = "Startposisjon bredde")]
-    #[serde(deserialize_with = "float_from_str")]
+    #[serde_as(as = "FloatFromStr")]
     pub start_latitude: f64,
     #[serde(rename = "Startposisjon bredde N/SGGDD")]
     pub start_latitude_sggdd: NonEmptyString,
     #[serde(rename = "Startposisjon lengde")]
-    #[serde(deserialize_with = "float_from_str")]
+    #[serde_as(as = "FloatFromStr")]
     pub start_longitude: f64,
     #[serde(rename = "Startposisjon lengde E/WGGGDD")]
     pub start_longitude_sggdd: NonEmptyString,
