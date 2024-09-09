@@ -101,10 +101,10 @@ async fn test_hauls_returns_hauls_with_gear_group_ids() {
             .hauls(4)
             .modify_idx(|i, v| match i {
                 0 => {
-                    v.dca.gear.gear_group_code = GearGroup::Seine;
+                    v.dca.gear.gear_group_code = Some(GearGroup::Seine);
                 }
                 1 => {
-                    v.dca.gear.gear_group_code = GearGroup::LobsterTrapAndFykeNets;
+                    v.dca.gear.gear_group_code = Some(GearGroup::LobsterTrapAndFykeNets);
                 }
                 _ => (),
             })
@@ -133,10 +133,10 @@ async fn test_hauls_returns_hauls_with_species_group_ids() {
             .hauls(4)
             .modify_idx(|i, v| match i {
                 0 => {
-                    v.dca.catch.species.species_group_code = SpeciesGroup::GreenlandHalibut;
+                    v.dca.catch.species.species_group_code = Some(SpeciesGroup::GreenlandHalibut);
                 }
                 1 => {
-                    v.dca.catch.species.species_group_code = SpeciesGroup::GoldenRedfish;
+                    v.dca.catch.species.species_group_code = Some(SpeciesGroup::GoldenRedfish);
                 }
                 _ => (),
             })

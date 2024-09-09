@@ -2,12 +2,10 @@ use crate::{deserialize_utils::*, string_new_types::NonEmptyString};
 use crate::{SpeciesGroup, SpeciesMainGroup, VesselLengthGroup};
 use chrono::{DateTime, Datelike, Duration, NaiveDate, NaiveTime, Utc};
 use num_derive::FromPrimitive;
-use num_traits::FromPrimitive;
-use serde::de::{self, Visitor};
 use serde::Deserialize;
 use serde_repr::Serialize_repr;
 use serde_with::{serde_as, NoneAsEmptyString};
-use strum::{AsRefStr, EnumString};
+use strum::{AsRefStr, Display, EnumString};
 
 use super::FiskeridirVesselId;
 
@@ -34,22 +32,27 @@ pub struct Port {
     PartialEq,
     FromPrimitive,
     Eq,
+    Deserialize,
     Serialize_repr,
     Hash,
     Ord,
     PartialOrd,
-    strum::Display,
+    Display,
     AsRefStr,
     EnumString,
 )]
 #[cfg_attr(feature = "sqlx", derive(sqlx::Type))]
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub enum FiskdirVesselNationalityGroup {
+    #[serde(rename(deserialize = "U"))]
     Foreign = 1,
+    #[serde(rename(deserialize = "N"))]
     Norwegian = 2,
+    #[serde(rename(deserialize = "T"))]
     Test = 3,
 }
 
+#[serde_as]
 #[remain::sorted]
 #[derive(Deserialize, Debug, Clone)]
 pub struct ErsMessageInfo {
@@ -75,7 +78,7 @@ pub struct ErsMessageInfo {
     #[serde(rename = "Relevant år")]
     pub relevant_year: u32,
     #[serde(rename = "Sekvensnummer")]
-    #[serde(deserialize_with = "opt_u32_from_str")]
+    #[serde_as(as = "OptPrimitiveFromStr")]
     pub sequence_number: Option<u32>,
 }
 
@@ -84,7 +87,7 @@ pub struct ErsMessageInfo {
 #[derive(Deserialize, Debug, Clone)]
 pub struct ErsSpecies {
     #[serde(rename = "Rundvekt")]
-    #[serde(deserialize_with = "opt_u32_from_str")]
+    #[serde_as(as = "OptPrimitiveFromStr")]
     pub living_weight: Option<u32>,
     #[serde(rename = "Art FAO")]
     #[serde_as(as = "NoneAsEmptyString")]
@@ -96,20 +99,20 @@ pub struct ErsSpecies {
     #[serde_as(as = "NoneAsEmptyString")]
     pub species_fdir: Option<String>,
     #[serde(rename = "Art - FDIR (kode)")]
-    #[serde(deserialize_with = "opt_u32_from_str")]
+    #[serde_as(as = "OptPrimitiveFromStr")]
     pub species_fdir_code: Option<u32>,
     #[serde(rename = "Art - gruppe")]
     #[serde_as(as = "NoneAsEmptyString")]
     pub species_group: Option<String>,
     #[serde(rename = "Art - gruppe (kode)")]
-    #[serde(deserialize_with = "species_group_from_opt_value")]
-    pub species_group_code: SpeciesGroup,
+    #[serde_as(as = "OptPrimitiveFromStr")]
+    pub species_group_code: Option<SpeciesGroup>,
     #[serde(rename = "Art - hovedgruppe")]
     #[serde_as(as = "NoneAsEmptyString")]
     pub species_main_group: Option<String>,
     #[serde(rename = "Art - hovedgruppe (kode)")]
-    #[serde(deserialize_with = "species_main_group_from_opt_value")]
-    pub species_main_group_code: SpeciesMainGroup,
+    #[serde_as(as = "OptPrimitiveFromStr")]
+    pub species_main_group_code: Option<SpeciesMainGroup>,
 }
 
 #[serde_as]
@@ -117,7 +120,7 @@ pub struct ErsSpecies {
 #[derive(Deserialize, Debug, Clone)]
 pub struct ErsVesselInfo {
     #[serde(rename = "Byggeår")]
-    #[serde(deserialize_with = "opt_u32_from_str")]
+    #[serde_as(as = "OptPrimitiveFromStr")]
     pub building_year: Option<u32>,
     #[serde(rename = "Radiokallesignal")]
     #[serde_as(as = "NoneAsEmptyString")]
@@ -125,39 +128,39 @@ pub struct ErsVesselInfo {
     #[serde(rename = "Radiokallesignal (ERS)")]
     pub call_sign_ers: NonEmptyString,
     #[serde(rename = "Motorbyggeår")]
-    #[serde(deserialize_with = "opt_u32_from_str")]
+    #[serde_as(as = "OptPrimitiveFromStr")]
     pub engine_building_year: Option<u32>,
     #[serde(rename = "Motorkraft")]
-    #[serde(deserialize_with = "opt_u32_from_str")]
+    #[serde_as(as = "OptPrimitiveFromStr")]
     pub engine_power: Option<u32>,
     #[serde(rename = "Bruttotonnasje 1969")]
-    #[serde(deserialize_with = "opt_u32_from_str")]
+    #[serde_as(as = "OptPrimitiveFromStr")]
     pub gross_tonnage_1969: Option<u32>,
     #[serde(rename = "Bruttotonnasje annen")]
-    #[serde(deserialize_with = "opt_u32_from_str")]
+    #[serde_as(as = "OptPrimitiveFromStr")]
     pub gross_tonnage_other: Option<u32>,
     #[serde(rename = "Fartøyfylke")]
     #[serde_as(as = "NoneAsEmptyString")]
     pub vessel_county: Option<String>,
     #[serde(rename = "Fartøyfylke (kode)")]
-    #[serde(deserialize_with = "opt_u32_from_str")]
+    #[serde_as(as = "OptPrimitiveFromStr")]
     pub vessel_county_code: Option<u32>,
     #[serde(rename = "Største lengde")]
-    #[serde(deserialize_with = "opt_float_from_str")]
+    #[serde_as(as = "OptFloatFromStr")]
     pub vessel_greatest_length: Option<f64>,
     #[serde(rename = "Fartøy ID")]
-    #[serde(deserialize_with = "opt_fiskeridir_vessel_id_from_str")]
+    #[serde_as(as = "OptPrimitiveFromStr")]
     pub vessel_id: Option<FiskeridirVesselId>,
     #[serde(rename = "Fartøyidentifikasjon")]
     pub vessel_identification: NonEmptyString,
     #[serde(rename = "Fartøylengde")]
-    #[serde(deserialize_with = "float_from_str")]
+    #[serde_as(as = "FloatFromStr")]
     pub vessel_length: f64,
     #[serde(rename = "Lengdegruppe")]
     #[serde_as(as = "NoneAsEmptyString")]
     pub vessel_length_group: Option<String>,
     #[serde(rename = "Lengdegruppe (kode)")]
-    #[serde(deserialize_with = "opt_enum_from_primitive")]
+    #[serde_as(as = "OptPrimitiveFromStr")]
     pub vessel_length_group_code: Option<VesselLengthGroup>,
     #[serde(rename = "Fartøymateriale (kode)")]
     #[serde_as(as = "NoneAsEmptyString")]
@@ -166,7 +169,7 @@ pub struct ErsVesselInfo {
     #[serde_as(as = "NoneAsEmptyString")]
     pub vessel_municipality: Option<String>,
     #[serde(rename = "Fartøykommune (kode)")]
-    #[serde(deserialize_with = "opt_u32_from_str")]
+    #[serde_as(as = "OptPrimitiveFromStr")]
     pub vessel_municipality_code: Option<u32>,
     #[serde(rename = "Fartøynavn")]
     #[serde_as(as = "NoneAsEmptyString")]
@@ -179,13 +182,13 @@ pub struct ErsVesselInfo {
     #[serde(rename = "Fartøygruppe (kode)")]
     pub vessel_nationality_group_code: FiskdirVesselNationalityGroup,
     #[serde(rename = "Ombyggingsår")]
-    #[serde(deserialize_with = "opt_u32_from_str")]
+    #[serde_as(as = "OptPrimitiveFromStr")]
     pub vessel_rebuilding_year: Option<u32>,
     #[serde(rename = "Registreringsmerke")]
     #[serde_as(as = "NoneAsEmptyString")]
     pub vessel_registration_id: Option<String>,
     #[serde(rename = "Registreringsmerke (ERS)")]
-    #[serde(deserialize_with = "opt_string_from_str_or_int")]
+    #[serde_as(as = "Option<StrFromAny>")]
     pub vessel_registration_id_ers: Option<String>,
     #[serde(rename = "Fartøy gjelder fra dato")]
     #[serde(deserialize_with = "opt_naive_date_from_str")]
@@ -194,7 +197,7 @@ pub struct ErsVesselInfo {
     #[serde(deserialize_with = "opt_naive_date_from_str")]
     pub vessel_valid_until: Option<NaiveDate>,
     #[serde(rename = "Bredde")]
-    #[serde(deserialize_with = "opt_float_from_str")]
+    #[serde_as(as = "OptFloatFromStr")]
     pub vessel_width: Option<f64>,
 }
 
@@ -302,13 +305,13 @@ impl ErsSpecies {
             species_fdir: Some("Torsk".into()),
             species_fdir_code: Some(1022),
             species_group: Some(SpeciesGroup::AtlanticCod.norwegian_name().to_owned()),
-            species_group_code: SpeciesGroup::AtlanticCod,
+            species_group_code: Some(SpeciesGroup::AtlanticCod),
             species_main_group: Some(
                 SpeciesMainGroup::CodAndCodishFish
                     .norwegian_name()
                     .to_owned(),
             ),
-            species_main_group_code: SpeciesMainGroup::CodAndCodishFish,
+            species_main_group_code: Some(SpeciesMainGroup::CodAndCodishFish),
         }
     }
 }
@@ -316,49 +319,5 @@ impl ErsSpecies {
 impl From<FiskdirVesselNationalityGroup> for i32 {
     fn from(value: FiskdirVesselNationalityGroup) -> Self {
         value as i32
-    }
-}
-
-pub struct FiskdirVesselNationalityGroupVisitor;
-impl<'de> Visitor<'de> for FiskdirVesselNationalityGroupVisitor {
-    type Value = FiskdirVesselNationalityGroup;
-
-    fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        formatter.write_str("a valid FiskdirVesselNationalityGroup")
-    }
-
-    fn visit_i64<E>(self, v: i64) -> Result<Self::Value, E>
-    where
-        E: serde::de::Error,
-    {
-        Self::Value::from_i64(v).ok_or(de::Error::invalid_value(de::Unexpected::Signed(v), &self))
-    }
-
-    fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
-    where
-        E: serde::de::Error,
-    {
-        Self::Value::from_u64(v).ok_or(de::Error::invalid_value(de::Unexpected::Unsigned(v), &self))
-    }
-
-    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
-    where
-        E: de::Error,
-    {
-        match v {
-            "U" => Ok(Self::Value::Foreign),
-            "N" => Ok(Self::Value::Norwegian),
-            "T" => Ok(Self::Value::Test),
-            _ => Err(de::Error::invalid_value(de::Unexpected::Str(v), &self)),
-        }
-    }
-}
-
-impl<'de> Deserialize<'de> for FiskdirVesselNationalityGroup {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        deserializer.deserialize_any(FiskdirVesselNationalityGroupVisitor)
     }
 }

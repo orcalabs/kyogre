@@ -113,7 +113,7 @@ async fn test_vessel_events_connect_to_existing_trip() {
             .hauls(2)
             .modify_idx(|idx, v| {
                 if idx == 0 {
-                    v.dca.gear.gear_fdir_code = Gear::Unknown;
+                    v.dca.gear.gear_fdir_code = Some(Gear::Unknown);
                     v.dca.catch.species.species_fao_code = None;
                     v.dca.catch.species.living_weight = None;
                     v.dca.whale_catch_info.grenade_number = None;

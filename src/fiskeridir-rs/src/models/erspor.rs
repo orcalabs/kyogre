@@ -21,7 +21,6 @@ pub struct ErsPor {
     #[serde(flatten)]
     pub catch: ErsCatch,
     #[serde(rename = "Mottakernavn")]
-    #[serde(deserialize_with = "opt_string_from_str_or_int")]
     pub landing_facility: Option<String>,
     #[serde(flatten)]
     pub message_info: ErsMessageInfo,

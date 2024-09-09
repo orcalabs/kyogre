@@ -196,10 +196,13 @@ impl TryFrom<&fiskeridir_rs::ErsDca> for NewErsDcaBody {
             catch_year: v.catch_year.map(|v| v as i32),
             economic_zone_id: v.economic_zone_code.clone(),
             gear_amount: v.gear.gear_amount.map(|v| v as i32),
-            gear_id: v.gear.gear_fdir_code,
+            gear_id: v.gear.gear_fdir_code.unwrap_or(Gear::Unknown),
             gear_fao_id: v.gear.gear_fao_code.clone(),
-            gear_group_id: v.gear.gear_group_code,
-            gear_main_group_id: v.gear.gear_main_group_code,
+            gear_group_id: v.gear.gear_group_code.unwrap_or(GearGroup::Unknown),
+            gear_main_group_id: v
+                .gear
+                .gear_main_group_code
+                .unwrap_or(MainGearGroup::Unknown),
             gear_mesh_width: v.gear.gear_mesh_width.map(|v| v as i32),
             gear_problem_id: v.gear.gear_problem_code.map(|v| v as i32),
             gear_specification_id: v.gear.gear_specification_code.map(|v| v as i32),
@@ -210,8 +213,16 @@ impl TryFrom<&fiskeridir_rs::ErsDca> for NewErsDcaBody {
             living_weight: v.catch.species.living_weight.map(|v| v as i32),
             species_fao_id: v.catch.species.species_fao_code.clone(),
             species_fiskeridir_id: v.catch.species.species_fdir_code.map(|v| v as i32),
-            species_group_id: v.catch.species.species_group_code,
-            species_main_group_id: v.catch.species.species_main_group_code,
+            species_group_id: v
+                .catch
+                .species
+                .species_group_code
+                .unwrap_or(SpeciesGroup::Unknown),
+            species_main_group_id: v
+                .catch
+                .species
+                .species_main_group_code
+                .unwrap_or(SpeciesMainGroup::Unknown),
             whale_grenade_number: v.whale_catch_info.grenade_number.clone(),
             whale_blubber_measure_a: v.whale_catch_info.blubber_measure_a.map(|v| v as i32),
             whale_blubber_measure_b: v.whale_catch_info.blubber_measure_b.map(|v| v as i32),

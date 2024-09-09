@@ -1,5 +1,5 @@
 use chrono::{DateTime, NaiveDate, Utc};
-use fiskeridir_rs::FiskdirVesselNationalityGroup;
+use fiskeridir_rs::{FiskdirVesselNationalityGroup, SpeciesGroup, SpeciesMainGroup};
 use kyogre_core::FiskeridirVesselId;
 use unnest_insert::UnnestInsert;
 
@@ -144,8 +144,17 @@ impl NewErsTraCatch {
                 living_weight: s.living_weight.map(|v| v as i32),
                 species_fao_id: ers_tra.catch.species.species_fao_code.clone(),
                 species_fiskeridir_id: ers_tra.catch.species.species_fdir_code.map(|v| v as i32),
-                species_group_id: ers_tra.catch.species.species_group_code as i32,
-                species_main_group_id: ers_tra.catch.species.species_main_group_code as i32,
+                species_group_id: ers_tra
+                    .catch
+                    .species
+                    .species_group_code
+                    .unwrap_or(SpeciesGroup::Unknown) as i32,
+                species_main_group_id: ers_tra
+                    .catch
+                    .species
+                    .species_main_group_code
+                    .unwrap_or(SpeciesMainGroup::Unknown)
+                    as i32,
             })
         } else {
             None
