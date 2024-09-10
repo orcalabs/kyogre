@@ -1689,6 +1689,7 @@ dependencies = [
 name = "fiskeridir-rs"
 version = "0.22.0"
 dependencies = [
+ "ahash 0.8.11",
  "chrono",
  "chrono-tz",
  "csv",
@@ -1704,7 +1705,6 @@ dependencies = [
  "serde",
  "serde_repr",
  "serde_with",
- "sha3",
  "snafu",
  "sqlx",
  "stack-error",
@@ -2682,15 +2682,6 @@ dependencies = [
  "serde_json",
  "serde_plain",
  "static_assertions",
-]
-
-[[package]]
-name = "keccak"
-version = "0.1.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ecc2af9a1119c51f12a14607e783cb977bde58bc069ff0c3da1095e635d70654"
-dependencies = [
- "cpufeatures",
 ]
 
 [[package]]
@@ -3984,7 +3975,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f8650aabb6c35b860610e9cff5dc1af886c9e25073b7b1712a68972af4281302"
 dependencies = [
  "bytes",
- "heck 0.4.1",
+ "heck 0.5.0",
  "itertools 0.13.0",
  "log",
  "multimap",
@@ -5089,16 +5080,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "sha3"
-version = "0.10.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "75872d278a8f37ef87fa0ddbda7802605cb18344497949862c0d4dcb291eba60"
-dependencies = [
- "digest",
- "keccak",
-]
-
-[[package]]
 name = "sharded-slab"
 version = "0.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5195,7 +5176,7 @@ version = "0.8.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "38d1e02fca405f6280643174a50c942219f0bbf4dbf7d480f1dd864d6f211ae5"
 dependencies = [
- "heck 0.4.1",
+ "heck 0.5.0",
  "proc-macro2",
  "quote 1.0.37",
  "syn 2.0.77",

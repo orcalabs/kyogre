@@ -37,7 +37,7 @@ sqlx = { workspace = true, features = [
 enum_index = { workspace = true }
 enum_index_derive = { workspace = true }
 
-sha3 = "0.10.8"
+ahash = "0.8.11"
 zip = "2.2.0"
 
 [dev-dependencies]
