@@ -47,7 +47,7 @@ async fn test_hauls_matrix_does_not_query_database_on_prior_month_or_newer_data(
                     v.dca.start_longitude = Some(21.957);
                     v.dca.catch.species.living_weight = Some(100);
                     v.dca.catch.species.species_group_code = Some(SpeciesGroup::AtlanticCod);
-                    v.dca.catch.species.species_fao_code = Some("test".into());
+                    v.dca.catch.species.species_fao_code = Some("test".parse().unwrap());
                 }
                 1 => {
                     v.dca.set_start_timestamp(now);
@@ -56,7 +56,7 @@ async fn test_hauls_matrix_does_not_query_database_on_prior_month_or_newer_data(
                     v.dca.start_longitude = Some(21.957);
                     v.dca.catch.species.living_weight = Some(90);
                     v.dca.catch.species.species_group_code = Some(SpeciesGroup::GoldenRedfish);
-                    v.dca.catch.species.species_fao_code = Some("test2".into());
+                    v.dca.catch.species.species_fao_code = Some("test2".parse().unwrap());
                 }
                 2 => {
                     v.dca.set_start_timestamp(next_month);
@@ -65,7 +65,7 @@ async fn test_hauls_matrix_does_not_query_database_on_prior_month_or_newer_data(
                     v.dca.start_longitude = Some(21.957);
                     v.dca.catch.species.living_weight = Some(90);
                     v.dca.catch.species.species_group_code = Some(SpeciesGroup::GoldenRedfish);
-                    v.dca.catch.species.species_fao_code = Some("test2".into());
+                    v.dca.catch.species.species_fao_code = Some("test2".parse().unwrap());
                 }
                 _ => (),
             })
@@ -116,7 +116,7 @@ async fn test_hauls_matrix_filters_majority_species() {
                     v.dca.start_longitude = Some(21.957);
                     v.dca.catch.species.living_weight = Some(100);
                     v.dca.catch.species.species_group_code = Some(SpeciesGroup::AtlanticCod);
-                    v.dca.catch.species.species_fao_code = Some("test".into());
+                    v.dca.catch.species.species_fao_code = Some("test".parse().unwrap());
                 }
                 1 => {
                     v.dca.message_info.message_id = 1;
@@ -126,7 +126,7 @@ async fn test_hauls_matrix_filters_majority_species() {
                     v.dca.start_longitude = Some(21.957);
                     v.dca.catch.species.living_weight = Some(90);
                     v.dca.catch.species.species_group_code = Some(SpeciesGroup::GoldenRedfish);
-                    v.dca.catch.species.species_fao_code = Some("test2".into());
+                    v.dca.catch.species.species_fao_code = Some("test2".parse().unwrap());
                 }
                 _ => (),
             })
@@ -171,7 +171,7 @@ async fn test_hauls_matrix_filters_bycatch() {
                     v.dca.start_longitude = Some(21.957);
                     v.dca.catch.species.living_weight = Some(100);
                     v.dca.catch.species.species_group_code = Some(SpeciesGroup::AtlanticCod);
-                    v.dca.catch.species.species_fao_code = Some("test".into());
+                    v.dca.catch.species.species_fao_code = Some("test".parse().unwrap());
                 }
                 1 => {
                     v.dca.message_info.message_id = 1;
@@ -181,7 +181,7 @@ async fn test_hauls_matrix_filters_bycatch() {
                     v.dca.start_longitude = Some(21.957);
                     v.dca.catch.species.living_weight = Some(10);
                     v.dca.catch.species.species_group_code = Some(SpeciesGroup::GoldenRedfish);
-                    v.dca.catch.species.species_fao_code = Some("test2".into());
+                    v.dca.catch.species.species_fao_code = Some("test2".parse().unwrap());
                 }
                 _ => (),
             })
@@ -305,13 +305,13 @@ async fn test_hauls_matrix_filters_by_vessel_length() {
             .hauls(4)
             .modify_idx(|i, v| match i {
                 0 => {
-                    v.dca.vessel_info.vessel_length = 9.;
+                    v.dca.vessel_info.length = 9.;
                     v.dca.start_latitude = Some(56.727258);
                     v.dca.start_longitude = Some(12.565410);
                     v.dca.catch.species.living_weight = Some(10);
                 }
                 1 => {
-                    v.dca.vessel_info.vessel_length = 12.;
+                    v.dca.vessel_info.length = 12.;
                     v.dca.start_latitude = Some(56.727258);
                     v.dca.start_longitude = Some(12.565410);
                     v.dca.catch.species.living_weight = Some(20);
@@ -656,13 +656,13 @@ async fn test_hauls_matrix_vessel_length_sum_area_table_is_correct() {
             .hauls(4)
             .modify_idx(|i, v| match i {
                 0 => {
-                    v.dca.vessel_info.vessel_length = 9.;
+                    v.dca.vessel_info.length = 9.;
                     v.dca.start_latitude = Some(56.727258);
                     v.dca.start_longitude = Some(12.565410);
                     v.dca.catch.species.living_weight = Some(10);
                 }
                 1 => {
-                    v.dca.vessel_info.vessel_length = 12.;
+                    v.dca.vessel_info.length = 12.;
                     v.dca.start_latitude = Some(56.727258);
                     v.dca.start_longitude = Some(12.565410);
                     v.dca.catch.species.living_weight = Some(20);

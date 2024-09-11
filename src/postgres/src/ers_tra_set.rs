@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{hash_map::Entry, HashMap};
 
 use kyogre_core::FiskeridirVesselId;
 
@@ -59,34 +59,41 @@ impl ErsTraSet {
 
         for e in ers_tra.into_iter() {
             set.add_ers_message_type(&e);
-            set.add_vessel(&e)?;
+            set.add_vessel(&e);
             set.add_catch(&e)?;
             set.add_municipality(&e);
             set.add_county(&e)?;
-            set.add_ers_tra(&e)?;
+            set.add_ers_tra(e);
         }
 
         Ok(set)
     }
 
     fn add_municipality(&mut self, ers_tra: &fiskeridir_rs::ErsTra) {
-        if let Some(code) = ers_tra.vessel_info.vessel_municipality_code {
+        if let Some(code) = ers_tra.vessel_info.municipality_code {
             self.municipalities.entry(code as i32).or_insert_with(|| {
-                NewMunicipality::new(code as i32, ers_tra.vessel_info.vessel_municipality.clone())
+                NewMunicipality::new(
+                    code as i32,
+                    ers_tra
+                        .vessel_info
+                        .municipality
+                        .clone()
+                        .map(|v| v.into_inner()),
+                )
             });
         }
     }
 
     fn add_county(&mut self, ers_tra: &fiskeridir_rs::ErsTra) -> Result<()> {
-        if let Some(code) = ers_tra.vessel_info.vessel_county_code {
-            let county = ers_tra
-                .vessel_info
-                .vessel_county
-                .clone()
-                .ok_or_else(|| MissingValueSnafu.build())?;
-            self.counties
-                .entry(code as i32)
-                .or_insert_with(|| NewCounty::new(code as i32, county));
+        if let Some(code) = ers_tra.vessel_info.county_code {
+            if let Entry::Vacant(e) = self.counties.entry(code as i32) {
+                let county = ers_tra
+                    .vessel_info
+                    .county
+                    .clone()
+                    .ok_or_else(|| MissingValueSnafu.build())?;
+                e.insert(NewCounty::new(code as i32, county.into_inner()));
+            }
         }
         Ok(())
     }
@@ -104,14 +111,12 @@ impl ErsTraSet {
         }
     }
 
-    fn add_vessel(&mut self, ers_tra: &fiskeridir_rs::ErsTra) -> Result<()> {
-        if let Some(vessel_id) = ers_tra.vessel_info.vessel_id {
-            if !self.vessels.contains_key(&vessel_id) {
-                let vessel = fiskeridir_rs::Vessel::try_from(ers_tra.vessel_info.clone())?;
-                self.vessels.entry(vessel_id).or_insert(vessel);
-            }
+    fn add_vessel(&mut self, ers_tra: &fiskeridir_rs::ErsTra) {
+        if let Some(vessel_id) = ers_tra.vessel_info.id {
+            self.vessels
+                .entry(vessel_id)
+                .or_insert_with(|| ers_tra.vessel_info.clone().into());
         }
-        Ok(())
     }
 
     fn add_catch(&mut self, ers_tra: &fiskeridir_rs::ErsTra) -> Result<()> {
@@ -122,39 +127,39 @@ impl ErsTraSet {
                 .species_fao_code
                 .clone()
                 .ok_or_else(|| MissingValueSnafu.build())?;
-            self.add_species_fao(&species_fao_code, &ers_tra.catch.species.species_fao);
+            self.add_species_fao(
+                species_fao_code.as_ref(),
+                ers_tra.catch.species.species_fao.as_deref(),
+            );
             self.add_species_fiskeridir(
                 ers_tra.catch.species.species_fdir_code,
-                ers_tra.catch.species.species_fdir.clone(),
+                ers_tra.catch.species.species_fdir.as_deref(),
             );
             self.catches.push(catch);
         }
         Ok(())
     }
 
-    fn add_species_fao(&mut self, code: &String, name: &Option<String>) {
+    fn add_species_fao(&mut self, code: &str, name: Option<&str>) {
         if !self.species_fao.contains_key(code) {
-            self.species_fao
-                .insert(code.clone(), SpeciesFao::new(code.clone(), name.clone()));
+            self.species_fao.insert(
+                code.into(),
+                SpeciesFao::new(code.into(), name.map(From::from)),
+            );
         }
     }
 
-    fn add_species_fiskeridir(&mut self, code: Option<u32>, name: Option<String>) {
+    fn add_species_fiskeridir(&mut self, code: Option<u32>, name: Option<&str>) {
         if let Some(code) = code {
             self.species_fiskeridir
                 .entry(code as i32)
-                .or_insert_with(|| SpeciesFiskeridir::new(code as i32, name));
+                .or_insert_with(|| SpeciesFiskeridir::new(code as i32, name.map(From::from)));
         }
     }
 
-    fn add_ers_tra(&mut self, ers_tra: &fiskeridir_rs::ErsTra) -> Result<()> {
-        if !self
-            .ers_tra
-            .contains_key(&(ers_tra.message_info.message_id as i64))
-        {
-            let new_ers_tra = NewErsTra::try_from(ers_tra.clone())?;
-            self.ers_tra.insert(new_ers_tra.message_id, new_ers_tra);
-        }
-        Ok(())
+    fn add_ers_tra(&mut self, ers_tra: fiskeridir_rs::ErsTra) {
+        self.ers_tra
+            .entry(ers_tra.message_info.message_id as i64)
+            .or_insert_with(|| ers_tra.into());
     }
 }

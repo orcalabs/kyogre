@@ -1700,7 +1700,6 @@ dependencies = [
  "jurisdiction",
  "num-derive",
  "num-traits",
- "regex",
  "remain",
  "serde",
  "serde_repr",

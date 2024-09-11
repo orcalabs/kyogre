@@ -114,7 +114,7 @@ async fn test_trip_of_landing_returns_none_of_no_trip_is_connected_to_given_land
 
         let trip = helper
             .app
-            .get_trip_of_landing(&"1-7-0-0".try_into().unwrap())
+            .get_trip_of_landing(&"1-7-0-0".parse().unwrap())
             .await
             .unwrap();
         assert!(trip.is_none());
@@ -325,7 +325,7 @@ async fn test_trip_connects_to_tra_event_based_on_message_timestamp_if_reloading
             .trips(1)
             .tra(1)
             .modify(|t| {
-                t.tra.reloading_timestamp = None;
+                t.tra._reloading_timestamp = None;
                 t.tra.reloading_date = None;
                 t.tra.reloading_time = None;
             })
@@ -360,8 +360,8 @@ async fn test_trips_returns_correct_ports() {
             .trips(1)
             .modify(|t| match &mut t.trip_specification {
                 TripSpecification::Ers { dep, por } => {
-                    dep.port.code = Some(start_port.clone());
-                    por.port.code = Some(end_port.clone());
+                    dep.port.code = Some(start_port.parse().unwrap());
+                    por.port.code = Some(end_port.parse().unwrap());
                 }
                 TripSpecification::Landing {
                     start_landing: _,
@@ -613,7 +613,7 @@ async fn test_trips_orders_descendingly() {
 #[tokio::test]
 async fn test_trips_filter_by_delivery_point() {
     test_with_cache(|helper, builder| async move {
-        let delivery_point = DeliveryPointId::try_from("FKAI").unwrap();
+        let delivery_point: DeliveryPointId = "FKAI".parse().unwrap();
 
         let state = builder
             .vessels(1)

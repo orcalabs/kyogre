@@ -111,7 +111,7 @@ impl FishingFacility {
             barentswatch_vessel_id: Some(Uuid::new_v4()),
             fiskeridir_vessel_id: None,
             vessel_name: Some("Sjarken".into()),
-            call_sign: Some(CallSign::try_from("LK-17").unwrap()),
+            call_sign: Some("LK-17".parse().unwrap()),
             mmsi: Some(Mmsi::test_new(123456)),
             imo: Some(12345678),
             reg_num: Some("NO-342642".into()),

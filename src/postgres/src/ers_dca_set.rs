@@ -95,49 +95,60 @@ impl ErsDcaSet {
             set.add_catch_area(&e);
             set.add_gear_fao(&e);
             set.add_gear_problem(&e);
-            set.add_vessel(&e)?;
+            set.add_vessel(&e);
             set.add_port(&e)?;
             set.add_municipality(&e);
             set.add_economic_zone(&e);
             set.add_county(&e)?;
             set.add_species_fao(&e);
             set.add_species_fiskeridir(&e);
-            set.add_ers_dca_body(&e)?;
-            set.add_ers_dca(&e)?;
+            set.add_ers_dca_body(&e);
+            set.add_ers_dca(e);
         }
 
         Ok(set)
     }
 
     fn add_municipality(&mut self, ers_dca: &fiskeridir_rs::ErsDca) {
-        if let Some(code) = ers_dca.vessel_info.vessel_municipality_code {
+        if let Some(code) = ers_dca.vessel_info.municipality_code {
             self.municipalities.entry(code as i32).or_insert_with(|| {
-                NewMunicipality::new(code as i32, ers_dca.vessel_info.vessel_municipality.clone())
+                NewMunicipality::new(
+                    code as i32,
+                    ers_dca
+                        .vessel_info
+                        .municipality
+                        .clone()
+                        .map(|v| v.into_inner()),
+                )
             });
         }
     }
 
     fn add_economic_zone(&mut self, ers_dca: &fiskeridir_rs::ErsDca) {
         if let Some(ref code) = ers_dca.economic_zone_code {
+            let code = code.as_ref();
             if !self.economic_zones.contains_key(code) {
                 self.economic_zones.insert(
-                    code.clone(),
-                    NewEconomicZone::new(code.clone(), ers_dca.economic_zone_code.clone()),
+                    code.into(),
+                    NewEconomicZone::new(
+                        code.into(),
+                        ers_dca.economic_zone_code.clone().map(|v| v.into_inner()),
+                    ),
                 );
             }
         }
     }
 
     fn add_county(&mut self, ers_dca: &fiskeridir_rs::ErsDca) -> Result<()> {
-        if let Some(code) = ers_dca.vessel_info.vessel_county_code {
-            let county = ers_dca
-                .vessel_info
-                .vessel_county
-                .clone()
-                .ok_or_else(|| MissingValueSnafu.build())?;
-            self.counties
-                .entry(code as i32)
-                .or_insert_with(|| NewCounty::new(code as i32, county));
+        if let Some(code) = ers_dca.vessel_info.county_code {
+            if let Entry::Vacant(e) = self.counties.entry(code as i32) {
+                let county = ers_dca
+                    .vessel_info
+                    .county
+                    .clone()
+                    .ok_or_else(|| MissingValueSnafu.build())?;
+                e.insert(NewCounty::new(code as i32, county.into_inner()));
+            }
         }
         Ok(())
     }
@@ -157,14 +168,15 @@ impl ErsDcaSet {
 
     fn add_herring_population(&mut self, ers_dca: &fiskeridir_rs::ErsDca) -> Result<()> {
         if let Some(ref code) = ers_dca.herring_population_code {
+            let code = code.as_ref();
             if !self.herring_populations.contains_key(code) {
                 let herring_population = ers_dca
                     .herring_population
                     .clone()
                     .ok_or_else(|| MissingValueSnafu.build())?;
                 self.herring_populations.insert(
-                    code.clone(),
-                    NewHerringPopulation::new(code.clone(), herring_population),
+                    code.into(),
+                    NewHerringPopulation::new(code.into(), herring_population.into_inner()),
                 );
             }
         }
@@ -173,10 +185,14 @@ impl ErsDcaSet {
 
     fn add_gear_fao(&mut self, ers_dca: &fiskeridir_rs::ErsDca) {
         if let Some(ref code) = ers_dca.gear.gear_fao_code {
+            let code = code.as_ref();
             if !self.gear_fao.contains_key(code) {
                 self.gear_fao.insert(
-                    code.clone(),
-                    NewGearFao::new(code.clone(), ers_dca.gear.gear_fao.clone()),
+                    code.into(),
+                    NewGearFao::new(
+                        code.into(),
+                        ers_dca.gear.gear_fao.clone().map(|v| v.into_inner()),
+                    ),
                 );
             }
         }
@@ -185,93 +201,100 @@ impl ErsDcaSet {
     fn add_gear_problem(&mut self, ers_dca: &fiskeridir_rs::ErsDca) {
         if let Some(code) = ers_dca.gear.gear_problem_code {
             self.gear_problems.entry(code as i32).or_insert_with(|| {
-                NewGearProblem::new(code as i32, ers_dca.gear.gear_fdir.clone())
+                NewGearProblem::new(
+                    code as i32,
+                    ers_dca.gear.gear_fdir.clone().map(|v| v.into_inner()),
+                )
             });
         }
     }
 
-    fn add_vessel(&mut self, ers_dca: &fiskeridir_rs::ErsDca) -> Result<()> {
-        if let Some(vessel_id) = ers_dca.vessel_info.vessel_id {
-            if let Entry::Vacant(e) = self.vessels.entry(vessel_id) {
-                let vessel = fiskeridir_rs::Vessel::try_from(ers_dca.vessel_info.clone())?;
-                e.insert(vessel);
-            }
+    fn add_vessel(&mut self, ers_dca: &fiskeridir_rs::ErsDca) {
+        if let Some(vessel_id) = ers_dca.vessel_info.id {
+            self.vessels
+                .entry(vessel_id)
+                .or_insert_with(|| ers_dca.vessel_info.clone().into());
         }
-        Ok(())
     }
 
     fn add_port(&mut self, ers_dca: &fiskeridir_rs::ErsDca) -> Result<()> {
         if let Some(ref code) = ers_dca.port.code {
+            let code = code.as_ref();
             if !self.ports.contains_key(code) {
-                let port = NewPort::new(code.clone(), ers_dca.port.name.clone())?;
-                self.ports.insert(code.clone(), port);
+                let port = NewPort::new(
+                    code.into(),
+                    ers_dca.port.name.clone().map(|v| v.into_inner()),
+                )?;
+                self.ports.insert(code.into(), port);
             }
         }
         Ok(())
     }
 
-    fn add_species_fao_impl(&mut self, code: &Option<String>, name: &Option<String>) {
+    fn add_species_fao_impl(&mut self, code: Option<&str>, name: Option<&str>) {
         if let Some(code) = code {
             if !self.species_fao.contains_key(code) {
-                self.species_fao
-                    .insert(code.clone(), SpeciesFao::new(code.clone(), name.clone()));
+                self.species_fao.insert(
+                    code.into(),
+                    SpeciesFao::new(code.into(), name.map(From::from)),
+                );
             }
         }
     }
 
     fn add_species_fao(&mut self, ers_dca: &fiskeridir_rs::ErsDca) {
         self.add_species_fao_impl(
-            &ers_dca.catch.species.species_fao_code,
-            &ers_dca.catch.species.species_fao,
+            ers_dca.catch.species.species_fao_code.as_deref(),
+            ers_dca.catch.species.species_fao.as_deref(),
         );
         self.add_species_fao_impl(
-            &ers_dca.catch.majority_species_fao_code,
-            &ers_dca.catch.majority_species_fao,
+            ers_dca.catch.majority_species_fao_code.as_deref(),
+            ers_dca.catch.majority_species_fao.as_deref(),
         );
     }
 
-    fn add_species_fiskeridir_impl(&mut self, code: Option<u32>, name: &Option<String>) {
+    fn add_species_fiskeridir_impl(&mut self, code: Option<u32>, name: Option<&str>) {
         if let Some(code) = code {
             self.species_fiskeridir
                 .entry(code as i32)
-                .or_insert_with(|| SpeciesFiskeridir::new(code as i32, name.clone()));
+                .or_insert_with(|| SpeciesFiskeridir::new(code as i32, name.map(From::from)));
         }
     }
 
     fn add_species_fiskeridir(&mut self, ers_dca: &fiskeridir_rs::ErsDca) {
         self.add_species_fiskeridir_impl(
             ers_dca.catch.species.species_fdir_code,
-            &ers_dca.catch.species.species_fdir,
+            ers_dca.catch.species.species_fdir.as_deref(),
         );
-        self.add_species_fiskeridir_impl(ers_dca.catch.majority_species_fdir_code, &None);
+        self.add_species_fiskeridir_impl(ers_dca.catch.majority_species_fdir_code, None);
     }
 
-    fn add_area_grouping_impl(&mut self, code: &String, name: &Option<String>) {
+    fn add_area_grouping_impl(&mut self, code: &str, name: Option<&str>) {
         if !self.area_groupings.contains_key(code) {
             self.area_groupings.insert(
-                code.clone(),
-                NewAreaGrouping::new(code.clone(), name.clone()),
+                code.into(),
+                NewAreaGrouping::new(code.into(), name.map(From::from)),
             );
         }
     }
 
     fn add_area_grouping(&mut self, ers_dca: &fiskeridir_rs::ErsDca) {
         if let Some(ref code) = ers_dca.area_grouping_end_code {
-            self.add_area_grouping_impl(code, &ers_dca.area_grouping_end)
+            self.add_area_grouping_impl(code.as_ref(), ers_dca.area_grouping_end.as_deref())
         }
 
         if let Some(ref code) = ers_dca.area_grouping_start_code {
-            self.add_area_grouping_impl(code, &ers_dca.area_grouping_start)
+            self.add_area_grouping_impl(code.as_ref(), ers_dca.area_grouping_start.as_deref())
         }
     }
 
-    fn add_main_area_impl(&mut self, code: Option<u32>, name: Option<String>) {
+    fn add_main_area_impl(&mut self, code: Option<u32>, name: Option<&str>) {
         if let Some(code) = code {
             self.main_areas
                 .entry(code as i32)
                 .or_insert_with(|| NewCatchMainArea {
                     id: code as i32,
-                    name,
+                    name: name.map(From::from),
                     longitude: None,
                     latitude: None,
                 });
@@ -291,10 +314,10 @@ impl ErsDcaSet {
     }
 
     fn add_main_area(&mut self, ers_dca: &fiskeridir_rs::ErsDca) {
-        self.add_main_area_impl(ers_dca.main_area_end_code, ers_dca.main_area_end.clone());
+        self.add_main_area_impl(ers_dca.main_area_end_code, ers_dca.main_area_end.as_deref());
         self.add_main_area_impl(
             ers_dca.main_area_start_code,
-            ers_dca.main_area_start.clone(),
+            ers_dca.main_area_start.as_deref(),
         );
     }
 
@@ -303,13 +326,12 @@ impl ErsDcaSet {
         self.add_catch_area_impl(ers_dca.location_end_code);
     }
 
-    fn add_ers_dca_body(&mut self, ers_dca: &fiskeridir_rs::ErsDca) -> Result<()> {
-        self.ers_dca_bodies.push(ers_dca.try_into()?);
-        Ok(())
+    fn add_ers_dca_body(&mut self, ers_dca: &fiskeridir_rs::ErsDca) {
+        self.ers_dca_bodies.push(ers_dca.into());
     }
 
-    fn add_ers_dca(&mut self, ers_dca: &fiskeridir_rs::ErsDca) -> Result<()> {
-        let new = NewErsDca::try_from(ers_dca.clone())?;
+    fn add_ers_dca(&mut self, ers_dca: fiskeridir_rs::ErsDca) {
+        let new = NewErsDca::from(ers_dca);
         match self.ers_dca.entry(new.message_id) {
             Entry::Occupied(mut e) => {
                 let v = e.get_mut();
@@ -321,6 +343,5 @@ impl ErsDcaSet {
                 e.insert(new);
             }
         }
-        Ok(())
     }
 }

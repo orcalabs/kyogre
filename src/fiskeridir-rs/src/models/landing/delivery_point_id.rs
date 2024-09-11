@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use crate::{
     error::ParseStringError,
     string_new_types::{PrunedString, PrunedStringVisitor},
@@ -33,17 +35,19 @@ impl AsRef<str> for DeliveryPointId {
     }
 }
 
-impl TryFrom<&str> for DeliveryPointId {
-    type Error = ParseStringError;
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        PrunedString::try_from(value).map(DeliveryPointId)
+impl FromStr for DeliveryPointId {
+    type Err = ParseStringError;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        value.parse().map(Self)
     }
 }
 
 impl TryFrom<String> for DeliveryPointId {
     type Error = ParseStringError;
+
     fn try_from(value: String) -> Result<Self, Self::Error> {
-        PrunedString::try_from(value).map(DeliveryPointId)
+        value.parse()
     }
 }
 

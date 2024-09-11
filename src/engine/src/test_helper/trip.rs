@@ -64,8 +64,8 @@ impl TripSpecification {
     pub fn set_ports(&mut self, port_id: &str) {
         match self {
             TripSpecification::Ers { dep, por } => {
-                dep.port.code = Some(port_id.to_string());
-                por.port.code = Some(port_id.to_string());
+                dep.port.code = Some(port_id.parse().unwrap());
+                por.port.code = Some(port_id.parse().unwrap());
             }
             TripSpecification::Landing {
                 start_landing: _,
@@ -94,7 +94,7 @@ impl TripSpecification {
 impl TripConstructor {
     pub fn end(&self) -> DateTime<Utc> {
         match &self.trip_specification {
-            TripSpecification::Ers { dep: _, por } => por.arrival_timestamp,
+            TripSpecification::Ers { dep: _, por } => por.arrival_timestamp(),
             TripSpecification::Landing {
                 start_landing: _,
                 end_landing,
@@ -103,7 +103,7 @@ impl TripConstructor {
     }
     pub fn start(&self) -> DateTime<Utc> {
         match &self.trip_specification {
-            TripSpecification::Ers { dep, por: _ } => dep.departure_timestamp,
+            TripSpecification::Ers { dep, por: _ } => dep.departure_timestamp(),
             TripSpecification::Landing {
                 start_landing,
                 end_landing: _,

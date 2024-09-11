@@ -43,8 +43,10 @@ pub async fn vessel_benchmarks<T: Database + 'static>(
     let fisk_info_profile = bw_profile
         .fisk_info_profile
         .ok_or_else(|| MissingBwFiskInfoProfileSnafu.build())?;
-    let call_sign =
-        CallSign::try_from(fisk_info_profile.ircs.as_str()).context(InvalidCallSignSnafu {
+    let call_sign = fisk_info_profile
+        .ircs
+        .parse()
+        .context(InvalidCallSignSnafu {
             call_sign: fisk_info_profile.ircs,
         })?;
 
@@ -181,16 +183,16 @@ impl PartialEq<fiskeridir_rs::Vessel> for FiskeridirVessel {
     fn eq(&self, other: &fiskeridir_rs::Vessel) -> bool {
         Some(self.id) == other.id
             && self.vessel_type_id == other.type_code.map(|v| v as u32)
-            && self.length_group_id == other.length_group_code
-            && self.nation_group_id == other.nation_group.clone()
+            && Some(self.length_group_id) == other.length_group_code
+            && self.nation_group_id.as_deref() == other.nationality_group.as_deref()
             && self.norwegian_municipality_id == other.municipality_code
             && self.norwegian_county_id == other.county_code
             && self.gross_tonnage_1969 == other.gross_tonnage_1969
             && self.gross_tonnage_other == other.gross_tonnage_other
             && self.call_sign.as_ref().map(|v| v.as_ref())
                 == other.call_sign.as_ref().map(|v| v.as_ref())
-            && self.name == other.name
-            && self.registration_id == other.registration_id
+            && self.name.as_deref() == other.name.as_deref()
+            && self.registration_id.as_deref() == other.registration_id.as_deref()
             && self.length.map(|v| v as u32) == other.length.map(|v| v as u32)
             && self.engine_building_year == other.engine_building_year
             && self.engine_power == other.engine_power

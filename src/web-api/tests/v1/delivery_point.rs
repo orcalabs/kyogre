@@ -51,17 +51,17 @@ async fn test_delivery_points_prioritizes_manual_entries() {
             .aqua_cultures(1)
             .modify(|v| {
                 v.val.delivery_point_id = id.clone();
-                v.val.name = "A".into()
+                v.val.name = "A".parse().unwrap()
             })
             .mattilsynet(1)
             .modify(|v| {
                 v.val.id = id.clone();
-                v.val.name = "B".into()
+                v.val.name = "B".parse().unwrap()
             })
             .manual_delivery_points(1)
             .modify(|v| {
                 v.val.id = id.clone();
-                v.val.name = "C".into()
+                v.val.name = "C".parse().unwrap()
             })
             .build()
             .await;
@@ -71,7 +71,7 @@ async fn test_delivery_points_prioritizes_manual_entries() {
 
         assert_eq!(dps.len(), 1);
         assert_eq!(dps[0].id, id);
-        assert_eq!(dps[0].name, Some("C".into()));
+        assert_eq!(dps[0].name.as_deref(), Some("C"));
         assert_eq!(
             dps[0],
             *state.delivery_points.iter().find(|v| v.id == id).unwrap()
@@ -91,14 +91,14 @@ async fn test_delivery_points_adds_to_log_when_updated() {
             .aqua_cultures(1)
             .modify(|v| {
                 v.val.delivery_point_id = id.clone();
-                v.val.name = old_name.to_string();
+                v.val.name = old_name.parse().unwrap();
             })
             .persist()
             .await
             .aqua_cultures(1)
             .modify(|v| {
                 v.val.delivery_point_id = id.clone();
-                v.val.name = new_name.to_string();
+                v.val.name = new_name.parse().unwrap();
             })
             .build()
             .await;
@@ -151,14 +151,14 @@ async fn test_delivery_points_doesnt_add_to_log_when_updated_without_change() {
             .aqua_cultures(1)
             .modify(|v| {
                 v.val.delivery_point_id = id.clone();
-                v.val.name = name.to_string();
+                v.val.name = name.parse().unwrap();
             })
             .persist()
             .await
             .aqua_cultures(1)
             .modify(|v| {
                 v.val.delivery_point_id = id.clone();
-                v.val.name = name.to_string();
+                v.val.name = name.parse().unwrap();
             })
             .build()
             .await;

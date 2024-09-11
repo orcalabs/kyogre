@@ -68,7 +68,7 @@ impl TryFrom<&fiskeridir_rs::Landing> for NewLandingEntry {
     fn try_from(landing: &fiskeridir_rs::Landing) -> Result<Self, Self::Error> {
         Ok(NewLandingEntry {
             landing_id: landing.id.clone().into_inner(),
-            size_grouping_code: landing.product.size_grouping_code.clone(),
+            size_grouping_code: landing.product.size_grouping_code.clone().into_inner(),
             withdrawn_catch_value: landing.finances.withdrawn_catch_value,
             catch_value: landing.finances.catch_value,
             sales_team_fee: landing.finances.sales_team_fee,
@@ -91,7 +91,12 @@ impl TryFrom<&fiskeridir_rs::Landing> for NewLandingEntry {
             living_weight: landing.product.living_weight,
             living_weight_over_quota: landing.product.living_weight_over_quota,
             species_id: landing.product.species.code as i32,
-            species_fao_id: landing.product.species.fao_code.clone(),
+            species_fao_id: landing
+                .product
+                .species
+                .fao_code
+                .clone()
+                .map(|v| v.into_inner()),
             species_group_id: landing.product.species.group_code as i32,
             species_fiskeridir_id: landing.product.species.fdir_code as i32,
             species_main_group_id: landing.product.species.main_group_code as i32,

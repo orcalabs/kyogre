@@ -3,11 +3,16 @@ use num_derive::FromPrimitive;
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use strum::{AsRefStr, Display, EnumCount, EnumIter, EnumString};
 
+use crate::string_new_types::NonEmptyString;
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GearDetails {
     pub gear: Gear,
+    pub gear_name: NonEmptyString,
     pub group: GearGroup,
+    pub group_name: NonEmptyString,
     pub main_group: MainGearGroup,
+    pub main_group_name: NonEmptyString,
 }
 
 /// Gear code definitions from Fiskedirektoratet.
