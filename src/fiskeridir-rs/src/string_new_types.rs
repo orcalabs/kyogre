@@ -1,3 +1,5 @@
+use std::{fmt::Display, ops::Deref, str::FromStr};
+
 use crate::error::{parse_string_error::EmptySnafu, ParseStringError};
 use jurisdiction::Jurisdiction;
 use serde::{
@@ -23,14 +25,25 @@ impl AsRef<str> for NonEmptyString {
     }
 }
 
-impl TryFrom<&str> for NonEmptyString {
-    type Error = ParseStringError;
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
+impl Deref for NonEmptyString {
+    type Target = str;
+
+    fn deref(&self) -> &Self::Target {
+        self.as_ref()
+    }
+}
+
+impl FromStr for NonEmptyString {
+    type Err = ParseStringError;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
         NonEmptyString::try_from(value.to_owned())
     }
 }
+
 impl TryFrom<String> for NonEmptyString {
     type Error = ParseStringError;
+
     fn try_from(value: String) -> Result<Self, Self::Error> {
         if value.is_empty() {
             EmptySnafu.fail()
@@ -79,22 +92,16 @@ impl<'de> Visitor<'de> for NonEmptyStringVisitor {
     where
         E: de::Error,
     {
-        NonEmptyString::try_from(value)
-            .map_err(|_e| de::Error::invalid_value(de::Unexpected::Str(value), &self))
-    }
-
-    fn visit_string<E>(self, value: String) -> Result<Self::Value, E>
-    where
-        E: de::Error,
-    {
-        NonEmptyString::try_from(value.as_ref())
-            .map_err(|_e| de::Error::invalid_value(de::Unexpected::Str(&value), &self))
+        value
+            .parse()
+            .map_err(|_| de::Error::invalid_value(de::Unexpected::Str(value), &self))
     }
 }
 
-impl TryFrom<&str> for PrunedString {
-    type Error = ParseStringError;
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
+impl FromStr for PrunedString {
+    type Err = ParseStringError;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
         let pruned_value = value.replace(['_', '-', ' '], "");
         if pruned_value.is_empty() {
             EmptySnafu.fail()
@@ -103,10 +110,12 @@ impl TryFrom<&str> for PrunedString {
         }
     }
 }
+
 impl TryFrom<String> for PrunedString {
     type Error = ParseStringError;
+
     fn try_from(value: String) -> Result<Self, Self::Error> {
-        PrunedString::try_from(value.as_str())
+        value.parse()
     }
 }
 
@@ -137,16 +146,9 @@ impl<'de> Visitor<'de> for PrunedStringVisitor {
     where
         E: de::Error,
     {
-        PrunedString::try_from(value)
-            .map_err(|_e| de::Error::invalid_value(de::Unexpected::Str(value), &self))
-    }
-
-    fn visit_string<E>(self, value: String) -> Result<Self::Value, E>
-    where
-        E: de::Error,
-    {
-        PrunedString::try_from(value.as_ref())
-            .map_err(|_e| de::Error::invalid_value(de::Unexpected::Str(&value), &self))
+        value
+            .parse()
+            .map_err(|_| de::Error::invalid_value(de::Unexpected::Str(value), &self))
     }
 }
 
@@ -159,5 +161,17 @@ impl PartialEq<PrunedString> for String {
 impl From<Jurisdiction> for PrunedString {
     fn from(value: Jurisdiction) -> Self {
         PrunedString(value.alpha3().to_string())
+    }
+}
+
+impl Display for NonEmptyString {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+impl Display for PrunedString {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
     }
 }

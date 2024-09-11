@@ -226,7 +226,7 @@ impl NewAisStatic {
         NewAisStatic {
             mmsi,
             imo_number: Some(10),
-            call_sign: Some(call_sign.try_into().unwrap()),
+            call_sign: Some(call_sign.parse().unwrap()),
             name: Some("test_vessel".to_string()),
             ship_length: Some(10),
             ship_width: Some(5),

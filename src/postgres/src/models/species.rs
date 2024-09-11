@@ -44,7 +44,7 @@ impl From<&fiskeridir_rs::Species> for Species {
     fn from(val: &fiskeridir_rs::Species) -> Species {
         Species {
             id: val.code as i32,
-            name: val.name.clone(),
+            name: val.name.clone().into_inner(),
         }
     }
 }
@@ -53,7 +53,7 @@ impl From<&fiskeridir_rs::Species> for SpeciesFiskeridir {
     fn from(val: &fiskeridir_rs::Species) -> SpeciesFiskeridir {
         SpeciesFiskeridir {
             id: val.fdir_code as i32,
-            name: Some(val.fdir_name.clone()),
+            name: Some(val.fdir_name.clone().into_inner()),
         }
     }
 }
@@ -75,8 +75,8 @@ impl SpeciesFao {
     pub fn from_landing_species(species: &fiskeridir_rs::Species) -> Option<SpeciesFao> {
         match (&species.fao_name, &species.fao_code) {
             (name, Some(id)) => Some(SpeciesFao {
-                id: id.clone(),
-                name: name.clone(),
+                id: id.clone().into_inner(),
+                name: name.clone().map(|v| v.into_inner()),
             }),
             _ => None,
         }

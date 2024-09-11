@@ -39,8 +39,8 @@ impl HaulVesselBuilder {
             for (i, haul) in hauls.iter_mut().enumerate() {
                 let num_weather = distribution.num_elements(i);
 
-                let start = haul.dca.start_timestamp.unwrap();
-                let diff = haul.dca.stop_timestamp.unwrap() - start;
+                let start = haul.dca.start_timestamp().unwrap();
+                let diff = haul.dca.stop_timestamp().unwrap() - start;
                 let increment = diff.num_milliseconds() / num_weather as i64;
 
                 for i in 0..num_weather {
@@ -85,8 +85,8 @@ impl HaulVesselBuilder {
             for (i, haul) in hauls.iter_mut().enumerate() {
                 let num_ocean_climate = distribution.num_elements(i);
 
-                let start = haul.dca.start_timestamp.unwrap();
-                let diff = haul.dca.stop_timestamp.unwrap() - start;
+                let start = haul.dca.start_timestamp().unwrap();
+                let diff = haul.dca.stop_timestamp().unwrap() - start;
                 let increment = diff.num_milliseconds() / num_ocean_climate as i64;
 
                 for i in 0..num_ocean_climate {

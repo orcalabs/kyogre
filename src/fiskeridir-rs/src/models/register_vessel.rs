@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
-use serde_with::{serde_as, DisplayFromStr};
+use serde_with::{serde_as, DisplayFromStr, NoneAsEmptyString};
 
-use crate::{deserialize_utils::*, CallSign};
+use crate::{deserialize_utils::*, string_new_types::NonEmptyString, CallSign};
 
 use super::FiskeridirVesselId;
 
@@ -20,11 +20,14 @@ pub enum RegisterVesselEntityType {
 #[serde(rename_all = "camelCase")]
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct RegisterVesselOwner {
-    pub city: Option<String>,
+    #[serde_as(as = "NoneAsEmptyString")]
+    #[cfg_attr(feature = "utoipa", schema(value_type = Option<String>))]
+    pub city: Option<NonEmptyString>,
     pub entity_type: RegisterVesselEntityType,
     #[serde(deserialize_with = "opt_from_nullable_str")]
     pub id: Option<i64>,
-    pub name: String,
+    #[cfg_attr(feature = "utoipa", schema(value_type = String))]
+    pub name: NonEmptyString,
     #[serde_as(as = "DisplayFromStr")]
     pub postal_code: i32,
 }
@@ -45,14 +48,15 @@ pub struct RegisterVessel {
     pub length: f64,
     #[serde_as(as = "DisplayFromStr")]
     pub municipality_code: i32,
-    pub name: String,
+    pub name: NonEmptyString,
     pub owners: Vec<RegisterVesselOwner>,
     pub radio_call_sign: Option<CallSign>,
-    pub registration_mark: String,
+    pub registration_mark: NonEmptyString,
     #[serde_as(as = "OptFloatFromStr")]
     pub width: Option<f64>,
 }
 
+#[serde_as]
 #[remain::sorted]
 #[derive(Debug, Default, Clone, Deserialize, Serialize)]
 pub struct RegisterVesselQuery {
@@ -61,19 +65,24 @@ pub struct RegisterVesselQuery {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub length_lte: Option<f64>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub municipality_code: Option<String>,
+    #[serde_as(as = "NoneAsEmptyString")]
+    pub municipality_code: Option<NonEmptyString>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub name: Option<String>,
+    #[serde_as(as = "NoneAsEmptyString")]
+    pub name: Option<NonEmptyString>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub page: Option<i32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub per_page: Option<i32>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub query: Option<String>,
+    #[serde_as(as = "NoneAsEmptyString")]
+    pub query: Option<NonEmptyString>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub radio_call_sign: Option<String>,
+    #[serde_as(as = "NoneAsEmptyString")]
+    pub radio_call_sign: Option<NonEmptyString>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub registration_mark: Option<String>,
+    #[serde_as(as = "NoneAsEmptyString")]
+    pub registration_mark: Option<NonEmptyString>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub sort_asc: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -98,10 +107,10 @@ impl RegisterVessel {
             imo_number: Some(765324),
             length: 16.5,
             municipality_code: 5010,
-            name: "Sjarken".into(),
+            name: "Sjarken".parse().unwrap(),
             owners: vec![RegisterVesselOwner::test_default(Some(675432673542))],
-            radio_call_sign: Some(CallSign::try_from("LK27").unwrap()),
-            registration_mark: "TF3524T".into(),
+            radio_call_sign: Some("LK27".parse().unwrap()),
+            registration_mark: "TF3524T".parse().unwrap(),
             width: Some(5.5),
         }
     }
@@ -110,10 +119,10 @@ impl RegisterVessel {
 impl RegisterVesselOwner {
     pub fn test_default(id: Option<i64>) -> Self {
         Self {
-            city: Some("TROMSØ".into()),
+            city: Some("TROMSØ".parse().unwrap()),
             entity_type: RegisterVesselEntityType::Person,
             id,
-            name: "OWNER A".into(),
+            name: "OWNER A".parse().unwrap(),
             postal_code: 9010,
         }
     }

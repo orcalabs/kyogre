@@ -2,45 +2,48 @@ use num_derive::{FromPrimitive, ToPrimitive};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use strum::{AsRefStr, Display, EnumString};
 
-use crate::{SpeciesGroup, SpeciesMainGroup};
+use crate::{string_new_types::NonEmptyString, SpeciesGroup, SpeciesMainGroup};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Product {
-    pub species: Species,
     pub condition: Condition,
     pub conservation_method: ConservationMethod,
+    pub conservation_method_name: NonEmptyString,
     pub landing_method: Option<LandingMethod>,
-    pub size_grouping_code: String,
+    pub landing_method_name: Option<NonEmptyString>,
+    pub size_grouping_code: NonEmptyString,
     pub num_fish: Option<u32>,
     pub gross_weight: Option<f64>,
     pub product_weight: f64,
     pub product_weight_over_quota: Option<f64>,
     pub living_weight_over_quota: Option<f64>,
     pub living_weight: Option<f64>,
-    pub purpose: Purpose,
     pub quality: Quality,
+    pub quality_name: NonEmptyString,
+    pub purpose: Purpose,
+    pub species: Species,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Purpose {
     pub code: Option<u32>,
+    pub name: Option<NonEmptyString>,
     pub group_code: Option<u32>,
-    pub group_name: Option<String>,
-    pub name: Option<String>,
+    pub group_name: Option<NonEmptyString>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Species {
     pub code: u32,
-    pub fao_code: Option<String>,
-    pub fao_name: Option<String>,
-    pub fdir_name: String,
+    pub name: NonEmptyString,
+    pub fao_code: Option<NonEmptyString>,
+    pub fao_name: Option<NonEmptyString>,
     pub fdir_code: u32,
+    pub fdir_name: NonEmptyString,
     pub group_code: SpeciesGroup,
-    pub group_name: String,
-    pub main_group: String,
+    pub group_name: NonEmptyString,
     pub main_group_code: SpeciesMainGroup,
-    pub name: String,
+    pub main_group: NonEmptyString,
 }
 
 #[repr(i32)]
@@ -297,7 +300,20 @@ impl Quality {
 
 /// Produkttilstand
 #[repr(i32)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, FromPrimitive, ToPrimitive)]
+#[derive(
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    FromPrimitive,
+    ToPrimitive,
+    Deserialize_repr,
+    Serialize_repr,
+    Display,
+    AsRefStr,
+    EnumString,
+)]
 #[cfg_attr(feature = "sqlx", derive(sqlx::Type))]
 pub enum Condition {
     Levende = 100,

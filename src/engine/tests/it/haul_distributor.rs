@@ -186,7 +186,7 @@ async fn test_hauls_filters_by_distributed_catch_locations_after_distribution() 
                 v.dca.start_latitude = Some(CL_00_05.1);
                 v.dca.start_longitude = Some(CL_00_05.0);
                 v.dca.catch.species.living_weight = Some(100);
-                v.dca.catch.species.species_fao_code = Some("AAA".into());
+                v.dca.catch.species.species_fao_code = Some("AAA".parse().unwrap());
                 v.dca.catch.species.species_group_code = Some(SpeciesGroup::AtlanticCod);
             })
             .ais_positions(1)

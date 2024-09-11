@@ -38,3 +38,17 @@ pub fn convert_naive_date_and_naive_time_to_utc(date: NaiveDate, time: NaiveTime
         chrono::LocalResult::Ambiguous(_, d) => d.with_timezone(&Utc),
     }
 }
+
+pub fn timestamp_from_date_and_time(date: NaiveDate, time: NaiveTime) -> DateTime<Utc> {
+    DateTime::from_naive_utc_and_offset(date.and_time(time), Utc)
+}
+
+pub fn opt_timestamp_from_date_and_time(
+    date: Option<NaiveDate>,
+    time: Option<NaiveTime>,
+) -> Option<DateTime<Utc>> {
+    match (date, time) {
+        (Some(date), Some(time)) => Some(timestamp_from_date_and_time(date, time)),
+        _ => None,
+    }
+}

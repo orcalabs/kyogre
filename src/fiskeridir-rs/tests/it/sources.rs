@@ -175,7 +175,7 @@ async fn download_and_read_landings() {
     for data in iter {
         match data {
             Ok(data) => {
-                let converted = Landing::try_from_raw(data, source.year());
+                let converted = Landing::from_raw(data, source.year());
                 result.push(converted);
             }
             Err(e) => {

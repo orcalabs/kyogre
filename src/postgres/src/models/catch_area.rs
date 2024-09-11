@@ -58,8 +58,12 @@ impl NewAreaGrouping {
             .area_grouping_code
             .as_ref()
             .map(|id| NewAreaGrouping {
-                id: id.clone(),
-                name: landing.catch_location.area_grouping_code.clone(),
+                id: id.clone().into_inner(),
+                name: landing
+                    .catch_location
+                    .area_grouping_code
+                    .clone()
+                    .map(|v| v.into_inner()),
             })
     }
 }
@@ -87,7 +91,11 @@ impl NewCatchMainArea {
             .map(|id| {
                 Ok(Self {
                     id: id as i32,
-                    name: landing.catch_location.main_area.clone(),
+                    name: landing
+                        .catch_location
+                        .main_area
+                        .clone()
+                        .map(|v| v.into_inner()),
                     latitude: landing.catch_location.main_area_latitude,
                     longitude: landing.catch_location.main_area_longitude,
                 })
@@ -103,7 +111,11 @@ impl NewCatchMainAreaFao {
             .main_area_fao_code
             .map(|id| NewCatchMainAreaFao {
                 id: id as i32,
-                name: landing.catch_location.main_area_fao.clone(),
+                name: landing
+                    .catch_location
+                    .main_area_fao
+                    .clone()
+                    .map(|v| v.into_inner()),
             })
     }
 }

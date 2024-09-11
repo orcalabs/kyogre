@@ -2,11 +2,14 @@ use super::{
     ers_common::{ErsCatch, ErsMessageInfo, ErsVesselInfo, Port},
     FiskeridirVesselId,
 };
-use crate::deserialize_utils::*;
+use crate::{
+    deserialize_utils::*, string_new_types::NonEmptyString, utils::timestamp_from_date_and_time,
+};
 use chrono::{DateTime, Datelike, NaiveDate, NaiveTime, Utc};
 use serde::Deserialize;
+use serde_with::serde_as;
 
-#[remain::sorted]
+#[serde_as]
 #[derive(Deserialize, Debug, Clone)]
 pub struct ErsPor {
     #[serde(rename = "Ankomstdato")]
@@ -15,13 +18,17 @@ pub struct ErsPor {
     #[serde(rename = "Ankomstklokkeslett")]
     #[serde(deserialize_with = "naive_time_hour_minutes_from_str")]
     pub arrival_time: NaiveTime,
+
+    // This field is sometimes missing the `Time` part of the `DateTime`.
+    // Therefore, we always use the combination of `message_date` and `message_time` to construct the `DateTime`, and just ignore this field
     #[serde(rename = "Ankomsttidspunkt")]
-    #[serde(deserialize_with = "date_time_utc_from_str")]
-    pub arrival_timestamp: DateTime<Utc>,
+    pub _arrival_timestamp: String, // DateTime<Utc>
+
     #[serde(flatten)]
     pub catch: ErsCatch,
     #[serde(rename = "Mottakernavn")]
-    pub landing_facility: Option<String>,
+    #[serde_as(as = "OptFromStrFromAny")]
+    pub landing_facility: Option<NonEmptyString>,
     #[serde(flatten)]
     pub message_info: ErsMessageInfo,
     #[serde(flatten)]
@@ -31,12 +38,16 @@ pub struct ErsPor {
 }
 
 impl ErsPor {
+    pub fn arrival_timestamp(&self) -> DateTime<Utc> {
+        timestamp_from_date_and_time(self.arrival_date, self.arrival_time)
+    }
+
     pub fn set_arrival_timestamp(&mut self, timestamp: DateTime<Utc>) {
         self.arrival_time = timestamp.time();
         self.arrival_date = timestamp.date_naive();
-        self.arrival_timestamp = timestamp;
         self.message_info.relevant_year = timestamp.date_naive().year() as u32;
     }
+
     pub fn test_default(
         message_id: u64,
         fiskeridir_vessel_id: FiskeridirVesselId,
@@ -47,9 +58,9 @@ impl ErsPor {
         ErsPor {
             arrival_date: timestamp.date_naive(),
             arrival_time: timestamp.time(),
-            arrival_timestamp: timestamp,
+            _arrival_timestamp: "".into(),
             catch: ErsCatch::test_default(),
-            landing_facility: Some("test".to_string()),
+            landing_facility: Some("test".parse().unwrap()),
             message_info,
             port: Port::test_default(),
             vessel_info: ErsVesselInfo::test_default(Some(fiskeridir_vessel_id)),

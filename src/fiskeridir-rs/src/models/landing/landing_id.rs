@@ -6,6 +6,7 @@ use num_traits::FromPrimitive;
 use serde::de::{self, Visitor};
 use serde::{Deserialize, Serialize};
 use snafu::ResultExt;
+use std::str::FromStr;
 
 /// NewType wrapping the creation of unique landing ids.
 #[derive(PartialOrd, Ord, PartialEq, Eq, Clone, Debug, Hash, Serialize)]
@@ -28,6 +29,11 @@ impl LandingId {
             document_id, sale_team_orginization_code as u32, document_type as u32, year
         ))
     }
+
+    /// Consume the `LandingId` and returned the wrapped value.
+    pub fn into_inner(self) -> String {
+        self.0
+    }
 }
 
 impl<'de> Deserialize<'de> for LandingId {
@@ -44,19 +50,12 @@ impl<'de> Deserialize<'de> for LandingId {
                 formatter.write_str("a valid landing id")
             }
 
-            fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+            fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
             where
                 E: de::Error,
             {
-                LandingId::try_from(value)
-                    .map_err(|_e| de::Error::invalid_value(de::Unexpected::Str(value), &self))
-            }
-            fn visit_string<E>(self, value: String) -> Result<Self::Value, E>
-            where
-                E: de::Error,
-            {
-                LandingId::try_from(value.as_str())
-                    .map_err(|_e| de::Error::invalid_value(de::Unexpected::Str(&value), &self))
+                v.parse()
+                    .map_err(|_| de::Error::invalid_value(de::Unexpected::Str(v), &self))
             }
         }
 
@@ -64,42 +63,31 @@ impl<'de> Deserialize<'de> for LandingId {
     }
 }
 
-impl TryFrom<&str> for LandingId {
-    type Error = LandingIdError;
+impl FromStr for LandingId {
+    type Err = LandingIdError;
 
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
         let split: Vec<&str> = value.split('-').collect();
         if split.len() != 4 {
-            return LengthSnafu {
-                value: value.to_string(),
-            }
-            .fail();
+            return LengthSnafu { value }.fail();
         }
 
-        let document_id: i64 = split[0].parse::<i64>().context(ParseSnafu { value })?;
-        let sale_team_id: SalesTeam =
-            SalesTeam::from_i32(split[1].parse::<i32>().context(ParseSnafu { value })?)
-                .ok_or_else(|| {
-                    InvalidSnafu {
-                        value: split[1].to_string(),
-                    }
-                    .build()
-                })?;
+        let document_id = split[0].parse().context(ParseSnafu { value })?;
 
-        let document_type: DocumentType =
-            DocumentType::from_i32(split[2].parse::<i32>().context(ParseSnafu { value })?)
-                .ok_or_else(|| {
-                    InvalidSnafu {
-                        value: split[2].to_string(),
-                    }
-                    .build()
-                })?;
-        let year: u32 = split[3].parse::<u32>().context(ParseSnafu { value })?;
+        let sale_team_id = SalesTeam::from_i32(split[1].parse().context(ParseSnafu { value })?)
+            .ok_or_else(|| InvalidSnafu { value: split[1] }.build())?;
 
-        Ok(LandingId(format!(
-            "{}-{}-{}-{}",
-            document_id, sale_team_id as i32, document_type as i32, year
-        )))
+        let document_type = DocumentType::from_i32(split[2].parse().context(ParseSnafu { value })?)
+            .ok_or_else(|| InvalidSnafu { value: split[2] }.build())?;
+
+        let year = split[3].parse().context(ParseSnafu { value })?;
+
+        Ok(LandingId::new(
+            document_id,
+            sale_team_id,
+            document_type,
+            year,
+        ))
     }
 }
 
@@ -107,14 +95,7 @@ impl TryFrom<String> for LandingId {
     type Error = LandingIdError;
 
     fn try_from(value: String) -> Result<Self, Self::Error> {
-        LandingId::try_from(value.as_str())
-    }
-}
-
-impl LandingId {
-    /// Consume the `LandingId` and returned the wrapped value.
-    pub fn into_inner(self) -> String {
-        self.0
+        value.parse()
     }
 }
 

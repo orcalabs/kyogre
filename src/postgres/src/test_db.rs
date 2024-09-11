@@ -651,7 +651,7 @@ WHERE
         port_id: &str,
     ) {
         let mut departure = ErsDep::test_default(message_id, vessel_id, timestamp, message_number);
-        departure.port.code = Some(port_id.to_owned());
+        departure.port.code = Some(port_id.parse().unwrap());
         self.db.add_ers_dep(vec![departure]).await.unwrap();
     }
 
@@ -686,7 +686,7 @@ ORDER BY
         port_id: &str,
     ) {
         let mut arrival = ErsPor::test_default(message_id, vessel_id, timestamp, message_number);
-        arrival.port.code = Some(port_id.to_owned());
+        arrival.port.code = Some(port_id.parse().unwrap());
         self.db.add_ers_por(vec![arrival]).await.unwrap();
     }
 

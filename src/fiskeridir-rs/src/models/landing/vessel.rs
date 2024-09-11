@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use strum::{AsRefStr, Display, EnumCount, EnumIter, EnumString};
 
-use crate::{error::error::JurisdictionSnafu, models::ers_common::ErsVesselInfo, CallSign, Error};
+use crate::{models::ers_common::ErsVesselInfo, string_new_types::NonEmptyString, CallSign};
 
 #[derive(
     Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize, FromPrimitive,
@@ -22,20 +22,21 @@ pub struct FiskeridirVesselId(i64);
 #[derive(Debug, Clone, PartialEq)]
 pub struct Vessel {
     pub id: Option<FiskeridirVesselId>,
-    pub registration_id: Option<String>,
+    pub registration_id: Option<NonEmptyString>,
     pub call_sign: Option<CallSign>,
-    pub name: Option<String>,
+    pub name: Option<NonEmptyString>,
     pub type_code: Option<VesselType>,
-    pub quota_vessel_registration_id: Option<String>,
+    pub quota_registration_id: Option<NonEmptyString>,
     pub num_crew_members: Option<u32>,
     pub municipality_code: Option<u32>,
-    pub municipality_name: Option<String>,
+    pub municipality_name: Option<NonEmptyString>,
     pub county_code: Option<u32>,
-    pub county: Option<String>,
+    pub county: Option<NonEmptyString>,
     pub nationality_code: Jurisdiction,
-    pub nation_group: Option<String>,
+    pub nationality_group: Option<NonEmptyString>,
     pub length: Option<f64>,
-    pub length_group_code: VesselLengthGroup,
+    pub length_group_code: Option<VesselLengthGroup>,
+    pub length_group_name: Option<NonEmptyString>,
     pub gross_tonnage_1969: Option<u32>,
     pub gross_tonnage_other: Option<u32>,
     pub building_year: Option<u32>,
@@ -166,44 +167,32 @@ impl From<VesselLengthGroup> for i32 {
     }
 }
 
-impl TryFrom<ErsVesselInfo> for Vessel {
-    type Error = Error;
-
-    fn try_from(v: ErsVesselInfo) -> Result<Self, Self::Error> {
-        Ok(Self {
-            id: v.vessel_id,
-            registration_id: v.vessel_registration_id,
-            call_sign: v.call_sign.map(CallSign::try_from).transpose()?,
-            name: v.vessel_name,
+impl From<ErsVesselInfo> for Vessel {
+    fn from(v: ErsVesselInfo) -> Self {
+        Self {
+            id: v.id,
+            registration_id: v.registration_id,
+            call_sign: v.call_sign,
+            name: v.name,
             type_code: None,
-            quota_vessel_registration_id: None,
+            quota_registration_id: None,
             num_crew_members: None,
-            municipality_code: v.vessel_municipality_code,
-            municipality_name: v.vessel_municipality,
-            county_code: v.vessel_county_code,
-            county: v.vessel_county,
-            nationality_code: Jurisdiction::from_str(v.vessel_nationality_code.as_ref()).map_err(
-                |e| {
-                    JurisdictionSnafu {
-                        error_stringified: e.to_string(),
-                        nation_code: v.vessel_nationality_code,
-                        nation: None,
-                    }
-                    .build()
-                },
-            )?,
-            nation_group: None,
-            length: Some(v.vessel_length),
-            length_group_code: v
-                .vessel_length_group_code
-                .unwrap_or(VesselLengthGroup::Unknown),
+            municipality_code: v.municipality_code,
+            municipality_name: v.municipality,
+            county_code: v.county_code,
+            county: v.county,
+            nationality_code: v.nationality_code,
+            nationality_group: None,
+            length: Some(v.length),
+            length_group_code: v.length_group_code,
+            length_group_name: v.length_group,
             gross_tonnage_1969: v.gross_tonnage_1969,
             gross_tonnage_other: v.gross_tonnage_other,
             building_year: v.building_year,
-            rebuilding_year: v.vessel_rebuilding_year,
+            rebuilding_year: v.rebuilding_year,
             engine_power: v.engine_power,
             engine_building_year: v.engine_building_year,
-        })
+        }
     }
 }
 
@@ -211,20 +200,26 @@ impl Vessel {
     pub fn test_default(id: Option<FiskeridirVesselId>, call_sign: &str) -> Vessel {
         Vessel {
             id,
-            registration_id: Some("LK-29".to_owned()),
-            call_sign: Some(CallSign::try_from(call_sign).unwrap()),
-            name: Some("sjarken".to_owned()),
+            registration_id: Some("LK-29".parse().unwrap()),
+            call_sign: Some(call_sign.parse().unwrap()),
+            name: Some("sjarken".parse().unwrap()),
             type_code: Some(VesselType::FishingVessel),
-            quota_vessel_registration_id: Some("LK-29".to_owned()),
+            quota_registration_id: Some("LK-29".parse().unwrap()),
             num_crew_members: Some(10),
             municipality_code: Some(1002),
-            municipality_name: Some("Bergen".to_owned()),
+            municipality_name: Some("Bergen".parse().unwrap()),
             county_code: Some(1230),
-            county: Some("Rogaland".to_owned()),
-            nationality_code: Jurisdiction::from_str("NOR").unwrap(),
-            nation_group: Some("Norske fartøy".to_owned()),
+            county: Some("Rogaland".parse().unwrap()),
+            nationality_code: "NOR".parse().unwrap(),
+            nationality_group: Some("Norske fartøy".parse().unwrap()),
             length: Some(16.4),
-            length_group_code: VesselLengthGroup::FifteenToTwentyOne,
+            length_group_code: Some(VesselLengthGroup::FifteenToTwentyOne),
+            length_group_name: Some(
+                VesselLengthGroup::FifteenToTwentyOne
+                    .description()
+                    .parse()
+                    .unwrap(),
+            ),
             gross_tonnage_1969: Some(143),
             gross_tonnage_other: Some(12),
             building_year: Some(2001),

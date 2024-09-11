@@ -151,7 +151,7 @@ FROM
             ids.push(a.delivery_point_id.clone().into());
 
             species.entry(a.species_code).or_insert_with(|| {
-                SpeciesFiskeridir::new(a.species_code as i32, Some(a.species.clone()))
+                SpeciesFiskeridir::new(a.species_code as i32, Some(a.species.clone().into_inner()))
             });
 
             if let Entry::Vacant(e) =
@@ -162,10 +162,10 @@ FROM
 
             if let Entry::Vacant(e) = tills.entry((a.delivery_point_id.clone(), a.till_nr.clone()))
             {
-                e.insert((&a).try_into()?);
+                e.insert((&a).into());
             }
 
-            entries.insert(a.delivery_point_id.clone(), a.try_into()?);
+            entries.insert(a.delivery_point_id.clone(), a.into());
         }
 
         let values = entries.into_values().collect();

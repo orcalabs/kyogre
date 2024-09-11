@@ -826,8 +826,8 @@ impl TestStateBuilder {
                 }
                 match &t.trip_specification {
                     TripSpecification::Ers { dep, por } => {
-                        let departure_timestamp = dep.departure_timestamp;
-                        let arrival_timestamp = por.arrival_timestamp;
+                        let departure_timestamp = dep.departure_timestamp();
+                        let arrival_timestamp = por.arrival_timestamp();
                         let start_port = dep.port.code.clone();
                         let end_port = por.port.code.clone();
 
@@ -849,18 +849,22 @@ impl TestStateBuilder {
                                 }
                                 PrecisionId::Port => TripPrecisonStartPoint::Port {
                                     start_port: start_port
-                                        .expect("cant add precision to dep without port code set"),
+                                        .expect("cant add precision to dep without port code set")
+                                        .into_inner(),
                                     end_port: end_port
-                                        .expect("cant add precision to por without port code set"),
+                                        .expect("cant add precision to por without port code set")
+                                        .into_inner(),
                                     start: departure_timestamp,
                                     end: arrival_timestamp,
                                     mmsi,
                                 },
                                 PrecisionId::DockPoint => TripPrecisonStartPoint::DockPoint {
                                     start_port: start_port
-                                        .expect("cant add precision to dep without port code set"),
+                                        .expect("cant add precision to dep without port code set")
+                                        .into_inner(),
                                     end_port: end_port
-                                        .expect("cant add precision to por without port code set"),
+                                        .expect("cant add precision to por without port code set")
+                                        .into_inner(),
                                     start: departure_timestamp,
                                     end: arrival_timestamp,
                                     mmsi,

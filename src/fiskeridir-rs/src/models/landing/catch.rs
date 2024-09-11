@@ -1,24 +1,25 @@
-use crate::NorthSouth62DegreesNorth;
 use num_derive::FromPrimitive;
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use strum::{AsRefStr, Display, EnumIter, EnumString};
 
+use crate::{string_new_types::NonEmptyString, NorthSouth62DegreesNorth};
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct CatchLocation {
-    pub catch_field: String,
+    pub catch_field: NonEmptyString,
     pub coast_ocean_code: TwelveMileBorder,
     pub main_area_code: Option<u32>,
-    pub main_area: Option<String>,
+    pub main_area: Option<NonEmptyString>,
     pub main_area_longitude: Option<f64>,
     pub main_area_latitude: Option<f64>,
     pub location_code: Option<u32>,
     pub location_longitude: Option<f64>,
     pub location_latitude: Option<f64>,
-    pub economic_zone_code: Option<String>,
-    pub area_grouping: Option<String>,
-    pub area_grouping_code: Option<String>,
+    pub economic_zone_code: Option<NonEmptyString>,
+    pub area_grouping: Option<NonEmptyString>,
+    pub area_grouping_code: Option<NonEmptyString>,
     pub main_area_fao_code: Option<u32>,
-    pub main_area_fao: Option<String>,
+    pub main_area_fao: Option<NonEmptyString>,
     pub north_or_south_of_62_degrees: NorthSouth62DegreesNorth,
 }
 

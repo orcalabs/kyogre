@@ -45,7 +45,7 @@ pub async fn get_fuel_measurements<T: Database + 'static>(
     let profile = profile
         .fisk_info_profile
         .ok_or_else(|| MissingBwFiskInfoProfileSnafu.build())?;
-    let call_sign = CallSign::try_from(profile.ircs.as_str()).context(InvalidCallSignSnafu {
+    let call_sign = profile.ircs.parse().context(InvalidCallSignSnafu {
         call_sign: profile.ircs,
     })?;
 
@@ -80,7 +80,7 @@ pub async fn create_fuel_measurements<T: Database + 'static>(
     let profile = profile
         .fisk_info_profile
         .ok_or_else(|| MissingBwFiskInfoProfileSnafu.build())?;
-    let call_sign = CallSign::try_from(profile.ircs.as_str()).context(InvalidCallSignSnafu {
+    let call_sign = profile.ircs.parse().context(InvalidCallSignSnafu {
         call_sign: profile.ircs,
     })?;
 
@@ -118,7 +118,7 @@ pub async fn update_fuel_measurements<T: Database + 'static>(
     let profile = profile
         .fisk_info_profile
         .ok_or_else(|| MissingBwFiskInfoProfileSnafu.build())?;
-    let call_sign = CallSign::try_from(profile.ircs.as_str()).context(InvalidCallSignSnafu {
+    let call_sign = profile.ircs.parse().context(InvalidCallSignSnafu {
         call_sign: profile.ircs,
     })?;
 
@@ -156,7 +156,7 @@ pub async fn delete_fuel_measurements<T: Database + 'static>(
     let profile = profile
         .fisk_info_profile
         .ok_or_else(|| MissingBwFiskInfoProfileSnafu.build())?;
-    let call_sign = CallSign::try_from(profile.ircs.as_str()).context(InvalidCallSignSnafu {
+    let call_sign = profile.ircs.parse().context(InvalidCallSignSnafu {
         call_sign: profile.ircs,
     })?;
 

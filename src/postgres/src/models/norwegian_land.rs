@@ -30,35 +30,45 @@ impl NewMunicipality {
         if let Some(id) = landing.landing_municipality_code {
             municipalities.push(NewMunicipality {
                 id: id as i32,
-                name: landing.landing_municipality.clone(),
+                name: landing.landing_municipality.clone().map(|v| v.into_inner()),
             });
         }
 
         if let Some(id) = landing.fisher_tax_municipality_code {
             municipalities.push(NewMunicipality {
                 id: id as i32,
-                name: landing.fisher_tax_municipality.clone(),
+                name: landing
+                    .fisher_tax_municipality
+                    .clone()
+                    .map(|v| v.into_inner()),
             });
         }
 
         if let Some(id) = landing.fisher_tax_municipality_code {
             municipalities.push(NewMunicipality {
                 id: id as i32,
-                name: landing.fisher_tax_municipality.clone(),
+                name: landing
+                    .fisher_tax_municipality
+                    .clone()
+                    .map(|v| v.into_inner()),
             });
         }
 
         if let Some(id) = landing.production_facility_municipality_code {
             municipalities.push(NewMunicipality {
                 id: id as i32,
-                name: landing.production_facility.clone(),
+                name: landing.production_facility.clone().map(|v| v.into_inner()),
             });
         }
 
         if let Some(id) = landing.vessel.municipality_code {
             municipalities.push(NewMunicipality {
                 id: id as i32,
-                name: landing.vessel.municipality_name.clone(),
+                name: landing
+                    .vessel
+                    .municipality_name
+                    .clone()
+                    .map(|v| v.into_inner()),
             });
         }
         municipalities

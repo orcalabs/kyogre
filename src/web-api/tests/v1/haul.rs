@@ -168,10 +168,10 @@ async fn test_hauls_returns_hauls_with_vessel_length_groups() {
             .hauls(4)
             .modify_idx(|i, v| match i {
                 0 => {
-                    v.dca.vessel_info.vessel_length = 9.;
+                    v.dca.vessel_info.length = 9.;
                 }
                 1 => {
-                    v.dca.vessel_info.vessel_length = 12.;
+                    v.dca.vessel_info.length = 12.;
                 }
                 _ => (),
             })

@@ -127,15 +127,18 @@ impl NewLanding {
             fiskeridir_vessel_id: landing.vessel.id,
             fiskeridir_vessel_type_id: landing.vessel.type_code.map(|v| v as i32),
             vessel_call_sign: landing.vessel.call_sign.map(|v| v.into_inner()),
-            vessel_registration_id: landing.vessel.registration_id,
-            vessel_length_group_id: landing.vessel.length_group_code as i32,
-            vessel_nation_group_id: landing.vessel.nation_group,
+            vessel_registration_id: landing.vessel.registration_id.map(|v| v.into_inner()),
+            vessel_length_group_id: landing
+                .vessel
+                .length_group_code
+                .unwrap_or(VesselLengthGroup::Unknown) as i32,
+            vessel_nation_group_id: landing.vessel.nationality_group.map(|v| v.into_inner()),
             vessel_nation_id: landing.vessel.nationality_code.alpha3().to_string(),
             vessel_norwegian_municipality_id: landing.vessel.municipality_code.map(|v| v as i32),
             vessel_norwegian_county_id: landing.vessel.county_code.map(|v| v as i32),
             vessel_gross_tonnage_1969: landing.vessel.gross_tonnage_1969.map(|v| v as i32),
             vessel_gross_tonnage_other: landing.vessel.gross_tonnage_other.map(|v| v as i32),
-            vessel_name: landing.vessel.name,
+            vessel_name: landing.vessel.name.map(|v| v.into_inner()),
             vessel_length: landing.vessel.length,
             vessel_engine_building_year: landing.vessel.engine_building_year.map(|v| v as i32),
             vessel_engine_power: landing.vessel.engine_power.map(|v| v as i32),
@@ -161,11 +164,14 @@ impl NewLanding {
                 .fisher_nationality_code
                 .map(|v| v.alpha3().to_string()),
             fisher_municipality_id: landing.fisher_tax_municipality_code.map(|v| v as i32),
-            catch_field: landing.catch_location.catch_field,
+            catch_field: landing.catch_location.catch_field.into_inner(),
             catch_area_id: landing.catch_location.location_code.map(|v| v as i32),
             catch_main_area_id: landing.catch_location.main_area_code.map(|v| v as i32),
             catch_main_area_fao_id: landing.catch_location.main_area_fao_code.map(|v| v as i32),
-            area_grouping_id: landing.catch_location.area_grouping_code,
+            area_grouping_id: landing
+                .catch_location
+                .area_grouping_code
+                .map(|v| v.into_inner()),
             delivery_point_municipality_id: landing.landing_municipality_code.map(|v| v as i32),
             landing_norwegian_county_id: landing.landing_county_code.map(|v| v as i32),
             landing_nation_id: landing.landing_nation_code.map(|v| v.alpha3().to_string()),
@@ -176,7 +182,10 @@ impl NewLanding {
             within_12_mile_border: landing.catch_location.coast_ocean_code as i32,
             fishing_diary_number: landing.fishing_diary_number.map(|v| v as i32),
             fishing_diary_trip_number: landing.fishing_diary_trip_number.map(|v| v as i32),
-            economic_zone_id: landing.catch_location.economic_zone_code,
+            economic_zone_id: landing
+                .catch_location
+                .economic_zone_code
+                .map(|v| v.into_inner()),
             partial_landing: landing.partial_landing,
             partial_landing_next_delivery_point_id: landing
                 .partial_landing_next_delivery_point_id
@@ -186,23 +195,32 @@ impl NewLanding {
                 .map(|v| v.into_inner()),
             data_update_timestamp: landing.update_timestamp,
             catch_year: landing.catch_year as i32,
-            production_facility: landing.production_facility,
+            production_facility: landing.production_facility.map(|v| v.into_inner()),
             production_facility_municipality_id: landing
                 .production_facility_municipality_code
                 .map(|v| v as i32),
             product_quality_id: landing.product.quality as i32,
             quota_type_id: landing.quota.map(|v| v as i32),
-            quota_vessel_registration_id: landing.vessel.quota_vessel_registration_id,
+            quota_vessel_registration_id: landing
+                .vessel
+                .quota_registration_id
+                .map(|v| v.into_inner()),
             buyer_org_id: landing.delivery_point.org_id.map(|v| v as i32),
             buyer_nation_id: landing
                 .delivery_point
                 .nationality_code
                 .map(|v| v.alpha3().to_string()),
-            receiving_vessel_registration_id: landing.recipient_vessel_registration_id,
-            receiving_vessel_mmsi_or_call_sign: landing.recipient_vessel_callsign_or_mmsi,
+            receiving_vessel_registration_id: landing
+                .recipient_vessel_registration_id
+                .map(|v| v.into_inner()),
+            receiving_vessel_mmsi_or_call_sign: landing
+                .recipient_vessel_callsign_or_mmsi
+                .map(|v| v.into_inner()),
             receiving_vessel_type: landing.recipient_vessel_type_code.map(|v| v as i32),
-            receiving_vessel_nation_id: landing.recipient_vessel_nation_code,
-            receiving_vessel_nation: landing.recipient_vessel_nation,
+            receiving_vessel_nation_id: landing
+                .recipient_vessel_nation_code
+                .map(|v| v.into_inner()),
+            receiving_vessel_nation: landing.recipient_vessel_nation.map(|v| v.into_inner()),
             data_year: data_year as i32,
             vessel_event_id: None,
         })
