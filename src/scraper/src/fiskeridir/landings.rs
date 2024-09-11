@@ -41,10 +41,7 @@ impl DataSource for LandingScraper {
                 let year = file.year();
                 let data = dir
                     .into_deserialize::<LandingRaw>(&file)?
-                    .map(move |v| match v {
-                        Ok(v) => Landing::try_from_raw(v, year),
-                        Err(e) => Err(e),
-                    });
+                    .map(move |v| v.map(|v| Landing::from_raw(v, year)));
 
                 Ok(processor.add_landings(Box::new(data), year).await?)
             },

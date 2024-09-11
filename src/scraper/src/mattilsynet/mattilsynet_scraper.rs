@@ -203,7 +203,7 @@ impl MattilsynetScraper {
                 };
 
                 vec.push(DeliveryPoint {
-                    id: DeliveryPointId::try_from(id)?,
+                    id: id.parse()?,
                     name: name.trim().into(),
                     address: address.map(|v| v.trim().into()),
                     // unwrap is safe because regex only matches if postal_code is 4 digits

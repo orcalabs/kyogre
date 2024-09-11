@@ -21,8 +21,7 @@ async fn test_vessel_benchmarks_returns_correct_cumulative_landings() {
         builder
             .vessels(1)
             .modify(|v| {
-                v.fiskeridir.radio_call_sign =
-                    Some(CallSign::try_from(SIGNED_IN_VESSEL_CALLSIGN).unwrap())
+                v.fiskeridir.radio_call_sign = Some(SIGNED_IN_VESSEL_CALLSIGN.parse().unwrap())
             })
             .landings(4)
             .modify_idx(|i, v| match i {
@@ -101,7 +100,7 @@ async fn test_vessel_benchmarks_returns_correct_self_benchmarks() {
         let state = builder
             .vessels(1)
             .modify(|v| {
-                let cs = CallSign::try_from(SIGNED_IN_VESSEL_CALLSIGN).unwrap();
+                let cs: CallSign = SIGNED_IN_VESSEL_CALLSIGN.parse().unwrap();
                 v.fiskeridir.radio_call_sign = Some(cs.clone());
                 v.ais.call_sign = Some(cs);
             })
@@ -191,7 +190,7 @@ async fn test_vessel_benchmarks_returns_correct_averages_for_followers() {
             .vessels(3)
             .modify_idx(|i, v| {
                 if i == 0 {
-                    let cs = CallSign::try_from(SIGNED_IN_VESSEL_CALLSIGN).unwrap();
+                    let cs: CallSign = SIGNED_IN_VESSEL_CALLSIGN.parse().unwrap();
                     v.fiskeridir.radio_call_sign = Some(cs.clone());
                     v.ais.call_sign = Some(cs);
                 }

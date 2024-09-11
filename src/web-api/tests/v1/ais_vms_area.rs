@@ -286,7 +286,7 @@ async fn test_ais_vms_area_does_not_return_positions_from_active_conflicts() {
         builder
             .vessels(2)
             .modify(|v| {
-                let cs: CallSign = "test".try_into().unwrap();
+                let cs: CallSign = "test".parse().unwrap();
                 v.fiskeridir.radio_call_sign = Some(cs.clone());
                 v.ais.call_sign = Some(cs);
             })
@@ -324,7 +324,7 @@ async fn test_ais_vms_area_returns_positions_from_conflict_winners() {
         let state = builder
             .vessels(1)
             .modify(|v| {
-                let cs: CallSign = "test".try_into().unwrap();
+                let cs: CallSign = "test".parse().unwrap();
                 v.fiskeridir.radio_call_sign = Some(cs.clone());
                 v.ais.call_sign = Some(cs);
             })
@@ -332,7 +332,7 @@ async fn test_ais_vms_area_returns_positions_from_conflict_winners() {
             .vessels(1)
             .conflict_loser()
             .modify(|v| {
-                let cs: CallSign = "test".try_into().unwrap();
+                let cs: CallSign = "test".parse().unwrap();
                 v.fiskeridir.radio_call_sign = Some(cs.clone());
                 v.ais.call_sign = Some(cs);
             })
@@ -414,7 +414,7 @@ async fn test_ais_vms_area_returns_single_position_for_duplicated_conflict_winne
         let state = builder
             .vessels(1)
             .modify(|v| {
-                let cs: CallSign = "test".try_into().unwrap();
+                let cs: CallSign = "test".parse().unwrap();
                 v.fiskeridir.radio_call_sign = Some(cs.clone());
                 v.ais.call_sign = Some(cs);
             })
@@ -422,7 +422,7 @@ async fn test_ais_vms_area_returns_single_position_for_duplicated_conflict_winne
             .vessels(1)
             .conflict_winner()
             .modify(|v| {
-                let cs: CallSign = "test".try_into().unwrap();
+                let cs: CallSign = "test".parse().unwrap();
                 v.fiskeridir.radio_call_sign = Some(cs.clone());
                 v.ais.call_sign = Some(cs);
             })

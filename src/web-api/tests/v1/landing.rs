@@ -164,8 +164,8 @@ async fn test_landings_returns_landings_with_vessel_length_groups() {
         let state = builder
             .landings(4)
             .modify_idx(|i, v| match i {
-                0 => v.landing.vessel.length_group_code = VesselLengthGroup::UnderEleven,
-                1 => v.landing.vessel.length_group_code = VesselLengthGroup::ElevenToFifteen,
+                0 => v.landing.vessel.length_group_code = Some(VesselLengthGroup::UnderEleven),
+                1 => v.landing.vessel.length_group_code = Some(VesselLengthGroup::ElevenToFifteen),
                 _ => (),
             })
             .build()

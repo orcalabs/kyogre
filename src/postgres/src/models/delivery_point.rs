@@ -132,54 +132,50 @@ impl TryFrom<&fiskeridir_rs::AquaCultureEntry> for AquaCultureSpecies {
     fn try_from(v: &fiskeridir_rs::AquaCultureEntry) -> Result<Self, Self::Error> {
         Ok(Self {
             delivery_point_id: v.delivery_point_id.clone().into_inner(),
-            till_nr: v.till_nr.clone(),
-            till_unit: v.till_unit.clone(),
+            till_nr: v.till_nr.clone().into_inner(),
+            till_unit: v.till_unit.clone().into_inner(),
             species_fiskeridir_id: v.species_code as i32,
             till_kap: v.till_kap,
         })
     }
 }
 
-impl TryFrom<&fiskeridir_rs::AquaCultureEntry> for AquaCultureTill {
-    type Error = Error;
-
-    fn try_from(v: &fiskeridir_rs::AquaCultureEntry) -> Result<Self, Self::Error> {
-        Ok(Self {
+impl From<&fiskeridir_rs::AquaCultureEntry> for AquaCultureTill {
+    fn from(v: &fiskeridir_rs::AquaCultureEntry) -> Self {
+        Self {
             delivery_point_id: v.delivery_point_id.clone().into_inner(),
-            till_nr: v.till_nr.clone(),
+            till_nr: v.till_nr.clone().into_inner(),
             till_municipality_number: v.till_municipality_number as i32,
-            till_municipality: v.till_municipality.clone(),
-        })
+            till_municipality: v.till_municipality.clone().into_inner(),
+        }
     }
 }
 
-impl TryFrom<fiskeridir_rs::AquaCultureEntry> for AquaCultureEntry {
-    type Error = Error;
-
-    fn try_from(v: fiskeridir_rs::AquaCultureEntry) -> Result<Self, Self::Error> {
-        Ok(Self {
+impl From<fiskeridir_rs::AquaCultureEntry> for AquaCultureEntry {
+    fn from(v: fiskeridir_rs::AquaCultureEntry) -> Self {
+        Self {
             delivery_point_id: v.delivery_point_id.into_inner(),
             org_id: v.org_number.map(|o| o as i32),
-            name: v.name,
-            address: v.address,
+            name: v.name.into_inner(),
+            address: v.address.map(|v| v.into_inner()),
             zip_code: v.zip_code.map(|z| z as i32),
-            city: v.city,
+            city: v.city.map(|v| v.into_inner()),
             approval_date: v.approval_date,
             approval_limit: v.approval_limit,
-            purpose: v.purpose,
-            production_form: v.production_form,
-            locality_name: v.locality_name,
+            purpose: v.purpose.into_inner(),
+            production_form: v.production_form.into_inner(),
+            locality_name: v.locality_name.into_inner(),
             locality_municipality_number: v.locality_municipality_number as i32,
-            locality_municipality: v.locality_municipality,
-            locality_location: v.locality_location,
-            water_environment: v.water_environment,
+            locality_municipality: v.locality_municipality.into_inner(),
+            locality_location: v.locality_location.into_inner(),
+            water_environment: v.water_environment.into_inner(),
             locality_kap: v.locality_kap,
-            locality_unit: v.locality_unit,
+            locality_unit: v.locality_unit.into_inner(),
             expiration_date: v.expiration_date,
             latitude: v.latitude,
             longitude: v.longitude,
-            prod_omr: v.prod_omr,
-        })
+            prod_omr: v.prod_omr.map(|v| v.into_inner()),
+        }
     }
 }
 

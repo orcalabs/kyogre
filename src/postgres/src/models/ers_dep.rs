@@ -3,10 +3,7 @@ use fiskeridir_rs::{FiskdirVesselNationalityGroup, SpeciesGroup, SpeciesMainGrou
 use kyogre_core::FiskeridirVesselId;
 use unnest_insert::UnnestInsert;
 
-use crate::{
-    error::Error,
-    queries::{opt_type_to_i64, timestamp_from_date_and_time, type_to_i32},
-};
+use crate::queries::{opt_type_to_i64, type_to_i32};
 
 #[derive(UnnestInsert)]
 #[unnest_insert(
@@ -78,60 +75,55 @@ pub struct NewErsDepCatch {
     pub species_main_group_id: i32,
 }
 
-impl TryFrom<fiskeridir_rs::ErsDep> for NewErsDep {
-    type Error = Error;
-
-    fn try_from(v: fiskeridir_rs::ErsDep) -> Result<Self, Self::Error> {
-        Ok(Self {
+impl From<fiskeridir_rs::ErsDep> for NewErsDep {
+    fn from(v: fiskeridir_rs::ErsDep) -> Self {
+        Self {
             message_id: v.message_info.message_id as i64,
             message_number: v.message_info.message_number as i32,
-            message_timestamp: timestamp_from_date_and_time(
-                v.message_info.message_date,
-                v.message_info.message_time,
-            ),
+            message_timestamp: v.message_info.message_timestamp(),
+            departure_timestamp: v.departure_timestamp(),
+            fishing_timestamp: v.fishing_timestamp(),
             ers_message_type_id: v.message_info.message_type_code.into_inner(),
             message_year: v.message_info.message_year as i32,
             relevant_year: v.message_info.relevant_year as i32,
             sequence_number: v.message_info.sequence_number.map(|v| v as i32),
-            ers_activity_id: v.activity_code,
-            departure_timestamp: timestamp_from_date_and_time(v.departure_date, v.departure_time),
-            fishing_timestamp: timestamp_from_date_and_time(v.fishing_date, v.fishing_time),
+            ers_activity_id: v.activity_code.map(|v| v.into_inner()),
             start_latitude: v.start_latitude,
             start_latitude_sggdd: v.start_latitude_sggdd.into_inner(),
             start_longitude: v.start_longitude,
             start_longitude_sggdd: v.start_longitude_sggdd.into_inner(),
             target_species_fao_id: v.target_species_fao_code.into_inner(),
             target_species_fiskeridir_id: v.target_species_fdir_code.map(|v| v as i32),
-            port_id: v.port.code,
-            fiskeridir_vessel_id: v.vessel_info.vessel_id,
+            port_id: v.port.code.map(|v| v.into_inner()),
+            fiskeridir_vessel_id: v.vessel_info.id,
             vessel_building_year: v.vessel_info.building_year.map(|v| v as i32),
-            vessel_call_sign: v.vessel_info.call_sign,
+            vessel_call_sign: v.vessel_info.call_sign.map(|v| v.into_inner()),
             vessel_call_sign_ers: v.vessel_info.call_sign_ers.into_inner(),
             vessel_engine_building_year: v.vessel_info.engine_building_year.map(|v| v as i32),
             vessel_engine_power: v.vessel_info.engine_power.map(|v| v as i32),
             vessel_gross_tonnage_1969: v.vessel_info.gross_tonnage_1969.map(|v| v as i32),
             vessel_gross_tonnage_other: v.vessel_info.gross_tonnage_other.map(|v| v as i32),
-            vessel_county: v.vessel_info.vessel_county,
-            vessel_county_code: v.vessel_info.vessel_county_code.map(|v| v as i32),
-            vessel_greatest_length: v.vessel_info.vessel_greatest_length,
-            vessel_identification: v.vessel_info.vessel_identification.into_inner(),
-            vessel_length: v.vessel_info.vessel_length,
-            vessel_length_group: v.vessel_info.vessel_length_group,
-            vessel_length_group_code: v.vessel_info.vessel_length_group_code.map(|v| v as i32),
-            vessel_material_code: v.vessel_info.vessel_material_code,
-            vessel_municipality: v.vessel_info.vessel_municipality,
-            vessel_municipality_code: v.vessel_info.vessel_municipality_code.map(|v| v as i32),
-            vessel_name: v.vessel_info.vessel_name,
-            vessel_name_ers: v.vessel_info.vessel_name_ers,
-            vessel_nationality_code: v.vessel_info.vessel_nationality_code.into_inner(),
-            fiskeridir_vessel_nationality_group_id: v.vessel_info.vessel_nationality_group_code,
-            vessel_rebuilding_year: v.vessel_info.vessel_rebuilding_year.map(|v| v as i32),
-            vessel_registration_id: v.vessel_info.vessel_registration_id,
-            vessel_registration_id_ers: v.vessel_info.vessel_registration_id_ers,
-            vessel_valid_until: v.vessel_info.vessel_valid_until,
-            vessel_width: v.vessel_info.vessel_width,
+            vessel_county: v.vessel_info.county.map(|v| v.into_inner()),
+            vessel_county_code: v.vessel_info.county_code.map(|v| v as i32),
+            vessel_greatest_length: v.vessel_info.greatest_length,
+            vessel_identification: v.vessel_info.identification.into_inner(),
+            vessel_length: v.vessel_info.length,
+            vessel_length_group: v.vessel_info.length_group.map(|v| v.into_inner()),
+            vessel_length_group_code: v.vessel_info.length_group_code.map(|v| v as i32),
+            vessel_material_code: v.vessel_info.material_code.map(|v| v.into_inner()),
+            vessel_municipality: v.vessel_info.municipality.map(|v| v.into_inner()),
+            vessel_municipality_code: v.vessel_info.municipality_code.map(|v| v as i32),
+            vessel_name: v.vessel_info.name.map(|v| v.into_inner()),
+            vessel_name_ers: v.vessel_info.name_ers.map(|v| v.into_inner()),
+            vessel_nationality_code: v.vessel_info.nationality_code.alpha3().to_string(),
+            fiskeridir_vessel_nationality_group_id: v.vessel_info.nationality_group_code,
+            vessel_rebuilding_year: v.vessel_info.rebuilding_year.map(|v| v as i32),
+            vessel_registration_id: v.vessel_info.registration_id.map(|v| v.into_inner()),
+            vessel_registration_id_ers: v.vessel_info.registration_id_ers.map(|v| v.into_inner()),
+            vessel_valid_until: v.vessel_info.valid_until,
+            vessel_width: v.vessel_info.width,
             vessel_event_id: None,
-        })
+        }
     }
 }
 
@@ -147,9 +139,9 @@ impl NewErsDepCatch {
         {
             Some(Self {
                 message_id: ers_dep.message_info.message_id as i64,
-                ers_quantum_type_id: c.quantum_type_code.clone(),
+                ers_quantum_type_id: c.quantum_type_code.clone().map(|v| v.into_inner()),
                 living_weight: s.living_weight.map(|v| v as i32),
-                species_fao_id: s.species_fao_code.clone(),
+                species_fao_id: s.species_fao_code.clone().map(|v| v.into_inner()),
                 species_fiskeridir_id: s.species_fdir_code.map(|v| v as i32),
                 species_group_id: s.species_group_code.unwrap_or(SpeciesGroup::Unknown) as i32,
                 species_main_group_id: s

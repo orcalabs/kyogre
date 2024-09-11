@@ -2,8 +2,6 @@ use snafu::{Location, Snafu};
 use stack_error::{OpaqueError, StackError};
 use std::num::ParseIntError;
 
-use crate::string_new_types::NonEmptyString;
-
 pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Snafu, StackError)]
@@ -82,22 +80,6 @@ pub enum Error {
         location: Location,
         #[snafu(source)]
         error: zip::result::ZipError,
-    },
-    // Jurisdiction uses `anyhow::Error` as its error type and as that type does not implement
-    // `std::error::Error` trait we cant use our regular stack error scheme, instead we stringify the output error.
-    #[snafu(display("Jurisdiction error, error: '{error_stringified}', nation: '{nation:?}', nation_code: '{nation_code:?}'"))]
-    Jurisdiction {
-        #[snafu(implicit)]
-        location: Location,
-        error_stringified: String,
-        nation_code: Option<NonEmptyString>,
-        nation: Option<NonEmptyString>,
-    },
-    #[snafu(display("Failed data conversion"))]
-    Conversion {
-        #[snafu(implicit)]
-        location: Location,
-        source: ParseStringError,
     },
 }
 

@@ -1,7 +1,6 @@
 use crate::helper::*;
 use chrono::Duration;
 use engine::*;
-use fiskeridir_rs::LandingId;
 use kyogre_core::*;
 
 #[tokio::test]
@@ -40,7 +39,7 @@ async fn test_preferred_assembler_set_to_landings_after_one_year_of_no_ers() {
             .new_cycle()
             .landings(1)
             .modify(|l| {
-                l.landing.id = LandingId::try_from("100-7-0-3000").unwrap();
+                l.landing.id = "100-7-0-3000".parse().unwrap();
                 l.landing.vessel.id = Some(state.vessels[0].fiskeridir.id);
                 l.landing.landing_timestamp += Duration::days(400);
             })

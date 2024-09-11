@@ -1,7 +1,7 @@
 use super::helper::test;
 use chrono::Duration;
 use engine::*;
-use fiskeridir_rs::{GearGroup, LandingId, SpeciesGroup};
+use fiskeridir_rs::{GearGroup, SpeciesGroup};
 use kyogre_core::{
     ActiveVesselConflict, FiskeridirVesselId, Mmsi, TestHelperOutbound, VesselSource,
 };
@@ -172,7 +172,7 @@ async fn test_vessel_removes_gear_group_when_last_landing_is_replaced_with_new_g
             .vessels(1)
             .landings(1)
             .modify(|v| {
-                v.landing.id = LandingId::try_from("1-7-0-0").unwrap();
+                v.landing.id = "1-7-0-0".parse().unwrap();
                 v.landing.document_info.version_number = 1;
                 v.landing.gear.group = GearGroup::Seine;
             })
@@ -180,7 +180,7 @@ async fn test_vessel_removes_gear_group_when_last_landing_is_replaced_with_new_g
             .landings(1)
             .modify(|v| {
                 v.landing.document_info.version_number = 2;
-                v.landing.id = LandingId::try_from("1-7-0-0").unwrap();
+                v.landing.id = "1-7-0-0".parse().unwrap();
                 v.landing.gear.group = GearGroup::Net;
             })
             .build()
@@ -236,7 +236,7 @@ async fn test_vessel_removes_species_group_when_last_landing_is_replaced_with_ne
             .vessels(1)
             .landings(1)
             .modify(|v| {
-                v.landing.id = LandingId::try_from("1-7-0-0").unwrap();
+                v.landing.id = "1-7-0-0".parse().unwrap();
                 v.landing.document_info.version_number = 1;
                 v.landing.product.species.group_code = SpeciesGroup::AtlanticCod;
             })
@@ -244,7 +244,7 @@ async fn test_vessel_removes_species_group_when_last_landing_is_replaced_with_ne
             .landings(1)
             .modify(|v| {
                 v.landing.document_info.version_number = 2;
-                v.landing.id = LandingId::try_from("1-7-0-0").unwrap();
+                v.landing.id = "1-7-0-0".parse().unwrap();
                 v.landing.product.species.group_code = SpeciesGroup::Saithe;
             })
             .build()
@@ -288,7 +288,7 @@ async fn test_vessels_returns_vessels_that_only_exists_in_landings_with_call_sig
             .landings(1)
             .modify(|l| {
                 l.landing.vessel.id = Some(vessel_id);
-                l.landing.vessel.call_sign = Some("test".try_into().unwrap());
+                l.landing.vessel.call_sign = Some("test".parse().unwrap());
             })
             .build()
             .await;
@@ -309,8 +309,8 @@ async fn test_vessels_does_not_return_vessel_with_an_active_conflict() {
             .vessels(2)
             .modify_idx(|i, v| {
                 v.fiskeridir.id = FiskeridirVesselId::test_new(i as i64);
-                v.fiskeridir.radio_call_sign = Some("test".try_into().unwrap());
-                v.ais.call_sign = Some("test".try_into().unwrap());
+                v.fiskeridir.radio_call_sign = Some("test".parse().unwrap());
+                v.ais.call_sign = Some("test".parse().unwrap());
             })
             .build()
             .await;
@@ -325,7 +325,7 @@ async fn test_vessels_does_not_return_vessel_with_an_active_conflict() {
                     Some(FiskeridirVesselId::test_new(0)),
                     Some(FiskeridirVesselId::test_new(1))
                 ],
-                call_sign: "test".try_into().unwrap(),
+                call_sign: "test".parse().unwrap(),
                 mmsis: vec![Some(Mmsi::test_new(1)), Some(Mmsi::test_new(2))],
                 sources: vec![Some(VesselSource::FiskeridirVesselRegister)],
             }
@@ -343,9 +343,9 @@ async fn test_vessels_returns_most_used_call_sign_of_vessel_that_only_exists_in_
             .modify_idx(|i, v| {
                 v.landing.vessel.id = Some(FiskeridirVesselId::test_new(1));
                 if i == 0 {
-                    v.landing.vessel.call_sign = Some("test".try_into().unwrap());
+                    v.landing.vessel.call_sign = Some("test".parse().unwrap());
                 } else {
-                    v.landing.vessel.call_sign = Some("test2".try_into().unwrap());
+                    v.landing.vessel.call_sign = Some("test2".parse().unwrap());
                 }
             })
             .build()
@@ -364,11 +364,11 @@ async fn test_vessels_does_not_return_most_used_call_sign_of_vessel_that_exists_
         builder
             .vessels(1)
             .modify(|v| {
-                v.fiskeridir.radio_call_sign = Some("cs".try_into().unwrap());
+                v.fiskeridir.radio_call_sign = Some("cs".parse().unwrap());
             })
             .landings(3)
             .modify(|v| {
-                v.landing.vessel.call_sign = Some("test".try_into().unwrap());
+                v.landing.vessel.call_sign = Some("test".parse().unwrap());
             })
             .build()
             .await;
@@ -391,16 +391,16 @@ async fn test_vessels_returns_both_vessels_after_conflict_have_been_resolved_but
             .vessels(1)
             .modify(|v| {
                 v.fiskeridir.id = vessel_id1;
-                v.fiskeridir.radio_call_sign = Some("test".try_into().unwrap());
-                v.ais.call_sign = Some("test".try_into().unwrap());
+                v.fiskeridir.radio_call_sign = Some("test".parse().unwrap());
+                v.ais.call_sign = Some("test".parse().unwrap());
                 v.ais.mmsi = Mmsi::test_new(1);
             })
             .conflict_winner()
             .vessels(1)
             .modify(|v| {
                 v.fiskeridir.id = vessel_id2;
-                v.fiskeridir.radio_call_sign = Some("test".try_into().unwrap());
-                v.ais.call_sign = Some("test".try_into().unwrap());
+                v.fiskeridir.radio_call_sign = Some("test".parse().unwrap());
+                v.ais.call_sign = Some("test".parse().unwrap());
                 v.ais.mmsi = Mmsi::test_new(2);
             })
             .conflict_loser()
@@ -436,8 +436,8 @@ async fn test_vessels_does_not_return_vessels_with_an_active_mmsi_conflict() {
             .vessels(2)
             .modify_idx(|i, v| {
                 v.fiskeridir.id = FiskeridirVesselId::test_new(i as i64);
-                v.fiskeridir.radio_call_sign = Some("test".to_string().try_into().unwrap());
-                v.ais.call_sign = Some("test".to_string().try_into().unwrap());
+                v.fiskeridir.radio_call_sign = Some("test".to_string().parse().unwrap());
+                v.ais.call_sign = Some("test".to_string().parse().unwrap());
                 v.ais.mmsi = Mmsi::test_new(1);
             })
             .build()
@@ -455,7 +455,7 @@ async fn test_vessels_does_not_return_vessels_with_an_active_mmsi_conflict() {
                     Some(FiskeridirVesselId::test_new(0)),
                     Some(FiskeridirVesselId::test_new(1))
                 ],
-                call_sign: "test".try_into().unwrap(),
+                call_sign: "test".parse().unwrap(),
                 mmsis: vec![Some(Mmsi::test_new(1))],
                 sources: vec![Some(VesselSource::FiskeridirVesselRegister)],
             },
@@ -471,8 +471,8 @@ async fn test_vessels_returns_vessels_conflicts_that_have_been_annotated_as_the_
             .vessels(2)
             .modify_idx(|i, v| {
                 v.fiskeridir.id = FiskeridirVesselId::test_new(i as i64);
-                v.fiskeridir.radio_call_sign = Some("test".try_into().unwrap());
-                v.ais.call_sign = Some("test".try_into().unwrap());
+                v.fiskeridir.radio_call_sign = Some("test".parse().unwrap());
+                v.ais.call_sign = Some("test".parse().unwrap());
                 v.ais.mmsi = Mmsi::test_new(1);
             })
             .conflict_winner()
@@ -508,12 +508,12 @@ async fn test_vessels_does_not_return_an_active_mmsi_conflict() {
             .ais_vessels(1)
             .modify(|v| {
                 v.vessel.mmsi = Mmsi::test_new(2);
-                v.vessel.call_sign = Some("test".try_into().unwrap());
+                v.vessel.call_sign = Some("test".parse().unwrap());
             })
             .vessels(1)
             .modify(|v| {
-                v.fiskeridir.radio_call_sign = Some("test".try_into().unwrap());
-                v.ais.call_sign = Some("test".try_into().unwrap());
+                v.fiskeridir.radio_call_sign = Some("test".parse().unwrap());
+                v.ais.call_sign = Some("test".parse().unwrap());
                 v.ais.mmsi = Mmsi::test_new(1);
             })
             .build()
@@ -528,7 +528,7 @@ async fn test_vessels_does_not_return_an_active_mmsi_conflict() {
             conflicts[0],
             ActiveVesselConflict {
                 vessel_ids: vec![Some(FiskeridirVesselId::test_new(1))],
-                call_sign: "test".try_into().unwrap(),
+                call_sign: "test".parse().unwrap(),
                 mmsis: vec![Some(Mmsi::test_new(1)), Some(Mmsi::test_new(2))],
                 sources: vec![Some(VesselSource::FiskeridirVesselRegister)],
             },
@@ -544,12 +544,12 @@ async fn test_vessels_only_returns_winner_of_resolved_mmsi_conflict() {
             .ais_vessels(1)
             .modify(|v| {
                 v.vessel.mmsi = Mmsi::test_new(2);
-                v.vessel.call_sign = Some("test".try_into().unwrap());
+                v.vessel.call_sign = Some("test".parse().unwrap());
             })
             .vessels(1)
             .modify(|v| {
-                v.fiskeridir.radio_call_sign = Some("test".try_into().unwrap());
-                v.ais.call_sign = Some("test".try_into().unwrap());
+                v.fiskeridir.radio_call_sign = Some("test".parse().unwrap());
+                v.ais.call_sign = Some("test".parse().unwrap());
                 v.ais.mmsi = Mmsi::test_new(1);
             })
             .conflict_winner()
@@ -573,9 +573,9 @@ async fn test_vessels_with_ignored_call_signs_have_no_call_sign() {
             .vessels(2)
             .modify_idx(|i, v| {
                 if i == 0 {
-                    v.fiskeridir.radio_call_sign = Some("0".try_into().unwrap());
+                    v.fiskeridir.radio_call_sign = Some("0".parse().unwrap());
                 } else {
-                    v.fiskeridir.radio_call_sign = Some("00000000".try_into().unwrap());
+                    v.fiskeridir.radio_call_sign = Some("00000000".parse().unwrap());
                 }
             })
             .build()

@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{hash_map::Entry, HashMap};
 
 use kyogre_core::FiskeridirVesselId;
 
@@ -63,35 +63,42 @@ impl ErsPorSet {
 
         for e in ers_por.into_iter() {
             set.add_ers_message_type(&e);
-            set.add_vessel(&e)?;
+            set.add_vessel(&e);
             set.add_port(&e)?;
             set.add_catch(&e)?;
             set.add_municipality(&e);
             set.add_county(&e)?;
-            set.add_ers_por(&e)?;
+            set.add_ers_por(e);
         }
 
         Ok(set)
     }
 
     fn add_municipality(&mut self, ers_por: &fiskeridir_rs::ErsPor) {
-        if let Some(code) = ers_por.vessel_info.vessel_municipality_code {
+        if let Some(code) = ers_por.vessel_info.municipality_code {
             self.municipalities.entry(code as i32).or_insert_with(|| {
-                NewMunicipality::new(code as i32, ers_por.vessel_info.vessel_municipality.clone())
+                NewMunicipality::new(
+                    code as i32,
+                    ers_por
+                        .vessel_info
+                        .municipality
+                        .clone()
+                        .map(|v| v.into_inner()),
+                )
             });
         }
     }
 
     fn add_county(&mut self, ers_por: &fiskeridir_rs::ErsPor) -> Result<()> {
-        if let Some(code) = ers_por.vessel_info.vessel_county_code {
-            let county = ers_por
-                .vessel_info
-                .vessel_county
-                .clone()
-                .ok_or_else(|| MissingValueSnafu.build())?;
-            self.counties
-                .entry(code as i32)
-                .or_insert_with(|| NewCounty::new(code as i32, county));
+        if let Some(code) = ers_por.vessel_info.county_code {
+            if let Entry::Vacant(e) = self.counties.entry(code as i32) {
+                let county = ers_por
+                    .vessel_info
+                    .county
+                    .clone()
+                    .ok_or_else(|| MissingValueSnafu.build())?;
+                e.insert(NewCounty::new(code as i32, county.into_inner()));
+            }
         }
         Ok(())
     }
@@ -109,21 +116,23 @@ impl ErsPorSet {
         }
     }
 
-    fn add_vessel(&mut self, ers_por: &fiskeridir_rs::ErsPor) -> Result<()> {
-        if let Some(vessel_id) = ers_por.vessel_info.vessel_id {
-            if !self.vessels.contains_key(&vessel_id) {
-                let vessel = fiskeridir_rs::Vessel::try_from(ers_por.vessel_info.clone())?;
-                self.vessels.entry(vessel_id).or_insert(vessel);
-            }
+    fn add_vessel(&mut self, ers_por: &fiskeridir_rs::ErsPor) {
+        if let Some(vessel_id) = ers_por.vessel_info.id {
+            self.vessels
+                .entry(vessel_id)
+                .or_insert_with(|| ers_por.vessel_info.clone().into());
         }
-        Ok(())
     }
 
     fn add_port(&mut self, ers_por: &fiskeridir_rs::ErsPor) -> Result<()> {
         if let Some(ref code) = ers_por.port.code {
+            let code = code.as_ref();
             if !self.ports.contains_key(code) {
-                let port = NewPort::new(code.clone(), ers_por.port.name.clone())?;
-                self.ports.insert(code.clone(), port);
+                let port = NewPort::new(
+                    code.into(),
+                    ers_por.port.name.clone().map(|v| v.into_inner()),
+                )?;
+                self.ports.insert(code.into(), port);
             }
         }
         Ok(())
@@ -137,39 +146,39 @@ impl ErsPorSet {
                 .species_fao_code
                 .clone()
                 .ok_or_else(|| MissingValueSnafu {}.build())?;
-            self.add_species_fao(&species_fao_code, &ers_por.catch.species.species_fao);
+            self.add_species_fao(
+                species_fao_code.as_ref(),
+                ers_por.catch.species.species_fao.as_deref(),
+            );
             self.add_species_fiskeridir(
                 ers_por.catch.species.species_fdir_code,
-                ers_por.catch.species.species_fdir.clone(),
+                ers_por.catch.species.species_fdir.as_deref(),
             );
             self.catches.push(catch);
         }
         Ok(())
     }
 
-    fn add_species_fao(&mut self, code: &String, name: &Option<String>) {
+    fn add_species_fao(&mut self, code: &str, name: Option<&str>) {
         if !self.species_fao.contains_key(code) {
-            self.species_fao
-                .insert(code.clone(), SpeciesFao::new(code.clone(), name.clone()));
+            self.species_fao.insert(
+                code.into(),
+                SpeciesFao::new(code.into(), name.map(From::from)),
+            );
         }
     }
 
-    fn add_species_fiskeridir(&mut self, code: Option<u32>, name: Option<String>) {
+    fn add_species_fiskeridir(&mut self, code: Option<u32>, name: Option<&str>) {
         if let Some(code) = code {
             self.species_fiskeridir
                 .entry(code as i32)
-                .or_insert_with(|| SpeciesFiskeridir::new(code as i32, name));
+                .or_insert_with(|| SpeciesFiskeridir::new(code as i32, name.map(From::from)));
         }
     }
 
-    fn add_ers_por(&mut self, ers_por: &fiskeridir_rs::ErsPor) -> Result<()> {
-        if !self
-            .ers_por
-            .contains_key(&(ers_por.message_info.message_id as i64))
-        {
-            let new_ers_por = NewErsPor::try_from(ers_por.clone())?;
-            self.ers_por.insert(new_ers_por.message_id, new_ers_por);
-        }
-        Ok(())
+    fn add_ers_por(&mut self, ers_por: fiskeridir_rs::ErsPor) {
+        self.ers_por
+            .entry(ers_por.message_info.message_id as i64)
+            .or_insert_with(|| ers_por.into());
     }
 }

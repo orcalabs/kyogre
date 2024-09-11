@@ -47,8 +47,8 @@ impl From<fiskeridir_rs::AquaCultureEntry> for DeliveryPoint {
     fn from(v: fiskeridir_rs::AquaCultureEntry) -> Self {
         DeliveryPoint {
             id: v.delivery_point_id,
-            name: Some(v.name),
-            address: v.address,
+            name: Some(v.name.into_inner()),
+            address: v.address.map(|v| v.into_inner()),
             latitude: Some(v.latitude),
             longitude: Some(v.longitude),
         }

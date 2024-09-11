@@ -3,7 +3,7 @@ use crate::v1::helper::*;
 use chrono::{DateTime, Utc};
 use engine::*;
 use enum_index::EnumIndex;
-use fiskeridir_rs::{GearGroup, LandingId, SpeciesGroup, VesselLengthGroup};
+use fiskeridir_rs::{GearGroup, SpeciesGroup, VesselLengthGroup};
 use kyogre_core::{
     landing_date_feature_matrix_index, ActiveLandingFilter, CatchLocationId, HaulMatrixes,
     LandingMatrixes, NUM_CATCH_LOCATIONS,
@@ -119,15 +119,16 @@ async fn test_landing_matrix_filters_by_vessel_length() {
             .modify_idx(|i, v| match i {
                 0 => {
                     v.landing.product.living_weight = Some(20.0);
-                    v.landing.vessel.length_group_code = VesselLengthGroup::UnderEleven;
+                    v.landing.vessel.length_group_code = Some(VesselLengthGroup::UnderEleven);
                 }
                 1 => {
                     v.landing.product.living_weight = Some(40.0);
-                    v.landing.vessel.length_group_code = VesselLengthGroup::ElevenToFifteen;
+                    v.landing.vessel.length_group_code = Some(VesselLengthGroup::ElevenToFifteen);
                 }
                 2 => {
                     v.landing.product.living_weight = Some(100.0);
-                    v.landing.vessel.length_group_code = VesselLengthGroup::TwentyTwoToTwentyEight;
+                    v.landing.vessel.length_group_code =
+                        Some(VesselLengthGroup::TwentyTwoToTwentyEight);
                 }
                 _ => (),
             })
@@ -164,12 +165,12 @@ async fn test_landing_matrix_filters_by_species_group() {
             .modify_idx(|i, v| match i {
                 0 => {
                     v.landing.product.living_weight = Some(20.0);
-                    v.landing.vessel.length_group_code = VesselLengthGroup::UnderEleven;
+                    v.landing.vessel.length_group_code = Some(VesselLengthGroup::UnderEleven);
                     v.landing.product.species.group_code = SpeciesGroup::GreenlandHalibut;
                 }
                 1 => {
                     v.landing.product.living_weight = Some(40.0);
-                    v.landing.vessel.length_group_code = VesselLengthGroup::ElevenToFifteen;
+                    v.landing.vessel.length_group_code = Some(VesselLengthGroup::ElevenToFifteen);
                     v.landing.product.species.group_code = SpeciesGroup::GoldenRedfish;
                 }
                 2 => {
@@ -364,15 +365,16 @@ async fn test_landing_matrix_vessel_length_sum_area_table_is_correct() {
             .modify_idx(|i, v| match i {
                 0 => {
                     v.landing.product.living_weight = Some(20.0);
-                    v.landing.vessel.length_group_code = VesselLengthGroup::UnderEleven;
+                    v.landing.vessel.length_group_code = Some(VesselLengthGroup::UnderEleven);
                 }
                 1 => {
                     v.landing.product.living_weight = Some(40.0);
-                    v.landing.vessel.length_group_code = VesselLengthGroup::ElevenToFifteen;
+                    v.landing.vessel.length_group_code = Some(VesselLengthGroup::ElevenToFifteen);
                 }
                 2 => {
                     v.landing.product.living_weight = Some(100.0);
-                    v.landing.vessel.length_group_code = VesselLengthGroup::TwentyTwoToTwentyEight;
+                    v.landing.vessel.length_group_code =
+                        Some(VesselLengthGroup::TwentyTwoToTwentyEight);
                 }
                 _ => (),
             })
@@ -409,12 +411,12 @@ async fn test_landing_matrix_species_group_sum_area_table_is_correct() {
             .modify_idx(|i, v| match i {
                 0 => {
                     v.landing.product.living_weight = Some(20.0);
-                    v.landing.vessel.length_group_code = VesselLengthGroup::UnderEleven;
+                    v.landing.vessel.length_group_code = Some(VesselLengthGroup::UnderEleven);
                     v.landing.product.species.group_code = SpeciesGroup::GreenlandHalibut;
                 }
                 1 => {
                     v.landing.product.living_weight = Some(40.0);
-                    v.landing.vessel.length_group_code = VesselLengthGroup::ElevenToFifteen;
+                    v.landing.vessel.length_group_code = Some(VesselLengthGroup::ElevenToFifteen);
                     v.landing.product.species.group_code = SpeciesGroup::GoldenRedfish;
                 }
                 2 => {
@@ -456,13 +458,13 @@ async fn test_landing_matrix_have_correct_totals_after_landing_is_replaced_by_ne
             .landings(1)
             .modify(|v| {
                 v.landing.product.living_weight = Some(20.0);
-                v.landing.id = LandingId::try_from("1-7-0-0").unwrap();
+                v.landing.id = "1-7-0-0".parse().unwrap();
             })
             .new_cycle()
             .landings(1)
             .modify(|v| {
                 v.landing.product.living_weight = Some(40.0);
-                v.landing.id = LandingId::try_from("1-7-0-0").unwrap();
+                v.landing.id = "1-7-0-0".parse().unwrap();
                 v.landing.document_info.version_number += 1;
             })
             .build()

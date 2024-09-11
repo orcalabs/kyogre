@@ -1,7 +1,6 @@
 use crate::v1::helper::test;
 use chrono::{Duration, TimeZone, Utc};
 use engine::*;
-use fiskeridir_rs::CallSign;
 use http_client::StatusCode;
 use web_api::{error::ErrorDiscriminants, routes::v1::vms::VmsParameters};
 
@@ -11,7 +10,7 @@ async fn test_vms_return_no_positions_for_non_existing_call_sign() {
         let positions = helper
             .app
             .get_vms_positions(
-                &CallSign::try_from("TEST").unwrap(),
+                &"TEST".parse().unwrap(),
                 VmsParameters {
                     start: Some(Utc.timestamp_opt(100, 0).unwrap()),
                     end: Some(Utc.timestamp_opt(101, 0).unwrap()),
@@ -31,7 +30,7 @@ async fn test_vms_return_bad_request_when_only_start_or_end_is_provided() {
         let error = helper
             .app
             .get_vms_positions(
-                &CallSign::try_from("TEST").unwrap(),
+                &"TEST".parse().unwrap(),
                 VmsParameters {
                     start: None,
                     end: Some(Utc.timestamp_opt(101, 0).unwrap()),
@@ -43,7 +42,7 @@ async fn test_vms_return_bad_request_when_only_start_or_end_is_provided() {
         let error2 = helper
             .app
             .get_vms_positions(
-                &CallSign::try_from("TEST").unwrap(),
+                &"TEST".parse().unwrap(),
                 VmsParameters {
                     start: Some(Utc.timestamp_opt(101, 0).unwrap()),
                     end: None,
