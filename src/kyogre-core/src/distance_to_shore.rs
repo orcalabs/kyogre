@@ -67,5 +67,5 @@ pub fn running_in_test() -> bool {
         .try_into()
         .unwrap();
 
-    environment == Environment::Test
+    environment == Environment::Test || environment == Environment::Local
 }
