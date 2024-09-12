@@ -35,53 +35,49 @@ impl<T> Range<T> {
 
 impl<T: FromStr> FromStr for Range<T>
 where
-    <T as FromStr>::Err: Send + Sync + std::error::Error + 'static,
+    T::Err: Send + Sync + std::error::Error + 'static,
 {
     type Err = RangeError;
 
     fn from_str(v: &str) -> Result<Self, Self::Err> {
-        let split = v.split(',').collect::<Vec<_>>();
+        let Some((lower, upper)) = v.split_once(',') else {
+            return InvalidSnafu { val: v }.fail();
+        };
 
-        if split.len() != 2 {
-            return InvalidSnafu { val: v.to_string() }.fail();
-        }
-        if split[0].is_empty() {
-            return InvalidSnafu { val: v.to_string() }.fail();
-        }
-        if split[1].is_empty() {
-            return InvalidSnafu { val: v.to_string() }.fail();
+        if lower.is_empty() || upper.is_empty() {
+            return InvalidSnafu { val: v }.fail();
         }
 
-        let (lower_bound, start_str) = split[0].split_at(1);
+        let (lower_bound, start_str) = lower.split_at(1);
         let start = match start_str.len() {
             0 => Ok(Bound::Unbounded),
             _ => {
                 let start_value = start_str
                     .parse::<T>()
                     .boxed()
-                    .with_context(|_| ParseBoundSnafu { val: v.to_string() })?;
+                    .context(ParseBoundSnafu { val: v })?;
 
                 match lower_bound {
                     "(" => Ok(Bound::Excluded(start_value)),
                     "[" => Ok(Bound::Included(start_value)),
-                    _ => Err(InvalidSnafu { val: v.to_string() }.build()),
+                    _ => InvalidSnafu { val: v }.fail(),
                 }
             }
         }?;
 
-        let (end_str, upper_bound) = split[1].split_at(split[1].len() - 1);
+        let (end_str, upper_bound) = upper.split_at(upper.len() - 1);
         let end = match end_str.len() {
             0 => Ok(Bound::Unbounded),
             _ => {
                 let end_value = end_str
                     .parse::<T>()
                     .boxed()
-                    .with_context(|_| ParseBoundSnafu { val: v.to_string() })?;
+                    .context(ParseBoundSnafu { val: v })?;
 
                 match upper_bound {
                     ")" => Ok(Bound::Excluded(end_value)),
                     "]" => Ok(Bound::Included(end_value)),
-                    _ => Err(InvalidSnafu { val: v.to_string() }.build()),
+                    _ => InvalidSnafu { val: v }.fail(),
                 }
             }
         }?;
@@ -92,12 +88,12 @@ where
 
 impl<T: FromStr> TryFrom<String> for Range<T>
 where
-    <T as FromStr>::Err: Send + Sync + std::error::Error + 'static,
+    T::Err: Send + Sync + std::error::Error + 'static,
 {
     type Error = RangeError;
 
     fn try_from(v: String) -> Result<Self, Self::Error> {
-        Self::from_str(v.as_str())
+        v.parse()
     }
 }
 
@@ -130,7 +126,7 @@ impl<T: Display> Serialize for Range<T> {
 
 impl<'de, T: FromStr> Deserialize<'de> for Range<T>
 where
-    <T as FromStr>::Err: Send + Sync + std::error::Error + 'static,
+    T::Err: Send + Sync + std::error::Error + 'static,
 {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -140,7 +136,7 @@ where
 
         impl<'de, T: FromStr> Visitor<'de> for RangeVisitor<T>
         where
-            <T as FromStr>::Err: Send + Sync + std::error::Error + 'static,
+            T::Err: Send + Sync + std::error::Error + 'static,
         {
             type Value = Range<T>;
 
