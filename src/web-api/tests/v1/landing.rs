@@ -2,7 +2,7 @@ use super::helper::{test, test_with_cache};
 use chrono::{DateTime, Utc};
 use engine::*;
 use fiskeridir_rs::{GearGroup, SpeciesGroup, VesselLengthGroup};
-use kyogre_core::{FiskeridirVesselId, LandingsSorting, Ordering};
+use kyogre_core::{CatchLocationId, FiskeridirVesselId, LandingsSorting, Ordering};
 use web_api::routes::v1::landing::LandingsParams;
 
 #[tokio::test]
@@ -81,10 +81,7 @@ async fn test_landings_returns_landings_in_catch_location() {
         helper.refresh_cache().await;
 
         let params = LandingsParams {
-            catch_locations: Some(vec![
-                "09-05".try_into().unwrap(),
-                "09-04".try_into().unwrap(),
-            ]),
+            catch_locations: Some(vec![CatchLocationId::new(9, 5), CatchLocationId::new(9, 4)]),
             ordering: Some(Ordering::Asc),
             ..Default::default()
         };
