@@ -1,5 +1,5 @@
 use chrono::{DateTime, NaiveDate, Utc};
-use fiskeridir_rs::FiskdirVesselNationalityGroup;
+use fiskeridir_rs::{FiskdirVesselNationalityGroup, SpeciesGroup, SpeciesMainGroup};
 use kyogre_core::FiskeridirVesselId;
 use unnest_insert::UnnestInsert;
 
@@ -64,8 +64,8 @@ pub struct NewErsPorCatch {
     pub living_weight: Option<i32>,
     pub species_fao_id: Option<String>,
     pub species_fiskeridir_id: Option<i32>,
-    pub species_group_id: Option<i32>,
-    pub species_main_group_id: Option<i32>,
+    pub species_group_id: i32,
+    pub species_main_group_id: i32,
 }
 
 impl From<fiskeridir_rs::ErsPor> for NewErsPor {
@@ -118,10 +118,17 @@ impl NewErsPorCatch {
         let c = &ers_por.catch;
         let s = &c.species;
 
+        // According to our understanding, all the fields of a `NewErsPorCatch` (except `species_fiskeridir_id`)
+        // are required, meaning if one of these fields are set, then all of them should be set.
+        // Here we only check if one of the fields is `Some`, which means all the other fields
+        // _should_ also be `Some`, and let our database constraints catch any cases where they are not,
+        // which will log an error that we can audit.
         if c.quantum_type_code.is_some()
             || s.living_weight.is_some()
             || s.species_fao_code.is_some()
             || s.species_fdir_code.is_some()
+            || s.species_group_code.is_some()
+            || s.species_main_group_code.is_some()
         {
             Some(Self {
                 message_id: ers_por.message_info.message_id as i64,
@@ -138,12 +145,17 @@ impl NewErsPorCatch {
                     .clone()
                     .map(|v| v.into_inner()),
                 species_fiskeridir_id: ers_por.catch.species.species_fdir_code.map(|v| v as i32),
-                species_group_id: ers_por.catch.species.species_group_code.map(|v| v as i32),
+                species_group_id: ers_por
+                    .catch
+                    .species
+                    .species_group_code
+                    .unwrap_or(SpeciesGroup::Unknown) as i32,
                 species_main_group_id: ers_por
                     .catch
                     .species
                     .species_main_group_code
-                    .map(|v| v as i32),
+                    .unwrap_or(SpeciesMainGroup::Unknown)
+                    as i32,
             })
         } else {
             None
