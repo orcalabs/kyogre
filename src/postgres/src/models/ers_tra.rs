@@ -116,10 +116,17 @@ impl NewErsTraCatch {
         let c = &ers_tra.catch;
         let s = &c.species;
 
+        // According to our understanding, all the fields of a `NewErsTraCatch` (except `species_fiskeridir_id`)
+        // are required, meaning if one of these fields are set, then all of them should be set.
+        // Here we only check if one of the fields is `Some`, which means all the other fields
+        // _should_ also be `Some`, and let our database constraints catch any cases where they are not,
+        // which will log an error that we can audit.
         if c.quantum_type_code.is_some()
             || s.living_weight.is_some()
             || s.species_fao_code.is_some()
             || s.species_fdir_code.is_some()
+            || s.species_group_code.is_some()
+            || s.species_main_group_code.is_some()
         {
             Some(Self {
                 message_id: ers_tra.message_info.message_id as i64,
