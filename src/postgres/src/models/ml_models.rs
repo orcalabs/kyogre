@@ -82,8 +82,7 @@ impl TryFrom<FishingWeightPrediction> for kyogre_core::FishingWeightPrediction {
     type Error = Error;
 
     fn try_from(value: FishingWeightPrediction) -> std::result::Result<Self, Self::Error> {
-        let catch_location_id = CatchLocationId::try_from(value.catch_location_id.as_str())?;
-
+        let catch_location_id = value.catch_location_id.parse()?;
         Ok(Self {
             catch_location_id,
             weight: value.weight,

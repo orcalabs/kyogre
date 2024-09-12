@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use geo::geometry::Polygon;
 use serde::{
     de::{self, Visitor},
@@ -69,22 +71,16 @@ impl CatchLocationId {
     }
 }
 
-impl TryFrom<&str> for CatchLocationId {
-    type Error = CatchLocationIdError;
+impl FromStr for CatchLocationId {
+    type Err = CatchLocationIdError;
 
-    fn try_from(v: &str) -> Result<Self, Self::Error> {
-        let split: Vec<&str> = v.split('-').collect();
-        if split.len() != 2 {
-            return LengthSnafu { id: v.to_string() }.fail();
-        }
+    fn from_str(v: &str) -> Result<Self, Self::Err> {
+        let Some((main, catch)) = v.split_once('-') else {
+            return LengthSnafu { id: v }.fail();
+        };
 
-        let main_area = split[0]
-            .parse::<i32>()
-            .with_context(|_| ParseSnafu { id: v.to_string() })?;
-
-        let catch_area = split[1]
-            .parse::<i32>()
-            .with_context(|_| ParseSnafu { id: v.to_string() })?;
+        let main_area = main.parse().context(ParseSnafu { id: v })?;
+        let catch_area = catch.parse().context(ParseSnafu { id: v })?;
 
         Ok(Self::new(main_area, catch_area))
     }
@@ -100,7 +96,7 @@ impl TryFrom<String> for CatchLocationId {
     type Error = CatchLocationIdError;
 
     fn try_from(v: String) -> Result<Self, Self::Error> {
-        CatchLocationId::try_from(v.as_ref())
+        v.parse()
     }
 }
 
@@ -125,13 +121,6 @@ impl<'de> Visitor<'de> for CatchLocationIdVisitor {
     where
         E: de::Error,
     {
-        CatchLocationId::try_from(value).map_err(|e| de::Error::custom(e))
-    }
-
-    fn visit_string<E>(self, value: String) -> Result<Self::Value, E>
-    where
-        E: de::Error,
-    {
-        CatchLocationId::try_from(value).map_err(|e| de::Error::custom(e))
+        value.parse().map_err(de::Error::custom)
     }
 }
