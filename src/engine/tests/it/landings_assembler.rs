@@ -4,55 +4,15 @@ use engine::*;
 use kyogre_core::*;
 
 #[tokio::test]
-async fn test_logs_conflicts() {
-    test(|helper, builder| async move {
-        let state = builder
-            .vessels(1)
-            .landings(1)
-            .new_cycle()
-            .landings(1)
-            .build()
-            .await;
-
-        let mut log = helper.adapter().trip_assembler_log().await;
-        assert_eq!(log.len(), 2);
-        let log = log.pop().unwrap();
-        assert!(log.is_conflict());
-
-        assert_eq!(
-            log.conflict.unwrap().timestamp(),
-            Utc.from_utc_datetime(
-                &state.landings[1]
-                    .landing_timestamp
-                    .date_naive()
-                    .and_hms_opt(0, 0, 0)
-                    .unwrap()
-            )
-            .timestamp()
-        );
-        assert_eq!(
-            log.conflict_vessel_event_timestamp.unwrap().timestamp(),
-            state.landings[1].landing_timestamp.timestamp()
-        );
-        assert_eq!(
-            log.conflict_vessel_event_type_id.unwrap(),
-            VesselEventType::Landing,
-        );
-        assert_eq!(log.conflict_vessel_event_id.unwrap(), 2);
-    })
-    .await
-}
-#[tokio::test]
-async fn test_logs_actions() {
+async fn test_does_not_logs_actions_on_success() {
     test(|helper, builder| async move {
         let timestamp = Utc.timestamp_opt(1000000000, 0).unwrap();
-        let state = builder
+        builder
             .vessels(1)
             .landings(1)
             .modify(|v| {
                 v.landing.landing_timestamp = timestamp;
             })
-            .new_cycle()
             .landings(1)
             .modify(|v| {
                 v.landing.landing_timestamp = timestamp + Duration::days(1);
@@ -60,50 +20,8 @@ async fn test_logs_actions() {
             .build()
             .await;
 
-        let mut log = helper.adapter().trip_assembler_log().await;
-        assert_eq!(log.len(), 2);
-        let log2 = log.pop().unwrap();
-        let log1 = log.pop().unwrap();
-
-        assert!(log1.calculation_timer_prior.is_none());
-        assert!(!log1.is_conflict());
-        assert!(log1.prior_trip_vessel_events.is_empty());
-        assert_eq!(log1.new_vessel_events.len(), 1);
-
-        assert_eq!(log1.new_vessel_events[0].vessel_event_id, 1);
-        assert_eq!(
-            log1.new_vessel_events[0].event_type,
-            VesselEventType::Landing
-        );
-        assert_eq!(
-            log1.new_vessel_events[0].timestamp.timestamp(),
-            state.landings[0].landing_timestamp.timestamp()
-        );
-
-        assert!(log2.calculation_timer_prior.is_some());
-        assert!(!log2.is_conflict());
-        assert_eq!(log2.prior_trip_vessel_events.len(), 1);
-
-        assert_eq!(log2.prior_trip_vessel_events[0].vessel_event_id, 1);
-        assert_eq!(
-            log2.prior_trip_vessel_events[0].event_type,
-            VesselEventType::Landing
-        );
-        assert_eq!(
-            log2.prior_trip_vessel_events[0].timestamp.timestamp(),
-            state.landings[0].landing_timestamp.timestamp()
-        );
-
-        assert_eq!(log2.new_vessel_events.len(), 1);
-        assert_eq!(log2.new_vessel_events[0].vessel_event_id, 2);
-        assert_eq!(
-            log2.new_vessel_events[0].event_type,
-            VesselEventType::Landing
-        );
-        assert_eq!(
-            log2.new_vessel_events[0].timestamp.timestamp(),
-            state.landings[1].landing_timestamp.timestamp()
-        );
+        let logs = helper.adapter().trip_assembler_log().await;
+        assert!(logs.is_empty());
     })
     .await
 }

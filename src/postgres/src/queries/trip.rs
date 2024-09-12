@@ -1,8 +1,8 @@
 use crate::{
     error::{Result, TripPositionMatchSnafu},
     models::{
-        CurrentTrip, NewTripAssemblerConflict, NewTripAssemblerLogEntry, NewTripReturning, Trip,
-        TripAisVmsPosition, TripAssemblerLogEntry, TripCalculationTimer, TripDetailed,
+        CurrentTrip, NewTrip, NewTripAssemblerConflict, NewTripAssemblerLogEntry, NewTripReturning,
+        Trip, TripAisVmsPosition, TripAssemblerLogEntry, TripCalculationTimer, TripDetailed,
         TripPrunedAisVmsPosition,
     },
     PostgresAdapter,
@@ -1223,13 +1223,12 @@ WHERE
         Ok(timer)
     }
 
-    pub(crate) async fn add_new_trip_assembler_log_entry<'a>(
-        &'a self,
-        batch: NewTripAssemblerLogEntry,
-        tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
+    pub(crate) async fn add_new_trip_assembler_log_entry(
+        &self,
+        batch: NewTripAssemblerLogEntry<'_>,
     ) -> Result<()> {
-        let prior_trip_vessel_events = serde_json::to_value(&batch.prior_trip_vessel_events)?;
-        let new_vessel_events = serde_json::to_value(&batch.new_vessel_events)?;
+        let prior_trip_vessel_events = serde_json::to_value(batch.prior_trip_vessel_events)?;
+        let new_vessel_events = serde_json::to_value(batch.new_vessel_events)?;
 
         sqlx::query!(
             r#"
@@ -1260,7 +1259,7 @@ VALUES
             new_vessel_events,
             batch.conflict_strategy.to_string(),
         )
-        .execute(&mut **tx)
+        .execute(&self.pool)
         .await?;
 
         Ok(())
@@ -1275,22 +1274,7 @@ VALUES
             .unwrap()
             .clone();
 
-        let mut new_trips = Vec::with_capacity(value.values.len());
-        let mut trip_positions = Vec::new();
-
-        let mut trip_positions_insert_mapping: HashMap<i64, TripId> = HashMap::new();
-
-        for v in value.values {
-            new_trips.push(crate::models::NewTrip::try_from(&v)?);
-            if let Some(output) = v.trip_position_output {
-                trip_positions.push((output, v.trip.period.start().timestamp()));
-            }
-        }
-
-        let earliest_trip_start = earliest_trip_period.start();
-        let earliest_trip_period = PgRange::from(&earliest_trip_period);
-
-        let batch = NewTripAssemblerLogEntry {
+        let log = NewTripAssemblerLogEntry {
             fiskeridir_vessel_id: value.fiskeridir_vessel_id,
             calculation_timer_prior_to_batch: value.prior_trip_calculation_time,
             calculation_timer_post_batch: value.new_trip_calculation_time,
@@ -1301,15 +1285,56 @@ VALUES
                 .map(|v| v.vessel_event_timestamp),
             conflict_vessel_event_id: value.conflict.as_ref().and_then(|v| v.vessel_event_id),
             conflict_vessel_event_type_id: value.conflict.as_ref().map(|v| v.event_type),
-            prior_trip_vessel_events: value.prior_trip_events,
-            new_vessel_events: value.new_trip_events,
+            prior_trip_vessel_events: &value.prior_trip_events,
+            new_vessel_events: &value.new_trip_events,
             conflict_strategy: value.conflict_strategy,
         };
 
-        let mut tx = self.pool.begin().await?;
+        let mut new_trips = Vec::with_capacity(value.values.len());
+        let mut trip_positions = Vec::new();
+        for v in value.values {
+            new_trips.push(crate::models::NewTrip::try_from(&v)?);
+            if let Some(output) = v.trip_position_output {
+                trip_positions.push((output, v.trip.period.start().timestamp()));
+            }
+        }
 
-        self.add_new_trip_assembler_log_entry(batch, &mut tx)
-            .await?;
+        if let Err(e) = self
+            .add_trips_inner(
+                new_trips,
+                earliest_trip_period,
+                trip_positions,
+                value.fiskeridir_vessel_id,
+                value.trip_assembler_id,
+                value.conflict_strategy,
+                value.new_trip_calculation_time,
+            )
+            .await
+        {
+            self.add_new_trip_assembler_log_entry(log).await?;
+            return Err(e);
+        }
+
+        Ok(())
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) async fn add_trips_inner(
+        &self,
+        new_trips: Vec<NewTrip>,
+        earliest_trip_period: DateRange,
+        trip_positions: Vec<(TripPositionLayerOutput, i64)>,
+        vessel_id: FiskeridirVesselId,
+        trip_assembler_id: TripAssemblerId,
+        conflict_strategy: TripsConflictStrategy,
+        new_trip_calculation_time: DateTime<Utc>,
+    ) -> Result<()> {
+        let earliest_trip_start = earliest_trip_period.start();
+        let earliest_trip_period = PgRange::from(&earliest_trip_period);
+
+        let mut trip_positions_insert_mapping: HashMap<i64, TripId> = HashMap::new();
+
+        let mut tx = self.pool.begin().await?;
         // We assume that trip assemblers process all events and conflicts on each run and can
         // therefore set conflict to NULL.
         // Additionally, we assume that no data that can produce conflicts are added concurrently
@@ -1330,14 +1355,14 @@ SET
     conflict_vessel_event_id = NULL,
     conflict_vessel_event_timestamp = NULL
             "#,
-            value.fiskeridir_vessel_id.into_inner(),
-            value.trip_assembler_id as i32,
-            value.new_trip_calculation_time,
+            vessel_id.into_inner(),
+            trip_assembler_id as i32,
+            new_trip_calculation_time,
         )
         .execute(&mut *tx)
         .await?;
 
-        match value.conflict_strategy {
+        match conflict_strategy {
             TripsConflictStrategy::Replace => {
                 let periods: Vec<PgRange<DateTime<Utc>>> =
                     new_trips.iter().map(|v| v.period.clone()).collect();
@@ -1350,8 +1375,8 @@ WHERE
     AND trip_assembler_id = $3
                     "#,
                     &periods,
-                    value.fiskeridir_vessel_id.into_inner(),
-                    value.trip_assembler_id as i32,
+                    vessel_id.into_inner(),
+                    trip_assembler_id as i32,
                 )
                 .execute(&mut *tx)
                 .await
@@ -1364,8 +1389,8 @@ WHERE
     fiskeridir_vessel_id = $1
     AND trip_assembler_id = $2
                 "#,
-                value.fiskeridir_vessel_id.into_inner(),
-                value.trip_assembler_id as i32,
+                vessel_id.into_inner(),
+                trip_assembler_id as i32,
             )
             .execute(&mut *tx)
             .await
@@ -1373,11 +1398,10 @@ WHERE
             TripsConflictStrategy::Error => Ok(()),
         }?;
 
-        let start_of_prior_trip: Result<Option<Option<DateTime<Utc>>>> =
-            match value.trip_assembler_id {
-                TripAssemblerId::Landings => Ok(None),
-                TripAssemblerId::Ers => Ok(sqlx::query!(
-                    r#"
+        let start_of_prior_trip: Result<Option<Option<DateTime<Utc>>>> = match trip_assembler_id {
+            TripAssemblerId::Landings => Ok(None),
+            TripAssemblerId::Ers => Ok(sqlx::query!(
+                r#"
 UPDATE trips
 SET
     landing_coverage = tstzrange (LOWER(period), $3)
@@ -1398,14 +1422,14 @@ WHERE
 RETURNING
     LOWER(period) AS ts
                     "#,
-                    value.fiskeridir_vessel_id.into_inner(),
-                    earliest_trip_period,
-                    earliest_trip_start,
-                )
-                .fetch_optional(&mut *tx)
-                .await?
-                .map(|v| v.ts)),
-            };
+                vessel_id.into_inner(),
+                earliest_trip_period,
+                earliest_trip_start,
+            )
+            .fetch_optional(&mut *tx)
+            .await?
+            .map(|v| v.ts)),
+        };
 
         let earliest = if let Some(start_of_prior_trip) = start_of_prior_trip?.flatten() {
             std::cmp::min(earliest_trip_start, start_of_prior_trip)
@@ -1440,12 +1464,10 @@ RETURNING
             .map(|v| v.trip_id)
             .collect::<HashSet<_>>();
 
-        self.connect_events_to_trips(inserted_trips, value.trip_assembler_id, &mut tx)
+        self.connect_events_to_trips(inserted_trips, trip_assembler_id, &mut tx)
             .await?;
 
-        let boundary = self
-            .trips_refresh_boundary(value.fiskeridir_vessel_id, &mut tx)
-            .await?;
+        let boundary = self.trips_refresh_boundary(vessel_id, &mut tx).await?;
 
         let boundary = if let Some(boundary) = boundary {
             if boundary < earliest {
@@ -1467,7 +1489,7 @@ WHERE
     t.fiskeridir_vessel_id = $1
     AND $2 >= LOWER(t.period)
             "#,
-            value.fiskeridir_vessel_id.into_inner(),
+            vessel_id.into_inner(),
             boundary,
         )
         .fetch_all(&mut *tx)
@@ -1477,7 +1499,7 @@ WHERE
 
         self.add_trips_detailed(trip_ids, &mut tx).await?;
 
-        self.reset_trips_refresh_boundary(value.fiskeridir_vessel_id, &mut tx)
+        self.reset_trips_refresh_boundary(vessel_id, &mut tx)
             .await?;
 
         tx.commit().await?;

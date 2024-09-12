@@ -51,7 +51,7 @@ pub struct TripAssemblerLogEntry {
 }
 
 #[derive(Debug, Clone)]
-pub struct NewTripAssemblerLogEntry {
+pub struct NewTripAssemblerLogEntry<'a> {
     pub fiskeridir_vessel_id: FiskeridirVesselId,
     pub calculation_timer_prior_to_batch: Option<DateTime<Utc>>,
     pub calculation_timer_post_batch: DateTime<Utc>,
@@ -59,9 +59,9 @@ pub struct NewTripAssemblerLogEntry {
     pub conflict_vessel_event_timestamp: Option<DateTime<Utc>>,
     pub conflict_vessel_event_id: Option<i64>,
     pub conflict_vessel_event_type_id: Option<VesselEventType>,
-    pub prior_trip_vessel_events: Vec<MinimalVesselEvent>,
+    pub prior_trip_vessel_events: &'a [MinimalVesselEvent],
     pub conflict_strategy: TripsConflictStrategy,
-    pub new_vessel_events: Vec<MinimalVesselEvent>,
+    pub new_vessel_events: &'a [MinimalVesselEvent],
 }
 
 #[derive(Debug, Clone, UnnestInsert)]
