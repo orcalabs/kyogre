@@ -2,7 +2,9 @@ use super::helper::test_with_cache;
 use chrono::{DateTime, Utc};
 use engine::*;
 use fiskeridir_rs::{ErsDca, GearGroup, SpeciesGroup, VesselLengthGroup};
-use kyogre_core::{AirTemperature, FiskeridirVesselId, HaulsSorting, Ordering, WindSpeed};
+use kyogre_core::{
+    AirTemperature, CatchLocationId, FiskeridirVesselId, HaulsSorting, Ordering, WindSpeed,
+};
 use web_api::routes::v1::haul::HaulsParams;
 
 #[tokio::test]
@@ -79,10 +81,7 @@ async fn test_hauls_returns_hauls_in_catch_location() {
         helper.refresh_cache().await;
 
         let params = HaulsParams {
-            catch_locations: Some(vec![
-                "09-05".try_into().unwrap(),
-                "09-04".try_into().unwrap(),
-            ]),
+            catch_locations: Some(vec![CatchLocationId::new(9, 5), CatchLocationId::new(9, 4)]),
             ..Default::default()
         };
 
