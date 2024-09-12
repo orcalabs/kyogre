@@ -52,6 +52,7 @@ pub struct RegisterVessel {
     pub owners: Vec<RegisterVesselOwner>,
     pub radio_call_sign: Option<CallSign>,
     pub registration_mark: NonEmptyString,
+    #[serde(default)]
     #[serde_as(as = "OptFloatFromStr")]
     pub width: Option<f64>,
 }
