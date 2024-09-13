@@ -8,6 +8,7 @@ use crate::{
 };
 use async_trait::async_trait;
 use fiskeridir_rs::{GearGroup, SpeciesGroup, VesselLengthGroup};
+use kyogre_core::retry;
 use kyogre_core::{
     ActiveHaulsFilter, ActiveLandingFilter, CatchLocationId, CoreResult, FiskeridirVesselId,
     HaulsMatrixQuery, LandingMatrixQuery, MatrixCacheOutbound,
@@ -109,16 +110,16 @@ impl MatrixCacheOutbound for Client {
     #[instrument(name = "cache_landing_matrix", skip(self))]
     async fn landing_matrix(
         &self,
-        query: LandingMatrixQuery,
+        query: &LandingMatrixQuery,
     ) -> CoreResult<Option<kyogre_core::LandingMatrix>> {
-        Ok(self.landing_matrix_impl(query).await?)
+        Ok(retry(|| self.landing_matrix_impl(query.clone())).await?)
     }
     #[instrument(name = "cache_hauls_matrix", skip(self))]
     async fn hauls_matrix(
         &self,
-        query: HaulsMatrixQuery,
+        query: &HaulsMatrixQuery,
     ) -> CoreResult<Option<kyogre_core::HaulsMatrix>> {
-        Ok(self.hauls_matrix_impl(query).await?)
+        Ok(retry(|| self.hauls_matrix_impl(query.clone())).await?)
     }
 }
 

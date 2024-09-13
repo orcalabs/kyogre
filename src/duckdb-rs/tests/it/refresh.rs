@@ -15,7 +15,7 @@ async fn test_haul_refresh_with_no_data_succeeds_and_returns_miss_on_subsequent_
 
         let cache_result = helper
             .cache
-            .hauls_matrix(HaulsMatrixQuery {
+            .hauls_matrix(&HaulsMatrixQuery {
                 months: None,
                 catch_locations: None,
                 gear_group_ids: None,
@@ -53,7 +53,7 @@ async fn test_haul_returns_hit_after_refreshing_with_data() {
 
         let cache_result = helper
             .cache
-            .hauls_matrix(HaulsMatrixQuery {
+            .hauls_matrix(&HaulsMatrixQuery {
                 months: None,
                 catch_locations: None,
                 gear_group_ids: None,
@@ -80,7 +80,7 @@ async fn test_landing_refresh_with_no_data_succeeds_and_returns_miss_on_subseque
 
         let cache_result = helper
             .cache
-            .landing_matrix(LandingMatrixQuery {
+            .landing_matrix(&LandingMatrixQuery {
                 months: None,
                 catch_locations: None,
                 gear_group_ids: None,
@@ -109,7 +109,7 @@ async fn test_landing_returns_hit_after_refreshing_with_data() {
 
         let cache_result = helper
             .cache
-            .landing_matrix(LandingMatrixQuery {
+            .landing_matrix(&LandingMatrixQuery {
                 months: None,
                 catch_locations: None,
                 gear_group_ids: None,
