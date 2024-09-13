@@ -11,7 +11,46 @@ use kyogre_core::*;
 use sqlx::{postgres::types::PgRange, Pool, Postgres};
 
 impl PostgresAdapter {
-    pub(crate) async fn hauls_matrix_impl(
+    pub(crate) async fn hauls_matrix_impl(&self, query: &HaulsMatrixQuery) -> Result<HaulsMatrix> {
+        let active_filter = query.active_filter;
+        let args = HaulsMatrixArgs::try_from(query.clone())?;
+
+        let j1 = tokio::spawn(PostgresAdapter::single_haul_matrix(
+            self.pool.clone(),
+            args.clone(),
+            active_filter,
+            HaulMatrixXFeature::Date,
+        ));
+        let j2 = tokio::spawn(PostgresAdapter::single_haul_matrix(
+            self.pool.clone(),
+            args.clone(),
+            active_filter,
+            HaulMatrixXFeature::VesselLength,
+        ));
+        let j3 = tokio::spawn(PostgresAdapter::single_haul_matrix(
+            self.pool.clone(),
+            args.clone(),
+            active_filter,
+            HaulMatrixXFeature::GearGroup,
+        ));
+        let j4 = tokio::spawn(PostgresAdapter::single_haul_matrix(
+            self.pool.clone(),
+            args.clone(),
+            active_filter,
+            HaulMatrixXFeature::SpeciesGroup,
+        ));
+
+        let (dates, length_group, gear_group, species_group) = tokio::join!(j1, j2, j3, j4);
+
+        Ok(HaulsMatrix {
+            dates: dates??,
+            length_group: length_group??,
+            gear_group: gear_group??,
+            species_group: species_group??,
+        })
+    }
+
+    pub(crate) async fn single_haul_matrix(
         pool: Pool<Postgres>,
         args: HaulsMatrixArgs,
         active_filter: ActiveHaulsFilter,
