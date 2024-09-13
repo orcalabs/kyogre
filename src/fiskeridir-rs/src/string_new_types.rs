@@ -37,18 +37,11 @@ impl FromStr for NonEmptyString {
     type Err = ParseStringError;
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
-        NonEmptyString::try_from(value.to_owned())
-    }
-}
-
-impl TryFrom<String> for NonEmptyString {
-    type Error = ParseStringError;
-
-    fn try_from(value: String) -> Result<Self, Self::Error> {
+        let value = value.trim();
         if value.is_empty() {
             EmptySnafu.fail()
         } else {
-            Ok(NonEmptyString(value))
+            Ok(Self(value.into()))
         }
     }
 }
@@ -56,6 +49,14 @@ impl TryFrom<String> for NonEmptyString {
 impl NonEmptyString {
     pub fn into_inner(self) -> String {
         self.0
+    }
+}
+
+impl Deref for PrunedString {
+    type Target = str;
+
+    fn deref(&self) -> &Self::Target {
+        self.as_ref()
     }
 }
 
@@ -102,7 +103,7 @@ impl FromStr for PrunedString {
     type Err = ParseStringError;
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
-        let pruned_value = value.replace(['_', '-', ' '], "");
+        let pruned_value = value.trim().replace(['_', '-', ' '], "");
         if pruned_value.is_empty() {
             EmptySnafu.fail()
         } else {

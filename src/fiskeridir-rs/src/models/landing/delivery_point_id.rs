@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::{ops::Deref, str::FromStr};
 
 use crate::{
     error::ParseStringError,
@@ -32,6 +32,14 @@ impl DeliveryPointId {
 impl AsRef<str> for DeliveryPointId {
     fn as_ref(&self) -> &str {
         self.0.as_ref()
+    }
+}
+
+impl Deref for DeliveryPointId {
+    type Target = str;
+
+    fn deref(&self) -> &Self::Target {
+        self.as_ref()
     }
 }
 

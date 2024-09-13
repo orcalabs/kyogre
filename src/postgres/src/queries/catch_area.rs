@@ -17,7 +17,7 @@ impl PostgresAdapter {
 
     pub(crate) async fn add_catch_main_areas<'a>(
         &'a self,
-        areas: Vec<NewCatchMainArea>,
+        areas: Vec<NewCatchMainArea<'_>>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
     ) -> Result<()> {
         NewCatchMainArea::unnest_insert(areas, &mut **tx).await?;
@@ -26,7 +26,7 @@ impl PostgresAdapter {
 
     pub(crate) async fn add_area_groupings<'a>(
         &'a self,
-        regions: Vec<NewAreaGrouping>,
+        regions: Vec<NewAreaGrouping<'_>>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
     ) -> Result<()> {
         NewAreaGrouping::unnest_insert(regions, &mut **tx).await?;
@@ -35,7 +35,7 @@ impl PostgresAdapter {
 
     pub(crate) async fn add_catch_main_area_fao<'a>(
         &'a self,
-        areas: Vec<NewCatchMainAreaFao>,
+        areas: Vec<NewCatchMainAreaFao<'_>>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
     ) -> Result<()> {
         NewCatchMainAreaFao::unnest_insert(areas, &mut **tx).await?;

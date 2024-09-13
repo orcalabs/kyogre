@@ -1,4 +1,3 @@
-use crate::error::Result;
 use unnest_insert::UnnestInsert;
 
 #[derive(Debug, Clone, PartialEq, UnnestInsert)]
@@ -20,20 +19,20 @@ pub struct NewCatchArea {
     conflict = "catch_main_area_id",
     update_coalesce_all
 )]
-pub struct NewCatchMainArea {
+pub struct NewCatchMainArea<'a> {
     #[unnest_insert(field_name = "catch_main_area_id")]
     pub id: i32,
-    pub name: Option<String>,
+    pub name: Option<&'a str>,
     pub longitude: Option<f64>,
     pub latitude: Option<f64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, UnnestInsert)]
 #[unnest_insert(table_name = "area_groupings", conflict = "area_grouping_id")]
-pub struct NewAreaGrouping {
+pub struct NewAreaGrouping<'a> {
     #[unnest_insert(field_name = "area_grouping_id")]
-    pub id: String,
-    pub name: Option<String>,
+    pub id: &'a str,
+    pub name: Option<&'a str>,
 }
 
 #[derive(Debug, Clone, PartialEq, UnnestInsert)]
@@ -41,81 +40,55 @@ pub struct NewAreaGrouping {
     table_name = "catch_main_area_fao",
     conflict = "catch_main_area_fao_id"
 )]
-pub struct NewCatchMainAreaFao {
+pub struct NewCatchMainAreaFao<'a> {
     #[unnest_insert(field_name = "catch_main_area_fao_id")]
     pub id: i32,
-    pub name: Option<String>,
+    pub name: Option<&'a str>,
 }
 
-impl NewAreaGrouping {
-    pub fn new(id: String, name: Option<String>) -> Self {
+impl<'a> NewAreaGrouping<'a> {
+    pub fn new(id: &'a str, name: Option<&'a str>) -> Self {
         Self { id, name }
     }
 
-    pub fn from_landing(landing: &fiskeridir_rs::Landing) -> Option<NewAreaGrouping> {
+    pub fn from_landing(landing: &'a fiskeridir_rs::Landing) -> Option<Self> {
         landing
             .catch_location
             .area_grouping_code
             .as_ref()
-            .map(|id| NewAreaGrouping {
-                id: id.clone().into_inner(),
-                name: landing
-                    .catch_location
-                    .area_grouping_code
-                    .clone()
-                    .map(|v| v.into_inner()),
+            .map(|id| Self {
+                id,
+                name: landing.catch_location.area_grouping_code.as_deref(),
             })
     }
 }
 
 impl NewCatchArea {
-    pub fn from_landing(landing: &fiskeridir_rs::Landing) -> Result<Option<NewCatchArea>> {
-        landing
-            .catch_location
-            .location_code
-            .map(|id| {
-                Ok(NewCatchArea {
-                    id: id as i32,
-                    latitude: landing.catch_location.location_latitude,
-                    longitude: landing.catch_location.location_longitude,
-                })
-            })
-            .transpose()
-    }
-}
-impl NewCatchMainArea {
-    pub fn from_landing(landing: &fiskeridir_rs::Landing) -> Result<Option<Self>> {
-        landing
-            .catch_location
-            .main_area_code
-            .map(|id| {
-                Ok(Self {
-                    id: id as i32,
-                    name: landing
-                        .catch_location
-                        .main_area
-                        .clone()
-                        .map(|v| v.into_inner()),
-                    latitude: landing.catch_location.main_area_latitude,
-                    longitude: landing.catch_location.main_area_longitude,
-                })
-            })
-            .transpose()
+    pub fn from_landing(landing: &fiskeridir_rs::Landing) -> Option<Self> {
+        landing.catch_location.location_code.map(|id| Self {
+            id: id as i32,
+            latitude: landing.catch_location.location_latitude,
+            longitude: landing.catch_location.location_longitude,
+        })
     }
 }
 
-impl NewCatchMainAreaFao {
-    pub fn from_landing(landing: &fiskeridir_rs::Landing) -> Option<NewCatchMainAreaFao> {
-        landing
-            .catch_location
-            .main_area_fao_code
-            .map(|id| NewCatchMainAreaFao {
-                id: id as i32,
-                name: landing
-                    .catch_location
-                    .main_area_fao
-                    .clone()
-                    .map(|v| v.into_inner()),
-            })
+impl<'a> NewCatchMainArea<'a> {
+    pub fn from_landing(landing: &'a fiskeridir_rs::Landing) -> Option<Self> {
+        landing.catch_location.main_area_code.map(|id| Self {
+            id: id as i32,
+            name: landing.catch_location.main_area.as_deref(),
+            latitude: landing.catch_location.main_area_latitude,
+            longitude: landing.catch_location.main_area_longitude,
+        })
+    }
+}
+
+impl<'a> NewCatchMainAreaFao<'a> {
+    pub fn from_landing(landing: &'a fiskeridir_rs::Landing) -> Option<Self> {
+        landing.catch_location.main_area_fao_code.map(|id| Self {
+            id: id as i32,
+            name: landing.catch_location.main_area_fao.as_deref(),
+        })
     }
 }

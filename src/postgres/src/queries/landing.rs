@@ -1,26 +1,22 @@
-use chrono::{DateTime, TimeZone, Utc};
-use chrono::{NaiveDateTime, NaiveTime};
-use futures::Stream;
-use futures::TryStreamExt;
-use kyogre_core::TripAssemblerId;
-use kyogre_core::VesselEventType;
-use kyogre_core::{FiskeridirVesselId, LandingsQuery};
+use std::{
+    cmp::min,
+    collections::{HashMap, HashSet},
+};
+
+use chrono::{DateTime, NaiveDateTime, NaiveTime, TimeZone, Utc};
+use fiskeridir_rs::{Gear, GearGroup, LandingId, VesselLengthGroup};
+use futures::{Stream, TryStreamExt};
+use kyogre_core::{FiskeridirVesselId, LandingsQuery, TripAssemblerId, VesselEventType};
 use sqlx::postgres::types::PgRange;
-use std::cmp::min;
-use std::collections::{HashMap, HashSet};
 use tracing::{error, info};
 use unnest_insert::{UnnestInsert, UnnestInsertReturning};
 
-use crate::error::{Error, Result};
-use crate::landing_set::PreparedLandingSet;
-use crate::models::NewLandingEntry;
-use crate::models::NewTripAssemblerConflict;
 use crate::{
+    error::{Error, Result},
     landing_set::LandingSet,
-    models::{Landing, NewLanding},
+    models::{Landing, NewLanding, NewLandingEntry, NewTripAssemblerConflict},
     PostgresAdapter,
 };
-use fiskeridir_rs::{Gear, GearGroup, LandingId, VesselLengthGroup};
 
 static CHUNK_SIZE: usize = 100_000;
 
@@ -252,12 +248,10 @@ WHERE
 
         let mut num_landings = 0;
 
-        let mut landing_set = LandingSet::with_capacity(CHUNK_SIZE, data_year);
+        let mut chunk = Vec::with_capacity(CHUNK_SIZE);
         for (i, item) in landings.enumerate() {
             match item {
-                Err(e) => {
-                    error!("failed to read data: {e:?}");
-                }
+                Err(e) => error!("failed to read data: {e:?}"),
                 Ok(item) => {
                     num_landings += 1;
                     existing_landing_ids.insert(item.id.clone().into_inner());
@@ -270,10 +264,10 @@ WHERE
                         continue;
                     }
 
-                    landing_set.add_landing(item)?;
+                    chunk.push(item);
 
                     if i % CHUNK_SIZE == 0 && i > 0 {
-                        let set = landing_set.prepare();
+                        let set = LandingSet::new(chunk.iter(), data_year);
                         self.add_landing_set(
                             set,
                             &mut inserted_landing_ids,
@@ -282,12 +276,13 @@ WHERE
                             &mut tx,
                         )
                         .await?;
+                        chunk.clear();
                     }
                 }
             }
         }
-        if landing_set.len() > 0 {
-            let set = landing_set.prepare();
+        if !chunk.is_empty() {
+            let set = LandingSet::new(chunk.iter(), data_year);
             self.add_landing_set(
                 set,
                 &mut inserted_landing_ids,
@@ -334,12 +329,14 @@ WHERE
 
     pub(crate) async fn add_landing_set<'a>(
         &'a self,
-        set: PreparedLandingSet,
+        set: LandingSet<'_>,
         inserted_landing_ids: &mut HashSet<String>,
         vessel_event_ids: &mut Vec<i64>,
         trip_assembler_conflicts: &mut HashMap<FiskeridirVesselId, NewTripAssemblerConflict>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
     ) -> Result<()> {
+        let set = set.prepare();
+
         self.add_delivery_point_ids(set.delivery_points, tx).await?;
 
         self.add_municipalities(set.municipalities, tx).await?;
@@ -371,20 +368,20 @@ WHERE
 
     async fn add_landings<'a>(
         &'a self,
-        mut landings: Vec<NewLanding>,
+        mut landings: Vec<NewLanding<'_>>,
         inserted_landing_ids: &mut HashSet<String>,
         vessel_event_ids: &mut Vec<i64>,
         trip_assembler_conflicts: &mut HashMap<FiskeridirVesselId, NewTripAssemblerConflict>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
     ) -> Result<()> {
-        landings.retain(|l| !inserted_landing_ids.contains(&l.landing_id));
+        landings.retain(|l| !inserted_landing_ids.contains(l.landing_id));
 
         let len = landings.len();
         let mut landing_id = Vec::with_capacity(len);
         let mut version = Vec::with_capacity(len);
 
         for l in landings.iter() {
-            landing_id.push(l.landing_id.as_str());
+            landing_id.push(l.landing_id);
             version.push(l.version);
         }
 
@@ -474,7 +471,7 @@ WHERE
 
     pub(crate) async fn add_landing_entries<'a>(
         &'a self,
-        entries: Vec<NewLandingEntry>,
+        entries: Vec<NewLandingEntry<'_>>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
     ) -> Result<()> {
         NewLandingEntry::unnest_insert(entries, &mut **tx).await?;

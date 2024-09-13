@@ -1,5 +1,5 @@
 use crate::models::AisVmsAreaPositionsReturning;
-use std::collections::{HashMap, HashSet};
+use std::collections::{hash_map::Entry, HashMap, HashSet};
 
 use crate::{
     error::Result,
@@ -79,35 +79,40 @@ ORDER BY
 
     pub(crate) async fn add_vms_impl(&self, vms: Vec<fiskeridir_rs::Vms>) -> Result<()> {
         let mut call_signs_unique = HashSet::new();
-        let mut vms_unique: HashMap<(String, DateTime<Utc>), NewVmsPosition> = HashMap::new();
-        let mut vms_earliest: HashMap<String, EarliestVms> = HashMap::new();
+        let mut vms_unique: HashMap<(&str, DateTime<Utc>), NewVmsPosition<'_>> = HashMap::new();
+        let mut vms_earliest: HashMap<&str, EarliestVms<'_>> = HashMap::new();
 
         let speed_threshold = 0.001;
-        for v in vms {
+        for v in &vms {
             if v.latitude.is_none() || v.longitude.is_none() {
                 continue;
             }
 
-            let pos = NewVmsPosition::try_from(v)?;
+            let call_sign = v.call_sign.as_ref();
+
             vms_earliest
-                .entry(pos.call_sign.clone())
+                .entry(call_sign)
                 .and_modify(|e| {
-                    if e.timestamp > pos.timestamp {
-                        e.timestamp = pos.timestamp;
+                    if e.timestamp > v.timestamp {
+                        e.timestamp = v.timestamp;
                     }
                 })
                 .or_insert(EarliestVms {
-                    call_sign: pos.call_sign.clone(),
-                    timestamp: pos.timestamp,
+                    call_sign,
+                    timestamp: v.timestamp,
                 });
 
-            call_signs_unique.insert(pos.call_sign.clone());
-            vms_unique
-                .entry((pos.call_sign.clone(), pos.timestamp))
-                .and_modify(|e| {
+            call_signs_unique.insert(call_sign);
+
+            match vms_unique.entry((call_sign, v.timestamp)) {
+                Entry::Vacant(e) => {
+                    e.insert(v.try_into()?);
+                }
+                Entry::Occupied(mut e) => {
+                    let e = e.get_mut();
                     let mut replace = false;
 
-                    match (e.course, pos.course) {
+                    match (e.course, v.course) {
                         (Some(_), None) | (None, None) => (),
                         (None, Some(_)) => replace = true,
                         (Some(c), Some(c2)) => {
@@ -116,7 +121,7 @@ ORDER BY
                             }
                         }
                     }
-                    match (&e.speed, &pos.speed) {
+                    match (&e.speed, &v.speed) {
                         (Some(_), None) | (None, None) => (),
                         (None, Some(_)) => replace = true,
                         (Some(c), Some(c2)) => {
@@ -127,10 +132,10 @@ ORDER BY
                     }
 
                     if replace {
-                        *e = pos.clone();
+                        *e = v.try_into()?;
                     }
-                })
-                .or_insert(pos);
+                }
+            }
         }
 
         let call_signs_unique = call_signs_unique.into_iter().collect::<Vec<_>>();
@@ -144,12 +149,12 @@ ORDER BY
 SELECT
     add_vms_position_partitions ($1)
             "#,
-            call_signs_unique.as_slice(),
+            &call_signs_unique as &[&str],
         )
         .execute(&mut *tx)
         .await?;
 
-        let vms: Vec<NewVmsPosition> = vms_unique.into_values().collect();
+        let vms: Vec<NewVmsPosition<'_>> = vms_unique.into_values().collect();
 
         let len = vms.len();
         let mut lat = Vec::with_capacity(len);
@@ -157,12 +162,13 @@ SELECT
         let mut timestamp = Vec::with_capacity(len);
         let mut position_type_id = Vec::with_capacity(len);
         let mut call_sign = Vec::with_capacity(len);
+
         for v in &vms {
             lat.push(v.latitude);
             lon.push(v.longitude);
             timestamp.push(v.timestamp);
             position_type_id.push(PositionType::Vms as i32);
-            call_sign.push(v.call_sign.clone());
+            call_sign.push(v.call_sign);
         }
 
         let area_positions_inserted = sqlx::query_as!(
@@ -210,7 +216,7 @@ RETURNING
             &lon,
             &timestamp,
             &position_type_id,
-            &call_sign
+            &call_sign as &[&str],
         )
         .fetch_all(&mut *tx)
         .await?;

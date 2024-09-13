@@ -5,28 +5,28 @@ use unnest_insert::UnnestInsert;
 impl PostgresAdapter {
     pub(crate) async fn add_species_fiskeridir<'a>(
         &'a self,
-        species: Vec<SpeciesFiskeridir>,
+        species: Vec<NewSpeciesFiskeridir<'_>>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
     ) -> Result<()> {
-        SpeciesFiskeridir::unnest_insert(species, &mut **tx).await?;
+        NewSpeciesFiskeridir::unnest_insert(species, &mut **tx).await?;
         Ok(())
     }
 
     pub(crate) async fn add_species<'a>(
         &'a self,
-        species: Vec<Species>,
+        species: Vec<NewSpecies<'_>>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
     ) -> Result<()> {
-        Species::unnest_insert(species, &mut **tx).await?;
+        NewSpecies::unnest_insert(species, &mut **tx).await?;
         Ok(())
     }
 
     pub(crate) async fn add_species_fao<'a>(
         &'a self,
-        species: Vec<SpeciesFao>,
+        species: Vec<NewSpeciesFao<'_>>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
     ) -> Result<()> {
-        SpeciesFao::unnest_insert(species, &mut **tx).await?;
+        NewSpeciesFao::unnest_insert(species, &mut **tx).await?;
         Ok(())
     }
 
