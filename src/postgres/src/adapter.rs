@@ -1,6 +1,4 @@
 use crate::error::Result;
-use crate::models::LandingMatrixArgs;
-use crate::queries::haul::HaulsMatrixArgs;
 use crate::{ers_dep_set::ErsDepSet, ers_por_set::ErsPorSet, ers_tra_set::ErsTraSet};
 use async_trait::async_trait;
 use chrono::{DateTime, Duration, NaiveDate, Utc};
@@ -526,40 +524,6 @@ impl WebApiOutboundPort for PostgresAdapter {
             .map(|v| Ok(v?))
             .boxed()
     }
-    fn fishing_weight_predictions(
-        &self,
-        model_id: ModelId,
-        species: SpeciesGroup,
-        date: NaiveDate,
-        limit: u32,
-    ) -> PinBoxStream<'_, FishingWeightPrediction> {
-        convert_stream(self.fishing_weight_predictions_impl(model_id, species, date, limit)).boxed()
-    }
-    fn all_fishing_weight_predictions(
-        &self,
-        model_id: ModelId,
-    ) -> PinBoxStream<'_, FishingWeightPrediction> {
-        convert_stream(self.all_fishing_weight_predictions_impl(model_id)).boxed()
-    }
-
-    fn all_fishing_spot_predictions(
-        &self,
-        model_id: ModelId,
-    ) -> PinBoxStream<'_, FishingSpotPrediction> {
-        self.all_fishing_spot_predictions_impl(model_id)
-            .map_err(From::from)
-            .boxed()
-    }
-    async fn fishing_spot_prediction(
-        &self,
-        model_id: ModelId,
-        species: SpeciesGroup,
-        date: NaiveDate,
-    ) -> CoreResult<Option<FishingSpotPrediction>> {
-        Ok(self
-            .fishing_spot_prediction_impl(model_id, species, date)
-            .await?)
-    }
     fn ais_positions(
         &self,
         mmsi: Mmsi,
@@ -600,34 +564,48 @@ impl WebApiOutboundPort for PostgresAdapter {
             .boxed(),
         }
     }
-
     fn species(&self) -> PinBoxStream<'_, Species> {
         convert_stream(self.species_impl()).boxed()
     }
-
     fn species_fiskeridir(&self) -> PinBoxStream<'_, SpeciesFiskeridir> {
         convert_stream(self.species_fiskeridir_impl()).boxed()
     }
     fn species_fao(&self) -> PinBoxStream<'_, SpeciesFao> {
         convert_stream(self.species_fao_impl()).boxed()
     }
+
     fn vessels(&self) -> Pin<Box<dyn Stream<Item = CoreResult<Vessel>> + Send + '_>> {
         convert_stream(self.fiskeridir_ais_vessel_combinations()).boxed()
     }
 
     fn hauls(&self, query: HaulsQuery) -> CoreResult<PinBoxStream<'_, Haul>> {
-        let stream = self.hauls_impl(query)?;
-        Ok(convert_stream(stream).boxed())
+        Ok(convert_stream(self.hauls_impl(query)?).boxed())
     }
 
+    async fn vessel_benchmarks(
+        &self,
+        user_id: &BarentswatchUserId,
+        call_sign: &CallSign,
+    ) -> CoreResult<VesselBenchmarks> {
+        Ok(retry(|| self.vessel_benchmarks_impl(user_id, call_sign))
+            .await?
+            .try_into()?)
+    }
+    fn detailed_trips(
+        &self,
+        query: TripsQuery,
+        read_fishing_facility: bool,
+    ) -> CoreResult<PinBoxStream<'_, TripDetailed>> {
+        let stream = self.detailed_trips_impl(query, read_fishing_facility)?;
+        Ok(convert_stream(stream).boxed())
+    }
     async fn detailed_trip_of_haul(
         &self,
         haul_id: &HaulId,
         read_fishing_facility: bool,
     ) -> CoreResult<Option<TripDetailed>> {
         convert_optional(
-            self.detailed_trip_of_haul_impl(haul_id, read_fishing_facility)
-                .await?,
+            retry(|| self.detailed_trip_of_haul_impl(haul_id, read_fishing_facility)).await?,
         )
     }
 
@@ -637,18 +615,8 @@ impl WebApiOutboundPort for PostgresAdapter {
         read_fishing_facility: bool,
     ) -> CoreResult<Option<TripDetailed>> {
         convert_optional(
-            self.detailed_trip_of_landing_impl(landing_id, read_fishing_facility)
-                .await?,
+            retry(|| self.detailed_trip_of_landing_impl(landing_id, read_fishing_facility)).await?,
         )
-    }
-
-    fn detailed_trips(
-        &self,
-        query: TripsQuery,
-        read_fishing_facility: bool,
-    ) -> CoreResult<PinBoxStream<'_, TripDetailed>> {
-        let stream = self.detailed_trips_impl(query, read_fishing_facility)?;
-        Ok(convert_stream(stream).boxed())
     }
 
     async fn current_trip(
@@ -656,10 +624,11 @@ impl WebApiOutboundPort for PostgresAdapter {
         vessel_id: FiskeridirVesselId,
         read_fishing_facility: bool,
     ) -> CoreResult<Option<CurrentTrip>> {
-        convert_optional(
-            self.current_trip_impl(vessel_id, read_fishing_facility)
-                .await?,
-        )
+        convert_optional(retry(|| self.current_trip_impl(vessel_id, read_fishing_facility)).await?)
+    }
+
+    async fn hauls_matrix(&self, query: &HaulsMatrixQuery) -> CoreResult<HaulsMatrix> {
+        Ok(retry(|| self.hauls_matrix_impl(query)).await?)
     }
 
     fn landings(&self, query: LandingsQuery) -> CoreResult<PinBoxStream<'_, Landing>> {
@@ -668,81 +637,7 @@ impl WebApiOutboundPort for PostgresAdapter {
     }
 
     async fn landing_matrix(&self, query: &LandingMatrixQuery) -> CoreResult<LandingMatrix> {
-        let active_filter = query.active_filter;
-        let args = LandingMatrixArgs::try_from(query.clone())?;
-
-        let j1 = tokio::spawn(PostgresAdapter::landing_matrix_impl(
-            self.pool.clone(),
-            args.clone(),
-            active_filter,
-            LandingMatrixXFeature::Date,
-        ));
-        let j2 = tokio::spawn(PostgresAdapter::landing_matrix_impl(
-            self.pool.clone(),
-            args.clone(),
-            active_filter,
-            LandingMatrixXFeature::VesselLength,
-        ));
-        let j3 = tokio::spawn(PostgresAdapter::landing_matrix_impl(
-            self.pool.clone(),
-            args.clone(),
-            active_filter,
-            LandingMatrixXFeature::GearGroup,
-        ));
-        let j4 = tokio::spawn(PostgresAdapter::landing_matrix_impl(
-            self.pool.clone(),
-            args.clone(),
-            active_filter,
-            LandingMatrixXFeature::SpeciesGroup,
-        ));
-
-        let (dates, length_group, gear_group, species_group) = tokio::join!(j1, j2, j3, j4);
-
-        Ok(LandingMatrix {
-            dates: dates??,
-            length_group: length_group??,
-            gear_group: gear_group??,
-            species_group: species_group??,
-        })
-    }
-
-    async fn hauls_matrix(&self, query: &HaulsMatrixQuery) -> CoreResult<HaulsMatrix> {
-        let active_filter = query.active_filter;
-        let args = HaulsMatrixArgs::try_from(query.clone())?;
-
-        let j1 = tokio::spawn(PostgresAdapter::hauls_matrix_impl(
-            self.pool.clone(),
-            args.clone(),
-            active_filter,
-            HaulMatrixXFeature::Date,
-        ));
-        let j2 = tokio::spawn(PostgresAdapter::hauls_matrix_impl(
-            self.pool.clone(),
-            args.clone(),
-            active_filter,
-            HaulMatrixXFeature::VesselLength,
-        ));
-        let j3 = tokio::spawn(PostgresAdapter::hauls_matrix_impl(
-            self.pool.clone(),
-            args.clone(),
-            active_filter,
-            HaulMatrixXFeature::GearGroup,
-        ));
-        let j4 = tokio::spawn(PostgresAdapter::hauls_matrix_impl(
-            self.pool.clone(),
-            args.clone(),
-            active_filter,
-            HaulMatrixXFeature::SpeciesGroup,
-        ));
-
-        let (dates, length_group, gear_group, species_group) = tokio::join!(j1, j2, j3, j4);
-
-        Ok(HaulsMatrix {
-            dates: dates??,
-            length_group: length_group??,
-            gear_group: gear_group??,
-            species_group: species_group??,
-        })
+        Ok(retry(|| self.landing_matrix_impl(query)).await?)
     }
 
     fn fishing_facilities(
@@ -753,7 +648,7 @@ impl WebApiOutboundPort for PostgresAdapter {
     }
 
     async fn get_user(&self, user_id: BarentswatchUserId) -> CoreResult<Option<User>> {
-        Ok(self.get_user_impl(user_id).await?)
+        Ok(retry(|| self.get_user_impl(user_id)).await?)
     }
 
     fn delivery_points(&self) -> PinBoxStream<'_, DeliveryPoint> {
@@ -768,41 +663,65 @@ impl WebApiOutboundPort for PostgresAdapter {
         convert_stream(self.weather_locations_impl()).boxed()
     }
 
-    fn fuel_measurements(&self, query: FuelMeasurementsQuery) -> PinBoxStream<'_, FuelMeasurement> {
-        convert_stream(self.fuel_measurements_impl(query)).boxed()
+    async fn fishing_spot_prediction(
+        &self,
+        model_id: ModelId,
+        species: SpeciesGroup,
+        date: NaiveDate,
+    ) -> CoreResult<Option<FishingSpotPrediction>> {
+        Ok(retry(|| self.fishing_spot_prediction_impl(model_id, species, date)).await?)
     }
 
-    async fn vessel_benchmarks(
+    fn fishing_weight_predictions(
         &self,
-        user_id: &BarentswatchUserId,
-        call_sign: &CallSign,
-    ) -> CoreResult<VesselBenchmarks> {
-        Ok(self
-            .vessel_benchmarks_impl(user_id, call_sign)
-            .await?
-            .try_into()?)
+        model_id: ModelId,
+        species: SpeciesGroup,
+        date: NaiveDate,
+        limit: u32,
+    ) -> PinBoxStream<'_, FishingWeightPrediction> {
+        convert_stream(self.fishing_weight_predictions_impl(model_id, species, date, limit)).boxed()
+    }
+
+    fn all_fishing_spot_predictions(
+        &self,
+        model_id: ModelId,
+    ) -> PinBoxStream<'_, FishingSpotPrediction> {
+        self.all_fishing_spot_predictions_impl(model_id)
+            .map_err(From::from)
+            .boxed()
+    }
+
+    fn all_fishing_weight_predictions(
+        &self,
+        model_id: ModelId,
+    ) -> PinBoxStream<'_, FishingWeightPrediction> {
+        convert_stream(self.all_fishing_weight_predictions_impl(model_id)).boxed()
+    }
+
+    fn fuel_measurements(&self, query: FuelMeasurementsQuery) -> PinBoxStream<'_, FuelMeasurement> {
+        convert_stream(self.fuel_measurements_impl(query)).boxed()
     }
 }
 
 #[async_trait]
 impl WebApiInboundPort for PostgresAdapter {
-    async fn update_user(&self, user: User) -> CoreResult<()> {
-        self.update_user_impl(user).await?;
+    async fn update_user(&self, user: &User) -> CoreResult<()> {
+        retry(|| self.update_user_impl(user)).await?;
         Ok(())
     }
-    async fn add_fuel_measurements(&self, measurements: Vec<FuelMeasurement>) -> CoreResult<()> {
-        self.add_fuel_measurements_impl(measurements).await?;
+    async fn add_fuel_measurements(&self, measurements: &[FuelMeasurement]) -> CoreResult<()> {
+        retry(|| self.add_fuel_measurements_impl(measurements)).await?;
         Ok(())
     }
-    async fn update_fuel_measurements(&self, measurements: Vec<FuelMeasurement>) -> CoreResult<()> {
-        self.update_fuel_measurements_impl(measurements).await?;
+    async fn update_fuel_measurements(&self, measurements: &[FuelMeasurement]) -> CoreResult<()> {
+        retry(|| self.update_fuel_measurements_impl(measurements)).await?;
         Ok(())
     }
     async fn delete_fuel_measurements(
         &self,
-        measurements: Vec<DeleteFuelMeasurement>,
+        measurements: &[DeleteFuelMeasurement],
     ) -> CoreResult<()> {
-        self.delete_fuel_measurements_impl(measurements).await?;
+        retry(|| self.delete_fuel_measurements_impl(measurements)).await?;
         Ok(())
     }
 }

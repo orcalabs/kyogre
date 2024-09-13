@@ -1,9 +1,16 @@
+use crate::IsTimeout;
 use chrono::{DateTime, Utc};
 use snafu::{Location, Snafu};
 use stack_error::{OpaqueError, StackError};
 use std::num::ParseIntError;
 
 pub type CoreResult<T> = Result<T, Error>;
+
+impl IsTimeout for Error {
+    fn is_timeout(&self) -> bool {
+        matches!(self, Error::Timeout { .. })
+    }
+}
 
 #[derive(Snafu, StackError)]
 #[snafu(module)]

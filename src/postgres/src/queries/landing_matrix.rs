@@ -9,6 +9,48 @@ use sqlx::{Pool, Postgres};
 
 impl PostgresAdapter {
     pub(crate) async fn landing_matrix_impl(
+        &self,
+        query: &kyogre_core::LandingMatrixQuery,
+    ) -> Result<kyogre_core::LandingMatrix> {
+        let active_filter = query.active_filter;
+        let args = LandingMatrixArgs::try_from(query.clone())?;
+
+        let j1 = tokio::spawn(PostgresAdapter::single_landing_matrix(
+            self.pool.clone(),
+            args.clone(),
+            active_filter,
+            LandingMatrixXFeature::Date,
+        ));
+        let j2 = tokio::spawn(PostgresAdapter::single_landing_matrix(
+            self.pool.clone(),
+            args.clone(),
+            active_filter,
+            LandingMatrixXFeature::VesselLength,
+        ));
+        let j3 = tokio::spawn(PostgresAdapter::single_landing_matrix(
+            self.pool.clone(),
+            args.clone(),
+            active_filter,
+            LandingMatrixXFeature::GearGroup,
+        ));
+        let j4 = tokio::spawn(PostgresAdapter::single_landing_matrix(
+            self.pool.clone(),
+            args.clone(),
+            active_filter,
+            LandingMatrixXFeature::SpeciesGroup,
+        ));
+
+        let (dates, length_group, gear_group, species_group) = tokio::join!(j1, j2, j3, j4);
+
+        Ok(kyogre_core::LandingMatrix {
+            dates: dates??,
+            length_group: length_group??,
+            gear_group: gear_group??,
+            species_group: species_group??,
+        })
+    }
+
+    pub(crate) async fn single_landing_matrix(
         pool: Pool<Postgres>,
         args: LandingMatrixArgs,
         active_filter: ActiveLandingFilter,

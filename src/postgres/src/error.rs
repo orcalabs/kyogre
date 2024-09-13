@@ -1,5 +1,5 @@
 use fiskeridir_rs::{LandingIdError, ParseStringError};
-use kyogre_core::{CatchLocationIdError, ChronoError, DateRangeError, MatrixIndexError};
+use kyogre_core::{CatchLocationIdError, ChronoError, DateRangeError, IsTimeout, MatrixIndexError};
 use snafu::{Location, Snafu};
 use sqlx::migrate::MigrateError;
 use stack_error::{OpaqueError, StackError};
@@ -7,6 +7,12 @@ use stack_error::{OpaqueError, StackError};
 use crate::models::ActiveVesselConflict;
 
 pub(crate) type Result<T> = std::result::Result<T, Error>;
+
+impl IsTimeout for Error {
+    fn is_timeout(&self) -> bool {
+        matches!(self, Error::Timeout { .. })
+    }
+}
 
 #[derive(Snafu, StackError)]
 #[snafu(visibility(pub(crate)))]
@@ -80,6 +86,13 @@ pub enum Error {
         ],
         opaque_std = [strum::ParseError])]
     Conversion {
+        #[snafu(implicit)]
+        location: Location,
+        opaque: OpaqueError,
+    },
+    #[snafu(display("An unexpected error occured"))]
+    #[stack_error(opaque_std = [tokio::task::JoinError])]
+    Unexpected {
         #[snafu(implicit)]
         location: Location,
         opaque: OpaqueError,
@@ -191,6 +204,7 @@ impl From<Error> for kyogre_core::Error {
             | Error::Sqlx { .. }
             | Error::VerifyDatabase { .. }
             | Error::Jurisdiction { .. }
+            | Error::Unexpected { .. }
             | Error::Migrate { .. } => kyogre_core::Error::Unexpected {
                 location,
                 opaque: OpaqueError::Stack(Box::new(value)),

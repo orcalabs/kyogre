@@ -84,13 +84,13 @@ pub async fn create_fuel_measurements<T: Database + 'static>(
         call_sign: profile.ircs,
     })?;
 
-    let measurements = body
+    let measurements: Vec<kyogre_core::FuelMeasurement> = body
         .into_inner()
         .into_iter()
         .map(|m| m.to_domain_fuel_measurement(user_id, &call_sign))
         .collect();
 
-    db.add_fuel_measurements(measurements).await?;
+    db.add_fuel_measurements(&measurements).await?;
     Ok(Response::new(()))
 }
 
@@ -122,13 +122,13 @@ pub async fn update_fuel_measurements<T: Database + 'static>(
         call_sign: profile.ircs,
     })?;
 
-    let measurements = body
+    let measurements: Vec<kyogre_core::FuelMeasurement> = body
         .into_inner()
         .into_iter()
         .map(|m| m.to_domain_fuel_measurement(user_id, &call_sign))
         .collect();
 
-    db.update_fuel_measurements(measurements).await?;
+    db.update_fuel_measurements(&measurements).await?;
     Ok(Response::new(()))
 }
 
@@ -160,13 +160,13 @@ pub async fn delete_fuel_measurements<T: Database + 'static>(
         call_sign: profile.ircs,
     })?;
 
-    let measurements = body
+    let measurements: Vec<kyogre_core::DeleteFuelMeasurement> = body
         .into_inner()
         .into_iter()
         .map(|m| m.to_domain_delete_fuel_measurement(user_id, &call_sign))
         .collect();
 
-    db.delete_fuel_measurements(measurements).await?;
+    db.delete_fuel_measurements(&measurements).await?;
     Ok(Response::new(()))
 }
 

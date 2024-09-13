@@ -25,10 +25,10 @@ GROUP BY
         Ok(user)
     }
 
-    pub(crate) async fn update_user_impl(&self, user: kyogre_core::User) -> Result<()> {
+    pub(crate) async fn update_user_impl(&self, user: &kyogre_core::User) -> Result<()> {
         let mut tx = self.pool.begin().await?;
 
-        self.update_user_follows(user.barentswatch_user_id, user.following, &mut tx)
+        self.update_user_follows(user.barentswatch_user_id, &user.following, &mut tx)
             .await?;
 
         tx.commit().await?;
@@ -39,7 +39,7 @@ GROUP BY
     pub(crate) async fn update_user_follows<'a>(
         &'a self,
         user_id: BarentswatchUserId,
-        vessel_ids: Vec<FiskeridirVesselId>,
+        vessel_ids: &[FiskeridirVesselId],
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
     ) -> Result<()> {
         sqlx::query!(
@@ -64,7 +64,7 @@ FROM
     UNNEST($2::BIGINT[])
             "#,
             user_id.as_ref(),
-            &vessel_ids as &[FiskeridirVesselId],
+            vessel_ids as &[FiskeridirVesselId],
         )
         .execute(&mut **tx)
         .await?;
