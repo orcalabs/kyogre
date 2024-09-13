@@ -1,3 +1,15 @@
+use std::collections::{HashMap, HashSet};
+
+use chrono::{DateTime, Duration, Utc};
+use fiskeridir_rs::{Gear, GearGroup, LandingId, SpeciesGroup, VesselLengthGroup};
+use futures::{Stream, TryStreamExt};
+use kyogre_core::{
+    DateRange, FiskeridirVesselId, HaulId, Ordering, PrecisionOutcome, PrecisionStatus,
+    ProcessingStatus, TripAssemblerId, TripId, TripPositionLayerOutput, TripSet, TripSorting,
+    TripUpdate, TripsConflictStrategy, TripsQuery, VesselEventType,
+};
+use sqlx::postgres::types::PgRange;
+
 use crate::{
     error::{Result, TripPositionMatchSnafu},
     models::{
@@ -7,20 +19,6 @@ use crate::{
     },
     PostgresAdapter,
 };
-use chrono::{DateTime, Duration, Utc};
-use fiskeridir_rs::{Gear, GearGroup, LandingId, SpeciesGroup, VesselLengthGroup};
-use futures::Stream;
-use futures::TryStreamExt;
-use kyogre_core::ProcessingStatus;
-use kyogre_core::{DateRange, TripId};
-use kyogre_core::{
-    FiskeridirVesselId, HaulId, Ordering, PrecisionOutcome, PrecisionStatus, TripAssemblerId,
-    TripPositionLayerOutput, TripSet, TripSorting, TripUpdate, TripsConflictStrategy, TripsQuery,
-    VesselEventType,
-};
-use sqlx::postgres::types::PgRange;
-use std::collections::{HashMap, HashSet};
-use unnest_insert::{UnnestInsert, UnnestInsertReturning};
 
 impl PostgresAdapter {
     pub(crate) async fn reset_trip_processing_conflicts_impl(&self) -> Result<()> {
@@ -152,9 +150,8 @@ WHERE
         .execute(&mut **tx)
         .await?;
 
-        TripAisVmsPosition::unnest_insert(trip_positions, &mut **tx).await?;
-
-        TripPrunedAisVmsPosition::unnest_insert(pruned_positions, &mut **tx).await?;
+        self.unnest_insert(trip_positions, &mut **tx).await?;
+        self.unnest_insert(pruned_positions, &mut **tx).await?;
 
         sqlx::query!(
             r#"
@@ -213,9 +210,8 @@ WHERE
             pruned_positions.append(&mut pruned);
         }
 
-        TripAisVmsPosition::unnest_insert(trip_positions, &mut **tx).await?;
-
-        TripPrunedAisVmsPosition::unnest_insert(pruned_positions, &mut **tx).await?;
+        self.unnest_insert(trip_positions, &mut **tx).await?;
+        self.unnest_insert(pruned_positions, &mut **tx).await?;
 
         Ok(())
     }
@@ -1437,8 +1433,7 @@ RETURNING
             earliest_trip_start
         };
 
-        let inserted_trips =
-            crate::models::NewTrip::unnest_insert_returning(new_trips, &mut *tx).await?;
+        let inserted_trips = self.unnest_insert_returning(new_trips, &mut *tx).await?;
 
         for t in &inserted_trips {
             let range = DateRange::try_from(&t.period)?;

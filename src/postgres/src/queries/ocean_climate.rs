@@ -1,7 +1,6 @@
 use chrono::{DateTime, Utc};
 use futures::{Stream, TryStreamExt};
 use kyogre_core::{HaulOceanClimate, OceanClimate, OceanClimateQuery, WeatherLocationId};
-use unnest_insert::UnnestInsert;
 
 use crate::{error::Result, models::NewOceanClimate, PostgresAdapter};
 
@@ -101,9 +100,8 @@ WHERE
         &self,
         ocean_climate: Vec<kyogre_core::NewOceanClimate>,
     ) -> Result<()> {
-        let values = ocean_climate.into_iter().map(From::from).collect();
-        NewOceanClimate::unnest_insert(values, &self.pool).await?;
-        Ok(())
+        self.unnest_insert_from::<_, _, NewOceanClimate>(ocean_climate, &self.pool)
+            .await
     }
 
     pub(crate) async fn latest_ocean_climate_timestamp_impl(

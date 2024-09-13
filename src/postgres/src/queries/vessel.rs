@@ -1,17 +1,17 @@
 use std::collections::HashMap;
 
-use crate::{
-    error::Result,
-    models::{
-        ActiveVesselConflict, FiskeridirAisVesselCombination, NewFiskeridirVessel, NewMunicipality,
-        NewRegisterVessel, VesselConflictInsert,
-    },
-    PostgresAdapter,
-};
 use fiskeridir_rs::{GearGroup, SpeciesGroup, VesselLengthGroup};
 use futures::{Stream, TryStreamExt};
 use kyogre_core::{FiskeridirVesselId, Mmsi, TripAssemblerId, VesselSource};
-use unnest_insert::UnnestInsert;
+
+use crate::{
+    error::Result,
+    models::{
+        ActiveVesselConflict, FiskeridirAisVesselCombination, NewMunicipality, NewRegisterVessel,
+        VesselConflictInsert,
+    },
+    PostgresAdapter,
+};
 
 impl PostgresAdapter {
     pub(crate) async fn active_vessel_conflicts_impl(&self) -> Result<Vec<ActiveVesselConflict>> {
@@ -42,14 +42,15 @@ FROM
         let mut mmsi = Vec::with_capacity(overrides.len());
         let mut fiskeridir_vessel_id = Vec::with_capacity(overrides.len());
 
-        let mut tx = self.pool.begin().await?;
-
         overrides.iter().for_each(|v| {
             if let Some(val) = v.mmsi {
                 mmsi.push(val);
             }
             fiskeridir_vessel_id.push(v.vessel_id);
         });
+
+        let mut tx = self.pool.begin().await?;
+
         sqlx::query!(
             r#"
 INSERT INTO
@@ -80,12 +81,8 @@ ON CONFLICT DO NOTHING
         .fetch_all(&mut *tx)
         .await?;
 
-        let overrides: Vec<VesselConflictInsert> = overrides
-            .into_iter()
-            .map(VesselConflictInsert::from)
-            .collect();
-
-        VesselConflictInsert::unnest_insert(overrides, &mut *tx).await?;
+        self.unnest_insert_from::<_, _, VesselConflictInsert>(overrides, &mut *tx)
+            .await?;
 
         tx.commit().await?;
 
@@ -221,15 +218,6 @@ VALUES
         Ok(())
     }
 
-    pub(crate) async fn add_fiskeridir_vessels<'a>(
-        &'a self,
-        vessels: Vec<NewFiskeridirVessel<'_>>,
-        tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<()> {
-        NewFiskeridirVessel::unnest_insert(vessels, &mut **tx).await?;
-        Ok(())
-    }
-
     pub(crate) async fn set_landing_vessels_call_signs<'a>(
         &self,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
@@ -304,29 +292,15 @@ WHERE
 
         let mut tx = self.pool.begin().await?;
 
-        self.add_municipalities(municipalitis.into_values().collect(), &mut tx)
+        self.unnest_insert(municipalitis.into_values(), &mut *tx)
+            .await?;
+        self.unnest_insert_try_from::<_, _, NewRegisterVessel>(vessels, &mut *tx)
             .await?;
 
-        self.add_register_vessels_impl(vessels, &mut tx).await?;
         self.set_landing_vessels_call_signs(&mut tx).await?;
         self.refresh_vessel_mappings(&mut tx).await?;
 
         tx.commit().await?;
-
-        Ok(())
-    }
-
-    pub(crate) async fn add_register_vessels_impl<'a>(
-        &'a self,
-        vessels: Vec<fiskeridir_rs::RegisterVessel>,
-        tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<()> {
-        let vessels = vessels
-            .into_iter()
-            .map(NewRegisterVessel::try_from)
-            .collect::<Result<Vec<_>>>()?;
-
-        NewRegisterVessel::unnest_insert(vessels, &mut **tx).await?;
 
         Ok(())
     }

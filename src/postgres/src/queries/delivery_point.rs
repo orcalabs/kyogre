@@ -1,5 +1,10 @@
 use std::collections::{hash_map::Entry, HashMap};
 
+use fiskeridir_rs::DeliveryPointId;
+use futures::{Stream, TryStreamExt};
+use kyogre_core::{DateRange, FiskeridirVesselId};
+use sqlx::postgres::types::PgRange;
+
 use crate::{
     error::Result,
     models::{
@@ -8,11 +13,6 @@ use crate::{
     },
     PostgresAdapter,
 };
-use fiskeridir_rs::DeliveryPointId;
-use futures::{Stream, TryStreamExt};
-use kyogre_core::{DateRange, FiskeridirVesselId};
-use sqlx::postgres::types::PgRange;
-use unnest_insert::UnnestInsert;
 
 impl PostgresAdapter {
     pub(crate) async fn delivery_point_impl(
@@ -89,15 +89,9 @@ FROM
     ) -> Result<()> {
         let mut tx = self.pool.begin().await?;
 
-        let ids = values
-            .iter()
-            .map(|v| NewDeliveryPointId {
-                delivery_point_id: v.delivery_point_id.as_ref(),
-            })
-            .collect();
-        self.add_delivery_point_ids(ids, &mut tx).await?;
-
-        ManualDeliveryPoint::unnest_insert(values, &mut *tx).await?;
+        self.unnest_insert_from::<_, _, NewDeliveryPointId<'_>>(&values, &mut *tx)
+            .await?;
+        self.unnest_insert(values, &mut *tx).await?;
 
         tx.commit().await?;
 
@@ -127,15 +121,6 @@ FROM
         .map_err(From::from)
     }
 
-    pub(crate) async fn add_delivery_point_ids<'a>(
-        &'a self,
-        delivery_point_ids: Vec<NewDeliveryPointId<'_>>,
-        tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<()> {
-        NewDeliveryPointId::unnest_insert(delivery_point_ids, &mut **tx).await?;
-        Ok(())
-    }
-
     pub(crate) async fn add_aqua_culture_register_impl(
         &self,
         f_entries: Vec<fiskeridir_rs::AquaCultureEntry>,
@@ -148,7 +133,7 @@ FROM
         let mut ids = Vec::with_capacity(len);
 
         for a in &f_entries {
-            ids.push((&a.delivery_point_id).into());
+            ids.push(NewDeliveryPointId::from(&a.delivery_point_id));
 
             species.entry(a.species_code).or_insert_with(|| {
                 NewSpeciesFiskeridir::new(a.species_code as i32, Some(&a.species))
@@ -157,52 +142,31 @@ FROM
             if let Entry::Vacant(e) =
                 aqua_species.entry((a.till_nr.as_ref(), a.till_unit.as_ref(), a.species_code))
             {
-                e.insert(a.into());
+                e.insert(AquaCultureSpecies::from(a));
             }
 
             if let Entry::Vacant(e) = tills.entry((&a.delivery_point_id, a.till_nr.as_ref())) {
-                e.insert(a.into());
+                e.insert(AquaCultureTill::from(a));
             }
 
-            entries.insert(&a.delivery_point_id, a.into());
+            entries.insert(&a.delivery_point_id, AquaCultureEntry::from(a));
         }
 
-        let values = entries.into_values().collect();
-        let species = species.into_values().collect();
-        let tills = tills.into_values().collect();
-        let aqua_species = aqua_species.into_values().collect();
+        let values = entries.into_values();
+        let species = species.into_values();
+        let tills = tills.into_values();
+        let aqua_species = aqua_species.into_values();
 
         let mut tx = self.pool.begin().await?;
 
-        self.add_delivery_point_ids(ids, &mut tx).await?;
-        self.add_species_fiskeridir(species, &mut tx).await?;
-
-        AquaCultureEntry::unnest_insert(values, &mut *tx).await?;
-
-        self.add_aqua_culture_register_tills(tills, &mut tx).await?;
-        self.add_aqua_culture_register_species(aqua_species, &mut tx)
-            .await?;
+        self.unnest_insert(ids, &mut *tx).await?;
+        self.unnest_insert(species, &mut *tx).await?;
+        self.unnest_insert(values, &mut *tx).await?;
+        self.unnest_insert(tills, &mut *tx).await?;
+        self.unnest_insert(aqua_species, &mut *tx).await?;
 
         tx.commit().await?;
 
-        Ok(())
-    }
-
-    pub(crate) async fn add_aqua_culture_register_tills<'a>(
-        &'a self,
-        tills: Vec<AquaCultureTill<'_>>,
-        tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<()> {
-        AquaCultureTill::unnest_insert(tills, &mut **tx).await?;
-        Ok(())
-    }
-
-    pub(crate) async fn add_aqua_culture_register_species<'a>(
-        &'a self,
-        species: Vec<AquaCultureSpecies<'_>>,
-        tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<()> {
-        AquaCultureSpecies::unnest_insert(species, &mut **tx).await?;
         Ok(())
     }
 
@@ -211,8 +175,8 @@ FROM
         delivery_points: Vec<kyogre_core::MattilsynetDeliveryPoint>,
     ) -> Result<()> {
         let len = delivery_points.len();
-        let mut items = Vec::with_capacity(len);
-        let mut ids = Vec::with_capacity(len);
+        let mut items = Vec::<MattilsynetDeliveryPoint<'_>>::with_capacity(len);
+        let mut ids = Vec::<NewDeliveryPointId<'_>>::with_capacity(len);
 
         for d in &delivery_points {
             ids.push((&d.id).into());
@@ -221,9 +185,8 @@ FROM
 
         let mut tx = self.pool.begin().await?;
 
-        self.add_delivery_point_ids(ids, &mut tx).await?;
-
-        MattilsynetDeliveryPoint::unnest_insert(items, &mut *tx).await?;
+        self.unnest_insert(ids, &mut *tx).await?;
+        self.unnest_insert(items, &mut *tx).await?;
 
         tx.commit().await?;
 

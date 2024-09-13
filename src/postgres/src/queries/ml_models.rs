@@ -1,16 +1,19 @@
-use crate::error::Result;
-use crate::models::{
-    FishingSpotTrainingData, FishingWeightPrediction, MLTrainingLog, NewFishingSpotPrediction,
-    NewFishingWeightPrediction, WeightPredictorTrainingData,
-};
-use crate::PostgresAdapter;
 use chrono::NaiveDate;
 use fiskeridir_rs::{GearGroup, SpeciesGroup};
-use futures::Stream;
-use futures::TryStreamExt;
-use kyogre_core::SPOT_PREDICTOR_SAMPLE_WEIGHT_LIMIT;
-use kyogre_core::{FishingSpotPrediction, HaulId, ModelId, TrainingHaul, WeatherData};
-use unnest_insert::UnnestInsert;
+use futures::{Stream, TryStreamExt};
+use kyogre_core::{
+    FishingSpotPrediction, HaulId, ModelId, TrainingHaul, WeatherData,
+    SPOT_PREDICTOR_SAMPLE_WEIGHT_LIMIT,
+};
+
+use crate::{
+    error::Result,
+    models::{
+        FishingSpotTrainingData, FishingWeightPrediction, MLTrainingLog, NewFishingSpotPrediction,
+        NewFishingWeightPrediction, WeightPredictorTrainingData,
+    },
+    PostgresAdapter,
+};
 
 impl PostgresAdapter {
     pub(crate) async fn commit_hauls_training_impl(
@@ -19,19 +22,14 @@ impl PostgresAdapter {
         species: SpeciesGroup,
         hauls: Vec<TrainingHaul>,
     ) -> Result<()> {
-        let insert: Vec<MLTrainingLog> = hauls
-            .into_iter()
-            .map(|v| MLTrainingLog {
-                ml_model_id: model_id,
-                haul_id: v.haul_id,
-                species_group_id: species,
-                catch_location_id: v.catch_location_id.into_inner(),
-            })
-            .collect();
+        let insert = hauls.into_iter().map(|v| MLTrainingLog {
+            ml_model_id: model_id,
+            haul_id: v.haul_id,
+            species_group_id: species,
+            catch_location_id: v.catch_location_id.into_inner(),
+        });
 
-        MLTrainingLog::unnest_insert(insert, &self.pool).await?;
-
-        Ok(())
+        self.unnest_insert(insert, &self.pool).await
     }
 
     pub(crate) async fn save_model_impl(
@@ -149,28 +147,16 @@ WHERE
         &self,
         predictions: Vec<kyogre_core::NewFishingSpotPrediction>,
     ) -> Result<()> {
-        let predictions: Vec<NewFishingSpotPrediction> = predictions
-            .into_iter()
-            .map(NewFishingSpotPrediction::from)
-            .collect();
-
-        NewFishingSpotPrediction::unnest_insert(predictions, &self.pool).await?;
-
-        Ok(())
+        self.unnest_insert_from::<_, _, NewFishingSpotPrediction>(predictions, &self.pool)
+            .await
     }
 
     pub(crate) async fn add_weight_predictions_impl(
         &self,
         predictions: Vec<kyogre_core::NewFishingWeightPrediction>,
     ) -> Result<()> {
-        let predictions: Vec<NewFishingWeightPrediction> = predictions
-            .into_iter()
-            .map(NewFishingWeightPrediction::from)
-            .collect();
-
-        NewFishingWeightPrediction::unnest_insert(predictions, &self.pool).await?;
-
-        Ok(())
+        self.unnest_insert_from::<_, _, NewFishingWeightPrediction>(predictions, &self.pool)
+            .await
     }
 
     pub(crate) async fn fishing_weight_predictor_training_data_impl(
