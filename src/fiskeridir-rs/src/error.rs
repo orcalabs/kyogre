@@ -43,7 +43,7 @@ pub enum ParseStringError {
 #[snafu(module, visibility(pub))]
 pub enum Error {
     #[snafu(display("Http error"))]
-    #[stack_error(opaque_std = [http_client::Error])]
+    #[stack_error(opaque_stack = [http_client::Error])]
     Http {
         #[snafu(implicit)]
         location: Location,
