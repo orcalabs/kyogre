@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::{ops::Deref, str::FromStr};
 
 use crate::{
     error::ParseStringError,
@@ -19,6 +19,14 @@ impl CallSign {
     }
     pub fn into_inner(self) -> String {
         self.0.into_inner()
+    }
+}
+
+impl Deref for CallSign {
+    type Target = str;
+
+    fn deref(&self) -> &Self::Target {
+        self.as_ref()
     }
 }
 

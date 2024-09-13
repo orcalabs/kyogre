@@ -7,10 +7,10 @@ use crate::error::{Error, JurisdictionSnafu, MissingValueSnafu, Result};
 
 #[derive(Debug, Clone, PartialEq, Eq, UnnestInsert)]
 #[unnest_insert(table_name = "ports", conflict = "port_id")]
-pub struct NewPort {
+pub struct NewPort<'a> {
     #[unnest_insert(field_name = "port_id")]
-    pub id: String,
-    pub name: Option<String>,
+    pub id: &'a str,
+    pub name: Option<&'a str>,
     pub nationality: String,
 }
 
@@ -51,12 +51,12 @@ pub struct TripDockPoints {
     pub end: Option<String>,
 }
 
-impl NewPort {
-    pub fn new(id: String, name: Option<String>) -> Result<Self> {
+impl<'a> NewPort<'a> {
+    pub fn new(id: &'a str, name: Option<&'a str>) -> Result<Self> {
         let jurisdiction = Jurisdiction::from_str(&id[0..2]).map_err(|e| {
             JurisdictionSnafu {
                 error_stringified: e.to_string(),
-                data: id.clone(),
+                data: id,
             }
             .build()
         })?;

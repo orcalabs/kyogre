@@ -7,8 +7,8 @@ use unnest_insert::UnnestInsert;
 
 #[derive(Deserialize, Debug, Clone, UnnestInsert)]
 #[unnest_insert(table_name = "vms_positions", conflict = "call_sign, timestamp")]
-pub struct NewVmsPosition {
-    pub call_sign: String,
+pub struct NewVmsPosition<'a> {
+    pub call_sign: &'a str,
     #[unnest_insert(conflict = "COALESCE(NULLIF(course, 0), excluded.course)")]
     pub course: Option<i32>,
     #[unnest_insert(update_coalesce)]
@@ -18,16 +18,16 @@ pub struct NewVmsPosition {
     #[unnest_insert(update)]
     pub longitude: f64,
     pub message_id: i32,
-    pub message_type: String,
-    pub message_type_code: String,
+    pub message_type: &'a str,
+    pub message_type_code: &'a str,
     #[unnest_insert(update_coalesce)]
-    pub registration_id: Option<String>,
+    pub registration_id: Option<&'a str>,
     #[unnest_insert(conflict = "COALESCE(NULLIF(speed, 0), excluded.speed)")]
     pub speed: Option<f64>,
     pub timestamp: DateTime<Utc>,
     pub vessel_length: f64,
-    pub vessel_name: String,
-    pub vessel_type: String,
+    pub vessel_name: &'a str,
+    pub vessel_type: &'a str,
     #[unnest_insert(update)]
     pub distance_to_shore: f64,
 }
@@ -38,8 +38,8 @@ pub struct NewVmsPosition {
     conflict = "call_sign",
     where_clause = "earliest_vms_insertion.timestamp > excluded.timestamp"
 )]
-pub struct EarliestVms {
-    pub call_sign: String,
+pub struct EarliestVms<'a> {
+    pub call_sign: &'a str,
     #[unnest_insert(update)]
     pub timestamp: DateTime<Utc>,
 }
@@ -59,28 +59,28 @@ pub struct VmsPosition {
     pub distance_to_shore: f64,
 }
 
-impl TryFrom<fiskeridir_rs::Vms> for NewVmsPosition {
+impl<'a> TryFrom<&'a fiskeridir_rs::Vms> for NewVmsPosition<'a> {
     type Error = Error;
 
-    fn try_from(v: fiskeridir_rs::Vms) -> Result<Self, Self::Error> {
+    fn try_from(v: &'a fiskeridir_rs::Vms) -> Result<Self, Self::Error> {
         let latitude = v.latitude.ok_or_else(|| MissingValueSnafu.build())?;
         let longitude = v.longitude.ok_or_else(|| MissingValueSnafu.build())?;
 
         Ok(Self {
-            call_sign: v.call_sign.into_inner(),
+            call_sign: v.call_sign.as_ref(),
             course: v.course.map(|c| c as i32),
             gross_tonnage: v.gross_tonnage.map(|c| c as i32),
             latitude,
             longitude,
             message_id: v.message_id as i32,
-            message_type: v.message_type.into_inner(),
-            message_type_code: v.message_type_code.into_inner(),
-            registration_id: v.registration_id.map(|v| v.into_inner()),
+            message_type: v.message_type.as_ref(),
+            message_type_code: v.message_type_code.as_ref(),
+            registration_id: v.registration_id.as_deref(),
             speed: v.speed,
             timestamp: v.timestamp,
             vessel_length: v.vessel_length,
-            vessel_name: v.vessel_name.into_inner(),
-            vessel_type: v.vessel_type.into_inner(),
+            vessel_name: v.vessel_name.as_ref(),
+            vessel_type: v.vessel_type.as_ref(),
             distance_to_shore: distance_to_shore(latitude, longitude),
         })
     }

@@ -36,7 +36,7 @@ impl PostgresAdapter {
                 Ok(item) => {
                     chunk.push(item);
                     if i % CHUNK_SIZE == 0 && i > 0 {
-                        let set = ErsDcaSet::new(chunk.drain(0..))?;
+                        let set = ErsDcaSet::new(chunk.iter())?;
                         self.add_ers_dca_set(
                             set,
                             &mut inserted_message_ids,
@@ -44,12 +44,13 @@ impl PostgresAdapter {
                             &mut tx,
                         )
                         .await?;
+                        chunk.clear();
                     }
                 }
             }
         }
         if !chunk.is_empty() {
-            let set = ErsDcaSet::new(chunk.drain(0..))?;
+            let set = ErsDcaSet::new(chunk.iter())?;
             self.add_ers_dca_set(
                 set,
                 &mut inserted_message_ids,
@@ -74,7 +75,7 @@ impl PostgresAdapter {
 
     pub(crate) async fn add_ers_dca_set<'a>(
         &'a self,
-        set: ErsDcaSet,
+        set: ErsDcaSet<'_>,
         inserted_message_ids: &mut HashSet<i64>,
         vessel_event_ids: &mut Vec<i64>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
@@ -124,7 +125,7 @@ impl PostgresAdapter {
 
     async fn add_ers_dca<'a>(
         &'a self,
-        mut ers_dca: Vec<NewErsDca>,
+        mut ers_dca: Vec<NewErsDca<'_>>,
         inserted_message_ids: &mut HashSet<i64>,
         vessel_event_ids: &mut Vec<i64>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
@@ -193,7 +194,7 @@ WHERE
 
     async fn add_ers_dca_bodies<'a>(
         &'a self,
-        ers_dca_bodies: Vec<NewErsDcaBody>,
+        ers_dca_bodies: Vec<NewErsDcaBody<'_>>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
     ) -> Result<()> {
         NewErsDcaBody::unnest_insert(ers_dca_bodies, &mut **tx).await?;
@@ -202,7 +203,7 @@ WHERE
 
     pub(crate) async fn add_herring_populations<'a>(
         &self,
-        herring_populations: Vec<NewHerringPopulation>,
+        herring_populations: Vec<NewHerringPopulation<'_>>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
     ) -> Result<()> {
         NewHerringPopulation::unnest_insert(herring_populations, &mut **tx).await?;

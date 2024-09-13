@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use strum::{AsRefStr, Display, EnumCount, EnumIter, EnumString};
 
-use crate::{models::ers_common::ErsVesselInfo, string_new_types::NonEmptyString, CallSign};
+use crate::{string_new_types::NonEmptyString, CallSign};
 
 #[derive(
     Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize, FromPrimitive,
@@ -164,35 +164,6 @@ impl VesselLengthGroup {
 impl From<VesselLengthGroup> for i32 {
     fn from(value: VesselLengthGroup) -> Self {
         value as i32
-    }
-}
-
-impl From<ErsVesselInfo> for Vessel {
-    fn from(v: ErsVesselInfo) -> Self {
-        Self {
-            id: v.id,
-            registration_id: v.registration_id,
-            call_sign: v.call_sign,
-            name: v.name,
-            type_code: None,
-            quota_registration_id: None,
-            num_crew_members: None,
-            municipality_code: v.municipality_code,
-            municipality_name: v.municipality,
-            county_code: v.county_code,
-            county: v.county,
-            nationality_code: v.nationality_code,
-            nationality_group: None,
-            length: Some(v.length),
-            length_group_code: v.length_group_code,
-            length_group_name: v.length_group,
-            gross_tonnage_1969: v.gross_tonnage_1969,
-            gross_tonnage_other: v.gross_tonnage_other,
-            building_year: v.building_year,
-            rebuilding_year: v.rebuilding_year,
-            engine_power: v.engine_power,
-            engine_building_year: v.engine_building_year,
-        }
     }
 }
 

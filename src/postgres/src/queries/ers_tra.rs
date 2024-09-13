@@ -11,7 +11,7 @@ use kyogre_core::VesselEventType;
 use unnest_insert::{UnnestInsert, UnnestInsertReturning};
 
 impl PostgresAdapter {
-    pub(crate) async fn add_ers_tra_set(&self, set: ErsTraSet) -> Result<()> {
+    pub(crate) async fn add_ers_tra_set(&self, set: ErsTraSet<'_>) -> Result<()> {
         let prepared_set = set.prepare();
 
         let mut tx = self.pool.begin().await?;
@@ -40,7 +40,7 @@ impl PostgresAdapter {
 
     async fn add_ers_tra<'a>(
         &'a self,
-        mut ers_tra: Vec<NewErsTra>,
+        mut ers_tra: Vec<NewErsTra<'_>>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
     ) -> Result<()> {
         let to_insert = self.ers_tra_to_insert(&ers_tra, tx).await?;
@@ -60,7 +60,7 @@ impl PostgresAdapter {
 
     async fn ers_tra_to_insert<'a>(
         &'a self,
-        ers_tra: &[NewErsTra],
+        ers_tra: &[NewErsTra<'_>],
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
     ) -> Result<HashSet<i64>> {
         let message_ids = ers_tra.iter().map(|e| e.message_id).collect::<Vec<_>>();
@@ -87,7 +87,7 @@ WHERE
 
     pub(crate) async fn add_ers_tra_catches<'a>(
         &self,
-        catches: Vec<NewErsTraCatch>,
+        catches: Vec<NewErsTraCatch<'_>>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
     ) -> Result<()> {
         NewErsTraCatch::unnest_insert(catches, &mut **tx).await?;

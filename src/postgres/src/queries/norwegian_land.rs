@@ -8,7 +8,7 @@ use unnest_insert::UnnestInsert;
 impl PostgresAdapter {
     pub(crate) async fn add_municipalities<'a>(
         &'a self,
-        municipalities: Vec<NewMunicipality>,
+        municipalities: Vec<NewMunicipality<'_>>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
     ) -> Result<()> {
         NewMunicipality::unnest_insert(municipalities, &mut **tx).await?;
@@ -17,7 +17,7 @@ impl PostgresAdapter {
 
     pub(crate) async fn add_counties<'a>(
         &'a self,
-        municipalities: Vec<NewCounty>,
+        municipalities: Vec<NewCounty<'_>>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
     ) -> Result<()> {
         NewCounty::unnest_insert(municipalities, &mut **tx).await?;

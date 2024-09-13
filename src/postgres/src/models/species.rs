@@ -10,10 +10,10 @@ pub struct SpeciesGroupWeek {
 
 #[derive(Debug, Clone, PartialEq, Eq, UnnestInsert)]
 #[unnest_insert(table_name = "species", conflict = "species_id", update_coalesce_all)]
-pub struct Species {
+pub struct NewSpecies<'a> {
     #[unnest_insert(field_name = "species_id")]
     pub id: i32,
-    pub name: String,
+    pub name: &'a str,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, UnnestInsert)]
@@ -22,10 +22,10 @@ pub struct Species {
     conflict = "species_fao_id",
     update_coalesce_all
 )]
-pub struct SpeciesFao {
+pub struct NewSpeciesFao<'a> {
     #[unnest_insert(field_name = "species_fao_id")]
-    pub id: String,
-    pub name: Option<String>,
+    pub id: &'a str,
+    pub name: Option<&'a str>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, UnnestInsert)]
@@ -34,26 +34,44 @@ pub struct SpeciesFao {
     conflict = "species_fiskeridir_id",
     update_coalesce_all
 )]
-pub struct SpeciesFiskeridir {
+pub struct NewSpeciesFiskeridir<'a> {
     #[unnest_insert(field_name = "species_fiskeridir_id")]
+    pub id: i32,
+    pub name: Option<&'a str>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Species {
+    pub id: i32,
+    pub name: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SpeciesFao {
+    pub id: String,
+    pub name: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SpeciesFiskeridir {
     pub id: i32,
     pub name: Option<String>,
 }
 
-impl From<&fiskeridir_rs::Species> for Species {
-    fn from(val: &fiskeridir_rs::Species) -> Species {
-        Species {
+impl<'a> From<&'a fiskeridir_rs::Species> for NewSpecies<'a> {
+    fn from(val: &'a fiskeridir_rs::Species) -> Self {
+        Self {
             id: val.code as i32,
-            name: val.name.clone().into_inner(),
+            name: &val.name,
         }
     }
 }
 
-impl From<&fiskeridir_rs::Species> for SpeciesFiskeridir {
-    fn from(val: &fiskeridir_rs::Species) -> SpeciesFiskeridir {
-        SpeciesFiskeridir {
+impl<'a> From<&'a fiskeridir_rs::Species> for NewSpeciesFiskeridir<'a> {
+    fn from(val: &'a fiskeridir_rs::Species) -> Self {
+        Self {
             id: val.fdir_code as i32,
-            name: Some(val.fdir_name.clone().into_inner()),
+            name: Some(&val.fdir_name),
         }
     }
 }
@@ -67,27 +85,34 @@ impl From<SpeciesGroupWeek> for kyogre_core::SpeciesGroupWeek {
     }
 }
 
-impl SpeciesFao {
-    pub fn new(id: String, name: Option<String>) -> Self {
+impl<'a> NewSpeciesFao<'a> {
+    pub fn new(id: &'a str, name: Option<&'a str>) -> Self {
         Self { id, name }
     }
 
-    pub fn from_landing_species(species: &fiskeridir_rs::Species) -> Option<SpeciesFao> {
-        match (&species.fao_name, &species.fao_code) {
-            (name, Some(id)) => Some(SpeciesFao {
-                id: id.clone().into_inner(),
-                name: name.clone().map(|v| v.into_inner()),
-            }),
-            _ => None,
-        }
+    pub fn from_landing_species(species: &'a fiskeridir_rs::Species) -> Option<Self> {
+        species.fao_code.as_ref().map(|id| Self {
+            id,
+            name: species.fao_name.as_deref(),
+        })
     }
 }
+
+impl<'a> NewSpeciesFiskeridir<'a> {
+    pub fn new(id: i32, name: Option<&'a str>) -> Self {
+        Self { id, name }
+    }
+}
+
+//
+// TODO: TryFrom -> From ?
+//
 
 impl TryFrom<Species> for kyogre_core::Species {
     type Error = Error;
 
     fn try_from(value: Species) -> Result<Self, Self::Error> {
-        Ok(kyogre_core::Species {
+        Ok(Self {
             id: value.id as u32,
             name: value.name,
         })
@@ -98,7 +123,7 @@ impl TryFrom<SpeciesFao> for kyogre_core::SpeciesFao {
     type Error = Error;
 
     fn try_from(value: SpeciesFao) -> Result<Self, Self::Error> {
-        Ok(kyogre_core::SpeciesFao {
+        Ok(Self {
             id: value.id,
             name: value.name,
         })
@@ -109,15 +134,9 @@ impl TryFrom<SpeciesFiskeridir> for kyogre_core::SpeciesFiskeridir {
     type Error = Error;
 
     fn try_from(value: SpeciesFiskeridir) -> Result<Self, Self::Error> {
-        Ok(kyogre_core::SpeciesFiskeridir {
+        Ok(Self {
             id: value.id as u32,
             name: value.name,
         })
-    }
-}
-
-impl SpeciesFiskeridir {
-    pub fn new(id: i32, name: Option<String>) -> Self {
-        Self { id, name }
     }
 }
