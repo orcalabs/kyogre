@@ -1,7 +1,6 @@
 use chrono::{Datelike, Utc};
 use fiskeridir_rs::CallSign;
 use kyogre_core::BarentswatchUserId;
-use unnest_insert::UnnestInsert;
 
 use crate::{
     error::Result,
@@ -14,14 +13,8 @@ impl PostgresAdapter {
         &self,
         values: Vec<kyogre_core::VesselBenchmarkOutput>,
     ) -> Result<()> {
-        let values = values
-            .into_iter()
-            .map(VesselBenchmarkOutput::from)
-            .collect();
-
-        VesselBenchmarkOutput::unnest_insert(values, &self.pool).await?;
-
-        Ok(())
+        self.unnest_insert_from::<_, _, VesselBenchmarkOutput>(values, &self.pool)
+            .await
     }
 
     pub(crate) async fn vessel_benchmarks_impl(

@@ -9,12 +9,11 @@ use futures::{Stream, TryStreamExt};
 use kyogre_core::{FiskeridirVesselId, LandingsQuery, TripAssemblerId, VesselEventType};
 use sqlx::postgres::types::PgRange;
 use tracing::{error, info};
-use unnest_insert::{UnnestInsert, UnnestInsertReturning};
 
 use crate::{
     error::{Error, Result},
     landing_set::LandingSet,
-    models::{Landing, NewLanding, NewLandingEntry, NewTripAssemblerConflict},
+    models::{Landing, NewLanding, NewTripAssemblerConflict},
     PostgresAdapter,
 };
 
@@ -337,21 +336,20 @@ WHERE
     ) -> Result<()> {
         let set = set.prepare();
 
-        self.add_delivery_point_ids(set.delivery_points, tx).await?;
-
-        self.add_municipalities(set.municipalities, tx).await?;
-        self.add_counties(set.counties, tx).await?;
-        self.add_fiskeridir_vessels(set.vessels, tx).await?;
-
-        self.add_species_fiskeridir(set.species_fiskeridir, tx)
+        self.unnest_insert(set.delivery_points, &mut **tx).await?;
+        self.unnest_insert(set.municipalities, &mut **tx).await?;
+        self.unnest_insert(set.counties, &mut **tx).await?;
+        self.unnest_insert(set.vessels, &mut **tx).await?;
+        self.unnest_insert(set.species_fiskeridir, &mut **tx)
             .await?;
-        self.add_species(set.species, tx).await?;
-        self.add_species_fao(set.species_fao, tx).await?;
-        self.add_catch_areas(set.catch_areas, tx).await?;
-        self.add_catch_main_areas(set.catch_main_areas, tx).await?;
-        self.add_catch_main_area_fao(set.catch_main_area_fao, tx)
+        self.unnest_insert(set.species, &mut **tx).await?;
+        self.unnest_insert(set.species_fao, &mut **tx).await?;
+        self.unnest_insert(set.catch_areas, &mut **tx).await?;
+        self.unnest_insert(set.catch_main_areas, &mut **tx).await?;
+        self.unnest_insert(set.catch_main_area_fao, &mut **tx)
             .await?;
-        self.add_area_groupings(set.area_groupings, tx).await?;
+        self.unnest_insert(set.area_groupings, &mut **tx).await?;
+
         self.add_landings(
             set.landings,
             inserted_landing_ids,
@@ -361,7 +359,7 @@ WHERE
         )
         .await?;
 
-        self.add_landing_entries(set.landing_entries, tx).await?;
+        self.unnest_insert(set.landing_entries, &mut **tx).await?;
 
         Ok(())
     }
@@ -401,7 +399,7 @@ RETURNING
         .fetch_all(&mut **tx)
         .await?;
 
-        let inserted = NewLanding::unnest_insert_returning(landings, &mut **tx).await?;
+        let inserted = self.unnest_insert_returning(landings, &mut **tx).await?;
 
         for i in inserted {
             if let (Some(id), Some(event_id)) = (i.fiskeridir_vessel_id, i.vessel_event_id) {
@@ -467,15 +465,6 @@ WHERE
         .await?;
 
         Ok(landings)
-    }
-
-    pub(crate) async fn add_landing_entries<'a>(
-        &'a self,
-        entries: Vec<NewLandingEntry<'_>>,
-        tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<()> {
-        NewLandingEntry::unnest_insert(entries, &mut **tx).await?;
-        Ok(())
     }
 
     pub(crate) async fn delete_removed_landings<'a>(

@@ -126,6 +126,14 @@ impl<'a> From<&'a fiskeridir_rs::DeliveryPointId> for NewDeliveryPointId<'a> {
     }
 }
 
+impl<'a> From<&'a ManualDeliveryPoint> for NewDeliveryPointId<'a> {
+    fn from(v: &'a ManualDeliveryPoint) -> Self {
+        Self {
+            delivery_point_id: v.delivery_point_id.as_ref(),
+        }
+    }
+}
+
 impl<'a> From<&'a fiskeridir_rs::AquaCultureEntry> for AquaCultureSpecies<'a> {
     fn from(v: &'a fiskeridir_rs::AquaCultureEntry) -> Self {
         Self {

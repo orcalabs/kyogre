@@ -6,7 +6,6 @@ use kyogre_core::{
     CatchLocationId, HaulId, HaulWeather, HaulWeatherOutput, Weather, WeatherLocationId,
     WeatherQuery,
 };
-use unnest_insert::UnnestInsert;
 
 use crate::{
     error::Result,
@@ -551,24 +550,18 @@ WHERE
         &self,
         weather: Vec<kyogre_core::NewWeather>,
     ) -> Result<()> {
-        let values = weather
-            .into_iter()
-            .map(NewWeather::try_from)
-            .collect::<Result<Vec<_>>>()?;
-
-        let average_reset: Vec<NewWeatherDailyDirty> = values
+        let average_reset = weather
             .iter()
             .map(|v| v.timestamp.date_naive())
             .collect::<HashSet<NaiveDate>>()
             .into_iter()
-            .map(|v| NewWeatherDailyDirty { date: v })
-            .collect();
+            .map(|v| NewWeatherDailyDirty { date: v });
 
         let mut tx = self.pool.begin().await?;
 
-        NewWeatherDailyDirty::unnest_insert(average_reset, &mut *tx).await?;
-
-        NewWeather::unnest_insert(values, &mut *tx).await?;
+        self.unnest_insert_try_from::<_, _, NewWeather>(weather, &mut *tx)
+            .await?;
+        self.unnest_insert(average_reset, &mut *tx).await?;
 
         tx.commit().await?;
 

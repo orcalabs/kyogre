@@ -1,15 +1,10 @@
 use std::collections::HashSet;
 
-use crate::{
-    error::Result,
-    ers_dca_set::ErsDcaSet,
-    models::{NewErsDca, NewErsDcaBody, NewHerringPopulation},
-    PostgresAdapter,
-};
 use futures::TryStreamExt;
 use kyogre_core::VesselEventType;
 use tracing::error;
-use unnest_insert::{UnnestInsert, UnnestInsertReturning};
+
+use crate::{error::Result, ers_dca_set::ErsDcaSet, models::NewErsDca, PostgresAdapter};
 
 static CHUNK_SIZE: usize = 100_000;
 
@@ -82,28 +77,29 @@ impl PostgresAdapter {
     ) -> Result<()> {
         let prepared_set = set.prepare();
 
-        self.add_ers_message_types(prepared_set.ers_message_types, tx)
+        self.unnest_insert(prepared_set.ers_message_types, &mut **tx)
             .await?;
-        self.add_area_groupings(prepared_set.area_groupings, tx)
+        self.unnest_insert(prepared_set.area_groupings, &mut **tx)
             .await?;
-        self.add_herring_populations(prepared_set.herring_populations, tx)
+        self.unnest_insert(prepared_set.herring_populations, &mut **tx)
             .await?;
-        self.add_catch_main_areas(prepared_set.main_areas, tx)
+        self.unnest_insert(prepared_set.main_areas, &mut **tx)
             .await?;
-        self.add_catch_areas(prepared_set.catch_areas, tx).await?;
-        self.add_gear_fao(prepared_set.gear_fao, tx).await?;
-        self.add_gear_problems(prepared_set.gear_problems, tx)
+        self.unnest_insert(prepared_set.catch_areas, &mut **tx)
             .await?;
-        self.add_municipalities(prepared_set.municipalities, tx)
+        self.unnest_insert(prepared_set.gear_fao, &mut **tx).await?;
+        self.unnest_insert(prepared_set.gear_problems, &mut **tx)
             .await?;
-        self.add_economic_zones(prepared_set.economic_zones, tx)
+        self.unnest_insert(prepared_set.municipalities, &mut **tx)
             .await?;
-        self.add_counties(prepared_set.counties, tx).await?;
-        self.add_fiskeridir_vessels(prepared_set.vessels, tx)
+        self.unnest_insert(prepared_set.economic_zones, &mut **tx)
             .await?;
-        self.add_ports(prepared_set.ports, tx).await?;
-        self.add_species_fao(prepared_set.species_fao, tx).await?;
-        self.add_species_fiskeridir(prepared_set.species_fiskeridir, tx)
+        self.unnest_insert(prepared_set.counties, &mut **tx).await?;
+        self.unnest_insert(prepared_set.vessels, &mut **tx).await?;
+        self.unnest_insert(prepared_set.ports, &mut **tx).await?;
+        self.unnest_insert(prepared_set.species_fao, &mut **tx)
+            .await?;
+        self.unnest_insert(prepared_set.species_fiskeridir, &mut **tx)
             .await?;
         self.add_ers_dca(
             prepared_set.ers_dca,
@@ -116,9 +112,9 @@ impl PostgresAdapter {
         let bodies = prepared_set
             .ers_dca_bodies
             .into_iter()
-            .filter(|b| inserted_message_ids.contains(&b.message_id))
-            .collect();
-        self.add_ers_dca_bodies(bodies, tx).await?;
+            .filter(|b| inserted_message_ids.contains(&b.message_id));
+
+        self.unnest_insert(bodies, &mut **tx).await?;
 
         Ok(())
     }
@@ -155,7 +151,7 @@ WHERE
         let to_insert = self.ers_dca_to_insert(&message_id, tx).await?;
         ers_dca.retain(|e| to_insert.contains(&e.message_id));
 
-        let inserted = NewErsDca::unnest_insert_returning(ers_dca, &mut **tx).await?;
+        let inserted = self.unnest_insert_returning(ers_dca, &mut **tx).await?;
 
         for i in inserted {
             inserted_message_ids.insert(i.message_id);
@@ -190,23 +186,5 @@ WHERE
         .await?;
 
         Ok(ids)
-    }
-
-    async fn add_ers_dca_bodies<'a>(
-        &'a self,
-        ers_dca_bodies: Vec<NewErsDcaBody<'_>>,
-        tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<()> {
-        NewErsDcaBody::unnest_insert(ers_dca_bodies, &mut **tx).await?;
-        Ok(())
-    }
-
-    pub(crate) async fn add_herring_populations<'a>(
-        &self,
-        herring_populations: Vec<NewHerringPopulation<'_>>,
-        tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<()> {
-        NewHerringPopulation::unnest_insert(herring_populations, &mut **tx).await?;
-        Ok(())
     }
 }
