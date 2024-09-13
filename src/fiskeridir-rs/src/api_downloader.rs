@@ -39,9 +39,9 @@ impl ApiDownloader {
         source: &ApiSource,
         query: Option<&impl Serialize>,
     ) -> Result<T> {
-        self.http_client
+        Ok(self
+            .http_client
             .download(source.url(), query, None::<String>)
-            .await
-            .map_err(From::from)
+            .await?)
     }
 }
