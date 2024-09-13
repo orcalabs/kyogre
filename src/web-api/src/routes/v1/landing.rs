@@ -127,7 +127,7 @@ pub async fn landing_matrix<T: Database + 'static, S: Cache>(
     let query = matrix_params_to_query(params.into_inner(), path.active_filter);
 
     if let Some(cache) = cache.as_ref() {
-        if let Some(matrix) = cache.landing_matrix(query.clone()).await? {
+        if let Some(matrix) = cache.landing_matrix(&query).await? {
             return Ok(Response::new(LandingMatrix::from(matrix)));
         }
     }
