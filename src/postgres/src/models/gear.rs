@@ -2,16 +2,10 @@ use unnest_insert::UnnestInsert;
 
 #[derive(Debug, Clone, PartialEq, Eq, UnnestInsert)]
 #[unnest_insert(table_name = "gear_fao", conflict = "gear_fao_id", update_coalesce_all)]
-pub struct NewGearFao {
+pub struct NewGearFao<'a> {
     #[unnest_insert(field_name = "gear_fao_id")]
-    pub id: String,
-    pub name: Option<String>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct NewGearFiskeridir {
-    pub id: i32,
-    pub name: String,
+    pub id: &'a str,
+    pub name: Option<&'a str>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, UnnestInsert)]
@@ -20,20 +14,20 @@ pub struct NewGearFiskeridir {
     conflict = "gear_problem_id",
     update_coalesce_all
 )]
-pub struct NewGearProblem {
+pub struct NewGearProblem<'a> {
     #[unnest_insert(field_name = "gear_problem_id")]
     pub id: i32,
-    pub name: Option<String>,
+    pub name: Option<&'a str>,
 }
 
-impl NewGearFao {
-    pub fn new(id: String, name: Option<String>) -> Self {
+impl<'a> NewGearFao<'a> {
+    pub fn new(id: &'a str, name: Option<&'a str>) -> Self {
         Self { id, name }
     }
 }
 
-impl NewGearProblem {
-    pub fn new(id: i32, name: Option<String>) -> Self {
+impl<'a> NewGearProblem<'a> {
+    pub fn new(id: i32, name: Option<&'a str>) -> Self {
         Self { id, name }
     }
 }

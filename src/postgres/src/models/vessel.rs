@@ -137,12 +137,12 @@ pub struct AisVessel {
 
 #[derive(Debug, Clone, UnnestInsert)]
 #[unnest_insert(table_name = "fiskeridir_vessels", conflict = "fiskeridir_vessel_id")]
-pub struct NewFiskeridirVessel {
+pub struct NewFiskeridirVessel<'a> {
     #[unnest_insert(sql_type = "BIGINT", type_conversion = "opt_type_to_i64")]
     pub fiskeridir_vessel_id: Option<FiskeridirVesselId>,
-    pub call_sign: Option<String>,
-    pub registration_id: Option<String>,
-    pub name: Option<String>,
+    pub call_sign: Option<&'a str>,
+    pub registration_id: Option<&'a str>,
+    pub name: Option<&'a str>,
     pub length: Option<f64>,
     pub building_year: Option<i32>,
     pub engine_power: Option<i32>,
@@ -151,7 +151,7 @@ pub struct NewFiskeridirVessel {
     pub fiskeridir_vessel_type_id: Option<VesselType>,
     pub norwegian_municipality_id: Option<i32>,
     pub norwegian_county_id: Option<i32>,
-    pub fiskeridir_nation_group_id: Option<String>,
+    pub fiskeridir_nation_group_id: Option<&'a str>,
     pub nation_id: String,
     pub gross_tonnage_1969: Option<i32>,
     pub gross_tonnage_other: Option<i32>,
@@ -195,15 +195,13 @@ pub struct VesselBenchmarkOutput {
     pub output: f64,
 }
 
-impl TryFrom<fiskeridir_rs::Vessel> for NewFiskeridirVessel {
-    type Error = Error;
-
-    fn try_from(v: fiskeridir_rs::Vessel) -> Result<Self, Self::Error> {
-        Ok(Self {
+impl<'a> From<&'a fiskeridir_rs::Vessel> for NewFiskeridirVessel<'a> {
+    fn from(v: &'a fiskeridir_rs::Vessel) -> Self {
+        Self {
             fiskeridir_vessel_id: v.id,
-            call_sign: v.call_sign.map(|c| c.into_inner()),
-            registration_id: v.registration_id.map(|v| v.into_inner()),
-            name: v.name.map(|v| v.into_inner()),
+            call_sign: v.call_sign.as_deref(),
+            registration_id: v.registration_id.as_deref(),
+            name: v.name.as_deref(),
             length: v.length,
             building_year: v.building_year.map(|x| x as i32),
             engine_power: v.engine_power.map(|x| x as i32),
@@ -211,12 +209,35 @@ impl TryFrom<fiskeridir_rs::Vessel> for NewFiskeridirVessel {
             fiskeridir_vessel_type_id: v.type_code,
             norwegian_municipality_id: v.municipality_code.map(|x| x as i32),
             norwegian_county_id: v.county_code.map(|x| x as i32),
-            fiskeridir_nation_group_id: v.nationality_group.map(|v| v.into_inner()),
+            fiskeridir_nation_group_id: v.nationality_group.as_deref(),
             nation_id: v.nationality_code.alpha3().to_string(),
             gross_tonnage_1969: v.gross_tonnage_1969.map(|x| x as i32),
             gross_tonnage_other: v.gross_tonnage_other.map(|x| x as i32),
             rebuilding_year: v.rebuilding_year.map(|x| x as i32),
-        })
+        }
+    }
+}
+
+impl<'a> From<&'a fiskeridir_rs::ErsVesselInfo> for NewFiskeridirVessel<'a> {
+    fn from(v: &'a fiskeridir_rs::ErsVesselInfo) -> Self {
+        Self {
+            fiskeridir_vessel_id: v.id,
+            call_sign: v.call_sign.as_deref(),
+            registration_id: v.registration_id.as_deref(),
+            name: v.name.as_deref(),
+            length: Some(v.length),
+            building_year: v.building_year.map(|x| x as i32),
+            engine_power: v.engine_power.map(|x| x as i32),
+            engine_building_year: v.engine_building_year.map(|x| x as i32),
+            fiskeridir_vessel_type_id: None,
+            norwegian_municipality_id: v.municipality_code.map(|x| x as i32),
+            norwegian_county_id: v.county_code.map(|x| x as i32),
+            fiskeridir_nation_group_id: None,
+            nation_id: v.nationality_code.alpha3().to_string(),
+            gross_tonnage_1969: v.gross_tonnage_1969.map(|x| x as i32),
+            gross_tonnage_other: v.gross_tonnage_other.map(|x| x as i32),
+            rebuilding_year: v.rebuilding_year.map(|x| x as i32),
+        }
     }
 }
 

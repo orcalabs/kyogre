@@ -851,15 +851,15 @@ impl ScraperInboundPort for PostgresAdapter {
         Ok(())
     }
     async fn add_ers_dep(&self, ers_dep: Vec<fiskeridir_rs::ErsDep>) -> CoreResult<()> {
-        let set = ErsDepSet::new(ers_dep)?;
+        let set = ErsDepSet::new(ers_dep.iter())?;
         Ok(self.add_ers_dep_set(set).await?)
     }
     async fn add_ers_por(&self, ers_por: Vec<fiskeridir_rs::ErsPor>) -> CoreResult<()> {
-        let set = ErsPorSet::new(ers_por)?;
+        let set = ErsPorSet::new(ers_por.iter())?;
         Ok(self.add_ers_por_set(set).await?)
     }
     async fn add_ers_tra(&self, ers_tra: Vec<fiskeridir_rs::ErsTra>) -> CoreResult<()> {
-        let set = ErsTraSet::new(ers_tra)?;
+        let set = ErsTraSet::new(ers_tra.iter())?;
         Ok(self.add_ers_tra_set(set).await?)
     }
     async fn add_vms(&self, vms: Vec<fiskeridir_rs::Vms>) -> CoreResult<()> {

@@ -15,7 +15,7 @@ use kyogre_core::{Arrival, ArrivalFilter, FiskeridirVesselId, TripAssemblerId, V
 use unnest_insert::{UnnestInsert, UnnestInsertReturning};
 
 impl PostgresAdapter {
-    pub(crate) async fn add_ers_por_set(&self, set: ErsPorSet) -> Result<()> {
+    pub(crate) async fn add_ers_por_set(&self, set: ErsPorSet<'_>) -> Result<()> {
         let prepared_set = set.prepare();
 
         let mut tx = self.pool.begin().await?;
@@ -44,7 +44,7 @@ impl PostgresAdapter {
 
     async fn add_ers_por<'a>(
         &'a self,
-        mut ers_por: Vec<NewErsPor>,
+        mut ers_por: Vec<NewErsPor<'_>>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
     ) -> Result<()> {
         let to_insert = self.ers_por_to_insert(&ers_por, tx).await?;
@@ -87,7 +87,7 @@ impl PostgresAdapter {
 
     async fn ers_por_to_insert<'a>(
         &'a self,
-        ers_por: &[NewErsPor],
+        ers_por: &[NewErsPor<'_>],
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
     ) -> Result<HashSet<i64>> {
         let message_ids = ers_por.iter().map(|e| e.message_id).collect::<Vec<_>>();
@@ -114,7 +114,7 @@ WHERE
 
     pub(crate) async fn add_ers_por_catches<'a>(
         &self,
-        catches: Vec<NewErsPorCatch>,
+        catches: Vec<NewErsPorCatch<'_>>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
     ) -> Result<()> {
         NewErsPorCatch::unnest_insert(catches, &mut **tx).await?;

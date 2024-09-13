@@ -74,7 +74,7 @@ FROM
 
     pub(crate) async fn add_ports<'a>(
         &'a self,
-        ports: Vec<NewPort>,
+        ports: Vec<NewPort<'_>>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
     ) -> Result<()> {
         NewPort::unnest_insert(ports, &mut **tx).await?;

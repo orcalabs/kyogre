@@ -40,7 +40,6 @@ impl DataDir {
 
         let csv_reader = csv::ReaderBuilder::new()
             .delimiter(b';')
-            .trim(csv::Trim::Fields)
             .flexible(true)
             .from_reader(file);
 

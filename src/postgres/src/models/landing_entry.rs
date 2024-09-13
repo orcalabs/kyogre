@@ -1,13 +1,12 @@
-use crate::error::Error;
 use unnest_insert::UnnestInsert;
 
 #[derive(UnnestInsert)]
 #[unnest_insert(table_name = "landing_entries", conflict = "landing_id,line_number")]
-pub struct NewLandingEntry {
+pub struct NewLandingEntry<'a> {
     // Dokumentnummer-SalgslagId-Dokumenttype
-    pub landing_id: String,
+    pub landing_id: &'a str,
     // Størrelsesgruppering (kode)
-    pub size_grouping_code: String,
+    pub size_grouping_code: &'a str,
     // Inndradd fangstverdi
     pub withdrawn_catch_value: Option<f64>,
     // Fangstverdi
@@ -53,7 +52,7 @@ pub struct NewLandingEntry {
     // Art (kode)
     pub species_id: i32,
     //  Art FAO (kode)
-    pub species_fao_id: Option<String>,
+    pub species_fao_id: Option<&'a str>,
     // Art - gruppe (kode)
     pub species_group_id: i32,
     // Art - FDIR (kode)
@@ -62,13 +61,11 @@ pub struct NewLandingEntry {
     pub species_main_group_id: i32,
 }
 
-impl TryFrom<&fiskeridir_rs::Landing> for NewLandingEntry {
-    type Error = Error;
-
-    fn try_from(landing: &fiskeridir_rs::Landing) -> Result<Self, Self::Error> {
-        Ok(NewLandingEntry {
-            landing_id: landing.id.clone().into_inner(),
-            size_grouping_code: landing.product.size_grouping_code.clone().into_inner(),
+impl<'a> From<&'a fiskeridir_rs::Landing> for NewLandingEntry<'a> {
+    fn from(landing: &'a fiskeridir_rs::Landing) -> Self {
+        Self {
+            landing_id: landing.id.as_ref(),
+            size_grouping_code: landing.product.size_grouping_code.as_ref(),
             withdrawn_catch_value: landing.finances.withdrawn_catch_value,
             catch_value: landing.finances.catch_value,
             sales_team_fee: landing.finances.sales_team_fee,
@@ -91,15 +88,10 @@ impl TryFrom<&fiskeridir_rs::Landing> for NewLandingEntry {
             living_weight: landing.product.living_weight,
             living_weight_over_quota: landing.product.living_weight_over_quota,
             species_id: landing.product.species.code as i32,
-            species_fao_id: landing
-                .product
-                .species
-                .fao_code
-                .clone()
-                .map(|v| v.into_inner()),
+            species_fao_id: landing.product.species.fao_code.as_deref(),
             species_group_id: landing.product.species.group_code as i32,
             species_fiskeridir_id: landing.product.species.fdir_code as i32,
             species_main_group_id: landing.product.species.main_group_code as i32,
-        })
+        }
     }
 }

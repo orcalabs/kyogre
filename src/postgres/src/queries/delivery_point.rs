@@ -4,7 +4,7 @@ use crate::{
     error::Result,
     models::{
         AquaCultureEntry, AquaCultureSpecies, AquaCultureTill, DeliveryPoint, ManualDeliveryPoint,
-        MattilsynetDeliveryPoint, NewDeliveryPointId, SpeciesFiskeridir,
+        MattilsynetDeliveryPoint, NewDeliveryPointId, NewSpeciesFiskeridir,
     },
     PostgresAdapter,
 };
@@ -92,7 +92,7 @@ FROM
         let ids = values
             .iter()
             .map(|v| NewDeliveryPointId {
-                delivery_point_id: v.delivery_point_id.clone(),
+                delivery_point_id: v.delivery_point_id.as_ref(),
             })
             .collect();
         self.add_delivery_point_ids(ids, &mut tx).await?;
@@ -129,7 +129,7 @@ FROM
 
     pub(crate) async fn add_delivery_point_ids<'a>(
         &'a self,
-        delivery_point_ids: Vec<NewDeliveryPointId>,
+        delivery_point_ids: Vec<NewDeliveryPointId<'_>>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
     ) -> Result<()> {
         NewDeliveryPointId::unnest_insert(delivery_point_ids, &mut **tx).await?;
@@ -147,25 +147,24 @@ FROM
         let mut tills = HashMap::with_capacity(len);
         let mut ids = Vec::with_capacity(len);
 
-        for a in f_entries {
-            ids.push(a.delivery_point_id.clone().into());
+        for a in &f_entries {
+            ids.push((&a.delivery_point_id).into());
 
             species.entry(a.species_code).or_insert_with(|| {
-                SpeciesFiskeridir::new(a.species_code as i32, Some(a.species.clone().into_inner()))
+                NewSpeciesFiskeridir::new(a.species_code as i32, Some(&a.species))
             });
 
             if let Entry::Vacant(e) =
-                aqua_species.entry((a.till_nr.clone(), a.till_unit.clone(), a.species_code))
+                aqua_species.entry((a.till_nr.as_ref(), a.till_unit.as_ref(), a.species_code))
             {
-                e.insert((&a).try_into()?);
+                e.insert(a.into());
             }
 
-            if let Entry::Vacant(e) = tills.entry((a.delivery_point_id.clone(), a.till_nr.clone()))
-            {
-                e.insert((&a).into());
+            if let Entry::Vacant(e) = tills.entry((&a.delivery_point_id, a.till_nr.as_ref())) {
+                e.insert(a.into());
             }
 
-            entries.insert(a.delivery_point_id.clone(), a.into());
+            entries.insert(&a.delivery_point_id, a.into());
         }
 
         let values = entries.into_values().collect();
@@ -191,7 +190,7 @@ FROM
 
     pub(crate) async fn add_aqua_culture_register_tills<'a>(
         &'a self,
-        tills: Vec<AquaCultureTill>,
+        tills: Vec<AquaCultureTill<'_>>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
     ) -> Result<()> {
         AquaCultureTill::unnest_insert(tills, &mut **tx).await?;
@@ -200,7 +199,7 @@ FROM
 
     pub(crate) async fn add_aqua_culture_register_species<'a>(
         &'a self,
-        species: Vec<AquaCultureSpecies>,
+        species: Vec<AquaCultureSpecies<'_>>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
     ) -> Result<()> {
         AquaCultureSpecies::unnest_insert(species, &mut **tx).await?;
@@ -215,8 +214,8 @@ FROM
         let mut items = Vec::with_capacity(len);
         let mut ids = Vec::with_capacity(len);
 
-        for d in delivery_points {
-            ids.push(d.id.clone().into());
+        for d in &delivery_points {
+            ids.push((&d.id).into());
             items.push(d.into());
         }
 

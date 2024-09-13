@@ -28,7 +28,7 @@ geo = { workspace = true }
 wkt = { workspace = true }
 uuid = { workspace = true }
 
-unnest_insert = { version = "0.7.0", registry = "orcalabs-orcastrator", features = [
+unnest_insert = { version = "0.8.0", registry = "orcalabs-orcastrator", features = [
     "derive",
 ] }
 

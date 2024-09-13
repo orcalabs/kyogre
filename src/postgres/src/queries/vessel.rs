@@ -212,10 +212,7 @@ VALUES
                 &c.fiskeridir_vessel_ids as _,
                 &c.ais_vessel_names as _,
                 &c.fiskeridir_vessel_names as _,
-                &c.fiskeridir_vessel_source_ids
-                    .iter()
-                    .map(|i| i.map(|v| v as i32))
-                    .collect::<Vec<_>>() as _,
+                &c.fiskeridir_vessel_source_ids as &[Option<VesselSource>],
             )
             .execute(&mut **tx)
             .await?;
@@ -223,27 +220,13 @@ VALUES
 
         Ok(())
     }
+
     pub(crate) async fn add_fiskeridir_vessels<'a>(
         &'a self,
-        vessels: Vec<fiskeridir_rs::Vessel>,
+        vessels: Vec<NewFiskeridirVessel<'_>>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
     ) -> Result<()> {
-        let vessels = vessels
-            .into_iter()
-            .map(NewFiskeridirVessel::try_from)
-            .filter(|v| {
-                matches!(
-                    v,
-                    Ok(NewFiskeridirVessel {
-                        fiskeridir_vessel_id: Some(_),
-                        ..
-                    })
-                )
-            })
-            .collect::<Result<Vec<_>>>()?;
-
         NewFiskeridirVessel::unnest_insert(vessels, &mut **tx).await?;
-
         Ok(())
     }
 
@@ -306,7 +289,7 @@ WHERE
         &self,
         vessels: Vec<fiskeridir_rs::RegisterVessel>,
     ) -> Result<()> {
-        let municipalitis: HashMap<i32, NewMunicipality> = vessels
+        let municipalitis: HashMap<i32, NewMunicipality<'_>> = vessels
             .iter()
             .map(|v| {
                 (
