@@ -190,7 +190,7 @@ pub async fn trips<T: Database + 'static, M: Meilisearch + 'static>(
     if let Some(meilisearch) = meilisearch.as_ref() {
         return Ok(Response::new(
             meilisearch
-                .trips(query.clone(), read_fishing_facility)
+                .trips(&query, read_fishing_facility)
                 .await?
                 .into_iter()
                 .map(Trip::from)
