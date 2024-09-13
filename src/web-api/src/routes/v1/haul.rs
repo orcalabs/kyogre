@@ -89,7 +89,7 @@ pub async fn hauls<T: Database + 'static, M: Meilisearch + 'static>(
     if let Some(meilisearch) = meilisearch.as_ref() {
         return Ok(Response::new(
             meilisearch
-                .hauls(query.clone())
+                .hauls(&query)
                 .await?
                 .into_iter()
                 .map(Haul::from)

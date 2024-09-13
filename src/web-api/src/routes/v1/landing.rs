@@ -83,7 +83,7 @@ pub async fn landings<T: Database + 'static, M: Meilisearch + 'static>(
     if let Some(meilisearch) = meilisearch.as_ref() {
         return Ok(Response::new(
             meilisearch
-                .landings(query.clone())
+                .landings(&query)
                 .await?
                 .into_iter()
                 .map(Landing::from)

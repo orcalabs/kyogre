@@ -171,7 +171,7 @@ pub trait MatrixCacheOutbound: Send + Sync {
 pub trait MeilisearchOutbound: Send + Sync {
     async fn trips(
         &self,
-        query: TripsQuery,
+        query: &TripsQuery,
         read_fishing_facility: bool,
     ) -> CoreResult<Vec<TripDetailed>>;
     async fn trip_of_haul(
@@ -184,8 +184,8 @@ pub trait MeilisearchOutbound: Send + Sync {
         landing_id: &LandingId,
         read_fishing_facility: bool,
     ) -> CoreResult<Option<TripDetailed>>;
-    async fn hauls(&self, query: HaulsQuery) -> CoreResult<Vec<Haul>>;
-    async fn landings(&self, query: LandingsQuery) -> CoreResult<Vec<Landing>>;
+    async fn hauls(&self, query: &HaulsQuery) -> CoreResult<Vec<Haul>>;
+    async fn landings(&self, query: &LandingsQuery) -> CoreResult<Vec<Landing>>;
 }
 
 #[async_trait]
