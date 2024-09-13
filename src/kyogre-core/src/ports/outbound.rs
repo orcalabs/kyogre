@@ -163,8 +163,9 @@ pub trait VesselBenchmarkOutbound: Send + Sync {
 
 #[async_trait]
 pub trait MatrixCacheOutbound: Send + Sync {
-    async fn hauls_matrix(&self, query: HaulsMatrixQuery) -> CoreResult<Option<HaulsMatrix>>;
-    async fn landing_matrix(&self, query: LandingMatrixQuery) -> CoreResult<Option<LandingMatrix>>;
+    async fn hauls_matrix(&self, query: &HaulsMatrixQuery) -> CoreResult<Option<HaulsMatrix>>;
+    async fn landing_matrix(&self, query: &LandingMatrixQuery)
+        -> CoreResult<Option<LandingMatrix>>;
 }
 
 #[async_trait]

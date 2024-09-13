@@ -1,6 +1,7 @@
 use crate::error::Result;
 use duckdb::DuckdbConnectionManager;
 use duckdb::{params, Transaction};
+use kyogre_core::retry;
 use orca_core::PsqlSettings;
 use r2d2::PooledConnection;
 use tokio::sync::mpsc::{Receiver, Sender};
@@ -199,50 +200,35 @@ SELECT
 
     #[instrument(skip_all)]
     async fn do_periodic_refresh(&self, response_channel: Option<Sender<RefreshResponse>>) {
-        let res = match self.refresh_status() {
-            Err(e) => {
-                error!("failed to check postgres for refresh status: {e:?}");
-                Err(e)
-            }
-            Ok(v) => {
-                let res = if v.hauls.should_refresh {
-                    info!("hauls have been modified, starting refresh...");
-                    match self.refresh_hauls(Some(v.hauls.version)) {
-                        Err(e) => {
-                            error!("failed to set refresh hauls: {e:?}");
-                            Err(e)
-                        }
-                        Ok(v) => Ok(v),
-                    }
-                } else {
-                    Ok(())
-                };
-                let res2 = if v.landings.should_refresh {
-                    info!("landings have been modified, starting refresh...");
-                    match self.refresh_landings(Some(v.landings.version)) {
-                        Err(e) => {
-                            error!("failed to set refresh landings: {e:?}");
-                            Err(e)
-                        }
-                        Ok(v) => Ok(v),
-                    }
-                } else {
-                    Ok(())
-                };
-
-                match (res, res2) {
-                    (_, Err(e)) => Err(e),
-                    (Err(e), _) => Err(e),
-                    (_, _) => Ok(()),
-                }
-            }
-        };
+        let res = retry(|| async { self.do_periodic_refresh_impl() }).await;
+        if let Err(e) = &res {
+            error!("failed periodic refresh: {e:?}");
+        }
 
         if let Some(sender) = response_channel {
             if let Err(e) = sender.send(RefreshResponse(res)).await {
                 error!("sender half error, exiting refresh_loop: {e:?}");
             }
         }
+    }
+
+    fn do_periodic_refresh_impl(&self) -> Result<()> {
+        let status = self.refresh_status()?;
+
+        let res = if status.hauls.should_refresh {
+            info!("hauls have been modified, starting refresh...");
+            self.refresh_hauls(Some(status.hauls.version))
+        } else {
+            Ok(())
+        };
+        let res2 = if status.landings.should_refresh {
+            info!("landings have been modified, starting refresh...");
+            self.refresh_landings(Some(status.landings.version))
+        } else {
+            Ok(())
+        };
+
+        res.and(res2)
     }
 
     #[instrument(skip(self))]

@@ -52,7 +52,7 @@ impl Meilisearch for MeilesearchCache {}
 impl MatrixCacheOutbound for MatrixCache {
     async fn landing_matrix(
         &self,
-        query: LandingMatrixQuery,
+        query: &LandingMatrixQuery,
     ) -> CoreResult<Option<kyogre_core::LandingMatrix>> {
         match self.inner.landing_matrix(query).await {
             Ok(v) => Ok(v),
@@ -67,7 +67,7 @@ impl MatrixCacheOutbound for MatrixCache {
     }
     async fn hauls_matrix(
         &self,
-        query: HaulsMatrixQuery,
+        query: &HaulsMatrixQuery,
     ) -> CoreResult<Option<kyogre_core::HaulsMatrix>> {
         match self.inner.hauls_matrix(query).await {
             Ok(v) => Ok(v),
