@@ -43,7 +43,7 @@ pub async fn update_user<T: Database + 'static>(
     user: web::Json<User>,
 ) -> Result<Response<()>> {
     let user = user.into_inner().to_domain_user(profile.user.id);
-    db.update_user(user).await?;
+    db.update_user(&user).await?;
     Ok(Response::new(()))
 }
 

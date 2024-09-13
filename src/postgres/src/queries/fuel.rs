@@ -1,6 +1,6 @@
 use crate::{
     error::Result,
-    models::{DeleteFuelMeasurement, FuelMeasurement},
+    models::{DeleteFuelMeasurement, FuelMeasurement, UpsertFuelMeasurement},
     PostgresAdapter,
 };
 use futures::{Stream, TryStreamExt};
@@ -47,27 +47,27 @@ ORDER BY
 
     pub(crate) async fn add_fuel_measurements_impl(
         &self,
-        measurements: Vec<kyogre_core::FuelMeasurement>,
+        measurements: &[kyogre_core::FuelMeasurement],
     ) -> Result<()> {
-        let values = measurements.into_iter().map(From::from).collect();
-        FuelMeasurement::unnest_insert(values, &self.pool).await?;
+        let values = measurements.iter().map(From::from).collect();
+        UpsertFuelMeasurement::unnest_insert(values, &self.pool).await?;
         Ok(())
     }
 
     pub(crate) async fn update_fuel_measurements_impl(
         &self,
-        measurements: Vec<kyogre_core::FuelMeasurement>,
+        measurements: &[kyogre_core::FuelMeasurement],
     ) -> Result<()> {
-        let values = measurements.into_iter().map(From::from).collect();
-        FuelMeasurement::unnest_update(values, &self.pool).await?;
+        let values = measurements.iter().map(From::from).collect();
+        UpsertFuelMeasurement::unnest_update(values, &self.pool).await?;
         Ok(())
     }
 
     pub(crate) async fn delete_fuel_measurements_impl(
         &self,
-        measurements: Vec<kyogre_core::DeleteFuelMeasurement>,
+        measurements: &[kyogre_core::DeleteFuelMeasurement],
     ) -> Result<()> {
-        let values = measurements.into_iter().map(From::from).collect();
+        let values = measurements.iter().map(From::from).collect();
         DeleteFuelMeasurement::unnest_delete(values, &self.pool).await?;
         Ok(())
     }
