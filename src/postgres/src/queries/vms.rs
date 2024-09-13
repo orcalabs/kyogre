@@ -1,16 +1,15 @@
-use crate::models::AisVmsAreaPositionsReturning;
 use std::collections::{hash_map::Entry, HashMap, HashSet};
 
-use crate::{
-    error::Result,
-    models::{EarliestVms, NewVmsPosition, VmsPosition},
-    PostgresAdapter,
-};
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::CallSign;
 use futures::{Stream, TryStreamExt};
 use kyogre_core::{DateRange, Mmsi, PositionType};
-use unnest_insert::UnnestInsert;
+
+use crate::{
+    error::Result,
+    models::{AisVmsAreaPositionsReturning, EarliestVms, NewVmsPosition, VmsPosition},
+    PostgresAdapter,
+};
 
 impl PostgresAdapter {
     pub(crate) async fn all_vms_impl(&self) -> Result<Vec<VmsPosition>> {
@@ -139,10 +138,11 @@ ORDER BY
         }
 
         let call_signs_unique = call_signs_unique.into_iter().collect::<Vec<_>>();
-        let earliest_positions = vms_earliest.into_values().collect::<Vec<_>>();
+        let earliest_positions = vms_earliest.into_values();
 
         let mut tx = self.pool.begin().await?;
-        EarliestVms::unnest_insert(earliest_positions, &mut *tx).await?;
+
+        self.unnest_insert(earliest_positions, &mut *tx).await?;
 
         sqlx::query!(
             r#"
@@ -154,16 +154,14 @@ SELECT
         .execute(&mut *tx)
         .await?;
 
-        let vms: Vec<NewVmsPosition<'_>> = vms_unique.into_values().collect();
-
-        let len = vms.len();
+        let len = vms_unique.len();
         let mut lat = Vec::with_capacity(len);
         let mut lon = Vec::with_capacity(len);
         let mut timestamp = Vec::with_capacity(len);
         let mut position_type_id = Vec::with_capacity(len);
         let mut call_sign = Vec::with_capacity(len);
 
-        for v in &vms {
+        for v in vms_unique.values() {
             lat.push(v.latitude);
             lon.push(v.longitude);
             timestamp.push(v.timestamp);
@@ -224,7 +222,8 @@ RETURNING
         self.add_ais_vms_aggregated(area_positions_inserted, &mut tx)
             .await?;
 
-        NewVmsPosition::unnest_insert(vms, &mut *tx).await?;
+        self.unnest_insert(vms_unique.into_values(), &mut *tx)
+            .await?;
 
         tx.commit().await?;
 

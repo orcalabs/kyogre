@@ -6,13 +6,12 @@ use std::{
 use crate::{
     error::Result,
     ers_por_set::ErsPorSet,
-    models::{NewErsPor, NewErsPorCatch, NewTripAssemblerConflict},
+    models::{NewErsPor, NewTripAssemblerConflict},
     PostgresAdapter,
 };
 use chrono::{DateTime, Utc};
 use futures::TryStreamExt;
 use kyogre_core::{Arrival, ArrivalFilter, FiskeridirVesselId, TripAssemblerId, VesselEventType};
-use unnest_insert::{UnnestInsert, UnnestInsertReturning};
 
 impl PostgresAdapter {
     pub(crate) async fn add_ers_por_set(&self, set: ErsPorSet<'_>) -> Result<()> {
@@ -20,22 +19,21 @@ impl PostgresAdapter {
 
         let mut tx = self.pool.begin().await?;
 
-        self.add_ers_message_types(prepared_set.ers_message_types, &mut tx)
+        self.unnest_insert(prepared_set.ers_message_types, &mut *tx)
             .await?;
-        self.add_species_fao(prepared_set.species_fao, &mut tx)
+        self.unnest_insert(prepared_set.species_fao, &mut *tx)
             .await?;
-        self.add_species_fiskeridir(prepared_set.species_fiskeridir, &mut tx)
+        self.unnest_insert(prepared_set.species_fiskeridir, &mut *tx)
             .await?;
-        self.add_municipalities(prepared_set.municipalities, &mut tx)
+        self.unnest_insert(prepared_set.municipalities, &mut *tx)
             .await?;
-        self.add_counties(prepared_set.counties, &mut tx).await?;
-        self.add_fiskeridir_vessels(prepared_set.vessels, &mut tx)
-            .await?;
-        self.add_ports(prepared_set.ports, &mut tx).await?;
+        self.unnest_insert(prepared_set.counties, &mut *tx).await?;
+        self.unnest_insert(prepared_set.vessels, &mut *tx).await?;
+        self.unnest_insert(prepared_set.ports, &mut *tx).await?;
+
         self.add_ers_por(prepared_set.ers_por, &mut tx).await?;
 
-        self.add_ers_por_catches(prepared_set.catches, &mut tx)
-            .await?;
+        self.unnest_insert(prepared_set.catches, &mut *tx).await?;
 
         tx.commit().await?;
 
@@ -50,7 +48,7 @@ impl PostgresAdapter {
         let to_insert = self.ers_por_to_insert(&ers_por, tx).await?;
         ers_por.retain(|e| to_insert.contains(&e.message_id));
 
-        let inserted = NewErsPor::unnest_insert_returning(ers_por, &mut **tx).await?;
+        let inserted = self.unnest_insert_returning(ers_por, &mut **tx).await?;
 
         let len = inserted.len();
         let mut conflicts =
@@ -110,15 +108,6 @@ WHERE
         .await?;
 
         Ok(ids)
-    }
-
-    pub(crate) async fn add_ers_por_catches<'a>(
-        &self,
-        catches: Vec<NewErsPorCatch<'_>>,
-        tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<()> {
-        NewErsPorCatch::unnest_insert(catches, &mut **tx).await?;
-        Ok(())
     }
 
     pub async fn ers_arrivals_impl(

@@ -1,35 +1,8 @@
-use crate::{error::Result, models::*, PostgresAdapter};
 use futures::{Stream, TryStreamExt};
-use unnest_insert::UnnestInsert;
+
+use crate::{error::Result, models::*, PostgresAdapter};
 
 impl PostgresAdapter {
-    pub(crate) async fn add_species_fiskeridir<'a>(
-        &'a self,
-        species: Vec<NewSpeciesFiskeridir<'_>>,
-        tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<()> {
-        NewSpeciesFiskeridir::unnest_insert(species, &mut **tx).await?;
-        Ok(())
-    }
-
-    pub(crate) async fn add_species<'a>(
-        &'a self,
-        species: Vec<NewSpecies<'_>>,
-        tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<()> {
-        NewSpecies::unnest_insert(species, &mut **tx).await?;
-        Ok(())
-    }
-
-    pub(crate) async fn add_species_fao<'a>(
-        &'a self,
-        species: Vec<NewSpeciesFao<'_>>,
-        tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<()> {
-        NewSpeciesFao::unnest_insert(species, &mut **tx).await?;
-        Ok(())
-    }
-
     pub(crate) fn species_fiskeridir_impl(
         &self,
     ) -> impl Stream<Item = Result<SpeciesFiskeridir>> + '_ {

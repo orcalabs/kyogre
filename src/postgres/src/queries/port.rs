@@ -1,9 +1,8 @@
 use kyogre_core::{Arrival, FiskeridirVesselId, TripId};
-use unnest_insert::UnnestInsert;
 
 use crate::{
     error::Result,
-    models::{NewPort, Port, PortDockPoint, TripDockPoints, TripPorts},
+    models::{Port, PortDockPoint, TripDockPoints, TripPorts},
     PostgresAdapter,
 };
 
@@ -70,15 +69,6 @@ FROM
         .await?;
 
         Ok(arrivals)
-    }
-
-    pub(crate) async fn add_ports<'a>(
-        &'a self,
-        ports: Vec<NewPort<'_>>,
-        tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<()> {
-        NewPort::unnest_insert(ports, &mut **tx).await?;
-        Ok(())
     }
 
     pub(crate) async fn ports_impl(&self) -> Result<Vec<Port>> {

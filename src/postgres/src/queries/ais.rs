@@ -7,7 +7,6 @@ use kyogre_core::{
     NewAisPosition, NewAisStatic, PositionType, LEISURE_VESSEL_LENGTH_AIS_BOUNDARY,
     LEISURE_VESSEL_SHIP_TYPES, PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY,
 };
-use unnest_insert::UnnestInsert;
 
 use crate::{
     error::Result,
@@ -518,32 +517,23 @@ WHERE
     }
 
     pub(crate) async fn add_ais_vessels(&self, static_messages: &[NewAisStatic]) -> Result<()> {
-        let mut unique_static: HashMap<Mmsi, NewAisStatic> = HashMap::new();
+        let mut unique_static: HashMap<Mmsi, NewAisVessel<'_>> = HashMap::new();
         for v in static_messages {
-            unique_static.entry(v.mmsi).or_insert(v.clone());
+            unique_static.entry(v.mmsi).or_insert_with(|| v.into());
         }
 
         let mut tx = self.pool.begin().await?;
 
-        let vessels = unique_static
-            .into_values()
-            .map(NewAisVessel::from)
-            .collect();
-
-        let vessels_historic = static_messages
-            .iter()
-            .cloned()
-            .map(NewAisVesselHistoric::from)
-            .collect();
-
-        NewAisVessel::unnest_insert(vessels, &mut *tx).await?;
-
-        NewAisVesselHistoric::unnest_insert(vessels_historic, &mut *tx).await?;
+        self.unnest_insert(unique_static.into_values(), &mut *tx)
+            .await?;
+        self.unnest_insert_from::<_, _, NewAisVesselHistoric<'_>>(static_messages, &mut *tx)
+            .await?;
 
         tx.commit().await?;
 
         Ok(())
     }
+
     pub(crate) async fn add_mmsis_impl(&self, mmsis: &[Mmsi]) -> Result<()> {
         sqlx::query!(
             r#"
