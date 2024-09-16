@@ -9,9 +9,9 @@ use chrono_tz::Europe::Oslo;
 use num_traits::FromPrimitive;
 use serde::{
     de::{Error, Visitor},
-    Deserialize, Deserializer,
+    Deserialize, Deserializer, Serialize, Serializer,
 };
-use serde_with::DeserializeAs;
+use serde_with::{DeserializeAs, SerializeAs};
 
 use crate::string_new_types::NonEmptyString;
 
@@ -311,6 +311,18 @@ where
         }
 
         deserializer.deserialize_any(Helper(PhantomData))
+    }
+}
+
+impl<T> SerializeAs<T> for PrimitiveFromStr
+where
+    T: Serialize,
+{
+    fn serialize_as<S>(source: &T, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        source.serialize(serializer)
     }
 }
 
