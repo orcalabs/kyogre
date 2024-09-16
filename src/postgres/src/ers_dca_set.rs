@@ -27,63 +27,7 @@ pub struct ErsDcaSet<'a> {
     ers_dca: HashMap<i64, NewErsDca<'a>>,
 }
 
-pub struct PreparedErsDcaSet<'a> {
-    pub ers_message_types: Vec<NewErsMessageType<'a>>,
-    pub area_groupings: Vec<NewAreaGrouping<'a>>,
-    pub herring_populations: Vec<NewHerringPopulation<'a>>,
-    pub main_areas: Vec<NewCatchMainArea<'a>>,
-    pub catch_areas: Vec<NewCatchArea>,
-    pub gear_fao: Vec<NewGearFao<'a>>,
-    pub gear_problems: Vec<NewGearProblem<'a>>,
-    pub vessels: Vec<NewFiskeridirVessel<'a>>,
-    pub ports: Vec<NewPort<'a>>,
-    pub species_fao: Vec<NewSpeciesFao<'a>>,
-    pub species_fiskeridir: Vec<NewSpeciesFiskeridir<'a>>,
-    pub municipalities: Vec<NewMunicipality<'a>>,
-    pub economic_zones: Vec<NewEconomicZone<'a>>,
-    pub counties: Vec<NewCounty<'a>>,
-    pub ers_dca_bodies: Vec<NewErsDcaBody<'a>>,
-    pub ers_dca: Vec<NewErsDca<'a>>,
-}
-
 impl<'a> ErsDcaSet<'a> {
-    pub(crate) fn prepare(self) -> PreparedErsDcaSet<'a> {
-        let ers_message_types = self.ers_message_types.into_values().collect();
-        let area_groupings = self.area_groupings.into_values().collect();
-        let herring_populations = self.herring_populations.into_values().collect();
-        let main_areas = self.main_areas.into_values().collect();
-        let catch_areas = self.catch_areas.into_values().collect();
-        let gear_fao = self.gear_fao.into_values().collect();
-        let gear_problems = self.gear_problems.into_values().collect();
-        let municipalities = self.municipalities.into_values().collect();
-        let economic_zones = self.economic_zones.into_values().collect();
-        let counties = self.counties.into_values().collect();
-        let vessels = self.vessels.into_values().collect();
-        let ports = self.ports.into_values().collect();
-        let species_fao = self.species_fao.into_values().collect();
-        let species_fiskeridir = self.species_fiskeridir.into_values().collect();
-        let ers_dca = self.ers_dca.into_values().collect();
-
-        PreparedErsDcaSet {
-            ers_message_types,
-            area_groupings,
-            herring_populations,
-            main_areas,
-            catch_areas,
-            gear_fao,
-            gear_problems,
-            vessels,
-            ports,
-            species_fao,
-            species_fiskeridir,
-            municipalities,
-            economic_zones,
-            counties,
-            ers_dca_bodies: self.ers_dca_bodies,
-            ers_dca,
-        }
-    }
-
     pub(crate) fn with_capacity(capacity: usize) -> Self {
         Self {
             ers_message_types: HashMap::with_capacity(capacity),
@@ -105,30 +49,116 @@ impl<'a> ErsDcaSet<'a> {
         }
     }
 
-    pub(crate) fn new(ers_dca: impl Iterator<Item = &'a fiskeridir_rs::ErsDca>) -> Result<Self> {
-        let (min, max) = ers_dca.size_hint();
-        let mut set = Self::with_capacity(max.unwrap_or(min));
+    pub(crate) fn assert_is_empty(&self) {
+        let Self {
+            ers_message_types,
+            area_groupings,
+            herring_populations,
+            main_areas,
+            catch_areas,
+            gear_fao,
+            gear_problems,
+            vessels,
+            ports,
+            species_fao,
+            species_fiskeridir,
+            municipalities,
+            economic_zones,
+            counties,
+            ers_dca_bodies,
+            ers_dca,
+        } = self;
 
+        assert!(ers_message_types.is_empty());
+        assert!(area_groupings.is_empty());
+        assert!(herring_populations.is_empty());
+        assert!(main_areas.is_empty());
+        assert!(catch_areas.is_empty());
+        assert!(gear_fao.is_empty());
+        assert!(gear_problems.is_empty());
+        assert!(vessels.is_empty());
+        assert!(ports.is_empty());
+        assert!(species_fao.is_empty());
+        assert!(species_fiskeridir.is_empty());
+        assert!(municipalities.is_empty());
+        assert!(economic_zones.is_empty());
+        assert!(counties.is_empty());
+        assert!(ers_dca_bodies.is_empty());
+        assert!(ers_dca.is_empty());
+    }
+
+    pub(crate) fn add_all(
+        &mut self,
+        ers_dca: impl Iterator<Item = &'a fiskeridir_rs::ErsDca>,
+    ) -> Result<()> {
         for e in ers_dca {
-            set.add_ers_message_type(e);
-            set.add_area_grouping(e);
-            set.add_herring_population(e)?;
-            set.add_main_area(e);
-            set.add_catch_area(e);
-            set.add_gear_fao(e);
-            set.add_gear_problem(e);
-            set.add_vessel(e);
-            set.add_port(e)?;
-            set.add_municipality(e);
-            set.add_economic_zone(e);
-            set.add_county(e)?;
-            set.add_species_fao(e);
-            set.add_species_fiskeridir(e);
-            set.add_ers_dca_body(e);
-            set.add_ers_dca(e);
+            self.add_ers_message_type(e);
+            self.add_area_grouping(e);
+            self.add_herring_population(e)?;
+            self.add_main_area(e);
+            self.add_catch_area(e);
+            self.add_gear_fao(e);
+            self.add_gear_problem(e);
+            self.add_vessel(e);
+            self.add_port(e)?;
+            self.add_municipality(e);
+            self.add_economic_zone(e);
+            self.add_county(e)?;
+            self.add_species_fao(e);
+            self.add_species_fiskeridir(e);
+            self.add_ers_dca_body(e);
+            self.add_ers_dca(e);
         }
+        Ok(())
+    }
 
-        Ok(set)
+    pub(crate) fn ers_message_types(&mut self) -> impl Iterator<Item = NewErsMessageType<'_>> {
+        self.ers_message_types.drain().map(|(_, v)| v)
+    }
+    pub(crate) fn area_groupings(&mut self) -> impl Iterator<Item = NewAreaGrouping<'_>> {
+        self.area_groupings.drain().map(|(_, v)| v)
+    }
+    pub(crate) fn herring_populations(&mut self) -> impl Iterator<Item = NewHerringPopulation<'_>> {
+        self.herring_populations.drain().map(|(_, v)| v)
+    }
+    pub(crate) fn main_areas(&mut self) -> impl Iterator<Item = NewCatchMainArea<'_>> {
+        self.main_areas.drain().map(|(_, v)| v)
+    }
+    pub(crate) fn catch_areas(&mut self) -> impl Iterator<Item = NewCatchArea> + '_ {
+        self.catch_areas.drain().map(|(_, v)| v)
+    }
+    pub(crate) fn gear_fao(&mut self) -> impl Iterator<Item = NewGearFao<'_>> {
+        self.gear_fao.drain().map(|(_, v)| v)
+    }
+    pub(crate) fn gear_problems(&mut self) -> impl Iterator<Item = NewGearProblem<'_>> {
+        self.gear_problems.drain().map(|(_, v)| v)
+    }
+    pub(crate) fn municipalities(&mut self) -> impl Iterator<Item = NewMunicipality<'_>> {
+        self.municipalities.drain().map(|(_, v)| v)
+    }
+    pub(crate) fn economic_zones(&mut self) -> impl Iterator<Item = NewEconomicZone<'_>> {
+        self.economic_zones.drain().map(|(_, v)| v)
+    }
+    pub(crate) fn counties(&mut self) -> impl Iterator<Item = NewCounty<'_>> {
+        self.counties.drain().map(|(_, v)| v)
+    }
+    pub(crate) fn vessels(&mut self) -> impl Iterator<Item = NewFiskeridirVessel<'_>> {
+        self.vessels.drain().map(|(_, v)| v)
+    }
+    pub(crate) fn ports(&mut self) -> impl Iterator<Item = NewPort<'_>> {
+        self.ports.drain().map(|(_, v)| v)
+    }
+    pub(crate) fn species_fao(&mut self) -> impl Iterator<Item = NewSpeciesFao<'_>> {
+        self.species_fao.drain().map(|(_, v)| v)
+    }
+    pub(crate) fn species_fiskeridir(&mut self) -> impl Iterator<Item = NewSpeciesFiskeridir<'_>> {
+        self.species_fiskeridir.drain().map(|(_, v)| v)
+    }
+    pub(crate) fn ers_dca_bodies(&mut self) -> impl Iterator<Item = NewErsDcaBody<'_>> {
+        self.ers_dca_bodies.drain(..)
+    }
+    pub(crate) fn ers_dca(&mut self) -> Vec<NewErsDca<'_>> {
+        self.ers_dca.drain().map(|(_, v)| v).collect()
     }
 
     fn add_municipality(&mut self, ers_dca: &'a fiskeridir_rs::ErsDca) {

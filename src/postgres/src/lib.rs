@@ -2,6 +2,7 @@
 #![deny(rust_2018_idioms)]
 
 mod adapter;
+mod chunk;
 mod error;
 mod ers_dca_set;
 mod ers_dep_set;

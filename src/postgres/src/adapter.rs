@@ -1,5 +1,5 @@
-use crate::error::Result;
-use crate::{ers_dep_set::ErsDepSet, ers_por_set::ErsPorSet, ers_tra_set::ErsTraSet};
+use std::{pin::Pin, result::Result as StdResult};
+
 use async_trait::async_trait;
 use chrono::{DateTime, Duration, NaiveDate, Utc};
 use fiskeridir_rs::{CallSign, DataFileId, DeliveryPointId, LandingId, SpeciesGroup};
@@ -10,8 +10,9 @@ use sqlx::{
     postgres::{PgConnectOptions, PgPoolOptions, PgSslMode},
     ConnectOptions, PgPool,
 };
-use std::{pin::Pin, result::Result as StdResult};
 use tracing::{error, instrument, warn};
+
+use crate::error::Result;
 
 #[derive(Debug, Clone)]
 pub struct PostgresAdapter {
@@ -748,11 +749,7 @@ impl ScraperInboundPort for PostgresAdapter {
     }
     async fn add_landings(
         &self,
-        landings: Box<
-            dyn Iterator<Item = std::result::Result<fiskeridir_rs::Landing, fiskeridir_rs::Error>>
-                + Send
-                + Sync,
-        >,
+        landings: BoxIterator<fiskeridir_rs::Result<fiskeridir_rs::Landing>>,
         data_year: u32,
     ) -> CoreResult<()> {
         self.add_landings_impl(landings, data_year).await?;
@@ -760,26 +757,28 @@ impl ScraperInboundPort for PostgresAdapter {
     }
     async fn add_ers_dca(
         &self,
-        ers_dca: Box<
-            dyn Iterator<Item = std::result::Result<fiskeridir_rs::ErsDca, fiskeridir_rs::Error>>
-                + Send
-                + Sync,
-        >,
+        ers_dca: BoxIterator<fiskeridir_rs::Result<fiskeridir_rs::ErsDca>>,
     ) -> CoreResult<()> {
         self.add_ers_dca_impl(ers_dca).await?;
         Ok(())
     }
-    async fn add_ers_dep(&self, ers_dep: Vec<fiskeridir_rs::ErsDep>) -> CoreResult<()> {
-        let set = ErsDepSet::new(ers_dep.iter())?;
-        Ok(self.add_ers_dep_set(set).await?)
+    async fn add_ers_dep(
+        &self,
+        ers_dep: BoxIterator<fiskeridir_rs::Result<fiskeridir_rs::ErsDep>>,
+    ) -> CoreResult<()> {
+        Ok(self.add_ers_dep_impl(ers_dep).await?)
     }
-    async fn add_ers_por(&self, ers_por: Vec<fiskeridir_rs::ErsPor>) -> CoreResult<()> {
-        let set = ErsPorSet::new(ers_por.iter())?;
-        Ok(self.add_ers_por_set(set).await?)
+    async fn add_ers_por(
+        &self,
+        ers_por: BoxIterator<fiskeridir_rs::Result<fiskeridir_rs::ErsPor>>,
+    ) -> CoreResult<()> {
+        Ok(self.add_ers_por_impl(ers_por).await?)
     }
-    async fn add_ers_tra(&self, ers_tra: Vec<fiskeridir_rs::ErsTra>) -> CoreResult<()> {
-        let set = ErsTraSet::new(ers_tra.iter())?;
-        Ok(self.add_ers_tra_set(set).await?)
+    async fn add_ers_tra(
+        &self,
+        ers_tra: BoxIterator<fiskeridir_rs::Result<fiskeridir_rs::ErsTra>>,
+    ) -> CoreResult<()> {
+        Ok(self.add_ers_tra_impl(ers_tra).await?)
     }
     async fn add_vms(&self, vms: Vec<fiskeridir_rs::Vms>) -> CoreResult<()> {
         Ok(self.add_vms_impl(vms).await?)

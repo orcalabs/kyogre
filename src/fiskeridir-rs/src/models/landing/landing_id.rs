@@ -10,6 +10,7 @@ use std::str::FromStr;
 
 /// NewType wrapping the creation of unique landing ids.
 #[derive(PartialOrd, Ord, PartialEq, Eq, Clone, Debug, Hash, Serialize)]
+#[cfg_attr(feature = "sqlx", derive(sqlx::Type), sqlx(transparent))]
 pub struct LandingId(String);
 
 impl LandingId {

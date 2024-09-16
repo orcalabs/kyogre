@@ -1,32 +1,69 @@
 use std::collections::HashSet;
 
 use futures::TryStreamExt;
-use kyogre_core::VesselEventType;
+use kyogre_core::{BoxIterator, VesselEventType};
+use tracing::error;
 
-use crate::{error::Result, ers_tra_set::ErsTraSet, models::NewErsTra, PostgresAdapter};
+use crate::{
+    chunk::Chunks, error::Result, ers_tra_set::ErsTraSet, models::NewErsTra, PostgresAdapter,
+};
+
+static CHUNK_SIZE: usize = 10_000;
 
 impl PostgresAdapter {
-    pub(crate) async fn add_ers_tra_set(&self, set: ErsTraSet<'_>) -> Result<()> {
-        let prepared_set = set.prepare();
-
+    pub(crate) async fn add_ers_tra_impl(
+        &self,
+        ers_tra: BoxIterator<fiskeridir_rs::Result<fiskeridir_rs::ErsTra>>,
+    ) -> Result<()> {
         let mut tx = self.pool.begin().await?;
 
-        self.unnest_insert(prepared_set.ers_message_types, &mut *tx)
-            .await?;
-        self.unnest_insert(prepared_set.species_fao, &mut *tx)
-            .await?;
-        self.unnest_insert(prepared_set.species_fiskeridir, &mut *tx)
-            .await?;
-        self.unnest_insert(prepared_set.municipalities, &mut *tx)
-            .await?;
-        self.unnest_insert(prepared_set.counties, &mut *tx).await?;
-        self.unnest_insert(prepared_set.vessels, &mut *tx).await?;
+        let mut set = ErsTraSet::with_capacity(CHUNK_SIZE);
 
-        self.add_ers_tra(prepared_set.ers_tra, &mut tx).await?;
+        let mut chunks = ers_tra.chunks(CHUNK_SIZE);
+        while let Some(chunk) = chunks.next() {
+            // SAFETY: This `transmute` is necessary to "reset" the lifetime of the set so
+            // that it no longer borrows from `chunk` at the end of the scope.
+            // This is safe as long as the set is completely cleared before `chunk` is
+            // dropped.
+            let temp_set: &mut ErsTraSet<'_> = unsafe { std::mem::transmute(&mut set) };
 
-        self.unnest_insert(prepared_set.catches, &mut *tx).await?;
+            temp_set.add_all(chunk.iter().filter_map(
+                |v: &fiskeridir_rs::Result<fiskeridir_rs::ErsTra>| match v {
+                    Ok(v) => Some(v),
+                    Err(e) => {
+                        error!("failed to read data: {e:?}");
+                        None
+                    }
+                },
+            ))?;
+
+            self.add_ers_tra_set(temp_set, &mut tx).await?;
+
+            temp_set.assert_is_empty();
+        }
 
         tx.commit().await?;
+
+        Ok(())
+    }
+
+    async fn add_ers_tra_set<'a>(
+        &'a self,
+        set: &mut ErsTraSet<'_>,
+        tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
+    ) -> Result<()> {
+        self.unnest_insert(set.ers_message_types(), &mut **tx)
+            .await?;
+        self.unnest_insert(set.species_fao(), &mut **tx).await?;
+        self.unnest_insert(set.species_fiskeridir(), &mut **tx)
+            .await?;
+        self.unnest_insert(set.municipalities(), &mut **tx).await?;
+        self.unnest_insert(set.counties(), &mut **tx).await?;
+        self.unnest_insert(set.vessels(), &mut **tx).await?;
+
+        self.add_ers_tra(set.ers_tra(), tx).await?;
+
+        self.unnest_insert(set.catches(), &mut **tx).await?;
 
         Ok(())
     }

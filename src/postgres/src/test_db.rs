@@ -1,12 +1,13 @@
-use crate::{models::Haul, PostgresAdapter};
 use chrono::{DateTime, Datelike, Duration, Utc};
 use fiskeridir_rs::{
-    CallSign, ErsDca, ErsDep, ErsPor, Gear, GearGroup, LandingId, SpeciesGroup, VesselLengthGroup,
-    Vms,
+    CallSign, ErsDca, ErsDep, ErsPor, ErsTra, Gear, GearGroup, LandingId, SpeciesGroup,
+    VesselLengthGroup, Vms,
 };
 use futures::TryStreamExt;
 use kyogre_core::*;
 use rand::random;
+
+use crate::{models::Haul, PostgresAdapter};
 
 /// Wrapper with additional methods inteded for testing purposes.
 #[derive(Debug, Clone)]
@@ -474,8 +475,15 @@ WHERE
         vessel_id: FiskeridirVesselId,
         timestamp: DateTime<Utc>,
     ) {
-        let tra = fiskeridir_rs::ErsTra::test_default(message_id, Some(vessel_id), timestamp);
-        self.db.add_ers_tra(vec![tra]).await.unwrap();
+        let tra = ErsTra::test_default(message_id, Some(vessel_id), timestamp);
+        self.add_ers_tra(vec![tra]).await;
+    }
+
+    pub async fn add_ers_tra(&self, ers_tra: Vec<ErsTra>) {
+        self.db
+            .add_ers_tra(Box::new(ers_tra.into_iter().map(Ok)))
+            .await
+            .unwrap();
     }
 
     pub async fn generate_fiskeridir_vessel(
@@ -652,7 +660,14 @@ WHERE
     ) {
         let mut departure = ErsDep::test_default(message_id, vessel_id, timestamp, message_number);
         departure.port.code = Some(port_id.parse().unwrap());
-        self.db.add_ers_dep(vec![departure]).await.unwrap();
+        self.add_ers_departure(vec![departure]).await;
+    }
+
+    pub async fn add_ers_departure(&self, ers_dep: Vec<ErsDep>) {
+        self.db
+            .add_ers_dep(Box::new(ers_dep.into_iter().map(Ok)))
+            .await
+            .unwrap();
     }
 
     pub async fn landing_ids_of_vessel(&self, vessel_id: FiskeridirVesselId) -> Vec<LandingId> {
@@ -687,7 +702,14 @@ ORDER BY
     ) {
         let mut arrival = ErsPor::test_default(message_id, vessel_id, timestamp, message_number);
         arrival.port.code = Some(port_id.parse().unwrap());
-        self.db.add_ers_por(vec![arrival]).await.unwrap();
+        self.add_ers_arrival(vec![arrival]).await;
+    }
+
+    pub async fn add_ers_arrival(&self, ers_por: Vec<ErsPor>) {
+        self.db
+            .add_ers_por(Box::new(ers_por.into_iter().map(Ok)))
+            .await
+            .unwrap();
     }
 
     pub async fn generate_fishing_facility(&self) -> FishingFacility {

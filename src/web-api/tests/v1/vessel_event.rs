@@ -34,7 +34,7 @@ async fn test_trips_does_not_contain_duplicated_tra_events() {
             .build()
             .await;
 
-        helper.db.db.add_ers_tra(vec![tra]).await.unwrap();
+        helper.db.add_ers_tra(vec![tra]).await;
 
         helper.refresh_cache().await;
 
@@ -178,20 +178,10 @@ async fn test_inserting_same_ers_dca_does_not_create_dangling_vessel_event() {
         let mut dca = fiskeridir_rs::ErsDca::test_default(1, Some(state.vessels[0].fiskeridir.id));
 
         dca.message_version = 99;
-        helper
-            .db
-            .db
-            .add_ers_dca(Box::new(vec![Ok(dca.clone())].into_iter()))
-            .await
-            .unwrap();
+        helper.db.add_ers_dca(vec![dca.clone()]).await;
 
         dca.message_version = 1;
-        helper
-            .db
-            .db
-            .add_ers_dca(Box::new(vec![Ok(dca)].into_iter()))
-            .await
-            .unwrap();
+        helper.db.add_ers_dca(vec![dca]).await;
     })
     .await;
 }
@@ -203,8 +193,8 @@ async fn test_inserting_same_ers_dep_does_not_create_dangling_vessel_event() {
         let dep =
             fiskeridir_rs::ErsDep::test_default(1, state.vessels[0].fiskeridir.id, Utc::now(), 1);
 
-        helper.db.db.add_ers_dep(vec![dep.clone()]).await.unwrap();
-        helper.db.db.add_ers_dep(vec![dep.clone()]).await.unwrap();
+        helper.db.add_ers_departure(vec![dep.clone()]).await;
+        helper.db.add_ers_departure(vec![dep]).await;
     })
     .await;
 }
@@ -216,8 +206,8 @@ async fn test_inserting_same_ers_por_does_not_create_dangling_vessel_event() {
         let por =
             fiskeridir_rs::ErsPor::test_default(1, state.vessels[0].fiskeridir.id, Utc::now(), 1);
 
-        helper.db.db.add_ers_por(vec![por.clone()]).await.unwrap();
-        helper.db.db.add_ers_por(vec![por.clone()]).await.unwrap();
+        helper.db.add_ers_arrival(vec![por.clone()]).await;
+        helper.db.add_ers_arrival(vec![por]).await;
     })
     .await;
 }
@@ -232,8 +222,8 @@ async fn test_inserting_same_ers_tra_does_not_create_dangling_vessel_event() {
             Utc::now(),
         );
 
-        helper.db.db.add_ers_tra(vec![tra.clone()]).await.unwrap();
-        helper.db.db.add_ers_tra(vec![tra.clone()]).await.unwrap();
+        helper.db.add_ers_tra(vec![tra.clone()]).await;
+        helper.db.add_ers_tra(vec![tra]).await;
     })
     .await;
 }

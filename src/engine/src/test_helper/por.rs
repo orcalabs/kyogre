@@ -9,6 +9,7 @@ pub struct PorVesselBuilder {
     pub current_index: usize,
 }
 
+#[derive(Debug, Clone)]
 pub struct PorConstructor {
     pub por: ErsPor,
     pub cycle: Cycle,
