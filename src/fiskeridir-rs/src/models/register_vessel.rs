@@ -28,7 +28,7 @@ pub struct RegisterVesselOwner {
     pub id: Option<i64>,
     #[cfg_attr(feature = "utoipa", schema(value_type = String))]
     pub name: NonEmptyString,
-    #[serde_as(as = "DisplayFromStr")]
+    #[serde_as(as = "PrimitiveFromStr")]
     pub postal_code: i32,
 }
 
