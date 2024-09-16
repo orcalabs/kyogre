@@ -9,6 +9,7 @@ pub struct DepVesselBuilder {
     pub current_index: usize,
 }
 
+#[derive(Debug, Clone)]
 pub struct DepConstructor {
     pub dep: ErsDep,
     pub cycle: Cycle,

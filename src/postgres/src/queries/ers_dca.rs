@@ -1,58 +1,54 @@
 use std::collections::HashSet;
 
 use futures::TryStreamExt;
-use kyogre_core::VesselEventType;
+use kyogre_core::{BoxIterator, VesselEventType};
 use tracing::error;
 
-use crate::{error::Result, ers_dca_set::ErsDcaSet, models::NewErsDca, PostgresAdapter};
+use crate::{
+    chunk::Chunks, error::Result, ers_dca_set::ErsDcaSet, models::NewErsDca, PostgresAdapter,
+};
 
 static CHUNK_SIZE: usize = 100_000;
 
 impl PostgresAdapter {
     pub(crate) async fn add_ers_dca_impl(
         &self,
-        ers_dca: Box<
-            dyn Iterator<Item = std::result::Result<fiskeridir_rs::ErsDca, fiskeridir_rs::Error>>
-                + Send
-                + Sync,
-        >,
+        ers_dca: BoxIterator<fiskeridir_rs::Result<fiskeridir_rs::ErsDca>>,
     ) -> Result<()> {
         let mut tx = self.pool.begin().await?;
 
         let mut inserted_message_ids = HashSet::new();
         let mut vessel_event_ids = Vec::new();
 
-        let mut chunk = Vec::with_capacity(CHUNK_SIZE);
-        for (i, item) in ers_dca.enumerate() {
-            match item {
-                Err(e) => {
-                    error!("failed to read data: {e:?}");
-                }
-                Ok(item) => {
-                    chunk.push(item);
-                    if i % CHUNK_SIZE == 0 && i > 0 {
-                        let set = ErsDcaSet::new(chunk.iter())?;
-                        self.add_ers_dca_set(
-                            set,
-                            &mut inserted_message_ids,
-                            &mut vessel_event_ids,
-                            &mut tx,
-                        )
-                        .await?;
-                        chunk.clear();
+        let mut set = ErsDcaSet::with_capacity(CHUNK_SIZE);
+
+        let mut chunks = ers_dca.chunks(CHUNK_SIZE);
+        while let Some(chunk) = chunks.next() {
+            // SAFETY: This `transmute` is necessary to "reset" the lifetime of the set so
+            // that it no longer borrows from `chunk` at the end of the scope.
+            // This is safe as long as the set is completely cleared before `chunk` is
+            // dropped.
+            let temp_set: &mut ErsDcaSet<'_> = unsafe { std::mem::transmute(&mut set) };
+
+            temp_set.add_all(chunk.iter().filter_map(
+                |v: &fiskeridir_rs::Result<fiskeridir_rs::ErsDca>| match v {
+                    Ok(v) => Some(v),
+                    Err(e) => {
+                        error!("failed to read data: {e:?}");
+                        None
                     }
-                }
-            }
-        }
-        if !chunk.is_empty() {
-            let set = ErsDcaSet::new(chunk.iter())?;
+                },
+            ))?;
+
             self.add_ers_dca_set(
-                set,
+                temp_set,
                 &mut inserted_message_ids,
                 &mut vessel_event_ids,
                 &mut tx,
             )
             .await?;
+
+            temp_set.assert_is_empty();
         }
 
         self.connect_trip_to_events(vessel_event_ids, VesselEventType::ErsDca, &mut tx)
@@ -70,48 +66,34 @@ impl PostgresAdapter {
 
     pub(crate) async fn add_ers_dca_set<'a>(
         &'a self,
-        set: ErsDcaSet<'_>,
+        set: &mut ErsDcaSet<'_>,
         inserted_message_ids: &mut HashSet<i64>,
         vessel_event_ids: &mut Vec<i64>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
     ) -> Result<()> {
-        let prepared_set = set.prepare();
+        self.unnest_insert(set.ers_message_types(), &mut **tx)
+            .await?;
+        self.unnest_insert(set.area_groupings(), &mut **tx).await?;
+        self.unnest_insert(set.herring_populations(), &mut **tx)
+            .await?;
+        self.unnest_insert(set.main_areas(), &mut **tx).await?;
+        self.unnest_insert(set.catch_areas(), &mut **tx).await?;
+        self.unnest_insert(set.gear_fao(), &mut **tx).await?;
+        self.unnest_insert(set.gear_problems(), &mut **tx).await?;
+        self.unnest_insert(set.municipalities(), &mut **tx).await?;
+        self.unnest_insert(set.economic_zones(), &mut **tx).await?;
+        self.unnest_insert(set.counties(), &mut **tx).await?;
+        self.unnest_insert(set.vessels(), &mut **tx).await?;
+        self.unnest_insert(set.ports(), &mut **tx).await?;
+        self.unnest_insert(set.species_fao(), &mut **tx).await?;
+        self.unnest_insert(set.species_fiskeridir(), &mut **tx)
+            .await?;
 
-        self.unnest_insert(prepared_set.ers_message_types, &mut **tx)
+        self.add_ers_dca(set.ers_dca(), inserted_message_ids, vessel_event_ids, tx)
             .await?;
-        self.unnest_insert(prepared_set.area_groupings, &mut **tx)
-            .await?;
-        self.unnest_insert(prepared_set.herring_populations, &mut **tx)
-            .await?;
-        self.unnest_insert(prepared_set.main_areas, &mut **tx)
-            .await?;
-        self.unnest_insert(prepared_set.catch_areas, &mut **tx)
-            .await?;
-        self.unnest_insert(prepared_set.gear_fao, &mut **tx).await?;
-        self.unnest_insert(prepared_set.gear_problems, &mut **tx)
-            .await?;
-        self.unnest_insert(prepared_set.municipalities, &mut **tx)
-            .await?;
-        self.unnest_insert(prepared_set.economic_zones, &mut **tx)
-            .await?;
-        self.unnest_insert(prepared_set.counties, &mut **tx).await?;
-        self.unnest_insert(prepared_set.vessels, &mut **tx).await?;
-        self.unnest_insert(prepared_set.ports, &mut **tx).await?;
-        self.unnest_insert(prepared_set.species_fao, &mut **tx)
-            .await?;
-        self.unnest_insert(prepared_set.species_fiskeridir, &mut **tx)
-            .await?;
-        self.add_ers_dca(
-            prepared_set.ers_dca,
-            inserted_message_ids,
-            vessel_event_ids,
-            tx,
-        )
-        .await?;
 
-        let bodies = prepared_set
-            .ers_dca_bodies
-            .into_iter()
+        let bodies = set
+            .ers_dca_bodies()
             .filter(|b| inserted_message_ids.contains(&b.message_id));
 
         self.unnest_insert(bodies, &mut **tx).await?;

@@ -6,11 +6,14 @@ use std::{
 use chrono::{DateTime, NaiveDateTime, NaiveTime, TimeZone, Utc};
 use fiskeridir_rs::{Gear, GearGroup, LandingId, VesselLengthGroup};
 use futures::{Stream, TryStreamExt};
-use kyogre_core::{FiskeridirVesselId, LandingsQuery, TripAssemblerId, VesselEventType};
+use kyogre_core::{
+    BoxIterator, FiskeridirVesselId, LandingsQuery, TripAssemblerId, VesselEventType,
+};
 use sqlx::postgres::types::PgRange;
 use tracing::{error, info};
 
 use crate::{
+    chunk::Chunks,
     error::{Error, Result},
     landing_set::LandingSet,
     models::{Landing, NewLanding, NewTripAssemblerConflict},
@@ -228,11 +231,7 @@ WHERE
 
     pub(crate) async fn add_landings_impl(
         &self,
-        landings: Box<
-            dyn Iterator<Item = std::result::Result<fiskeridir_rs::Landing, fiskeridir_rs::Error>>
-                + Send
-                + Sync,
-        >,
+        landings: BoxIterator<fiskeridir_rs::Result<fiskeridir_rs::Landing>>,
         data_year: u32,
     ) -> Result<()> {
         let mut tx = self.pool.begin().await?;
@@ -247,49 +246,46 @@ WHERE
 
         let mut num_landings = 0;
 
-        let mut chunk = Vec::with_capacity(CHUNK_SIZE);
-        for (i, item) in landings.enumerate() {
-            match item {
-                Err(e) => error!("failed to read data: {e:?}"),
-                Ok(item) => {
+        let mut set = LandingSet::with_capacity(CHUNK_SIZE, data_year);
+
+        let mut chunks = landings.chunks(CHUNK_SIZE);
+        while let Some(chunk) = chunks.next() {
+            // SAFETY: This `transmute` is necessary to "reset" the lifetime of the set so
+            // that it no longer borrows from `chunk` at the end of the scope.
+            // This is safe as long as the set is completely cleared before `chunk` is
+            // dropped.
+            let temp_set: &mut LandingSet<'_> = unsafe { std::mem::transmute(&mut set) };
+
+            temp_set.add_all(chunk.iter().filter_map(|v| match v {
+                Ok(v) => {
                     num_landings += 1;
-                    existing_landing_ids.insert(item.id.clone().into_inner());
+                    existing_landing_ids.insert(v.id.clone());
 
                     if existing_landings
-                        .get(item.id.as_ref())
-                        .map(|version| version >= &item.document_info.version_number)
-                        .unwrap_or(false)
+                        .get(v.id.as_ref())
+                        .map_or(false, |version| version >= &v.document_info.version_number)
                     {
-                        continue;
-                    }
-
-                    chunk.push(item);
-
-                    if i % CHUNK_SIZE == 0 && i > 0 {
-                        let set = LandingSet::new(chunk.iter(), data_year);
-                        self.add_landing_set(
-                            set,
-                            &mut inserted_landing_ids,
-                            &mut vessel_event_ids,
-                            &mut trip_assembler_conflicts,
-                            &mut tx,
-                        )
-                        .await?;
-                        chunk.clear();
+                        None
+                    } else {
+                        Some(v)
                     }
                 }
-            }
-        }
-        if !chunk.is_empty() {
-            let set = LandingSet::new(chunk.iter(), data_year);
+                Err(e) => {
+                    error!("failed to read data: {e:?}");
+                    None
+                }
+            }));
+
             self.add_landing_set(
-                set,
+                temp_set,
                 &mut inserted_landing_ids,
                 &mut vessel_event_ids,
                 &mut trip_assembler_conflicts,
                 &mut tx,
             )
             .await?;
+
+            temp_set.assert_is_empty();
         }
 
         let existing_landing_ids = existing_landing_ids.into_iter().collect::<Vec<_>>();
@@ -328,30 +324,29 @@ WHERE
 
     pub(crate) async fn add_landing_set<'a>(
         &'a self,
-        set: LandingSet<'_>,
+        set: &mut LandingSet<'_>,
         inserted_landing_ids: &mut HashSet<String>,
         vessel_event_ids: &mut Vec<i64>,
         trip_assembler_conflicts: &mut HashMap<FiskeridirVesselId, NewTripAssemblerConflict>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
     ) -> Result<()> {
-        let set = set.prepare();
-
-        self.unnest_insert(set.delivery_points, &mut **tx).await?;
-        self.unnest_insert(set.municipalities, &mut **tx).await?;
-        self.unnest_insert(set.counties, &mut **tx).await?;
-        self.unnest_insert(set.vessels, &mut **tx).await?;
-        self.unnest_insert(set.species_fiskeridir, &mut **tx)
+        self.unnest_insert(set.delivery_points(), &mut **tx).await?;
+        self.unnest_insert(set.municipalities(), &mut **tx).await?;
+        self.unnest_insert(set.counties(), &mut **tx).await?;
+        self.unnest_insert(set.vessels(), &mut **tx).await?;
+        self.unnest_insert(set.species_fiskeridir(), &mut **tx)
             .await?;
-        self.unnest_insert(set.species, &mut **tx).await?;
-        self.unnest_insert(set.species_fao, &mut **tx).await?;
-        self.unnest_insert(set.catch_areas, &mut **tx).await?;
-        self.unnest_insert(set.catch_main_areas, &mut **tx).await?;
-        self.unnest_insert(set.catch_main_area_fao, &mut **tx)
+        self.unnest_insert(set.species(), &mut **tx).await?;
+        self.unnest_insert(set.species_fao(), &mut **tx).await?;
+        self.unnest_insert(set.catch_areas(), &mut **tx).await?;
+        self.unnest_insert(set.catch_main_areas(), &mut **tx)
             .await?;
-        self.unnest_insert(set.area_groupings, &mut **tx).await?;
+        self.unnest_insert(set.catch_main_area_fao(), &mut **tx)
+            .await?;
+        self.unnest_insert(set.area_groupings(), &mut **tx).await?;
 
         self.add_landings(
-            set.landings,
+            set.landings(),
             inserted_landing_ids,
             vessel_event_ids,
             trip_assembler_conflicts,
@@ -359,7 +354,7 @@ WHERE
         )
         .await?;
 
-        self.unnest_insert(set.landing_entries, &mut **tx).await?;
+        self.unnest_insert(set.landing_entries(), &mut **tx).await?;
 
         Ok(())
     }
@@ -469,7 +464,7 @@ WHERE
 
     pub(crate) async fn delete_removed_landings<'a>(
         &'a self,
-        existing_landing_ids: &[String],
+        existing_landing_ids: &[LandingId],
         trip_assembler_conflicts: &mut HashMap<FiskeridirVesselId, NewTripAssemblerConflict>,
         data_year: u32,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
@@ -484,7 +479,7 @@ RETURNING
     fiskeridir_vessel_id AS "fiskeridir_vessel_id?: FiskeridirVesselId",
     landing_timestamp AS "landing_timestamp!"
             "#,
-            existing_landing_ids,
+            existing_landing_ids as &[LandingId],
             data_year as i32,
         )
         .fetch_all(&mut **tx)

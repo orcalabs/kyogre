@@ -30,9 +30,7 @@ impl PostgresAdapter {
         I: IntoIterator<Item = T> + Send,
         I::IntoIter: Send,
     {
-        T::unnest_insert_returning(values, executor)
-            .await
-            .map_err(From::from)
+        Ok(T::unnest_insert_returning(values, executor).await?)
     }
 
     pub(crate) async fn unnest_insert_from<T, I, O>(
