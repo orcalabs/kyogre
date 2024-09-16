@@ -4,6 +4,7 @@ use crate::error::Result;
 use actix_web::{body::BoxBody, web::Bytes, HttpRequest, HttpResponse, Responder};
 use chrono::Duration;
 use serde::{Deserialize, Serialize};
+use tracing::error;
 use utoipa::ToSchema;
 
 pub static AIS_DETAILS_INTERVAL: LazyLock<Duration> = LazyLock::new(|| Duration::minutes(30));
@@ -44,6 +45,21 @@ pub fn to_bytes<T: Serialize>(value: &T) -> Result<Bytes> {
     Ok(Bytes::from(serde_json::to_vec(value)?))
 }
 
+pub fn produce_streaming_item<T: Serialize>(
+    value: std::result::Result<T, kyogre_core::Error>,
+) -> Option<Bytes> {
+    let item = value
+        .inspect_err(|e| {
+            error!("failed to retrieve streaming item: {e:?}");
+        })
+        .ok()?;
+
+    to_bytes(&item)
+        .inspect_err(|e| {
+            error!("failed to serialize streaming item: {e:?}");
+        })
+        .ok()
+}
 #[macro_export]
 macro_rules! to_streaming_response {
     ($stream:expr) => {
@@ -52,7 +68,7 @@ macro_rules! to_streaming_response {
         use futures::StreamExt;
 
         use $crate::error::Result;
-        use $crate::response::to_bytes;
+        use $crate::response::produce_streaming_item;
 
         let stream: AsyncStream<Result<Bytes>, _> = try_stream! {
             let mut stream = $stream;
@@ -60,12 +76,16 @@ macro_rules! to_streaming_response {
             yield Bytes::from_static(b"[");
 
             if let Some(first) = stream.next().await {
-                yield to_bytes(&first?)?;
+                if let Some(item) = produce_streaming_item(first) {
+                    yield item;
+                }
             }
 
             while let Some(item) = stream.next().await {
-                yield Bytes::from_static(b",");
-                yield to_bytes(&item?)?;
+                if let Some(item) = produce_streaming_item(item) {
+                    yield Bytes::from_static(b",");
+                    yield item;
+                }
             }
 
             yield Bytes::from_static(b"]");
