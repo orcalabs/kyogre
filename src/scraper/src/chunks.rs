@@ -5,7 +5,7 @@ use tracing::error;
 
 pub(crate) async fn add_in_chunks<A, B, D>(
     insert_closure: A,
-    data: Box<dyn Iterator<Item = std::result::Result<D, fiskeridir_rs::Error>> + Send>,
+    data: Box<dyn Iterator<Item = fiskeridir_rs::Result<D>> + Send>,
     chunk_size: usize,
 ) -> Result<()>
 where

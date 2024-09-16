@@ -19,39 +19,7 @@ pub struct ErsTraSet<'a> {
     ers_tra: HashMap<i64, NewErsTra<'a>>,
 }
 
-pub struct PreparedErsTraSet<'a> {
-    pub ers_message_types: Vec<NewErsMessageType<'a>>,
-    pub species_fao: Vec<NewSpeciesFao<'a>>,
-    pub species_fiskeridir: Vec<NewSpeciesFiskeridir<'a>>,
-    pub vessels: Vec<NewFiskeridirVessel<'a>>,
-    pub municipalities: Vec<NewMunicipality<'a>>,
-    pub counties: Vec<NewCounty<'a>>,
-    pub catches: Vec<NewErsTraCatch<'a>>,
-    pub ers_tra: Vec<NewErsTra<'a>>,
-}
-
 impl<'a> ErsTraSet<'a> {
-    pub(crate) fn prepare(self) -> PreparedErsTraSet<'a> {
-        let ers_message_types = self.ers_message_types.into_values().collect();
-        let species_fao = self.species_fao.into_values().collect();
-        let species_fiskeridir = self.species_fiskeridir.into_values().collect();
-        let vessels = self.vessels.into_values().collect();
-        let municipalities = self.municipalities.into_values().collect();
-        let counties = self.counties.into_values().collect();
-        let ers_tra = self.ers_tra.into_values().collect();
-
-        PreparedErsTraSet {
-            ers_message_types,
-            species_fao,
-            species_fiskeridir,
-            vessels,
-            municipalities,
-            counties,
-            catches: self.catches,
-            ers_tra,
-        }
-    }
-
     pub(crate) fn with_capacity(capacity: usize) -> Self {
         Self {
             ers_message_types: HashMap::with_capacity(capacity),
@@ -65,20 +33,66 @@ impl<'a> ErsTraSet<'a> {
         }
     }
 
-    pub(crate) fn new(ers_tra: impl Iterator<Item = &'a fiskeridir_rs::ErsTra>) -> Result<Self> {
-        let (min, max) = ers_tra.size_hint();
-        let mut set = Self::with_capacity(max.unwrap_or(min));
+    pub(crate) fn assert_is_empty(&self) {
+        let Self {
+            ers_message_types,
+            species_fao,
+            species_fiskeridir,
+            vessels,
+            municipalities,
+            counties,
+            catches,
+            ers_tra,
+        } = self;
 
+        assert!(ers_message_types.is_empty());
+        assert!(species_fao.is_empty());
+        assert!(species_fiskeridir.is_empty());
+        assert!(vessels.is_empty());
+        assert!(municipalities.is_empty());
+        assert!(counties.is_empty());
+        assert!(catches.is_empty());
+        assert!(ers_tra.is_empty());
+    }
+
+    pub(crate) fn add_all(
+        &mut self,
+        ers_tra: impl Iterator<Item = &'a fiskeridir_rs::ErsTra>,
+    ) -> Result<()> {
         for e in ers_tra {
-            set.add_ers_message_type(e);
-            set.add_vessel(e);
-            set.add_catch(e)?;
-            set.add_municipality(e);
-            set.add_county(e)?;
-            set.add_ers_tra(e);
+            self.add_ers_message_type(e);
+            self.add_vessel(e);
+            self.add_catch(e)?;
+            self.add_municipality(e);
+            self.add_county(e)?;
+            self.add_ers_tra(e);
         }
+        Ok(())
+    }
 
-        Ok(set)
+    pub(crate) fn ers_message_types(&mut self) -> impl Iterator<Item = NewErsMessageType<'_>> {
+        self.ers_message_types.drain().map(|(_, v)| v)
+    }
+    pub(crate) fn counties(&mut self) -> impl Iterator<Item = NewCounty<'_>> {
+        self.counties.drain().map(|(_, v)| v)
+    }
+    pub(crate) fn vessels(&mut self) -> impl Iterator<Item = NewFiskeridirVessel<'_>> {
+        self.vessels.drain().map(|(_, v)| v)
+    }
+    pub(crate) fn municipalities(&mut self) -> impl Iterator<Item = NewMunicipality<'_>> {
+        self.municipalities.drain().map(|(_, v)| v)
+    }
+    pub(crate) fn species_fao(&mut self) -> impl Iterator<Item = NewSpeciesFao<'_>> {
+        self.species_fao.drain().map(|(_, v)| v)
+    }
+    pub(crate) fn species_fiskeridir(&mut self) -> impl Iterator<Item = NewSpeciesFiskeridir<'_>> {
+        self.species_fiskeridir.drain().map(|(_, v)| v)
+    }
+    pub(crate) fn catches(&mut self) -> impl Iterator<Item = NewErsTraCatch<'_>> {
+        self.catches.drain(..)
+    }
+    pub(crate) fn ers_tra(&mut self) -> Vec<NewErsTra<'_>> {
+        self.ers_tra.drain().map(|(_, v)| v).collect()
     }
 
     fn add_municipality(&mut self, ers_tra: &'a fiskeridir_rs::ErsTra) {

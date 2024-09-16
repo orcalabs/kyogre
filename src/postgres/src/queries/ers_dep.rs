@@ -3,38 +3,75 @@ use std::{
     collections::{HashMap, HashSet},
 };
 
+use futures::TryStreamExt;
+use kyogre_core::{BoxIterator, Departure, FiskeridirVesselId, TripAssemblerId, VesselEventType};
+use tracing::error;
+
 use crate::{
+    chunk::Chunks,
     error::Result,
     ers_dep_set::ErsDepSet,
     models::{NewErsDep, NewTripAssemblerConflict},
     PostgresAdapter,
 };
-use futures::TryStreamExt;
-use kyogre_core::{Departure, FiskeridirVesselId, TripAssemblerId, VesselEventType};
+
+static CHUNK_SIZE: usize = 10_000;
 
 impl PostgresAdapter {
-    pub(crate) async fn add_ers_dep_set(&self, set: ErsDepSet<'_>) -> Result<()> {
-        let prepared_set = set.prepare();
-
+    pub(crate) async fn add_ers_dep_impl(
+        &self,
+        ers_dep: BoxIterator<fiskeridir_rs::Result<fiskeridir_rs::ErsDep>>,
+    ) -> Result<()> {
         let mut tx = self.pool.begin().await?;
 
-        self.unnest_insert(prepared_set.ers_message_types, &mut *tx)
-            .await?;
-        self.unnest_insert(prepared_set.species_fao, &mut *tx)
-            .await?;
-        self.unnest_insert(prepared_set.species_fiskeridir, &mut *tx)
-            .await?;
-        self.unnest_insert(prepared_set.municipalities, &mut *tx)
-            .await?;
-        self.unnest_insert(prepared_set.counties, &mut *tx).await?;
-        self.unnest_insert(prepared_set.vessels, &mut *tx).await?;
-        self.unnest_insert(prepared_set.ports, &mut *tx).await?;
+        let mut set = ErsDepSet::with_capacity(CHUNK_SIZE);
 
-        self.add_ers_dep(prepared_set.ers_dep, &mut tx).await?;
+        let mut chunks = ers_dep.chunks(CHUNK_SIZE);
+        while let Some(chunk) = chunks.next() {
+            // SAFETY: This `transmute` is necessary to "reset" the lifetime of the set so
+            // that it no longer borrows from `chunk` at the end of the scope.
+            // This is safe as long as the set is completely cleared before `chunk` is
+            // dropped.
+            let temp_set: &mut ErsDepSet<'_> = unsafe { std::mem::transmute(&mut set) };
 
-        self.unnest_insert(prepared_set.catches, &mut *tx).await?;
+            temp_set.add_all(chunk.iter().filter_map(
+                |v: &fiskeridir_rs::Result<fiskeridir_rs::ErsDep>| match v {
+                    Ok(v) => Some(v),
+                    Err(e) => {
+                        error!("failed to read data: {e:?}");
+                        None
+                    }
+                },
+            ))?;
+
+            self.add_ers_dep_set(temp_set, &mut tx).await?;
+
+            temp_set.assert_is_empty();
+        }
 
         tx.commit().await?;
+
+        Ok(())
+    }
+
+    async fn add_ers_dep_set<'a>(
+        &'a self,
+        set: &mut ErsDepSet<'_>,
+        tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
+    ) -> Result<()> {
+        self.unnest_insert(set.ers_message_types(), &mut **tx)
+            .await?;
+        self.unnest_insert(set.species_fao(), &mut **tx).await?;
+        self.unnest_insert(set.species_fiskeridir(), &mut **tx)
+            .await?;
+        self.unnest_insert(set.municipalities(), &mut **tx).await?;
+        self.unnest_insert(set.counties(), &mut **tx).await?;
+        self.unnest_insert(set.vessels(), &mut **tx).await?;
+        self.unnest_insert(set.ports(), &mut **tx).await?;
+
+        self.add_ers_dep(set.ers_dep(), tx).await?;
+
+        self.unnest_insert(set.catches(), &mut **tx).await?;
 
         Ok(())
     }

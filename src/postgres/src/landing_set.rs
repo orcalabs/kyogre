@@ -23,55 +23,7 @@ pub struct LandingSet<'a> {
     data_year: u32,
 }
 
-pub struct PreparedLandingSet<'a> {
-    pub species: Vec<NewSpecies<'a>>,
-    pub species_fao: Vec<NewSpeciesFao<'a>>,
-    pub species_fiskeridir: Vec<NewSpeciesFiskeridir<'a>>,
-    pub vessels: Vec<NewFiskeridirVessel<'a>>,
-    pub delivery_points: Vec<NewDeliveryPointId<'a>>,
-    pub catch_areas: Vec<NewCatchArea>,
-    pub catch_main_areas: Vec<NewCatchMainArea<'a>>,
-    pub catch_main_area_fao: Vec<NewCatchMainAreaFao<'a>>,
-    pub area_groupings: Vec<NewAreaGrouping<'a>>,
-    pub landings: Vec<NewLanding<'a>>,
-    pub landing_entries: Vec<NewLandingEntry<'a>>,
-    pub counties: Vec<NewCounty<'a>>,
-    pub municipalities: Vec<NewMunicipality<'a>>,
-}
-
 impl<'a> LandingSet<'a> {
-    pub(crate) fn prepare(self) -> PreparedLandingSet<'a> {
-        let species = self.species.into_values().collect();
-        let species_fao = self.species_fao.into_values().collect();
-        let vessels = self.vessels.into_values().collect();
-        let delivery_points = self.delivery_points.into_iter().collect();
-        let catch_areas = self.catch_areas.into_values().collect();
-        let catch_main_areas = self.catch_main_areas.into_values().collect();
-        let area_groupings = self.area_groupings.into_values().collect();
-        let species_fiskeridir = self.species_fiskeridir.into_values().collect();
-        let landings = self.landings.into_values().collect();
-        let landing_entries = self.landing_entries.into_iter().collect();
-        let counties = self.counties.into_values().collect();
-        let municipalities = self.municipalities.into_values().collect();
-        let catch_main_area_fao = self.catch_main_area_fao.into_values().collect();
-
-        PreparedLandingSet {
-            species,
-            landings,
-            landing_entries,
-            vessels,
-            delivery_points,
-            species_fao,
-            catch_areas,
-            catch_main_areas,
-            area_groupings,
-            species_fiskeridir,
-            counties,
-            municipalities,
-            catch_main_area_fao,
-        }
-    }
-
     pub(crate) fn with_capacity(capacity: usize, data_year: u32) -> Self {
         Self {
             species: HashMap::with_capacity(capacity),
@@ -91,30 +43,95 @@ impl<'a> LandingSet<'a> {
         }
     }
 
-    pub(crate) fn new(
-        landings: impl Iterator<Item = &'a fiskeridir_rs::Landing>,
-        data_year: u32,
-    ) -> Self {
-        let (min, max) = landings.size_hint();
-        let mut set = Self::with_capacity(max.unwrap_or(min), data_year);
+    pub(crate) fn assert_is_empty(&self) {
+        let Self {
+            species,
+            species_fao,
+            species_fiskeridir,
+            landings,
+            landing_entries,
+            vessels,
+            delivery_points,
+            catch_areas,
+            catch_main_areas,
+            catch_main_area_fao,
+            area_groupings,
+            counties,
+            municipalities,
+            data_year: _,
+        } = self;
 
+        assert!(species.is_empty());
+        assert!(species_fao.is_empty());
+        assert!(species_fiskeridir.is_empty());
+        assert!(landings.is_empty());
+        assert!(landing_entries.is_empty());
+        assert!(vessels.is_empty());
+        assert!(delivery_points.is_empty());
+        assert!(catch_areas.is_empty());
+        assert!(catch_main_areas.is_empty());
+        assert!(catch_main_area_fao.is_empty());
+        assert!(area_groupings.is_empty());
+        assert!(counties.is_empty());
+        assert!(municipalities.is_empty());
+    }
+
+    pub(crate) fn add_all(&mut self, landings: impl Iterator<Item = &'a fiskeridir_rs::Landing>) {
         for l in landings {
-            set.add_vessel(l);
-            set.add_species(l);
-            set.add_species_fao(l);
-            set.add_species_fiskeridir(l);
-            set.add_delivery_point(l);
-            set.add_catch_area(l);
-            set.add_main_catch_area(l);
-            set.add_main_catch_area_fao(l);
-            set.add_fishing_region(l);
-            set.add_municipality(l);
-            set.add_county(l);
-            set.add_landing_impl(l);
-            set.add_landing_entry(l);
+            self.add_vessel(l);
+            self.add_species(l);
+            self.add_species_fao(l);
+            self.add_species_fiskeridir(l);
+            self.add_delivery_point(l);
+            self.add_catch_area(l);
+            self.add_main_catch_area(l);
+            self.add_main_catch_area_fao(l);
+            self.add_fishing_region(l);
+            self.add_municipality(l);
+            self.add_county(l);
+            self.add_landing_impl(l);
+            self.add_landing_entry(l);
         }
+    }
 
-        set
+    pub(crate) fn species(&mut self) -> impl Iterator<Item = NewSpecies<'_>> {
+        self.species.drain().map(|(_, v)| v)
+    }
+    pub(crate) fn species_fao(&mut self) -> impl Iterator<Item = NewSpeciesFao<'_>> {
+        self.species_fao.drain().map(|(_, v)| v)
+    }
+    pub(crate) fn species_fiskeridir(&mut self) -> impl Iterator<Item = NewSpeciesFiskeridir<'_>> {
+        self.species_fiskeridir.drain().map(|(_, v)| v)
+    }
+    pub(crate) fn vessels(&mut self) -> impl Iterator<Item = NewFiskeridirVessel<'_>> {
+        self.vessels.drain().map(|(_, v)| v)
+    }
+    pub(crate) fn delivery_points(&mut self) -> impl Iterator<Item = NewDeliveryPointId<'_>> {
+        self.delivery_points.drain()
+    }
+    pub(crate) fn catch_areas(&mut self) -> impl Iterator<Item = NewCatchArea> + '_ {
+        self.catch_areas.drain().map(|(_, v)| v)
+    }
+    pub(crate) fn catch_main_areas(&mut self) -> impl Iterator<Item = NewCatchMainArea<'_>> {
+        self.catch_main_areas.drain().map(|(_, v)| v)
+    }
+    pub(crate) fn catch_main_area_fao(&mut self) -> impl Iterator<Item = NewCatchMainAreaFao<'_>> {
+        self.catch_main_area_fao.drain().map(|(_, v)| v)
+    }
+    pub(crate) fn area_groupings(&mut self) -> impl Iterator<Item = NewAreaGrouping<'_>> {
+        self.area_groupings.drain().map(|(_, v)| v)
+    }
+    pub(crate) fn counties(&mut self) -> impl Iterator<Item = NewCounty<'_>> {
+        self.counties.drain().map(|(_, v)| v)
+    }
+    pub(crate) fn municipalities(&mut self) -> impl Iterator<Item = NewMunicipality<'_>> {
+        self.municipalities.drain().map(|(_, v)| v)
+    }
+    pub(crate) fn landing_entries(&mut self) -> impl Iterator<Item = NewLandingEntry<'_>> {
+        self.landing_entries.drain(..)
+    }
+    pub(crate) fn landings(&mut self) -> Vec<NewLanding<'_>> {
+        self.landings.drain().map(|(_, v)| v).collect()
     }
 
     fn add_municipality(&mut self, landing: &'a fiskeridir_rs::Landing) {

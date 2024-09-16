@@ -690,62 +690,41 @@ impl TestStateBuilder {
                 .unwrap();
 
             self.storage
-                .add_ers_dca(Box::new(self.hauls.clone().into_iter().filter_map(
-                    move |v| {
-                        if v.cycle == i {
-                            Some(Ok(v.dca))
-                        } else {
-                            None
-                        }
-                    },
-                )))
+                .add_ers_dca(Box::new(
+                    self.hauls
+                        .clone()
+                        .into_iter()
+                        .filter_map(move |v| (v.cycle == i).then_some(Ok(v.dca))),
+                ))
                 .await
                 .unwrap();
 
             self.storage
-                .add_ers_tra(
+                .add_ers_tra(Box::new(
                     self.tra
-                        .iter()
-                        .filter_map(|v| {
-                            if v.cycle == i {
-                                Some(v.tra.clone())
-                            } else {
-                                None
-                            }
-                        })
-                        .collect(),
-                )
+                        .clone()
+                        .into_iter()
+                        .filter_map(move |v| (v.cycle == i).then_some(Ok(v.tra))),
+                ))
                 .await
                 .unwrap();
 
             self.storage
-                .add_ers_dep(
+                .add_ers_dep(Box::new(
                     self.dep
-                        .iter()
-                        .filter_map(|v| {
-                            if v.cycle == i {
-                                Some(v.dep.clone())
-                            } else {
-                                None
-                            }
-                        })
-                        .collect(),
-                )
+                        .clone()
+                        .into_iter()
+                        .filter_map(move |v| (v.cycle == i).then_some(Ok(v.dep))),
+                ))
                 .await
                 .unwrap();
             self.storage
-                .add_ers_por(
+                .add_ers_por(Box::new(
                     self.por
-                        .iter()
-                        .filter_map(|v| {
-                            if v.cycle == i {
-                                Some(v.por.clone())
-                            } else {
-                                None
-                            }
-                        })
-                        .collect(),
-                )
+                        .clone()
+                        .into_iter()
+                        .filter_map(move |v| (v.cycle == i).then_some(Ok(v.por))),
+                ))
                 .await
                 .unwrap();
 
@@ -831,8 +810,15 @@ impl TestStateBuilder {
                         let start_port = dep.port.code.clone();
                         let end_port = por.port.code.clone();
 
-                        self.storage.add_ers_dep(vec![dep.clone()]).await.unwrap();
-                        self.storage.add_ers_por(vec![por.clone()]).await.unwrap();
+                        self.storage
+                            .add_ers_dep(Box::new(vec![Ok(dep.clone())].into_iter()))
+                            .await
+                            .unwrap();
+                        self.storage
+                            .add_ers_por(Box::new(vec![Ok(por.clone())].into_iter()))
+                            .await
+                            .unwrap();
+
                         if let Some(precision) = t.precision_id {
                             let mmsi = t
                                 .mmsi

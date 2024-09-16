@@ -3,6 +3,8 @@ use async_trait::async_trait;
 use chrono::{DateTime, NaiveDate, Utc};
 use fiskeridir_rs::{DataFileId, DeliveryPointId, SpeciesGroup};
 
+pub type BoxIterator<T> = Box<dyn Iterator<Item = T> + Send + Sync>;
+
 #[async_trait]
 pub trait MLModelsInbound: Send + Sync {
     async fn add_fishing_spot_predictions(
@@ -83,24 +85,25 @@ pub trait ScraperInboundPort {
     ) -> CoreResult<()>;
     async fn add_landings(
         &self,
-        landings: Box<
-            dyn Iterator<Item = std::result::Result<fiskeridir_rs::Landing, fiskeridir_rs::Error>>
-                + Send
-                + Sync,
-        >,
+        landings: BoxIterator<fiskeridir_rs::Result<fiskeridir_rs::Landing>>,
         data_year: u32,
     ) -> CoreResult<()>;
     async fn add_ers_dca(
         &self,
-        ers_dca: Box<
-            dyn Iterator<Item = std::result::Result<fiskeridir_rs::ErsDca, fiskeridir_rs::Error>>
-                + Send
-                + Sync,
-        >,
+        ers_dca: BoxIterator<fiskeridir_rs::Result<fiskeridir_rs::ErsDca>>,
     ) -> CoreResult<()>;
-    async fn add_ers_dep(&self, ers_dep: Vec<fiskeridir_rs::ErsDep>) -> CoreResult<()>;
-    async fn add_ers_por(&self, ers_por: Vec<fiskeridir_rs::ErsPor>) -> CoreResult<()>;
-    async fn add_ers_tra(&self, ers_tra: Vec<fiskeridir_rs::ErsTra>) -> CoreResult<()>;
+    async fn add_ers_dep(
+        &self,
+        ers_dep: BoxIterator<fiskeridir_rs::Result<fiskeridir_rs::ErsDep>>,
+    ) -> CoreResult<()>;
+    async fn add_ers_por(
+        &self,
+        ers_por: BoxIterator<fiskeridir_rs::Result<fiskeridir_rs::ErsPor>>,
+    ) -> CoreResult<()>;
+    async fn add_ers_tra(
+        &self,
+        ers_tra: BoxIterator<fiskeridir_rs::Result<fiskeridir_rs::ErsTra>>,
+    ) -> CoreResult<()>;
     async fn add_vms(&self, vms: Vec<fiskeridir_rs::Vms>) -> CoreResult<()>;
     async fn add_aqua_culture_register(
         &self,
