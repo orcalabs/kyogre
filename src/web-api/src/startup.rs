@@ -308,7 +308,7 @@ where
             }
         }
     })
-    .listen(listener)
+    .listen_auto_h2c(listener)
     .unwrap();
 
     if let Some(workers) = settings.api.num_workers {
