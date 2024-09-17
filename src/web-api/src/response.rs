@@ -53,13 +53,21 @@ pub fn produce_streaming_item<T: Serialize>(
             error!(error = true, "failed to retrieve streaming item: {e:?}");
         })
         .ok()?;
-
     to_bytes(&item)
         .inspect_err(|e| {
             error!(error = true, "failed to serialize streaming item: {e:?}");
         })
         .ok()
 }
+
+pub fn produce_ais_streaming_item<T: Serialize>(value: &T) -> Option<Bytes> {
+    to_bytes(value)
+        .inspect_err(|e| {
+            error!(error = true, "failed to serialize streaming item: {e:?}");
+        })
+        .ok()
+}
+
 #[macro_export]
 macro_rules! to_streaming_response {
     ($stream:expr) => {
@@ -103,9 +111,10 @@ macro_rules! ais_to_streaming_response {
         use actix_web::{http::header::ContentType, web::Bytes, HttpResponse};
         use async_stream::{__private::AsyncStream, try_stream};
         use futures::{StreamExt, TryStreamExt};
+        use tracing::error;
 
         use $crate::error::Result;
-        use $crate::response::{to_bytes, AIS_DETAILS_INTERVAL, MISSING_DATA_DURATION};
+        use $crate::response::{ AIS_DETAILS_INTERVAL, MISSING_DATA_DURATION, produce_ais_streaming_item};
 
         let stream: AsyncStream<Result<Bytes>, _> = try_stream! {
             let mut stream = $stream.enumerate();
@@ -115,11 +124,20 @@ macro_rules! ais_to_streaming_response {
             let mut missing_flag = false;
 
             if let Some((_, first)) = stream.next().await {
-                let mut pos = first?;
+                let mut pos = first.inspect_err(|e| {
+                    error!(error = true, "failed to retrieve streaming item: {e:?}");
+                })?;
+
                 let mut prev_details = pos.timestamp;
 
                 while let Some((i, next)) = stream.next().await {
-                    let next = next?;
+                    let next = match next {
+                        Err(e) => {
+                            error!(error = true, "failed to retrieve streaming item: {e:?}");
+                            continue;
+                        }
+                        Ok(v) => v,
+                    };
 
                     if next.timestamp - pos.timestamp >= *MISSING_DATA_DURATION {
                         if let Some(ref mut det) = pos.det {
@@ -137,13 +155,16 @@ macro_rules! ais_to_streaming_response {
                         prev_details = pos.timestamp;
                     }
 
-                    yield to_bytes(&pos)?;
-                    yield web::Bytes::from_static(b",");
-
-                    pos = next;
+                    if let Some(bytes) = produce_ais_streaming_item(&pos) {
+                        yield bytes;
+                        yield web::Bytes::from_static(b",");
+                        pos = next;
+                    }
                 }
 
-                yield to_bytes(&pos)?;
+                if let Some(bytes) = produce_ais_streaming_item(&pos) {
+                    yield bytes;
+                }
             }
 
             yield web::Bytes::from_static(b"]");
