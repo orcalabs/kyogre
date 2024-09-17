@@ -50,13 +50,13 @@ pub fn produce_streaming_item<T: Serialize>(
 ) -> Option<Bytes> {
     let item = value
         .inspect_err(|e| {
-            error!("failed to retrieve streaming item: {e:?}");
+            error!(error = true, "failed to retrieve streaming item: {e:?}");
         })
         .ok()?;
 
     to_bytes(&item)
         .inspect_err(|e| {
-            error!("failed to serialize streaming item: {e:?}");
+            error!(error = true, "failed to serialize streaming item: {e:?}");
         })
         .ok()
 }
