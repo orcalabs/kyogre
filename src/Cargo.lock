@@ -3511,9 +3511,9 @@ dependencies = [
 
 [[package]]
 name = "orca-core"
-version = "0.31.0"
+version = "0.31.1"
 source = "sparse+https://cargo.cloudsmith.io/orcalabs/orcastrator/"
-checksum = "b14e68002ad80e2199a3348098567185a06f72e41d4e66a41e4505c4753d81cc"
+checksum = "c0d1223a8c017bdb7656ae7ee92ad7e8348dc01abe60a375b02b0f0924446947"
 dependencies = [
  "actix-web",
  "config",
