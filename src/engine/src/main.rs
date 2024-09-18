@@ -9,7 +9,6 @@ async fn main() {
     settings.init_tracer("kyogre-engine", "engine");
 
     let settings = Settings::new(settings).unwrap();
-
     let app = App::build(&settings).await;
 
     app.run().await;
