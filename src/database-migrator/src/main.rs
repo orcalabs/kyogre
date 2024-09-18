@@ -29,4 +29,6 @@ async fn main() {
         .unwrap()
         .do_migrations()
         .await;
+
+    orca_core::shutdown_tracer_provider();
 }

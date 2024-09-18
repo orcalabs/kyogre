@@ -10,7 +10,7 @@ use sqlx::{
     postgres::{PgConnectOptions, PgPoolOptions, PgSslMode},
     ConnectOptions, PgPool,
 };
-use tracing::{error, instrument, warn};
+use tracing::{error, info, instrument, warn};
 
 use crate::error::Result;
 
@@ -183,6 +183,7 @@ WHERE
             .run(&self.pool)
             .await
             .unwrap();
+        info!("ran db migrations successfully");
     }
 
     #[instrument(skip_all)]
