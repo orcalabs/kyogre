@@ -78,7 +78,7 @@ async fn create_server<T, S, M>(
     settings: &Settings,
 ) -> Result<Server, Error>
 where
-    T: Database + Clone + Send + 'static,
+    T: Database + Clone + Send + Sync + 'static,
     S: Cache + Clone + Send + 'static,
     M: Meilisearch + Clone + Send + 'static,
 {

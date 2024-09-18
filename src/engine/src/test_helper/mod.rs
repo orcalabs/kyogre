@@ -1062,7 +1062,6 @@ impl TestStateBuilder {
                 },
                 true,
             )
-            .unwrap()
             .try_collect::<Vec<TripDetailed>>()
             .await
             .unwrap();
@@ -1072,7 +1071,6 @@ impl TestStateBuilder {
         let mut hauls = self
             .storage
             .hauls(HaulsQuery::default())
-            .unwrap()
             .try_collect::<Vec<Haul>>()
             .await
             .unwrap();
@@ -1099,7 +1097,6 @@ impl TestStateBuilder {
                 ordering: Some(Ordering::Asc),
                 ..Default::default()
             })
-            .unwrap()
             .try_collect::<Vec<Landing>>()
             .await
             .unwrap();

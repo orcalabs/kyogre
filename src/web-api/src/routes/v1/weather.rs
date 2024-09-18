@@ -1,7 +1,4 @@
-use actix_web::{
-    web::{self},
-    HttpResponse,
-};
+use actix_web::web;
 use chrono::{DateTime, Duration, Utc};
 use futures::TryStreamExt;
 use kyogre_core::{WeatherLocationId, WeatherQuery};
@@ -10,7 +7,7 @@ use serde_qs::actix::QsQuery as Query;
 use utoipa::{IntoParams, ToSchema};
 use wkt::ToWkt;
 
-use crate::{error::Result, *};
+use crate::{response::StreamResponse, stream_response, *};
 
 #[derive(Default, Debug, Deserialize, Serialize, IntoParams)]
 #[serde(rename_all = "camelCase")]
@@ -31,13 +28,13 @@ pub struct WeatherParams {
     )
 )]
 #[tracing::instrument(skip(db))]
-pub async fn weather<T: Database + 'static>(
+pub async fn weather<T: Database + Send + Sync + 'static>(
     db: web::Data<T>,
     params: Query<WeatherParams>,
-) -> Result<HttpResponse> {
+) -> StreamResponse<Weather> {
     let query = params.into_inner().into();
 
-    to_streaming_response! {
+    stream_response! {
         db.weather(query).map_ok(Weather::from)
     }
 }
@@ -51,13 +48,12 @@ pub async fn weather<T: Database + 'static>(
     )
 )]
 #[tracing::instrument(skip(db))]
-pub async fn weather_locations<T: Database + 'static>(
+pub async fn weather_locations<T: Database + Send + Sync + 'static>(
     db: web::Data<T>,
     params: web::Query<WeatherParams>,
-) -> Result<HttpResponse> {
-    to_streaming_response! {
-        db.weather_locations()
-            .map_ok(WeatherLocation::from)
+) -> StreamResponse<WeatherLocation> {
+    stream_response! {
+        db.weather_locations().map_ok(WeatherLocation::from)
     }
 }
 

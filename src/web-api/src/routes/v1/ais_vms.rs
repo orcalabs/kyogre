@@ -1,15 +1,6 @@
-use crate::{
-    ais_to_streaming_response,
-    error::{
-        error::{InvalidDateRangeSnafu, MissingDateRangeSnafu, MissingMmsiOrCallSignOrTripIdSnafu},
-        Result,
-    },
-    extractors::{Auth0Profile, BwProfile},
-    response::Response,
-    Database,
-};
-use actix_web::{web, HttpResponse};
-use async_stream::try_stream;
+use std::string::ToString;
+
+use actix_web::web;
 use chrono::{DateTime, Duration, NaiveDate, Utc};
 use fiskeridir_rs::CallSign;
 use futures::TryStreamExt;
@@ -22,8 +13,17 @@ use serde::{Deserialize, Serialize};
 use serde_qs::actix::QsQuery as Query;
 use serde_with::{serde_as, skip_serializing_none, DisplayFromStr};
 use snafu::ResultExt;
-use std::string::ToString;
 use utoipa::{IntoParams, ToSchema};
+
+use crate::{
+    error::{
+        error::{InvalidDateRangeSnafu, MissingDateRangeSnafu, MissingMmsiOrCallSignOrTripIdSnafu},
+        Result,
+    },
+    extractors::{Auth0Profile, BwProfile},
+    response::{ais_unfold, Response, StreamResponse},
+    stream_response, Database,
+};
 
 #[derive(Debug, Deserialize, Serialize, IntoParams)]
 #[serde(rename_all = "camelCase")]
@@ -63,12 +63,12 @@ pub struct AisVmsAreaParameters {
     )
 )]
 #[tracing::instrument(skip(db))]
-pub async fn ais_vms_positions<T: Database + 'static>(
+pub async fn ais_vms_positions<T: Database + Send + Sync + 'static>(
     db: web::Data<T>,
     params: Query<AisVmsParameters>,
     bw_profile: Option<BwProfile>,
     auth: Option<Auth0Profile>,
-) -> Result<HttpResponse> {
+) -> Result<StreamResponse<AisVmsPosition>> {
     let params = params.into_inner();
     if params.mmsi.is_none() && params.call_sign.is_none() && params.trip_id.is_none() {
         return MissingMmsiOrCallSignOrTripIdSnafu.fail();
@@ -109,9 +109,14 @@ pub async fn ais_vms_positions<T: Database + 'static>(
         AisPermission::Above15m
     };
 
-    ais_to_streaming_response! {
-        db.ais_vms_positions(params, policy).map_ok(AisVmsPosition::from)
-    }
+    let response = stream_response! {
+        ais_unfold(
+            db.ais_vms_positions(params, policy)
+                .map_ok(AisVmsPosition::from),
+        )
+    };
+
+    Ok(response)
 }
 
 #[utoipa::path(

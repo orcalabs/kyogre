@@ -1,14 +1,4 @@
-use crate::{
-    error::{
-        error::{InvalidDateRangeSnafu, MissingDateRangeSnafu},
-        Result,
-    },
-    to_streaming_response, Database,
-};
-use actix_web::{
-    web::{self, Path},
-    HttpResponse,
-};
+use actix_web::web::{self, Path};
 use chrono::{DateTime, Duration, Utc};
 use fiskeridir_rs::CallSign;
 use futures::TryStreamExt;
@@ -17,6 +7,15 @@ use serde::{Deserialize, Serialize};
 use serde_qs::actix::QsQuery as Query;
 use snafu::ResultExt;
 use utoipa::{IntoParams, ToSchema};
+
+use crate::{
+    error::{
+        error::{InvalidDateRangeSnafu, MissingDateRangeSnafu},
+        Result,
+    },
+    response::{ais_unfold, StreamResponse},
+    stream_response, Database,
+};
 
 #[derive(Debug, Deserialize, Serialize, IntoParams)]
 #[serde(rename_all = "camelCase")]
@@ -42,11 +41,11 @@ pub struct VmsPath {
     )
 )]
 #[tracing::instrument(skip(db))]
-pub async fn vms_positions<T: Database + 'static>(
+pub async fn vms_positions<T: Database + Send + Sync + 'static>(
     db: web::Data<T>,
     params: Query<VmsParameters>,
     path: Path<VmsPath>,
-) -> Result<HttpResponse> {
+) -> Result<StreamResponse<VmsPosition>> {
     let (start, end) = match (params.start, params.end) {
         (None, None) => {
             let end = chrono::Utc::now();
@@ -63,9 +62,14 @@ pub async fn vms_positions<T: Database + 'static>(
 
     let range = DateRange::new(start, end).context(InvalidDateRangeSnafu { start, end })?;
 
-    to_streaming_response! {
-        db.vms_positions(&path.call_sign, &range).map_ok(VmsPosition::from)
-    }
+    let response = stream_response! {
+        ais_unfold(
+            db.vms_positions(&path.call_sign, &range)
+                .map_ok(VmsPosition::from),
+        )
+    };
+
+    Ok(response)
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema)]

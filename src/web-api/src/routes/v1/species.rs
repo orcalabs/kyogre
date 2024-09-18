@@ -1,5 +1,4 @@
-use crate::{error::Result, response::Response, to_streaming_response, Database};
-use actix_web::{web, HttpResponse};
+use actix_web::web;
 use fiskeridir_rs::{SpeciesGroup, SpeciesMainGroup};
 use futures::TryStreamExt;
 use kyogre_core::ML_SPECIES_GROUPS;
@@ -8,6 +7,11 @@ use serde_qs::actix::QsQuery as Query;
 use serde_with::{serde_as, DisplayFromStr};
 use strum::IntoEnumIterator;
 use utoipa::{IntoParams, ToSchema};
+
+use crate::{
+    response::{Response, StreamResponse},
+    stream_response, Database,
+};
 
 #[derive(Default, Debug, Clone, Deserialize, Serialize, IntoParams)]
 #[serde(rename_all = "camelCase")]
@@ -24,8 +28,10 @@ pub struct SpeciesGroupParams {
     )
 )]
 #[tracing::instrument(skip(db))]
-pub async fn species<T: Database + 'static>(db: web::Data<T>) -> Result<HttpResponse> {
-    to_streaming_response! {
+pub async fn species<T: Database + Send + Sync + 'static>(
+    db: web::Data<T>,
+) -> StreamResponse<Species> {
+    stream_response! {
         db.species().map_ok(Species::from)
     }
 }
@@ -86,8 +92,10 @@ pub async fn species_main_groups<T: Database + 'static>() -> Response<Vec<Specie
     )
 )]
 #[tracing::instrument(skip(db))]
-pub async fn species_fiskeridir<T: Database + 'static>(db: web::Data<T>) -> Result<HttpResponse> {
-    to_streaming_response! {
+pub async fn species_fiskeridir<T: Database + Send + Sync + 'static>(
+    db: web::Data<T>,
+) -> StreamResponse<SpeciesFiskeridir> {
+    stream_response! {
         db.species_fiskeridir().map_ok(SpeciesFiskeridir::from)
     }
 }
@@ -101,8 +109,10 @@ pub async fn species_fiskeridir<T: Database + 'static>(db: web::Data<T>) -> Resu
     )
 )]
 #[tracing::instrument(skip(db))]
-pub async fn species_fao<T: Database + 'static>(db: web::Data<T>) -> Result<HttpResponse> {
-    to_streaming_response! {
+pub async fn species_fao<T: Database + Send + Sync + 'static>(
+    db: web::Data<T>,
+) -> StreamResponse<SpeciesFao> {
+    stream_response! {
         db.species_fao().map_ok(SpeciesFao::from)
     }
 }
