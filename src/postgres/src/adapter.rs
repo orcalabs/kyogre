@@ -176,6 +176,7 @@ WHERE
         Ok(())
     }
 
+    #[instrument(skip_all)]
     pub async fn do_migrations(&self) {
         sqlx::migrate!()
             .set_ignore_missing(true)
