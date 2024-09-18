@@ -54,7 +54,7 @@ pub trait WebApiOutboundPort {
     fn species_fiskeridir(&self) -> PinBoxStream<'_, SpeciesFiskeridir>;
     fn species_fao(&self) -> PinBoxStream<'_, SpeciesFao>;
     fn vessels(&self) -> Pin<Box<dyn Stream<Item = CoreResult<Vessel>> + Send + '_>>;
-    fn hauls(&self, query: HaulsQuery) -> CoreResult<PinBoxStream<'_, Haul>>;
+    fn hauls(&self, query: HaulsQuery) -> PinBoxStream<'_, Haul>;
     async fn vessel_benchmarks(
         &self,
         user_id: &BarentswatchUserId,
@@ -64,7 +64,7 @@ pub trait WebApiOutboundPort {
         &self,
         query: TripsQuery,
         read_fishing_facility: bool,
-    ) -> CoreResult<PinBoxStream<'_, TripDetailed>>;
+    ) -> PinBoxStream<'_, TripDetailed>;
     async fn detailed_trip_of_haul(
         &self,
         haul_id: &HaulId,
@@ -81,7 +81,7 @@ pub trait WebApiOutboundPort {
         read_fishing_facility: bool,
     ) -> CoreResult<Option<CurrentTrip>>;
     async fn hauls_matrix(&self, query: &HaulsMatrixQuery) -> CoreResult<HaulsMatrix>;
-    fn landings(&self, query: LandingsQuery) -> CoreResult<PinBoxStream<'_, Landing>>;
+    fn landings(&self, query: LandingsQuery) -> PinBoxStream<'_, Landing>;
     async fn landing_matrix(&self, query: &LandingMatrixQuery) -> CoreResult<LandingMatrix>;
     fn fishing_facilities(
         &self,

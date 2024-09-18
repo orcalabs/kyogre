@@ -147,13 +147,10 @@ GROUP BY
         Ok(table)
     }
 
-    pub(crate) fn hauls_impl(
-        &self,
-        query: HaulsQuery,
-    ) -> Result<impl Stream<Item = Result<Haul>> + '_> {
-        let args = HaulsArgs::try_from(query)?;
+    pub(crate) fn hauls_impl(&self, query: HaulsQuery) -> impl Stream<Item = Result<Haul>> + '_ {
+        let args = HaulsArgs::from(query);
 
-        let stream = sqlx::query_as!(
+        sqlx::query_as!(
             Haul,
             r#"
 SELECT
@@ -281,9 +278,7 @@ ORDER BY
             args.sorting,
         )
         .fetch(&self.pool)
-        .map_err(From::from);
-
-        Ok(stream)
+        .map_err(From::from)
     }
 
     pub(crate) async fn hauls_by_ids_impl(&self, haul_ids: &[HaulId]) -> Result<Vec<Haul>> {
@@ -1016,11 +1011,9 @@ pub struct HaulsArgs {
     pub ordering: Option<i32>,
 }
 
-impl TryFrom<HaulsQuery> for HaulsArgs {
-    type Error = Error;
-
-    fn try_from(v: HaulsQuery) -> std::result::Result<Self, Self::Error> {
-        Ok(HaulsArgs {
+impl From<HaulsQuery> for HaulsArgs {
+    fn from(v: HaulsQuery) -> Self {
+        HaulsArgs {
             ranges: v.ranges.map(|ranges| {
                 ranges
                     .into_iter()
@@ -1049,7 +1042,7 @@ impl TryFrom<HaulsQuery> for HaulsArgs {
             max_air_temperature: v.max_air_temperature,
             sorting: v.sorting.map(|s| s as i32),
             ordering: v.ordering.map(|o| o as i32),
-        })
+        }
     }
 }
 

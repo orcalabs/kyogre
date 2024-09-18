@@ -728,7 +728,7 @@ WHERE
         &self,
         query: TripsQuery,
         read_fishing_facility: bool,
-    ) -> Result<impl Stream<Item = Result<TripDetailed>> + '_> {
+    ) -> impl Stream<Item = Result<TripDetailed>> + '_ {
         let order_by = match (query.ordering, query.sorting) {
             (Ordering::Asc, TripSorting::StopDate) => 1,
             (Ordering::Asc, TripSorting::Weight) => 2,
@@ -736,19 +736,7 @@ WHERE
             (Ordering::Desc, TripSorting::Weight) => 4,
         };
 
-        let gear_groups = query
-            .gear_group_ids
-            .map(|vec| vec.into_iter().map(|v| v as i32).collect::<Vec<i32>>());
-
-        let species_group_ids = query
-            .species_group_ids
-            .map(|vec| vec.into_iter().map(|v| v as i32).collect::<Vec<i32>>());
-
-        let vessel_length_groups = query
-            .vessel_length_groups
-            .map(|vec| vec.into_iter().map(|v| v as i32).collect::<Vec<i32>>());
-
-        let stream = sqlx::query_as!(
+        sqlx::query_as!(
             TripDetailed,
             r#"
 SELECT
@@ -846,17 +834,15 @@ LIMIT
             query.end_date,
             query.min_weight,
             query.max_weight,
-            gear_groups.as_deref(),
-            species_group_ids.as_deref(),
-            vessel_length_groups.as_deref(),
+            query.gear_group_ids.as_deref() as Option<&[GearGroup]>,
+            query.species_group_ids.as_deref() as Option<&[SpeciesGroup]>,
+            query.vessel_length_groups.as_deref() as Option<&[VesselLengthGroup]>,
             order_by,
             query.pagination.offset() as i64,
             query.pagination.limit() as i64,
         )
         .fetch(&self.pool)
-        .map_err(From::from);
-
-        Ok(stream)
+        .map_err(From::from)
     }
 
     pub(crate) async fn detailed_trips_by_ids_impl(

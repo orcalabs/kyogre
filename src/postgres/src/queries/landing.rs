@@ -4,7 +4,7 @@ use std::{
 };
 
 use chrono::{DateTime, NaiveDateTime, NaiveTime, TimeZone, Utc};
-use fiskeridir_rs::{Gear, GearGroup, LandingId, VesselLengthGroup};
+use fiskeridir_rs::{Gear, GearGroup, LandingId, SpeciesGroup, VesselLengthGroup};
 use futures::{Stream, TryStreamExt};
 use kyogre_core::{
     BoxIterator, FiskeridirVesselId, LandingsQuery, TripAssemblerId, VesselEventType,
@@ -14,7 +14,7 @@ use tracing::{error, info};
 
 use crate::{
     chunk::Chunks,
-    error::{Error, Result},
+    error::Result,
     landing_set::LandingSet,
     models::{Landing, NewLanding, NewTripAssemblerConflict},
     PostgresAdapter,
@@ -26,10 +26,10 @@ impl PostgresAdapter {
     pub(crate) fn landings_impl(
         &self,
         query: LandingsQuery,
-    ) -> Result<impl Stream<Item = Result<Landing>> + '_> {
-        let args = LandingsArgs::try_from(query)?;
+    ) -> impl Stream<Item = Result<Landing>> + '_ {
+        let args = LandingsArgs::from(query);
 
-        let stream = sqlx::query_as!(
+        sqlx::query_as!(
             Landing,
             r#"
 SELECT
@@ -120,17 +120,15 @@ ORDER BY
             args.ranges.as_deref(),
             args.catch_area_ids as _,
             args.catch_main_area_ids as _,
-            args.gear_group_ids as _,
-            args.vessel_length_groups as _,
+            args.gear_group_ids.as_deref() as Option<&[GearGroup]>,
+            args.vessel_length_groups.as_deref() as Option<&[VesselLengthGroup]>,
             args.fiskeridir_vessel_ids as _,
-            args.species_group_ids as _,
+            args.species_group_ids.as_deref() as Option<&[SpeciesGroup]>,
             args.ordering,
             args.sorting,
         )
         .fetch(&self.pool)
-        .map_err(From::from);
-
-        Ok(stream)
+        .map_err(From::from)
     }
 
     pub(crate) async fn landings_by_ids_impl(
@@ -676,18 +674,16 @@ pub struct LandingsArgs {
     pub ranges: Option<Vec<PgRange<DateTime<Utc>>>>,
     pub catch_area_ids: Option<Vec<i32>>,
     pub catch_main_area_ids: Option<Vec<i32>>,
-    pub gear_group_ids: Option<Vec<i32>>,
-    pub species_group_ids: Option<Vec<i32>>,
-    pub vessel_length_groups: Option<Vec<i32>>,
+    pub gear_group_ids: Option<Vec<GearGroup>>,
+    pub species_group_ids: Option<Vec<SpeciesGroup>>,
+    pub vessel_length_groups: Option<Vec<VesselLengthGroup>>,
     pub fiskeridir_vessel_ids: Option<Vec<FiskeridirVesselId>>,
     pub sorting: Option<i32>,
     pub ordering: Option<i32>,
 }
 
-impl TryFrom<LandingsQuery> for LandingsArgs {
-    type Error = Error;
-
-    fn try_from(v: LandingsQuery) -> std::result::Result<Self, Self::Error> {
+impl From<LandingsQuery> for LandingsArgs {
+    fn from(v: LandingsQuery) -> Self {
         let (catch_area_ids, catch_main_area_ids) = if let Some(cls) = v.catch_locations {
             let mut catch_areas = Vec::with_capacity(cls.len());
             let mut main_areas = Vec::with_capacity(cls.len());
@@ -702,7 +698,7 @@ impl TryFrom<LandingsQuery> for LandingsArgs {
             (None, None)
         };
 
-        Ok(LandingsArgs {
+        LandingsArgs {
             ranges: v.ranges.map(|ranges| {
                 ranges
                     .into_iter()
@@ -714,18 +710,12 @@ impl TryFrom<LandingsQuery> for LandingsArgs {
             }),
             catch_area_ids,
             catch_main_area_ids,
-            gear_group_ids: v
-                .gear_group_ids
-                .map(|gs| gs.into_iter().map(|g| g as i32).collect()),
-            species_group_ids: v
-                .species_group_ids
-                .map(|gs| gs.into_iter().map(|g| g as i32).collect()),
-            vessel_length_groups: v
-                .vessel_length_groups
-                .map(|groups| groups.into_iter().map(|g| g as i32).collect()),
+            gear_group_ids: v.gear_group_ids,
+            species_group_ids: v.species_group_ids,
+            vessel_length_groups: v.vessel_length_groups,
             fiskeridir_vessel_ids: v.vessel_ids,
             sorting: v.sorting.map(|s| s as i32),
             ordering: v.ordering.map(|o| o as i32),
-        })
+        }
     }
 }

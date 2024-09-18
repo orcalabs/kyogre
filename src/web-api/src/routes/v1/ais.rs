@@ -1,25 +1,22 @@
-use crate::{
-    ais_to_streaming_response,
-    error::{
-        error::{InvalidDateRangeSnafu, MissingDateRangeSnafu},
-        Result,
-    },
-    extractors::{Auth0Profile, BwProfile},
-    to_streaming_response, Database,
-};
-use actix_web::{
-    web::{self, Path},
-    HttpResponse,
-};
+use actix_web::web::{self, Path};
 use chrono::{DateTime, Duration, Utc};
 use futures::TryStreamExt;
-use kyogre_core::{AisPermission, NavigationStatus};
-use kyogre_core::{DateRange, Mmsi};
+use kyogre_core::{AisPermission, DateRange, Mmsi, NavigationStatus};
 use serde::{Deserialize, Serialize};
 use serde_qs::actix::QsQuery as Query;
 use serde_with::{serde_as, DisplayFromStr};
 use snafu::ResultExt;
 use utoipa::{IntoParams, ToSchema};
+
+use crate::{
+    error::{
+        error::{InvalidDateRangeSnafu, MissingDateRangeSnafu},
+        Result,
+    },
+    extractors::{Auth0Profile, BwProfile},
+    response::{ais_unfold, StreamResponse},
+    stream_response, Database,
+};
 
 #[derive(Debug, Deserialize, Serialize, IntoParams)]
 #[serde(rename_all = "camelCase")]
@@ -57,12 +54,12 @@ pub struct AisCurrentPositionParameters {
     )
 )]
 #[tracing::instrument(skip(db))]
-pub async fn ais_current_positions<T: Database + 'static>(
+pub async fn ais_current_positions<T: Database + Send + Sync + 'static>(
     db: web::Data<T>,
     params: Query<AisCurrentPositionParameters>,
     bw_profile: Option<BwProfile>,
     auth: Option<Auth0Profile>,
-) -> Result<HttpResponse> {
+) -> StreamResponse<AisPosition> {
     let bw_policy = bw_profile.map(AisPermission::from).unwrap_or_default();
     let auth0_policy = auth.map(AisPermission::from).unwrap_or_default();
     let policy = if bw_policy == AisPermission::All || auth0_policy == AisPermission::All {
@@ -71,8 +68,11 @@ pub async fn ais_current_positions<T: Database + 'static>(
         AisPermission::Above15m
     };
 
-    to_streaming_response! {
-        db.ais_current_positions(params.position_timestamp_limit, policy).map_ok(AisPosition::from)
+    stream_response! {
+        ais_unfold(
+            db.ais_current_positions(params.position_timestamp_limit, policy)
+                .map_ok(AisPosition::from),
+        )
     }
 }
 
@@ -94,13 +94,13 @@ pub async fn ais_current_positions<T: Database + 'static>(
     )
 )]
 #[tracing::instrument(skip(db))]
-pub async fn ais_track<T: Database + 'static>(
+pub async fn ais_track<T: Database + Send + Sync + 'static>(
     db: web::Data<T>,
     params: Query<AisTrackParameters>,
     path: Path<AisTrackPath>,
     bw_profile: Option<BwProfile>,
     auth: Option<Auth0Profile>,
-) -> Result<HttpResponse> {
+) -> Result<StreamResponse<AisPosition>> {
     let (start, end) = match (params.start, params.end) {
         (None, None) => {
             let end = chrono::Utc::now();
@@ -125,9 +125,14 @@ pub async fn ais_track<T: Database + 'static>(
 
     let range = DateRange::new(start, end).context(InvalidDateRangeSnafu { start, end })?;
 
-    ais_to_streaming_response! {
-        db.ais_positions(path.mmsi, &range, policy).map_ok(AisPosition::from)
-    }
+    let response = stream_response! {
+        ais_unfold(
+            db.ais_positions(path.mmsi, &range, policy)
+                .map_ok(AisPosition::from),
+        )
+    };
+
+    Ok(response)
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema)]

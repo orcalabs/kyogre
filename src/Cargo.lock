@@ -6528,7 +6528,6 @@ version = "0.1.0"
 dependencies = [
  "actix-cors",
  "actix-web",
- "async-stream",
  "async-trait",
  "base64 0.22.1",
  "chrono",
@@ -6545,6 +6544,7 @@ dependencies = [
  "machine",
  "meilisearch",
  "orca-core",
+ "pin-project-lite",
  "postgres",
  "rand 0.8.5",
  "rsa",
@@ -6556,6 +6556,7 @@ dependencies = [
  "stack-error",
  "strum 0.26.3",
  "tokio",
+ "tokio-stream",
  "tracing",
  "tracing-subscriber",
  "utoipa",

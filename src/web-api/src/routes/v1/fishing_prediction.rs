@@ -1,9 +1,5 @@
-use crate::{error::Result, response::Response};
-use crate::{to_streaming_response, Database};
-use actix_web::HttpResponse;
 use actix_web::{web, web::Path};
-use chrono::NaiveDate;
-use chrono::Utc;
+use chrono::{NaiveDate, Utc};
 use fiskeridir_rs::SpeciesGroup;
 use futures::TryStreamExt;
 use kyogre_core::{CatchLocationId, ModelId};
@@ -11,6 +7,12 @@ use serde::{Deserialize, Serialize};
 use serde_qs::actix::QsQuery as Query;
 use serde_with::{serde_as, DisplayFromStr};
 use utoipa::{IntoParams, ToSchema};
+
+use crate::{
+    error::Result,
+    response::{Response, StreamResponse},
+    stream_response, Database,
+};
 
 pub const MAX_FISHING_WEIGHT_PREDICTIONS: u32 = 20;
 pub const DEFAULT_FISHING_WEIGHT_PREDICTIONS: u32 = 5;
@@ -81,14 +83,13 @@ pub async fn fishing_spot_predictions<T: Database + 'static>(
     )
 )]
 #[tracing::instrument(skip(db))]
-pub async fn all_fishing_spot_predictions<T: Database + 'static>(
+pub async fn all_fishing_spot_predictions<T: Database + Send + Sync + 'static>(
     db: web::Data<T>,
     path: Path<AllFishingPredictionsPath>,
-) -> Result<HttpResponse> {
-    to_streaming_response! {
-        db
-         .all_fishing_spot_predictions(path.model_id)
-         .map_ok(FishingSpotPrediction::from)
+) -> StreamResponse<FishingSpotPrediction> {
+    stream_response! {
+        db.all_fishing_spot_predictions(path.model_id)
+            .map_ok(FishingSpotPrediction::from)
     }
 }
 
@@ -105,11 +106,11 @@ pub async fn all_fishing_spot_predictions<T: Database + 'static>(
     )
 )]
 #[tracing::instrument(skip(db))]
-pub async fn fishing_weight_predictions<T: Database + 'static>(
+pub async fn fishing_weight_predictions<T: Database + Send + Sync + 'static>(
     db: web::Data<T>,
     params: web::Query<FishingWeightPredictionParams>,
     path_params: Path<FishingPredictionsPath>,
-) -> Result<HttpResponse> {
+) -> StreamResponse<FishingWeightPrediction> {
     let date = params.date.unwrap_or_else(|| Utc::now().date_naive());
     let mut limit = params.limit.unwrap_or(DEFAULT_FISHING_WEIGHT_PREDICTIONS);
 
@@ -117,10 +118,14 @@ pub async fn fishing_weight_predictions<T: Database + 'static>(
         limit = DEFAULT_FISHING_WEIGHT_PREDICTIONS;
     }
 
-    to_streaming_response! {
-        db
-         .fishing_weight_predictions(path_params.model_id, path_params.species_group_id, date, limit)
-         .map_ok(FishingWeightPrediction::from)
+    stream_response! {
+        db.fishing_weight_predictions(
+            path_params.model_id,
+            path_params.species_group_id,
+            date,
+            limit,
+        )
+        .map_ok(FishingWeightPrediction::from)
     }
 }
 
@@ -134,14 +139,13 @@ pub async fn fishing_weight_predictions<T: Database + 'static>(
     )
 )]
 #[tracing::instrument(skip(db))]
-pub async fn all_fishing_weight_predictions<T: Database + 'static>(
+pub async fn all_fishing_weight_predictions<T: Database + Send + Sync + 'static>(
     db: web::Data<T>,
     path: Path<AllFishingPredictionsPath>,
-) -> Result<HttpResponse> {
-    to_streaming_response! {
-        db
-         .all_fishing_weight_predictions(path.model_id)
-         .map_ok(FishingWeightPrediction::from)
+) -> StreamResponse<FishingWeightPrediction> {
+    stream_response! {
+        db.all_fishing_weight_predictions(path.model_id)
+            .map_ok(FishingWeightPrediction::from)
     }
 }
 

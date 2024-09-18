@@ -1,7 +1,4 @@
-use crate::error::error::{InvalidCallSignSnafu, MissingBwFiskInfoProfileSnafu};
-use crate::response::Response;
-use crate::{error::Result, extractors::BwProfile, to_streaming_response, Database};
-use actix_web::{web, HttpResponse};
+use actix_web::web;
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::{CallSign, GearGroup, RegisterVesselOwner, SpeciesGroup, VesselLengthGroup};
 use futures::TryStreamExt;
@@ -12,6 +9,16 @@ use serde_with::{serde_as, DisplayFromStr};
 use snafu::ResultExt;
 use utoipa::ToSchema;
 
+use crate::{
+    error::{
+        error::{InvalidCallSignSnafu, MissingBwFiskInfoProfileSnafu},
+        Result,
+    },
+    extractors::BwProfile,
+    response::{Response, StreamResponse},
+    stream_response, Database,
+};
+
 #[utoipa::path(
     get,
     path = "/vessels",
@@ -21,8 +28,10 @@ use utoipa::ToSchema;
     )
 )]
 #[tracing::instrument(skip(db))]
-pub async fn vessels<T: Database + 'static>(db: web::Data<T>) -> Result<HttpResponse> {
-    to_streaming_response! {
+pub async fn vessels<T: Database + Send + Sync + 'static>(
+    db: web::Data<T>,
+) -> StreamResponse<Vessel> {
+    stream_response! {
         db.vessels().map_ok(Vessel::from)
     }
 }

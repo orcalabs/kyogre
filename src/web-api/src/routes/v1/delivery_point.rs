@@ -1,9 +1,10 @@
-use crate::{error::Result, to_streaming_response, Database};
-use actix_web::{web, HttpResponse};
+use actix_web::web;
 use fiskeridir_rs::DeliveryPointId;
 use futures::TryStreamExt;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
+
+use crate::{response::StreamResponse, stream_response, Database};
 
 #[utoipa::path(
     get,
@@ -14,8 +15,10 @@ use utoipa::ToSchema;
     )
 )]
 #[tracing::instrument(skip(db))]
-pub async fn delivery_points<T: Database + 'static>(db: web::Data<T>) -> Result<HttpResponse> {
-    to_streaming_response! {
+pub async fn delivery_points<T: Database + Send + Sync + 'static>(
+    db: web::Data<T>,
+) -> StreamResponse<DeliveryPoint> {
+    stream_response! {
         db.delivery_points().map_ok(DeliveryPoint::from)
     }
 }

@@ -1,11 +1,4 @@
-use crate::{
-    error::Result, response::Response, routes::utils::*, to_streaming_response, Cache, Database,
-    Meilisearch,
-};
-use actix_web::{
-    web::{self, Path},
-    HttpResponse,
-};
+use actix_web::web::{self, Path};
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::{DeliveryPointId, Gear, GearGroup, SpeciesGroup, VesselLengthGroup};
 use futures::TryStreamExt;
@@ -17,6 +10,13 @@ use serde::{Deserialize, Serialize};
 use serde_qs::actix::QsQuery as Query;
 use serde_with::{serde_as, DisplayFromStr};
 use utoipa::{IntoParams, ToSchema};
+
+use crate::{
+    error::Result,
+    response::{Response, ResponseOrStream, StreamResponse},
+    routes::utils::*,
+    stream_response, Cache, Database, Meilisearch,
+};
 
 #[serde_as]
 #[derive(Default, Debug, Clone, Deserialize, Serialize, IntoParams)]
@@ -73,11 +73,11 @@ pub struct LandingMatrixParams {
     )
 )]
 #[tracing::instrument(skip(db, meilisearch))]
-pub async fn landings<T: Database + 'static, M: Meilisearch + 'static>(
+pub async fn landings<T: Database + Send + Sync + 'static, M: Meilisearch + 'static>(
     db: web::Data<T>,
     meilisearch: web::Data<Option<M>>,
     params: Query<LandingsParams>,
-) -> Result<HttpResponse> {
+) -> Result<ResponseOrStream<Landing>> {
     let query: LandingsQuery = params.into_inner().into();
 
     if let Some(meilisearch) = meilisearch.as_ref() {
@@ -92,9 +92,11 @@ pub async fn landings<T: Database + 'static, M: Meilisearch + 'static>(
         .into());
     }
 
-    to_streaming_response! {
-        db.landings(query)?.map_ok(Landing::from)
-    }
+    let response = stream_response! {
+        db.landings(query).map_ok(Landing::from)
+    };
+
+    Ok(response.into())
 }
 
 #[serde_as]

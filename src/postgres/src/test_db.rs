@@ -451,7 +451,6 @@ WHERE
 
         self.db
             .landings(Default::default())
-            .unwrap()
             .try_collect()
             .await
             .unwrap()

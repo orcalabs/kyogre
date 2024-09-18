@@ -1,30 +1,26 @@
+use actix_web::web::{self, Path};
+use chrono::{DateTime, Utc};
 use error::error::StartAfterEndSnafu;
 use fiskeridir_rs::{Gear, GearGroup, LandingId};
 use futures::TryStreamExt;
-use serde_qs::actix::QsQuery as Query;
-use serde_with::{serde_as, DisplayFromStr};
-
-use crate::{
-    error::Result,
-    extractors::{BwPolicy, BwProfile},
-    response::Response,
-    *,
-};
-use actix_web::{
-    web::{self, Path},
-    HttpResponse,
-};
-use chrono::{DateTime, Utc};
 use kyogre_core::{
     FiskeridirVesselId, HaulId, Ordering, Pagination, TripAssemblerId, TripId, TripSorting, Trips,
     TripsQuery, VesselEventType,
 };
 use serde::{Deserialize, Serialize};
+use serde_qs::actix::QsQuery as Query;
+use serde_with::{serde_as, DisplayFromStr};
 use utoipa::{IntoParams, ToSchema};
 
 use super::{
     fishing_facility::FishingFacility,
     haul::{HaulCatch, WhaleCatch},
+};
+use crate::{
+    error::Result,
+    extractors::{BwPolicy, BwProfile},
+    response::{Response, ResponseOrStream, StreamResponse},
+    stream_response, *,
 };
 
 #[serde_as]
@@ -160,12 +156,12 @@ pub async fn trip_of_landing<T: Database + 'static, M: Meilisearch + 'static>(
     )
 )]
 #[tracing::instrument(skip(db, meilisearch))]
-pub async fn trips<T: Database + 'static, M: Meilisearch + 'static>(
+pub async fn trips<T: Database + Send + Sync + 'static, M: Meilisearch + 'static>(
     db: web::Data<T>,
     meilisearch: web::Data<Option<M>>,
     profile: Option<BwProfile>,
     params: Query<TripsParameters>,
-) -> Result<HttpResponse> {
+) -> Result<ResponseOrStream<Trip>> {
     let read_fishing_facility = profile
         .map(|p| {
             p.policies
@@ -199,13 +195,12 @@ pub async fn trips<T: Database + 'static, M: Meilisearch + 'static>(
         .into());
     }
 
-    to_streaming_response! {
-        db.detailed_trips(
-            query,
-            read_fishing_facility,
-        )?
-        .map_ok(Trip::from)
-    }
+    let response = stream_response! {
+        db.detailed_trips(query, read_fishing_facility)
+            .map_ok(Trip::from)
+    };
+
+    Ok(response.into())
 }
 
 #[utoipa::path(

@@ -204,7 +204,6 @@ async fn test_hauls_filters_by_distributed_catch_locations_after_distribution() 
                 catch_locations: Some(vec![CatchLocationId::new(1, 1)]),
                 ..Default::default()
             })
-            .unwrap()
             .try_collect()
             .await
             .unwrap();
@@ -254,7 +253,6 @@ async fn test_distributed_hauls_includes_catch_location_start_in_catch_locations
         let mut hauls: Vec<Haul> = helper
             .adapter()
             .hauls(HaulsQuery::default())
-            .unwrap()
             .try_collect()
             .await
             .unwrap();
