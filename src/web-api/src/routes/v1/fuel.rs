@@ -1,4 +1,4 @@
-use actix_web::{web, HttpResponse};
+use actix_web::web;
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::CallSign;
 use futures::TryStreamExt;
@@ -14,8 +14,8 @@ use crate::{
         Result,
     },
     extractors::BwProfile,
-    response::Response,
-    to_streaming_response, Database,
+    response::{Response, StreamResponse},
+    stream_response, Database,
 };
 
 #[derive(Default, Debug, Clone, Deserialize, Serialize, IntoParams)]
@@ -35,11 +35,11 @@ pub struct FuelMeasurementsParams {
     )
 )]
 #[tracing::instrument(skip(db))]
-pub async fn get_fuel_measurements<T: Database + 'static>(
+pub async fn get_fuel_measurements<T: Database + Send + Sync + 'static>(
     db: web::Data<T>,
     profile: BwProfile,
     params: Query<FuelMeasurementsParams>,
-) -> Result<HttpResponse> {
+) -> Result<StreamResponse<FuelMeasurement>> {
     let user_id = profile.user.id;
 
     let profile = profile
@@ -51,9 +51,11 @@ pub async fn get_fuel_measurements<T: Database + 'static>(
 
     let query = params.into_inner().to_query(user_id, call_sign);
 
-    to_streaming_response! {
+    let response = stream_response! {
         db.fuel_measurements(query).map_ok(FuelMeasurement::from)
-    }
+    };
+
+    Ok(response)
 }
 
 #[utoipa::path(

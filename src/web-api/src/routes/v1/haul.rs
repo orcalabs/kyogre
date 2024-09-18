@@ -1,11 +1,4 @@
-use crate::{
-    error::Result, response::Response, routes::utils::*, to_streaming_response, Cache, Database,
-    Meilisearch,
-};
-use actix_web::{
-    web::{self, Path},
-    HttpResponse,
-};
+use actix_web::web::{self, Path};
 use chrono::{DateTime, Datelike, Utc};
 use fiskeridir_rs::{Gear, GearGroup, SpeciesGroup, VesselLengthGroup, WhaleGender};
 use futures::TryStreamExt;
@@ -17,6 +10,13 @@ use serde::{Deserialize, Serialize};
 use serde_qs::actix::QsQuery as Query;
 use serde_with::{serde_as, DisplayFromStr};
 use utoipa::{IntoParams, ToSchema};
+
+use crate::{
+    error::Result,
+    response::{Response, ResponseOrStream, StreamResponse},
+    routes::utils::*,
+    stream_response, Cache, Database, Meilisearch,
+};
 
 #[serde_as]
 #[derive(Default, Debug, Clone, Deserialize, Serialize, IntoParams)]
@@ -79,11 +79,11 @@ pub struct HaulsMatrixParams {
     )
 )]
 #[tracing::instrument(skip(db, meilisearch))]
-pub async fn hauls<T: Database + 'static, M: Meilisearch + 'static>(
+pub async fn hauls<T: Database + Send + Sync + 'static, M: Meilisearch + 'static>(
     db: web::Data<T>,
     meilisearch: web::Data<Option<M>>,
     params: Query<HaulsParams>,
-) -> Result<HttpResponse> {
+) -> Result<ResponseOrStream<Haul>> {
     let query: HaulsQuery = params.into_inner().into();
 
     if let Some(meilisearch) = meilisearch.as_ref() {
@@ -98,9 +98,11 @@ pub async fn hauls<T: Database + 'static, M: Meilisearch + 'static>(
         .into());
     }
 
-    to_streaming_response! {
-        db.hauls(query)?.map_ok(Haul::from)
-    }
+    let response = stream_response! {
+        db.hauls(query).map_ok(Haul::from)
+    };
+
+    Ok(response.into())
 }
 
 #[serde_as]

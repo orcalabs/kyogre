@@ -581,8 +581,8 @@ impl WebApiOutboundPort for PostgresAdapter {
         convert_stream(self.fiskeridir_ais_vessel_combinations()).boxed()
     }
 
-    fn hauls(&self, query: HaulsQuery) -> CoreResult<PinBoxStream<'_, Haul>> {
-        Ok(convert_stream(self.hauls_impl(query)?).boxed())
+    fn hauls(&self, query: HaulsQuery) -> PinBoxStream<'_, Haul> {
+        convert_stream(self.hauls_impl(query)).boxed()
     }
 
     async fn vessel_benchmarks(
@@ -598,9 +598,9 @@ impl WebApiOutboundPort for PostgresAdapter {
         &self,
         query: TripsQuery,
         read_fishing_facility: bool,
-    ) -> CoreResult<PinBoxStream<'_, TripDetailed>> {
-        let stream = self.detailed_trips_impl(query, read_fishing_facility)?;
-        Ok(convert_stream(stream).boxed())
+    ) -> PinBoxStream<'_, TripDetailed> {
+        let stream = self.detailed_trips_impl(query, read_fishing_facility);
+        convert_stream(stream).boxed()
     }
     async fn detailed_trip_of_haul(
         &self,
@@ -634,9 +634,9 @@ impl WebApiOutboundPort for PostgresAdapter {
         Ok(retry(|| self.hauls_matrix_impl(query)).await?)
     }
 
-    fn landings(&self, query: LandingsQuery) -> CoreResult<PinBoxStream<'_, Landing>> {
-        let stream = self.landings_impl(query)?;
-        Ok(convert_stream(stream).boxed())
+    fn landings(&self, query: LandingsQuery) -> PinBoxStream<'_, Landing> {
+        let stream = self.landings_impl(query);
+        convert_stream(stream).boxed()
     }
 
     async fn landing_matrix(&self, query: &LandingMatrixQuery) -> CoreResult<LandingMatrix> {

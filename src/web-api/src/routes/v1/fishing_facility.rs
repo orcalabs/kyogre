@@ -1,4 +1,4 @@
-use actix_web::{web, HttpResponse};
+use actix_web::web;
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::CallSign;
 use futures::TryStreamExt;
@@ -15,7 +15,8 @@ use uuid::Uuid;
 use crate::{
     error::{error::InsufficientPermissionsSnafu, Result},
     extractors::{BwPolicy, BwProfile},
-    to_streaming_response, Database,
+    response::StreamResponse,
+    stream_response, Database,
 };
 
 #[serde_as]
@@ -50,11 +51,11 @@ pub struct FishingFacilitiesParams {
     )
 )]
 #[tracing::instrument(skip(db))]
-pub async fn fishing_facilities<T: Database + 'static>(
+pub async fn fishing_facilities<T: Database + Send + Sync + 'static>(
     db: web::Data<T>,
     profile: BwProfile,
     params: Query<FishingFacilitiesParams>,
-) -> Result<HttpResponse> {
+) -> Result<StreamResponse<FishingFacility>> {
     if !profile
         .policies
         .contains(&BwPolicy::BwReadExtendedFishingFacility)
@@ -64,9 +65,11 @@ pub async fn fishing_facilities<T: Database + 'static>(
 
     let query = params.into_inner().into();
 
-    to_streaming_response! {
+    let response = stream_response! {
         db.fishing_facilities(query).map_ok(FishingFacility::from)
-    }
+    };
+
+    Ok(response)
 }
 
 #[serde_as]

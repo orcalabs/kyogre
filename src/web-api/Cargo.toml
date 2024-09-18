@@ -34,13 +34,14 @@ wkt = { workspace = true }
 serde_with = { workspace = true }
 uuid = { workspace = true }
 async-trait = { workspace = true }
+tokio-stream = { workspace = true }
 
 actix-web = "4.9.0"
 actix-cors = "0.7.0"
 utoipa-swagger-ui = { version = "7.1", features = ["actix-web"] }
-async-stream = "0.3.5"
 jsonwebtoken = "9.3.0"
 serde_qs = { version = "0.13.0", features = ["actix4"] }
+pin-project-lite = "0.2.14"
 
 [dev-dependencies]
 engine = { path = "../engine" }
