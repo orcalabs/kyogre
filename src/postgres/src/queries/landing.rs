@@ -135,8 +135,6 @@ ORDER BY
         &self,
         landing_ids: &[LandingId],
     ) -> Result<Vec<Landing>> {
-        let ids = landing_ids.iter().map(|i| i.as_ref()).collect::<Vec<_>>();
-
         let landings = sqlx::query_as!(
             Landing,
             r#"
@@ -180,7 +178,7 @@ WHERE
 GROUP BY
     l.landing_id
             "#,
-            ids.as_slice() as _,
+            landing_ids as &[LandingId],
         )
         .fetch_all(&self.pool)
         .await?;
@@ -189,10 +187,10 @@ GROUP BY
     }
 
     pub(crate) async fn all_landing_versions_impl(&self) -> Result<Vec<(LandingId, i64)>> {
-        sqlx::query!(
+        let versions = sqlx::query!(
             r#"
 SELECT
-    landing_id,
+    landing_id AS "id!: LandingId",
     "version"
 FROM
     landings
@@ -201,8 +199,10 @@ FROM
         .fetch_all(&self.pool)
         .await?
         .into_iter()
-        .map(|r| Ok((LandingId::try_from(r.landing_id)?, r.version as i64)))
-        .collect::<std::result::Result<_, _>>()
+        .map(|r| (r.id, r.version as i64))
+        .collect();
+
+        Ok(versions)
     }
 
     pub(crate) async fn sum_landing_weight_impl(

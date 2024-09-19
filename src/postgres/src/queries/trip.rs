@@ -178,11 +178,8 @@ WHERE
         let mut pruned_positions = Vec::with_capacity(outputs.len());
 
         for (trip_id, output) in outputs {
-            let mut positions = Vec::with_capacity(output.trip_positions.len());
-            let mut pruned = Vec::with_capacity(output.pruned_positions.len());
-
             for p in output.trip_positions {
-                positions.push(TripAisVmsPosition {
+                trip_positions.push(TripAisVmsPosition {
                     trip_id,
                     latitude: p.latitude,
                     longitude: p.longitude,
@@ -198,16 +195,13 @@ WHERE
                 });
             }
             for p in output.pruned_positions {
-                pruned.push(TripPrunedAisVmsPosition {
+                pruned_positions.push(TripPrunedAisVmsPosition {
                     trip_id,
                     positions: p.positions,
                     value: p.value,
                     trip_position_layer_id: p.trip_layer,
                 });
             }
-
-            trip_positions.append(&mut positions);
-            pruned_positions.append(&mut pruned);
         }
 
         self.unnest_insert(trip_positions, &mut **tx).await?;
@@ -1008,7 +1002,7 @@ WHERE
     t.landing_ids && $2::VARCHAR[];
             "#,
             read_fishing_facility,
-            &[landing_id.clone().into_inner()],
+            &[landing_id] as &[&LandingId],
         )
         .fetch_optional(&self.pool)
         .await?;
@@ -1275,7 +1269,7 @@ VALUES
         let mut new_trips = Vec::with_capacity(value.values.len());
         let mut trip_positions = Vec::new();
         for v in value.values {
-            new_trips.push(crate::models::NewTrip::try_from(&v)?);
+            new_trips.push(crate::models::NewTrip::from(&v));
             if let Some(output) = v.trip_position_output {
                 trip_positions.push((output, v.trip.period.start().timestamp()));
             }
@@ -1346,8 +1340,7 @@ SET
 
         match conflict_strategy {
             TripsConflictStrategy::Replace => {
-                let periods: Vec<PgRange<DateTime<Utc>>> =
-                    new_trips.iter().map(|v| v.period.clone()).collect();
+                let periods: Vec<_> = new_trips.iter().map(|v| &v.period).collect();
                 sqlx::query!(
                     r#"
 DELETE FROM trips
@@ -1356,7 +1349,7 @@ WHERE
     AND fiskeridir_vessel_id = $2
     AND trip_assembler_id = $3
                     "#,
-                    &periods,
+                    &periods as &[&PgRange<DateTime<Utc>>],
                     vessel_id.into_inner(),
                     trip_assembler_id as i32,
                 )

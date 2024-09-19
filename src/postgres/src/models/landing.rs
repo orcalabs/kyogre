@@ -1,5 +1,5 @@
 use chrono::{DateTime, NaiveDate, NaiveTime, Utc};
-use fiskeridir_rs::{DeliveryPointId, Gear, GearGroup, LandingId, VesselLengthGroup};
+use fiskeridir_rs::{DeliveryPointId, Gear, GearGroup, LandingId, SpeciesGroup, VesselLengthGroup};
 use kyogre_core::{CatchLocationId, FiskeridirVesselId, LandingMatrixQuery};
 use unnest_insert::UnnestInsert;
 
@@ -249,9 +249,9 @@ pub struct LandingMatrixQueryOutput {
 pub struct LandingMatrixArgs {
     pub months: Option<Vec<i32>>,
     pub catch_locations: Option<Vec<String>>,
-    pub gear_group_ids: Option<Vec<i32>>,
-    pub species_group_ids: Option<Vec<i32>>,
-    pub vessel_length_groups: Option<Vec<i32>>,
+    pub gear_group_ids: Option<Vec<GearGroup>>,
+    pub species_group_ids: Option<Vec<SpeciesGroup>>,
+    pub vessel_length_groups: Option<Vec<VesselLengthGroup>>,
     pub fiskeridir_vessel_ids: Option<Vec<FiskeridirVesselId>>,
 }
 
@@ -265,27 +265,19 @@ impl From<LandingMatrixQueryOutput> for kyogre_core::LandingMatrixQueryOutput {
     }
 }
 
-impl TryFrom<LandingMatrixQuery> for LandingMatrixArgs {
-    type Error = Error;
-
-    fn try_from(v: LandingMatrixQuery) -> std::result::Result<Self, Self::Error> {
-        Ok(LandingMatrixArgs {
+impl From<LandingMatrixQuery> for LandingMatrixArgs {
+    fn from(v: LandingMatrixQuery) -> Self {
+        LandingMatrixArgs {
             months: v
                 .months
                 .map(|months| months.into_iter().map(|m| m as i32).collect()),
             catch_locations: v
                 .catch_locations
                 .map(|cls| cls.into_iter().map(|c| c.into_inner()).collect()),
-            gear_group_ids: v
-                .gear_group_ids
-                .map(|gs| gs.into_iter().map(|g| g as i32).collect()),
-            species_group_ids: v
-                .species_group_ids
-                .map(|gs| gs.into_iter().map(|g| g as i32).collect()),
-            vessel_length_groups: v
-                .vessel_length_groups
-                .map(|groups| groups.into_iter().map(|g| g as i32).collect()),
+            gear_group_ids: v.gear_group_ids,
+            species_group_ids: v.species_group_ids,
+            vessel_length_groups: v.vessel_length_groups,
             fiskeridir_vessel_ids: v.vessel_ids,
-        })
+        }
     }
 }
