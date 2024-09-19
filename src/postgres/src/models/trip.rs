@@ -82,9 +82,9 @@ pub struct NewTrip {
     pub start_precision_id: Option<PrecisionId>,
     #[unnest_insert(sql_type = "INT", type_conversion = "opt_type_to_i32")]
     pub end_precision_id: Option<PrecisionId>,
-    pub start_precision_direction: Option<String>,
-    pub end_precision_direction: Option<String>,
-    pub trip_precision_status_id: String,
+    pub start_precision_direction: Option<&'static str>,
+    pub end_precision_direction: Option<&'static str>,
+    pub trip_precision_status_id: &'static str,
     #[unnest_insert(sql_type = "tstzrange")]
     pub period_precision: Option<PgRange<DateTime<Utc>>>,
     pub distance: Option<f64>,
@@ -129,10 +129,8 @@ pub struct TripPrunedAisVmsPosition {
     pub trip_position_layer_id: TripPositionLayerId,
 }
 
-impl TryFrom<&TripProcessingUnit> for NewTrip {
-    type Error = Error;
-
-    fn try_from(value: &TripProcessingUnit) -> std::result::Result<Self, Self::Error> {
+impl From<&TripProcessingUnit> for NewTrip {
+    fn from(value: &TripProcessingUnit) -> Self {
         let (
             start_precision_id,
             start_precision_direction,
@@ -183,7 +181,7 @@ impl TryFrom<&TripProcessingUnit> for NewTrip {
             None => ProcessingStatus::Unprocessed,
         };
 
-        Ok(NewTrip {
+        NewTrip {
             period: PgRange::from(&value.trip.period),
             period_precision,
             landing_coverage: PgRange::from(&value.trip.landing_coverage),
@@ -191,15 +189,15 @@ impl TryFrom<&TripProcessingUnit> for NewTrip {
             fiskeridir_vessel_id: value.vessel_id,
             start_precision_id,
             end_precision_id,
-            start_precision_direction: start_precision_direction.map(|v| v.name().to_string()),
-            end_precision_direction: end_precision_direction.map(|v| v.name().to_string()),
-            trip_precision_status_id: trip_precision_status_id.to_string(),
+            start_precision_direction: start_precision_direction.map(|v| v.name()),
+            end_precision_direction: end_precision_direction.map(|v| v.name()),
+            trip_precision_status_id,
             distance,
             distancer_id,
             start_port_id: value.start_port.clone().map(|p| p.id),
             end_port_id: value.end_port.clone().map(|p| p.id),
             position_layers_status,
-        })
+        }
     }
 }
 

@@ -10,7 +10,7 @@ use kyogre_core::{
 
 use crate::{
     error::Result,
-    models::{AisClass, AisVmsAreaPositionsReturning, NewAisVessel, NewAisVesselHistoric},
+    models::{AisVmsAreaPositionsReturning, NewAisVessel, NewAisVesselHistoric},
     PostgresAdapter,
 };
 
@@ -225,13 +225,14 @@ FROM
         let mut latest_position_per_vessel: HashMap<Mmsi, NewAisPosition> = HashMap::new();
 
         for p in positions {
-            if let Some(v) = latest_position_per_vessel.get(&p.mmsi) {
-                if p.msgtime > v.msgtime {
-                    latest_position_per_vessel.insert(p.mmsi, p.clone());
-                }
-            } else {
-                latest_position_per_vessel.insert(p.mmsi, p.clone());
-            }
+            latest_position_per_vessel
+                .entry(p.mmsi)
+                .and_modify(|v| {
+                    if p.msgtime > v.msgtime {
+                        *v = p.clone();
+                    }
+                })
+                .or_insert_with(|| p.clone());
 
             mmsis.push(p.mmsi);
             latitude.push(p.latitude);
@@ -244,7 +245,7 @@ FROM
             distance_to_shore.push(p.distance_to_shore);
             navigation_status_id.push(p.navigational_status as i32);
             timestamp.push(p.msgtime);
-            ais_class.push(p.ais_class.map(|a| AisClass::from(a).to_string()));
+            ais_class.push(p.ais_class.map(<&str>::from));
             ais_message_type.push(p.message_type_id);
         }
 
@@ -330,8 +331,7 @@ RETURNING
             let rate_of_turn = p.rate_of_turn;
             let speed_over_ground = p.speed_over_ground;
             let distance_to_shore = p.distance_to_shore;
-
-            let ais_class = p.ais_class.map(|a| AisClass::from(a).to_string());
+            let ais_class = p.ais_class.map(<&str>::from);
 
             sqlx::query!(
                 r#"
