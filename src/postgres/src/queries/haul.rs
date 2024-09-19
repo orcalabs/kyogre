@@ -1,11 +1,6 @@
-use crate::{
-    error::{Error, Result},
-    models::Haul,
-    models::HaulMessage,
-    PostgresAdapter,
-};
+use crate::{error::Result, models::Haul, models::HaulMessage, PostgresAdapter};
 use chrono::{DateTime, Utc};
-use fiskeridir_rs::{Gear, GearGroup, VesselLengthGroup};
+use fiskeridir_rs::{Gear, GearGroup, SpeciesGroup, VesselLengthGroup};
 use futures::{Stream, TryStreamExt};
 use kyogre_core::*;
 use sqlx::{postgres::types::PgRange, Pool, Postgres};
@@ -13,7 +8,7 @@ use sqlx::{postgres::types::PgRange, Pool, Postgres};
 impl PostgresAdapter {
     pub(crate) async fn hauls_matrix_impl(&self, query: &HaulsMatrixQuery) -> Result<HaulsMatrix> {
         let active_filter = query.active_filter;
-        let args = HaulsMatrixArgs::try_from(query.clone())?;
+        let args = HaulsMatrixArgs::from(query.clone());
 
         let j1 = tokio::spawn(PostgresAdapter::single_haul_matrix(
             self.pool.clone(),
@@ -132,10 +127,10 @@ GROUP BY
             y_feature as i32,
             args.months as _,
             args.catch_locations as _,
-            args.gear_group_ids as _,
-            args.species_group_ids as _,
-            args.vessel_length_groups as _,
-            args.fiskeridir_vessel_ids as _,
+            args.gear_group_ids as Option<Vec<GearGroup>>,
+            args.species_group_ids as Option<Vec<SpeciesGroup>>,
+            args.vessel_length_groups as Option<Vec<VesselLengthGroup>>,
+            args.fiskeridir_vessel_ids as Option<Vec<FiskeridirVesselId>>,
             args.bycatch_percentage,
             args.majority_species_group,
         )
@@ -266,10 +261,10 @@ ORDER BY
             "#,
             args.ranges.as_deref(),
             args.catch_locations as _,
-            args.gear_group_ids as _,
-            args.species_group_ids as _,
-            args.vessel_length_groups as _,
-            args.fiskeridir_vessel_ids as _,
+            args.gear_group_ids as Option<Vec<GearGroup>>,
+            args.species_group_ids as Option<Vec<SpeciesGroup>>,
+            args.vessel_length_groups as Option<Vec<VesselLengthGroup>>,
+            args.fiskeridir_vessel_ids as Option<Vec<FiskeridirVesselId>>,
             args.min_wind_speed,
             args.max_wind_speed,
             args.min_air_temperature,
@@ -999,9 +994,9 @@ GROUP BY
 pub struct HaulsArgs {
     pub ranges: Option<Vec<PgRange<DateTime<Utc>>>>,
     pub catch_locations: Option<Vec<String>>,
-    pub gear_group_ids: Option<Vec<i32>>,
-    pub species_group_ids: Option<Vec<i32>>,
-    pub vessel_length_groups: Option<Vec<i32>>,
+    pub gear_group_ids: Option<Vec<GearGroup>>,
+    pub species_group_ids: Option<Vec<SpeciesGroup>>,
+    pub vessel_length_groups: Option<Vec<VesselLengthGroup>>,
     pub fiskeridir_vessel_ids: Option<Vec<FiskeridirVesselId>>,
     pub min_wind_speed: Option<f64>,
     pub max_wind_speed: Option<f64>,
@@ -1026,15 +1021,9 @@ impl From<HaulsQuery> for HaulsArgs {
             catch_locations: v
                 .catch_locations
                 .map(|cls| cls.into_iter().map(|c| c.into_inner()).collect()),
-            gear_group_ids: v
-                .gear_group_ids
-                .map(|gs| gs.into_iter().map(|g| g as i32).collect()),
-            species_group_ids: v
-                .species_group_ids
-                .map(|gs| gs.into_iter().map(|g| g as i32).collect()),
-            vessel_length_groups: v
-                .vessel_length_groups
-                .map(|groups| groups.into_iter().map(|g| g as i32).collect()),
+            gear_group_ids: v.gear_group_ids,
+            species_group_ids: v.species_group_ids,
+            vessel_length_groups: v.vessel_length_groups,
             fiskeridir_vessel_ids: v.vessel_ids,
             min_wind_speed: v.min_wind_speed,
             max_wind_speed: v.max_wind_speed,
@@ -1050,37 +1039,29 @@ impl From<HaulsQuery> for HaulsArgs {
 pub struct HaulsMatrixArgs {
     pub months: Option<Vec<i32>>,
     pub catch_locations: Option<Vec<String>>,
-    pub gear_group_ids: Option<Vec<i32>>,
-    pub species_group_ids: Option<Vec<i32>>,
-    pub vessel_length_groups: Option<Vec<i32>>,
+    pub gear_group_ids: Option<Vec<GearGroup>>,
+    pub species_group_ids: Option<Vec<SpeciesGroup>>,
+    pub vessel_length_groups: Option<Vec<VesselLengthGroup>>,
     pub fiskeridir_vessel_ids: Option<Vec<FiskeridirVesselId>>,
     pub bycatch_percentage: Option<f64>,
     pub majority_species_group: bool,
 }
 
-impl TryFrom<HaulsMatrixQuery> for HaulsMatrixArgs {
-    type Error = Error;
-
-    fn try_from(v: HaulsMatrixQuery) -> std::result::Result<Self, Self::Error> {
-        Ok(HaulsMatrixArgs {
+impl From<HaulsMatrixQuery> for HaulsMatrixArgs {
+    fn from(v: HaulsMatrixQuery) -> Self {
+        HaulsMatrixArgs {
             months: v
                 .months
                 .map(|months| months.into_iter().map(|m| m as i32).collect()),
             catch_locations: v
                 .catch_locations
                 .map(|cls| cls.into_iter().map(|c| c.into_inner()).collect()),
-            gear_group_ids: v
-                .gear_group_ids
-                .map(|gs| gs.into_iter().map(|g| g as i32).collect()),
-            species_group_ids: v
-                .species_group_ids
-                .map(|gs| gs.into_iter().map(|g| g as i32).collect()),
-            vessel_length_groups: v
-                .vessel_length_groups
-                .map(|groups| groups.into_iter().map(|g| g as i32).collect()),
+            gear_group_ids: v.gear_group_ids,
+            species_group_ids: v.species_group_ids,
+            vessel_length_groups: v.vessel_length_groups,
             fiskeridir_vessel_ids: v.vessel_ids,
             bycatch_percentage: v.bycatch_percentage,
             majority_species_group: v.majority_species_group,
-        })
+        }
     }
 }

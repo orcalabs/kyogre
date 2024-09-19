@@ -1,9 +1,10 @@
 use crate::error::Result;
 use crate::models::LandingMatrixQueryOutput;
 use crate::{models::LandingMatrixArgs, PostgresAdapter};
+use fiskeridir_rs::{GearGroup, SpeciesGroup, VesselLengthGroup};
 use kyogre_core::{
-    calculate_landing_sum_area_table, ActiveLandingFilter, LandingMatrixXFeature,
-    LandingMatrixYFeature,
+    calculate_landing_sum_area_table, ActiveLandingFilter, FiskeridirVesselId,
+    LandingMatrixXFeature, LandingMatrixYFeature,
 };
 use sqlx::{Pool, Postgres};
 
@@ -13,7 +14,7 @@ impl PostgresAdapter {
         query: &kyogre_core::LandingMatrixQuery,
     ) -> Result<kyogre_core::LandingMatrix> {
         let active_filter = query.active_filter;
-        let args = LandingMatrixArgs::try_from(query.clone())?;
+        let args = LandingMatrixArgs::from(query.clone());
 
         let j1 = tokio::spawn(PostgresAdapter::single_landing_matrix(
             self.pool.clone(),
@@ -124,10 +125,10 @@ GROUP BY
             y_feature as i32,
             args.months as _,
             args.catch_locations as _,
-            args.gear_group_ids as _,
-            args.species_group_ids as _,
-            args.vessel_length_groups as _,
-            args.fiskeridir_vessel_ids as _,
+            args.gear_group_ids as Option<Vec<GearGroup>>,
+            args.species_group_ids as Option<Vec<SpeciesGroup>>,
+            args.vessel_length_groups as Option<Vec<VesselLengthGroup>>,
+            args.fiskeridir_vessel_ids as Option<Vec<FiskeridirVesselId>>,
         )
         .fetch_all(&pool)
         .await?;

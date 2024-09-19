@@ -6,7 +6,7 @@ use num_derive::FromPrimitive;
 use rand::random;
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
-use strum::{AsRefStr, EnumString};
+use strum::{AsRefStr, EnumString, IntoStaticStr};
 
 pub const LEISURE_VESSEL_SHIP_TYPES: [i32; 2] = [36, 37];
 pub const LEISURE_VESSEL_LENGTH_AIS_BOUNDARY: u32 = 45;
@@ -145,7 +145,7 @@ pub enum AisMessageType {
     Static,
 }
 
-#[derive(Serialize, Deserialize, Clone, Copy, Debug)]
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, IntoStaticStr)]
 pub enum AisClass {
     A,
     B,

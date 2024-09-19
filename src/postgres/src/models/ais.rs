@@ -1,5 +1,3 @@
-use std::fmt;
-
 use chrono::{DateTime, Utc};
 use kyogre_core::Mmsi;
 use unnest_insert::UnnestInsert;
@@ -71,21 +69,6 @@ pub struct AisVmsAreaPositionsReturning {
     pub call_sign: Option<String>,
 }
 
-#[derive(Clone, Copy)]
-pub enum AisClass {
-    A,
-    B,
-}
-
-impl fmt::Display for AisClass {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            AisClass::A => f.write_str("A"),
-            AisClass::B => f.write_str("B"),
-        }
-    }
-}
-
 impl<'a> From<&'a kyogre_core::NewAisStatic> for NewAisVesselHistoric<'a> {
     fn from(v: &'a kyogre_core::NewAisStatic) -> Self {
         Self {
@@ -124,15 +107,6 @@ impl<'a> From<&'a kyogre_core::NewAisStatic> for NewAisVessel<'a> {
             eta: v.eta,
             draught: v.draught,
             destination: v.destination.as_deref(),
-        }
-    }
-}
-
-impl From<kyogre_core::AisClass> for AisClass {
-    fn from(value: kyogre_core::AisClass) -> Self {
-        match value {
-            kyogre_core::AisClass::A => AisClass::A,
-            kyogre_core::AisClass::B => AisClass::B,
         }
     }
 }

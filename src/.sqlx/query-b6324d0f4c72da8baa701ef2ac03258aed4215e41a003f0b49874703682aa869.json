@@ -1,11 +1,11 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT\n    landing_id,\n    \"version\"\nFROM\n    landings\n            ",
+  "query": "\nSELECT\n    landing_id AS \"id!: LandingId\",\n    \"version\"\nFROM\n    landings\n            ",
   "describe": {
     "columns": [
       {
         "ordinal": 0,
-        "name": "landing_id",
+        "name": "id!: LandingId",
         "type_info": "Varchar"
       },
       {
@@ -22,5 +22,5 @@
       false
     ]
   },
-  "hash": "5c6a0180bf4d4e5ab15ee34d94d89203f14733cbe833305fc1be70b9f17ce2ad"
+  "hash": "b6324d0f4c72da8baa701ef2ac03258aed4215e41a003f0b49874703682aa869"
 }
