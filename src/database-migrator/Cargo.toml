@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 postgres = { path = "../postgres" }
 
-orca-core = { workspace = true }
+orca-core = { workspace = true, features = ["telemetry"] }
 serde = { workspace = true }
 config = { workspace = true }
 tokio = { workspace = true, features = ["macros"] }
