@@ -1,4 +1,4 @@
-use std::{pin::Pin, sync::LazyLock, task::Poll};
+use std::{pin::Pin, task::Poll};
 
 use actix_web::{
     body::BoxBody, http::header::ContentType, web::Bytes, HttpRequest, HttpResponse, Responder,
@@ -17,8 +17,8 @@ use crate::{
     routes::v1::{ais::AisPosition, ais_vms::AisVmsPosition, vms::VmsPosition},
 };
 
-pub static AIS_DETAILS_INTERVAL: LazyLock<Duration> = LazyLock::new(|| Duration::minutes(30));
-pub static MISSING_DATA_DURATION: LazyLock<Duration> = LazyLock::new(|| Duration::minutes(70));
+pub static AIS_DETAILS_INTERVAL: Duration = Duration::minutes(30);
+pub static MISSING_DATA_DURATION: Duration = Duration::minutes(70);
 
 pub struct StreamResponse<T> {
     pub rx: Receiver<CoreResult<T>>,
@@ -197,12 +197,12 @@ pub fn ais_unfold<'a, T: Position>(
                 let (pos, prev_det_ts) =
                     unsafe { state.pos_and_prev_det_ts.as_mut().unwrap_unchecked() };
 
-                if next.timestamp() - pos.timestamp() >= *MISSING_DATA_DURATION {
+                if next.timestamp() - pos.timestamp() >= MISSING_DATA_DURATION {
                     pos.set_missing_data();
                     state.missing_flag = true;
                 } else {
                     if !state.missing_flag
-                        && pos.timestamp() - *prev_det_ts < *AIS_DETAILS_INTERVAL
+                        && pos.timestamp() - *prev_det_ts < AIS_DETAILS_INTERVAL
                         && !state.is_first
                     {
                         pos.clear_details();
