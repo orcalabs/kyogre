@@ -61,7 +61,7 @@ async fn test_ais_track_returns_a_details_on_first_and_last_point() {
 async fn test_ais_track_returns_a_details_every_interval() {
     test(|helper, builder| async move {
         let state = builder
-            .data_increment(*AIS_DETAILS_INTERVAL / 2)
+            .data_increment(AIS_DETAILS_INTERVAL / 2)
             .vessels(1)
             .ais_positions(7)
             .build()
@@ -100,10 +100,10 @@ async fn test_ais_track_returns_missing_data_if_time_between_points_exceeds_limi
             .modify_idx(|idx, position| {
                 if idx == 2 {
                     position.position.msgtime +=
-                        (*MISSING_DATA_DURATION + Duration::seconds(1)) * idx as i32;
+                        (MISSING_DATA_DURATION + Duration::seconds(1)) * idx as i32;
                 } else {
                     position.position.msgtime +=
-                        (*AIS_DETAILS_INTERVAL + Duration::seconds(1)) * idx as i32;
+                        (AIS_DETAILS_INTERVAL + Duration::seconds(1)) * idx as i32;
                 }
             })
             .build()
