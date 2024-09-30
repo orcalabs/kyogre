@@ -18,6 +18,6 @@ reqwest = { workspace = true, default-features = false, features = [
     "stream",
 ] }
 reqwest-middleware = { version = "0.3", features = ["json"] }
-reqwest-retry = "0.5"
+reqwest-retry = "0.6"
 reqwest-tracing = "0.5"
 bytes = "1.7"
