@@ -19,7 +19,7 @@ members = [
 fiskeridir-rs = { path = "./fiskeridir-rs/", features = ["utoipa", "sqlx"] }
 
 machine = { version = "0.13.0", registry = "orcalabs-orcastrator" }
-orca-core = { version = "0.31.1", registry = "orcalabs-orcastrator" }
+orca-core = { version = "0.31.2", registry = "orcalabs-orcastrator" }
 
 dockertest = "0.5.0"
 sqlx = { version = "0.8.1", features = [
