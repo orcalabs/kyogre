@@ -8,6 +8,6 @@ fn main() {
         .expect("proto file should reside in a directory");
     configure()
         .protoc_arg("--experimental_allow_proto3_optional")
-        .compile(&["proto/matrix_cache.proto"], &[proto_dir])
+        .compile_protos(&["proto/matrix_cache.proto"], &[proto_dir])
         .unwrap_or_else(|e| panic!("Failed to compile protos {:?}", e));
 }
