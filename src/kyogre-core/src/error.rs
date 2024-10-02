@@ -12,6 +12,30 @@ impl IsTimeout for Error {
     }
 }
 
+impl IsTimeout for std::io::Error {
+    fn is_timeout(&self) -> bool {
+        use std::io::ErrorKind;
+        matches!(
+            self.kind(),
+            ErrorKind::ConnectionRefused
+                | ErrorKind::ConnectionReset
+                | ErrorKind::ConnectionAborted
+                | ErrorKind::NotConnected
+                | ErrorKind::AddrInUse
+                | ErrorKind::AddrNotAvailable
+                | ErrorKind::BrokenPipe
+                | ErrorKind::WouldBlock
+                | ErrorKind::TimedOut
+                | ErrorKind::WriteZero
+                | ErrorKind::Interrupted
+                | ErrorKind::Unsupported
+                | ErrorKind::UnexpectedEof
+                | ErrorKind::OutOfMemory
+                | ErrorKind::Other
+        )
+    }
+}
+
 #[derive(Snafu, StackError)]
 #[snafu(module)]
 pub enum Error {

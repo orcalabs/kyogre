@@ -156,33 +156,22 @@ pub enum VerifyDatabaseError {
 
 impl From<sqlx::Error> for Error {
     #[track_caller]
-    fn from(value: sqlx::Error) -> Self {
+    fn from(error: sqlx::Error) -> Self {
         let location = std::panic::Location::caller();
         let location = Location::new(location.file(), location.line(), location.column());
-        match value {
+        match error {
             sqlx::Error::Database(ref e) => {
                 // Postgres error codes documentation:
                 // https://www.postgresql.org/docs/current/errcodes-appendix.html
                 match e.code().map(|v| v.to_string()).as_deref() {
                     // Deadlock
-                    Some("40P01") => Error::Timeout {
-                        location,
-                        error: value,
-                    },
-                    _ => Error::Sqlx {
-                        location,
-                        error: value,
-                    },
+                    Some("40P01") => Error::Timeout { location, error },
+                    _ => Error::Sqlx { location, error },
                 }
             }
-            sqlx::Error::PoolTimedOut => Error::Timeout {
-                location,
-                error: value,
-            },
-            _ => Error::Sqlx {
-                location,
-                error: value,
-            },
+            sqlx::Error::PoolTimedOut => Error::Timeout { location, error },
+            sqlx::Error::Io(ref e) if e.is_timeout() => Error::Timeout { location, error },
+            _ => Error::Sqlx { location, error },
         }
     }
 }
