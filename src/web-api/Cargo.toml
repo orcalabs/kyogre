@@ -45,7 +45,7 @@ pin-project-lite = "0.2.14"
 
 [dev-dependencies]
 engine = { path = "../engine" }
-vessel-benchmark = { path = "../vessel-benchmark" }
+trip-benchmark = { path = "../trip-benchmark" }
 http-client = { path = "../http-client", default-features = false }
 
 machine = { workspace = true }

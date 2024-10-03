@@ -1,12 +1,13 @@
-use crate::{
-    AisVms, AisVmsConflict, Cluster, ErsTripAssembler, FisheryDiscriminants, LandingTripAssembler,
-    UnrealisticSpeed,
-};
 use config::ConfigError;
 use kyogre_core::*;
 use orca_core::{Environment, PsqlSettings};
 use serde::Deserialize;
-use vessel_benchmark::*;
+use trip_benchmark::*;
+
+use crate::{
+    AisVms, AisVmsConflict, Cluster, ErsTripAssembler, FisheryDiscriminants, LandingTripAssembler,
+    UnrealisticSpeed,
+};
 
 #[derive(Debug, Deserialize)]
 pub struct Settings {
@@ -50,12 +51,13 @@ impl Settings {
     pub fn ml_models(&self) -> Vec<Box<dyn MLModel>> {
         vec![]
     }
-    pub fn benchmarks(&self) -> Vec<Box<dyn VesselBenchmark>> {
-        let weight_per_hour = Box::<WeightPerHour>::default();
-
-        let vec = vec![weight_per_hour as Box<dyn VesselBenchmark>];
-
-        vec
+    pub fn benchmarks(&self) -> Vec<Box<dyn TripBenchmark>> {
+        vec![
+            Box::<WeightPerHour>::default(),
+            // `Sustainability` needs to be last because it depends on benchmarks above.
+            // TODO
+            // Box::<Sustainability>::default(),
+        ]
     }
     pub fn trip_distancer(&self) -> Box<dyn TripDistancer> {
         Box::<AisVms>::default()

@@ -1,6 +1,3 @@
-use std::fmt;
-
-use crate::{AisVessel, Mmsi, TripAssemblerId};
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::{
     CallSign, FiskeridirVesselId, GearGroup, RegisterVesselOwner, SpeciesGroup, VesselLengthGroup,
@@ -8,12 +5,15 @@ use fiskeridir_rs::{
 use num_derive::FromPrimitive;
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
+use strum::{AsRefStr, EnumString};
+
+use crate::{AisVessel, Mmsi, TripAssemblerId};
 
 mod benchmark;
 
 pub use benchmark::*;
-use strum::{AsRefStr, EnumString};
 
+pub static TEST_SIGNED_IN_VESSEL_CALLSIGN: &str = "LK17";
 pub static IGNORED_CONFLICT_CALL_SIGNS: &[&str] = &["00000000", "0"];
 
 #[derive(Debug, Clone)]
@@ -36,7 +36,6 @@ pub struct Vessel {
     pub fiskeridir: FiskeridirVessel,
     pub ais: Option<AisVessel>,
     pub preferred_trip_assembler: TripAssemblerId,
-    pub fish_caught_per_hour: Option<f64>,
     pub gear_groups: Vec<GearGroup>,
     pub species_groups: Vec<SpeciesGroup>,
 }
@@ -121,25 +120,6 @@ pub enum RelevantEventType {
     ErsPorAndDep,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Deserialize_repr)]
-#[repr(i32)]
-pub enum VesselBenchmarkId {
-    WeightPerHour = 1,
-}
-
-impl From<VesselBenchmarkId> for i32 {
-    fn from(value: VesselBenchmarkId) -> Self {
-        value as i32
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct VesselBenchmarkOutput {
-    pub vessel_id: FiskeridirVesselId,
-    pub benchmark_id: VesselBenchmarkId,
-    pub value: f64,
-}
-
 #[derive(Debug, Clone)]
 pub struct FiskeridirVessel {
     pub id: FiskeridirVesselId,
@@ -206,14 +186,6 @@ impl VesselEventType {
             VesselEventType::ErsDep => "ers_dep",
             VesselEventType::ErsPor => "ers_por",
             VesselEventType::Haul => "haul",
-        }
-    }
-}
-
-impl std::fmt::Display for VesselBenchmarkId {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            VesselBenchmarkId::WeightPerHour => f.write_str("WeightPerHour"),
         }
     }
 }

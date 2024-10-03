@@ -9,7 +9,7 @@ edition = "2021"
 kyogre-core = { path = "../kyogre-core" }
 postgres = { path = "../postgres" }
 scraper = { path = "../scraper" }
-vessel-benchmark = { path = "../vessel-benchmark" }
+trip-benchmark = { path = "../trip-benchmark" }
 meilisearch = { path = "../meilisearch" }
 http-client = { path = "../http-client" }
 

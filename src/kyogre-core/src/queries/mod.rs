@@ -9,6 +9,7 @@ mod landing;
 mod ocean_climate;
 mod pagination;
 mod trip;
+mod trip_benchmark;
 mod weather;
 
 pub use fishing_facility::*;
@@ -19,6 +20,7 @@ pub use ocean_climate::*;
 pub use pagination::*;
 use strum::{AsRefStr, EnumString};
 pub use trip::*;
+pub use trip_benchmark::*;
 pub use weather::*;
 
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]

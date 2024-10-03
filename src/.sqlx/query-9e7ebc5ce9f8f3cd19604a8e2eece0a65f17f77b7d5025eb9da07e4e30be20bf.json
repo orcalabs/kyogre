@@ -1,0 +1,44 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nWITH\n    vessel_id AS (\n        SELECT\n            fiskeridir_vessel_id\n        FROM\n            fiskeridir_ais_vessel_mapping_whitelist\n        WHERE\n            call_sign = $1\n    )\nSELECT\n    t.trip_id AS \"trip_id!: TripId\",\n    t.period,\n    t.period_precision,\n    MAX(b.output) FILTER (\n        WHERE\n            b.trip_benchmark_id = $2\n    ) AS \"weight_per_hour!\"\nFROM\n    vessel_id v\n    INNER JOIN trips t ON v.fiskeridir_vessel_id = t.fiskeridir_vessel_id\n    INNER JOIN trip_benchmark_outputs b ON t.trip_id = b.trip_id\nWHERE\n    NOT b.unrealistic\n    AND (\n        $3::TIMESTAMPTZ IS NULL\n        OR LOWER(t.period) >= $3\n    )\n    AND (\n        $4::TIMESTAMPTZ IS NULL\n        OR UPPER(t.period) <= $4\n    )\nGROUP BY\n    t.trip_id\nHAVING\n    ARRAY[$2] <@ ARRAY_AGG(b.trip_benchmark_id)\nORDER BY\n    CASE\n        WHEN $5 = 1 THEN t.period\n    END ASC,\n    CASE\n        WHEN $5 = 2 THEN t.period\n    END DESC\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "trip_id!: TripId",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "period",
+        "type_info": "TstzRange"
+      },
+      {
+        "ordinal": 2,
+        "name": "period_precision",
+        "type_info": "TstzRange"
+      },
+      {
+        "ordinal": 3,
+        "name": "weight_per_hour!",
+        "type_info": "Float8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Int4",
+        "Timestamptz",
+        "Timestamptz",
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      null
+    ]
+  },
+  "hash": "9e7ebc5ce9f8f3cd19604a8e2eece0a65f17f77b7d5025eb9da07e4e30be20bf"
+}

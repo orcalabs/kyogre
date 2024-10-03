@@ -1,7 +1,6 @@
-use super::{barentswatch_helper::SIGNED_IN_VESSEL_CALLSIGN, helper::test};
+use super::helper::test;
 use chrono::{Datelike, TimeZone, Utc};
 use engine::*;
-use fiskeridir_rs::CallSign;
 use http_client::StatusCode;
 use web_api::routes::v1::user::User;
 
@@ -20,9 +19,7 @@ async fn test_vessel_benchmarks_returns_correct_cumulative_landings() {
         let now = Utc::now();
         builder
             .vessels(1)
-            .modify(|v| {
-                v.fiskeridir.radio_call_sign = Some(SIGNED_IN_VESSEL_CALLSIGN.parse().unwrap())
-            })
+            .set_logged_in()
             .landings(4)
             .modify_idx(|i, v| match i {
                 0 => {
@@ -99,11 +96,7 @@ async fn test_vessel_benchmarks_returns_correct_self_benchmarks() {
     test(|mut helper, builder| async move {
         let state = builder
             .vessels(1)
-            .modify(|v| {
-                let cs: CallSign = SIGNED_IN_VESSEL_CALLSIGN.parse().unwrap();
-                v.fiskeridir.radio_call_sign = Some(cs.clone());
-                v.ais.call_sign = Some(cs);
-            })
+            .set_logged_in()
             .trips(2)
             .hauls(4)
             .landings(4)
@@ -188,13 +181,7 @@ async fn test_vessel_benchmarks_returns_correct_averages_for_followers() {
     test(|mut helper, builder| async move {
         let state = builder
             .vessels(3)
-            .modify_idx(|i, v| {
-                if i == 0 {
-                    let cs: CallSign = SIGNED_IN_VESSEL_CALLSIGN.parse().unwrap();
-                    v.fiskeridir.radio_call_sign = Some(cs.clone());
-                    v.ais.call_sign = Some(cs);
-                }
-            })
+            .set_logged_in()
             .trips(3)
             .hauls(6)
             .landings(6)

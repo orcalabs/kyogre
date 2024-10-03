@@ -1,5 +1,5 @@
 use crate::{date_range_error::OrderingSnafu, DateRangeError};
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Duration, Utc};
 
 #[derive(Debug, Clone)]
 pub struct DateRange {
@@ -147,6 +147,10 @@ impl DateRange {
             Bound::Inclusive => std::ops::Bound::Included(self.end),
             Bound::Exclusive => std::ops::Bound::Excluded(self.end),
         }
+    }
+
+    pub fn duration(&self) -> Duration {
+        self.end - self.start
     }
 }
 

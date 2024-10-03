@@ -8,7 +8,7 @@ members = [
     "web-api",
     "engine",
     "scraper",
-    "vessel-benchmark",
+    "trip-benchmark",
     "duckdb-rs",
     "meilisearch",
     "fiskeridir-rs",

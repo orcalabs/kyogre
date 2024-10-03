@@ -1,10 +1,10 @@
-use super::helper::test;
-use chrono::Duration;
 use engine::*;
 use fiskeridir_rs::{GearGroup, SpeciesGroup};
 use kyogre_core::{
     ActiveVesselConflict, FiskeridirVesselId, Mmsi, TestHelperOutbound, VesselSource,
 };
+
+use super::helper::test;
 
 #[tokio::test]
 async fn test_vessels_returns_merged_data_from_fiskeridir_and_ais() {
@@ -18,113 +18,6 @@ async fn test_vessels_returns_merged_data_from_fiskeridir_and_ais() {
             state.vessels[0].ais.take().unwrap(),
             vessels[0].ais.take().unwrap()
         );
-    })
-    .await;
-}
-
-#[tokio::test]
-async fn test_vessel_contains_weight_per_hour_benchmark() {
-    test(|helper, builder| async move {
-        builder
-            .trip_duration(Duration::hours(2))
-            .vessels(1)
-            .trips(1)
-            .landings(1)
-            .modify(|v| {
-                v.landing.product.living_weight = Some(1000.0);
-            })
-            .build()
-            .await;
-
-        let vessels = helper.app.get_vessels().await.unwrap();
-        assert_eq!(vessels.len(), 1);
-        assert_eq!(vessels[0].fish_caught_per_hour.unwrap(), 500.0);
-    })
-    .await;
-}
-
-#[tokio::test]
-async fn test_vessel_weight_per_hour_is_correct_over_multiple_trips() {
-    test(|helper, builder| async move {
-        builder
-            .trip_duration(Duration::hours(1))
-            .vessels(1)
-            .trips(2)
-            .landings(1)
-            .modify(|v| {
-                v.landing.product.living_weight = Some(1000.0);
-            })
-            .build()
-            .await;
-
-        let vessels = helper.app.get_vessels().await.unwrap();
-        assert_eq!(vessels.len(), 1);
-        assert_eq!(vessels[0].fish_caught_per_hour.unwrap(), 500.0);
-    })
-    .await;
-}
-
-#[tokio::test]
-async fn test_vessel_weight_per_hour_includes_landings_not_covered_by_trips() {
-    test(|helper, builder| async move {
-        builder
-            .trip_duration(Duration::hours(2))
-            .vessels(1)
-            .landings(1)
-            .modify(|v| {
-                v.landing.product.living_weight = Some(1000.0);
-            })
-            .trips(1)
-            .build()
-            .await;
-
-        let vessels = helper.app.get_vessels().await.unwrap();
-        assert_eq!(vessels[0].fish_caught_per_hour.unwrap(), 500.0);
-    })
-    .await;
-}
-
-#[tokio::test]
-async fn test_vessel_weight_per_hour_excludes_landings_from_other_vessels() {
-    test(|helper, builder| async move {
-        let state = builder
-            .trip_duration(Duration::hours(2))
-            .vessels(2)
-            .trips(2)
-            .landings(2)
-            .modify(|v| {
-                v.landing.product.living_weight = Some(1000.0);
-            })
-            .build()
-            .await;
-
-        let vessels = helper.app.get_vessels().await.unwrap();
-        assert_eq!(vessels.len(), 2);
-        assert_eq!(state.vessels[0].fish_caught_per_hour.unwrap(), 500.0);
-    })
-    .await;
-}
-
-#[tokio::test]
-async fn test_vessel_weight_per_hour_is_zero_if_there_are_trips_but_no_landings() {
-    test(|helper, builder| async move {
-        builder.vessels(1).trips(1).build().await;
-
-        let vessels = helper.app.get_vessels().await.unwrap();
-        assert_eq!(vessels.len(), 1);
-        assert_eq!(vessels[0].fish_caught_per_hour.unwrap(), 0.0);
-    })
-    .await;
-}
-
-#[tokio::test]
-async fn test_vessel_weight_per_hour_is_zero_if_there_are_landings_but_no_trips() {
-    test(|helper, builder| async move {
-        builder.vessels(1).landings(1).build().await;
-
-        let vessels = helper.app.get_vessels().await.unwrap();
-        assert_eq!(vessels.len(), 1);
-        assert_eq!(vessels[0].fish_caught_per_hour.unwrap(), 0.0);
     })
     .await;
 }

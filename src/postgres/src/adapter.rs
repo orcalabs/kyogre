@@ -1,7 +1,7 @@
 use std::{pin::Pin, result::Result as StdResult};
 
 use async_trait::async_trait;
-use chrono::{DateTime, Duration, NaiveDate, Utc};
+use chrono::{DateTime, NaiveDate, Utc};
 use fiskeridir_rs::{CallSign, DataFileId, DeliveryPointId, LandingId, SpeciesGroup};
 use futures::{Stream, StreamExt, TryStreamExt};
 use kyogre_core::*;
@@ -594,6 +594,12 @@ impl WebApiOutboundPort for PostgresAdapter {
             .await?
             .try_into()?)
     }
+    async fn trip_benchmarks(
+        &self,
+        query: TripBenchmarksQuery,
+    ) -> CoreResult<Vec<TripWithBenchmark>> {
+        convert_vec(self.trip_benchmarks_impl(&query).await?)
+    }
     fn detailed_trips(
         &self,
         query: TripsQuery,
@@ -920,23 +926,29 @@ impl TripPrecisionOutboundPort for PostgresAdapter {
 }
 
 #[async_trait]
-impl VesselBenchmarkOutbound for PostgresAdapter {
+impl TripBenchmarkOutbound for PostgresAdapter {
     async fn vessels(&self) -> CoreResult<Vec<Vessel>> {
         convert_stream(self.fiskeridir_ais_vessel_combinations())
             .try_collect()
             .await
     }
-    async fn sum_trip_time(&self, id: FiskeridirVesselId) -> CoreResult<Option<Duration>> {
-        Ok(self.sum_trip_time_impl(id).await?)
+    async fn trips_with_landing_weight(
+        &self,
+        id: FiskeridirVesselId,
+    ) -> CoreResult<Vec<TripWithTotalLivingWeight>> {
+        convert_vec(self.trips_with_landing_weight_impl(id).await?)
     }
-    async fn sum_landing_weight(&self, id: FiskeridirVesselId) -> CoreResult<Option<f64>> {
-        Ok(self.sum_landing_weight_impl(id).await?)
+    async fn sustainability_metrics(
+        &self,
+        id: FiskeridirVesselId,
+    ) -> CoreResult<Vec<TripSustainabilityMetric>> {
+        Ok(self.sustainability_metrics_impl(id).await?)
     }
 }
 
 #[async_trait]
-impl VesselBenchmarkInbound for PostgresAdapter {
-    async fn add_output(&self, values: Vec<VesselBenchmarkOutput>) -> CoreResult<()> {
+impl TripBenchmarkInbound for PostgresAdapter {
+    async fn add_output(&self, values: Vec<TripBenchmarkOutput>) -> CoreResult<()> {
         Ok(self.add_benchmark_outputs(values).await?)
     }
 }
