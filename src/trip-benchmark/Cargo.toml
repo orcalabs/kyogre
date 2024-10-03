@@ -1,5 +1,5 @@
 [package]
-name = "vessel-benchmark"
+name = "trip-benchmark"
 version = "0.1.0"
 edition = "2021"
 
@@ -7,5 +7,6 @@ edition = "2021"
 
 [dependencies]
 kyogre-core = { path = "../kyogre-core", features = ["utoipa"] }
+fiskeridir-rs = { path = "../fiskeridir-rs" }
 
 async-trait = { workspace = true }

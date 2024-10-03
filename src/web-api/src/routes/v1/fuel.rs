@@ -5,14 +5,10 @@ use futures::TryStreamExt;
 use kyogre_core::{BarentswatchUserId, FuelMeasurementsQuery};
 use serde::{Deserialize, Serialize};
 use serde_qs::actix::QsQuery as Query;
-use snafu::ResultExt;
 use utoipa::{IntoParams, ToSchema};
 
 use crate::{
-    error::{
-        error::{InvalidCallSignSnafu, MissingBwFiskInfoProfileSnafu},
-        Result,
-    },
+    error::Result,
     extractors::BwProfile,
     response::{Response, StreamResponse},
     stream_response, Database,
@@ -41,14 +37,7 @@ pub async fn get_fuel_measurements<T: Database + Send + Sync + 'static>(
     params: Query<FuelMeasurementsParams>,
 ) -> Result<StreamResponse<FuelMeasurement>> {
     let user_id = profile.user.id;
-
-    let profile = profile
-        .fisk_info_profile
-        .ok_or_else(|| MissingBwFiskInfoProfileSnafu.build())?;
-    let call_sign = profile.ircs.parse().context(InvalidCallSignSnafu {
-        call_sign: profile.ircs,
-    })?;
-
+    let call_sign = profile.call_sign()?;
     let query = params.into_inner().to_query(user_id, call_sign);
 
     let response = stream_response! {
@@ -78,13 +67,7 @@ pub async fn create_fuel_measurements<T: Database + 'static>(
     body: web::Json<Vec<FuelMeasurementBody>>,
 ) -> Result<Response<()>> {
     let user_id = profile.user.id;
-
-    let profile = profile
-        .fisk_info_profile
-        .ok_or_else(|| MissingBwFiskInfoProfileSnafu.build())?;
-    let call_sign = profile.ircs.parse().context(InvalidCallSignSnafu {
-        call_sign: profile.ircs,
-    })?;
+    let call_sign = profile.call_sign()?;
 
     let measurements: Vec<kyogre_core::FuelMeasurement> = body
         .into_inner()
@@ -116,13 +99,7 @@ pub async fn update_fuel_measurements<T: Database + 'static>(
     body: web::Json<Vec<FuelMeasurementBody>>,
 ) -> Result<Response<()>> {
     let user_id = profile.user.id;
-
-    let profile = profile
-        .fisk_info_profile
-        .ok_or_else(|| MissingBwFiskInfoProfileSnafu.build())?;
-    let call_sign = profile.ircs.parse().context(InvalidCallSignSnafu {
-        call_sign: profile.ircs,
-    })?;
+    let call_sign = profile.call_sign()?;
 
     let measurements: Vec<kyogre_core::FuelMeasurement> = body
         .into_inner()
@@ -154,13 +131,7 @@ pub async fn delete_fuel_measurements<T: Database + 'static>(
     body: web::Json<Vec<DeleteFuelMeasurement>>,
 ) -> Result<Response<()>> {
     let user_id = profile.user.id;
-
-    let profile = profile
-        .fisk_info_profile
-        .ok_or_else(|| MissingBwFiskInfoProfileSnafu.build())?;
-    let call_sign = profile.ircs.parse().context(InvalidCallSignSnafu {
-        call_sign: profile.ircs,
-    })?;
+    let call_sign = profile.call_sign()?;
 
     let measurements: Vec<kyogre_core::DeleteFuelMeasurement> = body
         .into_inner()

@@ -2,21 +2,9 @@ use chrono::{Datelike, Utc};
 use fiskeridir_rs::CallSign;
 use kyogre_core::BarentswatchUserId;
 
-use crate::{
-    error::Result,
-    models::{VesselBenchmarkOutput, VesselBenchmarks},
-    PostgresAdapter,
-};
+use crate::{error::Result, models::VesselBenchmarks, PostgresAdapter};
 
 impl PostgresAdapter {
-    pub(crate) async fn add_benchmark_outputs(
-        &self,
-        values: Vec<kyogre_core::VesselBenchmarkOutput>,
-    ) -> Result<()> {
-        self.unnest_insert_from::<_, _, VesselBenchmarkOutput>(values, &self.pool)
-            .await
-    }
-
     pub(crate) async fn vessel_benchmarks_impl(
         &self,
         user_id: &BarentswatchUserId,

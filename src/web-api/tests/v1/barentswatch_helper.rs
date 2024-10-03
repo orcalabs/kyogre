@@ -4,7 +4,7 @@ use jsonwebtoken::{
     jwk::{AlgorithmParameters, CommonParameters, Jwk, JwkSet, KeyAlgorithm, RSAKeyParameters},
     Algorithm, DecodingKey, EncodingKey, Header, Validation,
 };
-use kyogre_core::BarentswatchUserId;
+use kyogre_core::{BarentswatchUserId, TEST_SIGNED_IN_VESSEL_CALLSIGN};
 use rsa::{
     pkcs1::EncodeRsaPrivateKey, pkcs8::LineEnding, traits::PublicKeyParts, RsaPrivateKey,
     RsaPublicKey,
@@ -16,8 +16,6 @@ use wiremock::{
     matchers::{method, path},
     Mock, MockServer, ResponseTemplate,
 };
-
-pub static SIGNED_IN_VESSEL_CALLSIGN: &str = "LK17";
 
 pub struct BarentswatchHelper {
     mock_server: MockServer,
@@ -81,7 +79,7 @@ impl BarentswatchHelper {
                             id: decoded.claims.id,
                         },
                         fisk_info_profile: Some(BwVesselInfo {
-                            ircs: SIGNED_IN_VESSEL_CALLSIGN.into(),
+                            ircs: TEST_SIGNED_IN_VESSEL_CALLSIGN.into(),
                         }),
                         policies: decoded.claims.policies,
                         roles: decoded.claims.roles,

@@ -1,8 +1,7 @@
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::{CallSign, GearGroup, SpeciesGroup, VesselLengthGroup, VesselType};
 use kyogre_core::{
-    chrono_error::UnknownMonthSnafu, FiskeridirVesselId, Mmsi, TripAssemblerId, VesselBenchmarkId,
-    VesselSource,
+    chrono_error::UnknownMonthSnafu, FiskeridirVesselId, Mmsi, TripAssemblerId, VesselSource,
 };
 use num_traits::FromPrimitive;
 use serde::Deserialize;
@@ -181,20 +180,6 @@ pub struct NewRegisterVessel {
     pub fiskeridir_vessel_source_id: VesselSource,
 }
 
-#[derive(Debug, Clone, UnnestInsert)]
-#[unnest_insert(
-    table_name = "vessel_benchmark_outputs",
-    conflict = "fiskeridir_vessel_id,vessel_benchmark_id",
-    update_all
-)]
-pub struct VesselBenchmarkOutput {
-    #[unnest_insert(sql_type = "BIGINT", type_conversion = "type_to_i64")]
-    pub fiskeridir_vessel_id: FiskeridirVesselId,
-    #[unnest_insert(sql_type = "INT", type_conversion = "type_to_i32")]
-    pub vessel_benchmark_id: VesselBenchmarkId,
-    pub output: f64,
-}
-
 impl<'a> From<&'a fiskeridir_rs::Vessel> for NewFiskeridirVessel<'a> {
     fn from(v: &'a fiskeridir_rs::Vessel) -> Self {
         Self {
@@ -261,16 +246,6 @@ impl TryFrom<fiskeridir_rs::RegisterVessel> for NewRegisterVessel {
     }
 }
 
-impl From<kyogre_core::VesselBenchmarkOutput> for VesselBenchmarkOutput {
-    fn from(v: kyogre_core::VesselBenchmarkOutput) -> Self {
-        Self {
-            fiskeridir_vessel_id: v.vessel_id,
-            vessel_benchmark_id: v.benchmark_id,
-            output: v.value,
-        }
-    }
-}
-
 impl TryFrom<AisVessel> for kyogre_core::AisVessel {
     type Error = Error;
 
@@ -319,38 +294,28 @@ pub struct FiskeridirAisVesselCombination {
     pub fiskeridir_building_year: Option<i32>,
     pub fiskeridir_rebuilding_year: Option<i32>,
     pub preferred_trip_assembler: TripAssemblerId,
-    pub benchmarks: String,
     pub gear_group_ids: Vec<GearGroup>,
     pub species_group_ids: Vec<SpeciesGroup>,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct Benchmark {
-    pub benchmark_id: VesselBenchmarkId,
-    pub value: f64,
 }
 
 impl TryFrom<FiskeridirAisVesselCombination> for kyogre_core::Vessel {
     type Error = Error;
 
     fn try_from(value: FiskeridirAisVesselCombination) -> Result<Self, Self::Error> {
-        let ais_vessel: Result<Option<kyogre_core::AisVessel>, Error> =
-            if let Some(mmsi) = value.ais_mmsi {
-                Ok(Some(kyogre_core::AisVessel {
-                    mmsi,
-                    imo_number: value.ais_imo_number,
-                    call_sign: value.ais_call_sign.map(CallSign::try_from).transpose()?,
-                    name: value.ais_name,
-                    ship_length: value.ais_ship_length,
-                    ship_width: value.ais_ship_width,
-                    eta: value.ais_eta,
-                    destination: value.ais_destination,
-                }))
-            } else {
-                Ok(None)
-            };
-
-        let benchmarks: Vec<Benchmark> = serde_json::from_str(&value.benchmarks)?;
+        let ais_vessel: Option<kyogre_core::AisVessel> = if let Some(mmsi) = value.ais_mmsi {
+            Some(kyogre_core::AisVessel {
+                mmsi,
+                imo_number: value.ais_imo_number,
+                call_sign: value.ais_call_sign.map(CallSign::try_from).transpose()?,
+                name: value.ais_name,
+                ship_length: value.ais_ship_length,
+                ship_width: value.ais_ship_width,
+                eta: value.ais_eta,
+                destination: value.ais_destination,
+            })
+        } else {
+            None
+        };
 
         let fiskeridir_vessel = kyogre_core::FiskeridirVessel {
             id: value.fiskeridir_vessel_id,
@@ -383,12 +348,8 @@ impl TryFrom<FiskeridirAisVesselCombination> for kyogre_core::Vessel {
 
         Ok(kyogre_core::Vessel {
             fiskeridir: fiskeridir_vessel,
-            ais: ais_vessel?,
+            ais: ais_vessel,
             preferred_trip_assembler: value.preferred_trip_assembler,
-            fish_caught_per_hour: benchmarks
-                .iter()
-                .find(|v| v.benchmark_id == VesselBenchmarkId::WeightPerHour)
-                .map(|v| v.value),
             gear_groups: value.gear_group_ids,
             species_groups: value.species_group_ids,
         })

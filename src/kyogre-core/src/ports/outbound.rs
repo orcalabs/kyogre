@@ -1,10 +1,11 @@
 use std::pin::Pin;
 
-use crate::*;
 use async_trait::async_trait;
-use chrono::{DateTime, Duration, NaiveDate, Utc};
+use chrono::{DateTime, NaiveDate, Utc};
 use fiskeridir_rs::{CallSign, DataFileId, DeliveryPointId, LandingId, SpeciesGroup};
 use futures::Stream;
+
+use crate::*;
 
 #[async_trait]
 pub trait AisMigratorSource {
@@ -60,6 +61,10 @@ pub trait WebApiOutboundPort {
         user_id: &BarentswatchUserId,
         call_sign: &CallSign,
     ) -> CoreResult<VesselBenchmarks>;
+    async fn trip_benchmarks(
+        &self,
+        query: TripBenchmarksQuery,
+    ) -> CoreResult<Vec<TripWithBenchmark>>;
     fn detailed_trips(
         &self,
         query: TripsQuery,
@@ -155,10 +160,16 @@ pub trait TripPrecisionOutboundPort: Send + Sync {
 }
 
 #[async_trait]
-pub trait VesselBenchmarkOutbound: Send + Sync {
+pub trait TripBenchmarkOutbound: Send + Sync {
     async fn vessels(&self) -> CoreResult<Vec<Vessel>>;
-    async fn sum_trip_time(&self, id: FiskeridirVesselId) -> CoreResult<Option<Duration>>;
-    async fn sum_landing_weight(&self, id: FiskeridirVesselId) -> CoreResult<Option<f64>>;
+    async fn trips_with_landing_weight(
+        &self,
+        id: FiskeridirVesselId,
+    ) -> CoreResult<Vec<TripWithTotalLivingWeight>>;
+    async fn sustainability_metrics(
+        &self,
+        id: FiskeridirVesselId,
+    ) -> CoreResult<Vec<TripSustainabilityMetric>>;
 }
 
 #[async_trait]

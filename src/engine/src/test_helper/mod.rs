@@ -1,3 +1,17 @@
+use std::collections::{HashMap, HashSet};
+
+use chrono::{DateTime, Duration, TimeZone, Utc};
+use fiskeridir_rs::{CallSign, DeliveryPointId, LandingMonth};
+use futures::TryStreamExt;
+use kyogre_core::{
+    CatchLocationId, FiskeridirVesselId, MLModel, NewVesselConflict, NewWeather, TestStorage,
+    TrainingMode, TripAssembler, TripDistancer, TripPositionLayer,
+};
+use machine::StateMachine;
+use orca_core::PsqlSettings;
+use postgres::PostgresAdapter;
+use trip_benchmark::*;
+
 use crate::{
     AisConsumeLoop, AisPosition, AisVms, AisVmsConflict, Arrival, Cluster, DataMessage,
     DeliveryPoint, DeliveryPointType, Departure, ErsTripAssembler, FisheryEngine,
@@ -9,20 +23,6 @@ use crate::{
     Step, TripDetailed, Trips, TripsQuery, UnrealisticSpeed, Vessel, VmsPosition, Weather,
     WeightPredictorSettings,
 };
-
-use chrono::{DateTime, Duration, TimeZone, Utc};
-use fiskeridir_rs::CallSign;
-use fiskeridir_rs::{DeliveryPointId, LandingMonth};
-use futures::TryStreamExt;
-use kyogre_core::{
-    CatchLocationId, FiskeridirVesselId, MLModel, NewVesselConflict, NewWeather, TestStorage,
-    TrainingMode, TripAssembler, TripDistancer, TripPositionLayer, VesselBenchmark,
-};
-use machine::StateMachine;
-use orca_core::PsqlSettings;
-use postgres::PostgresAdapter;
-use std::collections::{HashMap, HashSet};
-use vessel_benchmark::WeightPerHour;
 
 mod ais;
 mod ais_vms;
@@ -220,7 +220,11 @@ pub async fn engine(adapter: PostgresAdapter, db_settings: &PsqlSettings) -> Fis
         Box::<LandingTripAssembler>::default() as Box<dyn TripAssembler>,
         Box::<ErsTripAssembler>::default() as Box<dyn TripAssembler>,
     ];
-    let benchmarks = vec![Box::<WeightPerHour>::default() as Box<dyn VesselBenchmark>];
+    let benchmarks = vec![
+        Box::<WeightPerHour>::default() as _,
+        // TODO
+        // Box::<Sustainability>::default() as _,
+    ];
     let trip_distancer = Box::<AisVms>::default() as Box<dyn TripDistancer>;
     let trip_layers = vec![
         Box::<AisVmsConflict>::default() as Box<dyn TripPositionLayer>,

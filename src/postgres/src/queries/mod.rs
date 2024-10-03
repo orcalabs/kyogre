@@ -18,6 +18,7 @@ pub mod ocean_climate;
 pub mod port;
 pub mod species;
 pub mod trip;
+pub mod trip_benchmarks;
 pub mod unnest_delete;
 pub mod unnest_insert;
 pub mod unnest_update;

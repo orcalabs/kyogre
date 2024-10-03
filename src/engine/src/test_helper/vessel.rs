@@ -28,6 +28,14 @@ pub struct VesselContructor {
 }
 
 impl VesselBuilder {
+    pub fn set_logged_in(mut self) -> Self {
+        let call_sign = Some(TEST_SIGNED_IN_VESSEL_CALLSIGN.parse().unwrap());
+        let vessel = &mut self.state.vessels[self.current_index];
+        vessel.fiskeridir.radio_call_sign = call_sign.clone();
+        vessel.ais.call_sign = call_sign;
+        self
+    }
+
     pub fn conflict_winner(mut self) -> VesselBuilder {
         let base = &mut self.state;
         let num_vessels = base.vessels[self.current_index..].len();

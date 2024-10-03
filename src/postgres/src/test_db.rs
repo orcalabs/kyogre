@@ -724,30 +724,6 @@ ORDER BY
         self.db.add_fishing_facilities(facilities).await.unwrap();
     }
 
-    pub async fn benchmark(
-        &self,
-        vessel_id: FiskeridirVesselId,
-        benchmark: VesselBenchmarkId,
-    ) -> f64 {
-        sqlx::query!(
-            r#"
-SELECT
-    output
-FROM
-    vessel_benchmark_outputs
-WHERE
-    fiskeridir_vessel_id = $1
-    AND vessel_benchmark_id = $2
-            "#,
-            vessel_id.into_inner(),
-            benchmark as i32,
-        )
-        .fetch_one(&self.db.pool)
-        .await
-        .unwrap()
-        .output
-    }
-
     async fn single_vms_position(&self, message_id: u32) -> VmsPosition {
         let pos = sqlx::query_as!(
             crate::models::VmsPosition,

@@ -9,6 +9,7 @@ pub mod haul;
 pub mod landing;
 pub mod species;
 pub mod trip;
+pub mod trip_benchmark;
 pub mod user;
 pub mod vessel;
 pub mod vms;
