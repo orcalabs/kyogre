@@ -28,6 +28,7 @@ use web_api::{
             SpeciesMainGroupDetailed,
         },
         trip::{CurrentTrip, Trip, TripsParameters},
+        trip_benchmark::{TripBenchmarks, TripBenchmarksParameters},
         user::User,
         vessel::Vessel,
         vms::{VmsParameters, VmsPosition},
@@ -193,6 +194,13 @@ impl ApiClient {
     }
     pub async fn get_vessel_benchmarks(&self) -> Result<VesselBenchmarks, Error> {
         self.send("vessels/benchmarks", Method::GET, &(), None::<&()>)
+            .await
+    }
+    pub async fn get_trip_benchmarks(
+        &self,
+        params: TripBenchmarksParameters,
+    ) -> Result<TripBenchmarks, Error> {
+        self.send("trip_benchmarks", Method::GET, &(), Some(&params))
             .await
     }
     pub async fn get_delivery_points(&self) -> Result<Vec<DeliveryPoint>, Error> {

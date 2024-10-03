@@ -8,10 +8,12 @@ use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 
 mod assembler;
+mod benchmark;
 mod distancer;
 mod layer;
 
 pub use assembler::*;
+pub use benchmark::*;
 pub use distancer::*;
 pub use layer::*;
 use strum::{AsRefStr, Display, EnumString};

@@ -1,6 +1,7 @@
 use std::pin::Pin;
 
 use actix_web::{web::Data, FromRequest};
+use fiskeridir_rs::CallSign;
 use futures::Future;
 use http_client::{HttpClient, StatusCode};
 use kyogre_core::{AisPermission, BarentswatchUserId};
@@ -10,8 +11,11 @@ use strum::EnumIter;
 
 use crate::{
     error::{
-        error::{InvalidJWTSnafu, MissingJWTSnafu, ParseJWTSnafu},
-        Error,
+        error::{
+            InvalidCallSignSnafu, InvalidJWTSnafu, MissingBwFiskInfoProfileSnafu, MissingJWTSnafu,
+            ParseJWTSnafu,
+        },
+        Error, Result,
     },
     settings::BW_PROFILES_URL,
 };
@@ -84,7 +88,7 @@ impl From<BwProfile> for AisPermission {
 impl FromRequest for BwProfile {
     type Error = Error;
 
-    type Future = Pin<Box<dyn Future<Output = Result<Self, Self::Error>>>>;
+    type Future = Pin<Box<dyn Future<Output = Result<Self>>>>;
 
     fn from_request(
         req: &actix_web::HttpRequest,
@@ -119,6 +123,19 @@ impl FromRequest for BwProfile {
                 .await?;
 
             Ok(response)
+        })
+    }
+}
+
+impl BwProfile {
+    pub fn call_sign(&self) -> Result<CallSign> {
+        let profile = self
+            .fisk_info_profile
+            .as_ref()
+            .ok_or_else(|| MissingBwFiskInfoProfileSnafu.build())?;
+
+        profile.ircs.parse().context(InvalidCallSignSnafu {
+            call_sign: &profile.ircs,
         })
     }
 }

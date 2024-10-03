@@ -18,6 +18,7 @@ pub mod landing_matrix;
 pub mod species;
 pub mod test_client;
 pub mod trip;
+pub mod trip_benchmarks;
 pub mod trip_of_haul;
 pub mod user;
 pub mod vessel;

@@ -6,14 +6,10 @@ use kyogre_core::VesselBenchmarks;
 use kyogre_core::{FiskeridirVesselId, Mmsi};
 use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, DisplayFromStr};
-use snafu::ResultExt;
 use utoipa::ToSchema;
 
 use crate::{
-    error::{
-        error::{InvalidCallSignSnafu, MissingBwFiskInfoProfileSnafu},
-        Result,
-    },
+    error::Result,
     extractors::BwProfile,
     response::{Response, StreamResponse},
     stream_response, Database,
@@ -49,16 +45,7 @@ pub async fn vessel_benchmarks<T: Database + 'static>(
     db: web::Data<T>,
     bw_profile: BwProfile,
 ) -> Result<Response<VesselBenchmarks>> {
-    let fisk_info_profile = bw_profile
-        .fisk_info_profile
-        .ok_or_else(|| MissingBwFiskInfoProfileSnafu.build())?;
-    let call_sign = fisk_info_profile
-        .ircs
-        .parse()
-        .context(InvalidCallSignSnafu {
-            call_sign: fisk_info_profile.ircs,
-        })?;
-
+    let call_sign = bw_profile.call_sign()?;
     Ok(Response::new(
         db.vessel_benchmarks(&bw_profile.user.id, &call_sign)
             .await?,
@@ -71,7 +58,6 @@ pub async fn vessel_benchmarks<T: Database + 'static>(
 pub struct Vessel {
     pub fiskeridir: FiskeridirVessel,
     pub ais: Option<AisVessel>,
-    pub fish_caught_per_hour: Option<f64>,
     #[serde_as(as = "Vec<DisplayFromStr>")]
     pub gear_groups: Vec<GearGroup>,
     #[serde_as(as = "Vec<DisplayFromStr>")]
@@ -139,7 +125,6 @@ impl From<kyogre_core::Vessel> for Vessel {
         Vessel {
             fiskeridir: FiskeridirVessel::from(value.fiskeridir),
             ais: value.ais.map(AisVessel::from),
-            fish_caught_per_hour: value.fish_caught_per_hour,
             gear_groups: value.gear_groups,
             species_groups: value.species_groups,
         }

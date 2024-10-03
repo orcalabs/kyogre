@@ -205,28 +205,6 @@ FROM
         Ok(versions)
     }
 
-    pub(crate) async fn sum_landing_weight_impl(
-        &self,
-        id: FiskeridirVesselId,
-    ) -> Result<Option<f64>> {
-        let row = sqlx::query!(
-            r#"
-SELECT
-    SUM(le.living_weight) AS weight
-FROM
-    landings AS l
-    INNER JOIN landing_entries AS le ON l.landing_id = le.landing_id
-WHERE
-    fiskeridir_vessel_id = $1
-            "#,
-            id.into_inner(),
-        )
-        .fetch_one(&self.pool)
-        .await?;
-
-        Ok(row.weight)
-    }
-
     pub(crate) async fn add_landings_impl(
         &self,
         landings: BoxIterator<fiskeridir_rs::Result<fiskeridir_rs::Landing>>,

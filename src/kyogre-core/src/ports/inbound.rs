@@ -133,8 +133,8 @@ pub trait ScraperFileHashInboundPort {
 }
 
 #[async_trait]
-pub trait VesselBenchmarkInbound: Send + Sync {
-    async fn add_output(&self, values: Vec<VesselBenchmarkOutput>) -> CoreResult<()>;
+pub trait TripBenchmarkInbound: Send + Sync {
+    async fn add_output(&self, values: Vec<TripBenchmarkOutput>) -> CoreResult<()>;
 }
 
 #[async_trait]

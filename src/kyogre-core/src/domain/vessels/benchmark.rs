@@ -1,14 +1,7 @@
-use std::collections::HashMap;
-
-use crate::*;
-use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use tracing::error;
 
-use crate::VesselBenchmarkId;
-
-// trait BenchmarkPort: VesselBenchmarkOutbound + VesselBenchmarkInbound {}
+use crate::*;
 
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
@@ -53,49 +46,6 @@ pub struct CumulativeLandings {
     pub species_fiskeridir_id: u32,
     pub weight: f64,
     pub cumulative_weight: f64,
-}
-
-#[async_trait]
-pub trait VesselBenchmark: Send + Sync {
-    fn benchmark_id(&self) -> VesselBenchmarkId;
-    async fn benchmark(
-        &self,
-        vessel: &Vessel,
-        adapter: &dyn VesselBenchmarkOutbound,
-    ) -> CoreResult<f64>;
-    async fn produce_and_store_benchmarks(
-        &self,
-        input_adapter: &dyn VesselBenchmarkInbound,
-        output_adapter: &dyn VesselBenchmarkOutbound,
-    ) -> CoreResult<()> {
-        let id = self.benchmark_id();
-        let vessels = output_adapter
-            .vessels()
-            .await?
-            .into_iter()
-            .map(|v| (v.fiskeridir.id, v))
-            .collect::<HashMap<FiskeridirVesselId, Vessel>>();
-
-        let mut outputs = Vec::with_capacity(vessels.len());
-        for v in vessels.into_values() {
-            match self.benchmark(&v, output_adapter).await {
-                Ok(value) => {
-                    outputs.push(VesselBenchmarkOutput {
-                        benchmark_id: id,
-                        vessel_id: v.fiskeridir.id,
-                        value,
-                    });
-                }
-                Err(e) => {
-                    error!("failed to run benchmark {id}, err: {e:?}");
-                }
-            }
-        }
-
-        input_adapter.add_output(outputs).await?;
-
-        Ok(())
-    }
 }
 
 impl PartialEq<(&TripDetailed, f64)> for &BenchmarkEntry {

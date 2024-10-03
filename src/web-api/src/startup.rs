@@ -241,6 +241,12 @@ where
                     web::get()
                         .guard(guard.clone())
                         .to(routes::v1::vessel::vessel_benchmarks::<T>),
+                )
+                .route(
+                    "/trip_benchmarks",
+                    web::get()
+                        .guard(guard.clone())
+                        .to(routes::v1::trip_benchmark::trip_benchmarks::<T>),
                 );
         }
 

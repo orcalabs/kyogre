@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
-use chrono::{DateTime, Duration, Utc};
+use chrono::{DateTime, Utc};
 use fiskeridir_rs::{Gear, GearGroup, LandingId, SpeciesGroup, VesselLengthGroup};
 use futures::{Stream, TryStreamExt};
 use kyogre_core::{
@@ -693,29 +693,6 @@ WHERE
         .await?;
 
         Ok(())
-    }
-
-    pub(crate) async fn sum_trip_time_impl(
-        &self,
-        id: FiskeridirVesselId,
-    ) -> Result<Option<Duration>> {
-        let duration = sqlx::query!(
-            r#"
-SELECT
-    SUM(UPPER(period) - LOWER(period)) AS duration
-FROM
-    trips
-WHERE
-    fiskeridir_vessel_id = $1
-            "#,
-            id.into_inner(),
-        )
-        .fetch_one(&self.pool)
-        .await?;
-
-        Ok(duration
-            .duration
-            .map(|v| Duration::microseconds(v.microseconds)))
     }
 
     pub(crate) fn detailed_trips_impl(
