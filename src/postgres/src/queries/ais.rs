@@ -198,11 +198,10 @@ FROM
     ais_vessels
             "#,
         )
-        .fetch_all(&self.pool)
-        .await?
-        .into_iter()
-        .map(|v| v.mmsi)
-        .collect();
+        .fetch(&self.pool)
+        .map_ok(|v| v.mmsi)
+        .try_collect()
+        .await?;
 
         Ok(mmsis)
     }

@@ -94,7 +94,7 @@ fn avg_distance_from_center(positions: &[AisVmsPosition]) -> Result<f64> {
             DistanceEstimationSnafu {
                 from: loc,
                 to: center,
-                error_stringified: e.clone(),
+                error_stringified: e,
             }
             .build()
         })?;

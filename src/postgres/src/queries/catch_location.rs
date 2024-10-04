@@ -1,18 +1,19 @@
+use futures::{Stream, TryStreamExt};
 use kyogre_core::{CatchLocationId, WeatherLocationOverlap};
 
 use crate::{error::Result, models::CatchLocation, PostgresAdapter};
 
 impl PostgresAdapter {
-    pub(crate) async fn catch_locations_impl(
+    pub(crate) fn catch_locations_impl(
         &self,
         overlap: WeatherLocationOverlap,
-    ) -> Result<Vec<CatchLocation>> {
+    ) -> impl Stream<Item = Result<CatchLocation>> + '_ {
         let overlap = match overlap {
             WeatherLocationOverlap::OnlyOverlaps => false,
             WeatherLocationOverlap::All => true,
         };
 
-        let locs = sqlx::query_as!(
+        sqlx::query_as!(
             CatchLocation,
             r#"
 SELECT
@@ -29,9 +30,7 @@ WHERE
             "#,
             overlap
         )
-        .fetch_all(&self.pool)
-        .await?;
-
-        Ok(locs)
+        .fetch(&self.pool)
+        .map_err(|e| e.into())
     }
 }

@@ -76,11 +76,10 @@ FROM
     delivery_points_log d
             "#,
         )
-        .fetch_all(&self.pool)
-        .await?
-        .into_iter()
-        .map(|r| r.json)
-        .collect())
+        .fetch(&self.pool)
+        .map_ok(|r| r.json)
+        .try_collect()
+        .await?)
     }
 
     pub(crate) async fn add_manual_delivery_points_impl(

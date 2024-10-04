@@ -6,7 +6,7 @@ use kyogre_core::{
     Catch, DateRange, FishingFacility, FiskeridirVesselId, MinimalVesselEvent, PositionType,
     PrecisionId, PrecisionOutcome, PrecisionStatus, ProcessingStatus, TripAssemblerConflict,
     TripAssemblerId, TripDistancerId, TripHaul, TripId, TripPositionLayerId, TripProcessingUnit,
-    TripsConflictStrategy, VesselEvent, VesselEventType,
+    TripsConflictStrategy, VesselEventType,
 };
 use sqlx::postgres::types::PgRange;
 use unnest_insert::UnnestInsert;
@@ -15,6 +15,8 @@ use crate::{
     error::{Error, Result},
     queries::{opt_type_to_i32, type_to_i32, type_to_i64},
 };
+
+use super::VesselEvent;
 
 #[derive(Debug, Clone)]
 pub struct Trip {
@@ -316,7 +318,10 @@ impl TryFrom<TripDetailed> for kyogre_core::TripDetailed {
     type Error = Error;
 
     fn try_from(value: TripDetailed) -> std::result::Result<Self, Self::Error> {
-        let mut vessel_events = serde_json::from_str::<Vec<VesselEvent>>(&value.vessel_events)?;
+        let mut vessel_events = serde_json::from_str::<Vec<VesselEvent>>(&value.vessel_events)?
+            .into_iter()
+            .map(kyogre_core::VesselEvent::from)
+            .collect::<Vec<_>>();
 
         vessel_events.sort_by_key(|v| v.report_timestamp);
 

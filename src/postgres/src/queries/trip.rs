@@ -68,8 +68,10 @@ TRUNCATE earliest_vms_insertion
 
         Ok(())
     }
-    pub(crate) async fn trip_assembler_log_impl(&self) -> Result<Vec<TripAssemblerLogEntry>> {
-        Ok(sqlx::query_as!(
+    pub(crate) fn trip_assembler_log_impl(
+        &self,
+    ) -> impl Stream<Item = Result<TripAssemblerLogEntry>> + '_ {
+        sqlx::query_as!(
             TripAssemblerLogEntry,
             r#"
 SELECT
@@ -88,8 +90,8 @@ FROM
     trip_assembler_logs
             "#
         )
-        .fetch_all(&self.pool)
-        .await?)
+        .fetch(&self.pool)
+        .map_err(|e| e.into())
     }
 
     pub(crate) async fn add_trip_position<'a>(
@@ -816,11 +818,11 @@ LIMIT
         .map_err(|e| e.into())
     }
 
-    pub(crate) async fn detailed_trips_by_ids_impl(
+    pub(crate) fn detailed_trips_by_ids_impl(
         &self,
         trip_ids: &[TripId],
-    ) -> Result<Vec<TripDetailed>> {
-        let trips = sqlx::query_as!(
+    ) -> impl Stream<Item = Result<TripDetailed>> + '_ {
+        sqlx::query_as!(
             TripDetailed,
             r#"
 SELECT
@@ -858,10 +860,8 @@ WHERE
             "#,
             &trip_ids as &[TripId],
         )
-        .fetch_all(&self.pool)
-        .await?;
-
-        Ok(trips)
+        .fetch(&self.pool)
+        .map_err(|e| e.into())
     }
 
     pub(crate) async fn all_trip_cache_versions_impl(&self) -> Result<Vec<(TripId, i64)>> {
@@ -874,11 +874,10 @@ FROM
     trips_detailed AS t
             "#,
         )
-        .fetch_all(&self.pool)
-        .await?
-        .into_iter()
-        .map(|r| (r.trip_id, r.cache_version))
-        .collect())
+        .fetch(&self.pool)
+        .map_ok(|r| (r.trip_id, r.cache_version))
+        .try_collect()
+        .await?)
     }
 
     pub(crate) async fn detailed_trip_of_haul_impl(
@@ -1443,10 +1442,12 @@ WHERE
             vessel_id.into_inner(),
             boundary,
         )
-        .fetch_all(&mut *tx)
+        .fetch(&mut *tx)
+        .map_ok(|r| r.trip_id)
+        .try_collect::<Vec<_>>()
         .await?;
 
-        trip_ids.extend(refresh_trip_ids.into_iter().map(|v| v.trip_id));
+        trip_ids.extend(refresh_trip_ids);
 
         self.add_trips_detailed(trip_ids, &mut tx).await?;
 
@@ -1480,13 +1481,13 @@ WHERE
                 vessel_id.into_inner(),
                 boundary,
             )
-            .fetch_all(&mut *tx)
+            .fetch(&mut *tx)
+            .map_ok(|r| r.trip_id)
+            .try_collect()
             .await?;
-            self.add_trips_detailed(
-                refresh_trip_ids.into_iter().map(|v| v.trip_id).collect(),
-                &mut tx,
-            )
-            .await?;
+
+            self.add_trips_detailed(refresh_trip_ids, &mut tx).await?;
+
             self.reset_trips_refresh_boundary(vessel_id, &mut tx)
                 .await?;
         }

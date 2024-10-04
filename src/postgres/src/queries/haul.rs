@@ -1,6 +1,6 @@
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::{Gear, GearGroup, SpeciesGroup, VesselLengthGroup};
-use futures::{Stream, TryStreamExt};
+use futures::{future::ready, Stream, TryStreamExt};
 use kyogre_core::*;
 use sqlx::{postgres::types::PgRange, Pool, Postgres};
 
@@ -127,7 +127,7 @@ GROUP BY
             x_feature as i32,
             y_feature as i32,
             args.months as _,
-            args.catch_locations as _,
+            args.catch_locations as Option<Vec<CatchLocationId>>,
             args.gear_group_ids as Option<Vec<GearGroup>>,
             args.species_group_ids as Option<Vec<SpeciesGroup>>,
             args.vessel_length_groups as Option<Vec<VesselLengthGroup>>,
@@ -261,7 +261,7 @@ ORDER BY
     END DESC
             "#,
             args.ranges.as_deref(),
-            args.catch_locations as _,
+            args.catch_locations as Option<Vec<CatchLocationId>>,
             args.gear_group_ids as Option<Vec<GearGroup>>,
             args.species_group_ids as Option<Vec<SpeciesGroup>>,
             args.vessel_length_groups as Option<Vec<VesselLengthGroup>>,
@@ -277,8 +277,11 @@ ORDER BY
         .map_err(|e| e.into())
     }
 
-    pub(crate) async fn hauls_by_ids_impl(&self, haul_ids: &[HaulId]) -> Result<Vec<Haul>> {
-        let hauls = sqlx::query_as!(
+    pub(crate) fn hauls_by_ids_impl(
+        &self,
+        haul_ids: &[HaulId],
+    ) -> impl Stream<Item = Result<Haul>> + '_ {
+        sqlx::query_as!(
             Haul,
             r#"
 SELECT
@@ -330,10 +333,8 @@ WHERE
             "#,
             &haul_ids as &[HaulId],
         )
-        .fetch_all(&self.pool)
-        .await?;
-
-        Ok(hauls)
+        .fetch(&self.pool)
+        .map_err(|e| e.into())
     }
 
     pub(crate) async fn all_haul_cache_versions_impl(&self) -> Result<Vec<(HaulId, i64)>> {
@@ -346,11 +347,10 @@ FROM
     hauls
             "#,
         )
-        .fetch_all(&self.pool)
-        .await?
-        .into_iter()
-        .map(|r| (r.haul_id, r.cache_version))
-        .collect())
+        .fetch(&self.pool)
+        .map_ok(|r| (r.haul_id, r.cache_version))
+        .try_collect()
+        .await?)
     }
 
     pub(crate) async fn haul_messages_of_vessel_impl(
@@ -684,11 +684,10 @@ WHERE
     OR (h.catch ->> 'living_weight')::INT != c.living_weight
             "#
         )
-        .fetch_all(&self.pool)
-        .await?
-        .into_iter()
-        .map(|r| r.message_id)
-        .collect())
+        .fetch(&self.pool)
+        .map_ok(|r| r.message_id)
+        .try_collect()
+        .await?)
     }
 
     pub(crate) async fn hauls_matrix_vs_ers_dca_living_weight(&self) -> Result<i64> {
@@ -921,11 +920,10 @@ RETURNING
             "#,
             message_ids,
         )
-        .fetch_all(&mut **tx)
-        .await?
-        .into_iter()
-        .filter_map(|r| r.vessel_event_id)
-        .collect();
+        .fetch(&mut **tx)
+        .try_filter_map(|r| ready(Ok(r.vessel_event_id)))
+        .try_collect()
+        .await?;
 
         self.connect_trip_to_events(event_ids, VesselEventType::Haul, tx)
             .await
@@ -992,7 +990,7 @@ GROUP BY
 
 pub struct HaulsArgs {
     pub ranges: Option<Vec<PgRange<DateTime<Utc>>>>,
-    pub catch_locations: Option<Vec<String>>,
+    pub catch_locations: Option<Vec<CatchLocationId>>,
     pub gear_group_ids: Option<Vec<GearGroup>>,
     pub species_group_ids: Option<Vec<SpeciesGroup>>,
     pub vessel_length_groups: Option<Vec<VesselLengthGroup>>,
@@ -1017,9 +1015,7 @@ impl From<HaulsQuery> for HaulsArgs {
                     })
                     .collect()
             }),
-            catch_locations: v
-                .catch_locations
-                .map(|cls| cls.into_iter().map(|c| c.into_inner()).collect()),
+            catch_locations: v.catch_locations,
             gear_group_ids: v.gear_group_ids,
             species_group_ids: v.species_group_ids,
             vessel_length_groups: v.vessel_length_groups,
@@ -1037,7 +1033,7 @@ impl From<HaulsQuery> for HaulsArgs {
 #[derive(Debug, Clone)]
 pub struct HaulsMatrixArgs {
     pub months: Option<Vec<i32>>,
-    pub catch_locations: Option<Vec<String>>,
+    pub catch_locations: Option<Vec<CatchLocationId>>,
     pub gear_group_ids: Option<Vec<GearGroup>>,
     pub species_group_ids: Option<Vec<SpeciesGroup>>,
     pub vessel_length_groups: Option<Vec<VesselLengthGroup>>,
@@ -1052,9 +1048,7 @@ impl From<HaulsMatrixQuery> for HaulsMatrixArgs {
             months: v
                 .months
                 .map(|months| months.into_iter().map(|m| m as i32).collect()),
-            catch_locations: v
-                .catch_locations
-                .map(|cls| cls.into_iter().map(|c| c.into_inner()).collect()),
+            catch_locations: v.catch_locations,
             gear_group_ids: v.gear_group_ids,
             species_group_ids: v.species_group_ids,
             vessel_length_groups: v.vessel_length_groups,

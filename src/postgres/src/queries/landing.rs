@@ -133,11 +133,11 @@ ORDER BY
         .map_err(|e| e.into())
     }
 
-    pub(crate) async fn landings_by_ids_impl(
+    pub(crate) fn landings_by_ids_impl(
         &self,
         landing_ids: &[LandingId],
-    ) -> Result<Vec<Landing>> {
-        let landings = sqlx::query_as!(
+    ) -> impl Stream<Item = Result<Landing>> + '_ {
+        sqlx::query_as!(
             Landing,
             r#"
 SELECT
@@ -182,10 +182,8 @@ GROUP BY
             "#,
             landing_ids as &[LandingId],
         )
-        .fetch_all(&self.pool)
-        .await?;
-
-        Ok(landings)
+        .fetch(&self.pool)
+        .map_err(|e|e.into())
     }
 
     pub(crate) async fn all_landing_versions_impl(&self) -> Result<Vec<(LandingId, i64)>> {
@@ -198,11 +196,10 @@ FROM
     landings
             "#
         )
-        .fetch_all(&self.pool)
-        .await?
-        .into_iter()
-        .map(|r| (r.id, r.version as i64))
-        .collect();
+        .fetch(&self.pool)
+        .map_ok(|r| (r.id, r.version as i64))
+        .try_collect()
+        .await?;
 
         Ok(versions)
     }

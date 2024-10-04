@@ -12,8 +12,8 @@ use crate::{
 };
 
 impl PostgresAdapter {
-    pub(crate) async fn all_vms_impl(&self) -> Result<Vec<VmsPosition>> {
-        let vms = sqlx::query_as!(
+    pub(crate) fn all_vms_impl(&self) -> impl Stream<Item = Result<VmsPosition>> + '_ {
+        sqlx::query_as!(
             VmsPosition,
             r#"
 SELECT
@@ -34,10 +34,8 @@ ORDER BY
     "timestamp" ASC
             "#,
         )
-        .fetch_all(&self.pool)
-        .await?;
-
-        Ok(vms)
+        .fetch(&self.pool)
+        .map_err(|e| e.into())
     }
 
     pub(crate) fn vms_positions_impl(
