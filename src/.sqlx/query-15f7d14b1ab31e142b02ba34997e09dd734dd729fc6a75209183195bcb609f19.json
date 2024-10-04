@@ -1,0 +1,77 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    trip_id AS \"trip_id!: TripId\",\n    period AS \"period!: DateRange\",\n    period_precision AS \"period_precision: DateRange\",\n    landing_coverage AS \"landing_coverage!: DateRange\",\n    distance,\n    trip_assembler_id AS \"trip_assembler_id!: TripAssemblerId\",\n    start_port_id,\n    end_port_id,\n    target_species_fiskeridir_id,\n    target_species_fao_id\nFROM\n    trips\nWHERE\n    fiskeridir_vessel_id = $1\n    AND trip_precision_status_id = $2\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "trip_id!: TripId",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "period!: DateRange",
+        "type_info": "TstzRange"
+      },
+      {
+        "ordinal": 2,
+        "name": "period_precision: DateRange",
+        "type_info": "TstzRange"
+      },
+      {
+        "ordinal": 3,
+        "name": "landing_coverage!: DateRange",
+        "type_info": "TstzRange"
+      },
+      {
+        "ordinal": 4,
+        "name": "distance",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 5,
+        "name": "trip_assembler_id!: TripAssemblerId",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 6,
+        "name": "start_port_id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 7,
+        "name": "end_port_id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 8,
+        "name": "target_species_fiskeridir_id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 9,
+        "name": "target_species_fao_id",
+        "type_info": "Varchar"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      false,
+      true,
+      false,
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "15f7d14b1ab31e142b02ba34997e09dd734dd729fc6a75209183195bcb609f19"
+}

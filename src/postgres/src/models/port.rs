@@ -1,6 +1,8 @@
-use jurisdiction::Jurisdiction;
-use serde::Deserialize;
 use std::str::FromStr;
+
+use jurisdiction::Jurisdiction;
+use kyogre_core::PortDockPoint;
+use serde::Deserialize;
 use unnest_insert::UnnestInsert;
 
 use crate::error::{Error, JurisdictionSnafu, MissingValueSnafu, Result};
@@ -20,15 +22,6 @@ pub struct Port {
     pub name: Option<String>,
     pub latitude: Option<f64>,
     pub longitude: Option<f64>,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct PortDockPoint {
-    pub port_dock_point_id: i32,
-    pub port_id: String,
-    pub name: String,
-    pub latitude: f64,
-    pub longitude: f64,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -73,33 +66,19 @@ impl TryFrom<TripDockPoints> for kyogre_core::TripDockPoints {
     type Error = Error;
 
     fn try_from(value: TripDockPoints) -> std::result::Result<Self, Self::Error> {
-        let start: Vec<kyogre_core::PortDockPoint> = value
+        let start: Vec<PortDockPoint> = value
             .start
             .map(|v| serde_json::from_str(&v))
             .transpose()?
             .unwrap_or_default();
 
-        let end: Vec<kyogre_core::PortDockPoint> = value
+        let end: Vec<PortDockPoint> = value
             .end
             .map(|v| serde_json::from_str(&v))
             .transpose()?
             .unwrap_or_default();
 
         Ok(kyogre_core::TripDockPoints { start, end })
-    }
-}
-
-impl TryFrom<PortDockPoint> for kyogre_core::PortDockPoint {
-    type Error = Error;
-
-    fn try_from(value: PortDockPoint) -> std::result::Result<Self, Self::Error> {
-        Ok(kyogre_core::PortDockPoint {
-            port_dock_point_id: value.port_dock_point_id,
-            port_id: value.port_id,
-            name: value.name,
-            latitude: value.latitude,
-            longitude: value.longitude,
-        })
     }
 }
 

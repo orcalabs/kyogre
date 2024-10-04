@@ -1,8 +1,6 @@
 use fiskeridir_rs::SpeciesGroup;
 use unnest_insert::UnnestInsert;
 
-use crate::error::Error;
-
 pub struct SpeciesGroupWeek {
     pub species: SpeciesGroup,
     pub weeks: Vec<i32>,
@@ -44,12 +42,6 @@ pub struct NewSpeciesFiskeridir<'a> {
 pub struct Species {
     pub id: i32,
     pub name: String,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct SpeciesFao {
-    pub id: String,
-    pub name: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -104,39 +96,20 @@ impl<'a> NewSpeciesFiskeridir<'a> {
     }
 }
 
-//
-// TODO: TryFrom -> From ?
-//
-
-impl TryFrom<Species> for kyogre_core::Species {
-    type Error = Error;
-
-    fn try_from(value: Species) -> Result<Self, Self::Error> {
-        Ok(Self {
+impl From<Species> for kyogre_core::Species {
+    fn from(value: Species) -> Self {
+        Self {
             id: value.id as u32,
             name: value.name,
-        })
+        }
     }
 }
 
-impl TryFrom<SpeciesFao> for kyogre_core::SpeciesFao {
-    type Error = Error;
-
-    fn try_from(value: SpeciesFao) -> Result<Self, Self::Error> {
-        Ok(Self {
-            id: value.id,
-            name: value.name,
-        })
-    }
-}
-
-impl TryFrom<SpeciesFiskeridir> for kyogre_core::SpeciesFiskeridir {
-    type Error = Error;
-
-    fn try_from(value: SpeciesFiskeridir) -> Result<Self, Self::Error> {
-        Ok(Self {
+impl From<SpeciesFiskeridir> for kyogre_core::SpeciesFiskeridir {
+    fn from(value: SpeciesFiskeridir) -> Self {
+        Self {
             id: value.id as u32,
             name: value.name,
-        })
+        }
     }
 }

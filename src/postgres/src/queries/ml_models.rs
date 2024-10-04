@@ -2,15 +2,15 @@ use chrono::NaiveDate;
 use fiskeridir_rs::{GearGroup, SpeciesGroup};
 use futures::{Stream, TryStreamExt};
 use kyogre_core::{
-    FishingSpotPrediction, HaulId, ModelId, TrainingHaul, WeatherData,
-    SPOT_PREDICTOR_SAMPLE_WEIGHT_LIMIT,
+    CatchLocationId, FishingSpotPrediction, FishingSpotTrainingData, FishingWeightPrediction,
+    HaulId, ModelId, TrainingHaul, WeatherData, SPOT_PREDICTOR_SAMPLE_WEIGHT_LIMIT,
 };
 
 use crate::{
     error::Result,
     models::{
-        FishingSpotTrainingData, FishingWeightPrediction, MLTrainingLog, NewFishingSpotPrediction,
-        NewFishingWeightPrediction, WeightPredictorTrainingData,
+        MLTrainingLog, NewFishingSpotPrediction, NewFishingWeightPrediction,
+        WeightPredictorTrainingData,
     },
     PostgresAdapter,
 };
@@ -91,7 +91,7 @@ WHERE
             FishingWeightPrediction,
             r#"
 SELECT
-    catch_location_id,
+    catch_location_id AS "catch_location_id!: CatchLocationId",
     species_group_id AS "species_group_id: SpeciesGroup",
     weight,
     "date"
@@ -291,7 +291,7 @@ WITH
 SELECT
     sums.longitude AS "longitude!",
     sums.latitude AS "latitude!",
-    hm.catch_location,
+    hm.catch_location AS "catch_location_id!: CatchLocationId",
     h.start_timestamp::DATE AS "date!",
     hm.species_group_id AS "species: SpeciesGroup",
     h.haul_id AS "haul_id!: HaulId"
@@ -340,7 +340,7 @@ LIMIT
             FishingWeightPrediction,
             r#"
 SELECT
-    catch_location_id,
+    catch_location_id AS "catch_location_id!: CatchLocationId",
     species_group_id AS "species_group_id: SpeciesGroup",
     weight,
     "date"
@@ -361,7 +361,7 @@ LIMIT
             limit as i32
         )
         .fetch(&self.pool)
-        .map_err(From::from)
+        .map_err(|e| e.into())
     }
 
     pub(crate) async fn fishing_spot_prediction_impl(
@@ -403,7 +403,7 @@ WHERE
             FishingWeightPrediction,
             r#"
 SELECT
-    catch_location_id,
+    catch_location_id AS "catch_location_id!: CatchLocationId",
     species_group_id AS "species_group_id: SpeciesGroup",
     weight,
     "date"
@@ -415,7 +415,7 @@ WHERE
             model_id as i32
         )
         .fetch(&self.pool)
-        .map_err(From::from)
+        .map_err(|e| e.into())
     }
 
     pub(crate) fn all_fishing_spot_predictions_impl(
@@ -438,6 +438,6 @@ WHERE
             model_id as i32
         )
         .fetch(&self.pool)
-        .map_err(From::from)
+        .map_err(|e| e.into())
     }
 }

@@ -3,7 +3,7 @@ use crate::models::LandingMatrixQueryOutput;
 use crate::{models::LandingMatrixArgs, PostgresAdapter};
 use fiskeridir_rs::{GearGroup, SpeciesGroup, VesselLengthGroup};
 use kyogre_core::{
-    calculate_landing_sum_area_table, ActiveLandingFilter, FiskeridirVesselId,
+    calculate_landing_sum_area_table, ActiveLandingFilter, CatchLocationId, FiskeridirVesselId,
     LandingMatrixXFeature, LandingMatrixYFeature,
 };
 use sqlx::{Pool, Postgres};
@@ -124,7 +124,7 @@ GROUP BY
             x_feature as i32,
             y_feature as i32,
             args.months as _,
-            args.catch_locations as _,
+            args.catch_locations as Option<Vec<CatchLocationId>>,
             args.gear_group_ids as Option<Vec<GearGroup>>,
             args.species_group_ids as Option<Vec<SpeciesGroup>>,
             args.vessel_length_groups as Option<Vec<VesselLengthGroup>>,

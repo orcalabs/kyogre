@@ -1,10 +1,11 @@
 use fiskeridir_rs::{LandingIdError, ParseStringError};
-use kyogre_core::{CatchLocationIdError, ChronoError, DateRangeError, IsTimeout, MatrixIndexError};
+use kyogre_core::{
+    ActiveVesselConflict, CatchLocationIdError, ChronoError, DateRangeError, IsTimeout,
+    MatrixIndexError,
+};
 use snafu::{Location, Snafu};
 use sqlx::migrate::MigrateError;
 use stack_error::{OpaqueError, StackError};
-
-use crate::models::ActiveVesselConflict;
 
 pub(crate) type Result<T> = std::result::Result<T, Error>;
 

@@ -1,6 +1,6 @@
 use crate::error::landing_id_error::{InvalidSnafu, LengthSnafu, ParseSnafu};
 use crate::error::LandingIdError;
-use crate::{DocumentType, SalesTeam};
+use crate::{sqlx_str_impl, DocumentType, SalesTeam};
 use core::fmt;
 use num_traits::FromPrimitive;
 use serde::de::{self, Visitor};
@@ -10,7 +10,6 @@ use std::str::FromStr;
 
 /// NewType wrapping the creation of unique landing ids.
 #[derive(PartialOrd, Ord, PartialEq, Eq, Clone, Debug, Hash, Serialize)]
-#[cfg_attr(feature = "sqlx", derive(sqlx::Type), sqlx(transparent))]
 pub struct LandingId(String);
 
 impl LandingId {
@@ -111,3 +110,5 @@ impl fmt::Display for LandingId {
         self.0.fmt(f)
     }
 }
+
+sqlx_str_impl!(LandingId);

@@ -1983,19 +1983,6 @@ dependencies = [
  "geo-types",
  "geojson",
  "log",
- "serde_json",
- "thiserror",
- "wkt",
-]
-
-[[package]]
-name = "geozero"
-version = "0.14.0"
-source = "git+https://github.com/georust/geozero?branch=main#bdb8e9782534dbc5e5eae3c2b612d5fc3a136580"
-dependencies = [
- "geo-types",
- "geojson",
- "log",
  "scroll",
  "serde_json",
  "sqlx",
@@ -2726,6 +2713,7 @@ dependencies = [
  "flate2",
  "futures",
  "geo",
+ "geozero",
  "num-derive",
  "num-traits",
  "oauth2",
@@ -3874,7 +3862,7 @@ dependencies = [
  "futures",
  "geo",
  "geo-types",
- "geozero 0.14.0 (git+https://github.com/georust/geozero?branch=main)",
+ "geozero",
  "jurisdiction",
  "kyogre-core",
  "num-traits",
@@ -4836,7 +4824,7 @@ dependencies = [
  "chrono",
  "csv",
  "fiskeridir-rs",
- "geozero 0.14.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "geozero",
  "http-client",
  "kyogre-core",
  "orca-core",

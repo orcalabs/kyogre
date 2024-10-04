@@ -1,0 +1,35 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    haul_id AS \"haul_id!: HaulId\",\n    start_timestamp,\n    stop_timestamp\nFROM\n    hauls\nWHERE\n    fiskeridir_vessel_id = $1::BIGINT\n    AND haul_weather_status_id = $2::INT\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "haul_id!: HaulId",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "start_timestamp",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 2,
+        "name": "stop_timestamp",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "c76561778d18503e7014d2f703ee5d71e77e3f6ac4217631a27e69ed682a95c8"
+}

@@ -1,4 +1,5 @@
 use futures::{Stream, TryStreamExt};
+use kyogre_core::SpeciesFao;
 
 use crate::{error::Result, models::*, PostgresAdapter};
 
@@ -19,7 +20,7 @@ ORDER BY
             "#,
         )
         .fetch(&self.pool)
-        .map_err(From::from)
+        .map_err(|e| e.into())
     }
 
     pub(crate) fn species_impl(&self) -> impl Stream<Item = Result<Species>> + '_ {
@@ -34,7 +35,7 @@ FROM
             "#,
         )
         .fetch(&self.pool)
-        .map_err(From::from)
+        .map_err(|e| e.into())
     }
 
     pub(crate) fn species_fao_impl(&self) -> impl Stream<Item = Result<SpeciesFao>> + '_ {
@@ -49,6 +50,6 @@ FROM
             "#,
         )
         .fetch(&self.pool)
-        .map_err(From::from)
+        .map_err(|e| e.into())
     }
 }

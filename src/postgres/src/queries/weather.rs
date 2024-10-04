@@ -3,13 +3,13 @@ use std::collections::HashSet;
 use chrono::{DateTime, NaiveDate, TimeZone, Utc};
 use futures::{Stream, TryStreamExt};
 use kyogre_core::{
-    CatchLocationId, HaulId, HaulWeather, HaulWeatherOutput, Weather, WeatherLocationId,
-    WeatherQuery,
+    CatchLocationId, CatchLocationWeather, HaulId, HaulWeather, HaulWeatherOutput, Weather,
+    WeatherLocationId, WeatherQuery,
 };
 
 use crate::{
     error::Result,
-    models::{CatchLocationWeather, NewWeather, NewWeatherDailyDirty, WeatherLocation},
+    models::{NewWeather, NewWeatherDailyDirty, WeatherLocation},
     PostgresAdapter,
 };
 
@@ -18,18 +18,17 @@ impl PostgresAdapter {
         let locs = sqlx::query!(
             r#"
 SELECT
-    catch_location_id
+    catch_location_id AS "id!: CatchLocationId"
 FROM
     catch_locations
 WHERE
     CARDINALITY(weather_location_ids) > 0
             "#
         )
-        .fetch_all(&self.pool)
-        .await?
-        .into_iter()
-        .map(|v| CatchLocationId::try_from(v.catch_location_id))
-        .collect::<std::result::Result<Vec<_>, _>>()?;
+        .fetch(&self.pool)
+        .map_ok(|v| v.id)
+        .try_collect()
+        .await?;
 
         Ok(locs)
     }
@@ -42,7 +41,7 @@ WHERE
             CatchLocationWeather,
             r#"
 SELECT
-    catch_location_id,
+    catch_location_id AS "id!: CatchLocationId",
     date,
     wind_speed_10m,
     wind_direction_10m,
@@ -96,7 +95,7 @@ FROM
             CatchLocationWeather,
             r#"
 SELECT
-    catch_location_id,
+    catch_location_id AS "id!: CatchLocationId",
     date,
     wind_speed_10m,
     wind_direction_10m,
@@ -377,7 +376,7 @@ GROUP BY
             query.weather_location_ids.as_deref() as Option<&[WeatherLocationId]>,
         )
         .fetch(&self.pool)
-        .map_err(From::from)
+        .map_err(|e| e.into())
     }
 
     pub(crate) async fn haul_weather_impl(
@@ -559,7 +558,7 @@ WHERE
 
         let mut tx = self.pool.begin().await?;
 
-        self.unnest_insert_try_from::<_, _, NewWeather>(weather, &mut *tx)
+        self.unnest_insert_from::<_, _, NewWeather>(weather, &mut *tx)
             .await?;
         self.unnest_insert(average_reset, &mut *tx).await?;
 
@@ -597,6 +596,6 @@ FROM
             "#,
         )
         .fetch(&self.pool)
-        .map_err(From::from)
+        .map_err(|e| e.into())
     }
 }

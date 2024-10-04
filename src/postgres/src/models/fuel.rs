@@ -2,8 +2,6 @@ use chrono::{DateTime, Utc};
 use kyogre_core::BarentswatchUserId;
 use unnest_insert::{UnnestDelete, UnnestInsert, UnnestUpdate};
 
-use crate::error::Error;
-
 #[derive(Debug, Clone, UnnestInsert, UnnestUpdate)]
 #[unnest_insert(table_name = "fuel_measurements")]
 #[unnest_update(table_name = "fuel_measurements")]
@@ -18,14 +16,6 @@ pub struct UpsertFuelMeasurement<'a> {
     pub fuel: f64,
 }
 
-#[derive(Debug, Clone)]
-pub struct FuelMeasurement {
-    pub barentswatch_user_id: BarentswatchUserId,
-    pub call_sign: String,
-    pub timestamp: DateTime<Utc>,
-    pub fuel: f64,
-}
-
 #[derive(Debug, Clone, UnnestDelete)]
 #[unnest_delete(table_name = "fuel_measurements")]
 pub struct DeleteFuelMeasurement<'a> {
@@ -35,35 +25,11 @@ pub struct DeleteFuelMeasurement<'a> {
     pub timestamp: DateTime<Utc>,
 }
 
-impl TryFrom<FuelMeasurement> for kyogre_core::FuelMeasurement {
-    type Error = Error;
-
-    fn try_from(v: FuelMeasurement) -> Result<Self, Self::Error> {
-        Ok(Self {
-            barentswatch_user_id: v.barentswatch_user_id,
-            call_sign: v.call_sign.try_into()?,
-            timestamp: v.timestamp,
-            fuel: v.fuel,
-        })
-    }
-}
-
 impl<'a> From<&'a kyogre_core::FuelMeasurement> for UpsertFuelMeasurement<'a> {
     fn from(v: &'a kyogre_core::FuelMeasurement) -> Self {
         Self {
             barentswatch_user_id: v.barentswatch_user_id,
             call_sign: v.call_sign.as_ref(),
-            timestamp: v.timestamp,
-            fuel: v.fuel,
-        }
-    }
-}
-
-impl From<kyogre_core::FuelMeasurement> for FuelMeasurement {
-    fn from(v: kyogre_core::FuelMeasurement) -> Self {
-        Self {
-            barentswatch_user_id: v.barentswatch_user_id,
-            call_sign: v.call_sign.into_inner(),
             timestamp: v.timestamp,
             fuel: v.fuel,
         }

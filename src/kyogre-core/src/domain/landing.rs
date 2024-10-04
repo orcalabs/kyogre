@@ -1,5 +1,7 @@
 use chrono::{DateTime, Utc};
-use fiskeridir_rs::{DeliveryPointId, Gear, GearGroup, LandingId, SpeciesGroup, VesselLengthGroup};
+use fiskeridir_rs::{
+    CallSign, DeliveryPointId, Gear, GearGroup, LandingId, SpeciesGroup, VesselLengthGroup,
+};
 use serde::{Deserialize, Serialize};
 
 use crate::{CatchLocationId, FiskeridirVesselId};
@@ -18,14 +20,14 @@ pub struct LandingMatrix {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Landing {
-    pub landing_id: LandingId,
+    pub id: LandingId,
     pub landing_timestamp: DateTime<Utc>,
     pub catch_location: Option<CatchLocationId>,
     pub gear_id: Gear,
     pub gear_group_id: GearGroup,
     pub delivery_point_id: Option<DeliveryPointId>,
     pub fiskeridir_vessel_id: Option<FiskeridirVesselId>,
-    pub vessel_call_sign: Option<String>,
+    pub vessel_call_sign: Option<CallSign>,
     pub vessel_name: Option<String>,
     pub vessel_length: Option<f64>,
     pub vessel_length_group: VesselLengthGroup,

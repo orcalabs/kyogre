@@ -2,6 +2,7 @@ use std::{ops::Deref, str::FromStr};
 
 use crate::{
     error::ParseStringError,
+    sqlx_str_impl,
     string_new_types::{PrunedString, PrunedStringVisitor},
 };
 use serde::{Deserialize, Serialize};
@@ -68,3 +69,5 @@ impl<'de> Deserialize<'de> for CallSign {
             .map(CallSign)
     }
 }
+
+sqlx_str_impl!(CallSign);

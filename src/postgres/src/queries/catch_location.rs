@@ -1,4 +1,4 @@
-use kyogre_core::WeatherLocationOverlap;
+use kyogre_core::{CatchLocationId, WeatherLocationOverlap};
 
 use crate::{error::Result, models::CatchLocation, PostgresAdapter};
 
@@ -16,7 +16,7 @@ impl PostgresAdapter {
             CatchLocation,
             r#"
 SELECT
-    catch_location_id,
+    catch_location_id AS "id!: CatchLocationId",
     "polygon" AS "polygon!: _",
     longitude,
     latitude,

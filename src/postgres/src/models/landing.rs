@@ -1,5 +1,7 @@
 use chrono::{DateTime, NaiveDate, NaiveTime, Utc};
-use fiskeridir_rs::{DeliveryPointId, Gear, GearGroup, LandingId, SpeciesGroup, VesselLengthGroup};
+use fiskeridir_rs::{
+    CallSign, DeliveryPointId, Gear, GearGroup, LandingId, SpeciesGroup, VesselLengthGroup,
+};
 use kyogre_core::{CatchLocationId, FiskeridirVesselId, LandingMatrixQuery};
 use unnest_insert::UnnestInsert;
 
@@ -94,15 +96,15 @@ pub struct NewLanding<'a> {
 }
 
 pub struct Landing {
-    pub landing_id: String,
+    pub landing_id: LandingId,
     pub landing_timestamp: DateTime<Utc>,
     pub catch_area_id: Option<i32>,
     pub catch_main_area_id: Option<i32>,
     pub gear_id: Gear,
     pub gear_group_id: GearGroup,
-    pub delivery_point_id: Option<String>,
+    pub delivery_point_id: Option<DeliveryPointId>,
     pub fiskeridir_vessel_id: Option<FiskeridirVesselId>,
-    pub vessel_call_sign: Option<String>,
+    pub vessel_call_sign: Option<CallSign>,
     pub vessel_name: Option<String>,
     pub vessel_length: Option<f64>,
     pub vessel_length_group: VesselLengthGroup,
@@ -215,15 +217,12 @@ impl TryFrom<Landing> for kyogre_core::Landing {
 
     fn try_from(v: Landing) -> std::result::Result<Self, Self::Error> {
         Ok(Self {
-            landing_id: LandingId::try_from(v.landing_id)?,
+            id: v.landing_id,
             landing_timestamp: v.landing_timestamp,
             catch_location: CatchLocationId::new_opt(v.catch_main_area_id, v.catch_area_id),
             gear_id: v.gear_id,
             gear_group_id: v.gear_group_id,
-            delivery_point_id: v
-                .delivery_point_id
-                .map(DeliveryPointId::try_from)
-                .transpose()?,
+            delivery_point_id: v.delivery_point_id,
             fiskeridir_vessel_id: v.fiskeridir_vessel_id,
             vessel_call_sign: v.vessel_call_sign,
             vessel_name: v.vessel_name,
@@ -248,7 +247,7 @@ pub struct LandingMatrixQueryOutput {
 #[derive(Debug, Clone)]
 pub struct LandingMatrixArgs {
     pub months: Option<Vec<i32>>,
-    pub catch_locations: Option<Vec<String>>,
+    pub catch_locations: Option<Vec<CatchLocationId>>,
     pub gear_group_ids: Option<Vec<GearGroup>>,
     pub species_group_ids: Option<Vec<SpeciesGroup>>,
     pub vessel_length_groups: Option<Vec<VesselLengthGroup>>,
@@ -271,9 +270,7 @@ impl From<LandingMatrixQuery> for LandingMatrixArgs {
             months: v
                 .months
                 .map(|months| months.into_iter().map(|m| m as i32).collect()),
-            catch_locations: v
-                .catch_locations
-                .map(|cls| cls.into_iter().map(|c| c.into_inner()).collect()),
+            catch_locations: v.catch_locations,
             gear_group_ids: v.gear_group_ids,
             species_group_ids: v.species_group_ids,
             vessel_length_groups: v.vessel_length_groups,

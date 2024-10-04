@@ -1,12 +1,9 @@
 use kyogre_core::{
-    FiskeridirVesselId, TripBenchmarkId, TripBenchmarksQuery, TripId, TripSustainabilityMetric,
+    DateRange, FiskeridirVesselId, TripBenchmarkId, TripBenchmarksQuery, TripId,
+    TripSustainabilityMetric, TripWithBenchmark, TripWithTotalLivingWeight,
 };
 
-use crate::{
-    error::Result,
-    models::{TripBenchmarkOutput, TripWithBenchmark, TripWithTotalLivingWeight},
-    PostgresAdapter,
-};
+use crate::{error::Result, models::TripBenchmarkOutput, PostgresAdapter};
 
 impl PostgresAdapter {
     pub(crate) async fn add_benchmark_outputs(
@@ -34,9 +31,9 @@ WITH
             call_sign = $1
     )
 SELECT
-    t.trip_id AS "trip_id!: TripId",
-    t.period,
-    t.period_precision,
+    t.trip_id AS "id!: TripId",
+    t.period AS "period!: DateRange",
+    t.period_precision AS "period_precision: DateRange",
     MAX(b.output) FILTER (
         WHERE
             b.trip_benchmark_id = $2
@@ -87,9 +84,9 @@ ORDER BY
             TripWithTotalLivingWeight,
             r#"
 SELECT
-    t.trip_id AS "trip_id!: TripId",
-    t.period,
-    t.period_precision,
+    t.trip_id AS "id!: TripId",
+    t.period AS "period!: DateRange",
+    t.period_precision AS "period_precision: DateRange",
     t.landing_total_living_weight AS "total_living_weight!"
 FROM
     trips_detailed t

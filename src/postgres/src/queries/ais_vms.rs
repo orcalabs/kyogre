@@ -3,16 +3,12 @@ use fiskeridir_rs::CallSign;
 use futures::{Stream, TryStreamExt};
 use geozero::wkb;
 use kyogre_core::{
-    AisPermission, AisVmsAreaCount, DateRange, Mmsi, NavigationStatus, PositionType, TripId,
-    TripPositionLayerId, LEISURE_VESSEL_LENGTH_AIS_BOUNDARY, LEISURE_VESSEL_SHIP_TYPES,
-    PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY,
+    AisPermission, AisVmsAreaCount, AisVmsPosition, DateRange, Mmsi, NavigationStatus,
+    PositionType, TripId, TripPositionLayerId, LEISURE_VESSEL_LENGTH_AIS_BOUNDARY,
+    LEISURE_VESSEL_SHIP_TYPES, PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY,
 };
 
-use crate::{
-    error::Result,
-    models::{AisVmsAreaPositionsReturning, AisVmsPosition},
-    PostgresAdapter,
-};
+use crate::{error::Result, models::AisVmsAreaPositionsReturning, PostgresAdapter};
 
 impl PostgresAdapter {
     pub(crate) fn ais_vms_area_positions_impl(
@@ -48,7 +44,7 @@ GROUP BY
             date_limit,
         )
         .fetch(&self.pool)
-        .map_err(From::from)
+        .map_err(|e| e.into())
     }
     pub(crate) async fn prune_ais_vms_area_impl(&self, limit: NaiveDate) -> Result<()> {
         let mut tx = self.pool.begin().await?;
@@ -185,7 +181,7 @@ SELECT
     rate_of_turn,
     true_heading,
     distance_to_shore AS "distance_to_shore!",
-    position_type_id AS "position_type_id!: PositionType",
+    position_type_id AS "position_type!: PositionType",
     NULL AS "pruned_by: TripPositionLayerId"
 FROM
     (
@@ -249,7 +245,7 @@ SELECT
     rate_of_turn,
     true_heading,
     distance_to_shore AS "distance_to_shore!",
-    position_type_id AS "position_type_id!: PositionType",
+    position_type_id AS "position_type!: PositionType",
     NULL AS "pruned_by: TripPositionLayerId"
 FROM
     (
@@ -324,7 +320,7 @@ ORDER BY
             PositionType::Vms as i32,
         )
         .fetch(self.ais_pool())
-        .map_err(From::from)
+        .map_err(|e| e.into())
     }
 
     pub(crate) fn trip_positions_impl(
@@ -345,7 +341,7 @@ SELECT
     rate_of_turn,
     true_heading,
     distance_to_shore AS "distance_to_shore!",
-    position_type_id AS "position_type_id: PositionType",
+    position_type_id AS "position_type: PositionType",
     pruned_by AS "pruned_by: TripPositionLayerId"
 FROM
     trip_positions
@@ -387,6 +383,6 @@ ORDER BY
             PositionType::Vms as i32
         )
         .fetch(&self.pool)
-        .map_err(From::from)
+        .map_err(|e| e.into())
     }
 }

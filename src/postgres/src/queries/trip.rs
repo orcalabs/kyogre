@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
 use chrono::{DateTime, Utc};
-use fiskeridir_rs::{Gear, GearGroup, LandingId, SpeciesGroup, VesselLengthGroup};
+use fiskeridir_rs::{DeliveryPointId, Gear, GearGroup, LandingId, SpeciesGroup, VesselLengthGroup};
 use futures::{Stream, TryStreamExt};
 use kyogre_core::{
     DateRange, FiskeridirVesselId, HaulId, Ordering, PrecisionOutcome, PrecisionStatus,
@@ -714,14 +714,14 @@ SELECT
     t.trip_id AS "trip_id!: TripId",
     t.fiskeridir_vessel_id AS "fiskeridir_vessel_id!: FiskeridirVesselId",
     t.fiskeridir_length_group_id AS "fiskeridir_length_group_id!: VesselLengthGroup",
-    t.period AS "period!",
-    t.period_precision,
-    t.landing_coverage AS "landing_coverage!",
+    t.period AS "period!: DateRange",
+    t.period_precision AS "period_precision: DateRange",
+    t.landing_coverage AS "landing_coverage!: DateRange",
     COALESCE(t.num_landings::BIGINT, 0) AS "num_deliveries!",
     COALESCE(t.landing_total_living_weight, 0.0) AS "total_living_weight!",
     COALESCE(t.landing_total_gross_weight, 0.0) AS "total_gross_weight!",
     COALESCE(t.landing_total_product_weight, 0.0) AS "total_product_weight!",
-    COALESCE(t.delivery_point_ids, '{}') AS "delivery_points!",
+    COALESCE(t.delivery_point_ids, '{}') AS "delivery_points!: Vec<DeliveryPointId>",
     COALESCE(t.landing_gear_ids, '{}') AS "gear_ids!: Vec<Gear>",
     COALESCE(t.landing_gear_group_ids, '{}') AS "gear_group_ids!: Vec<GearGroup>",
     COALESCE(t.landing_species_group_ids, '{}') AS "species_group_ids!: Vec<SpeciesGroup>",
@@ -732,7 +732,7 @@ SELECT
     t.trip_assembler_id AS "trip_assembler_id!: TripAssemblerId",
     COALESCE(t.vessel_events, '[]')::TEXT AS "vessel_events!",
     COALESCE(t.hauls, '[]')::TEXT AS "hauls!",
-    COALESCE(t.landing_ids, '{}') AS "landing_ids!",
+    COALESCE(t.landing_ids, '{}') AS "landing_ids!: Vec<LandingId>",
     CASE
         WHEN $1 THEN COALESCE(t.fishing_facilities, '[]')::TEXT
         ELSE '[]'
@@ -813,7 +813,7 @@ LIMIT
             query.pagination.limit() as i64,
         )
         .fetch(&self.pool)
-        .map_err(From::from)
+        .map_err(|e| e.into())
     }
 
     pub(crate) async fn detailed_trips_by_ids_impl(
@@ -827,14 +827,14 @@ SELECT
     t.trip_id AS "trip_id!: TripId",
     t.fiskeridir_vessel_id AS "fiskeridir_vessel_id!: FiskeridirVesselId",
     t.fiskeridir_length_group_id AS "fiskeridir_length_group_id!: VesselLengthGroup",
-    t.period AS "period!",
-    t.period_precision,
-    t.landing_coverage AS "landing_coverage!",
+    t.period AS "period!: DateRange",
+    t.period_precision AS "period_precision: DateRange",
+    t.landing_coverage AS "landing_coverage!: DateRange",
     COALESCE(t.num_landings::BIGINT, 0) AS "num_deliveries!",
     COALESCE(t.landing_total_living_weight, 0.0) AS "total_living_weight!",
     COALESCE(t.landing_total_gross_weight, 0.0) AS "total_gross_weight!",
     COALESCE(t.landing_total_product_weight, 0.0) AS "total_product_weight!",
-    COALESCE(t.delivery_point_ids, '{}') AS "delivery_points!",
+    COALESCE(t.delivery_point_ids, '{}') AS "delivery_points!: Vec<DeliveryPointId>",
     COALESCE(t.landing_gear_ids, '{}') AS "gear_ids!: Vec<Gear>",
     COALESCE(t.landing_gear_group_ids, '{}') AS "gear_group_ids!: Vec<GearGroup>",
     COALESCE(t.landing_species_group_ids, '{}') AS "species_group_ids!: Vec<SpeciesGroup>",
@@ -845,7 +845,7 @@ SELECT
     t.trip_assembler_id AS "trip_assembler_id!: TripAssemblerId",
     COALESCE(t.vessel_events, '[]')::TEXT AS "vessel_events!",
     COALESCE(t.hauls, '[]')::TEXT AS "hauls!",
-    COALESCE(t.landing_ids, '{}') AS "landing_ids!",
+    COALESCE(t.landing_ids, '{}') AS "landing_ids!: Vec<LandingId>",
     COALESCE(t.fishing_facilities, '[]')::TEXT AS "fishing_facilities!",
     t.distance,
     t.cache_version,
@@ -893,14 +893,14 @@ SELECT
     t.trip_id AS "trip_id!: TripId",
     t.fiskeridir_vessel_id AS "fiskeridir_vessel_id!: FiskeridirVesselId",
     t.fiskeridir_length_group_id AS "fiskeridir_length_group_id!: VesselLengthGroup",
-    t.period AS "period!",
-    t.period_precision,
-    t.landing_coverage AS "landing_coverage!",
+    t.period AS "period!: DateRange",
+    t.period_precision AS "period_precision: DateRange",
+    t.landing_coverage AS "landing_coverage!: DateRange",
     COALESCE(t.num_landings::BIGINT, 0) AS "num_deliveries!",
     COALESCE(t.landing_total_living_weight, 0.0) AS "total_living_weight!",
     COALESCE(t.landing_total_gross_weight, 0.0) AS "total_gross_weight!",
     COALESCE(t.landing_total_product_weight, 0.0) AS "total_product_weight!",
-    COALESCE(t.delivery_point_ids, '{}') AS "delivery_points!",
+    COALESCE(t.delivery_point_ids, '{}') AS "delivery_points!: Vec<DeliveryPointId>",
     COALESCE(t.landing_gear_ids, '{}') AS "gear_ids!: Vec<Gear>",
     COALESCE(t.landing_gear_group_ids, '{}') AS "gear_group_ids!: Vec<GearGroup>",
     COALESCE(t.landing_species_group_ids, '{}') AS "species_group_ids!: Vec<SpeciesGroup>",
@@ -911,7 +911,7 @@ SELECT
     t.trip_assembler_id AS "trip_assembler_id!: TripAssemblerId",
     COALESCE(t.vessel_events, '[]')::TEXT AS "vessel_events!",
     COALESCE(t.hauls, '[]')::TEXT AS "hauls!",
-    COALESCE(t.landing_ids, '{}') AS "landing_ids!",
+    COALESCE(t.landing_ids, '{}') AS "landing_ids!: Vec<LandingId>",
     CASE
         WHEN $1 THEN COALESCE(t.fishing_facilities, '[]')::TEXT
         ELSE '[]'
@@ -946,14 +946,14 @@ SELECT
     t.trip_id AS "trip_id!: TripId",
     t.fiskeridir_vessel_id AS "fiskeridir_vessel_id!: FiskeridirVesselId",
     t.fiskeridir_length_group_id AS "fiskeridir_length_group_id!: VesselLengthGroup",
-    t.period AS "period!",
-    t.period_precision,
-    t.landing_coverage AS "landing_coverage!",
+    t.period AS "period!: DateRange",
+    t.period_precision AS "period_precision: DateRange",
+    t.landing_coverage AS "landing_coverage!: DateRange",
     COALESCE(t.num_landings::BIGINT, 0) AS "num_deliveries!",
     COALESCE(t.landing_total_living_weight, 0.0) AS "total_living_weight!",
     COALESCE(t.landing_total_gross_weight, 0.0) AS "total_gross_weight!",
     COALESCE(t.landing_total_product_weight, 0.0) AS "total_product_weight!",
-    COALESCE(t.delivery_point_ids, '{}') AS "delivery_points!",
+    COALESCE(t.delivery_point_ids, '{}') AS "delivery_points!: Vec<DeliveryPointId>",
     COALESCE(t.landing_gear_ids, '{}') AS "gear_ids!: Vec<Gear>",
     COALESCE(t.landing_gear_group_ids, '{}') AS "gear_group_ids!: Vec<GearGroup>",
     COALESCE(t.landing_species_group_ids, '{}') AS "species_group_ids!: Vec<SpeciesGroup>",
@@ -964,7 +964,7 @@ SELECT
     t.trip_assembler_id AS "trip_assembler_id!: TripAssemblerId",
     COALESCE(t.vessel_events, '[]')::TEXT AS "vessel_events!",
     COALESCE(t.hauls, '[]')::TEXT AS "hauls!",
-    COALESCE(t.landing_ids, '{}') AS "landing_ids!",
+    COALESCE(t.landing_ids, '{}') AS "landing_ids!: Vec<LandingId>",
     CASE
         WHEN $1 THEN COALESCE(t.fishing_facilities, '[]')::TEXT
         ELSE '[]'
@@ -1595,9 +1595,9 @@ WHERE
             r#"
 SELECT
     trip_id AS "trip_id!: TripId",
-    period,
-    period_precision,
-    landing_coverage,
+    period AS "period!: DateRange",
+    period_precision AS "period_precision: DateRange",
+    landing_coverage AS "landing_coverage!: DateRange",
     distance,
     trip_assembler_id AS "trip_assembler_id!: TripAssemblerId",
     start_port_id,
@@ -1633,9 +1633,9 @@ LIMIT
             r#"
 SELECT
     trip_id AS "trip_id!: TripId",
-    period,
-    period_precision,
-    landing_coverage,
+    period AS "period!: DateRange",
+    period_precision AS "period_precision: DateRange",
+    landing_coverage AS "landing_coverage!: DateRange",
     distance,
     trip_assembler_id AS "trip_assembler_id!: TripAssemblerId",
     start_port_id,
@@ -1661,18 +1661,18 @@ LIMIT
         Ok(trip)
     }
 
-    pub(crate) async fn trips_without_precision_impl(
+    pub(crate) fn trips_without_precision_impl(
         &self,
         vessel_id: FiskeridirVesselId,
-    ) -> Result<Vec<Trip>> {
-        let trips = sqlx::query_as!(
+    ) -> impl Stream<Item = Result<Trip>> + '_ {
+        sqlx::query_as!(
             Trip,
             r#"
 SELECT
     trip_id AS "trip_id!: TripId",
-    period,
-    period_precision,
-    landing_coverage,
+    period AS "period!: DateRange",
+    period_precision AS "period_precision: DateRange",
+    landing_coverage AS "landing_coverage!: DateRange",
     distance,
     trip_assembler_id AS "trip_assembler_id!: TripAssemblerId",
     start_port_id,
@@ -1688,24 +1688,22 @@ WHERE
             vessel_id.into_inner(),
             PrecisionStatus::Unprocessed.name(),
         )
-        .fetch_all(&self.pool)
-        .await?;
-
-        Ok(trips)
+        .fetch(&self.pool)
+        .map_err(|e| e.into())
     }
 
-    pub(crate) async fn trips_without_trip_layers_impl(
+    pub(crate) fn trips_without_trip_layers_impl(
         &self,
         vessel_id: FiskeridirVesselId,
-    ) -> Result<Vec<Trip>> {
-        let trips = sqlx::query_as!(
+    ) -> impl Stream<Item = Result<Trip>> + '_ {
+        sqlx::query_as!(
             Trip,
             r#"
 SELECT
     trip_id AS "trip_id!: TripId",
-    period,
-    period_precision,
-    landing_coverage,
+    period AS "period!: DateRange",
+    period_precision AS "period_precision: DateRange",
+    landing_coverage AS "landing_coverage!: DateRange",
     distance,
     trip_assembler_id AS "trip_assembler_id!: TripAssemblerId",
     start_port_id,
@@ -1721,24 +1719,22 @@ WHERE
             vessel_id.into_inner(),
             ProcessingStatus::Unprocessed as i32,
         )
-        .fetch_all(&self.pool)
-        .await?;
-
-        Ok(trips)
+        .fetch(&self.pool)
+        .map_err(|e| e.into())
     }
 
-    pub(crate) async fn trips_without_distance_impl(
+    pub(crate) fn trips_without_distance_impl(
         &self,
         vessel_id: FiskeridirVesselId,
-    ) -> Result<Vec<Trip>> {
-        let trips = sqlx::query_as!(
+    ) -> impl Stream<Item = Result<Trip>> + '_ {
+        sqlx::query_as!(
             Trip,
             r#"
 SELECT
     trip_id AS "trip_id!: TripId",
-    period,
-    period_precision,
-    landing_coverage,
+    period AS "period!: DateRange",
+    period_precision AS "period_precision: DateRange",
+    landing_coverage AS "landing_coverage!: DateRange",
     distance,
     trip_assembler_id AS "trip_assembler_id!: TripAssemblerId",
     start_port_id,
@@ -1753,10 +1749,8 @@ WHERE
             "#,
             vessel_id.into_inner(),
         )
-        .fetch_all(&self.pool)
-        .await?;
-
-        Ok(trips)
+        .fetch(&self.pool)
+        .map_err(|e| e.into())
     }
 
     pub(crate) async fn connect_trip_to_events<'a>(
