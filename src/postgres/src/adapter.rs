@@ -1,4 +1,4 @@
-use std::{pin::Pin, result::Result as StdResult};
+use std::result::Result as StdResult;
 
 use async_trait::async_trait;
 use chrono::{DateTime, NaiveDate, Utc};
@@ -12,7 +12,7 @@ use sqlx::{
 };
 use tracing::{error, info, instrument, warn};
 
-use crate::error::Result;
+use crate::error::{Error, Result};
 
 #[derive(Debug, Clone)]
 pub struct PostgresAdapter {
@@ -321,20 +321,14 @@ impl TestStorage for PostgresAdapter {}
 impl TestHelperOutbound for PostgresAdapter {
     async fn trip_assembler_log(&self) -> Vec<TripAssemblerLogEntry> {
         self.trip_assembler_log_impl()
+            .map(|v| v.unwrap().try_into().unwrap())
+            .collect()
             .await
-            .unwrap()
-            .into_iter()
-            .map(TripAssemblerLogEntry::try_from)
-            .collect::<StdResult<_, _>>()
-            .unwrap()
     }
     async fn active_vessel_conflicts(&self) -> Vec<ActiveVesselConflict> {
         self.active_vessel_conflicts_impl()
+            .try_collect()
             .await
-            .unwrap()
-            .into_iter()
-            .map(ActiveVesselConflict::try_from)
-            .collect::<std::result::Result<_, _>>()
             .unwrap()
     }
     async fn all_dep(&self) -> Vec<Departure> {
@@ -353,21 +347,12 @@ impl TestHelperOutbound for PostgresAdapter {
     }
     async fn all_vms(&self) -> Vec<VmsPosition> {
         self.all_vms_impl()
+            .map(|v| v.unwrap().into())
+            .collect()
             .await
-            .unwrap()
-            .into_iter()
-            .map(VmsPosition::try_from)
-            .collect::<StdResult<_, _>>()
-            .unwrap()
     }
     async fn all_ais_vms(&self) -> Vec<AisVmsPosition> {
-        self.all_ais_vms_impl()
-            .await
-            .unwrap()
-            .into_iter()
-            .map(AisVmsPosition::try_from)
-            .collect::<StdResult<_, _>>()
-            .unwrap()
+        self.all_ais_vms_impl().await.unwrap()
     }
     async fn port(&self, port_id: &str) -> Option<Port> {
         self.port_impl(port_id)
@@ -378,21 +363,10 @@ impl TestHelperOutbound for PostgresAdapter {
             .unwrap()
     }
     async fn delivery_point(&self, id: &DeliveryPointId) -> Option<DeliveryPoint> {
-        self.delivery_point_impl(id)
-            .await
-            .unwrap()
-            .map(DeliveryPoint::try_from)
-            .transpose()
-            .unwrap()
+        self.delivery_point_impl(id).await.unwrap()
     }
     async fn dock_points_of_port(&self, port_id: &str) -> Vec<PortDockPoint> {
-        self.dock_points_of_port_impl(port_id)
-            .await
-            .unwrap()
-            .into_iter()
-            .map(PortDockPoint::try_from)
-            .collect::<StdResult<_, _>>()
-            .unwrap()
+        self.dock_points_of_port_impl(port_id).await.unwrap()
     }
 }
 
@@ -524,7 +498,7 @@ impl WebApiOutboundPort for PostgresAdapter {
         date_limit: NaiveDate,
     ) -> PinBoxStream<'_, AisVmsAreaCount> {
         self.ais_vms_area_positions_impl(x1, x2, y1, y2, date_limit)
-            .map(|v| Ok(v?))
+            .convert()
             .boxed()
     }
     fn ais_positions(
@@ -542,7 +516,7 @@ impl WebApiOutboundPort for PostgresAdapter {
         call_sign: &CallSign,
         range: &DateRange,
     ) -> PinBoxStream<'_, VmsPosition> {
-        convert_stream(self.vms_positions_impl(call_sign, range)).boxed()
+        self.vms_positions_impl(call_sign, range).convert().boxed()
     }
 
     fn ais_vms_positions(
@@ -566,27 +540,23 @@ impl WebApiOutboundPort for PostgresAdapter {
         }
     }
     fn species(&self) -> PinBoxStream<'_, Species> {
-        self.species_impl()
-            .map_ok(From::from)
-            .map_err(|e| e.into())
-            .boxed()
+        self.species_impl().convert().boxed()
     }
     fn species_fiskeridir(&self) -> PinBoxStream<'_, SpeciesFiskeridir> {
-        self.species_fiskeridir_impl()
-            .map_ok(From::from)
-            .map_err(|e| e.into())
-            .boxed()
+        self.species_fiskeridir_impl().convert().boxed()
     }
     fn species_fao(&self) -> PinBoxStream<'_, SpeciesFao> {
         self.species_fao_impl().map_err(|e| e.into()).boxed()
     }
 
-    fn vessels(&self) -> Pin<Box<dyn Stream<Item = CoreResult<Vessel>> + Send + '_>> {
-        convert_stream(self.fiskeridir_ais_vessel_combinations()).boxed()
+    fn vessels(&self) -> PinBoxStream<'_, Vessel> {
+        self.fiskeridir_ais_vessel_combinations()
+            .try_convert()
+            .boxed()
     }
 
     fn hauls(&self, query: HaulsQuery) -> PinBoxStream<'_, Haul> {
-        convert_stream(self.hauls_impl(query)).boxed()
+        self.hauls_impl(query).try_convert().boxed()
     }
 
     async fn vessel_benchmarks(
@@ -609,8 +579,9 @@ impl WebApiOutboundPort for PostgresAdapter {
         query: TripsQuery,
         read_fishing_facility: bool,
     ) -> PinBoxStream<'_, TripDetailed> {
-        let stream = self.detailed_trips_impl(query, read_fishing_facility);
-        convert_stream(stream).boxed()
+        self.detailed_trips_impl(query, read_fishing_facility)
+            .try_convert()
+            .boxed()
     }
     async fn detailed_trip_of_haul(
         &self,
@@ -645,8 +616,7 @@ impl WebApiOutboundPort for PostgresAdapter {
     }
 
     fn landings(&self, query: LandingsQuery) -> PinBoxStream<'_, Landing> {
-        let stream = self.landings_impl(query);
-        convert_stream(stream).boxed()
+        self.landings_impl(query).try_convert().boxed()
     }
 
     async fn landing_matrix(&self, query: &LandingMatrixQuery) -> CoreResult<LandingMatrix> {
@@ -675,7 +645,7 @@ impl WebApiOutboundPort for PostgresAdapter {
     }
 
     fn weather_locations(&self) -> PinBoxStream<'_, WeatherLocation> {
-        convert_stream(self.weather_locations_impl()).boxed()
+        self.weather_locations_impl().try_convert().boxed()
     }
 
     async fn fishing_spot_prediction(
@@ -861,7 +831,7 @@ impl ScraperFileHashOutboundPort for PostgresAdapter {
 #[async_trait]
 impl TripAssemblerOutboundPort for PostgresAdapter {
     async fn ports(&self) -> CoreResult<Vec<Port>> {
-        convert_vec(self.ports_impl().await?)
+        self.ports_impl().try_convert_collect().await
     }
 
     async fn dock_points(&self) -> CoreResult<Vec<PortDockPoint>> {
@@ -869,8 +839,8 @@ impl TripAssemblerOutboundPort for PostgresAdapter {
     }
 
     async fn all_vessels(&self) -> CoreResult<Vec<Vessel>> {
-        convert_stream(self.fiskeridir_ais_vessel_combinations())
-            .try_collect()
+        self.fiskeridir_ais_vessel_combinations()
+            .try_convert_collect()
             .await
     }
     async fn trip_calculation_timer(
@@ -907,10 +877,18 @@ impl TripAssemblerOutboundPort for PostgresAdapter {
         period: &QueryRange,
         event_types: RelevantEventType,
     ) -> CoreResult<Vec<VesselEventDetailed>> {
-        convert_vec(match event_types {
-            RelevantEventType::Landing => self.landing_events(vessel_id, period).await,
-            RelevantEventType::ErsPorAndDep => self.ers_por_and_dep_events(vessel_id, period).await,
-        }?)
+        match event_types {
+            RelevantEventType::Landing => {
+                self.landing_events(vessel_id, period)
+                    .try_convert_collect()
+                    .await
+            }
+            RelevantEventType::ErsPorAndDep => {
+                self.ers_por_and_dep_events(vessel_id, period)
+                    .try_convert_collect()
+                    .await
+            }
+        }
     }
 }
 
@@ -922,10 +900,9 @@ impl TripPrecisionOutboundPort for PostgresAdapter {
         call_sign: Option<&CallSign>,
         range: &DateRange,
     ) -> CoreResult<Vec<AisVmsPosition>> {
-        Ok(self
-            .ais_vms_positions_impl(mmsi, call_sign, range, AisPermission::All)
-            .try_collect()
-            .await?)
+        self.ais_vms_positions_impl(mmsi, call_sign, range, AisPermission::All)
+            .convert_collect()
+            .await
     }
     async fn delivery_points_associated_with_trip(
         &self,
@@ -941,8 +918,8 @@ impl TripPrecisionOutboundPort for PostgresAdapter {
 #[async_trait]
 impl TripBenchmarkOutbound for PostgresAdapter {
     async fn vessels(&self) -> CoreResult<Vec<Vessel>> {
-        convert_stream(self.fiskeridir_ais_vessel_combinations())
-            .try_collect()
+        self.fiskeridir_ais_vessel_combinations()
+            .try_convert_collect()
             .await
     }
     async fn trips_with_landing_weight(
@@ -979,16 +956,15 @@ impl HaulDistributorInbound for PostgresAdapter {
 #[async_trait]
 impl HaulDistributorOutbound for PostgresAdapter {
     async fn vessels(&self) -> CoreResult<Vec<Vessel>> {
-        convert_stream(self.fiskeridir_ais_vessel_combinations())
-            .try_collect()
+        self.fiskeridir_ais_vessel_combinations()
+            .try_convert_collect()
             .await
     }
 
     async fn catch_locations(&self) -> CoreResult<Vec<CatchLocation>> {
-        convert_vec(
-            self.catch_locations_impl(WeatherLocationOverlap::All)
-                .await?,
-        )
+        self.catch_locations_impl(WeatherLocationOverlap::All)
+            .try_convert_collect()
+            .await
     }
 
     async fn haul_messages_of_vessel(
@@ -1004,10 +980,9 @@ impl HaulDistributorOutbound for PostgresAdapter {
         call_sign: Option<&CallSign>,
         range: &DateRange,
     ) -> CoreResult<Vec<AisVmsPosition>> {
-        Ok(self
-            .ais_vms_positions_impl(mmsi, call_sign, range, AisPermission::All)
-            .try_collect()
-            .await?)
+        self.ais_vms_positions_impl(mmsi, call_sign, range, AisPermission::All)
+            .convert_collect()
+            .await
     }
 }
 
@@ -1017,28 +992,22 @@ impl TripPipelineOutbound for PostgresAdapter {
         &self,
         vessel_id: FiskeridirVesselId,
     ) -> CoreResult<Vec<Trip>> {
-        Ok(self
-            .trips_without_trip_layers_impl(vessel_id)
-            .map_ok(From::from)
-            .try_collect()
-            .await?)
+        self.trips_without_trip_layers_impl(vessel_id)
+            .convert_collect()
+            .await
     }
     async fn trips_without_distance(&self, vessel_id: FiskeridirVesselId) -> CoreResult<Vec<Trip>> {
-        Ok(self
-            .trips_without_distance_impl(vessel_id)
-            .map_ok(From::from)
-            .try_collect()
-            .await?)
+        self.trips_without_distance_impl(vessel_id)
+            .convert_collect()
+            .await
     }
     async fn trips_without_precision(
         &self,
         vessel_id: FiskeridirVesselId,
     ) -> CoreResult<Vec<Trip>> {
-        Ok(self
-            .trips_without_precision_impl(vessel_id)
-            .map_ok(From::from)
-            .try_collect()
-            .await?)
+        self.trips_without_precision_impl(vessel_id)
+            .convert_collect()
+            .await
     }
 }
 
@@ -1111,7 +1080,9 @@ impl MLModelsOutbound for PostgresAdapter {
         &self,
         overlap: WeatherLocationOverlap,
     ) -> CoreResult<Vec<CatchLocation>> {
-        convert_vec(self.catch_locations_impl(overlap).await?)
+        self.catch_locations_impl(overlap)
+            .try_convert_collect()
+            .await
     }
 
     async fn model(&self, model_id: ModelId, species: SpeciesGroup) -> CoreResult<Vec<u8>> {
@@ -1126,19 +1097,16 @@ impl MLModelsOutbound for PostgresAdapter {
         bycatch_percentage: Option<f64>,
         majority_species_group: bool,
     ) -> CoreResult<Vec<WeightPredictorTrainingData>> {
-        Ok(self
-            .fishing_weight_predictor_training_data_impl(
-                model_id,
-                species,
-                weather_data,
-                limit,
-                bycatch_percentage,
-                majority_species_group,
-            )
-            .await?
-            .into_iter()
-            .map(WeightPredictorTrainingData::from)
-            .collect())
+        self.fishing_weight_predictor_training_data_impl(
+            model_id,
+            species,
+            weather_data,
+            limit,
+            bycatch_percentage,
+            majority_species_group,
+        )
+        .convert_collect()
+        .await
     }
 
     async fn fishing_spot_predictor_training_data(
@@ -1204,7 +1172,9 @@ impl MLModelsInbound for PostgresAdapter {
         &self,
         overlap: WeatherLocationOverlap,
     ) -> CoreResult<Vec<CatchLocation>> {
-        convert_vec(self.catch_locations_impl(overlap).await?)
+        self.catch_locations_impl(overlap)
+            .try_convert_collect()
+            .await
     }
     async fn add_fishing_spot_predictions(
         &self,
@@ -1233,8 +1203,8 @@ impl HaulWeatherInbound for PostgresAdapter {
 #[async_trait]
 impl HaulWeatherOutbound for PostgresAdapter {
     async fn all_vessels(&self) -> CoreResult<Vec<Vessel>> {
-        convert_stream(self.fiskeridir_ais_vessel_combinations())
-            .try_collect()
+        self.fiskeridir_ais_vessel_combinations()
+            .try_convert_collect()
             .await
     }
     async fn haul_messages_of_vessel_without_weather(
@@ -1251,15 +1221,12 @@ impl HaulWeatherOutbound for PostgresAdapter {
         call_sign: Option<&CallSign>,
         range: &DateRange,
     ) -> CoreResult<Vec<AisVmsPosition>> {
-        Ok(self
-            .ais_vms_positions_impl(mmsi, call_sign, range, AisPermission::All)
-            .try_collect()
-            .await?)
+        self.ais_vms_positions_impl(mmsi, call_sign, range, AisPermission::All)
+            .convert_collect()
+            .await
     }
     async fn weather_locations(&self) -> CoreResult<Vec<WeatherLocation>> {
-        convert_stream(self.weather_locations_impl())
-            .try_collect()
-            .await
+        self.weather_locations_impl().try_convert_collect().await
     }
     async fn haul_weather(&self, query: WeatherQuery) -> CoreResult<Option<HaulWeather>> {
         Ok(self.haul_weather_impl(query).await?)
@@ -1275,13 +1242,17 @@ impl HaulWeatherOutbound for PostgresAdapter {
 #[async_trait]
 impl MeilisearchSource for PostgresAdapter {
     async fn trips_by_ids(&self, trip_ids: &[TripId]) -> CoreResult<Vec<TripDetailed>> {
-        convert_vec(self.detailed_trips_by_ids_impl(trip_ids).await?)
+        self.detailed_trips_by_ids_impl(trip_ids)
+            .try_convert_collect()
+            .await
     }
     async fn hauls_by_ids(&self, haul_ids: &[HaulId]) -> CoreResult<Vec<Haul>> {
-        convert_vec(self.hauls_by_ids_impl(haul_ids).await?)
+        self.hauls_by_ids_impl(haul_ids).try_convert_collect().await
     }
     async fn landings_by_ids(&self, landing_ids: &[LandingId]) -> CoreResult<Vec<Landing>> {
-        convert_vec(self.landings_by_ids_impl(landing_ids).await?)
+        self.landings_by_ids_impl(landing_ids)
+            .try_convert_collect()
+            .await
     }
     async fn all_trip_versions(&self) -> CoreResult<Vec<(TripId, i64)>> {
         Ok(self.all_trip_cache_versions_impl().await?)
@@ -1294,13 +1265,46 @@ impl MeilisearchSource for PostgresAdapter {
     }
 }
 
-pub(crate) fn convert_stream<I, A, B>(input: I) -> impl Stream<Item = CoreResult<B>>
+#[async_trait]
+pub(crate) trait Convert<T, E> {
+    fn convert(self) -> impl Stream<Item = StdResult<T, E>>;
+    async fn convert_collect(self) -> StdResult<Vec<T>, E>;
+}
+
+#[async_trait]
+pub(crate) trait TryConvert<T, E> {
+    fn try_convert(self) -> impl Stream<Item = StdResult<T, E>>;
+    async fn try_convert_collect(self) -> StdResult<Vec<T>, E>;
+}
+
+#[async_trait]
+impl<S, T, O, E> Convert<O, E> for S
 where
-    I: Stream<Item = Result<A>>,
-    B: TryFrom<A>,
-    B: std::convert::TryFrom<A, Error = crate::error::Error>,
+    S: Stream<Item = Result<T>> + Send,
+    O: From<T> + Send,
+    E: From<Error>,
 {
-    input.map(|i| Ok(i.map(B::try_from)??))
+    fn convert(self) -> impl Stream<Item = StdResult<O, E>> {
+        self.map_ok(From::from).map_err(|e| e.into())
+    }
+    async fn convert_collect(self) -> StdResult<Vec<O>, E> {
+        self.convert().try_collect().await
+    }
+}
+
+#[async_trait]
+impl<S, T, O, E> TryConvert<O, E> for S
+where
+    S: Stream<Item = Result<T>> + Send,
+    O: TryFrom<T, Error = Error> + Send,
+    E: From<Error>,
+{
+    fn try_convert(self) -> impl Stream<Item = StdResult<O, E>> {
+        self.map(|v| Ok(v?.try_into()?))
+    }
+    async fn try_convert_collect(self) -> StdResult<Vec<O>, E> {
+        self.try_convert().try_collect().await
+    }
 }
 
 pub(crate) fn convert_optional<A, B>(val: Option<A>) -> CoreResult<Option<B>>
@@ -1308,14 +1312,4 @@ where
     B: std::convert::TryFrom<A, Error = crate::error::Error>,
 {
     Ok(val.map(B::try_from).transpose()?)
-}
-
-pub(crate) fn convert_vec<A, B>(val: Vec<A>) -> CoreResult<Vec<B>>
-where
-    B: std::convert::TryFrom<A, Error = crate::error::Error>,
-{
-    Ok(val
-        .into_iter()
-        .map(B::try_from)
-        .collect::<std::result::Result<Vec<_>, <B as std::convert::TryFrom<A>>::Error>>()?)
 }

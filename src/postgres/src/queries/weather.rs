@@ -75,11 +75,10 @@ FROM
     weather_locations
             "#,
         )
-        .fetch_all(&mut **tx)
-        .await?
-        .into_iter()
-        .map(|v| v.id)
-        .collect())
+        .fetch(&mut **tx)
+        .map_ok(|v| v.id)
+        .try_collect()
+        .await?)
     }
 
     pub(crate) async fn catch_locations_weather_impl(
@@ -324,11 +323,10 @@ FROM
     daily_weather_dirty
             "#
         )
-        .fetch_all(&self.pool)
-        .await?
-        .into_iter()
-        .map(|v| v.date)
-        .collect())
+        .fetch(&self.pool)
+        .map_ok(|v| v.date)
+        .try_collect()
+        .await?)
     }
 
     pub(crate) fn weather_impl(

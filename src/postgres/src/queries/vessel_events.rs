@@ -1,14 +1,15 @@
 use crate::{error::Result, models::VesselEventDetailed, PostgresAdapter};
+use futures::{Stream, TryStreamExt};
 use kyogre_core::{FiskeridirVesselId, QueryRange, VesselEventType};
 use sqlx::postgres::types::PgRange;
 
 impl PostgresAdapter {
-    pub(crate) async fn landing_events(
+    pub(crate) fn landing_events(
         &self,
         vessel_id: FiskeridirVesselId,
         period: &QueryRange,
-    ) -> Result<Vec<VesselEventDetailed>> {
-        let events = sqlx::query_as!(
+    ) -> impl Stream<Item = Result<VesselEventDetailed>> + '_ {
+        sqlx::query_as!(
             VesselEventDetailed,
             r#"
 SELECT
@@ -34,18 +35,16 @@ ORDER BY
             VesselEventType::Landing as i32,
             PgRange::from(period),
         )
-        .fetch_all(&self.pool)
-        .await?;
-
-        Ok(events)
+        .fetch(&self.pool)
+        .map_err(|e| e.into())
     }
 
-    pub(crate) async fn ers_por_and_dep_events(
+    pub(crate) fn ers_por_and_dep_events(
         &self,
         vessel_id: FiskeridirVesselId,
         period: &QueryRange,
-    ) -> Result<Vec<VesselEventDetailed>> {
-        let events = sqlx::query_as!(
+    ) -> impl Stream<Item = Result<VesselEventDetailed>> + '_ {
+        sqlx::query_as!(
             VesselEventDetailed,
             r#"
 SELECT
@@ -104,10 +103,8 @@ ORDER BY
             vessel_id.into_inner(),
             PgRange::from(period),
         )
-        .fetch_all(&self.pool)
-        .await?;
-
-        Ok(events)
+        .fetch(&self.pool)
+        .map_err(|e| e.into())
     }
 
     pub(crate) async fn dangling_vessel_events(&self) -> Result<i64> {

@@ -1,27 +1,16 @@
 use chrono::{DateTime, Utc};
 use kyogre_core::{FiskeridirVesselId, VesselEventData, VesselEventType};
+use serde::Deserialize;
 
 use crate::error::{Error, MissingValueSnafu};
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Deserialize)]
 pub struct VesselEvent {
     pub vessel_event_id: i64,
     pub fiskeridir_vessel_id: FiskeridirVesselId,
     pub report_timestamp: DateTime<Utc>,
     pub occurence_timestamp: Option<DateTime<Utc>>,
     pub vessel_event_type_id: VesselEventType,
-}
-
-impl From<VesselEvent> for kyogre_core::VesselEvent {
-    fn from(v: VesselEvent) -> kyogre_core::VesselEvent {
-        kyogre_core::VesselEvent {
-            event_id: v.vessel_event_id as u64,
-            vessel_id: v.fiskeridir_vessel_id,
-            report_timestamp: v.report_timestamp,
-            event_type: v.vessel_event_type_id,
-            occurence_timestamp: v.occurence_timestamp,
-        }
-    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -35,6 +24,18 @@ pub struct VesselEventDetailed {
     pub arrival_port_id: Option<String>,
     pub port_id: Option<String>,
     pub estimated_timestamp: Option<DateTime<Utc>>,
+}
+
+impl From<VesselEvent> for kyogre_core::VesselEvent {
+    fn from(v: VesselEvent) -> kyogre_core::VesselEvent {
+        Self {
+            event_id: v.vessel_event_id as u64,
+            vessel_id: v.fiskeridir_vessel_id,
+            report_timestamp: v.report_timestamp,
+            event_type: v.vessel_event_type_id,
+            occurence_timestamp: v.occurence_timestamp,
+        }
+    }
 }
 
 impl TryFrom<VesselEventDetailed> for kyogre_core::VesselEventDetailed {

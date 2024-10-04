@@ -352,7 +352,7 @@ LIMIT
             "#,
             args.mmsis.as_deref() as Option<&[Mmsi]>,
             args.fiskeridir_vessel_ids as _,
-            args.tool_types as _,
+            args.tool_types as Option<Vec<FishingFacilityToolType>>,
             args.active,
             args.setup_ranges.as_deref(),
             args.removed_ranges.as_deref(),
@@ -397,7 +397,7 @@ LIMIT
 pub struct FishingFacilitiesArgs {
     pub mmsis: Option<Vec<Mmsi>>,
     pub fiskeridir_vessel_ids: Option<Vec<FiskeridirVesselId>>,
-    pub tool_types: Option<Vec<i32>>,
+    pub tool_types: Option<Vec<FishingFacilityToolType>>,
     pub active: Option<bool>,
     pub setup_ranges: Option<Vec<PgRange<DateTime<Utc>>>>,
     pub removed_ranges: Option<Vec<PgRange<DateTime<Utc>>>>,
@@ -412,9 +412,7 @@ impl From<FishingFacilitiesQuery> for FishingFacilitiesArgs {
         Self {
             mmsis: v.mmsis,
             fiskeridir_vessel_ids: v.fiskeridir_vessel_ids,
-            tool_types: v
-                .tool_types
-                .map(|ts| ts.into_iter().map(|t| t as i32).collect()),
+            tool_types: v.tool_types,
             active: v.active,
             setup_ranges: v.setup_ranges.map(|ss| {
                 ss.into_iter()

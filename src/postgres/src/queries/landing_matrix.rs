@@ -2,17 +2,18 @@ use crate::error::Result;
 use crate::models::LandingMatrixQueryOutput;
 use crate::{models::LandingMatrixArgs, PostgresAdapter};
 use fiskeridir_rs::{GearGroup, SpeciesGroup, VesselLengthGroup};
+use futures::TryStreamExt;
 use kyogre_core::{
     calculate_landing_sum_area_table, ActiveLandingFilter, CatchLocationId, FiskeridirVesselId,
-    LandingMatrixXFeature, LandingMatrixYFeature,
+    LandingMatrix, LandingMatrixQuery, LandingMatrixXFeature, LandingMatrixYFeature,
 };
 use sqlx::{Pool, Postgres};
 
 impl PostgresAdapter {
     pub(crate) async fn landing_matrix_impl(
         &self,
-        query: &kyogre_core::LandingMatrixQuery,
-    ) -> Result<kyogre_core::LandingMatrix> {
+        query: &LandingMatrixQuery,
+    ) -> Result<LandingMatrix> {
         let active_filter = query.active_filter;
         let args = LandingMatrixArgs::from(query.clone());
 
@@ -43,7 +44,7 @@ impl PostgresAdapter {
 
         let (dates, length_group, gear_group, species_group) = tokio::join!(j1, j2, j3, j4);
 
-        Ok(kyogre_core::LandingMatrix {
+        Ok(LandingMatrix {
             dates: dates??,
             length_group: length_group??,
             gear_group: gear_group??,
@@ -63,7 +64,7 @@ impl PostgresAdapter {
             LandingMatrixYFeature::from(active_filter)
         };
 
-        let data: Vec<LandingMatrixQueryOutput> = sqlx::query_as!(
+        let data = sqlx::query_as!(
             LandingMatrixQueryOutput,
             r#"
 SELECT
@@ -130,15 +131,12 @@ GROUP BY
             args.vessel_length_groups as Option<Vec<VesselLengthGroup>>,
             args.fiskeridir_vessel_ids as Option<Vec<FiskeridirVesselId>>,
         )
-        .fetch_all(&pool)
+        .fetch(&pool)
+        .map_ok(From::from)
+        .try_collect()
         .await?;
 
-        let converted: Vec<kyogre_core::LandingMatrixQueryOutput> = data
-            .into_iter()
-            .map(kyogre_core::LandingMatrixQueryOutput::from)
-            .collect();
-
-        let table = calculate_landing_sum_area_table(x_feature, y_feature, converted)?;
+        let table = calculate_landing_sum_area_table(x_feature, y_feature, data)?;
 
         Ok(table)
     }

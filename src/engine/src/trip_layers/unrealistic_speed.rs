@@ -74,7 +74,7 @@ fn estimated_speed_between_points(first: &AisVmsPosition, second: &AisVmsPositio
         DistanceEstimationSnafu {
             from: first_loc,
             to: second_loc,
-            error_stringified: e.clone(),
+            error_stringified: e,
         }
         .build()
     })?;
