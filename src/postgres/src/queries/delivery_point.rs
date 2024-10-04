@@ -2,13 +2,13 @@ use std::collections::{hash_map::Entry, HashMap};
 
 use fiskeridir_rs::DeliveryPointId;
 use futures::{Stream, TryStreamExt};
-use kyogre_core::{DateRange, FiskeridirVesselId};
+use kyogre_core::{DateRange, DeliveryPoint, FiskeridirVesselId};
 use sqlx::postgres::types::PgRange;
 
 use crate::{
     error::Result,
     models::{
-        AquaCultureEntry, AquaCultureSpecies, AquaCultureTill, DeliveryPoint, ManualDeliveryPoint,
+        AquaCultureEntry, AquaCultureSpecies, AquaCultureTill, ManualDeliveryPoint,
         MattilsynetDeliveryPoint, NewDeliveryPointId, NewSpeciesFiskeridir,
     },
     PostgresAdapter,
@@ -25,7 +25,7 @@ impl PostgresAdapter {
             DeliveryPoint,
             r#"
 SELECT
-    COALESCE(d.delivery_point_id, d.delivery_point_id) AS "delivery_point_id!",
+    COALESCE(d.delivery_point_id, d.delivery_point_id) AS "id!: DeliveryPointId",
     COALESCE(m.name, a.name, mt.name) AS NAME,
     COALESCE(m.address, a.address, mt.address) AS address,
     COALESCE(m.latitude, a.latitude) AS latitude,
@@ -105,7 +105,7 @@ FROM
             DeliveryPoint,
             r#"
 SELECT
-    COALESCE(d.delivery_point_id, d.delivery_point_id) AS "delivery_point_id!",
+    COALESCE(d.delivery_point_id, d.delivery_point_id) AS "id!: DeliveryPointId",
     COALESCE(m.name, a.name, mt.name) AS NAME,
     COALESCE(m.address, a.address, mt.address) AS address,
     COALESCE(m.latitude, a.latitude) AS latitude,
@@ -118,7 +118,7 @@ FROM
             "#
         )
         .fetch(&self.pool)
-        .map_err(From::from)
+        .map_err(|e| e.into())
     }
 
     pub(crate) async fn add_aqua_culture_register_impl(
@@ -204,7 +204,7 @@ FROM
             DeliveryPoint,
             r#"
 SELECT
-    d.delivery_point_id AS "delivery_point_id!",
+    d.delivery_point_id AS "id!: DeliveryPointId",
     COALESCE(m.name, a.name, mt.name) AS NAME,
     COALESCE(m.address, a.address, mt.address) AS address,
     COALESCE(m.latitude, a.latitude) AS latitude,

@@ -3,10 +3,7 @@ use fiskeridir_rs::SpeciesGroup;
 use kyogre_core::{CatchLocationId, HaulId, ModelId};
 use unnest_insert::UnnestInsert;
 
-use crate::{
-    error::Error,
-    queries::{type_to_i32, type_to_i64},
-};
+use crate::queries::{type_to_i32, type_to_i64};
 
 #[derive(Debug, Clone, UnnestInsert)]
 #[unnest_insert(
@@ -18,7 +15,8 @@ pub struct NewFishingSpotPrediction {
     pub latitude: f64,
     #[unnest_insert(update)]
     pub longitude: f64,
-    pub species_group_id: i32,
+    #[unnest_insert(sql_type = "INT", type_conversion = "type_to_i32")]
+    pub species_group_id: SpeciesGroup,
     pub date: NaiveDate,
     #[unnest_insert(sql_type = "INT", type_conversion = "type_to_i32")]
     pub ml_model_id: ModelId,
@@ -37,14 +35,6 @@ pub struct NewFishingWeightPrediction {
     pub date: NaiveDate,
     #[unnest_insert(sql_type = "INT", type_conversion = "type_to_i32")]
     pub ml_model_id: ModelId,
-}
-
-#[derive(Debug, Clone)]
-pub struct FishingWeightPrediction {
-    pub catch_location_id: String,
-    pub weight: f64,
-    pub species_group_id: SpeciesGroup,
-    pub date: NaiveDate,
 }
 
 #[derive(Debug, Clone)]
@@ -78,20 +68,6 @@ pub struct MLTrainingLog {
     pub catch_location_id: String,
 }
 
-impl TryFrom<FishingWeightPrediction> for kyogre_core::FishingWeightPrediction {
-    type Error = Error;
-
-    fn try_from(value: FishingWeightPrediction) -> std::result::Result<Self, Self::Error> {
-        let catch_location_id = value.catch_location_id.parse()?;
-        Ok(Self {
-            catch_location_id,
-            weight: value.weight,
-            species_group_id: value.species_group_id,
-            date: value.date,
-        })
-    }
-}
-
 impl From<WeightPredictorTrainingData> for kyogre_core::WeightPredictorTrainingData {
     fn from(v: WeightPredictorTrainingData) -> Self {
         Self {
@@ -121,7 +97,7 @@ impl From<kyogre_core::NewFishingSpotPrediction> for NewFishingSpotPrediction {
         Self {
             latitude: value.latitude,
             longitude: value.longitude,
-            species_group_id: value.species.into(),
+            species_group_id: value.species,
             date: value.date,
             ml_model_id: value.model,
         }

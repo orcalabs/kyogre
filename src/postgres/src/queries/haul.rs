@@ -1,9 +1,10 @@
-use crate::{error::Result, models::Haul, models::HaulMessage, PostgresAdapter};
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::{Gear, GearGroup, SpeciesGroup, VesselLengthGroup};
 use futures::{Stream, TryStreamExt};
 use kyogre_core::*;
 use sqlx::{postgres::types::PgRange, Pool, Postgres};
+
+use crate::{error::Result, models::Haul, PostgresAdapter};
 
 impl PostgresAdapter {
     pub(crate) async fn hauls_matrix_impl(&self, query: &HaulsMatrixQuery) -> Result<HaulsMatrix> {
@@ -153,8 +154,8 @@ SELECT
     h.ers_activity_id,
     h.duration,
     h.haul_distance,
-    h.catch_location_start,
-    h.catch_locations,
+    h.catch_location_start AS "catch_location_start?: CatchLocationId",
+    h.catch_locations AS "catch_locations?: Vec<CatchLocationId>",
     h.ocean_depth_end,
     h.ocean_depth_start,
     h.quota_type_id,
@@ -273,7 +274,7 @@ ORDER BY
             args.sorting,
         )
         .fetch(&self.pool)
-        .map_err(From::from)
+        .map_err(|e| e.into())
     }
 
     pub(crate) async fn hauls_by_ids_impl(&self, haul_ids: &[HaulId]) -> Result<Vec<Haul>> {
@@ -285,8 +286,8 @@ SELECT
     ers_activity_id,
     duration,
     haul_distance,
-    catch_location_start,
-    catch_locations,
+    catch_location_start AS "catch_location_start?: CatchLocationId",
+    catch_locations AS "catch_locations?: Vec<CatchLocationId>",
     ocean_depth_end,
     ocean_depth_start,
     quota_type_id,
@@ -361,7 +362,6 @@ FROM
             r#"
 SELECT DISTINCT
     h.haul_id AS "haul_id!: HaulId",
-    h.message_id,
     h.start_timestamp,
     h.stop_timestamp
 FROM
@@ -393,7 +393,6 @@ WHERE
             r#"
 SELECT
     haul_id AS "haul_id!: HaulId",
-    message_id,
     start_timestamp,
     stop_timestamp
 FROM

@@ -1,18 +1,8 @@
 use chrono::NaiveDate;
-use fiskeridir_rs::DeliveryPointId;
 use kyogre_core::DeliveryPointType;
 use unnest_insert::UnnestInsert;
 
-use crate::{error::Error, queries::type_to_i32};
-
-#[derive(Debug, Clone)]
-pub struct DeliveryPoint {
-    pub delivery_point_id: String,
-    pub name: Option<String>,
-    pub address: Option<String>,
-    pub latitude: Option<f64>,
-    pub longitude: Option<f64>,
-}
+use crate::queries::type_to_i32;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, UnnestInsert)]
 #[unnest_insert(table_name = "delivery_point_ids", conflict = "delivery_point_id")]
@@ -102,20 +92,6 @@ pub struct MattilsynetDeliveryPoint<'a> {
     pub address: Option<&'a str>,
     pub postal_city: Option<&'a str>,
     pub postal_code: Option<i32>,
-}
-
-impl TryFrom<DeliveryPoint> for kyogre_core::DeliveryPoint {
-    type Error = Error;
-
-    fn try_from(v: DeliveryPoint) -> Result<Self, Self::Error> {
-        Ok(Self {
-            id: DeliveryPointId::try_from(v.delivery_point_id)?,
-            name: v.name,
-            address: v.address,
-            latitude: v.latitude,
-            longitude: v.longitude,
-        })
-    }
 }
 
 impl<'a> From<&'a fiskeridir_rs::DeliveryPointId> for NewDeliveryPointId<'a> {

@@ -6,7 +6,9 @@ use crate::{
 };
 use async_trait::async_trait;
 use chrono::{TimeZone, Utc};
-use fiskeridir_rs::{DeliveryPointId, Gear, GearGroup, LandingId, SpeciesGroup, VesselLengthGroup};
+use fiskeridir_rs::{
+    CallSign, DeliveryPointId, Gear, GearGroup, LandingId, SpeciesGroup, VesselLengthGroup,
+};
 use kyogre_core::{CatchLocationId, FiskeridirVesselId, LandingCatch, MeilisearchSource};
 use serde::{Deserialize, Serialize};
 
@@ -22,7 +24,7 @@ pub struct Landing {
     pub species_group_ids: Vec<SpeciesGroup>,
     pub delivery_point_id: Option<DeliveryPointId>,
     pub fiskeridir_vessel_id: Option<FiskeridirVesselId>,
-    pub vessel_call_sign: Option<String>,
+    pub vessel_call_sign: Option<CallSign>,
     pub vessel_name: Option<String>,
     pub vessel_length: Option<f64>,
     pub vessel_length_group: VesselLengthGroup,
@@ -96,7 +98,7 @@ impl TryFrom<kyogre_core::Landing> for Landing {
 
     fn try_from(v: kyogre_core::Landing) -> std::result::Result<Self, Self::Error> {
         Ok(Self {
-            landing_id: v.landing_id,
+            landing_id: v.id,
             landing_timestamp: to_nanos(v.landing_timestamp)?,
             catch_location: v.catch_location,
             gear_id: v.gear_id,
@@ -120,7 +122,7 @@ impl TryFrom<kyogre_core::Landing> for Landing {
 impl From<Landing> for kyogre_core::Landing {
     fn from(v: Landing) -> Self {
         Self {
-            landing_id: v.landing_id,
+            id: v.landing_id,
             landing_timestamp: Utc.timestamp_nanos(v.landing_timestamp),
             catch_location: v.catch_location,
             gear_id: v.gear_id,

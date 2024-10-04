@@ -1,9 +1,10 @@
+use fiskeridir_rs::CallSign;
 use futures::{Stream, TryStreamExt};
-use kyogre_core::{BarentswatchUserId, FuelMeasurementsQuery};
+use kyogre_core::{BarentswatchUserId, FuelMeasurement, FuelMeasurementsQuery};
 
 use crate::{
     error::Result,
-    models::{DeleteFuelMeasurement, FuelMeasurement, UpsertFuelMeasurement},
+    models::{DeleteFuelMeasurement, UpsertFuelMeasurement},
     PostgresAdapter,
 };
 
@@ -17,7 +18,7 @@ impl PostgresAdapter {
             r#"
 SELECT
     barentswatch_user_id AS "barentswatch_user_id!: BarentswatchUserId",
-    call_sign,
+    call_sign AS "call_sign!: CallSign",
     timestamp,
     fuel
 FROM
@@ -42,7 +43,7 @@ ORDER BY
             query.end_date,
         )
         .fetch(&self.pool)
-        .map_err(From::from)
+        .map_err(|e| e.into())
     }
 
     pub(crate) async fn add_fuel_measurements_impl(

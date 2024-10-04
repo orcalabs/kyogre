@@ -1,0 +1,44 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    COALESCE(d.delivery_point_id, d.delivery_point_id) AS \"id!: DeliveryPointId\",\n    COALESCE(m.name, a.name, mt.name) AS NAME,\n    COALESCE(m.address, a.address, mt.address) AS address,\n    COALESCE(m.latitude, a.latitude) AS latitude,\n    COALESCE(m.longitude, a.longitude) AS longitude\nFROM\n    delivery_point_ids d\n    LEFT JOIN manual_delivery_points m ON m.delivery_point_id = d.delivery_point_id\n    LEFT JOIN aqua_culture_register a ON a.delivery_point_id = d.delivery_point_id\n    LEFT JOIN mattilsynet_delivery_points mt ON mt.delivery_point_id = d.delivery_point_id\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id!: DeliveryPointId",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "address",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "latitude",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 4,
+        "name": "longitude",
+        "type_info": "Float8"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "6344dbd436000c689abbcaeec89022519faa672197c5457c9fc956f33675a8a7"
+}

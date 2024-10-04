@@ -512,7 +512,7 @@ impl WebApiOutboundPort for PostgresAdapter {
         user_policy: AisPermission,
     ) -> PinBoxStream<'_, AisPosition> {
         self.ais_current_positions(limit, user_policy)
-            .map_err(From::from)
+            .map_err(|e| e.into())
             .boxed()
     }
     fn ais_vms_area_positions(
@@ -534,7 +534,7 @@ impl WebApiOutboundPort for PostgresAdapter {
         permission: AisPermission,
     ) -> PinBoxStream<'_, AisPosition> {
         self.ais_positions_impl(mmsi, range, permission)
-            .map_err(From::from)
+            .map_err(|e| e.into())
             .boxed()
     }
     fn vms_positions(
@@ -551,30 +551,34 @@ impl WebApiOutboundPort for PostgresAdapter {
         permission: AisPermission,
     ) -> PinBoxStream<'_, AisVmsPosition> {
         match params {
-            AisVmsParams::Trip(trip_id) => {
-                convert_stream(self.trip_positions_impl(trip_id, permission)).boxed()
-            }
+            AisVmsParams::Trip(trip_id) => self
+                .trip_positions_impl(trip_id, permission)
+                .map_err(|e| e.into())
+                .boxed(),
             AisVmsParams::Range {
                 mmsi,
                 call_sign,
                 range,
-            } => convert_stream(self.ais_vms_positions_impl(
-                mmsi,
-                call_sign.as_ref(),
-                &range,
-                permission,
-            ))
-            .boxed(),
+            } => self
+                .ais_vms_positions_impl(mmsi, call_sign.as_ref(), &range, permission)
+                .map_err(|e| e.into())
+                .boxed(),
         }
     }
     fn species(&self) -> PinBoxStream<'_, Species> {
-        convert_stream(self.species_impl()).boxed()
+        self.species_impl()
+            .map_ok(From::from)
+            .map_err(|e| e.into())
+            .boxed()
     }
     fn species_fiskeridir(&self) -> PinBoxStream<'_, SpeciesFiskeridir> {
-        convert_stream(self.species_fiskeridir_impl()).boxed()
+        self.species_fiskeridir_impl()
+            .map_ok(From::from)
+            .map_err(|e| e.into())
+            .boxed()
     }
     fn species_fao(&self) -> PinBoxStream<'_, SpeciesFao> {
-        convert_stream(self.species_fao_impl()).boxed()
+        self.species_fao_impl().map_err(|e| e.into()).boxed()
     }
 
     fn vessels(&self) -> Pin<Box<dyn Stream<Item = CoreResult<Vessel>> + Send + '_>> {
@@ -598,7 +602,7 @@ impl WebApiOutboundPort for PostgresAdapter {
         &self,
         query: TripBenchmarksQuery,
     ) -> CoreResult<Vec<TripWithBenchmark>> {
-        convert_vec(self.trip_benchmarks_impl(&query).await?)
+        Ok(retry(|| self.trip_benchmarks_impl(&query)).await?)
     }
     fn detailed_trips(
         &self,
@@ -653,7 +657,9 @@ impl WebApiOutboundPort for PostgresAdapter {
         &self,
         query: FishingFacilitiesQuery,
     ) -> PinBoxStream<'_, FishingFacility> {
-        convert_stream(self.fishing_facilities_impl(query)).boxed()
+        self.fishing_facilities_impl(query)
+            .map_err(|e| e.into())
+            .boxed()
     }
 
     async fn get_user(&self, user_id: BarentswatchUserId) -> CoreResult<Option<User>> {
@@ -661,11 +667,11 @@ impl WebApiOutboundPort for PostgresAdapter {
     }
 
     fn delivery_points(&self) -> PinBoxStream<'_, DeliveryPoint> {
-        convert_stream(self.delivery_points_impl()).boxed()
+        self.delivery_points_impl().map_err(|e| e.into()).boxed()
     }
 
     fn weather(&self, query: WeatherQuery) -> PinBoxStream<'_, Weather> {
-        self.weather_impl(query).map_err(From::from).boxed()
+        self.weather_impl(query).map_err(|e| e.into()).boxed()
     }
 
     fn weather_locations(&self) -> PinBoxStream<'_, WeatherLocation> {
@@ -688,7 +694,9 @@ impl WebApiOutboundPort for PostgresAdapter {
         date: NaiveDate,
         limit: u32,
     ) -> PinBoxStream<'_, FishingWeightPrediction> {
-        convert_stream(self.fishing_weight_predictions_impl(model_id, species, date, limit)).boxed()
+        self.fishing_weight_predictions_impl(model_id, species, date, limit)
+            .map_err(|e| e.into())
+            .boxed()
     }
 
     fn all_fishing_spot_predictions(
@@ -696,7 +704,7 @@ impl WebApiOutboundPort for PostgresAdapter {
         model_id: ModelId,
     ) -> PinBoxStream<'_, FishingSpotPrediction> {
         self.all_fishing_spot_predictions_impl(model_id)
-            .map_err(From::from)
+            .map_err(|e| e.into())
             .boxed()
     }
 
@@ -704,11 +712,15 @@ impl WebApiOutboundPort for PostgresAdapter {
         &self,
         model_id: ModelId,
     ) -> PinBoxStream<'_, FishingWeightPrediction> {
-        convert_stream(self.all_fishing_weight_predictions_impl(model_id)).boxed()
+        self.all_fishing_weight_predictions_impl(model_id)
+            .map_err(|e| e.into())
+            .boxed()
     }
 
     fn fuel_measurements(&self, query: FuelMeasurementsQuery) -> PinBoxStream<'_, FuelMeasurement> {
-        convert_stream(self.fuel_measurements_impl(query)).boxed()
+        self.fuel_measurements_impl(query)
+            .map_err(|e| e.into())
+            .boxed()
     }
 }
 
@@ -853,7 +865,7 @@ impl TripAssemblerOutboundPort for PostgresAdapter {
     }
 
     async fn dock_points(&self) -> CoreResult<Vec<PortDockPoint>> {
-        convert_vec(self.dock_points_impl().await?)
+        Ok(self.dock_points_impl().await?)
     }
 
     async fn all_vessels(&self) -> CoreResult<Vec<Vessel>> {
@@ -877,7 +889,7 @@ impl TripAssemblerOutboundPort for PostgresAdapter {
         timestamp: &DateTime<Utc>,
         bound: Bound,
     ) -> CoreResult<Option<Trip>> {
-        convert_optional(match bound {
+        Ok(match bound {
             Bound::Inclusive => {
                 self.trip_prior_to_timestamp_inclusive(vessel_id, timestamp)
                     .await?
@@ -886,7 +898,8 @@ impl TripAssemblerOutboundPort for PostgresAdapter {
                 self.trip_prior_to_timestamp_exclusive(vessel_id, timestamp)
                     .await?
             }
-        })
+        }
+        .map(From::from))
     }
     async fn relevant_events(
         &self,
@@ -909,19 +922,19 @@ impl TripPrecisionOutboundPort for PostgresAdapter {
         call_sign: Option<&CallSign>,
         range: &DateRange,
     ) -> CoreResult<Vec<AisVmsPosition>> {
-        convert_stream(self.ais_vms_positions_impl(mmsi, call_sign, range, AisPermission::All))
+        Ok(self
+            .ais_vms_positions_impl(mmsi, call_sign, range, AisPermission::All)
             .try_collect()
-            .await
+            .await?)
     }
     async fn delivery_points_associated_with_trip(
         &self,
         vessel_id: FiskeridirVesselId,
         trip_landing_coverage: &DateRange,
     ) -> CoreResult<Vec<DeliveryPoint>> {
-        convert_vec(
-            self.delivery_points_associated_with_trip_impl(vessel_id, trip_landing_coverage)
-                .await?,
-        )
+        Ok(self
+            .delivery_points_associated_with_trip_impl(vessel_id, trip_landing_coverage)
+            .await?)
     }
 }
 
@@ -936,7 +949,7 @@ impl TripBenchmarkOutbound for PostgresAdapter {
         &self,
         id: FiskeridirVesselId,
     ) -> CoreResult<Vec<TripWithTotalLivingWeight>> {
-        convert_vec(self.trips_with_landing_weight_impl(id).await?)
+        Ok(self.trips_with_landing_weight_impl(id).await?)
     }
     async fn sustainability_metrics(
         &self,
@@ -982,7 +995,7 @@ impl HaulDistributorOutbound for PostgresAdapter {
         &self,
         vessel_id: FiskeridirVesselId,
     ) -> CoreResult<Vec<HaulMessage>> {
-        convert_vec(self.haul_messages_of_vessel_impl(vessel_id).await?)
+        Ok(self.haul_messages_of_vessel_impl(vessel_id).await?)
     }
 
     async fn ais_vms_positions(
@@ -991,9 +1004,10 @@ impl HaulDistributorOutbound for PostgresAdapter {
         call_sign: Option<&CallSign>,
         range: &DateRange,
     ) -> CoreResult<Vec<AisVmsPosition>> {
-        convert_stream(self.ais_vms_positions_impl(mmsi, call_sign, range, AisPermission::All))
+        Ok(self
+            .ais_vms_positions_impl(mmsi, call_sign, range, AisPermission::All)
             .try_collect()
-            .await
+            .await?)
     }
 }
 
@@ -1003,16 +1017,28 @@ impl TripPipelineOutbound for PostgresAdapter {
         &self,
         vessel_id: FiskeridirVesselId,
     ) -> CoreResult<Vec<Trip>> {
-        convert_vec(self.trips_without_trip_layers_impl(vessel_id).await?)
+        Ok(self
+            .trips_without_trip_layers_impl(vessel_id)
+            .map_ok(From::from)
+            .try_collect()
+            .await?)
     }
     async fn trips_without_distance(&self, vessel_id: FiskeridirVesselId) -> CoreResult<Vec<Trip>> {
-        convert_vec(self.trips_without_distance_impl(vessel_id).await?)
+        Ok(self
+            .trips_without_distance_impl(vessel_id)
+            .map_ok(From::from)
+            .try_collect()
+            .await?)
     }
     async fn trips_without_precision(
         &self,
         vessel_id: FiskeridirVesselId,
     ) -> CoreResult<Vec<Trip>> {
-        convert_vec(self.trips_without_precision_impl(vessel_id).await?)
+        Ok(self
+            .trips_without_precision_impl(vessel_id)
+            .map_ok(From::from)
+            .try_collect()
+            .await?)
     }
 }
 
@@ -1062,14 +1088,14 @@ impl MLModelsOutbound for PostgresAdapter {
         &self,
         dates: Vec<NaiveDate>,
     ) -> CoreResult<Vec<CatchLocationWeather>> {
-        convert_vec(self.catch_locations_weather_dates_impl(dates).await?)
+        Ok(self.catch_locations_weather_dates_impl(dates).await?)
     }
 
     async fn catch_locations_weather(
         &self,
         keys: Vec<(CatchLocationId, NaiveDate)>,
     ) -> CoreResult<Vec<CatchLocationWeather>> {
-        convert_vec(self.catch_locations_weather_impl(keys).await?)
+        Ok(self.catch_locations_weather_impl(keys).await?)
     }
 
     async fn save_model(
@@ -1121,10 +1147,9 @@ impl MLModelsOutbound for PostgresAdapter {
         species: SpeciesGroup,
         limit: Option<u32>,
     ) -> CoreResult<Vec<FishingSpotTrainingData>> {
-        convert_vec(
-            self.fishing_spot_predictor_training_data_impl(model_id, species, limit)
-                .await?,
-        )
+        Ok(self
+            .fishing_spot_predictor_training_data_impl(model_id, species, limit)
+            .await?)
     }
 
     async fn commit_hauls_training(
@@ -1145,14 +1170,14 @@ impl MLModelsInbound for PostgresAdapter {
         &self,
         dates: Vec<NaiveDate>,
     ) -> CoreResult<Vec<CatchLocationWeather>> {
-        convert_vec(self.catch_locations_weather_dates_impl(dates).await?)
+        Ok(self.catch_locations_weather_dates_impl(dates).await?)
     }
 
     async fn catch_locations_weather(
         &self,
         keys: Vec<(CatchLocationId, NaiveDate)>,
     ) -> CoreResult<Vec<CatchLocationWeather>> {
-        convert_vec(self.catch_locations_weather_impl(keys).await?)
+        Ok(self.catch_locations_weather_impl(keys).await?)
     }
 
     async fn existing_fishing_weight_predictions(
@@ -1161,10 +1186,9 @@ impl MLModelsInbound for PostgresAdapter {
         species: SpeciesGroup,
         year: u32,
     ) -> CoreResult<Vec<FishingWeightPrediction>> {
-        convert_vec(
-            self.existing_fishing_weight_predictions_impl(model_id, species, year)
-                .await?,
-        )
+        Ok(self
+            .existing_fishing_weight_predictions_impl(model_id, species, year)
+            .await?)
     }
     async fn existing_fishing_spot_predictions(
         &self,
@@ -1217,10 +1241,9 @@ impl HaulWeatherOutbound for PostgresAdapter {
         &self,
         vessel_id: FiskeridirVesselId,
     ) -> CoreResult<Vec<HaulMessage>> {
-        convert_vec(
-            self.haul_messages_of_vessel_without_weather_impl(vessel_id)
-                .await?,
-        )
+        Ok(self
+            .haul_messages_of_vessel_without_weather_impl(vessel_id)
+            .await?)
     }
     async fn ais_vms_positions(
         &self,
@@ -1228,9 +1251,10 @@ impl HaulWeatherOutbound for PostgresAdapter {
         call_sign: Option<&CallSign>,
         range: &DateRange,
     ) -> CoreResult<Vec<AisVmsPosition>> {
-        convert_stream(self.ais_vms_positions_impl(mmsi, call_sign, range, AisPermission::All))
+        Ok(self
+            .ais_vms_positions_impl(mmsi, call_sign, range, AisPermission::All)
             .try_collect()
-            .await
+            .await?)
     }
     async fn weather_locations(&self) -> CoreResult<Vec<WeatherLocation>> {
         convert_stream(self.weather_locations_impl())

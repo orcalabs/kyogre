@@ -131,7 +131,7 @@ async fn test_trip_of_landing_does_not_return_trip_outside_landing_timestamp() {
 
         let trip = helper
             .app
-            .get_trip_of_landing(&state.landings[0].landing_id)
+            .get_trip_of_landing(&state.landings[0].id)
             .await
             .unwrap();
         assert!(trip.is_none());
@@ -163,7 +163,7 @@ async fn test_trip_of_landing_does_not_return_trip_of_other_vessels() {
 
         let trip = helper
             .app
-            .get_trip_of_landing(&state.landings[0].landing_id)
+            .get_trip_of_landing(&state.landings[0].id)
             .await
             .unwrap()
             .unwrap();
@@ -187,7 +187,7 @@ async fn test_trip_of_landing_returns_all_hauls_and_landings_connected_to_trip()
 
         let trip = helper
             .app
-            .get_trip_of_landing(&state.landings[0].landing_id)
+            .get_trip_of_landing(&state.landings[0].id)
             .await
             .unwrap()
             .unwrap();
@@ -921,7 +921,7 @@ async fn test_trips_contains_landing_ids() {
             state
                 .landings
                 .into_iter()
-                .map(|v| v.landing_id)
+                .map(|v| v.id)
                 .collect::<Vec<LandingId>>()
         );
     })
@@ -975,7 +975,7 @@ async fn test_trips_connects_to_existing_landings_outside_period_but_inside_land
             state
                 .landings
                 .into_iter()
-                .map(|v| v.landing_id)
+                .map(|v| v.id)
                 .collect::<Vec<LandingId>>()
         );
     })

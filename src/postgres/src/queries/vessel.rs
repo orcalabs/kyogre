@@ -1,14 +1,13 @@
 use std::collections::HashMap;
 
-use fiskeridir_rs::{GearGroup, SpeciesGroup, VesselLengthGroup};
-use futures::{Stream, TryStreamExt};
-use kyogre_core::{FiskeridirVesselId, Mmsi, TripAssemblerId, VesselSource};
+use fiskeridir_rs::{CallSign, GearGroup, SpeciesGroup, VesselLengthGroup};
+use futures::{Stream, StreamExt, TryStreamExt};
+use kyogre_core::{ActiveVesselConflict, FiskeridirVesselId, Mmsi, TripAssemblerId, VesselSource};
 
 use crate::{
     error::Result,
     models::{
-        ActiveVesselConflict, FiskeridirAisVesselCombination, NewMunicipality, NewRegisterVessel,
-        VesselConflictInsert,
+        FiskeridirAisVesselCombination, NewMunicipality, NewRegisterVessel, VesselConflictInsert,
     },
     PostgresAdapter,
 };
@@ -19,12 +18,10 @@ impl PostgresAdapter {
             ActiveVesselConflict,
             r#"
 SELECT
-    call_sign,
+    call_sign AS "call_sign!: CallSign",
     mmsis AS "mmsis!: Vec<Option<Mmsi>>",
-    fiskeridir_vessel_ids AS "fiskeridir_vessel_ids!: Vec<Option<FiskeridirVesselId>>",
-    ais_vessel_names AS "ais_vessel_names!: Vec<Option<String>>",
-    fiskeridir_vessel_names AS "fiskeridir_vessel_names!: Vec<Option<String>>",
-    fiskeridir_vessel_source_ids AS "fiskeridir_vessel_source_ids!: Vec<Option<VesselSource>>"
+    fiskeridir_vessel_ids AS "vessel_ids!: Vec<Option<FiskeridirVesselId>>",
+    fiskeridir_vessel_source_ids AS "sources!: Vec<Option<VesselSource>>"
 FROM
     fiskeridir_ais_vessel_active_conflicts
             "#
@@ -154,12 +151,11 @@ ON CONFLICT DO NOTHING
         .execute(&mut **tx)
         .await?;
 
-        let conflicts = sqlx::query_as!(
-            ActiveVesselConflict,
+        let conflicts = sqlx::query!(
             r#"
 SELECT
     ARRAY_AGG(DISTINCT f.fiskeridir_vessel_id) AS "fiskeridir_vessel_ids!: Vec<Option<FiskeridirVesselId>>",
-    f.call_sign AS "call_sign!",
+    f.call_sign AS "call_sign!: CallSign",
     COALESCE(ARRAY_AGG(DISTINCT a.mmsi), '{}') AS "mmsis!: Vec<Option<Mmsi>>",
     COALESCE(ARRAY_AGG(DISTINCT a.name), '{}') AS "ais_vessel_names!: Vec<Option<String>>",
     COALESCE(ARRAY_AGG(DISTINCT f.name), '{}') AS "fiskeridir_vessel_names!: Vec<Option<String>>",
@@ -186,8 +182,7 @@ HAVING
             &self.ignored_conflict_call_signs
         )
         .fetch_all(&mut **tx)
-        .await
-        ?;
+        .await?;
 
         for c in &conflicts {
             sqlx::query!(
@@ -204,11 +199,11 @@ INSERT INTO
 VALUES
     ($1, $2, $3, $4, $5, $6)
                 "#,
-                c.call_sign,
-                &c.mmsis as _,
-                &c.fiskeridir_vessel_ids as _,
-                &c.ais_vessel_names as _,
-                &c.fiskeridir_vessel_names as _,
+                c.call_sign.as_ref(),
+                &c.mmsis as &[Option<Mmsi>],
+                &c.fiskeridir_vessel_ids as &[Option<FiskeridirVesselId>],
+                &c.ais_vessel_names as &[Option<String>],
+                &c.fiskeridir_vessel_names as &[Option<String>],
                 &c.fiskeridir_vessel_source_ids as &[Option<VesselSource>],
             )
             .execute(&mut **tx)
@@ -308,58 +303,23 @@ WHERE
     pub(crate) fn fiskeridir_ais_vessel_combinations(
         &self,
     ) -> impl Stream<Item = Result<FiskeridirAisVesselCombination>> + '_ {
-        sqlx::query_as!(
-            FiskeridirAisVesselCombination,
-            r#"
-SELECT
-    f.preferred_trip_assembler AS "preferred_trip_assembler!: TripAssemblerId",
-    f.fiskeridir_vessel_id AS "fiskeridir_vessel_id!: FiskeridirVesselId",
-    f.fiskeridir_vessel_type_id,
-    f.fiskeridir_length_group_id AS "fiskeridir_length_group_id!: VesselLengthGroup",
-    f.fiskeridir_nation_group_id,
-    f.norwegian_municipality_id AS fiskeridir_norwegian_municipality_id,
-    f.norwegian_county_id AS fiskeridir_norwegian_county_id,
-    f.nation_id AS "fiskeridir_nation_id?",
-    f.gross_tonnage_1969 AS fiskeridir_gross_tonnage_1969,
-    f.gross_tonnage_other AS fiskeridir_gross_tonnage_other,
-    MAX(v.call_sign) AS fiskeridir_call_sign,
-    f."name" AS fiskeridir_name,
-    f.registration_id AS fiskeridir_registration_id,
-    f."length" AS fiskeridir_length,
-    f."width" AS fiskeridir_width,
-    f."owner" AS fiskeridir_owner,
-    f.owners::TEXT AS fiskeridir_owners,
-    f.engine_building_year AS fiskeridir_engine_building_year,
-    f.engine_power AS fiskeridir_engine_power,
-    f.building_year AS fiskeridir_building_year,
-    f.rebuilding_year AS fiskeridir_rebuilding_year,
-    f.gear_group_ids AS "gear_group_ids!: Vec<GearGroup>",
-    f.species_group_ids AS "species_group_ids!: Vec<SpeciesGroup>",
-    a.mmsi AS "ais_mmsi?: Mmsi",
-    a.imo_number AS ais_imo_number,
-    a.call_sign AS ais_call_sign,
-    a.name AS ais_name,
-    a.ship_length AS ais_ship_length,
-    a.ship_width AS ais_ship_width,
-    a.eta AS ais_eta,
-    a.destination AS ais_destination
-FROM
-    fiskeridir_ais_vessel_mapping_whitelist AS v
-    INNER JOIN fiskeridir_vessels AS f ON v.fiskeridir_vessel_id = f.fiskeridir_vessel_id
-    LEFT JOIN ais_vessels AS a ON v.mmsi = a.mmsi
-GROUP BY
-    f.fiskeridir_vessel_id,
-    a.mmsi
-            "#
-        )
-        .fetch(&self.pool)
-        .map_err(From::from)
+        self.fiskeridir_ais_vessel_combinations_impl(None)
     }
 
     pub(crate) async fn single_fiskeridir_ais_vessel_combination(
         &self,
         vessel_id: FiskeridirVesselId,
     ) -> Result<Option<FiskeridirAisVesselCombination>> {
+        self.fiskeridir_ais_vessel_combinations_impl(Some(vessel_id))
+            .next()
+            .await
+            .transpose()
+    }
+
+    pub(crate) fn fiskeridir_ais_vessel_combinations_impl(
+        &self,
+        vessel_id: Option<FiskeridirVesselId>,
+    ) -> impl Stream<Item = Result<FiskeridirAisVesselCombination>> + '_ {
         sqlx::query_as!(
             FiskeridirAisVesselCombination,
             r#"
@@ -374,7 +334,7 @@ SELECT
     f.nation_id AS "fiskeridir_nation_id?",
     f.gross_tonnage_1969 AS fiskeridir_gross_tonnage_1969,
     f.gross_tonnage_other AS fiskeridir_gross_tonnage_other,
-    f.call_sign AS fiskeridir_call_sign,
+    f.call_sign AS "fiskeridir_call_sign: CallSign",
     f."name" AS fiskeridir_name,
     f.registration_id AS fiskeridir_registration_id,
     f."length" AS fiskeridir_length,
@@ -389,7 +349,7 @@ SELECT
     f.species_group_ids AS "species_group_ids!: Vec<SpeciesGroup>",
     a.mmsi AS "ais_mmsi?: Mmsi",
     a.imo_number AS ais_imo_number,
-    a.call_sign AS ais_call_sign,
+    a.call_sign AS "ais_call_sign: CallSign",
     a.name AS ais_name,
     a.ship_length AS ais_ship_length,
     a.ship_width AS ais_ship_width,
@@ -400,16 +360,18 @@ FROM
     INNER JOIN fiskeridir_vessels AS f ON v.fiskeridir_vessel_id = f.fiskeridir_vessel_id
     LEFT JOIN ais_vessels AS a ON v.mmsi = a.mmsi
 WHERE
-    f.fiskeridir_vessel_id = $1
+    (
+        $1::BIGINT IS NULL
+        OR f.fiskeridir_vessel_id = $1
+    )
 GROUP BY
     f.fiskeridir_vessel_id,
     a.mmsi
             "#,
-            vessel_id.into_inner(),
+            vessel_id as Option<FiskeridirVesselId>,
         )
-        .fetch_optional(&self.pool)
-        .await
-        .map_err(From::from)
+        .fetch(&self.pool)
+        .map_err(|e| e.into())
     }
 
     pub(crate) async fn add_vessel_gear_and_species_groups<'a>(

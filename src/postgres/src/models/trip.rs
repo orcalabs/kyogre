@@ -1,21 +1,16 @@
 use std::str::FromStr;
 
 use chrono::{DateTime, Utc};
-use fiskeridir_rs::{
-    DeliveryPointId, Gear, GearGroup, LandingId, LandingIdError, Quality, SpeciesGroup,
-    VesselLengthGroup,
-};
+use fiskeridir_rs::{DeliveryPointId, Gear, GearGroup, LandingId, SpeciesGroup, VesselLengthGroup};
 use kyogre_core::{
-    DateRange, FiskeridirVesselId, HaulId, MinimalVesselEvent, PositionType, PrecisionId,
-    PrecisionOutcome, PrecisionStatus, ProcessingStatus, TripAssemblerConflict, TripAssemblerId,
-    TripDistancerId, TripId, TripPositionLayerId, TripProcessingUnit, TripsConflictStrategy,
-    VesselEventType,
+    Catch, DateRange, FishingFacility, FiskeridirVesselId, MinimalVesselEvent, PositionType,
+    PrecisionId, PrecisionOutcome, PrecisionStatus, ProcessingStatus, TripAssemblerConflict,
+    TripAssemblerId, TripDistancerId, TripHaul, TripId, TripPositionLayerId, TripProcessingUnit,
+    TripsConflictStrategy, VesselEvent, VesselEventType,
 };
-use serde::Deserialize;
 use sqlx::postgres::types::PgRange;
 use unnest_insert::UnnestInsert;
 
-use super::{FishingFacility, HaulCatch, WhaleCatch};
 use crate::{
     error::{Error, Result},
     queries::{opt_type_to_i32, type_to_i32, type_to_i64},
@@ -24,9 +19,9 @@ use crate::{
 #[derive(Debug, Clone)]
 pub struct Trip {
     pub trip_id: TripId,
-    pub period: PgRange<DateTime<Utc>>,
-    pub period_precision: Option<PgRange<DateTime<Utc>>>,
-    pub landing_coverage: PgRange<DateTime<Utc>>,
+    pub period: DateRange,
+    pub period_precision: Option<DateRange>,
+    pub landing_coverage: DateRange,
     pub distance: Option<f64>,
     pub trip_assembler_id: TripAssemblerId,
     pub start_port_id: Option<String>,
@@ -225,18 +220,18 @@ pub struct TripDetailed {
     pub trip_id: TripId,
     pub fiskeridir_vessel_id: FiskeridirVesselId,
     pub fiskeridir_length_group_id: VesselLengthGroup,
-    pub period: PgRange<DateTime<Utc>>,
-    pub period_precision: Option<PgRange<DateTime<Utc>>>,
-    pub landing_coverage: PgRange<DateTime<Utc>>,
+    pub period: DateRange,
+    pub period_precision: Option<DateRange>,
+    pub landing_coverage: DateRange,
     pub num_deliveries: i64,
     pub total_living_weight: f64,
     pub total_gross_weight: f64,
     pub total_product_weight: f64,
-    pub delivery_points: Vec<String>,
+    pub delivery_points: Vec<DeliveryPointId>,
     pub gear_ids: Vec<Gear>,
     pub gear_group_ids: Vec<GearGroup>,
     pub species_group_ids: Vec<SpeciesGroup>,
-    pub landing_ids: Vec<String>,
+    pub landing_ids: Vec<LandingId>,
     pub latest_landing_timestamp: Option<DateTime<Utc>>,
     pub catches: String,
     pub hauls: String,
@@ -251,52 +246,6 @@ pub struct TripDetailed {
     pub target_species_fao_id: Option<String>,
 }
 
-#[derive(Deserialize)]
-struct TripHaul {
-    haul_id: HaulId,
-    ers_activity_id: String,
-    duration: i32,
-    haul_distance: Option<i32>,
-    start_timestamp: DateTime<Utc>,
-    stop_timestamp: DateTime<Utc>,
-    start_latitude: f64,
-    start_longitude: f64,
-    stop_latitude: f64,
-    stop_longitude: f64,
-    total_living_weight: i64,
-    gear_id: Gear,
-    gear_group_id: GearGroup,
-    fiskeridir_vessel_id: Option<FiskeridirVesselId>,
-    catches: Vec<HaulCatch>,
-    whale_catches: Vec<WhaleCatch>,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-struct Delivery {
-    total_living_weight: f64,
-    total_product_weight: f64,
-    total_gross_weight: f64,
-    catches: Vec<Catch>,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-struct Catch {
-    living_weight: f64,
-    gross_weight: f64,
-    product_weight: f64,
-    species_fiskeridir_id: i32,
-    product_quality_id: Quality,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-struct VesselEvent {
-    vessel_event_id: i64,
-    fiskeridir_vessel_id: FiskeridirVesselId,
-    report_timestamp: DateTime<Utc>,
-    occurence_timestamp: Option<DateTime<Utc>>,
-    vessel_event_type_id: VesselEventType,
-}
-
 #[derive(Debug, Clone)]
 pub struct NewTripAssemblerConflict {
     pub timestamp: DateTime<Utc>,
@@ -306,51 +255,34 @@ pub struct NewTripAssemblerConflict {
     pub fiskeridir_vessel_id: FiskeridirVesselId,
 }
 
-impl TryFrom<Trip> for kyogre_core::Trip {
-    type Error = Error;
-
-    fn try_from(value: Trip) -> std::result::Result<Self, Self::Error> {
-        let period = DateRange::try_from(value.period)?;
-
-        let landing_coverage = DateRange::try_from(value.landing_coverage)?;
-
-        let precision_period = value
-            .period_precision
-            .map(DateRange::try_from)
-            .transpose()?;
-
-        Ok(kyogre_core::Trip {
+impl From<Trip> for kyogre_core::Trip {
+    fn from(value: Trip) -> Self {
+        Self {
             trip_id: value.trip_id,
-            period,
-            landing_coverage,
+            period: value.period,
+            landing_coverage: value.landing_coverage,
             distance: value.distance,
             assembler_id: value.trip_assembler_id,
-            precision_period,
+            precision_period: value.period_precision,
             start_port_code: value.start_port_id,
             end_port_code: value.end_port_id,
             target_species_fiskeridir_id: value.target_species_fiskeridir_id.map(|v| v as u32),
             target_species_fao_id: value.target_species_fao_id,
-        })
+        }
     }
 }
 
 impl TryFrom<CurrentTrip> for kyogre_core::CurrentTrip {
     type Error = Error;
 
-    fn try_from(v: CurrentTrip) -> std::result::Result<Self, Self::Error> {
+    fn try_from(v: CurrentTrip) -> Result<Self> {
         Ok(Self {
             departure: v.departure_timestamp,
             target_species_fiskeridir_id: v.target_species_fiskeridir_id,
-            hauls: serde_json::from_str::<Vec<TripHaul>>(&v.hauls)?
-                .into_iter()
-                .map(kyogre_core::TripHaul::try_from)
-                .collect::<Result<_>>()?,
+            hauls: serde_json::from_str::<Vec<TripHaul>>(&v.hauls)?,
             fishing_facilities: serde_json::from_str::<Vec<FishingFacility>>(
                 &v.fishing_facilities,
-            )?
-            .into_iter()
-            .map(kyogre_core::FishingFacility::try_from)
-            .collect::<Result<_>>()?,
+            )?,
         })
     }
 }
@@ -384,59 +316,29 @@ impl TryFrom<TripDetailed> for kyogre_core::TripDetailed {
     type Error = Error;
 
     fn try_from(value: TripDetailed) -> std::result::Result<Self, Self::Error> {
-        let period = DateRange::try_from(value.period)?;
-        let period_precision = value
-            .period_precision
-            .map(DateRange::try_from)
-            .transpose()?;
-
-        let landing_coverage = DateRange::try_from(value.landing_coverage)?;
-
-        let mut vessel_events = serde_json::from_str::<Vec<VesselEvent>>(&value.vessel_events)?
-            .into_iter()
-            .map(kyogre_core::VesselEvent::from)
-            .collect::<Vec<kyogre_core::VesselEvent>>();
-
-        let landing_ids = value
-            .landing_ids
-            .into_iter()
-            .map(LandingId::try_from)
-            .collect::<std::result::Result<Vec<LandingId>, LandingIdError>>()?;
+        let mut vessel_events = serde_json::from_str::<Vec<VesselEvent>>(&value.vessel_events)?;
 
         vessel_events.sort_by_key(|v| v.report_timestamp);
 
         Ok(kyogre_core::TripDetailed {
-            period_precision,
+            period_precision: value.period_precision,
             fiskeridir_vessel_id: value.fiskeridir_vessel_id,
             fiskeridir_length_group_id: value.fiskeridir_length_group_id,
-            landing_coverage,
+            landing_coverage: value.landing_coverage,
             trip_id: value.trip_id,
-            period,
+            period: value.period,
             num_deliveries: value.num_deliveries as u32,
             most_recent_delivery_date: value.latest_landing_timestamp,
             gear_ids: value.gear_ids,
             gear_group_ids: value.gear_group_ids,
             species_group_ids: value.species_group_ids,
-            delivery_point_ids: value
-                .delivery_points
-                .into_iter()
-                .map(DeliveryPointId::try_from)
-                .collect::<std::result::Result<_, _>>()?,
-            hauls: serde_json::from_str::<Vec<TripHaul>>(&value.hauls)?
-                .into_iter()
-                .map(kyogre_core::TripHaul::try_from)
-                .collect::<std::result::Result<_, _>>()?,
+            delivery_point_ids: value.delivery_points,
+            hauls: serde_json::from_str::<Vec<TripHaul>>(&value.hauls)?,
             fishing_facilities: serde_json::from_str::<Vec<FishingFacility>>(
                 &value.fishing_facilities,
-            )?
-            .into_iter()
-            .map(kyogre_core::FishingFacility::try_from)
-            .collect::<std::result::Result<_, _>>()?,
+            )?,
             delivery: kyogre_core::Delivery {
-                delivered: serde_json::from_str::<Vec<Catch>>(&value.catches)?
-                    .into_iter()
-                    .map(kyogre_core::Catch::from)
-                    .collect::<Vec<kyogre_core::Catch>>(),
+                delivered: serde_json::from_str::<Vec<Catch>>(&value.catches)?,
                 total_living_weight: value.total_living_weight,
                 total_gross_weight: value.total_gross_weight,
                 total_product_weight: value.total_product_weight,
@@ -445,84 +347,11 @@ impl TryFrom<TripDetailed> for kyogre_core::TripDetailed {
             end_port_id: value.end_port_id,
             assembler_id: value.trip_assembler_id,
             vessel_events,
-            landing_ids,
+            landing_ids: value.landing_ids,
             distance: value.distance,
             cache_version: value.cache_version,
             target_species_fiskeridir_id: value.target_species_fiskeridir_id.map(|v| v as u32),
             target_species_fao_id: value.target_species_fao_id,
-        })
-    }
-}
-
-impl From<VesselEvent> for kyogre_core::VesselEvent {
-    fn from(v: VesselEvent) -> Self {
-        kyogre_core::VesselEvent {
-            event_id: v.vessel_event_id as u64,
-            vessel_id: v.fiskeridir_vessel_id,
-            report_timestamp: v.report_timestamp,
-            event_type: v.vessel_event_type_id,
-            occurence_timestamp: v.occurence_timestamp,
-        }
-    }
-}
-
-impl From<Delivery> for kyogre_core::Delivery {
-    fn from(d: Delivery) -> Self {
-        kyogre_core::Delivery {
-            delivered: d
-                .catches
-                .into_iter()
-                .map(kyogre_core::Catch::from)
-                .collect(),
-            total_living_weight: d.total_living_weight,
-            total_product_weight: d.total_product_weight,
-            total_gross_weight: d.total_gross_weight,
-        }
-    }
-}
-
-impl From<Catch> for kyogre_core::Catch {
-    fn from(c: Catch) -> Self {
-        kyogre_core::Catch {
-            living_weight: c.living_weight,
-            gross_weight: c.gross_weight,
-            product_weight: c.product_weight,
-            species_fiskeridir_id: c.species_fiskeridir_id,
-            product_quality_id: c.product_quality_id,
-            product_quality_name: c.product_quality_id.norwegian_name().to_owned(),
-        }
-    }
-}
-
-impl TryFrom<TripHaul> for kyogre_core::TripHaul {
-    type Error = Error;
-
-    fn try_from(v: TripHaul) -> std::result::Result<Self, Self::Error> {
-        Ok(Self {
-            haul_id: v.haul_id,
-            ers_activity_id: v.ers_activity_id,
-            duration: v.duration,
-            haul_distance: v.haul_distance,
-            start_latitude: v.start_latitude,
-            start_longitude: v.start_longitude,
-            start_timestamp: v.start_timestamp,
-            stop_latitude: v.stop_latitude,
-            stop_longitude: v.stop_longitude,
-            stop_timestamp: v.stop_timestamp,
-            total_living_weight: v.total_living_weight,
-            gear_id: v.gear_id,
-            gear_group_id: v.gear_group_id,
-            fiskeridir_vessel_id: v.fiskeridir_vessel_id,
-            catches: v
-                .catches
-                .into_iter()
-                .map(kyogre_core::HaulCatch::try_from)
-                .collect::<Result<_>>()?,
-            whale_catches: v
-                .whale_catches
-                .into_iter()
-                .map(kyogre_core::WhaleCatch::try_from)
-                .collect::<Result<_>>()?,
         })
     }
 }

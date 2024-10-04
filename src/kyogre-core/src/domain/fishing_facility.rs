@@ -201,3 +201,33 @@ impl Serialize for GeometryWkt {
         serializer.serialize_str(&self.0.to_string())
     }
 }
+
+#[cfg(feature = "sqlx")]
+mod _sqlx {
+    use std::error::Error;
+
+    use geozero::wkb;
+    use sqlx::{
+        postgres::{PgTypeInfo, PgValueRef},
+        Decode, Postgres, Type,
+    };
+    use wkt::ToWkt;
+
+    use super::GeometryWkt;
+    use crate::decode_error::MissingValueSnafu;
+
+    impl Type<Postgres> for GeometryWkt {
+        fn type_info() -> PgTypeInfo {
+            PgTypeInfo::with_name("geometry")
+        }
+    }
+
+    impl<'r> Decode<'r, Postgres> for GeometryWkt {
+        fn decode(value: PgValueRef<'r>) -> Result<Self, Box<dyn Error + Send + Sync + 'static>> {
+            let decode = wkb::Decode::<geo::Geometry<f64>>::decode(value)?;
+            let wkt = decode.geometry.ok_or_else(|| MissingValueSnafu.build())?;
+
+            Ok(Self(wkt.to_wkt()))
+        }
+    }
+}

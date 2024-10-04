@@ -1,16 +1,16 @@
 use chrono::{DateTime, Utc};
+use fiskeridir_rs::CallSign;
 use futures::{Stream, TryStreamExt};
 use geo_types::geometry::Geometry;
 use geozero::wkb;
 use kyogre_core::{
-    FishingFacilitiesQuery, FishingFacilitiesSorting, FishingFacilityApiSource,
+    FishingFacilitiesQuery, FishingFacilitiesSorting, FishingFacility, FishingFacilityApiSource,
     FishingFacilityToolType, FiskeridirVesselId, Mmsi, Ordering,
 };
 use sqlx::postgres::types::PgRange;
 
 use crate::{
     error::{ConvertSnafu, Result},
-    models::FishingFacility,
     PostgresAdapter,
 };
 
@@ -280,7 +280,7 @@ SELECT
     barentswatch_vessel_id,
     fiskeridir_vessel_id AS "fiskeridir_vessel_id?: FiskeridirVesselId",
     vessel_name,
-    call_sign,
+    call_sign AS "call_sign: CallSign",
     mmsi AS "mmsi?: Mmsi",
     imo,
     reg_num,
@@ -362,7 +362,7 @@ LIMIT
             args.limit as i64,
         )
         .fetch(&self.pool)
-        .map_err(From::from)
+        .map_err(|e| e.into())
     }
 
     pub(crate) async fn latest_fishing_facility_update_impl(

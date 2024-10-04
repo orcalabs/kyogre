@@ -155,3 +155,22 @@ pub enum ChronoError {
         month: i32,
     },
 }
+
+#[cfg(feature = "sqlx")]
+mod _sqlx {
+    use snafu::{Location, Snafu};
+    use stack_error::StackError;
+
+    #[derive(Snafu, StackError)]
+    #[snafu(module, visibility(pub))]
+    pub enum DecodeError {
+        #[snafu(display("Value unexpectedly missing"))]
+        MissingValue {
+            #[snafu(implicit)]
+            location: Location,
+        },
+    }
+}
+
+#[cfg(feature = "sqlx")]
+pub use _sqlx::*;
