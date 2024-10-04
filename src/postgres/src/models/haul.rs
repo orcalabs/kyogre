@@ -1,21 +1,12 @@
-use chrono::{DateTime, NaiveDate, Utc};
-use fiskeridir_rs::{
-    Gear, GearGroup, SpeciesGroup, SpeciesMainGroup, VesselLengthGroup, WhaleGender,
+use chrono::{DateTime, Utc};
+use fiskeridir_rs::{Gear, GearGroup, VesselLengthGroup};
+use kyogre_core::{
+    CatchLocationId, FiskeridirVesselId, HaulCatch, HaulId, HaulOceanClimate, HaulWeather,
+    WhaleCatch,
 };
-use kyogre_core::{CatchLocationId, FiskeridirVesselId, HaulId, HaulOceanClimate, HaulWeather};
 use serde::Deserialize;
 
 use crate::error::{Error, Result};
-
-#[derive(Debug)]
-pub struct FishingSpotTrainingData {
-    pub haul_id: HaulId,
-    pub latitude: f64,
-    pub longitude: f64,
-    pub species: SpeciesGroup,
-    pub catch_location: String,
-    pub date: NaiveDate,
-}
 
 #[derive(Deserialize)]
 pub struct Haul {
@@ -23,8 +14,8 @@ pub struct Haul {
     pub ers_activity_id: String,
     pub duration: i32,
     pub haul_distance: Option<i32>,
-    pub catch_location_start: Option<String>,
-    pub catch_locations: Option<Vec<String>>,
+    pub catch_location_start: Option<CatchLocationId>,
+    pub catch_locations: Option<Vec<CatchLocationId>>,
     pub ocean_depth_end: i32,
     pub ocean_depth_start: i32,
     pub quota_type_id: i32,
@@ -62,52 +53,17 @@ pub struct Haul {
     pub cache_version: i64,
 }
 
-#[derive(Deserialize)]
-pub struct HaulCatch {
-    pub living_weight: i32,
-    pub species_fao_id: String,
-    pub species_fiskeridir_id: i32,
-    pub species_group_id: SpeciesGroup,
-    pub species_main_group_id: Option<SpeciesMainGroup>,
-}
-
-#[derive(Deserialize)]
-pub struct WhaleCatch {
-    pub blubber_measure_a: Option<i32>,
-    pub blubber_measure_b: Option<i32>,
-    pub blubber_measure_c: Option<i32>,
-    pub circumference: Option<i32>,
-    pub fetus_length: Option<i32>,
-    pub gender_id: Option<WhaleGender>,
-    pub grenade_number: String,
-    pub individual_number: Option<i32>,
-    pub length: Option<i32>,
-}
-
-pub struct HaulMessage {
-    pub haul_id: HaulId,
-    pub message_id: i64,
-    pub start_timestamp: DateTime<Utc>,
-    pub stop_timestamp: DateTime<Utc>,
-}
-
 impl TryFrom<Haul> for kyogre_core::Haul {
     type Error = Error;
 
-    fn try_from(v: Haul) -> std::result::Result<Self, Self::Error> {
+    fn try_from(v: Haul) -> Result<Self> {
         Ok(Self {
             haul_id: v.haul_id,
             ers_activity_id: v.ers_activity_id,
             duration: v.duration,
             haul_distance: v.haul_distance,
-            catch_location_start: v
-                .catch_location_start
-                .map(CatchLocationId::try_from)
-                .transpose()?,
-            catch_locations: v
-                .catch_locations
-                .map(|c| c.into_iter().map(CatchLocationId::try_from).collect())
-                .transpose()?,
+            catch_location_start: v.catch_location_start,
+            catch_locations: v.catch_locations,
             ocean_depth_end: v.ocean_depth_end,
             ocean_depth_start: v.ocean_depth_start,
             quota_type_id: v.quota_type_id,
@@ -144,74 +100,9 @@ impl TryFrom<Haul> for kyogre_core::Haul {
                 ocean_climate_depth: v.ocean_climate_depth,
                 sea_floor_depth: v.sea_floor_depth,
             },
-            catches: serde_json::from_str::<Vec<HaulCatch>>(&v.catches)?
-                .into_iter()
-                .map(kyogre_core::HaulCatch::try_from)
-                .collect::<Result<_>>()?,
-            whale_catches: serde_json::from_str::<Vec<WhaleCatch>>(&v.whale_catches)?
-                .into_iter()
-                .map(kyogre_core::WhaleCatch::try_from)
-                .collect::<Result<_>>()?,
+            catches: serde_json::from_str::<Vec<HaulCatch>>(&v.catches)?,
+            whale_catches: serde_json::from_str::<Vec<WhaleCatch>>(&v.whale_catches)?,
             cache_version: v.cache_version,
-        })
-    }
-}
-
-impl TryFrom<HaulCatch> for kyogre_core::HaulCatch {
-    type Error = Error;
-
-    fn try_from(v: HaulCatch) -> std::result::Result<Self, Self::Error> {
-        Ok(Self {
-            living_weight: v.living_weight,
-            species_fao_id: v.species_fao_id,
-            species_fiskeridir_id: v.species_fiskeridir_id,
-            species_group_id: v.species_group_id,
-            species_main_group_id: v.species_main_group_id,
-        })
-    }
-}
-
-impl TryFrom<WhaleCatch> for kyogre_core::WhaleCatch {
-    type Error = Error;
-
-    fn try_from(v: WhaleCatch) -> std::result::Result<Self, Self::Error> {
-        Ok(Self {
-            blubber_measure_a: v.blubber_measure_a,
-            blubber_measure_b: v.blubber_measure_b,
-            blubber_measure_c: v.blubber_measure_c,
-            circumference: v.circumference,
-            fetus_length: v.fetus_length,
-            gender_id: v.gender_id,
-            grenade_number: v.grenade_number,
-            individual_number: v.individual_number,
-            length: v.length,
-        })
-    }
-}
-
-impl TryFrom<HaulMessage> for kyogre_core::HaulMessage {
-    type Error = Error;
-
-    fn try_from(v: HaulMessage) -> std::result::Result<Self, Self::Error> {
-        Ok(Self {
-            haul_id: v.haul_id,
-            start_timestamp: v.start_timestamp,
-            stop_timestamp: v.stop_timestamp,
-        })
-    }
-}
-
-impl TryFrom<FishingSpotTrainingData> for kyogre_core::FishingSpotTrainingData {
-    type Error = Error;
-
-    fn try_from(v: FishingSpotTrainingData) -> std::result::Result<Self, Self::Error> {
-        Ok(Self {
-            haul_id: v.haul_id,
-            latitude: v.latitude,
-            longitude: v.longitude,
-            species: v.species,
-            catch_location_id: CatchLocationId::try_from(v.catch_location)?,
-            date: v.date,
         })
     }
 }

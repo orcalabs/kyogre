@@ -62,7 +62,7 @@ WHERE
             PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY as i32,
         )
         .fetch(&self.pool)
-        .map_err(From::from)
+        .map_err(|e| e.into())
     }
 
     pub(crate) async fn all_ais_impl(&self) -> Result<Vec<AisPosition>> {
@@ -149,7 +149,7 @@ ORDER BY
             PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY as i32,
         )
         .fetch(self.ais_pool())
-        .map_err(From::from)
+        .map_err(|e| e.into())
     }
 
     pub(crate) async fn all_ais_positions_impl(
@@ -186,7 +186,7 @@ ORDER BY
         )
         .fetch_all(self.ais_pool())
         .await
-        .map_err(From::from)
+        .map_err(|e| e.into())
     }
 
     pub(crate) async fn existing_mmsis_impl(&self) -> Result<Vec<Mmsi>> {

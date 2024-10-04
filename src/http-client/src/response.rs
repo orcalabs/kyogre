@@ -18,18 +18,18 @@ impl Response {
     }
 
     pub async fn json<T: DeserializeOwned>(self) -> Result<T> {
-        self.0.json().await.map_err(From::from)
+        self.0.json().await.map_err(|e| e.into())
     }
 
     pub async fn text(self) -> Result<String> {
-        self.0.text().await.map_err(From::from)
+        self.0.text().await.map_err(|e| e.into())
     }
 
     pub async fn bytes(self) -> Result<Bytes> {
-        self.0.bytes().await.map_err(From::from)
+        self.0.bytes().await.map_err(|e| e.into())
     }
 
     pub fn bytes_stream(self) -> impl Stream<Item = Result<Bytes>> {
-        self.0.bytes_stream().map_err(From::from)
+        self.0.bytes_stream().map_err(|e| e.into())
     }
 }

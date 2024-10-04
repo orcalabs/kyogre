@@ -46,7 +46,7 @@ pub struct EarliestVms<'a> {
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct VmsPosition {
-    pub call_sign: String,
+    pub call_sign: CallSign,
     pub course: Option<i32>,
     pub latitude: f64,
     pub longitude: f64,
@@ -95,7 +95,7 @@ impl TryFrom<VmsPosition> for kyogre_core::VmsPosition {
             longitude: value.longitude,
             course: value.course.map(|c| c as u32),
             speed: value.speed,
-            call_sign: CallSign::try_from(value.call_sign)?,
+            call_sign: value.call_sign,
             registration_id: value.registration_id,
             timestamp: value.timestamp,
             vessel_length: value.vessel_length,

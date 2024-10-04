@@ -191,7 +191,6 @@ pub struct Catch {
     pub product_weight: f64,
     pub species_fiskeridir_id: i32,
     pub product_quality_id: Quality,
-    pub product_quality_name: String,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, EnumString, Display)]

@@ -1,0 +1,202 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    f.preferred_trip_assembler AS \"preferred_trip_assembler!: TripAssemblerId\",\n    f.fiskeridir_vessel_id AS \"fiskeridir_vessel_id!: FiskeridirVesselId\",\n    f.fiskeridir_vessel_type_id,\n    f.fiskeridir_length_group_id AS \"fiskeridir_length_group_id!: VesselLengthGroup\",\n    f.fiskeridir_nation_group_id,\n    f.norwegian_municipality_id AS fiskeridir_norwegian_municipality_id,\n    f.norwegian_county_id AS fiskeridir_norwegian_county_id,\n    f.nation_id AS \"fiskeridir_nation_id?\",\n    f.gross_tonnage_1969 AS fiskeridir_gross_tonnage_1969,\n    f.gross_tonnage_other AS fiskeridir_gross_tonnage_other,\n    f.call_sign AS \"fiskeridir_call_sign: CallSign\",\n    f.\"name\" AS fiskeridir_name,\n    f.registration_id AS fiskeridir_registration_id,\n    f.\"length\" AS fiskeridir_length,\n    f.\"width\" AS fiskeridir_width,\n    f.\"owner\" AS fiskeridir_owner,\n    f.owners::TEXT AS fiskeridir_owners,\n    f.engine_building_year AS fiskeridir_engine_building_year,\n    f.engine_power AS fiskeridir_engine_power,\n    f.building_year AS fiskeridir_building_year,\n    f.rebuilding_year AS fiskeridir_rebuilding_year,\n    f.gear_group_ids AS \"gear_group_ids!: Vec<GearGroup>\",\n    f.species_group_ids AS \"species_group_ids!: Vec<SpeciesGroup>\",\n    a.mmsi AS \"ais_mmsi?: Mmsi\",\n    a.imo_number AS ais_imo_number,\n    a.call_sign AS \"ais_call_sign: CallSign\",\n    a.name AS ais_name,\n    a.ship_length AS ais_ship_length,\n    a.ship_width AS ais_ship_width,\n    a.eta AS ais_eta,\n    a.destination AS ais_destination\nFROM\n    fiskeridir_ais_vessel_mapping_whitelist AS v\n    INNER JOIN fiskeridir_vessels AS f ON v.fiskeridir_vessel_id = f.fiskeridir_vessel_id\n    LEFT JOIN ais_vessels AS a ON v.mmsi = a.mmsi\nWHERE\n    (\n        $1::BIGINT IS NULL\n        OR f.fiskeridir_vessel_id = $1\n    )\nGROUP BY\n    f.fiskeridir_vessel_id,\n    a.mmsi\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "preferred_trip_assembler!: TripAssemblerId",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "fiskeridir_vessel_id!: FiskeridirVesselId",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 2,
+        "name": "fiskeridir_vessel_type_id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 3,
+        "name": "fiskeridir_length_group_id!: VesselLengthGroup",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 4,
+        "name": "fiskeridir_nation_group_id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 5,
+        "name": "fiskeridir_norwegian_municipality_id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 6,
+        "name": "fiskeridir_norwegian_county_id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 7,
+        "name": "fiskeridir_nation_id?",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 8,
+        "name": "fiskeridir_gross_tonnage_1969",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 9,
+        "name": "fiskeridir_gross_tonnage_other",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 10,
+        "name": "fiskeridir_call_sign: CallSign",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 11,
+        "name": "fiskeridir_name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 12,
+        "name": "fiskeridir_registration_id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 13,
+        "name": "fiskeridir_length",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 14,
+        "name": "fiskeridir_width",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 15,
+        "name": "fiskeridir_owner",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 16,
+        "name": "fiskeridir_owners",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 17,
+        "name": "fiskeridir_engine_building_year",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 18,
+        "name": "fiskeridir_engine_power",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 19,
+        "name": "fiskeridir_building_year",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 20,
+        "name": "fiskeridir_rebuilding_year",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 21,
+        "name": "gear_group_ids!: Vec<GearGroup>",
+        "type_info": "Int4Array"
+      },
+      {
+        "ordinal": 22,
+        "name": "species_group_ids!: Vec<SpeciesGroup>",
+        "type_info": "Int4Array"
+      },
+      {
+        "ordinal": 23,
+        "name": "ais_mmsi?: Mmsi",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 24,
+        "name": "ais_imo_number",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 25,
+        "name": "ais_call_sign: CallSign",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 26,
+        "name": "ais_name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 27,
+        "name": "ais_ship_length",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 28,
+        "name": "ais_ship_width",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 29,
+        "name": "ais_eta",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 30,
+        "name": "ais_destination",
+        "type_info": "Varchar"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      null,
+      true,
+      true,
+      true,
+      true,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "f614fc6a78daa2291956660a5dd19d48f24eec1a9fc6e9f4a8bcd2d923a1aab5"
+}

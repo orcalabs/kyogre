@@ -55,7 +55,7 @@ GROUP BY
             query.weather_location_ids.as_deref() as Option<&[WeatherLocationId]>,
         )
         .fetch(&self.pool)
-        .map_err(From::from)
+        .map_err(|e| e.into())
     }
 
     pub(crate) async fn haul_ocean_climate_impl(

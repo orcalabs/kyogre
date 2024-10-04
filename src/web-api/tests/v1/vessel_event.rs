@@ -158,7 +158,7 @@ async fn test_inserting_same_landing_does_not_create_dangling_vessel_event() {
 
         let l = &state.landings[0];
         let mut landing = fiskeridir_rs::Landing::test_default(1, l.fiskeridir_vessel_id);
-        landing.id = l.landing_id.clone();
+        landing.id = l.id.clone();
 
         // We use test builder cycle as data year
         helper

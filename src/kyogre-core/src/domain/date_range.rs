@@ -165,9 +165,14 @@ impl Eq for DateRange {}
 
 #[cfg(feature = "sqlx")]
 mod _sqlx {
+    use sqlx::{
+        postgres::{types::PgRange, PgValueRef},
+        Postgres,
+    };
+
     use super::*;
     use crate::{date_range_error::UnboundedSnafu, DateRangeError};
-    use sqlx::postgres::types::PgRange;
+
     impl From<&DateRange> for PgRange<DateTime<Utc>> {
         fn from(value: &DateRange) -> Self {
             let start = match value.start_bound {
@@ -212,6 +217,16 @@ mod _sqlx {
                 start: value.start,
                 end: value.end,
             }
+        }
+    }
+
+    impl<'r> sqlx::Decode<'r, Postgres> for DateRange {
+        fn decode(
+            value: PgValueRef<'r>,
+        ) -> Result<Self, Box<dyn std::error::Error + Send + Sync + 'static>> {
+            let pg_range = PgRange::<DateTime<Utc>>::decode(value)?;
+            let date_range = pg_range.try_into()?;
+            Ok(date_range)
         }
     }
 }

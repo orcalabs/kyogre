@@ -2,6 +2,7 @@ use std::{ops::Deref, str::FromStr};
 
 use crate::{
     error::ParseStringError,
+    sqlx_str_impl,
     string_new_types::{PrunedString, PrunedStringVisitor},
 };
 use jurisdiction::Jurisdiction;
@@ -81,3 +82,5 @@ impl From<Jurisdiction> for DeliveryPointId {
         DeliveryPointId(PrunedString::from(value))
     }
 }
+
+sqlx_str_impl!(DeliveryPointId);

@@ -4,7 +4,9 @@ use std::{
 };
 
 use chrono::{DateTime, NaiveDateTime, NaiveTime, TimeZone, Utc};
-use fiskeridir_rs::{Gear, GearGroup, LandingId, SpeciesGroup, VesselLengthGroup};
+use fiskeridir_rs::{
+    CallSign, DeliveryPointId, Gear, GearGroup, LandingId, SpeciesGroup, VesselLengthGroup,
+};
 use futures::{Stream, TryStreamExt};
 use kyogre_core::{
     BoxIterator, FiskeridirVesselId, LandingsQuery, TripAssemblerId, VesselEventType,
@@ -33,15 +35,15 @@ impl PostgresAdapter {
             Landing,
             r#"
 SELECT
-    l.landing_id,
+    l.landing_id AS "landing_id!: LandingId",
     l.landing_timestamp,
     l.catch_area_id,
     l.catch_main_area_id,
     l.gear_id AS "gear_id!: Gear",
     l.gear_group_id AS "gear_group_id!: GearGroup",
-    COALESCE(MIN(d.new_delivery_point_id), l.delivery_point_id) AS delivery_point_id,
+    COALESCE(MIN(d.new_delivery_point_id), l.delivery_point_id) AS "delivery_point_id: DeliveryPointId",
     l.fiskeridir_vessel_id AS "fiskeridir_vessel_id?: FiskeridirVesselId",
-    l.vessel_call_sign,
+    l.vessel_call_sign AS "vessel_call_sign: CallSign",
     l.vessel_name,
     l.vessel_length,
     l.vessel_length_group_id AS "vessel_length_group!: VesselLengthGroup",
@@ -128,7 +130,7 @@ ORDER BY
             args.sorting,
         )
         .fetch(&self.pool)
-        .map_err(From::from)
+        .map_err(|e| e.into())
     }
 
     pub(crate) async fn landings_by_ids_impl(
@@ -139,15 +141,15 @@ ORDER BY
             Landing,
             r#"
 SELECT
-    l.landing_id,
+    l.landing_id AS "landing_id!: LandingId",
     l.landing_timestamp,
     l.catch_area_id,
     l.catch_main_area_id,
     l.gear_id AS "gear_id!: Gear",
     l.gear_group_id AS "gear_group_id!: GearGroup",
-    COALESCE(MIN(d.new_delivery_point_id), l.delivery_point_id) AS delivery_point_id,
+    COALESCE(MIN(d.new_delivery_point_id), l.delivery_point_id) AS "delivery_point_id: DeliveryPointId",
     l.fiskeridir_vessel_id AS "fiskeridir_vessel_id?: FiskeridirVesselId",
-    l.vessel_call_sign,
+    l.vessel_call_sign AS "vessel_call_sign: CallSign",
     l.vessel_name,
     l.vessel_length,
     l.vessel_length_group_id AS "vessel_length_group!: VesselLengthGroup",

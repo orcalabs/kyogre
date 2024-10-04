@@ -1,0 +1,262 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    haul_id AS \"haul_id!: HaulId\",\n    ers_activity_id,\n    duration,\n    haul_distance,\n    catch_location_start AS \"catch_location_start?: CatchLocationId\",\n    catch_locations AS \"catch_locations?: Vec<CatchLocationId>\",\n    ocean_depth_end,\n    ocean_depth_start,\n    quota_type_id,\n    start_latitude,\n    start_longitude,\n    start_timestamp,\n    stop_timestamp,\n    stop_latitude,\n    stop_longitude,\n    total_living_weight,\n    gear_id AS \"gear_id!: Gear\",\n    gear_group_id AS \"gear_group_id!: GearGroup\",\n    fiskeridir_vessel_id AS \"fiskeridir_vessel_id?: FiskeridirVesselId\",\n    vessel_call_sign,\n    vessel_call_sign_ers,\n    vessel_length,\n    vessel_length_group AS \"vessel_length_group!: VesselLengthGroup\",\n    vessel_name,\n    vessel_name_ers,\n    wind_speed_10m,\n    wind_direction_10m,\n    air_temperature_2m,\n    relative_humidity_2m,\n    air_pressure_at_sea_level,\n    precipitation_amount,\n    cloud_area_fraction,\n    water_speed,\n    water_direction,\n    salinity,\n    water_temperature,\n    ocean_climate_depth,\n    sea_floor_depth,\n    catches::TEXT AS \"catches!\",\n    whale_catches::TEXT AS \"whale_catches!\",\n    cache_version\nFROM\n    hauls\nWHERE\n    haul_id = ANY ($1)\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "haul_id!: HaulId",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "ers_activity_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "duration",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 3,
+        "name": "haul_distance",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 4,
+        "name": "catch_location_start?: CatchLocationId",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "catch_locations?: Vec<CatchLocationId>",
+        "type_info": "TextArray"
+      },
+      {
+        "ordinal": 6,
+        "name": "ocean_depth_end",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 7,
+        "name": "ocean_depth_start",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 8,
+        "name": "quota_type_id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 9,
+        "name": "start_latitude",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 10,
+        "name": "start_longitude",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 11,
+        "name": "start_timestamp",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 12,
+        "name": "stop_timestamp",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 13,
+        "name": "stop_latitude",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 14,
+        "name": "stop_longitude",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 15,
+        "name": "total_living_weight",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 16,
+        "name": "gear_id!: Gear",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 17,
+        "name": "gear_group_id!: GearGroup",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 18,
+        "name": "fiskeridir_vessel_id?: FiskeridirVesselId",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 19,
+        "name": "vessel_call_sign",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 20,
+        "name": "vessel_call_sign_ers",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 21,
+        "name": "vessel_length",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 22,
+        "name": "vessel_length_group!: VesselLengthGroup",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 23,
+        "name": "vessel_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 24,
+        "name": "vessel_name_ers",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 25,
+        "name": "wind_speed_10m",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 26,
+        "name": "wind_direction_10m",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 27,
+        "name": "air_temperature_2m",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 28,
+        "name": "relative_humidity_2m",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 29,
+        "name": "air_pressure_at_sea_level",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 30,
+        "name": "precipitation_amount",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 31,
+        "name": "cloud_area_fraction",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 32,
+        "name": "water_speed",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 33,
+        "name": "water_direction",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 34,
+        "name": "salinity",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 35,
+        "name": "water_temperature",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 36,
+        "name": "ocean_climate_depth",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 37,
+        "name": "sea_floor_depth",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 38,
+        "name": "catches!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 39,
+        "name": "whale_catches!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 40,
+        "name": "cache_version",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8Array"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      null,
+      null,
+      false
+    ]
+  },
+  "hash": "c7a7e6400b799acb9e69d545619d806b3840415cf4314617db791be8ec80c14f"
+}

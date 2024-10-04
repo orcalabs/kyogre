@@ -1,5 +1,6 @@
 use std::str::FromStr;
 
+use fiskeridir_rs::sqlx_str_impl;
 use geo::geometry::Polygon;
 use serde::{
     de::{self, Visitor},
@@ -124,3 +125,5 @@ impl<'de> Visitor<'de> for CatchLocationIdVisitor {
         value.parse().map_err(de::Error::custom)
     }
 }
+
+sqlx_str_impl!(CatchLocationId);

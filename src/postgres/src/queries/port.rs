@@ -1,8 +1,8 @@
-use kyogre_core::{Arrival, FiskeridirVesselId, TripId};
+use kyogre_core::{Arrival, FiskeridirVesselId, PortDockPoint, TripId};
 
 use crate::{
     error::Result,
-    models::{Port, PortDockPoint, TripDockPoints, TripPorts},
+    models::{Port, TripDockPoints, TripPorts},
     PostgresAdapter,
 };
 

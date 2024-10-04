@@ -17,7 +17,7 @@ impl PostgresAdapter {
             VmsPosition,
             r#"
 SELECT
-    call_sign,
+    call_sign AS "call_sign!: CallSign",
     course,
     latitude,
     longitude,
@@ -49,7 +49,7 @@ ORDER BY
             VmsPosition,
             r#"
 SELECT
-    call_sign,
+    call_sign AS "call_sign!: CallSign",
     course,
     latitude,
     longitude,
@@ -73,7 +73,7 @@ ORDER BY
             range.end(),
         )
         .fetch(&self.pool)
-        .map_err(From::from)
+        .map_err(|e| e.into())
     }
 
     pub(crate) async fn add_vms_impl(&self, vms: Vec<fiskeridir_rs::Vms>) -> Result<()> {
