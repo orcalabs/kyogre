@@ -86,11 +86,9 @@ impl<'a> TryFrom<&'a fiskeridir_rs::Vms> for NewVmsPosition<'a> {
     }
 }
 
-impl TryFrom<VmsPosition> for kyogre_core::VmsPosition {
-    type Error = Error;
-
-    fn try_from(value: VmsPosition) -> Result<Self, Self::Error> {
-        Ok(kyogre_core::VmsPosition {
+impl From<VmsPosition> for kyogre_core::VmsPosition {
+    fn from(value: VmsPosition) -> Self {
+        Self {
             latitude: value.latitude,
             longitude: value.longitude,
             course: value.course.map(|c| c as u32),
@@ -102,6 +100,6 @@ impl TryFrom<VmsPosition> for kyogre_core::VmsPosition {
             vessel_name: value.vessel_name,
             vessel_type: value.vessel_type,
             distance_to_shore: value.distance_to_shore,
-        })
+        }
     }
 }

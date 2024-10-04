@@ -1,3 +1,5 @@
+use futures::TryStreamExt;
+use kyogre_core::ActiveVesselConflict;
 use orca_core::Environment;
 use tracing::error;
 
@@ -32,7 +34,9 @@ impl PostgresAdapter {
             weight_diff => IncorrectLandingMatrixLivingWeightSnafu { weight_diff }.fail(),
         }?;
 
-        let conflicts = self.active_vessel_conflicts_impl().await?;
+        let conflicts: Vec<ActiveVesselConflict> =
+            self.active_vessel_conflicts_impl().try_collect().await?;
+
         if !conflicts.is_empty() {
             // We do not return an error here as we want to test this case in our tests and as a
             // workaround we log the error here instead of the verify database step

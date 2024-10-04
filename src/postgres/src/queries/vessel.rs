@@ -13,8 +13,10 @@ use crate::{
 };
 
 impl PostgresAdapter {
-    pub(crate) async fn active_vessel_conflicts_impl(&self) -> Result<Vec<ActiveVesselConflict>> {
-        let conflicts = sqlx::query_as!(
+    pub(crate) fn active_vessel_conflicts_impl(
+        &self,
+    ) -> impl Stream<Item = Result<ActiveVesselConflict>> + '_ {
+        sqlx::query_as!(
             ActiveVesselConflict,
             r#"
 SELECT
@@ -26,10 +28,8 @@ FROM
     fiskeridir_ais_vessel_active_conflicts
             "#
         )
-        .fetch_all(&self.pool)
-        .await?;
-
-        Ok(conflicts)
+        .fetch(&self.pool)
+        .map_err(|e| e.into())
     }
 
     pub(crate) async fn manual_conflict_override_impl(
@@ -334,7 +334,7 @@ SELECT
     f.nation_id AS "fiskeridir_nation_id?",
     f.gross_tonnage_1969 AS fiskeridir_gross_tonnage_1969,
     f.gross_tonnage_other AS fiskeridir_gross_tonnage_other,
-    f.call_sign AS "fiskeridir_call_sign: CallSign",
+    MAX(v.call_sign) AS "fiskeridir_call_sign: CallSign",
     f."name" AS fiskeridir_name,
     f.registration_id AS fiskeridir_registration_id,
     f."length" AS fiskeridir_length,
@@ -436,11 +436,10 @@ RETURNING
             "#,
             TripAssemblerId::Landings as i32,
         )
-        .fetch_all(&mut *tx)
-        .await?
-        .into_iter()
-        .map(|r| r.id)
-        .collect::<Vec<_>>();
+        .fetch(&mut *tx)
+        .map_ok(|r| r.id)
+        .try_collect::<Vec<_>>()
+        .await?;
 
         sqlx::query!(
             r#"

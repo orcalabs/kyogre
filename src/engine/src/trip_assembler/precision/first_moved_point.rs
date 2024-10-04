@@ -78,7 +78,7 @@ where
             DistanceEstimationSnafu {
                 from: initial_position,
                 to: center,
-                error_stringified: e.clone(),
+                error_stringified: e,
             }
             .build()
         })?;

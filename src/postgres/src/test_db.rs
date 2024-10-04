@@ -436,7 +436,7 @@ WHERE
             })
             .collect::<Vec<_>>();
 
-        self.add_landings(landings.clone()).await;
+        self.add_landings(landings).await;
 
         self.db
             .landings(Default::default())
@@ -739,6 +739,6 @@ WHERE
         .await
         .unwrap();
 
-        VmsPosition::try_from(pos).unwrap()
+        pos.into()
     }
 }

@@ -159,7 +159,7 @@ WHERE
             .await
     }
 
-    pub(crate) async fn fishing_weight_predictor_training_data_impl(
+    pub(crate) fn fishing_weight_predictor_training_data_impl(
         &self,
         model_id: ModelId,
         species: SpeciesGroup,
@@ -167,13 +167,13 @@ WHERE
         limit: Option<u32>,
         bycatch_percentage: Option<f64>,
         majority_species_group: bool,
-    ) -> Result<Vec<WeightPredictorTrainingData>> {
+    ) -> impl Stream<Item = Result<WeightPredictorTrainingData>> + '_ {
         let require_weather = match weather_data {
             WeatherData::Require => false,
             WeatherData::Optional => true,
         };
 
-        let data = sqlx::query_as!(
+        sqlx::query_as!(
             WeightPredictorTrainingData,
             r#"
 SELECT
@@ -238,10 +238,8 @@ LIMIT
             majority_species_group,
             limit.map(|v| v as i64)
         )
-        .fetch_all(&self.pool)
-        .await?;
-
-        Ok(data)
+        .fetch(&self.pool)
+        .map_err(|e| e.into())
     }
 
     pub(crate) async fn fishing_spot_predictor_training_data_impl(

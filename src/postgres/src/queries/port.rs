@@ -1,3 +1,4 @@
+use futures::{Stream, TryStreamExt};
 use kyogre_core::{Arrival, FiskeridirVesselId, PortDockPoint, TripId};
 
 use crate::{
@@ -71,8 +72,8 @@ FROM
         Ok(arrivals)
     }
 
-    pub(crate) async fn ports_impl(&self) -> Result<Vec<Port>> {
-        let ports = sqlx::query_as!(
+    pub(crate) fn ports_impl(&self) -> impl Stream<Item = Result<Port>> + '_ {
+        sqlx::query_as!(
             Port,
             r#"
 SELECT
@@ -84,10 +85,8 @@ FROM
     ports AS p
             "#,
         )
-        .fetch_all(&self.pool)
-        .await?;
-
-        Ok(ports)
+        .fetch(&self.pool)
+        .map_err(|e| e.into())
     }
 
     pub(crate) async fn port_impl(&self, port_id: &str) -> Result<Option<Port>> {

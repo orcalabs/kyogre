@@ -1,5 +1,6 @@
 use crate::{error::Result, PostgresAdapter};
 use fiskeridir_rs::DataFileId;
+use futures::TryStreamExt;
 
 impl PostgresAdapter {
     pub(crate) async fn add_hash(&self, id: &DataFileId, hash: String) -> Result<()> {
@@ -39,10 +40,9 @@ WHERE
             "#,
             ids as &[DataFileId],
         )
-        .fetch_all(&self.pool)
-        .await?
-        .into_iter()
-        .map(|r| (r.id, r.hash))
-        .collect())
+        .fetch(&self.pool)
+        .map_ok(|r| (r.id, r.hash))
+        .try_collect()
+        .await?)
     }
 }
