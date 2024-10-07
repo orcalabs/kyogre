@@ -45,4 +45,4 @@ http-client = { path = "../http-client", default-features = false }
 tokio = { workspace = true, features = ["time", "rt-multi-thread", "macros"] }
 wiremock = { workspace = true }
 
-tempfile = "3.12.0"
+tempfile = "3.13.0"
