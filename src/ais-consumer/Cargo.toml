@@ -33,7 +33,7 @@ reqwest = { workspace = true, features = [
     "stream",
 ] }
 
-tokio-util = { version = "0.7.11", features = ["codec", "compat"] }
+tokio-util = { version = "0.7.12", features = ["codec", "compat"] }
 
 [dev-dependencies]
 orca-core = { workspace = true, features = ["dockertest"] }
