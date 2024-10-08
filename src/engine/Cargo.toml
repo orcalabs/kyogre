@@ -31,10 +31,10 @@ geo = { workspace = true }
 rand = { workspace = true }
 pyo3 = { workspace = true }
 num-traits = { workspace = true }
+geoutils = { workspace = true }
 
 derivative = "2.2.0"
 itertools = "0.13.0"
-geoutils = "0.5.1"
 humantime = "2.1.0"
 console-subscriber = "0.4.0"
 

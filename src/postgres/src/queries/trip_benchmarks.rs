@@ -1,3 +1,4 @@
+use futures::TryStreamExt;
 use kyogre_core::{
     DateRange, FiskeridirVesselId, TripBenchmarkId, TripBenchmarksQuery, TripId,
     TripSustainabilityMetric, TripWithBenchmark, TripWithTotalLivingWeight,
@@ -8,7 +9,7 @@ use crate::{error::Result, models::TripBenchmarkOutput, PostgresAdapter};
 impl PostgresAdapter {
     pub(crate) async fn add_benchmark_outputs(
         &self,
-        values: Vec<kyogre_core::TripBenchmarkOutput>,
+        values: &[kyogre_core::TripBenchmarkOutput],
     ) -> Result<()> {
         self.unnest_insert_from::<_, _, TripBenchmarkOutput>(values, &self.pool)
             .await
@@ -74,6 +75,33 @@ ORDER BY
         .await?;
 
         Ok(trips)
+    }
+
+    pub(crate) async fn trips_without_fuel_consumption_impl(
+        &self,
+        id: FiskeridirVesselId,
+    ) -> Result<Vec<TripId>> {
+        let ids = sqlx::query!(
+            r#"
+SELECT
+    t.trip_id AS "id!: TripId"
+FROM
+    trips t
+    LEFT JOIN trip_benchmark_outputs b ON t.trip_id = b.trip_id
+    AND b.trip_benchmark_id = $1
+WHERE
+    t.fiskeridir_vessel_id = $2
+    AND b.trip_id IS NULL
+            "#,
+            TripBenchmarkId::FuelConsumption as i32,
+            id.into_inner(),
+        )
+        .fetch(&self.pool)
+        .map_ok(|v| v.id)
+        .try_collect()
+        .await?;
+
+        Ok(ids)
     }
 
     pub(crate) async fn trips_with_landing_weight_impl(

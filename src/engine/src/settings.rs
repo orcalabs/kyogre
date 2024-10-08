@@ -54,6 +54,7 @@ impl Settings {
     pub fn benchmarks(&self) -> Vec<Box<dyn TripBenchmark>> {
         vec![
             Box::<WeightPerHour>::default(),
+            Box::<FuelConsumption>::default(),
             // `Sustainability` needs to be last because it depends on benchmarks above.
             // TODO
             // Box::<Sustainability>::default(),
