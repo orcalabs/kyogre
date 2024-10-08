@@ -6153,7 +6153,9 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "fiskeridir-rs",
+ "geoutils",
  "kyogre-core",
+ "tracing",
 ]
 
 [[package]]

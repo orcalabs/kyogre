@@ -18,8 +18,8 @@ pub struct TripBenchmarkOutput {
     pub unrealistic: bool,
 }
 
-impl From<kyogre_core::TripBenchmarkOutput> for TripBenchmarkOutput {
-    fn from(v: kyogre_core::TripBenchmarkOutput) -> Self {
+impl From<&kyogre_core::TripBenchmarkOutput> for TripBenchmarkOutput {
+    fn from(v: &kyogre_core::TripBenchmarkOutput) -> Self {
         Self {
             trip_id: v.trip_id,
             trip_benchmark_id: v.benchmark_id,

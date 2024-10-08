@@ -222,6 +222,7 @@ pub async fn engine(adapter: PostgresAdapter, db_settings: &PsqlSettings) -> Fis
     ];
     let benchmarks = vec![
         Box::<WeightPerHour>::default() as _,
+        Box::<FuelConsumption>::default() as _,
         // TODO
         // Box::<Sustainability>::default() as _,
     ];
