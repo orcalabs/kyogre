@@ -10,3 +10,5 @@ kyogre-core = { path = "../kyogre-core", features = ["utoipa"] }
 fiskeridir-rs = { path = "../fiskeridir-rs" }
 
 async-trait = { workspace = true }
+geoutils = { workspace = true }
+tracing = { workspace = true }

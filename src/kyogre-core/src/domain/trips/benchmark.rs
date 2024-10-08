@@ -1,21 +1,20 @@
-use std::{
-    collections::HashMap,
-    fmt::{self, Display},
-};
+use std::collections::HashMap;
 
 use async_trait::async_trait;
 use serde_repr::Deserialize_repr;
+use strum::Display;
 use tracing::error;
 
 use crate::*;
 
 #[repr(i32)]
-#[derive(Debug, Clone, Copy, PartialEq, Deserialize_repr)]
+#[derive(Debug, Clone, Copy, PartialEq, Deserialize_repr, Display)]
 #[cfg_attr(feature = "sqlx", derive(sqlx::Type))]
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub enum TripBenchmarkId {
     WeightPerHour = 1,
     Sustainability = 2,
+    FuelConsumption = 3,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -93,14 +92,5 @@ pub trait TripBenchmark: Send + Sync {
 impl From<TripBenchmarkId> for i32 {
     fn from(value: TripBenchmarkId) -> Self {
         value as i32
-    }
-}
-
-impl Display for TripBenchmarkId {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::WeightPerHour => f.write_str("WeightPerHour"),
-            Self::Sustainability => f.write_str("Sustainability"),
-        }
     }
 }

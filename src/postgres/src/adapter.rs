@@ -911,28 +911,43 @@ impl TripPrecisionOutboundPort for PostgresAdapter {
 #[async_trait]
 impl TripBenchmarkOutbound for PostgresAdapter {
     async fn vessels(&self) -> CoreResult<Vec<Vessel>> {
-        self.fiskeridir_ais_vessel_combinations()
-            .try_convert_collect()
-            .await
+        retry(|| {
+            self.fiskeridir_ais_vessel_combinations()
+                .try_convert_collect()
+        })
+        .await
+    }
+    async fn track_of_trip(&self, id: TripId) -> CoreResult<Vec<AisVmsPosition>> {
+        Ok(retry(|| {
+            self.trip_positions_impl(id, AisPermission::All)
+                .try_collect()
+        })
+        .await?)
+    }
+    async fn trips_without_fuel_consumption(
+        &self,
+        id: FiskeridirVesselId,
+    ) -> CoreResult<Vec<TripId>> {
+        Ok(retry(|| self.trips_without_fuel_consumption_impl(id)).await?)
     }
     async fn trips_with_landing_weight(
         &self,
         id: FiskeridirVesselId,
     ) -> CoreResult<Vec<TripWithTotalLivingWeight>> {
-        Ok(self.trips_with_landing_weight_impl(id).await?)
+        Ok(retry(|| self.trips_with_landing_weight_impl(id)).await?)
     }
     async fn sustainability_metrics(
         &self,
         id: FiskeridirVesselId,
     ) -> CoreResult<Vec<TripSustainabilityMetric>> {
-        Ok(self.sustainability_metrics_impl(id).await?)
+        Ok(retry(|| self.sustainability_metrics_impl(id)).await?)
     }
 }
 
 #[async_trait]
 impl TripBenchmarkInbound for PostgresAdapter {
     async fn add_output(&self, values: Vec<TripBenchmarkOutput>) -> CoreResult<()> {
-        Ok(self.add_benchmark_outputs(values).await?)
+        Ok(retry(|| self.add_benchmark_outputs(&values)).await?)
     }
 }
 
