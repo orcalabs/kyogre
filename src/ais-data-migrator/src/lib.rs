@@ -155,7 +155,7 @@ where
                 .await
                 .map_err(|error| Error::Source {
                     location: location!(),
-                    error,
+                    source: error,
                 })?;
 
             self.destination
@@ -163,7 +163,7 @@ where
                 .await
                 .map_err(|error| Error::Destination {
                     location: location!(),
-                    error,
+                    source: error,
                 })?;
 
             current = end;
