@@ -29,9 +29,7 @@ impl TripBenchmark for WeightPerHour {
             VesselLengthGroup::TwentyEightAndAbove => 20_000.,
         };
 
-        let trips = adapter
-            .trips_with_landing_weight(vessel.fiskeridir.id)
-            .await?;
+        let trips = adapter.trips_with_weight(vessel.fiskeridir.id).await?;
 
         let output = trips
             .into_iter()
@@ -46,7 +44,7 @@ impl TripBenchmark for WeightPerHour {
                 let value = if hours == 0. {
                     0.
                 } else {
-                    t.total_living_weight / hours
+                    t.total_weight / hours
                 };
 
                 TripBenchmarkOutput {

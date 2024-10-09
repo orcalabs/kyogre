@@ -4,7 +4,7 @@ use super::{
 };
 use crate::error::Result;
 use async_trait::async_trait;
-use kyogre_core::{AisVmsPosition, DateRange, TripProcessingUnit};
+use kyogre_core::{AisVmsPosition, DateRange, Mean, TripProcessingUnit};
 use kyogre_core::{TripPrecisionOutboundPort, Vessel};
 
 /// Precision strategy where we try to find a position that is close to shore.
@@ -108,17 +108,15 @@ impl DistanceToShorePrecision {
         T: IntoIterator<Item = &'a [AisVmsPosition]>,
     {
         for chunk in positions {
-            let mean_distance =
-                chunk.iter().map(|p| p.distance_to_shore).sum::<f64>() / chunk.len() as f64;
+            let mean_distance = chunk.iter().map(|p| p.distance_to_shore).mean();
 
-            if mean_distance > self.config.distance_threshold {
+            if mean_distance.map_or(true, |v| v > self.config.distance_threshold) {
                 continue;
             }
 
-            let speed_iter = chunk.iter().filter_map(|p| p.speed);
-            let mean_speed = speed_iter.clone().sum::<f64>() / speed_iter.count() as f64;
+            let mean_speed = chunk.iter().filter_map(|p| p.speed).mean();
 
-            if mean_speed <= self.config.speed_threshold {
+            if mean_speed.map_or(false, |v| v <= self.config.speed_threshold) {
                 return Some(PrecisionStop {
                     timestamp: match preference {
                         PointClusterPreference::First => chunk.first(),

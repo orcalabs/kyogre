@@ -14,7 +14,8 @@ use crate::*;
 pub enum TripBenchmarkId {
     WeightPerHour = 1,
     Sustainability = 2,
-    FuelConsumption = 3,
+    WeightPerDistance = 3,
+    FuelConsumption = 4,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -22,7 +23,9 @@ pub struct TripWithBenchmark {
     pub id: TripId,
     pub period: DateRange,
     pub period_precision: Option<DateRange>,
-    pub weight_per_hour: f64,
+    pub weight_per_hour: Option<f64>,
+    pub weight_per_distance: Option<f64>,
+    pub fuel_consumption: Option<f64>,
     // TODO
     // pub sustainability: f64,
 }
@@ -36,17 +39,25 @@ pub struct TripBenchmarkOutput {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct TripWithTotalLivingWeight {
+pub struct TripWithTotalWeight {
     pub id: TripId,
     pub period: DateRange,
     pub period_precision: Option<DateRange>,
-    pub total_living_weight: f64,
+    pub total_weight: f64,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct TripWithDistance {
+    pub id: TripId,
+    pub distance: f64,
+    pub total_weight: f64,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct TripSustainabilityMetric {
     pub id: TripId,
     pub weight_per_hour: f64,
+    pub weight_per_distance: f64,
 }
 
 #[async_trait]

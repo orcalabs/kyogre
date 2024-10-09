@@ -930,11 +930,17 @@ impl TripBenchmarkOutbound for PostgresAdapter {
     ) -> CoreResult<Vec<TripId>> {
         Ok(retry(|| self.trips_without_fuel_consumption_impl(id)).await?)
     }
-    async fn trips_with_landing_weight(
+    async fn trips_with_weight(
         &self,
         id: FiskeridirVesselId,
-    ) -> CoreResult<Vec<TripWithTotalLivingWeight>> {
-        Ok(retry(|| self.trips_with_landing_weight_impl(id)).await?)
+    ) -> CoreResult<Vec<TripWithTotalWeight>> {
+        Ok(retry(|| self.trips_with_weight_impl(id)).await?)
+    }
+    async fn trips_with_distance(
+        &self,
+        id: FiskeridirVesselId,
+    ) -> CoreResult<Vec<TripWithDistance>> {
+        Ok(retry(|| self.trips_with_distance_impl(id)).await?)
     }
     async fn sustainability_metrics(
         &self,
