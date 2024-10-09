@@ -1,9 +1,11 @@
+use std::future::ready;
+
 use chrono::{DateTime, Datelike, Duration, Utc};
 use fiskeridir_rs::{
     CallSign, DeliveryPointId, ErsDca, ErsDep, ErsPor, ErsTra, Gear, GearGroup, LandingId,
     SpeciesGroup, VesselLengthGroup, Vms,
 };
-use futures::TryStreamExt;
+use futures::{Stream, StreamExt, TryStreamExt};
 use kyogre_core::*;
 use rand::random;
 
@@ -245,6 +247,10 @@ ORDER BY
     }
 
     pub async fn all_ais_vessels(&self) -> Vec<AisVessel> {
+        self.all_ais_vessels_stream().collect().await
+    }
+
+    pub fn all_ais_vessels_stream(&self) -> impl Stream<Item = AisVessel> + '_ {
         sqlx::query_as!(
             AisVessel,
             r#"
@@ -261,9 +267,8 @@ FROM
     ais_vessels
             "#
         )
-        .fetch_all(&self.db.pool)
-        .await
-        .unwrap()
+        .fetch(&self.db.pool)
+        .map(|v| v.unwrap())
     }
 
     pub async fn create_test_database_from_template(&self, db_name: &str) {
@@ -385,11 +390,10 @@ WHERE
         self.db.add_ais_vessels(&[val]).await.unwrap();
 
         let mut vessels = self
-            .all_ais_vessels()
-            .await
-            .into_iter()
-            .filter(|v| v.mmsi == mmsi)
-            .collect::<Vec<AisVessel>>();
+            .all_ais_vessels_stream()
+            .filter(|v| ready(v.mmsi == mmsi))
+            .collect::<Vec<AisVessel>>()
+            .await;
         assert_eq!(vessels.len(), 1);
 
         vessels.pop().unwrap()

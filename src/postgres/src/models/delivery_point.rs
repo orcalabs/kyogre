@@ -102,10 +102,10 @@ impl<'a> From<&'a fiskeridir_rs::DeliveryPointId> for NewDeliveryPointId<'a> {
     }
 }
 
-impl<'a> From<&'a ManualDeliveryPoint> for NewDeliveryPointId<'a> {
-    fn from(v: &'a ManualDeliveryPoint) -> Self {
+impl<'a> From<&'a kyogre_core::ManualDeliveryPoint> for NewDeliveryPointId<'a> {
+    fn from(v: &'a kyogre_core::ManualDeliveryPoint) -> Self {
         Self {
-            delivery_point_id: v.delivery_point_id.as_ref(),
+            delivery_point_id: v.id.as_ref(),
         }
     }
 }

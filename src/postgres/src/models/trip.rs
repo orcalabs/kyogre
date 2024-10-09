@@ -3,10 +3,10 @@ use std::str::FromStr;
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::{DeliveryPointId, Gear, GearGroup, LandingId, SpeciesGroup, VesselLengthGroup};
 use kyogre_core::{
-    Catch, DateRange, FishingFacility, FiskeridirVesselId, MinimalVesselEvent, PositionType,
-    PrecisionId, PrecisionOutcome, PrecisionStatus, ProcessingStatus, TripAssemblerConflict,
-    TripAssemblerId, TripDistancerId, TripHaul, TripId, TripPositionLayerId, TripProcessingUnit,
-    TripsConflictStrategy, VesselEventType,
+    AisVmsPosition, Catch, DateRange, FishingFacility, FiskeridirVesselId, MinimalVesselEvent,
+    PositionType, PrecisionId, PrecisionOutcome, PrecisionStatus, ProcessingStatus,
+    PrunedTripPosition, TripAssemblerConflict, TripAssemblerId, TripDistancerId, TripHaul, TripId,
+    TripPositionLayerId, TripProcessingUnit, TripsConflictStrategy, VesselEventType,
 };
 use sqlx::postgres::types::PgRange;
 use unnest_insert::UnnestInsert;
@@ -378,5 +378,35 @@ impl TryFrom<TripAssemblerLogEntry> for kyogre_core::TripAssemblerLogEntry {
             new_vessel_events: serde_json::from_str(&value.new_vessel_events)?,
             conflict_strategy: TripsConflictStrategy::from_str(&value.conflict_strategy)?,
         })
+    }
+}
+
+impl TripAisVmsPosition {
+    pub fn new(id: TripId, p: AisVmsPosition) -> Self {
+        Self {
+            trip_id: id,
+            latitude: p.latitude,
+            longitude: p.longitude,
+            timestamp: p.timestamp,
+            course_over_ground: p.course_over_ground,
+            speed: p.speed,
+            navigation_status_id: p.navigational_status.map(|v| v as i32),
+            rate_of_turn: p.rate_of_turn,
+            true_heading: p.true_heading,
+            distance_to_shore: p.distance_to_shore,
+            position_type_id: p.position_type,
+            pruned_by: p.pruned_by,
+        }
+    }
+}
+
+impl TripPrunedAisVmsPosition {
+    pub fn new(id: TripId, p: PrunedTripPosition) -> Self {
+        Self {
+            trip_id: id,
+            positions: p.positions,
+            value: p.value,
+            trip_position_layer_id: p.trip_layer,
+        }
     }
 }

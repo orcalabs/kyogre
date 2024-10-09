@@ -113,8 +113,6 @@ impl PostgresAdapter {
             tx,
         )
         .await?;
-        self.connect_trip_to_events(event_ids, VesselEventType::ErsDep, tx)
-            .await?;
 
         Ok(())
     }

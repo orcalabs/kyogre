@@ -13,29 +13,7 @@ use crate::{
 
 impl PostgresAdapter {
     pub(crate) fn all_vms_impl(&self) -> impl Stream<Item = Result<VmsPosition>> + '_ {
-        sqlx::query_as!(
-            VmsPosition,
-            r#"
-SELECT
-    call_sign AS "call_sign!: CallSign",
-    course,
-    latitude,
-    longitude,
-    registration_id,
-    speed,
-    "timestamp",
-    vessel_length,
-    vessel_name,
-    vessel_type,
-    distance_to_shore
-FROM
-    vms_positions
-ORDER BY
-    "timestamp" ASC
-            "#,
-        )
-        .fetch(&self.pool)
-        .map_err(|e| e.into())
+        self.vms_positions_inner(VmsPositionsArg::All)
     }
 
     pub(crate) fn vms_positions_impl(
@@ -43,6 +21,20 @@ ORDER BY
         call_sign: &CallSign,
         range: &DateRange,
     ) -> impl Stream<Item = Result<VmsPosition>> + '_ {
+        self.vms_positions_inner(VmsPositionsArg::Filter { call_sign, range })
+    }
+
+    fn vms_positions_inner(
+        &self,
+        arg: VmsPositionsArg<'_>,
+    ) -> impl Stream<Item = Result<VmsPosition>> + '_ {
+        let (call_sign, start, end) = match arg {
+            VmsPositionsArg::All => (None, None, None),
+            VmsPositionsArg::Filter { call_sign, range } => {
+                (Some(call_sign), Some(range.start()), Some(range.end()))
+            }
+        };
+
         sqlx::query_as!(
             VmsPosition,
             r#"
@@ -61,14 +53,24 @@ SELECT
 FROM
     vms_positions
 WHERE
-    call_sign = $1
-    AND "timestamp" BETWEEN $2 AND $3
+    (
+        $1::TEXT IS NULL
+        OR call_sign = $1
+    )
+    AND (
+        $2::TIMESTAMPTZ IS NULL
+        OR timestamp >= $2
+    )
+    AND (
+        $3::TIMESTAMPTZ IS NULL
+        OR timestamp <= $3
+    )
 ORDER BY
     "timestamp" ASC
             "#,
-            call_sign.as_ref(),
-            range.start(),
-            range.end(),
+            call_sign as Option<&CallSign>,
+            start,
+            end,
         )
         .fetch(&self.pool)
         .map_err(|e| e.into())
@@ -227,4 +229,12 @@ RETURNING
 
         Ok(())
     }
+}
+
+pub(crate) enum VmsPositionsArg<'a> {
+    All,
+    Filter {
+        call_sign: &'a CallSign,
+        range: &'a DateRange,
+    },
 }

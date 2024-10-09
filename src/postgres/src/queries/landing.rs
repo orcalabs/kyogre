@@ -9,9 +9,8 @@ use fiskeridir_rs::{
 };
 use futures::{Stream, TryStreamExt};
 use kyogre_core::{
-    BoxIterator, FiskeridirVesselId, LandingsQuery, TripAssemblerId, VesselEventType,
+    BoxIterator, FiskeridirVesselId, LandingsQuery, Range, TripAssemblerId, VesselEventType,
 };
-use sqlx::postgres::types::PgRange;
 use tracing::{error, info};
 
 use crate::{
@@ -29,7 +28,15 @@ impl PostgresAdapter {
         &self,
         query: LandingsQuery,
     ) -> impl Stream<Item = Result<Landing>> + '_ {
-        let args = LandingsArgs::from(query);
+        let (catch_area_ids, catch_main_area_ids) = if let Some(cls) = query.catch_locations {
+            let (catch_areas, main_areas): (Vec<_>, Vec<_>) = cls
+                .into_iter()
+                .map(|v| (v.catch_area(), v.main_area()))
+                .unzip();
+            (Some(catch_areas), Some(main_areas))
+        } else {
+            (None, None)
+        };
 
         sqlx::query_as!(
             Landing,
@@ -119,15 +126,15 @@ ORDER BY
         AND $9 = 2 THEN SUM(le.living_weight)
     END DESC
             "#,
-            args.ranges.as_deref(),
-            args.catch_area_ids as _,
-            args.catch_main_area_ids as _,
-            args.gear_group_ids.as_deref() as Option<&[GearGroup]>,
-            args.vessel_length_groups.as_deref() as Option<&[VesselLengthGroup]>,
-            args.fiskeridir_vessel_ids as _,
-            args.species_group_ids.as_deref() as Option<&[SpeciesGroup]>,
-            args.ordering,
-            args.sorting,
+            query.ranges as Option<Vec<Range<DateTime<Utc>>>>,
+            catch_area_ids.as_deref(),
+            catch_main_area_ids.as_deref(),
+            query.gear_group_ids.as_deref() as Option<&[GearGroup]>,
+            query.vessel_length_groups.as_deref() as Option<&[VesselLengthGroup]>,
+            query.vessel_ids as Option<Vec<FiskeridirVesselId>>,
+            query.species_group_ids.as_deref() as Option<&[SpeciesGroup]>,
+            query.ordering.map(|o| o as i32),
+            query.sorting.map(|s| s as i32),
         )
         .fetch(&self.pool)
         .map_err(|e| e.into())
@@ -644,55 +651,5 @@ WHERE
         .c;
 
         Ok(c + c2)
-    }
-}
-
-pub struct LandingsArgs {
-    pub ranges: Option<Vec<PgRange<DateTime<Utc>>>>,
-    pub catch_area_ids: Option<Vec<i32>>,
-    pub catch_main_area_ids: Option<Vec<i32>>,
-    pub gear_group_ids: Option<Vec<GearGroup>>,
-    pub species_group_ids: Option<Vec<SpeciesGroup>>,
-    pub vessel_length_groups: Option<Vec<VesselLengthGroup>>,
-    pub fiskeridir_vessel_ids: Option<Vec<FiskeridirVesselId>>,
-    pub sorting: Option<i32>,
-    pub ordering: Option<i32>,
-}
-
-impl From<LandingsQuery> for LandingsArgs {
-    fn from(v: LandingsQuery) -> Self {
-        let (catch_area_ids, catch_main_area_ids) = if let Some(cls) = v.catch_locations {
-            let mut catch_areas = Vec::with_capacity(cls.len());
-            let mut main_areas = Vec::with_capacity(cls.len());
-
-            for c in cls {
-                catch_areas.push(c.catch_area());
-                main_areas.push(c.main_area());
-            }
-
-            (Some(catch_areas), Some(main_areas))
-        } else {
-            (None, None)
-        };
-
-        LandingsArgs {
-            ranges: v.ranges.map(|ranges| {
-                ranges
-                    .into_iter()
-                    .map(|m| PgRange {
-                        start: m.start,
-                        end: m.end,
-                    })
-                    .collect()
-            }),
-            catch_area_ids,
-            catch_main_area_ids,
-            gear_group_ids: v.gear_group_ids,
-            species_group_ids: v.species_group_ids,
-            vessel_length_groups: v.vessel_length_groups,
-            fiskeridir_vessel_ids: v.vessel_ids,
-            sorting: v.sorting.map(|s| s as i32),
-            ordering: v.ordering.map(|o| o as i32),
-        }
     }
 }

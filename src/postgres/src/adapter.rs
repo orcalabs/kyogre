@@ -12,7 +12,10 @@ use sqlx::{
 };
 use tracing::{error, info, instrument, warn};
 
-use crate::error::{Error, Result};
+use crate::{
+    error::{Error, Result},
+    queries::ais::AisPositionsArg,
+};
 
 #[derive(Debug, Clone)]
 pub struct PostgresAdapter {
@@ -343,7 +346,9 @@ impl TestHelperOutbound for PostgresAdapter {
     }
 
     async fn all_ais(&self) -> Vec<AisPosition> {
-        self.all_ais_impl().await.unwrap()
+        self.all_ais_positions_impl(AisPositionsArg::All)
+            .await
+            .unwrap()
     }
     async fn all_vms(&self) -> Vec<VmsPosition> {
         self.all_vms_impl()
@@ -408,14 +413,7 @@ impl TestHelperInbound for PostgresAdapter {
         self.clear_trip_precision_impl(vessel_id).await.unwrap();
     }
     async fn add_manual_delivery_points(&self, values: Vec<ManualDeliveryPoint>) {
-        self.add_manual_delivery_points_impl(
-            values
-                .into_iter()
-                .map(crate::models::ManualDeliveryPoint::from)
-                .collect(),
-        )
-        .await
-        .unwrap();
+        self.add_manual_delivery_points_impl(values).await.unwrap();
     }
     async fn add_deprecated_delivery_point(
         &self,
@@ -445,7 +443,9 @@ impl AisMigratorSource for PostgresAdapter {
         start: DateTime<Utc>,
         end: DateTime<Utc>,
     ) -> CoreResult<Vec<AisPosition>> {
-        Ok(self.all_ais_positions_impl(mmsi, start, end).await?)
+        Ok(self
+            .all_ais_positions_impl(AisPositionsArg::Filter { mmsi, start, end })
+            .await?)
     }
     async fn existing_mmsis(&self) -> CoreResult<Vec<Mmsi>> {
         Ok(self.existing_mmsis_impl().await?)
@@ -859,17 +859,10 @@ impl TripAssemblerOutboundPort for PostgresAdapter {
         timestamp: &DateTime<Utc>,
         bound: Bound,
     ) -> CoreResult<Option<Trip>> {
-        Ok(match bound {
-            Bound::Inclusive => {
-                self.trip_prior_to_timestamp_inclusive(vessel_id, timestamp)
-                    .await?
-            }
-            Bound::Exclusive => {
-                self.trip_prior_to_timestamp_exclusive(vessel_id, timestamp)
-                    .await?
-            }
-        }
-        .map(From::from))
+        Ok(self
+            .trip_prior_to_timestamp_impl(vessel_id, timestamp, bound)
+            .await?
+            .map(From::from))
     }
     async fn relevant_events(
         &self,

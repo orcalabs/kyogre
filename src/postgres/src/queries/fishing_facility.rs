@@ -4,10 +4,9 @@ use futures::{Stream, TryStreamExt};
 use geo_types::geometry::Geometry;
 use geozero::wkb;
 use kyogre_core::{
-    FishingFacilitiesQuery, FishingFacilitiesSorting, FishingFacility, FishingFacilityApiSource,
-    FishingFacilityToolType, FiskeridirVesselId, Mmsi, Ordering,
+    FishingFacilitiesQuery, FishingFacility, FishingFacilityApiSource, FishingFacilityToolType,
+    FiskeridirVesselId, Mmsi, Range,
 };
-use sqlx::postgres::types::PgRange;
 
 use crate::{
     error::{ConvertSnafu, Result},
@@ -270,8 +269,6 @@ SET
         &self,
         query: FishingFacilitiesQuery,
     ) -> impl Stream<Item = Result<FishingFacility>> + '_ {
-        let args: FishingFacilitiesArgs = query.into();
-
         sqlx::query_as!(
             FishingFacility,
             r#"
@@ -350,16 +347,16 @@ OFFSET
 LIMIT
     $10
             "#,
-            args.mmsis.as_deref() as Option<&[Mmsi]>,
-            args.fiskeridir_vessel_ids as _,
-            args.tool_types as Option<Vec<FishingFacilityToolType>>,
-            args.active,
-            args.setup_ranges.as_deref(),
-            args.removed_ranges.as_deref(),
-            args.ordering as i32,
-            args.sorting as i32,
-            args.offset as i64,
-            args.limit as i64,
+            query.mmsis as Option<Vec<Mmsi>>,
+            query.fiskeridir_vessel_ids as Option<Vec<FiskeridirVesselId>>,
+            query.tool_types as Option<Vec<FishingFacilityToolType>>,
+            query.active,
+            query.setup_ranges as Option<Vec<Range<DateTime<Utc>>>>,
+            query.removed_ranges as Option<Vec<Range<DateTime<Utc>>>>,
+            query.ordering.unwrap_or_default() as i32,
+            query.sorting.unwrap_or_default() as i32,
+            query.pagination.offset() as i64,
+            query.pagination.limit() as i64,
         )
         .fetch(&self.pool)
         .map_err(|e| e.into())
@@ -390,50 +387,5 @@ LIMIT
         .fetch_optional(&self.pool)
         .await?
         .map(|r| r.last_changed))
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct FishingFacilitiesArgs {
-    pub mmsis: Option<Vec<Mmsi>>,
-    pub fiskeridir_vessel_ids: Option<Vec<FiskeridirVesselId>>,
-    pub tool_types: Option<Vec<FishingFacilityToolType>>,
-    pub active: Option<bool>,
-    pub setup_ranges: Option<Vec<PgRange<DateTime<Utc>>>>,
-    pub removed_ranges: Option<Vec<PgRange<DateTime<Utc>>>>,
-    pub limit: u64,
-    pub offset: u64,
-    pub ordering: Ordering,
-    pub sorting: FishingFacilitiesSorting,
-}
-
-impl From<FishingFacilitiesQuery> for FishingFacilitiesArgs {
-    fn from(v: FishingFacilitiesQuery) -> Self {
-        Self {
-            mmsis: v.mmsis,
-            fiskeridir_vessel_ids: v.fiskeridir_vessel_ids,
-            tool_types: v.tool_types,
-            active: v.active,
-            setup_ranges: v.setup_ranges.map(|ss| {
-                ss.into_iter()
-                    .map(|s| PgRange {
-                        start: s.start,
-                        end: s.end,
-                    })
-                    .collect()
-            }),
-            removed_ranges: v.removed_ranges.map(|rs| {
-                rs.into_iter()
-                    .map(|r| PgRange {
-                        start: r.start,
-                        end: r.end,
-                    })
-                    .collect()
-            }),
-            limit: v.pagination.limit(),
-            offset: v.pagination.offset(),
-            ordering: v.ordering.unwrap_or_default(),
-            sorting: v.sorting.unwrap_or_default(),
-        }
     }
 }

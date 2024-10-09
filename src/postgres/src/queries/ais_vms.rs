@@ -46,6 +46,7 @@ GROUP BY
         .fetch(&self.pool)
         .map_err(|e| e.into())
     }
+
     pub(crate) async fn prune_ais_vms_area_impl(&self, limit: NaiveDate) -> Result<()> {
         let mut tx = self.pool.begin().await?;
 
@@ -74,6 +75,7 @@ WHERE
         tx.commit().await?;
         Ok(())
     }
+
     pub(crate) async fn add_ais_vms_aggregated<'a>(
         &self,
         values: Vec<AisVmsAreaPositionsReturning>,

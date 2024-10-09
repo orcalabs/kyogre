@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT\n    trip_id AS \"trip_id!: TripId\",\n    period AS \"period!: DateRange\",\n    period_precision AS \"period_precision: DateRange\",\n    landing_coverage AS \"landing_coverage!: DateRange\",\n    distance,\n    trip_assembler_id AS \"trip_assembler_id!: TripAssemblerId\",\n    start_port_id,\n    end_port_id,\n    target_species_fiskeridir_id,\n    target_species_fao_id\nFROM\n    trips\nWHERE\n    fiskeridir_vessel_id = $1\n    AND UPPER(period) < $2\nORDER BY\n    period DESC\nLIMIT\n    1\n            ",
+  "query": "\nSELECT\n    trip_id AS \"trip_id!: TripId\",\n    period AS \"period!: DateRange\",\n    period_precision AS \"period_precision: DateRange\",\n    landing_coverage AS \"landing_coverage!: DateRange\",\n    distance,\n    trip_assembler_id AS \"trip_assembler_id!: TripAssemblerId\",\n    start_port_id,\n    end_port_id,\n    target_species_fiskeridir_id,\n    target_species_fao_id\nFROM\n    trips\nWHERE\n    fiskeridir_vessel_id = $1\n    AND (\n        (\n            $2 = 1\n            AND UPPER(period) <= $3\n        )\n        OR (\n            $2 = 2\n            AND UPPER(period) < $3\n        )\n    )\nORDER BY\n    period DESC\nLIMIT\n    1\n            ",
   "describe": {
     "columns": [
       {
@@ -57,6 +57,7 @@
     "parameters": {
       "Left": [
         "Int8",
+        "Int4",
         "Timestamptz"
       ]
     },
@@ -73,5 +74,5 @@
       true
     ]
   },
-  "hash": "36082cb8b5a2c62d0bd45f91b5897ce20dc191b3da2709d8f551339c2495c8be"
+  "hash": "66f7f787f31baca9a7551a28fb00b8985ef3cf062ebfe6c9df31e64ce7968a30"
 }
