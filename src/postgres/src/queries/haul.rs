@@ -2,7 +2,7 @@ use chrono::{DateTime, Utc};
 use fiskeridir_rs::{Gear, GearGroup, SpeciesGroup, VesselLengthGroup};
 use futures::{future::ready, Stream, TryStreamExt};
 use kyogre_core::*;
-use sqlx::{postgres::types::PgRange, Pool, Postgres};
+use sqlx::{Pool, Postgres};
 
 use crate::{error::Result, models::Haul, PostgresAdapter};
 
@@ -144,8 +144,6 @@ GROUP BY
     }
 
     pub(crate) fn hauls_impl(&self, query: HaulsQuery) -> impl Stream<Item = Result<Haul>> + '_ {
-        let args = HaulsArgs::from(query);
-
         sqlx::query_as!(
             Haul,
             r#"
@@ -260,18 +258,18 @@ ORDER BY
         AND $12 = 3 THEN total_living_weight
     END DESC
             "#,
-            args.ranges.as_deref(),
-            args.catch_locations as Option<Vec<CatchLocationId>>,
-            args.gear_group_ids as Option<Vec<GearGroup>>,
-            args.species_group_ids as Option<Vec<SpeciesGroup>>,
-            args.vessel_length_groups as Option<Vec<VesselLengthGroup>>,
-            args.fiskeridir_vessel_ids as Option<Vec<FiskeridirVesselId>>,
-            args.min_wind_speed,
-            args.max_wind_speed,
-            args.min_air_temperature,
-            args.max_air_temperature,
-            args.ordering,
-            args.sorting,
+            query.ranges as Option<Vec<Range<DateTime<Utc>>>>,
+            query.catch_locations as Option<Vec<CatchLocationId>>,
+            query.gear_group_ids as Option<Vec<GearGroup>>,
+            query.species_group_ids as Option<Vec<SpeciesGroup>>,
+            query.vessel_length_groups as Option<Vec<VesselLengthGroup>>,
+            query.vessel_ids as Option<Vec<FiskeridirVesselId>>,
+            query.min_wind_speed,
+            query.max_wind_speed,
+            query.min_air_temperature,
+            query.max_air_temperature,
+            query.ordering.map(|o| o as i32),
+            query.sorting.map(|s| s as i32),
         )
         .fetch(&self.pool)
         .map_err(|e| e.into())
@@ -985,48 +983,6 @@ GROUP BY
         .await?;
 
         Ok(())
-    }
-}
-
-pub struct HaulsArgs {
-    pub ranges: Option<Vec<PgRange<DateTime<Utc>>>>,
-    pub catch_locations: Option<Vec<CatchLocationId>>,
-    pub gear_group_ids: Option<Vec<GearGroup>>,
-    pub species_group_ids: Option<Vec<SpeciesGroup>>,
-    pub vessel_length_groups: Option<Vec<VesselLengthGroup>>,
-    pub fiskeridir_vessel_ids: Option<Vec<FiskeridirVesselId>>,
-    pub min_wind_speed: Option<f64>,
-    pub max_wind_speed: Option<f64>,
-    pub min_air_temperature: Option<f64>,
-    pub max_air_temperature: Option<f64>,
-    pub sorting: Option<i32>,
-    pub ordering: Option<i32>,
-}
-
-impl From<HaulsQuery> for HaulsArgs {
-    fn from(v: HaulsQuery) -> Self {
-        HaulsArgs {
-            ranges: v.ranges.map(|ranges| {
-                ranges
-                    .into_iter()
-                    .map(|m| PgRange {
-                        start: m.start,
-                        end: m.end,
-                    })
-                    .collect()
-            }),
-            catch_locations: v.catch_locations,
-            gear_group_ids: v.gear_group_ids,
-            species_group_ids: v.species_group_ids,
-            vessel_length_groups: v.vessel_length_groups,
-            fiskeridir_vessel_ids: v.vessel_ids,
-            min_wind_speed: v.min_wind_speed,
-            max_wind_speed: v.max_wind_speed,
-            min_air_temperature: v.min_air_temperature,
-            max_air_temperature: v.max_air_temperature,
-            sorting: v.sorting.map(|s| s as i32),
-            ordering: v.ordering.map(|o| o as i32),
-        }
     }
 }
 

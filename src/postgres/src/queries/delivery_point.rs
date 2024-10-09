@@ -1,7 +1,7 @@
 use std::collections::{hash_map::Entry, HashMap};
 
 use fiskeridir_rs::DeliveryPointId;
-use futures::{Stream, TryStreamExt};
+use futures::{Stream, StreamExt, TryStreamExt};
 use kyogre_core::{DateRange, DeliveryPoint, FiskeridirVesselId};
 use sqlx::postgres::types::PgRange;
 
@@ -19,9 +19,23 @@ impl PostgresAdapter {
         &self,
         id: &DeliveryPointId,
     ) -> Result<Option<DeliveryPoint>> {
+        self.delivery_points_inner(Some(id))
+            .next()
+            .await
+            .transpose()
+    }
+
+    pub(crate) fn delivery_points_impl(&self) -> impl Stream<Item = Result<DeliveryPoint>> + '_ {
+        self.delivery_points_inner(None)
+    }
+
+    fn delivery_points_inner(
+        &self,
+        id: Option<&DeliveryPointId>,
+    ) -> impl Stream<Item = Result<DeliveryPoint>> + '_ {
         // Coalesce on delivery_point_id is needed due to a bug in sqlx prepare
         // which flips the nullability on each run
-        let dp = sqlx::query_as!(
+        sqlx::query_as!(
             DeliveryPoint,
             r#"
 SELECT
@@ -36,14 +50,15 @@ FROM
     LEFT JOIN aqua_culture_register a ON a.delivery_point_id = d.delivery_point_id
     LEFT JOIN mattilsynet_delivery_points mt ON mt.delivery_point_id = d.delivery_point_id
 WHERE
-    d.delivery_point_id = $1
+    (
+        $1::TEXT IS NULL
+        OR d.delivery_point_id = $1
+    )
             "#,
-            id.as_ref()
+            id as Option<&DeliveryPointId>,
         )
-        .fetch_optional(&self.pool)
-        .await?;
-
-        Ok(dp)
+        .fetch(&self.pool)
+        .map_err(|e| e.into())
     }
 
     pub(crate) async fn add_deprecated_delivery_point_impl(
@@ -84,40 +99,18 @@ FROM
 
     pub(crate) async fn add_manual_delivery_points_impl(
         &self,
-        values: Vec<ManualDeliveryPoint>,
+        values: Vec<kyogre_core::ManualDeliveryPoint>,
     ) -> Result<()> {
         let mut tx = self.pool.begin().await?;
 
         self.unnest_insert_from::<_, _, NewDeliveryPointId<'_>>(&values, &mut *tx)
             .await?;
-        self.unnest_insert(values, &mut *tx).await?;
+        self.unnest_insert_from::<_, _, ManualDeliveryPoint>(values, &mut *tx)
+            .await?;
 
         tx.commit().await?;
 
         Ok(())
-    }
-
-    pub(crate) fn delivery_points_impl(&self) -> impl Stream<Item = Result<DeliveryPoint>> + '_ {
-        // Coalesce on delivery_point_id is needed due to a bug in sqlx prepare
-        // which flips the nullability on each run
-        sqlx::query_as!(
-            DeliveryPoint,
-            r#"
-SELECT
-    COALESCE(d.delivery_point_id, d.delivery_point_id) AS "id!: DeliveryPointId",
-    COALESCE(m.name, a.name, mt.name) AS NAME,
-    COALESCE(m.address, a.address, mt.address) AS address,
-    COALESCE(m.latitude, a.latitude) AS latitude,
-    COALESCE(m.longitude, a.longitude) AS longitude
-FROM
-    delivery_point_ids d
-    LEFT JOIN manual_delivery_points m ON m.delivery_point_id = d.delivery_point_id
-    LEFT JOIN aqua_culture_register a ON a.delivery_point_id = d.delivery_point_id
-    LEFT JOIN mattilsynet_delivery_points mt ON mt.delivery_point_id = d.delivery_point_id
-            "#
-        )
-        .fetch(&self.pool)
-        .map_err(|e| e.into())
     }
 
     pub(crate) async fn add_aqua_culture_register_impl(
