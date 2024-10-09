@@ -1,7 +1,7 @@
-use actix_web::web::{self};
+use actix_web::web;
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::CallSign;
-use kyogre_core::{Ordering, TripBenchmarksQuery, TripId, TripWithBenchmark};
+use kyogre_core::{Mean, Ordering, TripBenchmarksQuery, TripId, TripWithBenchmark};
 use serde::{Deserialize, Serialize};
 use serde_qs::actix::QsQuery as Query;
 use utoipa::{IntoParams, ToSchema};
@@ -21,7 +21,7 @@ pub struct TripBenchmarksParameters {
     path = "/trip_benchmarks",
     params(TripBenchmarksParameters),
     responses(
-        (status = 200, description = "trip benchmarks matching parameters", body = TripBenchmarks),
+        (status = 200, description = "your trip benchmarks matching the parameters", body = TripBenchmarks),
         (status = 500, description = "an internal error occured", body = ErrorResponse),
     )
 )]
@@ -43,6 +43,9 @@ pub async fn trip_benchmarks<T: Database>(
 pub struct TripBenchmarks {
     // TODO
     // pub total_sustainability: f64,
+    pub weight_per_hour: Option<f64>,
+    pub weight_per_distance: Option<f64>,
+    pub fuel_consumption: Option<f64>,
     pub trips: Vec<TripBenchmark>,
 }
 
@@ -53,7 +56,9 @@ pub struct TripBenchmark {
     pub id: TripId,
     pub start: DateTime<Utc>,
     pub end: DateTime<Utc>,
-    pub weight_per_hour: f64,
+    pub weight_per_hour: Option<f64>,
+    pub weight_per_distance: Option<f64>,
+    pub fuel_consumption: Option<f64>,
     // TODO
     // pub sustainability: f64,
 }
@@ -61,6 +66,9 @@ pub struct TripBenchmark {
 impl From<Vec<TripWithBenchmark>> for TripBenchmarks {
     fn from(v: Vec<TripWithBenchmark>) -> Self {
         Self {
+            weight_per_hour: v.iter().filter_map(|v| v.weight_per_hour).mean(),
+            weight_per_distance: v.iter().filter_map(|v| v.weight_per_distance).mean(),
+            fuel_consumption: v.iter().filter_map(|v| v.fuel_consumption).mean(),
             trips: v.into_iter().map(From::from).collect(),
         }
     }
@@ -74,6 +82,8 @@ impl From<TripWithBenchmark> for TripBenchmark {
             start: period.start(),
             end: period.end(),
             weight_per_hour: v.weight_per_hour,
+            weight_per_distance: v.weight_per_distance,
+            fuel_consumption: v.fuel_consumption,
         }
     }
 }

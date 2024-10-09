@@ -1,7 +1,7 @@
 use futures::TryStreamExt;
 use kyogre_core::{
     DateRange, FiskeridirVesselId, TripBenchmarkId, TripBenchmarksQuery, TripId,
-    TripSustainabilityMetric, TripWithBenchmark, TripWithTotalLivingWeight,
+    TripSustainabilityMetric, TripWithBenchmark, TripWithDistance, TripWithTotalWeight,
 };
 
 use crate::{error::Result, models::TripBenchmarkOutput, PostgresAdapter};
@@ -38,35 +38,46 @@ SELECT
     MAX(b.output) FILTER (
         WHERE
             b.trip_benchmark_id = $2
-    ) AS "weight_per_hour!"
+    ) AS weight_per_hour,
+    MAX(b.output) FILTER (
+        WHERE
+            b.trip_benchmark_id = $3
+    ) AS weight_per_distance,
+    MAX(b.output) FILTER (
+        WHERE
+            b.trip_benchmark_id = $4
+    ) AS fuel_consumption
 FROM
     vessel_id v
     INNER JOIN trips t ON v.fiskeridir_vessel_id = t.fiskeridir_vessel_id
-    INNER JOIN trip_benchmark_outputs b ON t.trip_id = b.trip_id
+    LEFT JOIN trip_benchmark_outputs b ON t.trip_id = b.trip_id
 WHERE
-    NOT b.unrealistic
-    AND (
-        $3::TIMESTAMPTZ IS NULL
-        OR LOWER(t.period) >= $3
+    (
+        b.unrealistic IS NULL
+        OR NOT b.unrealistic
     )
     AND (
-        $4::TIMESTAMPTZ IS NULL
-        OR UPPER(t.period) <= $4
+        $5::TIMESTAMPTZ IS NULL
+        OR LOWER(t.period) >= $5
+    )
+    AND (
+        $6::TIMESTAMPTZ IS NULL
+        OR UPPER(t.period) <= $6
     )
 GROUP BY
     t.trip_id
-HAVING
-    ARRAY[$2] <@ ARRAY_AGG(b.trip_benchmark_id)
 ORDER BY
     CASE
-        WHEN $5 = 1 THEN t.period
+        WHEN $7 = 1 THEN t.period
     END ASC,
     CASE
-        WHEN $5 = 2 THEN t.period
+        WHEN $7 = 2 THEN t.period
     END DESC
             "#,
             query.call_sign.as_ref(),
             TripBenchmarkId::WeightPerHour as i32,
+            TripBenchmarkId::WeightPerDistance as i32,
+            TripBenchmarkId::FuelConsumption as i32,
             query.start_date,
             query.end_date,
             query.ordering as i32,
@@ -104,28 +115,70 @@ WHERE
         Ok(ids)
     }
 
-    pub(crate) async fn trips_with_landing_weight_impl(
+    pub(crate) async fn trips_with_weight_impl(
         &self,
         id: FiskeridirVesselId,
-    ) -> Result<Vec<TripWithTotalLivingWeight>> {
+    ) -> Result<Vec<TripWithTotalWeight>> {
         let trips = sqlx::query_as!(
-            TripWithTotalLivingWeight,
+            TripWithTotalWeight,
             r#"
 SELECT
     t.trip_id AS "id!: TripId",
     t.period AS "period!: DateRange",
     t.period_precision AS "period_precision: DateRange",
-    t.landing_total_living_weight AS "total_living_weight!"
+    CASE
+        WHEN t.trip_assembler_id = 1 THEN t.landing_total_living_weight
+        ELSE t.haul_total_weight
+    END AS "total_weight!"
 FROM
     trips_detailed t
     LEFT JOIN trip_benchmark_outputs b ON t.trip_id = b.trip_id
     AND b.trip_benchmark_id = $1
 WHERE
     t.fiskeridir_vessel_id = $2
-    AND t.landing_total_living_weight > 0
+    AND CASE
+        WHEN t.trip_assembler_id = 1 THEN t.landing_total_living_weight
+        ELSE t.haul_total_weight
+    END > 0
     AND b.trip_id IS NULL
             "#,
             TripBenchmarkId::WeightPerHour as i32,
+            id.into_inner(),
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(trips)
+    }
+
+    pub(crate) async fn trips_with_distance_impl(
+        &self,
+        id: FiskeridirVesselId,
+    ) -> Result<Vec<TripWithDistance>> {
+        let trips = sqlx::query_as!(
+            TripWithDistance,
+            r#"
+SELECT
+    t.trip_id AS "id!: TripId",
+    t.distance AS "distance!",
+    CASE
+        WHEN t.trip_assembler_id = 1 THEN t.landing_total_living_weight
+        ELSE t.haul_total_weight
+    END AS "total_weight!"
+FROM
+    trips_detailed t
+    LEFT JOIN trip_benchmark_outputs b ON t.trip_id = b.trip_id
+    AND b.trip_benchmark_id = $1
+WHERE
+    t.fiskeridir_vessel_id = $2
+    AND CASE
+        WHEN t.trip_assembler_id = 1 THEN t.landing_total_living_weight
+        ELSE t.haul_total_weight
+    END > 0
+    AND t.distance > 0
+    AND b.trip_id IS NULL
+            "#,
+            TripBenchmarkId::WeightPerDistance as i32,
             id.into_inner(),
         )
         .fetch_all(&self.pool)
@@ -146,12 +199,16 @@ SELECT
     MAX(b.output) FILTER (
         WHERE
             b.trip_benchmark_id = $1
-    ) AS "weight_per_hour!"
+    ) AS "weight_per_hour!",
+    MAX(b.output) FILTER (
+        WHERE
+            b.trip_benchmark_id = $2
+    ) AS "weight_per_distance!"
 FROM
     trip_benchmark_outputs b
     INNER JOIN trips t ON b.trip_id = t.trip_id
 WHERE
-    t.fiskeridir_vessel_id = $2
+    t.fiskeridir_vessel_id = $3
     AND NOT b.unrealistic
 GROUP BY
     b.trip_id
@@ -159,6 +216,7 @@ HAVING
     ARRAY[$1] <@ ARRAY_AGG(b.trip_benchmark_id)
             "#,
             TripBenchmarkId::WeightPerHour as i32,
+            TripBenchmarkId::WeightPerDistance as i32,
             id.into_inner(),
         )
         .fetch_all(&self.pool)
