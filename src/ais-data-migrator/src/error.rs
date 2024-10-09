@@ -10,15 +10,13 @@ pub enum Error {
     Source {
         #[snafu(implicit)]
         location: Location,
-        #[snafu(source)]
-        error: kyogre_core::Error,
+        source: kyogre_core::Error,
     },
     #[snafu(display("Destination error"))]
     #[stack_error(skip_from_impls)]
     Destination {
         #[snafu(implicit)]
         location: Location,
-        #[snafu(source)]
-        error: kyogre_core::Error,
+        source: kyogre_core::Error,
     },
 }
