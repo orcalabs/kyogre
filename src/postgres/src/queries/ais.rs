@@ -65,33 +65,6 @@ WHERE
         .map_err(|e| e.into())
     }
 
-    pub(crate) async fn all_ais_impl(&self) -> Result<Vec<AisPosition>> {
-        let ais = sqlx::query_as!(
-            AisPosition,
-            r#"
-SELECT
-    latitude,
-    longitude,
-    mmsi AS "mmsi!: Mmsi",
-    TIMESTAMP AS msgtime,
-    course_over_ground,
-    navigation_status_id AS "navigational_status: NavigationStatus",
-    rate_of_turn,
-    speed_over_ground,
-    true_heading,
-    distance_to_shore
-FROM
-    ais_positions
-ORDER BY
-    TIMESTAMP ASC
-            "#,
-        )
-        .fetch_all(self.ais_pool())
-        .await?;
-
-        Ok(ais)
-    }
-
     pub(crate) fn ais_positions_impl(
         &self,
         mmsi: Mmsi,
@@ -154,10 +127,13 @@ ORDER BY
 
     pub(crate) async fn all_ais_positions_impl(
         &self,
-        mmsi: Mmsi,
-        start: DateTime<Utc>,
-        end: DateTime<Utc>,
+        arg: AisPositionsArg,
     ) -> Result<Vec<AisPosition>> {
+        let (mmsi, start, end) = match arg {
+            AisPositionsArg::All => (None, None, None),
+            AisPositionsArg::Filter { mmsi, start, end } => (Some(mmsi), Some(start), Some(end)),
+        };
+
         sqlx::query_as!(
             AisPosition,
             r#"
@@ -175,12 +151,22 @@ SELECT
 FROM
     ais_positions
 WHERE
-    mmsi = $1
-    AND timestamp BETWEEN $2 AND $3
+    (
+        $1::INT IS NULL
+        OR mmsi = $1
+    )
+    AND (
+        $2::TIMESTAMPTZ IS NULL
+        OR timestamp >= $2
+    )
+    AND (
+        $3::TIMESTAMPTZ IS NULL
+        OR timestamp <= $3
+    )
 ORDER BY
     timestamp ASC
             "#,
-            mmsi.into_inner(),
+            mmsi as Option<Mmsi>,
             start,
             end,
         )
@@ -651,4 +637,13 @@ ON CONFLICT (mmsi, TIMESTAMP) DO NOTHING
 
         Ok(())
     }
+}
+
+pub(crate) enum AisPositionsArg {
+    All,
+    Filter {
+        mmsi: Mmsi,
+        start: DateTime<Utc>,
+        end: DateTime<Utc>,
+    },
 }

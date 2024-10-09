@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT\n    latitude,\n    longitude,\n    mmsi AS \"mmsi!: Mmsi\",\n    TIMESTAMP AS msgtime,\n    course_over_ground,\n    navigation_status_id AS \"navigational_status: NavigationStatus\",\n    rate_of_turn,\n    speed_over_ground,\n    true_heading,\n    distance_to_shore\nFROM\n    ais_positions\nORDER BY\n    TIMESTAMP ASC\n            ",
+  "query": "\nSELECT\n    latitude,\n    longitude,\n    mmsi AS \"mmsi!: Mmsi\",\n    timestamp AS msgtime,\n    course_over_ground,\n    navigation_status_id AS \"navigational_status: NavigationStatus\",\n    rate_of_turn,\n    speed_over_ground,\n    true_heading,\n    distance_to_shore\nFROM\n    ais_positions\nWHERE\n    (\n        $1::INT IS NULL\n        OR mmsi = $1\n    )\n    AND (\n        $2::TIMESTAMPTZ IS NULL\n        OR timestamp >= $2\n    )\n    AND (\n        $3::TIMESTAMPTZ IS NULL\n        OR timestamp <= $3\n    )\nORDER BY\n    timestamp ASC\n            ",
   "describe": {
     "columns": [
       {
@@ -55,7 +55,11 @@
       }
     ],
     "parameters": {
-      "Left": []
+      "Left": [
+        "Int4",
+        "Timestamptz",
+        "Timestamptz"
+      ]
     },
     "nullable": [
       false,
@@ -70,5 +74,5 @@
       false
     ]
   },
-  "hash": "60cb73adca8af789aee40f5772de8789ff92a5387b23e1508ffdf7a9023fc131"
+  "hash": "242cf1b61e6a95a34bb890e3f62624f3bc04cdf0cdd1221af1adbc9744557f6e"
 }

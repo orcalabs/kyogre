@@ -11,8 +11,8 @@ pub struct DateRange {
 
 #[derive(Copy, Debug, Clone)]
 pub enum Bound {
-    Inclusive,
-    Exclusive,
+    Inclusive = 1,
+    Exclusive = 2,
 }
 
 #[derive(Debug, Clone)]

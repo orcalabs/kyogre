@@ -1,4 +1,4 @@
-use futures::{Stream, TryStreamExt};
+use futures::{Stream, StreamExt, TryStreamExt};
 use kyogre_core::{Arrival, FiskeridirVesselId, PortDockPoint, TripId};
 
 use crate::{
@@ -9,29 +9,17 @@ use crate::{
 
 impl PostgresAdapter {
     pub(crate) async fn dock_points_impl(&self) -> Result<Vec<PortDockPoint>> {
-        let docks = sqlx::query_as!(
-            PortDockPoint,
-            r#"
-SELECT
-    p.port_id,
-    p.port_dock_point_id,
-    p.latitude,
-    p.longitude,
-    p.name
-FROM
-    port_dock_points p
-            "#,
-        )
-        .fetch_all(&self.pool)
-        .await?;
-
-        Ok(docks)
+        self.dock_points_inner(None).await
     }
 
     pub(crate) async fn dock_points_of_port_impl(
         &self,
         port_id: &str,
     ) -> Result<Vec<PortDockPoint>> {
+        self.dock_points_inner(Some(port_id)).await
+    }
+
+    async fn dock_points_inner(&self, port_id: Option<&str>) -> Result<Vec<PortDockPoint>> {
         let docks = sqlx::query_as!(
             PortDockPoint,
             r#"
@@ -44,9 +32,12 @@ SELECT
 FROM
     port_dock_points p
 WHERE
-    p.port_id = $1
+    (
+        $1::TEXT IS NULL
+        OR p.port_id = $1
+    )
             "#,
-            port_id
+            port_id,
         )
         .fetch_all(&self.pool)
         .await?;
@@ -73,6 +64,14 @@ FROM
     }
 
     pub(crate) fn ports_impl(&self) -> impl Stream<Item = Result<Port>> + '_ {
+        self.ports_inner(None)
+    }
+
+    pub(crate) async fn port_impl(&self, port_id: &str) -> Result<Option<Port>> {
+        self.ports_inner(Some(port_id)).next().await.transpose()
+    }
+
+    fn ports_inner(&self, port_id: Option<&str>) -> impl Stream<Item = Result<Port>> + '_ {
         sqlx::query_as!(
             Port,
             r#"
@@ -83,32 +82,16 @@ SELECT
     p.longitude
 FROM
     ports AS p
-            "#,
-        )
-        .fetch(&self.pool)
-        .map_err(|e| e.into())
-    }
-
-    pub(crate) async fn port_impl(&self, port_id: &str) -> Result<Option<Port>> {
-        let port = sqlx::query_as!(
-            Port,
-            r#"
-SELECT
-    p.port_id AS "id!",
-    p.name,
-    p.latitude,
-    p.longitude
-FROM
-    ports AS p
 WHERE
-    p.port_id = $1
+    (
+        $1::TEXT IS NULL
+        OR p.port_id = $1
+    )
             "#,
             port_id,
         )
-        .fetch_optional(&self.pool)
-        .await?;
-
-        Ok(port)
+        .fetch(&self.pool)
+        .map_err(|e| e.into())
     }
 
     pub async fn ports_of_trip_impl(&self, trip_id: TripId) -> Result<TripPorts> {

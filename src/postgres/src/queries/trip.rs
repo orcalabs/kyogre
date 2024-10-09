@@ -2,9 +2,9 @@ use std::collections::{HashMap, HashSet};
 
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::{DeliveryPointId, Gear, GearGroup, LandingId, SpeciesGroup, VesselLengthGroup};
-use futures::{Stream, TryStreamExt};
+use futures::{Stream, StreamExt, TryStreamExt};
 use kyogre_core::{
-    DateRange, FiskeridirVesselId, HaulId, Ordering, PrecisionOutcome, PrecisionStatus,
+    Bound, DateRange, FiskeridirVesselId, HaulId, Ordering, PrecisionOutcome, PrecisionStatus,
     ProcessingStatus, TripAssemblerId, TripId, TripPositionLayerOutput, TripSet, TripSorting,
     TripUpdate, TripsConflictStrategy, TripsQuery, VesselEventType,
 };
@@ -68,6 +68,7 @@ TRUNCATE earliest_vms_insertion
 
         Ok(())
     }
+
     pub(crate) fn trip_assembler_log_impl(
         &self,
     ) -> impl Stream<Item = Result<TripAssemblerLogEntry>> + '_ {
@@ -96,7 +97,7 @@ FROM
 
     pub(crate) async fn add_trip_position<'a>(
         &self,
-        trip_id: TripId,
+        id: TripId,
         output: TripPositionLayerOutput,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
     ) -> Result<()> {
@@ -104,28 +105,10 @@ FROM
         let mut pruned_positions = Vec::with_capacity(output.pruned_positions.len());
 
         for p in output.trip_positions {
-            trip_positions.push(TripAisVmsPosition {
-                trip_id,
-                latitude: p.latitude,
-                longitude: p.longitude,
-                timestamp: p.timestamp,
-                course_over_ground: p.course_over_ground,
-                speed: p.speed,
-                navigation_status_id: p.navigational_status.map(|v| v as i32),
-                rate_of_turn: p.rate_of_turn,
-                true_heading: p.true_heading,
-                distance_to_shore: p.distance_to_shore,
-                position_type_id: p.position_type,
-                pruned_by: p.pruned_by,
-            });
+            trip_positions.push(TripAisVmsPosition::new(id, p));
         }
         for p in output.pruned_positions {
-            pruned_positions.push(TripPrunedAisVmsPosition {
-                trip_id,
-                positions: p.positions,
-                value: p.value,
-                trip_position_layer_id: p.trip_layer,
-            });
+            pruned_positions.push(TripPrunedAisVmsPosition::new(id, p));
         }
 
         // We assume that the caller of this method is updating an existing trip
@@ -136,7 +119,7 @@ DELETE FROM trip_positions
 WHERE
     trip_id = $1
             "#,
-            trip_id.into_inner(),
+            id.into_inner(),
         )
         .execute(&mut **tx)
         .await?;
@@ -147,7 +130,7 @@ DELETE FROM trip_positions_pruned
 WHERE
     trip_id = $1
             "#,
-            trip_id.into_inner(),
+            id.into_inner(),
         )
         .execute(&mut **tx)
         .await?;
@@ -164,13 +147,14 @@ WHERE
     trip_id = $2
             "#,
             ProcessingStatus::Successful as i32,
-            trip_id.into_inner(),
+            id.into_inner(),
         )
         .execute(&mut **tx)
         .await?;
 
         Ok(())
     }
+
     pub(crate) async fn add_trip_positions<'a>(
         &self,
         outputs: Vec<(TripId, TripPositionLayerOutput)>,
@@ -179,30 +163,12 @@ WHERE
         let mut trip_positions = Vec::with_capacity(outputs.len());
         let mut pruned_positions = Vec::with_capacity(outputs.len());
 
-        for (trip_id, output) in outputs {
+        for (id, output) in outputs {
             for p in output.trip_positions {
-                trip_positions.push(TripAisVmsPosition {
-                    trip_id,
-                    latitude: p.latitude,
-                    longitude: p.longitude,
-                    timestamp: p.timestamp,
-                    course_over_ground: p.course_over_ground,
-                    speed: p.speed,
-                    navigation_status_id: p.navigational_status.map(|v| v as i32),
-                    rate_of_turn: p.rate_of_turn,
-                    true_heading: p.true_heading,
-                    distance_to_shore: p.distance_to_shore,
-                    position_type_id: p.position_type,
-                    pruned_by: p.pruned_by,
-                });
+                trip_positions.push(TripAisVmsPosition::new(id, p));
             }
             for p in output.pruned_positions {
-                pruned_positions.push(TripPrunedAisVmsPosition {
-                    trip_id,
-                    positions: p.positions,
-                    value: p.value,
-                    trip_position_layer_id: p.trip_layer,
-                });
+                pruned_positions.push(TripPrunedAisVmsPosition::new(id, p));
             }
         }
 
@@ -818,10 +784,22 @@ LIMIT
         .map_err(|e| e.into())
     }
 
-    pub(crate) fn detailed_trips_by_ids_impl(
+    fn detailed_trips_inner(
         &self,
-        trip_ids: &[TripId],
+        query: DetailedTripsQuery<'_>,
     ) -> impl Stream<Item = Result<TripDetailed>> + '_ {
+        let (trip_ids, haul_id, landing_id, read_fishing_facility) = match query {
+            DetailedTripsQuery::Ids(v) => (Some(v), None, None, None),
+            DetailedTripsQuery::Haul {
+                id,
+                read_fishing_facility,
+            } => (None, Some([id]), None, Some(read_fishing_facility)),
+            DetailedTripsQuery::Landing {
+                id,
+                read_fishing_facility,
+            } => (None, None, Some([id]), Some(read_fishing_facility)),
+        };
+
         sqlx::query_as!(
             TripDetailed,
             r#"
@@ -848,7 +826,13 @@ SELECT
     COALESCE(t.vessel_events, '[]')::TEXT AS "vessel_events!",
     COALESCE(t.hauls, '[]')::TEXT AS "hauls!",
     COALESCE(t.landing_ids, '{}') AS "landing_ids!: Vec<LandingId>",
-    COALESCE(t.fishing_facilities, '[]')::TEXT AS "fishing_facilities!",
+    CASE
+        WHEN (
+            $1
+            OR $1 IS NULL
+        ) THEN COALESCE(t.fishing_facilities, '[]')::TEXT
+        ELSE '[]'
+    END AS "fishing_facilities!",
     t.distance,
     t.cache_version,
     t.target_species_fiskeridir_id,
@@ -856,12 +840,33 @@ SELECT
 FROM
     trips_detailed AS t
 WHERE
-    trip_id = ANY ($1)
+    (
+        $2::BIGINT[] IS NULL
+        OR trip_id = ANY ($2)
+    )
+    AND (
+        $3::BIGINT[] IS NULL
+        OR t.haul_ids && $3
+    )
+    AND (
+        $4::VARCHAR[] IS NULL
+        OR t.landing_ids && $4::VARCHAR[]
+    )
             "#,
-            &trip_ids as &[TripId],
+            read_fishing_facility,
+            trip_ids as Option<&[TripId]>,
+            haul_id as Option<[&HaulId; 1]>,
+            landing_id as Option<[&LandingId; 1]>,
         )
         .fetch(&self.pool)
         .map_err(|e| e.into())
+    }
+
+    pub(crate) fn detailed_trips_by_ids_impl(
+        &self,
+        ids: &[TripId],
+    ) -> impl Stream<Item = Result<TripDetailed>> + '_ {
+        self.detailed_trips_inner(DetailedTripsQuery::Ids(ids))
     }
 
     pub(crate) async fn all_trip_cache_versions_impl(&self) -> Result<Vec<(TripId, i64)>> {
@@ -885,52 +890,13 @@ FROM
         haul_id: &HaulId,
         read_fishing_facility: bool,
     ) -> Result<Option<TripDetailed>> {
-        let trips = sqlx::query_as!(
-            TripDetailed,
-            r#"
-SELECT
-    t.trip_id AS "trip_id!: TripId",
-    t.fiskeridir_vessel_id AS "fiskeridir_vessel_id!: FiskeridirVesselId",
-    t.fiskeridir_length_group_id AS "fiskeridir_length_group_id!: VesselLengthGroup",
-    t.period AS "period!: DateRange",
-    t.period_precision AS "period_precision: DateRange",
-    t.landing_coverage AS "landing_coverage!: DateRange",
-    COALESCE(t.num_landings::BIGINT, 0) AS "num_deliveries!",
-    COALESCE(t.landing_total_living_weight, 0.0) AS "total_living_weight!",
-    COALESCE(t.landing_total_gross_weight, 0.0) AS "total_gross_weight!",
-    COALESCE(t.landing_total_product_weight, 0.0) AS "total_product_weight!",
-    COALESCE(t.delivery_point_ids, '{}') AS "delivery_points!: Vec<DeliveryPointId>",
-    COALESCE(t.landing_gear_ids, '{}') AS "gear_ids!: Vec<Gear>",
-    COALESCE(t.landing_gear_group_ids, '{}') AS "gear_group_ids!: Vec<GearGroup>",
-    COALESCE(t.landing_species_group_ids, '{}') AS "species_group_ids!: Vec<SpeciesGroup>",
-    t.most_recent_landing AS latest_landing_timestamp,
-    COALESCE(t.landings::TEXT, '[]') AS "catches!",
-    t.start_port_id,
-    t.end_port_id,
-    t.trip_assembler_id AS "trip_assembler_id!: TripAssemblerId",
-    COALESCE(t.vessel_events, '[]')::TEXT AS "vessel_events!",
-    COALESCE(t.hauls, '[]')::TEXT AS "hauls!",
-    COALESCE(t.landing_ids, '{}') AS "landing_ids!: Vec<LandingId>",
-    CASE
-        WHEN $1 THEN COALESCE(t.fishing_facilities, '[]')::TEXT
-        ELSE '[]'
-    END AS "fishing_facilities!",
-    t.distance,
-    t.cache_version,
-    target_species_fiskeridir_id,
-    target_species_fao_id
-FROM
-    trips_detailed t
-WHERE
-    t.haul_ids && $2;
-            "#,
+        self.detailed_trips_inner(DetailedTripsQuery::Haul {
+            id: haul_id,
             read_fishing_facility,
-            &[*haul_id] as &[HaulId],
-        )
-        .fetch_optional(&self.pool)
-        .await?;
-
-        Ok(trips)
+        })
+        .next()
+        .await
+        .transpose()
     }
 
     pub(crate) async fn detailed_trip_of_landing_impl(
@@ -938,52 +904,13 @@ WHERE
         landing_id: &LandingId,
         read_fishing_facility: bool,
     ) -> Result<Option<TripDetailed>> {
-        let trips = sqlx::query_as!(
-            TripDetailed,
-            r#"
-SELECT
-    t.trip_id AS "trip_id!: TripId",
-    t.fiskeridir_vessel_id AS "fiskeridir_vessel_id!: FiskeridirVesselId",
-    t.fiskeridir_length_group_id AS "fiskeridir_length_group_id!: VesselLengthGroup",
-    t.period AS "period!: DateRange",
-    t.period_precision AS "period_precision: DateRange",
-    t.landing_coverage AS "landing_coverage!: DateRange",
-    COALESCE(t.num_landings::BIGINT, 0) AS "num_deliveries!",
-    COALESCE(t.landing_total_living_weight, 0.0) AS "total_living_weight!",
-    COALESCE(t.landing_total_gross_weight, 0.0) AS "total_gross_weight!",
-    COALESCE(t.landing_total_product_weight, 0.0) AS "total_product_weight!",
-    COALESCE(t.delivery_point_ids, '{}') AS "delivery_points!: Vec<DeliveryPointId>",
-    COALESCE(t.landing_gear_ids, '{}') AS "gear_ids!: Vec<Gear>",
-    COALESCE(t.landing_gear_group_ids, '{}') AS "gear_group_ids!: Vec<GearGroup>",
-    COALESCE(t.landing_species_group_ids, '{}') AS "species_group_ids!: Vec<SpeciesGroup>",
-    t.most_recent_landing AS latest_landing_timestamp,
-    COALESCE(t.landings::TEXT, '[]') AS "catches!",
-    t.start_port_id,
-    t.end_port_id,
-    t.trip_assembler_id AS "trip_assembler_id!: TripAssemblerId",
-    COALESCE(t.vessel_events, '[]')::TEXT AS "vessel_events!",
-    COALESCE(t.hauls, '[]')::TEXT AS "hauls!",
-    COALESCE(t.landing_ids, '{}') AS "landing_ids!: Vec<LandingId>",
-    CASE
-        WHEN $1 THEN COALESCE(t.fishing_facilities, '[]')::TEXT
-        ELSE '[]'
-    END AS "fishing_facilities!",
-    t.distance,
-    t.cache_version,
-    t.target_species_fiskeridir_id,
-    t.target_species_fao_id
-FROM
-    trips_detailed t
-WHERE
-    t.landing_ids && $2::VARCHAR[];
-            "#,
+        self.detailed_trips_inner(DetailedTripsQuery::Landing {
+            id: landing_id,
             read_fishing_facility,
-            &[landing_id] as &[&LandingId],
-        )
-        .fetch_optional(&self.pool)
-        .await?;
-
-        Ok(trips)
+        })
+        .next()
+        .await
+        .transpose()
     }
 
     pub(crate) async fn current_trip_impl(
@@ -1586,10 +1513,11 @@ WHERE
         Ok(())
     }
 
-    pub(crate) async fn trip_prior_to_timestamp_exclusive(
+    pub(crate) async fn trip_prior_to_timestamp_impl(
         &self,
         vessel_id: FiskeridirVesselId,
         time: &DateTime<Utc>,
+        bound: Bound,
     ) -> Result<Option<Trip>> {
         let trip = sqlx::query_as!(
             Trip,
@@ -1609,51 +1537,23 @@ FROM
     trips
 WHERE
     fiskeridir_vessel_id = $1
-    AND UPPER(period) < $2
-ORDER BY
-    period DESC
-LIMIT
-    1
-            "#,
-            vessel_id.into_inner(),
-            time,
+    AND (
+        (
+            $2 = 1
+            AND UPPER(period) <= $3
         )
-        .fetch_optional(&self.pool)
-        .await?;
-
-        Ok(trip)
-    }
-
-    pub(crate) async fn trip_prior_to_timestamp_inclusive(
-        &self,
-        vessel_id: FiskeridirVesselId,
-        time: &DateTime<Utc>,
-    ) -> Result<Option<Trip>> {
-        let trip = sqlx::query_as!(
-            Trip,
-            r#"
-SELECT
-    trip_id AS "trip_id!: TripId",
-    period AS "period!: DateRange",
-    period_precision AS "period_precision: DateRange",
-    landing_coverage AS "landing_coverage!: DateRange",
-    distance,
-    trip_assembler_id AS "trip_assembler_id!: TripAssemblerId",
-    start_port_id,
-    end_port_id,
-    target_species_fiskeridir_id,
-    target_species_fao_id
-FROM
-    trips
-WHERE
-    fiskeridir_vessel_id = $1
-    AND UPPER(period) <= $2
+        OR (
+            $2 = 2
+            AND UPPER(period) < $3
+        )
+    )
 ORDER BY
     period DESC
 LIMIT
     1
             "#,
             vessel_id.into_inner(),
+            bound as i32,
             time,
         )
         .fetch_optional(&self.pool)
@@ -1762,12 +1662,11 @@ WHERE
     ) -> Result<()> {
         match event_type {
             VesselEventType::Landing => self.connect_trip_to_landing_events(event_ids, tx).await,
-            VesselEventType::ErsDep => self.connect_trip_to_ers_dep_events(event_ids, tx).await,
-            VesselEventType::ErsPor => self.connect_trip_to_ers_por_events(event_ids, tx).await,
             VesselEventType::ErsDca | VesselEventType::ErsTra | VesselEventType::Haul => {
                 self.connect_trip_to_ers_dca_tra_haul_events(event_ids, tx)
                     .await
             }
+            VesselEventType::ErsDep | VesselEventType::ErsPor => Ok(()),
         }
     }
 
@@ -1789,60 +1688,6 @@ WHERE
     AND trip_assembler_id != 1
     AND v.occurence_timestamp >= LOWER(t.landing_coverage)
     AND v.occurence_timestamp < UPPER(t.landing_coverage)
-            "#,
-            &event_ids
-        )
-        .execute(&mut **tx)
-        .await?;
-
-        Ok(())
-    }
-
-    pub(crate) async fn connect_trip_to_ers_dep_events<'a>(
-        &'a self,
-        event_ids: Vec<i64>,
-        tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<()> {
-        sqlx::query!(
-            r#"
-UPDATE vessel_events v
-SET
-    trip_id = t.trip_id
-FROM
-    trips t
-WHERE
-    v.vessel_event_id = ANY ($1::BIGINT[])
-    AND v.fiskeridir_vessel_id = t.fiskeridir_vessel_id
-    AND trip_assembler_id = 2
-    AND v.occurence_timestamp >= LOWER(t.period)
-    AND v.occurence_timestamp < UPPER(t.period)
-            "#,
-            &event_ids
-        )
-        .execute(&mut **tx)
-        .await?;
-
-        Ok(())
-    }
-
-    pub(crate) async fn connect_trip_to_ers_por_events<'a>(
-        &'a self,
-        event_ids: Vec<i64>,
-        tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<()> {
-        sqlx::query!(
-            r#"
-UPDATE vessel_events v
-SET
-    trip_id = t.trip_id
-FROM
-    trips t
-WHERE
-    v.vessel_event_id = ANY ($1::BIGINT[])
-    AND v.fiskeridir_vessel_id = t.fiskeridir_vessel_id
-    AND trip_assembler_id = 2
-    AND v.occurence_timestamp > LOWER(t.period)
-    AND v.occurence_timestamp <= UPPER(t.period)
             "#,
             &event_ids
         )
@@ -1958,4 +1803,16 @@ WHERE
 
         Ok(())
     }
+}
+
+enum DetailedTripsQuery<'a> {
+    Ids(&'a [TripId]),
+    Haul {
+        id: &'a HaulId,
+        read_fishing_facility: bool,
+    },
+    Landing {
+        id: &'a LandingId,
+        read_fishing_facility: bool,
+    },
 }

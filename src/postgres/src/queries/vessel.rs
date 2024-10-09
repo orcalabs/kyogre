@@ -2,7 +2,10 @@ use std::collections::HashMap;
 
 use fiskeridir_rs::{CallSign, GearGroup, SpeciesGroup, VesselLengthGroup};
 use futures::{Stream, StreamExt, TryStreamExt};
-use kyogre_core::{ActiveVesselConflict, FiskeridirVesselId, Mmsi, TripAssemblerId, VesselSource};
+use kyogre_core::{
+    ActiveVesselConflict, FiskeridirVesselId, Mmsi, NewVesselConflict, TripAssemblerId,
+    VesselSource,
+};
 
 use crate::{
     error::Result,
@@ -34,7 +37,7 @@ FROM
 
     pub(crate) async fn manual_conflict_override_impl(
         &self,
-        overrides: Vec<kyogre_core::NewVesselConflict>,
+        overrides: Vec<NewVesselConflict>,
     ) -> Result<()> {
         let mut mmsi = Vec::with_capacity(overrides.len());
         let mut fiskeridir_vessel_id = Vec::with_capacity(overrides.len());
@@ -60,7 +63,7 @@ ON CONFLICT DO NOTHING
             "#,
             &mmsi as &[Mmsi],
         )
-        .fetch_all(&mut *tx)
+        .execute(&mut *tx)
         .await?;
 
         sqlx::query!(
@@ -75,7 +78,7 @@ ON CONFLICT DO NOTHING
             "#,
             &fiskeridir_vessel_id as &[FiskeridirVesselId],
         )
-        .fetch_all(&mut *tx)
+        .execute(&mut *tx)
         .await?;
 
         self.unnest_insert_from::<_, _, VesselConflictInsert>(overrides, &mut *tx)

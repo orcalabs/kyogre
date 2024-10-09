@@ -156,3 +156,78 @@ where
         deserializer.deserialize_str(RangeVisitor(PhantomData))
     }
 }
+
+#[cfg(feature = "sqlx")]
+mod _sqlx {
+    use sqlx::{
+        encode::IsNull,
+        postgres::{types::PgRange, PgArgumentBuffer, PgHasArrayType, PgTypeInfo, PgValueRef},
+        Decode, Encode, Postgres, Type,
+    };
+
+    use super::*;
+
+    type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync + 'static>>;
+
+    impl<T> From<PgRange<T>> for Range<T> {
+        fn from(v: PgRange<T>) -> Self {
+            Self {
+                start: v.start,
+                end: v.end,
+            }
+        }
+    }
+
+    impl<T> From<&Range<T>> for PgRange<T>
+    where
+        T: Copy,
+    {
+        fn from(v: &Range<T>) -> Self {
+            Self {
+                start: v.start,
+                end: v.end,
+            }
+        }
+    }
+
+    impl<T> Type<Postgres> for Range<T>
+    where
+        PgRange<T>: Type<Postgres>,
+    {
+        fn type_info() -> PgTypeInfo {
+            PgRange::<T>::type_info()
+        }
+    }
+
+    impl<T> PgHasArrayType for Range<T>
+    where
+        PgRange<T>: PgHasArrayType,
+    {
+        fn array_type_info() -> PgTypeInfo {
+            PgRange::<T>::array_type_info()
+        }
+        fn array_compatible(ty: &PgTypeInfo) -> bool {
+            PgRange::<T>::array_compatible(ty)
+        }
+    }
+
+    impl<T> Encode<'_, Postgres> for Range<T>
+    where
+        T: Copy + Type<Postgres> + for<'a> Encode<'a, Postgres>,
+    {
+        fn encode_by_ref(&self, buf: &mut PgArgumentBuffer) -> Result<IsNull> {
+            let pg_range: PgRange<_> = self.into();
+            pg_range.encode_by_ref(buf)
+        }
+    }
+
+    impl<'r, T> Decode<'r, Postgres> for Range<T>
+    where
+        T: Type<Postgres> + for<'a> Decode<'a, Postgres>,
+    {
+        fn decode(value: PgValueRef<'r>) -> Result<Self> {
+            let pg_range = PgRange::<T>::decode(value)?;
+            Ok(pg_range.into())
+        }
+    }
+}

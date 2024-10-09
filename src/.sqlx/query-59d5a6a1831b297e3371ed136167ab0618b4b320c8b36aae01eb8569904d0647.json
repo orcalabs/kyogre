@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT\n    call_sign AS \"call_sign!: CallSign\",\n    course,\n    latitude,\n    longitude,\n    registration_id,\n    speed,\n    \"timestamp\",\n    vessel_length,\n    vessel_name,\n    vessel_type,\n    distance_to_shore\nFROM\n    vms_positions\nWHERE\n    call_sign = $1\n    AND \"timestamp\" BETWEEN $2 AND $3\nORDER BY\n    \"timestamp\" ASC\n            ",
+  "query": "\nSELECT\n    call_sign AS \"call_sign!: CallSign\",\n    course,\n    latitude,\n    longitude,\n    registration_id,\n    speed,\n    \"timestamp\",\n    vessel_length,\n    vessel_name,\n    vessel_type,\n    distance_to_shore\nFROM\n    vms_positions\nWHERE\n    (\n        $1::TEXT IS NULL\n        OR call_sign = $1\n    )\n    AND (\n        $2::TIMESTAMPTZ IS NULL\n        OR timestamp >= $2\n    )\n    AND (\n        $3::TIMESTAMPTZ IS NULL\n        OR timestamp <= $3\n    )\nORDER BY\n    \"timestamp\" ASC\n            ",
   "describe": {
     "columns": [
       {
@@ -80,5 +80,5 @@
       false
     ]
   },
-  "hash": "d208f6d11fe443a2a3a8eac54ba9d918340ec43463c423b1b312a0baec3fe02a"
+  "hash": "59d5a6a1831b297e3371ed136167ab0618b4b320c8b36aae01eb8569904d0647"
 }
