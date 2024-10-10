@@ -67,6 +67,8 @@ services:
 
   duckdb:
     image: ghcr.io/orcalabs/kyogre/duckdb
+    ports:
+      - 5000:5000
     build:
       context: .
       dockerfile: dockerfiles/duckdb/Dockerfile
