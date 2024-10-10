@@ -6,7 +6,7 @@ oauth:
   scope: ais
 postgres:
   ip: localhost
-  port: 5432
+  port: 5532
   username: postgres
   password: test123
   db_name: postgres
