@@ -2,7 +2,7 @@ log_level: Debug
 port: 5000
 postgres:
   ip: localhost
-  port: 5432
+  port: 5532
   username: postgres
   password: test123
   max_connections: 10
