@@ -4,7 +4,7 @@ start_threshold: 2024-09-03T00:00:00Z
 end_threshold: 2024-09-04T00:00:00Z
 source:
   ip: localhost
-  port: 5432
+  port: 5532
   username: postgres
   password: test123
   max_connections: 32
