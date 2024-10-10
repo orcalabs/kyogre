@@ -36,7 +36,7 @@ For a local api instance you will also need to start the duckdb service:
 ```
 docker-compose up -d postgres
 docker-compose up -d duckdb
-docker-compose up -d fishery-api
+docker-compose up -d api
 ```
 
 The api will then be availabe at `http://localhost:8080`, swagger at
