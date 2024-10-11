@@ -12,8 +12,12 @@ import threddsclient
 from multiprocessing import Pool
 
 
-OPERATIONAL_ARCHIVE_URL = "https://thredds.met.no/thredds/catalog/metpparchive/catalog.xml"
-HISTORICAL_ARCHIVE_URL = "https://thredds.met.no/thredds/catalog/metpparchivev1/catalog.xml"
+OPERATIONAL_ARCHIVE_URL = (
+    "https://thredds.met.no/thredds/catalog/metpparchive/catalog.xml"
+)
+HISTORICAL_ARCHIVE_URL = (
+    "https://thredds.met.no/thredds/catalog/metpparchivev1/catalog.xml"
+)
 
 
 def get_met_netcdf_file_urls(archive_url: str, cache_file: str | None = None):
@@ -39,13 +43,15 @@ def get_met_netcdf_file_urls(archive_url: str, cache_file: str | None = None):
     return urls
 
 
-async def download_file(url: str, filename='temp'):
+async def download_file(url: str, filename="temp"):
     timeout = aiohttp.ClientTimeout(total=100_000)
     async with aiohttp.ClientSession(timeout=timeout) as session:
         async with session.get(url) as res:
             if res.status != 200:
                 text = await res.text()
-                print(f"Error downloading url '{url}', status: {res.status}, error: {text}")
+                print(
+                    f"Error downloading url '{url}', status: {res.status}, error: {text}"
+                )
                 return
 
             async with aiofiles.open(filename, "wb") as f:
@@ -59,7 +65,9 @@ def downscale_and_convert_to_csv(read_file: str, write_file: str):
             df = ds.to_dataframe()
 
         resolution = 0.1
-        def to_bin(x): return math.floor(x / resolution) * resolution
+
+        def to_bin(x):
+            return math.floor(x / resolution) * resolution
 
         df["latitude_bin"] = df.latitude.map(to_bin)
         df["longitude_bin"] = df.longitude.map(to_bin)
@@ -74,12 +82,12 @@ def downscale_and_convert_to_csv(read_file: str, write_file: str):
 
 def url_to_filename(url: str) -> str:
     # Use the date part at the end as the filename
-    return 'data/' + url.split("_")[-1]
+    return "data/" + url.split("_")[-1]
 
 
 def download_only(url: str):
     filename = url_to_filename(url)
-    filename_temp = filename + '.tmp'
+    filename_temp = filename + ".tmp"
 
     start = time.time()
     asyncio.run(download_file(url, filename_temp))
@@ -91,7 +99,7 @@ def download_only(url: str):
 
 def _convert_only(file: str):
     start = time.time()
-    downscale_and_convert_to_csv(file, file + '.csv')
+    downscale_and_convert_to_csv(file, file + ".csv")
     end = time.time()
     print(f"Convert {file} in {(end - start):0.2f} seconds")
 
@@ -111,8 +119,8 @@ async def convert_only():
 
 def download_and_convert(url: str):
     filename = url_to_filename(url)
-    filename_temp = filename + '.tmp'
-    filename_csv = filename + '.csv'
+    filename_temp = filename + ".tmp"
+    filename_csv = filename + ".csv"
 
     start = time.time()
 
@@ -134,7 +142,7 @@ def download_and_convert(url: str):
     print(f"Convert:  {((csv_time / total) * 100):0.2f} %")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # Example url: https://thredds.met.no/thredds/fileServer/metpparchivev1/2019/05/01/met_analysis_1_0km_nordic_20190501T00Z.nc
 
     # urls = get_met_netcdf_file_urls(OPERATIONAL_ARCHIVE_URL, "operational_urls.json")
@@ -160,9 +168,9 @@ if __name__ == '__main__':
     urls = [
         i
         for i in urls
-        if not os.path.isfile('data/' + i.split('_')[-1] + '.nc')
-        and not os.path.isfile('data/' + i.split('_')[-1] + '.csv')
-        and not os.path.isfile('data/' + i.split('_')[-1] + '.csv.zip')
+        if not os.path.isfile("data/" + i.split("_")[-1] + ".nc")
+        and not os.path.isfile("data/" + i.split("_")[-1] + ".csv")
+        and not os.path.isfile("data/" + i.split("_")[-1] + ".csv.zip")
         # and "2018" not in i
         # and i not in bad_urls
     ]
@@ -172,8 +180,8 @@ if __name__ == '__main__':
     if len(sys.argv) == 1:
         with Pool(64) as p:
             p.map(download_and_convert, urls)
-    elif sys.argv[1] == 'd':
+    elif sys.argv[1] == "d":
         with Pool(64) as p:
             p.map(download_only, urls)
-    elif sys.argv[1] == 'c':
+    elif sys.argv[1] == "c":
         asyncio.run(convert_only())
