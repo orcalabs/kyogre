@@ -1,10 +1,9 @@
 use actix_web::web::{self, Path};
 use chrono::{DateTime, Datelike, Utc};
 use fiskeridir_rs::{Gear, GearGroup, SpeciesGroup, VesselLengthGroup, WhaleGender};
-use futures::TryStreamExt;
 use kyogre_core::{
     ActiveHaulsFilter, CatchLocationId, FiskeridirVesselId, HaulId, HaulMatrixXFeature,
-    HaulMatrixYFeature, HaulsMatrixQuery, HaulsQuery, HaulsSorting, Ordering,
+    HaulMatrixYFeature, HaulsMatrixQuery, HaulsQuery, HaulsSorting, MinimalHaul, Ordering,
 };
 use serde::{Deserialize, Serialize};
 use serde_qs::actix::QsQuery as Query;
@@ -70,6 +69,26 @@ pub struct HaulsMatrixParams {
 
 #[utoipa::path(
     get,
+    path = "/hauls/{haul_id}",
+    params(HaulsParams),
+    responses(
+        (status = 200, description = "the requested haul", body = Haul),
+        (status = 400, description = "the provided parameters were invalid"),
+        (status = 500, description = "an internal error occured", body = ErrorResponse),
+    )
+)]
+#[tracing::instrument(skip(db))]
+pub async fn haul<T: Database + Send + Sync + 'static>(
+    db: web::Data<T>,
+    haul_id: web::Path<HaulId>,
+) -> Result<Response<Option<Haul>>> {
+    let haul = db.haul(*haul_id).await?;
+
+    Ok(Response::new(haul.map(|h| h.into())))
+}
+
+#[utoipa::path(
+    get,
     path = "/hauls",
     params(HaulsParams),
     responses(
@@ -83,23 +102,24 @@ pub async fn hauls<T: Database + Send + Sync + 'static, M: Meilisearch + 'static
     db: web::Data<T>,
     meilisearch: web::Data<Option<M>>,
     params: Query<HaulsParams>,
-) -> Result<ResponseOrStream<Haul>> {
+) -> Result<ResponseOrStream<MinimalHaul>> {
     let query: HaulsQuery = params.into_inner().into();
 
-    if let Some(meilisearch) = meilisearch.as_ref() {
-        return Ok(Response::new(
-            meilisearch
-                .hauls(&query)
-                .await?
-                .into_iter()
-                .map(Haul::from)
-                .collect::<Vec<_>>(),
-        )
-        .into());
+    if let Some(_meilisearch) = meilisearch.as_ref() {
+        unreachable!();
+        //return Ok(Response::new(
+        //    meilisearch
+        //        .hauls(&query)
+        //        .await?
+        //        .into_iter()
+        //        .map(Haul::from)
+        //        .collect::<Vec<_>>(),
+        //)
+        //.into());
     }
 
     let response = stream_response! {
-        db.hauls(query).map_ok(Haul::from)
+        db.hauls_minimal(query)
     };
 
     Ok(response.into())

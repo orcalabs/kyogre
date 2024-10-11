@@ -142,8 +142,186 @@ GROUP BY
 
         Ok(table)
     }
+    pub(crate) fn hauls2(&self, query: HaulsQuery) -> impl Stream<Item = Result<MinimalHaul>> + '_ {
+        sqlx::query_as!(
+            MinimalHaul,
+            r#"
+SELECT
+    h.haul_id AS "haul_id!: HaulId",
+    h.start_timestamp,
+    h.total_living_weight,
+    h.vessel_name,
+    h.start_latitude,
+    h.start_longitude
+FROM
+    hauls_minimal h
+WHERE
+    (
+        $1::tstzrange[] IS NULL
+        OR h.period && ANY ($1)
+    )
+    AND (
+        $2::TEXT[] IS NULL
+        OR h.catch_locations && $2
+    )
+    AND (
+        $3::INT[] IS NULL
+        OR h.gear_group_id = ANY ($3)
+    )
+    AND (
+        $4::INT[] IS NULL
+        OR h.species_group_ids && $4
+    )
+    AND (
+        $5::INT[] IS NULL
+        OR h.vessel_length_group = ANY ($5)
+    )
+    AND (
+        $6::BIGINT[] IS NULL
+        OR fiskeridir_vessel_id = ANY ($6)
+    )
+ORDER BY
+    CASE
+        WHEN $7 = 1
+        AND $8 = 1 THEN h.start_timestamp
+    END ASC,
+    CASE
+        WHEN $7 = 1
+        AND $8 = 2 THEN h.stop_timestamp
+    END ASC,
+    CASE
+        WHEN $7 = 1
+        AND $8 = 3 THEN h.total_living_weight
+    END ASC,
+    CASE
+        WHEN $7 = 2
+        AND $8 = 1 THEN h.start_timestamp
+    END DESC,
+    CASE
+        WHEN $7 = 2
+        AND $8 = 2 THEN h.stop_timestamp
+    END DESC,
+    CASE
+        WHEN $7 = 2
+        AND $8 = 3 THEN h.total_living_weight
+    END DESC
+            "#,
+            query.ranges as Option<Vec<Range<DateTime<Utc>>>>,
+            query.catch_locations as Option<Vec<CatchLocationId>>,
+            query.gear_group_ids as Option<Vec<GearGroup>>,
+            query.species_group_ids as Option<Vec<SpeciesGroup>>,
+            query.vessel_length_groups as Option<Vec<VesselLengthGroup>>,
+            query.vessel_ids as Option<Vec<FiskeridirVesselId>>,
+            query.ordering.map(|o| o as i32),
+            query.sorting.map(|s| s as i32),
+        )
+        .fetch(&self.pool)
+        .map_err(|e| e.into())
+    }
 
-    pub(crate) fn hauls_impl(&self, query: HaulsQuery) -> impl Stream<Item = Result<Haul>> + '_ {
+    #[allow(dead_code)]
+    pub(crate) fn __hauls_impl(
+        &self,
+        query: HaulsQuery,
+    ) -> impl Stream<Item = Result<MinimalHaul>> + '_ {
+        sqlx::query_as!(
+            MinimalHaul,
+            r#"
+SELECT
+    m.haul_id AS "haul_id!: HaulId",
+    m.start_timestamp,
+    m.total_living_weight,
+    m.vessel_name,
+    m.start_latitude,
+    m.start_longitude
+FROM
+    hauls h
+    INNER JOIN minimal_hauls m ON h.haul_id = m.haul_id
+WHERE
+    (
+        $1::tstzrange[] IS NULL
+        OR h.period && ANY ($1)
+    )
+    AND (
+        $2::TEXT[] IS NULL
+        OR h.catch_locations && $2
+    )
+    AND (
+        $3::INT[] IS NULL
+        OR h.gear_group_id = ANY ($3)
+    )
+    AND (
+        $4::INT[] IS NULL
+        OR h.species_group_ids && $4
+    )
+    AND (
+        $5::INT[] IS NULL
+        OR h.vessel_length_group = ANY ($5)
+    )
+    AND (
+        $6::BIGINT[] IS NULL
+        OR fiskeridir_vessel_id = ANY ($6)
+    )
+    AND (
+        $7::DOUBLE PRECISION IS NULL
+        OR wind_speed_10m >= $7
+    )
+    AND (
+        $8::DOUBLE PRECISION IS NULL
+        OR wind_speed_10m <= $8
+    )
+    AND (
+        $9::DOUBLE PRECISION IS NULL
+        OR air_temperature_2m >= $9
+    )
+    AND (
+        $10::DOUBLE PRECISION IS NULL
+        OR air_temperature_2m <= $10
+    )
+ORDER BY
+    CASE
+        WHEN $11 = 1
+        AND $12 = 1 THEN h.start_timestamp
+    END ASC,
+    CASE
+        WHEN $11 = 1
+        AND $12 = 2 THEN h.stop_timestamp
+    END ASC,
+    CASE
+        WHEN $11 = 1
+        AND $12 = 3 THEN h.total_living_weight
+    END ASC,
+    CASE
+        WHEN $11 = 2
+        AND $12 = 1 THEN h.start_timestamp
+    END DESC,
+    CASE
+        WHEN $11 = 2
+        AND $12 = 2 THEN h.stop_timestamp
+    END DESC,
+    CASE
+        WHEN $11 = 2
+        AND $12 = 3 THEN h.total_living_weight
+    END DESC
+            "#,
+            query.ranges as Option<Vec<Range<DateTime<Utc>>>>,
+            query.catch_locations as Option<Vec<CatchLocationId>>,
+            query.gear_group_ids as Option<Vec<GearGroup>>,
+            query.species_group_ids as Option<Vec<SpeciesGroup>>,
+            query.vessel_length_groups as Option<Vec<VesselLengthGroup>>,
+            query.vessel_ids as Option<Vec<FiskeridirVesselId>>,
+            query.min_wind_speed,
+            query.max_wind_speed,
+            query.min_air_temperature,
+            query.max_air_temperature,
+            query.ordering.map(|o| o as i32),
+            query.sorting.map(|s| s as i32),
+        )
+        .fetch(&self.pool)
+        .map_err(|e| e.into())
+    }
+
+    pub(crate) fn _hauls_impl(&self, query: HaulsQuery) -> impl Stream<Item = Result<Haul>> + '_ {
         sqlx::query_as!(
             Haul,
             r#"
@@ -272,6 +450,64 @@ ORDER BY
             query.sorting.map(|s| s as i32),
         )
         .fetch(&self.pool)
+        .map_err(|e| e.into())
+    }
+
+    pub(crate) async fn haul_impl(&self, haul_id: HaulId) -> Result<Option<Haul>> {
+        sqlx::query_as!(
+            Haul,
+            r#"
+SELECT
+    haul_id AS "haul_id!: HaulId",
+    ers_activity_id,
+    duration,
+    haul_distance,
+    catch_location_start AS "catch_location_start?: CatchLocationId",
+    catch_locations AS "catch_locations?: Vec<CatchLocationId>",
+    ocean_depth_end,
+    ocean_depth_start,
+    quota_type_id,
+    start_latitude,
+    start_longitude,
+    start_timestamp,
+    stop_timestamp,
+    stop_latitude,
+    stop_longitude,
+    total_living_weight,
+    gear_id AS "gear_id!: Gear",
+    gear_group_id AS "gear_group_id!: GearGroup",
+    fiskeridir_vessel_id AS "fiskeridir_vessel_id?: FiskeridirVesselId",
+    vessel_call_sign,
+    vessel_call_sign_ers,
+    vessel_length,
+    vessel_length_group AS "vessel_length_group!: VesselLengthGroup",
+    vessel_name,
+    vessel_name_ers,
+    wind_speed_10m,
+    wind_direction_10m,
+    air_temperature_2m,
+    relative_humidity_2m,
+    air_pressure_at_sea_level,
+    precipitation_amount,
+    cloud_area_fraction,
+    water_speed,
+    water_direction,
+    salinity,
+    water_temperature,
+    ocean_climate_depth,
+    sea_floor_depth,
+    catches::TEXT AS "catches!",
+    whale_catches::TEXT AS "whale_catches!",
+    cache_version
+FROM
+    hauls
+WHERE
+    haul_id = $1
+            "#,
+            haul_id.into_inner(),
+        )
+        .fetch_optional(&self.pool)
+        .await
         .map_err(|e| e.into())
     }
 

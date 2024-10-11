@@ -556,7 +556,16 @@ impl WebApiOutboundPort for PostgresAdapter {
     }
 
     fn hauls(&self, query: HaulsQuery) -> PinBoxStream<'_, Haul> {
-        self.hauls_impl(query).try_convert().boxed()
+        self._hauls_impl(query).try_convert().boxed()
+    }
+
+    fn hauls_minimal(&self, query: HaulsQuery) -> PinBoxStream<'_, MinimalHaul> {
+        //self.hauls_impl(query).map_err(|e| e.into()).boxed()
+        self.hauls2(query).map_err(|e| e.into()).boxed()
+    }
+
+    async fn haul(&self, haul_id: HaulId) -> CoreResult<Option<Haul>> {
+        convert_optional(retry(|| self.haul_impl(haul_id)).await?)
     }
 
     async fn vessel_benchmarks(

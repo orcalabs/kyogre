@@ -148,7 +148,8 @@ impl Database for PostgresAdapter {}
             kyogre_core::VesselBenchmarks,
             kyogre_core::Benchmark,
             kyogre_core::BenchmarkEntry,
-            kyogre_core::CumulativeLandings
+            kyogre_core::CumulativeLandings,
+            kyogre_core::MinimalHaul
           )
     ),
     security(

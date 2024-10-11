@@ -16,6 +16,8 @@ services:
                -c auto_explain.log_settings=on
                -c auto_explain.log_nested_statements=on
                -c auto_explain.log_triggers=on
+               -c shared_buffers=2GB
+               -c work_mem=4MB
 
   migration-db:
     image: postgis/postgis:16-3.4-alpine

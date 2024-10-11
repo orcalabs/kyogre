@@ -14,6 +14,17 @@ use crate::{CatchLocationId, HaulOceanClimate, HaulWeather, ProcessingStatus};
 pub struct HaulId(i64);
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
+pub struct MinimalHaul {
+    pub haul_id: HaulId,
+    pub start_latitude: f64,
+    pub start_longitude: f64,
+    pub start_timestamp: DateTime<Utc>,
+    pub total_living_weight: i32,
+    pub vessel_name: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[remain::sorted]
 pub struct Haul {
     pub cache_version: i64,
