@@ -18,13 +18,15 @@ ARCHIVE_URL = "https://thredds.met.no/thredds/catalog/fou-hi/norkyst800m-1h/cata
 
 
 def datetime_from_url(url: str) -> datetime:
-    date_part = url.split('.')[-2]
+    date_part = url.split(".")[-2]
     dt = datetime.strptime(date_part, "%Y%m%d%H")
     dt = dt.replace(tzinfo=timezone.utc)
     return dt
 
 
-def get_met_netcdf_file_urls(latest: datetime | None = None, cache_file: str | None = None) -> list[str]:
+def get_met_netcdf_file_urls(
+    latest: datetime | None = None, cache_file: str | None = None
+) -> list[str]:
     if cache_file and os.path.exists(cache_file):
         with open(cache_file, "r") as f:
             return json.load(f)
@@ -60,14 +62,15 @@ def get_met_netcdf_file_urls(latest: datetime | None = None, cache_file: str | N
     return urls
 
 
-async def download_file(url: str, filename='temp'):
+async def download_file(url: str, filename="temp"):
     timeout = aiohttp.ClientTimeout(total=100_000)
     async with aiohttp.ClientSession(timeout=timeout) as session:
         async with session.get(url) as res:
             if res.status != 200:
                 text = await res.text()
                 print(
-                    f"Error downloading url '{url}', status: {res.status}, error: {text}")
+                    f"Error downloading url '{url}', status: {res.status}, error: {text}"
+                )
                 return
 
             async with aiofiles.open(filename, "wb") as f:
@@ -77,13 +80,13 @@ async def download_file(url: str, filename='temp'):
 
 def url_to_filename(url: str) -> str:
     # Use the date part at the end as the filename
-    return 'ocean_data/' + url.split(".")[-2] + '.nc'
+    return "ocean_data/" + url.split(".")[-2] + ".nc"
 
 
 async def download_only(urls: list[str]):
     for url in urls:
         filename = url_to_filename(url)
-        filename_temp = filename + '.tmp'
+        filename_temp = filename + ".tmp"
 
         start = time.time()
         await download_file(url, filename_temp)
@@ -106,7 +109,7 @@ def downscale_and_convert_to_csv(params: tuple[str, xarray.Dataset]):
     df["lat_bin"] = df.lat.map(to_bin)
     df["lon_bin"] = df.lon.map(to_bin)
 
-    data = df.groupby(['lat_bin', 'lon_bin']).mean()
+    data = df.groupby(["lat_bin", "lon_bin"]).mean()
     data.to_csv(csv_file, index=False)
 
     end = time.time()
@@ -116,13 +119,16 @@ def downscale_and_convert_to_csv(params: tuple[str, xarray.Dataset]):
 def _convert_only(file: str):
     start = time.time()
     with xarray.open_dataset(file) as ds:
-        ds = ds.drop_dims(['s_rho', 's_w'])
-        ds = ds.reset_coords(['lat', 'lon'])
+        ds = ds.drop_dims(["s_rho", "s_w"])
+        ds = ds.reset_coords(["lat", "lon"])
 
         x = [
-            (f"ocean_data/{pd.to_datetime(t).strftime('%Y%m%d%H')}_{int(depth)}.nc.csv", group)
-            for (t, group) in ds.groupby('time')
-            for (depth, group) in group.groupby('depth')
+            (
+                f"ocean_data/{pd.to_datetime(t).strftime('%Y%m%d%H')}_{int(depth)}.nc.csv",
+                group,
+            )
+            for (t, group) in ds.groupby("time")
+            for (depth, group) in group.groupby("depth")
         ]
 
     with Pool(16) as p:
@@ -152,27 +158,25 @@ if __name__ == "__main__":
     orig_len = len(urls)
     print(f"All urls: {orig_len}")
 
-    existing = set([f[:8] for f in os.listdir('ocean_data')])
+    existing = set([f[:8] for f in os.listdir("ocean_data")])
     print(f"Existing: {len(existing)}")
 
-    urls = [
-        url
-        for url in urls
-        if url.split('.')[-2][:-2] not in existing
-    ]
+    urls = [url for url in urls if url.split(".")[-2][:-2] not in existing]
 
     if len(urls) != orig_len - len(existing):
-        print(f"WARNING! Before: {orig_len}, Existing: {len(existing)}, After: {len(urls)}")
+        print(
+            f"WARNING! Before: {orig_len}, Existing: {len(existing)}, After: {len(urls)}"
+        )
         exit(0)
 
     print(f"To download: {len(urls)}")
 
     if len(sys.argv) == 1:
         exit(0)
-    elif sys.argv[1] == 'd':
-        temp_files = glob.glob('ocean_data/*.tmp')
+    elif sys.argv[1] == "d":
+        temp_files = glob.glob("ocean_data/*.tmp")
         for f in temp_files:
             os.remove(f)
         asyncio.run(download_only(urls))
-    elif sys.argv[1] == 'c':
+    elif sys.argv[1] == "c":
         asyncio.run(convert_only())
