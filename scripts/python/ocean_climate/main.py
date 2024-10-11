@@ -11,12 +11,12 @@ from datetime import datetime, timezone
 
 
 ARCHIVE_URL = "https://thredds.met.no/thredds/catalog/fou-hi/norkyst800m-1h/catalog.xml"
-DATA_DIR = 'ocean_data/'
+DATA_DIR = "ocean_data/"
 DEPTHS = [0, 25, 500]
 
 
 def datetime_from_url(url: str) -> datetime:
-    date_part = url.split('.')[-2]
+    date_part = url.split(".")[-2]
     dt = datetime.strptime(date_part, "%Y%m%d%H")
     dt = dt.replace(tzinfo=timezone.utc)
     return dt
@@ -39,13 +39,15 @@ def get_met_netcdf_file_urls(latest: datetime) -> list[str]:
     return urls
 
 
-async def download_file(url: str, filename='temp'):
+async def download_file(url: str, filename="temp"):
     timeout = aiohttp.ClientTimeout(total=100_000)
     async with aiohttp.ClientSession(timeout=timeout) as session:
         async with session.get(url) as res:
             if res.status != 200:
                 text = await res.text()
-                print(f"Error downloading url '{url}', status: {res.status}, error: {text}")
+                print(
+                    f"Error downloading url '{url}', status: {res.status}, error: {text}"
+                )
                 return
 
             async with aiofiles.open(filename, "wb") as f:
@@ -63,7 +65,7 @@ def downscale_and_convert_to_csv(ds: xarray.Dataset, csv_file: str):
     df["lat_bin"] = df.lat.map(to_bin)
     df["lon_bin"] = df.lon.map(to_bin)
 
-    data = df.groupby(['lat_bin', 'lon_bin']).mean()
+    data = df.groupby(["lat_bin", "lon_bin"]).mean()
     data.to_csv(csv_file, index=False)
 
 
@@ -71,14 +73,14 @@ def split_and_downscale_and_convert_to_csv(file: str) -> list[str]:
     csv_files = []
 
     with xarray.open_dataset(file) as ds:
-        ds = ds.drop_dims(['s_rho', 's_w'])
-        ds = ds.reset_coords(['lat', 'lon'])
+        ds = ds.drop_dims(["s_rho", "s_w"])
+        ds = ds.reset_coords(["lat", "lon"])
 
-        for (depth, group) in ds.groupby('depth'):
+        for depth, group in ds.groupby("depth"):
             if int(depth) not in DEPTHS:
                 continue
 
-            for (time, group) in group.groupby('time'):
+            for time, group in group.groupby("time"):
                 csv_file = f"{DATA_DIR}{pd.to_datetime(time).strftime('%Y%m%d%H')}_{int(depth)}.nc.csv"
                 downscale_and_convert_to_csv(group, csv_file)
                 csv_files.append(csv_file)
@@ -88,7 +90,7 @@ def split_and_downscale_and_convert_to_csv(file: str) -> list[str]:
 
 
 async def download_and_convert(url: str) -> list[str]:
-    file = DATA_DIR + url.split(".")[-2] + '.nc'
+    file = DATA_DIR + url.split(".")[-2] + ".nc"
 
     await download_file(url, file)
     csv_files = split_and_downscale_and_convert_to_csv(file)
@@ -115,6 +117,8 @@ if __name__ == "__main__":
         print("Usage: py main.py <latest_timestamp>")
         exit(1)
 
-    latest_datetime = datetime.strptime(sys.argv[1], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+    latest_datetime = datetime.strptime(sys.argv[1], "%Y-%m-%dT%H:%M:%SZ").replace(
+        tzinfo=timezone.utc
+    )
     filenames = main(latest_datetime)
     print(filenames)

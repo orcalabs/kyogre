@@ -9,7 +9,9 @@ import threddsclient
 from datetime import datetime, timezone
 
 
-OPERATIONAL_ARCHIVE_URL = "https://thredds.met.no/thredds/catalog/metpparchive/catalog.xml"
+OPERATIONAL_ARCHIVE_URL = (
+    "https://thredds.met.no/thredds/catalog/metpparchive/catalog.xml"
+)
 
 
 def get_met_netcdf_file_urls(latest: datetime) -> list[str]:
@@ -32,13 +34,15 @@ def get_met_netcdf_file_urls(latest: datetime) -> list[str]:
     return urls
 
 
-async def download_file(url: str, filename='temp'):
+async def download_file(url: str, filename="temp"):
     timeout = aiohttp.ClientTimeout(total=100_000)
     async with aiohttp.ClientSession(timeout=timeout) as session:
         async with session.get(url) as res:
             if res.status != 200:
                 text = await res.text()
-                print(f"Error downloading url '{url}', status: {res.status}, error: {text}")
+                print(
+                    f"Error downloading url '{url}', status: {res.status}, error: {text}"
+                )
                 return
 
             async with aiofiles.open(filename, "wb") as f:
@@ -51,7 +55,9 @@ def downscale_and_convert_to_csv(read_file: str, write_file: str):
         df = ds.to_dataframe()
 
     resolution = 0.1
-    def to_bin(x): return math.floor(x / resolution) * resolution
+
+    def to_bin(x):
+        return math.floor(x / resolution) * resolution
 
     df["latitude_bin"] = df.latitude.map(to_bin)
     df["longitude_bin"] = df.longitude.map(to_bin)
@@ -61,8 +67,8 @@ def downscale_and_convert_to_csv(read_file: str, write_file: str):
 
 
 async def download_and_convert(url: str) -> str:
-    filename = 'weather_data/' + url.split("_")[-1]
-    filename_csv = filename + '.csv'
+    filename = "weather_data/" + url.split("_")[-1]
+    filename_csv = filename + ".csv"
 
     await download_file(url, filename)
     downscale_and_convert_to_csv(filename, filename_csv)
@@ -72,14 +78,14 @@ async def download_and_convert(url: str) -> str:
 
 
 def datetime_from_url(url: str) -> datetime:
-    date_part = url.split('_')[-1].split('.')[0]
+    date_part = url.split("_")[-1].split(".")[0]
     dt = datetime.strptime(date_part, "%Y%m%dT%HZ")
     dt = dt.replace(tzinfo=timezone.utc)
     return dt
 
 
 def main(latest_datetime: datetime) -> list[str]:
-    if not os.path.isdir('weather_data'):
+    if not os.path.isdir("weather_data"):
         os.mkdir("weather_data")
 
     urls = get_met_netcdf_file_urls(latest_datetime)
@@ -97,5 +103,7 @@ if __name__ == "__main__":
         print("Usage: py main.py <latest_timestamp>")
         exit(1)
 
-    latest_datetime = datetime.strptime(sys.argv[1], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+    latest_datetime = datetime.strptime(sys.argv[1], "%Y-%m-%dT%H:%M:%SZ").replace(
+        tzinfo=timezone.utc
+    )
     main(latest_datetime)
