@@ -1,6 +1,6 @@
 use crate::error::{Error, Result};
 use chrono::{DateTime, Utc};
-use fiskeridir_rs::{Gear, GearGroup, SpeciesGroup, VesselLengthGroup};
+use fiskeridir_rs::{CallSign, Gear, GearGroup, SpeciesGroup, VesselLengthGroup};
 use kyogre_core::{CatchLocationId, FiskeridirVesselId, HaulCatch, HaulId};
 use serde::Deserialize;
 
@@ -21,6 +21,7 @@ pub struct Haul {
     pub vessel_length_group: VesselLengthGroup,
     pub fiskeridir_vessel_id: Option<FiskeridirVesselId>,
     pub species_group_ids: Vec<SpeciesGroup>,
+    pub call_sign: Option<CallSign>,
 }
 
 impl TryFrom<Haul> for kyogre_core::Haul {
@@ -43,6 +44,7 @@ impl TryFrom<Haul> for kyogre_core::Haul {
             fiskeridir_vessel_id: v.fiskeridir_vessel_id,
             vessel_length_group: v.vessel_length_group,
             gear_id: v.gear_id,
+            call_sign: v.call_sign,
         })
     }
 }
