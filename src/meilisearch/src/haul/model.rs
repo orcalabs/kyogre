@@ -7,7 +7,7 @@ use crate::{
 };
 use async_trait::async_trait;
 use chrono::{TimeZone, Utc};
-use fiskeridir_rs::{Gear, GearGroup, SpeciesGroup, VesselLengthGroup};
+use fiskeridir_rs::{CallSign, Gear, GearGroup, SpeciesGroup, VesselLengthGroup};
 use kyogre_core::{CatchLocationId, FiskeridirVesselId, HaulCatch, HaulId, MeilisearchSource};
 use serde::{Deserialize, Serialize};
 
@@ -28,6 +28,7 @@ pub struct Haul {
     pub vessel_length_group: VesselLengthGroup,
     pub catches: Vec<HaulCatch>,
     pub vessel_name: Option<String>,
+    pub call_sign: Option<CallSign>,
 }
 
 #[derive(Deserialize)]
@@ -108,6 +109,7 @@ impl TryFrom<kyogre_core::Haul> for Haul {
             fiskeridir_vessel_id: v.fiskeridir_vessel_id,
             vessel_length_group: v.vessel_length_group,
             gear: v.gear_id,
+            call_sign: v.call_sign,
         })
     }
 }
@@ -130,6 +132,7 @@ impl From<Haul> for kyogre_core::Haul {
             fiskeridir_vessel_id: v.fiskeridir_vessel_id,
             vessel_length_group: v.vessel_length_group,
             gear_id: v.gear,
+            call_sign: v.call_sign,
         }
     }
 }

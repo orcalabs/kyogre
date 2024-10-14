@@ -548,7 +548,9 @@ SELECT
                 'catches',
                 h.catches,
                 'vessel_name',
-                h.vessel_name
+                COALESCE(h.vessel_name, h.vessel_name_ers),
+                'call_sign',
+                COALESCE(h.vessel_call_sign, h.vessel_call_sign_ers)
             )
         ) FILTER (
             WHERE

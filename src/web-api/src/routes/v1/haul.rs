@@ -1,6 +1,6 @@
 use actix_web::web::{self, Path};
 use chrono::{DateTime, Datelike, Utc};
-use fiskeridir_rs::{Gear, GearGroup, SpeciesGroup, VesselLengthGroup, WhaleGender};
+use fiskeridir_rs::{CallSign, Gear, GearGroup, SpeciesGroup, VesselLengthGroup, WhaleGender};
 use futures::TryStreamExt;
 use kyogre_core::{
     ActiveHaulsFilter, CatchLocationId, FiskeridirVesselId, HaulId, HaulMatrixXFeature,
@@ -171,8 +171,12 @@ pub struct Haul {
     pub gear_group_id: GearGroup,
     #[serde_as(as = "DisplayFromStr")]
     pub gear: Gear,
-    pub vessel_name: Option<String>,
     pub catches: Vec<HaulCatch>,
+    #[schema(value_type = Option<i64>)]
+    pub fiskeridir_vessel_id: Option<FiskeridirVesselId>,
+    pub vessel_name: Option<String>,
+    #[schema(value_type = Option<String>)]
+    pub call_sign: Option<CallSign>,
 }
 
 #[serde_as]
@@ -294,6 +298,8 @@ impl From<kyogre_core::Haul> for Haul {
             vessel_name: v.vessel_name,
             catches: v.catches.into_iter().map(HaulCatch::from).collect(),
             gear: v.gear_id,
+            fiskeridir_vessel_id: v.fiskeridir_vessel_id,
+            call_sign: v.call_sign,
         }
     }
 }
