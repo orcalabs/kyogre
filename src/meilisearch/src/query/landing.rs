@@ -1,12 +1,12 @@
 use std::collections::BTreeSet;
 
-use kyogre_core::LandingsQuery;
+use kyogre_core::{Landings, LandingsQuery, Pagination};
 
 use crate::landing::{LandingFilter, LandingSort};
 
 use super::Query;
 
-impl From<LandingsQuery> for Query<LandingFilter, Option<LandingSort>, ()> {
+impl From<LandingsQuery> for Query<LandingFilter, Option<LandingSort>, Pagination<Landings>> {
     fn from(value: LandingsQuery) -> Self {
         let LandingsQuery {
             ordering,
@@ -17,6 +17,7 @@ impl From<LandingsQuery> for Query<LandingFilter, Option<LandingSort>, ()> {
             species_group_ids,
             vessel_length_groups,
             vessel_ids,
+            pagination,
         } = value;
 
         let mut filters = BTreeSet::new();
@@ -44,7 +45,7 @@ impl From<LandingsQuery> for Query<LandingFilter, Option<LandingSort>, ()> {
             filters,
             sorting: sorting.map(LandingSort::from),
             ordering: ordering.unwrap_or_default(),
-            pagination: (),
+            pagination,
         }
     }
 }
