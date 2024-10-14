@@ -1,7 +1,8 @@
+log_level: Info
 postgres:
-  ip: postgres
+  ip: localhost
   port: 5532
   username: postgres
   password: test123
   max_connections: 1
-  log_statements: "Disable"
+  log_statements: 'Disable'

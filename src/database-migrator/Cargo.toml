@@ -11,5 +11,5 @@ postgres = { path = "../postgres" }
 orca-core = { workspace = true, features = ["telemetry"] }
 serde = { workspace = true }
 config = { workspace = true }
-tokio = { workspace = true, features = ["macros"] }
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
 tracing = { workspace = true }
