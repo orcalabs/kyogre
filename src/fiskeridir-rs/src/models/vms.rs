@@ -5,7 +5,6 @@ use serde_with::NoneAsEmptyString;
 use serde::Deserialize;
 use serde_with::{serde_as, DisplayFromStr};
 
-#[remain::sorted]
 #[serde_as]
 #[derive(Deserialize, Debug, Clone)]
 pub struct Vms {

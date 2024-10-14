@@ -33,7 +33,6 @@ pub struct Haul {
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
-#[remain::sorted]
 pub struct HaulCatch {
     pub living_weight: i32,
     pub species_fao_id: String,
@@ -43,7 +42,6 @@ pub struct HaulCatch {
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
-#[remain::sorted]
 pub struct WhaleCatch {
     pub blubber_measure_a: Option<i32>,
     pub blubber_measure_b: Option<i32>,

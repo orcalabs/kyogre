@@ -33,7 +33,6 @@ tokio = { workspace = true, features = ["sync"] }
 wkt = { workspace = true }
 geo = { workspace = true }
 uuid = { workspace = true, features = ["serde", "v4"] }
-remain = { workspace = true }
 geozero = { workspace = true, optional = true }
 
 oauth2 = "4.4.2"
