@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT\n    h.haul_id AS \"haul_id!: HaulId\",\n    h.haul_distance,\n    h.catch_locations AS \"catch_locations?: Vec<CatchLocationId>\",\n    h.species_group_ids AS \"species_group_ids!: Vec<SpeciesGroup>\",\n    h.start_latitude,\n    h.start_longitude,\n    h.start_timestamp,\n    h.stop_timestamp,\n    h.gear_group_id AS \"gear_group_id!: GearGroup\",\n    h.gear_id AS \"gear_id!: Gear\",\n    h.fiskeridir_vessel_id AS \"fiskeridir_vessel_id?: FiskeridirVesselId\",\n    h.vessel_length_group AS \"vessel_length_group!: VesselLengthGroup\",\n    h.vessel_name,\n    h.catches::TEXT AS \"catches!\",\n    h.cache_version\nFROM\n    hauls h\nWHERE\n    h.fiskeridir_vessel_id = $1\n    AND h.message_id = $2\n            ",
+  "query": "\nSELECT\n    h.haul_id AS \"haul_id!: HaulId\",\n    h.haul_distance,\n    h.catch_locations AS \"catch_locations?: Vec<CatchLocationId>\",\n    h.species_group_ids AS \"species_group_ids!: Vec<SpeciesGroup>\",\n    h.start_latitude,\n    h.start_longitude,\n    h.start_timestamp,\n    h.stop_timestamp,\n    h.gear_group_id AS \"gear_group_id!: GearGroup\",\n    h.gear_id AS \"gear_id!: Gear\",\n    h.fiskeridir_vessel_id AS \"fiskeridir_vessel_id?: FiskeridirVesselId\",\n    h.vessel_length_group AS \"vessel_length_group!: VesselLengthGroup\",\n    COALESCE(h.vessel_name, h.vessel_name_ers) as vessel_name,\n    COALESCE(h.vessel_call_sign, h.vessel_call_sign_ers) as \"call_sign: CallSign\",\n    h.catches::TEXT AS \"catches!\",\n    h.cache_version\nFROM\n    hauls h\nWHERE\n    h.fiskeridir_vessel_id = $1\n    AND h.message_id = $2\n            ",
   "describe": {
     "columns": [
       {
@@ -70,11 +70,16 @@
       },
       {
         "ordinal": 13,
-        "name": "catches!",
+        "name": "call_sign: CallSign",
         "type_info": "Text"
       },
       {
         "ordinal": 14,
+        "name": "catches!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 15,
         "name": "cache_version",
         "type_info": "Int8"
       }
@@ -98,10 +103,11 @@
       false,
       true,
       false,
-      true,
+      null,
+      null,
       null,
       false
     ]
   },
-  "hash": "f4078e66bd9ba9703cd21f7311f3407019d09d871bce7eb0ac1f757af3725a78"
+  "hash": "77257441395f8a7cbdfcfbc38eca307d07c090fdfd4f38c144bbace17fa365cf"
 }

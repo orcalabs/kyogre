@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT\n    haul_id AS \"haul_id!: HaulId\",\n    haul_distance,\n    catch_locations AS \"catch_locations?: Vec<CatchLocationId>\",\n    species_group_ids AS \"species_group_ids!: Vec<SpeciesGroup>\",\n    start_latitude,\n    start_longitude,\n    start_timestamp,\n    stop_timestamp,\n    gear_group_id AS \"gear_group_id!: GearGroup\",\n    gear_id AS \"gear_id!: Gear\",\n    fiskeridir_vessel_id AS \"fiskeridir_vessel_id?: FiskeridirVesselId\",\n    vessel_length_group AS \"vessel_length_group!: VesselLengthGroup\",\n    vessel_name,\n    catches::TEXT AS \"catches!\",\n    cache_version\nFROM\n    hauls\nWHERE\n    haul_id = ANY ($1)\n            ",
+  "query": "\nSELECT\n    haul_id AS \"haul_id!: HaulId\",\n    haul_distance,\n    catch_locations AS \"catch_locations?: Vec<CatchLocationId>\",\n    species_group_ids AS \"species_group_ids!: Vec<SpeciesGroup>\",\n    start_latitude,\n    start_longitude,\n    start_timestamp,\n    stop_timestamp,\n    gear_group_id AS \"gear_group_id!: GearGroup\",\n    gear_id AS \"gear_id!: Gear\",\n    fiskeridir_vessel_id AS \"fiskeridir_vessel_id?: FiskeridirVesselId\",\n    vessel_length_group AS \"vessel_length_group!: VesselLengthGroup\",\n    COALESCE(vessel_name, vessel_name_ers) as vessel_name,\n    COALESCE(vessel_call_sign, vessel_call_sign_ers) as \"call_sign: CallSign\",\n    catches::TEXT AS \"catches!\",\n    cache_version\nFROM\n    hauls\nWHERE\n    haul_id = ANY ($1)\n            ",
   "describe": {
     "columns": [
       {
@@ -70,11 +70,16 @@
       },
       {
         "ordinal": 13,
-        "name": "catches!",
+        "name": "call_sign: CallSign",
         "type_info": "Text"
       },
       {
         "ordinal": 14,
+        "name": "catches!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 15,
         "name": "cache_version",
         "type_info": "Int8"
       }
@@ -97,10 +102,11 @@
       false,
       true,
       false,
-      true,
+      null,
+      null,
       null,
       false
     ]
   },
-  "hash": "2be327a87bf7e343843f2b3286fa71e18bb630896d3368a489e2a0d1a0a9c188"
+  "hash": "a98f1de1d0a02e5417b2bcc7243a8d32f30df9226d7c2e92e3c201c5c98f915c"
 }
