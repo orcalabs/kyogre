@@ -13,6 +13,8 @@ pub struct Haul {
     pub stop_timestamp: DateTime<Utc>,
     pub start_latitude: f64,
     pub start_longitude: f64,
+    pub stop_latitude: f64,
+    pub stop_longitude: f64,
     pub gear_group_id: GearGroup,
     pub gear_id: Gear,
     pub vessel_name: Option<String>,
@@ -21,7 +23,7 @@ pub struct Haul {
     pub vessel_length_group: VesselLengthGroup,
     pub fiskeridir_vessel_id: Option<FiskeridirVesselId>,
     pub species_group_ids: Vec<SpeciesGroup>,
-    pub call_sign: Option<CallSign>,
+    pub call_sign: CallSign,
 }
 
 impl TryFrom<Haul> for kyogre_core::Haul {
@@ -45,6 +47,8 @@ impl TryFrom<Haul> for kyogre_core::Haul {
             vessel_length_group: v.vessel_length_group,
             gear_id: v.gear_id,
             call_sign: v.call_sign,
+            stop_latitude: v.stop_latitude,
+            stop_longitude: v.stop_longitude,
         })
     }
 }

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT\n    h.haul_id AS \"haul_id!: HaulId\",\n    h.haul_distance,\n    h.catch_locations AS \"catch_locations?: Vec<CatchLocationId>\",\n    h.species_group_ids AS \"species_group_ids!: Vec<SpeciesGroup>\",\n    h.start_latitude,\n    h.start_longitude,\n    h.start_timestamp,\n    h.stop_timestamp,\n    h.gear_group_id AS \"gear_group_id!: GearGroup\",\n    h.gear_id AS \"gear_id!: Gear\",\n    h.fiskeridir_vessel_id AS \"fiskeridir_vessel_id?: FiskeridirVesselId\",\n    h.vessel_length_group AS \"vessel_length_group!: VesselLengthGroup\",\n    COALESCE(h.vessel_name, h.vessel_name_ers) as vessel_name,\n    COALESCE(h.vessel_call_sign, h.vessel_call_sign_ers) as \"call_sign: CallSign\",\n    h.catches::TEXT AS \"catches!\",\n    h.cache_version\nFROM\n    hauls h\nWHERE\n    h.fiskeridir_vessel_id = $1\n    AND h.message_id = $2\n            ",
+  "query": "\nSELECT\n    h.haul_id AS \"haul_id!: HaulId\",\n    h.haul_distance,\n    h.catch_locations AS \"catch_locations?: Vec<CatchLocationId>\",\n    h.species_group_ids AS \"species_group_ids!: Vec<SpeciesGroup>\",\n    h.start_latitude,\n    h.start_longitude,\n    h.stop_latitude,\n    h.stop_longitude,\n    h.start_timestamp,\n    h.stop_timestamp,\n    h.gear_group_id AS \"gear_group_id!: GearGroup\",\n    h.gear_id AS \"gear_id!: Gear\",\n    h.fiskeridir_vessel_id AS \"fiskeridir_vessel_id?: FiskeridirVesselId\",\n    h.vessel_length_group AS \"vessel_length_group!: VesselLengthGroup\",\n    COALESCE(h.vessel_name, h.vessel_name_ers) as vessel_name,\n    COALESCE(h.vessel_call_sign, h.vessel_call_sign_ers) as \"call_sign!: CallSign\",\n    h.catches::TEXT AS \"catches!\",\n    h.cache_version\nFROM\n    hauls h\nWHERE\n    h.fiskeridir_vessel_id = $1\n    AND h.message_id = $2\n            ",
   "describe": {
     "columns": [
       {
@@ -35,51 +35,61 @@
       },
       {
         "ordinal": 6,
+        "name": "stop_latitude",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 7,
+        "name": "stop_longitude",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 8,
         "name": "start_timestamp",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 7,
+        "ordinal": 9,
         "name": "stop_timestamp",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 8,
+        "ordinal": 10,
         "name": "gear_group_id!: GearGroup",
         "type_info": "Int4"
       },
       {
-        "ordinal": 9,
+        "ordinal": 11,
         "name": "gear_id!: Gear",
         "type_info": "Int4"
       },
       {
-        "ordinal": 10,
+        "ordinal": 12,
         "name": "fiskeridir_vessel_id?: FiskeridirVesselId",
         "type_info": "Int8"
       },
       {
-        "ordinal": 11,
+        "ordinal": 13,
         "name": "vessel_length_group!: VesselLengthGroup",
         "type_info": "Int4"
       },
       {
-        "ordinal": 12,
+        "ordinal": 14,
         "name": "vessel_name",
         "type_info": "Text"
       },
       {
-        "ordinal": 13,
-        "name": "call_sign: CallSign",
+        "ordinal": 15,
+        "name": "call_sign!: CallSign",
         "type_info": "Text"
       },
       {
-        "ordinal": 14,
+        "ordinal": 16,
         "name": "catches!",
         "type_info": "Text"
       },
       {
-        "ordinal": 15,
+        "ordinal": 17,
         "name": "cache_version",
         "type_info": "Int8"
       }
@@ -101,6 +111,8 @@
       false,
       false,
       false,
+      false,
+      false,
       true,
       false,
       null,
@@ -109,5 +121,5 @@
       false
     ]
   },
-  "hash": "77257441395f8a7cbdfcfbc38eca307d07c090fdfd4f38c144bbace17fa365cf"
+  "hash": "705ead3d6e2b9da5c114d2bc175515ac3af9a69283b3adf78730bf6cf7baf4dc"
 }

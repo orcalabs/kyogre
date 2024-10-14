@@ -25,12 +25,14 @@ pub struct Haul {
     pub haul_distance: Option<i32>,
     pub start_latitude: f64,
     pub start_longitude: f64,
+    pub stop_latitude: f64,
+    pub stop_longitude: f64,
     pub start_timestamp: DateTime<Utc>,
     pub stop_timestamp: DateTime<Utc>,
     pub vessel_length_group: VesselLengthGroup,
     pub catches: Vec<HaulCatch>,
     pub vessel_name: Option<String>,
-    pub call_sign: Option<CallSign>,
+    pub call_sign: CallSign,
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
