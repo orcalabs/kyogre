@@ -169,7 +169,7 @@ where
     )
     .set_log_options(None);
 
-    postgres.modify_port_map(5432, 5400);
+    postgres.modify_port_map(5432, 5534);
     docker_test.provide_container(postgres);
 
     if cache_mode == CacheMode::Meilisearch {

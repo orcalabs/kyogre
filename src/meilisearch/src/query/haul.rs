@@ -1,8 +1,6 @@
-use std::collections::BTreeSet;
-
-use kyogre_core::{HaulsQuery, MinMaxBoth};
-
 use crate::haul::{HaulFilter, HaulSort};
+use kyogre_core::HaulsQuery;
+use std::collections::BTreeSet;
 
 use super::Query;
 
@@ -17,22 +15,12 @@ impl From<HaulsQuery> for Query<HaulFilter, Option<HaulSort>, ()> {
             species_group_ids,
             vessel_length_groups,
             vessel_ids,
-            min_wind_speed,
-            max_wind_speed,
-            min_air_temperature,
-            max_air_temperature,
         } = value;
 
         let mut filters = BTreeSet::new();
 
         if let Some(ranges) = ranges {
             filters.insert(HaulFilter::StartTimestamp(ranges));
-        }
-        if let Some(wind) = MinMaxBoth::new(min_wind_speed, max_wind_speed) {
-            filters.insert(HaulFilter::WindSpeed(wind));
-        }
-        if let Some(temp) = MinMaxBoth::new(min_air_temperature, max_air_temperature) {
-            filters.insert(HaulFilter::AirTemperature(temp));
         }
         if let Some(ids) = gear_group_ids {
             filters.insert(HaulFilter::GearGroupId(ids));

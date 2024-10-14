@@ -2,8 +2,8 @@ use async_trait::async_trait;
 use chrono::{DateTime, TimeZone, Utc};
 use fiskeridir_rs::{DeliveryPointId, Gear, GearGroup, LandingId, SpeciesGroup, VesselLengthGroup};
 use kyogre_core::{
-    DateRange, Delivery, FishingFacility, FiskeridirVesselId, HaulId, MeilisearchSource,
-    TripAssemblerId, TripDetailed, TripHaul, TripId, VesselEvent,
+    DateRange, Delivery, FishingFacility, FiskeridirVesselId, Haul, HaulId, MeilisearchSource,
+    TripAssemblerId, TripDetailed, TripId, VesselEvent,
 };
 use serde::{Deserialize, Serialize};
 
@@ -32,7 +32,7 @@ pub struct Trip {
     pub gear_group_ids: Vec<GearGroup>,
     pub species_group_ids: Vec<SpeciesGroup>,
     pub delivery_point_ids: Vec<DeliveryPointId>,
-    pub hauls: Vec<TripHaul>,
+    pub hauls: Vec<Haul>,
     pub fishing_facilities: Vec<FishingFacility>,
     pub delivery: Delivery,
     pub start_port_id: Option<String>,

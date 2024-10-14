@@ -1,51 +1,35 @@
 use std::fmt::{self, Display};
 
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Duration, Utc};
 use fiskeridir_rs::{
     FiskeridirVesselId, Gear, GearGroup, SpeciesGroup, SpeciesMainGroup, VesselLengthGroup,
     WhaleGender,
 };
 use serde::{Deserialize, Serialize};
 
-use crate::{CatchLocationId, HaulOceanClimate, HaulWeather, ProcessingStatus};
+use crate::{CatchLocationId, ProcessingStatus};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize)]
 #[cfg_attr(feature = "sqlx", derive(sqlx::Type), sqlx(transparent))]
 pub struct HaulId(i64);
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
-#[remain::sorted]
 pub struct Haul {
+    pub haul_id: HaulId,
     pub cache_version: i64,
-    pub catch_location_start: Option<CatchLocationId>,
     pub catch_locations: Option<Vec<CatchLocationId>>,
-    pub catches: Vec<HaulCatch>,
-    pub duration: i32,
-    pub ers_activity_id: String,
-    pub fiskeridir_vessel_id: Option<FiskeridirVesselId>,
     pub gear_group_id: GearGroup,
     pub gear_id: Gear,
+    pub species_group_ids: Vec<SpeciesGroup>,
+    pub fiskeridir_vessel_id: Option<FiskeridirVesselId>,
     pub haul_distance: Option<i32>,
-    pub haul_id: HaulId,
-    pub ocean_climate: HaulOceanClimate,
-    pub ocean_depth_end: i32,
-    pub ocean_depth_start: i32,
-    pub quota_type_id: i32,
     pub start_latitude: f64,
     pub start_longitude: f64,
     pub start_timestamp: DateTime<Utc>,
-    pub stop_latitude: f64,
-    pub stop_longitude: f64,
     pub stop_timestamp: DateTime<Utc>,
-    pub total_living_weight: i64,
-    pub vessel_call_sign: Option<String>,
-    pub vessel_call_sign_ers: String,
-    pub vessel_length: f64,
     pub vessel_length_group: VesselLengthGroup,
+    pub catches: Vec<HaulCatch>,
     pub vessel_name: Option<String>,
-    pub vessel_name_ers: Option<String>,
-    pub weather: HaulWeather,
-    pub whale_catches: Vec<WhaleCatch>,
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
@@ -120,5 +104,14 @@ impl From<HaulId> for i64 {
 impl Display for HaulId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.0.fmt(f)
+    }
+}
+
+impl Haul {
+    pub fn duration(&self) -> Duration {
+        self.stop_timestamp - self.start_timestamp
+    }
+    pub fn total_living_weight(&self) -> i32 {
+        self.catches.iter().map(|c| c.living_weight).sum()
     }
 }
