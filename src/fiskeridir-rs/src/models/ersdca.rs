@@ -134,7 +134,6 @@ pub struct ErsDca {
 }
 
 /// It seems that either none or all of these fields are present in DCA messages.
-#[remain::sorted]
 #[serde_as]
 #[derive(Deserialize, Debug, Clone)]
 pub struct GearDca {
@@ -182,7 +181,6 @@ pub struct GearDca {
     pub gear_specification_code: Option<u32>,
 }
 
-#[remain::sorted]
 #[serde_as]
 #[derive(Deserialize, Debug, Clone)]
 pub struct DcaCatch {
@@ -199,7 +197,6 @@ pub struct DcaCatch {
     pub species: ErsSpecies,
 }
 
-#[remain::sorted]
 #[serde_as]
 #[derive(Deserialize, Debug, Clone)]
 pub struct WhaleCatchInfo {

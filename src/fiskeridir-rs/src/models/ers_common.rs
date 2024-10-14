@@ -12,7 +12,6 @@ use strum::{AsRefStr, Display, EnumString};
 use super::{CallSign, FiskeridirVesselId};
 
 #[serde_as]
-#[remain::sorted]
 #[derive(Deserialize, Debug, Clone)]
 pub struct Port {
     #[serde(rename = "Havn (kode)")]
@@ -86,7 +85,6 @@ pub struct ErsMessageInfo {
     pub sequence_number: Option<u32>,
 }
 
-#[remain::sorted]
 #[serde_as]
 #[derive(Deserialize, Debug, Clone)]
 pub struct ErsSpecies {
@@ -205,7 +203,6 @@ pub struct ErsVesselInfo {
     pub width: Option<f64>,
 }
 
-#[remain::sorted]
 #[serde_as]
 #[derive(Deserialize, Debug, Clone)]
 pub struct ErsCatch {
