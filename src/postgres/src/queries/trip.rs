@@ -539,6 +539,10 @@ SELECT
                 h.start_latitude,
                 'start_longitude',
                 h.start_longitude,
+                'stop_latitude',
+                h.stop_latitude,
+                'stop_longitude',
+                h.stop_longitude,
                 'start_timestamp',
                 LOWER(h.period),
                 'stop_timestamp',
@@ -955,6 +959,10 @@ SELECT
                         h.start_latitude,
                         'start_longitude',
                         h.start_longitude,
+                        'stop_latitude',
+                        h.stop_latitude,
+                        'stop_longitude',
+                        h.stop_longitude,
                         'start_timestamp',
                         LOWER(h.period),
                         'stop_timestamp',
@@ -964,7 +972,9 @@ SELECT
                         'catches',
                         h.catches,
                         'vessel_name',
-                        h.vessel_name
+                        COALESCE(h.vessel_name, h.vessel_name_ers),
+                        'call_sign',
+                        COALESCE(h.vessel_call_sign, h.vessel_call_sign_ers)
                     )
                 ),
                 '[]'

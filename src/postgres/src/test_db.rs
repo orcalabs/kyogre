@@ -49,6 +49,8 @@ SELECT
     h.species_group_ids AS "species_group_ids!: Vec<SpeciesGroup>",
     h.start_latitude,
     h.start_longitude,
+    h.stop_latitude,
+    h.stop_longitude,
     h.start_timestamp,
     h.stop_timestamp,
     h.gear_group_id AS "gear_group_id!: GearGroup",
@@ -56,7 +58,7 @@ SELECT
     h.fiskeridir_vessel_id AS "fiskeridir_vessel_id?: FiskeridirVesselId",
     h.vessel_length_group AS "vessel_length_group!: VesselLengthGroup",
     COALESCE(h.vessel_name, h.vessel_name_ers) as vessel_name,
-    COALESCE(h.vessel_call_sign, h.vessel_call_sign_ers) as "call_sign: CallSign",
+    COALESCE(h.vessel_call_sign, h.vessel_call_sign_ers) as "call_sign!: CallSign",
     h.catches::TEXT AS "catches!",
     h.cache_version
 FROM

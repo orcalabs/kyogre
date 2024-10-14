@@ -163,6 +163,8 @@ pub struct Haul {
     pub catch_locations: Option<Vec<CatchLocationId>>,
     pub start_latitude: f64,
     pub start_longitude: f64,
+    pub stop_latitude: f64,
+    pub stop_longitude: f64,
     #[schema(value_type = String, example = "2023-02-24T11:08:20.409416682Z")]
     pub start_timestamp: DateTime<Utc>,
     #[schema(value_type = String, example = "2023-02-24T11:08:20.409416682Z")]
@@ -175,8 +177,8 @@ pub struct Haul {
     #[schema(value_type = Option<i64>)]
     pub fiskeridir_vessel_id: Option<FiskeridirVesselId>,
     pub vessel_name: Option<String>,
-    #[schema(value_type = Option<String>)]
-    pub call_sign: Option<CallSign>,
+    #[schema(value_type = String)]
+    pub call_sign: CallSign,
 }
 
 #[serde_as]
@@ -300,6 +302,8 @@ impl From<kyogre_core::Haul> for Haul {
             gear: v.gear_id,
             fiskeridir_vessel_id: v.fiskeridir_vessel_id,
             call_sign: v.call_sign,
+            stop_latitude: v.stop_latitude,
+            stop_longitude: v.stop_longitude,
         }
     }
 }

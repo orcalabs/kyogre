@@ -23,12 +23,14 @@ pub struct Haul {
     pub haul_distance: Option<i32>,
     pub start_latitude: f64,
     pub start_longitude: f64,
+    pub stop_latitude: f64,
+    pub stop_longitude: f64,
     pub start_timestamp: i64,
     pub stop_timestamp: i64,
     pub vessel_length_group: VesselLengthGroup,
     pub catches: Vec<HaulCatch>,
     pub vessel_name: Option<String>,
-    pub call_sign: Option<CallSign>,
+    pub call_sign: CallSign,
 }
 
 #[derive(Deserialize)]
@@ -110,6 +112,8 @@ impl TryFrom<kyogre_core::Haul> for Haul {
             vessel_length_group: v.vessel_length_group,
             gear: v.gear_id,
             call_sign: v.call_sign,
+            stop_latitude: v.stop_latitude,
+            stop_longitude: v.stop_longitude,
         })
     }
 }
@@ -133,6 +137,8 @@ impl From<Haul> for kyogre_core::Haul {
             vessel_length_group: v.vessel_length_group,
             gear_id: v.gear,
             call_sign: v.call_sign,
+            stop_latitude: v.stop_latitude,
+            stop_longitude: v.stop_longitude,
         }
     }
 }
