@@ -406,7 +406,9 @@ INSERT INTO
         vessel_events,
         fishing_facilities,
         landing_ids,
-        hauls
+        hauls,
+        haul_total_weight,
+        haul_duration
     )
 SELECT
     t.trip_id,
@@ -519,10 +521,18 @@ SELECT
             DISTINCT JSONB_BUILD_OBJECT(
                 'haul_id',
                 h.haul_id,
-                'ers_activity_id',
-                h.ers_activity_id,
-                'duration',
-                h.duration,
+                'cache_version',
+                h.cache_version,
+                'catch_locations',
+                h.catch_locations,
+                'gear_group_id',
+                h.gear_group_id,
+                'gear_id',
+                h.gear_id,
+                'species_group_ids',
+                h.species_group_ids,
+                'fiskeridir_vessel_id',
+                h.fiskeridir_vessel_id,
                 'haul_distance',
                 h.haul_distance,
                 'start_latitude',
@@ -533,28 +543,20 @@ SELECT
                 LOWER(h.period),
                 'stop_timestamp',
                 UPPER(h.period),
-                'stop_latitude',
-                h.stop_latitude,
-                'stop_longitude',
-                h.stop_longitude,
-                'gear_group_id',
-                h.gear_group_id,
-                'gear_id',
-                h.gear_id,
-                'fiskeridir_vessel_id',
-                h.fiskeridir_vessel_id,
-                'total_living_weight',
-                h.total_living_weight,
+                'vessel_length_group',
+                h.vessel_length_group,
                 'catches',
                 h.catches,
-                'whale_catches',
-                h.whale_catches
+                'vessel_name',
+                h.vessel_name
             )
         ) FILTER (
             WHERE
                 h.haul_id IS NOT NULL
         )
-    ) AS hauls
+    ) AS hauls,
+    SUM(h.total_living_weight),
+    SUM((h.stop_timestamp - h.start_timestamp))
 FROM
     trips t
     INNER JOIN fiskeridir_vessels fv ON fv.fiskeridir_vessel_id = t.fiskeridir_vessel_id
@@ -587,7 +589,9 @@ SET
     vessel_events = excluded.vessel_events,
     fishing_facilities = excluded.fishing_facilities,
     landing_ids = excluded.landing_ids,
-    hauls = excluded.hauls;
+    hauls = excluded.hauls,
+    haul_total_weight = excluded.haul_total_weight,
+    haul_duration = excluded.haul_duration
             "#,
             &trip_ids as &[TripId],
         )
@@ -931,10 +935,18 @@ SELECT
                     JSONB_BUILD_OBJECT(
                         'haul_id',
                         h.haul_id,
-                        'ers_activity_id',
-                        h.ers_activity_id,
-                        'duration',
-                        h.duration,
+                        'cache_version',
+                        h.cache_version,
+                        'catch_locations',
+                        h.catch_locations,
+                        'gear_group_id',
+                        h.gear_group_id,
+                        'gear_id',
+                        h.gear_id,
+                        'species_group_ids',
+                        h.species_group_ids,
+                        'fiskeridir_vessel_id',
+                        h.fiskeridir_vessel_id,
                         'haul_distance',
                         h.haul_distance,
                         'start_latitude',
@@ -945,22 +957,12 @@ SELECT
                         LOWER(h.period),
                         'stop_timestamp',
                         UPPER(h.period),
-                        'stop_latitude',
-                        h.stop_latitude,
-                        'stop_longitude',
-                        h.stop_longitude,
-                        'gear_group_id',
-                        h.gear_group_id,
-                        'gear_id',
-                        h.gear_id,
-                        'fiskeridir_vessel_id',
-                        h.fiskeridir_vessel_id,
-                        'total_living_weight',
-                        h.total_living_weight,
+                        'vessel_length_group',
+                        h.vessel_length_group,
                         'catches',
                         h.catches,
-                        'whale_catches',
-                        h.whale_catches
+                        'vessel_name',
+                        h.vessel_name
                     )
                 ),
                 '[]'

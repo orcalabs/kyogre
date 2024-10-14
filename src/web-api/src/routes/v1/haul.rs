@@ -37,10 +37,6 @@ pub struct HaulsParams {
     pub vessel_length_groups: Option<Vec<VesselLengthGroup>>,
     #[param(rename = "fiskeridirVesselIds[]", value_type = Option<Vec<i64>>)]
     pub fiskeridir_vessel_ids: Option<Vec<FiskeridirVesselId>>,
-    pub min_wind_speed: Option<f64>,
-    pub max_wind_speed: Option<f64>,
-    pub min_air_temperature: Option<f64>,
-    pub max_air_temperature: Option<f64>,
     pub sorting: Option<HaulsSorting>,
     pub ordering: Option<Ordering>,
 }
@@ -162,44 +158,21 @@ pub async fn hauls_matrix<T: Database + 'static, S: Cache>(
 pub struct Haul {
     #[schema(value_type = i64)]
     pub haul_id: HaulId,
-    pub ers_activity_id: String,
-    pub duration: i32,
     pub haul_distance: Option<i32>,
-    #[schema(value_type = Option<String>, example = "05-24")]
-    pub catch_location_start: Option<CatchLocationId>,
     #[schema(value_type = Option<Vec<String>>, example = "[05-24,01-01]")]
     pub catch_locations: Option<Vec<CatchLocationId>>,
-    pub ocean_depth_end: i32,
-    pub ocean_depth_start: i32,
-    pub quota_type_id: i32,
     pub start_latitude: f64,
     pub start_longitude: f64,
     #[schema(value_type = String, example = "2023-02-24T11:08:20.409416682Z")]
     pub start_timestamp: DateTime<Utc>,
-    pub stop_latitude: f64,
-    pub stop_longitude: f64,
     #[schema(value_type = String, example = "2023-02-24T11:08:20.409416682Z")]
     pub stop_timestamp: DateTime<Utc>,
-    pub total_living_weight: i64,
-    #[serde_as(as = "DisplayFromStr")]
-    pub gear_id: Gear,
     #[serde_as(as = "DisplayFromStr")]
     pub gear_group_id: GearGroup,
-    #[schema(value_type = Option<i64>)]
-    pub fiskeridir_vessel_id: Option<FiskeridirVesselId>,
-    pub vessel_call_sign: Option<String>,
-    pub vessel_call_sign_ers: String,
-    pub vessel_length: f64,
-    #[schema(value_type = i32)]
-    pub vessel_length_group: VesselLengthGroup,
+    #[serde_as(as = "DisplayFromStr")]
+    pub gear: Gear,
     pub vessel_name: Option<String>,
-    pub vessel_name_ers: Option<String>,
-    #[serde(flatten)]
-    pub weather: HaulWeather,
-    #[serde(flatten)]
-    pub ocean_climate: HaulOceanClimate,
     pub catches: Vec<HaulCatch>,
-    pub whale_catches: Vec<WhaleCatch>,
 }
 
 #[serde_as]
@@ -311,34 +284,16 @@ impl From<kyogre_core::Haul> for Haul {
     fn from(v: kyogre_core::Haul) -> Self {
         Haul {
             haul_id: v.haul_id,
-            ers_activity_id: v.ers_activity_id,
-            duration: v.duration,
             haul_distance: v.haul_distance,
-            catch_location_start: v.catch_location_start,
             catch_locations: v.catch_locations,
-            ocean_depth_end: v.ocean_depth_end,
-            ocean_depth_start: v.ocean_depth_start,
-            quota_type_id: v.quota_type_id,
             start_latitude: v.start_latitude,
             start_longitude: v.start_longitude,
             start_timestamp: v.start_timestamp,
-            stop_latitude: v.stop_latitude,
-            stop_longitude: v.stop_longitude,
             stop_timestamp: v.stop_timestamp,
-            total_living_weight: v.total_living_weight,
-            gear_id: v.gear_id,
             gear_group_id: v.gear_group_id,
-            fiskeridir_vessel_id: v.fiskeridir_vessel_id,
-            vessel_call_sign: v.vessel_call_sign,
-            vessel_call_sign_ers: v.vessel_call_sign_ers,
-            vessel_length: v.vessel_length,
-            vessel_length_group: v.vessel_length_group,
             vessel_name: v.vessel_name,
-            vessel_name_ers: v.vessel_name_ers,
-            weather: v.weather.into(),
-            ocean_climate: v.ocean_climate.into(),
             catches: v.catches.into_iter().map(HaulCatch::from).collect(),
-            whale_catches: v.whale_catches.into_iter().map(WhaleCatch::from).collect(),
+            gear: v.gear_id,
         }
     }
 }
@@ -418,10 +373,6 @@ impl From<HaulsParams> for HaulsQuery {
             species_group_ids: v.species_group_ids,
             vessel_length_groups: v.vessel_length_groups,
             vessel_ids: v.fiskeridir_vessel_ids,
-            min_wind_speed: v.min_wind_speed,
-            max_wind_speed: v.max_wind_speed,
-            min_air_temperature: v.min_air_temperature,
-            max_air_temperature: v.max_air_temperature,
             sorting: v.sorting,
             ordering: v.ordering,
         }

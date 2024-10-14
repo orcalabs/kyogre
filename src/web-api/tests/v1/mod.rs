@@ -9,8 +9,6 @@ pub mod fishing_facility;
 pub mod fishing_predictions;
 pub mod fuel;
 pub mod haul;
-pub mod haul_ocean_climate;
-pub mod haul_weather;
 pub mod hauls_matrix;
 pub mod helper;
 pub mod landing;
