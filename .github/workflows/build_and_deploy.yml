@@ -27,7 +27,7 @@ jobs:
            },
            "fishery-api" : {
               "container-app-name" : "dev-kyogre-fishery-api",
-              "dockerfile" : "dockerfiles/fishery-api/Dockerfile"
+              "dockerfile" : "dockerfiles/api/Dockerfile"
            },
            "ais-consumer" : {
               "container-app-name" : "dev-kyogre-ais-consumer",
