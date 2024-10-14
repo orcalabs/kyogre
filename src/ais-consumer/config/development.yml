@@ -5,7 +5,7 @@ oauth:
   token_url: "https://id.barentswatch.no/connect/token"
   scope: "ais"
 postgres:
-  ip: orca-postgres-dev.postgres.database.azure.com
+  ip: kyogre-dev.postgres.database.azure.com
   max_connections: 1
   port: 5432
   db_name: kyogre

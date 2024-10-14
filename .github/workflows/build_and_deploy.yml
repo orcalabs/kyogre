@@ -1,43 +1,43 @@
-# name: Docker build and deploy images
-#
-# concurrency:
-#   group: ${{ github.workflow }}-${{ github.ref }}
-#   cancel-in-progress: true
-#
-# on:
-#   push:
-#     branches:
-#       - master
-#     paths:
-#       - src/**/*
-#       - dockerfiles/**/*
-# jobs:
-#   images:
-#     uses: orcalabs/github-actions/.github/workflows/container-apps-deploy.yml@master
-#     secrets: inherit
-#     with:
-#       object: '{
-#            "database-migrator" : {
-#               "dockerfile" : "dockerfiles/database-migrator/Dockerfile",
-#               "tag-override": "latest"
-#            },
-#            "duckdb" : {
-#               "container-app-name" : "dev-kyogre-duck-db",
-#               "dockerfile" : "dockerfiles/duckdb/Dockerfile"
-#            },
-#            "fishery-api" : {
-#               "container-app-name" : "dev-kyogre-fishery-api",
-#               "dockerfile" : "dockerfiles/fishery-api/Dockerfile"
-#            },
-#            "ais-consumer" : {
-#               "container-app-name" : "dev-kyogre-ais-consumer",
-#               "dockerfile" : "dockerfiles/ais-consumer/Dockerfile"
-#            },
-#            "engine" : {
-#               "container-app-name" : "dev-kyogre-engine",
-#               "dockerfile" : "dockerfiles/engine/Dockerfile"
-#            }
-#         }'
-#       registry: ghcr.io/orcalabs/kyogre
-#       container-app-resource-group: dev
-#       container-app-env-name: dev-kyogre
+name: Docker build and deploy images
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - src/**/*
+      - dockerfiles/**/*
+jobs:
+  images:
+    uses: orcalabs/github-actions/.github/workflows/container-apps-deploy.yml@master
+    secrets: inherit
+    with:
+      object: '{
+           "database-migrator" : {
+              "dockerfile" : "dockerfiles/database-migrator/Dockerfile",
+              "tag-override": "latest"
+           },
+           "duckdb" : {
+              "container-app-name" : "dev-kyogre-duck-db",
+              "dockerfile" : "dockerfiles/duckdb/Dockerfile"
+           },
+           "fishery-api" : {
+              "container-app-name" : "dev-kyogre-fishery-api",
+              "dockerfile" : "dockerfiles/fishery-api/Dockerfile"
+           },
+           "ais-consumer" : {
+              "container-app-name" : "dev-kyogre-ais-consumer",
+              "dockerfile" : "dockerfiles/ais-consumer/Dockerfile"
+           },
+           "engine" : {
+              "container-app-name" : "dev-kyogre-engine",
+              "dockerfile" : "dockerfiles/engine/Dockerfile"
+           }
+        }'
+      registry: ghcr.io/orcalabs/kyogre
+      container-app-resource-group: dev
+      container-app-env-name: dev-kyogre
