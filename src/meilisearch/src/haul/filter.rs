@@ -5,7 +5,7 @@ use crate::{
 };
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::{GearGroup, SpeciesGroup, VesselLengthGroup};
-use kyogre_core::{CatchLocationId, FiskeridirVesselId, HaulsSorting, MinMaxBoth, Range};
+use kyogre_core::{CatchLocationId, FiskeridirVesselId, HaulsSorting, Range};
 use strum::{EnumDiscriminants, EnumIter};
 
 mod never {
@@ -25,10 +25,6 @@ pub enum HaulFilter {
     // and it is unused because it is always used in conjunction with `StartTimestamp`.
     #[allow(dead_code)]
     StopTimestamp(never::Never),
-    #[strum_discriminants(strum(serialize = "wind_speed_10m"))]
-    WindSpeed(MinMaxBoth<f64>),
-    #[strum_discriminants(strum(serialize = "air_temperature_2m"))]
-    AirTemperature(MinMaxBoth<f64>),
     GearGroupId(Vec<GearGroup>),
     SpeciesGroupIds(Vec<SpeciesGroup>),
     CatchLocations(Vec<CatchLocationId>),
@@ -56,31 +52,6 @@ impl Filter for HaulFilter {
                 HaulFilterDiscriminants::StartTimestamp,
             ),
             HaulFilter::StopTimestamp(_) => unreachable!(),
-            HaulFilter::WindSpeed(v) => match v {
-                MinMaxBoth::Min(min) => {
-                    format!("{} >= {}", HaulFilterDiscriminants::WindSpeed, min)
-                }
-                MinMaxBoth::Max(max) => {
-                    format!("{} <= {}", HaulFilterDiscriminants::WindSpeed, max)
-                }
-                MinMaxBoth::Both { min, max } => {
-                    format!("{} {} TO {}", HaulFilterDiscriminants::WindSpeed, min, max)
-                }
-            },
-            HaulFilter::AirTemperature(v) => match v {
-                MinMaxBoth::Min(min) => {
-                    format!("{} >= {}", HaulFilterDiscriminants::AirTemperature, min)
-                }
-                MinMaxBoth::Max(max) => {
-                    format!("{} <= {}", HaulFilterDiscriminants::AirTemperature, max)
-                }
-                MinMaxBoth::Both { min, max } => format!(
-                    "{} {} TO {}",
-                    HaulFilterDiscriminants::AirTemperature,
-                    min,
-                    max,
-                ),
-            },
             HaulFilter::GearGroupId(ids) => format!(
                 "{} IN [{}]",
                 HaulFilterDiscriminants::GearGroupId,

@@ -1,22 +1,19 @@
-use std::str::FromStr;
-
-use chrono::{DateTime, Utc};
-use fiskeridir_rs::{DeliveryPointId, Gear, GearGroup, LandingId, SpeciesGroup, VesselLengthGroup};
-use kyogre_core::{
-    AisVmsPosition, Catch, DateRange, FishingFacility, FiskeridirVesselId, MinimalVesselEvent,
-    PositionType, PrecisionId, PrecisionOutcome, PrecisionStatus, ProcessingStatus,
-    PrunedTripPosition, TripAssemblerConflict, TripAssemblerId, TripDistancerId, TripHaul, TripId,
-    TripPositionLayerId, TripProcessingUnit, TripsConflictStrategy, VesselEventType,
-};
-use sqlx::postgres::types::PgRange;
-use unnest_insert::UnnestInsert;
-
+use super::VesselEvent;
 use crate::{
     error::{Error, Result},
     queries::{opt_type_to_i32, type_to_i32, type_to_i64},
 };
-
-use super::VesselEvent;
+use chrono::{DateTime, Utc};
+use fiskeridir_rs::{DeliveryPointId, Gear, GearGroup, LandingId, SpeciesGroup, VesselLengthGroup};
+use kyogre_core::{
+    AisVmsPosition, Catch, DateRange, FishingFacility, FiskeridirVesselId, Haul,
+    MinimalVesselEvent, PositionType, PrecisionId, PrecisionOutcome, PrecisionStatus,
+    ProcessingStatus, PrunedTripPosition, TripAssemblerConflict, TripAssemblerId, TripDistancerId,
+    TripId, TripPositionLayerId, TripProcessingUnit, TripsConflictStrategy, VesselEventType,
+};
+use sqlx::postgres::types::PgRange;
+use std::str::FromStr;
+use unnest_insert::UnnestInsert;
 
 #[derive(Debug, Clone)]
 pub struct Trip {
@@ -281,7 +278,7 @@ impl TryFrom<CurrentTrip> for kyogre_core::CurrentTrip {
         Ok(Self {
             departure: v.departure_timestamp,
             target_species_fiskeridir_id: v.target_species_fiskeridir_id,
-            hauls: serde_json::from_str::<Vec<TripHaul>>(&v.hauls)?,
+            hauls: serde_json::from_str::<Vec<Haul>>(&v.hauls)?,
             fishing_facilities: serde_json::from_str::<Vec<FishingFacility>>(
                 &v.fishing_facilities,
             )?,
@@ -338,7 +335,7 @@ impl TryFrom<TripDetailed> for kyogre_core::TripDetailed {
             gear_group_ids: value.gear_group_ids,
             species_group_ids: value.species_group_ids,
             delivery_point_ids: value.delivery_points,
-            hauls: serde_json::from_str::<Vec<TripHaul>>(&value.hauls)?,
+            hauls: serde_json::from_str::<Vec<Haul>>(&value.hauls)?,
             fishing_facilities: serde_json::from_str::<Vec<FishingFacility>>(
                 &value.fishing_facilities,
             )?,

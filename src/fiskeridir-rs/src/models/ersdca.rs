@@ -299,7 +299,7 @@ impl ErsDca {
             call_sign_of_loading_vessel: Some("LK-23".parse().unwrap()),
             catch: DcaCatch::test_default(),
             catch_year: Some(start.year() as u32),
-            duration: Some(30),
+            duration: Some((stop - start).num_minutes() as u32),
             economic_zone: Some("Norges økonomiske sone".parse().unwrap()),
             economic_zone_code: Some("NOR".parse().unwrap()),
             gear: GearDca::test_default(),

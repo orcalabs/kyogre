@@ -2,9 +2,7 @@ use super::helper::test_with_cache;
 use chrono::{DateTime, Utc};
 use engine::*;
 use fiskeridir_rs::{ErsDca, GearGroup, SpeciesGroup, VesselLengthGroup};
-use kyogre_core::{
-    AirTemperature, CatchLocationId, FiskeridirVesselId, HaulsSorting, Ordering, WindSpeed,
-};
+use kyogre_core::{CatchLocationId, FiskeridirVesselId, HaulsSorting, Ordering};
 use web_api::routes::v1::haul::HaulsParams;
 
 #[tokio::test]
@@ -18,6 +16,33 @@ async fn test_hauls_returns_all_hauls() {
 
         assert_eq!(hauls.len(), 3);
         assert_eq!(hauls, state.hauls)
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_hauls_sorts_by_weight() {
+    test_with_cache(|helper, builder| async move {
+        let mut state = builder
+            .hauls(4)
+            .modify_idx(|i, v| v.dca.catch.species.living_weight = Some(i as u32))
+            .build()
+            .await;
+
+        helper.refresh_cache().await;
+
+        let params = HaulsParams {
+            sorting: Some(HaulsSorting::Weight),
+            ordering: Some(Ordering::Asc),
+            ..Default::default()
+        };
+
+        let hauls = helper.app.get_hauls(params).await.unwrap();
+
+        state.hauls.sort_by_key(|v| v.total_living_weight());
+
+        assert_eq!(hauls.len(), 4);
+        assert_eq!(hauls, state.hauls);
     })
     .await;
 }
@@ -226,62 +251,6 @@ async fn test_hauls_returns_hauls_with_fiskeridir_vessel_ids() {
 }
 
 #[tokio::test]
-async fn test_hauls_filters_by_wind_speed() {
-    test_with_cache(|helper, builder| async move {
-        let state = builder
-            .vessels(1)
-            .hauls(5)
-            .weather(5)
-            .modify_idx(|i, w| w.weather.wind_speed_10m = WindSpeed::new(i as f64))
-            .build()
-            .await;
-
-        helper.refresh_cache().await;
-
-        let params = HaulsParams {
-            min_wind_speed: Some(0.5),
-            max_wind_speed: Some(2.5),
-            ..Default::default()
-        };
-
-        let hauls = helper.app.get_hauls(params).await.unwrap();
-
-        assert_eq!(hauls.len(), 2);
-        assert_eq!(hauls, state.hauls[1..=2]);
-    })
-    .await;
-}
-
-#[tokio::test]
-async fn test_hauls_filters_by_air_temperature() {
-    test_with_cache(|helper, builder| async move {
-        let state = builder
-            .vessels(1)
-            .hauls(5)
-            .weather(5)
-            .modify_idx(|i, w| {
-                w.weather.air_temperature_2m = AirTemperature::new(i as f64);
-            })
-            .build()
-            .await;
-
-        helper.refresh_cache().await;
-
-        let params = HaulsParams {
-            min_air_temperature: Some(0.5),
-            max_air_temperature: Some(2.5),
-            ..Default::default()
-        };
-
-        let hauls = helper.app.get_hauls(params).await.unwrap();
-
-        assert_eq!(hauls.len(), 2);
-        assert_eq!(hauls, state.hauls[1..=2]);
-    })
-    .await;
-}
-
-#[tokio::test]
 async fn test_hauls_sorts_by_start_timestamp() {
     test_with_cache(|helper, builder| async move {
         let state = builder.hauls(4).build().await;
@@ -315,33 +284,6 @@ async fn test_hauls_sorts_by_stop_timestamp() {
         helper.refresh_cache().await;
 
         let hauls = helper.app.get_hauls(params).await.unwrap();
-
-        assert_eq!(hauls.len(), 4);
-        assert_eq!(hauls, state.hauls);
-    })
-    .await;
-}
-
-#[tokio::test]
-async fn test_hauls_sorts_by_weight() {
-    test_with_cache(|helper, builder| async move {
-        let mut state = builder
-            .hauls(4)
-            .modify_idx(|i, v| v.dca.catch.species.living_weight = Some(i as u32))
-            .build()
-            .await;
-
-        helper.refresh_cache().await;
-
-        let params = HaulsParams {
-            sorting: Some(HaulsSorting::Weight),
-            ordering: Some(Ordering::Asc),
-            ..Default::default()
-        };
-
-        let hauls = helper.app.get_hauls(params).await.unwrap();
-
-        state.hauls.sort_by_key(|v| v.total_living_weight);
 
         assert_eq!(hauls.len(), 4);
         assert_eq!(hauls, state.hauls);

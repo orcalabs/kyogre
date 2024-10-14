@@ -149,45 +149,19 @@ GROUP BY
             r#"
 SELECT
     h.haul_id AS "haul_id!: HaulId",
-    h.ers_activity_id,
-    h.duration,
     h.haul_distance,
-    h.catch_location_start AS "catch_location_start?: CatchLocationId",
     h.catch_locations AS "catch_locations?: Vec<CatchLocationId>",
-    h.ocean_depth_end,
-    h.ocean_depth_start,
-    h.quota_type_id,
+    h.species_group_ids AS "species_group_ids!: Vec<SpeciesGroup>",
     h.start_latitude,
     h.start_longitude,
     h.start_timestamp,
     h.stop_timestamp,
-    h.stop_latitude,
-    h.stop_longitude,
-    h.total_living_weight,
-    h.gear_id AS "gear_id!: Gear",
     h.gear_group_id AS "gear_group_id!: GearGroup",
+    h.gear_id AS "gear_id!: Gear",
     h.fiskeridir_vessel_id AS "fiskeridir_vessel_id?: FiskeridirVesselId",
-    h.vessel_call_sign,
-    h.vessel_call_sign_ers,
-    h.vessel_length,
     h.vessel_length_group AS "vessel_length_group!: VesselLengthGroup",
     h.vessel_name,
-    h.vessel_name_ers,
-    h.wind_speed_10m,
-    h.wind_direction_10m,
-    h.air_temperature_2m,
-    h.relative_humidity_2m,
-    h.air_pressure_at_sea_level,
-    h.precipitation_amount,
-    h.cloud_area_fraction,
-    h.water_speed,
-    h.water_direction,
-    h.salinity,
-    h.water_temperature,
-    h.ocean_climate_depth,
-    h.sea_floor_depth,
     h.catches::TEXT AS "catches!",
-    h.whale_catches::TEXT AS "whale_catches!",
     h.cache_version
 FROM
     hauls h
@@ -216,46 +190,30 @@ WHERE
         $6::BIGINT[] IS NULL
         OR fiskeridir_vessel_id = ANY ($6)
     )
-    AND (
-        $7::DOUBLE PRECISION IS NULL
-        OR wind_speed_10m >= $7
-    )
-    AND (
-        $8::DOUBLE PRECISION IS NULL
-        OR wind_speed_10m <= $8
-    )
-    AND (
-        $9::DOUBLE PRECISION IS NULL
-        OR air_temperature_2m >= $9
-    )
-    AND (
-        $10::DOUBLE PRECISION IS NULL
-        OR air_temperature_2m <= $10
-    )
 ORDER BY
     CASE
-        WHEN $11 = 1
-        AND $12 = 1 THEN start_timestamp
+        WHEN $7 = 1
+        AND $8 = 1 THEN start_timestamp
     END ASC,
     CASE
-        WHEN $11 = 1
-        AND $12 = 2 THEN stop_timestamp
+        WHEN $7 = 1
+        AND $8 = 2 THEN stop_timestamp
     END ASC,
     CASE
-        WHEN $11 = 1
-        AND $12 = 3 THEN total_living_weight
+        WHEN $7 = 1
+        AND $8 = 3 THEN total_living_weight
     END ASC,
     CASE
-        WHEN $11 = 2
-        AND $12 = 1 THEN start_timestamp
+        WHEN $7 = 2
+        AND $8 = 1 THEN start_timestamp
     END DESC,
     CASE
-        WHEN $11 = 2
-        AND $12 = 2 THEN stop_timestamp
+        WHEN $7 = 2
+        AND $8 = 2 THEN stop_timestamp
     END DESC,
     CASE
-        WHEN $11 = 2
-        AND $12 = 3 THEN total_living_weight
+        WHEN $7 = 2
+        AND $8 = 3 THEN total_living_weight
     END DESC
             "#,
             query.ranges as Option<Vec<Range<DateTime<Utc>>>>,
@@ -264,10 +222,6 @@ ORDER BY
             query.species_group_ids as Option<Vec<SpeciesGroup>>,
             query.vessel_length_groups as Option<Vec<VesselLengthGroup>>,
             query.vessel_ids as Option<Vec<FiskeridirVesselId>>,
-            query.min_wind_speed,
-            query.max_wind_speed,
-            query.min_air_temperature,
-            query.max_air_temperature,
             query.ordering.map(|o| o as i32),
             query.sorting.map(|s| s as i32),
         )
@@ -284,45 +238,19 @@ ORDER BY
             r#"
 SELECT
     haul_id AS "haul_id!: HaulId",
-    ers_activity_id,
-    duration,
     haul_distance,
-    catch_location_start AS "catch_location_start?: CatchLocationId",
     catch_locations AS "catch_locations?: Vec<CatchLocationId>",
-    ocean_depth_end,
-    ocean_depth_start,
-    quota_type_id,
+    species_group_ids AS "species_group_ids!: Vec<SpeciesGroup>",
     start_latitude,
     start_longitude,
     start_timestamp,
     stop_timestamp,
-    stop_latitude,
-    stop_longitude,
-    total_living_weight,
-    gear_id AS "gear_id!: Gear",
     gear_group_id AS "gear_group_id!: GearGroup",
+    gear_id AS "gear_id!: Gear",
     fiskeridir_vessel_id AS "fiskeridir_vessel_id?: FiskeridirVesselId",
-    vessel_call_sign,
-    vessel_call_sign_ers,
-    vessel_length,
     vessel_length_group AS "vessel_length_group!: VesselLengthGroup",
     vessel_name,
-    vessel_name_ers,
-    wind_speed_10m,
-    wind_direction_10m,
-    air_temperature_2m,
-    relative_humidity_2m,
-    air_pressure_at_sea_level,
-    precipitation_amount,
-    cloud_area_fraction,
-    water_speed,
-    water_direction,
-    salinity,
-    water_temperature,
-    ocean_climate_depth,
-    sea_floor_depth,
     catches::TEXT AS "catches!",
-    whale_catches::TEXT AS "whale_catches!",
     cache_version
 FROM
     hauls

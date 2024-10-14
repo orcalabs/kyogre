@@ -3,7 +3,7 @@
 
 use fiskeridir_rs::{
     Gear, GearGroup, MainGearGroup, Quality, RegisterVesselEntityType, RegisterVesselOwner,
-    SpeciesGroup, SpeciesMainGroup, VesselLengthGroup, WhaleGender,
+    SpeciesGroup, SpeciesMainGroup, VesselLengthGroup,
 };
 use kyogre_core::{
     ActiveHaulsFilter, ActiveLandingFilter, FishingFacilitiesSorting, FishingFacilityToolType,
@@ -95,7 +95,6 @@ impl Database for PostgresAdapter {}
             SpeciesMainGroup,
             Quality,
             VesselEventType,
-            WhaleGender,
             VesselLengthGroup,
             error::ErrorResponse,
             error::ErrorDiscriminants,
@@ -117,14 +116,10 @@ impl Database for PostgresAdapter {}
             v1::haul::Haul,
             v1::haul::HaulsMatrix,
             v1::haul::HaulCatch,
-            v1::haul::WhaleCatch,
-            v1::haul::HaulWeather,
-            v1::haul::HaulOceanClimate,
             v1::trip::Trip,
             v1::trip::Delivery,
             v1::trip::Catch,
             v1::trip::CurrentTrip,
-            v1::trip::TripHaul,
             v1::trip::VesselEvent,
             v1::vms::VmsPosition,
             v1::ais_vms::AisVmsPosition,

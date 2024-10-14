@@ -115,13 +115,13 @@ async fn test_vessel_benchmarks_returns_correct_self_benchmarks() {
         let ers_dca = benchmarks.ers_dca.unwrap();
 
         // All hauls in test have same duration
-        let fishing_time_per_trip = (state.hauls[0].duration * 2) as f64;
+        let fishing_time_per_trip = (state.hauls[0].duration().num_minutes() * 2) as f64;
         let trip_time_minutes =
             (state.trips[0].period.end() - state.trips[0].period.start()).num_minutes() as f64;
         // All landings in test have same weight
         let landing_weight_per_trip = state.landings[0].total_living_weight * 2.0;
         // All hauls in test have same weight
-        let haul_weight_per_trip = state.hauls[0].total_living_weight as f64 * 2.0;
+        let haul_weight_per_trip = state.hauls[0].total_living_weight() as f64 * 2.0;
 
         // Fishing time
         assert_eq!(
@@ -210,8 +210,8 @@ async fn test_vessel_benchmarks_returns_correct_averages_for_followers() {
         let ers_dca = benchmarks.ers_dca.unwrap();
 
         assert_eq!(
-            fishing_time.average_followers as i32,
-            state.hauls[0].duration * 2
+            fishing_time.average_followers as i64,
+            state.hauls[0].duration().num_minutes() * 2
         );
         assert_eq!(fishing_distance.average_followers as i64, 116);
         assert_eq!(
@@ -223,8 +223,8 @@ async fn test_vessel_benchmarks_returns_correct_averages_for_followers() {
             (state.landings[0].total_living_weight * 2.0) as i64
         );
         assert_eq!(
-            ers_dca.average_followers as i64,
-            state.hauls[0].total_living_weight * 2
+            ers_dca.average_followers as i32,
+            state.hauls[0].total_living_weight() * 2
         );
     })
     .await;
