@@ -29,7 +29,7 @@ RUN --mount=type=secret,id=cloudsmith-api-key,required=true \
     cd src && \
     cargo chef cook --release --recipe-path recipe.json
 
-COPY src .
+COPY src src
 RUN cd src && \
     cargo build --release --bin database-migrator
 
