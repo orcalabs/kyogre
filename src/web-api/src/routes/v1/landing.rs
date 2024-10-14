@@ -3,8 +3,8 @@ use chrono::{DateTime, Utc};
 use fiskeridir_rs::{CallSign, DeliveryPointId, Gear, GearGroup, SpeciesGroup, VesselLengthGroup};
 use futures::TryStreamExt;
 use kyogre_core::{
-    ActiveLandingFilter, CatchLocationId, FiskeridirVesselId, LandingMatrixQuery, LandingsQuery,
-    LandingsSorting, Ordering,
+    ActiveLandingFilter, CatchLocationId, FiskeridirVesselId, LandingMatrixQuery, Landings,
+    LandingsQuery, LandingsSorting, Ordering, Pagination,
 };
 use serde::{Deserialize, Serialize};
 use serde_qs::actix::QsQuery as Query;
@@ -39,6 +39,8 @@ pub struct LandingsParams {
     pub fiskeridir_vessel_ids: Option<Vec<FiskeridirVesselId>>,
     pub sorting: Option<LandingsSorting>,
     pub ordering: Option<Ordering>,
+    pub limit: Option<u64>,
+    pub offset: Option<u64>,
 }
 
 #[serde_as]
@@ -249,6 +251,7 @@ impl From<kyogre_core::LandingMatrix> for LandingMatrix {
 impl From<LandingsParams> for LandingsQuery {
     fn from(v: LandingsParams) -> Self {
         Self {
+            pagination: Pagination::<Landings>::new(v.limit, v.offset),
             ranges: v.months.map(months_to_date_ranges),
             catch_locations: v.catch_locations,
             gear_group_ids: v.gear_group_ids,

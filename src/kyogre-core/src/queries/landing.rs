@@ -1,6 +1,6 @@
 use crate::{
-    matrix_index_error::ValueSnafu, CatchLocationId, FiskeridirVesselId, MatrixIndexError,
-    Ordering, Range, LANDING_OLDEST_DATA_MONTHS, NUM_CATCH_LOCATIONS,
+    matrix_index_error::ValueSnafu, CatchLocationId, FiskeridirVesselId, Landings,
+    MatrixIndexError, Ordering, Pagination, Range, LANDING_OLDEST_DATA_MONTHS, NUM_CATCH_LOCATIONS,
 };
 use chrono::{DateTime, Datelike, Months, Utc};
 use enum_index::EnumIndex;
@@ -57,6 +57,7 @@ pub enum LandingsSorting {
 
 #[derive(Default, Debug, Clone)]
 pub struct LandingsQuery {
+    pub pagination: Pagination<Landings>,
     pub ranges: Option<Vec<Range<DateTime<Utc>>>>,
     pub catch_locations: Option<Vec<CatchLocationId>>,
     pub gear_group_ids: Option<Vec<GearGroup>>,

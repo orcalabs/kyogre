@@ -125,6 +125,10 @@ ORDER BY
         WHEN $8 = 2
         AND $9 = 2 THEN SUM(le.living_weight)
     END DESC
+OFFSET
+    $10
+LIMIT
+    $11
             "#,
             query.ranges as Option<Vec<Range<DateTime<Utc>>>>,
             catch_area_ids.as_deref(),
@@ -135,6 +139,8 @@ ORDER BY
             query.species_group_ids.as_deref() as Option<&[SpeciesGroup]>,
             query.ordering.map(|o| o as i32),
             query.sorting.map(|s| s as i32),
+            query.pagination.offset() as i64,
+            query.pagination.limit() as i64,
         )
         .fetch(&self.pool)
         .map_err(|e| e.into())

@@ -1,5 +1,5 @@
 use crate::{error::Result, indexable::Indexable, query::Query, MeilisearchAdapter};
-use kyogre_core::LandingsQuery;
+use kyogre_core::{Landings, LandingsQuery, Pagination};
 
 mod filter;
 mod model;
@@ -12,7 +12,9 @@ impl<T> MeilisearchAdapter<T> {
         &self,
         query: LandingsQuery,
     ) -> Result<Vec<kyogre_core::Landing>> {
-        let query = Query::<LandingFilter, Option<LandingSort>, _>::from(query);
+        let query = Query::<LandingFilter, Option<LandingSort>, Pagination<Landings>>::from(query);
+
+        let pagination = query.pagination;
 
         let sort_string = query.sort_str_opt();
         let sort = sort_string
@@ -28,6 +30,8 @@ impl<T> MeilisearchAdapter<T> {
             .with_array_filter(filter)
             .with_limit(usize::MAX)
             .with_sort(&sort)
+            .with_limit(pagination.limit() as usize)
+            .with_offset(pagination.offset() as usize)
             .execute::<Landing>()
             .await?;
 

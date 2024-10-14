@@ -286,3 +286,45 @@ async fn test_landing_deletion_only_deletes_removed_landings() {
     })
     .await;
 }
+
+#[tokio::test]
+async fn test_landings_filter_by_limit() {
+    test_with_cache(|helper, builder| async move {
+        let state = builder.vessels(1).landings(2).build().await;
+
+        helper.refresh_cache().await;
+
+        let landings = helper
+            .app
+            .get_landings(LandingsParams {
+                limit: Some(1),
+                ..Default::default()
+            })
+            .await
+            .unwrap();
+        assert_eq!(landings.len(), 1);
+        assert_eq!(landings[0], state.landings[1]);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_landings_filter_by_offset() {
+    test_with_cache(|helper, builder| async move {
+        let state = builder.vessels(1).landings(2).build().await;
+
+        helper.refresh_cache().await;
+
+        let landings = helper
+            .app
+            .get_landings(LandingsParams {
+                offset: Some(1),
+                ..Default::default()
+            })
+            .await
+            .unwrap();
+        assert_eq!(landings.len(), 1);
+        assert_eq!(landings[0], state.landings[0]);
+    })
+    .await;
+}
