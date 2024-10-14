@@ -1704,7 +1704,6 @@ dependencies = [
  "jurisdiction",
  "num-derive",
  "num-traits",
- "remain",
  "serde",
  "serde_repr",
  "serde_with",
@@ -2710,7 +2709,6 @@ dependencies = [
  "oauth2",
  "orca-core",
  "rand 0.8.5",
- "remain",
  "serde",
  "serde_json",
  "serde_repr",
@@ -4336,17 +4334,6 @@ name = "regex-syntax"
 version = "0.8.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2b15c43186be67a4fd63bee50d0303afffcef381492ebe2c5d87f324e1b8815c"
-
-[[package]]
-name = "remain"
-version = "0.2.14"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "46aef80f842736de545ada6ec65b81ee91504efd6853f4b96de7414c42ae7443"
-dependencies = [
- "proc-macro2",
- "quote 1.0.37",
- "syn 2.0.79",
-]
 
 [[package]]
 name = "rend"

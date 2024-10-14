@@ -5,7 +5,6 @@ use crate::{deserialize_utils::*, string_new_types::NonEmptyString, CallSign};
 
 use super::FiskeridirVesselId;
 
-#[remain::sorted]
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "UPPERCASE")]
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
@@ -15,7 +14,6 @@ pub enum RegisterVesselEntityType {
 }
 
 #[serde_as]
-#[remain::sorted]
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
@@ -33,7 +31,6 @@ pub struct RegisterVesselOwner {
 }
 
 #[serde_as]
-#[remain::sorted]
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RegisterVessel {
@@ -58,7 +55,6 @@ pub struct RegisterVessel {
 }
 
 #[serde_as]
-#[remain::sorted]
 #[derive(Debug, Default, Clone, Deserialize, Serialize)]
 pub struct RegisterVesselQuery {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -90,7 +86,6 @@ pub struct RegisterVesselQuery {
     pub sort_by: Option<RegisterVesselSorting>,
 }
 
-#[remain::sorted]
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "UPPERCASE")]
 pub enum RegisterVesselSorting {
