@@ -1,14 +1,13 @@
 #![deny(warnings)]
 #![deny(rust_2018_idioms)]
 
-use orca_core::{Environment, PsqlSettings};
+use orca_core::PsqlSettings;
 use postgres::PostgresAdapter;
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
 pub struct Settings {
     pub postgres: PsqlSettings,
-    pub environment: Environment,
 }
 
 impl Settings {
