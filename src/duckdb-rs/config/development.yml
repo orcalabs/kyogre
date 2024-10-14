@@ -5,7 +5,7 @@ telemetry:
   port: 443
 postgres:
   port: 5432
-  ip: orca-postgres-dev.postgres.database.azure.com
+  ip: kyogre-dev.postgres.database.azure.com
   db_name: kyogre
   max_connections: 10
   log_statements: Disable

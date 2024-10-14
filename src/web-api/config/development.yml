@@ -3,7 +3,7 @@ api:
   ip: 0.0.0.0
   port: 8080
 postgres:
-  ip: orca-postgres-dev.postgres.database.azure.com
+  ip: kyogre-dev.postgres.database.azure.com
   port: 5432
   db_name: kyogre
   max_connections: 10
