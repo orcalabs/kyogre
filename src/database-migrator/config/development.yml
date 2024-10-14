@@ -1,3 +1,4 @@
+log_level: Info
 postgres:
   ip: kyogre-dev.postgres.database.azure.com
   port: 5432
