@@ -1,22 +1,15 @@
 use super::{barentswatch_helper::BarentswatchHelper, test_client::ApiClient};
-use dockertest::{DockerTest, Source};
 use duckdb_rs::{adapter, CacheStorage};
 use engine::*;
 use futures::Future;
 use kyogre_core::*;
 use meilisearch::MeilisearchAdapter;
-use orca_core::{
-    compositions::{meilisearch_composition, postgres_composition},
-    Environment, PsqlLogStatements, PsqlSettings,
-};
+use orca_core::{Environment, PsqlLogStatements, PsqlSettings, TestHelperBuilder};
 use postgres::{PostgresAdapter, TestDb};
-use rand::random;
 use std::ops::AddAssign;
-use std::sync::Once;
 use std::{ops::SubAssign, panic};
 use strum::IntoEnumIterator;
 use tokio::sync::OnceCell;
-use tracing_subscriber::FmtSubscriber;
 use web_api::{
     cache::CacheErrorMode,
     routes::v1::{haul, landing},
@@ -25,7 +18,6 @@ use web_api::{
 };
 
 static BARENTSWATCH_HELPER: OnceCell<BarentswatchHelper> = OnceCell::const_new();
-static TRACING: Once = Once::new();
 
 //               Lon  Lat
 pub const CL_00_05: (f64, f64) = (13.5, 67.125);
@@ -140,54 +132,24 @@ where
     T: FnOnce(TestHelper, TestStateBuilder) -> Fut + panic::UnwindSafe + Send + Sync + 'static,
     Fut: Future<Output = ()> + Send + 'static,
 {
-    let mut docker_test = DockerTest::new().with_default_source(Source::DockerHub);
-    TRACING.call_once(|| {
-        tracing::subscriber::set_global_default(
-            FmtSubscriber::builder()
-                .with_max_level(tracing::Level::ERROR)
-                .finish(),
-        )
-        .unwrap();
-    });
-
-    let mut keep_db = false;
-    let db_name = if let Ok(v) = std::env::var(KEEP_DB_ENV) {
-        if v == "true" {
-            keep_db = true;
-            "test".into()
-        } else {
-            random::<u32>().to_string()
-        }
-    } else {
-        random::<u32>().to_string()
-    };
-
-    let mut postgres = postgres_composition(
-        "postgres",
+    let mut test_helper = TestHelperBuilder::default().add_postgres(
         "ghcr.io/orcalabs/kyogre/test-postgres",
-        "latest",
-    )
-    .set_log_options(None);
-
-    postgres.modify_port_map(5432, 5534);
-    docker_test.provide_container(postgres);
+        Some(POSTGRES_TEST_PORT),
+    );
 
     if cache_mode == CacheMode::Meilisearch {
-        let mut meilisearch =
-            meilisearch_composition("test123", "meilisearch", "getmeili/meilisearch", "v1.4.2")
-                .set_log_options(None);
-        meilisearch.modify_port_map(7700, 7500);
-        docker_test.provide_container(meilisearch);
+        test_helper = test_helper.add_meilisearch(None);
     }
 
-    docker_test
-        .run_async(|ops| async move {
+    test_helper
+        .build()
+        .run(move |ops, db_name| async move {
             let db_handle = ops.handle("postgres");
 
-            let mut db_settings = PsqlSettings {
+            let db_settings = PsqlSettings {
                 ip: db_handle.ip().to_string(),
                 port: 5432,
-                db_name: Some("template1".to_string()),
+                db_name: db_name.clone(),
                 password: None,
                 username: "postgres".to_string(),
                 max_connections: 1,
@@ -197,23 +159,11 @@ where
             };
 
             let adapter = PostgresAdapter::new(&db_settings).await.unwrap();
-            let mut test_db = TestDb { db: adapter };
-
-            if keep_db {
-                test_db.drop_db(&db_name).await;
-                let adapter = PostgresAdapter::new(&db_settings).await.unwrap();
-                test_db = TestDb { db: adapter };
-            }
-
-            test_db.create_test_database_from_template(&db_name).await;
 
             let bw_helper = BARENTSWATCH_HELPER
                 .get_or_init(|| async { BarentswatchHelper::new().await })
                 .await;
             let bw_address = bw_helper.address();
-
-            db_settings.db_name = Some(db_name.clone());
-            let adapter = PostgresAdapter::new(&db_settings).await.unwrap();
 
             let (duck_db_api, duck_db_client) = if cache_mode == CacheMode::MatrixCache {
                 let duckdb_app = duckdb_rs::App::build(&duckdb_rs::Settings {
@@ -249,12 +199,9 @@ where
                     host: format!("http://{}:7700", handle.ip()),
                     api_key: "test123".to_string(),
                     refresh_timeout: None,
-                    index_suffix: Some(db_name.clone()),
+                    index_suffix: db_name,
                 };
                 let meilisearch = MeilisearchAdapter::new(&settings, adapter.clone());
-                if keep_db {
-                    meilisearch.cleanup().await.unwrap();
-                }
                 (Some(meilisearch), Some(settings))
             } else {
                 (None, None)
@@ -299,14 +246,9 @@ where
             test(app, builder).await;
 
             adapter.verify_database().await.unwrap();
-
-            if !keep_db {
-                test_db.drop_db(&db_name).await;
-                if cache_mode == CacheMode::Meilisearch {
-                    meilisearch.unwrap().cleanup().await.unwrap();
-                }
+            if cache_mode == CacheMode::Meilisearch {
+                meilisearch.unwrap().cleanup().await.unwrap();
             }
-            test_db.db.close().await;
             adapter.close().await;
         })
         .await;

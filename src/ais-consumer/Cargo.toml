@@ -36,7 +36,7 @@ reqwest = { workspace = true, features = [
 tokio-util = { version = "0.7.12", features = ["codec", "compat"] }
 
 [dev-dependencies]
-orca-core = { workspace = true, features = ["dockertest"] }
+orca-core = { workspace = true, features = ["test-helper"] }
 dockertest = { workspace = true }
 reqwest = { workspace = true, default-features = false, features = [
     "http2",

@@ -42,5 +42,5 @@ console-subscriber = "0.4.0"
 http-client = { path = "../http-client", default-features = false }
 
 dockertest = { workspace = true }
-orca-core = { workspace = true, features = ["dockertest"] }
+orca-core = { workspace = true, features = ["test-helper"] }
 tracing-subscriber = { workspace = true }
