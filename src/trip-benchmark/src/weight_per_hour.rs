@@ -4,6 +4,7 @@ use kyogre_core::{
     CoreResult, TripBenchmark, TripBenchmarkId, TripBenchmarkOutbound, TripBenchmarkOutput, Vessel,
 };
 
+/// Computes the weight (kg) caught per hour for a trip.
 #[derive(Default)]
 pub struct WeightPerHour {}
 

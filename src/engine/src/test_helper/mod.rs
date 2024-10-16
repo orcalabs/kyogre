@@ -224,6 +224,7 @@ pub async fn engine(adapter: PostgresAdapter, db_settings: &PsqlSettings) -> Fis
         Box::<WeightPerHour>::default() as _,
         Box::<WeightPerDistance>::default() as _,
         Box::<FuelConsumption>::default() as _,
+        Box::<WeightPerFuel>::default() as _,
         // TODO
         // Box::<Sustainability>::default() as _,
     ];

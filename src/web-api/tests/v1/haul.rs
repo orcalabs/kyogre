@@ -239,6 +239,8 @@ async fn test_hauls_returns_hauls_with_fiskeridir_vessel_ids() {
 
         let params = HaulsParams {
             fiskeridir_vessel_ids: Some(vec![vessel_id1, vessel_id2]),
+            sorting: Some(HaulsSorting::StartDate),
+            ordering: Some(Ordering::Asc),
             ..Default::default()
         };
 

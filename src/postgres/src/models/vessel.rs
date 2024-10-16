@@ -112,8 +112,11 @@ pub struct NewFiskeridirVessel<'a> {
     pub registration_id: Option<&'a str>,
     pub name: Option<&'a str>,
     pub length: Option<f64>,
+    #[unnest_insert(update_coalesce)]
     pub building_year: Option<i32>,
+    #[unnest_insert(update_coalesce)]
     pub engine_power: Option<i32>,
+    #[unnest_insert(update_coalesce)]
     pub engine_building_year: Option<i32>,
     #[unnest_insert(sql_type = "INT", type_conversion = "opt_type_to_i32")]
     pub fiskeridir_vessel_type_id: Option<VesselType>,
