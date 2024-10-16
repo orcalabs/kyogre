@@ -16,6 +16,7 @@ pub enum TripBenchmarkId {
     Sustainability = 2,
     WeightPerDistance = 3,
     FuelConsumption = 4,
+    WeightPerFuel = 5,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -25,6 +26,7 @@ pub struct TripWithBenchmark {
     pub period_precision: Option<DateRange>,
     pub weight_per_hour: Option<f64>,
     pub weight_per_distance: Option<f64>,
+    pub weight_per_fuel: Option<f64>,
     pub fuel_consumption: Option<f64>,
     // TODO
     // pub sustainability: f64,
@@ -36,6 +38,13 @@ pub struct TripBenchmarkOutput {
     pub benchmark_id: TripBenchmarkId,
     pub value: f64,
     pub unrealistic: bool,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct TripWithWeightAndFuel {
+    pub id: TripId,
+    pub total_weight: f64,
+    pub fuel_consumption: f64,
 }
 
 #[derive(Debug, Clone, PartialEq)]

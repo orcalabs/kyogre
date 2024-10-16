@@ -1,10 +1,13 @@
 use async_trait::async_trait;
-use geoutils::Location;
+use chrono::{DateTime, Utc};
 use kyogre_core::{
-    CoreResult, TripBenchmark, TripBenchmarkId, TripBenchmarkOutbound, TripBenchmarkOutput, Vessel,
+    CoreResult, Mean, TripBenchmark, TripBenchmarkId, TripBenchmarkOutbound, TripBenchmarkOutput,
+    Vessel,
 };
-use tracing::error;
 
+const HP_TO_KW: f64 = 0.745699872;
+
+/// Computes fuel consumption for a trip in tonnes.
 #[derive(Default)]
 pub struct FuelConsumption {}
 
@@ -19,8 +22,22 @@ impl TripBenchmark for FuelConsumption {
         vessel: &Vessel,
         adapter: &dyn TripBenchmarkOutbound,
     ) -> CoreResult<Vec<TripBenchmarkOutput>> {
-        let engine_power = match vessel.fiskeridir.engine_power {
-            Some(v) => v as f64,
+        // Specific Fuel Consumption
+        // Source: https://wwwcdn.imo.org/localresources/en/OurWork/Environment/Documents/Fourth%20IMO%20GHG%20Study%202020%20-%20Full%20report%20and%20annexes.pdf
+        //         Annex B.2, Table 4
+        let sfc: f64 = match vessel.fiskeridir.engine_building_year {
+            Some(v) => match v {
+                ..1984 => [205., 190., 215., 200., 225., 210.],
+                1984..2001 => [185., 175., 195., 185., 205., 190.],
+                2001.. => [175., 165., 185., 175., 195., 185.],
+            }
+            .into_iter()
+            .mean()
+            .unwrap(),
+            None => return Ok(vec![]),
+        };
+        let engine_power_kw = match vessel.fiskeridir.engine_power {
+            Some(v) => v as f64 * HP_TO_KW,
             None => return Ok(vec![]),
         };
 
@@ -31,11 +48,11 @@ impl TripBenchmark for FuelConsumption {
         let mut output = Vec::with_capacity(trips.len());
 
         struct Item {
-            loc: Location,
             speed: Option<f64>,
+            timestamp: DateTime<Utc>,
         }
         struct State {
-            acc: f64,
+            kwh: f64,
             prev: Item,
         }
 
@@ -47,12 +64,12 @@ impl TripBenchmark for FuelConsumption {
             }
 
             let mut iter = track.into_iter().map(|v| Item {
-                loc: Location::new_const(v.latitude, v.longitude),
                 speed: v.speed,
+                timestamp: v.timestamp,
             });
 
             let state = State {
-                acc: 0.,
+                kwh: 0.,
                 // `unwrap` is safe due to `len() < 2` check above
                 prev: iter.next().unwrap(),
             };
@@ -65,27 +82,28 @@ impl TripBenchmark for FuelConsumption {
                     (None, None) => return state,
                 };
 
-                match state.prev.loc.distance_to(&v.loc) {
-                    Ok(d) => {
-                        // TODO: What to do when speed is zero since ship might still be running the engine?
-                        state.acc += d.meters() * speed * engine_power;
-                        state.prev = v;
-                    }
-                    Err(e) => {
-                        error!(
-                            "failed to compute distance from {:?} to {:?}, trip: {id}, err: {e:?}",
-                            state.prev.loc, v.loc,
-                        );
-                    }
-                }
+                // TODO: Currently using surrogate value from:
+                // https://www.epa.gov/system/files/documents/2023-01/2020NEI_C1C2_Documentation.pdf
+                // Table 3. C1C2 Propulsive Power and Load Factor Surrogates
+                let speed_service = 12.;
+
+                let load_factor = ((speed / speed_service).powf(3.) * 0.85).clamp(0., 0.98);
+
+                state.kwh += load_factor
+                    * engine_power_kw
+                    * (v.timestamp - state.prev.timestamp).num_milliseconds() as f64
+                    / 3_600_000.;
+                state.prev = v;
                 state
             });
+
+            let fuel_consumption_tonnes = sfc * result.kwh / 1_000_000.;
 
             output.push(TripBenchmarkOutput {
                 trip_id: id,
                 benchmark_id: TripBenchmarkId::FuelConsumption,
-                value: result.acc,
-                unrealistic: false, // TODO
+                value: fuel_consumption_tonnes,
+                unrealistic: false,
             });
         }
 

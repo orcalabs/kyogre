@@ -4,29 +4,25 @@ use engine::{Modifiable, TripLevel};
 use crate::v1::helper::test;
 
 #[tokio::test]
-async fn test_fuel_consumption_is_correct() {
+async fn test_weight_per_fuel_is_correct() {
     test(|mut helper, builder| async move {
         let start = Utc.timestamp_opt(10000000, 0).unwrap();
         let end = Utc.timestamp_opt(100000000000, 0).unwrap();
 
         let speed = 5.;
-        let engine_power = 10.;
 
         builder
-            .trip_duration(Duration::hours(2))
             .vessels(1)
-            .modify(|v| {
-                v.fiskeridir.engine_power = Some(engine_power as _);
-            })
             .set_logged_in()
             .trips(1)
             .modify(|v| {
                 v.trip_specification.set_start(start);
                 v.trip_specification.set_end(end);
             })
-            .landings(1)
+            .hauls(1)
             .modify(|v| {
-                v.landing.vessel.engine_building_year = Some(2000);
+                v.dca.vessel_info.engine_building_year = Some(2000);
+                v.dca.catch.species.living_weight = Some(1_000);
             })
             .ais_positions(3)
             .modify_idx(|i, v| match i {
@@ -62,20 +58,22 @@ async fn test_fuel_consumption_is_correct() {
             .unwrap();
 
         assert_eq!(bench.trips.len(), 1);
-        assert!(bench.trips[0].fuel_consumption.unwrap() > 0.);
+        assert!(bench.trips[0].weight_per_fuel.unwrap() > 0.);
     })
     .await;
 }
 
 #[tokio::test]
-async fn test_fuel_consumption_does_not_compute_trips_with_zero_distance() {
+async fn test_weight_per_fuel_does_not_compute_trips_with_zero_weight() {
     test(|mut helper, builder| async move {
         builder
-            .trip_duration(Duration::hours(2))
             .vessels(1)
             .set_logged_in()
             .trips(1)
-            .landings(1)
+            .hauls(1)
+            .modify(|v| {
+                v.dca.catch.species.living_weight = Some(0);
+            })
             .build()
             .await;
 
@@ -88,7 +86,35 @@ async fn test_fuel_consumption_does_not_compute_trips_with_zero_distance() {
             .unwrap();
 
         assert_eq!(bench.trips.len(), 1);
-        assert!(bench.trips[0].fuel_consumption.is_none());
+        assert!(bench.trips[0].weight_per_fuel.is_none());
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_weight_per_fuel_does_not_compute_trips_with_zero_fuel() {
+    test(|mut helper, builder| async move {
+        builder
+            .vessels(1)
+            .set_logged_in()
+            .trips(1)
+            .hauls(1)
+            .modify(|v| {
+                v.dca.catch.species.living_weight = Some(1_000);
+            })
+            .build()
+            .await;
+
+        helper.app.login_user();
+
+        let bench = helper
+            .app
+            .get_trip_benchmarks(Default::default())
+            .await
+            .unwrap();
+
+        assert_eq!(bench.trips.len(), 1);
+        assert!(bench.trips[0].weight_per_fuel.is_none());
     })
     .await;
 }

@@ -4,6 +4,7 @@ use kyogre_core::{
     CoreResult, TripBenchmark, TripBenchmarkId, TripBenchmarkOutbound, TripBenchmarkOutput, Vessel,
 };
 
+/// Computes the sustainability score (1-10) for a trip.
 #[derive(Default)]
 pub struct Sustainability {}
 
