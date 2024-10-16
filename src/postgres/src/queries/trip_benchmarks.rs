@@ -2,6 +2,7 @@ use futures::TryStreamExt;
 use kyogre_core::{
     DateRange, FiskeridirVesselId, TripBenchmarkId, TripBenchmarksQuery, TripId,
     TripSustainabilityMetric, TripWithBenchmark, TripWithDistance, TripWithTotalWeight,
+    TripWithWeightAndFuel,
 };
 
 use crate::{error::Result, models::TripBenchmarkOutput, PostgresAdapter};
@@ -46,7 +47,11 @@ SELECT
     MAX(b.output) FILTER (
         WHERE
             b.trip_benchmark_id = $4
-    ) AS fuel_consumption
+    ) AS fuel_consumption,
+    MAX(b.output) FILTER (
+        WHERE
+            b.trip_benchmark_id = $5
+    ) AS weight_per_fuel
 FROM
     vessel_id v
     INNER JOIN trips t ON v.fiskeridir_vessel_id = t.fiskeridir_vessel_id
@@ -57,27 +62,28 @@ WHERE
         OR NOT b.unrealistic
     )
     AND (
-        $5::TIMESTAMPTZ IS NULL
-        OR LOWER(t.period) >= $5
+        $6::TIMESTAMPTZ IS NULL
+        OR LOWER(t.period) >= $6
     )
     AND (
-        $6::TIMESTAMPTZ IS NULL
-        OR UPPER(t.period) <= $6
+        $7::TIMESTAMPTZ IS NULL
+        OR UPPER(t.period) <= $7
     )
 GROUP BY
     t.trip_id
 ORDER BY
     CASE
-        WHEN $7 = 1 THEN t.period
+        WHEN $8 = 1 THEN t.period
     END ASC,
     CASE
-        WHEN $7 = 2 THEN t.period
+        WHEN $8 = 2 THEN t.period
     END DESC
             "#,
             query.call_sign.as_ref(),
             TripBenchmarkId::WeightPerHour as i32,
             TripBenchmarkId::WeightPerDistance as i32,
             TripBenchmarkId::FuelConsumption as i32,
+            TripBenchmarkId::WeightPerFuel as i32,
             query.start_date,
             query.end_date,
             query.ordering as i32,
@@ -179,6 +185,45 @@ WHERE
     AND b.trip_id IS NULL
             "#,
             TripBenchmarkId::WeightPerDistance as i32,
+            id.into_inner(),
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(trips)
+    }
+
+    pub(crate) async fn trips_with_weight_and_fuel_impl(
+        &self,
+        id: FiskeridirVesselId,
+    ) -> Result<Vec<TripWithWeightAndFuel>> {
+        let trips = sqlx::query_as!(
+            TripWithWeightAndFuel,
+            r#"
+SELECT
+    t.trip_id AS "id!: TripId",
+    CASE
+        WHEN t.trip_assembler_id = 1 THEN t.landing_total_living_weight
+        ELSE t.haul_total_weight
+    END AS "total_weight!",
+    b_fuel.output AS "fuel_consumption!"
+FROM
+    trips_detailed t
+    LEFT JOIN trip_benchmark_outputs b_fuel ON t.trip_id = b_fuel.trip_id
+    AND b_fuel.trip_benchmark_id = $1
+    LEFT JOIN trip_benchmark_outputs b_weight ON t.trip_id = b_weight.trip_id
+    AND b_weight.trip_benchmark_id = $2
+WHERE
+    t.fiskeridir_vessel_id = $3
+    AND CASE
+        WHEN t.trip_assembler_id = 1 THEN t.landing_total_living_weight
+        ELSE t.haul_total_weight
+    END > 0
+    AND b_fuel.output > 0
+    AND b_weight.trip_id IS NULL
+            "#,
+            TripBenchmarkId::FuelConsumption as i32,
+            TripBenchmarkId::WeightPerFuel as i32,
             id.into_inner(),
         )
         .fetch_all(&self.pool)

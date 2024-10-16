@@ -6152,8 +6152,8 @@ name = "trip-benchmark"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "chrono",
  "fiskeridir-rs",
- "geoutils",
  "kyogre-core",
  "tracing",
 ]

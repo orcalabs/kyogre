@@ -1,0 +1,65 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nWITH\n    vessel_id AS (\n        SELECT\n            fiskeridir_vessel_id\n        FROM\n            fiskeridir_ais_vessel_mapping_whitelist\n        WHERE\n            call_sign = $1\n    )\nSELECT\n    t.trip_id AS \"id!: TripId\",\n    t.period AS \"period!: DateRange\",\n    t.period_precision AS \"period_precision: DateRange\",\n    MAX(b.output) FILTER (\n        WHERE\n            b.trip_benchmark_id = $2\n    ) AS weight_per_hour,\n    MAX(b.output) FILTER (\n        WHERE\n            b.trip_benchmark_id = $3\n    ) AS weight_per_distance,\n    MAX(b.output) FILTER (\n        WHERE\n            b.trip_benchmark_id = $4\n    ) AS fuel_consumption,\n    MAX(b.output) FILTER (\n        WHERE\n            b.trip_benchmark_id = $5\n    ) AS weight_per_fuel\nFROM\n    vessel_id v\n    INNER JOIN trips t ON v.fiskeridir_vessel_id = t.fiskeridir_vessel_id\n    LEFT JOIN trip_benchmark_outputs b ON t.trip_id = b.trip_id\nWHERE\n    (\n        b.unrealistic IS NULL\n        OR NOT b.unrealistic\n    )\n    AND (\n        $6::TIMESTAMPTZ IS NULL\n        OR LOWER(t.period) >= $6\n    )\n    AND (\n        $7::TIMESTAMPTZ IS NULL\n        OR UPPER(t.period) <= $7\n    )\nGROUP BY\n    t.trip_id\nORDER BY\n    CASE\n        WHEN $8 = 1 THEN t.period\n    END ASC,\n    CASE\n        WHEN $8 = 2 THEN t.period\n    END DESC\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id!: TripId",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "period!: DateRange",
+        "type_info": "TstzRange"
+      },
+      {
+        "ordinal": 2,
+        "name": "period_precision: DateRange",
+        "type_info": "TstzRange"
+      },
+      {
+        "ordinal": 3,
+        "name": "weight_per_hour",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 4,
+        "name": "weight_per_distance",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 5,
+        "name": "fuel_consumption",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 6,
+        "name": "weight_per_fuel",
+        "type_info": "Float8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Int4",
+        "Int4",
+        "Int4",
+        "Int4",
+        "Timestamptz",
+        "Timestamptz",
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "603176b34f30db5721b662c2aac70ee3324fef6d6ccd0976ef1bb6d6297c0df3"
+}

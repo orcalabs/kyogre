@@ -942,6 +942,12 @@ impl TripBenchmarkOutbound for PostgresAdapter {
     ) -> CoreResult<Vec<TripWithDistance>> {
         Ok(retry(|| self.trips_with_distance_impl(id)).await?)
     }
+    async fn trips_with_weight_and_fuel(
+        &self,
+        id: FiskeridirVesselId,
+    ) -> CoreResult<Vec<TripWithWeightAndFuel>> {
+        Ok(retry(|| self.trips_with_weight_and_fuel_impl(id)).await?)
+    }
     async fn sustainability_metrics(
         &self,
         id: FiskeridirVesselId,

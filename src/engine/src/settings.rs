@@ -56,6 +56,7 @@ impl Settings {
             Box::<WeightPerHour>::default(),
             Box::<WeightPerDistance>::default(),
             Box::<FuelConsumption>::default(),
+            Box::<WeightPerFuel>::default(),
             // `Sustainability` needs to be last because it depends on benchmarks above.
             // TODO
             // Box::<Sustainability>::default(),
