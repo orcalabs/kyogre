@@ -2613,15 +2613,6 @@ dependencies = [
 
 [[package]]
 name = "itertools"
-version = "0.12.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ba291022dbbd398a455acf126c1e341954079855bc60dfdda641363bd6922569"
-dependencies = [
- "either",
-]
-
-[[package]]
-name = "itertools"
 version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "413ee7dfc52ee1a4949ceeb7dbc8a33f2d6c088194d9f922fb8318faf1f01186"
@@ -2922,9 +2913,9 @@ checksum = "c41e0c4fef86961ac6d6f8a82609f55f31b05e4fce149ac5710e439df7619ba4"
 
 [[package]]
 name = "machine"
-version = "0.13.0"
+version = "0.15.0"
 source = "sparse+https://cargo.cloudsmith.io/orcalabs/orcastrator/"
-checksum = "027638d3c8c948a8d7af6e3e4a370b96e822f73d0ff10163ada4ba4ad1ba0e38"
+checksum = "4aab54c1b8643063cc56cdbbd2fa838d6c1b4b371380565a551e416c775b4ee7"
 dependencies = [
  "async-trait",
  "chrono",
@@ -3486,9 +3477,9 @@ dependencies = [
 
 [[package]]
 name = "orca-core"
-version = "0.31.2"
+version = "0.33.0"
 source = "sparse+https://cargo.cloudsmith.io/orcalabs/orcastrator/"
-checksum = "de3b37eba99454dfa24abeece16cc79f64838c78e42df225464cd2fdd71b5d19"
+checksum = "be89f8e11d7b08a2fb5f5ec57217ec46c431f800992872aa29d80fa589588b02"
 dependencies = [
  "actix-web",
  "config",
@@ -3497,7 +3488,9 @@ dependencies = [
  "opentelemetry-otlp",
  "opentelemetry-semantic-conventions",
  "opentelemetry_sdk",
+ "rand 0.8.5",
  "serde",
+ "sqlx",
  "tonic 0.11.0",
  "tracing",
  "tracing-actix-web",
@@ -3973,7 +3966,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0c1318b19085f08681016926435853bbf7858f9c082d0999b80550ff5d9abe15"
 dependencies = [
  "bytes",
- "heck 0.5.0",
+ "heck 0.4.1",
  "itertools 0.13.0",
  "log",
  "multimap",
@@ -3994,7 +3987,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "81bddcdb20abf9501610992b6759a4c888aef7d1a7247ef75e2404275ac24af1"
 dependencies = [
  "anyhow",
- "itertools 0.12.1",
+ "itertools 0.11.0",
  "proc-macro2",
  "quote 1.0.37",
  "syn 2.0.79",
@@ -5159,7 +5152,7 @@ version = "0.8.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "03c3c6b7927ffe7ecaa769ee0e3994da3b8cafc8f444578982c83ecb161af917"
 dependencies = [
- "heck 0.5.0",
+ "heck 0.4.1",
  "proc-macro2",
  "quote 1.0.37",
  "syn 2.0.79",

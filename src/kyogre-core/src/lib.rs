@@ -1,7 +1,7 @@
 #![deny(warnings)]
 #![deny(rust_2018_idioms)]
 
-pub static KEEP_DB_ENV: &str = "KEEP_TEST_DB";
+pub static POSTGRES_TEST_PORT: u32 = 5534;
 
 use async_trait::async_trait;
 

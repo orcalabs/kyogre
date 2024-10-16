@@ -1,0 +1,34 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    s.transition_date AS date,\n    s.source AS \"from\",\n    s.destination AS \"to\"\nFROM\n    engine_transitions AS s\nWHERE\n    s.source = $1\nORDER BY\n    s.transition_date DESC\nLIMIT\n    1\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "date",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 1,
+        "name": "from",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 2,
+        "name": "to",
+        "type_info": "Varchar"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "87775820d6a3e1d55cd1e757676f1b4ee433c6b160b32020ec121a2d81934a7f"
+}
