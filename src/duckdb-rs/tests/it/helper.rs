@@ -1,4 +1,3 @@
-use dockertest::{DockerTest, Source};
 use duckdb_rs::{
     adapter::{CacheMode, CacheStorage, DuckdbSettings},
     api::Client,
@@ -6,15 +5,10 @@ use duckdb_rs::{
     startup::App,
 };
 use futures::Future;
-use kyogre_core::VerificationOutbound;
-use orca_core::{compositions::postgres_composition, Environment, PsqlLogStatements, PsqlSettings};
+use kyogre_core::{VerificationOutbound, POSTGRES_TEST_PORT};
+use orca_core::{Environment, PsqlLogStatements, PsqlSettings, TestHelperBuilder};
 use postgres::{PostgresAdapter, TestDb};
-use rand::random;
 use std::panic;
-use std::sync::Once;
-use tracing_subscriber::FmtSubscriber;
-
-static TRACING: Once = Once::new();
 
 pub struct TestHelper {
     pub db: TestDb,
@@ -32,34 +26,19 @@ where
     T: FnOnce(TestHelper) -> Fut + panic::UnwindSafe + Send + Sync + 'static,
     Fut: Future<Output = ()> + Send + 'static,
 {
-    let mut docker_test = DockerTest::new().with_default_source(Source::DockerHub);
-    TRACING.call_once(|| {
-        tracing::subscriber::set_global_default(
-            FmtSubscriber::builder()
-                .with_max_level(tracing::Level::INFO)
-                .finish(),
+    TestHelperBuilder::default()
+        .add_postgres(
+            "ghcr.io/orcalabs/kyogre/test-postgres",
+            Some(POSTGRES_TEST_PORT),
         )
-        .unwrap();
-    });
-
-    let composition = postgres_composition(
-        "postgres",
-        "ghcr.io/orcalabs/kyogre/test-postgres",
-        "latest",
-    )
-    .set_log_options(None);
-
-    docker_test.provide_container(composition);
-
-    let db_name = random::<u32>().to_string();
-    docker_test
-        .run_async(|ops| async move {
+        .build()
+        .run(move |ops, db_name| async move {
             let db_handle = ops.handle("postgres");
 
-            let mut db_settings = PsqlSettings {
+            let db_settings = PsqlSettings {
                 ip: db_handle.ip().to_string(),
                 port: 5432,
-                db_name: Some("template1".to_string()),
+                db_name,
                 password: None,
                 username: "postgres".to_string(),
                 max_connections: 1,
@@ -68,12 +47,6 @@ where
                 application_name: None,
             };
 
-            let adapter = PostgresAdapter::new(&db_settings).await.unwrap();
-            let test_db = TestDb { db: adapter };
-
-            test_db.create_test_database_from_template(&db_name).await;
-
-            db_settings.db_name = Some(db_name.clone());
             let settings = Settings {
                 port: 0,
                 postgres: db_settings.clone(),
@@ -102,8 +75,6 @@ where
             test(helper).await;
 
             adapter.verify_database().await.unwrap();
-
-            test_db.drop_db(&db_name).await;
         })
         .await;
 }

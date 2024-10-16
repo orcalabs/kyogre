@@ -38,5 +38,5 @@ geo-types = "0.7.13"
 
 [dev-dependencies]
 dockertest = { workspace = true }
-orca-core = { workspace = true, features = ["dockertest"] }
+orca-core = { workspace = true, features = ["compositions"] }
 tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }

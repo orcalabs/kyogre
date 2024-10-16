@@ -1,20 +1,14 @@
-use std::{panic, sync::Once};
-
 use ais_consumer::{
     models::{AisPosition, AisStatic},
     settings::Settings,
     startup::App,
 };
-use dockertest::{DockerTest, Source};
 use futures::{Future, TryStreamExt};
-use kyogre_core::VerificationOutbound;
-use orca_core::{compositions::postgres_composition, Environment, PsqlLogStatements, PsqlSettings};
+use kyogre_core::{VerificationOutbound, POSTGRES_TEST_PORT};
+use orca_core::{Environment, PsqlLogStatements, PsqlSettings, TestHelperBuilder};
 use postgres::{PostgresAdapter, TestDb};
-use rand::random;
+use std::panic;
 use tokio_stream::wrappers::ReceiverStream;
-use tracing_subscriber::FmtSubscriber;
-
-static TRACING: Once = Once::new();
 
 pub struct TestHelper {
     pub ais_source: AisSource,
@@ -31,58 +25,22 @@ impl TestHelper {}
 
 pub async fn test<T, Fut>(test_closure: T)
 where
-    T: FnOnce(TestHelper) -> Fut + panic::UnwindSafe + Send + 'static,
+    T: FnOnce(TestHelper) -> Fut + panic::UnwindSafe + Send + Sync + 'static,
     Fut: Future<Output = ()> + Send + 'static,
 {
-    TRACING.call_once(|| {
-        tracing::subscriber::set_global_default(
-            FmtSubscriber::builder()
-                .with_max_level(tracing::Level::INFO)
-                .finish(),
+    TestHelperBuilder::default()
+        .add_postgres(
+            "ghcr.io/orcalabs/kyogre/test-postgres",
+            Some(POSTGRES_TEST_PORT),
         )
-        .unwrap();
-    });
-
-    let mut docker_test = DockerTest::new().with_default_source(Source::DockerHub);
-
-    let mut db_composition = postgres_composition(
-        "postgres",
-        "ghcr.io/orcalabs/kyogre/test-postgres",
-        "latest",
-    )
-    .set_log_options(None);
-
-    db_composition.modify_port_map(5432, 5400);
-    docker_test.provide_container(db_composition);
-
-    let db_name = random::<u32>().to_string();
-
-    docker_test
-        .run_async(|ops| async move {
+        .build()
+        .run(move |ops, db_name| async move {
             let db_handle = ops.handle("postgres");
-
-            let master_db_settings = PsqlSettings {
-                ip: db_handle.ip().to_string(),
-                port: 5432,
-                db_name: Some("template1".to_string()),
-                username: "postgres".to_string(),
-                password: None,
-                max_connections: 1,
-                root_cert: None,
-                log_statements: PsqlLogStatements::Disable,
-                application_name: None,
-            };
-
-            let master_db = PostgresAdapter::new(&master_db_settings).await.unwrap();
-            let test_master_db = TestDb { db: master_db };
-            test_master_db
-                .create_test_database_from_template(&db_name)
-                .await;
 
             let settings = PsqlSettings {
                 ip: db_handle.ip().to_string(),
                 port: 5432,
-                db_name: Some(db_name.to_string()),
+                db_name,
                 username: "postgres".to_string(),
                 password: None,
                 max_connections: 1,
@@ -128,8 +86,6 @@ where
             test_closure(helper).await;
 
             test_db.db.verify_database().await.unwrap();
-
-            test_master_db.drop_db(&db_name).await;
         })
         .await;
 }

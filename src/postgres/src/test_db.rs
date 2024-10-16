@@ -18,18 +18,6 @@ pub struct TestDb {
 }
 
 impl TestDb {
-    pub async fn drop_db(&self, db_name: &str) {
-        {
-            sqlx::query(&format!(
-                "DROP DATABASE IF EXISTS \"{db_name}\" WITH (FORCE);"
-            ))
-            .execute(&self.db.pool)
-            .await
-            .unwrap();
-        }
-        self.db.pool.close().await;
-    }
-
     pub async fn all_ais_positions(&self) -> Vec<AisPosition> {
         self.ais_positions(None, None).await
     }
