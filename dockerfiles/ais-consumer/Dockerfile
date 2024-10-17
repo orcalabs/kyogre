@@ -21,8 +21,7 @@ RUN apt update -y && \
     protobuf-compiler \
     pkg-config \
     python3 \
-    python3-dev && \
-    git config --global credential.helper store
+    python3-dev
 
 RUN --mount=type=secret,id=cloudsmith-api-key,required=true \
     export CARGO_REGISTRIES_ORCALABS_ORCASTRATOR_TOKEN=$(cat /run/secrets/cloudsmith-api-key) && \
