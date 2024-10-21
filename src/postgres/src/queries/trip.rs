@@ -1167,10 +1167,17 @@ VALUES
             .unwrap()
             .clone();
 
+        let calculation_timer = value
+            .values
+            .iter()
+            .map(|t| t.trip.period.end())
+            .max()
+            .unwrap();
+
         let log = NewTripAssemblerLogEntry {
             fiskeridir_vessel_id: value.fiskeridir_vessel_id,
             calculation_timer_prior_to_batch: value.prior_trip_calculation_time,
-            calculation_timer_post_batch: value.new_trip_calculation_time,
+            calculation_timer_post_batch: calculation_timer,
             conflict: value.conflict.as_ref().map(|v| v.timestamp),
             conflict_vessel_event_timestamp: value
                 .conflict
@@ -1200,7 +1207,7 @@ VALUES
                 value.fiskeridir_vessel_id,
                 value.trip_assembler_id,
                 value.conflict_strategy,
-                value.new_trip_calculation_time,
+                calculation_timer,
             )
             .await
         {

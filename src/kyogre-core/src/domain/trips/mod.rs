@@ -70,7 +70,6 @@ pub struct MinimalVesselEvent {
 pub struct TripSet {
     pub fiskeridir_vessel_id: FiskeridirVesselId,
     pub conflict_strategy: TripsConflictStrategy,
-    pub new_trip_calculation_time: DateTime<Utc>,
     pub trip_assembler_id: TripAssemblerId,
     pub values: Vec<TripProcessingUnit>,
     pub conflict: Option<TripAssemblerConflict>,
