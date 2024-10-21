@@ -52,7 +52,6 @@ pub struct TripProcessingOutcome {
 pub struct TripAssembly {
     pub trips: Vec<NewTrip>,
     pub conflict_strategy: TripsConflictStrategy,
-    pub new_trip_calculation_time: DateTime<Utc>,
     pub prior_trip_calculation_time: Option<DateTime<Utc>>,
     pub trip_assembler_id: TripAssemblerId,
     pub conflict: Option<TripAssemblerConflict>,
@@ -438,7 +437,6 @@ async fn process_vessel(
         let mut output = TripSet {
             fiskeridir_vessel_id: vessel.fiskeridir.id,
             conflict_strategy: trips.conflict_strategy,
-            new_trip_calculation_time: trips.new_trip_calculation_time,
             trip_assembler_id: assembler_impl.assembler_id(),
             values: vec![],
             conflict: trips.conflict,
@@ -579,7 +577,6 @@ async fn run_trip_assembler(
             Some(TripAssembly {
                 trips: trips.new_trips,
                 conflict_strategy,
-                new_trip_calculation_time: trips.calculation_timer,
                 trip_assembler_id: assembler.assembler_id(),
                 prior_trip_calculation_time,
                 conflict,

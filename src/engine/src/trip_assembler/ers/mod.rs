@@ -227,7 +227,6 @@ async fn assemble_impl(
         Ok(None)
     } else {
         Ok(Some(TripAssemblerState {
-            calculation_timer: new_trips.iter().map(|t| t.period.end()).max().unwrap(),
             new_trips,
             conflict_strategy,
         }))

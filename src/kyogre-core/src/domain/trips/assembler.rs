@@ -18,7 +18,6 @@ pub enum AssemblerState {
 #[derive(Debug)]
 pub struct TripAssemblerState {
     pub new_trips: Vec<NewTrip>,
-    pub calculation_timer: DateTime<Utc>,
     pub conflict_strategy: Option<TripsConflictStrategy>,
 }
 
