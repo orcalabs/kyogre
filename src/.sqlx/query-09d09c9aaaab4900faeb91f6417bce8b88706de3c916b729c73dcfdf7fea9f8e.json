@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    t.trip_id AS \"trip_id!: TripId\"\nFROM\n    trips t\n    INNER JOIN trip_benchmark_outputs b ON t.trip_id = b.trip_id\nWHERE\n    b.status = $1\nOFFSET\n    $2\nLIMIT\n    $3\n                ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "trip_id!: TripId",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "09d09c9aaaab4900faeb91f6417bce8b88706de3c916b729c73dcfdf7fea9f8e"
+}

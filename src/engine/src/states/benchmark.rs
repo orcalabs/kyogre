@@ -22,6 +22,10 @@ impl machine::State for BenchmarkState {
             }
         }
 
+        if let Err(e) = shared_state.benchmark_inbound.refresh_trips().await {
+            error!("failed to refresh trips after benchmarks, err: {e:?}");
+        }
+
         shared_state
     }
     fn schedule(&self) -> Schedule {
