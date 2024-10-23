@@ -911,8 +911,8 @@ async fn test_trips_contains_landing_ids() {
             .get_trips(TripsParameters::default())
             .await
             .unwrap();
-        let landing_ids = &trips[0].landing_ids;
 
+        let landing_ids = &trips[0].landing_ids;
         assert_eq!(trips.len(), 1);
         assert_eq!(trips, state.trips);
         assert_eq!(landing_ids.len(), 3);

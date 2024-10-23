@@ -400,12 +400,12 @@ INSERT INTO
         landing_gear_ids,
         landing_gear_group_ids,
         vessel_events,
-        fishing_facilities,
         landing_ids,
         hauls,
         haul_total_weight,
         haul_duration,
-        fuel_consumption
+        fuel_consumption,
+        haul_ids
     )
 SELECT
     t.trip_id,
@@ -419,21 +419,33 @@ SELECT
     MAX(l.landing_timestamp) AS most_recent_landing,
     t.start_port_id,
     t.end_port_id,
-    ARRAY_AGG(DISTINCT l.delivery_point_id) FILTER (
+    ARRAY_AGG(
+        DISTINCT l.delivery_point_id
+        ORDER BY
+            l.delivery_point_id
+    ) FILTER (
         WHERE
             l.delivery_point_id IS NOT NULL
     ) AS delivery_point_ids,
-    ARRAY_AGG(DISTINCT l.gear_id) FILTER (
+    ARRAY_AGG(
+        DISTINCT l.gear_id
+        ORDER BY
+            l.gear_id
+    ) FILTER (
         WHERE
             l.gear_id IS NOT NULL
     ) AS landing_gear_ids,
-    ARRAY_AGG(DISTINCT l.gear_group_id) FILTER (
+    ARRAY_AGG(
+        DISTINCT l.gear_group_id
+        ORDER BY
+            l.gear_group_id
+    ) FILTER (
         WHERE
             l.gear_group_id IS NOT NULL
     ) AS landing_gear_group_ids,
     COALESCE(
         JSONB_AGG(
-            DISTINCT JSONB_BUILD_OBJECT(
+            JSONB_BUILD_OBJECT(
                 'vessel_event_id',
                 v.vessel_event_id,
                 'fiskeridir_vessel_id',
@@ -445,6 +457,9 @@ SELECT
                 'vessel_event_type_id',
                 v.vessel_event_type_id
             )
+            ORDER BY
+                v.report_timestamp,
+                v.vessel_event_type_id
         ) FILTER (
             WHERE
                 v.vessel_event_id IS NOT NULL
@@ -452,70 +467,19 @@ SELECT
         '[]'
     ) AS vessel_events,
     COALESCE(
-        JSONB_AGG(
-            DISTINCT JSONB_BUILD_OBJECT(
-                'tool_id',
-                f.tool_id,
-                'barentswatch_vessel_id',
-                f.barentswatch_vessel_id,
-                'fiskeridir_vessel_id',
-                f.fiskeridir_vessel_id,
-                'vessel_name',
-                f.vessel_name,
-                'call_sign',
-                f.call_sign,
-                'mmsi',
-                f.mmsi,
-                'imo',
-                f.imo,
-                'reg_num',
-                f.reg_num,
-                'sbr_reg_num',
-                f.sbr_reg_num,
-                'contact_phone',
-                f.contact_phone,
-                'contact_email',
-                f.contact_email,
-                'tool_type',
-                f.tool_type,
-                'tool_type_name',
-                f.tool_type_name,
-                'tool_color',
-                f.tool_color,
-                'tool_count',
-                f.tool_count,
-                'setup_timestamp',
-                f.setup_timestamp,
-                'setup_processed_timestamp',
-                f.setup_processed_timestamp,
-                'removed_timestamp',
-                f.removed_timestamp,
-                'removed_processed_timestamp',
-                f.removed_processed_timestamp,
-                'last_changed',
-                f.last_changed,
-                'source',
-                f.source,
-                'comment',
-                f.comment,
-                'geometry_wkt',
-                ST_ASTEXT (f.geometry_wkt),
-                'api_source',
-                f.api_source
-            )
+        ARRAY_AGG(
+            l.landing_id
+            ORDER BY
+                l.landing_id
         ) FILTER (
             WHERE
-                f.tool_id IS NOT NULL
+                l.landing_id IS NOT NULL
         ),
-        '[]'
-    ) AS fishing_facilities,
-    ARRAY_AGG(DISTINCT l.landing_id) FILTER (
-        WHERE
-            l.landing_id IS NOT NULL
+        '{}'
     ) AS landing_ids,
     COALESCE(
         JSONB_AGG(
-            DISTINCT JSONB_BUILD_OBJECT(
+            JSONB_BUILD_OBJECT(
                 'haul_id',
                 h.haul_id,
                 'cache_version',
@@ -553,6 +517,8 @@ SELECT
                 'call_sign',
                 COALESCE(h.vessel_call_sign, h.vessel_call_sign_ers)
             )
+            ORDER BY
+                h.start_timestamp
         ) FILTER (
             WHERE
                 h.haul_id IS NOT NULL
@@ -560,15 +526,24 @@ SELECT
     ) AS hauls,
     SUM(h.total_living_weight),
     SUM((h.stop_timestamp - h.start_timestamp)),
-    MAX(b.output) AS fuel_consumption
+    MAX(b.output) AS fuel_consumption,
+    COALESCE(
+        ARRAY_AGG(
+            h.haul_id
+            ORDER BY
+                h.haul_id
+        ) FILTER (
+            WHERE
+                h.haul_id IS NOT NULL
+        ),
+        '{}'
+    ) AS haul_ids
 FROM
     trips t
     INNER JOIN fiskeridir_vessels fv ON fv.fiskeridir_vessel_id = t.fiskeridir_vessel_id
     LEFT JOIN vessel_events v ON t.trip_id = v.trip_id
     LEFT JOIN landings l ON l.vessel_event_id = v.vessel_event_id
     LEFT JOIN hauls h ON h.vessel_event_id = v.vessel_event_id
-    LEFT JOIN fishing_facilities f ON f.fiskeridir_vessel_id = t.fiskeridir_vessel_id
-    AND f.period && t.period
     LEFT JOIN trip_benchmark_outputs b ON t.trip_id = b.trip_id
     AND b.trip_benchmark_id = $1
 WHERE
@@ -598,9 +573,94 @@ SET
     hauls = excluded.hauls,
     haul_total_weight = excluded.haul_total_weight,
     haul_duration = excluded.haul_duration,
-    fuel_consumption = excluded.fuel_consumption
+    fuel_consumption = excluded.fuel_consumption,
+    haul_ids = excluded.haul_ids
             "#,
             TripBenchmarkId::FuelConsumption as i32,
+            &trip_ids as &[TripId],
+        )
+        .execute(&mut **tx)
+        .await?;
+
+        sqlx::query!(
+            r#"
+UPDATE trips_detailed
+SET
+    fishing_facilities = q.fishing_facilities
+FROM
+    (
+        SELECT
+            t.trip_id,
+            COALESCE(
+                JSONB_AGG(
+                    DISTINCT JSONB_BUILD_OBJECT(
+                        'tool_id',
+                        f.tool_id,
+                        'barentswatch_vessel_id',
+                        f.barentswatch_vessel_id,
+                        'fiskeridir_vessel_id',
+                        f.fiskeridir_vessel_id,
+                        'vessel_name',
+                        f.vessel_name,
+                        'call_sign',
+                        f.call_sign,
+                        'mmsi',
+                        f.mmsi,
+                        'imo',
+                        f.imo,
+                        'reg_num',
+                        f.reg_num,
+                        'sbr_reg_num',
+                        f.sbr_reg_num,
+                        'contact_phone',
+                        f.contact_phone,
+                        'contact_email',
+                        f.contact_email,
+                        'tool_type',
+                        f.tool_type,
+                        'tool_type_name',
+                        f.tool_type_name,
+                        'tool_color',
+                        f.tool_color,
+                        'tool_count',
+                        f.tool_count,
+                        'setup_timestamp',
+                        f.setup_timestamp,
+                        'setup_processed_timestamp',
+                        f.setup_processed_timestamp,
+                        'removed_timestamp',
+                        f.removed_timestamp,
+                        'removed_processed_timestamp',
+                        f.removed_processed_timestamp,
+                        'last_changed',
+                        f.last_changed,
+                        'source',
+                        f.source,
+                        'comment',
+                        f.comment,
+                        'geometry_wkt',
+                        ST_ASTEXT (f.geometry_wkt),
+                        'api_source',
+                        f.api_source
+                    )
+                ) FILTER (
+                    WHERE
+                        f.tool_id IS NOT NULL
+                ),
+                '[]'
+            ) AS fishing_facilities
+        FROM
+            trips t
+            INNER JOIN fishing_facilities f ON f.fiskeridir_vessel_id = t.fiskeridir_vessel_id
+            AND f.period && t.period
+        WHERE
+            t.trip_id = ANY ($1::BIGINT[])
+        GROUP BY
+            t.trip_id
+    ) q
+WHERE
+    trips_detailed.trip_id = q.trip_id
+            "#,
             trip_ids as &[TripId],
         )
         .execute(&mut **tx)
@@ -611,7 +671,10 @@ SET
 UPDATE trips_detailed
 SET
     landings = q.landings,
-    landing_species_group_ids = q.landing_species_group_ids
+    landing_species_group_ids = q.landing_species_group_ids,
+    landing_total_living_weight = q.living_weight,
+    landing_total_gross_weight = q.gross_weight,
+    landing_total_product_weight = q.product_weight
 FROM
     (
         SELECT
@@ -626,7 +689,10 @@ FROM
             ARRAY(
                 SELECT DISTINCT
                     UNNEST(ARRAY_AGG(qi.species_group_ids))
-            ) AS landing_species_group_ids
+            ) AS landing_species_group_ids,
+            SUM(qi.living_weight) AS living_weight,
+            SUM(qi.gross_weight) AS gross_weight,
+            SUM(qi.product_weight) AS product_weight
         FROM
             (
                 SELECT
@@ -646,7 +712,10 @@ FROM
                         le.species_fiskeridir_id,
                         'product_quality_id',
                         l.product_quality_id
-                    ) AS catches
+                    ) AS catches,
+                    SUM(le.living_weight) AS living_weight,
+                    SUM(le.gross_weight) AS gross_weight,
+                    SUM(le.product_weight) AS product_weight
                 FROM
                     trips t
                     INNER JOIN vessel_events v ON t.trip_id = v.trip_id
