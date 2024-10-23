@@ -316,13 +316,6 @@ impl TryFrom<TripDetailed> for kyogre_core::TripDetailed {
     type Error = Error;
 
     fn try_from(value: TripDetailed) -> std::result::Result<Self, Self::Error> {
-        let mut vessel_events = serde_json::from_str::<Vec<VesselEvent>>(&value.vessel_events)?
-            .into_iter()
-            .map(kyogre_core::VesselEvent::from)
-            .collect::<Vec<_>>();
-
-        vessel_events.sort_by_key(|v| v.report_timestamp);
-
         Ok(kyogre_core::TripDetailed {
             period_precision: value.period_precision,
             fiskeridir_vessel_id: value.fiskeridir_vessel_id,
@@ -349,7 +342,10 @@ impl TryFrom<TripDetailed> for kyogre_core::TripDetailed {
             start_port_id: value.start_port_id,
             end_port_id: value.end_port_id,
             assembler_id: value.trip_assembler_id,
-            vessel_events,
+            vessel_events: serde_json::from_str::<Vec<VesselEvent>>(&value.vessel_events)?
+                .into_iter()
+                .map(kyogre_core::VesselEvent::from)
+                .collect(),
             landing_ids: value.landing_ids,
             distance: value.distance,
             cache_version: value.cache_version,
