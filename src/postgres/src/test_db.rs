@@ -45,8 +45,8 @@ SELECT
     h.gear_id AS "gear_id!: Gear",
     h.fiskeridir_vessel_id AS "fiskeridir_vessel_id?: FiskeridirVesselId",
     h.vessel_length_group AS "vessel_length_group!: VesselLengthGroup",
-    COALESCE(h.vessel_name, h.vessel_name_ers) as vessel_name,
-    COALESCE(h.vessel_call_sign, h.vessel_call_sign_ers) as "call_sign!: CallSign",
+    COALESCE(h.vessel_name, h.vessel_name_ers) AS vessel_name,
+    COALESCE(h.vessel_call_sign, h.vessel_call_sign_ers) AS "call_sign!: CallSign",
     h.catches::TEXT AS "catches!",
     h.cache_version
 FROM
@@ -317,7 +317,8 @@ SELECT
     t.distance,
     t.cache_version,
     t.target_species_fiskeridir_id,
-    t.target_species_fao_id
+    t.target_species_fao_id,
+    t.fuel_consumption
 FROM
     trips_detailed t
 WHERE

@@ -19,6 +19,16 @@ pub enum TripBenchmarkId {
     WeightPerFuel = 5,
 }
 
+#[repr(i32)]
+#[derive(Debug, Clone, Copy, PartialEq, Deserialize_repr, Display)]
+#[cfg_attr(feature = "sqlx", derive(sqlx::Type))]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
+pub enum TripBenchmarkStatus {
+    MustRecompute = 1,
+    MustRefresh = 2,
+    Refreshed = 3,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct TripWithBenchmark {
     pub id: TripId,
@@ -111,6 +121,12 @@ pub trait TripBenchmark: Send + Sync {
 
 impl From<TripBenchmarkId> for i32 {
     fn from(value: TripBenchmarkId) -> Self {
+        value as i32
+    }
+}
+
+impl From<TripBenchmarkStatus> for i32 {
+    fn from(value: TripBenchmarkStatus) -> Self {
         value as i32
     }
 }

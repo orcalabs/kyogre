@@ -961,6 +961,9 @@ impl TripBenchmarkInbound for PostgresAdapter {
     async fn add_output(&self, values: Vec<TripBenchmarkOutput>) -> CoreResult<()> {
         Ok(retry(|| self.add_benchmark_outputs(&values)).await?)
     }
+    async fn refresh_trips(&self) -> CoreResult<()> {
+        Ok(retry(|| self.refresh_detailed_trip_benchmarks_impl()).await?)
+    }
 }
 
 #[async_trait]

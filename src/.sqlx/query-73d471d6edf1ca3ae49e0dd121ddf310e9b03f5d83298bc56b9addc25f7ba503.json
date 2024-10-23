@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT\n    t.trip_id AS \"trip_id!: TripId\",\n    t.fiskeridir_vessel_id AS \"fiskeridir_vessel_id!: FiskeridirVesselId\",\n    t.fiskeridir_length_group_id AS \"fiskeridir_length_group_id!: VesselLengthGroup\",\n    t.period AS \"period!: DateRange\",\n    t.period_precision AS \"period_precision: DateRange\",\n    t.landing_coverage AS \"landing_coverage!: DateRange\",\n    COALESCE(t.num_landings::BIGINT, 0) AS \"num_deliveries!\",\n    COALESCE(t.landing_total_living_weight, 0.0) AS \"total_living_weight!\",\n    COALESCE(t.landing_total_gross_weight, 0.0) AS \"total_gross_weight!\",\n    COALESCE(t.landing_total_product_weight, 0.0) AS \"total_product_weight!\",\n    COALESCE(t.delivery_point_ids, '{}') AS \"delivery_points!: Vec<DeliveryPointId>\",\n    COALESCE(t.landing_gear_ids, '{}') AS \"gear_ids!: Vec<Gear>\",\n    COALESCE(t.landing_gear_group_ids, '{}') AS \"gear_group_ids!: Vec<GearGroup>\",\n    COALESCE(t.landing_species_group_ids, '{}') AS \"species_group_ids!: Vec<SpeciesGroup>\",\n    t.most_recent_landing AS latest_landing_timestamp,\n    COALESCE(t.landings::TEXT, '[]') AS \"catches!\",\n    t.start_port_id,\n    t.end_port_id,\n    t.trip_assembler_id AS \"trip_assembler_id!: TripAssemblerId\",\n    COALESCE(t.vessel_events, '[]')::TEXT AS \"vessel_events!\",\n    COALESCE(t.hauls, '[]')::TEXT AS \"hauls!\",\n    COALESCE(t.landing_ids, '{}') AS \"landing_ids!: Vec<LandingId>\",\n    CASE\n        WHEN (\n            $1\n            OR $1 IS NULL\n        ) THEN COALESCE(t.fishing_facilities, '[]')::TEXT\n        ELSE '[]'\n    END AS \"fishing_facilities!\",\n    t.distance,\n    t.cache_version,\n    t.target_species_fiskeridir_id,\n    t.target_species_fao_id\nFROM\n    trips_detailed AS t\nWHERE\n    (\n        $2::BIGINT[] IS NULL\n        OR trip_id = ANY ($2)\n    )\n    AND (\n        $3::BIGINT[] IS NULL\n        OR t.haul_ids && $3\n    )\n    AND (\n        $4::VARCHAR[] IS NULL\n        OR t.landing_ids && $4::VARCHAR[]\n    )\n            ",
+  "query": "\nSELECT\n    t.trip_id AS \"trip_id!: TripId\",\n    t.fiskeridir_vessel_id AS \"fiskeridir_vessel_id!: FiskeridirVesselId\",\n    t.fiskeridir_length_group_id AS \"fiskeridir_length_group_id!: VesselLengthGroup\",\n    t.period AS \"period!: DateRange\",\n    t.period_precision AS \"period_precision: DateRange\",\n    t.landing_coverage AS \"landing_coverage!: DateRange\",\n    COALESCE(t.num_landings::BIGINT, 0) AS \"num_deliveries!\",\n    COALESCE(t.landing_total_living_weight, 0.0) AS \"total_living_weight!\",\n    COALESCE(t.landing_total_gross_weight, 0.0) AS \"total_gross_weight!\",\n    COALESCE(t.landing_total_product_weight, 0.0) AS \"total_product_weight!\",\n    COALESCE(t.delivery_point_ids, '{}') AS \"delivery_points!: Vec<DeliveryPointId>\",\n    COALESCE(t.landing_gear_ids, '{}') AS \"gear_ids!: Vec<Gear>\",\n    COALESCE(t.landing_gear_group_ids, '{}') AS \"gear_group_ids!: Vec<GearGroup>\",\n    COALESCE(t.landing_species_group_ids, '{}') AS \"species_group_ids!: Vec<SpeciesGroup>\",\n    t.most_recent_landing AS latest_landing_timestamp,\n    COALESCE(t.landings::TEXT, '[]') AS \"catches!\",\n    t.start_port_id,\n    t.end_port_id,\n    t.trip_assembler_id AS \"trip_assembler_id!: TripAssemblerId\",\n    COALESCE(t.vessel_events, '[]')::TEXT AS \"vessel_events!\",\n    COALESCE(t.hauls, '[]')::TEXT AS \"hauls!\",\n    COALESCE(t.fishing_facilities, '[]')::TEXT AS \"fishing_facilities!\",\n    COALESCE(t.landing_ids, '{}') AS \"landing_ids!: Vec<LandingId>\",\n    t.distance,\n    t.cache_version,\n    t.target_species_fiskeridir_id,\n    t.target_species_fao_id,\n    t.fuel_consumption\nFROM\n    trips_detailed t\nWHERE\n    t.fiskeridir_vessel_id = $1;\n            ",
   "describe": {
     "columns": [
       {
@@ -110,13 +110,13 @@
       },
       {
         "ordinal": 21,
-        "name": "landing_ids!: Vec<LandingId>",
-        "type_info": "VarcharArray"
+        "name": "fishing_facilities!",
+        "type_info": "Text"
       },
       {
         "ordinal": 22,
-        "name": "fishing_facilities!",
-        "type_info": "Text"
+        "name": "landing_ids!: Vec<LandingId>",
+        "type_info": "VarcharArray"
       },
       {
         "ordinal": 23,
@@ -137,14 +137,16 @@
         "ordinal": 26,
         "name": "target_species_fao_id",
         "type_info": "Varchar"
+      },
+      {
+        "ordinal": 27,
+        "name": "fuel_consumption",
+        "type_info": "Float8"
       }
     ],
     "parameters": {
       "Left": [
-        "Bool",
-        "Int8Array",
-        "Int8Array",
-        "VarcharArray"
+        "Int8"
       ]
     },
     "nullable": [
@@ -174,8 +176,9 @@
       true,
       false,
       true,
+      true,
       true
     ]
   },
-  "hash": "4c33f4c391a2b05a337e41c5d26d6e466cbaef16980c8b5024001426ecadb783"
+  "hash": "73d471d6edf1ca3ae49e0dd121ddf310e9b03f5d83298bc56b9addc25f7ba503"
 }
