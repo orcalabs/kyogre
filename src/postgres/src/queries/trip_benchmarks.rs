@@ -1,7 +1,7 @@
 use futures::TryStreamExt;
 use kyogre_core::{
-    DateRange, FiskeridirVesselId, TripBenchmarkId, TripBenchmarksQuery, TripId,
-    TripSustainabilityMetric, TripWithBenchmark, TripWithDistance, TripWithTotalWeight,
+    DateRange, FiskeridirVesselId, TripBenchmarkId, TripBenchmarkStatus, TripBenchmarksQuery,
+    TripId, TripSustainabilityMetric, TripWithBenchmark, TripWithDistance, TripWithTotalWeight,
     TripWithWeightAndFuel,
 };
 
@@ -108,10 +108,14 @@ FROM
     AND b.trip_benchmark_id = $1
 WHERE
     t.fiskeridir_vessel_id = $2
-    AND b.trip_id IS NULL
+    AND (
+        b.trip_id IS NULL
+        OR b.status = $3
+    )
             "#,
             TripBenchmarkId::FuelConsumption as i32,
             id.into_inner(),
+            TripBenchmarkStatus::MustRefresh as i32,
         )
         .fetch(&self.pool)
         .map_ok(|v| v.id)
@@ -146,10 +150,14 @@ WHERE
         WHEN t.trip_assembler_id = 1 THEN t.landing_total_living_weight
         ELSE t.haul_total_weight
     END > 0
-    AND b.trip_id IS NULL
+    AND (
+        b.trip_id IS NULL
+        OR b.status = $3
+    )
             "#,
             TripBenchmarkId::WeightPerHour as i32,
             id.into_inner(),
+            TripBenchmarkStatus::MustRefresh as i32,
         )
         .fetch_all(&self.pool)
         .await?;
@@ -182,10 +190,14 @@ WHERE
         ELSE t.haul_total_weight
     END > 0
     AND t.distance > 0
-    AND b.trip_id IS NULL
+    AND (
+        b.trip_id IS NULL
+        OR b.status = $3
+    )
             "#,
             TripBenchmarkId::WeightPerDistance as i32,
             id.into_inner(),
+            TripBenchmarkStatus::MustRefresh as i32,
         )
         .fetch_all(&self.pool)
         .await?;
@@ -221,10 +233,15 @@ WHERE
     END > 0
     AND b_fuel.output > 0
     AND b_weight.trip_id IS NULL
+    AND (
+        b_weight.trip_id IS NULL
+        OR b_weight.status = $4
+    )
             "#,
             TripBenchmarkId::FuelConsumption as i32,
             TripBenchmarkId::WeightPerFuel as i32,
             id.into_inner(),
+            TripBenchmarkStatus::MustRefresh as i32,
         )
         .fetch_all(&self.pool)
         .await?;

@@ -152,6 +152,7 @@ pub struct TripDetailed {
     pub cache_version: i64,
     pub target_species_fiskeridir_id: Option<u32>,
     pub target_species_fao_id: Option<String>,
+    pub fuel_consumption: Option<f64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    t.trip_id AS \"id!: TripId\"\nFROM\n    trips t\n    LEFT JOIN trip_benchmark_outputs b ON t.trip_id = b.trip_id\n    AND b.trip_benchmark_id = $1\nWHERE\n    t.fiskeridir_vessel_id = $2\n    AND (\n        b.trip_id IS NULL\n        OR b.status = $3\n    )\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id!: TripId",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Int8",
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "75c5ae008a57a58ba24bbb01e6ed3a8a64f7ccd26f39bf67558ae5ab1e7ad39e"
+}

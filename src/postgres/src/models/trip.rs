@@ -243,6 +243,7 @@ pub struct TripDetailed {
     pub cache_version: i64,
     pub target_species_fiskeridir_id: Option<i32>,
     pub target_species_fao_id: Option<String>,
+    pub fuel_consumption: Option<f64>,
 }
 
 #[derive(Debug, Clone)]
@@ -354,6 +355,7 @@ impl TryFrom<TripDetailed> for kyogre_core::TripDetailed {
             cache_version: value.cache_version,
             target_species_fiskeridir_id: value.target_species_fiskeridir_id.map(|v| v as u32),
             target_species_fao_id: value.target_species_fao_id,
+            fuel_consumption: value.fuel_consumption,
         })
     }
 }
