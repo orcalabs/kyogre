@@ -6,8 +6,9 @@ pub trait TripPositionLayer: Send + Sync {
     fn layer_id(&self) -> TripPositionLayerId;
     fn prune_positions(
         &self,
-        positions: Vec<AisVmsPosition>,
-    ) -> CoreResult<(Vec<AisVmsPosition>, Vec<PrunedTripPosition>)>;
+        input: TripPositionLayerOutput,
+        trip_period: &DateRange,
+    ) -> CoreResult<TripPositionLayerOutput>;
 }
 
 #[cfg_attr(feature = "sqlx", derive(sqlx::Type))]
@@ -35,6 +36,7 @@ pub enum TripPositionLayerId {
 pub struct TripPositionLayerOutput {
     pub trip_positions: Vec<AisVmsPosition>,
     pub pruned_positions: Vec<PrunedTripPosition>,
+    pub track_coverage: f64,
 }
 
 #[derive(Debug, Clone)]
@@ -47,5 +49,14 @@ pub struct PrunedTripPosition {
 impl From<TripPositionLayerId> for i32 {
     fn from(value: TripPositionLayerId) -> Self {
         value as i32
+    }
+}
+
+pub fn track_coverage(len: usize, period: &DateRange) -> f64 {
+    let minutes = period.duration().num_minutes();
+    match (minutes, len) {
+        (0, 0) => 0.,
+        (0, _) => 100.,
+        _ => (len as f64 * 100. / minutes as f64).clamp(0., 100.),
     }
 }

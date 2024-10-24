@@ -47,6 +47,7 @@ pub struct Trip {
     pub target_species_fiskeridir_id: Option<u32>,
     pub target_species_fao: Option<String>,
     pub fuel_consumption: Option<f64>,
+    pub track_coverage: Option<f64>,
 }
 
 #[derive(Deserialize)]
@@ -151,6 +152,7 @@ impl Trip {
             target_species_fiskeridir_id: self.target_species_fiskeridir_id,
             target_species_fao_id: self.target_species_fao,
             fuel_consumption: self.fuel_consumption,
+            track_coverage: self.track_coverage,
         })
     }
 }
@@ -190,6 +192,7 @@ impl TryFrom<TripDetailed> for Trip {
             target_species_fiskeridir_id: v.target_species_fiskeridir_id,
             target_species_fao: v.target_species_fao_id,
             fuel_consumption: v.fuel_consumption,
+            track_coverage: v.track_coverage,
         })
     }
 }

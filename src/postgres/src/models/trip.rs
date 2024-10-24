@@ -88,6 +88,7 @@ pub struct NewTrip {
     pub end_port_id: Option<String>,
     #[unnest_insert(sql_type = "INT", type_conversion = "type_to_i32")]
     pub position_layers_status: ProcessingStatus,
+    pub track_coverage: Option<f64>,
 }
 
 #[derive(Debug, Clone, UnnestInsert)]
@@ -170,9 +171,9 @@ impl From<&TripProcessingUnit> for NewTrip {
             None => (None, None),
         };
 
-        let position_layers_status = match value.trip_position_output {
-            Some(_) => ProcessingStatus::Successful,
-            None => ProcessingStatus::Unprocessed,
+        let (position_layers_status, track_coverage) = match &value.trip_position_output {
+            Some(v) => (ProcessingStatus::Successful, Some(v.track_coverage)),
+            None => (ProcessingStatus::Attempted, None),
         };
 
         NewTrip {
@@ -191,6 +192,7 @@ impl From<&TripProcessingUnit> for NewTrip {
             start_port_id: value.start_port.clone().map(|p| p.id),
             end_port_id: value.end_port.clone().map(|p| p.id),
             position_layers_status,
+            track_coverage,
         }
     }
 }
@@ -244,6 +246,7 @@ pub struct TripDetailed {
     pub target_species_fiskeridir_id: Option<i32>,
     pub target_species_fao_id: Option<String>,
     pub fuel_consumption: Option<f64>,
+    pub track_coverage: Option<f64>,
 }
 
 #[derive(Debug, Clone)]
@@ -352,6 +355,7 @@ impl TryFrom<TripDetailed> for kyogre_core::TripDetailed {
             target_species_fiskeridir_id: value.target_species_fiskeridir_id.map(|v| v as u32),
             target_species_fao_id: value.target_species_fao_id,
             fuel_consumption: value.fuel_consumption,
+            track_coverage: value.track_coverage,
         })
     }
 }

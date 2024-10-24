@@ -8,6 +8,7 @@ use crate::error::Result;
 use crate::*;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
+use kyogre_core::track_coverage;
 use machine::Schedule;
 use tokio::{
     select,
@@ -154,20 +155,22 @@ impl TripComputationStep for TripPositionLayers {
         _vessel: &Vessel,
         mut unit: TripProcessingUnit,
     ) -> Result<TripProcessingUnit> {
-        let mut trip_positions = unit.positions;
-        let mut pruned_positions = Vec::new();
+        let period = unit
+            .precision_period()
+            .unwrap_or_else(|| unit.trip.period.clone());
+
+        let mut output = TripPositionLayerOutput {
+            track_coverage: track_coverage(unit.positions.len(), &period),
+            trip_positions: unit.positions,
+            pruned_positions: Vec::new(),
+        };
 
         for l in &shared.trip_position_layers {
-            let (positions, pruned) = l.prune_positions(trip_positions)?;
-            trip_positions = positions;
-            pruned_positions.extend(pruned);
+            output = l.prune_positions(output, &period)?;
         }
 
-        unit.positions = trip_positions.clone();
-        unit.trip_position_output = Some(TripPositionLayerOutput {
-            trip_positions,
-            pruned_positions,
-        });
+        unit.positions = output.trip_positions.clone();
+        unit.trip_position_output = Some(output);
 
         Ok(unit)
     }
