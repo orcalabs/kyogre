@@ -170,7 +170,7 @@ where
                     postgres: db_settings.clone(),
                     environment: Environment::Test,
                     duck_db: duckdb_rs::adapter::DuckdbSettings {
-                        max_connections: 1,
+                        max_connections: 10,
                         cache_mode: adapter::CacheMode::ReturnError,
                         storage: CacheStorage::Memory,
                         refresh_interval: std::time::Duration::from_secs(100000),

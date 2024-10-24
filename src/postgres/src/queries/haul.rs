@@ -4,7 +4,11 @@ use futures::{future::ready, Stream, TryStreamExt};
 use kyogre_core::*;
 use sqlx::{Pool, Postgres};
 
-use crate::{error::Result, models::Haul, PostgresAdapter};
+use crate::{
+    error::Result,
+    models::{DuckDbDataVersionId, Haul},
+    PostgresAdapter,
+};
 
 impl PostgresAdapter {
     pub(crate) async fn hauls_matrix_impl(&self, query: &HaulsMatrixQuery) -> Result<HaulsMatrix> {
@@ -162,8 +166,8 @@ SELECT
     h.gear_id AS "gear_id!: Gear",
     h.fiskeridir_vessel_id AS "fiskeridir_vessel_id?: FiskeridirVesselId",
     h.vessel_length_group AS "vessel_length_group!: VesselLengthGroup",
-    COALESCE(h.vessel_name, h.vessel_name_ers) as vessel_name,
-    COALESCE(h.vessel_call_sign, h.vessel_call_sign_ers) as "call_sign!: CallSign",
+    COALESCE(h.vessel_name, h.vessel_name_ers) AS vessel_name,
+    COALESCE(h.vessel_call_sign, h.vessel_call_sign_ers) AS "call_sign!: CallSign",
     h.catches::TEXT AS "catches!",
     h.cache_version
 FROM
@@ -254,8 +258,8 @@ SELECT
     gear_id AS "gear_id!: Gear",
     fiskeridir_vessel_id AS "fiskeridir_vessel_id?: FiskeridirVesselId",
     vessel_length_group AS "vessel_length_group!: VesselLengthGroup",
-    COALESCE(vessel_name, vessel_name_ers) as vessel_name,
-    COALESCE(vessel_call_sign, vessel_call_sign_ers) as "call_sign!: CallSign",
+    COALESCE(vessel_name, vessel_name_ers) AS vessel_name,
+    COALESCE(vessel_call_sign, vessel_call_sign_ers) AS "call_sign!: CallSign",
     catches::TEXT AS "catches!",
     cache_version
 FROM
@@ -866,7 +870,7 @@ RETURNING
         message_ids: &[i64],
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
     ) -> Result<()> {
-        sqlx::query!(
+        let matrix_month_buckets = sqlx::query!(
             r#"
 INSERT INTO
     hauls_matrix (
@@ -909,12 +913,22 @@ WHERE
 GROUP BY
     h.haul_id,
     b.species_group_id,
-    l.catch_location_id;
+    l.catch_location_id
+RETURNING
+    matrix_month_bucket
             "#,
             message_ids,
         )
-        .execute(&mut **tx)
-        .await?;
+        .fetch_all(&mut **tx)
+        .await?
+        .into_iter()
+        .map(|r| r.matrix_month_bucket)
+        .min();
+
+        if let Some(min) = matrix_month_buckets {
+            self.increment_duckdb_version(min, DuckDbDataVersionId::Hauls, tx)
+                .await?;
+        }
 
         Ok(())
     }

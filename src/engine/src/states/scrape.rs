@@ -14,10 +14,6 @@ impl machine::State for ScrapeState {
     async fn run(&self, shared_state: Self::SharedState) -> Self::SharedState {
         if let Some(scraper) = &shared_state.scraper {
             scraper.run().await;
-            if let Err(e) = shared_state.matrix_cache.increment().await {
-                error!("failed to increment cache data version: {e:?}");
-            }
-
             let limit = (Utc::now() - ais_area_window()).date_naive();
 
             if let Err(e) = shared_state

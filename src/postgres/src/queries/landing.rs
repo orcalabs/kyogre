@@ -17,7 +17,7 @@ use crate::{
     chunk::Chunks,
     error::Result,
     landing_set::LandingSet,
-    models::{Landing, NewLanding, NewTripAssemblerConflict},
+    models::{DuckDbDataVersionId, Landing, NewLanding, NewTripAssemblerConflict},
     PostgresAdapter,
 };
 
@@ -535,7 +535,7 @@ SELECT
         landing_ids: &[String],
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
     ) -> Result<()> {
-        sqlx::query!(
+        let matrix_month_buckets = sqlx::query!(
             r#"
 INSERT INTO
     landing_matrix (
@@ -572,11 +572,21 @@ ON CONFLICT (landing_id, species_group_id) DO
 UPDATE
 SET
     living_weight = EXCLUDED.living_weight
+RETURNING
+    matrix_month_bucket
             "#,
             landing_ids,
         )
-        .execute(&mut **tx)
-        .await?;
+        .fetch_all(&mut **tx)
+        .await?
+        .into_iter()
+        .map(|r| r.matrix_month_bucket)
+        .min();
+
+        if let Some(min) = matrix_month_buckets {
+            self.increment_duckdb_version(min, DuckDbDataVersionId::Landings, tx)
+                .await?;
+        }
 
         Ok(())
     }

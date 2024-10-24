@@ -34,7 +34,7 @@ enum HaulFilter<'a> {
 impl<'a> std::fmt::Display for HaulFilter<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            HaulFilter::CatchLocations(vals) => write_array_filter(f, "catch_location_id", vals),
+            HaulFilter::CatchLocations(vals) => write_array_filter(f, "catch_location", vals),
             HaulFilter::MonthBuckets(vals) => write_array_filter(f, "matrix_month_bucket", vals),
             HaulFilter::GearGroup(vals) => write_array_filter(f, "gear_group_id", vals),
             HaulFilter::SpeciesGroup(vals) => write_array_filter(f, "species_group_id", vals),
