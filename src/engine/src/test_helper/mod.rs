@@ -335,6 +335,11 @@ impl TestStateBuilder {
         self
     }
 
+    pub fn trip_data_increment(mut self, duration: Duration) -> TestStateBuilder {
+        self.trip_data_timestamp_gap = duration;
+        self
+    }
+
     pub fn data_start(mut self, time: DateTime<Utc>) -> TestStateBuilder {
         self.global_data_timestamp_counter = time;
         self

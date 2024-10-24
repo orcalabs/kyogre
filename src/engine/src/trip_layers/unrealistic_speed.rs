@@ -1,7 +1,8 @@
 use crate::error::{error::DistanceEstimationSnafu, Result};
 use geoutils::Location;
 use kyogre_core::{
-    AisVmsPosition, CoreResult, PrunedTripPosition, TripPositionLayer, TripPositionLayerId,
+    AisVmsPosition, CoreResult, DateRange, PrunedTripPosition, TripPositionLayer,
+    TripPositionLayerId, TripPositionLayerOutput,
 };
 use serde_json::json;
 
@@ -20,17 +21,23 @@ impl Default for UnrealisticSpeed {
 impl TripPositionLayer for UnrealisticSpeed {
     fn prune_positions(
         &self,
-        positions: Vec<AisVmsPosition>,
-    ) -> CoreResult<(Vec<AisVmsPosition>, Vec<PrunedTripPosition>)> {
-        let num_positions = positions.len();
+        input: TripPositionLayerOutput,
+        _trip_period: &DateRange,
+    ) -> CoreResult<TripPositionLayerOutput> {
+        let num_positions = input.trip_positions.len();
         if num_positions <= 1 {
-            return Ok((positions, vec![]));
+            return Ok(input);
         }
 
-        let mut new_positions = Vec::with_capacity(num_positions);
-        let mut pruned = Vec::new();
+        let TripPositionLayerOutput {
+            trip_positions,
+            mut pruned_positions,
+            track_coverage,
+        } = input;
 
-        let mut iter = positions.into_iter();
+        let mut new_positions = Vec::with_capacity(num_positions);
+
+        let mut iter = trip_positions.into_iter();
 
         new_positions.push(iter.next().unwrap());
 
@@ -47,7 +54,7 @@ impl TripPositionLayer for UnrealisticSpeed {
                 }
                 new_positions.push(next);
             } else {
-                pruned.push(PrunedTripPosition {
+                pruned_positions.push(PrunedTripPosition {
                     positions: json!([current, next]),
                     value: json!({ "speed": speed }),
                     trip_layer: TripPositionLayerId::UnrealisticSpeed,
@@ -58,7 +65,11 @@ impl TripPositionLayer for UnrealisticSpeed {
             }
         }
 
-        Ok((new_positions, pruned))
+        Ok(TripPositionLayerOutput {
+            trip_positions: new_positions,
+            pruned_positions,
+            track_coverage,
+        })
     }
 
     fn layer_id(&self) -> TripPositionLayerId {

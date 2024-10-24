@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO\n    trips (\n    trip_assembler_id,fiskeridir_vessel_id,landing_coverage,period,start_precision_id,end_precision_id,start_precision_direction,end_precision_direction,trip_precision_status_id,period_precision,distance,distancer_id,start_port_id,end_port_id,position_layers_status,track_coverage\n   )\nSELECT\n    *\nFROM\n    UNNEST(\n        $1::INT[],$2::BIGINT[],$3::tstzrange[],$4::tstzrange[],$5::INT[],$6::INT[],$7::TEXT[],$8::TEXT[],$9::TEXT[],$10::tstzrange[],$11::DOUBLE PRECISION[],$12::INT[],$13::TEXT[],$14::TEXT[],$15::INT[],$16::DOUBLE PRECISION[]\n    )\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4Array",
+        "Int8Array",
+        "TstzRangeArray",
+        "TstzRangeArray",
+        "Int4Array",
+        "Int4Array",
+        "TextArray",
+        "TextArray",
+        "TextArray",
+        "TstzRangeArray",
+        "Float8Array",
+        "Int4Array",
+        "TextArray",
+        "TextArray",
+        "Int4Array",
+        "Float8Array"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "987e607b33e2e6c025b80678917759399bac5d541779c87adf707f9cea57fcfc"
+}
