@@ -240,11 +240,6 @@ pub trait HaulDistributorOutbound: Send + Sync {
 }
 
 #[async_trait]
-pub trait MatrixCacheVersion: Send + Sync {
-    async fn increment(&self) -> CoreResult<()>;
-}
-
-#[async_trait]
 pub trait VerificationOutbound: Send + Sync {
     async fn verify_database(&self) -> CoreResult<()>;
 }

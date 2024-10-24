@@ -2,7 +2,7 @@ use chrono::{TimeZone, Utc};
 use fiskeridir_rs::{ErsDca, Landing};
 use kyogre_core::{
     ActiveHaulsFilter, ActiveLandingFilter, FiskeridirVesselId, HaulsMatrixQuery,
-    LandingMatrixQuery, MatrixCacheOutbound, MatrixCacheVersion,
+    LandingMatrixQuery, MatrixCacheOutbound,
 };
 
 use super::helper::test;
@@ -10,7 +10,6 @@ use super::helper::test;
 #[tokio::test]
 async fn test_haul_refresh_with_no_data_succeeds_and_returns_miss_on_subsequent_request() {
     test(|helper| async move {
-        helper.adapter().increment().await.unwrap();
         helper.cache.refresh().await.unwrap();
 
         let cache_result = helper
@@ -48,7 +47,6 @@ async fn test_haul_returns_hit_after_refreshing_with_data() {
         ers_dca.start_longitude = Some(21.957);
         helper.db.add_ers_dca_value(ers_dca.clone()).await;
 
-        helper.adapter().increment().await.unwrap();
         helper.cache.refresh().await.unwrap();
 
         let cache_result = helper
@@ -75,7 +73,6 @@ async fn test_haul_returns_hit_after_refreshing_with_data() {
 #[tokio::test]
 async fn test_landing_refresh_with_no_data_succeeds_and_returns_miss_on_subsequent_request() {
     test(|helper| async move {
-        helper.adapter().increment().await.unwrap();
         helper.cache.refresh().await.unwrap();
 
         let cache_result = helper
@@ -104,7 +101,6 @@ async fn test_landing_returns_hit_after_refreshing_with_data() {
 
         helper.db.add_landings(vec![landing.clone()]).await;
 
-        helper.adapter().increment().await.unwrap();
         helper.cache.refresh().await.unwrap();
 
         let cache_result = helper

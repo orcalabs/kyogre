@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT\n    haul_id AS \"haul_id!: HaulId\",\n    haul_distance,\n    catch_locations AS \"catch_locations?: Vec<CatchLocationId>\",\n    species_group_ids AS \"species_group_ids!: Vec<SpeciesGroup>\",\n    start_latitude,\n    start_longitude,\n    stop_latitude,\n    stop_longitude,\n    start_timestamp,\n    stop_timestamp,\n    gear_group_id AS \"gear_group_id!: GearGroup\",\n    gear_id AS \"gear_id!: Gear\",\n    fiskeridir_vessel_id AS \"fiskeridir_vessel_id?: FiskeridirVesselId\",\n    vessel_length_group AS \"vessel_length_group!: VesselLengthGroup\",\n    COALESCE(vessel_name, vessel_name_ers) as vessel_name,\n    COALESCE(vessel_call_sign, vessel_call_sign_ers) as \"call_sign!: CallSign\",\n    catches::TEXT AS \"catches!\",\n    cache_version\nFROM\n    hauls\nWHERE\n    haul_id = ANY ($1)\n            ",
+  "query": "\nSELECT\n    haul_id AS \"haul_id!: HaulId\",\n    haul_distance,\n    catch_locations AS \"catch_locations?: Vec<CatchLocationId>\",\n    species_group_ids AS \"species_group_ids!: Vec<SpeciesGroup>\",\n    start_latitude,\n    start_longitude,\n    stop_latitude,\n    stop_longitude,\n    start_timestamp,\n    stop_timestamp,\n    gear_group_id AS \"gear_group_id!: GearGroup\",\n    gear_id AS \"gear_id!: Gear\",\n    fiskeridir_vessel_id AS \"fiskeridir_vessel_id?: FiskeridirVesselId\",\n    vessel_length_group AS \"vessel_length_group!: VesselLengthGroup\",\n    COALESCE(vessel_name, vessel_name_ers) AS vessel_name,\n    COALESCE(vessel_call_sign, vessel_call_sign_ers) AS \"call_sign!: CallSign\",\n    catches::TEXT AS \"catches!\",\n    cache_version\nFROM\n    hauls\nWHERE\n    haul_id = ANY ($1)\n            ",
   "describe": {
     "columns": [
       {
@@ -120,5 +120,5 @@
       false
     ]
   },
-  "hash": "62e2745bc73b54f85ea0c61fbc879310c40fcbe1b3402a6cbf914752626f1240"
+  "hash": "9bb5aa14c54de6f0a3c6daab4536624261a2cfd1f253cc8339804044a41fe37d"
 }
