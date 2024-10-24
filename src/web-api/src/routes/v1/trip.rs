@@ -260,6 +260,7 @@ pub struct Trip {
     pub target_species_fiskeridir_id: Option<u32>,
     pub target_species_fao_id: Option<String>,
     pub fuel_consumption: Option<f64>,
+    pub track_coverage: Option<f64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
@@ -361,6 +362,7 @@ impl From<kyogre_core::TripDetailed> for Trip {
             target_species_fiskeridir_id: value.target_species_fiskeridir_id,
             target_species_fao_id: value.target_species_fao_id,
             fuel_consumption: value.fuel_consumption,
+            track_coverage: value.track_coverage,
         }
     }
 }

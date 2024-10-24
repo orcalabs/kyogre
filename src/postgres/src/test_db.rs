@@ -318,7 +318,8 @@ SELECT
     t.cache_version,
     t.target_species_fiskeridir_id,
     t.target_species_fao_id,
-    t.fuel_consumption
+    t.fuel_consumption,
+    t.track_coverage
 FROM
     trips_detailed t
 WHERE

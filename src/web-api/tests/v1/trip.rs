@@ -981,3 +981,43 @@ async fn test_trips_connects_to_existing_landings_outside_period_but_inside_land
     })
     .await;
 }
+
+#[tokio::test]
+async fn test_trips_returns_track_coverage() {
+    test(|helper, builder| async move {
+        let start: DateTime<Utc> = "2000-01-01T00:00:00Z".parse().unwrap();
+        let end: DateTime<Utc> = "2000-01-01T00:10:00Z".parse().unwrap();
+
+        builder
+            .trip_data_increment(Duration::minutes(2))
+            .vessels(1)
+            .trips(1)
+            .modify(|v| {
+                v.trip_specification.set_start(start);
+                v.trip_specification.set_end(end);
+            })
+            .ais_vms_positions(3)
+            .modify_idx(|i, p| p.position.add_location(i as f64, i as f64))
+            .build()
+            .await;
+
+        let trips = helper.app.get_trips(Default::default()).await.unwrap();
+
+        assert_eq!(trips.len(), 1);
+        assert_eq!(trips[0].track_coverage.unwrap() as i32, 30);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_trips_returns_track_coverage_zero_if_no_track() {
+    test(|helper, builder| async move {
+        builder.vessels(1).trips(1).build().await;
+
+        let trips = helper.app.get_trips(Default::default()).await.unwrap();
+
+        assert_eq!(trips.len(), 1);
+        assert_eq!(trips[0].track_coverage.unwrap() as i32, 0);
+    })
+    .await;
+}

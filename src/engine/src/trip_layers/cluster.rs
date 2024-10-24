@@ -1,7 +1,8 @@
 use crate::error::{error::DistanceEstimationSnafu, Result};
 use geoutils::Location;
 use kyogre_core::{
-    AisVmsPosition, CoreResult, PrunedTripPosition, TripPositionLayer, TripPositionLayerId,
+    AisVmsPosition, CoreResult, DateRange, PrunedTripPosition, TripPositionLayer,
+    TripPositionLayerId, TripPositionLayerOutput,
 };
 use serde_json::json;
 use tracing::warn;
@@ -27,19 +28,25 @@ impl TripPositionLayer for Cluster {
 
     fn prune_positions(
         &self,
-        mut positions: Vec<AisVmsPosition>,
-    ) -> CoreResult<(Vec<AisVmsPosition>, Vec<PrunedTripPosition>)> {
-        let num_positions = positions.len();
+        input: TripPositionLayerOutput,
+        _trip_period: &DateRange,
+    ) -> CoreResult<TripPositionLayerOutput> {
+        let num_positions = input.trip_positions.len();
         if num_positions <= 1 {
-            return Ok((positions, vec![]));
+            return Ok(input);
         }
 
+        let TripPositionLayerOutput {
+            mut trip_positions,
+            mut pruned_positions,
+            track_coverage,
+        } = input;
+
         let mut new_positions = Vec::with_capacity(num_positions);
-        let mut pruned = Vec::new();
 
         let mut next_pruned_by = false;
 
-        for chunk in positions.chunks_mut(self.chunk_size) {
+        for chunk in trip_positions.chunks_mut(self.chunk_size) {
             if chunk.len() <= 1 {
                 new_positions.extend_from_slice(chunk);
                 break;
@@ -61,7 +68,7 @@ impl TripPositionLayer for Cluster {
                 }
                 new_positions.extend_from_slice(chunk);
             } else {
-                pruned.push(PrunedTripPosition {
+                pruned_positions.push(PrunedTripPosition {
                     positions: json!(chunk),
                     value: json!({ "distance": distance }),
                     trip_layer: TripPositionLayerId::Cluster,
@@ -74,7 +81,11 @@ impl TripPositionLayer for Cluster {
             }
         }
 
-        Ok((new_positions, pruned))
+        Ok(TripPositionLayerOutput {
+            trip_positions: new_positions,
+            pruned_positions,
+            track_coverage,
+        })
     }
 }
 
