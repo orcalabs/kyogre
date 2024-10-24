@@ -1,17 +1,19 @@
 use crate::error::Result;
+use duckdb::params;
 use duckdb::DuckdbConnectionManager;
-use duckdb::{params, Transaction};
-use kyogre_core::retry;
+use kyogre_core::IsTimeout;
 use orca_core::PsqlSettings;
 use r2d2::PooledConnection;
+use std::u64;
 use tokio::sync::mpsc::{Receiver, Sender};
 use tracing::{error, info, instrument};
 
 const POSTGRES_DUCKDB_VERSION_TABLE: &str = "duckdb_data_version";
 const HAULS_SCHEMA: &str = "CREATE TABLE
     hauls_matrix_cache (
+        haul_id INT NOT NULL,
         catch_location_matrix_index INT NOT NULL,
-        catch_location_id TEXT NOT NULL,
+        catch_location TEXT NOT NULL,
         matrix_month_bucket INT NOT NULL,
         vessel_length_group INT NOT NULL,
         fiskeridir_vessel_id INT,
@@ -19,7 +21,8 @@ const HAULS_SCHEMA: &str = "CREATE TABLE
         species_group_id INT NOT NULL,
         living_weight DOUBLE NOT NULL,
         species_group_weight_percentage_of_haul DOUBLE,
-        is_majority_species_group_of_haul BOOLEAN
+        is_majority_species_group_of_haul BOOLEAN,
+        PRIMARY KEY(haul_id, species_group_id, catch_location)
     )";
 const LANDING_SCHEMA: &str = "CREATE TABLE
     landing_matrix_cache (
@@ -43,41 +46,47 @@ pub struct DuckdbRefresher {
     postgres_credentials: String,
     refresh_interval: std::time::Duration,
     refresh_queue: Receiver<RefreshRequest>,
+    landing_version: u64,
+    haul_version: u64,
 }
 
+#[derive(Debug, PartialEq, Eq, Hash)]
 pub enum DataSource {
     Hauls,
     Landings,
 }
 
+#[derive(Debug, PartialEq, Eq, Hash)]
+pub enum Postgres {
+    Hauls,
+    Landings,
+}
+
+#[derive(Debug)]
 pub enum CreateMode {
     Initial,
-    Refresh,
+    Refresh { matrix_month_bucket: u64 },
 }
 
 impl DataSource {
-    fn row_value_name(&self) -> &'static str {
-        match self {
-            DataSource::Hauls => "hauls",
-            DataSource::Landings => "landings",
-        }
-    }
     fn postgres_version_table_id(&self) -> &'static str {
         match self {
-            DataSource::Hauls => "hauls",
-            DataSource::Landings => "landings",
+            DataSource::Hauls => "Hauls",
+            DataSource::Landings => "Landings",
         }
     }
 }
 
+#[derive(Debug)]
 pub struct RefreshStatus {
-    hauls: SourceStatus,
-    landings: SourceStatus,
+    hauls: Option<SourceStatus>,
+    landings: Option<SourceStatus>,
 }
 
+#[derive(Debug)]
 pub struct SourceStatus {
-    version: u64,
-    should_refresh: bool,
+    postgres_version: u64,
+    matrix_month_bucket: u64,
 }
 
 impl DuckdbRefresher {
@@ -110,6 +119,8 @@ impl DuckdbRefresher {
             postgres_credentials,
             refresh_interval,
             refresh_queue,
+            landing_version: 0,
+            haul_version: 0,
         }
     }
 
@@ -130,47 +141,27 @@ LOAD postgres;
     }
 
     #[instrument(skip_all)]
-    pub fn initial_create(&self) -> Result<()> {
+    pub fn initial_create(&mut self) -> Result<()> {
         let mut conn = self.pool.get()?;
 
         self.install_postgres_exstension(&conn)?;
 
-        let tx = conn.transaction()?;
-
-        tx.execute(
+        conn.execute(
             &format!(
-                "ATTACH '{}' AS postgres_db (TYPE postgres);",
+                "ATTACH '{}' AS postgres_db (TYPE postgres, READ_ONLY);",
                 self.postgres_credentials
             ),
             [],
         )?;
 
-        let table_exists: bool = tx.query_row(
-            "
-SELECT
-    COALESCE(
-        (
-            SELECT
-                TRUE
-            FROM
-                information_schema.tables
-            WHERE
-                table_name = 'data_versions'
-        ),
-        FALSE
-    );
-                ",
-            params![],
-            |row| row.get(0),
-        )?;
+        self.create_hauls(CreateMode::Initial, &mut conn)?;
+        self.create_landings(CreateMode::Initial, &mut conn)?;
+        let haul_version = self.postgres_data_source_latest_version(&conn, DataSource::Hauls)?;
+        let landing_version =
+            self.postgres_data_source_latest_version(&conn, DataSource::Landings)?;
 
-        if !table_exists {
-            self.create_hauls(CreateMode::Initial, &tx)?;
-            self.create_landings(CreateMode::Initial, &tx)?;
-            self.add_data_versions(&tx)?;
-        }
-
-        tx.commit()?;
+        self.landing_version = landing_version;
+        self.haul_version = haul_version;
 
         Ok(())
     }
@@ -199,43 +190,60 @@ SELECT
     }
 
     #[instrument(skip_all)]
-    async fn do_periodic_refresh(&self, response_channel: Option<Sender<RefreshResponse>>) {
-        let res = retry(|| async { self.do_periodic_refresh_impl() }).await;
-        if let Err(e) = &res {
-            error!("failed periodic refresh: {e:?}");
-        }
-
-        if let Some(sender) = response_channel {
-            if let Err(e) = sender.send(RefreshResponse(res)).await {
-                error!("sender half error, exiting refresh_loop: {e:?}");
+    async fn do_periodic_refresh(&mut self, response_channel: Option<Sender<RefreshResponse>>) {
+        let mut attempt = 0;
+        loop {
+            match self.do_periodic_refresh_impl() {
+                Ok(_) => {
+                    if let Some(ref sender) = response_channel {
+                        if let Err(e) = sender.send(RefreshResponse(Ok(()))).await {
+                            error!("sender half error, exiting refresh_loop: {e:?}");
+                        }
+                    }
+                    break;
+                }
+                Err(e) if e.is_timeout() => {
+                    attempt = attempt + 1;
+                    if attempt > 3 {
+                        error!("failed periodic refresh: {e:?}");
+                        break;
+                    }
+                }
+                Err(e) => {
+                    error!("failed periodic refresh: {e:?}");
+                    break;
+                }
             }
         }
     }
 
-    fn do_periodic_refresh_impl(&self) -> Result<()> {
+    fn do_periodic_refresh_impl(&mut self) -> Result<()> {
         let status = self.refresh_status()?;
 
-        let res = if status.hauls.should_refresh {
-            info!("hauls have been modified, starting refresh...");
-            self.refresh_hauls(Some(status.hauls.version))
-        } else {
-            Ok(())
+        dbg!(&status);
+
+        let res = match status.hauls {
+            Some(hauls) if hauls.postgres_version > self.haul_version => {
+                info!("hauls have been modified, starting refresh...");
+                self.refresh_hauls(hauls)
+            }
+            _ => Ok(()),
         };
-        let res2 = if status.landings.should_refresh {
-            info!("landings have been modified, starting refresh...");
-            self.refresh_landings(Some(status.landings.version))
-        } else {
-            Ok(())
+
+        let res2 = match status.landings {
+            Some(landings) if landings.postgres_version > self.landing_version => {
+                info!("landings have been modified, starting refresh...");
+                self.refresh_landings(landings)
+            }
+            _ => Ok(()),
         };
 
         res.and(res2)
     }
 
     #[instrument(skip(self))]
-    fn refresh_landings(&self, new_version: Option<u64>) -> Result<()> {
+    fn refresh_landings(&mut self, status: SourceStatus) -> Result<()> {
         let mut conn = self.pool.get()?;
-
-        conn.execute("DELETE FROM landing_matrix_cache", [])?;
 
         conn.execute(
             r"
@@ -244,23 +252,21 @@ LOAD postgres;
             [],
         )?;
 
-        let tx = conn.transaction()?;
+        self.create_landings(
+            CreateMode::Refresh {
+                matrix_month_bucket: status.matrix_month_bucket,
+            },
+            &mut conn,
+        )?;
 
-        self.create_landings(CreateMode::Refresh, &tx)?;
+        self.landing_version = status.postgres_version;
 
-        if let Some(new_version) = new_version {
-            self.set_data_source_version(DataSource::Landings, new_version, &tx)?;
-        }
-
-        tx.commit()?;
         Ok(())
     }
 
     #[instrument(skip(self))]
-    fn refresh_hauls(&self, new_version: Option<u64>) -> Result<()> {
+    fn refresh_hauls(&mut self, status: SourceStatus) -> Result<()> {
         let mut conn = self.pool.get()?;
-
-        conn.execute("DELETE FROM hauls_matrix_cache", [])?;
 
         conn.execute(
             r"
@@ -269,15 +275,15 @@ LOAD postgres;
             [],
         )?;
 
-        let tx = conn.transaction()?;
+        self.create_hauls(
+            CreateMode::Refresh {
+                matrix_month_bucket: status.matrix_month_bucket,
+            },
+            &mut conn,
+        )?;
 
-        self.create_hauls(CreateMode::Refresh, &tx)?;
+        self.haul_version = status.postgres_version;
 
-        if let Some(new_version) = new_version {
-            self.set_data_source_version(DataSource::Hauls, new_version, &tx)?;
-        }
-
-        tx.commit()?;
         Ok(())
     }
 
@@ -291,22 +297,12 @@ LOAD postgres;
             [],
         )?;
 
-        let postgres_haul_version = self.postgres_data_source_version(&conn, DataSource::Hauls)?;
-        let local_haul_version = self.data_source_version(&conn, DataSource::Hauls)?;
-
-        let postgres_landing_version =
-            self.postgres_data_source_version(&conn, DataSource::Landings)?;
-        let local_landing_version = self.data_source_version(&conn, DataSource::Landings)?;
+        let hauls_status = self.postgres_data_source_version(&conn, DataSource::Hauls)?;
+        let landings_status = self.postgres_data_source_version(&conn, DataSource::Landings)?;
 
         let status = RefreshStatus {
-            hauls: SourceStatus {
-                version: postgres_haul_version,
-                should_refresh: postgres_haul_version > local_haul_version,
-            },
-            landings: SourceStatus {
-                version: postgres_landing_version,
-                should_refresh: postgres_landing_version > local_landing_version,
-            },
+            hauls: hauls_status,
+            landings: landings_status,
         };
 
         Ok(status)
@@ -316,132 +312,79 @@ LOAD postgres;
         &self,
         conn: &PooledConnection<DuckdbConnectionManager>,
         source: DataSource,
-    ) -> Result<u64> {
+    ) -> Result<Option<SourceStatus>> {
+        let version = match source {
+            DataSource::Hauls => self.haul_version,
+            DataSource::Landings => self.landing_version,
+        };
         let version_command = format!(
             "
 SELECT
-    version
+    MAX(version),
+    matrix_month_bucket
 FROM
     postgres_db.{}
 WHERE
     duckdb_data_version_id = ?
+AND
+    version > ?
+GROUP BY matrix_month_bucket
+ORDER BY matrix_month_bucket
+LIMIT 1
             ",
             POSTGRES_DUCKDB_VERSION_TABLE
         );
 
-        let version: u64 = conn.query_row(
+        match conn.query_row(
             &version_command,
-            params![source.postgres_version_table_id()],
-            |row| row.get(0),
-        )?;
-        Ok(version)
+            params![source.postgres_version_table_id(), version],
+            |row| Ok((row.get(0), row.get(1))),
+        ) {
+            Ok((postgres_version, matrix_month_bucket)) => Ok(Some(SourceStatus {
+                postgres_version: postgres_version?,
+                matrix_month_bucket: matrix_month_bucket?,
+            })),
+            Err(duckdb::Error::QueryReturnedNoRows) => Ok(None),
+            Err(e) => Err(e.into()),
+        }
     }
 
-    fn postgres_data_source_version_tx(
-        &self,
-        tx: &Transaction<'_>,
-        source: DataSource,
-    ) -> Result<u64> {
-        let version_command = format!(
-            "
-SELECT
-    version
-FROM
-    postgres_db.{}
-WHERE
-    duckdb_data_version_id = ?
-            ",
-            POSTGRES_DUCKDB_VERSION_TABLE
-        );
-
-        let version: u64 = tx.query_row(
-            &version_command,
-            params![source.postgres_version_table_id()],
-            |row| row.get(0),
-        )?;
-        Ok(version)
-    }
-
-    fn data_source_version(
+    fn postgres_data_source_latest_version(
         &self,
         conn: &PooledConnection<DuckdbConnectionManager>,
         source: DataSource,
     ) -> Result<u64> {
-        let version: u64 = conn.query_row(
-            r#"
+        let version_command = format!(
+            "
 SELECT
-    "version"
+    version
 FROM
-    data_versions
+    postgres_db.{}
 WHERE
-    source = ?
-                "#,
-            params![source.row_value_name()],
+    duckdb_data_version_id = ?
+ORDER BY version DESC
+LIMIT 1
+            ",
+            POSTGRES_DUCKDB_VERSION_TABLE
+        );
+
+        match conn.query_row(
+            &version_command,
+            params![source.postgres_version_table_id()],
             |row| row.get(0),
-        )?;
-
-        Ok(version)
-    }
-
-    fn set_data_source_version(
-        &self,
-        source: DataSource,
-        version: u64,
-        tx: &Transaction<'_>,
-    ) -> Result<()> {
-        tx.execute(
-            r#"
-UPDATE data_versions
-SET
-    "version" = ?
-WHERE
-    source = ?
-            "#,
-            params![version, source.row_value_name()],
-        )?;
-
-        Ok(())
-    }
-
-    fn add_data_versions(&self, tx: &Transaction<'_>) -> Result<()> {
-        let postgres_haul_version = self.postgres_data_source_version_tx(tx, DataSource::Hauls)?;
-        let postgres_landing_version =
-            self.postgres_data_source_version_tx(tx, DataSource::Landings)?;
-
-        tx.execute_batch(
-            r#"
-CREATE TABLE
-    data_versions ("version" INT NOT NULL, source VARCHAR PRIMARY KEY,);
-            "#,
-        )?;
-
-        tx.execute(
-            r#"
-INSERT INTO
-    data_versions ("version", source)
-VALUES
-    (?, 'landings')
-ON CONFLICT (source) DO NOTHING;
-            "#,
-            [postgres_landing_version],
-        )?;
-
-        tx.execute(
-            r#"
-INSERT INTO
-    data_versions ("version", source)
-VALUES
-    (?, 'hauls')
-ON CONFLICT (source) DO NOTHING;
-            "#,
-            [postgres_haul_version],
-        )?;
-
-        Ok(())
+        ) {
+            Ok(version) => Ok(version),
+            Err(duckdb::Error::QueryReturnedNoRows) => Ok(0),
+            Err(e) => Err(e.into()),
+        }
     }
 
     #[instrument(skip_all)]
-    fn create_landings(&self, mode: CreateMode, tx: &Transaction<'_>) -> Result<()> {
+    fn create_landings(
+        &self,
+        mode: CreateMode,
+        conn: &mut PooledConnection<DuckdbConnectionManager>,
+    ) -> Result<()> {
         let postgres_scan_command = "
 INSERT INTO
     landing_matrix_cache (
@@ -469,25 +412,36 @@ FROM
     postgres_db.landing_matrix"
             .to_string();
 
-        let queries = match mode {
+        match mode {
             CreateMode::Initial => {
-                format!(
-                    "DROP TABLE IF EXISTS landing_matrix_cache;{};{};",
-                    LANDING_SCHEMA, postgres_scan_command
-                )
+                let tx = conn.transaction()?;
+                tx.execute_batch(&format!("{};{};", LANDING_SCHEMA, postgres_scan_command))?;
+                tx.commit()?;
+                Ok(())
             }
-            CreateMode::Refresh => postgres_scan_command,
-        };
-        Ok(tx.execute_batch(&queries)?)
+            CreateMode::Refresh {
+                matrix_month_bucket,
+            } => self.refresh_re_insert(
+                conn,
+                postgres_scan_command,
+                matrix_month_bucket,
+                DataSource::Landings,
+            ),
+        }
     }
 
     #[instrument(skip_all)]
-    fn create_hauls(&self, mode: CreateMode, tx: &Transaction<'_>) -> Result<()> {
+    fn create_hauls(
+        &self,
+        mode: CreateMode,
+        conn: &mut PooledConnection<DuckdbConnectionManager>,
+    ) -> Result<()> {
         let postgres_scan_command = "
 INSERT INTO
     hauls_matrix_cache (
+        haul_id,
         catch_location_matrix_index,
-        catch_location_id,
+        catch_location,
         matrix_month_bucket,
         vessel_length_group,
         fiskeridir_vessel_id,
@@ -498,6 +452,7 @@ INSERT INTO
         is_majority_species_group_of_haul
     )
 SELECT
+    haul_id,
     catch_location_matrix_index,
     catch_location,
     matrix_month_bucket,
@@ -512,15 +467,50 @@ FROM
     postgres_db.hauls_matrix"
             .to_string();
 
-        let queries = match mode {
+        match mode {
             CreateMode::Initial => {
-                format!(
-                    "DROP TABLE IF EXISTS hauls_matrix_cache;{};{};",
-                    HAULS_SCHEMA, postgres_scan_command
-                )
+                let tx = conn.transaction()?;
+                tx.execute_batch(&format!("{};{};", HAULS_SCHEMA, postgres_scan_command))?;
+                tx.commit()?;
+                Ok(())
             }
-            CreateMode::Refresh => postgres_scan_command,
+            CreateMode::Refresh {
+                matrix_month_bucket,
+            } => self.refresh_re_insert(
+                conn,
+                postgres_scan_command,
+                matrix_month_bucket,
+                DataSource::Hauls,
+            ),
+        }
+    }
+
+    fn refresh_re_insert(
+        &self,
+        conn: &mut PooledConnection<DuckdbConnectionManager>,
+        mut postgres_scan_command: String,
+        matrix_month_bucket: u64,
+        source: DataSource,
+    ) -> Result<()> {
+        let table = match source {
+            DataSource::Hauls => "hauls_matrix_cache",
+            DataSource::Landings => "landing_matrix_cache",
         };
-        Ok(tx.execute_batch(&queries)?)
+        let delete = format!("DELETE FROM {table}");
+        postgres_scan_command.push_str(&format!(
+            " WHERE matrix_month_bucket >= {matrix_month_bucket}"
+        ));
+        //dbg!(format!("BEGIN;{delete};{postgres_scan_command};COMMIT;"));
+
+        //conn.execute(&format!("BEGIN;"), [])?;
+        //conn.execute(&format!("{delete};",), [])?;
+        //conn.execute(&format!("{postgres_scan_command};",), [])?;
+        //conn.execute(&format!("COMMIT;"), [])?;
+        //
+        //conn.execute_batch(&format!("{postgres_scan_command};"))?;
+
+        conn.execute_batch(&format!("BEGIN;{delete};{postgres_scan_command};COMMIT;"))?;
+
+        Ok(())
     }
 }

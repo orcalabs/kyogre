@@ -1059,14 +1059,6 @@ impl TripPipelineInbound for PostgresAdapter {
 }
 
 #[async_trait]
-impl MatrixCacheVersion for PostgresAdapter {
-    async fn increment(&self) -> CoreResult<()> {
-        self.increment_duckdb_version().await?;
-        Ok(())
-    }
-}
-
-#[async_trait]
 impl VerificationOutbound for PostgresAdapter {
     async fn verify_database(&self) -> CoreResult<()> {
         self.verify_database_impl().await?;

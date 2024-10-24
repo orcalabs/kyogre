@@ -71,7 +71,7 @@ impl DuckdbAdapter {
 
         let (sender, recv) = mpsc::channel(1);
 
-        let refresher = DuckdbRefresher::new(
+        let mut refresher = DuckdbRefresher::new(
             pool.clone(),
             postgres_settings,
             settings.refresh_interval,

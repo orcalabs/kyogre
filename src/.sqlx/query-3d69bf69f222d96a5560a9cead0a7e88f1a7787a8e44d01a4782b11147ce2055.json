@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO\n    duckdb_data_version (\n        \"version\",\n        matrix_month_bucket,\n        duckdb_data_version_id\n    )\nVALUES\n    ($1, $2, $3)\nON CONFLICT (duckdb_data_version_id) DO\nUPDATE\nSET\n    \"version\" = duckdb_data_version.version + 1,\n    matrix_month_bucket = excluded.matrix_month_bucket\n                ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Int4",
+        "Varchar"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "3d69bf69f222d96a5560a9cead0a7e88f1a7787a8e44d01a4782b11147ce2055"
+}

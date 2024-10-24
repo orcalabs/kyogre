@@ -52,7 +52,7 @@ where
                 postgres: db_settings.clone(),
                 environment: Environment::Test,
                 duck_db: DuckdbSettings {
-                    max_connections: 1,
+                    max_connections: 10,
                     cache_mode: CacheMode::ReturnError,
                     storage: CacheStorage::Memory,
                     refresh_interval: std::time::Duration::from_secs(10000000),
