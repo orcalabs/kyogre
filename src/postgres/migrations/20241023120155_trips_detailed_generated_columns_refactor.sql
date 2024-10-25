@@ -5,10 +5,10 @@ DROP COLUMN landing_total_product_weight,
 DROP COLUMN haul_ids;
 
 ALTER TABLE trips_detailed
-ADD COLUMN landing_total_living_weight double precision,
-ADD COLUMN landing_total_gross_weight double precision,
-ADD COLUMN landing_total_product_weight double precision,
-ADD COLUMN haul_ids BIGINT[] NOT NULL;
+ADD COLUMN landing_total_living_weight DOUBLE PRECISION,
+ADD COLUMN landing_total_gross_weight DOUBLE PRECISION,
+ADD COLUMN landing_total_product_weight DOUBLE PRECISION,
+ADD COLUMN haul_ids BIGINT[] NOT NULL DEFAULT '{}';
 
 UPDATE trips_refresh_boundary
 SET
