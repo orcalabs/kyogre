@@ -36,7 +36,7 @@ geoutils = { workspace = true }
 derivative = "2.2.0"
 itertools = "0.13.0"
 humantime = "2.1.0"
-console-subscriber = "0.4.0"
+console-subscriber = "0.4.1"
 
 [dev-dependencies]
 http-client = { path = "../http-client", default-features = false }
