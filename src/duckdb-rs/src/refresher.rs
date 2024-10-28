@@ -88,13 +88,14 @@ impl DuckdbRefresher {
         refresh_queue: Receiver<RefreshRequest>,
     ) -> DuckdbRefresher {
         let postgres_credentials = format!(
-            "postgresql://{}{}@{}/{}{}",
+            "postgresql://{}{}@{}:{}/{}{}",
             postgres_settings.username,
             postgres_settings
                 .password
                 .map(|p| format!(":{p}"))
                 .unwrap_or_default(),
             postgres_settings.ip,
+            postgres_settings.port,
             postgres_settings
                 .db_name
                 .clone()
