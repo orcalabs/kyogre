@@ -40,7 +40,7 @@ stack-error = { version = "0.3.0", registry = "orcalabs-orcastrator" }
 snafu = "0.8.5"
 strum = { version = "0.26.3", features = ["derive"] }
 config = { version = "0.14", default-features = false, features = ["yaml"] }
-tokio = "1.40"
+tokio = "1.41"
 tokio-stream = "0.1"
 tracing = "0.1"
 chrono = { version = "0.4", features = ["serde"] }
