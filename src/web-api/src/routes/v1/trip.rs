@@ -1,13 +1,5 @@
-use super::fishing_facility::FishingFacility;
-use crate::{
-    error::Result,
-    extractors::{BwPolicy, BwProfile},
-    response::{Response, ResponseOrStream, StreamResponse},
-    stream_response, *,
-};
 use actix_web::web::{self, Path};
 use chrono::{DateTime, Utc};
-use error::error::StartAfterEndSnafu;
 use fiskeridir_rs::{Gear, GearGroup, LandingId};
 use futures::TryStreamExt;
 use kyogre_core::{
@@ -19,6 +11,14 @@ use serde_qs::actix::QsQuery as Query;
 use serde_with::{serde_as, DisplayFromStr};
 use utoipa::{IntoParams, ToSchema};
 use v1::haul::Haul;
+
+use super::fishing_facility::FishingFacility;
+use crate::{
+    error::{error::StartAfterEndSnafu, ErrorResponse, Result},
+    extractors::{BwPolicy, BwProfile},
+    response::{Response, ResponseOrStream, StreamResponse},
+    stream_response, *,
+};
 
 #[serde_as]
 #[derive(Default, Debug, Deserialize, Serialize, IntoParams)]

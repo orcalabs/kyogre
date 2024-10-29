@@ -4,7 +4,7 @@ use futures::TryStreamExt;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-use crate::{response::StreamResponse, stream_response, Database};
+use crate::{error::ErrorResponse, response::StreamResponse, stream_response, Database};
 
 #[utoipa::path(
     get,
