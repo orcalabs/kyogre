@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-orca-core = { version = "0.27.0", registry = "orcalabs-orcastrator" }
+orca-core = { version = "0.33.1", registry = "orcalabs-orcastrator" }
 fiskeridir-rs = { path = "../fiskeridir-rs/", features = ["utoipa", "sqlx"] }
 tokio = "1.34.0"
 kyogre-core = { path = "../kyogre-core" }
