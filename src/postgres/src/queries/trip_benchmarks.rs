@@ -115,7 +115,7 @@ WHERE
             "#,
             TripBenchmarkId::FuelConsumption as i32,
             id.into_inner(),
-            TripBenchmarkStatus::MustRefresh as i32,
+            TripBenchmarkStatus::MustRecompute as i32,
         )
         .fetch(&self.pool)
         .map_ok(|v| v.id)
@@ -157,7 +157,7 @@ WHERE
             "#,
             TripBenchmarkId::WeightPerHour as i32,
             id.into_inner(),
-            TripBenchmarkStatus::MustRefresh as i32,
+            TripBenchmarkStatus::MustRecompute as i32,
         )
         .fetch_all(&self.pool)
         .await?;
@@ -197,7 +197,7 @@ WHERE
             "#,
             TripBenchmarkId::WeightPerDistance as i32,
             id.into_inner(),
-            TripBenchmarkStatus::MustRefresh as i32,
+            TripBenchmarkStatus::MustRecompute as i32,
         )
         .fetch_all(&self.pool)
         .await?;
@@ -241,7 +241,7 @@ WHERE
             TripBenchmarkId::FuelConsumption as i32,
             TripBenchmarkId::WeightPerFuel as i32,
             id.into_inner(),
-            TripBenchmarkStatus::MustRefresh as i32,
+            TripBenchmarkStatus::MustRecompute as i32,
         )
         .fetch_all(&self.pool)
         .await?;
