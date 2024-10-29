@@ -11,7 +11,7 @@ use utoipa::{IntoParams, ToSchema};
 use crate::{
     error::{
         error::{InvalidDateRangeSnafu, MissingDateRangeSnafu},
-        Result,
+        ErrorResponse, Result,
     },
     response::{ais_unfold, StreamResponse},
     stream_response, Database,

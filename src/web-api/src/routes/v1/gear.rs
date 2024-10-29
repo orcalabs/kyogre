@@ -1,9 +1,13 @@
-use crate::{error::Result, response::Response};
 use fiskeridir_rs::{Gear, GearGroup, MainGearGroup};
 use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, DisplayFromStr};
 use strum::IntoEnumIterator;
 use utoipa::ToSchema;
+
+use crate::{
+    error::{ErrorResponse, Result},
+    response::Response,
+};
 
 #[utoipa::path(
     get,

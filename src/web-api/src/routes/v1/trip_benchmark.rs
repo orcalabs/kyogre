@@ -6,7 +6,12 @@ use serde::{Deserialize, Serialize};
 use serde_qs::actix::QsQuery as Query;
 use utoipa::{IntoParams, ToSchema};
 
-use crate::{error::Result, extractors::BwProfile, response::Response, Database};
+use crate::{
+    error::{ErrorResponse, Result},
+    extractors::BwProfile,
+    response::Response,
+    Database,
+};
 
 #[derive(Default, Debug, Deserialize, Serialize, IntoParams)]
 #[serde(rename_all = "camelCase")]

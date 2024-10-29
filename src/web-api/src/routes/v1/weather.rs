@@ -7,7 +7,7 @@ use serde_qs::actix::QsQuery as Query;
 use utoipa::{IntoParams, ToSchema};
 use wkt::ToWkt;
 
-use crate::{response::StreamResponse, stream_response, *};
+use crate::{error::ErrorResponse, response::StreamResponse, stream_response, *};
 
 #[derive(Default, Debug, Deserialize, Serialize, IntoParams)]
 #[serde(rename_all = "camelCase")]

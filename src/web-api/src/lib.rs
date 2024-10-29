@@ -153,5 +153,10 @@ impl Database for PostgresAdapter {}
     tags(
         (name = "kyogre-api", description = "kyogre api")
     ),
+    info(
+        license(
+            identifier = "null"
+        ),
+    ),
 )]
 pub struct ApiDoc;

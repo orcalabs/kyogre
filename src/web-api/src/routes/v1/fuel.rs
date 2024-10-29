@@ -8,7 +8,7 @@ use serde_qs::actix::QsQuery as Query;
 use utoipa::{IntoParams, ToSchema};
 
 use crate::{
-    error::Result,
+    error::{ErrorResponse, Result},
     extractors::BwProfile,
     response::{Response, StreamResponse},
     stream_response, Database,

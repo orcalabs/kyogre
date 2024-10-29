@@ -9,6 +9,7 @@ use strum::IntoEnumIterator;
 use utoipa::{IntoParams, ToSchema};
 
 use crate::{
+    error::ErrorResponse,
     response::{Response, StreamResponse},
     stream_response, Database,
 };
