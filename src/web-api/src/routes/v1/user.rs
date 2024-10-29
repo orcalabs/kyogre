@@ -3,7 +3,12 @@ use kyogre_core::{BarentswatchUserId, FiskeridirVesselId};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-use crate::{error::Result, extractors::BwProfile, response::Response, Database};
+use crate::{
+    error::{ErrorResponse, Result},
+    extractors::BwProfile,
+    response::Response,
+    Database,
+};
 
 #[utoipa::path(
     get,

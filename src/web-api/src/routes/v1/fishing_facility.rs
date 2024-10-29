@@ -13,7 +13,7 @@ use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
 use crate::{
-    error::{error::InsufficientPermissionsSnafu, Result},
+    error::{error::InsufficientPermissionsSnafu, ErrorResponse, Result},
     extractors::{BwPolicy, BwProfile},
     response::StreamResponse,
     stream_response, Database,

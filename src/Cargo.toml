@@ -46,7 +46,7 @@ tracing = "0.1"
 chrono = { version = "0.4", features = ["serde"] }
 chrono-tz = "0.10"
 async-trait = "0.1"
-utoipa = "4.2"
+utoipa = "5.1"
 futures = "0.3"
 futures-util = "0.3"
 enum_index = "0.2"

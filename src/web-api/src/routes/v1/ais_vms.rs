@@ -1,5 +1,3 @@
-use std::string::ToString;
-
 use actix_web::web;
 use chrono::{DateTime, Duration, NaiveDate, Utc};
 use fiskeridir_rs::CallSign;
@@ -18,7 +16,7 @@ use utoipa::{IntoParams, ToSchema};
 use crate::{
     error::{
         error::{InvalidDateRangeSnafu, MissingDateRangeSnafu, MissingMmsiOrCallSignOrTripIdSnafu},
-        Result,
+        ErrorResponse, Result,
     },
     extractors::{Auth0Profile, BwProfile},
     response::{ais_unfold, Response, StreamResponse},

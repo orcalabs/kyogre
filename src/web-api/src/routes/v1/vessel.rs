@@ -9,7 +9,7 @@ use serde_with::{serde_as, DisplayFromStr};
 use utoipa::ToSchema;
 
 use crate::{
-    error::Result,
+    error::{ErrorResponse, Result},
     extractors::BwProfile,
     response::{Response, StreamResponse},
     stream_response, Database,
