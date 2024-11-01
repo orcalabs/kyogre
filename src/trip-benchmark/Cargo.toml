@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-kyogre-core = { path = "../kyogre-core", features = ["utoipa"] }
+kyogre-core = { path = "../kyogre-core" }
 fiskeridir-rs = { path = "../fiskeridir-rs" }
 
 async-trait = { workspace = true }
