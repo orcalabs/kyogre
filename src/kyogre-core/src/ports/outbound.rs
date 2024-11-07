@@ -1,8 +1,11 @@
+use core::f64;
 use std::pin::Pin;
 
 use async_trait::async_trait;
 use chrono::{DateTime, NaiveDate, Utc};
-use fiskeridir_rs::{CallSign, DataFileId, DeliveryPointId, LandingId, SpeciesGroup};
+use fiskeridir_rs::{
+    CallSign, DataFileId, DeliveryPointId, GearGroup, LandingId, SpeciesGroup, VesselLengthGroup,
+};
 use futures::Stream;
 
 use crate::*;
@@ -88,6 +91,13 @@ pub trait WebApiOutboundPort {
     async fn hauls_matrix(&self, query: &HaulsMatrixQuery) -> CoreResult<HaulsMatrix>;
     fn landings(&self, query: LandingsQuery) -> PinBoxStream<'_, Landing>;
     async fn landing_matrix(&self, query: &LandingMatrixQuery) -> CoreResult<LandingMatrix>;
+    async fn average_fuel_consumption(
+        &self,
+        start_date: DateTime<Utc>,
+        end_date: DateTime<Utc>,
+        gear_groups: Option<Vec<GearGroup>>,
+        length_group: Option<VesselLengthGroup>,
+    ) -> CoreResult<Option<f64>>;
     fn fishing_facilities(
         &self,
         query: FishingFacilitiesQuery,

@@ -406,7 +406,9 @@ INSERT INTO
         haul_total_weight,
         haul_duration,
         fuel_consumption,
-        haul_ids
+        haul_ids,
+        haul_gear_group_ids,
+        haul_gear_ids
     )
 SELECT
     t.trip_id,
@@ -539,7 +541,21 @@ SELECT
                 h.haul_id IS NOT NULL
         ),
         '{}'
-    ) AS haul_ids
+    ) AS haul_ids,
+    COALESCE(
+        ARRAY_AGG(h.gear_group_id) FILTER (
+            WHERE
+                h.haul_id IS NOT NULL
+        ),
+        '{}'
+    ) AS haul_gear_group_ids,
+    COALESCE(
+        ARRAY_AGG(h.gear_id) FILTER (
+            WHERE
+                h.haul_id IS NOT NULL
+        ),
+        '{}'
+    ) AS haul_gear_ids
 FROM
     trips t
     INNER JOIN fiskeridir_vessels fv ON fv.fiskeridir_vessel_id = t.fiskeridir_vessel_id
@@ -576,7 +592,9 @@ SET
     haul_total_weight = excluded.haul_total_weight,
     haul_duration = excluded.haul_duration,
     fuel_consumption = excluded.fuel_consumption,
-    haul_ids = excluded.haul_ids
+    haul_ids = excluded.haul_ids,
+    haul_gear_group_ids= excluded.haul_gear_group_ids,
+    haul_gear_ids = excluded.haul_gear_ids
             "#,
             TripBenchmarkId::FuelConsumption as i32,
             &trip_ids as &[TripId],

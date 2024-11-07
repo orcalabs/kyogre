@@ -1,17 +1,16 @@
-use actix_web::web;
-use chrono::{DateTime, Utc};
-use fiskeridir_rs::CallSign;
-use kyogre_core::{Mean, Ordering, TripBenchmarksQuery, TripId, TripWithBenchmark};
-use serde::{Deserialize, Serialize};
-use serde_qs::actix::QsQuery as Query;
-use utoipa::{IntoParams, ToSchema};
-
 use crate::{
     error::{ErrorResponse, Result},
     extractors::BwProfile,
     response::Response,
     Database,
 };
+use actix_web::web;
+use chrono::{DateTime, Utc};
+use fiskeridir_rs::{CallSign, GearGroup, VesselLengthGroup};
+use kyogre_core::{Mean, Ordering, TripBenchmarksQuery, TripId, TripWithBenchmark};
+use serde::{Deserialize, Serialize};
+use serde_qs::actix::QsQuery as Query;
+use utoipa::{IntoParams, ToSchema};
 
 #[derive(Default, Debug, Deserialize, Serialize, IntoParams)]
 #[serde(rename_all = "camelCase")]
@@ -19,6 +18,41 @@ pub struct TripBenchmarksParameters {
     pub start_date: Option<DateTime<Utc>>,
     pub end_date: Option<DateTime<Utc>>,
     pub ordering: Option<Ordering>,
+}
+
+#[derive(Default, Debug, Deserialize, Serialize, IntoParams)]
+#[serde(rename_all = "camelCase")]
+pub struct FuelConsumptionAverageParams {
+    pub start_date: DateTime<Utc>,
+    pub end_date: DateTime<Utc>,
+    pub gear_groups: Option<Vec<GearGroup>>,
+    pub length_group: Option<VesselLengthGroup>,
+}
+
+#[utoipa::path(
+    get,
+    path = "/trip_benchmarks/average_fuel_consumption",
+    params(FuelConsumptionAverageParams),
+    responses(
+        (status = 200, description = "average fuel consumption", body = Option<f64>),
+        (status = 500, description = "an internal error occured", body = ErrorResponse),
+    )
+)]
+#[tracing::instrument(skip(db))]
+pub async fn average_fuel_consumption<T: Database + Send + Sync + 'static>(
+    db: web::Data<T>,
+    params: Query<FuelConsumptionAverageParams>,
+) -> Result<Response<Option<f64>>> {
+    let params = params.into_inner();
+    Ok(Response::new(
+        db.average_fuel_consumption(
+            params.start_date,
+            params.end_date,
+            params.gear_groups,
+            params.length_group,
+        )
+        .await?,
+    ))
 }
 
 #[utoipa::path(

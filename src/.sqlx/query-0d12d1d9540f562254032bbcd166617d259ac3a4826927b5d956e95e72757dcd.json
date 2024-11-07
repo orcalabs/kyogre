@@ -1,0 +1,25 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    AVG(fuel_consumption) as fuel\nFROM\n    trips_detailed t\nWHERE\n    t.start_timestamp >= $1\n    AND t.stop_timestamp <= $2\n    AND (\n        $3::INT IS NULL\n        OR t.fiskeridir_length_group_id = $3\n    )\n    AND (\n        $4::INT[] IS NULL\n        OR t.haul_gear_group_ids && $4\n    )\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "fuel",
+        "type_info": "Float8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Timestamptz",
+        "Timestamptz",
+        "Int4",
+        "Int4Array"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "0d12d1d9540f562254032bbcd166617d259ac3a4826927b5d956e95e72757dcd"
+}
