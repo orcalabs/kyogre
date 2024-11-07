@@ -2,7 +2,9 @@ use std::result::Result as StdResult;
 
 use async_trait::async_trait;
 use chrono::{DateTime, NaiveDate, Utc};
-use fiskeridir_rs::{CallSign, DataFileId, DeliveryPointId, LandingId, SpeciesGroup};
+use fiskeridir_rs::{
+    CallSign, DataFileId, DeliveryPointId, GearGroup, LandingId, SpeciesGroup, VesselLengthGroup,
+};
 use futures::{Stream, StreamExt, TryStreamExt};
 use kyogre_core::*;
 use orca_core::{Environment, PsqlLogStatements, PsqlSettings};
@@ -480,6 +482,17 @@ impl AisMigratorDestination for PostgresAdapter {
 
 #[async_trait]
 impl WebApiOutboundPort for PostgresAdapter {
+    async fn average_fuel_consumption(
+        &self,
+        start_date: DateTime<Utc>,
+        end_date: DateTime<Utc>,
+        gear_groups: Option<Vec<GearGroup>>,
+        length_group: Option<VesselLengthGroup>,
+    ) -> CoreResult<Option<f64>> {
+        Ok(self
+            .average_fuel_consumption_impl(start_date, end_date, gear_groups, length_group)
+            .await?)
+    }
     fn ais_current_positions(
         &self,
         limit: Option<DateTime<Utc>>,
