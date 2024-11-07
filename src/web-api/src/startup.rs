@@ -247,6 +247,10 @@ where
                     web::get()
                         .guard(guard.clone())
                         .to(routes::v1::trip_benchmark::trip_benchmarks::<T>),
+                )
+                .route(
+                    "/trip_benchmarks/average_fuel_consumption",
+                    web::get().to(routes::v1::trip_benchmark::average_fuel_consumption::<T>),
                 );
         }
 

@@ -1,3 +1,5 @@
+use chrono::{DateTime, Utc};
+use fiskeridir_rs::{GearGroup, VesselLengthGroup};
 use futures::TryStreamExt;
 use kyogre_core::{
     DateRange, FiskeridirVesselId, TripBenchmarkId, TripBenchmarkStatus, TripBenchmarksQuery,
@@ -14,6 +16,41 @@ impl PostgresAdapter {
     ) -> Result<()> {
         self.unnest_insert_from::<_, _, TripBenchmarkOutput>(values, &self.pool)
             .await
+    }
+
+    pub(crate) async fn average_fuel_consumption_impl(
+        &self,
+        start_date: DateTime<Utc>,
+        end_date: DateTime<Utc>,
+        gear_groups: Option<Vec<GearGroup>>,
+        length_group: Option<VesselLengthGroup>,
+    ) -> Result<Option<f64>> {
+        Ok(sqlx::query!(
+            r#"
+SELECT
+    AVG(fuel_consumption) as fuel
+FROM
+    trips_detailed t
+WHERE
+    t.start_timestamp >= $1
+    AND t.stop_timestamp <= $2
+    AND (
+        $3::INT IS NULL
+        OR t.fiskeridir_length_group_id = $3
+    )
+    AND (
+        $4::INT[] IS NULL
+        OR t.haul_gear_group_ids && $4
+    )
+            "#,
+            start_date,
+            end_date,
+            &length_group as &Option<VesselLengthGroup>,
+            &gear_groups as &Option<Vec<GearGroup>>
+        )
+        .fetch_one(&self.pool)
+        .await?
+        .fuel)
     }
 
     pub(crate) async fn trip_benchmarks_impl(
