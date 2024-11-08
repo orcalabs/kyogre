@@ -10,6 +10,8 @@ use fiskeridir_rs::{CallSign, GearGroup, VesselLengthGroup};
 use kyogre_core::{Mean, Ordering, TripBenchmarksQuery, TripId, TripWithBenchmark};
 use serde::{Deserialize, Serialize};
 use serde_qs::actix::QsQuery as Query;
+use serde_with::serde_as;
+use serde_with::DisplayFromStr;
 use utoipa::{IntoParams, ToSchema};
 
 #[derive(Default, Debug, Deserialize, Serialize, IntoParams)]
@@ -20,12 +22,16 @@ pub struct TripBenchmarksParameters {
     pub ordering: Option<Ordering>,
 }
 
+#[serde_as]
 #[derive(Default, Debug, Deserialize, Serialize, IntoParams)]
 #[serde(rename_all = "camelCase")]
 pub struct FuelConsumptionAverageParams {
     pub start_date: DateTime<Utc>,
     pub end_date: DateTime<Utc>,
-    pub gear_groups: Option<Vec<GearGroup>>,
+    #[serde(default)]
+    #[serde_as(as = "Vec<DisplayFromStr>")]
+    #[param(rename = "gearGroups[]", value_type = Option<Vec<GearGroup>>)]
+    pub gear_groups: Vec<GearGroup>,
     pub length_group: Option<VesselLengthGroup>,
 }
 

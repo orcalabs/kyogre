@@ -486,7 +486,7 @@ impl WebApiOutboundPort for PostgresAdapter {
         &self,
         start_date: DateTime<Utc>,
         end_date: DateTime<Utc>,
-        gear_groups: Option<Vec<GearGroup>>,
+        gear_groups: Vec<GearGroup>,
         length_group: Option<VesselLengthGroup>,
     ) -> CoreResult<Option<f64>> {
         Ok(self
