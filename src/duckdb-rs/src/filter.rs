@@ -138,39 +138,35 @@ impl<'a> HaulFilters<'a> {
             filters.push(HaulFilter::BycatchPercentage(*bycatch_percentage));
         }
 
-        if let Some(m) = months {
-            if y_feature != HaulMatrixYFeature::Date && x_feature != HaulMatrixXFeature::Date {
-                filters.push(HaulFilter::MonthBuckets(m));
-            }
+        if !months.is_empty()
+            && y_feature != HaulMatrixYFeature::Date
+            && x_feature != HaulMatrixXFeature::Date
+        {
+            filters.push(HaulFilter::MonthBuckets(months));
         }
 
-        if let Some(catch_locations) = catch_locations {
-            if y_feature != HaulMatrixYFeature::CatchLocation {
-                filters.push(HaulFilter::CatchLocations(catch_locations));
-            }
+        if !catch_locations.is_empty() && y_feature != HaulMatrixYFeature::CatchLocation {
+            filters.push(HaulFilter::CatchLocations(catch_locations));
         }
-        if let Some(gear_group_ids) = gear_group_ids {
-            if y_feature != HaulMatrixYFeature::GearGroup
-                && x_feature != HaulMatrixXFeature::GearGroup
-            {
-                filters.push(HaulFilter::GearGroup(gear_group_ids));
-            }
+        if !gear_group_ids.is_empty()
+            && y_feature != HaulMatrixYFeature::GearGroup
+            && x_feature != HaulMatrixXFeature::GearGroup
+        {
+            filters.push(HaulFilter::GearGroup(gear_group_ids));
         }
-        if let Some(species_group_ids) = species_group_ids {
-            if y_feature != HaulMatrixYFeature::SpeciesGroup
-                && x_feature != HaulMatrixXFeature::SpeciesGroup
-            {
-                filters.push(HaulFilter::SpeciesGroup(species_group_ids));
-            }
+        if !species_group_ids.is_empty()
+            && y_feature != HaulMatrixYFeature::SpeciesGroup
+            && x_feature != HaulMatrixXFeature::SpeciesGroup
+        {
+            filters.push(HaulFilter::SpeciesGroup(species_group_ids));
         }
-        if let Some(vessel_length_groups) = vessel_length_groups {
-            if y_feature != HaulMatrixYFeature::VesselLength
-                && x_feature != HaulMatrixXFeature::VesselLength
-            {
-                filters.push(HaulFilter::VesselLengthGroups(vessel_length_groups));
-            }
+        if !vessel_length_groups.is_empty()
+            && y_feature != HaulMatrixYFeature::VesselLength
+            && x_feature != HaulMatrixXFeature::VesselLength
+        {
+            filters.push(HaulFilter::VesselLengthGroups(vessel_length_groups));
         }
-        if let Some(vessel_ids) = vessel_ids {
+        if !vessel_ids.is_empty() {
             filters.push(HaulFilter::VesselIds(vessel_ids));
         }
 
@@ -198,40 +194,35 @@ impl<'a> LandingFilters<'a> {
             active_filter: _,
         } = query;
 
-        if let Some(m) = months {
-            if y_feature != LandingMatrixYFeature::Date && x_feature != LandingMatrixXFeature::Date
-            {
-                filters.push(LandingFilter::MonthBuckets(m));
-            }
+        if !months.is_empty()
+            && y_feature != LandingMatrixYFeature::Date
+            && x_feature != LandingMatrixXFeature::Date
+        {
+            filters.push(LandingFilter::MonthBuckets(months));
         }
 
-        if let Some(catch_locations) = catch_locations {
-            if y_feature != LandingMatrixYFeature::CatchLocation {
-                filters.push(LandingFilter::CatchLocations(catch_locations));
-            }
+        if !catch_locations.is_empty() && y_feature != LandingMatrixYFeature::CatchLocation {
+            filters.push(LandingFilter::CatchLocations(catch_locations));
         }
-        if let Some(gear_group_ids) = gear_group_ids {
-            if y_feature != LandingMatrixYFeature::GearGroup
-                && x_feature != LandingMatrixXFeature::GearGroup
-            {
-                filters.push(LandingFilter::GearGroup(gear_group_ids));
-            }
+        if !gear_group_ids.is_empty()
+            && y_feature != LandingMatrixYFeature::GearGroup
+            && x_feature != LandingMatrixXFeature::GearGroup
+        {
+            filters.push(LandingFilter::GearGroup(gear_group_ids));
         }
-        if let Some(species_group_ids) = species_group_ids {
-            if y_feature != LandingMatrixYFeature::SpeciesGroup
-                && x_feature != LandingMatrixXFeature::SpeciesGroup
-            {
-                filters.push(LandingFilter::SpeciesGroup(species_group_ids));
-            }
+        if !species_group_ids.is_empty()
+            && y_feature != LandingMatrixYFeature::SpeciesGroup
+            && x_feature != LandingMatrixXFeature::SpeciesGroup
+        {
+            filters.push(LandingFilter::SpeciesGroup(species_group_ids));
         }
-        if let Some(vessel_length_groups) = vessel_length_groups {
-            if y_feature != LandingMatrixYFeature::VesselLength
-                && x_feature != LandingMatrixXFeature::VesselLength
-            {
-                filters.push(LandingFilter::VesselLengthGroups(vessel_length_groups));
-            }
+        if !vessel_length_groups.is_empty()
+            && y_feature != LandingMatrixYFeature::VesselLength
+            && x_feature != LandingMatrixXFeature::VesselLength
+        {
+            filters.push(LandingFilter::VesselLengthGroups(vessel_length_groups));
         }
-        if let Some(vessel_ids) = vessel_ids {
+        if !vessel_ids.is_empty() {
             filters.push(LandingFilter::VesselIds(vessel_ids));
         }
 

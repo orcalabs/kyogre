@@ -9,7 +9,8 @@ use fiskeridir_rs::{
 };
 use futures::{Stream, TryStreamExt};
 use kyogre_core::{
-    BoxIterator, FiskeridirVesselId, LandingsQuery, Range, TripAssemblerId, VesselEventType,
+    BoxIterator, EmptyVecToNone, FiskeridirVesselId, LandingsQuery, Range, TripAssemblerId,
+    VesselEventType,
 };
 use tracing::{error, info};
 
@@ -28,8 +29,9 @@ impl PostgresAdapter {
         &self,
         query: LandingsQuery,
     ) -> impl Stream<Item = Result<Landing>> + '_ {
-        let (catch_area_ids, catch_main_area_ids) = if let Some(cls) = query.catch_locations {
-            let (catch_areas, main_areas): (Vec<_>, Vec<_>) = cls
+        let (catch_area_ids, catch_main_area_ids) = if !query.catch_locations.is_empty() {
+            let (catch_areas, main_areas): (Vec<_>, Vec<_>) = query
+                .catch_locations
                 .into_iter()
                 .map(|v| (v.catch_area(), v.main_area()))
                 .unzip();
@@ -130,13 +132,13 @@ OFFSET
 LIMIT
     $11
             "#,
-            query.ranges as Option<Vec<Range<DateTime<Utc>>>>,
+            query.ranges.empty_to_none() as Option<Vec<Range<DateTime<Utc>>>>,
             catch_area_ids.as_deref(),
             catch_main_area_ids.as_deref(),
-            query.gear_group_ids.as_deref() as Option<&[GearGroup]>,
-            query.vessel_length_groups.as_deref() as Option<&[VesselLengthGroup]>,
-            query.vessel_ids as Option<Vec<FiskeridirVesselId>>,
-            query.species_group_ids.as_deref() as Option<&[SpeciesGroup]>,
+            query.gear_group_ids.empty_to_none() as Option<Vec<GearGroup>>,
+            query.vessel_length_groups.empty_to_none() as Option<Vec<VesselLengthGroup>>,
+            query.vessel_ids.empty_to_none() as Option<Vec<FiskeridirVesselId>>,
+            query.species_group_ids.empty_to_none() as Option<Vec<SpeciesGroup>>,
             query.ordering.map(|o| o as i32),
             query.sorting.map(|s| s as i32),
             query.pagination.offset() as i64,

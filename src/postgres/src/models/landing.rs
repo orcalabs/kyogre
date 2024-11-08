@@ -246,12 +246,12 @@ pub struct LandingMatrixQueryOutput {
 
 #[derive(Debug, Clone)]
 pub struct LandingMatrixArgs {
-    pub months: Option<Vec<i32>>,
-    pub catch_locations: Option<Vec<CatchLocationId>>,
-    pub gear_group_ids: Option<Vec<GearGroup>>,
-    pub species_group_ids: Option<Vec<SpeciesGroup>>,
-    pub vessel_length_groups: Option<Vec<VesselLengthGroup>>,
-    pub fiskeridir_vessel_ids: Option<Vec<FiskeridirVesselId>>,
+    pub months: Vec<i32>,
+    pub catch_locations: Vec<CatchLocationId>,
+    pub gear_group_ids: Vec<GearGroup>,
+    pub species_group_ids: Vec<SpeciesGroup>,
+    pub vessel_length_groups: Vec<VesselLengthGroup>,
+    pub fiskeridir_vessel_ids: Vec<FiskeridirVesselId>,
 }
 
 impl From<LandingMatrixQueryOutput> for kyogre_core::LandingMatrixQueryOutput {
@@ -267,9 +267,7 @@ impl From<LandingMatrixQueryOutput> for kyogre_core::LandingMatrixQueryOutput {
 impl From<LandingMatrixQuery> for LandingMatrixArgs {
     fn from(v: LandingMatrixQuery) -> Self {
         LandingMatrixArgs {
-            months: v
-                .months
-                .map(|months| months.into_iter().map(|m| m as i32).collect()),
+            months: v.months.into_iter().map(|m| m as i32).collect(),
             catch_locations: v.catch_locations,
             gear_group_ids: v.gear_group_ids,
             species_group_ids: v.species_group_ids,

@@ -84,24 +84,24 @@ pub enum HaulsSorting {
 
 #[derive(Default, Debug, Clone)]
 pub struct HaulsQuery {
-    pub ranges: Option<Vec<Range<DateTime<Utc>>>>,
-    pub catch_locations: Option<Vec<CatchLocationId>>,
-    pub gear_group_ids: Option<Vec<GearGroup>>,
-    pub species_group_ids: Option<Vec<SpeciesGroup>>,
-    pub vessel_length_groups: Option<Vec<VesselLengthGroup>>,
-    pub vessel_ids: Option<Vec<FiskeridirVesselId>>,
+    pub ranges: Vec<Range<DateTime<Utc>>>,
+    pub catch_locations: Vec<CatchLocationId>,
+    pub gear_group_ids: Vec<GearGroup>,
+    pub species_group_ids: Vec<SpeciesGroup>,
+    pub vessel_length_groups: Vec<VesselLengthGroup>,
+    pub vessel_ids: Vec<FiskeridirVesselId>,
     pub sorting: Option<HaulsSorting>,
     pub ordering: Option<Ordering>,
 }
 
 #[derive(Debug, Clone)]
 pub struct HaulsMatrixQuery {
-    pub months: Option<Vec<u32>>,
-    pub catch_locations: Option<Vec<CatchLocationId>>,
-    pub gear_group_ids: Option<Vec<GearGroup>>,
-    pub species_group_ids: Option<Vec<SpeciesGroup>>,
-    pub vessel_length_groups: Option<Vec<VesselLengthGroup>>,
-    pub vessel_ids: Option<Vec<FiskeridirVesselId>>,
+    pub months: Vec<u32>,
+    pub catch_locations: Vec<CatchLocationId>,
+    pub gear_group_ids: Vec<GearGroup>,
+    pub species_group_ids: Vec<SpeciesGroup>,
+    pub vessel_length_groups: Vec<VesselLengthGroup>,
+    pub vessel_ids: Vec<FiskeridirVesselId>,
     pub active_filter: ActiveHaulsFilter,
     pub bycatch_percentage: Option<f64>,
     pub majority_species_group: bool,

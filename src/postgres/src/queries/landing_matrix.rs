@@ -4,8 +4,9 @@ use crate::{models::LandingMatrixArgs, PostgresAdapter};
 use fiskeridir_rs::{GearGroup, SpeciesGroup, VesselLengthGroup};
 use futures::TryStreamExt;
 use kyogre_core::{
-    calculate_landing_sum_area_table, ActiveLandingFilter, CatchLocationId, FiskeridirVesselId,
-    LandingMatrix, LandingMatrixQuery, LandingMatrixXFeature, LandingMatrixYFeature,
+    calculate_landing_sum_area_table, ActiveLandingFilter, CatchLocationId, EmptyVecToNone,
+    FiskeridirVesselId, LandingMatrix, LandingMatrixQuery, LandingMatrixXFeature,
+    LandingMatrixYFeature,
 };
 use sqlx::{Pool, Postgres};
 
@@ -124,12 +125,12 @@ GROUP BY
             "#,
             x_feature as i32,
             y_feature as i32,
-            args.months as _,
-            args.catch_locations as Option<Vec<CatchLocationId>>,
-            args.gear_group_ids as Option<Vec<GearGroup>>,
-            args.species_group_ids as Option<Vec<SpeciesGroup>>,
-            args.vessel_length_groups as Option<Vec<VesselLengthGroup>>,
-            args.fiskeridir_vessel_ids as Option<Vec<FiskeridirVesselId>>,
+            args.months.empty_to_none() as _,
+            args.catch_locations.empty_to_none() as Option<Vec<CatchLocationId>>,
+            args.gear_group_ids.empty_to_none() as Option<Vec<GearGroup>>,
+            args.species_group_ids.empty_to_none() as Option<Vec<SpeciesGroup>>,
+            args.vessel_length_groups.empty_to_none() as Option<Vec<VesselLengthGroup>>,
+            args.fiskeridir_vessel_ids.empty_to_none() as Option<Vec<FiskeridirVesselId>>,
         )
         .fetch(&pool)
         .map_ok(From::from)

@@ -24,12 +24,12 @@ pub enum FishingFacilitiesSorting {
 
 #[derive(Debug, Clone)]
 pub struct FishingFacilitiesQuery {
-    pub mmsis: Option<Vec<Mmsi>>,
-    pub fiskeridir_vessel_ids: Option<Vec<FiskeridirVesselId>>,
-    pub tool_types: Option<Vec<FishingFacilityToolType>>,
+    pub mmsis: Vec<Mmsi>,
+    pub fiskeridir_vessel_ids: Vec<FiskeridirVesselId>,
+    pub tool_types: Vec<FishingFacilityToolType>,
     pub active: Option<bool>,
-    pub setup_ranges: Option<Vec<Range<DateTime<Utc>>>>,
-    pub removed_ranges: Option<Vec<Range<DateTime<Utc>>>>,
+    pub setup_ranges: Vec<Range<DateTime<Utc>>>,
+    pub removed_ranges: Vec<Range<DateTime<Utc>>>,
     pub pagination: Pagination<FishingFacilities>,
     pub ordering: Option<Ordering>,
     pub sorting: Option<FishingFacilitiesSorting>,

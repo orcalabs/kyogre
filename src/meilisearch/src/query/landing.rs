@@ -22,23 +22,23 @@ impl From<LandingsQuery> for Query<LandingFilter, Option<LandingSort>, Paginatio
 
         let mut filters = BTreeSet::new();
 
-        if let Some(ranges) = ranges {
+        if !ranges.is_empty() {
             filters.insert(LandingFilter::LandingTimestamp(ranges));
         }
-        if let Some(ids) = gear_group_ids {
-            filters.insert(LandingFilter::GearGroupId(ids));
+        if !gear_group_ids.is_empty() {
+            filters.insert(LandingFilter::GearGroupId(gear_group_ids));
         }
-        if let Some(ids) = species_group_ids {
-            filters.insert(LandingFilter::SpeciesGroupIds(ids));
+        if !species_group_ids.is_empty() {
+            filters.insert(LandingFilter::SpeciesGroupIds(species_group_ids));
         }
-        if let Some(groups) = vessel_length_groups {
-            filters.insert(LandingFilter::VesselLengthGroup(groups));
+        if !vessel_length_groups.is_empty() {
+            filters.insert(LandingFilter::VesselLengthGroup(vessel_length_groups));
         }
-        if let Some(ids) = vessel_ids {
-            filters.insert(LandingFilter::FiskeridirVesselId(ids));
+        if !vessel_ids.is_empty() {
+            filters.insert(LandingFilter::FiskeridirVesselId(vessel_ids));
         }
-        if let Some(locs) = catch_locations {
-            filters.insert(LandingFilter::CatchLocation(locs));
+        if !catch_locations.is_empty() {
+            filters.insert(LandingFilter::CatchLocation(catch_locations));
         }
 
         Self {

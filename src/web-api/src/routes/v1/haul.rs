@@ -20,46 +20,46 @@ use crate::{
 
 #[serde_as]
 #[derive(Default, Debug, Clone, Deserialize, Serialize, IntoParams)]
-#[serde(rename_all = "camelCase")]
+#[serde(default, rename_all = "camelCase")]
 pub struct HaulsParams {
     #[param(rename = "months[]")]
-    pub months: Option<Vec<DateTime<Utc>>>,
+    pub months: Vec<DateTime<Utc>>,
     #[param(rename = "catchLocations[]", value_type = Option<Vec<String>>)]
-    pub catch_locations: Option<Vec<CatchLocationId>>,
-    #[param(rename = "gearGroupIds[]", value_type = Option<Vec<String>>)]
-    #[serde_as(as = "Option<Vec<DisplayFromStr>>")]
-    pub gear_group_ids: Option<Vec<GearGroup>>,
-    #[param(rename = "speciesGroupIds[]", value_type = Option<Vec<String>>)]
-    #[serde_as(as = "Option<Vec<DisplayFromStr>>")]
-    pub species_group_ids: Option<Vec<SpeciesGroup>>,
-    #[param(rename = "vesselLengthGroups[]", value_type = Option<Vec<String>>)]
-    #[serde_as(as = "Option<Vec<DisplayFromStr>>")]
-    pub vessel_length_groups: Option<Vec<VesselLengthGroup>>,
+    pub catch_locations: Vec<CatchLocationId>,
+    #[param(rename = "gearGroupIds[]", value_type = Option<Vec<GearGroup>>)]
+    #[serde_as(as = "Vec<DisplayFromStr>")]
+    pub gear_group_ids: Vec<GearGroup>,
+    #[param(rename = "speciesGroupIds[]", value_type = Option<Vec<SpeciesGroup>>)]
+    #[serde_as(as = "Vec<DisplayFromStr>")]
+    pub species_group_ids: Vec<SpeciesGroup>,
+    #[param(rename = "vesselLengthGroups[]", value_type = Option<Vec<VesselLengthGroup>>)]
+    #[serde_as(as = "Vec<DisplayFromStr>")]
+    pub vessel_length_groups: Vec<VesselLengthGroup>,
     #[param(rename = "fiskeridirVesselIds[]", value_type = Option<Vec<i64>>)]
-    pub fiskeridir_vessel_ids: Option<Vec<FiskeridirVesselId>>,
+    pub fiskeridir_vessel_ids: Vec<FiskeridirVesselId>,
     pub sorting: Option<HaulsSorting>,
     pub ordering: Option<Ordering>,
 }
 
 #[serde_as]
 #[derive(Default, Debug, Clone, Deserialize, Serialize, IntoParams)]
-#[serde(rename_all = "camelCase")]
+#[serde(default, rename_all = "camelCase")]
 pub struct HaulsMatrixParams {
     #[param(rename = "months[]")]
-    pub months: Option<Vec<u32>>,
+    pub months: Vec<u32>,
     #[param(rename = "catchLocations[]", value_type = Option<Vec<String>>)]
-    pub catch_locations: Option<Vec<CatchLocationId>>,
-    #[param(rename = "gearGroupIds[]", value_type = Option<Vec<String>>)]
-    #[serde_as(as = "Option<Vec<DisplayFromStr>>")]
-    pub gear_group_ids: Option<Vec<GearGroup>>,
-    #[param(rename = "speciesGroupIds[]", value_type = Option<Vec<String>>)]
-    #[serde_as(as = "Option<Vec<DisplayFromStr>>")]
-    pub species_group_ids: Option<Vec<SpeciesGroup>>,
-    #[param(rename = "vesselLengthGroups[]", value_type = Option<Vec<String>>)]
-    #[serde_as(as = "Option<Vec<DisplayFromStr>>")]
-    pub vessel_length_groups: Option<Vec<VesselLengthGroup>>,
+    pub catch_locations: Vec<CatchLocationId>,
+    #[param(rename = "gearGroupIds[]", value_type = Option<Vec<GearGroup>>)]
+    #[serde_as(as = "Vec<DisplayFromStr>")]
+    pub gear_group_ids: Vec<GearGroup>,
+    #[param(rename = "speciesGroupIds[]", value_type = Option<Vec<SpeciesGroup>>)]
+    #[serde_as(as = "Vec<DisplayFromStr>")]
+    pub species_group_ids: Vec<SpeciesGroup>,
+    #[param(rename = "vesselLengthGroups[]", value_type = Option<Vec<VesselLengthGroup>>)]
+    #[serde_as(as = "Vec<DisplayFromStr>")]
+    pub vessel_length_groups: Vec<VesselLengthGroup>,
     #[param(rename = "fiskeridirVesselIds[]", value_type = Option<Vec<i64>>)]
-    pub fiskeridir_vessel_ids: Option<Vec<FiskeridirVesselId>>,
+    pub fiskeridir_vessel_ids: Vec<FiskeridirVesselId>,
     pub bycatch_percentage: Option<f64>,
     pub majority_species_group: Option<bool>,
 }
@@ -138,11 +138,11 @@ pub async fn hauls_matrix<T: Database + 'static, S: Cache>(
 
     // Requests for prior month's data or newer will not exist in the database, but the query will
     // still take over 10s to complete which we want to avoid.
-    if let Some(months) = &query.months {
+    if !query.months.is_empty() {
         let current_time = Utc::now();
         let month_cutoff = (current_time.year() * 12 + current_time.month0() as i32 - 1) as u32;
 
-        if !months.iter().any(|v| *v < month_cutoff) {
+        if !query.months.iter().any(|v| *v < month_cutoff) {
             return Ok(Response::new(HaulsMatrix::empty(path.active_filter)));
         }
     }
@@ -377,7 +377,7 @@ impl From<kyogre_core::WhaleCatch> for WhaleCatch {
 impl From<HaulsParams> for HaulsQuery {
     fn from(v: HaulsParams) -> Self {
         Self {
-            ranges: v.months.map(months_to_date_ranges),
+            ranges: months_to_date_ranges(v.months),
             catch_locations: v.catch_locations,
             gear_group_ids: v.gear_group_ids,
             species_group_ids: v.species_group_ids,
@@ -428,12 +428,12 @@ mod tests {
         let res2: DateTime<Utc> = "2002-09-1T00:00:00Z".parse().unwrap();
 
         let params = HaulsParams {
-            months: Some(vec![month1, month2, month3, month4, month5, month6]),
+            months: vec![month1, month2, month3, month4, month5, month6],
             ..Default::default()
         };
 
         let query = HaulsQuery::from(params);
-        let ranges = query.ranges.unwrap();
+        let ranges = query.ranges;
 
         assert_eq!(ranges.len(), 2);
         assert_eq!(ranges[0].start, Bound::Included(month1));

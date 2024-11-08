@@ -27,3 +27,16 @@ pub use retry::*;
 pub trait Scraper: Send + Sync {
     async fn run(&self);
 }
+
+pub trait EmptyVecToNone
+where
+    Self: Sized,
+{
+    fn empty_to_none(self) -> Option<Self>;
+}
+
+impl<T> EmptyVecToNone for Vec<T> {
+    fn empty_to_none(self) -> Option<Self> {
+        (!self.is_empty()).then_some(self)
+    }
+}
