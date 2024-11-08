@@ -19,23 +19,23 @@ impl From<HaulsQuery> for Query<HaulFilter, Option<HaulSort>, ()> {
 
         let mut filters = BTreeSet::new();
 
-        if let Some(ranges) = ranges {
+        if !ranges.is_empty() {
             filters.insert(HaulFilter::StartTimestamp(ranges));
         }
-        if let Some(ids) = gear_group_ids {
-            filters.insert(HaulFilter::GearGroupId(ids));
+        if !gear_group_ids.is_empty() {
+            filters.insert(HaulFilter::GearGroupId(gear_group_ids));
         }
-        if let Some(ids) = species_group_ids {
-            filters.insert(HaulFilter::SpeciesGroupIds(ids));
+        if !species_group_ids.is_empty() {
+            filters.insert(HaulFilter::SpeciesGroupIds(species_group_ids));
         }
-        if let Some(groups) = vessel_length_groups {
-            filters.insert(HaulFilter::VesselLengthGroup(groups));
+        if !vessel_length_groups.is_empty() {
+            filters.insert(HaulFilter::VesselLengthGroup(vessel_length_groups));
         }
-        if let Some(ids) = vessel_ids {
-            filters.insert(HaulFilter::FiskeridirVesselId(ids));
+        if !vessel_ids.is_empty() {
+            filters.insert(HaulFilter::FiskeridirVesselId(vessel_ids));
         }
-        if let Some(locs) = catch_locations {
-            filters.insert(HaulFilter::CatchLocations(locs));
+        if !catch_locations.is_empty() {
+            filters.insert(HaulFilter::CatchLocations(catch_locations));
         }
 
         Self {

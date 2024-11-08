@@ -194,34 +194,31 @@ impl From<LandingMatrixQuery> for LandingFeatures {
     fn from(value: LandingMatrixQuery) -> Self {
         LandingFeatures {
             active_filter: value.active_filter as u32,
-            months: value.months.unwrap_or_default(),
+            months: value.months,
             catch_locations: value
                 .catch_locations
-                .map(|v| {
-                    v.into_iter()
-                        .map(|v| CatchLocation {
-                            main_area_id: v.main_area() as u32,
-                            catch_area_id: v.catch_area() as u32,
-                        })
-                        .collect()
+                .into_iter()
+                .map(|v| CatchLocation {
+                    main_area_id: v.main_area() as u32,
+                    catch_area_id: v.catch_area() as u32,
                 })
-                .unwrap_or_default(),
+                .collect(),
             species_group_ids: value
                 .species_group_ids
-                .map(|v| v.into_iter().map(|v| v as u32).collect())
-                .unwrap_or_default(),
-            gear_group_ids: value
-                .gear_group_ids
-                .map(|v| v.into_iter().map(|v| v as u32).collect())
-                .unwrap_or_default(),
+                .into_iter()
+                .map(|v| v as u32)
+                .collect(),
+            gear_group_ids: value.gear_group_ids.into_iter().map(|v| v as u32).collect(),
             vessel_length_groups: value
                 .vessel_length_groups
-                .map(|v| v.into_iter().map(|v| v as u32).collect())
-                .unwrap_or_default(),
+                .into_iter()
+                .map(|v| v as u32)
+                .collect(),
             fiskeridir_vessel_ids: value
                 .vessel_ids
-                .map(|v| v.into_iter().map(|v| v.into_inner()).collect())
-                .unwrap_or_default(),
+                .into_iter()
+                .map(|v| v.into_inner())
+                .collect(),
         }
     }
 }
@@ -255,57 +252,41 @@ impl TryFrom<LandingFeatures> for LandingQueryWrapper {
 
     fn try_from(value: LandingFeatures) -> std::result::Result<Self, Self::Error> {
         Ok(LandingQueryWrapper(LandingMatrixQuery {
-            months: (!value.months.is_empty()).then_some(value.months),
-            catch_locations: (!value.catch_locations.is_empty()).then(|| {
-                value
-                    .catch_locations
-                    .into_iter()
-                    .map(|v| CatchLocationId::new(v.main_area_id as i32, v.catch_area_id as i32))
-                    .collect()
-            }),
-            gear_group_ids: (!value.gear_group_ids.is_empty())
-                .then(|| {
-                    value
-                        .gear_group_ids
-                        .into_iter()
-                        .map(|v| {
-                            GearGroup::from_u32(v)
-                                .ok_or_else(|| InvalidParametersSnafu { value: v }.build())
-                        })
-                        .collect::<std::result::Result<Vec<_>, Error>>()
+            months: value.months,
+            catch_locations: value
+                .catch_locations
+                .into_iter()
+                .map(|v| CatchLocationId::new(v.main_area_id as i32, v.catch_area_id as i32))
+                .collect(),
+            gear_group_ids: value
+                .gear_group_ids
+                .into_iter()
+                .map(|v| {
+                    GearGroup::from_u32(v)
+                        .ok_or_else(|| InvalidParametersSnafu { value: v }.build())
                 })
-                .transpose()?,
-            species_group_ids: (!value.species_group_ids.is_empty())
-                .then(|| {
-                    value
-                        .species_group_ids
-                        .into_iter()
-                        .map(|v| {
-                            SpeciesGroup::from_u32(v)
-                                .ok_or_else(|| InvalidParametersSnafu { value: v }.build())
-                        })
-                        .collect::<std::result::Result<Vec<_>, Error>>()
+                .collect::<std::result::Result<Vec<_>, Error>>()?,
+            species_group_ids: value
+                .species_group_ids
+                .into_iter()
+                .map(|v| {
+                    SpeciesGroup::from_u32(v)
+                        .ok_or_else(|| InvalidParametersSnafu { value: v }.build())
                 })
-                .transpose()?,
-            vessel_length_groups: (!value.vessel_length_groups.is_empty())
-                .then(|| {
-                    value
-                        .vessel_length_groups
-                        .into_iter()
-                        .map(|v| {
-                            VesselLengthGroup::from_u32(v)
-                                .ok_or_else(|| InvalidParametersSnafu { value: v }.build())
-                        })
-                        .collect::<std::result::Result<Vec<_>, Error>>()
+                .collect::<std::result::Result<Vec<_>, Error>>()?,
+            vessel_length_groups: value
+                .vessel_length_groups
+                .into_iter()
+                .map(|v| {
+                    VesselLengthGroup::from_u32(v)
+                        .ok_or_else(|| InvalidParametersSnafu { value: v }.build())
                 })
-                .transpose()?,
-            vessel_ids: (!value.fiskeridir_vessel_ids.is_empty()).then(|| {
-                value
-                    .fiskeridir_vessel_ids
-                    .into_iter()
-                    .map(FiskeridirVesselId::new)
-                    .collect()
-            }),
+                .collect::<std::result::Result<Vec<_>, Error>>()?,
+            vessel_ids: value
+                .fiskeridir_vessel_ids
+                .into_iter()
+                .map(FiskeridirVesselId::new)
+                .collect(),
             active_filter: ActiveLandingFilter::from_u32(value.active_filter).ok_or_else(|| {
                 InvalidParametersSnafu {
                     value: value.active_filter,
@@ -320,34 +301,31 @@ impl From<HaulsMatrixQuery> for HaulFeatures {
     fn from(value: HaulsMatrixQuery) -> Self {
         HaulFeatures {
             active_filter: value.active_filter as u32,
-            months: value.months.unwrap_or_default(),
+            months: value.months,
             catch_locations: value
                 .catch_locations
-                .map(|v| {
-                    v.into_iter()
-                        .map(|v| CatchLocation {
-                            main_area_id: v.main_area() as u32,
-                            catch_area_id: v.catch_area() as u32,
-                        })
-                        .collect()
+                .into_iter()
+                .map(|v| CatchLocation {
+                    main_area_id: v.main_area() as u32,
+                    catch_area_id: v.catch_area() as u32,
                 })
-                .unwrap_or_default(),
+                .collect(),
             species_group_ids: value
                 .species_group_ids
-                .map(|v| v.into_iter().map(|v| v as u32).collect())
-                .unwrap_or_default(),
-            gear_group_ids: value
-                .gear_group_ids
-                .map(|v| v.into_iter().map(|v| v as u32).collect())
-                .unwrap_or_default(),
+                .into_iter()
+                .map(|v| v as u32)
+                .collect(),
+            gear_group_ids: value.gear_group_ids.into_iter().map(|v| v as u32).collect(),
             vessel_length_groups: value
                 .vessel_length_groups
-                .map(|v| v.into_iter().map(|v| v as u32).collect())
-                .unwrap_or_default(),
+                .into_iter()
+                .map(|v| v as u32)
+                .collect(),
             fiskeridir_vessel_ids: value
                 .vessel_ids
-                .map(|v| v.into_iter().map(|v| v.into_inner()).collect())
-                .unwrap_or_default(),
+                .into_iter()
+                .map(|v| v.into_inner())
+                .collect(),
             bycatch_percentage: value.bycatch_percentage,
             majority_species_group: value.majority_species_group,
         }
@@ -372,57 +350,41 @@ impl TryFrom<HaulFeatures> for HaulQueryWrapper {
 
     fn try_from(value: HaulFeatures) -> std::result::Result<Self, Self::Error> {
         Ok(HaulQueryWrapper(HaulsMatrixQuery {
-            months: (!value.months.is_empty()).then_some(value.months),
-            catch_locations: (!value.catch_locations.is_empty()).then(|| {
-                value
-                    .catch_locations
-                    .into_iter()
-                    .map(|v| CatchLocationId::new(v.main_area_id as i32, v.catch_area_id as i32))
-                    .collect()
-            }),
-            gear_group_ids: (!value.gear_group_ids.is_empty())
-                .then(|| {
-                    value
-                        .gear_group_ids
-                        .into_iter()
-                        .map(|v| {
-                            GearGroup::from_u32(v)
-                                .ok_or_else(|| InvalidParametersSnafu { value: v }.build())
-                        })
-                        .collect::<std::result::Result<Vec<_>, Error>>()
+            months: value.months,
+            catch_locations: value
+                .catch_locations
+                .into_iter()
+                .map(|v| CatchLocationId::new(v.main_area_id as i32, v.catch_area_id as i32))
+                .collect(),
+            gear_group_ids: value
+                .gear_group_ids
+                .into_iter()
+                .map(|v| {
+                    GearGroup::from_u32(v)
+                        .ok_or_else(|| InvalidParametersSnafu { value: v }.build())
                 })
-                .transpose()?,
-            species_group_ids: (!value.species_group_ids.is_empty())
-                .then(|| {
-                    value
-                        .species_group_ids
-                        .into_iter()
-                        .map(|v| {
-                            SpeciesGroup::from_u32(v)
-                                .ok_or_else(|| InvalidParametersSnafu { value: v }.build())
-                        })
-                        .collect::<std::result::Result<Vec<_>, Error>>()
+                .collect::<std::result::Result<Vec<_>, Error>>()?,
+            species_group_ids: value
+                .species_group_ids
+                .into_iter()
+                .map(|v| {
+                    SpeciesGroup::from_u32(v)
+                        .ok_or_else(|| InvalidParametersSnafu { value: v }.build())
                 })
-                .transpose()?,
-            vessel_length_groups: (!value.vessel_length_groups.is_empty())
-                .then(|| {
-                    value
-                        .vessel_length_groups
-                        .into_iter()
-                        .map(|v| {
-                            VesselLengthGroup::from_u32(v)
-                                .ok_or_else(|| InvalidParametersSnafu { value: v }.build())
-                        })
-                        .collect::<std::result::Result<Vec<_>, Error>>()
+                .collect::<std::result::Result<Vec<_>, Error>>()?,
+            vessel_length_groups: value
+                .vessel_length_groups
+                .into_iter()
+                .map(|v| {
+                    VesselLengthGroup::from_u32(v)
+                        .ok_or_else(|| InvalidParametersSnafu { value: v }.build())
                 })
-                .transpose()?,
-            vessel_ids: (!value.fiskeridir_vessel_ids.is_empty()).then(|| {
-                value
-                    .fiskeridir_vessel_ids
-                    .into_iter()
-                    .map(FiskeridirVesselId::new)
-                    .collect()
-            }),
+                .collect::<std::result::Result<Vec<_>, Error>>()?,
+            vessel_ids: value
+                .fiskeridir_vessel_ids
+                .into_iter()
+                .map(FiskeridirVesselId::new)
+                .collect(),
             active_filter: ActiveHaulsFilter::from_u32(value.active_filter).ok_or_else(|| {
                 InvalidParametersSnafu {
                     value: value.active_filter,

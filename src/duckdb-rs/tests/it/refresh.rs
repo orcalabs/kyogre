@@ -16,12 +16,12 @@ async fn test_haul_refresh_with_no_data_succeeds_and_returns_miss_on_subsequent_
         let cache_result = helper
             .cache
             .hauls_matrix(&HaulsMatrixQuery {
-                months: None,
-                catch_locations: None,
-                gear_group_ids: None,
-                species_group_ids: None,
-                vessel_length_groups: None,
-                vessel_ids: None,
+                months: vec![],
+                catch_locations: vec![],
+                gear_group_ids: vec![],
+                species_group_ids: vec![],
+                vessel_length_groups: vec![],
+                vessel_ids: vec![],
                 active_filter: ActiveHaulsFilter::Date,
                 bycatch_percentage: None,
                 majority_species_group: false,
@@ -54,12 +54,12 @@ async fn test_haul_returns_hit_after_refreshing_with_data() {
         let cache_result = helper
             .cache
             .hauls_matrix(&HaulsMatrixQuery {
-                months: None,
-                catch_locations: None,
-                gear_group_ids: None,
-                species_group_ids: None,
-                vessel_length_groups: None,
-                vessel_ids: None,
+                months: vec![],
+                catch_locations: vec![],
+                gear_group_ids: vec![],
+                species_group_ids: vec![],
+                vessel_length_groups: vec![],
+                vessel_ids: vec![],
                 active_filter: ActiveHaulsFilter::Date,
                 bycatch_percentage: None,
                 majority_species_group: false,
@@ -81,12 +81,12 @@ async fn test_landing_refresh_with_no_data_succeeds_and_returns_miss_on_subseque
         let cache_result = helper
             .cache
             .landing_matrix(&LandingMatrixQuery {
-                months: None,
-                catch_locations: None,
-                gear_group_ids: None,
-                species_group_ids: None,
-                vessel_length_groups: None,
-                vessel_ids: None,
+                months: vec![],
+                catch_locations: vec![],
+                gear_group_ids: vec![],
+                species_group_ids: vec![],
+                vessel_length_groups: vec![],
+                vessel_ids: vec![],
                 active_filter: ActiveLandingFilter::Date,
             })
             .await
@@ -110,12 +110,12 @@ async fn test_landing_returns_hit_after_refreshing_with_data() {
         let cache_result = helper
             .cache
             .landing_matrix(&LandingMatrixQuery {
-                months: None,
-                catch_locations: None,
-                gear_group_ids: None,
-                species_group_ids: None,
-                vessel_length_groups: None,
-                vessel_ids: None,
+                months: vec![],
+                catch_locations: vec![],
+                gear_group_ids: vec![],
+                species_group_ids: vec![],
+                vessel_length_groups: vec![],
+                vessel_ids: vec![],
                 active_filter: ActiveLandingFilter::Date,
             })
             .await

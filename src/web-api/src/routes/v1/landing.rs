@@ -22,21 +22,27 @@ use crate::{
 #[derive(Default, Debug, Clone, Deserialize, Serialize, IntoParams)]
 #[serde(rename_all = "camelCase")]
 pub struct LandingsParams {
-    #[param(rename = "months[]")]
-    pub months: Option<Vec<DateTime<Utc>>>,
+    #[serde(default)]
+    #[param(rename = "months[]", value_type = Option<Vec<DateTime<Utc>>>)]
+    pub months: Vec<DateTime<Utc>>,
+    #[serde(default)]
     #[param(rename = "catchLocations[]", value_type = Option<Vec<String>>)]
-    pub catch_locations: Option<Vec<CatchLocationId>>,
-    #[param(rename = "gearGroupIds[]", value_type = Option<Vec<String>>)]
-    #[serde_as(as = "Option<Vec<DisplayFromStr>>")]
-    pub gear_group_ids: Option<Vec<GearGroup>>,
-    #[param(rename = "speciesGroupIds[]", value_type = Option<Vec<String>>)]
-    #[serde_as(as = "Option<Vec<DisplayFromStr>>")]
-    pub species_group_ids: Option<Vec<SpeciesGroup>>,
-    #[param(rename = "vesselLengthGroups[]", value_type = Option<Vec<String>>)]
-    #[serde_as(as = "Option<Vec<DisplayFromStr>>")]
-    pub vessel_length_groups: Option<Vec<VesselLengthGroup>>,
+    pub catch_locations: Vec<CatchLocationId>,
+    #[serde(default)]
+    #[param(rename = "gearGroupIds[]", value_type = Option<Vec<GearGroup>>)]
+    #[serde_as(as = "Vec<DisplayFromStr>")]
+    pub gear_group_ids: Vec<GearGroup>,
+    #[serde(default)]
+    #[param(rename = "speciesGroupIds[]", value_type = Option<Vec<SpeciesGroup>>)]
+    #[serde_as(as = "Vec<DisplayFromStr>")]
+    pub species_group_ids: Vec<SpeciesGroup>,
+    #[serde(default)]
+    #[param(rename = "vesselLengthGroups[]", value_type = Option<Vec<VesselLengthGroup>>)]
+    #[serde_as(as = "Vec<DisplayFromStr>")]
+    pub vessel_length_groups: Vec<VesselLengthGroup>,
+    #[serde(default)]
     #[param(rename = "fiskeridirVesselIds[]", value_type = Option<Vec<i64>>)]
-    pub fiskeridir_vessel_ids: Option<Vec<FiskeridirVesselId>>,
+    pub fiskeridir_vessel_ids: Vec<FiskeridirVesselId>,
     pub sorting: Option<LandingsSorting>,
     pub ordering: Option<Ordering>,
     pub limit: Option<u64>,
@@ -45,23 +51,23 @@ pub struct LandingsParams {
 
 #[serde_as]
 #[derive(Default, Debug, Clone, Deserialize, Serialize, IntoParams)]
-#[serde(rename_all = "camelCase")]
+#[serde(default, rename_all = "camelCase")]
 pub struct LandingMatrixParams {
     #[param(rename = "months[]")]
-    pub months: Option<Vec<u32>>,
+    pub months: Vec<u32>,
     #[param(rename = "catchLocations[]", value_type = Option<Vec<String>>)]
-    pub catch_locations: Option<Vec<CatchLocationId>>,
-    #[param(rename = "gearGroupIds[]", value_type = Option<Vec<String>>)]
-    #[serde_as(as = "Option<Vec<DisplayFromStr>>")]
-    pub gear_group_ids: Option<Vec<GearGroup>>,
-    #[param(rename = "speciesGroupIds[]", value_type = Option<Vec<String>>)]
-    #[serde_as(as = "Option<Vec<DisplayFromStr>>")]
-    pub species_group_ids: Option<Vec<SpeciesGroup>>,
-    #[param(rename = "vesselLengthGroups[]", value_type = Option<Vec<String>>)]
-    #[serde_as(as = "Option<Vec<DisplayFromStr>>")]
-    pub vessel_length_groups: Option<Vec<VesselLengthGroup>>,
+    pub catch_locations: Vec<CatchLocationId>,
+    #[param(rename = "gearGroupIds[]", value_type = Option<Vec<GearGroup>>)]
+    #[serde_as(as = "Vec<DisplayFromStr>")]
+    pub gear_group_ids: Vec<GearGroup>,
+    #[param(rename = "speciesGroupIds[]", value_type = Option<Vec<SpeciesGroup>>)]
+    #[serde_as(as = "Vec<DisplayFromStr>")]
+    pub species_group_ids: Vec<SpeciesGroup>,
+    #[param(rename = "vesselLengthGroups[]", value_type = Option<Vec<VesselLengthGroup>>)]
+    #[serde_as(as = "Vec<DisplayFromStr>")]
+    pub vessel_length_groups: Vec<VesselLengthGroup>,
     #[param(rename = "fiskeridirVesselIds[]", value_type = Option<Vec<i64>>)]
-    pub fiskeridir_vessel_ids: Option<Vec<FiskeridirVesselId>>,
+    pub fiskeridir_vessel_ids: Vec<FiskeridirVesselId>,
 }
 
 #[utoipa::path(
@@ -252,7 +258,7 @@ impl From<LandingsParams> for LandingsQuery {
     fn from(v: LandingsParams) -> Self {
         Self {
             pagination: Pagination::<Landings>::new(v.limit, v.offset),
-            ranges: v.months.map(months_to_date_ranges),
+            ranges: months_to_date_ranges(v.months),
             catch_locations: v.catch_locations,
             gear_group_ids: v.gear_group_ids,
             species_group_ids: v.species_group_ids,

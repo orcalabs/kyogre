@@ -23,18 +23,23 @@ use crate::{
 #[derive(Default, Debug, Clone, Deserialize, Serialize, IntoParams)]
 #[serde(rename_all = "camelCase")]
 pub struct FishingFacilitiesParams {
+    #[serde(default)]
     #[param(rename = "mmsis[]", value_type = Option<Vec<i32>>)]
-    pub mmsis: Option<Vec<Mmsi>>,
+    pub mmsis: Vec<Mmsi>,
+    #[serde(default)]
     #[param(rename = "fiskeridirVesselIds[]", value_type = Option<Vec<i64>>)]
-    pub fiskeridir_vessel_ids: Option<Vec<FiskeridirVesselId>>,
-    #[param(rename = "toolTypes[]", value_type = Option<Vec<String>>)]
-    #[serde_as(as = "Option<Vec<DisplayFromStr>>")]
-    pub tool_types: Option<Vec<FishingFacilityToolType>>,
+    pub fiskeridir_vessel_ids: Vec<FiskeridirVesselId>,
+    #[serde(default)]
+    #[param(rename = "toolTypes[]", value_type = Option<Vec<FishingFacilityToolType>>)]
+    #[serde_as(as = "Vec<DisplayFromStr>")]
+    pub tool_types: Vec<FishingFacilityToolType>,
     pub active: Option<bool>,
+    #[serde(default)]
     #[param(rename = "setupRanges[]", value_type = Option<Vec<String>>)]
-    pub setup_ranges: Option<Vec<Range<DateTime<Utc>>>>,
+    pub setup_ranges: Vec<Range<DateTime<Utc>>>,
+    #[serde(default)]
     #[param(rename = "removedRanges[]", value_type = Option<Vec<String>>)]
-    pub removed_ranges: Option<Vec<Range<DateTime<Utc>>>>,
+    pub removed_ranges: Vec<Range<DateTime<Utc>>>,
     pub limit: Option<u64>,
     pub offset: Option<u64>,
     pub ordering: Option<Ordering>,
