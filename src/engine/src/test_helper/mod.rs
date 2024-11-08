@@ -1116,12 +1116,12 @@ impl TestStateBuilder {
         let mut fishing_facilities = self
             .storage
             .fishing_facilities(FishingFacilitiesQuery {
-                mmsis: None,
-                fiskeridir_vessel_ids: None,
-                tool_types: None,
+                mmsis: vec![],
+                fiskeridir_vessel_ids: vec![],
+                tool_types: vec![],
                 active: None,
-                setup_ranges: None,
-                removed_ranges: None,
+                setup_ranges: vec![],
+                removed_ranges: vec![],
                 ordering: None,
                 sorting: None,
                 pagination: Pagination::<FishingFacilities>::new(Some(100), Some(0)),

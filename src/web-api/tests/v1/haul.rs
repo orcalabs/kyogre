@@ -72,7 +72,7 @@ async fn test_hauls_returns_hauls_in_specified_months() {
         helper.refresh_cache().await;
 
         let params = HaulsParams {
-            months: Some(vec![month1, month2]),
+            months: vec![month1, month2],
             ..Default::default()
         };
 
@@ -106,7 +106,7 @@ async fn test_hauls_returns_hauls_in_catch_location() {
         helper.refresh_cache().await;
 
         let params = HaulsParams {
-            catch_locations: Some(vec![CatchLocationId::new(9, 5), CatchLocationId::new(9, 4)]),
+            catch_locations: vec![CatchLocationId::new(9, 5), CatchLocationId::new(9, 4)],
             ..Default::default()
         };
 
@@ -138,7 +138,7 @@ async fn test_hauls_returns_hauls_with_gear_group_ids() {
         helper.refresh_cache().await;
 
         let params = HaulsParams {
-            gear_group_ids: Some(vec![GearGroup::Seine, GearGroup::LobsterTrapAndFykeNets]),
+            gear_group_ids: vec![GearGroup::Seine, GearGroup::LobsterTrapAndFykeNets],
             ..Default::default()
         };
 
@@ -170,10 +170,7 @@ async fn test_hauls_returns_hauls_with_species_group_ids() {
         helper.refresh_cache().await;
 
         let params = HaulsParams {
-            species_group_ids: Some(vec![
-                SpeciesGroup::GreenlandHalibut,
-                SpeciesGroup::GoldenRedfish,
-            ]),
+            species_group_ids: vec![SpeciesGroup::GreenlandHalibut, SpeciesGroup::GoldenRedfish],
             ..Default::default()
         };
 
@@ -205,10 +202,10 @@ async fn test_hauls_returns_hauls_with_vessel_length_groups() {
         helper.refresh_cache().await;
 
         let params = HaulsParams {
-            vessel_length_groups: Some(vec![
+            vessel_length_groups: vec![
                 VesselLengthGroup::UnderEleven,
                 VesselLengthGroup::ElevenToFifteen,
-            ]),
+            ],
             ..Default::default()
         };
 
@@ -238,7 +235,7 @@ async fn test_hauls_returns_hauls_with_fiskeridir_vessel_ids() {
         helper.refresh_cache().await;
 
         let params = HaulsParams {
-            fiskeridir_vessel_ids: Some(vec![vessel_id1, vessel_id2]),
+            fiskeridir_vessel_ids: vec![vessel_id1, vessel_id2],
             sorting: Some(HaulsSorting::StartDate),
             ordering: Some(Ordering::Asc),
             ..Default::default()

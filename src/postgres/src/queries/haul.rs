@@ -126,12 +126,12 @@ GROUP BY
             "#,
             x_feature as i32,
             y_feature as i32,
-            args.months as _,
-            args.catch_locations as Option<Vec<CatchLocationId>>,
-            args.gear_group_ids as Option<Vec<GearGroup>>,
-            args.species_group_ids as Option<Vec<SpeciesGroup>>,
-            args.vessel_length_groups as Option<Vec<VesselLengthGroup>>,
-            args.fiskeridir_vessel_ids as Option<Vec<FiskeridirVesselId>>,
+            args.months.empty_to_none() as _,
+            args.catch_locations.empty_to_none() as Option<Vec<CatchLocationId>>,
+            args.gear_group_ids.empty_to_none() as Option<Vec<GearGroup>>,
+            args.species_group_ids.empty_to_none() as Option<Vec<SpeciesGroup>>,
+            args.vessel_length_groups.empty_to_none() as Option<Vec<VesselLengthGroup>>,
+            args.fiskeridir_vessel_ids.empty_to_none() as Option<Vec<FiskeridirVesselId>>,
             args.bycatch_percentage,
             args.majority_species_group,
         )
@@ -219,12 +219,12 @@ ORDER BY
         AND $8 = 3 THEN total_living_weight
     END DESC
             "#,
-            query.ranges as Option<Vec<Range<DateTime<Utc>>>>,
-            query.catch_locations as Option<Vec<CatchLocationId>>,
-            query.gear_group_ids as Option<Vec<GearGroup>>,
-            query.species_group_ids as Option<Vec<SpeciesGroup>>,
-            query.vessel_length_groups as Option<Vec<VesselLengthGroup>>,
-            query.vessel_ids as Option<Vec<FiskeridirVesselId>>,
+            query.ranges.empty_to_none() as Option<Vec<Range<DateTime<Utc>>>>,
+            query.catch_locations.empty_to_none() as Option<Vec<CatchLocationId>>,
+            query.gear_group_ids.empty_to_none() as Option<Vec<GearGroup>>,
+            query.species_group_ids.empty_to_none() as Option<Vec<SpeciesGroup>>,
+            query.vessel_length_groups.empty_to_none() as Option<Vec<VesselLengthGroup>>,
+            query.vessel_ids.empty_to_none() as Option<Vec<FiskeridirVesselId>>,
             query.ordering.map(|o| o as i32),
             query.sorting.map(|s| s as i32),
         )
@@ -922,12 +922,12 @@ GROUP BY
 
 #[derive(Debug, Clone)]
 pub struct HaulsMatrixArgs {
-    pub months: Option<Vec<i32>>,
-    pub catch_locations: Option<Vec<CatchLocationId>>,
-    pub gear_group_ids: Option<Vec<GearGroup>>,
-    pub species_group_ids: Option<Vec<SpeciesGroup>>,
-    pub vessel_length_groups: Option<Vec<VesselLengthGroup>>,
-    pub fiskeridir_vessel_ids: Option<Vec<FiskeridirVesselId>>,
+    pub months: Vec<i32>,
+    pub catch_locations: Vec<CatchLocationId>,
+    pub gear_group_ids: Vec<GearGroup>,
+    pub species_group_ids: Vec<SpeciesGroup>,
+    pub vessel_length_groups: Vec<VesselLengthGroup>,
+    pub fiskeridir_vessel_ids: Vec<FiskeridirVesselId>,
     pub bycatch_percentage: Option<f64>,
     pub majority_species_group: bool,
 }
@@ -935,9 +935,7 @@ pub struct HaulsMatrixArgs {
 impl From<HaulsMatrixQuery> for HaulsMatrixArgs {
     fn from(v: HaulsMatrixQuery) -> Self {
         HaulsMatrixArgs {
-            months: v
-                .months
-                .map(|months| months.into_iter().map(|m| m as i32).collect()),
+            months: v.months.into_iter().map(|m| m as i32).collect(),
             catch_locations: v.catch_locations,
             gear_group_ids: v.gear_group_ids,
             species_group_ids: v.species_group_ids,

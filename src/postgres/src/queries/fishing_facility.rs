@@ -4,8 +4,8 @@ use futures::{Stream, TryStreamExt};
 use geo_types::geometry::Geometry;
 use geozero::wkb;
 use kyogre_core::{
-    FishingFacilitiesQuery, FishingFacility, FishingFacilityApiSource, FishingFacilityToolType,
-    FiskeridirVesselId, Mmsi, Range,
+    EmptyVecToNone, FishingFacilitiesQuery, FishingFacility, FishingFacilityApiSource,
+    FishingFacilityToolType, FiskeridirVesselId, Mmsi, Range,
 };
 
 use crate::{
@@ -347,12 +347,12 @@ OFFSET
 LIMIT
     $10
             "#,
-            query.mmsis as Option<Vec<Mmsi>>,
-            query.fiskeridir_vessel_ids as Option<Vec<FiskeridirVesselId>>,
-            query.tool_types as Option<Vec<FishingFacilityToolType>>,
+            query.mmsis.empty_to_none() as Option<Vec<Mmsi>>,
+            query.fiskeridir_vessel_ids.empty_to_none() as Option<Vec<FiskeridirVesselId>>,
+            query.tool_types.empty_to_none() as Option<Vec<FishingFacilityToolType>>,
             query.active,
-            query.setup_ranges as Option<Vec<Range<DateTime<Utc>>>>,
-            query.removed_ranges as Option<Vec<Range<DateTime<Utc>>>>,
+            query.setup_ranges.empty_to_none() as Option<Vec<Range<DateTime<Utc>>>>,
+            query.removed_ranges.empty_to_none() as Option<Vec<Range<DateTime<Utc>>>>,
             query.ordering.unwrap_or_default() as i32,
             query.sorting.unwrap_or_default() as i32,
             query.pagination.offset() as i64,

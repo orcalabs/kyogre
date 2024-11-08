@@ -58,24 +58,24 @@ pub enum LandingsSorting {
 #[derive(Default, Debug, Clone)]
 pub struct LandingsQuery {
     pub pagination: Pagination<Landings>,
-    pub ranges: Option<Vec<Range<DateTime<Utc>>>>,
-    pub catch_locations: Option<Vec<CatchLocationId>>,
-    pub gear_group_ids: Option<Vec<GearGroup>>,
-    pub species_group_ids: Option<Vec<SpeciesGroup>>,
-    pub vessel_length_groups: Option<Vec<VesselLengthGroup>>,
-    pub vessel_ids: Option<Vec<FiskeridirVesselId>>,
+    pub ranges: Vec<Range<DateTime<Utc>>>,
+    pub catch_locations: Vec<CatchLocationId>,
+    pub gear_group_ids: Vec<GearGroup>,
+    pub species_group_ids: Vec<SpeciesGroup>,
+    pub vessel_length_groups: Vec<VesselLengthGroup>,
+    pub vessel_ids: Vec<FiskeridirVesselId>,
     pub sorting: Option<LandingsSorting>,
     pub ordering: Option<Ordering>,
 }
 
 #[derive(Debug, Clone)]
 pub struct LandingMatrixQuery {
-    pub months: Option<Vec<u32>>,
-    pub catch_locations: Option<Vec<CatchLocationId>>,
-    pub gear_group_ids: Option<Vec<GearGroup>>,
-    pub species_group_ids: Option<Vec<SpeciesGroup>>,
-    pub vessel_length_groups: Option<Vec<VesselLengthGroup>>,
-    pub vessel_ids: Option<Vec<FiskeridirVesselId>>,
+    pub months: Vec<u32>,
+    pub catch_locations: Vec<CatchLocationId>,
+    pub gear_group_ids: Vec<GearGroup>,
+    pub species_group_ids: Vec<SpeciesGroup>,
+    pub vessel_length_groups: Vec<VesselLengthGroup>,
+    pub vessel_ids: Vec<FiskeridirVesselId>,
     pub active_filter: ActiveLandingFilter,
 }
 
