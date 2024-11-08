@@ -57,7 +57,7 @@ async fn test_average_fuel_works() {
             .get_average_fuel_consumption(FuelConsumptionAverageParams {
                 start_date: start,
                 end_date: end,
-                gear_groups: None,
+                gear_groups: vec![],
                 length_group: None,
             })
             .await

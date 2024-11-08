@@ -22,9 +22,10 @@ impl PostgresAdapter {
         &self,
         start_date: DateTime<Utc>,
         end_date: DateTime<Utc>,
-        gear_groups: Option<Vec<GearGroup>>,
+        gear_groups: Vec<GearGroup>,
         length_group: Option<VesselLengthGroup>,
     ) -> Result<Option<f64>> {
+        let gear_groups = (!gear_groups.is_empty()).then_some(gear_groups);
         Ok(sqlx::query!(
             r#"
 SELECT
