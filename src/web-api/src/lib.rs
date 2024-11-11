@@ -48,7 +48,7 @@ impl Database for PostgresAdapter {}
         v1::vessel::vessels,
         v1::vessel::vessel_benchmarks,
         v1::trip_benchmark::trip_benchmarks,
-        v1::trip_benchmark::average_fuel_consumption,
+        v1::trip_benchmark::average,
         v1::haul::hauls,
         v1::haul::hauls_matrix,
         v1::trip::trip_of_haul,
@@ -144,7 +144,8 @@ impl Database for PostgresAdapter {}
             kyogre_core::VesselBenchmarks,
             kyogre_core::Benchmark,
             kyogre_core::BenchmarkEntry,
-            kyogre_core::CumulativeLandings
+            kyogre_core::CumulativeLandings,
+            kyogre_core::AverageTripBenchmarks
           )
     ),
     security(

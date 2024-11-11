@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use async_trait::async_trait;
+use serde::{Deserialize, Serialize};
 use serde_repr::Deserialize_repr;
 use strum::Display;
 use tracing::error;
@@ -27,6 +28,17 @@ pub enum TripBenchmarkStatus {
     MustRecompute = 1,
     MustRefresh = 2,
     Refreshed = 3,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
+pub struct AverageTripBenchmarks {
+    pub weight_per_hour: Option<f64>,
+    pub weight_per_distance: Option<f64>,
+    pub weight_per_fuel: Option<f64>,
+    pub fuel_consumption: Option<f64>,
+    // TODO
+    // pub sustainability: f64,
 }
 
 #[derive(Debug, Clone, PartialEq)]

@@ -1740,6 +1740,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "float-cmp"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b09cf3155332e944990140d967ff5eceb70df778b34f77d8075db46e4704e6d8"
+dependencies = [
+ "num-traits",
+]
+
+[[package]]
 name = "float_next_after"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6630,6 +6639,7 @@ dependencies = [
  "engine",
  "enum_index",
  "fiskeridir-rs",
+ "float-cmp",
  "futures",
  "http-client",
  "jsonwebtoken",

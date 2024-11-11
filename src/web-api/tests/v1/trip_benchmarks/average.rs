@@ -1,11 +1,12 @@
 use crate::v1::helper::test;
 use chrono::{Duration, TimeZone, Utc};
 use engine::{Modifiable, TripLevel};
+use float_cmp::approx_eq;
 use kyogre_core::Mean;
-use web_api::routes::v1::trip_benchmark::FuelConsumptionAverageParams;
+use web_api::routes::v1::trip_benchmark::AverageTripBenchmarksParams;
 
 #[tokio::test]
-async fn test_average_fuel_works() {
+async fn test_average_benchmarks_works() {
     test(|mut helper, builder| async move {
         let start = Utc.timestamp_opt(10000000, 0).unwrap();
         let end = Utc.timestamp_opt(100000000000, 0).unwrap();
@@ -52,9 +53,9 @@ async fn test_average_fuel_works() {
 
         helper.app.login_user();
 
-        let average_fuel = helper
+        let average = helper
             .app
-            .get_average_fuel_consumption(FuelConsumptionAverageParams {
+            .get_average_trip_benchmarks(AverageTripBenchmarksParams {
                 start_date: start,
                 end_date: end,
                 gear_groups: vec![],
@@ -69,14 +70,50 @@ async fn test_average_fuel_works() {
             .await
             .unwrap();
 
-        let expected = bench
+        let fuel = bench
             .trips
             .iter()
             .map(|f| f.fuel_consumption.unwrap())
             .mean()
             .unwrap();
 
-        assert_eq!(expected, average_fuel);
+        let weight_per_hour = bench
+            .trips
+            .iter()
+            .map(|f| f.weight_per_hour.unwrap())
+            .mean()
+            .unwrap();
+
+        let weight_per_distance = bench
+            .trips
+            .iter()
+            .map(|f| f.weight_per_distance.unwrap())
+            .mean()
+            .unwrap();
+
+        let weight_per_fuel = bench
+            .trips
+            .iter()
+            .map(|f| f.weight_per_fuel.unwrap())
+            .mean()
+            .unwrap();
+
+        assert!(approx_eq!(f64, fuel, average.fuel_consumption.unwrap()));
+        assert!(approx_eq!(
+            f64,
+            weight_per_hour,
+            average.weight_per_hour.unwrap()
+        ));
+        assert!(approx_eq!(
+            f64,
+            weight_per_distance,
+            average.weight_per_distance.unwrap()
+        ));
+        assert!(approx_eq!(
+            f64,
+            weight_per_fuel,
+            average.weight_per_fuel.unwrap()
+        ));
     })
     .await;
 }

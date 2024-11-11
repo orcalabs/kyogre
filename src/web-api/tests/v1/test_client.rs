@@ -2,8 +2,8 @@ use actix_web::http::Method;
 use fiskeridir_rs::{CallSign, LandingId, SpeciesGroup};
 use http_client::{HttpClient, StatusCode};
 use kyogre_core::{
-    ActiveHaulsFilter, ActiveLandingFilter, FiskeridirVesselId, HaulId, Mmsi, ModelId,
-    VesselBenchmarks,
+    ActiveHaulsFilter, ActiveLandingFilter, AverageTripBenchmarks, FiskeridirVesselId, HaulId,
+    Mmsi, ModelId, VesselBenchmarks,
 };
 use serde::{de::DeserializeOwned, Serialize};
 use web_api::{
@@ -28,7 +28,7 @@ use web_api::{
             SpeciesMainGroupDetailed,
         },
         trip::{CurrentTrip, Trip, TripsParameters},
-        trip_benchmark::{FuelConsumptionAverageParams, TripBenchmarks, TripBenchmarksParameters},
+        trip_benchmark::{AverageTripBenchmarksParams, TripBenchmarks, TripBenchmarksParameters},
         user::User,
         vessel::Vessel,
         vms::{VmsParameters, VmsPosition},
@@ -203,17 +203,12 @@ impl ApiClient {
         self.send("trip_benchmarks", Method::GET, &(), Some(&params))
             .await
     }
-    pub async fn get_average_fuel_consumption(
+    pub async fn get_average_trip_benchmarks(
         &self,
-        params: FuelConsumptionAverageParams,
-    ) -> Result<f64, Error> {
-        self.send(
-            "trip_benchmarks/average_fuel_consumption",
-            Method::GET,
-            &(),
-            Some(&params),
-        )
-        .await
+        params: AverageTripBenchmarksParams,
+    ) -> Result<AverageTripBenchmarks, Error> {
+        self.send("trip_benchmarks/average", Method::GET, &(), Some(&params))
+            .await
     }
     pub async fn get_delivery_points(&self) -> Result<Vec<DeliveryPoint>, Error> {
         self.send("delivery_points", Method::GET, &(), None::<&()>)

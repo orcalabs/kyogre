@@ -482,15 +482,15 @@ impl AisMigratorDestination for PostgresAdapter {
 
 #[async_trait]
 impl WebApiOutboundPort for PostgresAdapter {
-    async fn average_fuel_consumption(
+    async fn average_trip_benchmarks(
         &self,
         start_date: DateTime<Utc>,
         end_date: DateTime<Utc>,
         gear_groups: Vec<GearGroup>,
         length_group: Option<VesselLengthGroup>,
-    ) -> CoreResult<Option<f64>> {
+    ) -> CoreResult<AverageTripBenchmarks> {
         Ok(self
-            .average_fuel_consumption_impl(start_date, end_date, gear_groups, length_group)
+            .average_trip_benchmarks_impl(start_date, end_date, gear_groups, length_group)
             .await?)
     }
     fn ais_current_positions(
