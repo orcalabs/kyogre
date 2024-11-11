@@ -57,6 +57,7 @@ tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
 rand = { workspace = true }
 tracing-subscriber = { workspace = true }
 wiremock = { workspace = true }
+float-cmp = "0.10.0"
 
 rsa = { version = "0.9.6", features = ["serde"] }
 base64 = "0.22.1"

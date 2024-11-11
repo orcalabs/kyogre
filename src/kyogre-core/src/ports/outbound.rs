@@ -91,13 +91,13 @@ pub trait WebApiOutboundPort {
     async fn hauls_matrix(&self, query: &HaulsMatrixQuery) -> CoreResult<HaulsMatrix>;
     fn landings(&self, query: LandingsQuery) -> PinBoxStream<'_, Landing>;
     async fn landing_matrix(&self, query: &LandingMatrixQuery) -> CoreResult<LandingMatrix>;
-    async fn average_fuel_consumption(
+    async fn average_trip_benchmarks(
         &self,
         start_date: DateTime<Utc>,
         end_date: DateTime<Utc>,
         gear_groups: Vec<GearGroup>,
         length_group: Option<VesselLengthGroup>,
-    ) -> CoreResult<Option<f64>>;
+    ) -> CoreResult<AverageTripBenchmarks>;
     fn fishing_facilities(
         &self,
         query: FishingFacilitiesQuery,

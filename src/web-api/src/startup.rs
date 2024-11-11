@@ -249,8 +249,8 @@ where
                         .to(routes::v1::trip_benchmark::trip_benchmarks::<T>),
                 )
                 .route(
-                    "/trip_benchmarks/average_fuel_consumption",
-                    web::get().to(routes::v1::trip_benchmark::average_fuel_consumption::<T>),
+                    "/trip_benchmarks/average",
+                    web::get().to(routes::v1::trip_benchmark::average::<T>),
                 );
         }
 
