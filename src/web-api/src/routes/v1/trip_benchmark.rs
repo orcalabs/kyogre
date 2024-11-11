@@ -32,6 +32,7 @@ pub struct FuelConsumptionAverageParams {
     #[serde_as(as = "Vec<DisplayFromStr>")]
     #[param(rename = "gearGroups[]", value_type = Option<Vec<GearGroup>>)]
     pub gear_groups: Vec<GearGroup>,
+    #[serde_as(as = "Option<DisplayFromStr>")]
     pub length_group: Option<VesselLengthGroup>,
 }
 
