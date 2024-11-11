@@ -7,7 +7,9 @@ use crate::{
 use actix_web::web;
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::{CallSign, GearGroup, VesselLengthGroup};
-use kyogre_core::{Mean, Ordering, TripBenchmarksQuery, TripId, TripWithBenchmark};
+use kyogre_core::{
+    AverageTripBenchmarks, Mean, Ordering, TripBenchmarksQuery, TripId, TripWithBenchmark,
+};
 use serde::{Deserialize, Serialize};
 use serde_qs::actix::QsQuery as Query;
 use serde_with::serde_as;
@@ -25,7 +27,7 @@ pub struct TripBenchmarksParameters {
 #[serde_as]
 #[derive(Default, Debug, Deserialize, Serialize, IntoParams)]
 #[serde(rename_all = "camelCase")]
-pub struct FuelConsumptionAverageParams {
+pub struct AverageTripBenchmarksParams {
     pub start_date: DateTime<Utc>,
     pub end_date: DateTime<Utc>,
     #[serde(default)]
@@ -38,21 +40,21 @@ pub struct FuelConsumptionAverageParams {
 
 #[utoipa::path(
     get,
-    path = "/trip_benchmarks/average_fuel_consumption",
-    params(FuelConsumptionAverageParams),
+    path = "/trip_benchmarks/average",
+    params(AverageTripBenchmarksParams),
     responses(
-        (status = 200, description = "average fuel consumption", body = Option<f64>),
+        (status = 200, description = "average trip benchmarks", body = AverageTripBenchmarks),
         (status = 500, description = "an internal error occured", body = ErrorResponse),
     )
 )]
 #[tracing::instrument(skip(db))]
-pub async fn average_fuel_consumption<T: Database + Send + Sync + 'static>(
+pub async fn average<T: Database + Send + Sync + 'static>(
     db: web::Data<T>,
-    params: Query<FuelConsumptionAverageParams>,
-) -> Result<Response<Option<f64>>> {
+    params: Query<AverageTripBenchmarksParams>,
+) -> Result<Response<AverageTripBenchmarks>> {
     let params = params.into_inner();
     Ok(Response::new(
-        db.average_fuel_consumption(
+        db.average_trip_benchmarks(
             params.start_date,
             params.end_date,
             params.gear_groups,

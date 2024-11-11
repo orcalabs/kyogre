@@ -18,40 +18,52 @@ impl PostgresAdapter {
             .await
     }
 
-    pub(crate) async fn average_fuel_consumption_impl(
+    pub(crate) async fn average_trip_benchmarks_impl(
         &self,
         start_date: DateTime<Utc>,
         end_date: DateTime<Utc>,
         gear_groups: Vec<GearGroup>,
         length_group: Option<VesselLengthGroup>,
-    ) -> Result<Option<f64>> {
+    ) -> Result<kyogre_core::AverageTripBenchmarks> {
         let gear_groups = (!gear_groups.is_empty()).then_some(gear_groups);
-        Ok(sqlx::query!(
+        Ok(sqlx::query_as!(
+            kyogre_core::AverageTripBenchmarks,
             r#"
 SELECT
-    AVG(fuel_consumption) as fuel
+    AVG(t.fuel_consumption) AS fuel_consumption,
+    AVG(o.output) AS weight_per_hour,
+    AVG(o2.output) AS weight_per_distance,
+    AVG(o3.output) AS weight_per_fuel
 FROM
     trips_detailed t
+    LEFT JOIN trip_benchmark_outputs o ON t.trip_id = o.trip_id
+    AND o.trip_benchmark_id = $1
+    LEFT JOIN trip_benchmark_outputs o2 ON t.trip_id = o2.trip_id
+    AND o2.trip_benchmark_id = $2
+    LEFT JOIN trip_benchmark_outputs o3 ON t.trip_id = o3.trip_id
+    AND o3.trip_benchmark_id = $3
 WHERE
-    t.start_timestamp >= $1
-    AND t.stop_timestamp <= $2
+    t.start_timestamp >= $4
+    AND t.stop_timestamp <= $5
     AND (
-        $3::INT IS NULL
-        OR t.fiskeridir_length_group_id = $3
+        $6::INT IS NULL
+        OR t.fiskeridir_length_group_id = $6
     )
     AND (
-        $4::INT[] IS NULL
-        OR t.haul_gear_group_ids && $4
+        $7::INT[] IS NULL
+        OR t.haul_gear_group_ids && $7
     )
             "#,
+            TripBenchmarkId::WeightPerHour as i32,
+            TripBenchmarkId::WeightPerDistance as i32,
+            TripBenchmarkId::WeightPerFuel as i32,
             start_date,
             end_date,
             &length_group as &Option<VesselLengthGroup>,
             &gear_groups as &Option<Vec<GearGroup>>
         )
         .fetch_one(&self.pool)
-        .await?
-        .fuel)
+        .await?)
     }
 
     pub(crate) async fn trip_benchmarks_impl(
