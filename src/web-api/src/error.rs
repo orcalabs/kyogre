@@ -1,5 +1,6 @@
 use actix_web::{
     body::BoxBody,
+    error::QueryPayloadError,
     http::{header::ToStrError, StatusCode},
     HttpResponse, ResponseError,
 };
@@ -106,6 +107,12 @@ pub enum Error {
         location: Location,
         source: JWTDecodeError,
     },
+    #[snafu(display("Query payload error"))]
+    QueryPayload {
+        #[snafu(implicit)]
+        location: Location,
+        error: QueryPayloadError,
+    },
     #[snafu(display("An unexpected error occured"))]
     #[stack_error(
         opaque_stack = [kyogre_core::Error],
@@ -133,6 +140,7 @@ impl ResponseError for Error {
             | MissingBwFiskInfoProfile
             | InvalidDateRange
             | MissingDateRange
+            | QueryPayload
             | MissingMmsiOrCallSignOrTripId => StatusCode::BAD_REQUEST,
             InsufficientPermissions => StatusCode::FORBIDDEN,
             MissingJWT | InvalidJWT | ParseJWT | JWTDecode => StatusCode::UNAUTHORIZED,
