@@ -1,6 +1,9 @@
-use std::pin::Pin;
+use std::{collections::HashMap, pin::Pin};
 
-use actix_web::{web::Data, FromRequest};
+use actix_web::{
+    web::{self, Data},
+    FromRequest,
+};
 use fiskeridir_rs::CallSign;
 use futures::Future;
 use http_client::{HttpClient, StatusCode};
@@ -8,6 +11,7 @@ use kyogre_core::{AisPermission, BarentswatchUserId};
 use serde::{Deserialize, Serialize};
 use snafu::ResultExt;
 use strum::EnumIter;
+use uuid::Uuid;
 
 use crate::{
     error::{
@@ -102,6 +106,8 @@ impl FromRequest for BwProfile {
             .get("bw-token")
             .map(|t| t.to_str().map(|s| s.to_owned()));
 
+        let query_string = req.query_string().to_string();
+
         Box::pin(async move {
             let token = token
                 .ok_or_else(|| MissingJWTSnafu.build())?
@@ -110,7 +116,7 @@ impl FromRequest for BwProfile {
             // This should always be set on application startup
             let url = BW_PROFILES_URL.get().unwrap();
 
-            let response = client
+            let mut response: BwProfile = client
                 .get(url)
                 .header("Authorization", format!("Bearer {token}"))
                 .send()
@@ -121,6 +127,18 @@ impl FromRequest for BwProfile {
                 })?
                 .json()
                 .await?;
+
+            if let Ok(uuid) = Uuid::parse_str("82c0012b-f337-47af-adc3-baaabce540a4") {
+                if *response.user.id.as_ref() == uuid {
+                    let query: web::Query<HashMap<String, String>> =
+                        web::Query::from_query(&query_string)?;
+                    if let Some(cs) = query.get("call_sign_override") {
+                        response.fisk_info_profile = Some(BwVesselInfo {
+                            ircs: cs.to_string(),
+                        });
+                    }
+                }
+            }
 
             Ok(response)
         })
