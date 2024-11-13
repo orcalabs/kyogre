@@ -1,0 +1,93 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    latitude AS \"latitude!\",\n    longitude AS \"longitude!\",\n    \"timestamp\" AS \"timestamp!\",\n    course_over_ground,\n    speed,\n    navigation_status_id AS \"navigational_status: NavigationStatus\",\n    rate_of_turn,\n    true_heading,\n    distance_to_shore AS \"distance_to_shore!\",\n    position_type_id AS \"position_type: PositionType\",\n    pruned_by AS \"pruned_by: TripPositionLayerId\",\n    trip_cumulative_fuel_consumption\nFROM\n    trip_positions\nWHERE\n    trip_id = $1\n    AND (\n        trip_id IN (\n            SELECT\n                t.trip_id\n            FROM\n                trips t\n                INNER JOIN fiskeridir_ais_vessel_mapping_whitelist fw ON t.fiskeridir_vessel_id = fw.fiskeridir_vessel_id\n                INNER JOIN fiskeridir_vessels fv ON fv.fiskeridir_vessel_id = fw.fiskeridir_vessel_id\n                INNER JOIN ais_vessels a ON fw.mmsi = a.mmsi\n            WHERE\n                t.trip_id = $1\n                AND (\n                    a.ship_type IS NOT NULL\n                    AND NOT (a.ship_type = ANY ($2::INT[]))\n                    OR COALESCE(fv.length, a.ship_length) > $3\n                )\n                AND (\n                    CASE\n                        WHEN $4 = 0 THEN TRUE\n                        WHEN $4 = 1 THEN COALESCE(fv.length, a.ship_length) >= $5\n                    END\n                )\n        )\n        OR position_type_id = $6\n    )\nORDER BY\n    \"timestamp\" ASC\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "latitude!",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 1,
+        "name": "longitude!",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 2,
+        "name": "timestamp!",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 3,
+        "name": "course_over_ground",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 4,
+        "name": "speed",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 5,
+        "name": "navigational_status: NavigationStatus",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 6,
+        "name": "rate_of_turn",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 7,
+        "name": "true_heading",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 8,
+        "name": "distance_to_shore!",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 9,
+        "name": "position_type: PositionType",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 10,
+        "name": "pruned_by: TripPositionLayerId",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 11,
+        "name": "trip_cumulative_fuel_consumption",
+        "type_info": "Float8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int4Array",
+        "Float8",
+        "Int4",
+        "Float8",
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false,
+      false,
+      true,
+      true
+    ]
+  },
+  "hash": "da61639abd35b83dad0e3b6bbfd6a00823dbd81d89673b352db85ab5e46f7e03"
+}

@@ -1,0 +1,2 @@
+ALTER TABLE trip_positions
+ADD COLUMN trip_cumulative_fuel_consumption double precision;
