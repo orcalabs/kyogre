@@ -1,6 +1,7 @@
 use std::{collections::HashMap, pin::Pin};
 
 use actix_web::{
+    http::header::ToStrError,
     web::{self, Data},
     FromRequest,
 };
@@ -9,15 +10,15 @@ use futures::Future;
 use http_client::{HttpClient, StatusCode};
 use kyogre_core::{AisPermission, BarentswatchUserId};
 use serde::{Deserialize, Serialize};
-use snafu::ResultExt;
+use snafu::{location, ResultExt};
 use strum::EnumIter;
+use tracing::warn;
 use uuid::Uuid;
 
 use crate::{
     error::{
         error::{
-            InvalidCallSignSnafu, InvalidJWTSnafu, MissingBwFiskInfoProfileSnafu, MissingJWTSnafu,
-            ParseJWTSnafu,
+            InvalidCallSignSnafu, MissingBwFiskInfoProfileSnafu, MissingJWTSnafu, ParseJWTSnafu,
         },
         Error, Result,
     },
@@ -100,52 +101,62 @@ impl FromRequest for BwProfile {
     ) -> Self::Future {
         // `HttpClient` should be provided on startup, so `unwrap` is safe
         let client = req.app_data::<Data<HttpClient>>().unwrap().clone();
-
         let token = req
             .headers()
             .get("bw-token")
             .map(|t| t.to_str().map(|s| s.to_owned()));
-
         let query_string = req.query_string().to_string();
 
         Box::pin(async move {
-            let token = token
-                .ok_or_else(|| MissingJWTSnafu.build())?
-                .context(ParseJWTSnafu)?;
-
-            // This should always be set on application startup
-            let url = BW_PROFILES_URL.get().unwrap();
-
-            let mut response: BwProfile = client
-                .get(url)
-                .header("Authorization", format!("Bearer {token}"))
-                .send()
+            BwProfile::extract_impl(client, token, query_string)
                 .await
-                .map_err(|e| match e.status() {
-                    Some(StatusCode::UNAUTHORIZED) => InvalidJWTSnafu.build(),
-                    _ => e.into(),
-                })?
-                .json()
-                .await?;
-
-            if let Ok(uuid) = Uuid::parse_str("82c0012b-f337-47af-adc3-baaabce540a4") {
-                if *response.user.id.as_ref() == uuid {
-                    let query: web::Query<HashMap<String, String>> =
-                        web::Query::from_query(&query_string)?;
-                    if let Some(cs) = query.get("call_sign_override") {
-                        response.fisk_info_profile = Some(BwVesselInfo {
-                            ircs: cs.to_string(),
-                        });
-                    }
-                }
-            }
-
-            Ok(response)
+                .inspect_err(|e| warn!("failed to extract barentswatch profile: {e:?}"))
         })
     }
 }
 
 impl BwProfile {
+    async fn extract_impl(
+        client: Data<HttpClient>,
+        token: Option<std::result::Result<String, ToStrError>>,
+        query_string: String,
+    ) -> Result<Self> {
+        let token = token
+            .ok_or_else(|| MissingJWTSnafu.build())?
+            .context(ParseJWTSnafu)?;
+
+        // This should always be set on application startup
+        let url = BW_PROFILES_URL.get().unwrap();
+
+        let mut response: BwProfile = client
+            .get(url)
+            .header("Authorization", format!("Bearer {token}"))
+            .send()
+            .await
+            .map_err(|e| match e.status() {
+                Some(StatusCode::UNAUTHORIZED) => Error::InvalidJWT {
+                    location: location!(),
+                    source: e,
+                },
+                _ => e.into(),
+            })?
+            .json()
+            .await?;
+
+        if let Ok(uuid) = Uuid::parse_str("82c0012b-f337-47af-adc3-baaabce540a4") {
+            if *response.user.id.as_ref() == uuid {
+                let query: web::Query<HashMap<String, String>> =
+                    web::Query::from_query(&query_string)?;
+                if let Some(cs) = query.get("call_sign_override") {
+                    response.fisk_info_profile = Some(BwVesselInfo {
+                        ircs: cs.to_string(),
+                    });
+                }
+            }
+        }
+
+        Ok(response)
+    }
     pub fn call_sign(&self) -> Result<CallSign> {
         let profile = self
             .fisk_info_profile
