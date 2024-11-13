@@ -118,6 +118,7 @@ mod tests {
             distance_to_shore: 21.1,
             position_type: PositionType::Vms,
             pruned_by: None,
+            trip_cumulative_fuel_consumption: None,
         };
 
         let second = AisVmsPosition {
@@ -132,6 +133,7 @@ mod tests {
             distance_to_shore: 21.1,
             position_type: PositionType::Vms,
             pruned_by: None,
+            trip_cumulative_fuel_consumption: None,
         };
 
         let res = estimated_speed_between_points(&first, &second).unwrap();

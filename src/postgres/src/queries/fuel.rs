@@ -4,11 +4,18 @@ use kyogre_core::{BarentswatchUserId, FuelMeasurement, FuelMeasurementsQuery};
 
 use crate::{
     error::Result,
-    models::{DeleteFuelMeasurement, UpsertFuelMeasurement},
+    models::{DeleteFuelMeasurement, UpdateTripPositionFuel, UpsertFuelMeasurement},
     PostgresAdapter,
 };
 
 impl PostgresAdapter {
+    pub(crate) async fn update_trip_position_fuel_consumption_impl(
+        &self,
+        values: &[kyogre_core::UpdateTripPositionFuel],
+    ) -> Result<()> {
+        self.unnest_update_from::<_, _, UpdateTripPositionFuel>(values, &self.pool)
+            .await
+    }
     pub(crate) fn fuel_measurements_impl(
         &self,
         query: FuelMeasurementsQuery,

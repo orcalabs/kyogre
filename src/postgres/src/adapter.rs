@@ -967,6 +967,13 @@ impl TripBenchmarkOutbound for PostgresAdapter {
     ) -> CoreResult<Vec<TripSustainabilityMetric>> {
         Ok(retry(|| self.sustainability_metrics_impl(id)).await?)
     }
+
+    async fn update_trip_position_fuel_consumption(
+        &self,
+        values: &[UpdateTripPositionFuel],
+    ) -> CoreResult<()> {
+        Ok(retry(|| self.update_trip_position_fuel_consumption_impl(values)).await?)
+    }
 }
 
 #[async_trait]

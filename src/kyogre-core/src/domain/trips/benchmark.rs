@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use async_trait::async_trait;
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_repr::Deserialize_repr;
 use strum::Display;
@@ -52,6 +53,14 @@ pub struct TripWithBenchmark {
     pub fuel_consumption: Option<f64>,
     // TODO
     // pub sustainability: f64,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct UpdateTripPositionFuel {
+    pub trip_id: TripId,
+    pub timestamp: DateTime<Utc>,
+    pub position_type_id: PositionType,
+    pub trip_cumulative_fuel_consumption: f64,
 }
 
 #[derive(Debug, Clone, PartialEq)]

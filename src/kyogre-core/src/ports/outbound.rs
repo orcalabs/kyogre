@@ -171,6 +171,10 @@ pub trait TripPrecisionOutboundPort: Send + Sync {
 
 #[async_trait]
 pub trait TripBenchmarkOutbound: Send + Sync {
+    async fn update_trip_position_fuel_consumption(
+        &self,
+        values: &[UpdateTripPositionFuel],
+    ) -> CoreResult<()>;
     async fn vessels(&self) -> CoreResult<Vec<Vessel>>;
     async fn track_of_trip(&self, id: TripId) -> CoreResult<Vec<AisVmsPosition>>;
     async fn trips_without_fuel_consumption(
