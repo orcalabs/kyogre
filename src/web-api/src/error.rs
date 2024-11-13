@@ -90,9 +90,11 @@ pub enum Error {
         location: Location,
     },
     #[snafu(display("An invalid JWT token was provided"))]
+    #[stack_error(skip_from_impls)]
     InvalidJWT {
         #[snafu(implicit)]
         location: Location,
+        source: http_client::Error,
     },
     #[snafu(display("The provided JWT token could no be parsed"))]
     ParseJWT {
@@ -115,8 +117,8 @@ pub enum Error {
     },
     #[snafu(display("An unexpected error occured"))]
     #[stack_error(
-        opaque_stack = [kyogre_core::Error],
-        opaque_std = [serde_json::Error, http_client::Error])]
+        opaque_stack = [kyogre_core::Error, http_client::Error],
+        opaque_std = [serde_json::Error])]
     Unexpected {
         #[snafu(implicit)]
         location: Location,

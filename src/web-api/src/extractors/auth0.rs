@@ -4,6 +4,7 @@ use kyogre_core::AisPermission;
 use serde::{Deserialize, Serialize};
 use snafu::ResultExt;
 use strum::EnumIter;
+use tracing::warn;
 
 use crate::{
     auth0::Auth0State,
@@ -49,7 +50,10 @@ impl FromRequest for Auth0Profile {
         req: &actix_web::HttpRequest,
         _payload: &mut actix_web::dev::Payload,
     ) -> Self::Future {
-        ready(Self::from_request_impl(req))
+        ready(
+            Self::from_request_impl(req)
+                .inspect_err(|e| warn!("failed to extract auth0 profile: {e:?}")),
+        )
     }
 }
 
