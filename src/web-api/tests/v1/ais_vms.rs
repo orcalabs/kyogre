@@ -1,6 +1,7 @@
 use super::helper::test;
 use chrono::{Duration, TimeZone, Utc};
 use engine::*;
+use float_cmp::approx_eq;
 use http_client::StatusCode;
 use kyogre_core::*;
 use web_api::{
@@ -852,6 +853,48 @@ async fn test_ais_vms_by_trip_contains_positions_added_post_trip_creation() {
         assert_eq!(positions[1], state.ais_vms_positions[1]);
         assert_eq!(positions[2], state.ais_vms_positions[2]);
         assert_eq!(positions[3], state.ais_vms_positions[3]);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_ais_vms_by_trip_returns_cumulative_fuel_consumption() {
+    test(|helper, builder| async move {
+        let state = builder
+            .vessels(1)
+            .trips(1)
+            .ais_vms_positions(3)
+            .build()
+            .await;
+
+        let positions = helper
+            .app
+            .get_ais_vms_positions(AisVmsParameters {
+                start: None,
+                end: None,
+                trip_id: Some(state.trips[0].trip_id),
+                mmsi: None,
+                call_sign: None,
+            })
+            .await
+            .unwrap();
+
+        assert_eq!(positions.len(), 3);
+        assert!(positions[0].trip_cumulative_fuel_consumption.is_none());
+        assert!(positions
+            .iter()
+            .skip(1)
+            .map(|v| v.trip_cumulative_fuel_consumption.unwrap())
+            .is_sorted());
+        assert!(approx_eq!(
+            f64,
+            positions
+                .last()
+                .unwrap()
+                .trip_cumulative_fuel_consumption
+                .unwrap(),
+            state.trips[0].fuel_consumption.unwrap()
+        ));
     })
     .await;
 }

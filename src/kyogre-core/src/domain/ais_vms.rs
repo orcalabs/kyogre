@@ -19,6 +19,7 @@ pub struct AisVmsPosition {
     pub distance_to_shore: f64,
     pub position_type: PositionType,
     pub pruned_by: Option<TripPositionLayerId>,
+    pub trip_cumulative_fuel_consumption: Option<f64>,
 }
 
 #[derive(Debug, Clone)]

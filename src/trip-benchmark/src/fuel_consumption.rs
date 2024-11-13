@@ -1,8 +1,8 @@
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use kyogre_core::{
-    CoreResult, Mean, TripBenchmark, TripBenchmarkId, TripBenchmarkOutbound, TripBenchmarkOutput,
-    Vessel,
+    CoreResult, Mean, PositionType, TripBenchmark, TripBenchmarkId, TripBenchmarkOutbound,
+    TripBenchmarkOutput, UpdateTripPositionFuel, Vessel,
 };
 
 const HP_TO_KW: f64 = 0.745699872;
@@ -46,10 +46,12 @@ impl TripBenchmark for FuelConsumption {
             .await?;
 
         let mut output = Vec::with_capacity(trips.len());
+        let mut fuel_updates = Vec::with_capacity(trips.len());
 
         struct Item {
             speed: Option<f64>,
             timestamp: DateTime<Utc>,
+            position_type_id: PositionType,
         }
         struct State {
             kwh: f64,
@@ -66,6 +68,7 @@ impl TripBenchmark for FuelConsumption {
             let mut iter = track.into_iter().map(|v| Item {
                 speed: v.speed,
                 timestamp: v.timestamp,
+                position_type_id: v.position_type,
             });
 
             let state = State {
@@ -93,11 +96,24 @@ impl TripBenchmark for FuelConsumption {
                     * engine_power_kw
                     * (v.timestamp - state.prev.timestamp).num_milliseconds() as f64
                     / 3_600_000.;
+
+                fuel_updates.push(UpdateTripPositionFuel {
+                    trip_id: id,
+                    timestamp: v.timestamp,
+                    position_type_id: v.position_type_id,
+                    trip_cumulative_fuel_consumption: sfc * state.kwh / 1_000_000.,
+                });
+
                 state.prev = v;
                 state
             });
 
             let fuel_consumption_tonnes = sfc * result.kwh / 1_000_000.;
+
+            adapter
+                .update_trip_position_fuel_consumption(&fuel_updates)
+                .await?;
+            fuel_updates.clear();
 
             output.push(TripBenchmarkOutput {
                 trip_id: id,
