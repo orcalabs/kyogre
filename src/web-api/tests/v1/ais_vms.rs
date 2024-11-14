@@ -898,3 +898,190 @@ async fn test_ais_vms_by_trip_returns_cumulative_fuel_consumption() {
     })
     .await;
 }
+
+#[tokio::test]
+async fn test_ais_vms_by_trip_returns_cumulative_haul_weight() {
+    test(|helper, builder| async move {
+        let state = builder
+            .vessels(1)
+            .trips(1)
+            .ais_vms_positions(1)
+            .hauls(1)
+            .ais_vms_positions(2)
+            .build()
+            .await;
+
+        let positions = helper
+            .app
+            .get_ais_vms_positions(AisVmsParameters {
+                start: None,
+                end: None,
+                trip_id: Some(state.trips[0].trip_id),
+                mmsi: None,
+                call_sign: None,
+            })
+            .await
+            .unwrap();
+
+        assert_eq!(positions.len(), 3);
+        assert_eq!(positions[0].trip_cumulative_haul_weight.unwrap(), 0.0);
+        assert!(positions
+            .iter()
+            .skip(1)
+            .map(|v| v.trip_cumulative_haul_weight.unwrap())
+            .is_sorted());
+        assert!(approx_eq!(
+            f64,
+            positions
+                .last()
+                .unwrap()
+                .trip_cumulative_haul_weight
+                .unwrap(),
+            state.trips[0]
+                .hauls
+                .iter()
+                .map(|h| h.total_living_weight() as f64)
+                .sum()
+        ));
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_ais_vms_by_trip_spreads_haul_weight_evenly_among_positions_within_the_haul() {
+    test(|helper, builder| async move {
+        let start = Utc.timestamp_opt(100000, 0).unwrap();
+        let end = start + Duration::hours(1);
+
+        let state = builder
+            .vessels(1)
+            .trips(1)
+            .modify(|t| {
+                t.trip_specification.set_start(start);
+                t.trip_specification.set_end(end)
+            })
+            .ais_vms_positions(1)
+            .modify(|v| v.position.set_timestamp(start + Duration::minutes(1)))
+            .hauls(1)
+            .modify(|v| {
+                v.dca.set_start_timestamp(start + Duration::minutes(10));
+                v.dca.set_stop_timestamp(start + Duration::minutes(20));
+            })
+            .ais_vms_positions(2)
+            .modify_idx(|i, v| {
+                v.position
+                    .set_timestamp(start + Duration::minutes(11 + i as i64));
+            })
+            .ais_vms_positions(2)
+            .modify_idx(|i, v| {
+                v.position
+                    .set_timestamp(start + Duration::minutes(22 + i as i64));
+            })
+            .build()
+            .await;
+
+        let positions = helper
+            .app
+            .get_ais_vms_positions(AisVmsParameters {
+                start: None,
+                end: None,
+                trip_id: Some(state.trips[0].trip_id),
+                mmsi: None,
+                call_sign: None,
+            })
+            .await
+            .unwrap();
+
+        assert_eq!(positions.len(), 5);
+
+        let haul_weight = state.hauls[0].total_living_weight() as f64;
+
+        assert_eq!(positions[0].trip_cumulative_haul_weight.unwrap(), 0.0);
+        assert!(approx_eq!(
+            f64,
+            positions[1].trip_cumulative_haul_weight.unwrap(),
+            haul_weight / 2.
+        ));
+        assert!(approx_eq!(
+            f64,
+            positions[2].trip_cumulative_haul_weight.unwrap(),
+            haul_weight
+        ));
+        assert!(approx_eq!(
+            f64,
+            positions[3].trip_cumulative_haul_weight.unwrap(),
+            haul_weight
+        ));
+        assert!(approx_eq!(
+            f64,
+            positions[4].trip_cumulative_haul_weight.unwrap(),
+            haul_weight
+        ));
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn tests_cumulative_haul_weight_is_recomputed_with_new_data() {
+    test(|helper, builder| async move {
+        let start = Utc.timestamp_opt(100000, 0).unwrap();
+        let end = start + Duration::hours(1);
+
+        let state = builder
+            .vessels(1)
+            .trips(1)
+            .modify(|t| {
+                t.trip_specification.set_start(start);
+                t.trip_specification.set_end(end)
+            })
+            .ais_vms_positions(1)
+            .modify(|v| v.position.set_timestamp(start + Duration::minutes(1)))
+            .ais_vms_positions(2)
+            .modify_idx(|i, v| {
+                v.position
+                    .set_timestamp(start + Duration::minutes(11 + i as i64));
+            })
+            .new_cycle()
+            .hauls(1)
+            .modify(|v| {
+                v.dca.set_start_timestamp(start + Duration::minutes(10));
+                v.dca.set_stop_timestamp(start + Duration::minutes(20));
+            })
+            .build()
+            .await;
+
+        let positions = helper
+            .app
+            .get_ais_vms_positions(AisVmsParameters {
+                start: None,
+                end: None,
+                trip_id: Some(state.trips[0].trip_id),
+                mmsi: None,
+                call_sign: None,
+            })
+            .await
+            .unwrap();
+
+        assert_eq!(positions.len(), 3);
+        assert_eq!(positions[0].trip_cumulative_haul_weight.unwrap(), 0.0);
+        assert!(positions
+            .iter()
+            .skip(1)
+            .map(|v| v.trip_cumulative_haul_weight.unwrap())
+            .is_sorted());
+        assert!(approx_eq!(
+            f64,
+            positions
+                .last()
+                .unwrap()
+                .trip_cumulative_haul_weight
+                .unwrap(),
+            state.trips[0]
+                .hauls
+                .iter()
+                .map(|h| h.total_living_weight() as f64)
+                .sum()
+        ));
+    })
+    .await;
+}

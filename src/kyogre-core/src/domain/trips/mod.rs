@@ -82,6 +82,7 @@ pub struct TripSet {
 pub struct TripProcessingUnit {
     pub vessel_id: FiskeridirVesselId,
     pub trip: NewTrip,
+    pub trip_id: Option<TripId>,
     pub trip_assembler_id: TripAssemblerId,
     pub start_port: Option<Port>,
     pub end_port: Option<Port>,
@@ -91,6 +92,14 @@ pub struct TripProcessingUnit {
     pub precision_outcome: Option<PrecisionOutcome>,
     pub distance_output: Option<TripDistanceOutput>,
     pub trip_position_output: Option<TripPositionLayerOutput>,
+    pub trip_position_haul_weight_distribution_output: Option<Vec<UpdateTripPositionHaulWeight>>,
+}
+
+#[derive(Debug, Clone)]
+pub struct UpdateTripPositionHaulWeight {
+    pub timestamp: DateTime<Utc>,
+    pub position_type: PositionType,
+    pub trip_cumulative_haul_weight: f64,
 }
 
 #[derive(Debug, Clone)]
@@ -115,6 +124,7 @@ pub struct TripUpdate {
     pub precision: Option<PrecisionOutcome>,
     pub distance: Option<TripDistanceOutput>,
     pub position_layers: Option<TripPositionLayerOutput>,
+    pub trip_position_haul_weight_distribution_output: Option<Vec<UpdateTripPositionHaulWeight>>,
 }
 
 impl Trip {

@@ -51,12 +51,14 @@ impl PostgresAdapter {
             temp_set.assert_is_empty();
         }
 
-        self.connect_trip_to_events(vessel_event_ids, VesselEventType::ErsDca, &mut tx)
+        self.connect_trip_to_events(&vessel_event_ids, VesselEventType::ErsDca, &mut tx)
             .await?;
 
         let message_ids = inserted_message_ids.into_iter().collect::<Vec<_>>();
 
-        self.add_hauls(&message_ids, &mut tx).await?;
+        let haul_vessel_event_ids = self.add_hauls(&message_ids, &mut tx).await?;
+        self.update_trip_position_haul_weight_distribution_status(&haul_vessel_event_ids, &mut tx)
+            .await?;
         self.add_hauls_matrix(&message_ids, &mut tx).await?;
 
         tx.commit().await?;
