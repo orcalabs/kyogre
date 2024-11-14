@@ -1,3 +1,4 @@
+use core::f64;
 use std::{
     cmp::min,
     collections::HashMap,
@@ -22,6 +23,7 @@ static TRIP_COMPUTATION_STEPS: LazyLock<Vec<Box<dyn TripComputationStep>>> = Laz
         Box::<TripPrecisionStep>::default(),
         Box::<TripPositionLayers>::default(),
         Box::<AisVms>::default(),
+        Box::<TripHaulWeight>::default(),
     ]
 });
 
@@ -226,6 +228,110 @@ impl TripComputationStep for TripPrecisionStep {
         Ok(shared
             .trip_pipeline_outbound
             .trips_without_precision(vessel.fiskeridir.id)
+            .await?)
+    }
+}
+
+#[derive(Default)]
+struct TripHaulWeight;
+
+#[async_trait]
+impl TripComputationStep for TripHaulWeight {
+    async fn run(
+        &self,
+        shared: &SharedState,
+        vessel: &Vessel,
+        mut unit: TripProcessingUnit,
+    ) -> Result<TripProcessingUnit> {
+        let adapter = shared.trips_precision_outbound_port.as_ref();
+
+        let hauls = adapter
+            .haul_weights_from_range(vessel.fiskeridir.id, &unit.trip.period)
+            .await?;
+
+        let mut hauls_iter = hauls.into_iter();
+        let mut current_haul = hauls_iter.next();
+        let mut current_weight = 0.0;
+        let mut updates = Vec::new();
+        let mut i = 0;
+
+        let positions = if let Some(ref output) = unit.trip_position_output {
+            &output.trip_positions
+        } else if let Some(trip_id) = unit.trip_id {
+            &adapter.trip_positions(trip_id).await?
+        } else {
+            // Trip positions will either run prior to this state, or this is an existing trip with
+            // a trip id.
+            unreachable!();
+        };
+
+        while i < positions.len() {
+            let current_position = &positions[i];
+
+            if let Some(haul) = &current_haul {
+                if haul.period.contains(current_position.timestamp) {
+                    let haul_start_idx = i;
+                    let mut haul_end_idx = haul_start_idx + 1;
+
+                    // Lint suggestion does not support break
+                    #[allow(clippy::needless_range_loop)]
+                    for j in haul_start_idx + 1..positions.len() {
+                        if !haul.period.contains(positions[j].timestamp) {
+                            haul_end_idx = j;
+                            break;
+                        }
+                    }
+
+                    let num_haul_positions = (haul_end_idx - haul_start_idx) as f64;
+                    // 'num_haul_positions' is ALWAYS 1 or greater
+                    let weight_per_position = haul.weight / num_haul_positions;
+                    (haul_start_idx..haul_end_idx).for_each(|idx| {
+                        current_weight += weight_per_position;
+                        let pos = &positions[idx];
+                        updates.push(UpdateTripPositionHaulWeight {
+                            timestamp: pos.timestamp,
+                            position_type: pos.position_type,
+                            trip_cumulative_haul_weight: current_weight,
+                        });
+                    });
+
+                    current_haul = hauls_iter.next();
+                    i = haul_end_idx;
+                } else if haul.period.end() < current_position.timestamp {
+                    current_weight += haul.weight;
+                    current_haul = hauls_iter.next();
+
+                    updates.push(UpdateTripPositionHaulWeight {
+                        timestamp: current_position.timestamp,
+                        position_type: current_position.position_type,
+                        trip_cumulative_haul_weight: current_weight,
+                    });
+                    i += 1;
+                } else {
+                    updates.push(UpdateTripPositionHaulWeight {
+                        timestamp: current_position.timestamp,
+                        position_type: current_position.position_type,
+                        trip_cumulative_haul_weight: current_weight,
+                    });
+                    i += 1;
+                }
+            } else {
+                updates.push(UpdateTripPositionHaulWeight {
+                    timestamp: current_position.timestamp,
+                    position_type: current_position.position_type,
+                    trip_cumulative_haul_weight: current_weight,
+                });
+                i += 1;
+            }
+        }
+        unit.trip_position_haul_weight_distribution_output = Some(updates);
+
+        Ok(unit)
+    }
+    async fn fetch_missing(&self, shared: &SharedState, vessel: &Vessel) -> Result<Vec<Trip>> {
+        Ok(shared
+            .trip_pipeline_outbound
+            .trips_without_position_haul_weight_distribution(vessel.fiskeridir.id)
             .await?)
     }
 }
@@ -478,6 +584,8 @@ async fn process_vessel(
                 trip_assembler_id: output.trip_assembler_id,
                 trip_position_output: None,
                 trip: t,
+                trip_position_haul_weight_distribution_output: None,
+                trip_id: None,
             };
 
             for step in TRIP_COMPUTATION_STEPS.iter() {
@@ -724,6 +832,8 @@ async fn process_unprocessed_trips(
                 end_port_code: t.end_port_code,
             },
             trip_position_output: None,
+            trip_position_haul_weight_distribution_output: None,
+            trip_id: Some(t.trip_id),
         };
 
         for step in &TRIP_COMPUTATION_STEPS[idx..] {
@@ -735,6 +845,8 @@ async fn process_unprocessed_trips(
             precision: unit.precision_outcome,
             distance: unit.distance_output,
             position_layers: unit.trip_position_output,
+            trip_position_haul_weight_distribution_output: unit
+                .trip_position_haul_weight_distribution_output,
         });
     }
 

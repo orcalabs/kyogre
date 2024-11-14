@@ -900,6 +900,18 @@ impl TripAssemblerOutboundPort for PostgresAdapter {
 
 #[async_trait]
 impl TripPrecisionOutboundPort for PostgresAdapter {
+    async fn trip_positions(&self, trip_id: TripId) -> CoreResult<Vec<AisVmsPosition>> {
+        self.trip_positions_impl(trip_id, AisPermission::All)
+            .convert_collect()
+            .await
+    }
+    async fn haul_weights_from_range(
+        &self,
+        vessel_id: FiskeridirVesselId,
+        range: &DateRange,
+    ) -> CoreResult<Vec<HaulWeight>> {
+        Ok(self.haul_weights_from_range_impl(vessel_id, range).await?)
+    }
     async fn ais_vms_positions(
         &self,
         mmsi: Option<Mmsi>,
@@ -1031,6 +1043,14 @@ impl HaulDistributorOutbound for PostgresAdapter {
 
 #[async_trait]
 impl TripPipelineOutbound for PostgresAdapter {
+    async fn trips_without_position_haul_weight_distribution(
+        &self,
+        vessel_id: FiskeridirVesselId,
+    ) -> CoreResult<Vec<Trip>> {
+        self.trips_without_position_haul_weight_distribution_impl(vessel_id)
+            .convert_collect()
+            .await
+    }
     async fn trips_without_position_layers(
         &self,
         vessel_id: FiskeridirVesselId,

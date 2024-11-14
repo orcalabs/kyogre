@@ -13,7 +13,7 @@ use kyogre_core::{
 };
 use sqlx::postgres::types::PgRange;
 use std::str::FromStr;
-use unnest_insert::UnnestInsert;
+use unnest_insert::{UnnestInsert, UnnestUpdate};
 
 #[derive(Debug, Clone)]
 pub struct Trip {
@@ -90,6 +90,8 @@ pub struct NewTrip {
     #[unnest_insert(sql_type = "INT", type_conversion = "type_to_i32")]
     pub position_layers_status: ProcessingStatus,
     pub track_coverage: Option<f64>,
+    #[unnest_insert(sql_type = "INT", type_conversion = "type_to_i32")]
+    pub trip_position_haul_weight_distribution_status: ProcessingStatus,
 }
 
 #[derive(Debug, Clone, UnnestInsert)]
@@ -110,6 +112,7 @@ pub struct TripAisVmsPosition {
     pub position_type_id: PositionType,
     #[unnest_insert(sql_type = "INT", type_conversion = "opt_type_to_i32")]
     pub pruned_by: Option<TripPositionLayerId>,
+    pub trip_cumulative_haul_weight: Option<f64>,
 }
 
 #[derive(Debug, Clone, UnnestInsert)]
@@ -123,6 +126,18 @@ pub struct TripPrunedAisVmsPosition {
     pub value: serde_json::Value,
     #[unnest_insert(sql_type = "INT", type_conversion = "type_to_i32")]
     pub trip_position_layer_id: TripPositionLayerId,
+}
+
+#[derive(Debug, Clone, UnnestUpdate)]
+#[unnest_update(table_name = "trip_positions")]
+pub struct UpdateTripPositionHaulWeight {
+    #[unnest_update(id, sql_type = "INT", type_conversion = "type_to_i64")]
+    pub trip_id: TripId,
+    #[unnest_update(id)]
+    pub timestamp: DateTime<Utc>,
+    #[unnest_update(id, sql_type = "INT", type_conversion = "type_to_i32")]
+    pub position_type_id: PositionType,
+    pub trip_cumulative_haul_weight: f64,
 }
 
 impl From<&TripProcessingUnit> for NewTrip {
@@ -165,6 +180,14 @@ impl From<&TripProcessingUnit> for NewTrip {
             None => (ProcessingStatus::Attempted, None),
         };
 
+        let trip_position_haul_weight_distribution_status = match value
+            .trip_position_haul_weight_distribution_output
+            .is_some()
+        {
+            true => ProcessingStatus::Successful,
+            false => ProcessingStatus::Unprocessed,
+        };
+
         NewTrip {
             period: PgRange::from(&value.trip.period),
             period_precision,
@@ -182,6 +205,7 @@ impl From<&TripProcessingUnit> for NewTrip {
             end_port_id: value.end_port.clone().map(|p| p.id),
             position_layers_status,
             track_coverage,
+            trip_position_haul_weight_distribution_status,
         }
     }
 }
@@ -384,6 +408,7 @@ impl TripAisVmsPosition {
             distance_to_shore: p.distance_to_shore,
             position_type_id: p.position_type,
             pruned_by: p.pruned_by,
+            trip_cumulative_haul_weight: p.trip_cumulative_haul_weight,
         }
     }
 }

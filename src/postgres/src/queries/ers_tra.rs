@@ -76,14 +76,14 @@ impl PostgresAdapter {
         let to_insert = self.ers_tra_to_insert(&ers_tra, tx).await?;
         ers_tra.retain(|e| to_insert.contains(&e.message_id));
 
-        let event_ids = self
+        let event_ids: Vec<i64> = self
             .unnest_insert_returning(ers_tra, &mut **tx)
             .await?
             .into_iter()
             .filter_map(|r| r.vessel_event_id)
             .collect();
 
-        self.connect_trip_to_events(event_ids, VesselEventType::ErsTra, tx)
+        self.connect_trip_to_events(&event_ids, VesselEventType::ErsTra, tx)
             .await?;
 
         Ok(())

@@ -2,11 +2,46 @@ use chrono::{DateTime, Utc};
 use fiskeridir_rs::{CallSign, Gear, GearGroup, SpeciesGroup, VesselLengthGroup};
 use futures::{future::ready, Stream, TryStreamExt};
 use kyogre_core::*;
-use sqlx::{Pool, Postgres};
+use sqlx::{postgres::types::PgRange, Pool, Postgres};
 
 use crate::{error::Result, models::Haul, PostgresAdapter};
 
 impl PostgresAdapter {
+    pub(crate) async fn haul_weights_from_range_impl(
+        &self,
+        vessel_id: FiskeridirVesselId,
+        range: &DateRange,
+    ) -> Result<Vec<HaulWeight>> {
+        let pg_range: PgRange<DateTime<Utc>> = range.into();
+        Ok(sqlx::query_as!(
+            HaulWeight,
+            r#"
+SELECT
+    q.ranges AS "period!: DateRange",
+    COALESCE(SUM(h.total_living_weight), 0.0)::DOUBLE PRECISION AS "weight!"
+FROM
+    hauls h
+    INNER JOIN (
+        SELECT
+            unnest(range_agg(period)) AS ranges
+        FROM
+            hauls h
+        WHERE
+            h.fiskeridir_vessel_id = $1
+           AND h.period <@ $2::tstzrange
+    ) q ON q.ranges <@ h.period
+WHERE
+    h.fiskeridir_vessel_id = $1
+    AND h.period <@ $2::tstzrange
+GROUP BY
+    q.ranges
+            "#,
+            vessel_id.into_inner(),
+            pg_range
+        )
+        .fetch_all(&self.pool)
+        .await?)
+    }
     pub(crate) async fn hauls_matrix_impl(&self, query: &HaulsMatrixQuery) -> Result<HaulsMatrix> {
         let active_filter = query.active_filter;
         let args = HaulsMatrixArgs::from(query.clone());
@@ -162,8 +197,8 @@ SELECT
     h.gear_id AS "gear_id!: Gear",
     h.fiskeridir_vessel_id AS "fiskeridir_vessel_id?: FiskeridirVesselId",
     h.vessel_length_group AS "vessel_length_group!: VesselLengthGroup",
-    COALESCE(h.vessel_name, h.vessel_name_ers) as vessel_name,
-    COALESCE(h.vessel_call_sign, h.vessel_call_sign_ers) as "call_sign!: CallSign",
+    COALESCE(h.vessel_name, h.vessel_name_ers) AS vessel_name,
+    COALESCE(h.vessel_call_sign, h.vessel_call_sign_ers) AS "call_sign!: CallSign",
     h.catches::TEXT AS "catches!",
     h.cache_version
 FROM
@@ -254,8 +289,8 @@ SELECT
     gear_id AS "gear_id!: Gear",
     fiskeridir_vessel_id AS "fiskeridir_vessel_id?: FiskeridirVesselId",
     vessel_length_group AS "vessel_length_group!: VesselLengthGroup",
-    COALESCE(vessel_name, vessel_name_ers) as vessel_name,
-    COALESCE(vessel_call_sign, vessel_call_sign_ers) as "call_sign!: CallSign",
+    COALESCE(vessel_name, vessel_name_ers) AS vessel_name,
+    COALESCE(vessel_call_sign, vessel_call_sign_ers) AS "call_sign!: CallSign",
     catches::TEXT AS "catches!",
     cache_version
 FROM
@@ -670,8 +705,8 @@ SELECT
         &'a self,
         message_ids: &[i64],
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<()> {
-        let event_ids = sqlx::query!(
+    ) -> Result<Vec<i64>> {
+        let event_ids: Vec<i64> = sqlx::query!(
             r#"
 INSERT INTO
     hauls (
@@ -857,8 +892,10 @@ RETURNING
         .try_collect()
         .await?;
 
-        self.connect_trip_to_events(event_ids, VesselEventType::Haul, tx)
-            .await
+        self.connect_trip_to_events(&event_ids, VesselEventType::Haul, tx)
+            .await?;
+
+        Ok(event_ids)
     }
 
     pub(crate) async fn add_hauls_matrix<'a>(

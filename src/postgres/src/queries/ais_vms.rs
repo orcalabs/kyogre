@@ -185,7 +185,8 @@ SELECT
     distance_to_shore AS "distance_to_shore!",
     position_type_id AS "position_type!: PositionType",
     NULL AS "pruned_by: TripPositionLayerId",
-    NULL as "trip_cumulative_fuel_consumption!: Option<f64>"
+    NULL as "trip_cumulative_fuel_consumption!: Option<f64>",
+    NULL as "trip_cumulative_haul_weight!: Option<f64>"
 FROM
     (
         SELECT
@@ -250,7 +251,8 @@ SELECT
     distance_to_shore AS "distance_to_shore!",
     position_type_id AS "position_type!: PositionType",
     NULL AS "pruned_by: TripPositionLayerId",
-    NULL as "trip_cumulative_fuel_consumption!: Option<f64>"
+    NULL as "trip_cumulative_fuel_consumption!: Option<f64>",
+    NULL as "trip_cumulative_haul_weight!: Option<f64>"
 FROM
     (
         SELECT
@@ -347,7 +349,8 @@ SELECT
     distance_to_shore AS "distance_to_shore!",
     position_type_id AS "position_type: PositionType",
     pruned_by AS "pruned_by: TripPositionLayerId",
-    trip_cumulative_fuel_consumption
+    trip_cumulative_fuel_consumption,
+    trip_cumulative_haul_weight
 FROM
     trip_positions
 WHERE
