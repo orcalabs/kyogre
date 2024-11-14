@@ -11,6 +11,12 @@ use strum::{AsRefStr, Display, EnumCount, EnumIter, EnumString};
 
 use super::compute_sum_area_table;
 
+#[derive(Debug, Clone)]
+pub struct HaulWeight {
+    pub period: DateRange,
+    pub weight: f64,
+}
+
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 #[derive(
     Debug,

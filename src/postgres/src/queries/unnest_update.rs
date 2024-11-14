@@ -18,4 +18,17 @@ impl PostgresAdapter {
         O::unnest_update(values, executor).await?;
         Ok(())
     }
+    pub(crate) async fn unnest_update<T, I>(
+        &self,
+        values: I,
+        executor: impl sqlx::Executor<'_, Database = sqlx::Postgres>,
+    ) -> Result<()>
+    where
+        T: UnnestUpdate,
+        I: IntoIterator<Item = T> + Send,
+        I::IntoIter: Send,
+    {
+        T::unnest_update(values, executor).await?;
+        Ok(())
+    }
 }

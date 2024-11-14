@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    q.ranges AS \"period!: DateRange\",\n    COALESCE(SUM(h.total_living_weight), 0.0)::DOUBLE PRECISION AS \"weight!\"\nFROM\n    hauls h\n    INNER JOIN (\n        SELECT\n            unnest(range_agg(period)) AS ranges\n        FROM\n            hauls h\n        WHERE\n            h.fiskeridir_vessel_id = $1\n           AND h.period <@ $2::tstzrange\n    ) q ON q.ranges <@ h.period\nWHERE\n    h.fiskeridir_vessel_id = $1\n    AND h.period <@ $2::tstzrange\nGROUP BY\n    q.ranges\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "period!: DateRange",
+        "type_info": "TstzRange"
+      },
+      {
+        "ordinal": 1,
+        "name": "weight!",
+        "type_info": "Float8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "TstzRange"
+      ]
+    },
+    "nullable": [
+      null,
+      null
+    ]
+  },
+  "hash": "f773ffa2f19bb699a35e6dde89fd9a1a62c8299a889efddff0724370ea9665db"
+}

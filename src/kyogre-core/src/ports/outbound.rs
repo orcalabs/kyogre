@@ -162,11 +162,18 @@ pub trait TripPrecisionOutboundPort: Send + Sync {
         call_sign: Option<&CallSign>,
         range: &DateRange,
     ) -> CoreResult<Vec<AisVmsPosition>>;
+    async fn trip_positions(&self, trip_id: TripId) -> CoreResult<Vec<AisVmsPosition>>;
     async fn delivery_points_associated_with_trip(
         &self,
         vessel_id: FiskeridirVesselId,
         trip_landing_coverage: &DateRange,
     ) -> CoreResult<Vec<DeliveryPoint>>;
+
+    async fn haul_weights_from_range(
+        &self,
+        vessel_id: FiskeridirVesselId,
+        range: &DateRange,
+    ) -> CoreResult<Vec<HaulWeight>>;
 }
 
 #[async_trait]
@@ -291,6 +298,10 @@ pub trait ScraperFileHashOutboundPort {
 
 #[async_trait]
 pub trait TripPipelineOutbound: Send + Sync {
+    async fn trips_without_position_haul_weight_distribution(
+        &self,
+        vessel_id: FiskeridirVesselId,
+    ) -> CoreResult<Vec<Trip>>;
     async fn trips_without_position_layers(
         &self,
         vessel_id: FiskeridirVesselId,
