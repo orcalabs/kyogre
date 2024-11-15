@@ -1,7 +1,4 @@
-use super::{
-    ers_common::{ErsCatch, ErsMessageInfo, ErsVesselInfo, Port},
-    FiskeridirVesselId,
-};
+use super::ers_common::{ErsCatch, ErsMessageInfo, ErsVesselInfo, Port};
 use crate::{
     deserialize_utils::*, string_new_types::NonEmptyString, utils::timestamp_from_date_and_time,
 };
@@ -47,23 +44,34 @@ impl ErsPor {
         self.arrival_date = timestamp.date_naive();
         self.message_info.relevant_year = timestamp.date_naive().year() as u32;
     }
+}
 
-    pub fn test_default(
-        message_id: u64,
-        fiskeridir_vessel_id: FiskeridirVesselId,
-        timestamp: DateTime<Utc>,
-        message_number: u32,
-    ) -> ErsPor {
-        let message_info = ErsMessageInfo::test_default(message_id, timestamp, message_number);
-        ErsPor {
-            arrival_date: timestamp.date_naive(),
-            arrival_time: timestamp.time(),
-            _arrival_timestamp: "".into(),
-            catch: ErsCatch::test_default(),
-            landing_facility: Some("test".parse().unwrap()),
-            message_info,
-            port: Port::test_default(),
-            vessel_info: ErsVesselInfo::test_default(Some(fiskeridir_vessel_id)),
+#[cfg(feature = "test")]
+mod test {
+    use chrono::{DateTime, Utc};
+
+    use crate::FiskeridirVesselId;
+
+    use super::*;
+
+    impl ErsPor {
+        pub fn test_default(
+            message_id: u64,
+            fiskeridir_vessel_id: FiskeridirVesselId,
+            timestamp: DateTime<Utc>,
+            message_number: u32,
+        ) -> ErsPor {
+            let message_info = ErsMessageInfo::test_default(message_id, timestamp, message_number);
+            ErsPor {
+                arrival_date: timestamp.date_naive(),
+                arrival_time: timestamp.time(),
+                _arrival_timestamp: "".into(),
+                catch: ErsCatch::test_default(),
+                landing_facility: Some("test".parse().unwrap()),
+                message_info,
+                port: Port::test_default(),
+                vessel_info: ErsVesselInfo::test_default(Some(fiskeridir_vessel_id)),
+            }
         }
     }
 }

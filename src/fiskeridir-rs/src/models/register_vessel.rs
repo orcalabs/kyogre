@@ -95,31 +95,36 @@ pub enum RegisterVesselSorting {
     RegistrationMark,
 }
 
-impl RegisterVessel {
-    pub fn test_default(id: FiskeridirVesselId) -> Self {
-        Self {
-            engine_power: Some(200),
-            id,
-            imo_number: Some(765324),
-            length: 16.5,
-            municipality_code: 5010,
-            name: "Sjarken".parse().unwrap(),
-            owners: vec![RegisterVesselOwner::test_default(Some(675432673542))],
-            radio_call_sign: Some("LK27".parse().unwrap()),
-            registration_mark: "TF3524T".parse().unwrap(),
-            width: Some(5.5),
+#[cfg(feature = "test")]
+mod test {
+    use super::*;
+
+    impl RegisterVessel {
+        pub fn test_default(id: FiskeridirVesselId) -> Self {
+            Self {
+                engine_power: Some(200),
+                id,
+                imo_number: Some(765324),
+                length: 16.5,
+                municipality_code: 5010,
+                name: "Sjarken".parse().unwrap(),
+                owners: vec![RegisterVesselOwner::test_default(Some(675432673542))],
+                radio_call_sign: Some("LK27".parse().unwrap()),
+                registration_mark: "TF3524T".parse().unwrap(),
+                width: Some(5.5),
+            }
         }
     }
-}
 
-impl RegisterVesselOwner {
-    pub fn test_default(id: Option<i64>) -> Self {
-        Self {
-            city: Some("TROMSØ".parse().unwrap()),
-            entity_type: RegisterVesselEntityType::Person,
-            id,
-            name: "OWNER A".parse().unwrap(),
-            postal_code: 9010,
+    impl RegisterVesselOwner {
+        pub fn test_default(id: Option<i64>) -> Self {
+            Self {
+                city: Some("TROMSØ".parse().unwrap()),
+                entity_type: RegisterVesselEntityType::Person,
+                id,
+                name: "OWNER A".parse().unwrap(),
+                postal_code: 9010,
+            }
         }
     }
 }

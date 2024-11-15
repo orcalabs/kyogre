@@ -1,11 +1,8 @@
-use super::{
-    ers_common::{ErsCatch, ErsMessageInfo, ErsVesselInfo, Port},
-    FiskeridirVesselId,
-};
+use super::ers_common::{ErsCatch, ErsMessageInfo, ErsVesselInfo, Port};
 use crate::{
     deserialize_utils::*, string_new_types::NonEmptyString, utils::timestamp_from_date_and_time,
 };
-use chrono::{DateTime, Datelike, Duration, NaiveDate, NaiveTime, Utc};
+use chrono::{DateTime, Datelike, NaiveDate, NaiveTime, Utc};
 use serde::Deserialize;
 use serde_with::serde_as;
 
@@ -79,35 +76,46 @@ impl ErsDep {
         self.departure_date = timestamp.date_naive();
         self.message_info.relevant_year = timestamp.date_naive().year() as u32;
     }
+}
 
-    pub fn test_default(
-        message_id: u64,
-        fiskeridir_vessel_id: FiskeridirVesselId,
-        timestamp: DateTime<Utc>,
-        message_number: u32,
-    ) -> ErsDep {
-        let fishing_timestamp = timestamp + Duration::hours(1);
-        let message_info = ErsMessageInfo::test_default(message_id, timestamp, message_number);
-        ErsDep {
-            activity: Some("Fiske overført".parse().unwrap()),
-            activity_code: Some("FIS".parse().unwrap()),
-            catch: ErsCatch::test_default(),
-            departure_date: timestamp.date_naive(),
-            departure_time: timestamp.time(),
-            _departure_timestamp: "".into(),
-            fishing_date: fishing_timestamp.date_naive(),
-            fishing_time: fishing_timestamp.time(),
-            _fishing_timestamp: "".into(),
-            message_info,
-            port: Port::test_default(),
-            start_latitude: 70.32,
-            start_latitude_sggdd: "LAT".parse().unwrap(),
-            start_longitude: 20.323,
-            start_longitude_sggdd: "LON".parse().unwrap(),
-            target_species_fao: Some("Cod".parse().unwrap()),
-            target_species_fao_code: "Cod".parse().unwrap(),
-            target_species_fdir_code: Some(1021),
-            vessel_info: ErsVesselInfo::test_default(Some(fiskeridir_vessel_id)),
+#[cfg(feature = "test")]
+mod test {
+    use chrono::{DateTime, Duration, Utc};
+
+    use crate::FiskeridirVesselId;
+
+    use super::*;
+
+    impl ErsDep {
+        pub fn test_default(
+            message_id: u64,
+            fiskeridir_vessel_id: FiskeridirVesselId,
+            timestamp: DateTime<Utc>,
+            message_number: u32,
+        ) -> ErsDep {
+            let fishing_timestamp = timestamp + Duration::hours(1);
+            let message_info = ErsMessageInfo::test_default(message_id, timestamp, message_number);
+            ErsDep {
+                activity: Some("Fiske overført".parse().unwrap()),
+                activity_code: Some("FIS".parse().unwrap()),
+                catch: ErsCatch::test_default(),
+                departure_date: timestamp.date_naive(),
+                departure_time: timestamp.time(),
+                _departure_timestamp: "".into(),
+                fishing_date: fishing_timestamp.date_naive(),
+                fishing_time: fishing_timestamp.time(),
+                _fishing_timestamp: "".into(),
+                message_info,
+                port: Port::test_default(),
+                start_latitude: 70.32,
+                start_latitude_sggdd: "LAT".parse().unwrap(),
+                start_longitude: 20.323,
+                start_longitude_sggdd: "LON".parse().unwrap(),
+                target_species_fao: Some("Cod".parse().unwrap()),
+                target_species_fao_code: "Cod".parse().unwrap(),
+                target_species_fdir_code: Some(1021),
+                vessel_info: ErsVesselInfo::test_default(Some(fiskeridir_vessel_id)),
+            }
         }
     }
 }

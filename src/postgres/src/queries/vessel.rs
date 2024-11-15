@@ -1,17 +1,12 @@
 use std::collections::HashMap;
 
 use fiskeridir_rs::{CallSign, GearGroup, SpeciesGroup, VesselLengthGroup};
-use futures::{Stream, StreamExt, TryStreamExt};
-use kyogre_core::{
-    ActiveVesselConflict, FiskeridirVesselId, Mmsi, NewVesselConflict, TripAssemblerId,
-    VesselSource,
-};
+use futures::{Stream, TryStreamExt};
+use kyogre_core::{ActiveVesselConflict, FiskeridirVesselId, Mmsi, TripAssemblerId, VesselSource};
 
 use crate::{
     error::Result,
-    models::{
-        FiskeridirAisVesselCombination, NewMunicipality, NewRegisterVessel, VesselConflictInsert,
-    },
+    models::{FiskeridirAisVesselCombination, NewMunicipality, NewRegisterVessel},
     PostgresAdapter,
 };
 
@@ -33,60 +28,6 @@ FROM
         )
         .fetch(&self.pool)
         .map_err(|e| e.into())
-    }
-
-    pub(crate) async fn manual_conflict_override_impl(
-        &self,
-        overrides: Vec<NewVesselConflict>,
-    ) -> Result<()> {
-        let mut mmsi = Vec::with_capacity(overrides.len());
-        let mut fiskeridir_vessel_id = Vec::with_capacity(overrides.len());
-
-        overrides.iter().for_each(|v| {
-            if let Some(val) = v.mmsi {
-                mmsi.push(val);
-            }
-            fiskeridir_vessel_id.push(v.vessel_id);
-        });
-
-        let mut tx = self.pool.begin().await?;
-
-        sqlx::query!(
-            r#"
-INSERT INTO
-    ais_vessels (mmsi)
-SELECT
-    *
-FROM
-    UNNEST($1::INT[])
-ON CONFLICT DO NOTHING
-            "#,
-            &mmsi as &[Mmsi],
-        )
-        .execute(&mut *tx)
-        .await?;
-
-        sqlx::query!(
-            r#"
-INSERT INTO
-    fiskeridir_vessels (fiskeridir_vessel_id)
-SELECT
-    *
-FROM
-    UNNEST($1::BIGINT[])
-ON CONFLICT DO NOTHING
-            "#,
-            &fiskeridir_vessel_id as &[FiskeridirVesselId],
-        )
-        .execute(&mut *tx)
-        .await?;
-
-        self.unnest_insert_from::<_, _, VesselConflictInsert>(overrides, &mut *tx)
-            .await?;
-
-        tx.commit().await?;
-
-        Ok(())
     }
 
     pub(crate) async fn refresh_vessel_mappings<'a>(
@@ -307,16 +248,6 @@ WHERE
         &self,
     ) -> impl Stream<Item = Result<FiskeridirAisVesselCombination>> + '_ {
         self.fiskeridir_ais_vessel_combinations_impl(None)
-    }
-
-    pub(crate) async fn single_fiskeridir_ais_vessel_combination(
-        &self,
-        vessel_id: FiskeridirVesselId,
-    ) -> Result<Option<FiskeridirAisVesselCombination>> {
-        self.fiskeridir_ais_vessel_combinations_impl(Some(vessel_id))
-            .next()
-            .await
-            .transpose()
     }
 
     pub(crate) fn fiskeridir_ais_vessel_combinations_impl(

@@ -4,7 +4,7 @@ use std::{
 };
 
 use futures::TryStreamExt;
-use kyogre_core::{BoxIterator, Departure, FiskeridirVesselId, TripAssemblerId, VesselEventType};
+use kyogre_core::{BoxIterator, FiskeridirVesselId, TripAssemblerId, VesselEventType};
 use tracing::error;
 
 use crate::{
@@ -142,23 +142,5 @@ WHERE
         .await?;
 
         Ok(ids)
-    }
-
-    pub(crate) async fn all_ers_departures_impl(&self) -> Result<Vec<Departure>> {
-        let dep = sqlx::query_as!(
-            Departure,
-            r#"
-SELECT
-    fiskeridir_vessel_id AS "fiskeridir_vessel_id!: FiskeridirVesselId",
-    departure_timestamp AS "timestamp",
-    port_id
-FROM
-    ers_departures
-            "#,
-        )
-        .fetch_all(&self.pool)
-        .await?;
-
-        Ok(dep)
     }
 }

@@ -8,6 +8,7 @@ edition = "2021"
 [features]
 utoipa = ["dep:utoipa"]
 sqlx = ["dep:sqlx", "dep:geozero"]
+test = ["dep:rand"]
 
 [dependencies]
 fiskeridir-rs = { workspace = true }
@@ -17,13 +18,10 @@ snafu = { workspace = true }
 strum = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
-sqlx = { workspace = true, optional = true }
 serde_repr = { workspace = true }
 num-traits = { workspace = true }
 num-derive = { workspace = true }
-rand = { workspace = true }
 futures = { workspace = true }
-utoipa = { workspace = true, optional = true }
 enum_index = { workspace = true }
 enum_index_derive = { workspace = true }
 tracing = { workspace = true }
@@ -33,7 +31,11 @@ tokio = { workspace = true, features = ["sync"] }
 wkt = { workspace = true }
 geo = { workspace = true }
 uuid = { workspace = true, features = ["serde", "v4"] }
+
+sqlx = { workspace = true, optional = true }
 geozero = { workspace = true, optional = true }
+utoipa = { workspace = true, optional = true }
+rand = { workspace = true, optional = true }
 
 oauth2 = "4.4.2"
 flate2 = "1.0.34"

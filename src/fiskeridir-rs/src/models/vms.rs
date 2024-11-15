@@ -47,23 +47,28 @@ pub struct Vms {
     pub vessel_type: NonEmptyString,
 }
 
-impl Vms {
-    pub fn test_default(message_id: u32, call_sign: CallSign, timestamp: DateTime<Utc>) -> Vms {
-        Vms {
-            call_sign,
-            course: Some(81),
-            gross_tonnage: Some(28),
-            latitude: Some(37.123),
-            longitude: Some(28.123),
-            message_id,
-            message_type: "Position".parse().unwrap(),
-            message_type_code: "POS".parse().unwrap(),
-            registration_id: Some("LK-123".parse().unwrap()),
-            speed: Some(8.12),
-            timestamp,
-            vessel_length: 18.01,
-            vessel_name: "sjarken".parse().unwrap(),
-            vessel_type: "Fiskefartøy".parse().unwrap(),
+#[cfg(feature = "test")]
+mod test {
+    use super::*;
+
+    impl Vms {
+        pub fn test_default(message_id: u32, call_sign: CallSign, timestamp: DateTime<Utc>) -> Vms {
+            Vms {
+                call_sign,
+                course: Some(81),
+                gross_tonnage: Some(28),
+                latitude: Some(37.123),
+                longitude: Some(28.123),
+                message_id,
+                message_type: "Position".parse().unwrap(),
+                message_type_code: "POS".parse().unwrap(),
+                registration_id: Some("LK-123".parse().unwrap()),
+                speed: Some(8.12),
+                timestamp,
+                vessel_length: 18.01,
+                vessel_name: "sjarken".parse().unwrap(),
+                vessel_type: "Fiskefartøy".parse().unwrap(),
+            }
         }
     }
 }

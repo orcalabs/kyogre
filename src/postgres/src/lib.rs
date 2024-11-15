@@ -11,7 +11,9 @@ mod ers_tra_set;
 mod landing_set;
 mod models;
 mod queries;
+#[cfg(feature = "test")]
 mod test_db;
 
 pub use adapter::PostgresAdapter;
+#[cfg(feature = "test")]
 pub use test_db::TestDb;

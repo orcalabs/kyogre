@@ -2,8 +2,8 @@ use crate::{
     error::{Result, TripPositionMatchSnafu},
     models::{
         CurrentTrip, NewTrip, NewTripAssemblerConflict, NewTripAssemblerLogEntry, NewTripReturning,
-        Trip, TripAisVmsPosition, TripAssemblerLogEntry, TripCalculationTimer, TripDetailed,
-        TripPrunedAisVmsPosition, UpdateTripPositionHaulWeight,
+        Trip, TripAisVmsPosition, TripCalculationTimer, TripDetailed, TripPrunedAisVmsPosition,
+        UpdateTripPositionHaulWeight,
     },
     PostgresAdapter,
 };
@@ -73,32 +73,6 @@ TRUNCATE earliest_vms_insertion
         tx.commit().await?;
 
         Ok(())
-    }
-
-    pub(crate) fn trip_assembler_log_impl(
-        &self,
-    ) -> impl Stream<Item = Result<TripAssemblerLogEntry>> + '_ {
-        sqlx::query_as!(
-            TripAssemblerLogEntry,
-            r#"
-SELECT
-    trip_assembler_log_id,
-    fiskeridir_vessel_id AS "fiskeridir_vessel_id!: FiskeridirVesselId",
-    calculation_timer_prior,
-    calculation_timer_post,
-    "conflict",
-    conflict_vessel_event_timestamp,
-    conflict_vessel_event_id,
-    conflict_vessel_event_type_id AS "conflict_vessel_event_type_id: VesselEventType",
-    prior_trip_vessel_events::TEXT AS "prior_trip_vessel_events!",
-    new_vessel_events::TEXT AS "new_vessel_events!",
-    conflict_strategy
-FROM
-    trip_assembler_logs
-            "#
-        )
-        .fetch(&self.pool)
-        .map_err(|e| e.into())
     }
 
     pub(crate) async fn update_trip_position_haul_weight(
@@ -232,51 +206,6 @@ WHERE
         Ok(())
     }
 
-    pub(crate) async fn clear_trip_precision_impl(
-        &self,
-        vessel_id: FiskeridirVesselId,
-    ) -> Result<()> {
-        sqlx::query!(
-            r#"
-UPDATE trips
-SET
-    start_precision_id = NULL,
-    start_precision_direction = NULL,
-    end_precision_id = NULL,
-    end_precision_direction = NULL,
-    period_precision = NULL,
-    trip_precision_status_id = $1
-WHERE
-    fiskeridir_vessel_id = $2
-            "#,
-            ProcessingStatus::Unprocessed as i32,
-            vessel_id.into_inner(),
-        )
-        .execute(&self.pool)
-        .await?;
-        Ok(())
-    }
-
-    pub(crate) async fn clear_trip_distancing_impl(
-        &self,
-        vessel_id: FiskeridirVesselId,
-    ) -> Result<()> {
-        sqlx::query!(
-            r#"
-UPDATE trips
-SET
-    distancer_id = NULL,
-    distance = NULL
-WHERE
-    fiskeridir_vessel_id = $1
-            "#,
-            vessel_id.into_inner(),
-        )
-        .execute(&self.pool)
-        .await?;
-        Ok(())
-    }
-
     pub(crate) async fn update_trip_impl(&self, update: TripUpdate) -> Result<()> {
         let mut tx = self.pool.begin().await?;
 
@@ -370,20 +299,6 @@ WHERE
         self.add_trips_detailed(&[update.trip_id], &mut tx).await?;
 
         tx.commit().await?;
-
-        Ok(())
-    }
-
-    pub(crate) async fn queue_trip_reset_impl(&self) -> Result<()> {
-        sqlx::query!(
-            r#"
-UPDATE trip_calculation_timers
-SET
-    queued_reset = TRUE
-            "#
-        )
-        .execute(&self.pool)
-        .await?;
 
         Ok(())
     }
@@ -1887,7 +1802,7 @@ FROM
     trips
 WHERE
     fiskeridir_vessel_id = $1
-    AND trip_position_haul_weight_distribution_status  = $2
+    AND trip_position_haul_weight_distribution_status = $2
             "#,
             vessel_id.into_inner(),
             ProcessingStatus::Unprocessed as i32,

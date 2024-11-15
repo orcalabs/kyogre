@@ -37,10 +37,7 @@ prost = "0.13"
 postgres = { path = "../postgres" }
 
 futures = { workspace = true }
-rand = { workspace = true }
-dockertest = { workspace = true }
 orca-core = { workspace = true, features = ["test-helper"] }
-tracing-subscriber = { workspace = true }
 
 [build-dependencies]
 tonic-build = "0.12"

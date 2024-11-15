@@ -1,5 +1,5 @@
 use crate::{deserialize_utils::*, string_new_types::NonEmptyString, DeliveryPointId};
-use chrono::{NaiveDate, Utc};
+use chrono::NaiveDate;
 use serde::Deserialize;
 
 #[derive(Deserialize, Debug, Clone)]
@@ -65,39 +65,46 @@ pub struct AquaCultureEntry {
     pub prod_omr: Option<NonEmptyString>,
 }
 
-impl AquaCultureEntry {
-    pub fn test_default() -> Self {
-        let now = Utc::now();
+#[cfg(feature = "test")]
+mod test {
+    use chrono::Utc;
 
-        Self {
-            till_nr: "AABB".parse().unwrap(),
-            org_number: Some(123),
-            name: "AquaCultureEntry".parse().unwrap(),
-            address: Some("Address 123".parse().unwrap()),
-            zip_code: Some(1234),
-            city: Some("Tromso".parse().unwrap()),
-            approval_date: now.date_naive(),
-            approval_limit: Some(now.date_naive()),
-            till_municipality_number: 123,
-            till_municipality: "Troms".parse().unwrap(),
-            purpose: "Purpose".parse().unwrap(),
-            production_form: "Production form".parse().unwrap(),
-            species: "Laks".parse().unwrap(),
-            species_code: 711,
-            till_kap: 1.0,
-            till_unit: "LN".parse().unwrap(),
-            delivery_point_id: DeliveryPointId::new_unchecked("LK17"),
-            locality_name: "Locality".parse().unwrap(),
-            locality_municipality_number: 1234,
-            locality_municipality: "Troms".parse().unwrap(),
-            locality_location: "Location".parse().unwrap(),
-            water_environment: "SALTVANN".parse().unwrap(),
-            locality_kap: 1.0,
-            locality_unit: "TN".parse().unwrap(),
-            expiration_date: None,
-            latitude: 65.5,
-            longitude: 10.1,
-            prod_omr: Some("Prod omr".parse().unwrap()),
+    use super::*;
+
+    impl AquaCultureEntry {
+        pub fn test_default() -> Self {
+            let now = Utc::now();
+
+            Self {
+                till_nr: "AABB".parse().unwrap(),
+                org_number: Some(123),
+                name: "AquaCultureEntry".parse().unwrap(),
+                address: Some("Address 123".parse().unwrap()),
+                zip_code: Some(1234),
+                city: Some("Tromso".parse().unwrap()),
+                approval_date: now.date_naive(),
+                approval_limit: Some(now.date_naive()),
+                till_municipality_number: 123,
+                till_municipality: "Troms".parse().unwrap(),
+                purpose: "Purpose".parse().unwrap(),
+                production_form: "Production form".parse().unwrap(),
+                species: "Laks".parse().unwrap(),
+                species_code: 711,
+                till_kap: 1.0,
+                till_unit: "LN".parse().unwrap(),
+                delivery_point_id: DeliveryPointId::new_unchecked("LK17"),
+                locality_name: "Locality".parse().unwrap(),
+                locality_municipality_number: 1234,
+                locality_municipality: "Troms".parse().unwrap(),
+                locality_location: "Location".parse().unwrap(),
+                water_environment: "SALTVANN".parse().unwrap(),
+                locality_kap: 1.0,
+                locality_unit: "TN".parse().unwrap(),
+                expiration_date: None,
+                latitude: 65.5,
+                longitude: 10.1,
+                prod_omr: Some("Prod omr".parse().unwrap()),
+            }
         }
     }
 }

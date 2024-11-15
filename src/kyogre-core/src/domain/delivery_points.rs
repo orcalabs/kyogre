@@ -86,18 +86,6 @@ impl From<DeliveryPointSourceId> for i32 {
     }
 }
 
-impl MattilsynetDeliveryPoint {
-    pub fn test_default() -> Self {
-        Self {
-            id: DeliveryPointId::new_unchecked("LK17"),
-            name: "Name".into(),
-            address: Some("Address".into()),
-            postal_city: Some("Tromsø".into()),
-            postal_code: Some(1234),
-        }
-    }
-}
-
 impl From<MattilsynetDeliveryPoint> for DeliveryPoint {
     fn from(v: MattilsynetDeliveryPoint) -> Self {
         Self {
@@ -106,6 +94,23 @@ impl From<MattilsynetDeliveryPoint> for DeliveryPoint {
             address: v.address,
             latitude: None,
             longitude: None,
+        }
+    }
+}
+
+#[cfg(feature = "test")]
+mod test {
+    use super::*;
+
+    impl MattilsynetDeliveryPoint {
+        pub fn test_default() -> Self {
+            Self {
+                id: DeliveryPointId::new_unchecked("LK17"),
+                name: "Name".into(),
+                address: Some("Address".into()),
+                postal_city: Some("Tromsø".into()),
+                postal_code: Some(1234),
+            }
         }
     }
 }

@@ -452,9 +452,6 @@ impl TripId {
     pub fn into_inner(self) -> i64 {
         self.0
     }
-    pub fn test_new(value: i64) -> Self {
-        Self(value)
-    }
 }
 
 impl From<TripId> for i64 {
@@ -466,5 +463,16 @@ impl From<TripId> for i64 {
 impl Display for TripId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.0.fmt(f)
+    }
+}
+
+#[cfg(feature = "test")]
+mod test {
+    use super::*;
+
+    impl TripId {
+        pub fn test_new(value: i64) -> Self {
+            Self(value)
+        }
     }
 }
