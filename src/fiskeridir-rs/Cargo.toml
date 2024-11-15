@@ -8,6 +8,7 @@ edition = "2021"
 [features]
 utoipa = ["dep:utoipa"]
 sqlx = ["dep:sqlx"]
+test = []
 
 [dependencies]
 http-client = { path = "../http-client" }

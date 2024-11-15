@@ -1,12 +1,11 @@
 use super::ers_common::{ErsMessageInfo, ErsSpecies, ErsVesselInfo, Port};
-use super::FiskeridirVesselId;
 use crate::deserialize_utils::*;
 use crate::string_new_types::NonEmptyString;
 use crate::utils::opt_timestamp_from_date_and_time;
 use crate::Gear;
 use crate::GearGroup;
 use crate::MainGearGroup;
-use chrono::{DateTime, Datelike, Duration, NaiveDate, NaiveTime, Utc};
+use chrono::{DateTime, NaiveDate, NaiveTime, Utc};
 use num_derive::FromPrimitive;
 use serde::Deserialize;
 use serde_repr::Deserialize_repr;
@@ -282,102 +281,117 @@ impl ErsDca {
         self.stop_time = Some(timestamp.time());
         self.stop_date = Some(timestamp.date_naive());
     }
-
-    pub fn test_default(message_id: u64, vessel_id: Option<FiskeridirVesselId>) -> Self {
-        let stop = Utc::now();
-        let start = stop - Duration::hours(4);
-        Self {
-            activity: NonEmptyString::new_unchecked("Fiske overført".into()),
-            activity_code: NonEmptyString::new_unchecked("FIS".into()),
-            area_grouping_end: Some("Atlanterhavet, nordøst/sentrale Nordsjøen".parse().unwrap()),
-            area_grouping_end_code: Some("27_4_B".parse().unwrap()),
-            area_grouping_start: Some("Atlanterhavet, nordøst/sentrale Nordsjøen".parse().unwrap()),
-            area_grouping_start_code: Some("27_4_B".parse().unwrap()),
-            call_sign_of_loading_vessel: Some("LK-23".parse().unwrap()),
-            catch: DcaCatch::test_default(),
-            catch_year: Some(start.year() as u32),
-            duration: Some((stop - start).num_minutes() as u32),
-            economic_zone: Some("Norges økonomiske sone".parse().unwrap()),
-            economic_zone_code: Some("NOR".parse().unwrap()),
-            gear: GearDca::test_default(),
-            haul_distance: Some(1000),
-            herring_population: Some("Norsk vårgytende sild".parse().unwrap()),
-            herring_population_code: Some("NOR01".parse().unwrap()),
-            herring_population_fdir_code: Some(61104),
-            location_end_code: Some(30),
-            location_start_code: Some(30),
-            main_area_end: Some("Sentrale Norskehav".parse().unwrap()),
-            main_area_end_code: Some(9),
-            main_area_start: Some("Sentrale Norskehav".parse().unwrap()),
-            main_area_start_code: Some(9),
-            message_info: ErsMessageInfo::test_default(message_id, stop, 1),
-            message_version: 1,
-            ocean_depth_end: Some(5432),
-            ocean_depth_start: Some(3452),
-            port: Port::test_default(),
-            quota_type: NonEmptyString::new_unchecked("Vanlig kvote".into()),
-            quota_type_code: 1,
-            start_date: Some(start.date_naive()),
-            start_latitude: Some(57.81891926743023),
-            start_longitude: Some(7.6702187769988495),
-            start_time: Some(start.time()),
-            _start_timestamp: None,
-            stop_date: Some(stop.date_naive()),
-            stop_latitude: Some(57.82),
-            stop_longitude: Some(7.68),
-            stop_time: Some(stop.time()),
-            _stop_timestamp: None,
-            vessel_info: ErsVesselInfo::test_default(vessel_id),
-            whale_catch_info: WhaleCatchInfo::test_default(),
-        }
-    }
 }
 
-impl GearDca {
-    pub fn test_default() -> Self {
-        Self {
-            gear_amount: Some(1),
-            gear_fao: Some("Traal".parse().unwrap()),
-            gear_fao_code: Some("TR".parse().unwrap()),
-            gear_fdir: Some("Trippel Traal".parse().unwrap()),
-            gear_fdir_code: Some(Gear::TripleTrawl),
-            gear_group: Some("Traal".parse().unwrap()),
-            gear_group_code: Some(GearGroup::Trawl),
-            gear_main_group: Some("Traal".parse().unwrap()),
-            gear_main_group_code: Some(MainGearGroup::Trawl),
-            gear_mesh_width: Some(6),
-            gear_problem: None,
-            gear_problem_code: None,
-            gear_specification: Some("enkeltrål".parse().unwrap()),
-            gear_specification_code: Some(1),
+#[cfg(feature = "test")]
+mod test {
+    use chrono::{Datelike, Duration, Utc};
+
+    use crate::FiskeridirVesselId;
+
+    use super::*;
+
+    impl ErsDca {
+        pub fn test_default(message_id: u64, vessel_id: Option<FiskeridirVesselId>) -> Self {
+            let stop = Utc::now();
+            let start = stop - Duration::hours(4);
+            Self {
+                activity: NonEmptyString::new_unchecked("Fiske overført".into()),
+                activity_code: NonEmptyString::new_unchecked("FIS".into()),
+                area_grouping_end: Some(
+                    "Atlanterhavet, nordøst/sentrale Nordsjøen".parse().unwrap(),
+                ),
+                area_grouping_end_code: Some("27_4_B".parse().unwrap()),
+                area_grouping_start: Some(
+                    "Atlanterhavet, nordøst/sentrale Nordsjøen".parse().unwrap(),
+                ),
+                area_grouping_start_code: Some("27_4_B".parse().unwrap()),
+                call_sign_of_loading_vessel: Some("LK-23".parse().unwrap()),
+                catch: DcaCatch::test_default(),
+                catch_year: Some(start.year() as u32),
+                duration: Some((stop - start).num_minutes() as u32),
+                economic_zone: Some("Norges økonomiske sone".parse().unwrap()),
+                economic_zone_code: Some("NOR".parse().unwrap()),
+                gear: GearDca::test_default(),
+                haul_distance: Some(1000),
+                herring_population: Some("Norsk vårgytende sild".parse().unwrap()),
+                herring_population_code: Some("NOR01".parse().unwrap()),
+                herring_population_fdir_code: Some(61104),
+                location_end_code: Some(30),
+                location_start_code: Some(30),
+                main_area_end: Some("Sentrale Norskehav".parse().unwrap()),
+                main_area_end_code: Some(9),
+                main_area_start: Some("Sentrale Norskehav".parse().unwrap()),
+                main_area_start_code: Some(9),
+                message_info: ErsMessageInfo::test_default(message_id, stop, 1),
+                message_version: 1,
+                ocean_depth_end: Some(5432),
+                ocean_depth_start: Some(3452),
+                port: Port::test_default(),
+                quota_type: NonEmptyString::new_unchecked("Vanlig kvote".into()),
+                quota_type_code: 1,
+                start_date: Some(start.date_naive()),
+                start_latitude: Some(57.81891926743023),
+                start_longitude: Some(7.6702187769988495),
+                start_time: Some(start.time()),
+                _start_timestamp: None,
+                stop_date: Some(stop.date_naive()),
+                stop_latitude: Some(57.82),
+                stop_longitude: Some(7.68),
+                stop_time: Some(stop.time()),
+                _stop_timestamp: None,
+                vessel_info: ErsVesselInfo::test_default(vessel_id),
+                whale_catch_info: WhaleCatchInfo::test_default(),
+            }
         }
     }
-}
 
-impl DcaCatch {
-    pub fn test_default() -> Self {
-        Self {
-            majority_species_fao: Some("Torsk".parse().unwrap()),
-            majority_species_fao_code: Some("COD".parse().unwrap()),
-            majority_species_fdir_code: Some(1022),
-            species: ErsSpecies::test_default(),
+    impl GearDca {
+        pub fn test_default() -> Self {
+            Self {
+                gear_amount: Some(1),
+                gear_fao: Some("Traal".parse().unwrap()),
+                gear_fao_code: Some("TR".parse().unwrap()),
+                gear_fdir: Some("Trippel Traal".parse().unwrap()),
+                gear_fdir_code: Some(Gear::TripleTrawl),
+                gear_group: Some("Traal".parse().unwrap()),
+                gear_group_code: Some(GearGroup::Trawl),
+                gear_main_group: Some("Traal".parse().unwrap()),
+                gear_main_group_code: Some(MainGearGroup::Trawl),
+                gear_mesh_width: Some(6),
+                gear_problem: None,
+                gear_problem_code: None,
+                gear_specification: Some("enkeltrål".parse().unwrap()),
+                gear_specification_code: Some(1),
+            }
         }
     }
-}
 
-impl WhaleCatchInfo {
-    pub fn test_default() -> Self {
-        Self {
-            blubber_measure_a: Some(1),
-            blubber_measure_b: Some(2),
-            blubber_measure_c: Some(3),
-            circumference: Some(4),
-            fetus_length: Some(5),
-            gender: Some("Hannkjønn".parse().unwrap()),
-            gender_code: Some(WhaleGender::Male),
-            grenade_number: Some("WhaleGrenade1".parse().unwrap()),
-            individual_number: Some(643),
-            length: Some(622),
+    impl DcaCatch {
+        pub fn test_default() -> Self {
+            Self {
+                majority_species_fao: Some("Torsk".parse().unwrap()),
+                majority_species_fao_code: Some("COD".parse().unwrap()),
+                majority_species_fdir_code: Some(1022),
+                species: ErsSpecies::test_default(),
+            }
+        }
+    }
+
+    impl WhaleCatchInfo {
+        pub fn test_default() -> Self {
+            Self {
+                blubber_measure_a: Some(1),
+                blubber_measure_b: Some(2),
+                blubber_measure_c: Some(3),
+                circumference: Some(4),
+                fetus_length: Some(5),
+                gender: Some("Hannkjønn".parse().unwrap()),
+                gender_code: Some(WhaleGender::Male),
+                grenade_number: Some("WhaleGrenade1".parse().unwrap()),
+                individual_number: Some(643),
+                length: Some(622),
+            }
         }
     }
 }

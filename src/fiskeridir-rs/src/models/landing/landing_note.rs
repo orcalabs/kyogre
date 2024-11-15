@@ -1,10 +1,9 @@
-use chrono::{DateTime, Datelike, NaiveDate, NaiveTime, TimeZone, Utc};
+use chrono::{DateTime, Datelike, NaiveDate, NaiveTime, Utc};
 use jurisdiction::Jurisdiction;
 use num_derive::FromPrimitive;
 use serde::Deserialize;
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use serde_with::{serde_as, DisplayFromStr};
-use std::str::FromStr;
 use strum::{AsRefStr, Display, EnumIter, EnumString};
 
 use super::{
@@ -824,171 +823,6 @@ impl DocumentType {
     }
 }
 
-impl Landing {
-    pub fn test_default(landing_id: i64, vessel_id: Option<FiskeridirVesselId>) -> Landing {
-        let norway_nation_code = Jurisdiction::from_str("NOR").unwrap();
-        let document_type = DocumentType::ClosingSlip;
-        let sales_team = SalesTeam::NorgesRafisklag;
-        let landing_timestamp = Utc.timestamp_opt(100000000, 0).unwrap();
-        Landing {
-            id: LandingId::new(
-                landing_id,
-                sales_team,
-                document_type,
-                landing_timestamp.year() as u32,
-            ),
-            document_info: DocumentInfo {
-                id: landing_id,
-                type_number: document_type,
-                version_number: 1,
-                signing_date: Some(NaiveDate::from_ymd_opt(2000, 1, 1).unwrap()),
-                version_timestamp: Utc.timestamp_opt(100000, 0).unwrap(),
-            },
-            sales_team,
-            finances: Finances {
-                unit_price_for_buyer: Some(5.0),
-                price_for_buyer: Some(120.0),
-                unit_price_for_fisher: Some(10.0),
-                price_for_fisher: Some(15.0),
-                support_amount_for_fisher: Some(20.0),
-                sales_team_fee: Some(10.0),
-                withdrawn_catch_value: Some(18.0),
-                post_payment: Some(32.0),
-                catch_value: Some(140.0),
-            },
-            delivery_point: DeliveryPoint {
-                id: Some("RKAI".parse().unwrap()),
-                org_id: Some(123123123),
-                nationality_code: Some(norway_nation_code.clone()),
-            },
-            recipient_vessel_callsign_or_mmsi: Some("R-230".parse().unwrap()),
-            recipient_vessel_nation_code: Some("NOR".parse().unwrap()),
-            recipient_vessel_nation: Some("Norway".parse().unwrap()),
-            recipient_vessel_registration_id: Some("RK-123".parse().unwrap()),
-            recipient_vessel_type_code: Some(VesselType::FishingVessel),
-            production_facility: Some("Kaisalg".parse().unwrap()),
-            production_facility_municipality: Some("Troms og Finnmark".parse().unwrap()),
-            production_facility_municipality_code: Some(123123),
-            vessel: Vessel {
-                id: vessel_id,
-                registration_id: Some("RK-54".parse().unwrap()),
-                call_sign: Some("LK-23".parse().unwrap()),
-                name: Some("Sjarken".parse().unwrap()),
-                type_code: Some(VesselType::FishingVessel),
-                quota_registration_id: Some("RK-50".parse().unwrap()),
-                num_crew_members: Some(5),
-                municipality_code: Some(1232),
-                municipality_name: Some("Oslo".parse().unwrap()),
-                county_code: Some(120),
-                county: Some("Oslo".parse().unwrap()),
-                nationality_code: norway_nation_code.clone(),
-                nationality_group: Some("Norske fartøy".parse().unwrap()),
-                length: Some(50.0),
-                length_group_code: Some(VesselLengthGroup::TwentyEightAndAbove),
-                length_group_name: Some(
-                    VesselLengthGroup::TwentyEightAndAbove
-                        .description()
-                        .parse()
-                        .unwrap(),
-                ),
-                gross_tonnage_1969: Some(5423),
-                gross_tonnage_other: Some(4233),
-                building_year: Some(2002),
-                rebuilding_year: Some(2010),
-                engine_power: Some(2332),
-                engine_building_year: Some(2000),
-            },
-            quota: Some(Quota::KingCrab),
-            gear: GearDetails {
-                gear: Gear::DanishSeine,
-                gear_name: Gear::DanishSeine.norwegian_name().parse().unwrap(),
-                group: GearGroup::DanishSeine,
-                group_name: GearGroup::DanishSeine.norwegian_name().parse().unwrap(),
-                main_group: MainGearGroup::Conventional,
-                main_group_name: MainGearGroup::Conventional
-                    .norwegian_name()
-                    .parse()
-                    .unwrap(),
-            },
-            product: Product {
-                species: Species {
-                    code: 123,
-                    name: "Sild".parse().unwrap(),
-                    fao_code: Some("SIL".parse().unwrap()),
-                    fao_name: Some("SILD".parse().unwrap()),
-                    fdir_name: "Sild".parse().unwrap(),
-                    fdir_code: 543,
-                    group_code: SpeciesGroup::AtlanticCod,
-                    group_name: SpeciesGroup::AtlanticCod.norwegian_name().parse().unwrap(),
-                    main_group: SpeciesMainGroup::ShellfishMolluscaAndEchinoderm
-                        .norwegian_name()
-                        .parse()
-                        .unwrap(),
-                    main_group_code: SpeciesMainGroup::ShellfishMolluscaAndEchinoderm,
-                },
-                condition: Condition::Spekk,
-                conservation_method: ConservationMethod::Iset,
-                conservation_method_name: ConservationMethod::Iset.name().parse().unwrap(),
-                landing_method: Some(LandingMethod::Container),
-                landing_method_name: Some(LandingMethod::Container.name().parse().unwrap()),
-                size_grouping_code: "12332".parse().unwrap(),
-                num_fish: Some(2300),
-                gross_weight: Some(43432.0),
-                product_weight: 43432.0,
-                product_weight_over_quota: Some(50.0),
-                living_weight_over_quota: Some(323.0),
-                living_weight: Some(43000.0),
-                purpose: Purpose {
-                    code: Some(100),
-                    name: Some("Fersk".parse().unwrap()),
-                    group_code: Some(1),
-                    group_name: Some("Konsum".parse().unwrap()),
-                },
-                quality: Quality::A,
-                quality_name: Quality::A.norwegian_name().parse().unwrap(),
-            },
-            catch_location: CatchLocation {
-                catch_field: "34343".parse().unwrap(),
-                coast_ocean_code: TwelveMileBorder::Within,
-                main_area_code: Some(11),
-                main_area: Some("test_main_area".parse().unwrap()),
-                main_area_longitude: Some(28.0),
-                main_area_latitude: Some(32.0),
-                location_code: Some(12),
-                location_longitude: Some(33.0),
-                location_latitude: Some(23.0),
-                economic_zone_code: Some("NOR".parse().unwrap()),
-                area_grouping: Some("test_area_group".parse().unwrap()),
-                area_grouping_code: Some("AN52".parse().unwrap()),
-                main_area_fao_code: Some(50),
-                main_area_fao: Some("europe_coast".parse().unwrap()),
-                north_or_south_of_62_degrees: NorthSouth62DegreesNorth::North,
-            },
-            partial_landing_next_delivery_point_id: Some("RUNT".parse().unwrap()),
-            partial_landing_previous_delivery_point_id: Some("AUNT".parse().unwrap()),
-            landing_county: Some("TROMS".parse().unwrap()),
-            landing_county_code: Some(234),
-            landing_municipality: Some("TROMS OG FINNMARK".parse().unwrap()),
-            landing_municipality_code: Some(23),
-            landing_nation_code: Some(norway_nation_code.clone()),
-            fisher_id: Some(3243),
-            fisher_nationality_code: Some(norway_nation_code),
-            fisher_tax_municipality: Some("TROMS OG FINNMARK".parse().unwrap()),
-            fisher_tax_municipality_code: Some(23),
-            catch_year: 2020,
-            last_catch_date: NaiveDate::from_ymd_opt(2020, 1, 1).unwrap(),
-            fishing_diary_number: Some(1),
-            fishing_diary_trip_number: Some(2),
-            landing_month: LandingMonth::January,
-            landing_time: NaiveTime::from_hms_opt(10, 20, 10).unwrap(),
-            landing_timestamp,
-            line_number: 1,
-            update_timestamp: Utc.timestamp_opt(200000000, 0).unwrap(),
-            partial_landing: false,
-        }
-    }
-}
-
 impl From<DateTime<Utc>> for LandingMonth {
     fn from(value: DateTime<Utc>) -> Self {
         match value.month() {
@@ -1005,6 +839,180 @@ impl From<DateTime<Utc>> for LandingMonth {
             11 => LandingMonth::November,
             12 => LandingMonth::December,
             _ => panic!("encountered unrecognized month: {}", value.month()),
+        }
+    }
+}
+
+#[cfg(feature = "test")]
+mod test {
+    use std::str::FromStr;
+
+    use chrono::{Datelike, NaiveDate, NaiveTime, TimeZone, Utc};
+
+    use super::*;
+
+    impl Landing {
+        pub fn test_default(landing_id: i64, vessel_id: Option<FiskeridirVesselId>) -> Landing {
+            let norway_nation_code = Jurisdiction::from_str("NOR").unwrap();
+            let document_type = DocumentType::ClosingSlip;
+            let sales_team = SalesTeam::NorgesRafisklag;
+            let landing_timestamp = Utc.timestamp_opt(100000000, 0).unwrap();
+            Landing {
+                id: LandingId::new(
+                    landing_id,
+                    sales_team,
+                    document_type,
+                    landing_timestamp.year() as u32,
+                ),
+                document_info: DocumentInfo {
+                    id: landing_id,
+                    type_number: document_type,
+                    version_number: 1,
+                    signing_date: Some(NaiveDate::from_ymd_opt(2000, 1, 1).unwrap()),
+                    version_timestamp: Utc.timestamp_opt(100000, 0).unwrap(),
+                },
+                sales_team,
+                finances: Finances {
+                    unit_price_for_buyer: Some(5.0),
+                    price_for_buyer: Some(120.0),
+                    unit_price_for_fisher: Some(10.0),
+                    price_for_fisher: Some(15.0),
+                    support_amount_for_fisher: Some(20.0),
+                    sales_team_fee: Some(10.0),
+                    withdrawn_catch_value: Some(18.0),
+                    post_payment: Some(32.0),
+                    catch_value: Some(140.0),
+                },
+                delivery_point: DeliveryPoint {
+                    id: Some("RKAI".parse().unwrap()),
+                    org_id: Some(123123123),
+                    nationality_code: Some(norway_nation_code.clone()),
+                },
+                recipient_vessel_callsign_or_mmsi: Some("R-230".parse().unwrap()),
+                recipient_vessel_nation_code: Some("NOR".parse().unwrap()),
+                recipient_vessel_nation: Some("Norway".parse().unwrap()),
+                recipient_vessel_registration_id: Some("RK-123".parse().unwrap()),
+                recipient_vessel_type_code: Some(VesselType::FishingVessel),
+                production_facility: Some("Kaisalg".parse().unwrap()),
+                production_facility_municipality: Some("Troms og Finnmark".parse().unwrap()),
+                production_facility_municipality_code: Some(123123),
+                vessel: Vessel {
+                    id: vessel_id,
+                    registration_id: Some("RK-54".parse().unwrap()),
+                    call_sign: Some("LK-23".parse().unwrap()),
+                    name: Some("Sjarken".parse().unwrap()),
+                    type_code: Some(VesselType::FishingVessel),
+                    quota_registration_id: Some("RK-50".parse().unwrap()),
+                    num_crew_members: Some(5),
+                    municipality_code: Some(1232),
+                    municipality_name: Some("Oslo".parse().unwrap()),
+                    county_code: Some(120),
+                    county: Some("Oslo".parse().unwrap()),
+                    nationality_code: norway_nation_code.clone(),
+                    nationality_group: Some("Norske fartøy".parse().unwrap()),
+                    length: Some(50.0),
+                    length_group_code: Some(VesselLengthGroup::TwentyEightAndAbove),
+                    length_group_name: Some(
+                        VesselLengthGroup::TwentyEightAndAbove
+                            .description()
+                            .parse()
+                            .unwrap(),
+                    ),
+                    gross_tonnage_1969: Some(5423),
+                    gross_tonnage_other: Some(4233),
+                    building_year: Some(2002),
+                    rebuilding_year: Some(2010),
+                    engine_power: Some(2332),
+                    engine_building_year: Some(2000),
+                },
+                quota: Some(Quota::KingCrab),
+                gear: GearDetails {
+                    gear: Gear::DanishSeine,
+                    gear_name: Gear::DanishSeine.norwegian_name().parse().unwrap(),
+                    group: GearGroup::DanishSeine,
+                    group_name: GearGroup::DanishSeine.norwegian_name().parse().unwrap(),
+                    main_group: MainGearGroup::Conventional,
+                    main_group_name: MainGearGroup::Conventional
+                        .norwegian_name()
+                        .parse()
+                        .unwrap(),
+                },
+                product: Product {
+                    species: Species {
+                        code: 123,
+                        name: "Sild".parse().unwrap(),
+                        fao_code: Some("SIL".parse().unwrap()),
+                        fao_name: Some("SILD".parse().unwrap()),
+                        fdir_name: "Sild".parse().unwrap(),
+                        fdir_code: 543,
+                        group_code: SpeciesGroup::AtlanticCod,
+                        group_name: SpeciesGroup::AtlanticCod.norwegian_name().parse().unwrap(),
+                        main_group: SpeciesMainGroup::ShellfishMolluscaAndEchinoderm
+                            .norwegian_name()
+                            .parse()
+                            .unwrap(),
+                        main_group_code: SpeciesMainGroup::ShellfishMolluscaAndEchinoderm,
+                    },
+                    condition: Condition::Spekk,
+                    conservation_method: ConservationMethod::Iset,
+                    conservation_method_name: ConservationMethod::Iset.name().parse().unwrap(),
+                    landing_method: Some(LandingMethod::Container),
+                    landing_method_name: Some(LandingMethod::Container.name().parse().unwrap()),
+                    size_grouping_code: "12332".parse().unwrap(),
+                    num_fish: Some(2300),
+                    gross_weight: Some(43432.0),
+                    product_weight: 43432.0,
+                    product_weight_over_quota: Some(50.0),
+                    living_weight_over_quota: Some(323.0),
+                    living_weight: Some(43000.0),
+                    purpose: Purpose {
+                        code: Some(100),
+                        name: Some("Fersk".parse().unwrap()),
+                        group_code: Some(1),
+                        group_name: Some("Konsum".parse().unwrap()),
+                    },
+                    quality: Quality::A,
+                    quality_name: Quality::A.norwegian_name().parse().unwrap(),
+                },
+                catch_location: CatchLocation {
+                    catch_field: "34343".parse().unwrap(),
+                    coast_ocean_code: TwelveMileBorder::Within,
+                    main_area_code: Some(11),
+                    main_area: Some("test_main_area".parse().unwrap()),
+                    main_area_longitude: Some(28.0),
+                    main_area_latitude: Some(32.0),
+                    location_code: Some(12),
+                    location_longitude: Some(33.0),
+                    location_latitude: Some(23.0),
+                    economic_zone_code: Some("NOR".parse().unwrap()),
+                    area_grouping: Some("test_area_group".parse().unwrap()),
+                    area_grouping_code: Some("AN52".parse().unwrap()),
+                    main_area_fao_code: Some(50),
+                    main_area_fao: Some("europe_coast".parse().unwrap()),
+                    north_or_south_of_62_degrees: NorthSouth62DegreesNorth::North,
+                },
+                partial_landing_next_delivery_point_id: Some("RUNT".parse().unwrap()),
+                partial_landing_previous_delivery_point_id: Some("AUNT".parse().unwrap()),
+                landing_county: Some("TROMS".parse().unwrap()),
+                landing_county_code: Some(234),
+                landing_municipality: Some("TROMS OG FINNMARK".parse().unwrap()),
+                landing_municipality_code: Some(23),
+                landing_nation_code: Some(norway_nation_code.clone()),
+                fisher_id: Some(3243),
+                fisher_nationality_code: Some(norway_nation_code),
+                fisher_tax_municipality: Some("TROMS OG FINNMARK".parse().unwrap()),
+                fisher_tax_municipality_code: Some(23),
+                catch_year: 2020,
+                last_catch_date: NaiveDate::from_ymd_opt(2020, 1, 1).unwrap(),
+                fishing_diary_number: Some(1),
+                fishing_diary_trip_number: Some(2),
+                landing_month: LandingMonth::January,
+                landing_time: NaiveTime::from_hms_opt(10, 20, 10).unwrap(),
+                landing_timestamp,
+                line_number: 1,
+                update_timestamp: Utc.timestamp_opt(200000000, 0).unwrap(),
+                partial_landing: false,
+            }
         }
     }
 }

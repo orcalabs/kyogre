@@ -169,66 +169,6 @@ SET
         Ok(())
     }
 
-    pub(crate) async fn all_ais_vms_impl(&self) -> Result<Vec<AisVmsPosition>> {
-        let ais = sqlx::query_as!(
-            AisVmsPosition,
-            r#"
-SELECT
-    latitude AS "latitude!",
-    longitude AS "longitude!",
-    "timestamp" AS "timestamp!",
-    course_over_ground,
-    speed,
-    navigational_status AS "navigational_status: NavigationStatus",
-    rate_of_turn,
-    true_heading,
-    distance_to_shore AS "distance_to_shore!",
-    position_type_id AS "position_type!: PositionType",
-    NULL AS "pruned_by: TripPositionLayerId",
-    NULL as "trip_cumulative_fuel_consumption!: Option<f64>",
-    NULL as "trip_cumulative_haul_weight!: Option<f64>"
-FROM
-    (
-        SELECT
-            latitude,
-            longitude,
-            "timestamp",
-            course_over_ground,
-            speed_over_ground AS speed,
-            navigation_status_id AS navigational_status,
-            rate_of_turn,
-            true_heading,
-            distance_to_shore,
-            $1::INT AS position_type_id
-        FROM
-            ais_positions a
-        UNION ALL
-        SELECT
-            latitude,
-            longitude,
-            "timestamp",
-            course AS course_over_ground,
-            speed,
-            NULL AS navigational_status,
-            NULL AS rate_of_turn,
-            NULL AS true_heading,
-            distance_to_shore,
-            $2::INT AS position_type_id
-        FROM
-            vms_positions v
-    ) q
-ORDER BY
-    "timestamp" ASC
-            "#,
-            PositionType::Ais as i32,
-            PositionType::Vms as i32,
-        )
-        .fetch_all(self.ais_pool())
-        .await?;
-
-        Ok(ais)
-    }
-
     pub(crate) fn ais_vms_positions_impl(
         &self,
         mmsi: Option<Mmsi>,
@@ -251,8 +191,8 @@ SELECT
     distance_to_shore AS "distance_to_shore!",
     position_type_id AS "position_type!: PositionType",
     NULL AS "pruned_by: TripPositionLayerId",
-    NULL as "trip_cumulative_fuel_consumption!: Option<f64>",
-    NULL as "trip_cumulative_haul_weight!: Option<f64>"
+    NULL AS "trip_cumulative_fuel_consumption!: Option<f64>",
+    NULL AS "trip_cumulative_haul_weight!: Option<f64>"
 FROM
     (
         SELECT

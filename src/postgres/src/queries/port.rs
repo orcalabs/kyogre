@@ -1,5 +1,5 @@
-use futures::{Stream, StreamExt, TryStreamExt};
-use kyogre_core::{Arrival, FiskeridirVesselId, PortDockPoint, TripId};
+use futures::{Stream, TryStreamExt};
+use kyogre_core::{PortDockPoint, TripId};
 
 use crate::{
     error::Result,
@@ -12,14 +12,10 @@ impl PostgresAdapter {
         self.dock_points_inner(None).await
     }
 
-    pub(crate) async fn dock_points_of_port_impl(
+    pub(crate) async fn dock_points_inner(
         &self,
-        port_id: &str,
+        port_id: Option<&str>,
     ) -> Result<Vec<PortDockPoint>> {
-        self.dock_points_inner(Some(port_id)).await
-    }
-
-    async fn dock_points_inner(&self, port_id: Option<&str>) -> Result<Vec<PortDockPoint>> {
         let docks = sqlx::query_as!(
             PortDockPoint,
             r#"
@@ -45,33 +41,14 @@ WHERE
         Ok(docks)
     }
 
-    pub(crate) async fn all_ers_arrivals_impl(&self) -> Result<Vec<Arrival>> {
-        let arrivals = sqlx::query_as!(
-            Arrival,
-            r#"
-SELECT
-    fiskeridir_vessel_id AS "fiskeridir_vessel_id!: FiskeridirVesselId",
-    arrival_timestamp AS "timestamp",
-    port_id
-FROM
-    ers_arrivals
-            "#,
-        )
-        .fetch_all(&self.pool)
-        .await?;
-
-        Ok(arrivals)
-    }
-
     pub(crate) fn ports_impl(&self) -> impl Stream<Item = Result<Port>> + '_ {
         self.ports_inner(None)
     }
 
-    pub(crate) async fn port_impl(&self, port_id: &str) -> Result<Option<Port>> {
-        self.ports_inner(Some(port_id)).next().await.transpose()
-    }
-
-    fn ports_inner(&self, port_id: Option<&str>) -> impl Stream<Item = Result<Port>> + '_ {
+    pub(crate) fn ports_inner(
+        &self,
+        port_id: Option<&str>,
+    ) -> impl Stream<Item = Result<Port>> + '_ {
         sqlx::query_as!(
             Port,
             r#"

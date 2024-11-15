@@ -91,9 +91,6 @@ impl HaulId {
     pub fn into_inner(self) -> i64 {
         self.0
     }
-    pub fn test_new(value: i64) -> Self {
-        Self(value)
-    }
 }
 
 impl From<HaulId> for i64 {
@@ -114,5 +111,16 @@ impl Haul {
     }
     pub fn total_living_weight(&self) -> i32 {
         self.catches.iter().map(|c| c.living_weight).sum()
+    }
+}
+
+#[cfg(feature = "test")]
+mod test {
+    use super::*;
+
+    impl HaulId {
+        pub fn test_new(value: i64) -> Self {
+            Self(value)
+        }
     }
 }

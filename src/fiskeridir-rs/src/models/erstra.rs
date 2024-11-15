@@ -1,6 +1,5 @@
 use super::ers_common::ErsCatch;
 use super::ers_common::{ErsMessageInfo, ErsVesselInfo};
-use super::FiskeridirVesselId;
 use crate::deserialize_utils::*;
 use crate::string_new_types::NonEmptyString;
 use crate::utils::opt_timestamp_from_date_and_time;
@@ -58,25 +57,34 @@ impl ErsTra {
         self.reloading_time = Some(timestamp.time());
         self.reloading_date = Some(timestamp.date_naive());
     }
+}
 
-    pub fn test_default(
-        message_id: u64,
-        vessel_id: Option<FiskeridirVesselId>,
-        reloading_timestamp: DateTime<Utc>,
-    ) -> Self {
-        Self {
-            catch: ErsCatch::test_default(),
-            message_info: ErsMessageInfo::test_default(message_id, reloading_timestamp, 1),
-            reloading_date: Some(reloading_timestamp.date_naive()),
-            reloading_from_vessel: Some("test_vessel".parse().unwrap()),
-            reloading_time: Some(reloading_timestamp.time()),
-            _reloading_timestamp: None,
-            reloading_to_vessel: Some("test_vessel2".parse().unwrap()),
-            start_latitude: Some(12.123),
-            start_latitude_sggdd: Some("chords".parse().unwrap()),
-            start_longitude: Some(17.123),
-            start_longitude_sggdd: Some("chords".parse().unwrap()),
-            vessel_info: ErsVesselInfo::test_default(vessel_id),
+#[cfg(feature = "test")]
+mod test {
+    use crate::FiskeridirVesselId;
+
+    use super::*;
+
+    impl ErsTra {
+        pub fn test_default(
+            message_id: u64,
+            vessel_id: Option<FiskeridirVesselId>,
+            reloading_timestamp: DateTime<Utc>,
+        ) -> Self {
+            Self {
+                catch: ErsCatch::test_default(),
+                message_info: ErsMessageInfo::test_default(message_id, reloading_timestamp, 1),
+                reloading_date: Some(reloading_timestamp.date_naive()),
+                reloading_from_vessel: Some("test_vessel".parse().unwrap()),
+                reloading_time: Some(reloading_timestamp.time()),
+                _reloading_timestamp: None,
+                reloading_to_vessel: Some("test_vessel2".parse().unwrap()),
+                start_latitude: Some(12.123),
+                start_latitude_sggdd: Some("chords".parse().unwrap()),
+                start_longitude: Some(17.123),
+                start_longitude_sggdd: Some("chords".parse().unwrap()),
+                vessel_info: ErsVesselInfo::test_default(vessel_id),
+            }
         }
     }
 }

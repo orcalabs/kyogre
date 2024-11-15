@@ -1,4 +1,4 @@
-use std::{ops::Deref, str::FromStr};
+use std::ops::Deref;
 
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::CallSign;
@@ -8,7 +8,6 @@ use serde::{de::Visitor, Deserialize, Serialize, Serializer};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use strum::{AsRefStr, EnumString};
 use uuid::Uuid;
-use wkt::Wkt;
 
 use crate::{FiskeridirVesselId, Mmsi};
 
@@ -105,39 +104,6 @@ pub struct FishingFacility {
 #[serde(transparent)]
 pub struct GeometryWkt(pub wkt::Wkt<f64>);
 
-impl FishingFacility {
-    pub fn test_default() -> Self {
-        Self {
-            tool_id: Uuid::new_v4(),
-            barentswatch_vessel_id: Some(Uuid::new_v4()),
-            fiskeridir_vessel_id: None,
-            vessel_name: Some("Sjarken".into()),
-            call_sign: Some("LK-17".parse().unwrap()),
-            mmsi: Some(Mmsi::test_new(123456)),
-            imo: Some(12345678),
-            reg_num: Some("NO-342642".into()),
-            sbr_reg_num: Some("ABC 123".into()),
-            contact_phone: Some("+4712345678".into()),
-            contact_email: Some("test@test.com".into()),
-            tool_type: FishingFacilityToolType::Nets,
-            tool_type_name: Some("Nets".into()),
-            tool_color: Some("#FF0874C1".into()),
-            tool_count: Some(3),
-            setup_timestamp: Utc::now(),
-            setup_processed_timestamp: Some(Utc::now()),
-            removed_timestamp: Some(Utc::now()),
-            removed_processed_timestamp: Some(Utc::now()),
-            last_changed: Utc::now(),
-            source: Some("SKYS".into()),
-            comment: Some("This is a comment".into()),
-            geometry_wkt: Some(GeometryWkt(
-                Wkt::from_str("POINT(5.7348 62.320717)").unwrap(),
-            )),
-            api_source: FishingFacilityApiSource::Updates,
-        }
-    }
-}
-
 impl<'de> Deserialize<'de> for FishingFacilityToolType {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -229,6 +195,49 @@ mod _sqlx {
             let wkt = decode.geometry.ok_or_else(|| MissingValueSnafu.build())?;
 
             Ok(Self(wkt.to_wkt()))
+        }
+    }
+}
+
+#[cfg(feature = "test")]
+mod test {
+    use std::str::FromStr;
+
+    use uuid::Uuid;
+    use wkt::Wkt;
+
+    use super::*;
+
+    impl FishingFacility {
+        pub fn test_default() -> Self {
+            Self {
+                tool_id: Uuid::new_v4(),
+                barentswatch_vessel_id: Some(Uuid::new_v4()),
+                fiskeridir_vessel_id: None,
+                vessel_name: Some("Sjarken".into()),
+                call_sign: Some("LK-17".parse().unwrap()),
+                mmsi: Some(Mmsi::test_new(123456)),
+                imo: Some(12345678),
+                reg_num: Some("NO-342642".into()),
+                sbr_reg_num: Some("ABC 123".into()),
+                contact_phone: Some("+4712345678".into()),
+                contact_email: Some("test@test.com".into()),
+                tool_type: FishingFacilityToolType::Nets,
+                tool_type_name: Some("Nets".into()),
+                tool_color: Some("#FF0874C1".into()),
+                tool_count: Some(3),
+                setup_timestamp: Utc::now(),
+                setup_processed_timestamp: Some(Utc::now()),
+                removed_timestamp: Some(Utc::now()),
+                removed_processed_timestamp: Some(Utc::now()),
+                last_changed: Utc::now(),
+                source: Some("SKYS".into()),
+                comment: Some("This is a comment".into()),
+                geometry_wkt: Some(GeometryWkt(
+                    Wkt::from_str("POINT(5.7348 62.320717)").unwrap(),
+                )),
+                api_source: FishingFacilityApiSource::Updates,
+            }
         }
     }
 }

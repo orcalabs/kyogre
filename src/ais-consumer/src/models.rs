@@ -7,7 +7,6 @@ use fiskeridir_rs::CallSign;
 use kyogre_core::{
     distance_to_shore, AisClass, Mmsi, NavigationStatus, NewAisPosition, NewAisStatic,
 };
-use rand::{random, Rng};
 use serde::{Deserialize, Serialize};
 use snafu::ResultExt;
 use tracing::warn;
@@ -172,55 +171,6 @@ impl From<AisPosition> for NewAisPositionWrapper {
     }
 }
 
-impl AisPosition {
-    pub fn test_default(mmsi: Option<Mmsi>) -> AisPosition {
-        AisPosition {
-            message_type_id: Some(1),
-            message_type: Some(AisMessageType::Position),
-            mmsi: mmsi.unwrap_or_else(|| Mmsi::test_new(random::<i32>())),
-            msgtime: chrono::offset::Utc::now(),
-            altitude: Some(5),
-            course_over_ground: Some(123.32),
-            latitude: Some(12.23),
-            longitude: Some(74.4),
-            navigational_status: NavigationStatus::UnderWayUsingEngine,
-            ais_class: Some(AisClass::A),
-            rate_of_turn: Some(43.23),
-            speed_over_ground: Some(8.4),
-            true_heading: Some(320),
-        }
-    }
-}
-
-impl AisStatic {
-    pub fn test_default() -> AisStatic {
-        let mmsi: i32 = rand::thread_rng().gen();
-        AisStatic {
-            message_type_id: 5,
-            message_type: Some(AisMessageType::Static),
-            mmsi: Mmsi::test_new(mmsi.abs()),
-            msgtime: chrono::offset::Utc::now(),
-            imo_number: Some(123),
-            call_sign: Some("LK45".to_string()),
-            destination: Some("BERGEN".to_string()),
-            eta: Some(create_eta_string_value(
-                &Utc.timestamp_opt(1000, 0).unwrap(),
-            )),
-            name: Some("sjarken".to_string()),
-            draught: Some(213),
-            ship_length: Some(23),
-            ship_width: Some(8),
-            ship_type: Some(2),
-            dimension_a: Some(1),
-            dimension_b: Some(2),
-            dimension_c: Some(3),
-            dimension_d: Some(4),
-            position_fixing_device_type: Some(2),
-            report_class: Some("test_report_class".to_string()),
-        }
-    }
-}
-
 impl PartialEq<kyogre_core::AisPosition> for AisPosition {
     fn eq(&self, other: &kyogre_core::AisPosition) -> bool {
         self.latitude.unwrap() as i32 == other.latitude as i32
@@ -365,6 +315,62 @@ impl From<AisMessageType> for kyogre_core::AisMessageType {
         match value {
             AisMessageType::Position => kyogre_core::AisMessageType::Position,
             AisMessageType::Static => kyogre_core::AisMessageType::Static,
+        }
+    }
+}
+
+#[cfg(feature = "test")]
+mod test {
+    use rand::{random, Rng};
+
+    use super::*;
+
+    impl AisPosition {
+        pub fn test_default(mmsi: Option<Mmsi>) -> AisPosition {
+            AisPosition {
+                message_type_id: Some(1),
+                message_type: Some(AisMessageType::Position),
+                mmsi: mmsi.unwrap_or_else(|| Mmsi::test_new(random::<i32>())),
+                msgtime: chrono::offset::Utc::now(),
+                altitude: Some(5),
+                course_over_ground: Some(123.32),
+                latitude: Some(12.23),
+                longitude: Some(74.4),
+                navigational_status: NavigationStatus::UnderWayUsingEngine,
+                ais_class: Some(AisClass::A),
+                rate_of_turn: Some(43.23),
+                speed_over_ground: Some(8.4),
+                true_heading: Some(320),
+            }
+        }
+    }
+
+    impl AisStatic {
+        pub fn test_default() -> AisStatic {
+            let mmsi: i32 = rand::thread_rng().gen();
+            AisStatic {
+                message_type_id: 5,
+                message_type: Some(AisMessageType::Static),
+                mmsi: Mmsi::test_new(mmsi.abs()),
+                msgtime: chrono::offset::Utc::now(),
+                imo_number: Some(123),
+                call_sign: Some("LK45".to_string()),
+                destination: Some("BERGEN".to_string()),
+                eta: Some(create_eta_string_value(
+                    &Utc.timestamp_opt(1000, 0).unwrap(),
+                )),
+                name: Some("sjarken".to_string()),
+                draught: Some(213),
+                ship_length: Some(23),
+                ship_width: Some(8),
+                ship_type: Some(2),
+                dimension_a: Some(1),
+                dimension_b: Some(2),
+                dimension_c: Some(3),
+                dimension_d: Some(4),
+                position_fixing_device_type: Some(2),
+                report_class: Some("test_report_class".to_string()),
+            }
         }
     }
 }

@@ -10,5 +10,4 @@ kyogre-core = { path = "../kyogre-core" }
 fiskeridir-rs = { path = "../fiskeridir-rs" }
 
 async-trait = { workspace = true }
-tracing = { workspace = true }
 chrono = { workspace = true }

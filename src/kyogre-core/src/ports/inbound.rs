@@ -1,7 +1,7 @@
 use crate::*;
 use async_trait::async_trait;
 use chrono::{DateTime, NaiveDate, Utc};
-use fiskeridir_rs::{DataFileId, DeliveryPointId, SpeciesGroup};
+use fiskeridir_rs::{DataFileId, SpeciesGroup};
 
 pub type BoxIterator<T> = Box<dyn Iterator<Item = T> + Send + Sync>;
 
@@ -153,6 +153,7 @@ pub trait TripPipelineInbound: Send + Sync {
     async fn refresh_detailed_trips(&self, vessel_id: FiskeridirVesselId) -> CoreResult<()>;
 }
 
+#[cfg(feature = "test")]
 #[async_trait]
 pub trait TestHelperInbound: Send + Sync {
     async fn manual_vessel_conflict_override(&self, conflicts: Vec<NewVesselConflict>);
@@ -162,8 +163,8 @@ pub trait TestHelperInbound: Send + Sync {
     async fn add_manual_delivery_points(&self, values: Vec<ManualDeliveryPoint>);
     async fn add_deprecated_delivery_point(
         &self,
-        old: DeliveryPointId,
-        new: DeliveryPointId,
+        old: fiskeridir_rs::DeliveryPointId,
+        new: fiskeridir_rs::DeliveryPointId,
     ) -> CoreResult<()>;
 }
 

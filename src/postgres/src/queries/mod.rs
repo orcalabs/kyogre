@@ -17,6 +17,8 @@ pub mod ml_models;
 pub mod ocean_climate;
 pub mod port;
 pub mod species;
+#[cfg(feature = "test")]
+pub mod test;
 pub mod trip;
 pub mod trip_benchmarks;
 pub mod unnest_delete;

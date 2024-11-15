@@ -130,6 +130,7 @@ ORDER BY
         arg: AisPositionsArg,
     ) -> Result<Vec<AisPosition>> {
         let (mmsi, start, end) = match arg {
+            #[cfg(feature = "test")]
             AisPositionsArg::All => (None, None, None),
             AisPositionsArg::Filter { mmsi, start, end } => (Some(mmsi), Some(start), Some(end)),
         };
@@ -640,6 +641,7 @@ ON CONFLICT (mmsi, TIMESTAMP) DO NOTHING
 }
 
 pub(crate) enum AisPositionsArg {
+    #[cfg(feature = "test")]
     All,
     Filter {
         mmsi: Mmsi,

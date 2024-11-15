@@ -20,8 +20,13 @@ impl AsRef<Uuid> for BarentswatchUserId {
     }
 }
 
-impl BarentswatchUserId {
-    pub fn test_new() -> Self {
-        Self(Uuid::new_v4())
+#[cfg(feature = "test")]
+mod test {
+    use super::*;
+
+    impl BarentswatchUserId {
+        pub fn test_new() -> Self {
+            Self(Uuid::new_v4())
+        }
     }
 }
