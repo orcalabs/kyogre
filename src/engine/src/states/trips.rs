@@ -125,6 +125,13 @@ trait TripComputationStep: Send + Sync {
         unit: TripProcessingUnit,
     ) -> Result<TripProcessingUnit>;
     async fn fetch_missing(&self, shared: &SharedState, vessel: &Vessel) -> Result<Vec<Trip>>;
+    async fn set_state(
+        &self,
+        shared: &SharedState,
+        unit: &mut TripProcessingUnit,
+        vessel: &Vessel,
+        trip: &Trip,
+    ) -> Result<()>;
 }
 
 #[async_trait]
@@ -143,6 +150,19 @@ impl TripComputationStep for AisVms {
             .trip_pipeline_outbound
             .trips_without_distance(vessel.fiskeridir.id)
             .await?)
+    }
+    async fn set_state(
+        &self,
+        shared: &SharedState,
+        unit: &mut TripProcessingUnit,
+        _vessel: &Vessel,
+        trip: &Trip,
+    ) -> Result<()> {
+        unit.positions = shared
+            .trips_precision_outbound_port
+            .trip_positions(trip.trip_id)
+            .await?;
+        Ok(())
     }
 }
 
@@ -181,6 +201,20 @@ impl TripComputationStep for TripPositionLayers {
             .trip_pipeline_outbound
             .trips_without_position_layers(vessel.fiskeridir.id)
             .await?)
+    }
+
+    async fn set_state(
+        &self,
+        shared: &SharedState,
+        unit: &mut TripProcessingUnit,
+        _vessel: &Vessel,
+        trip: &Trip,
+    ) -> Result<()> {
+        unit.positions = shared
+            .trips_precision_outbound_port
+            .trip_positions(trip.trip_id)
+            .await?;
+        Ok(())
     }
 }
 
@@ -230,6 +264,22 @@ impl TripComputationStep for TripPrecisionStep {
             .trips_without_precision(vessel.fiskeridir.id)
             .await?)
     }
+
+    async fn set_state(
+        &self,
+        shared: &SharedState,
+        unit: &mut TripProcessingUnit,
+        vessel: &Vessel,
+        trip: &Trip,
+    ) -> Result<()> {
+        let period = trip.precision_period.as_ref().unwrap_or(&trip.period);
+        unit.positions = shared
+            .trips_precision_outbound_port
+            .ais_vms_positions(vessel.mmsi(), vessel.fiskeridir.call_sign.as_ref(), period)
+            .await?;
+
+        Ok(())
+    }
 }
 
 #[derive(Default)]
@@ -255,18 +305,8 @@ impl TripComputationStep for TripHaulWeight {
         let mut updates = Vec::new();
         let mut i = 0;
 
-        let positions = if let Some(ref output) = unit.trip_position_output {
-            &output.trip_positions
-        } else if let Some(trip_id) = unit.trip_id {
-            &adapter.trip_positions(trip_id).await?
-        } else {
-            // Trip positions will either run prior to this state, or this is an existing trip with
-            // a trip id.
-            unreachable!();
-        };
-
-        while i < positions.len() {
-            let current_position = &positions[i];
+        while i < unit.positions.len() {
+            let current_position = &unit.positions[i];
 
             if let Some(haul) = &current_haul {
                 if haul.period.contains(current_position.timestamp) {
@@ -275,8 +315,8 @@ impl TripComputationStep for TripHaulWeight {
 
                     // Lint suggestion does not support break
                     #[allow(clippy::needless_range_loop)]
-                    for j in haul_start_idx + 1..positions.len() {
-                        if !haul.period.contains(positions[j].timestamp) {
+                    for j in haul_start_idx + 1..unit.positions.len() {
+                        if !haul.period.contains(unit.positions[j].timestamp) {
                             haul_end_idx = j;
                             break;
                         }
@@ -287,7 +327,7 @@ impl TripComputationStep for TripHaulWeight {
                     let weight_per_position = haul.weight / num_haul_positions;
                     (haul_start_idx..haul_end_idx).for_each(|idx| {
                         current_weight += weight_per_position;
-                        let pos = &positions[idx];
+                        let pos = &unit.positions[idx];
                         updates.push(UpdateTripPositionHaulWeight {
                             timestamp: pos.timestamp,
                             position_type: pos.position_type,
@@ -333,6 +373,20 @@ impl TripComputationStep for TripHaulWeight {
             .trip_pipeline_outbound
             .trips_without_position_haul_weight_distribution(vessel.fiskeridir.id)
             .await?)
+    }
+
+    async fn set_state(
+        &self,
+        shared: &SharedState,
+        unit: &mut TripProcessingUnit,
+        _vessel: &Vessel,
+        trip: &Trip,
+    ) -> Result<()> {
+        unit.positions = shared
+            .trips_precision_outbound_port
+            .trip_positions(trip.trip_id)
+            .await?;
+        Ok(())
     }
 }
 
@@ -815,25 +869,37 @@ async fn process_unprocessed_trips(
                 .as_ref()
                 .and_then(|v| dock_points.get(v).cloned())
                 .unwrap_or_default(),
-            positions: shared_state
+            positions: vec![],
+            vessel_id: vessel.fiskeridir.id,
+            trip_assembler_id: vessel.preferred_trip_assembler,
+            trip: NewTrip {
+                period: t.period.clone(),
+                landing_coverage: t.landing_coverage.clone(),
+                start_port_code: t.start_port_code.clone(),
+                end_port_code: t.end_port_code.clone(),
+            },
+            trip_position_output: None,
+            trip_position_haul_weight_distribution_output: None,
+            trip_id: Some(t.trip_id),
+        };
+
+        if idx == 0 {
+            // The first computation step wants the regular 'period', but when
+            // setting the state for the next step we want the 'period_precison'.
+            // We therefore hardcode the first step to only operate on the regular
+            // period instead of invoking its 'set_state' that prioritzes the 'precision_period'
+            unit.positions = shared_state
                 .trips_precision_outbound_port
                 .ais_vms_positions(
                     vessel.mmsi(),
                     vessel.fiskeridir.call_sign.as_ref(),
                     &t.period,
                 )
-                .await?,
-            vessel_id: vessel.fiskeridir.id,
-            trip_assembler_id: vessel.preferred_trip_assembler,
-            trip: NewTrip {
-                period: t.period.clone(),
-                landing_coverage: t.landing_coverage,
-                start_port_code: t.start_port_code,
-                end_port_code: t.end_port_code,
-            },
-            trip_position_output: None,
-            trip_position_haul_weight_distribution_output: None,
-            trip_id: Some(t.trip_id),
+                .await?;
+        } else {
+            TRIP_COMPUTATION_STEPS[idx - 1]
+                .set_state(shared_state, &mut unit, vessel, &t)
+                .await?;
         };
 
         for step in &TRIP_COMPUTATION_STEPS[idx..] {
