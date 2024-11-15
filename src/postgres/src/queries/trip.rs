@@ -4,10 +4,9 @@ use chrono::{DateTime, Utc};
 use fiskeridir_rs::{DeliveryPointId, Gear, GearGroup, LandingId, SpeciesGroup, VesselLengthGroup};
 use futures::{Stream, StreamExt, TryStreamExt};
 use kyogre_core::{
-    Bound, DateRange, FiskeridirVesselId, HaulId, Ordering, PrecisionOutcome, PrecisionStatus,
-    ProcessingStatus, TripAssemblerId, TripBenchmarkId, TripBenchmarkStatus, TripId,
-    TripPositionLayerOutput, TripSet, TripSorting, TripUpdate, TripsConflictStrategy, TripsQuery,
-    VesselEventType,
+    Bound, DateRange, FiskeridirVesselId, HaulId, Ordering, PrecisionOutcome, ProcessingStatus,
+    TripAssemblerId, TripBenchmarkId, TripBenchmarkStatus, TripId, TripPositionLayerOutput,
+    TripSet, TripSorting, TripUpdate, TripsConflictStrategy, TripsQuery, VesselEventType,
 };
 use sqlx::{postgres::types::PgRange, Acquire};
 
@@ -29,9 +28,9 @@ impl PostgresAdapter {
             r#"
 UPDATE trips t
 SET
-    trip_precision_status_id = 'unprocessed',
+    trip_precision_status_id = $1,
     distancer_id = NULL,
-    position_layers_status = 1
+    position_layers_status = $1
 FROM
     (
         SELECT
@@ -47,11 +46,12 @@ FROM
         FROM
             trips
         WHERE
-            UPPER(period) >= $1
+            UPPER(period) >= $2
     ) q
 WHERE
     q.trip_id = t.trip_id
             "#,
+            ProcessingStatus::Unprocessed as i32,
             Utc::now()
         )
         .execute(&mut *tx)
@@ -196,7 +196,7 @@ SET
 WHERE
     fiskeridir_vessel_id = $2
             "#,
-            PrecisionStatus::Unprocessed.name(),
+            ProcessingStatus::Unprocessed as i32,
             vessel_id.into_inner(),
         )
         .execute(&self.pool)
@@ -272,7 +272,7 @@ WHERE
                         .as_ref()
                         .map(|v| v.direction.name().to_string()),
                     Some(PgRange::from(&new_period)),
-                    PrecisionStatus::Successful.name(),
+                    ProcessingStatus::Successful as i32,
                 ),
                 PrecisionOutcome::Failed => (
                     None,
@@ -280,7 +280,7 @@ WHERE
                     None,
                     None,
                     None,
-                    PrecisionStatus::Attempted.name(),
+                    ProcessingStatus::Attempted as i32,
                 ),
             };
 
@@ -1782,7 +1782,7 @@ WHERE
     AND trip_precision_status_id = $2
             "#,
             vessel_id.into_inner(),
-            PrecisionStatus::Unprocessed.name(),
+            ProcessingStatus::Unprocessed as i32,
         )
         .fetch(&self.pool)
         .map_err(|e| e.into())

@@ -10,7 +10,7 @@
         "Int4",
         "Varchar",
         "TstzRange",
-        "Varchar",
+        "Int4",
         "Int8"
       ]
     },
