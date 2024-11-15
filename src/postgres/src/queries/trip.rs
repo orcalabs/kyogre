@@ -34,7 +34,8 @@ UPDATE trips t
 SET
     trip_precision_status_id = $1,
     distancer_id = NULL,
-    position_layers_status = $1
+    position_layers_status = $1,
+    trip_position_haul_weight_distribution_status = $1
 FROM
     (
         SELECT
