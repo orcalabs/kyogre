@@ -10,7 +10,7 @@ ALTER COLUMN trip_precision_status_id TYPE int USING (
     CASE trip_precision_status_id
         WHEN 'unprocessed' THEN 1
         WHEN 'attempted' THEN 2
-        WHEN 'sucessful' THEN 3
+        WHEN 'successful' THEN 3
     END
 );
 
