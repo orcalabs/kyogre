@@ -7,9 +7,9 @@ use chrono::{DateTime, Utc};
 use fiskeridir_rs::{DeliveryPointId, Gear, GearGroup, LandingId, SpeciesGroup, VesselLengthGroup};
 use kyogre_core::{
     AisVmsPosition, Catch, DateRange, FishingFacility, FiskeridirVesselId, Haul,
-    MinimalVesselEvent, PositionType, PrecisionId, PrecisionOutcome, PrecisionStatus,
-    ProcessingStatus, PrunedTripPosition, TripAssemblerConflict, TripAssemblerId, TripDistancerId,
-    TripId, TripPositionLayerId, TripProcessingUnit, TripsConflictStrategy, VesselEventType,
+    MinimalVesselEvent, PositionType, PrecisionId, PrecisionOutcome, ProcessingStatus,
+    PrunedTripPosition, TripAssemblerConflict, TripAssemblerId, TripDistancerId, TripId,
+    TripPositionLayerId, TripProcessingUnit, TripsConflictStrategy, VesselEventType,
 };
 use sqlx::postgres::types::PgRange;
 use std::str::FromStr;
@@ -78,7 +78,8 @@ pub struct NewTrip {
     pub end_precision_id: Option<PrecisionId>,
     pub start_precision_direction: Option<&'static str>,
     pub end_precision_direction: Option<&'static str>,
-    pub trip_precision_status_id: &'static str,
+    #[unnest_insert(sql_type = "INT", type_conversion = "type_to_i32")]
+    pub trip_precision_status_id: ProcessingStatus,
     #[unnest_insert(sql_type = "tstzrange")]
     pub period_precision: Option<PgRange<DateTime<Utc>>>,
     pub distance: Option<f64>,
@@ -145,25 +146,13 @@ impl From<&TripProcessingUnit> for NewTrip {
                     end_precision.as_ref().map(|v| v.id),
                     end_precision.as_ref().map(|v| v.direction),
                     Some(PgRange::from(new_period)),
-                    PrecisionStatus::Successful.name(),
+                    ProcessingStatus::Successful,
                 ),
-                PrecisionOutcome::Failed => (
-                    None,
-                    None,
-                    None,
-                    None,
-                    None,
-                    PrecisionStatus::Attempted.name(),
-                ),
+                PrecisionOutcome::Failed => {
+                    (None, None, None, None, None, ProcessingStatus::Attempted)
+                }
             },
-            None => (
-                None,
-                None,
-                None,
-                None,
-                None,
-                PrecisionStatus::Unprocessed.name(),
-            ),
+            None => (None, None, None, None, None, ProcessingStatus::Unprocessed),
         };
 
         let (distance, distancer_id) = match value.distance_output {
