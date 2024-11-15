@@ -35,7 +35,7 @@ serde_repr = "0.1"
 serde_json = "1.0"
 humantime-serde = "1.1"
 reqwest = { version = "0.12.9", default-features = false }
-stack-error = { version = "0.3.0", registry = "orcalabs-orcastrator" }
+stack-error = { version = "0.4.0", registry = "orcalabs-orcastrator" }
 snafu = "0.8.5"
 strum = { version = "0.26.3", features = ["derive"] }
 config = { version = "0.14", default-features = false, features = ["yaml"] }
@@ -52,7 +52,7 @@ enum_index = "0.2"
 enum_index_derive = "0.2"
 uuid = { version = "1.11", features = ["serde"] }
 wkt = { version = "0.11", features = ["serde"] }
-geo = "0.28"
+geo = "0.29"
 rand = "0.8"
 num-traits = "0.2"
 num-derive = "0.4"

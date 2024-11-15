@@ -17,7 +17,7 @@ reqwest = { workspace = true, default-features = false, features = [
     "gzip",
     "stream",
 ] }
-reqwest-middleware = { version = "0.3", features = ["json"] }
-reqwest-retry = "0.6"
+reqwest-middleware = { version = "0.4", features = ["json"] }
+reqwest-retry = "0.7"
 reqwest-tracing = "0.5"
 bytes = "1.8"
