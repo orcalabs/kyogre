@@ -281,14 +281,14 @@ impl TripUpdate {
 }
 
 impl PrecisionOutcome {
-    pub fn status(&self) -> PrecisionStatus {
+    pub fn status(&self) -> ProcessingStatus {
         match self {
             PrecisionOutcome::Success {
                 new_period: _,
                 start_precision: _,
                 end_precision: _,
-            } => PrecisionStatus::Successful,
-            PrecisionOutcome::Failed => PrecisionStatus::Attempted,
+            } => ProcessingStatus::Successful,
+            PrecisionOutcome::Failed => ProcessingStatus::Attempted,
         }
     }
 }
@@ -297,33 +297,6 @@ impl PrecisionOutcome {
 pub struct PrecisionUpdate {
     pub id: PrecisionId,
     pub direction: PrecisionDirection,
-}
-
-/// Status of the outcome of all enabled precision implementations for a given trip.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum PrecisionStatus {
-    /// No precision implementation has been attempted.
-    Unprocessed = 1,
-    /// All enabled precision implementations have been attempted, but failed.
-    Attempted = 2,
-    /// Enabled precision implementations have been attempted and atleast 1 succeeded.
-    Successful = 3,
-}
-
-impl From<PrecisionStatus> for i32 {
-    fn from(value: PrecisionStatus) -> Self {
-        value as i32
-    }
-}
-
-impl PrecisionStatus {
-    pub fn name(&self) -> &'static str {
-        match self {
-            PrecisionStatus::Attempted => "attempted",
-            PrecisionStatus::Successful => "successful",
-            PrecisionStatus::Unprocessed => "unprocessed",
-        }
-    }
 }
 
 /// What direction a precision implementation have modified a trip.
