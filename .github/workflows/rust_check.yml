@@ -24,4 +24,3 @@ jobs:
       postgres-version: postgis/postgis:16-3.4-alpine
       openapi-bins: |
         web-api-openapi
-      cargo-test-features: all-tests
