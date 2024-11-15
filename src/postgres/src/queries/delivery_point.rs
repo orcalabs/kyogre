@@ -1,35 +1,25 @@
 use std::collections::{hash_map::Entry, HashMap};
 
 use fiskeridir_rs::DeliveryPointId;
-use futures::{Stream, StreamExt, TryStreamExt};
+use futures::{Stream, TryStreamExt};
 use kyogre_core::{DateRange, DeliveryPoint, FiskeridirVesselId};
 use sqlx::postgres::types::PgRange;
 
 use crate::{
     error::Result,
     models::{
-        AquaCultureEntry, AquaCultureSpecies, AquaCultureTill, ManualDeliveryPoint,
-        MattilsynetDeliveryPoint, NewDeliveryPointId, NewSpeciesFiskeridir,
+        AquaCultureEntry, AquaCultureSpecies, AquaCultureTill, MattilsynetDeliveryPoint,
+        NewDeliveryPointId, NewSpeciesFiskeridir,
     },
     PostgresAdapter,
 };
 
 impl PostgresAdapter {
-    pub(crate) async fn delivery_point_impl(
-        &self,
-        id: &DeliveryPointId,
-    ) -> Result<Option<DeliveryPoint>> {
-        self.delivery_points_inner(Some(id))
-            .next()
-            .await
-            .transpose()
-    }
-
     pub(crate) fn delivery_points_impl(&self) -> impl Stream<Item = Result<DeliveryPoint>> + '_ {
         self.delivery_points_inner(None)
     }
 
-    fn delivery_points_inner(
+    pub(crate) fn delivery_points_inner(
         &self,
         id: Option<&DeliveryPointId>,
     ) -> impl Stream<Item = Result<DeliveryPoint>> + '_ {
@@ -59,58 +49,6 @@ WHERE
         )
         .fetch(&self.pool)
         .map_err(|e| e.into())
-    }
-
-    pub(crate) async fn add_deprecated_delivery_point_impl(
-        &self,
-        old: DeliveryPointId,
-        new: DeliveryPointId,
-    ) -> Result<()> {
-        sqlx::query!(
-            r#"
-INSERT INTO
-    deprecated_delivery_points (old_delivery_point_id, new_delivery_point_id)
-VALUES
-    ($1, $2)
-            "#,
-            old.into_inner(),
-            new.into_inner(),
-        )
-        .execute(&self.pool)
-        .await?;
-
-        Ok(())
-    }
-
-    pub(crate) async fn delivery_points_log_impl(&self) -> Result<Vec<serde_json::Value>> {
-        Ok(sqlx::query!(
-            r#"
-SELECT
-    TO_JSONB(d.*) AS "json!"
-FROM
-    delivery_points_log d
-            "#,
-        )
-        .fetch(&self.pool)
-        .map_ok(|r| r.json)
-        .try_collect()
-        .await?)
-    }
-
-    pub(crate) async fn add_manual_delivery_points_impl(
-        &self,
-        values: Vec<kyogre_core::ManualDeliveryPoint>,
-    ) -> Result<()> {
-        let mut tx = self.pool.begin().await?;
-
-        self.unnest_insert_from::<_, _, NewDeliveryPointId<'_>>(&values, &mut *tx)
-            .await?;
-        self.unnest_insert_from::<_, _, ManualDeliveryPoint>(values, &mut *tx)
-            .await?;
-
-        tx.commit().await?;
-
-        Ok(())
     }
 
     pub(crate) async fn add_aqua_culture_register_impl(

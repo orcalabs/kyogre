@@ -5,12 +5,15 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[features]
+test = ["kyogre-core/test", "fiskeridir-rs/test"]
+
 [dependencies]
 kyogre-core = { path = "../kyogre-core", features = ["sqlx"] }
 
 orca-core = { workspace = true, features = ["telemetry"] }
 fiskeridir-rs = { workspace = true }
-jurisdiction = "0.1.1"
+jurisdiction = { workspace = true }
 stack-error = { workspace = true }
 snafu = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
@@ -24,9 +27,6 @@ async-trait = { workspace = true }
 futures = { workspace = true }
 rand = { workspace = true }
 strum = { workspace = true }
-geo = { workspace = true }
-wkt = { workspace = true }
-uuid = { workspace = true }
 geozero = { workspace = true }
 
 unnest_insert = { version = "0.9.0", registry = "orcalabs-orcastrator", features = [
@@ -35,8 +35,3 @@ unnest_insert = { version = "0.9.0", registry = "orcalabs-orcastrator", features
 
 
 geo-types = "0.7.13"
-
-[dev-dependencies]
-dockertest = { workspace = true }
-orca-core = { workspace = true, features = ["compositions"] }
-tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }

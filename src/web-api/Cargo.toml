@@ -46,18 +46,15 @@ serde_qs = { version = "0.13.0", features = ["actix4"] }
 pin-project-lite = "0.2.15"
 
 [dev-dependencies]
-engine = { path = "../engine" }
+engine = { path = "../engine", features = ["test"] }
 trip-benchmark = { path = "../trip-benchmark" }
 http-client = { path = "../http-client", default-features = false }
 
-machine = { workspace = true }
-dockertest = { workspace = true }
+fiskeridir-rs = { workspace = true, features = ["test"] }
 orca-core = { workspace = true, features = ["test-helper"] }
 tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
-rand = { workspace = true }
-tracing-subscriber = { workspace = true }
 wiremock = { workspace = true }
-float-cmp = "0.10.0"
 
+float-cmp = "0.10.0"
 rsa = { version = "0.9.6", features = ["serde"] }
 base64 = "0.22.1"

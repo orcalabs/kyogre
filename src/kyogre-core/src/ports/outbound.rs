@@ -3,9 +3,7 @@ use std::pin::Pin;
 
 use async_trait::async_trait;
 use chrono::{DateTime, NaiveDate, Utc};
-use fiskeridir_rs::{
-    CallSign, DataFileId, DeliveryPointId, GearGroup, LandingId, SpeciesGroup, VesselLengthGroup,
-};
+use fiskeridir_rs::{CallSign, DataFileId, GearGroup, LandingId, SpeciesGroup, VesselLengthGroup};
 use futures::Stream;
 
 use crate::*;
@@ -355,6 +353,7 @@ pub trait MLModelsOutbound: Send + Sync {
     ) -> CoreResult<Vec<CatchLocationWeather>>;
 }
 
+#[cfg(feature = "test")]
 #[async_trait]
 pub trait TestHelperOutbound: Send + Sync {
     async fn all_dep(&self) -> Vec<Departure>;
@@ -365,7 +364,7 @@ pub trait TestHelperOutbound: Send + Sync {
     async fn active_vessel_conflicts(&self) -> Vec<ActiveVesselConflict>;
     async fn delivery_points_log(&self) -> Vec<serde_json::Value>;
     async fn port(&self, port_id: &str) -> Option<Port>;
-    async fn delivery_point(&self, id: &DeliveryPointId) -> Option<DeliveryPoint>;
+    async fn delivery_point(&self, id: &fiskeridir_rs::DeliveryPointId) -> Option<DeliveryPoint>;
     async fn dock_points_of_port(&self, port_id: &str) -> Vec<PortDockPoint>;
     async fn trip_assembler_log(&self) -> Vec<TripAssemblerLogEntry>;
 }

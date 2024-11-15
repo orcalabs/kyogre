@@ -15,12 +15,14 @@ mod trip_layers;
 pub mod settings;
 pub mod startup;
 pub mod states;
+#[cfg(feature = "test")]
 pub mod test_helper;
 
 pub use ml_models::*;
 pub use settings::*;
 pub use startup::*;
 pub use states::*;
+#[cfg(feature = "test")]
 pub use test_helper::*;
 pub use trip_assembler::*;
 pub use trip_layers::*;

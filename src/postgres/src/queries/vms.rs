@@ -12,10 +12,6 @@ use crate::{
 };
 
 impl PostgresAdapter {
-    pub(crate) fn all_vms_impl(&self) -> impl Stream<Item = Result<VmsPosition>> + '_ {
-        self.vms_positions_inner(VmsPositionsArg::All)
-    }
-
     pub(crate) fn vms_positions_impl(
         &self,
         call_sign: &CallSign,
@@ -24,11 +20,12 @@ impl PostgresAdapter {
         self.vms_positions_inner(VmsPositionsArg::Filter { call_sign, range })
     }
 
-    fn vms_positions_inner(
+    pub(crate) fn vms_positions_inner(
         &self,
         arg: VmsPositionsArg<'_>,
     ) -> impl Stream<Item = Result<VmsPosition>> + '_ {
         let (call_sign, start, end) = match arg {
+            #[cfg(feature = "test")]
             VmsPositionsArg::All => (None, None, None),
             VmsPositionsArg::Filter { call_sign, range } => {
                 (Some(call_sign), Some(range.start()), Some(range.end()))
@@ -232,6 +229,7 @@ RETURNING
 }
 
 pub(crate) enum VmsPositionsArg<'a> {
+    #[cfg(feature = "test")]
     All,
     Filter {
         call_sign: &'a CallSign,

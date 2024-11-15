@@ -296,39 +296,44 @@ impl ErsVesselInfo {
     }
 }
 
-impl ErsCatch {
-    pub fn test_default() -> Self {
-        Self {
-            quantum_type: Some("Fangst ombord".parse().unwrap()),
-            quantum_type_code: Some("OB".parse().unwrap()),
-            species: ErsSpecies::test_default(),
-        }
-    }
-}
-
-impl ErsSpecies {
-    pub fn test_default() -> Self {
-        Self {
-            living_weight: Some(2468),
-            species_fao: Some("Torsk".parse().unwrap()),
-            species_fao_code: Some("COD".parse().unwrap()),
-            species_fdir: Some("Torsk".parse().unwrap()),
-            species_fdir_code: Some(1022),
-            species_group: Some(SpeciesGroup::AtlanticCod.norwegian_name().parse().unwrap()),
-            species_group_code: Some(SpeciesGroup::AtlanticCod),
-            species_main_group: Some(
-                SpeciesMainGroup::CodAndCodishFish
-                    .norwegian_name()
-                    .parse()
-                    .unwrap(),
-            ),
-            species_main_group_code: Some(SpeciesMainGroup::CodAndCodishFish),
-        }
-    }
-}
-
 impl From<FiskdirVesselNationalityGroup> for i32 {
     fn from(value: FiskdirVesselNationalityGroup) -> Self {
         value as i32
+    }
+}
+
+#[cfg(feature = "test")]
+mod test {
+    use super::*;
+
+    impl ErsCatch {
+        pub fn test_default() -> Self {
+            Self {
+                quantum_type: Some("Fangst ombord".parse().unwrap()),
+                quantum_type_code: Some("OB".parse().unwrap()),
+                species: ErsSpecies::test_default(),
+            }
+        }
+    }
+
+    impl ErsSpecies {
+        pub fn test_default() -> Self {
+            Self {
+                living_weight: Some(2468),
+                species_fao: Some("Torsk".parse().unwrap()),
+                species_fao_code: Some("COD".parse().unwrap()),
+                species_fdir: Some("Torsk".parse().unwrap()),
+                species_fdir_code: Some(1022),
+                species_group: Some(SpeciesGroup::AtlanticCod.norwegian_name().parse().unwrap()),
+                species_group_code: Some(SpeciesGroup::AtlanticCod),
+                species_main_group: Some(
+                    SpeciesMainGroup::CodAndCodishFish
+                        .norwegian_name()
+                        .parse()
+                        .unwrap(),
+                ),
+                species_main_group_code: Some(SpeciesMainGroup::CodAndCodishFish),
+            }
+        }
     }
 }

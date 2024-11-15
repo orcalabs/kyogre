@@ -222,26 +222,6 @@ pub static WEATHER_LOCATION_LATS_LONS: [(f64, f64, i64); 21] = [
     (70.95, 25.45, 170901254),
 ];
 
-impl NewWeather {
-    pub fn test_default(timestamp: DateTime<Utc>) -> Self {
-        let (latitude, longitude, _) = WEATHER_LOCATION_LATS_LONS[0];
-        Self {
-            timestamp,
-            latitude,
-            longitude,
-            altitude: 0.0,
-            wind_speed_10m: WindSpeed::new(20.0),
-            wind_direction_10m: Some(150.0),
-            air_temperature_2m: AirTemperature::new(10.0),
-            relative_humidity_2m: RelativeHumidity::new(0.2),
-            air_pressure_at_sea_level: AirPressureAtSeaLevel::new(20000.0),
-            precipitation_amount: PrecipitationAmount::new(10.0),
-            land_area_fraction: 0.,
-            cloud_area_fraction: CloudAreaFraction::new(0.2),
-        }
-    }
-}
-
 impl From<&NewWeather> for Weather {
     fn from(v: &NewWeather) -> Self {
         Self {
@@ -326,5 +306,30 @@ impl From<Option<f64>> for CloudAreaFraction {
 impl From<Option<f64>> for PrecipitationAmount {
     fn from(value: Option<f64>) -> Self {
         value.map(PrecipitationAmount::new).unwrap_or_default()
+    }
+}
+
+#[cfg(feature = "test")]
+mod test {
+    use super::*;
+
+    impl NewWeather {
+        pub fn test_default(timestamp: DateTime<Utc>) -> Self {
+            let (latitude, longitude, _) = WEATHER_LOCATION_LATS_LONS[0];
+            Self {
+                timestamp,
+                latitude,
+                longitude,
+                altitude: 0.0,
+                wind_speed_10m: WindSpeed::new(20.0),
+                wind_direction_10m: Some(150.0),
+                air_temperature_2m: AirTemperature::new(10.0),
+                relative_humidity_2m: RelativeHumidity::new(0.2),
+                air_pressure_at_sea_level: AirPressureAtSeaLevel::new(20000.0),
+                precipitation_amount: PrecipitationAmount::new(10.0),
+                land_area_fraction: 0.,
+                cloud_area_fraction: CloudAreaFraction::new(0.2),
+            }
+        }
     }
 }

@@ -2,9 +2,7 @@ use std::result::Result as StdResult;
 
 use async_trait::async_trait;
 use chrono::{DateTime, NaiveDate, Utc};
-use fiskeridir_rs::{
-    CallSign, DataFileId, DeliveryPointId, GearGroup, LandingId, SpeciesGroup, VesselLengthGroup,
-};
+use fiskeridir_rs::{CallSign, DataFileId, GearGroup, LandingId, SpeciesGroup, VesselLengthGroup};
 use futures::{Stream, StreamExt, TryStreamExt};
 use kyogre_core::*;
 use orca_core::{Environment, PsqlLogStatements, PsqlSettings};
@@ -320,8 +318,10 @@ WHERE
     }
 }
 
+#[cfg(feature = "test")]
 impl TestStorage for PostgresAdapter {}
 
+#[cfg(feature = "test")]
 #[async_trait]
 impl TestHelperOutbound for PostgresAdapter {
     async fn trip_assembler_log(&self) -> Vec<TripAssemblerLogEntry> {
@@ -369,7 +369,7 @@ impl TestHelperOutbound for PostgresAdapter {
             .transpose()
             .unwrap()
     }
-    async fn delivery_point(&self, id: &DeliveryPointId) -> Option<DeliveryPoint> {
+    async fn delivery_point(&self, id: &fiskeridir_rs::DeliveryPointId) -> Option<DeliveryPoint> {
         self.delivery_point_impl(id).await.unwrap()
     }
     async fn dock_points_of_port(&self, port_id: &str) -> Vec<PortDockPoint> {
@@ -400,6 +400,7 @@ impl DailyWeatherInbound for PostgresAdapter {
     }
 }
 
+#[cfg(feature = "test")]
 #[async_trait]
 impl TestHelperInbound for PostgresAdapter {
     async fn manual_vessel_conflict_override(&self, overrides: Vec<NewVesselConflict>) {
@@ -419,8 +420,8 @@ impl TestHelperInbound for PostgresAdapter {
     }
     async fn add_deprecated_delivery_point(
         &self,
-        old: DeliveryPointId,
-        new: DeliveryPointId,
+        old: fiskeridir_rs::DeliveryPointId,
+        new: fiskeridir_rs::DeliveryPointId,
     ) -> CoreResult<()> {
         Ok(self.add_deprecated_delivery_point_impl(old, new).await?)
     }

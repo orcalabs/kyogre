@@ -167,40 +167,6 @@ impl From<VesselLengthGroup> for i32 {
     }
 }
 
-impl Vessel {
-    pub fn test_default(id: Option<FiskeridirVesselId>, call_sign: &str) -> Vessel {
-        Vessel {
-            id,
-            registration_id: Some("LK-29".parse().unwrap()),
-            call_sign: Some(call_sign.parse().unwrap()),
-            name: Some("sjarken".parse().unwrap()),
-            type_code: Some(VesselType::FishingVessel),
-            quota_registration_id: Some("LK-29".parse().unwrap()),
-            num_crew_members: Some(10),
-            municipality_code: Some(1002),
-            municipality_name: Some("Bergen".parse().unwrap()),
-            county_code: Some(1230),
-            county: Some("Rogaland".parse().unwrap()),
-            nationality_code: "NOR".parse().unwrap(),
-            nationality_group: Some("Norske fartøy".parse().unwrap()),
-            length: Some(16.4),
-            length_group_code: Some(VesselLengthGroup::FifteenToTwentyOne),
-            length_group_name: Some(
-                VesselLengthGroup::FifteenToTwentyOne
-                    .description()
-                    .parse()
-                    .unwrap(),
-            ),
-            gross_tonnage_1969: Some(143),
-            gross_tonnage_other: Some(12),
-            building_year: Some(2001),
-            rebuilding_year: Some(2010),
-            engine_power: Some(900),
-            engine_building_year: Some(2000),
-        }
-    }
-}
-
 impl FiskeridirVesselId {
     // This exists because `duckdb-rs` needs to be able to create this type from a
     // generated protobuf schema, and because `DeserializeOptFiskeridirVesselIdStr` needs to
@@ -210,9 +176,6 @@ impl FiskeridirVesselId {
     }
     pub fn into_inner(self) -> i64 {
         self.0
-    }
-    pub fn test_new(value: i64) -> Self {
-        Self(value)
     }
 }
 
@@ -233,5 +196,50 @@ impl From<FiskeridirVesselId> for i64 {
 impl Display for FiskeridirVesselId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.0.fmt(f)
+    }
+}
+
+#[cfg(feature = "test")]
+mod test {
+    use super::*;
+
+    impl Vessel {
+        pub fn test_default(id: Option<FiskeridirVesselId>, call_sign: &str) -> Vessel {
+            Vessel {
+                id,
+                registration_id: Some("LK-29".parse().unwrap()),
+                call_sign: Some(call_sign.parse().unwrap()),
+                name: Some("sjarken".parse().unwrap()),
+                type_code: Some(VesselType::FishingVessel),
+                quota_registration_id: Some("LK-29".parse().unwrap()),
+                num_crew_members: Some(10),
+                municipality_code: Some(1002),
+                municipality_name: Some("Bergen".parse().unwrap()),
+                county_code: Some(1230),
+                county: Some("Rogaland".parse().unwrap()),
+                nationality_code: "NOR".parse().unwrap(),
+                nationality_group: Some("Norske fartøy".parse().unwrap()),
+                length: Some(16.4),
+                length_group_code: Some(VesselLengthGroup::FifteenToTwentyOne),
+                length_group_name: Some(
+                    VesselLengthGroup::FifteenToTwentyOne
+                        .description()
+                        .parse()
+                        .unwrap(),
+                ),
+                gross_tonnage_1969: Some(143),
+                gross_tonnage_other: Some(12),
+                building_year: Some(2001),
+                rebuilding_year: Some(2010),
+                engine_power: Some(900),
+                engine_building_year: Some(2000),
+            }
+        }
+    }
+
+    impl FiskeridirVesselId {
+        pub fn test_new(value: i64) -> Self {
+            Self(value)
+        }
     }
 }

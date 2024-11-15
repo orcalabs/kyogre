@@ -264,9 +264,9 @@ dependencies = [
 name = "ais-consumer"
 version = "0.1.0"
 dependencies = [
+ "ais-consumer",
  "chrono",
  "config",
- "dockertest",
  "fiskeridir-rs",
  "futures",
  "humantime-serde",
@@ -283,7 +283,6 @@ dependencies = [
  "tokio-stream",
  "tokio-util",
  "tracing",
- "tracing-subscriber",
 ]
 
 [[package]]
@@ -1054,45 +1053,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "console-api"
-version = "0.8.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8030735ecb0d128428b64cd379809817e620a40e5001c54465b99ec5feec2857"
-dependencies = [
- "futures-core",
- "prost 0.13.3",
- "prost-types",
- "tonic 0.12.3",
- "tracing-core",
-]
-
-[[package]]
-name = "console-subscriber"
-version = "0.4.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6539aa9c6a4cd31f4b1c040f860a1eac9aa80e7df6b05d506a6e7179936d6a01"
-dependencies = [
- "console-api",
- "crossbeam-channel",
- "crossbeam-utils",
- "futures-task",
- "hdrhistogram",
- "humantime",
- "hyper-util",
- "prost 0.13.3",
- "prost-types",
- "serde",
- "serde_json",
- "thread_local",
- "tokio",
- "tokio-stream",
- "tonic 0.12.3",
- "tracing",
- "tracing-core",
- "tracing-subscriber",
-]
-
-[[package]]
 name = "const-oid"
 version = "0.9.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1331,7 +1291,6 @@ dependencies = [
  "postgres",
  "serde",
  "tokio",
- "tracing",
 ]
 
 [[package]]
@@ -1508,7 +1467,6 @@ dependencies = [
  "async-trait",
  "chrono",
  "config",
- "dockertest",
  "duckdb",
  "fiskeridir-rs",
  "futures",
@@ -1520,7 +1478,6 @@ dependencies = [
  "postgres",
  "prost 0.13.3",
  "r2d2",
- "rand 0.8.5",
  "serde",
  "snafu",
  "stack-error",
@@ -1529,7 +1486,6 @@ dependencies = [
  "tonic 0.12.3",
  "tonic-build",
  "tracing",
- "tracing-subscriber",
 ]
 
 [[package]]
@@ -1579,9 +1535,8 @@ dependencies = [
  "async-trait",
  "chrono",
  "config",
- "console-subscriber",
  "derivative",
- "dockertest",
+ "engine",
  "fiskeridir-rs",
  "futures",
  "geo",
@@ -1605,7 +1560,6 @@ dependencies = [
  "strum 0.26.3",
  "tokio",
  "tracing",
- "tracing-subscriber",
  "trip-benchmark",
 ]
 
@@ -2158,19 +2112,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6ba4ff7128dee98c7dc9794b6a411377e1404dba1c97deb8d1a55297bd25d8af"
 dependencies = [
  "hashbrown 0.14.5",
-]
-
-[[package]]
-name = "hdrhistogram"
-version = "7.5.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "765c9198f173dd59ce26ff9f95ef0aafd0a0fe01fb9d72841bc5066a4c06511d"
-dependencies = [
- "base64 0.21.7",
- "byteorder",
- "flate2",
- "nom",
- "num-traits",
 ]
 
 [[package]]
@@ -3975,10 +3916,8 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "chrono",
- "dockertest",
  "fiskeridir-rs",
  "futures",
- "geo",
  "geo-types",
  "geozero",
  "jurisdiction",
@@ -3995,8 +3934,6 @@ dependencies = [
  "tokio",
  "tracing",
  "unnest_insert",
- "uuid",
- "wkt",
 ]
 
 [[package]]
@@ -6270,7 +6207,6 @@ dependencies = [
  "chrono",
  "fiskeridir-rs",
  "kyogre-core",
- "tracing",
 ]
 
 [[package]]
@@ -6634,7 +6570,6 @@ dependencies = [
  "base64 0.22.1",
  "chrono",
  "config",
- "dockertest",
  "duckdb-rs",
  "engine",
  "enum_index",
@@ -6644,12 +6579,10 @@ dependencies = [
  "http-client",
  "jsonwebtoken",
  "kyogre-core",
- "machine",
  "meilisearch",
  "orca-core",
  "pin-project-lite",
  "postgres",
- "rand 0.8.5",
  "rsa",
  "serde",
  "serde_json",
@@ -6661,7 +6594,6 @@ dependencies = [
  "tokio",
  "tokio-stream",
  "tracing",
- "tracing-subscriber",
  "trip-benchmark",
  "utoipa",
  "utoipa-swagger-ui",

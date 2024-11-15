@@ -1,9 +1,8 @@
 use std::{fmt::Display, num::ParseIntError, str::FromStr};
 
-use chrono::{DateTime, Duration, TimeZone, Utc};
+use chrono::{DateTime, Duration, Utc};
 use fiskeridir_rs::CallSign;
 use num_derive::FromPrimitive;
-use rand::random;
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use strum::{AsRefStr, EnumString, IntoStaticStr};
@@ -196,9 +195,6 @@ impl Mmsi {
     pub fn into_inner(self) -> i32 {
         self.0
     }
-    pub fn test_new(mmsi: i32) -> Self {
-        Self(mmsi)
-    }
 }
 
 impl FromStr for Mmsi {
@@ -221,49 +217,63 @@ impl Display for Mmsi {
     }
 }
 
-impl NewAisStatic {
-    pub fn test_default(mmsi: Mmsi, call_sign: &str) -> NewAisStatic {
-        NewAisStatic {
-            mmsi,
-            imo_number: Some(10),
-            call_sign: Some(call_sign.parse().unwrap()),
-            name: Some("test_vessel".to_string()),
-            ship_length: Some(10),
-            ship_width: Some(5),
-            eta: Some(Utc.timestamp_opt(1000, 0).unwrap()),
-            destination: Some("ramfjord camping".to_string()),
-            message_type: Some(AisMessageType::Static),
-            message_type_id: 18,
-            msgtime: Utc.timestamp_opt(900, 0).unwrap(),
-            draught: Some(50),
-            ship_type: Some(1),
-            dimension_a: Some(1),
-            dimension_b: Some(1),
-            dimension_c: Some(1),
-            dimension_d: Some(1),
-            position_fixing_device_type: Some(1),
-            report_class: Some("A".to_string()),
+#[cfg(feature = "test")]
+mod test {
+    use chrono::{DateTime, TimeZone, Utc};
+    use rand::random;
+
+    use super::*;
+
+    impl Mmsi {
+        pub fn test_new(mmsi: i32) -> Self {
+            Self(mmsi)
         }
     }
-}
 
-impl NewAisPosition {
-    pub fn test_default(mmsi: Mmsi, time: DateTime<Utc>) -> NewAisPosition {
-        NewAisPosition {
-            latitude: random(),
-            longitude: random(),
-            message_type_id: Some(19),
-            message_type: Some(AisMessageType::Position),
-            mmsi,
-            msgtime: time,
-            altitude: Some(random()),
-            course_over_ground: Some(random()),
-            navigational_status: NavigationStatus::UnderWayUsingEngine,
-            ais_class: Some(AisClass::A),
-            rate_of_turn: Some(random()),
-            speed_over_ground: Some(random()),
-            true_heading: Some(random()),
-            distance_to_shore: random(),
+    impl NewAisStatic {
+        pub fn test_default(mmsi: Mmsi, call_sign: &str) -> NewAisStatic {
+            NewAisStatic {
+                mmsi,
+                imo_number: Some(10),
+                call_sign: Some(call_sign.parse().unwrap()),
+                name: Some("test_vessel".to_string()),
+                ship_length: Some(10),
+                ship_width: Some(5),
+                eta: Some(Utc.timestamp_opt(1000, 0).unwrap()),
+                destination: Some("ramfjord camping".to_string()),
+                message_type: Some(AisMessageType::Static),
+                message_type_id: 18,
+                msgtime: Utc.timestamp_opt(900, 0).unwrap(),
+                draught: Some(50),
+                ship_type: Some(1),
+                dimension_a: Some(1),
+                dimension_b: Some(1),
+                dimension_c: Some(1),
+                dimension_d: Some(1),
+                position_fixing_device_type: Some(1),
+                report_class: Some("A".to_string()),
+            }
+        }
+    }
+
+    impl NewAisPosition {
+        pub fn test_default(mmsi: Mmsi, time: DateTime<Utc>) -> NewAisPosition {
+            NewAisPosition {
+                latitude: random(),
+                longitude: random(),
+                message_type_id: Some(19),
+                message_type: Some(AisMessageType::Position),
+                mmsi,
+                msgtime: time,
+                altitude: Some(random()),
+                course_over_ground: Some(random()),
+                navigational_status: NavigationStatus::UnderWayUsingEngine,
+                ais_class: Some(AisClass::A),
+                rate_of_turn: Some(random()),
+                speed_over_ground: Some(random()),
+                true_heading: Some(random()),
+                distance_to_shore: random(),
+            }
         }
     }
 }
