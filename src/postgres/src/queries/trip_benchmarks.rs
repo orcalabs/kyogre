@@ -336,4 +336,21 @@ HAVING
 
         Ok(metrics)
     }
+
+    pub(crate) async fn reset_trip_benchmarks(&self, id: TripId) -> Result<()> {
+        sqlx::query!(
+            r#"
+UPDATE trip_benchmark_outputs
+SET
+    status = $1
+WHERE
+    trip_id = $2
+            "#,
+            TripBenchmarkStatus::MustRecompute as i32,
+            id.into_inner(),
+        )
+        .execute(&self.pool)
+        .await?;
+        Ok(())
+    }
 }
