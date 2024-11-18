@@ -38,6 +38,6 @@ utoipa = { workspace = true, optional = true }
 rand = { workspace = true, optional = true }
 
 oauth2 = "4.4.2"
-flate2 = "1.0.34"
+flate2 = "1.0.35"
 vpsearch = "2.0.1"
 backon = "1.2.0"
