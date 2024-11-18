@@ -296,7 +296,7 @@ pub trait ScraperFileHashOutboundPort {
 
 #[async_trait]
 pub trait TripPipelineOutbound: Send + Sync {
-    async fn trips_without_position_haul_weight_distribution(
+    async fn trips_without_position_cargo_weight_distribution(
         &self,
         vessel_id: FiskeridirVesselId,
     ) -> CoreResult<Vec<Trip>>;
