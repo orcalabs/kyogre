@@ -91,7 +91,7 @@ pub struct NewTrip {
     pub position_layers_status: ProcessingStatus,
     pub track_coverage: Option<f64>,
     #[unnest_insert(sql_type = "INT", type_conversion = "type_to_i32")]
-    pub trip_position_haul_weight_distribution_status: ProcessingStatus,
+    pub trip_position_cargo_weight_distribution_status: ProcessingStatus,
 }
 
 #[derive(Debug, Clone, UnnestInsert)]
@@ -112,7 +112,7 @@ pub struct TripAisVmsPosition {
     pub position_type_id: PositionType,
     #[unnest_insert(sql_type = "INT", type_conversion = "opt_type_to_i32")]
     pub pruned_by: Option<TripPositionLayerId>,
-    pub trip_cumulative_haul_weight: Option<f64>,
+    pub trip_cumulative_cargo_weight: Option<f64>,
 }
 
 #[derive(Debug, Clone, UnnestInsert)]
@@ -130,14 +130,14 @@ pub struct TripPrunedAisVmsPosition {
 
 #[derive(Debug, Clone, UnnestUpdate)]
 #[unnest_update(table_name = "trip_positions")]
-pub struct UpdateTripPositionHaulWeight {
+pub struct UpdateTripPositionCargoWeight {
     #[unnest_update(id, sql_type = "INT", type_conversion = "type_to_i64")]
     pub trip_id: TripId,
     #[unnest_update(id)]
     pub timestamp: DateTime<Utc>,
     #[unnest_update(id, sql_type = "INT", type_conversion = "type_to_i32")]
     pub position_type_id: PositionType,
-    pub trip_cumulative_haul_weight: f64,
+    pub trip_cumulative_cargo_weight: f64,
 }
 
 impl From<&TripProcessingUnit> for NewTrip {
@@ -181,7 +181,7 @@ impl From<&TripProcessingUnit> for NewTrip {
         };
 
         let trip_position_haul_weight_distribution_status = match value
-            .trip_position_haul_weight_distribution_output
+            .trip_position_cargo_weight_distribution_output
             .is_some()
         {
             true => ProcessingStatus::Successful,
@@ -205,7 +205,8 @@ impl From<&TripProcessingUnit> for NewTrip {
             end_port_id: value.end_port.clone().map(|p| p.id),
             position_layers_status,
             track_coverage,
-            trip_position_haul_weight_distribution_status,
+            trip_position_cargo_weight_distribution_status:
+                trip_position_haul_weight_distribution_status,
         }
     }
 }
@@ -408,7 +409,7 @@ impl TripAisVmsPosition {
             distance_to_shore: p.distance_to_shore,
             position_type_id: p.position_type,
             pruned_by: p.pruned_by,
-            trip_cumulative_haul_weight: p.trip_cumulative_haul_weight,
+            trip_cumulative_cargo_weight: p.trip_cumulative_cargo_weight,
         }
     }
 }

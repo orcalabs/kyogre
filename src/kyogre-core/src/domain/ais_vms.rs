@@ -20,7 +20,7 @@ pub struct AisVmsPosition {
     pub position_type: PositionType,
     pub pruned_by: Option<TripPositionLayerId>,
     pub trip_cumulative_fuel_consumption: Option<f64>,
-    pub trip_cumulative_haul_weight: Option<f64>,
+    pub trip_cumulative_cargo_weight: Option<f64>,
 }
 
 #[derive(Debug, Clone)]

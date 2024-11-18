@@ -3,7 +3,7 @@ use crate::{
     models::{
         CurrentTrip, NewTrip, NewTripAssemblerConflict, NewTripAssemblerLogEntry, NewTripReturning,
         Trip, TripAisVmsPosition, TripCalculationTimer, TripDetailed, TripPrunedAisVmsPosition,
-        UpdateTripPositionHaulWeight,
+        UpdateTripPositionCargoWeight,
     },
     PostgresAdapter,
 };
@@ -21,7 +21,7 @@ use std::collections::{HashMap, HashSet};
 pub struct TripPositions {
     trip_id: TripId,
     positions: Option<TripPositionLayerOutput>,
-    haul_weights: Vec<kyogre_core::UpdateTripPositionHaulWeight>,
+    cargo_weights: Vec<kyogre_core::UpdateTripPositionCargoWeight>,
 }
 
 impl PostgresAdapter {
@@ -35,7 +35,7 @@ SET
     trip_precision_status_id = $1,
     distancer_id = NULL,
     position_layers_status = $1,
-    trip_position_haul_weight_distribution_status = $1
+    trip_position_cargo_weight_distribution_status = $1
 FROM
     (
         SELECT
@@ -75,17 +75,17 @@ TRUNCATE earliest_vms_insertion
         Ok(())
     }
 
-    pub(crate) async fn update_trip_position_haul_weight(
+    pub(crate) async fn update_trip_position_cargo_weight(
         &self,
         id: TripId,
-        output: Vec<kyogre_core::UpdateTripPositionHaulWeight>,
+        output: Vec<kyogre_core::UpdateTripPositionCargoWeight>,
         tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     ) -> Result<()> {
         sqlx::query!(
             r#"
 UPDATE trips
 SET
-    trip_position_haul_weight_distribution_status = $1
+    trip_position_cargo_weight_distribution_status = $1
 WHERE
     trip_id = $2
             "#,
@@ -96,11 +96,11 @@ WHERE
         .await?;
 
         self.unnest_update(
-            output.into_iter().map(|h| UpdateTripPositionHaulWeight {
+            output.into_iter().map(|h| UpdateTripPositionCargoWeight {
                 trip_id: id,
                 timestamp: h.timestamp,
                 position_type_id: h.position_type,
-                trip_cumulative_haul_weight: h.trip_cumulative_haul_weight,
+                trip_cumulative_cargo_weight: h.trip_cumulative_cargo_weight,
             }),
             &mut **tx,
         )
@@ -189,12 +189,12 @@ WHERE
                 }
             }
 
-            weight_updates.extend(t.haul_weights.into_iter().map(|h| {
-                UpdateTripPositionHaulWeight {
+            weight_updates.extend(t.cargo_weights.into_iter().map(|h| {
+                UpdateTripPositionCargoWeight {
                     trip_id: id,
                     timestamp: h.timestamp,
                     position_type_id: h.position_type,
-                    trip_cumulative_haul_weight: h.trip_cumulative_haul_weight,
+                    trip_cumulative_cargo_weight: h.trip_cumulative_cargo_weight,
                 }
             }));
         }
@@ -214,8 +214,8 @@ WHERE
                 .await?;
         }
 
-        if let Some(output) = update.trip_position_haul_weight_distribution_output {
-            self.update_trip_position_haul_weight(update.trip_id, output, &mut tx)
+        if let Some(output) = update.trip_position_cargo_weight_distribution_output {
+            self.update_trip_position_cargo_weight(update.trip_id, output, &mut tx)
                 .await?;
         }
 
@@ -1265,7 +1265,7 @@ VALUES
 
             match (
                 v.trip_position_output,
-                v.trip_position_haul_weight_distribution_output,
+                v.trip_position_cargo_weight_distribution_output,
             ) {
                 (None, None) => (),
                 (s, o) => {
@@ -1304,7 +1304,7 @@ VALUES
         earliest_trip_period: DateRange,
         trip_positions: Vec<(
             Option<TripPositionLayerOutput>,
-            Vec<kyogre_core::UpdateTripPositionHaulWeight>,
+            Vec<kyogre_core::UpdateTripPositionCargoWeight>,
             i64,
         )>,
         vessel_id: FiskeridirVesselId,
@@ -1429,7 +1429,7 @@ RETURNING
         // We use the start of the trips period to map the inserted trips trip_ids to the trip positions,
         // as trips cannot overlap we are guranteed that the start of trips are unique
         let mut trip_positions_with_trip_id = Vec::with_capacity(trip_positions.len());
-        for (positions, haul_weights, period_start) in trip_positions {
+        for (positions, cargo_weights, period_start) in trip_positions {
             let trip_id = trip_positions_insert_mapping
                 .remove(&period_start)
                 .ok_or_else(|| TripPositionMatchSnafu.build())?;
@@ -1437,7 +1437,7 @@ RETURNING
             trip_positions_with_trip_id.push(TripPositions {
                 trip_id,
                 positions,
-                haul_weights,
+                cargo_weights,
             })
         }
 
@@ -1780,7 +1780,7 @@ WHERE
         .map_err(|e| e.into())
     }
 
-    pub(crate) fn trips_without_position_haul_weight_distribution_impl(
+    pub(crate) fn trips_without_position_cargo_weight_distribution_impl(
         &self,
         vessel_id: FiskeridirVesselId,
     ) -> impl Stream<Item = Result<Trip>> + '_ {
@@ -1802,7 +1802,7 @@ FROM
     trips
 WHERE
     fiskeridir_vessel_id = $1
-    AND trip_position_haul_weight_distribution_status = $2
+    AND trip_position_cargo_weight_distribution_status = $2
             "#,
             vessel_id.into_inner(),
             ProcessingStatus::Unprocessed as i32,
@@ -2022,7 +2022,7 @@ WHERE
         Ok(())
     }
 
-    pub(crate) async fn update_trip_position_haul_weight_distribution_status<'a>(
+    pub(crate) async fn update_trip_position_cargo_weight_distribution_status<'a>(
         &'a self,
         haul_vessel_event_ids: &[i64],
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
@@ -2031,7 +2031,7 @@ WHERE
             r#"
 UPDATE trips t
 SET
-    trip_position_haul_weight_distribution_status = $1
+    trip_position_cargo_weight_distribution_status = $1
 FROM
     (
         SELECT DISTINCT

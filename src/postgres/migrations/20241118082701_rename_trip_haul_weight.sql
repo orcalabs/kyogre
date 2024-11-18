@@ -1,0 +1,5 @@
+ALTER TABLE trips
+RENAME COLUMN trip_position_haul_weight_distribution_status TO trip_position_cargo_weight_distribution_status;
+
+ALTER TABLE trip_positions
+RENAME COLUMN trip_cumulative_haul_weight TO trip_cumulative_cargo_weight;

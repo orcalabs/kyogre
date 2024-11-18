@@ -92,14 +92,14 @@ pub struct TripProcessingUnit {
     pub precision_outcome: Option<PrecisionOutcome>,
     pub distance_output: Option<TripDistanceOutput>,
     pub trip_position_output: Option<TripPositionLayerOutput>,
-    pub trip_position_haul_weight_distribution_output: Option<Vec<UpdateTripPositionHaulWeight>>,
+    pub trip_position_cargo_weight_distribution_output: Option<Vec<UpdateTripPositionCargoWeight>>,
 }
 
 #[derive(Debug, Clone)]
-pub struct UpdateTripPositionHaulWeight {
+pub struct UpdateTripPositionCargoWeight {
     pub timestamp: DateTime<Utc>,
     pub position_type: PositionType,
-    pub trip_cumulative_haul_weight: f64,
+    pub trip_cumulative_cargo_weight: f64,
 }
 
 #[derive(Debug, Clone)]
@@ -124,7 +124,7 @@ pub struct TripUpdate {
     pub precision: Option<PrecisionOutcome>,
     pub distance: Option<TripDistanceOutput>,
     pub position_layers: Option<TripPositionLayerOutput>,
-    pub trip_position_haul_weight_distribution_output: Option<Vec<UpdateTripPositionHaulWeight>>,
+    pub trip_position_cargo_weight_distribution_output: Option<Vec<UpdateTripPositionCargoWeight>>,
 }
 
 impl Trip {

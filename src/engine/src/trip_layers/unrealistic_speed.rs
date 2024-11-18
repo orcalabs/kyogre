@@ -119,7 +119,7 @@ mod tests {
             position_type: PositionType::Vms,
             pruned_by: None,
             trip_cumulative_fuel_consumption: None,
-            trip_cumulative_haul_weight: None,
+            trip_cumulative_cargo_weight: None,
         };
 
         let second = AisVmsPosition {
@@ -135,7 +135,7 @@ mod tests {
             position_type: PositionType::Vms,
             pruned_by: None,
             trip_cumulative_fuel_consumption: None,
-            trip_cumulative_haul_weight: None,
+            trip_cumulative_cargo_weight: None,
         };
 
         let res = estimated_speed_between_points(&first, &second).unwrap();
