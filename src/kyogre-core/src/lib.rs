@@ -40,3 +40,9 @@ impl<T> EmptyVecToNone for Vec<T> {
         (!self.is_empty()).then_some(self)
     }
 }
+
+impl<T> EmptyVecToNone for &[T] {
+    fn empty_to_none(self) -> Option<Self> {
+        (!self.is_empty()).then_some(self)
+    }
+}
