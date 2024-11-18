@@ -34,4 +34,4 @@ unnest_insert = { version = "0.11.0", registry = "orcalabs-orcastrator", feature
 ] }
 
 
-geo-types = "0.7.13"
+geo-types = "0.7.14"
