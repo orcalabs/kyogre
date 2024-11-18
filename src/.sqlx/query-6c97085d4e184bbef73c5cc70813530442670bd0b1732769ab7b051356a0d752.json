@@ -1,0 +1,30 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nWITH\n    deps AS (\n        SELECT\n            MAX(message_id) AS message_id,\n            departure_timestamp\n        FROM\n            ers_departures\n        WHERE\n            fiskeridir_vessel_id = $1::BIGINT\n            AND departure_timestamp >= $2::TIMESTAMPTZ\n            AND departure_timestamp < $3::TIMESTAMPTZ\n        GROUP BY\n            departure_timestamp\n    )\nSELECT\n    e.departure_timestamp,\n    COALESCE(SUM(c.living_weight), 0)::DOUBLE PRECISION AS \"weight!\"\nFROM\n    deps e\n    LEFT JOIN ers_departure_catches c ON e.message_id = c.message_id\nGROUP BY\n    e.message_id,\n    e.departure_timestamp\nORDER BY\n    e.departure_timestamp ASC\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "departure_timestamp",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 1,
+        "name": "weight!",
+        "type_info": "Float8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Timestamptz",
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      false,
+      null
+    ]
+  },
+  "hash": "6c97085d4e184bbef73c5cc70813530442670bd0b1732769ab7b051356a0d752"
+}

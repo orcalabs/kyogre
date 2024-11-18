@@ -80,6 +80,12 @@ pub struct VesselEventDetailed {
     pub event_data: VesselEventData,
 }
 
+#[derive(Debug, Clone)]
+pub struct DepartureWeight {
+    pub departure_timestamp: DateTime<Utc>,
+    pub weight: f64,
+}
+
 #[cfg_attr(feature = "sqlx", derive(sqlx::Type))]
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 #[repr(i32)]

@@ -906,6 +906,15 @@ impl TripPrecisionOutboundPort for PostgresAdapter {
             .convert_collect()
             .await
     }
+    async fn departure_weights_from_range(
+        &self,
+        vessel_id: FiskeridirVesselId,
+        range: &DateRange,
+    ) -> CoreResult<Vec<DepartureWeight>> {
+        Ok(self
+            .departure_weights_from_range_impl(vessel_id, range)
+            .await?)
+    }
     async fn haul_weights_from_range(
         &self,
         vessel_id: FiskeridirVesselId,

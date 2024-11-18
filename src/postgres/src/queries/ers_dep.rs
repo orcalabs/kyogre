@@ -4,7 +4,9 @@ use std::{
 };
 
 use futures::TryStreamExt;
-use kyogre_core::{BoxIterator, FiskeridirVesselId, TripAssemblerId, VesselEventType};
+use kyogre_core::{
+    BoxIterator, DateRange, DepartureWeight, FiskeridirVesselId, TripAssemblerId, VesselEventType,
+};
 use tracing::error;
 
 use crate::{
@@ -142,5 +144,48 @@ WHERE
         .await?;
 
         Ok(ids)
+    }
+
+    pub(crate) async fn departure_weights_from_range_impl(
+        &self,
+        vessel_id: FiskeridirVesselId,
+        range: &DateRange,
+    ) -> Result<Vec<DepartureWeight>> {
+        sqlx::query_as!(
+            DepartureWeight,
+            r#"
+WITH
+    deps AS (
+        SELECT
+            MAX(message_id) AS message_id,
+            departure_timestamp
+        FROM
+            ers_departures
+        WHERE
+            fiskeridir_vessel_id = $1::BIGINT
+            AND departure_timestamp >= $2::TIMESTAMPTZ
+            AND departure_timestamp < $3::TIMESTAMPTZ
+        GROUP BY
+            departure_timestamp
+    )
+SELECT
+    e.departure_timestamp,
+    COALESCE(SUM(c.living_weight), 0)::DOUBLE PRECISION AS "weight!"
+FROM
+    deps e
+    LEFT JOIN ers_departure_catches c ON e.message_id = c.message_id
+GROUP BY
+    e.message_id,
+    e.departure_timestamp
+ORDER BY
+    e.departure_timestamp ASC
+            "#,
+            vessel_id.into_inner(),
+            range.start(),
+            range.end(),
+        )
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| e.into())
     }
 }
