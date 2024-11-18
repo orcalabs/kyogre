@@ -23,7 +23,7 @@ static TRIP_COMPUTATION_STEPS: LazyLock<Vec<Box<dyn TripComputationStep>>> = Laz
         Box::<TripPrecisionStep>::default(),
         Box::<TripPositionLayers>::default(),
         Box::<AisVms>::default(),
-        Box::<TripHaulWeight>::default(),
+        Box::<TripCargoWeight>::default(),
     ]
 });
 
@@ -283,10 +283,10 @@ impl TripComputationStep for TripPrecisionStep {
 }
 
 #[derive(Default)]
-struct TripHaulWeight;
+struct TripCargoWeight;
 
 #[async_trait]
-impl TripComputationStep for TripHaulWeight {
+impl TripComputationStep for TripCargoWeight {
     async fn run(
         &self,
         shared: &SharedState,
@@ -328,10 +328,10 @@ impl TripComputationStep for TripHaulWeight {
                     (haul_start_idx..haul_end_idx).for_each(|idx| {
                         current_weight += weight_per_position;
                         let pos = &unit.positions[idx];
-                        updates.push(UpdateTripPositionHaulWeight {
+                        updates.push(UpdateTripPositionCargoWeight {
                             timestamp: pos.timestamp,
                             position_type: pos.position_type,
-                            trip_cumulative_haul_weight: current_weight,
+                            trip_cumulative_cargo_weight: current_weight,
                         });
                     });
 
@@ -341,37 +341,37 @@ impl TripComputationStep for TripHaulWeight {
                     current_weight += haul.weight;
                     current_haul = hauls_iter.next();
 
-                    updates.push(UpdateTripPositionHaulWeight {
+                    updates.push(UpdateTripPositionCargoWeight {
                         timestamp: current_position.timestamp,
                         position_type: current_position.position_type,
-                        trip_cumulative_haul_weight: current_weight,
+                        trip_cumulative_cargo_weight: current_weight,
                     });
                     i += 1;
                 } else {
-                    updates.push(UpdateTripPositionHaulWeight {
+                    updates.push(UpdateTripPositionCargoWeight {
                         timestamp: current_position.timestamp,
                         position_type: current_position.position_type,
-                        trip_cumulative_haul_weight: current_weight,
+                        trip_cumulative_cargo_weight: current_weight,
                     });
                     i += 1;
                 }
             } else {
-                updates.push(UpdateTripPositionHaulWeight {
+                updates.push(UpdateTripPositionCargoWeight {
                     timestamp: current_position.timestamp,
                     position_type: current_position.position_type,
-                    trip_cumulative_haul_weight: current_weight,
+                    trip_cumulative_cargo_weight: current_weight,
                 });
                 i += 1;
             }
         }
-        unit.trip_position_haul_weight_distribution_output = Some(updates);
+        unit.trip_position_cargo_weight_distribution_output = Some(updates);
 
         Ok(unit)
     }
     async fn fetch_missing(&self, shared: &SharedState, vessel: &Vessel) -> Result<Vec<Trip>> {
         Ok(shared
             .trip_pipeline_outbound
-            .trips_without_position_haul_weight_distribution(vessel.fiskeridir.id)
+            .trips_without_position_cargo_weight_distribution(vessel.fiskeridir.id)
             .await?)
     }
 
@@ -638,7 +638,7 @@ async fn process_vessel(
                 trip_assembler_id: output.trip_assembler_id,
                 trip_position_output: None,
                 trip: t,
-                trip_position_haul_weight_distribution_output: None,
+                trip_position_cargo_weight_distribution_output: None,
                 trip_id: None,
             };
 
@@ -879,7 +879,7 @@ async fn process_unprocessed_trips(
                 end_port_code: t.end_port_code.clone(),
             },
             trip_position_output: None,
-            trip_position_haul_weight_distribution_output: None,
+            trip_position_cargo_weight_distribution_output: None,
             trip_id: Some(t.trip_id),
         };
 
@@ -911,8 +911,8 @@ async fn process_unprocessed_trips(
             precision: unit.precision_outcome,
             distance: unit.distance_output,
             position_layers: unit.trip_position_output,
-            trip_position_haul_weight_distribution_output: unit
-                .trip_position_haul_weight_distribution_output,
+            trip_position_cargo_weight_distribution_output: unit
+                .trip_position_cargo_weight_distribution_output,
         });
     }
 

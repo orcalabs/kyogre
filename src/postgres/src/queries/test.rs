@@ -116,7 +116,7 @@ SELECT
     position_type_id AS "position_type!: PositionType",
     NULL AS "pruned_by: TripPositionLayerId",
     NULL AS "trip_cumulative_fuel_consumption!: Option<f64>",
-    NULL AS "trip_cumulative_haul_weight!: Option<f64>"
+    NULL AS "trip_cumulative_cargo_weight!: Option<f64>"
 FROM
     (
         SELECT

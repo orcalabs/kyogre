@@ -1044,11 +1044,11 @@ impl HaulDistributorOutbound for PostgresAdapter {
 
 #[async_trait]
 impl TripPipelineOutbound for PostgresAdapter {
-    async fn trips_without_position_haul_weight_distribution(
+    async fn trips_without_position_cargo_weight_distribution(
         &self,
         vessel_id: FiskeridirVesselId,
     ) -> CoreResult<Vec<Trip>> {
-        self.trips_without_position_haul_weight_distribution_impl(vessel_id)
+        self.trips_without_position_cargo_weight_distribution_impl(vessel_id)
             .convert_collect()
             .await
     }
