@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nUPDATE trip_benchmark_outputs\nSET\n    status = $1\nWHERE\n    trip_id = $2\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "00deb14b4aa994fcb6e3d599cf87c62ae6f51da1e99b2edff6c3e3c2906430fd"
+}
