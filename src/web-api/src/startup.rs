@@ -251,6 +251,16 @@ where
                 .route(
                     "/trip_benchmarks/average",
                     web::get().to(routes::v1::trip_benchmark::average::<T>),
+                )
+                .route(
+                    "/trip_benchmarks/eeoi",
+                    web::get()
+                        .guard(guard.clone())
+                        .to(routes::v1::trip_benchmark::eeoi::<T>),
+                )
+                .route(
+                    "/trip_benchmarks/average_eeoi",
+                    web::get().to(routes::v1::trip_benchmark::average_eeoi::<T>),
                 );
         }
 

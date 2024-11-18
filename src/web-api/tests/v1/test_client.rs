@@ -28,7 +28,10 @@ use web_api::{
             SpeciesMainGroupDetailed,
         },
         trip::{CurrentTrip, Trip, TripsParameters},
-        trip_benchmark::{AverageTripBenchmarksParams, TripBenchmarks, TripBenchmarksParameters},
+        trip_benchmark::{
+            AverageEeoiParams, AverageTripBenchmarksParams, EeoiParams, TripBenchmarks,
+            TripBenchmarksParams,
+        },
         user::User,
         vessel::Vessel,
         vms::{VmsParameters, VmsPosition},
@@ -198,7 +201,7 @@ impl ApiClient {
     }
     pub async fn get_trip_benchmarks(
         &self,
-        params: TripBenchmarksParameters,
+        params: TripBenchmarksParams,
     ) -> Result<TripBenchmarks, Error> {
         self.send("trip_benchmarks", Method::GET, &(), Some(&params))
             .await
@@ -209,6 +212,19 @@ impl ApiClient {
     ) -> Result<AverageTripBenchmarks, Error> {
         self.send("trip_benchmarks/average", Method::GET, &(), Some(&params))
             .await
+    }
+    pub async fn get_eeoi(&self, params: EeoiParams) -> Result<Option<f64>, Error> {
+        self.send("trip_benchmarks/eeoi", Method::GET, &(), Some(&params))
+            .await
+    }
+    pub async fn get_average_eeoi(&self, params: AverageEeoiParams) -> Result<Option<f64>, Error> {
+        self.send(
+            "trip_benchmarks/average_eeoi",
+            Method::GET,
+            &(),
+            Some(&params),
+        )
+        .await
     }
     pub async fn get_delivery_points(&self) -> Result<Vec<DeliveryPoint>, Error> {
         self.send("delivery_points", Method::GET, &(), None::<&()>)

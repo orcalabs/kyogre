@@ -3,7 +3,7 @@ use std::pin::Pin;
 
 use async_trait::async_trait;
 use chrono::{DateTime, NaiveDate, Utc};
-use fiskeridir_rs::{CallSign, DataFileId, GearGroup, LandingId, SpeciesGroup, VesselLengthGroup};
+use fiskeridir_rs::{CallSign, DataFileId, LandingId, SpeciesGroup};
 use futures::Stream;
 
 use crate::*;
@@ -66,6 +66,7 @@ pub trait WebApiOutboundPort {
         &self,
         query: TripBenchmarksQuery,
     ) -> CoreResult<Vec<TripWithBenchmark>>;
+    async fn eeoi(&self, query: EeoiQuery) -> CoreResult<Option<f64>>;
     fn detailed_trips(
         &self,
         query: TripsQuery,
@@ -91,11 +92,9 @@ pub trait WebApiOutboundPort {
     async fn landing_matrix(&self, query: &LandingMatrixQuery) -> CoreResult<LandingMatrix>;
     async fn average_trip_benchmarks(
         &self,
-        start_date: DateTime<Utc>,
-        end_date: DateTime<Utc>,
-        gear_groups: Vec<GearGroup>,
-        length_group: Option<VesselLengthGroup>,
+        query: AverageTripBenchmarksQuery,
     ) -> CoreResult<AverageTripBenchmarks>;
+    async fn average_eeoi(&self, query: AverageEeoiQuery) -> CoreResult<Option<f64>>;
     fn fishing_facilities(
         &self,
         query: FishingFacilitiesQuery,

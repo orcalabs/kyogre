@@ -2,7 +2,7 @@ use std::result::Result as StdResult;
 
 use async_trait::async_trait;
 use chrono::{DateTime, NaiveDate, Utc};
-use fiskeridir_rs::{CallSign, DataFileId, GearGroup, LandingId, SpeciesGroup, VesselLengthGroup};
+use fiskeridir_rs::{CallSign, DataFileId, LandingId, SpeciesGroup};
 use futures::{Stream, StreamExt, TryStreamExt};
 use kyogre_core::*;
 use orca_core::{Environment, PsqlLogStatements, PsqlSettings};
@@ -485,14 +485,12 @@ impl AisMigratorDestination for PostgresAdapter {
 impl WebApiOutboundPort for PostgresAdapter {
     async fn average_trip_benchmarks(
         &self,
-        start_date: DateTime<Utc>,
-        end_date: DateTime<Utc>,
-        gear_groups: Vec<GearGroup>,
-        length_group: Option<VesselLengthGroup>,
+        query: AverageTripBenchmarksQuery,
     ) -> CoreResult<AverageTripBenchmarks> {
-        Ok(self
-            .average_trip_benchmarks_impl(start_date, end_date, gear_groups, length_group)
-            .await?)
+        Ok(retry(|| self.average_trip_benchmarks_impl(&query)).await?)
+    }
+    async fn average_eeoi(&self, query: AverageEeoiQuery) -> CoreResult<Option<f64>> {
+        Ok(retry(|| self.average_eeoi_impl(&query)).await?)
     }
     fn ais_current_positions(
         &self,
@@ -587,6 +585,9 @@ impl WebApiOutboundPort for PostgresAdapter {
         query: TripBenchmarksQuery,
     ) -> CoreResult<Vec<TripWithBenchmark>> {
         Ok(retry(|| self.trip_benchmarks_impl(&query)).await?)
+    }
+    async fn eeoi(&self, query: EeoiQuery) -> CoreResult<Option<f64>> {
+        Ok(retry(|| self.eeoi_impl(&query)).await?)
     }
     fn detailed_trips(
         &self,
