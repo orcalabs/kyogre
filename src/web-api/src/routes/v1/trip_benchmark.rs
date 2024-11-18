@@ -8,7 +8,8 @@ use actix_web::web;
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::{CallSign, GearGroup, VesselLengthGroup};
 use kyogre_core::{
-    AverageTripBenchmarks, Mean, Ordering, TripBenchmarksQuery, TripId, TripWithBenchmark,
+    AverageEeoiQuery, AverageTripBenchmarks, AverageTripBenchmarksQuery, EeoiQuery, Mean, Ordering,
+    TripBenchmarksQuery, TripId, TripWithBenchmark,
 };
 use serde::{Deserialize, Serialize};
 use serde_qs::actix::QsQuery as Query;
@@ -18,16 +19,37 @@ use utoipa::{IntoParams, ToSchema};
 
 #[derive(Default, Debug, Deserialize, Serialize, IntoParams)]
 #[serde(rename_all = "camelCase")]
-pub struct TripBenchmarksParameters {
+pub struct TripBenchmarksParams {
     pub start_date: Option<DateTime<Utc>>,
     pub end_date: Option<DateTime<Utc>>,
     pub ordering: Option<Ordering>,
+}
+
+#[derive(Default, Debug, Deserialize, Serialize, IntoParams)]
+#[serde(rename_all = "camelCase")]
+pub struct EeoiParams {
+    pub start_date: Option<DateTime<Utc>>,
+    pub end_date: Option<DateTime<Utc>>,
 }
 
 #[serde_as]
 #[derive(Default, Debug, Deserialize, Serialize, IntoParams)]
 #[serde(rename_all = "camelCase")]
 pub struct AverageTripBenchmarksParams {
+    pub start_date: DateTime<Utc>,
+    pub end_date: DateTime<Utc>,
+    #[serde(default)]
+    #[serde_as(as = "Vec<DisplayFromStr>")]
+    #[param(rename = "gearGroups[]", value_type = Option<Vec<GearGroup>>)]
+    pub gear_groups: Vec<GearGroup>,
+    #[serde_as(as = "Option<DisplayFromStr>")]
+    pub length_group: Option<VesselLengthGroup>,
+}
+
+#[serde_as]
+#[derive(Default, Debug, Deserialize, Serialize, IntoParams)]
+#[serde(rename_all = "camelCase")]
+pub struct AverageEeoiParams {
     pub start_date: DateTime<Utc>,
     pub end_date: DateTime<Utc>,
     #[serde(default)]
@@ -52,22 +74,14 @@ pub async fn average<T: Database + Send + Sync + 'static>(
     db: web::Data<T>,
     params: Query<AverageTripBenchmarksParams>,
 ) -> Result<Response<AverageTripBenchmarks>> {
-    let params = params.into_inner();
-    Ok(Response::new(
-        db.average_trip_benchmarks(
-            params.start_date,
-            params.end_date,
-            params.gear_groups,
-            params.length_group,
-        )
-        .await?,
-    ))
+    let query = params.into_inner().into();
+    Ok(Response::new(db.average_trip_benchmarks(query).await?))
 }
 
 #[utoipa::path(
     get,
     path = "/trip_benchmarks",
-    params(TripBenchmarksParameters),
+    params(TripBenchmarksParams),
     responses(
         (status = 200, description = "your trip benchmarks matching the parameters", body = TripBenchmarks),
         (status = 500, description = "an internal error occured", body = ErrorResponse),
@@ -77,13 +91,58 @@ pub async fn average<T: Database + Send + Sync + 'static>(
 pub async fn trip_benchmarks<T: Database>(
     db: web::Data<T>,
     profile: BwProfile,
-    params: Query<TripBenchmarksParameters>,
+    params: Query<TripBenchmarksParams>,
 ) -> Result<Response<TripBenchmarks>> {
     let call_sign = profile.call_sign()?;
     let query = params.into_inner().to_query(call_sign);
 
     let benchmarks = db.trip_benchmarks(query).await?.into();
     Ok(Response::new(benchmarks))
+}
+
+/// Returns the EEOI of the logged in user for the given period.
+/// EEOI is given with the unit: `tonn / (tonn * nautical miles)`
+#[utoipa::path(
+    get,
+    path = "/trip_benchmarks/eeoi",
+    params(EeoiParams),
+    responses(
+        (status = 200, description = "your EEOI for the given period", body = Option<f64>),
+        (status = 500, description = "an internal error occured", body = ErrorResponse),
+    )
+)]
+#[tracing::instrument(skip(db))]
+pub async fn eeoi<T: Database>(
+    db: web::Data<T>,
+    profile: BwProfile,
+    params: Query<EeoiParams>,
+) -> Result<Response<Option<f64>>> {
+    let call_sign = profile.call_sign()?;
+    let query = params.into_inner().to_query(call_sign);
+
+    let eeoi = db.eeoi(query).await?;
+    Ok(Response::new(eeoi))
+}
+
+/// Returns the average EEOI of all vessels matching the given parameters.
+/// EEOI is given with the unit: `tonn / (tonn * nautical miles)`
+#[utoipa::path(
+    get,
+    path = "/trip_benchmarks/average_eeoi",
+    params(AverageEeoiParams),
+    responses(
+        (status = 200, description = "the average EEOI for vessels matching the parameters", body = Option<f64>),
+        (status = 500, description = "an internal error occured", body = ErrorResponse),
+    )
+)]
+#[tracing::instrument(skip(db))]
+pub async fn average_eeoi<T: Database>(
+    db: web::Data<T>,
+    params: Query<AverageEeoiParams>,
+) -> Result<Response<Option<f64>>> {
+    let query = params.into_inner().into();
+    let eeoi = db.average_eeoi(query).await?;
+    Ok(Response::new(eeoi))
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
@@ -143,13 +202,45 @@ impl From<TripWithBenchmark> for TripBenchmark {
     }
 }
 
-impl TripBenchmarksParameters {
+impl TripBenchmarksParams {
     fn to_query(&self, call_sign: CallSign) -> TripBenchmarksQuery {
         TripBenchmarksQuery {
             call_sign,
             start_date: self.start_date,
             end_date: self.end_date,
             ordering: self.ordering.unwrap_or_default(),
+        }
+    }
+}
+
+impl EeoiParams {
+    fn to_query(&self, call_sign: CallSign) -> EeoiQuery {
+        EeoiQuery {
+            call_sign,
+            start_date: self.start_date,
+            end_date: self.end_date,
+        }
+    }
+}
+
+impl From<AverageTripBenchmarksParams> for AverageTripBenchmarksQuery {
+    fn from(v: AverageTripBenchmarksParams) -> Self {
+        Self {
+            start_date: v.start_date,
+            end_date: v.end_date,
+            gear_groups: v.gear_groups,
+            length_group: v.length_group,
+        }
+    }
+}
+
+impl From<AverageEeoiParams> for AverageEeoiQuery {
+    fn from(v: AverageEeoiParams) -> Self {
+        Self {
+            start_date: v.start_date,
+            end_date: v.end_date,
+            gear_groups: v.gear_groups,
+            length_group: v.length_group,
         }
     }
 }

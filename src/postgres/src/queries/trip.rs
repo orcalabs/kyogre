@@ -297,7 +297,7 @@ WHERE
         }
 
         self.add_trips_detailed(&[update.trip_id], &mut tx).await?;
-        self.reset_trip_benchmarks(update.trip_id).await?;
+        self.reset_trip_benchmarks(update.trip_id, &mut tx).await?;
 
         tx.commit().await?;
 

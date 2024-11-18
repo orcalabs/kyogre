@@ -49,6 +49,8 @@ impl Database for PostgresAdapter {}
         v1::vessel::vessel_benchmarks,
         v1::trip_benchmark::trip_benchmarks,
         v1::trip_benchmark::average,
+        v1::trip_benchmark::eeoi,
+        v1::trip_benchmark::average_eeoi,
         v1::haul::hauls,
         v1::haul::hauls_matrix,
         v1::trip::trip_of_haul,

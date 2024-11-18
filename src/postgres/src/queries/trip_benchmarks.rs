@@ -1,13 +1,24 @@
-use chrono::{DateTime, Utc};
 use fiskeridir_rs::{GearGroup, VesselLengthGroup};
 use futures::TryStreamExt;
 use kyogre_core::{
-    DateRange, FiskeridirVesselId, TripBenchmarkId, TripBenchmarkStatus, TripBenchmarksQuery,
+    AverageEeoiQuery, AverageTripBenchmarks, AverageTripBenchmarksQuery, DateRange, EeoiQuery,
+    EmptyVecToNone, FiskeridirVesselId, TripBenchmarkId, TripBenchmarkStatus, TripBenchmarksQuery,
     TripId, TripSustainabilityMetric, TripWithBenchmark, TripWithDistance, TripWithTotalWeight,
     TripWithWeightAndFuel,
 };
 
 use crate::{error::Result, models::TripBenchmarkOutput, PostgresAdapter};
+
+const METERS_TO_NAUTICAL_MILES: f64 = 1. / 1852.;
+
+/// Fuel mass to CO2 mass conversion factor for Diesel/Gas Oil
+/// Unit: CO2 (tonn) / Fuel (tonn)
+///
+/// Source: <https://www.classnk.or.jp/hp/pdf/activities/statutory/eedi/mepc_1-circ_684.pdf>
+///         Appendix, section 3
+const DIESEL_CARBON_FACTOR: f64 = 3.206;
+
+const MIN_EEOI_DISTANCE: f64 = 1_000.;
 
 impl PostgresAdapter {
     pub(crate) async fn add_benchmark_outputs(
@@ -20,14 +31,10 @@ impl PostgresAdapter {
 
     pub(crate) async fn average_trip_benchmarks_impl(
         &self,
-        start_date: DateTime<Utc>,
-        end_date: DateTime<Utc>,
-        gear_groups: Vec<GearGroup>,
-        length_group: Option<VesselLengthGroup>,
-    ) -> Result<kyogre_core::AverageTripBenchmarks> {
-        let gear_groups = (!gear_groups.is_empty()).then_some(gear_groups);
-        Ok(sqlx::query_as!(
-            kyogre_core::AverageTripBenchmarks,
+        query: &AverageTripBenchmarksQuery,
+    ) -> Result<AverageTripBenchmarks> {
+        sqlx::query_as!(
+            AverageTripBenchmarks,
             r#"
 SELECT
     AVG(t.fuel_consumption) AS fuel_consumption,
@@ -57,13 +64,14 @@ WHERE
             TripBenchmarkId::WeightPerHour as i32,
             TripBenchmarkId::WeightPerDistance as i32,
             TripBenchmarkId::WeightPerFuel as i32,
-            start_date,
-            end_date,
-            &length_group as &Option<VesselLengthGroup>,
-            &gear_groups as &Option<Vec<GearGroup>>
+            query.start_date,
+            query.end_date,
+            query.length_group as Option<VesselLengthGroup>,
+            query.gear_groups.as_slice().empty_to_none() as Option<&[GearGroup]>
         )
         .fetch_one(&self.pool)
-        .await?)
+        .await
+        .map_err(|e| e.into())
     }
 
     pub(crate) async fn trip_benchmarks_impl(
@@ -142,6 +150,101 @@ ORDER BY
         .await?;
 
         Ok(trips)
+    }
+
+    pub(crate) async fn eeoi_impl(&self, query: &EeoiQuery) -> Result<Option<f64>> {
+        let result = sqlx::query!(
+            r#"
+WITH
+    vessel_id AS (
+        SELECT
+            fiskeridir_vessel_id
+        FROM
+            fiskeridir_ais_vessel_mapping_whitelist
+        WHERE
+            call_sign = $1
+    )
+SELECT
+    CASE
+        WHEN SUM(t.landing_total_living_weight) > 0
+        AND SUM(t.distance) > $2 THEN (SUM(t.fuel_consumption) * $3)::DOUBLE PRECISION / (
+            SUM(t.landing_total_living_weight * t.distance * $4)::DOUBLE PRECISION / 1000::DOUBLE PRECISION
+        )
+        ELSE NULL
+    END AS eeoi
+FROM
+    vessel_id v
+    INNER JOIN trips_detailed t ON v.fiskeridir_vessel_id = t.fiskeridir_vessel_id
+WHERE
+    (
+        $5::TIMESTAMPTZ IS NULL
+        OR t.start_timestamp >= $5
+    )
+    AND (
+        $6::TIMESTAMPTZ IS NULL
+        OR t.stop_timestamp <= $6
+    )
+            "#,
+            query.call_sign.as_ref(),
+            MIN_EEOI_DISTANCE,
+            DIESEL_CARBON_FACTOR,
+            METERS_TO_NAUTICAL_MILES,
+            query.start_date,
+            query.end_date,
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(result.and_then(|v| v.eeoi))
+    }
+
+    pub(crate) async fn average_eeoi_impl(&self, query: &AverageEeoiQuery) -> Result<Option<f64>> {
+        let result = sqlx::query!(
+            r#"
+
+WITH
+    eeois AS (
+        SELECT
+            CASE
+                WHEN SUM(t.landing_total_living_weight) > 0
+                AND SUM(t.distance) > $1 THEN (SUM(t.fuel_consumption) * $2)::DOUBLE PRECISION / (
+                    SUM(t.landing_total_living_weight * t.distance * $3)::DOUBLE PRECISION / 1000::DOUBLE PRECISION
+                )
+                ELSE NULL
+            END AS eeoi
+        FROM
+            trips_detailed t
+        WHERE
+            t.start_timestamp >= $4
+            AND t.stop_timestamp <= $5
+            AND (
+                $6::INT IS NULL
+                OR t.fiskeridir_length_group_id = $6
+            )
+            AND (
+                $7::INT[] IS NULL
+                OR t.haul_gear_group_ids && $7
+            )
+        GROUP BY
+            t.fiskeridir_vessel_id
+    )
+SELECT
+    AVG(eeoi) AS eeoi
+FROM
+    eeois
+            "#,
+            MIN_EEOI_DISTANCE,
+            DIESEL_CARBON_FACTOR,
+            METERS_TO_NAUTICAL_MILES,
+            query.start_date,
+            query.end_date,
+            query.length_group as Option<VesselLengthGroup>,
+            query.gear_groups.as_slice().empty_to_none() as Option<&[GearGroup]>
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(result.and_then(|v| v.eeoi))
     }
 
     pub(crate) async fn trips_without_fuel_consumption_impl(
@@ -337,7 +440,11 @@ HAVING
         Ok(metrics)
     }
 
-    pub(crate) async fn reset_trip_benchmarks(&self, id: TripId) -> Result<()> {
+    pub(crate) async fn reset_trip_benchmarks(
+        &self,
+        id: TripId,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    ) -> Result<()> {
         sqlx::query!(
             r#"
 UPDATE trip_benchmark_outputs
@@ -349,7 +456,7 @@ WHERE
             TripBenchmarkStatus::MustRecompute as i32,
             id.into_inner(),
         )
-        .execute(&self.pool)
+        .execute(&mut **tx)
         .await?;
         Ok(())
     }
