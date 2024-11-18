@@ -89,6 +89,11 @@ impl TripSpecification {
             }
         }
     }
+    pub fn set_dep_weight(&mut self, weight: u32) {
+        if let TripSpecification::Ers { dep, .. } = self {
+            dep.catch.species.living_weight = Some(weight);
+        }
+    }
 }
 
 impl TripConstructor {
