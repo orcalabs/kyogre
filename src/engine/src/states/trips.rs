@@ -295,36 +295,42 @@ impl TripComputationStep for TripCargoWeight {
     ) -> Result<TripProcessingUnit> {
         let adapter = shared.trips_precision_outbound_port.as_ref();
 
+        let departures = adapter
+            .departure_weights_from_range(vessel.fiskeridir.id, &unit.trip.period)
+            .await?;
         let hauls = adapter
             .haul_weights_from_range(vessel.fiskeridir.id, &unit.trip.period)
             .await?;
 
+        let positions_len = unit.positions.len();
+
         let mut hauls_iter = hauls.into_iter();
         let mut current_haul = hauls_iter.next();
         let mut current_weight = 0.0;
-        let mut updates = Vec::new();
+        let mut updates = Vec::with_capacity(positions_len);
         let mut i = 0;
 
-        while i < unit.positions.len() {
+        while i < positions_len {
             let current_position = &unit.positions[i];
 
             if let Some(haul) = &current_haul {
                 if haul.period.contains(current_position.timestamp) {
                     let haul_start_idx = i;
-                    let mut haul_end_idx = haul_start_idx + 1;
 
-                    // Lint suggestion does not support break
-                    #[allow(clippy::needless_range_loop)]
-                    for j in haul_start_idx + 1..unit.positions.len() {
-                        if !haul.period.contains(unit.positions[j].timestamp) {
-                            haul_end_idx = j;
-                            break;
-                        }
-                    }
+                    let haul_end_idx = unit
+                        .positions
+                        .iter()
+                        .enumerate()
+                        .skip(i + 1)
+                        .skip_while(|(_, p)| haul.period.contains(p.timestamp))
+                        .map(|(i, _)| i)
+                        .next()
+                        .unwrap_or(positions_len);
 
                     let num_haul_positions = (haul_end_idx - haul_start_idx) as f64;
                     // 'num_haul_positions' is ALWAYS 1 or greater
                     let weight_per_position = haul.weight / num_haul_positions;
+
                     (haul_start_idx..haul_end_idx).for_each(|idx| {
                         current_weight += weight_per_position;
                         let pos = &unit.positions[idx];
@@ -337,33 +343,37 @@ impl TripComputationStep for TripCargoWeight {
 
                     current_haul = hauls_iter.next();
                     i = haul_end_idx;
+                    continue;
                 } else if haul.period.end() < current_position.timestamp {
                     current_weight += haul.weight;
                     current_haul = hauls_iter.next();
-
-                    updates.push(UpdateTripPositionCargoWeight {
-                        timestamp: current_position.timestamp,
-                        position_type: current_position.position_type,
-                        trip_cumulative_cargo_weight: current_weight,
-                    });
-                    i += 1;
-                } else {
-                    updates.push(UpdateTripPositionCargoWeight {
-                        timestamp: current_position.timestamp,
-                        position_type: current_position.position_type,
-                        trip_cumulative_cargo_weight: current_weight,
-                    });
-                    i += 1;
+                    continue;
                 }
-            } else {
-                updates.push(UpdateTripPositionCargoWeight {
-                    timestamp: current_position.timestamp,
-                    position_type: current_position.position_type,
-                    trip_cumulative_cargo_weight: current_weight,
-                });
-                i += 1;
             }
+
+            updates.push(UpdateTripPositionCargoWeight {
+                timestamp: current_position.timestamp,
+                position_type: current_position.position_type,
+                trip_cumulative_cargo_weight: current_weight,
+            });
+            i += 1;
         }
+
+        let mut deps_iter = departures.into_iter().peekable();
+        let mut current_weight = 0.;
+
+        for update in updates.iter_mut() {
+            if deps_iter
+                .peek()
+                .is_some_and(|v| v.departure_timestamp <= update.timestamp)
+            {
+                // `unwrap` is safe due to `is_some_and` check
+                current_weight = deps_iter.next().unwrap().weight;
+            }
+
+            update.trip_cumulative_cargo_weight += current_weight;
+        }
+
         unit.trip_position_cargo_weight_distribution_output = Some(updates);
 
         Ok(unit)

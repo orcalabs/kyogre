@@ -167,6 +167,11 @@ pub trait TripPrecisionOutboundPort: Send + Sync {
         trip_landing_coverage: &DateRange,
     ) -> CoreResult<Vec<DeliveryPoint>>;
 
+    async fn departure_weights_from_range(
+        &self,
+        vessel_id: FiskeridirVesselId,
+        range: &DateRange,
+    ) -> CoreResult<Vec<DepartureWeight>>;
     async fn haul_weights_from_range(
         &self,
         vessel_id: FiskeridirVesselId,

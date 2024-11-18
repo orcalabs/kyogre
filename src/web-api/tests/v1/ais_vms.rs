@@ -863,6 +863,9 @@ async fn test_ais_vms_by_trip_returns_cumulative_fuel_consumption() {
         let state = builder
             .vessels(1)
             .trips(1)
+            .modify(|v| {
+                v.trip_specification.set_dep_weight(0);
+            })
             .ais_vms_positions(3)
             .build()
             .await;
@@ -900,11 +903,14 @@ async fn test_ais_vms_by_trip_returns_cumulative_fuel_consumption() {
 }
 
 #[tokio::test]
-async fn test_ais_vms_by_trip_returns_cumulative_haul_weight() {
+async fn test_ais_vms_by_trip_returns_cumulative_cargo_weight() {
     test(|helper, builder| async move {
         let state = builder
             .vessels(1)
             .trips(1)
+            .modify(|v| {
+                v.trip_specification.set_dep_weight(0);
+            })
             .ais_vms_positions(1)
             .hauls(1)
             .ais_vms_positions(2)
@@ -948,7 +954,7 @@ async fn test_ais_vms_by_trip_returns_cumulative_haul_weight() {
 }
 
 #[tokio::test]
-async fn test_ais_vms_by_trip_spreads_haul_weight_evenly_among_positions_within_the_haul() {
+async fn test_ais_vms_by_trip_spreads_cargo_weight_evenly_among_positions_within_the_haul() {
     test(|helper, builder| async move {
         let start = Utc.timestamp_opt(100000, 0).unwrap();
         let end = start + Duration::hours(1);
@@ -958,7 +964,8 @@ async fn test_ais_vms_by_trip_spreads_haul_weight_evenly_among_positions_within_
             .trips(1)
             .modify(|t| {
                 t.trip_specification.set_start(start);
-                t.trip_specification.set_end(end)
+                t.trip_specification.set_end(end);
+                t.trip_specification.set_dep_weight(0);
             })
             .ais_vms_positions(1)
             .modify(|v| v.position.set_timestamp(start + Duration::minutes(1)))
@@ -1022,7 +1029,7 @@ async fn test_ais_vms_by_trip_spreads_haul_weight_evenly_among_positions_within_
 }
 
 #[tokio::test]
-async fn tests_cumulative_haul_weight_is_recomputed_with_new_data() {
+async fn tests_cumulative_cargo_weight_is_recomputed_with_new_data() {
     test(|helper, builder| async move {
         let start = Utc.timestamp_opt(100000, 0).unwrap();
         let end = start + Duration::hours(1);
@@ -1032,7 +1039,8 @@ async fn tests_cumulative_haul_weight_is_recomputed_with_new_data() {
             .trips(1)
             .modify(|t| {
                 t.trip_specification.set_start(start);
-                t.trip_specification.set_end(end)
+                t.trip_specification.set_end(end);
+                t.trip_specification.set_dep_weight(0);
             })
             .ais_vms_positions(1)
             .modify(|v| v.position.set_timestamp(start + Duration::minutes(1)))
@@ -1081,6 +1089,152 @@ async fn tests_cumulative_haul_weight_is_recomputed_with_new_data() {
                 .iter()
                 .map(|h| h.total_living_weight() as f64)
                 .sum()
+        ));
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn tests_cumulative_cargo_weight_includes_departures() {
+    test(|helper, builder| async move {
+        let ts1 = Utc.timestamp_opt(1_000_000, 0).unwrap();
+        let ts2 = Utc.timestamp_opt(2_000_000, 0).unwrap();
+        let ts3 = Utc.timestamp_opt(3_000_000, 0).unwrap();
+        let ts4 = Utc.timestamp_opt(4_000_000, 0).unwrap();
+        let ts5 = Utc.timestamp_opt(5_000_000, 0).unwrap();
+
+        let state = builder
+            .vessels(1)
+            .trips(1)
+            .modify(|v| {
+                v.trip_specification.set_start(ts1);
+                v.trip_specification.set_end(ts5);
+                v.trip_specification.set_dep_weight(0);
+            })
+            .dep(2)
+            .modify_idx(|i, v| {
+                v.dep.set_departure_timestamp(match i {
+                    0 => ts2,
+                    1 => ts4,
+                    _ => unreachable!(),
+                });
+                v.dep.catch.species.living_weight = Some(100 * (i + 1) as u32);
+            })
+            .ais_vms_positions(3)
+            .modify_idx(|i, v| {
+                v.position.set_timestamp(match i {
+                    0 => ts1,
+                    1 => ts3,
+                    2 => ts5,
+                    _ => unreachable!(),
+                });
+            })
+            .build()
+            .await;
+
+        let positions = helper
+            .app
+            .get_ais_vms_positions(AisVmsParameters {
+                start: None,
+                end: None,
+                trip_id: Some(state.trips[0].trip_id),
+                mmsi: None,
+                call_sign: None,
+            })
+            .await
+            .unwrap();
+
+        assert_eq!(positions.len(), 3);
+        assert!(approx_eq!(
+            f64,
+            positions[0].trip_cumulative_cargo_weight.unwrap(),
+            0.
+        ));
+        assert!(approx_eq!(
+            f64,
+            positions[1].trip_cumulative_cargo_weight.unwrap(),
+            100.
+        ));
+        assert!(approx_eq!(
+            f64,
+            positions[2].trip_cumulative_cargo_weight.unwrap(),
+            200.
+        ));
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn tests_cumulative_cargo_weight_combines_hauls_and_departures() {
+    test(|helper, builder| async move {
+        let start = Utc.timestamp_opt(100000, 0).unwrap();
+        let end = start + Duration::hours(1);
+        let dep_weight = 100;
+
+        let state = builder
+            .vessels(1)
+            .trips(1)
+            .modify(|v| {
+                v.trip_specification.set_start(start);
+                v.trip_specification.set_end(end);
+                v.trip_specification.set_dep_weight(dep_weight);
+            })
+            .ais_vms_positions(1)
+            .modify(|v| v.position.set_timestamp(start + Duration::minutes(1)))
+            .hauls(1)
+            .modify(|v| {
+                v.dca.set_start_timestamp(start + Duration::minutes(10));
+                v.dca.set_stop_timestamp(start + Duration::minutes(20));
+            })
+            .ais_vms_positions(2)
+            .modify_idx(|i, v| {
+                v.position
+                    .set_timestamp(start + Duration::minutes(11 + i as i64));
+            })
+            .ais_vms_positions(2)
+            .modify_idx(|i, v| {
+                v.position
+                    .set_timestamp(start + Duration::minutes(22 + i as i64));
+            })
+            .build()
+            .await;
+
+        let positions = helper
+            .app
+            .get_ais_vms_positions(AisVmsParameters {
+                start: None,
+                end: None,
+                trip_id: Some(state.trips[0].trip_id),
+                mmsi: None,
+                call_sign: None,
+            })
+            .await
+            .unwrap();
+
+        assert_eq!(positions.len(), 5);
+        assert!(positions
+            .iter()
+            .skip(1)
+            .map(|v| v.trip_cumulative_cargo_weight.unwrap())
+            .is_sorted());
+        assert!(approx_eq!(
+            f64,
+            positions[0].trip_cumulative_cargo_weight.unwrap(),
+            dep_weight as f64
+        ));
+        assert!(approx_eq!(
+            f64,
+            positions
+                .last()
+                .unwrap()
+                .trip_cumulative_cargo_weight
+                .unwrap(),
+            state.trips[0]
+                .hauls
+                .iter()
+                .map(|h| h.total_living_weight() as f64)
+                .sum::<f64>()
+                + dep_weight as f64
         ));
     })
     .await;
