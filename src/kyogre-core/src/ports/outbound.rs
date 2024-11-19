@@ -360,6 +360,7 @@ pub trait MLModelsOutbound: Send + Sync {
 #[cfg(feature = "test")]
 #[async_trait]
 pub trait TestHelperOutbound: Send + Sync {
+    async fn all_tra(&self) -> Vec<Tra>;
     async fn all_dep(&self) -> Vec<Departure>;
     async fn all_por(&self) -> Vec<Arrival>;
     async fn all_ais(&self) -> Vec<AisPosition>;

@@ -1,15 +1,14 @@
-use std::future::ready;
-
+use crate::{models::Haul, PostgresAdapter};
 use chrono::{DateTime, Datelike, Duration, Utc};
+use fiskeridir_rs::DeliveryPointId;
 use fiskeridir_rs::{
-    CallSign, DeliveryPointId, ErsDca, ErsDep, ErsPor, ErsTra, Gear, GearGroup, LandingId,
-    SpeciesGroup, VesselLengthGroup, Vms,
+    CallSign, ErsDca, ErsDep, ErsPor, ErsTra, Gear, GearGroup, LandingId, SpeciesGroup,
+    VesselLengthGroup, Vms,
 };
 use futures::{Stream, StreamExt, TryStreamExt};
 use kyogre_core::*;
 use rand::random;
-
-use crate::{models::Haul, PostgresAdapter};
+use std::future::ready;
 
 /// Wrapper with additional methods inteded for testing purposes.
 #[derive(Debug, Clone)]
@@ -312,6 +311,7 @@ SELECT
     t.trip_assembler_id AS "trip_assembler_id!: TripAssemblerId",
     COALESCE(t.vessel_events, '[]')::TEXT AS "vessel_events!",
     COALESCE(t.hauls, '[]')::TEXT AS "hauls!",
+    COALESCE(t.tra, '[]')::TEXT AS "tra!",
     COALESCE(t.fishing_facilities, '[]')::TEXT AS "fishing_facilities!",
     COALESCE(t.landing_ids, '{}') AS "landing_ids!: Vec<LandingId>",
     t.distance,

@@ -151,6 +151,7 @@ pub struct TripDetailed {
     pub species_group_ids: Vec<fiskeridir_rs::SpeciesGroup>,
     pub delivery_point_ids: Vec<DeliveryPointId>,
     pub hauls: Vec<Haul>,
+    pub tra: Vec<Tra>,
     pub fishing_facilities: Vec<FishingFacility>,
     pub delivery: Delivery,
     pub start_port_id: Option<String>,
