@@ -336,6 +336,14 @@ impl TestHelperOutbound for PostgresAdapter {
             .await
             .unwrap()
     }
+    async fn all_tra(&self) -> Vec<Tra> {
+        self.all_ers_tra_impl()
+            .await
+            .unwrap()
+            .into_iter()
+            .map(|t| Tra::try_from(t).unwrap())
+            .collect()
+    }
     async fn all_dep(&self) -> Vec<Departure> {
         self.all_ers_departures_impl().await.unwrap()
     }

@@ -1,0 +1,74 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    e.fiskeridir_vessel_id as \"fiskeridir_vessel_id?: FiskeridirVesselId\",\n    e.latitude,\n    e.longitude,\n    e.reloading_timestamp,\n    e.message_timestamp,\n    e.catches::TEXT as \"catches!\",\n    e.reload_to as \"reload_to?: FiskeridirVesselId\",\n    e.reload_from as \"reload_from?: FiskeridirVesselId\",\n    e.reload_to_call_sign as \"reload_to_call_sign?: CallSign\",\n    e.reload_from_call_sign as \"reload_from_call_sign?: CallSign\"\nFROM\n    ers_tra_reloads e\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "fiskeridir_vessel_id?: FiskeridirVesselId",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "latitude",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 2,
+        "name": "longitude",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 3,
+        "name": "reloading_timestamp",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 4,
+        "name": "message_timestamp",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 5,
+        "name": "catches!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "reload_to?: FiskeridirVesselId",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 7,
+        "name": "reload_from?: FiskeridirVesselId",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 8,
+        "name": "reload_to_call_sign?: CallSign",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 9,
+        "name": "reload_from_call_sign?: CallSign",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      true,
+      true,
+      true,
+      true,
+      false,
+      null,
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "12670c0e10b09ec2bdd32ef298fb59a760ae6309544bf8931b11d71e6aafe7bb"
+}

@@ -3,8 +3,8 @@ use chrono::{DateTime, Utc};
 use fiskeridir_rs::{Gear, GearGroup, LandingId};
 use futures::TryStreamExt;
 use kyogre_core::{
-    FiskeridirVesselId, HaulId, Ordering, Pagination, TripAssemblerId, TripId, TripSorting, Trips,
-    TripsQuery, VesselEventType,
+    FiskeridirVesselId, HaulId, Ordering, Pagination, Tra, TripAssemblerId, TripId, TripSorting,
+    Trips, TripsQuery, VesselEventType,
 };
 use serde::{Deserialize, Serialize};
 use serde_qs::actix::QsQuery as Query;
@@ -248,6 +248,7 @@ pub struct Trip {
     #[schema(value_type = Vec<String>)]
     pub delivery_point_ids: Vec<fiskeridir_rs::DeliveryPointId>,
     pub hauls: Vec<Haul>,
+    pub tra: Vec<Tra>,
     pub fishing_facilities: Vec<FishingFacility>,
     pub delivery: Delivery,
     pub start_port_id: Option<String>,
@@ -363,6 +364,7 @@ impl From<kyogre_core::TripDetailed> for Trip {
             target_species_fao_id: value.target_species_fao_id,
             fuel_consumption: value.fuel_consumption,
             track_coverage: value.track_coverage,
+            tra: value.tra,
         }
     }
 }

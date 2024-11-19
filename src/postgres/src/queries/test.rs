@@ -1,3 +1,4 @@
+use fiskeridir_rs::CallSign;
 use fiskeridir_rs::DeliveryPointId;
 use futures::{Stream, StreamExt, TryStreamExt};
 use kyogre_core::{
@@ -9,7 +10,7 @@ use kyogre_core::{
 use crate::{
     error::Result,
     models::{
-        FiskeridirAisVesselCombination, ManualDeliveryPoint, NewDeliveryPointId, Port,
+        FiskeridirAisVesselCombination, ManualDeliveryPoint, NewDeliveryPointId, Port, Tra,
         TripAssemblerLogEntry, VesselConflictInsert, VmsPosition,
     },
     PostgresAdapter,
@@ -42,6 +43,30 @@ FROM
         )
         .fetch(&self.pool)
         .map_err(|e| e.into())
+    }
+    pub(crate) async fn all_ers_tra_impl(&self) -> Result<Vec<Tra>> {
+        let tra = sqlx::query_as!(
+            Tra,
+            r#"
+SELECT
+    e.fiskeridir_vessel_id as "fiskeridir_vessel_id?: FiskeridirVesselId",
+    e.latitude,
+    e.longitude,
+    e.reloading_timestamp,
+    e.message_timestamp,
+    e.catches::TEXT as "catches!",
+    e.reload_to as "reload_to?: FiskeridirVesselId",
+    e.reload_from as "reload_from?: FiskeridirVesselId",
+    e.reload_to_call_sign as "reload_to_call_sign?: CallSign",
+    e.reload_from_call_sign as "reload_from_call_sign?: CallSign"
+FROM
+    ers_tra_reloads e
+            "#,
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(tra)
     }
 
     pub(crate) async fn all_ers_departures_impl(&self) -> Result<Vec<Departure>> {

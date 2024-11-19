@@ -1,5 +1,6 @@
 use super::ers_common::ErsCatch;
 use super::ers_common::{ErsMessageInfo, ErsVesselInfo};
+use super::CallSign;
 use crate::deserialize_utils::*;
 use crate::string_new_types::NonEmptyString;
 use crate::utils::opt_timestamp_from_date_and_time;
@@ -19,7 +20,7 @@ pub struct ErsTra {
     pub reloading_date: Option<NaiveDate>,
     #[serde(rename = "Omlasting fra fartøy")]
     #[serde_as(as = "OptFromStrFromAny")]
-    pub reloading_from_vessel: Option<NonEmptyString>,
+    pub reloading_from_vessel: Option<CallSign>,
     #[serde(rename = "Omlastingsklokkeslett")]
     #[serde(deserialize_with = "opt_naive_time_from_str")]
     pub reloading_time: Option<NaiveTime>,
@@ -31,7 +32,7 @@ pub struct ErsTra {
 
     #[serde(rename = "Omlasting til fartøy")]
     #[serde_as(as = "OptFromStrFromAny")]
-    pub reloading_to_vessel: Option<NonEmptyString>,
+    pub reloading_to_vessel: Option<CallSign>,
     #[serde(rename = "Startposisjon bredde")]
     #[serde_as(as = "OptFloatFromStr")]
     pub start_latitude: Option<f64>,

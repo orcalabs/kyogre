@@ -1,4 +1,4 @@
-use super::VesselEvent;
+use super::{TripTra, VesselEvent};
 use crate::{
     error::{Error, Result},
     queries::{opt_type_to_i32, type_to_i32, type_to_i64},
@@ -250,6 +250,7 @@ pub struct TripDetailed {
     pub latest_landing_timestamp: Option<DateTime<Utc>>,
     pub catches: String,
     pub hauls: String,
+    pub tra: String,
     pub fishing_facilities: String,
     pub vessel_events: String,
     pub start_port_id: Option<String>,
@@ -370,6 +371,10 @@ impl TryFrom<TripDetailed> for kyogre_core::TripDetailed {
             target_species_fao_id: value.target_species_fao_id,
             fuel_consumption: value.fuel_consumption,
             track_coverage: value.track_coverage,
+            tra: serde_json::from_str::<Vec<TripTra>>(&value.tra)?
+                .into_iter()
+                .map(kyogre_core::Tra::from)
+                .collect(),
         })
     }
 }

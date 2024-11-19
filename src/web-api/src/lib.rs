@@ -147,7 +147,10 @@ impl Database for PostgresAdapter {}
             kyogre_core::Benchmark,
             kyogre_core::BenchmarkEntry,
             kyogre_core::CumulativeLandings,
-            kyogre_core::AverageTripBenchmarks
+            kyogre_core::AverageTripBenchmarks,
+            kyogre_core::Tra,
+            kyogre_core::TraCatch,
+            kyogre_core::ErsQuantumType
           )
     ),
     security(

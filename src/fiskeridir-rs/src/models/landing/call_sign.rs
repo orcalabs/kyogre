@@ -45,6 +45,14 @@ impl FromStr for CallSign {
     }
 }
 
+impl TryFrom<&str> for CallSign {
+    type Error = ParseStringError;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        value.parse()
+    }
+}
+
 impl TryFrom<String> for CallSign {
     type Error = ParseStringError;
 

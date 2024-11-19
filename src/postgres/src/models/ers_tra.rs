@@ -1,14 +1,52 @@
+use crate::{
+    error::Error,
+    queries::{opt_type_to_i64, type_to_i32},
+};
 use chrono::{DateTime, NaiveDate, Utc};
-use fiskeridir_rs::{FiskdirVesselNationalityGroup, SpeciesGroup, SpeciesMainGroup};
-use kyogre_core::FiskeridirVesselId;
+use fiskeridir_rs::{CallSign, FiskdirVesselNationalityGroup, SpeciesGroup, SpeciesMainGroup};
+use kyogre_core::{ErsQuantumType, FiskeridirVesselId};
+use serde::Deserialize;
 use unnest_insert::UnnestInsert;
 
-use crate::queries::{opt_type_to_i64, type_to_i32};
+#[derive(Debug, Clone)]
+pub struct Tra {
+    pub fiskeridir_vessel_id: Option<FiskeridirVesselId>,
+    pub latitude: Option<f64>,
+    pub longitude: Option<f64>,
+    pub reloading_timestamp: Option<DateTime<Utc>>,
+    pub message_timestamp: DateTime<Utc>,
+    pub catches: String,
+    pub reload_to: Option<FiskeridirVesselId>,
+    pub reload_from: Option<FiskeridirVesselId>,
+    pub reload_to_call_sign: Option<CallSign>,
+    pub reload_from_call_sign: Option<CallSign>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct TripTra {
+    pub fiskeridir_vessel_id: Option<FiskeridirVesselId>,
+    pub latitude: Option<f64>,
+    pub longitude: Option<f64>,
+    pub reloading_timestamp: Option<DateTime<Utc>>,
+    pub message_timestamp: DateTime<Utc>,
+    pub catches: Vec<TripTraCatch>,
+    pub reload_to: Option<FiskeridirVesselId>,
+    pub reload_from: Option<FiskeridirVesselId>,
+    pub reload_to_call_sign: Option<CallSign>,
+    pub reload_from_call_sign: Option<CallSign>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct TripTraCatch {
+    pub living_weight: i32,
+    pub species_group_id: SpeciesGroup,
+    pub catch_quantum: ErsQuantumType,
+}
 
 #[derive(UnnestInsert)]
 #[unnest_insert(
     table_name = "ers_tra",
-    returning = "vessel_event_id, message_timestamp, reloading_timestamp, fiskeridir_vessel_id"
+    returning = "vessel_event_id, message_id, message_timestamp, reloading_timestamp, fiskeridir_vessel_id"
 )]
 pub struct NewErsTra<'a> {
     pub message_id: i64,
@@ -18,7 +56,11 @@ pub struct NewErsTra<'a> {
     pub message_year: i32,
     pub relevant_year: i32,
     pub sequence_number: Option<i32>,
+    pub start_latitude: Option<f64>,
+    pub start_longitude: Option<f64>,
     pub reloading_timestamp: Option<DateTime<Utc>>,
+    pub reload_to_vessel_call_sign: Option<&'a str>,
+    pub reload_from_vessel_call_sign: Option<&'a str>,
     #[unnest_insert(sql_type = "BIGINT", type_conversion = "opt_type_to_i64")]
     pub fiskeridir_vessel_id: Option<FiskeridirVesselId>,
     pub vessel_building_year: Option<i32>,
@@ -107,6 +149,10 @@ impl<'a> From<&'a fiskeridir_rs::ErsTra> for NewErsTra<'a> {
             vessel_valid_from: v.vessel_info.valid_from,
             vessel_width: v.vessel_info.width,
             vessel_event_id: None,
+            start_latitude: v.start_latitude,
+            start_longitude: v.start_longitude,
+            reload_to_vessel_call_sign: v.reloading_to_vessel.as_deref(),
+            reload_from_vessel_call_sign: v.reloading_from_vessel.as_deref(),
         }
     }
 }
@@ -148,6 +194,59 @@ impl<'a> NewErsTraCatch<'a> {
             })
         } else {
             None
+        }
+    }
+}
+
+impl TryFrom<Tra> for kyogre_core::Tra {
+    type Error = Error;
+
+    fn try_from(value: Tra) -> Result<Self, Self::Error> {
+        Ok(Self {
+            latitude: value.latitude,
+            longitude: value.longitude,
+            reloading_timestamp: value.reloading_timestamp,
+            catches: serde_json::from_str::<Vec<TripTraCatch>>(&value.catches)?
+                .into_iter()
+                .map(kyogre_core::TraCatch::from)
+                .collect(),
+            reload_to_fiskeridir_vessel_id: value.reload_to,
+            reload_from_fiskeridir_vessel_id: value.reload_from,
+            fiskeridir_vessel_id: value.fiskeridir_vessel_id,
+            message_timestamp: value.message_timestamp,
+            reload_to_call_sign: value.reload_to_call_sign,
+            reload_from_call_sign: value.reload_from_call_sign,
+        })
+    }
+}
+
+impl From<TripTra> for kyogre_core::Tra {
+    fn from(value: TripTra) -> Self {
+        Self {
+            latitude: value.latitude,
+            longitude: value.longitude,
+            reloading_timestamp: value.reloading_timestamp,
+            catches: value
+                .catches
+                .into_iter()
+                .map(kyogre_core::TraCatch::from)
+                .collect(),
+            reload_to_fiskeridir_vessel_id: value.reload_to,
+            reload_from_fiskeridir_vessel_id: value.reload_from,
+            fiskeridir_vessel_id: value.fiskeridir_vessel_id,
+            message_timestamp: value.message_timestamp,
+            reload_to_call_sign: value.reload_to_call_sign,
+            reload_from_call_sign: value.reload_from_call_sign,
+        }
+    }
+}
+
+impl From<TripTraCatch> for kyogre_core::TraCatch {
+    fn from(value: TripTraCatch) -> Self {
+        Self {
+            living_weight: value.living_weight,
+            species_group_id: value.species_group_id,
+            catch_quantum: value.catch_quantum,
         }
     }
 }
