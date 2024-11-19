@@ -60,6 +60,7 @@ async fn test_average_benchmarks_works() {
                 end_date: end,
                 gear_groups: vec![],
                 length_group: None,
+                vessel_ids: vec![],
             })
             .await
             .unwrap();

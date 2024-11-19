@@ -1,5 +1,5 @@
 use chrono::{DateTime, Utc};
-use fiskeridir_rs::{CallSign, GearGroup, VesselLengthGroup};
+use fiskeridir_rs::{CallSign, FiskeridirVesselId, GearGroup, VesselLengthGroup};
 
 use super::Ordering;
 
@@ -17,6 +17,7 @@ pub struct AverageTripBenchmarksQuery {
     pub end_date: DateTime<Utc>,
     pub gear_groups: Vec<GearGroup>,
     pub length_group: Option<VesselLengthGroup>,
+    pub vessel_ids: Vec<FiskeridirVesselId>,
 }
 
 #[derive(Debug, Clone)]
@@ -32,4 +33,5 @@ pub struct AverageEeoiQuery {
     pub end_date: DateTime<Utc>,
     pub gear_groups: Vec<GearGroup>,
     pub length_group: Option<VesselLengthGroup>,
+    pub vessel_ids: Vec<FiskeridirVesselId>,
 }

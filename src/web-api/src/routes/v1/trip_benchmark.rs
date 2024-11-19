@@ -8,8 +8,8 @@ use actix_web::web;
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::{CallSign, GearGroup, VesselLengthGroup};
 use kyogre_core::{
-    AverageEeoiQuery, AverageTripBenchmarks, AverageTripBenchmarksQuery, EeoiQuery, Mean, Ordering,
-    TripBenchmarksQuery, TripId, TripWithBenchmark,
+    AverageEeoiQuery, AverageTripBenchmarks, AverageTripBenchmarksQuery, EeoiQuery,
+    FiskeridirVesselId, Mean, Ordering, TripBenchmarksQuery, TripId, TripWithBenchmark,
 };
 use serde::{Deserialize, Serialize};
 use serde_qs::actix::QsQuery as Query;
@@ -44,6 +44,9 @@ pub struct AverageTripBenchmarksParams {
     pub gear_groups: Vec<GearGroup>,
     #[serde_as(as = "Option<DisplayFromStr>")]
     pub length_group: Option<VesselLengthGroup>,
+    #[serde(default)]
+    #[param(rename = "vesselIds[]", value_type = Option<Vec<i64>>)]
+    pub vessel_ids: Vec<FiskeridirVesselId>,
 }
 
 #[serde_as]
@@ -58,6 +61,9 @@ pub struct AverageEeoiParams {
     pub gear_groups: Vec<GearGroup>,
     #[serde_as(as = "Option<DisplayFromStr>")]
     pub length_group: Option<VesselLengthGroup>,
+    #[serde(default)]
+    #[param(rename = "vesselIds[]", value_type = Option<Vec<i64>>)]
+    pub vessel_ids: Vec<FiskeridirVesselId>,
 }
 
 #[utoipa::path(
@@ -230,6 +236,7 @@ impl From<AverageTripBenchmarksParams> for AverageTripBenchmarksQuery {
             end_date: v.end_date,
             gear_groups: v.gear_groups,
             length_group: v.length_group,
+            vessel_ids: v.vessel_ids,
         }
     }
 }
@@ -241,6 +248,7 @@ impl From<AverageEeoiParams> for AverageEeoiQuery {
             end_date: v.end_date,
             gear_groups: v.gear_groups,
             length_group: v.length_group,
+            vessel_ids: v.vessel_ids,
         }
     }
 }

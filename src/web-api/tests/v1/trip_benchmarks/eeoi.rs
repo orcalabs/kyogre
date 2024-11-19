@@ -1,14 +1,11 @@
-#![allow(warnings)]
-
 use crate::v1::helper::test;
-use chrono::{Duration, TimeZone, Utc};
 use engine::{Modifiable, TripLevel};
-use web_api::routes::v1::{ais_vms::AisVmsParameters, trip_benchmark::AverageEeoiParams};
+use web_api::routes::v1::trip_benchmark::AverageEeoiParams;
 
 #[tokio::test]
 async fn test_eeoi_works() {
     test(|mut helper, builder| async move {
-        let state = builder
+        builder
             .vessels(1)
             .set_logged_in()
             .trips(1)
@@ -54,6 +51,7 @@ async fn test_average_eeoi_works() {
                 end_date: end,
                 gear_groups: vec![],
                 length_group: None,
+                vessel_ids: vec![],
             })
             .await
             .unwrap();
