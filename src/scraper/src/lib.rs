@@ -156,8 +156,8 @@ impl Scraper {
             scrapers: vec![
                 vec![
                     Arc::new(landings_scraper),
-                    Arc::new(ers_scraper),
                     Arc::new(register_vessels_scraper),
+                    Arc::new(ers_scraper),
                     Arc::new(fishing_facility_scraper),
                     Arc::new(fishing_facility_historic_scraper),
                     Arc::new(aqua_culture_register_scraper),

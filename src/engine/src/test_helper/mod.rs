@@ -4,7 +4,7 @@ use chrono::{DateTime, Duration, TimeZone, Utc};
 use fiskeridir_rs::{CallSign, DeliveryPointId, LandingMonth};
 use futures::TryStreamExt;
 use kyogre_core::{
-    CatchLocationId, FiskeridirVesselId, MLModel, NewVesselConflict, NewWeather, TestStorage,
+    CatchLocationId, FiskeridirVesselId, MLModel, NewVesselConflict, NewWeather, TestStorage, Tra,
     TrainingMode, TripAssembler, TripDistancer, TripPositionLayer,
 };
 use machine::StateMachine;
@@ -73,6 +73,7 @@ pub struct TestState {
     pub trips: Vec<TripDetailed>,
     pub landings: Vec<Landing>,
     pub hauls: Vec<Haul>,
+    pub tra: Vec<Tra>,
     pub dep: Vec<Departure>,
     pub por: Vec<Arrival>,
     // Includes the static delivery points from our migrations
@@ -1087,6 +1088,7 @@ impl TestStateBuilder {
             .await
             .unwrap();
 
+        let mut tra = self.storage.all_tra().await;
         let mut dep = self.storage.all_dep().await;
         let mut por = self.storage.all_por().await;
         let all_delivery_points = self
@@ -1143,6 +1145,7 @@ impl TestStateBuilder {
         vms_positions.sort_by_key(|v| (v.call_sign.clone(), v.timestamp));
         trips.sort_by_key(|v| (v.fiskeridir_vessel_id, v.period.start()));
         hauls.sort_by_key(|v| (v.start_timestamp, v.haul_id));
+        tra.sort_by_key(|v| (v.reloading_timestamp));
         dep.sort_by_key(|v| (v.fiskeridir_vessel_id, v.timestamp));
         por.sort_by_key(|v| (v.fiskeridir_vessel_id, v.timestamp));
         delivery_points.sort_by_key(|v| v.id.clone());
@@ -1163,6 +1166,7 @@ impl TestStateBuilder {
             fishing_facilities,
             weather,
             ocean_climate,
+            tra,
         }
     }
 }

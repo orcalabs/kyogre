@@ -382,7 +382,8 @@ INSERT INTO
         fuel_consumption,
         haul_ids,
         haul_gear_group_ids,
-        haul_gear_ids
+        haul_gear_ids,
+        tra
     )
 SELECT
     t.trip_id,
@@ -529,13 +530,46 @@ SELECT
                 h.haul_id IS NOT NULL
         ),
         '{}'
-    ) AS haul_gear_ids
+    ) AS haul_gear_ids,
+    COALESCE(
+        JSONB_AGG(
+            JSONB_BUILD_OBJECT(
+                'latitude',
+                tra.latitude,
+                'longitude',
+                tra.longitude,
+                'reload_to',
+                tra.reload_to,
+                'reload_from',
+                tra.reload_from,
+                'reload_to_call_sign',
+                tra.reload_to_call_sign,
+                'reload_from_call_sign',
+                tra.reload_from_call_sign,
+                'message_timestamp',
+                tra.message_timestamp,
+                'reloading_timestamp',
+                tra.reloading_timestamp,
+                'fiskeridir_vessel_id',
+                tra.fiskeridir_vessel_id,
+                'catches',
+                tra.catches
+            )
+            ORDER BY
+                tra.message_timestamp
+        ) FILTER (
+            WHERE
+                tra.message_id IS NOT NULL
+        ),
+        '[]'
+    ) AS tra
 FROM
     trips t
     INNER JOIN fiskeridir_vessels fv ON fv.fiskeridir_vessel_id = t.fiskeridir_vessel_id
     LEFT JOIN vessel_events v ON t.trip_id = v.trip_id
     LEFT JOIN landings l ON l.vessel_event_id = v.vessel_event_id
     LEFT JOIN hauls h ON h.vessel_event_id = v.vessel_event_id
+    LEFT JOIN ers_tra_reloads tra ON tra.vessel_event_id = v.vessel_event_id
     LEFT JOIN trip_benchmark_outputs b ON t.trip_id = b.trip_id
     AND b.trip_benchmark_id = $1
 WHERE
@@ -568,7 +602,8 @@ SET
     fuel_consumption = excluded.fuel_consumption,
     haul_ids = excluded.haul_ids,
     haul_gear_group_ids = excluded.haul_gear_group_ids,
-    haul_gear_ids = excluded.haul_gear_ids
+    haul_gear_ids = excluded.haul_gear_ids,
+    tra = excluded.tra
             "#,
             TripBenchmarkId::FuelConsumption as i32,
             &trip_ids as &[TripId],
@@ -775,6 +810,7 @@ SELECT
     t.trip_assembler_id AS "trip_assembler_id!: TripAssemblerId",
     COALESCE(t.vessel_events, '[]')::TEXT AS "vessel_events!",
     COALESCE(t.hauls, '[]')::TEXT AS "hauls!",
+    COALESCE(t.tra, '[]')::TEXT AS "tra!",
     COALESCE(t.landing_ids, '{}') AS "landing_ids!: Vec<LandingId>",
     CASE
         WHEN $1 THEN COALESCE(t.fishing_facilities, '[]')::TEXT
@@ -902,6 +938,7 @@ SELECT
     t.trip_assembler_id AS "trip_assembler_id!: TripAssemblerId",
     COALESCE(t.vessel_events, '[]')::TEXT AS "vessel_events!",
     COALESCE(t.hauls, '[]')::TEXT AS "hauls!",
+    COALESCE(t.tra, '[]')::TEXT AS "tra!",
     COALESCE(t.landing_ids, '{}') AS "landing_ids!: Vec<LandingId>",
     CASE
         WHEN (

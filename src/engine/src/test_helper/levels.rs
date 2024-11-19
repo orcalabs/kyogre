@@ -184,6 +184,7 @@ impl_modifiable!(
 impl_modifiable!(AisVesselBuilder, AisVesselConstructor, state.ais_static);
 impl_modifiable!(TraVesselBuilder, TraConstructor, state.state.tra);
 impl_modifiable!(TraTripBuilder, TraConstructor, state.state.state.tra);
+impl_modifiable!(TraBuilder, TraConstructor, state.tra);
 impl_modifiable!(VesselBuilder, VesselContructor, state.vessels);
 impl_modifiable!(HaulBuilder, HaulConstructor, state.hauls);
 impl_modifiable!(HaulTripBuilder, HaulConstructor, state.state.state.hauls);

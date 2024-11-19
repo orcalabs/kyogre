@@ -1,11 +1,116 @@
 use super::helper::{test, test_with_cache};
 use chrono::{DateTime, Duration, TimeZone, Utc};
 use engine::*;
-use fiskeridir_rs::{DeliveryPointId, GearGroup, LandingId, SpeciesGroup, VesselLengthGroup};
+use fiskeridir_rs::{
+    CallSign, DeliveryPointId, GearGroup, LandingId, SpeciesGroup, VesselLengthGroup,
+};
 use http_client::StatusCode;
 use kyogre_core::{FiskeridirVesselId, Ordering, TripSorting, VesselEventType};
 use uuid::Uuid;
 use web_api::{error::ErrorDiscriminants, routes::v1::trip::TripsParameters};
+
+#[tokio::test]
+async fn test_tra_messages_on_trips_connects_to_receiver_and_sender_if_provided() {
+    test(|helper, builder| async move {
+        let start: DateTime<Utc> = "2020-01-05T00:00:00Z".parse().unwrap();
+        let end: DateTime<Utc> = "2020-01-07T00:00:00Z".parse().unwrap();
+
+        let cs: CallSign = "RK1".try_into().unwrap();
+        let cs2: CallSign = "RK2".try_into().unwrap();
+        let state = builder
+            .vessels(2)
+            .modify_idx(|i, v| {
+                if i == 0 {
+                    v.fiskeridir.radio_call_sign = Some(cs.clone());
+                    v.ais.call_sign = Some(cs.clone());
+                } else {
+                    v.fiskeridir.radio_call_sign = Some(cs2.clone());
+                    v.ais.call_sign = Some(cs2.clone());
+                }
+            })
+            .trips(1)
+            .modify(|t| {
+                t.trip_specification.set_start(start);
+                t.trip_specification.set_end(end);
+            })
+            .tra(2)
+            .modify_idx(|i, t| {
+                if i == 0 {
+                    t.tra.set_reloading_timestamp(start + Duration::seconds(1));
+                    t.tra
+                        .message_info
+                        .set_message_timestamp(start + Duration::seconds(1));
+                    t.tra.reloading_to_vessel = Some(cs.clone());
+                    t.tra.reloading_from_vessel = Some(cs2.clone());
+                } else {
+                    t.tra.set_reloading_timestamp(start + Duration::seconds(2));
+                    t.tra
+                        .message_info
+                        .set_message_timestamp(start + Duration::seconds(2));
+                    t.tra.reloading_to_vessel = Some(cs2.clone());
+                    t.tra.reloading_from_vessel = Some(cs.clone());
+                }
+            })
+            .build()
+            .await;
+
+        let trips = helper
+            .app
+            .get_trips(TripsParameters {
+                ..Default::default()
+            })
+            .await
+            .unwrap();
+
+        let tra = &trips[0].tra[0];
+        let tra2 = &trips[0].tra[1];
+
+        let vessel = &state.vessels[0].fiskeridir;
+        let vessel2 = &state.vessels[1].fiskeridir;
+
+        assert_eq!(trips.len(), 1);
+        assert_eq!(trips[0].tra.len(), 2);
+
+        assert_eq!(
+            tra.message_timestamp.timestamp(),
+            (start + Duration::seconds(1)).timestamp()
+        );
+        assert_eq!(tra.reload_to_fiskeridir_vessel_id, Some(vessel.id));
+        assert_eq!(tra.reload_to_call_sign, vessel.call_sign);
+        assert_eq!(tra.reload_from_fiskeridir_vessel_id, Some(vessel2.id));
+        assert_eq!(tra.reload_from_call_sign, vessel2.call_sign);
+
+        assert_eq!(
+            tra2.message_timestamp.timestamp(),
+            (start + Duration::seconds(2)).timestamp()
+        );
+        assert_eq!(tra2.reload_to_fiskeridir_vessel_id, Some(vessel2.id));
+        assert_eq!(tra2.reload_to_call_sign, vessel2.call_sign);
+        assert_eq!(tra2.reload_from_fiskeridir_vessel_id, Some(vessel.id));
+        assert_eq!(tra2.reload_from_call_sign, vessel.call_sign);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_trips_contains_tra_added_after_trip_creation() {
+    test(|helper, builder| async move {
+        let state = builder.vessels(1).trips(1).new_cycle().tra(1).build().await;
+
+        let trips = helper
+            .app
+            .get_trips(TripsParameters {
+                ..Default::default()
+            })
+            .await
+            .unwrap();
+
+        assert_eq!(trips.len(), 1);
+        assert_eq!(trips[0].tra.len(), 1);
+        assert_eq!(trips[0].tra[0], state.tra[0]);
+    })
+    .await;
+}
 
 #[tokio::test]
 async fn test_trips_contains_hauls_added_after_trip_creation() {

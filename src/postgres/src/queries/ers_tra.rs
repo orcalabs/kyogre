@@ -61,9 +61,80 @@ impl PostgresAdapter {
         self.unnest_insert(set.counties(), &mut **tx).await?;
         self.unnest_insert(set.vessels(), &mut **tx).await?;
 
-        self.add_ers_tra(set.ers_tra(), tx).await?;
+        let message_ids = self.add_ers_tra(set.ers_tra(), tx).await?;
 
         self.unnest_insert(set.catches(), &mut **tx).await?;
+
+        self.add_ers_tra_reloads(&message_ids, tx).await?;
+
+        Ok(())
+    }
+    async fn add_ers_tra_reloads(
+        &self,
+        message_ids: &[i64],
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    ) -> Result<()> {
+        sqlx::query!(
+            r#"
+INSERT INTO
+    ers_tra_reloads (
+        message_id,
+        vessel_event_id,
+        vessel_event_type_id,
+        message_timestamp,
+        reloading_timestamp,
+        latitude,
+        longitude,
+        fiskeridir_vessel_id,
+        reload_to,
+        reload_from,
+        reload_to_call_sign,
+        reload_from_call_sign,
+        catches
+    )
+SELECT
+    e.message_id,
+    e.vessel_event_id,
+    $2,
+    e.message_timestamp,
+    e.reloading_timestamp,
+    e.start_latitude,
+    e.start_longitude,
+    e.fiskeridir_vessel_id,
+    MAX(v.fiskeridir_vessel_id),
+    MAX(v2.fiskeridir_vessel_id),
+    e.reload_to_vessel_call_sign,
+    e.reload_from_vessel_call_sign,
+    COALESCE(
+        JSONB_AGG(
+            JSONB_BUILD_OBJECT(
+                'living_weight',
+                COALESCE(c.living_weight, 0.0),
+                'species_group_id',
+                c.species_group_id,
+                'catch_quantum',
+                c.ers_quantum_type_id
+            )
+        ) FILTER (
+            WHERE
+                c.message_id IS NOT NULL
+        ),
+        '[]'
+    )
+FROM
+    UNNEST($1::BIGINT[]) u (message_id)
+    INNER JOIN ers_tra e ON u.message_id = e.message_id
+    INNER JOIN ers_tra_catches c ON c.message_id = e.message_id
+    LEFT JOIN fiskeridir_ais_vessel_mapping_whitelist v ON v.call_sign = e.reload_to_vessel_call_sign
+    LEFT JOIN fiskeridir_ais_vessel_mapping_whitelist v2 ON v2.call_sign = e.reload_from_vessel_call_sign
+GROUP BY
+    e.message_id
+            "#,
+            &message_ids,
+            VesselEventType::ErsTra as i32
+        )
+        .execute(&mut **tx)
+        .await?;
 
         Ok(())
     }
@@ -72,21 +143,25 @@ impl PostgresAdapter {
         &'a self,
         mut ers_tra: Vec<NewErsTra<'_>>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<()> {
+    ) -> Result<Vec<i64>> {
         let to_insert = self.ers_tra_to_insert(&ers_tra, tx).await?;
         ers_tra.retain(|e| to_insert.contains(&e.message_id));
 
-        let event_ids: Vec<i64> = self
+        let (event_ids, message_ids): (Vec<Option<i64>>, Vec<i64>) = self
             .unnest_insert_returning(ers_tra, &mut **tx)
             .await?
             .into_iter()
-            .filter_map(|r| r.vessel_event_id)
-            .collect();
+            .map(|r| (r.vessel_event_id, r.message_id))
+            .unzip();
 
-        self.connect_trip_to_events(&event_ids, VesselEventType::ErsTra, tx)
-            .await?;
+        self.connect_trip_to_events(
+            &event_ids.into_iter().flatten().collect::<Vec<i64>>(),
+            VesselEventType::ErsTra,
+            tx,
+        )
+        .await?;
 
-        Ok(())
+        Ok(message_ids)
     }
 
     async fn ers_tra_to_insert<'a>(
