@@ -1,3 +1,4 @@
+DELETE FROM ers_tra_catches;
 DELETE FROM ers_tra;
 
 DELETE FROM file_hashes
