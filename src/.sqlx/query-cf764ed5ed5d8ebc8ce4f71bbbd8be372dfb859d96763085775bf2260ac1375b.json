@@ -1,0 +1,47 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    AVG(t.fuel_consumption) AS fuel_consumption,\n    AVG(o.output) AS weight_per_hour,\n    AVG(o2.output) AS weight_per_distance,\n    AVG(o3.output) AS weight_per_fuel\nFROM\n    trips_detailed t\n    LEFT JOIN trip_benchmark_outputs o ON t.trip_id = o.trip_id\n    AND o.trip_benchmark_id = $1\n    LEFT JOIN trip_benchmark_outputs o2 ON t.trip_id = o2.trip_id\n    AND o2.trip_benchmark_id = $2\n    LEFT JOIN trip_benchmark_outputs o3 ON t.trip_id = o3.trip_id\n    AND o3.trip_benchmark_id = $3\nWHERE\n    t.start_timestamp >= $4\n    AND t.stop_timestamp <= $5\n    AND (\n        $6::INT IS NULL\n        OR t.fiskeridir_length_group_id = $6\n    )\n    AND (\n        $7::INT[] IS NULL\n        OR t.haul_gear_group_ids && $7\n    )\n    AND (\n        $8::BIGINT[] IS NULL\n        OR t.fiskeridir_vessel_id = ANY ($8)\n    )\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "fuel_consumption",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 1,
+        "name": "weight_per_hour",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 2,
+        "name": "weight_per_distance",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 3,
+        "name": "weight_per_fuel",
+        "type_info": "Float8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Int4",
+        "Int4",
+        "Timestamptz",
+        "Timestamptz",
+        "Int4",
+        "Int4Array",
+        "Int8Array"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "cf764ed5ed5d8ebc8ce4f71bbbd8be372dfb859d96763085775bf2260ac1375b"
+}
