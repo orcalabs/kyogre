@@ -60,6 +60,10 @@ WHERE
         $7::INT[] IS NULL
         OR t.haul_gear_group_ids && $7
     )
+    AND (
+        $8::BIGINT[] IS NULL
+        OR t.fiskeridir_vessel_id = ANY ($8)
+    )
             "#,
             TripBenchmarkId::WeightPerHour as i32,
             TripBenchmarkId::WeightPerDistance as i32,
@@ -67,7 +71,8 @@ WHERE
             query.start_date,
             query.end_date,
             query.length_group as Option<VesselLengthGroup>,
-            query.gear_groups.as_slice().empty_to_none() as Option<&[GearGroup]>
+            query.gear_groups.as_slice().empty_to_none() as Option<&[GearGroup]>,
+            query.vessel_ids.as_slice().empty_to_none() as Option<&[FiskeridirVesselId]>,
         )
         .fetch_one(&self.pool)
         .await
@@ -225,6 +230,10 @@ WITH
                 $7::INT[] IS NULL
                 OR t.haul_gear_group_ids && $7
             )
+            AND (
+                $8::BIGINT[] IS NULL
+                OR t.fiskeridir_vessel_id = ANY ($8)
+            )
         GROUP BY
             t.fiskeridir_vessel_id
     )
@@ -239,7 +248,8 @@ FROM
             query.start_date,
             query.end_date,
             query.length_group as Option<VesselLengthGroup>,
-            query.gear_groups.as_slice().empty_to_none() as Option<&[GearGroup]>
+            query.gear_groups.as_slice().empty_to_none() as Option<&[GearGroup]>,
+            query.vessel_ids.as_slice().empty_to_none() as Option<&[FiskeridirVesselId]>,
         )
         .fetch_optional(&self.pool)
         .await?;
