@@ -35,7 +35,7 @@ pub struct TestHelper {
 }
 
 impl TestHelper {
-    async fn builder(&self) -> TestStateBuilder {
+    pub async fn builder(&self) -> TestStateBuilder {
         let engine = engine(self.adapter().clone(), &self.db_settings).await;
 
         TestStateBuilder::new(

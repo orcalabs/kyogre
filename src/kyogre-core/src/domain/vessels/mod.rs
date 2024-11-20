@@ -16,6 +16,13 @@ pub use benchmark::*;
 pub static TEST_SIGNED_IN_VESSEL_CALLSIGN: &str = "LK17";
 pub static IGNORED_CONFLICT_CALL_SIGNS: &[&str] = &["00000000", "0"];
 
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UpdateVessel {
+    pub engine_power: Option<u32>,
+    pub engine_building_year: Option<u32>,
+}
+
 #[derive(Debug, Clone)]
 pub struct NewVesselConflict {
     pub vessel_id: FiskeridirVesselId,

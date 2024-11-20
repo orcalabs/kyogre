@@ -3,7 +3,7 @@ use fiskeridir_rs::{CallSign, LandingId, SpeciesGroup};
 use http_client::{HttpClient, StatusCode};
 use kyogre_core::{
     ActiveHaulsFilter, ActiveLandingFilter, AverageTripBenchmarks, FiskeridirVesselId, HaulId,
-    Mmsi, ModelId, VesselBenchmarks,
+    Mmsi, ModelId, UpdateVessel, VesselBenchmarks,
 };
 use serde::{de::DeserializeOwned, Serialize};
 use web_api::{
@@ -373,6 +373,9 @@ impl ApiClient {
     }
     pub async fn update_user(&self, user: User) -> Result<(), Error> {
         self.send("user", Method::PUT, &user, None::<&()>).await
+    }
+    pub async fn update_vessel(&self, update: &UpdateVessel) -> Result<Vessel, Error> {
+        self.send("vessels", Method::PUT, update, None::<&()>).await
     }
     pub async fn get_fuel_measurements(
         &self,

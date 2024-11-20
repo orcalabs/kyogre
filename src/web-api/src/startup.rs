@@ -237,6 +237,12 @@ where
                         .to(routes::v1::fuel::delete_fuel_measurements::<T>),
                 )
                 .route(
+                    "/vessels",
+                    web::put()
+                        .guard(guard.clone())
+                        .to(routes::v1::vessel::update_vessel::<T>),
+                )
+                .route(
                     "/vessels/benchmarks",
                     web::get()
                         .guard(guard.clone())
