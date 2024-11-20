@@ -19,6 +19,7 @@ pub enum TripBenchmarkId {
     WeightPerDistance = 3,
     FuelConsumption = 4,
     WeightPerFuel = 5,
+    CatchValuePerFuel = 6,
 }
 
 #[repr(i32)]
@@ -37,6 +38,7 @@ pub struct AverageTripBenchmarks {
     pub weight_per_hour: Option<f64>,
     pub weight_per_distance: Option<f64>,
     pub weight_per_fuel: Option<f64>,
+    pub catch_value_per_fuel: Option<f64>,
     pub fuel_consumption: Option<f64>,
     // TODO
     // pub sustainability: f64,
@@ -50,6 +52,7 @@ pub struct TripWithBenchmark {
     pub weight_per_hour: Option<f64>,
     pub weight_per_distance: Option<f64>,
     pub weight_per_fuel: Option<f64>,
+    pub catch_value_per_fuel: Option<f64>,
     pub fuel_consumption: Option<f64>,
     // TODO
     // pub sustainability: f64,
@@ -75,6 +78,13 @@ pub struct TripBenchmarkOutput {
 pub struct TripWithWeightAndFuel {
     pub id: TripId,
     pub total_weight: f64,
+    pub fuel_consumption: f64,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct TripWithCatchValueAndFuel {
+    pub id: TripId,
+    pub total_catch_value: f64,
     pub fuel_consumption: f64,
 }
 

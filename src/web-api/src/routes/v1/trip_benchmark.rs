@@ -160,6 +160,7 @@ pub struct TripBenchmarks {
     pub weight_per_distance: Option<f64>,
     pub fuel_consumption: Option<f64>,
     pub weight_per_fuel: Option<f64>,
+    pub catch_value_per_fuel: Option<f64>,
     pub trips: Vec<TripBenchmark>,
 }
 
@@ -174,6 +175,7 @@ pub struct TripBenchmark {
     pub weight_per_distance: Option<f64>,
     pub fuel_consumption: Option<f64>,
     pub weight_per_fuel: Option<f64>,
+    pub catch_value_per_fuel: Option<f64>,
     // TODO
     // pub sustainability: f64,
 }
@@ -188,6 +190,7 @@ impl From<Vec<TripWithBenchmark>> for TripBenchmarks {
                 .filter_map(|v| v.fuel_consumption)
                 .fold(None, |acc, cur| Some(acc.unwrap_or(0.) + cur)),
             weight_per_fuel: v.iter().filter_map(|v| v.weight_per_fuel).mean(),
+            catch_value_per_fuel: v.iter().filter_map(|v| v.catch_value_per_fuel).mean(),
             trips: v.into_iter().map(From::from).collect(),
         }
     }
@@ -204,6 +207,7 @@ impl From<TripWithBenchmark> for TripBenchmark {
             weight_per_distance: v.weight_per_distance,
             fuel_consumption: v.fuel_consumption,
             weight_per_fuel: v.weight_per_fuel,
+            catch_value_per_fuel: v.catch_value_per_fuel,
         }
     }
 }

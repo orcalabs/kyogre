@@ -3,8 +3,8 @@ use futures::TryStreamExt;
 use kyogre_core::{
     AverageEeoiQuery, AverageTripBenchmarks, AverageTripBenchmarksQuery, DateRange, EeoiQuery,
     EmptyVecToNone, FiskeridirVesselId, TripBenchmarkId, TripBenchmarkStatus, TripBenchmarksQuery,
-    TripId, TripSustainabilityMetric, TripWithBenchmark, TripWithDistance, TripWithTotalWeight,
-    TripWithWeightAndFuel,
+    TripId, TripSustainabilityMetric, TripWithBenchmark, TripWithCatchValueAndFuel,
+    TripWithDistance, TripWithTotalWeight, TripWithWeightAndFuel,
 };
 
 use crate::{error::Result, models::TripBenchmarkOutput, PostgresAdapter};
@@ -40,7 +40,8 @@ SELECT
     AVG(t.fuel_consumption) AS fuel_consumption,
     AVG(o.output) AS weight_per_hour,
     AVG(o2.output) AS weight_per_distance,
-    AVG(o3.output) AS weight_per_fuel
+    AVG(o3.output) AS weight_per_fuel,
+    AVG(o4.output) AS catch_value_per_fuel
 FROM
     trips_detailed t
     LEFT JOIN trip_benchmark_outputs o ON t.trip_id = o.trip_id
@@ -49,25 +50,28 @@ FROM
     AND o2.trip_benchmark_id = $2
     LEFT JOIN trip_benchmark_outputs o3 ON t.trip_id = o3.trip_id
     AND o3.trip_benchmark_id = $3
+    LEFT JOIN trip_benchmark_outputs o4 ON t.trip_id = o4.trip_id
+    AND o4.trip_benchmark_id = $4
 WHERE
-    t.start_timestamp >= $4
-    AND t.stop_timestamp <= $5
+    t.start_timestamp >= $5
+    AND t.stop_timestamp <= $6
     AND (
-        $6::INT IS NULL
-        OR t.fiskeridir_length_group_id = $6
+        $7::INT IS NULL
+        OR t.fiskeridir_length_group_id = $7
     )
     AND (
-        $7::INT[] IS NULL
-        OR t.haul_gear_group_ids && $7
+        $8::INT[] IS NULL
+        OR t.haul_gear_group_ids && $8
     )
     AND (
-        $8::BIGINT[] IS NULL
-        OR t.fiskeridir_vessel_id = ANY ($8)
+        $9::BIGINT[] IS NULL
+        OR t.fiskeridir_vessel_id = ANY ($9)
     )
             "#,
             TripBenchmarkId::WeightPerHour as i32,
             TripBenchmarkId::WeightPerDistance as i32,
             TripBenchmarkId::WeightPerFuel as i32,
+            TripBenchmarkId::CatchValuePerFuel as i32,
             query.start_date,
             query.end_date,
             query.length_group as Option<VesselLengthGroup>,
@@ -114,7 +118,11 @@ SELECT
     MAX(b.output) FILTER (
         WHERE
             b.trip_benchmark_id = $5
-    ) AS weight_per_fuel
+    ) AS weight_per_fuel,
+    MAX(b.output) FILTER (
+        WHERE
+            b.trip_benchmark_id = $6
+    ) AS catch_value_per_fuel
 FROM
     vessel_id v
     INNER JOIN trips t ON v.fiskeridir_vessel_id = t.fiskeridir_vessel_id
@@ -125,21 +133,21 @@ WHERE
         OR NOT b.unrealistic
     )
     AND (
-        $6::TIMESTAMPTZ IS NULL
-        OR LOWER(t.period) >= $6
+        $7::TIMESTAMPTZ IS NULL
+        OR LOWER(t.period) >= $7
     )
     AND (
-        $7::TIMESTAMPTZ IS NULL
-        OR UPPER(t.period) <= $7
+        $8::TIMESTAMPTZ IS NULL
+        OR UPPER(t.period) <= $8
     )
 GROUP BY
     t.trip_id
 ORDER BY
     CASE
-        WHEN $8 = 1 THEN t.period
+        WHEN $9 = 1 THEN t.period
     END ASC,
     CASE
-        WHEN $8 = 2 THEN t.period
+        WHEN $9 = 2 THEN t.period
     END DESC
             "#,
             query.call_sign.as_ref(),
@@ -147,6 +155,7 @@ ORDER BY
             TripBenchmarkId::WeightPerDistance as i32,
             TripBenchmarkId::FuelConsumption as i32,
             TripBenchmarkId::WeightPerFuel as i32,
+            TripBenchmarkId::CatchValuePerFuel as i32,
             query.start_date,
             query.end_date,
             query.ordering as i32,
@@ -395,7 +404,6 @@ WHERE
         ELSE t.haul_total_weight
     END > 0
     AND b_fuel.output > 0
-    AND b_weight.trip_id IS NULL
     AND (
         b_weight.trip_id IS NULL
         OR b_weight.status = $4
@@ -403,6 +411,46 @@ WHERE
             "#,
             TripBenchmarkId::FuelConsumption as i32,
             TripBenchmarkId::WeightPerFuel as i32,
+            id.into_inner(),
+            TripBenchmarkStatus::MustRecompute as i32,
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(trips)
+    }
+
+    pub(crate) async fn trips_with_catch_value_and_fuel_impl(
+        &self,
+        id: FiskeridirVesselId,
+    ) -> Result<Vec<TripWithCatchValueAndFuel>> {
+        let trips = sqlx::query_as!(
+            TripWithCatchValueAndFuel,
+            r#"
+SELECT
+    t.trip_id AS "id!: TripId",
+    SUM(l.price_for_fisher)::DOUBLE PRECISION AS "total_catch_value!: f64",
+    MAX(b_fuel.output) AS "fuel_consumption!"
+FROM
+    trips_detailed t
+    INNER JOIN landing_entries l ON l.landing_id = ANY (t.landing_ids)
+    LEFT JOIN trip_benchmark_outputs b_fuel ON t.trip_id = b_fuel.trip_id
+    AND b_fuel.trip_benchmark_id = $1
+    LEFT JOIN trip_benchmark_outputs b_cv ON t.trip_id = b_cv.trip_id
+    AND b_cv.trip_benchmark_id = $2
+WHERE
+    t.fiskeridir_vessel_id = $3
+    AND l.price_for_fisher IS NOT NULL
+    AND b_fuel.output > 0
+    AND (
+        b_cv.trip_id IS NULL
+        OR b_cv.status = $4
+    )
+GROUP BY
+    t.trip_id
+            "#,
+            TripBenchmarkId::FuelConsumption as i32,
+            TripBenchmarkId::CatchValuePerFuel as i32,
             id.into_inner(),
             TripBenchmarkStatus::MustRecompute as i32,
         )
