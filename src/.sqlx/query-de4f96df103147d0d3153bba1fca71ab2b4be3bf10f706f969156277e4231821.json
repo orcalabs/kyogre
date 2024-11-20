@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nUPDATE trip_benchmark_outputs o\nSET\n    status = $1\nFROM\n    trips t\nWHERE\n    t.fiskeridir_vessel_id = $2\n    AND t.trip_id = o.trip_id\n                ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "de4f96df103147d0d3153bba1fca71ab2b4be3bf10f706f969156277e4231821"
+}

@@ -47,6 +47,7 @@ impl Database for PostgresAdapter {}
         v1::gear::gear_main_groups,
         v1::vessel::vessels,
         v1::vessel::vessel_benchmarks,
+        v1::vessel::update_vessel,
         v1::trip_benchmark::trip_benchmarks,
         v1::trip_benchmark::average,
         v1::trip_benchmark::eeoi,
@@ -150,7 +151,8 @@ impl Database for PostgresAdapter {}
             kyogre_core::AverageTripBenchmarks,
             kyogre_core::Tra,
             kyogre_core::TraCatch,
-            kyogre_core::ErsQuantumType
+            kyogre_core::ErsQuantumType,
+            kyogre_core::UpdateVessel
           )
     ),
     security(

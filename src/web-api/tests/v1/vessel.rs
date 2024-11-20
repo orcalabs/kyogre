@@ -1,7 +1,8 @@
 use engine::*;
 use fiskeridir_rs::{GearGroup, SpeciesGroup};
 use kyogre_core::{
-    ActiveVesselConflict, FiskeridirVesselId, Mmsi, TestHelperOutbound, VesselSource,
+    ActiveVesselConflict, FiskeridirVesselId, Mmsi, TestHelperOutbound, TripBenchmarkStatus,
+    UpdateVessel, VesselSource,
 };
 
 use super::helper::test;
@@ -480,6 +481,63 @@ async fn test_vessels_with_ignored_call_signs_have_no_call_sign() {
         assert!(vessels[0].fiskeridir_call_sign().is_none());
         assert!(vessels[1].fiskeridir_call_sign().is_none());
         assert!(helper.adapter().active_vessel_conflicts().await.is_empty());
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_update_vessel_succeeds() {
+    test(|mut helper, builder| async move {
+        let state = builder.vessels(1).set_logged_in().build().await;
+
+        let update = UpdateVessel {
+            engine_power: Some(2000),
+            engine_building_year: Some(1233231),
+        };
+        helper.app.login_user();
+        let new_vessel = helper.app.update_vessel(&update).await.unwrap();
+        let vessels = helper
+            .app
+            .get_vessels()
+            .await
+            .unwrap()
+            .into_iter()
+            .find(|v| v.fiskeridir.id == state.vessels[0].fiskeridir.id)
+            .unwrap();
+
+        assert_eq!(update, new_vessel);
+        assert_eq!(vessels, new_vessel);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_update_vessel_resets_benchmarks() {
+    test(|mut helper, builder| async move {
+        builder
+            .vessels(1)
+            .set_logged_in()
+            .trips(1)
+            .ais_vms_positions(3)
+            .hauls(3)
+            .build()
+            .await;
+
+        let update = UpdateVessel {
+            engine_power: Some(2000),
+            engine_building_year: Some(1233231),
+        };
+        helper.app.login_user();
+        helper.app.update_vessel(&update).await.unwrap();
+
+        assert!(
+            helper
+                .db
+                .db
+                .trip_benchmarks_with_status(TripBenchmarkStatus::MustRecompute)
+                .await
+                > 0
+        );
     })
     .await;
 }

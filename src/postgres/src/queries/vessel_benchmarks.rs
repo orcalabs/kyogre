@@ -1,10 +1,33 @@
 use chrono::{Datelike, Utc};
 use fiskeridir_rs::CallSign;
-use kyogre_core::BarentswatchUserId;
+use kyogre_core::{BarentswatchUserId, FiskeridirVesselId, TripBenchmarkStatus};
 
 use crate::{error::Result, models::VesselBenchmarks, PostgresAdapter};
 
 impl PostgresAdapter {
+    pub(crate) async fn reset_bencmarks(
+        &self,
+        vessel_id: FiskeridirVesselId,
+        executor: impl sqlx::Executor<'_, Database = sqlx::Postgres>,
+    ) -> Result<()> {
+        sqlx::query!(
+            r#"
+UPDATE trip_benchmark_outputs o
+SET
+    status = $1
+FROM
+    trips t
+WHERE
+    t.fiskeridir_vessel_id = $2
+    AND t.trip_id = o.trip_id
+                "#,
+            TripBenchmarkStatus::MustRecompute as i32,
+            vessel_id.into_inner()
+        )
+        .execute(executor)
+        .await?;
+        Ok(())
+    }
     pub(crate) async fn vessel_benchmarks_impl(
         &self,
         user_id: &BarentswatchUserId,

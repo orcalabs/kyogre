@@ -2,18 +2,47 @@ use actix_web::web;
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::{CallSign, GearGroup, RegisterVesselOwner, SpeciesGroup, VesselLengthGroup};
 use futures::TryStreamExt;
-use kyogre_core::VesselBenchmarks;
 use kyogre_core::{FiskeridirVesselId, Mmsi};
+use kyogre_core::{UpdateVessel, VesselBenchmarks};
 use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, DisplayFromStr};
 use utoipa::ToSchema;
 
+use crate::error::error::UpdateVesselNotFoundSnafu;
 use crate::{
     error::{ErrorResponse, Result},
     extractors::BwProfile,
     response::{Response, StreamResponse},
     stream_response, Database,
 };
+
+#[utoipa::path(
+    put,
+    path = "/vessels",
+    responses(
+        (status = 200, description = "the updated vessel", body = Vessel),
+        (status = 500, description = "an internal error occured", body = ErrorResponse),
+    )
+)]
+pub async fn update_vessel<T: Database + Send + Sync + 'static>(
+    db: web::Data<T>,
+    bw_profile: BwProfile,
+    update: web::Json<UpdateVessel>,
+) -> Result<Response<Vessel>> {
+    let cs = bw_profile.call_sign()?;
+
+    Ok(Response::new(
+        db.update_vessel(cs, &update)
+            .await?
+            .ok_or_else(|| {
+                UpdateVesselNotFoundSnafu {
+                    call_sign: cs.clone(),
+                }
+                .build()
+            })?
+            .into(),
+    ))
+}
 
 #[utoipa::path(
     get,
@@ -47,8 +76,7 @@ pub async fn vessel_benchmarks<T: Database + 'static>(
 ) -> Result<Response<VesselBenchmarks>> {
     let call_sign = bw_profile.call_sign()?;
     Ok(Response::new(
-        db.vessel_benchmarks(&bw_profile.user.id, &call_sign)
-            .await?,
+        db.vessel_benchmarks(&bw_profile.user.id, call_sign).await?,
     ))
 }
 
@@ -245,6 +273,19 @@ impl PartialEq<AisVessel> for kyogre_core::AisVessel {
 
 impl PartialEq<FiskeridirVessel> for fiskeridir_rs::Vessel {
     fn eq(&self, other: &FiskeridirVessel) -> bool {
+        other.eq(self)
+    }
+}
+
+impl PartialEq<UpdateVessel> for Vessel {
+    fn eq(&self, other: &UpdateVessel) -> bool {
+        self.fiskeridir.engine_power == other.engine_power
+            && self.fiskeridir.engine_building_year == other.engine_building_year
+    }
+}
+
+impl PartialEq<Vessel> for UpdateVessel {
+    fn eq(&self, other: &Vessel) -> bool {
         other.eq(self)
     }
 }

@@ -1,16 +1,61 @@
-use std::collections::HashMap;
-
-use fiskeridir_rs::{CallSign, GearGroup, SpeciesGroup, VesselLengthGroup};
-use futures::{Stream, TryStreamExt};
-use kyogre_core::{ActiveVesselConflict, FiskeridirVesselId, Mmsi, TripAssemblerId, VesselSource};
-
 use crate::{
     error::Result,
     models::{FiskeridirAisVesselCombination, NewMunicipality, NewRegisterVessel},
     PostgresAdapter,
 };
+use fiskeridir_rs::{CallSign, GearGroup, SpeciesGroup, VesselLengthGroup};
+use futures::{Stream, TryStreamExt};
+use kyogre_core::{
+    ActiveVesselConflict, FiskeridirVesselId, Mmsi, TripAssemblerId, Vessel, VesselSource,
+};
+use std::collections::HashMap;
 
 impl PostgresAdapter {
+    pub(crate) async fn update_vessel_impl(
+        &self,
+        call_sign: &CallSign,
+        update: &kyogre_core::UpdateVessel,
+    ) -> Result<Option<Vessel>> {
+        let mut tx = self.pool.begin().await?;
+
+        let res = sqlx::query!(
+            r#"
+UPDATE fiskeridir_vessels
+SET
+    engine_power_manual = $1,
+    engine_building_year_manual = $2
+WHERE
+    call_sign = $3
+RETURNING
+    fiskeridir_vessel_id AS "fiskeridir_vessel_id: FiskeridirVesselId"
+            "#,
+            update.engine_power.map(|e| e as i32),
+            update.engine_building_year.map(|e| e as i32),
+            call_sign
+        )
+        .fetch_optional(&mut *tx)
+        .await?;
+
+        if let Some(res) = res {
+            let out = self
+                .fiskeridir_ais_vessel_combinations_impl(Some(res.fiskeridir_vessel_id), &mut *tx)
+                .try_collect::<Vec<FiskeridirAisVesselCombination>>()
+                .await?
+                .pop()
+                .map(Vessel::try_from)
+                .transpose()?;
+
+            self.reset_bencmarks(res.fiskeridir_vessel_id, &mut *tx)
+                .await?;
+
+            tx.commit().await?;
+
+            Ok(out)
+        } else {
+            tx.rollback().await?;
+            Ok(None)
+        }
+    }
     pub(crate) fn active_vessel_conflicts_impl(
         &self,
     ) -> impl Stream<Item = Result<ActiveVesselConflict>> + '_ {
@@ -247,13 +292,14 @@ WHERE
     pub(crate) fn fiskeridir_ais_vessel_combinations(
         &self,
     ) -> impl Stream<Item = Result<FiskeridirAisVesselCombination>> + '_ {
-        self.fiskeridir_ais_vessel_combinations_impl(None)
+        self.fiskeridir_ais_vessel_combinations_impl(None, &self.pool)
     }
 
-    pub(crate) fn fiskeridir_ais_vessel_combinations_impl(
-        &self,
+    pub(crate) fn fiskeridir_ais_vessel_combinations_impl<'a>(
+        &'a self,
         vessel_id: Option<FiskeridirVesselId>,
-    ) -> impl Stream<Item = Result<FiskeridirAisVesselCombination>> + '_ {
+        executor: impl sqlx::Executor<'a, Database = sqlx::Postgres> + 'a,
+    ) -> impl Stream<Item = Result<FiskeridirAisVesselCombination>> + 'a {
         sqlx::query_as!(
             FiskeridirAisVesselCombination,
             r#"
@@ -275,8 +321,8 @@ SELECT
     f."width" AS fiskeridir_width,
     f."owner" AS fiskeridir_owner,
     f.owners::TEXT AS fiskeridir_owners,
-    f.engine_building_year AS fiskeridir_engine_building_year,
-    f.engine_power AS fiskeridir_engine_power,
+    f.engine_building_year_final AS fiskeridir_engine_building_year,
+    f.engine_power_final AS fiskeridir_engine_power,
     f.building_year AS fiskeridir_building_year,
     f.rebuilding_year AS fiskeridir_rebuilding_year,
     f.gear_group_ids AS "gear_group_ids!: Vec<GearGroup>",
@@ -304,7 +350,7 @@ GROUP BY
             "#,
             vessel_id as Option<FiskeridirVesselId>,
         )
-        .fetch(&self.pool)
+        .fetch(executor)
         .map_err(|e| e.into())
     }
 

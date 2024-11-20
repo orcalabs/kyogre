@@ -100,7 +100,7 @@ pub async fn trip_benchmarks<T: Database>(
     params: Query<TripBenchmarksParams>,
 ) -> Result<Response<TripBenchmarks>> {
     let call_sign = profile.call_sign()?;
-    let query = params.into_inner().to_query(call_sign);
+    let query = params.into_inner().to_query(call_sign.clone());
 
     let benchmarks = db.trip_benchmarks(query).await?.into();
     Ok(Response::new(benchmarks))
@@ -124,7 +124,7 @@ pub async fn eeoi<T: Database>(
     params: Query<EeoiParams>,
 ) -> Result<Response<Option<f64>>> {
     let call_sign = profile.call_sign()?;
-    let query = params.into_inner().to_query(call_sign);
+    let query = params.into_inner().to_query(call_sign.clone());
 
     let eeoi = db.eeoi(query).await?;
     Ok(Response::new(eeoi))

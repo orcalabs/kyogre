@@ -1,6 +1,7 @@
 use fiskeridir_rs::CallSign;
 use fiskeridir_rs::DeliveryPointId;
 use futures::{Stream, StreamExt, TryStreamExt};
+use kyogre_core::TripBenchmarkStatus;
 use kyogre_core::{
     AisVmsPosition, Arrival, DeliveryPoint, Departure, FiskeridirVesselId, Mmsi, NavigationStatus,
     NewVesselConflict, PortDockPoint, PositionType, ProcessingStatus, TripPositionLayerId,
@@ -19,6 +20,25 @@ use crate::{
 use super::vms::VmsPositionsArg;
 
 impl PostgresAdapter {
+    pub(crate) async fn trip_benchmarks_with_status_impl(
+        &self,
+        status: TripBenchmarkStatus,
+    ) -> Result<u32> {
+        Ok(sqlx::query!(
+            r#"
+SELECT
+    COALESCE(COUNT(*), 0) AS "num_count!"
+FROM
+    trip_benchmark_outputs
+WHERE
+    status = $1
+            "#,
+            status as i32
+        )
+        .fetch_one(&self.pool)
+        .await?
+        .num_count as u32)
+    }
     pub(crate) fn trip_assembler_log_impl(
         &self,
     ) -> impl Stream<Item = Result<TripAssemblerLogEntry>> + '_ {
@@ -49,16 +69,16 @@ FROM
             Tra,
             r#"
 SELECT
-    e.fiskeridir_vessel_id as "fiskeridir_vessel_id?: FiskeridirVesselId",
+    e.fiskeridir_vessel_id AS "fiskeridir_vessel_id?: FiskeridirVesselId",
     e.latitude,
     e.longitude,
     e.reloading_timestamp,
     e.message_timestamp,
-    e.catches::TEXT as "catches!",
-    e.reload_to as "reload_to?: FiskeridirVesselId",
-    e.reload_from as "reload_from?: FiskeridirVesselId",
-    e.reload_to_call_sign as "reload_to_call_sign?: CallSign",
-    e.reload_from_call_sign as "reload_from_call_sign?: CallSign"
+    e.catches::TEXT AS "catches!",
+    e.reload_to AS "reload_to?: FiskeridirVesselId",
+    e.reload_from AS "reload_from?: FiskeridirVesselId",
+    e.reload_to_call_sign AS "reload_to_call_sign?: CallSign",
+    e.reload_from_call_sign AS "reload_from_call_sign?: CallSign"
 FROM
     ers_tra_reloads e
             "#,
@@ -359,7 +379,7 @@ VALUES
         &self,
         vessel_id: FiskeridirVesselId,
     ) -> Result<Option<FiskeridirAisVesselCombination>> {
-        self.fiskeridir_ais_vessel_combinations_impl(Some(vessel_id))
+        self.fiskeridir_ais_vessel_combinations_impl(Some(vessel_id), &self.pool)
             .next()
             .await
             .transpose()
