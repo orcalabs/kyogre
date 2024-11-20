@@ -1,4 +1,4 @@
-use std::{ops::Deref, str::FromStr};
+use std::{fmt::Display, ops::Deref, str::FromStr};
 
 use crate::{
     error::ParseStringError,
@@ -20,6 +20,12 @@ impl CallSign {
     }
     pub fn into_inner(self) -> String {
         self.0.into_inner()
+    }
+}
+
+impl Display for CallSign {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
     }
 }
 

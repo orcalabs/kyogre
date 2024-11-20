@@ -324,6 +324,9 @@ impl TestStorage for PostgresAdapter {}
 #[cfg(feature = "test")]
 #[async_trait]
 impl TestHelperOutbound for PostgresAdapter {
+    async fn trip_benchmarks_with_status(&self, status: TripBenchmarkStatus) -> u32 {
+        self.trip_benchmarks_with_status_impl(status).await.unwrap()
+    }
     async fn trip_assembler_log(&self) -> Vec<TripAssemblerLogEntry> {
         self.trip_assembler_log_impl()
             .map(|v| v.unwrap().try_into().unwrap())
@@ -491,6 +494,13 @@ impl AisMigratorDestination for PostgresAdapter {
 
 #[async_trait]
 impl WebApiOutboundPort for PostgresAdapter {
+    async fn update_vessel(
+        &self,
+        call_sign: &CallSign,
+        update: &UpdateVessel,
+    ) -> CoreResult<Option<Vessel>> {
+        Ok(retry(|| self.update_vessel_impl(call_sign, update)).await?)
+    }
     async fn average_trip_benchmarks(
         &self,
         query: AverageTripBenchmarksQuery,

@@ -125,6 +125,11 @@ pub trait WebApiOutboundPort {
         model_id: ModelId,
     ) -> PinBoxStream<'_, FishingWeightPrediction>;
     fn fuel_measurements(&self, query: FuelMeasurementsQuery) -> PinBoxStream<'_, FuelMeasurement>;
+    async fn update_vessel(
+        &self,
+        call_sign: &CallSign,
+        update: &UpdateVessel,
+    ) -> CoreResult<Option<Vessel>>;
 }
 
 #[async_trait]
@@ -376,4 +381,5 @@ pub trait TestHelperOutbound: Send + Sync {
     async fn delivery_point(&self, id: &fiskeridir_rs::DeliveryPointId) -> Option<DeliveryPoint>;
     async fn dock_points_of_port(&self, port_id: &str) -> Vec<PortDockPoint>;
     async fn trip_assembler_log(&self) -> Vec<TripAssemblerLogEntry>;
+    async fn trip_benchmarks_with_status(&self, status: TripBenchmarkStatus) -> u32;
 }

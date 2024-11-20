@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT\n    e.fiskeridir_vessel_id as \"fiskeridir_vessel_id?: FiskeridirVesselId\",\n    e.latitude,\n    e.longitude,\n    e.reloading_timestamp,\n    e.message_timestamp,\n    e.catches::TEXT as \"catches!\",\n    e.reload_to as \"reload_to?: FiskeridirVesselId\",\n    e.reload_from as \"reload_from?: FiskeridirVesselId\",\n    e.reload_to_call_sign as \"reload_to_call_sign?: CallSign\",\n    e.reload_from_call_sign as \"reload_from_call_sign?: CallSign\"\nFROM\n    ers_tra_reloads e\n            ",
+  "query": "\nSELECT\n    e.fiskeridir_vessel_id AS \"fiskeridir_vessel_id?: FiskeridirVesselId\",\n    e.latitude,\n    e.longitude,\n    e.reloading_timestamp,\n    e.message_timestamp,\n    e.catches::TEXT AS \"catches!\",\n    e.reload_to AS \"reload_to?: FiskeridirVesselId\",\n    e.reload_from AS \"reload_from?: FiskeridirVesselId\",\n    e.reload_to_call_sign AS \"reload_to_call_sign?: CallSign\",\n    e.reload_from_call_sign AS \"reload_from_call_sign?: CallSign\"\nFROM\n    ers_tra_reloads e\n            ",
   "describe": {
     "columns": [
       {
@@ -70,5 +70,5 @@
       true
     ]
   },
-  "hash": "12670c0e10b09ec2bdd32ef298fb59a760ae6309544bf8931b11d71e6aafe7bb"
+  "hash": "7c2df7b57817ce7de91d244300b4765b4b29fd93deabb820de6a858bf6c3ba83"
 }

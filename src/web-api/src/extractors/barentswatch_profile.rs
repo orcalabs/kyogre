@@ -17,9 +17,7 @@ use uuid::Uuid;
 
 use crate::{
     error::{
-        error::{
-            InvalidCallSignSnafu, MissingBwFiskInfoProfileSnafu, MissingJWTSnafu, ParseJWTSnafu,
-        },
+        error::{MissingBwFiskInfoProfileSnafu, MissingJWTSnafu, ParseJWTSnafu},
         Error, Result,
     },
     settings::BW_PROFILES_URL,
@@ -53,7 +51,7 @@ pub struct BwUser {
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct BwVesselInfo {
-    pub ircs: String,
+    pub ircs: CallSign,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -149,7 +147,7 @@ impl BwProfile {
                     web::Query::from_query(&query_string)?;
                 if let Some(cs) = query.get("call_sign_override") {
                     response.fisk_info_profile = Some(BwVesselInfo {
-                        ircs: cs.to_string(),
+                        ircs: cs.as_str().try_into()?,
                     });
                 }
             }
@@ -157,14 +155,11 @@ impl BwProfile {
 
         Ok(response)
     }
-    pub fn call_sign(&self) -> Result<CallSign> {
-        let profile = self
-            .fisk_info_profile
-            .as_ref()
-            .ok_or_else(|| MissingBwFiskInfoProfileSnafu.build())?;
 
-        profile.ircs.parse().context(InvalidCallSignSnafu {
-            call_sign: &profile.ircs,
-        })
+    pub fn call_sign(&self) -> Result<&CallSign> {
+        self.fisk_info_profile
+            .as_ref()
+            .map(|v| &v.ircs)
+            .ok_or_else(|| MissingBwFiskInfoProfileSnafu.build())
     }
 }

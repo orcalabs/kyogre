@@ -5,7 +5,7 @@ use actix_web::{
     HttpResponse, ResponseError,
 };
 use chrono::{DateTime, Utc};
-use fiskeridir_rs::ParseStringError;
+use fiskeridir_rs::{CallSign, ParseStringError};
 use kyogre_core::DateRangeError;
 use serde::{Deserialize, Serialize};
 use snafu::{Location, Snafu};
@@ -115,9 +115,15 @@ pub enum Error {
         location: Location,
         error: QueryPayloadError,
     },
+    #[snafu(display("The vessel with call_sign '{call_sign}' was not found"))]
+    UpdateVesselNotFound {
+        #[snafu(implicit)]
+        location: Location,
+        call_sign: CallSign,
+    },
     #[snafu(display("An unexpected error occured"))]
     #[stack_error(
-        opaque_stack = [kyogre_core::Error, http_client::Error],
+        opaque_stack = [kyogre_core::Error, http_client::Error, ParseStringError],
         opaque_std = [serde_json::Error])]
     Unexpected {
         #[snafu(implicit)]
@@ -135,8 +141,7 @@ pub struct ErrorResponse {
 impl ResponseError for Error {
     fn status_code(&self) -> StatusCode {
         use ErrorDiscriminants::*;
-        let disc: ErrorDiscriminants = self.into();
-        match disc {
+        match self.into() {
             StartAfterEnd
             | InvalidCallSign
             | MissingBwFiskInfoProfile
@@ -146,6 +151,7 @@ impl ResponseError for Error {
             | MissingMmsiOrCallSignOrTripId => StatusCode::BAD_REQUEST,
             InsufficientPermissions => StatusCode::FORBIDDEN,
             MissingJWT | InvalidJWT | ParseJWT | JWTDecode => StatusCode::UNAUTHORIZED,
+            UpdateVesselNotFound => StatusCode::NOT_FOUND,
             Unexpected => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }

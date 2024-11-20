@@ -38,7 +38,7 @@ pub async fn get_fuel_measurements<T: Database + Send + Sync + 'static>(
 ) -> Result<StreamResponse<FuelMeasurement>> {
     let user_id = profile.user.id;
     let call_sign = profile.call_sign()?;
-    let query = params.into_inner().to_query(user_id, call_sign);
+    let query = params.into_inner().to_query(user_id, call_sign.clone());
 
     let response = stream_response! {
         db.fuel_measurements(query).map_ok(FuelMeasurement::from)
@@ -72,7 +72,7 @@ pub async fn create_fuel_measurements<T: Database + 'static>(
     let measurements: Vec<kyogre_core::FuelMeasurement> = body
         .into_inner()
         .into_iter()
-        .map(|m| m.to_domain_fuel_measurement(user_id, &call_sign))
+        .map(|m| m.to_domain_fuel_measurement(user_id, call_sign))
         .collect();
 
     db.add_fuel_measurements(&measurements).await?;
@@ -104,7 +104,7 @@ pub async fn update_fuel_measurements<T: Database + 'static>(
     let measurements: Vec<kyogre_core::FuelMeasurement> = body
         .into_inner()
         .into_iter()
-        .map(|m| m.to_domain_fuel_measurement(user_id, &call_sign))
+        .map(|m| m.to_domain_fuel_measurement(user_id, call_sign))
         .collect();
 
     db.update_fuel_measurements(&measurements).await?;
@@ -136,7 +136,7 @@ pub async fn delete_fuel_measurements<T: Database + 'static>(
     let measurements: Vec<kyogre_core::DeleteFuelMeasurement> = body
         .into_inner()
         .into_iter()
-        .map(|m| m.to_domain_delete_fuel_measurement(user_id, &call_sign))
+        .map(|m| m.to_domain_delete_fuel_measurement(user_id, call_sign))
         .collect();
 
     db.delete_fuel_measurements(&measurements).await?;
