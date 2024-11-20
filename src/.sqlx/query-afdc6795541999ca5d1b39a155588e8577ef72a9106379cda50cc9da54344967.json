@@ -1,0 +1,37 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    t.trip_id AS \"id!: TripId\",\n    t.landing_total_price_for_fisher AS \"total_catch_value!: f64\",\n    MAX(b_fuel.output) AS \"fuel_consumption!\"\nFROM\n    trips_detailed t\n    LEFT JOIN trip_benchmark_outputs b_fuel ON t.trip_id = b_fuel.trip_id\n    AND b_fuel.trip_benchmark_id = $1\n    LEFT JOIN trip_benchmark_outputs b_cv ON t.trip_id = b_cv.trip_id\n    AND b_cv.trip_benchmark_id = $2\nWHERE\n    t.fiskeridir_vessel_id = $3\n    AND t.landing_total_price_for_fisher IS NOT NULL\n    AND b_fuel.output > 0\n    AND (\n        b_cv.trip_id IS NULL\n        OR b_cv.status = $4\n    )\nGROUP BY\n    t.trip_id\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id!: TripId",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "total_catch_value!: f64",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 2,
+        "name": "fuel_consumption!",
+        "type_info": "Float8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Int4",
+        "Int8",
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      null
+    ]
+  },
+  "hash": "afdc6795541999ca5d1b39a155588e8577ef72a9106379cda50cc9da54344967"
+}

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT\n    t.trip_id AS \"trip_id!: TripId\",\n    t.fiskeridir_vessel_id AS \"fiskeridir_vessel_id!: FiskeridirVesselId\",\n    t.fiskeridir_length_group_id AS \"fiskeridir_length_group_id!: VesselLengthGroup\",\n    t.period AS \"period!: DateRange\",\n    t.period_precision AS \"period_precision: DateRange\",\n    t.landing_coverage AS \"landing_coverage!: DateRange\",\n    COALESCE(t.num_landings::BIGINT, 0) AS \"num_deliveries!\",\n    COALESCE(t.landing_total_living_weight, 0.0) AS \"total_living_weight!\",\n    COALESCE(t.landing_total_gross_weight, 0.0) AS \"total_gross_weight!\",\n    COALESCE(t.landing_total_product_weight, 0.0) AS \"total_product_weight!\",\n    COALESCE(t.delivery_point_ids, '{}') AS \"delivery_points!: Vec<DeliveryPointId>\",\n    COALESCE(t.landing_gear_ids, '{}') AS \"gear_ids!: Vec<Gear>\",\n    COALESCE(t.landing_gear_group_ids, '{}') AS \"gear_group_ids!: Vec<GearGroup>\",\n    COALESCE(t.landing_species_group_ids, '{}') AS \"species_group_ids!: Vec<SpeciesGroup>\",\n    t.most_recent_landing AS latest_landing_timestamp,\n    COALESCE(t.landings::TEXT, '[]') AS \"catches!\",\n    t.start_port_id,\n    t.end_port_id,\n    t.trip_assembler_id AS \"trip_assembler_id!: TripAssemblerId\",\n    COALESCE(t.vessel_events, '[]')::TEXT AS \"vessel_events!\",\n    COALESCE(t.hauls, '[]')::TEXT AS \"hauls!\",\n    COALESCE(t.tra, '[]')::TEXT AS \"tra!\",\n    COALESCE(t.fishing_facilities, '[]')::TEXT AS \"fishing_facilities!\",\n    COALESCE(t.landing_ids, '{}') AS \"landing_ids!: Vec<LandingId>\",\n    t.distance,\n    t.cache_version,\n    t.target_species_fiskeridir_id,\n    t.target_species_fao_id,\n    t.fuel_consumption,\n    t.track_coverage\nFROM\n    trips_detailed t\nWHERE\n    t.fiskeridir_vessel_id = $1;\n            ",
+  "query": "\nSELECT\n    t.trip_id AS \"trip_id!: TripId\",\n    t.fiskeridir_vessel_id AS \"fiskeridir_vessel_id!: FiskeridirVesselId\",\n    t.fiskeridir_length_group_id AS \"fiskeridir_length_group_id!: VesselLengthGroup\",\n    t.period AS \"period!: DateRange\",\n    t.period_precision AS \"period_precision: DateRange\",\n    t.landing_coverage AS \"landing_coverage!: DateRange\",\n    COALESCE(t.num_landings::BIGINT, 0) AS \"num_deliveries!\",\n    COALESCE(t.landing_total_living_weight, 0.0) AS \"total_living_weight!\",\n    COALESCE(t.landing_total_gross_weight, 0.0) AS \"total_gross_weight!\",\n    COALESCE(t.landing_total_product_weight, 0.0) AS \"total_product_weight!\",\n    t.landing_total_price_for_fisher AS total_price_for_fisher,\n    COALESCE(t.delivery_point_ids, '{}') AS \"delivery_points!: Vec<DeliveryPointId>\",\n    COALESCE(t.landing_gear_ids, '{}') AS \"gear_ids!: Vec<Gear>\",\n    COALESCE(t.landing_gear_group_ids, '{}') AS \"gear_group_ids!: Vec<GearGroup>\",\n    COALESCE(t.landing_species_group_ids, '{}') AS \"species_group_ids!: Vec<SpeciesGroup>\",\n    t.most_recent_landing AS latest_landing_timestamp,\n    COALESCE(t.landings::TEXT, '[]') AS \"catches!\",\n    t.start_port_id,\n    t.end_port_id,\n    t.trip_assembler_id AS \"trip_assembler_id!: TripAssemblerId\",\n    COALESCE(t.vessel_events, '[]')::TEXT AS \"vessel_events!\",\n    COALESCE(t.hauls, '[]')::TEXT AS \"hauls!\",\n    COALESCE(t.tra, '[]')::TEXT AS \"tra!\",\n    COALESCE(t.fishing_facilities, '[]')::TEXT AS \"fishing_facilities!\",\n    COALESCE(t.landing_ids, '{}') AS \"landing_ids!: Vec<LandingId>\",\n    t.distance,\n    t.cache_version,\n    t.target_species_fiskeridir_id,\n    t.target_species_fao_id,\n    t.fuel_consumption,\n    t.track_coverage\nFROM\n    trips_detailed t\nWHERE\n    t.fiskeridir_vessel_id = $1;\n            ",
   "describe": {
     "columns": [
       {
@@ -55,101 +55,106 @@
       },
       {
         "ordinal": 10,
+        "name": "total_price_for_fisher",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 11,
         "name": "delivery_points!: Vec<DeliveryPointId>",
         "type_info": "VarcharArray"
       },
       {
-        "ordinal": 11,
+        "ordinal": 12,
         "name": "gear_ids!: Vec<Gear>",
         "type_info": "Int4Array"
       },
       {
-        "ordinal": 12,
+        "ordinal": 13,
         "name": "gear_group_ids!: Vec<GearGroup>",
         "type_info": "Int4Array"
       },
       {
-        "ordinal": 13,
+        "ordinal": 14,
         "name": "species_group_ids!: Vec<SpeciesGroup>",
         "type_info": "Int4Array"
       },
       {
-        "ordinal": 14,
+        "ordinal": 15,
         "name": "latest_landing_timestamp",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 15,
+        "ordinal": 16,
         "name": "catches!",
         "type_info": "Text"
       },
       {
-        "ordinal": 16,
+        "ordinal": 17,
         "name": "start_port_id",
         "type_info": "Varchar"
       },
       {
-        "ordinal": 17,
+        "ordinal": 18,
         "name": "end_port_id",
         "type_info": "Varchar"
       },
       {
-        "ordinal": 18,
+        "ordinal": 19,
         "name": "trip_assembler_id!: TripAssemblerId",
         "type_info": "Int4"
       },
       {
-        "ordinal": 19,
+        "ordinal": 20,
         "name": "vessel_events!",
         "type_info": "Text"
       },
       {
-        "ordinal": 20,
+        "ordinal": 21,
         "name": "hauls!",
         "type_info": "Text"
       },
       {
-        "ordinal": 21,
+        "ordinal": 22,
         "name": "tra!",
         "type_info": "Text"
       },
       {
-        "ordinal": 22,
+        "ordinal": 23,
         "name": "fishing_facilities!",
         "type_info": "Text"
       },
       {
-        "ordinal": 23,
+        "ordinal": 24,
         "name": "landing_ids!: Vec<LandingId>",
         "type_info": "VarcharArray"
       },
       {
-        "ordinal": 24,
+        "ordinal": 25,
         "name": "distance",
         "type_info": "Float8"
       },
       {
-        "ordinal": 25,
+        "ordinal": 26,
         "name": "cache_version",
         "type_info": "Int8"
       },
       {
-        "ordinal": 26,
+        "ordinal": 27,
         "name": "target_species_fiskeridir_id",
         "type_info": "Int4"
       },
       {
-        "ordinal": 27,
+        "ordinal": 28,
         "name": "target_species_fao_id",
         "type_info": "Varchar"
       },
       {
-        "ordinal": 28,
+        "ordinal": 29,
         "name": "fuel_consumption",
         "type_info": "Float8"
       },
       {
-        "ordinal": 29,
+        "ordinal": 30,
         "name": "track_coverage",
         "type_info": "Float8"
       }
@@ -170,6 +175,7 @@
       null,
       null,
       null,
+      true,
       null,
       null,
       null,
@@ -192,5 +198,5 @@
       true
     ]
   },
-  "hash": "ff81bd94b6fa49ee6a07babc5e9c600202a8346a6741d1771f03902ef7273adc"
+  "hash": "fff701c7ff84959c0c9e46d92833a42700a8b3504666e1f6e29c387b2c99946d"
 }

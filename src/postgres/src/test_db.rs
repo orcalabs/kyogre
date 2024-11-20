@@ -300,6 +300,7 @@ SELECT
     COALESCE(t.landing_total_living_weight, 0.0) AS "total_living_weight!",
     COALESCE(t.landing_total_gross_weight, 0.0) AS "total_gross_weight!",
     COALESCE(t.landing_total_product_weight, 0.0) AS "total_product_weight!",
+    t.landing_total_price_for_fisher AS total_price_for_fisher,
     COALESCE(t.delivery_point_ids, '{}') AS "delivery_points!: Vec<DeliveryPointId>",
     COALESCE(t.landing_gear_ids, '{}') AS "gear_ids!: Vec<Gear>",
     COALESCE(t.landing_gear_group_ids, '{}') AS "gear_group_ids!: Vec<GearGroup>",
