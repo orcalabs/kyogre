@@ -173,6 +173,7 @@ pub struct Delivery {
     pub total_living_weight: f64,
     pub total_product_weight: f64,
     pub total_gross_weight: f64,
+    pub total_price_for_fisher: Option<f64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -182,6 +183,7 @@ pub struct Catch {
     pub product_weight: f64,
     pub species_fiskeridir_id: i32,
     pub product_quality_id: Quality,
+    pub price_for_fisher: Option<f64>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, EnumString, Display)]

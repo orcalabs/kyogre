@@ -429,18 +429,17 @@ WHERE
             r#"
 SELECT
     t.trip_id AS "id!: TripId",
-    SUM(l.price_for_fisher)::DOUBLE PRECISION AS "total_catch_value!: f64",
+    t.landing_total_price_for_fisher AS "total_catch_value!: f64",
     MAX(b_fuel.output) AS "fuel_consumption!"
 FROM
     trips_detailed t
-    INNER JOIN landing_entries l ON l.landing_id = ANY (t.landing_ids)
     LEFT JOIN trip_benchmark_outputs b_fuel ON t.trip_id = b_fuel.trip_id
     AND b_fuel.trip_benchmark_id = $1
     LEFT JOIN trip_benchmark_outputs b_cv ON t.trip_id = b_cv.trip_id
     AND b_cv.trip_benchmark_id = $2
 WHERE
     t.fiskeridir_vessel_id = $3
-    AND l.price_for_fisher IS NOT NULL
+    AND t.landing_total_price_for_fisher IS NOT NULL
     AND b_fuel.output > 0
     AND (
         b_cv.trip_id IS NULL

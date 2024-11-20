@@ -703,7 +703,8 @@ SET
     landing_species_group_ids = q.landing_species_group_ids,
     landing_total_living_weight = q.living_weight,
     landing_total_gross_weight = q.gross_weight,
-    landing_total_product_weight = q.product_weight
+    landing_total_product_weight = q.product_weight,
+    landing_total_price_for_fisher = q.price_for_fisher
 FROM
     (
         SELECT
@@ -721,7 +722,8 @@ FROM
             ) AS landing_species_group_ids,
             SUM(qi.living_weight) AS living_weight,
             SUM(qi.gross_weight) AS gross_weight,
-            SUM(qi.product_weight) AS product_weight
+            SUM(qi.product_weight) AS product_weight,
+            SUM(qi.price_for_fisher) AS price_for_fisher
         FROM
             (
                 SELECT
@@ -737,6 +739,8 @@ FROM
                         COALESCE(SUM(le.gross_weight), 0),
                         'product_weight',
                         COALESCE(SUM(le.product_weight), 0),
+                        'price_for_fisher',
+                        SUM(le.price_for_fisher),
                         'species_fiskeridir_id',
                         le.species_fiskeridir_id,
                         'product_quality_id',
@@ -744,7 +748,8 @@ FROM
                     ) AS catches,
                     SUM(le.living_weight) AS living_weight,
                     SUM(le.gross_weight) AS gross_weight,
-                    SUM(le.product_weight) AS product_weight
+                    SUM(le.product_weight) AS product_weight,
+                    SUM(le.price_for_fisher) AS price_for_fisher
                 FROM
                     trips t
                     INNER JOIN vessel_events v ON t.trip_id = v.trip_id
@@ -799,6 +804,7 @@ SELECT
     COALESCE(t.landing_total_living_weight, 0.0) AS "total_living_weight!",
     COALESCE(t.landing_total_gross_weight, 0.0) AS "total_gross_weight!",
     COALESCE(t.landing_total_product_weight, 0.0) AS "total_product_weight!",
+    t.landing_total_price_for_fisher AS total_price_for_fisher,
     COALESCE(t.delivery_point_ids, '{}') AS "delivery_points!: Vec<DeliveryPointId>",
     COALESCE(t.landing_gear_ids, '{}') AS "gear_ids!: Vec<Gear>",
     COALESCE(t.landing_gear_group_ids, '{}') AS "gear_group_ids!: Vec<GearGroup>",
@@ -927,6 +933,7 @@ SELECT
     COALESCE(t.landing_total_living_weight, 0.0) AS "total_living_weight!",
     COALESCE(t.landing_total_gross_weight, 0.0) AS "total_gross_weight!",
     COALESCE(t.landing_total_product_weight, 0.0) AS "total_product_weight!",
+    t.landing_total_price_for_fisher AS total_price_for_fisher,
     COALESCE(t.delivery_point_ids, '{}') AS "delivery_points!: Vec<DeliveryPointId>",
     COALESCE(t.landing_gear_ids, '{}') AS "gear_ids!: Vec<Gear>",
     COALESCE(t.landing_gear_group_ids, '{}') AS "gear_group_ids!: Vec<GearGroup>",
