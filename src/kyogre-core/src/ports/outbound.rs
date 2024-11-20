@@ -202,6 +202,10 @@ pub trait TripBenchmarkOutbound: Send + Sync {
         &self,
         id: FiskeridirVesselId,
     ) -> CoreResult<Vec<TripWithWeightAndFuel>>;
+    async fn trips_with_catch_value_and_fuel(
+        &self,
+        id: FiskeridirVesselId,
+    ) -> CoreResult<Vec<TripWithCatchValueAndFuel>>;
     async fn sustainability_metrics(
         &self,
         id: FiskeridirVesselId,
