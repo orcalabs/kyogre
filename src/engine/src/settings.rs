@@ -57,6 +57,7 @@ impl Settings {
             Box::<WeightPerDistance>::default(),
             Box::<FuelConsumption>::default(),
             Box::<WeightPerFuel>::default(),
+            Box::<CatchValuePerFuel>::default(),
             // `Sustainability` needs to be last because it depends on benchmarks above.
             // TODO
             // Box::<Sustainability>::default(),
