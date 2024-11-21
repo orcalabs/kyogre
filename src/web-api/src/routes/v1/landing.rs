@@ -9,6 +9,7 @@ use kyogre_core::{
 use serde::{Deserialize, Serialize};
 use serde_qs::actix::QsQuery as Query;
 use serde_with::{serde_as, DisplayFromStr};
+use tracing::error;
 use utoipa::{IntoParams, ToSchema};
 
 use crate::{
@@ -137,13 +138,15 @@ pub async fn landing_matrix<T: Database + 'static, S: Cache>(
     let query = matrix_params_to_query(params.into_inner(), path.active_filter);
 
     if let Some(cache) = cache.as_ref() {
-        if let Some(matrix) = cache.landing_matrix(&query).await? {
-            return Ok(Response::new(LandingMatrix::from(matrix)));
+        match cache.landing_matrix(&query).await {
+            Ok(matrix) => return Ok(Response::new(LandingMatrix::from(matrix))),
+            Err(e) => {
+                error!("matrix cache returned error: {e:?}");
+            }
         }
     }
 
     let matrix = db.landing_matrix(&query).await?;
-
     Ok(Response::new(LandingMatrix::from(matrix)))
 }
 

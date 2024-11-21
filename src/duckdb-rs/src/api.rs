@@ -60,7 +60,8 @@ impl Client {
     async fn landing_matrix_impl(
         &self,
         query: LandingMatrixQuery,
-    ) -> Result<Option<kyogre_core::LandingMatrix>> {
+    ) -> Result<kyogre_core::LandingMatrix> {
+        let active_filter = query.active_filter;
         let parameters = LandingFeatures::from(query);
 
         // Cloning a channel is cheap see
@@ -75,15 +76,14 @@ impl Client {
             || matrix.length_group.is_empty()
             || matrix.species_group.is_empty()
         {
-            Ok(None)
+            Ok(kyogre_core::LandingMatrix::empty(active_filter))
         } else {
-            Ok(Some(kyogre_core::LandingMatrix::from(matrix)))
+            Ok(kyogre_core::LandingMatrix::from(matrix))
         }
     }
-    async fn hauls_matrix_impl(
-        &self,
-        query: HaulsMatrixQuery,
-    ) -> Result<Option<kyogre_core::HaulsMatrix>> {
+
+    async fn hauls_matrix_impl(&self, query: HaulsMatrixQuery) -> Result<kyogre_core::HaulsMatrix> {
+        let active_filter = query.active_filter;
         let parameters = HaulFeatures::from(query);
 
         // Cloning a channel is cheap see
@@ -98,9 +98,9 @@ impl Client {
             || matrix.length_group.is_empty()
             || matrix.species_group.is_empty()
         {
-            Ok(None)
+            Ok(kyogre_core::HaulsMatrix::empty(active_filter))
         } else {
-            Ok(Some(kyogre_core::HaulsMatrix::from(matrix)))
+            Ok(kyogre_core::HaulsMatrix::from(matrix))
         }
     }
 }
@@ -111,14 +111,11 @@ impl MatrixCacheOutbound for Client {
     async fn landing_matrix(
         &self,
         query: &LandingMatrixQuery,
-    ) -> CoreResult<Option<kyogre_core::LandingMatrix>> {
+    ) -> CoreResult<kyogre_core::LandingMatrix> {
         Ok(retry(|| self.landing_matrix_impl(query.clone())).await?)
     }
     #[instrument(name = "cache_hauls_matrix", skip(self))]
-    async fn hauls_matrix(
-        &self,
-        query: &HaulsMatrixQuery,
-    ) -> CoreResult<Option<kyogre_core::HaulsMatrix>> {
+    async fn hauls_matrix(&self, query: &HaulsMatrixQuery) -> CoreResult<kyogre_core::HaulsMatrix> {
         Ok(retry(|| self.hauls_matrix_impl(query.clone())).await?)
     }
 }

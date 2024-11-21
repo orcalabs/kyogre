@@ -29,7 +29,7 @@ async fn test_haul_refresh_with_no_data_succeeds_and_returns_miss_on_subsequent_
             .await
             .unwrap();
 
-        assert!(cache_result.is_none());
+        assert!(cache_result.is_empty());
     })
     .await;
 }
@@ -67,7 +67,7 @@ async fn test_haul_returns_hit_after_refreshing_with_data() {
             .await
             .unwrap();
 
-        assert!(cache_result.is_some());
+        assert!(!cache_result.is_empty());
     })
     .await;
 }
@@ -92,7 +92,7 @@ async fn test_landing_refresh_with_no_data_succeeds_and_returns_miss_on_subseque
             .await
             .unwrap();
 
-        assert!(cache_result.is_none());
+        assert!(cache_result.is_empty());
     })
     .await;
 }
@@ -121,7 +121,7 @@ async fn test_landing_returns_hit_after_refreshing_with_data() {
             .await
             .unwrap();
 
-        assert!(cache_result.is_some());
+        assert!(!cache_result.is_empty());
     })
     .await;
 }
