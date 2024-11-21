@@ -66,7 +66,7 @@ impl PartialEq<ActiveHaulsFilter> for HaulMatrixXFeature {
 
 fn haul_date_feature_matrix_size() -> usize {
     let diff = chrono::Utc::now() - Months::new(ERS_OLDEST_DATA_MONTHS as u32);
-    (diff.month() as i32 + (diff.year() * 12)) as usize
+    (diff.month() as i32 + 1 + (diff.year() * 12)) as usize
 }
 
 pub fn haul_date_feature_matrix_index(ts: &DateTime<Utc>) -> usize {

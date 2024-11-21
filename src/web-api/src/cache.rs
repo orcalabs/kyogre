@@ -3,8 +3,9 @@ use async_trait::async_trait;
 use duckdb_rs::Client;
 use fiskeridir_rs::LandingId;
 use kyogre_core::{
-    CoreResult, HaulId, HaulsMatrixQuery, HaulsQuery, LandingMatrixQuery, LandingsQuery,
-    MatrixCacheOutbound, MeilisearchOutbound, TripDetailed, TripsQuery,
+    CoreResult, HaulId, HaulsMatrix, HaulsMatrixQuery, HaulsQuery, LandingMatrix,
+    LandingMatrixQuery, LandingsQuery, MatrixCacheOutbound, MeilisearchOutbound, TripDetailed,
+    TripsQuery,
 };
 use meilisearch::MeilisearchAdapter;
 use postgres::PostgresAdapter;
@@ -50,32 +51,26 @@ impl Meilisearch for MeilesearchCache {}
 
 #[async_trait]
 impl MatrixCacheOutbound for MatrixCache {
-    async fn landing_matrix(
-        &self,
-        query: &LandingMatrixQuery,
-    ) -> CoreResult<Option<kyogre_core::LandingMatrix>> {
+    async fn landing_matrix(&self, query: &LandingMatrixQuery) -> CoreResult<LandingMatrix> {
         match self.inner.landing_matrix(query).await {
             Ok(v) => Ok(v),
             Err(e) => {
                 error!("failed to retrieve landings matrix: {e:?}");
                 match self.error_mode {
                     CacheErrorMode::Propagate => Err(e),
-                    CacheErrorMode::Log => Ok(None),
+                    CacheErrorMode::Log => Ok(LandingMatrix::empty(query.active_filter)),
                 }
             }
         }
     }
-    async fn hauls_matrix(
-        &self,
-        query: &HaulsMatrixQuery,
-    ) -> CoreResult<Option<kyogre_core::HaulsMatrix>> {
+    async fn hauls_matrix(&self, query: &HaulsMatrixQuery) -> CoreResult<HaulsMatrix> {
         match self.inner.hauls_matrix(query).await {
             Ok(v) => Ok(v),
             Err(e) => {
                 error!("failed to retrieve hauls matrix: {e:?}");
                 match self.error_mode {
                     CacheErrorMode::Propagate => Err(e),
-                    CacheErrorMode::Log => Ok(None),
+                    CacheErrorMode::Log => Ok(HaulsMatrix::empty(query.active_filter)),
                 }
             }
         }

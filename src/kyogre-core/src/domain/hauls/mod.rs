@@ -7,7 +7,9 @@ use fiskeridir_rs::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::{CatchLocationId, ProcessingStatus};
+use crate::{
+    ActiveHaulsFilter, CatchLocationId, HaulMatrixXFeature, HaulMatrixYFeature, ProcessingStatus,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize)]
 #[cfg_attr(feature = "sqlx", derive(sqlx::Type), sqlx(transparent))]
@@ -111,6 +113,56 @@ impl Haul {
     }
     pub fn total_living_weight(&self) -> i32 {
         self.catches.iter().map(|c| c.living_weight).sum()
+    }
+}
+
+impl HaulsMatrix {
+    pub fn is_empty(&self) -> bool {
+        let Self {
+            dates,
+            length_group,
+            gear_group,
+            species_group,
+        } = self;
+
+        dates.iter().all(|v| *v == 0)
+            && length_group.iter().all(|v| *v == 0)
+            && gear_group.iter().all(|v| *v == 0)
+            && species_group.iter().all(|v| *v == 0)
+    }
+
+    pub fn empty(active_filter: ActiveHaulsFilter) -> Self {
+        let x_feature: HaulMatrixXFeature = active_filter.into();
+        let dates_size = if x_feature == HaulMatrixXFeature::Date {
+            HaulMatrixYFeature::Date.size() * HaulMatrixYFeature::CatchLocation.size()
+        } else {
+            HaulMatrixYFeature::Date.size() * x_feature.size()
+        };
+
+        let length_group_size = if x_feature == HaulMatrixXFeature::VesselLength {
+            HaulMatrixYFeature::VesselLength.size() * HaulMatrixYFeature::CatchLocation.size()
+        } else {
+            HaulMatrixYFeature::VesselLength.size() * x_feature.size()
+        };
+
+        let gear_group_size = if x_feature == HaulMatrixXFeature::GearGroup {
+            HaulMatrixYFeature::GearGroup.size() * HaulMatrixYFeature::CatchLocation.size()
+        } else {
+            HaulMatrixYFeature::GearGroup.size() * x_feature.size()
+        };
+
+        let species_group_size = if x_feature == HaulMatrixXFeature::SpeciesGroup {
+            HaulMatrixYFeature::SpeciesGroup.size() * HaulMatrixYFeature::CatchLocation.size()
+        } else {
+            HaulMatrixYFeature::SpeciesGroup.size() * x_feature.size()
+        };
+
+        Self {
+            dates: vec![0; dates_size],
+            length_group: vec![0; length_group_size],
+            gear_group: vec![0; gear_group_size],
+            species_group: vec![0; species_group_size],
+        }
     }
 }
 

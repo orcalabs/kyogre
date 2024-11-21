@@ -1,14 +1,15 @@
 use actix_web::web::{self, Path};
-use chrono::{DateTime, Datelike, Utc};
+use chrono::{DateTime, Utc};
 use fiskeridir_rs::{CallSign, Gear, GearGroup, SpeciesGroup, VesselLengthGroup, WhaleGender};
 use futures::TryStreamExt;
 use kyogre_core::{
-    ActiveHaulsFilter, CatchLocationId, FiskeridirVesselId, HaulId, HaulMatrixXFeature,
-    HaulMatrixYFeature, HaulsMatrixQuery, HaulsQuery, HaulsSorting, Ordering,
+    ActiveHaulsFilter, CatchLocationId, FiskeridirVesselId, HaulId, HaulsMatrixQuery, HaulsQuery,
+    HaulsSorting, Ordering,
 };
 use serde::{Deserialize, Serialize};
 use serde_qs::actix::QsQuery as Query;
 use serde_with::{serde_as, DisplayFromStr};
+use tracing::error;
 use utoipa::{IntoParams, ToSchema};
 
 use crate::{
@@ -131,24 +132,15 @@ pub async fn hauls_matrix<T: Database + 'static, S: Cache>(
     let query = matrix_params_to_query(params.into_inner(), path.active_filter);
 
     if let Some(cache) = cache.as_ref() {
-        if let Some(matrix) = cache.hauls_matrix(&query).await? {
-            return Ok(Response::new(HaulsMatrix::from(matrix)));
-        }
-    }
-
-    // Requests for prior month's data or newer will not exist in the database, but the query will
-    // still take over 10s to complete which we want to avoid.
-    if !query.months.is_empty() {
-        let current_time = Utc::now();
-        let month_cutoff = (current_time.year() * 12 + current_time.month0() as i32 - 1) as u32;
-
-        if !query.months.iter().any(|v| *v < month_cutoff) {
-            return Ok(Response::new(HaulsMatrix::empty(path.active_filter)));
+        match cache.hauls_matrix(&query).await {
+            Ok(matrix) => return Ok(Response::new(HaulsMatrix::from(matrix))),
+            Err(e) => {
+                error!("matrix cache returned error: {e:?}");
+            }
         }
     }
 
     let matrix = db.hauls_matrix(&query).await?;
-
     Ok(Response::new(HaulsMatrix::from(matrix)))
 }
 
@@ -237,42 +229,6 @@ pub struct HaulOceanClimate {
     pub water_temperature: Option<f64>,
     pub ocean_climate_depth: Option<f64>,
     pub sea_floor_depth: Option<f64>,
-}
-
-impl HaulsMatrix {
-    fn empty(active_filter: ActiveHaulsFilter) -> HaulsMatrix {
-        let x_feature: HaulMatrixXFeature = active_filter.into();
-        let dates_size = if x_feature == HaulMatrixXFeature::Date {
-            HaulMatrixYFeature::Date.size() * HaulMatrixYFeature::CatchLocation.size()
-        } else {
-            HaulMatrixYFeature::Date.size() * x_feature.size()
-        };
-
-        let length_group_size = if x_feature == HaulMatrixXFeature::VesselLength {
-            HaulMatrixYFeature::VesselLength.size() * HaulMatrixYFeature::CatchLocation.size()
-        } else {
-            HaulMatrixYFeature::VesselLength.size() * x_feature.size()
-        };
-
-        let gear_group_size = if x_feature == HaulMatrixXFeature::GearGroup {
-            HaulMatrixYFeature::GearGroup.size() * HaulMatrixYFeature::CatchLocation.size()
-        } else {
-            HaulMatrixYFeature::GearGroup.size() * x_feature.size()
-        };
-
-        let species_group_size = if x_feature == HaulMatrixXFeature::SpeciesGroup {
-            HaulMatrixYFeature::SpeciesGroup.size() * HaulMatrixYFeature::CatchLocation.size()
-        } else {
-            HaulMatrixYFeature::SpeciesGroup.size() * x_feature.size()
-        };
-
-        HaulsMatrix {
-            dates: vec![0; dates_size],
-            length_group: vec![0; length_group_size],
-            gear_group: vec![0; gear_group_size],
-            species_group: vec![0; species_group_size],
-        }
-    }
 }
 
 impl From<kyogre_core::HaulsMatrix> for HaulsMatrix {

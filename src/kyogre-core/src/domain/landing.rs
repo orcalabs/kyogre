@@ -4,7 +4,10 @@ use fiskeridir_rs::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::{CatchLocationId, FiskeridirVesselId};
+use crate::{
+    ActiveLandingFilter, CatchLocationId, FiskeridirVesselId, LandingMatrixXFeature,
+    LandingMatrixYFeature,
+};
 
 pub static LANDING_OLDEST_DATA_MONTHS: usize = 1999 * 12;
 
@@ -45,4 +48,54 @@ pub struct LandingCatch {
     pub product_weight: f64,
     pub species_fiskeridir_id: i32,
     pub species_group_id: SpeciesGroup,
+}
+
+impl LandingMatrix {
+    pub fn is_empty(&self) -> bool {
+        let Self {
+            dates,
+            length_group,
+            gear_group,
+            species_group,
+        } = self;
+
+        dates.iter().all(|v| *v == 0)
+            && length_group.iter().all(|v| *v == 0)
+            && gear_group.iter().all(|v| *v == 0)
+            && species_group.iter().all(|v| *v == 0)
+    }
+
+    pub fn empty(active_filter: ActiveLandingFilter) -> LandingMatrix {
+        let x_feature: LandingMatrixXFeature = active_filter.into();
+        let dates_size = if x_feature == LandingMatrixXFeature::Date {
+            LandingMatrixYFeature::Date.size() * LandingMatrixYFeature::CatchLocation.size()
+        } else {
+            LandingMatrixYFeature::Date.size() * x_feature.size()
+        };
+
+        let length_group_size = if x_feature == LandingMatrixXFeature::VesselLength {
+            LandingMatrixYFeature::VesselLength.size() * LandingMatrixYFeature::CatchLocation.size()
+        } else {
+            LandingMatrixYFeature::VesselLength.size() * x_feature.size()
+        };
+
+        let gear_group_size = if x_feature == LandingMatrixXFeature::GearGroup {
+            LandingMatrixYFeature::GearGroup.size() * LandingMatrixYFeature::CatchLocation.size()
+        } else {
+            LandingMatrixYFeature::GearGroup.size() * x_feature.size()
+        };
+
+        let species_group_size = if x_feature == LandingMatrixXFeature::SpeciesGroup {
+            LandingMatrixYFeature::SpeciesGroup.size() * LandingMatrixYFeature::CatchLocation.size()
+        } else {
+            LandingMatrixYFeature::SpeciesGroup.size() * x_feature.size()
+        };
+
+        Self {
+            dates: vec![0; dates_size],
+            length_group: vec![0; length_group_size],
+            gear_group: vec![0; gear_group_size],
+            species_group: vec![0; species_group_size],
+        }
+    }
 }
