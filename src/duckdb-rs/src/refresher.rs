@@ -190,7 +190,6 @@ SELECT
                         Some(v) => self.do_periodic_refresh(Some(v.0)).await,
                         None => {
                             error!("sender half closed, exiting refresh_loop");
-
                         }
                     }
                 }
@@ -201,7 +200,8 @@ SELECT
 
     #[instrument(skip_all)]
     async fn do_periodic_refresh(&self, response_channel: Option<Sender<RefreshResponse>>) {
-        let res = retry(|| async { self.do_periodic_refresh_impl() }).await;
+        let res =
+            retry(|| async { self.do_periodic_refresh_impl(response_channel.is_some()) }).await;
         if let Err(e) = &res {
             error!("failed periodic refresh: {e:?}");
         }
@@ -213,16 +213,16 @@ SELECT
         }
     }
 
-    fn do_periodic_refresh_impl(&self) -> Result<()> {
+    fn do_periodic_refresh_impl(&self, refresh_override: bool) -> Result<()> {
         let status = self.refresh_status()?;
 
-        let res = if status.hauls.should_refresh {
+        let res = if refresh_override || status.hauls.should_refresh {
             info!("hauls have been modified, starting refresh...");
             self.refresh_hauls(Some(status.hauls.version))
         } else {
             Ok(())
         };
-        let res2 = if status.landings.should_refresh {
+        let res2 = if refresh_override || status.landings.should_refresh {
             info!("landings have been modified, starting refresh...");
             self.refresh_landings(Some(status.landings.version))
         } else {
