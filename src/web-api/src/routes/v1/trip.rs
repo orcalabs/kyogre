@@ -271,6 +271,7 @@ pub struct Delivery {
     pub total_living_weight: f64,
     pub total_product_weight: f64,
     pub total_gross_weight: f64,
+    pub total_price_for_fisher: Option<f64>,
 }
 
 #[serde_as]
@@ -284,6 +285,7 @@ pub struct Catch {
     #[serde_as(as = "DisplayFromStr")]
     pub product_quality_id: Quality,
     pub product_quality_name: String,
+    pub price_for_fisher: Option<f64>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
@@ -376,6 +378,7 @@ impl From<kyogre_core::Delivery> for Delivery {
             total_living_weight: v.total_living_weight,
             total_product_weight: v.total_product_weight,
             total_gross_weight: v.total_gross_weight,
+            total_price_for_fisher: v.total_price_for_fisher,
         }
     }
 }
@@ -389,6 +392,7 @@ impl From<kyogre_core::Catch> for Catch {
             species_fiskeridir_id: v.species_fiskeridir_id,
             product_quality_id: v.product_quality_id,
             product_quality_name: v.product_quality_id.norwegian_name().to_owned(),
+            price_for_fisher: v.price_for_fisher,
         }
     }
 }
