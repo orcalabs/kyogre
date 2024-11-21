@@ -69,6 +69,7 @@ impl PostgresAdapter {
 
         Ok(())
     }
+
     async fn add_ers_tra_reloads(
         &self,
         message_ids: &[i64],
@@ -95,7 +96,10 @@ INSERT INTO
 SELECT
     e.message_id,
     e.vessel_event_id,
-    $2,
+    CASE
+        WHEN e.vessel_event_id IS NULL THEN NULL
+        ELSE $2::INT
+    END,
     e.message_timestamp,
     e.reloading_timestamp,
     e.start_latitude,
@@ -131,7 +135,7 @@ GROUP BY
     e.message_id
             "#,
             &message_ids,
-            VesselEventType::ErsTra as i32
+            VesselEventType::ErsTra as i32,
         )
         .execute(&mut **tx)
         .await?;
