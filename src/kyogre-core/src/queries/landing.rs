@@ -141,7 +141,8 @@ impl LandingMatrixXFeature {
                 .map(|v| v.enum_index()),
         }
     }
-    fn size(&self) -> usize {
+
+    pub fn size(&self) -> usize {
         match self {
             LandingMatrixXFeature::Date => landing_date_feature_matrix_size(),
             LandingMatrixXFeature::GearGroup => GearGroup::COUNT,
@@ -184,7 +185,7 @@ impl LandingMatrixYFeature {
         }
     }
 
-    fn size(&self) -> usize {
+    pub fn size(&self) -> usize {
         match self {
             LandingMatrixYFeature::Date => landing_date_feature_matrix_size(),
             LandingMatrixYFeature::GearGroup => GearGroup::COUNT,
