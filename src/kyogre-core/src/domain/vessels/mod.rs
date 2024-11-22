@@ -18,6 +18,7 @@ pub static IGNORED_CONFLICT_CALL_SIGNS: &[&str] = &["00000000", "0"];
 
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct UpdateVessel {
     pub engine_power: Option<u32>,
     pub engine_building_year: Option<u32>,
