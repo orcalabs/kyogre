@@ -2,6 +2,7 @@
 #![deny(rust_2018_idioms)]
 
 pub static POSTGRES_TEST_PORT: u32 = 5534;
+pub static POSTGRES_TEST_MASTER_PORT: u32 = 5535;
 
 use async_trait::async_trait;
 

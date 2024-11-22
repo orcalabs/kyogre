@@ -30,6 +30,9 @@ services:
     container_name: postgres
     build:
       context: .
+      args:
+        - MIGRATIONS_DIR_PATH=src/postgres/migrations
+        - TEST_MIGRATIONS_DIR_PATH=src/postgres/test_migrations
       dockerfile: dockerfiles/test-db/Dockerfile
     environment:
       - POSTGRES_HOST_AUTH_METHOD=trust

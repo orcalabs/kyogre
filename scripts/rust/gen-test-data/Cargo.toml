@@ -1,0 +1,11 @@
+[package]
+name = "gen-test-data"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+engine = { path = "../../../src/engine", features = ["test"] }
+postgres = { path = "../../../src/postgres" }
+orca-core = { version = "0.35.1", registry = "orcalabs-orcastrator" }
+tokio = "1.41"
+clap = { version = "4.5.21", features = ["derive"] }
