@@ -262,6 +262,7 @@ pub struct Trip {
     pub target_species_fao_id: Option<String>,
     pub fuel_consumption: Option<f64>,
     pub track_coverage: Option<f64>,
+    pub distance: Option<f64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
@@ -311,100 +312,162 @@ pub struct VesselEvent {
 
 impl From<TripsParameters> for TripsQuery {
     fn from(value: TripsParameters) -> Self {
-        TripsQuery {
-            pagination: Pagination::<Trips>::new(value.limit, value.offset),
-            ordering: value.ordering.unwrap_or_default(),
-            sorting: value.sorting.unwrap_or_default(),
-            delivery_points: value.delivery_points,
-            start_date: value.start_date,
-            end_date: value.end_date,
-            min_weight: value.min_weight,
-            max_weight: value.max_weight,
-            gear_group_ids: value.gear_group_ids,
-            species_group_ids: value.species_group_ids,
-            vessel_length_groups: value.vessel_length_groups,
-            fiskeridir_vessel_ids: value.fiskeridir_vessel_ids,
+        let TripsParameters {
+            limit,
+            offset,
+            ordering,
+            delivery_points,
+            start_date,
+            end_date,
+            min_weight,
+            max_weight,
+            sorting,
+            gear_group_ids,
+            species_group_ids,
+            vessel_length_groups,
+            fiskeridir_vessel_ids,
+        } = value;
+
+        Self {
+            pagination: Pagination::<Trips>::new(limit, offset),
+            ordering: ordering.unwrap_or_default(),
+            sorting: sorting.unwrap_or_default(),
+            delivery_points,
+            start_date,
+            end_date,
+            min_weight,
+            max_weight,
+            gear_group_ids,
+            species_group_ids,
+            vessel_length_groups,
+            fiskeridir_vessel_ids,
         }
     }
 }
 
 impl From<kyogre_core::TripDetailed> for Trip {
     fn from(value: kyogre_core::TripDetailed) -> Self {
-        let (start, end) = if let Some(v) = value.period_precision {
-            (v.start(), v.end())
-        } else {
-            (value.period.start(), value.period.end())
-        };
+        let kyogre_core::TripDetailed {
+            fiskeridir_vessel_id,
+            fiskeridir_length_group_id: _,
+            trip_id,
+            period,
+            period_precision,
+            landing_coverage,
+            num_deliveries,
+            most_recent_delivery_date,
+            gear_ids,
+            gear_group_ids: _,
+            species_group_ids: _,
+            delivery_point_ids,
+            hauls,
+            tra,
+            fishing_facilities,
+            delivery,
+            start_port_id,
+            end_port_id,
+            assembler_id,
+            vessel_events,
+            landing_ids,
+            distance,
+            cache_version: _,
+            target_species_fiskeridir_id,
+            target_species_fao_id,
+            fuel_consumption,
+            track_coverage,
+        } = value;
+
+        let period = period_precision.unwrap_or(period);
+
         Trip {
-            trip_id: value.trip_id,
-            start,
-            end,
-            num_deliveries: value.num_deliveries,
-            most_recent_delivery_date: value.most_recent_delivery_date,
-            gear_ids: value.gear_ids,
-            delivery_point_ids: value.delivery_point_ids,
-            hauls: value.hauls.into_iter().map(Haul::from).collect(),
-            fishing_facilities: value
-                .fishing_facilities
+            trip_id,
+            start: period.start(),
+            end: period.end(),
+            num_deliveries,
+            most_recent_delivery_date,
+            gear_ids,
+            delivery_point_ids,
+            hauls: hauls.into_iter().map(Haul::from).collect(),
+            fishing_facilities: fishing_facilities
                 .into_iter()
                 .map(FishingFacility::from)
                 .collect(),
-            delivery: value.delivery.into(),
-            start_port_id: value.start_port_id,
-            end_port_id: value.end_port_id,
-            fiskeridir_vessel_id: value.fiskeridir_vessel_id,
-            events: value
-                .vessel_events
-                .into_iter()
-                .map(VesselEvent::from)
-                .collect(),
-            landing_ids: value.landing_ids,
-            trip_assembler_id: value.assembler_id,
-            landing_coverage_start: value.landing_coverage.start(),
-            landing_coverage_end: value.landing_coverage.end(),
-            target_species_fiskeridir_id: value.target_species_fiskeridir_id,
-            target_species_fao_id: value.target_species_fao_id,
-            fuel_consumption: value.fuel_consumption,
-            track_coverage: value.track_coverage,
-            tra: value.tra,
+            delivery: delivery.into(),
+            start_port_id,
+            end_port_id,
+            fiskeridir_vessel_id,
+            events: vessel_events.into_iter().map(VesselEvent::from).collect(),
+            landing_ids,
+            trip_assembler_id: assembler_id,
+            landing_coverage_start: landing_coverage.start(),
+            landing_coverage_end: landing_coverage.end(),
+            target_species_fiskeridir_id,
+            target_species_fao_id,
+            fuel_consumption,
+            track_coverage,
+            distance,
+            tra,
         }
     }
 }
 
 impl From<kyogre_core::Delivery> for Delivery {
     fn from(v: kyogre_core::Delivery) -> Self {
+        let kyogre_core::Delivery {
+            delivered,
+            total_living_weight,
+            total_product_weight,
+            total_gross_weight,
+            total_price_for_fisher,
+        } = v;
+
         Self {
-            delivered: v.delivered.into_iter().map(Catch::from).collect(),
-            total_living_weight: v.total_living_weight,
-            total_product_weight: v.total_product_weight,
-            total_gross_weight: v.total_gross_weight,
-            total_price_for_fisher: v.total_price_for_fisher,
+            delivered: delivered.into_iter().map(Catch::from).collect(),
+            total_living_weight,
+            total_product_weight,
+            total_gross_weight,
+            total_price_for_fisher,
         }
     }
 }
 
 impl From<kyogre_core::Catch> for Catch {
     fn from(v: kyogre_core::Catch) -> Self {
+        let kyogre_core::Catch {
+            living_weight,
+            gross_weight,
+            product_weight,
+            species_fiskeridir_id,
+            product_quality_id,
+            price_for_fisher,
+        } = v;
+
         Self {
-            living_weight: v.living_weight,
-            gross_weight: v.gross_weight,
-            product_weight: v.product_weight,
-            species_fiskeridir_id: v.species_fiskeridir_id,
-            product_quality_id: v.product_quality_id,
-            product_quality_name: v.product_quality_id.norwegian_name().to_owned(),
-            price_for_fisher: v.price_for_fisher,
+            living_weight,
+            gross_weight,
+            product_weight,
+            species_fiskeridir_id,
+            product_quality_id,
+            product_quality_name: product_quality_id.norwegian_name().to_owned(),
+            price_for_fisher,
         }
     }
 }
 
 impl From<kyogre_core::CurrentTrip> for CurrentTrip {
     fn from(v: kyogre_core::CurrentTrip) -> Self {
+        let kyogre_core::CurrentTrip {
+            departure,
+            target_species_fiskeridir_id,
+            hauls,
+            fishing_facilities,
+        } = v;
+
         Self {
-            departure: v.departure,
-            target_species_fiskeridir_id: v.target_species_fiskeridir_id,
-            hauls: v.hauls.into_iter().map(Haul::from).collect(),
-            fishing_facilities: v
-                .fishing_facilities
+            departure,
+            target_species_fiskeridir_id,
+            hauls: hauls.into_iter().map(Haul::from).collect(),
+            fishing_facilities: fishing_facilities
                 .into_iter()
                 .map(FishingFacility::from)
                 .collect(),
@@ -414,21 +477,50 @@ impl From<kyogre_core::CurrentTrip> for CurrentTrip {
 
 impl From<kyogre_core::VesselEvent> for VesselEvent {
     fn from(value: kyogre_core::VesselEvent) -> Self {
+        let kyogre_core::VesselEvent {
+            event_id,
+            vessel_id: _,
+            report_timestamp,
+            occurence_timestamp,
+            event_type,
+        } = value;
+
         VesselEvent {
-            event_id: value.event_id,
-            event_type: value.event_type,
-            event_name: value.event_type.name().to_owned(),
-            report_timestamp: value.report_timestamp,
-            occurence_timestamp: value.occurence_timestamp,
+            event_id,
+            event_type,
+            event_name: event_type.name().to_owned(),
+            report_timestamp,
+            occurence_timestamp,
         }
     }
 }
 
 impl PartialEq<Trip> for kyogre_core::Trip {
     fn eq(&self, other: &Trip) -> bool {
-        self.trip_id == other.trip_id
+        let Self {
+            trip_id,
+            period: _,
+            precision_period: _,
+            landing_coverage,
+            distance,
+            assembler_id,
+            start_port_code,
+            end_port_code,
+            target_species_fiskeridir_id,
+            target_species_fao_id,
+        } = self;
+
+        *trip_id == other.trip_id
             && self.start().timestamp() == other.start.timestamp()
             && self.end().timestamp() == other.end.timestamp()
+            && landing_coverage.start().timestamp() == other.landing_coverage_start.timestamp()
+            && landing_coverage.end().timestamp() == other.landing_coverage_end.timestamp()
+            && *distance == other.distance
+            && *assembler_id == other.trip_assembler_id
+            && *start_port_code == other.start_port_id
+            && *end_port_code == other.end_port_id
+            && *target_species_fiskeridir_id == other.target_species_fiskeridir_id
+            && *target_species_fao_id == other.target_species_fao_id
     }
 }
 

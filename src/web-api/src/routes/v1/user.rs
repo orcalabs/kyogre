@@ -61,17 +61,22 @@ pub struct User {
 
 impl From<kyogre_core::User> for User {
     fn from(v: kyogre_core::User) -> Self {
-        Self {
-            following: v.following,
-        }
+        let kyogre_core::User {
+            barentswatch_user_id: _,
+            following,
+        } = v;
+
+        Self { following }
     }
 }
 
 impl User {
     pub fn to_domain_user(self, barentswatch_user_id: BarentswatchUserId) -> kyogre_core::User {
+        let Self { following } = self;
+
         kyogre_core::User {
             barentswatch_user_id,
-            following: self.following,
+            following,
         }
     }
 }

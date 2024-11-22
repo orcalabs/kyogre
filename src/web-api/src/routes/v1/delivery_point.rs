@@ -36,22 +36,61 @@ pub struct DeliveryPoint {
 
 impl From<kyogre_core::DeliveryPoint> for DeliveryPoint {
     fn from(v: kyogre_core::DeliveryPoint) -> Self {
+        let kyogre_core::DeliveryPoint {
+            id,
+            name,
+            address,
+            latitude,
+            longitude,
+        } = v;
+
         DeliveryPoint {
-            id: v.id,
-            name: v.name,
-            address: v.address,
-            latitude: v.latitude,
-            longitude: v.longitude,
+            id,
+            name,
+            address,
+            latitude,
+            longitude,
         }
     }
 }
 
 impl From<fiskeridir_rs::AquaCultureEntry> for DeliveryPoint {
     fn from(v: fiskeridir_rs::AquaCultureEntry) -> Self {
+        let fiskeridir_rs::AquaCultureEntry {
+            till_nr: _,
+            org_number: _,
+            name,
+            address,
+            zip_code: _,
+            city: _,
+            approval_date: _,
+            approval_limit: _,
+            till_municipality_number: _,
+            till_municipality: _,
+            purpose: _,
+            production_form: _,
+            species: _,
+            species_code: _,
+            till_kap: _,
+            till_unit: _,
+            delivery_point_id,
+            locality_name: _,
+            locality_municipality_number: _,
+            locality_municipality: _,
+            locality_location: _,
+            water_environment: _,
+            locality_kap: _,
+            locality_unit: _,
+            expiration_date: _,
+            latitude: _,
+            longitude: _,
+            prod_omr: _,
+        } = v;
+
         DeliveryPoint {
-            id: v.delivery_point_id,
-            name: Some(v.name.into_inner()),
-            address: v.address.map(|v| v.into_inner()),
+            id: delivery_point_id,
+            name: Some(name.into_inner()),
+            address: address.map(|v| v.into_inner()),
             latitude: Some(v.latitude),
             longitude: Some(v.longitude),
         }

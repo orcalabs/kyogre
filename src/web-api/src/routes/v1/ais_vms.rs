@@ -197,20 +197,36 @@ pub struct AisVmsPositionDetails {
 
 impl From<kyogre_core::AisVmsPosition> for AisVmsPosition {
     fn from(v: kyogre_core::AisVmsPosition) -> Self {
+        let kyogre_core::AisVmsPosition {
+            latitude,
+            longitude,
+            timestamp,
+            course_over_ground,
+            speed,
+            navigational_status,
+            rate_of_turn,
+            true_heading,
+            distance_to_shore,
+            position_type: _,
+            pruned_by,
+            trip_cumulative_fuel_consumption,
+            trip_cumulative_cargo_weight,
+        } = v;
+
         AisVmsPosition {
-            lat: v.latitude,
-            lon: v.longitude,
-            timestamp: v.timestamp,
-            cog: v.course_over_ground,
-            speed: v.speed,
-            pruned_by: v.pruned_by,
-            trip_cumulative_fuel_consumption: v.trip_cumulative_fuel_consumption,
-            trip_cumulative_cargo_weight: v.trip_cumulative_cargo_weight,
+            lat: latitude,
+            lon: longitude,
+            timestamp,
+            cog: course_over_ground,
+            speed,
+            pruned_by,
+            trip_cumulative_fuel_consumption,
+            trip_cumulative_cargo_weight,
             det: Some(AisVmsPositionDetails {
-                navigational_status: v.navigational_status,
-                rate_of_turn: v.rate_of_turn,
-                true_heading: v.true_heading,
-                distance_to_shore: v.distance_to_shore,
+                navigational_status,
+                rate_of_turn,
+                true_heading,
+                distance_to_shore,
                 missing_data: false,
             }),
         }
@@ -228,22 +244,41 @@ impl From<Vec<kyogre_core::AisVmsAreaCount>> for AisVmsArea {
 
 impl From<kyogre_core::AisVmsAreaCount> for AisVmsAreaCount {
     fn from(value: kyogre_core::AisVmsAreaCount) -> Self {
+        let kyogre_core::AisVmsAreaCount {
+            lat,
+            lon,
+            count,
+            num_vessels: _,
+        } = value;
+
         Self {
-            lat: value.lat,
-            lon: value.lon,
-            count: value.count as u32,
+            lat,
+            lon,
+            count: count as u32,
         }
     }
 }
 
 impl PartialEq<kyogre_core::AisVmsPosition> for AisVmsPosition {
     fn eq(&self, other: &kyogre_core::AisVmsPosition) -> bool {
-        self.lat as i32 == other.latitude as i32
-            && self.lon as i32 == other.longitude as i32
-            && self.timestamp.timestamp_millis() == other.timestamp.timestamp_millis()
-            && self.cog.map(|c| c as i32) == other.course_over_ground.map(|c| c as i32)
-            && self.speed.map(|s| s as i32) == other.speed.map(|s| s as i32)
-            && self.det.as_ref().map_or(true, |d| {
+        let Self {
+            lat,
+            lon,
+            timestamp,
+            cog,
+            speed,
+            trip_cumulative_fuel_consumption: _,
+            trip_cumulative_cargo_weight: _,
+            pruned_by: _,
+            det,
+        } = self;
+
+        *lat as i32 == other.latitude as i32
+            && *lon as i32 == other.longitude as i32
+            && timestamp.timestamp_millis() == other.timestamp.timestamp_millis()
+            && cog.map(|c| c as i32) == other.course_over_ground.map(|c| c as i32)
+            && speed.map(|s| s as i32) == other.speed.map(|s| s as i32)
+            && det.as_ref().map_or(true, |d| {
                 d.navigational_status == other.navigational_status
                     && d.rate_of_turn.map(|s| s as i32) == other.rate_of_turn.map(|s| s as i32)
                     && d.true_heading == other.true_heading
@@ -254,29 +289,59 @@ impl PartialEq<kyogre_core::AisVmsPosition> for AisVmsPosition {
 
 impl PartialEq<AisVmsPosition> for AisPosition {
     fn eq(&self, other: &AisVmsPosition) -> bool {
-        self.latitude as i32 == other.lat as i32
-            && self.longitude as i32 == other.lon as i32
-            && self.msgtime.timestamp_millis() == other.timestamp.timestamp_millis()
-            && self.course_over_ground.map(|c| c as i32) == other.cog.map(|c| c as i32)
-            && self.speed_over_ground.map(|s| s as i32) == other.speed.map(|s| s as i32)
+        let Self {
+            latitude,
+            longitude,
+            mmsi: _,
+            msgtime,
+            course_over_ground,
+            navigational_status,
+            rate_of_turn,
+            speed_over_ground,
+            true_heading,
+            distance_to_shore,
+        } = self;
+
+        *latitude as i32 == other.lat as i32
+            && *longitude as i32 == other.lon as i32
+            && msgtime.timestamp_millis() == other.timestamp.timestamp_millis()
+            && course_over_ground.map(|c| c as i32) == other.cog.map(|c| c as i32)
+            && speed_over_ground.map(|s| s as i32) == other.speed.map(|s| s as i32)
             && other.det.as_ref().map_or(true, |d| {
-                self.navigational_status.map(|n| n as i32)
-                    == d.navigational_status.map(|n| n as i32)
-                    && self.rate_of_turn.map(|s| s as i32) == d.rate_of_turn.map(|s| s as i32)
-                    && self.true_heading == d.true_heading
-                    && self.distance_to_shore as i32 == d.distance_to_shore as i32
-                    && self.speed_over_ground.map(|s| s as i32) == other.speed.map(|s| s as i32)
+                navigational_status.map(|n| n as i32) == d.navigational_status.map(|n| n as i32)
+                    && rate_of_turn.map(|s| s as i32) == d.rate_of_turn.map(|s| s as i32)
+                    && *true_heading == d.true_heading
+                    && *distance_to_shore as i32 == d.distance_to_shore as i32
+                    && speed_over_ground.map(|s| s as i32) == other.speed.map(|s| s as i32)
             })
     }
 }
 
 impl PartialEq<AisVmsPosition> for VmsPosition {
     fn eq(&self, other: &AisVmsPosition) -> bool {
-        self.latitude as i32 == other.lat as i32
-            && self.longitude as i32 == other.lon as i32
-            && self.timestamp.timestamp_millis() == other.timestamp.timestamp_millis()
-            && self.course == other.cog.map(|c| c as u32)
-            && self.speed.map(|s| s as i32) == other.speed.map(|s| s as i32)
+        let Self {
+            call_sign: _,
+            course,
+            latitude,
+            longitude,
+            registration_id: _,
+            speed,
+            timestamp,
+            vessel_length: _,
+            vessel_name: _,
+            vessel_type: _,
+            distance_to_shore,
+        } = self;
+
+        *latitude as i32 == other.lat as i32
+            && *longitude as i32 == other.lon as i32
+            && timestamp.timestamp_millis() == other.timestamp.timestamp_millis()
+            && *course == other.cog.map(|c| c as u32)
+            && speed.map(|s| s as i32) == other.speed.map(|s| s as i32)
+            && other
+                .det
+                .as_ref()
+                .is_none_or(|v| v.distance_to_shore as i64 == *distance_to_shore as i64)
     }
 }
 

@@ -233,60 +233,107 @@ pub struct HaulOceanClimate {
 
 impl From<kyogre_core::HaulsMatrix> for HaulsMatrix {
     fn from(v: kyogre_core::HaulsMatrix) -> Self {
+        let kyogre_core::HaulsMatrix {
+            dates,
+            length_group,
+            gear_group,
+            species_group,
+        } = v;
+
         HaulsMatrix {
-            dates: v.dates,
-            length_group: v.length_group,
-            gear_group: v.gear_group,
-            species_group: v.species_group,
+            dates,
+            length_group,
+            gear_group,
+            species_group,
         }
     }
 }
 
 impl From<kyogre_core::Haul> for Haul {
     fn from(v: kyogre_core::Haul) -> Self {
+        let kyogre_core::Haul {
+            haul_id,
+            cache_version: _,
+            catch_locations,
+            gear_group_id,
+            gear_id,
+            species_group_ids: _,
+            fiskeridir_vessel_id,
+            haul_distance,
+            start_latitude,
+            start_longitude,
+            stop_latitude,
+            stop_longitude,
+            start_timestamp,
+            stop_timestamp,
+            vessel_length_group: _,
+            catches,
+            vessel_name,
+            call_sign,
+        } = v;
+
         Haul {
-            haul_id: v.haul_id,
-            haul_distance: v.haul_distance,
-            catch_locations: v.catch_locations,
-            start_latitude: v.start_latitude,
-            start_longitude: v.start_longitude,
-            start_timestamp: v.start_timestamp,
-            stop_timestamp: v.stop_timestamp,
-            gear_group_id: v.gear_group_id,
-            vessel_name: v.vessel_name,
-            catches: v.catches.into_iter().map(HaulCatch::from).collect(),
-            gear: v.gear_id,
-            fiskeridir_vessel_id: v.fiskeridir_vessel_id,
-            call_sign: v.call_sign,
-            stop_latitude: v.stop_latitude,
-            stop_longitude: v.stop_longitude,
+            haul_id,
+            haul_distance,
+            catch_locations,
+            start_latitude,
+            start_longitude,
+            start_timestamp,
+            stop_timestamp,
+            gear_group_id,
+            vessel_name,
+            catches: catches.into_iter().map(HaulCatch::from).collect(),
+            gear: gear_id,
+            fiskeridir_vessel_id,
+            call_sign,
+            stop_latitude,
+            stop_longitude,
         }
     }
 }
 
 impl From<kyogre_core::HaulWeather> for HaulWeather {
     fn from(v: kyogre_core::HaulWeather) -> Self {
+        let kyogre_core::HaulWeather {
+            wind_speed_10m,
+            wind_direction_10m,
+            air_temperature_2m,
+            relative_humidity_2m,
+            air_pressure_at_sea_level,
+            precipitation_amount,
+            cloud_area_fraction,
+        } = v;
+
         Self {
-            wind_speed_10m: v.wind_speed_10m,
-            wind_direction_10m: v.wind_direction_10m,
-            air_temperature_2m: v.air_temperature_2m,
-            relative_humidity_2m: v.relative_humidity_2m,
-            air_pressure_at_sea_level: v.air_pressure_at_sea_level,
-            precipitation_amount: v.precipitation_amount,
-            cloud_area_fraction: v.cloud_area_fraction,
+            wind_speed_10m,
+            wind_direction_10m,
+            air_temperature_2m,
+            relative_humidity_2m,
+            air_pressure_at_sea_level,
+            precipitation_amount,
+            cloud_area_fraction,
         }
     }
 }
 
 impl From<kyogre_core::HaulOceanClimate> for HaulOceanClimate {
     fn from(v: kyogre_core::HaulOceanClimate) -> Self {
+        let kyogre_core::HaulOceanClimate {
+            water_speed,
+            water_direction,
+            salinity,
+            water_temperature,
+            ocean_climate_depth,
+            sea_floor_depth,
+        } = v;
+
         Self {
-            water_speed: v.water_speed,
-            water_direction: v.water_direction,
-            salinity: v.salinity,
-            water_temperature: v.water_temperature,
-            ocean_climate_depth: v.ocean_climate_depth,
-            sea_floor_depth: v.sea_floor_depth,
+            water_speed,
+            water_direction,
+            salinity,
+            water_temperature,
+            ocean_climate_depth,
+            sea_floor_depth,
         }
     }
 }
@@ -306,41 +353,72 @@ impl PartialEq<kyogre_core::Haul> for Haul {
 
 impl From<kyogre_core::HaulCatch> for HaulCatch {
     fn from(v: kyogre_core::HaulCatch) -> Self {
+        let kyogre_core::HaulCatch {
+            living_weight,
+            species_fao_id: _,
+            species_fiskeridir_id,
+            species_group_id,
+            species_main_group_id: _,
+        } = v;
+
         Self {
-            living_weight: v.living_weight,
-            species_fiskeridir_id: v.species_fiskeridir_id,
-            species_group_id: v.species_group_id,
+            living_weight,
+            species_fiskeridir_id,
+            species_group_id,
         }
     }
 }
 
 impl From<kyogre_core::WhaleCatch> for WhaleCatch {
     fn from(v: kyogre_core::WhaleCatch) -> Self {
+        let kyogre_core::WhaleCatch {
+            blubber_measure_a,
+            blubber_measure_b,
+            blubber_measure_c,
+            circumference,
+            fetus_length,
+            gender_id,
+            grenade_number,
+            individual_number,
+            length,
+        } = v;
+
         Self {
-            blubber_measure_a: v.blubber_measure_a,
-            blubber_measure_b: v.blubber_measure_b,
-            blubber_measure_c: v.blubber_measure_c,
-            circumference: v.circumference,
-            fetus_length: v.fetus_length,
-            gender_id: v.gender_id,
-            grenade_number: v.grenade_number,
-            individual_number: v.individual_number,
-            length: v.length,
+            blubber_measure_a,
+            blubber_measure_b,
+            blubber_measure_c,
+            circumference,
+            fetus_length,
+            gender_id,
+            grenade_number,
+            individual_number,
+            length,
         }
     }
 }
 
 impl From<HaulsParams> for HaulsQuery {
     fn from(v: HaulsParams) -> Self {
+        let HaulsParams {
+            months,
+            catch_locations,
+            gear_group_ids,
+            species_group_ids,
+            vessel_length_groups,
+            fiskeridir_vessel_ids,
+            sorting,
+            ordering,
+        } = v;
+
         Self {
-            ranges: months_to_date_ranges(v.months),
-            catch_locations: v.catch_locations,
-            gear_group_ids: v.gear_group_ids,
-            species_group_ids: v.species_group_ids,
-            vessel_length_groups: v.vessel_length_groups,
-            vessel_ids: v.fiskeridir_vessel_ids,
-            sorting: v.sorting,
-            ordering: v.ordering,
+            ranges: months_to_date_ranges(months),
+            catch_locations,
+            gear_group_ids,
+            species_group_ids,
+            vessel_length_groups,
+            vessel_ids: fiskeridir_vessel_ids,
+            sorting,
+            ordering,
         }
     }
 }
@@ -349,16 +427,27 @@ pub fn matrix_params_to_query(
     params: HaulsMatrixParams,
     active_filter: ActiveHaulsFilter,
 ) -> HaulsMatrixQuery {
+    let HaulsMatrixParams {
+        months,
+        catch_locations,
+        gear_group_ids,
+        species_group_ids,
+        vessel_length_groups,
+        fiskeridir_vessel_ids,
+        bycatch_percentage,
+        majority_species_group,
+    } = params;
+
     HaulsMatrixQuery {
-        months: params.months,
-        catch_locations: params.catch_locations,
-        gear_group_ids: params.gear_group_ids,
-        species_group_ids: params.species_group_ids,
-        vessel_length_groups: params.vessel_length_groups,
+        months,
+        catch_locations,
+        gear_group_ids,
+        species_group_ids,
+        vessel_length_groups,
         active_filter,
-        vessel_ids: params.fiskeridir_vessel_ids,
-        bycatch_percentage: params.bycatch_percentage,
-        majority_species_group: params.majority_species_group.unwrap_or(false),
+        vessel_ids: fiskeridir_vessel_ids,
+        bycatch_percentage,
+        majority_species_group: majority_species_group.unwrap_or(false),
     }
 }
 

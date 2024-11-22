@@ -48,16 +48,22 @@ pub struct CumulativeLandings {
     pub cumulative_weight: f64,
 }
 
-impl PartialEq<(&TripDetailed, f64)> for &BenchmarkEntry {
+impl PartialEq<(&TripDetailed, f64)> for BenchmarkEntry {
     fn eq(&self, other: &(&TripDetailed, f64)) -> bool {
-        self.value as i64 == other.1 as i64
-            && self.fiskeridir_vessel_id == other.0.fiskeridir_vessel_id
-            && self.trip_start == other.0.period.start()
+        let Self {
+            fiskeridir_vessel_id,
+            trip_start,
+            value,
+        } = self;
+
+        *value as i64 == other.1 as i64
+            && *fiskeridir_vessel_id == other.0.fiskeridir_vessel_id
+            && *trip_start == other.0.period.start()
     }
 }
 
-impl PartialEq<&BenchmarkEntry> for (&TripDetailed, f64) {
-    fn eq(&self, other: &&BenchmarkEntry) -> bool {
+impl PartialEq<BenchmarkEntry> for (&TripDetailed, f64) {
+    fn eq(&self, other: &BenchmarkEntry) -> bool {
         other.eq(self)
     }
 }

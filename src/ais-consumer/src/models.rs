@@ -74,8 +74,6 @@ pub struct AisPosition {
     pub true_heading: Option<i32>,
 }
 
-pub struct NewAisPositionWrapper(pub Option<NewAisPosition>);
-
 #[derive(Deserialize, Serialize, Clone, Debug)]
 pub enum AisMessageType {
     /// A message containing position data.
@@ -103,86 +101,138 @@ impl TryFrom<AisStatic> for NewAisStatic {
     type Error = AisMessageError;
 
     fn try_from(a: AisStatic) -> Result<Self, Self::Error> {
-        let eta = a.eta.map(|eta| parse_eta_value(&eta)).transpose();
-        let eta: Result<Option<Option<DateTime<Utc>>>, AisMessageError> = match eta {
-            Ok(v) => Ok(v),
+        let AisStatic {
+            message_type,
+            message_type_id,
+            mmsi,
+            msgtime,
+            imo_number,
+            call_sign,
+            destination,
+            eta,
+            name,
+            draught,
+            ship_length,
+            ship_width,
+            ship_type,
+            dimension_a,
+            dimension_b,
+            dimension_c,
+            dimension_d,
+            position_fixing_device_type,
+            report_class,
+        } = a;
+
+        let eta = eta.map(|eta| parse_eta_value(&eta)).transpose();
+        let eta = match eta {
+            Ok(v) => v.flatten(),
             Err(e) => {
-                warn!("{e:?}");
-                Ok(None)
+                warn!("invalid eta: {e:?}");
+                None
             }
         };
 
-        let call_sign: Result<Option<Option<CallSign>>, fiskeridir_rs::Error> = a
-            .call_sign
-            .map(|v| match CallSign::try_from(v) {
-                Ok(v) => Ok(Some(v)),
-                Err(e) => {
-                    warn!("invalid call_sign: {e:?}");
-                    Ok(None)
-                }
-            })
-            .transpose();
+        let call_sign = call_sign.and_then(|v| match CallSign::try_from(v) {
+            Ok(v) => Some(v),
+            Err(e) => {
+                warn!("invalid call_sign: {e:?}");
+                None
+            }
+        });
 
         Ok(NewAisStatic {
-            message_type: a.message_type.map(kyogre_core::AisMessageType::from),
-            message_type_id: a.message_type_id,
-            mmsi: a.mmsi,
-            msgtime: a.msgtime,
-            imo_number: a.imo_number,
-            call_sign: call_sign.unwrap().flatten(),
-            destination: a.destination,
-            eta: eta?.flatten(),
-            name: a.name,
-            draught: a.draught,
-            ship_length: a.ship_length,
-            ship_width: a.ship_width,
-            ship_type: a.ship_type,
-            dimension_a: a.dimension_a,
-            dimension_b: a.dimension_b,
-            dimension_c: a.dimension_c,
-            dimension_d: a.dimension_d,
-            position_fixing_device_type: a.position_fixing_device_type,
-            report_class: a.report_class,
+            message_type: message_type.map(kyogre_core::AisMessageType::from),
+            message_type_id,
+            mmsi,
+            msgtime,
+            imo_number,
+            call_sign,
+            destination,
+            eta,
+            name,
+            draught,
+            ship_length,
+            ship_width,
+            ship_type,
+            dimension_a,
+            dimension_b,
+            dimension_c,
+            dimension_d,
+            position_fixing_device_type,
+            report_class,
         })
     }
 }
 
-impl From<AisPosition> for NewAisPositionWrapper {
+impl From<AisPosition> for Option<NewAisPosition> {
     fn from(a: AisPosition) -> Self {
         match (a.latitude, a.longitude) {
-            (Some(latitude), Some(longitude)) => NewAisPositionWrapper(Some(NewAisPosition {
-                latitude,
-                longitude,
-                message_type_id: a.message_type_id,
-                message_type: a.message_type.map(kyogre_core::AisMessageType::from),
-                mmsi: a.mmsi,
-                msgtime: a.msgtime,
-                altitude: a.altitude,
-                course_over_ground: a.course_over_ground,
-                navigational_status: a.navigational_status,
-                ais_class: a.ais_class,
-                rate_of_turn: a.rate_of_turn,
-                speed_over_ground: a.speed_over_ground,
-                true_heading: a.true_heading,
-                distance_to_shore: distance_to_shore(latitude, longitude),
-            })),
-            _ => NewAisPositionWrapper(None),
+            (Some(latitude), Some(longitude)) => {
+                let AisPosition {
+                    message_type_id,
+                    message_type,
+                    mmsi,
+                    msgtime,
+                    altitude,
+                    course_over_ground,
+                    latitude: _,
+                    longitude: _,
+                    navigational_status,
+                    ais_class,
+                    rate_of_turn,
+                    speed_over_ground,
+                    true_heading,
+                } = a;
+
+                Some(NewAisPosition {
+                    latitude,
+                    longitude,
+                    message_type_id,
+                    message_type: message_type.map(kyogre_core::AisMessageType::from),
+                    mmsi,
+                    msgtime,
+                    altitude,
+                    course_over_ground,
+                    navigational_status,
+                    ais_class,
+                    rate_of_turn,
+                    speed_over_ground,
+                    true_heading,
+                    distance_to_shore: distance_to_shore(latitude, longitude),
+                })
+            }
+            _ => None,
         }
     }
 }
 
 impl PartialEq<kyogre_core::AisPosition> for AisPosition {
     fn eq(&self, other: &kyogre_core::AisPosition) -> bool {
-        self.latitude.unwrap() as i32 == other.latitude as i32
-            && self.longitude.unwrap() as i32 == other.longitude as i32
-            && self.mmsi == other.mmsi
-            && self.msgtime.timestamp() == other.msgtime.timestamp()
-            && self.course_over_ground.map(|v| v as i32)
-                == other.course_over_ground.map(|v| v as i32)
-            && self.navigational_status == other.navigational_status.unwrap()
-            && self.rate_of_turn.map(|v| v as i32) == other.rate_of_turn.map(|v| v as i32)
-            && self.speed_over_ground.map(|v| v as i32) == other.speed_over_ground.map(|v| v as i32)
-            && self.true_heading == other.true_heading
+        let Self {
+            message_type_id: _,
+            message_type: _,
+            mmsi,
+            msgtime,
+            altitude: _,
+            course_over_ground,
+            latitude,
+            longitude,
+            navigational_status,
+            ais_class: _,
+            rate_of_turn,
+            speed_over_ground,
+            true_heading,
+        } = self;
+
+        latitude.unwrap() as i32 == other.latitude as i32
+            && longitude.unwrap() as i32 == other.longitude as i32
+            && *mmsi == other.mmsi
+            && msgtime.timestamp() == other.msgtime.timestamp()
+            && course_over_ground.map(|v| v as i32) == other.course_over_ground.map(|v| v as i32)
+            && *navigational_status == other.navigational_status.unwrap()
+            && rate_of_turn.map(|v| v as i32) == other.rate_of_turn.map(|v| v as i32)
+            && speed_over_ground.map(|v| v as i32) == other.speed_over_ground.map(|v| v as i32)
+            && *true_heading == other.true_heading
     }
 }
 
@@ -204,14 +254,38 @@ pub fn create_eta_string_value(timestamp: &DateTime<Utc>) -> String {
 
 impl PartialEq<kyogre_core::AisVesselHistoric> for AisStatic {
     fn eq(&self, other: &kyogre_core::AisVesselHistoric) -> bool {
-        other.mmsi == self.mmsi
-            && other.imo_number == self.imo_number
-            && other.call_sign.as_ref().map(|c| c.as_ref()) == self.call_sign.as_deref()
-            && other.name == self.name
-            && other.ship_width == self.ship_width
-            && other.ship_length == self.ship_length
+        let Self {
+            message_type: _,
+            message_type_id,
+            mmsi,
+            msgtime,
+            imo_number,
+            call_sign,
+            destination,
+            eta,
+            name,
+            draught,
+            ship_length,
+            ship_width,
+            ship_type,
+            dimension_a,
+            dimension_b,
+            dimension_c,
+            dimension_d,
+            position_fixing_device_type,
+            report_class,
+        } = self;
+
+        other.mmsi == *mmsi
+            && other.message_timestamp.timestamp() == msgtime.timestamp()
+            && other.imo_number == *imo_number
+            && other.call_sign.as_ref().map(|c| c.as_ref()) == call_sign.as_deref()
+            && other.name == *name
+            && other.draught == *draught
+            && other.ship_width == *ship_width
+            && other.ship_length == *ship_length
             && other.eta.map(|t| t.with_year(1980).unwrap().timestamp())
-                == self.eta.as_ref().map(|t| {
+                == eta.as_ref().map(|t| {
                     let t = parse_eta_value(t).unwrap().unwrap();
                     t.with_year(1980)
                         .unwrap()
@@ -221,28 +295,50 @@ impl PartialEq<kyogre_core::AisVesselHistoric> for AisStatic {
                         .unwrap()
                         .timestamp()
                 })
-            && other.destination == self.destination
-            && other.message_type_id == (self.message_type_id as i32)
-            && other.ship_type == self.ship_type
-            && other.dimension_a == self.dimension_a
-            && other.dimension_b == self.dimension_b
-            && other.dimension_c == self.dimension_c
-            && other.dimension_d == self.dimension_d
-            && other.position_fixing_device_type == self.position_fixing_device_type
-            && other.report_class == self.report_class
+            && other.destination == *destination
+            && other.message_type_id == *message_type_id as i32
+            && other.ship_type == *ship_type
+            && other.dimension_a == *dimension_a
+            && other.dimension_b == *dimension_b
+            && other.dimension_c == *dimension_c
+            && other.dimension_d == *dimension_d
+            && other.position_fixing_device_type == *position_fixing_device_type
+            && other.report_class == *report_class
     }
 }
 
 impl PartialEq<kyogre_core::AisVessel> for AisStatic {
     fn eq(&self, other: &kyogre_core::AisVessel) -> bool {
-        other.mmsi == self.mmsi
-            && other.imo_number == self.imo_number
-            && other.call_sign.as_ref().map(|c| c.as_ref()) == self.call_sign.as_deref()
-            && other.name == self.name
-            && other.ship_width == self.ship_width
-            && other.ship_length == self.ship_length
+        let Self {
+            message_type: _,
+            message_type_id: _,
+            mmsi,
+            msgtime: _,
+            imo_number,
+            call_sign,
+            destination,
+            eta,
+            name,
+            draught: _,
+            ship_length,
+            ship_width,
+            ship_type: _,
+            dimension_a: _,
+            dimension_b: _,
+            dimension_c: _,
+            dimension_d: _,
+            position_fixing_device_type: _,
+            report_class: _,
+        } = self;
+
+        other.mmsi == *mmsi
+            && other.imo_number == *imo_number
+            && other.call_sign.as_ref().map(|c| c.as_ref()) == call_sign.as_deref()
+            && other.name == *name
+            && other.ship_width == *ship_width
+            && other.ship_length == *ship_length
             && other.eta.map(|t| t.with_year(1980).unwrap().timestamp())
-                == self.eta.as_ref().map(|t| {
+                == eta.as_ref().map(|t| {
                     let t = parse_eta_value(t).unwrap().unwrap();
                     t.with_year(1980)
                         .unwrap()
@@ -252,7 +348,7 @@ impl PartialEq<kyogre_core::AisVessel> for AisStatic {
                         .unwrap()
                         .timestamp()
                 })
-            && other.destination == self.destination
+            && other.destination == *destination
     }
 }
 
@@ -263,50 +359,39 @@ impl PartialEq<AisStatic> for kyogre_core::AisVessel {
 }
 
 fn parse_eta_value(val: &str) -> Result<Option<DateTime<Utc>>, AisMessageError> {
-    if val.is_empty() {
-        Ok(None)
-    } else if val.len() != 8 {
-        InvalidEtaSnafu {
-            eta: val.to_string(),
-        }
-        .fail()
-    } else {
-        let month = &val[0..=1].parse::<u32>().with_context(|_| ParseEtaSnafu {
-            eta: val.to_string(),
-        })?;
-        let day = &val[2..=3].parse::<u32>().with_context(|_| ParseEtaSnafu {
-            eta: val.to_string(),
-        })?;
+    match val.len() {
+        0 => Ok(None),
+        8 => {
+            let month = &val[0..=1]
+                .parse::<u32>()
+                .with_context(|_| ParseEtaSnafu { eta: val })?;
+            let day = &val[2..=3]
+                .parse::<u32>()
+                .with_context(|_| ParseEtaSnafu { eta: val })?;
+            let hour = &val[4..=5]
+                .parse::<u32>()
+                .with_context(|_| ParseEtaSnafu { eta: val })?;
+            let minute = &val[6..=7]
+                .parse::<u32>()
+                .with_context(|_| ParseEtaSnafu { eta: val })?;
 
-        let hour = &val[4..=5].parse::<u32>().with_context(|_| ParseEtaSnafu {
-            eta: val.to_string(),
-        })?;
-        let minute = &val[6..=7].parse::<u32>().with_context(|_| ParseEtaSnafu {
-            eta: val.to_string(),
-        })?;
-        let year = chrono::Utc::now().year();
-
-        // See https://gpsd.gitlab.io/gpsd/AIVDM.html#_type_5_static_and_voyage_related_data
-        // for default values
-        if *month == 0 || *day == 0 || *hour == 24 || *minute == 60 {
-            return Ok(None);
-        }
-
-        let time = NaiveTime::from_hms_opt(*hour, *minute, 0).ok_or_else(|| {
-            InvalidEtaSnafu {
-                eta: val.to_string(),
+            // See https://gpsd.gitlab.io/gpsd/AIVDM.html#_type_5_static_and_voyage_related_data
+            // for default values
+            if *month == 0 || *day == 0 || *hour == 24 || *minute == 60 {
+                return Ok(None);
             }
-            .build()
-        })?;
-        let date = NaiveDate::from_ymd_opt(year, *month, *day).ok_or_else(|| {
-            InvalidEtaSnafu {
-                eta: val.to_string(),
-            }
-            .build()
-        })?;
-        let dt = NaiveDateTime::new(date, time);
 
-        Ok(Some(Utc.from_utc_datetime(&dt)))
+            let year = chrono::Utc::now().year();
+
+            let time = NaiveTime::from_hms_opt(*hour, *minute, 0)
+                .ok_or_else(|| InvalidEtaSnafu { eta: val }.build())?;
+            let date = NaiveDate::from_ymd_opt(year, *month, *day)
+                .ok_or_else(|| InvalidEtaSnafu { eta: val }.build())?;
+            let dt = NaiveDateTime::new(date, time);
+
+            Ok(Some(Utc.from_utc_datetime(&dt)))
+        }
+        _ => InvalidEtaSnafu { eta: val }.fail(),
     }
 }
 

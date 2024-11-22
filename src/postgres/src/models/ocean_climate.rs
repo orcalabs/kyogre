@@ -23,19 +23,34 @@ pub struct NewOceanClimate {
 
 impl From<kyogre_core::NewOceanClimate> for NewOceanClimate {
     fn from(v: kyogre_core::NewOceanClimate) -> Self {
+        let kyogre_core::NewOceanClimate {
+            timestamp,
+            depth,
+            latitude,
+            longitude,
+            water_speed,
+            water_direction,
+            upward_sea_velocity,
+            wind_speed,
+            wind_direction,
+            salinity,
+            temperature,
+            sea_floor_depth,
+        } = v;
+
         Self {
-            timestamp: v.timestamp,
-            depth: v.depth,
-            latitude: v.latitude,
-            longitude: v.longitude,
-            water_speed: v.water_speed,
-            water_direction: v.water_direction,
-            upward_sea_velocity: v.upward_sea_velocity,
-            wind_speed: v.wind_speed,
-            wind_direction: v.wind_direction,
-            salinity: v.salinity,
-            temperature: v.temperature,
-            sea_floor_depth: v.sea_floor_depth,
+            timestamp,
+            depth,
+            latitude,
+            longitude,
+            water_speed,
+            water_direction,
+            upward_sea_velocity,
+            wind_speed,
+            wind_direction,
+            salinity,
+            temperature,
+            sea_floor_depth,
         }
     }
 }

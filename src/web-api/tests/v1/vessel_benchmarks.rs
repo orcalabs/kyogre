@@ -125,49 +125,49 @@ async fn test_vessel_benchmarks_returns_correct_self_benchmarks() {
 
         // Fishing time
         assert_eq!(
-            &fishing_time.recent_trips[0],
+            fishing_time.recent_trips[0],
             (&state.trips[0], fishing_time_per_trip),
         );
         assert_eq!(
-            &fishing_time.recent_trips[1],
+            fishing_time.recent_trips[1],
             (&state.trips[1], fishing_time_per_trip),
         );
         assert_eq!(fishing_time.average_followers, 0.0);
         assert_eq!(fishing_time.average, fishing_time_per_trip);
         // Fishing distance
-        assert_eq!(&fishing_distance.recent_trips[0], (&state.trips[0], 116.0));
-        assert_eq!(&fishing_distance.recent_trips[1], (&state.trips[1], 116.0));
+        assert_eq!(fishing_distance.recent_trips[0], (&state.trips[0], 116.0));
+        assert_eq!(fishing_distance.recent_trips[1], (&state.trips[1], 116.0));
         assert_eq!(fishing_distance.average_followers, 0.0);
         assert_eq!(fishing_distance.average as i64, 116);
         // Trip time
         assert_eq!(
-            &trip_time.recent_trips[0],
+            trip_time.recent_trips[0],
             (&state.trips[0], trip_time_minutes),
         );
         assert_eq!(
-            &trip_time.recent_trips[1],
+            trip_time.recent_trips[1],
             (&state.trips[1], trip_time_minutes),
         );
         assert_eq!(trip_time.average_followers, 0.0);
         assert_eq!(trip_time.average, trip_time_minutes);
         // Landings
         assert_eq!(
-            &landings.recent_trips[0],
+            landings.recent_trips[0],
             (&state.trips[0], landing_weight_per_trip),
         );
         assert_eq!(
-            &landings.recent_trips[1],
+            landings.recent_trips[1],
             (&state.trips[1], landing_weight_per_trip),
         );
         assert_eq!(landings.average_followers, 0.0);
         assert_eq!(landings.average, landing_weight_per_trip);
         // Ers dca
         assert_eq!(
-            &ers_dca.recent_trips[0],
+            ers_dca.recent_trips[0],
             (&state.trips[0], haul_weight_per_trip),
         );
         assert_eq!(
-            &ers_dca.recent_trips[1],
+            ers_dca.recent_trips[1],
             (&state.trips[1], haul_weight_per_trip),
         );
         assert_eq!(ers_dca.average_followers, 0.0);

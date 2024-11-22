@@ -160,17 +160,30 @@ pub struct AisPositionDetails {
 
 impl From<kyogre_core::AisPosition> for AisPosition {
     fn from(value: kyogre_core::AisPosition) -> Self {
+        let kyogre_core::AisPosition {
+            latitude,
+            longitude,
+            mmsi: _,
+            msgtime,
+            course_over_ground,
+            navigational_status,
+            rate_of_turn,
+            speed_over_ground,
+            true_heading,
+            distance_to_shore,
+        } = value;
+
         AisPosition {
-            lat: value.latitude,
-            lon: value.longitude,
-            timestamp: value.msgtime,
-            cog: value.course_over_ground,
+            lat: latitude,
+            lon: longitude,
+            timestamp: msgtime,
+            cog: course_over_ground,
             det: Some(AisPositionDetails {
-                navigational_status: value.navigational_status,
-                rate_of_turn: value.rate_of_turn,
-                speed_over_ground: value.speed_over_ground,
-                true_heading: value.true_heading,
-                distance_to_shore: value.distance_to_shore,
+                navigational_status,
+                rate_of_turn,
+                speed_over_ground,
+                true_heading,
+                distance_to_shore,
                 missing_data: false,
             }),
         }
@@ -179,16 +192,19 @@ impl From<kyogre_core::AisPosition> for AisPosition {
 
 impl PartialEq<kyogre_core::AisPosition> for AisPosition {
     fn eq(&self, other: &kyogre_core::AisPosition) -> bool {
-        let mut equal_details = true;
-        if let Some(ref details) = self.det {
-            equal_details = details == other;
-        }
+        let Self {
+            lat,
+            lon,
+            timestamp,
+            cog,
+            det,
+        } = self;
 
-        equal_details
-            && self.lat as i32 == other.latitude as i32
-            && self.lon as i32 == other.longitude as i32
-            && self.timestamp.timestamp() == other.msgtime.timestamp()
-            && self.cog.map(|c| c as i32) == other.course_over_ground.map(|c| c as i32)
+        det.as_ref().is_none_or(|v| v == other)
+            && *lat as i32 == other.latitude as i32
+            && *lon as i32 == other.longitude as i32
+            && timestamp.timestamp() == other.msgtime.timestamp()
+            && cog.map(|c| c as i32) == other.course_over_ground.map(|c| c as i32)
     }
 }
 
@@ -200,11 +216,20 @@ impl PartialEq<AisPosition> for kyogre_core::AisPosition {
 
 impl PartialEq<kyogre_core::AisPosition> for AisPositionDetails {
     fn eq(&self, other: &kyogre_core::AisPosition) -> bool {
-        self.navigational_status == other.navigational_status
-            && self.rate_of_turn.map(|c| c as i32) == other.rate_of_turn.map(|c| c as i32)
-            && self.speed_over_ground.map(|c| c as i32) == other.speed_over_ground.map(|c| c as i32)
-            && self.true_heading == other.true_heading
-            && self.distance_to_shore as i32 == other.distance_to_shore as i32
+        let Self {
+            navigational_status,
+            rate_of_turn,
+            speed_over_ground,
+            true_heading,
+            distance_to_shore,
+            missing_data: _,
+        } = self;
+
+        *navigational_status == other.navigational_status
+            && rate_of_turn.map(|c| c as i32) == other.rate_of_turn.map(|c| c as i32)
+            && speed_over_ground.map(|c| c as i32) == other.speed_over_ground.map(|c| c as i32)
+            && *true_heading == other.true_heading
+            && *distance_to_shore as i32 == other.distance_to_shore as i32
     }
 }
 

@@ -28,7 +28,7 @@ FROM
             hauls h
         WHERE
             h.fiskeridir_vessel_id = $1
-           AND h.period <@ $2::tstzrange
+            AND h.period <@ $2::tstzrange
     ) q ON q.ranges <@ h.period
 WHERE
     h.fiskeridir_vessel_id = $1
@@ -971,15 +971,27 @@ pub struct HaulsMatrixArgs {
 
 impl From<HaulsMatrixQuery> for HaulsMatrixArgs {
     fn from(v: HaulsMatrixQuery) -> Self {
+        let HaulsMatrixQuery {
+            months,
+            catch_locations,
+            gear_group_ids,
+            species_group_ids,
+            vessel_length_groups,
+            vessel_ids,
+            active_filter: _,
+            bycatch_percentage,
+            majority_species_group,
+        } = v;
+
         HaulsMatrixArgs {
-            months: v.months.into_iter().map(|m| m as i32).collect(),
-            catch_locations: v.catch_locations,
-            gear_group_ids: v.gear_group_ids,
-            species_group_ids: v.species_group_ids,
-            vessel_length_groups: v.vessel_length_groups,
-            fiskeridir_vessel_ids: v.vessel_ids,
-            bycatch_percentage: v.bycatch_percentage,
-            majority_species_group: v.majority_species_group,
+            months: months.into_iter().map(|m| m as i32).collect(),
+            catch_locations,
+            gear_group_ids,
+            species_group_ids,
+            vessel_length_groups,
+            fiskeridir_vessel_ids: vessel_ids,
+            bycatch_percentage,
+            majority_species_group,
         }
     }
 }

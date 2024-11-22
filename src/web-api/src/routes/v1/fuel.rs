@@ -169,11 +169,18 @@ pub struct DeleteFuelMeasurement {
 
 impl From<kyogre_core::FuelMeasurement> for FuelMeasurement {
     fn from(v: kyogre_core::FuelMeasurement) -> Self {
+        let kyogre_core::FuelMeasurement {
+            barentswatch_user_id,
+            call_sign,
+            timestamp,
+            fuel,
+        } = v;
+
         Self {
-            barentswatch_user_id: v.barentswatch_user_id,
-            call_sign: v.call_sign,
-            timestamp: v.timestamp,
-            fuel: v.fuel,
+            barentswatch_user_id,
+            call_sign,
+            timestamp,
+            fuel,
         }
     }
 }
@@ -184,11 +191,13 @@ impl FuelMeasurementBody {
         barentswatch_user_id: BarentswatchUserId,
         call_sign: &CallSign,
     ) -> kyogre_core::FuelMeasurement {
+        let Self { timestamp, fuel } = self;
+
         kyogre_core::FuelMeasurement {
             barentswatch_user_id,
             call_sign: call_sign.clone(),
-            timestamp: self.timestamp,
-            fuel: self.fuel,
+            timestamp,
+            fuel,
         }
     }
 }
@@ -199,11 +208,16 @@ impl FuelMeasurementsParams {
         barentswatch_user_id: BarentswatchUserId,
         call_sign: CallSign,
     ) -> FuelMeasurementsQuery {
+        let Self {
+            start_date,
+            end_date,
+        } = self;
+
         FuelMeasurementsQuery {
             barentswatch_user_id,
             call_sign,
-            start_date: self.start_date,
-            end_date: self.end_date,
+            start_date,
+            end_date,
         }
     }
 }
@@ -214,10 +228,12 @@ impl DeleteFuelMeasurement {
         barentswatch_user_id: BarentswatchUserId,
         call_sign: &CallSign,
     ) -> kyogre_core::DeleteFuelMeasurement {
+        let Self { timestamp } = self;
+
         kyogre_core::DeleteFuelMeasurement {
             barentswatch_user_id,
             call_sign: call_sign.clone(),
-            timestamp: self.timestamp,
+            timestamp,
         }
     }
 }

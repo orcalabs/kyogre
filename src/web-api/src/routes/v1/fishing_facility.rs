@@ -117,82 +117,147 @@ pub struct FishingFacility {
 
 impl From<kyogre_core::FishingFacility> for FishingFacility {
     fn from(v: kyogre_core::FishingFacility) -> Self {
+        let kyogre_core::FishingFacility {
+            tool_id,
+            barentswatch_vessel_id,
+            fiskeridir_vessel_id,
+            vessel_name,
+            call_sign,
+            mmsi,
+            imo,
+            reg_num,
+            sbr_reg_num,
+            contact_phone,
+            contact_email,
+            tool_type,
+            tool_type_name,
+            tool_color,
+            tool_count,
+            setup_timestamp,
+            setup_processed_timestamp,
+            removed_timestamp,
+            removed_processed_timestamp,
+            last_changed,
+            source,
+            comment,
+            geometry_wkt,
+            api_source: _,
+        } = v;
+
         Self {
-            tool_id: v.tool_id,
-            barentswatch_vessel_id: v.barentswatch_vessel_id,
-            fiskeridir_vessel_id: v.fiskeridir_vessel_id,
-            vessel_name: v.vessel_name,
-            call_sign: v.call_sign,
-            mmsi: v.mmsi,
-            imo: v.imo,
-            reg_num: v.reg_num,
-            sbr_reg_num: v.sbr_reg_num,
-            contact_phone: v.contact_phone,
-            contact_email: v.contact_email,
-            tool_type: v.tool_type,
-            tool_type_name: v.tool_type_name,
-            tool_color: v.tool_color,
-            tool_count: v.tool_count,
-            setup_timestamp: v.setup_timestamp,
-            setup_processed_timestamp: v.setup_processed_timestamp,
-            removed_timestamp: v.removed_timestamp,
-            removed_processed_timestamp: v.removed_processed_timestamp,
-            last_changed: v.last_changed,
-            source: v.source,
-            comment: v.comment,
-            geometry_wkt: v.geometry_wkt.map(|v| v.to_string()),
+            tool_id,
+            barentswatch_vessel_id,
+            fiskeridir_vessel_id,
+            vessel_name,
+            call_sign,
+            mmsi,
+            imo,
+            reg_num,
+            sbr_reg_num,
+            contact_phone,
+            contact_email,
+            tool_type,
+            tool_type_name,
+            tool_color,
+            tool_count,
+            setup_timestamp,
+            setup_processed_timestamp,
+            removed_timestamp,
+            removed_processed_timestamp,
+            last_changed,
+            source,
+            comment,
+            geometry_wkt: geometry_wkt.map(|v| v.to_string()),
         }
     }
 }
 
 impl PartialEq<kyogre_core::FishingFacility> for FishingFacility {
     fn eq(&self, other: &kyogre_core::FishingFacility) -> bool {
-        self.tool_id == other.tool_id
-            && self.barentswatch_vessel_id == other.barentswatch_vessel_id
-            && self.vessel_name == other.vessel_name
-            && self.call_sign == other.call_sign
-            && self.mmsi == other.mmsi
-            && self.imo == other.imo
-            && self.reg_num == other.reg_num
-            && self.sbr_reg_num == other.sbr_reg_num
-            && self.contact_phone == other.contact_phone
-            && self.contact_email == other.contact_email
-            && self.tool_type == other.tool_type
-            && self.tool_type_name == other.tool_type_name
-            && self.tool_color == other.tool_color
-            && self.tool_count == other.tool_count
-            && self.setup_timestamp.timestamp_millis() == other.setup_timestamp.timestamp_millis()
-            && self.setup_processed_timestamp.map(|t| t.timestamp_millis())
+        let Self {
+            tool_id,
+            barentswatch_vessel_id,
+            fiskeridir_vessel_id,
+            vessel_name,
+            call_sign,
+            mmsi,
+            imo,
+            reg_num,
+            sbr_reg_num,
+            contact_phone,
+            contact_email,
+            tool_type,
+            tool_type_name,
+            tool_color,
+            tool_count,
+            setup_timestamp,
+            setup_processed_timestamp,
+            removed_timestamp,
+            removed_processed_timestamp,
+            last_changed,
+            source,
+            comment,
+            geometry_wkt,
+        } = self;
+
+        *tool_id == other.tool_id
+            && *fiskeridir_vessel_id == other.fiskeridir_vessel_id
+            && *barentswatch_vessel_id == other.barentswatch_vessel_id
+            && *vessel_name == other.vessel_name
+            && *call_sign == other.call_sign
+            && *mmsi == other.mmsi
+            && *imo == other.imo
+            && *reg_num == other.reg_num
+            && *sbr_reg_num == other.sbr_reg_num
+            && *contact_phone == other.contact_phone
+            && *contact_email == other.contact_email
+            && *tool_type == other.tool_type
+            && *tool_type_name == other.tool_type_name
+            && *tool_color == other.tool_color
+            && *tool_count == other.tool_count
+            && setup_timestamp.timestamp_millis() == other.setup_timestamp.timestamp_millis()
+            && setup_processed_timestamp.map(|t| t.timestamp_millis())
                 == other
                     .setup_processed_timestamp
                     .map(|t| t.timestamp_millis())
-            && self.removed_timestamp.map(|t| t.timestamp_millis())
+            && removed_timestamp.map(|t| t.timestamp_millis())
                 == other.removed_timestamp.map(|t| t.timestamp_millis())
-            && self
-                .removed_processed_timestamp
-                .map(|t| t.timestamp_millis())
+            && removed_processed_timestamp.map(|t| t.timestamp_millis())
                 == other
                     .removed_processed_timestamp
                     .map(|t| t.timestamp_millis())
-            && self.last_changed.timestamp_millis() == other.last_changed.timestamp_millis()
-            && self.source == other.source
-            && self.comment == other.comment
-            && self.geometry_wkt == other.geometry_wkt.as_ref().map(|v| v.to_string())
+            && last_changed.timestamp_millis() == other.last_changed.timestamp_millis()
+            && *source == other.source
+            && *comment == other.comment
+            && *geometry_wkt == other.geometry_wkt.as_ref().map(|v| v.to_string())
     }
 }
 
 impl From<FishingFacilitiesParams> for FishingFacilitiesQuery {
     fn from(v: FishingFacilitiesParams) -> Self {
+        let FishingFacilitiesParams {
+            mmsis,
+            fiskeridir_vessel_ids,
+            tool_types,
+            active,
+            setup_ranges,
+            removed_ranges,
+            limit,
+            offset,
+            ordering,
+            sorting,
+        } = v;
+
         Self {
-            mmsis: v.mmsis,
-            fiskeridir_vessel_ids: v.fiskeridir_vessel_ids,
-            tool_types: v.tool_types,
-            active: v.active,
-            setup_ranges: v.setup_ranges,
-            removed_ranges: v.removed_ranges,
-            pagination: Pagination::<FishingFacilities>::new(v.limit, v.offset),
-            ordering: v.ordering,
-            sorting: v.sorting,
+            mmsis,
+            fiskeridir_vessel_ids,
+            tool_types,
+            active,
+            setup_ranges,
+            removed_ranges,
+            pagination: Pagination::<FishingFacilities>::new(limit, offset),
+            ordering,
+            sorting,
         }
     }
 }

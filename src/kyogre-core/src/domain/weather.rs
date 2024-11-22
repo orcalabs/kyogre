@@ -152,7 +152,8 @@ pub struct NewWeather {
     pub cloud_area_fraction: CloudAreaFraction,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct Weather {
     pub timestamp: DateTime<Utc>,
     pub latitude: f64,
@@ -166,6 +167,7 @@ pub struct Weather {
     pub precipitation_amount: Option<f64>,
     pub land_area_fraction: f64,
     pub cloud_area_fraction: Option<f64>,
+    #[cfg_attr(feature = "utoipa", schema(value_type = i32))]
     pub weather_location_id: WeatherLocationId,
 }
 
