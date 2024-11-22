@@ -71,12 +71,3 @@ WHERE
 DELETE FROM fiskeridir_vessels;
 
 DELETE FROM ais_vessels;
-
-ALTER SYSTEM
-SET
-    autovacuum = off;
-
-SELECT
-    pg_reload_conf();
-
-ALTER DATABASE postgres is_template = TRUE;

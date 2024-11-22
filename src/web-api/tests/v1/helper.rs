@@ -7,6 +7,8 @@ use meilisearch::MeilisearchAdapter;
 use orca_core::{Environment, PsqlLogStatements, PsqlSettings, TestHelperBuilder};
 use postgres::{PostgresAdapter, TestDb};
 use std::ops::AddAssign;
+use std::path::PathBuf;
+use std::str::FromStr;
 use std::{ops::SubAssign, panic};
 use strum::IntoEnumIterator;
 use tokio::sync::OnceCell;
@@ -47,6 +49,17 @@ impl TestHelper {
     pub fn adapter(&self) -> &PostgresAdapter {
         &self.db.db
     }
+
+    pub async fn run_new_migrations(&self) {
+        let dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
+        let mut path = PathBuf::from_str(&dir).unwrap();
+        path.pop();
+        path.push("postgres");
+        path.push("migrations");
+
+        self.db.db.do_migrations_path(path).await;
+    }
+
     async fn spawn_app(
         db: PostgresAdapter,
         db_settings: PsqlSettings,
@@ -79,13 +92,25 @@ impl TestHelper {
         }
     }
 }
+pub async fn test_with_master_db<T, Fut>(test: T)
+where
+    T: FnOnce(TestHelper, TestStateBuilder) -> Fut
+        + panic::UnwindSafe
+        + Send
+        + Sync
+        + Clone
+        + 'static,
+    Fut: Future<Output = ()> + Send + 'static,
+{
+    test_impl(test, CacheMode::NoCache, PgTag::Master).await;
+}
 
 pub async fn test<T, Fut>(test: T)
 where
     T: FnOnce(TestHelper, TestStateBuilder) -> Fut + panic::UnwindSafe + Send + Sync + 'static,
     Fut: Future<Output = ()> + Send + 'static,
 {
-    test_impl(test, CacheMode::NoCache).await;
+    test_impl(test, CacheMode::NoCache, PgTag::Local).await;
 }
 
 pub async fn test_with_matrix_cache<T, Fut>(test: T)
@@ -99,9 +124,9 @@ where
     Fut: Future<Output = ()> + Send + 'static,
 {
     #[cfg(feature = "all-tests")]
-    test_impl(test.clone(), CacheMode::MatrixCache).await;
+    test_impl(test.clone(), CacheMode::MatrixCache, PgTag::Local).await;
 
-    test_impl(test, CacheMode::NoCache).await;
+    test_impl(test, CacheMode::NoCache, PgTag::Local).await;
 }
 
 pub async fn test_with_cache<T, Fut>(test: T)
@@ -115,9 +140,9 @@ where
     Fut: Future<Output = ()> + Send + 'static,
 {
     #[cfg(feature = "all-tests")]
-    test_impl(test.clone(), CacheMode::Meilisearch).await;
+    test_impl(test.clone(), CacheMode::Meilisearch, PgTag::Local).await;
 
-    test_impl(test, CacheMode::NoCache).await;
+    test_impl(test, CacheMode::NoCache, PgTag::Local).await;
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -127,14 +152,44 @@ enum CacheMode {
     Meilisearch,
 }
 
-async fn test_impl<T, Fut>(test: T, cache_mode: CacheMode)
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum PgTag {
+    Master,
+    Local,
+}
+
+impl PgTag {
+    fn container_name(&self) -> &'static str {
+        match self {
+            PgTag::Master => "postgres-master",
+            PgTag::Local => "postgres",
+        }
+    }
+    fn tag(&self) -> &'static str {
+        match self {
+            PgTag::Master => "master",
+            PgTag::Local => "latest",
+        }
+    }
+    fn port(&self) -> u32 {
+        match self {
+            PgTag::Master => POSTGRES_TEST_MASTER_PORT,
+            PgTag::Local => POSTGRES_TEST_PORT,
+        }
+    }
+}
+
+async fn test_impl<T, Fut>(test: T, cache_mode: CacheMode, pg_tag: PgTag)
 where
     T: FnOnce(TestHelper, TestStateBuilder) -> Fut + panic::UnwindSafe + Send + Sync + 'static,
     Fut: Future<Output = ()> + Send + 'static,
 {
+    let container_name = pg_tag.container_name();
     let mut test_helper = TestHelperBuilder::default().add_postgres(
+        Some(container_name),
         "ghcr.io/orcalabs/kyogre/test-postgres",
-        Some(POSTGRES_TEST_PORT),
+        Some(pg_tag.tag()),
+        Some(pg_tag.port()),
     );
 
     if cache_mode == CacheMode::Meilisearch {
@@ -144,7 +199,7 @@ where
     test_helper
         .build()
         .run(move |ops, db_name| async move {
-            let db_handle = ops.handle("postgres");
+            let db_handle = ops.handle(container_name);
 
             let db_settings = PsqlSettings {
                 ip: db_handle.ip().to_string(),
