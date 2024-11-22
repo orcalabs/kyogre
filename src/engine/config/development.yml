@@ -1,5 +1,5 @@
 log_level: Info
-num_workers: 8
+num_workers: 4
 tracing_mode: Regular
 fishing_predictors:
   training_rounds: 200
