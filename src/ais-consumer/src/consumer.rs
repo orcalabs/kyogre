@@ -1,8 +1,6 @@
 use crate::{
     error::{error::StreamClosedSnafu, Result},
-    models::{
-        AisMessage, AisMessageType, AisPosition, AisStatic, MessageType, NewAisPositionWrapper,
-    },
+    models::{AisMessage, AisMessageType, AisPosition, AisStatic, MessageType},
 };
 use futures::StreamExt;
 use kyogre_core::{DataMessage, NewAisStatic};
@@ -70,7 +68,7 @@ where
                         Ok(d) => data_message.static_messages.push(d),
                     },
                     AisMessage::Position(m) => {
-                        if let Some(m) = NewAisPositionWrapper::from(m).0 {
+                        if let Some(m) = m.into() {
                             data_message.positions.push(m)
                         }
                     }

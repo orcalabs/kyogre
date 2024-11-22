@@ -400,11 +400,17 @@ pub struct TripAssemblerConflict {
 }
 
 impl Trip {
-    pub fn start(&self) -> DateTime<Utc> {
-        self.period.start()
+    #[inline]
+    pub fn period(&self) -> &DateRange {
+        self.precision_period.as_ref().unwrap_or(&self.period)
     }
+    #[inline]
+    pub fn start(&self) -> DateTime<Utc> {
+        self.period().start()
+    }
+    #[inline]
     pub fn end(&self) -> DateTime<Utc> {
-        self.period.end()
+        self.period().end()
     }
 }
 

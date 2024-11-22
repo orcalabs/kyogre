@@ -216,23 +216,43 @@ impl TryFrom<Landing> for kyogre_core::Landing {
     type Error = Error;
 
     fn try_from(v: Landing) -> std::result::Result<Self, Self::Error> {
+        let Landing {
+            landing_id,
+            landing_timestamp,
+            catch_area_id,
+            catch_main_area_id,
+            gear_id,
+            gear_group_id,
+            delivery_point_id,
+            fiskeridir_vessel_id,
+            vessel_call_sign,
+            vessel_name,
+            vessel_length,
+            vessel_length_group,
+            total_living_weight,
+            total_product_weight,
+            total_gross_weight,
+            catches,
+            version,
+        } = v;
+
         Ok(Self {
-            id: v.landing_id,
-            landing_timestamp: v.landing_timestamp,
-            catch_location: CatchLocationId::new_opt(v.catch_main_area_id, v.catch_area_id),
-            gear_id: v.gear_id,
-            gear_group_id: v.gear_group_id,
-            delivery_point_id: v.delivery_point_id,
-            fiskeridir_vessel_id: v.fiskeridir_vessel_id,
-            vessel_call_sign: v.vessel_call_sign,
-            vessel_name: v.vessel_name,
-            vessel_length: v.vessel_length,
-            vessel_length_group: v.vessel_length_group,
-            total_gross_weight: v.total_gross_weight,
-            total_living_weight: v.total_living_weight,
-            total_product_weight: v.total_product_weight,
-            catches: serde_json::from_str(&v.catches)?,
-            version: v.version,
+            id: landing_id,
+            landing_timestamp,
+            catch_location: CatchLocationId::new_opt(catch_main_area_id, catch_area_id),
+            gear_id,
+            gear_group_id,
+            delivery_point_id,
+            fiskeridir_vessel_id,
+            vessel_call_sign,
+            vessel_name,
+            vessel_length,
+            vessel_length_group,
+            total_gross_weight,
+            total_living_weight,
+            total_product_weight,
+            catches: serde_json::from_str(&catches)?,
+            version,
         })
     }
 }
@@ -256,23 +276,39 @@ pub struct LandingMatrixArgs {
 
 impl From<LandingMatrixQueryOutput> for kyogre_core::LandingMatrixQueryOutput {
     fn from(value: LandingMatrixQueryOutput) -> Self {
+        let LandingMatrixQueryOutput {
+            sum_living,
+            x_index,
+            y_index,
+        } = value;
+
         Self {
-            sum_living: value.sum_living as u64,
-            x_index: value.x_index,
-            y_index: value.y_index,
+            sum_living: sum_living as u64,
+            x_index,
+            y_index,
         }
     }
 }
 
 impl From<LandingMatrixQuery> for LandingMatrixArgs {
     fn from(v: LandingMatrixQuery) -> Self {
+        let LandingMatrixQuery {
+            months,
+            catch_locations,
+            gear_group_ids,
+            species_group_ids,
+            vessel_length_groups,
+            vessel_ids,
+            active_filter: _,
+        } = v;
+
         LandingMatrixArgs {
-            months: v.months.into_iter().map(|m| m as i32).collect(),
-            catch_locations: v.catch_locations,
-            gear_group_ids: v.gear_group_ids,
-            species_group_ids: v.species_group_ids,
-            vessel_length_groups: v.vessel_length_groups,
-            fiskeridir_vessel_ids: v.vessel_ids,
+            months: months.into_iter().map(|m| m as i32).collect(),
+            catch_locations,
+            gear_group_ids,
+            species_group_ids,
+            vessel_length_groups,
+            fiskeridir_vessel_ids: vessel_ids,
         }
     }
 }
