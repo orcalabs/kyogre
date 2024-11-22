@@ -202,51 +202,82 @@ impl TryFrom<Tra> for kyogre_core::Tra {
     type Error = Error;
 
     fn try_from(value: Tra) -> Result<Self, Self::Error> {
+        let Tra {
+            fiskeridir_vessel_id,
+            latitude,
+            longitude,
+            reloading_timestamp,
+            message_timestamp,
+            catches,
+            reload_to,
+            reload_from,
+            reload_to_call_sign,
+            reload_from_call_sign,
+        } = value;
+
         Ok(Self {
-            latitude: value.latitude,
-            longitude: value.longitude,
-            reloading_timestamp: value.reloading_timestamp,
-            catches: serde_json::from_str::<Vec<TripTraCatch>>(&value.catches)?
+            latitude,
+            longitude,
+            reloading_timestamp,
+            catches: serde_json::from_str::<Vec<TripTraCatch>>(&catches)?
                 .into_iter()
                 .map(kyogre_core::TraCatch::from)
                 .collect(),
-            reload_to_fiskeridir_vessel_id: value.reload_to,
-            reload_from_fiskeridir_vessel_id: value.reload_from,
-            fiskeridir_vessel_id: value.fiskeridir_vessel_id,
-            message_timestamp: value.message_timestamp,
-            reload_to_call_sign: value.reload_to_call_sign,
-            reload_from_call_sign: value.reload_from_call_sign,
+            reload_to_fiskeridir_vessel_id: reload_to,
+            reload_from_fiskeridir_vessel_id: reload_from,
+            fiskeridir_vessel_id,
+            message_timestamp,
+            reload_to_call_sign,
+            reload_from_call_sign,
         })
     }
 }
 
 impl From<TripTra> for kyogre_core::Tra {
     fn from(value: TripTra) -> Self {
+        let TripTra {
+            fiskeridir_vessel_id,
+            latitude,
+            longitude,
+            reloading_timestamp,
+            message_timestamp,
+            catches,
+            reload_to,
+            reload_from,
+            reload_to_call_sign,
+            reload_from_call_sign,
+        } = value;
+
         Self {
-            latitude: value.latitude,
-            longitude: value.longitude,
-            reloading_timestamp: value.reloading_timestamp,
-            catches: value
-                .catches
+            latitude,
+            longitude,
+            reloading_timestamp,
+            catches: catches
                 .into_iter()
                 .map(kyogre_core::TraCatch::from)
                 .collect(),
-            reload_to_fiskeridir_vessel_id: value.reload_to,
-            reload_from_fiskeridir_vessel_id: value.reload_from,
-            fiskeridir_vessel_id: value.fiskeridir_vessel_id,
-            message_timestamp: value.message_timestamp,
-            reload_to_call_sign: value.reload_to_call_sign,
-            reload_from_call_sign: value.reload_from_call_sign,
+            reload_to_fiskeridir_vessel_id: reload_to,
+            reload_from_fiskeridir_vessel_id: reload_from,
+            fiskeridir_vessel_id,
+            message_timestamp,
+            reload_to_call_sign,
+            reload_from_call_sign,
         }
     }
 }
 
 impl From<TripTraCatch> for kyogre_core::TraCatch {
     fn from(value: TripTraCatch) -> Self {
+        let TripTraCatch {
+            living_weight,
+            species_group_id,
+            catch_quantum,
+        } = value;
+
         Self {
-            living_weight: value.living_weight,
-            species_group_id: value.species_group_id,
-            catch_quantum: value.catch_quantum,
+            living_weight,
+            species_group_id,
+            catch_quantum,
         }
     }
 }

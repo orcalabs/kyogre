@@ -58,10 +58,12 @@ impl TryFrom<WeatherLocation> for kyogre_core::WeatherLocation {
     type Error = Error;
 
     fn try_from(v: WeatherLocation) -> Result<Self, Self::Error> {
-        let geometry = v
-            .polygon
-            .geometry
-            .ok_or_else(|| MissingValueSnafu.build())?;
+        let WeatherLocation {
+            weather_location_id,
+            polygon,
+        } = v;
+
+        let geometry = polygon.geometry.ok_or_else(|| MissingValueSnafu.build())?;
 
         let polygon = match geometry {
             Geometry::Polygon(p) => p,
@@ -69,7 +71,7 @@ impl TryFrom<WeatherLocation> for kyogre_core::WeatherLocation {
         };
 
         Ok(Self {
-            id: v.weather_location_id,
+            id: weather_location_id,
             polygon,
         })
     }

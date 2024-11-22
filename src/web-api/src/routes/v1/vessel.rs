@@ -139,7 +139,8 @@ pub struct AisVessel {
     #[schema(value_type = i32)]
     pub mmsi: Mmsi,
     pub imo_number: Option<i32>,
-    pub call_sign: Option<String>,
+    #[schema(value_type = Option<String>)]
+    pub call_sign: Option<CallSign>,
     pub name: Option<String>,
     pub ship_length: Option<i32>,
     pub ship_width: Option<i32>,
@@ -150,112 +151,211 @@ pub struct AisVessel {
 
 impl From<kyogre_core::Vessel> for Vessel {
     fn from(value: kyogre_core::Vessel) -> Self {
+        let kyogre_core::Vessel {
+            fiskeridir,
+            ais,
+            preferred_trip_assembler: _,
+            gear_groups,
+            species_groups,
+        } = value;
+
         Vessel {
-            fiskeridir: FiskeridirVessel::from(value.fiskeridir),
-            ais: value.ais.map(AisVessel::from),
-            gear_groups: value.gear_groups,
-            species_groups: value.species_groups,
+            fiskeridir: FiskeridirVessel::from(fiskeridir),
+            ais: ais.map(AisVessel::from),
+            gear_groups,
+            species_groups,
         }
     }
 }
 
 impl From<kyogre_core::AisVessel> for AisVessel {
     fn from(value: kyogre_core::AisVessel) -> Self {
+        let kyogre_core::AisVessel {
+            mmsi,
+            imo_number,
+            call_sign,
+            name,
+            ship_length,
+            ship_width,
+            eta,
+            destination,
+        } = value;
+
         AisVessel {
-            mmsi: value.mmsi,
-            imo_number: value.imo_number,
-            call_sign: value.call_sign.map(|v| v.into_inner()),
-            name: value.name,
-            ship_length: value.ship_length,
-            ship_width: value.ship_width,
-            eta: value.eta,
-            destination: value.destination,
+            mmsi,
+            imo_number,
+            call_sign,
+            name,
+            ship_length,
+            ship_width,
+            eta,
+            destination,
         }
     }
 }
 
 impl From<kyogre_core::FiskeridirVessel> for FiskeridirVessel {
     fn from(value: kyogre_core::FiskeridirVessel) -> Self {
+        let kyogre_core::FiskeridirVessel {
+            id,
+            vessel_type_id,
+            length_group_id,
+            nation_group_id,
+            nation_id,
+            norwegian_municipality_id,
+            norwegian_county_id,
+            gross_tonnage_1969,
+            gross_tonnage_other,
+            call_sign,
+            name,
+            registration_id,
+            length,
+            width,
+            owner,
+            owners,
+            engine_building_year,
+            engine_power,
+            building_year,
+            rebuilding_year,
+        } = value;
+
         FiskeridirVessel {
-            id: value.id,
-            vessel_type_id: value.vessel_type_id,
-            length_group_id: value.length_group_id,
-            nation_group_id: value.nation_group_id,
-            nation_id: value.nation_id,
-            norwegian_municipality_id: value.norwegian_municipality_id,
-            norwegian_county_id: value.norwegian_county_id,
-            gross_tonnage_1969: value.gross_tonnage_1969,
-            gross_tonnage_other: value.gross_tonnage_other,
-            call_sign: value.call_sign,
-            name: value.name,
-            registration_id: value.registration_id,
-            length: value.length,
-            width: value.width,
-            owner: value.owner,
-            owners: value.owners,
-            engine_building_year: value.engine_building_year,
-            engine_power: value.engine_power,
-            building_year: value.building_year,
-            rebuilding_year: value.rebuilding_year,
+            id,
+            vessel_type_id,
+            length_group_id,
+            nation_group_id,
+            nation_id,
+            norwegian_municipality_id,
+            norwegian_county_id,
+            gross_tonnage_1969,
+            gross_tonnage_other,
+            call_sign,
+            name,
+            registration_id,
+            length,
+            width,
+            owner,
+            owners,
+            engine_building_year,
+            engine_power,
+            building_year,
+            rebuilding_year,
         }
     }
 }
 
 impl PartialEq<fiskeridir_rs::Vessel> for FiskeridirVessel {
     fn eq(&self, other: &fiskeridir_rs::Vessel) -> bool {
-        Some(self.id) == other.id
-            && self.vessel_type_id == other.type_code.map(|v| v as u32)
-            && Some(self.length_group_id) == other.length_group_code
-            && self.nation_group_id.as_deref() == other.nationality_group.as_deref()
-            && self.norwegian_municipality_id == other.municipality_code
-            && self.norwegian_county_id == other.county_code
-            && self.gross_tonnage_1969 == other.gross_tonnage_1969
-            && self.gross_tonnage_other == other.gross_tonnage_other
-            && self.call_sign.as_ref().map(|v| v.as_ref())
+        let Self {
+            id,
+            vessel_type_id,
+            length_group_id,
+            nation_group_id,
+            nation_id,
+            norwegian_municipality_id,
+            norwegian_county_id,
+            gross_tonnage_1969,
+            gross_tonnage_other,
+            call_sign,
+            name,
+            registration_id,
+            length,
+            width: _,
+            owner: _,
+            owners: _,
+            engine_building_year,
+            engine_power,
+            building_year,
+            rebuilding_year,
+        } = self;
+
+        Some(*id) == other.id
+            && *vessel_type_id == other.type_code.map(|v| v as u32)
+            && Some(*length_group_id) == other.length_group_code
+            && nation_group_id.as_deref() == other.nationality_group.as_deref()
+            && *norwegian_municipality_id == other.municipality_code
+            && *norwegian_county_id == other.county_code
+            && *gross_tonnage_1969 == other.gross_tonnage_1969
+            && *gross_tonnage_other == other.gross_tonnage_other
+            && call_sign.as_ref().map(|v| v.as_ref())
                 == other.call_sign.as_ref().map(|v| v.as_ref())
-            && self.name.as_deref() == other.name.as_deref()
-            && self.registration_id.as_deref() == other.registration_id.as_deref()
-            && self.length.map(|v| v as u32) == other.length.map(|v| v as u32)
-            && self.engine_building_year == other.engine_building_year
-            && self.engine_power == other.engine_power
-            && self.building_year == other.building_year
-            && self.rebuilding_year == other.rebuilding_year
-            && self.nation_id == Some(other.nationality_code.alpha3().to_string())
+            && name.as_deref() == other.name.as_deref()
+            && registration_id.as_deref() == other.registration_id.as_deref()
+            && length.map(|v| v as u32) == other.length.map(|v| v as u32)
+            && *engine_building_year == other.engine_building_year
+            && *engine_power == other.engine_power
+            && *building_year == other.building_year
+            && *rebuilding_year == other.rebuilding_year
+            && *nation_id == Some(other.nationality_code.alpha3().to_string())
     }
 }
 
 impl PartialEq<kyogre_core::AisVessel> for AisVessel {
     fn eq(&self, other: &kyogre_core::AisVessel) -> bool {
-        self.mmsi == other.mmsi
-            && self.call_sign.as_ref().map(|v| v.as_ref())
-                == other.call_sign.as_ref().map(|v| v.as_ref())
-            && self.imo_number == other.imo_number
-            && self.name == other.name
-            && self.ship_length == other.ship_length
-            && self.ship_width == other.ship_width
-            && self.eta == other.eta
-            && self.destination == other.destination
+        let Self {
+            mmsi,
+            imo_number,
+            call_sign,
+            name,
+            ship_length,
+            ship_width,
+            eta,
+            destination,
+        } = self;
+
+        *mmsi == other.mmsi
+            && *call_sign == other.call_sign
+            && *imo_number == other.imo_number
+            && *name == other.name
+            && *ship_length == other.ship_length
+            && *ship_width == other.ship_width
+            && *eta == other.eta
+            && *destination == other.destination
     }
 }
 
 impl PartialEq<kyogre_core::FiskeridirVessel> for FiskeridirVessel {
     fn eq(&self, other: &kyogre_core::FiskeridirVessel) -> bool {
-        self.id == other.id
-            && self.vessel_type_id == other.vessel_type_id
-            && self.length_group_id == other.length_group_id
-            && self.nation_group_id == other.nation_group_id
-            && self.norwegian_municipality_id == other.norwegian_municipality_id
-            && self.norwegian_county_id == other.norwegian_county_id
-            && self.gross_tonnage_1969 == other.gross_tonnage_1969
-            && self.gross_tonnage_other == other.gross_tonnage_other
-            && self.call_sign == other.call_sign
-            && self.name == other.name
-            && self.registration_id == other.registration_id
-            && self.length == other.length
-            && self.engine_building_year == other.engine_building_year
-            && self.engine_power == other.engine_power
-            && self.building_year == other.building_year
-            && self.rebuilding_year == other.rebuilding_year
+        let Self {
+            id,
+            vessel_type_id,
+            length_group_id,
+            nation_group_id,
+            nation_id,
+            norwegian_municipality_id,
+            norwegian_county_id,
+            gross_tonnage_1969,
+            gross_tonnage_other,
+            call_sign,
+            name,
+            registration_id,
+            length,
+            width: _,
+            owner: _,
+            owners: _,
+            engine_building_year,
+            engine_power,
+            building_year,
+            rebuilding_year,
+        } = self;
+
+        *id == other.id
+            && *vessel_type_id == other.vessel_type_id
+            && *length_group_id == other.length_group_id
+            && *nation_group_id == other.nation_group_id
+            && *nation_id == other.nation_id
+            && *norwegian_municipality_id == other.norwegian_municipality_id
+            && *norwegian_county_id == other.norwegian_county_id
+            && *gross_tonnage_1969 == other.gross_tonnage_1969
+            && *gross_tonnage_other == other.gross_tonnage_other
+            && *call_sign == other.call_sign
+            && *name == other.name
+            && *registration_id == other.registration_id
+            && *length == other.length
+            && *engine_building_year == other.engine_building_year
+            && *engine_power == other.engine_power
+            && *building_year == other.building_year
+            && *rebuilding_year == other.rebuilding_year
     }
 }
 
@@ -279,8 +379,13 @@ impl PartialEq<FiskeridirVessel> for fiskeridir_rs::Vessel {
 
 impl PartialEq<UpdateVessel> for Vessel {
     fn eq(&self, other: &UpdateVessel) -> bool {
-        self.fiskeridir.engine_power == other.engine_power
-            && self.fiskeridir.engine_building_year == other.engine_building_year
+        let UpdateVessel {
+            engine_power,
+            engine_building_year,
+        } = other;
+
+        self.fiskeridir.engine_power == *engine_power
+            && self.fiskeridir.engine_building_year == *engine_building_year
     }
 }
 

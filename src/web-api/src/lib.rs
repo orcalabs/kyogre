@@ -134,7 +134,6 @@ impl Database for PostgresAdapter {}
             v1::landing::LandingCatch,
             v1::landing::LandingMatrix,
             v1::delivery_point::DeliveryPoint,
-            v1::weather::Weather,
             v1::weather::WeatherLocation,
             v1::fishing_prediction::FishingSpotPrediction,
             v1::fishing_prediction::FishingWeightPrediction,
@@ -152,7 +151,8 @@ impl Database for PostgresAdapter {}
             kyogre_core::Tra,
             kyogre_core::TraCatch,
             kyogre_core::ErsQuantumType,
-            kyogre_core::UpdateVessel
+            kyogre_core::UpdateVessel,
+            kyogre_core::Weather,
           )
     ),
     security(

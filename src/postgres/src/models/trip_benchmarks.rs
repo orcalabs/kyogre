@@ -22,11 +22,18 @@ pub struct TripBenchmarkOutput {
 
 impl From<&kyogre_core::TripBenchmarkOutput> for TripBenchmarkOutput {
     fn from(v: &kyogre_core::TripBenchmarkOutput) -> Self {
+        let kyogre_core::TripBenchmarkOutput {
+            trip_id,
+            benchmark_id,
+            value,
+            unrealistic,
+        } = v;
+
         Self {
-            trip_id: v.trip_id,
-            trip_benchmark_id: v.benchmark_id,
-            output: v.value,
-            unrealistic: v.unrealistic,
+            trip_id: *trip_id,
+            trip_benchmark_id: *benchmark_id,
+            output: *value,
+            unrealistic: *unrealistic,
             status: TripBenchmarkStatus::MustRefresh,
         }
     }

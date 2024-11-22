@@ -1,7 +1,7 @@
 use actix_web::web;
 use chrono::{DateTime, Duration, Utc};
 use futures::TryStreamExt;
-use kyogre_core::{WeatherLocationId, WeatherQuery};
+use kyogre_core::{Weather, WeatherLocationId, WeatherQuery};
 use serde::{Deserialize, Serialize};
 use serde_qs::actix::QsQuery as Query;
 use utoipa::{IntoParams, ToSchema};
@@ -35,7 +35,7 @@ pub async fn weather<T: Database + Send + Sync + 'static>(
     let query = params.into_inner().into();
 
     stream_response! {
-        db.weather(query).map_ok(Weather::from)
+        db.weather(query)
     }
 }
 
@@ -59,65 +59,35 @@ pub async fn weather_locations<T: Database + Send + Sync + 'static>(
 
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct Weather {
-    pub timestamp: DateTime<Utc>,
-    pub latitude: f64,
-    pub longitude: f64,
-    pub altitude: f64,
-    pub wind_speed_10m: Option<f64>,
-    pub wind_direction_10m: Option<f64>,
-    pub air_temperature_2m: Option<f64>,
-    pub relative_humidity_2m: Option<f64>,
-    pub air_pressure_at_sea_level: Option<f64>,
-    pub precipitation_amount: Option<f64>,
-    pub land_area_fraction: f64,
-    pub cloud_area_fraction: Option<f64>,
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
-#[serde(rename_all = "camelCase")]
 pub struct WeatherLocation {
     #[schema(value_type = i32)]
     pub id: WeatherLocationId,
     pub polygon: String,
 }
 
-impl From<kyogre_core::Weather> for Weather {
-    fn from(v: kyogre_core::Weather) -> Self {
-        Self {
-            timestamp: v.timestamp,
-            latitude: v.latitude,
-            longitude: v.longitude,
-            altitude: v.altitude,
-            wind_speed_10m: v.wind_speed_10m,
-            wind_direction_10m: v.wind_direction_10m,
-            air_temperature_2m: v.air_temperature_2m,
-            relative_humidity_2m: v.relative_humidity_2m,
-            air_pressure_at_sea_level: v.air_pressure_at_sea_level,
-            precipitation_amount: v.precipitation_amount,
-            land_area_fraction: v.land_area_fraction,
-            cloud_area_fraction: v.cloud_area_fraction,
-        }
-    }
-}
-
 impl From<kyogre_core::WeatherLocation> for WeatherLocation {
     fn from(v: kyogre_core::WeatherLocation) -> Self {
+        let kyogre_core::WeatherLocation { id, polygon } = v;
+
         Self {
-            id: v.id,
-            polygon: v.polygon.to_wkt().to_string(),
+            id,
+            polygon: polygon.to_wkt().to_string(),
         }
     }
 }
 
 impl From<WeatherParams> for WeatherQuery {
     fn from(v: WeatherParams) -> Self {
+        let WeatherParams {
+            start_date,
+            end_date,
+            weather_location_ids,
+        } = v;
+
         Self {
-            start_date: v
-                .start_date
-                .unwrap_or_else(|| Utc::now() - Duration::days(1)),
-            end_date: v.end_date.unwrap_or_else(Utc::now),
-            weather_location_ids: v.weather_location_ids,
+            start_date: start_date.unwrap_or_else(|| Utc::now() - Duration::days(1)),
+            end_date: end_date.unwrap_or_else(Utc::now),
+            weather_location_ids,
         }
     }
 }

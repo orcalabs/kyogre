@@ -15,8 +15,15 @@ impl TryFrom<CatchLocation> for kyogre_core::CatchLocation {
     type Error = Error;
 
     fn try_from(v: CatchLocation) -> Result<Self, Self::Error> {
-        let geometry = v
-            .polygon
+        let CatchLocation {
+            id,
+            polygon,
+            latitude,
+            longitude,
+            weather_location_ids,
+        } = v;
+
+        let geometry = polygon
             .geometry
             .ok_or_else(|| MissingValueSnafu {}.build())?;
 
@@ -26,11 +33,11 @@ impl TryFrom<CatchLocation> for kyogre_core::CatchLocation {
         };
 
         Ok(Self {
-            id: v.id,
+            id,
             polygon,
-            latitude: v.latitude,
-            longitude: v.longitude,
-            weather_location_ids: v.weather_location_ids,
+            latitude,
+            longitude,
+            weather_location_ids,
         })
     }
 }

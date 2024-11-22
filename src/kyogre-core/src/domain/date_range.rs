@@ -9,7 +9,7 @@ pub struct DateRange {
     end: DateTime<Utc>,
 }
 
-#[derive(Copy, Debug, Clone)]
+#[derive(Copy, Debug, Clone, PartialEq, Eq)]
 pub enum Bound {
     Inclusive = 1,
     Exclusive = 2,
@@ -23,16 +23,7 @@ pub struct QueryRange {
 
 impl From<DateRange> for QueryRange {
     fn from(value: DateRange) -> Self {
-        let start = match value.start_bound {
-            Bound::Inclusive => std::ops::Bound::Included(value.start),
-            Bound::Exclusive => std::ops::Bound::Excluded(value.start),
-        };
-        let end = match value.end_bound {
-            Bound::Inclusive => std::ops::Bound::Included(value.end),
-            Bound::Exclusive => std::ops::Bound::Excluded(value.end),
-        };
-
-        QueryRange { start, end }
+        Self::from(&value)
     }
 }
 
@@ -160,8 +151,17 @@ impl DateRange {
 
 impl PartialEq for DateRange {
     fn eq(&self, other: &Self) -> bool {
-        self.start.timestamp() == other.start.timestamp()
-            && self.end.timestamp() == other.end.timestamp()
+        let Self {
+            start_bound,
+            end_bound,
+            start,
+            end,
+        } = self;
+
+        *start_bound == other.start_bound
+            && *end_bound == other.end_bound
+            && start.timestamp() == other.start.timestamp()
+            && end.timestamp() == other.end.timestamp()
     }
 }
 

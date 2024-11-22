@@ -70,48 +70,82 @@ pub struct MLTrainingLog {
 
 impl From<WeightPredictorTrainingData> for kyogre_core::WeightPredictorTrainingData {
     fn from(v: WeightPredictorTrainingData) -> Self {
+        let WeightPredictorTrainingData {
+            haul_id,
+            weight,
+            latitude,
+            longitude,
+            catch_location_area_id,
+            catch_location_main_area_id,
+            species,
+            date,
+            wind_speed_10m,
+            wind_direction_10m,
+            air_temperature_2m,
+            relative_humidity_2m,
+            air_pressure_at_sea_level,
+            precipitation_amount,
+            cloud_area_fraction,
+        } = v;
+
         Self {
-            weight: v.weight,
-            latitude: v.latitude,
-            longitude: v.longitude,
+            weight,
+            latitude,
+            longitude,
             catch_location: CatchLocationId::new(
-                v.catch_location_main_area_id,
-                v.catch_location_area_id,
+                catch_location_main_area_id,
+                catch_location_area_id,
             ),
-            species: v.species,
-            date: v.date,
-            haul_id: v.haul_id,
-            wind_speed_10m: v.wind_speed_10m,
-            wind_direction_10m: v.wind_speed_10m,
-            air_temperature_2m: v.air_temperature_2m,
-            relative_humidity_2m: v.relative_humidity_2m,
-            air_pressure_at_sea_level: v.air_pressure_at_sea_level,
-            precipitation_amount: v.precipitation_amount,
-            cloud_area_fraction: v.cloud_area_fraction,
+            species,
+            date,
+            haul_id,
+            wind_speed_10m,
+            wind_direction_10m,
+            air_temperature_2m,
+            relative_humidity_2m,
+            air_pressure_at_sea_level,
+            precipitation_amount,
+            cloud_area_fraction,
         }
     }
 }
 
 impl From<kyogre_core::NewFishingSpotPrediction> for NewFishingSpotPrediction {
     fn from(value: kyogre_core::NewFishingSpotPrediction) -> Self {
+        let kyogre_core::NewFishingSpotPrediction {
+            latitude,
+            longitude,
+            species,
+            model,
+            date,
+        } = value;
+
         Self {
-            latitude: value.latitude,
-            longitude: value.longitude,
-            species_group_id: value.species,
-            date: value.date,
-            ml_model_id: value.model,
+            latitude,
+            longitude,
+            date,
+            species_group_id: species,
+            ml_model_id: model,
         }
     }
 }
 
 impl From<kyogre_core::NewFishingWeightPrediction> for NewFishingWeightPrediction {
     fn from(value: kyogre_core::NewFishingWeightPrediction) -> Self {
+        let kyogre_core::NewFishingWeightPrediction {
+            model,
+            catch_location_id,
+            weight,
+            species,
+            date,
+        } = value;
+
         Self {
-            species_group_id: value.species as i32,
-            weight: value.weight,
-            catch_location_id: value.catch_location_id.into_inner(),
-            ml_model_id: value.model,
-            date: value.date,
+            species_group_id: species as i32,
+            weight,
+            catch_location_id: catch_location_id.into_inner(),
+            ml_model_id: model,
+            date,
         }
     }
 }

@@ -1,6 +1,8 @@
 use actix_web::web::{self, Path};
 use chrono::{DateTime, Utc};
-use fiskeridir_rs::{CallSign, DeliveryPointId, Gear, GearGroup, SpeciesGroup, VesselLengthGroup};
+use fiskeridir_rs::{
+    CallSign, DeliveryPointId, Gear, GearGroup, LandingId, SpeciesGroup, VesselLengthGroup,
+};
 use futures::TryStreamExt;
 use kyogre_core::{
     ActiveLandingFilter, CatchLocationId, FiskeridirVesselId, LandingMatrixQuery, Landings,
@@ -154,7 +156,8 @@ pub async fn landing_matrix<T: Database + 'static, S: Cache>(
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct Landing {
-    pub landing_id: String,
+    #[schema(value_type = String)]
+    pub id: LandingId,
     pub landing_timestamp: DateTime<Utc>,
     #[schema(value_type = Option<String>, example = "05-24")]
     pub catch_location: Option<CatchLocationId>,
@@ -201,22 +204,41 @@ pub struct LandingMatrix {
 
 impl From<kyogre_core::Landing> for Landing {
     fn from(v: kyogre_core::Landing) -> Self {
+        let kyogre_core::Landing {
+            id,
+            landing_timestamp,
+            catch_location,
+            gear_id,
+            gear_group_id,
+            delivery_point_id,
+            fiskeridir_vessel_id,
+            vessel_call_sign,
+            vessel_name,
+            vessel_length,
+            vessel_length_group,
+            total_living_weight,
+            total_product_weight,
+            total_gross_weight,
+            catches,
+            version: _,
+        } = v;
+
         Self {
-            landing_id: v.id.into_inner(),
-            landing_timestamp: v.landing_timestamp,
-            catch_location: v.catch_location,
-            gear_id: v.gear_id,
-            gear_group_id: v.gear_group_id,
-            delivery_point_id: v.delivery_point_id,
-            fiskeridir_vessel_id: v.fiskeridir_vessel_id,
-            vessel_call_sign: v.vessel_call_sign,
-            vessel_name: v.vessel_name,
-            vessel_length: v.vessel_length,
-            vessel_length_group: v.vessel_length_group,
-            total_living_weight: v.total_living_weight,
-            total_product_weight: v.total_product_weight,
-            total_gross_weight: v.total_gross_weight,
-            catches: v.catches.into_iter().map(LandingCatch::from).collect(),
+            id,
+            landing_timestamp,
+            catch_location,
+            gear_id,
+            gear_group_id,
+            delivery_point_id,
+            fiskeridir_vessel_id,
+            vessel_call_sign,
+            vessel_name,
+            vessel_length,
+            vessel_length_group,
+            total_living_weight,
+            total_product_weight,
+            total_gross_weight,
+            catches: catches.into_iter().map(LandingCatch::from).collect(),
         }
     }
 }
@@ -236,39 +258,67 @@ impl PartialEq<kyogre_core::Landing> for Landing {
 
 impl From<kyogre_core::LandingCatch> for LandingCatch {
     fn from(v: kyogre_core::LandingCatch) -> Self {
+        let kyogre_core::LandingCatch {
+            living_weight,
+            gross_weight,
+            product_weight,
+            species_fiskeridir_id,
+            species_group_id,
+        } = v;
+
         Self {
-            living_weight: v.living_weight,
-            gross_weight: v.gross_weight,
-            product_weight: v.product_weight,
-            species_fiskeridir_id: v.species_fiskeridir_id,
-            species_group_id: v.species_group_id,
+            living_weight,
+            gross_weight,
+            product_weight,
+            species_fiskeridir_id,
+            species_group_id,
         }
     }
 }
 
 impl From<kyogre_core::LandingMatrix> for LandingMatrix {
     fn from(v: kyogre_core::LandingMatrix) -> Self {
+        let kyogre_core::LandingMatrix {
+            dates,
+            length_group,
+            gear_group,
+            species_group,
+        } = v;
+
         LandingMatrix {
-            dates: v.dates,
-            length_group: v.length_group,
-            gear_group: v.gear_group,
-            species_group: v.species_group,
+            dates,
+            length_group,
+            gear_group,
+            species_group,
         }
     }
 }
 
 impl From<LandingsParams> for LandingsQuery {
     fn from(v: LandingsParams) -> Self {
+        let LandingsParams {
+            months,
+            catch_locations,
+            gear_group_ids,
+            species_group_ids,
+            vessel_length_groups,
+            fiskeridir_vessel_ids,
+            sorting,
+            ordering,
+            limit,
+            offset,
+        } = v;
+
         Self {
-            pagination: Pagination::<Landings>::new(v.limit, v.offset),
-            ranges: months_to_date_ranges(v.months),
-            catch_locations: v.catch_locations,
-            gear_group_ids: v.gear_group_ids,
-            species_group_ids: v.species_group_ids,
-            vessel_length_groups: v.vessel_length_groups,
-            vessel_ids: v.fiskeridir_vessel_ids,
-            sorting: Some(v.sorting.unwrap_or_default()),
-            ordering: Some(v.ordering.unwrap_or_default()),
+            pagination: Pagination::<Landings>::new(limit, offset),
+            ranges: months_to_date_ranges(months),
+            catch_locations,
+            gear_group_ids,
+            species_group_ids,
+            vessel_length_groups,
+            vessel_ids: fiskeridir_vessel_ids,
+            sorting: Some(sorting.unwrap_or_default()),
+            ordering: Some(ordering.unwrap_or_default()),
         }
     }
 }
@@ -277,13 +327,22 @@ pub fn matrix_params_to_query(
     params: LandingMatrixParams,
     active_filter: ActiveLandingFilter,
 ) -> LandingMatrixQuery {
+    let LandingMatrixParams {
+        months,
+        catch_locations,
+        gear_group_ids,
+        species_group_ids,
+        vessel_length_groups,
+        fiskeridir_vessel_ids,
+    } = params;
+
     LandingMatrixQuery {
-        months: params.months,
-        catch_locations: params.catch_locations,
-        gear_group_ids: params.gear_group_ids,
-        species_group_ids: params.species_group_ids,
-        vessel_length_groups: params.vessel_length_groups,
+        months,
+        catch_locations,
+        gear_group_ids,
+        species_group_ids,
+        vessel_length_groups,
         active_filter,
-        vessel_ids: params.fiskeridir_vessel_ids,
+        vessel_ids: fiskeridir_vessel_ids,
     }
 }

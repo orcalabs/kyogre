@@ -85,24 +85,48 @@ pub struct VmsPosition {
 
 impl From<kyogre_core::VmsPosition> for VmsPosition {
     fn from(value: kyogre_core::VmsPosition) -> Self {
+        let kyogre_core::VmsPosition {
+            call_sign: _,
+            course,
+            latitude,
+            longitude,
+            registration_id: _,
+            speed,
+            timestamp,
+            vessel_length: _,
+            vessel_name: _,
+            vessel_type: _,
+            distance_to_shore,
+        } = value;
+
         VmsPosition {
-            lat: value.latitude,
-            lon: value.longitude,
-            timestamp: value.timestamp,
-            course: value.course,
-            speed: value.speed,
-            distance_to_shore: value.distance_to_shore,
+            lat: latitude,
+            lon: longitude,
+            timestamp,
+            course,
+            speed,
+            distance_to_shore,
         }
     }
 }
 
 impl PartialEq<kyogre_core::VmsPosition> for VmsPosition {
     fn eq(&self, other: &kyogre_core::VmsPosition) -> bool {
-        self.course == other.course
-            && self.lat == other.latitude
-            && self.lon == other.longitude
-            && self.speed == other.speed
-            && self.timestamp.timestamp() == other.timestamp.timestamp()
+        let Self {
+            course,
+            lat,
+            lon,
+            speed,
+            timestamp,
+            distance_to_shore,
+        } = self;
+
+        *course == other.course
+            && *lat == other.latitude
+            && *lon == other.longitude
+            && *speed == other.speed
+            && timestamp.timestamp() == other.timestamp.timestamp()
+            && *distance_to_shore as i64 == other.distance_to_shore as i64
     }
 }
 

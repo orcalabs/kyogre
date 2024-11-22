@@ -18,7 +18,6 @@ pub struct VesselEventDetailed {
     pub vessel_event_id: i64,
     pub fiskeridir_vessel_id: FiskeridirVesselId,
     pub report_timestamp: DateTime<Utc>,
-    pub occurence_timestamp: Option<DateTime<Utc>>,
     pub vessel_event_type_id: VesselEventType,
     pub departure_port_id: Option<String>,
     pub arrival_port_id: Option<String>,
@@ -28,12 +27,20 @@ pub struct VesselEventDetailed {
 
 impl From<VesselEvent> for kyogre_core::VesselEvent {
     fn from(v: VesselEvent) -> kyogre_core::VesselEvent {
+        let VesselEvent {
+            vessel_event_id,
+            fiskeridir_vessel_id,
+            report_timestamp,
+            occurence_timestamp,
+            vessel_event_type_id,
+        } = v;
+
         Self {
-            event_id: v.vessel_event_id as u64,
-            vessel_id: v.fiskeridir_vessel_id,
-            report_timestamp: v.report_timestamp,
-            event_type: v.vessel_event_type_id,
-            occurence_timestamp: v.occurence_timestamp,
+            event_id: vessel_event_id as u64,
+            vessel_id: fiskeridir_vessel_id,
+            report_timestamp,
+            event_type: vessel_event_type_id,
+            occurence_timestamp,
         }
     }
 }
@@ -42,39 +49,40 @@ impl TryFrom<VesselEventDetailed> for kyogre_core::VesselEventDetailed {
     type Error = Error;
 
     fn try_from(v: VesselEventDetailed) -> Result<kyogre_core::VesselEventDetailed, Self::Error> {
-        let event_data: Result<VesselEventData, Error> = match v.vessel_event_type_id {
-            VesselEventType::Landing => Ok(VesselEventData::Landing),
-            VesselEventType::ErsDca => Ok(VesselEventData::ErsDca),
-            VesselEventType::ErsTra => Ok(VesselEventData::ErsTra),
-            VesselEventType::Haul => Ok(VesselEventData::Haul),
-            VesselEventType::ErsPor => Ok(VesselEventData::ErsPor {
-                port_id: if v.arrival_port_id.is_some() {
-                    v.arrival_port_id
-                } else {
-                    v.port_id
-                },
-                estimated_timestamp: v
-                    .estimated_timestamp
+        let VesselEventDetailed {
+            vessel_event_id,
+            fiskeridir_vessel_id,
+            report_timestamp,
+            vessel_event_type_id,
+            departure_port_id,
+            arrival_port_id,
+            port_id,
+            estimated_timestamp,
+        } = v;
+
+        let event_data = match vessel_event_type_id {
+            VesselEventType::Landing => VesselEventData::Landing,
+            VesselEventType::ErsDca => VesselEventData::ErsDca,
+            VesselEventType::ErsTra => VesselEventData::ErsTra,
+            VesselEventType::Haul => VesselEventData::Haul,
+            VesselEventType::ErsPor => VesselEventData::ErsPor {
+                port_id: arrival_port_id.or(port_id),
+                estimated_timestamp: estimated_timestamp
                     .ok_or_else(|| MissingValueSnafu.build())?,
-            }),
-            VesselEventType::ErsDep => Ok(VesselEventData::ErsDep {
-                port_id: if v.departure_port_id.is_some() {
-                    v.departure_port_id
-                } else {
-                    v.port_id
-                },
-                estimated_timestamp: v
-                    .estimated_timestamp
+            },
+            VesselEventType::ErsDep => VesselEventData::ErsDep {
+                port_id: departure_port_id.or(port_id),
+                estimated_timestamp: estimated_timestamp
                     .ok_or_else(|| MissingValueSnafu.build())?,
-            }),
+            },
         };
 
         Ok(kyogre_core::VesselEventDetailed {
-            event_id: v.vessel_event_id as u64,
-            vessel_id: v.fiskeridir_vessel_id,
-            timestamp: v.report_timestamp,
-            event_type: v.vessel_event_type_id,
-            event_data: event_data?,
+            event_id: vessel_event_id as u64,
+            vessel_id: fiskeridir_vessel_id,
+            timestamp: report_timestamp,
+            event_type: vessel_event_type_id,
+            event_data,
         })
     }
 }

@@ -100,7 +100,7 @@ pub async fn trip_benchmarks<T: Database>(
     params: Query<TripBenchmarksParams>,
 ) -> Result<Response<TripBenchmarks>> {
     let call_sign = profile.call_sign()?;
-    let query = params.into_inner().to_query(call_sign.clone());
+    let query = params.into_inner().into_query(call_sign.clone());
 
     let benchmarks = db.trip_benchmarks(query).await?.into();
     Ok(Response::new(benchmarks))
@@ -124,7 +124,7 @@ pub async fn eeoi<T: Database>(
     params: Query<EeoiParams>,
 ) -> Result<Response<Option<f64>>> {
     let call_sign = profile.call_sign()?;
-    let query = params.into_inner().to_query(call_sign.clone());
+    let query = params.into_inner().into_query(call_sign.clone());
 
     let eeoi = db.eeoi(query).await?;
     Ok(Response::new(eeoi))
@@ -198,61 +198,100 @@ impl From<Vec<TripWithBenchmark>> for TripBenchmarks {
 
 impl From<TripWithBenchmark> for TripBenchmark {
     fn from(v: TripWithBenchmark) -> Self {
-        let period = v.period_precision.unwrap_or(v.period);
+        let TripWithBenchmark {
+            id,
+            period,
+            period_precision,
+            weight_per_hour,
+            weight_per_distance,
+            weight_per_fuel,
+            catch_value_per_fuel,
+            fuel_consumption,
+        } = v;
+
+        let period = period_precision.unwrap_or(period);
+
         Self {
-            id: v.id,
+            id,
             start: period.start(),
             end: period.end(),
-            weight_per_hour: v.weight_per_hour,
-            weight_per_distance: v.weight_per_distance,
-            fuel_consumption: v.fuel_consumption,
-            weight_per_fuel: v.weight_per_fuel,
-            catch_value_per_fuel: v.catch_value_per_fuel,
+            weight_per_hour,
+            weight_per_distance,
+            fuel_consumption,
+            weight_per_fuel,
+            catch_value_per_fuel,
         }
     }
 }
 
 impl TripBenchmarksParams {
-    fn to_query(&self, call_sign: CallSign) -> TripBenchmarksQuery {
+    fn into_query(self, call_sign: CallSign) -> TripBenchmarksQuery {
+        let Self {
+            start_date,
+            end_date,
+            ordering,
+        } = self;
+
         TripBenchmarksQuery {
             call_sign,
-            start_date: self.start_date,
-            end_date: self.end_date,
-            ordering: self.ordering.unwrap_or_default(),
+            start_date,
+            end_date,
+            ordering: ordering.unwrap_or_default(),
         }
     }
 }
 
 impl EeoiParams {
-    fn to_query(&self, call_sign: CallSign) -> EeoiQuery {
+    fn into_query(self, call_sign: CallSign) -> EeoiQuery {
+        let Self {
+            start_date,
+            end_date,
+        } = self;
+
         EeoiQuery {
             call_sign,
-            start_date: self.start_date,
-            end_date: self.end_date,
+            start_date,
+            end_date,
         }
     }
 }
 
 impl From<AverageTripBenchmarksParams> for AverageTripBenchmarksQuery {
     fn from(v: AverageTripBenchmarksParams) -> Self {
+        let AverageTripBenchmarksParams {
+            start_date,
+            end_date,
+            gear_groups,
+            length_group,
+            vessel_ids,
+        } = v;
+
         Self {
-            start_date: v.start_date,
-            end_date: v.end_date,
-            gear_groups: v.gear_groups,
-            length_group: v.length_group,
-            vessel_ids: v.vessel_ids,
+            start_date,
+            end_date,
+            gear_groups,
+            length_group,
+            vessel_ids,
         }
     }
 }
 
 impl From<AverageEeoiParams> for AverageEeoiQuery {
     fn from(v: AverageEeoiParams) -> Self {
+        let AverageEeoiParams {
+            start_date,
+            end_date,
+            gear_groups,
+            length_group,
+            vessel_ids,
+        } = v;
+
         Self {
-            start_date: v.start_date,
-            end_date: v.end_date,
-            gear_groups: v.gear_groups,
-            length_group: v.length_group,
-            vessel_ids: v.vessel_ids,
+            start_date,
+            end_date,
+            gear_groups,
+            length_group,
+            vessel_ids,
         }
     }
 }

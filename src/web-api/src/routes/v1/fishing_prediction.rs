@@ -174,22 +174,36 @@ pub struct FishingWeightPrediction {
 
 impl From<kyogre_core::FishingSpotPrediction> for FishingSpotPrediction {
     fn from(v: kyogre_core::FishingSpotPrediction) -> Self {
+        let kyogre_core::FishingSpotPrediction {
+            latitude,
+            longitude,
+            species_group_id,
+            date,
+        } = v;
+
         Self {
-            latitude: v.latitude,
-            longitude: v.longitude,
-            species_group_id: v.species_group_id,
-            date: v.date,
+            latitude,
+            longitude,
+            species_group_id,
+            date,
         }
     }
 }
 
 impl From<kyogre_core::FishingWeightPrediction> for FishingWeightPrediction {
     fn from(v: kyogre_core::FishingWeightPrediction) -> Self {
+        let kyogre_core::FishingWeightPrediction {
+            catch_location_id,
+            weight,
+            species_group_id,
+            date,
+        } = v;
+
         Self {
-            catch_location_id: v.catch_location_id,
-            weight: v.weight,
-            species_group_id: v.species_group_id,
-            date: v.date,
+            catch_location_id,
+            weight,
+            species_group_id,
+            date,
         }
     }
 }

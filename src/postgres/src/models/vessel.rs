@@ -46,12 +46,19 @@ impl TryFrom<CumulativeLandings> for kyogre_core::CumulativeLandings {
     type Error = Error;
 
     fn try_from(value: CumulativeLandings) -> Result<Self, Self::Error> {
+        let CumulativeLandings {
+            month,
+            species_fiskeridir_id,
+            weight,
+            cumulative_weight,
+        } = value;
+
         Ok(kyogre_core::CumulativeLandings {
-            month: chrono::Month::from_i32(value.month)
-                .ok_or_else(|| UnknownMonthSnafu { month: value.month }.build())?,
-            species_fiskeridir_id: value.species_fiskeridir_id as u32,
-            weight: value.weight,
-            cumulative_weight: value.cumulative_weight,
+            month: chrono::Month::from_i32(month)
+                .ok_or_else(|| UnknownMonthSnafu { month }.build())?,
+            species_fiskeridir_id: species_fiskeridir_id as u32,
+            weight,
+            cumulative_weight,
         })
     }
 }
@@ -60,33 +67,29 @@ impl TryFrom<VesselBenchmarks> for kyogre_core::VesselBenchmarks {
     type Error = Error;
 
     fn try_from(value: VesselBenchmarks) -> Result<Self, Self::Error> {
+        let VesselBenchmarks {
+            fishing_time,
+            fishing_distance,
+            trip_time,
+            landings,
+            ers_dca,
+            cumulative_landings,
+        } = value;
+
         let cumulative_landings =
-            serde_json::from_str::<Vec<CumulativeLandings>>(&value.cumulative_landings)?
+            serde_json::from_str::<Vec<CumulativeLandings>>(&cumulative_landings)?
                 .into_iter()
                 .map(kyogre_core::CumulativeLandings::try_from)
                 .collect::<Result<Vec<kyogre_core::CumulativeLandings>, _>>()?;
 
         Ok(kyogre_core::VesselBenchmarks {
-            fishing_time: value
-                .fishing_time
+            fishing_time: fishing_time.map(|v| serde_json::from_str(&v)).transpose()?,
+            fishing_distance: fishing_distance
                 .map(|v| serde_json::from_str(&v))
                 .transpose()?,
-            fishing_distance: value
-                .fishing_distance
-                .map(|v| serde_json::from_str(&v))
-                .transpose()?,
-            trip_time: value
-                .trip_time
-                .map(|v| serde_json::from_str(&v))
-                .transpose()?,
-            landings: value
-                .landings
-                .map(|v| serde_json::from_str(&v))
-                .transpose()?,
-            ers_dca: value
-                .ers_dca
-                .map(|v| serde_json::from_str(&v))
-                .transpose()?,
+            trip_time: trip_time.map(|v| serde_json::from_str(&v)).transpose()?,
+            landings: landings.map(|v| serde_json::from_str(&v)).transpose()?,
+            ers_dca: ers_dca.map(|v| serde_json::from_str(&v)).transpose()?,
             cumulative_landings,
         })
     }
@@ -94,10 +97,16 @@ impl TryFrom<VesselBenchmarks> for kyogre_core::VesselBenchmarks {
 
 impl From<kyogre_core::NewVesselConflict> for VesselConflictInsert {
     fn from(value: kyogre_core::NewVesselConflict) -> Self {
-        VesselConflictInsert {
-            fiskeridir_vessel_id: value.vessel_id,
-            call_sign: value.call_sign.map(|v| v.into_inner()),
-            mmsi: value.mmsi,
+        let kyogre_core::NewVesselConflict {
+            vessel_id,
+            call_sign,
+            mmsi,
+        } = value;
+
+        Self {
+            fiskeridir_vessel_id: vessel_id,
+            call_sign: call_sign.map(|v| v.into_inner()),
+            mmsi,
             is_manual: true,
         }
     }
@@ -257,53 +266,82 @@ impl TryFrom<FiskeridirAisVesselCombination> for kyogre_core::Vessel {
     type Error = Error;
 
     fn try_from(value: FiskeridirAisVesselCombination) -> Result<Self, Self::Error> {
-        let ais_vessel: Option<AisVessel> = if let Some(mmsi) = value.ais_mmsi {
-            Some(AisVessel {
-                mmsi,
-                imo_number: value.ais_imo_number,
-                call_sign: value.ais_call_sign,
-                name: value.ais_name,
-                ship_length: value.ais_ship_length,
-                ship_width: value.ais_ship_width,
-                eta: value.ais_eta,
-                destination: value.ais_destination,
-            })
-        } else {
-            None
-        };
+        let FiskeridirAisVesselCombination {
+            ais_mmsi,
+            ais_imo_number,
+            ais_call_sign,
+            ais_name,
+            ais_ship_length,
+            ais_ship_width,
+            ais_eta,
+            ais_destination,
+            fiskeridir_vessel_id,
+            fiskeridir_vessel_type_id,
+            fiskeridir_length_group_id,
+            fiskeridir_nation_group_id,
+            fiskeridir_nation_id,
+            fiskeridir_norwegian_municipality_id,
+            fiskeridir_norwegian_county_id,
+            fiskeridir_gross_tonnage_1969,
+            fiskeridir_gross_tonnage_other,
+            fiskeridir_call_sign,
+            fiskeridir_name,
+            fiskeridir_registration_id,
+            fiskeridir_length,
+            fiskeridir_width,
+            fiskeridir_owner,
+            fiskeridir_owners,
+            fiskeridir_engine_building_year,
+            fiskeridir_engine_power,
+            fiskeridir_building_year,
+            fiskeridir_rebuilding_year,
+            preferred_trip_assembler,
+            gear_group_ids,
+            species_group_ids,
+        } = value;
 
-        let fiskeridir_vessel = FiskeridirVessel {
-            id: value.fiskeridir_vessel_id,
-            vessel_type_id: value.fiskeridir_vessel_type_id.map(|v| v as u32),
-            length_group_id: value.fiskeridir_length_group_id,
-            nation_group_id: value.fiskeridir_nation_group_id,
-            nation_id: value.fiskeridir_nation_id,
-            norwegian_municipality_id: value.fiskeridir_norwegian_municipality_id.map(|v| v as u32),
-            norwegian_county_id: value.fiskeridir_norwegian_county_id.map(|v| v as u32),
-            gross_tonnage_1969: value.fiskeridir_gross_tonnage_1969.map(|v| v as u32),
-            gross_tonnage_other: value.fiskeridir_gross_tonnage_other.map(|v| v as u32),
-            call_sign: value.fiskeridir_call_sign,
-            name: value.fiskeridir_name,
-            registration_id: value.fiskeridir_registration_id,
-            length: value.fiskeridir_length,
-            width: value.fiskeridir_width,
-            owner: value.fiskeridir_owner,
-            owners: value
-                .fiskeridir_owners
+        let ais = ais_mmsi.map(|mmsi| AisVessel {
+            mmsi,
+            imo_number: ais_imo_number,
+            call_sign: ais_call_sign,
+            name: ais_name,
+            ship_length: ais_ship_length,
+            ship_width: ais_ship_width,
+            eta: ais_eta,
+            destination: ais_destination,
+        });
+
+        let fiskeridir = FiskeridirVessel {
+            id: fiskeridir_vessel_id,
+            vessel_type_id: fiskeridir_vessel_type_id.map(|v| v as u32),
+            length_group_id: fiskeridir_length_group_id,
+            nation_group_id: fiskeridir_nation_group_id,
+            nation_id: fiskeridir_nation_id,
+            norwegian_municipality_id: fiskeridir_norwegian_municipality_id.map(|v| v as u32),
+            norwegian_county_id: fiskeridir_norwegian_county_id.map(|v| v as u32),
+            gross_tonnage_1969: fiskeridir_gross_tonnage_1969.map(|v| v as u32),
+            gross_tonnage_other: fiskeridir_gross_tonnage_other.map(|v| v as u32),
+            call_sign: fiskeridir_call_sign,
+            name: fiskeridir_name,
+            registration_id: fiskeridir_registration_id,
+            length: fiskeridir_length,
+            width: fiskeridir_width,
+            owner: fiskeridir_owner,
+            owners: fiskeridir_owners
                 .map(|o| serde_json::from_str(&o))
                 .transpose()?,
-            engine_building_year: value.fiskeridir_engine_building_year.map(|v| v as u32),
-            engine_power: value.fiskeridir_engine_power.map(|v| v as u32),
-            building_year: value.fiskeridir_building_year.map(|v| v as u32),
-            rebuilding_year: value.fiskeridir_rebuilding_year.map(|v| v as u32),
+            engine_building_year: fiskeridir_engine_building_year.map(|v| v as u32),
+            engine_power: fiskeridir_engine_power.map(|v| v as u32),
+            building_year: fiskeridir_building_year.map(|v| v as u32),
+            rebuilding_year: fiskeridir_rebuilding_year.map(|v| v as u32),
         };
 
         Ok(Self {
-            fiskeridir: fiskeridir_vessel,
-            ais: ais_vessel,
-            preferred_trip_assembler: value.preferred_trip_assembler,
-            gear_groups: value.gear_group_ids,
-            species_groups: value.species_group_ids,
+            fiskeridir,
+            ais,
+            preferred_trip_assembler,
+            gear_groups: gear_group_ids,
+            species_groups: species_group_ids,
         })
     }
 }

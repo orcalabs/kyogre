@@ -142,6 +142,28 @@ pub struct UpdateTripPositionCargoWeight {
 
 impl From<&TripProcessingUnit> for NewTrip {
     fn from(value: &TripProcessingUnit) -> Self {
+        let TripProcessingUnit {
+            vessel_id,
+            trip:
+                kyogre_core::NewTrip {
+                    period,
+                    landing_coverage,
+                    start_port_code: _,
+                    end_port_code: _,
+                },
+            trip_id: _,
+            trip_assembler_id,
+            start_port,
+            end_port,
+            start_dock_points: _,
+            end_dock_points: _,
+            positions: _,
+            precision_outcome,
+            distance_output,
+            trip_position_output,
+            trip_position_cargo_weight_distribution_output,
+        } = value;
+
         let (
             start_precision_id,
             start_precision_direction,
@@ -149,7 +171,7 @@ impl From<&TripProcessingUnit> for NewTrip {
             end_precision_direction,
             period_precision,
             trip_precision_status_id,
-        ) = match &value.precision_outcome {
+        ) = match precision_outcome {
             Some(v) => match v {
                 PrecisionOutcome::Success {
                     new_period,
@@ -170,30 +192,28 @@ impl From<&TripProcessingUnit> for NewTrip {
             None => (None, None, None, None, None, ProcessingStatus::Unprocessed),
         };
 
-        let (distance, distancer_id) = match value.distance_output {
+        let (distance, distancer_id) = match distance_output {
             Some(v) => (v.distance, Some(v.distancer_id)),
             None => (None, None),
         };
 
-        let (position_layers_status, track_coverage) = match &value.trip_position_output {
+        let (position_layers_status, track_coverage) = match trip_position_output {
             Some(v) => (ProcessingStatus::Successful, Some(v.track_coverage)),
             None => (ProcessingStatus::Attempted, None),
         };
 
-        let trip_position_haul_weight_distribution_status = match value
-            .trip_position_cargo_weight_distribution_output
-            .is_some()
-        {
-            true => ProcessingStatus::Successful,
-            false => ProcessingStatus::Unprocessed,
-        };
+        let trip_position_haul_weight_distribution_status =
+            match trip_position_cargo_weight_distribution_output.is_some() {
+                true => ProcessingStatus::Successful,
+                false => ProcessingStatus::Unprocessed,
+            };
 
         NewTrip {
-            period: PgRange::from(&value.trip.period),
+            period: PgRange::from(period),
             period_precision,
-            landing_coverage: PgRange::from(&value.trip.landing_coverage),
-            trip_assembler_id: value.trip_assembler_id,
-            fiskeridir_vessel_id: value.vessel_id,
+            landing_coverage: PgRange::from(landing_coverage),
+            trip_assembler_id: *trip_assembler_id,
+            fiskeridir_vessel_id: *vessel_id,
             start_precision_id,
             end_precision_id,
             start_precision_direction: start_precision_direction.map(|v| v.name()),
@@ -201,8 +221,8 @@ impl From<&TripProcessingUnit> for NewTrip {
             trip_precision_status_id,
             distance,
             distancer_id,
-            start_port_id: value.start_port.clone().map(|p| p.id),
-            end_port_id: value.end_port.clone().map(|p| p.id),
+            start_port_id: start_port.clone().map(|p| p.id),
+            end_port_id: end_port.clone().map(|p| p.id),
             position_layers_status,
             track_coverage,
             trip_position_cargo_weight_distribution_status:
@@ -276,17 +296,30 @@ pub struct NewTripAssemblerConflict {
 
 impl From<Trip> for kyogre_core::Trip {
     fn from(value: Trip) -> Self {
+        let Trip {
+            trip_id,
+            period,
+            period_precision,
+            landing_coverage,
+            distance,
+            trip_assembler_id,
+            start_port_id,
+            end_port_id,
+            target_species_fiskeridir_id,
+            target_species_fao_id,
+        } = value;
+
         Self {
-            trip_id: value.trip_id,
-            period: value.period,
-            landing_coverage: value.landing_coverage,
-            distance: value.distance,
-            assembler_id: value.trip_assembler_id,
-            precision_period: value.period_precision,
-            start_port_code: value.start_port_id,
-            end_port_code: value.end_port_id,
-            target_species_fiskeridir_id: value.target_species_fiskeridir_id.map(|v| v as u32),
-            target_species_fao_id: value.target_species_fao_id,
+            trip_id,
+            period,
+            landing_coverage,
+            distance,
+            assembler_id: trip_assembler_id,
+            precision_period: period_precision,
+            start_port_code: start_port_id,
+            end_port_code: end_port_id,
+            target_species_fiskeridir_id: target_species_fiskeridir_id.map(|v| v as u32),
+            target_species_fao_id,
         }
     }
 }
@@ -295,85 +328,133 @@ impl TryFrom<CurrentTrip> for kyogre_core::CurrentTrip {
     type Error = Error;
 
     fn try_from(v: CurrentTrip) -> Result<Self> {
+        let CurrentTrip {
+            departure_timestamp,
+            target_species_fiskeridir_id,
+            hauls,
+            fishing_facilities,
+        } = v;
+
         Ok(Self {
-            departure: v.departure_timestamp,
-            target_species_fiskeridir_id: v.target_species_fiskeridir_id,
-            hauls: serde_json::from_str::<Vec<Haul>>(&v.hauls)?,
-            fishing_facilities: serde_json::from_str::<Vec<FishingFacility>>(
-                &v.fishing_facilities,
-            )?,
+            departure: departure_timestamp,
+            target_species_fiskeridir_id,
+            hauls: serde_json::from_str::<Vec<Haul>>(&hauls)?,
+            fishing_facilities: serde_json::from_str::<Vec<FishingFacility>>(&fishing_facilities)?,
         })
     }
 }
 
 impl From<TripCalculationTimer> for kyogre_core::TripCalculationTimer {
     fn from(v: TripCalculationTimer) -> Self {
+        let TripCalculationTimer {
+            timestamp,
+            fiskeridir_vessel_id,
+            queued_reset,
+            conflict,
+            conflict_vessel_event_id,
+            conflict_event_type,
+            conflict_vessel_event_timestamp,
+        } = v;
+
         let conflict = match (
-            v.conflict,
-            v.conflict_event_type,
-            v.conflict_vessel_event_timestamp,
+            conflict,
+            conflict_event_type,
+            conflict_vessel_event_timestamp,
         ) {
             (Some(timestamp), Some(event_type), Some(vessel_event_timestamp)) => {
                 Some(TripAssemblerConflict {
                     timestamp,
                     event_type,
-                    vessel_event_id: v.conflict_vessel_event_id,
+                    vessel_event_id: conflict_vessel_event_id,
                     vessel_event_timestamp,
                 })
             }
             _ => None,
         };
         Self {
-            fiskeridir_vessel_id: v.fiskeridir_vessel_id,
-            timestamp: v.timestamp,
-            queued_reset: v.queued_reset,
+            fiskeridir_vessel_id,
+            timestamp,
+            queued_reset,
             conflict,
         }
     }
 }
+
 impl TryFrom<TripDetailed> for kyogre_core::TripDetailed {
     type Error = Error;
 
     fn try_from(value: TripDetailed) -> std::result::Result<Self, Self::Error> {
+        let TripDetailed {
+            trip_id,
+            fiskeridir_vessel_id,
+            fiskeridir_length_group_id,
+            period,
+            period_precision,
+            landing_coverage,
+            num_deliveries,
+            total_living_weight,
+            total_gross_weight,
+            total_product_weight,
+            total_price_for_fisher,
+            delivery_points,
+            gear_ids,
+            gear_group_ids,
+            species_group_ids,
+            landing_ids,
+            latest_landing_timestamp,
+            catches,
+            hauls,
+            tra,
+            fishing_facilities,
+            vessel_events,
+            start_port_id,
+            end_port_id,
+            trip_assembler_id,
+            distance,
+            cache_version,
+            target_species_fiskeridir_id,
+            target_species_fao_id,
+            fuel_consumption,
+            track_coverage,
+        } = value;
+
         Ok(kyogre_core::TripDetailed {
-            period_precision: value.period_precision,
-            fiskeridir_vessel_id: value.fiskeridir_vessel_id,
-            fiskeridir_length_group_id: value.fiskeridir_length_group_id,
-            landing_coverage: value.landing_coverage,
-            trip_id: value.trip_id,
-            period: value.period,
-            num_deliveries: value.num_deliveries as u32,
-            most_recent_delivery_date: value.latest_landing_timestamp,
-            gear_ids: value.gear_ids,
-            gear_group_ids: value.gear_group_ids,
-            species_group_ids: value.species_group_ids,
-            delivery_point_ids: value.delivery_points,
-            hauls: serde_json::from_str::<Vec<Haul>>(&value.hauls)?,
-            fishing_facilities: serde_json::from_str::<Vec<FishingFacility>>(
-                &value.fishing_facilities,
-            )?,
+            period_precision,
+            fiskeridir_vessel_id,
+            fiskeridir_length_group_id,
+            landing_coverage,
+            trip_id,
+            period,
+            num_deliveries: num_deliveries as u32,
+            most_recent_delivery_date: latest_landing_timestamp,
+            gear_ids,
+            gear_group_ids,
+            species_group_ids,
+            delivery_point_ids: delivery_points,
+            hauls: serde_json::from_str::<Vec<Haul>>(&hauls)?,
+            fishing_facilities: serde_json::from_str::<Vec<FishingFacility>>(&fishing_facilities)?,
             delivery: kyogre_core::Delivery {
-                delivered: serde_json::from_str::<Vec<Catch>>(&value.catches)?,
-                total_living_weight: value.total_living_weight,
-                total_gross_weight: value.total_gross_weight,
-                total_product_weight: value.total_product_weight,
-                total_price_for_fisher: value.total_price_for_fisher,
+                delivered: serde_json::from_str::<Vec<Catch>>(&catches)?,
+                total_living_weight,
+                total_gross_weight,
+                total_product_weight,
+                total_price_for_fisher,
             },
-            start_port_id: value.start_port_id,
-            end_port_id: value.end_port_id,
-            assembler_id: value.trip_assembler_id,
-            vessel_events: serde_json::from_str::<Vec<VesselEvent>>(&value.vessel_events)?
+            start_port_id,
+            end_port_id,
+            assembler_id: trip_assembler_id,
+            vessel_events: serde_json::from_str::<Vec<VesselEvent>>(&vessel_events)?
                 .into_iter()
                 .map(kyogre_core::VesselEvent::from)
                 .collect(),
-            landing_ids: value.landing_ids,
-            distance: value.distance,
-            cache_version: value.cache_version,
-            target_species_fiskeridir_id: value.target_species_fiskeridir_id.map(|v| v as u32),
-            target_species_fao_id: value.target_species_fao_id,
-            fuel_consumption: value.fuel_consumption,
-            track_coverage: value.track_coverage,
-            tra: serde_json::from_str::<Vec<TripTra>>(&value.tra)?
+            landing_ids,
+            distance,
+            cache_version,
+            target_species_fiskeridir_id: target_species_fiskeridir_id.map(|v| v as u32),
+            target_species_fao_id,
+            fuel_consumption,
+            track_coverage,
+            tra: serde_json::from_str::<Vec<TripTra>>(&tra)?
                 .into_iter()
                 .map(kyogre_core::Tra::from)
                 .collect(),
@@ -385,18 +466,32 @@ impl TryFrom<TripAssemblerLogEntry> for kyogre_core::TripAssemblerLogEntry {
     type Error = Error;
 
     fn try_from(value: TripAssemblerLogEntry) -> std::result::Result<Self, Self::Error> {
+        let TripAssemblerLogEntry {
+            trip_assembler_log_id,
+            fiskeridir_vessel_id,
+            calculation_timer_prior,
+            calculation_timer_post,
+            conflict,
+            conflict_vessel_event_timestamp,
+            conflict_vessel_event_id,
+            conflict_vessel_event_type_id,
+            conflict_strategy,
+            prior_trip_vessel_events,
+            new_vessel_events,
+        } = value;
+
         Ok(Self {
-            trip_assembler_log_id: value.trip_assembler_log_id as u64,
-            vessel_id: value.fiskeridir_vessel_id,
-            calculation_timer_prior: value.calculation_timer_prior,
-            calculation_timer_post: value.calculation_timer_post,
-            conflict: value.conflict,
-            conflict_vessel_event_timestamp: value.conflict_vessel_event_timestamp,
-            conflict_vessel_event_id: value.conflict_vessel_event_id.map(|v| v as u64),
-            conflict_vessel_event_type_id: value.conflict_vessel_event_type_id,
-            prior_trip_vessel_events: serde_json::from_str(&value.prior_trip_vessel_events)?,
-            new_vessel_events: serde_json::from_str(&value.new_vessel_events)?,
-            conflict_strategy: TripsConflictStrategy::from_str(&value.conflict_strategy)?,
+            trip_assembler_log_id: trip_assembler_log_id as u64,
+            vessel_id: fiskeridir_vessel_id,
+            calculation_timer_prior,
+            calculation_timer_post,
+            conflict,
+            conflict_vessel_event_timestamp,
+            conflict_vessel_event_id: conflict_vessel_event_id.map(|v| v as u64),
+            conflict_vessel_event_type_id,
+            prior_trip_vessel_events: serde_json::from_str(&prior_trip_vessel_events)?,
+            new_vessel_events: serde_json::from_str(&new_vessel_events)?,
+            conflict_strategy: TripsConflictStrategy::from_str(&conflict_strategy)?,
         })
     }
 }
