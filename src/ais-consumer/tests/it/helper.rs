@@ -30,7 +30,9 @@ where
 {
     TestHelperBuilder::default()
         .add_postgres(
+            None,
             "ghcr.io/orcalabs/kyogre/test-postgres",
+            None,
             Some(POSTGRES_TEST_PORT),
         )
         .build()

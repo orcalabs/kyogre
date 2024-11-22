@@ -1,4 +1,7 @@
 FROM postgis/postgis:16-3.4-alpine
 
-COPY src/postgres/migrations/* /docker-entrypoint-initdb.d/
-COPY src/postgres/test_migrations/* /docker-entrypoint-initdb.d/
+ARG MIGRATIONS_DIR_PATH
+ARG TEST_MIGRATIONS_DIR_PATH
+
+COPY ${MIGRATIONS_DIR_PATH}/*  /docker-entrypoint-initdb.d/
+COPY ${TEST_MIGRATIONS_DIR_PATH}/* /docker-entrypoint-initdb.d/

@@ -1,4 +1,4 @@
-use std::result::Result as StdResult;
+use std::{path::PathBuf, result::Result as StdResult};
 
 use async_trait::async_trait;
 use chrono::{DateTime, NaiveDate, Utc};
@@ -7,6 +7,7 @@ use futures::{Stream, StreamExt, TryStreamExt};
 use kyogre_core::*;
 use orca_core::{Environment, PsqlLogStatements, PsqlSettings};
 use sqlx::{
+    migrate::Migrator,
     postgres::{PgConnectOptions, PgPoolOptions, PgSslMode},
     ConnectOptions, PgPool,
 };
@@ -182,6 +183,17 @@ WHERE
     #[instrument(skip_all)]
     pub async fn do_migrations(&self) {
         sqlx::migrate!()
+            .set_ignore_missing(true)
+            .run(&self.pool)
+            .await
+            .unwrap();
+        info!("ran db migrations successfully");
+    }
+
+    pub async fn do_migrations_path(&self, path: PathBuf) {
+        Migrator::new(path)
+            .await
+            .unwrap()
             .set_ignore_missing(true)
             .run(&self.pool)
             .await

@@ -76,6 +76,15 @@ the first run:
 docker-compose build test-db
 ```
 
+By default not all tests are run, to enable cache tests and db migrations run the following
+(you will need the master db state image):
+
+```
+echo <GITHUB_TOKEN> | docker login ghcr.io/orcalabs/kyogre -u <USERNAME> --password-stdin
+docker pull ghcr.io/orcalabs/kyogre/test-postgres:master
+cargo test --features all-tests
+```
+
 If you experience `Too many open files` errors from tests either increase your
 max amount of file descriptors (`ulimit -n NUM`, linux) or run `cargo test` with
 limited test threads `cargo test -- --test-threads=NUM`
