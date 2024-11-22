@@ -33,6 +33,7 @@ pub enum TripBenchmarkStatus {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct AverageTripBenchmarks {
     pub weight_per_hour: Option<f64>,

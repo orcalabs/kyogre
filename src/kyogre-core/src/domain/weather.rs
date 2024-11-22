@@ -153,6 +153,7 @@ pub struct NewWeather {
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct Weather {
     pub timestamp: DateTime<Utc>,
