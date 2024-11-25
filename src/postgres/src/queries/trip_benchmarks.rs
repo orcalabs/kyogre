@@ -181,8 +181,8 @@ WITH
 SELECT
     CASE
         WHEN SUM(t.landing_total_living_weight) > 0
-        AND SUM(t.distance) > $2 THEN (SUM(t.fuel_consumption) * $3)::DOUBLE PRECISION / (
-            SUM(t.landing_total_living_weight * t.distance * $4)::DOUBLE PRECISION / 1000::DOUBLE PRECISION
+        AND SUM(t.distance) > $2 THEN ((SUM(t.fuel_consumption) * $3) * 1000)::DOUBLE PRECISION / (
+            SUM(t.landing_total_living_weight * t.distance * $4)::DOUBLE PRECISION
         )
         ELSE NULL
     END AS eeoi
@@ -221,8 +221,8 @@ WITH
         SELECT
             CASE
                 WHEN SUM(t.landing_total_living_weight) > 0
-                AND SUM(t.distance) > $1 THEN (SUM(t.fuel_consumption) * $2)::DOUBLE PRECISION / (
-                    SUM(t.landing_total_living_weight * t.distance * $3)::DOUBLE PRECISION / 1000::DOUBLE PRECISION
+                AND SUM(t.distance) > $1 THEN ((SUM(t.fuel_consumption) * $2) * 1000)::DOUBLE PRECISION / (
+                    SUM(t.landing_total_living_weight * t.distance * $3)::DOUBLE PRECISION
                 )
                 ELSE NULL
             END AS eeoi

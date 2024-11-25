@@ -107,7 +107,7 @@ pub async fn trip_benchmarks<T: Database>(
 }
 
 /// Returns the EEOI of the logged in user for the given period.
-/// EEOI is given with the unit: `tonn / (tonn * nautical miles)`
+/// EEOI is given with the unit: `kg / (kg * nautical miles)`
 #[utoipa::path(
     get,
     path = "/trip_benchmarks/eeoi",
@@ -131,7 +131,7 @@ pub async fn eeoi<T: Database>(
 }
 
 /// Returns the average EEOI of all vessels matching the given parameters.
-/// EEOI is given with the unit: `tonn / (tonn * nautical miles)`
+/// EEOI is given with the unit: `kg / (kg * nautical miles)`
 #[utoipa::path(
     get,
     path = "/trip_benchmarks/average_eeoi",
