@@ -265,6 +265,7 @@ name = "ais-consumer"
 version = "0.1.0"
 dependencies = [
  "ais-consumer",
+ "async-channel",
  "chrono",
  "config",
  "fiskeridir-rs",
@@ -527,6 +528,18 @@ checksum = "47e4f2b81832e72834d7518d8487a0396a28cc408186a2e8854c0f98011faf12"
 dependencies = [
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "async-channel"
+version = "2.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "89b47800b0be77592da0afd425cc03468052844aff33b84e33cc696f64e77b6a"
+dependencies = [
+ "concurrent-queue",
+ "event-listener-strategy",
+ "futures-core",
+ "pin-project-lite",
 ]
 
 [[package]]
@@ -1551,6 +1564,7 @@ dependencies = [
 name = "engine"
 version = "0.1.0"
 dependencies = [
+ "async-channel",
  "async-trait",
  "chrono",
  "config",
@@ -1633,6 +1647,16 @@ checksum = "6032be9bd27023a771701cc49f9f053c751055f71efb2e0ae5c15809093675ba"
 dependencies = [
  "concurrent-queue",
  "parking",
+ "pin-project-lite",
+]
+
+[[package]]
+name = "event-listener-strategy"
+version = "0.5.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0f214dc438f977e6d4e3500aaa277f5ad94ca83fbbd9b1a15713ce2344ccc5a1"
+dependencies = [
+ "event-listener",
  "pin-project-lite",
 ]
 
@@ -2842,6 +2866,7 @@ dependencies = [
 name = "kyogre-core"
 version = "0.1.0"
 dependencies = [
+ "async-channel",
  "async-trait",
  "backon",
  "chrono",
@@ -3971,6 +3996,7 @@ checksum = "280dc24453071f1b63954171985a0b0d30058d287960968b9b2aca264c8d4ee6"
 name = "postgres"
 version = "0.1.0"
 dependencies = [
+ "async-channel",
  "async-trait",
  "chrono",
  "fiskeridir-rs",
@@ -4075,7 +4101,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0c1318b19085f08681016926435853bbf7858f9c082d0999b80550ff5d9abe15"
 dependencies = [
  "bytes",
- "heck 0.4.1",
+ "heck 0.5.0",
  "itertools 0.13.0",
  "log",
  "multimap",
@@ -5288,7 +5314,7 @@ version = "0.8.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "03c3c6b7927ffe7ecaa769ee0e3994da3b8cafc8f444578982c83ecb161af917"
 dependencies = [
- "heck 0.4.1",
+ "heck 0.5.0",
  "proc-macro2",
  "quote 1.0.37",
  "syn 2.0.89",
