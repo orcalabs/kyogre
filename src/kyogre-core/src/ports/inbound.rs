@@ -1,4 +1,5 @@
 use crate::*;
+use async_channel::Receiver;
 use async_trait::async_trait;
 use chrono::{DateTime, NaiveDate, Utc};
 use fiskeridir_rs::{DataFileId, SpeciesGroup};
@@ -45,7 +46,7 @@ pub trait MLModelsInbound: Send + Sync {
 pub trait AisConsumeLoop: Sync + Send {
     async fn consume(
         &self,
-        mut receiver: tokio::sync::broadcast::Receiver<DataMessage>,
+        mut receiver: Receiver<DataMessage>,
         process_confirmation: Option<tokio::sync::mpsc::Sender<()>>,
     );
 }

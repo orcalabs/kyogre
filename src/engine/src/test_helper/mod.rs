@@ -1,5 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
+use async_channel::Sender;
 use chrono::{DateTime, Duration, TimeZone, Utc};
 use fiskeridir_rs::{CallSign, DeliveryPointId, LandingMonth};
 use futures::TryStreamExt;
@@ -88,7 +89,7 @@ pub struct TestState {
 pub struct TestStateBuilder {
     storage: Box<dyn TestStorage>,
     vessels: Vec<VesselContructor>,
-    ais_data_sender: tokio::sync::broadcast::Sender<DataMessage>,
+    ais_data_sender: Sender<DataMessage>,
     ais_data_confirmation: tokio::sync::mpsc::Receiver<()>,
     vessel_id_counter: i64,
     mmsi_counter: i32,
@@ -272,7 +273,7 @@ impl TestStateBuilder {
         ais_consumer: Box<dyn AisConsumeLoop>,
         engine: FisheryEngine,
     ) -> TestStateBuilder {
-        let (sender, receiver) = tokio::sync::broadcast::channel::<DataMessage>(30);
+        let (sender, receiver) = async_channel::bounded::<DataMessage>(30);
 
         let (confirmation_sender, confirmation_receiver) = tokio::sync::mpsc::channel(100);
         tokio::spawn(async move {
@@ -657,6 +658,7 @@ impl TestStateBuilder {
                         }))
                         .collect(),
                 })
+                .await
                 .unwrap();
 
             self.ais_data_confirmation.recv().await.unwrap();
@@ -1008,6 +1010,7 @@ impl TestStateBuilder {
                         .collect(),
                     static_messages: vec![],
                 })
+                .await
                 .unwrap();
 
             self.ais_data_confirmation.recv().await.unwrap();

@@ -1,9 +1,9 @@
+use async_channel::{RecvError, SendError};
 use kyogre_core::DataMessage;
 use reqwest::StatusCode;
 use snafu::{Location, Snafu};
 use stack_error::StackError;
 use std::num::ParseIntError;
-use tokio::sync::broadcast::error::SendError;
 
 pub type Result<T> = std::result::Result<T, Error>;
 
@@ -39,6 +39,13 @@ pub enum Error {
     },
     #[snafu(display("Internal ais channel closed"))]
     InternalChannelClosed {
+        #[snafu(implicit)]
+        location: Location,
+        #[snafu(source)]
+        error: RecvError,
+    },
+    #[snafu(display("Failed to send message to consume loop"))]
+    SendError {
         #[snafu(implicit)]
         location: Location,
         #[snafu(source)]
