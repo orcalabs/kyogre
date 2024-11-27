@@ -29,7 +29,8 @@ async fn test_does_not_logs_actions_on_success() {
 async fn test_produces_new_trips_without_replacing_existing_ones() {
     test(|_helper, builder| async move {
         let landing = Utc.timestamp_opt(10000000, 0).unwrap();
-        let landing2 = Utc.timestamp_opt(30000000, 0).unwrap();
+        let landing2 = landing + Duration::days(14);
+
         let state = builder
             .vessels(1)
             .landings(1)
@@ -86,8 +87,9 @@ async fn test_produces_no_trips_with_no_new_landings() {
 async fn test_resolves_conflict_on_day_prior_to_most_recent_trip_end() {
     test(|_helper, builder| async move {
         let landing = Utc.timestamp_opt(10000000, 0).unwrap();
-        let landing2 = Utc.timestamp_opt(30000000, 0).unwrap();
-        let landing3 = Utc.timestamp_opt(20000000, 0).unwrap();
+        let landing2 = landing + Duration::days(14);
+        let landing3 = landing + Duration::days(7);
+
         let state = builder
             .vessels(1)
             .landings(2)
@@ -150,7 +152,7 @@ async fn test_other_event_types_does_not_cause_conflicts() {
 async fn test_resolves_conflict_on_same_day_as_most_recent_trip_end() {
     test(|_helper, builder| async move {
         let landing = Utc.timestamp_opt(10000000, 0).unwrap();
-        let landing2 = Utc.timestamp_opt(30000000, 0).unwrap();
+        let landing2 = landing + Duration::days(14);
         let landing3 = landing2 + Duration::seconds(1);
 
         let state = builder

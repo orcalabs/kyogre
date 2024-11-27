@@ -106,6 +106,10 @@ impl DateRange {
         val >= self.start && val <= self.end
     }
 
+    pub fn set_start(&mut self, start: DateTime<Utc>) {
+        self.start = start;
+    }
+
     pub fn set_end_bound(&mut self, bound: Bound) {
         self.end_bound = bound;
     }
