@@ -1,6 +1,8 @@
 use crate::error::Result;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Duration, Utc};
 use kyogre_core::{Bound, DateRange, NewTrip, VesselEventDetailed, VesselEventType};
+
+const MAX_LANDING_TRIP_DURATION: Duration = Duration::days(60);
 
 pub struct LandingStatemachine {
     current_landing: LandingEvent,
@@ -38,6 +40,11 @@ impl LandingStatemachine {
             let mut period = DateRange::new(self.current_landing.timestamp, event.timestamp)?;
             period.set_start_bound(Bound::Exclusive);
             period.set_end_bound(Bound::Inclusive);
+
+            if period.duration() > MAX_LANDING_TRIP_DURATION {
+                period.set_start(period.end() - MAX_LANDING_TRIP_DURATION);
+            }
+
             self.new_trips.push(NewTrip {
                 landing_coverage: period.clone(),
                 period,
