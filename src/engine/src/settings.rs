@@ -11,7 +11,8 @@ use crate::{
 
 #[derive(Debug, Deserialize)]
 pub struct Settings {
-    pub num_workers: u32,
+    pub num_trip_state_workers: u32,
+    pub num_fuel_estimation_workers: u32,
     pub postgres: PsqlSettings,
     pub meilisearch: Option<meilisearch::Settings>,
     pub environment: Environment,

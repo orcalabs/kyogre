@@ -1,5 +1,5 @@
-use chrono::{DateTime, Utc};
-use fiskeridir_rs::CallSign;
+use chrono::{DateTime, NaiveDate, Utc};
+use fiskeridir_rs::{CallSign, FiskeridirVesselId};
 
 use crate::BarentswatchUserId;
 
@@ -16,4 +16,11 @@ pub struct DeleteFuelMeasurement {
     pub barentswatch_user_id: BarentswatchUserId,
     pub call_sign: CallSign,
     pub timestamp: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone)]
+pub struct NewFuelDayEstimate {
+    pub vessel_id: FiskeridirVesselId,
+    pub date: NaiveDate,
+    pub estimate: f64,
 }

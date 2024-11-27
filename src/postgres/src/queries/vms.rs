@@ -1,15 +1,13 @@
-use std::collections::{hash_map::Entry, HashMap, HashSet};
-
-use chrono::{DateTime, Utc};
-use fiskeridir_rs::CallSign;
-use futures::{Stream, TryStreamExt};
-use kyogre_core::{DateRange, Mmsi, PositionType};
-
 use crate::{
     error::Result,
     models::{AisVmsAreaPositionsReturning, EarliestVms, NewVmsPosition, VmsPosition},
     PostgresAdapter,
 };
+use chrono::{DateTime, NaiveDate, Utc};
+use fiskeridir_rs::CallSign;
+use futures::{Stream, TryStreamExt};
+use kyogre_core::{DateRange, Mmsi, PositionType, ProcessingStatus};
+use std::collections::{hash_map::Entry, HashMap, HashSet};
 
 impl PostgresAdapter {
     pub(crate) fn vms_positions_impl(
@@ -135,11 +133,48 @@ ORDER BY
         }
 
         let call_signs_unique = call_signs_unique.into_iter().collect::<Vec<_>>();
+
+        let (cs, dates): (Vec<String>, Vec<NaiveDate>) = vms_earliest
+            .iter()
+            .map(|v| (v.0.to_string(), v.1.timestamp.date_naive()))
+            .collect();
+
         let earliest_positions = vms_earliest.into_values();
 
         let mut tx = self.pool.begin().await?;
 
         self.unnest_insert(earliest_positions, &mut *tx).await?;
+
+        sqlx::query!(
+            r#"
+WITH
+    to_update AS (
+        SELECT
+            UNNEST($1::TEXT[]) cs,
+            UNNEST($2::DATE[]) date
+    )
+UPDATE fuel_estimates f
+SET
+    status = $3
+FROM
+    (
+        SELECT
+            w.fiskeridir_vessel_id,
+            to_update.date
+        FROM
+            to_update
+            INNER JOIN fiskeridir_ais_vessel_mapping_whitelist w ON w.call_sign = to_update.cs
+    ) q
+WHERE
+    q.fiskeridir_vessel_id = f.fiskeridir_vessel_id
+    AND f.date >= q.date
+            "#,
+            cs.as_slice(),
+            &dates,
+            ProcessingStatus::Unprocessed as i32
+        )
+        .execute(&mut *tx)
+        .await?;
 
         sqlx::query!(
             r#"

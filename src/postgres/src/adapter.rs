@@ -500,7 +500,54 @@ impl AisMigratorDestination for PostgresAdapter {
 }
 
 #[async_trait]
+impl FuelEstimation for PostgresAdapter {
+    #[cfg(feature = "test")]
+    async fn latest_position(&self) -> CoreResult<Option<NaiveDate>> {
+        Ok(self.latest_position_impl().await?)
+    }
+
+    async fn add_fuel_estimates(&self, estimates: &[NewFuelDayEstimate]) -> CoreResult<()> {
+        Ok(retry(|| self.add_fuel_estimates_impl(estimates)).await?)
+    }
+    async fn vessels_with_trips(&self, num_trips: u32) -> CoreResult<Vec<Vessel>> {
+        Ok(retry(|| async {
+            let out: CoreResult<Vec<Vessel>> = self
+                .vessels_with_trips_impl(num_trips)
+                .try_convert_collect()
+                .await;
+            out
+        })
+        .await?)
+    }
+    async fn dates_to_estimate(
+        &self,
+        vessel_id: FiskeridirVesselId,
+        call_sign: Option<&CallSign>,
+        mmsi: Option<Mmsi>,
+        end_date: NaiveDate,
+    ) -> CoreResult<Vec<NaiveDate>> {
+        Ok(retry(|| self.dates_to_estimate_impl(vessel_id, call_sign, mmsi, end_date)).await?)
+    }
+
+    async fn ais_vms_positions_with_haul(
+        &self,
+        vessel_id: FiskeridirVesselId,
+        mmsi: Option<Mmsi>,
+        call_sign: Option<&CallSign>,
+        date: NaiveDate,
+    ) -> CoreResult<Vec<AisVmsPositionWithHaul>> {
+        Ok(
+            retry(|| self.ais_vms_positions_with_haul_impl(vessel_id, mmsi, call_sign, date))
+                .await?,
+        )
+    }
+}
+
+#[async_trait]
 impl WebApiOutboundPort for PostgresAdapter {
+    async fn fuel_estimation(&self, query: &FuelQuery) -> CoreResult<f64> {
+        Ok(retry(|| self.fuel_estimation_impl(query)).await?)
+    }
     async fn update_vessel(
         &self,
         call_sign: &CallSign,
@@ -978,12 +1025,8 @@ impl TripBenchmarkOutbound for PostgresAdapter {
         })
         .await
     }
-    async fn track_of_trip(&self, id: TripId) -> CoreResult<Vec<AisVmsPosition>> {
-        Ok(retry(|| {
-            self.trip_positions_impl(id, AisPermission::All)
-                .try_collect()
-        })
-        .await?)
+    async fn track_of_trip_with_haul(&self, id: TripId) -> CoreResult<Vec<AisVmsPositionWithHaul>> {
+        Ok(retry(|| self.track_of_trip_with_haul_impl(id)).await?)
     }
     async fn trips_without_fuel_consumption(
         &self,

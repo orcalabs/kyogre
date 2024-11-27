@@ -427,21 +427,24 @@ async fn test_ais_vms_does_not_return_positions_for_vessels_under_15m_with_corre
 #[tokio::test]
 async fn test_ais_vms_by_trip_returns_only_positions_within_trip() {
     test(|helper, builder| async move {
+        let start = Utc.with_ymd_and_hms(2010, 1, 1, 1, 0, 0).unwrap();
+        let end = start + Duration::days(1);
         let state = builder
             .vessels(1)
             .ais_vms_positions(2)
             .modify_idx(|i, v| {
                 if i == 0 {
-                    v.position
-                        .set_timestamp(Utc.timestamp_opt(100000, 0).unwrap())
+                    v.position.set_timestamp(start - Duration::seconds(1));
                 } else {
-                    v.position
-                        .set_timestamp(Utc.timestamp_opt(100000000000, 0).unwrap())
+                    v.position.set_timestamp(end + Duration::seconds(1));
                 }
             })
             .trips(1)
+            .modify(|t| {
+                t.trip_specification.set_start(start);
+                t.trip_specification.set_end(end);
+            })
             .ais_vms_positions(3)
-            .modify_idx(|i, p| p.position.add_location(i as f64, i as f64))
             .build()
             .await;
 

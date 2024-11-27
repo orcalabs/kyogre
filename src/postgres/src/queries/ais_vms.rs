@@ -1,16 +1,115 @@
-use chrono::NaiveDate;
-use fiskeridir_rs::CallSign;
+use chrono::{NaiveDate, TimeZone, Utc};
+use fiskeridir_rs::{CallSign, GearGroup};
 use futures::{Stream, TryStreamExt};
 use geozero::wkb;
 use kyogre_core::{
-    AisPermission, AisVmsAreaCount, AisVmsPosition, DateRange, Mmsi, NavigationStatus,
-    PositionType, TripId, TripPositionLayerId, LEISURE_VESSEL_LENGTH_AIS_BOUNDARY,
-    LEISURE_VESSEL_SHIP_TYPES, PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY,
+    AisPermission, AisVmsAreaCount, AisVmsPosition, AisVmsPositionWithHaul, DateRange,
+    FiskeridirVesselId, Mmsi, NavigationStatus, PositionType, TripId, TripPositionLayerId,
+    LEISURE_VESSEL_LENGTH_AIS_BOUNDARY, LEISURE_VESSEL_SHIP_TYPES,
+    PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY,
 };
 
 use crate::{error::Result, models::AisVmsAreaPositionsReturning, PostgresAdapter};
 
 impl PostgresAdapter {
+    pub(crate) async fn ais_vms_positions_with_haul_impl(
+        &self,
+        vessel_id: FiskeridirVesselId,
+        mmsi: Option<Mmsi>,
+        call_sign: Option<&CallSign>,
+        date: NaiveDate,
+    ) -> Result<Vec<AisVmsPositionWithHaul>> {
+        let start = Utc.from_utc_datetime(&date.and_hms_opt(0, 0, 0).unwrap());
+        let end = Utc.from_utc_datetime(&date.and_hms_opt(23, 59, 59).unwrap());
+
+        Ok(sqlx::query_as!(
+            AisVmsPositionWithHaul,
+            r#"
+SELECT
+    u.latitude AS "latitude!",
+    u.longitude AS "longitude!",
+    u."timestamp" AS "timestamp!",
+    u.speed,
+    u.position_type_id AS "position_type_id!: PositionType",
+    (h.haul_id IS NOT NULL AND h.gear_group_id = ANY($1)) AS "is_inside_haul_and_active_gear!"
+FROM
+    (
+        SELECT
+            latitude,
+            longitude,
+            "timestamp",
+            speed_over_ground AS speed,
+            $2::INT AS position_type_id
+        FROM
+            ais_positions a
+        WHERE
+            "timestamp" >= $3
+            AND "timestamp" <= $4
+            AND mmsi = $5
+        UNION ALL
+        SELECT
+            latitude,
+            longitude,
+            "timestamp",
+            speed,
+            $6::INT AS position_type_id
+        FROM
+            vms_positions v
+        WHERE
+            "timestamp" >= $3
+            AND "timestamp" <= $4
+            AND call_sign = $7
+    ) u
+    LEFT JOIN hauls h ON h.fiskeridir_vessel_id = $8
+    AND h.period @> u."timestamp"
+ORDER BY
+    u."timestamp" ASC
+                "#,
+            &GearGroup::active_int(),
+            PositionType::Ais as i32,
+            start,
+            end,
+            mmsi.map(|m| m.into_inner()),
+            PositionType::Vms as i32,
+            call_sign.map(|c| c.as_ref()),
+            vessel_id.into_inner()
+        )
+        .fetch_all(&self.pool)
+        .await?)
+    }
+    pub(crate) async fn earliest_position_impl(
+        &self,
+        call_sign: Option<&CallSign>,
+        mmsi: Option<Mmsi>,
+    ) -> Result<Option<NaiveDate>> {
+        Ok(sqlx::query!(
+            r#"
+SELECT
+    MIN (DATE(u.min_time)) AS min_date
+FROM
+    (
+        SELECT
+            MIN("timestamp") AS min_time
+        FROM
+            ais_positions a
+        WHERE
+            mmsi = $1
+        UNION ALL
+        SELECT
+            MIN("timestamp") AS min_time
+        FROM
+            vms_positions v
+        WHERE
+            call_sign = $2
+    ) u
+                "#,
+            mmsi.map(|m| m.into_inner()),
+            call_sign.map(|c| c.as_ref())
+        )
+        .fetch_one(&self.pool)
+        .await?
+        .min_date)
+    }
     pub(crate) fn ais_vms_area_positions_impl(
         &self,
         x1: f64,
@@ -267,6 +366,36 @@ ORDER BY
         )
         .fetch(self.ais_pool())
         .map_err(|e| e.into())
+    }
+    pub(crate) async fn track_of_trip_with_haul_impl(
+        &self,
+        trip_id: TripId,
+    ) -> Result<Vec<AisVmsPositionWithHaul>> {
+        Ok(sqlx::query_as!(
+            AisVmsPositionWithHaul,
+            r#"
+SELECT
+    latitude AS "latitude!",
+    longitude AS "longitude!",
+    "timestamp" AS "timestamp!",
+    speed,
+    position_type_id AS "position_type_id: PositionType",
+    (h.haul_id IS NOT NULL AND h.gear_group_id = ANY($1)) AS "is_inside_haul_and_active_gear!"
+FROM
+    trip_positions p
+    INNER JOIN trips_detailed t ON p.trip_id = t.trip_id
+    LEFT JOIN hauls h ON h.haul_id = ANY (t.haul_ids)
+    AND h.period @> p."timestamp"
+WHERE
+    p.trip_id = $2
+ORDER BY
+    "timestamp" ASC
+            "#,
+            &GearGroup::active_int(),
+            trip_id.into_inner(),
+        )
+        .fetch_all(&self.pool)
+        .await?)
     }
 
     pub(crate) fn trip_positions_impl(

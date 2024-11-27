@@ -24,6 +24,16 @@ pub struct AisVmsPosition {
 }
 
 #[derive(Debug, Clone)]
+pub struct AisVmsPositionWithHaul {
+    pub latitude: f64,
+    pub longitude: f64,
+    pub timestamp: DateTime<Utc>,
+    pub speed: Option<f64>,
+    pub is_inside_haul_and_active_gear: bool,
+    pub position_type_id: PositionType,
+}
+
+#[derive(Debug, Clone)]
 pub enum AisVmsParams {
     Trip(TripId),
     Range {

@@ -207,6 +207,12 @@ where
                         .to(routes::v1::user::update_user::<T>),
                 )
                 .route(
+                    "/fuel",
+                    web::get()
+                        .guard(guard.clone())
+                        .to(routes::v1::fuel::get_fuel::<T>),
+                )
+                .route(
                     "/fuel_measurements",
                     web::get()
                         .guard(guard.clone())
