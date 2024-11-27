@@ -1,3 +1,4 @@
+use chrono::NaiveDate;
 use fiskeridir_rs::CallSign;
 use fiskeridir_rs::DeliveryPointId;
 use futures::{Stream, StreamExt, TryStreamExt};
@@ -20,6 +21,29 @@ use crate::{
 use super::vms::VmsPositionsArg;
 
 impl PostgresAdapter {
+    pub(crate) async fn latest_position_impl(&self) -> Result<Option<NaiveDate>> {
+        Ok(sqlx::query!(
+            r#"
+SELECT
+    MAX(DATE(u.date)) as date
+FROM
+    (
+        SELECT
+            MAX("timestamp") as date
+        FROM
+            ais_positions a
+        UNION ALL
+        SELECT
+            MAX("timestamp") as date
+        FROM
+            vms_positions v
+    ) u
+                "#,
+        )
+        .fetch_one(&self.pool)
+        .await?
+        .date)
+    }
     pub(crate) async fn trip_benchmarks_with_status_impl(
         &self,
         status: TripBenchmarkStatus,

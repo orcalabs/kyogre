@@ -1,12 +1,42 @@
 use crate::error::{error::DistanceEstimationSnafu, Result};
+use chrono::{DateTime, Utc};
 use geoutils::Location;
 use kyogre_core::{
-    AisVmsPosition, CoreResult, DateRange, PrunedTripPosition, TripPositionLayer,
-    TripPositionLayerId, TripPositionLayerOutput,
+    AisVmsPosition, AisVmsPositionWithHaul, CoreResult, DateRange, PrunedTripPosition,
+    TripPositionLayer, TripPositionLayerId, TripPositionLayerOutput,
 };
 use serde_json::json;
 
 static METER_TO_NAUTICAL_MILES: f64 = 0.0005399568;
+
+pub struct SpeedItem {
+    pub latitude: f64,
+    pub longitude: f64,
+    pub speed: Option<f64>,
+    pub timestamp: DateTime<Utc>,
+}
+
+impl From<&AisVmsPosition> for SpeedItem {
+    fn from(value: &AisVmsPosition) -> Self {
+        SpeedItem {
+            latitude: value.latitude,
+            longitude: value.longitude,
+            speed: value.speed,
+            timestamp: value.timestamp,
+        }
+    }
+}
+
+impl From<&AisVmsPositionWithHaul> for SpeedItem {
+    fn from(value: &AisVmsPositionWithHaul) -> Self {
+        SpeedItem {
+            latitude: value.latitude,
+            longitude: value.longitude,
+            speed: value.speed,
+            timestamp: value.timestamp,
+        }
+    }
+}
 
 pub struct UnrealisticSpeed {
     pub knots_limit: u32,
@@ -77,7 +107,12 @@ impl TripPositionLayer for UnrealisticSpeed {
     }
 }
 
-fn estimated_speed_between_points(first: &AisVmsPosition, second: &AisVmsPosition) -> Result<u32> {
+pub fn estimated_speed_between_points<T>(first: &T, second: &T) -> Result<u32>
+where
+    for<'a> &'a T: Into<SpeedItem>,
+{
+    let first: SpeedItem = first.into();
+    let second: SpeedItem = second.into();
     let first_loc = Location::new(first.latitude, first.longitude);
     let second_loc = Location::new(second.latitude, second.longitude);
 
@@ -91,6 +126,7 @@ fn estimated_speed_between_points(first: &AisVmsPosition, second: &AisVmsPositio
     })?;
 
     let time_diff = second.timestamp - first.timestamp;
+
     let estimated_speed = (distance.meters() * METER_TO_NAUTICAL_MILES)
         / ((time_diff.num_seconds() as f64) / 60.0 / 60.0);
 
