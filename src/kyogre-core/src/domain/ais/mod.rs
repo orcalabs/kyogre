@@ -191,6 +191,12 @@ pub struct AisVesselMigrate {
     pub progress: Option<DateTime<Utc>>,
 }
 
+impl DataMessage {
+    pub fn is_empty(&self) -> bool {
+        self.static_messages.is_empty() && self.positions.is_empty()
+    }
+}
+
 impl Mmsi {
     pub fn into_inner(self) -> i32 {
         self.0

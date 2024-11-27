@@ -28,6 +28,7 @@ futures = { workspace = true }
 rand = { workspace = true }
 strum = { workspace = true }
 geozero = { workspace = true }
+async-channel = { workspace = true }
 
 unnest_insert = { version = "0.11.0", registry = "orcalabs-orcastrator", features = [
     "derive",

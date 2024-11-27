@@ -4,9 +4,6 @@ on:
   push:
     branches:
       - master
-    paths:
-      - src/postgres/migrations/**
-      - src/postgres/test_migrations/**
   workflow_dispatch:
 
 env:
@@ -32,12 +29,23 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v2
+        id: filter
+        with:
+          filters: |
+            migrations:
+              - 'src/postgres/migrations/**'
+            test_migrations:
+              - 'src/postgres/test_migrations/**'
+
       - uses: taiki-e/cache-cargo-install-action@v2
+        if: steps.filter.outputs.migrations == 'true' || steps.filter.outputs.test_migrations == 'true'
         name: install sqlx
         with:
           tool: sqlx-cli
 
       - name: install postgres 16
+        if: steps.filter.outputs.migrations == 'true' || steps.filter.outputs.test_migrations == 'true'
         run: |
           sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
           curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/postgresql.gpg
@@ -45,11 +53,13 @@ jobs:
           sudo apt install postgresql-client-16
 
       - name: Setup rust
+        if: steps.filter.outputs.migrations == 'true' || steps.filter.outputs.test_migrations == 'true'
         uses: orcalabs/github-actions/rust-setup@master
         with:
           cloudsmith-api-key: ${{ secrets.CLOUDSMITH_API_KEY }}
 
       - name: migrate db
+        if: steps.filter.outputs.migrations == 'true' || steps.filter.outputs.test_migrations == 'true'
         run: |
           export DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432
           cargo sqlx migrate run --source src/postgres/migrations
@@ -65,6 +75,7 @@ jobs:
           pg_dump -h localhost -U postgres | grep -v '^CREATE SCHEMA' | grep -v '^COMMENT ON' > src/master_migrations/1231332_db.sql
 
       - uses: docker/setup-buildx-action@v3
+        if: steps.filter.outputs.migrations == 'true' || steps.filter.outputs.test_migrations == 'true'
         name: build and push db
         # See related issues
         # https://github.com/docker/build-push-action/issues/761#issuecomment-1575006515
@@ -74,11 +85,13 @@ jobs:
             image=moby/buildkit:v0.11.6
             network=host
       - uses: docker/login-action@v3
+        if: steps.filter.outputs.migrations == 'true' || steps.filter.outputs.test_migrations == 'true'
         with:
           registry: ghcr.io/orcalabs/kyogre
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - uses: docker/build-push-action@v6
+        if: steps.filter.outputs.migrations == 'true' || steps.filter.outputs.test_migrations == 'true'
         with:
           context: .
           push: true

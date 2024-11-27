@@ -2,10 +2,10 @@ use crate::{
     error::{error::StreamClosedSnafu, Result},
     models::{AisMessage, AisMessageType, AisPosition, AisStatic, MessageType},
 };
+use async_channel::Sender;
 use futures::StreamExt;
 use kyogre_core::{DataMessage, NewAisStatic};
 use tokio::io::AsyncRead;
-use tokio::sync::broadcast::Sender;
 use tokio_util::codec::{FramedRead, LinesCodec, LinesCodecError};
 use tracing::{error, instrument};
 
@@ -18,7 +18,7 @@ impl Consumer {
         Consumer { commit_interval }
     }
     pub async fn run(
-        self,
+        &self,
         source: impl AsyncRead + Unpin,
         sender: Sender<DataMessage>,
     ) -> Result<()> {
@@ -36,19 +36,21 @@ impl Consumer {
                 message = framed_read.next() => {
                     match message {
                         Some(message) => buffer.push(message),
-                        None => return StreamClosedSnafu{}.fail(),
+                        None => {
+                            process_messages(buffer.drain(..), &sender).await?;
+                            return StreamClosedSnafu{}.fail();
+                        },
                     }
                 }
                 _ = interval.tick() => {
-                    if !buffer.is_empty() {
-                        process_messages(buffer.drain(..), &sender).await?;
-                    }
+                    process_messages(buffer.drain(..), &sender).await?;
                 }
             }
         }
     }
 }
 
+// Only returns an error if the receiver half of the sender closes
 #[instrument(skip(messages, sender), fields(app.num_messages))]
 async fn process_messages<T>(messages: T, sender: &Sender<DataMessage>) -> Result<()>
 where
@@ -61,10 +63,10 @@ where
         match message {
             Err(e) => error!("failed to consume ais message: {e:?}"),
             Ok(message) => match parse_message(message) {
-                Err(e) => error!("{e:?}"),
+                Err(e) => error!("failed to parse message: {e:?}"),
                 Ok(message) => match message {
                     AisMessage::Static(m) => match NewAisStatic::try_from(m) {
-                        Err(e) => error!("{e:?}"),
+                        Err(e) => error!("failed to convert static message: {e:?}"),
                         Ok(d) => data_message.static_messages.push(d),
                     },
                     AisMessage::Position(m) => {
@@ -77,8 +79,12 @@ where
         }
     }
 
+    if data_message.is_empty() {
+        return Ok(());
+    }
+
     // Can only fail if the channel is closed.
-    sender.send(data_message)?;
+    sender.send(data_message).await?;
 
     tracing::Span::current().record("app.num_messages", num_messages);
 

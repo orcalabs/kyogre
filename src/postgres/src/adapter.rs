@@ -1,5 +1,6 @@
 use std::{path::PathBuf, result::Result as StdResult};
 
+use async_channel::Receiver;
 use async_trait::async_trait;
 use chrono::{DateTime, NaiveDate, Utc};
 use fiskeridir_rs::{CallSign, DataFileId, LandingId, SpeciesGroup};
@@ -204,7 +205,7 @@ WHERE
     #[instrument(skip_all)]
     pub async fn consume_loop_iteration(
         &self,
-        receiver: &mut tokio::sync::broadcast::Receiver<DataMessage>,
+        receiver: &mut Receiver<DataMessage>,
         process_confirmation: Option<&tokio::sync::mpsc::Sender<()>>,
     ) -> ConsumeLoopOutcome {
         let message = receiver.recv().await;
@@ -247,7 +248,7 @@ WHERE
 
     pub async fn consume_loop(
         &self,
-        mut receiver: tokio::sync::broadcast::Receiver<DataMessage>,
+        mut receiver: Receiver<DataMessage>,
         process_confirmation: Option<tokio::sync::mpsc::Sender<()>>,
     ) {
         loop {
@@ -293,7 +294,7 @@ WHERE
     #[instrument(skip_all, name = "postgres_insert_ais_data")]
     async fn process_message(
         &self,
-        incoming: StdResult<DataMessage, tokio::sync::broadcast::error::RecvError>,
+        incoming: StdResult<DataMessage, async_channel::RecvError>,
     ) -> AisProcessingAction {
         match incoming {
             Ok(message) => {
@@ -316,16 +317,10 @@ WHERE
                     },
                 }
             }
-            Err(e) => match e {
-                tokio::sync::broadcast::error::RecvError::Closed => {
-                    warn!("sender half of ais broadcast channel closed unexpectedly, exiting");
-                    AisProcessingAction::Exit
-                }
-                tokio::sync::broadcast::error::RecvError::Lagged(num_lagged) => {
-                    warn!("postgres consumer lagged {num_lagged} ais messages");
-                    AisProcessingAction::Continue
-                }
-            },
+            Err(e) => {
+                warn!("sender half of ais broadcast channel closed unexpectedly: '{e:?}', exiting");
+                AisProcessingAction::Exit
+            }
         }
     }
 }
@@ -454,7 +449,7 @@ impl TestHelperInbound for PostgresAdapter {
 impl AisConsumeLoop for PostgresAdapter {
     async fn consume(
         &self,
-        receiver: tokio::sync::broadcast::Receiver<DataMessage>,
+        receiver: Receiver<DataMessage>,
         process_confirmation: Option<tokio::sync::mpsc::Sender<()>>,
     ) {
         self.consume_loop(receiver, process_confirmation).await
