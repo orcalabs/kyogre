@@ -1,4 +1,7 @@
-use std::collections::{HashMap, HashSet};
+use std::{
+    collections::{HashMap, HashSet},
+    sync::Arc,
+};
 
 use async_channel::Sender;
 use chrono::{DateTime, Duration, TimeZone, Utc};
@@ -217,6 +220,7 @@ pub fn default_fishing_weight_weather_predictor() -> Box<dyn MLModel> {
 
 pub async fn engine(adapter: PostgresAdapter, db_settings: &PsqlSettings) -> FisheryEngine {
     let transition_log = Box::new(machine::PostgresAdapter::new(db_settings).await.unwrap());
+    let db_arc = Arc::new(adapter.clone());
     let db = Box::new(adapter);
     let trip_assemblers = vec![
         Box::<LandingTripAssembler>::default() as Box<dyn TripAssembler>,
@@ -240,6 +244,7 @@ pub async fn engine(adapter: PostgresAdapter, db_settings: &PsqlSettings) -> Fis
 
     let shared_state = SharedState::new(
         2,
+        2,
         db.clone(),
         db.clone(),
         db.clone(),
@@ -255,7 +260,8 @@ pub async fn engine(adapter: PostgresAdapter, db_settings: &PsqlSettings) -> Fis
         db.clone(),
         db.clone(),
         db.clone(),
-        db,
+        db.clone(),
+        db_arc,
         None,
         trip_assemblers,
         benchmarks,

@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    UNNEST(\n        ($1::DATERANGE)::DATEMULTIRANGE - COALESCE(RANGE_AGG(DATERANGE (date, date + 1, '[)')), '{}')::DATEMULTIRANGE\n    ) AS \"dates!\"\nFROM\n    fuel_estimates\nWHERE\n    fiskeridir_vessel_id = $2\n    AND status = $3\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "dates!",
+        "type_info": "DateRange"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "DateRange",
+        "Int8",
+        "Int4"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "b864699e7f01d9fa9dcf3ff57ec79d60f85fd6e3191825d1e043da2688e85f42"
+}

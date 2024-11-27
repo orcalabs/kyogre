@@ -95,6 +95,7 @@ pub trait WebApiOutboundPort {
         query: AverageTripBenchmarksQuery,
     ) -> CoreResult<AverageTripBenchmarks>;
     async fn average_eeoi(&self, query: AverageEeoiQuery) -> CoreResult<Option<f64>>;
+    async fn fuel_estimation(&self, query: &FuelQuery) -> CoreResult<f64>;
     fn fishing_facilities(
         &self,
         query: FishingFacilitiesQuery,
@@ -190,7 +191,7 @@ pub trait TripBenchmarkOutbound: Send + Sync {
         values: &[UpdateTripPositionFuel],
     ) -> CoreResult<()>;
     async fn vessels(&self) -> CoreResult<Vec<Vessel>>;
-    async fn track_of_trip(&self, id: TripId) -> CoreResult<Vec<AisVmsPosition>>;
+    async fn track_of_trip_with_haul(&self, id: TripId) -> CoreResult<Vec<AisVmsPositionWithHaul>>;
     async fn trips_without_fuel_consumption(
         &self,
         id: FiskeridirVesselId,
@@ -273,6 +274,30 @@ pub trait HaulDistributorOutbound: Send + Sync {
 #[async_trait]
 pub trait MatrixCacheVersion: Send + Sync {
     async fn increment(&self) -> CoreResult<()>;
+}
+
+#[async_trait]
+pub trait FuelEstimation: Send + Sync {
+    // Only used in tests to reduce the amount of estimations generated
+    #[cfg(feature = "test")]
+    async fn latest_position(&self) -> CoreResult<Option<NaiveDate>>;
+
+    async fn add_fuel_estimates(&self, estimates: &[NewFuelDayEstimate]) -> CoreResult<()>;
+    async fn vessels_with_trips(&self, num_trips: u32) -> CoreResult<Vec<Vessel>>;
+    async fn dates_to_estimate(
+        &self,
+        vessel_id: FiskeridirVesselId,
+        call_sign: Option<&CallSign>,
+        mmsi: Option<Mmsi>,
+        end_date: NaiveDate,
+    ) -> CoreResult<Vec<NaiveDate>>;
+    async fn ais_vms_positions_with_haul(
+        &self,
+        vessel_id: FiskeridirVesselId,
+        mmsi: Option<Mmsi>,
+        call_sign: Option<&CallSign>,
+        date: NaiveDate,
+    ) -> CoreResult<Vec<AisVmsPositionWithHaul>>;
 }
 
 #[async_trait]

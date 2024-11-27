@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    COALESCE(SUM(estimate), 0.0) AS \"estimate!\"\nFROM\n    fiskeridir_ais_vessel_mapping_whitelist w\n    INNER JOIN fuel_estimates f ON w.fiskeridir_vessel_id = f.fiskeridir_vessel_id\nWHERE\n    call_sign = $1\n    AND \"date\" >= $2\n    AND \"date\" <= $3\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "estimate!",
+        "type_info": "Float8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Date",
+        "Date"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "a9d2105fbd742d7d5f943c03e57adba26f9dc4d96537d49b64e070249ad2d9f3"
+}

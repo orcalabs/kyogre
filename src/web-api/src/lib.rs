@@ -77,6 +77,7 @@ impl Meilisearch for meilisearch::MeilisearchAdapter<PostgresAdapter> {}
         v1::fuel::create_fuel_measurements,
         v1::fuel::update_fuel_measurements,
         v1::fuel::delete_fuel_measurements,
+        v1::fuel::get_fuel,
     ),
     components(
         schemas(

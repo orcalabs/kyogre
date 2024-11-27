@@ -20,6 +20,7 @@ use web_api::{
         },
         fuel::{
             DeleteFuelMeasurement, FuelMeasurement, FuelMeasurementBody, FuelMeasurementsParams,
+            FuelParams,
         },
         haul::{Haul, HaulsMatrix, HaulsMatrixParams, HaulsParams},
         landing::{Landing, LandingMatrix, LandingMatrixParams, LandingsParams},
@@ -376,6 +377,9 @@ impl ApiClient {
     }
     pub async fn update_vessel(&self, update: &UpdateVessel) -> Result<Vessel, Error> {
         self.send("vessels", Method::PUT, update, None::<&()>).await
+    }
+    pub async fn get_fuel(&self, params: FuelParams) -> Result<f64, Error> {
+        self.send("fuel", Method::GET, &(), Some(&params)).await
     }
     pub async fn get_fuel_measurements(
         &self,

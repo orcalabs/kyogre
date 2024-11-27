@@ -1,5 +1,6 @@
-use chrono::{DateTime, Utc};
-use kyogre_core::{BarentswatchUserId, PositionType, TripId};
+use crate::queries::type_to_i64;
+use chrono::{DateTime, NaiveDate, Utc};
+use kyogre_core::{BarentswatchUserId, FiskeridirVesselId, PositionType, TripId};
 use unnest_insert::{UnnestDelete, UnnestInsert, UnnestUpdate};
 
 #[derive(Debug, Clone, UnnestUpdate)]
@@ -26,6 +27,16 @@ pub struct UpsertFuelMeasurement<'a> {
     #[unnest_update(id)]
     pub timestamp: DateTime<Utc>,
     pub fuel: f64,
+}
+
+#[derive(Debug, Clone, UnnestInsert)]
+#[unnest_insert(table_name = "fuel_estimates", conflict = "fiskeridir_vessel_id, date")]
+pub struct UpsertFuelEstimation {
+    #[unnest_insert(sql_type = "BIGINT", type_conversion = "type_to_i64")]
+    pub fiskeridir_vessel_id: FiskeridirVesselId,
+    pub date: NaiveDate,
+    #[unnest_insert(update)]
+    pub estimate: f64,
 }
 
 #[derive(Debug, Clone, UnnestDelete)]
@@ -65,6 +76,16 @@ impl From<&kyogre_core::UpdateTripPositionFuel> for UpdateTripPositionFuel {
             timestamp: v.timestamp,
             position_type_id: v.position_type_id,
             trip_cumulative_fuel_consumption: v.trip_cumulative_fuel_consumption,
+        }
+    }
+}
+
+impl From<&kyogre_core::NewFuelDayEstimate> for UpsertFuelEstimation {
+    fn from(v: &kyogre_core::NewFuelDayEstimate) -> Self {
+        Self {
+            fiskeridir_vessel_id: v.vessel_id,
+            date: v.date,
+            estimate: v.estimate,
         }
     }
 }

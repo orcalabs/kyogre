@@ -1,3 +1,4 @@
+use crate::mean::Mean;
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::{
     CallSign, FiskeridirVesselId, GearGroup, RegisterVesselOwner, SpeciesGroup, VesselLengthGroup,
@@ -13,6 +14,7 @@ mod benchmark;
 
 pub use benchmark::*;
 
+const HP_TO_KW: f64 = 0.745699872;
 pub static TEST_SIGNED_IN_VESSEL_CALLSIGN: &str = "LK17";
 pub static IGNORED_CONFLICT_CALL_SIGNS: &[&str] = &["00000000", "0"];
 
@@ -161,6 +163,25 @@ pub struct FiskeridirVessel {
 impl Vessel {
     pub fn mmsi(&self) -> Option<Mmsi> {
         self.ais.as_ref().map(|v| v.mmsi)
+    }
+
+    pub fn sfc(&self) -> Option<f64> {
+        // Specific Fuel Consumption
+        // Source: https://wwwcdn.imo.org/localresources/en/OurWork/Environment/Documents/Fourth%20IMO%20GHG%20Study%202020%20-%20Full%20report%20and%20annexes.pdf
+        //         Annex B.2, Table 4
+        self.fiskeridir.engine_building_year.map(|v| {
+            match v {
+                ..1984 => [205., 190., 215., 200., 225., 210.],
+                1984..2001 => [185., 175., 195., 185., 205., 190.],
+                2001.. => [175., 165., 185., 175., 195., 185.],
+            }
+            .into_iter()
+            .mean()
+            .unwrap()
+        })
+    }
+    pub fn engine_power_kw(&self) -> Option<f64> {
+        self.fiskeridir.engine_power.map(|v| v as f64 * HP_TO_KW)
     }
 }
 

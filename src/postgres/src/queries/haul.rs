@@ -895,6 +895,35 @@ RETURNING
         self.connect_trip_to_events(&event_ids, VesselEventType::Haul, tx)
             .await?;
 
+        sqlx::query!(
+            r#"
+UPDATE fuel_estimates f
+SET
+    status = $1
+FROM
+    (
+        SELECT
+            GENERATE_SERIES(LOWER(period), UPPER(period), INTERVAL '1 day') AS date,
+            e.fiskeridir_vessel_id
+        FROM
+            vessel_events e
+            INNER JOIN hauls h ON e.vessel_event_id = h.vessel_event_id
+        WHERE
+            e.vessel_event_id = ANY ($2)
+        GROUP BY
+            e.fiskeridir_vessel_id,
+            date
+    ) q
+WHERE
+    q.fiskeridir_vessel_id = f.fiskeridir_vessel_id
+    AND q.date = f.date
+            "#,
+            ProcessingStatus::Unprocessed as i32,
+            &event_ids
+        )
+        .execute(&mut **tx)
+        .await?;
+
         Ok(event_ids)
     }
 

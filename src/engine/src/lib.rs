@@ -1,6 +1,8 @@
 #![deny(warnings)]
 #![deny(rust_2018_idioms)]
 
+use std::sync::Arc;
+
 use kyogre_core::*;
 use machine::{Machine, Schedule};
 use serde::Deserialize;
@@ -75,6 +77,7 @@ pub enum Fishery {
     DailyWeather(DailyWeatherState),
     Trips(TripsState),
     Benchmark(BenchmarkState),
+    FuelEstimation(FuelEstimationState),
     HaulDistribution(HaulDistributionState),
     HaulWeather(HaulWeatherState),
     MLModels(MLModelsState),
@@ -84,6 +87,7 @@ pub enum Fishery {
 // TODO: change do Box<dyn Database> after (https://github.com/rust-lang/rust/issues/65991) resolves.
 pub struct SharedState {
     pub num_workers: u32,
+    pub num_fuel_estimation_workers: u32,
     pub ml_models_inbound: Box<dyn MLModelsInbound>,
     pub ml_models_outbound: Box<dyn MLModelsOutbound>,
     pub trip_assembler_outbound_port: Box<dyn TripAssemblerOutboundPort>,
@@ -106,6 +110,7 @@ pub struct SharedState {
     pub trip_position_layers: Vec<Box<dyn TripPositionLayer>>,
     pub catch_location_weather: Box<dyn DailyWeatherInbound>,
     pub ais_pruner_inbound: Box<dyn AisVmsAreaPrunerInbound>,
+    pub fuel_estimation: Arc<dyn FuelEstimation>,
 }
 
 impl FisheryEngine {
@@ -121,6 +126,7 @@ impl FisheryEngine {
             FisheryEngine::VerifyDatabase(s) => &mut s.shared_state,
             FisheryEngine::MLModels(s) => &mut s.shared_state,
             FisheryEngine::DailyWeather(s) => &mut s.shared_state,
+            FisheryEngine::FuelEstimation(s) => &mut s.shared_state,
         };
 
         shared.ml_models = models;
@@ -145,6 +151,7 @@ impl SharedState {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         num_workers: u32,
+        num_fuel_estimation_workers: u32,
         ml_models_inbound: Box<dyn MLModelsInbound>,
         ml_models_outbound: Box<dyn MLModelsOutbound>,
         trip_assembler_outbound_port: Box<dyn TripAssemblerOutboundPort>,
@@ -161,6 +168,7 @@ impl SharedState {
         haul_weather_outbound: Box<dyn HaulWeatherOutbound>,
         catch_location_weather: Box<dyn DailyWeatherInbound>,
         ais_pruner_inbound: Box<dyn AisVmsAreaPrunerInbound>,
+        fuel_estimation: Arc<dyn FuelEstimation>,
         scraper: Option<Box<dyn Scraper>>,
         trip_assemblers: Vec<Box<dyn TripAssembler>>,
         benchmarks: Vec<Box<dyn TripBenchmark>>,
@@ -192,6 +200,8 @@ impl SharedState {
             trip_position_layers,
             catch_location_weather,
             ais_pruner_inbound,
+            fuel_estimation,
+            num_fuel_estimation_workers,
         }
     }
 }

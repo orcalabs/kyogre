@@ -242,6 +242,14 @@ impl Gear {
 }
 
 impl GearGroup {
+    pub fn active_int() -> [i32; 4] {
+        [
+            GearGroup::Trawl as i32,
+            GearGroup::HookGear as i32,
+            GearGroup::Seine as i32,
+            GearGroup::DanishSeine as i32,
+        ]
+    }
     /// Returns the norwegian name of the gear group type.
     pub fn norwegian_name(&self) -> &'static str {
         use GearGroup::*;
