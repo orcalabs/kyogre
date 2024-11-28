@@ -49,6 +49,7 @@ pub struct Trip {
     pub target_species_fao: Option<String>,
     pub fuel_consumption: Option<f64>,
     pub track_coverage: Option<f64>,
+    pub has_track: bool,
 }
 
 #[derive(Deserialize)]
@@ -111,50 +112,84 @@ impl Indexable for Trip {
 
 impl Trip {
     pub fn try_to_trip_detailed(self, read_fishing_facility: bool) -> Result<TripDetailed> {
-        let start = Utc.timestamp_nanos(self.start);
-        let end = Utc.timestamp_nanos(self.end);
+        let Self {
+            trip_id,
+            fiskeridir_vessel_id,
+            fiskeridir_length_group_id,
+            start,
+            end,
+            period_precision_start,
+            period_precision_end,
+            landing_coverage_start,
+            landing_coverage_end,
+            num_deliveries,
+            most_recent_delivery_date,
+            gear_ids,
+            gear_group_ids,
+            species_group_ids,
+            delivery_point_ids,
+            hauls,
+            tra,
+            fishing_facilities,
+            delivery,
+            start_port_id,
+            end_port_id,
+            assembler_id,
+            vessel_events,
+            landing_ids,
+            haul_ids: _,
+            distance,
+            cache_version,
+            total_living_weight: _,
+            target_species_fiskeridir_id,
+            target_species_fao,
+            fuel_consumption,
+            track_coverage,
+            has_track,
+        } = self;
 
-        let period_precision = match (self.period_precision_start, self.period_precision_end) {
+        let start = Utc.timestamp_nanos(start);
+        let end = Utc.timestamp_nanos(end);
+
+        let period_precision = match (period_precision_start, period_precision_end) {
             (Some(start), Some(end)) => Some(DateRange::new(start, end)?),
             (None, None) => None,
             _ => unreachable!(),
         };
 
         Ok(TripDetailed {
-            trip_id: self.trip_id,
-            fiskeridir_vessel_id: self.fiskeridir_vessel_id,
-            fiskeridir_length_group_id: self.fiskeridir_length_group_id,
+            trip_id,
+            fiskeridir_vessel_id,
+            fiskeridir_length_group_id,
             period: DateRange::new(start, end)?,
             period_precision,
-            landing_coverage: DateRange::new(
-                self.landing_coverage_start,
-                self.landing_coverage_end,
-            )?,
-            num_deliveries: self.num_deliveries,
-            most_recent_delivery_date: self.most_recent_delivery_date,
-            gear_ids: self.gear_ids,
-            gear_group_ids: self.gear_group_ids,
-            species_group_ids: self.species_group_ids,
-            delivery_point_ids: self.delivery_point_ids,
-            hauls: self.hauls,
+            landing_coverage: DateRange::new(landing_coverage_start, landing_coverage_end)?,
+            num_deliveries,
+            most_recent_delivery_date,
+            gear_ids,
+            gear_group_ids,
+            species_group_ids,
+            delivery_point_ids,
+            hauls,
             fishing_facilities: if read_fishing_facility {
-                self.fishing_facilities
+                fishing_facilities
             } else {
                 vec![]
             },
-            delivery: self.delivery,
-            start_port_id: self.start_port_id,
-            end_port_id: self.end_port_id,
-            assembler_id: self.assembler_id,
-            vessel_events: self.vessel_events,
-            landing_ids: self.landing_ids,
-            distance: self.distance,
-            cache_version: self.cache_version,
-            target_species_fiskeridir_id: self.target_species_fiskeridir_id,
-            target_species_fao_id: self.target_species_fao,
-            fuel_consumption: self.fuel_consumption,
-            track_coverage: self.track_coverage,
-            tra: self.tra,
+            delivery,
+            start_port_id,
+            end_port_id,
+            assembler_id,
+            vessel_events,
+            landing_ids,
+            distance,
+            cache_version,
+            target_species_fiskeridir_id,
+            target_species_fao_id: target_species_fao,
+            fuel_consumption,
+            track_coverage,
+            tra,
+            has_track,
         })
     }
 }
@@ -191,6 +226,7 @@ impl TryFrom<TripDetailed> for Trip {
             target_species_fao_id,
             fuel_consumption,
             track_coverage,
+            has_track,
         } = v;
 
         Ok(Self {
@@ -226,6 +262,7 @@ impl TryFrom<TripDetailed> for Trip {
             fuel_consumption,
             track_coverage,
             tra,
+            has_track,
         })
     }
 }

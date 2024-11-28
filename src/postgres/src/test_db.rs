@@ -320,7 +320,8 @@ SELECT
     t.target_species_fiskeridir_id,
     t.target_species_fao_id,
     t.fuel_consumption,
-    t.track_coverage
+    t.track_coverage,
+    t.has_track
 FROM
     trips_detailed t
 WHERE
