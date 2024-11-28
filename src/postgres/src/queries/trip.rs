@@ -383,7 +383,8 @@ INSERT INTO
         haul_ids,
         haul_gear_group_ids,
         haul_gear_ids,
-        tra
+        tra,
+        has_track
     )
 SELECT
     t.trip_id,
@@ -562,7 +563,15 @@ SELECT
                 tra.message_id IS NOT NULL
         ),
         '[]'
-    ) AS tra
+    ) AS tra,
+    EXISTS (
+        SELECT
+            1
+        FROM
+            trip_positions p
+        WHERE
+            p.trip_id = t.trip_id
+    ) AS has_track
 FROM
     trips t
     INNER JOIN fiskeridir_vessels fv ON fv.fiskeridir_vessel_id = t.fiskeridir_vessel_id
@@ -827,7 +836,8 @@ SELECT
     t.target_species_fiskeridir_id,
     t.target_species_fao_id,
     t.fuel_consumption,
-    t.track_coverage
+    t.track_coverage,
+    t.has_track
 FROM
     trips_detailed AS t
 WHERE
@@ -959,7 +969,8 @@ SELECT
     t.target_species_fiskeridir_id,
     t.target_species_fao_id,
     t.fuel_consumption,
-    t.track_coverage
+    t.track_coverage,
+    t.has_track
 FROM
     trips_detailed AS t
 WHERE
