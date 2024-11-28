@@ -263,6 +263,7 @@ pub struct Trip {
     pub fuel_consumption: Option<f64>,
     pub track_coverage: Option<f64>,
     pub distance: Option<f64>,
+    pub has_track: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
@@ -375,6 +376,7 @@ impl From<kyogre_core::TripDetailed> for Trip {
             target_species_fao_id,
             fuel_consumption,
             track_coverage,
+            has_track,
         } = value;
 
         let period = period_precision.unwrap_or(period);
@@ -407,6 +409,7 @@ impl From<kyogre_core::TripDetailed> for Trip {
             track_coverage,
             distance,
             tra,
+            has_track,
         }
     }
 }

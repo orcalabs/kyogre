@@ -1126,3 +1126,34 @@ async fn test_trips_returns_track_coverage_zero_if_no_track() {
     })
     .await;
 }
+
+#[tokio::test]
+async fn test_trips_without_track_returns_has_track_false() {
+    test(|helper, builder| async move {
+        builder.vessels(1).trips(1).build().await;
+
+        let trips = helper.app.get_trips(Default::default()).await.unwrap();
+
+        assert_eq!(trips.len(), 1);
+        assert!(!trips[0].has_track);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_trips_with_track_returns_has_track_true() {
+    test(|helper, builder| async move {
+        builder
+            .vessels(1)
+            .trips(1)
+            .ais_vms_positions(1)
+            .build()
+            .await;
+
+        let trips = helper.app.get_trips(Default::default()).await.unwrap();
+
+        assert_eq!(trips.len(), 1);
+        assert!(trips[0].has_track);
+    })
+    .await;
+}

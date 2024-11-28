@@ -283,6 +283,7 @@ pub struct TripDetailed {
     pub target_species_fao_id: Option<String>,
     pub fuel_consumption: Option<f64>,
     pub track_coverage: Option<f64>,
+    pub has_track: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -416,6 +417,7 @@ impl TryFrom<TripDetailed> for kyogre_core::TripDetailed {
             target_species_fao_id,
             fuel_consumption,
             track_coverage,
+            has_track,
         } = value;
 
         Ok(kyogre_core::TripDetailed {
@@ -458,6 +460,7 @@ impl TryFrom<TripDetailed> for kyogre_core::TripDetailed {
                 .into_iter()
                 .map(kyogre_core::Tra::from)
                 .collect(),
+            has_track,
         })
     }
 }

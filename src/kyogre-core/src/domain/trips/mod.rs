@@ -165,6 +165,7 @@ pub struct TripDetailed {
     pub target_species_fao_id: Option<String>,
     pub fuel_consumption: Option<f64>,
     pub track_coverage: Option<f64>,
+    pub has_track: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
