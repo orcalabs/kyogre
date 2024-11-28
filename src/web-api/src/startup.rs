@@ -14,11 +14,7 @@ use utoipa::{openapi::security::SecurityScheme, OpenApi};
 use utoipa_swagger_ui::SwaggerUi;
 
 use crate::{
-    auth0::Auth0State,
-    cache::{MatrixCache, MeilesearchCache},
-    guards::BwtGuard,
-    routes,
-    settings::Settings,
+    auth0::Auth0State, cache::MeilesearchCache, guards::BwtGuard, routes, settings::Settings,
     ApiDoc, Cache, Database, Meilisearch,
 };
 
@@ -36,11 +32,10 @@ impl App {
 
         let postgres = PostgresAdapter::new(&settings.postgres).await.unwrap();
 
-        let duck_db = match (&settings.duck_db_api, settings.cache_error_mode) {
-            (Some(duckdb), Some(error_mode)) => {
+        let duck_db = match &settings.duck_db_api {
+            Some(duckdb) => {
                 let adapter = Client::new(&duckdb.ip, duckdb.port).await.unwrap();
-                let wrapper = MatrixCache::new(adapter, error_mode);
-                Some(wrapper)
+                Some(adapter)
             }
             _ => None,
         };
