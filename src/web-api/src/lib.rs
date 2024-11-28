@@ -30,6 +30,7 @@ pub trait Cache: MatrixCacheOutbound {}
 pub trait Meilisearch: MeilisearchOutbound {}
 
 impl Database for PostgresAdapter {}
+impl Cache for duckdb_rs::Client {}
 
 #[derive(OpenApi)]
 #[openapi(

@@ -1,16 +1,14 @@
-use crate::{Cache, Meilisearch};
 use async_trait::async_trait;
-use duckdb_rs::Client;
 use fiskeridir_rs::LandingId;
 use kyogre_core::{
-    CoreResult, HaulId, HaulsMatrix, HaulsMatrixQuery, HaulsQuery, LandingMatrix,
-    LandingMatrixQuery, LandingsQuery, MatrixCacheOutbound, MeilisearchOutbound, TripDetailed,
-    TripsQuery,
+    CoreResult, HaulId, HaulsQuery, LandingsQuery, MeilisearchOutbound, TripDetailed, TripsQuery,
 };
 use meilisearch::MeilisearchAdapter;
 use postgres::PostgresAdapter;
 use serde::Deserialize;
 use tracing::error;
+
+use crate::Meilisearch;
 
 // Used to trigger api errors when testing cache implementations
 #[derive(Copy, Clone, Debug, Deserialize)]
@@ -25,12 +23,6 @@ pub struct MeilesearchCache {
     error_mode: CacheErrorMode,
 }
 
-#[derive(Clone)]
-pub struct MatrixCache {
-    inner: Client,
-    error_mode: CacheErrorMode,
-}
-
 impl MeilesearchCache {
     pub fn new(
         inner: MeilisearchAdapter<PostgresAdapter>,
@@ -40,42 +32,7 @@ impl MeilesearchCache {
     }
 }
 
-impl MatrixCache {
-    pub fn new(inner: Client, error_mode: CacheErrorMode) -> MatrixCache {
-        MatrixCache { inner, error_mode }
-    }
-}
-
-impl Cache for MatrixCache {}
 impl Meilisearch for MeilesearchCache {}
-
-#[async_trait]
-impl MatrixCacheOutbound for MatrixCache {
-    async fn landing_matrix(&self, query: &LandingMatrixQuery) -> CoreResult<LandingMatrix> {
-        match self.inner.landing_matrix(query).await {
-            Ok(v) => Ok(v),
-            Err(e) => {
-                error!("failed to retrieve landings matrix: {e:?}");
-                match self.error_mode {
-                    CacheErrorMode::Propagate => Err(e),
-                    CacheErrorMode::Log => Ok(LandingMatrix::empty(query.active_filter)),
-                }
-            }
-        }
-    }
-    async fn hauls_matrix(&self, query: &HaulsMatrixQuery) -> CoreResult<HaulsMatrix> {
-        match self.inner.hauls_matrix(query).await {
-            Ok(v) => Ok(v),
-            Err(e) => {
-                error!("failed to retrieve hauls matrix: {e:?}");
-                match self.error_mode {
-                    CacheErrorMode::Propagate => Err(e),
-                    CacheErrorMode::Log => Ok(HaulsMatrix::empty(query.active_filter)),
-                }
-            }
-        }
-    }
-}
 
 #[async_trait]
 impl MeilisearchOutbound for MeilesearchCache {
