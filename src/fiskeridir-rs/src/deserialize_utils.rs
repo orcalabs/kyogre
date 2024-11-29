@@ -45,7 +45,7 @@ where
 {
     struct Helper<T>(PhantomData<T>);
 
-    impl<'de, T> Visitor<'de> for Helper<T>
+    impl<T> Visitor<'_> for Helper<T>
     where
         T: FromPrimitive + FromStr,
         T::Err: Display,
@@ -275,7 +275,7 @@ where
     {
         struct Helper<S>(PhantomData<S>);
 
-        impl<'de, S> Visitor<'de> for Helper<S>
+        impl<S> Visitor<'_> for Helper<S>
         where
             S: FromPrimitive,
         {
@@ -338,7 +338,7 @@ where
     {
         struct Helper<S>(PhantomData<S>);
 
-        impl<'de, S> Visitor<'de> for Helper<S>
+        impl<S> Visitor<'_> for Helper<S>
         where
             S: FromPrimitive,
         {
@@ -403,7 +403,7 @@ where
     {
         struct Helper<S>(PhantomData<S>);
 
-        impl<'de, S> Visitor<'de> for Helper<S>
+        impl<S> Visitor<'_> for Helper<S>
         where
             S: FromPrimitive + FromStr,
             S::Err: Display,
@@ -460,7 +460,7 @@ where
     {
         struct Helper<S>(PhantomData<S>);
 
-        impl<'de, S> Visitor<'de> for Helper<S>
+        impl<S> Visitor<'_> for Helper<S>
         where
             S: FromPrimitive + FromStr,
             S::Err: Display,
@@ -537,7 +537,7 @@ where
     {
         struct Helper<S>(PhantomData<S>);
 
-        impl<'de, S> Visitor<'de> for Helper<S>
+        impl<S> Visitor<'_> for Helper<S>
         where
             S: FromStr,
             S::Err: Display,
@@ -587,7 +587,7 @@ where
     {
         struct Helper<S>(PhantomData<S>);
 
-        impl<'de, S> Visitor<'de> for Helper<S>
+        impl<S> Visitor<'_> for Helper<S>
         where
             S: FromStr,
             S::Err: Display,

@@ -111,7 +111,7 @@ impl<'de> Deserialize<'de> for CatchLocationId {
 }
 
 struct CatchLocationIdVisitor;
-impl<'de> Visitor<'de> for CatchLocationIdVisitor {
+impl Visitor<'_> for CatchLocationIdVisitor {
     type Value = CatchLocationId;
 
     fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

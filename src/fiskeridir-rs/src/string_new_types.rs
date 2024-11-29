@@ -82,7 +82,7 @@ impl<'de> Deserialize<'de> for NonEmptyString {
 }
 
 pub(crate) struct NonEmptyStringVisitor;
-impl<'de> Visitor<'de> for NonEmptyStringVisitor {
+impl Visitor<'_> for NonEmptyStringVisitor {
     type Value = NonEmptyString;
 
     fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -136,7 +136,7 @@ impl<'de> Deserialize<'de> for PrunedString {
 }
 
 pub(crate) struct PrunedStringVisitor;
-impl<'de> Visitor<'de> for PrunedStringVisitor {
+impl Visitor<'_> for PrunedStringVisitor {
     type Value = PrunedString;
 
     fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

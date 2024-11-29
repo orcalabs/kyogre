@@ -134,7 +134,7 @@ where
     {
         struct RangeVisitor<T>(PhantomData<T>);
 
-        impl<'de, T: FromStr> Visitor<'de> for RangeVisitor<T>
+        impl<T: FromStr> Visitor<'_> for RangeVisitor<T>
         where
             T::Err: Send + Sync + std::error::Error + 'static,
         {
