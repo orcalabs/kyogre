@@ -84,15 +84,14 @@ pub async fn hauls<T: Database + Send + Sync + 'static, M: Meilisearch + 'static
     let query: HaulsQuery = params.into_inner().into();
 
     if let Some(meilisearch) = meilisearch.as_ref() {
-        return Ok(Response::new(
-            meilisearch
-                .hauls(&query)
-                .await?
-                .into_iter()
-                .map(Haul::from)
-                .collect::<Vec<_>>(),
-        )
-        .into());
+        match meilisearch.hauls(&query).await {
+            Ok(v) => {
+                return Ok(Response::new(v.into_iter().map(Haul::from).collect::<Vec<_>>()).into())
+            }
+            Err(e) => {
+                error!("meilisearch cache returned error: {e:?}");
+            }
+        }
     }
 
     let response = stream_response! {
