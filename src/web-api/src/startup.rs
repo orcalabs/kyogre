@@ -14,8 +14,8 @@ use utoipa::{openapi::security::SecurityScheme, OpenApi};
 use utoipa_swagger_ui::SwaggerUi;
 
 use crate::{
-    auth0::Auth0State, cache::MeilesearchCache, guards::BwtGuard, routes, settings::Settings,
-    ApiDoc, Cache, Database, Meilisearch,
+    auth0::Auth0State, guards::BwtGuard, routes, settings::Settings, ApiDoc, Cache, Database,
+    Meilisearch,
 };
 
 use duckdb_rs::Client;
@@ -40,11 +40,10 @@ impl App {
             _ => None,
         };
 
-        let meilisearch = match (&settings.meilisearch, settings.cache_error_mode) {
-            (Some(m), Some(error_mode)) => {
+        let meilisearch = match &settings.meilisearch {
+            Some(m) => {
                 let adapter = MeilisearchAdapter::new(m, postgres.clone());
-                let wrapper = MeilesearchCache::new(adapter, error_mode);
-                Some(wrapper)
+                Some(adapter)
             }
             _ => None,
         };

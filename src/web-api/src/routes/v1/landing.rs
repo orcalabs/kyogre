@@ -92,15 +92,16 @@ pub async fn landings<T: Database + Send + Sync + 'static, M: Meilisearch + 'sta
     let query: LandingsQuery = params.into_inner().into();
 
     if let Some(meilisearch) = meilisearch.as_ref() {
-        return Ok(Response::new(
-            meilisearch
-                .landings(&query)
-                .await?
-                .into_iter()
-                .map(Landing::from)
-                .collect::<Vec<_>>(),
-        )
-        .into());
+        match meilisearch.landings(&query).await {
+            Ok(v) => {
+                return Ok(
+                    Response::new(v.into_iter().map(Landing::from).collect::<Vec<_>>()).into(),
+                )
+            }
+            Err(e) => {
+                error!("meilisearch cache returned error: {e:?}");
+            }
+        }
     }
 
     let response = stream_response! {
