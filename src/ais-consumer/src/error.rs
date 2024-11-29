@@ -1,5 +1,5 @@
 use async_channel::{RecvError, SendError};
-use kyogre_core::DataMessage;
+use kyogre_core::{DataMessage, OauthError};
 use reqwest::StatusCode;
 use snafu::{Location, Snafu};
 use stack_error::StackError;
@@ -23,6 +23,12 @@ pub enum Error {
         location: Location,
         #[snafu(source)]
         error: reqwest::Error,
+    },
+    #[snafu(display("Oauth error"))]
+    Oauth {
+        #[snafu(implicit)]
+        location: Location,
+        source: OauthError,
     },
     #[snafu(display("HTTP Request failed, status: '{status}', url: '{url}', body: '{body}'"))]
     FailedRequest {
