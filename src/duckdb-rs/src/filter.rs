@@ -31,7 +31,7 @@ enum HaulFilter<'a> {
     VesselIds(&'a [FiskeridirVesselId]),
 }
 
-impl<'a> std::fmt::Display for HaulFilter<'a> {
+impl std::fmt::Display for HaulFilter<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             HaulFilter::CatchLocations(vals) => write_array_filter(f, "catch_location_id", vals),
@@ -53,7 +53,7 @@ impl<'a> std::fmt::Display for HaulFilter<'a> {
     }
 }
 
-impl<'a> std::fmt::Display for LandingFilter<'a> {
+impl std::fmt::Display for LandingFilter<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             LandingFilter::CatchLocations(vals) => write_array_filter(f, "catch_location_id", vals),
