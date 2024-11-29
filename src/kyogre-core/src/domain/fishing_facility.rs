@@ -111,7 +111,7 @@ impl<'de> Deserialize<'de> for FishingFacilityToolType {
     {
         struct FishingFacilityToolTypeVisitor;
 
-        impl<'de> Visitor<'de> for FishingFacilityToolTypeVisitor {
+        impl Visitor<'_> for FishingFacilityToolTypeVisitor {
             type Value = FishingFacilityToolType;
 
             fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
