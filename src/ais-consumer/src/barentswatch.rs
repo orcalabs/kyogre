@@ -1,12 +1,12 @@
 use crate::error::{error::FailedRequestSnafu, Result};
 use futures::{StreamExt, TryStreamExt};
-use kyogre_core::BearerToken;
+use kyogre_core::{BearerToken, OauthConfig};
 use reqwest::{Client, Url};
 use serde::Serialize;
 use tokio::io::AsyncRead;
 
 pub struct BarentswatchAisClient {
-    bearer_token: BearerToken,
+    oauth_config: OauthConfig,
     api_address: Url,
     client: Client,
 }
@@ -27,9 +27,9 @@ struct AisFilterArgs {
 }
 
 impl BarentswatchAisClient {
-    pub fn new(bearer_token: BearerToken, api_address: Url) -> BarentswatchAisClient {
+    pub fn new(oauth_config: OauthConfig, api_address: Url) -> BarentswatchAisClient {
         BarentswatchAisClient {
-            bearer_token,
+            oauth_config,
             api_address,
             client: Client::new(),
         }
@@ -52,7 +52,10 @@ impl BarentswatchAisClient {
             .json(&args)
             .header(
                 "Authorization",
-                format!("bearer {}", self.bearer_token.as_ref()),
+                format!(
+                    "bearer {}",
+                    BearerToken::acquire(&self.oauth_config).await?.as_ref()
+                ),
             )
             .header("Content-type", "application/json")
             .send()
