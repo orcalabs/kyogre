@@ -16,7 +16,6 @@ use routes::v1::{self};
 use utoipa::OpenApi;
 
 pub mod auth0;
-pub mod cache;
 pub mod error;
 pub mod extractors;
 pub mod guards;
@@ -31,6 +30,7 @@ pub trait Meilisearch: MeilisearchOutbound {}
 
 impl Database for PostgresAdapter {}
 impl Cache for duckdb_rs::Client {}
+impl Meilisearch for meilisearch::MeilisearchAdapter<PostgresAdapter> {}
 
 #[derive(OpenApi)]
 #[openapi(

@@ -9,6 +9,7 @@ use kyogre_core::{
 use serde::{Deserialize, Serialize};
 use serde_qs::actix::QsQuery as Query;
 use serde_with::{serde_as, DisplayFromStr};
+use tracing::error;
 use utoipa::{IntoParams, ToSchema};
 use v1::haul::Haul;
 
@@ -89,12 +90,15 @@ pub async fn trip_of_haul<T: Database + 'static, M: Meilisearch + 'static>(
         .unwrap_or(false);
 
     if let Some(meilisearch) = meilisearch.as_ref() {
-        return Ok(Response::new(
-            meilisearch
-                .trip_of_haul(&path.haul_id, read_fishing_facility)
-                .await?
-                .map(Trip::from),
-        ));
+        match meilisearch
+            .trip_of_haul(&path.haul_id, read_fishing_facility)
+            .await
+        {
+            Ok(v) => return Ok(Response::new(v.map(Trip::from))),
+            Err(e) => {
+                error!("meilisearch cache returned error: {e:?}");
+            }
+        }
     }
 
     let trip = db
@@ -128,12 +132,15 @@ pub async fn trip_of_landing<T: Database + 'static, M: Meilisearch + 'static>(
         .unwrap_or(false);
 
     if let Some(meilisearch) = meilisearch.as_ref() {
-        return Ok(Response::new(
-            meilisearch
-                .trip_of_landing(&path.landing_id, read_fishing_facility)
-                .await?
-                .map(Trip::from),
-        ));
+        match meilisearch
+            .trip_of_landing(&path.landing_id, read_fishing_facility)
+            .await
+        {
+            Ok(v) => return Ok(Response::new(v.map(Trip::from))),
+            Err(e) => {
+                error!("meilisearch cache returned error: {e:?}");
+            }
+        }
     }
 
     let trip = db
@@ -181,15 +188,14 @@ pub async fn trips<T: Database + Send + Sync + 'static, M: Meilisearch + 'static
     let query = TripsQuery::from(params);
 
     if let Some(meilisearch) = meilisearch.as_ref() {
-        return Ok(Response::new(
-            meilisearch
-                .trips(&query, read_fishing_facility)
-                .await?
-                .into_iter()
-                .map(Trip::from)
-                .collect::<Vec<_>>(),
-        )
-        .into());
+        match meilisearch.trips(&query, read_fishing_facility).await {
+            Ok(v) => {
+                return Ok(Response::new(v.into_iter().map(Trip::from).collect::<Vec<_>>()).into())
+            }
+            Err(e) => {
+                error!("meilisearch cache returned error: {e:?}");
+            }
+        }
     }
 
     let response = stream_response! {
