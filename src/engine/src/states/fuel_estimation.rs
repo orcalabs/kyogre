@@ -62,7 +62,7 @@ impl FuelEstimationState {
             REQUIRED_TRIPS_TO_ESTIMATE_FUEL,
             // We dont want to estimate the current day as all ais positions will not be
             // added yet.
-            Utc::now().naive_utc().date().pred_opt().unwrap(),
+            chrono::Utc::now().naive_utc().date().pred_opt().unwrap(),
         );
 
         let vessels = adapter.vessels_with_trips(num_trips).await?;
