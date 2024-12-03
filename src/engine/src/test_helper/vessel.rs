@@ -369,6 +369,7 @@ impl VesselBuilder {
                     precision_id: None,
                     mmsi: Some(vessel.ais.mmsi),
                     cycle: base.cycle,
+                    current_ers_landing_data_timestamp: end + Duration::seconds(1),
                 });
 
                 base.global_data_timestamp_counter = end + base.data_timestamp_gap;
@@ -427,6 +428,7 @@ impl VesselBuilder {
                     precision_id: None,
                     mmsi: Some(vessel.ais.mmsi),
                     cycle: base.cycle,
+                    current_ers_landing_data_timestamp: end + Duration::seconds(1),
                 });
                 base.global_data_timestamp_counter = end + base.data_timestamp_gap;
             }
