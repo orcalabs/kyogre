@@ -28,13 +28,16 @@ pub struct TripConstructor {
     pub(crate) vessel_id: FiskeridirVesselId,
     pub(crate) vessel_call_sign: Option<CallSign>,
     pub(crate) current_data_timestamp: DateTime<Utc>,
+    // Ers trips covers landings from end of trip to end of next trip, so we need
+    // a separate timestamp tracker for them.
+    pub(crate) current_ers_landing_data_timestamp: DateTime<Utc>,
     pub(crate) precision_id: Option<PrecisionId>,
     pub(crate) mmsi: Option<Mmsi>,
     pub cycle: Cycle,
 }
 
 #[allow(clippy::large_enum_variant)]
-#[derive(Debug)]
+#[derive(Debug, EnumDiscriminants)]
 pub enum TripSpecification {
     Ers {
         dep: ErsDep,
@@ -282,7 +285,12 @@ impl TripBuilder {
         let num_trips = base.trips[self.current_index..].len();
         let distribution = ItemDistribution::new(amount, num_trips);
 
-        for (i, trip) in base.trips[self.current_index..].iter_mut().enumerate() {
+        let mut iter = base.trips[self.current_index..]
+            .iter_mut()
+            .enumerate()
+            .peekable();
+
+        while let Some((i, trip)) = iter.next() {
             let num_landings = distribution.num_elements(i);
 
             for _ in 0..num_landings {
@@ -291,23 +299,41 @@ impl TripBuilder {
                     Some(trip.vessel_id),
                 );
 
-                let ts = trip.current_data_timestamp;
-                landing.landing_timestamp = ts;
-                landing.landing_time = ts.time();
-                landing.landing_month = LandingMonth::from(ts);
+                let (trip_end, current_timestamp) =
+                    match TripSpecificationDiscriminants::from(&trip.trip_specification) {
+                        TripSpecificationDiscriminants::Ers => {
+                            // We assume that trips are created in ascending order timewise, if a
+                            // test manually modifies a trips start/stop after creating landings
+                            // for a trip, the landing coverage
+                            // for its succeeding trip is not guaranteed to match any
+                            // created landings for that trip
+                            let end = iter
+                                .peek()
+                                .map(|(_, t)| t.end())
+                                .unwrap_or_else(|| ers_last_trip_landing_coverage_end(&trip.end()));
+
+                            (end, &mut trip.current_ers_landing_data_timestamp)
+                        }
+                        TripSpecificationDiscriminants::Landing => {
+                            (trip.end(), &mut trip.current_data_timestamp)
+                        }
+                    };
+
+                landing.landing_timestamp = *current_timestamp;
+                landing.landing_time = current_timestamp.time();
+                landing.landing_month = LandingMonth::from(*current_timestamp);
+
+                if (*current_timestamp + base.trip_data_timestamp_gap) > trip_end {
+                    *current_timestamp = trip_end;
+                } else {
+                    *current_timestamp += base.trip_data_timestamp_gap;
+                }
 
                 base.landings.push(LandingConstructor {
                     landing,
                     cycle: base.cycle,
                 });
-
                 base.landing_id_counter += 1;
-
-                if (trip.current_data_timestamp + base.trip_data_timestamp_gap) >= trip.end() {
-                    trip.current_data_timestamp = trip.end();
-                } else {
-                    trip.current_data_timestamp += base.trip_data_timestamp_gap;
-                }
             }
         }
 

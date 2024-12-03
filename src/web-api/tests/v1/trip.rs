@@ -341,11 +341,11 @@ async fn test_trips_contains_all_events_within_trip_period_ordered_ascendingly()
         assert_eq!(trips.len(), 1);
         assert_eq!(trips[0].events.len(), 6);
         assert_eq!(trips[0].events[0].event_type, VesselEventType::ErsDep);
-        assert_eq!(trips[0].events[1].event_type, VesselEventType::Landing);
-        assert_eq!(trips[0].events[2].event_type, VesselEventType::ErsTra);
-        assert_eq!(trips[0].events[3].event_type, VesselEventType::ErsDca);
-        assert_eq!(trips[0].events[4].event_type, VesselEventType::Haul);
-        assert_eq!(trips[0].events[5].event_type, VesselEventType::ErsPor);
+        assert_eq!(trips[0].events[1].event_type, VesselEventType::ErsTra);
+        assert_eq!(trips[0].events[2].event_type, VesselEventType::ErsDca);
+        assert_eq!(trips[0].events[3].event_type, VesselEventType::Haul);
+        assert_eq!(trips[0].events[4].event_type, VesselEventType::ErsPor);
+        assert_eq!(trips[0].events[5].event_type, VesselEventType::Landing);
         assert_eq!(trips[0], state.trips[0]);
     })
     .await;

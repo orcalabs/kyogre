@@ -86,7 +86,7 @@ pub struct ErsEvent {
     port_id: Option<String>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 enum ErsEventType {
     Arrival,
     Departure,
@@ -191,27 +191,22 @@ async fn assemble_impl(
             return Ok(None);
         }
     } else {
-        let current_event = vessel_events.remove(0);
-        match current_event.event_type {
-            ErsEventType::Arrival => {
-                prior_trip_events.push(current_event);
-                prior_trip_events.append(&mut vessel_events);
-                conflict_strategy = Some(TripsConflictStrategy::Replace);
+        if vessel_events.len() == 1
+            && vessel_events.first().unwrap().event_type == ErsEventType::Departure
+        {
+            return Ok(None);
+        }
+        prior_trip_events.append(&mut vessel_events);
+        conflict_strategy = Some(TripsConflictStrategy::Replace);
 
-                let current_event = prior_trip_events.remove(0);
-                match current_event.event_type {
-                    ErsEventType::Arrival => TripStartedOnArrivalSnafu {
-                        event: current_event,
-                    }
-                    .fail(),
-                    ErsEventType::Departure => Ok((
-                        prior_trip_events,
-                        ErsStatemachine::new(Departure::from_ers_event(current_event).unwrap()),
-                    )),
-                }
+        let current_event = prior_trip_events.remove(0);
+        match current_event.event_type {
+            ErsEventType::Arrival => TripStartedOnArrivalSnafu {
+                event: current_event,
             }
+            .fail(),
             ErsEventType::Departure => Ok((
-                vessel_events,
+                prior_trip_events,
                 ErsStatemachine::new(Departure::from_ers_event(current_event).unwrap()),
             )),
         }
