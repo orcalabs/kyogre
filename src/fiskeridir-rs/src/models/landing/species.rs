@@ -123,6 +123,7 @@ pub enum SpeciesGroup {
     FreshWaterFish = 9901,
     FishFarming = 9902,
     MarineMammals = 9903,
+    Seabird = 9904,
     Other = 9920,
 }
 
@@ -172,6 +173,7 @@ impl SpeciesGroup {
             SpeciesGroup::FreshWaterFish => "Ferskvannsfisk",
             SpeciesGroup::FishFarming => "Oppdrett",
             SpeciesGroup::MarineMammals => "Sjøpattedyr",
+            SpeciesGroup::Seabird => "Sjøfugl",
             SpeciesGroup::Other => "Annet",
         }
     }
