@@ -75,7 +75,7 @@ impl BarentswatchAisClient {
 
         let stream = stream
             .map(|result| {
-                result.map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))
+                result.map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, format!("{e:?}")))
             })
             .into_async_read();
 

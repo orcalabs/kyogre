@@ -62,11 +62,13 @@ where
         num_messages += 1;
         match message {
             Err(e) => error!("failed to consume ais message: {e:?}"),
-            Ok(message) => match parse_message(message) {
-                Err(e) => error!("failed to parse message: {e:?}"),
+            Ok(original) => match parse_message(&original) {
+                Err(e) => error!("failed to parse message: {e:?}, message: '{original}'"),
                 Ok(message) => match message {
                     AisMessage::Static(m) => match NewAisStatic::try_from(m) {
-                        Err(e) => error!("failed to convert static message: {e:?}"),
+                        Err(e) => {
+                            error!("failed to convert static message: {e:?}, message: '{original}'")
+                        }
                         Ok(d) => data_message.static_messages.push(d),
                     },
                     AisMessage::Position(m) => {
@@ -91,16 +93,16 @@ where
     Ok(())
 }
 
-fn parse_message(message: String) -> Result<AisMessage> {
-    let message_type: MessageType = serde_json::from_str(&message)?;
+fn parse_message(message: &str) -> Result<AisMessage> {
+    let message_type: MessageType = serde_json::from_str(message)?;
 
     match message_type.message_type {
         AisMessageType::Position => {
-            let val: AisPosition = serde_json::from_str(&message)?;
+            let val: AisPosition = serde_json::from_str(message)?;
             Ok(AisMessage::Position(val))
         }
         AisMessageType::Static => {
-            let val: AisStatic = serde_json::from_str(&message)?;
+            let val: AisStatic = serde_json::from_str(message)?;
             Ok(AisMessage::Static(val))
         }
     }
