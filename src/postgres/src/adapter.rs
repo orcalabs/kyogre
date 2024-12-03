@@ -1065,6 +1065,16 @@ impl TripBenchmarkOutbound for PostgresAdapter {
         Ok(retry(|| self.sustainability_metrics_impl(id)).await?)
     }
 
+    async fn trips_without_eeoi_and_with_distance_and_fuel_consumption(
+        &self,
+        id: FiskeridirVesselId,
+    ) -> CoreResult<Vec<TripWithDistanceAndFuel>> {
+        Ok(
+            retry(|| self.trips_without_eeoi_and_with_distance_and_fuel_consumption_impl(id))
+                .await?,
+        )
+    }
+
     async fn update_trip_position_fuel_consumption(
         &self,
         values: &[UpdateTripPositionFuel],

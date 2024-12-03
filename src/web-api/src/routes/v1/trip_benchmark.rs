@@ -176,6 +176,7 @@ pub struct TripBenchmark {
     pub fuel_consumption: Option<f64>,
     pub weight_per_fuel: Option<f64>,
     pub catch_value_per_fuel: Option<f64>,
+    pub eeoi: Option<f64>,
     // TODO
     // pub sustainability: f64,
 }
@@ -207,6 +208,7 @@ impl From<TripWithBenchmark> for TripBenchmark {
             weight_per_fuel,
             catch_value_per_fuel,
             fuel_consumption,
+            eeoi,
         } = v;
 
         let period = period_precision.unwrap_or(period);
@@ -220,6 +222,7 @@ impl From<TripWithBenchmark> for TripBenchmark {
             fuel_consumption,
             weight_per_fuel,
             catch_value_per_fuel,
+            eeoi,
         }
     }
 }
