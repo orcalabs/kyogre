@@ -4,21 +4,11 @@ use kyogre_core::{
     AverageEeoiQuery, AverageTripBenchmarks, AverageTripBenchmarksQuery, DateRange, EeoiQuery,
     EmptyVecToNone, FiskeridirVesselId, TripBenchmarkId, TripBenchmarkStatus, TripBenchmarksQuery,
     TripId, TripSustainabilityMetric, TripWithBenchmark, TripWithCatchValueAndFuel,
-    TripWithDistance, TripWithTotalWeight, TripWithWeightAndFuel,
+    TripWithDistance, TripWithDistanceAndFuel, TripWithTotalWeight, TripWithWeightAndFuel,
+    DIESEL_CARBON_FACTOR, METERS_TO_NAUTICAL_MILES, MIN_EEOI_DISTANCE,
 };
 
 use crate::{error::Result, models::TripBenchmarkOutput, PostgresAdapter};
-
-const METERS_TO_NAUTICAL_MILES: f64 = 1. / 1852.;
-
-/// Fuel mass to CO2 mass conversion factor for Diesel/Gas Oil
-/// Unit: CO2 (tonn) / Fuel (tonn)
-///
-/// Source: <https://www.classnk.or.jp/hp/pdf/activities/statutory/eedi/mepc_1-circ_684.pdf>
-///         Appendix, section 3
-const DIESEL_CARBON_FACTOR: f64 = 3.206;
-
-const MIN_EEOI_DISTANCE: f64 = 1_000.;
 
 impl PostgresAdapter {
     pub(crate) async fn add_benchmark_outputs(
@@ -122,7 +112,11 @@ SELECT
     MAX(b.output) FILTER (
         WHERE
             b.trip_benchmark_id = $6
-    ) AS catch_value_per_fuel
+    ) AS catch_value_per_fuel,
+    MAX(b.output) FILTER (
+        WHERE
+            b.trip_benchmark_id = $7
+    ) AS eeoi
 FROM
     vessel_id v
     INNER JOIN trips t ON v.fiskeridir_vessel_id = t.fiskeridir_vessel_id
@@ -133,21 +127,21 @@ WHERE
         OR NOT b.unrealistic
     )
     AND (
-        $7::TIMESTAMPTZ IS NULL
-        OR LOWER(t.period) >= $7
+        $8::TIMESTAMPTZ IS NULL
+        OR LOWER(t.period) >= $8
     )
     AND (
-        $8::TIMESTAMPTZ IS NULL
-        OR UPPER(t.period) <= $8
+        $9::TIMESTAMPTZ IS NULL
+        OR UPPER(t.period) <= $9
     )
 GROUP BY
     t.trip_id
 ORDER BY
     CASE
-        WHEN $9 = 1 THEN t.period
+        WHEN $10 = 1 THEN t.period
     END ASC,
     CASE
-        WHEN $9 = 2 THEN t.period
+        WHEN $10 = 2 THEN t.period
     END DESC
             "#,
             query.call_sign.as_ref(),
@@ -156,6 +150,7 @@ ORDER BY
             TripBenchmarkId::FuelConsumption as i32,
             TripBenchmarkId::WeightPerFuel as i32,
             TripBenchmarkId::CatchValuePerFuel as i32,
+            TripBenchmarkId::Eeoi as i32,
             query.start_date,
             query.end_date,
             query.ordering as i32,
@@ -412,6 +407,48 @@ WHERE
             TripBenchmarkId::FuelConsumption as i32,
             TripBenchmarkId::WeightPerFuel as i32,
             id.into_inner(),
+            TripBenchmarkStatus::MustRecompute as i32,
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(trips)
+    }
+
+    pub(crate) async fn trips_without_eeoi_and_with_distance_and_fuel_consumption_impl(
+        &self,
+        id: FiskeridirVesselId,
+    ) -> Result<Vec<TripWithDistanceAndFuel>> {
+        let trips = sqlx::query_as!(
+            TripWithDistanceAndFuel,
+            r#"
+SELECT
+    t.trip_id AS "id!: TripId",
+    t.landing_total_living_weight AS "total_weight!",
+    t.distance AS "distance!",
+    MAX(b_fuel.output) AS "fuel_consumption!"
+FROM
+    trips_detailed t
+    LEFT JOIN trip_benchmark_outputs b_fuel ON t.trip_id = b_fuel.trip_id
+    AND b_fuel.trip_benchmark_id = $1
+    LEFT JOIN trip_benchmark_outputs b_eeoi ON t.trip_id = b_eeoi.trip_id
+    AND b_eeoi.trip_benchmark_id = $2
+WHERE
+    t.fiskeridir_vessel_id = $3
+    AND t.landing_total_living_weight > 0
+    AND t.distance > $4
+    AND b_fuel.output > 0
+    AND (
+        b_eeoi.trip_id IS NULL
+        OR b_eeoi.status = $5
+    )
+GROUP BY
+    t.trip_id
+            "#,
+            TripBenchmarkId::FuelConsumption as i32,
+            TripBenchmarkId::Eeoi as i32,
+            id.into_inner(),
+            MIN_EEOI_DISTANCE,
             TripBenchmarkStatus::MustRecompute as i32,
         )
         .fetch_all(&self.pool)

@@ -26,6 +26,7 @@ async fn test_average_benchmarks_works() {
                 v.dca.vessel_info.engine_building_year = Some(2000);
                 v.dca.catch.species.living_weight = Some(1_000);
             })
+            .landings(1)
             .ais_positions(3)
             .modify_idx(|i, v| match i {
                 0 => {
