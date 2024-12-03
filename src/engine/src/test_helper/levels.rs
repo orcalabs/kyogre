@@ -287,6 +287,7 @@ impl Modifiable for TripBuilder {
             .for_each(|(_, c)| {
                 closure(c);
                 c.current_data_timestamp = c.start();
+                c.current_ers_landing_data_timestamp = c.end();
             });
 
         self

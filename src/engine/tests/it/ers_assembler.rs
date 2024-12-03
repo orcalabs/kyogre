@@ -32,12 +32,12 @@ async fn test_produces_new_trips_without_replacing_existing_ones() {
 
         assert_eq!(trip.period.start(), state.dep[0].timestamp);
         assert_eq!(trip.period.end(), state.por[0].timestamp);
-        assert_eq!(trip.landing_coverage.start(), state.dep[0].timestamp);
-        assert_eq!(trip.landing_coverage.end(), state.dep[1].timestamp);
+        assert_eq!(trip.landing_coverage.start(), state.por[0].timestamp);
+        assert_eq!(trip.landing_coverage.end(), state.por[1].timestamp);
 
         assert_eq!(trip2.period.start(), state.dep[1].timestamp);
         assert_eq!(trip2.period.end(), state.por[1].timestamp);
-        assert_eq!(trip2.landing_coverage.start(), state.dep[1].timestamp);
+        assert_eq!(trip2.landing_coverage.start(), state.por[1].timestamp);
         assert_eq!(
             trip2.landing_coverage.end(),
             ers_last_trip_landing_coverage_end(&state.por[1].timestamp)
@@ -52,6 +52,25 @@ async fn test_produces_no_trips_with_no_new_departures_or_arrivals() {
         builder.vessels(1).dep(1).por(1).build().await;
         let state = helper.builder().await.build().await;
         assert_eq!(state.trips.len(), 1);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_does_not_recompute_prior_trip_with_new_departure_event() {
+    test(|_helper, builder| async move {
+        let state = builder
+            .vessels(1)
+            .dep(1)
+            .por(1)
+            .new_cycle()
+            .dep(1)
+            .build()
+            .await;
+
+        let trip = &state.trips[0];
+        assert_eq!(state.trips.len(), 1);
+        assert_eq!(trip.trip_id.into_inner(), 1);
     })
     .await;
 }
@@ -73,7 +92,7 @@ async fn test_extends_most_recent_trip_with_new_arrival() {
 
         assert_eq!(trip.period.start(), state.dep[0].timestamp);
         assert_eq!(trip.period.end(), state.por[1].timestamp);
-        assert_eq!(trip.landing_coverage.start(), state.dep[0].timestamp);
+        assert_eq!(trip.landing_coverage.start(), state.por[1].timestamp);
         assert_eq!(
             trip.landing_coverage.end(),
             ers_last_trip_landing_coverage_end(&state.por[1].timestamp)
@@ -127,17 +146,17 @@ async fn test_handles_conflict_correctly() {
 
         assert_eq!(trip.period.start(), departure);
         assert_eq!(trip.period.end(), arrival);
-        assert_eq!(trip.landing_coverage.start(), departure);
-        assert_eq!(trip.landing_coverage.end(), departure3);
+        assert_eq!(trip.landing_coverage.start(), arrival);
+        assert_eq!(trip.landing_coverage.end(), arrival3);
 
         assert_eq!(trip2.period.start(), departure3);
         assert_eq!(trip2.period.end(), arrival3);
-        assert_eq!(trip2.landing_coverage.start(), departure3);
-        assert_eq!(trip2.landing_coverage.end(), departure2);
+        assert_eq!(trip2.landing_coverage.start(), arrival3);
+        assert_eq!(trip2.landing_coverage.end(), arrival2);
 
         assert_eq!(trip3.period.start(), departure2);
         assert_eq!(trip3.period.end(), arrival2);
-        assert_eq!(trip3.landing_coverage.start(), departure2);
+        assert_eq!(trip3.landing_coverage.start(), arrival2);
         assert_eq!(
             trip3.landing_coverage.end(),
             ers_last_trip_landing_coverage_end(&arrival2)
@@ -173,7 +192,7 @@ async fn test_is_not_affected_of_other_vessels_trips() {
 
         assert_eq!(trip.period.start(), state.dep[0].timestamp);
         assert_eq!(trip.period.end(), state.por[0].timestamp);
-        assert_eq!(trip.landing_coverage.start(), state.dep[0].timestamp);
+        assert_eq!(trip.landing_coverage.start(), state.por[0].timestamp);
         assert_eq!(
             trip.landing_coverage.end(),
             ers_last_trip_landing_coverage_end(&state.por[0].timestamp)
@@ -181,7 +200,7 @@ async fn test_is_not_affected_of_other_vessels_trips() {
 
         assert_eq!(trip2.period.start(), state.dep[1].timestamp);
         assert_eq!(trip2.period.end(), state.por[1].timestamp);
-        assert_eq!(trip2.landing_coverage.start(), state.dep[1].timestamp);
+        assert_eq!(trip2.landing_coverage.start(), state.por[1].timestamp);
         assert_eq!(
             trip2.landing_coverage.end(),
             ers_last_trip_landing_coverage_end(&state.por[1].timestamp)
@@ -199,7 +218,7 @@ async fn test_ignores_arrival_if_its_the_first_ever_event_for_a_vessel() {
         let trip = &state.trips[0];
         assert_eq!(trip.period.start(), state.dep[0].timestamp);
         assert_eq!(trip.period.end(), state.por[1].timestamp);
-        assert_eq!(trip.landing_coverage.start(), state.dep[0].timestamp);
+        assert_eq!(trip.landing_coverage.start(), state.por[1].timestamp);
         assert_eq!(
             trip.landing_coverage.end(),
             ers_last_trip_landing_coverage_end(&state.por[1].timestamp)
@@ -234,7 +253,7 @@ async fn test_handles_dep_and_por_with_identical_timestamps() {
 
         assert_eq!(trip.period.start(), state.dep[0].timestamp);
         assert_eq!(trip.period.end(), state.por[0].timestamp);
-        assert_eq!(trip.landing_coverage.start(), state.dep[0].timestamp);
+        assert_eq!(trip.landing_coverage.start(), state.por[0].timestamp);
         assert_eq!(
             trip.landing_coverage.end(),
             ers_last_trip_landing_coverage_end(&state.por[0].timestamp)
@@ -250,9 +269,9 @@ async fn test_other_event_types_does_not_cause_conflicts() {
             .vessels(1)
             .dep(1)
             .hauls(1)
-            .landings(1)
             .tra(1)
             .por(1)
+            .landings(1)
             .build()
             .await;
 
