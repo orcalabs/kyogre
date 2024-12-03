@@ -41,6 +41,15 @@ pub struct Coordinates {
 
 pub static NUM_CATCH_LOCATIONS: usize = 2113;
 
+pub const MIN_EEOI_DISTANCE: f64 = 1_000.;
+pub const METERS_TO_NAUTICAL_MILES: f64 = 1. / 1852.;
+/// Fuel mass to CO2 mass conversion factor for Diesel/Gas Oil
+/// Unit: CO2 (tonn) / Fuel (tonn)
+///
+/// Source: <https://www.classnk.or.jp/hp/pdf/activities/statutory/eedi/mepc_1-circ_684.pdf>
+///         Appendix, section 3
+pub const DIESEL_CARBON_FACTOR: f64 = 3.206;
+
 pub use fiskeridir_rs::FiskeridirVesselId;
 
 pub use ais::*;

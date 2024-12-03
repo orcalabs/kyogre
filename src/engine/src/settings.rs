@@ -59,6 +59,7 @@ impl Settings {
             Box::<FuelConsumption>::default(),
             Box::<WeightPerFuel>::default(),
             Box::<CatchValuePerFuel>::default(),
+            Box::<Eeoi>::default(),
             // `Sustainability` needs to be last because it depends on benchmarks above.
             // TODO
             // Box::<Sustainability>::default(),
