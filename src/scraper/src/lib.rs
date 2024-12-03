@@ -4,7 +4,8 @@
 use async_trait::async_trait;
 use barentswatch::{FishingFacilityHistoricScraper, FishingFacilityScraper};
 use fiskeridir::{
-    AquaCultureRegisterScraper, ErsScraper, LandingScraper, RegisterVesselsScraper, VmsScraper,
+    AquaCultureRegisterScraper, BuyerRegisterScraper, ErsScraper, LandingScraper,
+    RegisterVesselsScraper, VmsScraper,
 };
 use kyogre_core::{OauthConfig, ScraperInboundPort, ScraperOutboundPort};
 use mattilsynet::MattilsynetScraper;
@@ -48,6 +49,7 @@ pub struct Config {
     pub mattilsynet_fishery_url: Option<String>,
     pub mattilsynet_businesses_url: Option<String>,
     pub register_vessels_url: Option<String>,
+    pub buyer_register_url: Option<String>,
     pub fishing_facility: Option<ApiClientConfig>,
     pub fishing_facility_historic: Option<ApiClientConfig>,
     pub file_download_dir: PathBuf,
@@ -122,6 +124,10 @@ impl Scraper {
             .register_vessels_url
             .map(|url| fiskeridir_rs::ApiSource::RegisterVessels { url });
 
+        let buyer_register_source = config
+            .buyer_register_url
+            .map(|url| fiskeridir_rs::ApiSource::BuyerRegister { url });
+
         let fiskeridir_arc = Arc::new(fiskeridir_source);
         let landings_scraper =
             LandingScraper::new(fiskeridir_arc.clone(), landing_sources, environment);
@@ -138,7 +144,9 @@ impl Scraper {
             config.mattilsynet_businesses_url,
         );
         let register_vessels_scraper =
-            RegisterVesselsScraper::new(fiskeridir_arc, register_vessels_source);
+            RegisterVesselsScraper::new(fiskeridir_arc.clone(), register_vessels_source);
+        let buyer_register_scraper =
+            BuyerRegisterScraper::new(fiskeridir_arc, buyer_register_source);
 
         let barentswatch_source = Arc::new(barentswatch_source);
         let fishing_facility_scraper =
@@ -157,6 +165,7 @@ impl Scraper {
                 vec![
                     Arc::new(landings_scraper),
                     Arc::new(register_vessels_scraper),
+                    Arc::new(buyer_register_scraper),
                     Arc::new(ers_scraper),
                     Arc::new(fishing_facility_scraper),
                     Arc::new(fishing_facility_historic_scraper),
@@ -223,6 +232,7 @@ pub enum ScraperId {
     Landings,
     Ers,
     RegisterVessels,
+    BuyerRegister,
     Vms,
     FishingFacility,
     FishingFacilityHistoric,
@@ -238,6 +248,7 @@ impl std::fmt::Display for ScraperId {
             ScraperId::Landings => write!(f, "landings_scraper"),
             ScraperId::Ers => write!(f, "ers_scraper"),
             ScraperId::RegisterVessels => write!(f, "register_vessels_scraper"),
+            ScraperId::BuyerRegister => write!(f, "buyer_register_scraper"),
             ScraperId::Vms => write!(f, "vms_scraper"),
             ScraperId::FishingFacility => write!(f, "fishing_facility_scraper"),
             ScraperId::FishingFacilityHistoric => write!(f, "fishing_facility_historic_scraper"),

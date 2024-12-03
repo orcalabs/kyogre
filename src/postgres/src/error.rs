@@ -153,6 +153,12 @@ pub enum VerifyDatabaseError {
         location: Location,
         num: i64,
     },
+    #[snafu(display("BuyerLocations without mapping: '{num}'"))]
+    BuyerLocationsWithoutMapping {
+        #[snafu(implicit)]
+        location: Location,
+        num: i64,
+    },
 }
 
 impl From<sqlx::Error> for Error {

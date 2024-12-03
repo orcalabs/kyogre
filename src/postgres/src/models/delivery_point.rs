@@ -1,4 +1,5 @@
-use chrono::NaiveDate;
+use chrono::{NaiveDate, NaiveDateTime};
+use fiskeridir_rs::{BuyerAddress, BuyerLocationId, BuyerLocationType, DeliveryPointId};
 use kyogre_core::DeliveryPointType;
 use unnest_insert::UnnestInsert;
 
@@ -94,6 +95,39 @@ pub struct MattilsynetDeliveryPoint<'a> {
     pub postal_code: Option<i32>,
 }
 
+#[derive(Debug, Clone, UnnestInsert)]
+#[unnest_insert(
+    table_name = "buyer_locations",
+    conflict = "buyer_location_id",
+    update_all
+)]
+pub struct NewBuyerLocation<'a> {
+    #[unnest_insert(sql_type = "BIGINT", sql_convert = "type_to_i64")]
+    pub buyer_location_id: BuyerLocationId,
+    #[unnest_insert(sql_type = "TEXT")]
+    pub delivery_point_id: Option<&'a DeliveryPointId>,
+    #[unnest_insert(sql_type = "BIGINT", sql_convert = "opt_type_to_i64")]
+    pub parent: Option<BuyerLocationId>,
+    #[unnest_insert(sql_type = "INT", sql_convert = "type_to_i32")]
+    pub location_type: BuyerLocationType,
+    pub legal_entity_id: Option<&'a str>,
+    pub main_legal_entity_id: Option<&'a str>,
+    pub parent_legal_entity_id: Option<&'a str>,
+    pub name: Option<&'a str>,
+    pub created: NaiveDateTime,
+    pub updated: NaiveDateTime,
+    pub address: Option<&'a str>,
+    pub postal_code: Option<i32>,
+    pub municipality_number: Option<i32>,
+    pub country_code: Option<String>,
+    pub postal_address: Option<&'a str>,
+    pub postal_postal_code: Option<i32>,
+    pub postal_municipality_number: Option<i32>,
+    pub postal_country_code: Option<String>,
+    pub latitude: Option<f64>,
+    pub longitude: Option<f64>,
+}
+
 impl<'a> From<&'a fiskeridir_rs::DeliveryPointId> for NewDeliveryPointId<'a> {
     fn from(v: &'a fiskeridir_rs::DeliveryPointId) -> Self {
         Self {
@@ -179,6 +213,51 @@ impl From<kyogre_core::ManualDeliveryPoint> for ManualDeliveryPoint {
             delivery_point_id: v.id.into_inner(),
             name: v.name,
             delivery_point_type_id: v.type_id,
+        }
+    }
+}
+
+impl<'a> From<&'a kyogre_core::BuyerLocation> for NewBuyerLocation<'a> {
+    fn from(v: &'a kyogre_core::BuyerLocation) -> Self {
+        let address_expand = |addr: Option<&'a BuyerAddress>| {
+            if let Some(v) = addr {
+                (
+                    v.address.as_deref(),
+                    v.postal_code.map(|v| v as i32),
+                    v.municipality_number.map(|v| v as i32),
+                    Some(v.country_code.alpha3().to_string()),
+                )
+            } else {
+                (None, None, None, None)
+            }
+        };
+
+        let (address, postal_code, municipality_number, country_code) =
+            address_expand(v.address.as_ref());
+        let (postal_address, postal_postal_code, postal_municipality_number, postal_country_code) =
+            address_expand(v.postal_address.as_ref());
+
+        Self {
+            buyer_location_id: v.id,
+            delivery_point_id: v.delivery_point_id.as_ref(),
+            parent: v.parent,
+            location_type: v.location_type,
+            legal_entity_id: v.legal_entity_id.as_ref().map(|v| v.as_ref()),
+            main_legal_entity_id: v.main_legal_entity_id.as_ref().map(|v| v.as_ref()),
+            parent_legal_entity_id: v.parent_legal_entity_id.as_ref().map(|v| v.as_ref()),
+            name: v.name.as_deref(),
+            created: v.created,
+            updated: v.updated,
+            address,
+            postal_code,
+            municipality_number,
+            country_code,
+            postal_address,
+            postal_postal_code,
+            postal_municipality_number,
+            postal_country_code,
+            latitude: v.position.as_ref().map(|v| v.lat),
+            longitude: v.position.as_ref().map(|v| v.lon),
         }
     }
 }

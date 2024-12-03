@@ -1,7 +1,7 @@
 use crate::*;
 use async_channel::Receiver;
 use async_trait::async_trait;
-use chrono::{DateTime, NaiveDate, Utc};
+use chrono::{DateTime, NaiveDate, NaiveDateTime, Utc};
 use fiskeridir_rs::{DataFileId, SpeciesGroup};
 
 pub type BoxIterator<T> = Box<dyn Iterator<Item = T> + Send + Sync>;
@@ -84,6 +84,7 @@ pub trait ScraperInboundPort {
         &self,
         vessels: Vec<fiskeridir_rs::RegisterVessel>,
     ) -> CoreResult<()>;
+    async fn add_buyer_locations(&self, locations: Vec<BuyerLocation>) -> CoreResult<()>;
     async fn add_landings(
         &self,
         landings: BoxIterator<fiskeridir_rs::Result<fiskeridir_rs::Landing>>,
@@ -126,6 +127,7 @@ pub trait ScraperOutboundPort {
     ) -> CoreResult<Option<DateTime<Utc>>>;
     async fn latest_weather_timestamp(&self) -> CoreResult<Option<DateTime<Utc>>>;
     async fn latest_ocean_climate_timestamp(&self) -> CoreResult<Option<DateTime<Utc>>>;
+    async fn latest_buyer_location_update(&self) -> CoreResult<Option<NaiveDateTime>>;
 }
 
 #[async_trait]
