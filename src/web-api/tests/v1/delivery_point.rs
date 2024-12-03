@@ -37,7 +37,22 @@ async fn test_delivery_points_returns_mattilsynet_delivery_points() {
 async fn test_delivery_points_returns_manual_delivery_points() {
     test(|helper, _builder| async move {
         let dps = helper.app.get_delivery_points().await.unwrap();
-        assert_eq!(dps.len(), 331);
+        assert_eq!(dps.len(), 365);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_delivery_points_returns_buyer_register_delivery_points() {
+    test(|helper, builder| async move {
+        let state = builder.buyer_locations(3).build().await;
+
+        let mut dps = helper.app.get_delivery_points().await.unwrap();
+        dps.retain(|v| state.delivery_points.iter().any(|d| d.id == v.id));
+        dps.sort_by_key(|d| d.id.clone());
+
+        assert_eq!(dps.len(), 3);
+        assert_eq!(dps, state.delivery_points);
     })
     .await;
 }

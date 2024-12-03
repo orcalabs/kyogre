@@ -2,7 +2,7 @@ use std::{path::PathBuf, result::Result as StdResult};
 
 use async_channel::Receiver;
 use async_trait::async_trait;
-use chrono::{DateTime, NaiveDate, Utc};
+use chrono::{DateTime, NaiveDate, NaiveDateTime, Utc};
 use fiskeridir_rs::{CallSign, DataFileId, LandingId, SpeciesGroup};
 use futures::{Stream, StreamExt, TryStreamExt};
 use kyogre_core::*;
@@ -824,6 +824,10 @@ impl ScraperInboundPort for PostgresAdapter {
         self.add_register_vessels_full(vessels).await?;
         Ok(())
     }
+    async fn add_buyer_locations(&self, locations: Vec<BuyerLocation>) -> CoreResult<()> {
+        self.add_buyer_locations_impl(&locations).await?;
+        Ok(())
+    }
     async fn add_landings(
         &self,
         landings: BoxIterator<fiskeridir_rs::Result<fiskeridir_rs::Landing>>,
@@ -898,6 +902,9 @@ impl ScraperOutboundPort for PostgresAdapter {
     }
     async fn latest_ocean_climate_timestamp(&self) -> CoreResult<Option<DateTime<Utc>>> {
         Ok(self.latest_ocean_climate_timestamp_impl().await?)
+    }
+    async fn latest_buyer_location_update(&self) -> CoreResult<Option<NaiveDateTime>> {
+        Ok(self.latest_buyer_location_update_impl().await?)
     }
 }
 

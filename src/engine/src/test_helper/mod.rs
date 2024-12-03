@@ -8,8 +8,8 @@ use chrono::{DateTime, Duration, TimeZone, Utc};
 use fiskeridir_rs::{CallSign, DeliveryPointId, LandingMonth};
 use futures::TryStreamExt;
 use kyogre_core::{
-    CatchLocationId, FiskeridirVesselId, MLModel, NewVesselConflict, NewWeather, TestStorage, Tra,
-    TrainingMode, TripAssembler, TripDistancer, TripPositionLayer,
+    BuyerLocation, CatchLocationId, FiskeridirVesselId, MLModel, NewVesselConflict, NewWeather,
+    TestStorage, Tra, TrainingMode, TripAssembler, TripDistancer, TripPositionLayer,
 };
 use machine::StateMachine;
 use orca_core::PsqlSettings;
@@ -111,6 +111,7 @@ pub struct TestStateBuilder {
     por: Vec<PorConstructor>,
     aqua_cultures: Vec<AquaCultureConstructor>,
     mattilsynet: Vec<MattilsynetConstructor>,
+    buyer_locations: Vec<BuyerLocationConstructor>,
     manual_delivery_points: Vec<ManualDeliveryPointConstructor>,
     fishing_facilities: Vec<FishingFacilityConctructor>,
     weather: Vec<WeatherConstructor>,
@@ -321,6 +322,7 @@ impl TestStateBuilder {
             por: vec![],
             aqua_cultures: vec![],
             mattilsynet: vec![],
+            buyer_locations: vec![],
             manual_delivery_points: vec![],
             cycle: Cycle::new(),
             trip_queue_reset: None,
@@ -386,6 +388,27 @@ impl TestStateBuilder {
 
         MattilsynetBuilder {
             current_index: self.mattilsynet.len() - amount,
+            state: self,
+        }
+    }
+
+    pub fn buyer_locations(mut self, amount: usize) -> BuyerLocationBuilder {
+        assert!(amount != 0);
+
+        for _ in 0..amount {
+            let mut val = BuyerLocation::test_default();
+            val.delivery_point_id = Some(
+                DeliveryPointId::try_from(format!("DP{}", self.delivery_point_id_counter)).unwrap(),
+            );
+            self.delivery_point_id_counter += 1;
+            self.buyer_locations.push(BuyerLocationConstructor {
+                val,
+                cycle: self.cycle,
+            });
+        }
+
+        BuyerLocationBuilder {
+            current_index: self.buyer_locations.len() - amount,
             state: self,
         }
     }
@@ -756,6 +779,11 @@ impl TestStateBuilder {
                     .iter()
                     .map(|v| v.val.delivery_point_id.clone())
                     .chain(self.mattilsynet.iter().map(|v| v.val.id.clone()))
+                    .chain(
+                        self.buyer_locations
+                            .iter()
+                            .filter_map(|v| v.val.delivery_point_id.clone()),
+                    )
                     .chain(self.manual_delivery_points.iter().map(|v| v.val.id.clone())),
             );
 
@@ -786,6 +814,17 @@ impl TestStateBuilder {
                                 None
                             }
                         })
+                        .collect(),
+                )
+                .await
+                .unwrap();
+
+            self.storage
+                .add_buyer_locations(
+                    self.buyer_locations
+                        .iter()
+                        .filter(|v| v.cycle == i)
+                        .map(|v| v.val.clone())
                         .collect(),
                 )
                 .await

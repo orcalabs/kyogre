@@ -29,6 +29,7 @@ scraper:
     token_url: 'https://id.barentswatch.no/connect/token'
     scope: 'api'
   register_vessels_url: https://api.fiskeridir.no/vessel-api/api/v1/vessels
+  buyer_register_url: https://api.fiskeridir.no/buyer-api/v1/locations
   aqua_culture_register_url: 'https://api.fiskeridir.no/pub-aqua/api/v1/dump/new-legacy-csv'
   mattilsynet_fishery_url: 'https://mattilsynet-xp7prod.enonic.cloud/api/_/attachment/inline/59b2d10e-8246-476b-a8f9-589f028e2767:2e8d15e8e8e31941d1ca952d7f3694e6880b67b2/Fishery_products.csv'
   mattilsynet_businesses_url: 'https://mattilsynet-xp7prod.enonic.cloud/api/_/attachment/inline/0213bd0e-f035-4d10-8147-bb03193e73bc:2723b89b3f2128c3857502d4fa793588feb24841/virksomhetslister.csv'

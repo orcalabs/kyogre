@@ -5,7 +5,8 @@ use tracing::error;
 
 use crate::{
     error::{
-        ConflictingVesselMappingsSnafu, DanglingVesselEventsSnafu, IncorrectHaulCatchesSnafu,
+        BuyerLocationsWithoutMappingSnafu, ConflictingVesselMappingsSnafu,
+        DanglingVesselEventsSnafu, IncorrectHaulCatchesSnafu,
         IncorrectHaulsMatrixLivingWeightSnafu, IncorrectLandingMatrixLivingWeightSnafu,
         LandingsWithoutTripSnafu, Result,
     },
@@ -51,6 +52,11 @@ impl PostgresAdapter {
         match self.landings_without_trip().await? {
             0 => Ok(()),
             num => LandingsWithoutTripSnafu { num }.fail(),
+        }?;
+
+        match self.buyer_locations_without_mapping().await? {
+            0 => Ok(()),
+            num => BuyerLocationsWithoutMappingSnafu { num }.fail(),
         }?;
 
         Ok(())

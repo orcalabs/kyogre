@@ -93,6 +93,7 @@ impl_cycleable!(
 );
 impl_cycleable!(AquaCultureBuilder, AquaCultureConstructor, state, cycle);
 impl_cycleable!(MattilsynetBuilder, MattilsynetConstructor, state, cycle);
+impl_cycleable!(BuyerLocationBuilder, BuyerLocationConstructor, state, cycle);
 impl_cycleable!(
     FishingFacilityBuilder,
     FishingFacilityConctructor,
@@ -228,6 +229,11 @@ impl_modifiable!(
     MattilsynetBuilder,
     MattilsynetConstructor,
     state.mattilsynet
+);
+impl_modifiable!(
+    BuyerLocationBuilder,
+    BuyerLocationConstructor,
+    state.buyer_locations
 );
 impl_modifiable!(DepVesselBuilder, DepConstructor, state.state.dep);
 impl_modifiable!(
@@ -436,6 +442,9 @@ where
     fn mattilsynet(self, amount: usize) -> MattilsynetBuilder {
         self.base().mattilsynet(amount)
     }
+    fn buyer_locations(self, amount: usize) -> BuyerLocationBuilder {
+        self.base().buyer_locations(amount)
+    }
     fn aqua_cultures(self, amount: usize) -> AquaCultureBuilder {
         self.base().aqua_cultures(amount)
     }
@@ -463,6 +472,7 @@ impl_global_level!(HaulBuilder);
 impl_global_level!(TraBuilder);
 impl_global_level!(LandingBuilder);
 impl_global_level!(MattilsynetBuilder);
+impl_global_level!(BuyerLocationBuilder);
 impl_global_level!(AquaCultureBuilder);
 impl_global_level!(FishingFacilityBuilder);
 impl_global_level!(ManualDeliveryPointsBuilder);

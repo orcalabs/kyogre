@@ -1,6 +1,11 @@
-use fiskeridir_rs::DeliveryPointId;
+use chrono::NaiveDateTime;
+use fiskeridir_rs::{
+    BuyerAddress, BuyerLocationId, BuyerLocationType, BuyerPosition, DeliveryPointId, LegalEntityId,
+};
 use num_derive::FromPrimitive;
 use serde_repr::{Deserialize_repr, Serialize_repr};
+
+use crate::{buyer_location_error::TooManyApprovalNumbersSnafu, BuyerLocationError};
 
 #[derive(Clone, Debug)]
 pub struct DeliveryPoint {
@@ -25,6 +30,23 @@ pub struct ManualDeliveryPoint {
     pub id: DeliveryPointId,
     pub name: String,
     pub type_id: DeliveryPointType,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct BuyerLocation {
+    pub id: BuyerLocationId,
+    pub delivery_point_id: Option<DeliveryPointId>,
+    pub parent: Option<BuyerLocationId>,
+    pub location_type: BuyerLocationType,
+    pub legal_entity_id: Option<LegalEntityId>,
+    pub main_legal_entity_id: Option<LegalEntityId>,
+    pub parent_legal_entity_id: Option<LegalEntityId>,
+    pub name: Option<String>,
+    pub created: NaiveDateTime,
+    pub updated: NaiveDateTime,
+    pub address: Option<BuyerAddress>,
+    pub postal_address: Option<BuyerAddress>,
+    pub position: Option<BuyerPosition>,
 }
 
 /// Defines different types of delivery points, these values are our own creation and does not
@@ -72,6 +94,8 @@ pub enum DeliveryPointSourceId {
     Mattilsynet = 2,
     /// From Fiskeridirektoratets aqua culture register.
     AquaCultureRegister = 3,
+    /// From Fiskeridirektoratets buyer register.
+    BuyerRegister = 4,
 }
 
 impl From<DeliveryPointType> for i32 {
@@ -98,8 +122,53 @@ impl From<MattilsynetDeliveryPoint> for DeliveryPoint {
     }
 }
 
+impl TryFrom<fiskeridir_rs::BuyerLocation> for BuyerLocation {
+    type Error = BuyerLocationError;
+
+    fn try_from(v: fiskeridir_rs::BuyerLocation) -> Result<Self, Self::Error> {
+        let fiskeridir_rs::BuyerLocation {
+            location_id,
+            parent,
+            location_type,
+            legal_entity_id,
+            main_legal_entity_id,
+            parent_legal_entity_id,
+            name,
+            created,
+            updated,
+            address,
+            postal_address,
+            position,
+            approval_numbers,
+        } = v;
+
+        let delivery_point_id = match approval_numbers.len() {
+            0 | 1 => approval_numbers.into_iter().next(),
+            v => return TooManyApprovalNumbersSnafu { num: v }.fail(),
+        };
+
+        Ok(Self {
+            id: location_id,
+            delivery_point_id,
+            parent,
+            location_type,
+            legal_entity_id,
+            main_legal_entity_id,
+            parent_legal_entity_id,
+            name,
+            created,
+            updated,
+            address,
+            postal_address,
+            position,
+        })
+    }
+}
+
 #[cfg(feature = "test")]
 mod test {
+    use chrono::Utc;
+
     use super::*;
 
     impl MattilsynetDeliveryPoint {
@@ -110,6 +179,27 @@ mod test {
                 address: Some("Address".into()),
                 postal_city: Some("Tromsø".into()),
                 postal_code: Some(1234),
+            }
+        }
+    }
+
+    impl BuyerLocation {
+        pub fn test_default() -> Self {
+            let now = Utc::now().naive_utc();
+            Self {
+                id: BuyerLocationId::test_default(),
+                delivery_point_id: Some(DeliveryPointId::new_unchecked("LK17")),
+                parent: None,
+                location_type: BuyerLocationType::OrdinaryFacility,
+                legal_entity_id: None,
+                main_legal_entity_id: None,
+                parent_legal_entity_id: None,
+                name: Some("Name".into()),
+                created: now,
+                updated: now,
+                address: Some(BuyerAddress::test_default()),
+                postal_address: Some(BuyerAddress::test_default()),
+                position: Some(BuyerPosition::test_default()),
             }
         }
     }
