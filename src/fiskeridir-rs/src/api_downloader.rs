@@ -15,14 +15,16 @@ pub struct ApiDownloader {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ApiSource {
     RegisterVessels { url: String },
+    BuyerRegister { url: String },
 }
 
 impl ApiSource {
-    fn url(&self) -> String {
+    fn url(&self) -> &str {
         use ApiSource::*;
 
         match self {
-            RegisterVessels { url } => url.clone(),
+            RegisterVessels { url } => url,
+            BuyerRegister { url } => url,
         }
     }
 }

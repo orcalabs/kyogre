@@ -3,12 +3,14 @@ use fiskeridir_rs::{ApiDownloader, DataDir, DataDownloader, FileSource};
 use kyogre_core::{ScraperFileHashInboundPort, ScraperFileHashOutboundPort};
 
 mod aqua_culture_register;
+mod buyer_register;
 mod ers;
 mod landings;
 mod register_vessel;
 mod vms;
 
 pub use aqua_culture_register::*;
+pub use buyer_register::*;
 pub use ers::*;
 pub use landings::*;
 pub use register_vessel::*;

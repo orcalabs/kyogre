@@ -1,0 +1,20 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    COUNT(*) AS \"count!\"\nFROM\n    buyer_locations b\n    LEFT JOIN buyer_locations_mapping m ON b.buyer_location_id = m.buyer_location_id\nWHERE\n    b.delivery_point_id IS NOT NULL\n    AND m.buyer_location_id IS NULL\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "count!",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "9f3b73cd88e2b2e8f5317783fcc08e2f6d13f6d837faad4a00ab61dff71454ba"
+}

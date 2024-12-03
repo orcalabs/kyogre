@@ -19,8 +19,18 @@ pub struct MattilsynetBuilder {
     pub current_index: usize,
 }
 
+pub struct BuyerLocationBuilder {
+    pub state: TestStateBuilder,
+    pub current_index: usize,
+}
+
 pub struct MattilsynetConstructor {
     pub val: MattilsynetDeliveryPoint,
+    pub cycle: Cycle,
+}
+
+pub struct BuyerLocationConstructor {
+    pub val: BuyerLocation,
     pub cycle: Cycle,
 }
 

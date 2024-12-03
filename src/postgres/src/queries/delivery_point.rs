@@ -1,15 +1,16 @@
 use std::collections::{hash_map::Entry, HashMap};
 
+use chrono::NaiveDateTime;
 use fiskeridir_rs::DeliveryPointId;
 use futures::{Stream, TryStreamExt};
-use kyogre_core::{DateRange, DeliveryPoint, FiskeridirVesselId};
+use kyogre_core::{BuyerLocation, DateRange, DeliveryPoint, FiskeridirVesselId};
 use sqlx::postgres::types::PgRange;
 
 use crate::{
     error::Result,
     models::{
         AquaCultureEntry, AquaCultureSpecies, AquaCultureTill, MattilsynetDeliveryPoint,
-        NewDeliveryPointId, NewSpeciesFiskeridir,
+        NewBuyerLocation, NewDeliveryPointId, NewSpeciesFiskeridir,
     },
     PostgresAdapter,
 };
@@ -30,15 +31,17 @@ impl PostgresAdapter {
             r#"
 SELECT
     COALESCE(d.delivery_point_id, d.delivery_point_id) AS "id!: DeliveryPointId",
-    COALESCE(m.name, a.name, mt.name) AS NAME,
-    COALESCE(m.address, a.address, mt.address) AS address,
-    COALESCE(m.latitude, a.latitude) AS latitude,
-    COALESCE(m.longitude, a.longitude) AS longitude
+    COALESCE(m.name, a.name, mt.name, b.name) AS "name",
+    COALESCE(m.address, a.address, mt.address, b.address) AS address,
+    COALESCE(m.latitude, a.latitude, b.latitude) AS latitude,
+    COALESCE(m.longitude, a.longitude, b.longitude) AS longitude
 FROM
     delivery_point_ids d
     LEFT JOIN manual_delivery_points m ON m.delivery_point_id = d.delivery_point_id
     LEFT JOIN aqua_culture_register a ON a.delivery_point_id = d.delivery_point_id
     LEFT JOIN mattilsynet_delivery_points mt ON mt.delivery_point_id = d.delivery_point_id
+    LEFT JOIN buyer_locations_mapping bm ON bm.delivery_point_id = d.delivery_point_id
+    LEFT JOIN buyer_locations b ON b.buyer_location_id = bm.buyer_location_id
 WHERE
     (
         $1::TEXT IS NULL
@@ -135,16 +138,18 @@ WHERE
             r#"
 SELECT
     d.delivery_point_id AS "id!: DeliveryPointId",
-    COALESCE(m.name, a.name, mt.name) AS NAME,
-    COALESCE(m.address, a.address, mt.address) AS address,
-    COALESCE(m.latitude, a.latitude) AS latitude,
-    COALESCE(m.longitude, a.longitude) AS longitude
+    COALESCE(m.name, a.name, mt.name, b.name) AS "name",
+    COALESCE(m.address, a.address, mt.address, b.address) AS address,
+    COALESCE(m.latitude, a.latitude, b.latitude) AS latitude,
+    COALESCE(m.longitude, a.longitude, b.longitude) AS longitude
 FROM
     landings l
     INNER JOIN delivery_point_ids d ON l.delivery_point_id = d.delivery_point_id
     LEFT JOIN manual_delivery_points m ON m.delivery_point_id = d.delivery_point_id
     LEFT JOIN aqua_culture_register a ON a.delivery_point_id = d.delivery_point_id
     LEFT JOIN mattilsynet_delivery_points mt ON mt.delivery_point_id = d.delivery_point_id
+    LEFT JOIN buyer_locations_mapping bm ON bm.delivery_point_id = d.delivery_point_id
+    LEFT JOIN buyer_locations b ON b.buyer_location_id = bm.buyer_location_id
 WHERE
     l.fiskeridir_vessel_id = $1
     AND l.landing_timestamp <@ $2::tstzrange
@@ -156,5 +161,99 @@ WHERE
         .await?;
 
         Ok(dps)
+    }
+
+    pub(crate) async fn latest_buyer_location_update_impl(&self) -> Result<Option<NaiveDateTime>> {
+        sqlx::query!(
+            r#"
+SELECT
+    MAX(updated) AS updated
+FROM
+    buyer_locations
+            "#,
+        )
+        .fetch_optional(&self.pool)
+        .await
+        .map(|v| v.and_then(|v| v.updated))
+        .map_err(|e| e.into())
+    }
+
+    pub(crate) async fn add_buyer_locations_impl(&self, locations: &[BuyerLocation]) -> Result<()> {
+        let len = locations.len();
+
+        let mut ids = Vec::with_capacity(len);
+        let mut items = Vec::with_capacity(len);
+
+        for l in locations {
+            if let Some(dp_id) = &l.delivery_point_id {
+                ids.push(NewDeliveryPointId::from(dp_id));
+            }
+            items.push(NewBuyerLocation::from(l));
+        }
+
+        let mut tx = self.pool.begin().await?;
+
+        self.unnest_insert(ids, &mut *tx).await?;
+        self.unnest_insert(items, &mut *tx).await?;
+
+        sqlx::query!(
+            r#"
+WITH
+    mappings AS (
+        SELECT
+            delivery_point_id,
+            MIN(buyer_location_id) AS buyer_location_id,
+            COUNT(*) AS "count"
+        FROM
+            buyer_locations
+        WHERE
+            delivery_point_id IS NOT NULL
+        GROUP BY
+            delivery_point_id
+    ),
+    _ AS (
+        INSERT INTO
+            buyer_locations_mapping (delivery_point_id, buyer_location_id)
+        SELECT
+            delivery_point_id,
+            buyer_location_id
+        FROM
+            mappings
+        WHERE
+            "count" = 1
+        ON CONFLICT DO NOTHING
+    )
+DELETE FROM buyer_locations_mapping b USING mappings m
+WHERE
+    b.delivery_point_id = m.delivery_point_id
+    AND m.count > 1
+    AND NOT b.is_manual
+            "#,
+        )
+        .execute(&mut *tx)
+        .await?;
+
+        tx.commit().await?;
+
+        Ok(())
+    }
+
+    pub(crate) async fn buyer_locations_without_mapping(&self) -> Result<i64> {
+        sqlx::query!(
+            r#"
+SELECT
+    COUNT(*) AS "count!"
+FROM
+    buyer_locations b
+    LEFT JOIN buyer_locations_mapping m ON b.buyer_location_id = m.buyer_location_id
+WHERE
+    b.delivery_point_id IS NOT NULL
+    AND m.buyer_location_id IS NULL
+            "#,
+        )
+        .fetch_one(&self.pool)
+        .await
+        .map(|r| r.count)
+        .map_err(|e| e.into())
     }
 }

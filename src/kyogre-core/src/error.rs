@@ -156,6 +156,17 @@ pub enum ChronoError {
     },
 }
 
+#[derive(Snafu, StackError)]
+#[snafu(module, visibility(pub))]
+pub enum BuyerLocationError {
+    #[snafu(display("Buyer location contained more than 1 approval numbers: {num}"))]
+    TooManyApprovalNumbers {
+        #[snafu(implicit)]
+        location: Location,
+        num: usize,
+    },
+}
+
 #[cfg(feature = "sqlx")]
 mod _sqlx {
     use snafu::{Location, Snafu};
