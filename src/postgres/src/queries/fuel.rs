@@ -16,6 +16,26 @@ use crate::{
 };
 
 impl PostgresAdapter {
+    pub(crate) async fn reset_fuel_estimation(
+        &self,
+        vessel_id: FiskeridirVesselId,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    ) -> Result<()> {
+        sqlx::query!(
+            r#"
+UPDATE fuel_estimates
+SET
+    status = $1
+WHERE
+    fiskeridir_vessel_id = $2
+            "#,
+            ProcessingStatus::Unprocessed as i32,
+            vessel_id.into_inner()
+        )
+        .execute(&mut **tx)
+        .await?;
+        Ok(())
+    }
     pub(crate) async fn dates_to_estimate_impl(
         &self,
         vessel_id: FiskeridirVesselId,

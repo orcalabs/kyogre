@@ -11,6 +11,26 @@ use kyogre_core::{
 use std::collections::HashMap;
 
 impl PostgresAdapter {
+    pub(crate) async fn queue_vessel_trip_reset(
+        &self,
+        vessel_id: FiskeridirVesselId,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    ) -> Result<()> {
+        sqlx::query!(
+            r#"
+UPDATE trip_calculation_timers
+SET
+    queued_reset = TRUE
+WHERE
+    fiskeridir_vessel_id = $1
+            "#,
+            vessel_id.into_inner()
+        )
+        .execute(&mut **tx)
+        .await?;
+        Ok(())
+    }
+
     pub(crate) fn vessels_with_trips_impl(
         &self,
         num_trips: u32,
@@ -104,6 +124,10 @@ RETURNING
             self.reset_bencmarks(res.fiskeridir_vessel_id, &mut *tx)
                 .await?;
 
+            self.queue_vessel_trip_reset(res.fiskeridir_vessel_id, &mut tx)
+                .await?;
+            self.reset_fuel_estimation(res.fiskeridir_vessel_id, &mut tx)
+                .await?;
             tx.commit().await?;
 
             Ok(out)
