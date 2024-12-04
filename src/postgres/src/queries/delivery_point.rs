@@ -43,7 +43,8 @@ FROM
     LEFT JOIN buyer_locations_mapping bm ON bm.delivery_point_id = d.delivery_point_id
     LEFT JOIN buyer_locations b ON b.buyer_location_id = bm.buyer_location_id
 WHERE
-    (
+    d.num_landings > 0
+    AND (
         $1::TEXT IS NULL
         OR d.delivery_point_id = $1
     )

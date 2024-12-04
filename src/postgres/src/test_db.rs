@@ -714,4 +714,37 @@ WHERE
 
         pos.into()
     }
+
+    pub async fn all_delivery_point_ids(&self) -> Vec<DeliveryPointId> {
+        sqlx::query!(
+            r#"
+SELECT
+    delivery_point_id AS "id!: DeliveryPointId"
+FROM
+    delivery_point_ids
+            "#,
+        )
+        .fetch(&self.db.pool)
+        .map(|v| v.unwrap().id)
+        .collect()
+        .await
+    }
+
+    pub async fn delivery_point_num_landings(&self, id: &DeliveryPointId) -> usize {
+        sqlx::query!(
+            r#"
+SELECT
+    num_landings
+FROM
+    delivery_point_ids
+WHERE
+    delivery_point_id = $1
+            "#,
+            id.as_ref(),
+        )
+        .fetch_one(&self.db.pool)
+        .await
+        .unwrap()
+        .num_landings as _
+    }
 }

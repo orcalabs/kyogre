@@ -85,15 +85,7 @@ impl_cycleable!(
     state.state,
     cycle
 );
-impl_cycleable!(
-    ManualDeliveryPointsBuilder,
-    ManualDeliveryPointConstructor,
-    state,
-    cycle
-);
-impl_cycleable!(AquaCultureBuilder, AquaCultureConstructor, state, cycle);
-impl_cycleable!(MattilsynetBuilder, MattilsynetConstructor, state, cycle);
-impl_cycleable!(BuyerLocationBuilder, BuyerLocationConstructor, state, cycle);
+impl_cycleable!(DeliveryPointBuilder, DeliveryPointConstructor, state, cycle);
 impl_cycleable!(
     FishingFacilityBuilder,
     FishingFacilityConctructor,
@@ -201,9 +193,9 @@ impl_modifiable!(
     state.state.ais_positions
 );
 impl_modifiable!(
-    ManualDeliveryPointsBuilder,
-    ManualDeliveryPointConstructor,
-    state.manual_delivery_points
+    DeliveryPointBuilder,
+    DeliveryPointConstructor,
+    state.delivery_points
 );
 impl_modifiable!(
     AisPositionTripBuilder,
@@ -219,21 +211,6 @@ impl_modifiable!(
     VmsPositionTripBuilder,
     VmsPositionConstructor,
     state.state.state.vms_positions
-);
-impl_modifiable!(
-    AquaCultureBuilder,
-    AquaCultureConstructor,
-    state.aqua_cultures
-);
-impl_modifiable!(
-    MattilsynetBuilder,
-    MattilsynetConstructor,
-    state.mattilsynet
-);
-impl_modifiable!(
-    BuyerLocationBuilder,
-    BuyerLocationConstructor,
-    state.buyer_locations
 );
 impl_modifiable!(DepVesselBuilder, DepConstructor, state.state.dep);
 impl_modifiable!(
@@ -439,20 +416,11 @@ where
     fn landings(self, amount: usize) -> LandingBuilder {
         self.base().landings(amount)
     }
-    fn mattilsynet(self, amount: usize) -> MattilsynetBuilder {
-        self.base().mattilsynet(amount)
-    }
-    fn buyer_locations(self, amount: usize) -> BuyerLocationBuilder {
-        self.base().buyer_locations(amount)
-    }
-    fn aqua_cultures(self, amount: usize) -> AquaCultureBuilder {
-        self.base().aqua_cultures(amount)
-    }
     fn fishing_facilities(self, amount: usize) -> FishingFacilityBuilder {
         self.base().fishing_facilities(amount)
     }
-    fn manual_delivery_points(self, amount: usize) -> ManualDeliveryPointsBuilder {
-        self.base().manual_delivery_points(amount)
+    fn delivery_points(self, amount: usize) -> DeliveryPointBuilder {
+        self.base().delivery_points(amount)
     }
 }
 
@@ -471,11 +439,8 @@ impl_global_level!(VesselBuilder);
 impl_global_level!(HaulBuilder);
 impl_global_level!(TraBuilder);
 impl_global_level!(LandingBuilder);
-impl_global_level!(MattilsynetBuilder);
-impl_global_level!(BuyerLocationBuilder);
-impl_global_level!(AquaCultureBuilder);
 impl_global_level!(FishingFacilityBuilder);
-impl_global_level!(ManualDeliveryPointsBuilder);
+impl_global_level!(DeliveryPointBuilder);
 impl_global_level!(WeatherBuilder);
 
 #[async_trait]
@@ -531,3 +496,33 @@ impl_trip_level!(FishingFacilityTripBuilder);
 impl_trip_level!(AisVmsPositionTripBuilder);
 impl_trip_level!(AisPositionTripBuilder);
 impl_trip_level!(VmsPositionTripBuilder);
+
+#[async_trait]
+pub trait DeliveryPointLevel
+where
+    Self: Sized,
+{
+    fn base(self) -> TestStateBuilder;
+    fn up(self) -> DeliveryPointBuilder;
+    async fn build(self) -> TestState {
+        self.base().build().await
+    }
+    fn landings(self, amount: usize) -> LandingDeliveryPointBuilder {
+        self.up().landings(amount)
+    }
+}
+
+macro_rules! impl_delivery_point_level {
+    ($type: ty) => {
+        impl DeliveryPointLevel for $type {
+            fn base(self) -> TestStateBuilder {
+                self.state.state
+            }
+            fn up(self) -> DeliveryPointBuilder {
+                self.state
+            }
+        }
+    };
+}
+
+impl_delivery_point_level!(LandingDeliveryPointBuilder);
