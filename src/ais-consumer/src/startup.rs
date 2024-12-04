@@ -60,27 +60,25 @@ impl App {
 
     #[instrument(skip_all)]
     async fn run_impl(&self) {
-        if let Err(e) = self.run_inner().await {
-            error!("consumer failed: {e:?}");
-        }
-    }
-
-    #[instrument(skip_all)]
-    async fn run_inner(&self) -> Result<()> {
-        let ais_source = self.ais_source.as_ref().unwrap().streamer().await?;
-        match self.consumer.run(ais_source, self.sender.clone()).await {
-            Ok(_) => Ok(()),
-            Err(e) => match e {
-                // This indicates that the postgres consume loop has exited unexpectedly
-                // and we have no way of recovering so we panic.
-                crate::error::Error::SendError {
-                    location: _,
-                    error: _,
-                } => {
-                    panic!("{e:?}");
+        match self.ais_source.as_ref().unwrap().streamer().await {
+            Err(e) => {
+                error!("ais api connection failed: {e:?}");
+            }
+            Ok(stream) => {
+                if let Err(e) = self.consumer.run(stream, self.sender.clone()).await {
+                    match e {
+                        // This indicates that the postgres consume loop has exited unexpectedly
+                        // and we have no way of recovering so we panic.
+                        crate::error::Error::SendError {
+                            location: _,
+                            error: _,
+                        } => {
+                            panic!("{e:?}");
+                        }
+                        _ => error!("consumer failed: {e:?}"),
+                    }
                 }
-                _ => Err(e),
-            },
+            }
         }
     }
 
