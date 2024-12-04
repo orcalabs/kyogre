@@ -184,11 +184,11 @@ mod test {
     }
 
     impl BuyerLocation {
-        pub fn test_default() -> Self {
+        pub fn test_new(delivery_point_id: DeliveryPointId) -> Self {
             let now = Utc::now().naive_utc();
             Self {
                 id: BuyerLocationId::test_default(),
-                delivery_point_id: Some(DeliveryPointId::new_unchecked("LK17")),
+                delivery_point_id: Some(delivery_point_id),
                 parent: None,
                 location_type: BuyerLocationType::OrdinaryFacility,
                 legal_entity_id: None,

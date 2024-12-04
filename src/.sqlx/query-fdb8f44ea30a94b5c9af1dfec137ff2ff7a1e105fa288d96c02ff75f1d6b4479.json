@@ -1,0 +1,20 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    delivery_point_id AS \"id!: DeliveryPointId\"\nFROM\n    delivery_point_ids\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id!: DeliveryPointId",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "fdb8f44ea30a94b5c9af1dfec137ff2ff7a1e105fa288d96c02ff75f1d6b4479"
+}
