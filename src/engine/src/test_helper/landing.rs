@@ -17,6 +17,11 @@ pub struct LandingTripBuilder {
     pub current_index: usize,
 }
 
+pub struct LandingDeliveryPointBuilder {
+    pub state: DeliveryPointBuilder,
+    pub current_index: usize,
+}
+
 #[derive(Debug, Clone)]
 pub struct LandingConstructor {
     pub landing: fiskeridir_rs::Landing,

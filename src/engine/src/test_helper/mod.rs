@@ -17,14 +17,13 @@ use postgres::PostgresAdapter;
 use trip_benchmark::*;
 
 use crate::{
-    AisConsumeLoop, AisPosition, AisVms, AisVmsConflict, Arrival, Cluster, DataMessage,
-    DeliveryPoint, DeliveryPointType, Departure, ErsTripAssembler, FisheryEngine,
-    FishingFacilities, FishingFacilitiesQuery, FishingFacility, FishingSpotPredictor,
-    FishingSpotWeatherPredictor, FishingWeightPredictor, FishingWeightWeatherPredictor, Haul,
-    HaulsQuery, Landing, LandingTripAssembler, LandingsQuery, LandingsSorting, ManualDeliveryPoint,
-    MattilsynetDeliveryPoint, Mmsi, NewAisPosition, NewAisStatic, OceanClimate, Ordering,
-    Pagination, PrecisionId, PredictionRange, ScrapeState, SharedState, SpotPredictorSettings,
-    Step, TripDetailed, Trips, TripsQuery, UnrealisticSpeed, Vessel, VmsPosition, Weather,
+    AisConsumeLoop, AisPosition, AisVms, AisVmsConflict, Arrival, Cluster, DataMessage, Departure,
+    ErsTripAssembler, FisheryEngine, FishingFacilities, FishingFacilitiesQuery, FishingFacility,
+    FishingSpotPredictor, FishingSpotWeatherPredictor, FishingWeightPredictor,
+    FishingWeightWeatherPredictor, Haul, HaulsQuery, Landing, LandingTripAssembler, LandingsQuery,
+    LandingsSorting, Mmsi, NewAisPosition, NewAisStatic, OceanClimate, Ordering, Pagination,
+    PrecisionId, PredictionRange, ScrapeState, SharedState, SpotPredictorSettings, Step,
+    TripDetailed, Trips, TripsQuery, UnrealisticSpeed, Vessel, VmsPosition, Weather,
     WeightPredictorSettings,
 };
 
@@ -81,9 +80,9 @@ pub struct TestState {
     pub dep: Vec<Departure>,
     pub por: Vec<Arrival>,
     // Includes the static delivery points from our migrations
-    pub all_delivery_points: Vec<DeliveryPoint>,
+    pub all_delivery_points: Vec<kyogre_core::DeliveryPoint>,
     // Only includes the delivery points added by the builder
-    pub delivery_points: Vec<DeliveryPoint>,
+    pub delivery_points: Vec<kyogre_core::DeliveryPoint>,
     pub fishing_facilities: Vec<FishingFacility>,
     pub weather: Vec<Weather>,
     pub ocean_climate: Vec<OceanClimate>,
@@ -109,10 +108,7 @@ pub struct TestStateBuilder {
     tra: Vec<TraConstructor>,
     dep: Vec<DepConstructor>,
     por: Vec<PorConstructor>,
-    aqua_cultures: Vec<AquaCultureConstructor>,
-    mattilsynet: Vec<MattilsynetConstructor>,
-    buyer_locations: Vec<BuyerLocationConstructor>,
-    manual_delivery_points: Vec<ManualDeliveryPointConstructor>,
+    delivery_points: Vec<DeliveryPointConstructor>,
     fishing_facilities: Vec<FishingFacilityConctructor>,
     weather: Vec<WeatherConstructor>,
     ocean_climate: Vec<OceanClimateConstructor>,
@@ -320,10 +316,7 @@ impl TestStateBuilder {
             default_fishing_facility_duration: Duration::hours(1),
             dep: vec![],
             por: vec![],
-            aqua_cultures: vec![],
-            mattilsynet: vec![],
-            buyer_locations: vec![],
-            manual_delivery_points: vec![],
+            delivery_points: vec![],
             cycle: Cycle::new(),
             trip_queue_reset: None,
             ais_static: vec![],
@@ -372,47 +365,6 @@ impl TestStateBuilder {
         self
     }
 
-    pub fn mattilsynet(mut self, amount: usize) -> MattilsynetBuilder {
-        assert!(amount != 0);
-
-        for _ in 0..amount {
-            let mut val = MattilsynetDeliveryPoint::test_default();
-            val.id =
-                DeliveryPointId::try_from(format!("DP{}", self.delivery_point_id_counter)).unwrap();
-            self.delivery_point_id_counter += 1;
-            self.mattilsynet.push(MattilsynetConstructor {
-                val,
-                cycle: self.cycle,
-            });
-        }
-
-        MattilsynetBuilder {
-            current_index: self.mattilsynet.len() - amount,
-            state: self,
-        }
-    }
-
-    pub fn buyer_locations(mut self, amount: usize) -> BuyerLocationBuilder {
-        assert!(amount != 0);
-
-        for _ in 0..amount {
-            let mut val = BuyerLocation::test_default();
-            val.delivery_point_id = Some(
-                DeliveryPointId::try_from(format!("DP{}", self.delivery_point_id_counter)).unwrap(),
-            );
-            self.delivery_point_id_counter += 1;
-            self.buyer_locations.push(BuyerLocationConstructor {
-                val,
-                cycle: self.cycle,
-            });
-        }
-
-        BuyerLocationBuilder {
-            current_index: self.buyer_locations.len() - amount,
-            state: self,
-        }
-    }
-
     pub fn fishing_facilities(mut self, amount: usize) -> FishingFacilityBuilder {
         assert!(amount != 0);
 
@@ -439,49 +391,22 @@ impl TestStateBuilder {
         }
     }
 
-    pub fn manual_delivery_points(mut self, amount: usize) -> ManualDeliveryPointsBuilder {
+    pub fn delivery_points(mut self, amount: usize) -> DeliveryPointBuilder {
         assert!(amount != 0);
 
         for _ in 0..amount {
             let id =
                 DeliveryPointId::try_from(format!("DP{}", self.delivery_point_id_counter)).unwrap();
 
-            let name = format!("{}_name", id.as_ref());
-
             self.delivery_point_id_counter += 1;
-            self.manual_delivery_points
-                .push(ManualDeliveryPointConstructor {
-                    cycle: self.cycle,
-                    val: ManualDeliveryPoint {
-                        id,
-                        name,
-                        type_id: DeliveryPointType::Fiskemottak,
-                    },
-                });
-        }
-
-        ManualDeliveryPointsBuilder {
-            current_index: self.manual_delivery_points.len() - amount,
-            state: self,
-        }
-    }
-
-    pub fn aqua_cultures(mut self, amount: usize) -> AquaCultureBuilder {
-        assert!(amount != 0);
-
-        for _ in 0..amount {
-            let mut val = fiskeridir_rs::AquaCultureEntry::test_default();
-            val.delivery_point_id =
-                DeliveryPointId::try_from(format!("DP{}", self.delivery_point_id_counter)).unwrap();
-            self.delivery_point_id_counter += 1;
-            self.aqua_cultures.push(AquaCultureConstructor {
-                val,
+            self.delivery_points.push(DeliveryPointConstructor {
                 cycle: self.cycle,
+                val: delivery_points::DeliveryPoint::BuyerRegister(BuyerLocation::test_new(id)),
             });
         }
 
-        AquaCultureBuilder {
-            current_index: self.aqua_cultures.len() - amount,
+        DeliveryPointBuilder {
+            current_index: self.delivery_points.len() - amount,
             state: self,
         }
     }
@@ -774,30 +699,15 @@ impl TestStateBuilder {
                 .await
                 .unwrap();
 
-            delivery_point_ids.extend(
-                self.aqua_cultures
-                    .iter()
-                    .map(|v| v.val.delivery_point_id.clone())
-                    .chain(self.mattilsynet.iter().map(|v| v.val.id.clone()))
-                    .chain(
-                        self.buyer_locations
-                            .iter()
-                            .filter_map(|v| v.val.delivery_point_id.clone()),
-                    )
-                    .chain(self.manual_delivery_points.iter().map(|v| v.val.id.clone())),
-            );
+            delivery_point_ids.extend(self.delivery_points.iter().map(|v| v.val.id().clone()));
 
             self.storage
                 .add_aqua_culture_register(
-                    self.aqua_cultures
+                    self.delivery_points
                         .iter()
-                        .filter_map(|v| {
-                            if v.cycle == i {
-                                Some(v.val.clone())
-                            } else {
-                                None
-                            }
-                        })
+                        .filter(|v| v.cycle == i)
+                        .filter_map(|v| v.val.aqua_culture())
+                        .cloned()
                         .collect(),
                 )
                 .await
@@ -805,15 +715,11 @@ impl TestStateBuilder {
 
             self.storage
                 .add_mattilsynet_delivery_points(
-                    self.mattilsynet
+                    self.delivery_points
                         .iter()
-                        .filter_map(|v| {
-                            if v.cycle == i {
-                                Some(v.val.clone())
-                            } else {
-                                None
-                            }
-                        })
+                        .filter(|v| v.cycle == i)
+                        .filter_map(|v| v.val.mattilsynet())
+                        .cloned()
                         .collect(),
                 )
                 .await
@@ -821,10 +727,11 @@ impl TestStateBuilder {
 
             self.storage
                 .add_buyer_locations(
-                    self.buyer_locations
+                    self.delivery_points
                         .iter()
                         .filter(|v| v.cycle == i)
-                        .map(|v| v.val.clone())
+                        .filter_map(|v| v.val.buyer_location())
+                        .cloned()
                         .collect(),
                 )
                 .await
@@ -832,15 +739,11 @@ impl TestStateBuilder {
 
             self.storage
                 .add_manual_delivery_points(
-                    self.manual_delivery_points
+                    self.delivery_points
                         .iter()
-                        .filter_map(|v| {
-                            if v.cycle == i {
-                                Some(v.val.clone())
-                            } else {
-                                None
-                            }
-                        })
+                        .filter(|v| v.cycle == i)
+                        .filter_map(|v| v.val.manual())
+                        .cloned()
                         .collect(),
                 )
                 .await;
@@ -1144,11 +1047,11 @@ impl TestStateBuilder {
         let all_delivery_points = self
             .storage
             .delivery_points()
-            .try_collect::<Vec<DeliveryPoint>>()
+            .try_collect::<Vec<kyogre_core::DeliveryPoint>>()
             .await
             .unwrap();
 
-        let mut delivery_points: Vec<DeliveryPoint> = all_delivery_points
+        let mut delivery_points: Vec<kyogre_core::DeliveryPoint> = all_delivery_points
             .iter()
             .filter(|v| delivery_point_ids.contains(&v.id))
             .cloned()
