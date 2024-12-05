@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT\n    fiskeridir_vessel_id AS \"fiskeridir_vessel_id!: FiskeridirVesselId\",\n    departure_timestamp AS \"timestamp\",\n    port_id\nFROM\n    ers_departures\n            ",
+  "query": "\nSELECT\n    fiskeridir_vessel_id AS \"fiskeridir_vessel_id!: FiskeridirVesselId\",\n    departure_timestamp AS \"timestamp\",\n    port_id,\n    message_number\nFROM\n    ers_departures\n            ",
   "describe": {
     "columns": [
       {
@@ -17,6 +17,11 @@
         "ordinal": 2,
         "name": "port_id",
         "type_info": "Varchar"
+      },
+      {
+        "ordinal": 3,
+        "name": "message_number",
+        "type_info": "Int4"
       }
     ],
     "parameters": {
@@ -25,8 +30,9 @@
     "nullable": [
       true,
       false,
-      true
+      true,
+      false
     ]
   },
-  "hash": "25ce80b3572bf55491aee1b4bd4346fc2215e930a8ca34a7ed5b7aeee0b29b72"
+  "hash": "faef92929ea6108d5537d7101be0ac9ccd46a79a96cb7557e3aa65811d22bb20"
 }

@@ -114,6 +114,16 @@ impl DateRange {
         self.end_bound = bound;
     }
 
+    pub fn set_equal_end_and_start_to_non_empty(&mut self) {
+        if self.start() == self.end() {
+            self.set_start_bound(Bound::Inclusive);
+            self.set_end_bound(Bound::Inclusive);
+        } else {
+            self.set_start_bound(Bound::Inclusive);
+            self.set_end_bound(Bound::Exclusive);
+        }
+    }
+
     pub fn set_start_bound(&mut self, bound: Bound) {
         self.start_bound = bound;
     }
@@ -150,6 +160,10 @@ impl DateRange {
 
     pub fn duration(&self) -> Duration {
         self.end - self.start
+    }
+
+    pub fn equal_start_and_end(&self) -> bool {
+        self.end == self.start
     }
 }
 
