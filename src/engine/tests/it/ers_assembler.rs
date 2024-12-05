@@ -1,5 +1,5 @@
 use crate::helper::*;
-use chrono::{TimeZone, Utc};
+use chrono::{Duration, TimeZone, Utc};
 use engine::*;
 use kyogre_core::*;
 
@@ -9,6 +9,128 @@ async fn test_does_not_logs_actions_on_success() {
         builder.vessels(1).dep(1).por(1).build().await;
         let logs = helper.adapter().trip_assembler_log().await;
         assert!(logs.is_empty());
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_handles_dep_and_por_on_same_timestamp2() {
+    test(|_helper, builder| async move {
+        let start = Utc.with_ymd_and_hms(2020, 2, 1, 0, 0, 0).unwrap();
+        let start2 = Utc.with_ymd_and_hms(2020, 6, 1, 0, 0, 0).unwrap();
+        let start3 = Utc.with_ymd_and_hms(2020, 7, 1, 0, 0, 0).unwrap();
+
+        let state = builder
+            .vessels(1)
+            .dep(1)
+            .modify(|d| {
+                d.dep.set_departure_timestamp(start);
+                d.dep.message_info.message_number = 1;
+            })
+            .por(2)
+            .modify_idx(|i, p| {
+                p.por.set_arrival_timestamp(start2);
+                if i == 0 {
+                    p.por.message_info.message_number = 2;
+                } else {
+                    p.por.message_info.message_number = 4;
+                }
+            })
+            .dep(1)
+            .modify(|d| {
+                d.dep.set_departure_timestamp(start2);
+                d.dep.message_info.message_number = 3;
+            })
+            .dep(1)
+            .modify(|d| {
+                d.dep.set_departure_timestamp(start3);
+                d.dep.message_info.message_number = 5;
+            })
+            .por(1)
+            .modify(|p| {
+                p.por.set_arrival_timestamp(start3);
+                p.por.message_info.message_number = 6;
+            })
+            .build()
+            .await;
+
+        let trip = &state.trips[0];
+        let trip2 = &state.trips[1];
+        let trip3 = &state.trips[2];
+        assert_eq!(state.trips.len(), 3);
+
+        assert_eq!(trip.period.start(), state.dep[0].timestamp);
+        assert_eq!(trip.period.end(), state.por[0].timestamp);
+
+        assert_eq!(trip.landing_coverage.start(), state.por[0].timestamp);
+        assert_eq!(trip.landing_coverage.end(), state.por[1].timestamp);
+
+        assert_eq!(trip2.period.start(), state.dep[1].timestamp);
+        assert_eq!(trip2.period.end(), state.por[1].timestamp);
+        assert_eq!(trip2.landing_coverage.start(), state.por[1].timestamp);
+        assert_eq!(trip2.landing_coverage.end(), state.por[2].timestamp);
+
+        assert_eq!(trip3.period.start(), state.dep[2].timestamp);
+        assert_eq!(trip3.period.end(), state.por[2].timestamp);
+        assert_eq!(trip3.landing_coverage.start(), state.por[2].timestamp);
+        assert_eq!(
+            trip3.landing_coverage.end(),
+            ers_last_trip_landing_coverage_end(&state.por[2].timestamp)
+        );
+    })
+    .await;
+}
+#[tokio::test]
+async fn test_handles_dep_and_por_on_same_timestamp() {
+    test(|_helper, builder| async move {
+        let start = Utc.with_ymd_and_hms(2020, 2, 1, 0, 0, 0).unwrap();
+        let start2 = Utc.with_ymd_and_hms(2020, 6, 1, 0, 0, 0).unwrap();
+
+        let state = builder
+            .vessels(1)
+            .dep(1)
+            .modify(|d| {
+                d.dep.set_departure_timestamp(start);
+                d.dep.message_info.message_number = 1;
+            })
+            .por(1)
+            .modify(|p| {
+                p.por.set_arrival_timestamp(start + Duration::hours(1));
+                p.por.message_info.message_number = 2;
+            })
+            .dep(1)
+            .modify(|d| {
+                d.dep.set_departure_timestamp(start2);
+                d.dep.message_info.message_number = 4;
+            })
+            .por(2)
+            .modify_idx(|i, p| {
+                p.por.set_arrival_timestamp(start2);
+                if i == 0 {
+                    p.por.message_info.message_number = 3;
+                } else {
+                    p.por.message_info.message_number = 5;
+                }
+            })
+            .build()
+            .await;
+
+        let trip = &state.trips[0];
+        let trip2 = &state.trips[1];
+        assert_eq!(state.trips.len(), 2);
+
+        assert_eq!(trip.period.start(), state.dep[0].timestamp);
+        assert_eq!(trip.period.end(), state.por[1].timestamp);
+        assert_eq!(trip.landing_coverage.start(), state.por[1].timestamp);
+        assert_eq!(trip.landing_coverage.end(), state.por[2].timestamp);
+
+        assert_eq!(trip2.period.start(), state.dep[1].timestamp);
+        assert_eq!(trip2.period.end(), state.por[2].timestamp);
+        assert_eq!(trip2.landing_coverage.start(), state.por[2].timestamp);
+        assert_eq!(
+            trip2.landing_coverage.end(),
+            ers_last_trip_landing_coverage_end(&state.por[2].timestamp)
+        );
     })
     .await;
 }

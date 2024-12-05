@@ -120,7 +120,8 @@ FROM
 SELECT
     fiskeridir_vessel_id AS "fiskeridir_vessel_id!: FiskeridirVesselId",
     departure_timestamp AS "timestamp",
-    port_id
+    port_id,
+    message_number
 FROM
     ers_departures
             "#,
@@ -138,7 +139,8 @@ FROM
 SELECT
     fiskeridir_vessel_id AS "fiskeridir_vessel_id!: FiskeridirVesselId",
     arrival_timestamp AS "timestamp",
-    port_id
+    port_id,
+    message_number
 FROM
     ers_arrivals
             "#,

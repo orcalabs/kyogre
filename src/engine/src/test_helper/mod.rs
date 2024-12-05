@@ -1099,8 +1099,8 @@ impl TestStateBuilder {
         trips.sort_by_key(|v| (v.fiskeridir_vessel_id, v.period.start()));
         hauls.sort_by_key(|v| (v.start_timestamp, v.haul_id));
         tra.sort_by_key(|v| (v.reloading_timestamp));
-        dep.sort_by_key(|v| (v.fiskeridir_vessel_id, v.timestamp));
-        por.sort_by_key(|v| (v.fiskeridir_vessel_id, v.timestamp));
+        dep.sort_by_key(|v| (v.fiskeridir_vessel_id, v.timestamp, v.message_number));
+        por.sort_by_key(|v| (v.fiskeridir_vessel_id, v.timestamp, v.message_number));
         delivery_points.sort_by_key(|v| v.id.clone());
         fishing_facilities.sort_by_key(|v| (v.fiskeridir_vessel_id, v.setup_timestamp));
 
