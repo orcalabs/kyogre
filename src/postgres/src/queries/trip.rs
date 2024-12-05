@@ -399,29 +399,38 @@ SELECT
     t.start_port_id,
     t.end_port_id,
     t.track_coverage,
-    ARRAY_AGG(
-        DISTINCT l.delivery_point_id
-        ORDER BY
-            l.delivery_point_id
-    ) FILTER (
-        WHERE
-            l.delivery_point_id IS NOT NULL
+    COALESCE(
+        ARRAY_AGG(
+            DISTINCT l.delivery_point_id
+            ORDER BY
+                l.delivery_point_id
+        ) FILTER (
+            WHERE
+                l.delivery_point_id IS NOT NULL
+        ),
+        '{}'
     ) AS delivery_point_ids,
-    ARRAY_AGG(
-        DISTINCT l.gear_id
-        ORDER BY
-            l.gear_id
-    ) FILTER (
-        WHERE
-            l.gear_id IS NOT NULL
+    COALESCE(
+        ARRAY_AGG(
+            DISTINCT l.gear_id
+            ORDER BY
+                l.gear_id
+        ) FILTER (
+            WHERE
+                l.gear_id IS NOT NULL
+        ),
+        '{}'
     ) AS landing_gear_ids,
-    ARRAY_AGG(
-        DISTINCT l.gear_group_id
-        ORDER BY
-            l.gear_group_id
-    ) FILTER (
-        WHERE
-            l.gear_group_id IS NOT NULL
+    COALESCE(
+        ARRAY_AGG(
+            DISTINCT l.gear_group_id
+            ORDER BY
+                l.gear_group_id
+        ) FILTER (
+            WHERE
+                l.gear_group_id IS NOT NULL
+        ),
+        '{}'
     ) AS landing_gear_group_ids,
     COALESCE(
         JSONB_AGG(
@@ -502,10 +511,11 @@ SELECT
         ) FILTER (
             WHERE
                 h.haul_id IS NOT NULL
-        )
+        ),
+        '[]'
     ) AS hauls,
-    SUM(h.total_living_weight),
-    SUM((h.stop_timestamp - h.start_timestamp)),
+    COALESCE(SUM(h.total_living_weight), 0),
+    COALESCE(SUM((h.stop_timestamp - h.start_timestamp)), '0'),
     MAX(b.output) AS fuel_consumption,
     COALESCE(
         ARRAY_AGG(
@@ -708,12 +718,12 @@ WHERE
             r#"
 UPDATE trips_detailed
 SET
-    landings = q.landings,
-    landing_species_group_ids = q.landing_species_group_ids,
-    landing_total_living_weight = q.living_weight,
-    landing_total_gross_weight = q.gross_weight,
-    landing_total_product_weight = q.product_weight,
-    landing_total_price_for_fisher = q.price_for_fisher
+    landings = COALESCE(q.landings, '[]'),
+    landing_species_group_ids = COALESCE(q.landing_species_group_ids, '{}'),
+    landing_total_living_weight = COALESCE(q.living_weight, 0),
+    landing_total_gross_weight = COALESCE(q.gross_weight, 0),
+    landing_total_product_weight = COALESCE(q.product_weight, 0),
+    landing_total_price_for_fisher = COALESCE(q.price_for_fisher, 0)
 FROM
     (
         SELECT
@@ -809,26 +819,26 @@ SELECT
     t.period AS "period!: DateRange",
     t.period_precision AS "period_precision: DateRange",
     t.landing_coverage AS "landing_coverage!: DateRange",
-    COALESCE(t.num_landings::BIGINT, 0) AS "num_deliveries!",
-    COALESCE(t.landing_total_living_weight, 0.0) AS "total_living_weight!",
-    COALESCE(t.landing_total_gross_weight, 0.0) AS "total_gross_weight!",
-    COALESCE(t.landing_total_product_weight, 0.0) AS "total_product_weight!",
+    t.num_landings AS num_deliveries,
+    t.landing_total_living_weight AS total_living_weight,
+    t.landing_total_gross_weight AS total_gross_weight,
+    t.landing_total_product_weight AS total_product_weight,
     t.landing_total_price_for_fisher AS total_price_for_fisher,
-    COALESCE(t.delivery_point_ids, '{}') AS "delivery_points!: Vec<DeliveryPointId>",
-    COALESCE(t.landing_gear_ids, '{}') AS "gear_ids!: Vec<Gear>",
-    COALESCE(t.landing_gear_group_ids, '{}') AS "gear_group_ids!: Vec<GearGroup>",
-    COALESCE(t.landing_species_group_ids, '{}') AS "species_group_ids!: Vec<SpeciesGroup>",
+    t.delivery_point_ids AS "delivery_points: Vec<DeliveryPointId>",
+    t.landing_gear_ids AS "gear_ids: Vec<Gear>",
+    t.landing_gear_group_ids AS "gear_group_ids: Vec<GearGroup>",
+    t.landing_species_group_ids AS "species_group_ids: Vec<SpeciesGroup>",
     t.most_recent_landing AS latest_landing_timestamp,
-    COALESCE(t.landings::TEXT, '[]') AS "catches!",
+    t.landings::TEXT AS "catches!",
     t.start_port_id,
     t.end_port_id,
     t.trip_assembler_id AS "trip_assembler_id!: TripAssemblerId",
-    COALESCE(t.vessel_events, '[]')::TEXT AS "vessel_events!",
-    COALESCE(t.hauls, '[]')::TEXT AS "hauls!",
-    COALESCE(t.tra, '[]')::TEXT AS "tra!",
-    COALESCE(t.landing_ids, '{}') AS "landing_ids!: Vec<LandingId>",
+    t.vessel_events::TEXT AS "vessel_events!",
+    t.hauls::TEXT AS "hauls!",
+    t.tra::TEXT AS "tra!",
+    t.landing_ids AS "landing_ids: Vec<LandingId>",
     CASE
-        WHEN $1 THEN COALESCE(t.fishing_facilities, '[]')::TEXT
+        WHEN $1 THEN t.fishing_facilities::TEXT
         ELSE '[]'
     END AS "fishing_facilities!",
     t.distance,
@@ -939,29 +949,29 @@ SELECT
     t.period AS "period!: DateRange",
     t.period_precision AS "period_precision: DateRange",
     t.landing_coverage AS "landing_coverage!: DateRange",
-    COALESCE(t.num_landings::BIGINT, 0) AS "num_deliveries!",
-    COALESCE(t.landing_total_living_weight, 0.0) AS "total_living_weight!",
-    COALESCE(t.landing_total_gross_weight, 0.0) AS "total_gross_weight!",
-    COALESCE(t.landing_total_product_weight, 0.0) AS "total_product_weight!",
+    t.num_landings AS num_deliveries,
+    t.landing_total_living_weight AS total_living_weight,
+    t.landing_total_gross_weight AS total_gross_weight,
+    t.landing_total_product_weight AS total_product_weight,
     t.landing_total_price_for_fisher AS total_price_for_fisher,
-    COALESCE(t.delivery_point_ids, '{}') AS "delivery_points!: Vec<DeliveryPointId>",
-    COALESCE(t.landing_gear_ids, '{}') AS "gear_ids!: Vec<Gear>",
-    COALESCE(t.landing_gear_group_ids, '{}') AS "gear_group_ids!: Vec<GearGroup>",
-    COALESCE(t.landing_species_group_ids, '{}') AS "species_group_ids!: Vec<SpeciesGroup>",
+    t.delivery_point_ids AS "delivery_points: Vec<DeliveryPointId>",
+    t.landing_gear_ids AS "gear_ids: Vec<Gear>",
+    t.landing_gear_group_ids AS "gear_group_ids: Vec<GearGroup>",
+    t.landing_species_group_ids AS "species_group_ids: Vec<SpeciesGroup>",
     t.most_recent_landing AS latest_landing_timestamp,
-    COALESCE(t.landings::TEXT, '[]') AS "catches!",
+    t.landings::TEXT AS "catches!",
     t.start_port_id,
     t.end_port_id,
     t.trip_assembler_id AS "trip_assembler_id!: TripAssemblerId",
-    COALESCE(t.vessel_events, '[]')::TEXT AS "vessel_events!",
-    COALESCE(t.hauls, '[]')::TEXT AS "hauls!",
-    COALESCE(t.tra, '[]')::TEXT AS "tra!",
-    COALESCE(t.landing_ids, '{}') AS "landing_ids!: Vec<LandingId>",
+    t.vessel_events::TEXT AS "vessel_events!",
+    t.hauls::TEXT AS "hauls!",
+    t.tra::TEXT AS "tra!",
+    t.landing_ids AS "landing_ids: Vec<LandingId>",
     CASE
         WHEN (
             $1
             OR $1 IS NULL
-        ) THEN COALESCE(t.fishing_facilities, '[]')::TEXT
+        ) THEN t.fishing_facilities::TEXT
         ELSE '[]'
     END AS "fishing_facilities!",
     t.distance,
