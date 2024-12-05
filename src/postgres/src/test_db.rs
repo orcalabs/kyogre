@@ -282,60 +282,6 @@ WHERE
         .unwrap()
     }
 
-    pub async fn all_detailed_trips_of_vessels(
-        &self,
-        vessel_id: FiskeridirVesselId,
-    ) -> Vec<TripDetailed> {
-        sqlx::query_as!(
-            crate::models::TripDetailed,
-            r#"
-SELECT
-    t.trip_id AS "trip_id!: TripId",
-    t.fiskeridir_vessel_id AS "fiskeridir_vessel_id!: FiskeridirVesselId",
-    t.fiskeridir_length_group_id AS "fiskeridir_length_group_id!: VesselLengthGroup",
-    t.period AS "period!: DateRange",
-    t.period_precision AS "period_precision: DateRange",
-    t.landing_coverage AS "landing_coverage!: DateRange",
-    COALESCE(t.num_landings::BIGINT, 0) AS "num_deliveries!",
-    COALESCE(t.landing_total_living_weight, 0.0) AS "total_living_weight!",
-    COALESCE(t.landing_total_gross_weight, 0.0) AS "total_gross_weight!",
-    COALESCE(t.landing_total_product_weight, 0.0) AS "total_product_weight!",
-    t.landing_total_price_for_fisher AS total_price_for_fisher,
-    COALESCE(t.delivery_point_ids, '{}') AS "delivery_points!: Vec<DeliveryPointId>",
-    COALESCE(t.landing_gear_ids, '{}') AS "gear_ids!: Vec<Gear>",
-    COALESCE(t.landing_gear_group_ids, '{}') AS "gear_group_ids!: Vec<GearGroup>",
-    COALESCE(t.landing_species_group_ids, '{}') AS "species_group_ids!: Vec<SpeciesGroup>",
-    t.most_recent_landing AS latest_landing_timestamp,
-    COALESCE(t.landings::TEXT, '[]') AS "catches!",
-    t.start_port_id,
-    t.end_port_id,
-    t.trip_assembler_id AS "trip_assembler_id!: TripAssemblerId",
-    COALESCE(t.vessel_events, '[]')::TEXT AS "vessel_events!",
-    COALESCE(t.hauls, '[]')::TEXT AS "hauls!",
-    COALESCE(t.tra, '[]')::TEXT AS "tra!",
-    COALESCE(t.fishing_facilities, '[]')::TEXT AS "fishing_facilities!",
-    COALESCE(t.landing_ids, '{}') AS "landing_ids!: Vec<LandingId>",
-    t.distance,
-    t.cache_version,
-    t.target_species_fiskeridir_id,
-    t.target_species_fao_id,
-    t.fuel_consumption,
-    t.track_coverage,
-    t.has_track
-FROM
-    trips_detailed t
-WHERE
-    t.fiskeridir_vessel_id = $1;
-            "#,
-            vessel_id.into_inner(),
-        )
-        .fetch(&self.db.pool)
-        .map_ok(|v| TripDetailed::try_from(v).unwrap())
-        .try_collect()
-        .await
-        .unwrap()
-    }
-
     pub async fn generate_haul(
         &self,
         vessel_id: FiskeridirVesselId,
