@@ -25,19 +25,24 @@ impl ErsStatemachine {
             self.current_departure.estimated_timestamp,
             arrival.estimated_timestamp,
         )?;
+        period.set_equal_end_and_start_to_non_empty();
 
-        if period.start() == period.end() {
-            period.set_start_bound(Bound::Inclusive);
-            period.set_end_bound(Bound::Inclusive);
-        } else {
-            period.set_start_bound(Bound::Inclusive);
-            period.set_end_bound(Bound::Exclusive);
-        }
+        let mut prior_trip_same_start_and_end_landing_coverage = false;
 
         if let Some(prior_trip) = self.new_trips.last_mut() {
             let mut range = DateRange::new(prior_trip.period.end(), period.end())?;
-            range.set_start_bound(Bound::Inclusive);
-            range.set_end_bound(Bound::Exclusive);
+            if range.equal_start_and_end() {
+                range.set_start_bound(Bound::Inclusive);
+                range.set_end_bound(Bound::Inclusive);
+                prior_trip_same_start_and_end_landing_coverage = true;
+            } else if prior_trip.landing_coverage.start_bound() == Bound::Exclusive {
+                range.set_start_bound(Bound::Exclusive);
+                range.set_end_bound(Bound::Exclusive);
+            } else {
+                range.set_start_bound(Bound::Inclusive);
+                range.set_end_bound(Bound::Exclusive);
+            }
+
             prior_trip.landing_coverage = range;
         }
 
@@ -45,8 +50,14 @@ impl ErsStatemachine {
             period.end(),
             ers_last_trip_landing_coverage_end(&period.end()),
         )?;
-        landing_coverage.set_start_bound(Bound::Inclusive);
-        landing_coverage.set_end_bound(Bound::Exclusive);
+
+        if prior_trip_same_start_and_end_landing_coverage {
+            landing_coverage.set_start_bound(Bound::Exclusive);
+            landing_coverage.set_end_bound(Bound::Exclusive);
+        } else {
+            landing_coverage.set_start_bound(Bound::Inclusive);
+            landing_coverage.set_end_bound(Bound::Exclusive);
+        }
 
         self.new_trips.push(NewTrip {
             period,

@@ -7,4 +7,5 @@ pub struct Departure {
     pub fiskeridir_vessel_id: FiskeridirVesselId,
     pub timestamp: DateTime<Utc>,
     pub port_id: Option<String>,
+    pub message_number: i32,
 }
