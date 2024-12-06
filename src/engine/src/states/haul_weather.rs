@@ -7,12 +7,12 @@ use crate::{
     error::Result, DateRange, HaulWeatherOutput, HaulWeatherStatus, OceanClimateQuery, Vessel,
     WeatherQuery,
 };
+use async_channel::bounded;
 use async_trait::async_trait;
 use geo::{coord, Contains};
 use kyogre_core::{HaulWeatherOutbound, WeatherLocation};
 use machine::Schedule;
 use tokio::sync::mpsc::channel;
-use tokio::sync::Mutex;
 use tracing::{error, instrument};
 
 pub struct HaulWeatherState;
@@ -60,8 +60,7 @@ async fn process_haul_weather(shared_state: Arc<SharedState>) -> Result<()> {
     let num_workers = min(shared_state.num_workers as usize, num_vessels);
 
     let (master_tx, mut master_rx) = channel::<Result<_>>(10);
-    let (worker_tx, worker_rx) = channel::<Vessel>(num_vessels);
-    let worker_rx = Arc::new(Mutex::new(worker_rx));
+    let (worker_tx, worker_rx) = bounded::<Vessel>(num_vessels);
 
     for v in vessels {
         worker_tx.try_send(v).unwrap();
@@ -77,7 +76,7 @@ async fn process_haul_weather(shared_state: Arc<SharedState>) -> Result<()> {
             let weather_locations = weather_locations.clone();
 
             async move {
-                while let Ok(vessel) = { worker_rx.lock().await.try_recv() } {
+                while let Ok(vessel) = worker_rx.try_recv() {
                     if let Some(outputs) = process(
                         &vessel,
                         &weather_locations,
