@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT\n    trip_id AS \"trip_id!: TripId\",\n    period AS \"period!: DateRange\",\n    period_precision AS \"period_precision: DateRange\",\n    landing_coverage AS \"landing_coverage!: DateRange\",\n    distance,\n    trip_assembler_id AS \"trip_assembler_id!: TripAssemblerId\",\n    start_port_id,\n    end_port_id,\n    target_species_fiskeridir_id,\n    target_species_fao_id\nFROM\n    trips\nWHERE\n    fiskeridir_vessel_id = $1\n    AND trip_precision_status_id = $2\n            ",
+  "query": "\nSELECT\n    trip_id AS \"trip_id!: TripId\",\n    period AS \"period!: DateRange\",\n    period_extended AS \"period_extended: DateRange\",\n    period_precision AS \"period_precision: DateRange\",\n    landing_coverage AS \"landing_coverage!: DateRange\",\n    distance,\n    trip_assembler_id AS \"trip_assembler_id!: TripAssemblerId\",\n    start_port_id,\n    end_port_id,\n    target_species_fiskeridir_id,\n    target_species_fao_id\nFROM\n    trips\nWHERE\n    fiskeridir_vessel_id = $1\n            ",
   "describe": {
     "columns": [
       {
@@ -15,52 +15,57 @@
       },
       {
         "ordinal": 2,
-        "name": "period_precision: DateRange",
+        "name": "period_extended: DateRange",
         "type_info": "TstzRange"
       },
       {
         "ordinal": 3,
-        "name": "landing_coverage!: DateRange",
+        "name": "period_precision: DateRange",
         "type_info": "TstzRange"
       },
       {
         "ordinal": 4,
+        "name": "landing_coverage!: DateRange",
+        "type_info": "TstzRange"
+      },
+      {
+        "ordinal": 5,
         "name": "distance",
         "type_info": "Float8"
       },
       {
-        "ordinal": 5,
+        "ordinal": 6,
         "name": "trip_assembler_id!: TripAssemblerId",
         "type_info": "Int4"
       },
       {
-        "ordinal": 6,
+        "ordinal": 7,
         "name": "start_port_id",
         "type_info": "Varchar"
       },
       {
-        "ordinal": 7,
+        "ordinal": 8,
         "name": "end_port_id",
         "type_info": "Varchar"
       },
       {
-        "ordinal": 8,
+        "ordinal": 9,
         "name": "target_species_fiskeridir_id",
         "type_info": "Int4"
       },
       {
-        "ordinal": 9,
+        "ordinal": 10,
         "name": "target_species_fao_id",
         "type_info": "Varchar"
       }
     ],
     "parameters": {
       "Left": [
-        "Int8",
-        "Int4"
+        "Int8"
       ]
     },
     "nullable": [
+      false,
       false,
       false,
       true,
@@ -73,5 +78,5 @@
       true
     ]
   },
-  "hash": "15f7d14b1ab31e142b02ba34997e09dd734dd729fc6a75209183195bcb609f19"
+  "hash": "5997dcbb473515a709abe81366659e297b76b3b7c7c787d197b29332b6b9e3a5"
 }

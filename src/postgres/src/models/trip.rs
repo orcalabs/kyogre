@@ -19,6 +19,7 @@ use unnest_insert::{UnnestInsert, UnnestUpdate};
 pub struct Trip {
     pub trip_id: TripId,
     pub period: DateRange,
+    pub period_extended: DateRange,
     pub period_precision: Option<DateRange>,
     pub landing_coverage: DateRange,
     pub distance: Option<f64>,
@@ -72,6 +73,8 @@ pub struct NewTrip {
     pub landing_coverage: PgRange<DateTime<Utc>>,
     #[unnest_insert(sql_type = "tstzrange")]
     pub period: PgRange<DateTime<Utc>>,
+    #[unnest_insert(sql_type = "tstzrange")]
+    pub period_extended: PgRange<DateTime<Utc>>,
     #[unnest_insert(sql_type = "INT", type_conversion = "opt_type_to_i32")]
     pub start_precision_id: Option<PrecisionId>,
     #[unnest_insert(sql_type = "INT", type_conversion = "opt_type_to_i32")]
@@ -147,6 +150,7 @@ impl From<&TripProcessingUnit> for NewTrip {
             trip:
                 kyogre_core::NewTrip {
                     period,
+                    period_extended,
                     landing_coverage,
                     start_port_code: _,
                     end_port_code: _,
@@ -210,6 +214,7 @@ impl From<&TripProcessingUnit> for NewTrip {
 
         NewTrip {
             period: PgRange::from(period),
+            period_extended: PgRange::from(period_extended),
             period_precision,
             landing_coverage: PgRange::from(landing_coverage),
             trip_assembler_id: *trip_assembler_id,
@@ -256,6 +261,7 @@ pub struct TripDetailed {
     pub fiskeridir_vessel_id: FiskeridirVesselId,
     pub fiskeridir_length_group_id: VesselLengthGroup,
     pub period: DateRange,
+    pub period_extended: DateRange,
     pub period_precision: Option<DateRange>,
     pub landing_coverage: DateRange,
     pub num_deliveries: i64,
@@ -300,6 +306,7 @@ impl From<Trip> for kyogre_core::Trip {
         let Trip {
             trip_id,
             period,
+            period_extended,
             period_precision,
             landing_coverage,
             distance,
@@ -313,10 +320,11 @@ impl From<Trip> for kyogre_core::Trip {
         Self {
             trip_id,
             period,
+            period_extended,
             landing_coverage,
             distance,
             assembler_id: trip_assembler_id,
-            precision_period: period_precision,
+            period_precision,
             start_port_code: start_port_id,
             end_port_code: end_port_id,
             target_species_fiskeridir_id: target_species_fiskeridir_id.map(|v| v as u32),
@@ -390,6 +398,7 @@ impl TryFrom<TripDetailed> for kyogre_core::TripDetailed {
             fiskeridir_vessel_id,
             fiskeridir_length_group_id,
             period,
+            period_extended,
             period_precision,
             landing_coverage,
             num_deliveries,
@@ -427,6 +436,7 @@ impl TryFrom<TripDetailed> for kyogre_core::TripDetailed {
             landing_coverage,
             trip_id,
             period,
+            period_extended,
             num_deliveries: num_deliveries as u32,
             most_recent_delivery_date: latest_landing_timestamp,
             gear_ids,

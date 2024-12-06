@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT\n    trip_id AS \"trip_id!: TripId\",\n    period AS \"period!: DateRange\",\n    period_precision AS \"period_precision: DateRange\",\n    landing_coverage AS \"landing_coverage!: DateRange\",\n    distance,\n    trip_assembler_id AS \"trip_assembler_id!: TripAssemblerId\",\n    start_port_id,\n    end_port_id,\n    target_species_fiskeridir_id,\n    target_species_fao_id\nFROM\n    trips\nWHERE\n    fiskeridir_vessel_id = $1\n    AND (\n        (\n            $2 = 1\n            AND UPPER(period) <= $3\n        )\n        OR (\n            $2 = 2\n            AND UPPER(period) < $3\n        )\n    )\nORDER BY\n    period DESC\nLIMIT\n    1\n            ",
+  "query": "\nSELECT\n    trip_id AS \"trip_id!: TripId\",\n    period AS \"period!: DateRange\",\n    period_extended AS \"period_extended: DateRange\",\n    period_precision AS \"period_precision: DateRange\",\n    landing_coverage AS \"landing_coverage!: DateRange\",\n    distance,\n    trip_assembler_id AS \"trip_assembler_id!: TripAssemblerId\",\n    start_port_id,\n    end_port_id,\n    target_species_fiskeridir_id,\n    target_species_fao_id\nFROM\n    trips\nWHERE\n    fiskeridir_vessel_id = $1\n    AND trip_position_cargo_weight_distribution_status = $2\n            ",
   "describe": {
     "columns": [
       {
@@ -15,41 +15,46 @@
       },
       {
         "ordinal": 2,
-        "name": "period_precision: DateRange",
+        "name": "period_extended: DateRange",
         "type_info": "TstzRange"
       },
       {
         "ordinal": 3,
-        "name": "landing_coverage!: DateRange",
+        "name": "period_precision: DateRange",
         "type_info": "TstzRange"
       },
       {
         "ordinal": 4,
+        "name": "landing_coverage!: DateRange",
+        "type_info": "TstzRange"
+      },
+      {
+        "ordinal": 5,
         "name": "distance",
         "type_info": "Float8"
       },
       {
-        "ordinal": 5,
+        "ordinal": 6,
         "name": "trip_assembler_id!: TripAssemblerId",
         "type_info": "Int4"
       },
       {
-        "ordinal": 6,
+        "ordinal": 7,
         "name": "start_port_id",
         "type_info": "Varchar"
       },
       {
-        "ordinal": 7,
+        "ordinal": 8,
         "name": "end_port_id",
         "type_info": "Varchar"
       },
       {
-        "ordinal": 8,
+        "ordinal": 9,
         "name": "target_species_fiskeridir_id",
         "type_info": "Int4"
       },
       {
-        "ordinal": 9,
+        "ordinal": 10,
         "name": "target_species_fao_id",
         "type_info": "Varchar"
       }
@@ -57,11 +62,11 @@
     "parameters": {
       "Left": [
         "Int8",
-        "Int4",
-        "Timestamptz"
+        "Int4"
       ]
     },
     "nullable": [
+      false,
       false,
       false,
       true,
@@ -74,5 +79,5 @@
       true
     ]
   },
-  "hash": "66f7f787f31baca9a7551a28fb00b8985ef3cf062ebfe6c9df31e64ce7968a30"
+  "hash": "14d12c22f82628a7afb67aa782c0352d18ac4c6aae3448610f2cbbceaf1c95b3"
 }

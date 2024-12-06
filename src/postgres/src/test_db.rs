@@ -260,6 +260,7 @@ FROM
 SELECT
     trip_id AS "trip_id!: TripId",
     period AS "period!: DateRange",
+    period_extended AS "period_extended: DateRange",
     period_precision AS "period_precision: DateRange",
     landing_coverage AS "landing_coverage!: DateRange",
     distance,

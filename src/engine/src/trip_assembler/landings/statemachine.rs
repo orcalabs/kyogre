@@ -47,6 +47,7 @@ impl LandingStatemachine {
 
             self.new_trips.push(NewTrip {
                 landing_coverage: period.clone(),
+                period_extended: period.clone(),
                 period,
                 start_port_code: None,
                 end_port_code: None,

@@ -25,7 +25,8 @@ pub struct TripId(i64);
 pub struct Trip {
     pub trip_id: TripId,
     pub period: DateRange,
-    pub precision_period: Option<DateRange>,
+    pub period_extended: DateRange,
+    pub period_precision: Option<DateRange>,
     pub landing_coverage: DateRange,
     pub distance: Option<f64>,
     pub assembler_id: TripAssemblerId,
@@ -113,6 +114,7 @@ pub struct CurrentTrip {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NewTrip {
     pub period: DateRange,
+    pub period_extended: DateRange,
     pub landing_coverage: DateRange,
     pub start_port_code: Option<String>,
     pub end_port_code: Option<String>,
@@ -129,10 +131,10 @@ pub struct TripUpdate {
 
 impl Trip {
     pub fn precision_start(&self) -> Option<DateTime<Utc>> {
-        self.precision_period.as_ref().map(|v| v.start())
+        self.period_precision.as_ref().map(|v| v.start())
     }
     pub fn precision_end(&self) -> Option<DateTime<Utc>> {
-        self.precision_period.as_ref().map(|v| v.end())
+        self.period_precision.as_ref().map(|v| v.end())
     }
 }
 
@@ -142,6 +144,7 @@ pub struct TripDetailed {
     pub fiskeridir_length_group_id: VesselLengthGroup,
     pub trip_id: TripId,
     pub period: DateRange,
+    pub period_extended: DateRange,
     pub period_precision: Option<DateRange>,
     pub landing_coverage: DateRange,
     pub num_deliveries: u32,
@@ -233,13 +236,13 @@ impl TripProcessingUnit {
         self.trip.landing_coverage.end()
     }
 
-    pub fn precision_period(&self) -> Option<DateRange> {
+    pub fn period_precision(&self) -> Option<&DateRange> {
         self.precision_outcome.as_ref().and_then(|v| match v {
             PrecisionOutcome::Success {
                 new_period,
                 start_precision: _,
                 end_precision: _,
-            } => Some(new_period.clone()),
+            } => Some(new_period),
             PrecisionOutcome::Failed => None,
         })
     }
@@ -282,7 +285,7 @@ pub enum PrecisionOutcome {
 }
 
 impl TripUpdate {
-    pub fn precision_period(&self) -> Option<DateRange> {
+    pub fn period_precision(&self) -> Option<DateRange> {
         self.precision.as_ref().and_then(|v| match v {
             PrecisionOutcome::Success {
                 new_period,
@@ -403,7 +406,7 @@ pub struct TripAssemblerConflict {
 impl Trip {
     #[inline]
     pub fn period(&self) -> &DateRange {
-        self.precision_period.as_ref().unwrap_or(&self.period)
+        self.period_precision.as_ref().unwrap_or(&self.period)
     }
     #[inline]
     pub fn start(&self) -> DateTime<Utc> {
@@ -420,10 +423,11 @@ impl From<TripDetailed> for Trip {
         Trip {
             trip_id: value.trip_id,
             period: value.period,
+            period_extended: value.period_extended,
             landing_coverage: value.landing_coverage,
             assembler_id: value.assembler_id,
             distance: value.distance,
-            precision_period: value.period_precision,
+            period_precision: value.period_precision,
             start_port_code: value.start_port_id,
             end_port_code: value.end_port_id,
             target_species_fiskeridir_id: value.target_species_fiskeridir_id,

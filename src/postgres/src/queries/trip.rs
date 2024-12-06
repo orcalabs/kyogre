@@ -364,6 +364,7 @@ INSERT INTO
         fiskeridir_vessel_id,
         fiskeridir_length_group_id,
         "period",
+        period_extended,
         landing_coverage,
         period_precision,
         trip_assembler_id,
@@ -392,6 +393,7 @@ SELECT
     t.fiskeridir_vessel_id AS fiskeridir_vessel_id,
     MAX(fv.fiskeridir_length_group_id) AS fiskeridir_length_group_id,
     t.period AS "period",
+    t.period_extended,
     t.landing_coverage,
     t.period_precision,
     t.trip_assembler_id,
@@ -817,6 +819,7 @@ SELECT
     t.fiskeridir_vessel_id AS "fiskeridir_vessel_id!: FiskeridirVesselId",
     t.fiskeridir_length_group_id AS "fiskeridir_length_group_id!: VesselLengthGroup",
     t.period AS "period!: DateRange",
+    t.period_extended AS "period_extended: DateRange",
     t.period_precision AS "period_precision: DateRange",
     t.landing_coverage AS "landing_coverage!: DateRange",
     t.num_landings AS num_deliveries,
@@ -947,6 +950,7 @@ SELECT
     t.fiskeridir_vessel_id AS "fiskeridir_vessel_id!: FiskeridirVesselId",
     t.fiskeridir_length_group_id AS "fiskeridir_length_group_id!: VesselLengthGroup",
     t.period AS "period!: DateRange",
+    t.period_extended AS "period_extended: DateRange",
     t.period_precision AS "period_precision: DateRange",
     t.landing_coverage AS "landing_coverage!: DateRange",
     t.num_landings AS num_deliveries,
@@ -1778,6 +1782,7 @@ WHERE
 SELECT
     trip_id AS "trip_id!: TripId",
     period AS "period!: DateRange",
+    period_extended AS "period_extended: DateRange",
     period_precision AS "period_precision: DateRange",
     landing_coverage AS "landing_coverage!: DateRange",
     distance,
@@ -1825,6 +1830,7 @@ LIMIT
 SELECT
     trip_id AS "trip_id!: TripId",
     period AS "period!: DateRange",
+    period_extended AS "period_extended: DateRange",
     period_precision AS "period_precision: DateRange",
     landing_coverage AS "landing_coverage!: DateRange",
     distance,
@@ -1856,6 +1862,7 @@ WHERE
 SELECT
     trip_id AS "trip_id!: TripId",
     period AS "period!: DateRange",
+    period_extended AS "period_extended: DateRange",
     period_precision AS "period_precision: DateRange",
     landing_coverage AS "landing_coverage!: DateRange",
     distance,
@@ -1887,6 +1894,7 @@ WHERE
 SELECT
     trip_id AS "trip_id!: TripId",
     period AS "period!: DateRange",
+    period_extended AS "period_extended: DateRange",
     period_precision AS "period_precision: DateRange",
     landing_coverage AS "landing_coverage!: DateRange",
     distance,
@@ -1918,6 +1926,7 @@ WHERE
 SELECT
     trip_id AS "trip_id!: TripId",
     period AS "period!: DateRange",
+    period_extended AS "period_extended: DateRange",
     period_precision AS "period_precision: DateRange",
     landing_coverage AS "landing_coverage!: DateRange",
     distance,

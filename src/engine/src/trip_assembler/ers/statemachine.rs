@@ -27,6 +27,13 @@ impl ErsStatemachine {
         )?;
         period.set_equal_end_and_start_to_non_empty();
 
+        let period_extended = DateRange::new(
+            self.current_departure
+                .estimated_timestamp
+                .min(self.current_departure.message_timestamp),
+            arrival.estimated_timestamp.max(arrival.message_timestamp),
+        )?;
+
         let mut prior_trip_same_start_and_end_landing_coverage = false;
 
         if let Some(prior_trip) = self.new_trips.last_mut() {
@@ -61,6 +68,7 @@ impl ErsStatemachine {
 
         self.new_trips.push(NewTrip {
             period,
+            period_extended,
             landing_coverage,
             start_port_code: self.current_departure.port_id.clone(),
             end_port_code: arrival.port_id,

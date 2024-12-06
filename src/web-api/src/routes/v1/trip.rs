@@ -359,6 +359,7 @@ impl From<kyogre_core::TripDetailed> for Trip {
             fiskeridir_length_group_id: _,
             trip_id,
             period,
+            period_extended: _,
             period_precision,
             landing_coverage,
             num_deliveries,
@@ -509,7 +510,8 @@ impl PartialEq<Trip> for kyogre_core::Trip {
         let Self {
             trip_id,
             period: _,
-            precision_period: _,
+            period_extended: _,
+            period_precision: _,
             landing_coverage,
             distance,
             assembler_id,

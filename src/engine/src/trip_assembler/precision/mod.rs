@@ -136,8 +136,8 @@ impl TripPrecisionCalculator {
             }
         }
 
-        let trip_start = trip.trip.period.start();
-        let trip_end = trip.trip.period.end();
+        let trip_start = trip.trip.period_extended.start();
+        let trip_end = trip.trip.period_extended.end();
 
         let start = start_precision
             .as_ref()
