@@ -77,11 +77,8 @@ impl PortPrecision {
                 ),
                 PrecisionDirection::Extending => {
                     let range = DateRange::new(
-                        trip.trip.period.end(),
-                        std::cmp::min(
-                            trip.trip.period.end() + self.config.search_threshold,
-                            trip.trip.landing_coverage.end(),
-                        ),
+                        trip.trip.period_extended.end(),
+                        trip.trip.period_extended.end() + self.config.search_threshold,
                     )
                     .unwrap();
                     let positions = adapter
@@ -107,8 +104,8 @@ impl PortPrecision {
                 ),
                 PrecisionDirection::Extending => {
                     let range = DateRange::new(
-                        trip.trip.period.start() - self.config.search_threshold,
-                        trip.trip.period.start(),
+                        trip.trip.period_extended.start() - self.config.search_threshold,
+                        trip.trip.period_extended.start(),
                     )
                     .unwrap();
                     let positions = adapter

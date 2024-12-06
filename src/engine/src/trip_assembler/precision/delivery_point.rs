@@ -71,11 +71,8 @@ impl DeliveryPointPrecision {
 
             PrecisionDirection::Extending => {
                 let range = DateRange::new(
-                    trip.end(),
-                    std::cmp::min(
-                        trip.end() + self.config.search_threshold,
-                        trip.landing_coverage_end(),
-                    ),
+                    trip.trip.period_extended.end(),
+                    trip.trip.period_extended.end() + self.config.search_threshold,
                 )
                 .unwrap();
                 let positions = adapter

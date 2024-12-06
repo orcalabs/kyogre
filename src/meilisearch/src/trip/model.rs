@@ -22,6 +22,8 @@ pub struct Trip {
     pub fiskeridir_length_group_id: VesselLengthGroup,
     pub start: i64,
     pub end: i64,
+    pub start_extended: i64,
+    pub end_extended: i64,
     pub period_precision_start: Option<DateTime<Utc>>,
     pub period_precision_end: Option<DateTime<Utc>>,
     pub landing_coverage_start: DateTime<Utc>,
@@ -118,6 +120,8 @@ impl Trip {
             fiskeridir_length_group_id,
             start,
             end,
+            start_extended,
+            end_extended,
             period_precision_start,
             period_precision_end,
             landing_coverage_start,
@@ -151,6 +155,9 @@ impl Trip {
         let start = Utc.timestamp_nanos(start);
         let end = Utc.timestamp_nanos(end);
 
+        let start_extended = Utc.timestamp_nanos(start_extended);
+        let end_extended = Utc.timestamp_nanos(end_extended);
+
         let period_precision = match (period_precision_start, period_precision_end) {
             (Some(start), Some(end)) => Some(DateRange::new(start, end)?),
             (None, None) => None,
@@ -162,6 +169,7 @@ impl Trip {
             fiskeridir_vessel_id,
             fiskeridir_length_group_id,
             period: DateRange::new(start, end)?,
+            period_extended: DateRange::new(start_extended, end_extended)?,
             period_precision,
             landing_coverage: DateRange::new(landing_coverage_start, landing_coverage_end)?,
             num_deliveries,
@@ -203,6 +211,7 @@ impl TryFrom<TripDetailed> for Trip {
             fiskeridir_length_group_id,
             trip_id,
             period,
+            period_extended,
             period_precision,
             landing_coverage,
             num_deliveries,
@@ -235,6 +244,8 @@ impl TryFrom<TripDetailed> for Trip {
             fiskeridir_length_group_id,
             start: to_nanos(period.start())?,
             end: to_nanos(period.end())?,
+            start_extended: to_nanos(period_extended.start())?,
+            end_extended: to_nanos(period_extended.end())?,
             period_precision_start: period_precision.as_ref().map(|p| p.start()),
             period_precision_end: period_precision.map(|p| p.end()),
             landing_coverage_start: landing_coverage.start(),

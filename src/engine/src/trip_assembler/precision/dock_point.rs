@@ -70,11 +70,8 @@ impl DockPointPrecision {
                 ),
                 PrecisionDirection::Extending => {
                     let range = DateRange::new(
-                        trip.end(),
-                        std::cmp::min(
-                            trip.end() + self.config.search_threshold,
-                            trip.landing_coverage_end(),
-                        ),
+                        trip.trip.period_extended.end(),
+                        trip.trip.period_extended.end() + self.config.search_threshold,
                     )
                     .unwrap();
                     let positions = adapter
@@ -98,9 +95,11 @@ impl DockPointPrecision {
                     &PointClusterPreference::First,
                 ),
                 PrecisionDirection::Extending => {
-                    let range =
-                        DateRange::new(trip.start() - self.config.search_threshold, trip.start())
-                            .unwrap();
+                    let range = DateRange::new(
+                        trip.trip.period_extended.start() - self.config.search_threshold,
+                        trip.trip.period_extended.start(),
+                    )
+                    .unwrap();
                     let positions = adapter
                         .ais_vms_positions(
                             vessel.mmsi(),
