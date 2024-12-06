@@ -7,15 +7,12 @@ use std::{
 
 use crate::error::Result;
 use crate::*;
+use async_channel::bounded;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use kyogre_core::track_coverage;
 use machine::Schedule;
-use tokio::{
-    select,
-    sync::{mpsc::channel, Mutex},
-    task::JoinSet,
-};
+use tokio::{select, sync::mpsc::channel, task::JoinSet};
 use tracing::{error, info};
 
 static TRIP_COMPUTATION_STEPS: LazyLock<Vec<Box<dyn TripComputationStep>>> = LazyLock::new(|| {
@@ -449,7 +446,7 @@ async fn run_state(shared_state: Arc<SharedState>) -> Result<TripsReport> {
         dock_points_map
             .entry(d.port_id.clone())
             .and_modify(|v| v.push(d.clone()))
-            .or_insert(vec![d]);
+            .or_insert_with(|| vec![d]);
     }
 
     let ports = Arc::new(ports);
@@ -459,8 +456,7 @@ async fn run_state(shared_state: Arc<SharedState>) -> Result<TripsReport> {
     let num_workers = min(num_vessels, shared_state.num_workers as usize);
 
     let (master_tx, mut master_rx) = channel(10);
-    let (worker_tx, worker_rx) = channel(num_vessels);
-    let worker_rx = Arc::new(Mutex::new(worker_rx));
+    let (worker_tx, worker_rx) = bounded(num_vessels);
 
     let mut workers = JoinSet::new();
 
@@ -472,26 +468,21 @@ async fn run_state(shared_state: Arc<SharedState>) -> Result<TripsReport> {
         let dock_points = dock_points.clone();
 
         workers.spawn(async move {
-            while let Some(task) = { worker_rx.lock().await.recv().await } {
-                match task {
+            while let Ok(task) = worker_rx.recv().await {
+                let result = match task {
                     WorkerTask::New(vessel) => {
                         let result =
                             process_vessel(&shared_state, &vessel, &ports, &dock_points).await;
-                        master_tx
-                            .send(MasterTask::New(vessel, result))
-                            .await
-                            .unwrap()
+                        MasterTask::New(vessel, result)
                     }
                     WorkerTask::Unprocessed(vessel) => {
                         let result =
                             process_unprocessed_trips(&shared_state, &vessel, &ports, &dock_points)
                                 .await;
-                        master_tx
-                            .send(MasterTask::Unprocessed(vessel, result))
-                            .await
-                            .unwrap()
+                        MasterTask::Unprocessed(vessel, result)
                     }
-                }
+                };
+                master_tx.send(result).await.unwrap()
             }
         });
     }
@@ -561,7 +552,6 @@ async fn run_state(shared_state: Arc<SharedState>) -> Result<TripsReport> {
                                 }
                             }
                             Err(e) => error!(
-
                                 "failed to process unprocessed trips for vessel: {}, err: {e:?}",
                                 vessel.fiskeridir.id,
                             ),
