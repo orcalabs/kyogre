@@ -177,9 +177,7 @@ impl TripComputationStep for TripPositionLayers {
         _vessel: &Vessel,
         mut unit: TripProcessingUnit,
     ) -> Result<TripProcessingUnit> {
-        let period = unit
-            .precision_period()
-            .unwrap_or_else(|| unit.trip.period.clone());
+        let period = unit.period_precision().unwrap_or(&unit.trip.period).clone();
 
         let mut output = TripPositionLayerOutput {
             track_coverage: track_coverage(unit.positions.len(), &period),
@@ -207,12 +205,13 @@ impl TripComputationStep for TripPositionLayers {
         &self,
         shared: &SharedState,
         unit: &mut TripProcessingUnit,
-        _vessel: &Vessel,
+        vessel: &Vessel,
         trip: &Trip,
     ) -> Result<()> {
+        let period = trip.period_precision.as_ref().unwrap_or(&trip.period);
         unit.positions = shared
             .trips_precision_outbound_port
-            .trip_positions(trip.trip_id)
+            .ais_vms_positions(vessel.mmsi(), vessel.fiskeridir.call_sign.as_ref(), period)
             .await?;
         Ok(())
     }
@@ -245,13 +244,13 @@ impl TripComputationStep for TripPrecisionStep {
 
         unit.precision_outcome = Some(precision);
 
-        if let Some(period_precison) = unit.precision_period() {
+        if let Some(period_precison) = unit.period_precision() {
             unit.positions = shared
                 .trips_precision_outbound_port
                 .ais_vms_positions(
                     vessel.mmsi(),
                     vessel.fiskeridir.call_sign.as_ref(),
-                    &period_precison,
+                    period_precison,
                 )
                 .await?;
         }
@@ -272,12 +271,14 @@ impl TripComputationStep for TripPrecisionStep {
         vessel: &Vessel,
         trip: &Trip,
     ) -> Result<()> {
-        let period = trip.precision_period.as_ref().unwrap_or(&trip.period);
         unit.positions = shared
             .trips_precision_outbound_port
-            .ais_vms_positions(vessel.mmsi(), vessel.fiskeridir.call_sign.as_ref(), period)
+            .ais_vms_positions(
+                vessel.mmsi(),
+                vessel.fiskeridir.call_sign.as_ref(),
+                &trip.period,
+            )
             .await?;
-
         Ok(())
     }
 }
@@ -641,7 +642,7 @@ async fn process_vessel(
                     .ais_vms_positions(
                         vessel.mmsi(),
                         vessel.fiskeridir.call_sign.as_ref(),
-                        &t.period,
+                        &t.period_extended,
                     )
                     .await?,
                 vessel_id: vessel.fiskeridir.id,
@@ -860,7 +861,7 @@ async fn process_unprocessed_trips(
 
     let mut updates = Vec::with_capacity(trips.len());
 
-    for (t, idx) in trips.into_values() {
+    for (t, computation_step_idx) in trips.into_values() {
         let mut unit = TripProcessingUnit {
             precision_outcome: None,
             distance_output: None,
@@ -884,6 +885,7 @@ async fn process_unprocessed_trips(
             trip_assembler_id: vessel.preferred_trip_assembler,
             trip: NewTrip {
                 period: t.period.clone(),
+                period_extended: t.period_extended.clone(),
                 landing_coverage: t.landing_coverage.clone(),
                 start_port_code: t.start_port_code.clone(),
                 end_port_code: t.end_port_code.clone(),
@@ -893,26 +895,11 @@ async fn process_unprocessed_trips(
             trip_id: Some(t.trip_id),
         };
 
-        if idx == 0 {
-            // The first computation step wants the regular 'period', but when
-            // setting the state for the next step we want the 'period_precison'.
-            // We therefore hardcode the first step to only operate on the regular
-            // period instead of invoking its 'set_state' that prioritzes the 'precision_period'
-            unit.positions = shared_state
-                .trips_precision_outbound_port
-                .ais_vms_positions(
-                    vessel.mmsi(),
-                    vessel.fiskeridir.call_sign.as_ref(),
-                    &t.period,
-                )
-                .await?;
-        } else {
-            TRIP_COMPUTATION_STEPS[idx - 1]
-                .set_state(shared_state, &mut unit, vessel, &t)
-                .await?;
-        };
+        TRIP_COMPUTATION_STEPS[computation_step_idx]
+            .set_state(shared_state, &mut unit, vessel, &t)
+            .await?;
 
-        for step in &TRIP_COMPUTATION_STEPS[idx..] {
+        for step in &TRIP_COMPUTATION_STEPS[computation_step_idx..] {
             unit = step.run(shared_state, vessel, unit).await?;
         }
 
