@@ -1,8 +1,12 @@
+use std::str::FromStr;
+
 use super::helper::test;
 use chrono::{Datelike, TimeZone, Utc};
 use engine::*;
+use fiskeridir_rs::{NonEmptyString, OrgId, RegisterVesselEntityType, RegisterVesselOwner};
 use http_client::StatusCode;
-use web_api::routes::v1::user::User;
+use kyogre_core::{Haul, OrgBenchmarks, TripDetailed};
+use web_api::routes::v1::{user::User, vessel::OrgBenchmarkParameters};
 
 #[tokio::test]
 async fn test_vessel_benchmarks_without_token_returns_not_found() {
@@ -228,4 +232,233 @@ async fn test_vessel_benchmarks_returns_correct_averages_for_followers() {
         );
     })
     .await;
+}
+
+#[tokio::test]
+async fn test_vessel_org_benchmarks_without_token_returns_not_found() {
+    test(|helper, builder| async move {
+        let state = builder.vessels(1).build().await;
+
+        let error = helper
+            .app
+            .get_org_benchmarks(
+                state.vessels[0].fiskeridir.owners[0].id.unwrap(),
+                Default::default(),
+            )
+            .await
+            .unwrap_err();
+        assert_eq!(error.status, StatusCode::NOT_FOUND);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_vessel_org_benchmarks_returns_not_found_on_org_not_associated_with_vessel() {
+    test(|mut helper, builder| async move {
+        let org_id = OrgId::test_new(1);
+        let org_id2 = OrgId::test_new(2);
+        let state = builder
+            .vessels(2)
+            .modify_idx(|i, v| {
+                let org = if i > 0 { org_id } else { org_id2 };
+                v.fiskeridir.owners = vec![RegisterVesselOwner {
+                    city: None,
+                    entity_type: RegisterVesselEntityType::Company,
+                    id: Some(org),
+                    name: NonEmptyString::from_str("test").unwrap(),
+                    postal_code: 9000,
+                }];
+            })
+            .set_logged_in()
+            .trips(3)
+            .ais_vms_positions(9)
+            .hauls(6)
+            .landings(6)
+            .build()
+            .await;
+
+        helper.app.login_user();
+        let error = helper
+            .app
+            .get_org_benchmarks(
+                org_id,
+                OrgBenchmarkParameters {
+                    start: state.trips.iter().map(|t| t.period.start()).min(),
+                    end: state.trips.iter().map(|t| t.period.end()).max(),
+                },
+            )
+            .await
+            .unwrap_err();
+
+        assert_eq!(error.status, StatusCode::NOT_FOUND);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_vessel_org_benchmarks_works() {
+    test(|mut helper, builder| async move {
+        let org_id = OrgId::test_new(1);
+        let state = builder
+            .vessels(3)
+            .modify(|v| {
+                v.fiskeridir.owners = vec![RegisterVesselOwner {
+                    city: None,
+                    entity_type: RegisterVesselEntityType::Company,
+                    id: Some(org_id),
+                    name: NonEmptyString::from_str("test").unwrap(),
+                    postal_code: 9000,
+                }];
+            })
+            .set_logged_in()
+            .trips(3)
+            .ais_vms_positions(9)
+            .hauls(6)
+            .landings(6)
+            .build()
+            .await;
+
+        helper.app.login_user();
+        let benchmarks = helper
+            .app
+            .get_org_benchmarks(
+                org_id,
+                OrgBenchmarkParameters {
+                    start: state.trips.iter().map(|t| t.period.start()).min(),
+                    end: state.trips.iter().map(|t| t.period.end()).max(),
+                },
+            )
+            .await
+            .unwrap()
+            .unwrap();
+
+        assert_org_benchmarks(&benchmarks, &state.trips, &state.hauls, 3);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_vessel_org_benchmarks_filters_by_org() {
+    test(|mut helper, builder| async move {
+        let org_id = OrgId::test_new(1);
+        let state = builder
+            .vessels(3)
+            .modify_idx(|i, v| {
+                if i < 2 {
+                    v.fiskeridir.owners = vec![RegisterVesselOwner {
+                        city: None,
+                        entity_type: RegisterVesselEntityType::Company,
+                        id: Some(org_id),
+                        name: NonEmptyString::from_str("test").unwrap(),
+                        postal_code: 9000,
+                    }];
+                }
+            })
+            .set_logged_in()
+            .trips(3)
+            .ais_vms_positions(9)
+            .hauls(6)
+            .landings(6)
+            .build()
+            .await;
+
+        helper.app.login_user();
+        let benchmarks = helper
+            .app
+            .get_org_benchmarks(
+                org_id,
+                OrgBenchmarkParameters {
+                    start: state.trips.iter().map(|t| t.period.start()).min(),
+                    end: state.trips.iter().map(|t| t.period.end()).max(),
+                },
+            )
+            .await
+            .unwrap()
+            .unwrap();
+
+        assert_org_benchmarks(&benchmarks, &state.trips[1..], &state.hauls[2..], 2);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_vessel_org_benchmarks_filters_by_dates() {
+    test(|mut helper, builder| async move {
+        let org_id = OrgId::test_new(1);
+        let state = builder
+            .vessels(3)
+            .modify(|v| {
+                v.fiskeridir.owners = vec![RegisterVesselOwner {
+                    city: None,
+                    entity_type: RegisterVesselEntityType::Company,
+                    id: Some(org_id),
+                    name: NonEmptyString::from_str("test").unwrap(),
+                    postal_code: 9000,
+                }];
+            })
+            .set_logged_in()
+            .trips(3)
+            .ais_vms_positions(9)
+            .hauls(6)
+            .landings(6)
+            .build()
+            .await;
+
+        helper.app.login_user();
+        let benchmarks = helper
+            .app
+            .get_org_benchmarks(
+                org_id,
+                OrgBenchmarkParameters {
+                    start: Some(state.trips[1].period.start()),
+                    end: state.trips.iter().map(|t| t.period.end()).max(),
+                },
+            )
+            .await
+            .unwrap()
+            .unwrap();
+
+        assert_org_benchmarks(&benchmarks, &state.trips[1..], &state.hauls[2..], 2);
+    })
+    .await;
+}
+
+// Assumes all hauls and trips have not been modified beyond their test defaults
+fn assert_org_benchmarks(
+    benchmarks: &OrgBenchmarks,
+    trips: &[TripDetailed],
+    hauls: &[Haul],
+    num_vessels: u64,
+) {
+    let trip_distance = trips.iter().map(|t| t.distance.unwrap()).sum::<f64>() as u64;
+    let fishing_time = hauls
+        .iter()
+        .map(|t| t.duration().num_seconds())
+        .sum::<i64>() as u64;
+    let trip_time = trips
+        .iter()
+        .map(|t| t.period.duration().num_seconds())
+        .sum::<i64>() as u64;
+    let landing_weight = trips
+        .iter()
+        .map(|t| t.delivery.total_living_weight)
+        .sum::<f64>() as u64;
+
+    assert_eq!(trip_distance, benchmarks.trip_distance as u64);
+    assert_eq!(fishing_time, benchmarks.fishing_time);
+    assert_eq!(trip_time, benchmarks.trip_time);
+    assert_eq!(
+        landing_weight,
+        benchmarks.landing_total_living_weight as u64
+    );
+
+    for b in benchmarks.vessels.iter().filter(|b| !b.is_empty()) {
+        assert_eq!(b.trip_distance as u64, trip_distance / num_vessels);
+        assert_eq!(b.fishing_time, fishing_time / num_vessels);
+        assert_eq!(b.trip_time, trip_time / num_vessels);
+        assert_eq!(
+            b.landing_total_living_weight as u64,
+            landing_weight / num_vessels
+        );
+    }
 }

@@ -1,9 +1,8 @@
-use unnest_insert::{UnnestInsert, UnnestInsertReturning};
-
 use crate::{
     error::{Error, Result},
     PostgresAdapter,
 };
+use unnest_insert::{UnnestInsert, UnnestInsertReturning};
 
 impl PostgresAdapter {
     pub(crate) async fn unnest_insert<T, I>(

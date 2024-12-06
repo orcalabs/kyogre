@@ -1,12 +1,55 @@
+use super::FiskeridirVesselId;
+use crate::{
+    deserialize_utils::*, sqlx_str_impl, string_new_types::NonEmptyString, CallSign, Error,
+};
+use num_derive::FromPrimitive;
 use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, DisplayFromStr, NoneAsEmptyString};
+use std::{fmt::Display, str::FromStr};
+use strum::{AsRefStr, EnumString};
 
-use crate::{deserialize_utils::*, string_new_types::NonEmptyString, CallSign};
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize, FromPrimitive,
+)]
+#[cfg_attr(feature = "sqlx", derive(sqlx::Type), sqlx(transparent))]
+pub struct OrgId(i64);
 
-use super::FiskeridirVesselId;
+impl Display for OrgId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
+    }
+}
 
-#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
+impl From<OrgId> for i64 {
+    fn from(value: OrgId) -> Self {
+        value.0
+    }
+}
+
+impl FromStr for OrgId {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(Self(s.parse()?))
+    }
+}
+
+impl OrgId {
+    pub fn into_inner(self) -> i64 {
+        self.0
+    }
+
+    #[cfg(feature = "test")]
+    pub fn test_new(val: i64) -> Self {
+        Self(val)
+    }
+}
+
+#[derive(
+    Debug, Copy, Clone, PartialEq, Eq, Serialize, Deserialize, strum::Display, EnumString, AsRefStr,
+)]
 #[serde(rename_all = "UPPERCASE")]
+#[strum(serialize_all = "UPPERCASE")]
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub enum RegisterVesselEntityType {
     Company,
@@ -23,7 +66,8 @@ pub struct RegisterVesselOwner {
     pub city: Option<NonEmptyString>,
     pub entity_type: RegisterVesselEntityType,
     #[serde(deserialize_with = "opt_from_nullable_str")]
-    pub id: Option<i64>,
+    #[cfg_attr(feature = "utoipa", schema(value_type = Option<i64>))]
+    pub id: Option<OrgId>,
     #[cfg_attr(feature = "utoipa", schema(value_type = String))]
     pub name: NonEmptyString,
     #[serde_as(as = "PrimitiveFromStr")]
@@ -121,10 +165,12 @@ mod test {
             Self {
                 city: Some("TROMSØ".parse().unwrap()),
                 entity_type: RegisterVesselEntityType::Person,
-                id,
+                id: id.map(OrgId::test_new),
                 name: "OWNER A".parse().unwrap(),
                 postal_code: 9010,
             }
         }
     }
 }
+
+sqlx_str_impl!(RegisterVesselEntityType);

@@ -1,0 +1,18 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO\n    orgs (\n    org_id,entity_type,city,name,postal_code\n   )\nSELECT\n    *\nFROM\n    UNNEST(\n        $1::BIGINT[],$2::TEXT[],$3::TEXT[],$4::TEXT[],$5::INT[]\n    )\n        ON CONFLICT (org_id) DO UPDATE SET entity_type = EXCLUDED.entity_type,city = EXCLUDED.city,name = EXCLUDED.name,postal_code = EXCLUDED.postal_code",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8Array",
+        "TextArray",
+        "TextArray",
+        "TextArray",
+        "Int4Array"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "74234c4f7b40e6273017e56139748cc3bfbd0a6ffe3f72998f0992eaf6e301b1"
+}

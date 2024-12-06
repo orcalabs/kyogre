@@ -1,9 +1,9 @@
 use actix_web::http::Method;
-use fiskeridir_rs::{CallSign, LandingId, SpeciesGroup};
+use fiskeridir_rs::{CallSign, LandingId, OrgId, SpeciesGroup};
 use http_client::{HttpClient, StatusCode};
 use kyogre_core::{
     ActiveHaulsFilter, ActiveLandingFilter, AverageTripBenchmarks, FiskeridirVesselId, HaulId,
-    Mmsi, ModelId, UpdateVessel, VesselBenchmarks,
+    Mmsi, ModelId, OrgBenchmarks, UpdateVessel, VesselBenchmarks,
 };
 use serde::{de::DeserializeOwned, Serialize};
 use web_api::{
@@ -34,7 +34,7 @@ use web_api::{
             TripBenchmarksParams,
         },
         user::User,
-        vessel::Vessel,
+        vessel::{OrgBenchmarkParameters, Vessel},
         vms::{VmsParameters, VmsPosition},
     },
 };
@@ -199,6 +199,19 @@ impl ApiClient {
     pub async fn get_vessel_benchmarks(&self) -> Result<VesselBenchmarks, Error> {
         self.send("vessels/benchmarks", Method::GET, &(), None::<&()>)
             .await
+    }
+    pub async fn get_org_benchmarks(
+        &self,
+        org_id: OrgId,
+        params: OrgBenchmarkParameters,
+    ) -> Result<Option<OrgBenchmarks>, Error> {
+        self.send(
+            format!("vessels/org_benchmarks/{org_id}"),
+            Method::GET,
+            &(),
+            Some(&params),
+        )
+        .await
     }
     pub async fn get_trip_benchmarks(
         &self,

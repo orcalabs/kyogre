@@ -1,7 +1,39 @@
 use chrono::{DateTime, Utc};
+use num_traits::Zero;
 use serde::{Deserialize, Serialize};
 
 use crate::*;
+
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct OrgBenchmarks {
+    /// Unit is in seconds
+    pub fishing_time: u64,
+    /// Unit is in meters
+    pub trip_distance: f64,
+    /// Unit is in seconds
+    pub trip_time: u64,
+    /// Unit is in KG
+    pub landing_total_living_weight: f64,
+    pub vessels: Vec<OrgBenchmarkEntry>,
+}
+
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct OrgBenchmarkEntry {
+    #[cfg_attr(feature = "utoipa", schema(value_type = i64))]
+    pub fiskeridir_vessel_id: FiskeridirVesselId,
+    /// Unit is in seconds
+    pub fishing_time: u64,
+    /// Unit is in meters
+    pub trip_distance: f64,
+    /// Unit is in seconds
+    pub trip_time: u64,
+    /// Unit is in KG
+    pub landing_total_living_weight: f64,
+}
 
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
@@ -46,6 +78,15 @@ pub struct CumulativeLandings {
     pub species_fiskeridir_id: u32,
     pub weight: f64,
     pub cumulative_weight: f64,
+}
+
+impl OrgBenchmarkEntry {
+    pub fn is_empty(&self) -> bool {
+        self.fishing_time.is_zero()
+            && self.trip_distance.is_zero()
+            && self.trip_time.is_zero()
+            && self.landing_total_living_weight.is_zero()
+    }
 }
 
 impl PartialEq<(&TripDetailed, f64)> for BenchmarkEntry {

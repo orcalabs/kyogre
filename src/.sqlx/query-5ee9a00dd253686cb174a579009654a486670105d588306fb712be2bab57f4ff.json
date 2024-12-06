@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO\n    orgs__fiskeridir_vessels (\n    org_id,fiskeridir_vessel_id\n   )\nSELECT\n    *\nFROM\n    UNNEST(\n        $1::BIGINT[],$2::BIGINT[]\n    )\n        ON CONFLICT DO NOTHING",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8Array",
+        "Int8Array"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "5ee9a00dd253686cb174a579009654a486670105d588306fb712be2bab57f4ff"
+}

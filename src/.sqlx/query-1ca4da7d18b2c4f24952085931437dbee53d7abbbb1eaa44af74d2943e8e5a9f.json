@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT\n    f.preferred_trip_assembler AS \"preferred_trip_assembler!: TripAssemblerId\",\n    f.fiskeridir_vessel_id AS \"fiskeridir_vessel_id!: FiskeridirVesselId\",\n    f.fiskeridir_vessel_type_id,\n    f.fiskeridir_length_group_id AS \"fiskeridir_length_group_id!: VesselLengthGroup\",\n    f.fiskeridir_nation_group_id,\n    f.norwegian_municipality_id AS fiskeridir_norwegian_municipality_id,\n    f.norwegian_county_id AS fiskeridir_norwegian_county_id,\n    f.nation_id AS \"fiskeridir_nation_id?\",\n    f.gross_tonnage_1969 AS fiskeridir_gross_tonnage_1969,\n    f.gross_tonnage_other AS fiskeridir_gross_tonnage_other,\n    MAX(v.call_sign) AS \"fiskeridir_call_sign: CallSign\",\n    f.\"name\" AS fiskeridir_name,\n    f.registration_id AS fiskeridir_registration_id,\n    f.\"length\" AS fiskeridir_length,\n    f.\"width\" AS fiskeridir_width,\n    f.\"owner\" AS fiskeridir_owner,\n    f.owners::TEXT AS fiskeridir_owners,\n    f.engine_building_year_final AS fiskeridir_engine_building_year,\n    f.engine_power_final AS fiskeridir_engine_power,\n    f.building_year AS fiskeridir_building_year,\n    f.rebuilding_year AS fiskeridir_rebuilding_year,\n    f.gear_group_ids AS \"gear_group_ids!: Vec<GearGroup>\",\n    f.species_group_ids AS \"species_group_ids!: Vec<SpeciesGroup>\",\n    a.mmsi AS \"ais_mmsi?: Mmsi\",\n    a.imo_number AS ais_imo_number,\n    a.call_sign AS \"ais_call_sign: CallSign\",\n    a.name AS ais_name,\n    a.ship_length AS ais_ship_length,\n    a.ship_width AS ais_ship_width,\n    a.eta AS ais_eta,\n    a.destination AS ais_destination\nFROM\n    fiskeridir_ais_vessel_mapping_whitelist AS v\n    INNER JOIN fiskeridir_vessels AS f ON v.fiskeridir_vessel_id = f.fiskeridir_vessel_id\n    LEFT JOIN ais_vessels AS a ON v.mmsi = a.mmsi\n    INNER JOIN trips t ON v.fiskeridir_vessel_id = t.fiskeridir_vessel_id\nGROUP BY\n    f.fiskeridir_vessel_id,\n    a.mmsi\nHAVING\n    COUNT(DISTINCT t.trip_id) >= $1\n                    ",
+  "query": "\nSELECT\n    f.preferred_trip_assembler AS \"preferred_trip_assembler!: TripAssemblerId\",\n    f.fiskeridir_vessel_id AS \"fiskeridir_vessel_id!: FiskeridirVesselId\",\n    f.fiskeridir_vessel_type_id,\n    f.fiskeridir_length_group_id AS \"fiskeridir_length_group_id!: VesselLengthGroup\",\n    f.fiskeridir_nation_group_id,\n    f.norwegian_municipality_id AS fiskeridir_norwegian_municipality_id,\n    f.norwegian_county_id AS fiskeridir_norwegian_county_id,\n    f.nation_id AS \"fiskeridir_nation_id?\",\n    f.gross_tonnage_1969 AS fiskeridir_gross_tonnage_1969,\n    f.gross_tonnage_other AS fiskeridir_gross_tonnage_other,\n    MAX(v.call_sign) AS \"fiskeridir_call_sign: CallSign\",\n    f.\"name\" AS fiskeridir_name,\n    f.registration_id AS fiskeridir_registration_id,\n    f.\"length\" AS fiskeridir_length,\n    f.\"width\" AS fiskeridir_width,\n    f.\"owner\" AS fiskeridir_owner,\n    f.owners::TEXT AS \"fiskeridir_owners!\",\n    f.engine_building_year_final AS fiskeridir_engine_building_year,\n    f.engine_power_final AS fiskeridir_engine_power,\n    f.building_year AS fiskeridir_building_year,\n    f.rebuilding_year AS fiskeridir_rebuilding_year,\n    f.gear_group_ids AS \"gear_group_ids!: Vec<GearGroup>\",\n    f.species_group_ids AS \"species_group_ids!: Vec<SpeciesGroup>\",\n    a.mmsi AS \"ais_mmsi?: Mmsi\",\n    a.imo_number AS ais_imo_number,\n    a.call_sign AS \"ais_call_sign: CallSign\",\n    a.name AS ais_name,\n    a.ship_length AS ais_ship_length,\n    a.ship_width AS ais_ship_width,\n    a.eta AS ais_eta,\n    a.destination AS ais_destination\nFROM\n    fiskeridir_ais_vessel_mapping_whitelist AS v\n    INNER JOIN fiskeridir_vessels AS f ON v.fiskeridir_vessel_id = f.fiskeridir_vessel_id\n    LEFT JOIN ais_vessels AS a ON v.mmsi = a.mmsi\n    INNER JOIN trips t ON v.fiskeridir_vessel_id = t.fiskeridir_vessel_id\nGROUP BY\n    f.fiskeridir_vessel_id,\n    a.mmsi\nHAVING\n    COUNT(DISTINCT t.trip_id) >= $1\n                    ",
   "describe": {
     "columns": [
       {
@@ -85,7 +85,7 @@
       },
       {
         "ordinal": 16,
-        "name": "fiskeridir_owners",
+        "name": "fiskeridir_owners!",
         "type_info": "Text"
       },
       {
@@ -198,5 +198,5 @@
       true
     ]
   },
-  "hash": "86cb267e34f57ff0e586a65394ed02b199b2ffabdc68fed29ffc552a1f806214"
+  "hash": "1ca4da7d18b2c4f24952085931437dbee53d7abbbb1eaa44af74d2943e8e5a9f"
 }

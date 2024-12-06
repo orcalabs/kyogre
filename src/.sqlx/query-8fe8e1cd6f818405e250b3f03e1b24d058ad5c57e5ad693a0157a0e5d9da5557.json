@@ -1,0 +1,49 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nWITH\n    org AS (\n        SELECT\n            of.org_id\n        FROM\n            fiskeridir_ais_vessel_mapping_whitelist f\n            INNER JOIN orgs__fiskeridir_vessels of ON f.fiskeridir_vessel_id = of.fiskeridir_vessel_id\n        WHERE\n            f.call_sign = $1\n            AND of.org_id = $2\n    )\nSELECT\n    COALESCE(\n        EXTRACT(\n            'epoch'\n            FROM\n                SUM(q.haul_duration)\n        ),\n        0\n    )::BIGINT AS \"fishing_time!\",\n    COALESCE(SUM(q.distance), 0.0)::DOUBLE PRECISION AS \"trip_distance!\",\n    COALESCE(\n        EXTRACT(\n            'epoch'\n            FROM\n                SUM(q.trip_duration)\n        ),\n        0\n    )::BIGINT AS \"trip_time!\",\n    COALESCE(SUM(q.landing_total_living_weight), 0.0)::DOUBLE PRECISION AS \"landing_total_living_weight!\",\n    COALESCE(\n        JSONB_AGG(\n            JSONB_BUILD_OBJECT(\n                'fiskeridirVesselId',\n                q.fiskeridir_vessel_id,\n                'fishingTime',\n                COALESCE(\n                    EXTRACT(\n                        'epoch'\n                        FROM\n                            q.haul_duration\n                    ),\n                    0\n                )::BIGINT,\n                'tripDistance',\n                COALESCE(q.distance, 0.0)::DOUBLE PRECISION,\n                'tripTime',\n                COALESCE(\n                    EXTRACT(\n                        'epoch'\n                        FROM\n                            q.trip_duration\n                    ),\n                    0\n                )::BIGINT,\n                'landingTotalLivingWeight',\n                COALESCE(q.landing_total_living_weight, 0.0)::DOUBLE PRECISION\n            )\n        ),\n        '[]'\n    )::TEXT AS \"vessels!\"\nFROM\n    (\n        SELECT\n            f.fiskeridir_vessel_id,\n            MAX(o.org_id) AS org_id,\n            SUM(t.haul_duration) AS haul_duration,\n            SUM(t.distance) AS distance,\n            SUM(t.trip_duration) AS trip_duration,\n            SUM(t.landing_total_living_weight) AS landing_total_living_weight\n        FROM\n            org o\n            LEFT JOIN orgs__fiskeridir_vessels f ON f.org_id = o.org_id\n            LEFT JOIN trips_detailed t ON f.fiskeridir_vessel_id = t.fiskeridir_vessel_id\n            AND t.start_timestamp >= $3\n            AND t.stop_timestamp <= $4\n        GROUP BY\n            f.fiskeridir_vessel_id\n    ) q\nGROUP BY\n    q.org_id\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "fishing_time!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "trip_distance!",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 2,
+        "name": "trip_time!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 3,
+        "name": "landing_total_living_weight!",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 4,
+        "name": "vessels!",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Int8",
+        "Timestamptz",
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "8fe8e1cd6f818405e250b3f03e1b24d058ad5c57e5ad693a0157a0e5d9da5557"
+}
