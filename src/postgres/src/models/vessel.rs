@@ -1,5 +1,12 @@
+use crate::{
+    error::Error,
+    queries::{opt_type_to_i32, opt_type_to_i64, type_to_i32, type_to_i64},
+};
 use chrono::{DateTime, Utc};
-use fiskeridir_rs::{CallSign, GearGroup, SpeciesGroup, VesselLengthGroup, VesselType};
+use fiskeridir_rs::{
+    CallSign, GearGroup, OrgId, RegisterVesselEntityType, SpeciesGroup, VesselLengthGroup,
+    VesselType,
+};
 use kyogre_core::{
     chrono_error::UnknownMonthSnafu, AisVessel, FiskeridirVessel, FiskeridirVesselId, Mmsi,
     TripAssemblerId, VesselSource,
@@ -7,11 +14,6 @@ use kyogre_core::{
 use num_traits::FromPrimitive;
 use serde::Deserialize;
 use unnest_insert::UnnestInsert;
-
-use crate::{
-    error::Error,
-    queries::{opt_type_to_i32, opt_type_to_i64, type_to_i32, type_to_i64},
-};
 
 #[derive(Debug, Clone, UnnestInsert)]
 #[unnest_insert(table_name = "fiskeridir_ais_vessel_mapping_whitelist", conflict = "")]
@@ -22,6 +24,15 @@ pub struct VesselConflictInsert {
     #[unnest_insert(sql_type = "INT", type_conversion = "opt_type_to_i32")]
     pub mmsi: Option<Mmsi>,
     pub is_manual: bool,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct OrgBenchmarks {
+    pub fishing_time: i64,
+    pub trip_distance: f64,
+    pub trip_time: i64,
+    pub landing_total_living_weight: f64,
+    pub vessels: String,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -161,6 +172,27 @@ pub struct NewRegisterVessel {
     pub fiskeridir_vessel_source_id: VesselSource,
 }
 
+#[derive(Debug, Clone, UnnestInsert)]
+#[unnest_insert(table_name = "orgs__fiskeridir_vessels", conflict = "")]
+pub struct NewOrgVessel {
+    #[unnest_insert(sql_type = "BIGINT", type_conversion = "type_to_i64")]
+    pub org_id: OrgId,
+    #[unnest_insert(sql_type = "BIGINT", type_conversion = "type_to_i64")]
+    pub fiskeridir_vessel_id: FiskeridirVesselId,
+}
+
+#[derive(Debug, Clone, UnnestInsert)]
+#[unnest_insert(table_name = "orgs", conflict = "org_id", update_all)]
+pub struct NewOrg<'a> {
+    #[unnest_insert(sql_type = "BIGINT", type_conversion = "type_to_i64")]
+    pub org_id: OrgId,
+    #[unnest_insert(sql_type = "TEXT")]
+    pub entity_type: RegisterVesselEntityType,
+    pub city: Option<&'a str>,
+    pub name: &'a str,
+    pub postal_code: i32,
+}
+
 impl<'a> From<&'a fiskeridir_rs::Vessel> for NewFiskeridirVessel<'a> {
     fn from(v: &'a fiskeridir_rs::Vessel) -> Self {
         Self {
@@ -252,7 +284,7 @@ pub struct FiskeridirAisVesselCombination {
     pub fiskeridir_length: Option<f64>,
     pub fiskeridir_width: Option<f64>,
     pub fiskeridir_owner: Option<String>,
-    pub fiskeridir_owners: Option<String>,
+    pub fiskeridir_owners: String,
     pub fiskeridir_engine_building_year: Option<i32>,
     pub fiskeridir_engine_power: Option<i32>,
     pub fiskeridir_building_year: Option<i32>,
@@ -327,9 +359,7 @@ impl TryFrom<FiskeridirAisVesselCombination> for kyogre_core::Vessel {
             length: fiskeridir_length,
             width: fiskeridir_width,
             owner: fiskeridir_owner,
-            owners: fiskeridir_owners
-                .map(|o| serde_json::from_str(&o))
-                .transpose()?,
+            owners: serde_json::from_str(&fiskeridir_owners)?,
             engine_building_year: fiskeridir_engine_building_year.map(|v| v as u32),
             engine_power: fiskeridir_engine_power.map(|v| v as u32),
             building_year: fiskeridir_building_year.map(|v| v as u32),
@@ -342,6 +372,28 @@ impl TryFrom<FiskeridirAisVesselCombination> for kyogre_core::Vessel {
             preferred_trip_assembler,
             gear_groups: gear_group_ids,
             species_groups: species_group_ids,
+        })
+    }
+}
+
+impl TryFrom<OrgBenchmarks> for kyogre_core::OrgBenchmarks {
+    type Error = Error;
+
+    fn try_from(value: OrgBenchmarks) -> Result<Self, Self::Error> {
+        let OrgBenchmarks {
+            fishing_time,
+            trip_distance,
+            trip_time,
+            landing_total_living_weight,
+            vessels,
+        } = value;
+
+        Ok(Self {
+            fishing_time: fishing_time as u64,
+            trip_distance,
+            trip_time: trip_time as u64,
+            landing_total_living_weight,
+            vessels: serde_json::from_str(&vessels)?,
         })
     }
 }

@@ -5,7 +5,7 @@ use actix_web::{
     HttpResponse, ResponseError,
 };
 use chrono::{DateTime, Utc};
-use fiskeridir_rs::{CallSign, ParseStringError};
+use fiskeridir_rs::{CallSign, OrgId, ParseStringError};
 use kyogre_core::DateRangeError;
 use serde::{Deserialize, Serialize};
 use snafu::{Location, Snafu};
@@ -121,6 +121,12 @@ pub enum Error {
         location: Location,
         call_sign: CallSign,
     },
+    #[snafu(display("The org '{org_id}' was not found"))]
+    OrgNotFound {
+        #[snafu(implicit)]
+        location: Location,
+        org_id: OrgId,
+    },
     #[snafu(display("An unexpected error occured"))]
     #[stack_error(
         opaque_stack = [kyogre_core::Error, http_client::Error, ParseStringError],
@@ -151,7 +157,7 @@ impl ResponseError for Error {
             | MissingMmsiOrCallSignOrTripId => StatusCode::BAD_REQUEST,
             InsufficientPermissions => StatusCode::FORBIDDEN,
             MissingJWT | InvalidJWT | ParseJWT | JWTDecode => StatusCode::UNAUTHORIZED,
-            UpdateVesselNotFound => StatusCode::NOT_FOUND,
+            UpdateVesselNotFound | OrgNotFound => StatusCode::NOT_FOUND,
             Unexpected => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }

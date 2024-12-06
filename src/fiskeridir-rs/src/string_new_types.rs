@@ -1,11 +1,10 @@
-use std::{fmt::Display, ops::Deref, str::FromStr};
-
 use crate::error::{parse_string_error::EmptySnafu, ParseStringError};
 use jurisdiction::Jurisdiction;
 use serde::{
     de::{self, Visitor},
     Deserialize, Serialize,
 };
+use std::{fmt::Display, ops::Deref, str::FromStr};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Ord, PartialOrd)]
 pub struct NonEmptyString(String);

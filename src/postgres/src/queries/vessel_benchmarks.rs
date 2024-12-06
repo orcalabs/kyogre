@@ -1,10 +1,112 @@
+use crate::{
+    error::Result,
+    models::{OrgBenchmarks, VesselBenchmarks},
+    PostgresAdapter,
+};
 use chrono::{Datelike, Utc};
 use fiskeridir_rs::CallSign;
-use kyogre_core::{BarentswatchUserId, FiskeridirVesselId, TripBenchmarkStatus};
-
-use crate::{error::Result, models::VesselBenchmarks, PostgresAdapter};
+use kyogre_core::{BarentswatchUserId, FiskeridirVesselId, OrgBenchmarkQuery, TripBenchmarkStatus};
 
 impl PostgresAdapter {
+    pub(crate) async fn org_benchmarks_impl(
+        &self,
+        query: &OrgBenchmarkQuery,
+    ) -> Result<Option<OrgBenchmarks>> {
+        let benchmark = sqlx::query_as!(
+            OrgBenchmarks,
+            r#"
+WITH
+    org AS (
+        SELECT
+            of.org_id
+        FROM
+            fiskeridir_ais_vessel_mapping_whitelist f
+            INNER JOIN orgs__fiskeridir_vessels of ON f.fiskeridir_vessel_id = of.fiskeridir_vessel_id
+        WHERE
+            f.call_sign = $1
+            AND of.org_id = $2
+    )
+SELECT
+    COALESCE(
+        EXTRACT(
+            'epoch'
+            FROM
+                SUM(q.haul_duration)
+        ),
+        0
+    )::BIGINT AS "fishing_time!",
+    COALESCE(SUM(q.distance), 0.0)::DOUBLE PRECISION AS "trip_distance!",
+    COALESCE(
+        EXTRACT(
+            'epoch'
+            FROM
+                SUM(q.trip_duration)
+        ),
+        0
+    )::BIGINT AS "trip_time!",
+    COALESCE(SUM(q.landing_total_living_weight), 0.0)::DOUBLE PRECISION AS "landing_total_living_weight!",
+    COALESCE(
+        JSONB_AGG(
+            JSONB_BUILD_OBJECT(
+                'fiskeridirVesselId',
+                q.fiskeridir_vessel_id,
+                'fishingTime',
+                COALESCE(
+                    EXTRACT(
+                        'epoch'
+                        FROM
+                            q.haul_duration
+                    ),
+                    0
+                )::BIGINT,
+                'tripDistance',
+                COALESCE(q.distance, 0.0)::DOUBLE PRECISION,
+                'tripTime',
+                COALESCE(
+                    EXTRACT(
+                        'epoch'
+                        FROM
+                            q.trip_duration
+                    ),
+                    0
+                )::BIGINT,
+                'landingTotalLivingWeight',
+                COALESCE(q.landing_total_living_weight, 0.0)::DOUBLE PRECISION
+            )
+        ),
+        '[]'
+    )::TEXT AS "vessels!"
+FROM
+    (
+        SELECT
+            f.fiskeridir_vessel_id,
+            MAX(o.org_id) AS org_id,
+            SUM(t.haul_duration) AS haul_duration,
+            SUM(t.distance) AS distance,
+            SUM(t.trip_duration) AS trip_duration,
+            SUM(t.landing_total_living_weight) AS landing_total_living_weight
+        FROM
+            org o
+            LEFT JOIN orgs__fiskeridir_vessels f ON f.org_id = o.org_id
+            LEFT JOIN trips_detailed t ON f.fiskeridir_vessel_id = t.fiskeridir_vessel_id
+            AND t.start_timestamp >= $3
+            AND t.stop_timestamp <= $4
+        GROUP BY
+            f.fiskeridir_vessel_id
+    ) q
+GROUP BY
+    q.org_id
+            "#,
+            query.call_sign.as_ref(),
+            query.org_id.into_inner(),
+            query.start,
+            query.end
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(benchmark)
+    }
     pub(crate) async fn reset_bencmarks(
         &self,
         vessel_id: FiskeridirVesselId,
