@@ -153,7 +153,7 @@ pub struct FiskeridirVessel {
     pub length: Option<f64>,
     pub width: Option<f64>,
     pub owner: Option<String>,
-    pub owners: Option<Vec<RegisterVesselOwner>>,
+    pub owners: Vec<RegisterVesselOwner>,
     pub engine_building_year: Option<u32>,
     pub engine_power: Option<u32>,
     pub building_year: Option<u32>,

@@ -545,6 +545,9 @@ impl FuelEstimation for PostgresAdapter {
 
 #[async_trait]
 impl WebApiOutboundPort for PostgresAdapter {
+    async fn org_benchmarks(&self, query: &OrgBenchmarkQuery) -> CoreResult<Option<OrgBenchmarks>> {
+        convert_optional(retry(|| self.org_benchmarks_impl(query)).await?)
+    }
     async fn fuel_estimation(&self, query: &FuelQuery) -> CoreResult<f64> {
         Ok(retry(|| self.fuel_estimation_impl(query)).await?)
     }

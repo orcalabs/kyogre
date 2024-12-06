@@ -48,6 +48,7 @@ impl Meilisearch for meilisearch::MeilisearchAdapter<PostgresAdapter> {}
         v1::gear::gear_main_groups,
         v1::vessel::vessels,
         v1::vessel::vessel_benchmarks,
+        v1::vessel::org_benchmarks,
         v1::vessel::update_vessel,
         v1::trip_benchmark::trip_benchmarks,
         v1::trip_benchmark::average,
@@ -155,6 +156,8 @@ impl Meilisearch for meilisearch::MeilisearchAdapter<PostgresAdapter> {}
             kyogre_core::ErsQuantumType,
             kyogre_core::UpdateVessel,
             kyogre_core::Weather,
+            kyogre_core::OrgBenchmarks,
+            kyogre_core::OrgBenchmarkEntry,
           )
     ),
     security(

@@ -81,6 +81,13 @@ pub enum Error {
         #[snafu(source)]
         error: zip::result::ZipError,
     },
+    #[snafu(display("Parse int error"))]
+    ParseInt {
+        #[snafu(implicit)]
+        location: Location,
+        #[snafu(source)]
+        error: ParseIntError,
+    },
 }
 
 impl From<csv::Error> for Error {

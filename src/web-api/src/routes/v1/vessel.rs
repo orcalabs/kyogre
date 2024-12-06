@@ -1,20 +1,35 @@
-use actix_web::web;
-use chrono::{DateTime, Utc};
-use fiskeridir_rs::{CallSign, GearGroup, RegisterVesselOwner, SpeciesGroup, VesselLengthGroup};
-use futures::TryStreamExt;
-use kyogre_core::{FiskeridirVesselId, Mmsi};
-use kyogre_core::{UpdateVessel, VesselBenchmarks};
-use serde::{Deserialize, Serialize};
-use serde_with::{serde_as, DisplayFromStr};
-use utoipa::ToSchema;
-
-use crate::error::error::UpdateVesselNotFoundSnafu;
+use crate::error::error::{MissingDateRangeSnafu, OrgNotFoundSnafu, UpdateVesselNotFoundSnafu};
 use crate::{
     error::{ErrorResponse, Result},
     extractors::BwProfile,
     response::{Response, StreamResponse},
     stream_response, Database,
 };
+use actix_web::web::{self, Path};
+use chrono::{DateTime, Duration, Utc};
+use fiskeridir_rs::{
+    CallSign, GearGroup, OrgId, RegisterVesselOwner, SpeciesGroup, VesselLengthGroup,
+};
+use futures::TryStreamExt;
+use kyogre_core::{FiskeridirVesselId, Mmsi, OrgBenchmarkQuery, OrgBenchmarks};
+use kyogre_core::{UpdateVessel, VesselBenchmarks};
+use serde::{Deserialize, Serialize};
+use serde_qs::actix::QsQuery as Query;
+use serde_with::{serde_as, DisplayFromStr};
+use utoipa::{IntoParams, ToSchema};
+
+#[derive(Default, Debug, Deserialize, Serialize, IntoParams)]
+#[serde(rename_all = "camelCase")]
+pub struct OrgBenchmarkParameters {
+    pub start: Option<DateTime<Utc>>,
+    pub end: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, IntoParams, Deserialize)]
+pub struct OrgBenchmarkPath {
+    #[param(value_type = i64)]
+    pub org_id: OrgId,
+}
 
 #[utoipa::path(
     put,
@@ -58,6 +73,36 @@ pub async fn vessels<T: Database + Send + Sync + 'static>(
 ) -> StreamResponse<Vessel> {
     stream_response! {
         db.vessels().map_ok(Vessel::from)
+    }
+}
+
+#[utoipa::path(
+    get,
+    path = "/vessels/org_benchmarks/{org_id}",
+    params(OrgBenchmarkPath),
+    responses(
+        (status = 200, description = "benchmark data for the given organization", body = OrgBenchmarks),
+        (status = 500, description = "an internal error occured", body = ErrorResponse),
+    )
+)]
+#[tracing::instrument(skip(db))]
+pub async fn org_benchmarks<T: Database + 'static>(
+    db: web::Data<T>,
+    bw_profile: BwProfile,
+    params: Query<OrgBenchmarkParameters>,
+    path: Path<OrgBenchmarkPath>,
+) -> Result<Response<OrgBenchmarks>> {
+    let call_sign = bw_profile.call_sign()?;
+    let query = params
+        .into_inner()
+        .into_query(call_sign.clone(), path.org_id)?;
+
+    match db.org_benchmarks(&query).await? {
+        Some(b) => Ok(Response::new(b)),
+        None => OrgNotFoundSnafu {
+            org_id: path.org_id,
+        }
+        .fail(),
     }
 }
 
@@ -126,7 +171,7 @@ pub struct FiskeridirVessel {
     pub length: Option<f64>,
     pub width: Option<f64>,
     pub owner: Option<String>,
-    pub owners: Option<Vec<RegisterVesselOwner>>,
+    pub owners: Vec<RegisterVesselOwner>,
     pub engine_building_year: Option<u32>,
     pub engine_power: Option<u32>,
     pub building_year: Option<u32>,
@@ -147,6 +192,29 @@ pub struct AisVessel {
     #[schema(value_type = Option<String>, example = "2023-02-24T11:08:20.409416682Z")]
     pub eta: Option<DateTime<Utc>>,
     pub destination: Option<String>,
+}
+
+impl OrgBenchmarkParameters {
+    pub fn into_query(self, call_sign: CallSign, org_id: OrgId) -> Result<OrgBenchmarkQuery> {
+        let (start, end) = match (self.start, self.end) {
+            (None, None) => {
+                let now = Utc::now();
+                Ok((now - Duration::days(30), now))
+            }
+            (Some(s), Some(e)) => Ok((s, e)),
+            _ => MissingDateRangeSnafu {
+                start: self.start.is_some(),
+                end: self.end.is_some(),
+            }
+            .fail(),
+        }?;
+        Ok(OrgBenchmarkQuery {
+            start,
+            end,
+            call_sign,
+            org_id,
+        })
+    }
 }
 
 impl From<kyogre_core::Vessel> for Vessel {

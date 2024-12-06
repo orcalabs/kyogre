@@ -1,9 +1,11 @@
 use crate::{
     error::Result,
-    models::{FiskeridirAisVesselCombination, NewMunicipality, NewRegisterVessel},
+    models::{
+        FiskeridirAisVesselCombination, NewMunicipality, NewOrg, NewOrgVessel, NewRegisterVessel,
+    },
     PostgresAdapter,
 };
-use fiskeridir_rs::{CallSign, GearGroup, SpeciesGroup, VesselLengthGroup};
+use fiskeridir_rs::{CallSign, GearGroup, OrgId, SpeciesGroup, VesselLengthGroup};
 use futures::{Stream, TryStreamExt};
 use kyogre_core::{
     ActiveVesselConflict, FiskeridirVesselId, Mmsi, TripAssemblerId, Vessel, VesselSource,
@@ -55,7 +57,7 @@ SELECT
     f."length" AS fiskeridir_length,
     f."width" AS fiskeridir_width,
     f."owner" AS fiskeridir_owner,
-    f.owners::TEXT AS fiskeridir_owners,
+    f.owners::TEXT AS "fiskeridir_owners!",
     f.engine_building_year_final AS fiskeridir_engine_building_year,
     f.engine_power_final AS fiskeridir_engine_power,
     f.building_year AS fiskeridir_building_year,
@@ -354,12 +356,46 @@ WHERE
             })
             .collect();
 
+        let org_vessels: Vec<NewOrgVessel> = vessels
+            .iter()
+            .flat_map(|v| {
+                v.owners.iter().filter_map(|o| {
+                    o.id.map(|org_id| NewOrgVessel {
+                        org_id,
+                        fiskeridir_vessel_id: v.id,
+                    })
+                })
+            })
+            .collect();
+
+        let orgs: HashMap<OrgId, NewOrg<'_>> = vessels
+            .iter()
+            .flat_map(|v| {
+                v.owners.iter().filter_map(|o| {
+                    o.id.map(|org_id| {
+                        (
+                            org_id,
+                            NewOrg {
+                                org_id,
+                                entity_type: o.entity_type,
+                                city: o.city.as_deref(),
+                                name: &o.name,
+                                postal_code: o.postal_code,
+                            },
+                        )
+                    })
+                })
+            })
+            .collect();
+
         let mut tx = self.pool.begin().await?;
 
         self.unnest_insert(municipalitis.into_values(), &mut *tx)
             .await?;
+        self.unnest_insert(orgs.into_values(), &mut *tx).await?;
         self.unnest_insert_try_from::<_, _, NewRegisterVessel>(vessels, &mut *tx)
             .await?;
+        self.unnest_insert(org_vessels, &mut *tx).await?;
 
         self.set_landing_vessels_call_signs(&mut tx).await?;
         self.refresh_vessel_mappings(&mut tx).await?;
@@ -400,7 +436,7 @@ SELECT
     f."length" AS fiskeridir_length,
     f."width" AS fiskeridir_width,
     f."owner" AS fiskeridir_owner,
-    f.owners::TEXT AS fiskeridir_owners,
+    f.owners::TEXT AS "fiskeridir_owners!",
     f.engine_building_year_final AS fiskeridir_engine_building_year,
     f.engine_power_final AS fiskeridir_engine_power,
     f.building_year AS fiskeridir_building_year,

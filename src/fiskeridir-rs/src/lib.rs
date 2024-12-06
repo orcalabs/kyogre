@@ -15,6 +15,7 @@ pub use api_downloader::*;
 pub use error::{Error, ErrorDiscriminants, LandingIdError, ParseStringError, Result};
 pub use file_downloader::*;
 pub use models::*;
+pub use string_new_types::*;
 
 #[macro_export]
 macro_rules! sqlx_str_impl {

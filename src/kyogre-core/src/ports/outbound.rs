@@ -57,6 +57,7 @@ pub trait WebApiOutboundPort {
     fn species_fao(&self) -> PinBoxStream<'_, SpeciesFao>;
     fn vessels(&self) -> Pin<Box<dyn Stream<Item = CoreResult<Vessel>> + Send + '_>>;
     fn hauls(&self, query: HaulsQuery) -> PinBoxStream<'_, Haul>;
+    async fn org_benchmarks(&self, query: &OrgBenchmarkQuery) -> CoreResult<Option<OrgBenchmarks>>;
     async fn vessel_benchmarks(
         &self,
         user_id: &BarentswatchUserId,
