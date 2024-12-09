@@ -424,7 +424,10 @@ WHERE
             r#"
 SELECT
     t.trip_id AS "id!: TripId",
-    t.landing_total_living_weight AS "total_weight!",
+    CASE
+        WHEN t.trip_assembler_id = 1 THEN t.landing_total_living_weight
+        ELSE t.haul_total_weight
+    END AS "total_weight!",
     t.distance AS "distance!",
     MAX(b_fuel.output) AS "fuel_consumption!"
 FROM
@@ -435,7 +438,10 @@ FROM
     AND b_eeoi.trip_benchmark_id = $2
 WHERE
     t.fiskeridir_vessel_id = $3
-    AND t.landing_total_living_weight > 0
+    AND CASE
+        WHEN t.trip_assembler_id = 1 THEN t.landing_total_living_weight
+        ELSE t.haul_total_weight
+    END > 0
     AND t.distance > $4
     AND b_fuel.output > 0
     AND (
