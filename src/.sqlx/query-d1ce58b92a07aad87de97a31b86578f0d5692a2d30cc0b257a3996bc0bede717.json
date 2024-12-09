@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    MIN(DATE (u.min_time)) AS min_date\nFROM\n    (\n        SELECT\n            MIN(\"timestamp\") AS min_time\n        FROM\n            ais_positions a\n        WHERE\n            mmsi = $1\n        UNION ALL\n        SELECT\n            MIN(\"timestamp\") AS min_time\n        FROM\n            vms_positions v\n        WHERE\n            call_sign = $2\n    ) u\n                ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "min_date",
+        "type_info": "Date"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Text"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "d1ce58b92a07aad87de97a31b86578f0d5692a2d30cc0b257a3996bc0bede717"
+}

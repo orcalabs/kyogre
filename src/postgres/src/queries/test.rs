@@ -25,22 +25,22 @@ impl PostgresAdapter {
         Ok(sqlx::query!(
             r#"
 SELECT
-    MAX(DATE(u.date)) as date
+    MAX(DATE (u.date)) AS date
 FROM
     (
         SELECT
-            MAX("timestamp") as date
+            MAX("timestamp") AS date
         FROM
             ais_positions a
         UNION ALL
         SELECT
-            MAX("timestamp") as date
+            MAX("timestamp") AS date
         FROM
             vms_positions v
     ) u
                 "#,
         )
-        .fetch_one(&self.pool)
+        .fetch_one(self.ais_pool())
         .await?
         .date)
     }
