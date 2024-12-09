@@ -10,7 +10,10 @@ async fn test_eeoi_benchmark_works() {
             .set_logged_in()
             .trips(1)
             .ais_vms_positions(30)
-            .landings(1)
+            .hauls(1)
+            .modify(|v| {
+                v.dca.catch.species.living_weight = Some(100);
+            })
             .build()
             .await;
 
