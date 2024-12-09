@@ -39,7 +39,7 @@ stack-error = { version = "0.4.0", registry = "orcalabs-orcastrator" }
 snafu = "0.8.5"
 strum = { version = "0.26.3", features = ["derive"] }
 config = { version = "0.14", default-features = false, features = ["yaml"] }
-tokio = "1.41"
+tokio = "1.42"
 tokio-stream = "0.1"
 tracing = "0.1"
 chrono = { version = "0.4", features = ["serde"] }
@@ -60,7 +60,7 @@ pyo3 = { version = "0.22.6", features = ["chrono", "auto-initialize"] }
 csv = "1.3"
 regex = "1.11"
 jurisdiction = "0.1"
-http = "1.1"
+http = "1.2"
 geozero = { version = "0.14", features = ["with-postgis-sqlx"] }
 geoutils = "0.5"
 async-channel = "2.3.1"
