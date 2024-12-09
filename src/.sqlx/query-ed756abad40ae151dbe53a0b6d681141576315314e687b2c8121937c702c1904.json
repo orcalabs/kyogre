@@ -1,0 +1,59 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    u.latitude AS \"latitude!\",\n    u.longitude AS \"longitude!\",\n    u.\"timestamp\" AS \"timestamp!\",\n    u.speed,\n    u.position_type_id AS \"position_type_id!: PositionType\",\n    (\n        h.haul_id IS NOT NULL\n        AND h.gear_group_id = ANY ($1)\n    ) AS \"is_inside_haul_and_active_gear!\"\nFROM\n    (\n        SELECT\n            latitude,\n            longitude,\n            \"timestamp\",\n            speed_over_ground AS speed,\n            $2::INT AS position_type_id\n        FROM\n            ais_positions a\n        WHERE\n            \"timestamp\" >= $3\n            AND \"timestamp\" <= $4\n            AND mmsi = $5\n        UNION ALL\n        SELECT\n            latitude,\n            longitude,\n            \"timestamp\",\n            speed,\n            $6::INT AS position_type_id\n        FROM\n            vms_positions v\n        WHERE\n            \"timestamp\" >= $3\n            AND \"timestamp\" <= $4\n            AND call_sign = $7\n    ) u\n    LEFT JOIN hauls h ON h.fiskeridir_vessel_id = $8\n    AND h.period @> u.\"timestamp\"\nORDER BY\n    u.\"timestamp\" ASC\n                ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "latitude!",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 1,
+        "name": "longitude!",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 2,
+        "name": "timestamp!",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 3,
+        "name": "speed",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 4,
+        "name": "position_type_id!: PositionType",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 5,
+        "name": "is_inside_haul_and_active_gear!",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4Array",
+        "Int4",
+        "Timestamptz",
+        "Timestamptz",
+        "Int4",
+        "Int4",
+        "Text",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "ed756abad40ae151dbe53a0b6d681141576315314e687b2c8121937c702c1904"
+}

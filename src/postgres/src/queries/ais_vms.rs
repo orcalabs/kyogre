@@ -31,7 +31,10 @@ SELECT
     u."timestamp" AS "timestamp!",
     u.speed,
     u.position_type_id AS "position_type_id!: PositionType",
-    (h.haul_id IS NOT NULL AND h.gear_group_id = ANY($1)) AS "is_inside_haul_and_active_gear!"
+    (
+        h.haul_id IS NOT NULL
+        AND h.gear_group_id = ANY ($1)
+    ) AS "is_inside_haul_and_active_gear!"
 FROM
     (
         SELECT
@@ -74,7 +77,7 @@ ORDER BY
             call_sign.map(|c| c.as_ref()),
             vessel_id.into_inner()
         )
-        .fetch_all(&self.pool)
+        .fetch_all(self.ais_pool())
         .await?)
     }
     pub(crate) async fn earliest_position_impl(
@@ -85,7 +88,7 @@ ORDER BY
         Ok(sqlx::query!(
             r#"
 SELECT
-    MIN (DATE(u.min_time)) AS min_date
+    MIN(DATE (u.min_time)) AS min_date
 FROM
     (
         SELECT
@@ -106,7 +109,7 @@ FROM
             mmsi.map(|m| m.into_inner()),
             call_sign.map(|c| c.as_ref())
         )
-        .fetch_one(&self.pool)
+        .fetch_one(self.ais_pool())
         .await?
         .min_date)
     }
@@ -380,7 +383,10 @@ SELECT
     "timestamp" AS "timestamp!",
     speed,
     position_type_id AS "position_type_id: PositionType",
-    (h.haul_id IS NOT NULL AND h.gear_group_id = ANY($1)) AS "is_inside_haul_and_active_gear!"
+    (
+        h.haul_id IS NOT NULL
+        AND h.gear_group_id = ANY ($1)
+    ) AS "is_inside_haul_and_active_gear!"
 FROM
     trip_positions p
     INNER JOIN trips_detailed t ON p.trip_id = t.trip_id
