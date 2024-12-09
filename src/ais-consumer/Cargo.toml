@@ -38,7 +38,7 @@ async-channel = { workspace = true }
 
 rand = { workspace = true, optional = true }
 
-tokio-util = { version = "0.7.12", features = ["codec", "compat"] }
+tokio-util = { version = "0.7.13", features = ["codec", "compat"] }
 
 [dev-dependencies]
 ais-consumer = { path = ".", features = ["test"] }
