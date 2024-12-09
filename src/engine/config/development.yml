@@ -1,6 +1,6 @@
 log_level: Info
 num_trip_state_workers: 2
-num_fuel_estimation_workers: 8
+num_fuel_estimation_workers: 3
 tracing_mode: Regular
 fishing_predictors:
   training_rounds: 200
