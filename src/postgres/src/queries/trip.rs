@@ -1610,7 +1610,6 @@ WHERE
         let mut conn = self.pool.acquire().await?;
 
         let limit = 100_000;
-        let mut offset = 0;
 
         loop {
             let mut tx = conn.begin().await?;
@@ -1624,13 +1623,12 @@ FROM
     INNER JOIN trip_benchmark_outputs b ON t.trip_id = b.trip_id
 WHERE
     b.status = $1
-OFFSET
-    $2
+GROUP BY
+    t.trip_id
 LIMIT
-    $3
+    $2
                 "#,
                 TripBenchmarkStatus::MustRefresh as i32,
-                offset as i64,
                 limit as i64,
             )
             .fetch(&mut *tx)
@@ -1651,8 +1649,6 @@ LIMIT
             if trip_ids.len() < limit {
                 break;
             }
-
-            offset += limit;
         }
 
         Ok(())
