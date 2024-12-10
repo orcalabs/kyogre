@@ -79,7 +79,7 @@ pub async fn vessels<T: Database + Send + Sync + 'static>(
 #[utoipa::path(
     get,
     path = "/vessels/org_benchmarks/{org_id}",
-    params(OrgBenchmarkPath),
+    params(OrgBenchmarkPath, OrgBenchmarkParameters),
     responses(
         (status = 200, description = "benchmark data for the given organization", body = OrgBenchmarks),
         (status = 500, description = "an internal error occured", body = ErrorResponse),
