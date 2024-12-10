@@ -1383,6 +1383,7 @@ VALUES
         new_trip_calculation_time: DateTime<Utc>,
     ) -> Result<()> {
         let earliest_trip_start = earliest_trip_period.start();
+        let earliest_trip_end = earliest_trip_period.end();
         let earliest_trip_period = PgRange::from(&earliest_trip_period);
 
         let mut trip_positions_insert_mapping: HashMap<i64, TripId> = HashMap::new();
@@ -1456,7 +1457,7 @@ WHERE
                 r#"
 UPDATE trips
 SET
-    landing_coverage = tstzrange (LOWER(period), $3)
+    landing_coverage = tstzrange (UPPER(period), $3)
 WHERE
     trip_id = (
         SELECT
@@ -1476,7 +1477,7 @@ RETURNING
                     "#,
                 vessel_id.into_inner(),
                 earliest_trip_period,
-                earliest_trip_start,
+                earliest_trip_end,
             )
             .fetch_optional(&mut *tx)
             .await?
