@@ -31,6 +31,9 @@ pub struct OrgBenchmarkPath {
     pub org_id: OrgId,
 }
 
+/// Updates the vessel with the provided information.
+/// Note that all trip benchmarks that rely on some of the provided information will not be
+/// updated immediatley upon updating a vessel, trip benchmark updates can be expected within 24 hours.
 #[utoipa::path(
     put,
     path = "/vessels",
@@ -59,6 +62,7 @@ pub async fn update_vessel<T: Database + Send + Sync + 'static>(
     ))
 }
 
+/// Returns all known vessels.
 #[utoipa::path(
     get,
     path = "/vessels",
@@ -76,12 +80,15 @@ pub async fn vessels<T: Database + Send + Sync + 'static>(
     }
 }
 
+/// Returns organization benchmarks for the given organization id (Breg org id).
+/// This will include benchmarks for all vessels associated with the organization.
 #[utoipa::path(
     get,
     path = "/vessels/org_benchmarks/{org_id}",
     params(OrgBenchmarkPath, OrgBenchmarkParameters),
     responses(
         (status = 200, description = "benchmark data for the given organization", body = OrgBenchmarks),
+        (status = 404, description = "the authenticated user is not part of the given organization id or the organization does not exist", body = ErrorResponse),
         (status = 500, description = "an internal error occured", body = ErrorResponse),
     )
 )]
@@ -106,6 +113,7 @@ pub async fn org_benchmarks<T: Database + 'static>(
     }
 }
 
+/// Returns benchmark data for the vessel associated with the authenticated user.
 #[utoipa::path(
     get,
     path = "/vessels/benchmarks",

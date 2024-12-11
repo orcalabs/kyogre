@@ -65,6 +65,7 @@ pub struct HaulsMatrixParams {
     pub majority_species_group: Option<bool>,
 }
 
+/// Returns all hauls matching the provided parameters.
 #[utoipa::path(
     get,
     path = "/hauls",
@@ -108,6 +109,7 @@ pub struct HaulsMatrixPath {
     pub active_filter: ActiveHaulsFilter,
 }
 
+/// Returns an aggregated matrix view of haul living weights.
 #[utoipa::path(
     get,
     path = "/hauls_matrix/{active_filter}",

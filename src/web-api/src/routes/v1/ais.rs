@@ -34,9 +34,12 @@ pub struct AisTrackPath {
 #[derive(Debug, Deserialize, Serialize, IntoParams)]
 #[serde(rename_all = "camelCase")]
 pub struct AisCurrentPositionParameters {
+    /// Filters out positions that are older than this limit.
     pub position_timestamp_limit: Option<DateTime<Utc>>,
 }
 
+/// Returns all current AIS positions of vessels.
+/// AIS data for vessels under 15m are restricted to authenticated users with sufficient permissions.
 #[utoipa::path(
     get,
     path = "/ais_current_positions",
@@ -76,6 +79,9 @@ pub async fn ais_current_positions<T: Database + Send + Sync + 'static>(
     }
 }
 
+/// Returns the AIS track for the given vessel matching the given filter if any.
+/// If no time filter is provided the track of the last 24 hours are returned.
+/// AIS data for vessels under 15m are restricted to authenticated users with sufficient permissions.
 #[utoipa::path(
     get,
     path = "/ais_track/{mmsi}",

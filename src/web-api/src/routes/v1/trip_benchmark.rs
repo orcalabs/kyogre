@@ -66,6 +66,8 @@ pub struct AverageEeoiParams {
     pub vessel_ids: Vec<FiskeridirVesselId>,
 }
 
+/// Returns the average trip benchmarks for the given timespan and vessels matching the given
+/// parameters.
 #[utoipa::path(
     get,
     path = "/trip_benchmarks/average",
@@ -84,6 +86,7 @@ pub async fn average<T: Database + Send + Sync + 'static>(
     Ok(Response::new(db.average_trip_benchmarks(query).await?))
 }
 
+/// Returns trip benchmarks for the vessel associated with the authenticated user.
 #[utoipa::path(
     get,
     path = "/trip_benchmarks",

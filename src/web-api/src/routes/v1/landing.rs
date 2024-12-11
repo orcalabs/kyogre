@@ -73,6 +73,7 @@ pub struct LandingMatrixParams {
     pub fiskeridir_vessel_ids: Vec<FiskeridirVesselId>,
 }
 
+/// Returns all landings matching the provided parameters.
 #[utoipa::path(
     get,
     path = "/landings",
@@ -118,6 +119,7 @@ pub struct LandingMatrixPath {
     pub active_filter: ActiveLandingFilter,
 }
 
+/// Returns an aggregated matrix view of landing living weights.
 #[utoipa::path(
     get,
     path = "/landing_matrix/{active_filter}",
