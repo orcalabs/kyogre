@@ -30,6 +30,8 @@ pub struct VmsPath {
     pub call_sign: CallSign,
 }
 
+/// Returns the VMS track for the given vessel mactching the given filter if any.
+/// If no time filter is provided the track of the last 24 hours are returned.
 #[utoipa::path(
     get,
     path = "/vms/{call_sign}",

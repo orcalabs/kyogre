@@ -46,6 +46,8 @@ pub struct FishingFacilitiesParams {
     pub sorting: Option<FishingFacilitiesSorting>,
 }
 
+/// Returns all fishing facilities matching the provided parameters.
+/// Access to fishing facilities are limited to authenticated users with sufficient permissions.
 #[utoipa::path(
     get,
     path = "/fishing_facilities",

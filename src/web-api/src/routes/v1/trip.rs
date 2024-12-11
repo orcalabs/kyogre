@@ -66,6 +66,7 @@ pub struct CurrentTripPath {
     pub fiskeridir_vessel_id: FiskeridirVesselId,
 }
 
+/// Returns the trip associated with the given haul.
 #[utoipa::path(
     get,
     path = "/trip_of_haul/{haul_id}",
@@ -108,6 +109,7 @@ pub async fn trip_of_haul<T: Database + 'static, M: Meilisearch + 'static>(
     Ok(Response::new(trip.map(Trip::from)))
 }
 
+/// Returns the trip associated with the given landing.
 #[utoipa::path(
     get,
     path = "/trip_of_landing/{landing_id}",
@@ -150,6 +152,9 @@ pub async fn trip_of_landing<T: Database + 'static, M: Meilisearch + 'static>(
     Ok(Response::new(trip.map(Trip::from)))
 }
 
+/// Returns all trips matching the provided parameters.
+/// All vessels below 15m have significantly reduced trip data quality as they do not report
+/// ERS POR and DEP messages.
 #[utoipa::path(
     get,
     path = "/trips",
@@ -206,6 +211,8 @@ pub async fn trips<T: Database + Send + Sync + 'static, M: Meilisearch + 'static
     Ok(response.into())
 }
 
+/// Returns the current trip of the given vessel, which is determined by the vessel's last reported DEP message.
+/// All vessels below 15m will not have a current trip as they do not report DEP messages.
 #[utoipa::path(
     get,
     path = "/trips/current/{fiskeridir_vessel_id}",

@@ -6,6 +6,12 @@ use utoipa::ToSchema;
 
 use crate::{error::ErrorResponse, response::StreamResponse, stream_response, Database};
 
+/// Returns all known delivery points.
+/// Delivery points originates from the following sources:
+/// - Buyer register from Fiskeridirektoratet
+/// - Aqua culture register from Fiskeridirektoratet
+/// - Mattilsynet approval lists
+/// - Manual entries
 #[utoipa::path(
     get,
     path = "/delivery_points",
