@@ -614,38 +614,54 @@ WHERE
     v.vessel_event_type_id = 1
     AND v.trip_id IS NULL
     AND f.preferred_trip_assembler = 2
+    -- Data before 2012 is highly unreliable, so don't include it
+    AND v.report_timestamp > '2012-01-01T00:00:00Z'
     AND v.report_timestamp > (
         SELECT
             HSTORE (
-                ARRAY_AGG(fiskeridir_vessel_id::TEXT),
-                ARRAY_AGG(departure_timestamp::TEXT)
-            )
-        FROM
-            (
-                SELECT
-                    MIN(departure_timestamp) AS departure_timestamp,
-                    fiskeridir_vessel_id
-                FROM
-                    ers_departures
-                WHERE
-                    fiskeridir_vessel_id IS NOT NULL
-                GROUP BY
-                    fiskeridir_vessel_id
-            ) q
-    ) [v.fiskeridir_vessel_id::TEXT]::TIMESTAMPTZ
-    AND v.report_timestamp < (
-        SELECT
-            hstore (
                 ARRAY_AGG(fiskeridir_vessel_id::TEXT),
                 ARRAY_AGG(arrival_timestamp::TEXT)
             )
         FROM
             (
                 SELECT
-                    MAX(arrival_timestamp) AS arrival_timestamp,
-                    fiskeridir_vessel_id
+                    fiskeridir_vessel_id,
+                    MIN(arrival_timestamp) AS arrival_timestamp
                 FROM
-                    ers_arrivals
+                    ers_arrivals a
+                WHERE
+                    fiskeridir_vessel_id IS NOT NULL
+                    AND arrival_timestamp > (
+                        SELECT
+                            departure_timestamp
+                        FROM
+                            ers_departures d
+                        WHERE
+                            d.fiskeridir_vessel_id = a.fiskeridir_vessel_id
+                        ORDER BY
+                            departure_timestamp
+                        LIMIT
+                            1
+                        OFFSET
+                            1
+                    )
+                GROUP BY
+                    fiskeridir_vessel_id
+            ) q
+    ) [v.fiskeridir_vessel_id::TEXT]::TIMESTAMPTZ
+    AND v.report_timestamp < (
+        SELECT
+            HSTORE (
+                ARRAY_AGG(fiskeridir_vessel_id::TEXT),
+                ARRAY_AGG(arrival_timestamp::TEXT)
+            )
+        FROM
+            (
+                SELECT
+                    fiskeridir_vessel_id,
+                    MAX(arrival_timestamp) AS arrival_timestamp
+                FROM
+                    ers_arrivals a
                 WHERE
                     fiskeridir_vessel_id IS NOT NULL
                 GROUP BY

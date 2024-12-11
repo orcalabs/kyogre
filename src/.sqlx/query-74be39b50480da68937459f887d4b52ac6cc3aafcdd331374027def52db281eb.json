@@ -1,0 +1,20 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    COUNT(*) AS \"c!\"\nFROM\n    vessel_events v\n    INNER JOIN fiskeridir_vessels f ON v.fiskeridir_vessel_id = f.fiskeridir_vessel_id\n    LEFT JOIN trips t ON v.fiskeridir_vessel_id = t.fiskeridir_vessel_id\n    AND v.report_timestamp <@ t.landing_coverage\nWHERE\n    v.vessel_event_type_id = 1\n    AND v.trip_id IS NULL\n    AND f.preferred_trip_assembler = 2\n    -- Data before 2012 is highly unreliable, so don't include it\n    AND v.report_timestamp > '2012-01-01T00:00:00Z'\n    AND v.report_timestamp > (\n        SELECT\n            HSTORE (\n                ARRAY_AGG(fiskeridir_vessel_id::TEXT),\n                ARRAY_AGG(arrival_timestamp::TEXT)\n            )\n        FROM\n            (\n                SELECT\n                    fiskeridir_vessel_id,\n                    MIN(arrival_timestamp) AS arrival_timestamp\n                FROM\n                    ers_arrivals a\n                WHERE\n                    fiskeridir_vessel_id IS NOT NULL\n                    AND arrival_timestamp > (\n                        SELECT\n                            departure_timestamp\n                        FROM\n                            ers_departures d\n                        WHERE\n                            d.fiskeridir_vessel_id = a.fiskeridir_vessel_id\n                        ORDER BY\n                            departure_timestamp\n                        LIMIT\n                            1\n                        OFFSET\n                            1\n                    )\n                GROUP BY\n                    fiskeridir_vessel_id\n            ) q\n    ) [v.fiskeridir_vessel_id::TEXT]::TIMESTAMPTZ\n    AND v.report_timestamp < (\n        SELECT\n            HSTORE (\n                ARRAY_AGG(fiskeridir_vessel_id::TEXT),\n                ARRAY_AGG(arrival_timestamp::TEXT)\n            )\n        FROM\n            (\n                SELECT\n                    fiskeridir_vessel_id,\n                    MAX(arrival_timestamp) AS arrival_timestamp\n                FROM\n                    ers_arrivals a\n                WHERE\n                    fiskeridir_vessel_id IS NOT NULL\n                GROUP BY\n                    fiskeridir_vessel_id\n            ) q\n    ) [v.fiskeridir_vessel_id::TEXT]::TIMESTAMPTZ\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "c!",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "74be39b50480da68937459f887d4b52ac6cc3aafcdd331374027def52db281eb"
+}
