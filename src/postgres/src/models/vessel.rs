@@ -35,6 +35,22 @@ pub struct OrgBenchmarks {
     pub vessels: String,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct OrgBenchmarkEntry {
+    pub fiskeridir_vessel_id: FiskeridirVesselId,
+    pub fishing_time: i64,
+    pub trip_distance: f64,
+    pub trip_time: i64,
+    pub landing_total_living_weight: f64,
+    pub species: Vec<OrgBenchmarkSpecies>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct OrgBenchmarkSpecies {
+    pub species_group_id: SpeciesGroup,
+    pub landing_total_living_weight: f64,
+}
+
 #[derive(Debug, Clone, Deserialize)]
 pub struct VesselBenchmarks {
     pub fishing_time: Option<String>,
@@ -51,6 +67,42 @@ pub struct CumulativeLandings {
     pub species_fiskeridir_id: i32,
     pub weight: f64,
     pub cumulative_weight: f64,
+}
+
+impl From<OrgBenchmarkEntry> for kyogre_core::OrgBenchmarkEntry {
+    fn from(value: OrgBenchmarkEntry) -> Self {
+        let OrgBenchmarkEntry {
+            fiskeridir_vessel_id,
+            fishing_time,
+            trip_distance,
+            trip_time,
+            landing_total_living_weight,
+            species,
+        } = value;
+        Self {
+            fiskeridir_vessel_id,
+            fishing_time: fishing_time as u64,
+            trip_distance,
+            trip_time: trip_time as u64,
+            landing_total_living_weight,
+            species: species
+                .into_iter()
+                .map(kyogre_core::OrgBenchmarkSpecies::from)
+                .collect(),
+        }
+    }
+}
+impl From<OrgBenchmarkSpecies> for kyogre_core::OrgBenchmarkSpecies {
+    fn from(value: OrgBenchmarkSpecies) -> Self {
+        let OrgBenchmarkSpecies {
+            species_group_id,
+            landing_total_living_weight,
+        } = value;
+        Self {
+            species_group_id,
+            landing_total_living_weight,
+        }
+    }
 }
 
 impl TryFrom<CumulativeLandings> for kyogre_core::CumulativeLandings {
@@ -393,7 +445,10 @@ impl TryFrom<OrgBenchmarks> for kyogre_core::OrgBenchmarks {
             trip_distance,
             trip_time: trip_time as u64,
             landing_total_living_weight,
-            vessels: serde_json::from_str(&vessels)?,
+            vessels: serde_json::from_str::<Vec<OrgBenchmarkEntry>>(&vessels)?
+                .into_iter()
+                .map(kyogre_core::OrgBenchmarkEntry::from)
+                .collect(),
         })
     }
 }

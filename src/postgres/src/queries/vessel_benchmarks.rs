@@ -16,15 +16,25 @@ impl PostgresAdapter {
             OrgBenchmarks,
             r#"
 WITH
-    org AS (
+    trips AS (
         SELECT
-            of.org_id
+            f.fiskeridir_vessel_id,
+            f.org_id,
+            haul_duration,
+            distance,
+            trip_duration,
+            landing_total_living_weight,
+            landing_ids
         FROM
-            fiskeridir_ais_vessel_mapping_whitelist f
-            INNER JOIN orgs__fiskeridir_vessels of ON f.fiskeridir_vessel_id = of.fiskeridir_vessel_id
+            fiskeridir_ais_vessel_mapping_whitelist w
+            INNER JOIN orgs__fiskeridir_vessels of ON w.fiskeridir_vessel_id = of.fiskeridir_vessel_id
+            LEFT JOIN orgs__fiskeridir_vessels f ON f.org_id = of.org_id
+            LEFT JOIN trips_detailed t ON f.fiskeridir_vessel_id = t.fiskeridir_vessel_id
+            AND t.start_timestamp >= $1
+            AND t.stop_timestamp <= $2
         WHERE
-            f.call_sign = $1
-            AND of.org_id = $2
+            w.call_sign = $3
+            AND of.org_id = $4
     )
 SELECT
     COALESCE(
@@ -48,9 +58,9 @@ SELECT
     COALESCE(
         JSONB_AGG(
             JSONB_BUILD_OBJECT(
-                'fiskeridirVesselId',
+                'fiskeridir_vessel_id',
                 q.fiskeridir_vessel_id,
-                'fishingTime',
+                'fishing_time',
                 COALESCE(
                     EXTRACT(
                         'epoch'
@@ -59,9 +69,9 @@ SELECT
                     ),
                     0
                 )::BIGINT,
-                'tripDistance',
+                'trip_distance',
                 COALESCE(q.distance, 0.0)::DOUBLE PRECISION,
-                'tripTime',
+                'trip_time',
                 COALESCE(
                     EXTRACT(
                         'epoch'
@@ -70,8 +80,10 @@ SELECT
                     ),
                     0
                 )::BIGINT,
-                'landingTotalLivingWeight',
-                COALESCE(q.landing_total_living_weight, 0.0)::DOUBLE PRECISION
+                'landing_total_living_weight',
+                COALESCE(q.landing_total_living_weight, 0.0)::DOUBLE PRECISION,
+                'species',
+                COALESCE(q.species, '[]')::JSONB
             )
         ),
         '[]'
@@ -79,28 +91,50 @@ SELECT
 FROM
     (
         SELECT
-            f.fiskeridir_vessel_id,
-            MAX(o.org_id) AS org_id,
+            t.fiskeridir_vessel_id,
+            MAX(t.org_id) AS org_id,
             SUM(t.haul_duration) AS haul_duration,
             SUM(t.distance) AS distance,
             SUM(t.trip_duration) AS trip_duration,
-            SUM(t.landing_total_living_weight) AS landing_total_living_weight
+            SUM(t.landing_total_living_weight) AS landing_total_living_weight,
+            JSONB_AGG(
+                JSONB_BUILD_OBJECT(
+                    'species_group_id',
+                    q.species_group_id,
+                    'landing_total_living_weight',
+                    q.living_weight
+                )
+                ORDER BY
+                    q.species_group_id,
+                    q.living_weight
+            ) FILTER (
+                WHERE
+                    q.species_group_id IS NOT NULL
+            ) AS species
         FROM
-            org o
-            LEFT JOIN orgs__fiskeridir_vessels f ON f.org_id = o.org_id
-            LEFT JOIN trips_detailed t ON f.fiskeridir_vessel_id = t.fiskeridir_vessel_id
-            AND t.start_timestamp >= $3
-            AND t.stop_timestamp <= $4
+            trips t
+            LEFT JOIN (
+                SELECT
+                    l.species_group_id,
+                    t.fiskeridir_vessel_id,
+                    COALESCE(SUM(l.living_weight), 0.0)::DOUBLE PRECISION AS living_weight
+                FROM
+                    trips t
+                    INNER JOIN landing_entries l ON l.landing_id = ANY (t.landing_ids)
+                GROUP BY
+                    t.fiskeridir_vessel_id,
+                    l.species_group_id
+            ) q ON q.fiskeridir_vessel_id = t.fiskeridir_vessel_id
         GROUP BY
-            f.fiskeridir_vessel_id
+            t.fiskeridir_vessel_id
     ) q
 GROUP BY
     q.org_id
             "#,
-            query.call_sign.as_ref(),
-            query.org_id.into_inner(),
             query.start,
-            query.end
+            query.end,
+            query.call_sign.as_ref(),
+            query.org_id.into_inner()
         )
         .fetch_optional(&self.pool)
         .await?;
