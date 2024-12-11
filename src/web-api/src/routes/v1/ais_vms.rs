@@ -26,10 +26,13 @@ use crate::{
 #[derive(Debug, Deserialize, Serialize, IntoParams)]
 #[serde(rename_all = "camelCase")]
 pub struct AisVmsParameters {
+    /// The mmsi of the vessel, used to retrive AIS position data
     #[param(value_type = Option<i32>)]
     pub mmsi: Option<Mmsi>,
+    /// The call sign of the vessel, used to retrive VMS position data
     #[param(value_type = Option<String>)]
     pub call_sign: Option<CallSign>,
+    /// Trip to retrive the track for, all other filter parameters are ignored if provided
     #[param(value_type = Option<u64>)]
     pub trip_id: Option<TripId>,
     pub start: Option<DateTime<Utc>>,
@@ -46,6 +49,9 @@ pub struct AisVmsAreaParameters {
     pub date_limit: Option<NaiveDate>,
 }
 
+/// Returns the combined AIS/VMS track for the given vessel matching the given filter if any.
+/// If no time filter is provided the track of the last 24 hours are returned.
+/// AIS data for vessels under 15m are restricted to authenticated users with sufficient permissions.
 #[utoipa::path(
     get,
     path = "/ais_vms_positions",
@@ -117,6 +123,10 @@ pub async fn ais_vms_positions<T: Database + Send + Sync + 'static>(
     Ok(response)
 }
 
+/// Returns the combined AIS/VMS positions data for the given area.
+/// If no time filter is provided positions within the given area for the last 10 days are
+/// returned.
+/// AIS data for vessels under 15m are restricted to authenticated users with sufficient permissions.
 #[utoipa::path(
     get,
     path = "/ais_vms_area",
