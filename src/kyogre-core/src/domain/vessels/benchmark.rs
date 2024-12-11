@@ -1,6 +1,9 @@
 use chrono::{DateTime, Utc};
+use fiskeridir_rs::SpeciesGroup;
 use num_traits::Zero;
 use serde::{Deserialize, Serialize};
+use serde_with::serde_as;
+use serde_with::DisplayFromStr;
 
 use crate::*;
 
@@ -31,6 +34,17 @@ pub struct OrgBenchmarkEntry {
     pub trip_distance: f64,
     /// Unit is in seconds
     pub trip_time: u64,
+    /// Unit is in KG
+    pub landing_total_living_weight: f64,
+    pub species: Vec<OrgBenchmarkSpecies>,
+}
+
+#[serde_as]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
+pub struct OrgBenchmarkSpecies {
+    #[serde_as(as = "DisplayFromStr")]
+    pub species_group_id: SpeciesGroup,
     /// Unit is in KG
     pub landing_total_living_weight: f64,
 }

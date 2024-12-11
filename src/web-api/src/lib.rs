@@ -158,6 +158,7 @@ impl Meilisearch for meilisearch::MeilisearchAdapter<PostgresAdapter> {}
             kyogre_core::Weather,
             kyogre_core::OrgBenchmarks,
             kyogre_core::OrgBenchmarkEntry,
+            kyogre_core::OrgBenchmarkSpecies,
           )
     ),
     security(

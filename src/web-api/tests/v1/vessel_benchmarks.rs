@@ -3,7 +3,9 @@ use std::str::FromStr;
 use super::helper::test;
 use chrono::{Datelike, TimeZone, Utc};
 use engine::*;
-use fiskeridir_rs::{NonEmptyString, OrgId, RegisterVesselEntityType, RegisterVesselOwner};
+use fiskeridir_rs::{
+    NonEmptyString, OrgId, RegisterVesselEntityType, RegisterVesselOwner, SpeciesGroup,
+};
 use http_client::StatusCode;
 use kyogre_core::{Haul, OrgBenchmarks, TripDetailed};
 use web_api::routes::v1::{user::User, vessel::OrgBenchmarkParameters};
@@ -295,6 +297,63 @@ async fn test_vessel_org_benchmarks_returns_not_found_on_org_not_associated_with
     .await;
 }
 
+#[tokio::test]
+async fn test_vessel_org_benchmarks_sums_species_per_vessel() {
+    test(|mut helper, builder| async move {
+        let org_id = OrgId::test_new(1);
+        let state = builder
+            .vessels(2)
+            .modify(|v| {
+                v.fiskeridir.owners = vec![RegisterVesselOwner {
+                    city: None,
+                    entity_type: RegisterVesselEntityType::Company,
+                    id: Some(org_id),
+                    name: NonEmptyString::from_str("test").unwrap(),
+                    postal_code: 9000,
+                }];
+            })
+            .set_logged_in()
+            .trips(2)
+            .landings(8)
+            .modify_idx(|i, l| {
+                let species = if i % 2 == 0 {
+                    SpeciesGroup::Seabird
+                } else {
+                    SpeciesGroup::SharkFish
+                };
+                l.landing.product.species.group_code = species;
+                l.landing.product.living_weight = Some(50.0);
+            })
+            .build()
+            .await;
+
+        helper.app.login_user();
+        let benchmarks = helper
+            .app
+            .get_org_benchmarks(
+                org_id,
+                OrgBenchmarkParameters {
+                    start: state.trips.iter().map(|t| t.period.start()).min(),
+                    end: state.trips.iter().map(|t| t.period.end()).max(),
+                },
+            )
+            .await
+            .unwrap()
+            .unwrap();
+
+        assert_eq!(benchmarks.vessels.len(), 2);
+        for b in benchmarks.vessels {
+            assert_eq!(b.species.len(), 2);
+
+            assert_eq!(b.species[0].species_group_id, SpeciesGroup::SharkFish);
+            assert_eq!(b.species[0].landing_total_living_weight as u32, 100);
+
+            assert_eq!(b.species[1].species_group_id, SpeciesGroup::Seabird);
+            assert_eq!(b.species[1].landing_total_living_weight as u32, 100);
+        }
+    })
+    .await;
+}
 #[tokio::test]
 async fn test_vessel_org_benchmarks_works() {
     test(|mut helper, builder| async move {
