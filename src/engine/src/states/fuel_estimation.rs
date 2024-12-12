@@ -12,6 +12,8 @@ pub struct FuelEstimationState;
 #[cfg(not(feature = "test"))]
 static REQUIRED_TRIPS_TO_ESTIMATE_FUEL: u32 = 5;
 
+static FUEL_ESTIMATE_COMMITE_SIZE: usize = 50;
+
 #[async_trait]
 impl machine::State for FuelEstimationState {
     type SharedState = SharedState;
@@ -136,9 +138,9 @@ async fn process_vessel(
         )
         .await?;
 
-    let mut estimates = Vec::with_capacity(dates_to_estimate.len());
+    let mut estimates = Vec::with_capacity(FUEL_ESTIMATE_COMMITE_SIZE.min(dates_to_estimate.len()));
 
-    for d in dates_to_estimate {
+    for (i, d) in dates_to_estimate.into_iter().enumerate() {
         match process_day(&vessel, adapter, d).await {
             Ok(v) => estimates.push(v),
             Err(e) => {
@@ -146,9 +148,18 @@ async fn process_vessel(
                 continue;
             }
         }
+        if (i + 1) % FUEL_ESTIMATE_COMMITE_SIZE == 0 {
+            if let Err(e) = adapter.add_fuel_estimates(&estimates).await {
+                error!("failed to add fuel estimation: {e:?}");
+                continue;
+            }
+            estimates.clear();
+        }
     }
 
-    adapter.add_fuel_estimates(&estimates).await?;
+    if !estimates.is_empty() {
+        adapter.add_fuel_estimates(&estimates).await?;
+    }
 
     Ok(())
 }
