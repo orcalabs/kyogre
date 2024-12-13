@@ -607,6 +607,7 @@ async fn process_vessel(
             new_trip_events: trips.new_trip_events,
             prior_trip_events: trips.prior_trip_events,
             prior_trip_calculation_time: trips.prior_trip_calculation_time,
+            queued_reset: outcome.state == AssemblerState::QueuedReset,
         };
         for t in trips.trips {
             let mut unit = TripProcessingUnit {

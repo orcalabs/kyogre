@@ -7,7 +7,7 @@ use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use strum::EnumDiscriminants;
 
-#[derive(Debug, Clone, EnumDiscriminants)]
+#[derive(Debug, Clone, EnumDiscriminants, PartialEq, Eq)]
 pub enum AssemblerState {
     Conflict(TripAssemblerConflict),
     NoPriorState,
