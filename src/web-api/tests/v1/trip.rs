@@ -7,7 +7,10 @@ use fiskeridir_rs::{
 use http_client::StatusCode;
 use kyogre_core::{FiskeridirVesselId, Ordering, TripSorting, VesselEventType};
 use uuid::Uuid;
-use web_api::{error::ErrorDiscriminants, routes::v1::trip::TripsParameters};
+use web_api::{
+    error::ErrorDiscriminants,
+    routes::v1::{ais_vms::AisVmsParameters, trip::TripsParameters},
+};
 
 #[tokio::test]
 async fn test_tra_messages_on_trips_connects_to_receiver_and_sender_if_provided() {
@@ -1154,6 +1157,75 @@ async fn test_trips_with_track_returns_has_track_true() {
 
         assert_eq!(trips.len(), 1);
         assert!(trips[0].has_track);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_trips_are_reprocessed_if_extended() {
+    test(|helper, builder| async move {
+        let state = builder
+            .vessels(1)
+            .dep(1)
+            .por(1)
+            .new_cycle()
+            .ais_positions(10)
+            .por(1)
+            .build()
+            .await;
+
+        assert_eq!(state.trips.len(), 1);
+
+        let positions = helper
+            .app
+            .get_ais_vms_positions(AisVmsParameters {
+                mmsi: state.vessels[0].mmsi(),
+                call_sign: state.vessels[0].fiskeridir.call_sign.clone(),
+                trip_id: Some(state.trips[0].trip_id),
+                start: None,
+                end: None,
+            })
+            .await
+            .unwrap();
+
+        assert_eq!(positions.len(), 10);
+    })
+    .await;
+}
+#[tokio::test]
+async fn test_trips_ending_in_the_future_has_their_track_updated_on_each_run() {
+    test(|helper, builder| async move {
+        let now = Utc::now();
+        let start = now - Duration::hours(10);
+        let end = now + Duration::hours(10);
+
+        let state = builder
+            .vessels(1)
+            .trips(1)
+            .modify(|t| {
+                t.trip_specification.set_start(start);
+                t.trip_specification.set_end(end);
+            })
+            .new_cycle()
+            .ais_positions(10)
+            .build()
+            .await;
+
+        assert_eq!(state.trips.len(), 1);
+
+        let positions = helper
+            .app
+            .get_ais_vms_positions(AisVmsParameters {
+                mmsi: state.vessels[0].mmsi(),
+                call_sign: state.vessels[0].fiskeridir.call_sign.clone(),
+                trip_id: Some(state.trips[0].trip_id),
+                start: None,
+                end: None,
+            })
+            .await
+            .unwrap();
+
+        assert_eq!(positions.len(), 10);
     })
     .await;
 }
