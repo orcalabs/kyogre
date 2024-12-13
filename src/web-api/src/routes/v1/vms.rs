@@ -124,8 +124,8 @@ impl PartialEq<kyogre_core::VmsPosition> for VmsPosition {
         } = self;
 
         *course == other.course
-            && *lat == other.latitude
-            && *lon == other.longitude
+            && *lat as i32 == other.latitude as i32
+            && *lon as i32 == other.longitude as i32
             && *speed == other.speed
             && timestamp.timestamp() == other.timestamp.timestamp()
             && *distance_to_shore as i64 == other.distance_to_shore as i64
