@@ -1357,6 +1357,7 @@ VALUES
                 value.trip_assembler_id,
                 value.conflict_strategy,
                 calculation_timer,
+                value.queued_reset,
             )
             .await
         {
@@ -1381,6 +1382,7 @@ VALUES
         trip_assembler_id: TripAssemblerId,
         conflict_strategy: TripsConflictStrategy,
         new_trip_calculation_time: DateTime<Utc>,
+        queued_reset: bool,
     ) -> Result<()> {
         let earliest_trip_start = earliest_trip_period.start();
         let earliest_trip_end = earliest_trip_period.end();
@@ -1402,8 +1404,8 @@ VALUES
 ON CONFLICT (fiskeridir_vessel_id) DO
 UPDATE
 SET
-    timer = excluded.timer,
-    queued_reset = FALSE,
+    timer = EXCLUDED.timer,
+    queued_reset = COALESCE($4, EXCLUDED.queued_reset),
     "conflict" = NULL,
     conflict_vessel_event_type_id = NULL,
     conflict_vessel_event_id = NULL,
@@ -1412,6 +1414,10 @@ SET
             vessel_id.into_inner(),
             trip_assembler_id as i32,
             new_trip_calculation_time,
+            // We do not want to clear the 'queued_reset' flag if the trips were assembled without that
+            // information. This can occur if we manually queue a reset while the trip assembler is
+            // running.
+            queued_reset.then_some(false),
         )
         .execute(&mut *tx)
         .await?;

@@ -74,6 +74,7 @@ pub struct TripSet {
     pub trip_assembler_id: TripAssemblerId,
     pub values: Vec<TripProcessingUnit>,
     pub conflict: Option<TripAssemblerConflict>,
+    pub queued_reset: bool,
     pub new_trip_events: Vec<MinimalVesselEvent>,
     pub prior_trip_events: Vec<MinimalVesselEvent>,
     pub prior_trip_calculation_time: Option<DateTime<Utc>>,
@@ -395,7 +396,7 @@ pub struct TripCalculationTimer {
     pub conflict: Option<TripAssemblerConflict>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TripAssemblerConflict {
     pub timestamp: DateTime<Utc>,
     pub vessel_event_timestamp: DateTime<Utc>,
