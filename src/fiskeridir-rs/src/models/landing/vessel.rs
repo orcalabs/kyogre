@@ -11,12 +11,16 @@ use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use strum::{AsRefStr, Display, EnumCount, EnumIter, EnumString};
 
+#[cfg(feature = "oasgen")]
+use oasgen::OaSchema;
+
 use crate::{string_new_types::NonEmptyString, CallSign};
 
 #[derive(
     Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize, FromPrimitive,
 )]
 #[cfg_attr(feature = "sqlx", derive(sqlx::Type), sqlx(transparent))]
+#[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
 pub struct FiskeridirVesselId(i64);
 
 #[derive(Debug, Clone, PartialEq)]
@@ -63,7 +67,7 @@ pub struct Vessel {
     AsRefStr,
     EnumString,
 )]
-#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
+#[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
 #[cfg_attr(feature = "sqlx", derive(sqlx::Type))]
 pub enum VesselType {
     Unknown = 0,
@@ -117,7 +121,7 @@ impl From<VesselType> for i32 {
 }
 
 #[repr(i32)]
-#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
+#[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
 #[cfg_attr(feature = "sqlx", derive(sqlx::Type))]
 #[derive(
     Debug,

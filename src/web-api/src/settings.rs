@@ -41,7 +41,6 @@ pub struct ApiSettings {
 pub struct Auth0Settings {
     pub jwk_url: String,
     pub authorization_url: String,
-    pub client_id: String,
     pub audience: String,
 }
 

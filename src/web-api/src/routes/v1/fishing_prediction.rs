@@ -3,13 +3,13 @@ use chrono::{NaiveDate, Utc};
 use fiskeridir_rs::SpeciesGroup;
 use futures::TryStreamExt;
 use kyogre_core::{CatchLocationId, ModelId};
+use oasgen::{oasgen, OaSchema};
 use serde::{Deserialize, Serialize};
 use serde_qs::actix::QsQuery as Query;
 use serde_with::{serde_as, DisplayFromStr};
-use utoipa::{IntoParams, ToSchema};
 
 use crate::{
-    error::{ErrorResponse, Result},
+    error::Result,
     response::{Response, StreamResponse},
     stream_response, Database,
 };
@@ -17,13 +17,13 @@ use crate::{
 pub const MAX_FISHING_WEIGHT_PREDICTIONS: u32 = 20;
 pub const DEFAULT_FISHING_WEIGHT_PREDICTIONS: u32 = 5;
 
-#[derive(Default, Debug, Clone, Deserialize, Serialize, IntoParams)]
+#[derive(Default, Debug, Clone, Deserialize, Serialize, OaSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct FishingSpotPredictionParams {
     pub date: Option<NaiveDate>,
 }
 
-#[derive(Default, Debug, Clone, Deserialize, Serialize, IntoParams)]
+#[derive(Default, Debug, Clone, Deserialize, Serialize, OaSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct FishingWeightPredictionParams {
     pub date: Option<NaiveDate>,
@@ -31,7 +31,7 @@ pub struct FishingWeightPredictionParams {
 }
 
 #[serde_as]
-#[derive(Debug, Clone, Deserialize, Serialize, IntoParams)]
+#[derive(Debug, Clone, Deserialize, Serialize, OaSchema)]
 pub struct FishingPredictionsPath {
     #[serde_as(as = "DisplayFromStr")]
     pub model_id: ModelId,
@@ -40,24 +40,13 @@ pub struct FishingPredictionsPath {
 }
 
 #[serde_as]
-#[derive(Debug, Clone, Deserialize, Serialize, IntoParams)]
+#[derive(Debug, Clone, Deserialize, Serialize, OaSchema)]
 pub struct AllFishingPredictionsPath {
     #[serde_as(as = "DisplayFromStr")]
     pub model_id: ModelId,
 }
 
-#[utoipa::path(
-    get,
-    path = "/fishing_spot_predictions/{model_id}/{species_group_id}",
-    params(
-        FishingSpotPredictionParams,
-        FishingPredictionsPath,
-    ),
-    responses(
-        (status = 200, description = "fishing spot predictions for the requested filter", body = FishingSpotPrediction),
-        (status = 500, description = "an internal error occured", body = ErrorResponse),
-    )
-)]
+#[oasgen(skip(db), tags("FishingPrediction"))]
 #[tracing::instrument(skip(db))]
 pub async fn fishing_spot_predictions<T: Database + 'static>(
     db: web::Data<T>,
@@ -73,15 +62,7 @@ pub async fn fishing_spot_predictions<T: Database + 'static>(
     Ok(Response::new(predictions.map(FishingSpotPrediction::from)))
 }
 
-#[utoipa::path(
-    get,
-    path = "/fishing_spot_predictions/{model_id}",
-    params(AllFishingPredictionsPath),
-    responses(
-        (status = 200, description = "all fishing spot predictions", body = [FishingSpotPrediction]),
-        (status = 500, description = "an internal error occured", body = ErrorResponse),
-    )
-)]
+#[oasgen(skip(db), tags("FishingPrediction"))]
 #[tracing::instrument(skip(db))]
 pub async fn all_fishing_spot_predictions<T: Database + Send + Sync + 'static>(
     db: web::Data<T>,
@@ -93,18 +74,7 @@ pub async fn all_fishing_spot_predictions<T: Database + Send + Sync + 'static>(
     }
 }
 
-#[utoipa::path(
-    get,
-    path = "/fishing_weight_predictions/{model_id}/{species_group_id}",
-    params(
-        FishingWeightPredictionParams,
-        FishingPredictionsPath,
-    ),
-    responses(
-        (status = 200, description = "fishing weight predictions for the requested filter", body = [FishingWeightPrediction]),
-        (status = 500, description = "an internal error occured", body = ErrorResponse),
-    )
-)]
+#[oasgen(skip(db), tags("FishingPrediction"))]
 #[tracing::instrument(skip(db))]
 pub async fn fishing_weight_predictions<T: Database + Send + Sync + 'static>(
     db: web::Data<T>,
@@ -129,15 +99,7 @@ pub async fn fishing_weight_predictions<T: Database + Send + Sync + 'static>(
     }
 }
 
-#[utoipa::path(
-    get,
-    path = "/fishing_weight_predictions/{model_id}",
-    params(AllFishingPredictionsPath),
-    responses(
-        (status = 200, description = "all fishing weight predictions", body = [FishingWeightPrediction]),
-        (status = 500, description = "an internal error occured", body = ErrorResponse),
-    )
-)]
+#[oasgen(skip(db), tags("FishingPrediction"))]
 #[tracing::instrument(skip(db))]
 pub async fn all_fishing_weight_predictions<T: Database + Send + Sync + 'static>(
     db: web::Data<T>,
@@ -150,7 +112,7 @@ pub async fn all_fishing_weight_predictions<T: Database + Send + Sync + 'static>
 }
 
 #[serde_as]
-#[derive(Debug, Clone, Deserialize, Serialize, ToSchema)]
+#[derive(Debug, Clone, Deserialize, Serialize, OaSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct FishingSpotPrediction {
     pub latitude: f64,
@@ -161,10 +123,9 @@ pub struct FishingSpotPrediction {
 }
 
 #[serde_as]
-#[derive(Debug, Clone, Deserialize, Serialize, ToSchema)]
+#[derive(Debug, Clone, Deserialize, Serialize, OaSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct FishingWeightPrediction {
-    #[schema(value_type = String)]
     pub catch_location_id: CatchLocationId,
     pub weight: f64,
     #[serde_as(as = "DisplayFromStr")]

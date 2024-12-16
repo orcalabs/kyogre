@@ -1,50 +1,26 @@
 use fiskeridir_rs::{Gear, GearGroup, MainGearGroup};
+use oasgen::{oasgen, OaSchema};
 use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, DisplayFromStr};
 use strum::IntoEnumIterator;
-use utoipa::ToSchema;
 
-use crate::{
-    error::{ErrorResponse, Result},
-    response::Response,
-};
+use crate::{error::Result, response::Response};
 
-#[utoipa::path(
-    get,
-    path = "/gear",
-    responses(
-        (status = 200, description = "all gear types", body = [GearDetailed]),
-        (status = 500, description = "an internal error occured", body = ErrorResponse),
-    )
-)]
+#[oasgen(skip(db), tags("Gear"))]
 #[tracing::instrument]
 pub async fn gear() -> Result<Response<Vec<GearDetailed>>> {
     let gear: Vec<GearDetailed> = Gear::iter().map(GearDetailed::from).collect();
     Ok(Response::new(gear))
 }
 
-#[utoipa::path(
-    get,
-    path = "/gear_groups",
-    responses(
-        (status = 200, description = "all gear groups", body = [GearGroupDetailed]),
-        (status = 500, description = "an internal error occured", body = ErrorResponse),
-    )
-)]
+#[oasgen(skip(db), tags("Gear"))]
 #[tracing::instrument]
 pub async fn gear_groups() -> Result<Response<Vec<GearGroupDetailed>>> {
     let gear: Vec<GearGroupDetailed> = GearGroup::iter().map(GearGroupDetailed::from).collect();
     Ok(Response::new(gear))
 }
 
-#[utoipa::path(
-    get,
-    path = "/gear_main_groups",
-    responses(
-        (status = 200, description = "all main gear groups", body = [GearMainGroupDetailed]),
-        (status = 500, description = "an internal error occured", body = ErrorResponse),
-    )
-)]
+#[oasgen(skip(db), tags("Gear"))]
 #[tracing::instrument]
 pub async fn gear_main_groups() -> Result<Response<Vec<GearMainGroupDetailed>>> {
     let gear: Vec<GearMainGroupDetailed> = MainGearGroup::iter()
@@ -54,7 +30,7 @@ pub async fn gear_main_groups() -> Result<Response<Vec<GearMainGroupDetailed>>> 
 }
 
 #[serde_as]
-#[derive(Debug, Clone, Deserialize, Serialize, ToSchema, Ord, PartialOrd, PartialEq, Eq)]
+#[derive(Debug, Clone, Deserialize, Serialize, OaSchema, Ord, PartialOrd, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct GearDetailed {
     #[serde_as(as = "DisplayFromStr")]
@@ -63,7 +39,7 @@ pub struct GearDetailed {
 }
 
 #[serde_as]
-#[derive(Debug, Clone, Deserialize, Serialize, ToSchema, Ord, PartialOrd, PartialEq, Eq)]
+#[derive(Debug, Clone, Deserialize, Serialize, OaSchema, Ord, PartialOrd, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct GearGroupDetailed {
     #[serde_as(as = "DisplayFromStr")]
@@ -72,7 +48,7 @@ pub struct GearGroupDetailed {
 }
 
 #[serde_as]
-#[derive(Debug, Clone, Deserialize, Serialize, ToSchema, Ord, PartialOrd, PartialEq, Eq)]
+#[derive(Debug, Clone, Deserialize, Serialize, OaSchema, Ord, PartialOrd, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct GearMainGroupDetailed {
     #[serde_as(as = "DisplayFromStr")]

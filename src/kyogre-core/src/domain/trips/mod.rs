@@ -6,6 +6,9 @@ use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use std::fmt::{self, Display};
 
+#[cfg(feature = "oasgen")]
+use oasgen::OaSchema;
+
 mod assembler;
 mod benchmark;
 mod distancer;
@@ -19,6 +22,7 @@ use strum::{AsRefStr, Display, EnumString};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize)]
 #[cfg_attr(feature = "sqlx", derive(sqlx::Type), sqlx(transparent))]
+#[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
 pub struct TripId(i64);
 
 #[derive(Debug, Clone, PartialEq)]
@@ -217,7 +221,7 @@ pub enum TripsConflictStrategy {
     EnumString,
 )]
 #[cfg_attr(feature = "sqlx", derive(sqlx::Type))]
-#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
+#[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
 pub enum TripAssemblerId {
     Landings = 1,
     Ers = 2,

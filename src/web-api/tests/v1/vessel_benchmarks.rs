@@ -7,7 +7,7 @@ use fiskeridir_rs::{
     NonEmptyString, OrgId, RegisterVesselEntityType, RegisterVesselOwner, SpeciesGroup,
 };
 use http_client::StatusCode;
-use kyogre_core::{Haul, OrgBenchmarks, TripDetailed};
+use kyogre_core::{Haul, Month, OrgBenchmarks, TripDetailed};
 use web_api::routes::v1::{user::User, vessel::OrgBenchmarkParameters};
 
 #[tokio::test]
@@ -64,18 +64,9 @@ async fn test_vessel_benchmarks_returns_correct_cumulative_landings() {
         assert_eq!(benchmarks.cumulative_landings[1].species_fiskeridir_id, 200);
         assert_eq!(benchmarks.cumulative_landings[2].species_fiskeridir_id, 201);
 
-        assert_eq!(
-            benchmarks.cumulative_landings[0].month,
-            chrono::Month::February
-        );
-        assert_eq!(
-            benchmarks.cumulative_landings[1].month,
-            chrono::Month::March
-        );
-        assert_eq!(
-            benchmarks.cumulative_landings[2].month,
-            chrono::Month::March
-        );
+        assert_eq!(benchmarks.cumulative_landings[0].month, Month::February);
+        assert_eq!(benchmarks.cumulative_landings[1].month, Month::March);
+        assert_eq!(benchmarks.cumulative_landings[2].month, Month::March);
 
         assert_eq!(benchmarks.cumulative_landings[0].weight as i32, 200);
         assert_eq!(benchmarks.cumulative_landings[1].weight as i32, 5000);

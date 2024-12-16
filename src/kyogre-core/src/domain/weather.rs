@@ -2,6 +2,9 @@ use chrono::{DateTime, NaiveDate, Utc};
 use geo::geometry::Polygon;
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "oasgen")]
+use oasgen::OaSchema;
+
 use crate::{CatchLocationId, HaulId, HaulOceanClimate, HaulWeatherStatus};
 
 static MAX_WIND_SPEED_10M: f64 = 1000.0;
@@ -154,7 +157,7 @@ pub struct NewWeather {
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
-#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
+#[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
 pub struct Weather {
     pub timestamp: DateTime<Utc>,
     pub latitude: f64,
@@ -168,12 +171,12 @@ pub struct Weather {
     pub precipitation_amount: Option<f64>,
     pub land_area_fraction: f64,
     pub cloud_area_fraction: Option<f64>,
-    #[cfg_attr(feature = "utoipa", schema(value_type = i32))]
     pub weather_location_id: WeatherLocationId,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize)]
 #[cfg_attr(feature = "sqlx", derive(sqlx::Type), sqlx(transparent))]
+#[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
 pub struct WeatherLocationId(i32);
 
 #[derive(Debug, Clone)]

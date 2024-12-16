@@ -1,10 +1,10 @@
 use actix_web::web;
 use fiskeridir_rs::DeliveryPointId;
 use futures::TryStreamExt;
+use oasgen::{oasgen, OaSchema};
 use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
 
-use crate::{error::ErrorResponse, response::StreamResponse, stream_response, Database};
+use crate::{response::StreamResponse, stream_response, Database};
 
 /// Returns all known delivery points.
 /// Delivery points originates from the following sources:
@@ -12,14 +12,7 @@ use crate::{error::ErrorResponse, response::StreamResponse, stream_response, Dat
 /// - Aqua culture register from Fiskeridirektoratet
 /// - Mattilsynet approval lists
 /// - Manual entries
-#[utoipa::path(
-    get,
-    path = "/delivery_points",
-    responses(
-        (status = 200, description = "all delivery points", body = [DeliveryPoint]),
-        (status = 500, description = "an internal error occured", body = ErrorResponse),
-    )
-)]
+#[oasgen(skip(db), tags("DeliveryPoint"))]
 #[tracing::instrument(skip(db))]
 pub async fn delivery_points<T: Database + Send + Sync + 'static>(
     db: web::Data<T>,
@@ -29,10 +22,9 @@ pub async fn delivery_points<T: Database + Send + Sync + 'static>(
     }
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
+#[derive(Debug, Clone, Deserialize, Serialize, OaSchema, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct DeliveryPoint {
-    #[schema(value_type = String)]
     pub id: DeliveryPointId,
     pub name: Option<String>,
     pub address: Option<String>,

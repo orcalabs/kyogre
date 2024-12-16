@@ -8,10 +8,8 @@ use fiskeridir_rs::{
     VesselType,
 };
 use kyogre_core::{
-    chrono_error::UnknownMonthSnafu, AisVessel, FiskeridirVessel, FiskeridirVesselId, Mmsi,
-    TripAssemblerId, VesselSource,
+    AisVessel, FiskeridirVessel, FiskeridirVesselId, Mmsi, Month, TripAssemblerId, VesselSource,
 };
-use num_traits::FromPrimitive;
 use serde::Deserialize;
 use unnest_insert::UnnestInsert;
 
@@ -63,7 +61,7 @@ pub struct VesselBenchmarks {
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct CumulativeLandings {
-    pub month: i32,
+    pub month: Month,
     pub species_fiskeridir_id: i32,
     pub weight: f64,
     pub cumulative_weight: f64,
@@ -105,10 +103,8 @@ impl From<OrgBenchmarkSpecies> for kyogre_core::OrgBenchmarkSpecies {
     }
 }
 
-impl TryFrom<CumulativeLandings> for kyogre_core::CumulativeLandings {
-    type Error = Error;
-
-    fn try_from(value: CumulativeLandings) -> Result<Self, Self::Error> {
+impl From<CumulativeLandings> for kyogre_core::CumulativeLandings {
+    fn from(value: CumulativeLandings) -> Self {
         let CumulativeLandings {
             month,
             species_fiskeridir_id,
@@ -116,13 +112,12 @@ impl TryFrom<CumulativeLandings> for kyogre_core::CumulativeLandings {
             cumulative_weight,
         } = value;
 
-        Ok(kyogre_core::CumulativeLandings {
-            month: chrono::Month::from_i32(month)
-                .ok_or_else(|| UnknownMonthSnafu { month }.build())?,
+        Self {
+            month,
             species_fiskeridir_id: species_fiskeridir_id as u32,
             weight,
             cumulative_weight,
-        })
+        }
     }
 }
 
@@ -142,8 +137,8 @@ impl TryFrom<VesselBenchmarks> for kyogre_core::VesselBenchmarks {
         let cumulative_landings =
             serde_json::from_str::<Vec<CumulativeLandings>>(&cumulative_landings)?
                 .into_iter()
-                .map(kyogre_core::CumulativeLandings::try_from)
-                .collect::<Result<Vec<kyogre_core::CumulativeLandings>, _>>()?;
+                .map(From::from)
+                .collect();
 
         Ok(kyogre_core::VesselBenchmarks {
             fishing_time: fishing_time.map(|v| serde_json::from_str(&v)).transpose()?,

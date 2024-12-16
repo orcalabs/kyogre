@@ -1,4 +1,4 @@
-use std::{pin::Pin, task::Poll};
+use std::{any::TypeId, pin::Pin, task::Poll};
 
 use actix_web::{
     body::BoxBody, http::header::ContentType, web::Bytes, HttpRequest, HttpResponse, Responder,
@@ -6,6 +6,7 @@ use actix_web::{
 use chrono::{DateTime, Duration, Utc};
 use futures::{stream, Stream};
 use kyogre_core::CoreResult;
+use oasgen::{OaSchema, ObjectType, RefOr, Schema, SchemaData, SchemaKind, Type};
 use pin_project_lite::pin_project;
 use serde::Serialize;
 use tokio::sync::mpsc::Receiver;
@@ -27,6 +28,30 @@ pub struct StreamResponse<T> {
 impl<T> StreamResponse<T> {
     pub fn new(rx: Receiver<CoreResult<T>>) -> Self {
         Self { rx }
+    }
+}
+
+impl<T: OaSchema + 'static> OaSchema for StreamResponse<T> {
+    fn schema_ref() -> oasgen::ReferenceOr<Schema> {
+        if TypeId::of::<T>() == TypeId::of::<()>() {
+            RefOr::Item(Schema {
+                data: SchemaData::default(),
+                kind: SchemaKind::Type(Type::Object(ObjectType::default())),
+            })
+        } else {
+            Vec::<T>::schema_ref()
+        }
+    }
+
+    fn schema() -> Schema {
+        if TypeId::of::<T>() == TypeId::of::<()>() {
+            Schema {
+                data: SchemaData::default(),
+                kind: SchemaKind::Type(Type::Object(ObjectType::default())),
+            }
+        } else {
+            Vec::<T>::schema()
+        }
     }
 }
 

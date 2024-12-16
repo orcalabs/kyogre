@@ -17,7 +17,7 @@ pub struct HaulWeight {
     pub weight: f64,
 }
 
-#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
+#[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
 #[derive(
     Debug,
     Copy,
@@ -74,7 +74,7 @@ pub fn haul_date_feature_matrix_index(ts: &DateTime<Utc>) -> usize {
 }
 
 #[cfg_attr(feature = "sqlx", derive(sqlx::Type))]
-#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
+#[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
 #[derive(
     Default, Debug, Clone, Copy, Deserialize, Serialize, strum::Display, AsRefStr, EnumString,
 )]

@@ -1,4 +1,4 @@
-use std::{collections::HashMap, pin::Pin};
+use std::{collections::HashMap, ops::Deref, pin::Pin};
 
 use actix_web::{
     http::header::ToStrError,
@@ -9,6 +9,10 @@ use fiskeridir_rs::CallSign;
 use futures::Future;
 use http_client::{HttpClient, StatusCode};
 use kyogre_core::{AisPermission, BarentswatchUserId};
+use oasgen::{
+    HeaderStyle, OaParameter, OaSchema, Parameter, ParameterData, ParameterKind,
+    ParameterSchemaOrContent, RefOr,
+};
 use serde::{Deserialize, Serialize};
 use snafu::{location, ResultExt};
 use strum::EnumIter;
@@ -63,6 +67,44 @@ pub struct BwProfile {
     pub roles: Vec<BwRole>,
 }
 
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OptionBwProfile(Option<BwProfile>);
+
+impl OaParameter for BwProfile {
+    fn parameters() -> Vec<RefOr<Parameter>> {
+        vec![RefOr::Item(Parameter {
+            data: ParameterData {
+                name: "bw-token".into(),
+                description: None,
+                required: true,
+                deprecated: None,
+                format: ParameterSchemaOrContent::Schema(String::schema_ref()),
+                example: None,
+                examples: Default::default(),
+                explode: None,
+                extensions: Default::default(),
+            },
+            kind: ParameterKind::Header {
+                style: HeaderStyle::Simple,
+            },
+        })]
+    }
+}
+
+impl OaParameter for OptionBwProfile {
+    fn parameters() -> Vec<RefOr<Parameter>> {
+        BwProfile::parameters()
+            .into_iter()
+            .flat_map(|v| v.into_item())
+            .map(|mut v| {
+                v.required = false;
+                RefOr::Item(v)
+            })
+            .collect()
+    }
+}
+
 impl From<BwProfile> for AisPermission {
     fn from(value: BwProfile) -> Self {
         let ais_policy = value.policies.iter().any(|v| *v == BwPolicy::BwAisFiskinfo);
@@ -110,6 +152,20 @@ impl FromRequest for BwProfile {
                 .await
                 .inspect_err(|e| warn!("failed to extract barentswatch profile: {e:?}"))
         })
+    }
+}
+
+impl FromRequest for OptionBwProfile {
+    type Error = Error;
+
+    type Future = Pin<Box<dyn Future<Output = Result<Self>>>>;
+
+    fn from_request(
+        req: &actix_web::HttpRequest,
+        payload: &mut actix_web::dev::Payload,
+    ) -> Self::Future {
+        let fut = BwProfile::from_request(req, payload);
+        Box::pin(async move { Ok(Self(fut.await.ok())) })
     }
 }
 
@@ -161,5 +217,19 @@ impl BwProfile {
             .as_ref()
             .map(|v| &v.ircs)
             .ok_or_else(|| MissingBwFiskInfoProfileSnafu.build())
+    }
+}
+
+impl OptionBwProfile {
+    pub fn into_inner(self) -> Option<BwProfile> {
+        self.0
+    }
+}
+
+impl Deref for OptionBwProfile {
+    type Target = Option<BwProfile>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }

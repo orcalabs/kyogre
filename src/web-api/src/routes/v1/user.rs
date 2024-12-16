@@ -1,23 +1,11 @@
 use actix_web::web;
 use kyogre_core::{BarentswatchUserId, FiskeridirVesselId};
+use oasgen::{oasgen, OaSchema};
 use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
 
-use crate::{
-    error::{ErrorResponse, Result},
-    extractors::BwProfile,
-    response::Response,
-    Database,
-};
+use crate::{error::Result, extractors::BwProfile, response::Response, Database};
 
-#[utoipa::path(
-    get,
-    path = "/user",
-    responses(
-        (status = 200, description = "user information", body = User),
-        (status = 500, description = "an internal error occured", body = ErrorResponse),
-    )
-)]
+#[oasgen(skip(db), tags("User"))]
 #[tracing::instrument(skip(db))]
 pub async fn get_user<T: Database + 'static>(
     db: web::Data<T>,
@@ -28,19 +16,7 @@ pub async fn get_user<T: Database + 'static>(
     ))
 }
 
-#[utoipa::path(
-    put,
-    path = "/user",
-    request_body(
-        content = User,
-        content_type = "application/json",
-        description = "updated user information",
-    ),
-    responses(
-        (status = 200, description = "update successfull"),
-        (status = 500, description = "an internal error occured", body = ErrorResponse),
-    )
-)]
+#[oasgen(skip(db), tags("User"))]
 #[tracing::instrument(skip(db))]
 pub async fn update_user<T: Database + 'static>(
     db: web::Data<T>,
@@ -52,10 +28,9 @@ pub async fn update_user<T: Database + 'static>(
     Ok(Response::new(()))
 }
 
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize, ToSchema)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize, OaSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct User {
-    #[schema(value_type = Vec<i64>)]
     pub following: Vec<FiskeridirVesselId>,
 }
 

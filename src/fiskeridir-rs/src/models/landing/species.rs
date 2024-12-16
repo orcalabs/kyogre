@@ -5,7 +5,7 @@ use strum::{AsRefStr, Display, EnumCount, EnumIter, EnumString};
 
 #[allow(missing_docs)]
 #[repr(i32)]
-#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
+#[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
 #[cfg_attr(feature = "sqlx", derive(sqlx::Type))]
 #[derive(
     Debug,
@@ -62,7 +62,7 @@ impl SpeciesMainGroup {
 
 #[allow(missing_docs)]
 #[repr(i32)]
-#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
+#[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
 #[cfg_attr(feature = "sqlx", derive(sqlx::Type))]
 #[derive(
     Debug,

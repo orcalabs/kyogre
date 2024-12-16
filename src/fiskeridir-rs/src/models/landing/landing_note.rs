@@ -633,7 +633,7 @@ pub struct Finances {
     AsRefStr,
     EnumString,
 )]
-#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
+#[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
 #[cfg_attr(feature = "sqlx", derive(sqlx::Type))]
 pub enum LandingMonth {
     January = 1,
@@ -668,7 +668,7 @@ pub enum LandingMonth {
     AsRefStr,
     EnumString,
 )]
-#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
+#[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
 #[cfg_attr(feature = "sqlx", derive(sqlx::Type))]
 pub enum SalesTeam {
     FiskehavSA = 2,
@@ -727,7 +727,7 @@ impl SalesTeam {
     AsRefStr,
     EnumString,
 )]
-#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
+#[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
 #[cfg_attr(feature = "sqlx", derive(sqlx::Type))]
 pub enum Quota {
     Unknown = 0,
@@ -791,7 +791,7 @@ impl Quota {
     AsRefStr,
     EnumString,
 )]
-#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
+#[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
 #[cfg_attr(feature = "sqlx", derive(sqlx::Type))]
 pub enum DocumentType {
     /// Represents a sale of fish and is only generated at the time of sale.

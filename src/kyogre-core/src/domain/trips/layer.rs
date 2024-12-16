@@ -12,7 +12,7 @@ pub trait TripPositionLayer: Send + Sync {
 }
 
 #[cfg_attr(feature = "sqlx", derive(sqlx::Type))]
-#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
+#[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
 #[derive(
     Debug,
     Copy,

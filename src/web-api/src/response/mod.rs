@@ -1,12 +1,14 @@
+use std::any::TypeId;
+
 use actix_web::{body::BoxBody, HttpRequest, HttpResponse, Responder};
+use oasgen::{OaSchema, ObjectType, RefOr, Schema, SchemaData, SchemaKind, Type};
 use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
 
 mod stream;
 
 pub use stream::*;
 
-#[derive(Debug, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Response<T> {
     pub body: T,
 }
@@ -14,6 +16,54 @@ pub struct Response<T> {
 pub enum ResponseOrStream<T> {
     Response(Response<Vec<T>>),
     Stream(StreamResponse<T>),
+}
+
+impl<T: OaSchema + 'static> OaSchema for Response<T> {
+    fn schema_ref() -> oasgen::ReferenceOr<Schema> {
+        if TypeId::of::<T>() == TypeId::of::<()>() {
+            RefOr::Item(Schema {
+                data: SchemaData::default(),
+                kind: SchemaKind::Type(Type::Object(ObjectType::default())),
+            })
+        } else {
+            T::schema_ref()
+        }
+    }
+
+    fn schema() -> Schema {
+        if TypeId::of::<T>() == TypeId::of::<()>() {
+            Schema {
+                data: SchemaData::default(),
+                kind: SchemaKind::Type(Type::Object(ObjectType::default())),
+            }
+        } else {
+            T::schema()
+        }
+    }
+}
+
+impl<T: OaSchema + 'static> OaSchema for ResponseOrStream<T> {
+    fn schema_ref() -> oasgen::ReferenceOr<Schema> {
+        if TypeId::of::<T>() == TypeId::of::<()>() {
+            RefOr::Item(Schema {
+                data: SchemaData::default(),
+                kind: SchemaKind::Type(Type::Object(ObjectType::default())),
+            })
+        } else {
+            Vec::<T>::schema_ref()
+        }
+    }
+
+    fn schema() -> Schema {
+        if TypeId::of::<T>() == TypeId::of::<()>() {
+            Schema {
+                data: SchemaData::default(),
+                kind: SchemaKind::Type(Type::Object(ObjectType::default())),
+            }
+        } else {
+            Vec::<T>::schema()
+        }
+    }
 }
 
 impl<T> Response<T> {

@@ -1,7 +1,6 @@
 use fiskeridir_rs::{LandingIdError, ParseStringError};
 use kyogre_core::{
-    ActiveVesselConflict, CatchLocationIdError, ChronoError, DateRangeError, IsTimeout,
-    MatrixIndexError,
+    ActiveVesselConflict, CatchLocationIdError, DateRangeError, IsTimeout, MatrixIndexError,
 };
 use snafu::{Location, Snafu};
 use sqlx::migrate::MigrateError;
@@ -80,7 +79,6 @@ pub enum Error {
             CatchLocationIdError,
             DateRangeError,
             LandingIdError,
-            ChronoError,
             fiskeridir_rs::Error,
             WktConversionError,
             MatrixIndexError

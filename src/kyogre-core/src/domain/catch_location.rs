@@ -101,6 +101,9 @@ impl TryFrom<String> for CatchLocationId {
     }
 }
 
+#[cfg(feature = "oasgen")]
+oasgen::impl_oa_schema!(CatchLocationId, oasgen::Schema::new_string());
+
 impl<'de> Deserialize<'de> for CatchLocationId {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where

@@ -7,39 +7,36 @@ use kyogre_core::{
     AisPermission, AisPosition, AisVmsParams, DateRange, Mmsi, NavigationStatus, TripId,
     TripPositionLayerId, VmsPosition,
 };
+use oasgen::{oasgen, OaSchema};
 use serde::{Deserialize, Serialize};
 use serde_qs::actix::QsQuery as Query;
 use serde_with::{serde_as, skip_serializing_none, DisplayFromStr};
 use snafu::ResultExt;
-use utoipa::{IntoParams, ToSchema};
 
 use crate::{
     error::{
         error::{InvalidDateRangeSnafu, MissingDateRangeSnafu, MissingMmsiOrCallSignOrTripIdSnafu},
-        ErrorResponse, Result,
+        Result,
     },
-    extractors::{Auth0Profile, BwProfile},
+    extractors::{OptionAuth0Profile, OptionBwProfile},
     response::{ais_unfold, Response, StreamResponse},
     stream_response, Database,
 };
 
-#[derive(Debug, Deserialize, Serialize, IntoParams)]
+#[derive(Default, Debug, Deserialize, Serialize, OaSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct AisVmsParameters {
     /// The mmsi of the vessel, used to retrive AIS position data
-    #[param(value_type = Option<i32>)]
     pub mmsi: Option<Mmsi>,
     /// The call sign of the vessel, used to retrive VMS position data
-    #[param(value_type = Option<String>)]
     pub call_sign: Option<CallSign>,
     /// Trip to retrive the track for, all other filter parameters are ignored if provided
-    #[param(value_type = Option<u64>)]
     pub trip_id: Option<TripId>,
     pub start: Option<DateTime<Utc>>,
     pub end: Option<DateTime<Utc>>,
 }
 
-#[derive(Debug, Deserialize, Serialize, IntoParams)]
+#[derive(Debug, Deserialize, Serialize, OaSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct AisVmsAreaParameters {
     pub x1: f64,
@@ -52,26 +49,13 @@ pub struct AisVmsAreaParameters {
 /// Returns the combined AIS/VMS track for the given vessel matching the given filter if any.
 /// If no time filter is provided the track of the last 24 hours are returned.
 /// AIS data for vessels under 15m are restricted to authenticated users with sufficient permissions.
-#[utoipa::path(
-    get,
-    path = "/ais_vms_positions",
-    params(AisVmsParameters),
-    security(
-        (),
-        ("auth0" = ["read:ais:under_15m"]),
-    ),
-    responses(
-        (status = 200, description = "ais and vms positions for the given mmsi/call_sign or trip_id", body = [AisVmsPosition]),
-        (status = 500, description = "an internal error occured", body = ErrorResponse),
-        (status = 400, description = "invalid parameters were provided", body = ErrorResponse),
-    )
-)]
+#[oasgen(skip(db), tags("AisVms"))]
 #[tracing::instrument(skip(db))]
 pub async fn ais_vms_positions<T: Database + Send + Sync + 'static>(
     db: web::Data<T>,
     params: Query<AisVmsParameters>,
-    bw_profile: Option<BwProfile>,
-    auth: Option<Auth0Profile>,
+    bw_profile: OptionBwProfile,
+    auth: OptionAuth0Profile,
 ) -> Result<StreamResponse<AisVmsPosition>> {
     let params = params.into_inner();
     if params.mmsi.is_none() && params.call_sign.is_none() && params.trip_id.is_none() {
@@ -105,8 +89,14 @@ pub async fn ais_vms_positions<T: Database + Send + Sync + 'static>(
     };
     let params = params?;
 
-    let bw_policy = bw_profile.map(AisPermission::from).unwrap_or_default();
-    let auth0_policy = auth.map(AisPermission::from).unwrap_or_default();
+    let bw_policy = bw_profile
+        .into_inner()
+        .map(AisPermission::from)
+        .unwrap_or_default();
+    let auth0_policy = auth
+        .into_inner()
+        .map(AisPermission::from)
+        .unwrap_or_default();
     let policy = if bw_policy == AisPermission::All || auth0_policy == AisPermission::All {
         AisPermission::All
     } else {
@@ -127,18 +117,7 @@ pub async fn ais_vms_positions<T: Database + Send + Sync + 'static>(
 /// If no time filter is provided positions within the given area for the last 10 days are
 /// returned.
 /// AIS data for vessels under 15m are restricted to authenticated users with sufficient permissions.
-#[utoipa::path(
-    get,
-    path = "/ais_vms_area",
-    params(
-        AisVmsAreaParameters,
-    ),
-    responses(
-        (status = 200, description = "ais and vms data within the given interval and area", body = AisVmsArea),
-        (status = 500, description = "an internal error occured", body = ErrorResponse),
-        (status = 400, description = "invalid parameters were provided", body = ErrorResponse),
-    )
-)]
+#[oasgen(skip(db), tags("AisVms"))]
 #[tracing::instrument(skip(db))]
 pub async fn ais_vms_area<T: Database + 'static>(
     db: web::Data<T>,
@@ -160,14 +139,14 @@ pub async fn ais_vms_area<T: Database + 'static>(
     Ok(Response::new(area.into()))
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize, ToSchema)]
+#[derive(Debug, Clone, Deserialize, Serialize, OaSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct AisVmsArea {
     pub num_vessels: u32,
     pub counts: Vec<AisVmsAreaCount>,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize, ToSchema)]
+#[derive(Debug, Clone, Deserialize, Serialize, OaSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct AisVmsAreaCount {
     pub lat: f64,
@@ -177,7 +156,7 @@ pub struct AisVmsAreaCount {
 
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Deserialize, Serialize, ToSchema)]
+#[derive(Debug, Clone, Deserialize, Serialize, OaSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct AisVmsPosition {
     pub lat: f64,
@@ -194,7 +173,7 @@ pub struct AisVmsPosition {
 
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Deserialize, Serialize, ToSchema)]
+#[derive(Debug, Clone, Deserialize, Serialize, OaSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct AisVmsPositionDetails {
     #[serde_as(as = "Option<DisplayFromStr>")]
