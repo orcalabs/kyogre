@@ -3,25 +3,25 @@ use chrono::{DateTime, Duration, NaiveDate, Utc};
 use fiskeridir_rs::CallSign;
 use futures::TryStreamExt;
 use kyogre_core::{BarentswatchUserId, FuelMeasurementsQuery, FuelQuery};
+use oasgen::{oasgen, OaSchema};
 use serde::{Deserialize, Serialize};
 use serde_qs::actix::QsQuery as Query;
-use utoipa::{IntoParams, ToSchema};
 
 use crate::{
-    error::{error::MissingDateRangeSnafu, ErrorResponse, Result},
+    error::{error::MissingDateRangeSnafu, Result},
     extractors::BwProfile,
     response::{Response, StreamResponse},
     stream_response, Database,
 };
 
-#[derive(Default, Debug, Clone, Deserialize, Serialize, IntoParams)]
+#[derive(Default, Debug, Clone, Deserialize, Serialize, OaSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct FuelMeasurementsParams {
     pub start_date: Option<DateTime<Utc>>,
     pub end_date: Option<DateTime<Utc>>,
 }
 
-#[derive(Default, Debug, Clone, Deserialize, Serialize, IntoParams)]
+#[derive(Default, Debug, Clone, Deserialize, Serialize, OaSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct FuelParams {
     pub start_date: Option<NaiveDate>,
@@ -31,15 +31,7 @@ pub struct FuelParams {
 /// Returns a fuel consumption estimate for the given date range for the vessel associated with the
 /// authenticated user, if no date range is given the last 30 days
 /// are returned.
-#[utoipa::path(
-    get,
-    path = "/fuel",
-    params(FuelParams),
-    responses(
-        (status = 200, description = "fuel estimates for the given date range", body = f64),
-        (status = 500, description = "an internal error occured", body = ErrorResponse),
-    )
-)]
+#[oasgen(skip(db), tags("Fuel"))]
 #[tracing::instrument(skip(db))]
 pub async fn get_fuel<T: Database + Send + Sync + 'static>(
     db: web::Data<T>,
@@ -52,15 +44,7 @@ pub async fn get_fuel<T: Database + Send + Sync + 'static>(
     Ok(Response::new(db.fuel_estimation(&query).await?))
 }
 
-#[utoipa::path(
-    get,
-    path = "/fuel_measurements",
-    params(FuelMeasurementsParams),
-    responses(
-        (status = 200, description = "fuel measurements", body = [FuelMeasurement]),
-        (status = 500, description = "an internal error occured", body = ErrorResponse),
-    )
-)]
+#[oasgen(skip(db), tags("Fuel"))]
 #[tracing::instrument(skip(db))]
 pub async fn get_fuel_measurements<T: Database + Send + Sync + 'static>(
     db: web::Data<T>,
@@ -78,19 +62,7 @@ pub async fn get_fuel_measurements<T: Database + Send + Sync + 'static>(
     Ok(response)
 }
 
-#[utoipa::path(
-    post,
-    path = "/fuel_measurements",
-    request_body(
-        content = [FuelMeasurementBody],
-        content_type = "application/json",
-        description = "fuel measurements",
-    ),
-    responses(
-        (status = 200, description = "create successfull"),
-        (status = 500, description = "an internal error occured", body = ErrorResponse),
-    )
-)]
+#[oasgen(skip(db), tags("Fuel"))]
 #[tracing::instrument(skip(db))]
 pub async fn create_fuel_measurements<T: Database + 'static>(
     db: web::Data<T>,
@@ -110,19 +82,7 @@ pub async fn create_fuel_measurements<T: Database + 'static>(
     Ok(Response::new(()))
 }
 
-#[utoipa::path(
-    put,
-    path = "/fuel_measurements",
-    request_body(
-        content = [FuelMeasurementBody],
-        content_type = "application/json",
-        description = "updated fuel measurements",
-    ),
-    responses(
-        (status = 200, description = "update successfull"),
-        (status = 500, description = "an internal error occured", body = ErrorResponse),
-    )
-)]
+#[oasgen(skip(db), tags("Fuel"))]
 #[tracing::instrument(skip(db))]
 pub async fn update_fuel_measurements<T: Database + 'static>(
     db: web::Data<T>,
@@ -142,19 +102,7 @@ pub async fn update_fuel_measurements<T: Database + 'static>(
     Ok(Response::new(()))
 }
 
-#[utoipa::path(
-    delete,
-    path = "/fuel_measurements",
-    request_body(
-        content = [DeleteFuelMeasurement],
-        content_type = "application/json",
-        description = "fuel measurements to delete",
-    ),
-    responses(
-        (status = 200, description = "delete successfull"),
-        (status = 500, description = "an internal error occured", body = ErrorResponse),
-    )
-)]
+#[oasgen(skip(db), tags("Fuel"))]
 #[tracing::instrument(skip(db))]
 pub async fn delete_fuel_measurements<T: Database + 'static>(
     db: web::Data<T>,
@@ -174,25 +122,23 @@ pub async fn delete_fuel_measurements<T: Database + 'static>(
     Ok(Response::new(()))
 }
 
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize, ToSchema)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize, OaSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct FuelMeasurement {
-    #[schema(value_type = Uuid)]
     pub barentswatch_user_id: BarentswatchUserId,
-    #[schema(value_type = String)]
     pub call_sign: CallSign,
     pub timestamp: DateTime<Utc>,
     pub fuel: f64,
 }
 
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize, ToSchema)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize, OaSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct FuelMeasurementBody {
     pub timestamp: DateTime<Utc>,
     pub fuel: f64,
 }
 
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize, ToSchema)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize, OaSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct DeleteFuelMeasurement {
     pub timestamp: DateTime<Utc>,

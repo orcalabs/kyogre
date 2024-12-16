@@ -1,11 +1,15 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+#[cfg(feature = "oasgen")]
+use oasgen::OaSchema;
+
 use crate::FiskeridirVesselId;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize)]
 #[serde(transparent)]
 #[cfg_attr(feature = "sqlx", derive(sqlx::Type), sqlx(transparent))]
+#[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
 pub struct BarentswatchUserId(Uuid);
 
 #[derive(Debug, Clone)]

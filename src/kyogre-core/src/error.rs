@@ -147,17 +147,6 @@ pub enum DateRangeError {
 
 #[derive(Snafu, StackError)]
 #[snafu(module, visibility(pub))]
-pub enum ChronoError {
-    #[snafu(display("unknown month '{month}'"))]
-    UnknownMonth {
-        #[snafu(implicit)]
-        location: Location,
-        month: i32,
-    },
-}
-
-#[derive(Snafu, StackError)]
-#[snafu(module, visibility(pub))]
 pub enum BuyerLocationError {
     #[snafu(display("Buyer location contained more than 1 approval numbers: {num}"))]
     TooManyApprovalNumbers {

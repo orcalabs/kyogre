@@ -8,9 +8,13 @@ use crate::{
 use jurisdiction::Jurisdiction;
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "oasgen")]
+use oasgen::OaSchema;
+
 /// NewType wrapper for delivery point ids, enforces that delivery point ids cannot contain
 /// '_', '-', ' ' or be empty.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Ord, PartialOrd)]
+#[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
 pub struct DeliveryPointId(PrunedString);
 
 impl DeliveryPointId {

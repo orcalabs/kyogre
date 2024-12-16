@@ -6,76 +6,67 @@ use kyogre_core::{
     ActiveHaulsFilter, CatchLocationId, FiskeridirVesselId, HaulId, HaulsMatrixQuery, HaulsQuery,
     HaulsSorting, Ordering,
 };
+use oasgen::{oasgen, OaSchema};
 use serde::{Deserialize, Serialize};
 use serde_qs::actix::QsQuery as Query;
 use serde_with::{serde_as, DisplayFromStr};
 use tracing::error;
-use utoipa::{IntoParams, ToSchema};
 
 use crate::{
-    error::{ErrorResponse, Result},
+    error::Result,
     response::{Response, ResponseOrStream, StreamResponse},
     routes::utils::*,
     stream_response, Cache, Database, Meilisearch,
 };
 
 #[serde_as]
-#[derive(Default, Debug, Clone, Deserialize, Serialize, IntoParams)]
+#[derive(Default, Debug, Clone, Deserialize, Serialize, OaSchema)]
 #[serde(default, rename_all = "camelCase")]
 pub struct HaulsParams {
-    #[param(rename = "months[]")]
-    pub months: Vec<DateTime<Utc>>,
-    #[param(rename = "catchLocations[]", value_type = Option<Vec<String>>)]
-    pub catch_locations: Vec<CatchLocationId>,
-    #[param(rename = "gearGroupIds[]", value_type = Option<Vec<GearGroup>>)]
-    #[serde_as(as = "Vec<DisplayFromStr>")]
-    pub gear_group_ids: Vec<GearGroup>,
-    #[param(rename = "speciesGroupIds[]", value_type = Option<Vec<SpeciesGroup>>)]
-    #[serde_as(as = "Vec<DisplayFromStr>")]
-    pub species_group_ids: Vec<SpeciesGroup>,
-    #[param(rename = "vesselLengthGroups[]", value_type = Option<Vec<VesselLengthGroup>>)]
-    #[serde_as(as = "Vec<DisplayFromStr>")]
-    pub vessel_length_groups: Vec<VesselLengthGroup>,
-    #[param(rename = "fiskeridirVesselIds[]", value_type = Option<Vec<i64>>)]
-    pub fiskeridir_vessel_ids: Vec<FiskeridirVesselId>,
+    #[oasgen(rename = "months[]")]
+    pub months: Option<Vec<DateTime<Utc>>>,
+    #[oasgen(rename = "catchLocations[]")]
+    pub catch_locations: Option<Vec<CatchLocationId>>,
+    #[oasgen(rename = "gearGroupIds[]")]
+    #[serde_as(as = "Option<Vec<DisplayFromStr>>")]
+    pub gear_group_ids: Option<Vec<GearGroup>>,
+    #[oasgen(rename = "speciesGroupIds[]")]
+    #[serde_as(as = "Option<Vec<DisplayFromStr>>")]
+    pub species_group_ids: Option<Vec<SpeciesGroup>>,
+    #[oasgen(rename = "vesselLengthGroups[]")]
+    #[serde_as(as = "Option<Vec<DisplayFromStr>>")]
+    pub vessel_length_groups: Option<Vec<VesselLengthGroup>>,
+    #[oasgen(rename = "fiskeridirVesselIds[]")]
+    pub fiskeridir_vessel_ids: Option<Vec<FiskeridirVesselId>>,
     pub sorting: Option<HaulsSorting>,
     pub ordering: Option<Ordering>,
 }
 
 #[serde_as]
-#[derive(Default, Debug, Clone, Deserialize, Serialize, IntoParams)]
+#[derive(Default, Debug, Clone, Deserialize, Serialize, OaSchema)]
 #[serde(default, rename_all = "camelCase")]
 pub struct HaulsMatrixParams {
-    #[param(rename = "months[]")]
-    pub months: Vec<u32>,
-    #[param(rename = "catchLocations[]", value_type = Option<Vec<String>>)]
-    pub catch_locations: Vec<CatchLocationId>,
-    #[param(rename = "gearGroupIds[]", value_type = Option<Vec<GearGroup>>)]
-    #[serde_as(as = "Vec<DisplayFromStr>")]
-    pub gear_group_ids: Vec<GearGroup>,
-    #[param(rename = "speciesGroupIds[]", value_type = Option<Vec<SpeciesGroup>>)]
-    #[serde_as(as = "Vec<DisplayFromStr>")]
-    pub species_group_ids: Vec<SpeciesGroup>,
-    #[param(rename = "vesselLengthGroups[]", value_type = Option<Vec<VesselLengthGroup>>)]
-    #[serde_as(as = "Vec<DisplayFromStr>")]
-    pub vessel_length_groups: Vec<VesselLengthGroup>,
-    #[param(rename = "fiskeridirVesselIds[]", value_type = Option<Vec<i64>>)]
-    pub fiskeridir_vessel_ids: Vec<FiskeridirVesselId>,
+    #[oasgen(rename = "months[]")]
+    pub months: Option<Vec<u32>>,
+    #[oasgen(rename = "catchLocations[]")]
+    pub catch_locations: Option<Vec<CatchLocationId>>,
+    #[oasgen(rename = "gearGroupIds[]")]
+    #[serde_as(as = "Option<Vec<DisplayFromStr>>")]
+    pub gear_group_ids: Option<Vec<GearGroup>>,
+    #[oasgen(rename = "speciesGroupIds[]")]
+    #[serde_as(as = "Option<Vec<DisplayFromStr>>")]
+    pub species_group_ids: Option<Vec<SpeciesGroup>>,
+    #[oasgen(rename = "vesselLengthGroups[]")]
+    #[serde_as(as = "Option<Vec<DisplayFromStr>>")]
+    pub vessel_length_groups: Option<Vec<VesselLengthGroup>>,
+    #[oasgen(rename = "fiskeridirVesselIds[]")]
+    pub fiskeridir_vessel_ids: Option<Vec<FiskeridirVesselId>>,
     pub bycatch_percentage: Option<f64>,
     pub majority_species_group: Option<bool>,
 }
 
 /// Returns all hauls matching the provided parameters.
-#[utoipa::path(
-    get,
-    path = "/hauls",
-    params(HaulsParams),
-    responses(
-        (status = 200, description = "all hauls", body = [Haul]),
-        (status = 400, description = "the provided parameters were invalid"),
-        (status = 500, description = "an internal error occured", body = ErrorResponse),
-    )
-)]
+#[oasgen(skip(db, meilisearch), tags("Haul"))]
 #[tracing::instrument(skip(db, meilisearch))]
 pub async fn hauls<T: Database + Send + Sync + 'static, M: Meilisearch + 'static>(
     db: web::Data<T>,
@@ -103,26 +94,14 @@ pub async fn hauls<T: Database + Send + Sync + 'static, M: Meilisearch + 'static
 }
 
 #[serde_as]
-#[derive(Debug, Deserialize, IntoParams)]
+#[derive(Debug, Deserialize, OaSchema)]
 pub struct HaulsMatrixPath {
     #[serde_as(as = "DisplayFromStr")]
     pub active_filter: ActiveHaulsFilter,
 }
 
 /// Returns an aggregated matrix view of haul living weights.
-#[utoipa::path(
-    get,
-    path = "/hauls_matrix/{active_filter}",
-    params(
-        HaulsMatrixParams,
-        HaulsMatrixPath,
-    ),
-    responses(
-        (status = 200, description = "an aggregated matrix view of haul living weights", body = HaulsMatrix),
-        (status = 400, description = "the provided parameters were invalid"),
-        (status = 500, description = "an internal error occured", body = ErrorResponse),
-    )
-)]
+#[oasgen(skip(db, cache), tags("Haul"))]
 #[tracing::instrument(skip(db, cache))]
 pub async fn hauls_matrix<T: Database + 'static, S: Cache>(
     db: web::Data<T>,
@@ -146,36 +125,30 @@ pub async fn hauls_matrix<T: Database + 'static, S: Cache>(
 }
 
 #[serde_as]
-#[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
+#[derive(Debug, Clone, Deserialize, Serialize, OaSchema, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct Haul {
-    #[schema(value_type = i64)]
     pub haul_id: HaulId,
     pub haul_distance: Option<i32>,
-    #[schema(value_type = Option<Vec<String>>, example = "[05-24,01-01]")]
     pub catch_locations: Option<Vec<CatchLocationId>>,
     pub start_latitude: f64,
     pub start_longitude: f64,
     pub stop_latitude: f64,
     pub stop_longitude: f64,
-    #[schema(value_type = String, example = "2023-02-24T11:08:20.409416682Z")]
     pub start_timestamp: DateTime<Utc>,
-    #[schema(value_type = String, example = "2023-02-24T11:08:20.409416682Z")]
     pub stop_timestamp: DateTime<Utc>,
     #[serde_as(as = "DisplayFromStr")]
     pub gear_group_id: GearGroup,
     #[serde_as(as = "DisplayFromStr")]
     pub gear: Gear,
     pub catches: Vec<HaulCatch>,
-    #[schema(value_type = Option<i64>)]
     pub fiskeridir_vessel_id: Option<FiskeridirVesselId>,
     pub vessel_name: Option<String>,
-    #[schema(value_type = String)]
     pub call_sign: CallSign,
 }
 
 #[serde_as]
-#[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
+#[derive(Debug, Clone, Deserialize, Serialize, OaSchema, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct HaulCatch {
     pub living_weight: i32,
@@ -184,7 +157,7 @@ pub struct HaulCatch {
     pub species_group_id: SpeciesGroup,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq, Eq)]
+#[derive(Debug, Clone, Deserialize, Serialize, OaSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct HaulsMatrix {
     pub dates: Vec<u64>,
@@ -194,7 +167,7 @@ pub struct HaulsMatrix {
 }
 
 #[serde_as]
-#[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
+#[derive(Debug, Clone, Deserialize, Serialize, OaSchema, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct WhaleCatch {
     pub blubber_measure_a: Option<i32>,
@@ -209,7 +182,7 @@ pub struct WhaleCatch {
     pub length: Option<i32>,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
+#[derive(Debug, Clone, Deserialize, Serialize, OaSchema, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct HaulWeather {
     pub wind_speed_10m: Option<f64>,
@@ -221,7 +194,7 @@ pub struct HaulWeather {
     pub cloud_area_fraction: Option<f64>,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
+#[derive(Debug, Clone, Deserialize, Serialize, OaSchema, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct HaulOceanClimate {
     pub water_speed: Option<f64>,
@@ -412,12 +385,12 @@ impl From<HaulsParams> for HaulsQuery {
         } = v;
 
         Self {
-            ranges: months_to_date_ranges(months),
-            catch_locations,
-            gear_group_ids,
-            species_group_ids,
-            vessel_length_groups,
-            vessel_ids: fiskeridir_vessel_ids,
+            ranges: months_to_date_ranges(months.unwrap_or_default()),
+            catch_locations: catch_locations.unwrap_or_default(),
+            gear_group_ids: gear_group_ids.unwrap_or_default(),
+            species_group_ids: species_group_ids.unwrap_or_default(),
+            vessel_length_groups: vessel_length_groups.unwrap_or_default(),
+            vessel_ids: fiskeridir_vessel_ids.unwrap_or_default(),
             sorting,
             ordering,
         }
@@ -440,13 +413,13 @@ pub fn matrix_params_to_query(
     } = params;
 
     HaulsMatrixQuery {
-        months,
-        catch_locations,
-        gear_group_ids,
-        species_group_ids,
-        vessel_length_groups,
+        months: months.unwrap_or_default(),
+        catch_locations: catch_locations.unwrap_or_default(),
+        gear_group_ids: gear_group_ids.unwrap_or_default(),
+        species_group_ids: species_group_ids.unwrap_or_default(),
+        vessel_length_groups: vessel_length_groups.unwrap_or_default(),
         active_filter,
-        vessel_ids: fiskeridir_vessel_ids,
+        vessel_ids: fiskeridir_vessel_ids.unwrap_or_default(),
         bycatch_percentage,
         majority_species_group: majority_species_group.unwrap_or(false),
     }
@@ -474,7 +447,7 @@ mod tests {
         let res2: DateTime<Utc> = "2002-09-1T00:00:00Z".parse().unwrap();
 
         let params = HaulsParams {
-            months: vec![month1, month2, month3, month4, month5, month6],
+            months: Some(vec![month1, month2, month3, month4, month5, month6]),
             ..Default::default()
         };
 

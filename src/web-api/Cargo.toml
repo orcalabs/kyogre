@@ -10,7 +10,7 @@ authors = ["<contact@orcalabs.no>"]
 all-tests = []
 
 [dependencies]
-kyogre-core = { path = "../kyogre-core", features = ["utoipa"] }
+kyogre-core = { path = "../kyogre-core", features = ["oasgen"] }
 postgres = { path = "../postgres" }
 duckdb-rs = { path = "../duckdb-rs" }
 meilisearch = { path = "../meilisearch" }
@@ -25,7 +25,6 @@ orca-core = { workspace = true, features = ["actix-telemetry", "telemetry"] }
 serde = { workspace = true }
 serde_json = { workspace = true }
 config = { workspace = true }
-utoipa = { workspace = true, features = ["actix_extras", "chrono", "uuid"] }
 chrono = { workspace = true }
 tokio = { workspace = true }
 tracing = { workspace = true }
@@ -37,10 +36,10 @@ serde_with = { workspace = true }
 uuid = { workspace = true }
 async-trait = { workspace = true }
 tokio-stream = { workspace = true }
+oasgen = { workspace = true, features = ["actix", "swagger-ui", "serde_qs"] }
 
 actix-web = "4.9.0"
 actix-cors = "0.7.0"
-utoipa-swagger-ui = { version = "8.0", features = ["actix-web"] }
 jsonwebtoken = "9.3.0"
 serde_qs = { version = "0.13.0", features = ["actix4"] }
 pin-project-lite = "0.2.15"

@@ -2,36 +2,35 @@ use actix_web::web::{self, Path};
 use chrono::{DateTime, Duration, Utc};
 use futures::TryStreamExt;
 use kyogre_core::{AisPermission, DateRange, Mmsi, NavigationStatus};
+use oasgen::{oasgen, OaSchema};
 use serde::{Deserialize, Serialize};
 use serde_qs::actix::QsQuery as Query;
 use serde_with::{serde_as, DisplayFromStr};
 use snafu::ResultExt;
-use utoipa::{IntoParams, ToSchema};
 
 use crate::{
     error::{
         error::{InvalidDateRangeSnafu, MissingDateRangeSnafu},
-        ErrorResponse, Result,
+        Result,
     },
-    extractors::{Auth0Profile, BwProfile},
+    extractors::{OptionAuth0Profile, OptionBwProfile},
     response::{ais_unfold, StreamResponse},
     stream_response, Database,
 };
 
-#[derive(Debug, Deserialize, Serialize, IntoParams)]
+#[derive(Default, Debug, Deserialize, Serialize, OaSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct AisTrackParameters {
     pub start: Option<DateTime<Utc>>,
     pub end: Option<DateTime<Utc>>,
 }
 
-#[derive(Debug, Deserialize, IntoParams)]
+#[derive(Debug, Deserialize, OaSchema)]
 pub struct AisTrackPath {
-    #[param(value_type = i32)]
     pub mmsi: Mmsi,
 }
 
-#[derive(Debug, Deserialize, Serialize, IntoParams)]
+#[derive(Default, Debug, Deserialize, Serialize, OaSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct AisCurrentPositionParameters {
     /// Filters out positions that are older than this limit.
@@ -40,31 +39,22 @@ pub struct AisCurrentPositionParameters {
 
 /// Returns all current AIS positions of vessels.
 /// AIS data for vessels under 15m are restricted to authenticated users with sufficient permissions.
-#[utoipa::path(
-    get,
-    path = "/ais_current_positions",
-    params(
-        AisCurrentPositionParameters,
-    ),
-    security(
-        (),
-        ("auth0" = ["read:ais:under_15m"]),
-    ),
-    responses(
-        (status = 200, description = "all current ais positions", body = [AisPosition]),
-        (status = 500, description = "an internal error occured", body = ErrorResponse),
-        (status = 400, description = "invalid parameters were provided", body = ErrorResponse),
-    )
-)]
+#[oasgen(skip(db), tags("Ais"))]
 #[tracing::instrument(skip(db))]
 pub async fn ais_current_positions<T: Database + Send + Sync + 'static>(
     db: web::Data<T>,
     params: Query<AisCurrentPositionParameters>,
-    bw_profile: Option<BwProfile>,
-    auth: Option<Auth0Profile>,
+    bw_profile: OptionBwProfile,
+    auth: OptionAuth0Profile,
 ) -> StreamResponse<AisPosition> {
-    let bw_policy = bw_profile.map(AisPermission::from).unwrap_or_default();
-    let auth0_policy = auth.map(AisPermission::from).unwrap_or_default();
+    let bw_policy = bw_profile
+        .into_inner()
+        .map(AisPermission::from)
+        .unwrap_or_default();
+    let auth0_policy = auth
+        .into_inner()
+        .map(AisPermission::from)
+        .unwrap_or_default();
     let policy = if bw_policy == AisPermission::All || auth0_policy == AisPermission::All {
         AisPermission::All
     } else {
@@ -82,30 +72,14 @@ pub async fn ais_current_positions<T: Database + Send + Sync + 'static>(
 /// Returns the AIS track for the given vessel matching the given filter if any.
 /// If no time filter is provided the track of the last 24 hours are returned.
 /// AIS data for vessels under 15m are restricted to authenticated users with sufficient permissions.
-#[utoipa::path(
-    get,
-    path = "/ais_track/{mmsi}",
-    params(
-        AisTrackParameters,
-        AisTrackPath,
-    ),
-    security(
-        (),
-        ("auth0" = ["read:ais:under_15m"]),
-    ),
-    responses(
-        (status = 200, description = "ais positions for the given mmsi", body = [AisPosition]),
-        (status = 500, description = "an internal error occured", body = ErrorResponse),
-        (status = 400, description = "invalid parameters were provided", body = ErrorResponse),
-    )
-)]
+#[oasgen(skip(db), tags("Ais"))]
 #[tracing::instrument(skip(db))]
 pub async fn ais_track<T: Database + Send + Sync + 'static>(
     db: web::Data<T>,
     params: Query<AisTrackParameters>,
     path: Path<AisTrackPath>,
-    bw_profile: Option<BwProfile>,
-    auth: Option<Auth0Profile>,
+    bw_profile: OptionBwProfile,
+    auth: OptionAuth0Profile,
 ) -> Result<StreamResponse<AisPosition>> {
     let (start, end) = match (params.start, params.end) {
         (None, None) => {
@@ -121,8 +95,14 @@ pub async fn ais_track<T: Database + Send + Sync + 'static>(
         .fail(),
     }?;
 
-    let bw_policy = bw_profile.map(AisPermission::from).unwrap_or_default();
-    let auth0_policy = auth.map(AisPermission::from).unwrap_or_default();
+    let bw_policy = bw_profile
+        .into_inner()
+        .map(AisPermission::from)
+        .unwrap_or_default();
+    let auth0_policy = auth
+        .into_inner()
+        .map(AisPermission::from)
+        .unwrap_or_default();
     let policy = if bw_policy == AisPermission::All || auth0_policy == AisPermission::All {
         AisPermission::All
     } else {
@@ -141,7 +121,7 @@ pub async fn ais_track<T: Database + Send + Sync + 'static>(
     Ok(response)
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize, ToSchema)]
+#[derive(Debug, Clone, Deserialize, Serialize, OaSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct AisPosition {
     pub lat: f64,
@@ -152,7 +132,7 @@ pub struct AisPosition {
 }
 
 #[serde_as]
-#[derive(Debug, Clone, Deserialize, Serialize, ToSchema)]
+#[derive(Debug, Clone, Deserialize, Serialize, OaSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct AisPositionDetails {
     #[serde_as(as = "Option<DisplayFromStr>")]

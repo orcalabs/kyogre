@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 orca-core = { version = "0.33.1", registry = "orcalabs-orcastrator" }
-fiskeridir-rs = { path = "../fiskeridir-rs/", features = ["utoipa", "sqlx"] }
+fiskeridir-rs = { path = "../fiskeridir-rs/", features = ["oasgen", "sqlx"] }
 tokio = "1.34.0"
 kyogre-core = { path = "../kyogre-core" }
 postgres = { path = "../postgres" }

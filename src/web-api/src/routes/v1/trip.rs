@@ -1,89 +1,80 @@
 use actix_web::web::{self, Path};
 use chrono::{DateTime, Utc};
-use fiskeridir_rs::{Gear, GearGroup, LandingId};
+use fiskeridir_rs::{Gear, GearGroup, LandingId, Quality, SpeciesGroup, VesselLengthGroup};
 use futures::TryStreamExt;
 use kyogre_core::{
     FiskeridirVesselId, HaulId, Ordering, Pagination, Tra, TripAssemblerId, TripId, TripSorting,
     Trips, TripsQuery, VesselEventType,
 };
+use oasgen::{oasgen, OaSchema};
 use serde::{Deserialize, Serialize};
 use serde_qs::actix::QsQuery as Query;
 use serde_with::{serde_as, DisplayFromStr};
 use tracing::error;
-use utoipa::{IntoParams, ToSchema};
+
 use v1::haul::Haul;
 
 use super::fishing_facility::FishingFacility;
 use crate::{
-    error::{error::StartAfterEndSnafu, ErrorResponse, Result},
-    extractors::{BwPolicy, BwProfile},
+    error::{error::StartAfterEndSnafu, Result},
+    extractors::{BwPolicy, OptionBwProfile},
     response::{Response, ResponseOrStream, StreamResponse},
     stream_response, *,
 };
 
 #[serde_as]
-#[derive(Default, Debug, Deserialize, Serialize, IntoParams)]
+#[derive(Default, Debug, Deserialize, Serialize, OaSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct TripsParameters {
     pub limit: Option<u64>,
     pub offset: Option<u64>,
     pub ordering: Option<Ordering>,
-    #[param(rename = "deliveryPoints[]", value_type = Option<Vec<String>>)]
+    #[oasgen(rename = "deliveryPoints[]")]
     pub delivery_points: Option<Vec<String>>,
     pub start_date: Option<DateTime<Utc>>,
     pub end_date: Option<DateTime<Utc>>,
     pub min_weight: Option<f64>,
     pub max_weight: Option<f64>,
     pub sorting: Option<TripSorting>,
-    #[param(rename = "gearGroupIds[]", value_type = Option<Vec<String>>)]
+    #[oasgen(rename = "gearGroupIds[]")]
     #[serde_as(as = "Option<Vec<DisplayFromStr>>")]
     pub gear_group_ids: Option<Vec<GearGroup>>,
-    #[param(rename = "speciesGroupIds[]", value_type = Option<Vec<String>>)]
+    #[oasgen(rename = "speciesGroupIds[]")]
     #[serde_as(as = "Option<Vec<DisplayFromStr>>")]
     pub species_group_ids: Option<Vec<SpeciesGroup>>,
-    #[param(rename = "vesselLengthGroups[]", value_type = Option<Vec<String>>)]
+    #[oasgen(rename = "vesselLengthGroups[]")]
     #[serde_as(as = "Option<Vec<DisplayFromStr>>")]
     pub vessel_length_groups: Option<Vec<VesselLengthGroup>>,
-    #[param(rename = "fiskeridirVesselIds[]", value_type = Option<Vec<i64>>)]
+    #[oasgen(rename = "fiskeridirVesselIds[]")]
     pub fiskeridir_vessel_ids: Option<Vec<FiskeridirVesselId>>,
 }
 
-#[derive(Debug, Deserialize, IntoParams)]
+#[derive(Debug, Deserialize, OaSchema)]
 pub struct TripOfHaulPath {
-    #[param(value_type = i64)]
     pub haul_id: HaulId,
 }
 
-#[derive(Debug, Deserialize, IntoParams)]
+#[derive(Debug, Deserialize, OaSchema)]
 pub struct TripOfLandingPath {
-    #[param(value_type = String)]
     pub landing_id: LandingId,
 }
 
-#[derive(Debug, Deserialize, IntoParams)]
+#[derive(Debug, Deserialize, OaSchema)]
 pub struct CurrentTripPath {
-    #[param(value_type = i64)]
     pub fiskeridir_vessel_id: FiskeridirVesselId,
 }
 
 /// Returns the trip associated with the given haul.
-#[utoipa::path(
-    get,
-    path = "/trip_of_haul/{haul_id}",
-    params(TripOfHaulPath),
-    responses(
-        (status = 200, description = "trip associated with the given haul_id", body = Trip),
-        (status = 500, description = "an internal error occured", body = ErrorResponse),
-    )
-)]
+#[oasgen(skip(db, meilisearch), tags("Trip"))]
 #[tracing::instrument(skip(db, meilisearch))]
 pub async fn trip_of_haul<T: Database + 'static, M: Meilisearch + 'static>(
     db: web::Data<T>,
     meilisearch: web::Data<Option<M>>,
-    profile: Option<BwProfile>,
+    profile: OptionBwProfile,
     path: Path<TripOfHaulPath>,
 ) -> Result<Response<Option<Trip>>> {
     let read_fishing_facility = profile
+        .into_inner()
         .map(|p| {
             p.policies
                 .contains(&BwPolicy::BwReadExtendedFishingFacility)
@@ -110,23 +101,16 @@ pub async fn trip_of_haul<T: Database + 'static, M: Meilisearch + 'static>(
 }
 
 /// Returns the trip associated with the given landing.
-#[utoipa::path(
-    get,
-    path = "/trip_of_landing/{landing_id}",
-    params(TripOfLandingPath),
-    responses(
-        (status = 200, description = "trip associated with the given landing_id", body = Trip),
-        (status = 500, description = "an internal error occured", body = ErrorResponse),
-    )
-)]
+#[oasgen(skip(db, meilisearch), tags("Trip"))]
 #[tracing::instrument(skip(db, meilisearch))]
 pub async fn trip_of_landing<T: Database + 'static, M: Meilisearch + 'static>(
     db: web::Data<T>,
     meilisearch: web::Data<Option<M>>,
-    profile: Option<BwProfile>,
+    profile: OptionBwProfile,
     path: Path<TripOfLandingPath>,
 ) -> Result<Response<Option<Trip>>> {
     let read_fishing_facility = profile
+        .into_inner()
         .map(|p| {
             p.policies
                 .contains(&BwPolicy::BwReadExtendedFishingFacility)
@@ -155,23 +139,16 @@ pub async fn trip_of_landing<T: Database + 'static, M: Meilisearch + 'static>(
 /// Returns all trips matching the provided parameters.
 /// All vessels below 15m have significantly reduced trip data quality as they do not report
 /// ERS POR and DEP messages.
-#[utoipa::path(
-    get,
-    path = "/trips",
-    params(TripsParameters),
-    responses(
-        (status = 200, description = "trips matching the given parameters", body = [Trip]),
-        (status = 500, description = "an internal error occured", body = ErrorResponse),
-    )
-)]
+#[oasgen(skip(db, meilisearch), tags("Trip"))]
 #[tracing::instrument(skip(db, meilisearch))]
 pub async fn trips<T: Database + Send + Sync + 'static, M: Meilisearch + 'static>(
     db: web::Data<T>,
     meilisearch: web::Data<Option<M>>,
-    profile: Option<BwProfile>,
+    profile: OptionBwProfile,
     params: Query<TripsParameters>,
 ) -> Result<ResponseOrStream<Trip>> {
     let read_fishing_facility = profile
+        .into_inner()
         .map(|p| {
             p.policies
                 .contains(&BwPolicy::BwReadExtendedFishingFacility)
@@ -213,22 +190,15 @@ pub async fn trips<T: Database + Send + Sync + 'static, M: Meilisearch + 'static
 
 /// Returns the current trip of the given vessel, which is determined by the vessel's last reported DEP message.
 /// All vessels below 15m will not have a current trip as they do not report DEP messages.
-#[utoipa::path(
-    get,
-    path = "/trips/current/{fiskeridir_vessel_id}",
-    params(CurrentTripPath),
-    responses(
-        (status = 200, description = "current trip of the given vessel", body = CurrentTrip),
-        (status = 500, description = "an internal error occured", body = ErrorResponse),
-    )
-)]
+#[oasgen(skip(db), tags("Trip"))]
 #[tracing::instrument(skip(db))]
 pub async fn current_trip<T: Database + 'static>(
     db: web::Data<T>,
-    profile: Option<BwProfile>,
+    profile: OptionBwProfile,
     path: Path<CurrentTripPath>,
 ) -> Result<Response<Option<CurrentTrip>>> {
     let read_fishing_facility = profile
+        .into_inner()
         .map(|p| {
             p.policies
                 .contains(&BwPolicy::BwReadExtendedFishingFacility)
@@ -243,12 +213,10 @@ pub async fn current_trip<T: Database + 'static>(
 }
 
 #[serde_as]
-#[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
+#[derive(Debug, Clone, Deserialize, Serialize, OaSchema, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct Trip {
-    #[schema(value_type = i64)]
     pub fiskeridir_vessel_id: FiskeridirVesselId,
-    #[schema(value_type = i64)]
     pub trip_id: TripId,
     pub start: DateTime<Utc>,
     pub end: DateTime<Utc>,
@@ -258,7 +226,6 @@ pub struct Trip {
     pub most_recent_delivery_date: Option<DateTime<Utc>>,
     #[serde_as(as = "Vec<DisplayFromStr>")]
     pub gear_ids: Vec<Gear>,
-    #[schema(value_type = Vec<String>)]
     pub delivery_point_ids: Vec<fiskeridir_rs::DeliveryPointId>,
     pub hauls: Vec<Haul>,
     pub tra: Vec<Tra>,
@@ -269,7 +236,6 @@ pub struct Trip {
     pub events: Vec<VesselEvent>,
     #[serde_as(as = "DisplayFromStr")]
     pub trip_assembler_id: TripAssemblerId,
-    #[schema(value_type = Vec<String>)]
     pub landing_ids: Vec<LandingId>,
     pub target_species_fiskeridir_id: Option<u32>,
     pub target_species_fao_id: Option<String>,
@@ -279,7 +245,7 @@ pub struct Trip {
     pub has_track: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, OaSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct Delivery {
     pub delivered: Vec<Catch>,
@@ -290,7 +256,7 @@ pub struct Delivery {
 }
 
 #[serde_as]
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, OaSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct Catch {
     pub living_weight: f64,
@@ -303,7 +269,7 @@ pub struct Catch {
     pub price_for_fisher: Option<f64>,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
+#[derive(Debug, Clone, Deserialize, Serialize, OaSchema, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct CurrentTrip {
     pub departure: DateTime<Utc>,
@@ -313,7 +279,7 @@ pub struct CurrentTrip {
 }
 
 #[serde_as]
-#[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
+#[derive(Debug, Clone, Deserialize, Serialize, OaSchema, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct VesselEvent {
     pub event_id: u64,

@@ -3,45 +3,35 @@ use chrono::{DateTime, Duration, Utc};
 use fiskeridir_rs::CallSign;
 use futures::TryStreamExt;
 use kyogre_core::DateRange;
+use oasgen::{oasgen, OaSchema};
 use serde::{Deserialize, Serialize};
 use serde_qs::actix::QsQuery as Query;
 use snafu::ResultExt;
-use utoipa::{IntoParams, ToSchema};
 
 use crate::{
     error::{
         error::{InvalidDateRangeSnafu, MissingDateRangeSnafu},
-        ErrorResponse, Result,
+        Result,
     },
     response::{ais_unfold, StreamResponse},
     stream_response, Database,
 };
 
-#[derive(Debug, Deserialize, Serialize, IntoParams)]
+#[derive(Debug, Deserialize, Serialize, OaSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct VmsParameters {
     pub start: Option<DateTime<Utc>>,
     pub end: Option<DateTime<Utc>>,
 }
 
-#[derive(Debug, Deserialize, Serialize, IntoParams)]
+#[derive(Debug, Deserialize, Serialize, OaSchema)]
 pub struct VmsPath {
-    #[param(value_type = String)]
     pub call_sign: CallSign,
 }
 
 /// Returns the VMS track for the given vessel mactching the given filter if any.
 /// If no time filter is provided the track of the last 24 hours are returned.
-#[utoipa::path(
-    get,
-    path = "/vms/{call_sign}",
-    params(VmsParameters, VmsPath),
-    responses(
-        (status = 200, description = "vms positions for the given call sign", body = [VmsPosition]),
-        (status = 500, description = "an internal error occured", body = ErrorResponse),
-        (status = 400, description = "invalid parameters were provided", body = ErrorResponse),
-    )
-)]
+#[oasgen(skip(db), tags("Vms"))]
 #[tracing::instrument(skip(db))]
 pub async fn vms_positions<T: Database + Send + Sync + 'static>(
     db: web::Data<T>,
@@ -74,7 +64,7 @@ pub async fn vms_positions<T: Database + Send + Sync + 'static>(
     Ok(response)
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize, ToSchema)]
+#[derive(Debug, Clone, Deserialize, Serialize, OaSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct VmsPosition {
     pub course: Option<u32>,

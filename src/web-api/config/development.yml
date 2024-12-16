@@ -22,5 +22,4 @@ duck_db_api:
 auth0:
   jwk_url: https://dev-orcalabs.eu.auth0.com/.well-known/jwks.json
   authorization_url: https://dev-orcalabs.eu.auth0.com/authorize
-  client_id: QYCH29iCoaNEfvYWmVMs2m3vbpUv9Gug
   audience: https://api.dev.datafangst.orcalabs.no/

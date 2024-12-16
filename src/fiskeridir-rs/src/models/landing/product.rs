@@ -248,7 +248,7 @@ impl ConservationMethod {
     EnumString,
 )]
 #[cfg_attr(feature = "sqlx", derive(sqlx::Type))]
-#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
+#[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
 pub enum Quality {
     Extra = 10,
     Prima = 11,

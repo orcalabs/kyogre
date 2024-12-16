@@ -2,31 +2,24 @@ use actix_web::web;
 use chrono::{DateTime, Duration, Utc};
 use futures::TryStreamExt;
 use kyogre_core::{Weather, WeatherLocationId, WeatherQuery};
+use oasgen::{oasgen, OaSchema};
 use serde::{Deserialize, Serialize};
 use serde_qs::actix::QsQuery as Query;
-use utoipa::{IntoParams, ToSchema};
+
 use wkt::ToWkt;
 
-use crate::{error::ErrorResponse, response::StreamResponse, stream_response, *};
+use crate::{response::StreamResponse, stream_response, *};
 
-#[derive(Default, Debug, Deserialize, Serialize, IntoParams)]
+#[derive(Default, Debug, Deserialize, Serialize, OaSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct WeatherParams {
     pub start_date: Option<DateTime<Utc>>,
     pub end_date: Option<DateTime<Utc>>,
-    #[param(rename = "weatherLocationIds[]", value_type = Option<Vec<i64>>)]
+    #[oasgen(rename = "weatherLocationIds[]")]
     pub weather_location_ids: Option<Vec<WeatherLocationId>>,
 }
 
-#[utoipa::path(
-    get,
-    path = "/weather",
-    params(WeatherParams),
-    responses(
-        (status = 200, description = "all weather data matching parameters", body = [Weather]),
-        (status = 500, description = "an internal error occured", body = ErrorResponse),
-    )
-)]
+#[oasgen(skip(db), tags("Weather"))]
 #[tracing::instrument(skip(db))]
 pub async fn weather<T: Database + Send + Sync + 'static>(
     db: web::Data<T>,
@@ -39,14 +32,7 @@ pub async fn weather<T: Database + Send + Sync + 'static>(
     }
 }
 
-#[utoipa::path(
-    get,
-    path = "/weather_locations",
-    responses(
-        (status = 200, description = "all weather locations", body = [WeatherLocation]),
-        (status = 500, description = "an internal error occured", body = ErrorResponse),
-    )
-)]
+#[oasgen(skip(db), tags("Weather"))]
 #[tracing::instrument(skip(db))]
 pub async fn weather_locations<T: Database + Send + Sync + 'static>(
     db: web::Data<T>,
@@ -57,10 +43,9 @@ pub async fn weather_locations<T: Database + Send + Sync + 'static>(
     }
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
+#[derive(Debug, Clone, Deserialize, Serialize, OaSchema, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct WeatherLocation {
-    #[schema(value_type = i32)]
     pub id: WeatherLocationId,
     pub polygon: String,
 }

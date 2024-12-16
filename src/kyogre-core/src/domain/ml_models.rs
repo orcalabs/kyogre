@@ -40,7 +40,7 @@ pub static ML_SPECIES_GROUPS: &[SpeciesGroup] = &[
     Ord,
 )]
 #[cfg_attr(feature = "sqlx", derive(sqlx::Type))]
-#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
+#[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
 pub enum ModelId {
     Spot = 1,
     Weight = 2,

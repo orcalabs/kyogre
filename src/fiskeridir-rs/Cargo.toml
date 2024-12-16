@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [features]
-utoipa = ["dep:utoipa"]
+oasgen = ["dep:oasgen"]
 sqlx = ["dep:sqlx"]
 test = []
 
@@ -27,7 +27,7 @@ tracing = { workspace = true }
 futures-util = { workspace = true }
 csv = { workspace = true }
 strum = { workspace = true }
-utoipa = { workspace = true, optional = true }
+oasgen = { workspace = true, optional = true }
 sqlx = { workspace = true, features = [
     "runtime-tokio-rustls",
     "derive",

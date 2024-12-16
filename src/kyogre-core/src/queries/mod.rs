@@ -25,7 +25,7 @@ pub use trip_benchmark::*;
 pub use vessel_benchmark::*;
 pub use weather::*;
 
-#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
+#[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
 #[derive(
     Deserialize, Serialize, Debug, Default, Clone, Copy, strum::Display, AsRefStr, EnumString,
 )]

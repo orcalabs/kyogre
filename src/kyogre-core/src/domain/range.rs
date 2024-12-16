@@ -231,3 +231,16 @@ mod _sqlx {
         }
     }
 }
+
+#[cfg(feature = "oasgen")]
+mod _oasgen {
+    use oasgen::OaSchema;
+
+    use super::*;
+
+    impl<T> OaSchema for Range<T> {
+        fn schema() -> oasgen::Schema {
+            String::schema()
+        }
+    }
+}

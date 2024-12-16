@@ -13,7 +13,7 @@ pub static LANDING_OLDEST_DATA_MONTHS: usize = 1999 * 12;
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Default)]
 #[serde(rename_all = "camelCase")]
-#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
+#[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
 pub struct LandingMatrix {
     pub dates: Vec<u64>,
     pub length_group: Vec<u64>,

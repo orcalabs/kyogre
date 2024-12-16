@@ -1705,6 +1705,7 @@ dependencies = [
  "jurisdiction",
  "num-derive",
  "num-traits",
+ "oasgen",
  "serde",
  "serde_repr",
  "serde_with",
@@ -1715,7 +1716,6 @@ dependencies = [
  "tempfile",
  "tokio",
  "tracing",
- "utoipa",
  "wiremock",
  "zip",
 ]
@@ -2769,6 +2769,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "inventory"
+version = "0.3.15"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f958d3d68f4167080a18141e10381e7634563984a537f2a49a30fd8e53ac5767"
+
+[[package]]
 name = "ipnet"
 version = "2.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2889,6 +2895,7 @@ dependencies = [
  "geozero",
  "num-derive",
  "num-traits",
+ "oasgen",
  "oauth2",
  "orca-core",
  "rand 0.8.5",
@@ -2902,7 +2909,6 @@ dependencies = [
  "strum 0.26.3",
  "tokio",
  "tracing",
- "utoipa",
  "uuid",
  "vpsearch",
  "wkt",
@@ -3262,16 +3268,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6877bb514081ee2a7ff5ef9de3281f14a4dd4bceac4c09388074a6b5df8a139a"
 
 [[package]]
-name = "mime_guess"
-version = "2.0.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f7c44f8e672c00fe5308fa235f821cb4198414e1c77935c1ab6948d3fd78550e"
-dependencies = [
- "mime",
- "unicase",
-]
-
-[[package]]
 name = "minimal-lexical"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3479,6 +3475,60 @@ dependencies = [
 ]
 
 [[package]]
+name = "oasgen"
+version = "0.21.2"
+source = "git+https://github.com/markhilb/oasgen#2dd50da161214ba76d4b1a6a07faf266368570e7"
+dependencies = [
+ "actix-web",
+ "futures",
+ "http 1.2.0",
+ "http-body 1.0.1",
+ "http-body-util",
+ "indexmap 2.7.0",
+ "inventory",
+ "oasgen-core",
+ "oasgen-macro",
+ "once_cell",
+ "openapiv3-extended",
+ "regex-lite",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "swagger-ui2",
+]
+
+[[package]]
+name = "oasgen-core"
+version = "0.21.2"
+source = "git+https://github.com/markhilb/oasgen#2dd50da161214ba76d4b1a6a07faf266368570e7"
+dependencies = [
+ "actix-web",
+ "chrono",
+ "http 1.2.0",
+ "indexmap 2.7.0",
+ "inventory",
+ "openapiv3-extended",
+ "serde_json",
+ "serde_qs",
+ "structmeta",
+ "syn 2.0.90",
+ "uuid",
+]
+
+[[package]]
+name = "oasgen-macro"
+version = "0.21.0"
+source = "git+https://github.com/markhilb/oasgen#2dd50da161214ba76d4b1a6a07faf266368570e7"
+dependencies = [
+ "oasgen-core",
+ "proc-macro2",
+ "quote 1.0.37",
+ "serde_derive_internals",
+ "structmeta",
+ "syn 2.0.90",
+]
+
+[[package]]
 name = "oauth2"
 version = "4.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3512,6 +3562,19 @@ name = "once_cell"
 version = "1.20.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1261fe7e33c73b354eab43b1273a57c8f967d0391e80353e51f764ac02cf6775"
+
+[[package]]
+name = "openapiv3-extended"
+version = "6.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "756f9fddd9e5264d11c36c405a0b8a16bf7b2037bc8a424a0d14f74fd73dcb7f"
+dependencies = [
+ "anyhow",
+ "http 1.2.0",
+ "indexmap 2.7.0",
+ "serde",
+ "serde_json",
+]
 
 [[package]]
 name = "openssl"
@@ -5097,6 +5160,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "serde_derive_internals"
+version = "0.29.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "18d26a20a969b9e3fdf2fc2d9f21eda6c40e2de84c9408bb5d3b05d499aae711"
+dependencies = [
+ "proc-macro2",
+ "quote 1.0.37",
+ "syn 2.0.90",
+]
+
+[[package]]
 name = "serde_json"
 version = "1.0.133"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5191,6 +5265,19 @@ dependencies = [
  "proc-macro2",
  "quote 1.0.37",
  "syn 2.0.90",
+]
+
+[[package]]
+name = "serde_yaml"
+version = "0.9.34+deprecated"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6a8b1a1a2ebf674015cc02edccce75287f1a0130d394307b36743c2f5d504b47"
+dependencies = [
+ "indexmap 2.7.0",
+ "itoa 1.0.14",
+ "ryu",
+ "serde",
+ "unsafe-libyaml",
 ]
 
 [[package]]
@@ -5736,6 +5823,18 @@ name = "subtle"
 version = "2.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
+
+[[package]]
+name = "swagger-ui2"
+version = "0.6.0"
+source = "git+https://github.com/markhilb/oasgen#2dd50da161214ba76d4b1a6a07faf266368570e7"
+dependencies = [
+ "bytes",
+ "http 1.2.0",
+ "rust-embed",
+ "serde",
+ "serde_json",
+]
 
 [[package]]
 name = "syn"
@@ -6359,12 +6458,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "42ff0bf0c66b8238c6f3b578df37d0b7848e55df8577b3f74f92a69acceeb825"
 
 [[package]]
-name = "unicase"
-version = "2.8.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7e51b68083f157f853b6379db119d1c1be0e6e4dec98101079dec41f6f5cf6df"
-
-[[package]]
 name = "unicode-bidi"
 version = "0.3.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6450,6 +6543,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "unsafe-libyaml"
+version = "0.2.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "673aac59facbab8a9007c7f6108d11f63b603f7cabff99fabf650fea5c32b861"
+
+[[package]]
 name = "untrusted"
 version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6490,48 +6589,6 @@ name = "utf8_iter"
 version = "1.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b6c140620e7ffbb22c2dee59cafe6084a59b5ffc27a8859a5f0d494b5d52b6be"
-
-[[package]]
-name = "utoipa"
-version = "5.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "514a48569e4e21c86d0b84b5612b5e73c0b2cf09db63260134ba426d4e8ea714"
-dependencies = [
- "indexmap 2.7.0",
- "serde",
- "serde_json",
- "utoipa-gen",
-]
-
-[[package]]
-name = "utoipa-gen"
-version = "5.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5629efe65599d0ccd5d493688cbf6e03aa7c1da07fe59ff97cf5977ed0637f66"
-dependencies = [
- "proc-macro2",
- "quote 1.0.37",
- "regex",
- "syn 2.0.90",
- "uuid",
-]
-
-[[package]]
-name = "utoipa-swagger-ui"
-version = "8.0.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a5c80b4dd79ea382e8374d67dcce22b5c6663fa13a82ad3886441d1bbede5e35"
-dependencies = [
- "actix-web",
- "mime_guess",
- "regex",
- "rust-embed",
- "serde",
- "serde_json",
- "url",
- "utoipa",
- "zip",
-]
 
 [[package]]
 name = "uuid"
@@ -6723,6 +6780,7 @@ dependencies = [
  "jsonwebtoken",
  "kyogre-core",
  "meilisearch",
+ "oasgen",
  "orca-core",
  "pin-project-lite",
  "postgres",
@@ -6738,8 +6796,6 @@ dependencies = [
  "tokio-stream",
  "tracing",
  "trip-benchmark",
- "utoipa",
- "utoipa-swagger-ui",
  "uuid",
  "wiremock",
  "wkt",
@@ -6812,7 +6868,7 @@ version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cf221c93e13a30d793f7645a0e7762c55d169dbb0a49671918a2319d289b10bb"
 dependencies = [
- "windows-sys 0.59.0",
+ "windows-sys 0.48.0",
 ]
 
 [[package]]

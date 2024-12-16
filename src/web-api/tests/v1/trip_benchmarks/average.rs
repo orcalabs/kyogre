@@ -59,9 +59,7 @@ async fn test_average_benchmarks_works() {
             .get_average_trip_benchmarks(AverageTripBenchmarksParams {
                 start_date: start,
                 end_date: end,
-                gear_groups: vec![],
-                length_group: None,
-                vessel_ids: vec![],
+                ..Default::default()
             })
             .await
             .unwrap();

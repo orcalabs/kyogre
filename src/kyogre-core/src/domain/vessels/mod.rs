@@ -21,7 +21,7 @@ pub static TEST_SIGNED_IN_VESSEL_CALLSIGN: &str = "LK17";
 /// ignore.
 pub static IGNORED_CONFLICT_CALL_SIGNS: &[&str] = &["00000000", "0"];
 
-#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
+#[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateVessel {
@@ -100,7 +100,7 @@ pub struct DepartureWeight {
 }
 
 #[cfg_attr(feature = "sqlx", derive(sqlx::Type))]
-#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
+#[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
 #[repr(i32)]
 #[derive(
     Debug,
@@ -203,7 +203,7 @@ impl Vessel {
 )]
 #[repr(i32)]
 #[cfg_attr(feature = "sqlx", derive(sqlx::Type))]
-#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
+#[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
 pub enum VesselSource {
     Landings = 1,
     FiskeridirVesselRegister = 2,

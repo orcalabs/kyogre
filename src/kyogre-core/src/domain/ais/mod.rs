@@ -7,6 +7,9 @@ use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use strum::{AsRefStr, EnumString, IntoStaticStr};
 
+#[cfg(feature = "oasgen")]
+use oasgen::OaSchema;
+
 pub const LEISURE_VESSEL_SHIP_TYPES: [i32; 2] = [36, 37];
 pub const LEISURE_VESSEL_LENGTH_AIS_BOUNDARY: u32 = 45;
 pub const PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY: u32 = 15;
@@ -36,6 +39,7 @@ pub struct DataMessage {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize)]
 #[cfg_attr(feature = "sqlx", derive(sqlx::Type), sqlx(transparent))]
+#[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
 pub struct Mmsi(i32);
 
 #[derive(Debug, Clone)]
@@ -151,7 +155,7 @@ pub enum AisClass {
 }
 
 #[cfg_attr(feature = "sqlx", derive(sqlx::Type))]
-#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
+#[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
 #[derive(
     Debug,
     Copy,

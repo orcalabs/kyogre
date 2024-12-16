@@ -103,7 +103,7 @@ pub struct BuyerLocationsQuery {
     AsRefStr,
     EnumString,
 )]
-#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
+#[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
 #[cfg_attr(feature = "sqlx", derive(sqlx::Type))]
 pub enum BuyerLocationType {
     #[strum(serialize = "LEGAL_ENTITY", to_string = "LegalEntity")]

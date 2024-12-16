@@ -2,32 +2,24 @@ use actix_web::web;
 use fiskeridir_rs::{SpeciesGroup, SpeciesMainGroup};
 use futures::TryStreamExt;
 use kyogre_core::ML_SPECIES_GROUPS;
+use oasgen::{oasgen, OaSchema};
 use serde::{Deserialize, Serialize};
 use serde_qs::actix::QsQuery as Query;
 use serde_with::{serde_as, DisplayFromStr};
 use strum::IntoEnumIterator;
-use utoipa::{IntoParams, ToSchema};
 
 use crate::{
-    error::ErrorResponse,
     response::{Response, StreamResponse},
     stream_response, Database,
 };
 
-#[derive(Default, Debug, Clone, Deserialize, Serialize, IntoParams)]
+#[derive(Default, Debug, Clone, Deserialize, Serialize, OaSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct SpeciesGroupParams {
     pub has_ml_models: Option<bool>,
 }
 
-#[utoipa::path(
-    get,
-    path = "/species",
-    responses(
-        (status = 200, description = "all species", body = [Species]),
-        (status = 500, description = "an internal error occured", body = ErrorResponse),
-    )
-)]
+#[oasgen(skip(db), tags("Species"))]
 #[tracing::instrument(skip(db))]
 pub async fn species<T: Database + Send + Sync + 'static>(
     db: web::Data<T>,
@@ -37,15 +29,7 @@ pub async fn species<T: Database + Send + Sync + 'static>(
     }
 }
 
-#[utoipa::path(
-    get,
-    path = "/species_groups",
-    params(SpeciesGroupParams),
-    responses(
-        (status = 200, description = "all species groups", body = [SpeciesGroupDetailed]),
-        (status = 500, description = "an internal error occured", body = ErrorResponse),
-    )
-)]
+#[oasgen(skip(db), tags("Species"))]
 #[tracing::instrument]
 pub async fn species_groups<T: Database + 'static + 'static>(
     params: Query<SpeciesGroupParams>,
@@ -66,14 +50,7 @@ pub async fn species_groups<T: Database + 'static + 'static>(
     }
 }
 
-#[utoipa::path(
-    get,
-    path = "/species_main_groups",
-    responses(
-        (status = 200, description = "all species main groups", body = [SpeciesMainGroupDetailed]),
-        (status = 500, description = "an internal error occured", body = ErrorResponse),
-    )
-)]
+#[oasgen(skip(db), tags("Species"))]
 #[tracing::instrument]
 pub async fn species_main_groups<T: Database + 'static>() -> Response<Vec<SpeciesMainGroupDetailed>>
 {
@@ -84,14 +61,7 @@ pub async fn species_main_groups<T: Database + 'static>() -> Response<Vec<Specie
     )
 }
 
-#[utoipa::path(
-    get,
-    path = "/species_fiskeridir",
-    responses(
-        (status = 200, description = "all Fiskeriderktoratet species", body = [SpeciesFiskeridir]),
-        (status = 500, description = "an internal error occured", body = ErrorResponse),
-    )
-)]
+#[oasgen(skip(db), tags("Species"))]
 #[tracing::instrument(skip(db))]
 pub async fn species_fiskeridir<T: Database + Send + Sync + 'static>(
     db: web::Data<T>,
@@ -101,14 +71,7 @@ pub async fn species_fiskeridir<T: Database + Send + Sync + 'static>(
     }
 }
 
-#[utoipa::path(
-    get,
-    path = "/species_fao",
-    responses(
-        (status = 200, description = "all fao species", body = [SpeciesFao]),
-        (status = 500, description = "an internal error occured", body = ErrorResponse),
-    )
-)]
+#[oasgen(skip(db), tags("Species"))]
 #[tracing::instrument(skip(db))]
 pub async fn species_fao<T: Database + Send + Sync + 'static>(
     db: web::Data<T>,
@@ -118,7 +81,7 @@ pub async fn species_fao<T: Database + Send + Sync + 'static>(
     }
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize, ToSchema, Ord, PartialOrd, PartialEq, Eq)]
+#[derive(Debug, Clone, Deserialize, Serialize, OaSchema, Ord, PartialOrd, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct Species {
     pub id: u32,
@@ -126,7 +89,7 @@ pub struct Species {
 }
 
 #[serde_as]
-#[derive(Debug, Clone, Deserialize, Serialize, ToSchema, Ord, PartialOrd, PartialEq, Eq)]
+#[derive(Debug, Clone, Deserialize, Serialize, OaSchema, Ord, PartialOrd, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct SpeciesGroupDetailed {
     #[serde_as(as = "DisplayFromStr")]
@@ -135,7 +98,7 @@ pub struct SpeciesGroupDetailed {
 }
 
 #[serde_as]
-#[derive(Debug, Clone, Deserialize, Serialize, ToSchema, Ord, PartialOrd, PartialEq, Eq)]
+#[derive(Debug, Clone, Deserialize, Serialize, OaSchema, Ord, PartialOrd, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct SpeciesMainGroupDetailed {
     #[serde_as(as = "DisplayFromStr")]
@@ -143,14 +106,14 @@ pub struct SpeciesMainGroupDetailed {
     pub name: String,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize, ToSchema, Ord, PartialOrd, PartialEq, Eq)]
+#[derive(Debug, Clone, Deserialize, Serialize, OaSchema, Ord, PartialOrd, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct SpeciesFiskeridir {
     pub id: u32,
     pub name: Option<String>,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize, ToSchema, Ord, PartialOrd, PartialEq, Eq)]
+#[derive(Debug, Clone, Deserialize, Serialize, OaSchema, Ord, PartialOrd, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct SpeciesFao {
     pub id: String,

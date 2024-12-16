@@ -40,7 +40,7 @@ pub struct CatchLocation {
     AsRefStr,
     EnumString,
 )]
-#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
+#[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
 #[cfg_attr(feature = "sqlx", derive(sqlx::Type))]
 pub enum TwelveMileBorder {
     Outside = 0,

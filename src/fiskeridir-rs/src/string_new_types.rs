@@ -6,7 +6,11 @@ use serde::{
 };
 use std::{fmt::Display, ops::Deref, str::FromStr};
 
+#[cfg(feature = "oasgen")]
+use oasgen::OaSchema;
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Ord, PartialOrd)]
+#[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
 pub struct NonEmptyString(String);
 
 impl NonEmptyString {
@@ -16,6 +20,7 @@ impl NonEmptyString {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Ord, PartialOrd)]
+#[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
 pub(crate) struct PrunedString(String);
 
 impl AsRef<str> for NonEmptyString {

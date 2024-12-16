@@ -7,10 +7,10 @@ use actix_web::{
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::{CallSign, OrgId, ParseStringError};
 use kyogre_core::DateRangeError;
+use oasgen::OaSchema;
 use serde::{Deserialize, Serialize};
 use snafu::{Location, Snafu};
 use stack_error::{OpaqueError, StackError};
-use utoipa::ToSchema;
 
 pub type Result<T> = std::result::Result<T, Error>;
 
@@ -37,7 +37,7 @@ pub enum JWTDecodeError {
 }
 
 #[derive(Snafu, StackError, strum::EnumDiscriminants)]
-#[strum_discriminants(derive(Deserialize, Serialize, ToSchema))]
+#[strum_discriminants(derive(Deserialize, Serialize, OaSchema))]
 #[snafu(module, visibility(pub))]
 pub enum Error {
     #[snafu(display("Start date: '{start}' cannot be after end date: '{end}'"))]
@@ -138,7 +138,7 @@ pub enum Error {
     },
 }
 
-#[derive(Serialize, Deserialize, ToSchema)]
+#[derive(Serialize, Deserialize, OaSchema)]
 pub struct ErrorResponse {
     pub error: ErrorDiscriminants,
     pub description: String,
