@@ -13,7 +13,8 @@ VALUES
 ON CONFLICT (file_hash_id) DO
 UPDATE
 SET
-    hash = excluded.hash
+    hash = excluded.hash,
+    updated_at = NOW()
             "#,
             hash,
             id.as_ref(),

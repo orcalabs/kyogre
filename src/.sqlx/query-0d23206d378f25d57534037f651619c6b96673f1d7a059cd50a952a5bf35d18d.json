@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO\n    file_hashes (hash, file_hash_id)\nVALUES\n    ($1, $2)\nON CONFLICT (file_hash_id) DO\nUPDATE\nSET\n    hash = excluded.hash,\n    updated_at = NOW()\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Varchar",
+        "Varchar"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "0d23206d378f25d57534037f651619c6b96673f1d7a059cd50a952a5bf35d18d"
+}
