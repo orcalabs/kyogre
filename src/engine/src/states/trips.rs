@@ -416,7 +416,7 @@ async fn run_state(shared_state: Arc<SharedState>) -> Result<TripsReport> {
 
     shared_state
         .trip_pipeline_inbound
-        .reset_trip_processing_conflicts()
+        .check_for_out_of_order_vms_insertion()
         .await?;
 
     let vessels = shared_state
