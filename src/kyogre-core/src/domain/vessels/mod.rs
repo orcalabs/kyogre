@@ -16,6 +16,9 @@ pub use benchmark::*;
 
 const HP_TO_KW: f64 = 0.745699872;
 pub static TEST_SIGNED_IN_VESSEL_CALLSIGN: &str = "LK17";
+
+/// These have been observed in data from Fiskeridirektoratet, and we assume that they are safe to
+/// ignore.
 pub static IGNORED_CONFLICT_CALL_SIGNS: &[&str] = &["00000000", "0"];
 
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]

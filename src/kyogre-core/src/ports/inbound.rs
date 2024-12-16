@@ -149,10 +149,36 @@ pub trait HaulDistributorInbound: Send + Sync {
 
 #[async_trait]
 pub trait TripPipelineInbound: Send + Sync {
-    async fn reset_trip_processing_conflicts(&self) -> CoreResult<()>;
+    /// Checks wether any vms data has been added out of order (e.g. vms data for '2024-04-04' was
+    /// inserted at '2024-04-20'), if so all trips within or after that timestamp has their
+    /// processing status reset.
+    async fn check_for_out_of_order_vms_insertion(&self) -> CoreResult<()>;
+
+    /// All vessels that have a single [`crate::Departure`] message will use the
+    /// [`crate::TripAssemblerId::Ers`] trip assembler.
+    /// This has the drawback where a vessel that has operated without ERS messages
+    /// for some time and then starts reporting ERS, then all prior [`crate::TripAssemblerId::Landings`] trips for that vessel will be deleted
+    /// and replaced with the new ERS based trips (the new ERS based trips will not cover the older landings).
+    ///
+    /// This method updates all vessels preferred trip assembler.
     async fn update_preferred_trip_assemblers(&self) -> CoreResult<()>;
     async fn update_trip(&self, update: TripUpdate) -> CoreResult<()>;
     async fn add_trip_set(&self, value: TripSet) -> CoreResult<()>;
+
+    /// Trips contain different types of events which can all be scraped out of order (events
+    /// that occurred in the past are added later).
+    /// This presents a problem when a trip has already been generated and only the events that existed
+    /// within its period at the time of creation is associated with it.
+    ///
+    /// Our first attempt at solving this used Postgres Materialized Views, where we created a
+    /// view for trips which we refreshed each day. However, this took considerable amount of
+    /// time and the entire view had to be refreshed if a single trip or out of order event was added.
+    ///
+    /// In our current solution we maintain a refresh boundary per vessel which indicates how far
+    /// back in time we have should refresh the vessel's trips. This boundary is updated each time
+    /// a new out of order event is added (if its timestamp is lower than the current boundary).
+    ///
+    /// This method refreshes all trips that are before or on the refresh boundary.
     async fn refresh_detailed_trips(&self, vessel_id: FiskeridirVesselId) -> CoreResult<()>;
 }
 

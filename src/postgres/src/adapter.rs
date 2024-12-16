@@ -1181,8 +1181,8 @@ impl TripPipelineOutbound for PostgresAdapter {
 
 #[async_trait]
 impl TripPipelineInbound for PostgresAdapter {
-    async fn reset_trip_processing_conflicts(&self) -> CoreResult<()> {
-        self.reset_trip_processing_conflicts_impl().await?;
+    async fn check_for_out_of_order_vms_insertion(&self) -> CoreResult<()> {
+        self.check_for_out_of_order_vms_insertion_imp().await?;
         Ok(())
     }
     async fn update_preferred_trip_assemblers(&self) -> CoreResult<()> {

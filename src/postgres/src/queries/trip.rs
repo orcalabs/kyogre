@@ -25,7 +25,7 @@ pub struct TripPositions {
 }
 
 impl PostgresAdapter {
-    pub(crate) async fn reset_trip_processing_conflicts_impl(&self) -> Result<()> {
+    pub(crate) async fn check_for_out_of_order_vms_insertion_imp(&self) -> Result<()> {
         let mut tx = self.pool.begin().await?;
 
         sqlx::query!(
