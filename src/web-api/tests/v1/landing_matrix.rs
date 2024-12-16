@@ -59,7 +59,7 @@ async fn test_landing_matrix_filters_by_catch_locations() {
             .await;
 
         let params = LandingMatrixParams {
-            catch_locations: vec![CatchLocationId::new(9, 32)],
+            catch_locations: Some(vec![CatchLocationId::new(9, 32)]),
             ..Default::default()
         };
 
@@ -97,7 +97,7 @@ async fn test_landing_matrix_filters_by_months() {
             .await;
 
         let params = LandingMatrixParams {
-            months: vec![datetime_to_month(month1), datetime_to_month(month2)],
+            months: Some(vec![datetime_to_month(month1), datetime_to_month(month2)]),
             ..Default::default()
         };
 
@@ -137,10 +137,10 @@ async fn test_landing_matrix_filters_by_vessel_length() {
 
         helper.refresh_matrix_cache().await;
         let params = LandingMatrixParams {
-            vessel_length_groups: vec![
+            vessel_length_groups: Some(vec![
                 VesselLengthGroup::UnderEleven,
                 VesselLengthGroup::ElevenToFifteen,
-            ],
+            ]),
             ..Default::default()
         };
 
@@ -184,7 +184,10 @@ async fn test_landing_matrix_filters_by_species_group() {
 
         helper.refresh_matrix_cache().await;
         let params = LandingMatrixParams {
-            species_group_ids: vec![SpeciesGroup::GoldenRedfish, SpeciesGroup::GreenlandHalibut],
+            species_group_ids: Some(vec![
+                SpeciesGroup::GoldenRedfish,
+                SpeciesGroup::GreenlandHalibut,
+            ]),
             ..Default::default()
         };
 
@@ -227,7 +230,7 @@ async fn test_landing_matrix_filters_by_gear_group() {
 
         helper.refresh_matrix_cache().await;
         let params = LandingMatrixParams {
-            gear_group_ids: vec![GearGroup::Seine, GearGroup::Net],
+            gear_group_ids: Some(vec![GearGroup::Seine, GearGroup::Net]),
             ..Default::default()
         };
 
@@ -252,7 +255,7 @@ async fn test_landing_matrix_filters_by_fiskeridir_vessel_ids() {
 
         helper.refresh_matrix_cache().await;
         let params = LandingMatrixParams {
-            fiskeridir_vessel_ids: state.vessels.iter().map(|v| v.fiskeridir.id).collect(),
+            fiskeridir_vessel_ids: Some(state.vessels.iter().map(|v| v.fiskeridir.id).collect()),
             ..Default::default()
         };
 

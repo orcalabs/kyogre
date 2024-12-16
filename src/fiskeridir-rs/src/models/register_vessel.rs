@@ -8,10 +8,14 @@ use serde_with::{serde_as, DisplayFromStr, NoneAsEmptyString};
 use std::{fmt::Display, str::FromStr};
 use strum::{AsRefStr, EnumString};
 
+#[cfg(feature = "oasgen")]
+use oasgen::OaSchema;
+
 #[derive(
     Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize, FromPrimitive,
 )]
 #[cfg_attr(feature = "sqlx", derive(sqlx::Type), sqlx(transparent))]
+#[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
 pub struct OrgId(i64);
 
 impl Display for OrgId {
@@ -50,7 +54,7 @@ impl OrgId {
 )]
 #[serde(rename_all = "UPPERCASE")]
 #[strum(serialize_all = "UPPERCASE")]
-#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
+#[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
 pub enum RegisterVesselEntityType {
     Company,
     Person,
@@ -59,16 +63,13 @@ pub enum RegisterVesselEntityType {
 #[serde_as]
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
-#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
+#[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
 pub struct RegisterVesselOwner {
     #[serde_as(as = "NoneAsEmptyString")]
-    #[cfg_attr(feature = "utoipa", schema(value_type = Option<String>))]
     pub city: Option<NonEmptyString>,
     pub entity_type: RegisterVesselEntityType,
     #[serde(deserialize_with = "opt_from_nullable_str")]
-    #[cfg_attr(feature = "utoipa", schema(value_type = Option<i64>))]
     pub id: Option<OrgId>,
-    #[cfg_attr(feature = "utoipa", schema(value_type = String))]
     pub name: NonEmptyString,
     #[serde_as(as = "PrimitiveFromStr")]
     pub postal_code: i32,

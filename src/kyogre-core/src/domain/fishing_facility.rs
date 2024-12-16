@@ -28,7 +28,7 @@ use crate::{FiskeridirVesselId, Mmsi};
 )]
 #[repr(i32)]
 #[cfg_attr(feature = "sqlx", derive(sqlx::Type))]
-#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
+#[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
 pub enum FishingFacilityToolType {
     Undefined = 1,
     Crabpot = 2,

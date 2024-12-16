@@ -196,7 +196,7 @@ async fn test_hauls_matrix_filters_by_months() {
             .await;
 
         let params = HaulsMatrixParams {
-            months: vec![datetime_to_month(month1), datetime_to_month(month2)],
+            months: Some(vec![datetime_to_month(month1), datetime_to_month(month2)]),
             ..Default::default()
         };
 
@@ -246,10 +246,10 @@ async fn test_hauls_matrix_filters_by_vessel_length() {
 
         helper.refresh_matrix_cache().await;
         let params = HaulsMatrixParams {
-            vessel_length_groups: vec![
+            vessel_length_groups: Some(vec![
                 VesselLengthGroup::UnderEleven,
                 VesselLengthGroup::ElevenToFifteen,
-            ],
+            ]),
             ..Default::default()
         };
 
@@ -296,7 +296,10 @@ async fn test_hauls_matrix_filters_by_species_group() {
 
         helper.refresh_matrix_cache().await;
         let params = HaulsMatrixParams {
-            species_group_ids: vec![SpeciesGroup::GoldenRedfish, SpeciesGroup::GreenlandHalibut],
+            species_group_ids: Some(vec![
+                SpeciesGroup::GoldenRedfish,
+                SpeciesGroup::GreenlandHalibut,
+            ]),
             ..Default::default()
         };
 
@@ -343,7 +346,7 @@ async fn test_hauls_matrix_filters_by_gear_group() {
             .await;
 
         let params = HaulsMatrixParams {
-            gear_group_ids: vec![GearGroup::Seine, GearGroup::Net],
+            gear_group_ids: Some(vec![GearGroup::Seine, GearGroup::Net]),
             ..Default::default()
         };
 
@@ -394,7 +397,7 @@ async fn test_hauls_matrix_filters_by_fiskeridir_vessel_ids() {
             .await;
 
         let params = HaulsMatrixParams {
-            fiskeridir_vessel_ids: state.vessels.iter().map(|v| v.fiskeridir.id).collect(),
+            fiskeridir_vessel_ids: Some(state.vessels.iter().map(|v| v.fiskeridir.id).collect()),
             ..Default::default()
         };
 
@@ -430,7 +433,7 @@ async fn test_hauls_matrix_filters_by_catch_locations() {
             .await;
 
         let params = HaulsMatrixParams {
-            catch_locations: vec![CatchLocationId::new(0, 5)],
+            catch_locations: Some(vec![CatchLocationId::new(0, 5)]),
             ..Default::default()
         };
 
@@ -716,7 +719,7 @@ async fn test_hauls_matrix_returns_correct_array_dimensions_with_no_data_for_cur
             .app
             .get_hauls_matrix(
                 HaulsMatrixParams {
-                    months: vec![current_month],
+                    months: Some(vec![current_month]),
                     ..Default::default()
                 },
                 filter,

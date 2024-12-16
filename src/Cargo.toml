@@ -16,7 +16,7 @@ members = [
 ]
 
 [workspace.dependencies]
-fiskeridir-rs = { path = "./fiskeridir-rs/", features = ["utoipa", "sqlx"] }
+fiskeridir-rs = { path = "./fiskeridir-rs/", features = ["oasgen", "sqlx"] }
 
 machine = { version = "0.17.1", registry = "orcalabs-orcastrator" }
 orca-core = { version = "0.35.1", registry = "orcalabs-orcastrator" }
@@ -45,7 +45,10 @@ tracing = "0.1"
 chrono = { version = "0.4", features = ["serde"] }
 chrono-tz = "0.10"
 async-trait = "0.1"
-utoipa = "5.2"
+oasgen = { git = "https://github.com/markhilb/oasgen", features = [
+    "chrono",
+    "uuid",
+] }
 futures = "0.3"
 futures-util = "0.3"
 enum_index = "0.2"

@@ -8,8 +8,12 @@ use serde::{Deserialize, Serialize};
 use snafu::ResultExt;
 use std::str::FromStr;
 
+#[cfg(feature = "oasgen")]
+use oasgen::OaSchema;
+
 /// NewType wrapping the creation of unique landing ids.
 #[derive(PartialOrd, Ord, PartialEq, Eq, Clone, Debug, Hash, Serialize)]
+#[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
 pub struct LandingId(String);
 
 impl LandingId {

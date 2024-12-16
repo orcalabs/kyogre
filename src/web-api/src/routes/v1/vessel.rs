@@ -1,6 +1,6 @@
 use crate::error::error::{MissingDateRangeSnafu, OrgNotFoundSnafu, UpdateVesselNotFoundSnafu};
 use crate::{
-    error::{ErrorResponse, Result},
+    error::Result,
     extractors::BwProfile,
     response::{Response, StreamResponse},
     stream_response, Database,
@@ -13,35 +13,27 @@ use fiskeridir_rs::{
 use futures::TryStreamExt;
 use kyogre_core::{FiskeridirVesselId, Mmsi, OrgBenchmarkQuery, OrgBenchmarks};
 use kyogre_core::{UpdateVessel, VesselBenchmarks};
+use oasgen::{oasgen, OaSchema};
 use serde::{Deserialize, Serialize};
 use serde_qs::actix::QsQuery as Query;
 use serde_with::{serde_as, DisplayFromStr};
-use utoipa::{IntoParams, ToSchema};
 
-#[derive(Default, Debug, Deserialize, Serialize, IntoParams)]
+#[derive(Default, Debug, Deserialize, Serialize, OaSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct OrgBenchmarkParameters {
     pub start: Option<DateTime<Utc>>,
     pub end: Option<DateTime<Utc>>,
 }
 
-#[derive(Debug, Clone, IntoParams, Deserialize)]
+#[derive(Debug, Clone, OaSchema, Deserialize)]
 pub struct OrgBenchmarkPath {
-    #[param(value_type = i64)]
     pub org_id: OrgId,
 }
 
 /// Updates the vessel with the provided information.
 /// Note that all trip benchmarks that rely on some of the provided information will not be
 /// updated immediatley upon updating a vessel, trip benchmark updates can be expected within 24 hours.
-#[utoipa::path(
-    put,
-    path = "/vessels",
-    responses(
-        (status = 200, description = "the updated vessel", body = Vessel),
-        (status = 500, description = "an internal error occured", body = ErrorResponse),
-    )
-)]
+#[oasgen(skip(db), tags("Vessel"))]
 pub async fn update_vessel<T: Database + Send + Sync + 'static>(
     db: web::Data<T>,
     bw_profile: BwProfile,
@@ -63,14 +55,7 @@ pub async fn update_vessel<T: Database + Send + Sync + 'static>(
 }
 
 /// Returns all known vessels.
-#[utoipa::path(
-    get,
-    path = "/vessels",
-    responses(
-        (status = 200, description = "all vessels", body = [Vessel]),
-        (status = 500, description = "an internal error occured", body = ErrorResponse),
-    )
-)]
+#[oasgen(skip(db), tags("Vessel"))]
 #[tracing::instrument(skip(db))]
 pub async fn vessels<T: Database + Send + Sync + 'static>(
     db: web::Data<T>,
@@ -82,16 +67,7 @@ pub async fn vessels<T: Database + Send + Sync + 'static>(
 
 /// Returns organization benchmarks for the given organization id (Breg org id).
 /// This will include benchmarks for all vessels associated with the organization.
-#[utoipa::path(
-    get,
-    path = "/vessels/org_benchmarks/{org_id}",
-    params(OrgBenchmarkPath, OrgBenchmarkParameters),
-    responses(
-        (status = 200, description = "benchmark data for the given organization", body = OrgBenchmarks),
-        (status = 404, description = "the authenticated user is not part of the given organization id or the organization does not exist", body = ErrorResponse),
-        (status = 500, description = "an internal error occured", body = ErrorResponse),
-    )
-)]
+#[oasgen(skip(db), tags("Vessel"))]
 #[tracing::instrument(skip(db))]
 pub async fn org_benchmarks<T: Database + 'static>(
     db: web::Data<T>,
@@ -114,14 +90,7 @@ pub async fn org_benchmarks<T: Database + 'static>(
 }
 
 /// Returns benchmark data for the vessel associated with the authenticated user.
-#[utoipa::path(
-    get,
-    path = "/vessels/benchmarks",
-    responses(
-        (status = 200, description = "benchmark data for the vessel associated with the current user", body = VesselBenchmarks),
-        (status = 500, description = "an internal error occured", body = ErrorResponse),
-    )
-)]
+#[oasgen(skip(db), tags("Vessel"))]
 #[tracing::instrument(skip(db))]
 pub async fn vessel_benchmarks<T: Database + 'static>(
     db: web::Data<T>,
@@ -134,7 +103,7 @@ pub async fn vessel_benchmarks<T: Database + 'static>(
 }
 
 #[serde_as]
-#[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
+#[derive(Debug, Clone, Deserialize, Serialize, OaSchema, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct Vessel {
     pub fiskeridir: FiskeridirVessel,
@@ -158,10 +127,9 @@ impl Vessel {
 }
 
 #[serde_as]
-#[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
+#[derive(Debug, Clone, Deserialize, Serialize, OaSchema, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct FiskeridirVessel {
-    #[schema(value_type = i64)]
     pub id: FiskeridirVesselId,
     pub vessel_type_id: Option<u32>,
     #[serde_as(as = "DisplayFromStr")]
@@ -172,7 +140,6 @@ pub struct FiskeridirVessel {
     pub norwegian_county_id: Option<u32>,
     pub gross_tonnage_1969: Option<u32>,
     pub gross_tonnage_other: Option<u32>,
-    #[schema(value_type = String)]
     pub call_sign: Option<CallSign>,
     pub name: Option<String>,
     pub registration_id: Option<String>,
@@ -186,18 +153,15 @@ pub struct FiskeridirVessel {
     pub rebuilding_year: Option<u32>,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
+#[derive(Debug, Clone, Deserialize, Serialize, OaSchema, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct AisVessel {
-    #[schema(value_type = i32)]
     pub mmsi: Mmsi,
     pub imo_number: Option<i32>,
-    #[schema(value_type = Option<String>)]
     pub call_sign: Option<CallSign>,
     pub name: Option<String>,
     pub ship_length: Option<i32>,
     pub ship_width: Option<i32>,
-    #[schema(value_type = Option<String>, example = "2023-02-24T11:08:20.409416682Z")]
     pub eta: Option<DateTime<Utc>>,
     pub destination: Option<String>,
 }

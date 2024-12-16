@@ -7,12 +7,16 @@ use fiskeridir_rs::{
 };
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "oasgen")]
+use oasgen::OaSchema;
+
 use crate::{
     ActiveHaulsFilter, CatchLocationId, HaulMatrixXFeature, HaulMatrixYFeature, ProcessingStatus,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize)]
 #[cfg_attr(feature = "sqlx", derive(sqlx::Type), sqlx(transparent))]
+#[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
 pub struct HaulId(i64);
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]

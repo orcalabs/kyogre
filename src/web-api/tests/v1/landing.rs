@@ -46,7 +46,7 @@ async fn test_landings_returns_landings_in_specified_months() {
         helper.refresh_cache().await;
 
         let params = LandingsParams {
-            months: vec![month1, month2],
+            months: Some(vec![month1, month2]),
             ordering: Some(Ordering::Asc),
             ..Default::default()
         };
@@ -81,7 +81,7 @@ async fn test_landings_returns_landings_in_catch_location() {
         helper.refresh_cache().await;
 
         let params = LandingsParams {
-            catch_locations: vec![CatchLocationId::new(9, 5), CatchLocationId::new(9, 4)],
+            catch_locations: Some(vec![CatchLocationId::new(9, 5), CatchLocationId::new(9, 4)]),
             ordering: Some(Ordering::Asc),
             ..Default::default()
         };
@@ -110,7 +110,7 @@ async fn test_landings_returns_landings_with_gear_group_ids() {
         helper.refresh_cache().await;
 
         let params = LandingsParams {
-            gear_group_ids: vec![GearGroup::Seine, GearGroup::LobsterTrapAndFykeNets],
+            gear_group_ids: Some(vec![GearGroup::Seine, GearGroup::LobsterTrapAndFykeNets]),
             ordering: Some(Ordering::Asc),
             ..Default::default()
         };
@@ -139,7 +139,10 @@ async fn test_landings_returns_landings_with_species_group_ids() {
         helper.refresh_cache().await;
 
         let params = LandingsParams {
-            species_group_ids: vec![SpeciesGroup::GreenlandHalibut, SpeciesGroup::GoldenRedfish],
+            species_group_ids: Some(vec![
+                SpeciesGroup::GreenlandHalibut,
+                SpeciesGroup::GoldenRedfish,
+            ]),
             ordering: Some(Ordering::Asc),
             ..Default::default()
         };
@@ -168,10 +171,10 @@ async fn test_landings_returns_landings_with_vessel_length_groups() {
         helper.refresh_cache().await;
 
         let params = LandingsParams {
-            vessel_length_groups: vec![
+            vessel_length_groups: Some(vec![
                 VesselLengthGroup::UnderEleven,
                 VesselLengthGroup::ElevenToFifteen,
-            ],
+            ]),
             ordering: Some(Ordering::Asc),
             ..Default::default()
         };
@@ -192,7 +195,7 @@ async fn test_landings_returns_landings_with_fiskeridir_vessel_ids() {
         helper.refresh_cache().await;
 
         let params = LandingsParams {
-            fiskeridir_vessel_ids: state.vessels.iter().map(|v| v.fiskeridir.id).collect(),
+            fiskeridir_vessel_ids: Some(state.vessels.iter().map(|v| v.fiskeridir.id).collect()),
             ..Default::default()
         };
 

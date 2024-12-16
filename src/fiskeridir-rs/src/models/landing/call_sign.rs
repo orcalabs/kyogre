@@ -7,9 +7,13 @@ use crate::{
 };
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "oasgen")]
+use oasgen::OaSchema;
+
 /// NewType wrapper for call signs, enforces that call signs cannot contain
 /// '_', '-', ' ' or be empty.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Ord, PartialOrd)]
+#[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
 pub struct CallSign(PrunedString);
 
 impl CallSign {

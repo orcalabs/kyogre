@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [features]
-utoipa = ["dep:utoipa"]
+oasgen = ["dep:oasgen"]
 sqlx = ["dep:sqlx", "dep:geozero"]
 test = ["dep:rand"]
 
@@ -36,7 +36,7 @@ async-channel = { workspace = true }
 
 sqlx = { workspace = true, optional = true }
 geozero = { workspace = true, optional = true }
-utoipa = { workspace = true, optional = true }
+oasgen = { workspace = true, optional = true }
 rand = { workspace = true, optional = true }
 
 oauth2 = "4.4.2"

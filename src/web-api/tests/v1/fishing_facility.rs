@@ -43,7 +43,7 @@ async fn test_fishing_facilities_returns_fishing_facilities_with_mmsis() {
             .await;
 
         let params = FishingFacilitiesParams {
-            mmsis: vec![mmsi1, mmsi2],
+            mmsis: Some(vec![mmsi1, mmsi2]),
             ..Default::default()
         };
 
@@ -67,7 +67,7 @@ async fn test_fishing_facilities_returns_fishing_facilities_with_vessel_ids() {
         let state = builder.vessels(2).fishing_facilities(2).build().await;
 
         let params = FishingFacilitiesParams {
-            fiskeridir_vessel_ids: state.vessels.iter().map(|v| v.fiskeridir.id).collect(),
+            fiskeridir_vessel_ids: Some(state.vessels.iter().map(|v| v.fiskeridir.id).collect()),
             ordering: Some(Ordering::Asc),
             ..Default::default()
         };
@@ -95,10 +95,10 @@ async fn test_fishing_facilities_returns_fishing_facilities_with_tool_types() {
             .await;
 
         let params = FishingFacilitiesParams {
-            tool_types: vec![
+            tool_types: Some(vec![
                 FishingFacilityToolType::Sensorbuoy,
                 FishingFacilityToolType::Crabpot,
-            ],
+            ]),
             ordering: Some(Ordering::Asc),
             ..Default::default()
         };
@@ -185,14 +185,14 @@ async fn test_fishing_facilities_returns_fishing_facilities_in_setup_ranges() {
             .await;
 
         let params = FishingFacilitiesParams {
-            setup_ranges: vec![
+            setup_ranges: Some(vec![
                 "[2000-01-05T00:00:00Z,2000-01-15T00:00:00Z]"
                     .parse()
                     .unwrap(),
                 "[2000-01-15T00:00:00Z,2000-01-25T00:00:00Z]"
                     .parse()
                     .unwrap(),
-            ],
+            ]),
             ordering: Some(Ordering::Asc),
             ..Default::default()
         };
@@ -223,14 +223,14 @@ async fn test_fishing_facilities_returns_fishing_facilities_in_removed_ranges() 
             .await;
 
         let params = FishingFacilitiesParams {
-            removed_ranges: vec![
+            removed_ranges: Some(vec![
                 "[2000-01-05T00:00:00Z,2000-01-15T00:00:00Z]"
                     .parse()
                     .unwrap(),
                 "[2000-01-15T00:00:00Z,2000-01-25T00:00:00Z]"
                     .parse()
                     .unwrap(),
-            ],
+            ]),
             ordering: Some(Ordering::Asc),
             ..Default::default()
         };

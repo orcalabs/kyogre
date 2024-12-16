@@ -43,7 +43,7 @@ pub struct Port {
     EnumString,
 )]
 #[cfg_attr(feature = "sqlx", derive(sqlx::Type))]
-#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
+#[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
 pub enum FiskdirVesselNationalityGroup {
     #[serde(rename(deserialize = "U"))]
     Foreign = 1,

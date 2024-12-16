@@ -6,40 +6,36 @@ use kyogre_core::{
     FishingFacilities, FishingFacilitiesQuery, FishingFacilitiesSorting, FishingFacilityToolType,
     FiskeridirVesselId, Mmsi, Ordering, Pagination, Range,
 };
+use oasgen::{oasgen, OaSchema};
 use serde::{Deserialize, Serialize};
 use serde_qs::actix::QsQuery as Query;
 use serde_with::{serde_as, DisplayFromStr};
-use utoipa::{IntoParams, ToSchema};
+
 use uuid::Uuid;
 
 use crate::{
-    error::{error::InsufficientPermissionsSnafu, ErrorResponse, Result},
+    error::{error::InsufficientPermissionsSnafu, Result},
     extractors::{BwPolicy, BwProfile},
     response::StreamResponse,
     stream_response, Database,
 };
 
 #[serde_as]
-#[derive(Default, Debug, Clone, Deserialize, Serialize, IntoParams)]
+#[derive(Default, Debug, Clone, Deserialize, Serialize, OaSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct FishingFacilitiesParams {
-    #[serde(default)]
-    #[param(rename = "mmsis[]", value_type = Option<Vec<i32>>)]
-    pub mmsis: Vec<Mmsi>,
-    #[serde(default)]
-    #[param(rename = "fiskeridirVesselIds[]", value_type = Option<Vec<i64>>)]
-    pub fiskeridir_vessel_ids: Vec<FiskeridirVesselId>,
-    #[serde(default)]
-    #[param(rename = "toolTypes[]", value_type = Option<Vec<FishingFacilityToolType>>)]
-    #[serde_as(as = "Vec<DisplayFromStr>")]
-    pub tool_types: Vec<FishingFacilityToolType>,
+    #[oasgen(rename = "mmsis[]")]
+    pub mmsis: Option<Vec<Mmsi>>,
+    #[oasgen(rename = "fiskeridirVesselIds[]")]
+    pub fiskeridir_vessel_ids: Option<Vec<FiskeridirVesselId>>,
+    #[oasgen(rename = "toolTypes[]")]
+    #[serde_as(as = "Option<Vec<DisplayFromStr>>")]
+    pub tool_types: Option<Vec<FishingFacilityToolType>>,
     pub active: Option<bool>,
-    #[serde(default)]
-    #[param(rename = "setupRanges[]", value_type = Option<Vec<String>>)]
-    pub setup_ranges: Vec<Range<DateTime<Utc>>>,
-    #[serde(default)]
-    #[param(rename = "removedRanges[]", value_type = Option<Vec<String>>)]
-    pub removed_ranges: Vec<Range<DateTime<Utc>>>,
+    #[oasgen(rename = "setupRanges[]")]
+    pub setup_ranges: Option<Vec<Range<DateTime<Utc>>>>,
+    #[oasgen(rename = "removedRanges[]")]
+    pub removed_ranges: Option<Vec<Range<DateTime<Utc>>>>,
     pub limit: Option<u64>,
     pub offset: Option<u64>,
     pub ordering: Option<Ordering>,
@@ -48,15 +44,7 @@ pub struct FishingFacilitiesParams {
 
 /// Returns all fishing facilities matching the provided parameters.
 /// Access to fishing facilities are limited to authenticated users with sufficient permissions.
-#[utoipa::path(
-    get,
-    path = "/fishing_facilities",
-    params(FishingFacilitiesParams),
-    responses(
-        (status = 200, description = "all fishing facilities", body = [FishingFacility]),
-        (status = 500, description = "an internal error occured", body = ErrorResponse),
-    )
-)]
+#[oasgen(skip(db), tags("FishingFacility"))]
 #[tracing::instrument(skip(db))]
 pub async fn fishing_facilities<T: Database + Send + Sync + 'static>(
     db: web::Data<T>,
@@ -80,17 +68,14 @@ pub async fn fishing_facilities<T: Database + Send + Sync + 'static>(
 }
 
 #[serde_as]
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize, ToSchema)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize, OaSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct FishingFacility {
     pub tool_id: Uuid,
     pub barentswatch_vessel_id: Option<Uuid>,
-    #[schema(value_type = Option<i64>)]
     pub fiskeridir_vessel_id: Option<FiskeridirVesselId>,
     pub vessel_name: Option<String>,
-    #[schema(value_type = Option<String>)]
     pub call_sign: Option<CallSign>,
-    #[schema(value_type = Option<i32>)]
     pub mmsi: Option<Mmsi>,
     pub imo: Option<i64>,
     pub reg_num: Option<String>,
@@ -102,15 +87,10 @@ pub struct FishingFacility {
     pub tool_type_name: Option<String>,
     pub tool_color: Option<String>,
     pub tool_count: Option<i32>,
-    #[schema(value_type = String, example = "2023-02-24T11:08:20.409416682Z")]
     pub setup_timestamp: DateTime<Utc>,
-    #[schema(value_type = Option<String>, example = "2023-02-24T11:08:20.409416682Z")]
     pub setup_processed_timestamp: Option<DateTime<Utc>>,
-    #[schema(value_type = Option<String>, example = "2023-02-24T11:08:20.409416682Z")]
     pub removed_timestamp: Option<DateTime<Utc>>,
-    #[schema(value_type = Option<String>, example = "2023-02-24T11:08:20.409416682Z")]
     pub removed_processed_timestamp: Option<DateTime<Utc>>,
-    #[schema(value_type = String, example = "2023-02-24T11:08:20.409416682Z")]
     pub last_changed: DateTime<Utc>,
     pub source: Option<String>,
     pub comment: Option<String>,
@@ -251,12 +231,12 @@ impl From<FishingFacilitiesParams> for FishingFacilitiesQuery {
         } = v;
 
         Self {
-            mmsis,
-            fiskeridir_vessel_ids,
-            tool_types,
+            mmsis: mmsis.unwrap_or_default(),
+            fiskeridir_vessel_ids: fiskeridir_vessel_ids.unwrap_or_default(),
+            tool_types: tool_types.unwrap_or_default(),
             active,
-            setup_ranges,
-            removed_ranges,
+            setup_ranges: setup_ranges.unwrap_or_default(),
+            removed_ranges: removed_ranges.unwrap_or_default(),
             pagination: Pagination::<FishingFacilities>::new(limit, offset),
             ordering,
             sorting,

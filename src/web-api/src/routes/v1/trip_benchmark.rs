@@ -1,9 +1,4 @@
-use crate::{
-    error::{ErrorResponse, Result},
-    extractors::BwProfile,
-    response::Response,
-    Database,
-};
+use crate::{error::Result, extractors::BwProfile, response::Response, Database};
 use actix_web::web;
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::{CallSign, GearGroup, VesselLengthGroup};
@@ -11,13 +6,13 @@ use kyogre_core::{
     AverageEeoiQuery, AverageTripBenchmarks, AverageTripBenchmarksQuery, EeoiQuery,
     FiskeridirVesselId, Mean, Ordering, TripBenchmarksQuery, TripId, TripWithBenchmark,
 };
+use oasgen::{oasgen, OaSchema};
 use serde::{Deserialize, Serialize};
 use serde_qs::actix::QsQuery as Query;
 use serde_with::serde_as;
 use serde_with::DisplayFromStr;
-use utoipa::{IntoParams, ToSchema};
 
-#[derive(Default, Debug, Deserialize, Serialize, IntoParams)]
+#[derive(Default, Debug, Deserialize, Serialize, OaSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct TripBenchmarksParams {
     pub start_date: Option<DateTime<Utc>>,
@@ -25,7 +20,7 @@ pub struct TripBenchmarksParams {
     pub ordering: Option<Ordering>,
 }
 
-#[derive(Default, Debug, Deserialize, Serialize, IntoParams)]
+#[derive(Default, Debug, Deserialize, Serialize, OaSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct EeoiParams {
     pub start_date: Option<DateTime<Utc>>,
@@ -33,50 +28,38 @@ pub struct EeoiParams {
 }
 
 #[serde_as]
-#[derive(Default, Debug, Deserialize, Serialize, IntoParams)]
+#[derive(Default, Debug, Deserialize, Serialize, OaSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct AverageTripBenchmarksParams {
     pub start_date: DateTime<Utc>,
     pub end_date: DateTime<Utc>,
-    #[serde(default)]
-    #[serde_as(as = "Vec<DisplayFromStr>")]
-    #[param(rename = "gearGroups[]", value_type = Option<Vec<GearGroup>>)]
-    pub gear_groups: Vec<GearGroup>,
+    #[serde_as(as = "Option<Vec<DisplayFromStr>>")]
+    #[oasgen(rename = "gearGroups[]")]
+    pub gear_groups: Option<Vec<GearGroup>>,
     #[serde_as(as = "Option<DisplayFromStr>")]
     pub length_group: Option<VesselLengthGroup>,
-    #[serde(default)]
-    #[param(rename = "vesselIds[]", value_type = Option<Vec<i64>>)]
-    pub vessel_ids: Vec<FiskeridirVesselId>,
+    #[oasgen(rename = "vesselIds[]")]
+    pub vessel_ids: Option<Vec<FiskeridirVesselId>>,
 }
 
 #[serde_as]
-#[derive(Default, Debug, Deserialize, Serialize, IntoParams)]
+#[derive(Default, Debug, Deserialize, Serialize, OaSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct AverageEeoiParams {
     pub start_date: DateTime<Utc>,
     pub end_date: DateTime<Utc>,
-    #[serde(default)]
-    #[serde_as(as = "Vec<DisplayFromStr>")]
-    #[param(rename = "gearGroups[]", value_type = Option<Vec<GearGroup>>)]
-    pub gear_groups: Vec<GearGroup>,
+    #[serde_as(as = "Option<Vec<DisplayFromStr>>")]
+    #[oasgen(rename = "gearGroups[]")]
+    pub gear_groups: Option<Vec<GearGroup>>,
     #[serde_as(as = "Option<DisplayFromStr>")]
     pub length_group: Option<VesselLengthGroup>,
-    #[serde(default)]
-    #[param(rename = "vesselIds[]", value_type = Option<Vec<i64>>)]
-    pub vessel_ids: Vec<FiskeridirVesselId>,
+    #[oasgen(rename = "vesselIds[]")]
+    pub vessel_ids: Option<Vec<FiskeridirVesselId>>,
 }
 
 /// Returns the average trip benchmarks for the given timespan and vessels matching the given
 /// parameters.
-#[utoipa::path(
-    get,
-    path = "/trip_benchmarks/average",
-    params(AverageTripBenchmarksParams),
-    responses(
-        (status = 200, description = "average trip benchmarks", body = AverageTripBenchmarks),
-        (status = 500, description = "an internal error occured", body = ErrorResponse),
-    )
-)]
+#[oasgen(skip(db), tags("TripBenchmark"))]
 #[tracing::instrument(skip(db))]
 pub async fn average<T: Database + Send + Sync + 'static>(
     db: web::Data<T>,
@@ -87,15 +70,7 @@ pub async fn average<T: Database + Send + Sync + 'static>(
 }
 
 /// Returns trip benchmarks for the vessel associated with the authenticated user.
-#[utoipa::path(
-    get,
-    path = "/trip_benchmarks",
-    params(TripBenchmarksParams),
-    responses(
-        (status = 200, description = "your trip benchmarks matching the parameters", body = TripBenchmarks),
-        (status = 500, description = "an internal error occured", body = ErrorResponse),
-    )
-)]
+#[oasgen(skip(db), tags("TripBenchmark"))]
 #[tracing::instrument(skip(db))]
 pub async fn trip_benchmarks<T: Database>(
     db: web::Data<T>,
@@ -111,15 +86,7 @@ pub async fn trip_benchmarks<T: Database>(
 
 /// Returns the EEOI of the logged in user for the given period.
 /// EEOI is given with the unit: `tonn / (tonn * nautical miles)`
-#[utoipa::path(
-    get,
-    path = "/trip_benchmarks/eeoi",
-    params(EeoiParams),
-    responses(
-        (status = 200, description = "your EEOI for the given period", body = Option<f64>),
-        (status = 500, description = "an internal error occured", body = ErrorResponse),
-    )
-)]
+#[oasgen(skip(db), tags("TripBenchmark"))]
 #[tracing::instrument(skip(db))]
 pub async fn eeoi<T: Database>(
     db: web::Data<T>,
@@ -135,15 +102,7 @@ pub async fn eeoi<T: Database>(
 
 /// Returns the average EEOI of all vessels matching the given parameters.
 /// EEOI is given with the unit: `tonn / (tonn * nautical miles)`
-#[utoipa::path(
-    get,
-    path = "/trip_benchmarks/average_eeoi",
-    params(AverageEeoiParams),
-    responses(
-        (status = 200, description = "the average EEOI for vessels matching the parameters", body = Option<f64>),
-        (status = 500, description = "an internal error occured", body = ErrorResponse),
-    )
-)]
+#[oasgen(skip(db), tags("TripBenchmark"))]
 #[tracing::instrument(skip(db))]
 pub async fn average_eeoi<T: Database>(
     db: web::Data<T>,
@@ -154,7 +113,7 @@ pub async fn average_eeoi<T: Database>(
     Ok(Response::new(eeoi))
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
+#[derive(Debug, Clone, Deserialize, Serialize, OaSchema, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct TripBenchmarks {
     // TODO
@@ -167,10 +126,9 @@ pub struct TripBenchmarks {
     pub trips: Vec<TripBenchmark>,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
+#[derive(Debug, Clone, Deserialize, Serialize, OaSchema, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct TripBenchmark {
-    #[schema(value_type = i64)]
     pub id: TripId,
     pub start: DateTime<Utc>,
     pub end: DateTime<Utc>,
@@ -275,9 +233,9 @@ impl From<AverageTripBenchmarksParams> for AverageTripBenchmarksQuery {
         Self {
             start_date,
             end_date,
-            gear_groups,
+            gear_groups: gear_groups.unwrap_or_default(),
             length_group,
-            vessel_ids,
+            vessel_ids: vessel_ids.unwrap_or_default(),
         }
     }
 }
@@ -295,9 +253,9 @@ impl From<AverageEeoiParams> for AverageEeoiQuery {
         Self {
             start_date,
             end_date,
-            gear_groups,
+            gear_groups: gear_groups.unwrap_or_default(),
             length_group,
-            vessel_ids,
+            vessel_ids: vessel_ids.unwrap_or_default(),
         }
     }
 }

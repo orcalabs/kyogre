@@ -6,7 +6,7 @@ use strum::{AsRefStr, EnumString};
 use crate::{FiskeridirVesselId, Ordering, Pagination, Trips};
 
 #[cfg_attr(feature = "sqlx", derive(sqlx::Type))]
-#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
+#[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
 #[derive(
     Default, Debug, Clone, Copy, Deserialize, Serialize, strum::Display, AsRefStr, EnumString,
 )]

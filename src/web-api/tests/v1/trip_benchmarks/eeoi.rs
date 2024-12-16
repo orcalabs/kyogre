@@ -148,9 +148,7 @@ async fn test_average_eeoi_works() {
             .get_average_eeoi(AverageEeoiParams {
                 start_date: start,
                 end_date: end,
-                gear_groups: vec![],
-                length_group: None,
-                vessel_ids: vec![],
+                ..Default::default()
             })
             .await
             .unwrap();

@@ -8,44 +8,38 @@ use kyogre_core::{
     ActiveLandingFilter, CatchLocationId, FiskeridirVesselId, LandingMatrixQuery, Landings,
     LandingsQuery, LandingsSorting, Ordering, Pagination,
 };
+use oasgen::{oasgen, OaSchema};
 use serde::{Deserialize, Serialize};
 use serde_qs::actix::QsQuery as Query;
 use serde_with::{serde_as, DisplayFromStr};
 use tracing::error;
-use utoipa::{IntoParams, ToSchema};
 
 use crate::{
-    error::{ErrorResponse, Result},
+    error::Result,
     response::{Response, ResponseOrStream, StreamResponse},
     routes::utils::*,
     stream_response, Cache, Database, Meilisearch,
 };
 
 #[serde_as]
-#[derive(Default, Debug, Clone, Deserialize, Serialize, IntoParams)]
+#[derive(Default, Debug, Clone, Deserialize, Serialize, OaSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct LandingsParams {
-    #[serde(default)]
-    #[param(rename = "months[]", value_type = Option<Vec<DateTime<Utc>>>)]
-    pub months: Vec<DateTime<Utc>>,
-    #[serde(default)]
-    #[param(rename = "catchLocations[]", value_type = Option<Vec<String>>)]
-    pub catch_locations: Vec<CatchLocationId>,
-    #[serde(default)]
-    #[param(rename = "gearGroupIds[]", value_type = Option<Vec<GearGroup>>)]
-    #[serde_as(as = "Vec<DisplayFromStr>")]
-    pub gear_group_ids: Vec<GearGroup>,
-    #[serde(default)]
-    #[param(rename = "speciesGroupIds[]", value_type = Option<Vec<SpeciesGroup>>)]
-    #[serde_as(as = "Vec<DisplayFromStr>")]
-    pub species_group_ids: Vec<SpeciesGroup>,
-    #[serde(default)]
-    #[param(rename = "vesselLengthGroups[]", value_type = Option<Vec<VesselLengthGroup>>)]
-    #[serde_as(as = "Vec<DisplayFromStr>")]
-    pub vessel_length_groups: Vec<VesselLengthGroup>,
-    #[serde(default)]
-    #[param(rename = "fiskeridirVesselIds[]", value_type = Option<Vec<i64>>)]
-    pub fiskeridir_vessel_ids: Vec<FiskeridirVesselId>,
+    #[oasgen(rename = "months[]")]
+    pub months: Option<Vec<DateTime<Utc>>>,
+    #[oasgen(rename = "catchLocations[]")]
+    pub catch_locations: Option<Vec<CatchLocationId>>,
+    #[oasgen(rename = "gearGroupIds[]")]
+    #[serde_as(as = "Option<Vec<DisplayFromStr>>")]
+    pub gear_group_ids: Option<Vec<GearGroup>>,
+    #[oasgen(rename = "speciesGroupIds[]")]
+    #[serde_as(as = "Option<Vec<DisplayFromStr>>")]
+    pub species_group_ids: Option<Vec<SpeciesGroup>>,
+    #[oasgen(rename = "vesselLengthGroups[]")]
+    #[serde_as(as = "Option<Vec<DisplayFromStr>>")]
+    pub vessel_length_groups: Option<Vec<VesselLengthGroup>>,
+    #[oasgen(rename = "fiskeridirVesselIds[]")]
+    pub fiskeridir_vessel_ids: Option<Vec<FiskeridirVesselId>>,
     pub sorting: Option<LandingsSorting>,
     pub ordering: Option<Ordering>,
     pub limit: Option<u64>,
@@ -53,37 +47,28 @@ pub struct LandingsParams {
 }
 
 #[serde_as]
-#[derive(Default, Debug, Clone, Deserialize, Serialize, IntoParams)]
+#[derive(Default, Debug, Clone, Deserialize, Serialize, OaSchema)]
 #[serde(default, rename_all = "camelCase")]
 pub struct LandingMatrixParams {
-    #[param(rename = "months[]")]
-    pub months: Vec<u32>,
-    #[param(rename = "catchLocations[]", value_type = Option<Vec<String>>)]
-    pub catch_locations: Vec<CatchLocationId>,
-    #[param(rename = "gearGroupIds[]", value_type = Option<Vec<GearGroup>>)]
-    #[serde_as(as = "Vec<DisplayFromStr>")]
-    pub gear_group_ids: Vec<GearGroup>,
-    #[param(rename = "speciesGroupIds[]", value_type = Option<Vec<SpeciesGroup>>)]
-    #[serde_as(as = "Vec<DisplayFromStr>")]
-    pub species_group_ids: Vec<SpeciesGroup>,
-    #[param(rename = "vesselLengthGroups[]", value_type = Option<Vec<VesselLengthGroup>>)]
-    #[serde_as(as = "Vec<DisplayFromStr>")]
-    pub vessel_length_groups: Vec<VesselLengthGroup>,
-    #[param(rename = "fiskeridirVesselIds[]", value_type = Option<Vec<i64>>)]
-    pub fiskeridir_vessel_ids: Vec<FiskeridirVesselId>,
+    #[oasgen(rename = "months[]")]
+    pub months: Option<Vec<u32>>,
+    #[oasgen(rename = "catchLocations[]")]
+    pub catch_locations: Option<Vec<CatchLocationId>>,
+    #[oasgen(rename = "gearGroupIds[]")]
+    #[serde_as(as = "Option<Vec<DisplayFromStr>>")]
+    pub gear_group_ids: Option<Vec<GearGroup>>,
+    #[oasgen(rename = "speciesGroupIds[]")]
+    #[serde_as(as = "Option<Vec<DisplayFromStr>>")]
+    pub species_group_ids: Option<Vec<SpeciesGroup>>,
+    #[oasgen(rename = "vesselLengthGroups[]")]
+    #[serde_as(as = "Option<Vec<DisplayFromStr>>")]
+    pub vessel_length_groups: Option<Vec<VesselLengthGroup>>,
+    #[oasgen(rename = "fiskeridirVesselIds[]")]
+    pub fiskeridir_vessel_ids: Option<Vec<FiskeridirVesselId>>,
 }
 
 /// Returns all landings matching the provided parameters.
-#[utoipa::path(
-    get,
-    path = "/landings",
-    params(LandingsParams),
-    responses(
-        (status = 200, description = "all landings", body = [Landing]),
-        (status = 400, description = "the provided parameters were invalid"),
-        (status = 500, description = "an internal error occured", body = ErrorResponse),
-    )
-)]
+#[oasgen(skip(db, meilisearch), tags("Landing"))]
 #[tracing::instrument(skip(db, meilisearch))]
 pub async fn landings<T: Database + Send + Sync + 'static, M: Meilisearch + 'static>(
     db: web::Data<T>,
@@ -113,26 +98,14 @@ pub async fn landings<T: Database + Send + Sync + 'static, M: Meilisearch + 'sta
 }
 
 #[serde_as]
-#[derive(Debug, Deserialize, IntoParams)]
+#[derive(Debug, Deserialize, OaSchema)]
 pub struct LandingMatrixPath {
     #[serde_as(as = "DisplayFromStr")]
     pub active_filter: ActiveLandingFilter,
 }
 
 /// Returns an aggregated matrix view of landing living weights.
-#[utoipa::path(
-    get,
-    path = "/landing_matrix/{active_filter}",
-    params(
-        LandingMatrixParams,
-        LandingMatrixPath,
-    ),
-    responses(
-        (status = 200, description = "an aggregated matrix view of landing living weights", body = LandingMatrix),
-        (status = 400, description = "the provided parameters were invalid"),
-        (status = 500, description = "an internal error occured", body = ErrorResponse),
-    )
-)]
+#[oasgen(skip(db, cache), tags("Landing"))]
 #[tracing::instrument(skip(db, cache))]
 pub async fn landing_matrix<T: Database + 'static, S: Cache>(
     db: web::Data<T>,
@@ -156,23 +129,18 @@ pub async fn landing_matrix<T: Database + 'static, S: Cache>(
 }
 
 #[serde_as]
-#[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
+#[derive(Debug, Clone, Deserialize, Serialize, OaSchema, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct Landing {
-    #[schema(value_type = String)]
     pub id: LandingId,
     pub landing_timestamp: DateTime<Utc>,
-    #[schema(value_type = Option<String>, example = "05-24")]
     pub catch_location: Option<CatchLocationId>,
     #[serde_as(as = "DisplayFromStr")]
     pub gear_id: Gear,
     #[serde_as(as = "DisplayFromStr")]
     pub gear_group_id: GearGroup,
-    #[schema(value_type = Option<String>)]
     pub delivery_point_id: Option<DeliveryPointId>,
-    #[schema(value_type = Option<i64>)]
     pub fiskeridir_vessel_id: Option<FiskeridirVesselId>,
-    #[schema(value_type = Option<String>)]
     pub vessel_call_sign: Option<CallSign>,
     pub vessel_name: Option<String>,
     pub vessel_length: Option<f64>,
@@ -185,7 +153,7 @@ pub struct Landing {
 }
 
 #[serde_as]
-#[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
+#[derive(Debug, Clone, Deserialize, Serialize, OaSchema, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct LandingCatch {
     pub living_weight: f64,
@@ -196,7 +164,7 @@ pub struct LandingCatch {
     pub species_group_id: SpeciesGroup,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
+#[derive(Debug, Clone, Deserialize, Serialize, OaSchema, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct LandingMatrix {
     pub dates: Vec<u64>,
@@ -314,12 +282,12 @@ impl From<LandingsParams> for LandingsQuery {
 
         Self {
             pagination: Pagination::<Landings>::new(limit, offset),
-            ranges: months_to_date_ranges(months),
-            catch_locations,
-            gear_group_ids,
-            species_group_ids,
-            vessel_length_groups,
-            vessel_ids: fiskeridir_vessel_ids,
+            ranges: months_to_date_ranges(months.unwrap_or_default()),
+            catch_locations: catch_locations.unwrap_or_default(),
+            gear_group_ids: gear_group_ids.unwrap_or_default(),
+            species_group_ids: species_group_ids.unwrap_or_default(),
+            vessel_length_groups: vessel_length_groups.unwrap_or_default(),
+            vessel_ids: fiskeridir_vessel_ids.unwrap_or_default(),
             sorting: Some(sorting.unwrap_or_default()),
             ordering: Some(ordering.unwrap_or_default()),
         }
@@ -340,12 +308,12 @@ pub fn matrix_params_to_query(
     } = params;
 
     LandingMatrixQuery {
-        months,
-        catch_locations,
-        gear_group_ids,
-        species_group_ids,
-        vessel_length_groups,
+        months: months.unwrap_or_default(),
+        catch_locations: catch_locations.unwrap_or_default(),
+        gear_group_ids: gear_group_ids.unwrap_or_default(),
+        species_group_ids: species_group_ids.unwrap_or_default(),
+        vessel_length_groups: vessel_length_groups.unwrap_or_default(),
         active_filter,
-        vessel_ids: fiskeridir_vessel_ids,
+        vessel_ids: fiskeridir_vessel_ids.unwrap_or_default(),
     }
 }

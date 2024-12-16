@@ -12,7 +12,7 @@ use crate::*;
 #[repr(i32)]
 #[derive(Debug, Clone, Copy, PartialEq, Deserialize_repr, Display)]
 #[cfg_attr(feature = "sqlx", derive(sqlx::Type))]
-#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
+#[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
 pub enum TripBenchmarkId {
     WeightPerHour = 1,
     Sustainability = 2,
@@ -26,7 +26,7 @@ pub enum TripBenchmarkId {
 #[repr(i32)]
 #[derive(Debug, Clone, Copy, PartialEq, Deserialize_repr, Display)]
 #[cfg_attr(feature = "sqlx", derive(sqlx::Type))]
-#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
+#[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
 pub enum TripBenchmarkStatus {
     MustRecompute = 1,
     MustRefresh = 2,
@@ -35,7 +35,7 @@ pub enum TripBenchmarkStatus {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
+#[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
 pub struct AverageTripBenchmarks {
     pub weight_per_hour: Option<f64>,
     pub weight_per_distance: Option<f64>,

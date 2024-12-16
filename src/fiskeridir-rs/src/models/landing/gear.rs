@@ -18,7 +18,7 @@ pub struct GearDetails {
 /// Gear code definitions from Fiskedirektoratet.
 #[allow(missing_docs)]
 #[repr(i32)]
-#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
+#[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
 #[cfg_attr(feature = "sqlx", derive(sqlx::Type))]
 #[derive(
     Debug,
@@ -90,7 +90,7 @@ pub enum Gear {
 
 /// GearGroup code definitions from Fiskedirektoratet.
 #[allow(missing_docs)]
-#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
+#[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
 #[cfg_attr(feature = "sqlx", derive(sqlx::Type))]
 #[derive(
     Serialize_repr,
@@ -129,7 +129,7 @@ pub enum GearGroup {
 
 /// MainGearGroup code definitions from Fiskedirektoratet.
 #[allow(missing_docs)]
-#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
+#[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
 #[cfg_attr(feature = "sqlx", derive(sqlx::Type))]
 #[derive(
     Serialize_repr,
