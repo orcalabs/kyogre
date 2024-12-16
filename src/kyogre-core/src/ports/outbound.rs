@@ -307,6 +307,8 @@ pub trait FuelEstimation: Send + Sync {
 
 #[async_trait]
 pub trait VerificationOutbound: Send + Sync {
+    /// Runs a set of verification queries to check if certain constraints, which we cannot express
+    /// as database constraints, holds.
     async fn verify_database(&self) -> CoreResult<()>;
 }
 

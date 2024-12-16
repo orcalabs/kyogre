@@ -108,3 +108,11 @@ git config --global credential.helper store
 
 echo "https://USERNAME:API-KEY@dl.cloudsmith.io" > ~/.git-credentials
 ```
+
+## Documentation
+
+To view the code documentation run the following from the `src` directory (the docs will popup in your browser):
+
+```
+cargo doc --open --no-deps --workspace --document-private-items
+```
