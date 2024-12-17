@@ -4,6 +4,44 @@ use crate::ers_last_trip_landing_coverage_end;
 use chrono::{DateTime, Utc};
 use kyogre_core::{Bound, DateRange, NewTrip};
 
+/// Creates trips based on DEP/POR ERS messages where DEP messages indicate the start of a trip
+/// and POR messages indicate the end of trip.
+/// - If multiple successive DEP messages exist the earliest will be used to indicate trip start.
+/// - If multiple successive POR messages exist the latest will be used to indicate trip end.
+///
+/// Ships are legally required to send DEP/POR messages some hours prior to actually departing or
+/// arriving at a port.
+/// These messages include an estimated field indicating when the captain thinks they will actually
+/// arrive/depart.
+/// We use this estimated timestamp to define the ordering of DEP/POR messages and on tiebreaks use
+/// ERS message number (num_sent_message within a given year).
+///
+/// Landing coverage for a trip is defined as (where `POR` is the trip's POR estimated timestamp
+/// `POR(N)` is the next trip's POR estimated timestamp): `POR - 6 hours -> POR(N) - 6 hours`
+/// - If a trip is shorter than 6 hours `POR` is used as start.
+/// - If the next trip is shorter than 6 hours `POR(N)` is used as end.
+/// - The latest trip which has no next trip has the end `POR + 3 days`.
+///
+/// Previously tested approaches for trip definitions:
+/// - Sort messages based on ERS message number (num_sent_message within a given year)
+///     - Did not work out as their associated timestamp (both estimated and message timestamp) are not ordered correctly.
+/// - Latest DEP message instead of earliest
+///     - The resulting trips did not accuratley represent fishing trips. There were cases where
+///         vessels sent a DEP message, then did some fishing, then sent another DEP and fished some more
+///         before sending a POR.
+/// - Earliest POR message instead of latest
+///     - The resulting trips did not accuratley represent full fishing trips. There were cases where
+///         vessels would send multiple successive POR messages at different ports, (deliverying
+///         fish at multiple locations) leading to placing landings on wrong trips.
+///
+/// Previously tested approaches for landing coverage:
+/// - `POR -> POR(N)`
+///     - We observed that several incidents where landings were registered a short duration prior
+///         to POR resulting in them being registered on the prior trip instead of the current trip.
+/// - `DEP -> Middle of next trip`
+///     - The arbitrary cutoff in the middle of trip resulted in incorrect landing connections, and
+///         did not scale well with longer trips.
+
 #[derive(Debug)]
 pub struct ErsStatemachine {
     current_departure: Departure,
