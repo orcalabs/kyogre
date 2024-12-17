@@ -37,7 +37,11 @@ impl ErsStatemachine {
         let mut prior_trip_same_start_and_end_landing_coverage = false;
 
         if let Some(prior_trip) = self.new_trips.last_mut() {
-            let mut range = DateRange::new(prior_trip.period.end(), period.end())?;
+            let mut range = DateRange::new(
+                prior_trip.landing_coverage.start(),
+                period.ers_landing_coverage_start(),
+            )?;
+
             if range.equal_start_and_end() {
                 range.set_start_bound(Bound::Inclusive);
                 range.set_end_bound(Bound::Inclusive);
@@ -54,7 +58,7 @@ impl ErsStatemachine {
         }
 
         let mut landing_coverage = DateRange::new(
-            period.end(),
+            period.ers_landing_coverage_start(),
             ers_last_trip_landing_coverage_end(&period.end()),
         )?;
 

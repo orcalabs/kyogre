@@ -1,6 +1,8 @@
 use crate::{date_range_error::OrderingSnafu, DateRangeError};
 use chrono::{DateTime, Duration, Utc};
 
+use super::ERS_LANDING_COVERAGE_OFFSET;
+
 #[derive(Debug, Clone)]
 pub struct DateRange {
     start_bound: Bound,
@@ -160,6 +162,14 @@ impl DateRange {
 
     pub fn duration(&self) -> Duration {
         self.end - self.start
+    }
+
+    pub fn ers_landing_coverage_start(&self) -> DateTime<Utc> {
+        if self.duration() < ERS_LANDING_COVERAGE_OFFSET {
+            self.end()
+        } else {
+            self.end() - ERS_LANDING_COVERAGE_OFFSET
+        }
     }
 
     pub fn equal_start_and_end(&self) -> bool {
