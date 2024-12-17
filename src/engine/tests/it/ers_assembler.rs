@@ -62,7 +62,10 @@ async fn test_handles_dep_and_por_on_same_timestamp2() {
         assert_eq!(trip.period.start(), state.dep[0].timestamp);
         assert_eq!(trip.period.end(), state.por[0].timestamp);
 
-        assert_eq!(trip.landing_coverage.start(), state.por[0].timestamp);
+        assert_eq!(
+            trip.landing_coverage.start(),
+            state.por[0].timestamp - ERS_LANDING_COVERAGE_OFFSET
+        );
         assert_eq!(trip.landing_coverage.end(), state.por[1].timestamp);
 
         assert_eq!(trip2.period.start(), state.dep[1].timestamp);
@@ -95,7 +98,8 @@ async fn test_handles_dep_and_por_on_same_timestamp() {
             })
             .por(1)
             .modify(|p| {
-                p.por.set_arrival_timestamp(start + Duration::hours(1));
+                p.por
+                    .set_arrival_timestamp(start + ERS_LANDING_COVERAGE_OFFSET);
                 p.por.message_info.message_number = 2;
             })
             .dep(1)
@@ -121,7 +125,10 @@ async fn test_handles_dep_and_por_on_same_timestamp() {
 
         assert_eq!(trip.period.start(), state.dep[0].timestamp);
         assert_eq!(trip.period.end(), state.por[1].timestamp);
-        assert_eq!(trip.landing_coverage.start(), state.por[1].timestamp);
+        assert_eq!(
+            trip.landing_coverage.start(),
+            state.por[1].timestamp - ERS_LANDING_COVERAGE_OFFSET
+        );
         assert_eq!(trip.landing_coverage.end(), state.por[2].timestamp);
 
         assert_eq!(trip2.period.start(), state.dep[1].timestamp);
@@ -201,6 +208,7 @@ async fn test_does_not_recompute_prior_trip_with_new_departure_event() {
 async fn test_extends_most_recent_trip_with_new_arrival() {
     test(|_helper, builder| async move {
         let state = builder
+            .data_increment(ERS_LANDING_COVERAGE_OFFSET)
             .vessels(1)
             .dep(1)
             .por(1)
@@ -214,7 +222,10 @@ async fn test_extends_most_recent_trip_with_new_arrival() {
 
         assert_eq!(trip.period.start(), state.dep[0].timestamp);
         assert_eq!(trip.period.end(), state.por[1].timestamp);
-        assert_eq!(trip.landing_coverage.start(), state.por[1].timestamp);
+        assert_eq!(
+            trip.landing_coverage.start(),
+            state.por[1].timestamp - ERS_LANDING_COVERAGE_OFFSET
+        );
         assert_eq!(
             trip.landing_coverage.end(),
             ers_last_trip_landing_coverage_end(&state.por[1].timestamp)
@@ -375,7 +386,10 @@ async fn test_handles_dep_and_por_with_identical_timestamps() {
 
         assert_eq!(trip.period.start(), state.dep[0].timestamp);
         assert_eq!(trip.period.end(), state.por[0].timestamp);
-        assert_eq!(trip.landing_coverage.start(), state.por[0].timestamp);
+        assert_eq!(
+            trip.landing_coverage.start(),
+            state.por[0].timestamp - ERS_LANDING_COVERAGE_OFFSET
+        );
         assert_eq!(
             trip.landing_coverage.end(),
             ers_last_trip_landing_coverage_end(&state.por[0].timestamp)
@@ -488,6 +502,119 @@ async fn test_trips_reset_deletes_all_trips_including_non_overlaps() {
         assert_eq!(state.trips.len(), 2);
         assert_eq!(state.trips[0].trip_id.into_inner(), 2);
         assert_eq!(state.trips[1].trip_id.into_inner(), 3);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_handles_prior_trip_shorter_than_landing_coverage_offset() {
+    test(|_helper, builder| async move {
+        let state = builder
+            .data_increment(ERS_LANDING_COVERAGE_OFFSET)
+            .trip_duration(ERS_LANDING_COVERAGE_OFFSET - Duration::seconds(1))
+            .vessels(1)
+            .trips(1)
+            .dep(1)
+            .por(1)
+            .build()
+            .await;
+
+        assert_eq!(state.trips.len(), 2);
+        let trip = &state.trips[0];
+        let trip2 = &state.trips[1];
+
+        assert_eq!(trip.period.start(), state.dep[0].timestamp);
+        assert_eq!(trip.period.end(), state.por[0].timestamp);
+        assert_eq!(trip.landing_coverage.start(), state.por[0].timestamp);
+        assert_eq!(
+            trip.landing_coverage.end(),
+            state.por[1].timestamp - ERS_LANDING_COVERAGE_OFFSET
+        );
+
+        assert_eq!(trip2.period.start(), state.dep[1].timestamp);
+        assert_eq!(trip2.period.end(), state.por[1].timestamp);
+        assert_eq!(
+            trip2.landing_coverage.start(),
+            state.por[1].timestamp - ERS_LANDING_COVERAGE_OFFSET
+        );
+        assert_eq!(
+            trip2.landing_coverage.end(),
+            ers_last_trip_landing_coverage_end(&state.por[1].timestamp)
+        );
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_handles_trip_shorter_than_landing_coverage_offset() {
+    test(|_helper, builder| async move {
+        let state = builder
+            .data_increment(ERS_LANDING_COVERAGE_OFFSET - Duration::hours(1))
+            .trip_duration(ERS_LANDING_COVERAGE_OFFSET)
+            .vessels(1)
+            .trips(1)
+            .dep(1)
+            .por(1)
+            .build()
+            .await;
+
+        assert_eq!(state.trips.len(), 2);
+        let trip = &state.trips[0];
+        let trip2 = &state.trips[1];
+
+        assert_eq!(trip.period.start(), state.dep[0].timestamp);
+        assert_eq!(trip.period.end(), state.por[0].timestamp);
+        assert_eq!(
+            trip.landing_coverage.start(),
+            state.por[0].timestamp - ERS_LANDING_COVERAGE_OFFSET
+        );
+        assert_eq!(trip.landing_coverage.end(), state.por[1].timestamp);
+
+        assert_eq!(trip2.period.start(), state.dep[1].timestamp);
+        assert_eq!(trip2.period.end(), state.por[1].timestamp);
+        assert_eq!(trip2.landing_coverage.start(), state.por[1].timestamp);
+        assert_eq!(
+            trip2.landing_coverage.end(),
+            ers_last_trip_landing_coverage_end(&state.por[1].timestamp)
+        );
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_handles_extending_trip_shorter_than_landing_coverage_offset() {
+    test(|_helper, builder| async move {
+        let state = builder
+            .data_increment(ERS_LANDING_COVERAGE_OFFSET - Duration::hours(5))
+            .trip_duration(ERS_LANDING_COVERAGE_OFFSET)
+            .vessels(1)
+            .trips(1)
+            .dep(1)
+            .por(1)
+            .new_cycle()
+            .por(1)
+            .build()
+            .await;
+
+        assert_eq!(state.trips.len(), 2);
+        let trip = &state.trips[0];
+        let trip2 = &state.trips[1];
+
+        assert_eq!(trip.period.start(), state.dep[0].timestamp);
+        assert_eq!(trip.period.end(), state.por[0].timestamp);
+        assert_eq!(
+            trip.landing_coverage.start(),
+            state.por[0].timestamp - ERS_LANDING_COVERAGE_OFFSET
+        );
+        assert_eq!(trip.landing_coverage.end(), state.por[2].timestamp);
+
+        assert_eq!(trip2.period.start(), state.dep[1].timestamp);
+        assert_eq!(trip2.period.end(), state.por[2].timestamp);
+        assert_eq!(trip2.landing_coverage.start(), state.por[2].timestamp);
+        assert_eq!(
+            trip2.landing_coverage.end(),
+            ers_last_trip_landing_coverage_end(&state.por[2].timestamp)
+        );
     })
     .await;
 }

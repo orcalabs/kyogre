@@ -1372,7 +1372,7 @@ VALUES
     pub(crate) async fn add_trips_inner(
         &self,
         new_trips: Vec<NewTrip>,
-        earliest_trip_period: DateRange,
+        earliest_trip_range: DateRange,
         trip_positions: Vec<(
             Option<TripPositionLayerOutput>,
             Vec<kyogre_core::UpdateTripPositionCargoWeight>,
@@ -1384,9 +1384,8 @@ VALUES
         new_trip_calculation_time: DateTime<Utc>,
         queued_reset: bool,
     ) -> Result<()> {
-        let earliest_trip_start = earliest_trip_period.start();
-        let earliest_trip_end = earliest_trip_period.end();
-        let earliest_trip_period = PgRange::from(&earliest_trip_period);
+        let earliest_trip_start = earliest_trip_range.start();
+        let earliest_trip_period = PgRange::from(&earliest_trip_range);
 
         let mut trip_positions_insert_mapping: HashMap<i64, TripId> = HashMap::new();
 
@@ -1463,7 +1462,7 @@ WHERE
                 r#"
 UPDATE trips
 SET
-    landing_coverage = tstzrange (UPPER(period), $3)
+    landing_coverage = TSTZRANGE (LOWER(landing_coverage), $1)
 WHERE
     trip_id = (
         SELECT
@@ -1471,8 +1470,8 @@ WHERE
         FROM
             trips
         WHERE
-            fiskeridir_vessel_id = $1
-            AND period < $2
+            fiskeridir_vessel_id = $2
+            AND period < $3
         ORDER BY
             period DESC
         LIMIT
@@ -1481,9 +1480,11 @@ WHERE
 RETURNING
     LOWER(period) AS ts
                     "#,
+                // The start of our earliest trip's landing_coverage is the end of the prior trips
+                // landing_coverage
+                earliest_trip_range.ers_landing_coverage_start(),
                 vessel_id.into_inner(),
-                earliest_trip_period,
-                earliest_trip_end,
+                earliest_trip_period
             )
             .fetch_optional(&mut *tx)
             .await?
