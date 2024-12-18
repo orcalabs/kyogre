@@ -725,7 +725,7 @@ SET
     landing_total_living_weight = COALESCE(q.living_weight, 0),
     landing_total_gross_weight = COALESCE(q.gross_weight, 0),
     landing_total_product_weight = COALESCE(q.product_weight, 0),
-    landing_total_price_for_fisher = COALESCE(q.price_for_fisher, 0)
+    landing_total_price_for_fisher = COALESCE(q.final_price_for_fisher, 0)
 FROM
     (
         SELECT
@@ -744,7 +744,7 @@ FROM
             SUM(qi.living_weight) AS living_weight,
             SUM(qi.gross_weight) AS gross_weight,
             SUM(qi.product_weight) AS product_weight,
-            SUM(qi.price_for_fisher) AS price_for_fisher
+            SUM(qi.final_price_for_fisher) AS final_price_for_fisher
         FROM
             (
                 SELECT
@@ -761,16 +761,16 @@ FROM
                         'product_weight',
                         COALESCE(SUM(le.product_weight), 0),
                         'price_for_fisher',
-                        SUM(le.price_for_fisher),
+                        COALESCE(SUM(le.final_price_for_fisher), 0),
                         'species_fiskeridir_id',
                         le.species_fiskeridir_id,
                         'product_quality_id',
-                        l.product_quality_id
+                        le.product_quality_id
                     ) AS catches,
                     SUM(le.living_weight) AS living_weight,
                     SUM(le.gross_weight) AS gross_weight,
                     SUM(le.product_weight) AS product_weight,
-                    SUM(le.price_for_fisher) AS price_for_fisher
+                    SUM(le.final_price_for_fisher) AS final_price_for_fisher
                 FROM
                     trips t
                     INNER JOIN vessel_events v ON t.trip_id = v.trip_id
@@ -778,11 +778,11 @@ FROM
                     INNER JOIN landing_entries le ON le.landing_id = l.landing_id
                 WHERE
                     t.trip_id = ANY ($1::BIGINT[])
-                    AND l.product_quality_id IS NOT NULL
+                    AND le.product_quality_id IS NOT NULL
                     AND le.species_fiskeridir_id IS NOT NULL
                 GROUP BY
                     t.trip_id,
-                    l.product_quality_id,
+                    le.product_quality_id,
                     le.species_fiskeridir_id
             ) qi
         GROUP BY

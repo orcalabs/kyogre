@@ -2,7 +2,7 @@ use core::f64;
 use std::pin::Pin;
 
 use async_trait::async_trait;
-use chrono::{DateTime, NaiveDate, Utc};
+use chrono::{DateTime, NaiveDate, NaiveDateTime, Utc};
 use fiskeridir_rs::{CallSign, DataFileId, LandingId, SpeciesGroup};
 use futures::Stream;
 
@@ -331,6 +331,18 @@ pub trait HaulWeatherOutbound: Send + Sync {
         &self,
         query: OceanClimateQuery,
     ) -> CoreResult<Option<HaulOceanClimate>>;
+}
+
+#[async_trait]
+pub trait ScraperOutboundPort {
+    async fn latest_fishing_facility_update(
+        &self,
+        source: Option<FishingFacilityApiSource>,
+    ) -> CoreResult<Option<DateTime<Utc>>>;
+    async fn latest_weather_timestamp(&self) -> CoreResult<Option<DateTime<Utc>>>;
+    async fn latest_ocean_climate_timestamp(&self) -> CoreResult<Option<DateTime<Utc>>>;
+    async fn latest_buyer_location_update(&self) -> CoreResult<Option<NaiveDateTime>>;
+    async fn latest_weekly_sale(&self) -> CoreResult<Option<NaiveDate>>;
 }
 
 #[async_trait]

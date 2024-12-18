@@ -820,6 +820,10 @@ impl ScraperInboundPort for PostgresAdapter {
         self.add_fishing_facilities_impl(facilities).await?;
         Ok(())
     }
+    async fn add_weekly_sales(&self, weekly_sales: Vec<WeeklySale>) -> CoreResult<()> {
+        self.add_weekly_sales_impl(weekly_sales).await?;
+        Ok(())
+    }
     async fn add_register_vessels(
         &self,
         vessels: Vec<fiskeridir_rs::RegisterVessel>,
@@ -908,6 +912,9 @@ impl ScraperOutboundPort for PostgresAdapter {
     }
     async fn latest_buyer_location_update(&self) -> CoreResult<Option<NaiveDateTime>> {
         Ok(self.latest_buyer_location_update_impl().await?)
+    }
+    async fn latest_weekly_sale(&self) -> CoreResult<Option<NaiveDate>> {
+        Ok(self.latest_weekly_sale_impl().await?)
     }
 }
 

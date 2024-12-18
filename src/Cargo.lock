@@ -5028,6 +5028,7 @@ dependencies = [
  "geozero",
  "http-client",
  "kyogre-core",
+ "num-traits",
  "orca-core",
  "pyo3",
  "regex",

@@ -9,7 +9,8 @@ use fiskeridir_rs::{CallSign, DeliveryPointId, LandingMonth};
 use futures::TryStreamExt;
 use kyogre_core::{
     BuyerLocation, CatchLocationId, FiskeridirVesselId, MLModel, NewVesselConflict, NewWeather,
-    TestStorage, Tra, TrainingMode, TripAssembler, TripDistancer, TripPositionLayer,
+    TestStorage, Tra, TrainingMode, TripAssembler, TripDistancer, TripPositionLayer, WeeklySale,
+    WeeklySaleId,
 };
 use machine::StateMachine;
 use orca_core::PsqlSettings;
@@ -44,6 +45,7 @@ mod trip;
 mod vessel;
 mod vms;
 mod weather;
+mod weekly_sale;
 
 pub use ais::*;
 pub use ais_vms::*;
@@ -60,6 +62,7 @@ pub use trip::*;
 pub use vessel::*;
 pub use vms::*;
 pub use weather::*;
+pub use weekly_sale::*;
 
 use self::cycle::Cycle;
 
@@ -79,6 +82,7 @@ pub struct TestState {
     pub tra: Vec<Tra>,
     pub dep: Vec<Departure>,
     pub por: Vec<Arrival>,
+    pub weekly_sales: Vec<WeeklySale>,
     // Includes the static delivery points from our migrations
     pub all_delivery_points: Vec<kyogre_core::DeliveryPoint>,
     // Only includes the delivery points added by the builder
@@ -108,6 +112,7 @@ pub struct TestStateBuilder {
     tra: Vec<TraConstructor>,
     dep: Vec<DepConstructor>,
     por: Vec<PorConstructor>,
+    weekly_sales: Vec<WeeklySaleContructor>,
     delivery_points: Vec<DeliveryPointConstructor>,
     fishing_facilities: Vec<FishingFacilityConctructor>,
     weather: Vec<WeatherConstructor>,
@@ -309,6 +314,7 @@ impl TestStateBuilder {
             hauls: vec![],
             default_haul_duration: Duration::hours(1),
             tra: vec![],
+            weekly_sales: vec![],
             global_data_timestamp_counter: Utc.with_ymd_and_hms(2010, 2, 5, 10, 0, 0).unwrap(),
             fishing_facilities: vec![],
             weather: vec![],
@@ -569,6 +575,23 @@ impl TestStateBuilder {
 
         VesselBuilder {
             current_index: self.vessels.len() - amount,
+            state: self,
+        }
+    }
+
+    pub fn weekly_sales(mut self, amount: usize, mut start: DateTime<Utc>) -> WeeklySaleBuilder {
+        assert_ne!(amount, 0);
+
+        for _ in 0..amount {
+            self.weekly_sales.push(WeeklySaleContructor {
+                cycle: self.cycle,
+                weekly_sale: WeeklySale::test_new(WeeklySaleId::test_new(start)),
+            });
+            start += Duration::weeks(1);
+        }
+
+        WeeklySaleBuilder {
+            current_index: self.weekly_sales.len() - amount,
             state: self,
         }
     }
@@ -909,6 +932,17 @@ impl TestStateBuilder {
                     .unwrap();
             }
 
+            // Weekly Sales must be inserted after landings because it updates the landing_entries table
+            self.storage
+                .add_weekly_sales(
+                    self.weekly_sales
+                        .iter()
+                        .filter_map(|v| (v.cycle == i).then_some(v.weekly_sale.clone()))
+                        .collect(),
+                )
+                .await
+                .unwrap();
+
             self.ais_vms_positions.iter().for_each(|v| {
                 if v.cycle == i {
                     match &v.position {
@@ -1087,6 +1121,12 @@ impl TestStateBuilder {
 
         assert!(fishing_facilities.len() < 100);
 
+        let weekly_sales = self
+            .weekly_sales
+            .into_iter()
+            .map(|v| v.weekly_sale)
+            .collect();
+
         let mut ais_positions = self.storage.all_ais().await;
         let mut vms_positions = self.storage.all_vms().await;
         let mut ais_vms_positions = self.storage.all_ais_vms().await;
@@ -1114,6 +1154,7 @@ impl TestStateBuilder {
             hauls,
             dep,
             por,
+            weekly_sales,
             all_delivery_points,
             delivery_points,
             fishing_facilities,

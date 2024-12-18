@@ -118,6 +118,7 @@ impl_cycleable!(
     state.state.state,
     cycle
 );
+impl_cycleable!(WeeklySaleBuilder, WeeklySaleContructor, state, cycle);
 
 pub trait Modifiable
 where
@@ -126,9 +127,9 @@ where
     type Constructor;
     fn current_index(&self) -> usize;
     fn slice(&mut self) -> &mut [Self::Constructor];
-    fn modify<F>(mut self, closure: F) -> Self
+    fn modify<F>(mut self, mut closure: F) -> Self
     where
-        F: Fn(&mut Self::Constructor),
+        F: FnMut(&mut Self::Constructor),
     {
         let current_index = self.current_index();
         self.slice()
@@ -140,9 +141,9 @@ where
         self
     }
 
-    fn modify_idx<F>(mut self, closure: F) -> Self
+    fn modify_idx<F>(mut self, mut closure: F) -> Self
     where
-        F: Fn(usize, &mut Self::Constructor),
+        F: FnMut(usize, &mut Self::Constructor),
     {
         let current_index = self.current_index();
         self.slice()
@@ -246,6 +247,17 @@ impl_modifiable!(
     state.state.state.weather
 );
 impl_modifiable!(WeatherBuilder, WeatherConstructor, state.weather);
+impl_modifiable!(WeeklySaleBuilder, WeeklySaleContructor, state.weekly_sales);
+impl_modifiable!(
+    WeeklySaleLandingTripBuilder,
+    WeeklySaleContructor,
+    state.state.state.state.weekly_sales
+);
+impl_modifiable!(
+    WeeklySaleLandingBuilder,
+    WeeklySaleContructor,
+    state.state.weekly_sales
+);
 
 impl Modifiable for TripBuilder {
     type Constructor = TripConstructor;
@@ -258,9 +270,9 @@ impl Modifiable for TripBuilder {
         &mut self.state.state.trips
     }
 
-    fn modify<F>(mut self, closure: F) -> Self
+    fn modify<F>(mut self, mut closure: F) -> Self
     where
-        F: Fn(&mut Self::Constructor),
+        F: FnMut(&mut Self::Constructor),
     {
         let current_index = self.current_index();
         self.slice()
@@ -276,9 +288,9 @@ impl Modifiable for TripBuilder {
         self
     }
 
-    fn modify_idx<F>(mut self, closure: F) -> Self
+    fn modify_idx<F>(mut self, mut closure: F) -> Self
     where
-        F: Fn(usize, &mut Self::Constructor),
+        F: FnMut(usize, &mut Self::Constructor),
     {
         let current_index = self.current_index();
         self.slice()
@@ -442,6 +454,7 @@ impl_global_level!(LandingBuilder);
 impl_global_level!(FishingFacilityBuilder);
 impl_global_level!(DeliveryPointBuilder);
 impl_global_level!(WeatherBuilder);
+impl_global_level!(WeeklySaleBuilder);
 
 #[async_trait]
 pub trait TripLevel
@@ -526,3 +539,63 @@ macro_rules! impl_delivery_point_level {
 }
 
 impl_delivery_point_level!(LandingDeliveryPointBuilder);
+
+#[async_trait]
+pub trait LandingLevel
+where
+    Self: Sized,
+{
+    fn base(self) -> TestStateBuilder;
+    fn up(self) -> LandingBuilder;
+    async fn build(self) -> TestState {
+        self.base().build().await
+    }
+    fn weekly_sales(self) -> WeeklySaleLandingBuilder {
+        self.up().weekly_sales()
+    }
+}
+
+macro_rules! impl_landing_level {
+    ($type: ty) => {
+        impl LandingLevel for $type {
+            fn base(self) -> TestStateBuilder {
+                self.state.state
+            }
+            fn up(self) -> LandingBuilder {
+                self.state
+            }
+        }
+    };
+}
+
+impl_landing_level!(WeeklySaleLandingBuilder);
+
+#[async_trait]
+pub trait LandingTripLevel
+where
+    Self: Sized,
+{
+    fn base(self) -> TestStateBuilder;
+    fn up(self) -> LandingTripBuilder;
+    async fn build(self) -> TestState {
+        self.base().build().await
+    }
+    fn weekly_sales(self) -> WeeklySaleLandingTripBuilder {
+        self.up().weekly_sales()
+    }
+}
+
+macro_rules! impl_landing_trip_level {
+    ($type: ty) => {
+        impl LandingTripLevel for $type {
+            fn base(self) -> TestStateBuilder {
+                self.state.state.state.state
+            }
+            fn up(self) -> LandingTripBuilder {
+                self.state
+            }
+        }
+    };
+}
+
+impl_landing_trip_level!(WeeklySaleLandingTripBuilder);

@@ -18,6 +18,11 @@ telemetry:
   port: 443
 scraper:
   file_download_dir: '/tmp/kyogre-engine-download-data'
+  rafisklaget_weekly_sales:
+    url: https://ws.rafisklaget.no/statistics/sales-data/weekly-sales
+    auth_url: https://ws.rafisklaget.no/statistics/oauth/authorize
+    token_url: https://ws.rafisklaget.no/statistics/oauth/token
+    scope: ''
   fishing_facility:
     url: https://www.barentswatch.no/bwapi/v2/geodata/fishingfacilityupdates
     auth_url: 'https://id.barentswatch.no/connect/authorize'

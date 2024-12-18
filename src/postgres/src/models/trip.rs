@@ -268,7 +268,7 @@ pub struct TripDetailed {
     pub total_living_weight: f64,
     pub total_gross_weight: f64,
     pub total_product_weight: f64,
-    pub total_price_for_fisher: Option<f64>,
+    pub total_price_for_fisher: f64,
     pub delivery_points: Vec<DeliveryPointId>,
     pub gear_ids: Vec<Gear>,
     pub gear_group_ids: Vec<GearGroup>,

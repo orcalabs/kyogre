@@ -89,6 +89,13 @@ pub enum Error {
         location: Location,
         opaque: OpaqueError,
     },
+    #[snafu(display("Invalid ISO week, year: {year}, week: {week}"))]
+    InvalidIsoWeek {
+        #[snafu(implicit)]
+        location: Location,
+        year: i32,
+        week: i32,
+    },
     #[snafu(display("An unexpected error occured"))]
     #[stack_error(opaque_std = [tokio::task::JoinError])]
     Unexpected {
@@ -199,6 +206,7 @@ impl From<Error> for kyogre_core::Error {
             | Error::VerifyDatabase { .. }
             | Error::Jurisdiction { .. }
             | Error::Unexpected { .. }
+            | Error::InvalidIsoWeek { .. }
             | Error::Migrate { .. } => kyogre_core::Error::Unexpected {
                 location,
                 opaque: OpaqueError::Stack(Box::new(value)),
