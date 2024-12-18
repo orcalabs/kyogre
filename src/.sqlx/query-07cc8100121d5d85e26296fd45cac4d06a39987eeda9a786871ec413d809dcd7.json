@@ -1,0 +1,26 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    \"year\",\n    week\nFROM\n    rafisklaget_weekly_sales\nORDER BY\n    \"year\" DESC,\n    week DESC\nLIMIT\n    1\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "year",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "week",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "07cc8100121d5d85e26296fd45cac4d06a39987eeda9a786871ec413d809dcd7"
+}

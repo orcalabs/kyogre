@@ -81,7 +81,6 @@ pub struct NewLanding<'a> {
     pub catch_year: i32,
     pub production_facility: Option<&'a str>,
     pub production_facility_municipality_id: Option<i32>,
-    pub product_quality_id: i32,
     pub quota_type_id: Option<i32>,
     pub quota_vessel_registration_id: Option<&'a str>,
     pub buyer_org_id: Option<i32>,
@@ -190,7 +189,6 @@ impl<'a> NewLanding<'a> {
             production_facility_municipality_id: landing
                 .production_facility_municipality_code
                 .map(|v| v as i32),
-            product_quality_id: landing.product.quality as i32,
             quota_type_id: landing.quota.map(|v| v as i32),
             quota_vessel_registration_id: landing.vessel.quota_registration_id.as_deref(),
             buyer_org_id: landing.delivery_point.org_id.map(|v| v as i32),

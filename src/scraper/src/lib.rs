@@ -7,10 +7,12 @@ use fiskeridir::{
     AquaCultureRegisterScraper, BuyerRegisterScraper, ErsScraper, LandingScraper,
     RegisterVesselsScraper, VmsScraper,
 };
+use http_client::HttpClient;
 use kyogre_core::{OauthConfig, ScraperInboundPort, ScraperOutboundPort};
 use mattilsynet::MattilsynetScraper;
 use ocean_climate::OceanClimateScraper;
 use orca_core::Environment;
+use rafisklaget::WeeklySalesScraper;
 use serde::Deserialize;
 use std::sync::Arc;
 use std::{fmt::Debug, path::PathBuf};
@@ -23,6 +25,7 @@ mod error;
 mod fiskeridir;
 mod mattilsynet;
 mod ocean_climate;
+mod rafisklaget;
 mod utils;
 mod weather;
 
@@ -52,6 +55,7 @@ pub struct Config {
     pub buyer_register_url: Option<String>,
     pub fishing_facility: Option<ApiClientConfig>,
     pub fishing_facility_historic: Option<ApiClientConfig>,
+    pub rafisklaget_weekly_sales: Option<ApiClientConfig>,
     pub file_download_dir: PathBuf,
 }
 
@@ -86,7 +90,6 @@ impl Scraper {
         config: Config,
         processor: Arc<dyn Processor>,
         fiskeridir_source: FiskeridirSource,
-        barentswatch_source: BarentswatchSource,
     ) -> Scraper {
         let landing_sources = config
             .landings
@@ -148,13 +151,18 @@ impl Scraper {
         let buyer_register_scraper =
             BuyerRegisterScraper::new(fiskeridir_arc, buyer_register_source);
 
-        let barentswatch_source = Arc::new(barentswatch_source);
+        let http_client = Arc::new(HttpClient::new());
+
+        let barentswatch_source = Arc::new(BarentswatchSource::new(http_client.clone()));
         let fishing_facility_scraper =
             FishingFacilityScraper::new(barentswatch_source.clone(), config.fishing_facility);
         let fishing_facility_historic_scraper = FishingFacilityHistoricScraper::new(
             barentswatch_source,
             config.fishing_facility_historic,
         );
+
+        let weekly_sales_scraper =
+            WeeklySalesScraper::new(config.rafisklaget_weekly_sales, http_client);
 
         let weather_scraper = WeatherScraper::new();
         let _ocean_climate_scraper = OceanClimateScraper::new();
@@ -170,6 +178,7 @@ impl Scraper {
                     Arc::new(fishing_facility_scraper),
                     Arc::new(fishing_facility_historic_scraper),
                     Arc::new(aqua_culture_register_scraper),
+                    Arc::new(weekly_sales_scraper),
                 ],
                 vec![Arc::new(vms_scraper)],
                 vec![Arc::new(mattilsynet_scraper)],
@@ -240,6 +249,7 @@ pub enum ScraperId {
     Mattilsynet,
     Weather,
     OceanClimate,
+    RafisklagetWeeklySales,
 }
 
 impl std::fmt::Display for ScraperId {
@@ -256,6 +266,7 @@ impl std::fmt::Display for ScraperId {
             ScraperId::Mattilsynet => write!(f, "mattilsynet"),
             ScraperId::Weather => write!(f, "weather"),
             ScraperId::OceanClimate => write!(f, "ocean_climate"),
+            ScraperId::RafisklagetWeeklySales => write!(f, "rafisklaget_weekly_sales"),
         }
     }
 }

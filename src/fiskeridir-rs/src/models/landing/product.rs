@@ -306,6 +306,7 @@ impl Quality {
     Copy,
     PartialEq,
     Eq,
+    Hash,
     FromPrimitive,
     ToPrimitive,
     Deserialize_repr,
@@ -518,5 +519,17 @@ impl Condition {
             Slo => "Slo",
             Uspesifisert => "Uspesifisert",
         }
+    }
+}
+
+impl From<Condition> for i32 {
+    fn from(value: Condition) -> Self {
+        value as i32
+    }
+}
+
+impl From<Quality> for i32 {
+    fn from(value: Quality) -> Self {
+        value as i32
     }
 }

@@ -1,7 +1,7 @@
 use crate::*;
 use async_channel::Receiver;
 use async_trait::async_trait;
-use chrono::{DateTime, NaiveDate, NaiveDateTime, Utc};
+use chrono::{DateTime, NaiveDate, Utc};
 use fiskeridir_rs::{DataFileId, SpeciesGroup};
 
 pub type BoxIterator<T> = Box<dyn Iterator<Item = T> + Send + Sync>;
@@ -80,6 +80,7 @@ pub trait WebApiInboundPort {
 #[async_trait]
 pub trait ScraperInboundPort {
     async fn add_fishing_facilities(&self, facilities: Vec<FishingFacility>) -> CoreResult<()>;
+    async fn add_weekly_sales(&self, weekly_sales: Vec<WeeklySale>) -> CoreResult<()>;
     async fn add_register_vessels(
         &self,
         vessels: Vec<fiskeridir_rs::RegisterVessel>,
@@ -117,17 +118,6 @@ pub trait ScraperInboundPort {
     ) -> CoreResult<()>;
     async fn add_weather(&self, weather: Vec<NewWeather>) -> CoreResult<()>;
     async fn add_ocean_climate(&self, ocean_climate: Vec<NewOceanClimate>) -> CoreResult<()>;
-}
-
-#[async_trait]
-pub trait ScraperOutboundPort {
-    async fn latest_fishing_facility_update(
-        &self,
-        source: Option<FishingFacilityApiSource>,
-    ) -> CoreResult<Option<DateTime<Utc>>>;
-    async fn latest_weather_timestamp(&self) -> CoreResult<Option<DateTime<Utc>>>;
-    async fn latest_ocean_climate_timestamp(&self) -> CoreResult<Option<DateTime<Utc>>>;
-    async fn latest_buyer_location_update(&self) -> CoreResult<Option<NaiveDateTime>>;
 }
 
 #[async_trait]
