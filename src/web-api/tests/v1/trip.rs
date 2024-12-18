@@ -1192,6 +1192,7 @@ async fn test_trips_are_reprocessed_if_extended() {
     })
     .await;
 }
+
 #[tokio::test]
 async fn test_trips_ending_in_the_future_has_their_track_updated_on_each_run() {
     test(|helper, builder| async move {
@@ -1226,6 +1227,78 @@ async fn test_trips_ending_in_the_future_has_their_track_updated_on_each_run() {
             .unwrap();
 
         assert_eq!(positions.len(), 10);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_trips_includes_weekly_sales_price() {
+    test(|_helper, builder| async move {
+        let now = Utc::now();
+        let start = now - Duration::hours(10);
+        let end = now + Duration::hours(10);
+
+        let state = builder
+            .vessels(1)
+            .trips(1)
+            .modify(|t| {
+                t.trip_specification.set_start(start);
+                t.trip_specification.set_end(end);
+            })
+            .landings(1)
+            .modify(|v| {
+                v.landing.finances.price_for_fisher = None;
+            })
+            .weekly_sales()
+            .build()
+            .await;
+
+        assert_eq!(state.trips.len(), 1);
+        assert!(state.trips[0].delivery.total_price_for_fisher > 0.);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_trips_includes_weekly_sales_price_after_refresh() {
+    test(|helper, builder| async move {
+        let now = Utc::now();
+        let start = now - Duration::hours(10);
+        let end = now + Duration::hours(10);
+
+        let mut landing = fiskeridir_rs::Landing::test_default(1, None);
+
+        let state = builder
+            .vessels(1)
+            .trips(1)
+            .modify(|t| {
+                t.trip_specification.set_start(start);
+                t.trip_specification.set_end(end);
+            })
+            .landings(1)
+            .modify(|v| {
+                v.landing.finances.price_for_fisher = None;
+                landing = v.landing.clone();
+            })
+            .build()
+            .await;
+
+        assert_eq!(state.trips.len(), 1);
+        assert_eq!(state.trips[0].delivery.total_price_for_fisher, 0.);
+
+        let state = helper
+            .builder()
+            .await
+            .landings(1)
+            .modify(|v| {
+                v.landing = landing.clone();
+            })
+            .weekly_sales()
+            .build()
+            .await;
+
+        assert_eq!(state.trips.len(), 1);
+        assert!(state.trips[0].delivery.total_price_for_fisher > 0.);
     })
     .await;
 }

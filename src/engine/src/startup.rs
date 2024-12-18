@@ -1,11 +1,10 @@
 use std::sync::Arc;
 
-use http_client::HttpClient;
 use machine::StateMachine;
 use meilisearch::MeilisearchAdapter;
 use orca_core::Environment;
 use postgres::PostgresAdapter;
-use scraper::{BarentswatchSource, FiskeridirSource, Scraper};
+use scraper::{FiskeridirSource, Scraper};
 use tokio::select;
 use tracing::error;
 
@@ -48,15 +47,11 @@ impl App {
         let fiskeridir_source =
             FiskeridirSource::new(Box::new(postgres.clone()), file_downloader, api_downloader);
 
-        let http_client = Arc::new(HttpClient::new());
-        let barentswatch_source = BarentswatchSource::new(http_client);
-
         let scraper = Scraper::new(
             settings.environment,
             settings.scraper.clone(),
             Arc::new(postgres.clone()),
             fiskeridir_source,
-            barentswatch_source,
         );
         let trip_assemblers = settings.trip_assemblers();
         let transition_log = machine::PostgresAdapter::new(&settings.postgres)

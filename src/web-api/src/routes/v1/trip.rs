@@ -252,7 +252,7 @@ pub struct Delivery {
     pub total_living_weight: f64,
     pub total_product_weight: f64,
     pub total_gross_weight: f64,
-    pub total_price_for_fisher: Option<f64>,
+    pub total_price_for_fisher: f64,
 }
 
 #[serde_as]
@@ -266,7 +266,7 @@ pub struct Catch {
     #[serde_as(as = "DisplayFromStr")]
     pub product_quality_id: Quality,
     pub product_quality_name: String,
-    pub price_for_fisher: Option<f64>,
+    pub price_for_fisher: f64,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, OaSchema, PartialEq)]
