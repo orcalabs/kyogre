@@ -8,18 +8,23 @@ use kyogre_core::{
     TrainingMode, TrainingOutput, WeatherData, WeatherLocationOverlap, WeightPredictorTrainingData,
 };
 use pyo3::{
+    ffi::c_str,
     types::{PyAnyMethods, PyByteArray, PyModule},
     Python,
 };
 use serde::Serialize;
-use std::collections::{HashMap, HashSet};
+use std::{
+    collections::{HashMap, HashSet},
+    ffi::CStr,
+};
 use tracing::info;
 
 mod weight;
 mod weight_weather;
 
-static PYTHON_FISHING_WEIGHT_PREDICTOR_CODE: &str =
-    include_str!("../../../../../scripts/python/fishing_predictor/fishing_weight_predictor.py");
+static PYTHON_FISHING_WEIGHT_PREDICTOR_CODE: &CStr = c_str!(include_str!(
+    "../../../../../scripts/python/fishing_predictor/fishing_weight_predictor.py"
+));
 
 pub use weight::*;
 pub use weight_weather::*;
@@ -166,14 +171,19 @@ where
     let training_data = serde_json::to_string(&training_data)?;
 
     let out: (Vec<u8>, Option<f64>) = Python::with_gil(|py| {
-        let py_module =
-            PyModule::from_code_bound(py, PYTHON_FISHING_WEIGHT_PREDICTOR_CODE, "", "").unwrap();
+        let py_module = PyModule::from_code(
+            py,
+            PYTHON_FISHING_WEIGHT_PREDICTOR_CODE,
+            c_str!(""),
+            c_str!(""),
+        )
+        .unwrap();
         let py_main = py_module.getattr("train").unwrap();
 
         let model = if output.model.is_empty() {
             None
         } else {
-            Some(PyByteArray::new_bound(py, &output.model))
+            Some(PyByteArray::new(py, &output.model))
         };
 
         py_main
@@ -326,10 +336,14 @@ where
         let prediction_input = serde_json::to_string(&prediction_input)?;
 
         let predictions = Python::with_gil(|py| {
-            let py_module =
-                PyModule::from_code_bound(py, PYTHON_FISHING_WEIGHT_PREDICTOR_CODE, "", "")?;
+            let py_module = PyModule::from_code(
+                py,
+                PYTHON_FISHING_WEIGHT_PREDICTOR_CODE,
+                c_str!(""),
+                c_str!(""),
+            )?;
             let py_main = py_module.getattr("predict")?;
-            let model = PyByteArray::new_bound(py, model);
+            let model = PyByteArray::new(py, model);
             py_main
                 .call1((model, prediction_input))?
                 .extract::<Vec<f64>>()
