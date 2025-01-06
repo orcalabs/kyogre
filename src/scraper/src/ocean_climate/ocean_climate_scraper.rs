@@ -2,7 +2,8 @@ use async_trait::async_trait;
 use chrono::{DateTime, Duration, Utc};
 use csv::Reader;
 use pyo3::{
-    types::{timezone_utc_bound, PyAnyMethods, PyDateTime, PyModule},
+    ffi::c_str,
+    types::{timezone_utc, PyAnyMethods, PyDateTime, PyModule},
     Python,
 };
 use tracing::{error, info};
@@ -75,16 +76,15 @@ impl OceanClimateScraper {
 }
 
 fn download_ocean_climate_data(latest: DateTime<Utc>) -> Result<Vec<String>> {
-    let py_code = include_str!("../../../../scripts/python/ocean_climate/main.py");
+    let py_code = c_str!(include_str!(
+        "../../../../scripts/python/ocean_climate/main.py"
+    ));
 
     Ok(Python::with_gil(|py| {
-        let py_datetime = PyDateTime::from_timestamp_bound(
-            py,
-            latest.timestamp() as f64,
-            Some(&timezone_utc_bound(py)),
-        )?;
+        let py_datetime =
+            PyDateTime::from_timestamp(py, latest.timestamp() as f64, Some(&timezone_utc(py)))?;
 
-        let py_module = PyModule::from_code_bound(py, py_code, "", "")?;
+        let py_module = PyModule::from_code(py, py_code, c_str!(""), c_str!(""))?;
 
         let py_main = py_module.getattr("main")?;
 
