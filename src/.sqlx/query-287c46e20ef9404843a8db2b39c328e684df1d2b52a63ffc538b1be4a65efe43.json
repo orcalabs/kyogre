@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nWITH\n    _ AS (\n        INSERT INTO\n            species_fiskeridir (species_fiskeridir_id)\n        SELECT\n            u.species\n        FROM\n            UNNEST($1::INT[]) u (species)\n        ON CONFLICT DO NOTHING\n    ),\n    inserted AS (\n        INSERT INTO\n            rafisklaget_weekly_sales (\n                \"year\",\n                week,\n                vessel_length_group,\n                gear_group,\n                species,\n                condition,\n                quality,\n                sum_net_quantity_kg,\n                sum_calculated_living_weight,\n                sum_price\n            )\n        SELECT\n            \"year\",\n            week,\n            vessel_length_group,\n            gear_group,\n            species,\n            condition,\n            quality,\n            sum_net_quantity_kg,\n            sum_calculated_living_weight,\n            sum_price\n        FROM\n            UNNEST(\n                $1::INT[],\n                $2::INT[],\n                $3::INT[],\n                $4::INT[],\n                $5::INT[],\n                $6::INT[],\n                $7::INT[],\n                $8::DOUBLE PRECISION[],\n                $9::DOUBLE PRECISION[],\n                $10::DOUBLE PRECISION[]\n            ) u (\n                species,\n                \"year\",\n                week,\n                vessel_length_group,\n                gear_group,\n                condition,\n                quality,\n                sum_net_quantity_kg,\n                sum_calculated_living_weight,\n                sum_price\n            )\n        ON CONFLICT (\n            \"year\",\n            week,\n            vessel_length_group,\n            gear_group,\n            species,\n            condition,\n            quality\n        ) DO UPDATE\n        SET\n            sum_net_quantity_kg = EXCLUDED.sum_net_quantity_kg,\n            sum_calculated_living_weight = EXCLUDED.sum_calculated_living_weight,\n            sum_price = EXCLUDED.sum_price\n        RETURNING\n            *\n    ),\n    updated AS (\n        UPDATE landing_entries e\n        SET\n            estimated_unit_price_for_fisher = i.sum_price / i.sum_calculated_living_weight\n        FROM\n            inserted i\n            INNER JOIN landings l ON DATE_PART('year', l.landing_timestamp) = i.year\n            AND DATE_PART('week', l.landing_timestamp) = i.week\n            AND l.vessel_length_group_id = i.vessel_length_group\n            AND l.gear_group_id = i.gear_group\n        WHERE\n            e.landing_id = l.landing_id\n            AND e.species_fiskeridir_id = i.species\n            AND e.product_condition_id = i.condition\n            AND e.product_quality_id = i.quality\n            AND i.sum_calculated_living_weight != 0\n        RETURNING\n            l.fiskeridir_vessel_id,\n            l.landing_timestamp\n    )\nUPDATE trips_refresh_boundary t\nSET\n    refresh_boundary = LEAST(t.refresh_boundary, q.landing_timestamp)\nFROM\n    (\n        SELECT\n            u.fiskeridir_vessel_id,\n            MIN(u.landing_timestamp) AS landing_timestamp\n        FROM\n            updated u\n        GROUP BY\n            u.fiskeridir_vessel_id\n    ) q\nWHERE\n    t.fiskeridir_vessel_id = q.fiskeridir_vessel_id\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4Array",
+        "Int4Array",
+        "Int4Array",
+        "Int4Array",
+        "Int4Array",
+        "Int4Array",
+        "Int4Array",
+        "Float8Array",
+        "Float8Array",
+        "Float8Array"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "287c46e20ef9404843a8db2b39c328e684df1d2b52a63ffc538b1be4a65efe43"
+}
