@@ -105,8 +105,7 @@ WITH
             species,
             condition,
             quality
-        ) DO
-        UPDATE
+        ) DO UPDATE
         SET
             sum_net_quantity_kg = EXCLUDED.sum_net_quantity_kg,
             sum_calculated_living_weight = EXCLUDED.sum_calculated_living_weight,
@@ -117,7 +116,7 @@ WITH
     updated AS (
         UPDATE landing_entries e
         SET
-            estimated_unit_price_for_fisher = e.living_weight * (i.sum_price / i.sum_calculated_living_weight)
+            estimated_unit_price_for_fisher = i.sum_price / i.sum_calculated_living_weight
         FROM
             inserted i
             INNER JOIN landings l ON DATE_PART('year', l.landing_timestamp) = i.year
