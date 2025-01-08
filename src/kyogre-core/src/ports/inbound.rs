@@ -139,6 +139,9 @@ pub trait HaulDistributorInbound: Send + Sync {
 
 #[async_trait]
 pub trait TripPipelineInbound: Send + Sync {
+    /// Sets the current trip for the given vessel, only relevant for ERS-based assemblers
+    /// and depends on the latest departure message.
+    async fn set_current_trip(&self, vessel_id: FiskeridirVesselId) -> CoreResult<()>;
     /// Checks wether any vms data has been added out of order (e.g. vms data for '2024-04-04' was
     /// inserted at '2024-04-20'), if so all trips within or after that timestamp has their
     /// processing status reset.
