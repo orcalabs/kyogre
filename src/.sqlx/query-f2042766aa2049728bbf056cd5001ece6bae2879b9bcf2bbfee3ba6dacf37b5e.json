@@ -1,0 +1,41 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    departure_timestamp,\n    hauls::TEXT AS \"hauls!\",\n    CASE\n        WHEN $1 THEN fishing_facilities::TEXT\n        ELSE '[]'\n    END AS \"fishing_facilities!\",\n    target_species_fiskeridir_id\nFROM\n    current_trips\nWHERE\n    fiskeridir_vessel_id = $2\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "departure_timestamp",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 1,
+        "name": "hauls!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "fishing_facilities!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "target_species_fiskeridir_id",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Bool",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      null,
+      null,
+      true
+    ]
+  },
+  "hash": "f2042766aa2049728bbf056cd5001ece6bae2879b9bcf2bbfee3ba6dacf37b5e"
+}

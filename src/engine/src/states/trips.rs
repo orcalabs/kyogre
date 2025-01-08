@@ -519,6 +519,22 @@ async fn run_state(shared_state: Arc<SharedState>) -> Result<TripsReport> {
                                         );
                                     }
                                 }
+
+                                // Regardless if we had no trips to add we need to set the current
+                                // trip to add any new hauls or fishing facilites that might have
+                                // bee added.
+                                match vessel.preferred_trip_assembler {
+                                    TripAssemblerId::Landings => (),
+                                    TripAssemblerId::Ers => {
+                                        if let Err(e) = shared_state.trip_pipeline_inbound.set_current_trip(vessel.fiskeridir.id).await {
+                                            error!(
+                                                "failed to set current trip for vessel: {}, err: {e:?}",
+                                                vessel.fiskeridir.id,
+                                            );
+
+                                        }
+                                    }
+                                }
                             }
                             Err(e) => error!(
                                 "failed to run trips pipeline for vessel: {}, err: {e:?}",
