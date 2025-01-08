@@ -1,5 +1,5 @@
 use crate::{estimated_speed_between_points, Result, UnrealisticSpeed};
-use chrono::{DateTime, NaiveDate, Utc};
+use chrono::{DateTime, Duration, NaiveDate, Utc};
 use kyogre_core::{
     AisVmsPositionWithHaul, FuelEstimation, NewFuelDayEstimate, PositionType, Vessel,
 };
@@ -10,6 +10,7 @@ use tracing::{error, info, instrument};
 #[cfg(not(feature = "test"))]
 static REQUIRED_TRIPS_TO_ESTIMATE_FUEL: u32 = 5;
 
+static RUN_INTERVAL: Duration = Duration::hours(5);
 static FUEL_ESTIMATE_COMMIT_SIZE: usize = 50;
 static HAUL_LOAD_FACTOR: f64 = 1.75;
 
@@ -47,12 +48,25 @@ impl FuelEstimator {
             num_workers,
         }
     }
-    pub async fn last_run(&self) -> Result<Option<DateTime<Utc>>> {
-        Ok(self.adapter.last_run().await?)
+
+    pub async fn run_continuous(self) -> Result<()> {
+        loop {
+            if let Some(last_run) = self.adapter.last_run().await? {
+                let diff = Utc::now() - last_run;
+                if diff >= RUN_INTERVAL {
+                    self.run_single().await?;
+                } else {
+                    tokio::time::sleep(diff.to_std().unwrap()).await;
+                    self.run_single().await?;
+                }
+            } else {
+                self.run_single().await?;
+            }
+        }
     }
 
     #[instrument(skip_all)]
-    pub async fn run(&self) -> Result<()> {
+    pub async fn run_single(&self) -> Result<()> {
         // We dont want to estimate all days in test as it adds some test execution time
         #[cfg(feature = "test")]
         let (num_trips, end_date) = match self.adapter.latest_position().await.unwrap() {
@@ -204,17 +218,19 @@ async fn process_day(
     })
 }
 
-fn estimate_fuel_for_positions(
-    positions: Vec<AisVmsPositionWithHaul>,
-    sfc: f64,
-    engine_power_kw: f64,
-) -> f64 {
+pub fn estimate_fuel_for_positions<T>(positions: Vec<T>, sfc: f64, engine_power_kw: f64) -> f64
+where
+    T: Into<AisVmsPositionWithHaul>,
+{
     let positions = prune_unrealistic_speed(positions);
 
     estimate_fuel(sfc, engine_power_kw, positions, &mut vec![], |_, _| {})
 }
 
-fn prune_unrealistic_speed(positions: Vec<AisVmsPositionWithHaul>) -> Vec<AisVmsPositionWithHaul> {
+fn prune_unrealistic_speed<T>(positions: Vec<T>) -> Vec<AisVmsPositionWithHaul>
+where
+    T: Into<AisVmsPositionWithHaul>,
+{
     let unrealistic = UnrealisticSpeed::default();
     let mut new_positions = Vec::with_capacity(positions.len());
 
@@ -223,10 +239,12 @@ fn prune_unrealistic_speed(positions: Vec<AisVmsPositionWithHaul>) -> Vec<AisVms
     }
 
     let mut iter = positions.into_iter();
-    new_positions.push(iter.next().unwrap());
+    new_positions.push(iter.next().unwrap().into());
 
     for next in iter {
         let current = new_positions.last().unwrap();
+
+        let next = next.into();
 
         match estimated_speed_between_points(current, &next) {
             Ok(speed) => {

@@ -552,7 +552,49 @@ impl FuelEstimation for PostgresAdapter {
 }
 
 #[async_trait]
+impl LiveFuelInbound for PostgresAdapter {
+    async fn delete_old_live_fuel(
+        &self,
+        fiskeridir_vessel_id: FiskeridirVesselId,
+        threshold: DateTime<Utc>,
+    ) -> CoreResult<()> {
+        Ok(retry(|| self.delete_old_live_fuel_impl(fiskeridir_vessel_id, threshold)).await?)
+    }
+    async fn add_live_fuel(
+        &self,
+        vessel_id: FiskeridirVesselId,
+        fuel: &[NewLiveFuel],
+    ) -> CoreResult<()> {
+        Ok(retry(|| self.add_live_fuel_impl(vessel_id, fuel)).await?)
+    }
+    async fn live_fuel_vessels(&self) -> CoreResult<Vec<LiveFuelVessel>> {
+        Ok(retry(|| self.live_fuel_vessels_impl()).await?)
+    }
+    async fn ais_positions(&self, mmsi: Mmsi, range: &DateRange) -> CoreResult<Vec<AisPosition>> {
+        Ok(self
+            .all_ais_positions_impl(AisPositionsArg::Filter {
+                mmsi,
+                start: range.start(),
+                end: range.end(),
+            })
+            .await?)
+    }
+}
+
+#[async_trait]
 impl WebApiOutboundPort for PostgresAdapter {
+    async fn live_fuel(&self, query: &LiveFuelQuery) -> CoreResult<LiveFuel> {
+        Ok(retry(|| async {
+            let entries: CoreResult<Vec<kyogre_core::LiveFuelEntry>> =
+                self.live_fuel_impl(query).convert_collect().await;
+            let entries = entries?;
+            Ok::<kyogre_core::LiveFuel, kyogre_core::Error>(kyogre_core::LiveFuel {
+                total_fuel: entries.iter().map(|e| e.fuel).sum(),
+                entries,
+            })
+        })
+        .await?)
+    }
     async fn org_benchmarks(&self, query: &OrgBenchmarkQuery) -> CoreResult<Option<OrgBenchmarks>> {
         convert_optional(retry(|| self.org_benchmarks_impl(query)).await?)
     }

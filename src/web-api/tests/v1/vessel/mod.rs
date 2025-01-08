@@ -5,12 +5,12 @@ use fiskeridir_rs::SpeciesGroup;
 use fiskeridir_rs::{CallSign, GearGroup};
 use float_cmp::approx_eq;
 use http_client::StatusCode;
-use kyogre_core::TEST_SIGNED_IN_VESSEL_CALLSIGN;
 use kyogre_core::{
     ActiveVesselConflict, FiskeridirVesselId, Mmsi, TestHelperOutbound, TripBenchmarkStatus,
     UpdateVessel, VesselSource,
 };
-use web_api::routes::v1::vessel::FuelParams;
+use kyogre_core::{DEFAULT_LIVE_FUEL_THRESHOLD, TEST_SIGNED_IN_VESSEL_CALLSIGN};
+use web_api::routes::v1::vessel::{FuelParams, LiveFuelParams};
 
 pub mod benchmarks;
 
@@ -825,6 +825,39 @@ async fn test_fuel_is_recalculated_with_new_vms_data() {
             .unwrap();
 
         assert!(!approx_eq!(f64, fuel, fuel2))
+    })
+    .await;
+}
+#[tokio::test]
+async fn test_live_fuel_returns_all_fuel_within_default_threshold() {
+    test(|mut helper, builder| async move {
+        let start = Utc::now() - DEFAULT_LIVE_FUEL_THRESHOLD - Duration::hours(1);
+        builder
+            .vessels(1)
+            .set_engine_building_year()
+            .set_logged_in()
+            .ais_positions(20)
+            .modify_idx(|i, p| {
+                p.position.msgtime = start + Duration::minutes((i * 20) as i64);
+            })
+            .build()
+            .await;
+
+        helper.app.login_user();
+
+        let fuel = helper
+            .app
+            .get_live_vessel_fuel(LiveFuelParams::default())
+            .await
+            .unwrap();
+
+        assert_eq!(fuel.entries.len(), 6);
+        assert!(!approx_eq!(f64, fuel.total_fuel, 0.0));
+        assert!(approx_eq!(
+            f64,
+            fuel.entries.iter().map(|e| e.fuel).sum::<f64>(),
+            fuel.total_fuel
+        ));
     })
     .await;
 }

@@ -14,8 +14,8 @@ use fuel_processor::UnrealisticSpeed;
 use futures::TryStreamExt;
 use kyogre_core::{
     BuyerLocation, CatchLocationId, FiskeridirVesselId, MLModel, NewVesselConflict, NewWeather,
-    TestStorage, Tra, TrainingMode, TripAssembler, TripDistancer, TripPositionLayer, WeeklySale,
-    WeeklySaleId,
+    TestStorage, Tra, TrainingMode, TripAssembler, TripDistancer, TripPositionLayer, UpdateVessel,
+    WeeklySale, WeeklySaleId,
 };
 use machine::StateMachine;
 use orca_core::PsqlSettings;
@@ -569,6 +569,7 @@ impl TestStateBuilder {
                 clear_trip_distancing: false,
                 conflict_winner: false,
                 conflict_loser: false,
+                set_engine_building_year: false,
             });
 
             self.ers_message_number_per_vessel.insert(key, 1);
@@ -672,12 +673,23 @@ impl TestStateBuilder {
                 .manual_vessel_conflict_override(conflict_overrides)
                 .await;
 
+            let mut vessel_updates = Vec::with_capacity(self.vessels.len());
+
             self.storage
                 .add_register_vessels(
                     self.vessels
                         .iter()
                         .filter_map(|v| {
                             if v.cycle == i {
+                                if v.set_engine_building_year {
+                                    vessel_updates.push((
+                                        v.fiskeridir.radio_call_sign.as_ref().unwrap(),
+                                        UpdateVessel {
+                                            engine_power: None,
+                                            engine_building_year: Some(2000),
+                                        },
+                                    ));
+                                }
                                 Some(v.fiskeridir.clone())
                             } else {
                                 None
@@ -687,6 +699,10 @@ impl TestStateBuilder {
                 )
                 .await
                 .unwrap();
+
+            for v in vessel_updates {
+                self.storage.update_vessel(v.0, &v.1).await.unwrap();
+            }
 
             self.storage
                 .add_ers_dca(Box::new(
@@ -1044,7 +1060,6 @@ impl TestStateBuilder {
                 }
                 self.engine = self.engine.run_single().await;
             }
-            self.fuel_processor.run().await.unwrap();
 
             for v in self.vessels.iter().filter(|v| v.cycle == i) {
                 if v.clear_trip_precision {
@@ -1055,6 +1070,8 @@ impl TestStateBuilder {
                 }
             }
         }
+
+        self.fuel_processor.run().await.unwrap();
 
         let mut vessels: Vec<Vessel> = self.storage.vessels().try_collect().await.unwrap();
         vessels.sort_by_key(|v| v.fiskeridir.id);

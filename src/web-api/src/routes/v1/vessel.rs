@@ -9,8 +9,10 @@ use actix_web::web::{self};
 use chrono::{DateTime, Duration, NaiveDate, Utc};
 use fiskeridir_rs::{CallSign, GearGroup, RegisterVesselOwner, SpeciesGroup, VesselLengthGroup};
 use futures::TryStreamExt;
-use kyogre_core::UpdateVessel;
-use kyogre_core::{FiskeridirVesselId, FuelQuery, Mmsi};
+use kyogre_core::{
+    FiskeridirVesselId, FuelQuery, LiveFuelQuery, Mmsi, DEFAULT_LIVE_FUEL_THRESHOLD,
+};
+use kyogre_core::{LiveFuel, UpdateVessel};
 use oasgen::{oasgen, OaSchema};
 use serde::{Deserialize, Serialize};
 use serde_qs::actix::QsQuery as Query;
@@ -23,6 +25,12 @@ pub mod benchmarks;
 pub struct FuelParams {
     pub start_date: Option<NaiveDate>,
     pub end_date: Option<NaiveDate>,
+}
+
+#[derive(Default, Debug, Clone, Deserialize, Serialize, OaSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct LiveFuelParams {
+    pub threshold: Option<DateTime<Utc>>,
 }
 
 /// Updates the vessel with the provided information.
@@ -75,6 +83,19 @@ pub async fn fuel<T: Database + Send + Sync + 'static>(
     let query = params.into_inner().to_query(call_sign.clone())?;
 
     Ok(Response::new(db.fuel_estimation(&query).await?))
+}
+
+#[oasgen(skip(db), tags("Vessel"))]
+#[tracing::instrument(skip(db))]
+pub async fn live_fuel<T: Database + Send + Sync + 'static>(
+    db: web::Data<T>,
+    profile: BwProfile,
+    params: Query<LiveFuelParams>,
+) -> Result<Response<LiveFuel>> {
+    let call_sign = profile.call_sign()?;
+    let query = params.into_inner().to_query(call_sign.clone());
+
+    Ok(Response::new(db.live_fuel(&query).await?))
 }
 
 #[serde_as]
@@ -139,6 +160,16 @@ pub struct AisVessel {
     pub ship_width: Option<i32>,
     pub eta: Option<DateTime<Utc>>,
     pub destination: Option<String>,
+}
+impl LiveFuelParams {
+    pub fn to_query(self, call_sign: CallSign) -> LiveFuelQuery {
+        let Self { threshold } = self;
+
+        LiveFuelQuery {
+            call_sign,
+            threshold: threshold.unwrap_or_else(|| Utc::now() - DEFAULT_LIVE_FUEL_THRESHOLD),
+        }
+    }
 }
 
 impl FuelParams {

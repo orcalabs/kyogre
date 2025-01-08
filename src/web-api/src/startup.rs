@@ -219,6 +219,12 @@ where
                     get().guard(guard.clone()).to(routes::v1::vessel::fuel::<T>),
                 )
                 .route(
+                    "/vessel/live_fuel",
+                    get()
+                        .guard(guard.clone())
+                        .to(routes::v1::vessel::live_fuel::<T>),
+                )
+                .route(
                     "/fuel_measurements",
                     get()
                         .guard(guard.clone())

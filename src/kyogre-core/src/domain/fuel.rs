@@ -1,8 +1,7 @@
-use chrono::{DateTime, NaiveDate, Utc};
+use crate::BarentswatchUserId;
+use chrono::{DateTime, Datelike, NaiveDate, Timelike, Utc};
 use fiskeridir_rs::{CallSign, FiskeridirVesselId};
 use serde::{Deserialize, Serialize};
-
-use crate::BarentswatchUserId;
 
 #[derive(Debug, Clone)]
 pub struct FuelMeasurement {
@@ -32,4 +31,28 @@ pub struct NewFuelDayEstimate {
 pub struct FuelEntry {
     pub fiskeridir_vessel_id: FiskeridirVesselId,
     pub estimated_fuel: f64,
+}
+
+#[derive(Debug, Clone)]
+pub struct NewLiveFuel {
+    pub latest_position_timestamp: DateTime<Utc>,
+    pub fuel: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
+pub struct LiveFuelEntry {
+    pub timestamp: DateTime<Utc>,
+    pub fuel: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
+pub struct LiveFuel {
+    pub total_fuel: f64,
+    pub entries: Vec<LiveFuelEntry>,
+}
+
+pub fn live_fuel_year_day_hour(ts: DateTime<Utc>) -> (i32, u32, u32) {
+    (ts.year(), ts.ordinal(), ts.hour())
 }

@@ -10,6 +10,8 @@ use strum::{AsRefStr, EnumString, IntoStaticStr};
 #[cfg(feature = "oasgen")]
 use oasgen::OaSchema;
 
+use super::{AisVmsPositionWithHaul, PositionType};
+
 pub const LEISURE_VESSEL_SHIP_TYPES: [i32; 2] = [36, 37];
 pub const LEISURE_VESSEL_LENGTH_AIS_BOUNDARY: u32 = 45;
 pub const PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY: u32 = 15;
@@ -104,6 +106,34 @@ pub struct AisPosition {
     pub speed_over_ground: Option<f64>,
     pub true_heading: Option<i32>,
     pub distance_to_shore: f64,
+}
+
+impl From<AisPosition> for AisVmsPositionWithHaul {
+    fn from(value: AisPosition) -> Self {
+        let AisPosition {
+            latitude,
+            longitude,
+            mmsi: _,
+            msgtime,
+            course_over_ground: _,
+            navigational_status: _,
+            rate_of_turn: _,
+            speed_over_ground,
+            true_heading: _,
+            distance_to_shore: _,
+        } = value;
+
+        AisVmsPositionWithHaul {
+            latitude,
+            longitude,
+            timestamp: msgtime,
+            speed: speed_over_ground,
+            // In the cases where we need this conversion we do not have haul data available so
+            // this will always be false
+            is_inside_haul_and_active_gear: false,
+            position_type_id: PositionType::Ais,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]

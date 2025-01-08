@@ -21,6 +21,7 @@ pub struct VesselContructor {
     pub fiskeridir: fiskeridir_rs::RegisterVessel,
     pub ais: NewAisStatic,
     pub cycle: Cycle,
+    pub set_engine_building_year: bool,
     pub(crate) clear_trip_precision: bool,
     pub(crate) clear_trip_distancing: bool,
     pub(crate) conflict_winner: bool,
@@ -33,6 +34,18 @@ impl VesselBuilder {
         let vessel = &mut self.state.vessels[self.current_index];
         vessel.fiskeridir.radio_call_sign = call_sign.clone();
         vessel.ais.call_sign = call_sign;
+        self
+    }
+
+    pub fn set_engine_building_year(mut self) -> VesselBuilder {
+        let base = &mut self.state;
+        let num_vessels = base.vessels[self.current_index..].len();
+
+        assert!(num_vessels > 0);
+
+        for v in base.vessels[self.current_index..].iter_mut() {
+            v.set_engine_building_year = true;
+        }
         self
     }
 
