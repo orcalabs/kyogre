@@ -1,4 +1,5 @@
 use crate::mean::Mean;
+use crate::{AisVessel, Mmsi, TripAssemblerId};
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::{
     CallSign, FiskeridirVesselId, GearGroup, RegisterVesselOwner, SpeciesGroup, VesselLengthGroup,
@@ -7,8 +8,6 @@ use num_derive::FromPrimitive;
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use strum::{AsRefStr, EnumString};
-
-use crate::{AisVessel, Mmsi, TripAssemblerId};
 
 mod benchmark;
 
@@ -27,6 +26,22 @@ pub static IGNORED_CONFLICT_CALL_SIGNS: &[&str] = &["00000000", "0"];
 pub struct UpdateVessel {
     pub engine_power: Option<u32>,
     pub engine_building_year: Option<u32>,
+}
+
+#[derive(Debug, Clone)]
+pub struct LiveFuelVessel {
+    pub mmsi: Mmsi,
+    pub vessel_id: FiskeridirVesselId,
+    pub current_trip_start: Option<DateTime<Utc>>,
+    pub latest_position_timestamp: Option<DateTime<Utc>>,
+    pub engine_building_year: i32,
+    pub engine_power: f64,
+}
+
+impl LiveFuelVessel {
+    pub fn engine_power_kw(&self) -> f64 {
+        self.engine_power * HP_TO_KW
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -163,25 +178,26 @@ pub struct FiskeridirVessel {
     pub rebuilding_year: Option<u32>,
 }
 
+pub fn sfc(engine_building_year: u32) -> f64 {
+    // Specific Fuel Consumption
+    // Source: https://wwwcdn.imo.org/localresources/en/OurWork/Environment/Documents/Fourth%20IMO%20GHG%20Study%202020%20-%20Full%20report%20and%20annexes.pdf
+    //         Annex B.2, Table 4
+    match engine_building_year {
+        ..1984 => [205., 190., 215., 200., 225., 210.],
+        1984..2001 => [185., 175., 195., 185., 205., 190.],
+        2001.. => [175., 165., 185., 175., 195., 185.],
+    }
+    .into_iter()
+    .mean()
+    .unwrap()
+}
+
 impl Vessel {
     pub fn mmsi(&self) -> Option<Mmsi> {
         self.ais.as_ref().map(|v| v.mmsi)
     }
-
     pub fn sfc(&self) -> Option<f64> {
-        // Specific Fuel Consumption
-        // Source: https://wwwcdn.imo.org/localresources/en/OurWork/Environment/Documents/Fourth%20IMO%20GHG%20Study%202020%20-%20Full%20report%20and%20annexes.pdf
-        //         Annex B.2, Table 4
-        self.fiskeridir.engine_building_year.map(|v| {
-            match v {
-                ..1984 => [205., 190., 215., 200., 225., 210.],
-                1984..2001 => [185., 175., 195., 185., 205., 190.],
-                2001.. => [175., 165., 185., 175., 195., 185.],
-            }
-            .into_iter()
-            .mean()
-            .unwrap()
-        })
+        self.fiskeridir.engine_building_year.map(sfc)
     }
     pub fn engine_power_kw(&self) -> Option<f64> {
         self.fiskeridir.engine_power.map(|v| v as f64 * HP_TO_KW)

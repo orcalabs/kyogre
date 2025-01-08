@@ -1,21 +1,124 @@
-use chrono::NaiveDate;
-use fiskeridir_rs::{CallSign, OrgId};
-use futures::{Stream, TryStreamExt};
-use kyogre_core::{
-    BarentswatchUserId, FiskeridirVesselId, FuelEntry, FuelMeasurement, FuelMeasurementsQuery,
-    FuelQuery, Mmsi, NewFuelDayEstimate, ProcessingStatus,
-};
-use sqlx::postgres::types::PgRange;
-
 use crate::{
     error::Result,
     models::{
         DeleteFuelMeasurement, UpdateTripPositionFuel, UpsertFuelEstimation, UpsertFuelMeasurement,
+        UpsertNewLiveFuel,
     },
     PostgresAdapter,
 };
+use chrono::{DateTime, NaiveDate, Utc};
+use fiskeridir_rs::{CallSign, OrgId};
+use futures::{Stream, TryStreamExt};
+use kyogre_core::{
+    live_fuel_year_day_hour, BarentswatchUserId, FiskeridirVesselId, FuelEntry, FuelMeasurement,
+    FuelMeasurementsQuery, FuelQuery, LiveFuelQuery, LiveFuelVessel, Mmsi, NewFuelDayEstimate,
+    NewLiveFuel, ProcessingStatus,
+};
+use sqlx::postgres::types::PgRange;
+use unnest_insert::UnnestInsert;
 
 impl PostgresAdapter {
+    pub(crate) fn live_fuel_impl(
+        &self,
+        query: &LiveFuelQuery,
+    ) -> impl Stream<Item = Result<kyogre_core::LiveFuelEntry>> + '_ {
+        let (year, day, hour) = live_fuel_year_day_hour(query.threshold);
+        sqlx::query_as!(
+            kyogre_core::LiveFuelEntry,
+            r#"
+SELECT
+    COALESCE(SUM(fuel), 0.0) AS "fuel!",
+    DATE_TRUNC('hour', f.latest_position_timestamp) as "timestamp!"
+FROM
+    fiskeridir_ais_vessel_mapping_whitelist w
+    INNER JOIN live_fuel f ON w.fiskeridir_vessel_id = f.fiskeridir_vessel_id
+WHERE
+    w.call_sign = $1
+    AND f.year >= $2
+    AND f.day >= $3
+    AND f.hour >= $4
+GROUP BY
+    f.fiskeridir_vessel_id,
+    f.year,
+    f.day,
+    f.hour
+                    "#,
+            query.call_sign.as_ref(),
+            year,
+            day as i32,
+            hour as i32
+        )
+        .fetch(&self.pool)
+        .map_err(|e| e.into())
+    }
+
+    pub(crate) async fn delete_old_live_fuel_impl(
+        &self,
+        fiskeridir_vessel_id: FiskeridirVesselId,
+        threshold: DateTime<Utc>,
+    ) -> Result<()> {
+        sqlx::query!(
+            r#"
+DELETE FROM live_fuel
+WHERE
+    fiskeridir_vessel_id = $1
+    AND latest_position_timestamp <= $2
+            "#,
+            fiskeridir_vessel_id.into_inner(),
+            threshold,
+        )
+        .execute(&self.pool)
+        .await?;
+        Ok(())
+    }
+    pub(crate) async fn live_fuel_vessels_impl(&self) -> Result<Vec<LiveFuelVessel>> {
+        Ok(sqlx::query_as!(
+            LiveFuelVessel,
+            r#"
+SELECT
+    w.mmsi AS "mmsi!: Mmsi",
+    f.fiskeridir_vessel_id AS "vessel_id!: FiskeridirVesselId",
+    f.engine_building_year_final AS "engine_building_year!",
+    f.engine_power_final AS "engine_power!",
+    t.departure_timestamp AS current_trip_start,
+    q.latest_position_timestamp AS "latest_position_timestamp?"
+FROM
+    fiskeridir_ais_vessel_mapping_whitelist w
+    INNER JOIN fiskeridir_vessels f ON w.fiskeridir_vessel_id = f.fiskeridir_vessel_id
+    LEFT JOIN current_trips t ON t.fiskeridir_vessel_id = f.fiskeridir_vessel_id
+    LEFT JOIN (
+        SELECT DISTINCT
+            ON (fiskeridir_vessel_id) fiskeridir_vessel_id,
+            latest_position_timestamp
+        FROM
+            live_fuel
+        ORDER BY
+            fiskeridir_vessel_id,
+            latest_position_timestamp DESC
+    ) q ON q.fiskeridir_vessel_id = f.fiskeridir_vessel_id
+WHERE
+    w.mmsi IS NOT NULL
+    AND f.engine_building_year_final IS NOT NULL
+    AND f.engine_power_final IS NOT NULL
+            "#,
+        )
+        .fetch_all(&self.pool)
+        .await?)
+    }
+    pub(crate) async fn add_live_fuel_impl(
+        &self,
+        vessel_id: FiskeridirVesselId,
+        fuel: &[NewLiveFuel],
+    ) -> Result<()> {
+        UnnestInsert::unnest_insert(
+            fuel.iter()
+                .map(|f| UpsertNewLiveFuel::from_core(vessel_id, f)),
+            &self.pool,
+        )
+        .await?;
+        Ok(())
+    }
+
     pub(crate) async fn reset_fuel_estimation(
         &self,
         vessel_id: FiskeridirVesselId,

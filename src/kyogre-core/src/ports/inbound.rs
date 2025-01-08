@@ -7,6 +7,22 @@ use fiskeridir_rs::{DataFileId, SpeciesGroup};
 pub type BoxIterator<T> = Box<dyn Iterator<Item = T> + Send + Sync>;
 
 #[async_trait]
+pub trait LiveFuelInbound: Send + Sync {
+    async fn add_live_fuel(
+        &self,
+        vessel_id: FiskeridirVesselId,
+        fuel: &[NewLiveFuel],
+    ) -> CoreResult<()>;
+    async fn delete_old_live_fuel(
+        &self,
+        fiskeridir_vessel_id: FiskeridirVesselId,
+        threshold: DateTime<Utc>,
+    ) -> CoreResult<()>;
+    async fn live_fuel_vessels(&self) -> CoreResult<Vec<LiveFuelVessel>>;
+    async fn ais_positions(&self, mmsi: Mmsi, range: &DateRange) -> CoreResult<Vec<AisPosition>>;
+}
+
+#[async_trait]
 pub trait MLModelsInbound: Send + Sync {
     async fn add_fishing_spot_predictions(
         &self,

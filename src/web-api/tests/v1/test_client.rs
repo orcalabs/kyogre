@@ -3,7 +3,7 @@ use fiskeridir_rs::{CallSign, LandingId, OrgId, SpeciesGroup};
 use http_client::{HttpClient, StatusCode};
 use kyogre_core::{
     ActiveHaulsFilter, ActiveLandingFilter, AverageTripBenchmarks, FiskeridirVesselId, FuelEntry,
-    HaulId, Mmsi, ModelId, OrgBenchmarks, UpdateVessel, VesselBenchmarks,
+    HaulId, LiveFuel, Mmsi, ModelId, OrgBenchmarks, UpdateVessel, VesselBenchmarks,
 };
 use serde::{de::DeserializeOwned, Serialize};
 use web_api::{
@@ -28,13 +28,15 @@ use web_api::{
             Species, SpeciesFao, SpeciesFiskeridir, SpeciesGroupDetailed, SpeciesGroupParams,
             SpeciesMainGroupDetailed,
         },
-        trip::benchmarks::{
-            AverageEeoiParams, AverageTripBenchmarksParams, EeoiParams, TripBenchmarks,
-            TripBenchmarksParams,
+        trip::{
+            benchmarks::{
+                AverageEeoiParams, AverageTripBenchmarksParams, EeoiParams, TripBenchmarks,
+                TripBenchmarksParams,
+            },
+            CurrentTrip, Trip, TripsParameters,
         },
-        trip::{CurrentTrip, Trip, TripsParameters},
         user::User,
-        vessel::{FuelParams, Vessel},
+        vessel::{FuelParams, LiveFuelParams, Vessel},
         vms::{VmsParameters, VmsPosition},
     },
 };
@@ -403,6 +405,10 @@ impl ApiClient {
     }
     pub async fn update_vessel(&self, update: &UpdateVessel) -> Result<Vessel, Error> {
         self.send("vessels", Method::PUT, update, None::<&()>).await
+    }
+    pub async fn get_live_vessel_fuel(&self, params: LiveFuelParams) -> Result<LiveFuel, Error> {
+        self.send("vessel/live_fuel", Method::GET, &(), Some(&params))
+            .await
     }
     pub async fn get_vessel_fuel(&self, params: FuelParams) -> Result<f64, Error> {
         self.send("vessel/fuel", Method::GET, &(), Some(&params))

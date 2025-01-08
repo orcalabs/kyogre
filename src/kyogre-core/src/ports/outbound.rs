@@ -96,6 +96,7 @@ pub trait WebApiOutboundPort {
         query: AverageTripBenchmarksQuery,
     ) -> CoreResult<AverageTripBenchmarks>;
     async fn average_eeoi(&self, query: AverageEeoiQuery) -> CoreResult<Option<f64>>;
+    async fn live_fuel(&self, query: &LiveFuelQuery) -> CoreResult<LiveFuel>;
     async fn fuel_estimation(&self, query: &FuelQuery) -> CoreResult<f64>;
     async fn fuel_estimation_by_org(
         &self,
