@@ -1,4 +1,4 @@
-use crate::error::{error::DistanceEstimationSnafu, Result};
+use crate::{error::error::DistanceEstimationSnafu, Result};
 use chrono::{DateTime, Utc};
 use geoutils::Location;
 use kyogre_core::{
@@ -9,13 +9,21 @@ use serde_json::json;
 
 static METER_TO_NAUTICAL_MILES: f64 = 0.0005399568;
 
+pub struct UnrealisticSpeed {
+    pub knots_limit: u32,
+}
+impl Default for UnrealisticSpeed {
+    fn default() -> Self {
+        UnrealisticSpeed { knots_limit: 70 }
+    }
+}
+
 pub struct SpeedItem {
     pub latitude: f64,
     pub longitude: f64,
     pub speed: Option<f64>,
     pub timestamp: DateTime<Utc>,
 }
-
 impl From<&AisVmsPosition> for SpeedItem {
     fn from(value: &AisVmsPosition) -> Self {
         SpeedItem {
@@ -26,7 +34,6 @@ impl From<&AisVmsPosition> for SpeedItem {
         }
     }
 }
-
 impl From<&AisVmsPositionWithHaul> for SpeedItem {
     fn from(value: &AisVmsPositionWithHaul) -> Self {
         SpeedItem {
@@ -38,14 +45,30 @@ impl From<&AisVmsPositionWithHaul> for SpeedItem {
     }
 }
 
-pub struct UnrealisticSpeed {
-    pub knots_limit: u32,
-}
+pub fn estimated_speed_between_points<T>(first: &T, second: &T) -> Result<u32>
+where
+    for<'a> &'a T: Into<SpeedItem>,
+{
+    let first: SpeedItem = first.into();
+    let second: SpeedItem = second.into();
+    let first_loc = Location::new(first.latitude, first.longitude);
+    let second_loc = Location::new(second.latitude, second.longitude);
 
-impl Default for UnrealisticSpeed {
-    fn default() -> Self {
-        UnrealisticSpeed { knots_limit: 70 }
-    }
+    let distance = first_loc.distance_to(&second_loc).map_err(|e| {
+        DistanceEstimationSnafu {
+            from: first_loc,
+            to: second_loc,
+            error_stringified: e,
+        }
+        .build()
+    })?;
+
+    let time_diff = second.timestamp - first.timestamp;
+
+    let estimated_speed = (distance.meters() * METER_TO_NAUTICAL_MILES)
+        / ((time_diff.num_seconds() as f64) / 60.0 / 60.0);
+
+    Ok(estimated_speed.round() as u32)
 }
 
 impl TripPositionLayer for UnrealisticSpeed {
@@ -105,32 +128,6 @@ impl TripPositionLayer for UnrealisticSpeed {
     fn layer_id(&self) -> TripPositionLayerId {
         TripPositionLayerId::UnrealisticSpeed
     }
-}
-
-pub fn estimated_speed_between_points<T>(first: &T, second: &T) -> Result<u32>
-where
-    for<'a> &'a T: Into<SpeedItem>,
-{
-    let first: SpeedItem = first.into();
-    let second: SpeedItem = second.into();
-    let first_loc = Location::new(first.latitude, first.longitude);
-    let second_loc = Location::new(second.latitude, second.longitude);
-
-    let distance = first_loc.distance_to(&second_loc).map_err(|e| {
-        DistanceEstimationSnafu {
-            from: first_loc,
-            to: second_loc,
-            error_stringified: e,
-        }
-        .build()
-    })?;
-
-    let time_diff = second.timestamp - first.timestamp;
-
-    let estimated_speed = (distance.meters() * METER_TO_NAUTICAL_MILES)
-        / ((time_diff.num_seconds() as f64) / 60.0 / 60.0);
-
-    Ok(estimated_speed.round() as u32)
 }
 
 #[cfg(test)]

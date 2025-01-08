@@ -286,6 +286,8 @@ pub trait FuelEstimation: Send + Sync {
     // Only used in tests to reduce the amount of estimations generated
     #[cfg(feature = "test")]
     async fn latest_position(&self) -> CoreResult<Option<NaiveDate>>;
+    async fn last_run(&self) -> CoreResult<Option<DateTime<Utc>>>;
+    async fn add_run(&self) -> CoreResult<()>;
 
     async fn add_fuel_estimates(&self, estimates: &[NewFuelDayEstimate]) -> CoreResult<()>;
     async fn vessels_with_trips(&self, num_trips: u32) -> CoreResult<Vec<Vessel>>;

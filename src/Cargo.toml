@@ -13,6 +13,7 @@ members = [
     "meilisearch",
     "fiskeridir-rs",
     "http-client",
+    "fuel-processor",
 ]
 
 [workspace.dependencies]

@@ -16,6 +16,7 @@ pub mod landing_matrix;
 pub mod ml_models;
 pub mod ocean_climate;
 pub mod port;
+pub mod processor;
 pub mod rafisklaget;
 pub mod species;
 #[cfg(feature = "test")]

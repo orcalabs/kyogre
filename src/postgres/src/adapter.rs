@@ -506,6 +506,14 @@ impl FuelEstimation for PostgresAdapter {
         Ok(self.latest_position_impl().await?)
     }
 
+    async fn last_run(&self) -> CoreResult<Option<DateTime<Utc>>> {
+        Ok(retry(|| self.last_run_impl(Processor::FuelProcessor)).await?)
+    }
+
+    async fn add_run(&self) -> CoreResult<()> {
+        Ok(retry(|| self.add_run_impl(Processor::FuelProcessor)).await?)
+    }
+
     async fn add_fuel_estimates(&self, estimates: &[NewFuelDayEstimate]) -> CoreResult<()> {
         Ok(retry(|| self.add_fuel_estimates_impl(estimates)).await?)
     }

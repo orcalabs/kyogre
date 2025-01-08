@@ -15,6 +15,7 @@ postgres = { path = "../postgres" }
 duckdb-rs = { path = "../duckdb-rs" }
 meilisearch = { path = "../meilisearch" }
 http-client = { path = "../http-client" }
+fuel-processor = { path = "../fuel-processor" }
 
 fiskeridir-rs = { workspace = true }
 stack-error = { workspace = true }
