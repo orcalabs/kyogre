@@ -44,7 +44,13 @@ async fn main() {
 
     let engine = engine::engine(adapter.clone(), &db_settings).await;
 
-    let builder = TestStateBuilder::new(Box::new(adapter.clone()), Box::new(adapter), engine);
+    let builder = TestStateBuilder::new(
+        Box::new(adapter.clone()),
+        Box::new(adapter),
+        engine,
+        &db_settings,
+    )
+    .await;
 
     builder
         .hauls(2)
