@@ -1,0 +1,24 @@
+[package]
+name = "fuel-processor"
+version = "0.1.0"
+edition = "2021"
+
+[features]
+test = ["kyogre-core/test", "postgres/test"]
+
+[dependencies]
+kyogre-core = { path = "../kyogre-core" }
+postgres = { path = "../postgres" }
+
+orca-core = { workspace = true, features = ["telemetry"] }
+
+tokio = { workspace = true, features = ["tracing", "rt-multi-thread"] }
+serde = { workspace = true }
+serde_json = { workspace = true }
+config = { workspace = true }
+stack-error = { workspace = true }
+snafu = { workspace = true }
+async-channel = { workspace = true }
+tracing = { workspace = true }
+chrono = { workspace = true }
+geoutils = { workspace = true }

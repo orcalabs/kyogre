@@ -19,7 +19,9 @@ impl TestHelper {
             Box::new(self.adapter().clone()),
             Box::new(self.adapter().clone()),
             engine,
+            &self.db_settings,
         )
+        .await
     }
     pub fn adapter(&self) -> &PostgresAdapter {
         &self.db.db

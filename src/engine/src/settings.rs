@@ -1,18 +1,16 @@
+use crate::{
+    AisVms, AisVmsConflict, Cluster, ErsTripAssembler, FisheryDiscriminants, LandingTripAssembler,
+};
 use config::ConfigError;
+use fuel_processor::UnrealisticSpeed;
 use kyogre_core::*;
 use orca_core::{Environment, PsqlSettings};
 use serde::Deserialize;
 use trip_benchmark::*;
 
-use crate::{
-    AisVms, AisVmsConflict, Cluster, ErsTripAssembler, FisheryDiscriminants, LandingTripAssembler,
-    UnrealisticSpeed,
-};
-
 #[derive(Debug, Deserialize)]
 pub struct Settings {
     pub num_trip_state_workers: u32,
-    pub num_fuel_estimation_workers: u32,
     pub postgres: PsqlSettings,
     pub meilisearch: Option<meilisearch::Settings>,
     pub environment: Environment,
