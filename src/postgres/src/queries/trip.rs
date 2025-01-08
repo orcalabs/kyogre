@@ -597,8 +597,7 @@ WHERE
     t.trip_id = ANY ($2::BIGINT[])
 GROUP BY
     t.trip_id
-ON CONFLICT (trip_id) DO
-UPDATE
+ON CONFLICT (trip_id) DO UPDATE
 SET
     trip_id = excluded.trip_id,
     distance = excluded.distance,
@@ -725,7 +724,8 @@ SET
     landing_total_living_weight = COALESCE(q.living_weight, 0),
     landing_total_gross_weight = COALESCE(q.gross_weight, 0),
     landing_total_product_weight = COALESCE(q.product_weight, 0),
-    landing_total_price_for_fisher = COALESCE(q.final_price_for_fisher, 0)
+    landing_total_price_for_fisher = COALESCE(q.final_price_for_fisher, 0),
+    price_for_fisher_is_estimated = COALESCE(q.price_for_fisher_is_estimated, FALSE)
 FROM
     (
         SELECT
@@ -744,7 +744,8 @@ FROM
             SUM(qi.living_weight) AS living_weight,
             SUM(qi.gross_weight) AS gross_weight,
             SUM(qi.product_weight) AS product_weight,
-            SUM(qi.final_price_for_fisher) AS final_price_for_fisher
+            SUM(qi.final_price_for_fisher) AS final_price_for_fisher,
+            BOOL_OR(qi.price_for_fisher_is_estimated) AS price_for_fisher_is_estimated
         FROM
             (
                 SELECT
@@ -770,7 +771,11 @@ FROM
                     SUM(le.living_weight) AS living_weight,
                     SUM(le.gross_weight) AS gross_weight,
                     SUM(le.product_weight) AS product_weight,
-                    SUM(le.final_price_for_fisher) AS final_price_for_fisher
+                    SUM(le.final_price_for_fisher) AS final_price_for_fisher,
+                    BOOL_OR(
+                        le.price_for_fisher IS NULL
+                        AND le.final_price_for_fisher IS NOT NULL
+                    ) AS price_for_fisher_is_estimated
                 FROM
                     trips t
                     INNER JOIN vessel_events v ON t.trip_id = v.trip_id
@@ -827,6 +832,7 @@ SELECT
     t.landing_total_gross_weight AS total_gross_weight,
     t.landing_total_product_weight AS total_product_weight,
     t.landing_total_price_for_fisher AS total_price_for_fisher,
+    t.price_for_fisher_is_estimated,
     t.delivery_point_ids AS "delivery_points: Vec<DeliveryPointId>",
     t.landing_gear_ids AS "gear_ids: Vec<Gear>",
     t.landing_gear_group_ids AS "gear_group_ids: Vec<GearGroup>",
@@ -958,6 +964,7 @@ SELECT
     t.landing_total_gross_weight AS total_gross_weight,
     t.landing_total_product_weight AS total_product_weight,
     t.landing_total_price_for_fisher AS total_price_for_fisher,
+    t.price_for_fisher_is_estimated,
     t.delivery_point_ids AS "delivery_points: Vec<DeliveryPointId>",
     t.landing_gear_ids AS "gear_ids: Vec<Gear>",
     t.landing_gear_group_ids AS "gear_group_ids: Vec<GearGroup>",
@@ -1400,8 +1407,7 @@ INSERT INTO
     trip_calculation_timers (fiskeridir_vessel_id, trip_assembler_id, timer)
 VALUES
     ($1, $2, $3)
-ON CONFLICT (fiskeridir_vessel_id) DO
-UPDATE
+ON CONFLICT (fiskeridir_vessel_id) DO UPDATE
 SET
     timer = EXCLUDED.timer,
     queued_reset = COALESCE($4, EXCLUDED.queued_reset),

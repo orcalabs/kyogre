@@ -1255,6 +1255,7 @@ async fn test_trips_includes_weekly_sales_price() {
 
         assert_eq!(state.trips.len(), 1);
         assert!(state.trips[0].delivery.total_price_for_fisher > 0.);
+        assert!(state.trips[0].delivery.price_for_fisher_is_estimated);
     })
     .await;
 }
@@ -1299,6 +1300,7 @@ async fn test_trips_includes_weekly_sales_price_after_refresh() {
 
         assert_eq!(state.trips.len(), 1);
         assert!(state.trips[0].delivery.total_price_for_fisher > 0.);
+        assert!(state.trips[0].delivery.price_for_fisher_is_estimated);
     })
     .await;
 }

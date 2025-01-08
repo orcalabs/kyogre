@@ -183,6 +183,7 @@ pub struct Delivery {
     pub total_product_weight: f64,
     pub total_gross_weight: f64,
     pub total_price_for_fisher: f64,
+    pub price_for_fisher_is_estimated: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
