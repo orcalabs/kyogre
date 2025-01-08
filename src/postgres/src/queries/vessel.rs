@@ -76,7 +76,9 @@ FROM
     fiskeridir_ais_vessel_mapping_whitelist AS v
     INNER JOIN fiskeridir_vessels AS f ON v.fiskeridir_vessel_id = f.fiskeridir_vessel_id
     LEFT JOIN ais_vessels AS a ON v.mmsi = a.mmsi
-    INNER JOIN trips t ON v.fiskeridir_vessel_id = t.fiskeridir_vessel_id
+    INNER JOIN trips_detailed t ON v.fiskeridir_vessel_id = t.fiskeridir_vessel_id
+WHERE
+    t.has_track
 GROUP BY
     f.fiskeridir_vessel_id,
     a.mmsi

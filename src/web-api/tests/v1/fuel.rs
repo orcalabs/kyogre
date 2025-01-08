@@ -229,6 +229,10 @@ async fn test_fuel_is_recalculated_with_new_vms_data() {
             })
             .set_logged_in()
             .trips(1)
+            .modify(|t| {
+                t.trip_specification.set_start(start);
+                t.trip_specification.set_end(end);
+            })
             .vms_positions(10)
             .modify_idx(|i, p| {
                 p.position.timestamp = end - Duration::hours(i as i64);
