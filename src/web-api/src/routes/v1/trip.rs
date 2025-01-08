@@ -253,6 +253,7 @@ pub struct Delivery {
     pub total_product_weight: f64,
     pub total_gross_weight: f64,
     pub total_price_for_fisher: f64,
+    pub price_for_fisher_is_estimated: bool,
 }
 
 #[serde_as]
@@ -402,6 +403,7 @@ impl From<kyogre_core::Delivery> for Delivery {
             total_product_weight,
             total_gross_weight,
             total_price_for_fisher,
+            price_for_fisher_is_estimated,
         } = v;
 
         Self {
@@ -410,6 +412,7 @@ impl From<kyogre_core::Delivery> for Delivery {
             total_product_weight,
             total_gross_weight,
             total_price_for_fisher,
+            price_for_fisher_is_estimated,
         }
     }
 }
