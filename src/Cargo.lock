@@ -3517,7 +3517,7 @@ dependencies = [
 [[package]]
 name = "oasgen"
 version = "0.21.2"
-source = "git+https://github.com/markhilb/oasgen#2dd50da161214ba76d4b1a6a07faf266368570e7"
+source = "git+https://github.com/markhilb/oasgen?branch=all#bcd91f718e83a24e0227165b4e799a72d19a78ef"
 dependencies = [
  "actix-web",
  "futures",
@@ -3540,7 +3540,7 @@ dependencies = [
 [[package]]
 name = "oasgen-core"
 version = "0.21.2"
-source = "git+https://github.com/markhilb/oasgen#2dd50da161214ba76d4b1a6a07faf266368570e7"
+source = "git+https://github.com/markhilb/oasgen?branch=all#bcd91f718e83a24e0227165b4e799a72d19a78ef"
 dependencies = [
  "actix-web",
  "chrono",
@@ -3558,7 +3558,7 @@ dependencies = [
 [[package]]
 name = "oasgen-macro"
 version = "0.21.0"
-source = "git+https://github.com/markhilb/oasgen#2dd50da161214ba76d4b1a6a07faf266368570e7"
+source = "git+https://github.com/markhilb/oasgen?branch=all#bcd91f718e83a24e0227165b4e799a72d19a78ef"
 dependencies = [
  "oasgen-core",
  "proc-macro2",
@@ -5852,7 +5852,7 @@ checksum = "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
 [[package]]
 name = "swagger-ui2"
 version = "0.6.0"
-source = "git+https://github.com/markhilb/oasgen#2dd50da161214ba76d4b1a6a07faf266368570e7"
+source = "git+https://github.com/markhilb/oasgen?branch=all#bcd91f718e83a24e0227165b4e799a72d19a78ef"
 dependencies = [
  "bytes",
  "http 1.2.0",
