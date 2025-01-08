@@ -45,7 +45,7 @@ tracing = "0.1"
 chrono = { version = "0.4", features = ["serde"] }
 chrono-tz = "0.10"
 async-trait = "0.1"
-oasgen = { git = "https://github.com/markhilb/oasgen", features = [
+oasgen = { git = "https://github.com/markhilb/oasgen", branch = "all", features = [
     "chrono",
     "uuid",
 ] }

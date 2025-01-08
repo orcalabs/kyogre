@@ -46,7 +46,7 @@ pub async fn ais_current_positions<T: Database + Send + Sync + 'static>(
     params: Query<AisCurrentPositionParameters>,
     bw_profile: OptionBwProfile,
     auth: OptionAuth0Profile,
-) -> StreamResponse<AisPosition> {
+) -> StreamResponse<CurrentAisPosition> {
     let bw_policy = bw_profile
         .into_inner()
         .map(AisPermission::from)
@@ -62,10 +62,8 @@ pub async fn ais_current_positions<T: Database + Send + Sync + 'static>(
     };
 
     stream_response! {
-        ais_unfold(
-            db.ais_current_positions(params.position_timestamp_limit, policy)
-                .map_ok(AisPosition::from),
-        )
+        db.ais_current_positions(params.position_timestamp_limit, policy)
+            .map_ok(From::from)
     }
 }
 
@@ -134,6 +132,23 @@ pub struct AisPosition {
 #[serde_as]
 #[derive(Debug, Clone, Deserialize, Serialize, OaSchema)]
 #[serde(rename_all = "camelCase")]
+pub struct CurrentAisPosition {
+    pub mmsi: Mmsi,
+    pub lat: f64,
+    pub lon: f64,
+    pub timestamp: DateTime<Utc>,
+    pub cog: Option<f64>,
+    #[serde_as(as = "Option<DisplayFromStr>")]
+    pub navigational_status: Option<NavigationStatus>,
+    pub rate_of_turn: Option<f64>,
+    pub speed_over_ground: Option<f64>,
+    pub true_heading: Option<i32>,
+    pub distance_to_shore: f64,
+}
+
+#[serde_as]
+#[derive(Debug, Clone, Deserialize, Serialize, OaSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct AisPositionDetails {
     #[serde_as(as = "Option<DisplayFromStr>")]
     pub navigational_status: Option<NavigationStatus>,
@@ -172,6 +187,36 @@ impl From<kyogre_core::AisPosition> for AisPosition {
                 distance_to_shore,
                 missing_data: false,
             }),
+        }
+    }
+}
+
+impl From<kyogre_core::AisPosition> for CurrentAisPosition {
+    fn from(value: kyogre_core::AisPosition) -> Self {
+        let kyogre_core::AisPosition {
+            latitude,
+            longitude,
+            mmsi,
+            msgtime,
+            course_over_ground,
+            navigational_status,
+            rate_of_turn,
+            speed_over_ground,
+            true_heading,
+            distance_to_shore,
+        } = value;
+
+        Self {
+            mmsi,
+            lat: latitude,
+            lon: longitude,
+            timestamp: msgtime,
+            cog: course_over_ground,
+            navigational_status,
+            rate_of_turn,
+            speed_over_ground,
+            true_heading,
+            distance_to_shore,
         }
     }
 }
