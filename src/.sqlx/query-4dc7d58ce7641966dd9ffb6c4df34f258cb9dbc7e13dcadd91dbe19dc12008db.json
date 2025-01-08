@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO\n    ais_data_migration_progress (mmsi, progress)\nVALUES\n    ($1, $2)\nON CONFLICT (mmsi) DO UPDATE\nSET\n    progress = excluded.progress\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "4dc7d58ce7641966dd9ffb6c4df34f258cb9dbc7e13dcadd91dbe19dc12008db"
+}
