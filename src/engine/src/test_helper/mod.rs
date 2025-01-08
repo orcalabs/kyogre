@@ -1,11 +1,16 @@
-use std::{
-    collections::{HashMap, HashSet},
-    sync::Arc,
+use crate::{
+    AisConsumeLoop, AisPosition, AisVms, AisVmsConflict, Arrival, Cluster, DataMessage, Departure,
+    ErsTripAssembler, FisheryEngine, FishingFacilities, FishingFacilitiesQuery, FishingFacility,
+    FishingSpotPredictor, FishingSpotWeatherPredictor, FishingWeightPredictor,
+    FishingWeightWeatherPredictor, Haul, HaulsQuery, Landing, LandingTripAssembler, LandingsQuery,
+    LandingsSorting, Mmsi, NewAisPosition, NewAisStatic, OceanClimate, Ordering, Pagination,
+    PrecisionId, PredictionRange, ScrapeState, SharedState, SpotPredictorSettings, Step,
+    TripDetailed, Trips, TripsQuery, Vessel, VmsPosition, Weather, WeightPredictorSettings,
 };
-
 use async_channel::Sender;
 use chrono::{DateTime, Duration, TimeZone, Utc};
 use fiskeridir_rs::{CallSign, DeliveryPointId, LandingMonth};
+use fuel_processor::UnrealisticSpeed;
 use futures::TryStreamExt;
 use kyogre_core::{
     BuyerLocation, CatchLocationId, FiskeridirVesselId, MLModel, NewVesselConflict, NewWeather,
@@ -15,18 +20,11 @@ use kyogre_core::{
 use machine::StateMachine;
 use orca_core::PsqlSettings;
 use postgres::PostgresAdapter;
-use trip_benchmark::*;
-
-use crate::{
-    AisConsumeLoop, AisPosition, AisVms, AisVmsConflict, Arrival, Cluster, DataMessage, Departure,
-    ErsTripAssembler, FisheryEngine, FishingFacilities, FishingFacilitiesQuery, FishingFacility,
-    FishingSpotPredictor, FishingSpotWeatherPredictor, FishingWeightPredictor,
-    FishingWeightWeatherPredictor, Haul, HaulsQuery, Landing, LandingTripAssembler, LandingsQuery,
-    LandingsSorting, Mmsi, NewAisPosition, NewAisStatic, OceanClimate, Ordering, Pagination,
-    PrecisionId, PredictionRange, ScrapeState, SharedState, SpotPredictorSettings, Step,
-    TripDetailed, Trips, TripsQuery, UnrealisticSpeed, Vessel, VmsPosition, Weather,
-    WeightPredictorSettings,
+use std::{
+    collections::{HashMap, HashSet},
+    sync::Arc,
 };
+use trip_benchmark::*;
 
 mod ais;
 mod ais_vms;
@@ -126,6 +124,7 @@ pub struct TestStateBuilder {
     delivery_point_id_counter: u64,
     landing_id_counter: u64,
     engine: FisheryEngine,
+    fuel_processor: fuel_processor::App,
     cycle: Cycle,
     trip_queue_reset: Option<Cycle>,
     enabled_ml_models: Vec<Box<dyn MLModel>>,
@@ -247,7 +246,6 @@ pub async fn engine(adapter: PostgresAdapter, db_settings: &PsqlSettings) -> Fis
 
     let shared_state = SharedState::new(
         2,
-        2,
         db.clone(),
         db.clone(),
         db.clone(),
@@ -277,10 +275,11 @@ pub async fn engine(adapter: PostgresAdapter, db_settings: &PsqlSettings) -> Fis
 }
 
 impl TestStateBuilder {
-    pub fn new(
+    pub async fn new(
         storage: Box<dyn TestStorage>,
         ais_consumer: Box<dyn AisConsumeLoop>,
         engine: FisheryEngine,
+        psql_settings: &PsqlSettings,
     ) -> TestStateBuilder {
         let (sender, receiver) = async_channel::bounded::<DataMessage>(30);
 
@@ -328,6 +327,12 @@ impl TestStateBuilder {
             ais_static: vec![],
             call_sign_counter: 1,
             enabled_ml_models: vec![],
+            fuel_processor: fuel_processor::App::build(&fuel_processor::Settings {
+                num_fuel_estimation_workers: 1,
+                environment: orca_core::Environment::Test,
+                postgres: psql_settings.clone(),
+            })
+            .await,
         }
     }
 
@@ -1039,6 +1044,7 @@ impl TestStateBuilder {
                 }
                 self.engine = self.engine.run_single().await;
             }
+            self.fuel_processor.run().await.unwrap();
 
             for v in self.vessels.iter().filter(|v| v.cycle == i) {
                 if v.clear_trip_precision {

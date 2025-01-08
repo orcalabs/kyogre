@@ -1571,6 +1571,7 @@ dependencies = [
  "derivative",
  "engine",
  "fiskeridir-rs",
+ "fuel-processor",
  "futures",
  "geo",
  "geoutils",
@@ -1796,6 +1797,25 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e13624c2627564efccf4934284bdd98cbaa14e79b0b5a141218e507b3a823456"
 dependencies = [
  "percent-encoding",
+]
+
+[[package]]
+name = "fuel-processor"
+version = "0.1.0"
+dependencies = [
+ "async-channel",
+ "chrono",
+ "config",
+ "geoutils",
+ "kyogre-core",
+ "orca-core",
+ "postgres",
+ "serde",
+ "serde_json",
+ "snafu",
+ "stack-error",
+ "tokio",
+ "tracing",
 ]
 
 [[package]]
@@ -6469,6 +6489,7 @@ dependencies = [
  "async-trait",
  "chrono",
  "fiskeridir-rs",
+ "fuel-processor",
  "kyogre-core",
 ]
 
@@ -6796,6 +6817,7 @@ dependencies = [
  "enum_index",
  "fiskeridir-rs",
  "float-cmp",
+ "fuel-processor",
  "futures",
  "http-client",
  "jsonwebtoken",

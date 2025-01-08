@@ -26,6 +26,12 @@ pub use ports::*;
 pub use queries::*;
 pub use retry::*;
 
+/// Defines all isolated processor services running in their own dedicated
+/// container (excluding 'engine').
+pub enum Processor {
+    FuelProcessor = 1,
+}
+
 #[async_trait]
 pub trait Scraper: Send + Sync {
     async fn run(&self);

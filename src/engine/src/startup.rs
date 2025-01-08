@@ -68,7 +68,6 @@ impl App {
 
         let shared_state = SharedState::new(
             settings.num_trip_state_workers,
-            settings.num_fuel_estimation_workers,
             postgres.clone(),
             postgres.clone(),
             postgres.clone(),
@@ -175,15 +174,6 @@ impl App {
                         Box::new(self.transition_log),
                     );
                     let engine = FisheryEngine::DailyWeather(step);
-                    engine.run_single().await;
-                }
-                FisheryDiscriminants::FuelEstimation => {
-                    let step = crate::Step::initial(
-                        crate::FuelEstimationState,
-                        self.shared_state,
-                        Box::new(self.transition_log),
-                    );
-                    let engine = FisheryEngine::FuelEstimation(step);
                     engine.run_single().await;
                 }
             };

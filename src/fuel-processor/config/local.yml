@@ -1,0 +1,11 @@
+log_level: Info
+num_fuel_estimation_workers: 8
+tracing_mode: Regular
+postgres:
+  ip: localhost
+  port: 5532
+  username: postgres
+  password: test123
+  max_connections: 10
+  log_statements: Disable
+  application_name: kyogre-fuel-processor
