@@ -25,6 +25,169 @@ pub struct TripPositions {
 }
 
 impl PostgresAdapter {
+    pub(crate) async fn set_current_trip_impl(&self, vessel_id: FiskeridirVesselId) -> Result<()> {
+        sqlx::query!(
+            r#"
+INSERT INTO
+    current_trips (
+        fiskeridir_vessel_id,
+        departure_timestamp,
+        target_species_fiskeridir_id,
+        hauls,
+        fishing_facilities
+    )
+SELECT
+    d.fiskeridir_vessel_id,
+    d.departure_timestamp,
+    d.target_species_fiskeridir_id,
+    (
+        SELECT
+            COALESCE(
+                JSONB_AGG(
+                    JSONB_BUILD_OBJECT(
+                        'haul_id',
+                        h.haul_id,
+                        'cache_version',
+                        h.cache_version,
+                        'catch_locations',
+                        h.catch_locations,
+                        'gear_group_id',
+                        h.gear_group_id,
+                        'gear_id',
+                        h.gear_id,
+                        'species_group_ids',
+                        h.species_group_ids,
+                        'fiskeridir_vessel_id',
+                        h.fiskeridir_vessel_id,
+                        'haul_distance',
+                        h.haul_distance,
+                        'start_latitude',
+                        h.start_latitude,
+                        'start_longitude',
+                        h.start_longitude,
+                        'stop_latitude',
+                        h.stop_latitude,
+                        'stop_longitude',
+                        h.stop_longitude,
+                        'start_timestamp',
+                        LOWER(h.period),
+                        'stop_timestamp',
+                        UPPER(h.period),
+                        'vessel_length_group',
+                        h.vessel_length_group,
+                        'catches',
+                        h.catches,
+                        'vessel_name',
+                        COALESCE(h.vessel_name, h.vessel_name_ers),
+                        'call_sign',
+                        COALESCE(h.vessel_call_sign, h.vessel_call_sign_ers)
+                    )
+                ),
+                '[]'
+            )
+        FROM
+            hauls h
+        WHERE
+            h.fiskeridir_vessel_id = $1
+            AND h.start_timestamp > d.departure_timestamp
+    ) AS "hauls!",
+    (
+        SELECT
+            COALESCE(
+                JSONB_AGG(
+                    JSONB_BUILD_OBJECT(
+                        'tool_id',
+                        f.tool_id,
+                        'barentswatch_vessel_id',
+                        f.barentswatch_vessel_id,
+                        'fiskeridir_vessel_id',
+                        f.fiskeridir_vessel_id,
+                        'vessel_name',
+                        f.vessel_name,
+                        'call_sign',
+                        f.call_sign,
+                        'mmsi',
+                        f.mmsi,
+                        'imo',
+                        f.imo,
+                        'reg_num',
+                        f.reg_num,
+                        'sbr_reg_num',
+                        f.sbr_reg_num,
+                        'contact_phone',
+                        f.contact_phone,
+                        'contact_email',
+                        f.contact_email,
+                        'tool_type',
+                        f.tool_type,
+                        'tool_type_name',
+                        f.tool_type_name,
+                        'tool_color',
+                        f.tool_color,
+                        'tool_count',
+                        f.tool_count,
+                        'setup_timestamp',
+                        f.setup_timestamp,
+                        'setup_processed_timestamp',
+                        f.setup_processed_timestamp,
+                        'removed_timestamp',
+                        f.removed_timestamp,
+                        'removed_processed_timestamp',
+                        f.removed_processed_timestamp,
+                        'last_changed',
+                        f.last_changed,
+                        'source',
+                        f.source,
+                        'comment',
+                        f.comment,
+                        'geometry_wkt',
+                        ST_ASTEXT (f.geometry_wkt),
+                        'api_source',
+                        f.api_source
+                    )
+                ),
+                '[]'
+            )
+        FROM
+            fishing_facilities f
+        WHERE
+            f.fiskeridir_vessel_id = $1
+            AND (
+                f.removed_timestamp IS NULL
+                OR f.removed_timestamp > d.departure_timestamp
+            )
+    ) AS "fishing_facilities!"
+FROM
+    ers_departures d
+WHERE
+    d.fiskeridir_vessel_id = $1
+    AND d.departure_timestamp > COALESCE(
+        (
+            SELECT
+                MAX(UPPER(COALESCE(t.period_precision, t.period)))
+            FROM
+                trips t
+            WHERE
+                t.fiskeridir_vessel_id = $1
+                AND t.trip_assembler_id = $2
+        ),
+        TO_TIMESTAMP(0)
+    )
+GROUP BY
+    d.message_id
+ORDER BY
+    d.departure_timestamp ASC
+LIMIT
+    1
+            "#,
+            vessel_id.into_inner(),
+            TripAssemblerId::Ers as i32,
+        )
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
+    }
     pub(crate) async fn check_for_out_of_order_vms_insertion_imp(&self) -> Result<()> {
         let mut tx = self.pool.begin().await?;
 
@@ -597,7 +760,8 @@ WHERE
     t.trip_id = ANY ($2::BIGINT[])
 GROUP BY
     t.trip_id
-ON CONFLICT (trip_id) DO UPDATE
+ON CONFLICT (trip_id) DO
+UPDATE
 SET
     trip_id = excluded.trip_id,
     distance = excluded.distance,
@@ -1077,152 +1241,20 @@ FROM
             CurrentTrip,
             r#"
 SELECT
-    d.departure_timestamp,
-    d.target_species_fiskeridir_id,
-    (
-        SELECT
-            COALESCE(
-                JSONB_AGG(
-                    JSONB_BUILD_OBJECT(
-                        'haul_id',
-                        h.haul_id,
-                        'cache_version',
-                        h.cache_version,
-                        'catch_locations',
-                        h.catch_locations,
-                        'gear_group_id',
-                        h.gear_group_id,
-                        'gear_id',
-                        h.gear_id,
-                        'species_group_ids',
-                        h.species_group_ids,
-                        'fiskeridir_vessel_id',
-                        h.fiskeridir_vessel_id,
-                        'haul_distance',
-                        h.haul_distance,
-                        'start_latitude',
-                        h.start_latitude,
-                        'start_longitude',
-                        h.start_longitude,
-                        'stop_latitude',
-                        h.stop_latitude,
-                        'stop_longitude',
-                        h.stop_longitude,
-                        'start_timestamp',
-                        LOWER(h.period),
-                        'stop_timestamp',
-                        UPPER(h.period),
-                        'vessel_length_group',
-                        h.vessel_length_group,
-                        'catches',
-                        h.catches,
-                        'vessel_name',
-                        COALESCE(h.vessel_name, h.vessel_name_ers),
-                        'call_sign',
-                        COALESCE(h.vessel_call_sign, h.vessel_call_sign_ers)
-                    )
-                ),
-                '[]'
-            )::TEXT
-        FROM
-            hauls h
-        WHERE
-            h.fiskeridir_vessel_id = $1
-            AND h.start_timestamp > d.departure_timestamp
-    ) AS "hauls!",
-    (
-        SELECT
-            COALESCE(
-                JSONB_AGG(
-                    JSONB_BUILD_OBJECT(
-                        'tool_id',
-                        f.tool_id,
-                        'barentswatch_vessel_id',
-                        f.barentswatch_vessel_id,
-                        'fiskeridir_vessel_id',
-                        f.fiskeridir_vessel_id,
-                        'vessel_name',
-                        f.vessel_name,
-                        'call_sign',
-                        f.call_sign,
-                        'mmsi',
-                        f.mmsi,
-                        'imo',
-                        f.imo,
-                        'reg_num',
-                        f.reg_num,
-                        'sbr_reg_num',
-                        f.sbr_reg_num,
-                        'contact_phone',
-                        f.contact_phone,
-                        'contact_email',
-                        f.contact_email,
-                        'tool_type',
-                        f.tool_type,
-                        'tool_type_name',
-                        f.tool_type_name,
-                        'tool_color',
-                        f.tool_color,
-                        'tool_count',
-                        f.tool_count,
-                        'setup_timestamp',
-                        f.setup_timestamp,
-                        'setup_processed_timestamp',
-                        f.setup_processed_timestamp,
-                        'removed_timestamp',
-                        f.removed_timestamp,
-                        'removed_processed_timestamp',
-                        f.removed_processed_timestamp,
-                        'last_changed',
-                        f.last_changed,
-                        'source',
-                        f.source,
-                        'comment',
-                        f.comment,
-                        'geometry_wkt',
-                        ST_ASTEXT (f.geometry_wkt),
-                        'api_source',
-                        f.api_source
-                    )
-                ),
-                '[]'
-            )::TEXT
-        FROM
-            fishing_facilities f
-        WHERE
-            $2
-            AND f.fiskeridir_vessel_id = $1
-            AND (
-                f.removed_timestamp IS NULL
-                OR f.removed_timestamp > d.departure_timestamp
-            )
-    ) AS "fishing_facilities!"
+    departure_timestamp,
+    hauls::TEXT AS "hauls!",
+    CASE
+        WHEN $1 THEN fishing_facilities::TEXT
+        ELSE '[]'
+    END AS "fishing_facilities!",
+    target_species_fiskeridir_id
 FROM
-    ers_departures d
+    current_trips
 WHERE
-    d.fiskeridir_vessel_id = $1
-    AND d.departure_timestamp > COALESCE(
-        (
-            SELECT
-                MAX(UPPER(COALESCE(t.period_precision, t.period)))
-            FROM
-                trips t
-            WHERE
-                t.fiskeridir_vessel_id = $1
-                AND t.trip_assembler_id = $3
-        ),
-        TO_TIMESTAMP(0)
-    )
-GROUP BY
-    d.message_id
-ORDER BY
-    d.departure_timestamp ASC
-LIMIT
-    1
+    fiskeridir_vessel_id = $2
             "#,
-            vessel_id.into_inner(),
             read_fishing_facility,
-            TripAssemblerId::Ers as i32,
+            vessel_id.into_inner(),
         )
         .fetch_optional(&self.pool)
         .await?;
@@ -1407,7 +1439,8 @@ INSERT INTO
     trip_calculation_timers (fiskeridir_vessel_id, trip_assembler_id, timer)
 VALUES
     ($1, $2, $3)
-ON CONFLICT (fiskeridir_vessel_id) DO UPDATE
+ON CONFLICT (fiskeridir_vessel_id) DO
+UPDATE
 SET
     timer = EXCLUDED.timer,
     queued_reset = COALESCE($4, EXCLUDED.queued_reset),

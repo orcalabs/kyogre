@@ -1216,6 +1216,11 @@ impl TripPipelineInbound for PostgresAdapter {
         self.refresh_detailed_trips_impl(vessel_id).await?;
         Ok(())
     }
+
+    async fn set_current_trip(&self, vessel_id: FiskeridirVesselId) -> CoreResult<()> {
+        self.set_current_trip_impl(vessel_id).await?;
+        Ok(())
+    }
 }
 
 #[async_trait]
