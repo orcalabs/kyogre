@@ -1,6 +1,7 @@
 use kyogre_core::Error as CoreError;
 use snafu::{Location, Snafu};
 use stack_error::StackError;
+use tokio::task::JoinError;
 
 pub type Result<T> = std::result::Result<T, Error>;
 
@@ -8,6 +9,12 @@ pub type Result<T> = std::result::Result<T, Error>;
 #[snafu(module, visibility(pub))]
 #[stack_error(to = [CoreError::Unexpected])]
 pub enum Error {
+    #[snafu(display("Failed to join tasks"))]
+    JoinError {
+        #[snafu(implicit)]
+        location: Location,
+        error: JoinError,
+    },
     #[snafu(display("Failed a database operation"))]
     Database {
         #[snafu(implicit)]
