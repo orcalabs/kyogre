@@ -18,23 +18,23 @@ use web_api::{
             FishingSpotPrediction, FishingSpotPredictionParams, FishingWeightPrediction,
             FishingWeightPredictionParams,
         },
-        fuel::{
+        fuel_measurement::{
             DeleteFuelMeasurement, FuelMeasurement, FuelMeasurementBody, FuelMeasurementsParams,
-            FuelParams,
         },
         haul::{Haul, HaulsMatrix, HaulsMatrixParams, HaulsParams},
         landing::{Landing, LandingMatrix, LandingMatrixParams, LandingsParams},
+        org::OrgBenchmarkParameters,
         species::{
             Species, SpeciesFao, SpeciesFiskeridir, SpeciesGroupDetailed, SpeciesGroupParams,
             SpeciesMainGroupDetailed,
         },
-        trip::{CurrentTrip, Trip, TripsParameters},
-        trip_benchmark::{
+        trip::benchmarks::{
             AverageEeoiParams, AverageTripBenchmarksParams, EeoiParams, TripBenchmarks,
             TripBenchmarksParams,
         },
+        trip::{CurrentTrip, Trip, TripsParameters},
         user::User,
-        vessel::{OrgBenchmarkParameters, Vessel},
+        vessel::{FuelParams, Vessel},
         vms::{VmsParameters, VmsPosition},
     },
 };
@@ -206,7 +206,7 @@ impl ApiClient {
         params: OrgBenchmarkParameters,
     ) -> Result<Option<OrgBenchmarks>, Error> {
         self.send(
-            format!("vessels/org_benchmarks/{org_id}"),
+            format!("org/{org_id}/benchmarks"),
             Method::GET,
             &(),
             Some(&params),
@@ -217,23 +217,23 @@ impl ApiClient {
         &self,
         params: TripBenchmarksParams,
     ) -> Result<TripBenchmarks, Error> {
-        self.send("trip_benchmarks", Method::GET, &(), Some(&params))
+        self.send("trip/benchmarks", Method::GET, &(), Some(&params))
             .await
     }
     pub async fn get_average_trip_benchmarks(
         &self,
         params: AverageTripBenchmarksParams,
     ) -> Result<AverageTripBenchmarks, Error> {
-        self.send("trip_benchmarks/average", Method::GET, &(), Some(&params))
+        self.send("trip/benchmarks/average", Method::GET, &(), Some(&params))
             .await
     }
     pub async fn get_eeoi(&self, params: EeoiParams) -> Result<Option<f64>, Error> {
-        self.send("trip_benchmarks/eeoi", Method::GET, &(), Some(&params))
+        self.send("trip/benchmarks/eeoi", Method::GET, &(), Some(&params))
             .await
     }
     pub async fn get_average_eeoi(&self, params: AverageEeoiParams) -> Result<Option<f64>, Error> {
         self.send(
-            "trip_benchmarks/average_eeoi",
+            "trip/benchmarks/average_eeoi",
             Method::GET,
             &(),
             Some(&params),
@@ -391,8 +391,9 @@ impl ApiClient {
     pub async fn update_vessel(&self, update: &UpdateVessel) -> Result<Vessel, Error> {
         self.send("vessels", Method::PUT, update, None::<&()>).await
     }
-    pub async fn get_fuel(&self, params: FuelParams) -> Result<f64, Error> {
-        self.send("fuel", Method::GET, &(), Some(&params)).await
+    pub async fn get_vessel_fuel(&self, params: FuelParams) -> Result<f64, Error> {
+        self.send("vessel/fuel", Method::GET, &(), Some(&params))
+            .await
     }
     pub async fn get_fuel_measurements(
         &self,
