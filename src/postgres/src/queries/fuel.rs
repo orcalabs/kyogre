@@ -68,7 +68,7 @@ WHERE
             "#,
             range,
             vessel_id.into_inner(),
-            ProcessingStatus::Unprocessed as i32
+            ProcessingStatus::Successful as i32
         )
         .fetch(&self.pool)
         .map_ok(|r| {
