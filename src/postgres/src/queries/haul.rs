@@ -903,7 +903,7 @@ SET
 FROM
     (
         SELECT
-            GENERATE_SERIES(LOWER(period), UPPER(period), INTERVAL '1 day') AS date,
+            GENERATE_SERIES(LOWER(period), UPPER(period), INTERVAL '1 day')::DATE AS date,
             e.fiskeridir_vessel_id
         FROM
             vessel_events e
