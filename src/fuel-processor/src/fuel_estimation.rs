@@ -5,7 +5,7 @@ use kyogre_core::{
 };
 use std::sync::Arc;
 use tokio::task::JoinSet;
-use tracing::{error, instrument};
+use tracing::{error, info, instrument};
 
 #[cfg(not(feature = "test"))]
 static REQUIRED_TRIPS_TO_ESTIMATE_FUEL: u32 = 5;
@@ -20,6 +20,7 @@ pub struct FuelItem {
     pub is_inside_haul_and_active_gear: bool,
 }
 
+#[derive(Debug)]
 struct VesselToProcess {
     vessel: Vessel,
     sfc: f64,
@@ -116,21 +117,29 @@ impl FuelEstimator {
     }
 }
 
-#[instrument(skip_all)]
 async fn vessel_task(
     receiver: async_channel::Receiver<VesselToProcess>,
     adapter: Arc<dyn FuelEstimation>,
     end_date: NaiveDate,
 ) {
     while let Ok(vessel) = receiver.recv().await {
-        let vessel_id = vessel.fiskeridir.id;
-        if let Err(e) = process_vessel(vessel, adapter.as_ref(), end_date).await {
-            error!("failed to process vessel_id: '{vessel_id}' err: {e:?}");
-        }
+        process_vessel(vessel, adapter.as_ref(), end_date).await;
     }
 }
 
+#[instrument(skip(adapter))]
 async fn process_vessel(
+    vessel: VesselToProcess,
+    adapter: &dyn FuelEstimation,
+    end_date: NaiveDate,
+) {
+    let id = vessel.fiskeridir.id;
+    if let Err(e) = process_vessel_impl(vessel, adapter, end_date).await {
+        error!("failed to process vessel_id: '{id}' err: {e:?}");
+    }
+}
+
+async fn process_vessel_impl(
     vessel: VesselToProcess,
     adapter: &dyn FuelEstimation,
     end_date: NaiveDate,
@@ -143,6 +152,8 @@ async fn process_vessel(
             end_date,
         )
         .await?;
+
+    info!("dates to process: {}", dates_to_estimate.len());
 
     let mut estimates = Vec::with_capacity(FUEL_ESTIMATE_COMMIT_SIZE.min(dates_to_estimate.len()));
 
