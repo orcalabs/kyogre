@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO\n    fuel_estimates (\n    fiskeridir_vessel_id,date,estimate,status\n   )\nSELECT\n    *\nFROM\n    UNNEST(\n        $1::BIGINT[],$2::DATE[],$3::DOUBLE PRECISION[],$4::INT[]\n    )\n        ON CONFLICT (fiskeridir_vessel_id, date) DO UPDATE SET estimate = EXCLUDED.estimate,status = EXCLUDED.status",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8Array",
+        "DateArray",
+        "Float8Array",
+        "Int4Array"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "efbc036b90d9b5ca59db9a3cac15f34198a2442991bb0346e84bad01b319aaa7"
+}

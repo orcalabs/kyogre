@@ -1,6 +1,6 @@
-use crate::queries::type_to_i64;
+use crate::queries::{type_to_i32, type_to_i64};
 use chrono::{DateTime, NaiveDate, Utc};
-use kyogre_core::{BarentswatchUserId, FiskeridirVesselId, PositionType, TripId};
+use kyogre_core::{BarentswatchUserId, FiskeridirVesselId, PositionType, ProcessingStatus, TripId};
 use unnest_insert::{UnnestDelete, UnnestInsert, UnnestUpdate};
 
 #[derive(Debug, Clone, UnnestUpdate)]
@@ -37,6 +37,8 @@ pub struct UpsertFuelEstimation {
     pub date: NaiveDate,
     #[unnest_insert(update)]
     pub estimate: f64,
+    #[unnest_insert(update, sql_type = "INT", type_conversion = "type_to_i32")]
+    pub status: ProcessingStatus,
 }
 
 #[derive(Debug, Clone, UnnestDelete)]
@@ -86,6 +88,7 @@ impl From<&kyogre_core::NewFuelDayEstimate> for UpsertFuelEstimation {
             fiskeridir_vessel_id: v.vessel_id,
             date: v.date,
             estimate: v.estimate,
+            status: ProcessingStatus::Successful,
         }
     }
 }
