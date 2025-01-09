@@ -1,9 +1,9 @@
 use chrono::NaiveDate;
-use fiskeridir_rs::CallSign;
+use fiskeridir_rs::{CallSign, OrgId};
 use futures::{Stream, TryStreamExt};
 use kyogre_core::{
-    BarentswatchUserId, FiskeridirVesselId, FuelMeasurement, FuelMeasurementsQuery, FuelQuery,
-    Mmsi, NewFuelDayEstimate, ProcessingStatus,
+    BarentswatchUserId, FiskeridirVesselId, FuelEntry, FuelMeasurement, FuelMeasurementsQuery,
+    FuelQuery, Mmsi, NewFuelDayEstimate, ProcessingStatus,
 };
 use sqlx::postgres::types::PgRange;
 
@@ -100,6 +100,47 @@ WHERE
     ) -> Result<()> {
         self.unnest_insert_from::<_, _, UpsertFuelEstimation>(estimates, &self.pool)
             .await
+    }
+    pub(crate) async fn fuel_estimation_by_org_impl(
+        &self,
+        query: &FuelQuery,
+        org_id: OrgId,
+    ) -> Result<Option<Vec<FuelEntry>>> {
+        if !self
+            .assert_call_sign_is_in_org(&query.call_sign, org_id)
+            .await?
+        {
+            return Ok(None);
+        }
+
+        Ok(Some(
+            sqlx::query_as!(
+                FuelEntry,
+                r#"
+SELECT
+    COALESCE(SUM(f.estimate), 0.0) AS "estimated_fuel!",
+    f.fiskeridir_vessel_id AS "fiskeridir_vessel_id: FiskeridirVesselId"
+FROM
+    fiskeridir_ais_vessel_mapping_whitelist w
+    INNER JOIN orgs__fiskeridir_vessels o ON o.fiskeridir_vessel_id = w.fiskeridir_vessel_id
+    AND o.org_id = $1
+    INNER JOIN orgs__fiskeridir_vessels o2 ON o2.org_id = o.org_id
+    INNER JOIN fuel_estimates f ON o2.fiskeridir_vessel_id = f.fiskeridir_vessel_id
+WHERE
+    w.call_sign = $2
+    AND f."date" >= $3
+    AND f."date" <= $4
+GROUP BY
+    f.fiskeridir_vessel_id
+            "#,
+                org_id.into_inner(),
+                query.call_sign.as_ref(),
+                query.start_date,
+                query.end_date
+            )
+            .fetch_all(&self.pool)
+            .await?,
+        ))
     }
     pub(crate) async fn fuel_estimation_impl(&self, query: &FuelQuery) -> Result<f64> {
         Ok(sqlx::query!(
