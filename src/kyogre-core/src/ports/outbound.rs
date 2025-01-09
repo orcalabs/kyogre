@@ -3,7 +3,7 @@ use std::pin::Pin;
 
 use async_trait::async_trait;
 use chrono::{DateTime, NaiveDate, NaiveDateTime, Utc};
-use fiskeridir_rs::{CallSign, DataFileId, LandingId, SpeciesGroup};
+use fiskeridir_rs::{CallSign, DataFileId, LandingId, OrgId, SpeciesGroup};
 use futures::Stream;
 
 use crate::*;
@@ -97,6 +97,11 @@ pub trait WebApiOutboundPort {
     ) -> CoreResult<AverageTripBenchmarks>;
     async fn average_eeoi(&self, query: AverageEeoiQuery) -> CoreResult<Option<f64>>;
     async fn fuel_estimation(&self, query: &FuelQuery) -> CoreResult<f64>;
+    async fn fuel_estimation_by_org(
+        &self,
+        query: &FuelQuery,
+        org_id: OrgId,
+    ) -> CoreResult<Option<Vec<FuelEntry>>>;
     fn fishing_facilities(
         &self,
         query: FishingFacilitiesQuery,

@@ -1,4 +1,5 @@
 use super::helper::test;
+use chrono::{Duration, Utc};
 use engine::*;
 use fiskeridir_rs::{
     NonEmptyString, OrgId, RegisterVesselEntityType, RegisterVesselOwner, SpeciesGroup,
@@ -6,7 +7,7 @@ use fiskeridir_rs::{
 use http_client::StatusCode;
 use kyogre_core::{Haul, OrgBenchmarks, TripDetailed};
 use std::str::FromStr;
-use web_api::routes::v1::{org::OrgBenchmarkParameters, user::User};
+use web_api::routes::v1::{org::OrgBenchmarkParameters, user::User, vessel::FuelParams};
 
 #[tokio::test]
 async fn test_vessel_benchmarks_returns_correct_averages_for_followers() {
@@ -304,6 +305,193 @@ async fn test_vessel_org_benchmarks_filters_by_dates() {
             .unwrap();
 
         assert_org_benchmarks(&benchmarks, &state.trips[1..], &state.hauls[2..], 2);
+    })
+    .await;
+}
+#[tokio::test]
+async fn test_org_fuel_returns_not_found_for_non_logged_in_users() {
+    test(|helper, builder| async move {
+        let org_id = OrgId::test_new(1);
+        let state = builder
+            .vessels(1)
+            .modify(|v| {
+                v.fiskeridir.owners = vec![RegisterVesselOwner {
+                    city: None,
+                    entity_type: RegisterVesselEntityType::Company,
+                    id: Some(org_id),
+                    name: NonEmptyString::from_str("test").unwrap(),
+                    postal_code: 9000,
+                }];
+            })
+            .set_logged_in()
+            .trips(1)
+            .ais_vms_positions(10)
+            .build()
+            .await;
+
+        let error = helper
+            .app
+            .get_org_fuel(
+                org_id,
+                FuelParams {
+                    start_date: state
+                        .trips
+                        .iter()
+                        .map(|t| t.period.start().date_naive())
+                        .min(),
+                    end_date: state
+                        .trips
+                        .iter()
+                        .map(|t| t.period.end().date_naive())
+                        .max(),
+                },
+            )
+            .await
+            .unwrap_err();
+
+        assert_eq!(error.status, StatusCode::NOT_FOUND);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_get_org_fuel_for_org_user_is_not_part_of_returns_not_found() {
+    test(|mut helper, builder| async move {
+        let org_id = OrgId::test_new(1);
+        let org_id2 = OrgId::test_new(2);
+        let state = builder
+            .vessels(3)
+            .modify_idx(|i, v| {
+                let org_id = if i > 1 { org_id2 } else { org_id };
+                v.fiskeridir.owners = vec![RegisterVesselOwner {
+                    city: None,
+                    entity_type: RegisterVesselEntityType::Company,
+                    id: Some(org_id),
+                    name: NonEmptyString::from_str("test").unwrap(),
+                    postal_code: 9000,
+                }];
+            })
+            .set_logged_in()
+            .trips(3)
+            .ais_vms_positions(18)
+            .build()
+            .await;
+
+        helper.app.login_user();
+
+        let error = helper
+            .app
+            .get_org_fuel(
+                org_id2,
+                FuelParams {
+                    start_date: state
+                        .trips
+                        .iter()
+                        .map(|t| t.period.start().date_naive())
+                        .min(),
+                    end_date: state
+                        .trips
+                        .iter()
+                        .map(|t| t.period.end().date_naive())
+                        .max(),
+                },
+            )
+            .await
+            .unwrap_err();
+
+        assert_eq!(error.status, StatusCode::NOT_FOUND);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_org_fuel_filter_by_orgs() {
+    test(|mut helper, builder| async move {
+        let org_id = OrgId::test_new(1);
+        let org_id2 = OrgId::test_new(2);
+        let state = builder
+            .vessels(3)
+            .modify_idx(|i, v| {
+                let org_id = if i > 1 { org_id2 } else { org_id };
+                v.fiskeridir.owners = vec![RegisterVesselOwner {
+                    city: None,
+                    entity_type: RegisterVesselEntityType::Company,
+                    id: Some(org_id),
+                    name: NonEmptyString::from_str("test").unwrap(),
+                    postal_code: 9000,
+                }];
+            })
+            .set_logged_in()
+            .trips(3)
+            .ais_vms_positions(18)
+            .build()
+            .await;
+
+        helper.app.login_user();
+
+        let fuel = helper
+            .app
+            .get_org_fuel(
+                org_id,
+                FuelParams {
+                    start_date: state
+                        .trips
+                        .iter()
+                        .map(|t| t.period.start().date_naive())
+                        .min(),
+                    end_date: state
+                        .trips
+                        .iter()
+                        .map(|t| t.period.end().date_naive())
+                        .max(),
+                },
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(fuel.len(), 2);
+        assert!(!fuel
+            .iter()
+            .any(|f| f.fiskeridir_vessel_id == state.vessels[2].fiskeridir.id));
+    })
+    .await;
+}
+#[tokio::test]
+async fn test_org_fuel_returns_empty_response_with_no_data() {
+    test(|mut helper, builder| async move {
+        let org_id = OrgId::test_new(1);
+        builder
+            .vessels(1)
+            .modify(|v| {
+                v.fiskeridir.owners = vec![RegisterVesselOwner {
+                    city: None,
+                    entity_type: RegisterVesselEntityType::Company,
+                    id: Some(org_id),
+                    name: NonEmptyString::from_str("test").unwrap(),
+                    postal_code: 9000,
+                }];
+            })
+            .set_logged_in()
+            .build()
+            .await;
+
+        helper.app.login_user();
+
+        let now = Utc::now();
+
+        let fuel = helper
+            .app
+            .get_org_fuel(
+                org_id,
+                FuelParams {
+                    start_date: Some((now - Duration::days(10)).date_naive()),
+                    end_date: Some(now.date_naive()),
+                },
+            )
+            .await
+            .unwrap();
+
+        assert!(fuel.is_empty());
     })
     .await;
 }
