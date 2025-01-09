@@ -1,33 +1,28 @@
-use crate::error::error::{MissingDateRangeSnafu, OrgNotFoundSnafu, UpdateVesselNotFoundSnafu};
+use crate::error::error::{MissingDateRangeSnafu, UpdateVesselNotFoundSnafu};
 use crate::{
     error::Result,
     extractors::BwProfile,
     response::{Response, StreamResponse},
     stream_response, Database,
 };
-use actix_web::web::{self, Path};
-use chrono::{DateTime, Duration, Utc};
-use fiskeridir_rs::{
-    CallSign, GearGroup, OrgId, RegisterVesselOwner, SpeciesGroup, VesselLengthGroup,
-};
+use actix_web::web::{self};
+use chrono::{DateTime, Duration, NaiveDate, Utc};
+use fiskeridir_rs::{CallSign, GearGroup, RegisterVesselOwner, SpeciesGroup, VesselLengthGroup};
 use futures::TryStreamExt;
-use kyogre_core::{FiskeridirVesselId, Mmsi, OrgBenchmarkQuery, OrgBenchmarks};
-use kyogre_core::{UpdateVessel, VesselBenchmarks};
+use kyogre_core::UpdateVessel;
+use kyogre_core::{FiskeridirVesselId, FuelQuery, Mmsi};
 use oasgen::{oasgen, OaSchema};
 use serde::{Deserialize, Serialize};
 use serde_qs::actix::QsQuery as Query;
 use serde_with::{serde_as, DisplayFromStr};
 
-#[derive(Default, Debug, Deserialize, Serialize, OaSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct OrgBenchmarkParameters {
-    pub start: Option<DateTime<Utc>>,
-    pub end: Option<DateTime<Utc>>,
-}
+pub mod benchmarks;
 
-#[derive(Debug, Clone, OaSchema, Deserialize)]
-pub struct OrgBenchmarkPath {
-    pub org_id: OrgId,
+#[derive(Default, Debug, Clone, Deserialize, Serialize, OaSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct FuelParams {
+    pub start_date: Option<NaiveDate>,
+    pub end_date: Option<NaiveDate>,
 }
 
 /// Updates the vessel with the provided information.
@@ -65,41 +60,21 @@ pub async fn vessels<T: Database + Send + Sync + 'static>(
     }
 }
 
-/// Returns organization benchmarks for the given organization id (Breg org id).
-/// This will include benchmarks for all vessels associated with the organization.
+/// Returns a fuel consumption estimate for the given date range for the vessel associated with the
+/// authenticated user, if no date range is given the last 30 days
+/// are returned.
+/// This is not based on trips and is the full fuel consumption estimate for the given date range
 #[oasgen(skip(db), tags("Vessel"))]
 #[tracing::instrument(skip(db))]
-pub async fn org_benchmarks<T: Database + 'static>(
+pub async fn fuel<T: Database + Send + Sync + 'static>(
     db: web::Data<T>,
-    bw_profile: BwProfile,
-    params: Query<OrgBenchmarkParameters>,
-    path: Path<OrgBenchmarkPath>,
-) -> Result<Response<OrgBenchmarks>> {
-    let call_sign = bw_profile.call_sign()?;
-    let query = params
-        .into_inner()
-        .into_query(call_sign.clone(), path.org_id)?;
+    profile: BwProfile,
+    params: Query<FuelParams>,
+) -> Result<Response<f64>> {
+    let call_sign = profile.call_sign()?;
+    let query = params.into_inner().to_query(call_sign.clone())?;
 
-    match db.org_benchmarks(&query).await? {
-        Some(b) => Ok(Response::new(b)),
-        None => OrgNotFoundSnafu {
-            org_id: path.org_id,
-        }
-        .fail(),
-    }
-}
-
-/// Returns benchmark data for the vessel associated with the authenticated user.
-#[oasgen(skip(db), tags("Vessel"))]
-#[tracing::instrument(skip(db))]
-pub async fn vessel_benchmarks<T: Database + 'static>(
-    db: web::Data<T>,
-    bw_profile: BwProfile,
-) -> Result<Response<VesselBenchmarks>> {
-    let call_sign = bw_profile.call_sign()?;
-    Ok(Response::new(
-        db.vessel_benchmarks(&bw_profile.user.id, call_sign).await?,
-    ))
+    Ok(Response::new(db.fuel_estimation(&query).await?))
 }
 
 #[serde_as]
@@ -166,25 +141,34 @@ pub struct AisVessel {
     pub destination: Option<String>,
 }
 
-impl OrgBenchmarkParameters {
-    pub fn into_query(self, call_sign: CallSign, org_id: OrgId) -> Result<OrgBenchmarkQuery> {
-        let (start, end) = match (self.start, self.end) {
+impl FuelParams {
+    pub fn to_query(self, call_sign: CallSign) -> Result<FuelQuery> {
+        let Self {
+            start_date,
+            end_date,
+        } = self;
+
+        let (start_date, end_date) = match (start_date, end_date) {
+            (Some(s), Some(e)) => (s, e),
             (None, None) => {
                 let now = Utc::now();
-                Ok((now - Duration::days(30), now))
+                let start = (now - Duration::days(30)).naive_utc().date();
+
+                (start, now.naive_utc().date())
             }
-            (Some(s), Some(e)) => Ok((s, e)),
-            _ => MissingDateRangeSnafu {
-                start: self.start.is_some(),
-                end: self.end.is_some(),
+            _ => {
+                return MissingDateRangeSnafu {
+                    start: start_date.is_some(),
+                    end: end_date.is_some(),
+                }
+                .fail()
             }
-            .fail(),
-        }?;
-        Ok(OrgBenchmarkQuery {
-            start,
-            end,
+        };
+
+        Ok(FuelQuery {
             call_sign,
-            org_id,
+            start_date,
+            end_date,
         })
     }
 }

@@ -1,19 +1,3 @@
-use actix_web::web::{self, Path};
-use chrono::{DateTime, Utc};
-use fiskeridir_rs::{Gear, GearGroup, LandingId, Quality, SpeciesGroup, VesselLengthGroup};
-use futures::TryStreamExt;
-use kyogre_core::{
-    FiskeridirVesselId, HaulId, Ordering, Pagination, Tra, TripAssemblerId, TripId, TripSorting,
-    Trips, TripsQuery, VesselEventType,
-};
-use oasgen::{oasgen, OaSchema};
-use serde::{Deserialize, Serialize};
-use serde_qs::actix::QsQuery as Query;
-use serde_with::{serde_as, DisplayFromStr};
-use tracing::error;
-
-use v1::haul::Haul;
-
 use super::fishing_facility::FishingFacility;
 use crate::{
     error::{error::StartAfterEndSnafu, Result},
@@ -21,6 +5,23 @@ use crate::{
     response::{Response, ResponseOrStream, StreamResponse},
     stream_response, *,
 };
+use actix_web::web::{self, Path};
+use chrono::{DateTime, Utc};
+use fiskeridir_rs::{Gear, GearGroup, LandingId, Quality, SpeciesGroup, VesselLengthGroup};
+use futures::TryStreamExt;
+use kyogre_core::{
+    FiskeridirVesselId, Ordering, Pagination, Tra, TripAssemblerId, TripId, TripSorting, Trips,
+    TripsQuery, VesselEventType,
+};
+use oasgen::{oasgen, OaSchema};
+use serde::{Deserialize, Serialize};
+use serde_qs::actix::QsQuery as Query;
+use serde_with::{serde_as, DisplayFromStr};
+use tracing::error;
+use v1::haul::Haul;
+
+pub mod benchmarks;
+pub mod trip_of_haul;
 
 #[serde_as]
 #[derive(Default, Debug, Deserialize, Serialize, OaSchema)]
@@ -50,11 +51,6 @@ pub struct TripsParameters {
 }
 
 #[derive(Debug, Deserialize, OaSchema)]
-pub struct TripOfHaulPath {
-    pub haul_id: HaulId,
-}
-
-#[derive(Debug, Deserialize, OaSchema)]
 pub struct TripOfLandingPath {
     pub landing_id: LandingId,
 }
@@ -62,42 +58,6 @@ pub struct TripOfLandingPath {
 #[derive(Debug, Deserialize, OaSchema)]
 pub struct CurrentTripPath {
     pub fiskeridir_vessel_id: FiskeridirVesselId,
-}
-
-/// Returns the trip associated with the given haul.
-#[oasgen(skip(db, meilisearch), tags("Trip"))]
-#[tracing::instrument(skip(db, meilisearch))]
-pub async fn trip_of_haul<T: Database + 'static, M: Meilisearch + 'static>(
-    db: web::Data<T>,
-    meilisearch: web::Data<Option<M>>,
-    profile: OptionBwProfile,
-    path: Path<TripOfHaulPath>,
-) -> Result<Response<Option<Trip>>> {
-    let read_fishing_facility = profile
-        .into_inner()
-        .map(|p| {
-            p.policies
-                .contains(&BwPolicy::BwReadExtendedFishingFacility)
-        })
-        .unwrap_or(false);
-
-    if let Some(meilisearch) = meilisearch.as_ref() {
-        match meilisearch
-            .trip_of_haul(&path.haul_id, read_fishing_facility)
-            .await
-        {
-            Ok(v) => return Ok(Response::new(v.map(Trip::from))),
-            Err(e) => {
-                error!("meilisearch cache returned error: {e:?}");
-            }
-        }
-    }
-
-    let trip = db
-        .detailed_trip_of_haul(&path.haul_id, read_fishing_facility)
-        .await?;
-
-    Ok(Response::new(trip.map(Trip::from)))
 }
 
 /// Returns the trip associated with the given landing.

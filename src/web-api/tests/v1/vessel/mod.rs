@@ -1,11 +1,18 @@
+use super::helper::test;
+use chrono::{Duration, TimeZone, Utc};
 use engine::*;
-use fiskeridir_rs::{GearGroup, SpeciesGroup};
+use fiskeridir_rs::SpeciesGroup;
+use fiskeridir_rs::{CallSign, GearGroup};
+use float_cmp::approx_eq;
+use http_client::StatusCode;
+use kyogre_core::TEST_SIGNED_IN_VESSEL_CALLSIGN;
 use kyogre_core::{
     ActiveVesselConflict, FiskeridirVesselId, Mmsi, TestHelperOutbound, TripBenchmarkStatus,
     UpdateVessel, VesselSource,
 };
+use web_api::routes::v1::vessel::FuelParams;
 
-use super::helper::test;
+pub mod benchmarks;
 
 #[tokio::test]
 async fn test_vessels_returns_merged_data_from_fiskeridir_and_ais() {
@@ -538,6 +545,286 @@ async fn test_update_vessel_resets_benchmarks() {
                 .await
                 > 0
         );
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_cant_use_fuel_endpoint_without_bw_token() {
+    test(|helper, _builder| async move {
+        let error = helper
+            .app
+            .get_vessel_fuel(Default::default())
+            .await
+            .unwrap_err();
+        assert_eq!(error.status, StatusCode::NOT_FOUND);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_fuel_is_estimated() {
+    test(|mut helper, builder| async move {
+        let state = builder
+            .vessels(1)
+            .set_logged_in()
+            .trips(1)
+            .ais_vms_positions(10)
+            .build()
+            .await;
+
+        helper.app.login_user();
+
+        let fuel = helper
+            .app
+            .get_vessel_fuel(FuelParams {
+                start_date: Some(state.ais_vms_positions[0].timestamp.naive_utc().date()),
+                end_date: Some(state.ais_vms_positions[9].timestamp.naive_utc().date()),
+            })
+            .await
+            .unwrap();
+
+        assert!(fuel > 0.0)
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_fuel_is_equal_to_trip_fuel_estimation() {
+    test(|mut helper, builder| async move {
+        let state = builder
+            .vessels(1)
+            .set_logged_in()
+            .trips(1)
+            .ais_vms_positions(10)
+            .build()
+            .await;
+
+        helper.app.login_user();
+
+        let trips = helper.app.get_trips(Default::default()).await.unwrap();
+        let fuel = helper
+            .app
+            .get_vessel_fuel(FuelParams {
+                start_date: Some(state.ais_vms_positions[0].timestamp.naive_utc().date()),
+                end_date: Some(state.ais_vms_positions[9].timestamp.naive_utc().date()),
+            })
+            .await
+            .unwrap();
+
+        assert_eq!(trips.len(), 1);
+        assert!(approx_eq!(f64, fuel, trips[0].fuel_consumption.unwrap()))
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_fuel_returns_zero_if_no_estimate_exists() {
+    test(|mut helper, builder| async move {
+        builder.vessels(1).set_logged_in().build().await;
+        helper.app.login_user();
+
+        let fuel = helper
+            .app
+            .get_vessel_fuel(Default::default())
+            .await
+            .unwrap();
+        assert_eq!(fuel as i32, 0);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_fuel_is_not_recalculated_with_new_hauls_with_passive_gear_types() {
+    test(|mut helper, builder| async move {
+        let start = Utc.with_ymd_and_hms(2020, 5, 1, 0, 0, 0).unwrap();
+        let end = start + Duration::hours(10);
+        let state = builder
+            .vessels(1)
+            .modify(|v| {
+                v.fiskeridir.id = FiskeridirVesselId::test_new(1);
+                v.fiskeridir.radio_call_sign =
+                    Some(CallSign::try_from(TEST_SIGNED_IN_VESSEL_CALLSIGN).unwrap());
+            })
+            .set_logged_in()
+            .trips(1)
+            .modify(|t| {
+                t.trip_specification.set_start(start);
+                t.trip_specification.set_end(end);
+            })
+            .vms_positions(10)
+            .build()
+            .await;
+
+        helper.app.login_user();
+
+        let fuel = helper
+            .app
+            .get_vessel_fuel(FuelParams {
+                start_date: Some(state.vms_positions[0].timestamp.naive_utc().date()),
+                end_date: Some(state.vms_positions[9].timestamp.naive_utc().date()),
+            })
+            .await
+            .unwrap();
+
+        helper
+            .builder()
+            .await
+            .vessels(1)
+            .modify(|v| {
+                v.fiskeridir.id = FiskeridirVesselId::test_new(1);
+                v.fiskeridir.radio_call_sign =
+                    Some(CallSign::try_from(TEST_SIGNED_IN_VESSEL_CALLSIGN).unwrap());
+            })
+            .hauls(1)
+            .modify(|h| {
+                h.dca.gear.gear_group_code = Some(GearGroup::Net);
+                h.dca.set_start_timestamp(start + Duration::seconds(1));
+                h.dca.set_stop_timestamp(end - Duration::seconds(1));
+            })
+            .build()
+            .await;
+
+        let fuel2 = helper
+            .app
+            .get_vessel_fuel(FuelParams {
+                start_date: Some(start.date_naive()),
+                end_date: Some(end.date_naive()),
+            })
+            .await
+            .unwrap();
+
+        assert!(approx_eq!(f64, fuel, fuel2))
+    })
+    .await;
+}
+#[tokio::test]
+async fn test_fuel_is_recalculated_with_new_hauls() {
+    test(|mut helper, builder| async move {
+        let start = Utc.with_ymd_and_hms(2020, 5, 1, 0, 0, 0).unwrap();
+        let end = start + Duration::hours(10);
+        builder
+            .vessels(1)
+            .modify(|v| {
+                v.fiskeridir.id = FiskeridirVesselId::test_new(1);
+                v.fiskeridir.radio_call_sign =
+                    Some(CallSign::try_from(TEST_SIGNED_IN_VESSEL_CALLSIGN).unwrap());
+            })
+            .set_logged_in()
+            .trips(1)
+            .modify(|t| {
+                t.trip_specification.set_start(start);
+                t.trip_specification.set_end(end);
+            })
+            .vms_positions(10)
+            .build()
+            .await;
+
+        helper.app.login_user();
+
+        let fuel = helper
+            .app
+            .get_vessel_fuel(FuelParams {
+                start_date: Some(start.date_naive()),
+                end_date: Some(end.date_naive()),
+            })
+            .await
+            .unwrap();
+
+        helper
+            .builder()
+            .await
+            .vessels(1)
+            .modify(|v| {
+                v.fiskeridir.id = FiskeridirVesselId::test_new(1);
+                v.fiskeridir.radio_call_sign =
+                    Some(CallSign::try_from(TEST_SIGNED_IN_VESSEL_CALLSIGN).unwrap());
+            })
+            .hauls(1)
+            .modify(|h| {
+                h.dca.gear.gear_group_code = Some(GearGroup::Trawl);
+                h.dca.set_start_timestamp(start + Duration::seconds(1));
+                h.dca.set_stop_timestamp(end - Duration::seconds(1));
+            })
+            .build()
+            .await;
+
+        let fuel2 = helper
+            .app
+            .get_vessel_fuel(FuelParams {
+                start_date: Some(start.date_naive()),
+                end_date: Some(end.date_naive()),
+            })
+            .await
+            .unwrap();
+
+        assert!(!approx_eq!(f64, fuel, fuel2))
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_fuel_is_recalculated_with_new_vms_data() {
+    test(|mut helper, builder| async move {
+        let start = Utc.with_ymd_and_hms(2020, 5, 1, 0, 0, 0).unwrap();
+        let end = start + Duration::days(10);
+        builder
+            .vessels(1)
+            .modify(|v| {
+                v.fiskeridir.id = FiskeridirVesselId::test_new(1);
+                v.fiskeridir.radio_call_sign =
+                    Some(CallSign::try_from(TEST_SIGNED_IN_VESSEL_CALLSIGN).unwrap());
+            })
+            .set_logged_in()
+            .trips(1)
+            .modify(|t| {
+                t.trip_specification.set_start(start);
+                t.trip_specification.set_end(end);
+            })
+            .vms_positions(10)
+            .modify_idx(|i, p| {
+                p.position.timestamp = end - Duration::hours(i as i64);
+            })
+            .build()
+            .await;
+
+        helper.app.login_user();
+
+        let fuel = helper
+            .app
+            .get_vessel_fuel(FuelParams {
+                start_date: Some(start.date_naive()),
+                end_date: Some(end.date_naive()),
+            })
+            .await
+            .unwrap();
+
+        helper
+            .builder()
+            .await
+            .vessels(1)
+            .modify(|v| {
+                v.fiskeridir.id = FiskeridirVesselId::test_new(1);
+                v.fiskeridir.radio_call_sign =
+                    Some(CallSign::try_from(TEST_SIGNED_IN_VESSEL_CALLSIGN).unwrap());
+            })
+            .vms_positions(10)
+            .modify_idx(|i, p| {
+                p.position.timestamp = start + Duration::hours(i as i64);
+            })
+            .build()
+            .await;
+
+        let fuel2 = helper
+            .app
+            .get_vessel_fuel(FuelParams {
+                start_date: Some(start.date_naive()),
+                end_date: Some(end.date_naive()),
+            })
+            .await
+            .unwrap();
+
+        assert!(!approx_eq!(f64, fuel, fuel2))
     })
     .await;
 }

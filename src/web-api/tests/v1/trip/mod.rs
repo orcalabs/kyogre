@@ -12,6 +12,9 @@ use web_api::{
     routes::v1::{ais_vms::AisVmsParameters, trip::TripsParameters},
 };
 
+pub mod benchmarks;
+pub mod trip_of_haul;
+
 #[tokio::test]
 async fn test_tra_messages_on_trips_connects_to_receiver_and_sender_if_provided() {
     test(|helper, builder| async move {

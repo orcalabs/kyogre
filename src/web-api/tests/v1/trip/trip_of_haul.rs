@@ -1,4 +1,4 @@
-use super::helper::test_with_cache;
+use super::super::helper::test_with_cache;
 use chrono::{Duration, TimeZone, Utc};
 use engine::*;
 use fiskeridir_rs::Quality;
