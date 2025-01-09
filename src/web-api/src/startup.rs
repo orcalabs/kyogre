@@ -123,7 +123,7 @@ where
             )
             .route(
                 "/trip_of_haul/{haul_id}",
-                get().to(routes::v1::trip::trip_of_haul::<T, M>),
+                get().to(routes::v1::trip::trip_of_haul::trip_of_haul::<T, M>),
             )
             .route(
                 "/trip_of_landing/{landing_id}",
@@ -186,12 +186,12 @@ where
                 get().to(routes::v1::weather::weather_locations::<T>),
             )
             .route(
-                "/trip_benchmarks/average",
-                get().to(routes::v1::trip_benchmark::average::<T>),
+                "/trip/benchmarks/average",
+                get().to(routes::v1::trip::benchmarks::average::<T>),
             )
             .route(
-                "/trip_benchmarks/average_eeoi",
-                get().to(routes::v1::trip_benchmark::average_eeoi::<T>),
+                "/trip/benchmarks/average_eeoi",
+                get().to(routes::v1::trip::benchmarks::average_eeoi::<T>),
             );
 
         if let Some(ref guard) = bw_jwt_guard {
@@ -215,34 +215,32 @@ where
                         .to(routes::v1::user::update_user::<T>),
                 )
                 .route(
-                    "/fuel",
-                    get()
-                        .guard(guard.clone())
-                        .to(routes::v1::fuel::get_fuel::<T>),
+                    "/vessel/fuel",
+                    get().guard(guard.clone()).to(routes::v1::vessel::fuel::<T>),
                 )
                 .route(
                     "/fuel_measurements",
                     get()
                         .guard(guard.clone())
-                        .to(routes::v1::fuel::get_fuel_measurements::<T>),
+                        .to(routes::v1::fuel_measurement::get_fuel_measurements::<T>),
                 )
                 .route(
                     "/fuel_measurements",
                     post()
                         .guard(guard.clone())
-                        .to(routes::v1::fuel::create_fuel_measurements::<T>),
+                        .to(routes::v1::fuel_measurement::create_fuel_measurements::<T>),
                 )
                 .route(
                     "/fuel_measurements",
                     put()
                         .guard(guard.clone())
-                        .to(routes::v1::fuel::update_fuel_measurements::<T>),
+                        .to(routes::v1::fuel_measurement::update_fuel_measurements::<T>),
                 )
                 .route(
                     "/fuel_measurements",
                     delete()
                         .guard(guard.clone())
-                        .to(routes::v1::fuel::delete_fuel_measurements::<T>),
+                        .to(routes::v1::fuel_measurement::delete_fuel_measurements::<T>),
                 )
                 .route(
                     "/vessels",
@@ -254,25 +252,25 @@ where
                     "/vessels/benchmarks",
                     get()
                         .guard(guard.clone())
-                        .to(routes::v1::vessel::vessel_benchmarks::<T>),
+                        .to(routes::v1::vessel::benchmarks::benchmarks::<T>),
                 )
                 .route(
-                    "/vessels/org_benchmarks/{org_id}",
+                    "/org/{org_id}/benchmarks",
                     get()
                         .guard(guard.clone())
-                        .to(routes::v1::vessel::org_benchmarks::<T>),
+                        .to(routes::v1::org::benchmarks::<T>),
                 )
                 .route(
-                    "/trip_benchmarks",
+                    "/trip/benchmarks",
                     get()
                         .guard(guard.clone())
-                        .to(routes::v1::trip_benchmark::trip_benchmarks::<T>),
+                        .to(routes::v1::trip::benchmarks::benchmarks::<T>),
                 )
                 .route(
-                    "/trip_benchmarks/eeoi",
+                    "/trip/benchmarks/eeoi",
                     get()
                         .guard(guard.clone())
-                        .to(routes::v1::trip_benchmark::eeoi::<T>),
+                        .to(routes::v1::trip::benchmarks::eeoi::<T>),
                 );
         }
 
@@ -343,6 +341,8 @@ where
                 }
             }
         }
+
+        server.openapi.paths.paths.sort_keys();
 
         let server = server
             .route_json_spec("/api-doc/openapi.json")

@@ -1,6 +1,6 @@
 use crate::v1::helper::test;
 use engine::*;
-use web_api::routes::v1::trip_benchmark::AverageEeoiParams;
+use web_api::routes::v1::trip::benchmarks::AverageEeoiParams;
 
 #[tokio::test]
 async fn test_eeoi_benchmark_works() {

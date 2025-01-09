@@ -3,7 +3,7 @@ use chrono::{Duration, TimeZone, Utc};
 use engine::{Modifiable, TripLevel};
 use float_cmp::approx_eq;
 use kyogre_core::Mean;
-use web_api::routes::v1::trip_benchmark::AverageTripBenchmarksParams;
+use web_api::routes::v1::trip::benchmarks::AverageTripBenchmarksParams;
 
 #[tokio::test]
 async fn test_average_benchmarks_works() {
