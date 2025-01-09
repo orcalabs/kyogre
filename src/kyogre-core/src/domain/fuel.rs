@@ -1,5 +1,6 @@
 use chrono::{DateTime, NaiveDate, Utc};
 use fiskeridir_rs::{CallSign, FiskeridirVesselId};
+use serde::{Deserialize, Serialize};
 
 use crate::BarentswatchUserId;
 
@@ -23,4 +24,11 @@ pub struct NewFuelDayEstimate {
     pub vessel_id: FiskeridirVesselId,
     pub date: NaiveDate,
     pub estimate: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
+pub struct FuelEntry {
+    pub fiskeridir_vessel_id: FiskeridirVesselId,
+    pub estimated_fuel: f64,
 }

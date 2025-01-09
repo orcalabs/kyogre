@@ -3,7 +3,7 @@ use std::{path::PathBuf, result::Result as StdResult};
 use async_channel::Receiver;
 use async_trait::async_trait;
 use chrono::{DateTime, NaiveDate, NaiveDateTime, Utc};
-use fiskeridir_rs::{CallSign, DataFileId, LandingId, SpeciesGroup};
+use fiskeridir_rs::{CallSign, DataFileId, LandingId, OrgId, SpeciesGroup};
 use futures::{Stream, StreamExt, TryStreamExt};
 use kyogre_core::*;
 use orca_core::{Environment, PsqlLogStatements, PsqlSettings};
@@ -558,6 +558,13 @@ impl WebApiOutboundPort for PostgresAdapter {
     }
     async fn fuel_estimation(&self, query: &FuelQuery) -> CoreResult<f64> {
         Ok(retry(|| self.fuel_estimation_impl(query)).await?)
+    }
+    async fn fuel_estimation_by_org(
+        &self,
+        query: &FuelQuery,
+        org_id: OrgId,
+    ) -> CoreResult<Option<Vec<FuelEntry>>> {
+        Ok(retry(|| self.fuel_estimation_by_org_impl(query, org_id)).await?)
     }
     async fn update_vessel(
         &self,

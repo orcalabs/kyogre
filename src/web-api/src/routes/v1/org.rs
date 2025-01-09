@@ -1,9 +1,10 @@
+use super::vessel::FuelParams;
 use crate::error::error::{MissingDateRangeSnafu, OrgNotFoundSnafu};
 use crate::{error::Result, extractors::BwProfile, response::Response, Database};
 use actix_web::web::{self, Path};
 use chrono::{DateTime, Duration, Utc};
 use fiskeridir_rs::{CallSign, OrgId};
-use kyogre_core::{OrgBenchmarkQuery, OrgBenchmarks};
+use kyogre_core::{FuelEntry, OrgBenchmarkQuery, OrgBenchmarks};
 use oasgen::{oasgen, OaSchema};
 use serde::{Deserialize, Serialize};
 use serde_qs::actix::QsQuery as Query;
@@ -16,6 +17,10 @@ pub struct OrgBenchmarkParameters {
 }
 #[derive(Debug, Clone, OaSchema, Deserialize)]
 pub struct OrgBenchmarkPath {
+    pub org_id: OrgId,
+}
+#[derive(Debug, Clone, OaSchema, Deserialize)]
+pub struct OrgFuelPath {
     pub org_id: OrgId,
 }
 
@@ -40,6 +45,28 @@ pub async fn benchmarks<T: Database + 'static>(
             org_id: path.org_id,
         }
         .fail(),
+    }
+}
+
+/// Returns a fuel consumption estimate for the given date range for all vessels associated with the
+/// given org, if no date range is given the last 30 days
+/// are returned.
+/// This is not based on trips and is the full fuel consumption estimate for the given date range.
+#[oasgen(skip(db), tags("Org"))]
+#[tracing::instrument(skip(db))]
+pub async fn fuel<T: Database + Send + Sync + 'static>(
+    db: web::Data<T>,
+    profile: BwProfile,
+    params: Query<FuelParams>,
+    path: Path<OrgFuelPath>,
+) -> Result<Response<Vec<FuelEntry>>> {
+    let call_sign = profile.call_sign()?;
+    let query = params.into_inner().to_query(call_sign.clone())?;
+
+    let org_id = path.into_inner().org_id;
+    match db.fuel_estimation_by_org(&query, org_id).await? {
+        Some(b) => Ok(Response::new(b)),
+        None => OrgNotFoundSnafu { org_id }.fail(),
     }
 }
 

@@ -261,6 +261,10 @@ where
                         .to(routes::v1::org::benchmarks::<T>),
                 )
                 .route(
+                    "/org/{org_id}/fuel",
+                    get().guard(guard.clone()).to(routes::v1::org::fuel::<T>),
+                )
+                .route(
                     "/trip/benchmarks",
                     get()
                         .guard(guard.clone())

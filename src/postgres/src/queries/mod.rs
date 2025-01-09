@@ -1,5 +1,6 @@
 pub mod ais;
 pub mod ais_vms;
+pub mod assert;
 pub mod catch_location;
 pub mod delivery_point;
 pub mod duckdb;
