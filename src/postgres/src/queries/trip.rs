@@ -272,11 +272,11 @@ WHERE
         Ok(())
     }
 
-    pub(crate) async fn add_trip_position<'a>(
+    pub(crate) async fn add_trip_position(
         &self,
         id: TripId,
         output: TripPositionLayerOutput,
-        tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     ) -> Result<()> {
         let mut trip_positions = Vec::with_capacity(output.trip_positions.len());
         let mut pruned_positions = Vec::with_capacity(output.pruned_positions.len());
@@ -332,10 +332,10 @@ WHERE
         Ok(())
     }
 
-    pub(crate) async fn add_trip_positions<'a>(
+    pub(crate) async fn add_trip_positions(
         &self,
         input: Vec<TripPositions>,
-        tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     ) -> Result<()> {
         let mut trip_positions = Vec::with_capacity(input.len());
         let mut pruned_positions = Vec::with_capacity(trip_positions.len());
@@ -467,10 +467,10 @@ WHERE
         Ok(())
     }
 
-    pub(crate) async fn trips_refresh_boundary<'a>(
+    pub(crate) async fn trips_refresh_boundary(
         &self,
         vessel_id: FiskeridirVesselId,
-        tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     ) -> Result<Option<DateTime<Utc>>> {
         Ok(sqlx::query!(
             r#"
@@ -488,10 +488,10 @@ WHERE
         .and_then(|v| v.refresh_boundary))
     }
 
-    pub(crate) async fn reset_trips_refresh_boundary<'a>(
+    pub(crate) async fn reset_trips_refresh_boundary(
         &self,
         vessel_id: FiskeridirVesselId,
-        tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     ) -> Result<()> {
         sqlx::query!(
             r#"
@@ -509,10 +509,10 @@ WHERE
         Ok(())
     }
 
-    pub(crate) async fn add_trips_detailed<'a>(
+    pub(crate) async fn add_trips_detailed(
         &self,
         trip_ids: &[TripId],
-        tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     ) -> Result<()> {
         if trip_ids.is_empty() {
             return Ok(());
@@ -760,8 +760,7 @@ WHERE
     t.trip_id = ANY ($2::BIGINT[])
 GROUP BY
     t.trip_id
-ON CONFLICT (trip_id) DO
-UPDATE
+ON CONFLICT (trip_id) DO UPDATE
 SET
     trip_id = excluded.trip_id,
     distance = excluded.distance,
@@ -1439,8 +1438,7 @@ INSERT INTO
     trip_calculation_timers (fiskeridir_vessel_id, trip_assembler_id, timer)
 VALUES
     ($1, $2, $3)
-ON CONFLICT (fiskeridir_vessel_id) DO
-UPDATE
+ON CONFLICT (fiskeridir_vessel_id) DO UPDATE
 SET
     timer = EXCLUDED.timer,
     queued_reset = COALESCE($4, EXCLUDED.queued_reset),

@@ -63,9 +63,9 @@ WHERE
         Ok(weather)
     }
 
-    pub(crate) async fn weather_location_ids<'a>(
+    pub(crate) async fn weather_location_ids(
         &self,
-        tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     ) -> Result<Vec<WeatherLocationId>> {
         Ok(sqlx::query!(
             r#"
@@ -116,11 +116,11 @@ WHERE
         Ok(weather)
     }
 
-    pub(crate) async fn update_catch_locations_daily_weather<'a>(
+    pub(crate) async fn update_catch_locations_daily_weather(
         &self,
         catch_location_ids: &[CatchLocationId],
         date: NaiveDate,
-        tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     ) -> Result<()> {
         let start = Utc.from_utc_datetime(&date.and_hms_opt(0, 0, 0).unwrap());
         let end = Utc.from_utc_datetime(&date.and_hms_opt(23, 59, 59).unwrap());
@@ -168,8 +168,7 @@ WHERE
     AND cloud_area_fraction IS NOT NULL
 GROUP BY
     c.catch_location_id
-ON CONFLICT (catch_location_daily_weather_id) DO
-UPDATE
+ON CONFLICT (catch_location_daily_weather_id) DO UPDATE
 SET
     altitude = excluded.altitude,
     wind_speed_10m = excluded.wind_speed_10m,
@@ -192,10 +191,10 @@ SET
         Ok(())
     }
 
-    pub(crate) async fn update_weather_locations_daily_weather<'a>(
+    pub(crate) async fn update_weather_locations_daily_weather(
         &self,
         date: NaiveDate,
-        tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     ) -> Result<()> {
         let start = Utc.from_utc_datetime(&date.and_hms_opt(0, 0, 0).unwrap());
         let end = Utc.from_utc_datetime(&date.and_hms_opt(23, 59, 59).unwrap());
@@ -243,8 +242,7 @@ WHERE
     AND cloud_area_fraction IS NOT NULL
 GROUP BY
     w.weather_location_id
-ON CONFLICT (weather_location_daily_weather_id) DO
-UPDATE
+ON CONFLICT (weather_location_daily_weather_id) DO UPDATE
 SET
     altitude = excluded.altitude,
     wind_speed_10m = excluded.wind_speed_10m,

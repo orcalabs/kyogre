@@ -178,10 +178,10 @@ WHERE
         Ok(())
     }
 
-    pub(crate) async fn add_ais_vms_aggregated<'a>(
+    pub(crate) async fn add_ais_vms_aggregated(
         &self,
         values: Vec<AisVmsAreaPositionsReturning>,
-        tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     ) -> Result<()> {
         let len = values.len();
         let mut lat = Vec::with_capacity(len);
@@ -246,8 +246,7 @@ GROUP BY
     u.latitude::DECIMAL(10, 2),
     u.longitude::DECIMAL(10, 2),
     u.date
-ON CONFLICT (latitude, longitude, date) DO
-UPDATE
+ON CONFLICT (latitude, longitude, date) DO UPDATE
 SET
     "count" = a.count + EXCLUDED.count,
     mmsis = a.mmsis | EXCLUDED.mmsis,
