@@ -19,12 +19,15 @@ WITH
     trips AS (
         SELECT
             f.fiskeridir_vessel_id,
-            f.org_id,
-            haul_duration,
-            distance,
-            trip_duration,
-            landing_total_living_weight,
-            landing_ids
+            MAX(of.org_id) AS org_id,
+            SUM(haul_duration) AS haul_duration,
+            SUM(distance) AS distance,
+            SUM(trip_duration) AS trip_duration,
+            SUM(landing_total_living_weight) AS landing_total_living_weight,
+            ARRAY_AGG(landing_ids) FILTER (
+                WHERE
+                    landing_ids IS NOT NULL
+            ) AS landing_ids
         FROM
             fiskeridir_ais_vessel_mapping_whitelist w
             INNER JOIN orgs__fiskeridir_vessels of ON w.fiskeridir_vessel_id = of.fiskeridir_vessel_id
@@ -35,6 +38,8 @@ WITH
         WHERE
             w.call_sign = $3
             AND of.org_id = $4
+        GROUP BY
+            f.fiskeridir_vessel_id
     )
 SELECT
     COALESCE(
@@ -93,10 +98,10 @@ FROM
         SELECT
             t.fiskeridir_vessel_id,
             MAX(t.org_id) AS org_id,
-            SUM(t.haul_duration) AS haul_duration,
-            SUM(t.distance) AS distance,
-            SUM(t.trip_duration) AS trip_duration,
-            SUM(t.landing_total_living_weight) AS landing_total_living_weight,
+            MAX(t.haul_duration) AS haul_duration,
+            MAX(t.distance) AS distance,
+            MAX(t.trip_duration) AS trip_duration,
+            MAX(t.landing_total_living_weight) AS landing_total_living_weight,
             JSONB_AGG(
                 JSONB_BUILD_OBJECT(
                     'species_group_id',
