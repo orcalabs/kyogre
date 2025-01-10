@@ -27,6 +27,27 @@ use crate::{
     settings::BW_PROFILES_URL,
 };
 
+static ORCA_ACCOUNT_ID: Uuid = parse_uuid("82c0012b-f337-47af-adc3-baaabce540a4");
+static PER_GUNNAR_AURAN: Uuid = parse_uuid("6b01b65f-21e8-44b0-b3e3-9d547a217744");
+static BAARD_JOHAN_HANSSEN: Uuid = parse_uuid("92d015cb-c10d-4748-b8d2-a4f4e27f2c64");
+static PER_FINN: Uuid = parse_uuid("37999e6c-5e07-492a-b889-0ef3880e7009");
+static ERLEND_STAV: Uuid = parse_uuid("6c1d8388-82c2-43d6-bb06-6b55f5b65fd7");
+
+static PROJECT_USERS: [Uuid; 5] = [
+    ORCA_ACCOUNT_ID,
+    PER_GUNNAR_AURAN,
+    BAARD_JOHAN_HANSSEN,
+    PER_FINN,
+    ERLEND_STAV,
+];
+
+const fn parse_uuid(uuid: &'static str) -> Uuid {
+    match Uuid::try_parse(uuid) {
+        Ok(u) => u,
+        Err(_) => panic!("failed to parse uuid"),
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, EnumIter)]
 pub enum BwPolicy {
     BwReadExtendedFishingFacility,
@@ -197,15 +218,12 @@ impl BwProfile {
             .json()
             .await?;
 
-        if let Ok(uuid) = Uuid::parse_str("82c0012b-f337-47af-adc3-baaabce540a4") {
-            if *response.user.id.as_ref() == uuid {
-                let query: web::Query<HashMap<String, String>> =
-                    web::Query::from_query(&query_string)?;
-                if let Some(cs) = query.get("call_sign_override") {
-                    response.fisk_info_profile = Some(BwVesselInfo {
-                        ircs: cs.as_str().try_into()?,
-                    });
-                }
+        if PROJECT_USERS.contains(response.user.id.as_ref()) {
+            let query: web::Query<HashMap<String, String>> = web::Query::from_query(&query_string)?;
+            if let Some(cs) = query.get("call_sign_override") {
+                response.fisk_info_profile = Some(BwVesselInfo {
+                    ircs: cs.as_str().try_into()?,
+                });
             }
         }
 
