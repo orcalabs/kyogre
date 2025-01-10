@@ -28,6 +28,7 @@ pub struct NewFuelDayEstimate {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
+#[serde(rename_all = "camelCase")]
 pub struct FuelEntry {
     pub fiskeridir_vessel_id: FiskeridirVesselId,
     pub estimated_fuel: f64,
