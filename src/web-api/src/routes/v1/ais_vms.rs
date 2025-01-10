@@ -267,7 +267,7 @@ impl PartialEq<kyogre_core::AisVmsPosition> for AisVmsPosition {
             && timestamp.timestamp_millis() == other.timestamp.timestamp_millis()
             && cog.map(|c| c as i32) == other.course_over_ground.map(|c| c as i32)
             && speed.map(|s| s as i32) == other.speed.map(|s| s as i32)
-            && det.as_ref().map_or(true, |d| {
+            && det.as_ref().is_none_or(|d| {
                 d.navigational_status == other.navigational_status
                     && d.rate_of_turn.map(|s| s as i32) == other.rate_of_turn.map(|s| s as i32)
                     && d.true_heading == other.true_heading
@@ -296,7 +296,7 @@ impl PartialEq<AisVmsPosition> for AisPosition {
             && msgtime.timestamp_millis() == other.timestamp.timestamp_millis()
             && course_over_ground.map(|c| c as i32) == other.cog.map(|c| c as i32)
             && speed_over_ground.map(|s| s as i32) == other.speed.map(|s| s as i32)
-            && other.det.as_ref().map_or(true, |d| {
+            && other.det.as_ref().is_none_or(|d| {
                 navigational_status.map(|n| n as i32) == d.navigational_status.map(|n| n as i32)
                     && rate_of_turn.map(|s| s as i32) == d.rate_of_turn.map(|s| s as i32)
                     && *true_heading == d.true_heading

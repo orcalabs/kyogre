@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO\n    catch_location_daily_weather (\n        catch_location_id,\n        date,\n        altitude,\n        wind_speed_10m,\n        wind_direction_10m,\n        air_temperature_2m,\n        relative_humidity_2m,\n        air_pressure_at_sea_level,\n        precipitation_amount,\n        cloud_area_fraction\n    )\nSELECT\n    c.catch_location_id,\n    $1,\n    AVG(altitude)::DOUBLE PRECISION AS \"altitude!\",\n    AVG(wind_speed_10m)::DOUBLE PRECISION,\n    AVG(wind_direction_10m)::DOUBLE PRECISION,\n    AVG(air_temperature_2m)::DOUBLE PRECISION,\n    AVG(relative_humidity_2m)::DOUBLE PRECISION,\n    AVG(air_pressure_at_sea_level)::DOUBLE PRECISION,\n    AVG(precipitation_amount)::DOUBLE PRECISION,\n    AVG(cloud_area_fraction)::DOUBLE PRECISION\nFROM\n    catch_locations c\n    INNER JOIN weather w ON w.weather_location_id = ANY (c.weather_location_ids)\nWHERE\n    c.catch_location_id = $2\n    AND \"timestamp\" BETWEEN $3 AND $4\n    AND wind_speed_10m IS NOT NULL\n    AND wind_direction_10m IS NOT NULL\n    AND air_temperature_2m IS NOT NULL\n    AND relative_humidity_2m IS NOT NULL\n    AND air_pressure_at_sea_level IS NOT NULL\n    AND precipitation_amount IS NOT NULL\n    AND cloud_area_fraction IS NOT NULL\nGROUP BY\n    c.catch_location_id\nON CONFLICT (catch_location_daily_weather_id) DO UPDATE\nSET\n    altitude = excluded.altitude,\n    wind_speed_10m = excluded.wind_speed_10m,\n    wind_direction_10m = excluded.wind_direction_10m,\n    air_temperature_2m = excluded.air_temperature_2m,\n    relative_humidity_2m = excluded.relative_humidity_2m,\n    air_pressure_at_sea_level = excluded.air_pressure_at_sea_level,\n    precipitation_amount = excluded.precipitation_amount,\n    cloud_area_fraction = excluded.cloud_area_fraction\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Date",
+        "Text",
+        "Timestamptz",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "3722ae14377cfdb7a8930e476c697782138f8f207e16c14533943fcefa76b1ab"
+}

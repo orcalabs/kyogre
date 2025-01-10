@@ -253,7 +253,7 @@ FROM
 
                     if existing_landings
                         .get(v.id.as_ref())
-                        .map_or(false, |version| version >= &v.document_info.version_number)
+                        .is_some_and(|version| version >= &v.document_info.version_number)
                     {
                         None
                     } else {
@@ -570,8 +570,7 @@ FROM
 GROUP BY
     l.landing_id,
     e.species_group_id
-ON CONFLICT (landing_id, species_group_id) DO
-UPDATE
+ON CONFLICT (landing_id, species_group_id) DO UPDATE
 SET
     living_weight = EXCLUDED.living_weight
             "#,
