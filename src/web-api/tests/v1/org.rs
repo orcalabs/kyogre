@@ -140,7 +140,7 @@ async fn test_vessel_org_benchmarks_sums_species_per_vessel() {
                 }];
             })
             .set_logged_in()
-            .trips(2)
+            .trips(4)
             .landings(8)
             .modify_idx(|i, l| {
                 let species = if i % 2 == 0 {

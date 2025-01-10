@@ -43,6 +43,7 @@ pub struct OrgBenchmarkEntry {
 #[serde_as]
 #[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
 pub struct OrgBenchmarkSpecies {
     #[serde_as(as = "DisplayFromStr")]
     pub species_group_id: SpeciesGroup,
