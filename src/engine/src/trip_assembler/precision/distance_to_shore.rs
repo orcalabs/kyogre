@@ -109,13 +109,13 @@ impl DistanceToShorePrecision {
         for chunk in positions {
             let mean_distance = chunk.iter().map(|p| p.distance_to_shore).mean();
 
-            if mean_distance.map_or(true, |v| v > self.config.distance_threshold) {
+            if mean_distance.is_none_or(|v| v > self.config.distance_threshold) {
                 continue;
             }
 
             let mean_speed = chunk.iter().filter_map(|p| p.speed).mean();
 
-            if mean_speed.map_or(false, |v| v <= self.config.speed_threshold) {
+            if mean_speed.is_some_and(|v| v <= self.config.speed_threshold) {
                 return Some(PrecisionStop {
                     timestamp: match preference {
                         PointClusterPreference::First => chunk.first(),

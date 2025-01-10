@@ -159,9 +159,9 @@ FROM
         .map_err(|e| e.into())
     }
 
-    pub(crate) async fn refresh_vessel_mappings<'a>(
+    pub(crate) async fn refresh_vessel_mappings(
         &self,
-        tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     ) -> Result<()> {
         sqlx::query!(
             r#"
@@ -286,9 +286,9 @@ VALUES
         Ok(())
     }
 
-    pub(crate) async fn set_landing_vessels_call_signs<'a>(
+    pub(crate) async fn set_landing_vessels_call_signs(
         &self,
-        tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     ) -> Result<()> {
         sqlx::query!(
             r#"
