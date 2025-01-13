@@ -24,7 +24,7 @@ WITH
             SUM(distance) AS distance,
             SUM(trip_duration) AS trip_duration,
             SUM(landing_total_living_weight) AS landing_total_living_weight,
-            ARRAY_AGG(landing_ids) FILTER (
+            ARRAY_CONCAT (landing_ids) FILTER (
                 WHERE
                     landing_ids IS NOT NULL
                     AND CARDINALITY(landing_ids) > 0
