@@ -80,6 +80,41 @@ async fn test_vessel_org_benchmarks_without_token_returns_not_found() {
     })
     .await;
 }
+#[tokio::test]
+async fn test_vessel_org_benchmarks_works_with_trips_without_landings() {
+    test(|mut helper, builder| async move {
+        let org_id = OrgId::test_new(1);
+        let state = builder
+            .vessels(2)
+            .modify(|v| {
+                v.fiskeridir.owners = vec![RegisterVesselOwner {
+                    city: None,
+                    entity_type: RegisterVesselEntityType::Company,
+                    id: Some(org_id),
+                    name: NonEmptyString::from_str("test").unwrap(),
+                    postal_code: 9000,
+                }];
+            })
+            .set_logged_in()
+            .trips(2)
+            .build()
+            .await;
+
+        helper.app.login_user();
+        helper
+            .app
+            .get_org_benchmarks(
+                org_id,
+                OrgBenchmarkParameters {
+                    start: state.trips.iter().map(|t| t.period.start()).min(),
+                    end: state.trips.iter().map(|t| t.period.end()).max(),
+                },
+            )
+            .await
+            .unwrap();
+    })
+    .await;
+}
 
 #[tokio::test]
 async fn test_vessel_org_benchmarks_returns_not_found_on_org_not_associated_with_vessel() {
