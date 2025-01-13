@@ -27,6 +27,7 @@ WITH
             ARRAY_AGG(landing_ids) FILTER (
                 WHERE
                     landing_ids IS NOT NULL
+                    AND CARDINALITY(landing_ids) > 0
             ) AS landing_ids
         FROM
             fiskeridir_ais_vessel_mapping_whitelist w
