@@ -56,7 +56,7 @@ impl FuelEstimator {
                 if diff >= RUN_INTERVAL {
                     self.run_single().await?;
                 } else {
-                    tokio::time::sleep(diff.to_std().unwrap()).await;
+                    tokio::time::sleep((RUN_INTERVAL - diff).to_std().unwrap()).await;
                     self.run_single().await?;
                 }
             } else {
