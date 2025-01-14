@@ -10,7 +10,8 @@ use chrono::{DateTime, Duration, NaiveDate, Utc};
 use fiskeridir_rs::{CallSign, GearGroup, RegisterVesselOwner, SpeciesGroup, VesselLengthGroup};
 use futures::TryStreamExt;
 use kyogre_core::{
-    FiskeridirVesselId, FuelQuery, LiveFuelQuery, Mmsi, DEFAULT_LIVE_FUEL_THRESHOLD,
+    FiskeridirVesselId, FuelQuery, LiveFuelQuery, Mmsi, VesselCurrentTrip,
+    DEFAULT_LIVE_FUEL_THRESHOLD,
 };
 use kyogre_core::{LiveFuel, UpdateVessel};
 use oasgen::{oasgen, OaSchema};
@@ -108,6 +109,7 @@ pub struct Vessel {
     pub gear_groups: Vec<GearGroup>,
     #[serde_as(as = "Vec<DisplayFromStr>")]
     pub species_groups: Vec<SpeciesGroup>,
+    pub current_trip: Option<VesselCurrentTrip>,
 }
 
 impl Vessel {
@@ -212,6 +214,7 @@ impl From<kyogre_core::Vessel> for Vessel {
             preferred_trip_assembler: _,
             gear_groups,
             species_groups,
+            current_trip,
         } = value;
 
         Vessel {
@@ -219,6 +222,7 @@ impl From<kyogre_core::Vessel> for Vessel {
             ais: ais.map(AisVessel::from),
             gear_groups,
             species_groups,
+            current_trip,
         }
     }
 }
