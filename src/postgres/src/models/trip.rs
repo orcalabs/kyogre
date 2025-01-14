@@ -6,7 +6,7 @@ use crate::{
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::{DeliveryPointId, Gear, GearGroup, LandingId, SpeciesGroup, VesselLengthGroup};
 use kyogre_core::{
-    AisVmsPosition, Catch, DateRange, FishingFacility, FiskeridirVesselId, Haul,
+    AisVmsPosition, Catch, DateRange, FishingFacility, FiskeridirVesselId, HasTrack, Haul,
     MinimalVesselEvent, PositionType, PrecisionId, PrecisionOutcome, ProcessingStatus,
     PrunedTripPosition, TripAssemblerConflict, TripAssemblerId, TripDistancerId, TripId,
     TripPositionLayerId, TripProcessingUnit, TripsConflictStrategy, VesselEventType,
@@ -290,7 +290,7 @@ pub struct TripDetailed {
     pub target_species_fao_id: Option<String>,
     pub fuel_consumption: Option<f64>,
     pub track_coverage: Option<f64>,
-    pub has_track: bool,
+    pub has_track: HasTrack,
 }
 
 #[derive(Debug, Clone)]

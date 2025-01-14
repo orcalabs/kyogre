@@ -18,6 +18,16 @@ pub enum TripSorting {
     Weight = 2,
 }
 
+#[repr(i32)]
+#[cfg_attr(feature = "sqlx", derive(sqlx::Type))]
+#[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
+pub enum HasTrack {
+    NoTrack = 1,
+    TrackUnder15 = 2,
+    TrackOver15 = 3,
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct TripsQuery {
     pub pagination: Pagination<Trips>,

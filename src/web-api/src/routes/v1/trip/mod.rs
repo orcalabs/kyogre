@@ -1,7 +1,7 @@
 use super::fishing_facility::FishingFacility;
 use crate::{
     error::{error::StartAfterEndSnafu, Result},
-    extractors::{BwPolicy, OptionBwProfile},
+    extractors::OptionBwProfile,
     response::{Response, ResponseOrStream, StreamResponse},
     stream_response, *,
 };
@@ -10,8 +10,8 @@ use chrono::{DateTime, Utc};
 use fiskeridir_rs::{Gear, GearGroup, LandingId, Quality, SpeciesGroup, VesselLengthGroup};
 use futures::TryStreamExt;
 use kyogre_core::{
-    FiskeridirVesselId, Ordering, Pagination, Tra, TripAssemblerId, TripId, TripSorting, Trips,
-    TripsQuery, VesselEventType,
+    FiskeridirVesselId, HasTrack, Ordering, Pagination, Tra, TripAssemblerId, TripId, TripSorting,
+    Trips, TripsQuery, VesselEventType,
 };
 use oasgen::{oasgen, OaSchema};
 use serde::{Deserialize, Serialize};
@@ -66,16 +66,10 @@ pub struct CurrentTripPath {
 pub async fn trip_of_landing<T: Database + 'static, M: Meilisearch + 'static>(
     db: web::Data<T>,
     meilisearch: web::Data<Option<M>>,
-    profile: OptionBwProfile,
     path: Path<TripOfLandingPath>,
+    profile: OptionBwProfile,
 ) -> Result<Response<Option<Trip>>> {
-    let read_fishing_facility = profile
-        .into_inner()
-        .map(|p| {
-            p.policies
-                .contains(&BwPolicy::BwReadExtendedFishingFacility)
-        })
-        .unwrap_or(false);
+    let read_fishing_facility = profile.read_fishing_facilities();
 
     if let Some(meilisearch) = meilisearch.as_ref() {
         match meilisearch
@@ -107,15 +101,9 @@ pub async fn trips<T: Database + Send + Sync + 'static, M: Meilisearch + 'static
     profile: OptionBwProfile,
     params: Query<TripsParameters>,
 ) -> Result<ResponseOrStream<Trip>> {
-    let read_fishing_facility = profile
-        .into_inner()
-        .map(|p| {
-            p.policies
-                .contains(&BwPolicy::BwReadExtendedFishingFacility)
-        })
-        .unwrap_or(false);
-    let params = params.into_inner();
+    let read_fishing_facility = profile.read_fishing_facilities();
 
+    let params = params.into_inner();
     match (params.start_date, params.end_date) {
         (Some(start), Some(end)) => {
             if start > end {
@@ -157,13 +145,7 @@ pub async fn current_trip<T: Database + 'static>(
     profile: OptionBwProfile,
     path: Path<CurrentTripPath>,
 ) -> Result<Response<Option<CurrentTrip>>> {
-    let read_fishing_facility = profile
-        .into_inner()
-        .map(|p| {
-            p.policies
-                .contains(&BwPolicy::BwReadExtendedFishingFacility)
-        })
-        .unwrap_or(false);
+    let read_fishing_facility = profile.read_fishing_facilities();
 
     Ok(Response::new(
         db.current_trip(path.fiskeridir_vessel_id, read_fishing_facility)
@@ -202,7 +184,7 @@ pub struct Trip {
     pub fuel_consumption: Option<f64>,
     pub track_coverage: Option<f64>,
     pub distance: Option<f64>,
-    pub has_track: bool,
+    pub has_track: HasTrack,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, OaSchema)]
