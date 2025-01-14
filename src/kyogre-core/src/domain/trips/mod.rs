@@ -116,6 +116,14 @@ pub struct CurrentTrip {
     pub fishing_facilities: Vec<FishingFacility>,
 }
 
+#[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct VesselCurrentTrip {
+    pub departure: DateTime<Utc>,
+    pub target_species_fiskeridir_id: Option<i32>,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NewTrip {
     pub period: DateRange,

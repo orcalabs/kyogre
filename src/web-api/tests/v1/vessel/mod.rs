@@ -861,3 +861,34 @@ async fn test_live_fuel_returns_all_fuel_within_default_threshold() {
     })
     .await;
 }
+
+#[tokio::test]
+async fn test_vessels_returns_correct_current_trip() {
+    test(|helper, builder| async move {
+        let state = builder
+            .vessels(3)
+            .dep(2)
+            .modify_idx(|i, d| {
+                if i == 0 {
+                    d.dep.target_species_fdir_code = Some(100);
+                } else {
+                    d.dep.target_species_fdir_code = Some(101);
+                }
+            })
+            .build()
+            .await;
+
+        let vessels = helper.app.get_vessels().await.unwrap();
+
+        let trip = vessels[0].current_trip.as_ref().unwrap();
+        let trip2 = vessels[1].current_trip.as_ref().unwrap();
+        assert_eq!(trip.departure, state.dep[0].timestamp);
+        assert_eq!(trip.target_species_fiskeridir_id, Some(100));
+
+        assert_eq!(trip2.departure, state.dep[1].timestamp);
+        assert_eq!(trip2.target_species_fiskeridir_id, Some(101));
+
+        assert!(vessels[2].current_trip.is_none());
+    })
+    .await;
+}
