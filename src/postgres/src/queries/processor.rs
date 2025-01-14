@@ -22,6 +22,7 @@ WHERE
         .await?
         .and_then(|r| r.latest_run))
     }
+
     pub(crate) async fn add_run_impl(&self, processor: Processor) -> Result<()> {
         sqlx::query!(
             r#"
@@ -29,6 +30,9 @@ INSERT INTO
     processing_runs (processor_id, latest_run)
 VALUES
     ($1, $2)
+ON CONFLICT (processor_id) DO UPDATE
+SET
+    latest_run = $2
             "#,
             processor as i32,
             Utc::now(),

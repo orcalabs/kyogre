@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO\n    processing_runs (processor_id, latest_run)\nVALUES\n    ($1, $2)\nON CONFLICT (processor_id) DO UPDATE\nSET\n    latest_run = $2\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "9acfcfa80cd0a019c2eab141da14e630c286c1603a4b0fe25d3e8d4b95e68443"
+}
