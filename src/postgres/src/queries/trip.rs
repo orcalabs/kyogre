@@ -11,9 +11,10 @@ use chrono::{DateTime, Utc};
 use fiskeridir_rs::{DeliveryPointId, Gear, GearGroup, LandingId, SpeciesGroup, VesselLengthGroup};
 use futures::{Stream, StreamExt, TryStreamExt};
 use kyogre_core::{
-    Bound, DateRange, FiskeridirVesselId, HaulId, Ordering, PrecisionOutcome, ProcessingStatus,
-    TripAssemblerId, TripBenchmarkId, TripBenchmarkStatus, TripId, TripPositionLayerOutput,
-    TripSet, TripSorting, TripUpdate, TripsConflictStrategy, TripsQuery, VesselEventType,
+    Bound, DateRange, FiskeridirVesselId, HasTrack, HaulId, Ordering, PrecisionOutcome,
+    ProcessingStatus, TripAssemblerId, TripBenchmarkId, TripBenchmarkStatus, TripId,
+    TripPositionLayerOutput, TripSet, TripSorting, TripUpdate, TripsConflictStrategy, TripsQuery,
+    VesselEventType,
 };
 use sqlx::{postgres::types::PgRange, Acquire};
 use std::collections::{HashMap, HashSet};
@@ -739,14 +740,27 @@ SELECT
         ),
         '[]'
     ) AS tra,
-    EXISTS (
-        SELECT
-            1
-        FROM
-            trip_positions p
-        WHERE
-            p.trip_id = t.trip_id
-    ) AS has_track
+    CASE
+        WHEN EXISTS (
+            SELECT
+                1
+            FROM
+                trip_positions p
+            WHERE
+                p.trip_id = t.trip_id
+        )
+        AND MAX(fv.fiskeridir_length_group_id) > $1 THEN 3
+        WHEN EXISTS (
+            SELECT
+                1
+            FROM
+                trip_positions p
+            WHERE
+                p.trip_id = t.trip_id
+        )
+        AND MAX(fv.fiskeridir_length_group_id) <= $1 THEN 2
+        ELSE 1
+    END AS has_track
 FROM
     trips t
     INNER JOIN fiskeridir_vessels fv ON fv.fiskeridir_vessel_id = t.fiskeridir_vessel_id
@@ -755,12 +769,13 @@ FROM
     LEFT JOIN hauls h ON h.vessel_event_id = v.vessel_event_id
     LEFT JOIN ers_tra_reloads tra ON tra.vessel_event_id = v.vessel_event_id
     LEFT JOIN trip_benchmark_outputs b ON t.trip_id = b.trip_id
-    AND b.trip_benchmark_id = $1
+    AND b.trip_benchmark_id = $2
 WHERE
-    t.trip_id = ANY ($2::BIGINT[])
+    t.trip_id = ANY ($3::BIGINT[])
 GROUP BY
     t.trip_id
-ON CONFLICT (trip_id) DO UPDATE
+ON CONFLICT (trip_id) DO
+UPDATE
 SET
     trip_id = excluded.trip_id,
     distance = excluded.distance,
@@ -788,6 +803,7 @@ SET
     haul_gear_ids = excluded.haul_gear_ids,
     tra = excluded.tra
             "#,
+            VesselLengthGroup::ElevenToFifteen as i32,
             TripBenchmarkId::FuelConsumption as i32,
             &trip_ids as &[TripId],
         )
@@ -1019,7 +1035,7 @@ SELECT
     t.target_species_fao_id,
     t.fuel_consumption,
     t.track_coverage,
-    t.has_track
+    t.has_track AS "has_track: HasTrack"
 FROM
     trips_detailed AS t
 WHERE
@@ -1154,7 +1170,7 @@ SELECT
     t.target_species_fao_id,
     t.fuel_consumption,
     t.track_coverage,
-    t.has_track
+    t.has_track AS "has_track: HasTrack"
 FROM
     trips_detailed AS t
 WHERE
@@ -1438,7 +1454,8 @@ INSERT INTO
     trip_calculation_timers (fiskeridir_vessel_id, trip_assembler_id, timer)
 VALUES
     ($1, $2, $3)
-ON CONFLICT (fiskeridir_vessel_id) DO UPDATE
+ON CONFLICT (fiskeridir_vessel_id) DO
+UPDATE
 SET
     timer = EXCLUDED.timer,
     queued_reset = COALESCE($4, EXCLUDED.queued_reset),

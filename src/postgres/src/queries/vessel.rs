@@ -8,7 +8,7 @@ use crate::{
 use fiskeridir_rs::{CallSign, GearGroup, OrgId, SpeciesGroup, VesselLengthGroup};
 use futures::{Stream, TryStreamExt};
 use kyogre_core::{
-    ActiveVesselConflict, FiskeridirVesselId, Mmsi, TripAssemblerId, Vessel, VesselSource,
+    ActiveVesselConflict, FiskeridirVesselId, HasTrack, Mmsi, TripAssemblerId, Vessel, VesselSource,
 };
 use std::collections::HashMap;
 
@@ -78,13 +78,14 @@ FROM
     LEFT JOIN ais_vessels AS a ON v.mmsi = a.mmsi
     INNER JOIN trips_detailed t ON v.fiskeridir_vessel_id = t.fiskeridir_vessel_id
 WHERE
-    t.has_track
+    t.has_track != $1
 GROUP BY
     f.fiskeridir_vessel_id,
     a.mmsi
 HAVING
-    COUNT(DISTINCT t.trip_id) >= $1
+    COUNT(DISTINCT t.trip_id) >= $2
                     "#,
+            HasTrack::NoTrack as i32,
             num_trips as i32
         )
         .fetch(&self.pool)

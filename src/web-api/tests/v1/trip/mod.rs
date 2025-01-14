@@ -5,7 +5,7 @@ use fiskeridir_rs::{
     CallSign, DeliveryPointId, GearGroup, LandingId, SpeciesGroup, VesselLengthGroup,
 };
 use http_client::StatusCode;
-use kyogre_core::{FiskeridirVesselId, Ordering, TripSorting, VesselEventType};
+use kyogre_core::{FiskeridirVesselId, HasTrack, Ordering, TripSorting, VesselEventType};
 use uuid::Uuid;
 use web_api::{
     error::ErrorDiscriminants,
@@ -1134,23 +1134,26 @@ async fn test_trips_returns_track_coverage_zero_if_no_track() {
 }
 
 #[tokio::test]
-async fn test_trips_without_track_returns_has_track_false() {
+async fn test_trips_without_track_returns_has_track_no_track() {
     test(|helper, builder| async move {
         builder.vessels(1).trips(1).build().await;
 
         let trips = helper.app.get_trips(Default::default()).await.unwrap();
 
         assert_eq!(trips.len(), 1);
-        assert!(!trips[0].has_track);
+        assert_eq!(trips[0].has_track, HasTrack::NoTrack);
     })
     .await;
 }
 
 #[tokio::test]
-async fn test_trips_with_track_returns_has_track_true() {
+async fn test_trips_with_track_returns_has_track_under_15() {
     test(|helper, builder| async move {
         builder
             .vessels(1)
+            .modify(|v| {
+                v.fiskeridir.length = 14.0;
+            })
             .trips(1)
             .ais_vms_positions(1)
             .build()
@@ -1159,7 +1162,28 @@ async fn test_trips_with_track_returns_has_track_true() {
         let trips = helper.app.get_trips(Default::default()).await.unwrap();
 
         assert_eq!(trips.len(), 1);
-        assert!(trips[0].has_track);
+        assert_eq!(trips[0].has_track, HasTrack::TrackUnder15);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_trips_with_track_returns_has_track_over_15() {
+    test(|helper, builder| async move {
+        builder
+            .vessels(1)
+            .modify(|v| {
+                v.fiskeridir.length = 16.0;
+            })
+            .trips(1)
+            .ais_vms_positions(1)
+            .build()
+            .await;
+
+        let trips = helper.app.get_trips(Default::default()).await.unwrap();
+
+        assert_eq!(trips.len(), 1);
+        assert_eq!(trips[0].has_track, HasTrack::TrackOver15);
     })
     .await;
 }

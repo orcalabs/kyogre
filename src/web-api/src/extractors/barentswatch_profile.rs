@@ -92,6 +92,18 @@ pub struct BwProfile {
 #[serde(rename_all = "camelCase")]
 pub struct OptionBwProfile(Option<BwProfile>);
 
+impl OptionBwProfile {
+    pub fn read_fishing_facilities(&self) -> bool {
+        self.0
+            .as_ref()
+            .map(|p| {
+                p.policies
+                    .contains(&BwPolicy::BwReadExtendedFishingFacility)
+            })
+            .unwrap_or(false)
+    }
+}
+
 impl OaParameter for BwProfile {
     fn parameters() -> Vec<RefOr<Parameter>> {
         vec![RefOr::Item(Parameter {
