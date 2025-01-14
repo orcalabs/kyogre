@@ -1,15 +1,10 @@
-use super::Trip;
-use crate::{
-    error::Result,
-    extractors::{BwPolicy, OptionBwProfile},
-    response::Response,
-    *,
-};
+use crate::{error::Result, extractors::OptionBwProfile, response::Response, *};
 use actix_web::web::{self, Path};
 use kyogre_core::HaulId;
 use oasgen::{oasgen, OaSchema};
 use serde::Deserialize;
 use tracing::error;
+use v1::trip::Trip;
 
 #[derive(Debug, Deserialize, OaSchema)]
 pub struct TripOfHaulPath {
@@ -25,13 +20,7 @@ pub async fn trip_of_haul<T: Database + 'static, M: Meilisearch + 'static>(
     profile: OptionBwProfile,
     path: Path<TripOfHaulPath>,
 ) -> Result<Response<Option<Trip>>> {
-    let read_fishing_facility = profile
-        .into_inner()
-        .map(|p| {
-            p.policies
-                .contains(&BwPolicy::BwReadExtendedFishingFacility)
-        })
-        .unwrap_or(false);
+    let read_fishing_facility = profile.read_fishing_facilities();
 
     if let Some(meilisearch) = meilisearch.as_ref() {
         match meilisearch
