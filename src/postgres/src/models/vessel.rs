@@ -8,7 +8,8 @@ use fiskeridir_rs::{
     VesselType,
 };
 use kyogre_core::{
-    AisVessel, FiskeridirVessel, FiskeridirVesselId, Mmsi, Month, TripAssemblerId, VesselSource,
+    AisVessel, FiskeridirVessel, FiskeridirVesselId, Mmsi, Month, TripAssemblerId,
+    VesselCurrentTrip, VesselSource,
 };
 use serde::Deserialize;
 use unnest_insert::UnnestInsert;
@@ -339,6 +340,8 @@ pub struct FiskeridirAisVesselCombination {
     pub preferred_trip_assembler: TripAssemblerId,
     pub gear_group_ids: Vec<GearGroup>,
     pub species_group_ids: Vec<SpeciesGroup>,
+    pub current_trip_departure_timestamp: Option<DateTime<Utc>>,
+    pub current_trip_target_species_fiskeridir_id: Option<i32>,
 }
 
 impl TryFrom<FiskeridirAisVesselCombination> for kyogre_core::Vessel {
@@ -377,6 +380,8 @@ impl TryFrom<FiskeridirAisVesselCombination> for kyogre_core::Vessel {
             preferred_trip_assembler,
             gear_group_ids,
             species_group_ids,
+            current_trip_departure_timestamp,
+            current_trip_target_species_fiskeridir_id,
         } = value;
 
         let ais = ais_mmsi.map(|mmsi| AisVessel {
@@ -419,6 +424,10 @@ impl TryFrom<FiskeridirAisVesselCombination> for kyogre_core::Vessel {
             preferred_trip_assembler,
             gear_groups: gear_group_ids,
             species_groups: species_group_ids,
+            current_trip: current_trip_departure_timestamp.map(|d| VesselCurrentTrip {
+                departure: d,
+                target_species_fiskeridir_id: current_trip_target_species_fiskeridir_id,
+            }),
         })
     }
 }

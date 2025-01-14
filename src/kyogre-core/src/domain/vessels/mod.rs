@@ -13,6 +13,8 @@ mod benchmark;
 
 pub use benchmark::*;
 
+use super::VesselCurrentTrip;
+
 const HP_TO_KW: f64 = 0.745699872;
 pub static TEST_SIGNED_IN_VESSEL_CALLSIGN: &str = "LK17";
 
@@ -66,6 +68,7 @@ pub struct Vessel {
     pub preferred_trip_assembler: TripAssemblerId,
     pub gear_groups: Vec<GearGroup>,
     pub species_groups: Vec<SpeciesGroup>,
+    pub current_trip: Option<VesselCurrentTrip>,
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]

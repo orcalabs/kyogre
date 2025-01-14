@@ -71,12 +71,15 @@ SELECT
     a.ship_length AS ais_ship_length,
     a.ship_width AS ais_ship_width,
     a.eta AS ais_eta,
-    a.destination AS ais_destination
+    a.destination AS ais_destination,
+    MAX(c.departure_timestamp) AS current_trip_departure_timestamp,
+    MAX(c.target_species_fiskeridir_id) AS current_trip_target_species_fiskeridir_id
 FROM
     fiskeridir_ais_vessel_mapping_whitelist AS v
     INNER JOIN fiskeridir_vessels AS f ON v.fiskeridir_vessel_id = f.fiskeridir_vessel_id
     LEFT JOIN ais_vessels AS a ON v.mmsi = a.mmsi
     INNER JOIN trips_detailed t ON v.fiskeridir_vessel_id = t.fiskeridir_vessel_id
+    LEFT JOIN current_trips AS c ON v.fiskeridir_vessel_id = c.fiskeridir_vessel_id
 WHERE
     t.has_track != $1
 GROUP BY
@@ -453,11 +456,14 @@ SELECT
     a.ship_length AS ais_ship_length,
     a.ship_width AS ais_ship_width,
     a.eta AS ais_eta,
-    a.destination AS ais_destination
+    a.destination AS ais_destination,
+    MAX(c.departure_timestamp) AS current_trip_departure_timestamp,
+    MAX(c.target_species_fiskeridir_id) AS current_trip_target_species_fiskeridir_id
 FROM
     fiskeridir_ais_vessel_mapping_whitelist AS v
     INNER JOIN fiskeridir_vessels AS f ON v.fiskeridir_vessel_id = f.fiskeridir_vessel_id
     LEFT JOIN ais_vessels AS a ON v.mmsi = a.mmsi
+    LEFT JOIN current_trips AS c ON v.fiskeridir_vessel_id = c.fiskeridir_vessel_id
 WHERE
     (
         $1::BIGINT IS NULL
