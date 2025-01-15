@@ -13,11 +13,11 @@ use strum::EnumIter;
 use tracing::warn;
 
 use crate::{
-    auth0::Auth0State,
     error::{
         error::{MissingJWTSnafu, ParseJWTSnafu},
         Error,
     },
+    states::Auth0State,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, EnumIter)]
