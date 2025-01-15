@@ -7,7 +7,6 @@ use kyogre_core::{
 use postgres::PostgresAdapter;
 use routes::v1;
 
-pub mod auth0;
 pub mod error;
 pub mod extractors;
 pub mod guards;
@@ -15,6 +14,7 @@ pub mod response;
 pub mod routes;
 pub mod settings;
 pub mod startup;
+pub mod states;
 
 pub trait Database: WebApiOutboundPort + WebApiInboundPort {}
 pub trait Cache: MatrixCacheOutbound {}

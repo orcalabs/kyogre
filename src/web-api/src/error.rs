@@ -17,7 +17,7 @@ pub type Result<T> = std::result::Result<T, Error>;
 #[derive(Snafu, StackError)]
 #[snafu(module, visibility(pub))]
 pub enum JWTDecodeError {
-    #[snafu(display("tried to decode a token with at disabled Auth0Guard"))]
+    #[snafu(display("Tried to decode a token with a disabled auth config"))]
     Disabled {
         #[snafu(implicit)]
         location: Location,

@@ -25,6 +25,7 @@ use crate::{
         Error, Result,
     },
     settings::BW_PROFILES_URL,
+    states::BwState,
 };
 
 static ORCA_ACCOUNT_ID: Uuid = parse_uuid("82c0012b-f337-47af-adc3-baaabce540a4");
@@ -88,6 +89,12 @@ pub struct BwProfile {
     pub fisk_info_profile: Option<BwVesselInfo>,
     pub policies: Vec<BwPolicy>,
     pub roles: Vec<BwRole>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct BwJwtClaims {
+    #[serde(alias = "sub")]
+    pub id: BarentswatchUserId,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -176,6 +183,9 @@ impl FromRequest for BwProfile {
     ) -> Self::Future {
         // `HttpClient` should be provided on startup, so `unwrap` is safe
         let client = req.app_data::<Data<HttpClient>>().unwrap().clone();
+        // `BwState` should be provided on startup, so `unwrap` is safe
+        let state = req.app_data::<Data<BwState>>().unwrap().clone();
+
         let token = req
             .headers()
             .get("bw-token")
@@ -183,7 +193,7 @@ impl FromRequest for BwProfile {
         let query_string = req.query_string().to_string();
 
         Box::pin(async move {
-            BwProfile::extract_impl(client, token, query_string)
+            BwProfile::extract_impl(state, client, token, query_string)
                 .await
                 .inspect_err(|e| warn!("failed to extract barentswatch profile: {e:?}"))
         })
@@ -206,6 +216,7 @@ impl FromRequest for OptionBwProfile {
 
 impl BwProfile {
     async fn extract_impl(
+        state: Data<BwState>,
         client: Data<HttpClient>,
         token: Option<std::result::Result<String, ToStrError>>,
         query_string: String,
@@ -214,34 +225,44 @@ impl BwProfile {
             .ok_or_else(|| MissingJWTSnafu.build())?
             .context(ParseJWTSnafu)?;
 
-        // This should always be set on application startup
-        let url = BW_PROFILES_URL.get().unwrap();
+        let claims = state.decode::<BwJwtClaims>(&token)?.claims;
 
-        let mut response: BwProfile = client
-            .get(url)
-            .header("Authorization", format!("Bearer {token}"))
-            .send()
-            .await
-            .map_err(|e| match e.status() {
-                Some(StatusCode::UNAUTHORIZED) => Error::InvalidJWT {
-                    location: location!(),
-                    source: e,
-                },
-                _ => e.into(),
-            })?
-            .json()
-            .await?;
+        let mut profile = if let Some(profile) = state.get_profile(&claims.id).await {
+            profile
+        } else {
+            // This should always be set on application startup
+            let url = BW_PROFILES_URL.get().unwrap();
 
-        if PROJECT_USERS.contains(response.user.id.as_ref()) {
+            let profile: BwProfile = client
+                .get(url)
+                .header("Authorization", format!("Bearer {token}"))
+                .send()
+                .await
+                .map_err(|e| match e.status() {
+                    Some(StatusCode::UNAUTHORIZED) => Error::InvalidJWT {
+                        location: location!(),
+                        source: e,
+                    },
+                    _ => e.into(),
+                })?
+                .json()
+                .await?;
+
+            state.set_profile(profile.clone()).await;
+
+            profile
+        };
+
+        if PROJECT_USERS.contains(profile.user.id.as_ref()) {
             let query: web::Query<HashMap<String, String>> = web::Query::from_query(&query_string)?;
             if let Some(cs) = query.get("call_sign_override") {
-                response.fisk_info_profile = Some(BwVesselInfo {
+                profile.fisk_info_profile = Some(BwVesselInfo {
                     ircs: cs.as_str().try_into()?,
                 });
             }
         }
 
-        Ok(response)
+        Ok(profile)
     }
 
     pub fn call_sign(&self) -> Result<&CallSign> {
