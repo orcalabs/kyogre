@@ -12,11 +12,10 @@ use fiskeridir_rs::{DeliveryPointId, Gear, GearGroup, LandingId, SpeciesGroup, V
 use futures::{Stream, StreamExt, TryStreamExt};
 use kyogre_core::{
     Bound, DateRange, FiskeridirVesselId, HasTrack, HaulId, Ordering, PrecisionOutcome,
-    ProcessingStatus, TripAssemblerId, TripBenchmarkId, TripBenchmarkStatus, TripId,
-    TripPositionLayerOutput, TripSet, TripSorting, TripUpdate, TripsConflictStrategy, TripsQuery,
-    VesselEventType,
+    ProcessingStatus, TripAssemblerId, TripId, TripPositionLayerOutput, TripSet, TripSorting,
+    TripUpdate, TripsConflictStrategy, TripsQuery, VesselEventType,
 };
-use sqlx::{postgres::types::PgRange, Acquire};
+use sqlx::postgres::types::PgRange;
 use std::collections::{HashMap, HashSet};
 
 pub struct TripPositions {
@@ -180,7 +179,8 @@ ORDER BY
     d.departure_timestamp ASC
 LIMIT
     1
-ON CONFLICT (fiskeridir_vessel_id) DO UPDATE
+ON CONFLICT (fiskeridir_vessel_id) DO
+UPDATE
 SET
     departure_timestamp = EXCLUDED.departure_timestamp,
     target_species_fiskeridir_id = EXCLUDED.target_species_fiskeridir_id,
@@ -468,7 +468,8 @@ WHERE
         }
 
         self.add_trips_detailed(&[update.trip_id], &mut tx).await?;
-        self.reset_trip_benchmarks(update.trip_id, &mut tx).await?;
+        self.set_trip_benchmark_status(&[update.trip_id], ProcessingStatus::Unprocessed, &mut tx)
+            .await?;
 
         tx.commit().await?;
 
@@ -551,12 +552,12 @@ INSERT INTO
         hauls,
         haul_total_weight,
         haul_duration,
-        fuel_consumption,
         haul_ids,
         haul_gear_group_ids,
         haul_gear_ids,
         tra,
-        has_track
+        has_track,
+        benchmark_status
     )
 SELECT
     t.trip_id,
@@ -689,7 +690,6 @@ SELECT
     ) AS hauls,
     COALESCE(SUM(h.total_living_weight), 0),
     COALESCE(SUM((h.stop_timestamp - h.start_timestamp)), '0'),
-    MAX(b.output) AS fuel_consumption,
     COALESCE(
         ARRAY_AGG(
             h.haul_id
@@ -767,7 +767,8 @@ SELECT
         )
         AND MAX(fv.fiskeridir_length_group_id) <= $1 THEN 2
         ELSE 1
-    END AS has_track
+    END AS has_track,
+    $2
 FROM
     trips t
     INNER JOIN fiskeridir_vessels fv ON fv.fiskeridir_vessel_id = t.fiskeridir_vessel_id
@@ -775,13 +776,12 @@ FROM
     LEFT JOIN landings l ON l.vessel_event_id = v.vessel_event_id
     LEFT JOIN hauls h ON h.vessel_event_id = v.vessel_event_id
     LEFT JOIN ers_tra_reloads tra ON tra.vessel_event_id = v.vessel_event_id
-    LEFT JOIN trip_benchmark_outputs b ON t.trip_id = b.trip_id
-    AND b.trip_benchmark_id = $2
 WHERE
     t.trip_id = ANY ($3::BIGINT[])
 GROUP BY
     t.trip_id
-ON CONFLICT (trip_id) DO UPDATE
+ON CONFLICT (trip_id) DO
+UPDATE
 SET
     trip_id = excluded.trip_id,
     distance = excluded.distance,
@@ -803,14 +803,14 @@ SET
     hauls = excluded.hauls,
     haul_total_weight = excluded.haul_total_weight,
     haul_duration = excluded.haul_duration,
-    fuel_consumption = excluded.fuel_consumption,
     haul_ids = excluded.haul_ids,
     haul_gear_group_ids = excluded.haul_gear_group_ids,
     haul_gear_ids = excluded.haul_gear_ids,
-    tra = excluded.tra
+    tra = excluded.tra,
+    benchmark_status = excluded.benchmark_status
             "#,
             VesselLengthGroup::ElevenToFifteen as i32,
-            TripBenchmarkId::FuelConsumption as i32,
+            ProcessingStatus::Unprocessed as i32,
             &trip_ids as &[TripId],
         )
         .execute(&mut **tx)
@@ -1039,7 +1039,7 @@ SELECT
     t.cache_version,
     t.target_species_fiskeridir_id,
     t.target_species_fao_id,
-    t.fuel_consumption,
+    t.benchmark_fuel_consumption AS fuel_consumption,
     t.track_coverage,
     t.has_track AS "has_track: HasTrack"
 FROM
@@ -1174,7 +1174,7 @@ SELECT
     t.cache_version,
     t.target_species_fiskeridir_id,
     t.target_species_fao_id,
-    t.fuel_consumption,
+    t.benchmark_fuel_consumption AS fuel_consumption,
     t.track_coverage,
     t.has_track AS "has_track: HasTrack"
 FROM
@@ -1460,7 +1460,8 @@ INSERT INTO
     trip_calculation_timers (fiskeridir_vessel_id, trip_assembler_id, timer)
 VALUES
     ($1, $2, $3)
-ON CONFLICT (fiskeridir_vessel_id) DO UPDATE
+ON CONFLICT (fiskeridir_vessel_id) DO
+UPDATE
 SET
     timer = EXCLUDED.timer,
     queued_reset = COALESCE($4, EXCLUDED.queued_reset),
@@ -1661,7 +1662,7 @@ WHERE
             .await?;
 
             self.add_trips_detailed(&trip_ids, &mut tx).await?;
-            self.set_trip_benchmark_status(&trip_ids, TripBenchmarkStatus::MustRecompute, &mut tx)
+            self.set_trip_benchmark_status(&trip_ids, ProcessingStatus::Unprocessed, &mut tx)
                 .await?;
 
             self.reset_trips_refresh_boundary(vessel_id, &mut tx)
@@ -1673,74 +1674,25 @@ WHERE
         Ok(())
     }
 
-    pub(crate) async fn refresh_detailed_trip_benchmarks_impl(&self) -> Result<()> {
-        let mut conn = self.pool.acquire().await?;
-
-        let limit = 100_000;
-
-        loop {
-            let mut tx = conn.begin().await?;
-
-            let trip_ids: Vec<_> = sqlx::query!(
-                r#"
-SELECT
-    t.trip_id AS "trip_id!: TripId"
-FROM
-    trips t
-    INNER JOIN trip_benchmark_outputs b ON t.trip_id = b.trip_id
-WHERE
-    b.status = $1
-GROUP BY
-    t.trip_id
-LIMIT
-    $2
-                "#,
-                TripBenchmarkStatus::MustRefresh as i32,
-                limit as i64,
-            )
-            .fetch(&mut *tx)
-            .map_ok(|r| r.trip_id)
-            .try_collect()
-            .await?;
-
-            if trip_ids.is_empty() {
-                break;
-            }
-
-            self.add_trips_detailed(&trip_ids, &mut tx).await?;
-            self.set_trip_benchmark_status(&trip_ids, TripBenchmarkStatus::Refreshed, &mut tx)
-                .await?;
-
-            tx.commit().await?;
-
-            if trip_ids.len() < limit {
-                break;
-            }
-        }
-
-        Ok(())
-    }
-
-    async fn set_trip_benchmark_status(
+    pub(crate) async fn set_trip_benchmark_status(
         &self,
         trip_ids: &[TripId],
-        status: TripBenchmarkStatus,
+        status: ProcessingStatus,
         tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     ) -> Result<()> {
         sqlx::query!(
             r#"
-UPDATE trip_benchmark_outputs
+UPDATE trips_detailed
 SET
-    status = $1
+    benchmark_status = $1
 WHERE
     trip_id = ANY ($2)
-                "#,
+            "#,
             status as i32,
-            &trip_ids as &[TripId],
+            trip_ids as &[TripId]
         )
         .execute(&mut **tx)
         .await?;
-
         Ok(())
     }
 

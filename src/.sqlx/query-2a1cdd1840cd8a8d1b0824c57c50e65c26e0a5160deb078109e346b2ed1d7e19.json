@@ -1,0 +1,70 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    trip_id AS \"trip_id!: TripId\",\n    period AS \"period: DateRange\",\n    period_precision AS \"period_precision?: DateRange\",\n    CASE\n        WHEN trip_assembler_id = 1 THEN landing_total_living_weight\n        WHEN trip_assembler_id = 2 THEN haul_total_weight::DOUBLE PRECISION\n        ELSE NULL\n    END AS \"total_catch_weight!\",\n    landing_total_price_for_fisher AS total_catch_value,\n    distance,\n    f.fiskeridir_length_group_id as \"vessel_length_group: VesselLengthGroup\",\n    f.engine_power_final as engine_power,\n    f.engine_building_year_final as engine_building_year\nFROM\n    trips_detailed t\n    INNER JOIN fiskeridir_vessels f ON t.fiskeridir_vessel_id = f.fiskeridir_vessel_id\nWHERE\n    benchmark_status = $1\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "trip_id!: TripId",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "period: DateRange",
+        "type_info": "TstzRange"
+      },
+      {
+        "ordinal": 2,
+        "name": "period_precision?: DateRange",
+        "type_info": "TstzRange"
+      },
+      {
+        "ordinal": 3,
+        "name": "total_catch_weight!",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 4,
+        "name": "total_catch_value",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 5,
+        "name": "distance",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 6,
+        "name": "vessel_length_group: VesselLengthGroup",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 7,
+        "name": "engine_power",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 8,
+        "name": "engine_building_year",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      null,
+      false,
+      true,
+      false,
+      true,
+      true
+    ]
+  },
+  "hash": "2a1cdd1840cd8a8d1b0824c57c50e65c26e0a5160deb078109e346b2ed1d7e19"
+}

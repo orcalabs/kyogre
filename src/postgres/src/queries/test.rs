@@ -2,7 +2,6 @@ use chrono::NaiveDate;
 use fiskeridir_rs::CallSign;
 use fiskeridir_rs::DeliveryPointId;
 use futures::{Stream, StreamExt, TryStreamExt};
-use kyogre_core::TripBenchmarkStatus;
 use kyogre_core::{
     AisVmsPosition, Arrival, DeliveryPoint, Departure, FiskeridirVesselId, Mmsi, NavigationStatus,
     NewVesselConflict, PortDockPoint, PositionType, ProcessingStatus, TripPositionLayerId,
@@ -44,18 +43,56 @@ FROM
         .await?
         .date)
     }
-    pub(crate) async fn trip_benchmarks_with_status_impl(
+    pub(crate) async fn unprocessed_trips_impl(&self) -> Result<u32> {
+        Ok(sqlx::query!(
+            r#"
+SELECT
+    COALESCE(COUNT(*), 0) AS "num_count!"
+FROM
+    trips
+WHERE
+    trip_precision_status_id = $1
+    AND distancer_id IS NULL
+    AND position_layers_status = $1
+    AND trip_position_cargo_weight_distribution_status = $1
+            "#,
+            ProcessingStatus::Unprocessed as i32
+        )
+        .fetch_one(&self.pool)
+        .await?
+        .num_count as u32)
+    }
+    pub(crate) async fn fuel_estimates_with_status_impl(
         &self,
-        status: TripBenchmarkStatus,
+        status: ProcessingStatus,
     ) -> Result<u32> {
         Ok(sqlx::query!(
             r#"
 SELECT
     COALESCE(COUNT(*), 0) AS "num_count!"
 FROM
-    trip_benchmark_outputs
+    fuel_estimates
 WHERE
     status = $1
+            "#,
+            status as i32
+        )
+        .fetch_one(&self.pool)
+        .await?
+        .num_count as u32)
+    }
+    pub(crate) async fn trips_with_benchmark_status_impl(
+        &self,
+        status: ProcessingStatus,
+    ) -> Result<u32> {
+        Ok(sqlx::query!(
+            r#"
+SELECT
+    COALESCE(COUNT(*), 0) AS "num_count!"
+FROM
+    trips_detailed
+WHERE
+    benchmark_status = $1
             "#,
             status as i32
         )

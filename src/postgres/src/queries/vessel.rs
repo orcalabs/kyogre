@@ -130,6 +130,7 @@ RETURNING
             Ok(None)
         }
     }
+
     pub(crate) fn active_vessel_conflicts_impl(
         &self,
     ) -> impl Stream<Item = Result<ActiveVesselConflict>> + '_ {

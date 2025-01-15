@@ -1,40 +1,44 @@
-use kyogre_core::{TripBenchmarkId, TripBenchmarkStatus, TripId};
-use unnest_insert::UnnestInsert;
-
 use crate::queries::{type_to_i32, type_to_i64};
+use kyogre_core::{ProcessingStatus, TripId};
+use unnest_insert::UnnestUpdate;
 
-#[derive(Debug, Clone, UnnestInsert)]
-#[unnest_insert(
-    table_name = "trip_benchmark_outputs",
-    conflict = "trip_id,trip_benchmark_id",
-    update_all
-)]
+#[derive(Debug, Clone, UnnestUpdate)]
+#[unnest_update(table_name = "trips_detailed")]
 pub struct TripBenchmarkOutput {
-    #[unnest_insert(sql_type = "BIGINT", type_conversion = "type_to_i64")]
+    #[unnest_update(id, sql_type = "BIGINT", type_conversion = "type_to_i64")]
     pub trip_id: TripId,
-    #[unnest_insert(sql_type = "INT", type_conversion = "type_to_i32")]
-    pub trip_benchmark_id: TripBenchmarkId,
-    pub output: f64,
-    pub unrealistic: bool,
-    #[unnest_insert(sql_type = "INT", type_conversion = "type_to_i32")]
-    pub status: TripBenchmarkStatus,
+    pub benchmark_weight_per_hour: Option<f64>,
+    pub benchmark_weight_per_distance: Option<f64>,
+    pub benchmark_fuel_consumption: Option<f64>,
+    pub benchmark_weight_per_fuel: Option<f64>,
+    pub benchmark_catch_value_per_fuel: Option<f64>,
+    pub benchmark_eeoi: Option<f64>,
+    #[unnest_update(sql_type = "INT", type_conversion = "type_to_i32")]
+    pub benchmark_status: ProcessingStatus,
 }
 
 impl From<&kyogre_core::TripBenchmarkOutput> for TripBenchmarkOutput {
     fn from(v: &kyogre_core::TripBenchmarkOutput) -> Self {
         let kyogre_core::TripBenchmarkOutput {
             trip_id,
-            benchmark_id,
-            value,
-            unrealistic,
+            weight_per_hour: benchmark_weight_per_hour,
+            weight_per_distance: benchmark_weight_per_distance,
+            fuel_consumption: benchmark_fuel_consumption,
+            weight_per_fuel: benchmark_weight_per_fuel,
+            catch_value_per_fuel: benchmark_catch_value_per_fuel,
+            eeoi: benchmark_eeoi,
+            status: benchmark_status,
         } = v;
 
         Self {
             trip_id: *trip_id,
-            trip_benchmark_id: *benchmark_id,
-            output: *value,
-            unrealistic: *unrealistic,
-            status: TripBenchmarkStatus::MustRefresh,
+            benchmark_weight_per_hour: *benchmark_weight_per_hour,
+            benchmark_weight_per_distance: *benchmark_weight_per_distance,
+            benchmark_fuel_consumption: *benchmark_fuel_consumption,
+            benchmark_weight_per_fuel: *benchmark_weight_per_fuel,
+            benchmark_catch_value_per_fuel: *benchmark_catch_value_per_fuel,
+            benchmark_eeoi: *benchmark_eeoi,
+            benchmark_status: *benchmark_status,
         }
     }
 }

@@ -1,7 +1,8 @@
 use async_trait::async_trait;
 use fiskeridir_rs::VesselLengthGroup;
 use kyogre_core::{
-    CoreResult, TripBenchmark, TripBenchmarkId, TripBenchmarkOutbound, TripBenchmarkOutput, Vessel,
+    BenchmarkTrip, CoreResult, TripBenchmark, TripBenchmarkId, TripBenchmarkOutbound,
+    TripBenchmarkOutput,
 };
 
 /// Computes the weight (kg) caught per hour for a trip.
@@ -16,47 +17,40 @@ impl TripBenchmark for WeightPerHour {
 
     async fn benchmark(
         &self,
-        vessel: &Vessel,
-        adapter: &dyn TripBenchmarkOutbound,
-    ) -> CoreResult<Vec<TripBenchmarkOutput>> {
+        trip: &BenchmarkTrip,
+        _adapter: &dyn TripBenchmarkOutbound,
+        output: &mut TripBenchmarkOutput,
+    ) -> CoreResult<()> {
         // NOTE: Changing any of these values will require updating the existing `unrealistic`
         // flags in the database.
-        let unrealistic_weight_per_hour = match vessel.fiskeridir.length_group_id {
+        let unrealistic_weight_per_hour = match trip.vessel_length_group {
             VesselLengthGroup::Unknown
             | VesselLengthGroup::UnderEleven
-            | VesselLengthGroup::ElevenToFifteen => return Ok(vec![]),
+            | VesselLengthGroup::ElevenToFifteen => return Ok(()),
             VesselLengthGroup::FifteenToTwentyOne => 10_000.,
             VesselLengthGroup::TwentyTwoToTwentyEight => 20_000.,
             VesselLengthGroup::TwentyEightAndAbove => 20_000.,
         };
 
-        let trips = adapter.trips_with_weight(vessel.fiskeridir.id).await?;
+        let hours = trip
+            .period_precision
+            .as_ref()
+            .unwrap_or(&trip.period)
+            .duration()
+            .num_seconds() as f64
+            / 3_600.;
 
-        let output = trips
-            .into_iter()
-            .map(|t| {
-                let hours = t
-                    .period_precision
-                    .unwrap_or(t.period)
-                    .duration()
-                    .num_seconds() as f64
-                    / 3_600.;
+        output.weight_per_hour = if hours == 0. {
+            None
+        } else {
+            let value = trip.total_catch_weight / hours;
+            if value >= unrealistic_weight_per_hour {
+                None
+            } else {
+                Some(value)
+            }
+        };
 
-                let value = if hours == 0. {
-                    0.
-                } else {
-                    t.total_weight / hours
-                };
-
-                TripBenchmarkOutput {
-                    trip_id: t.id,
-                    benchmark_id: TripBenchmarkId::WeightPerHour,
-                    value,
-                    unrealistic: value >= unrealistic_weight_per_hour,
-                }
-            })
-            .collect();
-
-        Ok(output)
+        Ok(())
     }
 }
