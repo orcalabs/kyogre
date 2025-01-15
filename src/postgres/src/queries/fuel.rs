@@ -28,7 +28,7 @@ impl PostgresAdapter {
             r#"
 SELECT
     COALESCE(SUM(fuel), 0.0) AS "fuel!",
-    DATE_TRUNC('hour', f.latest_position_timestamp) as "timestamp!"
+    DATE_TRUNC('hour', f.latest_position_timestamp) AS "timestamp!"
 FROM
     fiskeridir_ais_vessel_mapping_whitelist w
     INNER JOIN live_fuel f ON w.fiskeridir_vessel_id = f.fiskeridir_vessel_id
@@ -80,7 +80,7 @@ SELECT
     f.fiskeridir_vessel_id AS "vessel_id!: FiskeridirVesselId",
     f.engine_building_year_final AS "engine_building_year!",
     f.engine_power_final AS "engine_power!",
-    t.departure_timestamp AS current_trip_start,
+    t.departure_timestamp AS "current_trip_start?",
     q.latest_position_timestamp AS "latest_position_timestamp?"
 FROM
     fiskeridir_ais_vessel_mapping_whitelist w
