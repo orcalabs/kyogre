@@ -206,14 +206,12 @@ impl TripBuilder {
                 let ts = trip.current_data_timestamp;
 
                 let mut tra = fiskeridir_rs::ErsTra::test_default(
-                    base.ers_message_id_counter,
+                    next_ers_message_id(),
                     Some(trip.vessel_id),
                     ts,
                 );
 
                 tra.message_info.set_message_timestamp(ts);
-
-                base.ers_message_id_counter += 1;
 
                 base.tra.push(TraConstructor {
                     tra,
@@ -244,11 +242,10 @@ impl TripBuilder {
 
             for _ in 0..num_hauls {
                 let mut dca = fiskeridir_rs::ErsDca::test_default(
-                    base.ers_message_id_counter,
+                    next_ers_message_id(),
                     Some(trip.vessel_id),
                 );
 
-                base.ers_message_id_counter += 1;
                 let start = trip.current_data_timestamp;
                 dca.message_info.set_message_timestamp(start);
                 dca.set_start_timestamp(start);

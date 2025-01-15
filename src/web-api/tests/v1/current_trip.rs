@@ -1,4 +1,5 @@
 use super::helper::test;
+use chrono::Duration;
 use engine::*;
 
 #[tokio::test]
@@ -156,6 +157,65 @@ async fn test_current_trip_returns_earliest_departure_since_previous_trip() {
         assert_eq!(
             trip.departure.timestamp_millis(),
             state.dep[1].timestamp.timestamp_millis()
+        );
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_current_trip_updates_correctly() {
+    test(|helper, builder| async move {
+        let state = builder.vessels(1).trips(1).up().dep(1).build().await;
+
+        let vessel_id = state.vessels[0].fiskeridir.id;
+
+        let trip = helper
+            .app
+            .get_current_trip(vessel_id)
+            .await
+            .unwrap()
+            .unwrap();
+
+        let prev_dep_timestamp = state.dep[1].timestamp;
+        let new_dep_timestamp = prev_dep_timestamp + Duration::hours(10);
+
+        assert_eq!(
+            trip.departure.timestamp_millis(),
+            prev_dep_timestamp.timestamp_millis(),
+        );
+
+        helper
+            .builder()
+            .await
+            .vessels(1)
+            .modify(|v| {
+                v.fiskeridir.id = vessel_id;
+            })
+            .trips(1)
+            .modify(|v| {
+                v.trip_specification
+                    .set_start(prev_dep_timestamp + Duration::hours(1));
+                v.trip_specification
+                    .set_end(prev_dep_timestamp + Duration::hours(2));
+            })
+            .up()
+            .dep(1)
+            .modify(|v| {
+                v.dep.set_departure_timestamp(new_dep_timestamp);
+            })
+            .build()
+            .await;
+
+        let trip = helper
+            .app
+            .get_current_trip(vessel_id)
+            .await
+            .unwrap()
+            .unwrap();
+
+        assert_eq!(
+            trip.departure.timestamp_millis(),
+            new_dep_timestamp.timestamp_millis(),
         );
     })
     .await;
