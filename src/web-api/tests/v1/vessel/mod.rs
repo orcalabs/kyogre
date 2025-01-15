@@ -6,7 +6,7 @@ use fiskeridir_rs::{CallSign, GearGroup};
 use float_cmp::approx_eq;
 use http_client::StatusCode;
 use kyogre_core::{
-    ActiveVesselConflict, FiskeridirVesselId, Mmsi, TestHelperOutbound, TripBenchmarkStatus,
+    ActiveVesselConflict, FiskeridirVesselId, Mmsi, ProcessingStatus, TestHelperOutbound,
     UpdateVessel, VesselSource,
 };
 use kyogre_core::{DEFAULT_LIVE_FUEL_THRESHOLD, TEST_SIGNED_IN_VESSEL_CALLSIGN};
@@ -541,7 +541,7 @@ async fn test_update_vessel_resets_benchmarks() {
             helper
                 .db
                 .db
-                .trip_benchmarks_with_status(TripBenchmarkStatus::MustRecompute)
+                .trips_with_benchmark_status(ProcessingStatus::Unprocessed)
                 .await
                 > 0
         );

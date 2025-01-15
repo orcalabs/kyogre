@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use kyogre_core::{
-    CoreResult, TripBenchmark, TripBenchmarkId, TripBenchmarkOutbound, TripBenchmarkOutput, Vessel,
-    DIESEL_CARBON_FACTOR, METERS_TO_NAUTICAL_MILES,
+    BenchmarkTrip, CoreResult, TripBenchmark, TripBenchmarkId, TripBenchmarkOutbound,
+    TripBenchmarkOutput, DIESEL_CARBON_FACTOR, METERS_TO_NAUTICAL_MILES,
 };
 
 /// Computes the EEOI for trips in the unit: `tonn / (tonn * nautical miles)`
@@ -16,29 +16,23 @@ impl TripBenchmark for Eeoi {
 
     async fn benchmark(
         &self,
-        vessel: &Vessel,
-        adapter: &dyn TripBenchmarkOutbound,
-    ) -> CoreResult<Vec<TripBenchmarkOutput>> {
-        let trips = adapter
-            .trips_without_eeoi_and_with_distance_and_fuel_consumption(vessel.fiskeridir.id)
-            .await?;
+        trip: &BenchmarkTrip,
+        _adapter: &dyn TripBenchmarkOutbound,
+        output: &mut TripBenchmarkOutput,
+    ) -> CoreResult<()> {
+        output.eeoi = match (output.fuel_consumption, trip.distance) {
+            (Some(fuel), Some(distance))
+                if fuel > 0.0 && distance > 0.0 && trip.total_catch_weight > 0.0 =>
+            {
+                Some(
+                    (fuel * DIESEL_CARBON_FACTOR)
+                        / (trip.total_catch_weight * distance * METERS_TO_NAUTICAL_MILES)
+                        / 1000.0,
+                )
+            }
+            _ => None,
+        };
 
-        let output = trips
-            .into_iter()
-            .map(|t| {
-                let eeoi = (t.fuel_consumption * DIESEL_CARBON_FACTOR)
-                    / (t.total_weight * t.distance * METERS_TO_NAUTICAL_MILES)
-                    / 1000.0;
-
-                TripBenchmarkOutput {
-                    trip_id: t.id,
-                    benchmark_id: TripBenchmarkId::Eeoi,
-                    value: eeoi,
-                    unrealistic: false,
-                }
-            })
-            .collect();
-
-        Ok(output)
+        Ok(())
     }
 }

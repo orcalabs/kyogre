@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use kyogre_core::{
-    CoreResult, TripBenchmark, TripBenchmarkId, TripBenchmarkOutbound, TripBenchmarkOutput, Vessel,
+    BenchmarkTrip, CoreResult, TripBenchmark, TripBenchmarkId, TripBenchmarkOutbound,
+    TripBenchmarkOutput,
 };
 
 /// Computes the weight (kg) caught per distance (meter) for a trip.
@@ -15,29 +16,15 @@ impl TripBenchmark for WeightPerDistance {
 
     async fn benchmark(
         &self,
-        vessel: &Vessel,
-        adapter: &dyn TripBenchmarkOutbound,
-    ) -> CoreResult<Vec<TripBenchmarkOutput>> {
-        let trips = adapter.trips_with_distance(vessel.fiskeridir.id).await?;
+        trip: &BenchmarkTrip,
+        _adapter: &dyn TripBenchmarkOutbound,
+        output: &mut TripBenchmarkOutput,
+    ) -> CoreResult<()> {
+        output.weight_per_distance = match trip.distance {
+            Some(distance) if distance > 0.0 => Some(trip.total_catch_weight / distance),
+            _ => None,
+        };
 
-        let output = trips
-            .into_iter()
-            .map(|t| {
-                let value = if t.distance == 0. {
-                    0.
-                } else {
-                    t.total_weight / t.distance
-                };
-
-                TripBenchmarkOutput {
-                    trip_id: t.id,
-                    benchmark_id: TripBenchmarkId::WeightPerDistance,
-                    value,
-                    unrealistic: false,
-                }
-            })
-            .collect();
-
-        Ok(output)
+        Ok(())
     }
 }
