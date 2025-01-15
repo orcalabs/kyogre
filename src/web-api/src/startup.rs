@@ -17,8 +17,11 @@ use serde_qs::actix::QsQueryConfig;
 use std::{io::Error, net::TcpListener};
 
 use crate::{
-    auth0::Auth0State, error::ErrorResponse, guards::BwtGuard, routes, settings::Settings, Cache,
-    Database, Meilisearch,
+    error::ErrorResponse,
+    routes,
+    settings::Settings,
+    states::{Auth0State, BwState},
+    Cache, Database, Meilisearch,
 };
 
 use duckdb_rs::Client;
@@ -82,11 +85,7 @@ where
     let environment = settings.environment;
     let not_prod = environment != Environment::Production;
 
-    let bw_jwt_guard = if let Some(ref settings) = settings.bw_settings {
-        Some(BwtGuard::new(settings).await)
-    } else {
-        None
-    };
+    let bw_state = BwState::new(settings.bw_settings.as_ref()).await;
 
     let auth0_settings = settings.auth0.clone();
     let auth0_state = Auth0State::new(auth0_settings.as_ref()).await;
@@ -194,7 +193,7 @@ where
                 get().to(routes::v1::trip::benchmarks::average_eeoi::<T>),
             );
 
-        if let Some(ref guard) = bw_jwt_guard {
+        if let Some(guard) = bw_state.guard() {
             scope = scope
                 .route(
                     "/fishing_facilities",
@@ -363,6 +362,7 @@ where
             .app_data(Data::new(database.clone()))
             .app_data(Data::new(cache.clone()))
             .app_data(Data::new(auth0_state.clone()))
+            .app_data(Data::new(bw_state.clone()))
             .app_data(Data::new(meilisearch.clone()))
             .app_data(Data::new(HttpClient::new()))
             .app_data(QsQueryConfig::default().qs_config(serde_qs::Config::new(5, false)))
