@@ -5,7 +5,7 @@ use crate::{
 };
 use chrono::{Datelike, Utc};
 use fiskeridir_rs::CallSign;
-use kyogre_core::{BarentswatchUserId, FiskeridirVesselId, OrgBenchmarkQuery, TripBenchmarkStatus};
+use kyogre_core::{BarentswatchUserId, FiskeridirVesselId, OrgBenchmarkQuery, ProcessingStatus};
 
 impl PostgresAdapter {
     pub(crate) async fn org_benchmarks_impl(
@@ -162,16 +162,16 @@ GROUP BY
     ) -> Result<()> {
         sqlx::query!(
             r#"
-UPDATE trip_benchmark_outputs o
+UPDATE trips_detailed o
 SET
-    status = $1
+    benchmark_status = $1
 FROM
-    trips t
+    trips_detailed t
 WHERE
     t.fiskeridir_vessel_id = $2
     AND t.trip_id = o.trip_id
                 "#,
-            TripBenchmarkStatus::MustRecompute as i32,
+            ProcessingStatus::Unprocessed as i32,
             vessel_id.into_inner()
         )
         .execute(executor)

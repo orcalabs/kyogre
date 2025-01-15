@@ -466,6 +466,9 @@ where
     async fn build(self) -> TestState {
         self.base().build().await
     }
+    fn trips(self, amount: usize) -> TripBuilder {
+        self.up().trips(amount)
+    }
     fn hauls(self, amount: usize) -> HaulTripBuilder {
         self.up().hauls(amount)
     }

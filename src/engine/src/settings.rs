@@ -51,10 +51,12 @@ impl Settings {
         vec![]
     }
     pub fn benchmarks(&self) -> Vec<Box<dyn TripBenchmark>> {
+        // Order is significant as some benchmarks depends on the output of others.
+        // Currently most benchmarks depends on 'FuelConsumption'.
         vec![
+            Box::<FuelConsumption>::default(),
             Box::<WeightPerHour>::default(),
             Box::<WeightPerDistance>::default(),
-            Box::<FuelConsumption>::default(),
             Box::<WeightPerFuel>::default(),
             Box::<CatchValuePerFuel>::default(),
             Box::<Eeoi>::default(),

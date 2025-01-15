@@ -331,8 +331,14 @@ impl TestStorage for PostgresAdapter {}
 #[cfg(feature = "test")]
 #[async_trait]
 impl TestHelperOutbound for PostgresAdapter {
-    async fn trip_benchmarks_with_status(&self, status: TripBenchmarkStatus) -> u32 {
-        self.trip_benchmarks_with_status_impl(status).await.unwrap()
+    async fn unprocessed_trips(&self) -> u32 {
+        self.unprocessed_trips_impl().await.unwrap()
+    }
+    async fn fuel_estimates_with_status(&self, status: ProcessingStatus) -> u32 {
+        self.fuel_estimates_with_status_impl(status).await.unwrap()
+    }
+    async fn trips_with_benchmark_status(&self, status: ProcessingStatus) -> u32 {
+        self.trips_with_benchmark_status_impl(status).await.unwrap()
     }
     async fn trip_assembler_log(&self) -> Vec<TripAssemblerLogEntry> {
         self.trip_assembler_log_impl()
@@ -1092,6 +1098,9 @@ impl TripPrecisionOutboundPort for PostgresAdapter {
 
 #[async_trait]
 impl TripBenchmarkOutbound for PostgresAdapter {
+    async fn trips_to_benchmark(&self) -> CoreResult<Vec<BenchmarkTrip>> {
+        Ok(retry(|| self.trips_to_benchmark_impl()).await?)
+    }
     async fn vessels(&self) -> CoreResult<Vec<Vessel>> {
         retry(|| {
             self.fiskeridir_ais_vessel_combinations()
@@ -1101,52 +1110,6 @@ impl TripBenchmarkOutbound for PostgresAdapter {
     }
     async fn track_of_trip_with_haul(&self, id: TripId) -> CoreResult<Vec<AisVmsPositionWithHaul>> {
         Ok(retry(|| self.track_of_trip_with_haul_impl(id)).await?)
-    }
-    async fn trips_without_fuel_consumption(
-        &self,
-        id: FiskeridirVesselId,
-    ) -> CoreResult<Vec<TripId>> {
-        Ok(retry(|| self.trips_without_fuel_consumption_impl(id)).await?)
-    }
-    async fn trips_with_weight(
-        &self,
-        id: FiskeridirVesselId,
-    ) -> CoreResult<Vec<TripWithTotalWeight>> {
-        Ok(retry(|| self.trips_with_weight_impl(id)).await?)
-    }
-    async fn trips_with_distance(
-        &self,
-        id: FiskeridirVesselId,
-    ) -> CoreResult<Vec<TripWithDistance>> {
-        Ok(retry(|| self.trips_with_distance_impl(id)).await?)
-    }
-    async fn trips_with_weight_and_fuel(
-        &self,
-        id: FiskeridirVesselId,
-    ) -> CoreResult<Vec<TripWithWeightAndFuel>> {
-        Ok(retry(|| self.trips_with_weight_and_fuel_impl(id)).await?)
-    }
-    async fn trips_with_catch_value_and_fuel(
-        &self,
-        id: FiskeridirVesselId,
-    ) -> CoreResult<Vec<TripWithCatchValueAndFuel>> {
-        Ok(retry(|| self.trips_with_catch_value_and_fuel_impl(id)).await?)
-    }
-    async fn sustainability_metrics(
-        &self,
-        id: FiskeridirVesselId,
-    ) -> CoreResult<Vec<TripSustainabilityMetric>> {
-        Ok(retry(|| self.sustainability_metrics_impl(id)).await?)
-    }
-
-    async fn trips_without_eeoi_and_with_distance_and_fuel_consumption(
-        &self,
-        id: FiskeridirVesselId,
-    ) -> CoreResult<Vec<TripWithDistanceAndFuel>> {
-        Ok(
-            retry(|| self.trips_without_eeoi_and_with_distance_and_fuel_consumption_impl(id))
-                .await?,
-        )
     }
 
     async fn update_trip_position_fuel_consumption(
@@ -1159,11 +1122,8 @@ impl TripBenchmarkOutbound for PostgresAdapter {
 
 #[async_trait]
 impl TripBenchmarkInbound for PostgresAdapter {
-    async fn add_output(&self, values: Vec<TripBenchmarkOutput>) -> CoreResult<()> {
-        Ok(retry(|| self.add_benchmark_outputs(&values)).await?)
-    }
-    async fn refresh_trips(&self) -> CoreResult<()> {
-        Ok(retry(|| self.refresh_detailed_trip_benchmarks_impl()).await?)
+    async fn add_output(&self, values: &[TripBenchmarkOutput]) -> CoreResult<()> {
+        Ok(retry(|| self.add_benchmark_outputs(values)).await?)
     }
 }
 

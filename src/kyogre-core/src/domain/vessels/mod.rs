@@ -15,7 +15,7 @@ pub use benchmark::*;
 
 use super::VesselCurrentTrip;
 
-const HP_TO_KW: f64 = 0.745699872;
+pub const HP_TO_KW: f64 = 0.745699872;
 pub static TEST_SIGNED_IN_VESSEL_CALLSIGN: &str = "LK17";
 
 /// These have been observed in data from Fiskeridirektoratet, and we assume that they are safe to

@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use kyogre_core::{
-    CoreResult, TripBenchmark, TripBenchmarkId, TripBenchmarkOutbound, TripBenchmarkOutput, Vessel,
+    BenchmarkTrip, CoreResult, TripBenchmark, TripBenchmarkId, TripBenchmarkOutbound,
+    TripBenchmarkOutput,
 };
 
 /// Computes the catch value (NOK) received per fuel (tonn) for a trip.
@@ -15,31 +16,15 @@ impl TripBenchmark for CatchValuePerFuel {
 
     async fn benchmark(
         &self,
-        vessel: &Vessel,
-        adapter: &dyn TripBenchmarkOutbound,
-    ) -> CoreResult<Vec<TripBenchmarkOutput>> {
-        let trips = adapter
-            .trips_with_catch_value_and_fuel(vessel.fiskeridir.id)
-            .await?;
+        trip: &BenchmarkTrip,
+        _adapter: &dyn TripBenchmarkOutbound,
+        output: &mut TripBenchmarkOutput,
+    ) -> CoreResult<()> {
+        output.catch_value_per_fuel = match output.fuel_consumption {
+            Some(fuel) if fuel > 0.0 => Some(trip.total_catch_value / fuel),
+            _ => None,
+        };
 
-        let output = trips
-            .into_iter()
-            .map(|t| {
-                let value = if t.fuel_consumption == 0. {
-                    0.
-                } else {
-                    t.total_catch_value / t.fuel_consumption
-                };
-
-                TripBenchmarkOutput {
-                    trip_id: t.id,
-                    benchmark_id: TripBenchmarkId::CatchValuePerFuel,
-                    value,
-                    unrealistic: false,
-                }
-            })
-            .collect();
-
-        Ok(output)
+        Ok(())
     }
 }

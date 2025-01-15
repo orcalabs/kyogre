@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    COALESCE(COUNT(*), 0) AS \"num_count!\"\nFROM\n    trips_detailed\nWHERE\n    benchmark_status = $1\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "num_count!",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "00fe476745b6d5b18ddcb81b221385ac38a83264a55fe09f68691eedfb64f856"
+}

@@ -66,7 +66,7 @@ async fn test_weight_per_distance_is_correct() {
 }
 
 #[tokio::test]
-async fn test_weight_per_distance_does_not_compute_trips_with_zero_weight() {
+async fn test_weight_per_distance_sets_trips_with_zero_weight_to_zero() {
     test(|mut helper, builder| async move {
         builder
             .trip_duration(Duration::hours(2))
@@ -90,7 +90,7 @@ async fn test_weight_per_distance_does_not_compute_trips_with_zero_weight() {
             .unwrap();
 
         assert_eq!(bench.trips.len(), 1);
-        assert!(bench.trips[0].weight_per_distance.is_none());
+        assert_eq!(bench.trips[0].weight_per_distance.unwrap(), 0.0);
     })
     .await;
 }

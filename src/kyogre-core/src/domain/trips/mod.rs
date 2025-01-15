@@ -4,7 +4,10 @@ use fiskeridir_rs::{DeliveryPointId, LandingId, Quality, VesselLengthGroup};
 use num_derive::FromPrimitive;
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
-use std::fmt::{self, Display};
+use std::{
+    f64,
+    fmt::{self, Display},
+};
 
 #[cfg(feature = "oasgen")]
 use oasgen::OaSchema;
@@ -109,6 +112,19 @@ pub struct UpdateTripPositionCargoWeight {
 }
 
 #[derive(Debug, Clone)]
+pub struct BenchmarkTrip {
+    pub trip_id: TripId,
+    pub vessel_length_group: VesselLengthGroup,
+    pub engine_power: Option<i32>,
+    pub engine_building_year: Option<i32>,
+    pub total_catch_value: f64,
+    pub total_catch_weight: f64,
+    pub distance: Option<f64>,
+    pub period: DateRange,
+    pub period_precision: Option<DateRange>,
+}
+
+#[derive(Debug, Clone)]
 pub struct CurrentTrip {
     pub departure: DateTime<Utc>,
     pub target_species_fiskeridir_id: Option<i32>,
@@ -148,6 +164,15 @@ impl Trip {
     }
     pub fn precision_end(&self) -> Option<DateTime<Utc>> {
         self.period_precision.as_ref().map(|v| v.end())
+    }
+}
+
+impl BenchmarkTrip {
+    pub fn sfc(&self) -> Option<f64> {
+        self.engine_building_year.map(|v| sfc(v as u32))
+    }
+    pub fn engine_power_kw(&self) -> Option<f64> {
+        self.engine_power.map(|v| v as f64 * HP_TO_KW)
     }
 }
 

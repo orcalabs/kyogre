@@ -235,9 +235,9 @@ pub async fn engine(adapter: PostgresAdapter, db_settings: &PsqlSettings) -> Fis
         Box::<ErsTripAssembler>::default() as Box<dyn TripAssembler>,
     ];
     let benchmarks = vec![
+        Box::<FuelConsumption>::default() as _,
         Box::<WeightPerHour>::default() as _,
         Box::<WeightPerDistance>::default() as _,
-        Box::<FuelConsumption>::default() as _,
         Box::<WeightPerFuel>::default() as _,
         Box::<CatchValuePerFuel>::default() as _,
         Box::<Eeoi>::default() as _,

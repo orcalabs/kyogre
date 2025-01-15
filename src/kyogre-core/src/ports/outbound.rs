@@ -199,34 +199,7 @@ pub trait TripBenchmarkOutbound: Send + Sync {
     ) -> CoreResult<()>;
     async fn vessels(&self) -> CoreResult<Vec<Vessel>>;
     async fn track_of_trip_with_haul(&self, id: TripId) -> CoreResult<Vec<AisVmsPositionWithHaul>>;
-    async fn trips_without_fuel_consumption(
-        &self,
-        id: FiskeridirVesselId,
-    ) -> CoreResult<Vec<TripId>>;
-    async fn trips_with_weight(
-        &self,
-        id: FiskeridirVesselId,
-    ) -> CoreResult<Vec<TripWithTotalWeight>>;
-    async fn trips_without_eeoi_and_with_distance_and_fuel_consumption(
-        &self,
-        id: FiskeridirVesselId,
-    ) -> CoreResult<Vec<TripWithDistanceAndFuel>>;
-    async fn trips_with_distance(
-        &self,
-        id: FiskeridirVesselId,
-    ) -> CoreResult<Vec<TripWithDistance>>;
-    async fn trips_with_weight_and_fuel(
-        &self,
-        id: FiskeridirVesselId,
-    ) -> CoreResult<Vec<TripWithWeightAndFuel>>;
-    async fn trips_with_catch_value_and_fuel(
-        &self,
-        id: FiskeridirVesselId,
-    ) -> CoreResult<Vec<TripWithCatchValueAndFuel>>;
-    async fn sustainability_metrics(
-        &self,
-        id: FiskeridirVesselId,
-    ) -> CoreResult<Vec<TripSustainabilityMetric>>;
+    async fn trips_to_benchmark(&self) -> CoreResult<Vec<BenchmarkTrip>>;
 }
 
 #[async_trait]
@@ -432,5 +405,7 @@ pub trait TestHelperOutbound: Send + Sync {
     async fn delivery_point(&self, id: &fiskeridir_rs::DeliveryPointId) -> Option<DeliveryPoint>;
     async fn dock_points_of_port(&self, port_id: &str) -> Vec<PortDockPoint>;
     async fn trip_assembler_log(&self) -> Vec<TripAssemblerLogEntry>;
-    async fn trip_benchmarks_with_status(&self, status: TripBenchmarkStatus) -> u32;
+    async fn trips_with_benchmark_status(&self, status: ProcessingStatus) -> u32;
+    async fn unprocessed_trips(&self) -> u32;
+    async fn fuel_estimates_with_status(&self, status: ProcessingStatus) -> u32;
 }
