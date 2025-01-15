@@ -1,8 +1,8 @@
 use super::helper::test_with_cache;
 use chrono::{DateTime, Utc};
 use engine::*;
-use fiskeridir_rs::{ErsDca, GearGroup, SpeciesGroup, VesselLengthGroup};
-use kyogre_core::{CatchLocationId, FiskeridirVesselId, HaulsSorting, Ordering};
+use fiskeridir_rs::{GearGroup, SpeciesGroup, VesselLengthGroup};
+use kyogre_core::{CatchLocationId, HaulsSorting, Ordering};
 use web_api::routes::v1::haul::HaulsParams;
 
 #[tokio::test]
@@ -223,22 +223,15 @@ async fn test_hauls_returns_hauls_with_vessel_length_groups() {
 #[tokio::test]
 async fn test_hauls_returns_hauls_with_fiskeridir_vessel_ids() {
     test_with_cache(|helper, builder| async move {
-        let vessel_id1 = FiskeridirVesselId::test_new(1);
-        let vessel_id2 = FiskeridirVesselId::test_new(2);
-
-        let ers1 = ErsDca::test_default(1, Some(vessel_id1));
-        let ers2 = ErsDca::test_default(2, Some(vessel_id2));
-        let ers3 = ErsDca::test_default(3, None);
-        let ers4 = ErsDca::test_default(4, None);
-
-        helper.db.add_ers_dca(vec![ers1, ers2, ers3, ers4]).await;
-
         let state = builder.hauls(2).vessels(2).hauls(2).build().await;
 
         helper.refresh_cache().await;
 
         let params = HaulsParams {
-            fiskeridir_vessel_ids: Some(vec![vessel_id1, vessel_id2]),
+            fiskeridir_vessel_ids: Some(vec![
+                state.vessels[0].fiskeridir.id,
+                state.vessels[1].fiskeridir.id,
+            ]),
             sorting: Some(HaulsSorting::StartDate),
             ordering: Some(Ordering::Asc),
             ..Default::default()
@@ -247,7 +240,7 @@ async fn test_hauls_returns_hauls_with_fiskeridir_vessel_ids() {
         let hauls = helper.app.get_hauls(params).await.unwrap();
 
         assert_eq!(hauls.len(), 2);
-        assert_eq!(hauls, state.hauls[0..2]);
+        assert_eq!(hauls, state.hauls[2..]);
     })
     .await;
 }
