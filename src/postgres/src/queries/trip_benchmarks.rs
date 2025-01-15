@@ -240,11 +240,32 @@ WITH
             )
         GROUP BY
             t.fiskeridir_vessel_id
+    ),
+    ranked_data AS (
+        SELECT
+            eeoi,
+            percent_rank() OVER (
+                ORDER BY
+                    eeoi
+            ) AS percent
+        FROM
+            eeois
     )
 SELECT
     AVG(eeoi) AS eeoi
 FROM
-    eeois
+    ranked_data
+WHERE
+    (
+        percent <= 0.95
+        OR percent >= 0.05
+    )
+    OR (
+        SELECT
+            COUNT(*)
+        FROM
+            ranked_data
+    ) <= 2
             "#,
             MIN_EEOI_DISTANCE,
             DIESEL_CARBON_FACTOR,
