@@ -362,12 +362,14 @@ SET
     rate_of_turn = excluded.rate_of_turn,
     true_heading = excluded.true_heading,
     speed_over_ground = excluded.speed_over_ground,
-    TIMESTAMP = excluded.timestamp,
+    "timestamp" = excluded.timestamp,
     altitude = excluded.altitude,
     distance_to_shore = excluded.distance_to_shore,
     ais_class = excluded.ais_class,
     ais_message_type_id = excluded.ais_message_type_id,
     navigation_status_id = excluded.navigation_status_id
+WHERE
+    excluded.timestamp > current_ais_positions.timestamp
                 "#,
                 p.mmsi.into_inner(),
                 latitude,
