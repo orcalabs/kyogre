@@ -220,19 +220,42 @@ ORDER BY
             r#"
 SELECT
     mmsi AS "mmsi!: Mmsi",
-    imo_number,
     call_sign AS "call_sign: CallSign",
-    "name",
-    ship_width,
-    ship_length,
-    eta,
-    destination
+    "name"
 FROM
     ais_vessels
             "#
         )
         .fetch(&self.db.pool)
         .map(|v| v.unwrap())
+    }
+
+    pub async fn all_ais_vessels_with_eta(&self) -> Vec<(AisVessel, Option<DateTime<Utc>>)> {
+        sqlx::query!(
+            r#"
+SELECT
+    mmsi AS "mmsi!: Mmsi",
+    call_sign AS "call_sign: CallSign",
+    "name",
+    eta
+FROM
+    ais_vessels
+            "#
+        )
+        .fetch(&self.db.pool)
+        .map(|v| {
+            let v = v.unwrap();
+            (
+                AisVessel {
+                    mmsi: v.mmsi,
+                    call_sign: v.call_sign,
+                    name: v.name,
+                },
+                v.eta,
+            )
+        })
+        .collect()
+        .await
     }
 
     pub async fn create_test_database_from_template(&self, db_name: &str) {

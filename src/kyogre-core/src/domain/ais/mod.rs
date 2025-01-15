@@ -161,13 +161,8 @@ pub struct AisVesselHistoric {
 #[derive(Debug, Clone)]
 pub struct AisVessel {
     pub mmsi: Mmsi,
-    pub imo_number: Option<i32>,
     pub call_sign: Option<CallSign>,
     pub name: Option<String>,
-    pub ship_length: Option<i32>,
-    pub ship_width: Option<i32>,
-    pub eta: Option<DateTime<Utc>>,
-    pub destination: Option<String>,
 }
 
 #[derive(Clone, Debug)]
