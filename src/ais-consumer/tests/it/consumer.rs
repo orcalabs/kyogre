@@ -85,14 +85,16 @@ async fn test_ais_position_messages_updates_current_position() {
 #[tokio::test(flavor = "multi_thread")]
 async fn test_handles_missing_eta() {
     test(|mut helper| async move {
-        let mut vessel = AisStatic::test_default();
-        vessel.eta = None;
+        let mut ais_static = AisStatic::test_default();
+        ais_static.eta = None;
 
-        helper.ais_source.send_static(&vessel).await;
+        helper.ais_source.send_static(&ais_static).await;
         helper.postgres_process_confirmation.recv().await.unwrap();
 
-        assert!(helper.db.all_ais_vessels().await[0].eta.is_none());
-        assert_eq!(vec![vessel], helper.db.all_ais_vessels().await);
+        let (vessel, eta) = helper.db.all_ais_vessels_with_eta().await.pop().unwrap();
+
+        assert!(eta.is_none());
+        assert_eq!(ais_static, vessel);
     })
     .await;
 }

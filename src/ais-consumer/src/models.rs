@@ -314,14 +314,14 @@ impl PartialEq<kyogre_core::AisVessel> for AisStatic {
             message_type_id: _,
             mmsi,
             msgtime: _,
-            imo_number,
+            imo_number: _,
             call_sign,
-            destination,
-            eta,
+            destination: _,
+            eta: _,
             name,
             draught: _,
-            ship_length,
-            ship_width,
+            ship_length: _,
+            ship_width: _,
             ship_type: _,
             dimension_a: _,
             dimension_b: _,
@@ -332,23 +332,8 @@ impl PartialEq<kyogre_core::AisVessel> for AisStatic {
         } = self;
 
         other.mmsi == *mmsi
-            && other.imo_number == *imo_number
             && other.call_sign.as_ref().map(|c| c.as_ref()) == call_sign.as_deref()
             && other.name == *name
-            && other.ship_width == *ship_width
-            && other.ship_length == *ship_length
-            && other.eta.map(|t| t.with_year(1980).unwrap().timestamp())
-                == eta.as_ref().map(|t| {
-                    let t = parse_eta_value(t).unwrap().unwrap();
-                    t.with_year(1980)
-                        .unwrap()
-                        .with_second(0)
-                        .unwrap()
-                        .with_nanosecond(0)
-                        .unwrap()
-                        .timestamp()
-                })
-            && other.destination == *destination
     }
 }
 
