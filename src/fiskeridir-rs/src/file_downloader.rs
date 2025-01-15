@@ -1,5 +1,7 @@
+use chrono::Datelike;
 use std::{fmt::Display, io::Write, path::PathBuf, time::Duration};
 
+use chrono::Utc;
 use csv::DeserializeRecordsIntoIter;
 use futures_util::StreamExt;
 use http_client::HttpClient;
@@ -130,12 +132,21 @@ impl FileSource {
         match *self {
             Landings { year, .. } => vec![DataFile::Landings { year }],
             Vms { year, .. } => vec![DataFile::Vms { year }],
-            Ers { year, .. } => vec![
-                DataFile::ErsDca { year },
-                DataFile::ErsDep { year },
-                DataFile::ErsPor { year },
-                DataFile::ErsTra { year },
-            ],
+            Ers { year, .. } => {
+                let now = Utc::now();
+
+                let mut out = vec![
+                    DataFile::ErsDep { year },
+                    DataFile::ErsPor { year },
+                    DataFile::ErsTra { year },
+                ];
+                // The first month in every year the DCA file will be missing
+                // due to its delayed release.
+                if !(year == now.year() as u32 && now.month() == 1) {
+                    out.push(DataFile::ErsDca { year });
+                }
+                out
+            }
             AquaCultureRegister { .. } => vec![DataFile::AquaCultureRegister],
         }
     }
