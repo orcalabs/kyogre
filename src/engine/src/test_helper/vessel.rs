@@ -146,11 +146,10 @@ impl VesselBuilder {
             for _ in 0..num_hauls {
                 let timestamp = base.global_data_timestamp_counter;
                 let mut dca = fiskeridir_rs::ErsDca::test_default(
-                    base.ers_message_id_counter,
+                    next_ers_message_id(),
                     Some(vessel.fiskeridir.id),
                 );
 
-                base.ers_message_id_counter += 1;
                 let start = timestamp;
                 let end = timestamp + base.default_haul_duration;
                 dca.message_info.set_message_timestamp(start);
@@ -191,13 +190,12 @@ impl VesselBuilder {
                     .unwrap();
 
                 let por = fiskeridir_rs::ErsPor::test_default(
-                    base.ers_message_id_counter,
+                    next_ers_message_id(),
                     vessel.fiskeridir.id,
                     timestamp,
                     *message_number,
                 );
                 *message_number += 1;
-                base.ers_message_id_counter += 1;
 
                 base.por.push(PorConstructor {
                     por,
@@ -229,13 +227,12 @@ impl VesselBuilder {
                     .unwrap();
 
                 let dep = fiskeridir_rs::ErsDep::test_default(
-                    base.ers_message_id_counter,
+                    next_ers_message_id(),
                     vessel.fiskeridir.id,
                     timestamp,
                     *message_number,
                 );
                 *message_number += 1;
-                base.ers_message_id_counter += 1;
 
                 base.dep.push(DepConstructor {
                     dep,
@@ -263,14 +260,12 @@ impl VesselBuilder {
             for _ in 0..num_tra {
                 let timestamp = base.global_data_timestamp_counter;
                 let mut tra = fiskeridir_rs::ErsTra::test_default(
-                    base.ers_message_id_counter,
+                    next_ers_message_id(),
                     Some(vessel.fiskeridir.id),
                     timestamp,
                 );
 
                 tra.message_info.set_message_timestamp(timestamp);
-
-                base.ers_message_id_counter += 1;
 
                 base.tra.push(TraConstructor {
                     tra,
@@ -416,22 +411,19 @@ impl VesselBuilder {
                     .unwrap();
 
                 let dep = fiskeridir_rs::ErsDep::test_default(
-                    base.ers_message_id_counter,
+                    next_ers_message_id(),
                     vessel.fiskeridir.id,
                     start,
                     *message_number,
                 );
                 *message_number += 1;
-                base.ers_message_id_counter += 1;
                 let por = fiskeridir_rs::ErsPor::test_default(
-                    base.ers_message_id_counter,
+                    next_ers_message_id(),
                     vessel.fiskeridir.id,
                     end,
                     *message_number,
                 );
                 *message_number += 1;
-
-                base.ers_message_id_counter += 1;
 
                 base.trips.push(TripConstructor {
                     trip_specification: TripSpecification::Ers { dep, por },

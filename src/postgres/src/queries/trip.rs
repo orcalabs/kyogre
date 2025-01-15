@@ -180,6 +180,12 @@ ORDER BY
     d.departure_timestamp ASC
 LIMIT
     1
+ON CONFLICT (fiskeridir_vessel_id) DO UPDATE
+SET
+    departure_timestamp = EXCLUDED.departure_timestamp,
+    target_species_fiskeridir_id = EXCLUDED.target_species_fiskeridir_id,
+    hauls = EXCLUDED.hauls,
+    fishing_facilities = EXCLUDED.fishing_facilities
             "#,
             vessel_id.into_inner(),
             TripAssemblerId::Ers as i32,
@@ -189,6 +195,7 @@ LIMIT
 
         Ok(())
     }
+
     pub(crate) async fn check_for_out_of_order_vms_insertion_imp(&self) -> Result<()> {
         let mut tx = self.pool.begin().await?;
 
@@ -774,8 +781,7 @@ WHERE
     t.trip_id = ANY ($3::BIGINT[])
 GROUP BY
     t.trip_id
-ON CONFLICT (trip_id) DO
-UPDATE
+ON CONFLICT (trip_id) DO UPDATE
 SET
     trip_id = excluded.trip_id,
     distance = excluded.distance,
@@ -1454,8 +1460,7 @@ INSERT INTO
     trip_calculation_timers (fiskeridir_vessel_id, trip_assembler_id, timer)
 VALUES
     ($1, $2, $3)
-ON CONFLICT (fiskeridir_vessel_id) DO
-UPDATE
+ON CONFLICT (fiskeridir_vessel_id) DO UPDATE
 SET
     timer = EXCLUDED.timer,
     queued_reset = COALESCE($4, EXCLUDED.queued_reset),

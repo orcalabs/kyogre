@@ -22,7 +22,10 @@ use orca_core::PsqlSettings;
 use postgres::PostgresAdapter;
 use std::{
     collections::{HashMap, HashSet},
-    sync::Arc,
+    sync::{
+        atomic::{self, AtomicU64},
+        Arc,
+    },
 };
 use trip_benchmark::*;
 
@@ -67,6 +70,11 @@ use self::cycle::Cycle;
 pub static FISHING_SPOT_PREDICTOR_NUM_DAYS: u32 = 2;
 pub static FISHING_WEIGHT_PREDICTOR_NUM_DAYS: u32 = 2;
 pub static FISHING_WEIGHT_PREDICTOR_NUM_CL: u32 = 2;
+
+pub fn next_ers_message_id() -> u64 {
+    static ERS_MESSAGE_ID_COUNTER: AtomicU64 = AtomicU64::new(1);
+    ERS_MESSAGE_ID_COUNTER.fetch_add(1, atomic::Ordering::Relaxed)
+}
 
 #[derive(Debug)]
 pub struct TestState {
@@ -119,7 +127,6 @@ pub struct TestStateBuilder {
     default_haul_duration: Duration,
     default_fishing_facility_duration: Duration,
     trip_data_timestamp_gap: Duration,
-    ers_message_id_counter: u64,
     ers_message_number_per_vessel: HashMap<VesselKey, u32>,
     delivery_point_id_counter: u64,
     landing_id_counter: u64,
@@ -302,7 +309,6 @@ impl TestStateBuilder {
             vms_positions: vec![],
             trips: vec![],
             default_trip_duration: Duration::weeks(1),
-            ers_message_id_counter: 1,
             delivery_point_id_counter: 1,
             ers_message_number_per_vessel: HashMap::default(),
             engine,
@@ -481,11 +487,9 @@ impl TestStateBuilder {
         for _ in 0..amount {
             let timestamp = self.global_data_timestamp_counter;
             let mut tra =
-                fiskeridir_rs::ErsTra::test_default(self.ers_message_id_counter, None, timestamp);
+                fiskeridir_rs::ErsTra::test_default(next_ers_message_id(), None, timestamp);
 
             tra.message_info.set_message_timestamp(timestamp);
-
-            self.ers_message_id_counter += 1;
 
             self.tra.push(TraConstructor {
                 tra,
@@ -504,9 +508,8 @@ impl TestStateBuilder {
 
         for _ in 0..amount {
             let timestamp = self.global_data_timestamp_counter;
-            let mut dca = fiskeridir_rs::ErsDca::test_default(self.ers_message_id_counter, None);
+            let mut dca = fiskeridir_rs::ErsDca::test_default(next_ers_message_id(), None);
 
-            self.ers_message_id_counter += 1;
             let start = timestamp;
             let end = timestamp + self.default_haul_duration;
             dca.message_info.set_message_timestamp(start);
