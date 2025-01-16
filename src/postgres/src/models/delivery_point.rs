@@ -102,13 +102,13 @@ pub struct MattilsynetDeliveryPoint<'a> {
     update_all
 )]
 pub struct NewBuyerLocation<'a> {
-    #[unnest_insert(sql_type = "BIGINT", sql_convert = "type_to_i64")]
+    #[unnest_insert(sql_type = "BIGINT")]
     pub buyer_location_id: BuyerLocationId,
     #[unnest_insert(sql_type = "TEXT")]
     pub delivery_point_id: Option<&'a DeliveryPointId>,
-    #[unnest_insert(sql_type = "BIGINT", sql_convert = "opt_type_to_i64")]
+    #[unnest_insert(sql_type = "BIGINT")]
     pub parent: Option<BuyerLocationId>,
-    #[unnest_insert(sql_type = "INT", sql_convert = "type_to_i32")]
+    #[unnest_insert(sql_type = "INT")]
     pub location_type: BuyerLocationType,
     pub legal_entity_id: Option<&'a str>,
     pub main_legal_entity_id: Option<&'a str>,
