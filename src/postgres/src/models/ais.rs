@@ -1,8 +1,15 @@
 use chrono::{DateTime, Utc};
-use kyogre_core::Mmsi;
+use kyogre_core::{AisClass, Mmsi, NavigationStatus};
 use unnest_insert::UnnestInsert;
 
-use crate::queries::type_to_i32;
+use crate::queries::{opt_type_as_static_str, type_to_i32};
+
+#[derive(Debug, Clone, UnnestInsert)]
+#[unnest_insert(table_name = "ais_vessels", conflict = "mmsi")]
+pub struct NewAisVesselMmsi {
+    #[unnest_insert(sql_type = "INT", type_conversion = "type_to_i32")]
+    pub mmsi: Mmsi,
+}
 
 #[derive(Debug, Clone, UnnestInsert)]
 #[unnest_insert(table_name = "ais_vessels", conflict = "mmsi")]
@@ -60,6 +67,57 @@ pub struct NewAisVesselHistoric<'a> {
     pub report_class: Option<&'a str>,
 }
 
+#[derive(Debug, Clone, UnnestInsert)]
+#[unnest_insert(
+    table_name = "ais_positions",
+    conflict = "mmsi,timestamp",
+    returning = "mmsi:Mmsi,latitude,longitude,timestamp"
+)]
+pub struct NewAisPosition {
+    #[unnest_insert(sql_type = "INT", type_conversion = "type_to_i32")]
+    pub mmsi: Mmsi,
+    pub latitude: f64,
+    pub longitude: f64,
+    pub ais_message_type_id: Option<i32>,
+    pub timestamp: DateTime<Utc>,
+    pub altitude: Option<i32>,
+    pub course_over_ground: Option<f64>,
+    #[unnest_insert(sql_type = "INT", type_conversion = "type_to_i32")]
+    pub navigation_status_id: NavigationStatus,
+    #[unnest_insert(sql_type = "TEXT", type_conversion = "opt_type_as_static_str")]
+    pub ais_class: Option<AisClass>,
+    pub rate_of_turn: Option<f64>,
+    pub speed_over_ground: Option<f64>,
+    pub true_heading: Option<i32>,
+    pub distance_to_shore: f64,
+}
+
+#[derive(Debug, Clone, UnnestInsert)]
+#[unnest_insert(
+    table_name = "current_ais_positions",
+    conflict = "mmsi",
+    update_all,
+    where_clause = "excluded.timestamp > current_ais_positions.timestamp"
+)]
+pub struct NewAisCurrentPosition {
+    #[unnest_insert(sql_type = "INT", type_conversion = "type_to_i32")]
+    pub mmsi: Mmsi,
+    pub latitude: f64,
+    pub longitude: f64,
+    pub ais_message_type_id: Option<i32>,
+    pub timestamp: DateTime<Utc>,
+    pub altitude: Option<i32>,
+    pub course_over_ground: Option<f64>,
+    #[unnest_insert(sql_type = "INT", type_conversion = "type_to_i32")]
+    pub navigation_status_id: NavigationStatus,
+    #[unnest_insert(sql_type = "TEXT", type_conversion = "opt_type_as_static_str")]
+    pub ais_class: Option<AisClass>,
+    pub rate_of_turn: Option<f64>,
+    pub speed_over_ground: Option<f64>,
+    pub true_heading: Option<i32>,
+    pub distance_to_shore: f64,
+}
+
 #[derive(Debug, Clone)]
 pub struct AisVmsAreaPositionsReturning {
     pub latitude: f64,
@@ -107,6 +165,52 @@ impl<'a> From<&'a kyogre_core::NewAisStatic> for NewAisVessel<'a> {
             eta: v.eta,
             draught: v.draught,
             destination: v.destination.as_deref(),
+        }
+    }
+}
+
+impl From<&kyogre_core::NewAisPosition> for NewAisVesselMmsi {
+    fn from(v: &kyogre_core::NewAisPosition) -> Self {
+        Self { mmsi: v.mmsi }
+    }
+}
+
+impl From<&kyogre_core::NewAisPosition> for NewAisPosition {
+    fn from(v: &kyogre_core::NewAisPosition) -> Self {
+        Self {
+            mmsi: v.mmsi,
+            latitude: v.latitude,
+            longitude: v.longitude,
+            ais_message_type_id: v.message_type_id,
+            timestamp: v.msgtime,
+            altitude: v.altitude,
+            course_over_ground: v.course_over_ground,
+            navigation_status_id: v.navigational_status,
+            ais_class: v.ais_class,
+            rate_of_turn: v.rate_of_turn,
+            speed_over_ground: v.speed_over_ground,
+            true_heading: v.true_heading,
+            distance_to_shore: v.distance_to_shore,
+        }
+    }
+}
+
+impl From<&kyogre_core::NewAisPosition> for NewAisCurrentPosition {
+    fn from(v: &kyogre_core::NewAisPosition) -> Self {
+        Self {
+            mmsi: v.mmsi,
+            latitude: v.latitude,
+            longitude: v.longitude,
+            ais_message_type_id: v.message_type_id,
+            timestamp: v.msgtime,
+            altitude: v.altitude,
+            course_over_ground: v.course_over_ground,
+            navigation_status_id: v.navigational_status,
+            ais_class: v.ais_class,
+            rate_of_turn: v.rate_of_turn,
+            speed_over_ground: v.speed_over_ground,
+            true_heading: v.true_heading,
+            distance_to_shore: v.distance_to_shore,
         }
     }
 }
