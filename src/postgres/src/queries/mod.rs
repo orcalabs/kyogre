@@ -50,3 +50,7 @@ pub fn type_to_i64<T: Into<i64>>(value: T) -> i64 {
 pub fn opt_type_to_i64<T: Into<i64>>(value: Option<T>) -> Option<i64> {
     value.map(type_to_i64)
 }
+
+pub fn opt_type_as_static_str<T: Into<&'static str>>(value: Option<T>) -> Option<&'static str> {
+    value.map(Into::into)
+}

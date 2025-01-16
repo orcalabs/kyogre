@@ -246,6 +246,12 @@ impl From<Mmsi> for i32 {
     }
 }
 
+impl From<NavigationStatus> for i32 {
+    fn from(value: NavigationStatus) -> Self {
+        value as i32
+    }
+}
+
 impl Display for Mmsi {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.0.fmt(f)

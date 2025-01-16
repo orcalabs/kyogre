@@ -10,7 +10,10 @@ use kyogre_core::{
 
 use crate::{
     error::Result,
-    models::{AisVmsAreaPositionsReturning, NewAisVessel, NewAisVesselHistoric},
+    models::{
+        self, AisVmsAreaPositionsReturning, NewAisCurrentPosition, NewAisVessel,
+        NewAisVesselHistoric, NewAisVesselMmsi,
+    },
     PostgresAdapter,
 };
 
@@ -195,199 +198,32 @@ FROM
     }
 
     pub(crate) async fn add_ais_positions(&self, positions: &[NewAisPosition]) -> Result<()> {
-        let mut mmsis = Vec::with_capacity(positions.len());
-        let mut latitude = Vec::with_capacity(positions.len());
-        let mut longitude = Vec::with_capacity(positions.len());
-        let mut course_over_ground = Vec::with_capacity(positions.len());
-        let mut rate_of_turn = Vec::with_capacity(positions.len());
-        let mut true_heading = Vec::with_capacity(positions.len());
-        let mut speed_over_ground = Vec::with_capacity(positions.len());
-        let mut timestamp = Vec::with_capacity(positions.len());
-        let mut altitude = Vec::with_capacity(positions.len());
-        let mut distance_to_shore = Vec::with_capacity(positions.len());
-        let mut navigation_status_id = Vec::with_capacity(positions.len());
-        let mut ais_class = Vec::with_capacity(positions.len());
-        let mut ais_message_type = Vec::with_capacity(positions.len());
-
-        let mut latest_position_per_vessel: HashMap<Mmsi, NewAisPosition> = HashMap::new();
+        let len = positions.len();
+        let mut mmsis = Vec::<NewAisVesselMmsi>::with_capacity(len);
+        let mut ais_positions = Vec::<models::NewAisPosition>::with_capacity(len);
+        let mut current_positions = HashMap::<Mmsi, NewAisCurrentPosition>::with_capacity(len);
 
         for p in positions {
-            latest_position_per_vessel
+            mmsis.push(p.into());
+            ais_positions.push(p.into());
+            current_positions
                 .entry(p.mmsi)
                 .and_modify(|v| {
-                    if p.msgtime > v.msgtime {
-                        *v = p.clone();
+                    if p.msgtime > v.timestamp {
+                        *v = p.into();
                     }
                 })
-                .or_insert_with(|| p.clone());
-
-            mmsis.push(p.mmsi);
-            latitude.push(p.latitude);
-            longitude.push(p.longitude);
-            course_over_ground.push(p.course_over_ground);
-            rate_of_turn.push(p.rate_of_turn);
-            true_heading.push(p.true_heading);
-            speed_over_ground.push(p.speed_over_ground);
-            altitude.push(p.altitude);
-            distance_to_shore.push(p.distance_to_shore);
-            navigation_status_id.push(p.navigational_status as i32);
-            timestamp.push(p.msgtime);
-            ais_class.push(p.ais_class.map(<&str>::from));
-            ais_message_type.push(p.message_type_id);
+                .or_insert_with(|| p.into());
         }
 
         let mut tx = self.pool.begin().await?;
 
-        sqlx::query!(
-            r#"
-INSERT INTO
-    ais_vessels (mmsi)
-VALUES
-    (UNNEST($1::INT[]))
-ON CONFLICT (mmsi) DO NOTHING
-            "#,
-            &mmsis as &[Mmsi],
-        )
-        .execute(&mut *tx)
-        .await?;
-
-        let inserted = sqlx::query!(
-            r#"
-INSERT INTO
-    ais_positions (
-        mmsi,
-        latitude,
-        longitude,
-        course_over_ground,
-        rate_of_turn,
-        true_heading,
-        speed_over_ground,
-        TIMESTAMP,
-        altitude,
-        distance_to_shore,
-        ais_class,
-        ais_message_type_id,
-        navigation_status_id
-    )
-SELECT
-    *
-FROM
-    UNNEST(
-        $1::INT[],
-        $2::DOUBLE PRECISION[],
-        $3::DOUBLE PRECISION[],
-        $4::DOUBLE PRECISION[],
-        $5::DOUBLE PRECISION[],
-        $6::INT[],
-        $7::DOUBLE PRECISION[],
-        $8::TIMESTAMPTZ[],
-        $9::INT[],
-        $10::DOUBLE PRECISION[],
-        $11::VARCHAR[],
-        $12::INT[],
-        $13::INT[]
-    )
-ON CONFLICT (mmsi, TIMESTAMP) DO NOTHING
-RETURNING
-    mmsi AS "mmsi!: Mmsi",
-    latitude,
-    longitude,
-    "timestamp"
-            "#,
-            &mmsis as &[Mmsi],
-            &latitude,
-            &longitude,
-            &course_over_ground as _,
-            &rate_of_turn as _,
-            &true_heading as _,
-            &speed_over_ground as _,
-            &timestamp,
-            &altitude as _,
-            &distance_to_shore,
-            &ais_class as _,
-            &ais_message_type as _,
-            &navigation_status_id,
-        )
-        .fetch_all(&mut *tx)
-        .await?;
-
-        for (_, p) in latest_position_per_vessel {
-            let latitude = p.latitude;
-            let longitude = p.longitude;
-            let course_over_ground = p.course_over_ground;
-            let rate_of_turn = p.rate_of_turn;
-            let speed_over_ground = p.speed_over_ground;
-            let distance_to_shore = p.distance_to_shore;
-            let ais_class = p.ais_class.map(<&str>::from);
-
-            sqlx::query!(
-                r#"
-INSERT INTO
-    current_ais_positions (
-        mmsi,
-        latitude,
-        longitude,
-        course_over_ground,
-        rate_of_turn,
-        true_heading,
-        speed_over_ground,
-        TIMESTAMP,
-        altitude,
-        distance_to_shore,
-        ais_class,
-        ais_message_type_id,
-        navigation_status_id
-    )
-VALUES
-    (
-        $1::INT,
-        $2::DOUBLE PRECISION,
-        $3::DOUBLE PRECISION,
-        $4::DOUBLE PRECISION,
-        $5::DOUBLE PRECISION,
-        $6::INT,
-        $7::DOUBLE PRECISION,
-        $8::timestamptz,
-        $9::INT,
-        $10::DOUBLE PRECISION,
-        $11::VARCHAR,
-        $12::INT,
-        $13::INT
-    )
-ON CONFLICT (mmsi) DO UPDATE
-SET
-    latitude = excluded.latitude,
-    longitude = excluded.longitude,
-    course_over_ground = excluded.course_over_ground,
-    rate_of_turn = excluded.rate_of_turn,
-    true_heading = excluded.true_heading,
-    speed_over_ground = excluded.speed_over_ground,
-    "timestamp" = excluded.timestamp,
-    altitude = excluded.altitude,
-    distance_to_shore = excluded.distance_to_shore,
-    ais_class = excluded.ais_class,
-    ais_message_type_id = excluded.ais_message_type_id,
-    navigation_status_id = excluded.navigation_status_id
-WHERE
-    excluded.timestamp > current_ais_positions.timestamp
-                "#,
-                p.mmsi.into_inner(),
-                latitude,
-                longitude,
-                course_over_ground,
-                rate_of_turn,
-                p.true_heading,
-                speed_over_ground,
-                p.msgtime,
-                p.altitude,
-                distance_to_shore,
-                ais_class,
-                p.message_type_id,
-                p.navigational_status as i32,
-            )
-            .execute(&mut *tx)
+        self.unnest_insert(mmsis, &mut *tx).await?;
+        let inserted = self
+            .unnest_insert_returning(ais_positions, &mut *tx)
             .await?;
-        }
+        self.unnest_insert(current_positions.into_values(), &mut *tx)
+            .await?;
 
         let len = inserted.len();
         let mut lat = Vec::with_capacity(len);
