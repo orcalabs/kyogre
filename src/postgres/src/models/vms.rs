@@ -6,10 +6,25 @@ use serde::Deserialize;
 use unnest_insert::UnnestInsert;
 
 #[derive(Deserialize, Debug, Clone, UnnestInsert)]
-#[unnest_insert(table_name = "vms_positions", conflict = "call_sign, timestamp")]
+#[unnest_insert(
+    table_name = "vms_positions",
+    conflict = "call_sign,timestamp",
+    returning = "call_sign:String,timestamp",
+    where_clause = "
+        vms_positions.course != excluded.course
+        OR vms_positions.gross_tonnage != excluded.gross_tonnage
+        OR vms_positions.latitude != excluded.latitude
+        OR vms_positions.longitude != excluded.longitude
+        OR vms_positions.registration_id != excluded.registration_id
+        OR vms_positions.speed != excluded.speed
+        OR vms_positions.distance_to_shore != excluded.distance_to_shore
+    "
+)]
 pub struct NewVmsPosition<'a> {
     pub call_sign: &'a str,
-    #[unnest_insert(conflict = "COALESCE(NULLIF(course, 0), excluded.course)")]
+    #[unnest_insert(
+        update = "course = COALESCE(NULLIF(vms_positions.course, 0), excluded.course)"
+    )]
     pub course: Option<i32>,
     #[unnest_insert(update_coalesce)]
     pub gross_tonnage: Option<i32>,
@@ -22,7 +37,7 @@ pub struct NewVmsPosition<'a> {
     pub message_type_code: &'a str,
     #[unnest_insert(update_coalesce)]
     pub registration_id: Option<&'a str>,
-    #[unnest_insert(conflict = "COALESCE(NULLIF(speed, 0), excluded.speed)")]
+    #[unnest_insert(update = "speed = COALESCE(NULLIF(vms_positions.speed, 0), excluded.speed)")]
     pub speed: Option<f64>,
     pub timestamp: DateTime<Utc>,
     pub vessel_length: f64,
