@@ -30,7 +30,7 @@ strum = { workspace = true }
 geozero = { workspace = true }
 async-channel = { workspace = true }
 
-unnest_insert = { version = "0.11.1", registry = "orcalabs-orcastrator", features = [
+unnest_insert = { version = "0.12.0", registry = "orcalabs-orcastrator", features = [
     "derive",
 ] }
 
