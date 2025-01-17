@@ -6,7 +6,7 @@ use crate::{
 use chrono::{DateTime, NaiveDate, Utc};
 use fiskeridir_rs::CallSign;
 use futures::{Stream, TryStreamExt};
-use kyogre_core::{DateRange, Mmsi, PositionType, ProcessingStatus};
+use kyogre_core::{ais_area_window, DateRange, Mmsi, PositionType, ProcessingStatus};
 use std::collections::{hash_map::Entry, HashMap, HashSet};
 
 impl PostgresAdapter {
@@ -156,17 +156,21 @@ SELECT
         let mut position_type_id = Vec::with_capacity(len);
         let mut call_sign = Vec::with_capacity(len);
 
+        let limit = Utc::now() - ais_area_window();
         for v in vms_unique.values() {
-            lat.push(v.latitude);
-            lon.push(v.longitude);
-            timestamp.push(v.timestamp);
-            position_type_id.push(PositionType::Vms as i32);
-            call_sign.push(v.call_sign);
+            if v.timestamp > limit {
+                lat.push(v.latitude);
+                lon.push(v.longitude);
+                timestamp.push(v.timestamp);
+                position_type_id.push(PositionType::Vms as i32);
+                call_sign.push(v.call_sign);
+            }
         }
 
-        let area_positions_inserted = sqlx::query_as!(
-            AisVmsAreaPositionsReturning,
-            r#"
+        if !lat.is_empty() {
+            let area_positions_inserted = sqlx::query_as!(
+                AisVmsAreaPositionsReturning,
+                r#"
 INSERT INTO
     ais_vms_area_positions AS a (
         latitude,
@@ -205,17 +209,18 @@ RETURNING
     a.call_sign,
     a.mmsi AS "mmsi?: Mmsi"
             "#,
-            &lat,
-            &lon,
-            &timestamp,
-            &position_type_id,
-            &call_sign as &[&str],
-        )
-        .fetch_all(&mut *tx)
-        .await?;
-
-        self.add_ais_vms_aggregated(area_positions_inserted, &mut tx)
+                &lat,
+                &lon,
+                &timestamp,
+                &position_type_id,
+                &call_sign as &[&str],
+            )
+            .fetch_all(&mut *tx)
             .await?;
+
+            self.add_ais_vms_aggregated(area_positions_inserted, &mut tx)
+                .await?;
+        }
 
         let inserted = self
             .unnest_insert_returning(vms_unique.into_values(), &mut *tx)
