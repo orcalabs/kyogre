@@ -31,6 +31,7 @@ pub struct OrgBenchmarks {
     pub trip_distance: f64,
     pub trip_time: i64,
     pub landing_total_living_weight: f64,
+    pub price_for_fisher: f64,
     pub vessels: String,
 }
 
@@ -41,6 +42,7 @@ pub struct OrgBenchmarkEntry {
     pub trip_distance: f64,
     pub trip_time: i64,
     pub landing_total_living_weight: f64,
+    pub price_for_fisher: f64,
     pub species: Vec<OrgBenchmarkSpecies>,
 }
 
@@ -48,6 +50,7 @@ pub struct OrgBenchmarkEntry {
 pub struct OrgBenchmarkSpecies {
     pub species_group_id: SpeciesGroup,
     pub landing_total_living_weight: f64,
+    pub price_for_fisher: f64,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -77,6 +80,7 @@ impl From<OrgBenchmarkEntry> for kyogre_core::OrgBenchmarkEntry {
             trip_time,
             landing_total_living_weight,
             species,
+            price_for_fisher,
         } = value;
         Self {
             fiskeridir_vessel_id,
@@ -88,6 +92,7 @@ impl From<OrgBenchmarkEntry> for kyogre_core::OrgBenchmarkEntry {
                 .into_iter()
                 .map(kyogre_core::OrgBenchmarkSpecies::from)
                 .collect(),
+            price_for_fisher,
         }
     }
 }
@@ -96,10 +101,12 @@ impl From<OrgBenchmarkSpecies> for kyogre_core::OrgBenchmarkSpecies {
         let OrgBenchmarkSpecies {
             species_group_id,
             landing_total_living_weight,
+            price_for_fisher,
         } = value;
         Self {
             species_group_id,
             landing_total_living_weight,
+            price_for_fisher,
         }
     }
 }
@@ -400,6 +407,7 @@ impl TryFrom<OrgBenchmarks> for kyogre_core::OrgBenchmarks {
             trip_time,
             landing_total_living_weight,
             vessels,
+            price_for_fisher,
         } = value;
 
         Ok(Self {
@@ -411,6 +419,7 @@ impl TryFrom<OrgBenchmarks> for kyogre_core::OrgBenchmarks {
                 .into_iter()
                 .map(kyogre_core::OrgBenchmarkEntry::from)
                 .collect(),
+            price_for_fisher,
         })
     }
 }

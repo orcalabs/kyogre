@@ -878,7 +878,8 @@ async fn test_vessels_returns_correct_current_trip() {
             .build()
             .await;
 
-        let vessels = helper.app.get_vessels().await.unwrap();
+        let mut vessels = helper.app.get_vessels().await.unwrap();
+        vessels.sort_by_key(|v| v.fiskeridir.id);
 
         let trip = vessels[0].current_trip.as_ref().unwrap();
         let trip2 = vessels[1].current_trip.as_ref().unwrap();
