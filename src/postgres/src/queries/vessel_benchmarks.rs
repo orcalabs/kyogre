@@ -24,6 +24,7 @@ WITH
             SUM(distance) AS distance,
             SUM(trip_duration) AS trip_duration,
             SUM(landing_total_living_weight) AS landing_total_living_weight,
+            SUM(landing_total_price_for_fisher) AS price_for_fisher,
             ARRAY_CONCAT (landing_ids) FILTER (
                 WHERE
                     landing_ids IS NOT NULL
@@ -61,6 +62,7 @@ SELECT
         0
     )::BIGINT AS "trip_time!",
     COALESCE(SUM(q.landing_total_living_weight), 0.0)::DOUBLE PRECISION AS "landing_total_living_weight!",
+    COALESCE(SUM(q.price_for_fisher), 0.0)::DOUBLE PRECISION AS "price_for_fisher!",
     COALESCE(
         JSONB_AGG(
             JSONB_BUILD_OBJECT(
@@ -88,6 +90,8 @@ SELECT
                 )::BIGINT,
                 'landing_total_living_weight',
                 COALESCE(q.landing_total_living_weight, 0.0)::DOUBLE PRECISION,
+                'price_for_fisher',
+                COALESCE(q.price_for_fisher, 0.0)::DOUBLE PRECISION,
                 'species',
                 COALESCE(q.species, '[]')::JSONB
             )
@@ -103,12 +107,15 @@ FROM
             MAX(t.distance) AS distance,
             MAX(t.trip_duration) AS trip_duration,
             MAX(t.landing_total_living_weight) AS landing_total_living_weight,
+            MAX(t.price_for_fisher) AS price_for_fisher,
             JSONB_AGG(
                 JSONB_BUILD_OBJECT(
                     'species_group_id',
                     q.species_group_id,
                     'landing_total_living_weight',
-                    q.living_weight
+                    q.living_weight,
+                    'price_for_fisher',
+                    q.price_for_fisher
                 )
                 ORDER BY
                     q.species_group_id,
@@ -123,7 +130,8 @@ FROM
                 SELECT
                     l.species_group_id,
                     t.fiskeridir_vessel_id,
-                    COALESCE(SUM(l.living_weight), 0.0)::DOUBLE PRECISION AS living_weight
+                    COALESCE(SUM(l.living_weight), 0.0)::DOUBLE PRECISION AS living_weight,
+                    COALESCE(SUM(l.final_price_for_fisher), 0.0)::DOUBLE PRECISION AS price_for_fisher
                 FROM
                     trips t
                     INNER JOIN landing_entries l ON l.landing_id = ANY (t.landing_ids)

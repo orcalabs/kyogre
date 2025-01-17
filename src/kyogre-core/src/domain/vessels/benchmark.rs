@@ -21,6 +21,7 @@ pub struct OrgBenchmarks {
     pub trip_time: u64,
     /// Unit is in KG
     pub landing_total_living_weight: f64,
+    pub price_for_fisher: f64,
     pub vessels: Vec<OrgBenchmarkEntry>,
 }
 
@@ -37,6 +38,7 @@ pub struct OrgBenchmarkEntry {
     pub trip_time: u64,
     /// Unit is in KG
     pub landing_total_living_weight: f64,
+    pub price_for_fisher: f64,
     pub species: Vec<OrgBenchmarkSpecies>,
 }
 
@@ -49,6 +51,7 @@ pub struct OrgBenchmarkSpecies {
     pub species_group_id: SpeciesGroup,
     /// Unit is in KG
     pub landing_total_living_weight: f64,
+    pub price_for_fisher: f64,
 }
 
 #[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
