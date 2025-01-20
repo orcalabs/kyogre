@@ -10,9 +10,9 @@ use chrono::{DateTime, NaiveDate, Utc};
 use fiskeridir_rs::{CallSign, OrgId};
 use futures::{Stream, TryStreamExt};
 use kyogre_core::{
-    live_fuel_year_day_hour, BarentswatchUserId, FiskeridirVesselId, FuelEntry, FuelMeasurement,
-    FuelMeasurementsQuery, FuelQuery, LiveFuelQuery, LiveFuelVessel, Mmsi, NewFuelDayEstimate,
-    NewLiveFuel, ProcessingStatus,
+    BarentswatchUserId, FiskeridirVesselId, FuelEntry, FuelMeasurement, FuelMeasurementsQuery,
+    FuelQuery, LiveFuelQuery, LiveFuelVessel, Mmsi, NewFuelDayEstimate, NewLiveFuel,
+    ProcessingStatus,
 };
 use sqlx::postgres::types::PgRange;
 use unnest_insert::UnnestInsert;
@@ -22,7 +22,6 @@ impl PostgresAdapter {
         &self,
         query: &LiveFuelQuery,
     ) -> impl Stream<Item = Result<kyogre_core::LiveFuelEntry>> + '_ {
-        let (year, day, hour) = live_fuel_year_day_hour(query.threshold);
         sqlx::query_as!(
             kyogre_core::LiveFuelEntry,
             r#"
@@ -34,9 +33,7 @@ FROM
     INNER JOIN live_fuel f ON w.fiskeridir_vessel_id = f.fiskeridir_vessel_id
 WHERE
     w.call_sign = $1
-    AND f.year >= $2
-    AND f.day >= $3
-    AND f.hour >= $4
+    AND truncate_ts_to_hour (f.latest_position_timestamp) >= $2
 GROUP BY
     f.fiskeridir_vessel_id,
     f.year,
@@ -44,9 +41,7 @@ GROUP BY
     f.hour
                     "#,
             query.call_sign.as_ref(),
-            year,
-            day as i32,
-            hour as i32
+            query.threshold
         )
         .fetch(&self.pool)
         .map_err(|e| e.into())
