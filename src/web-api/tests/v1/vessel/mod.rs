@@ -851,7 +851,7 @@ async fn test_live_fuel_returns_all_fuel_within_default_threshold() {
             .await
             .unwrap();
 
-        assert_eq!(fuel.entries.len(), 6);
+        assert_eq!(fuel.entries.len(), 5);
         assert!(!approx_eq!(f64, fuel.total_fuel, 0.0));
         assert!(approx_eq!(
             f64,
