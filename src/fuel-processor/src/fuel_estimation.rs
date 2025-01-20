@@ -141,7 +141,6 @@ async fn vessel_task(
     }
 }
 
-#[instrument(skip(adapter))]
 async fn process_vessel(
     vessel: VesselToProcess,
     adapter: &dyn FuelEstimation,

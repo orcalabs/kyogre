@@ -39,7 +39,6 @@ impl LiveFuel {
         }
     }
 
-    #[instrument(skip_all)]
     async fn process_vessel(&self, vessel: LiveFuelVessel) -> Result<()> {
         let new_fuel = self.compute_fuel_for_vessel(&vessel).await?;
         if !new_fuel.is_empty() {
