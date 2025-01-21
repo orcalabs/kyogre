@@ -67,7 +67,7 @@ FROM
     INNER JOIN trips_detailed t ON v.fiskeridir_vessel_id = t.fiskeridir_vessel_id
     LEFT JOIN current_trips AS c ON v.fiskeridir_vessel_id = c.fiskeridir_vessel_id
 WHERE
-    t.has_track != $1
+    t.has_track > $1
 GROUP BY
     f.fiskeridir_vessel_id,
     a.mmsi
