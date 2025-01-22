@@ -144,6 +144,8 @@ pub struct FiskeridirVessel {
     pub auxiliary_engine_building_year: Option<u32>,
     pub boiler_engine_power: Option<u32>,
     pub boiler_engine_building_year: Option<u32>,
+    pub degree_of_electrification: Option<f64>,
+    pub service_speed: Option<f64>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, OaSchema, PartialEq)]
@@ -252,6 +254,8 @@ impl From<kyogre_core::FiskeridirVessel> for FiskeridirVessel {
             auxiliary_engine_building_year,
             boiler_engine_building_year,
             engine_version: _,
+            degree_of_electrification,
+            service_speed,
         } = value;
 
         FiskeridirVessel {
@@ -267,9 +271,11 @@ impl From<kyogre_core::FiskeridirVessel> for FiskeridirVessel {
             engine_power,
             building_year,
             auxiliary_engine_power,
-            boiler_engine_power,
             auxiliary_engine_building_year,
+            boiler_engine_power,
             boiler_engine_building_year,
+            degree_of_electrification,
+            service_speed,
         }
     }
 }
@@ -292,6 +298,8 @@ impl PartialEq<fiskeridir_rs::Vessel> for FiskeridirVessel {
             boiler_engine_power: _,
             auxiliary_engine_building_year: _,
             boiler_engine_building_year: _,
+            degree_of_electrification: _,
+            service_speed: _,
         } = self;
 
         Some(*id) == other.id
@@ -337,6 +345,8 @@ impl PartialEq<kyogre_core::FiskeridirVessel> for FiskeridirVessel {
             boiler_engine_power,
             auxiliary_engine_building_year,
             boiler_engine_building_year,
+            degree_of_electrification,
+            service_speed,
         } = self;
 
         *id == other.id
@@ -352,6 +362,8 @@ impl PartialEq<kyogre_core::FiskeridirVessel> for FiskeridirVessel {
             && *auxiliary_engine_building_year == other.auxiliary_engine_building_year
             && *boiler_engine_power == other.boiler_engine_power
             && *boiler_engine_building_year == other.boiler_engine_building_year
+            && *degree_of_electrification == other.degree_of_electrification
+            && *service_speed == other.service_speed
     }
 }
 
@@ -382,6 +394,8 @@ impl PartialEq<UpdateVessel> for Vessel {
             boiler_engine_power,
             auxiliary_engine_building_year,
             boiler_engine_building_year,
+            degree_of_electrification,
+            service_speed,
         } = other;
 
         self.fiskeridir.engine_power == *engine_power
@@ -390,6 +404,8 @@ impl PartialEq<UpdateVessel> for Vessel {
             && self.fiskeridir.auxiliary_engine_building_year == *auxiliary_engine_building_year
             && self.fiskeridir.boiler_engine_power == *boiler_engine_power
             && self.fiskeridir.boiler_engine_building_year == *boiler_engine_building_year
+            && self.fiskeridir.degree_of_electrification == *degree_of_electrification
+            && self.fiskeridir.service_speed == *service_speed
     }
 }
 

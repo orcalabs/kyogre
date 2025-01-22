@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT\n    trip_id AS \"trip_id!: TripId\",\n    period AS \"period: DateRange\",\n    period_precision AS \"period_precision?: DateRange\",\n    CASE\n        WHEN trip_assembler_id = 1 THEN landing_total_living_weight\n        WHEN trip_assembler_id = 2 THEN haul_total_weight::DOUBLE PRECISION\n        ELSE NULL\n    END AS \"total_catch_weight!\",\n    landing_total_price_for_fisher AS total_catch_value,\n    distance,\n    f.fiskeridir_length_group_id AS \"vessel_length_group: VesselLengthGroup\",\n    f.engine_power_final AS engine_power,\n    f.engine_building_year_final AS engine_building_year,\n    f.auxiliary_engine_power,\n    f.auxiliary_engine_building_year,\n    f.boiler_engine_power,\n    f.boiler_engine_building_year\nFROM\n    trips_detailed t\n    INNER JOIN fiskeridir_vessels f ON t.fiskeridir_vessel_id = f.fiskeridir_vessel_id\nWHERE\n    benchmark_status = $1\n            ",
+  "query": "\nSELECT\n    trip_id AS \"trip_id!: TripId\",\n    period AS \"period: DateRange\",\n    period_precision AS \"period_precision?: DateRange\",\n    CASE\n        WHEN trip_assembler_id = 1 THEN landing_total_living_weight\n        WHEN trip_assembler_id = 2 THEN haul_total_weight::DOUBLE PRECISION\n        ELSE NULL\n    END AS \"total_catch_weight!\",\n    landing_total_price_for_fisher AS total_catch_value,\n    distance,\n    f.fiskeridir_length_group_id AS \"vessel_length_group: VesselLengthGroup\",\n    f.engine_power_final AS engine_power,\n    f.engine_building_year_final AS engine_building_year,\n    f.auxiliary_engine_power,\n    f.auxiliary_engine_building_year,\n    f.boiler_engine_power,\n    f.boiler_engine_building_year,\n    f.service_speed,\n    f.degree_of_electrification\nFROM\n    trips_detailed t\n    INNER JOIN fiskeridir_vessels f ON t.fiskeridir_vessel_id = f.fiskeridir_vessel_id\nWHERE\n    benchmark_status = $1\n            ",
   "describe": {
     "columns": [
       {
@@ -67,6 +67,16 @@
         "ordinal": 12,
         "name": "boiler_engine_building_year",
         "type_info": "Int4"
+      },
+      {
+        "ordinal": 13,
+        "name": "service_speed",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 14,
+        "name": "degree_of_electrification",
+        "type_info": "Float8"
       }
     ],
     "parameters": {
@@ -87,8 +97,10 @@
       true,
       true,
       true,
+      true,
+      true,
       true
     ]
   },
-  "hash": "6273440bcf3e388e1b1d579816b332228354c8084ea458f3b631c7f3972a4ec3"
+  "hash": "8252ea55b57183141a774488f8fdea123903f6086de5a2794697cc4bf390a978"
 }
