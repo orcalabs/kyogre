@@ -1,8 +1,7 @@
 use crate::{
     error::Result,
     models::{
-        DeleteFuelMeasurement, UpdateTripPositionFuel, UpsertFuelEstimation, UpsertFuelMeasurement,
-        UpsertNewLiveFuel,
+        DeleteFuelMeasurement, UpdateTripPositionFuel, UpsertFuelMeasurement, UpsertNewLiveFuel,
     },
     PostgresAdapter,
 };
@@ -75,6 +74,10 @@ SELECT
     f.fiskeridir_vessel_id AS "vessel_id!: FiskeridirVesselId",
     f.engine_building_year_final AS "engine_building_year!",
     f.engine_power_final AS "engine_power!",
+    f.auxiliary_engine_power AS auxiliary_engine_power,
+    f.auxiliary_engine_building_year AS auxiliary_engine_building_year,
+    f.boiler_engine_power AS boiler_engine_power,
+    f.boiler_engine_building_year AS boiler_engine_building_year,
     t.departure_timestamp AS "current_trip_start?",
     q.latest_position_timestamp AS "latest_position_timestamp?"
 FROM
@@ -196,8 +199,54 @@ WHERE
         &self,
         estimates: &[NewFuelDayEstimate],
     ) -> Result<()> {
-        self.unnest_insert_from::<_, _, UpsertFuelEstimation>(estimates, &self.pool)
-            .await
+        let mut vessel_id = Vec::with_capacity(estimates.len());
+        let mut engine_version = Vec::with_capacity(estimates.len());
+        let mut date = Vec::with_capacity(estimates.len());
+        let mut estimate = Vec::with_capacity(estimates.len());
+        let mut status = Vec::with_capacity(estimates.len());
+        for e in estimates {
+            vessel_id.push(e.vessel_id.into_inner());
+            engine_version.push(e.engine_version as i32);
+            date.push(e.date);
+            estimate.push(e.estimate);
+            status.push(ProcessingStatus::Successful as i32);
+        }
+
+        sqlx::query!(
+            r#"
+INSERT INTO
+    fuel_estimates (fiskeridir_vessel_id, date, estimate, status)
+SELECT
+    u.id,
+    u.date,
+    u.estimate,
+    u.status
+FROM
+    fiskeridir_vessels f
+    INNER JOIN UNNEST(
+        $1::BIGINT[],
+        $2::INT[],
+        $3::DATE[],
+        $4::INT[],
+        $5::DOUBLE PRECISION[]
+    ) u (id, engine_version, date, status, estimate) ON u.id = f.fiskeridir_vessel_id
+    AND u.engine_version = f.engine_version
+ON CONFLICT (fiskeridir_vessel_id, date) DO
+UPDATE
+SET
+    estimate = EXCLUDED.estimate,
+    status = EXCLUDED.status
+            "#,
+            &vessel_id,
+            &engine_version,
+            &date,
+            &status,
+            &estimate
+        )
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
     }
     pub(crate) async fn fuel_estimation_by_org_impl(
         &self,

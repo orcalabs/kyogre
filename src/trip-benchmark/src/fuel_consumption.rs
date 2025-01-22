@@ -21,12 +21,10 @@ impl TripBenchmark for FuelConsumption {
         adapter: &dyn TripBenchmarkOutbound,
         output: &mut TripBenchmarkOutput,
     ) -> CoreResult<()> {
-        let Some(sfc) = trip.sfc() else {
+        let engines = trip.engines();
+        if engines.is_empty() {
             return Ok(());
-        };
-        let Some(engine_power_kw) = trip.engine_power_kw() else {
-            return Ok(());
-        };
+        }
 
         let track = adapter.track_of_trip_with_haul(trip.trip_id).await?;
 
@@ -36,18 +34,15 @@ impl TripBenchmark for FuelConsumption {
 
         let mut fuel_updates = Vec::with_capacity(track.len());
 
-        let fuel_consumption_tonnes = estimate_fuel(
-            sfc,
-            engine_power_kw,
-            track,
-            &mut fuel_updates,
-            |p, cumulative_fuel| UpdateTripPositionFuel {
-                trip_id: trip.trip_id,
-                timestamp: p.timestamp,
-                position_type_id: p.position_type_id,
-                trip_cumulative_fuel_consumption: cumulative_fuel,
-            },
-        );
+        let fuel_consumption_tonnes =
+            estimate_fuel(&engines, track, &mut fuel_updates, |p, cumulative_fuel| {
+                UpdateTripPositionFuel {
+                    trip_id: trip.trip_id,
+                    timestamp: p.timestamp,
+                    position_type_id: p.position_type_id,
+                    trip_cumulative_fuel_consumption: cumulative_fuel,
+                }
+            });
 
         adapter
             .update_trip_position_fuel_consumption(&fuel_updates)
