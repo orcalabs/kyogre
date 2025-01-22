@@ -72,9 +72,13 @@ SELECT
     END AS "total_catch_weight!",
     landing_total_price_for_fisher AS total_catch_value,
     distance,
-    f.fiskeridir_length_group_id as "vessel_length_group: VesselLengthGroup",
-    f.engine_power_final as engine_power,
-    f.engine_building_year_final as engine_building_year
+    f.fiskeridir_length_group_id AS "vessel_length_group: VesselLengthGroup",
+    f.engine_power_final AS engine_power,
+    f.engine_building_year_final AS engine_building_year,
+    f.auxiliary_engine_power,
+    f.auxiliary_engine_building_year,
+    f.boiler_engine_power,
+    f.boiler_engine_building_year
 FROM
     trips_detailed t
     INNER JOIN fiskeridir_vessels f ON t.fiskeridir_vessel_id = f.fiskeridir_vessel_id

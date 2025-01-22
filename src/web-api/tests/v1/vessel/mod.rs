@@ -5,6 +5,8 @@ use fiskeridir_rs::SpeciesGroup;
 use fiskeridir_rs::{CallSign, GearGroup};
 use float_cmp::approx_eq;
 use http_client::StatusCode;
+use kyogre_core::FuelEstimation;
+use kyogre_core::ScraperInboundPort;
 use kyogre_core::{
     ActiveVesselConflict, FiskeridirVesselId, Mmsi, ProcessingStatus, TestHelperOutbound,
     UpdateVessel, VesselSource,
@@ -500,6 +502,10 @@ async fn test_update_vessel_succeeds() {
         let update = UpdateVessel {
             engine_power: Some(2000),
             engine_building_year: Some(1233231),
+            auxiliary_engine_power: Some(100),
+            boiler_engine_power: Some(50),
+            auxiliary_engine_building_year: Some(1233231),
+            boiler_engine_building_year: Some(1233231),
         };
         helper.app.login_user();
         let new_vessel = helper.app.update_vessel(&update).await.unwrap();
@@ -533,6 +539,10 @@ async fn test_update_vessel_resets_benchmarks() {
         let update = UpdateVessel {
             engine_power: Some(2000),
             engine_building_year: Some(1233231),
+            auxiliary_engine_power: Some(100),
+            boiler_engine_power: Some(50),
+            auxiliary_engine_building_year: Some(1233231),
+            boiler_engine_building_year: Some(1233231),
         };
         helper.app.login_user();
         helper.app.update_vessel(&update).await.unwrap();
@@ -544,6 +554,48 @@ async fn test_update_vessel_resets_benchmarks() {
                 .trips_with_benchmark_status(ProcessingStatus::Unprocessed)
                 .await
                 > 0
+        );
+    })
+    .await;
+}
+#[tokio::test]
+async fn test_update_vessel_resets_fuel_estimation() {
+    test(|mut helper, builder| async move {
+        builder
+            .vessels(1)
+            .set_logged_in()
+            .trips(1)
+            .ais_vms_positions(3)
+            .hauls(3)
+            .build()
+            .await;
+
+        let update = UpdateVessel {
+            engine_power: Some(2000),
+            engine_building_year: Some(1233231),
+            auxiliary_engine_power: Some(100),
+            boiler_engine_power: Some(50),
+            auxiliary_engine_building_year: Some(1233231),
+            boiler_engine_building_year: Some(1233231),
+        };
+        helper.app.login_user();
+        helper.app.update_vessel(&update).await.unwrap();
+
+        assert!(
+            helper
+                .db
+                .db
+                .fuel_estimates_with_status(ProcessingStatus::Unprocessed)
+                .await
+                > 0
+        );
+        assert_eq!(
+            helper
+                .db
+                .db
+                .fuel_estimates_with_status(ProcessingStatus::Successful)
+                .await,
+            0
         );
     })
     .await;
@@ -890,6 +942,159 @@ async fn test_vessels_returns_correct_current_trip() {
         assert_eq!(trip2.target_species_fiskeridir_id, Some(101));
 
         assert!(vessels[2].current_trip.is_none());
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_update_vessel_with_engine_info_recomputes_fuel() {
+    test(|mut helper, builder| async move {
+        let start = Utc.with_ymd_and_hms(2020, 5, 1, 0, 0, 0).unwrap();
+        let end = start + Duration::days(10);
+        builder
+            .vessels(1)
+            .set_logged_in()
+            .trips(1)
+            .modify(|t| {
+                t.trip_specification.set_start(start);
+                t.trip_specification.set_end(end);
+            })
+            .vms_positions(10)
+            .build()
+            .await;
+
+        helper.app.login_user();
+
+        let fuel = helper
+            .app
+            .get_vessel_fuel(FuelParams {
+                start_date: Some(start.date_naive()),
+                end_date: Some(end.date_naive()),
+            })
+            .await
+            .unwrap();
+
+        let trip_fuel = helper
+            .app
+            .get_trips(Default::default())
+            .await
+            .unwrap()
+            .pop()
+            .unwrap()
+            .fuel_consumption
+            .unwrap();
+
+        helper
+            .app
+            .update_vessel(&UpdateVessel {
+                engine_power: Some(2000),
+                engine_building_year: Some(2000),
+                auxiliary_engine_power: Some(2000),
+                auxiliary_engine_building_year: Some(2000),
+                boiler_engine_power: Some(2000),
+                boiler_engine_building_year: Some(2000),
+            })
+            .await
+            .unwrap();
+
+        helper.builder().await.build().await;
+
+        let trip_fuel2 = helper
+            .app
+            .get_trips(Default::default())
+            .await
+            .unwrap()
+            .pop()
+            .unwrap()
+            .fuel_consumption
+            .unwrap();
+        let fuel2 = helper
+            .app
+            .get_vessel_fuel(FuelParams {
+                start_date: Some(start.date_naive()),
+                end_date: Some(end.date_naive()),
+            })
+            .await
+            .unwrap();
+
+        assert!(fuel2 > fuel);
+        assert!(trip_fuel2 > trip_fuel);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_update_vessel_with_engine_info_stops_fuel_estimation_from_comitting_with_stale_info()
+{
+    test(|mut helper, builder| async move {
+        let start = Utc.with_ymd_and_hms(2020, 5, 1, 0, 0, 0).unwrap();
+        let end = start + Duration::days(10);
+        let fuel_processor = builder.fuel_processor.clone();
+
+        builder
+            .vessels(1)
+            .set_logged_in()
+            .trips(1)
+            .modify(|t| {
+                t.trip_specification.set_start(start);
+                t.trip_specification.set_end(end);
+            })
+            .ais_vms_positions(10)
+            .build()
+            .await;
+
+        helper.app.login_user();
+
+        let fuel = helper
+            .app
+            .get_vessel_fuel(FuelParams {
+                start_date: Some(start.date_naive()),
+                end_date: Some(end.date_naive()),
+            })
+            .await
+            .unwrap();
+
+        let vessels = helper.adapter().vessels_with_trips(1).await.unwrap();
+        let cs = vessels[0].fiskeridir.call_sign.clone().unwrap();
+
+        helper
+            .app
+            .update_vessel(&UpdateVessel {
+                engine_power: Some(2000),
+                engine_building_year: Some(2000),
+                auxiliary_engine_power: Some(2000),
+                auxiliary_engine_building_year: Some(2000),
+                boiler_engine_power: Some(2000),
+                boiler_engine_building_year: Some(2000),
+            })
+            .await
+            .unwrap();
+
+        helper
+            .adapter()
+            .add_vms(vec![
+                fiskeridir_rs::Vms::test_default(100, cs.clone(), end + Duration::seconds(1)),
+                fiskeridir_rs::Vms::test_default(101, cs, end + Duration::seconds(2)),
+            ])
+            .await
+            .unwrap();
+
+        fuel_processor
+            .estimator
+            .run_single(Some(vessels))
+            .await
+            .unwrap();
+
+        let fuel2 = helper
+            .app
+            .get_vessel_fuel(FuelParams {
+                start_date: Some(start.date_naive()),
+                end_date: Some(end.date_naive()),
+            })
+            .await
+            .unwrap();
+
+        assert!(approx_eq!(f64, fuel, fuel2));
     })
     .await;
 }

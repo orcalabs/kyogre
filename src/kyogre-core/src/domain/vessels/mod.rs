@@ -28,6 +28,10 @@ pub static IGNORED_CONFLICT_CALL_SIGNS: &[&str] = &["00000000", "0"];
 pub struct UpdateVessel {
     pub engine_power: Option<u32>,
     pub engine_building_year: Option<u32>,
+    pub auxiliary_engine_power: Option<u32>,
+    pub auxiliary_engine_building_year: Option<u32>,
+    pub boiler_engine_power: Option<u32>,
+    pub boiler_engine_building_year: Option<u32>,
 }
 
 #[derive(Debug, Clone)]
@@ -38,11 +42,40 @@ pub struct LiveFuelVessel {
     pub latest_position_timestamp: Option<DateTime<Utc>>,
     pub engine_building_year: i32,
     pub engine_power: f64,
+    pub auxiliary_engine_power: Option<i32>,
+    pub auxiliary_engine_building_year: Option<i32>,
+    pub boiler_engine_power: Option<i32>,
+    pub boiler_engine_building_year: Option<i32>,
 }
 
 impl LiveFuelVessel {
-    pub fn engine_power_kw(&self) -> f64 {
-        self.engine_power * HP_TO_KW
+    pub fn engines(&self) -> Vec<VesselEngine> {
+        let mut vessels = vec![VesselEngine {
+            power_kw: self.engine_power * HP_TO_KW,
+            sfc: sfc(self.engine_building_year as u32),
+            engine_type: EngineType::Main,
+        }];
+
+        if let (Some(p), Some(b)) = (
+            self.auxiliary_engine_power,
+            self.auxiliary_engine_building_year,
+        ) {
+            vessels.push(VesselEngine {
+                power_kw: p as f64 * HP_TO_KW,
+                sfc: sfc(b as u32),
+                engine_type: EngineType::Auxiliary,
+            });
+        };
+
+        if let (Some(p), Some(b)) = (self.boiler_engine_power, self.boiler_engine_building_year) {
+            vessels.push(VesselEngine {
+                power_kw: p as f64 * HP_TO_KW,
+                sfc: sfc(b as u32),
+                engine_type: EngineType::Boiler,
+            });
+        };
+
+        vessels
     }
 }
 
@@ -170,6 +203,11 @@ pub struct FiskeridirVessel {
     pub engine_building_year: Option<u32>,
     pub engine_power: Option<u32>,
     pub building_year: Option<u32>,
+    pub auxiliary_engine_power: Option<u32>,
+    pub auxiliary_engine_building_year: Option<u32>,
+    pub boiler_engine_power: Option<u32>,
+    pub boiler_engine_building_year: Option<u32>,
+    pub engine_version: u32,
 }
 
 pub fn sfc(engine_building_year: u32) -> f64 {
@@ -190,12 +228,58 @@ impl Vessel {
     pub fn mmsi(&self) -> Option<Mmsi> {
         self.ais.as_ref().map(|v| v.mmsi)
     }
-    pub fn sfc(&self) -> Option<f64> {
-        self.fiskeridir.engine_building_year.map(sfc)
+
+    pub fn engines(&self) -> Vec<VesselEngine> {
+        let mut vessels = Vec::with_capacity(3);
+
+        if let (Some(p), Some(b)) = (
+            self.fiskeridir.engine_power,
+            self.fiskeridir.engine_building_year,
+        ) {
+            vessels.push(VesselEngine {
+                power_kw: p as f64 * HP_TO_KW,
+                sfc: sfc(b),
+                engine_type: EngineType::Main,
+            });
+        };
+
+        if let (Some(p), Some(b)) = (
+            self.fiskeridir.auxiliary_engine_power,
+            self.fiskeridir.auxiliary_engine_building_year,
+        ) {
+            vessels.push(VesselEngine {
+                power_kw: p as f64 * HP_TO_KW,
+                sfc: sfc(b),
+                engine_type: EngineType::Auxiliary,
+            });
+        };
+
+        if let (Some(p), Some(b)) = (
+            self.fiskeridir.boiler_engine_power,
+            self.fiskeridir.boiler_engine_building_year,
+        ) {
+            vessels.push(VesselEngine {
+                power_kw: p as f64 * HP_TO_KW,
+                sfc: sfc(b),
+                engine_type: EngineType::Boiler,
+            });
+        };
+
+        vessels
     }
-    pub fn engine_power_kw(&self) -> Option<f64> {
-        self.fiskeridir.engine_power.map(|v| v as f64 * HP_TO_KW)
-    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum EngineType {
+    Main,
+    Auxiliary,
+    Boiler,
+}
+#[derive(Debug, Clone)]
+pub struct VesselEngine {
+    pub power_kw: f64,
+    pub sfc: f64,
+    pub engine_type: EngineType,
 }
 
 #[derive(

@@ -21,6 +21,7 @@ pub struct DeleteFuelMeasurement {
 #[derive(Debug, Clone)]
 pub struct NewFuelDayEstimate {
     pub vessel_id: FiskeridirVesselId,
+    pub engine_version: u32,
     pub date: NaiveDate,
     pub estimate: f64,
 }

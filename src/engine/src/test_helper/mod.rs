@@ -131,7 +131,7 @@ pub struct TestStateBuilder {
     delivery_point_id_counter: u64,
     landing_id_counter: u64,
     engine: FisheryEngine,
-    fuel_processor: fuel_processor::App,
+    pub fuel_processor: fuel_processor::App,
     cycle: Cycle,
     trip_queue_reset: Option<Cycle>,
     enabled_ml_models: Vec<Box<dyn MLModel>>,
@@ -689,7 +689,11 @@ impl TestStateBuilder {
                                         v.fiskeridir.radio_call_sign.as_ref().unwrap(),
                                         UpdateVessel {
                                             engine_power: None,
+                                            auxiliary_engine_power: None,
+                                            boiler_engine_power: None,
                                             engine_building_year: Some(2000),
+                                            auxiliary_engine_building_year: Some(2000),
+                                            boiler_engine_building_year: Some(2000),
                                         },
                                     ));
                                 }

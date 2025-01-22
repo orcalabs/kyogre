@@ -140,6 +140,10 @@ pub struct FiskeridirVessel {
     pub engine_building_year: Option<u32>,
     pub engine_power: Option<u32>,
     pub building_year: Option<u32>,
+    pub auxiliary_engine_power: Option<u32>,
+    pub auxiliary_engine_building_year: Option<u32>,
+    pub boiler_engine_power: Option<u32>,
+    pub boiler_engine_building_year: Option<u32>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, OaSchema, PartialEq)]
@@ -243,6 +247,11 @@ impl From<kyogre_core::FiskeridirVessel> for FiskeridirVessel {
             engine_building_year,
             engine_power,
             building_year,
+            auxiliary_engine_power,
+            boiler_engine_power,
+            auxiliary_engine_building_year,
+            boiler_engine_building_year,
+            engine_version: _,
         } = value;
 
         FiskeridirVessel {
@@ -257,6 +266,10 @@ impl From<kyogre_core::FiskeridirVessel> for FiskeridirVessel {
             engine_building_year,
             engine_power,
             building_year,
+            auxiliary_engine_power,
+            boiler_engine_power,
+            auxiliary_engine_building_year,
+            boiler_engine_building_year,
         }
     }
 }
@@ -275,6 +288,10 @@ impl PartialEq<fiskeridir_rs::Vessel> for FiskeridirVessel {
             engine_building_year,
             engine_power,
             building_year,
+            auxiliary_engine_power: _,
+            boiler_engine_power: _,
+            auxiliary_engine_building_year: _,
+            boiler_engine_building_year: _,
         } = self;
 
         Some(*id) == other.id
@@ -316,6 +333,10 @@ impl PartialEq<kyogre_core::FiskeridirVessel> for FiskeridirVessel {
             engine_building_year,
             engine_power,
             building_year,
+            auxiliary_engine_power,
+            boiler_engine_power,
+            auxiliary_engine_building_year,
+            boiler_engine_building_year,
         } = self;
 
         *id == other.id
@@ -327,6 +348,10 @@ impl PartialEq<kyogre_core::FiskeridirVessel> for FiskeridirVessel {
             && *engine_building_year == other.engine_building_year
             && *engine_power == other.engine_power
             && *building_year == other.building_year
+            && *auxiliary_engine_power == other.auxiliary_engine_power
+            && *auxiliary_engine_building_year == other.auxiliary_engine_building_year
+            && *boiler_engine_power == other.boiler_engine_power
+            && *boiler_engine_building_year == other.boiler_engine_building_year
     }
 }
 
@@ -353,10 +378,18 @@ impl PartialEq<UpdateVessel> for Vessel {
         let UpdateVessel {
             engine_power,
             engine_building_year,
+            auxiliary_engine_power,
+            boiler_engine_power,
+            auxiliary_engine_building_year,
+            boiler_engine_building_year,
         } = other;
 
         self.fiskeridir.engine_power == *engine_power
             && self.fiskeridir.engine_building_year == *engine_building_year
+            && self.fiskeridir.auxiliary_engine_power == *auxiliary_engine_power
+            && self.fiskeridir.auxiliary_engine_building_year == *auxiliary_engine_building_year
+            && self.fiskeridir.boiler_engine_power == *boiler_engine_power
+            && self.fiskeridir.boiler_engine_building_year == *boiler_engine_building_year
     }
 }
 

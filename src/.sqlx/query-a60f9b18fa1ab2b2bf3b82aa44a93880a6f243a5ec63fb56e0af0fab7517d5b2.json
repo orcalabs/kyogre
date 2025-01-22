@@ -1,0 +1,18 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO\n    fuel_estimates (fiskeridir_vessel_id, date, estimate, status)\nSELECT\n    u.id,\n    u.date,\n    u.estimate,\n    u.status\nFROM\n    fiskeridir_vessels f\n    INNER JOIN UNNEST(\n        $1::BIGINT[],\n        $2::INT[],\n        $3::DATE[],\n        $4::INT[],\n        $5::DOUBLE PRECISION[]\n    ) u (id, engine_version, date, status, estimate) ON u.id = f.fiskeridir_vessel_id\n    AND u.engine_version = f.engine_version\nON CONFLICT (fiskeridir_vessel_id, date) DO\nUPDATE\nSET\n    estimate = EXCLUDED.estimate,\n    status = EXCLUDED.status\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8Array",
+        "Int4Array",
+        "DateArray",
+        "Int4Array",
+        "Float8Array"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "a60f9b18fa1ab2b2bf3b82aa44a93880a6f243a5ec63fb56e0af0fab7517d5b2"
+}
