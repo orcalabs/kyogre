@@ -1610,7 +1610,7 @@ FROM
     trips t
 WHERE
     t.fiskeridir_vessel_id = $1
-    AND $2 >= LOWER(t.period)
+    AND UPPER(t.period) >= $2
             "#,
             vessel_id.into_inner(),
             boundary,
@@ -1651,7 +1651,7 @@ FROM
     trips t
 WHERE
     t.fiskeridir_vessel_id = $1
-    AND LOWER(t.period) <= $2
+    AND UPPER(t.period) >= $2
                 "#,
                 vessel_id.into_inner(),
                 boundary,
