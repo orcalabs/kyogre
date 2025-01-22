@@ -78,7 +78,9 @@ SELECT
     f.auxiliary_engine_power,
     f.auxiliary_engine_building_year,
     f.boiler_engine_power,
-    f.boiler_engine_building_year
+    f.boiler_engine_building_year,
+    f.service_speed,
+    f.degree_of_electrification
 FROM
     trips_detailed t
     INNER JOIN fiskeridir_vessels f ON t.fiskeridir_vessel_id = f.fiskeridir_vessel_id

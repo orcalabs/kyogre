@@ -335,6 +335,8 @@ pub struct FiskeridirAisVesselCombination {
     pub fiskeridir_boiler_engine_power: Option<i32>,
     pub fiskeridir_boiler_engine_building_year: Option<i32>,
     pub fiskeridir_engine_version: i32,
+    pub fiskeridir_degree_of_electrification: Option<f64>,
+    pub fiskeridir_service_speed: Option<f64>,
     pub preferred_trip_assembler: TripAssemblerId,
     pub gear_group_ids: Vec<GearGroup>,
     pub species_group_ids: Vec<SpeciesGroup>,
@@ -371,6 +373,8 @@ impl TryFrom<FiskeridirAisVesselCombination> for kyogre_core::Vessel {
             fiskeridir_auxiliary_engine_building_year,
             fiskeridir_boiler_engine_building_year,
             fiskeridir_engine_version,
+            fiskeridir_degree_of_electrification,
+            fiskeridir_service_speed,
         } = value;
 
         let ais = ais_mmsi.map(|mmsi| AisVessel {
@@ -397,6 +401,8 @@ impl TryFrom<FiskeridirAisVesselCombination> for kyogre_core::Vessel {
             boiler_engine_power: fiskeridir_boiler_engine_power.map(|v| v as u32),
             boiler_engine_building_year: fiskeridir_boiler_engine_building_year.map(|v| v as u32),
             engine_version: fiskeridir_engine_version as u32,
+            degree_of_electrification: fiskeridir_degree_of_electrification,
+            service_speed: fiskeridir_service_speed,
         };
 
         Ok(Self {

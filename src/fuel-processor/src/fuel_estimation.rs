@@ -207,7 +207,12 @@ async fn process_day(
         )
         .await?;
 
-    let estimate = estimate_fuel_for_positions(ais_vms, &vessel.engines);
+    let estimate = estimate_fuel_for_positions(
+        ais_vms,
+        &vessel.engines,
+        vessel.fiskeridir.service_speed,
+        vessel.fiskeridir.degree_of_electrification,
+    );
 
     Ok(NewFuelDayEstimate {
         vessel_id: vessel.fiskeridir.id,
@@ -217,13 +222,25 @@ async fn process_day(
     })
 }
 
-pub fn estimate_fuel_for_positions<T>(positions: Vec<T>, engines: &[VesselEngine]) -> f64
+pub fn estimate_fuel_for_positions<T>(
+    positions: Vec<T>,
+    engines: &[VesselEngine],
+    service_speed: Option<f64>,
+    degree_of_electrification: Option<f64>,
+) -> f64
 where
     T: Into<AisVmsPositionWithHaul>,
 {
     let positions = prune_unrealistic_speed(positions);
 
-    estimate_fuel(engines, positions, &mut vec![], |_, _| {})
+    estimate_fuel(
+        engines,
+        service_speed,
+        degree_of_electrification,
+        positions,
+        &mut vec![],
+        |_, _| {},
+    )
 }
 
 fn prune_unrealistic_speed<T>(positions: Vec<T>) -> Vec<AisVmsPositionWithHaul>
@@ -281,6 +298,8 @@ impl From<AisVmsPositionWithHaul> for FuelItem {
 
 pub fn estimate_fuel<S, T, R>(
     engines: &[VesselEngine],
+    service_speed: Option<f64>,
+    degree_of_electrification: Option<f64>,
     items: Vec<R>,
     per_point: &mut Vec<S>,
     per_point_closure: T,
@@ -317,7 +336,8 @@ where
         // TODO: Currently using surrogate value from:
         // https://www.epa.gov/system/files/documents/2023-01/2020NEI_C1C2_Documentation.pdf
         // Table 3. C1C2 Propulsive Power and Load Factor Surrogates
-        let speed_service = 12.;
+        let speed_service = service_speed.unwrap_or(12.);
+        let degree_of_electrification = degree_of_electrification.unwrap_or(0.0);
         let load_factor = ((speed / speed_service).powf(3.) * 0.85).clamp(0., 0.98);
 
         for (i, e) in engines.iter().enumerate() {
@@ -329,6 +349,7 @@ where
                         1.0
                     })
                 * (v.timestamp - state.prev.timestamp).num_milliseconds() as f64
+                * (1.0 - degree_of_electrification)
                 / 3_600_000.;
 
             let kwh = match e.engine_type {

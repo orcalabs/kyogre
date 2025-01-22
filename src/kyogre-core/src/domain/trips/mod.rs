@@ -121,6 +121,8 @@ pub struct BenchmarkTrip {
     pub auxiliary_engine_building_year: Option<i32>,
     pub boiler_engine_power: Option<i32>,
     pub boiler_engine_building_year: Option<i32>,
+    pub service_speed: Option<f64>,
+    pub degree_of_electrification: Option<f64>,
     pub total_catch_value: f64,
     pub total_catch_weight: f64,
     pub distance: Option<f64>,

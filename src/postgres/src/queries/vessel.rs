@@ -58,6 +58,8 @@ SELECT
     f.engine_version AS fiskeridir_engine_version,
     f.boiler_engine_power AS fiskeridir_boiler_engine_power,
     f.boiler_engine_building_year AS fiskeridir_boiler_engine_building_year,
+    f.service_speed AS fiskeridir_service_speed,
+    f.degree_of_electrification AS fiskeridir_degree_of_electrification,
     f.gear_group_ids AS "gear_group_ids!: Vec<GearGroup>",
     f.species_group_ids AS "species_group_ids!: Vec<SpeciesGroup>",
     a.mmsi AS "ais_mmsi?: Mmsi",
@@ -103,9 +105,11 @@ SET
     auxiliary_engine_building_year = $4,
     boiler_engine_power = $5,
     boiler_engine_building_year = $6,
+    service_speed = $7,
+    degree_of_electrification = $8,
     engine_version = engine_version + 1
 WHERE
-    call_sign = $7
+    call_sign = $9
 RETURNING
     fiskeridir_vessel_id AS "fiskeridir_vessel_id: FiskeridirVesselId"
             "#,
@@ -115,6 +119,8 @@ RETURNING
             update.auxiliary_engine_building_year.map(|e| e as i32),
             update.boiler_engine_power.map(|e| e as i32),
             update.boiler_engine_building_year.map(|e| e as i32),
+            update.service_speed,
+            update.degree_of_electrification,
             call_sign
         )
         .fetch_optional(&mut *tx)
@@ -444,6 +450,8 @@ SELECT
     f.engine_version AS fiskeridir_engine_version,
     f.boiler_engine_power AS fiskeridir_boiler_engine_power,
     f.boiler_engine_building_year AS fiskeridir_boiler_engine_building_year,
+    f.service_speed AS fiskeridir_service_speed,
+    f.degree_of_electrification AS fiskeridir_degree_of_electrification,
     f.gear_group_ids AS "gear_group_ids!: Vec<GearGroup>",
     f.species_group_ids AS "species_group_ids!: Vec<SpeciesGroup>",
     a.mmsi AS "ais_mmsi?: Mmsi",

@@ -694,6 +694,8 @@ impl TestStateBuilder {
                                             engine_building_year: Some(2000),
                                             auxiliary_engine_building_year: Some(2000),
                                             boiler_engine_building_year: Some(2000),
+                                            degree_of_electrification: None,
+                                            service_speed: None,
                                         },
                                     ));
                                 }
