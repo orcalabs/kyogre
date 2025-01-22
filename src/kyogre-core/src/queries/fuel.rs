@@ -1,4 +1,3 @@
-use crate::BarentswatchUserId;
 use chrono::{DateTime, Duration, NaiveDate, Utc};
 use fiskeridir_rs::CallSign;
 
@@ -6,7 +5,6 @@ pub static DEFAULT_LIVE_FUEL_THRESHOLD: Duration = Duration::days(1);
 
 #[derive(Debug, Clone)]
 pub struct FuelMeasurementsQuery {
-    pub barentswatch_user_id: BarentswatchUserId,
     pub call_sign: CallSign,
     pub start_date: Option<DateTime<Utc>>,
     pub end_date: Option<DateTime<Utc>>,

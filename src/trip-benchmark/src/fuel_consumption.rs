@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use kyogre_core::{
-    BenchmarkTrip, CoreResult, TripBenchmark, TripBenchmarkId, TripBenchmarkOutbound,
+    BenchmarkTrip, CoreResult, DateRange, TripBenchmark, TripBenchmarkId, TripBenchmarkOutbound,
     TripBenchmarkOutput, UpdateTripPositionFuel,
 };
 use processors::estimate_fuel;
@@ -26,7 +26,15 @@ impl TripBenchmark for FuelConsumption {
             return Ok(());
         }
 
-        let track = adapter.track_of_trip_with_haul(trip.trip_id).await?;
+        let track = adapter
+            .ais_vms_positions_with_haul_and_manual(
+                trip.vessel_id,
+                trip.mmsi,
+                trip.call_sign.as_ref(),
+                &trip.period,
+                trip.trip_id,
+            )
+            .await?;
 
         if track.len() < 2 {
             return Ok(());
@@ -34,7 +42,8 @@ impl TripBenchmark for FuelConsumption {
 
         let mut fuel_updates = Vec::with_capacity(track.len());
 
-        let fuel_consumption_tonnes = estimate_fuel(
+        dbg!(&track.len());
+        let estimated_fuel = estimate_fuel(
             &engines,
             trip.service_speed,
             trip.degree_of_electrification,
@@ -48,11 +57,48 @@ impl TripBenchmark for FuelConsumption {
             },
         );
 
+        let measurements = adapter
+            .trip_fuel_measurements(trip.vessel_id, &trip.period)
+            .await?;
+
+        let mut measurement_diffs = vec![];
+        let mut sum_diffs = 0.0;
+        if let Some(start) = measurements.start_measurement_ts {
+            measurement_diffs.push(DateRange::new(start, trip.period.start())?);
+        }
+        if let Some(end) = measurements.end_measurement_ts {
+            measurement_diffs.push(DateRange::new(trip.period.end(), end)?);
+        }
+
+        dbg!(&measurement_diffs);
+
+        for m in measurement_diffs {
+            sum_diffs += estimate_fuel(
+                &engines,
+                trip.service_speed,
+                trip.degree_of_electrification,
+                adapter
+                    .ais_vms_positions_with_haul(
+                        trip.vessel_id,
+                        trip.mmsi,
+                        trip.call_sign.as_ref(),
+                        &m,
+                    )
+                    .await?,
+                &mut vec![],
+                |_, _| {},
+            );
+        }
+
+        dbg!(sum_diffs);
+
         adapter
             .update_trip_position_fuel_consumption(&fuel_updates)
             .await?;
 
-        output.fuel_consumption = Some(fuel_consumption_tonnes);
+        output.fuel_consumption = Some(
+            dbg!(measurements.total_overlapping_fuel) + dbg!(estimated_fuel) - dbg!(sum_diffs),
+        );
 
         Ok(())
     }

@@ -10,7 +10,7 @@ use strum::{AsRefStr, EnumString, IntoStaticStr};
 #[cfg(feature = "oasgen")]
 use oasgen::OaSchema;
 
-use super::{AisVmsPositionWithHaul, PositionType};
+use super::{AisVmsPositionWithHaulAndManual, PositionType};
 
 pub const LEISURE_VESSEL_SHIP_TYPES: [i32; 2] = [36, 37];
 pub const LEISURE_VESSEL_LENGTH_AIS_BOUNDARY: u32 = 45;
@@ -95,7 +95,7 @@ pub struct AisPosition {
     pub distance_to_shore: f64,
 }
 
-impl From<AisPosition> for AisVmsPositionWithHaul {
+impl From<AisPosition> for AisVmsPositionWithHaulAndManual {
     fn from(value: AisPosition) -> Self {
         let AisPosition {
             latitude,
@@ -110,15 +110,16 @@ impl From<AisPosition> for AisVmsPositionWithHaul {
             distance_to_shore: _,
         } = value;
 
-        AisVmsPositionWithHaul {
+        Self {
             latitude,
             longitude,
             timestamp: msgtime,
             speed: speed_over_ground,
-            // In the cases where we need this conversion we do not have haul data available so
-            // this will always be false
-            is_inside_haul_and_active_gear: false,
             position_type_id: PositionType::Ais,
+            // In the cases where we need this conversion we do not have haul data or manual fuel
+            // entries available so these will always be false
+            is_inside_haul_and_active_gear: false,
+            covered_by_manual_fuel_entry: false,
         }
     }
 }
@@ -298,7 +299,7 @@ mod test {
                 navigational_status: NavigationStatus::UnderWayUsingEngine,
                 ais_class: Some(AisClass::A),
                 rate_of_turn: Some(random()),
-                speed_over_ground: Some(random()),
+                speed_over_ground: Some(10.0),
                 true_heading: Some(random()),
                 distance_to_shore: random(),
             }

@@ -2,7 +2,7 @@ use crate::*;
 use async_channel::Receiver;
 use async_trait::async_trait;
 use chrono::{DateTime, NaiveDate, Utc};
-use fiskeridir_rs::{DataFileId, SpeciesGroup};
+use fiskeridir_rs::{CallSign, DataFileId, SpeciesGroup};
 
 pub type BoxIterator<T> = Box<dyn Iterator<Item = T> + Send + Sync>;
 
@@ -96,11 +96,19 @@ pub trait WebApiInboundPort {
     async fn add_fuel_measurements(
         &self,
         measurements: &[CreateFuelMeasurement],
+        call_sign: &CallSign,
+        user_id: BarentswatchUserId,
     ) -> CoreResult<Vec<FuelMeasurement>>;
-    async fn update_fuel_measurements(&self, measurements: &[FuelMeasurement]) -> CoreResult<()>;
+    async fn update_fuel_measurements(
+        &self,
+        measurements: &[FuelMeasurement],
+        call_sign: &CallSign,
+        user_id: BarentswatchUserId,
+    ) -> CoreResult<()>;
     async fn delete_fuel_measurements(
         &self,
         measurements: &[DeleteFuelMeasurement],
+        call_sign: &CallSign,
     ) -> CoreResult<()>;
 }
 

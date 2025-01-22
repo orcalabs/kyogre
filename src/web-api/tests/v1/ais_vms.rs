@@ -885,6 +885,8 @@ async fn test_ais_vms_by_trip_returns_cumulative_fuel_consumption() {
             .await
             .unwrap();
 
+        dbg!(&positions);
+
         assert_eq!(positions.len(), 3);
         assert!(positions[0].trip_cumulative_fuel_consumption.is_none());
         assert!(positions

@@ -26,7 +26,6 @@ pub mod species;
 pub mod test;
 pub mod trip;
 pub mod trip_benchmarks;
-pub mod unnest_delete;
 pub mod unnest_insert;
 pub mod unnest_update;
 pub mod user;

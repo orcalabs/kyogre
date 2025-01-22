@@ -34,6 +34,21 @@ impl PostgresAdapter {
         T::unnest_insert_returning_stream(values, executor).map_err(|e| e.into())
     }
 
+    //pub(crate) async fn unnest_insert_returning_from<T, I, O>(
+    //    &self,
+    //    values: I,
+    //    executor: impl sqlx::Executor<'_, Database = sqlx::Postgres>,
+    //) -> Result<Vec<O::Output>>
+    //where
+    //    O: UnnestInsert + UnnestInsertReturning,
+    //    T: Into<O>,
+    //    I: IntoIterator<Item = T> + Send,
+    //    I::IntoIter: Send,
+    //{
+    //    let values = values.into_iter().map(T::into);
+    //    Ok(O::unnest_insert_returning(values, executor).await?)
+    //}
+
     pub(crate) async fn unnest_insert_from<T, I, O>(
         &self,
         values: I,
@@ -50,21 +65,21 @@ impl PostgresAdapter {
         Ok(())
     }
 
-    pub(crate) fn unnest_insert_from_returning<'a, T, I, O>(
-        &self,
-        values: I,
-        executor: impl sqlx::Executor<'a, Database = sqlx::Postgres> + 'a,
-    ) -> impl Stream<Item = Result<O::Output>> + 'a
-    where
-        O: UnnestInsertReturning,
-        T: Into<O>,
-        I: IntoIterator<Item = T> + Send,
-        I::IntoIter: Send,
-        O::Output: Send + 'a,
-    {
-        let values = values.into_iter().map(T::into);
-        O::unnest_insert_returning_stream(values, executor).map_err(|e| e.into())
-    }
+    //pub(crate) fn unnest_insert_from_returning<'a, T, I, O>(
+    //    &self,
+    //    values: I,
+    //    executor: impl sqlx::Executor<'a, Database = sqlx::Postgres> + 'a,
+    //) -> impl Stream<Item = Result<O::Output>> + 'a
+    //where
+    //    O: UnnestInsertReturning,
+    //    T: Into<O>,
+    //    I: IntoIterator<Item = T> + Send,
+    //    I::IntoIter: Send,
+    //    O::Output: Send + 'a,
+    //{
+    //    let values = values.into_iter().map(T::into);
+    //    O::unnest_insert_returning_stream(values, executor).map_err(|e| e.into())
+    //}
 
     pub(crate) async fn unnest_insert_try_from<T, I, O>(
         &self,

@@ -1,6 +1,6 @@
 use crate::*;
 use chrono::{DateTime, TimeZone, Utc};
-use fiskeridir_rs::{DeliveryPointId, LandingId, Quality, VesselLengthGroup};
+use fiskeridir_rs::{CallSign, DeliveryPointId, LandingId, Quality, VesselLengthGroup};
 use num_derive::FromPrimitive;
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
@@ -114,7 +114,10 @@ pub struct UpdateTripPositionCargoWeight {
 #[derive(Debug, Clone)]
 pub struct BenchmarkTrip {
     pub trip_id: TripId,
+    pub vessel_id: FiskeridirVesselId,
     pub vessel_length_group: VesselLengthGroup,
+    pub mmsi: Option<Mmsi>,
+    pub call_sign: Option<CallSign>,
     pub engine_power: Option<i32>,
     pub engine_building_year: Option<i32>,
     pub auxiliary_engine_power: Option<i32>,
@@ -153,6 +156,13 @@ pub struct NewTrip {
     pub landing_coverage: DateRange,
     pub start_port_code: Option<String>,
     pub end_port_code: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct TripFuelMeasurement {
+    pub total_overlapping_fuel: f64,
+    pub start_measurement_ts: Option<DateTime<Utc>>,
+    pub end_measurement_ts: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug)]

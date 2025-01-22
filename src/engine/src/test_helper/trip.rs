@@ -432,6 +432,7 @@ impl TripBuilder {
                     cycle: base.cycle,
                 });
                 index += 1;
+
                 if (trip.current_data_timestamp + base.trip_data_timestamp_gap) >= trip.end() {
                     trip.current_data_timestamp = trip.end();
                 } else {

@@ -1,26 +1,110 @@
-use chrono::{NaiveDate, TimeZone, Utc};
+use chrono::NaiveDate;
 use fiskeridir_rs::{CallSign, GearGroup};
 use futures::{Stream, TryStreamExt};
 use kyogre_core::{
-    AisPermission, AisVmsPosition, AisVmsPositionWithHaul, DateRange, FiskeridirVesselId, Mmsi,
-    NavigationStatus, PositionType, TripId, TripPositionLayerId,
-    LEISURE_VESSEL_LENGTH_AIS_BOUNDARY, LEISURE_VESSEL_SHIP_TYPES,
+    AisPermission, AisVmsPosition, AisVmsPositionWithHaul, AisVmsPositionWithHaulAndManual,
+    DateRange, FiskeridirVesselId, Mmsi, NavigationStatus, PositionType, TripId,
+    TripPositionLayerId, LEISURE_VESSEL_LENGTH_AIS_BOUNDARY, LEISURE_VESSEL_SHIP_TYPES,
     PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY,
 };
 
 use crate::{error::Result, PostgresAdapter};
 
 impl PostgresAdapter {
+    pub(crate) async fn ais_vms_positions_with_haul_and_manual_impl(
+        &self,
+        vessel_id: FiskeridirVesselId,
+        mmsi: Option<Mmsi>,
+        call_sign: Option<&CallSign>,
+        range: &DateRange,
+        trip_id: TripId,
+    ) -> Result<Vec<AisVmsPositionWithHaulAndManual>> {
+        Ok(sqlx::query_as!(
+            AisVmsPositionWithHaulAndManual,
+            r#"
+WITH
+    ranges AS (
+        SELECT
+            --! fuel_measurement_ranges are '()', but we want to include positions that are equal to
+            --! its bounds without matching a position to two ranges.
+            --! UPPER bound matches are handled by the inclusive bound, while the LOWER bound match
+            --! are handled by separate where clause further down in the query
+            --! Using a '[]' bound would match two adjacent ranges to the same position.
+            TSTZRANGE(LOWER(f.fuel_range), UPPER(f.fuel_range), '(]') as fuel_range
+        FROM
+            trips t
+            INNER JOIN fuel_measurement_ranges f ON f.fiskeridir_vessel_id = t.fiskeridir_vessel_id
+            AND f.fuel_range && t.period
+            AND UPPER(f.fuel_range * t.period) - LOWER(f.fuel_range * t.period) >= (UPPER(f.fuel_range) - LOWER(f.fuel_range)) / 2
+        WHERE
+            t.trip_id = $1
+    )
+SELECT
+    u.latitude AS "latitude!",
+    u.longitude AS "longitude!",
+    u."timestamp" AS "timestamp!",
+    u.speed,
+    u.position_type_id AS "position_type_id!: PositionType",
+    (
+        h.haul_id IS NOT NULL
+        AND h.gear_group_id = ANY ($2)
+    ) AS "is_inside_haul_and_active_gear!",
+    r.fuel_range IS NOT NULL AS "covered_by_manual_fuel_entry!"
+FROM
+    (
+        SELECT
+            latitude,
+            longitude,
+            "timestamp",
+            speed_over_ground AS speed,
+            $3::INT AS position_type_id
+        FROM
+            ais_positions a
+        WHERE
+            "timestamp" >= $4
+            AND "timestamp" <= $5
+            AND mmsi = $6
+        UNION ALL
+        SELECT
+            latitude,
+            longitude,
+            "timestamp",
+            speed,
+            $7::INT AS position_type_id
+        FROM
+            vms_positions v
+        WHERE
+            "timestamp" >= $4
+            AND "timestamp" <= $5
+            AND call_sign = $8
+    ) u
+    LEFT JOIN hauls h ON h.fiskeridir_vessel_id = $9
+    AND h.period @> u."timestamp"
+    LEFT JOIN ranges r on r.fuel_range @> u."timestamp"
+    or u."timestamp" = LOWER(r.fuel_range)
+ORDER BY
+    u."timestamp" ASC
+                "#,
+            trip_id.into_inner(),
+            &GearGroup::active_int(),
+            PositionType::Ais as i32,
+            range.start(),
+            range.end(),
+            mmsi.map(|m| m.into_inner()),
+            PositionType::Vms as i32,
+            call_sign.map(|c| c.as_ref()),
+            vessel_id.into_inner()
+        )
+        .fetch_all(self.ais_pool())
+        .await?)
+    }
     pub(crate) async fn ais_vms_positions_with_haul_impl(
         &self,
         vessel_id: FiskeridirVesselId,
         mmsi: Option<Mmsi>,
         call_sign: Option<&CallSign>,
-        date: NaiveDate,
+        range: &DateRange,
     ) -> Result<Vec<AisVmsPositionWithHaul>> {
-        let start = Utc.from_utc_datetime(&date.and_hms_opt(0, 0, 0).unwrap());
-        let end = Utc.from_utc_datetime(&date.and_hms_opt(23, 59, 59).unwrap());
-
         Ok(sqlx::query_as!(
             AisVmsPositionWithHaul,
             r#"
@@ -69,8 +153,8 @@ ORDER BY
                 "#,
             &GearGroup::active_int(),
             PositionType::Ais as i32,
-            start,
-            end,
+            range.start(),
+            range.end(),
             mmsi.map(|m| m.into_inner()),
             PositionType::Vms as i32,
             call_sign.map(|c| c.as_ref()),
@@ -234,6 +318,9 @@ FROM
     INNER JOIN trips_detailed t ON p.trip_id = t.trip_id
     LEFT JOIN hauls h ON h.haul_id = ANY (t.haul_ids)
     AND h.period @> p."timestamp"
+    LEFT JOIN fuel_measurement_ranges f ON f.fiskeridir_vessel_id = t.fiskeridir_vessel_id
+    AND f.fuel_range @> p."timestamp"
+    AND UPPER(f.fuel_range * t.period) - LOWER(f.fuel_range * t.period) >= (UPPER(f.fuel_range) - LOWER(f.fuel_range)) / 2
 WHERE
     p.trip_id = $2
 ORDER BY

@@ -40,7 +40,6 @@ pub use ers_message::*;
 pub use ers_por::*;
 pub use ers_tra::*;
 pub use fuel::*;
-pub use fuel_measurement::*;
 pub use gear::*;
 pub use haul::*;
 pub use herring::*;

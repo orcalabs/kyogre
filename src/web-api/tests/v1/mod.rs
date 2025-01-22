@@ -10,6 +10,7 @@ pub mod delivery_point;
 pub mod fishing_facility;
 pub mod fishing_predictions;
 pub mod fuel_measurement;
+pub mod fuel_processor;
 pub mod haul;
 pub mod hauls_matrix;
 pub mod helper;

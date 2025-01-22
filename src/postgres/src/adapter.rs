@@ -331,11 +331,18 @@ impl TestStorage for PostgresAdapter {}
 #[cfg(feature = "test")]
 #[async_trait]
 impl TestHelperOutbound for PostgresAdapter {
+    async fn all_fuel_measurement_ranges(&self) -> Vec<FuelMeasurementRange> {
+        self.all_fuel_measurement_ranges_impl().await.unwrap()
+    }
     async fn unprocessed_trips(&self) -> u32 {
         self.unprocessed_trips_impl().await.unwrap()
     }
     async fn fuel_estimates_with_status(&self, status: ProcessingStatus) -> u32 {
         self.fuel_estimates_with_status_impl(status).await.unwrap()
+    }
+
+    async fn all_fuel_estimates(&self) -> Vec<f64> {
+        self.all_fuel_estimates_impl().await.unwrap()
     }
     async fn trips_with_benchmark_status(&self, status: ProcessingStatus) -> u32 {
         self.trips_with_benchmark_status_impl(status).await.unwrap()
@@ -512,6 +519,23 @@ impl FuelEstimation for PostgresAdapter {
         Ok(self.latest_position_impl().await?)
     }
 
+    #[cfg(feature = "test")]
+    async fn track_with_haul_and_manual(
+        &self,
+        vessel_id: FiskeridirVesselId,
+        mmsi: Option<Mmsi>,
+        call_sign: Option<&CallSign>,
+        range: &DateRange,
+        trip_id: TripId,
+    ) -> CoreResult<Vec<AisVmsPositionWithHaulAndManual>> {
+        Ok(retry(|| {
+            self.ais_vms_positions_with_haul_and_manual_impl(
+                vessel_id, mmsi, call_sign, range, trip_id,
+            )
+        })
+        .await?)
+    }
+
     async fn last_run(&self) -> CoreResult<Option<DateTime<Utc>>> {
         Ok(retry(|| self.last_run_impl(Processor::FuelProcessor)).await?)
     }
@@ -548,12 +572,26 @@ impl FuelEstimation for PostgresAdapter {
         vessel_id: FiskeridirVesselId,
         mmsi: Option<Mmsi>,
         call_sign: Option<&CallSign>,
-        date: NaiveDate,
+        range: &DateRange,
     ) -> CoreResult<Vec<AisVmsPositionWithHaul>> {
         Ok(
-            retry(|| self.ais_vms_positions_with_haul_impl(vessel_id, mmsi, call_sign, date))
+            retry(|| self.ais_vms_positions_with_haul_impl(vessel_id, mmsi, call_sign, range))
                 .await?,
         )
+    }
+
+    async fn unprocessed_fuel_measurement_ranges(
+        &self,
+        vessel_id: FiskeridirVesselId,
+    ) -> CoreResult<Vec<FuelMeasurementRange>> {
+        Ok(retry(|| self.unprocessed_fuel_measurement_ranges_impl(vessel_id)).await?)
+    }
+
+    async fn add_fuel_measurement_updates(
+        &self,
+        updates: &[UpdateFuelMeasurementRange],
+    ) -> CoreResult<()> {
+        Ok(retry(|| self.add_fuel_measurement_ranges_updates_impl(updates)).await?)
     }
 }
 
@@ -882,18 +920,26 @@ impl WebApiInboundPort for PostgresAdapter {
     async fn add_fuel_measurements(
         &self,
         measurements: &[CreateFuelMeasurement],
+        call_sign: &CallSign,
+        user_id: BarentswatchUserId,
     ) -> CoreResult<Vec<FuelMeasurement>> {
-        Ok(retry(|| self.add_fuel_measurements_impl(measurements)).await?)
+        Ok(retry(|| self.add_fuel_measurements_impl(measurements, call_sign, user_id)).await?)
     }
-    async fn update_fuel_measurements(&self, measurements: &[FuelMeasurement]) -> CoreResult<()> {
-        retry(|| self.update_fuel_measurements_impl(measurements)).await?;
+    async fn update_fuel_measurements(
+        &self,
+        measurements: &[FuelMeasurement],
+        call_sign: &CallSign,
+        user_id: BarentswatchUserId,
+    ) -> CoreResult<()> {
+        retry(|| self.update_fuel_measurements_impl(measurements, call_sign, user_id)).await?;
         Ok(())
     }
     async fn delete_fuel_measurements(
         &self,
         measurements: &[DeleteFuelMeasurement],
+        call_sign: &CallSign,
     ) -> CoreResult<()> {
-        retry(|| self.delete_fuel_measurements_impl(measurements)).await?;
+        retry(|| self.delete_fuel_measurements_impl(measurements, call_sign)).await?;
         Ok(())
     }
 }
@@ -1176,6 +1222,43 @@ impl TripBenchmarkOutbound for PostgresAdapter {
         values: &[UpdateTripPositionFuel],
     ) -> CoreResult<()> {
         Ok(retry(|| self.update_trip_position_fuel_consumption_impl(values)).await?)
+    }
+
+    async fn trip_fuel_measurements(
+        &self,
+        vessel_id: FiskeridirVesselId,
+        range: &DateRange,
+    ) -> CoreResult<TripFuelMeasurement> {
+        Ok(retry(|| self.trip_fuel_measurements_impl(vessel_id, range)).await?)
+    }
+
+    async fn ais_vms_positions_with_haul(
+        &self,
+        vessel_id: FiskeridirVesselId,
+        mmsi: Option<Mmsi>,
+        call_sign: Option<&CallSign>,
+        range: &DateRange,
+    ) -> CoreResult<Vec<AisVmsPositionWithHaul>> {
+        Ok(
+            retry(|| self.ais_vms_positions_with_haul_impl(vessel_id, mmsi, call_sign, range))
+                .await?,
+        )
+    }
+
+    async fn ais_vms_positions_with_haul_and_manual(
+        &self,
+        vessel_id: FiskeridirVesselId,
+        mmsi: Option<Mmsi>,
+        call_sign: Option<&CallSign>,
+        range: &DateRange,
+        trip_id: TripId,
+    ) -> CoreResult<Vec<AisVmsPositionWithHaulAndManual>> {
+        Ok(retry(|| {
+            self.ais_vms_positions_with_haul_and_manual_impl(
+                vessel_id, mmsi, call_sign, range, trip_id,
+            )
+        })
+        .await?)
     }
 }
 

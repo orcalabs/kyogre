@@ -208,7 +208,27 @@ pub trait TripBenchmarkOutbound: Send + Sync {
     ) -> CoreResult<()>;
     async fn vessels(&self) -> CoreResult<Vec<Vessel>>;
     async fn track_of_trip_with_haul(&self, id: TripId) -> CoreResult<Vec<AisVmsPositionWithHaul>>;
+    async fn ais_vms_positions_with_haul_and_manual(
+        &self,
+        vessel_id: FiskeridirVesselId,
+        mmsi: Option<Mmsi>,
+        call_sign: Option<&CallSign>,
+        period: &DateRange,
+        trip_id: TripId,
+    ) -> CoreResult<Vec<AisVmsPositionWithHaulAndManual>>;
+    async fn ais_vms_positions_with_haul(
+        &self,
+        vessel_id: FiskeridirVesselId,
+        mmsi: Option<Mmsi>,
+        call_sign: Option<&CallSign>,
+        period: &DateRange,
+    ) -> CoreResult<Vec<AisVmsPositionWithHaul>>;
     async fn trips_to_benchmark(&self) -> CoreResult<Vec<BenchmarkTrip>>;
+    async fn trip_fuel_measurements(
+        &self,
+        vessel_id: FiskeridirVesselId,
+        range: &DateRange,
+    ) -> CoreResult<TripFuelMeasurement>;
 }
 
 #[async_trait]
@@ -274,6 +294,16 @@ pub trait FuelEstimation: Send + Sync {
     // Only used in tests to reduce the amount of estimations generated
     #[cfg(feature = "test")]
     async fn latest_position(&self) -> CoreResult<Option<NaiveDate>>;
+    #[cfg(feature = "test")]
+    async fn track_with_haul_and_manual(
+        &self,
+        vessel_id: FiskeridirVesselId,
+        mmsi: Option<Mmsi>,
+        call_sign: Option<&CallSign>,
+        period: &DateRange,
+        trip_id: TripId,
+    ) -> CoreResult<Vec<AisVmsPositionWithHaulAndManual>>;
+
     async fn last_run(&self) -> CoreResult<Option<DateTime<Utc>>>;
     async fn add_run(&self) -> CoreResult<()>;
 
@@ -291,8 +321,16 @@ pub trait FuelEstimation: Send + Sync {
         vessel_id: FiskeridirVesselId,
         mmsi: Option<Mmsi>,
         call_sign: Option<&CallSign>,
-        date: NaiveDate,
+        range: &DateRange,
     ) -> CoreResult<Vec<AisVmsPositionWithHaul>>;
+    async fn unprocessed_fuel_measurement_ranges(
+        &self,
+        vessel_id: FiskeridirVesselId,
+    ) -> CoreResult<Vec<FuelMeasurementRange>>;
+    async fn add_fuel_measurement_updates(
+        &self,
+        updates: &[UpdateFuelMeasurementRange],
+    ) -> CoreResult<()>;
 }
 
 #[async_trait]
@@ -419,6 +457,8 @@ pub trait TestHelperOutbound: Send + Sync {
     async fn all_ais(&self) -> Vec<AisPosition>;
     async fn all_vms(&self) -> Vec<VmsPosition>;
     async fn all_ais_vms(&self) -> Vec<AisVmsPosition>;
+    async fn all_fuel_estimates(&self) -> Vec<f64>;
+    async fn all_fuel_measurement_ranges(&self) -> Vec<FuelMeasurementRange>;
     async fn active_vessel_conflicts(&self) -> Vec<ActiveVesselConflict>;
     async fn delivery_points_log(&self) -> Vec<serde_json::Value>;
     async fn port(&self, port_id: &str) -> Option<Port>;

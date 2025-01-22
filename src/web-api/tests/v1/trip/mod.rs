@@ -1,11 +1,14 @@
 use super::helper::{test, test_with_cache};
-use chrono::{DateTime, Duration, TimeZone, Utc};
+use chrono::{DateTime, Duration, NaiveDate, NaiveDateTime, NaiveTime, TimeZone, Utc};
 use engine::*;
 use fiskeridir_rs::{
     CallSign, DeliveryPointId, GearGroup, LandingId, SpeciesGroup, VesselLengthGroup,
 };
+use float_cmp::approx_eq;
 use http_client::StatusCode;
-use kyogre_core::{FiskeridirVesselId, HasTrack, Ordering, TripSorting, VesselEventType};
+use kyogre_core::{
+    CreateFuelMeasurement, FiskeridirVesselId, HasTrack, Ordering, TripSorting, VesselEventType,
+};
 use uuid::Uuid;
 use web_api::{
     error::ErrorDiscriminants,
@@ -1328,6 +1331,399 @@ async fn test_trips_includes_weekly_sales_price_after_refresh() {
         assert_eq!(state.trips.len(), 1);
         assert!(state.trips[0].delivery.total_price_for_fisher > 0.);
         assert!(state.trips[0].delivery.price_for_fisher_is_estimated);
+    })
+    .await;
+}
+#[tokio::test]
+async fn test_trips_with_full_fuel_measurment_coverage_and_adjacent_positions() {
+    test(|mut helper, builder| async move {
+        let state = builder
+            .trip_data_increment(Duration::hours(6))
+            .vessels(1)
+            .set_engine_building_year()
+            .set_logged_in()
+            .ais_vms_positions(10)
+            .trips(1)
+            .ais_vms_positions(40)
+            .up()
+            .ais_vms_positions(10)
+            .build()
+            .await;
+
+        helper.app.login_user();
+
+        let body = vec![
+            CreateFuelMeasurement {
+                timestamp: state.trips[0].period.start(),
+                fuel: 3000.,
+            },
+            CreateFuelMeasurement {
+                timestamp: state.trips[0].period.end(),
+                fuel: 1000.,
+            },
+        ];
+
+        helper.app.create_fuel_measurements(&body).await.unwrap();
+
+        helper.builder().await.build().await;
+
+        let fuel = helper
+            .app
+            .get_trips(Default::default())
+            .await
+            .unwrap()
+            .pop()
+            .unwrap()
+            .fuel_consumption
+            .unwrap();
+
+        assert!(approx_eq!(f64, fuel, 2000.0));
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_trips_fuel_excludes_fuel_measurement_when_more_than_half_of_period_is_outside_range()
+{
+    test(|mut helper, builder| async move {
+        let start = Utc.from_utc_datetime(&NaiveDateTime::new(
+            NaiveDate::from_ymd_opt(2020, 3, 12).unwrap(),
+            NaiveTime::from_hms_opt(1, 0, 0).unwrap(),
+        ));
+
+        let fuel_processor = builder.processors.estimator.clone();
+        let end = start + Duration::days(10);
+
+        let state = builder
+            .trip_data_increment(Duration::hours(6))
+            .vessels(1)
+            .set_engine_building_year()
+            .set_logged_in()
+            .trips(1)
+            .modify(|t| {
+                t.trip_specification.set_start(start);
+                t.trip_specification.set_end(end);
+            })
+            .ais_vms_positions(40)
+            .build()
+            .await;
+
+        helper.app.login_user();
+
+        let body = vec![
+            CreateFuelMeasurement {
+                timestamp: start + Duration::days(7),
+                fuel: 3000.,
+            },
+            CreateFuelMeasurement {
+                timestamp: end + Duration::days(5),
+                fuel: 2000.,
+            },
+        ];
+
+        helper.app.create_fuel_measurements(&body).await.unwrap();
+
+        helper.builder().await.build().await;
+
+        let trips = helper.app.get_trips(Default::default()).await.unwrap();
+        assert_eq!(trips.len(), 1);
+        let trip = &trips[0];
+
+        let expected = fuel_processor
+            .estimate_range(&state.vessels[0], trip.start, trip.end)
+            .await;
+
+        assert!(approx_eq!(
+            f64,
+            expected,
+            trips[0].fuel_consumption.unwrap()
+        ));
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_trips_fuel_subtracts_start_and_end_part_of_fully_covering_fuel_measurement() {
+    test(|mut helper, builder| async move {
+        let start = Utc.from_utc_datetime(&NaiveDateTime::new(
+            NaiveDate::from_ymd_opt(2020, 3, 12).unwrap(),
+            NaiveTime::from_hms_opt(1, 0, 0).unwrap(),
+        ));
+
+        let fuel_processor = builder.processors.estimator.clone();
+        let end = start + Duration::days(10);
+
+        let first_measurement = start - Duration::hours(4);
+        let last_measurement = end + Duration::hours(4);
+
+        let state = builder
+            .trip_data_increment(Duration::hours(6))
+            .vessels(1)
+            .set_engine_building_year()
+            .set_logged_in()
+            .ais_vms_positions(10)
+            .modify_idx(|i, p| {
+                p.position
+                    .set_timestamp(first_measurement + Duration::minutes(i as i64));
+            })
+            .ais_vms_positions(10)
+            .modify_idx(|i, p| {
+                p.position.set_timestamp(end + Duration::minutes(i as i64));
+            })
+            .trips(1)
+            .modify(|t| {
+                t.trip_specification.set_start(start);
+                t.trip_specification.set_end(end);
+            })
+            .ais_vms_positions(40)
+            .build()
+            .await;
+
+        helper.app.login_user();
+
+        let body = vec![
+            CreateFuelMeasurement {
+                timestamp: first_measurement,
+                fuel: 4000.,
+            },
+            CreateFuelMeasurement {
+                timestamp: start + Duration::hours(14),
+                fuel: 3000.,
+            },
+            CreateFuelMeasurement {
+                timestamp: last_measurement,
+                fuel: 2000.,
+            },
+        ];
+
+        helper.app.create_fuel_measurements(&body).await.unwrap();
+
+        helper.builder().await.build().await;
+
+        let trips = helper.app.get_trips(Default::default()).await.unwrap();
+        assert_eq!(trips.len(), 1);
+        let trip = &trips[0];
+
+        let expected_start_measurement_cutoff = fuel_processor
+            .estimate_range(&state.vessels[0], first_measurement, trip.start)
+            .await;
+
+        let expected_end_measurement_cutoff = fuel_processor
+            .estimate_range(&state.vessels[0], trip.end, last_measurement)
+            .await;
+
+        assert!(expected_start_measurement_cutoff > 0.0);
+        assert!(expected_end_measurement_cutoff > 0.0);
+
+        let expected = 2000.0 - expected_start_measurement_cutoff - expected_end_measurement_cutoff;
+
+        assert!(approx_eq!(f64, expected, trip.fuel_consumption.unwrap()));
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_trips_fuel_subtracts_start_part_of_partially_covering_fuel_measurement() {
+    test(|mut helper, builder| async move {
+        let start = Utc.from_utc_datetime(&NaiveDateTime::new(
+            NaiveDate::from_ymd_opt(2020, 3, 12).unwrap(),
+            NaiveTime::from_hms_opt(1, 0, 0).unwrap(),
+        ));
+
+        let fuel_processor = builder.processors.estimator.clone();
+        let end = start + Duration::days(10);
+
+        let first_measurement = start - Duration::hours(4);
+        let last_measurement = start + Duration::days(2);
+
+        let state = builder
+            .trip_data_increment(Duration::hours(6))
+            .vessels(1)
+            .set_engine_building_year()
+            .set_logged_in()
+            .ais_vms_positions(10)
+            .modify_idx(|i, p| {
+                p.position
+                    .set_timestamp(first_measurement + Duration::minutes(i as i64));
+            })
+            .ais_vms_positions(10)
+            .modify_idx(|i, p| {
+                p.position.set_timestamp(end + Duration::minutes(i as i64));
+            })
+            .trips(1)
+            .modify(|t| {
+                t.trip_specification.set_start(start);
+                t.trip_specification.set_end(end);
+            })
+            .ais_vms_positions(40)
+            .build()
+            .await;
+
+        helper.app.login_user();
+
+        let body = vec![
+            CreateFuelMeasurement {
+                timestamp: first_measurement,
+                fuel: 4000.,
+            },
+            CreateFuelMeasurement {
+                timestamp: last_measurement,
+                fuel: 3000.,
+            },
+        ];
+
+        helper.app.create_fuel_measurements(&body).await.unwrap();
+
+        helper.builder().await.build().await;
+
+        let trips = helper.app.get_trips(Default::default()).await.unwrap();
+        assert_eq!(trips.len(), 1);
+        let trip = &trips[0];
+
+        let expected_measurement_cutoff = fuel_processor
+            .estimate_range(&state.vessels[0], first_measurement, trip.start)
+            .await;
+
+        let expected_trip_estimation = fuel_processor
+            .estimate_range(&state.vessels[0], last_measurement, trip.end)
+            .await;
+
+        assert!(expected_measurement_cutoff > 0.0);
+        assert!(expected_trip_estimation > 0.0);
+
+        let expected = 1000.0 + expected_trip_estimation - expected_measurement_cutoff;
+
+        assert!(approx_eq!(f64, expected, trip.fuel_consumption.unwrap()));
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_trips_fuel_subtracts_end_part_of_fully_covering_fuel_measurement() {
+    test(|mut helper, builder| async move {
+        let start = Utc.from_utc_datetime(&NaiveDateTime::new(
+            NaiveDate::from_ymd_opt(2020, 3, 12).unwrap(),
+            NaiveTime::from_hms_opt(1, 0, 0).unwrap(),
+        ));
+
+        let fuel_processor = builder.processors.estimator.clone();
+        let end = start + Duration::days(10);
+
+        let first_measurement = end - Duration::days(2);
+        let last_measurement = end + Duration::hours(4);
+
+        let state = builder
+            .trip_data_increment(Duration::hours(6))
+            .vessels(1)
+            .set_engine_building_year()
+            .set_logged_in()
+            .ais_vms_positions(10)
+            .modify_idx(|i, p| {
+                p.position
+                    .set_timestamp(first_measurement + Duration::minutes(i as i64));
+            })
+            .ais_vms_positions(10)
+            .modify_idx(|i, p| {
+                p.position.set_timestamp(end + Duration::minutes(i as i64));
+            })
+            .trips(1)
+            .modify(|t| {
+                t.trip_specification.set_start(start);
+                t.trip_specification.set_end(end);
+            })
+            .ais_vms_positions(40)
+            .build()
+            .await;
+
+        helper.app.login_user();
+
+        let body = vec![
+            CreateFuelMeasurement {
+                timestamp: first_measurement,
+                fuel: 4000.,
+            },
+            CreateFuelMeasurement {
+                timestamp: last_measurement,
+                fuel: 3000.,
+            },
+        ];
+
+        helper.app.create_fuel_measurements(&body).await.unwrap();
+
+        helper.builder().await.build().await;
+
+        let trips = helper.app.get_trips(Default::default()).await.unwrap();
+        assert_eq!(trips.len(), 1);
+        let trip = &trips[0];
+
+        let expected_measurement_cutoff = fuel_processor
+            .estimate_range(&state.vessels[0], end, last_measurement)
+            .await;
+
+        let expected_trip_estimation = fuel_processor
+            .estimate_range(&state.vessels[0], trip.start, first_measurement)
+            .await;
+
+        assert!(expected_measurement_cutoff > 0.0);
+        assert!(expected_trip_estimation > 0.0);
+
+        let expected = 1000.0 + expected_trip_estimation - expected_measurement_cutoff;
+
+        assert!(approx_eq!(f64, expected, trip.fuel_consumption.unwrap()));
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_trips_fuel_equals_fuel_measurment_exactly_matching_trip_start_and_end() {
+    test(|mut helper, builder| async move {
+        let start = Utc.from_utc_datetime(&NaiveDateTime::new(
+            NaiveDate::from_ymd_opt(2020, 3, 12).unwrap(),
+            NaiveTime::from_hms_opt(1, 0, 0).unwrap(),
+        ));
+
+        let end = start + Duration::days(10);
+
+        builder
+            .trip_data_increment(Duration::hours(6))
+            .vessels(1)
+            .set_engine_building_year()
+            .set_logged_in()
+            .ais_vms_positions(10)
+            .trips(1)
+            .modify(|t| {
+                t.trip_specification.set_start(start);
+                t.trip_specification.set_end(end);
+            })
+            .ais_vms_positions(40)
+            .up()
+            .up()
+            .ais_vms_positions(10)
+            .build()
+            .await;
+
+        helper.app.login_user();
+
+        let body = vec![
+            CreateFuelMeasurement {
+                timestamp: start,
+                fuel: 4000.,
+            },
+            CreateFuelMeasurement {
+                timestamp: end,
+                fuel: 3000.,
+            },
+        ];
+
+        helper.app.create_fuel_measurements(&body).await.unwrap();
+
+        helper.builder().await.build().await;
+
+        let trips = helper.app.get_trips(Default::default()).await.unwrap();
+        assert_eq!(trips.len(), 1);
+        let trip = &trips[0];
+
+        assert!(approx_eq!(f64, 1000.0, trip.fuel_consumption.unwrap()));
     })
     .await;
 }

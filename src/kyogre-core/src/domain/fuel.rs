@@ -1,6 +1,18 @@
 use chrono::{DateTime, Datelike, NaiveDate, Timelike, Utc};
 use fiskeridir_rs::FiskeridirVesselId;
 use serde::{Deserialize, Serialize};
+use std::f64;
+
+//#[derive(Debug, Clone, Deserialize, Serialize)]
+//#[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
+//#[serde(rename_all = "camelCase")]
+//pub struct FuelMeasurement {
+//    pub barentswatch_user_id: BarentswatchUserId,
+//    pub fiskeridir_vessel_id: FiskeridirVesselId,
+//    pub timestamp: DateTime<Utc>,
+//    pub fuel: f64,
+//}
+//
 
 #[derive(Debug, Clone)]
 pub struct NewFuelDayEstimate {
