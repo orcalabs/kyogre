@@ -1,4 +1,5 @@
 use super::{barentswatch_helper::BarentswatchHelper, test_client::ApiClient};
+use chrono::{DateTime, NaiveDate, Utc};
 use duckdb_rs::{adapter, CacheStorage};
 use engine::*;
 use futures::Future;
@@ -6,6 +7,7 @@ use kyogre_core::*;
 use meilisearch::MeilisearchAdapter;
 use orca_core::{Environment, PsqlLogStatements, PsqlSettings, TestHelperBuilder};
 use postgres::{PostgresAdapter, TestDb};
+use std::f64;
 use std::ops::AddAssign;
 use std::path::PathBuf;
 use std::str::FromStr;
@@ -409,5 +411,39 @@ pub fn assert_haul_matrix_content(
         } else {
             assert_eq!(expected_total, matrix_total, "{m}");
         }
+    }
+}
+
+pub fn overlap_factor(
+    a: std::ops::RangeInclusive<DateTime<Utc>>,
+    b: std::ops::Range<DateTime<Utc>>,
+) -> f64 {
+    if let Some(intersection) = intersect(&a, &b) {
+        let inter_len = (*intersection.end() - *intersection.start()).num_seconds() as f64;
+        inter_len / ((*a.end() - *a.start()).num_seconds()) as f64
+    } else {
+        0.0
+    }
+}
+
+pub fn overlap_factor_date(
+    a: std::ops::RangeInclusive<NaiveDate>,
+    b: std::ops::Range<DateTime<Utc>>,
+) -> f64 {
+    let a = DateRange::from_dates(*a.start(), *a.end()).unwrap();
+    1.0 - overlap_factor(a.start()..=a.end(), b)
+}
+
+fn intersect(
+    a: &std::ops::RangeInclusive<DateTime<Utc>>,
+    b: &std::ops::Range<DateTime<Utc>>,
+) -> Option<std::ops::RangeInclusive<DateTime<Utc>>> {
+    let start = a.start().max(&b.start);
+    let end = a.end().min(&b.end);
+
+    if start <= end {
+        Some(*start..=*end)
+    } else {
+        None
     }
 }

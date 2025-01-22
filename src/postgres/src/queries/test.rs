@@ -2,6 +2,8 @@ use chrono::NaiveDate;
 use fiskeridir_rs::CallSign;
 use fiskeridir_rs::DeliveryPointId;
 use futures::{Stream, StreamExt, TryStreamExt};
+use kyogre_core::DateRange;
+use kyogre_core::FuelMeasurementRange;
 use kyogre_core::{
     AisVmsPosition, Arrival, DeliveryPoint, Departure, FiskeridirVesselId, Mmsi, NavigationStatus,
     NewVesselConflict, PortDockPoint, PositionType, ProcessingStatus, TripPositionLayerId,
@@ -20,6 +22,25 @@ use crate::{
 use super::vms::VmsPositionsArg;
 
 impl PostgresAdapter {
+    pub(crate) async fn all_fuel_measurement_ranges_impl(
+        &self,
+    ) -> Result<Vec<FuelMeasurementRange>> {
+        Ok(sqlx::query_as!(
+            FuelMeasurementRange,
+            r#"
+SELECT
+    fiskeridir_vessel_id AS "fiskeridir_vessel_id: FiskeridirVesselId",
+    fuel_range AS "fuel_range: DateRange",
+    fuel_used
+FROM
+    fuel_measurement_ranges
+ORDER BY
+    fuel_range
+                "#,
+        )
+        .fetch_all(&self.pool)
+        .await?)
+    }
     pub(crate) async fn latest_position_impl(&self) -> Result<Option<NaiveDate>> {
         Ok(sqlx::query!(
             r#"
@@ -61,6 +82,48 @@ WHERE
         .fetch_one(&self.pool)
         .await?
         .num_count as u32)
+    }
+
+    pub(crate) async fn sum_fuel_estimates_impl(
+        &self,
+        start: NaiveDate,
+        end: NaiveDate,
+        to_skip: &[NaiveDate],
+    ) -> Result<f64> {
+        Ok(sqlx::query!(
+            r#"
+SELECT
+    COALESCE(SUM(estimate), 0.0) AS "estimate!"
+FROM
+    fuel_estimates
+WHERE
+    "date"::DATE BETWEEN $1 AND $2
+    AND NOT ("date"::DATE = ANY ($3))
+            "#,
+            start,
+            end,
+            to_skip,
+        )
+        .fetch_one(&self.pool)
+        .await?
+        .estimate)
+    }
+    pub(crate) async fn all_fuel_estimates_impl(&self) -> Result<Vec<f64>> {
+        Ok(sqlx::query!(
+            r#"
+SELECT
+    estimate
+FROM
+    fuel_estimates
+ORDER BY
+    date ASC
+            "#,
+        )
+        .fetch_all(&self.pool)
+        .await?
+        .into_iter()
+        .map(|v| v.estimate)
+        .collect())
     }
     pub(crate) async fn fuel_estimates_with_status_impl(
         &self,

@@ -34,6 +34,17 @@ pub struct AisVmsPositionWithHaul {
 }
 
 #[derive(Debug, Clone)]
+pub struct AisVmsPositionWithHaulAndManual {
+    pub latitude: f64,
+    pub longitude: f64,
+    pub timestamp: DateTime<Utc>,
+    pub speed: Option<f64>,
+    pub is_inside_haul_and_active_gear: bool,
+    pub position_type_id: PositionType,
+    pub covered_by_manual_fuel_entry: bool,
+}
+
+#[derive(Debug, Clone)]
 pub enum AisVmsParams {
     Trip(TripId),
     Range {
@@ -54,5 +65,19 @@ pub enum PositionType {
 impl From<PositionType> for i32 {
     fn from(value: PositionType) -> Self {
         value as i32
+    }
+}
+
+impl From<AisVmsPositionWithHaul> for AisVmsPositionWithHaulAndManual {
+    fn from(value: AisVmsPositionWithHaul) -> Self {
+        Self {
+            speed: value.speed,
+            timestamp: value.timestamp,
+            position_type_id: value.position_type_id,
+            is_inside_haul_and_active_gear: value.is_inside_haul_and_active_gear,
+            latitude: value.latitude,
+            longitude: value.longitude,
+            covered_by_manual_fuel_entry: false,
+        }
     }
 }

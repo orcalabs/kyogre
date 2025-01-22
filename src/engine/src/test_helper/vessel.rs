@@ -1,4 +1,8 @@
-use fiskeridir_rs::LandingMonth;
+use std::str::FromStr;
+
+use fiskeridir_rs::{
+    LandingMonth, NonEmptyString, OrgId, RegisterVesselEntityType, RegisterVesselOwner,
+};
 
 use super::ais_vms::AisOrVmsPosition;
 use super::landing::LandingVesselBuilder;
@@ -45,6 +49,24 @@ impl VesselBuilder {
 
         for v in base.vessels[self.current_index..].iter_mut() {
             v.set_engine_building_year = true;
+        }
+        self
+    }
+
+    pub fn set_org_id_of_owner(mut self, org_id: OrgId) -> VesselBuilder {
+        let base = &mut self.state;
+        let num_vessels = base.vessels[self.current_index..].len();
+
+        assert!(num_vessels > 0);
+
+        for v in base.vessels[self.current_index..].iter_mut() {
+            v.fiskeridir.owners = vec![RegisterVesselOwner {
+                city: None,
+                entity_type: RegisterVesselEntityType::Company,
+                id: Some(org_id),
+                name: NonEmptyString::from_str("test").unwrap(),
+                postal_code: 9000,
+            }];
         }
         self
     }

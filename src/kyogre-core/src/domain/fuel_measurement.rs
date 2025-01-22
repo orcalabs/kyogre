@@ -1,8 +1,7 @@
+use super::DateRange;
 use chrono::{DateTime, Utc};
-use fiskeridir_rs::CallSign;
+use fiskeridir_rs::FiskeridirVesselId;
 use serde::{Deserialize, Serialize};
-
-use crate::BarentswatchUserId;
 
 #[cfg(feature = "oasgen")]
 use oasgen::OaSchema;
@@ -12,28 +11,37 @@ use oasgen::OaSchema;
 #[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
 pub struct FuelMeasurementId(i64);
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
+#[serde(rename_all = "camelCase")]
 pub struct FuelMeasurement {
     pub id: FuelMeasurementId,
-    pub barentswatch_user_id: BarentswatchUserId,
-    pub call_sign: CallSign,
     pub timestamp: DateTime<Utc>,
     pub fuel: f64,
+    pub fuel_after: Option<f64>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
+#[serde(rename_all = "camelCase")]
 pub struct CreateFuelMeasurement {
-    pub barentswatch_user_id: BarentswatchUserId,
-    pub call_sign: CallSign,
     pub timestamp: DateTime<Utc>,
     pub fuel: f64,
+    pub fuel_after: Option<f64>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
+#[serde(rename_all = "camelCase")]
 pub struct DeleteFuelMeasurement {
     pub id: FuelMeasurementId,
-    pub barentswatch_user_id: BarentswatchUserId,
-    pub call_sign: CallSign,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct FuelMeasurementRange {
+    pub fuel_used: f64,
+    pub fuel_range: DateRange,
+    pub fiskeridir_vessel_id: FiskeridirVesselId,
 }
 
 impl From<FuelMeasurementId> for i64 {

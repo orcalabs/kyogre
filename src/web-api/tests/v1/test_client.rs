@@ -2,8 +2,9 @@ use actix_web::http::Method;
 use fiskeridir_rs::{CallSign, OrgId, SpeciesGroup};
 use http_client::{HttpClient, StatusCode};
 use kyogre_core::{
-    ActiveHaulsFilter, ActiveLandingFilter, AverageTripBenchmarks, FiskeridirVesselId, FuelEntry,
-    LiveFuel, Mmsi, ModelId, OrgBenchmarks, UpdateVessel, VesselBenchmarks,
+    ActiveHaulsFilter, ActiveLandingFilter, AverageTripBenchmarks, CreateFuelMeasurement,
+    DeleteFuelMeasurement, FiskeridirVesselId, FuelEntry, FuelMeasurement, LiveFuel, Mmsi, ModelId,
+    OrgBenchmarks, UpdateVessel, VesselBenchmarks,
 };
 use serde::{de::DeserializeOwned, Serialize};
 use web_api::{
@@ -18,10 +19,7 @@ use web_api::{
             FishingSpotPrediction, FishingSpotPredictionParams, FishingWeightPrediction,
             FishingWeightPredictionParams,
         },
-        fuel_measurement::{
-            CreateFuelMeasurement, DeleteFuelMeasurement, FuelMeasurement, FuelMeasurementsParams,
-            UpdateFuelMeasurement,
-        },
+        fuel_measurement::FuelMeasurementsParams,
         haul::{Haul, HaulsMatrix, HaulsMatrixParams, HaulsParams},
         landing::{Landing, LandingMatrix, LandingMatrixParams, LandingsParams},
         org::OrgBenchmarkParameters,
@@ -414,10 +412,7 @@ impl ApiClient {
         self.send("fuel_measurements", Method::POST, &body, None::<&()>)
             .await
     }
-    pub async fn update_fuel_measurements(
-        &self,
-        body: &[UpdateFuelMeasurement],
-    ) -> Result<(), Error> {
+    pub async fn update_fuel_measurements(&self, body: &[FuelMeasurement]) -> Result<(), Error> {
         self.send("fuel_measurements", Method::PUT, &body, None::<&()>)
             .await
     }

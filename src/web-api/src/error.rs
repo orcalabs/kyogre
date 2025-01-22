@@ -40,6 +40,13 @@ pub enum JWTDecodeError {
 #[strum_discriminants(derive(Deserialize, Serialize, OaSchema))]
 #[snafu(module, visibility(pub))]
 pub enum Error {
+    #[snafu(display("Fuel after '{fuel_after}' cannot be lower or equal to fuel '{fuel}'"))]
+    FuelAfterLowerThanFuel {
+        #[snafu(implicit)]
+        location: Location,
+        fuel_after: f64,
+        fuel: f64,
+    },
     #[snafu(display("Start date: '{start}' cannot be after end date: '{end}'"))]
     StartAfterEnd {
         #[snafu(implicit)]
@@ -154,6 +161,7 @@ impl ResponseError for Error {
             | InvalidDateRange
             | MissingDateRange
             | QueryPayload
+            | FuelAfterLowerThanFuel
             | MissingMmsiOrCallSignOrTripId => StatusCode::BAD_REQUEST,
             InsufficientPermissions => StatusCode::FORBIDDEN,
             MissingJWT | InvalidJWT | ParseJWT | JWTDecode => StatusCode::UNAUTHORIZED,
