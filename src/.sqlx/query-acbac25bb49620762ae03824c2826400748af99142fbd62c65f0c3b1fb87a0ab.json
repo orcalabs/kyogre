@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT\n    trip_id AS \"trip_id!: TripId\"\nFROM\n    trips t\nWHERE\n    t.fiskeridir_vessel_id = $1\n    AND LOWER(t.period) <= $2\n                ",
+  "query": "\nSELECT\n    trip_id AS \"trip_id!: TripId\"\nFROM\n    trips t\nWHERE\n    t.fiskeridir_vessel_id = $1\n    AND UPPER(t.period) >= $2\n                ",
   "describe": {
     "columns": [
       {
@@ -19,5 +19,5 @@
       false
     ]
   },
-  "hash": "2ff343dd16eb042ea6a0856da7838d426f3cc3e4bb501a7f50f3929365fc0c8b"
+  "hash": "acbac25bb49620762ae03824c2826400748af99142fbd62c65f0c3b1fb87a0ab"
 }
