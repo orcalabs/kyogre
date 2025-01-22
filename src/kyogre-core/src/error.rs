@@ -1,5 +1,5 @@
 use crate::IsTimeout;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, NaiveDate, Utc};
 use snafu::{Location, Snafu};
 use stack_error::{OpaqueError, StackError};
 use std::num::ParseIntError;
@@ -142,6 +142,12 @@ pub enum DateRangeError {
     Unbounded {
         #[snafu(implicit)]
         location: Location,
+    },
+    #[snafu(display("Invalid calendar date: {date}"))]
+    InvalidCalendarDate {
+        #[snafu(implicit)]
+        location: Location,
+        date: NaiveDate,
     },
 }
 

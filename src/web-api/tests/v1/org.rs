@@ -1,10 +1,12 @@
 use super::helper::test;
-use chrono::{Duration, Utc};
+use chrono::{Duration, NaiveDate, NaiveDateTime, NaiveTime, TimeZone, Utc};
 use engine::*;
 use fiskeridir_rs::{
     NonEmptyString, OrgId, RegisterVesselEntityType, RegisterVesselOwner, SpeciesGroup,
 };
+use float_cmp::approx_eq;
 use http_client::StatusCode;
+use kyogre_core::{CreateFuelMeasurement, TestHelperOutbound};
 use kyogre_core::{Haul, OrgBenchmarks, TripDetailed};
 use std::str::FromStr;
 use web_api::routes::v1::{org::OrgBenchmarkParameters, user::User, vessel::FuelParams};
@@ -482,6 +484,7 @@ async fn test_org_fuel_filter_by_orgs() {
         let org_id2 = OrgId::test_new(2);
         let state = builder
             .vessels(3)
+            .set_engine_building_year()
             .modify_idx(|i, v| {
                 let org_id = if i > 1 { org_id2 } else { org_id };
                 v.fiskeridir.owners = vec![RegisterVesselOwner {
@@ -520,7 +523,17 @@ async fn test_org_fuel_filter_by_orgs() {
             .await
             .unwrap();
 
+        let expected_fuel = helper
+            .adapter()
+            .all_fuel_estimates()
+            .await
+            .into_iter()
+            .sum::<f64>()
+            / 3.0;
+
         assert_eq!(fuel.len(), 2);
+        assert!(approx_eq!(f64, expected_fuel, fuel[0].estimated_fuel));
+        assert!(approx_eq!(f64, expected_fuel, fuel[1].estimated_fuel));
         assert!(!fuel
             .iter()
             .any(|f| f.fiskeridir_vessel_id == state.vessels[2].fiskeridir.id));
@@ -563,6 +576,183 @@ async fn test_org_fuel_returns_empty_response_with_no_data() {
             .unwrap();
 
         assert!(fuel.is_empty());
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_org_fuel_only_includes_measurments_within_given_range() {
+    test(|mut helper, builder| async move {
+        let start = Utc.from_utc_datetime(&NaiveDateTime::new(
+            NaiveDate::from_ymd_opt(2020, 3, 12).unwrap(),
+            NaiveTime::from_hms_opt(0, 0, 0).unwrap(),
+        ));
+
+        let end = start + Duration::days(10);
+        let fuel_processor = builder.processors.estimator.clone();
+
+        let org_id = OrgId::test_new(1);
+
+        builder
+            .trip_data_increment(Duration::hours(6))
+            .vessels(1)
+            .modify(|v| {
+                v.fiskeridir.owners = vec![RegisterVesselOwner {
+                    city: None,
+                    entity_type: RegisterVesselEntityType::Company,
+                    id: Some(org_id),
+                    name: NonEmptyString::from_str("test").unwrap(),
+                    postal_code: 9000,
+                }];
+            })
+            .set_engine_building_year()
+            .set_logged_in()
+            .trips(1)
+            .modify(|t| {
+                t.trip_specification.set_start(start);
+                t.trip_specification.set_end(end);
+            })
+            .ais_vms_positions(40)
+            .build()
+            .await;
+
+        helper.app.login_user();
+
+        let body = vec![
+            CreateFuelMeasurement {
+                timestamp: start - Duration::days(10),
+                fuel: 4000.,
+                fuel_after: None,
+            },
+            CreateFuelMeasurement {
+                timestamp: start - Duration::days(8),
+                fuel: 3000.,
+                fuel_after: None,
+            },
+            CreateFuelMeasurement {
+                timestamp: start + Duration::days(3),
+                fuel: 2000.,
+                fuel_after: None,
+            },
+            CreateFuelMeasurement {
+                timestamp: start + Duration::days(4),
+                fuel: 1000.,
+                fuel_after: None,
+            },
+        ];
+
+        helper.app.create_fuel_measurements(&body).await.unwrap();
+
+        fuel_processor.run_single(None).await.unwrap();
+
+        let fuel = helper
+            .app
+            .get_org_fuel(
+                org_id,
+                FuelParams {
+                    start_date: Some(start.date_naive()),
+                    end_date: Some(end.date_naive()),
+                },
+            )
+            .await
+            .unwrap()
+            .iter()
+            .map(|v| v.estimated_fuel)
+            .sum();
+
+        let estimate = helper
+            .adapter()
+            .sum_fuel_estimates(
+                start.date_naive(),
+                end.date_naive(),
+                &[(start + Duration::days(3)).date_naive()],
+            )
+            .await;
+
+        let expected = 1000.0 + estimate;
+
+        assert!(estimate > 0.0);
+        assert!(approx_eq!(f64, expected, fuel));
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_org_fuel_excludes_fuel_measurement_when_more_than_half_of_period_is_outside_range() {
+    test(|mut helper, builder| async move {
+        let start = Utc.from_utc_datetime(&NaiveDateTime::new(
+            NaiveDate::from_ymd_opt(2020, 3, 12).unwrap(),
+            NaiveTime::from_hms_opt(1, 0, 0).unwrap(),
+        ));
+
+        let end = start + Duration::days(10);
+        let org_id = OrgId::test_new(1);
+
+        builder
+            .trip_data_increment(Duration::hours(6))
+            .vessels(1)
+            .modify(|v| {
+                v.fiskeridir.owners = vec![RegisterVesselOwner {
+                    city: None,
+                    entity_type: RegisterVesselEntityType::Company,
+                    id: Some(org_id),
+                    name: NonEmptyString::from_str("test").unwrap(),
+                    postal_code: 9000,
+                }];
+            })
+            .set_engine_building_year()
+            .set_logged_in()
+            .trips(1)
+            .modify(|t| {
+                t.trip_specification.set_start(start);
+                t.trip_specification.set_end(end);
+            })
+            .ais_vms_positions(40)
+            .build()
+            .await;
+
+        helper.app.login_user();
+
+        let body = vec![
+            CreateFuelMeasurement {
+                timestamp: start + Duration::days(7),
+                fuel: 3000.,
+                fuel_after: None,
+            },
+            CreateFuelMeasurement {
+                timestamp: end + Duration::days(5),
+                fuel: 2000.,
+                fuel_after: None,
+            },
+        ];
+
+        helper.app.create_fuel_measurements(&body).await.unwrap();
+
+        helper.builder().await.build().await;
+
+        let fuel = helper
+            .app
+            .get_org_fuel(
+                org_id,
+                FuelParams {
+                    start_date: Some(start.date_naive()),
+                    end_date: Some(end.date_naive()),
+                },
+            )
+            .await
+            .unwrap()
+            .iter()
+            .map(|v| v.estimated_fuel)
+            .sum();
+
+        let estimated_fuel = helper
+            .adapter()
+            .all_fuel_estimates()
+            .await
+            .into_iter()
+            .sum();
+
+        assert!(approx_eq!(f64, estimated_fuel, fuel));
     })
     .await;
 }

@@ -15,6 +15,7 @@ use kyogre_core::{DEFAULT_LIVE_FUEL_THRESHOLD, TEST_SIGNED_IN_VESSEL_CALLSIGN};
 use web_api::routes::v1::vessel::{FuelParams, LiveFuelParams};
 
 pub mod benchmarks;
+pub mod fuel;
 
 #[tokio::test]
 async fn test_vessels_returns_merged_data_from_fiskeridir_and_ais() {
@@ -953,7 +954,7 @@ async fn test_vessels_returns_correct_current_trip() {
 }
 
 #[tokio::test]
-async fn test_update_vessel_with_engine_info_recomputes_fuel() {
+async fn test_update_vessel_with_engine_info_recomputes_fuel_for_trips_and_day_estimates() {
     test(|mut helper, builder| async move {
         let start = Utc.with_ymd_and_hms(2020, 5, 1, 0, 0, 0).unwrap();
         let end = start + Duration::days(10);

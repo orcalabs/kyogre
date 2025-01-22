@@ -4106,6 +4106,7 @@ dependencies = [
  "futures",
  "geo-types",
  "geozero",
+ "itertools 0.14.0",
  "jurisdiction",
  "kyogre-core",
  "num-traits",

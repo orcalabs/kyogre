@@ -1,7 +1,8 @@
+use fiskeridir_rs::CallSign;
 use fiskeridir_rs::{GearGroup, VesselLengthGroup};
 use kyogre_core::{
     AverageEeoiQuery, AverageTripBenchmarks, AverageTripBenchmarksQuery, DateRange, EeoiQuery,
-    EmptyVecToNone, FiskeridirVesselId, ProcessingStatus, TripBenchmarksQuery, TripId,
+    EmptyVecToNone, FiskeridirVesselId, Mmsi, ProcessingStatus, TripBenchmarksQuery, TripId,
     TripWithBenchmark, DIESEL_CARBON_FACTOR, METERS_TO_NAUTICAL_MILES, MIN_EEOI_DISTANCE,
 };
 
@@ -62,6 +63,7 @@ WHERE
             kyogre_core::BenchmarkTrip,
             r#"
 SELECT
+    t.fiskeridir_vessel_id AS "vessel_id!: FiskeridirVesselId",
     trip_id AS "trip_id!: TripId",
     period AS "period: DateRange",
     period_precision AS "period_precision?: DateRange",
@@ -80,10 +82,13 @@ SELECT
     f.boiler_engine_power,
     f.boiler_engine_building_year,
     f.service_speed,
-    f.degree_of_electrification
+    f.degree_of_electrification,
+    w.call_sign as "call_sign: CallSign",
+    w.mmsi as "mmsi: Mmsi"
 FROM
     trips_detailed t
     INNER JOIN fiskeridir_vessels f ON t.fiskeridir_vessel_id = f.fiskeridir_vessel_id
+    INNER JOIN fiskeridir_ais_vessel_mapping_whitelist w ON w.fiskeridir_vessel_id = f.fiskeridir_vessel_id
 WHERE
     benchmark_status = $1
             "#,
