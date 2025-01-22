@@ -1,7 +1,8 @@
 use crate::{estimated_speed_between_points, Result, UnrealisticSpeed};
 use chrono::{DateTime, Duration, NaiveDate, Utc};
 use kyogre_core::{
-    AisVmsPositionWithHaul, FuelEstimation, NewFuelDayEstimate, PositionType, Vessel,
+    AisVmsPositionWithHaul, EngineType, FuelEstimation, NewFuelDayEstimate, PositionType, Vessel,
+    VesselEngine,
 };
 use std::sync::Arc;
 use tokio::task::JoinSet;
@@ -24,8 +25,7 @@ pub struct FuelItem {
 #[derive(Debug)]
 struct VesselToProcess {
     vessel: Vessel,
-    sfc: f64,
-    engine_power_kw: f64,
+    engines: Vec<VesselEngine>,
 }
 
 impl std::ops::Deref for VesselToProcess {
@@ -36,6 +36,7 @@ impl std::ops::Deref for VesselToProcess {
     }
 }
 
+#[derive(Clone)]
 pub struct FuelEstimator {
     adapter: Arc<dyn FuelEstimation>,
     num_workers: u32,
@@ -54,19 +55,19 @@ impl FuelEstimator {
             if let Some(last_run) = self.adapter.last_run().await? {
                 let diff = Utc::now() - last_run;
                 if diff >= RUN_INTERVAL {
-                    self.run_single().await?;
+                    self.run_single(None).await?;
                 } else {
                     tokio::time::sleep((RUN_INTERVAL - diff).to_std().unwrap()).await;
-                    self.run_single().await?;
+                    self.run_single(None).await?;
                 }
             } else {
-                self.run_single().await?;
+                self.run_single(None).await?;
             }
         }
     }
 
     #[instrument(skip_all)]
-    pub async fn run_single(&self) -> Result<()> {
+    pub async fn run_single(&self, vessels: Option<Vec<Vessel>>) -> Result<()> {
         // We dont want to estimate all days in test as it adds some test execution time
         #[cfg(feature = "test")]
         let (num_trips, end_date) = match self.adapter.latest_position().await.unwrap() {
@@ -82,7 +83,11 @@ impl FuelEstimator {
             chrono::Utc::now().naive_utc().date().pred_opt().unwrap(),
         );
 
-        let vessels = self.adapter.vessels_with_trips(num_trips).await?;
+        let vessels = if let Some(v) = vessels {
+            Ok(v)
+        } else {
+            self.adapter.vessels_with_trips(num_trips).await
+        }?;
 
         let (sender, receiver) = async_channel::unbounded();
         let mut set = JoinSet::new();
@@ -96,21 +101,15 @@ impl FuelEstimator {
         }
 
         for vessel in vessels {
-            let Some(sfc) = vessel.sfc() else {
+            let engines = vessel.engines();
+            if engines.is_empty() {
                 continue;
-            };
-            let Some(engine_power_kw) = vessel.engine_power_kw() else {
-                continue;
-            };
+            }
 
             // Only errors on all receivers being dropped which cannot be at this step as we have
             // the receiver in scope
             sender
-                .send(VesselToProcess {
-                    vessel,
-                    sfc,
-                    engine_power_kw,
-                })
+                .send(VesselToProcess { vessel, engines })
                 .await
                 .unwrap();
         }
@@ -208,22 +207,23 @@ async fn process_day(
         )
         .await?;
 
-    let estimate = estimate_fuel_for_positions(ais_vms, vessel.sfc, vessel.engine_power_kw);
+    let estimate = estimate_fuel_for_positions(ais_vms, &vessel.engines);
 
     Ok(NewFuelDayEstimate {
         vessel_id: vessel.fiskeridir.id,
         date,
         estimate,
+        engine_version: vessel.vessel.fiskeridir.engine_version,
     })
 }
 
-pub fn estimate_fuel_for_positions<T>(positions: Vec<T>, sfc: f64, engine_power_kw: f64) -> f64
+pub fn estimate_fuel_for_positions<T>(positions: Vec<T>, engines: &[VesselEngine]) -> f64
 where
     T: Into<AisVmsPositionWithHaul>,
 {
     let positions = prune_unrealistic_speed(positions);
 
-    estimate_fuel(sfc, engine_power_kw, positions, &mut vec![], |_, _| {})
+    estimate_fuel(engines, positions, &mut vec![], |_, _| {})
 }
 
 fn prune_unrealistic_speed<T>(positions: Vec<T>) -> Vec<AisVmsPositionWithHaul>
@@ -262,7 +262,9 @@ where
 }
 
 struct State {
-    kwh: f64,
+    main_kwh: f64,
+    aux_kwh: f64,
+    boiler_kwh: f64,
     prev: FuelItem,
 }
 
@@ -278,8 +280,7 @@ impl From<AisVmsPositionWithHaul> for FuelItem {
 }
 
 pub fn estimate_fuel<S, T, R>(
-    sfc: f64,
-    engine_power_kw: f64,
+    engines: &[VesselEngine],
     items: Vec<R>,
     per_point: &mut Vec<S>,
     per_point_closure: T,
@@ -295,12 +296,17 @@ where
     let mut iter = items.into_iter().map(R::into);
 
     let state = State {
-        kwh: 0.,
+        main_kwh: 0.,
+        aux_kwh: 0.,
+        boiler_kwh: 0.,
         // `unwrap` is safe due to `len() < 2` check above
         prev: iter.next().unwrap(),
     };
 
+    let num_engines = engines.len();
+
     let result = iter.fold(state, |mut state, v| {
+        let mut per_point_val = 0.;
         let speed = match (state.prev.speed, v.speed) {
             (Some(a), Some(b)) => (a + b) / 2.,
             (Some(a), None) => a,
@@ -312,24 +318,52 @@ where
         // https://www.epa.gov/system/files/documents/2023-01/2020NEI_C1C2_Documentation.pdf
         // Table 3. C1C2 Propulsive Power and Load Factor Surrogates
         let speed_service = 12.;
-
         let load_factor = ((speed / speed_service).powf(3.) * 0.85).clamp(0., 0.98);
 
-        state.kwh += load_factor
-            * (engine_power_kw
-                * if v.is_inside_haul_and_active_gear {
-                    HAUL_LOAD_FACTOR
-                } else {
-                    1.0
-                })
-            * (v.timestamp - state.prev.timestamp).num_milliseconds() as f64
-            / 3_600_000.;
+        for (i, e) in engines.iter().enumerate() {
+            let kwh = load_factor
+                * (e.power_kw
+                    * if v.is_inside_haul_and_active_gear {
+                        HAUL_LOAD_FACTOR
+                    } else {
+                        1.0
+                    })
+                * (v.timestamp - state.prev.timestamp).num_milliseconds() as f64
+                / 3_600_000.;
 
-        per_point.push(per_point_closure(&v, sfc * state.kwh / 1_000_000.));
+            let kwh = match e.engine_type {
+                EngineType::Main => {
+                    state.main_kwh += kwh;
+                    state.main_kwh
+                }
+                EngineType::Auxiliary => {
+                    state.aux_kwh += kwh;
+                    state.aux_kwh
+                }
+                EngineType::Boiler => {
+                    state.boiler_kwh += kwh;
+                    state.boiler_kwh
+                }
+            };
 
+            per_point_val += e.sfc * kwh / 1_000_000.;
+            if i == num_engines - 1 {
+                per_point.push(per_point_closure(&v, per_point_val));
+            }
+        }
         state.prev = v;
         state
     });
 
-    sfc * result.kwh / 1_000_000.
+    engines
+        .iter()
+        .map(|e| {
+            let kwh = match e.engine_type {
+                EngineType::Main => result.main_kwh,
+                EngineType::Auxiliary => result.aux_kwh,
+                EngineType::Boiler => result.boiler_kwh,
+            };
+            e.sfc * kwh / 1_000_000.
+        })
+        .sum()
 }

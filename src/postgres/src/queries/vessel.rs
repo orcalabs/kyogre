@@ -53,6 +53,11 @@ SELECT
     f.engine_building_year_final AS fiskeridir_engine_building_year,
     f.engine_power_final AS fiskeridir_engine_power,
     f.building_year AS fiskeridir_building_year,
+    f.auxiliary_engine_power AS fiskeridir_auxiliary_engine_power,
+    f.auxiliary_engine_building_year AS fiskeridir_auxiliary_engine_building_year,
+    f.engine_version AS fiskeridir_engine_version,
+    f.boiler_engine_power AS fiskeridir_boiler_engine_power,
+    f.boiler_engine_building_year AS fiskeridir_boiler_engine_building_year,
     f.gear_group_ids AS "gear_group_ids!: Vec<GearGroup>",
     f.species_group_ids AS "species_group_ids!: Vec<SpeciesGroup>",
     a.mmsi AS "ais_mmsi?: Mmsi",
@@ -93,14 +98,23 @@ HAVING
 UPDATE fiskeridir_vessels
 SET
     engine_power_manual = $1,
-    engine_building_year_manual = $2
+    engine_building_year_manual = $2,
+    auxiliary_engine_power = $3,
+    auxiliary_engine_building_year = $4,
+    boiler_engine_power = $5,
+    boiler_engine_building_year = $6,
+    engine_version = engine_version + 1
 WHERE
-    call_sign = $3
+    call_sign = $7
 RETURNING
     fiskeridir_vessel_id AS "fiskeridir_vessel_id: FiskeridirVesselId"
             "#,
             update.engine_power.map(|e| e as i32),
             update.engine_building_year.map(|e| e as i32),
+            update.auxiliary_engine_power.map(|e| e as i32),
+            update.auxiliary_engine_building_year.map(|e| e as i32),
+            update.boiler_engine_power.map(|e| e as i32),
+            update.boiler_engine_building_year.map(|e| e as i32),
             call_sign
         )
         .fetch_optional(&mut *tx)
@@ -425,6 +439,11 @@ SELECT
     f.engine_building_year_final AS fiskeridir_engine_building_year,
     f.engine_power_final AS fiskeridir_engine_power,
     f.building_year AS fiskeridir_building_year,
+    f.auxiliary_engine_power AS fiskeridir_auxiliary_engine_power,
+    f.auxiliary_engine_building_year AS fiskeridir_auxiliary_engine_building_year,
+    f.engine_version AS fiskeridir_engine_version,
+    f.boiler_engine_power AS fiskeridir_boiler_engine_power,
+    f.boiler_engine_building_year AS fiskeridir_boiler_engine_building_year,
     f.gear_group_ids AS "gear_group_ids!: Vec<GearGroup>",
     f.species_group_ids AS "species_group_ids!: Vec<SpeciesGroup>",
     a.mmsi AS "ais_mmsi?: Mmsi",

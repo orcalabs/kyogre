@@ -117,6 +117,10 @@ pub struct BenchmarkTrip {
     pub vessel_length_group: VesselLengthGroup,
     pub engine_power: Option<i32>,
     pub engine_building_year: Option<i32>,
+    pub auxiliary_engine_power: Option<i32>,
+    pub auxiliary_engine_building_year: Option<i32>,
+    pub boiler_engine_power: Option<i32>,
+    pub boiler_engine_building_year: Option<i32>,
     pub total_catch_value: f64,
     pub total_catch_weight: f64,
     pub distance: Option<f64>,
@@ -168,11 +172,37 @@ impl Trip {
 }
 
 impl BenchmarkTrip {
-    pub fn sfc(&self) -> Option<f64> {
-        self.engine_building_year.map(|v| sfc(v as u32))
-    }
-    pub fn engine_power_kw(&self) -> Option<f64> {
-        self.engine_power.map(|v| v as f64 * HP_TO_KW)
+    pub fn engines(&self) -> Vec<VesselEngine> {
+        let mut vessels = Vec::with_capacity(3);
+
+        if let (Some(p), Some(b)) = (self.engine_power, self.engine_building_year) {
+            vessels.push(VesselEngine {
+                power_kw: p as f64 * HP_TO_KW,
+                sfc: sfc(b as u32),
+                engine_type: EngineType::Main,
+            });
+        };
+
+        if let (Some(p), Some(b)) = (
+            self.auxiliary_engine_power,
+            self.auxiliary_engine_building_year,
+        ) {
+            vessels.push(VesselEngine {
+                power_kw: p as f64 * HP_TO_KW,
+                sfc: sfc(b as u32),
+                engine_type: EngineType::Auxiliary,
+            });
+        };
+
+        if let (Some(p), Some(b)) = (self.boiler_engine_power, self.boiler_engine_building_year) {
+            vessels.push(VesselEngine {
+                power_kw: p as f64 * HP_TO_KW,
+                sfc: sfc(b as u32),
+                engine_type: EngineType::Boiler,
+            });
+        };
+
+        vessels
     }
 }
 

@@ -1,7 +1,7 @@
 use crate::{estimate_fuel_for_positions, Result};
 use chrono::Utc;
 use kyogre_core::{
-    live_fuel_year_day_hour, sfc, AisPosition, Bound, DateRange, LiveFuelInbound, LiveFuelVessel,
+    live_fuel_year_day_hour, AisPosition, Bound, DateRange, LiveFuelInbound, LiveFuelVessel,
     NewLiveFuel,
 };
 use std::{collections::HashMap, sync::Arc, time::Duration, vec};
@@ -10,6 +10,7 @@ use tracing::{error, instrument};
 static RUN_INTERVAL: Duration = Duration::from_secs(60);
 static FUEL_COMPUTE_BOUNDARY: chrono::Duration = chrono::Duration::days(30);
 
+#[derive(Clone)]
 pub struct LiveFuel {
     adapter: Arc<dyn LiveFuelInbound>,
 }
@@ -92,6 +93,8 @@ impl LiveFuel {
             }
         }
 
+        let engines = vessel.engines();
+
         Ok(hour_split
             .into_iter()
             .filter_map(|(_, positions)| {
@@ -101,11 +104,7 @@ impl LiveFuel {
                     // Safe unwrap as we check the len above
                     let latest_position_timestamp =
                         positions.iter().map(|p| p.msgtime).max().unwrap();
-                    let fuel = estimate_fuel_for_positions(
-                        positions,
-                        sfc(vessel.engine_building_year as u32),
-                        vessel.engine_power_kw(),
-                    );
+                    let fuel = estimate_fuel_for_positions(positions, &engines);
 
                     Some(NewLiveFuel {
                         latest_position_timestamp,

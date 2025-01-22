@@ -4,8 +4,9 @@ use postgres::PostgresAdapter;
 use std::sync::Arc;
 use tokio::task::JoinSet;
 
+#[derive(Clone)]
 pub struct App {
-    estimator: FuelEstimator,
+    pub estimator: FuelEstimator,
     live_fuel: LiveFuel,
     environment: Environment,
 }
@@ -42,7 +43,7 @@ impl App {
                 panic!("one task unexpectedly exited with output: {out:?}");
             }
             Environment::Test => {
-                self.estimator.run_single().await?;
+                self.estimator.run_single(None).await?;
                 self.live_fuel.run_single().await
             }
         }
