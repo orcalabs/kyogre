@@ -1,10 +1,10 @@
-use crate::{estimated_speed_between_points, Result, UnrealisticSpeed};
-use chrono::{DateTime, Duration, NaiveDate, Utc};
+use crate::{estimated_speed_between_points, Result, SpeedItem, UnrealisticSpeed};
+use chrono::{DateTime, Duration, NaiveDate, TimeZone, Utc};
 use kyogre_core::{
-    AisVmsPositionWithHaul, EngineType, FuelEstimation, NewFuelDayEstimate, PositionType, Vessel,
-    VesselEngine,
+    AisVmsPositionWithHaul, AisVmsPositionWithHaulAndManual, DateRange, EngineType, FuelEstimation,
+    NewFuelDayEstimate, PositionType, Vessel, VesselEngine,
 };
-use std::sync::Arc;
+use std::{sync::Arc, vec};
 use tokio::task::JoinSet;
 use tracing::{error, info, instrument};
 
@@ -20,6 +20,7 @@ pub struct FuelItem {
     pub timestamp: DateTime<Utc>,
     pub position_type_id: PositionType,
     pub is_inside_haul_and_active_gear: bool,
+    pub is_covered_by_manual_entry: bool,
 }
 
 #[derive(Debug)]
@@ -48,6 +49,32 @@ impl FuelEstimator {
             adapter,
             num_workers,
         }
+    }
+
+    #[cfg(feature = "test")]
+    pub async fn estimate_range(
+        &self,
+        vessel: &Vessel,
+        start: DateTime<Utc>,
+        end: DateTime<Utc>,
+    ) -> f64 {
+        let ais_vms = self
+            .adapter
+            .ais_vms_positions_with_haul(
+                vessel.fiskeridir.id,
+                vessel.mmsi(),
+                vessel.fiskeridir.call_sign.as_ref(),
+                &DateRange::new(start, end).unwrap(),
+            )
+            .await
+            .unwrap();
+
+        estimate_fuel_for_positions(
+            ais_vms,
+            &vessel.engines(),
+            vessel.fiskeridir.service_speed,
+            vessel.fiskeridir.degree_of_electrification,
+        )
     }
 
     pub async fn run_continuous(self) -> Result<()> {
@@ -130,18 +157,19 @@ impl FuelEstimator {
     }
 }
 
+#[instrument(skip(receiver, adapter))]
 async fn vessel_task(
     receiver: async_channel::Receiver<VesselToProcess>,
     adapter: Arc<dyn FuelEstimation>,
     end_date: NaiveDate,
 ) {
     while let Ok(vessel) = receiver.recv().await {
-        process_vessel(vessel, adapter.as_ref(), end_date).await;
+        process_vessel(&vessel, adapter.as_ref(), end_date).await;
     }
 }
 
 async fn process_vessel(
-    vessel: VesselToProcess,
+    vessel: &VesselToProcess,
     adapter: &dyn FuelEstimation,
     end_date: NaiveDate,
 ) {
@@ -152,7 +180,7 @@ async fn process_vessel(
 }
 
 async fn process_vessel_impl(
-    vessel: VesselToProcess,
+    vessel: &VesselToProcess,
     adapter: &dyn FuelEstimation,
     end_date: NaiveDate,
 ) -> Result<()> {
@@ -170,7 +198,7 @@ async fn process_vessel_impl(
     let mut estimates = Vec::with_capacity(FUEL_ESTIMATE_COMMIT_SIZE.min(dates_to_estimate.len()));
 
     for (i, d) in dates_to_estimate.into_iter().enumerate() {
-        match process_day(&vessel, adapter, d).await {
+        match process_day(vessel, adapter, d).await {
             Ok(v) => estimates.push(v),
             Err(e) => {
                 error!("failed to estimate fuel: {e:?}");
@@ -198,12 +226,15 @@ async fn process_day(
     adapter: &dyn FuelEstimation,
     date: NaiveDate,
 ) -> Result<NewFuelDayEstimate> {
+    let start = Utc.from_utc_datetime(&date.and_hms_opt(0, 0, 0).unwrap());
+    let end = Utc.from_utc_datetime(&date.and_hms_opt(23, 59, 59).unwrap());
+    let range = DateRange::new(start, end)?;
     let ais_vms = adapter
         .ais_vms_positions_with_haul(
             vessel.fiskeridir.id,
             vessel.mmsi(),
             vessel.fiskeridir.call_sign.as_ref(),
-            date,
+            &range,
         )
         .await?;
 
@@ -229,7 +260,7 @@ pub fn estimate_fuel_for_positions<T>(
     degree_of_electrification: Option<f64>,
 ) -> f64
 where
-    T: Into<AisVmsPositionWithHaul>,
+    T: Into<AisVmsPositionWithHaulAndManual>,
 {
     let positions = prune_unrealistic_speed(positions);
 
@@ -243,9 +274,9 @@ where
     )
 }
 
-fn prune_unrealistic_speed<T>(positions: Vec<T>) -> Vec<AisVmsPositionWithHaul>
+fn prune_unrealistic_speed<T>(positions: Vec<T>) -> Vec<AisVmsPositionWithHaulAndManual>
 where
-    T: Into<AisVmsPositionWithHaul>,
+    T: Into<AisVmsPositionWithHaulAndManual>,
 {
     let unrealistic = UnrealisticSpeed::default();
     let mut new_positions = Vec::with_capacity(positions.len());
@@ -292,6 +323,30 @@ impl From<AisVmsPositionWithHaul> for FuelItem {
             timestamp: value.timestamp,
             position_type_id: value.position_type_id,
             is_inside_haul_and_active_gear: value.is_inside_haul_and_active_gear,
+            is_covered_by_manual_entry: false,
+        }
+    }
+}
+
+impl From<AisVmsPositionWithHaulAndManual> for FuelItem {
+    fn from(value: AisVmsPositionWithHaulAndManual) -> Self {
+        FuelItem {
+            speed: value.speed,
+            timestamp: value.timestamp,
+            position_type_id: value.position_type_id,
+            is_inside_haul_and_active_gear: value.is_inside_haul_and_active_gear,
+            is_covered_by_manual_entry: value.covered_by_manual_fuel_entry,
+        }
+    }
+}
+
+impl From<&AisVmsPositionWithHaulAndManual> for SpeedItem {
+    fn from(value: &AisVmsPositionWithHaulAndManual) -> Self {
+        Self {
+            latitude: value.latitude,
+            longitude: value.longitude,
+            speed: value.speed,
+            timestamp: value.timestamp,
         }
     }
 }
@@ -324,8 +379,9 @@ where
 
     let num_engines = engines.len();
 
+    let mut per_point_val = 0.;
+
     let result = iter.fold(state, |mut state, v| {
-        let mut per_point_val = 0.;
         let speed = match (state.prev.speed, v.speed) {
             (Some(a), Some(b)) => (a + b) / 2.,
             (Some(a), None) => a,
@@ -352,26 +408,33 @@ where
                 * (1.0 - degree_of_electrification)
                 / 3_600_000.;
 
-            let kwh = match e.engine_type {
-                EngineType::Main => {
-                    state.main_kwh += kwh;
-                    state.main_kwh
-                }
-                EngineType::Auxiliary => {
-                    state.aux_kwh += kwh;
-                    state.aux_kwh
-                }
-                EngineType::Boiler => {
-                    state.boiler_kwh += kwh;
-                    state.boiler_kwh
-                }
-            };
-
+            // We want to ensure that the trip_positions fuel is computed regardless if
+            // we are skipping the point or not.
             per_point_val += e.sfc * kwh / 1_000_000.;
             if i == num_engines - 1 {
                 per_point.push(per_point_closure(&v, per_point_val));
             }
+
+            // These fields are only set in the 'AisVmsPositionWithHaulAndManual' type which is only
+            // used during fuel estimation of trips.
+            if !v.is_covered_by_manual_entry || !state.prev.is_covered_by_manual_entry {
+                match e.engine_type {
+                    EngineType::Main => {
+                        state.main_kwh += kwh;
+                        state.main_kwh
+                    }
+                    EngineType::Auxiliary => {
+                        state.aux_kwh += kwh;
+                        state.aux_kwh
+                    }
+                    EngineType::Boiler => {
+                        state.boiler_kwh += kwh;
+                        state.boiler_kwh
+                    }
+                };
+            }
         }
+
         state.prev = v;
         state
     });

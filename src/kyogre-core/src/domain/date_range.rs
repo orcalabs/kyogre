@@ -1,5 +1,7 @@
+use crate::date_range_error::InvalidCalendarDateSnafu;
 use crate::{date_range_error::OrderingSnafu, DateRangeError};
-use chrono::{DateTime, Duration, Utc};
+use chrono::TimeZone;
+use chrono::{DateTime, Duration, NaiveDate, Utc};
 
 use super::ERS_LANDING_COVERAGE_OFFSET;
 
@@ -18,6 +20,20 @@ pub enum Bound {
 }
 
 impl DateRange {
+    pub fn from_dates(start: NaiveDate, end: NaiveDate) -> Result<DateRange, DateRangeError> {
+        let mut range = DateRange::new(
+            Utc.from_utc_datetime(&start.and_hms_opt(0, 0, 0).unwrap()),
+            Utc.from_utc_datetime(
+                &end.succ_opt()
+                    .ok_or(InvalidCalendarDateSnafu { date: end }.build())?
+                    .and_hms_opt(0, 0, 0)
+                    .unwrap(),
+            ),
+        )?;
+        range.set_start_bound(Bound::Inclusive);
+        range.set_end_bound(Bound::Exclusive);
+        Ok(range)
+    }
     // Defaults to both start and end being inclusive
     pub fn new(start: DateTime<Utc>, end: DateTime<Utc>) -> Result<DateRange, DateRangeError> {
         if start > end {

@@ -22,4 +22,5 @@ pub mod trip;
 pub mod user;
 pub mod vessel;
 pub mod vessel_event;
+pub mod vessel_org_fuel;
 pub mod vms;

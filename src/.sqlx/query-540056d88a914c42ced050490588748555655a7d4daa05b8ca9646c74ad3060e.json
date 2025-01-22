@@ -1,0 +1,51 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nWITH\n    inserted AS (\n        INSERT INTO\n            fuel_measurements (\n                fiskeridir_vessel_id,\n                barentswatch_user_id,\n                timestamp,\n                fuel,\n                fuel_after\n            )\n        SELECT\n            f.fiskeridir_vessel_id,\n            u.barentswatch_user_id,\n            u.timestamp,\n            u.fuel,\n            u.fuel_after\n        FROM\n            UNNEST(\n                $1::TEXT[],\n                $2::UUID [],\n                $3::TIMESTAMPTZ[],\n                $4::DOUBLE PRECISION[],\n                $5::DOUBLE PRECISION[]\n            ) u (\n                call_sign,\n                barentswatch_user_id,\n                timestamp,\n                fuel,\n                fuel_after\n            )\n            INNER JOIN fiskeridir_ais_vessel_mapping_whitelist f ON f.call_sign = u.call_sign\n        ON CONFLICT (fiskeridir_vessel_id, timestamp) DO NOTHING\n        RETURNING\n            fuel_measurement_id,\n            fiskeridir_vessel_id,\n            timestamp,\n            fuel,\n            fuel_after\n    ),\n    deleted AS (\n        DELETE FROM fuel_measurement_ranges r USING inserted\n        WHERE\n            fuel_range @> inserted.timestamp\n            AND r.fiskeridir_vessel_id = inserted.fiskeridir_vessel_id\n        RETURNING\n            r.fiskeridir_vessel_id,\n            r.fuel_range\n    ),\n    invalidated_trips AS (\n        UPDATE trips_detailed t\n        SET\n            benchmark_status = $6\n        FROM\n            deleted\n        WHERE\n            deleted.fiskeridir_vessel_id = t.fiskeridir_vessel_id\n            AND deleted.fuel_range && t.period\n    )\nSELECT\n    fuel_measurement_id AS \"id: FuelMeasurementId\",\n    fiskeridir_vessel_id AS \"fiskeridir_vessel_id: FiskeridirVesselId\",\n    timestamp,\n    fuel,\n    fuel_after\nFROM\n    inserted\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id: FuelMeasurementId",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "fiskeridir_vessel_id: FiskeridirVesselId",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 2,
+        "name": "timestamp",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 3,
+        "name": "fuel",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 4,
+        "name": "fuel_after",
+        "type_info": "Float8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "TextArray",
+        "UuidArray",
+        "TimestamptzArray",
+        "Float8Array",
+        "Float8Array",
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "540056d88a914c42ced050490588748555655a7d4daa05b8ca9646c74ad3060e"
+}

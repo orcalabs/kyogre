@@ -1,0 +1,20 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    estimate\nFROM\n    fuel_estimates\nORDER BY\n    date ASC\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "estimate",
+        "type_info": "Float8"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "40bc82d3426ba2e715779363f2e3da509427a7736c13f2013130ecdf3fef994a"
+}

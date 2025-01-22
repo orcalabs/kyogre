@@ -225,6 +225,9 @@ pub fn sfc(engine_building_year: u32) -> f64 {
 }
 
 impl Vessel {
+    pub fn fiskeridir_call_sign(&self) -> Option<&CallSign> {
+        self.fiskeridir.call_sign.as_ref()
+    }
     pub fn mmsi(&self) -> Option<Mmsi> {
         self.ais.as_ref().map(|v| v.mmsi)
     }

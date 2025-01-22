@@ -26,7 +26,15 @@ impl TripBenchmark for FuelConsumption {
             return Ok(());
         }
 
-        let track = adapter.track_of_trip_with_haul(trip.trip_id).await?;
+        let track = adapter
+            .ais_vms_positions_with_haul_and_manual(
+                trip.vessel_id,
+                trip.mmsi,
+                trip.call_sign.as_ref(),
+                &trip.period,
+                trip.trip_id,
+            )
+            .await?;
 
         if track.len() < 2 {
             return Ok(());
@@ -34,7 +42,7 @@ impl TripBenchmark for FuelConsumption {
 
         let mut fuel_updates = Vec::with_capacity(track.len());
 
-        let fuel_consumption_tonnes = estimate_fuel(
+        let estimated_fuel = estimate_fuel(
             &engines,
             trip.service_speed,
             trip.degree_of_electrification,
@@ -48,11 +56,15 @@ impl TripBenchmark for FuelConsumption {
             },
         );
 
+        let overlapping_measurement_fuel = adapter
+            .overlapping_measurment_fuel(trip.vessel_id, &trip.period)
+            .await?;
+
         adapter
             .update_trip_position_fuel_consumption(&fuel_updates)
             .await?;
 
-        output.fuel_consumption = Some(fuel_consumption_tonnes);
+        output.fuel_consumption = Some(estimated_fuel + overlapping_measurement_fuel);
 
         Ok(())
     }
