@@ -34,15 +34,19 @@ impl TripBenchmark for FuelConsumption {
 
         let mut fuel_updates = Vec::with_capacity(track.len());
 
-        let fuel_consumption_tonnes =
-            estimate_fuel(&engines, track, &mut fuel_updates, |p, cumulative_fuel| {
-                UpdateTripPositionFuel {
-                    trip_id: trip.trip_id,
-                    timestamp: p.timestamp,
-                    position_type_id: p.position_type_id,
-                    trip_cumulative_fuel_consumption: cumulative_fuel,
-                }
-            });
+        let fuel_consumption_tonnes = estimate_fuel(
+            &engines,
+            trip.service_speed,
+            trip.degree_of_electrification,
+            track,
+            &mut fuel_updates,
+            |p, cumulative_fuel| UpdateTripPositionFuel {
+                trip_id: trip.trip_id,
+                timestamp: p.timestamp,
+                position_type_id: p.position_type_id,
+                trip_cumulative_fuel_consumption: cumulative_fuel,
+            },
+        );
 
         adapter
             .update_trip_position_fuel_consumption(&fuel_updates)

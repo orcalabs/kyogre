@@ -32,6 +32,8 @@ pub struct UpdateVessel {
     pub auxiliary_engine_building_year: Option<u32>,
     pub boiler_engine_power: Option<u32>,
     pub boiler_engine_building_year: Option<u32>,
+    pub degree_of_electrification: Option<f64>,
+    pub service_speed: Option<f64>,
 }
 
 #[derive(Debug, Clone)]
@@ -46,6 +48,8 @@ pub struct LiveFuelVessel {
     pub auxiliary_engine_building_year: Option<i32>,
     pub boiler_engine_power: Option<i32>,
     pub boiler_engine_building_year: Option<i32>,
+    pub service_speed: Option<f64>,
+    pub degree_of_electrification: Option<f64>,
 }
 
 impl LiveFuelVessel {
@@ -208,6 +212,8 @@ pub struct FiskeridirVessel {
     pub boiler_engine_power: Option<u32>,
     pub boiler_engine_building_year: Option<u32>,
     pub engine_version: u32,
+    pub degree_of_electrification: Option<f64>,
+    pub service_speed: Option<f64>,
 }
 
 pub fn sfc(engine_building_year: u32) -> f64 {

@@ -104,7 +104,12 @@ impl LiveFuel {
                     // Safe unwrap as we check the len above
                     let latest_position_timestamp =
                         positions.iter().map(|p| p.msgtime).max().unwrap();
-                    let fuel = estimate_fuel_for_positions(positions, &engines);
+                    let fuel = estimate_fuel_for_positions(
+                        positions,
+                        &engines,
+                        vessel.service_speed,
+                        vessel.degree_of_electrification,
+                    );
 
                     Some(NewLiveFuel {
                         latest_position_timestamp,

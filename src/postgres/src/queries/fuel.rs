@@ -78,6 +78,8 @@ SELECT
     f.auxiliary_engine_building_year AS auxiliary_engine_building_year,
     f.boiler_engine_power AS boiler_engine_power,
     f.boiler_engine_building_year AS boiler_engine_building_year,
+    f.service_speed,
+    f.degree_of_electrification,
     t.departure_timestamp AS "current_trip_start?",
     q.latest_position_timestamp AS "latest_position_timestamp?"
 FROM
