@@ -37,7 +37,7 @@ impl DataSource for VmsScraper {
             self.environment,
             self.fiskeridir_source.clone(),
             self.sources.clone(),
-            None, // TODO: Some(2023),
+            Some(2023),
             |dir, file| async move {
                 let data = dir.into_deserialize(&file)?;
                 add_in_chunks(|vms| processor.add_vms(vms), Box::new(data), 10000).await
