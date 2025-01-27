@@ -16,10 +16,6 @@ pub const LEISURE_VESSEL_SHIP_TYPES: [i32; 2] = [36, 37];
 pub const LEISURE_VESSEL_LENGTH_AIS_BOUNDARY: u32 = 45;
 pub const PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY: u32 = 15;
 
-pub fn ais_area_window() -> Duration {
-    Duration::days(10)
-}
-
 pub fn ais_vms_area_position_interval() -> Duration {
     Duration::seconds(20)
 }
@@ -83,15 +79,6 @@ pub struct NewAisStatic {
     pub dimension_d: Option<i32>,
     pub position_fixing_device_type: Option<i32>,
     pub report_class: Option<String>,
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct AisVmsAreaCount {
-    pub lat: f64,
-    pub lon: f64,
-    pub count: i32,
-    pub num_vessels: i32,
 }
 
 #[derive(Debug, Clone)]

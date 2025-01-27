@@ -1,7 +1,6 @@
 pub mod ais;
 pub mod ais_current;
 pub mod ais_vms;
-pub mod ais_vms_area;
 pub mod barentswatch_helper;
 pub mod current_trip;
 #[cfg(feature = "all-tests")]

@@ -1,12 +1,12 @@
 use crate::{
     error::Result,
-    models::{AisVmsAreaPositionsReturning, EarliestVms, NewVmsPosition, VmsPosition},
+    models::{EarliestVms, NewVmsPosition, VmsPosition},
     PostgresAdapter,
 };
 use chrono::{DateTime, NaiveDate, Utc};
 use fiskeridir_rs::CallSign;
 use futures::{Stream, TryStreamExt};
-use kyogre_core::{ais_area_window, DateRange, Mmsi, PositionType, ProcessingStatus};
+use kyogre_core::{DateRange, ProcessingStatus};
 use std::collections::{hash_map::Entry, HashMap, HashSet};
 
 impl PostgresAdapter {
@@ -148,79 +148,6 @@ SELECT
         )
         .execute(&mut *tx)
         .await?;
-
-        let len = vms_unique.len();
-        let mut lat = Vec::with_capacity(len);
-        let mut lon = Vec::with_capacity(len);
-        let mut timestamp = Vec::with_capacity(len);
-        let mut position_type_id = Vec::with_capacity(len);
-        let mut call_sign = Vec::with_capacity(len);
-
-        let limit = Utc::now() - ais_area_window();
-        for v in vms_unique.values() {
-            if v.timestamp > limit {
-                lat.push(v.latitude);
-                lon.push(v.longitude);
-                timestamp.push(v.timestamp);
-                position_type_id.push(PositionType::Vms as i32);
-                call_sign.push(v.call_sign);
-            }
-        }
-
-        if !lat.is_empty() {
-            let area_positions_inserted = sqlx::query_as!(
-                AisVmsAreaPositionsReturning,
-                r#"
-INSERT INTO
-    ais_vms_area_positions AS a (
-        latitude,
-        longitude,
-        call_sign,
-        "timestamp",
-        position_type_id,
-        mmsi
-    )
-SELECT
-    u.latitude,
-    u.longitude,
-    u.call_sign,
-    u."timestamp",
-    u.position_type_id,
-    NULL
-FROM
-    UNNEST(
-        $1::DOUBLE PRECISION[],
-        $2::DOUBLE PRECISION[],
-        $3::TIMESTAMPTZ[],
-        $4::INT[],
-        $5::VARCHAR[]
-    ) u (
-        latitude,
-        longitude,
-        "timestamp",
-        position_type_id,
-        call_sign
-    )
-ON CONFLICT DO NOTHING
-RETURNING
-    a.latitude,
-    a.longitude,
-    a."timestamp",
-    a.call_sign,
-    a.mmsi AS "mmsi?: Mmsi"
-            "#,
-                &lat,
-                &lon,
-                &timestamp,
-                &position_type_id,
-                &call_sign as &[&str],
-            )
-            .fetch_all(&mut *tx)
-            .await?;
-
-            self.add_ais_vms_aggregated(area_positions_inserted, &mut tx)
-                .await?;
-        }
 
         let inserted = self
             .unnest_insert_returning(vms_unique.into_values(), &mut *tx)

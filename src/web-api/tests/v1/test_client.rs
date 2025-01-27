@@ -11,7 +11,7 @@ use web_api::{
     extractors::{BwPolicy, BwRole},
     routes::v1::{
         ais::{AisCurrentPositionParameters, AisPosition, AisTrackParameters},
-        ais_vms::{AisVmsArea, AisVmsAreaParameters, AisVmsParameters, AisVmsPosition},
+        ais_vms::{AisVmsParameters, AisVmsPosition},
         delivery_point::DeliveryPoint,
         fishing_facility::{FishingFacilitiesParams, FishingFacility},
         fishing_prediction::{
@@ -139,14 +139,6 @@ impl ApiClient {
             }
             None => format!("{}/{}", self.address, path),
         }
-    }
-
-    pub async fn get_ais_vms_area(
-        &self,
-        params: AisVmsAreaParameters,
-    ) -> Result<AisVmsArea, Error> {
-        self.send("ais_vms_area", Method::GET, &(), Some(&params))
-            .await
     }
 
     pub async fn get_ais_current(
