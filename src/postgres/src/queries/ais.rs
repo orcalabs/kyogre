@@ -4,16 +4,13 @@ use chrono::{DateTime, Utc};
 use futures::{Stream, TryStreamExt};
 use kyogre_core::{
     AisPermission, AisPosition, AisVesselMigrate, DateRange, Mmsi, NavigationStatus,
-    NewAisPosition, NewAisStatic, PositionType, LEISURE_VESSEL_LENGTH_AIS_BOUNDARY,
-    LEISURE_VESSEL_SHIP_TYPES, PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY,
+    NewAisPosition, NewAisStatic, LEISURE_VESSEL_LENGTH_AIS_BOUNDARY, LEISURE_VESSEL_SHIP_TYPES,
+    PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY,
 };
 
 use crate::{
     error::Result,
-    models::{
-        self, AisVmsAreaPositionsReturning, NewAisCurrentPosition, NewAisVessel,
-        NewAisVesselHistoric, NewAisVesselMmsi,
-    },
+    models::{self, NewAisCurrentPosition, NewAisVessel, NewAisVesselHistoric, NewAisVesselMmsi},
     PostgresAdapter,
 };
 
@@ -219,99 +216,8 @@ FROM
         let mut tx = self.pool.begin().await?;
 
         self.unnest_insert(mmsis, &mut *tx).await?;
-        let inserted = self
-            .unnest_insert_returning(ais_positions, &mut *tx)
-            .await?;
+        self.unnest_insert(ais_positions, &mut *tx).await?;
         self.unnest_insert(current_positions.into_values(), &mut *tx)
-            .await?;
-
-        let len = inserted.len();
-        let mut lat = Vec::with_capacity(len);
-        let mut lon = Vec::with_capacity(len);
-        let mut timestamp = Vec::with_capacity(len);
-        let mut position_type_id = Vec::with_capacity(len);
-        let mut mmsi = Vec::with_capacity(len);
-
-        for i in inserted {
-            lat.push(i.latitude);
-            lon.push(i.longitude);
-            timestamp.push(i.timestamp);
-            position_type_id.push(PositionType::Ais as i32);
-            mmsi.push(i.mmsi);
-        }
-
-        // By joining 'fiskeridir_ais_vessel_mapping_whitelist' we risk getting multiple
-        // hits as 'call_sign' is not unique on that table. However, it does not matter as one of
-        // the rows will be excluded due to our exclusion constraint and the values we are
-        // interested in each row are identical. This case will occur when we have added
-        // multiple fiskeridir_vessel_ids mapping to the same call sign in our whitelist.
-        //
-        // The 'where' statement catches 2 cases:
-        // - ais_vessels.call_sign is null, we accept this as there are ais vessels with null
-        // call signs.
-        // - fiskeridir_ais_vessel_mapping_whitelist.fiskeridir_vessel_id is not null, this
-        // requires the vessel to exist in our whitelist mapping.
-        //
-        // So a position either has has to be associated with an ais vessel without call sign or
-        // exist in our whitelist to be added to the position area table.
-        let area_positions_inserted = sqlx::query_as!(
-            AisVmsAreaPositionsReturning,
-            r#"
-INSERT INTO
-    ais_vms_area_positions AS a (
-        latitude,
-        longitude,
-        call_sign,
-        "timestamp",
-        position_type_id,
-        mmsi
-    )
-SELECT
-    u.latitude,
-    u.longitude,
-    av.call_sign,
-    u."timestamp",
-    u.position_type_id,
-    u.mmsi
-FROM
-    UNNEST(
-        $1::DOUBLE PRECISION[],
-        $2::DOUBLE PRECISION[],
-        $3::TIMESTAMPTZ[],
-        $4::INT[],
-        $5::INT[]
-    ) u (
-        latitude,
-        longitude,
-        "timestamp",
-        position_type_id,
-        mmsi
-    )
-    INNER JOIN ais_vessels av ON av.mmsi = u.mmsi
-    LEFT JOIN fiskeridir_ais_vessel_mapping_whitelist f ON av.call_sign = f.call_sign
-WHERE
-    (
-        av.call_sign IS NULL
-        OR f.fiskeridir_vessel_id IS NOT NULL
-    )
-ON CONFLICT DO NOTHING
-RETURNING
-    a.latitude,
-    a.longitude,
-    a."timestamp",
-    a.mmsi AS "mmsi?: Mmsi",
-    a.call_sign
-            "#,
-            &lat,
-            &lon,
-            &timestamp,
-            &position_type_id,
-            &mmsi as &[Mmsi],
-        )
-        .fetch_all(&mut *tx)
-        .await?;
-
-        self.add_ais_vms_aggregated(area_positions_inserted, &mut tx)
             .await?;
 
         tx.commit().await?;

@@ -1,6 +1,6 @@
 use crate::*;
 use async_trait::async_trait;
-use chrono::{Duration, NaiveTime, Utc};
+use chrono::{Duration, NaiveTime};
 use machine::Schedule;
 use orca_core::Environment;
 use tracing::error;
@@ -16,16 +16,6 @@ impl machine::State for ScrapeState {
             scraper.run().await;
             if let Err(e) = shared_state.matrix_cache.increment().await {
                 error!("failed to increment cache data version: {e:?}");
-            }
-
-            let limit = (Utc::now() - ais_area_window()).date_naive();
-
-            if let Err(e) = shared_state
-                .ais_pruner_inbound
-                .prune_ais_vms_area(limit)
-                .await
-            {
-                error!("failed to prune ais area: {e:?}");
             }
         }
 

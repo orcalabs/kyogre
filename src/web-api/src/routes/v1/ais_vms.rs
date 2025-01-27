@@ -1,8 +1,7 @@
 use actix_web::web;
-use chrono::{DateTime, Duration, NaiveDate, Utc};
+use chrono::{DateTime, Duration, Utc};
 use fiskeridir_rs::CallSign;
 use futures::TryStreamExt;
-use kyogre_core::ais_area_window;
 use kyogre_core::{
     AisPermission, AisPosition, AisVmsParams, DateRange, Mmsi, NavigationStatus, TripId,
     TripPositionLayerId, VmsPosition,
@@ -19,7 +18,7 @@ use crate::{
         Result,
     },
     extractors::{OptionAuth0Profile, OptionBwProfile},
-    response::{ais_unfold, Response, StreamResponse},
+    response::{ais_unfold, StreamResponse},
     stream_response, Database,
 };
 
@@ -34,16 +33,6 @@ pub struct AisVmsParameters {
     pub trip_id: Option<TripId>,
     pub start: Option<DateTime<Utc>>,
     pub end: Option<DateTime<Utc>>,
-}
-
-#[derive(Debug, Deserialize, Serialize, OaSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct AisVmsAreaParameters {
-    pub x1: f64,
-    pub x2: f64,
-    pub y1: f64,
-    pub y2: f64,
-    pub date_limit: Option<NaiveDate>,
 }
 
 /// Returns the combined AIS/VMS track for the given vessel matching the given filter if any.
@@ -113,47 +102,6 @@ pub async fn ais_vms_positions<T: Database + Send + Sync + 'static>(
     Ok(response)
 }
 
-/// Returns the combined AIS/VMS positions data for the given area.
-/// If no time filter is provided positions within the given area for the last 10 days are
-/// returned.
-/// AIS data for vessels under 15m are restricted to authenticated users with sufficient permissions.
-#[oasgen(skip(db), tags("AisVms"))]
-#[tracing::instrument(skip(db))]
-pub async fn ais_vms_area<T: Database + 'static>(
-    db: web::Data<T>,
-    params: Query<AisVmsAreaParameters>,
-) -> Result<Response<AisVmsArea>> {
-    let area: Vec<kyogre_core::AisVmsAreaCount> = db
-        .ais_vms_area_positions(
-            params.x1,
-            params.x2,
-            params.y1,
-            params.y2,
-            params
-                .date_limit
-                .unwrap_or_else(|| (chrono::Utc::now() - ais_area_window()).date_naive()),
-        )
-        .try_collect()
-        .await?;
-
-    Ok(Response::new(area.into()))
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize, OaSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct AisVmsArea {
-    pub num_vessels: u32,
-    pub counts: Vec<AisVmsAreaCount>,
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize, OaSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct AisVmsAreaCount {
-    pub lat: f64,
-    pub lon: f64,
-    pub count: u32,
-}
-
 #[serde_as]
 #[skip_serializing_none]
 #[derive(Debug, Clone, Deserialize, Serialize, OaSchema)]
@@ -218,32 +166,6 @@ impl From<kyogre_core::AisVmsPosition> for AisVmsPosition {
                 distance_to_shore,
                 missing_data: false,
             }),
-        }
-    }
-}
-
-impl From<Vec<kyogre_core::AisVmsAreaCount>> for AisVmsArea {
-    fn from(counts: Vec<kyogre_core::AisVmsAreaCount>) -> Self {
-        Self {
-            num_vessels: counts.iter().map(|v| v.num_vessels as u32).sum(),
-            counts: counts.into_iter().map(AisVmsAreaCount::from).collect(),
-        }
-    }
-}
-
-impl From<kyogre_core::AisVmsAreaCount> for AisVmsAreaCount {
-    fn from(value: kyogre_core::AisVmsAreaCount) -> Self {
-        let kyogre_core::AisVmsAreaCount {
-            lat,
-            lon,
-            count,
-            num_vessels: _,
-        } = value;
-
-        Self {
-            lat,
-            lon,
-            count: count as u32,
         }
     }
 }

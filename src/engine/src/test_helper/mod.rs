@@ -268,7 +268,6 @@ pub async fn engine(adapter: PostgresAdapter, db_settings: &PsqlSettings) -> Fis
         db.clone(),
         db.clone(),
         db.clone(),
-        db.clone(),
         db_arc,
         None,
         trip_assemblers,

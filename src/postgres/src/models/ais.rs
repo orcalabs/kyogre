@@ -68,11 +68,7 @@ pub struct NewAisVesselHistoric<'a> {
 }
 
 #[derive(Debug, Clone, UnnestInsert)]
-#[unnest_insert(
-    table_name = "ais_positions",
-    conflict = "mmsi,timestamp",
-    returning = "mmsi:Mmsi,latitude,longitude,timestamp"
-)]
+#[unnest_insert(table_name = "ais_positions", conflict = "mmsi,timestamp")]
 pub struct NewAisPosition {
     #[unnest_insert(sql_type = "INT", type_conversion = "type_to_i32")]
     pub mmsi: Mmsi,
@@ -116,15 +112,6 @@ pub struct NewAisCurrentPosition {
     pub speed_over_ground: Option<f64>,
     pub true_heading: Option<i32>,
     pub distance_to_shore: f64,
-}
-
-#[derive(Debug, Clone)]
-pub struct AisVmsAreaPositionsReturning {
-    pub latitude: f64,
-    pub longitude: f64,
-    pub timestamp: DateTime<Utc>,
-    pub mmsi: Option<Mmsi>,
-    pub call_sign: Option<String>,
 }
 
 impl<'a> From<&'a kyogre_core::NewAisStatic> for NewAisVesselHistoric<'a> {
