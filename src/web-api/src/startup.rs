@@ -172,10 +172,6 @@ where
                 get().to(routes::v1::ais::ais_current_positions::<T>),
             )
             .route(
-                "/ais_vms_area",
-                get().to(routes::v1::ais_vms::ais_vms_area::<T>),
-            )
-            .route(
                 "/ais_vms_positions",
                 get().to(routes::v1::ais_vms::ais_vms_positions::<T>),
             )

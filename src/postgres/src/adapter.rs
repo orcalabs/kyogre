@@ -639,18 +639,6 @@ impl WebApiOutboundPort for PostgresAdapter {
             .map_err(|e| e.into())
             .boxed()
     }
-    fn ais_vms_area_positions(
-        &self,
-        x1: f64,
-        x2: f64,
-        y1: f64,
-        y2: f64,
-        date_limit: NaiveDate,
-    ) -> PinBoxStream<'_, AisVmsAreaCount> {
-        self.ais_vms_area_positions_impl(x1, x2, y1, y2, date_limit)
-            .convert()
-            .boxed()
-    }
     fn ais_positions(
         &self,
         mmsi: Mmsi,
@@ -867,13 +855,6 @@ impl WebApiInboundPort for PostgresAdapter {
     ) -> CoreResult<()> {
         retry(|| self.delete_fuel_measurements_impl(measurements)).await?;
         Ok(())
-    }
-}
-
-#[async_trait]
-impl AisVmsAreaPrunerInbound for PostgresAdapter {
-    async fn prune_ais_vms_area(&self, limit: NaiveDate) -> CoreResult<()> {
-        Ok(self.prune_ais_vms_area_impl(limit).await?)
     }
 }
 
