@@ -29,7 +29,7 @@ impl machine::State for ScrapeState {
 
         match environment {
             Environment::Production | Environment::OnPremise | Environment::Development => {
-                Schedule::Daily(NaiveTime::from_hms_opt(7, 0, 0).unwrap())
+                Schedule::Daily(NaiveTime::from_hms_opt(0, 0, 0).unwrap())
             }
             Environment::Local => Schedule::Periodic(Duration::hours(1)),
             Environment::Test => Schedule::Periodic(Duration::seconds(0)),
