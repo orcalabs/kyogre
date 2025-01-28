@@ -47,6 +47,31 @@ pub struct NewVmsPosition<'a> {
     pub distance_to_shore: f64,
 }
 
+#[derive(Deserialize, Debug, Clone, UnnestInsert)]
+#[unnest_insert(
+    table_name = "current_vms_positions",
+    conflict = "call_sign",
+    update_all,
+    where_clause = "excluded.timestamp > current_vms_positions.timestamp"
+)]
+pub struct NewVmsCurrentPosition<'a> {
+    pub call_sign: &'a str,
+    pub course: Option<i32>,
+    pub gross_tonnage: Option<i32>,
+    pub latitude: f64,
+    pub longitude: f64,
+    pub message_id: i32,
+    pub message_type: &'a str,
+    pub message_type_code: &'a str,
+    pub registration_id: Option<&'a str>,
+    pub speed: Option<f64>,
+    pub timestamp: DateTime<Utc>,
+    pub vessel_length: f64,
+    pub vessel_name: &'a str,
+    pub vessel_type: &'a str,
+    pub distance_to_shore: f64,
+}
+
 #[derive(Debug, Clone, UnnestInsert)]
 #[unnest_insert(
     table_name = "earliest_vms_insertion",
@@ -75,6 +100,33 @@ pub struct VmsPosition {
 }
 
 impl<'a> TryFrom<&'a fiskeridir_rs::Vms> for NewVmsPosition<'a> {
+    type Error = Error;
+
+    fn try_from(v: &'a fiskeridir_rs::Vms) -> Result<Self, Self::Error> {
+        let latitude = v.latitude.ok_or_else(|| MissingValueSnafu.build())?;
+        let longitude = v.longitude.ok_or_else(|| MissingValueSnafu.build())?;
+
+        Ok(Self {
+            call_sign: v.call_sign.as_ref(),
+            course: v.course.map(|c| c as i32),
+            gross_tonnage: v.gross_tonnage.map(|c| c as i32),
+            latitude,
+            longitude,
+            message_id: v.message_id as i32,
+            message_type: v.message_type.as_ref(),
+            message_type_code: v.message_type_code.as_ref(),
+            registration_id: v.registration_id.as_deref(),
+            speed: v.speed,
+            timestamp: v.timestamp,
+            vessel_length: v.vessel_length,
+            vessel_name: v.vessel_name.as_ref(),
+            vessel_type: v.vessel_type.as_ref(),
+            distance_to_shore: distance_to_shore(latitude, longitude),
+        })
+    }
+}
+
+impl<'a> TryFrom<&'a fiskeridir_rs::Vms> for NewVmsCurrentPosition<'a> {
     type Error = Error;
 
     fn try_from(v: &'a fiskeridir_rs::Vms) -> Result<Self, Self::Error> {

@@ -26,7 +26,7 @@ impl LiveFuel {
 
         for v in vessels {
             if let Err(e) = self.process_vessel(v).await {
-                error!("failed to process vessel: {e}");
+                error!("failed to process vessel: {e:?}");
             }
         }
 

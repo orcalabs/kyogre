@@ -1037,7 +1037,7 @@ async fn test_update_vessel_with_engine_info_stops_fuel_estimation_from_comittin
     test(|mut helper, builder| async move {
         let start = Utc.with_ymd_and_hms(2020, 5, 1, 0, 0, 0).unwrap();
         let end = start + Duration::days(10);
-        let fuel_processor = builder.fuel_processor.clone();
+        let processors = builder.processors.clone();
 
         builder
             .vessels(1)
@@ -1089,7 +1089,7 @@ async fn test_update_vessel_with_engine_info_stops_fuel_estimation_from_comittin
             .await
             .unwrap();
 
-        fuel_processor
+        processors
             .estimator
             .run_single(Some(vessels))
             .await

@@ -558,6 +558,35 @@ impl FuelEstimation for PostgresAdapter {
 }
 
 #[async_trait]
+impl CurrentPositionInbound for PostgresAdapter {
+    async fn update_current_positions(
+        &self,
+        updates: Vec<CurrentPositionsUpdate>,
+    ) -> CoreResult<()> {
+        Ok(retry(|| self.update_current_positions_impl(&updates)).await?)
+    }
+}
+
+#[async_trait]
+impl CurrentPositionOutbound for PostgresAdapter {
+    async fn vessels(&self) -> CoreResult<Vec<CurrentPositionVessel>> {
+        Ok(retry(|| self.current_position_vessels_impl()).await?)
+    }
+    async fn ais_vms_positions(
+        &self,
+        mmsi: Option<Mmsi>,
+        call_sign: Option<&CallSign>,
+        range: &DateRange,
+    ) -> CoreResult<Vec<AisVmsPosition>> {
+        Ok(retry(|| {
+            self.ais_vms_positions_impl(mmsi, call_sign, range, AisPermission::All)
+                .try_collect()
+        })
+        .await?)
+    }
+}
+
+#[async_trait]
 impl LiveFuelInbound for PostgresAdapter {
     async fn delete_old_live_fuel(
         &self,
@@ -630,12 +659,21 @@ impl WebApiOutboundPort for PostgresAdapter {
     async fn average_eeoi(&self, query: AverageEeoiQuery) -> CoreResult<Option<f64>> {
         Ok(retry(|| self.average_eeoi_impl(&query)).await?)
     }
-    fn ais_current_positions(
+    fn current_positions(
         &self,
         limit: Option<DateTime<Utc>>,
         user_policy: AisPermission,
-    ) -> PinBoxStream<'_, AisPosition> {
-        self.ais_current_positions(limit, user_policy)
+    ) -> PinBoxStream<'_, CurrentPosition> {
+        self.current_positions_impl(limit, user_policy)
+            .map_err(|e| e.into())
+            .boxed()
+    }
+    fn current_trip_positions(
+        &self,
+        vessel_id: FiskeridirVesselId,
+        user_policy: AisPermission,
+    ) -> PinBoxStream<'_, AisVmsPosition> {
+        self.current_trip_positions_impl(vessel_id, user_policy)
             .map_err(|e| e.into())
             .boxed()
     }

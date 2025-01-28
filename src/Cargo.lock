@@ -1571,7 +1571,6 @@ dependencies = [
  "derivative",
  "engine",
  "fiskeridir-rs",
- "fuel-processor",
  "futures",
  "geo",
  "geoutils",
@@ -1584,6 +1583,7 @@ dependencies = [
  "num-traits",
  "orca-core",
  "postgres",
+ "processors",
  "pyo3",
  "rand 0.8.5",
  "scraper 0.1.0",
@@ -1797,25 +1797,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e13624c2627564efccf4934284bdd98cbaa14e79b0b5a141218e507b3a823456"
 dependencies = [
  "percent-encoding",
-]
-
-[[package]]
-name = "fuel-processor"
-version = "0.1.0"
-dependencies = [
- "async-channel",
- "chrono",
- "config",
- "geoutils",
- "kyogre-core",
- "orca-core",
- "postgres",
- "serde",
- "serde_json",
- "snafu",
- "stack-error",
- "tokio",
- "tracing",
 ]
 
 [[package]]
@@ -4198,6 +4179,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "processors"
+version = "0.1.0"
+dependencies = [
+ "async-channel",
+ "chrono",
+ "config",
+ "geoutils",
+ "kyogre-core",
+ "orca-core",
+ "postgres",
+ "serde",
+ "serde_json",
+ "snafu",
+ "stack-error",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "prost"
 version = "0.12.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6480,8 +6480,8 @@ dependencies = [
  "async-trait",
  "chrono",
  "fiskeridir-rs",
- "fuel-processor",
  "kyogre-core",
+ "processors",
 ]
 
 [[package]]
@@ -6808,7 +6808,6 @@ dependencies = [
  "enum_index",
  "fiskeridir-rs",
  "float-cmp",
- "fuel-processor",
  "futures",
  "http-client",
  "jsonwebtoken",
@@ -6818,6 +6817,7 @@ dependencies = [
  "orca-core",
  "pin-project-lite",
  "postgres",
+ "processors",
  "rsa",
  "serde",
  "serde_json",

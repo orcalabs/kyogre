@@ -30,43 +30,6 @@ pub struct AisTrackPath {
     pub mmsi: Mmsi,
 }
 
-#[derive(Default, Debug, Deserialize, Serialize, OaSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct AisCurrentPositionParameters {
-    /// Filters out positions that are older than this limit.
-    pub position_timestamp_limit: Option<DateTime<Utc>>,
-}
-
-/// Returns all current AIS positions of vessels.
-/// AIS data for vessels under 15m are restricted to authenticated users with sufficient permissions.
-#[oasgen(skip(db), tags("Ais"))]
-#[tracing::instrument(skip(db))]
-pub async fn ais_current_positions<T: Database + Send + Sync + 'static>(
-    db: web::Data<T>,
-    params: Query<AisCurrentPositionParameters>,
-    bw_profile: OptionBwProfile,
-    auth: OptionAuth0Profile,
-) -> StreamResponse<CurrentAisPosition> {
-    let bw_policy = bw_profile
-        .into_inner()
-        .map(AisPermission::from)
-        .unwrap_or_default();
-    let auth0_policy = auth
-        .into_inner()
-        .map(AisPermission::from)
-        .unwrap_or_default();
-    let policy = if bw_policy == AisPermission::All || auth0_policy == AisPermission::All {
-        AisPermission::All
-    } else {
-        AisPermission::Above15m
-    };
-
-    stream_response! {
-        db.ais_current_positions(params.position_timestamp_limit, policy)
-            .map_ok(From::from)
-    }
-}
-
 /// Returns the AIS track for the given vessel matching the given filter if any.
 /// If no time filter is provided the track of the last 24 hours are returned.
 /// AIS data for vessels under 15m are restricted to authenticated users with sufficient permissions.
@@ -132,23 +95,6 @@ pub struct AisPosition {
 #[serde_as]
 #[derive(Debug, Clone, Deserialize, Serialize, OaSchema)]
 #[serde(rename_all = "camelCase")]
-pub struct CurrentAisPosition {
-    pub mmsi: Mmsi,
-    pub lat: f64,
-    pub lon: f64,
-    pub timestamp: DateTime<Utc>,
-    pub cog: Option<f64>,
-    #[serde_as(as = "Option<DisplayFromStr>")]
-    pub navigational_status: Option<NavigationStatus>,
-    pub rate_of_turn: Option<f64>,
-    pub speed_over_ground: Option<f64>,
-    pub true_heading: Option<i32>,
-    pub distance_to_shore: f64,
-}
-
-#[serde_as]
-#[derive(Debug, Clone, Deserialize, Serialize, OaSchema)]
-#[serde(rename_all = "camelCase")]
 pub struct AisPositionDetails {
     #[serde_as(as = "Option<DisplayFromStr>")]
     pub navigational_status: Option<NavigationStatus>,
@@ -187,36 +133,6 @@ impl From<kyogre_core::AisPosition> for AisPosition {
                 distance_to_shore,
                 missing_data: false,
             }),
-        }
-    }
-}
-
-impl From<kyogre_core::AisPosition> for CurrentAisPosition {
-    fn from(value: kyogre_core::AisPosition) -> Self {
-        let kyogre_core::AisPosition {
-            latitude,
-            longitude,
-            mmsi,
-            msgtime,
-            course_over_ground,
-            navigational_status,
-            rate_of_turn,
-            speed_over_ground,
-            true_heading,
-            distance_to_shore,
-        } = value;
-
-        Self {
-            mmsi,
-            lat: latitude,
-            lon: longitude,
-            timestamp: msgtime,
-            cog: course_over_ground,
-            navigational_status,
-            rate_of_turn,
-            speed_over_ground,
-            true_heading,
-            distance_to_shore,
         }
     }
 }

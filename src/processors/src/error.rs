@@ -31,4 +31,10 @@ pub enum Error {
         from: geoutils::Location,
         to: geoutils::Location,
     },
+    #[snafu(display("Invalid date range"))]
+    InvalidDateRange {
+        #[snafu(implicit)]
+        location: Location,
+        source: kyogre_core::DateRangeError,
+    },
 }

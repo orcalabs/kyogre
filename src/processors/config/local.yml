@@ -1,5 +1,6 @@
 log_level: Info
 num_fuel_estimation_workers: 8
+current_positions_batch_size: 1000
 tracing_mode: Regular
 postgres:
   ip: localhost
@@ -8,4 +9,4 @@ postgres:
   password: test123
   max_connections: 10
   log_statements: Disable
-  application_name: kyogre-fuel-processor
+  application_name: kyogre-processors

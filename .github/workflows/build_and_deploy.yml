@@ -37,9 +37,9 @@ jobs:
               "container-app-name" : "dev-kyogre-engine",
               "dockerfile" : "dockerfiles/engine/Dockerfile"
            },
-           "fuel-processor" : {
-              "container-app-name" : "dev-kyogre-fuel-processor",
-              "dockerfile" : "dockerfiles/fuel-processor/Dockerfile"
+           "processors" : {
+              "container-app-name" : "dev-kyogre-processors",
+              "dockerfile" : "dockerfiles/processors/Dockerfile"
            }
         }'
       registry: ghcr.io/orcalabs/kyogre

@@ -1,6 +1,7 @@
 mod ais;
 mod catch_area;
 mod catch_location;
+mod current_position;
 mod delivery_point;
 mod economic_zones;
 mod ers_dca;
@@ -29,6 +30,7 @@ mod weather;
 pub use ais::*;
 pub use catch_area::*;
 pub use catch_location::*;
+pub use current_position::*;
 pub use delivery_point::*;
 pub use economic_zones::*;
 pub use ers_dca::*;

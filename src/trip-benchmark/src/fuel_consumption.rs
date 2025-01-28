@@ -1,9 +1,9 @@
 use async_trait::async_trait;
-use fuel_processor::estimate_fuel;
 use kyogre_core::{
     BenchmarkTrip, CoreResult, TripBenchmark, TripBenchmarkId, TripBenchmarkOutbound,
     TripBenchmarkOutput, UpdateTripPositionFuel,
 };
+use processors::estimate_fuel;
 
 /// Computes fuel consumption for a trip in tonnes.
 #[derive(Default)]

@@ -1,5 +1,6 @@
 log_level: Info
 num_fuel_estimation_workers: 4
+current_positions_batch_size: 100
 tracing_mode: Regular
 postgres:
   ip: kyogre-dev.postgres.database.azure.com
@@ -7,4 +8,4 @@ postgres:
   db_name: kyogre
   max_connections: 10
   log_statements: Disable
-  application_name: kyogre-fuel-processor
+  application_name: kyogre-processors

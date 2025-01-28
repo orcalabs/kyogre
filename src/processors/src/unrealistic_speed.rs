@@ -2,16 +2,18 @@ use crate::{error::error::DistanceEstimationSnafu, Result};
 use chrono::{DateTime, Utc};
 use geoutils::Location;
 use kyogre_core::{
-    AisVmsPosition, AisVmsPositionWithHaul, CoreResult, DateRange, PrunedTripPosition,
-    TripPositionLayer, TripPositionLayerId, TripPositionLayerOutput,
+    AisVmsPosition, AisVmsPositionWithHaul, CoreResult, CurrentPosition, DateRange,
+    PrunedTripPosition, TripPositionLayer, TripPositionLayerId, TripPositionLayerOutput,
 };
 use serde_json::json;
 
 static METER_TO_NAUTICAL_MILES: f64 = 0.0005399568;
 
+#[derive(Debug, Clone)]
 pub struct UnrealisticSpeed {
     pub knots_limit: u32,
 }
+
 impl Default for UnrealisticSpeed {
     fn default() -> Self {
         UnrealisticSpeed { knots_limit: 70 }
@@ -24,6 +26,7 @@ pub struct SpeedItem {
     pub speed: Option<f64>,
     pub timestamp: DateTime<Utc>,
 }
+
 impl From<&AisVmsPosition> for SpeedItem {
     fn from(value: &AisVmsPosition) -> Self {
         SpeedItem {
@@ -34,6 +37,18 @@ impl From<&AisVmsPosition> for SpeedItem {
         }
     }
 }
+
+impl From<&CurrentPosition> for SpeedItem {
+    fn from(value: &CurrentPosition) -> Self {
+        SpeedItem {
+            latitude: value.latitude,
+            longitude: value.longitude,
+            speed: value.speed,
+            timestamp: value.timestamp,
+        }
+    }
+}
+
 impl From<&AisVmsPositionWithHaul> for SpeedItem {
     fn from(value: &AisVmsPositionWithHaul) -> Self {
         SpeedItem {
@@ -45,9 +60,10 @@ impl From<&AisVmsPositionWithHaul> for SpeedItem {
     }
 }
 
-pub fn estimated_speed_between_points<T>(first: &T, second: &T) -> Result<u32>
+pub fn estimated_speed_between_points<A, B>(first: &A, second: &B) -> Result<u32>
 where
-    for<'a> &'a T: Into<SpeedItem>,
+    for<'a> &'a A: Into<SpeedItem>,
+    for<'a> &'a B: Into<SpeedItem>,
 {
     let first: SpeedItem = first.into();
     let second: SpeedItem = second.into();
