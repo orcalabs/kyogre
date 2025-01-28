@@ -74,14 +74,15 @@ SELECT
     f.fiskeridir_vessel_id AS "vessel_id!: FiskeridirVesselId",
     f.engine_building_year_final AS "engine_building_year!",
     f.engine_power_final AS "engine_power!",
-    f.auxiliary_engine_power AS auxiliary_engine_power,
-    f.auxiliary_engine_building_year AS auxiliary_engine_building_year,
-    f.boiler_engine_power AS boiler_engine_power,
-    f.boiler_engine_building_year AS boiler_engine_building_year,
-    f.service_speed,
-    f.degree_of_electrification,
+    f.auxiliary_engine_power AS "auxiliary_engine_power?",
+    f.auxiliary_engine_building_year AS "auxiliary_engine_building_year?",
+    f.boiler_engine_power AS "boiler_engine_power?",
+    f.boiler_engine_building_year AS "boiler_engine_building_year?",
+    f.service_speed AS "service_speed?",
+    f.degree_of_electrification AS "degree_of_electrification?",
     t.departure_timestamp AS "current_trip_start?",
-    q.latest_position_timestamp AS "latest_position_timestamp?"
+    -- Hacky fix because sqlx prepare/check flakes on nullability
+    COALESCE(q.latest_position_timestamp, NULL) AS latest_position_timestamp
 FROM
     fiskeridir_ais_vessel_mapping_whitelist w
     INNER JOIN fiskeridir_vessels f ON w.fiskeridir_vessel_id = f.fiskeridir_vessel_id
@@ -233,8 +234,7 @@ FROM
         $5::DOUBLE PRECISION[]
     ) u (id, engine_version, date, status, estimate) ON u.id = f.fiskeridir_vessel_id
     AND u.engine_version = f.engine_version
-ON CONFLICT (fiskeridir_vessel_id, date) DO
-UPDATE
+ON CONFLICT (fiskeridir_vessel_id, date) DO UPDATE
 SET
     estimate = EXCLUDED.estimate,
     status = EXCLUDED.status
