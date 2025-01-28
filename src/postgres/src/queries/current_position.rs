@@ -110,6 +110,8 @@ WHERE
             WHEN $4 = 1 THEN COALESCE(f.length, a.ship_length) >= $5
         END
     )
+ORDER BY
+    timestamp ASC
             "#,
             vessel_id.into_inner(),
             LEISURE_VESSEL_SHIP_TYPES.as_slice(),
@@ -129,7 +131,8 @@ SELECT
     f.fiskeridir_vessel_id AS "id!: FiskeridirVesselId",
     f.mmsi AS "mmsi: Mmsi",
     f.call_sign AS "call_sign: CallSign",
-    t.departure_timestamp AS "current_trip_start?",
+    -- Hacky fix because sqlx prepare/check flakes on nullability
+    COALESCE(t.departure_timestamp, NULL) AS current_trip_start,
     (
         SELECT
             MAX(p.timestamp)
