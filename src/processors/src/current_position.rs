@@ -110,7 +110,9 @@ impl CurrentPositionProcessor {
 
             updates.push(CurrentPositionsUpdate {
                 id: v.id,
-                delete_boundary: start,
+                delete_boundary: v
+                    .current_trip_start
+                    .unwrap_or_else(|| now - DEFAULT_CURRENT_POSITIONS_LIMIT),
                 positions,
             });
         }
