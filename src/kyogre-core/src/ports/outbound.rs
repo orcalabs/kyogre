@@ -23,11 +23,16 @@ pub type PinBoxStream<'a, T> = Pin<Box<dyn Stream<Item = CoreResult<T>> + Send +
 
 #[async_trait]
 pub trait WebApiOutboundPort {
-    fn ais_current_positions(
+    fn current_positions(
         &self,
         limit: Option<DateTime<Utc>>,
         user_policy: AisPermission,
-    ) -> PinBoxStream<'_, AisPosition>;
+    ) -> PinBoxStream<'_, CurrentPosition>;
+    fn current_trip_positions(
+        &self,
+        vessel_id: FiskeridirVesselId,
+        user_policy: AisPermission,
+    ) -> PinBoxStream<'_, AisVmsPosition>;
     fn ais_positions(
         &self,
         mmsi: Mmsi,
@@ -276,6 +281,17 @@ pub trait FuelEstimation: Send + Sync {
         call_sign: Option<&CallSign>,
         date: NaiveDate,
     ) -> CoreResult<Vec<AisVmsPositionWithHaul>>;
+}
+
+#[async_trait]
+pub trait CurrentPositionOutbound: Send + Sync {
+    async fn vessels(&self) -> CoreResult<Vec<CurrentPositionVessel>>;
+    async fn ais_vms_positions(
+        &self,
+        mmsi: Option<Mmsi>,
+        call_sign: Option<&CallSign>,
+        range: &DateRange,
+    ) -> CoreResult<Vec<AisVmsPosition>>;
 }
 
 #[async_trait]

@@ -15,57 +15,6 @@ use crate::{
 };
 
 impl PostgresAdapter {
-    pub(crate) fn ais_current_positions(
-        &self,
-        limit: Option<DateTime<Utc>>,
-        permission: AisPermission,
-    ) -> impl Stream<Item = Result<AisPosition>> + '_ {
-        sqlx::query_as!(
-            AisPosition,
-            r#"
-SELECT
-    c.latitude,
-    c.longitude,
-    c.mmsi AS "mmsi!: Mmsi",
-    c.timestamp AS msgtime,
-    c.course_over_ground,
-    c.navigation_status_id AS "navigational_status: NavigationStatus",
-    c.rate_of_turn,
-    c.speed_over_ground,
-    c.true_heading,
-    c.distance_to_shore
-FROM
-    current_ais_positions c
-    INNER JOIN ais_vessels a ON c.mmsi = a.mmsi
-    INNER JOIN fiskeridir_ais_vessel_mapping_whitelist AS m ON m.call_sign = a.call_sign
-    INNER JOIN fiskeridir_vessels f ON f.fiskeridir_vessel_id = m.fiskeridir_vessel_id
-WHERE
-    (
-        $1::timestamptz IS NULL
-        OR c.timestamp > $1
-    )
-    AND (
-        a.ship_type IS NOT NULL
-        AND NOT (a.ship_type = ANY ($2::INT[]))
-        OR COALESCE(f.length, a.ship_length) > $3
-    )
-    AND (
-        CASE
-            WHEN $4 = 0 THEN TRUE
-            WHEN $4 = 1 THEN COALESCE(f.length, a.ship_length) >= $5
-        END
-    )
-            "#,
-            limit,
-            LEISURE_VESSEL_SHIP_TYPES.as_slice(),
-            LEISURE_VESSEL_LENGTH_AIS_BOUNDARY as i32,
-            permission as i32,
-            PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY as i32,
-        )
-        .fetch(&self.pool)
-        .map_err(|e| e.into())
-    }
-
     pub(crate) fn ais_positions_impl(
         &self,
         mmsi: Mmsi,

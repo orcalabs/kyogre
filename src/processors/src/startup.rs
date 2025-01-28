@@ -1,4 +1,6 @@
-use crate::{FuelEstimator, LiveFuel, Result, Settings};
+use crate::{
+    current_position::CurrentPositionProcessor, FuelEstimator, LiveFuel, Result, Settings,
+};
 use orca_core::Environment;
 use postgres::PostgresAdapter;
 use std::sync::Arc;
@@ -8,6 +10,7 @@ use tokio::task::JoinSet;
 pub struct App {
     pub estimator: FuelEstimator,
     live_fuel: LiveFuel,
+    current_position: CurrentPositionProcessor,
     environment: Environment,
 }
 
@@ -21,7 +24,11 @@ impl App {
 
         Self {
             estimator: FuelEstimator::new(settings.num_fuel_estimation_workers, postgres.clone()),
-            live_fuel: LiveFuel::new(postgres),
+            live_fuel: LiveFuel::new(postgres.clone()),
+            current_position: CurrentPositionProcessor::new(
+                postgres,
+                settings.current_positions_batch_size,
+            ),
             environment: settings.environment,
         }
     }
@@ -34,8 +41,16 @@ impl App {
             | Environment::OnPremise => {
                 let mut set = JoinSet::new();
 
-                set.spawn(self.estimator.run_continuous());
-                set.spawn(self.live_fuel.run_continuous());
+                let Self {
+                    estimator,
+                    live_fuel,
+                    current_position,
+                    environment: _,
+                } = self;
+
+                set.spawn(estimator.run_continuous());
+                set.spawn(live_fuel.run_continuous());
+                set.spawn(current_position.run_continuous());
 
                 // Unwrap only panics on empty set
                 let out = set.join_next().await.unwrap()?;
@@ -43,8 +58,18 @@ impl App {
                 panic!("one task unexpectedly exited with output: {out:?}");
             }
             Environment::Test => {
-                self.estimator.run_single(None).await?;
-                self.live_fuel.run_single().await
+                let Self {
+                    estimator,
+                    live_fuel,
+                    current_position,
+                    environment: _,
+                } = self;
+
+                estimator.run_single(None).await?;
+                live_fuel.run_single().await?;
+                current_position.run_single().await?;
+
+                Ok(())
             }
         }
     }

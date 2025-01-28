@@ -1,0 +1,44 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    f.fiskeridir_vessel_id AS \"id!: FiskeridirVesselId\",\n    f.mmsi AS \"mmsi: Mmsi\",\n    f.call_sign AS \"call_sign: CallSign\",\n    t.departure_timestamp AS \"current_trip_start?\",\n    (\n        SELECT\n            MAX(p.timestamp)\n        FROM\n            current_trip_positions p\n        WHERE\n            p.fiskeridir_vessel_id = f.fiskeridir_vessel_id\n    ) AS latest_position\nFROM\n    fiskeridir_ais_vessel_mapping_whitelist f\n    LEFT JOIN current_trips t ON f.fiskeridir_vessel_id = t.fiskeridir_vessel_id\nWHERE\n    f.mmsi IS NOT NULL\n    OR f.call_sign IS NOT NULL\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id!: FiskeridirVesselId",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "mmsi: Mmsi",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 2,
+        "name": "call_sign: CallSign",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 3,
+        "name": "current_trip_start?",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 4,
+        "name": "latest_position",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      true,
+      true,
+      true,
+      false,
+      null
+    ]
+  },
+  "hash": "c142f9afd6e2b83285eb96e7e452eba4e5ba87356d0e23d259fb6e33332f2531"
+}

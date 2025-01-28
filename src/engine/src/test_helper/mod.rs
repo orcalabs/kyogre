@@ -1,5 +1,5 @@
 use crate::{
-    AisConsumeLoop, AisPosition, AisVms, AisVmsConflict, Arrival, Cluster, DataMessage, Departure,
+    AisConsumeLoop, AisPosition, AisVms, Arrival, Cluster, DataMessage, Departure,
     ErsTripAssembler, FisheryEngine, FishingFacilities, FishingFacilitiesQuery, FishingFacility,
     FishingSpotPredictor, FishingSpotWeatherPredictor, FishingWeightPredictor,
     FishingWeightWeatherPredictor, Haul, HaulsQuery, Landing, LandingTripAssembler, LandingsQuery,
@@ -10,7 +10,6 @@ use crate::{
 use async_channel::Sender;
 use chrono::{DateTime, Duration, TimeZone, Utc};
 use fiskeridir_rs::{CallSign, DeliveryPointId, LandingMonth};
-use fuel_processor::UnrealisticSpeed;
 use futures::TryStreamExt;
 use kyogre_core::{
     BuyerLocation, CatchLocationId, FiskeridirVesselId, MLModel, NewVesselConflict, NewWeather,
@@ -20,6 +19,7 @@ use kyogre_core::{
 use machine::StateMachine;
 use orca_core::PsqlSettings;
 use postgres::PostgresAdapter;
+use processors::{AisVmsConflict, UnrealisticSpeed};
 use std::{
     collections::{HashMap, HashSet},
     sync::{
@@ -131,7 +131,7 @@ pub struct TestStateBuilder {
     delivery_point_id_counter: u64,
     landing_id_counter: u64,
     engine: FisheryEngine,
-    pub fuel_processor: fuel_processor::App,
+    pub processors: processors::App,
     cycle: Cycle,
     trip_queue_reset: Option<Cycle>,
     enabled_ml_models: Vec<Box<dyn MLModel>>,
@@ -332,8 +332,9 @@ impl TestStateBuilder {
             ais_static: vec![],
             call_sign_counter: 1,
             enabled_ml_models: vec![],
-            fuel_processor: fuel_processor::App::build(&fuel_processor::Settings {
+            processors: processors::App::build(&processors::Settings {
                 num_fuel_estimation_workers: 1,
+                current_positions_batch_size: 10,
                 environment: orca_core::Environment::Test,
                 postgres: psql_settings.clone(),
             })
@@ -1079,7 +1080,7 @@ impl TestStateBuilder {
             }
         }
 
-        self.fuel_processor.run().await.unwrap();
+        self.processors.run().await.unwrap();
 
         let mut vessels: Vec<Vessel> = self.storage.vessels().try_collect().await.unwrap();
         vessels.sort_by_key(|v| v.fiskeridir.id);

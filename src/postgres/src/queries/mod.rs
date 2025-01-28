@@ -2,6 +2,7 @@ pub mod ais;
 pub mod ais_vms;
 pub mod assert;
 pub mod catch_location;
+pub mod current_position;
 pub mod delivery_point;
 pub mod duckdb;
 pub mod ers_dca;

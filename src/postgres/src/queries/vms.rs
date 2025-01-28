@@ -1,6 +1,6 @@
 use crate::{
     error::Result,
-    models::{EarliestVms, NewVmsPosition, VmsPosition},
+    models::{EarliestVms, NewVmsCurrentPosition, NewVmsPosition, VmsPosition},
     PostgresAdapter,
 };
 use chrono::{DateTime, NaiveDate, Utc};
@@ -75,6 +75,7 @@ ORDER BY
         let mut call_signs_unique = HashSet::new();
         let mut vms_unique: HashMap<(&str, DateTime<Utc>), NewVmsPosition<'_>> = HashMap::new();
         let mut vms_earliest: HashMap<&str, EarliestVms<'_>> = HashMap::new();
+        let mut current_positions: HashMap<&str, NewVmsCurrentPosition<'_>> = HashMap::new();
 
         let speed_threshold = 0.001;
         for v in &vms {
@@ -130,6 +131,17 @@ ORDER BY
                     }
                 }
             }
+
+            match current_positions.entry(call_sign) {
+                Entry::Vacant(e) => {
+                    e.insert(v.try_into()?);
+                }
+                Entry::Occupied(mut e) => {
+                    if e.get().timestamp < v.timestamp {
+                        e.insert(v.try_into()?);
+                    }
+                }
+            }
         }
 
         let call_signs_unique = call_signs_unique.into_iter().collect::<Vec<_>>();
@@ -137,6 +149,8 @@ ORDER BY
         let mut tx = self.pool.begin().await?;
 
         self.unnest_insert(vms_earliest.into_values(), &mut *tx)
+            .await?;
+        self.unnest_insert(current_positions.into_values(), &mut *tx)
             .await?;
 
         sqlx::query!(

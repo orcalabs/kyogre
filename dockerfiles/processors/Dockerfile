@@ -27,12 +27,12 @@ COPY src src
 COPY scripts scripts
 
 RUN cd src && \
-    cargo build --release --bin fuel-processor
+    cargo build --release --bin processors
 
 FROM gcr.io/distroless/cc
 
-COPY --from=builder /app/src/target/release/fuel-processor .
+COPY --from=builder /app/src/target/release/processors .
 
-COPY src/fuel-processor/config config
+COPY src/processors/config config
 
-ENTRYPOINT ["./fuel-processor"]
+ENTRYPOINT ["./processors"]

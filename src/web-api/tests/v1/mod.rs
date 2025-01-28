@@ -1,8 +1,9 @@
 pub mod ais;
-pub mod ais_current;
 pub mod ais_vms;
 pub mod barentswatch_helper;
+pub mod current_position;
 pub mod current_trip;
+pub mod current_trip_positions;
 #[cfg(feature = "all-tests")]
 pub mod db_migrations;
 pub mod delivery_point;
