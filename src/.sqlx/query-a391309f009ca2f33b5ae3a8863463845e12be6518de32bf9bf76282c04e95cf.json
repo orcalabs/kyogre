@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nDELETE FROM current_trip_positions p USING (\n    SELECT\n        UNNEST($1::BIGINT[]) AS vessel_id,\n        UNNEST($2::TIMESTAMPTZ[]) AS delete_boundary\n) q\nWHERE\n    p.fiskeridir_vessel_id = q.vessel_id\n    AND p.timestamp < q.delete_boundary\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8Array",
+        "TimestamptzArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "a391309f009ca2f33b5ae3a8863463845e12be6518de32bf9bf76282c04e95cf"
+}

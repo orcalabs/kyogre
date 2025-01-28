@@ -133,6 +133,10 @@ where
                 "/trips/current/{fiskeridir_vessel_id}",
                 get().to(routes::v1::trip::current_trip::<T>),
             )
+            .route(
+                "/trips/current/{fiskeridir_vessel_id}/positions",
+                get().to(routes::v1::trip::current_trip_positions::<T>),
+            )
             .route("/hauls", get().to(routes::v1::haul::hauls::<T, M>))
             .route(
                 "/hauls_matrix/{active_filter}",
@@ -168,8 +172,8 @@ where
                 get().to(routes::v1::ais::ais_track::<T>),
             )
             .route(
-                "/ais_current_positions",
-                get().to(routes::v1::ais::ais_current_positions::<T>),
+                "/current_positions",
+                get().to(routes::v1::ais_vms::current_positions::<T>),
             )
             .route(
                 "/ais_vms_positions",

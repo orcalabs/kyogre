@@ -3,8 +3,8 @@ use chrono::{DateTime, Duration, Utc};
 use fiskeridir_rs::CallSign;
 use futures::TryStreamExt;
 use kyogre_core::{
-    AisPermission, AisPosition, AisVmsParams, DateRange, Mmsi, NavigationStatus, TripId,
-    TripPositionLayerId, VmsPosition,
+    AisPermission, AisPosition, AisVmsParams, DateRange, FiskeridirVesselId, Mmsi,
+    NavigationStatus, TripId, TripPositionLayerId, VmsPosition,
 };
 use oasgen::{oasgen, OaSchema};
 use serde::{Deserialize, Serialize};
@@ -33,6 +33,43 @@ pub struct AisVmsParameters {
     pub trip_id: Option<TripId>,
     pub start: Option<DateTime<Utc>>,
     pub end: Option<DateTime<Utc>>,
+}
+
+#[derive(Default, Debug, Deserialize, Serialize, OaSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct CurrentPositionParameters {
+    /// Filters out positions that are older than this limit.
+    pub position_timestamp_limit: Option<DateTime<Utc>>,
+}
+
+/// Returns all current AIS/VMS positions of vessels.
+/// AIS data for vessels under 15m are restricted to authenticated users with sufficient permissions.
+#[oasgen(skip(db), tags("AisVms"))]
+#[tracing::instrument(skip(db))]
+pub async fn current_positions<T: Database + Send + Sync + 'static>(
+    db: web::Data<T>,
+    params: Query<CurrentPositionParameters>,
+    bw_profile: OptionBwProfile,
+    auth: OptionAuth0Profile,
+) -> StreamResponse<CurrentPosition> {
+    let bw_policy = bw_profile
+        .into_inner()
+        .map(AisPermission::from)
+        .unwrap_or_default();
+    let auth0_policy = auth
+        .into_inner()
+        .map(AisPermission::from)
+        .unwrap_or_default();
+    let policy = if bw_policy == AisPermission::All || auth0_policy == AisPermission::All {
+        AisPermission::All
+    } else {
+        AisPermission::Above15m
+    };
+
+    stream_response! {
+        db.current_positions(params.position_timestamp_limit, policy)
+            .map_ok(From::from)
+    }
 }
 
 /// Returns the combined AIS/VMS track for the given vessel matching the given filter if any.
@@ -103,6 +140,23 @@ pub async fn ais_vms_positions<T: Database + Send + Sync + 'static>(
 }
 
 #[serde_as]
+#[derive(Debug, Clone, Deserialize, Serialize, OaSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct CurrentPosition {
+    pub vessel_id: FiskeridirVesselId,
+    pub lat: f64,
+    pub lon: f64,
+    pub timestamp: DateTime<Utc>,
+    pub cog: Option<f64>,
+    #[serde_as(as = "Option<DisplayFromStr>")]
+    pub navigational_status: Option<NavigationStatus>,
+    pub rate_of_turn: Option<f64>,
+    pub speed: Option<f64>,
+    pub true_heading: Option<i32>,
+    pub distance_to_shore: f64,
+}
+
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Debug, Clone, Deserialize, Serialize, OaSchema)]
 #[serde(rename_all = "camelCase")]
@@ -130,6 +184,37 @@ pub struct AisVmsPositionDetails {
     pub true_heading: Option<i32>,
     pub distance_to_shore: f64,
     pub missing_data: bool,
+}
+
+impl From<kyogre_core::CurrentPosition> for CurrentPosition {
+    fn from(value: kyogre_core::CurrentPosition) -> Self {
+        let kyogre_core::CurrentPosition {
+            vessel_id,
+            latitude,
+            longitude,
+            timestamp,
+            course_over_ground,
+            speed,
+            navigational_status,
+            rate_of_turn,
+            true_heading,
+            distance_to_shore,
+            position_type: _,
+        } = value;
+
+        Self {
+            vessel_id,
+            lat: latitude,
+            lon: longitude,
+            timestamp,
+            cog: course_over_ground,
+            navigational_status,
+            rate_of_turn,
+            speed,
+            true_heading,
+            distance_to_shore,
+        }
+    }
 }
 
 impl From<kyogre_core::AisVmsPosition> for AisVmsPosition {
@@ -195,6 +280,33 @@ impl PartialEq<kyogre_core::AisVmsPosition> for AisVmsPosition {
                     && d.true_heading == other.true_heading
                     && d.distance_to_shore as i32 == other.distance_to_shore as i32
             })
+    }
+}
+
+impl PartialEq<kyogre_core::AisVmsPosition> for CurrentPosition {
+    fn eq(&self, other: &kyogre_core::AisVmsPosition) -> bool {
+        let Self {
+            vessel_id: _,
+            lat,
+            lon,
+            timestamp,
+            cog,
+            navigational_status,
+            rate_of_turn,
+            speed,
+            true_heading,
+            distance_to_shore,
+        } = self;
+
+        *lat as i32 == other.latitude as i32
+            && *lon as i32 == other.longitude as i32
+            && timestamp.timestamp() == other.timestamp.timestamp()
+            && cog.map(|c| c as i32) == other.course_over_ground.map(|c| c as i32)
+            && speed.map(|s| s as i32) == other.speed.map(|s| s as i32)
+            && *navigational_status == other.navigational_status
+            && rate_of_turn.map(|v| v as i32) == other.rate_of_turn.map(|v| v as i32)
+            && *true_heading == other.true_heading
+            && *distance_to_shore as i32 == other.distance_to_shore as i32
     }
 }
 

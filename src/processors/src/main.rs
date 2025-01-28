@@ -1,12 +1,12 @@
 #![deny(warnings)]
 #![deny(rust_2018_idioms)]
 
-use fuel_processor::{settings::Settings, startup::App};
+use processors::{settings::Settings, startup::App};
 
 #[tokio::main]
 async fn main() {
     let settings = orca_core::Settings::new().unwrap();
-    settings.init_tracer("kyogre-fuel-processor", "fuel-processor");
+    settings.init_tracer("kyogre-processors", "processors");
 
     let settings = Settings::new(settings).unwrap();
 

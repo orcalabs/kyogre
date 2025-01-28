@@ -10,8 +10,8 @@ use web_api::{
     error::{ErrorDiscriminants, ErrorResponse},
     extractors::{BwPolicy, BwRole},
     routes::v1::{
-        ais::{AisCurrentPositionParameters, AisPosition, AisTrackParameters},
-        ais_vms::{AisVmsParameters, AisVmsPosition},
+        ais::{AisPosition, AisTrackParameters},
+        ais_vms::{AisVmsParameters, AisVmsPosition, CurrentPosition, CurrentPositionParameters},
         delivery_point::DeliveryPoint,
         fishing_facility::{FishingFacilitiesParams, FishingFacility},
         fishing_prediction::{
@@ -141,11 +141,11 @@ impl ApiClient {
         }
     }
 
-    pub async fn get_ais_current(
+    pub async fn get_current_positions(
         &self,
-        params: AisCurrentPositionParameters,
-    ) -> Result<Vec<AisPosition>, Error> {
-        self.send("ais_current_positions", Method::GET, &(), Some(&params))
+        params: CurrentPositionParameters,
+    ) -> Result<Vec<CurrentPosition>, Error> {
+        self.send("current_positions", Method::GET, &(), Some(&params))
             .await
     }
 
@@ -367,6 +367,18 @@ impl ApiClient {
     ) -> Result<Option<CurrentTrip>, Error> {
         self.send(format!("trips/current/{id}"), Method::GET, &(), None::<&()>)
             .await
+    }
+    pub async fn get_current_trip_positions(
+        &self,
+        id: FiskeridirVesselId,
+    ) -> Result<Vec<AisVmsPosition>, Error> {
+        self.send(
+            format!("trips/current/{id}/positions"),
+            Method::GET,
+            &(),
+            None::<&()>,
+        )
+        .await
     }
     pub async fn get_vms_positions(
         &self,

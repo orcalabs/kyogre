@@ -59,6 +59,14 @@ pub trait MLModelsInbound: Send + Sync {
 }
 
 #[async_trait]
+pub trait CurrentPositionInbound: Send + Sync {
+    async fn update_current_positions(
+        &self,
+        updates: Vec<CurrentPositionsUpdate>,
+    ) -> CoreResult<()>;
+}
+
+#[async_trait]
 pub trait AisConsumeLoop: Sync + Send {
     async fn consume(
         &self,

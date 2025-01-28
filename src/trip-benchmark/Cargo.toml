@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 kyogre-core = { path = "../kyogre-core" }
 fiskeridir-rs = { path = "../fiskeridir-rs" }
-fuel-processor = { path = "../fuel-processor" }
+processors = { path = "../processors" }
 
 async-trait = { workspace = true }
 chrono = { workspace = true }

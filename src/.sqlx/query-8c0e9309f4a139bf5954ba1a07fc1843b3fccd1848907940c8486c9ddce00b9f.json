@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO\n    current_positions (\n        fiskeridir_vessel_id,\n        latitude,\n        longitude,\n        \"timestamp\",\n        course_over_ground,\n        speed,\n        navigation_status_id,\n        rate_of_turn,\n        true_heading,\n        distance_to_shore,\n        position_type_id\n    )\nSELECT DISTINCT\n    ON (m.fiskeridir_vessel_id) m.fiskeridir_vessel_id,\n    q.latitude,\n    q.longitude,\n    q.timestamp,\n    q.course_over_ground,\n    q.speed,\n    q.navigation_status_id,\n    q.rate_of_turn,\n    q.true_heading,\n    q.distance_to_shore,\n    q.position_type_id\nFROM\n    fiskeridir_ais_vessel_mapping_whitelist m\n    INNER JOIN (\n        SELECT\n            mmsi,\n            NULL AS call_sign,\n            latitude,\n            longitude,\n            \"timestamp\",\n            course_over_ground,\n            speed_over_ground AS speed,\n            navigation_status_id,\n            rate_of_turn,\n            true_heading,\n            distance_to_shore,\n            $1::INT AS position_type_id\n        FROM\n            current_ais_positions\n        UNION ALL\n        SELECT\n            NULL AS mmsi,\n            call_sign,\n            latitude,\n            longitude,\n            \"timestamp\",\n            course AS course_over_ground,\n            speed,\n            NULL AS navigation_status_id,\n            NULL AS rate_of_turn,\n            NULL AS true_heading,\n            distance_to_shore,\n            $2::INT AS position_type_id\n        FROM\n            current_vms_positions\n    ) q ON q.mmsi = m.mmsi\n    OR q.call_sign = m.call_sign\nWHERE\n    m.fiskeridir_vessel_id = ANY ($3::BIGINT[])\nORDER BY\n    m.fiskeridir_vessel_id,\n    q.timestamp DESC\nON CONFLICT (fiskeridir_vessel_id) DO UPDATE\nSET\n    latitude = EXCLUDED.latitude,\n    longitude = EXCLUDED.longitude,\n    timestamp = EXCLUDED.timestamp,\n    course_over_ground = EXCLUDED.course_over_ground,\n    speed = EXCLUDED.speed,\n    navigation_status_id = EXCLUDED.navigation_status_id,\n    rate_of_turn = EXCLUDED.rate_of_turn,\n    true_heading = EXCLUDED.true_heading,\n    distance_to_shore = EXCLUDED.distance_to_shore,\n    position_type_id = EXCLUDED.position_type_id\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Int4",
+        "Int8Array"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "8c0e9309f4a139bf5954ba1a07fc1843b3fccd1848907940c8486c9ddce00b9f"
+}

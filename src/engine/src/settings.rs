@@ -1,10 +1,8 @@
-use crate::{
-    AisVms, AisVmsConflict, Cluster, ErsTripAssembler, FisheryDiscriminants, LandingTripAssembler,
-};
+use crate::{AisVms, Cluster, ErsTripAssembler, FisheryDiscriminants, LandingTripAssembler};
 use config::ConfigError;
-use fuel_processor::UnrealisticSpeed;
 use kyogre_core::*;
 use orca_core::{Environment, PsqlSettings};
+use processors::{AisVmsConflict, UnrealisticSpeed};
 use serde::Deserialize;
 use trip_benchmark::*;
 

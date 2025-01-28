@@ -4,11 +4,11 @@ use engine::*;
 use kyogre_core::*;
 use web_api::{
     extractors::{BwPolicy, BwRole},
-    routes::v1::ais::AisCurrentPositionParameters,
+    routes::v1::ais_vms::CurrentPositionParameters,
 };
 
 #[tokio::test]
-async fn test_ais_current_does_not_return_positions_of_leisure_vessels_under_45_meters() {
+async fn test_current_positions_does_not_return_positions_of_leisure_vessels_under_45_meters() {
     test(|helper, builder| async move {
         let pos_timestamp = Utc.timestamp_opt(1000, 0).unwrap();
         builder
@@ -26,7 +26,7 @@ async fn test_ais_current_does_not_return_positions_of_leisure_vessels_under_45_
 
         let positions = helper
             .app
-            .get_ais_current(AisCurrentPositionParameters {
+            .get_current_positions(CurrentPositionParameters {
                 position_timestamp_limit: None,
             })
             .await
@@ -38,7 +38,7 @@ async fn test_ais_current_does_not_return_positions_of_leisure_vessels_under_45_
 }
 
 #[tokio::test]
-async fn test_ais_current_does_not_return_positions_of_vessel_with_unknown_ship_type() {
+async fn test_current_positions_does_not_return_positions_of_vessel_with_unknown_ship_type() {
     test(|helper, builder| async move {
         let pos_timestamp = Utc.timestamp_opt(1000, 0).unwrap();
         builder
@@ -53,7 +53,7 @@ async fn test_ais_current_does_not_return_positions_of_vessel_with_unknown_ship_
 
         let positions = helper
             .app
-            .get_ais_current(AisCurrentPositionParameters {
+            .get_current_positions(CurrentPositionParameters {
                 position_timestamp_limit: None,
             })
             .await
@@ -65,7 +65,7 @@ async fn test_ais_current_does_not_return_positions_of_vessel_with_unknown_ship_
 }
 
 #[tokio::test]
-async fn test_ais_current_prioritizes_fiskeridir_length_over_ais_length_in_leisure_vessel_length_check(
+async fn test_current_positions_prioritizes_fiskeridir_length_over_ais_length_in_leisure_vessel_length_check(
 ) {
     test(|helper, builder| async move {
         builder
@@ -80,7 +80,7 @@ async fn test_ais_current_prioritizes_fiskeridir_length_over_ais_length_in_leisu
 
         let positions = helper
             .app
-            .get_ais_current(AisCurrentPositionParameters {
+            .get_current_positions(CurrentPositionParameters {
                 position_timestamp_limit: None,
             })
             .await
@@ -92,7 +92,7 @@ async fn test_ais_current_prioritizes_fiskeridir_length_over_ais_length_in_leisu
 }
 
 #[tokio::test]
-async fn test_ais_current_does_not_return_positions_for_vessels_under_15m_without_bw_token() {
+async fn test_current_positions_does_not_return_positions_for_vessels_under_15m_without_bw_token() {
     test(|helper, builder| async move {
         let pos_timestamp = Utc.timestamp_opt(1000, 0).unwrap();
         builder
@@ -109,7 +109,7 @@ async fn test_ais_current_does_not_return_positions_for_vessels_under_15m_withou
 
         let positions = helper
             .app
-            .get_ais_current(AisCurrentPositionParameters {
+            .get_current_positions(CurrentPositionParameters {
                 position_timestamp_limit: None,
             })
             .await
@@ -121,7 +121,7 @@ async fn test_ais_current_does_not_return_positions_for_vessels_under_15m_withou
 }
 
 #[tokio::test]
-async fn test_ais_current_return_positions_for_vessels_under_15m_with_full_ais_permission() {
+async fn test_current_positions_return_positions_for_vessels_under_15m_with_full_ais_permission() {
     test(|mut helper, builder| async move {
         let pos_timestamp = Utc.timestamp_opt(1000, 0).unwrap();
         builder
@@ -140,7 +140,7 @@ async fn test_ais_current_return_positions_for_vessels_under_15m_with_full_ais_p
 
         let positions = helper
             .app
-            .get_ais_current(AisCurrentPositionParameters {
+            .get_current_positions(CurrentPositionParameters {
                 position_timestamp_limit: None,
             })
             .await
@@ -152,7 +152,7 @@ async fn test_ais_current_return_positions_for_vessels_under_15m_with_full_ais_p
 }
 
 #[tokio::test]
-async fn test_ais_current_does_not_return_positions_for_vessels_under_15m_with_correct_roles_but_missing_policy(
+async fn test_current_positions_does_not_return_positions_for_vessels_under_15m_with_correct_roles_but_missing_policy(
 ) {
     test(|mut helper, builder| async move {
         let pos_timestamp = Utc.timestamp_opt(1000, 0).unwrap();
@@ -175,7 +175,7 @@ async fn test_ais_current_does_not_return_positions_for_vessels_under_15m_with_c
 
         let positions = helper
             .app
-            .get_ais_current(AisCurrentPositionParameters {
+            .get_current_positions(CurrentPositionParameters {
                 position_timestamp_limit: None,
             })
             .await
@@ -187,7 +187,7 @@ async fn test_ais_current_does_not_return_positions_for_vessels_under_15m_with_c
 }
 
 #[tokio::test]
-async fn test_ais_current_does_not_return_positions_for_vessels_under_15m_with_correct_policy_but_missing_role(
+async fn test_current_positions_does_not_return_positions_for_vessels_under_15m_with_correct_policy_but_missing_role(
 ) {
     test(|mut helper, builder| async move {
         let pos_timestamp = Utc.timestamp_opt(1000, 0).unwrap();
@@ -209,7 +209,7 @@ async fn test_ais_current_does_not_return_positions_for_vessels_under_15m_with_c
 
         let positions = helper
             .app
-            .get_ais_current(AisCurrentPositionParameters {
+            .get_current_positions(CurrentPositionParameters {
                 position_timestamp_limit: None,
             })
             .await
@@ -221,17 +221,17 @@ async fn test_ais_current_does_not_return_positions_for_vessels_under_15m_with_c
 }
 
 #[tokio::test]
-async fn test_ais_current_filters_by_limit() {
+async fn test_current_positions_filters_by_limit() {
     test(|helper, builder| async move {
         let limit = Utc.timestamp_opt(1000, 0).unwrap();
         let state = builder
             .vessels(2)
-            .ais_positions(2)
+            .ais_vms_positions(2)
             .modify_idx(|i, v| {
                 if i == 0 {
-                    v.position.msgtime = limit + Duration::seconds(1);
+                    v.position.set_timestamp(limit + Duration::seconds(1));
                 } else {
-                    v.position.msgtime = limit - Duration::seconds(1);
+                    v.position.set_timestamp(limit - Duration::seconds(1));
                 }
             })
             .build()
@@ -239,14 +239,14 @@ async fn test_ais_current_filters_by_limit() {
 
         let positions = helper
             .app
-            .get_ais_current(AisCurrentPositionParameters {
+            .get_current_positions(CurrentPositionParameters {
                 position_timestamp_limit: Some(limit),
             })
             .await
             .unwrap();
 
         assert_eq!(positions.len(), 1);
-        assert_eq!(positions[0], state.ais_positions[0]);
+        assert_eq!(positions[0], state.ais_vms_positions[1]);
     })
     .await;
 }

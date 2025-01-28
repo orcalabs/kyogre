@@ -1,8 +1,9 @@
 use super::fishing_facility::FishingFacility;
 use crate::{
     error::{error::StartAfterEndSnafu, Result},
-    extractors::OptionBwProfile,
-    response::{Response, ResponseOrStream, StreamResponse},
+    extractors::{OptionAuth0Profile, OptionBwProfile},
+    response::{ais_unfold, Response, ResponseOrStream, StreamResponse},
+    routes::v1::ais_vms::AisVmsPosition,
     stream_response, *,
 };
 use actix_web::web::{self, Path};
@@ -10,8 +11,8 @@ use chrono::{DateTime, Utc};
 use fiskeridir_rs::{Gear, GearGroup, LandingId, Quality, SpeciesGroup, VesselLengthGroup};
 use futures::TryStreamExt;
 use kyogre_core::{
-    FiskeridirVesselId, HasTrack, Ordering, Pagination, Tra, TripAssemblerId, TripId, TripSorting,
-    Trips, TripsQuery, VesselEventType,
+    AisPermission, FiskeridirVesselId, HasTrack, Ordering, Pagination, Tra, TripAssemblerId,
+    TripId, TripSorting, Trips, TripsQuery, VesselEventType,
 };
 use oasgen::{oasgen, OaSchema};
 use serde::{Deserialize, Serialize};
@@ -57,6 +58,11 @@ pub struct TripOfLandingPath {
 
 #[derive(Debug, Deserialize, OaSchema)]
 pub struct CurrentTripPath {
+    pub fiskeridir_vessel_id: FiskeridirVesselId,
+}
+
+#[derive(Debug, Deserialize, OaSchema)]
+pub struct CurrentTripPositionsPath {
     pub fiskeridir_vessel_id: FiskeridirVesselId,
 }
 
@@ -152,6 +158,40 @@ pub async fn current_trip<T: Database + 'static>(
             .await?
             .map(CurrentTrip::from),
     ))
+}
+
+/// Returns the current trip of the given vessel, which is determined by the vessel's last reported DEP message.
+/// All vessels below 15m will not have a current trip as they do not report DEP messages.
+#[oasgen(skip(db), tags("Trip"))]
+#[tracing::instrument(skip(db))]
+pub async fn current_trip_positions<T: Database + Send + Sync + 'static>(
+    db: web::Data<T>,
+    path: Path<CurrentTripPositionsPath>,
+    bw_profile: OptionBwProfile,
+    auth: OptionAuth0Profile,
+) -> Result<StreamResponse<AisVmsPosition>> {
+    let bw_policy = bw_profile
+        .into_inner()
+        .map(AisPermission::from)
+        .unwrap_or_default();
+    let auth0_policy = auth
+        .into_inner()
+        .map(AisPermission::from)
+        .unwrap_or_default();
+    let policy = if bw_policy == AisPermission::All || auth0_policy == AisPermission::All {
+        AisPermission::All
+    } else {
+        AisPermission::Above15m
+    };
+
+    let response = stream_response! {
+        ais_unfold(
+            db.current_trip_positions(path.fiskeridir_vessel_id, policy)
+                .map_ok(AisVmsPosition::from),
+        )
+    };
+
+    Ok(response)
 }
 
 #[serde_as]

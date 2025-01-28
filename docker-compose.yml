@@ -110,11 +110,11 @@ services:
       - RUST_BACKTRACE=1
       - APP_ENVIRONMENT=local
 
-  fuel-processor:
-    image: ghcr.io/orcalabs/kyogre/fuel-processor
+  processors:
+    image: ghcr.io/orcalabs/kyogre/processors
     build:
       context: .
-      dockerfile: dockerfiles/fuel-processor/Dockerfile
+      dockerfile: dockerfiles/processors/Dockerfile
       secrets:
         - source: cloudsmith-api-key
     environment:
