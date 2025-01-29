@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use futures::TryStreamExt;
+use futures::{future::ready, TryStreamExt};
 use kyogre_core::{BoxIterator, VesselEventType};
 use tracing::error;
 
@@ -135,14 +135,15 @@ WHERE
         let to_insert = self.ers_dca_to_insert(&message_id, tx).await?;
         ers_dca.retain(|e| to_insert.contains(&e.message_id));
 
-        let inserted = self.unnest_insert_returning(ers_dca, &mut **tx).await?;
-
-        for i in inserted {
-            inserted_message_ids.insert(i.message_id);
-            if let Some(event_id) = i.vessel_event_id {
-                vessel_event_ids.push(event_id);
-            }
-        }
+        self.unnest_insert_returning(ers_dca, &mut **tx)
+            .try_for_each(|i| {
+                inserted_message_ids.insert(i.message_id);
+                if let Some(event_id) = i.vessel_event_id {
+                    vessel_event_ids.push(event_id);
+                }
+                ready(Ok(()))
+            })
+            .await?;
 
         Ok(())
     }

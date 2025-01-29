@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use futures::TryStreamExt;
+use futures::{future::ready, TryStreamExt};
 use kyogre_core::{BoxIterator, VesselEventType};
 use tracing::error;
 
@@ -151,19 +151,22 @@ GROUP BY
         let to_insert = self.ers_tra_to_insert(&ers_tra, tx).await?;
         ers_tra.retain(|e| to_insert.contains(&e.message_id));
 
-        let (event_ids, message_ids): (Vec<Option<i64>>, Vec<i64>) = self
-            .unnest_insert_returning(ers_tra, &mut **tx)
-            .await?
-            .into_iter()
-            .map(|r| (r.vessel_event_id, r.message_id))
-            .unzip();
+        let len = ers_tra.len();
+        let mut event_ids = Vec::with_capacity(len);
+        let mut message_ids = Vec::with_capacity(len);
 
-        self.connect_trip_to_events(
-            &event_ids.into_iter().flatten().collect::<Vec<i64>>(),
-            VesselEventType::ErsTra,
-            tx,
-        )
-        .await?;
+        self.unnest_insert_returning(ers_tra, &mut **tx)
+            .try_for_each(|v| {
+                if let Some(event_id) = v.vessel_event_id {
+                    event_ids.push(event_id);
+                }
+                message_ids.push(v.message_id);
+                ready(Ok(()))
+            })
+            .await?;
+
+        self.connect_trip_to_events(&event_ids, VesselEventType::ErsTra, tx)
+            .await?;
 
         Ok(message_ids)
     }

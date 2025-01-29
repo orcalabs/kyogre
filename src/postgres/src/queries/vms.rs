@@ -165,10 +165,9 @@ SELECT
 
         let inserted = self
             .unnest_insert_returning(vms_unique.into_values(), &mut *tx)
-            .await?
-            .into_iter()
-            .map(|v| (v.call_sign, v.timestamp.date_naive()))
-            .collect::<HashSet<_>>();
+            .map_ok(|v| (v.call_sign, v.timestamp.date_naive()))
+            .try_collect::<HashSet<_>>()
+            .await?;
 
         let (call_signs, dates): (Vec<String>, Vec<NaiveDate>) = inserted.into_iter().unzip();
 
