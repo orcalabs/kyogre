@@ -11,6 +11,7 @@ pub mod ers_por;
 pub mod ers_tra;
 pub mod fishing_facility;
 pub mod fuel;
+pub mod fuel_measurement;
 pub mod hash;
 pub mod haul;
 pub mod landing;

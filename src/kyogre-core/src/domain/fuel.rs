@@ -1,22 +1,6 @@
-use crate::BarentswatchUserId;
 use chrono::{DateTime, Datelike, NaiveDate, Timelike, Utc};
-use fiskeridir_rs::{CallSign, FiskeridirVesselId};
+use fiskeridir_rs::FiskeridirVesselId;
 use serde::{Deserialize, Serialize};
-
-#[derive(Debug, Clone)]
-pub struct FuelMeasurement {
-    pub barentswatch_user_id: BarentswatchUserId,
-    pub call_sign: CallSign,
-    pub timestamp: DateTime<Utc>,
-    pub fuel: f64,
-}
-
-#[derive(Debug, Clone)]
-pub struct DeleteFuelMeasurement {
-    pub barentswatch_user_id: BarentswatchUserId,
-    pub call_sign: CallSign,
-    pub timestamp: DateTime<Utc>,
-}
 
 #[derive(Debug, Clone)]
 pub struct NewFuelDayEstimate {

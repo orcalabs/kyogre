@@ -1,8 +1,9 @@
 use crate::v1::helper::test;
 use chrono::{Duration, Utc};
 use http_client::StatusCode;
+use kyogre_core::FuelMeasurementId;
 use web_api::routes::v1::fuel_measurement::{
-    DeleteFuelMeasurement, FuelMeasurementBody, FuelMeasurementsParams,
+    CreateFuelMeasurement, DeleteFuelMeasurement, FuelMeasurementsParams, UpdateFuelMeasurement,
 };
 
 #[tokio::test]
@@ -15,29 +16,60 @@ async fn test_cant_use_fuel_measurement_endpoints_without_bw_token() {
             .unwrap_err();
         assert_eq!(error.status, StatusCode::NOT_FOUND);
 
-        let body = vec![FuelMeasurementBody {
+        let body = &[CreateFuelMeasurement {
             timestamp: Utc::now(),
             fuel: 10.,
         }];
 
-        let error = helper
-            .app
-            .create_fuel_measurements(body.clone())
-            .await
-            .unwrap_err();
+        let error = helper.app.create_fuel_measurements(body).await.unwrap_err();
         assert_eq!(error.status, StatusCode::NOT_FOUND);
+
+        let body = &[UpdateFuelMeasurement {
+            id: FuelMeasurementId::test_new(1),
+            timestamp: Utc::now(),
+            fuel: 10.,
+        }];
 
         let error = helper.app.update_fuel_measurements(body).await.unwrap_err();
         assert_eq!(error.status, StatusCode::NOT_FOUND);
 
         let error = helper
             .app
-            .delete_fuel_measurements(vec![DeleteFuelMeasurement {
-                timestamp: Utc::now(),
+            .delete_fuel_measurements(&[DeleteFuelMeasurement {
+                id: FuelMeasurementId::test_new(765432),
             }])
             .await
             .unwrap_err();
         assert_eq!(error.status, StatusCode::NOT_FOUND);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_create_returns_created_objects() {
+    test(|mut helper, _builder| async move {
+        helper.app.login_user();
+
+        let now = Utc::now();
+
+        let body = &[
+            CreateFuelMeasurement {
+                timestamp: now,
+                fuel: 1000.,
+            },
+            CreateFuelMeasurement {
+                timestamp: now - Duration::days(1),
+                fuel: 2000.,
+            },
+            CreateFuelMeasurement {
+                timestamp: now - Duration::days(2),
+                fuel: 3000.,
+            },
+        ];
+
+        let measurements = helper.app.create_fuel_measurements(body).await.unwrap();
+
+        assert_eq!(measurements.len(), 3);
     })
     .await;
 }
@@ -49,16 +81,16 @@ async fn test_create_and_get_fuel_measurement() {
 
         let now = Utc::now();
 
-        let body = vec![
-            FuelMeasurementBody {
+        let body = &[
+            CreateFuelMeasurement {
                 timestamp: now,
                 fuel: 1000.,
             },
-            FuelMeasurementBody {
+            CreateFuelMeasurement {
                 timestamp: now - Duration::days(1),
                 fuel: 2000.,
             },
-            FuelMeasurementBody {
+            CreateFuelMeasurement {
                 timestamp: now - Duration::days(2),
                 fuel: 3000.,
             },
@@ -83,16 +115,16 @@ async fn test_get_fuel_measurement_filters_by_dates() {
 
         let now = Utc::now();
 
-        let body = vec![
-            FuelMeasurementBody {
+        let body = &[
+            CreateFuelMeasurement {
                 timestamp: now,
                 fuel: 1000.,
             },
-            FuelMeasurementBody {
+            CreateFuelMeasurement {
                 timestamp: now - Duration::days(2),
                 fuel: 2000.,
             },
-            FuelMeasurementBody {
+            CreateFuelMeasurement {
                 timestamp: now - Duration::days(4),
                 fuel: 3000.,
             },
@@ -119,32 +151,39 @@ async fn test_update_fuel_measurement() {
 
         let now = Utc::now();
 
-        let mut body = vec![
-            FuelMeasurementBody {
+        let body = &[
+            CreateFuelMeasurement {
                 timestamp: now,
                 fuel: 1000.,
             },
-            FuelMeasurementBody {
+            CreateFuelMeasurement {
                 timestamp: now - Duration::days(2),
                 fuel: 2000.,
             },
-            FuelMeasurementBody {
+            CreateFuelMeasurement {
                 timestamp: now - Duration::days(4),
                 fuel: 3000.,
             },
         ];
 
-        helper
+        helper.app.create_fuel_measurements(body).await.unwrap();
+
+        let measurements = helper
             .app
-            .create_fuel_measurements(body.clone())
+            .get_fuel_measurements(Default::default())
             .await
             .unwrap();
 
-        for m in body.iter_mut() {
-            m.fuel *= 10.;
-        }
+        let body = measurements
+            .into_iter()
+            .map(|v| UpdateFuelMeasurement {
+                id: v.id,
+                timestamp: v.timestamp,
+                fuel: v.fuel * 10.,
+            })
+            .collect::<Vec<_>>();
 
-        helper.app.update_fuel_measurements(body).await.unwrap();
+        helper.app.update_fuel_measurements(&body).await.unwrap();
 
         let measurements = helper
             .app
@@ -166,26 +205,22 @@ async fn test_delete_fuel_measurement() {
 
         let now = Utc::now();
 
-        let body = vec![
-            FuelMeasurementBody {
+        let body = &[
+            CreateFuelMeasurement {
                 timestamp: now,
                 fuel: 1000.,
             },
-            FuelMeasurementBody {
+            CreateFuelMeasurement {
                 timestamp: now - Duration::days(2),
                 fuel: 2000.,
             },
-            FuelMeasurementBody {
+            CreateFuelMeasurement {
                 timestamp: now - Duration::days(4),
                 fuel: 3000.,
             },
         ];
 
-        helper
-            .app
-            .create_fuel_measurements(body.clone())
-            .await
-            .unwrap();
+        helper.app.create_fuel_measurements(body).await.unwrap();
 
         let measurements = helper
             .app
@@ -194,12 +229,12 @@ async fn test_delete_fuel_measurement() {
             .unwrap();
         assert_eq!(measurements.len(), 3);
 
-        let delete = vec![
+        let delete = &[
             DeleteFuelMeasurement {
-                timestamp: body[0].timestamp,
+                id: measurements[0].id,
             },
             DeleteFuelMeasurement {
-                timestamp: body[2].timestamp,
+                id: measurements[2].id,
             },
         ];
 

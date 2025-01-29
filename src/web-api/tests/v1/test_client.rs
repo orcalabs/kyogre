@@ -19,7 +19,8 @@ use web_api::{
             FishingWeightPredictionParams,
         },
         fuel_measurement::{
-            DeleteFuelMeasurement, FuelMeasurement, FuelMeasurementBody, FuelMeasurementsParams,
+            CreateFuelMeasurement, DeleteFuelMeasurement, FuelMeasurement, FuelMeasurementsParams,
+            UpdateFuelMeasurement,
         },
         haul::{Haul, HaulsMatrix, HaulsMatrixParams, HaulsParams},
         landing::{Landing, LandingMatrix, LandingMatrixParams, LandingsParams},
@@ -427,21 +428,21 @@ impl ApiClient {
     }
     pub async fn create_fuel_measurements(
         &self,
-        body: Vec<FuelMeasurementBody>,
-    ) -> Result<(), Error> {
+        body: &[CreateFuelMeasurement],
+    ) -> Result<Vec<FuelMeasurement>, Error> {
         self.send("fuel_measurements", Method::POST, &body, None::<&()>)
             .await
     }
     pub async fn update_fuel_measurements(
         &self,
-        body: Vec<FuelMeasurementBody>,
+        body: &[UpdateFuelMeasurement],
     ) -> Result<(), Error> {
         self.send("fuel_measurements", Method::PUT, &body, None::<&()>)
             .await
     }
     pub async fn delete_fuel_measurements(
         &self,
-        body: Vec<DeleteFuelMeasurement>,
+        body: &[DeleteFuelMeasurement],
     ) -> Result<(), Error> {
         self.send("fuel_measurements", Method::DELETE, &body, None::<&()>)
             .await

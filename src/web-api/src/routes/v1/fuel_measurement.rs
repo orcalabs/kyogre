@@ -1,17 +1,18 @@
+use actix_web::web;
+use chrono::{DateTime, Utc};
+use fiskeridir_rs::CallSign;
+use futures::TryStreamExt;
+use kyogre_core::{BarentswatchUserId, FuelMeasurementId, FuelMeasurementsQuery};
+use oasgen::{oasgen, OaSchema};
+use serde::{Deserialize, Serialize};
+use serde_qs::actix::QsQuery as Query;
+
 use crate::{
     error::Result,
     extractors::BwProfile,
     response::{Response, StreamResponse},
     stream_response, Database,
 };
-use actix_web::web;
-use chrono::{DateTime, Utc};
-use fiskeridir_rs::CallSign;
-use futures::TryStreamExt;
-use kyogre_core::{BarentswatchUserId, FuelMeasurementsQuery};
-use oasgen::{oasgen, OaSchema};
-use serde::{Deserialize, Serialize};
-use serde_qs::actix::QsQuery as Query;
 
 #[derive(Default, Debug, Clone, Deserialize, Serialize, OaSchema)]
 #[serde(rename_all = "camelCase")]
@@ -43,19 +44,25 @@ pub async fn get_fuel_measurements<T: Database + Send + Sync + 'static>(
 pub async fn create_fuel_measurements<T: Database + 'static>(
     db: web::Data<T>,
     profile: BwProfile,
-    body: web::Json<Vec<FuelMeasurementBody>>,
-) -> Result<Response<()>> {
+    body: web::Json<Vec<CreateFuelMeasurement>>,
+) -> Result<Response<Vec<FuelMeasurement>>> {
     let user_id = profile.user.id;
     let call_sign = profile.call_sign()?;
 
-    let measurements: Vec<kyogre_core::FuelMeasurement> = body
+    let measurements = body
         .into_inner()
         .into_iter()
         .map(|m| m.to_domain_fuel_measurement(user_id, call_sign))
+        .collect::<Vec<_>>();
+
+    let measurements = db
+        .add_fuel_measurements(&measurements)
+        .await?
+        .into_iter()
+        .map(From::from)
         .collect();
 
-    db.add_fuel_measurements(&measurements).await?;
-    Ok(Response::new(()))
+    Ok(Response::new(measurements))
 }
 
 #[oasgen(skip(db), tags("FuelMeasurement"))]
@@ -63,16 +70,16 @@ pub async fn create_fuel_measurements<T: Database + 'static>(
 pub async fn update_fuel_measurements<T: Database + 'static>(
     db: web::Data<T>,
     profile: BwProfile,
-    body: web::Json<Vec<FuelMeasurementBody>>,
+    body: web::Json<Vec<UpdateFuelMeasurement>>,
 ) -> Result<Response<()>> {
     let user_id = profile.user.id;
     let call_sign = profile.call_sign()?;
 
-    let measurements: Vec<kyogre_core::FuelMeasurement> = body
+    let measurements = body
         .into_inner()
         .into_iter()
         .map(|m| m.to_domain_fuel_measurement(user_id, call_sign))
-        .collect();
+        .collect::<Vec<_>>();
 
     db.update_fuel_measurements(&measurements).await?;
     Ok(Response::new(()))
@@ -88,11 +95,11 @@ pub async fn delete_fuel_measurements<T: Database + 'static>(
     let user_id = profile.user.id;
     let call_sign = profile.call_sign()?;
 
-    let measurements: Vec<kyogre_core::DeleteFuelMeasurement> = body
+    let measurements = body
         .into_inner()
         .into_iter()
         .map(|m| m.to_domain_delete_fuel_measurement(user_id, call_sign))
-        .collect();
+        .collect::<Vec<_>>();
 
     db.delete_fuel_measurements(&measurements).await?;
     Ok(Response::new(()))
@@ -101,6 +108,7 @@ pub async fn delete_fuel_measurements<T: Database + 'static>(
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, OaSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct FuelMeasurement {
+    pub id: FuelMeasurementId,
     pub barentswatch_user_id: BarentswatchUserId,
     pub call_sign: CallSign,
     pub timestamp: DateTime<Utc>,
@@ -109,7 +117,15 @@ pub struct FuelMeasurement {
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, OaSchema)]
 #[serde(rename_all = "camelCase")]
-pub struct FuelMeasurementBody {
+pub struct CreateFuelMeasurement {
+    pub timestamp: DateTime<Utc>,
+    pub fuel: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize, OaSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateFuelMeasurement {
+    pub id: FuelMeasurementId,
     pub timestamp: DateTime<Utc>,
     pub fuel: f64,
 }
@@ -117,12 +133,13 @@ pub struct FuelMeasurementBody {
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, OaSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct DeleteFuelMeasurement {
-    pub timestamp: DateTime<Utc>,
+    pub id: FuelMeasurementId,
 }
 
 impl From<kyogre_core::FuelMeasurement> for FuelMeasurement {
     fn from(v: kyogre_core::FuelMeasurement) -> Self {
         let kyogre_core::FuelMeasurement {
+            id,
             barentswatch_user_id,
             call_sign,
             timestamp,
@@ -130,6 +147,7 @@ impl From<kyogre_core::FuelMeasurement> for FuelMeasurement {
         } = v;
 
         Self {
+            id,
             barentswatch_user_id,
             call_sign,
             timestamp,
@@ -138,15 +156,37 @@ impl From<kyogre_core::FuelMeasurement> for FuelMeasurement {
     }
 }
 
-impl FuelMeasurementBody {
+impl CreateFuelMeasurement {
+    pub fn to_domain_fuel_measurement(
+        self,
+        barentswatch_user_id: BarentswatchUserId,
+        call_sign: &CallSign,
+    ) -> kyogre_core::CreateFuelMeasurement {
+        let Self { timestamp, fuel } = self;
+
+        kyogre_core::CreateFuelMeasurement {
+            barentswatch_user_id,
+            call_sign: call_sign.clone(),
+            timestamp,
+            fuel,
+        }
+    }
+}
+
+impl UpdateFuelMeasurement {
     pub fn to_domain_fuel_measurement(
         self,
         barentswatch_user_id: BarentswatchUserId,
         call_sign: &CallSign,
     ) -> kyogre_core::FuelMeasurement {
-        let Self { timestamp, fuel } = self;
+        let Self {
+            id,
+            timestamp,
+            fuel,
+        } = self;
 
         kyogre_core::FuelMeasurement {
+            id,
             barentswatch_user_id,
             call_sign: call_sign.clone(),
             timestamp,
@@ -181,12 +221,12 @@ impl DeleteFuelMeasurement {
         barentswatch_user_id: BarentswatchUserId,
         call_sign: &CallSign,
     ) -> kyogre_core::DeleteFuelMeasurement {
-        let Self { timestamp } = self;
+        let Self { id } = self;
 
         kyogre_core::DeleteFuelMeasurement {
+            id,
             barentswatch_user_id,
             call_sign: call_sign.clone(),
-            timestamp,
         }
     }
 }
