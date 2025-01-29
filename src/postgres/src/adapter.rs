@@ -879,9 +879,11 @@ impl WebApiInboundPort for PostgresAdapter {
         retry(|| self.update_user_impl(user)).await?;
         Ok(())
     }
-    async fn add_fuel_measurements(&self, measurements: &[FuelMeasurement]) -> CoreResult<()> {
-        retry(|| self.add_fuel_measurements_impl(measurements)).await?;
-        Ok(())
+    async fn add_fuel_measurements(
+        &self,
+        measurements: &[CreateFuelMeasurement],
+    ) -> CoreResult<Vec<FuelMeasurement>> {
+        Ok(retry(|| self.add_fuel_measurements_impl(measurements)).await?)
     }
     async fn update_fuel_measurements(&self, measurements: &[FuelMeasurement]) -> CoreResult<()> {
         retry(|| self.update_fuel_measurements_impl(measurements)).await?;
