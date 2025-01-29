@@ -4,7 +4,7 @@ use std::{
 };
 
 use chrono::{DateTime, Utc};
-use futures::TryStreamExt;
+use futures::{future::ready, TryStreamExt};
 use kyogre_core::{
     Arrival, ArrivalFilter, BoxIterator, FiskeridirVesselId, TripAssemblerId, VesselEventType,
 };
@@ -87,28 +87,29 @@ impl PostgresAdapter {
         let to_insert = self.ers_por_to_insert(&ers_por, tx).await?;
         ers_por.retain(|e| to_insert.contains(&e.message_id));
 
-        let inserted = self.unnest_insert_returning(ers_por, &mut **tx).await?;
-
-        let len = inserted.len();
+        let len = ers_por.len();
         let mut conflicts =
             HashMap::<FiskeridirVesselId, NewTripAssemblerConflict>::with_capacity(len);
         let mut event_ids = Vec::with_capacity(len);
 
-        for i in inserted {
-            if let (Some(id), Some(event_id)) = (i.fiskeridir_vessel_id, i.vessel_event_id) {
-                conflicts
-                    .entry(id)
-                    .and_modify(|v| v.timestamp = min(v.timestamp, i.arrival_timestamp))
-                    .or_insert_with(|| NewTripAssemblerConflict {
-                        fiskeridir_vessel_id: id,
-                        timestamp: i.arrival_timestamp,
-                        vessel_event_id: Some(event_id),
-                        event_type: VesselEventType::ErsPor,
-                        vessel_event_timestamp: i.arrival_timestamp,
-                    });
-                event_ids.push(event_id);
-            }
-        }
+        self.unnest_insert_returning(ers_por, &mut **tx)
+            .try_for_each(|i| {
+                if let (Some(id), Some(event_id)) = (i.fiskeridir_vessel_id, i.vessel_event_id) {
+                    conflicts
+                        .entry(id)
+                        .and_modify(|v| v.timestamp = min(v.timestamp, i.arrival_timestamp))
+                        .or_insert_with(|| NewTripAssemblerConflict {
+                            fiskeridir_vessel_id: id,
+                            timestamp: i.arrival_timestamp,
+                            vessel_event_id: Some(event_id),
+                            event_type: VesselEventType::ErsPor,
+                            vessel_event_timestamp: i.arrival_timestamp,
+                        });
+                    event_ids.push(event_id);
+                }
+                ready(Ok(()))
+            })
+            .await?;
 
         self.add_trip_assembler_conflicts(
             conflicts.into_values().collect(),

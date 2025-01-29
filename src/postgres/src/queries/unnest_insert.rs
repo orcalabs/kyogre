@@ -20,17 +20,18 @@ impl PostgresAdapter {
         Ok(())
     }
 
-    pub(crate) async fn unnest_insert_returning<T, I>(
+    pub(crate) fn unnest_insert_returning<'a, T, I>(
         &self,
         values: I,
-        executor: impl sqlx::Executor<'_, Database = sqlx::Postgres>,
-    ) -> Result<Vec<T::Output>>
+        executor: impl sqlx::Executor<'a, Database = sqlx::Postgres> + 'a,
+    ) -> impl Stream<Item = Result<T::Output>> + 'a
     where
         T: UnnestInsert + UnnestInsertReturning,
         I: IntoIterator<Item = T> + Send,
         I::IntoIter: Send,
+        T::Output: Send + 'a,
     {
-        Ok(T::unnest_insert_returning(values, executor).await?)
+        T::unnest_insert_returning_stream(values, executor).map_err(|e| e.into())
     }
 
     pub(crate) async fn unnest_insert_from<T, I, O>(

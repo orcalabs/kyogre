@@ -7,7 +7,7 @@ use chrono::{DateTime, NaiveDateTime, NaiveTime, TimeZone, Utc};
 use fiskeridir_rs::{
     CallSign, DeliveryPointId, Gear, GearGroup, LandingId, SpeciesGroup, VesselLengthGroup,
 };
-use futures::{Stream, TryStreamExt};
+use futures::{future::ready, Stream, TryStreamExt};
 use kyogre_core::{
     BoxIterator, EmptyVecToNone, FiskeridirVesselId, LandingsQuery, Range, TripAssemblerId,
     VesselEventType,
@@ -384,27 +384,28 @@ RETURNING
         .fetch_all(&mut **tx)
         .await?;
 
-        let inserted = self.unnest_insert_returning(landings, &mut **tx).await?;
-
-        for i in inserted {
-            if let (Some(id), Some(event_id)) = (i.fiskeridir_vessel_id, i.vessel_event_id) {
-                trip_assembler_conflicts
-                    .entry(id)
-                    .and_modify(|v| v.timestamp = min(v.timestamp, i.landing_timestamp))
-                    .or_insert_with(|| NewTripAssemblerConflict {
-                        fiskeridir_vessel_id: id,
-                        timestamp: Utc.from_utc_datetime(&NaiveDateTime::new(
-                            i.landing_timestamp.date_naive(),
-                            NaiveTime::from_hms_opt(0, 0, 0).unwrap(),
-                        )),
-                        vessel_event_id: Some(event_id),
-                        event_type: VesselEventType::Landing,
-                        vessel_event_timestamp: i.landing_timestamp,
-                    });
-                vessel_event_ids.push(event_id);
-            }
-            inserted_landing_ids.insert(i.landing_id);
-        }
+        self.unnest_insert_returning(landings, &mut **tx)
+            .try_for_each(|i| {
+                if let (Some(id), Some(event_id)) = (i.fiskeridir_vessel_id, i.vessel_event_id) {
+                    trip_assembler_conflicts
+                        .entry(id)
+                        .and_modify(|v| v.timestamp = min(v.timestamp, i.landing_timestamp))
+                        .or_insert_with(|| NewTripAssemblerConflict {
+                            fiskeridir_vessel_id: id,
+                            timestamp: Utc.from_utc_datetime(&NaiveDateTime::new(
+                                i.landing_timestamp.date_naive(),
+                                NaiveTime::from_hms_opt(0, 0, 0).unwrap(),
+                            )),
+                            vessel_event_id: Some(event_id),
+                            event_type: VesselEventType::Landing,
+                            vessel_event_timestamp: i.landing_timestamp,
+                        });
+                    vessel_event_ids.push(event_id);
+                }
+                inserted_landing_ids.insert(i.landing_id);
+                ready(Ok(()))
+            })
+            .await?;
 
         for d in deleted {
             if let Some(id) = d.fiskeridir_vessel_id {

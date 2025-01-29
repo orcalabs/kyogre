@@ -179,8 +179,7 @@ ORDER BY
     d.departure_timestamp ASC
 LIMIT
     1
-ON CONFLICT (fiskeridir_vessel_id) DO
-UPDATE
+ON CONFLICT (fiskeridir_vessel_id) DO UPDATE
 SET
     departure_timestamp = EXCLUDED.departure_timestamp,
     target_species_fiskeridir_id = EXCLUDED.target_species_fiskeridir_id,
@@ -780,8 +779,7 @@ WHERE
     t.trip_id = ANY ($3::BIGINT[])
 GROUP BY
     t.trip_id
-ON CONFLICT (trip_id) DO
-UPDATE
+ON CONFLICT (trip_id) DO UPDATE
 SET
     trip_id = excluded.trip_id,
     distance = excluded.distance,
@@ -1460,8 +1458,7 @@ INSERT INTO
     trip_calculation_timers (fiskeridir_vessel_id, trip_assembler_id, timer)
 VALUES
     ($1, $2, $3)
-ON CONFLICT (fiskeridir_vessel_id) DO
-UPDATE
+ON CONFLICT (fiskeridir_vessel_id) DO UPDATE
 SET
     timer = EXCLUDED.timer,
     queued_reset = COALESCE($4, EXCLUDED.queued_reset),
@@ -1557,7 +1554,10 @@ RETURNING
             earliest_trip_start
         };
 
-        let inserted_trips = self.unnest_insert_returning(new_trips, &mut *tx).await?;
+        let inserted_trips = self
+            .unnest_insert_returning(new_trips, &mut *tx)
+            .try_collect::<Vec<_>>()
+            .await?;
 
         for t in &inserted_trips {
             let range = DateRange::try_from(&t.period)?;
