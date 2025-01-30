@@ -188,12 +188,6 @@ impl From<VesselEventType> for i32 {
     }
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum RelevantEventType {
-    Landing,
-    ErsPorAndDep,
-}
-
 #[derive(Debug, Clone)]
 pub struct FiskeridirVessel {
     pub id: FiskeridirVesselId,

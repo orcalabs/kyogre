@@ -955,12 +955,12 @@ impl TestStateBuilder {
                 .filter_map(move |v| (v.cycle == i).then_some(Ok(v.landing)))
                 .collect::<Vec<_>>();
 
-            if !landings.is_empty() {
-                self.storage
-                    .add_landings(Box::new(landings.into_iter()), i as u32)
-                    .await
-                    .unwrap();
-            }
+            // We want to call `add_landings` even if `landings` is empty because that will delete
+            // the existing landings.
+            self.storage
+                .add_landings(Box::new(landings.into_iter()), i as u32)
+                .await
+                .unwrap();
 
             // Weekly Sales must be inserted after landings because it updates the landing_entries table
             self.storage

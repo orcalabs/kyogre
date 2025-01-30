@@ -185,100 +185,166 @@ async fn test_resolves_conflict_on_same_day_as_most_recent_trip_end() {
     .await;
 }
 
-// // // TODO: figure out of we want to support this case
-// // // #[tokio::test]
-// // // async fn test_landing_later_on_same_day_as_first_trip_causes_conflict_and_results_in_trip_extension(
-// // // ) {
-// // //     test(|helper| async move {
-// // //         let fiskeridir_vessel_id = 1;
-// // //         let landings_assembler = LandingTripAssembler::default();
-// // //         let landing = fiskeridir_rs::Landing::test_default(1, Some(fiskeridir_vessel_id));
-// // //         helper.add_landings(vec![landing.clone()]).await.unwrap();
+#[tokio::test]
+async fn test_deleting_landing_deletes_corresponding_trip_with_no_prior_trip() {
+    test(|helper, builder| async move {
+        let vessel_id = FiskeridirVesselId::test_new(1);
 
-// // //         let first_landing_timestamp = landing.landing_timestamp;
+        let landing_ids = [
+            "2000-01-24T00:00:00Z".parse().unwrap(),
+            "2000-01-25T00:00:00Z".parse().unwrap(),
+            "2000-01-27T00:00:00Z".parse().unwrap(),
+            "2000-01-29T00:00:00Z".parse().unwrap(),
+        ];
 
-// // //         let vessel = helper.db.vessel(fiskeridir_vessel_id).await;
-// // //         let assembled = landings_assembler
-// // //             .assemble(&helper.db.db, &vessel, State::NoPriorState)
-// // //             .await
-// // //             .unwrap()
-// // //             .unwrap();
+        let landings = landing_ids
+            .iter()
+            .enumerate()
+            .map(|(i, v)| {
+                let mut l = fiskeridir_rs::Landing::test_default(i as _, Some(vessel_id));
+                l.landing_timestamp = *v;
+                l
+            })
+            .collect::<Vec<_>>();
 
-// // //         helper
-// // //             .add_trips(
-// // //                 vessel.fiskeridir.id,
-// // //                 assembled.new_trip_calucation_time,
-// // //                 assembled.conflict_strategy,
-// // //                 assembled.trips,
-// // //                 TripAssemblerId::Landings,
-// // //             )
-// // //             .await
-// // //             .unwrap();
+        let state = builder
+            .vessels(1)
+            .modify(|v| {
+                v.fiskeridir.id = vessel_id;
+            })
+            .landings(3)
+            .modify_idx(|i, v| {
+                v.landing = landings[i].clone();
+            })
+            .build()
+            .await;
 
-// // //         let mut landing = fiskeridir_rs::Landing::test_default(2, Some(fiskeridir_vessel_id));
-// // //         landing.landing_timestamp = DateTime::<Utc>::from_utc(
-// // //             NaiveDateTime::new(
-// // //                 landing.landing_timestamp.date_naive(),
-// // //                 NaiveTime::from_hms_opt(23, 50, 50).unwrap(),
-// // //             ),
-// // //             Utc,
-// // //         );
-// // //         helper.add_landings(vec![landing.clone()]).await.unwrap();
+        assert_eq!(state.trips.len(), 3);
 
-// // //         let conflict = helper
-// // //             .conflicts(TripAssemblerId::Landings)
-// // //             .await
-// // //             .unwrap()
-// // //             .pop()
-// // //             .unwrap();
+        let state = helper
+            .builder()
+            .await
+            .landings(2)
+            .modify_idx(|i, v| {
+                v.landing = landings[i].clone();
+            })
+            .build()
+            .await;
 
-// // //         dbg!("SECOND RUN");
-// // //         let assembled = landings_assembler
-// // //             .assemble(
-// // //                 &helper.db.db,
-// // //                 &vessel,
-// // //                 State::Conflict {
-// // //                     conflict_timestamp: conflict.timestamp,
-// // //                     trip_prior_to_or_at_conflict: helper
-// // //                         .trip_at_or_prior_to(
-// // //                             vessel.fiskeridir.id,
-// // //                             TripAssemblerId::Landings,
-// // //                             &conflict.timestamp,
-// // //                         )
-// // //                         .await
-// // //                         .unwrap(),
-// // //                 },
-// // //             )
-// // //             .await
-// // //             .unwrap()
-// // //             .unwrap();
-// // //         helper
-// // //             .add_trips(
-// // //                 vessel.fiskeridir.id,
-// // //                 assembled.new_trip_calucation_time,
-// // //                 assembled.conflict_strategy,
-// // //                 assembled.trips,
-// // //                 TripAssemblerId::Landings,
-// // //             )
-// // //             .await
-// // //             .unwrap();
+        assert_eq!(state.trips.len(), 2);
+    })
+    .await;
+}
 
-// // //         let trips = helper.db.trips_of_vessel(vessel.fiskeridir.id).await;
-// // //         assert_eq!(1, trips.len());
+#[tokio::test]
+async fn test_deleting_landing_deletes_corresponding_trip_with_prior_trip() {
+    test(|helper, builder| async move {
+        let vessel_id = FiskeridirVesselId::test_new(1);
 
-// // //         let expected_range = DateRange::new(
-// // //             first_landing_timestamp - Duration::days(1),
-// // //             landing.landing_timestamp,
-// // //         )
-// // //         .unwrap();
+        let landing_ids = [
+            "2000-01-23T00:00:00Z".parse().unwrap(),
+            "2000-01-24T00:00:00Z".parse().unwrap(),
+            "2000-01-25T00:00:00Z".parse().unwrap(),
+            "2000-01-27T00:00:00Z".parse().unwrap(),
+            "2000-01-29T00:00:00Z".parse().unwrap(),
+        ];
 
-// // //         let expected = Trip {
-// // //             trip_id: 2,
-// // //             range: expected_range.clone(),
-// // //             landing_coverage: expected_range,
-// // //             assembler_id: TripAssemblerId::Landings,
-// // //         };
-// // //         assert_eq!(expected, trips[0]);
-// // //     })
-// // //     .await;
-// // // }
+        let landings = landing_ids
+            .iter()
+            .enumerate()
+            .map(|(i, v)| {
+                let mut l = fiskeridir_rs::Landing::test_default(i as _, Some(vessel_id));
+                l.landing_timestamp = *v;
+                l
+            })
+            .collect::<Vec<_>>();
+
+        let state = builder
+            .vessels(1)
+            .modify(|v| {
+                v.fiskeridir.id = vessel_id;
+            })
+            .landings(4)
+            .modify_idx(|i, v| {
+                v.landing = landings[i].clone();
+            })
+            .build()
+            .await;
+
+        assert_eq!(state.trips.len(), 4);
+
+        let state = helper
+            .builder()
+            .await
+            .landings(3)
+            .modify_idx(|i, v| {
+                v.landing = landings[i].clone();
+            })
+            .build()
+            .await;
+
+        assert_eq!(state.trips.len(), 3);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_deleting_only_landing_deletes_trip() {
+    test(|helper, builder| async move {
+        let state = builder.vessels(1).landings(1).build().await;
+        assert_eq!(state.trips.len(), 1);
+
+        let state = helper.builder().await.build().await;
+        assert_eq!(state.trips.len(), 0);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_deleting_second_landing_deletes_trip() {
+    test(|helper, builder| async move {
+        let vessel_id = FiskeridirVesselId::test_new(1);
+
+        let landing_ids = [
+            "2000-01-24T00:00:00Z".parse().unwrap(),
+            "2000-01-25T00:00:00Z".parse().unwrap(),
+        ];
+
+        let landings = landing_ids
+            .iter()
+            .enumerate()
+            .map(|(i, v)| {
+                let mut l = fiskeridir_rs::Landing::test_default(i as _, Some(vessel_id));
+                l.landing_timestamp = *v;
+                l
+            })
+            .collect::<Vec<_>>();
+
+        let state = builder
+            .vessels(1)
+            .modify(|v| {
+                v.fiskeridir.id = vessel_id;
+            })
+            .landings(2)
+            .modify_idx(|i, v| {
+                v.landing = landings[i].clone();
+            })
+            .build()
+            .await;
+
+        assert_eq!(state.trips.len(), 2);
+
+        let state = helper
+            .builder()
+            .await
+            .landings(1)
+            .modify_idx(|i, v| {
+                v.landing = landings[i].clone();
+            })
+            .build()
+            .await;
+
+        assert_eq!(state.trips.len(), 1);
+    })
+    .await;
+}

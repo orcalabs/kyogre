@@ -17,78 +17,6 @@ pub enum Bound {
     Exclusive = 2,
 }
 
-#[derive(Debug, Clone)]
-pub struct QueryRange {
-    start: std::ops::Bound<DateTime<Utc>>,
-    end: std::ops::Bound<DateTime<Utc>>,
-}
-
-impl From<DateRange> for QueryRange {
-    fn from(value: DateRange) -> Self {
-        Self::from(&value)
-    }
-}
-
-impl From<&DateRange> for QueryRange {
-    fn from(value: &DateRange) -> Self {
-        let start = match value.start_bound {
-            Bound::Inclusive => std::ops::Bound::Included(value.start),
-            Bound::Exclusive => std::ops::Bound::Excluded(value.start),
-        };
-        let end = match value.end_bound {
-            Bound::Inclusive => std::ops::Bound::Included(value.end),
-            Bound::Exclusive => std::ops::Bound::Excluded(value.end),
-        };
-
-        QueryRange { start, end }
-    }
-}
-
-impl QueryRange {
-    pub fn new(
-        start: std::ops::Bound<DateTime<Utc>>,
-        end: std::ops::Bound<DateTime<Utc>>,
-    ) -> Result<QueryRange, DateRangeError> {
-        match (start, end) {
-            (std::ops::Bound::Included(start), std::ops::Bound::Included(end))
-            | (std::ops::Bound::Included(start), std::ops::Bound::Excluded(end))
-            | (std::ops::Bound::Excluded(start), std::ops::Bound::Included(end))
-            | (std::ops::Bound::Excluded(start), std::ops::Bound::Excluded(end)) => {
-                if end < start {
-                    OrderingSnafu { start, end }.fail()
-                } else {
-                    Ok(())
-                }
-            }
-            _ => Ok(()),
-        }?;
-
-        Ok(QueryRange { start, end })
-    }
-
-    pub fn start(&self) -> std::ops::Bound<DateTime<Utc>> {
-        self.start
-    }
-
-    pub fn end(&self) -> std::ops::Bound<DateTime<Utc>> {
-        self.end
-    }
-
-    pub fn unbounded_start(self) -> QueryRange {
-        Self {
-            start: std::ops::Bound::Unbounded,
-            end: self.end,
-        }
-    }
-
-    pub fn unbounded_end(&self) -> QueryRange {
-        Self {
-            start: self.start,
-            end: std::ops::Bound::Unbounded,
-        }
-    }
-}
-
 impl DateRange {
     // Defaults to both start and end being inclusive
     pub fn new(start: DateTime<Utc>, end: DateTime<Utc>) -> Result<DateRange, DateRangeError> {
@@ -229,26 +157,24 @@ mod _sqlx {
     impl TryFrom<&PgRange<DateTime<Utc>>> for DateRange {
         type Error = DateRangeError;
         fn try_from(value: &PgRange<DateTime<Utc>>) -> Result<Self, Self::Error> {
-            let start = match value.start {
-                std::ops::Bound::Included(t) | std::ops::Bound::Excluded(t) => Ok(t),
-                std::ops::Bound::Unbounded => UnboundedSnafu.fail(),
-            }?;
+            let (start, start_bound) = match value.start {
+                std::ops::Bound::Included(t) => (t, Bound::Inclusive),
+                std::ops::Bound::Excluded(t) => (t, Bound::Exclusive),
+                std::ops::Bound::Unbounded => return UnboundedSnafu.fail(),
+            };
 
-            let end = match value.end {
-                std::ops::Bound::Included(t) | std::ops::Bound::Excluded(t) => Ok(t),
-                std::ops::Bound::Unbounded => UnboundedSnafu.fail(),
-            }?;
+            let (end, end_bound) = match value.end {
+                std::ops::Bound::Included(t) => (t, Bound::Inclusive),
+                std::ops::Bound::Excluded(t) => (t, Bound::Exclusive),
+                std::ops::Bound::Unbounded => return UnboundedSnafu.fail(),
+            };
 
-            DateRange::new(start, end)
-        }
-    }
-
-    impl From<&QueryRange> for PgRange<DateTime<Utc>> {
-        fn from(value: &QueryRange) -> Self {
-            PgRange {
-                start: value.start,
-                end: value.end,
-            }
+            Ok(Self {
+                start,
+                end,
+                start_bound,
+                end_bound,
+            })
         }
     }
 

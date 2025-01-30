@@ -265,7 +265,9 @@ pub struct Catch {
 pub enum TripsConflictStrategy {
     #[default]
     Error,
-    Replace,
+    Replace {
+        conflict: DateTime<Utc>,
+    },
     ReplaceAll,
 }
 

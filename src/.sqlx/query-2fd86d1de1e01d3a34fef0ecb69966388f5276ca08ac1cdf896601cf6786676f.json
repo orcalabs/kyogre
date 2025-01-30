@@ -1,0 +1,30 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nWITH\n    deleted AS (\n        DELETE FROM landings l USING UNNEST($1::TEXT[], $2::INT[]) u (landing_id, \"version\")\n        WHERE\n            l.landing_id = u.landing_id\n            AND l.version < u.version\n        RETURNING\n            l.landing_id,\n            l.fiskeridir_vessel_id,\n            l.landing_timestamp\n    ),\n    _ AS (\n        INSERT INTO\n            deleted_landings (\n                landing_id,\n                fiskeridir_vessel_id,\n                landing_timestamp,\n                deleted_landing_type_id\n            )\n        SELECT\n            landing_id,\n            fiskeridir_vessel_id,\n            landing_timestamp,\n            $3::INT\n        FROM\n            deleted\n    )\nSELECT\n    fiskeridir_vessel_id AS \"fiskeridir_vessel_id?: FiskeridirVesselId\",\n    landing_timestamp AS \"landing_timestamp!\"\nFROM\n    deleted\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "fiskeridir_vessel_id?: FiskeridirVesselId",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "landing_timestamp!",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "TextArray",
+        "Int4Array",
+        "Int4"
+      ]
+    },
+    "nullable": [
+      true,
+      false
+    ]
+  },
+  "hash": "2fd86d1de1e01d3a34fef0ecb69966388f5276ca08ac1cdf896601cf6786676f"
+}
