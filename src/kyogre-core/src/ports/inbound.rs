@@ -199,6 +199,12 @@ pub trait TripPipelineInbound: Send + Sync {
     ///
     /// This method refreshes all trips that are before or on the refresh boundary.
     async fn refresh_detailed_trips(&self, vessel_id: FiskeridirVesselId) -> CoreResult<()>;
+
+    /// Nukes all trips for the given vessel.
+    /// Should only happen when a queued_reset produces zero trips.
+    /// Which should only happen in the landings assembler when all landings for that vessel has
+    /// been deleted.
+    async fn nuke_trips(&self, vessel_id: FiskeridirVesselId) -> CoreResult<()>;
 }
 
 #[cfg(feature = "test")]

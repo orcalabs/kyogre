@@ -1,6 +1,6 @@
 use crate::{
-    CoreResult, NewTrip, PrecisionOutcome, RelevantEventType, TripAssemblerConflict,
-    TripAssemblerId, TripPrecisionOutboundPort, TripProcessingUnit, TripsConflictStrategy, Vessel,
+    CoreResult, NewTrip, PrecisionOutcome, TripAssemblerConflict, TripAssemblerId,
+    TripPrecisionOutboundPort, TripProcessingUnit, TripsConflictStrategy, Vessel,
     VesselEventDetailed,
 };
 use async_trait::async_trait;
@@ -23,7 +23,6 @@ pub struct TripAssemblerState {
 
 #[async_trait]
 pub trait TripAssembler: Send + Sync {
-    fn relevant_event_types(&self) -> RelevantEventType;
     fn assembler_id(&self) -> TripAssemblerId;
     async fn assemble(
         &self,

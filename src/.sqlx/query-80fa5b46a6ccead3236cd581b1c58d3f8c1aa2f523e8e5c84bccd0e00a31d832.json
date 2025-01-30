@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nUPDATE trip_calculation_timers\nSET\n    queued_reset = TRUE\nWHERE\n    fiskeridir_vessel_id = ANY ($1)\n                ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8Array"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "80fa5b46a6ccead3236cd581b1c58d3f8c1aa2f523e8e5c84bccd0e00a31d832"
+}

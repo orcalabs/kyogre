@@ -28,7 +28,7 @@ pub struct TripsState;
 
 #[derive(Debug)]
 struct VesselEvents {
-    prior_trip_events: Vec<VesselEventDetailed>,
+    prior_trip_start_end_events: Vec<VesselEventDetailed>,
     new_vessel_events: Vec<VesselEventDetailed>,
 }
 
@@ -506,6 +506,16 @@ async fn run_state(shared_state: Arc<SharedState>) -> Result<TripsReport> {
                 match task {
                     MasterTask::New(vessel, result) => {
                         match result {
+                            Ok((TripProcessingOutcome { num_trips: 0, state: AssemblerState::QueuedReset }, None)) => {
+                                    if let Err(e) =
+                                        shared_state.trip_pipeline_inbound.nuke_trips(vessel.fiskeridir.id).await
+                                    {
+                                        error!(
+                                            "failed to nuke trips for vessel: {}, err: {e:?}",
+                                            vessel.fiskeridir.id,
+                                        );
+                                    }
+                            }
                             Ok((report, trips)) => {
                                 trips_report = trips_report + report;
 
@@ -678,7 +688,6 @@ async fn run_trip_assembler(
     adapter: &dyn TripAssemblerOutboundPort,
     assembler: &dyn TripAssembler,
 ) -> Result<(TripProcessingOutcome, Option<TripAssembly>)> {
-    let relevant_event_types = assembler.relevant_event_types();
     let timer = adapter
         .trip_calculation_timer(vessel.fiskeridir.id, assembler.assembler_id())
         .await?;
@@ -696,33 +705,37 @@ async fn run_trip_assembler(
         AssemblerState::NoPriorState
     };
 
-    let state_discriminant = AssemblerStateDiscriminants::from(&state);
-
     let vessel_events = match &state {
         AssemblerState::Conflict(c) => {
             new_vessel_events(
                 vessel.fiskeridir.id,
                 adapter,
-                relevant_event_types,
+                assembler.assembler_id(),
                 &c.timestamp,
                 Bound::Exclusive,
             )
-            .await
+            .await?
         }
         AssemblerState::Normal(t) => {
             new_vessel_events(
                 vessel.fiskeridir.id,
                 adapter,
-                relevant_event_types,
+                assembler.assembler_id(),
                 t,
                 Bound::Inclusive,
             )
-            .await
+            .await?
         }
         AssemblerState::NoPriorState | AssemblerState::QueuedReset => {
-            all_vessel_events(vessel.fiskeridir.id, adapter, relevant_event_types).await
+            let new_vessel_events = adapter
+                .all_vessel_events(vessel.fiskeridir.id, assembler.assembler_id())
+                .await?;
+            VesselEvents {
+                prior_trip_start_end_events: vec![],
+                new_vessel_events,
+            }
         }
-    }?;
+    };
 
     let new_trip_events = vessel_events
         .new_vessel_events
@@ -730,26 +743,29 @@ async fn run_trip_assembler(
         .map(MinimalVesselEvent::from)
         .collect();
     let prior_trip_events = vessel_events
-        .prior_trip_events
+        .prior_trip_start_end_events
         .iter()
         .map(MinimalVesselEvent::from)
         .collect();
 
     let trips = assembler
         .assemble(
-            vessel_events.prior_trip_events,
+            vessel_events.prior_trip_start_end_events,
             vessel_events.new_vessel_events,
         )
         .await?;
 
     if let Some(trips) = trips {
-        let conflict_strategy = match (state_discriminant, trips.conflict_strategy) {
-            (AssemblerStateDiscriminants::NoPriorState, Some(r))
-            | (AssemblerStateDiscriminants::Normal, Some(r)) => r,
-            (AssemblerStateDiscriminants::NoPriorState, None)
-            | (AssemblerStateDiscriminants::Normal, None) => TripsConflictStrategy::Error,
-            (AssemblerStateDiscriminants::Conflict, _) => TripsConflictStrategy::Replace,
-            (AssemblerStateDiscriminants::QueuedReset, _) => TripsConflictStrategy::ReplaceAll,
+        let conflict_strategy = match (&state, trips.conflict_strategy) {
+            (AssemblerState::NoPriorState, Some(r)) | (AssemblerState::Normal(_), Some(r)) => r,
+            (AssemblerState::NoPriorState, None) | (AssemblerState::Normal(_), None) => {
+                TripsConflictStrategy::Error
+            }
+            (AssemblerState::Conflict(_), Some(v)) => v,
+            (AssemblerState::Conflict(v), _) => TripsConflictStrategy::Replace {
+                conflict: v.timestamp,
+            },
+            (AssemblerState::QueuedReset, _) => TripsConflictStrategy::ReplaceAll,
         };
 
         Ok((
@@ -781,7 +797,7 @@ async fn run_trip_assembler(
 async fn new_vessel_events(
     vessel_id: FiskeridirVesselId,
     adapter: &dyn TripAssemblerOutboundPort,
-    relevant_event_types: RelevantEventType,
+    trip_assembler: TripAssemblerId,
     search_timestamp: &DateTime<Utc>,
     bound: Bound,
 ) -> Result<VesselEvents> {
@@ -789,62 +805,28 @@ async fn new_vessel_events(
         .trip_prior_to_timestamp(vessel_id, search_timestamp, bound)
         .await?;
 
-    let res: Result<(Vec<VesselEventDetailed>, QueryRange)> = match prior_trip {
+    let (prior_trip_start_end_events, search_timestamp) = match prior_trip {
         Some(prior_trip) => {
-            let range = QueryRange::new(
-                match prior_trip.period.end_bound() {
-                    // We want all events not covered by the trip and therefore swap the bounds
-                    crate::Bound::Inclusive => std::ops::Bound::Excluded(prior_trip.end()),
-                    crate::Bound::Exclusive => std::ops::Bound::Included(prior_trip.end()),
-                },
-                std::ops::Bound::Unbounded,
-            )?;
-
-            let events = adapter
-                .relevant_events(
+            let prior_trip_start_end_events = adapter
+                .trip_start_and_end_events(
                     vessel_id,
-                    &QueryRange::from(prior_trip.period),
-                    relevant_event_types,
+                    prior_trip.period.start(),
+                    prior_trip.period.end(),
+                    trip_assembler,
                 )
                 .await?;
 
-            Ok((events, range))
+            (prior_trip_start_end_events, prior_trip.end())
         }
-        None => {
-            let range = QueryRange::new(
-                std::ops::Bound::Included(*search_timestamp),
-                std::ops::Bound::Unbounded,
-            )?;
-
-            Ok((vec![], range))
-        }
+        None => (vec![], *search_timestamp),
     };
 
-    let (prior_trip_events, new_events_search_range) = res?;
-
     let new_vessel_events = adapter
-        .relevant_events(vessel_id, &new_events_search_range, relevant_event_types)
+        .all_events_after_timestamp(vessel_id, search_timestamp, trip_assembler)
         .await?;
 
     Ok(VesselEvents {
-        prior_trip_events,
-        new_vessel_events,
-    })
-}
-
-async fn all_vessel_events(
-    vessel_id: FiskeridirVesselId,
-    adapter: &dyn TripAssemblerOutboundPort,
-    relevant_event_types: RelevantEventType,
-) -> Result<VesselEvents> {
-    let range = QueryRange::new(std::ops::Bound::Unbounded, std::ops::Bound::Unbounded)?;
-
-    let new_vessel_events = adapter
-        .relevant_events(vessel_id, &range, relevant_event_types)
-        .await?;
-
-    Ok(VesselEvents {
-        prior_trip_events: vec![],
+        prior_trip_start_end_events,
         new_vessel_events,
     })
 }

@@ -8,9 +8,9 @@ use crate::error::Result;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use kyogre_core::{
-    CoreResult, FiskeridirVesselId, PrecisionDirection, PrecisionOutcome, RelevantEventType,
-    TripAssembler, TripAssemblerId, TripAssemblerState, TripPrecisionOutboundPort,
-    TripProcessingUnit, TripsConflictStrategy, Vessel, VesselEventData, VesselEventDetailed,
+    CoreResult, FiskeridirVesselId, PrecisionDirection, PrecisionOutcome, TripAssembler,
+    TripAssemblerId, TripAssemblerState, TripPrecisionOutboundPort, TripProcessingUnit,
+    TripsConflictStrategy, Vessel, VesselEventData, VesselEventDetailed,
 };
 
 use self::statemachine::Departure;
@@ -121,9 +121,6 @@ impl ErsEvent {
 
 #[async_trait]
 impl TripAssembler for ErsTripAssembler {
-    fn relevant_event_types(&self) -> RelevantEventType {
-        RelevantEventType::ErsPorAndDep
-    }
     fn assembler_id(&self) -> TripAssemblerId {
         TripAssemblerId::Ers
     }
@@ -191,13 +188,21 @@ async fn assemble_impl(
             return Ok(None);
         }
     } else {
-        if vessel_events.len() == 1
-            && vessel_events.first().unwrap().event_type == ErsEventType::Departure
+        // There is nothing to do without any new Por events
+        // Only Dep messages will not generate/extend any trips.
+        if vessel_events
+            .iter()
+            .all(|v| v.event_type == ErsEventType::Departure)
         {
             return Ok(None);
         }
+
+        // Adding a new trip or extending a trip will always require recalculating the previous
+        // trip due to landing coverage semantics.
+        conflict_strategy = Some(TripsConflictStrategy::Replace {
+            conflict: prior_trip_events.last().unwrap().estimated_timestamp,
+        });
         prior_trip_events.append(&mut vessel_events);
-        conflict_strategy = Some(TripsConflictStrategy::Replace);
 
         let current_event = prior_trip_events.remove(0);
         match current_event.event_type {

@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nWITH\n    deleted AS (\n        SELECT\n            UNNEST($1::BIGINT[]) AS fiskeridir_vessel_id,\n            UNNEST($2::TIMESTAMPTZ[]) AS landing_timestamp\n    ),\n    min_landings AS (\n        SELECT\n            fiskeridir_vessel_id,\n            MIN(landing_timestamp) AS landing_timestamp\n        FROM\n            deleted d\n        GROUP BY\n            fiskeridir_vessel_id\n    ),\n    first_landings AS (\n        SELECT\n            l.fiskeridir_vessel_id,\n            MIN(l.landing_timestamp) AS landing_timestamp\n        FROM\n            landings l\n        WHERE\n            l.fiskeridir_vessel_id = ANY ($1::BIGINT[])\n        GROUP BY\n            l.fiskeridir_vessel_id\n    )\nSELECT\n    m.fiskeridir_vessel_id AS \"fiskeridir_vessel_id!: FiskeridirVesselId\",\n    (\n        SELECT\n            CASE\n                WHEN l.landing_timestamp = f.landing_timestamp THEN NULL\n                ELSE l.landing_timestamp\n            END\n        FROM\n            landings l\n            INNER JOIN first_landings f ON l.fiskeridir_vessel_id = f.fiskeridir_vessel_id\n        WHERE\n            l.fiskeridir_vessel_id = m.fiskeridir_vessel_id\n            AND l.landing_timestamp < m.landing_timestamp\n        ORDER BY\n            l.landing_timestamp DESC\n        OFFSET\n            1\n        LIMIT\n            1\n    ) AS landing_timestamp\nFROM\n    min_landings m\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "fiskeridir_vessel_id!: FiskeridirVesselId",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "landing_timestamp",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8Array",
+        "TimestamptzArray"
+      ]
+    },
+    "nullable": [
+      null,
+      null
+    ]
+  },
+  "hash": "2c2377d98f0350bb992a90d988fac40d200a74530040d7e8c91d29f8637cda97"
+}

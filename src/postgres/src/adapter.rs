@@ -1052,20 +1052,58 @@ impl TripAssemblerOutboundPort for PostgresAdapter {
             .await?
             .map(From::from))
     }
-    async fn relevant_events(
+    async fn all_vessel_events(
         &self,
         vessel_id: FiskeridirVesselId,
-        period: &QueryRange,
-        event_types: RelevantEventType,
+        trip_assembler: TripAssemblerId,
     ) -> CoreResult<Vec<VesselEventDetailed>> {
-        match event_types {
-            RelevantEventType::Landing => {
-                self.landing_events(vessel_id, period)
+        match trip_assembler {
+            TripAssemblerId::Landings => {
+                self.all_landing_events(vessel_id)
                     .try_convert_collect()
                     .await
             }
-            RelevantEventType::ErsPorAndDep => {
-                self.ers_por_and_dep_events(vessel_id, period)
+            TripAssemblerId::Ers => {
+                self.all_ers_por_and_dep_events(vessel_id)
+                    .try_convert_collect()
+                    .await
+            }
+        }
+    }
+    async fn all_events_after_timestamp(
+        &self,
+        vessel_id: FiskeridirVesselId,
+        timestamp: DateTime<Utc>,
+        trip_assembler: TripAssemblerId,
+    ) -> CoreResult<Vec<VesselEventDetailed>> {
+        match trip_assembler {
+            TripAssemblerId::Landings => {
+                self.all_landing_events_after_trip(vessel_id, timestamp)
+                    .try_convert_collect()
+                    .await
+            }
+            TripAssemblerId::Ers => {
+                self.all_ers_por_and_dep_events_after_timestamp(vessel_id, timestamp)
+                    .try_convert_collect()
+                    .await
+            }
+        }
+    }
+    async fn trip_start_and_end_events(
+        &self,
+        vessel_id: FiskeridirVesselId,
+        start: DateTime<Utc>,
+        end: DateTime<Utc>,
+        trip_assembler: TripAssemblerId,
+    ) -> CoreResult<Vec<VesselEventDetailed>> {
+        match trip_assembler {
+            TripAssemblerId::Landings => {
+                self.landing_trip_start_and_end_events_impl(vessel_id, start, end)
+                    .try_convert_collect()
+                    .await
+            }
+            TripAssemblerId::Ers => {
+                self.ers_trip_start_and_end_events_impl(vessel_id, start, end)
                     .try_convert_collect()
                     .await
             }
@@ -1249,6 +1287,10 @@ impl TripPipelineInbound for PostgresAdapter {
 
     async fn set_current_trip(&self, vessel_id: FiskeridirVesselId) -> CoreResult<()> {
         self.set_current_trip_impl(vessel_id).await?;
+        Ok(())
+    }
+    async fn nuke_trips(&self, vessel_id: FiskeridirVesselId) -> CoreResult<()> {
+        self.nuke_trips_impl(vessel_id).await?;
         Ok(())
     }
 }

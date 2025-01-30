@@ -50,6 +50,14 @@ pub struct LandingCatch {
     pub species_group_id: SpeciesGroup,
 }
 
+#[repr(i32)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Ord, PartialOrd, Hash)]
+#[cfg_attr(feature = "sqlx", derive(sqlx::Type))]
+pub enum DeletedLandingType {
+    NewVersion = 1,
+    RemovedFromDataset = 2,
+}
+
 impl LandingMatrix {
     pub fn is_empty(&self) -> bool {
         let Self {

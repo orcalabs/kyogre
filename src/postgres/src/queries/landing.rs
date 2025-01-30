@@ -9,10 +9,10 @@ use fiskeridir_rs::{
 };
 use futures::{future::ready, Stream, TryStreamExt};
 use kyogre_core::{
-    BoxIterator, EmptyVecToNone, FiskeridirVesselId, LandingsQuery, Range, TripAssemblerId,
-    VesselEventType,
+    BoxIterator, DeletedLandingType, EmptyVecToNone, FiskeridirVesselId, LandingsQuery, Range,
+    TripAssemblerId, VesselEventType,
 };
-use tracing::{error, info};
+use tracing::error;
 
 use crate::{
     chunk::Chunks,
@@ -252,7 +252,7 @@ FROM
                     existing_landing_ids.insert(v.id.clone());
 
                     if existing_landings
-                        .get(v.id.as_ref())
+                        .get(&v.id)
                         .is_some_and(|version| version >= &v.document_info.version_number)
                     {
                         None
@@ -281,15 +281,13 @@ FROM
         let existing_landing_ids = existing_landing_ids.into_iter().collect::<Vec<_>>();
         let inserted_landing_ids = inserted_landing_ids.into_iter().collect::<Vec<_>>();
 
-        if num_landings > 0 {
-            self.delete_removed_landings(
-                &existing_landing_ids,
-                &mut trip_assembler_conflicts,
-                data_year,
-                &mut tx,
-            )
-            .await?;
-        }
+        self.delete_removed_landings(
+            &existing_landing_ids,
+            &mut trip_assembler_conflicts,
+            data_year,
+            &mut tx,
+        )
+        .await?;
 
         self.add_landing_matrix(&inserted_landing_ids, &mut tx)
             .await?;
@@ -370,16 +368,42 @@ FROM
 
         let deleted = sqlx::query!(
             r#"
-DELETE FROM landings l USING UNNEST($1::TEXT[], $2::INT[]) u (landing_id, "version")
-WHERE
-    l.landing_id = u.landing_id
-    AND l.version < u.version
-RETURNING
-    l.fiskeridir_vessel_id AS "fiskeridir_vessel_id?: FiskeridirVesselId",
-    l.landing_timestamp AS "landing_timestamp!"
+WITH
+    deleted AS (
+        DELETE FROM landings l USING UNNEST($1::TEXT[], $2::INT[]) u (landing_id, "version")
+        WHERE
+            l.landing_id = u.landing_id
+            AND l.version < u.version
+        RETURNING
+            l.landing_id,
+            l.fiskeridir_vessel_id,
+            l.landing_timestamp
+    ),
+    _ AS (
+        INSERT INTO
+            deleted_landings (
+                landing_id,
+                fiskeridir_vessel_id,
+                landing_timestamp,
+                deleted_landing_type_id
+            )
+        SELECT
+            landing_id,
+            fiskeridir_vessel_id,
+            landing_timestamp,
+            $3::INT
+        FROM
+            deleted
+    )
+SELECT
+    fiskeridir_vessel_id AS "fiskeridir_vessel_id?: FiskeridirVesselId",
+    landing_timestamp AS "landing_timestamp!"
+FROM
+    deleted
             "#,
             &landing_id as _,
             &version,
+            DeletedLandingType::NewVersion as i32,
         )
         .fetch_all(&mut **tx)
         .await?;
@@ -432,11 +456,11 @@ RETURNING
         &'a self,
         data_year: u32,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
-    ) -> Result<HashMap<String, i32>> {
+    ) -> Result<HashMap<LandingId, i32>> {
         let landings = sqlx::query!(
             r#"
 SELECT
-    landing_id,
+    landing_id AS "id!: LandingId",
     "version"
 FROM
     landings
@@ -446,7 +470,7 @@ WHERE
             data_year as i32,
         )
         .fetch(&mut **tx)
-        .map_ok(|r| (r.landing_id, r.version))
+        .map_ok(|r| (r.id, r.version))
         .try_collect::<HashMap<_, _>>()
         .await?;
 
@@ -460,40 +484,150 @@ WHERE
         data_year: u32,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
     ) -> Result<()> {
-        let deleted = sqlx::query!(
+        let (vessel_ids, landing_timestamps): (Vec<_>, Vec<_>) = sqlx::query!(
             r#"
-DELETE FROM landings
+WITH
+    deleted AS (
+        DELETE FROM landings
+        WHERE
+            (NOT landing_id = ANY ($1::TEXT[]))
+            AND data_year = $2::INT
+        RETURNING
+            landing_id,
+            fiskeridir_vessel_id,
+            landing_timestamp
+    ),
+    _ AS (
+        INSERT INTO
+            deleted_landings (
+                landing_id,
+                fiskeridir_vessel_id,
+                landing_timestamp,
+                deleted_landing_type_id
+            )
+        SELECT
+            landing_id,
+            fiskeridir_vessel_id,
+            landing_timestamp,
+            $3::INT
+        FROM
+            deleted
+    )
+SELECT
+    fiskeridir_vessel_id AS "fiskeridir_vessel_id!: FiskeridirVesselId",
+    landing_timestamp
+FROM
+    deleted
 WHERE
-    (NOT landing_id = ANY ($1::TEXT[]))
-    AND data_year = $2::INT
-RETURNING
-    fiskeridir_vessel_id AS "fiskeridir_vessel_id?: FiskeridirVesselId",
-    landing_timestamp AS "landing_timestamp!"
+    fiskeridir_vessel_id IS NOT NULL
             "#,
             existing_landing_ids as &[LandingId],
             data_year as i32,
+            DeletedLandingType::RemovedFromDataset as i32,
+        )
+        .fetch_all(&mut **tx)
+        .await?
+        .into_iter()
+        .map(|v| (v.fiskeridir_vessel_id, v.landing_timestamp))
+        .unzip();
+
+        if vessel_ids.is_empty() {
+            return Ok(());
+        }
+
+        let conflicts = sqlx::query!(
+            r#"
+WITH
+    deleted AS (
+        SELECT
+            UNNEST($1::BIGINT[]) AS fiskeridir_vessel_id,
+            UNNEST($2::TIMESTAMPTZ[]) AS landing_timestamp
+    ),
+    min_landings AS (
+        SELECT
+            fiskeridir_vessel_id,
+            MIN(landing_timestamp) AS landing_timestamp
+        FROM
+            deleted d
+        GROUP BY
+            fiskeridir_vessel_id
+    ),
+    first_landings AS (
+        SELECT
+            l.fiskeridir_vessel_id,
+            MIN(l.landing_timestamp) AS landing_timestamp
+        FROM
+            landings l
+        WHERE
+            l.fiskeridir_vessel_id = ANY ($1::BIGINT[])
+        GROUP BY
+            l.fiskeridir_vessel_id
+    )
+SELECT
+    m.fiskeridir_vessel_id AS "fiskeridir_vessel_id!: FiskeridirVesselId",
+    (
+        SELECT
+            CASE
+                WHEN l.landing_timestamp = f.landing_timestamp THEN NULL
+                ELSE l.landing_timestamp
+            END
+        FROM
+            landings l
+            INNER JOIN first_landings f ON l.fiskeridir_vessel_id = f.fiskeridir_vessel_id
+        WHERE
+            l.fiskeridir_vessel_id = m.fiskeridir_vessel_id
+            AND l.landing_timestamp < m.landing_timestamp
+        ORDER BY
+            l.landing_timestamp DESC
+        OFFSET
+            1
+        LIMIT
+            1
+    ) AS landing_timestamp
+FROM
+    min_landings m
+            "#,
+            &vessel_ids as &[FiskeridirVesselId],
+            &landing_timestamps,
         )
         .fetch_all(&mut **tx)
         .await?;
 
-        info!("landings_deleted: {}", deleted.len());
+        let mut queued_resets = Vec::new();
 
-        for d in deleted {
-            if let Some(id) = d.fiskeridir_vessel_id {
+        for c in conflicts {
+            if let Some(landing_timestamp) = c.landing_timestamp {
                 trip_assembler_conflicts
-                    .entry(id)
-                    .and_modify(|v| v.timestamp = min(v.timestamp, d.landing_timestamp))
+                    .entry(c.fiskeridir_vessel_id)
+                    .and_modify(|v| v.timestamp = min(v.timestamp, landing_timestamp))
                     .or_insert_with(|| NewTripAssemblerConflict {
-                        fiskeridir_vessel_id: id,
+                        fiskeridir_vessel_id: c.fiskeridir_vessel_id,
                         timestamp: Utc.from_utc_datetime(&NaiveDateTime::new(
-                            d.landing_timestamp.date_naive(),
+                            landing_timestamp.date_naive(),
                             NaiveTime::from_hms_opt(0, 0, 0).unwrap(),
                         )),
                         vessel_event_id: None,
                         event_type: VesselEventType::Landing,
-                        vessel_event_timestamp: d.landing_timestamp,
+                        vessel_event_timestamp: landing_timestamp,
                     });
+            } else {
+                queued_resets.push(c.fiskeridir_vessel_id);
             }
+        }
+
+        if !queued_resets.is_empty() {
+            sqlx::query!(
+                r#"
+UPDATE trip_calculation_timers
+SET
+    queued_reset = TRUE
+WHERE
+    fiskeridir_vessel_id = ANY ($1)
+                "#,
+                &queued_resets as &[FiskeridirVesselId],
+            )
+            .execute(&mut **tx)
+            .await?;
         }
 
         Ok(())

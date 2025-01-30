@@ -6,9 +6,8 @@ use crate::{
 use async_trait::async_trait;
 use chrono::Duration;
 use kyogre_core::{
-    CoreResult, PrecisionDirection, PrecisionOutcome, RelevantEventType, TripAssembler,
-    TripAssemblerId, TripAssemblerState, TripPrecisionOutboundPort, TripProcessingUnit, Vessel,
-    VesselEventDetailed,
+    CoreResult, PrecisionDirection, PrecisionOutcome, TripAssembler, TripAssemblerId,
+    TripAssemblerState, TripPrecisionOutboundPort, TripProcessingUnit, Vessel, VesselEventDetailed,
 };
 
 use self::statemachine::{LandingEvent, LandingStatemachine};
@@ -60,9 +59,6 @@ impl Default for LandingTripAssembler {
 
 #[async_trait]
 impl TripAssembler for LandingTripAssembler {
-    fn relevant_event_types(&self) -> RelevantEventType {
-        RelevantEventType::Landing
-    }
     fn assembler_id(&self) -> TripAssemblerId {
         TripAssemblerId::Landings
     }
