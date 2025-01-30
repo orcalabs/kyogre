@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nDELETE FROM trips\nWHERE\n    UPPER(period) >= $1::TIMESTAMPTZ\n    AND fiskeridir_vessel_id = $2\n    AND trip_assembler_id = $3\n                    ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Timestamptz",
+        "Int8",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "7527161854f9e80487c83e6c3a2c60949ff4d27e8e553cf5b268d282c1e18d19"
+}

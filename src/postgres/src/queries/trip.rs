@@ -1479,43 +1479,42 @@ SET
         .await?;
 
         match conflict_strategy {
-            TripsConflictStrategy::Replace => {
-                let periods: Vec<_> = new_trips.iter().map(|v| &v.period).collect();
+            TripsConflictStrategy::Replace { conflict } => {
                 sqlx::query!(
                     r#"
 DELETE FROM trips
 WHERE
-    period && ANY ($1)
+    UPPER(period) >= $1::TIMESTAMPTZ
     AND fiskeridir_vessel_id = $2
     AND trip_assembler_id = $3
                     "#,
-                    &periods as &[&PgRange<DateTime<Utc>>],
+                    conflict,
                     vessel_id.into_inner(),
                     trip_assembler_id as i32,
                 )
                 .execute(&mut *tx)
-                .await
-                .map(|_| ())
+                .await?;
             }
-            TripsConflictStrategy::ReplaceAll => sqlx::query!(
-                r#"
+            TripsConflictStrategy::ReplaceAll => {
+                sqlx::query!(
+                    r#"
 DELETE FROM trips
 WHERE
     fiskeridir_vessel_id = $1
     AND trip_assembler_id = $2
-                "#,
-                vessel_id.into_inner(),
-                trip_assembler_id as i32,
-            )
-            .execute(&mut *tx)
-            .await
-            .map(|_| ()),
-            TripsConflictStrategy::Error => Ok(()),
-        }?;
+                    "#,
+                    vessel_id.into_inner(),
+                    trip_assembler_id as i32,
+                )
+                .execute(&mut *tx)
+                .await?;
+            }
+            TripsConflictStrategy::Error => {}
+        };
 
-        let start_of_prior_trip: Result<Option<Option<DateTime<Utc>>>> = match trip_assembler_id {
-            TripAssemblerId::Landings => Ok(None),
-            TripAssemblerId::Ers => Ok(sqlx::query!(
+        let start_of_prior_trip: Option<DateTime<Utc>> = match trip_assembler_id {
+            TripAssemblerId::Landings => None,
+            TripAssemblerId::Ers => sqlx::query!(
                 r#"
 UPDATE trips
 SET
@@ -1536,19 +1535,19 @@ WHERE
     )
 RETURNING
     LOWER(period) AS ts
-                    "#,
+                "#,
                 // The start of our earliest trip's landing_coverage is the end of the prior trips
                 // landing_coverage
                 earliest_trip_range.ers_landing_coverage_start(),
                 vessel_id.into_inner(),
-                earliest_trip_period
+                earliest_trip_period,
             )
             .fetch_optional(&mut *tx)
             .await?
-            .map(|v| v.ts)),
+            .and_then(|v| v.ts),
         };
 
-        let earliest = if let Some(start_of_prior_trip) = start_of_prior_trip?.flatten() {
+        let earliest = if let Some(start_of_prior_trip) = start_of_prior_trip {
             std::cmp::min(earliest_trip_start, start_of_prior_trip)
         } else {
             earliest_trip_start
@@ -2140,6 +2139,21 @@ WHERE
         )
         .execute(&mut **tx)
         .await?;
+        Ok(())
+    }
+
+    pub(crate) async fn nuke_trips_impl(&self, vessel_id: FiskeridirVesselId) -> Result<()> {
+        sqlx::query!(
+            r#"
+DELETE FROM trips
+WHERE
+    fiskeridir_vessel_id = $1
+            "#,
+            vessel_id.into_inner(),
+        )
+        .execute(&self.pool)
+        .await?;
+
         Ok(())
     }
 }

@@ -59,13 +59,13 @@ impl ErsStatemachine {
     }
 
     fn add_trip(&mut self, arrival: Arrival) -> Result<()> {
-        let mut period = DateRange::new(
+        let mut new_trip_period = DateRange::new(
             self.current_departure.estimated_timestamp,
             arrival.estimated_timestamp,
         )?;
-        period.set_equal_end_and_start_to_non_empty();
+        new_trip_period.set_equal_end_and_start_to_non_empty();
 
-        let period_extended = DateRange::new(
+        let new_trip_period_extended = DateRange::new(
             self.current_departure
                 .estimated_timestamp
                 .min(self.current_departure.message_timestamp),
@@ -75,43 +75,43 @@ impl ErsStatemachine {
         let mut prior_trip_same_start_and_end_landing_coverage = false;
 
         if let Some(prior_trip) = self.new_trips.last_mut() {
-            let mut range = DateRange::new(
+            let mut prior_trip_new_landing_coverage = DateRange::new(
                 prior_trip.landing_coverage.start(),
-                period.ers_landing_coverage_start(),
+                new_trip_period.ers_landing_coverage_start(),
             )?;
 
-            if range.equal_start_and_end() {
-                range.set_start_bound(Bound::Inclusive);
-                range.set_end_bound(Bound::Inclusive);
+            if prior_trip_new_landing_coverage.equal_start_and_end() {
+                prior_trip_new_landing_coverage.set_start_bound(Bound::Inclusive);
+                prior_trip_new_landing_coverage.set_end_bound(Bound::Inclusive);
                 prior_trip_same_start_and_end_landing_coverage = true;
             } else if prior_trip.landing_coverage.start_bound() == Bound::Exclusive {
-                range.set_start_bound(Bound::Exclusive);
-                range.set_end_bound(Bound::Exclusive);
+                prior_trip_new_landing_coverage.set_start_bound(Bound::Exclusive);
+                prior_trip_new_landing_coverage.set_end_bound(Bound::Exclusive);
             } else {
-                range.set_start_bound(Bound::Inclusive);
-                range.set_end_bound(Bound::Exclusive);
+                prior_trip_new_landing_coverage.set_start_bound(Bound::Inclusive);
+                prior_trip_new_landing_coverage.set_end_bound(Bound::Exclusive);
             }
 
-            prior_trip.landing_coverage = range;
+            prior_trip.landing_coverage = prior_trip_new_landing_coverage;
         }
 
-        let mut landing_coverage = DateRange::new(
-            period.ers_landing_coverage_start(),
-            ers_last_trip_landing_coverage_end(&period.end()),
+        let mut new_trip_landing_coverage = DateRange::new(
+            new_trip_period.ers_landing_coverage_start(),
+            ers_last_trip_landing_coverage_end(&new_trip_period.end()),
         )?;
 
         if prior_trip_same_start_and_end_landing_coverage {
-            landing_coverage.set_start_bound(Bound::Exclusive);
-            landing_coverage.set_end_bound(Bound::Exclusive);
+            new_trip_landing_coverage.set_start_bound(Bound::Exclusive);
+            new_trip_landing_coverage.set_end_bound(Bound::Exclusive);
         } else {
-            landing_coverage.set_start_bound(Bound::Inclusive);
-            landing_coverage.set_end_bound(Bound::Exclusive);
+            new_trip_landing_coverage.set_start_bound(Bound::Inclusive);
+            new_trip_landing_coverage.set_end_bound(Bound::Exclusive);
         }
 
         self.new_trips.push(NewTrip {
-            period,
-            period_extended,
-            landing_coverage,
+            period: new_trip_period,
+            period_extended: new_trip_period_extended,
+            landing_coverage: new_trip_landing_coverage,
             start_port_code: self.current_departure.port_id.clone(),
             end_port_code: arrival.port_id,
         });
