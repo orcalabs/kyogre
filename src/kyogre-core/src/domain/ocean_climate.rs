@@ -76,10 +76,10 @@ mod test {
 
     impl NewOceanClimate {
         pub fn test_default(timestamp: DateTime<Utc>) -> Self {
-            let mut rng = rand::thread_rng();
-            let (latitude, longitude, _) =
-                WEATHER_LOCATION_LATS_LONS[rng.gen::<usize>() % WEATHER_LOCATION_LATS_LONS.len()];
-            let num = rng.gen::<u8>() as f64;
+            let mut rng = rand::rng();
+            let (latitude, longitude, _) = WEATHER_LOCATION_LATS_LONS
+                [rng.random::<u32>() as usize % WEATHER_LOCATION_LATS_LONS.len()];
+            let num = rng.random::<u8>() as f64;
 
             Self {
                 timestamp,
