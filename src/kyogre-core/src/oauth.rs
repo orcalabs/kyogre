@@ -1,11 +1,9 @@
 use crate::oauth_error::ExchangeCredentialsSnafu;
 use crate::OauthError;
+use oauth2::reqwest;
 use oauth2::AccessToken;
 use oauth2::TokenResponse;
-use oauth2::{
-    basic::BasicClient, reqwest::async_http_client, AuthUrl, ClientId, ClientSecret, Scope,
-    TokenUrl,
-};
+use oauth2::{basic::BasicClient, AuthUrl, ClientId, ClientSecret, Scope, TokenUrl};
 use serde::Deserialize;
 use snafu::ResultExt;
 
@@ -26,17 +24,15 @@ impl BearerToken {
 
         let token_url = TokenUrl::new(config.token_url.clone())?;
 
-        let client = BasicClient::new(
-            ClientId::new(config.client_id.clone()),
-            Some(ClientSecret::new(config.client_secret.clone())),
-            auth_url,
-            Some(token_url),
-        );
+        let client = BasicClient::new(ClientId::new(config.client_id.clone()))
+            .set_client_secret(ClientSecret::new(config.client_secret.clone()))
+            .set_auth_uri(auth_url)
+            .set_token_uri(token_url);
 
         let response = client
             .exchange_client_credentials()
             .add_scope(Scope::new(config.scope.clone()))
-            .request_async(async_http_client)
+            .request_async(&reqwest::Client::new())
             .await
             .boxed()
             .context(ExchangeCredentialsSnafu)?;

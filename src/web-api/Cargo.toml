@@ -43,7 +43,7 @@ actix-web = "4.9.0"
 actix-cors = "0.7.0"
 jsonwebtoken = "9.3.0"
 serde_qs = { version = "0.13.0", features = ["actix4"] }
-pin-project-lite = "0.2.15"
+pin-project-lite = "0.2.16"
 
 [dev-dependencies]
 engine = { path = "../engine", features = ["test"] }

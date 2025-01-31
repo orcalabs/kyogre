@@ -417,7 +417,7 @@ mod test {
 
     impl AisStatic {
         pub fn test_default() -> AisStatic {
-            let mmsi: i32 = rand::thread_rng().gen();
+            let mmsi: i32 = rand::rng().random();
             AisStatic {
                 message_type_id: 5,
                 message_type: Some(AisMessageType::Static),
