@@ -170,14 +170,8 @@ pub async fn current_trip_positions<T: Database + Send + Sync + 'static>(
     bw_profile: OptionBwProfile,
     auth: OptionAuth0Profile,
 ) -> Result<StreamResponse<AisVmsPosition>> {
-    let bw_policy = bw_profile
-        .into_inner()
-        .map(AisPermission::from)
-        .unwrap_or_default();
-    let auth0_policy = auth
-        .into_inner()
-        .map(AisPermission::from)
-        .unwrap_or_default();
+    let bw_policy = bw_profile.ais_permission();
+    let auth0_policy = auth.ais_permission();
     let policy = if bw_policy == AisPermission::All || auth0_policy == AisPermission::All {
         AisPermission::All
     } else {
