@@ -34,14 +34,16 @@ static BAARD_JOHAN_HANSSEN: Uuid = parse_uuid("92d015cb-c10d-4748-b8d2-a4f4e27f2
 static PER_FINN: Uuid = parse_uuid("37999e6c-5e07-492a-b889-0ef3880e7009");
 static ERLEND_STAV: Uuid = parse_uuid("6c1d8388-82c2-43d6-bb06-6b55f5b65fd7");
 static TORE_SYVERSEN: Uuid = parse_uuid("0b3dce7f-233a-4450-a882-a69e06ea47e4");
+static DORTHEA_VATN: Uuid = parse_uuid("85e96543-ff2f-483a-a86b-89c5554e0216");
 
-static PROJECT_USERS: [Uuid; 6] = [
+static PROJECT_USERS: [Uuid; 7] = [
     ORCA_ACCOUNT_ID,
     PER_GUNNAR_AURAN,
     BAARD_JOHAN_HANSSEN,
     PER_FINN,
     ERLEND_STAV,
     TORE_SYVERSEN,
+    DORTHEA_VATN,
 ];
 
 const fn parse_uuid(uuid: &'static str) -> Uuid {
@@ -256,9 +258,7 @@ impl BwProfile {
         if PROJECT_USERS.contains(profile.user.id.as_ref()) {
             let query: web::Query<HashMap<String, String>> = web::Query::from_query(&query_string)?;
             if let Some(cs) = query.get("call_sign_override") {
-                profile.fisk_info_profile = Some(BwVesselInfo {
-                    ircs: cs.as_str().try_into()?,
-                });
+                profile.fisk_info_profile = Some(BwVesselInfo { ircs: cs.parse()? });
             }
         }
 
