@@ -40,8 +40,8 @@ pub struct Auth0Profile {
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct OptionAuth0Profile(Option<Auth0Profile>);
 
-impl From<Auth0Profile> for AisPermission {
-    fn from(v: Auth0Profile) -> Self {
+impl From<&Auth0Profile> for AisPermission {
+    fn from(v: &Auth0Profile) -> Self {
         if v.permissions.contains(&Auth0Permission::ReadAisUnder15m) {
             AisPermission::All
         } else {
@@ -140,8 +140,8 @@ impl Auth0Profile {
 }
 
 impl OptionAuth0Profile {
-    pub fn into_inner(self) -> Option<Auth0Profile> {
-        self.0
+    pub fn ais_permission(&self) -> AisPermission {
+        self.0.as_ref().map(From::from).unwrap_or_default()
     }
 }
 
