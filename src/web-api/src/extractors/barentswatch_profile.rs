@@ -147,8 +147,8 @@ impl OaParameter for OptionBwProfile {
     }
 }
 
-impl From<BwProfile> for AisPermission {
-    fn from(value: BwProfile) -> Self {
+impl From<&BwProfile> for AisPermission {
+    fn from(value: &BwProfile) -> Self {
         let ais_policy = value.policies.iter().any(|v| *v == BwPolicy::BwAisFiskinfo);
         if ais_policy {
             value
@@ -274,8 +274,8 @@ impl BwProfile {
 }
 
 impl OptionBwProfile {
-    pub fn into_inner(self) -> Option<BwProfile> {
-        self.0
+    pub fn ais_permission(&self) -> AisPermission {
+        self.0.as_ref().map(From::from).unwrap_or_default()
     }
 }
 
