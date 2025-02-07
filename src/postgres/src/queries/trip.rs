@@ -9,11 +9,11 @@ use crate::{
 };
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::{DeliveryPointId, Gear, GearGroup, LandingId, SpeciesGroup, VesselLengthGroup};
-use futures::{Stream, StreamExt, TryStreamExt};
+use futures::{Stream, TryStreamExt};
 use kyogre_core::{
-    Bound, DateRange, FiskeridirVesselId, HasTrack, HaulId, Ordering, PrecisionOutcome,
-    ProcessingStatus, TripAssemblerId, TripId, TripPositionLayerOutput, TripSet, TripSorting,
-    TripUpdate, TripsConflictStrategy, TripsQuery, VesselEventType,
+    Bound, DateRange, FiskeridirVesselId, HasTrack, Ordering, PrecisionOutcome, ProcessingStatus,
+    TripAssemblerId, TripId, TripPositionLayerOutput, TripSet, TripSorting, TripUpdate,
+    TripsConflictStrategy, TripsQuery, VesselEventType,
 };
 use sqlx::postgres::types::PgRange;
 use std::collections::{HashMap, HashSet};
@@ -644,6 +644,8 @@ SELECT
             JSONB_BUILD_OBJECT(
                 'haul_id',
                 h.haul_id,
+                'trip_id',
+                t.trip_id,
                 'cache_version',
                 h.cache_version,
                 'catch_locations',
@@ -1079,23 +1081,27 @@ WHERE
         $10::INT[] IS NULL
         OR t.fiskeridir_length_group_id = ANY ($10)
     )
+    AND (
+        $11::INT[] IS NULL
+        OR t.trip_id = ANY ($11)
+    )
 ORDER BY
     CASE
-        WHEN $11::INT = 1 THEN t.stop_timestamp
+        WHEN $12::INT = 1 THEN t.stop_timestamp
     END ASC,
     CASE
-        WHEN $11::INT = 2 THEN t.landing_total_living_weight
+        WHEN $12::INT = 2 THEN t.landing_total_living_weight
     END ASC,
     CASE
-        WHEN $11::INT = 3 THEN t.stop_timestamp
+        WHEN $12::INT = 3 THEN t.stop_timestamp
     END DESC,
     CASE
-        WHEN $11::INT = 4 THEN t.landing_total_living_weight
+        WHEN $12::INT = 4 THEN t.landing_total_living_weight
     END DESC
 OFFSET
-    $12
-LIMIT
     $13
+LIMIT
+    $14
             "#,
             read_fishing_facility,
             query.fiskeridir_vessel_ids.as_deref() as Option<&[FiskeridirVesselId]>,
@@ -1107,6 +1113,7 @@ LIMIT
             query.gear_group_ids.as_deref() as Option<&[GearGroup]>,
             query.species_group_ids.as_deref() as Option<&[SpeciesGroup]>,
             query.vessel_length_groups.as_deref() as Option<&[VesselLengthGroup]>,
+            query.trip_ids.as_deref() as Option<&[TripId]>,
             order_by,
             query.pagination.offset() as i64,
             query.pagination.limit() as i64,
@@ -1115,22 +1122,10 @@ LIMIT
         .map_err(|e| e.into())
     }
 
-    fn detailed_trips_inner(
+    pub(crate) fn detailed_trips_by_ids_impl(
         &self,
-        query: DetailedTripsQuery<'_>,
+        ids: &[TripId],
     ) -> impl Stream<Item = Result<TripDetailed>> + '_ {
-        let (trip_ids, haul_id, landing_id, read_fishing_facility) = match query {
-            DetailedTripsQuery::Ids(v) => (Some(v), None, None, None),
-            DetailedTripsQuery::Haul {
-                id,
-                read_fishing_facility,
-            } => (None, Some([id]), None, Some(read_fishing_facility)),
-            DetailedTripsQuery::Landing {
-                id,
-                read_fishing_facility,
-            } => (None, None, Some([id]), Some(read_fishing_facility)),
-        };
-
         sqlx::query_as!(
             TripDetailed,
             r#"
@@ -1161,13 +1156,7 @@ SELECT
     t.hauls::TEXT AS "hauls!",
     t.tra::TEXT AS "tra!",
     t.landing_ids AS "landing_ids: Vec<LandingId>",
-    CASE
-        WHEN (
-            $1
-            OR $1 IS NULL
-        ) THEN t.fishing_facilities::TEXT
-        ELSE '[]'
-    END AS "fishing_facilities!",
+    t.fishing_facilities::TEXT AS "fishing_facilities!",
     t.distance,
     t.cache_version,
     t.target_species_fiskeridir_id,
@@ -1178,33 +1167,12 @@ SELECT
 FROM
     trips_detailed AS t
 WHERE
-    (
-        $2::BIGINT[] IS NULL
-        OR trip_id = ANY ($2)
-    )
-    AND (
-        $3::BIGINT[] IS NULL
-        OR t.haul_ids && $3
-    )
-    AND (
-        $4::VARCHAR[] IS NULL
-        OR t.landing_ids && $4::VARCHAR[]
-    )
+    t.trip_id = ANY ($1)
             "#,
-            read_fishing_facility,
-            trip_ids as Option<&[TripId]>,
-            haul_id as Option<[&HaulId; 1]>,
-            landing_id as Option<[&LandingId; 1]>,
+            ids as &[TripId],
         )
         .fetch(&self.pool)
         .map_err(|e| e.into())
-    }
-
-    pub(crate) fn detailed_trips_by_ids_impl(
-        &self,
-        ids: &[TripId],
-    ) -> impl Stream<Item = Result<TripDetailed>> + '_ {
-        self.detailed_trips_inner(DetailedTripsQuery::Ids(ids))
     }
 
     pub(crate) async fn all_trip_cache_versions_impl(&self) -> Result<Vec<(TripId, i64)>> {
@@ -1221,34 +1189,6 @@ FROM
         .map_ok(|r| (r.trip_id, r.cache_version))
         .try_collect()
         .await?)
-    }
-
-    pub(crate) async fn detailed_trip_of_haul_impl(
-        &self,
-        haul_id: &HaulId,
-        read_fishing_facility: bool,
-    ) -> Result<Option<TripDetailed>> {
-        self.detailed_trips_inner(DetailedTripsQuery::Haul {
-            id: haul_id,
-            read_fishing_facility,
-        })
-        .next()
-        .await
-        .transpose()
-    }
-
-    pub(crate) async fn detailed_trip_of_landing_impl(
-        &self,
-        landing_id: &LandingId,
-        read_fishing_facility: bool,
-    ) -> Result<Option<TripDetailed>> {
-        self.detailed_trips_inner(DetailedTripsQuery::Landing {
-            id: landing_id,
-            read_fishing_facility,
-        })
-        .next()
-        .await
-        .transpose()
     }
 
     pub(crate) async fn current_trip_impl(
@@ -2156,16 +2096,4 @@ WHERE
 
         Ok(())
     }
-}
-
-enum DetailedTripsQuery<'a> {
-    Ids(&'a [TripId]),
-    Haul {
-        id: &'a HaulId,
-        read_fishing_facility: bool,
-    },
-    Landing {
-        id: &'a LandingId,
-        read_fishing_facility: bool,
-    },
 }

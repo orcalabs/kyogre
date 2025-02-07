@@ -3,7 +3,7 @@ use fiskeridir_rs::{GearGroup, SpeciesGroup, VesselLengthGroup};
 use serde::{Deserialize, Serialize};
 use strum::{AsRefStr, EnumString};
 
-use crate::{FiskeridirVesselId, Ordering, Pagination, Trips};
+use crate::{FiskeridirVesselId, Ordering, Pagination, TripId, Trips};
 
 #[cfg_attr(feature = "sqlx", derive(sqlx::Type))]
 #[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
@@ -42,4 +42,5 @@ pub struct TripsQuery {
     pub species_group_ids: Option<Vec<SpeciesGroup>>,
     pub vessel_length_groups: Option<Vec<VesselLengthGroup>>,
     pub fiskeridir_vessel_ids: Option<Vec<FiskeridirVesselId>>,
+    pub trip_ids: Option<Vec<TripId>>,
 }

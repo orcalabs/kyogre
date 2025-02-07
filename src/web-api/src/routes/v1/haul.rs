@@ -4,7 +4,7 @@ use fiskeridir_rs::{CallSign, Gear, GearGroup, SpeciesGroup, VesselLengthGroup, 
 use futures::TryStreamExt;
 use kyogre_core::{
     ActiveHaulsFilter, CatchLocationId, FiskeridirVesselId, HaulId, HaulsMatrixQuery, HaulsQuery,
-    HaulsSorting, Ordering,
+    HaulsSorting, Ordering, TripId,
 };
 use oasgen::{oasgen, OaSchema};
 use serde::{Deserialize, Serialize};
@@ -128,7 +128,8 @@ pub async fn hauls_matrix<T: Database + 'static, S: Cache>(
 #[derive(Debug, Clone, Deserialize, Serialize, OaSchema, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct Haul {
-    pub haul_id: HaulId,
+    pub id: HaulId,
+    pub trip_id: Option<TripId>,
     pub haul_distance: Option<i32>,
     pub catch_locations: Option<Vec<CatchLocationId>>,
     pub start_latitude: f64,
@@ -226,7 +227,8 @@ impl From<kyogre_core::HaulsMatrix> for HaulsMatrix {
 impl From<kyogre_core::Haul> for Haul {
     fn from(v: kyogre_core::Haul) -> Self {
         let kyogre_core::Haul {
-            haul_id,
+            id,
+            trip_id,
             cache_version: _,
             catch_locations,
             gear_group_id,
@@ -247,7 +249,8 @@ impl From<kyogre_core::Haul> for Haul {
         } = v;
 
         Haul {
-            haul_id,
+            id,
+            trip_id,
             haul_distance,
             catch_locations,
             start_latitude,

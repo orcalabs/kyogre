@@ -31,6 +31,7 @@ impl TestDb {
             r#"
 SELECT
     h.haul_id AS "haul_id!: HaulId",
+    e.trip_id AS "trip_id: TripId",
     h.haul_distance,
     h.catch_locations AS "catch_locations?: Vec<CatchLocationId>",
     h.species_group_ids AS "species_group_ids!: Vec<SpeciesGroup>",
@@ -50,6 +51,7 @@ SELECT
     h.cache_version
 FROM
     hauls h
+    LEFT JOIN vessel_events e ON h.vessel_event_id = e.vessel_event_id
 WHERE
     h.fiskeridir_vessel_id = $1
     AND h.message_id = $2

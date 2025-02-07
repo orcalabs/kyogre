@@ -3,10 +3,9 @@
 
 use async_trait::async_trait;
 use error::Result;
-use fiskeridir_rs::LandingId;
 use indexable::Indexable;
 use kyogre_core::{
-    retry, CoreResult, HaulId, HaulsQuery, LandingsQuery, MeilisearchOutbound, MeilisearchSource,
+    retry, CoreResult, HaulsQuery, LandingsQuery, MeilisearchOutbound, MeilisearchSource,
     TripDetailed, TripsQuery,
 };
 use meilisearch_sdk::client::Client;
@@ -116,20 +115,6 @@ impl<T: Send + Sync> MeilisearchOutbound for MeilisearchAdapter<T> {
         read_fishing_facility: bool,
     ) -> CoreResult<Vec<TripDetailed>> {
         Ok(retry(|| self.trips_impl(query.clone(), read_fishing_facility)).await?)
-    }
-    async fn trip_of_haul(
-        &self,
-        haul_id: &HaulId,
-        read_fishing_facility: bool,
-    ) -> CoreResult<Option<TripDetailed>> {
-        Ok(retry(|| self.trip_of_haul_impl(haul_id, read_fishing_facility)).await?)
-    }
-    async fn trip_of_landing(
-        &self,
-        landing_id: &LandingId,
-        read_fishing_facility: bool,
-    ) -> CoreResult<Option<TripDetailed>> {
-        Ok(retry(|| self.trip_of_landing_impl(landing_id, read_fishing_facility)).await?)
     }
     async fn hauls(&self, query: &HaulsQuery) -> CoreResult<Vec<kyogre_core::Haul>> {
         Ok(retry(|| self.hauls_impl(query.clone())).await?)

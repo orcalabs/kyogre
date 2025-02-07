@@ -9,6 +9,8 @@ use crate::{
     LandingMatrixYFeature,
 };
 
+use super::TripId;
+
 pub static LANDING_OLDEST_DATA_MONTHS: usize = 1999 * 12;
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Default)]
@@ -24,6 +26,7 @@ pub struct LandingMatrix {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Landing {
     pub id: LandingId,
+    pub trip_id: Option<TripId>,
     pub landing_timestamp: DateTime<Utc>,
     pub catch_location: Option<CatchLocationId>,
     pub gear_id: Gear,

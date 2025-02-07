@@ -6,7 +6,7 @@ use fiskeridir_rs::{
 use futures::TryStreamExt;
 use kyogre_core::{
     ActiveLandingFilter, CatchLocationId, FiskeridirVesselId, LandingMatrixQuery, Landings,
-    LandingsQuery, LandingsSorting, Ordering, Pagination,
+    LandingsQuery, LandingsSorting, Ordering, Pagination, TripId,
 };
 use oasgen::{oasgen, OaSchema};
 use serde::{Deserialize, Serialize};
@@ -133,6 +133,7 @@ pub async fn landing_matrix<T: Database + 'static, S: Cache>(
 #[serde(rename_all = "camelCase")]
 pub struct Landing {
     pub id: LandingId,
+    pub trip_id: Option<TripId>,
     pub landing_timestamp: DateTime<Utc>,
     pub catch_location: Option<CatchLocationId>,
     #[serde_as(as = "DisplayFromStr")]
@@ -177,6 +178,7 @@ impl From<kyogre_core::Landing> for Landing {
     fn from(v: kyogre_core::Landing) -> Self {
         let kyogre_core::Landing {
             id,
+            trip_id,
             landing_timestamp,
             catch_location,
             gear_id,
@@ -196,6 +198,7 @@ impl From<kyogre_core::Landing> for Landing {
 
         Self {
             id,
+            trip_id,
             landing_timestamp,
             catch_location,
             gear_id,

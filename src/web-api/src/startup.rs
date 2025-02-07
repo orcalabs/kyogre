@@ -120,14 +120,6 @@ where
                 "/vms/{call_sign}",
                 get().to(routes::v1::vms::vms_positions::<T>),
             )
-            .route(
-                "/trip_of_haul/{haul_id}",
-                get().to(routes::v1::trip::trip_of_haul::trip_of_haul::<T, M>),
-            )
-            .route(
-                "/trip_of_landing/{landing_id}",
-                get().to(routes::v1::trip::trip_of_landing::<T, M>),
-            )
             .route("/trips", get().to(routes::v1::trip::trips::<T, M>))
             .route(
                 "/trips/current/{fiskeridir_vessel_id}",
