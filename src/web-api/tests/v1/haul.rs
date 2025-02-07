@@ -12,7 +12,15 @@ async fn test_hauls_returns_all_hauls() {
 
         helper.refresh_cache().await;
 
-        let hauls = helper.app.get_hauls(Default::default()).await.unwrap();
+        let hauls = helper
+            .app
+            .get_hauls(HaulsParams {
+                sorting: Some(HaulsSorting::StartDate),
+                ordering: Some(Ordering::Asc),
+                ..Default::default()
+            })
+            .await
+            .unwrap();
 
         assert_eq!(hauls.len(), 3);
         assert_eq!(hauls, state.hauls)

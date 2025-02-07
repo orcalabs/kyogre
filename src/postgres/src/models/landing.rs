@@ -2,7 +2,7 @@ use chrono::{DateTime, NaiveDate, NaiveTime, Utc};
 use fiskeridir_rs::{
     CallSign, DeliveryPointId, Gear, GearGroup, LandingId, SpeciesGroup, VesselLengthGroup,
 };
-use kyogre_core::{CatchLocationId, FiskeridirVesselId, LandingMatrixQuery};
+use kyogre_core::{CatchLocationId, FiskeridirVesselId, LandingMatrixQuery, TripId};
 use unnest_insert::UnnestInsert;
 
 use crate::{error::Error, queries::opt_type_to_i64};
@@ -96,6 +96,7 @@ pub struct NewLanding<'a> {
 
 pub struct Landing {
     pub landing_id: LandingId,
+    pub trip_id: Option<TripId>,
     pub landing_timestamp: DateTime<Utc>,
     pub catch_area_id: Option<i32>,
     pub catch_main_area_id: Option<i32>,
@@ -216,6 +217,7 @@ impl TryFrom<Landing> for kyogre_core::Landing {
     fn try_from(v: Landing) -> std::result::Result<Self, Self::Error> {
         let Landing {
             landing_id,
+            trip_id,
             landing_timestamp,
             catch_area_id,
             catch_main_area_id,
@@ -236,6 +238,7 @@ impl TryFrom<Landing> for kyogre_core::Landing {
 
         Ok(Self {
             id: landing_id,
+            trip_id,
             landing_timestamp,
             catch_location: CatchLocationId::new_opt(catch_main_area_id, catch_area_id),
             gear_id,

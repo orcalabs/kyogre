@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT\n    haul_id AS \"haul_id!: HaulId\",\n    haul_distance,\n    catch_locations AS \"catch_locations?: Vec<CatchLocationId>\",\n    species_group_ids AS \"species_group_ids!: Vec<SpeciesGroup>\",\n    start_latitude,\n    start_longitude,\n    stop_latitude,\n    stop_longitude,\n    start_timestamp,\n    stop_timestamp,\n    gear_group_id AS \"gear_group_id!: GearGroup\",\n    gear_id AS \"gear_id!: Gear\",\n    fiskeridir_vessel_id AS \"fiskeridir_vessel_id?: FiskeridirVesselId\",\n    vessel_length_group AS \"vessel_length_group!: VesselLengthGroup\",\n    COALESCE(vessel_name, vessel_name_ers) AS vessel_name,\n    COALESCE(vessel_call_sign, vessel_call_sign_ers) AS \"call_sign!: CallSign\",\n    catches::TEXT AS \"catches!\",\n    cache_version\nFROM\n    hauls\nWHERE\n    haul_id = ANY ($1)\n            ",
+  "query": "\nSELECT\n    h.haul_id AS \"haul_id!: HaulId\",\n    e.trip_id AS \"trip_id: TripId\",\n    h.haul_distance,\n    h.catch_locations AS \"catch_locations?: Vec<CatchLocationId>\",\n    h.species_group_ids AS \"species_group_ids!: Vec<SpeciesGroup>\",\n    h.start_latitude,\n    h.start_longitude,\n    h.stop_latitude,\n    h.stop_longitude,\n    h.start_timestamp,\n    h.stop_timestamp,\n    h.gear_group_id AS \"gear_group_id!: GearGroup\",\n    h.gear_id AS \"gear_id!: Gear\",\n    h.fiskeridir_vessel_id AS \"fiskeridir_vessel_id?: FiskeridirVesselId\",\n    h.vessel_length_group AS \"vessel_length_group!: VesselLengthGroup\",\n    COALESCE(h.vessel_name, h.vessel_name_ers) AS vessel_name,\n    COALESCE(h.vessel_call_sign, h.vessel_call_sign_ers) AS \"call_sign!: CallSign\",\n    h.catches::TEXT AS \"catches!\",\n    h.cache_version\nFROM\n    hauls h\n    LEFT JOIN vessel_events e ON h.vessel_event_id = e.vessel_event_id\nWHERE\n    h.haul_id = ANY ($1)\n            ",
   "describe": {
     "columns": [
       {
@@ -10,86 +10,91 @@
       },
       {
         "ordinal": 1,
+        "name": "trip_id: TripId",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 2,
         "name": "haul_distance",
         "type_info": "Int4"
       },
       {
-        "ordinal": 2,
+        "ordinal": 3,
         "name": "catch_locations?: Vec<CatchLocationId>",
         "type_info": "TextArray"
       },
       {
-        "ordinal": 3,
+        "ordinal": 4,
         "name": "species_group_ids!: Vec<SpeciesGroup>",
         "type_info": "Int4Array"
       },
       {
-        "ordinal": 4,
+        "ordinal": 5,
         "name": "start_latitude",
         "type_info": "Float8"
       },
       {
-        "ordinal": 5,
+        "ordinal": 6,
         "name": "start_longitude",
         "type_info": "Float8"
       },
       {
-        "ordinal": 6,
+        "ordinal": 7,
         "name": "stop_latitude",
         "type_info": "Float8"
       },
       {
-        "ordinal": 7,
+        "ordinal": 8,
         "name": "stop_longitude",
         "type_info": "Float8"
       },
       {
-        "ordinal": 8,
+        "ordinal": 9,
         "name": "start_timestamp",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 9,
+        "ordinal": 10,
         "name": "stop_timestamp",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 10,
+        "ordinal": 11,
         "name": "gear_group_id!: GearGroup",
         "type_info": "Int4"
       },
       {
-        "ordinal": 11,
+        "ordinal": 12,
         "name": "gear_id!: Gear",
         "type_info": "Int4"
       },
       {
-        "ordinal": 12,
+        "ordinal": 13,
         "name": "fiskeridir_vessel_id?: FiskeridirVesselId",
         "type_info": "Int8"
       },
       {
-        "ordinal": 13,
+        "ordinal": 14,
         "name": "vessel_length_group!: VesselLengthGroup",
         "type_info": "Int4"
       },
       {
-        "ordinal": 14,
+        "ordinal": 15,
         "name": "vessel_name",
         "type_info": "Text"
       },
       {
-        "ordinal": 15,
+        "ordinal": 16,
         "name": "call_sign!: CallSign",
         "type_info": "Text"
       },
       {
-        "ordinal": 16,
+        "ordinal": 17,
         "name": "catches!",
         "type_info": "Text"
       },
       {
-        "ordinal": 17,
+        "ordinal": 18,
         "name": "cache_version",
         "type_info": "Int8"
       }
@@ -101,6 +106,7 @@
     },
     "nullable": [
       false,
+      true,
       true,
       true,
       false,
@@ -120,5 +126,5 @@
       false
     ]
   },
-  "hash": "9bb5aa14c54de6f0a3c6daab4536624261a2cfd1f253cc8339804044a41fe37d"
+  "hash": "1a5ecdc39483700163658a05df366ef46cbfa4f4bd515ef0150746f1094613af"
 }

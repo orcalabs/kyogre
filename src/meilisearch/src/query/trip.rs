@@ -21,6 +21,7 @@ impl From<TripsQuery> for Query<TripFilter, TripSort, Pagination<Trips>> {
             species_group_ids,
             vessel_length_groups,
             fiskeridir_vessel_ids,
+            trip_ids,
         } = value;
 
         let mut filters = BTreeSet::new();
@@ -48,6 +49,9 @@ impl From<TripsQuery> for Query<TripFilter, TripSort, Pagination<Trips>> {
         }
         if let Some(ids) = fiskeridir_vessel_ids {
             filters.insert(TripFilter::FiskeridirVesselId(ids));
+        }
+        if let Some(ids) = trip_ids {
+            filters.insert(TripFilter::TripId(ids));
         }
 
         Self {

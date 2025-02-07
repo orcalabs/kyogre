@@ -1,9 +1,9 @@
 use actix_web::http::Method;
-use fiskeridir_rs::{CallSign, LandingId, OrgId, SpeciesGroup};
+use fiskeridir_rs::{CallSign, OrgId, SpeciesGroup};
 use http_client::{HttpClient, StatusCode};
 use kyogre_core::{
     ActiveHaulsFilter, ActiveLandingFilter, AverageTripBenchmarks, FiskeridirVesselId, FuelEntry,
-    HaulId, LiveFuel, Mmsi, ModelId, OrgBenchmarks, UpdateVessel, VesselBenchmarks,
+    LiveFuel, Mmsi, ModelId, OrgBenchmarks, UpdateVessel, VesselBenchmarks,
 };
 use serde::{de::DeserializeOwned, Serialize};
 use web_api::{
@@ -336,25 +336,6 @@ impl ApiClient {
             Method::GET,
             &(),
             Some(&params),
-        )
-        .await
-    }
-    pub async fn get_trip_of_haul(&self, haul_id: &HaulId) -> Result<Option<Trip>, Error> {
-        self.send(
-            format!("trip_of_haul/{haul_id}"),
-            Method::GET,
-            &(),
-            None::<&()>,
-        )
-        .await
-    }
-
-    pub async fn get_trip_of_landing(&self, landing_id: &LandingId) -> Result<Option<Trip>, Error> {
-        self.send(
-            format!("trip_of_landing/{}", landing_id.clone().into_inner()),
-            Method::GET,
-            &(),
-            None::<&()>,
         )
         .await
     }

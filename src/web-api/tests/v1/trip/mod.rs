@@ -13,7 +13,6 @@ use web_api::{
 };
 
 pub mod benchmarks;
-pub mod trip_of_haul;
 
 #[tokio::test]
 async fn test_tra_messages_on_trips_connects_to_receiver_and_sender_if_provided() {
@@ -214,95 +213,6 @@ async fn test_trips_contains_refreshed_hauls() {
         assert_eq!(trips[0].hauls.len(), 1);
         assert_eq!(trips[0].hauls, state.hauls);
         assert_eq!(trips[0].hauls[0].catches[0].living_weight, 20);
-    })
-    .await;
-}
-
-#[tokio::test]
-async fn test_trip_of_landing_returns_none_of_no_trip_is_connected_to_given_landing_id() {
-    test_with_cache(|helper, _builder| async move {
-        helper.refresh_cache().await;
-
-        let trip = helper
-            .app
-            .get_trip_of_landing(&"1-7-0-0".parse().unwrap())
-            .await
-            .unwrap();
-        assert!(trip.is_none());
-    })
-    .await;
-}
-
-#[tokio::test]
-async fn test_trip_of_landing_does_not_return_trip_outside_landing_timestamp() {
-    test_with_cache(|helper, builder| async move {
-        let state = builder.vessels(1).landings(1).trips(1).build().await;
-
-        helper.refresh_cache().await;
-
-        let trip = helper
-            .app
-            .get_trip_of_landing(&state.landings[0].id)
-            .await
-            .unwrap();
-        assert!(trip.is_none());
-    })
-    .await;
-}
-
-#[tokio::test]
-async fn test_trip_of_landing_does_not_return_trip_of_other_vessels() {
-    test_with_cache(|helper, builder| async move {
-        let start = Utc.timestamp_opt(10000000, 0).unwrap();
-        let end = Utc.timestamp_opt(20000000, 0).unwrap();
-
-        let state = builder
-            .vessels(1)
-            .landings(1)
-            .modify(|l| l.landing.landing_timestamp = start + Duration::seconds(1))
-            .base()
-            .vessels(1)
-            .trips(1)
-            .modify(|t| {
-                t.trip_specification.set_start(start);
-                t.trip_specification.set_end(end);
-            })
-            .build()
-            .await;
-
-        helper.refresh_cache().await;
-
-        let trip = helper
-            .app
-            .get_trip_of_landing(&state.landings[0].id)
-            .await
-            .unwrap()
-            .unwrap();
-        assert_eq!(state.trips[0], trip);
-    })
-    .await;
-}
-
-#[tokio::test]
-async fn test_trip_of_landing_returns_all_hauls_and_landings_connected_to_trip() {
-    test_with_cache(|helper, builder| async move {
-        let state = builder
-            .vessels(1)
-            .trips(1)
-            .landings(1)
-            .hauls(1)
-            .build()
-            .await;
-
-        helper.refresh_cache().await;
-
-        let trip = helper
-            .app
-            .get_trip_of_landing(&state.landings[0].id)
-            .await
-            .unwrap()
-            .unwrap();
-        assert_eq!(state.trips[0], trip);
     })
     .await;
 }
@@ -1328,6 +1238,28 @@ async fn test_trips_includes_weekly_sales_price_after_refresh() {
         assert_eq!(state.trips.len(), 1);
         assert!(state.trips[0].delivery.total_price_for_fisher > 0.);
         assert!(state.trips[0].delivery.price_for_fisher_is_estimated);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_trips_filter_by_trip_id() {
+    test_with_cache(|helper, builder| async move {
+        let state = builder.vessels(1).trips(2).build().await;
+
+        helper.refresh_cache().await;
+
+        let trips = helper
+            .app
+            .get_trips(TripsParameters {
+                trip_ids: Some(vec![state.trips[0].trip_id]),
+                ..Default::default()
+            })
+            .await
+            .unwrap();
+
+        assert_eq!(trips.len(), 1);
+        assert_eq!(trips[0], state.trips[0]);
     })
     .await;
 }

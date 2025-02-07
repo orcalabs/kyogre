@@ -1,11 +1,6 @@
-use crate::{
-    error::Result,
-    indexable::Indexable,
-    query::{Filter, Query},
-    MeilisearchAdapter,
-};
-use fiskeridir_rs::LandingId;
-use kyogre_core::{HaulId, Pagination, TripDetailed, Trips, TripsQuery};
+use kyogre_core::{Pagination, TripDetailed, Trips, TripsQuery};
+
+use crate::{error::Result, indexable::Indexable, query::Query, MeilisearchAdapter};
 
 mod filter;
 mod model;
@@ -45,53 +40,5 @@ impl<T> MeilisearchAdapter<T> {
             .collect::<Result<_>>()?;
 
         Ok(trips)
-    }
-
-    pub(crate) async fn trip_of_haul_impl(
-        &self,
-        haul_id: &HaulId,
-        read_fishing_facility: bool,
-    ) -> Result<Option<TripDetailed>> {
-        let filter = TripFilter::from(haul_id).filter_str()?;
-
-        let result = Trip::index(self)
-            .search()
-            .with_filter(&filter)
-            .with_limit(1)
-            .execute::<Trip>()
-            .await?;
-
-        let trip = result
-            .hits
-            .into_iter()
-            .next()
-            .map(|h| h.result.try_to_trip_detailed(read_fishing_facility))
-            .transpose()?;
-
-        Ok(trip)
-    }
-
-    pub(crate) async fn trip_of_landing_impl(
-        &self,
-        landing_id: &LandingId,
-        read_fishing_facility: bool,
-    ) -> Result<Option<TripDetailed>> {
-        let filter = TripFilter::from(landing_id).filter_str()?;
-
-        let result = Trip::index(self)
-            .search()
-            .with_filter(&filter)
-            .with_limit(1)
-            .execute::<Trip>()
-            .await?;
-
-        let trip = result
-            .hits
-            .into_iter()
-            .next()
-            .map(|h| h.result.try_to_trip_detailed(read_fishing_facility))
-            .transpose()?;
-
-        Ok(trip)
     }
 }

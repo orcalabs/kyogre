@@ -1,12 +1,13 @@
 use crate::error::{Error, Result};
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::{CallSign, Gear, GearGroup, SpeciesGroup, VesselLengthGroup};
-use kyogre_core::{CatchLocationId, FiskeridirVesselId, HaulCatch, HaulId};
+use kyogre_core::{CatchLocationId, FiskeridirVesselId, HaulCatch, HaulId, TripId};
 use serde::Deserialize;
 
 #[derive(Deserialize)]
 pub struct Haul {
     pub haul_id: HaulId,
+    pub trip_id: Option<TripId>,
     pub haul_distance: Option<i32>,
     pub catch_locations: Option<Vec<CatchLocationId>>,
     pub start_timestamp: DateTime<Utc>,
@@ -32,6 +33,7 @@ impl TryFrom<Haul> for kyogre_core::Haul {
     fn try_from(v: Haul) -> Result<Self> {
         let Haul {
             haul_id,
+            trip_id,
             haul_distance,
             catch_locations,
             start_timestamp,
@@ -52,7 +54,8 @@ impl TryFrom<Haul> for kyogre_core::Haul {
         } = v;
 
         Ok(Self {
-            haul_id,
+            id: haul_id,
+            trip_id,
             haul_distance,
             catch_locations,
             start_latitude,

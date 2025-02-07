@@ -762,25 +762,6 @@ impl WebApiOutboundPort for PostgresAdapter {
             .try_convert()
             .boxed()
     }
-    async fn detailed_trip_of_haul(
-        &self,
-        haul_id: &HaulId,
-        read_fishing_facility: bool,
-    ) -> CoreResult<Option<TripDetailed>> {
-        convert_optional(
-            retry(|| self.detailed_trip_of_haul_impl(haul_id, read_fishing_facility)).await?,
-        )
-    }
-
-    async fn detailed_trip_of_landing(
-        &self,
-        landing_id: &LandingId,
-        read_fishing_facility: bool,
-    ) -> CoreResult<Option<TripDetailed>> {
-        convert_optional(
-            retry(|| self.detailed_trip_of_landing_impl(landing_id, read_fishing_facility)).await?,
-        )
-    }
 
     async fn current_trip(
         &self,

@@ -256,7 +256,7 @@ impl TryFrom<TripDetailed> for Trip {
             gear_group_ids,
             species_group_ids,
             delivery_point_ids,
-            haul_ids: hauls.iter().map(|h| h.haul_id).collect(),
+            haul_ids: hauls.iter().map(|h| h.id).collect(),
             hauls,
             fishing_facilities,
             total_living_weight: delivery.total_living_weight,

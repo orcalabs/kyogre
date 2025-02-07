@@ -10,7 +10,7 @@ use fiskeridir_rs::{
 use futures::{future::ready, Stream, TryStreamExt};
 use kyogre_core::{
     BoxIterator, DeletedLandingType, EmptyVecToNone, FiskeridirVesselId, LandingsQuery, Range,
-    TripAssemblerId, VesselEventType,
+    TripAssemblerId, TripId, VesselEventType,
 };
 use tracing::error;
 
@@ -45,6 +45,7 @@ impl PostgresAdapter {
             r#"
 SELECT
     l.landing_id AS "landing_id!: LandingId",
+    MAX(e.trip_id) AS "trip_id: TripId",
     l.landing_timestamp,
     l.catch_area_id,
     l.catch_main_area_id,
@@ -78,6 +79,7 @@ FROM
     landings l
     INNER JOIN landing_entries le ON l.landing_id = le.landing_id
     LEFT JOIN deprecated_delivery_points d ON l.delivery_point_id = d.old_delivery_point_id
+    LEFT JOIN vessel_events e ON l.vessel_event_id = e.vessel_event_id
 WHERE
     (
         $1::tstzrange[] IS NULL
@@ -101,7 +103,7 @@ WHERE
     )
     AND (
         $6::BIGINT[] IS NULL
-        OR fiskeridir_vessel_id = ANY ($6)
+        OR l.fiskeridir_vessel_id = ANY ($6)
     )
 GROUP BY
     l.landing_id
@@ -157,6 +159,7 @@ LIMIT
             r#"
 SELECT
     l.landing_id AS "landing_id!: LandingId",
+    MAX(e.trip_id) AS "trip_id: TripId",
     l.landing_timestamp,
     l.catch_area_id,
     l.catch_main_area_id,
@@ -190,6 +193,7 @@ FROM
     landings l
     INNER JOIN landing_entries le ON l.landing_id = le.landing_id
     LEFT JOIN deprecated_delivery_points d ON l.delivery_point_id = d.old_delivery_point_id
+    LEFT JOIN vessel_events e ON l.vessel_event_id = e.vessel_event_id
 WHERE
     l.landing_id = ANY ($1)
 GROUP BY

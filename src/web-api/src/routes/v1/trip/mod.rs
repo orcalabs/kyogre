@@ -22,7 +22,6 @@ use tracing::error;
 use v1::haul::Haul;
 
 pub mod benchmarks;
-pub mod trip_of_haul;
 
 #[serde_as]
 #[derive(Default, Debug, Deserialize, Serialize, OaSchema)]
@@ -49,6 +48,8 @@ pub struct TripsParameters {
     pub vessel_length_groups: Option<Vec<VesselLengthGroup>>,
     #[oasgen(rename = "fiskeridirVesselIds[]")]
     pub fiskeridir_vessel_ids: Option<Vec<FiskeridirVesselId>>,
+    #[oasgen(rename = "tripIds[]")]
+    pub trip_ids: Option<Vec<TripId>>,
 }
 
 #[derive(Debug, Deserialize, OaSchema)]
@@ -64,36 +65,6 @@ pub struct CurrentTripPath {
 #[derive(Debug, Deserialize, OaSchema)]
 pub struct CurrentTripPositionsPath {
     pub fiskeridir_vessel_id: FiskeridirVesselId,
-}
-
-/// Returns the trip associated with the given landing.
-#[oasgen(skip(db, meilisearch), tags("Trip"))]
-#[tracing::instrument(skip(db, meilisearch))]
-pub async fn trip_of_landing<T: Database + 'static, M: Meilisearch + 'static>(
-    db: web::Data<T>,
-    meilisearch: web::Data<Option<M>>,
-    path: Path<TripOfLandingPath>,
-    profile: OptionBwProfile,
-) -> Result<Response<Option<Trip>>> {
-    let read_fishing_facility = profile.read_fishing_facilities();
-
-    if let Some(meilisearch) = meilisearch.as_ref() {
-        match meilisearch
-            .trip_of_landing(&path.landing_id, read_fishing_facility)
-            .await
-        {
-            Ok(v) => return Ok(Response::new(v.map(Trip::from))),
-            Err(e) => {
-                error!("meilisearch cache returned error: {e:?}");
-            }
-        }
-    }
-
-    let trip = db
-        .detailed_trip_of_landing(&path.landing_id, read_fishing_facility)
-        .await?;
-
-    Ok(Response::new(trip.map(Trip::from)))
 }
 
 /// Returns all trips matching the provided parameters.
@@ -283,6 +254,7 @@ impl From<TripsParameters> for TripsQuery {
             species_group_ids,
             vessel_length_groups,
             fiskeridir_vessel_ids,
+            trip_ids,
         } = value;
 
         Self {
@@ -298,6 +270,7 @@ impl From<TripsParameters> for TripsQuery {
             species_group_ids,
             vessel_length_groups,
             fiskeridir_vessel_ids,
+            trip_ids,
         }
     }
 }
