@@ -4,8 +4,8 @@ use crate::{
     utils::{join_comma, join_comma_fn, to_nanos},
 };
 use chrono::{DateTime, Utc};
-use fiskeridir_rs::{GearGroup, LandingId, SpeciesGroup, VesselLengthGroup};
-use kyogre_core::{FiskeridirVesselId, HaulId, MinMaxBoth, TripSorting};
+use fiskeridir_rs::{GearGroup, SpeciesGroup, VesselLengthGroup};
+use kyogre_core::{FiskeridirVesselId, MinMaxBoth, TripId, TripSorting};
 use strum::{EnumDiscriminants, EnumIter};
 
 #[derive(Debug, Clone, EnumDiscriminants, strum::Display)]
@@ -23,8 +23,7 @@ pub enum TripFilter {
     SpeciesGroupIds(Vec<SpeciesGroup>),
     FiskeridirLengthGroupId(Vec<VesselLengthGroup>),
     FiskeridirVesselId(Vec<FiskeridirVesselId>),
-    HaulIds(HaulId),
-    LandingIds(LandingId),
+    TripId(Vec<TripId>),
 }
 
 #[derive(Debug, Clone, Copy, EnumIter, strum::Display)]
@@ -82,23 +81,12 @@ impl Filter for TripFilter {
                 TripFilterDiscriminants::FiskeridirVesselId,
                 join_comma(ids)
             ),
-            TripFilter::HaulIds(id) => format!("{} = {}", TripFilterDiscriminants::HaulIds, id),
-            TripFilter::LandingIds(id) => {
-                format!("{} = {}", TripFilterDiscriminants::LandingIds, id)
-            }
+            TripFilter::TripId(ids) => format!(
+                "{} IN [{}]",
+                TripFilterDiscriminants::TripId,
+                join_comma(ids)
+            ),
         })
-    }
-}
-
-impl From<&HaulId> for TripFilter {
-    fn from(value: &HaulId) -> Self {
-        Self::HaulIds(*value)
-    }
-}
-
-impl From<&LandingId> for TripFilter {
-    fn from(value: &LandingId) -> Self {
-        Self::LandingIds(value.clone())
     }
 }
 

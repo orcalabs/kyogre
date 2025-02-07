@@ -14,6 +14,8 @@ use crate::{
     ActiveHaulsFilter, CatchLocationId, HaulMatrixXFeature, HaulMatrixYFeature, ProcessingStatus,
 };
 
+use super::TripId;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize)]
 #[cfg_attr(feature = "sqlx", derive(sqlx::Type), sqlx(transparent))]
 #[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
@@ -21,7 +23,9 @@ pub struct HaulId(i64);
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct Haul {
-    pub haul_id: HaulId,
+    #[serde(alias = "haul_id")]
+    pub id: HaulId,
+    pub trip_id: Option<TripId>,
     pub cache_version: i64,
     pub catch_locations: Option<Vec<CatchLocationId>>,
     pub gear_group_id: GearGroup,

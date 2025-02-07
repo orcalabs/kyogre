@@ -70,16 +70,6 @@ pub trait WebApiOutboundPort {
         query: TripsQuery,
         read_fishing_facility: bool,
     ) -> PinBoxStream<'_, TripDetailed>;
-    async fn detailed_trip_of_haul(
-        &self,
-        haul_id: &HaulId,
-        read_fishing_facility: bool,
-    ) -> CoreResult<Option<TripDetailed>>;
-    async fn detailed_trip_of_landing(
-        &self,
-        landing_id: &LandingId,
-        read_fishing_facility: bool,
-    ) -> CoreResult<Option<TripDetailed>>;
     async fn current_trip(
         &self,
         vessel_id: FiskeridirVesselId,
@@ -224,16 +214,6 @@ pub trait MeilisearchOutbound: Send + Sync {
         query: &TripsQuery,
         read_fishing_facility: bool,
     ) -> CoreResult<Vec<TripDetailed>>;
-    async fn trip_of_haul(
-        &self,
-        haul_id: &HaulId,
-        read_fishing_facility: bool,
-    ) -> CoreResult<Option<TripDetailed>>;
-    async fn trip_of_landing(
-        &self,
-        landing_id: &LandingId,
-        read_fishing_facility: bool,
-    ) -> CoreResult<Option<TripDetailed>>;
     async fn hauls(&self, query: &HaulsQuery) -> CoreResult<Vec<Haul>>;
     async fn landings(&self, query: &LandingsQuery) -> CoreResult<Vec<Landing>>;
 }

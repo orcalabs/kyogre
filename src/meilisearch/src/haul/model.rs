@@ -8,12 +8,15 @@ use crate::{
 use async_trait::async_trait;
 use chrono::{TimeZone, Utc};
 use fiskeridir_rs::{CallSign, Gear, GearGroup, SpeciesGroup, VesselLengthGroup};
-use kyogre_core::{CatchLocationId, FiskeridirVesselId, HaulCatch, HaulId, MeilisearchSource};
+use kyogre_core::{
+    CatchLocationId, FiskeridirVesselId, HaulCatch, HaulId, MeilisearchSource, TripId,
+};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Haul {
     pub haul_id: HaulId,
+    pub trip_id: Option<TripId>,
     pub cache_version: i64,
     pub catch_locations: Option<Vec<CatchLocationId>>,
     pub gear_group_id: GearGroup,
@@ -96,7 +99,8 @@ impl TryFrom<kyogre_core::Haul> for Haul {
 
     fn try_from(v: kyogre_core::Haul) -> std::result::Result<Self, Self::Error> {
         let kyogre_core::Haul {
-            haul_id,
+            id,
+            trip_id,
             cache_version,
             catch_locations,
             gear_group_id,
@@ -117,7 +121,8 @@ impl TryFrom<kyogre_core::Haul> for Haul {
         } = v;
 
         Ok(Self {
-            haul_id,
+            haul_id: id,
+            trip_id,
             cache_version,
             catch_locations,
             gear_group_id,
@@ -142,7 +147,8 @@ impl TryFrom<kyogre_core::Haul> for Haul {
 impl From<Haul> for kyogre_core::Haul {
     fn from(v: Haul) -> Self {
         let Haul {
-            haul_id,
+            haul_id: id,
+            trip_id,
             cache_version,
             catch_locations,
             gear_group_id,
@@ -163,7 +169,8 @@ impl From<Haul> for kyogre_core::Haul {
         } = v;
 
         Self {
-            haul_id,
+            id,
+            trip_id,
             cache_version,
             gear_group_id,
             haul_distance,

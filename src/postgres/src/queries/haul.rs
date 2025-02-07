@@ -184,15 +184,16 @@ GROUP BY
             r#"
 SELECT
     h.haul_id AS "haul_id!: HaulId",
+    e.trip_id AS "trip_id: TripId",
     h.haul_distance,
     h.catch_locations AS "catch_locations?: Vec<CatchLocationId>",
     h.species_group_ids AS "species_group_ids!: Vec<SpeciesGroup>",
-    h.start_latitude,
-    h.start_longitude,
-    h.start_timestamp,
-    h.stop_latitude,
-    h.stop_longitude,
-    h.stop_timestamp,
+    h.start_latitude AS "start_latitude!",
+    h.start_longitude AS "start_longitude!",
+    h.start_timestamp AS "start_timestamp!",
+    h.stop_latitude AS "stop_latitude!",
+    h.stop_longitude AS "stop_longitude!",
+    h.stop_timestamp AS "stop_timestamp!",
     h.gear_group_id AS "gear_group_id!: GearGroup",
     h.gear_id AS "gear_id!: Gear",
     h.fiskeridir_vessel_id AS "fiskeridir_vessel_id?: FiskeridirVesselId",
@@ -200,9 +201,10 @@ SELECT
     COALESCE(h.vessel_name, h.vessel_name_ers) AS vessel_name,
     COALESCE(h.vessel_call_sign, h.vessel_call_sign_ers) AS "call_sign!: CallSign",
     h.catches::TEXT AS "catches!",
-    h.cache_version
+    h.cache_version AS "cache_version!"
 FROM
     hauls h
+    LEFT JOIN vessel_events e ON h.vessel_event_id = e.vessel_event_id
 WHERE
     (
         $1::tstzrange[] IS NULL
@@ -226,32 +228,32 @@ WHERE
     )
     AND (
         $6::BIGINT[] IS NULL
-        OR fiskeridir_vessel_id = ANY ($6)
+        OR h.fiskeridir_vessel_id = ANY ($6)
     )
 ORDER BY
     CASE
         WHEN $7 = 1
-        AND $8 = 1 THEN start_timestamp
+        AND $8 = 1 THEN h.start_timestamp
     END ASC,
     CASE
         WHEN $7 = 1
-        AND $8 = 2 THEN stop_timestamp
+        AND $8 = 2 THEN h.stop_timestamp
     END ASC,
     CASE
         WHEN $7 = 1
-        AND $8 = 3 THEN total_living_weight
+        AND $8 = 3 THEN h.total_living_weight
     END ASC,
     CASE
         WHEN $7 = 2
-        AND $8 = 1 THEN start_timestamp
+        AND $8 = 1 THEN h.start_timestamp
     END DESC,
     CASE
         WHEN $7 = 2
-        AND $8 = 2 THEN stop_timestamp
+        AND $8 = 2 THEN h.stop_timestamp
     END DESC,
     CASE
         WHEN $7 = 2
-        AND $8 = 3 THEN total_living_weight
+        AND $8 = 3 THEN h.total_living_weight
     END DESC
             "#,
             query.ranges.empty_to_none() as Option<Vec<Range<DateTime<Utc>>>>,
@@ -275,28 +277,30 @@ ORDER BY
             Haul,
             r#"
 SELECT
-    haul_id AS "haul_id!: HaulId",
-    haul_distance,
-    catch_locations AS "catch_locations?: Vec<CatchLocationId>",
-    species_group_ids AS "species_group_ids!: Vec<SpeciesGroup>",
-    start_latitude,
-    start_longitude,
-    stop_latitude,
-    stop_longitude,
-    start_timestamp,
-    stop_timestamp,
-    gear_group_id AS "gear_group_id!: GearGroup",
-    gear_id AS "gear_id!: Gear",
-    fiskeridir_vessel_id AS "fiskeridir_vessel_id?: FiskeridirVesselId",
-    vessel_length_group AS "vessel_length_group!: VesselLengthGroup",
-    COALESCE(vessel_name, vessel_name_ers) AS vessel_name,
-    COALESCE(vessel_call_sign, vessel_call_sign_ers) AS "call_sign!: CallSign",
-    catches::TEXT AS "catches!",
-    cache_version
+    h.haul_id AS "haul_id!: HaulId",
+    e.trip_id AS "trip_id: TripId",
+    h.haul_distance,
+    h.catch_locations AS "catch_locations?: Vec<CatchLocationId>",
+    h.species_group_ids AS "species_group_ids!: Vec<SpeciesGroup>",
+    h.start_latitude,
+    h.start_longitude,
+    h.stop_latitude,
+    h.stop_longitude,
+    h.start_timestamp,
+    h.stop_timestamp,
+    h.gear_group_id AS "gear_group_id!: GearGroup",
+    h.gear_id AS "gear_id!: Gear",
+    h.fiskeridir_vessel_id AS "fiskeridir_vessel_id?: FiskeridirVesselId",
+    h.vessel_length_group AS "vessel_length_group!: VesselLengthGroup",
+    COALESCE(h.vessel_name, h.vessel_name_ers) AS vessel_name,
+    COALESCE(h.vessel_call_sign, h.vessel_call_sign_ers) AS "call_sign!: CallSign",
+    h.catches::TEXT AS "catches!",
+    h.cache_version
 FROM
-    hauls
+    hauls h
+    LEFT JOIN vessel_events e ON h.vessel_event_id = e.vessel_event_id
 WHERE
-    haul_id = ANY ($1)
+    h.haul_id = ANY ($1)
             "#,
             &haul_ids as &[HaulId],
         )

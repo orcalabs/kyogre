@@ -9,7 +9,7 @@ use chrono::{TimeZone, Utc};
 use fiskeridir_rs::{
     CallSign, DeliveryPointId, Gear, GearGroup, LandingId, SpeciesGroup, VesselLengthGroup,
 };
-use kyogre_core::{CatchLocationId, FiskeridirVesselId, LandingCatch, MeilisearchSource};
+use kyogre_core::{CatchLocationId, FiskeridirVesselId, LandingCatch, MeilisearchSource, TripId};
 use serde::{Deserialize, Serialize};
 
 use super::filter::{LandingFilterDiscriminants, LandingSort};
@@ -17,6 +17,7 @@ use super::filter::{LandingFilterDiscriminants, LandingSort};
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Landing {
     pub landing_id: LandingId,
+    pub trip_id: Option<TripId>,
     pub landing_timestamp: i64,
     pub catch_location: Option<CatchLocationId>,
     pub gear_id: Gear,
@@ -99,6 +100,7 @@ impl TryFrom<kyogre_core::Landing> for Landing {
     fn try_from(v: kyogre_core::Landing) -> std::result::Result<Self, Self::Error> {
         let kyogre_core::Landing {
             id,
+            trip_id,
             landing_timestamp,
             catch_location,
             gear_id,
@@ -118,6 +120,7 @@ impl TryFrom<kyogre_core::Landing> for Landing {
 
         Ok(Self {
             landing_id: id,
+            trip_id,
             landing_timestamp: to_nanos(landing_timestamp)?,
             catch_location,
             gear_id,
@@ -142,6 +145,7 @@ impl From<Landing> for kyogre_core::Landing {
     fn from(v: Landing) -> Self {
         let Landing {
             landing_id,
+            trip_id,
             landing_timestamp,
             catch_location,
             gear_id,
@@ -162,6 +166,7 @@ impl From<Landing> for kyogre_core::Landing {
 
         Self {
             id: landing_id,
+            trip_id,
             landing_timestamp: Utc.timestamp_nanos(landing_timestamp),
             catch_location,
             gear_id,
