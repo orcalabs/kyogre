@@ -228,6 +228,12 @@ where
                         .to(routes::v1::fuel_measurement::create_fuel_measurements::<T>),
                 )
                 .route(
+                    "/fuel_measurements/upload",
+                    post()
+                        .guard(guard.clone())
+                        .to(routes::v1::fuel_measurement::upload_fuel_measurements::<T>),
+                )
+                .route(
                     "/fuel_measurements",
                     put()
                         .guard(guard.clone())

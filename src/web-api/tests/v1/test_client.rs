@@ -19,7 +19,7 @@ use web_api::{
             FishingSpotPrediction, FishingSpotPredictionParams, FishingWeightPrediction,
             FishingWeightPredictionParams,
         },
-        fuel_measurement::FuelMeasurementsParams,
+        fuel_measurement::{FuelMeasurementsParams, UploadFuelMeasurement},
         haul::{Haul, HaulsMatrix, HaulsMatrixParams, HaulsParams},
         landing::{Landing, LandingMatrix, LandingMatrixParams, LandingsParams},
         org::OrgBenchmarkParameters,
@@ -410,6 +410,13 @@ impl ApiClient {
         body: &[CreateFuelMeasurement],
     ) -> Result<Vec<FuelMeasurement>, Error> {
         self.send("fuel_measurements", Method::POST, &body, None::<&()>)
+            .await
+    }
+    pub async fn upload_fuel_measurements(
+        &self,
+        body: UploadFuelMeasurement,
+    ) -> Result<Vec<FuelMeasurement>, Error> {
+        self.send("fuel_measurements/upload", Method::POST, &body, None::<&()>)
             .await
     }
     pub async fn update_fuel_measurements(&self, body: &[FuelMeasurement]) -> Result<(), Error> {

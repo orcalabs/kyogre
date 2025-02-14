@@ -116,6 +116,20 @@ pub enum Error {
         location: Location,
         source: JWTDecodeError,
     },
+    #[snafu(display("The provided base64 data could not be decoded"))]
+    Base64Decode {
+        #[snafu(implicit)]
+        location: Location,
+        #[snafu(source)]
+        error: base64::DecodeError,
+    },
+    #[snafu(display("An invalid Excel document was provided"))]
+    #[stack_error(opaque_std = [calamine::DeError, calamine::XlsxError])]
+    InvalidExcel {
+        #[snafu(implicit)]
+        location: Location,
+        opaque: OpaqueError,
+    },
     #[snafu(display("Query payload error"))]
     QueryPayload {
         #[snafu(implicit)]
@@ -162,6 +176,8 @@ impl ResponseError for Error {
             | MissingDateRange
             | QueryPayload
             | FuelAfterLowerThanFuel
+            | Base64Decode
+            | InvalidExcel
             | MissingMmsiOrCallSignOrTripId => StatusCode::BAD_REQUEST,
             InsufficientPermissions => StatusCode::FORBIDDEN,
             MissingJWT | InvalidJWT | ParseJWT | JWTDecode => StatusCode::UNAUTHORIZED,
