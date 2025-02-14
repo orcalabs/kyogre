@@ -1,14 +1,17 @@
-use crate::v1::helper::test;
+use base64::{prelude::BASE64_STANDARD, Engine};
 use chrono::{Duration, NaiveDate, NaiveDateTime, NaiveTime, TimeZone, Utc};
-use engine::GlobalLevel;
 use engine::*;
 use http_client::StatusCode;
 use kyogre_core::{
-    CreateFuelMeasurement, DeleteFuelMeasurement, FuelMeasurementId, ProcessingStatus,
+    CreateFuelMeasurement, DeleteFuelMeasurement, FuelMeasurement, FuelMeasurementId,
+    FuelMeasurementRange, ProcessingStatus, TestHelperOutbound,
 };
-use kyogre_core::{FuelMeasurement, FuelMeasurementRange, TestHelperOutbound};
-use web_api::error::ErrorDiscriminants;
-use web_api::routes::v1::fuel_measurement::FuelMeasurementsParams;
+use web_api::{
+    error::ErrorDiscriminants,
+    routes::v1::fuel_measurement::{FuelMeasurementsParams, UploadFuelMeasurement},
+};
+
+use crate::v1::helper::test;
 
 #[tokio::test]
 async fn test_cant_use_fuel_measurement_endpoints_without_bw_token() {
@@ -80,6 +83,24 @@ async fn test_create_returns_created_objects() {
 
         let measurements = helper.app.create_fuel_measurements(body).await.unwrap();
         assert_eq!(measurements.len(), 3);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_upload_returns_uploaded_objects() {
+    test(|mut helper, builder| async move {
+        builder.vessels(1).set_logged_in().build().await;
+
+        helper.app.login_user();
+
+        let bytes = include_bytes!("../Fuel.xlsx");
+        let file = BASE64_STANDARD.encode(bytes);
+
+        let body = UploadFuelMeasurement { file };
+
+        let measurements = helper.app.upload_fuel_measurements(body).await.unwrap();
+        assert_eq!(measurements.len(), 10);
     })
     .await;
 }
