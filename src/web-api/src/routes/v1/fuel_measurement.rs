@@ -1,24 +1,32 @@
-use crate::{
-    error::{error::FuelAfterLowerThanFuelSnafu, Result},
-    extractors::BwProfile,
-    response::{Response, StreamResponse},
-    stream_response, Database,
-};
 use actix_web::web;
-use chrono::{DateTime, Utc};
+use chrono::{offset::LocalResult, DateTime, NaiveDateTime, TimeZone, Utc};
+use chrono_tz::Europe::Oslo;
 use fiskeridir_rs::CallSign;
 use kyogre_core::{
     CreateFuelMeasurement, DeleteFuelMeasurement, FuelMeasurement, FuelMeasurementsQuery,
 };
 use oasgen::{oasgen, OaSchema};
-use serde::{Deserialize, Serialize};
+use serde::{de::Unexpected, Deserialize, Deserializer, Serialize};
 use serde_qs::actix::QsQuery as Query;
+
+use crate::{
+    error::{error::FuelAfterLowerThanFuelSnafu, Result},
+    excel::decode_excel_base64,
+    extractors::BwProfile,
+    response::{Response, StreamResponse},
+    stream_response, Database,
+};
 
 #[derive(Default, Debug, Clone, Deserialize, Serialize, OaSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct FuelMeasurementsParams {
     pub start_date: Option<DateTime<Utc>>,
     pub end_date: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Deserialize, Serialize, OaSchema)]
+pub struct UploadFuelMeasurement {
+    pub file: String,
 }
 
 #[oasgen(skip(db), tags("FuelMeasurement"))]
@@ -58,6 +66,40 @@ pub async fn create_fuel_measurements<T: Database + 'static>(
     let call_sign = profile.call_sign()?;
 
     let measurements = db.add_fuel_measurements(&body, call_sign, user_id).await?;
+
+    Ok(Response::new(measurements))
+}
+
+#[oasgen(skip(db), tags("FuelMeasurement"))]
+#[tracing::instrument(skip(db, body))]
+pub async fn upload_fuel_measurements<T: Database + 'static>(
+    db: web::Data<T>,
+    profile: BwProfile,
+    body: web::Json<UploadFuelMeasurement>,
+) -> Result<Response<Vec<FuelMeasurement>>> {
+    let user_id = profile.user.id;
+    let call_sign = profile.call_sign()?;
+
+    #[derive(Deserialize)]
+    struct Record {
+        #[serde(deserialize_with = "deserialize_norwegian_timestamp")]
+        pub timestamp: DateTime<Utc>,
+        pub fuel_before: f64,
+        pub fuel_after: Option<f64>,
+    }
+
+    let measurements = decode_excel_base64(body.into_inner().file)?
+        .into_iter()
+        .map(|v: Record| CreateFuelMeasurement {
+            timestamp: v.timestamp,
+            fuel: v.fuel_before,
+            fuel_after: v.fuel_after,
+        })
+        .collect::<Vec<_>>();
+
+    let measurements = db
+        .add_fuel_measurements(&measurements, call_sign, user_id)
+        .await?;
 
     Ok(Response::new(measurements))
 }
@@ -113,5 +155,38 @@ impl FuelMeasurementsParams {
             start_date,
             end_date,
         }
+    }
+}
+
+pub fn deserialize_norwegian_timestamp<'de, D>(
+    deserializer: D,
+) -> std::result::Result<DateTime<Utc>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let s = String::deserialize(deserializer)?;
+
+    let err = || {
+        Err(serde::de::Error::invalid_value(
+            Unexpected::Str(&s),
+            &"a valid date-time with with format: 'dd.mm.yyyy HH:MM:SS'",
+        ))
+    };
+
+    match NaiveDateTime::parse_from_str(&s, "%d.%m.%Y %H:%M:%S") {
+        Ok(v) => {
+            let dt = match Oslo.from_local_datetime(&v) {
+                LocalResult::Single(v) => v,
+                // As we have no way of knowing if the timestamp is before or after winter/summer
+                // time shift we simply have to pick one.
+                LocalResult::Ambiguous(_, v) => v,
+                LocalResult::None => {
+                    return err();
+                }
+            };
+
+            Ok(dt.with_timezone(&Utc))
+        }
+        Err(_) => err(),
     }
 }

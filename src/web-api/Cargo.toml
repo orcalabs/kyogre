@@ -27,6 +27,7 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 config = { workspace = true }
 chrono = { workspace = true }
+chrono-tz = { workspace = true }
 tokio = { workspace = true }
 tracing = { workspace = true }
 strum = { workspace = true }
@@ -44,6 +45,8 @@ actix-cors = "0.7.0"
 jsonwebtoken = "9.3.0"
 serde_qs = { version = "0.13.0", features = ["actix4"] }
 pin-project-lite = "0.2.16"
+calamine = "0.26.1"
+base64 = "0.22.1"
 
 [dev-dependencies]
 engine = { path = "../engine", features = ["test"] }
@@ -57,4 +60,3 @@ wiremock = { workspace = true }
 
 float-cmp = "0.10.0"
 rsa = { version = "0.9.7", features = ["serde"] }
-base64 = "0.22.1"

@@ -8,6 +8,7 @@ use postgres::PostgresAdapter;
 use routes::v1;
 
 pub mod error;
+pub mod excel;
 pub mod extractors;
 pub mod guards;
 pub mod response;
