@@ -1,14 +1,22 @@
 use crate::IsTimeout;
 use chrono::{DateTime, NaiveDate, Utc};
+use fiskeridir_rs::CallSign;
 use snafu::{Location, Snafu};
 use stack_error::{OpaqueError, StackError};
 use std::num::ParseIntError;
 
 pub type CoreResult<T> = Result<T, Error>;
+pub type WebApiResult<T> = Result<T, WebApiError>;
 
 impl IsTimeout for Error {
     fn is_timeout(&self) -> bool {
         matches!(self, Error::Timeout { .. })
+    }
+}
+
+impl IsTimeout for WebApiError {
+    fn is_timeout(&self) -> bool {
+        matches!(self, WebApiError::Timeout { .. })
     }
 }
 
@@ -34,6 +42,31 @@ impl IsTimeout for std::io::Error {
                 | ErrorKind::Other
         )
     }
+}
+
+#[derive(Snafu, StackError)]
+#[snafu(module)]
+pub enum WebApiError {
+    #[snafu(display("The callsign '{call_sign}' does not exist"))]
+    CallSignDoesNotExist {
+        #[snafu(implicit)]
+        location: Location,
+        opaque: OpaqueError,
+        call_sign: CallSign,
+    },
+    #[snafu(display("Timeout error"))]
+    Timeout {
+        #[snafu(implicit)]
+        location: Location,
+        opaque: OpaqueError,
+    },
+    #[snafu(display("Unexpected error"))]
+    #[stack_error(opaque_std = [tokio::task::JoinError])]
+    Unexpected {
+        #[snafu(implicit)]
+        location: Location,
+        opaque: OpaqueError,
+    },
 }
 
 #[derive(Snafu, StackError)]

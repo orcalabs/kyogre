@@ -98,6 +98,7 @@ ORDER BY
         }
 
         let mut tx = self.pool.begin().await?;
+        self.assert_call_sign_exists(call_sign, &mut *tx).await?;
 
         let (old_vessel_ids, old_timestamps): (Vec<_>, Vec<_>) = sqlx::query!(
             r#"
@@ -271,6 +272,8 @@ RETURNING
 
         let mut tx = self.pool.begin().await?;
 
+        self.assert_call_sign_exists(call_sign, &mut *tx).await?;
+
         #[derive(Debug)]
         struct Intermediate {
             id: FuelMeasurementId,
@@ -407,6 +410,7 @@ FROM
             id.push(m.id);
         }
         let mut tx = self.pool.begin().await?;
+        self.assert_call_sign_exists(call_sign, &mut *tx).await?;
 
         let (ts, vessel_ids): (Vec<_>, Vec<_>) = sqlx::query!(
             r#"

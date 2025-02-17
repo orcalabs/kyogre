@@ -1,4 +1,4 @@
-use fiskeridir_rs::{LandingIdError, ParseStringError};
+use fiskeridir_rs::{CallSign, LandingIdError, ParseStringError};
 use kyogre_core::{
     ActiveVesselConflict, CatchLocationIdError, DateRangeError, IsTimeout, MatrixIndexError,
 };
@@ -17,6 +17,12 @@ impl IsTimeout for Error {
 #[derive(Snafu, StackError)]
 #[snafu(visibility(pub(crate)))]
 pub enum Error {
+    #[snafu(display("The callsign '{call_sign}' does not exist"))]
+    CallSignDoesNotExist {
+        #[snafu(implicit)]
+        location: Location,
+        call_sign: CallSign,
+    },
     #[snafu(display("Json error"))]
     Json {
         #[snafu(implicit)]
@@ -207,7 +213,42 @@ impl From<Error> for kyogre_core::Error {
             | Error::Jurisdiction { .. }
             | Error::Unexpected { .. }
             | Error::InvalidIsoWeek { .. }
+            | Error::CallSignDoesNotExist { .. }
             | Error::Migrate { .. } => kyogre_core::Error::Unexpected {
+                location,
+                opaque: OpaqueError::Stack(Box::new(value)),
+            },
+        }
+    }
+}
+
+impl From<Error> for kyogre_core::WebApiError {
+    #[track_caller]
+    fn from(value: Error) -> Self {
+        let location = std::panic::Location::caller();
+        let location = Location::new(location.file(), location.line(), location.column());
+        match value {
+            Error::Timeout { .. } => kyogre_core::WebApiError::Timeout {
+                location,
+                opaque: OpaqueError::Stack(Box::new(value)),
+            },
+            Error::CallSignDoesNotExist { ref call_sign, .. } => {
+                kyogre_core::WebApiError::CallSignDoesNotExist {
+                    location,
+                    call_sign: call_sign.clone(),
+                    opaque: OpaqueError::Stack(Box::new(value)),
+                }
+            }
+            Error::Conversion { .. }
+            | Error::MissingValue { .. }
+            | Error::Json { .. }
+            | Error::TripPositionMatch { .. }
+            | Error::Sqlx { .. }
+            | Error::VerifyDatabase { .. }
+            | Error::Jurisdiction { .. }
+            | Error::Unexpected { .. }
+            | Error::InvalidIsoWeek { .. }
+            | Error::Migrate { .. } => kyogre_core::WebApiError::Unexpected {
                 location,
                 opaque: OpaqueError::Stack(Box::new(value)),
             },

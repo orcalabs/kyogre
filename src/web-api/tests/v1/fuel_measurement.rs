@@ -14,6 +14,43 @@ use web_api::{
 use crate::v1::helper::test;
 
 #[tokio::test]
+async fn test_cant_use_fuel_measurement_endpoints_without_being_associated_with_a_vessel() {
+    test(|mut helper, _builder| async move {
+        helper.app.login_user();
+        let body = &[CreateFuelMeasurement {
+            timestamp: Utc::now(),
+            fuel: 10.,
+            fuel_after: None,
+        }];
+
+        let error = helper.app.create_fuel_measurements(body).await.unwrap_err();
+        assert_eq!(error.status, StatusCode::BAD_REQUEST);
+        assert_eq!(error.error, ErrorDiscriminants::CallSignDoesNotExist);
+
+        let body = &[FuelMeasurement {
+            id: FuelMeasurementId::test_new(1),
+            timestamp: Utc::now(),
+            fuel: 10.,
+            fuel_after: None,
+        }];
+
+        let error = helper.app.update_fuel_measurements(body).await.unwrap_err();
+        assert_eq!(error.status, StatusCode::BAD_REQUEST);
+        assert_eq!(error.error, ErrorDiscriminants::CallSignDoesNotExist);
+
+        let error = helper
+            .app
+            .delete_fuel_measurements(&[DeleteFuelMeasurement {
+                id: FuelMeasurementId::test_new(765432),
+            }])
+            .await
+            .unwrap_err();
+        assert_eq!(error.status, StatusCode::BAD_REQUEST);
+        assert_eq!(error.error, ErrorDiscriminants::CallSignDoesNotExist);
+    })
+    .await;
+}
+#[tokio::test]
 async fn test_cant_use_fuel_measurement_endpoints_without_bw_token() {
     test(|helper, _builder| async move {
         let error = helper

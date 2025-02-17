@@ -1,4 +1,7 @@
-use crate::{error::Result, PostgresAdapter};
+use crate::{
+    error::{CallSignDoesNotExistSnafu, Result},
+    PostgresAdapter,
+};
 use fiskeridir_rs::{CallSign, OrgId};
 
 impl PostgresAdapter {
@@ -24,5 +27,34 @@ WHERE
         .fetch_optional(&self.pool)
         .await?
         .is_some())
+    }
+    pub async fn assert_call_sign_exists(
+        &self,
+        call_sign: &CallSign,
+        executor: impl sqlx::Executor<'_, Database = sqlx::Postgres>,
+    ) -> Result<()> {
+        let exists = sqlx::query!(
+            r#"
+SELECT
+    1 as exists
+FROM
+    fiskeridir_ais_vessel_mapping_whitelist
+WHERE
+    call_sign = $1
+            "#,
+            call_sign.as_ref(),
+        )
+        .fetch_optional(executor)
+        .await?
+        .is_some();
+
+        if exists {
+            Ok(())
+        } else {
+            CallSignDoesNotExistSnafu {
+                call_sign: call_sign.clone(),
+            }
+            .fail()
+        }
     }
 }

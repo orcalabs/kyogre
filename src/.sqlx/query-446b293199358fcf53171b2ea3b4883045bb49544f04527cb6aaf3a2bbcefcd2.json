@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    1 as exists\nFROM\n    fiskeridir_ais_vessel_mapping_whitelist\nWHERE\n    call_sign = $1\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "exists",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "446b293199358fcf53171b2ea3b4883045bb49544f04527cb6aaf3a2bbcefcd2"
+}
