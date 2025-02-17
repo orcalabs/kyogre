@@ -8,6 +8,15 @@ pub struct NewFuelDayEstimate {
     pub engine_version: u32,
     pub date: NaiveDate,
     pub estimate: f64,
+    pub num_ais_positions: u32,
+    pub num_vms_positions: u32,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct ComputedFuelEstimation {
+    pub fuel_tonnage: f64,
+    pub num_ais_positions: u32,
+    pub num_vms_positions: u32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
