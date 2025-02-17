@@ -14,6 +14,7 @@ members = [
     "fiskeridir-rs",
     "http-client",
     "processors",
+    "gen-test-data",
 ]
 
 [workspace.dependencies]

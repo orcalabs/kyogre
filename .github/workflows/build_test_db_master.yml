@@ -65,9 +65,9 @@ jobs:
           cargo sqlx migrate run --source src/postgres/migrations
           cargo sqlx migrate run  --ignore-missing --source src/postgres/test_migrations
 
-          cd scripts/rust/gen-test-data
+          cd src/gen-test-data
           cargo run
-          cd ../../../
+          cd ../../
 
           mkdir src/master_migrations
 
