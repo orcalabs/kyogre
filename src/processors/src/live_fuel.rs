@@ -113,7 +113,7 @@ impl LiveFuel {
 
                     Some(NewLiveFuel {
                         latest_position_timestamp,
-                        fuel,
+                        fuel: fuel.fuel_tonnage,
                     })
                 }
             })
