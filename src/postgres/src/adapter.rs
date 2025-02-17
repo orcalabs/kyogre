@@ -654,45 +654,48 @@ impl LiveFuelInbound for PostgresAdapter {
 
 #[async_trait]
 impl WebApiOutboundPort for PostgresAdapter {
-    async fn live_fuel(&self, query: &LiveFuelQuery) -> CoreResult<LiveFuel> {
+    async fn live_fuel(&self, query: &LiveFuelQuery) -> WebApiResult<LiveFuel> {
         Ok(retry(|| async {
-            let entries: CoreResult<Vec<kyogre_core::LiveFuelEntry>> =
+            let entries: WebApiResult<Vec<kyogre_core::LiveFuelEntry>> =
                 self.live_fuel_impl(query).convert_collect().await;
             let entries = entries?;
-            Ok::<kyogre_core::LiveFuel, kyogre_core::Error>(kyogre_core::LiveFuel {
+            Ok::<kyogre_core::LiveFuel, kyogre_core::WebApiError>(kyogre_core::LiveFuel {
                 total_fuel: entries.iter().map(|e| e.fuel).sum(),
                 entries,
             })
         })
         .await?)
     }
-    async fn org_benchmarks(&self, query: &OrgBenchmarkQuery) -> CoreResult<Option<OrgBenchmarks>> {
+    async fn org_benchmarks(
+        &self,
+        query: &OrgBenchmarkQuery,
+    ) -> WebApiResult<Option<OrgBenchmarks>> {
         convert_optional(retry(|| self.org_benchmarks_impl(query)).await?)
     }
-    async fn fuel_estimation(&self, query: &FuelQuery) -> CoreResult<f64> {
+    async fn fuel_estimation(&self, query: &FuelQuery) -> WebApiResult<f64> {
         Ok(retry(|| self.fuel_estimation_impl(query)).await?)
     }
     async fn fuel_estimation_by_org(
         &self,
         query: &FuelQuery,
         org_id: OrgId,
-    ) -> CoreResult<Option<Vec<FuelEntry>>> {
+    ) -> WebApiResult<Option<Vec<FuelEntry>>> {
         Ok(retry(|| self.fuel_estimation_by_org_impl(query, org_id)).await?)
     }
     async fn update_vessel(
         &self,
         call_sign: &CallSign,
         update: &UpdateVessel,
-    ) -> CoreResult<Option<Vessel>> {
+    ) -> WebApiResult<Option<Vessel>> {
         Ok(retry(|| self.update_vessel_impl(call_sign, update)).await?)
     }
     async fn average_trip_benchmarks(
         &self,
         query: AverageTripBenchmarksQuery,
-    ) -> CoreResult<AverageTripBenchmarks> {
+    ) -> WebApiResult<AverageTripBenchmarks> {
         Ok(retry(|| self.average_trip_benchmarks_impl(&query)).await?)
     }
-    async fn average_eeoi(&self, query: AverageEeoiQuery) -> CoreResult<Option<f64>> {
+    async fn average_eeoi(&self, query: AverageEeoiQuery) -> WebApiResult<Option<f64>> {
         Ok(retry(|| self.average_eeoi_impl(&query)).await?)
     }
     fn current_positions(
@@ -775,7 +778,7 @@ impl WebApiOutboundPort for PostgresAdapter {
         &self,
         user_id: &BarentswatchUserId,
         call_sign: &CallSign,
-    ) -> CoreResult<VesselBenchmarks> {
+    ) -> WebApiResult<VesselBenchmarks> {
         Ok(retry(|| self.vessel_benchmarks_impl(user_id, call_sign))
             .await?
             .try_into()?)
@@ -783,10 +786,10 @@ impl WebApiOutboundPort for PostgresAdapter {
     async fn trip_benchmarks(
         &self,
         query: TripBenchmarksQuery,
-    ) -> CoreResult<Vec<TripWithBenchmark>> {
+    ) -> WebApiResult<Vec<TripWithBenchmark>> {
         Ok(retry(|| self.trip_benchmarks_impl(&query)).await?)
     }
-    async fn eeoi(&self, query: EeoiQuery) -> CoreResult<Option<f64>> {
+    async fn eeoi(&self, query: EeoiQuery) -> WebApiResult<Option<f64>> {
         Ok(retry(|| self.eeoi_impl(&query)).await?)
     }
     fn detailed_trips(
@@ -803,11 +806,11 @@ impl WebApiOutboundPort for PostgresAdapter {
         &self,
         vessel_id: FiskeridirVesselId,
         read_fishing_facility: bool,
-    ) -> CoreResult<Option<CurrentTrip>> {
+    ) -> WebApiResult<Option<CurrentTrip>> {
         convert_optional(retry(|| self.current_trip_impl(vessel_id, read_fishing_facility)).await?)
     }
 
-    async fn hauls_matrix(&self, query: &HaulsMatrixQuery) -> CoreResult<HaulsMatrix> {
+    async fn hauls_matrix(&self, query: &HaulsMatrixQuery) -> WebApiResult<HaulsMatrix> {
         Ok(retry(|| self.hauls_matrix_impl(query)).await?)
     }
 
@@ -815,7 +818,7 @@ impl WebApiOutboundPort for PostgresAdapter {
         self.landings_impl(query).try_convert().boxed()
     }
 
-    async fn landing_matrix(&self, query: &LandingMatrixQuery) -> CoreResult<LandingMatrix> {
+    async fn landing_matrix(&self, query: &LandingMatrixQuery) -> WebApiResult<LandingMatrix> {
         Ok(retry(|| self.landing_matrix_impl(query)).await?)
     }
 
@@ -828,7 +831,7 @@ impl WebApiOutboundPort for PostgresAdapter {
             .boxed()
     }
 
-    async fn get_user(&self, user_id: BarentswatchUserId) -> CoreResult<Option<User>> {
+    async fn get_user(&self, user_id: BarentswatchUserId) -> WebApiResult<Option<User>> {
         Ok(retry(|| self.get_user_impl(user_id)).await?)
     }
 
@@ -849,7 +852,7 @@ impl WebApiOutboundPort for PostgresAdapter {
         model_id: ModelId,
         species: SpeciesGroup,
         date: NaiveDate,
-    ) -> CoreResult<Option<FishingSpotPrediction>> {
+    ) -> WebApiResult<Option<FishingSpotPrediction>> {
         Ok(retry(|| self.fishing_spot_prediction_impl(model_id, species, date)).await?)
     }
 
@@ -892,7 +895,7 @@ impl WebApiOutboundPort for PostgresAdapter {
 
 #[async_trait]
 impl WebApiInboundPort for PostgresAdapter {
-    async fn update_user(&self, user: &User) -> CoreResult<()> {
+    async fn update_user(&self, user: &User) -> WebApiResult<()> {
         retry(|| self.update_user_impl(user)).await?;
         Ok(())
     }
@@ -901,7 +904,7 @@ impl WebApiInboundPort for PostgresAdapter {
         measurements: &[CreateFuelMeasurement],
         call_sign: &CallSign,
         user_id: BarentswatchUserId,
-    ) -> CoreResult<Vec<FuelMeasurement>> {
+    ) -> WebApiResult<Vec<FuelMeasurement>> {
         Ok(retry(|| self.add_fuel_measurements_impl(measurements, call_sign, user_id)).await?)
     }
     async fn update_fuel_measurements(
@@ -909,7 +912,7 @@ impl WebApiInboundPort for PostgresAdapter {
         measurements: &[FuelMeasurement],
         call_sign: &CallSign,
         user_id: BarentswatchUserId,
-    ) -> CoreResult<()> {
+    ) -> WebApiResult<()> {
         retry(|| self.update_fuel_measurements_impl(measurements, call_sign, user_id)).await?;
         Ok(())
     }
@@ -917,7 +920,7 @@ impl WebApiInboundPort for PostgresAdapter {
         &self,
         measurements: &[DeleteFuelMeasurement],
         call_sign: &CallSign,
-    ) -> CoreResult<()> {
+    ) -> WebApiResult<()> {
         retry(|| self.delete_fuel_measurements_impl(measurements, call_sign)).await?;
         Ok(())
     }
@@ -1629,9 +1632,10 @@ where
     }
 }
 
-pub(crate) fn convert_optional<A, B>(val: Option<A>) -> CoreResult<Option<B>>
+pub(crate) fn convert_optional<A, B, E>(val: Option<A>) -> std::result::Result<Option<B>, E>
 where
     B: std::convert::TryFrom<A, Error = crate::error::Error>,
+    E: std::convert::From<crate::error::Error>,
 {
     Ok(val.map(B::try_from).transpose()?)
 }

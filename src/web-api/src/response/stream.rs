@@ -5,7 +5,7 @@ use actix_web::{
 };
 use chrono::{DateTime, Duration, Utc};
 use futures::{stream, Stream};
-use kyogre_core::CoreResult;
+use kyogre_core::WebApiResult;
 use oasgen::{OaSchema, ObjectType, RefOr, Schema, SchemaData, SchemaKind, Type};
 use pin_project_lite::pin_project;
 use serde::Serialize;
@@ -22,11 +22,11 @@ pub static AIS_DETAILS_INTERVAL: Duration = Duration::minutes(30);
 pub static MISSING_DATA_DURATION: Duration = Duration::minutes(70);
 
 pub struct StreamResponse<T> {
-    pub rx: Receiver<CoreResult<T>>,
+    pub rx: Receiver<WebApiResult<T>>,
 }
 
 impl<T> StreamResponse<T> {
-    pub fn new(rx: Receiver<CoreResult<T>>) -> Self {
+    pub fn new(rx: Receiver<WebApiResult<T>>) -> Self {
         Self { rx }
     }
 }
@@ -186,8 +186,8 @@ pub trait Position: Send + 'static {
 }
 
 pub fn ais_unfold<'a, T: Position>(
-    stream: impl Stream<Item = CoreResult<T>> + Send + Unpin + 'a,
-) -> Pin<Box<dyn Stream<Item = CoreResult<T>> + Send + 'a>> {
+    stream: impl Stream<Item = WebApiResult<T>> + Send + Unpin + 'a,
+) -> Pin<Box<dyn Stream<Item = WebApiResult<T>> + Send + 'a>> {
     use futures::StreamExt;
 
     struct State<S, P> {

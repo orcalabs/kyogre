@@ -19,7 +19,7 @@ pub trait AisMigratorSource {
     async fn existing_mmsis(&self) -> CoreResult<Vec<Mmsi>>;
 }
 
-pub type PinBoxStream<'a, T> = Pin<Box<dyn Stream<Item = CoreResult<T>> + Send + 'a>>;
+pub type PinBoxStream<'a, T> = Pin<Box<dyn Stream<Item = WebApiResult<T>> + Send + 'a>>;
 
 #[async_trait]
 pub trait WebApiOutboundPort {
@@ -52,19 +52,22 @@ pub trait WebApiOutboundPort {
     fn species(&self) -> PinBoxStream<'_, Species>;
     fn species_fiskeridir(&self) -> PinBoxStream<'_, SpeciesFiskeridir>;
     fn species_fao(&self) -> PinBoxStream<'_, SpeciesFao>;
-    fn vessels(&self) -> Pin<Box<dyn Stream<Item = CoreResult<Vessel>> + Send + '_>>;
+    fn vessels(&self) -> PinBoxStream<'_, Vessel>;
     fn hauls(&self, query: HaulsQuery) -> PinBoxStream<'_, Haul>;
-    async fn org_benchmarks(&self, query: &OrgBenchmarkQuery) -> CoreResult<Option<OrgBenchmarks>>;
+    async fn org_benchmarks(
+        &self,
+        query: &OrgBenchmarkQuery,
+    ) -> WebApiResult<Option<OrgBenchmarks>>;
     async fn vessel_benchmarks(
         &self,
         user_id: &BarentswatchUserId,
         call_sign: &CallSign,
-    ) -> CoreResult<VesselBenchmarks>;
+    ) -> WebApiResult<VesselBenchmarks>;
     async fn trip_benchmarks(
         &self,
         query: TripBenchmarksQuery,
-    ) -> CoreResult<Vec<TripWithBenchmark>>;
-    async fn eeoi(&self, query: EeoiQuery) -> CoreResult<Option<f64>>;
+    ) -> WebApiResult<Vec<TripWithBenchmark>>;
+    async fn eeoi(&self, query: EeoiQuery) -> WebApiResult<Option<f64>>;
     fn detailed_trips(
         &self,
         query: TripsQuery,
@@ -74,27 +77,27 @@ pub trait WebApiOutboundPort {
         &self,
         vessel_id: FiskeridirVesselId,
         read_fishing_facility: bool,
-    ) -> CoreResult<Option<CurrentTrip>>;
-    async fn hauls_matrix(&self, query: &HaulsMatrixQuery) -> CoreResult<HaulsMatrix>;
+    ) -> WebApiResult<Option<CurrentTrip>>;
+    async fn hauls_matrix(&self, query: &HaulsMatrixQuery) -> WebApiResult<HaulsMatrix>;
     fn landings(&self, query: LandingsQuery) -> PinBoxStream<'_, Landing>;
-    async fn landing_matrix(&self, query: &LandingMatrixQuery) -> CoreResult<LandingMatrix>;
+    async fn landing_matrix(&self, query: &LandingMatrixQuery) -> WebApiResult<LandingMatrix>;
     async fn average_trip_benchmarks(
         &self,
         query: AverageTripBenchmarksQuery,
-    ) -> CoreResult<AverageTripBenchmarks>;
-    async fn average_eeoi(&self, query: AverageEeoiQuery) -> CoreResult<Option<f64>>;
-    async fn live_fuel(&self, query: &LiveFuelQuery) -> CoreResult<LiveFuel>;
-    async fn fuel_estimation(&self, query: &FuelQuery) -> CoreResult<f64>;
+    ) -> WebApiResult<AverageTripBenchmarks>;
+    async fn average_eeoi(&self, query: AverageEeoiQuery) -> WebApiResult<Option<f64>>;
+    async fn live_fuel(&self, query: &LiveFuelQuery) -> WebApiResult<LiveFuel>;
+    async fn fuel_estimation(&self, query: &FuelQuery) -> WebApiResult<f64>;
     async fn fuel_estimation_by_org(
         &self,
         query: &FuelQuery,
         org_id: OrgId,
-    ) -> CoreResult<Option<Vec<FuelEntry>>>;
+    ) -> WebApiResult<Option<Vec<FuelEntry>>>;
     fn fishing_facilities(
         &self,
         query: FishingFacilitiesQuery,
     ) -> PinBoxStream<'_, FishingFacility>;
-    async fn get_user(&self, user_id: BarentswatchUserId) -> CoreResult<Option<User>>;
+    async fn get_user(&self, user_id: BarentswatchUserId) -> WebApiResult<Option<User>>;
     fn delivery_points(&self) -> PinBoxStream<'_, DeliveryPoint>;
     fn weather(&self, query: WeatherQuery) -> PinBoxStream<'_, Weather>;
     fn weather_locations(&self) -> PinBoxStream<'_, WeatherLocation>;
@@ -103,7 +106,7 @@ pub trait WebApiOutboundPort {
         model_id: ModelId,
         species: SpeciesGroup,
         date: NaiveDate,
-    ) -> CoreResult<Option<FishingSpotPrediction>>;
+    ) -> WebApiResult<Option<FishingSpotPrediction>>;
     fn fishing_weight_predictions(
         &self,
         model_id: ModelId,
@@ -124,7 +127,7 @@ pub trait WebApiOutboundPort {
         &self,
         call_sign: &CallSign,
         update: &UpdateVessel,
-    ) -> CoreResult<Option<Vessel>>;
+    ) -> WebApiResult<Option<Vessel>>;
 }
 
 #[async_trait]
