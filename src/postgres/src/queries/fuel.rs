@@ -210,45 +210,67 @@ WHERE
         let mut engine_version = Vec::with_capacity(estimates.len());
         let mut date = Vec::with_capacity(estimates.len());
         let mut estimate = Vec::with_capacity(estimates.len());
-        let mut status = Vec::with_capacity(estimates.len());
+        let mut num_ais_positions = Vec::with_capacity(estimates.len());
+        let mut num_vms_positions = Vec::with_capacity(estimates.len());
         for e in estimates {
             vessel_id.push(e.vessel_id.into_inner());
             engine_version.push(e.engine_version as i32);
             date.push(e.date);
             estimate.push(e.estimate);
-            status.push(ProcessingStatus::Successful as i32);
+            num_ais_positions.push(e.num_ais_positions as i32);
+            num_vms_positions.push(e.num_vms_positions as i32);
         }
 
         sqlx::query!(
             r#"
 INSERT INTO
-    fuel_estimates (fiskeridir_vessel_id, date, estimate, status)
+    fuel_estimates (
+        fiskeridir_vessel_id,
+        date,
+        estimate,
+        num_ais_positions,
+        num_vms_positions,
+        status
+    )
 SELECT
     u.id,
     u.date,
     u.estimate,
-    u.status
+    u.num_ais_positions,
+    u.num_vms_positions,
+    $7
 FROM
     fiskeridir_vessels f
     INNER JOIN UNNEST(
         $1::BIGINT[],
         $2::INT[],
         $3::DATE[],
-        $4::INT[],
-        $5::DOUBLE PRECISION[]
-    ) u (id, engine_version, date, status, estimate) ON u.id = f.fiskeridir_vessel_id
+        $4::DOUBLE PRECISION[],
+        $5::INT[],
+        $6::INT[]
+    ) u (
+        id,
+        engine_version,
+        date,
+        estimate,
+        num_ais_positions,
+        num_vms_positions
+    ) ON u.id = f.fiskeridir_vessel_id
     AND u.engine_version = f.engine_version
-ON CONFLICT (fiskeridir_vessel_id, date) DO
-UPDATE
+ON CONFLICT (fiskeridir_vessel_id, date) DO UPDATE
 SET
     estimate = EXCLUDED.estimate,
+    num_ais_positions = EXCLUDED.num_ais_positions,
+    num_vms_positions = EXCLUDED.num_vms_positions,
     status = EXCLUDED.status
             "#,
             &vessel_id,
             &engine_version,
             &date,
-            &status,
-            &estimate
+            &estimate,
+            &num_ais_positions,
+            &num_vms_positions,
+            ProcessingStatus::Successful as i32
         )
         .execute(&self.pool)
         .await?;

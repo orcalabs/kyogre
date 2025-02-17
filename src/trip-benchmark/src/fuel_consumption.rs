@@ -64,7 +64,7 @@ impl TripBenchmark for FuelConsumption {
             .update_trip_position_fuel_consumption(&fuel_updates)
             .await?;
 
-        output.fuel_consumption = Some(estimated_fuel + overlapping_measurement_fuel);
+        output.fuel_consumption = Some(estimated_fuel.fuel_tonnage + overlapping_measurement_fuel);
 
         Ok(())
     }
