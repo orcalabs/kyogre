@@ -6,7 +6,7 @@ use actix_web::{
 };
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::{CallSign, OrgId, ParseStringError};
-use kyogre_core::DateRangeError;
+use kyogre_core::{DateRangeError, WebApiError};
 use oasgen::OaSchema;
 use serde::{Deserialize, Serialize};
 use snafu::{Location, Snafu};
@@ -148,6 +148,13 @@ pub enum Error {
         location: Location,
         org_id: OrgId,
     },
+    #[snafu(display("The callsign '{call_sign}' does not exist"))]
+    CallSignDoesNotExist {
+        #[snafu(implicit)]
+        location: Location,
+        opaque: OpaqueError,
+        call_sign: CallSign,
+    },
     #[snafu(display("An unexpected error occured"))]
     #[stack_error(
         opaque_stack = [kyogre_core::Error, http_client::Error, ParseStringError],
@@ -168,7 +175,7 @@ pub struct ErrorResponse {
 impl ResponseError for Error {
     fn status_code(&self) -> StatusCode {
         use ErrorDiscriminants::*;
-        match self.into() {
+        match ErrorDiscriminants::from(self) {
             StartAfterEnd
             | InvalidCallSign
             | MissingBwFiskInfoProfile
@@ -178,6 +185,7 @@ impl ResponseError for Error {
             | FuelAfterLowerThanFuel
             | Base64Decode
             | InvalidExcel
+            | CallSignDoesNotExist
             | MissingMmsiOrCallSignOrTripId => StatusCode::BAD_REQUEST,
             InsufficientPermissions => StatusCode::FORBIDDEN,
             MissingJWT | InvalidJWT | ParseJWT | JWTDecode => StatusCode::UNAUTHORIZED,
@@ -192,5 +200,25 @@ impl ResponseError for Error {
             description: format!("{self}"),
         };
         HttpResponse::build(self.status_code()).json(&error)
+    }
+}
+
+impl From<WebApiError> for Error {
+    #[track_caller]
+    fn from(val: WebApiError) -> Error {
+        let location = std::panic::Location::caller();
+        let location = Location::new(location.file(), location.line(), location.column());
+        match val {
+            WebApiError::CallSignDoesNotExist {
+                call_sign, opaque, ..
+            } => Error::CallSignDoesNotExist {
+                location,
+                opaque,
+                call_sign,
+            },
+            WebApiError::Timeout { opaque, .. } | WebApiError::Unexpected { opaque, .. } => {
+                Error::Unexpected { location, opaque }
+            }
+        }
     }
 }
