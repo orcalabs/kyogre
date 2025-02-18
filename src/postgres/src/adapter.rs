@@ -660,7 +660,7 @@ impl WebApiOutboundPort for PostgresAdapter {
                 self.live_fuel_impl(query).convert_collect().await;
             let entries = entries?;
             Ok::<kyogre_core::LiveFuel, kyogre_core::WebApiError>(kyogre_core::LiveFuel {
-                total_fuel: entries.iter().map(|e| e.fuel).sum(),
+                total_fuel_liter: entries.iter().map(|e| e.fuel_liter).sum(),
                 entries,
             })
         })

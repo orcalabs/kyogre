@@ -3,6 +3,7 @@ use chrono::{DateTime, Duration, NaiveDate, Utc};
 use kyogre_core::{
     AisVmsPositionWithHaul, AisVmsPositionWithHaulAndManual, ComputedFuelEstimation, DateRange,
     EngineType, FuelEstimation, NewFuelDayEstimate, PositionType, Vessel, VesselEngine,
+    DIESEL_GRAM_TO_LITER,
 };
 use std::{sync::Arc, vec};
 use tokio::task::JoinSet;
@@ -75,7 +76,7 @@ impl FuelEstimator {
             vessel.fiskeridir.service_speed,
             vessel.fiskeridir.degree_of_electrification,
         )
-        .fuel_tonnage
+        .fuel_liter
     }
 
     pub async fn run_continuous(self) -> Result<()> {
@@ -247,7 +248,7 @@ async fn process_day(
     Ok(NewFuelDayEstimate {
         vessel_id: vessel.fiskeridir.id,
         date,
-        estimate: estimate.fuel_tonnage,
+        estimate_liter: estimate.fuel_liter,
         engine_version: vessel.vessel.fiskeridir.engine_version,
         num_ais_positions: estimate.num_ais_positions,
         num_vms_positions: estimate.num_vms_positions,
@@ -413,7 +414,7 @@ where
 
             // We want to ensure that the trip_positions fuel is computed regardless if
             // we are skipping the point or not.
-            per_point_val += e.sfc * kwh / 1_000_000.;
+            per_point_val += e.sfc * kwh * DIESEL_GRAM_TO_LITER;
             if i == num_engines - 1 {
                 per_point.push(per_point_closure(&v, per_point_val));
             }
@@ -451,7 +452,7 @@ where
         state
     });
 
-    let fuel_tonnage = engines
+    let fuel_liter = engines
         .iter()
         .map(|e| {
             let kwh = match e.engine_type {
@@ -459,12 +460,12 @@ where
                 EngineType::Auxiliary => result.aux_kwh,
                 EngineType::Boiler => result.boiler_kwh,
             };
-            e.sfc * kwh / 1_000_000.
+            e.sfc * kwh * DIESEL_GRAM_TO_LITER
         })
         .sum();
 
     ComputedFuelEstimation {
-        fuel_tonnage,
+        fuel_liter,
         num_ais_positions,
         num_vms_positions,
     }

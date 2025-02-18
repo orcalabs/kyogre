@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT\n    t.trip_id AS \"trip_id!: TripId\",\n    t.fiskeridir_vessel_id AS \"fiskeridir_vessel_id!: FiskeridirVesselId\",\n    t.fiskeridir_length_group_id AS \"fiskeridir_length_group_id!: VesselLengthGroup\",\n    t.period AS \"period!: DateRange\",\n    t.period_extended AS \"period_extended: DateRange\",\n    t.period_precision AS \"period_precision: DateRange\",\n    t.landing_coverage AS \"landing_coverage!: DateRange\",\n    t.num_landings AS num_deliveries,\n    t.landing_total_living_weight AS total_living_weight,\n    t.landing_total_gross_weight AS total_gross_weight,\n    t.landing_total_product_weight AS total_product_weight,\n    t.landing_total_price_for_fisher AS total_price_for_fisher,\n    t.price_for_fisher_is_estimated,\n    t.delivery_point_ids AS \"delivery_points: Vec<DeliveryPointId>\",\n    t.landing_gear_ids AS \"gear_ids: Vec<Gear>\",\n    t.landing_gear_group_ids AS \"gear_group_ids: Vec<GearGroup>\",\n    t.landing_species_group_ids AS \"species_group_ids: Vec<SpeciesGroup>\",\n    t.most_recent_landing AS latest_landing_timestamp,\n    t.landings::TEXT AS \"catches!\",\n    t.start_port_id,\n    t.end_port_id,\n    t.trip_assembler_id AS \"trip_assembler_id!: TripAssemblerId\",\n    t.vessel_events::TEXT AS \"vessel_events!\",\n    t.hauls::TEXT AS \"hauls!\",\n    t.tra::TEXT AS \"tra!\",\n    t.landing_ids AS \"landing_ids: Vec<LandingId>\",\n    t.fishing_facilities::TEXT AS \"fishing_facilities!\",\n    t.distance,\n    t.cache_version,\n    t.target_species_fiskeridir_id,\n    t.target_species_fao_id,\n    t.benchmark_fuel_consumption AS fuel_consumption,\n    t.track_coverage,\n    t.has_track AS \"has_track: HasTrack\"\nFROM\n    trips_detailed AS t\nWHERE\n    t.trip_id = ANY ($1)\n            ",
+  "query": "\nSELECT\n    t.trip_id AS \"trip_id!: TripId\",\n    t.fiskeridir_vessel_id AS \"fiskeridir_vessel_id!: FiskeridirVesselId\",\n    t.fiskeridir_length_group_id AS \"fiskeridir_length_group_id!: VesselLengthGroup\",\n    t.period AS \"period!: DateRange\",\n    t.period_extended AS \"period_extended: DateRange\",\n    t.period_precision AS \"period_precision: DateRange\",\n    t.landing_coverage AS \"landing_coverage!: DateRange\",\n    t.num_landings AS num_deliveries,\n    t.landing_total_living_weight AS total_living_weight,\n    t.landing_total_gross_weight AS total_gross_weight,\n    t.landing_total_product_weight AS total_product_weight,\n    t.landing_total_price_for_fisher AS total_price_for_fisher,\n    t.price_for_fisher_is_estimated,\n    t.delivery_point_ids AS \"delivery_points: Vec<DeliveryPointId>\",\n    t.landing_gear_ids AS \"gear_ids: Vec<Gear>\",\n    t.landing_gear_group_ids AS \"gear_group_ids: Vec<GearGroup>\",\n    t.landing_species_group_ids AS \"species_group_ids: Vec<SpeciesGroup>\",\n    t.most_recent_landing AS latest_landing_timestamp,\n    t.landings::TEXT AS \"catches!\",\n    t.start_port_id,\n    t.end_port_id,\n    t.trip_assembler_id AS \"trip_assembler_id!: TripAssemblerId\",\n    t.vessel_events::TEXT AS \"vessel_events!\",\n    t.hauls::TEXT AS \"hauls!\",\n    t.tra::TEXT AS \"tra!\",\n    t.landing_ids AS \"landing_ids: Vec<LandingId>\",\n    CASE\n        WHEN $1 THEN t.fishing_facilities::TEXT\n        ELSE '[]'\n    END AS \"fishing_facilities!\",\n    t.distance,\n    t.cache_version,\n    t.target_species_fiskeridir_id,\n    t.target_species_fao_id,\n    t.benchmark_fuel_consumption_liter AS fuel_consumption_liter,\n    t.track_coverage,\n    t.has_track AS \"has_track: HasTrack\"\nFROM\n    trips_detailed AS t\nWHERE\n    (\n        $2::BIGINT[] IS NULL\n        OR t.fiskeridir_vessel_id = ANY ($2)\n    )\n    AND (\n        $3::VARCHAR[] IS NULL\n        OR t.delivery_point_ids && $3::VARCHAR[]\n    )\n    AND (\n        $4::timestamptz IS NULL\n        OR t.start_timestamp >= $4\n    )\n    AND (\n        $5::timestamptz IS NULL\n        OR t.stop_timestamp <= $5\n    )\n    AND (\n        $6::DOUBLE PRECISION IS NULL\n        OR t.landing_total_living_weight >= $6\n    )\n    AND (\n        $7::DOUBLE PRECISION IS NULL\n        OR t.landing_total_living_weight <= $7\n    )\n    AND (\n        $8::INT[] IS NULL\n        OR t.landing_gear_group_ids && $8\n    )\n    AND (\n        $9::INT[] IS NULL\n        OR t.landing_species_group_ids && $9\n    )\n    AND (\n        $10::INT[] IS NULL\n        OR t.fiskeridir_length_group_id = ANY ($10)\n    )\n    AND (\n        $11::INT[] IS NULL\n        OR t.trip_id = ANY ($11)\n    )\nORDER BY\n    CASE\n        WHEN $12::INT = 1 THEN t.stop_timestamp\n    END ASC,\n    CASE\n        WHEN $12::INT = 2 THEN t.landing_total_living_weight\n    END ASC,\n    CASE\n        WHEN $12::INT = 3 THEN t.stop_timestamp\n    END DESC,\n    CASE\n        WHEN $12::INT = 4 THEN t.landing_total_living_weight\n    END DESC\nOFFSET\n    $13\nLIMIT\n    $14\n            ",
   "describe": {
     "columns": [
       {
@@ -160,7 +160,7 @@
       },
       {
         "ordinal": 31,
-        "name": "fuel_consumption",
+        "name": "fuel_consumption_liter",
         "type_info": "Float8"
       },
       {
@@ -176,7 +176,20 @@
     ],
     "parameters": {
       "Left": [
-        "Int8Array"
+        "Bool",
+        "Int8Array",
+        "VarcharArray",
+        "Timestamptz",
+        "Timestamptz",
+        "Float8",
+        "Float8",
+        "Int4Array",
+        "Int4Array",
+        "Int4Array",
+        "Int4Array",
+        "Int4",
+        "Int8",
+        "Int8"
       ]
     },
     "nullable": [
@@ -216,5 +229,5 @@
       false
     ]
   },
-  "hash": "fbc73dfd7968d0a57e2123c629302c4f416f20818439921b7f4f154a30e7d7d1"
+  "hash": "cfe3a855c6c0d213151179cf77e4f7066c1c433d243550b67411be4148acb9c0"
 }

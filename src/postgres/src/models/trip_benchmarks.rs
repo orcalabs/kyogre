@@ -9,9 +9,9 @@ pub struct TripBenchmarkOutput {
     pub trip_id: TripId,
     pub benchmark_weight_per_hour: Option<f64>,
     pub benchmark_weight_per_distance: Option<f64>,
-    pub benchmark_fuel_consumption: Option<f64>,
-    pub benchmark_weight_per_fuel: Option<f64>,
-    pub benchmark_catch_value_per_fuel: Option<f64>,
+    pub benchmark_fuel_consumption_liter: Option<f64>,
+    pub benchmark_weight_per_fuel_liter: Option<f64>,
+    pub benchmark_catch_value_per_fuel_liter: Option<f64>,
     pub benchmark_eeoi: Option<f64>,
     #[unnest_update(sql_type = "INT", type_conversion = "type_to_i32")]
     pub benchmark_status: ProcessingStatus,
@@ -21,24 +21,24 @@ impl From<&kyogre_core::TripBenchmarkOutput> for TripBenchmarkOutput {
     fn from(v: &kyogre_core::TripBenchmarkOutput) -> Self {
         let kyogre_core::TripBenchmarkOutput {
             trip_id,
-            weight_per_hour: benchmark_weight_per_hour,
-            weight_per_distance: benchmark_weight_per_distance,
-            fuel_consumption: benchmark_fuel_consumption,
-            weight_per_fuel: benchmark_weight_per_fuel,
-            catch_value_per_fuel: benchmark_catch_value_per_fuel,
-            eeoi: benchmark_eeoi,
-            status: benchmark_status,
+            weight_per_hour,
+            weight_per_distance,
+            fuel_consumption_liter,
+            weight_per_fuel_liter,
+            catch_value_per_fuel_liter,
+            eeoi,
+            status,
         } = v;
 
         Self {
             trip_id: *trip_id,
-            benchmark_weight_per_hour: *benchmark_weight_per_hour,
-            benchmark_weight_per_distance: *benchmark_weight_per_distance,
-            benchmark_fuel_consumption: *benchmark_fuel_consumption,
-            benchmark_weight_per_fuel: *benchmark_weight_per_fuel,
-            benchmark_catch_value_per_fuel: *benchmark_catch_value_per_fuel,
-            benchmark_eeoi: *benchmark_eeoi,
-            benchmark_status: *benchmark_status,
+            benchmark_weight_per_hour: *weight_per_hour,
+            benchmark_weight_per_distance: *weight_per_distance,
+            benchmark_fuel_consumption_liter: *fuel_consumption_liter,
+            benchmark_weight_per_fuel_liter: *weight_per_fuel_liter,
+            benchmark_catch_value_per_fuel_liter: *catch_value_per_fuel_liter,
+            benchmark_eeoi: *eeoi,
+            benchmark_status: *status,
         }
     }
 }

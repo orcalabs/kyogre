@@ -1039,7 +1039,7 @@ SELECT
     t.cache_version,
     t.target_species_fiskeridir_id,
     t.target_species_fao_id,
-    t.benchmark_fuel_consumption AS fuel_consumption,
+    t.benchmark_fuel_consumption_liter AS fuel_consumption_liter,
     t.track_coverage,
     t.has_track AS "has_track: HasTrack"
 FROM
@@ -1161,7 +1161,7 @@ SELECT
     t.cache_version,
     t.target_species_fiskeridir_id,
     t.target_species_fao_id,
-    t.benchmark_fuel_consumption AS fuel_consumption,
+    t.benchmark_fuel_consumption_liter AS fuel_consumption_liter,
     t.track_coverage,
     t.has_track AS "has_track: HasTrack"
 FROM

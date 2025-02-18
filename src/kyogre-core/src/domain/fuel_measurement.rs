@@ -17,8 +17,10 @@ pub struct FuelMeasurementId(i64);
 pub struct FuelMeasurement {
     pub id: FuelMeasurementId,
     pub timestamp: DateTime<Utc>,
-    pub fuel: f64,
-    pub fuel_after: Option<f64>,
+    #[serde(rename = "fuel")]
+    pub fuel_liter: f64,
+    #[serde(rename = "fuelAfter")]
+    pub fuel_after_liter: Option<f64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
@@ -26,8 +28,10 @@ pub struct FuelMeasurement {
 #[serde(rename_all = "camelCase")]
 pub struct CreateFuelMeasurement {
     pub timestamp: DateTime<Utc>,
-    pub fuel: f64,
-    pub fuel_after: Option<f64>,
+    #[serde(rename = "fuel")]
+    pub fuel_liter: f64,
+    #[serde(rename = "fuelAfter")]
+    pub fuel_after_liter: Option<f64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
@@ -39,7 +43,7 @@ pub struct DeleteFuelMeasurement {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct FuelMeasurementRange {
-    pub fuel_used: f64,
+    pub fuel_used_liter: f64,
     pub fuel_range: DateRange,
     pub fiskeridir_vessel_id: FiskeridirVesselId,
 }

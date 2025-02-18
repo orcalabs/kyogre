@@ -31,18 +31,18 @@ async fn test_setting_fuel_after_computes_correct_fuel_used() {
         let body = &[
             CreateFuelMeasurement {
                 timestamp: start,
-                fuel: 3000.,
-                fuel_after: None,
+                fuel_liter: 3000.,
+                fuel_after_liter: None,
             },
             CreateFuelMeasurement {
                 timestamp: start + Duration::days(1),
-                fuel: 2000.,
-                fuel_after: Some(2500.0),
+                fuel_liter: 2000.,
+                fuel_after_liter: Some(2500.0),
             },
             CreateFuelMeasurement {
                 timestamp: start + Duration::days(2),
-                fuel: 1000.,
-                fuel_after: None,
+                fuel_liter: 1000.,
+                fuel_after_liter: None,
             },
         ];
 
@@ -69,7 +69,7 @@ async fn test_setting_fuel_after_computes_correct_fuel_used() {
             .await
             .unwrap()
             .iter()
-            .map(|v| v.estimated_fuel)
+            .map(|v| v.estimated_fuel_liter)
             .sum();
 
         assert!(approx_eq!(f64, 2500.0, vessel_fuel));
@@ -126,13 +126,13 @@ async fn test_fuel_measurement_overlap_1() {
         let body = vec![
             CreateFuelMeasurement {
                 timestamp: first_measurement,
-                fuel: 4000.,
-                fuel_after: None,
+                fuel_liter: 4000.,
+                fuel_after_liter: None,
             },
             CreateFuelMeasurement {
                 timestamp: last_measurement,
-                fuel: 2000.,
-                fuel_after: None,
+                fuel_liter: 2000.,
+                fuel_after_liter: None,
             },
         ];
 
@@ -159,7 +159,7 @@ async fn test_fuel_measurement_overlap_1() {
             .await
             .unwrap()
             .iter()
-            .map(|v| v.estimated_fuel)
+            .map(|v| v.estimated_fuel_liter)
             .sum();
 
         assert!(approx_eq!(f64, 2000.0, vessel_fuel));
@@ -212,13 +212,13 @@ async fn test_fuel_measurement_overlap_2() {
         let body = vec![
             CreateFuelMeasurement {
                 timestamp: first_measurement,
-                fuel: 4000.,
-                fuel_after: None,
+                fuel_liter: 4000.,
+                fuel_after_liter: None,
             },
             CreateFuelMeasurement {
                 timestamp: last_measurement,
-                fuel: 2000.,
-                fuel_after: None,
+                fuel_liter: 2000.,
+                fuel_after_liter: None,
             },
         ];
 
@@ -245,7 +245,7 @@ async fn test_fuel_measurement_overlap_2() {
             .await
             .unwrap()
             .iter()
-            .map(|v| v.estimated_fuel)
+            .map(|v| v.estimated_fuel_liter)
             .sum();
 
         let ranges = helper.adapter().all_fuel_measurement_ranges().await;
@@ -336,13 +336,13 @@ async fn test_fuel_measurement_overlap_3() {
         let body = vec![
             CreateFuelMeasurement {
                 timestamp: first_measurement,
-                fuel: 4000.,
-                fuel_after: None,
+                fuel_liter: 4000.,
+                fuel_after_liter: None,
             },
             CreateFuelMeasurement {
                 timestamp: last_measurement,
-                fuel: 2000.,
-                fuel_after: None,
+                fuel_liter: 2000.,
+                fuel_after_liter: None,
             },
         ];
 
@@ -369,7 +369,7 @@ async fn test_fuel_measurement_overlap_3() {
             .await
             .unwrap()
             .iter()
-            .map(|v| v.estimated_fuel)
+            .map(|v| v.estimated_fuel_liter)
             .sum();
 
         let partially_covered_estimate = helper
@@ -448,13 +448,13 @@ async fn test_fuel_measurement_overlap_4() {
         let body = vec![
             CreateFuelMeasurement {
                 timestamp: first_measurement,
-                fuel: 4000.,
-                fuel_after: None,
+                fuel_liter: 4000.,
+                fuel_after_liter: None,
             },
             CreateFuelMeasurement {
                 timestamp: last_measurement,
-                fuel: 2000.,
-                fuel_after: None,
+                fuel_liter: 2000.,
+                fuel_after_liter: None,
             },
         ];
 
@@ -481,7 +481,7 @@ async fn test_fuel_measurement_overlap_4() {
             .await
             .unwrap()
             .iter()
-            .map(|v| v.estimated_fuel)
+            .map(|v| v.estimated_fuel_liter)
             .sum();
 
         let partially_covered_estimate = helper
@@ -554,23 +554,23 @@ async fn test_fuel_measurement_overlap_5() {
         let body = vec![
             CreateFuelMeasurement {
                 timestamp: first_measurement,
-                fuel: 4000.,
-                fuel_after: None,
+                fuel_liter: 4000.,
+                fuel_after_liter: None,
             },
             CreateFuelMeasurement {
                 timestamp: second_measurement,
-                fuel: 3000.,
-                fuel_after: None,
+                fuel_liter: 3000.,
+                fuel_after_liter: None,
             },
             CreateFuelMeasurement {
                 timestamp: third_measurement,
-                fuel: 2000.,
-                fuel_after: None,
+                fuel_liter: 2000.,
+                fuel_after_liter: None,
             },
             CreateFuelMeasurement {
                 timestamp: last_measurement,
-                fuel: 1000.,
-                fuel_after: None,
+                fuel_liter: 1000.,
+                fuel_after_liter: None,
             },
         ];
 
@@ -597,7 +597,7 @@ async fn test_fuel_measurement_overlap_5() {
             .await
             .unwrap()
             .iter()
-            .map(|v| v.estimated_fuel)
+            .map(|v| v.estimated_fuel_liter)
             .sum();
 
         let partially_covered_estimate = helper

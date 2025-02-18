@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    COALESCE(SUM(estimate_liter), 0.0) AS \"estimate_liter!\"\nFROM\n    fuel_estimates\nWHERE\n    \"date\"::DATE BETWEEN $1 AND $2\n    AND NOT (\"date\"::DATE = ANY ($3))\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "estimate_liter!",
+        "type_info": "Float8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Date",
+        "Date",
+        "DateArray"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "8836a316cb215105ad3940361817df961836a6f749c7f5ff3c04587d930f5504"
+}

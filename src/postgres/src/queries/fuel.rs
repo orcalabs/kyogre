@@ -22,7 +22,7 @@ impl PostgresAdapter {
             kyogre_core::LiveFuelEntry,
             r#"
 SELECT
-    COALESCE(SUM(fuel), 0.0) AS "fuel!",
+    COALESCE(SUM(fuel_liter), 0.0) AS "fuel_liter!",
     DATE_TRUNC('hour', f.latest_position_timestamp) AS "timestamp!"
 FROM
     fiskeridir_ais_vessel_mapping_whitelist w
@@ -35,7 +35,7 @@ GROUP BY
     f.year,
     f.day,
     f.hour
-                    "#,
+            "#,
             query.call_sign.as_ref(),
             query.threshold
         )
@@ -206,17 +206,19 @@ WHERE
         &self,
         estimates: &[NewFuelDayEstimate],
     ) -> Result<()> {
-        let mut vessel_id = Vec::with_capacity(estimates.len());
-        let mut engine_version = Vec::with_capacity(estimates.len());
-        let mut date = Vec::with_capacity(estimates.len());
-        let mut estimate = Vec::with_capacity(estimates.len());
-        let mut num_ais_positions = Vec::with_capacity(estimates.len());
-        let mut num_vms_positions = Vec::with_capacity(estimates.len());
+        let len = estimates.len();
+        let mut vessel_id = Vec::with_capacity(len);
+        let mut engine_version = Vec::with_capacity(len);
+        let mut date = Vec::with_capacity(len);
+        let mut estimate_liter = Vec::with_capacity(len);
+        let mut num_ais_positions = Vec::with_capacity(len);
+        let mut num_vms_positions = Vec::with_capacity(len);
+
         for e in estimates {
             vessel_id.push(e.vessel_id.into_inner());
             engine_version.push(e.engine_version as i32);
             date.push(e.date);
-            estimate.push(e.estimate);
+            estimate_liter.push(e.estimate_liter);
             num_ais_positions.push(e.num_ais_positions as i32);
             num_vms_positions.push(e.num_vms_positions as i32);
         }
@@ -227,7 +229,7 @@ INSERT INTO
     fuel_estimates (
         fiskeridir_vessel_id,
         date,
-        estimate,
+        estimate_liter,
         num_ais_positions,
         num_vms_positions,
         status
@@ -235,7 +237,7 @@ INSERT INTO
 SELECT
     u.id,
     u.date,
-    u.estimate,
+    u.estimate_liter,
     u.num_ais_positions,
     u.num_vms_positions,
     $7
@@ -252,14 +254,14 @@ FROM
         id,
         engine_version,
         date,
-        estimate,
+        estimate_liter,
         num_ais_positions,
         num_vms_positions
     ) ON u.id = f.fiskeridir_vessel_id
     AND u.engine_version = f.engine_version
 ON CONFLICT (fiskeridir_vessel_id, date) DO UPDATE
 SET
-    estimate = EXCLUDED.estimate,
+    estimate_liter = EXCLUDED.estimate_liter,
     num_ais_positions = EXCLUDED.num_ais_positions,
     num_vms_positions = EXCLUDED.num_vms_positions,
     status = EXCLUDED.status
@@ -267,7 +269,7 @@ SET
             &vessel_id,
             &engine_version,
             &date,
-            &estimate,
+            &estimate_liter,
             &num_ais_positions,
             &num_vms_positions,
             ProcessingStatus::Successful as i32
@@ -310,8 +312,8 @@ WITH
         SELECT
             v.fiskeridir_vessel_id,
             SUM(
-                COMPUTE_TS_RANGE_PERCENT_OVERLAP (r.fuel_range, $2) * r.fuel_used
-            ) AS fuel_used,
+                COMPUTE_TS_RANGE_PERCENT_OVERLAP (r.fuel_range, $2) * r.fuel_used_liter
+            ) AS fuel_used_liter,
             RANGE_AGG(r.fuel_range) AS fuel_ranges
         FROM
             vessels v
@@ -326,12 +328,12 @@ WITH
             v.fiskeridir_vessel_id,
             SUM(
                 CASE
-                    WHEN m.fuel_ranges IS NULL THEN f.estimate
+                    WHEN m.fuel_ranges IS NULL THEN f.estimate_liter
                     ELSE (
                         1.0 - COMPUTE_TS_RANGE_MUTLIRANGE_PERCENT_OVERLAP (f.day_range, m.fuel_ranges)
-                    ) * f.estimate
+                    ) * f.estimate_liter
                 END
-            ) AS fuel
+            ) AS fuel_liter
         FROM
             vessels v
             INNER JOIN fuel_estimates f ON v.fiskeridir_vessel_id = f.fiskeridir_vessel_id
@@ -343,24 +345,24 @@ WITH
     )
 SELECT
     q.fiskeridir_vessel_id AS "fiskeridir_vessel_id!: FiskeridirVesselId",
-    COALESCE(SUM(q.fuel), 0.0) AS "estimated_fuel!"
+    COALESCE(SUM(q.fuel_liter), 0.0) AS "estimated_fuel_liter!"
 FROM
     (
         SELECT
             fiskeridir_vessel_id,
-            fuel
+            fuel_liter
         FROM
             overlapping
         UNION ALL
         SELECT
             fiskeridir_vessel_id,
-            fuel_used AS fuel
+            fuel_used_liter AS fuel_liter
         FROM
             measurements
     ) q
 GROUP BY
     q.fiskeridir_vessel_id
-                    "#,
+                        "#,
                         org_id.into_inner(),
                         pg_range,
                     )
@@ -388,8 +390,8 @@ WITH
     measurements AS (
         SELECT
             SUM(
-                COMPUTE_TS_RANGE_PERCENT_OVERLAP (r.fuel_range, $2) * r.fuel_used
-            ) AS fuel_used,
+                COMPUTE_TS_RANGE_PERCENT_OVERLAP (r.fuel_range, $2) * r.fuel_used_liter
+            ) AS fuel_used_liter,
             RANGE_AGG(r.fuel_range) AS fuel_ranges
         FROM
             vessels v
@@ -401,12 +403,12 @@ WITH
         SELECT
             SUM(
                 CASE
-                    WHEN m.fuel_ranges IS NULL THEN f.estimate
+                    WHEN m.fuel_ranges IS NULL THEN f.estimate_liter
                     ELSE (
                         1.0 - COMPUTE_TS_RANGE_MUTLIRANGE_PERCENT_OVERLAP (f.day_range, m.fuel_ranges)
-                    ) * f.estimate
+                    ) * f.estimate_liter
                 END
-            ) AS fuel
+            ) AS fuel_liter
         FROM
             vessels v
             INNER JOIN fuel_estimates f ON v.fiskeridir_vessel_id = f.fiskeridir_vessel_id
@@ -414,16 +416,16 @@ WITH
             LEFT JOIN measurements m ON m.fuel_ranges && f.day_range
     )
 SELECT
-    COALESCE(SUM(q.fuel), 0.0) AS "estimate!"
+    COALESCE(SUM(q.fuel_liter), 0.0) AS "estimate_liter!"
 FROM
     (
         SELECT
-            fuel
+            fuel_liter
         FROM
             overlapping
         UNION ALL
         SELECT
-            fuel_used AS fuel
+            fuel_used_liter AS fuel_liter
         FROM
             measurements
     ) q
@@ -433,7 +435,7 @@ FROM
         )
         .fetch_one(&self.pool)
         .await?
-        .estimate)
+        .estimate_liter)
     }
 
     pub(crate) async fn update_trip_position_fuel_consumption_impl(

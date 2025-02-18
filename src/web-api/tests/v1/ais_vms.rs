@@ -899,7 +899,7 @@ async fn test_ais_vms_by_trip_returns_cumulative_fuel_consumption() {
                 .unwrap()
                 .trip_cumulative_fuel_consumption
                 .unwrap(),
-            state.trips[0].fuel_consumption.unwrap()
+            state.trips[0].fuel_consumption_liter.unwrap()
         ));
     })
     .await;

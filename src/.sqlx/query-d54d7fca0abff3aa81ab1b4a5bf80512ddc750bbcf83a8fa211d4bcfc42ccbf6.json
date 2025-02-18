@@ -1,0 +1,66 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nWITH\n    ranges AS (\n        SELECT\n            RANGE_AGG(f.fuel_range) AS fuel_range\n        FROM\n            trips t\n            INNER JOIN fuel_measurement_ranges f ON f.fiskeridir_vessel_id = t.fiskeridir_vessel_id\n            AND f.fuel_range && t.period\n            AND COMPUTE_TS_RANGE_PERCENT_OVERLAP (f.fuel_range, t.period) >= 0.5\n        WHERE\n            t.trip_id = $1\n    )\nSELECT\n    u.latitude AS \"latitude!\",\n    u.longitude AS \"longitude!\",\n    u.\"timestamp\" AS \"timestamp!\",\n    u.speed,\n    u.position_type_id AS \"position_type_id!: PositionType\",\n    (\n        h.haul_id IS NOT NULL\n        AND h.gear_group_id = ANY ($2)\n    ) AS \"is_inside_haul_and_active_gear!\",\n    r.fuel_range IS NOT NULL AS \"covered_by_manual_fuel_entry!\"\nFROM\n    (\n        SELECT\n            latitude,\n            longitude,\n            \"timestamp\",\n            speed_over_ground AS speed,\n            $3::INT AS position_type_id\n        FROM\n            ais_positions a\n        WHERE\n            \"timestamp\" >= $4\n            AND \"timestamp\" <= $5\n            AND mmsi = $6\n        UNION ALL\n        SELECT\n            latitude,\n            longitude,\n            \"timestamp\",\n            speed,\n            $7::INT AS position_type_id\n        FROM\n            vms_positions v\n        WHERE\n            \"timestamp\" >= $4\n            AND \"timestamp\" <= $5\n            AND call_sign = $8\n    ) u\n    LEFT JOIN hauls h ON h.fiskeridir_vessel_id = $9\n    AND h.period @> u.\"timestamp\"\n    LEFT JOIN ranges r ON r.fuel_range @> u.\"timestamp\"\nORDER BY\n    u.\"timestamp\" ASC\n                ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "latitude!",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 1,
+        "name": "longitude!",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 2,
+        "name": "timestamp!",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 3,
+        "name": "speed",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 4,
+        "name": "position_type_id!: PositionType",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 5,
+        "name": "is_inside_haul_and_active_gear!",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 6,
+        "name": "covered_by_manual_fuel_entry!",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int4Array",
+        "Int4",
+        "Timestamptz",
+        "Timestamptz",
+        "Int4",
+        "Int4",
+        "Text",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "d54d7fca0abff3aa81ab1b4a5bf80512ddc750bbcf83a8fa211d4bcfc42ccbf6"
+}

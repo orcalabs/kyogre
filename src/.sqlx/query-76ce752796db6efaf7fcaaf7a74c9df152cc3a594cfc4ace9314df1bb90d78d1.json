@@ -1,0 +1,21 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nUPDATE trips_detailed t\nSET\n    benchmark_weight_per_hour = q.benchmark_weight_per_hour,benchmark_weight_per_distance = q.benchmark_weight_per_distance,benchmark_fuel_consumption_liter = q.benchmark_fuel_consumption_liter,benchmark_weight_per_fuel_liter = q.benchmark_weight_per_fuel_liter,benchmark_catch_value_per_fuel_liter = q.benchmark_catch_value_per_fuel_liter,benchmark_eeoi = q.benchmark_eeoi,benchmark_status = q.benchmark_status\nFROM (\n    SELECT\n        *\n    FROM\n        UNNEST (\n            $1::BIGINT[],$2::DOUBLE PRECISION[],$3::DOUBLE PRECISION[],$4::DOUBLE PRECISION[],$5::DOUBLE PRECISION[],$6::DOUBLE PRECISION[],$7::DOUBLE PRECISION[],$8::INT[]\n        ) u (trip_id,benchmark_weight_per_hour,benchmark_weight_per_distance,benchmark_fuel_consumption_liter,benchmark_weight_per_fuel_liter,benchmark_catch_value_per_fuel_liter,benchmark_eeoi,benchmark_status)\n) q\nWHERE\n    t.trip_id = q.trip_id\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8Array",
+        "Float8Array",
+        "Float8Array",
+        "Float8Array",
+        "Float8Array",
+        "Float8Array",
+        "Float8Array",
+        "Int4Array"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "76ce752796db6efaf7fcaaf7a74c9df152cc3a594cfc4ace9314df1bb90d78d1"
+}

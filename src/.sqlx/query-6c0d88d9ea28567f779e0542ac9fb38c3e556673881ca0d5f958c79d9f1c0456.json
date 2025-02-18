@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nWITH\n    input AS (\n        SELECT\n            UNNEST($1::BIGINT[]) fiskeridir_vessel_id,\n            UNNEST($2::TIMESTAMPTZ[]) timestamp\n    ),\n    top AS (\n        SELECT DISTINCT\n            ON (i.fiskeridir_vessel_id, i.timestamp) i.fiskeridir_vessel_id AS fiskeridir_vessel_id,\n            i.timestamp AS deleted_timestamp,\n            f.timestamp AS end_ts,\n            f.fuel_liter AS end_fuel_liter\n        FROM\n            fuel_measurements f\n            INNER JOIN input i ON f.fiskeridir_vessel_id = i.fiskeridir_vessel_id\n            AND f.timestamp > i.timestamp\n        ORDER BY\n            i.fiskeridir_vessel_id,\n            i.timestamp,\n            f.timestamp ASC\n    ),\n    bottom AS (\n        SELECT DISTINCT\n            ON (i.fiskeridir_vessel_id, i.timestamp) i.fiskeridir_vessel_id AS fiskeridir_vessel_id,\n            i.timestamp AS deleted_timestamp,\n            f.timestamp AS start_ts,\n            f.fuel_liter AS start_fuel_liter,\n            f.fuel_after_liter AS start_fuel_after_liter\n        FROM\n            fuel_measurements f\n            INNER JOIN input i ON f.fiskeridir_vessel_id = i.fiskeridir_vessel_id\n            AND f.timestamp < i.timestamp\n        ORDER BY\n            i.fiskeridir_vessel_id,\n            i.timestamp,\n            f.timestamp DESC\n    )\nINSERT INTO\n    fuel_measurement_ranges (\n        fiskeridir_vessel_id,\n        start_measurement_ts,\n        start_measurement_fuel_liter,\n        start_measurement_fuel_after_liter,\n        end_measurement_ts,\n        end_measurement_fuel_liter\n    )\nSELECT\n    t.fiskeridir_vessel_id,\n    b.start_ts,\n    b.start_fuel_liter,\n    b.start_fuel_after_liter,\n    t.end_ts,\n    t.end_fuel_liter\nFROM\n    top t\n    INNER JOIN bottom b ON t.fiskeridir_vessel_id = b.fiskeridir_vessel_id\n    AND t.deleted_timestamp = b.deleted_timestamp\nWHERE\n    COMPUTE_FUEL_USED (\n        b.start_fuel_liter,\n        b.start_fuel_after_liter,\n        t.end_fuel_liter\n    ) > 0.0\n    --! This only occurs if 'add_fuel_measurement_ranges_post_measurement_insertion' is called prior to this method\n    --! then both will try to add the same fuel_measurement range\nON CONFLICT (fiskeridir_vessel_id, fuel_range) DO NOTHING\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8Array",
+        "TimestamptzArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "6c0d88d9ea28567f779e0542ac9fb38c3e556673881ca0d5f958c79d9f1c0456"
+}
