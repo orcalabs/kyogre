@@ -31,7 +31,6 @@ WITH
             INNER JOIN fuel_measurement_ranges f ON f.fiskeridir_vessel_id = t.fiskeridir_vessel_id
             AND f.fuel_range && t.period
             AND COMPUTE_TS_RANGE_PERCENT_OVERLAP (f.fuel_range, t.period) >= 0.5
-
         WHERE
             t.trip_id = $1
     )
@@ -214,7 +213,7 @@ SELECT
     distance_to_shore AS "distance_to_shore!",
     position_type_id AS "position_type!: PositionType",
     NULL AS "pruned_by: TripPositionLayerId",
-    NULL AS "trip_cumulative_fuel_consumption!: Option<f64>",
+    NULL AS "trip_cumulative_fuel_consumption_liter!: Option<f64>",
     NULL AS "trip_cumulative_cargo_weight!: Option<f64>"
 FROM
     (
@@ -345,7 +344,7 @@ SELECT
     distance_to_shore AS "distance_to_shore!",
     position_type_id AS "position_type: PositionType",
     pruned_by AS "pruned_by: TripPositionLayerId",
-    trip_cumulative_fuel_consumption,
+    trip_cumulative_fuel_consumption_liter,
     trip_cumulative_cargo_weight
 FROM
     trip_positions

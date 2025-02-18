@@ -51,7 +51,11 @@ pub const METERS_TO_NAUTICAL_MILES: f64 = 1. / 1852.;
 ///
 /// Source: <https://www.classnk.or.jp/hp/pdf/activities/statutory/eedi/mepc_1-circ_684.pdf>
 ///         Appendix, section 3
-pub const DIESEL_CARBON_FACTOR: f64 = 3.206;
+const DIESEL_TONN_CARBON_FACTOR: f64 = 3.206;
+pub const DIESEL_LITER_CARBON_FACTOR: f64 = DIESEL_TONN_CARBON_FACTOR / 1000. / DIESEL_KG_TO_LITER;
+
+pub static DIESEL_KG_TO_LITER: f64 = 1.163; // for density of diesel = 860 kg/m^3
+pub static DIESEL_GRAM_TO_LITER: f64 = DIESEL_KG_TO_LITER / 1000.;
 
 pub use fiskeridir_rs::FiskeridirVesselId;
 

@@ -31,7 +31,7 @@ impl PostgresAdapter {
 SELECT
     fiskeridir_vessel_id AS "fiskeridir_vessel_id: FiskeridirVesselId",
     fuel_range AS "fuel_range: DateRange",
-    fuel_used
+    fuel_used_liter
 FROM
     fuel_measurement_ranges
 ORDER BY
@@ -41,6 +41,7 @@ ORDER BY
         .fetch_all(&self.pool)
         .await?)
     }
+
     pub(crate) async fn latest_position_impl(&self) -> Result<Option<NaiveDate>> {
         Ok(sqlx::query!(
             r#"
@@ -64,6 +65,7 @@ FROM
         .await?
         .date)
     }
+
     pub(crate) async fn unprocessed_trips_impl(&self) -> Result<u32> {
         Ok(sqlx::query!(
             r#"
@@ -93,7 +95,7 @@ WHERE
         Ok(sqlx::query!(
             r#"
 SELECT
-    COALESCE(SUM(estimate), 0.0) AS "estimate!"
+    COALESCE(SUM(estimate_liter), 0.0) AS "estimate_liter!"
 FROM
     fuel_estimates
 WHERE
@@ -106,25 +108,26 @@ WHERE
         )
         .fetch_one(&self.pool)
         .await?
-        .estimate)
+        .estimate_liter)
     }
+
     pub(crate) async fn all_fuel_estimates_impl(&self) -> Result<Vec<f64>> {
         Ok(sqlx::query!(
             r#"
 SELECT
-    estimate
+    estimate_liter
 FROM
     fuel_estimates
 ORDER BY
     date ASC
             "#,
         )
-        .fetch_all(&self.pool)
-        .await?
-        .into_iter()
-        .map(|v| v.estimate)
-        .collect())
+        .fetch(&self.pool)
+        .map_ok(|v| v.estimate_liter)
+        .try_collect()
+        .await?)
     }
+
     pub(crate) async fn fuel_estimates_with_status_impl(
         &self,
         status: ProcessingStatus,
@@ -144,6 +147,7 @@ WHERE
         .await?
         .num_count as u32)
     }
+
     pub(crate) async fn trips_with_benchmark_status_impl(
         &self,
         status: ProcessingStatus,
@@ -163,6 +167,7 @@ WHERE
         .await?
         .num_count as u32)
     }
+
     pub(crate) fn trip_assembler_log_impl(
         &self,
     ) -> impl Stream<Item = Result<TripAssemblerLogEntry>> + '_ {
@@ -188,6 +193,7 @@ FROM
         .fetch(&self.pool)
         .map_err(|e| e.into())
     }
+
     pub(crate) async fn all_ers_tra_impl(&self) -> Result<Vec<Tra>> {
         let tra = sqlx::query_as!(
             Tra,
@@ -286,7 +292,7 @@ SELECT
     distance_to_shore AS "distance_to_shore!",
     position_type_id AS "position_type!: PositionType",
     NULL AS "pruned_by: TripPositionLayerId",
-    NULL AS "trip_cumulative_fuel_consumption!: Option<f64>",
+    NULL AS "trip_cumulative_fuel_consumption_liter!: Option<f64>",
     NULL AS "trip_cumulative_cargo_weight!: Option<f64>"
 FROM
     (

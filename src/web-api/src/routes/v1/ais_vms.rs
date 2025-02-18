@@ -218,7 +218,7 @@ impl From<kyogre_core::AisVmsPosition> for AisVmsPosition {
             distance_to_shore,
             position_type: _,
             pruned_by,
-            trip_cumulative_fuel_consumption,
+            trip_cumulative_fuel_consumption_liter,
             trip_cumulative_cargo_weight,
         } = v;
 
@@ -229,7 +229,7 @@ impl From<kyogre_core::AisVmsPosition> for AisVmsPosition {
             cog: course_over_ground,
             speed,
             pruned_by,
-            trip_cumulative_fuel_consumption,
+            trip_cumulative_fuel_consumption: trip_cumulative_fuel_consumption_liter,
             trip_cumulative_cargo_weight,
             det: Some(AisVmsPositionDetails {
                 navigational_status,

@@ -52,7 +52,7 @@ impl TripBenchmark for FuelConsumption {
                 trip_id: trip.trip_id,
                 timestamp: p.timestamp,
                 position_type_id: p.position_type_id,
-                trip_cumulative_fuel_consumption: cumulative_fuel,
+                trip_cumulative_fuel_consumption_liter: cumulative_fuel,
             },
         );
 
@@ -64,7 +64,8 @@ impl TripBenchmark for FuelConsumption {
             .update_trip_position_fuel_consumption(&fuel_updates)
             .await?;
 
-        output.fuel_consumption = Some(estimated_fuel.fuel_tonnage + overlapping_measurement_fuel);
+        output.fuel_consumption_liter =
+            Some(estimated_fuel.fuel_liter + overlapping_measurement_fuel);
 
         Ok(())
     }

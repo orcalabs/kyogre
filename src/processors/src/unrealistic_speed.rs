@@ -167,7 +167,7 @@ mod tests {
             distance_to_shore: 21.1,
             position_type: PositionType::Vms,
             pruned_by: None,
-            trip_cumulative_fuel_consumption: None,
+            trip_cumulative_fuel_consumption_liter: None,
             trip_cumulative_cargo_weight: None,
         };
 
@@ -183,7 +183,7 @@ mod tests {
             distance_to_shore: 21.1,
             position_type: PositionType::Vms,
             pruned_by: None,
-            trip_cumulative_fuel_consumption: None,
+            trip_cumulative_fuel_consumption_liter: None,
             trip_cumulative_cargo_weight: None,
         };
 

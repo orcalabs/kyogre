@@ -1,11 +1,11 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT\n    estimate\nFROM\n    fuel_estimates\nORDER BY\n    date ASC\n            ",
+  "query": "\nSELECT\n    estimate_liter\nFROM\n    fuel_estimates\nORDER BY\n    date ASC\n            ",
   "describe": {
     "columns": [
       {
         "ordinal": 0,
-        "name": "estimate",
+        "name": "estimate_liter",
         "type_info": "Float8"
       }
     ],
@@ -16,5 +16,5 @@
       false
     ]
   },
-  "hash": "40bc82d3426ba2e715779363f2e3da509427a7736c13f2013130ecdf3fef994a"
+  "hash": "eb459bbc206a29401b73e47414ce4e6be7d99fe5af2d06f88513f6a75dd98a49"
 }

@@ -3,7 +3,7 @@ use fiskeridir_rs::{GearGroup, VesselLengthGroup};
 use kyogre_core::{
     AverageEeoiQuery, AverageTripBenchmarks, AverageTripBenchmarksQuery, DateRange, EeoiQuery,
     EmptyVecToNone, FiskeridirVesselId, Mmsi, ProcessingStatus, TripBenchmarksQuery, TripId,
-    TripWithBenchmark, DIESEL_CARBON_FACTOR, METERS_TO_NAUTICAL_MILES, MIN_EEOI_DISTANCE,
+    TripWithBenchmark, DIESEL_LITER_CARBON_FACTOR, METERS_TO_NAUTICAL_MILES, MIN_EEOI_DISTANCE,
 };
 
 use crate::{error::Result, models::TripBenchmarkOutput, PostgresAdapter};
@@ -25,11 +25,11 @@ impl PostgresAdapter {
             AverageTripBenchmarks,
             r#"
 SELECT
-    AVG(t.benchmark_fuel_consumption) AS fuel_consumption,
+    AVG(t.benchmark_fuel_consumption_liter) AS fuel_consumption_liter,
     AVG(t.benchmark_weight_per_hour) AS weight_per_hour,
     AVG(t.benchmark_weight_per_distance) AS weight_per_distance,
-    AVG(t.benchmark_weight_per_fuel) AS weight_per_fuel,
-    AVG(t.benchmark_catch_value_per_fuel) AS catch_value_per_fuel
+    AVG(t.benchmark_weight_per_fuel_liter) AS weight_per_fuel_liter,
+    AVG(t.benchmark_catch_value_per_fuel_liter) AS catch_value_per_fuel_liter
 FROM
     trips_detailed t
 WHERE
@@ -58,6 +58,7 @@ WHERE
         .await
         .map_err(|e| e.into())
     }
+
     pub(crate) async fn trips_to_benchmark_impl(&self) -> Result<Vec<kyogre_core::BenchmarkTrip>> {
         Ok(sqlx::query_as!(
             kyogre_core::BenchmarkTrip,
@@ -83,8 +84,8 @@ SELECT
     f.boiler_engine_building_year,
     f.service_speed,
     f.degree_of_electrification,
-    w.call_sign as "call_sign: CallSign",
-    w.mmsi as "mmsi: Mmsi"
+    w.call_sign AS "call_sign: CallSign",
+    w.mmsi AS "mmsi: Mmsi"
 FROM
     trips_detailed t
     INNER JOIN fiskeridir_vessels f ON t.fiskeridir_vessel_id = f.fiskeridir_vessel_id
@@ -120,9 +121,9 @@ SELECT
     t.period_precision AS "period_precision: DateRange",
     t.benchmark_weight_per_hour AS weight_per_hour,
     t.benchmark_weight_per_distance AS weight_per_distance,
-    t.benchmark_fuel_consumption AS fuel_consumption,
-    t.benchmark_weight_per_fuel AS weight_per_fuel,
-    t.benchmark_catch_value_per_fuel AS catch_value_per_fuel,
+    t.benchmark_fuel_consumption_liter AS fuel_consumption_liter,
+    t.benchmark_weight_per_fuel_liter AS weight_per_fuel_liter,
+    t.benchmark_catch_value_per_fuel_liter AS catch_value_per_fuel_liter,
     t.benchmark_eeoi AS eeoi
 FROM
     vessel_id v
@@ -172,7 +173,7 @@ WITH
 SELECT
     CASE
         WHEN SUM(t.landing_total_living_weight) > 0
-        AND SUM(t.distance) > $2 THEN (SUM(t.benchmark_fuel_consumption) * $3)::DOUBLE PRECISION / (
+        AND SUM(t.distance) > $2 THEN (SUM(t.benchmark_fuel_consumption_liter) * $3)::DOUBLE PRECISION / (
             SUM(t.landing_total_living_weight * t.distance * $4)::DOUBLE PRECISION / 1000::DOUBLE PRECISION
         )
         ELSE NULL
@@ -192,7 +193,7 @@ WHERE
             "#,
             query.call_sign.as_ref(),
             MIN_EEOI_DISTANCE,
-            DIESEL_CARBON_FACTOR,
+            DIESEL_LITER_CARBON_FACTOR,
             METERS_TO_NAUTICAL_MILES,
             query.start_date,
             query.end_date,
@@ -212,7 +213,7 @@ WITH
         SELECT
             CASE
                 WHEN SUM(t.landing_total_living_weight) > 0
-                AND SUM(t.distance) > $1 THEN (SUM(t.benchmark_fuel_consumption) * $2)::DOUBLE PRECISION / (
+                AND SUM(t.distance) > $1 THEN (SUM(t.benchmark_fuel_consumption_liter) * $2)::DOUBLE PRECISION / (
                     SUM(t.landing_total_living_weight * t.distance * $3)::DOUBLE PRECISION / 1000::DOUBLE PRECISION
                 )
                 ELSE NULL
@@ -264,7 +265,7 @@ WHERE
     ) <= 2
             "#,
             MIN_EEOI_DISTANCE,
-            DIESEL_CARBON_FACTOR,
+            DIESEL_LITER_CARBON_FACTOR,
             METERS_TO_NAUTICAL_MILES,
             query.start_date,
             query.end_date,

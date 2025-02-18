@@ -210,6 +210,7 @@ pub struct FiskeridirVessel {
     pub service_speed: Option<f64>,
 }
 
+/// Specific Fuel Consumption in `g/kwh` for an engine with the given building year.
 pub fn sfc(engine_building_year: u32) -> f64 {
     // Specific Fuel Consumption
     // Source: https://wwwcdn.imo.org/localresources/en/OurWork/Environment/Documents/Fourth%20IMO%20GHG%20Study%202020%20-%20Full%20report%20and%20annexes.pdf

@@ -532,8 +532,8 @@ async fn test_org_fuel_filter_by_orgs() {
             / 3.0;
 
         assert_eq!(fuel.len(), 2);
-        assert!(approx_eq!(f64, expected_fuel, fuel[0].estimated_fuel));
-        assert!(approx_eq!(f64, expected_fuel, fuel[1].estimated_fuel));
+        assert!(approx_eq!(f64, expected_fuel, fuel[0].estimated_fuel_liter));
+        assert!(approx_eq!(f64, expected_fuel, fuel[1].estimated_fuel_liter));
         assert!(!fuel
             .iter()
             .any(|f| f.fiskeridir_vessel_id == state.vessels[2].fiskeridir.id));
@@ -621,23 +621,23 @@ async fn test_org_fuel_only_includes_measurments_within_given_range() {
         let body = vec![
             CreateFuelMeasurement {
                 timestamp: start - Duration::days(10),
-                fuel: 4000.,
-                fuel_after: None,
+                fuel_liter: 4000.,
+                fuel_after_liter: None,
             },
             CreateFuelMeasurement {
                 timestamp: start - Duration::days(8),
-                fuel: 3000.,
-                fuel_after: None,
+                fuel_liter: 3000.,
+                fuel_after_liter: None,
             },
             CreateFuelMeasurement {
                 timestamp: start + Duration::days(3),
-                fuel: 2000.,
-                fuel_after: None,
+                fuel_liter: 2000.,
+                fuel_after_liter: None,
             },
             CreateFuelMeasurement {
                 timestamp: start + Duration::days(4),
-                fuel: 1000.,
-                fuel_after: None,
+                fuel_liter: 1000.,
+                fuel_after_liter: None,
             },
         ];
 
@@ -657,7 +657,7 @@ async fn test_org_fuel_only_includes_measurments_within_given_range() {
             .await
             .unwrap()
             .iter()
-            .map(|v| v.estimated_fuel)
+            .map(|v| v.estimated_fuel_liter)
             .sum();
 
         let estimate = helper
@@ -716,13 +716,13 @@ async fn test_org_fuel_excludes_fuel_measurement_when_more_than_half_of_period_i
         let body = vec![
             CreateFuelMeasurement {
                 timestamp: start + Duration::days(7),
-                fuel: 3000.,
-                fuel_after: None,
+                fuel_liter: 3000.,
+                fuel_after_liter: None,
             },
             CreateFuelMeasurement {
                 timestamp: end + Duration::days(5),
-                fuel: 2000.,
-                fuel_after: None,
+                fuel_liter: 2000.,
+                fuel_after_liter: None,
             },
         ];
 
@@ -742,7 +742,7 @@ async fn test_org_fuel_excludes_fuel_measurement_when_more_than_half_of_period_i
             .await
             .unwrap()
             .iter()
-            .map(|v| v.estimated_fuel)
+            .map(|v| v.estimated_fuel_liter)
             .sum();
 
         let estimated_fuel = helper

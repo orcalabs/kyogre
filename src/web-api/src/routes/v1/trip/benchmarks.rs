@@ -149,10 +149,10 @@ impl From<Vec<TripWithBenchmark>> for TripBenchmarks {
             weight_per_distance: v.iter().filter_map(|v| v.weight_per_distance).mean(),
             fuel_consumption: v
                 .iter()
-                .filter_map(|v| v.fuel_consumption)
+                .filter_map(|v| v.fuel_consumption_liter)
                 .fold(None, |acc, cur| Some(acc.unwrap_or(0.) + cur)),
-            weight_per_fuel: v.iter().filter_map(|v| v.weight_per_fuel).mean(),
-            catch_value_per_fuel: v.iter().filter_map(|v| v.catch_value_per_fuel).mean(),
+            weight_per_fuel: v.iter().filter_map(|v| v.weight_per_fuel_liter).mean(),
+            catch_value_per_fuel: v.iter().filter_map(|v| v.catch_value_per_fuel_liter).mean(),
             trips: v.into_iter().map(From::from).collect(),
         }
     }
@@ -166,9 +166,9 @@ impl From<TripWithBenchmark> for TripBenchmark {
             period_precision,
             weight_per_hour,
             weight_per_distance,
-            weight_per_fuel,
-            catch_value_per_fuel,
-            fuel_consumption,
+            weight_per_fuel_liter,
+            catch_value_per_fuel_liter,
+            fuel_consumption_liter,
             eeoi,
         } = v;
 
@@ -180,9 +180,9 @@ impl From<TripWithBenchmark> for TripBenchmark {
             end: period.end(),
             weight_per_hour,
             weight_per_distance,
-            fuel_consumption,
-            weight_per_fuel,
-            catch_value_per_fuel,
+            fuel_consumption: fuel_consumption_liter,
+            weight_per_fuel: weight_per_fuel_liter,
+            catch_value_per_fuel: catch_value_per_fuel_liter,
             eeoi,
         }
     }

@@ -1,0 +1,45 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nWITH\n    input AS (\n        SELECT\n            w.fiskeridir_vessel_id,\n            u.barentswatch_user_id,\n            u.timestamp,\n            u.fuel_liter,\n            f.fuel_measurement_id,\n            u.fuel_after_liter\n        FROM\n            UNNEST(\n                $1::TEXT[],\n                $2::UUID[],\n                $3::TIMESTAMPTZ[],\n                $4::DOUBLE PRECISION[],\n                $5::BIGINT[],\n                $6::DOUBLE PRECISION[]\n            ) u (\n                call_sign,\n                barentswatch_user_id,\n                timestamp,\n                fuel_liter,\n                id,\n                fuel_after_liter\n            )\n            INNER JOIN fiskeridir_ais_vessel_mapping_whitelist w ON w.call_sign = u.call_sign\n            INNER JOIN fuel_measurements f ON u.id = f.fuel_measurement_id\n            AND f.fiskeridir_vessel_id = w.fiskeridir_vessel_id\n    )\nUPDATE fuel_measurements f\nSET\n    fuel_liter = input.fuel_liter,\n    barentswatch_user_id = input.barentswatch_user_id,\n    timestamp = input.timestamp,\n    fuel_after_liter = input.fuel_after_liter\nFROM\n    input\nWHERE\n    f.fuel_measurement_id = input.fuel_measurement_id\nRETURNING\n    f.fiskeridir_vessel_id AS \"fiskeridir_vessel_id: FiskeridirVesselId\",\n    f.timestamp,\n    f.fuel_liter,\n    f.fuel_after_liter\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "fiskeridir_vessel_id: FiskeridirVesselId",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "timestamp",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 2,
+        "name": "fuel_liter",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 3,
+        "name": "fuel_after_liter",
+        "type_info": "Float8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "TextArray",
+        "UuidArray",
+        "TimestamptzArray",
+        "Float8Array",
+        "Int8Array",
+        "Float8Array"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "160283a59884d64e60310102d55f588fba2510ad9bcc010f8ec9e556df88cadd"
+}

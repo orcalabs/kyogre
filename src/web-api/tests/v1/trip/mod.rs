@@ -1288,13 +1288,13 @@ async fn test_trips_with_full_fuel_measurment_coverage_and_adjacent_positions() 
         let body = vec![
             CreateFuelMeasurement {
                 timestamp: state.trips[0].period.start(),
-                fuel: 3000.,
-                fuel_after: None,
+                fuel_liter: 3000.,
+                fuel_after_liter: None,
             },
             CreateFuelMeasurement {
                 timestamp: state.trips[0].period.end(),
-                fuel: 1000.,
-                fuel_after: None,
+                fuel_liter: 1000.,
+                fuel_after_liter: None,
             },
         ];
 
@@ -1348,13 +1348,13 @@ async fn test_trips_fuel_excludes_fuel_measurement_when_more_than_half_of_period
         let body = vec![
             CreateFuelMeasurement {
                 timestamp: start + Duration::days(7),
-                fuel: 3000.,
-                fuel_after: None,
+                fuel_liter: 3000.,
+                fuel_after_liter: None,
             },
             CreateFuelMeasurement {
                 timestamp: end + Duration::days(5),
-                fuel: 2000.,
-                fuel_after: None,
+                fuel_liter: 2000.,
+                fuel_after_liter: None,
             },
         ];
 
@@ -1412,13 +1412,13 @@ async fn test_trips_adds_fully_contained_measurement() {
         let body = vec![
             CreateFuelMeasurement {
                 timestamp: first_measurement,
-                fuel: 4000.,
-                fuel_after: None,
+                fuel_liter: 4000.,
+                fuel_after_liter: None,
             },
             CreateFuelMeasurement {
                 timestamp: last_measurement,
-                fuel: 2000.,
-                fuel_after: None,
+                fuel_liter: 2000.,
+                fuel_after_liter: None,
             },
         ];
 
@@ -1474,13 +1474,13 @@ async fn test_trips_adds_partially_contained_measurement_with_factor() {
         let body = vec![
             CreateFuelMeasurement {
                 timestamp: first_measurement,
-                fuel: 4000.,
-                fuel_after: None,
+                fuel_liter: 4000.,
+                fuel_after_liter: None,
             },
             CreateFuelMeasurement {
                 timestamp: last_measurement,
-                fuel: 3000.,
-                fuel_after: None,
+                fuel_liter: 3000.,
+                fuel_after_liter: None,
             },
         ];
 
@@ -1541,33 +1541,33 @@ async fn test_trips_adds_multiple_partially_and_fully_covered_measurments() {
         let body = vec![
             CreateFuelMeasurement {
                 timestamp: m,
-                fuel: 9000.,
-                fuel_after: None,
+                fuel_liter: 9000.,
+                fuel_after_liter: None,
             },
             CreateFuelMeasurement {
                 timestamp: m2,
-                fuel: 8000.,
-                fuel_after: None,
+                fuel_liter: 8000.,
+                fuel_after_liter: None,
             },
             CreateFuelMeasurement {
                 timestamp: m3,
-                fuel: 7000.,
-                fuel_after: None,
+                fuel_liter: 7000.,
+                fuel_after_liter: None,
             },
             CreateFuelMeasurement {
                 timestamp: m4,
-                fuel: 6000.,
-                fuel_after: None,
+                fuel_liter: 6000.,
+                fuel_after_liter: None,
             },
             CreateFuelMeasurement {
                 timestamp: m5,
-                fuel: 5000.,
-                fuel_after: None,
+                fuel_liter: 5000.,
+                fuel_after_liter: None,
             },
             CreateFuelMeasurement {
                 timestamp: m6,
-                fuel: 4000.,
-                fuel_after: None,
+                fuel_liter: 4000.,
+                fuel_after_liter: None,
             },
         ];
 
@@ -1618,13 +1618,13 @@ async fn test_trips_fuel_equals_fuel_measurment_exactly_matching_trip_start_and_
         let body = vec![
             CreateFuelMeasurement {
                 timestamp: start,
-                fuel: 4000.,
-                fuel_after: None,
+                fuel_liter: 4000.,
+                fuel_after_liter: None,
             },
             CreateFuelMeasurement {
                 timestamp: end,
-                fuel: 3000.,
-                fuel_after: None,
+                fuel_liter: 3000.,
+                fuel_after_liter: None,
             },
         ];
 
