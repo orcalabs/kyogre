@@ -34,26 +34,24 @@ SELECT
     c.position_type_id AS "position_type!: PositionType"
 FROM
     current_positions c
-    INNER JOIN fiskeridir_ais_vessel_mapping_whitelist m ON m.fiskeridir_vessel_id = c.fiskeridir_vessel_id
-    INNER JOIN fiskeridir_vessels f ON f.fiskeridir_vessel_id = m.fiskeridir_vessel_id
-    LEFT JOIN ais_vessels a ON m.mmsi = a.mmsi
+    INNER JOIN active_vessels m ON m.fiskeridir_vessel_id = c.fiskeridir_vessel_id
 WHERE
     (
         $1::TIMESTAMPTZ IS NULL
         OR c.timestamp > $1
     )
     AND (
-        a.mmsi IS NULL
+        m.mmsi IS NULL
         OR (
-            a.ship_type IS NOT NULL
-            AND NOT (a.ship_type = ANY ($2::INT[]))
-            OR COALESCE(f.length, a.ship_length) > $3
+            m.ship_type IS NOT NULL
+            AND NOT (m.ship_type = ANY ($2::INT[]))
+            OR m.length > $3
         )
     )
     AND (
         CASE
             WHEN $4 = 0 THEN TRUE
-            WHEN $4 = 1 THEN COALESCE(f.length, a.ship_length) >= $5
+            WHEN $4 = 1 THEN m.length >= $5
         END
     )
             "#,
@@ -91,23 +89,21 @@ SELECT
     NULL::DOUBLE PRECISION AS trip_cumulative_cargo_weight
 FROM
     current_trip_positions c
-    INNER JOIN fiskeridir_ais_vessel_mapping_whitelist m ON m.fiskeridir_vessel_id = c.fiskeridir_vessel_id
-    INNER JOIN fiskeridir_vessels f ON f.fiskeridir_vessel_id = m.fiskeridir_vessel_id
-    LEFT JOIN ais_vessels a ON m.mmsi = a.mmsi
+    INNER JOIN active_vessels m ON m.fiskeridir_vessel_id = c.fiskeridir_vessel_id
 WHERE
     c.fiskeridir_vessel_id = $1::BIGINT
     AND (
-        a.mmsi IS NULL
+        m.mmsi IS NULL
         OR (
-            a.ship_type IS NOT NULL
-            AND NOT (a.ship_type = ANY ($2::INT[]))
-            OR COALESCE(f.length, a.ship_length) > $3
+            m.ship_type IS NOT NULL
+            AND NOT (m.ship_type = ANY ($2::INT[]))
+            OR m.length > $3
         )
     )
     AND (
         CASE
             WHEN $4 = 0 THEN TRUE
-            WHEN $4 = 1 THEN COALESCE(f.length, a.ship_length) >= $5
+            WHEN $4 = 1 THEN m.length >= $5
         END
     )
 ORDER BY
@@ -142,7 +138,7 @@ SELECT
             p.fiskeridir_vessel_id = f.fiskeridir_vessel_id
     ) AS latest_position
 FROM
-    fiskeridir_ais_vessel_mapping_whitelist f
+    active_vessels f
     LEFT JOIN current_trips t ON f.fiskeridir_vessel_id = t.fiskeridir_vessel_id
 WHERE
     f.mmsi IS NOT NULL
@@ -205,7 +201,7 @@ SELECT DISTINCT
     q.distance_to_shore,
     q.position_type_id
 FROM
-    fiskeridir_ais_vessel_mapping_whitelist m
+    active_vessels m
     INNER JOIN (
         SELECT
             mmsi,

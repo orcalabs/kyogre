@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nDELETE FROM vessel_conflicts\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "6584131c515432da7ed62e2be022e80527fdd61f5d6ad8f04974767cfa30bf03"
+}

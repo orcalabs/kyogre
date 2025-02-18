@@ -75,6 +75,7 @@ async fn test_fuel_only_includes_measurments_within_given_range() {
                 start.date_naive(),
                 end.date_naive(),
                 &[(start + Duration::days(3)).date_naive()],
+                None,
             )
             .await;
 

@@ -91,6 +91,7 @@ WHERE
         start: NaiveDate,
         end: NaiveDate,
         to_skip: &[NaiveDate],
+        vessels: Option<&[FiskeridirVesselId]>,
     ) -> Result<f64> {
         Ok(sqlx::query!(
             r#"
@@ -101,10 +102,15 @@ FROM
 WHERE
     "date"::DATE BETWEEN $1 AND $2
     AND NOT ("date"::DATE = ANY ($3))
+    AND (
+        $4::BIGINT[] IS NULL
+        OR fiskeridir_vessel_id = ANY ($4)
+    )
             "#,
             start,
             end,
             to_skip,
+            vessels as Option<&[FiskeridirVesselId]>
         )
         .fetch_one(&self.pool)
         .await?

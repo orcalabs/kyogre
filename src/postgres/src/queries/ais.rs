@@ -42,21 +42,20 @@ WHERE
     AND TIMESTAMP BETWEEN $2 AND $3
     AND $1 IN (
         SELECT
-            a.mmsi
+            mmsi
         FROM
-            ais_vessels a
-            LEFT JOIN fiskeridir_vessels f ON a.call_sign = f.call_sign
+            all_vessels
         WHERE
-            a.mmsi = $1
+            mmsi = $1
             AND (
-                a.ship_type IS NOT NULL
-                AND NOT (a.ship_type = ANY ($4::INT[]))
-                OR COALESCE(f.length, a.ship_length) > $5
+                ship_type IS NOT NULL
+                AND NOT (ship_type = ANY ($4::INT[]))
+                OR length > $5
             )
             AND (
                 CASE
                     WHEN $6 = 0 THEN TRUE
-                    WHEN $6 = 1 THEN COALESCE(f.length, a.ship_length) >= $7
+                    WHEN $6 = 1 THEN length >= $7
                 END
             )
     )

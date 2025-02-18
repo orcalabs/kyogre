@@ -14,17 +14,6 @@ use kyogre_core::{
 use serde::Deserialize;
 use unnest_insert::UnnestInsert;
 
-#[derive(Debug, Clone, UnnestInsert)]
-#[unnest_insert(table_name = "fiskeridir_ais_vessel_mapping_whitelist", conflict = "")]
-pub struct VesselConflictInsert {
-    #[unnest_insert(sql_type = "BIGINT", type_conversion = "type_to_i64")]
-    pub fiskeridir_vessel_id: FiskeridirVesselId,
-    pub call_sign: Option<String>,
-    #[unnest_insert(sql_type = "INT", type_conversion = "opt_type_to_i32")]
-    pub mmsi: Option<Mmsi>,
-    pub is_manual: bool,
-}
-
 #[derive(Debug, Clone, Deserialize)]
 pub struct OrgBenchmarks {
     pub fishing_time: i64,
@@ -158,23 +147,6 @@ impl TryFrom<VesselBenchmarks> for kyogre_core::VesselBenchmarks {
             ers_dca: ers_dca.map(|v| serde_json::from_str(&v)).transpose()?,
             cumulative_landings,
         })
-    }
-}
-
-impl From<kyogre_core::NewVesselConflict> for VesselConflictInsert {
-    fn from(value: kyogre_core::NewVesselConflict) -> Self {
-        let kyogre_core::NewVesselConflict {
-            vessel_id,
-            call_sign,
-            mmsi,
-        } = value;
-
-        Self {
-            fiskeridir_vessel_id: vessel_id,
-            call_sign: call_sign.map(|v| v.into_inner()),
-            mmsi,
-            is_manual: true,
-        }
     }
 }
 
@@ -342,6 +314,7 @@ pub struct FiskeridirAisVesselCombination {
     pub species_group_ids: Vec<SpeciesGroup>,
     pub current_trip_departure_timestamp: Option<DateTime<Utc>>,
     pub current_trip_target_species_fiskeridir_id: Option<i32>,
+    pub is_active: bool,
 }
 
 impl TryFrom<FiskeridirAisVesselCombination> for kyogre_core::Vessel {
@@ -375,6 +348,7 @@ impl TryFrom<FiskeridirAisVesselCombination> for kyogre_core::Vessel {
             fiskeridir_engine_version,
             fiskeridir_degree_of_electrification,
             fiskeridir_service_speed,
+            is_active,
         } = value;
 
         let ais = ais_mmsi.map(|mmsi| AisVessel {
@@ -415,6 +389,7 @@ impl TryFrom<FiskeridirAisVesselCombination> for kyogre_core::Vessel {
                 departure: d,
                 target_species_fiskeridir_id: current_trip_target_species_fiskeridir_id,
             }),
+            is_active,
         })
     }
 }

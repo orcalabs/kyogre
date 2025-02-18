@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nDELETE FROM all_vessels\nWHERE\n    is_manual = FALSE;\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "3e06bb9bfb5e4abcdda4ca0382ddb42e7866262c06fe6fd11ba10ddea9b48322"
+}

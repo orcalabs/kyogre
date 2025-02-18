@@ -66,9 +66,10 @@ SELECT
     a.call_sign AS "ais_call_sign: CallSign",
     a.name AS ais_name,
     MAX(c.departure_timestamp) AS current_trip_departure_timestamp,
-    MAX(c.target_species_fiskeridir_id) AS current_trip_target_species_fiskeridir_id
+    MAX(c.target_species_fiskeridir_id) AS current_trip_target_species_fiskeridir_id,
+    BOOL_OR(v.is_active) as "is_active!"
 FROM
-    fiskeridir_ais_vessel_mapping_whitelist AS v
+    all_vessels AS v
     INNER JOIN fiskeridir_vessels AS f ON v.fiskeridir_vessel_id = f.fiskeridir_vessel_id
     LEFT JOIN ais_vessels AS a ON v.mmsi = a.mmsi
     INNER JOIN trips_detailed t ON v.fiskeridir_vessel_id = t.fiskeridir_vessel_id
@@ -163,7 +164,7 @@ SELECT
     fiskeridir_vessel_ids AS "vessel_ids!: Vec<Option<FiskeridirVesselId>>",
     fiskeridir_vessel_source_ids AS "sources!: Vec<Option<VesselSource>>"
 FROM
-    fiskeridir_ais_vessel_active_conflicts
+    vessel_conflicts
             "#
         )
         .fetch(&self.pool)
@@ -176,7 +177,7 @@ FROM
     ) -> Result<()> {
         sqlx::query!(
             r#"
-DELETE FROM fiskeridir_ais_vessel_mapping_whitelist
+DELETE FROM all_vessels
 WHERE
     is_manual = FALSE;
             "#,
@@ -186,7 +187,7 @@ WHERE
 
         sqlx::query!(
             r#"
-DELETE FROM fiskeridir_ais_vessel_active_conflicts
+DELETE FROM vessel_conflicts
             "#,
         )
         .execute(&mut **tx)
@@ -195,11 +196,12 @@ DELETE FROM fiskeridir_ais_vessel_active_conflicts
         sqlx::query!(
             r#"
 INSERT INTO
-    fiskeridir_ais_vessel_mapping_whitelist (fiskeridir_vessel_id, mmsi, call_sign)
+    all_vessels (fiskeridir_vessel_id, mmsi, call_sign, is_active)
 SELECT
     (ARRAY_AGG(f.fiskeridir_vessel_id)) [1],
     (ARRAY_AGG(a.mmsi)) [1],
-    f.call_sign
+    f.call_sign,
+    true
 FROM
     fiskeridir_vessels AS f
     LEFT JOIN ais_vessels AS a ON f.call_sign = a.call_sign
@@ -220,9 +222,10 @@ ON CONFLICT DO NOTHING;
         sqlx::query!(
             r#"
 INSERT INTO
-    fiskeridir_ais_vessel_mapping_whitelist (fiskeridir_vessel_id)
+    all_vessels (fiskeridir_vessel_id, is_active)
 SELECT
-    f.fiskeridir_vessel_id
+    f.fiskeridir_vessel_id,
+    true
 FROM
     fiskeridir_vessels AS f
 WHERE
@@ -249,7 +252,7 @@ SELECT
     ) AS "fiskeridir_vessel_source_ids!: Vec<Option<VesselSource>>"
 FROM
     fiskeridir_vessels AS f
-    LEFT JOIN fiskeridir_ais_vessel_mapping_whitelist w ON f.fiskeridir_vessel_id = w.fiskeridir_vessel_id
+    LEFT JOIN all_vessels w ON f.fiskeridir_vessel_id = w.fiskeridir_vessel_id
     LEFT JOIN ais_vessels AS a ON f.call_sign = a.call_sign
 WHERE
     (
@@ -272,7 +275,7 @@ HAVING
             sqlx::query!(
                 r#"
 INSERT INTO
-    fiskeridir_ais_vessel_active_conflicts (
+    vessel_conflicts (
         call_sign,
         mmsis,
         fiskeridir_vessel_ids,
@@ -293,6 +296,30 @@ VALUES
             .execute(&mut **tx)
             .await?;
         }
+
+        sqlx::query!(
+            r#"
+UPDATE all_vessels v
+SET
+    length = q.length,
+    ship_type = q.ship_type
+FROM
+    (
+        SELECT
+            v.fiskeridir_vessel_id,
+            a.ship_type,
+            COALESCE(f.length, a.ship_length) AS length
+        FROM
+            all_vessels v
+            INNER JOIN fiskeridir_vessels f ON v.fiskeridir_vessel_id = f.fiskeridir_vessel_id
+            LEFT JOIN ais_vessels a ON v.mmsi = a.mmsi
+    ) q
+WHERE
+    v.fiskeridir_vessel_id = q.fiskeridir_vessel_id;
+            "#
+        )
+        .execute(&mut **tx)
+        .await?;
 
         Ok(())
     }
@@ -436,7 +463,7 @@ SELECT
     f.preferred_trip_assembler AS "preferred_trip_assembler!: TripAssemblerId",
     f.fiskeridir_vessel_id AS "fiskeridir_vessel_id!: FiskeridirVesselId",
     f.fiskeridir_length_group_id AS "fiskeridir_length_group_id!: VesselLengthGroup",
-    MAX(v.call_sign) AS "fiskeridir_call_sign: CallSign",
+    v.call_sign AS "fiskeridir_call_sign: CallSign",
     f."name" AS fiskeridir_name,
     f.registration_id AS fiskeridir_registration_id,
     f."length" AS fiskeridir_length,
@@ -457,21 +484,19 @@ SELECT
     a.mmsi AS "ais_mmsi?: Mmsi",
     a.call_sign AS "ais_call_sign: CallSign",
     a.name AS ais_name,
-    MAX(c.departure_timestamp) AS current_trip_departure_timestamp,
-    MAX(c.target_species_fiskeridir_id) AS current_trip_target_species_fiskeridir_id
+    c.departure_timestamp AS "current_trip_departure_timestamp?",
+    c.target_species_fiskeridir_id AS current_trip_target_species_fiskeridir_id,
+    v.is_active
 FROM
-    fiskeridir_ais_vessel_mapping_whitelist AS v
+    all_vessels AS v
     INNER JOIN fiskeridir_vessels AS f ON v.fiskeridir_vessel_id = f.fiskeridir_vessel_id
     LEFT JOIN ais_vessels AS a ON v.mmsi = a.mmsi
     LEFT JOIN current_trips AS c ON v.fiskeridir_vessel_id = c.fiskeridir_vessel_id
 WHERE
     (
         $1::BIGINT IS NULL
-        OR f.fiskeridir_vessel_id = $1
+        OR v.fiskeridir_vessel_id = $1
     )
-GROUP BY
-    f.fiskeridir_vessel_id,
-    a.mmsi
             "#,
             vessel_id as Option<FiskeridirVesselId>,
         )

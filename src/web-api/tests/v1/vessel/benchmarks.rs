@@ -1,8 +1,8 @@
 use super::super::helper::test;
-use chrono::{Datelike, TimeZone, Utc};
+use chrono::{Datelike, Duration, TimeZone, Utc};
 use engine::*;
 use http_client::StatusCode;
-use kyogre_core::Month;
+use kyogre_core::{Month, TEST_SIGNED_IN_VESSEL_CALLSIGN};
 
 #[tokio::test]
 async fn test_vessel_benchmarks_without_token_returns_not_found() {
@@ -163,6 +163,54 @@ async fn test_vessel_benchmarks_returns_correct_self_benchmarks() {
         );
         assert_eq!(ers_dca.average_followers, 0.0);
         assert_eq!(ers_dca.average, haul_weight_per_trip);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_vessel_benchmarks_excludes_data_from_non_active_vessels() {
+    test(|mut helper, builder| async move {
+        let start = Utc::now() - Duration::days(20);
+
+        let end = start + Duration::days(10);
+
+        let state = builder
+            .trip_data_increment(Duration::hours(6))
+            .vessels(1)
+            .set_engine_building_year()
+            .set_logged_in()
+            .active_vessel()
+            .trips(1)
+            .modify(|t| {
+                t.trip_specification.set_start(start);
+                t.trip_specification.set_end(end);
+            })
+            .ais_vms_positions(40)
+            .up()
+            .vessels(1)
+            .set_engine_building_year()
+            .set_call_sign(&(TEST_SIGNED_IN_VESSEL_CALLSIGN.try_into().unwrap()))
+            .historic_vessel()
+            .trips(1)
+            .modify(|t| {
+                t.trip_specification.set_start(start);
+                t.trip_specification.set_end(end);
+            })
+            .ais_vms_positions(40)
+            .build()
+            .await;
+
+        helper.app.login_user();
+
+        helper.builder().await.build().await;
+
+        let benchmarks = helper.app.get_vessel_benchmarks().await.unwrap();
+
+        assert_eq!(benchmarks.trip_time.as_ref().unwrap().recent_trips.len(), 1);
+        assert_eq!(
+            benchmarks.trip_time.unwrap().recent_trips[0].fiskeridir_vessel_id,
+            state.vessels[0].fiskeridir.id
+        );
     })
     .await;
 }

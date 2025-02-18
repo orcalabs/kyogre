@@ -1,0 +1,73 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nWITH\n    vessel_id AS (\n        SELECT\n            fiskeridir_vessel_id\n        FROM\n            active_vessels\n        WHERE\n            call_sign = $1\n    )\nSELECT\n    t.trip_id AS \"id!: TripId\",\n    t.period AS \"period!: DateRange\",\n    t.period_precision AS \"period_precision: DateRange\",\n    t.benchmark_weight_per_hour AS weight_per_hour,\n    t.benchmark_weight_per_distance AS weight_per_distance,\n    t.benchmark_fuel_consumption_liter AS fuel_consumption_liter,\n    t.benchmark_weight_per_fuel_liter AS weight_per_fuel_liter,\n    t.benchmark_catch_value_per_fuel_liter AS catch_value_per_fuel_liter,\n    t.benchmark_eeoi AS eeoi\nFROM\n    vessel_id v\n    INNER JOIN trips_detailed t ON v.fiskeridir_vessel_id = t.fiskeridir_vessel_id\nWHERE\n    (\n        $2::TIMESTAMPTZ IS NULL\n        OR LOWER(t.period) >= $2\n    )\n    AND (\n        $3::TIMESTAMPTZ IS NULL\n        OR UPPER(t.period) <= $3\n    )\nGROUP BY\n    t.trip_id\nORDER BY\n    CASE\n        WHEN $4 = 1 THEN t.period\n    END ASC,\n    CASE\n        WHEN $4 = 2 THEN t.period\n    END DESC\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id!: TripId",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "period!: DateRange",
+        "type_info": "TstzRange"
+      },
+      {
+        "ordinal": 2,
+        "name": "period_precision: DateRange",
+        "type_info": "TstzRange"
+      },
+      {
+        "ordinal": 3,
+        "name": "weight_per_hour",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 4,
+        "name": "weight_per_distance",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 5,
+        "name": "fuel_consumption_liter",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 6,
+        "name": "weight_per_fuel_liter",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 7,
+        "name": "catch_value_per_fuel_liter",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 8,
+        "name": "eeoi",
+        "type_info": "Float8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Timestamptz",
+        "Timestamptz",
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "7645ba18fc7172342774bb720edf55333244d80be9d1af68f599bf61cc329de2"
+}

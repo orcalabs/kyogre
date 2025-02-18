@@ -4,10 +4,10 @@ use crate::{
     PostgresAdapter,
 };
 use chrono::{DateTime, NaiveDate, Utc};
-use fiskeridir_rs::{CallSign, OrgId};
+use fiskeridir_rs::CallSign;
 use futures::{Stream, TryStreamExt};
 use kyogre_core::{
-    DateRange, FiskeridirVesselId, FuelEntry, FuelQuery, LiveFuelQuery, LiveFuelVessel, Mmsi,
+    DateRange, FiskeridirVesselId, FuelQuery, LiveFuelQuery, LiveFuelVessel, Mmsi,
     NewFuelDayEstimate, NewLiveFuel, ProcessingStatus,
 };
 use sqlx::postgres::types::PgRange;
@@ -25,7 +25,7 @@ SELECT
     COALESCE(SUM(fuel_liter), 0.0) AS "fuel_liter!",
     DATE_TRUNC('hour', f.latest_position_timestamp) AS "timestamp!"
 FROM
-    fiskeridir_ais_vessel_mapping_whitelist w
+    active_vessels w
     INNER JOIN live_fuel f ON w.fiskeridir_vessel_id = f.fiskeridir_vessel_id
 WHERE
     w.call_sign = $1
@@ -82,7 +82,7 @@ SELECT
     -- Hacky fix because sqlx prepare/check flakes on nullability
     COALESCE(q.latest_position_timestamp, NULL) AS latest_position_timestamp
 FROM
-    fiskeridir_ais_vessel_mapping_whitelist w
+    active_vessels w
     INNER JOIN fiskeridir_vessels f ON w.fiskeridir_vessel_id = f.fiskeridir_vessel_id
     LEFT JOIN current_trips t ON t.fiskeridir_vessel_id = f.fiskeridir_vessel_id
     LEFT JOIN (
@@ -280,98 +280,6 @@ SET
         Ok(())
     }
 
-    pub(crate) async fn fuel_estimation_by_org_impl(
-        &self,
-        query: &FuelQuery,
-        org_id: OrgId,
-    ) -> Result<Option<Vec<FuelEntry>>> {
-        if !self
-            .assert_call_sign_is_in_org(&query.call_sign, org_id)
-            .await?
-        {
-            return Ok(None);
-        }
-
-        let range = DateRange::from_dates(query.start_date, query.end_date)?;
-        let pg_range: PgRange<DateTime<Utc>> = (&range).into();
-
-        let values =
-                    sqlx::query_as!(
-                        FuelEntry,
-                        r#"
-WITH
-    vessels AS (
-        SELECT
-            fiskeridir_vessel_id
-        FROM
-            orgs__fiskeridir_vessels
-        WHERE
-            org_id = $1
-    ),
-    measurements AS (
-        SELECT
-            v.fiskeridir_vessel_id,
-            SUM(
-                COMPUTE_TS_RANGE_PERCENT_OVERLAP (r.fuel_range, $2) * r.fuel_used_liter
-            ) AS fuel_used_liter,
-            RANGE_AGG(r.fuel_range) AS fuel_ranges
-        FROM
-            vessels v
-            INNER JOIN fuel_measurement_ranges r ON v.fiskeridir_vessel_id = r.fiskeridir_vessel_id
-            AND r.fuel_range && $2
-            AND COMPUTE_TS_RANGE_PERCENT_OVERLAP (r.fuel_range, $2) >= 0.5
-        GROUP BY
-            v.fiskeridir_vessel_id
-    ),
-    overlapping AS (
-        SELECT
-            v.fiskeridir_vessel_id,
-            SUM(
-                CASE
-                    WHEN m.fuel_ranges IS NULL THEN f.estimate_liter
-                    ELSE (
-                        1.0 - COMPUTE_TS_RANGE_MUTLIRANGE_PERCENT_OVERLAP (f.day_range, m.fuel_ranges)
-                    ) * f.estimate_liter
-                END
-            ) AS fuel_liter
-        FROM
-            vessels v
-            INNER JOIN fuel_estimates f ON v.fiskeridir_vessel_id = f.fiskeridir_vessel_id
-            AND f.day_range <@ $2
-            LEFT JOIN measurements m ON m.fuel_ranges && f.day_range
-            AND m.fiskeridir_vessel_id = f.fiskeridir_vessel_id
-        GROUP BY
-            v.fiskeridir_vessel_id
-    )
-SELECT
-    q.fiskeridir_vessel_id AS "fiskeridir_vessel_id!: FiskeridirVesselId",
-    COALESCE(SUM(q.fuel_liter), 0.0) AS "estimated_fuel_liter!"
-FROM
-    (
-        SELECT
-            fiskeridir_vessel_id,
-            fuel_liter
-        FROM
-            overlapping
-        UNION ALL
-        SELECT
-            fiskeridir_vessel_id,
-            fuel_used_liter AS fuel_liter
-        FROM
-            measurements
-    ) q
-GROUP BY
-    q.fiskeridir_vessel_id
-                        "#,
-                        org_id.into_inner(),
-                        pg_range,
-                    )
-                    .fetch_all(&self.pool)
-                    .await?;
-
-        Ok(Some(values))
-    }
-
     pub(crate) async fn fuel_estimation_impl(&self, query: &FuelQuery) -> Result<f64> {
         let range = DateRange::from_dates(query.start_date, query.end_date)?;
         let pg_range: PgRange<DateTime<Utc>> = (&range).into();
@@ -383,7 +291,7 @@ WITH
         SELECT
             fiskeridir_vessel_id
         FROM
-            fiskeridir_ais_vessel_mapping_whitelist
+            active_vessels
         WHERE
             call_sign = $1
     ),

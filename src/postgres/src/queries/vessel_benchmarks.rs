@@ -1,160 +1,9 @@
-use crate::{
-    error::Result,
-    models::{OrgBenchmarks, VesselBenchmarks},
-    PostgresAdapter,
-};
+use crate::{error::Result, models::VesselBenchmarks, PostgresAdapter};
 use chrono::{Datelike, Utc};
 use fiskeridir_rs::CallSign;
-use kyogre_core::{BarentswatchUserId, FiskeridirVesselId, OrgBenchmarkQuery, ProcessingStatus};
+use kyogre_core::{BarentswatchUserId, FiskeridirVesselId, ProcessingStatus};
 
 impl PostgresAdapter {
-    pub(crate) async fn org_benchmarks_impl(
-        &self,
-        query: &OrgBenchmarkQuery,
-    ) -> Result<Option<OrgBenchmarks>> {
-        let benchmark = sqlx::query_as!(
-            OrgBenchmarks,
-            r#"
-WITH
-    trips AS (
-        SELECT
-            f.fiskeridir_vessel_id,
-            MAX(of.org_id) AS org_id,
-            SUM(haul_duration) AS haul_duration,
-            SUM(distance) AS distance,
-            SUM(trip_duration) AS trip_duration,
-            SUM(landing_total_living_weight) AS landing_total_living_weight,
-            SUM(landing_total_price_for_fisher) AS price_for_fisher,
-            ARRAY_CONCAT (landing_ids) FILTER (
-                WHERE
-                    landing_ids IS NOT NULL
-                    AND CARDINALITY(landing_ids) > 0
-            ) AS landing_ids
-        FROM
-            fiskeridir_ais_vessel_mapping_whitelist w
-            INNER JOIN orgs__fiskeridir_vessels of ON w.fiskeridir_vessel_id = of.fiskeridir_vessel_id
-            LEFT JOIN orgs__fiskeridir_vessels f ON f.org_id = of.org_id
-            LEFT JOIN trips_detailed t ON f.fiskeridir_vessel_id = t.fiskeridir_vessel_id
-            AND t.start_timestamp >= $1
-            AND t.stop_timestamp <= $2
-        WHERE
-            w.call_sign = $3
-            AND of.org_id = $4
-        GROUP BY
-            f.fiskeridir_vessel_id
-    )
-SELECT
-    COALESCE(
-        EXTRACT(
-            'epoch'
-            FROM
-                SUM(q.haul_duration)
-        ),
-        0
-    )::BIGINT AS "fishing_time!",
-    COALESCE(SUM(q.distance), 0.0)::DOUBLE PRECISION AS "trip_distance!",
-    COALESCE(
-        EXTRACT(
-            'epoch'
-            FROM
-                SUM(q.trip_duration)
-        ),
-        0
-    )::BIGINT AS "trip_time!",
-    COALESCE(SUM(q.landing_total_living_weight), 0.0)::DOUBLE PRECISION AS "landing_total_living_weight!",
-    COALESCE(SUM(q.price_for_fisher), 0.0)::DOUBLE PRECISION AS "price_for_fisher!",
-    COALESCE(
-        JSONB_AGG(
-            JSONB_BUILD_OBJECT(
-                'fiskeridir_vessel_id',
-                q.fiskeridir_vessel_id,
-                'fishing_time',
-                COALESCE(
-                    EXTRACT(
-                        'epoch'
-                        FROM
-                            q.haul_duration
-                    ),
-                    0
-                )::BIGINT,
-                'trip_distance',
-                COALESCE(q.distance, 0.0)::DOUBLE PRECISION,
-                'trip_time',
-                COALESCE(
-                    EXTRACT(
-                        'epoch'
-                        FROM
-                            q.trip_duration
-                    ),
-                    0
-                )::BIGINT,
-                'landing_total_living_weight',
-                COALESCE(q.landing_total_living_weight, 0.0)::DOUBLE PRECISION,
-                'price_for_fisher',
-                COALESCE(q.price_for_fisher, 0.0)::DOUBLE PRECISION,
-                'species',
-                COALESCE(q.species, '[]')::JSONB
-            )
-        ),
-        '[]'
-    )::TEXT AS "vessels!"
-FROM
-    (
-        SELECT
-            t.fiskeridir_vessel_id,
-            MAX(t.org_id) AS org_id,
-            MAX(t.haul_duration) AS haul_duration,
-            MAX(t.distance) AS distance,
-            MAX(t.trip_duration) AS trip_duration,
-            MAX(t.landing_total_living_weight) AS landing_total_living_weight,
-            MAX(t.price_for_fisher) AS price_for_fisher,
-            JSONB_AGG(
-                JSONB_BUILD_OBJECT(
-                    'species_group_id',
-                    q.species_group_id,
-                    'landing_total_living_weight',
-                    q.living_weight,
-                    'price_for_fisher',
-                    q.price_for_fisher
-                )
-                ORDER BY
-                    q.species_group_id,
-                    q.living_weight
-            ) FILTER (
-                WHERE
-                    q.species_group_id IS NOT NULL
-            ) AS species
-        FROM
-            trips t
-            LEFT JOIN (
-                SELECT
-                    l.species_group_id,
-                    t.fiskeridir_vessel_id,
-                    COALESCE(SUM(l.living_weight), 0.0)::DOUBLE PRECISION AS living_weight,
-                    COALESCE(SUM(l.final_price_for_fisher), 0.0)::DOUBLE PRECISION AS price_for_fisher
-                FROM
-                    trips t
-                    INNER JOIN landing_entries l ON l.landing_id = ANY (t.landing_ids)
-                GROUP BY
-                    t.fiskeridir_vessel_id,
-                    l.species_group_id
-            ) q ON q.fiskeridir_vessel_id = t.fiskeridir_vessel_id
-        GROUP BY
-            t.fiskeridir_vessel_id
-    ) q
-GROUP BY
-    q.org_id
-            "#,
-            query.start,
-            query.end,
-            query.call_sign.as_ref(),
-            query.org_id.into_inner()
-        )
-        .fetch_optional(&self.pool)
-        .await?;
-
-        Ok(benchmark)
-    }
     pub(crate) async fn reset_bencmarks(
         &self,
         vessel_id: FiskeridirVesselId,
@@ -225,7 +74,7 @@ SELECT
                                 SUM(living_weight) AS weight,
                                 le.species_fiskeridir_id
                             FROM
-                                fiskeridir_ais_vessel_mapping_whitelist f
+                                active_vessels f
                                 INNER JOIN landings l ON l.fiskeridir_vessel_id = f.fiskeridir_vessel_id
                                 INNER JOIN landing_entries le ON le.landing_id = l.landing_id
                             WHERE
@@ -505,7 +354,7 @@ FROM
                             fiskeridir_vessel_id,
                             TRUE AS is_self
                         FROM
-                            fiskeridir_ais_vessel_mapping_whitelist f
+                            active_vessels f
                         WHERE
                             f.call_sign = $1
                         UNION
