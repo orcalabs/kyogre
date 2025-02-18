@@ -1,0 +1,98 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    c.latitude,\n    c.longitude,\n    c.timestamp,\n    c.course_over_ground,\n    c.navigation_status_id AS \"navigational_status: NavigationStatus\",\n    c.rate_of_turn,\n    c.speed,\n    c.true_heading,\n    c.distance_to_shore,\n    c.position_type_id AS \"position_type!: PositionType\",\n    NULL AS \"pruned_by: TripPositionLayerId\",\n    NULL::DOUBLE PRECISION AS trip_cumulative_fuel_consumption_liter,\n    NULL::DOUBLE PRECISION AS trip_cumulative_cargo_weight\nFROM\n    current_trip_positions c\n    INNER JOIN active_vessels m ON m.fiskeridir_vessel_id = c.fiskeridir_vessel_id\nWHERE\n    c.fiskeridir_vessel_id = $1::BIGINT\n    AND (\n        m.mmsi IS NULL\n        OR (\n            m.ship_type IS NOT NULL\n            AND NOT (m.ship_type = ANY ($2::INT[]))\n            OR m.length > $3\n        )\n    )\n    AND (\n        CASE\n            WHEN $4 = 0 THEN TRUE\n            WHEN $4 = 1 THEN m.length >= $5\n        END\n    )\nORDER BY\n    timestamp ASC\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "latitude",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 1,
+        "name": "longitude",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 2,
+        "name": "timestamp",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 3,
+        "name": "course_over_ground",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 4,
+        "name": "navigational_status: NavigationStatus",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 5,
+        "name": "rate_of_turn",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 6,
+        "name": "speed",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 7,
+        "name": "true_heading",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 8,
+        "name": "distance_to_shore",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 9,
+        "name": "position_type!: PositionType",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 10,
+        "name": "pruned_by: TripPositionLayerId",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 11,
+        "name": "trip_cumulative_fuel_consumption_liter",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 12,
+        "name": "trip_cumulative_cargo_weight",
+        "type_info": "Float8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int4Array",
+        "Float8",
+        "Int4",
+        "Float8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false,
+      false,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "ef7ad56214a5ef261e41d027b82064f4cc75bce1db2d87529eecb697a3785f70"
+}

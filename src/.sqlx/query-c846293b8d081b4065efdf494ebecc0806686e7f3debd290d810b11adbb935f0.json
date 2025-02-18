@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO\n    all_vessels (fiskeridir_vessel_id, is_active)\nSELECT\n    f.fiskeridir_vessel_id,\n    true\nFROM\n    fiskeridir_vessels AS f\nWHERE\n    f.call_sign IS NULL\n    OR f.call_sign = ANY ($1::VARCHAR[])\nON CONFLICT DO NOTHING\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "VarcharArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "c846293b8d081b4065efdf494ebecc0806686e7f3debd290d810b11adbb935f0"
+}

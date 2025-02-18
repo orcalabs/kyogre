@@ -570,8 +570,7 @@ impl TestStateBuilder {
                 cycle: self.cycle,
                 clear_trip_precision: false,
                 clear_trip_distancing: false,
-                conflict_winner: false,
-                conflict_loser: false,
+                active_vessel: None,
                 set_engine_building_year: false,
             });
 
@@ -654,18 +653,17 @@ impl TestStateBuilder {
                 .vessels
                 .iter()
                 .filter_map(|v| {
-                    if v.cycle == i && v.conflict_winner {
-                        Some(NewVesselConflict {
-                            vessel_id: v.fiskeridir.id,
-                            call_sign: Some(v.fiskeridir.radio_call_sign.clone().unwrap()),
-                            mmsi: Some(v.ais.mmsi),
-                        })
-                    } else if v.cycle == i && v.conflict_loser {
-                        Some(NewVesselConflict {
-                            vessel_id: v.fiskeridir.id,
-                            call_sign: None,
-                            mmsi: None,
-                        })
+                    if let Some(is_active) = v.active_vessel {
+                        if v.cycle == i {
+                            Some(NewVesselConflict {
+                                vessel_id: v.fiskeridir.id,
+                                call_sign: Some(v.fiskeridir.radio_call_sign.clone().unwrap()),
+                                mmsi: Some(v.ais.mmsi),
+                                is_active,
+                            })
+                        } else {
+                            None
+                        }
                     } else {
                         None
                     }

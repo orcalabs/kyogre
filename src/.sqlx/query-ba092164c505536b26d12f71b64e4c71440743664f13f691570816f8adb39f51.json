@@ -1,0 +1,38 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    call_sign AS \"call_sign!: CallSign\",\n    mmsis AS \"mmsis!: Vec<Option<Mmsi>>\",\n    fiskeridir_vessel_ids AS \"vessel_ids!: Vec<Option<FiskeridirVesselId>>\",\n    fiskeridir_vessel_source_ids AS \"sources!: Vec<Option<VesselSource>>\"\nFROM\n    vessel_conflicts\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "call_sign!: CallSign",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 1,
+        "name": "mmsis!: Vec<Option<Mmsi>>",
+        "type_info": "Int4Array"
+      },
+      {
+        "ordinal": 2,
+        "name": "vessel_ids!: Vec<Option<FiskeridirVesselId>>",
+        "type_info": "Int8Array"
+      },
+      {
+        "ordinal": 3,
+        "name": "sources!: Vec<Option<VesselSource>>",
+        "type_info": "Int4Array"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "ba092164c505536b26d12f71b64e4c71440743664f13f691570816f8adb39f51"
+}

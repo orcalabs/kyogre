@@ -195,7 +195,7 @@ SET
         Ok(())
     }
 
-    pub(crate) async fn check_for_out_of_order_vms_insertion_imp(&self) -> Result<()> {
+    pub(crate) async fn check_for_out_of_order_vms_insertion_impl(&self) -> Result<()> {
         let mut tx = self.pool.begin().await?;
 
         sqlx::query!(
@@ -212,7 +212,8 @@ FROM
             trip_id
         FROM
             earliest_vms_insertion e
-            INNER JOIN fiskeridir_ais_vessel_mapping_whitelist f ON e.call_sign = f.call_sign
+            --! We want all vessels associated with the given call_sign to be invalidated
+            INNER JOIN all_vessels f ON e.call_sign = f.call_sign
             INNER JOIN trips tr ON tr.fiskeridir_vessel_id = f.fiskeridir_vessel_id
             AND UPPER(tr.period) >= e.timestamp
         UNION
