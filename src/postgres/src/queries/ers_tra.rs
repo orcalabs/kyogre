@@ -129,8 +129,9 @@ FROM
     UNNEST($1::BIGINT[]) u (message_id)
     INNER JOIN ers_tra e ON u.message_id = e.message_id
     INNER JOIN ers_tra_catches c ON c.message_id = e.message_id
-    LEFT JOIN fiskeridir_ais_vessel_mapping_whitelist v ON v.call_sign = e.reload_to_vessel_call_sign
-    LEFT JOIN fiskeridir_ais_vessel_mapping_whitelist v2 ON v2.call_sign = e.reload_from_vessel_call_sign
+    --! TODO: implement scheme to set this post insert to handle changes in active_vessels
+    LEFT JOIN active_vessels v ON v.call_sign = e.reload_to_vessel_call_sign
+    LEFT JOIN active_vessels v2 ON v2.call_sign = e.reload_from_vessel_call_sign
 GROUP BY
     e.message_id
             "#,

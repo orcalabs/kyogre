@@ -3,30 +3,33 @@ use crate::{
     PostgresAdapter,
 };
 use fiskeridir_rs::{CallSign, OrgId};
+use kyogre_core::FiskeridirVesselId;
 
 impl PostgresAdapter {
     pub async fn assert_call_sign_is_in_org(
         &self,
         call_sign: &CallSign,
         org_id: OrgId,
-    ) -> Result<bool> {
+    ) -> Result<Option<Vec<FiskeridirVesselId>>> {
         Ok(sqlx::query!(
             r#"
 SELECT
-    1 as exists
+    ARRAY_AGG(DISTINCT a2.fiskeridir_vessel_id) AS "ids: Vec<FiskeridirVesselId>"
 FROM
-    fiskeridir_ais_vessel_mapping_whitelist w
-    INNER JOIN orgs__fiskeridir_vessels o ON o.fiskeridir_vessel_id = w.fiskeridir_vessel_id
+    active_vessels a
+    INNER JOIN orgs__fiskeridir_vessels o ON o.fiskeridir_vessel_id = a.fiskeridir_vessel_id
+    INNER JOIN orgs__fiskeridir_vessels o2 ON o.org_id = o2.org_id
+    INNER JOIN active_vessels a2 ON o2.fiskeridir_vessel_id = a2.fiskeridir_vessel_id
 WHERE
-    w.call_sign = $1
+    a.call_sign = $1
     AND o.org_id = $2
             "#,
             call_sign.as_ref(),
             org_id.into_inner()
         )
-        .fetch_optional(&self.pool)
+        .fetch_one(&self.pool)
         .await?
-        .is_some())
+        .ids)
     }
     pub async fn assert_call_sign_exists(
         &self,
@@ -36,9 +39,9 @@ WHERE
         let exists = sqlx::query!(
             r#"
 SELECT
-    1 as exists
+    1 AS EXISTS
 FROM
-    fiskeridir_ais_vessel_mapping_whitelist
+    active_vessels
 WHERE
     call_sign = $1
             "#,

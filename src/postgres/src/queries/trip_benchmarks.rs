@@ -89,7 +89,7 @@ SELECT
 FROM
     trips_detailed t
     INNER JOIN fiskeridir_vessels f ON t.fiskeridir_vessel_id = f.fiskeridir_vessel_id
-    INNER JOIN fiskeridir_ais_vessel_mapping_whitelist w ON w.fiskeridir_vessel_id = f.fiskeridir_vessel_id
+    INNER JOIN all_vessels w ON w.fiskeridir_vessel_id = f.fiskeridir_vessel_id
 WHERE
     benchmark_status = $1
             "#,
@@ -111,7 +111,7 @@ WITH
         SELECT
             fiskeridir_vessel_id
         FROM
-            fiskeridir_ais_vessel_mapping_whitelist
+            active_vessels
         WHERE
             call_sign = $1
     )
@@ -166,7 +166,7 @@ WITH
         SELECT
             fiskeridir_vessel_id
         FROM
-            fiskeridir_ais_vessel_mapping_whitelist
+            active_vessels
         WHERE
             call_sign = $1
     )

@@ -88,6 +88,7 @@ pub struct NewVesselConflict {
     pub vessel_id: FiskeridirVesselId,
     pub call_sign: Option<CallSign>,
     pub mmsi: Option<Mmsi>,
+    pub is_active: bool,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -106,6 +107,7 @@ pub struct Vessel {
     pub gear_groups: Vec<GearGroup>,
     pub species_groups: Vec<SpeciesGroup>,
     pub current_trip: Option<VesselCurrentTrip>,
+    pub is_active: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]

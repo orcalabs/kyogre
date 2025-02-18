@@ -6,7 +6,7 @@ use fiskeridir_rs::{
 };
 use float_cmp::approx_eq;
 use http_client::StatusCode;
-use kyogre_core::{CreateFuelMeasurement, TestHelperOutbound};
+use kyogre_core::{CreateFuelMeasurement, TestHelperOutbound, TEST_SIGNED_IN_VESSEL_CALLSIGN};
 use kyogre_core::{Haul, OrgBenchmarks, TripDetailed};
 use std::str::FromStr;
 use web_api::routes::v1::{org::OrgBenchmarkParameters, user::User, vessel::FuelParams};
@@ -260,15 +260,7 @@ async fn test_vessel_org_benchmarks_works() {
         let org_id = OrgId::test_new(1);
         let state = builder
             .vessels(3)
-            .modify(|v| {
-                v.fiskeridir.owners = vec![RegisterVesselOwner {
-                    city: None,
-                    entity_type: RegisterVesselEntityType::Company,
-                    id: Some(org_id),
-                    name: NonEmptyString::from_str("test").unwrap(),
-                    postal_code: 9000,
-                }];
-            })
+            .set_org_id_of_owner(org_id)
             .set_logged_in()
             .trips(3)
             .ais_vms_positions(9)
@@ -666,6 +658,7 @@ async fn test_org_fuel_only_includes_measurments_within_given_range() {
                 start.date_naive(),
                 end.date_naive(),
                 &[(start + Duration::days(3)).date_naive()],
+                None,
             )
             .await;
 
@@ -753,6 +746,70 @@ async fn test_org_fuel_excludes_fuel_measurement_when_more_than_half_of_period_i
             .sum();
 
         assert!(approx_eq!(f64, estimated_fuel, fuel));
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_org_benchmarks_excludes_non_active_vessels() {
+    test(|mut helper, builder| async move {
+        let start = Utc.from_utc_datetime(&NaiveDateTime::new(
+            NaiveDate::from_ymd_opt(2020, 3, 12).unwrap(),
+            NaiveTime::from_hms_opt(1, 0, 0).unwrap(),
+        ));
+
+        let end = start + Duration::days(10);
+        let org_id = OrgId::test_new(1);
+
+        let state = builder
+            .trip_data_increment(Duration::hours(6))
+            .vessels(1)
+            .set_org_id_of_owner(org_id)
+            .set_engine_building_year()
+            .set_logged_in()
+            .active_vessel()
+            .trips(1)
+            .modify(|t| {
+                t.trip_specification.set_start(start);
+                t.trip_specification.set_end(end);
+            })
+            .up()
+            .vessels(1)
+            .set_org_id_of_owner(org_id)
+            .set_engine_building_year()
+            .set_call_sign(&(TEST_SIGNED_IN_VESSEL_CALLSIGN.try_into().unwrap()))
+            .historic_vessel()
+            .trips(1)
+            .modify(|t| {
+                t.trip_specification.set_start(start);
+                t.trip_specification.set_end(end);
+            })
+            .ais_vms_positions(40)
+            .build()
+            .await;
+
+        helper.app.login_user();
+
+        helper.builder().await.build().await;
+
+        let benchmarks = helper
+            .app
+            .get_org_benchmarks(
+                org_id,
+                OrgBenchmarkParameters {
+                    start: Some(start),
+                    end: Some(end),
+                },
+            )
+            .await
+            .unwrap()
+            .unwrap();
+
+        assert_eq!(benchmarks.vessels.len(), 1);
+        assert_eq!(
+            benchmarks.vessels[0].fiskeridir_vessel_id,
+            state.vessels[0].fiskeridir.id
+        );
     })
     .await;
 }

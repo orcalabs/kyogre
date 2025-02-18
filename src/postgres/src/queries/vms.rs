@@ -189,7 +189,7 @@ FROM
             to_update.date
         FROM
             to_update
-            INNER JOIN fiskeridir_ais_vessel_mapping_whitelist w ON w.call_sign = to_update.call_sign
+            INNER JOIN all_vessels w ON w.call_sign = to_update.call_sign
     ) q
 WHERE
     q.fiskeridir_vessel_id = f.fiskeridir_vessel_id

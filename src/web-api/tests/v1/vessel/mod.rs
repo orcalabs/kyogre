@@ -285,8 +285,7 @@ async fn test_vessels_does_not_return_most_used_call_sign_of_vessel_that_exists_
 }
 
 #[tokio::test]
-async fn test_vessels_returns_both_vessels_after_conflict_have_been_resolved_but_loser_without_call_sign_and_ais(
-) {
+async fn test_vessels_returns_vessels_conflicts_that_have_been_annotated_as_the_same_vessel() {
     test(|helper, builder| async move {
         let vessel_id1 = FiskeridirVesselId::test_new(1);
         let vessel_id2 = FiskeridirVesselId::test_new(2);
@@ -299,34 +298,34 @@ async fn test_vessels_returns_both_vessels_after_conflict_have_been_resolved_but
                 v.ais.call_sign = Some("test".parse().unwrap());
                 v.ais.mmsi = Mmsi::test_new(1);
             })
-            .conflict_winner()
+            .active_vessel()
             .vessels(1)
             .modify(|v| {
                 v.fiskeridir.id = vessel_id2;
                 v.fiskeridir.radio_call_sign = Some("test".parse().unwrap());
                 v.ais.call_sign = Some("test".parse().unwrap());
-                v.ais.mmsi = Mmsi::test_new(2);
+                v.ais.mmsi = Mmsi::test_new(1);
             })
-            .conflict_loser()
+            .historic_vessel()
             .build()
             .await;
 
         let vessels = helper.app.get_vessels().await.unwrap();
         assert_eq!(vessels.len(), 2);
 
-        let winner = vessels
+        let active = vessels
             .iter()
             .find(|v| v.fiskeridir.id == vessel_id1)
             .unwrap();
-        let loser = vessels
+        let historic = vessels
             .iter()
             .find(|v| v.fiskeridir.id == vessel_id2)
             .unwrap();
 
-        assert_eq!(winner.mmsi().unwrap().into_inner(), 1);
-        assert_eq!(winner.ais_call_sign().unwrap(), "test");
-        assert!(loser.ais.is_none());
-        assert!(loser.fiskeridir_call_sign().is_none());
+        assert_eq!(active.mmsi().unwrap().into_inner(), 1);
+        assert_eq!(active.ais_call_sign().unwrap(), "test");
+        assert_eq!(historic.mmsi().unwrap().into_inner(), 1);
+        assert_eq!(historic.ais_call_sign().unwrap(), "test");
 
         assert!(helper.adapter().active_vessel_conflicts().await.is_empty());
     })
@@ -364,43 +363,6 @@ async fn test_vessels_does_not_return_vessels_with_an_active_mmsi_conflict() {
                 sources: vec![Some(VesselSource::FiskeridirVesselRegister)],
             },
         );
-    })
-    .await;
-}
-
-#[tokio::test]
-async fn test_vessels_returns_vessels_conflicts_that_have_been_annotated_as_the_same_vessel() {
-    test(|helper, builder| async move {
-        builder
-            .vessels(2)
-            .modify_idx(|i, v| {
-                v.fiskeridir.id = FiskeridirVesselId::test_new(i as i64);
-                v.fiskeridir.radio_call_sign = Some("test".parse().unwrap());
-                v.ais.call_sign = Some("test".parse().unwrap());
-                v.ais.mmsi = Mmsi::test_new(1);
-            })
-            .conflict_winner()
-            .build()
-            .await;
-
-        let vessels = helper.app.get_vessels().await.unwrap();
-        assert_eq!(vessels.len(), 2);
-
-        let vessel = vessels
-            .iter()
-            .find(|v| v.fiskeridir.id.into_inner() == 0)
-            .unwrap();
-        let vessel2 = vessels
-            .iter()
-            .find(|v| v.fiskeridir.id.into_inner() == 1)
-            .unwrap();
-
-        assert_eq!(vessel.mmsi().unwrap().into_inner(), 1);
-        assert_eq!(vessel.ais_call_sign().unwrap(), "test");
-        assert_eq!(vessel2.mmsi().unwrap().into_inner(), 1);
-        assert_eq!(vessel2.ais_call_sign().unwrap(), "test");
-
-        assert!(helper.adapter().active_vessel_conflicts().await.is_empty());
     })
     .await;
 }
@@ -456,7 +418,7 @@ async fn test_vessels_only_returns_winner_of_resolved_mmsi_conflict() {
                 v.ais.call_sign = Some("test".parse().unwrap());
                 v.ais.mmsi = Mmsi::test_new(1);
             })
-            .conflict_winner()
+            .active_vessel()
             .build()
             .await;
 

@@ -439,6 +439,7 @@ pub trait TestHelperOutbound: Send + Sync {
         start: NaiveDate,
         end: NaiveDate,
         to_skip: &[NaiveDate],
+        vessels: Option<&[FiskeridirVesselId]>,
     ) -> f64;
     async fn active_vessel_conflicts(&self) -> Vec<ActiveVesselConflict>;
     async fn delivery_points_log(&self) -> Vec<serde_json::Value>;

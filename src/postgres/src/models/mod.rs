@@ -20,6 +20,8 @@ mod norwegian_land;
 mod ocean_climate;
 mod port;
 mod species;
+#[cfg(feature = "test")]
+mod test;
 mod trip;
 mod trip_benchmarks;
 mod vessel;
@@ -49,6 +51,8 @@ pub use norwegian_land::*;
 pub use ocean_climate::*;
 pub use port::*;
 pub use species::*;
+#[cfg(feature = "test")]
+pub use test::*;
 pub use trip::*;
 pub use trip_benchmarks::*;
 pub use vessel::*;

@@ -235,21 +235,20 @@ FROM
             AND mmsi = $1
             AND $1 IN (
                 SELECT
-                    a.mmsi
+                    mmsi
                 FROM
-                    ais_vessels a
-                    LEFT JOIN fiskeridir_vessels f ON a.call_sign = f.call_sign
+                    all_vessels
                 WHERE
-                    a.mmsi = $1
+                    mmsi = $1
                     AND (
-                        a.ship_type IS NOT NULL
-                        AND NOT (a.ship_type = ANY ($5::INT[]))
-                        OR COALESCE(f.length, a.ship_length) > $6
+                        ship_type IS NOT NULL
+                        AND NOT (ship_type = ANY ($5::INT[]))
+                        OR length > $6
                     )
                     AND (
                         CASE
                             WHEN $7 = 0 THEN TRUE
-                            WHEN $7 = 1 THEN COALESCE(f.length, a.ship_length) >= $8
+                            WHEN $7 = 1 THEN length >= $8
                         END
                     )
             )
@@ -356,20 +355,18 @@ WHERE
                 t.trip_id
             FROM
                 trips t
-                INNER JOIN fiskeridir_ais_vessel_mapping_whitelist fw ON t.fiskeridir_vessel_id = fw.fiskeridir_vessel_id
-                INNER JOIN fiskeridir_vessels fv ON fv.fiskeridir_vessel_id = fw.fiskeridir_vessel_id
-                INNER JOIN ais_vessels a ON fw.mmsi = a.mmsi
+                INNER JOIN all_vessels a ON t.fiskeridir_vessel_id = a.fiskeridir_vessel_id
             WHERE
                 t.trip_id = $1
                 AND (
                     a.ship_type IS NOT NULL
                     AND NOT (a.ship_type = ANY ($2::INT[]))
-                    OR COALESCE(fv.length, a.ship_length) > $3
+                    OR a.length > $3
                 )
                 AND (
                     CASE
                         WHEN $4 = 0 THEN TRUE
-                        WHEN $4 = 1 THEN COALESCE(fv.length, a.ship_length) >= $5
+                        WHEN $4 = 1 THEN a.length >= $5
                     END
                 )
         )

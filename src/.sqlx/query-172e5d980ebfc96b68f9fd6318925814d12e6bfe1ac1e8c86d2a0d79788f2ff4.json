@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    ARRAY_AGG(DISTINCT a2.fiskeridir_vessel_id) AS \"ids: Vec<FiskeridirVesselId>\"\nFROM\n    active_vessels a\n    INNER JOIN orgs__fiskeridir_vessels o ON o.fiskeridir_vessel_id = a.fiskeridir_vessel_id\n    INNER JOIN orgs__fiskeridir_vessels o2 ON o.org_id = o2.org_id\n    INNER JOIN active_vessels a2 ON o2.fiskeridir_vessel_id = a2.fiskeridir_vessel_id\nWHERE\n    a.call_sign = $1\n    AND o.org_id = $2\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "ids: Vec<FiskeridirVesselId>",
+        "type_info": "Int8Array"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "172e5d980ebfc96b68f9fd6318925814d12e6bfe1ac1e8c86d2a0d79788f2ff4"
+}

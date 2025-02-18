@@ -53,7 +53,7 @@ SELECT
     fuel_liter,
     fuel_after_liter
 FROM
-    fiskeridir_ais_vessel_mapping_whitelist w
+    active_vessels w
     INNER JOIN fuel_measurements f ON w.fiskeridir_vessel_id = f.fiskeridir_vessel_id
     AND call_sign = $1
 WHERE
@@ -117,7 +117,7 @@ WITH
                 $3::TIMESTAMPTZ[],
                 $4::BIGINT[]
             ) u (call_sign, barentswatch_user_id, timestamp, id)
-            INNER JOIN fiskeridir_ais_vessel_mapping_whitelist w ON w.call_sign = u.call_sign
+            INNER JOIN active_vessels w ON w.call_sign = u.call_sign
             INNER JOIN fuel_measurements f ON u.id = f.fuel_measurement_id
             AND f.fiskeridir_vessel_id = w.fiskeridir_vessel_id
     ),
@@ -197,7 +197,7 @@ WITH
                 id,
                 fuel_after_liter
             )
-            INNER JOIN fiskeridir_ais_vessel_mapping_whitelist w ON w.call_sign = u.call_sign
+            INNER JOIN active_vessels w ON w.call_sign = u.call_sign
             INNER JOIN fuel_measurements f ON u.id = f.fuel_measurement_id
             AND f.fiskeridir_vessel_id = w.fiskeridir_vessel_id
     )
@@ -323,7 +323,7 @@ WITH
                 fuel_liter,
                 fuel_after_liter
             )
-            INNER JOIN fiskeridir_ais_vessel_mapping_whitelist f ON f.call_sign = u.call_sign
+            INNER JOIN active_vessels f ON f.call_sign = u.call_sign
         ON CONFLICT (fiskeridir_vessel_id, timestamp) DO NOTHING
         RETURNING
             fuel_measurement_id,
@@ -428,7 +428,7 @@ WITH
             f.timestamp
         FROM
             UNNEST($1::TEXT[], $2::BIGINT[]) u (call_sign, id)
-            INNER JOIN fiskeridir_ais_vessel_mapping_whitelist w ON w.call_sign = u.call_sign
+            INNER JOIN active_vessels w ON w.call_sign = u.call_sign
             INNER JOIN fuel_measurements f ON u.id = f.fuel_measurement_id
             AND f.fiskeridir_vessel_id = w.fiskeridir_vessel_id
     ),

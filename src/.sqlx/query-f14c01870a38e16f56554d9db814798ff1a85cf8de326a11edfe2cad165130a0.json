@@ -1,0 +1,86 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    w.mmsi AS \"mmsi!: Mmsi\",\n    f.fiskeridir_vessel_id AS \"vessel_id!: FiskeridirVesselId\",\n    f.engine_building_year_final AS \"engine_building_year!\",\n    f.engine_power_final AS \"engine_power!\",\n    f.auxiliary_engine_power AS \"auxiliary_engine_power?\",\n    f.auxiliary_engine_building_year AS \"auxiliary_engine_building_year?\",\n    f.boiler_engine_power AS \"boiler_engine_power?\",\n    f.boiler_engine_building_year AS \"boiler_engine_building_year?\",\n    f.service_speed AS \"service_speed?\",\n    f.degree_of_electrification AS \"degree_of_electrification?\",\n    t.departure_timestamp AS \"current_trip_start?\",\n    -- Hacky fix because sqlx prepare/check flakes on nullability\n    COALESCE(q.latest_position_timestamp, NULL) AS latest_position_timestamp\nFROM\n    active_vessels w\n    INNER JOIN fiskeridir_vessels f ON w.fiskeridir_vessel_id = f.fiskeridir_vessel_id\n    LEFT JOIN current_trips t ON t.fiskeridir_vessel_id = f.fiskeridir_vessel_id\n    LEFT JOIN (\n        SELECT DISTINCT\n            ON (fiskeridir_vessel_id) fiskeridir_vessel_id,\n            latest_position_timestamp\n        FROM\n            live_fuel\n        ORDER BY\n            fiskeridir_vessel_id,\n            latest_position_timestamp DESC\n    ) q ON q.fiskeridir_vessel_id = f.fiskeridir_vessel_id\nWHERE\n    w.mmsi IS NOT NULL\n    AND f.engine_building_year_final IS NOT NULL\n    AND f.engine_power_final IS NOT NULL\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "mmsi!: Mmsi",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "vessel_id!: FiskeridirVesselId",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 2,
+        "name": "engine_building_year!",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 3,
+        "name": "engine_power!",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 4,
+        "name": "auxiliary_engine_power?",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 5,
+        "name": "auxiliary_engine_building_year?",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 6,
+        "name": "boiler_engine_power?",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 7,
+        "name": "boiler_engine_building_year?",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 8,
+        "name": "service_speed?",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 9,
+        "name": "degree_of_electrification?",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 10,
+        "name": "current_trip_start?",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 11,
+        "name": "latest_position_timestamp",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      true,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      null
+    ]
+  },
+  "hash": "f14c01870a38e16f56554d9db814798ff1a85cf8de326a11edfe2cad165130a0"
+}

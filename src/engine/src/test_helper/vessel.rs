@@ -28,8 +28,7 @@ pub struct VesselContructor {
     pub set_engine_building_year: bool,
     pub(crate) clear_trip_precision: bool,
     pub(crate) clear_trip_distancing: bool,
-    pub(crate) conflict_winner: bool,
-    pub(crate) conflict_loser: bool,
+    pub(crate) active_vessel: Option<bool>,
 }
 
 impl VesselBuilder {
@@ -38,6 +37,19 @@ impl VesselBuilder {
         let vessel = &mut self.state.vessels[self.current_index];
         vessel.fiskeridir.radio_call_sign = call_sign.clone();
         vessel.ais.call_sign = call_sign;
+        self
+    }
+
+    pub fn set_call_sign(mut self, call_sign: &CallSign) -> VesselBuilder {
+        let base = &mut self.state;
+        let num_vessels = base.vessels[self.current_index..].len();
+
+        assert!(num_vessels > 0);
+
+        for v in base.vessels[self.current_index..].iter_mut() {
+            v.fiskeridir.radio_call_sign = Some(call_sign.clone());
+            v.ais.call_sign = Some(call_sign.clone());
+        }
         self
     }
 
@@ -71,26 +83,26 @@ impl VesselBuilder {
         self
     }
 
-    pub fn conflict_winner(mut self) -> VesselBuilder {
+    pub fn active_vessel(mut self) -> VesselBuilder {
         let base = &mut self.state;
         let num_vessels = base.vessels[self.current_index..].len();
 
         assert!(num_vessels > 0);
 
         for v in base.vessels[self.current_index..].iter_mut() {
-            v.conflict_winner = true;
+            v.active_vessel = Some(true);
         }
         self
     }
 
-    pub fn conflict_loser(mut self) -> VesselBuilder {
+    pub fn historic_vessel(mut self) -> VesselBuilder {
         let base = &mut self.state;
         let num_vessels = base.vessels[self.current_index..].len();
 
         assert!(num_vessels > 0);
 
         for v in base.vessels[self.current_index..].iter_mut() {
-            v.conflict_loser = true;
+            v.active_vessel = Some(false);
         }
         self
     }

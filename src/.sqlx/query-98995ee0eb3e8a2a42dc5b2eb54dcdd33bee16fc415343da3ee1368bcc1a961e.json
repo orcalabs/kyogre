@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nWITH\n    to_update AS (\n        SELECT\n            UNNEST($1::TEXT[]) call_sign,\n            UNNEST($2::DATE[]) date\n    )\nUPDATE fuel_estimates f\nSET\n    status = $3\nFROM\n    (\n        SELECT\n            w.fiskeridir_vessel_id,\n            to_update.date\n        FROM\n            to_update\n            INNER JOIN all_vessels w ON w.call_sign = to_update.call_sign\n    ) q\nWHERE\n    q.fiskeridir_vessel_id = f.fiskeridir_vessel_id\n    AND f.date = q.date\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "TextArray",
+        "DateArray",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "98995ee0eb3e8a2a42dc5b2eb54dcdd33bee16fc415343da3ee1368bcc1a961e"
+}

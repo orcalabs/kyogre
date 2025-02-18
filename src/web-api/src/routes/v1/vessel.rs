@@ -110,6 +110,7 @@ pub struct Vessel {
     #[serde_as(as = "Vec<DisplayFromStr>")]
     pub species_groups: Vec<SpeciesGroup>,
     pub current_trip: Option<VesselCurrentTrip>,
+    pub is_active: bool,
 }
 
 impl Vessel {
@@ -207,6 +208,7 @@ impl From<kyogre_core::Vessel> for Vessel {
             gear_groups,
             species_groups,
             current_trip,
+            is_active,
         } = value;
 
         Vessel {
@@ -215,6 +217,7 @@ impl From<kyogre_core::Vessel> for Vessel {
             gear_groups,
             species_groups,
             current_trip,
+            is_active,
         }
     }
 }

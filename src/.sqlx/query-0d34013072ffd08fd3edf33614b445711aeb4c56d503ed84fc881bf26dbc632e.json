@@ -1,0 +1,179 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    f.preferred_trip_assembler AS \"preferred_trip_assembler!: TripAssemblerId\",\n    f.fiskeridir_vessel_id AS \"fiskeridir_vessel_id!: FiskeridirVesselId\",\n    f.fiskeridir_length_group_id AS \"fiskeridir_length_group_id!: VesselLengthGroup\",\n    MAX(v.call_sign) AS \"fiskeridir_call_sign: CallSign\",\n    f.\"name\" AS fiskeridir_name,\n    f.registration_id AS fiskeridir_registration_id,\n    f.\"length\" AS fiskeridir_length,\n    f.\"width\" AS fiskeridir_width,\n    f.owners::TEXT AS \"fiskeridir_owners!\",\n    f.engine_building_year_final AS fiskeridir_engine_building_year,\n    f.engine_power_final AS fiskeridir_engine_power,\n    f.building_year AS fiskeridir_building_year,\n    f.auxiliary_engine_power AS fiskeridir_auxiliary_engine_power,\n    f.auxiliary_engine_building_year AS fiskeridir_auxiliary_engine_building_year,\n    f.engine_version AS fiskeridir_engine_version,\n    f.boiler_engine_power AS fiskeridir_boiler_engine_power,\n    f.boiler_engine_building_year AS fiskeridir_boiler_engine_building_year,\n    f.service_speed AS fiskeridir_service_speed,\n    f.degree_of_electrification AS fiskeridir_degree_of_electrification,\n    f.gear_group_ids AS \"gear_group_ids!: Vec<GearGroup>\",\n    f.species_group_ids AS \"species_group_ids!: Vec<SpeciesGroup>\",\n    a.mmsi AS \"ais_mmsi?: Mmsi\",\n    a.call_sign AS \"ais_call_sign: CallSign\",\n    a.name AS ais_name,\n    MAX(c.departure_timestamp) AS current_trip_departure_timestamp,\n    MAX(c.target_species_fiskeridir_id) AS current_trip_target_species_fiskeridir_id,\n    BOOL_OR(v.is_active) as \"is_active!\"\nFROM\n    all_vessels AS v\n    INNER JOIN fiskeridir_vessels AS f ON v.fiskeridir_vessel_id = f.fiskeridir_vessel_id\n    LEFT JOIN ais_vessels AS a ON v.mmsi = a.mmsi\n    INNER JOIN trips_detailed t ON v.fiskeridir_vessel_id = t.fiskeridir_vessel_id\n    LEFT JOIN current_trips AS c ON v.fiskeridir_vessel_id = c.fiskeridir_vessel_id\nWHERE\n    t.has_track > $1\nGROUP BY\n    f.fiskeridir_vessel_id,\n    a.mmsi\nHAVING\n    COUNT(DISTINCT t.trip_id) >= $2\n                    ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "preferred_trip_assembler!: TripAssemblerId",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "fiskeridir_vessel_id!: FiskeridirVesselId",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 2,
+        "name": "fiskeridir_length_group_id!: VesselLengthGroup",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 3,
+        "name": "fiskeridir_call_sign: CallSign",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "fiskeridir_name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 5,
+        "name": "fiskeridir_registration_id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 6,
+        "name": "fiskeridir_length",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 7,
+        "name": "fiskeridir_width",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 8,
+        "name": "fiskeridir_owners!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 9,
+        "name": "fiskeridir_engine_building_year",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 10,
+        "name": "fiskeridir_engine_power",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 11,
+        "name": "fiskeridir_building_year",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 12,
+        "name": "fiskeridir_auxiliary_engine_power",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 13,
+        "name": "fiskeridir_auxiliary_engine_building_year",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 14,
+        "name": "fiskeridir_engine_version",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 15,
+        "name": "fiskeridir_boiler_engine_power",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 16,
+        "name": "fiskeridir_boiler_engine_building_year",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 17,
+        "name": "fiskeridir_service_speed",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 18,
+        "name": "fiskeridir_degree_of_electrification",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 19,
+        "name": "gear_group_ids!: Vec<GearGroup>",
+        "type_info": "Int4Array"
+      },
+      {
+        "ordinal": 20,
+        "name": "species_group_ids!: Vec<SpeciesGroup>",
+        "type_info": "Int4Array"
+      },
+      {
+        "ordinal": 21,
+        "name": "ais_mmsi?: Mmsi",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 22,
+        "name": "ais_call_sign: CallSign",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 23,
+        "name": "ais_name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 24,
+        "name": "current_trip_departure_timestamp",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 25,
+        "name": "current_trip_target_species_fiskeridir_id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 26,
+        "name": "is_active!",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      null,
+      true,
+      true,
+      true,
+      true,
+      null,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false,
+      true,
+      true,
+      true,
+      true,
+      false,
+      false,
+      false,
+      true,
+      true,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "0d34013072ffd08fd3edf33614b445711aeb4c56d503ed84fc881bf26dbc632e"
+}

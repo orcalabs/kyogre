@@ -350,8 +350,9 @@ impl TestHelperOutbound for PostgresAdapter {
         start: NaiveDate,
         end: NaiveDate,
         to_skip: &[NaiveDate],
+        vessels: Option<&[FiskeridirVesselId]>,
     ) -> f64 {
-        self.sum_fuel_estimates_impl(start, end, to_skip)
+        self.sum_fuel_estimates_impl(start, end, to_skip, vessels)
             .await
             .unwrap()
     }
@@ -1330,7 +1331,7 @@ impl TripPipelineOutbound for PostgresAdapter {
 #[async_trait]
 impl TripPipelineInbound for PostgresAdapter {
     async fn check_for_out_of_order_vms_insertion(&self) -> CoreResult<()> {
-        self.check_for_out_of_order_vms_insertion_imp().await?;
+        self.check_for_out_of_order_vms_insertion_impl().await?;
         Ok(())
     }
     async fn update_preferred_trip_assemblers(&self) -> CoreResult<()> {
