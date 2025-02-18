@@ -304,7 +304,7 @@ impl From<kyogre_core::TripDetailed> for Trip {
             cache_version: _,
             target_species_fiskeridir_id,
             target_species_fao_id,
-            fuel_consumption,
+            fuel_consumption_liter,
             track_coverage,
             has_track,
         } = value;
@@ -335,7 +335,7 @@ impl From<kyogre_core::TripDetailed> for Trip {
             landing_coverage_end: landing_coverage.end(),
             target_species_fiskeridir_id,
             target_species_fao_id,
-            fuel_consumption,
+            fuel_consumption: fuel_consumption_liter,
             track_coverage,
             distance,
             tra,

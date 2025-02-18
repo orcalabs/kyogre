@@ -1,0 +1,18 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nWITH\n    input AS (\n        SELECT\n            UNNEST($1::BIGINT[]) fiskeridir_vessel_id,\n            UNNEST($2::DOUBLE PRECISION[]) fuel_liter,\n            UNNEST($3::TIMESTAMPTZ[]) timestamp,\n            UNNEST($4::DOUBLE PRECISION[]) fuel_after_liter\n    ),\n    top AS (\n        SELECT DISTINCT\n            ON (i.fiskeridir_vessel_id, i.timestamp) i.fiskeridir_vessel_id AS fiskeridir_vessel_id,\n            i.timestamp AS start_ts,\n            i.fuel_liter AS start_fuel_liter,\n            i.fuel_after_liter AS start_fuel_after_liter,\n            f.timestamp AS end_ts,\n            f.fuel_liter AS end_fuel_liter\n        FROM\n            fuel_measurements f\n            INNER JOIN input i ON f.fiskeridir_vessel_id = i.fiskeridir_vessel_id\n            AND f.timestamp > i.timestamp\n        ORDER BY\n            i.fiskeridir_vessel_id,\n            i.timestamp,\n            f.timestamp ASC\n    ),\n    bottom AS (\n        SELECT DISTINCT\n            ON (i.fiskeridir_vessel_id, i.timestamp) i.fiskeridir_vessel_id AS fiskeridir_vessel_id,\n            f.timestamp AS start_ts,\n            f.fuel_liter AS start_fuel_liter,\n            f.fuel_after_liter AS start_fuel_after_liter,\n            i.timestamp AS end_ts,\n            i.fuel_liter AS end_fuel_liter\n        FROM\n            fuel_measurements f\n            INNER JOIN input i ON f.fiskeridir_vessel_id = i.fiskeridir_vessel_id\n            AND f.timestamp < i.timestamp\n        ORDER BY\n            i.fiskeridir_vessel_id,\n            i.timestamp,\n            f.timestamp DESC\n    ),\n    inserted AS (\n        INSERT INTO\n            fuel_measurement_ranges (\n                fiskeridir_vessel_id,\n                start_measurement_ts,\n                start_measurement_fuel_liter,\n                start_measurement_fuel_after_liter,\n                end_measurement_ts,\n                end_measurement_fuel_liter\n            )\n        SELECT\n            *\n        FROM\n            (\n                SELECT\n                    b.fiskeridir_vessel_id,\n                    b.start_ts,\n                    b.start_fuel_liter,\n                    b.start_fuel_after_liter,\n                    b.end_ts,\n                    b.end_fuel_liter\n                FROM\n                    bottom b\n                UNION\n                SELECT\n                    t.fiskeridir_vessel_id,\n                    t.start_ts,\n                    t.start_fuel_liter,\n                    t.start_fuel_after_liter,\n                    t.end_ts,\n                    t.end_fuel_liter\n                FROM\n                    top t\n            ) q\n        WHERE\n            COMPUTE_FUEL_USED (\n                q.start_fuel_liter,\n                q.start_fuel_after_liter,\n                q.end_fuel_liter\n            ) > 0.0\n        RETURNING\n            fiskeridir_vessel_id,\n            fuel_range\n    )\nUPDATE trips_detailed t\nSET\n    benchmark_status = $5\nFROM\n    inserted\nWHERE\n    inserted.fiskeridir_vessel_id = t.fiskeridir_vessel_id\n    AND inserted.fuel_range && t.period\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8Array",
+        "Float8Array",
+        "TimestamptzArray",
+        "Float8Array",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "1435e9012a9eec55bef81249f7cd8731b711b48f7f2b9d8a8e0826a1ef8dedd0"
+}

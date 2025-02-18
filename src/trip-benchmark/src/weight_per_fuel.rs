@@ -20,7 +20,7 @@ impl TripBenchmark for WeightPerFuel {
         _adapter: &dyn TripBenchmarkOutbound,
         output: &mut TripBenchmarkOutput,
     ) -> CoreResult<()> {
-        output.weight_per_fuel = match output.fuel_consumption {
+        output.weight_per_fuel_liter = match output.fuel_consumption_liter {
             Some(fuel) if fuel > 0.0 => Some(trip.total_catch_weight / fuel),
             _ => None,
         };

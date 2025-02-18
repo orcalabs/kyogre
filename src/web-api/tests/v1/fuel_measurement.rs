@@ -19,8 +19,8 @@ async fn test_cant_use_fuel_measurement_endpoints_without_being_associated_with_
         helper.app.login_user();
         let body = &[CreateFuelMeasurement {
             timestamp: Utc::now(),
-            fuel: 10.,
-            fuel_after: None,
+            fuel_liter: 10.,
+            fuel_after_liter: None,
         }];
 
         let error = helper.app.create_fuel_measurements(body).await.unwrap_err();
@@ -30,8 +30,8 @@ async fn test_cant_use_fuel_measurement_endpoints_without_being_associated_with_
         let body = &[FuelMeasurement {
             id: FuelMeasurementId::test_new(1),
             timestamp: Utc::now(),
-            fuel: 10.,
-            fuel_after: None,
+            fuel_liter: 10.,
+            fuel_after_liter: None,
         }];
 
         let error = helper.app.update_fuel_measurements(body).await.unwrap_err();
@@ -62,8 +62,8 @@ async fn test_cant_use_fuel_measurement_endpoints_without_bw_token() {
 
         let body = &[CreateFuelMeasurement {
             timestamp: Utc::now(),
-            fuel: 10.,
-            fuel_after: None,
+            fuel_liter: 10.,
+            fuel_after_liter: None,
         }];
 
         let error = helper.app.create_fuel_measurements(body).await.unwrap_err();
@@ -72,8 +72,8 @@ async fn test_cant_use_fuel_measurement_endpoints_without_bw_token() {
         let body = &[FuelMeasurement {
             id: FuelMeasurementId::test_new(1),
             timestamp: Utc::now(),
-            fuel: 10.,
-            fuel_after: None,
+            fuel_liter: 10.,
+            fuel_after_liter: None,
         }];
 
         let error = helper.app.update_fuel_measurements(body).await.unwrap_err();
@@ -103,18 +103,18 @@ async fn test_create_returns_created_objects() {
         let body = &[
             CreateFuelMeasurement {
                 timestamp: now,
-                fuel: 1000.,
-                fuel_after: None,
+                fuel_liter: 1000.,
+                fuel_after_liter: None,
             },
             CreateFuelMeasurement {
                 timestamp: now - Duration::days(1),
-                fuel: 2000.,
-                fuel_after: None,
+                fuel_liter: 2000.,
+                fuel_after_liter: None,
             },
             CreateFuelMeasurement {
                 timestamp: now - Duration::days(2),
-                fuel: 3000.,
-                fuel_after: None,
+                fuel_liter: 3000.,
+                fuel_after_liter: None,
             },
         ];
 
@@ -157,18 +157,18 @@ async fn test_create_and_get_fuel_measurement() {
         let body = vec![
             CreateFuelMeasurement {
                 timestamp: start,
-                fuel: 3000.,
-                fuel_after: None,
+                fuel_liter: 3000.,
+                fuel_after_liter: None,
             },
             CreateFuelMeasurement {
                 timestamp: start + Duration::days(1),
-                fuel: 2000.,
-                fuel_after: None,
+                fuel_liter: 2000.,
+                fuel_after_liter: None,
             },
             CreateFuelMeasurement {
-                fuel_after: None,
+                fuel_after_liter: None,
                 timestamp: start + Duration::days(2),
-                fuel: 1000.,
+                fuel_liter: 1000.,
             },
         ];
 
@@ -204,18 +204,18 @@ async fn test_get_fuel_measurement_filters_by_dates() {
         let body = vec![
             CreateFuelMeasurement {
                 timestamp: start,
-                fuel: 3000.,
-                fuel_after: None,
+                fuel_liter: 3000.,
+                fuel_after_liter: None,
             },
             CreateFuelMeasurement {
                 timestamp: start + Duration::days(2),
-                fuel: 2000.,
-                fuel_after: None,
+                fuel_liter: 2000.,
+                fuel_after_liter: None,
             },
             CreateFuelMeasurement {
                 timestamp: start + Duration::days(4),
-                fuel: 1000.,
-                fuel_after: None,
+                fuel_liter: 1000.,
+                fuel_after_liter: None,
             },
         ];
 
@@ -228,7 +228,7 @@ async fn test_get_fuel_measurement_filters_by_dates() {
 
         let measurements = helper.app.get_fuel_measurements(params).await.unwrap();
         assert_eq!(measurements.len(), 1);
-        assert_eq!(measurements[0].fuel, 2000.);
+        assert_eq!(measurements[0].fuel_liter, 2000.);
     })
     .await;
 }
@@ -247,18 +247,18 @@ async fn test_update_fuel_measurement_only_update_fuel() {
         let body = vec![
             CreateFuelMeasurement {
                 timestamp: start,
-                fuel: 3000.,
-                fuel_after: None,
+                fuel_liter: 3000.,
+                fuel_after_liter: None,
             },
             CreateFuelMeasurement {
                 timestamp: start + Duration::days(2),
-                fuel: 2000.,
-                fuel_after: None,
+                fuel_liter: 2000.,
+                fuel_after_liter: None,
             },
             CreateFuelMeasurement {
                 timestamp: start + Duration::days(4),
-                fuel: 1000.,
-                fuel_after: None,
+                fuel_liter: 1000.,
+                fuel_after_liter: None,
             },
         ];
 
@@ -270,7 +270,7 @@ async fn test_update_fuel_measurement_only_update_fuel() {
             .await
             .unwrap();
 
-        measurements.iter_mut().for_each(|m| m.fuel *= 10.);
+        measurements.iter_mut().for_each(|m| m.fuel_liter *= 10.);
         helper
             .app
             .update_fuel_measurements(&measurements)
@@ -286,9 +286,9 @@ async fn test_update_fuel_measurement_only_update_fuel() {
         measurements.sort_by_key(|m| m.timestamp);
 
         assert_eq!(measurements.len(), 3);
-        assert_eq!(measurements[0].fuel, 30_000.);
-        assert_eq!(measurements[1].fuel, 20_000.);
-        assert_eq!(measurements[2].fuel, 10_000.);
+        assert_eq!(measurements[0].fuel_liter, 30_000.);
+        assert_eq!(measurements[1].fuel_liter, 20_000.);
+        assert_eq!(measurements[2].fuel_liter, 10_000.);
         assert_ranges_are_correct(&measurements, &ranges);
     })
     .await;
@@ -309,18 +309,18 @@ async fn test_update_mulitlpe_fuel_measurement_move_timestamp_within_existing_fu
         let body = vec![
             CreateFuelMeasurement {
                 timestamp: start,
-                fuel_after: None,
-                fuel: 3000.,
+                fuel_after_liter: None,
+                fuel_liter: 3000.,
             },
             CreateFuelMeasurement {
                 timestamp: start + Duration::days(2),
-                fuel: 2000.,
-                fuel_after: None,
+                fuel_liter: 2000.,
+                fuel_after_liter: None,
             },
             CreateFuelMeasurement {
                 timestamp: start + Duration::days(4),
-                fuel: 1000.,
-                fuel_after: None,
+                fuel_liter: 1000.,
+                fuel_after_liter: None,
             },
         ];
 
@@ -349,9 +349,9 @@ async fn test_update_mulitlpe_fuel_measurement_move_timestamp_within_existing_fu
         measurements.sort_by_key(|m| m.timestamp);
 
         assert_eq!(measurements.len(), 3);
-        assert_eq!(measurements[0].fuel, 3000.);
-        assert_eq!(measurements[1].fuel, 2000.);
-        assert_eq!(measurements[2].fuel, 1000.);
+        assert_eq!(measurements[0].fuel_liter, 3000.);
+        assert_eq!(measurements[1].fuel_liter, 2000.);
+        assert_eq!(measurements[2].fuel_liter, 1000.);
         assert_ranges_are_correct(&measurements, &ranges);
     })
     .await;
@@ -372,18 +372,18 @@ async fn test_update_single_fuel_measurement_move_timestamp_within_existing_fuel
         let body = vec![
             CreateFuelMeasurement {
                 timestamp: start,
-                fuel_after: None,
-                fuel: 3000.,
+                fuel_after_liter: None,
+                fuel_liter: 3000.,
             },
             CreateFuelMeasurement {
                 timestamp: start + Duration::days(2),
-                fuel_after: None,
-                fuel: 2000.,
+                fuel_after_liter: None,
+                fuel_liter: 2000.,
             },
             CreateFuelMeasurement {
                 timestamp: start + Duration::days(4),
-                fuel_after: None,
-                fuel: 1000.,
+                fuel_after_liter: None,
+                fuel_liter: 1000.,
             },
         ];
 
@@ -412,9 +412,9 @@ async fn test_update_single_fuel_measurement_move_timestamp_within_existing_fuel
         measurements.sort_by_key(|m| m.timestamp);
 
         assert_eq!(measurements.len(), 3);
-        assert_eq!(measurements[0].fuel, 3000.);
-        assert_eq!(measurements[1].fuel, 2000.);
-        assert_eq!(measurements[2].fuel, 1000.);
+        assert_eq!(measurements[0].fuel_liter, 3000.);
+        assert_eq!(measurements[1].fuel_liter, 2000.);
+        assert_eq!(measurements[2].fuel_liter, 1000.);
         assert_ranges_are_correct(&measurements, &ranges);
     })
     .await;
@@ -434,18 +434,18 @@ async fn test_update_mulitple_fuel_measurement_move_timestamp_outside_existing_f
         let body = vec![
             CreateFuelMeasurement {
                 timestamp: start,
-                fuel_after: None,
-                fuel: 3000.,
+                fuel_after_liter: None,
+                fuel_liter: 3000.,
             },
             CreateFuelMeasurement {
                 timestamp: start + Duration::days(2),
-                fuel_after: None,
-                fuel: 2000.,
+                fuel_after_liter: None,
+                fuel_liter: 2000.,
             },
             CreateFuelMeasurement {
                 timestamp: start + Duration::days(4),
-                fuel_after: None,
-                fuel: 1000.,
+                fuel_after_liter: None,
+                fuel_liter: 1000.,
             },
         ];
 
@@ -458,7 +458,7 @@ async fn test_update_mulitple_fuel_measurement_move_timestamp_outside_existing_f
             .unwrap();
 
         measurements[1].timestamp = start + Duration::days(6);
-        measurements[1].fuel = 500.;
+        measurements[1].fuel_liter = 500.;
 
         helper
             .app
@@ -475,9 +475,9 @@ async fn test_update_mulitple_fuel_measurement_move_timestamp_outside_existing_f
         measurements.sort_by_key(|m| m.timestamp);
 
         assert_eq!(measurements.len(), 3);
-        assert_eq!(measurements[0].fuel, 3000.);
-        assert_eq!(measurements[1].fuel, 1000.);
-        assert_eq!(measurements[2].fuel, 500.);
+        assert_eq!(measurements[0].fuel_liter, 3000.);
+        assert_eq!(measurements[1].fuel_liter, 1000.);
+        assert_eq!(measurements[2].fuel_liter, 500.);
         assert_ranges_are_correct(&measurements, &ranges);
     })
     .await;
@@ -498,18 +498,18 @@ async fn test_update_single_fuel_measurement_move_timestamp_outside_existing_fue
         let body = vec![
             CreateFuelMeasurement {
                 timestamp: start,
-                fuel_after: None,
-                fuel: 3000.,
+                fuel_after_liter: None,
+                fuel_liter: 3000.,
             },
             CreateFuelMeasurement {
                 timestamp: start + Duration::days(2),
-                fuel: 2000.,
-                fuel_after: None,
+                fuel_liter: 2000.,
+                fuel_after_liter: None,
             },
             CreateFuelMeasurement {
                 timestamp: start + Duration::days(4),
-                fuel_after: None,
-                fuel: 1000.,
+                fuel_after_liter: None,
+                fuel_liter: 1000.,
             },
         ];
 
@@ -522,7 +522,7 @@ async fn test_update_single_fuel_measurement_move_timestamp_outside_existing_fue
             .unwrap();
 
         measurements[1].timestamp = start + Duration::days(6);
-        measurements[1].fuel = 500.;
+        measurements[1].fuel_liter = 500.;
 
         helper
             .app
@@ -539,9 +539,9 @@ async fn test_update_single_fuel_measurement_move_timestamp_outside_existing_fue
         measurements.sort_by_key(|m| m.timestamp);
 
         assert_eq!(measurements.len(), 3);
-        assert_eq!(measurements[0].fuel, 3000.);
-        assert_eq!(measurements[1].fuel, 1000.);
-        assert_eq!(measurements[2].fuel, 500.);
+        assert_eq!(measurements[0].fuel_liter, 3000.);
+        assert_eq!(measurements[1].fuel_liter, 1000.);
+        assert_eq!(measurements[2].fuel_liter, 500.);
         assert_ranges_are_correct(&measurements, &ranges);
     })
     .await;
@@ -561,28 +561,28 @@ async fn test_delete_fuel_measurement() {
         let body = vec![
             CreateFuelMeasurement {
                 timestamp: start,
-                fuel: 3000.,
-                fuel_after: None,
+                fuel_liter: 3000.,
+                fuel_after_liter: None,
             },
             CreateFuelMeasurement {
                 timestamp: start + Duration::days(2),
-                fuel: 2500.,
-                fuel_after: None,
+                fuel_liter: 2500.,
+                fuel_after_liter: None,
             },
             CreateFuelMeasurement {
                 timestamp: start + Duration::days(3),
-                fuel: 2000.,
-                fuel_after: None,
+                fuel_liter: 2000.,
+                fuel_after_liter: None,
             },
             CreateFuelMeasurement {
                 timestamp: start + Duration::days(4),
-                fuel: 1500.,
-                fuel_after: None,
+                fuel_liter: 1500.,
+                fuel_after_liter: None,
             },
             CreateFuelMeasurement {
                 timestamp: start + Duration::days(5),
-                fuel_after: None,
-                fuel: 1000.,
+                fuel_after_liter: None,
+                fuel_liter: 1000.,
             },
         ];
 
@@ -617,9 +617,9 @@ async fn test_delete_fuel_measurement() {
         measurements.sort_by_key(|m| m.timestamp);
 
         assert_eq!(measurements.len(), 3);
-        assert_eq!(measurements[0].fuel, 3000.);
-        assert_eq!(measurements[1].fuel, 2000.);
-        assert_eq!(measurements[2].fuel, 1000.);
+        assert_eq!(measurements[0].fuel_liter, 3000.);
+        assert_eq!(measurements[1].fuel_liter, 2000.);
+        assert_eq!(measurements[2].fuel_liter, 1000.);
         assert_ranges_are_correct(&measurements, &ranges);
     })
     .await;
@@ -639,18 +639,18 @@ async fn test_create_splits_upper_and_lower_correctly() {
         let body = vec![
             CreateFuelMeasurement {
                 timestamp: start,
-                fuel: 3000.,
-                fuel_after: None,
+                fuel_liter: 3000.,
+                fuel_after_liter: None,
             },
             CreateFuelMeasurement {
                 timestamp: start + Duration::days(3),
-                fuel: 2000.,
-                fuel_after: None,
+                fuel_liter: 2000.,
+                fuel_after_liter: None,
             },
             CreateFuelMeasurement {
                 timestamp: start + Duration::days(6),
-                fuel: 1000.,
-                fuel_after: None,
+                fuel_liter: 1000.,
+                fuel_after_liter: None,
             },
         ];
 
@@ -659,13 +659,13 @@ async fn test_create_splits_upper_and_lower_correctly() {
         let body = vec![
             CreateFuelMeasurement {
                 timestamp: start + Duration::days(2),
-                fuel: 2500.,
-                fuel_after: None,
+                fuel_liter: 2500.,
+                fuel_after_liter: None,
             },
             CreateFuelMeasurement {
                 timestamp: start + Duration::days(4),
-                fuel: 1500.,
-                fuel_after: None,
+                fuel_liter: 1500.,
+                fuel_after_liter: None,
             },
         ];
 
@@ -695,8 +695,8 @@ async fn test_create_handles_single_insert() {
 
         let body = vec![CreateFuelMeasurement {
             timestamp: Utc::now(),
-            fuel: 1000.,
-            fuel_after: None,
+            fuel_liter: 1000.,
+            fuel_after_liter: None,
         }];
 
         helper.app.create_fuel_measurements(&body).await.unwrap();
@@ -728,16 +728,16 @@ async fn test_create_handles_later_insert() {
 
         let body = vec![CreateFuelMeasurement {
             timestamp: start,
-            fuel_after: None,
-            fuel: 1000.,
+            fuel_after_liter: None,
+            fuel_liter: 1000.,
         }];
 
         helper.app.create_fuel_measurements(&body).await.unwrap();
 
         let body = vec![CreateFuelMeasurement {
             timestamp: start + Duration::days(2),
-            fuel: 500.,
-            fuel_after: None,
+            fuel_liter: 500.,
+            fuel_after_liter: None,
         }];
 
         helper.app.create_fuel_measurements(&body).await.unwrap();
@@ -771,16 +771,16 @@ async fn test_create_handles_earlier_insert() {
 
         let body = vec![CreateFuelMeasurement {
             timestamp: start,
-            fuel: 1000.,
-            fuel_after: None,
+            fuel_liter: 1000.,
+            fuel_after_liter: None,
         }];
 
         helper.app.create_fuel_measurements(&body).await.unwrap();
 
         let body = vec![CreateFuelMeasurement {
             timestamp: start - Duration::days(2),
-            fuel: 1500.,
-            fuel_after: None,
+            fuel_liter: 1500.,
+            fuel_after_liter: None,
         }];
 
         helper.app.create_fuel_measurements(&body).await.unwrap();
@@ -815,18 +815,18 @@ async fn test_delete_back_to_zero_entries() {
         let body = vec![
             CreateFuelMeasurement {
                 timestamp: start,
-                fuel: 3000.,
-                fuel_after: None,
+                fuel_liter: 3000.,
+                fuel_after_liter: None,
             },
             CreateFuelMeasurement {
                 timestamp: start + Duration::days(3),
-                fuel: 2000.,
-                fuel_after: None,
+                fuel_liter: 2000.,
+                fuel_after_liter: None,
             },
             CreateFuelMeasurement {
                 timestamp: start + Duration::days(5),
-                fuel: 1000.,
-                fuel_after: None,
+                fuel_liter: 1000.,
+                fuel_after_liter: None,
             },
         ];
 
@@ -875,18 +875,18 @@ async fn test_delete_back_to_one_entry() {
         let body = vec![
             CreateFuelMeasurement {
                 timestamp: start,
-                fuel: 3000.,
-                fuel_after: None,
+                fuel_liter: 3000.,
+                fuel_after_liter: None,
             },
             CreateFuelMeasurement {
                 timestamp: start + Duration::days(3),
-                fuel: 2000.,
-                fuel_after: None,
+                fuel_liter: 2000.,
+                fuel_after_liter: None,
             },
             CreateFuelMeasurement {
                 timestamp: start + Duration::days(5),
-                fuel: 1000.,
-                fuel_after: None,
+                fuel_liter: 1000.,
+                fuel_after_liter: None,
             },
         ];
 
@@ -932,18 +932,18 @@ async fn test_delete_back_to_two_entries() {
         let body = vec![
             CreateFuelMeasurement {
                 timestamp: start,
-                fuel_after: None,
-                fuel: 3000.,
+                fuel_after_liter: None,
+                fuel_liter: 3000.,
             },
             CreateFuelMeasurement {
                 timestamp: start + Duration::days(3),
-                fuel: 2000.,
-                fuel_after: None,
+                fuel_liter: 2000.,
+                fuel_after_liter: None,
             },
             CreateFuelMeasurement {
                 timestamp: start + Duration::days(5),
-                fuel: 1000.,
-                fuel_after: None,
+                fuel_liter: 1000.,
+                fuel_after_liter: None,
             },
         ];
 
@@ -1015,13 +1015,13 @@ async fn test_creating_fuel_measurements_invalidates_trip_benchmark_status_for_o
             .create_fuel_measurements(&[
                 CreateFuelMeasurement {
                     timestamp: start2 + Duration::days(2),
-                    fuel: 3000.,
-                    fuel_after: None,
+                    fuel_liter: 3000.,
+                    fuel_after_liter: None,
                 },
                 CreateFuelMeasurement {
                     timestamp: end3,
-                    fuel: 2000.,
-                    fuel_after: None,
+                    fuel_liter: 2000.,
+                    fuel_after_liter: None,
                 },
             ])
             .await
@@ -1085,13 +1085,13 @@ async fn test_deleting_fuel_measurements_invalidates_trip_benchmark_status_for_o
         let body = vec![
             CreateFuelMeasurement {
                 timestamp: start2 + Duration::days(2),
-                fuel: 3000.,
-                fuel_after: None,
+                fuel_liter: 3000.,
+                fuel_after_liter: None,
             },
             CreateFuelMeasurement {
                 timestamp: end3,
-                fuel: 2000.,
-                fuel_after: None,
+                fuel_liter: 2000.,
+                fuel_after_liter: None,
             },
         ];
 
@@ -1186,13 +1186,13 @@ async fn test_updating_fuel_measurements_invalidates_trip_benchmark_status_for_o
         let body = vec![
             CreateFuelMeasurement {
                 timestamp: start2 + Duration::days(2),
-                fuel_after: None,
-                fuel: 3000.,
+                fuel_after_liter: None,
+                fuel_liter: 3000.,
             },
             CreateFuelMeasurement {
                 timestamp: end3,
-                fuel: 2000.,
-                fuel_after: None,
+                fuel_liter: 2000.,
+                fuel_after_liter: None,
             },
         ];
 
@@ -1215,7 +1215,7 @@ async fn test_updating_fuel_measurements_invalidates_trip_benchmark_status_for_o
             3
         );
 
-        measurements.iter_mut().for_each(|v| v.fuel *= 10.0);
+        measurements.iter_mut().for_each(|v| v.fuel_liter *= 10.0);
 
         helper
             .app
@@ -1256,18 +1256,18 @@ async fn test_delete_fuel_measurement_sets_fuel_after_on_new_fuel_measurement_ra
         let body = vec![
             CreateFuelMeasurement {
                 timestamp: start,
-                fuel: 3000.,
-                fuel_after: Some(5000.0),
+                fuel_liter: 3000.,
+                fuel_after_liter: Some(5000.0),
             },
             CreateFuelMeasurement {
                 timestamp: start + Duration::days(1),
-                fuel: 2000.,
-                fuel_after: Some(4000.0),
+                fuel_liter: 2000.,
+                fuel_after_liter: Some(4000.0),
             },
             CreateFuelMeasurement {
-                fuel_after: None,
+                fuel_after_liter: None,
                 timestamp: start + Duration::days(2),
-                fuel: 1000.0,
+                fuel_liter: 1000.0,
             },
         ];
 
@@ -1289,10 +1289,10 @@ async fn test_delete_fuel_measurement_sets_fuel_after_on_new_fuel_measurement_ra
         let ranges = helper.adapter().all_fuel_measurement_ranges().await;
 
         assert_eq!(measurements.len(), 2);
-        assert_eq!(measurements[0].fuel_after, Some(5000.0));
+        assert_eq!(measurements[0].fuel_after_liter, Some(5000.0));
 
         assert_eq!(ranges.len(), 1);
-        assert_eq!(ranges[0].fuel_used, 4000.0);
+        assert_eq!(ranges[0].fuel_used_liter, 4000.0);
     })
     .await;
 }
@@ -1313,18 +1313,18 @@ async fn test_update_fuel_measurement_with_timestamp_outside_exisiting_fuel_meas
         let body = vec![
             CreateFuelMeasurement {
                 timestamp: start,
-                fuel: 3000.,
-                fuel_after: Some(5000.0),
+                fuel_liter: 3000.,
+                fuel_after_liter: Some(5000.0),
             },
             CreateFuelMeasurement {
                 timestamp: start + Duration::days(1),
-                fuel: 2000.,
-                fuel_after: Some(4000.0),
+                fuel_liter: 2000.,
+                fuel_after_liter: Some(4000.0),
             },
             CreateFuelMeasurement {
-                fuel_after: None,
+                fuel_after_liter: None,
                 timestamp: start + Duration::days(2),
-                fuel: 1000.0,
+                fuel_liter: 1000.0,
             },
         ];
 
@@ -1332,8 +1332,8 @@ async fn test_update_fuel_measurement_with_timestamp_outside_exisiting_fuel_meas
         measurements.sort_by_key(|m| m.timestamp);
 
         measurements[1].timestamp = start + Duration::days(4);
-        measurements[1].fuel_after = Some(2000.0);
-        measurements[1].fuel = 500.0;
+        measurements[1].fuel_after_liter = Some(2000.0);
+        measurements[1].fuel_liter = 500.0;
 
         helper
             .app
@@ -1350,13 +1350,13 @@ async fn test_update_fuel_measurement_with_timestamp_outside_exisiting_fuel_meas
         let ranges = helper.adapter().all_fuel_measurement_ranges().await;
 
         assert_eq!(measurements.len(), 3);
-        assert_eq!(measurements[0].fuel_after, Some(5000.0));
-        assert_eq!(measurements[1].fuel_after, None);
-        assert_eq!(measurements[2].fuel_after, Some(2000.0));
+        assert_eq!(measurements[0].fuel_after_liter, Some(5000.0));
+        assert_eq!(measurements[1].fuel_after_liter, None);
+        assert_eq!(measurements[2].fuel_after_liter, Some(2000.0));
 
         assert_eq!(ranges.len(), 2);
-        assert_eq!(ranges[0].fuel_used, 4000.0);
-        assert_eq!(ranges[1].fuel_used, 500.0);
+        assert_eq!(ranges[0].fuel_used_liter, 4000.0);
+        assert_eq!(ranges[1].fuel_used_liter, 500.0);
     })
     .await;
 }
@@ -1376,23 +1376,23 @@ async fn test_update_fuel_measurement_with_timestamp_outside_exisiting_fuel_meas
         let body = vec![
             CreateFuelMeasurement {
                 timestamp: start,
-                fuel: 4000.,
-                fuel_after: None,
+                fuel_liter: 4000.,
+                fuel_after_liter: None,
             },
             CreateFuelMeasurement {
                 timestamp: start + Duration::days(1),
-                fuel: 3000.,
-                fuel_after: None,
+                fuel_liter: 3000.,
+                fuel_after_liter: None,
             },
             CreateFuelMeasurement {
-                fuel_after: None,
+                fuel_after_liter: None,
                 timestamp: start + Duration::days(2),
-                fuel: 2000.0,
+                fuel_liter: 2000.0,
             },
             CreateFuelMeasurement {
-                fuel_after: None,
+                fuel_after_liter: None,
                 timestamp: start + Duration::days(4),
-                fuel: 1000.0,
+                fuel_liter: 1000.0,
             },
         ];
 
@@ -1401,7 +1401,7 @@ async fn test_update_fuel_measurement_with_timestamp_outside_exisiting_fuel_meas
         assert_eq!(measurements.len(), 4);
 
         measurements[1].timestamp = start + Duration::days(3);
-        measurements[1].fuel = 1500.0;
+        measurements[1].fuel_liter = 1500.0;
 
         helper
             .app
@@ -1437,8 +1437,8 @@ async fn test_create_greater_fuel_after_than_fuel_returns_bad_request() {
 
         let body = vec![CreateFuelMeasurement {
             timestamp: start,
-            fuel: 3000.,
-            fuel_after: Some(1000.0),
+            fuel_liter: 3000.,
+            fuel_after_liter: Some(1000.0),
         }];
 
         let err = helper
@@ -1466,12 +1466,12 @@ async fn test_update_greater_fuel_after_than_fuel_returns_bad_request() {
 
         let body = vec![CreateFuelMeasurement {
             timestamp: start,
-            fuel: 3000.,
-            fuel_after: Some(4000.0),
+            fuel_liter: 3000.,
+            fuel_after_liter: Some(4000.0),
         }];
 
         let mut measurements = helper.app.create_fuel_measurements(&body).await.unwrap();
-        measurements[0].fuel_after = Some(2000.0);
+        measurements[0].fuel_after_liter = Some(2000.0);
 
         let err = helper
             .app
@@ -1500,13 +1500,13 @@ async fn test_create_fuel_measurements_with_fuel_used_equal_or_lower_to_zero_doe
         let body = vec![
             CreateFuelMeasurement {
                 timestamp: start,
-                fuel: 3000.,
-                fuel_after: None,
+                fuel_liter: 3000.,
+                fuel_after_liter: None,
             },
             CreateFuelMeasurement {
                 timestamp: start + Duration::days(1),
-                fuel: 3000.,
-                fuel_after: None,
+                fuel_liter: 3000.,
+                fuel_after_liter: None,
             },
         ];
 
@@ -1535,13 +1535,13 @@ async fn test_update_fuel_measurements_with_fuel_used_equal_or_lower_than_zero_d
         let body = vec![
             CreateFuelMeasurement {
                 timestamp: start,
-                fuel: 3000.,
-                fuel_after: None,
+                fuel_liter: 3000.,
+                fuel_after_liter: None,
             },
             CreateFuelMeasurement {
                 timestamp: start + Duration::days(1),
-                fuel: 4000.,
-                fuel_after: None,
+                fuel_liter: 4000.,
+                fuel_after_liter: None,
             },
         ];
 
@@ -1549,7 +1549,7 @@ async fn test_update_fuel_measurements_with_fuel_used_equal_or_lower_than_zero_d
         measurements.sort_by_key(|m| m.timestamp);
         assert_eq!(measurements.len(), 2);
 
-        measurements[1].fuel = 3000.0;
+        measurements[1].fuel_liter = 3000.0;
 
         helper
             .app
@@ -1578,18 +1578,18 @@ async fn test_update_fuel_measurements_to_outside_existing_range_with_fuel_used_
         let body = vec![
             CreateFuelMeasurement {
                 timestamp: start,
-                fuel: 4000.,
-                fuel_after: None,
+                fuel_liter: 4000.,
+                fuel_after_liter: None,
             },
             CreateFuelMeasurement {
                 timestamp: start + Duration::days(1),
-                fuel: 3000.,
-                fuel_after: None,
+                fuel_liter: 3000.,
+                fuel_after_liter: None,
             },
             CreateFuelMeasurement {
                 timestamp: start + Duration::days(2),
-                fuel: 2000.,
-                fuel_after: None,
+                fuel_liter: 2000.,
+                fuel_after_liter: None,
             },
         ];
 
@@ -1597,7 +1597,7 @@ async fn test_update_fuel_measurements_to_outside_existing_range_with_fuel_used_
         measurements.sort_by_key(|m| m.timestamp);
         assert_eq!(measurements.len(), 3);
 
-        measurements[1].fuel = 2000.0;
+        measurements[1].fuel_liter = 2000.0;
         measurements[1].timestamp = start + Duration::days(4);
 
         helper
@@ -1608,7 +1608,7 @@ async fn test_update_fuel_measurements_to_outside_existing_range_with_fuel_used_
 
         let ranges = helper.adapter().all_fuel_measurement_ranges().await;
         assert_eq!(ranges.len(), 1);
-        assert_eq!(ranges[0].fuel_used, 2000.0);
+        assert_eq!(ranges[0].fuel_used_liter, 2000.0);
         assert_eq!(ranges[0].fuel_range.start(), start);
         assert_eq!(ranges[0].fuel_range.end(), start + Duration::days(2));
     })
@@ -1631,18 +1631,18 @@ async fn test_delete_fuel_measurements_with_fuel_used_equal_or_lower_than_zero_d
         let body = vec![
             CreateFuelMeasurement {
                 timestamp: start,
-                fuel: 3000.,
-                fuel_after: None,
+                fuel_liter: 3000.,
+                fuel_after_liter: None,
             },
             CreateFuelMeasurement {
                 timestamp: start + Duration::days(1),
-                fuel: 2500.,
-                fuel_after: None,
+                fuel_liter: 2500.,
+                fuel_after_liter: None,
             },
             CreateFuelMeasurement {
                 timestamp: start + Duration::days(2),
-                fuel: 3000.,
-                fuel_after: None,
+                fuel_liter: 3000.,
+                fuel_after_liter: None,
             },
         ];
 
@@ -1670,6 +1670,6 @@ fn assert_ranges_are_correct(measurements: &[FuelMeasurement], ranges: &[FuelMea
         let end = &measurements[i + 1];
         assert_eq!(r.fuel_range.start(), start.timestamp);
         assert_eq!(r.fuel_range.end(), end.timestamp);
-        assert_eq!(r.fuel_used, start.fuel - end.fuel);
+        assert_eq!(r.fuel_used_liter, start.fuel_liter - end.fuel_liter);
     }
 }

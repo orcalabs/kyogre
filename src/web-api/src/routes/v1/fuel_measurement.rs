@@ -54,12 +54,16 @@ pub async fn create_fuel_measurements<T: Database + 'static>(
     body: web::Json<Vec<CreateFuelMeasurement>>,
 ) -> Result<Response<Vec<FuelMeasurement>>> {
     let body = body.into_inner();
-    if let Some((fuel_after, fuel)) = body
+    if let Some((fuel_after_liter, fuel_liter)) = body
         .iter()
-        .filter_map(|b| b.fuel_after.map(|a| (a, b.fuel)))
+        .filter_map(|b| b.fuel_after_liter.map(|a| (a, b.fuel_liter)))
         .find(|v| v.0 <= v.1)
     {
-        return FuelAfterLowerThanFuelSnafu { fuel_after, fuel }.fail();
+        return FuelAfterLowerThanFuelSnafu {
+            fuel_after_liter,
+            fuel_liter,
+        }
+        .fail();
     };
 
     let user_id = profile.user.id;
@@ -84,16 +88,16 @@ pub async fn upload_fuel_measurements<T: Database + 'static>(
     struct Record {
         #[serde(deserialize_with = "deserialize_norwegian_timestamp")]
         pub timestamp: DateTime<Utc>,
-        pub fuel_before: f64,
-        pub fuel_after: Option<f64>,
+        pub fuel_liter_before: f64,
+        pub fuel_after_liter: Option<f64>,
     }
 
     let measurements = decode_excel_base64(body.into_inner().file)?
         .into_iter()
         .map(|v: Record| CreateFuelMeasurement {
             timestamp: v.timestamp,
-            fuel: v.fuel_before,
-            fuel_after: v.fuel_after,
+            fuel_liter: v.fuel_liter_before,
+            fuel_after_liter: v.fuel_after_liter,
         })
         .collect::<Vec<_>>();
 
@@ -112,12 +116,16 @@ pub async fn update_fuel_measurements<T: Database + 'static>(
     body: web::Json<Vec<FuelMeasurement>>,
 ) -> Result<Response<()>> {
     let body = body.into_inner();
-    if let Some((fuel_after, fuel)) = body
+    if let Some((fuel_after_liter, fuel_liter)) = body
         .iter()
-        .filter_map(|b| b.fuel_after.map(|a| (a, b.fuel)))
+        .filter_map(|b| b.fuel_after_liter.map(|a| (a, b.fuel_liter)))
         .find(|v| v.0 <= v.1)
     {
-        return FuelAfterLowerThanFuelSnafu { fuel_after, fuel }.fail();
+        return FuelAfterLowerThanFuelSnafu {
+            fuel_after_liter,
+            fuel_liter,
+        }
+        .fail();
     };
 
     let user_id = profile.user.id;

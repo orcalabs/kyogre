@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nWITH\n    vessels AS (\n        SELECT\n            fiskeridir_vessel_id\n        FROM\n            fiskeridir_ais_vessel_mapping_whitelist\n        WHERE\n            call_sign = $1\n    ),\n    measurements AS (\n        SELECT\n            SUM(\n                COMPUTE_TS_RANGE_PERCENT_OVERLAP (r.fuel_range, $2) * r.fuel_used_liter\n            ) AS fuel_used_liter,\n            RANGE_AGG(r.fuel_range) AS fuel_ranges\n        FROM\n            vessels v\n            INNER JOIN fuel_measurement_ranges r ON v.fiskeridir_vessel_id = r.fiskeridir_vessel_id\n            AND r.fuel_range && $2\n            AND COMPUTE_TS_RANGE_PERCENT_OVERLAP (r.fuel_range, $2) >= 0.5\n    ),\n    overlapping AS (\n        SELECT\n            SUM(\n                CASE\n                    WHEN m.fuel_ranges IS NULL THEN f.estimate_liter\n                    ELSE (\n                        1.0 - COMPUTE_TS_RANGE_MUTLIRANGE_PERCENT_OVERLAP (f.day_range, m.fuel_ranges)\n                    ) * f.estimate_liter\n                END\n            ) AS fuel_liter\n        FROM\n            vessels v\n            INNER JOIN fuel_estimates f ON v.fiskeridir_vessel_id = f.fiskeridir_vessel_id\n            AND f.day_range <@ $2\n            LEFT JOIN measurements m ON m.fuel_ranges && f.day_range\n    )\nSELECT\n    COALESCE(SUM(q.fuel_liter), 0.0) AS \"estimate_liter!\"\nFROM\n    (\n        SELECT\n            fuel_liter\n        FROM\n            overlapping\n        UNION ALL\n        SELECT\n            fuel_used_liter AS fuel_liter\n        FROM\n            measurements\n    ) q\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "estimate_liter!",
+        "type_info": "Float8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "TstzRange"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "d3821a2c9a657831ac60c82c43b69e7b46ca84ef57e109f5adf2cf9e7944c6b0"
+}

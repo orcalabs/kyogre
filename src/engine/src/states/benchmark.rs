@@ -64,9 +64,9 @@ async fn benchmark_trip(
         trip_id: trip.trip_id,
         weight_per_hour: None,
         weight_per_distance: None,
-        fuel_consumption: None,
-        weight_per_fuel: None,
-        catch_value_per_fuel: None,
+        fuel_consumption_liter: None,
+        weight_per_fuel_liter: None,
+        catch_value_per_fuel_liter: None,
         eeoi: None,
         status: ProcessingStatus::Successful,
     };

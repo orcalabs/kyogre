@@ -288,7 +288,7 @@ pub struct TripDetailed {
     pub cache_version: i64,
     pub target_species_fiskeridir_id: Option<i32>,
     pub target_species_fao_id: Option<String>,
-    pub fuel_consumption: Option<f64>,
+    pub fuel_consumption_liter: Option<f64>,
     pub track_coverage: Option<f64>,
     pub has_track: HasTrack,
 }
@@ -426,7 +426,7 @@ impl TryFrom<TripDetailed> for kyogre_core::TripDetailed {
             cache_version,
             target_species_fiskeridir_id,
             target_species_fao_id,
-            fuel_consumption,
+            fuel_consumption_liter,
             track_coverage,
             has_track,
         } = value;
@@ -467,7 +467,7 @@ impl TryFrom<TripDetailed> for kyogre_core::TripDetailed {
             cache_version,
             target_species_fiskeridir_id: target_species_fiskeridir_id.map(|v| v as u32),
             target_species_fao_id,
-            fuel_consumption,
+            fuel_consumption_liter,
             track_coverage,
             tra: serde_json::from_str::<Vec<TripTra>>(&tra)?
                 .into_iter()

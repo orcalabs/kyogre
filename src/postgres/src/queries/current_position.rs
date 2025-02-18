@@ -87,7 +87,7 @@ SELECT
     c.distance_to_shore,
     c.position_type_id AS "position_type!: PositionType",
     NULL AS "pruned_by: TripPositionLayerId",
-    NULL::DOUBLE PRECISION AS trip_cumulative_fuel_consumption,
+    NULL::DOUBLE PRECISION AS trip_cumulative_fuel_consumption_liter,
     NULL::DOUBLE PRECISION AS trip_cumulative_cargo_weight
 FROM
     current_trip_positions c

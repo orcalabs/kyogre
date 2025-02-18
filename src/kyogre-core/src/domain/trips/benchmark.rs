@@ -25,9 +25,12 @@ pub enum TripBenchmarkId {
 pub struct AverageTripBenchmarks {
     pub weight_per_hour: Option<f64>,
     pub weight_per_distance: Option<f64>,
-    pub weight_per_fuel: Option<f64>,
-    pub catch_value_per_fuel: Option<f64>,
-    pub fuel_consumption: Option<f64>,
+    #[serde(rename = "weightPerFuel")]
+    pub weight_per_fuel_liter: Option<f64>,
+    #[serde(rename = "catchValuePerFuel")]
+    pub catch_value_per_fuel_liter: Option<f64>,
+    #[serde(rename = "fuelConsumption")]
+    pub fuel_consumption_liter: Option<f64>,
     // TODO
     // pub sustainability: f64,
 }
@@ -39,9 +42,9 @@ pub struct TripWithBenchmark {
     pub period_precision: Option<DateRange>,
     pub weight_per_hour: Option<f64>,
     pub weight_per_distance: Option<f64>,
-    pub weight_per_fuel: Option<f64>,
-    pub catch_value_per_fuel: Option<f64>,
-    pub fuel_consumption: Option<f64>,
+    pub weight_per_fuel_liter: Option<f64>,
+    pub catch_value_per_fuel_liter: Option<f64>,
+    pub fuel_consumption_liter: Option<f64>,
     pub eeoi: Option<f64>,
     // TODO
     // pub sustainability: f64,
@@ -52,7 +55,7 @@ pub struct UpdateTripPositionFuel {
     pub trip_id: TripId,
     pub timestamp: DateTime<Utc>,
     pub position_type_id: PositionType,
-    pub trip_cumulative_fuel_consumption: f64,
+    pub trip_cumulative_fuel_consumption_liter: f64,
 }
 
 #[derive(Debug, Clone)]
@@ -60,9 +63,9 @@ pub struct TripBenchmarkOutput {
     pub trip_id: TripId,
     pub weight_per_hour: Option<f64>,
     pub weight_per_distance: Option<f64>,
-    pub fuel_consumption: Option<f64>,
-    pub weight_per_fuel: Option<f64>,
-    pub catch_value_per_fuel: Option<f64>,
+    pub fuel_consumption_liter: Option<f64>,
+    pub weight_per_fuel_liter: Option<f64>,
+    pub catch_value_per_fuel_liter: Option<f64>,
     pub eeoi: Option<f64>,
     pub status: ProcessingStatus,
 }

@@ -911,11 +911,11 @@ async fn test_live_fuel_returns_all_fuel_within_default_threshold() {
             .unwrap();
 
         assert_eq!(fuel.entries.len(), 5);
-        assert!(!approx_eq!(f64, fuel.total_fuel, 0.0));
+        assert!(!approx_eq!(f64, fuel.total_fuel_liter, 0.0));
         assert!(approx_eq!(
             f64,
-            fuel.entries.iter().map(|e| e.fuel).sum::<f64>(),
-            fuel.total_fuel
+            fuel.entries.iter().map(|e| e.fuel_liter).sum::<f64>(),
+            fuel.total_fuel_liter
         ));
     })
     .await;

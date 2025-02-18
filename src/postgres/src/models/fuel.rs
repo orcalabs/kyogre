@@ -18,8 +18,8 @@ pub struct UpsertNewLiveFuel {
     pub fiskeridir_vessel_id: FiskeridirVesselId,
     #[unnest_insert(update)]
     pub latest_position_timestamp: DateTime<Utc>,
-    #[unnest_insert(update = "fuel = live_fuel.fuel + excluded.fuel")]
-    pub fuel: f64,
+    #[unnest_insert(update = "fuel_liter = live_fuel.fuel_liter + excluded.fuel_liter")]
+    pub fuel_liter: f64,
 }
 
 #[derive(Debug, Clone, UnnestUpdate)]
@@ -31,7 +31,7 @@ pub struct UpdateTripPositionFuel {
     pub timestamp: DateTime<Utc>,
     #[unnest_update(id, sql_type = "INT")]
     pub position_type_id: PositionType,
-    pub trip_cumulative_fuel_consumption: f64,
+    pub trip_cumulative_fuel_consumption_liter: f64,
 }
 
 impl From<&kyogre_core::UpdateTripPositionFuel> for UpdateTripPositionFuel {
@@ -40,7 +40,7 @@ impl From<&kyogre_core::UpdateTripPositionFuel> for UpdateTripPositionFuel {
             trip_id: v.trip_id,
             timestamp: v.timestamp,
             position_type_id: v.position_type_id,
-            trip_cumulative_fuel_consumption: v.trip_cumulative_fuel_consumption,
+            trip_cumulative_fuel_consumption_liter: v.trip_cumulative_fuel_consumption_liter,
         }
     }
 }
@@ -52,7 +52,7 @@ impl UpsertNewLiveFuel {
     ) -> Self {
         let &kyogre_core::NewLiveFuel {
             latest_position_timestamp,
-            fuel,
+            fuel_liter,
         } = core;
         let (year, day, hour) = live_fuel_year_day_hour(latest_position_timestamp);
         Self {
@@ -61,7 +61,7 @@ impl UpsertNewLiveFuel {
             hour: hour as i32,
             fiskeridir_vessel_id,
             latest_position_timestamp: core.latest_position_timestamp,
-            fuel,
+            fuel_liter,
         }
     }
 }

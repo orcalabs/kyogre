@@ -98,7 +98,11 @@ async fn test_average_benchmarks_works() {
             .mean()
             .unwrap();
 
-        assert!(approx_eq!(f64, fuel, average.fuel_consumption.unwrap()));
+        assert!(approx_eq!(
+            f64,
+            fuel,
+            average.fuel_consumption_liter.unwrap()
+        ));
         assert!(approx_eq!(
             f64,
             weight_per_hour,
@@ -112,7 +116,7 @@ async fn test_average_benchmarks_works() {
         assert!(approx_eq!(
             f64,
             weight_per_fuel,
-            average.weight_per_fuel.unwrap()
+            average.weight_per_fuel_liter.unwrap()
         ));
     })
     .await;

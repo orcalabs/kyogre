@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT\n    c.latitude,\n    c.longitude,\n    c.timestamp,\n    c.course_over_ground,\n    c.navigation_status_id AS \"navigational_status: NavigationStatus\",\n    c.rate_of_turn,\n    c.speed,\n    c.true_heading,\n    c.distance_to_shore,\n    c.position_type_id AS \"position_type!: PositionType\",\n    NULL AS \"pruned_by: TripPositionLayerId\",\n    NULL::DOUBLE PRECISION AS trip_cumulative_fuel_consumption,\n    NULL::DOUBLE PRECISION AS trip_cumulative_cargo_weight\nFROM\n    current_trip_positions c\n    INNER JOIN fiskeridir_ais_vessel_mapping_whitelist m ON m.fiskeridir_vessel_id = c.fiskeridir_vessel_id\n    INNER JOIN fiskeridir_vessels f ON f.fiskeridir_vessel_id = m.fiskeridir_vessel_id\n    LEFT JOIN ais_vessels a ON m.mmsi = a.mmsi\nWHERE\n    c.fiskeridir_vessel_id = $1::BIGINT\n    AND (\n        a.mmsi IS NULL\n        OR (\n            a.ship_type IS NOT NULL\n            AND NOT (a.ship_type = ANY ($2::INT[]))\n            OR COALESCE(f.length, a.ship_length) > $3\n        )\n    )\n    AND (\n        CASE\n            WHEN $4 = 0 THEN TRUE\n            WHEN $4 = 1 THEN COALESCE(f.length, a.ship_length) >= $5\n        END\n    )\nORDER BY\n    timestamp ASC\n            ",
+  "query": "\nSELECT\n    c.latitude,\n    c.longitude,\n    c.timestamp,\n    c.course_over_ground,\n    c.navigation_status_id AS \"navigational_status: NavigationStatus\",\n    c.rate_of_turn,\n    c.speed,\n    c.true_heading,\n    c.distance_to_shore,\n    c.position_type_id AS \"position_type!: PositionType\",\n    NULL AS \"pruned_by: TripPositionLayerId\",\n    NULL::DOUBLE PRECISION AS trip_cumulative_fuel_consumption_liter,\n    NULL::DOUBLE PRECISION AS trip_cumulative_cargo_weight\nFROM\n    current_trip_positions c\n    INNER JOIN fiskeridir_ais_vessel_mapping_whitelist m ON m.fiskeridir_vessel_id = c.fiskeridir_vessel_id\n    INNER JOIN fiskeridir_vessels f ON f.fiskeridir_vessel_id = m.fiskeridir_vessel_id\n    LEFT JOIN ais_vessels a ON m.mmsi = a.mmsi\nWHERE\n    c.fiskeridir_vessel_id = $1::BIGINT\n    AND (\n        a.mmsi IS NULL\n        OR (\n            a.ship_type IS NOT NULL\n            AND NOT (a.ship_type = ANY ($2::INT[]))\n            OR COALESCE(f.length, a.ship_length) > $3\n        )\n    )\n    AND (\n        CASE\n            WHEN $4 = 0 THEN TRUE\n            WHEN $4 = 1 THEN COALESCE(f.length, a.ship_length) >= $5\n        END\n    )\nORDER BY\n    timestamp ASC\n            ",
   "describe": {
     "columns": [
       {
@@ -60,7 +60,7 @@
       },
       {
         "ordinal": 11,
-        "name": "trip_cumulative_fuel_consumption",
+        "name": "trip_cumulative_fuel_consumption_liter",
         "type_info": "Float8"
       },
       {
@@ -94,5 +94,5 @@
       null
     ]
   },
-  "hash": "92181398fb4dafa92cda26b98639f55d5866b7b69162b029b3e7a3228d2b72ed"
+  "hash": "94f8daf07f3ff26b921db4a89888b83a422a0e001fa5d6e8ffe703771866bd88"
 }

@@ -1,0 +1,50 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    AVG(t.benchmark_fuel_consumption_liter) AS fuel_consumption_liter,\n    AVG(t.benchmark_weight_per_hour) AS weight_per_hour,\n    AVG(t.benchmark_weight_per_distance) AS weight_per_distance,\n    AVG(t.benchmark_weight_per_fuel_liter) AS weight_per_fuel_liter,\n    AVG(t.benchmark_catch_value_per_fuel_liter) AS catch_value_per_fuel_liter\nFROM\n    trips_detailed t\nWHERE\n    t.start_timestamp >= $1\n    AND t.stop_timestamp <= $2\n    AND (\n        $3::INT IS NULL\n        OR t.fiskeridir_length_group_id = $3\n    )\n    AND (\n        $4::INT[] IS NULL\n        OR t.haul_gear_group_ids && $4\n    )\n    AND (\n        $5::BIGINT[] IS NULL\n        OR t.fiskeridir_vessel_id = ANY ($5)\n    )\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "fuel_consumption_liter",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 1,
+        "name": "weight_per_hour",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 2,
+        "name": "weight_per_distance",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 3,
+        "name": "weight_per_fuel_liter",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 4,
+        "name": "catch_value_per_fuel_liter",
+        "type_info": "Float8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Timestamptz",
+        "Timestamptz",
+        "Int4",
+        "Int4Array",
+        "Int8Array"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "0201c5703c009b5575ae8c9187bf62386517d01a6f59b422ccdb00fd08391c53"
+}

@@ -20,7 +20,7 @@ impl TripBenchmark for CatchValuePerFuel {
         _adapter: &dyn TripBenchmarkOutbound,
         output: &mut TripBenchmarkOutput,
     ) -> CoreResult<()> {
-        output.catch_value_per_fuel = match output.fuel_consumption {
+        output.catch_value_per_fuel_liter = match output.fuel_consumption_liter {
             Some(fuel) if fuel > 0.0 => Some(trip.total_catch_value / fuel),
             _ => None,
         };

@@ -40,12 +40,14 @@ pub enum JWTDecodeError {
 #[strum_discriminants(derive(Deserialize, Serialize, OaSchema))]
 #[snafu(module, visibility(pub))]
 pub enum Error {
-    #[snafu(display("Fuel after '{fuel_after}' cannot be lower or equal to fuel '{fuel}'"))]
+    #[snafu(display(
+        "Fuel after '{fuel_after_liter}' cannot be lower or equal to fuel '{fuel_liter}'"
+    ))]
     FuelAfterLowerThanFuel {
         #[snafu(implicit)]
         location: Location,
-        fuel_after: f64,
-        fuel: f64,
+        fuel_after_liter: f64,
+        fuel_liter: f64,
     },
     #[snafu(display("Start date: '{start}' cannot be after end date: '{end}'"))]
     StartAfterEnd {
