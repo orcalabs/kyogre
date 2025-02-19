@@ -47,17 +47,17 @@ WHERE
             all_vessels
         WHERE
             mmsi = $1
-            AND (
-                ship_type IS NOT NULL
-                AND NOT (ship_type = ANY ($4::INT[]))
-                OR length > $5
-            )
-            AND (
-                CASE
-                    WHEN $6 = 0 THEN TRUE
-                    WHEN $6 = 1 THEN length >= $7
-                END
-            )
+            AND CASE
+                WHEN $4 = 0 THEN TRUE
+                WHEN $4 = 1 THEN (
+                    length >= $5
+                    AND (
+                        ship_type IS NOT NULL
+                        AND NOT (ship_type = ANY ($6::INT[]))
+                        OR length > $7
+                    )
+                )
+            END
     )
 ORDER BY
     TIMESTAMP ASC
@@ -65,10 +65,10 @@ ORDER BY
             mmsi.into_inner(),
             range.start(),
             range.end(),
-            LEISURE_VESSEL_SHIP_TYPES.as_slice(),
-            LEISURE_VESSEL_LENGTH_AIS_BOUNDARY as i32,
             permission as i32,
             PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY as i32,
+            LEISURE_VESSEL_SHIP_TYPES.as_slice(),
+            LEISURE_VESSEL_LENGTH_AIS_BOUNDARY as i32,
         )
         .fetch(self.ais_pool())
         .map_err(|e| e.into())

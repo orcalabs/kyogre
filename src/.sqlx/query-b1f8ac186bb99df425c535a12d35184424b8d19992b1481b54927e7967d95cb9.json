@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT\n    latitude AS \"latitude!\",\n    longitude AS \"longitude!\",\n    \"timestamp\" AS \"timestamp!\",\n    course_over_ground,\n    speed,\n    navigation_status_id AS \"navigational_status: NavigationStatus\",\n    rate_of_turn,\n    true_heading,\n    distance_to_shore AS \"distance_to_shore!\",\n    position_type_id AS \"position_type: PositionType\",\n    pruned_by AS \"pruned_by: TripPositionLayerId\",\n    trip_cumulative_fuel_consumption_liter,\n    trip_cumulative_cargo_weight\nFROM\n    trip_positions\nWHERE\n    trip_id = $1\n    AND (\n        trip_id IN (\n            SELECT\n                t.trip_id\n            FROM\n                trips t\n                INNER JOIN all_vessels a ON t.fiskeridir_vessel_id = a.fiskeridir_vessel_id\n            WHERE\n                t.trip_id = $1\n                AND (\n                    a.ship_type IS NOT NULL\n                    AND NOT (a.ship_type = ANY ($2::INT[]))\n                    OR a.length > $3\n                )\n                AND (\n                    CASE\n                        WHEN $4 = 0 THEN TRUE\n                        WHEN $4 = 1 THEN a.length >= $5\n                    END\n                )\n        )\n        OR position_type_id = $6\n    )\nORDER BY\n    \"timestamp\" ASC\n            ",
+  "query": "\nSELECT\n    latitude AS \"latitude!\",\n    longitude AS \"longitude!\",\n    \"timestamp\" AS \"timestamp!\",\n    course_over_ground,\n    speed,\n    navigation_status_id AS \"navigational_status: NavigationStatus\",\n    rate_of_turn,\n    true_heading,\n    distance_to_shore AS \"distance_to_shore!\",\n    position_type_id AS \"position_type: PositionType\",\n    pruned_by AS \"pruned_by: TripPositionLayerId\",\n    trip_cumulative_fuel_consumption_liter,\n    trip_cumulative_cargo_weight\nFROM\n    trip_positions\nWHERE\n    trip_id = $1\n    AND (\n        trip_id IN (\n            SELECT\n                t.trip_id\n            FROM\n                trips t\n                INNER JOIN all_vessels a ON t.fiskeridir_vessel_id = a.fiskeridir_vessel_id\n            WHERE\n                t.trip_id = $1\n                AND CASE\n                    WHEN $2 = 0 THEN TRUE\n                    WHEN $2 = 1 THEN (\n                        length >= $3\n                        AND (\n                            ship_type IS NOT NULL\n                            AND NOT (ship_type = ANY ($4::INT[]))\n                            OR length > $5\n                        )\n                    )\n                END\n        )\n        OR position_type_id = $6\n    )\nORDER BY\n    \"timestamp\" ASC\n            ",
   "describe": {
     "columns": [
       {
@@ -72,9 +72,9 @@
     "parameters": {
       "Left": [
         "Int8",
-        "Int4Array",
-        "Float8",
         "Int4",
+        "Float8",
+        "Int4Array",
         "Float8",
         "Int4"
       ]
@@ -95,5 +95,5 @@
       true
     ]
   },
-  "hash": "8b49901550d41ca526dab422d10674ecf0b3b54ddf98efae65353faa9d09ea8e"
+  "hash": "b1f8ac186bb99df425c535a12d35184424b8d19992b1481b54927e7967d95cb9"
 }

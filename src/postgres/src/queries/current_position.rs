@@ -43,23 +43,25 @@ WHERE
     AND (
         m.mmsi IS NULL
         OR (
-            m.ship_type IS NOT NULL
-            AND NOT (m.ship_type = ANY ($2::INT[]))
-            OR m.length > $3
+             CASE
+                WHEN $2 = 0 THEN TRUE
+                WHEN $2 = 1 THEN (
+                    length >= $3
+                    AND (
+                        ship_type IS NOT NULL
+                        AND NOT (ship_type = ANY ($4::INT[]))
+                        OR length > $5
+                    )
+                )
+            END
         )
-    )
-    AND (
-        CASE
-            WHEN $4 = 0 THEN TRUE
-            WHEN $4 = 1 THEN m.length >= $5
-        END
     )
             "#,
             limit,
-            LEISURE_VESSEL_SHIP_TYPES.as_slice(),
-            LEISURE_VESSEL_LENGTH_AIS_BOUNDARY as i32,
             permission as i32,
             PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY as i32,
+            LEISURE_VESSEL_SHIP_TYPES.as_slice(),
+            LEISURE_VESSEL_LENGTH_AIS_BOUNDARY as i32,
         )
         .fetch(&self.pool)
         .map_err(|e| e.into())
@@ -95,25 +97,27 @@ WHERE
     AND (
         m.mmsi IS NULL
         OR (
-            m.ship_type IS NOT NULL
-            AND NOT (m.ship_type = ANY ($2::INT[]))
-            OR m.length > $3
+             CASE
+                WHEN $2 = 0 THEN TRUE
+                WHEN $2 = 1 THEN (
+                    length >= $3
+                    AND (
+                        ship_type IS NOT NULL
+                        AND NOT (ship_type = ANY ($4::INT[]))
+                        OR length > $5
+                    )
+                )
+            END
         )
-    )
-    AND (
-        CASE
-            WHEN $4 = 0 THEN TRUE
-            WHEN $4 = 1 THEN m.length >= $5
-        END
     )
 ORDER BY
     timestamp ASC
             "#,
             vessel_id.into_inner(),
-            LEISURE_VESSEL_SHIP_TYPES.as_slice(),
-            LEISURE_VESSEL_LENGTH_AIS_BOUNDARY as i32,
             permission as i32,
             PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY as i32,
+            LEISURE_VESSEL_SHIP_TYPES.as_slice(),
+            LEISURE_VESSEL_LENGTH_AIS_BOUNDARY as i32,
         )
         .fetch(&self.pool)
         .map_err(|e| e.into())

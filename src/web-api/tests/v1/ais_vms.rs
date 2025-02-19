@@ -165,7 +165,128 @@ async fn test_ais_vms_positions_returns_ais_and_vms_positions_with_missing_data(
 }
 
 #[tokio::test]
-async fn test_ais_vms_does_not_return_positions_of_leisure_vessels_under_45_meters() {
+async fn test_ais_vms_returns_positions_of_leisure_vessels_under_45_meters_with_extended_access() {
+    test(|mut helper, builder| async move {
+        let pos_timestamp = Utc.timestamp_opt(1000, 0).unwrap();
+        let state = builder
+            .vessels(2)
+            .modify_idx(|i, v| {
+                v.ais.ship_type = Some(LEISURE_VESSEL_SHIP_TYPES[i]);
+                v.fiskeridir.length = LEISURE_VESSEL_LENGTH_AIS_BOUNDARY as f64 - 1.0;
+            })
+            .ais_vms_positions(2)
+            .modify(|v| {
+                v.position.set_timestamp(pos_timestamp);
+            })
+            .build()
+            .await;
+
+        helper.app.login_user_with_full_ais_permissions();
+
+        let positions = helper
+            .app
+            .get_ais_vms_positions(AisVmsParameters {
+                start: Some(pos_timestamp - Duration::seconds(1)),
+                end: Some(pos_timestamp + Duration::seconds(1)),
+                mmsi: state.vessels[0].mmsi(),
+                trip_id: None,
+                call_sign: None,
+            })
+            .await
+            .unwrap();
+
+        let positions2 = helper
+            .app
+            .get_ais_vms_positions(AisVmsParameters {
+                start: Some(pos_timestamp - Duration::seconds(1)),
+                end: Some(pos_timestamp + Duration::seconds(1)),
+                mmsi: state.vessels[1].mmsi(),
+                trip_id: None,
+                call_sign: None,
+            })
+            .await
+            .unwrap();
+
+        assert!(!positions.is_empty());
+        assert!(!positions2.is_empty());
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_ais_vms_does_not_return_ais_positions_of_vessels_with_unknown_ship_type_under_45m_without_extended_access(
+) {
+    test(|helper, builder| async move {
+        let pos_timestamp = Utc.timestamp_opt(1000, 0).unwrap();
+        let state = builder
+            .vessels(1)
+            .modify(|v| {
+                v.ais.ship_type = None;
+                v.fiskeridir.length = (LEISURE_VESSEL_LENGTH_AIS_BOUNDARY - 1) as f64;
+            })
+            .ais_positions(1)
+            .modify(|v| {
+                v.position.msgtime = pos_timestamp;
+            })
+            .build()
+            .await;
+
+        let positions = helper
+            .app
+            .get_ais_vms_positions(AisVmsParameters {
+                start: Some(pos_timestamp - Duration::seconds(1)),
+                end: Some(pos_timestamp + Duration::seconds(1)),
+                mmsi: state.vessels[0].mmsi(),
+                trip_id: None,
+                call_sign: None,
+            })
+            .await
+            .unwrap();
+
+        assert!(positions.is_empty());
+    })
+    .await;
+}
+#[tokio::test]
+async fn test_ais_vms_returns_ais_positions_of_vessels_with_unknown_ship_type_under_45m_with_extended_access(
+) {
+    test(|mut helper, builder| async move {
+        let pos_timestamp = Utc.timestamp_opt(1000, 0).unwrap();
+        let state = builder
+            .vessels(1)
+            .modify(|v| {
+                v.ais.ship_type = None;
+                v.fiskeridir.length = (LEISURE_VESSEL_LENGTH_AIS_BOUNDARY - 1) as f64;
+            })
+            .ais_positions(1)
+            .modify(|v| {
+                v.position.msgtime = pos_timestamp;
+            })
+            .build()
+            .await;
+
+        helper.app.login_user_with_full_ais_permissions();
+
+        let positions = helper
+            .app
+            .get_ais_vms_positions(AisVmsParameters {
+                start: Some(pos_timestamp - Duration::seconds(1)),
+                end: Some(pos_timestamp + Duration::seconds(1)),
+                mmsi: state.vessels[0].mmsi(),
+                trip_id: None,
+                call_sign: None,
+            })
+            .await
+            .unwrap();
+
+        assert!(!positions.is_empty());
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_ais_vms_does_not_return_positions_of_leisure_vessels_under_45_meters_without_extend_access(
+) {
     test(|helper, builder| async move {
         let pos_timestamp = Utc.timestamp_opt(1000, 0).unwrap();
         let state = builder
@@ -181,14 +302,12 @@ async fn test_ais_vms_does_not_return_positions_of_leisure_vessels_under_45_mete
             .build()
             .await;
 
-        let vessel = &state.vessels[0];
-        let vessel2 = &state.vessels[0];
         let positions = helper
             .app
             .get_ais_vms_positions(AisVmsParameters {
                 start: Some(pos_timestamp - Duration::seconds(1)),
                 end: Some(pos_timestamp + Duration::seconds(1)),
-                mmsi: vessel.mmsi(),
+                mmsi: state.vessels[0].mmsi(),
                 trip_id: None,
                 call_sign: None,
             })
@@ -200,7 +319,7 @@ async fn test_ais_vms_does_not_return_positions_of_leisure_vessels_under_45_mete
             .get_ais_vms_positions(AisVmsParameters {
                 start: Some(pos_timestamp - Duration::seconds(1)),
                 end: Some(pos_timestamp + Duration::seconds(1)),
-                mmsi: vessel2.mmsi(),
+                mmsi: state.vessels[1].mmsi(),
                 trip_id: None,
                 call_sign: None,
             })
@@ -711,8 +830,7 @@ async fn test_ais_vms_by_trip_returns_vms_data_regardless_of_ais_access_restrict
             .vessels(1)
             .modify(|v| v.ais.ship_type = None)
             .trips(1)
-            .ais_positions(1)
-            .vms_positions(1)
+            .ais_vms_positions(2)
             .build()
             .await;
 
