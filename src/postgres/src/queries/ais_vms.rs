@@ -240,17 +240,17 @@ FROM
                     all_vessels
                 WHERE
                     mmsi = $1
-                    AND (
-                        ship_type IS NOT NULL
-                        AND NOT (ship_type = ANY ($5::INT[]))
-                        OR length > $6
-                    )
-                    AND (
-                        CASE
-                            WHEN $7 = 0 THEN TRUE
-                            WHEN $7 = 1 THEN length >= $8
-                        END
-                    )
+                    AND CASE
+                        WHEN $5 = 0 THEN TRUE
+                        WHEN $5 = 1 THEN (
+                            length >= $6
+                            AND (
+                                ship_type IS NOT NULL
+                                AND NOT (ship_type = ANY ($7::INT[]))
+                                OR length > $8
+                            )
+                        )
+                    END
             )
         UNION ALL
         SELECT
@@ -279,10 +279,10 @@ ORDER BY
             call_sign.map(|c| c.as_ref()),
             range.start(),
             range.end(),
-            LEISURE_VESSEL_SHIP_TYPES.as_slice(),
-            LEISURE_VESSEL_LENGTH_AIS_BOUNDARY as i32,
             permission as i32,
             PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY as i32,
+            LEISURE_VESSEL_SHIP_TYPES.as_slice(),
+            LEISURE_VESSEL_LENGTH_AIS_BOUNDARY as i32,
             PositionType::Ais as i32,
             PositionType::Vms as i32,
         )
@@ -358,17 +358,17 @@ WHERE
                 INNER JOIN all_vessels a ON t.fiskeridir_vessel_id = a.fiskeridir_vessel_id
             WHERE
                 t.trip_id = $1
-                AND (
-                    a.ship_type IS NOT NULL
-                    AND NOT (a.ship_type = ANY ($2::INT[]))
-                    OR a.length > $3
-                )
-                AND (
-                    CASE
-                        WHEN $4 = 0 THEN TRUE
-                        WHEN $4 = 1 THEN a.length >= $5
-                    END
-                )
+                AND CASE
+                    WHEN $2 = 0 THEN TRUE
+                    WHEN $2 = 1 THEN (
+                        length >= $3
+                        AND (
+                            ship_type IS NOT NULL
+                            AND NOT (ship_type = ANY ($4::INT[]))
+                            OR length > $5
+                        )
+                    )
+                END
         )
         OR position_type_id = $6
     )
@@ -376,10 +376,10 @@ ORDER BY
     "timestamp" ASC
             "#,
             trip_id.into_inner(),
-            LEISURE_VESSEL_SHIP_TYPES.as_slice(),
-            LEISURE_VESSEL_LENGTH_AIS_BOUNDARY as i32,
             permission as i32,
             PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY as i32,
+            LEISURE_VESSEL_SHIP_TYPES.as_slice(),
+            LEISURE_VESSEL_LENGTH_AIS_BOUNDARY as i32,
             PositionType::Vms as i32
         )
         .fetch(&self.pool)

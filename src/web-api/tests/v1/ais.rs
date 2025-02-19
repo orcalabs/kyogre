@@ -181,7 +181,8 @@ async fn test_ais_track_returns_24h_of_data_when_no_start_and_end_are_specified(
 }
 
 #[tokio::test]
-async fn test_ais_track_does_not_return_positions_of_leisure_vessels_under_45_meters() {
+async fn test_ais_does_not_return_positions_of_leisure_vessels_under_45_meters_without_extend_access(
+) {
     test(|helper, builder| async move {
         let pos_timestamp = Utc.timestamp_opt(1000, 0).unwrap();
         let state = builder
@@ -228,18 +229,24 @@ async fn test_ais_track_does_not_return_positions_of_leisure_vessels_under_45_me
 }
 
 #[tokio::test]
-async fn test_ais_track_does_not_return_positions_of_vessel_with_unknown_ship_type() {
-    test(|helper, builder| async move {
+async fn test_ais_track_returns_positions_of_leisure_vessels_under_45_meters_with_extended_access()
+{
+    test(|mut helper, builder| async move {
         let pos_timestamp = Utc.timestamp_opt(1000, 0).unwrap();
         let state = builder
-            .vessels(1)
-            .modify(|v| v.ais.ship_type = None)
-            .ais_positions(1)
+            .vessels(2)
+            .modify_idx(|i, v| {
+                v.ais.ship_type = Some(LEISURE_VESSEL_SHIP_TYPES[i]);
+                v.fiskeridir.length = LEISURE_VESSEL_LENGTH_AIS_BOUNDARY as f64 - 1.0;
+            })
+            .ais_positions(2)
             .modify(|v| {
                 v.position.msgtime = pos_timestamp;
             })
             .build()
             .await;
+
+        helper.app.login_user_with_full_ais_permissions();
 
         let positions = helper
             .app
@@ -253,7 +260,92 @@ async fn test_ais_track_does_not_return_positions_of_vessel_with_unknown_ship_ty
             .await
             .unwrap();
 
+        let positions2 = helper
+            .app
+            .get_ais_track(
+                state.vessels[1].mmsi().unwrap(),
+                AisTrackParameters {
+                    start: Some(pos_timestamp - Duration::seconds(1)),
+                    end: Some(pos_timestamp + Duration::seconds(1)),
+                },
+            )
+            .await
+            .unwrap();
+
+        assert!(!positions.is_empty());
+        assert!(!positions2.is_empty());
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_ais_track_does_not_return_positions_of_vessels_with_unknown_ship_type_under_45m_without_extended_access(
+) {
+    test(|helper, builder| async move {
+        let pos_timestamp = Utc.timestamp_opt(1000, 0).unwrap();
+        let state = builder
+            .vessels(1)
+            .modify(|v| {
+                v.ais.ship_type = None;
+                v.fiskeridir.length = (LEISURE_VESSEL_LENGTH_AIS_BOUNDARY - 1) as f64;
+            })
+            .ais_positions(1)
+            .modify(|v| {
+                v.position.msgtime = pos_timestamp;
+            })
+            .build()
+            .await;
+
+        let positions = helper
+            .app
+            .get_ais_track(
+                state.vessels[0].mmsi().unwrap(),
+                AisTrackParameters {
+                    start: Some(state.ais_positions[0].msgtime - Duration::seconds(1)),
+                    end: Some(state.ais_positions[0].msgtime + Duration::seconds(1)),
+                },
+            )
+            .await
+            .unwrap();
+
         assert!(positions.is_empty());
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_ais_track_returns_positions_of_vessels_with_unknown_ship_type_under_45m_with_extended_access(
+) {
+    test(|mut helper, builder| async move {
+        let pos_timestamp = Utc.timestamp_opt(1000, 0).unwrap();
+        let state = builder
+            .vessels(1)
+            .modify(|v| {
+                v.ais.ship_type = None;
+                v.fiskeridir.length = (LEISURE_VESSEL_LENGTH_AIS_BOUNDARY - 1) as f64;
+            })
+            .ais_positions(1)
+            .modify(|v| {
+                v.position.msgtime = pos_timestamp;
+            })
+            .build()
+            .await;
+
+        helper.app.login_user_with_full_ais_permissions();
+
+        let positions = helper
+            .app
+            .get_ais_track(
+                state.vessels[0].mmsi().unwrap(),
+                AisTrackParameters {
+                    start: Some(state.ais_positions[0].msgtime - Duration::seconds(1)),
+                    end: Some(state.ais_positions[0].msgtime + Duration::seconds(1)),
+                },
+            )
+            .await
+            .unwrap();
+
+        assert!(!positions.is_empty());
     })
     .await;
 }
