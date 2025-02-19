@@ -66,7 +66,7 @@ jobs:
           cargo sqlx migrate run  --ignore-missing --source src/postgres/test_migrations
 
           cd src/gen-test-data
-          cargo run
+          cargo run -F test
           cd ../../
 
           mkdir src/master_migrations

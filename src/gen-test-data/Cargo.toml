@@ -3,9 +3,12 @@ name = "gen-test-data"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+test = ["engine/test"]
+
 [dependencies]
 orca-core = { workspace = true }
-engine = { path = "../engine", features = ["test"] }
+engine = { path = "../engine" }
 postgres = { path = "../postgres" }
 tokio = "1.41"
 clap = { version = "4.5.21", features = ["derive"] }
