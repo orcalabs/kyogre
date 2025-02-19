@@ -1,5 +1,6 @@
 use crate::{estimated_speed_between_points, Result, SpeedItem, UnrealisticSpeed};
 use chrono::{DateTime, Duration, NaiveDate, Utc};
+use geoutils::Location;
 use kyogre_core::{
     AisVmsPositionWithHaul, AisVmsPositionWithHaulAndManual, ComputedFuelEstimation, DateRange,
     EngineType, FuelEstimation, NewFuelDayEstimate, PositionType, Vessel, VesselEngine,
@@ -7,7 +8,7 @@ use kyogre_core::{
 };
 use std::{sync::Arc, vec};
 use tokio::task::JoinSet;
-use tracing::{error, info, instrument};
+use tracing::{error, info, instrument, warn};
 
 #[cfg(not(feature = "test"))]
 static REQUIRED_TRIPS_TO_ESTIMATE_FUEL: u32 = 5;
@@ -15,9 +16,12 @@ static REQUIRED_TRIPS_TO_ESTIMATE_FUEL: u32 = 5;
 static RUN_INTERVAL: Duration = Duration::hours(5);
 static FUEL_ESTIMATE_COMMIT_SIZE: usize = 50;
 static HAUL_LOAD_FACTOR: f64 = 1.75;
+static METER_PER_SECONDS_TO_KNOTS: f64 = 1.943844;
 
 pub struct FuelItem {
     pub speed: Option<f64>,
+    pub latitude: f64,
+    pub longitude: f64,
     pub timestamp: DateTime<Utc>,
     pub position_type_id: PositionType,
     pub is_inside_haul_and_active_gear: bool,
@@ -322,6 +326,8 @@ impl From<AisVmsPositionWithHaul> for FuelItem {
     fn from(value: AisVmsPositionWithHaul) -> Self {
         FuelItem {
             speed: value.speed,
+            latitude: value.latitude,
+            longitude: value.longitude,
             timestamp: value.timestamp,
             position_type_id: value.position_type_id,
             is_inside_haul_and_active_gear: value.is_inside_haul_and_active_gear,
@@ -334,6 +340,8 @@ impl From<AisVmsPositionWithHaulAndManual> for FuelItem {
     fn from(value: AisVmsPositionWithHaulAndManual) -> Self {
         FuelItem {
             speed: value.speed,
+            latitude: value.latitude,
+            longitude: value.longitude,
             timestamp: value.timestamp,
             position_type_id: value.position_type_id,
             is_inside_haul_and_active_gear: value.is_inside_haul_and_active_gear,
@@ -386,19 +394,30 @@ where
     let mut num_vms_positions = 0;
 
     let result = iter.fold(state, |mut state, v| {
-        let speed = match (state.prev.speed, v.speed) {
-            (Some(a), Some(b)) => (a + b) / 2.,
-            (Some(a), None) => a,
-            (None, Some(b)) => b,
-            (None, None) => return state,
+        let first_loc = Location::new(state.prev.latitude, state.prev.longitude);
+        let second_loc = Location::new(v.latitude, v.longitude);
+
+        let time_ms = (v.timestamp - state.prev.timestamp).num_milliseconds() as f64;
+
+        let speed = match first_loc.distance_to(&second_loc) {
+            Ok(v) => (v.meters() / (time_ms / 1000.)) * METER_PER_SECONDS_TO_KNOTS,
+            Err(e) => {
+                warn!("failed to calculate distance: {e:?}");
+                match (state.prev.speed, v.speed) {
+                    (Some(a), Some(b)) => (a + b) / 2.,
+                    (Some(a), None) => a,
+                    (None, Some(b)) => b,
+                    (None, None) => return state,
+                }
+            }
         };
 
         // TODO: Currently using surrogate value from:
         // https://www.epa.gov/system/files/documents/2023-01/2020NEI_C1C2_Documentation.pdf
         // Table 3. C1C2 Propulsive Power and Load Factor Surrogates
-        let speed_service = service_speed.unwrap_or(12.);
+        let service_speed = service_speed.unwrap_or(12.);
         let degree_of_electrification = degree_of_electrification.unwrap_or(0.0);
-        let load_factor = ((speed / speed_service).powf(3.) * 0.85).clamp(0., 0.98);
+        let load_factor = ((speed / service_speed).powf(3.) * 0.85).clamp(0., 0.98);
 
         for (i, e) in engines.iter().enumerate() {
             let kwh = load_factor
@@ -408,7 +427,7 @@ where
                     } else {
                         1.0
                     })
-                * (v.timestamp - state.prev.timestamp).num_milliseconds() as f64
+                * time_ms
                 * (1.0 - degree_of_electrification)
                 / 3_600_000.;
 
