@@ -1,5 +1,6 @@
-use chrono::{Duration, TimeZone, Utc};
+use chrono::{Duration, NaiveDate, NaiveDateTime, NaiveTime, TimeZone, Utc};
 use engine::{Modifiable, TripLevel};
+use web_api::routes::v1::trip::benchmarks::TripBenchmarksParams;
 
 use crate::v1::helper::test;
 
@@ -149,6 +150,53 @@ async fn test_fuel_consumption_does_not_compute_trips_with_zero_distance() {
 
         assert_eq!(bench.trips.len(), 1);
         assert!(bench.trips[0].fuel_consumption.is_none());
+    })
+    .await;
+}
+#[tokio::test]
+async fn test_fuel_consumption_handles_positions_with_equal_timestamp() {
+    test(|mut helper, builder| async move {
+        let start = Utc.from_utc_datetime(&NaiveDateTime::new(
+            NaiveDate::from_ymd_opt(2020, 3, 12).unwrap(),
+            NaiveTime::from_hms_opt(0, 0, 0).unwrap(),
+        ));
+        let end = start + Duration::days(10);
+
+        builder
+            .vessels(1)
+            .set_logged_in()
+            .set_engine_building_year()
+            .trips(1)
+            .modify(|t| {
+                t.trip_specification.set_start(start);
+                t.trip_specification.set_end(end);
+            })
+            .ais_vms_positions(10)
+            .modify_idx(|i, v| {
+                if i <= 1 {
+                    v.position.set_timestamp(start + Duration::hours(1));
+                    v.position.set_location(72.12, 25.12);
+                } else {
+                    v.position.set_timestamp(start + Duration::hours(i as i64));
+                }
+            })
+            .build()
+            .await;
+
+        helper.app.login_user();
+
+        let bench = helper
+            .app
+            .get_trip_benchmarks(TripBenchmarksParams {
+                start_date: Some(start),
+                end_date: Some(end),
+                ordering: None,
+            })
+            .await
+            .unwrap();
+
+        assert_eq!(bench.trips.len(), 1);
+        assert!(bench.trips[0].fuel_consumption.unwrap() > 0.);
     })
     .await;
 }

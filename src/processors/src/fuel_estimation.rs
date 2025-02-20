@@ -398,6 +398,10 @@ where
         let second_loc = Location::new(v.latitude, v.longitude);
 
         let time_ms = (v.timestamp - state.prev.timestamp).num_milliseconds() as f64;
+        if time_ms <= 0.0 {
+            state.prev = v;
+            return state;
+        }
 
         let speed = match first_loc.distance_to(&second_loc) {
             Ok(v) => (v.meters() / (time_ms / 1000.)) * METER_PER_SECONDS_TO_KNOTS,
